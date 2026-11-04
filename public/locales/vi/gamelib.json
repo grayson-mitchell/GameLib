@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "Xóa tất cả bản sao…"
         },
         "engine": {
-            "wineTabHint": "GameLib chọn engine Wine và bottle cho các game Steam."
+            "wineTabHint": "GameLib chọn engine Wine và bottle cho các game Steam.",
+            "toast": {
+                "body": "Đang dùng engine tích hợp cho lần khởi chạy này.",
+                "cxBroken": "CrossOver không hoạt động — đang dùng engine tích hợp",
+                "cxExpired": "CrossOver đã hết hạn dùng thử — đang dùng engine tích hợp",
+                "cxMissing": "Không tìm thấy CrossOver — đang dùng engine tích hợp",
+                "title": {
+                    "cxBroken": "CrossOver không hoạt động",
+                    "cxExpired": "CrossOver đã hết hạn dùng thử",
+                    "cxMissing": "Không tìm thấy CrossOver"
+                }
+            }
         }
     },
     "steamgriddb": {

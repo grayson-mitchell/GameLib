@@ -524,7 +524,18 @@
             "removeAllCopiesLabel": "Elimină toate copiile…"
         },
         "engine": {
-            "wineTabHint": "GameLib alege motorul Wine și bottle-ul pentru jocurile Steam."
+            "wineTabHint": "GameLib alege motorul Wine și bottle-ul pentru jocurile Steam.",
+            "toast": {
+                "body": "Se folosește motorul integrat pentru această lansare.",
+                "cxBroken": "CrossOver nu funcționează — se folosește motorul integrat",
+                "cxExpired": "Perioada de probă CrossOver a expirat — se folosește motorul integrat",
+                "cxMissing": "CrossOver nu a fost găsit — se folosește motorul integrat",
+                "title": {
+                    "cxBroken": "CrossOver nu funcționează",
+                    "cxExpired": "Perioada de probă CrossOver a expirat",
+                    "cxMissing": "CrossOver nu a fost găsit"
+                }
+            }
         }
     },
     "steamgriddb": {

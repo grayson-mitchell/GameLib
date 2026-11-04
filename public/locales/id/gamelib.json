@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "Hapus semua salinan…"
         },
         "engine": {
-            "wineTabHint": "GameLib memilih mesin Wine dan bottle untuk game Steam."
+            "wineTabHint": "GameLib memilih mesin Wine dan bottle untuk game Steam.",
+            "toast": {
+                "body": "Menggunakan mesin bawaan untuk peluncuran ini.",
+                "cxBroken": "CrossOver tidak berfungsi — menggunakan mesin bawaan",
+                "cxExpired": "Masa uji coba CrossOver berakhir — menggunakan mesin bawaan",
+                "cxMissing": "CrossOver tidak ditemukan — menggunakan mesin bawaan",
+                "title": {
+                    "cxBroken": "CrossOver tidak berfungsi",
+                    "cxExpired": "Masa uji coba CrossOver berakhir",
+                    "cxMissing": "CrossOver tidak ditemukan"
+                }
+            }
         }
     },
     "steamgriddb": {

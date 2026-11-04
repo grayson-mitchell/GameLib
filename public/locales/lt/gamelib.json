@@ -531,7 +531,18 @@
             "removeAllCopiesLabel": "Pašalinti visas kopijas…"
         },
         "engine": {
-            "wineTabHint": "GameLib parenka Wine variklį ir bottle „Steam“ žaidimams."
+            "wineTabHint": "GameLib parenka Wine variklį ir bottle „Steam“ žaidimams.",
+            "toast": {
+                "body": "Šiam paleidimui naudojamas integruotas variklis.",
+                "cxBroken": "CrossOver neveikia — naudojamas integruotas variklis",
+                "cxExpired": "CrossOver bandomasis laikotarpis baigėsi — naudojamas integruotas variklis",
+                "cxMissing": "CrossOver nerastas — naudojamas integruotas variklis",
+                "title": {
+                    "cxBroken": "CrossOver neveikia",
+                    "cxExpired": "CrossOver bandomasis laikotarpis baigėsi",
+                    "cxMissing": "CrossOver nerastas"
+                }
+            }
         }
     },
     "steamgriddb": {

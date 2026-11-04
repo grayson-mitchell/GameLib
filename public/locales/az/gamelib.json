@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "Bütün nüsxələri sil…"
         },
         "engine": {
-            "wineTabHint": "GameLib Steam oyunları üçün Wine mühərrikini və bottle-ı seçir."
+            "wineTabHint": "GameLib Steam oyunları üçün Wine mühərrikini və bottle-ı seçir.",
+            "toast": {
+                "body": "Bu başlatma üçün daxili mühərrik istifadə olunur.",
+                "cxBroken": "CrossOver işləmir — daxili mühərrik istifadə olunur",
+                "cxExpired": "CrossOver sınaq müddəti bitdi — daxili mühərrik istifadə olunur",
+                "cxMissing": "CrossOver tapılmadı — daxili mühərrik istifadə olunur",
+                "title": {
+                    "cxBroken": "CrossOver işləmir",
+                    "cxExpired": "CrossOver sınaq müddəti bitdi",
+                    "cxMissing": "CrossOver tapılmadı"
+                }
+            }
         }
     },
     "steamgriddb": {

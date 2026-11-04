@@ -1,0 +1,443 @@
+{
+  "en": {
+    "steam.engine.toast.body": "Using the built-in engine for this launch.",
+    "steam.engine.toast.cxBroken": "CrossOver isn't working — using built-in engine",
+    "steam.engine.toast.cxExpired": "CrossOver trial expired — using built-in engine",
+    "steam.engine.toast.cxMissing": "CrossOver not found — using built-in engine",
+    "steam.engine.toast.title.cxBroken": "CrossOver isn't working",
+    "steam.engine.toast.title.cxExpired": "CrossOver trial expired",
+    "steam.engine.toast.title.cxMissing": "CrossOver not found"
+  },
+  "ar": {
+    "steam.engine.toast.body": "يتم استخدام المحرك المدمج لهذا التشغيل.",
+    "steam.engine.toast.cxBroken": "CrossOver لا يعمل — استخدام المحرك المدمج",
+    "steam.engine.toast.cxExpired": "انتهت الفترة التجريبية لـ CrossOver — استخدام المحرك المدمج",
+    "steam.engine.toast.cxMissing": "لم يتم العثور على CrossOver — استخدام المحرك المدمج",
+    "steam.engine.toast.title.cxBroken": "CrossOver لا يعمل",
+    "steam.engine.toast.title.cxExpired": "انتهت الفترة التجريبية لـ CrossOver",
+    "steam.engine.toast.title.cxMissing": "لم يتم العثور على CrossOver"
+  },
+  "az": {
+    "steam.engine.toast.body": "Bu başlatma üçün daxili mühərrik istifadə olunur.",
+    "steam.engine.toast.cxBroken": "CrossOver işləmir — daxili mühərrik istifadə olunur",
+    "steam.engine.toast.cxExpired": "CrossOver sınaq müddəti bitdi — daxili mühərrik istifadə olunur",
+    "steam.engine.toast.cxMissing": "CrossOver tapılmadı — daxili mühərrik istifadə olunur",
+    "steam.engine.toast.title.cxBroken": "CrossOver işləmir",
+    "steam.engine.toast.title.cxExpired": "CrossOver sınaq müddəti bitdi",
+    "steam.engine.toast.title.cxMissing": "CrossOver tapılmadı"
+  },
+  "be": {
+    "steam.engine.toast.body": "Для гэтага запуску выкарыстоўваецца ўбудаваны рухавік.",
+    "steam.engine.toast.cxBroken": "CrossOver не працуе — выкарыстоўваецца ўбудаваны рухавік",
+    "steam.engine.toast.cxExpired": "Пробны перыяд CrossOver скончыўся — выкарыстоўваецца ўбудаваны рухавік",
+    "steam.engine.toast.cxMissing": "CrossOver не знойдзены — выкарыстоўваецца ўбудаваны рухавік",
+    "steam.engine.toast.title.cxBroken": "CrossOver не працуе",
+    "steam.engine.toast.title.cxExpired": "Пробны перыяд CrossOver скончыўся",
+    "steam.engine.toast.title.cxMissing": "CrossOver не знойдзены"
+  },
+  "bg": {
+    "steam.engine.toast.body": "За това стартиране се използва вграденият двигател.",
+    "steam.engine.toast.cxBroken": "CrossOver не работи — използва се вграденият двигател",
+    "steam.engine.toast.cxExpired": "Пробният период на CrossOver изтече — използва се вграденият двигател",
+    "steam.engine.toast.cxMissing": "CrossOver не е намерен — използва се вграденият двигател",
+    "steam.engine.toast.title.cxBroken": "CrossOver не работи",
+    "steam.engine.toast.title.cxExpired": "Пробният период на CrossOver изтече",
+    "steam.engine.toast.title.cxMissing": "CrossOver не е намерен"
+  },
+  "br": {
+    "steam.engine.toast.body": "Implijet eo ar c’heflusker enframmet evit al lañs-mañ.",
+    "steam.engine.toast.cxBroken": "CrossOver ne laka ket — ar c’heflusker enframmet a vez implijet",
+    "steam.engine.toast.cxExpired": "Echuet eo prantad amprouiñ CrossOver — ar c’heflusker enframmet a vez implijet",
+    "steam.engine.toast.cxMissing": "CrossOver n’eo ket bet kavet — ar c’heflusker enframmet a vez implijet",
+    "steam.engine.toast.title.cxBroken": "CrossOver ne laka ket",
+    "steam.engine.toast.title.cxExpired": "Echuet eo prantad amprouiñ CrossOver",
+    "steam.engine.toast.title.cxMissing": "CrossOver n’eo ket bet kavet"
+  },
+  "bs": {
+    "steam.engine.toast.body": "Za ovo pokretanje koristi se ugrađeni engine.",
+    "steam.engine.toast.cxBroken": "CrossOver ne radi — koristi se ugrađeni engine",
+    "steam.engine.toast.cxExpired": "CrossOver probni period je istekao — koristi se ugrađeni engine",
+    "steam.engine.toast.cxMissing": "CrossOver nije pronađen — koristi se ugrađeni engine",
+    "steam.engine.toast.title.cxBroken": "CrossOver ne radi",
+    "steam.engine.toast.title.cxExpired": "CrossOver probni period je istekao",
+    "steam.engine.toast.title.cxMissing": "CrossOver nije pronađen"
+  },
+  "ca": {
+    "steam.engine.toast.body": "S'està utilitzant el motor integrat per a aquest inici.",
+    "steam.engine.toast.cxBroken": "CrossOver no funciona — s'utilitza el motor integrat",
+    "steam.engine.toast.cxExpired": "La prova de CrossOver ha caducat — s'utilitza el motor integrat",
+    "steam.engine.toast.cxMissing": "No s'ha trobat CrossOver — s'utilitza el motor integrat",
+    "steam.engine.toast.title.cxBroken": "CrossOver no funciona",
+    "steam.engine.toast.title.cxExpired": "La prova de CrossOver ha caducat",
+    "steam.engine.toast.title.cxMissing": "No s'ha trobat CrossOver"
+  },
+  "cs": {
+    "steam.engine.toast.body": "Pro toto spuštění se používá vestavěný engine.",
+    "steam.engine.toast.cxBroken": "CrossOver nefunguje — používá se vestavěný engine",
+    "steam.engine.toast.cxExpired": "Zkušební doba CrossOver vypršela — používá se vestavěný engine",
+    "steam.engine.toast.cxMissing": "CrossOver nebyl nalezen — používá se vestavěný engine",
+    "steam.engine.toast.title.cxBroken": "CrossOver nefunguje",
+    "steam.engine.toast.title.cxExpired": "Zkušební doba CrossOver vypršela",
+    "steam.engine.toast.title.cxMissing": "CrossOver nebyl nalezen"
+  },
+  "da": {
+    "steam.engine.toast.body": "Bruger den indbyggede motor til denne start.",
+    "steam.engine.toast.cxBroken": "CrossOver virker ikke — bruger indbygget motor",
+    "steam.engine.toast.cxExpired": "CrossOver-prøveperioden er udløbet — bruger indbygget motor",
+    "steam.engine.toast.cxMissing": "CrossOver blev ikke fundet — bruger indbygget motor",
+    "steam.engine.toast.title.cxBroken": "CrossOver virker ikke",
+    "steam.engine.toast.title.cxExpired": "CrossOver-prøveperioden er udløbet",
+    "steam.engine.toast.title.cxMissing": "CrossOver blev ikke fundet"
+  },
+  "de": {
+    "steam.engine.toast.body": "Für diesen Start wird die integrierte Engine verwendet.",
+    "steam.engine.toast.cxBroken": "CrossOver funktioniert nicht — integrierte Engine wird verwendet",
+    "steam.engine.toast.cxExpired": "CrossOver-Testversion abgelaufen — integrierte Engine wird verwendet",
+    "steam.engine.toast.cxMissing": "CrossOver nicht gefunden — integrierte Engine wird verwendet",
+    "steam.engine.toast.title.cxBroken": "CrossOver funktioniert nicht",
+    "steam.engine.toast.title.cxExpired": "CrossOver-Testversion abgelaufen",
+    "steam.engine.toast.title.cxMissing": "CrossOver nicht gefunden"
+  },
+  "el": {
+    "steam.engine.toast.body": "Χρησιμοποιείται η ενσωματωμένη μηχανή για αυτήν την εκκίνηση.",
+    "steam.engine.toast.cxBroken": "Το CrossOver δεν λειτουργεί — χρήση της ενσωματωμένης μηχανής",
+    "steam.engine.toast.cxExpired": "Η δοκιμαστική περίοδος του CrossOver έληξε — χρήση της ενσωματωμένης μηχανής",
+    "steam.engine.toast.cxMissing": "Το CrossOver δεν βρέθηκε — χρήση της ενσωματωμένης μηχανής",
+    "steam.engine.toast.title.cxBroken": "Το CrossOver δεν λειτουργεί",
+    "steam.engine.toast.title.cxExpired": "Η δοκιμαστική περίοδος του CrossOver έληξε",
+    "steam.engine.toast.title.cxMissing": "Το CrossOver δεν βρέθηκε"
+  },
+  "es": {
+    "steam.engine.toast.body": "Se usa el motor integrado para este inicio.",
+    "steam.engine.toast.cxBroken": "CrossOver no funciona — se usa el motor integrado",
+    "steam.engine.toast.cxExpired": "La prueba de CrossOver ha caducado — se usa el motor integrado",
+    "steam.engine.toast.cxMissing": "No se encontró CrossOver — se usa el motor integrado",
+    "steam.engine.toast.title.cxBroken": "CrossOver no funciona",
+    "steam.engine.toast.title.cxExpired": "La prueba de CrossOver ha caducado",
+    "steam.engine.toast.title.cxMissing": "No se encontró CrossOver"
+  },
+  "et": {
+    "steam.engine.toast.body": "Selle käivituse jaoks kasutatakse sisseehitatud mootorit.",
+    "steam.engine.toast.cxBroken": "CrossOver ei tööta — kasutatakse sisseehitatud mootorit",
+    "steam.engine.toast.cxExpired": "CrossOveri prooviaeg on lõppenud — kasutatakse sisseehitatud mootorit",
+    "steam.engine.toast.cxMissing": "CrossOverit ei leitud — kasutatakse sisseehitatud mootorit",
+    "steam.engine.toast.title.cxBroken": "CrossOver ei tööta",
+    "steam.engine.toast.title.cxExpired": "CrossOveri prooviaeg on lõppenud",
+    "steam.engine.toast.title.cxMissing": "CrossOverit ei leitud"
+  },
+  "eu": {
+    "steam.engine.toast.body": "Abiarazte honetarako motor integratua erabiltzen ari da.",
+    "steam.engine.toast.cxBroken": "CrossOver ez dabil — motor integratua erabiltzen",
+    "steam.engine.toast.cxExpired": "CrossOver-en proba-aldia amaitu da — motor integratua erabiltzen",
+    "steam.engine.toast.cxMissing": "Ez da CrossOver aurkitu — motor integratua erabiltzen",
+    "steam.engine.toast.title.cxBroken": "CrossOver ez dabil",
+    "steam.engine.toast.title.cxExpired": "CrossOver-en proba-aldia amaitu da",
+    "steam.engine.toast.title.cxMissing": "Ez da CrossOver aurkitu"
+  },
+  "fa": {
+    "steam.engine.toast.body": "برای این اجرا از موتور داخلی استفاده می‌شود.",
+    "steam.engine.toast.cxBroken": "CrossOver کار نمی‌کند — استفاده از موتور داخلی",
+    "steam.engine.toast.cxExpired": "دوره آزمایشی CrossOver به پایان رسیده است — استفاده از موتور داخلی",
+    "steam.engine.toast.cxMissing": "CrossOver پیدا نشد — استفاده از موتور داخلی",
+    "steam.engine.toast.title.cxBroken": "CrossOver کار نمی‌کند",
+    "steam.engine.toast.title.cxExpired": "دوره آزمایشی CrossOver به پایان رسیده است",
+    "steam.engine.toast.title.cxMissing": "CrossOver پیدا نشد"
+  },
+  "fi": {
+    "steam.engine.toast.body": "Tässä käynnistyksessä käytetään sisäänrakennettua moottoria.",
+    "steam.engine.toast.cxBroken": "CrossOver ei toimi — käytetään sisäänrakennettua moottoria",
+    "steam.engine.toast.cxExpired": "CrossOverin kokeilujakso on päättynyt — käytetään sisäänrakennettua moottoria",
+    "steam.engine.toast.cxMissing": "CrossOveria ei löytynyt — käytetään sisäänrakennettua moottoria",
+    "steam.engine.toast.title.cxBroken": "CrossOver ei toimi",
+    "steam.engine.toast.title.cxExpired": "CrossOverin kokeilujakso on päättynyt",
+    "steam.engine.toast.title.cxMissing": "CrossOveria ei löytynyt"
+  },
+  "fr": {
+    "steam.engine.toast.body": "Utilisation du moteur intégré pour ce lancement.",
+    "steam.engine.toast.cxBroken": "CrossOver ne fonctionne pas — utilisation du moteur intégré",
+    "steam.engine.toast.cxExpired": "Période d'essai de CrossOver terminée — utilisation du moteur intégré",
+    "steam.engine.toast.cxMissing": "CrossOver introuvable — utilisation du moteur intégré",
+    "steam.engine.toast.title.cxBroken": "CrossOver ne fonctionne pas",
+    "steam.engine.toast.title.cxExpired": "Période d'essai de CrossOver terminée",
+    "steam.engine.toast.title.cxMissing": "CrossOver introuvable"
+  },
+  "ga": {
+    "steam.engine.toast.body": "Á úsáid an inneall ionsuite don seoladh seo.",
+    "steam.engine.toast.cxBroken": "Níl CrossOver ag obair — inneall ionsuite in úsáid",
+    "steam.engine.toast.cxExpired": "Tá triail CrossOver caite — inneall ionsuite in úsáid",
+    "steam.engine.toast.cxMissing": "Níor aimsíodh CrossOver — inneall ionsuite in úsáid",
+    "steam.engine.toast.title.cxBroken": "Níl CrossOver ag obair",
+    "steam.engine.toast.title.cxExpired": "Tá triail CrossOver caite",
+    "steam.engine.toast.title.cxMissing": "Níor aimsíodh CrossOver"
+  },
+  "gl": {
+    "steam.engine.toast.body": "Úsase o motor integrado para este inicio.",
+    "steam.engine.toast.cxBroken": "CrossOver non funciona — úsase o motor integrado",
+    "steam.engine.toast.cxExpired": "A proba de CrossOver caducou — úsase o motor integrado",
+    "steam.engine.toast.cxMissing": "Non se atopou CrossOver — úsase o motor integrado",
+    "steam.engine.toast.title.cxBroken": "CrossOver non funciona",
+    "steam.engine.toast.title.cxExpired": "A proba de CrossOver caducou",
+    "steam.engine.toast.title.cxMissing": "Non se atopou CrossOver"
+  },
+  "he": {
+    "steam.engine.toast.body": "נעשה שימוש במנוע המובנה עבור ההפעלה הזו.",
+    "steam.engine.toast.cxBroken": "CrossOver לא עובד — שימוש במנוע המובנה",
+    "steam.engine.toast.cxExpired": "תקופת הניסיון של CrossOver הסתיימה — שימוש במנוע המובנה",
+    "steam.engine.toast.cxMissing": "CrossOver לא נמצא — שימוש במנוע המובנה",
+    "steam.engine.toast.title.cxBroken": "CrossOver לא עובד",
+    "steam.engine.toast.title.cxExpired": "תקופת הניסיון של CrossOver הסתיימה",
+    "steam.engine.toast.title.cxMissing": "CrossOver לא נמצא"
+  },
+  "hr": {
+    "steam.engine.toast.body": "Za ovo pokretanje koristi se ugrađeni engine.",
+    "steam.engine.toast.cxBroken": "CrossOver ne radi — koristi se ugrađeni engine",
+    "steam.engine.toast.cxExpired": "CrossOver probno razdoblje je isteklo — koristi se ugrađeni engine",
+    "steam.engine.toast.cxMissing": "CrossOver nije pronađen — koristi se ugrađeni engine",
+    "steam.engine.toast.title.cxBroken": "CrossOver ne radi",
+    "steam.engine.toast.title.cxExpired": "CrossOver probno razdoblje je isteklo",
+    "steam.engine.toast.title.cxMissing": "CrossOver nije pronađen"
+  },
+  "hu": {
+    "steam.engine.toast.body": "Ehhez az indításhoz a beépített motor van használatban.",
+    "steam.engine.toast.cxBroken": "A CrossOver nem működik — a beépített motor van használatban",
+    "steam.engine.toast.cxExpired": "A CrossOver próbaideje lejárt — a beépített motor van használatban",
+    "steam.engine.toast.cxMissing": "A CrossOver nem található — a beépített motor van használatban",
+    "steam.engine.toast.title.cxBroken": "A CrossOver nem működik",
+    "steam.engine.toast.title.cxExpired": "A CrossOver próbaideje lejárt",
+    "steam.engine.toast.title.cxMissing": "A CrossOver nem található"
+  },
+  "id": {
+    "steam.engine.toast.body": "Menggunakan mesin bawaan untuk peluncuran ini.",
+    "steam.engine.toast.cxBroken": "CrossOver tidak berfungsi — menggunakan mesin bawaan",
+    "steam.engine.toast.cxExpired": "Masa uji coba CrossOver berakhir — menggunakan mesin bawaan",
+    "steam.engine.toast.cxMissing": "CrossOver tidak ditemukan — menggunakan mesin bawaan",
+    "steam.engine.toast.title.cxBroken": "CrossOver tidak berfungsi",
+    "steam.engine.toast.title.cxExpired": "Masa uji coba CrossOver berakhir",
+    "steam.engine.toast.title.cxMissing": "CrossOver tidak ditemukan"
+  },
+  "it": {
+    "steam.engine.toast.body": "Per questo avvio viene usato il motore integrato.",
+    "steam.engine.toast.cxBroken": "CrossOver non funziona — uso del motore integrato",
+    "steam.engine.toast.cxExpired": "Prova di CrossOver scaduta — uso del motore integrato",
+    "steam.engine.toast.cxMissing": "CrossOver non trovato — uso del motore integrato",
+    "steam.engine.toast.title.cxBroken": "CrossOver non funziona",
+    "steam.engine.toast.title.cxExpired": "Prova di CrossOver scaduta",
+    "steam.engine.toast.title.cxMissing": "CrossOver non trovato"
+  },
+  "ja": {
+    "steam.engine.toast.body": "今回の起動では内蔵エンジンを使用します。",
+    "steam.engine.toast.cxBroken": "CrossOver が動作していません — 内蔵エンジンを使用",
+    "steam.engine.toast.cxExpired": "CrossOver の試用期間が終了しました — 内蔵エンジンを使用",
+    "steam.engine.toast.cxMissing": "CrossOver が見つかりません — 内蔵エンジンを使用",
+    "steam.engine.toast.title.cxBroken": "CrossOver が動作していません",
+    "steam.engine.toast.title.cxExpired": "CrossOver の試用期間が終了しました",
+    "steam.engine.toast.title.cxMissing": "CrossOver が見つかりません"
+  },
+  "ka": {
+    "steam.engine.toast.body": "ამ გაშვებისთვის გამოიყენება ჩაშენებული ძრავა.",
+    "steam.engine.toast.cxBroken": "CrossOver არ მუშაობს — გამოიყენება ჩაშენებული ძრავა",
+    "steam.engine.toast.cxExpired": "CrossOver-ის საცდელი პერიოდი ამოიწურა — გამოიყენება ჩაშენებული ძრავა",
+    "steam.engine.toast.cxMissing": "CrossOver ვერ მოიძებნა — გამოიყენება ჩაშენებული ძრავა",
+    "steam.engine.toast.title.cxBroken": "CrossOver არ მუშაობს",
+    "steam.engine.toast.title.cxExpired": "CrossOver-ის საცდელი პერიოდი ამოიწურა",
+    "steam.engine.toast.title.cxMissing": "CrossOver ვერ მოიძებნა"
+  },
+  "ko": {
+    "steam.engine.toast.body": "이번 실행에는 내장 엔진을 사용합니다.",
+    "steam.engine.toast.cxBroken": "CrossOver가 작동하지 않음 — 내장 엔진 사용",
+    "steam.engine.toast.cxExpired": "CrossOver 체험 기간 만료 — 내장 엔진 사용",
+    "steam.engine.toast.cxMissing": "CrossOver를 찾을 수 없음 — 내장 엔진 사용",
+    "steam.engine.toast.title.cxBroken": "CrossOver가 작동하지 않음",
+    "steam.engine.toast.title.cxExpired": "CrossOver 체험 기간 만료",
+    "steam.engine.toast.title.cxMissing": "CrossOver를 찾을 수 없음"
+  },
+  "lt": {
+    "steam.engine.toast.body": "Šiam paleidimui naudojamas integruotas variklis.",
+    "steam.engine.toast.cxBroken": "CrossOver neveikia — naudojamas integruotas variklis",
+    "steam.engine.toast.cxExpired": "CrossOver bandomasis laikotarpis baigėsi — naudojamas integruotas variklis",
+    "steam.engine.toast.cxMissing": "CrossOver nerastas — naudojamas integruotas variklis",
+    "steam.engine.toast.title.cxBroken": "CrossOver neveikia",
+    "steam.engine.toast.title.cxExpired": "CrossOver bandomasis laikotarpis baigėsi",
+    "steam.engine.toast.title.cxMissing": "CrossOver nerastas"
+  },
+  "ml": {
+    "steam.engine.toast.body": "ഈ ലോഞ്ചിനായി ബിൽറ്റ്-ഇൻ എഞ്ചിൻ ഉപയോഗിക്കുന്നു.",
+    "steam.engine.toast.cxBroken": "CrossOver പ്രവർത്തിക്കുന്നില്ല — ബിൽറ്റ്-ഇൻ എഞ്ചിൻ ഉപയോഗിക്കുന്നു",
+    "steam.engine.toast.cxExpired": "CrossOver ട്രയൽ കാലാവധി കഴിഞ്ഞു — ബിൽറ്റ്-ഇൻ എഞ്ചിൻ ഉപയോഗിക്കുന്നു",
+    "steam.engine.toast.cxMissing": "CrossOver കണ്ടെത്തിയില്ല — ബിൽറ്റ്-ഇൻ എഞ്ചിൻ ഉപയോഗിക്കുന്നു",
+    "steam.engine.toast.title.cxBroken": "CrossOver പ്രവർത്തിക്കുന്നില്ല",
+    "steam.engine.toast.title.cxExpired": "CrossOver ട്രയൽ കാലാവധി കഴിഞ്ഞു",
+    "steam.engine.toast.title.cxMissing": "CrossOver കണ്ടെത്തിയില്ല"
+  },
+  "nb_NO": {
+    "steam.engine.toast.body": "Bruker den innebygde motoren for denne starten.",
+    "steam.engine.toast.cxBroken": "CrossOver fungerer ikke — bruker innebygd motor",
+    "steam.engine.toast.cxExpired": "CrossOver-prøveperioden er utløpt — bruker innebygd motor",
+    "steam.engine.toast.cxMissing": "CrossOver ble ikke funnet — bruker innebygd motor",
+    "steam.engine.toast.title.cxBroken": "CrossOver fungerer ikke",
+    "steam.engine.toast.title.cxExpired": "CrossOver-prøveperioden er utløpt",
+    "steam.engine.toast.title.cxMissing": "CrossOver ble ikke funnet"
+  },
+  "nl": {
+    "steam.engine.toast.body": "De ingebouwde engine wordt gebruikt voor deze start.",
+    "steam.engine.toast.cxBroken": "CrossOver werkt niet — ingebouwde engine wordt gebruikt",
+    "steam.engine.toast.cxExpired": "CrossOver-proefperiode verlopen — ingebouwde engine wordt gebruikt",
+    "steam.engine.toast.cxMissing": "CrossOver niet gevonden — ingebouwde engine wordt gebruikt",
+    "steam.engine.toast.title.cxBroken": "CrossOver werkt niet",
+    "steam.engine.toast.title.cxExpired": "CrossOver-proefperiode verlopen",
+    "steam.engine.toast.title.cxMissing": "CrossOver niet gevonden"
+  },
+  "pl": {
+    "steam.engine.toast.body": "Przy tym uruchomieniu używany jest wbudowany silnik.",
+    "steam.engine.toast.cxBroken": "CrossOver nie działa — używany jest wbudowany silnik",
+    "steam.engine.toast.cxExpired": "Okres próbny CrossOver wygasł — używany jest wbudowany silnik",
+    "steam.engine.toast.cxMissing": "Nie znaleziono CrossOver — używany jest wbudowany silnik",
+    "steam.engine.toast.title.cxBroken": "CrossOver nie działa",
+    "steam.engine.toast.title.cxExpired": "Okres próbny CrossOver wygasł",
+    "steam.engine.toast.title.cxMissing": "Nie znaleziono CrossOver"
+  },
+  "pt": {
+    "steam.engine.toast.body": "A usar o motor integrado neste arranque.",
+    "steam.engine.toast.cxBroken": "O CrossOver não está a funcionar — a usar o motor integrado",
+    "steam.engine.toast.cxExpired": "A avaliação do CrossOver expirou — a usar o motor integrado",
+    "steam.engine.toast.cxMissing": "CrossOver não encontrado — a usar o motor integrado",
+    "steam.engine.toast.title.cxBroken": "O CrossOver não está a funcionar",
+    "steam.engine.toast.title.cxExpired": "A avaliação do CrossOver expirou",
+    "steam.engine.toast.title.cxMissing": "CrossOver não encontrado"
+  },
+  "pt_BR": {
+    "steam.engine.toast.body": "Usando o mecanismo integrado nesta inicialização.",
+    "steam.engine.toast.cxBroken": "O CrossOver não está funcionando — usando o mecanismo integrado",
+    "steam.engine.toast.cxExpired": "O teste do CrossOver expirou — usando o mecanismo integrado",
+    "steam.engine.toast.cxMissing": "CrossOver não encontrado — usando o mecanismo integrado",
+    "steam.engine.toast.title.cxBroken": "O CrossOver não está funcionando",
+    "steam.engine.toast.title.cxExpired": "O teste do CrossOver expirou",
+    "steam.engine.toast.title.cxMissing": "CrossOver não encontrado"
+  },
+  "ro": {
+    "steam.engine.toast.body": "Se folosește motorul integrat pentru această lansare.",
+    "steam.engine.toast.cxBroken": "CrossOver nu funcționează — se folosește motorul integrat",
+    "steam.engine.toast.cxExpired": "Perioada de probă CrossOver a expirat — se folosește motorul integrat",
+    "steam.engine.toast.cxMissing": "CrossOver nu a fost găsit — se folosește motorul integrat",
+    "steam.engine.toast.title.cxBroken": "CrossOver nu funcționează",
+    "steam.engine.toast.title.cxExpired": "Perioada de probă CrossOver a expirat",
+    "steam.engine.toast.title.cxMissing": "CrossOver nu a fost găsit"
+  },
+  "ru": {
+    "steam.engine.toast.body": "Для этого запуска используется встроенный движок.",
+    "steam.engine.toast.cxBroken": "CrossOver не работает — используется встроенный движок",
+    "steam.engine.toast.cxExpired": "Пробный период CrossOver истёк — используется встроенный движок",
+    "steam.engine.toast.cxMissing": "CrossOver не найден — используется встроенный движок",
+    "steam.engine.toast.title.cxBroken": "CrossOver не работает",
+    "steam.engine.toast.title.cxExpired": "Пробный период CrossOver истёк",
+    "steam.engine.toast.title.cxMissing": "CrossOver не найден"
+  },
+  "sk": {
+    "steam.engine.toast.body": "Pri tomto spustení sa používa vstavaný engine.",
+    "steam.engine.toast.cxBroken": "CrossOver nefunguje — používa sa vstavaný engine",
+    "steam.engine.toast.cxExpired": "Skúšobná doba CrossOver vypršala — používa sa vstavaný engine",
+    "steam.engine.toast.cxMissing": "CrossOver sa nenašiel — používa sa vstavaný engine",
+    "steam.engine.toast.title.cxBroken": "CrossOver nefunguje",
+    "steam.engine.toast.title.cxExpired": "Skúšobná doba CrossOver vypršala",
+    "steam.engine.toast.title.cxMissing": "CrossOver sa nenašiel"
+  },
+  "sl": {
+    "steam.engine.toast.body": "Za ta zagon se uporablja vgrajeni pogon.",
+    "steam.engine.toast.cxBroken": "CrossOver ne deluje — uporablja se vgrajeni pogon",
+    "steam.engine.toast.cxExpired": "Preizkusno obdobje CrossOver je poteklo — uporablja se vgrajeni pogon",
+    "steam.engine.toast.cxMissing": "CrossOver ni bil najden — uporablja se vgrajeni pogon",
+    "steam.engine.toast.title.cxBroken": "CrossOver ne deluje",
+    "steam.engine.toast.title.cxExpired": "Preizkusno obdobje CrossOver je poteklo",
+    "steam.engine.toast.title.cxMissing": "CrossOver ni bil najden"
+  },
+  "sr": {
+    "steam.engine.toast.body": "За ово покретање користи се уграђени енџин.",
+    "steam.engine.toast.cxBroken": "CrossOver не ради — користи се уграђени енџин",
+    "steam.engine.toast.cxExpired": "CrossOver пробни период је истекао — користи се уграђени енџин",
+    "steam.engine.toast.cxMissing": "CrossOver није пронађен — користи се уграђени енџин",
+    "steam.engine.toast.title.cxBroken": "CrossOver не ради",
+    "steam.engine.toast.title.cxExpired": "CrossOver пробни период је истекао",
+    "steam.engine.toast.title.cxMissing": "CrossOver није пронађен"
+  },
+  "sv": {
+    "steam.engine.toast.body": "Använder den inbyggda motorn för den här starten.",
+    "steam.engine.toast.cxBroken": "CrossOver fungerar inte — använder inbyggd motor",
+    "steam.engine.toast.cxExpired": "CrossOver-provperioden har gått ut — använder inbyggd motor",
+    "steam.engine.toast.cxMissing": "CrossOver hittades inte — använder inbyggd motor",
+    "steam.engine.toast.title.cxBroken": "CrossOver fungerar inte",
+    "steam.engine.toast.title.cxExpired": "CrossOver-provperioden har gått ut",
+    "steam.engine.toast.title.cxMissing": "CrossOver hittades inte"
+  },
+  "ta": {
+    "steam.engine.toast.body": "இந்தத் தொடக்கத்திற்கு உள்ளமைந்த இயந்திரம் பயன்படுத்தப்படுகிறது.",
+    "steam.engine.toast.cxBroken": "CrossOver இயங்கவில்லை — உள்ளமைந்த இயந்திரம் பயன்படுத்தப்படுகிறது",
+    "steam.engine.toast.cxExpired": "CrossOver சோதனைக் காலம் முடிந்தது — உள்ளமைந்த இயந்திரம் பயன்படுத்தப்படுகிறது",
+    "steam.engine.toast.cxMissing": "CrossOver கிடைக்கவில்லை — உள்ளமைந்த இயந்திரம் பயன்படுத்தப்படுகிறது",
+    "steam.engine.toast.title.cxBroken": "CrossOver இயங்கவில்லை",
+    "steam.engine.toast.title.cxExpired": "CrossOver சோதனைக் காலம் முடிந்தது",
+    "steam.engine.toast.title.cxMissing": "CrossOver கிடைக்கவில்லை"
+  },
+  "th": {
+    "steam.engine.toast.body": "ใช้เอนจินในตัวสำหรับการเปิดครั้งนี้",
+    "steam.engine.toast.cxBroken": "CrossOver ใช้งานไม่ได้ — ใช้เอนจินในตัว",
+    "steam.engine.toast.cxExpired": "CrossOver หมดช่วงทดลองใช้แล้ว — ใช้เอนจินในตัว",
+    "steam.engine.toast.cxMissing": "ไม่พบ CrossOver — ใช้เอนจินในตัว",
+    "steam.engine.toast.title.cxBroken": "CrossOver ใช้งานไม่ได้",
+    "steam.engine.toast.title.cxExpired": "CrossOver หมดช่วงทดลองใช้แล้ว",
+    "steam.engine.toast.title.cxMissing": "ไม่พบ CrossOver"
+  },
+  "tr": {
+    "steam.engine.toast.body": "Bu başlatma için yerleşik motor kullanılıyor.",
+    "steam.engine.toast.cxBroken": "CrossOver çalışmıyor — yerleşik motor kullanılıyor",
+    "steam.engine.toast.cxExpired": "CrossOver deneme süresi doldu — yerleşik motor kullanılıyor",
+    "steam.engine.toast.cxMissing": "CrossOver bulunamadı — yerleşik motor kullanılıyor",
+    "steam.engine.toast.title.cxBroken": "CrossOver çalışmıyor",
+    "steam.engine.toast.title.cxExpired": "CrossOver deneme süresi doldu",
+    "steam.engine.toast.title.cxMissing": "CrossOver bulunamadı"
+  },
+  "uk": {
+    "steam.engine.toast.body": "Для цього запуску використовується вбудований рушій.",
+    "steam.engine.toast.cxBroken": "CrossOver не працює — використовується вбудований рушій",
+    "steam.engine.toast.cxExpired": "Пробний період CrossOver закінчився — використовується вбудований рушій",
+    "steam.engine.toast.cxMissing": "CrossOver не знайдено — використовується вбудований рушій",
+    "steam.engine.toast.title.cxBroken": "CrossOver не працює",
+    "steam.engine.toast.title.cxExpired": "Пробний період CrossOver закінчився",
+    "steam.engine.toast.title.cxMissing": "CrossOver не знайдено"
+  },
+  "uz": {
+    "steam.engine.toast.body": "Bu ishga tushirish uchun o‘rnatilgan dvigatel ishlatilmoqda.",
+    "steam.engine.toast.cxBroken": "CrossOver ishlamayapti — o‘rnatilgan dvigatel ishlatilmoqda",
+    "steam.engine.toast.cxExpired": "CrossOver sinov muddati tugadi — o‘rnatilgan dvigatel ishlatilmoqda",
+    "steam.engine.toast.cxMissing": "CrossOver topilmadi — o‘rnatilgan dvigatel ishlatilmoqda",
+    "steam.engine.toast.title.cxBroken": "CrossOver ishlamayapti",
+    "steam.engine.toast.title.cxExpired": "CrossOver sinov muddati tugadi",
+    "steam.engine.toast.title.cxMissing": "CrossOver topilmadi"
+  },
+  "vi": {
+    "steam.engine.toast.body": "Đang dùng engine tích hợp cho lần khởi chạy này.",
+    "steam.engine.toast.cxBroken": "CrossOver không hoạt động — đang dùng engine tích hợp",
+    "steam.engine.toast.cxExpired": "CrossOver đã hết hạn dùng thử — đang dùng engine tích hợp",
+    "steam.engine.toast.cxMissing": "Không tìm thấy CrossOver — đang dùng engine tích hợp",
+    "steam.engine.toast.title.cxBroken": "CrossOver không hoạt động",
+    "steam.engine.toast.title.cxExpired": "CrossOver đã hết hạn dùng thử",
+    "steam.engine.toast.title.cxMissing": "Không tìm thấy CrossOver"
+  },
+  "zh_Hans": {
+    "steam.engine.toast.body": "本次启动使用内置引擎。",
+    "steam.engine.toast.cxBroken": "CrossOver 无法正常工作 — 使用内置引擎",
+    "steam.engine.toast.cxExpired": "CrossOver 试用已过期 — 使用内置引擎",
+    "steam.engine.toast.cxMissing": "未找到 CrossOver — 使用内置引擎",
+    "steam.engine.toast.title.cxBroken": "CrossOver 无法正常工作",
+    "steam.engine.toast.title.cxExpired": "CrossOver 试用已过期",
+    "steam.engine.toast.title.cxMissing": "未找到 CrossOver"
+  },
+  "zh_Hant": {
+    "steam.engine.toast.body": "本次啟動使用內建引擎。",
+    "steam.engine.toast.cxBroken": "CrossOver 無法正常運作 — 使用內建引擎",
+    "steam.engine.toast.cxExpired": "CrossOver 試用已到期 — 使用內建引擎",
+    "steam.engine.toast.cxMissing": "找不到 CrossOver — 使用內建引擎",
+    "steam.engine.toast.title.cxBroken": "CrossOver 無法正常運作",
+    "steam.engine.toast.title.cxExpired": "CrossOver 試用已到期",
+    "steam.engine.toast.title.cxMissing": "找不到 CrossOver"
+  }
+}

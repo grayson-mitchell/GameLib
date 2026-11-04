@@ -419,7 +419,18 @@
             "notify": "Eine unterbrochene Installation für {{game}} kann fortgesetzt werden — klicke auf Installieren, um fortzufahren"
         },
         "engine": {
-            "wineTabHint": "GameLib wählt die Wine-Engine und die Bottle für Steam-Spiele aus."
+            "wineTabHint": "GameLib wählt die Wine-Engine und die Bottle für Steam-Spiele aus.",
+            "toast": {
+                "body": "Für diesen Start wird die integrierte Engine verwendet.",
+                "cxBroken": "CrossOver funktioniert nicht — integrierte Engine wird verwendet",
+                "cxExpired": "CrossOver-Testversion abgelaufen — integrierte Engine wird verwendet",
+                "cxMissing": "CrossOver nicht gefunden — integrierte Engine wird verwendet",
+                "title": {
+                    "cxBroken": "CrossOver funktioniert nicht",
+                    "cxExpired": "CrossOver-Testversion abgelaufen",
+                    "cxMissing": "CrossOver nicht gefunden"
+                }
+            }
         }
     },
     "themeSelector": {

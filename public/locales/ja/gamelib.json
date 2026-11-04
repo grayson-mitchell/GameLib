@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "すべてのコピーを削除…"
         },
         "engine": {
-            "wineTabHint": "GameLib が Steam ゲーム用の Wine エンジンとボトルを選びます。"
+            "wineTabHint": "GameLib が Steam ゲーム用の Wine エンジンとボトルを選びます。",
+            "toast": {
+                "body": "今回の起動では内蔵エンジンを使用します。",
+                "cxBroken": "CrossOver が動作していません — 内蔵エンジンを使用",
+                "cxExpired": "CrossOver の試用期間が終了しました — 内蔵エンジンを使用",
+                "cxMissing": "CrossOver が見つかりません — 内蔵エンジンを使用",
+                "title": {
+                    "cxBroken": "CrossOver が動作していません",
+                    "cxExpired": "CrossOver の試用期間が終了しました",
+                    "cxMissing": "CrossOver が見つかりません"
+                }
+            }
         }
     },
     "steamgriddb": {

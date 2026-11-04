@@ -524,7 +524,18 @@
             "removeAllCopiesLabel": "Rimuovi tutte le copie…"
         },
         "engine": {
-            "wineTabHint": "GameLib sceglie il motore Wine e la bottle per i giochi Steam."
+            "wineTabHint": "GameLib sceglie il motore Wine e la bottle per i giochi Steam.",
+            "toast": {
+                "body": "Per questo avvio viene usato il motore integrato.",
+                "cxBroken": "CrossOver non funziona — uso del motore integrato",
+                "cxExpired": "Prova di CrossOver scaduta — uso del motore integrato",
+                "cxMissing": "CrossOver non trovato — uso del motore integrato",
+                "title": {
+                    "cxBroken": "CrossOver non funziona",
+                    "cxExpired": "Prova di CrossOver scaduta",
+                    "cxMissing": "CrossOver non trovato"
+                }
+            }
         }
     },
     "steamgriddb": {

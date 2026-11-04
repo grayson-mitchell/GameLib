@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "Αφαίρεση όλων των αντιγράφων…"
         },
         "engine": {
-            "wineTabHint": "Το GameLib επιλέγει τη μηχανή Wine και το bottle για τα παιχνίδια Steam."
+            "wineTabHint": "Το GameLib επιλέγει τη μηχανή Wine και το bottle για τα παιχνίδια Steam.",
+            "toast": {
+                "body": "Χρησιμοποιείται η ενσωματωμένη μηχανή για αυτήν την εκκίνηση.",
+                "cxBroken": "Το CrossOver δεν λειτουργεί — χρήση της ενσωματωμένης μηχανής",
+                "cxExpired": "Η δοκιμαστική περίοδος του CrossOver έληξε — χρήση της ενσωματωμένης μηχανής",
+                "cxMissing": "Το CrossOver δεν βρέθηκε — χρήση της ενσωματωμένης μηχανής",
+                "title": {
+                    "cxBroken": "Το CrossOver δεν λειτουργεί",
+                    "cxExpired": "Η δοκιμαστική περίοδος του CrossOver έληξε",
+                    "cxMissing": "Το CrossOver δεν βρέθηκε"
+                }
+            }
         }
     },
     "steamgriddb": {

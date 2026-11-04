@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "Fjern alle kopier…"
         },
         "engine": {
-            "wineTabHint": "GameLib velger Wine-motoren og bottle for Steam-spill."
+            "wineTabHint": "GameLib velger Wine-motoren og bottle for Steam-spill.",
+            "toast": {
+                "body": "Bruker den innebygde motoren for denne starten.",
+                "cxBroken": "CrossOver fungerer ikke — bruker innebygd motor",
+                "cxExpired": "CrossOver-prøveperioden er utløpt — bruker innebygd motor",
+                "cxMissing": "CrossOver ble ikke funnet — bruker innebygd motor",
+                "title": {
+                    "cxBroken": "CrossOver fungerer ikke",
+                    "cxExpired": "CrossOver-prøveperioden er utløpt",
+                    "cxMissing": "CrossOver ble ikke funnet"
+                }
+            }
         }
     },
     "steamgriddb": {

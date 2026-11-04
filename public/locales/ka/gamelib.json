@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "ყველა ასლის წაშლა…"
         },
         "engine": {
-            "wineTabHint": "GameLib ირჩევს Wine-ის ძრავას და bottle-ს Steam-ის თამაშებისთვის."
+            "wineTabHint": "GameLib ირჩევს Wine-ის ძრავას და bottle-ს Steam-ის თამაშებისთვის.",
+            "toast": {
+                "body": "ამ გაშვებისთვის გამოიყენება ჩაშენებული ძრავა.",
+                "cxBroken": "CrossOver არ მუშაობს — გამოიყენება ჩაშენებული ძრავა",
+                "cxExpired": "CrossOver-ის საცდელი პერიოდი ამოიწურა — გამოიყენება ჩაშენებული ძრავა",
+                "cxMissing": "CrossOver ვერ მოიძებნა — გამოიყენება ჩაშენებული ძრავა",
+                "title": {
+                    "cxBroken": "CrossOver არ მუშაობს",
+                    "cxExpired": "CrossOver-ის საცდელი პერიოდი ამოიწურა",
+                    "cxMissing": "CrossOver ვერ მოიძებნა"
+                }
+            }
         }
     },
     "steamgriddb": {

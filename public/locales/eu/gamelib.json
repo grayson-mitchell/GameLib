@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "Kendu kopia guztiak…"
         },
         "engine": {
-            "wineTabHint": "GameLib-ek Wine motorra eta bottle-a hautatzen ditu Steam jokoetarako."
+            "wineTabHint": "GameLib-ek Wine motorra eta bottle-a hautatzen ditu Steam jokoetarako.",
+            "toast": {
+                "body": "Abiarazte honetarako motor integratua erabiltzen ari da.",
+                "cxBroken": "CrossOver ez dabil — motor integratua erabiltzen",
+                "cxExpired": "CrossOver-en proba-aldia amaitu da — motor integratua erabiltzen",
+                "cxMissing": "Ez da CrossOver aurkitu — motor integratua erabiltzen",
+                "title": {
+                    "cxBroken": "CrossOver ez dabil",
+                    "cxExpired": "CrossOver-en proba-aldia amaitu da",
+                    "cxMissing": "Ez da CrossOver aurkitu"
+                }
+            }
         }
     },
     "steamgriddb": {

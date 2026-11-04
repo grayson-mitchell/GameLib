@@ -531,7 +531,18 @@
             "removeAllCopiesLabel": "Usuń wszystkie kopie…"
         },
         "engine": {
-            "wineTabHint": "GameLib wybiera silnik Wine i bottle dla gier ze Steam."
+            "wineTabHint": "GameLib wybiera silnik Wine i bottle dla gier ze Steam.",
+            "toast": {
+                "body": "Przy tym uruchomieniu używany jest wbudowany silnik.",
+                "cxBroken": "CrossOver nie działa — używany jest wbudowany silnik",
+                "cxExpired": "Okres próbny CrossOver wygasł — używany jest wbudowany silnik",
+                "cxMissing": "Nie znaleziono CrossOver — używany jest wbudowany silnik",
+                "title": {
+                    "cxBroken": "CrossOver nie działa",
+                    "cxExpired": "Okres próbny CrossOver wygasł",
+                    "cxMissing": "Nie znaleziono CrossOver"
+                }
+            }
         }
     },
     "steamgriddb": {

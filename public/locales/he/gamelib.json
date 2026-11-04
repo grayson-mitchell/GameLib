@@ -524,7 +524,18 @@
             "removeAllCopiesLabel": "הסר את כל העותקים…"
         },
         "engine": {
-            "wineTabHint": "GameLib בוחר את מנוע Wine ואת ה-bottle עבור משחקי Steam."
+            "wineTabHint": "GameLib בוחר את מנוע Wine ואת ה-bottle עבור משחקי Steam.",
+            "toast": {
+                "body": "נעשה שימוש במנוע המובנה עבור ההפעלה הזו.",
+                "cxBroken": "CrossOver לא עובד — שימוש במנוע המובנה",
+                "cxExpired": "תקופת הניסיון של CrossOver הסתיימה — שימוש במנוע המובנה",
+                "cxMissing": "CrossOver לא נמצא — שימוש במנוע המובנה",
+                "title": {
+                    "cxBroken": "CrossOver לא עובד",
+                    "cxExpired": "תקופת הניסיון של CrossOver הסתיימה",
+                    "cxMissing": "CrossOver לא נמצא"
+                }
+            }
         }
     },
     "steamgriddb": {

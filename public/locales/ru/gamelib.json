@@ -531,7 +531,18 @@
             "removeAllCopiesLabel": "Удалить все копии…"
         },
         "engine": {
-            "wineTabHint": "GameLib выбирает движок Wine и bottle для игр Steam."
+            "wineTabHint": "GameLib выбирает движок Wine и bottle для игр Steam.",
+            "toast": {
+                "body": "Для этого запуска используется встроенный движок.",
+                "cxBroken": "CrossOver не работает — используется встроенный движок",
+                "cxExpired": "Пробный период CrossOver истёк — используется встроенный движок",
+                "cxMissing": "CrossOver не найден — используется встроенный движок",
+                "title": {
+                    "cxBroken": "CrossOver не работает",
+                    "cxExpired": "Пробный период CrossOver истёк",
+                    "cxMissing": "CrossOver не найден"
+                }
+            }
         }
     },
     "steamgriddb": {

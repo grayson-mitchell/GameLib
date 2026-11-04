@@ -524,7 +524,18 @@
             "removeAllCopiesLabel": "Ukloni sve kopije…"
         },
         "engine": {
-            "wineTabHint": "GameLib бира Wine енџин и bottle за Steam игре."
+            "wineTabHint": "GameLib бира Wine енџин и bottle за Steam игре.",
+            "toast": {
+                "body": "За ово покретање користи се уграђени енџин.",
+                "cxBroken": "CrossOver не ради — користи се уграђени енџин",
+                "cxExpired": "CrossOver пробни период је истекао — користи се уграђени енџин",
+                "cxMissing": "CrossOver није пронађен — користи се уграђени енџин",
+                "title": {
+                    "cxBroken": "CrossOver не ради",
+                    "cxExpired": "CrossOver пробни период је истекао",
+                    "cxMissing": "CrossOver није пронађен"
+                }
+            }
         }
     },
     "steamgriddb": {

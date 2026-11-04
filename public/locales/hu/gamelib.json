@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "Összes példány eltávolítása…"
         },
         "engine": {
-            "wineTabHint": "A GameLib választja ki a Wine motort és a bottle-t a Steam-játékokhoz."
+            "wineTabHint": "A GameLib választja ki a Wine motort és a bottle-t a Steam-játékokhoz.",
+            "toast": {
+                "body": "Ehhez az indításhoz a beépített motor van használatban.",
+                "cxBroken": "A CrossOver nem működik — a beépített motor van használatban",
+                "cxExpired": "A CrossOver próbaideje lejárt — a beépített motor van használatban",
+                "cxMissing": "A CrossOver nem található — a beépített motor van használatban",
+                "title": {
+                    "cxBroken": "A CrossOver nem működik",
+                    "cxExpired": "A CrossOver próbaideje lejárt",
+                    "cxMissing": "A CrossOver nem található"
+                }
+            }
         }
     },
     "steamgriddb": {

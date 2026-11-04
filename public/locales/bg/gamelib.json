@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "Премахване на всички копия…"
         },
         "engine": {
-            "wineTabHint": "GameLib избира двигателя Wine и bottle за игрите от Steam."
+            "wineTabHint": "GameLib избира двигателя Wine и bottle за игрите от Steam.",
+            "toast": {
+                "body": "За това стартиране се използва вграденият двигател.",
+                "cxBroken": "CrossOver не работи — използва се вграденият двигател",
+                "cxExpired": "Пробният период на CrossOver изтече — използва се вграденият двигател",
+                "cxMissing": "CrossOver не е намерен — използва се вграденият двигател",
+                "title": {
+                    "cxBroken": "CrossOver не работи",
+                    "cxExpired": "Пробният период на CrossOver изтече",
+                    "cxMissing": "CrossOver не е намерен"
+                }
+            }
         }
     },
     "steamgriddb": {

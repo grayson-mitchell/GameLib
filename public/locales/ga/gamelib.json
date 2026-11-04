@@ -538,7 +538,18 @@
             "removeAllCopiesLabel": "Bain gach cóip…"
         },
         "engine": {
-            "wineTabHint": "Roghnaíonn GameLib an t-inneall Wine agus an buidéal do chluichí Steam."
+            "wineTabHint": "Roghnaíonn GameLib an t-inneall Wine agus an buidéal do chluichí Steam.",
+            "toast": {
+                "body": "Á úsáid an inneall ionsuite don seoladh seo.",
+                "cxBroken": "Níl CrossOver ag obair — inneall ionsuite in úsáid",
+                "cxExpired": "Tá triail CrossOver caite — inneall ionsuite in úsáid",
+                "cxMissing": "Níor aimsíodh CrossOver — inneall ionsuite in úsáid",
+                "title": {
+                    "cxBroken": "Níl CrossOver ag obair",
+                    "cxExpired": "Tá triail CrossOver caite",
+                    "cxMissing": "Níor aimsíodh CrossOver"
+                }
+            }
         }
     },
     "steamgriddb": {

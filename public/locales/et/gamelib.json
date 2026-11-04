@@ -514,7 +514,18 @@
             }
         },
         "engine": {
-            "wineTabHint": "GameLib valib Steami mängudele Wine'i mootori ja bottle'i."
+            "wineTabHint": "GameLib valib Steami mängudele Wine'i mootori ja bottle'i.",
+            "toast": {
+                "body": "Selle käivituse jaoks kasutatakse sisseehitatud mootorit.",
+                "cxBroken": "CrossOver ei tööta — kasutatakse sisseehitatud mootorit",
+                "cxExpired": "CrossOveri prooviaeg on lõppenud — kasutatakse sisseehitatud mootorit",
+                "cxMissing": "CrossOverit ei leitud — kasutatakse sisseehitatud mootorit",
+                "title": {
+                    "cxBroken": "CrossOver ei tööta",
+                    "cxExpired": "CrossOveri prooviaeg on lõppenud",
+                    "cxMissing": "CrossOverit ei leitud"
+                }
+            }
         }
     },
     "steamgriddb": {

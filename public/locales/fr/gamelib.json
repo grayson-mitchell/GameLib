@@ -425,7 +425,18 @@
             "notify": "Une installation interrompue pour {{game}} est prête à reprendre — cliquez sur Installer pour continuer"
         },
         "engine": {
-            "wineTabHint": "GameLib choisit le moteur Wine et la bouteille pour les jeux Steam."
+            "wineTabHint": "GameLib choisit le moteur Wine et la bouteille pour les jeux Steam.",
+            "toast": {
+                "body": "Utilisation du moteur intégré pour ce lancement.",
+                "cxBroken": "CrossOver ne fonctionne pas — utilisation du moteur intégré",
+                "cxExpired": "Période d'essai de CrossOver terminée — utilisation du moteur intégré",
+                "cxMissing": "CrossOver introuvable — utilisation du moteur intégré",
+                "title": {
+                    "cxBroken": "CrossOver ne fonctionne pas",
+                    "cxExpired": "Période d'essai de CrossOver terminée",
+                    "cxMissing": "CrossOver introuvable"
+                }
+            }
         }
     },
     "themeSelector": {

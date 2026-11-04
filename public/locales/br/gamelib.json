@@ -538,7 +538,18 @@
             "removeAllCopiesLabel": "Dilemel an holl eilskridoù…"
         },
         "engine": {
-            "wineTabHint": "GameLib a ziuz ar c’heflusker Wine hag ar voutailh evit c’hoarioù Steam."
+            "wineTabHint": "GameLib a ziuz ar c’heflusker Wine hag ar voutailh evit c’hoarioù Steam.",
+            "toast": {
+                "body": "Implijet eo ar c’heflusker enframmet evit al lañs-mañ.",
+                "cxBroken": "CrossOver ne laka ket — ar c’heflusker enframmet a vez implijet",
+                "cxExpired": "Echuet eo prantad amprouiñ CrossOver — ar c’heflusker enframmet a vez implijet",
+                "cxMissing": "CrossOver n’eo ket bet kavet — ar c’heflusker enframmet a vez implijet",
+                "title": {
+                    "cxBroken": "CrossOver ne laka ket",
+                    "cxExpired": "Echuet eo prantad amprouiñ CrossOver",
+                    "cxMissing": "CrossOver n’eo ket bet kavet"
+                }
+            }
         }
     },
     "steamgriddb": {

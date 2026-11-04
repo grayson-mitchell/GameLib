@@ -531,7 +531,18 @@
             "removeAllCopiesLabel": "Видалити всі копії…"
         },
         "engine": {
-            "wineTabHint": "GameLib вибирає рушій Wine і бутлку для ігор Steam."
+            "wineTabHint": "GameLib вибирає рушій Wine і бутлку для ігор Steam.",
+            "toast": {
+                "body": "Для цього запуску використовується вбудований рушій.",
+                "cxBroken": "CrossOver не працює — використовується вбудований рушій",
+                "cxExpired": "Пробний період CrossOver закінчився — використовується вбудований рушій",
+                "cxMissing": "CrossOver не знайдено — використовується вбудований рушій",
+                "title": {
+                    "cxBroken": "CrossOver не працює",
+                    "cxExpired": "Пробний період CrossOver закінчився",
+                    "cxMissing": "CrossOver не знайдено"
+                }
+            }
         }
     },
     "steamgriddb": {

@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "Tüm kopyaları kaldır…"
         },
         "engine": {
-            "wineTabHint": "GameLib, Steam oyunları için Wine motorunu ve bottle'ı seçer."
+            "wineTabHint": "GameLib, Steam oyunları için Wine motorunu ve bottle'ı seçer.",
+            "toast": {
+                "body": "Bu başlatma için yerleşik motor kullanılıyor.",
+                "cxBroken": "CrossOver çalışmıyor — yerleşik motor kullanılıyor",
+                "cxExpired": "CrossOver deneme süresi doldu — yerleşik motor kullanılıyor",
+                "cxMissing": "CrossOver bulunamadı — yerleşik motor kullanılıyor",
+                "title": {
+                    "cxBroken": "CrossOver çalışmıyor",
+                    "cxExpired": "CrossOver deneme süresi doldu",
+                    "cxMissing": "CrossOver bulunamadı"
+                }
+            }
         }
     },
     "steamgriddb": {

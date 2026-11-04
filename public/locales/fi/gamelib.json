@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "Poista kaikki kopiot…"
         },
         "engine": {
-            "wineTabHint": "GameLib valitsee Steam-peleille Wine-moottorin ja bottlen."
+            "wineTabHint": "GameLib valitsee Steam-peleille Wine-moottorin ja bottlen.",
+            "toast": {
+                "body": "Tässä käynnistyksessä käytetään sisäänrakennettua moottoria.",
+                "cxBroken": "CrossOver ei toimi — käytetään sisäänrakennettua moottoria",
+                "cxExpired": "CrossOverin kokeilujakso on päättynyt — käytetään sisäänrakennettua moottoria",
+                "cxMissing": "CrossOveria ei löytynyt — käytetään sisäänrakennettua moottoria",
+                "title": {
+                    "cxBroken": "CrossOver ei toimi",
+                    "cxExpired": "CrossOverin kokeilujakso on päättynyt",
+                    "cxMissing": "CrossOveria ei löytynyt"
+                }
+            }
         }
     },
     "steamgriddb": {

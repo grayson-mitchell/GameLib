@@ -545,7 +545,18 @@
             "removeAllCopiesLabel": "إزالة جميع النسخ…"
         },
         "engine": {
-            "wineTabHint": "يختار GameLib محرك Wine وbottle لألعاب Steam."
+            "wineTabHint": "يختار GameLib محرك Wine وbottle لألعاب Steam.",
+            "toast": {
+                "body": "يتم استخدام المحرك المدمج لهذا التشغيل.",
+                "cxBroken": "CrossOver لا يعمل — استخدام المحرك المدمج",
+                "cxExpired": "انتهت الفترة التجريبية لـ CrossOver — استخدام المحرك المدمج",
+                "cxMissing": "لم يتم العثور على CrossOver — استخدام المحرك المدمج",
+                "title": {
+                    "cxBroken": "CrossOver لا يعمل",
+                    "cxExpired": "انتهت الفترة التجريبية لـ CrossOver",
+                    "cxMissing": "لم يتم العثور على CrossOver"
+                }
+            }
         }
     },
     "steamgriddb": {

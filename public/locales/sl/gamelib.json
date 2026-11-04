@@ -531,7 +531,18 @@
             "removeAllCopiesLabel": "Odstrani vse kopije …"
         },
         "engine": {
-            "wineTabHint": "GameLib izbere pogon Wine in bottle za igre Steam."
+            "wineTabHint": "GameLib izbere pogon Wine in bottle za igre Steam.",
+            "toast": {
+                "body": "Za ta zagon se uporablja vgrajeni pogon.",
+                "cxBroken": "CrossOver ne deluje — uporablja se vgrajeni pogon",
+                "cxExpired": "Preizkusno obdobje CrossOver je poteklo — uporablja se vgrajeni pogon",
+                "cxMissing": "CrossOver ni bil najden — uporablja se vgrajeni pogon",
+                "title": {
+                    "cxBroken": "CrossOver ne deluje",
+                    "cxExpired": "Preizkusno obdobje CrossOver je poteklo",
+                    "cxMissing": "CrossOver ni bil najden"
+                }
+            }
         }
     },
     "steamgriddb": {

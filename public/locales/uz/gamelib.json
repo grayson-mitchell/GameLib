@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "Barcha nusxalarni olib tashlash…"
         },
         "engine": {
-            "wineTabHint": "GameLib Steam o‘yinlari uchun Wine dvigateli va bottle’ni tanlaydi."
+            "wineTabHint": "GameLib Steam o‘yinlari uchun Wine dvigateli va bottle’ni tanlaydi.",
+            "toast": {
+                "body": "Bu ishga tushirish uchun o‘rnatilgan dvigatel ishlatilmoqda.",
+                "cxBroken": "CrossOver ishlamayapti — o‘rnatilgan dvigatel ishlatilmoqda",
+                "cxExpired": "CrossOver sinov muddati tugadi — o‘rnatilgan dvigatel ishlatilmoqda",
+                "cxMissing": "CrossOver topilmadi — o‘rnatilgan dvigatel ishlatilmoqda",
+                "title": {
+                    "cxBroken": "CrossOver ishlamayapti",
+                    "cxExpired": "CrossOver sinov muddati tugadi",
+                    "cxMissing": "CrossOver topilmadi"
+                }
+            }
         }
     },
     "steamgriddb": {

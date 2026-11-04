@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "ลบทุกสำเนา…"
         },
         "engine": {
-            "wineTabHint": "GameLib เลือกเอนจิน Wine และบอตเทิลสำหรับเกม Steam"
+            "wineTabHint": "GameLib เลือกเอนจิน Wine และบอตเทิลสำหรับเกม Steam",
+            "toast": {
+                "body": "ใช้เอนจินในตัวสำหรับการเปิดครั้งนี้",
+                "cxBroken": "CrossOver ใช้งานไม่ได้ — ใช้เอนจินในตัว",
+                "cxExpired": "CrossOver หมดช่วงทดลองใช้แล้ว — ใช้เอนจินในตัว",
+                "cxMissing": "ไม่พบ CrossOver — ใช้เอนจินในตัว",
+                "title": {
+                    "cxBroken": "CrossOver ใช้งานไม่ได้",
+                    "cxExpired": "CrossOver หมดช่วงทดลองใช้แล้ว",
+                    "cxMissing": "ไม่พบ CrossOver"
+                }
+            }
         }
     },
     "steamgriddb": {

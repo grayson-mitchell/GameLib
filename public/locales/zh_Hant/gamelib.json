@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "移除所有副本……"
         },
         "engine": {
-            "wineTabHint": "GameLib 會為 Steam 遊戲選擇 Wine 引擎和 bottle。"
+            "wineTabHint": "GameLib 會為 Steam 遊戲選擇 Wine 引擎和 bottle。",
+            "toast": {
+                "body": "本次啟動使用內建引擎。",
+                "cxBroken": "CrossOver 無法正常運作 — 使用內建引擎",
+                "cxExpired": "CrossOver 試用已到期 — 使用內建引擎",
+                "cxMissing": "找不到 CrossOver — 使用內建引擎",
+                "title": {
+                    "cxBroken": "CrossOver 無法正常運作",
+                    "cxExpired": "CrossOver 試用已到期",
+                    "cxMissing": "找不到 CrossOver"
+                }
+            }
         }
     },
     "steamgriddb": {

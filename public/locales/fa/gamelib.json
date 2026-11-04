@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "حذف همه نسخه‌ها…"
         },
         "engine": {
-            "wineTabHint": "GameLib موتور Wine و بطری را برای بازی‌های Steam انتخاب می‌کند."
+            "wineTabHint": "GameLib موتور Wine و بطری را برای بازی‌های Steam انتخاب می‌کند.",
+            "toast": {
+                "body": "برای این اجرا از موتور داخلی استفاده می‌شود.",
+                "cxBroken": "CrossOver کار نمی‌کند — استفاده از موتور داخلی",
+                "cxExpired": "دوره آزمایشی CrossOver به پایان رسیده است — استفاده از موتور داخلی",
+                "cxMissing": "CrossOver پیدا نشد — استفاده از موتور داخلی",
+                "title": {
+                    "cxBroken": "CrossOver کار نمی‌کند",
+                    "cxExpired": "دوره آزمایشی CrossOver به پایان رسیده است",
+                    "cxMissing": "CrossOver پیدا نشد"
+                }
+            }
         }
     },
     "steamgriddb": {

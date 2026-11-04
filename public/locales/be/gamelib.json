@@ -531,7 +531,18 @@
             "removeAllCopiesLabel": "Выдаліць усе копіі…"
         },
         "engine": {
-            "wineTabHint": "GameLib выбірае рухавік Wine і bottle для гульняў Steam."
+            "wineTabHint": "GameLib выбірае рухавік Wine і bottle для гульняў Steam.",
+            "toast": {
+                "body": "Для гэтага запуску выкарыстоўваецца ўбудаваны рухавік.",
+                "cxBroken": "CrossOver не працуе — выкарыстоўваецца ўбудаваны рухавік",
+                "cxExpired": "Пробны перыяд CrossOver скончыўся — выкарыстоўваецца ўбудаваны рухавік",
+                "cxMissing": "CrossOver не знойдзены — выкарыстоўваецца ўбудаваны рухавік",
+                "title": {
+                    "cxBroken": "CrossOver не працуе",
+                    "cxExpired": "Пробны перыяд CrossOver скончыўся",
+                    "cxMissing": "CrossOver не знойдзены"
+                }
+            }
         }
     },
     "steamgriddb": {

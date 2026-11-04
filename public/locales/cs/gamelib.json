@@ -531,7 +531,18 @@
             "removeAllCopiesLabel": "Odstranit všechny kopie…"
         },
         "engine": {
-            "wineTabHint": "GameLib vybírá pro hry ze Steamu engine Wine a bottle."
+            "wineTabHint": "GameLib vybírá pro hry ze Steamu engine Wine a bottle.",
+            "toast": {
+                "body": "Pro toto spuštění se používá vestavěný engine.",
+                "cxBroken": "CrossOver nefunguje — používá se vestavěný engine",
+                "cxExpired": "Zkušební doba CrossOver vypršela — používá se vestavěný engine",
+                "cxMissing": "CrossOver nebyl nalezen — používá se vestavěný engine",
+                "title": {
+                    "cxBroken": "CrossOver nefunguje",
+                    "cxExpired": "Zkušební doba CrossOver vypršela",
+                    "cxMissing": "CrossOver nebyl nalezen"
+                }
+            }
         }
     },
     "steamgriddb": {

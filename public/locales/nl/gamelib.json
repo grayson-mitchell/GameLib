@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "Alle kopieën verwijderen…"
         },
         "engine": {
-            "wineTabHint": "GameLib kiest de Wine-engine en de bottle voor Steam-games."
+            "wineTabHint": "GameLib kiest de Wine-engine en de bottle voor Steam-games.",
+            "toast": {
+                "body": "De ingebouwde engine wordt gebruikt voor deze start.",
+                "cxBroken": "CrossOver werkt niet — ingebouwde engine wordt gebruikt",
+                "cxExpired": "CrossOver-proefperiode verlopen — ingebouwde engine wordt gebruikt",
+                "cxMissing": "CrossOver niet gevonden — ingebouwde engine wordt gebruikt",
+                "title": {
+                    "cxBroken": "CrossOver werkt niet",
+                    "cxExpired": "CrossOver-proefperiode verlopen",
+                    "cxMissing": "CrossOver niet gevonden"
+                }
+            }
         }
     },
     "steamgriddb": {

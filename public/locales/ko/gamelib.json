@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "모든 사본 제거…"
         },
         "engine": {
-            "wineTabHint": "GameLib이 Steam 게임에 사용할 Wine 엔진과 보틀을 선택합니다."
+            "wineTabHint": "GameLib이 Steam 게임에 사용할 Wine 엔진과 보틀을 선택합니다.",
+            "toast": {
+                "body": "이번 실행에는 내장 엔진을 사용합니다.",
+                "cxBroken": "CrossOver가 작동하지 않음 — 내장 엔진 사용",
+                "cxExpired": "CrossOver 체험 기간 만료 — 내장 엔진 사용",
+                "cxMissing": "CrossOver를 찾을 수 없음 — 내장 엔진 사용",
+                "title": {
+                    "cxBroken": "CrossOver가 작동하지 않음",
+                    "cxExpired": "CrossOver 체험 기간 만료",
+                    "cxMissing": "CrossOver를 찾을 수 없음"
+                }
+            }
         }
     },
     "steamgriddb": {

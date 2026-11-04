@@ -524,7 +524,18 @@
             "removeAllCopiesLabel": "Remover todas as cópias…"
         },
         "engine": {
-            "wineTabHint": "O GameLib escolhe o mecanismo Wine e a bottle para os jogos da Steam."
+            "wineTabHint": "O GameLib escolhe o mecanismo Wine e a bottle para os jogos da Steam.",
+            "toast": {
+                "body": "Usando o mecanismo integrado nesta inicialização.",
+                "cxBroken": "O CrossOver não está funcionando — usando o mecanismo integrado",
+                "cxExpired": "O teste do CrossOver expirou — usando o mecanismo integrado",
+                "cxMissing": "CrossOver não encontrado — usando o mecanismo integrado",
+                "title": {
+                    "cxBroken": "O CrossOver não está funcionando",
+                    "cxExpired": "O teste do CrossOver expirou",
+                    "cxMissing": "CrossOver não encontrado"
+                }
+            }
         }
     },
     "steamgriddb": {

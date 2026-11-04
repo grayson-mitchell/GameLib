@@ -517,7 +517,18 @@
             "removeAllCopiesLabel": "എല്ലാ കോപ്പികളും നീക്കം ചെയ്യുക…"
         },
         "engine": {
-            "wineTabHint": "Steam ഗെയിമുകൾക്കായി GameLib Wine എഞ്ചിനും ബോട്ടിലും തിരഞ്ഞെടുക്കുന്നു."
+            "wineTabHint": "Steam ഗെയിമുകൾക്കായി GameLib Wine എഞ്ചിനും ബോട്ടിലും തിരഞ്ഞെടുക്കുന്നു.",
+            "toast": {
+                "body": "ഈ ലോഞ്ചിനായി ബിൽറ്റ്-ഇൻ എഞ്ചിൻ ഉപയോഗിക്കുന്നു.",
+                "cxBroken": "CrossOver പ്രവർത്തിക്കുന്നില്ല — ബിൽറ്റ്-ഇൻ എഞ്ചിൻ ഉപയോഗിക്കുന്നു",
+                "cxExpired": "CrossOver ട്രയൽ കാലാവധി കഴിഞ്ഞു — ബിൽറ്റ്-ഇൻ എഞ്ചിൻ ഉപയോഗിക്കുന്നു",
+                "cxMissing": "CrossOver കണ്ടെത്തിയില്ല — ബിൽറ്റ്-ഇൻ എഞ്ചിൻ ഉപയോഗിക്കുന്നു",
+                "title": {
+                    "cxBroken": "CrossOver പ്രവർത്തിക്കുന്നില്ല",
+                    "cxExpired": "CrossOver ട്രയൽ കാലാവധി കഴിഞ്ഞു",
+                    "cxMissing": "CrossOver കണ്ടെത്തിയില്ല"
+                }
+            }
         }
     },
     "steamgriddb": {
