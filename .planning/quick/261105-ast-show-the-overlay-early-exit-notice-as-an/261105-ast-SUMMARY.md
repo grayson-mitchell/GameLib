@@ -48,3 +48,7 @@ The "Game closed soon after starting" notice is now a non-blocking toast in the 
 
 ## Self-Check: PASSED
 Both commits exist; listed files present; only explicit paths staged.
+
+## Live check
+
+2026-11-05, operator, restarted `pnpm tauri:dev`: an overlay launch that exited within 30 s showed the toast with the new wording and no dialog. Result: pass.
