@@ -4380,7 +4380,7 @@ export default class SteamGame implements Game {
         title,
         i18next.t(
           'gamelib:steam.engine.overrideUnavailable',
-          'The engine chosen for this game in Advanced settings is not available ({{detail}}). Choose Automatic or install it.',
+          'The engine chosen for this game in Wine settings is not available ({{detail}}). Choose Automatic or install it.',
           { detail: decision.detail }
         ),
         'override-unavailable'

@@ -97,11 +97,11 @@ const SteamEngineNotices = ({ state }: Props) => {
             {state.overrideWarning === 'cx-expired'
               ? t(
                   'steam.engine.overrideWarning.cxExpired',
-                  'This game is set to CrossOver in Advanced settings, but its CrossOver trial has expired. CrossOver will show its own expired-trial window when the game starts. Choose Automatic to use the built-in engine instead.'
+                  'This game is set to CrossOver in Wine settings, but its CrossOver trial has expired. CrossOver will show its own expired-trial window when the game starts. Choose Automatic to use the built-in engine instead.'
                 )
               : t(
                   'steam.engine.overrideWarning.cxBroken',
-                  "This game is set to CrossOver in Advanced settings, but CrossOver isn't working for it, so the game won't start on CrossOver. Fix CrossOver, or choose Automatic to use the built-in engine instead."
+                  "This game is set to CrossOver in Wine settings, but CrossOver isn't working for it, so the game won't start on CrossOver. Fix CrossOver, or choose Automatic to use the built-in engine instead."
                 )}
           </p>
         </div>

@@ -54,7 +54,7 @@ const EngineBadge = ({ state }: Props) => {
   const label = t('steam.engine.badge.unsupported', 'Unsupported engine')
   const title = t(
     'steam.engine.badge.unsupportedTitle',
-    "This game uses an engine chosen in its Advanced settings ({{engine}}). Known fixes and compatibility ratings don't apply.",
+    "This game uses an engine chosen in its Wine settings ({{engine}}). Known fixes and compatibility ratings don't apply.",
     { engine: state.engineLabel ?? '' }
   )
   return (

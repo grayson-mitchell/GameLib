@@ -584,7 +584,7 @@
                 "builtin": "Built-in engine (best-effort)",
                 "builtinTitle": "CrossOver is unavailable for this game ({{reason}}), so GameLib runs it on its built-in Wine engine. It is slower and has no Direct3D 12 support.",
                 "unsupported": "Unsupported engine",
-                "unsupportedTitle": "This game uses an engine chosen in its Advanced settings ({{engine}}). Known fixes and compatibility ratings don't apply."
+                "unsupportedTitle": "This game uses an engine chosen in its Wine settings ({{engine}}). Known fixes and compatibility ratings don't apply."
             },
             "crossoverRequired": {
                 "bottled": "This game runs through Windows Steam, which needs CrossOver ({{reason}}). Install or renew CrossOver, then try again.",
@@ -614,10 +614,10 @@
                 "summary": "Engine (advanced)",
                 "warning": "Unsupported — known fixes and compatibility ratings don't apply"
             },
-            "overrideUnavailable": "The engine chosen for this game in Advanced settings is not available ({{detail}}). Choose Automatic or install it.",
+            "overrideUnavailable": "The engine chosen for this game in Wine settings is not available ({{detail}}). Choose Automatic or install it.",
             "overrideWarning": {
-                "cxBroken": "This game is set to CrossOver in Advanced settings, but CrossOver isn't working for it, so the game won't start on CrossOver. Fix CrossOver, or choose Automatic to use the built-in engine instead.",
-                "cxExpired": "This game is set to CrossOver in Advanced settings, but its CrossOver trial has expired. CrossOver will show its own expired-trial window when the game starts. Choose Automatic to use the built-in engine instead."
+                "cxBroken": "This game is set to CrossOver in Wine settings, but CrossOver isn't working for it, so the game won't start on CrossOver. Fix CrossOver, or choose Automatic to use the built-in engine instead.",
+                "cxExpired": "This game is set to CrossOver in Wine settings, but its CrossOver trial has expired. CrossOver will show its own expired-trial window when the game starts. Choose Automatic to use the built-in engine instead."
             },
             "reason": {
                 "cxBroken": "CrossOver isn't working",
