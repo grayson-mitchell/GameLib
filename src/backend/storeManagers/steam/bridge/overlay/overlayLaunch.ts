@@ -60,7 +60,20 @@ export function appendCxEnvTokens(
 
 // 60-11 (G1): dev-only diagnostic input probe. Optional everywhere; an unsafe
 // one is dropped so a diagnostic can never fail the overlay.
-type OverlayProbe = { dylibPath: string; logPath: string }
+type OverlayProbe = {
+  dylibPath: string
+  logPath: string
+  experiment?: string
+}
+
+// 60-15: closed allowlist for the release-on-open experiment. `key:release+block`
+// is excluded because overlay_shim's sendEvent: block would swallow the
+// Shift+Tab the key source counts.
+const RELEASE_EXPERIMENT_RE = /^(cb:release|cb:release\+block|key:release)$/
+
+function isValidReleaseExperiment(v: string | undefined): boolean {
+  return typeof v === 'string' && RELEASE_EXPERIMENT_RE.test(v)
+}
 
 type OverlayEnvArgs = {
   appId: string
@@ -79,9 +92,11 @@ export function overlayInputProbeFromEnv(
   a: { appId: string; traceRoot: string; dylibPath: string; now: number }
 ): OverlayProbe | undefined {
   if (env.GAMELIB_OVERLAY_INPUT_PROBE !== '1') return undefined
+  const experiment = env.GAMELIB_OVERLAY_RELEASE_EXPERIMENT
   return {
     dylibPath: a.dylibPath,
-    logPath: join(a.traceRoot, `input-probe-${a.appId}-${a.now}.log`)
+    logPath: join(a.traceRoot, `input-probe-${a.appId}-${a.now}.log`),
+    ...(isValidReleaseExperiment(experiment) ? { experiment } : {})
   }
 }
 
@@ -118,7 +133,17 @@ function overlayEnvValues(a: OverlayEnvArgs): OverlayStepResult<{
         { key: 'SteamGameId', value: a.appId },
         { key: 'SteamAppId', value: a.appId },
         ...(probe
-          ? [{ key: 'GAMELIB_OVERLAY_PROBE_LOG', value: probe.logPath }]
+          ? [
+              { key: 'GAMELIB_OVERLAY_PROBE_LOG', value: probe.logPath },
+              ...(isValidReleaseExperiment(probe.experiment)
+                ? [
+                    {
+                      key: 'GAMELIB_OVERLAY_RELEASE_EXPERIMENT',
+                      value: probe.experiment as string
+                    }
+                  ]
+                : [])
+            ]
           : [])
       ]
     }
@@ -137,7 +162,9 @@ export function buildOverlayCxTokens(
   return {
     status: 'ok',
     tokens: built.vars.map((v) =>
-      v.key === 'DYLD_INSERT_LIBRARIES' || v.key === 'GAMELIB_OVERLAY_PROBE_LOG'
+      v.key === 'DYLD_INSERT_LIBRARIES' ||
+      v.key === 'GAMELIB_OVERLAY_PROBE_LOG' ||
+      v.key === 'GAMELIB_OVERLAY_RELEASE_EXPERIMENT'
         ? `${v.key}='${v.value}'`
         : `${v.key}=${v.value}`
     )
@@ -154,6 +181,7 @@ export function buildOverlayEnvVars(
 
 const OVERLAY_ENV_KEYS = new Set([
   'GAMELIB_OVERLAY_PROBE_LOG',
+  'GAMELIB_OVERLAY_RELEASE_EXPERIMENT',
   'SteamOverlayGameId',
   'SteamGameId',
   'SteamAppId'

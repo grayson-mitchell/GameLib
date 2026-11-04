@@ -4785,7 +4785,9 @@ export default class SteamGame implements Game {
    * raises a notice: a missing or unusable probe just logs a warning.
    */
   private overlayProbeArg():
-    | { probe: { dylibPath: string; logPath: string } }
+    | {
+        probe: { dylibPath: string; logPath: string; experiment?: string }
+      }
     | Record<string, never> {
     try {
       const traceRoot = buildOverlayPaths(appFolder)?.traceRoot
@@ -4806,9 +4808,18 @@ export default class SteamGame implements Game {
       }
       mkdirSync(traceRoot, { recursive: true, mode: 0o700 })
       logInfo(
-        `SteamGame: appId ${this.appId} overlay input probe=on log=${probe.logPath.replace(userHome, '~')}`,
+        `SteamGame: appId ${this.appId} overlay input probe=on log=${probe.logPath.replace(userHome, '~')} experiment=${probe.experiment ?? 'off'}`,
         LogPrefix.Steam
       )
+      if (
+        process.env.GAMELIB_OVERLAY_RELEASE_EXPERIMENT !== undefined &&
+        !probe.experiment
+      ) {
+        logWarning(
+          `SteamGame: appId ${this.appId} overlay release experiment=invalid (ignored)`,
+          LogPrefix.Steam
+        )
+      }
       return { probe }
     } catch (e) {
       logWarning(

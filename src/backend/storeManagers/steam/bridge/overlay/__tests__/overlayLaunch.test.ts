@@ -418,6 +418,87 @@ describe('overlay input probe (60-11, G1)', () => {
     })
   })
 
+  describe('release experiment (60-15)', () => {
+    const a = {
+      appId: '3205720',
+      traceRoot: '/abs/trace',
+      dylibPath: '/abs/p.dylib',
+      now: 1
+    }
+    test.each(['cb:release', 'cb:release+block', 'key:release'])(
+      'valid %s is carried',
+      (v) => {
+        const p = overlayInputProbeFromEnv(
+          {
+            GAMELIB_OVERLAY_INPUT_PROBE: '1',
+            GAMELIB_OVERLAY_RELEASE_EXPERIMENT: v
+          },
+          a
+        )
+        expect(p?.experiment).toBe(v)
+      }
+    )
+    test.each([
+      undefined,
+      '',
+      'key:release+block',
+      'cb:release ',
+      'CB:RELEASE',
+      'cb:release;x'
+    ])('invalid %j is dropped', (v) => {
+      const p = overlayInputProbeFromEnv(
+        {
+          GAMELIB_OVERLAY_INPUT_PROBE: '1',
+          GAMELIB_OVERLAY_RELEASE_EXPERIMENT: v
+        },
+        a
+      )
+      expect(p).toBeDefined()
+      expect(p && 'experiment' in p).toBe(false)
+    })
+    test('experiment without the probe flag is undefined', () => {
+      expect(
+        overlayInputProbeFromEnv(
+          { GAMELIB_OVERLAY_RELEASE_EXPERIMENT: 'cb:release' },
+          a
+        )
+      ).toBeUndefined()
+    })
+    test('tokens append the quoted experiment after the probe log', () => {
+      const r = buildOverlayCxTokens({
+        ...base,
+        probe: { ...probe, experiment: 'cb:release+block' }
+      })
+      expect(r.status === 'ok' && r.tokens.slice(-2)).toEqual([
+        `GAMELIB_OVERLAY_PROBE_LOG='${probe.logPath}'`,
+        `GAMELIB_OVERLAY_RELEASE_EXPERIMENT='cb:release+block'`
+      ])
+      expect(r.status === 'ok' && r.tokens[0]).toMatch(
+        /^DYLD_INSERT_LIBRARIES='\/A\/overlay_shim\.dylib:.*overlay_input_probe\.dylib'$/
+      )
+    })
+    test('env vars carry the experiment and merge replaces the old one', () => {
+      const r = buildOverlayEnvVars({
+        ...base,
+        probe: { ...probe, experiment: 'key:release' }
+      })
+      expect(r.status).toBe('ok')
+      if (r.status !== 'ok') return
+      const v = {
+        key: 'GAMELIB_OVERLAY_RELEASE_EXPERIMENT',
+        value: 'key:release'
+      }
+      expect(r.vars).toContainEqual(v)
+      const out = mergeOverlayEnvVars(
+        [{ key: 'GAMELIB_OVERLAY_RELEASE_EXPERIMENT', value: 'old' }],
+        r.vars
+      )
+      expect(
+        out.filter((e) => e.key === 'GAMELIB_OVERLAY_RELEASE_EXPERIMENT')
+      ).toEqual([v])
+    })
+  })
+
   test('without a probe the output is unchanged', () => {
     const r = buildOverlayEnvVars(base)
     expect(r.status === 'ok' && r.vars.map((v) => v.key)).toEqual([
