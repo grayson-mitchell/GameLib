@@ -7,7 +7,7 @@ status: validated
 nyquist_compliant: true
 wave_0_complete: true
 created: "2026-10-17"
-validated: "2026-10-26"
+validated: "2026-11-04"
 ---
 
 # Phase 51 — Validation Strategy
@@ -51,7 +51,7 @@ validated: "2026-10-26"
 | 51-03-02 | 03 | 1 | sub-decision 2/3, D-51-08 | T-51-08 | fail-loud bundled JSON | unit | `pnpm jest src/backend/storeManagers/steam/bridge/__tests__/allowlist.test.ts src/backend/storeManagers/steam/bridge/__tests__/shimCoverage.test.ts src/backend/storeManagers/steam/bridge/__tests__/shimGenerate.test.ts --silent` | ✅ | ✅ green |
 | 51-03-03 | 03 | 1 | D-51-07, D-51-10 | T-51-09 | malformed verdict untrusted | unit | `pnpm jest src/backend/storeManagers/steam/bridge/__tests__/bridgeVerdict.test.ts src/backend/storeManagers/steam/__tests__/metadataCapture.test.ts --silent` | ✅ | ✅ green |
 | 51-04-01 | 04 | 1 | l10n standing req | T-51-11 | placeholder integrity | script | `python3 fill-record completeness check (see plan)` | n/a | ✅ plan-time script; superseded by 51-04-02 catalog gates |
-| 51-04-02 | 04 | 1 | l10n standing req | T-51-11 | gamelib-only catalogs touched | unit+lint | `pnpm jest meta/__tests__/gamelibCatalogParity.test.ts meta/__tests__/lintTranslations.test.ts meta/__tests__/i18nGlossary.test.ts meta/__tests__/i18nCatalogChurnGuard.test.ts --silent && pnpm lint-translations:gamelib` | ✅ | ✅ green — 2026-10-27 quick 261027-thn filled the 6 downloadManager.cancelDialog.* keys in all 48 locales; jest catalog/glossary/churn gates and lint-translations:gamelib green |
+| 51-04-02 | 04 | 1 | l10n standing req | T-51-11 | gamelib-only catalogs touched | unit+lint | `pnpm jest meta/__tests__/gamelibCatalogParity.test.ts meta/__tests__/lintTranslations.test.ts meta/__tests__/i18nGlossary.test.ts meta/__tests__/i18nCatalogChurnGuard.test.ts --silent && pnpm lint-translations:gamelib` | ✅ | ❌ red (external) — 2026-11-04: 96 hard failures from en-only keys `settings.navbar.run` (quick 261104-unp) and `steam.engine.wineTabHint` (quick 261104-tm6); no Phase 51 key; todo `2026-11-04-localise-run-tab-and-wine-tab-hint-keys.md` |
 | 51-05-01 | 05 | 1 | D-51-12 | T-51-12 | never deletes protected bottles | unit | `pnpm jest src/backend/storeManagers/steam/__tests__/removeCopies.test.ts src/backend/storeManagers/steam/__tests__/library.test.ts --silent` | ✅ | ✅ green |
 | 51-05-02 | 05 | 1 | folded todo LD-5 | — | N/A | gate | `pnpm planning-gates` | ✅ | ✅ green |
 | 51-06-01 | 06 | 2 | sub-decision 1, D-09 | T-51-13 | class returns via hidden pointer | unit | `pnpm jest meta/__tests__/gen_vtables.test.ts --silent` | ✅ | ✅ green |
@@ -102,7 +102,7 @@ validated: "2026-10-26"
 | 51-25-02 | 25 | gap | D-51-15 | T-51-39 | census routed vs verified rows | unit | `pnpm jest meta/__tests__/bridgeCensus.test.ts --silent` | ✅ | ✅ green |
 | 51-26-01/02 | 26 | gap | D-51-13, D-51-01 | — | live accessor probe (ELEX 411300) | manual | `checkpoint:human-verify` | n/a | ✅ manual — operator approved probe evidence |
 | 51-26-03 | 26 | gap | D-51-13, D-51-14 | — | Win64 core interfaces wired | unit | `pnpm jest src/backend/storeManagers/steam/bridge/__tests__/shimCoverage.test.ts meta/__tests__/gen_vtables.test.ts meta/__tests__/bridgeCensus.test.ts --silent` | ✅ | ✅ green |
-| 51-27 | 27 | gap | D-51-01/03/13/14/16 | — | packaged re-gate | manual | 51-UAT.md items 14-16 | n/a | ✅ manual — 14 pass, 15 issue, 16 skipped (deferred to its live-gate todo) |
+| 51-27 | 27 | gap | D-51-01/03/13/14/16 | — | packaged re-gate | manual | 51-UAT.md items 14-16 | n/a | ✅ manual — 14 pass, 15 issue, 16 pass (live, b13bb48e6) |
 | 51-28 | 28 | gap | D-51-14, D-51-08, D-51-11 | — | anchor re-baseline decision | manual | `grep -n "D-51-14 anchor re-baselined" .planning/STATE.md` | n/a | ✅ manual — decision recorded in STATE.md |
 | 51-29 | 29 | gap | D-51-15, D-51-06 | — | representative sample | manual | 51-UAT.md item 19 | n/a | ✅ manual — item 19 pass |
 | 51-30 | 30 | gap | D-51-15, D-51-14 | T-51-39 | closing census + "most" verdict | run+manual | `pnpm bridge-census` · UAT item 20 | n/a | ✅ census runs; item 20 pass; verdict in STATE.md (closed by Phase 53) |
@@ -157,7 +157,7 @@ Existing infrastructure (Jest, ts-jest, the bridge `__tests__/` directory, `fixt
 - [x] Feedback latency < 51s (first `pnpm build-steam-bridge` downloads zig and may exceed it once; 2026-10-26 run: zig cached)
 - [x] `nyquist_compliant: true` set in frontmatter (set by validate-phase)
 
-**Approval:** validated 2026-10-26 (validate-phase audit below)
+**Approval:** validated 2026-10-26; re-audited 2026-11-04 (audits below)
 
 ---
 
@@ -175,3 +175,18 @@ Map extended with gap-closure plans 51-20..51-30 (all tasks had automated verify
 
 **Update 2026-10-27 (quick 261027-thn):** row 51-04-02 is green. The key count was 6 at fill time (quick 261027-cux, 9271b7e67, removed `messageSteam`), so 288 pairs, not 336. Commit 6de4cce9b had recorded those 288 pairs in the presence baseline, which masked the hard failures; this quick filled all 288 with per-language translations (fill record `261027-thn-i18n-fill.json`, 288/288 through `validateTranslation`, sabotage control rejected) and the re-synced baseline (`LINT_TRANSLATIONS_WRITE_BASELINE=1 pnpm lint-translations:gamelib`) dropped exactly those pairs (1920 -> 1632). Commands run, all green: `pnpm jest meta/__tests__/lintTranslations.test.ts meta/__tests__/gamelibCatalogParity.test.ts meta/__tests__/i18nCatalogChurnGuard.test.ts meta/__tests__/i18nGlossary.test.ts --silent` (4 suites, 269 tests); `pnpm lint-translations:gamelib` (1632 findings, 0 hard failures, no cancelDialog finding); `pnpm i18n-churn-guard` (clean); `pnpm planning-gates` (12/12).
 
+---
+
+## Validation Audit 2026-11-04
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+Re-audit 1,505 commits after the 2026-10-26 audit; no Phase 51 plan changed. All 37 referenced jest files are on disk. Run on HEAD `0a819b944`: 36 of 37 suites green (3,020 of 3,022 tests); `pnpm codecheck`, `pnpm gen-vtables` with a clean diff of `native/steam-bridge/generated/`, `pnpm build-steam-bridge` and `pnpm bridge-census` all exit 0. Row 51-27 updated: UAT item 16 has since passed live (`b13bb48e6`).
+
+**Two reds, both external to Phase 51.** Operator chose "validate, log both as todos".
+1. Row 51-04-02: `lintTranslations.test.ts` fails 2 tests and `pnpm lint-translations:gamelib` has 96 hard failures. The cause is 2 keys added to `en` only by today's quick tasks 261104-unp and 261104-tm6, missing across 48 locales. Tracked in `2026-11-04-localise-run-tab-and-wine-tab-hint-keys.md`.
+2. `pnpm planning-gates` is 11/12. The `.planning/STATE.md` line `Plan: Not started` fails the SDK field-anchor gate, which requires the form `<N> of <M>`. This is not a Phase 51 row. Tracked in `2026-11-04-state-md-plan-field-fails-planning-gate.md`.
