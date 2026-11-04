@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60
 Plan: Not started
 Status: Milestone complete
-Last activity: 2026-11-05 - Completed quick task 261105-ast: overlay early-exit notice as in-app toast
+Last activity: 2026-11-05 - Completed quick task 261105-gy5: localise steam overlay toast keys
 
 Progress: [██████████] 100%
 
@@ -434,6 +434,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261105-9sr | settings.navbar.run and steam.engine.wineTabHint localised in all 48 non-en gamelib catalogs (+ mt manifests) via a validated fill record; presence baseline re-synced, unmasking the 96 pairs 30ccb0b5f had recorded (6960 -> 6864); 51-04-02 green; 4 en-only toast keys split to a new pending todo. | 2026-11-05 | 5459b4f38 | validateTranslation 96/96; 4 i18n suites 267/267; lint-translations:gamelib + i18n-churn-guard exit 0; planning-gates 11/12 (existing Plan: gate) | [261105-9sr-localise-settings-navbar-run-and-steam-e](./quick/261105-9sr-localise-settings-navbar-run-and-steam-e/) |
 | 261105-a72 | steam.engine.toast body + title.cx* and the 3 flat toast.cx* keys (backend-read) localised in all 48 non-en gamelib catalogs (+ mt manifests) via a validated fill record; baseline re-synced, unmasking 336 pairs (6864 -> 6528); steam.overlay.toast split to a new pending todo. | 2026-11-05 | 94c47302e | validateTranslation 336/336; 4 i18n suites 267/267; lint-translations:gamelib + i18n-churn-guard exit 0; planning-gates 11/12 (existing Plan: gate) | [261105-a72-localise-the-4-steam-engine-toast-keys-i](./quick/261105-a72-localise-the-4-steam-engine-toast-keys-i/) |
 | 261105-ast | Steam overlay early-exit notice moved from a native dialog to the in-app toast stack (new exitNotice push + third toast slot, focus-gated 8s countdown, dismiss); body reworded to "If this is a crash and keeps happening, try turning the overlay off ... Run > Steam overlay." | 2026-11-05 | 1962f8ee0 | backend jest 731/731; frontend jest 233 pass/1 skip; tsc exit 0; pnpm lint warning caps over (src 1135/1130, tests 665/661; per-file counts unchanged, pre-existing by inference); live tauri:dev check pass 2026-11-05 | [261105-ast-show-the-overlay-early-exit-notice-as-an](./quick/261105-ast-show-the-overlay-early-exit-notice-as-an/) |
+| 261105-gy5 | Steam overlay toast title/body + the 6 `steam.overlay.step.*` sentences that fill `{{step}}` localised in all 48 non-en gamelib catalogs (scope widened from 2 keys); baseline 6528 -> 6144; todo closed, exit/override follow-up filed. | 2026-11-05 | 7796dd9c1 | validateTranslation 384/384; lint-translations exit 0; 4 jest suites pass (267 tests) | [261105-gy5-localise-steam-overlay-toast-keys](./quick/261105-gy5-localise-steam-overlay-toast-keys/) |
 
 ## Deferred Items
 
