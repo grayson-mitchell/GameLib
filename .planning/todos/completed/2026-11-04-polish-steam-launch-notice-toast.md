@@ -44,3 +44,15 @@ that sketch:
 - Icon per cause: clock (cx-expired), wrench (cx-broken), search (cx-missing), eye-slash (overlay).
 - 2px warning progress hairline for the 8s auto-hide; pauses on hover; overlay countdown stays
   frozen until GameLib is in front (existing G4 gating). Dismiss × always visible. No swipe.
+
+## Closed 2026-11-05 (built in quick 261104-vvz; live-checked)
+
+Built in quick 261104-vvz (`30ccb0b5f`, `15bf076cb`) to sketch 006 variant A. On 2026-11-05 the
+component's Jest suite and `hardcodedStringGate.test.ts` passed (2 suites, 194/194), so the
+overlay-table literal failure noted above is resolved. Live check in `pnpm tauri:dev` the same
+day: the engine-fallback notice was triggered by temporarily renaming `/Applications/CrossOver.app`
+(restored straight afterwards). Operator verdict: a-f pass (entrance, icon, title/body, stripe;
+countdown and hover pause; frozen overlay bar; slide-out and slot collapse; dismiss and
+store-embed release; Reduce Motion fade only). Themes broadly work. The operator asked for deeper
+theming (highlights, text colours) as a follow-up, filed as
+`pending/2026-11-05-deeper-theming-of-launch-notice-toast.md`.
