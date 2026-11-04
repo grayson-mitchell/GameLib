@@ -121,6 +121,7 @@ import {
   restoreNeedsAbsentPin
 } from '../engine/engineSwitch'
 import {
+  publishOverlayExitNotice,
   publishOverlayNotice,
   recordLaunchDecision
 } from '../engine/engineState'
@@ -647,7 +648,8 @@ jest.mock('../engine/engineSwitch', () => ({
 }))
 jest.mock('../engine/engineState', () => ({
   recordLaunchDecision: jest.fn(),
-  publishOverlayNotice: jest.fn()
+  publishOverlayNotice: jest.fn(),
+  publishOverlayExitNotice: jest.fn()
 }))
 jest.mock('../engine/fallbackEngine', () => ({
   ensurePinnedEngine: jest.fn(),
@@ -14726,7 +14728,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         expect(__watchOverlayAttachMock).toHaveBeenCalledTimes(1)
       })
 
-      it('D-10: game gone at 12 s with code 1 shows one notice and the toggle pointer', async () => {
+      it('D-10: game gone at 12 s with code 1 shows one in-app toast', async () => {
         const id = freshId()
         await launchOn(id)
         mon().onFirstMatch()
@@ -14735,10 +14737,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         settleWine({ code: 1 })
         await flush()
         expect(exitNotices(id)).toHaveLength(1)
-        expect(showDialogBoxModalAuto).toHaveBeenCalledTimes(1)
-        expect(showDialogBoxModalAuto.mock.calls[0][0].message).toBe(
-          'gamelib:steam.overlay.exit.body'
-        )
+        expect(publishOverlayExitNotice).toHaveBeenCalledTimes(1)
+        expect(publishOverlayExitNotice).toHaveBeenCalledWith(id)
+        expect(showDialogBoxModalAuto).not.toHaveBeenCalled()
         expect(runWineCommand).toHaveBeenCalledTimes(1)
       })
 
@@ -14784,6 +14785,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         settleWine({ code: 0 })
         await flush()
         expect(exitNotices(id)).toHaveLength(0)
+        expect(publishOverlayExitNotice).not.toHaveBeenCalled()
       })
 
       it('D-10: a non-overlay launch dying at 5 s gets no overlay notice', async () => {

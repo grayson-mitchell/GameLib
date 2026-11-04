@@ -164,7 +164,10 @@ import {
   OVERLAY_STEP_TEXT,
   type OverlayStep
 } from './bridge/overlay/overlayNotice'
-import { publishOverlayNotice } from './engine/engineState'
+import {
+  publishOverlayNotice,
+  publishOverlayExitNotice
+} from './engine/engineState'
 import { readKnownFixes } from 'backend/knownFixes'
 import type { OverlayRunnerReady } from './bridge/overlay/overlayRunnerClone'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
@@ -5941,17 +5944,21 @@ export default class SteamGame implements Game {
           return
         }
         logWarning(formatOverlayExitNoticeLine(this.appId), LogPrefix.Steam)
-        this.showEngineDialog(
-          i18next.t(
+        const pushed = publishOverlayExitNotice(this.appId)
+        logInfo(
+          `SteamGame: appId ${this.appId} overlay exit notice surface=in-app pushed=${pushed}`,
+          LogPrefix.Steam
+        )
+        notify({
+          title: i18next.t(
             'gamelib:steam.overlay.exit.title',
             'Game closed soon after starting'
           ),
-          i18next.t(
+          body: i18next.t(
             'gamelib:steam.overlay.exit.body',
-            "The game exited within 30 seconds with the Steam overlay on. If this keeps happening, turn the overlay off in this game's settings: Run > Steam overlay."
-          ),
-          'overlay-exit-abnormal'
-        )
+            "The game exited within 30 seconds with the Steam overlay on. If this is a crash and keeps happening, try turning the overlay off in this game's settings: Run > Steam overlay."
+          )
+        })
       }
 
       let handle: ReturnType<typeof startBottleProcessMonitor> = null

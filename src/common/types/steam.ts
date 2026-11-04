@@ -283,6 +283,11 @@ export interface SteamEngineState {
       | 'env'
     seq: number
   } | null
+  /**
+   * Quick 261105-ast: set only on the push from publishOverlayExitNotice; the
+   * renderer shows it once per seq. The game has already exited.
+   */
+  exitNotice?: { seq: number } | null
 }
 
 /** Phase 59: one choice in the per-game engine override picker (D-14). */

@@ -5,6 +5,7 @@ import {
   __resetEngineStateForTests,
   dismissSteamEngineNotice,
   getSteamEngineState,
+  publishOverlayExitNotice,
   publishOverlayNotice,
   recordLaunchDecision,
   setEngineStatePublisher
@@ -141,7 +142,8 @@ describe('getSteamEngineState', () => {
       overlayEligible: true,
       overrideWarning: null,
       launchNotice: null,
-      overlayNotice: null
+      overlayNotice: null,
+      exitNotice: null
     })
     expect(probe).not.toHaveBeenCalled()
     ready = true
@@ -567,6 +569,46 @@ describe('recordLaunchDecision and publisher', () => {
     expect(pub.mock.calls[0][0].launchNotice).toBeNull()
     expect(pub.mock.calls[1][0].launchNotice).toBeNull()
     expect((await getSteamEngineState('1', deps))?.launchNotice).toBeNull()
+  })
+  describe('publishOverlayExitNotice (261105-ast)', () => {
+    it('re-pushes the last state with exitNotice and a rising shared seq, carrying other notices', () => {
+      const { deps } = mk(healthy(null))
+      const pub = jest.fn()
+      setEngineStatePublisher(pub)
+      recordLaunchDecision(
+        '3205720',
+        fallback('cx-expired'),
+        'GameLibSteamBridge-1',
+        deps
+      )
+      expect(pub.mock.calls[0][0].exitNotice).toBeNull()
+      expect(publishOverlayExitNotice('3205720')).toBe(true)
+      expect(publishOverlayExitNotice('3205720')).toBe(true)
+      const first = pub.mock.calls[1][0]
+      const second = pub.mock.calls[2][0]
+      expect(first).toEqual({
+        ...pub.mock.calls[0][0],
+        exitNotice: { seq: 2 }
+      })
+      expect(first.launchNotice).toEqual({ reason: 'cx-expired', seq: 1 })
+      expect(first.overlayNotice).toBeNull()
+      expect(second.exitNotice).toEqual({ seq: 3 })
+    })
+    it('returns false without publishing for no base state or bad appId', () => {
+      const { deps } = mk(healthy(null))
+      const pub = jest.fn()
+      setEngineStatePublisher(pub)
+      expect(publishOverlayExitNotice('3205720')).toBe(false)
+      recordLaunchDecision(
+        '3205720',
+        decision(healthy(null)),
+        'GameLibSteamBridge-1',
+        deps
+      )
+      pub.mockClear()
+      expect(publishOverlayExitNotice('abc')).toBe(false)
+      expect(pub).not.toHaveBeenCalled()
+    })
   })
   describe('publishOverlayNotice (G4)', () => {
     it('re-pushes the last state with overlayNotice and a rising shared seq, keeping launchNotice', () => {

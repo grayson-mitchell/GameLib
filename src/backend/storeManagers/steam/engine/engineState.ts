@@ -231,7 +231,8 @@ function compute(
     overlayEligible,
     overrideWarning,
     launchNotice,
-    overlayNotice: null
+    overlayNotice: null,
+    exitNotice: null
   }
 }
 
@@ -392,6 +393,31 @@ export function publishOverlayNotice(
   } catch (e) {
     logError(
       `SteamEngine: overlay notice publisher failed: ${String(e)}`,
+      LogPrefix.Steam
+    )
+    return false
+  }
+}
+
+/**
+ * Quick 261105-ast: push an in-app "game closed soon after starting" notice
+ * for an overlay launch that exited abnormally. Same shared seq counter as the
+ * other notices. Never retries and never changes settings (D-10). Never throws.
+ */
+export function publishOverlayExitNotice(appId: string): boolean {
+  if (!/^\d+$/.test(appId)) return false
+  const base = lastPublished.get(appId)
+  if (!base) return false
+  try {
+    const state: SteamEngineState = {
+      ...base,
+      exitNotice: { seq: ++launchNoticeSeq }
+    }
+    publisher(state)
+    return true
+  } catch (e) {
+    logError(
+      `SteamEngine: overlay exit notice publisher failed: ${String(e)}`,
       LogPrefix.Steam
     )
     return false
