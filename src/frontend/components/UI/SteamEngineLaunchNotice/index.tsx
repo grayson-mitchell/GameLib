@@ -32,6 +32,9 @@ const AUTO_HIDE_MS = 8000
 
 // Mirrors the backend's OVERLAY_STEP_TEXT (a test guards drift); the frontend
 // must not import backend at runtime.
+// i18n-gate-exempt: each entry's `key`/`en` pair is consumed through
+// `t(OVERLAY_STEP_KEYS[step].key, OVERLAY_STEP_KEYS[step].en)` in the overlay
+// toast below; `en` is the i18n defaultValue, not rendered text.
 // ts-prune-ignore-next
 export const OVERLAY_STEP_KEYS: Record<
   OverlayStepId,
