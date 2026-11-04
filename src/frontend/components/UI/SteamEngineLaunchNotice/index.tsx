@@ -6,6 +6,7 @@ import {
   faClock,
   faEyeSlash,
   faMagnifyingGlass,
+  faTriangleExclamation,
   faWrench,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
@@ -33,6 +34,11 @@ type OverlayStepId =
   | 'env'
 interface ShownOverlay {
   step: OverlayStepId
+  seq: number
+  phase: Phase
+}
+
+interface ShownExit {
   seq: number
   phase: Phase
 }
@@ -114,6 +120,9 @@ const isReason = (r: unknown): r is Reason =>
 // `launchNotice` is non-null only in the push from recordLaunchDecision, so a
 // page re-fetch (launchNotice null) never re-shows it. T-59-72: only the
 // three closed reason values map to catalogue strings.
+// Quick 261105-ast: a third stream shows the overlay early-exit notice
+// (exitNotice), which used to be a modal dialog. Same rules: once per seq,
+// frozen until GameLib is in front, catalogue strings only (T-ast-01).
 // Sketch 006 variant A. Every exit goes through a leaving phase so the store
 // embed stays suppressed until the notice is actually removed (L3).
 export default function SteamEngineLaunchNotice() {
@@ -121,8 +130,16 @@ export default function SteamEngineLaunchNotice() {
   const byAppId = useSteamEngineState((s) => s.byAppId)
   const lastSeq = useRef(0)
   const lastOverlaySeq = useRef(0)
+  const lastExitSeq = useRef(0)
   const [shown, setShown] = useState<Shown | null>(null)
   const [shownOverlay, setShownOverlay] = useState<ShownOverlay | null>(null)
+  const [shownExit, setShownExit] = useState<ShownExit | null>(null)
+  const [hoveredExit, setHoveredExit] = useState(false)
+  const [waitingExit, setWaitingExit] = useState(false)
+  const remainingExit = useRef(AUTO_HIDE_MS)
+  const pendingExit = useRef<ShownExit | null>(null)
+  const shownExitRef = useRef<ShownExit | null>(null)
+  shownExitRef.current = shownExit
   const [hovered, setHovered] = useState(false)
   const [hoveredOverlay, setHoveredOverlay] = useState(false)
   const [waiting, setWaiting] = useState(false)
@@ -157,6 +174,19 @@ export default function SteamEngineLaunchNotice() {
       setShownOverlay({ ...p, phase: 'in' })
     } else {
       setShownOverlay(null)
+    }
+  }
+
+  const finishExit = () => {
+    const p = pendingExit.current
+    pendingExit.current = null
+    if (p) {
+      remainingExit.current = AUTO_HIDE_MS
+      setHoveredExit(false)
+      setWaitingExit(!gameLibInFront())
+      setShownExit({ ...p, phase: 'in' })
+    } else {
+      setShownExit(null)
     }
   }
 
@@ -205,6 +235,47 @@ export default function SteamEngineLaunchNotice() {
       if (cur.phase === 'in') setShownOverlay({ ...cur, phase: 'leaving' })
     }
   }, [byAppId])
+
+  // Quick 261105-ast: overlay early exit. A third seq stream, same push.
+  useEffect(() => {
+    let newest: ShownExit | null = null
+    for (const state of Object.values(byAppId)) {
+      const n = state.exitNotice
+      if (!n || typeof n.seq !== 'number') continue
+      if (n.seq > lastExitSeq.current && (!newest || n.seq > newest.seq)) {
+        newest = { seq: n.seq, phase: 'in' }
+      }
+    }
+    if (!newest) return
+    lastExitSeq.current = newest.seq
+    const cur = shownExitRef.current
+    if (!cur) {
+      remainingExit.current = AUTO_HIDE_MS
+      setHoveredExit(false)
+      setWaitingExit(!gameLibInFront())
+      setShownExit(newest)
+    } else {
+      pendingExit.current = newest
+      if (cur.phase === 'in') setShownExit({ ...cur, phase: 'leaving' })
+    }
+  }, [byAppId])
+
+  // The exit notice no longer raises the window, so GameLib may still be
+  // behind: freeze the countdown until it is visible and focused.
+  useEffect(() => {
+    if (!shownExit || !waitingExit) return
+    const check = () => {
+      if (gameLibInFront()) setWaitingExit(false)
+    }
+    window.addEventListener('focus', check)
+    document.addEventListener('visibilitychange', check)
+    check()
+    return () => {
+      window.removeEventListener('focus', check)
+      document.removeEventListener('visibilitychange', check)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on seq/phase like the sibling streams
+  }, [shownExit?.seq, waitingExit])
 
   // The overlay notice fires as the game comes to the front, so its countdown
   // starts only once GameLib is visible and focused. One-way latch per notice.
@@ -261,6 +332,26 @@ export default function SteamEngineLaunchNotice() {
     }
   }, [overlaySeq, overlayPhase, hoveredOverlay, waiting])
 
+  const exitSeq = shownExit?.seq
+  const exitPhase = shownExit?.phase
+  useEffect(() => {
+    if (!shownExit || shownExit.phase !== 'in') return
+    if (hoveredExit || waitingExit) return
+    const startedAt = Date.now()
+    const id = setTimeout(
+      () => setShownExit({ ...shownExit, phase: 'leaving' }),
+      remainingExit.current
+    )
+    return () => {
+      clearTimeout(id)
+      remainingExit.current = Math.max(
+        0,
+        remainingExit.current - (Date.now() - startedAt)
+      )
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on seq/phase like the sibling streams
+  }, [exitSeq, exitPhase, hoveredExit, waitingExit])
+
   // Phase fallbacks (T-vvz-02): never get stuck if animationend is lost.
   useEffect(() => {
     if (!shown || shown.phase === 'in') return
@@ -288,10 +379,26 @@ export default function SteamEngineLaunchNotice() {
     return () => clearTimeout(id)
   }, [overlaySeq, overlayPhase])
 
-  // The native store embed would cover the notice, as for HumbleExpiryToast.
-  useSuppressStoreEmbedWhile(shown !== null || shownOverlay !== null)
+  useEffect(() => {
+    if (!shownExit || shownExit.phase === 'in') return
+    const cur = shownExit
+    const id = setTimeout(
+      () =>
+        cur.phase === 'leaving'
+          ? setShownExit({ ...cur, phase: 'collapsing' })
+          : finishExit(),
+      PHASE_FALLBACK_MS
+    )
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on seq/phase like the sibling streams
+  }, [exitSeq, exitPhase])
 
-  if (!shown && !shownOverlay) return null
+  // The native store embed would cover the notice, as for HumbleExpiryToast.
+  useSuppressStoreEmbedWhile(
+    shown !== null || shownOverlay !== null || shownExit !== null
+  )
+
+  if (!shown && !shownOverlay && !shownExit) return null
 
   // A plain (non-hook) helper: one slot + toast.
   const renderSlot = (o: {
@@ -380,6 +487,27 @@ export default function SteamEngineLaunchNotice() {
     )
   }
 
+  const exitNode = shownExit
+    ? renderSlot({
+        slotKey: 'exit',
+        seq: shownExit.seq,
+        phase: shownExit.phase,
+        overlay: true,
+        paused: hoveredExit,
+        waiting: waitingExit,
+        icon: faTriangleExclamation,
+        title: t('steam.overlay.exit.title', 'Game closed soon after starting'),
+        body: t(
+          'steam.overlay.exit.body',
+          "The game exited within 30 seconds with the Steam overlay on. If this is a crash and keeps happening, try turning the overlay off in this game's settings: Run > Steam overlay."
+        ),
+        setHover: setHoveredExit,
+        beginLeave: () => setShownExit({ ...shownExit, phase: 'leaving' }),
+        toCollapsing: () => setShownExit({ ...shownExit, phase: 'collapsing' }),
+        remove: finishExit
+      })
+    : null
+
   const overlayNode = shownOverlay
     ? renderSlot({
         slotKey: 'overlay',
@@ -439,6 +567,7 @@ export default function SteamEngineLaunchNotice() {
 
   return (
     <div className="steamEngineLaunchNoticeRegion">
+      {exitNode}
       {overlayNode}
       {engineNode}
     </div>

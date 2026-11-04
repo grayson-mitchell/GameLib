@@ -84,6 +84,7 @@ import {
   faClock,
   faEyeSlash,
   faMagnifyingGlass,
+  faTriangleExclamation,
   faWrench
 } from '@fortawesome/free-solid-svg-icons'
 import { useSuppressStoreEmbedWhile } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
@@ -442,6 +443,93 @@ describe('SteamEngineLaunchNotice', () => {
 
     it('step keys and defaults equal the backend OVERLAY_STEP_TEXT', () => {
       expect(OVERLAY_STEP_KEYS).toEqual(OVERLAY_STEP_TEXT)
+    })
+  })
+  describe('overlay exit notice (261105-ast)', () => {
+    const exitState = (seq: unknown) => ({
+      '3205720': { appId: '3205720', exitNotice: { seq } }
+    })
+    const BODY =
+      "The game exited within 30 seconds with the Steam overlay on. If this is a crash and keeps happening, try turning the overlay off in this game's settings: Run > Steam overlay."
+
+    it('shows the title and the exact body in a status toast with its own dismiss', () => {
+      storeState = exitState(3)
+      const out = render()
+      expect(statuses(out)).toHaveLength(1)
+      expect(text(out)).toBe(`Game closed soon after starting ${BODY}`)
+      expect(
+        find(out, (e) => e.props.icon === faTriangleExclamation)
+      ).toBeDefined()
+      expect(
+        find(out, (e) => typeof e.props.onClick === 'function')
+      ).toBeDefined()
+    })
+
+    it('same seq does not re-show after dismissal; a higher seq does', () => {
+      storeState = exitState(3)
+      expect(exit(dismiss(render()))).toBeNull()
+      storeState = exitState(3)
+      expect(render()).toBeNull()
+      storeState = exitState(4)
+      expect(render()).not.toBeNull()
+    })
+
+    it('stacks with overlay and engine notices, three statuses', () => {
+      storeState = {
+        '3205720': {
+          appId: '3205720',
+          launchNotice: { reason: 'cx-expired', seq: 1 },
+          overlayNotice: { step: 'env', seq: 2 },
+          exitNotice: { seq: 3 }
+        }
+      }
+      const out = render()
+      expect(statuses(out)).toHaveLength(3)
+      expect(text(out)).toContain('Game closed soon after starting')
+      expect(text(out)).toContain('Steam overlay unavailable')
+      expect(text(out)).toContain('CrossOver trial expired')
+    })
+
+    it('waits for focus, then auto-hides after 8 s', () => {
+      env.focused = false
+      storeState = exitState(3)
+      render()
+      jest.advanceTimersByTime(20000)
+      const waiting = render()
+      expect(cls(toast(waiting))).toContain('steamEngineLaunchNotice--waiting')
+      expect(cls(toast(waiting))).not.toContain('--leaving')
+      env.focused = true
+      fire('focus')
+      expect(cls(toast(render()))).not.toContain('--waiting')
+      jest.advanceTimersByTime(7999)
+      expect(cls(toast(render()))).not.toContain('--leaving')
+      jest.advanceTimersByTime(1)
+      expect(cls(toast(render()))).toContain('--leaving')
+    })
+
+    it('hover pauses the countdown', () => {
+      storeState = exitState(3)
+      const out = render()
+      toast(out)?.props.onMouseEnter?.()
+      const hovered = render()
+      expect(cls(toast(hovered))).toContain('steamEngineLaunchNotice--paused')
+      jest.advanceTimersByTime(20000)
+      expect(cls(toast(render()))).not.toContain('--leaving')
+    })
+
+    it('removes listeners and timers on unmount', () => {
+      env.focused = false
+      storeState = exitState(3)
+      render()
+      expect(focusListeners.focus).toHaveLength(1)
+      unmount()
+      expect(focusListeners.focus).toHaveLength(0)
+      expect(focusListeners.visibilitychange).toHaveLength(0)
+    })
+
+    it('renders nothing for a non-number seq', () => {
+      storeState = exitState('3')
+      expect(render()).toBeNull()
     })
   })
 })
