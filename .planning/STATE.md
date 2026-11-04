@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60
 Plan: Not started
 Status: Milestone complete
-Last activity: 2026-11-04 - Completed quick task 261104-vvz: build the toast from sketch 006
+Last activity: 2026-11-05 - Completed quick task 261105-9sr: Localise settings.navbar.run and steam.engine.wineTabHint in all 48 non-en catalogs
 
 Progress: [██████████] 100%
 
@@ -431,6 +431,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261104-unp | Per-game settings regrouped into Run and Advanced; Other tab removed (Run: launch option, game args, language, offline, stats overlay, Linux MangoHud/GameMode/Prime, Steam overlay; Advanced: alt exe, scripts, wrappers, env, verbose logs, ignore updates, system libs, BattlEye/EAC). Saved 'other' tab maps to Run; overlay-exit message now points at Run. | 2026-11-04 | 3cd2f5be7 | Source-text tests + i18n gates pass (208); live check approved | [261104-unp-regroup-game-settings-into-run-and-advan](./quick/261104-unp-regroup-game-settings-into-run-and-advan/) |
 | 261104-uxr | macOS Steam titles: the 11 inert Wine-tab toggles (DXVK, NVAPI/VKD3D, esync, fsync, Wayland, WoW64, msync, AVX-for-Rosetta, FSR, DXVK FPS limit) hidden behind `!isMacSteamTitle`; Tools kept (acts on shared Steam bottle). Only visible on hosts without CrossOver. | 2026-11-04 | 2a94e2856 | Placement tests 18/18; tsc/prettier clean; live regression check approved | [261104-uxr-hide-inert-wine-toggles-for-mac-steam-ga](./quick/261104-uxr-hide-inert-wine-toggles-for-mac-steam-ga/) |
 | 261104-vvz | Steam launch notice restyled to sketch 006 variant A: shared bottom-right stack region (slots collapse so the other toast glides), slide-in/slide-out-right with fade-only under reduced motion, layered shadow + warning stripe, title/body split (4 new keys), per-cause icons, 8s progress hairline that pauses on hover and stays frozen for the overlay notice until GameLib is in front; store embed held suppressed until exit ends. | 2026-11-04 | 15bf076cb | component 18/18; hardcodedStringGate 176/176; codecheck/prettier/vite build/i18n clean; live tauri:dev look check pending | [261104-vvz-build-the-toast-from-sketch-006](./quick/261104-vvz-build-the-toast-from-sketch-006/) |
+| 261105-9sr | settings.navbar.run and steam.engine.wineTabHint localised in all 48 non-en gamelib catalogs (+ mt manifests) via a validated fill record; presence baseline re-synced, unmasking the 96 pairs 30ccb0b5f had recorded (6960 -> 6864); 51-04-02 green; 4 en-only toast keys split to a new pending todo. | 2026-11-05 | 5459b4f38 | validateTranslation 96/96; 4 i18n suites 267/267; lint-translations:gamelib + i18n-churn-guard exit 0; planning-gates 11/12 (existing Plan: gate) | [261105-9sr-localise-settings-navbar-run-and-steam-e](./quick/261105-9sr-localise-settings-navbar-run-and-steam-e/) |
 
 ## Deferred Items
 
