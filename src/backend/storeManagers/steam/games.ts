@@ -4796,19 +4796,26 @@ export default class SteamGame implements Game {
     })
   }
 
+  private overlayInputLine(applied: boolean, reason?: string): string {
+    return `SteamGame: appId ${this.appId} overlay input fix=${OVERLAY_INPUT_FIX_CODE} applied=${applied}${
+      reason ? ` reason=${reason}` : ''
+    }`
+  }
+
   /**
    * 60-20 (G1): route-scoped overlay_input.dylib. Synchronous, no handle or
-   * timer, never throws, never raises a notice (D-08). Logs exactly one
-   * `overlay input fix=` line per overlay launch. The DRM route only logs: its
-   * result is not spread into the launch (D-04).
+   * timer, never throws, never raises a notice (D-08). Together with
+   * logOverlayInputOutcome it logs exactly one `overlay input fix=` line per
+   * overlay launch: a refusal (route, disabled, experiment, probe, missing) is
+   * logged here; a candidate path is returned unlogged and its outcome is logged
+   * once the launch values are known (60-REVIEW WR-04). The DRM route only logs:
+   * its result is not spread into the launch (D-04).
    */
   private overlayInputArg(
     route: 'tcp-clone' | 'env' | 'drm'
   ): { inputModulePath: string } | Record<string, never> {
     const line = (applied: boolean, reason?: string) =>
-      `SteamGame: appId ${this.appId} overlay input fix=${OVERLAY_INPUT_FIX_CODE} applied=${applied}${
-        reason ? ` reason=${reason}` : ''
-      }`
+      this.overlayInputLine(applied, reason)
     try {
       if (!OVERLAY_INPUT_FIX_ROUTES.has(route)) {
         logInfo(line(false, 'route'), LogPrefix.Steam)
@@ -4841,11 +4848,44 @@ export default class SteamGame implements Game {
         logWarning(line(false, 'missing'), LogPrefix.Steam)
         return {}
       }
-      logInfo(line(true), LogPrefix.Steam)
       return { inputModulePath: builtOverlayInputPath }
     } catch (e) {
       logWarning(line(false, `missing: ${String(e)}`), LogPrefix.Steam)
       return {}
+    }
+  }
+
+  /**
+   * 60-REVIEW WR-04: the outcome line for a candidate from overlayInputArg,
+   * read from the values the launch actually carries (CX_ENV tokens or env
+   * values). applied=true only when DYLD_INSERT_LIBRARIES names the module;
+   * otherwise (prepare error, runner refused, unsafe path dropped by the value
+   * builder, a throw) applied=false reason=not-injected. Never throws.
+   */
+  private logOverlayInputOutcome(
+    arg: { inputModulePath: string } | Record<string, never>,
+    carried: readonly string[]
+  ): void {
+    try {
+      if (!('inputModulePath' in arg)) return
+      const path = arg.inputModulePath
+      const key = 'DYLD_INSERT_LIBRARIES='
+      const applied = carried.some((entry) => {
+        if (!entry.startsWith(key)) return false
+        let v = entry.slice(key.length)
+        if (v.length >= 2 && v.startsWith("'") && v.endsWith("'")) {
+          v = v.slice(1, -1)
+        }
+        return v.split(':').includes(path)
+      })
+      if (applied) logInfo(this.overlayInputLine(true), LogPrefix.Steam)
+      else
+        logWarning(
+          this.overlayInputLine(false, 'not-injected'),
+          LogPrefix.Steam
+        )
+    } catch {
+      // Diagnostics only: never affects the launch.
     }
   }
 
@@ -4916,6 +4956,13 @@ export default class SteamGame implements Game {
     overlayLaunch?: OverlayLaunchPayload
   }> {
     let registered = false
+    // 60-REVIEW WR-04: the input-fix candidate and the values the launch really
+    // carries; the one outcome line is logged in `finally`, after every exit.
+    let inputArg:
+      | { inputModulePath: string }
+      | Record<string, never>
+      | undefined
+    let carried: readonly string[] = []
     try {
       const { getEngineSelection } = await import('./engine/engineRegistry')
       const { isNonCrossover } = await import('./engine/engineTypes')
@@ -4934,11 +4981,12 @@ export default class SteamGame implements Game {
         | undefined
       if (fallbackEngine) {
         if (this.resolveLaunchOverlay().enabled) {
+          inputArg = this.overlayInputArg('env')
           const result = await prepareOverlayEnv({
             appId: this.appId,
             shimPath: builtOverlayShimPath,
             steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH),
-            ...this.overlayInputArg('env'),
+            ...inputArg,
             ...this.overlayProbeArg()
           })
           if (result.status === 'error') {
@@ -4952,12 +5000,13 @@ export default class SteamGame implements Game {
           }
         }
       } else if (this.resolveLaunchOverlay().enabled) {
+        inputArg = this.overlayInputArg('tcp-clone')
         const result = await prepareOverlayLaunch({
           appId: this.appId,
           appFolder,
           shimPath: builtOverlayShimPath,
           steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH),
-          ...this.overlayInputArg('tcp-clone'),
+          ...inputArg,
           ...this.overlayProbeArg()
         })
         if (result.status === 'error') {
@@ -4980,14 +5029,16 @@ export default class SteamGame implements Game {
       if (ok) {
         if (setOverlayBridgeRunner(this.appId, ok.runner)) {
           registered = true
-          return {
+          const launched = {
             settings: getBridgeBottleSettings(this.appId),
             overlayLaunch: {
-              kind: 'cx-env',
+              kind: 'cx-env' as const,
               tokens: ok.tokens,
               runnerBin: ok.runner.wrapperBin
             }
           }
+          carried = ok.tokens
+          return launched
         }
         this.notifyOverlaySetupFailed(
           'clone',
@@ -5001,6 +5052,7 @@ export default class SteamGame implements Game {
         return { settings: getBridgeBottleSettings(this.appId) }
       }
       if (envVars) {
+        carried = envVars.map((v) => `${v.key}=${v.value}`)
         return { settings, overlayLaunch: { kind: 'env', vars: envVars } }
       }
       return { settings }
@@ -5011,6 +5063,8 @@ export default class SteamGame implements Game {
       )
       if (registered) clearDrmBridgeRunner(this.appId)
       return { settings }
+    } finally {
+      if (inputArg) this.logOverlayInputOutcome(inputArg, carried)
     }
   }
 

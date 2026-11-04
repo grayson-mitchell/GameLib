@@ -80,7 +80,9 @@ type OverlayEnvArgs = {
   shimPath: string
   steamBinDir: string
   // 60-20 (G1): the GameLib overlay_input.dylib, inserted after the renderer.
-  // Unsafe values are dropped silently (the caller logs); never fails a launch.
+  // An unsafe value, or any value beside a probe (WR-02), is dropped here
+  // without a log; never fails a launch. games.ts reads the drop from the built
+  // DYLD_INSERT_LIBRARIES and logs applied=false reason=not-injected (WR-04).
   inputModulePath?: string
   probe?: OverlayProbe
 }

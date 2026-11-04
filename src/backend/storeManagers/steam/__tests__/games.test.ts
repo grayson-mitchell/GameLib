@@ -14045,9 +14045,38 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           }
         })
 
+        // 60-REVIEW WR-04: applied= is read from what the launch carries, so
+        // the prepare mocks echo the module into DYLD_INSERT_LIBRARIES the way
+        // the real value builder does.
+        const echoTokens = (id: string) => (a: { inputModulePath?: string }) =>
+          Promise.resolve({
+            ...okResult(id),
+            tokens: [
+              `DYLD_INSERT_LIBRARIES='/s/shim.dylib${
+                a.inputModulePath ? `:${a.inputModulePath}` : ''
+              }'`,
+              `SteamAppId=${id}`
+            ]
+          })
+        const echoVars = (a: { inputModulePath?: string }) =>
+          Promise.resolve({
+            status: 'ok',
+            vars: [
+              {
+                key: 'DYLD_INSERT_LIBRARIES',
+                value: `/s/shim.dylib${
+                  a.inputModulePath ? `:${a.inputModulePath}` : ''
+                }`
+              }
+            ]
+          })
+        const notInjected = (id: string) => [
+          `SteamGame: appId ${id} overlay input fix=X-RELEASE+BLOCK applied=false reason=not-injected`
+        ]
+
         it('CrossOver clone, module present: passed and logged applied=true', async () => {
           const id = freshId()
-          __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
+          __prepareOverlayLaunchMock.mockImplementation(echoTokens(id))
           await callPrepare(id, {
             wineCrossoverBottle: bottleFor(id),
             wineVersion: crossover
@@ -14063,6 +14092,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         it('fallback engine: passed and logged applied=true', async () => {
           const id = freshId()
           pinStaging(id)
+          __prepareOverlayEnvMock.mockImplementation(echoVars)
           await callPrepare(id, {
             wineCrossoverBottle: bottleFor(id),
             wineVersion: staging
@@ -14070,8 +14100,67 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           expect(__prepareOverlayEnvMock.mock.calls[0][0].inputModulePath).toBe(
             inputPath
           )
-          expect(fixLines()).toHaveLength(1)
-          expect(fixLines()[0]).toContain('applied=true')
+          expect(fixLines()).toEqual([
+            `SteamGame: appId ${id} overlay input fix=X-RELEASE+BLOCK applied=true`
+          ])
+        })
+
+        it('clone prepare error: applied=false reason=not-injected, never applied=true', async () => {
+          const id = freshId()
+          __prepareOverlayLaunchMock.mockResolvedValue({
+            status: 'error',
+            step: 'clone',
+            cause: 'resign failed'
+          })
+          const out = await callPrepare(id, {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: crossover
+          })
+          expect(out.overlayLaunch).toBeUndefined()
+          expect(fixLines()).toEqual(notInjected(id))
+        })
+
+        it('runner registration refused: applied=false reason=not-injected', async () => {
+          const id = freshId()
+          __prepareOverlayLaunchMock.mockImplementation(echoTokens(id))
+          bottleMod.setOverlayBridgeRunner.mockReturnValue(false)
+          const out = await callPrepare(id, {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: crossover
+          })
+          expect(out.overlayLaunch).toBeUndefined()
+          expect(fixLines()).toEqual(notInjected(id))
+        })
+
+        it('module dropped by the value builder: applied=false reason=not-injected', async () => {
+          const id = freshId()
+          pinStaging(id)
+          // ok result whose DYLD_INSERT_LIBRARIES does not name the module
+          __prepareOverlayEnvMock.mockResolvedValue({
+            status: 'ok',
+            vars: [{ key: 'DYLD_INSERT_LIBRARIES', value: '/s/shim.dylib' }]
+          })
+          const out = await callPrepare(id, {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: staging
+          })
+          expect(out.overlayLaunch).toBeDefined()
+          expect(fixLines()).toEqual(notInjected(id))
+        })
+
+        it('fallback prepare error: applied=false reason=not-injected', async () => {
+          const id = freshId()
+          pinStaging(id)
+          __prepareOverlayEnvMock.mockResolvedValue({
+            status: 'error',
+            step: 'shim',
+            cause: 'overlay shim missing'
+          })
+          await callPrepare(id, {
+            wineCrossoverBottle: bottleFor(id),
+            wineVersion: staging
+          })
+          expect(fixLines()).toEqual(notInjected(id))
         })
 
         it('module missing: no arg, one warning, no toast, overlay still prepared', async () => {
