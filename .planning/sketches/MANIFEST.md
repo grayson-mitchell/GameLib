@@ -34,6 +34,7 @@ a usable tab style.
 | 003 | two-tier-card-nav | How does a vertical tier 2 behave under card tabs? | **Synthesis** | navigation, information-architecture, shell |
 | 004 | games-filter-panel | What goes in the Games tier-2 panel? | **C — hybrid** | navigation, filtering, library |
 | 005 | views-section-distinction | How does Views read as a different *kind* of control from the facet groups below it? | **D — synthesis**: C's segmented block + A's `VIEWS` header | library, filtering, tier-2, selection-state, theme-survival |
+| 006 | launch-notice-toast | What surface, accent and motion make the bottom-right Steam launch notice feel polished in every theme? | **A — refined stripe** | toast, notice, motion, steam, multi-theme |
 
 ## Outcome — Phases 34.10 and 34.11
 

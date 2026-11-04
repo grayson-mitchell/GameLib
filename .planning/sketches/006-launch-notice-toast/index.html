@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sketch 006 · Launch notice toast</title>
+<link rel="stylesheet" href="../themes/default.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&family=Cabin:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: #0b0d0e; font-family: var(--font-sans); color: var(--color-text);
+  padding-top: 52px; padding-bottom: 72px;
+}
+
+/* ─── sketch chrome ──────────────────────────────────────────── */
+#variant-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+  background: #16181a; border-bottom: 1px solid #2a2e31; padding: 8px 16px;
+  display: flex; gap: 8px; align-items: center; font-family: system-ui, sans-serif;
+}
+#variant-nav .brand {
+  font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  color: #6b7376; margin-right: 12px; font-weight: 600;
+}
+.variant-tab {
+  background: transparent; border: 1px solid #2a2e31; color: #b9c0c2; padding: 6px 12px;
+  border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit; transition: all .15s ease;
+}
+.variant-tab:hover { border-color: #4a5154; color: #e6ebec; }
+.variant-tab.active { background: #1de8f5; border-color: #1de8f5; color: #08191b; font-weight: 600; }
+
+.caption { max-width: 1100px; margin: 24px auto 16px; padding: 0 24px; font-family: system-ui, sans-serif; }
+.caption h2 { margin: 0 0 6px; font-size: 15px; color: #e6ebec; font-weight: 600; }
+.caption p { margin: 0; font-size: 13px; line-height: 1.55; color: #8b9295; max-width: 85ch; }
+.tradeoff { display: flex; gap: 18px; font-size: 12px; margin-top: 10px; flex-wrap: wrap; }
+.tradeoff span { color: #8b9295; }
+.good b { color: #58c06d; } .bad b { color: #d6704e; }
+
+#sketch-tools {
+  position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 9999;
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center;
+  background: #16181a; border: 1px solid #2a2e31; border-radius: 10px; padding: 6px 8px;
+  font-family: system-ui, sans-serif; font-size: 12px; color: #b9c0c2;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5); max-width: calc(100vw - 32px);
+}
+#sketch-tools button, #sketch-tools select {
+  background: #1f2326; color: #d6dcde; border: 1px solid #2f3437; border-radius: 6px;
+  padding: 5px 9px; font: inherit; cursor: pointer;
+}
+#sketch-tools button:hover { border-color: #4a5154; }
+#sketch-tools button.on { background: #1de8f5; color: #08191b; border-color: #1de8f5; }
+#sketch-tools label { display: flex; gap: 5px; align-items: center; padding: 0 4px; cursor: pointer; }
+.sep2 { width: 1px; height: 20px; background: #2f3437; margin: 0 2px; }
+
+/* ─── fake app window ────────────────────────────────────────── */
+.window {
+  max-width: 1100px; height: 600px; margin: 0 auto 0; border-radius: 10px; overflow: hidden;
+  border: 1px solid #2a2e31; box-shadow: var(--shadow-lg); background: var(--color-bg);
+  position: relative; display: flex; flex-direction: column;
+}
+@media (max-width: 1148px) { .window { margin: 0 16px; } }
+.titlebar {
+  height: var(--titlebar-height); flex: none; display: flex; align-items: center; gap: 8px;
+  padding: 0 var(--space-4); background: var(--navbar-background);
+}
+.tl { width: 12px; height: 12px; border-radius: 50%; }
+.tl.r { background: #ff5f57; } .tl.y { background: #febc2e; } .tl.g { background: #28c840; }
+.tabs { display: flex; gap: 4px; margin-left: calc(var(--traffic-light-inset) - 60px); align-self: flex-end; }
+.tabs span {
+  font-size: var(--text-sm); padding: 7px 16px; border-radius: 8px 8px 0 0; color: var(--color-text-muted);
+}
+.tabs span.on { background: var(--color-bg); color: var(--color-text); }
+.content { flex: 1; padding: var(--space-6); display: grid; gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); align-content: start; overflow: hidden; }
+.card { aspect-ratio: 3 / 4; border-radius: var(--radius-lg); background:
+  linear-gradient(160deg, var(--c1), var(--c2)); position: relative; overflow: hidden; }
+.card::after { content: attr(data-name); position: absolute; left: 10px; bottom: 10px; right: 10px;
+  font-size: var(--text-sm); font-weight: var(--semibold); color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+
+/* ─── the toast stack (shared bottom-right region) ───────────── */
+.toast-region {
+  position: absolute; right: var(--space-6); bottom: var(--space-6); z-index: 20;
+  display: flex; flex-direction: column; align-items: flex-end;
+  width: min(400px, calc(100% - 2 * var(--space-6)));
+  pointer-events: none;
+}
+/* Slot collapses its height so neighbours glide instead of jumping. */
+.slot { display: grid; grid-template-rows: 1fr; width: 100%;
+  transition: grid-template-rows 200ms cubic-bezier(.4,0,.2,1), margin-top 200ms cubic-bezier(.4,0,.2,1);
+  margin-top: var(--space-2); }
+.slot:first-child { margin-top: 0; }
+.slot.collapsed { grid-template-rows: 0fr; margin-top: 0; }
+.slot > div { min-height: 0; overflow: visible; }
+
+.toast {
+  pointer-events: auto; position: relative; display: flex; align-items: flex-start; gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4); overflow: hidden;
+  font-size: var(--text-sm); color: var(--color-text);
+  animation: toast-in 240ms cubic-bezier(.2, 1.1, .3, 1) both;
+}
+.toast.leaving { animation: toast-out 180ms cubic-bezier(.4, 0, 1, 1) both; }
+@keyframes toast-in {
+  from { transform: translateX(calc(100% + var(--space-6))); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+@keyframes toast-out {
+  from { transform: translateX(0); opacity: 1; }
+  to   { transform: translateX(calc(100% + var(--space-6))); opacity: 0; }
+}
+.reduce-motion .toast { animation-name: toast-fade-in; animation-duration: 160ms; }
+.reduce-motion .toast.leaving { animation-name: toast-fade-out; }
+.reduce-motion .slot { transition: none; }
+@keyframes toast-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes toast-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+.toast .icon { flex: none; display: grid; place-items: center; color: var(--color-warning); }
+.toast .icon svg { width: 16px; height: 16px; }
+.toast .text { flex: 1; min-width: 0; line-height: 1.4; padding-top: 1px; }
+.toast .title { font-weight: var(--semibold); display: block; }
+.toast .body { color: var(--color-text-muted); display: block; margin-top: 2px; }
+.toast .dismiss {
+  flex: none; width: 24px; height: 24px; border-radius: var(--radius-full); border: none;
+  background: transparent; color: var(--color-text-muted); cursor: pointer; display: grid; place-items: center;
+  transition: background .12s ease, color .12s ease, opacity .12s ease;
+}
+.toast .dismiss:hover { color: var(--color-text); background: color-mix(in srgb, var(--color-text) 12%, transparent); }
+.toast .dismiss:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.toast .dismiss svg { width: 12px; height: 12px; }
+.toast .bar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 2px; transform-origin: left;
+  background: var(--color-warning); opacity: .7;
+  animation: bar 8s linear forwards;
+}
+.toast:hover .bar, .toast.waiting .bar { animation-play-state: paused; }
+.toast.waiting .bar { opacity: .25; }
+@keyframes bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* ─── Variant A: refined stripe (closest to today) ───────────── */
+.v-a .toast {
+  background: var(--color-surface); border-radius: var(--radius-lg);
+  border-inline-start: 3px solid var(--color-warning);
+  box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.4);
+}
+.v-a .toast .icon { padding-top: 1px; }
+
+/* ─── Variant B: icon chip on hairline surface ───────────────── */
+.v-b .toast {
+  background: var(--color-surface); border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, var(--color-border));
+  box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 8px rgba(0,0,0,.2), 0 16px 32px rgba(0,0,0,.35);
+  padding-left: var(--space-3);
+}
+.v-b .toast .icon {
+  width: 32px; height: 32px; border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-warning) 18%, transparent);
+}
+.v-b .toast .text { padding-top: 6px; }
+.v-b .toast .dismiss { opacity: 0; }
+.v-b .toast:hover .dismiss, .v-b .toast:focus-within .dismiss { opacity: 1; }
+.v-b .toast .bar { left: 12px; right: 12px; border-radius: 2px; }
+
+/* ─── Variant C: warning-tinted glass ────────────────────────── */
+.v-c .toast {
+  background: color-mix(in srgb, var(--color-warning) 9%, color-mix(in srgb, var(--color-surface) 88%, transparent));
+  backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border-radius: 12px; border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+}
+.v-c .toast .icon svg { width: 20px; height: 20px; }
+.v-c .toast .bar { top: 0; bottom: auto; opacity: .9; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <span class="brand">Sketch 006 · Launch notice toast</span>
+  <button class="variant-tab active" onclick="showVariant('a', this)">A: Refined stripe ★ Selected</button>
+  <button class="variant-tab" onclick="showVariant('b', this)">B: Icon chip</button>
+  <button class="variant-tab" onclick="showVariant('c', this)">C: Tinted glass</button>
+</div>
+
+<div class="caption" id="caption"></div>
+
+<div class="window v-a" id="win">
+  <div class="titlebar">
+    <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+    <div class="tabs"><span>Manage Accounts</span><span class="on">Games</span><span>Stores</span><span>Downloads</span></div>
+  </div>
+  <div class="content" id="grid"></div>
+  <div class="toast-region" id="region" aria-live="polite"></div>
+</div>
+
+<div id="sketch-tools">
+  <select id="theme-switcher" onchange="setTheme(this.value)" title="Theme">
+    <option value="default">midnightMirage</option>
+    <option value="gruvbox">gruvbox_dark</option>
+    <option value="dracula">dracula</option>
+  </select>
+  <div class="sep2"></div>
+  <select id="cause" title="Engine fallback cause">
+    <option value="cx-expired">Engine: trial expired</option>
+    <option value="cx-broken">Engine: CrossOver broken</option>
+    <option value="cx-missing">Engine: CrossOver missing</option>
+  </select>
+  <button onclick="pushEngine()">Show engine</button>
+  <select id="step" title="Overlay failure step">
+    <option value="steam-dylibs">Overlay: dylibs</option>
+    <option value="shim">Overlay: shim</option>
+    <option value="clone">Overlay: clone</option>
+    <option value="env">Overlay: env (long)</option>
+  </select>
+  <button onclick="pushOverlay()">Show overlay</button>
+  <button onclick="pushBoth()">Both (launch)</button>
+  <button onclick="dismissAll()">Dismiss all</button>
+  <div class="sep2"></div>
+  <label title="Overlay auto-hide only counts down while GameLib is focused"><input type="checkbox" id="front" checked onchange="frontChanged()"> GameLib in front</label>
+  <label><input type="checkbox" onchange="document.getElementById('win').classList.toggle('reduce-motion', this.checked)"> Reduced motion</label>
+</div>
+
+<script>
+const CAPTIONS = {
+  a: ['A: Refined stripe', 'Today\'s layout, upgraded: 10px radius, layered shadow, title/body split, progress hairline. The warning stripe stays as the accent. Dismiss is always visible.',
+      'Smallest diff from the shipped SCSS', 'Stripe reads as "form error"; icon floats loosely'],
+  b: ['B: Icon chip', 'Hairline theme border plus a three-layer shadow so the edge survives dark-on-dark themes. Cause icon sits in a tinted warning chip. Dismiss fades in on hover/focus. Inset rounded progress line.',
+      'Calm, modern, colour carried by one small element', 'Dismiss hidden until hover (still keyboard-reachable)'],
+  c: ['C: Tinted glass', 'Whole surface carries a faint warning tint with backdrop blur, a warning-tinted border, and the progress line along the top edge.',
+      'Most "alive"; strongest at-a-glance severity', 'Tint fights some themes (dracula yellow); blur cost over a live grid']
+};
+const ICONS = {
+  clock: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.6V8l2.3 1.5"/></svg>',
+  wrench: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.2 2.2a3.4 3.4 0 0 0-3.9 4.5L2.4 10.6a1.4 1.4 0 0 0 2 2l3.9-3.9a3.4 3.4 0 0 0 4.5-3.9l-2 2-1.7-.4-.4-1.7z"/></svg>',
+  search: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="7" r="4.6"/><path d="M10.5 10.5l3.2 3.2"/></svg>',
+  eyeSlash: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 8s2.4-4.4 6.4-4.4c1.2 0 2.3.4 3.2 1M14.4 8s-2.4 4.4-6.4 4.4c-1.2 0-2.3-.4-3.2-1"/><path d="M6.4 9.6a2.2 2.2 0 0 1 3.1-3.1M2.5 13.5l11-11"/></svg>',
+  x: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg>'
+};
+const ENGINE = {
+  'cx-expired': { icon: 'clock',  title: 'CrossOver trial expired', body: 'Using the built-in engine for this launch.' },
+  'cx-broken':  { icon: 'wrench', title: 'CrossOver isn\'t working', body: 'Using the built-in engine for this launch.' },
+  'cx-missing': { icon: 'search', title: 'CrossOver not found',      body: 'Using the built-in engine for this launch.' }
+};
+const STEPS = {
+  'steam-dylibs': 'Mac Steam\'s overlay files were not found.',
+  shim: 'GameLib\'s overlay helper is missing from this build.',
+  clone: 'The overlay copy of CrossOver could not be prepared.',
+  env: 'An overlay path contains a character GameLib cannot pass to the game.'
+};
+
+const region = document.getElementById('region');
+const live = { engine: null, overlay: null };
+
+function makeToast(kind, icon, title, body, gated) {
+  const slot = document.createElement('div');
+  slot.className = 'slot collapsed';
+  slot.innerHTML = `<div><div class="toast" role="status">
+      <span class="icon">${ICONS[icon]}</span>
+      <span class="text"><span class="title">${title}</span><span class="body">${body}</span></span>
+      <button class="dismiss" aria-label="Dismiss">${ICONS.x}</button>
+      <span class="bar"></span></div></div>`;
+  const toast = slot.querySelector('.toast');
+  toast.dataset.gated = gated ? '1' : '';
+  if (gated && !document.getElementById('front').checked) toast.classList.add('waiting');
+  toast.querySelector('.dismiss').onclick = () => leave(kind);
+  toast.querySelector('.bar').addEventListener('animationend', () => leave(kind));
+  region.appendChild(slot);
+  requestAnimationFrame(() => slot.classList.remove('collapsed'));
+  return slot;
+}
+
+function show(kind, icon, title, body, gated) {
+  if (live[kind]) remove(live[kind]);       // newest replaces, as in the component
+  live[kind] = makeToast(kind, icon, title, body, gated);
+}
+
+function leave(kind) {
+  const slot = live[kind];
+  if (!slot) return;
+  live[kind] = null;
+  const toast = slot.querySelector('.toast');
+  toast.classList.add('leaving');
+  // In the real component the store-embed suppression must be held until here.
+  const done = e => {
+    if (e.target !== toast || !/^toast-(out|fade-out)$/.test(e.animationName)) return;
+    toast.removeEventListener('animationend', done);
+    slot.classList.add('collapsed');
+    setTimeout(() => remove(slot), 220);
+  };
+  toast.addEventListener('animationend', done);
+}
+function remove(slot) { slot.remove(); }
+
+function pushEngine() {
+  const e = ENGINE[document.getElementById('cause').value];
+  show('engine', e.icon, e.title, e.body, false);
+}
+function pushOverlay() {
+  const s = document.getElementById('step').value;
+  show('overlay', 'eyeSlash', 'Steam overlay unavailable', STEPS[s] + ' The game is launching without the Steam overlay.', true);
+}
+function pushBoth() { pushEngine(); setTimeout(pushOverlay, 350); }
+function dismissAll() { leave('overlay'); setTimeout(() => leave('engine'), 60); }
+
+function frontChanged() {
+  const front = document.getElementById('front').checked;
+  region.querySelectorAll('.toast[data-gated="1"]').forEach(t => t.classList.toggle('waiting', !front));
+}
+
+function showVariant(v, btn) {
+  document.querySelectorAll('.variant-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const win = document.getElementById('win');
+  win.classList.remove('v-a', 'v-b', 'v-c');
+  win.classList.add('v-' + v);
+  const [h, p, good, bad] = CAPTIONS[v];
+  document.getElementById('caption').innerHTML =
+    `<h2>${h}</h2><p>${p}</p><div class="tradeoff"><span class="good"><b>+</b> ${good}</span><span class="bad"><b>−</b> ${bad}</span></div>`;
+}
+function setTheme(name) { document.querySelector('link[href*="themes/"]').href = '../themes/' + name + '.css'; }
+
+const GAMES = [['Hades II','#5b1d2e','#d1603d'],['Balatro','#173a5e','#c93c3c'],['Hollow Knight','#1c2430','#5c7a99'],
+  ['Celeste','#3a1f5c','#e06c9f'],['Stardew Valley','#2c5e2e','#e0c05a'],['Disco Elysium','#3d2a1e','#c98a4b'],
+  ['Outer Wilds','#132238','#e08a3c'],['Inscryption','#2a1d12','#8f6a3a'],['Tunic','#1e3d4a','#e0a75a'],
+  ['Schedule I','#1f2b1f','#6fa35a'],['Dredge','#0f2a33','#4f8a8b'],['Pentiment','#3b3223','#c7b48a']];
+document.getElementById('grid').innerHTML = GAMES.map(([n, a, b]) =>
+  `<div class="card" data-name="${n}" style="--c1:${a};--c2:${b}"></div>`).join('');
+
+showVariant('a', document.querySelector('.variant-tab'));
+setTimeout(pushBoth, 400);
+</script>
+</body>
+</html>

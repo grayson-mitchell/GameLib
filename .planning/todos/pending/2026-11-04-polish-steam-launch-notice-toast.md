@@ -27,3 +27,20 @@ Restyle the notice to match the app's themed surfaces. See `Skill("sketch-findin
 for the multi-theme survival rules. Ideas: elevation/shadow, an icon per cause, an
 enter/exit animation, a progress hairline for the ~8 s focus-gated auto-hide, and a dismiss
 affordance. Keep it non-modal and focus-gated (G4). Check it in every theme.
+
+## Design decided (sketch 006, 2026-11-04)
+
+Winner: **Variant A — refined stripe** (`.planning/sketches/006-launch-notice-toast/`). Build to
+that sketch:
+
+- Stays bottom-right. Replace the hard-coded `--overlay` 4.5rem offset with a shared
+  bottom-right stack region (flex column); a leaving toast collapses its slot so the other glides.
+- Enter: slide in from the right, ~240ms with slight overshoot. Exit: slide out right + fade,
+  ~180ms ease-in. Reduced motion: fade only.
+- Exit needs a "leaving" state before unmount, and `useSuppressStoreEmbedWhile` must stay held
+  until the exit animation ends.
+- Surface: 10px radius, layered shadow, 3px warning start-stripe kept; bold title + muted body
+  (engine notice needs a title/body split — new i18n keys).
+- Icon per cause: clock (cx-expired), wrench (cx-broken), search (cx-missing), eye-slash (overlay).
+- 2px warning progress hairline for the 8s auto-hide; pauses on hover; overlay countdown stays
+  frozen until GameLib is in front (existing G4 gating). Dismiss × always visible. No swipe.
