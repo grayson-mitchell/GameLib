@@ -522,3 +522,55 @@ describe('overlay input probe (60-11, G1)', () => {
     )
   })
 })
+
+describe('overlay input fix module (60-20, G1)', () => {
+  const base = {
+    appId: '3205720',
+    shimPath: '/A/overlay_shim.dylib',
+    steamBinDir: SBIN
+  }
+  const input = '/P Q/overlay_input.dylib'
+  const std = `/A/overlay_shim.dylib:${SBIN}/steamloader.dylib:${SBIN}/gameoverlayrenderer.dylib`
+
+  test('tokens: input after the renderer', () => {
+    const r = buildOverlayCxTokens({ ...base, inputModulePath: input })
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(r.tokens[0]).toBe(`DYLD_INSERT_LIBRARIES='${std}:${input}'`)
+  })
+
+  test('tokens: input then probe', () => {
+    const probe = {
+      dylibPath: '/A B/overlay_input_probe.dylib',
+      logPath: '/T R/p.log'
+    }
+    const r = buildOverlayCxTokens({ ...base, inputModulePath: input, probe })
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(r.tokens[0]).toBe(
+      `DYLD_INSERT_LIBRARIES='${std}:${input}:${probe.dylibPath}'`
+    )
+  })
+
+  test('env vars carry the same order', () => {
+    const r = buildOverlayEnvVars({ ...base, inputModulePath: input })
+    expect(r.status).toBe('ok')
+    if (r.status !== 'ok') return
+    expect(r.vars[0]).toEqual({
+      key: 'DYLD_INSERT_LIBRARIES',
+      value: `${std}:${input}`
+    })
+  })
+
+  test.each([
+    ['control char', '/a/b\u0001.dylib'],
+    ['relative', 'overlay_input.dylib'],
+    ['quote', "/a/it's.dylib"]
+  ])('unsafe input (%s) is dropped, status stays ok', (_n, bad) => {
+    const r = buildOverlayEnvVars({ ...base, inputModulePath: bad })
+    expect(r).toEqual(buildOverlayEnvVars(base))
+    expect(buildOverlayCxTokens({ ...base, inputModulePath: bad })).toEqual(
+      buildOverlayCxTokens(base)
+    )
+  })
+})

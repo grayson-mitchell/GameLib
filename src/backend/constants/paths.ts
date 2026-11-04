@@ -153,6 +153,13 @@ export const builtOverlayInputProbePath = fixAsarPath(
   join(publicDir, 'bin', process.arch, 'darwin', 'overlay_input_probe.dylib')
 )
 
+// Phase 60 gap closure (G1, 60-18/60-19/60-20): the production input fix
+// module built by `pnpm build-steam-bridge`. A missing dylib never blocks a
+// launch (D-08): the overlay is injected without it.
+export const builtOverlayInputPath = fixAsarPath(
+  join(publicDir, 'bin', process.arch, 'darwin', 'overlay_input.dylib')
+)
+
 // Phase 51 Plan 01 (D-51-01): per-appId staging root for the bridge helper's
 // own cwd. Each running helper gets its OWN subdirectory
 // `<steamBridgeHelperStateDir>/<appId>/` so two concurrently-running

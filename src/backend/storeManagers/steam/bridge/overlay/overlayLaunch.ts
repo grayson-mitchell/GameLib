@@ -79,6 +79,9 @@ type OverlayEnvArgs = {
   appId: string
   shimPath: string
   steamBinDir: string
+  // 60-20 (G1): the GameLib overlay_input.dylib, inserted after the renderer.
+  // Unsafe values are dropped silently (the caller logs); never fails a launch.
+  inputModulePath?: string
   probe?: OverlayProbe
 }
 
@@ -120,14 +123,15 @@ function overlayEnvValues(a: OverlayEnvArgs): OverlayStepResult<{
       a.probe && safePath(a.probe.dylibPath) && safePath(a.probe.logPath)
         ? a.probe
         : undefined
+    const input = safePath(a.inputModulePath) ? a.inputModulePath : undefined
     return {
       status: 'ok',
       vars: [
         {
           key: 'DYLD_INSERT_LIBRARIES',
           value: `${a.shimPath}:${loader}:${renderer}${
-            probe ? `:${probe.dylibPath}` : ''
-          }`
+            input ? `:${input}` : ''
+          }${probe ? `:${probe.dylibPath}` : ''}`
         },
         { key: 'SteamOverlayGameId', value: a.appId },
         { key: 'SteamGameId', value: a.appId },
