@@ -80,7 +80,17 @@ jest.mock('react', () => {
 })
 
 import * as React from 'react'
-import SteamEngineLaunchNotice, { OVERLAY_STEP_KEYS } from '../index'
+import {
+  faClock,
+  faEyeSlash,
+  faMagnifyingGlass,
+  faWrench
+} from '@fortawesome/free-solid-svg-icons'
+import { useSuppressStoreEmbedWhile } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
+import SteamEngineLaunchNotice, {
+  OVERLAY_STEP_KEYS,
+  PHASE_FALLBACK_MS
+} from '../index'
 import { OVERLAY_STEP_TEXT } from 'backend/storeManagers/steam/bridge/overlay/overlayNotice'
 
 type Rt = {
@@ -99,7 +109,12 @@ const rt = (React as unknown as { __rt: Rt }).__rt
 type El = ReactElement<{
   children?: ReactNode
   role?: string
+  icon?: unknown
+  className?: string
   onClick?: () => void
+  onMouseEnter?: () => void
+  onMouseLeave?: () => void
+  onAnimationEnd?: (e: unknown) => void
 }>
 const text = (n: ReactNode): string =>
   Array.isArray(n)
@@ -147,6 +162,29 @@ const fire = (type: string) => (focusListeners[type] ?? []).forEach((f) => f())
 const overlay = (step: string, seq: number) => ({
   '3205720': { appId: '3205720', overlayNotice: { step, seq } }
 })
+const cls = (e: El | undefined): string => e?.props.className ?? ''
+const toast = (out: ReactNode): El | undefined =>
+  find(out, (e) => e.props.role === 'status')
+const slotOf = (out: ReactNode): El | undefined =>
+  find(out, (e) => cls(e).startsWith('steamEngineLaunchNoticeSlot'))
+const ev = (name: string, same = true) => ({
+  target: 'a',
+  currentTarget: same ? 'a' : 'b',
+  animationName: name
+})
+const OUT = 'steamEngineLaunchNoticeOut'
+const CLOSE = 'steamEngineLaunchNoticeSlotClose'
+// Dismiss then drive the exit through both animationends.
+const exit = (out: ReactNode): ReactNode => {
+  toast(out)?.props.onAnimationEnd?.(ev(OUT))
+  const o2 = render()
+  slotOf(o2)?.props.onAnimationEnd?.(ev(CLOSE))
+  return render()
+}
+const dismiss = (out: ReactNode): ReactNode => {
+  find(out, (e) => typeof e.props.onClick === 'function')?.props.onClick?.()
+  return render()
+}
 const statuses = (out: ReactNode): El[] => {
   const all: El[] = []
   const walk = (n: ReactNode): void => {
@@ -199,19 +237,28 @@ describe('SteamEngineLaunchNotice', () => {
     storeState = notice('cx-expired', 1)
     const out = render()
     expect(find(out, (e) => e.props.role === 'status')).toBeDefined()
-    expect(text(out)).toBe('CrossOver trial expired — using built-in engine')
+    expect(text(out)).toBe(
+      'CrossOver trial expired Using the built-in engine for this launch.'
+    )
+    expect(find(out, (e) => e.props.icon === faClock)).toBeDefined()
   })
 
   it('maps cx-missing and cx-broken to their messages', () => {
     storeState = notice('cx-missing', 1)
-    expect(text(render())).toBe('CrossOver not found — using built-in engine')
+    const o1 = render()
+    expect(text(o1)).toBe(
+      'CrossOver not found Using the built-in engine for this launch.'
+    )
+    expect(find(o1, (e) => e.props.icon === faMagnifyingGlass)).toBeDefined()
     rt.states = []
     rt.refs = []
     rt.deps = []
     storeState = notice('cx-broken', 1)
-    expect(text(render())).toBe(
-      "CrossOver isn't working — using built-in engine"
+    const o2 = render()
+    expect(text(o2)).toBe(
+      "CrossOver isn't working Using the built-in engine for this launch."
     )
+    expect(find(o2, (e) => e.props.icon === faWrench)).toBeDefined()
   })
 
   it('renders nothing for an unknown reason value (T-59-72)', () => {
@@ -222,8 +269,16 @@ describe('SteamEngineLaunchNotice', () => {
   it('hides on dismiss, stays hidden on re-fetch, reappears on a newer seq', () => {
     storeState = notice('cx-expired', 1)
     const out = render()
-    find(out, (e) => typeof e.props.onClick === 'function')?.props.onClick?.()
-    expect(render()).toBeNull()
+    const leaving = dismiss(out)
+    expect(toast(leaving)).toBeDefined()
+    expect(cls(toast(leaving))).toContain('steamEngineLaunchNotice--leaving')
+    expect(jest.mocked(useSuppressStoreEmbedWhile).mock.calls.at(-1)).toEqual([
+      true
+    ])
+    expect(exit(leaving)).toBeNull()
+    expect(jest.mocked(useSuppressStoreEmbedWhile).mock.calls.at(-1)).toEqual([
+      false
+    ])
     storeState = { '63000': { appId: '63000', launchNotice: null } }
     expect(render()).toBeNull()
     storeState = notice('cx-expired', 1)
@@ -232,13 +287,74 @@ describe('SteamEngineLaunchNotice', () => {
     expect(text(render())).toContain('CrossOver trial expired')
   })
 
+  it('ignores bubbled or non-exit animationend events', () => {
+    storeState = notice('cx-expired', 1)
+    const leaving = dismiss(render())
+    toast(leaving)?.props.onAnimationEnd?.(ev(OUT, false))
+    toast(leaving)?.props.onAnimationEnd?.(ev('steamEngineLaunchNoticeIn'))
+    toast(leaving)?.props.onAnimationEnd?.(ev('steamEngineLaunchNoticeBar'))
+    const o = render()
+    expect(slotOf(o)?.props.className).not.toContain('--collapsing')
+    toast(o)?.props.onAnimationEnd?.(ev(OUT))
+    const c = render()
+    expect(slotOf(c)?.props.className).toContain('--collapsing')
+    slotOf(c)?.props.onAnimationEnd?.(ev(CLOSE, false))
+    slotOf(c)?.props.onAnimationEnd?.(ev('steamEngineLaunchNoticeSlotOpen'))
+    expect(render()).not.toBeNull()
+  })
+
+  it('falls back when no animationend arrives (T-vvz-02)', () => {
+    storeState = notice('cx-expired', 1)
+    dismiss(render())
+    jest.advanceTimersByTime(PHASE_FALLBACK_MS)
+    expect(slotOf(render())?.props.className).toContain('--collapsing')
+    jest.advanceTimersByTime(PHASE_FALLBACK_MS)
+    expect(render()).toBeNull()
+    expect(jest.mocked(useSuppressStoreEmbedWhile).mock.calls.at(-1)).toEqual([
+      false
+    ])
+  })
+
   it('auto-hides after 8 seconds', () => {
     storeState = notice('cx-expired', 1)
     expect(render()).not.toBeNull()
     jest.advanceTimersByTime(7999)
-    expect(render()).not.toBeNull()
+    expect(cls(toast(render()))).not.toContain('--leaving')
     jest.advanceTimersByTime(1)
-    expect(render()).toBeNull()
+    expect(cls(toast(render()))).toContain('--leaving')
+  })
+
+  it('hover pauses the real countdown and carries the budget over', () => {
+    storeState = notice('cx-expired', 1)
+    render()
+    jest.advanceTimersByTime(5000)
+    toast(render())?.props.onMouseEnter?.()
+    const paused = render()
+    expect(cls(toast(paused))).toContain('steamEngineLaunchNotice--paused')
+    jest.advanceTimersByTime(10000)
+    expect(cls(toast(render()))).not.toContain('--leaving')
+    toast(render())?.props.onMouseLeave?.()
+    render()
+    jest.advanceTimersByTime(2999)
+    expect(cls(toast(render()))).not.toContain('--leaving')
+    jest.advanceTimersByTime(1)
+    expect(cls(toast(render()))).toContain('--leaving')
+  })
+
+  it('a newer notice replaces the current one through its exit', () => {
+    storeState = notice('cx-expired', 1)
+    render()
+    storeState = notice('cx-broken', 2)
+    const o = render()
+    expect(cls(toast(o))).toContain('--leaving')
+    expect(text(o)).toContain('CrossOver trial expired')
+    const next = exit(o)
+    expect(text(next)).toContain("CrossOver isn't working")
+    expect(cls(toast(next))).not.toContain('--leaving')
+    jest.advanceTimersByTime(7999)
+    expect(cls(toast(render()))).not.toContain('--leaving')
+    jest.advanceTimersByTime(1)
+    expect(cls(toast(render()))).toContain('--leaving')
   })
 
   it('clears the auto-hide timer on unmount', () => {
@@ -254,9 +370,9 @@ describe('SteamEngineLaunchNotice', () => {
       storeState = overlay('shim', 5)
       const out = render()
       const [el] = statuses(out)
-      expect((el.props as { className?: string }).className).toBe(
-        'steamEngineLaunchNotice steamEngineLaunchNotice--overlay'
-      )
+      expect(cls(el)).toContain('steamEngineLaunchNotice')
+      expect(cls(el)).toContain('steamEngineLaunchNotice--overlay')
+      expect(find(out, (e) => e.props.icon === faEyeSlash)).toBeDefined()
       expect(text(out)).toBe(
         "Steam overlay unavailable GameLib's overlay helper is missing from this build. The game is launching without the Steam overlay."
       )
@@ -265,8 +381,7 @@ describe('SteamEngineLaunchNotice', () => {
     it('same seq does not re-show after dismissal; a newer seq does (D-09)', () => {
       storeState = overlay('shim', 5)
       const out = render()
-      find(out, (e) => typeof e.props.onClick === 'function')?.props.onClick?.()
-      expect(render()).toBeNull()
+      expect(exit(dismiss(out))).toBeNull()
       storeState = overlay('shim', 5)
       expect(render()).toBeNull()
       storeState = overlay('shim', 6)
@@ -283,6 +398,10 @@ describe('SteamEngineLaunchNotice', () => {
       }
       const out = render()
       expect(statuses(out)).toHaveLength(2)
+      expect(statuses(out).map((e) => cls(e).includes('--overlay'))).toEqual([
+        true,
+        false
+      ])
       expect(text(out)).toContain('CrossOver trial expired')
       expect(text(out)).toContain('Steam overlay unavailable')
     })
@@ -292,13 +411,16 @@ describe('SteamEngineLaunchNotice', () => {
       storeState = overlay('shim', 5)
       render()
       jest.advanceTimersByTime(20000)
-      expect(render()).not.toBeNull()
+      const waiting = render()
+      expect(cls(toast(waiting))).toContain('steamEngineLaunchNotice--waiting')
+      expect(cls(toast(waiting))).not.toContain('--leaving')
       env.focused = true
       fire('focus')
+      expect(cls(toast(render()))).not.toContain('--waiting')
       jest.advanceTimersByTime(7999)
-      expect(render()).not.toBeNull()
+      expect(cls(toast(render()))).not.toContain('--leaving')
       jest.advanceTimersByTime(1)
-      expect(render()).toBeNull()
+      expect(cls(toast(render()))).toContain('--leaving')
     })
 
     it('removes listeners and timer on unmount', () => {

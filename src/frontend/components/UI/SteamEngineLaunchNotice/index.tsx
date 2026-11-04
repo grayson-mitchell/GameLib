@@ -1,19 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import type { AnimationEvent } from 'react'
 import {
-  faTriangleExclamation,
+  faClock,
+  faEyeSlash,
+  faMagnifyingGlass,
+  faWrench,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
+import type { IconDefinition } from '@fortawesome/free-solid-svg-icons'
 
 import { useSteamEngineState } from 'frontend/state/SteamEngineState'
 import { useSuppressStoreEmbedWhile } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 import './index.scss'
 
 type Reason = 'cx-missing' | 'cx-expired' | 'cx-broken'
+// in -> leaving (exit animation) -> collapsing (slot closes) -> removed.
+type Phase = 'in' | 'leaving' | 'collapsing'
 interface Shown {
   reason: Reason
   seq: number
+  phase: Phase
 }
 
 type OverlayStepId =
@@ -26,9 +34,31 @@ type OverlayStepId =
 interface ShownOverlay {
   step: OverlayStepId
   seq: number
+  phase: Phase
 }
 
 const AUTO_HIDE_MS = 8000
+// Safety net when an animationend never arrives (hidden window, a theme that
+// kills animations): comfortably above the 180ms exit and 200ms slot close.
+// ts-prune-ignore-next
+export const PHASE_FALLBACK_MS = 500
+
+const EXIT_ANIMATIONS = [
+  'steamEngineLaunchNoticeOut',
+  'steamEngineLaunchNoticeFadeOut'
+]
+const TOAST_CLASS = 'steamEngineLaunchNotice'
+const TOAST_OVERLAY = `${TOAST_CLASS}--overlay`
+const TOAST_LEAVING = `${TOAST_CLASS}--leaving`
+const TOAST_PAUSED = `${TOAST_CLASS}--paused`
+const TOAST_WAITING = `${TOAST_CLASS}--waiting`
+const SLOT_CLOSE_ANIMATION = 'steamEngineLaunchNoticeSlotClose'
+
+const REASON_ICON: Record<Reason, IconDefinition> = {
+  'cx-expired': faClock,
+  'cx-broken': faWrench,
+  'cx-missing': faMagnifyingGlass
+}
 
 // Mirrors the backend's OVERLAY_STEP_TEXT (a test guards drift); the frontend
 // must not import backend at runtime.
@@ -84,6 +114,8 @@ const isReason = (r: unknown): r is Reason =>
 // `launchNotice` is non-null only in the push from recordLaunchDecision, so a
 // page re-fetch (launchNotice null) never re-shows it. T-59-72: only the
 // three closed reason values map to catalogue strings.
+// Sketch 006 variant A. Every exit goes through a leaving phase so the store
+// embed stays suppressed until the notice is actually removed (L3).
 export default function SteamEngineLaunchNotice() {
   const { t } = useTranslation('gamelib')
   const byAppId = useSteamEngineState((s) => s.byAppId)
@@ -91,6 +123,42 @@ export default function SteamEngineLaunchNotice() {
   const lastOverlaySeq = useRef(0)
   const [shown, setShown] = useState<Shown | null>(null)
   const [shownOverlay, setShownOverlay] = useState<ShownOverlay | null>(null)
+  const [hovered, setHovered] = useState(false)
+  const [hoveredOverlay, setHoveredOverlay] = useState(false)
+  const [waiting, setWaiting] = useState(false)
+  const remaining = useRef(AUTO_HIDE_MS)
+  const remainingOverlay = useRef(AUTO_HIDE_MS)
+  const pending = useRef<Shown | null>(null)
+  const pendingOverlay = useRef<ShownOverlay | null>(null)
+  const shownRef = useRef<Shown | null>(null)
+  const shownOverlayRef = useRef<ShownOverlay | null>(null)
+  shownRef.current = shown
+  shownOverlayRef.current = shownOverlay
+
+  // Removal: promote a replacement that arrived mid-exit, else clear.
+  const finish = () => {
+    const p = pending.current
+    pending.current = null
+    if (p) {
+      remaining.current = AUTO_HIDE_MS
+      setHovered(false)
+      setShown({ ...p, phase: 'in' })
+    } else {
+      setShown(null)
+    }
+  }
+  const finishOverlay = () => {
+    const p = pendingOverlay.current
+    pendingOverlay.current = null
+    if (p) {
+      remainingOverlay.current = AUTO_HIDE_MS
+      setHoveredOverlay(false)
+      setWaiting(!gameLibInFront())
+      setShownOverlay({ ...p, phase: 'in' })
+    } else {
+      setShownOverlay(null)
+    }
+  }
 
   useEffect(() => {
     let newest: Shown | null = null
@@ -98,12 +166,19 @@ export default function SteamEngineLaunchNotice() {
       const n = state.launchNotice
       if (!n || !isReason(n.reason) || typeof n.seq !== 'number') continue
       if (n.seq > lastSeq.current && (!newest || n.seq > newest.seq)) {
-        newest = { reason: n.reason, seq: n.seq }
+        newest = { reason: n.reason, seq: n.seq, phase: 'in' }
       }
     }
-    if (newest) {
-      lastSeq.current = newest.seq
+    if (!newest) return
+    lastSeq.current = newest.seq
+    const cur = shownRef.current
+    if (!cur) {
+      remaining.current = AUTO_HIDE_MS
+      setHovered(false)
       setShown(newest)
+    } else {
+      pending.current = newest
+      if (cur.phase === 'in') setShown({ ...cur, phase: 'leaving' })
     }
   }, [byAppId])
 
@@ -114,58 +189,208 @@ export default function SteamEngineLaunchNotice() {
       const n = state.overlayNotice
       if (!n || !isOverlayStep(n.step) || typeof n.seq !== 'number') continue
       if (n.seq > lastOverlaySeq.current && (!newest || n.seq > newest.seq)) {
-        newest = { step: n.step, seq: n.seq }
+        newest = { step: n.step, seq: n.seq, phase: 'in' }
       }
     }
-    if (newest) {
-      lastOverlaySeq.current = newest.seq
+    if (!newest) return
+    lastOverlaySeq.current = newest.seq
+    const cur = shownOverlayRef.current
+    if (!cur) {
+      remainingOverlay.current = AUTO_HIDE_MS
+      setHoveredOverlay(false)
+      setWaiting(!gameLibInFront())
       setShownOverlay(newest)
+    } else {
+      pendingOverlay.current = newest
+      if (cur.phase === 'in') setShownOverlay({ ...cur, phase: 'leaving' })
     }
   }, [byAppId])
 
-  // The overlay notice fires as the game comes to the front, so its auto-hide
-  // starts only once GameLib is visible and focused.
+  // The overlay notice fires as the game comes to the front, so its countdown
+  // starts only once GameLib is visible and focused. One-way latch per notice.
   useEffect(() => {
-    if (!shownOverlay) return
-    let timer: ReturnType<typeof setTimeout> | null = null
-    const start = () => {
-      if (timer !== null || !gameLibInFront()) return
-      timer = setTimeout(() => setShownOverlay(null), AUTO_HIDE_MS)
+    if (!shownOverlay || !waiting) return
+    const check = () => {
+      if (gameLibInFront()) setWaiting(false)
     }
-    const stop = () => {
-      window.removeEventListener('focus', start)
-      document.removeEventListener('visibilitychange', start)
-      if (timer !== null) clearTimeout(timer)
+    window.addEventListener('focus', check)
+    document.addEventListener('visibilitychange', check)
+    check()
+    return () => {
+      window.removeEventListener('focus', check)
+      document.removeEventListener('visibilitychange', check)
     }
-    window.addEventListener('focus', start)
-    document.addEventListener('visibilitychange', start)
-    start()
-    return stop
-  }, [shownOverlay])
+  }, [shownOverlay?.seq, waiting])
+
+  // Pausable auto-hide: the single source of truth for the countdown. The CSS
+  // bar is display-only and paused from the same state through modifiers.
+  const engineSeq = shown?.seq
+  const enginePhase = shown?.phase
+  useEffect(() => {
+    if (!shown || shown.phase !== 'in' || hovered) return
+    const startedAt = Date.now()
+    const id = setTimeout(
+      () => setShown({ ...shown, phase: 'leaving' }),
+      remaining.current
+    )
+    return () => {
+      clearTimeout(id)
+      remaining.current = Math.max(
+        0,
+        remaining.current - (Date.now() - startedAt)
+      )
+    }
+  }, [engineSeq, enginePhase, hovered])
+
+  const overlaySeq = shownOverlay?.seq
+  const overlayPhase = shownOverlay?.phase
+  useEffect(() => {
+    if (!shownOverlay || shownOverlay.phase !== 'in') return
+    if (hoveredOverlay || waiting) return
+    const startedAt = Date.now()
+    const id = setTimeout(
+      () => setShownOverlay({ ...shownOverlay, phase: 'leaving' }),
+      remainingOverlay.current
+    )
+    return () => {
+      clearTimeout(id)
+      remainingOverlay.current = Math.max(
+        0,
+        remainingOverlay.current - (Date.now() - startedAt)
+      )
+    }
+  }, [overlaySeq, overlayPhase, hoveredOverlay, waiting])
+
+  // Phase fallbacks (T-vvz-02): never get stuck if animationend is lost.
+  useEffect(() => {
+    if (!shown || shown.phase === 'in') return
+    const cur = shown
+    const id = setTimeout(
+      () =>
+        cur.phase === 'leaving'
+          ? setShown({ ...cur, phase: 'collapsing' })
+          : finish(),
+      PHASE_FALLBACK_MS
+    )
+    return () => clearTimeout(id)
+  }, [engineSeq, enginePhase])
 
   useEffect(() => {
-    if (!shown) return
-    const id = setTimeout(() => setShown(null), AUTO_HIDE_MS)
+    if (!shownOverlay || shownOverlay.phase === 'in') return
+    const cur = shownOverlay
+    const id = setTimeout(
+      () =>
+        cur.phase === 'leaving'
+          ? setShownOverlay({ ...cur, phase: 'collapsing' })
+          : finishOverlay(),
+      PHASE_FALLBACK_MS
+    )
     return () => clearTimeout(id)
-  }, [shown])
+  }, [overlaySeq, overlayPhase])
 
   // The native store embed would cover the notice, as for HumbleExpiryToast.
   useSuppressStoreEmbedWhile(shown !== null || shownOverlay !== null)
 
-  const overlayNode = shownOverlay ? (
-    <div
-      className="steamEngineLaunchNotice steamEngineLaunchNotice--overlay"
-      role="status"
-    >
-      <FontAwesomeIcon
-        icon={faTriangleExclamation}
-        className="steamEngineLaunchNoticeIcon"
-      />
-      <span className="steamEngineLaunchNoticeMessage">
-        <strong>
-          {t('steam.overlay.toast.title', 'Steam overlay unavailable')}
-        </strong>{' '}
-        {t(
+  if (!shown && !shownOverlay) return null
+
+  // A plain (non-hook) helper: one slot + toast.
+  const renderSlot = (o: {
+    slotKey: string
+    seq: number
+    phase: Phase
+    overlay: boolean
+    paused: boolean
+    waiting: boolean
+    icon: IconDefinition
+    title: string
+    body: string
+    setHover: (v: boolean) => void
+    beginLeave: () => void
+    toCollapsing: () => void
+    remove: () => void
+  }) => {
+    const toastClass = [
+      TOAST_CLASS,
+      o.overlay ? TOAST_OVERLAY : '',
+      o.phase !== 'in' ? TOAST_LEAVING : '',
+      o.paused ? TOAST_PAUSED : '',
+      o.waiting ? TOAST_WAITING : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
+    return (
+      <div
+        key={o.slotKey}
+        className={
+          'steamEngineLaunchNoticeSlot' +
+          (o.phase === 'collapsing'
+            ? ' steamEngineLaunchNoticeSlot--collapsing'
+            : '')
+        }
+        onAnimationEnd={(e: AnimationEvent) => {
+          if (
+            e.target === e.currentTarget &&
+            e.animationName === SLOT_CLOSE_ANIMATION &&
+            o.phase === 'collapsing'
+          )
+            o.remove()
+        }}
+      >
+        <div>
+          <div
+            key={o.seq}
+            className={toastClass}
+            role="status"
+            onMouseEnter={() => o.setHover(true)}
+            onMouseLeave={() => o.setHover(false)}
+            onAnimationEnd={(e: AnimationEvent) => {
+              if (
+                e.target === e.currentTarget &&
+                EXIT_ANIMATIONS.includes(e.animationName) &&
+                o.phase === 'leaving'
+              )
+                o.toCollapsing()
+            }}
+          >
+            <FontAwesomeIcon
+              icon={o.icon}
+              className="steamEngineLaunchNoticeIcon"
+            />
+            <span className="steamEngineLaunchNoticeText">
+              <span className="steamEngineLaunchNoticeTitle">{o.title}</span>{' '}
+              <span className="steamEngineLaunchNoticeBody">{o.body}</span>
+            </span>
+            <button
+              className="steamEngineLaunchNoticeDismiss"
+              aria-label={t('steam.engine.notice.dismiss', 'Dismiss')}
+              onClick={() => {
+                if (o.phase === 'in') o.beginLeave()
+              }}
+            >
+              <FontAwesomeIcon icon={faXmark} />
+            </button>
+            <span
+              className="steamEngineLaunchNoticeBar"
+              aria-hidden="true"
+              style={{ animationDuration: `${AUTO_HIDE_MS}ms` }}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const overlayNode = shownOverlay
+    ? renderSlot({
+        slotKey: 'overlay',
+        seq: shownOverlay.seq,
+        phase: shownOverlay.phase,
+        overlay: true,
+        paused: hoveredOverlay,
+        waiting,
+        icon: faEyeSlash,
+        title: t('steam.overlay.toast.title', 'Steam overlay unavailable'),
+        body: t(
           'steam.overlay.toast.body',
           '{{step}} The game is launching without the Steam overlay.',
           {
@@ -174,57 +399,48 @@ export default function SteamEngineLaunchNotice() {
               OVERLAY_STEP_KEYS[shownOverlay.step].en
             )
           }
-        )}
-      </span>
-      <button
-        className="steamEngineLaunchNoticeDismiss"
-        aria-label={t('steam.engine.notice.dismiss', 'Dismiss')}
-        onClick={() => setShownOverlay(null)}
-      >
-        <FontAwesomeIcon icon={faXmark} />
-      </button>
-    </div>
-  ) : null
+        ),
+        setHover: setHoveredOverlay,
+        beginLeave: () =>
+          setShownOverlay({ ...shownOverlay, phase: 'leaving' }),
+        toCollapsing: () =>
+          setShownOverlay({ ...shownOverlay, phase: 'collapsing' }),
+        remove: finishOverlay
+      })
+    : null
 
-  if (!shown) return overlayNode
+  let engineNode = null
+  if (shown) {
+    const title =
+      shown.reason === 'cx-expired'
+        ? t('steam.engine.toast.title.cxExpired', 'CrossOver trial expired')
+        : shown.reason === 'cx-broken'
+          ? t('steam.engine.toast.title.cxBroken', "CrossOver isn't working")
+          : t('steam.engine.toast.title.cxMissing', 'CrossOver not found')
+    engineNode = renderSlot({
+      slotKey: 'engine',
+      seq: shown.seq,
+      phase: shown.phase,
+      overlay: false,
+      paused: hovered,
+      waiting: false,
+      icon: REASON_ICON[shown.reason],
+      title,
+      body: t(
+        'steam.engine.toast.body',
+        'Using the built-in engine for this launch.'
+      ),
+      setHover: setHovered,
+      beginLeave: () => setShown({ ...shown, phase: 'leaving' }),
+      toCollapsing: () => setShown({ ...shown, phase: 'collapsing' }),
+      remove: finish
+    })
+  }
 
-  const message =
-    shown.reason === 'cx-expired'
-      ? t(
-          'steam.engine.toast.cxExpired',
-          'CrossOver trial expired — using built-in engine'
-        )
-      : shown.reason === 'cx-broken'
-        ? t(
-            'steam.engine.toast.cxBroken',
-            "CrossOver isn't working — using built-in engine"
-          )
-        : t(
-            'steam.engine.toast.cxMissing',
-            'CrossOver not found — using built-in engine'
-          )
-
-  const engineNode = (
-    <div className="steamEngineLaunchNotice" role="status">
-      <FontAwesomeIcon
-        icon={faTriangleExclamation}
-        className="steamEngineLaunchNoticeIcon"
-      />
-      <span className="steamEngineLaunchNoticeMessage">{message}</span>
-      <button
-        className="steamEngineLaunchNoticeDismiss"
-        aria-label={t('steam.engine.notice.dismiss', 'Dismiss')}
-        onClick={() => setShown(null)}
-      >
-        <FontAwesomeIcon icon={faXmark} />
-      </button>
-    </div>
-  )
-  if (!overlayNode) return engineNode
   return (
-    <>
-      {engineNode}
+    <div className="steamEngineLaunchNoticeRegion">
       {overlayNode}
-    </>
+      {engineNode}
+    </div>
   )
 }

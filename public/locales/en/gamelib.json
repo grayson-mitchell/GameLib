@@ -638,9 +638,15 @@
                 "verifying": "Verifying built-in engine"
             },
             "toast": {
+                "body": "Using the built-in engine for this launch.",
                 "cxBroken": "CrossOver isn't working — using built-in engine",
                 "cxExpired": "CrossOver trial expired — using built-in engine",
-                "cxMissing": "CrossOver not found — using built-in engine"
+                "cxMissing": "CrossOver not found — using built-in engine",
+                "title": {
+                    "cxBroken": "CrossOver isn't working",
+                    "cxExpired": "CrossOver trial expired",
+                    "cxMissing": "CrossOver not found"
+                }
             },
             "trial": {
                 "body": "When the trial ends, GameLib will switch this game to its built-in engine (best-effort).",
