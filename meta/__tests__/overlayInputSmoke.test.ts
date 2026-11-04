@@ -2,10 +2,12 @@
  * 60-19 (G1): smoke proof of overlay_input.dylib (production fix, signal cb,
  * X-RELEASE+BLOCK per the 60-18 verdict). Fake images are named exactly as the
  * module matches them (`winemac.so`, `setactive.dylib`); a driver subclasses
- * NSApplication as WineApplication. macOS only; the open / close cases need a
- * window server (CGSessionCopyCurrentDictionary non-NULL) and skip otherwise.
+ * NSApplication as WineApplication. macOS only. Every case needs a window
+ * server: 60-REVIEW WR-05 decides that at collect time (launchctl managername
+ * is Aqua), so a headless host reports the cases as skipped, and a host that
+ * should have one but whose driver finds none fails instead of passing.
  */
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import {
   copyFileSync,
   mkdirSync,
@@ -26,6 +28,7 @@ const DRIVER_SOURCE = `
 #import <stdio.h>
 #import <dlfcn.h>
 #import <notify.h>
+#import <objc/message.h>
 #import <objc/runtime.h>
 #import <sys/wait.h>
 #import <unistd.h>
@@ -34,6 +37,12 @@ extern CFDictionaryRef CGSessionCopyCurrentDictionary(void);
 
 static void spin(double seconds) {
   CFRunLoopRunInMode(kCFRunLoopDefaultMode, seconds, false);
+}
+
+// WR-05: the real AppKit state the module must change, read back directly.
+static void print_rect(const char *label, NSWindow *w) {
+  NSRect r = ((NSRect (*)(id, SEL))objc_msgSend)(w, sel_registerName("mouseConfinementRect"));
+  printf("%s=%g,%g,%g,%g\\n", label, r.origin.x, r.origin.y, r.size.width, r.size.height);
 }
 
 static void post_cb(const char *appid, uint64_t state) {
@@ -85,9 +94,18 @@ int main(int argc, char **argv) {
     void (*wm_assoc)(int) = (void (*)(int))dlsym(wm, "wm_assoc");
     void (*wm_warp)(void) = (void (*)(void))dlsym(wm, "wm_warp");
     void (*wm_hide)(void) = (void (*)(void))dlsym(wm, "wm_hide");
+    void (*wm_confine)(id, double, double, double, double) =
+        (void (*)(id, double, double, double, double))dlsym(wm, "wm_confine");
+    // A real window: open must clear its confinement, close must replay it.
+    NSWindow *win = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 40, 40)
+                                                styleMask:NSWindowStyleMaskBorderless
+                                                  backing:NSBackingStoreBuffered
+                                                    defer:NO];
     spin(0.4);
     wm_assoc(0);
     wm_hide();
+    wm_confine(win, 1, 2, 30, 40);
+    print_rect("rect_before", win);
     if (livepub) {
       // A live publisher (this process): the watch must never close.
       post_cb(appid, open_state(getpid()));
@@ -103,11 +121,15 @@ int main(int argc, char **argv) {
     } else {
       post_cb(appid, 1);
     }
+    print_rect("rect_open", win);
     wm_assoc(0);
     wm_warp();
+    wm_confine(win, 5, 6, 70, 80);
+    print_rect("rect_deferred", win);
     if (flood) for (int i = 0; i < 500; i++) wm_assoc(0);
     (void)CGAssociateMouseAndMouseCursorPosition(false); // driver itself: forwarded
     post_cb(appid, 0);
+    print_rect("rect_after", win);
     if (flood) {
       // WR-03: a second open/close after the flood must still be logged.
       post_cb(appid, 1);
@@ -115,6 +137,8 @@ int main(int argc, char **argv) {
       post_cb(appid, 0);
     }
     // Leave the user's mouse and cursor as we found them.
+    ((void (*)(id, SEL, NSRect))objc_msgSend)(win, sel_registerName("setMouseConfinementRect:"), NSZeroRect);
+    [win close];
     (void)CGAssociateMouseAndMouseCursorPosition(true);
     [NSCursor unhide];
     printf("done\\n");
@@ -131,6 +155,10 @@ void wm_assoc(int a) { CGAssociateMouseAndMouseCursorPosition(a); }
 void wm_warp(void) { CGWarpMouseCursorPosition(CGPointMake(10, 10)); }
 void wm_hide(void) {
   ((void (*)(id, SEL))objc_msgSend)((id)objc_getClass("NSCursor"), sel_registerName("hide"));
+}
+void wm_confine(id w, double x, double y, double wd, double h) {
+  ((void (*)(id, SEL, CGRect))objc_msgSend)(w, sel_registerName("setMouseConfinementRect:"),
+                                            CGRectMake(x, y, wd, h));
 }
 `
 
@@ -163,6 +191,29 @@ function run(
 }
 
 const describeDarwin = process.platform === 'darwin' ? describe : describe.skip
+
+// WR-05: an explicit, logged skip without a window server, never a silent pass.
+function hasWindowServer(): boolean {
+  if (process.platform !== 'darwin') return false
+  const profile = createFakeHomeProfile({ prefix: 'gamelib-ovlin-ws-' })
+  try {
+    const r = spawnSync('launchctl', ['managername'], {
+      encoding: 'utf8',
+      env: profile.childEnv(process.env),
+      timeout: 10_000
+    })
+    return r.status === 0 && r.stdout.trim() === 'Aqua'
+  } finally {
+    profile.dispose()
+  }
+}
+const windowServer = hasWindowServer()
+if (process.platform === 'darwin' && !windowServer) {
+  console.warn(
+    'overlay_input smoke: SKIPPED, no window server (launchctl managername is not Aqua)'
+  )
+}
+const itWindowServer = windowServer ? it : it.skip
 
 describeDarwin('overlay_input.dylib smoke (60-19, G1)', () => {
   jest.setTimeout(240_000)
@@ -283,116 +334,156 @@ describeDarwin('overlay_input.dylib smoke (60-19, G1)', () => {
     }
   }
 
-  const noServer = (stdout: string): boolean => {
+  const requireExercised = (stdout: string): void => {
     if (stdout.includes('no-window-server')) {
-      console.warn('overlay_input not exercised: no window server')
-      return true
+      throw new Error(
+        'launchctl reports Aqua but the driver found no window server: not exercised'
+      )
     }
-    return false
   }
 
   const countOf = (text: string, needle: string): number =>
     text.split(needle).length - 1
 
-  it('releases on open, defers winemac re-capture, forwards others, replays once, blocks', async () => {
-    const { stdout, stderr } = await runDriver([winemac, setactive])
-    if (noServer(stdout)) return
-    expect(countOf(stderr, 'overlay_input open')).toBe(1)
-    expect(stderr).toContain('overlay_input deferred CGAssociate')
-    expect(stderr).toContain('overlay_input deferred CGWarpMouseCursorPosition')
-    // The driver's own dissociate while open is forwarded, never reported deferred.
-    expect(countOf(stderr, 'overlay_input deferred CGAssociate')).toBe(1)
-    expect(countOf(stderr, 'overlay_input close')).toBe(1)
-    // WR-03: the per-open deferred total rides the close line (assoc + warp).
-    expect(stderr).toContain('overlay_input close deferred=2')
-    expect(stderr.indexOf('overlay_input close')).toBeGreaterThan(
-      stderr.indexOf('overlay_input open')
-    )
-    expect(stdout.indexOf('set_active 1')).toBeGreaterThanOrEqual(0)
-    expect(stdout.indexOf('set_active 0')).toBeGreaterThan(
-      stdout.indexOf('set_active 1')
-    )
-  })
+  itWindowServer(
+    'releases on open, defers winemac re-capture, forwards others, replays once, blocks',
+    async () => {
+      const { stdout, stderr } = await runDriver([winemac, setactive])
+      requireExercised(stdout)
+      expect(countOf(stderr, 'overlay_input open')).toBe(1)
+      // WR-05: the release itself. Every window's confinement was cleared, the
+      // one recorded winemac hide was undone and associate(1) was issued.
+      expect(stderr).toMatch(
+        /overlay_input open windows=[1-9]\d* unhide=1 assoc=1 err=-?\d+/
+      )
+      // ...and the real window state agrees: winemac's rect was in force, open
+      // cleared it, winemac's new rect while open was deferred (still clear), and
+      // close replayed that latest rect.
+      expect(stdout).toContain('rect_before=1,2,30,40')
+      expect(stdout).toContain('rect_open=0,0,0,0')
+      expect(stdout).toContain('rect_deferred=0,0,0,0')
+      expect(stdout).toContain('rect_after=5,6,70,80')
+      expect(stderr).toContain('overlay_input deferred CGAssociate')
+      expect(stderr).toContain(
+        'overlay_input deferred CGWarpMouseCursorPosition'
+      )
+      expect(stderr).toContain('overlay_input deferred setMouseConfinementRect')
+      // The driver's own dissociate while open is forwarded, never reported deferred.
+      expect(countOf(stderr, 'overlay_input deferred CGAssociate')).toBe(1)
+      expect(countOf(stderr, 'overlay_input close')).toBe(1)
+      // WR-03/WR-05: per-open deferred total (assoc + warp + rect) and the replay
+      // of winemac's latest state: dissociated, one hide, the rect.
+      expect(stderr).toContain(
+        'overlay_input close deferred=3 assoc=0 hide=1 rect=replayed'
+      )
+      expect(stderr.indexOf('overlay_input close')).toBeGreaterThan(
+        stderr.indexOf('overlay_input open')
+      )
+      expect(stdout.indexOf('set_active 1')).toBeGreaterThanOrEqual(0)
+      expect(stdout.indexOf('set_active 0')).toBeGreaterThan(
+        stdout.indexOf('set_active 1')
+      )
+    }
+  )
 
-  it('WR-01: a live publisher pid never closes the overlay by itself', async () => {
-    const { stdout, stderr } = await runDriver([
-      winemac,
-      setactive,
-      '--livepub'
-    ])
-    if (noServer(stdout)) return
-    expect(stderr).not.toContain('overlay_input publisher gone')
-    // Still open after two poll intervals: the later winemac call is deferred.
-    expect(stderr).toContain('overlay_input deferred CGWarpMouseCursorPosition')
-    expect(countOf(stderr, 'overlay_input close')).toBe(1)
-  })
+  itWindowServer(
+    'WR-01: a live publisher pid never closes the overlay by itself',
+    async () => {
+      const { stdout, stderr } = await runDriver([
+        winemac,
+        setactive,
+        '--livepub'
+      ])
+      requireExercised(stdout)
+      expect(stderr).not.toContain('overlay_input publisher gone')
+      // Still open after two poll intervals: the later winemac call is deferred.
+      expect(stderr).toContain(
+        'overlay_input deferred CGWarpMouseCursorPosition'
+      )
+      expect(countOf(stderr, 'overlay_input close')).toBe(1)
+    }
+  )
 
-  it('WR-01: a dead publisher pid closes once (set_active 0) without a close post', async () => {
-    const { stdout, stderr } = await runDriver([
-      winemac,
-      setactive,
-      '--deadpub'
-    ])
-    if (noServer(stdout)) return
-    expect(stderr).toMatch(/overlay_input publisher gone pid=\d+/)
-    const gone = stderr.indexOf('overlay_input publisher gone')
-    expect(stderr.indexOf('overlay_input close')).toBeGreaterThan(gone)
-    // The driver's later close post finds nothing open: still one close.
-    expect(countOf(stderr, 'overlay_input close')).toBe(1)
-    // Closed before the driver's own winemac calls: nothing deferred.
-    expect(stderr).not.toContain('overlay_input deferred')
-    expect(stdout.indexOf('set_active 0')).toBeGreaterThan(
-      stdout.indexOf('set_active 1')
-    )
-    expect(stdout.indexOf('set_active 0')).toBeLessThan(
-      stdout.indexOf('deadpub-waited')
-    )
-  })
+  itWindowServer(
+    'WR-01: a dead publisher pid closes once (set_active 0) without a close post',
+    async () => {
+      const { stdout, stderr } = await runDriver([
+        winemac,
+        setactive,
+        '--deadpub'
+      ])
+      requireExercised(stdout)
+      expect(stderr).toMatch(/overlay_input publisher gone pid=\d+/)
+      const gone = stderr.indexOf('overlay_input publisher gone')
+      expect(stderr.indexOf('overlay_input close')).toBeGreaterThan(gone)
+      // The driver's later close post finds nothing open: still one close.
+      expect(countOf(stderr, 'overlay_input close')).toBe(1)
+      // Closed before the driver's own winemac calls: nothing deferred.
+      expect(stderr).not.toContain('overlay_input deferred')
+      expect(stdout.indexOf('set_active 0')).toBeGreaterThan(
+        stdout.indexOf('set_active 1')
+      )
+      expect(stdout.indexOf('set_active 0')).toBeLessThan(
+        stdout.indexOf('deadpub-waited')
+      )
+    }
+  )
 
-  it('logs set_active absent once and does not crash without the shim', async () => {
-    const { stdout, stderr } = await runDriver([winemac, '-'])
-    if (noServer(stdout)) return
-    expect(countOf(stderr, 'overlay_input set_active absent')).toBe(1)
-    expect(stderr).toContain('overlay_input close')
-  })
+  itWindowServer(
+    'logs set_active absent once and does not crash without the shim',
+    async () => {
+      const { stdout, stderr } = await runDriver([winemac, '-'])
+      requireExercised(stdout)
+      expect(countOf(stderr, 'overlay_input set_active absent')).toBe(1)
+      expect(stderr).toContain('overlay_input close')
+    }
+  )
 
-  it('stays inactive without WineApplication, once', async () => {
+  itWindowServer('stays inactive without WineApplication, once', async () => {
     const { stdout, stderr } = await runDriver([winemac, '-', '--noclass'])
-    if (noServer(stdout)) return
+    requireExercised(stdout)
     expect(countOf(stderr, 'overlay_input inactive')).toBe(1)
     expect(stderr).not.toContain('overlay_input open')
   })
 
-  it('stays inactive in a Wine service process (explorer.exe)', async () => {
-    const { stdout, stderr } = await runDriver(
-      [winemac, setactive],
-      serviceDriver
-    )
-    if (noServer(stdout)) return
-    expect(countOf(stderr, 'overlay_input inactive')).toBe(1)
-    expect(stderr).not.toContain('overlay_input open')
-    expect(stdout).not.toContain('set_active')
-  })
+  itWindowServer(
+    'stays inactive in a Wine service process (explorer.exe)',
+    async () => {
+      const { stdout, stderr } = await runDriver(
+        [winemac, setactive],
+        serviceDriver
+      )
+      requireExercised(stdout)
+      expect(countOf(stderr, 'overlay_input inactive')).toBe(1)
+      expect(stderr).not.toContain('overlay_input open')
+      expect(stdout).not.toContain('set_active')
+    }
+  )
 
-  it('caps deferred lines under 500 deferred calls and keeps every lifecycle line (WR-03)', async () => {
-    const { stdout, stderr } = await runDriver([winemac, '-', '--flood'])
-    if (noServer(stdout)) return
-    const lines = stderr
-      .split('\n')
-      .filter((l) => l.startsWith('overlay_input'))
-    const deferred = lines.filter((l) =>
-      l.startsWith('overlay_input deferred ')
-    )
-    expect(deferred.length).toBe(32)
-    expect(lines.length).toBeLessThanOrEqual(256 + 32)
-    // Both cycles' lifecycle lines survive the flood; counts are per open.
-    expect(lines.filter((l) => l === 'overlay_input open')).toHaveLength(2)
-    expect(
-      lines.filter((l) => l.startsWith('overlay_input close deferred='))
-    ).toEqual([
-      'overlay_input close deferred=502',
-      'overlay_input close deferred=1'
-    ])
-    expect(countOf(stderr, 'overlay_input set_active absent')).toBe(1)
-  })
+  itWindowServer(
+    'caps deferred lines under 500 deferred calls and keeps every lifecycle line (WR-03)',
+    async () => {
+      const { stdout, stderr } = await runDriver([winemac, '-', '--flood'])
+      requireExercised(stdout)
+      const lines = stderr
+        .split('\n')
+        .filter((l) => l.startsWith('overlay_input'))
+      const deferred = lines.filter((l) =>
+        l.startsWith('overlay_input deferred ')
+      )
+      expect(deferred.length).toBe(32)
+      expect(lines.length).toBeLessThanOrEqual(256 + 32)
+      // Both cycles' lifecycle lines survive the flood; counts are per open.
+      expect(
+        lines.filter((l) => l.startsWith('overlay_input open '))
+      ).toHaveLength(2)
+      expect(
+        lines.filter((l) => l.startsWith('overlay_input close deferred='))
+      ).toEqual([
+        'overlay_input close deferred=503 assoc=0 hide=1 rect=replayed',
+        'overlay_input close deferred=1 assoc=0 hide=1 rect=replayed'
+      ])
+      expect(countOf(stderr, 'overlay_input set_active absent')).toBe(1)
+    }
+  )
 })

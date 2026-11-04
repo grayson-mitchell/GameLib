@@ -4,13 +4,16 @@
  *
  * The unconditional assertions need no window server (CGAssociate... is logged
  * before the real call forwards, and the NSCursor swizzle is installed at load).
- * Only the NSCursor hide/unhide call assertion is guarded by a GUI session check.
+ * Only the NSCursor hide/unhide call assertion and the 60-17 experiment cases
+ * need a GUI session. 60-REVIEW WR-05: that is decided at collect time
+ * (launchctl managername is Aqua); without one those cases are reported as
+ * skipped, and with one a driver that finds no window server fails the case.
  *
  * 60-17 extends it: the cb signal, caller-attributed renderer calls, the
  * interpose-visibility characterisation, image order, neutrality when the
  * experiment is unset, and the opt-in release / defer / replay experiment.
  */
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import {
   mkdirSync,
   mkdtempSync,
@@ -173,6 +176,36 @@ function run(
 }
 
 const describeDarwin = process.platform === 'darwin' ? describe : describe.skip
+
+// WR-05: an explicit, logged skip without a window server, never a silent pass.
+function hasWindowServer(): boolean {
+  if (process.platform !== 'darwin') return false
+  const profile = createFakeHomeProfile({ prefix: 'gamelib-ovlprobe-ws-' })
+  try {
+    const r = spawnSync('launchctl', ['managername'], {
+      encoding: 'utf8',
+      env: profile.childEnv(process.env),
+      timeout: 10_000
+    })
+    return r.status === 0 && r.stdout.trim() === 'Aqua'
+  } finally {
+    profile.dispose()
+  }
+}
+const windowServer = hasWindowServer()
+if (process.platform === 'darwin' && !windowServer) {
+  console.warn(
+    'overlay input probe smoke: GUI cases SKIPPED, no window server (launchctl managername is not Aqua)'
+  )
+}
+const itWindowServer = windowServer ? it : it.skip
+const requireExercised = (stdout: string): void => {
+  if (stdout.includes('no-window-server')) {
+    throw new Error(
+      'launchctl reports Aqua but the driver found no window server: not exercised'
+    )
+  }
+}
 
 const WINEMAC_SOURCE = `
 #include <CoreGraphics/CoreGraphics.h>
@@ -372,9 +405,10 @@ describeDarwin('overlay input probe smoke (60-11, 60-17, G1)', () => {
           `driver --cursor exited ${second.code}:\n${second.stderr}`
         )
       }
-      if (second.stdout.includes('no-window-server')) {
-        console.warn('NSCursor hook call not exercised: no window server')
+      if (!windowServer) {
+        console.warn('NSCursor hook call SKIPPED: no window server')
       } else {
+        requireExercised(second.stdout)
         const after = readFileSync(logPath, 'utf8')
         expect(after).toContain('NSCursor-hide')
         expect(after).toContain('NSCursor-unhide')
@@ -409,86 +443,91 @@ describeDarwin('overlay input probe smoke (60-11, 60-17, G1)', () => {
   })
 
   describe('release-on-open experiment (60-17)', () => {
-    const guard = (stdout: string): boolean => {
-      if (stdout.includes('no-window-server')) {
-        console.warn('experiment not exercised: no window server')
-        return true
-      }
-      return false
-    }
-
-    it('cb:release releases, defers winemac re-capture, forwards others, replays once', async () => {
-      const id = `${process.pid}${++counter}`
-      const { stdout, log } = await runDriver(['--exp', id, winemac, '-'], {
-        SteamAppId: id,
-        GAMELIB_OVERLAY_RELEASE_EXPERIMENT: 'cb:release'
-      })
-      if (guard(stdout)) return
-      const lines = log.split('\n')
-      expect(log).toContain('experiment open source=cb action=release')
-      expect(log).toMatch(/experiment release assoc=1 windows=\d+ unhide=1/)
-      expect(
-        lines.some(
-          (l) =>
-            l.includes('CGAssociateMouseAndMouseCursorPosition') &&
-            l.includes('caller=experiment')
+    itWindowServer(
+      'cb:release releases, defers winemac re-capture, forwards others, replays once',
+      async () => {
+        const id = `${process.pid}${++counter}`
+        const { stdout, log } = await runDriver(['--exp', id, winemac, '-'], {
+          SteamAppId: id,
+          GAMELIB_OVERLAY_RELEASE_EXPERIMENT: 'cb:release'
+        })
+        requireExercised(stdout)
+        const lines = log.split('\n')
+        expect(log).toContain('experiment open source=cb action=release')
+        expect(log).toMatch(/experiment release assoc=1 windows=\d+ unhide=1/)
+        expect(
+          lines.some(
+            (l) =>
+              l.includes('CGAssociateMouseAndMouseCursorPosition') &&
+              l.includes('caller=experiment')
+          )
+        ).toBe(true)
+        expect(log).toContain(
+          'deferred CGAssociateMouseAndMouseCursorPosition caller=winemac.so'
         )
-      ).toBe(true)
-      expect(log).toContain(
-        'deferred CGAssociateMouseAndMouseCursorPosition caller=winemac.so'
-      )
-      expect(log).toContain(
-        'deferred CGWarpMouseCursorPosition caller=winemac.so'
-      )
-      // The driver's own dissociate while open is forwarded, not deferred.
-      expect(
-        lines.some(
-          (l) =>
-            l.includes('CGAssociateMouseAndMouseCursorPosition') &&
-            l.includes('caller=probedriver') &&
-            l.includes('arg=0')
+        expect(log).toContain(
+          'deferred CGWarpMouseCursorPosition caller=winemac.so'
         )
-      ).toBe(true)
-      expect(
-        lines.filter((l) => l.includes('deferred') && l.includes('probedriver'))
-      ).toHaveLength(0)
-      const closes = lines.filter((l) => l.includes('experiment close'))
-      expect(closes).toHaveLength(1)
-      expect(closes[0]).toMatch(/reason=signal replay assoc=0 rect=none hide=1/)
-    })
-
-    it('cb:release+block drives set_active 1 on open and 0 on close', async () => {
-      const id = `${process.pid}${++counter}`
-      const args = ['--exp', id, winemac, setactive]
-      const env = {
-        SteamAppId: id,
-        GAMELIB_OVERLAY_RELEASE_EXPERIMENT: 'cb:release+block'
+        // The driver's own dissociate while open is forwarded, not deferred.
+        expect(
+          lines.some(
+            (l) =>
+              l.includes('CGAssociateMouseAndMouseCursorPosition') &&
+              l.includes('caller=probedriver') &&
+              l.includes('arg=0')
+          )
+        ).toBe(true)
+        expect(
+          lines.filter(
+            (l) => l.includes('deferred') && l.includes('probedriver')
+          )
+        ).toHaveLength(0)
+        const closes = lines.filter((l) => l.includes('experiment close'))
+        expect(closes).toHaveLength(1)
+        expect(closes[0]).toMatch(
+          /reason=signal replay assoc=0 rect=none hide=1/
+        )
       }
-      const { stdout, log } = await runDriver(args, env)
-      if (guard(stdout)) return
-      expect(stdout.indexOf('set_active 1')).toBeGreaterThanOrEqual(0)
-      expect(stdout.indexOf('set_active 0')).toBeGreaterThan(
-        stdout.indexOf('set_active 1')
-      )
-      expect(log).toContain('experiment open source=cb action=release+block')
+    )
 
-      const absent = await runDriver(['--exp', id, winemac, '-'], env)
-      expect(absent.log).toContain('experiment set_active absent')
-    })
+    itWindowServer(
+      'cb:release+block drives set_active 1 on open and 0 on close',
+      async () => {
+        const id = `${process.pid}${++counter}`
+        const args = ['--exp', id, winemac, setactive]
+        const env = {
+          SteamAppId: id,
+          GAMELIB_OVERLAY_RELEASE_EXPERIMENT: 'cb:release+block'
+        }
+        const { stdout, log } = await runDriver(args, env)
+        requireExercised(stdout)
+        expect(stdout.indexOf('set_active 1')).toBeGreaterThanOrEqual(0)
+        expect(stdout.indexOf('set_active 0')).toBeGreaterThan(
+          stdout.indexOf('set_active 1')
+        )
+        expect(log).toContain('experiment open source=cb action=release+block')
 
-    it('stays inactive without the WineApplication class', async () => {
-      const id = `${process.pid}${++counter}`
-      const { stdout, log } = await runDriver(
-        ['--exp', id, winemac, '-', '--noclass'],
-        { SteamAppId: id, GAMELIB_OVERLAY_RELEASE_EXPERIMENT: 'cb:release' }
-      )
-      if (guard(stdout)) return
-      expect(
-        log.split('experiment inactive reason=no-wineapp').length - 1
-      ).toBe(1)
-      expect(log).not.toContain('experiment open')
-      expect(log).not.toContain('deferred')
-    })
+        const absent = await runDriver(['--exp', id, winemac, '-'], env)
+        expect(absent.log).toContain('experiment set_active absent')
+      }
+    )
+
+    itWindowServer(
+      'stays inactive without the WineApplication class',
+      async () => {
+        const id = `${process.pid}${++counter}`
+        const { stdout, log } = await runDriver(
+          ['--exp', id, winemac, '-', '--noclass'],
+          { SteamAppId: id, GAMELIB_OVERLAY_RELEASE_EXPERIMENT: 'cb:release' }
+        )
+        requireExercised(stdout)
+        expect(
+          log.split('experiment inactive reason=no-wineapp').length - 1
+        ).toBe(1)
+        expect(log).not.toContain('experiment open')
+        expect(log).not.toContain('deferred')
+      }
+    )
 
     it('rejects an invalid experiment value and stays neutral', async () => {
       const { log } = await runDriver([], {
@@ -498,14 +537,17 @@ describeDarwin('overlay input probe smoke (60-11, 60-17, G1)', () => {
       expect(log).not.toContain('experiment open')
     })
 
-    it('key:release toggles open then close on two Shift+Tab presses', async () => {
-      const { stdout, log } = await runDriver(['--key', '1', winemac, '-'], {
-        GAMELIB_OVERLAY_RELEASE_EXPERIMENT: 'key:release'
-      })
-      if (guard(stdout)) return
-      expect(log.split('signal key shift+tab').length - 1).toBe(2)
-      expect(log).toContain('experiment open source=key')
-      expect(log).toContain('experiment close reason=signal')
-    })
+    itWindowServer(
+      'key:release toggles open then close on two Shift+Tab presses',
+      async () => {
+        const { stdout, log } = await runDriver(['--key', '1', winemac, '-'], {
+          GAMELIB_OVERLAY_RELEASE_EXPERIMENT: 'key:release'
+        })
+        requireExercised(stdout)
+        expect(log.split('signal key shift+tab').length - 1).toBe(2)
+        expect(log).toContain('experiment open source=key')
+        expect(log).toContain('experiment close reason=signal')
+      }
+    )
   })
 })

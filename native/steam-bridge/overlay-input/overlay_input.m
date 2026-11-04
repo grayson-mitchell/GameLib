@@ -363,21 +363,25 @@ static void overlay_open(pid_t publisher)
 	st_hide_real = 0;
 	os_unfair_lock_unlock(&st_lock);
 
-	ovl_log("open");
+	// 60-REVIEW WR-05: the open line reports what was actually released.
+	int cleared = 0, unhidden = 0;
 	@autoreleasepool {
 		if (real_confine != NULL) {
-			for (NSWindow *w in [NSApp windows])
+			for (NSWindow *w in [NSApp windows]) {
 				((void (*)(id, SEL, NSRect))real_confine)(
 				    w, sel_registerName("setMouseConfinementRect:"), NSZeroRect);
+				cleared++;
+			}
 		}
 	}
 	// This image's own __interpose does not apply to itself: this is the real call.
-	(void)CGAssociateMouseAndMouseCursorPosition(1);
+	CGError assoc_err = CGAssociateMouseAndMouseCursorPosition(1);
 	if (real_cursor_unhide != NULL) {
 		Class cursor = objc_getClass("NSCursor");
-		for (int i = 0; i < hide_real; i++)
+		for (int i = 0; i < hide_real; i++, unhidden++)
 			((void (*)(id, SEL))real_cursor_unhide)((id)cursor, sel_registerName("unhide"));
 	}
+	ovl_log("open windows=%d unhide=%d assoc=1 err=%d", cleared, unhidden, (int)assoc_err);
 #if OVERLAY_INPUT_BLOCK
 	call_set_active(1);
 #endif
@@ -415,15 +419,20 @@ static void overlay_close(void)
 	}
 	if (assoc >= 0)
 		(void)CGAssociateMouseAndMouseCursorPosition(assoc ? 1 : 0);
+	// 60-REVIEW WR-05: the close line reports what was actually replayed.
+	const char *rect_state = "none";
 	if (has_rect && real_confine != NULL) {
+		rect_state = "no-window";
 		@autoreleasepool {
 			NSWindow *w = [NSApp windowWithWindowNumber:(NSInteger)win];
-			if (w != nil)
+			if (w != nil) {
 				((void (*)(id, SEL, NSRect))real_confine)(
 				    w, sel_registerName("setMouseConfinementRect:"), rect);
+				rect_state = "replayed";
+			}
 		}
 	}
-	ovl_log("close deferred=%u", deferred);
+	ovl_log("close deferred=%u assoc=%d hide=%d rect=%s", deferred, assoc, hide, rect_state);
 }
 
 // ---- signal (cb): the helper's Darwin notification ---------------------------
