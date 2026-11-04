@@ -72,7 +72,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 60
-Plan: Not started
+Plan: 0 of 0
 Status: Milestone complete
 Last activity: 2026-11-05 - Completed quick task 261105-gy5: localise steam overlay toast keys
 
