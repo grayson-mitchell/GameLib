@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Phase 60 context gathered
-last_updated: "2026-11-04T06:33:06.302Z"
+last_updated: "2026-11-04T06:58:45.216Z"
 last_activity: 2026-11-04
 progress:
   total_phases: 10
   completed_phases: 9
   total_plans: 264
-  completed_plans: 260
+  completed_plans: 261
   percent: 90
 ---
 
@@ -72,11 +72,11 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 60 (steam-overlay-in-bridged-games-on-macos) — EXECUTING
-Plan: 6 of 16
+Plan: 7 of 16
 Status: Ready to execute
 Last activity: 2026-11-04
 
-Progress: [██████████] 98%
+Progress: [██████████] 99%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -320,6 +320,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 57]: 57-08: CEG report precedes forced-bridge return; no Mach-O retry seam (D-18)
 - [Phase 57]: [57-11] wrangler 4.156.0 user-approved; compatibility_date 2026-10-30 (workerd limit)
 - [Phase 59]: G27 accepted (operator 2026-11-03): D-09 unchanged, offline probe latency accepted
+- [Phase 60]: [60-18] G1 verdict X-RELEASE+BLOCK (signal cb): release on open + set_active, replay on close; scope to game process not explorer.exe
 
 ### Pending Todos
 
@@ -513,7 +514,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-04T06:33:06.295Z
+Last session: 2026-11-04T06:58:40.973Z
 Stopped at: Phase 60 context gathered
 Resume file: None
 
