@@ -5915,7 +5915,7 @@ export default class SteamGame implements Game {
       }
 
       // D-10: an overlay launch whose game vanishes within the window gets a
-      // text pointer to Advanced > Steam overlay (orchestrator resolution 4: an
+      // text pointer to Run > Steam overlay (orchestrator resolution 4: an
       // inline button would need a settings deep link the app does not have).
       // Never retries, never changes settings.
       let firstMatchAt: number | undefined
@@ -5948,7 +5948,7 @@ export default class SteamGame implements Game {
           ),
           i18next.t(
             'gamelib:steam.overlay.exit.body',
-            "The game exited within 30 seconds with the Steam overlay on. If this keeps happening, turn the overlay off in this game's settings: Advanced > Steam overlay."
+            "The game exited within 30 seconds with the Steam overlay on. If this keeps happening, turn the overlay off in this game's settings: Run > Steam overlay."
           ),
           'overlay-exit-abnormal'
         )

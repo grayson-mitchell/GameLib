@@ -683,7 +683,7 @@
         },
         "overlay": {
             "exit": {
-                "body": "The game exited within 30 seconds with the Steam overlay on. If this keeps happening, turn the overlay off in this game's settings: Advanced > Steam overlay.",
+                "body": "The game exited within 30 seconds with the Steam overlay on. If this keeps happening, turn the overlay off in this game's settings: Run > Steam overlay.",
                 "title": "Game closed soon after starting"
             },
             "override": {
