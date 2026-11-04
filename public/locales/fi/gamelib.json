@@ -529,6 +529,20 @@
                     "cxMissing": "CrossOveria ei löytynyt"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "CrossOverin päällisen kopiota ei voitu valmistella.",
+                "crossoverDetect": "CrossOveria ei löytynyt.",
+                "env": "Päällisen polku sisältää merkin, jota GameLib ei voi välittää peliin.",
+                "resign": "CrossOverin päällisen kopiota ei voitu allekirjoittaa.",
+                "shim": "GameLibin päällisen apuohjelma puuttuu tästä koontiversiosta.",
+                "steamDylibs": "Mac Steamin päällisen tiedostoja ei löytynyt."
+            },
+            "toast": {
+                "body": "{{step}} Peli käynnistyy ilman Steamin päällistä.",
+                "title": "Steamin päällinen ei ole käytettävissä"
+            }
         }
     },
     "steamgriddb": {

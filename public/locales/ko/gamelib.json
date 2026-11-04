@@ -529,6 +529,20 @@
                     "cxMissing": "CrossOver를 찾을 수 없음"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "CrossOver의 오버레이용 사본을 준비하지 못했습니다.",
+                "crossoverDetect": "CrossOver를 찾을 수 없습니다.",
+                "env": "오버레이 경로에 GameLib이 게임에 전달할 수 없는 문자가 포함되어 있습니다.",
+                "resign": "CrossOver의 오버레이용 사본에 서명하지 못했습니다.",
+                "shim": "GameLib의 오버레이 도우미가 이 빌드에 없습니다.",
+                "steamDylibs": "Mac Steam의 오버레이 파일을 찾을 수 없습니다."
+            },
+            "toast": {
+                "body": "{{step}} 게임이 Steam 오버레이 없이 실행됩니다.",
+                "title": "Steam 오버레이를 사용할 수 없음"
+            }
         }
     },
     "steamgriddb": {

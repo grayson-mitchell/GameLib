@@ -526,6 +526,20 @@
                     "cxMissing": "CrossOverit ei leitud"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "CrossOveri ülekatte koopiat ei õnnestunud ette valmistada.",
+                "crossoverDetect": "CrossOveri ei leitud.",
+                "env": "Ülekatte tee sisaldab märki, mida GameLib ei saa mängule edastada.",
+                "resign": "CrossOveri ülekatte koopiat ei õnnestunud allkirjastada.",
+                "shim": "GameLibi ülekatte abiline puudub sellest versioonist.",
+                "steamDylibs": "Mac Steami ülekatte faile ei leitud."
+            },
+            "toast": {
+                "body": "{{step}} Mäng käivitub ilma Steami ülekatteta.",
+                "title": "Steami ülekate pole saadaval"
+            }
         }
     },
     "steamgriddb": {

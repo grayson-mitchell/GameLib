@@ -536,6 +536,20 @@
                     "cxMissing": "CrossOver לא נמצא"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "לא ניתן היה להכין את עותק שכבת-העל של CrossOver.",
+                "crossoverDetect": "לא ניתן היה למצוא את CrossOver.",
+                "env": "נתיב שכבת-העל מכיל תו ש-GameLib אינו יכול להעביר למשחק.",
+                "resign": "לא ניתן היה לחתום על עותק שכבת-העל של CrossOver.",
+                "shim": "העוזר של שכבת-העל של GameLib חסר בגרסה זו.",
+                "steamDylibs": "קובצי שכבת-העל של Mac Steam לא נמצאו."
+            },
+            "toast": {
+                "body": "{{step}} המשחק מופעל ללא שכבת-העל של Steam.",
+                "title": "שכבת-העל של Steam אינה זמינה"
+            }
         }
     },
     "steamgriddb": {

@@ -437,6 +437,20 @@
                     "cxMissing": "CrossOver introuvable"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "La copie de CrossOver pour la surcouche n'a pas pu être préparée.",
+                "crossoverDetect": "CrossOver est introuvable.",
+                "env": "Un chemin de la surcouche contient un caractère que GameLib ne peut pas transmettre au jeu.",
+                "resign": "La copie de CrossOver pour la surcouche n'a pas pu être signée.",
+                "shim": "L'assistant de surcouche de GameLib est absent de cette version.",
+                "steamDylibs": "Les fichiers de la surcouche de Mac Steam sont introuvables."
+            },
+            "toast": {
+                "body": "{{step}} Le jeu se lance sans la surcouche Steam.",
+                "title": "Surcouche Steam indisponible"
+            }
         }
     },
     "themeSelector": {

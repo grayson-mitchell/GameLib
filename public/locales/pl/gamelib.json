@@ -543,6 +543,20 @@
                     "cxMissing": "Nie znaleziono CrossOver"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Nie udało się przygotować kopii CrossOver dla nakładki.",
+                "crossoverDetect": "Nie udało się znaleźć CrossOver.",
+                "env": "Ścieżka nakładki zawiera znak, którego GameLib nie może przekazać grze.",
+                "resign": "Nie udało się podpisać kopii CrossOver dla nakładki.",
+                "shim": "W tej wersji brakuje pomocnika nakładki GameLib.",
+                "steamDylibs": "Nie znaleziono plików nakładki Mac Steam."
+            },
+            "toast": {
+                "body": "{{step}} Gra uruchamia się bez nakładki Steam.",
+                "title": "Nakładka Steam jest niedostępna"
+            }
         }
     },
     "steamgriddb": {

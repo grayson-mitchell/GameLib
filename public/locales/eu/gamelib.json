@@ -529,6 +529,20 @@
                     "cxMissing": "Ez da CrossOver aurkitu"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Ezin izan da CrossOver-en overlay kopia prestatu.",
+                "crossoverDetect": "Ezin izan da CrossOver aurkitu.",
+                "env": "Overlay bideak GameLib-ek jokoari pasa ezin dion karaktere bat dauka.",
+                "resign": "Ezin izan da CrossOver-en overlay kopia sinatu.",
+                "shim": "GameLib-en overlay laguntzailea falta da bertsio honetan.",
+                "steamDylibs": "Ez dira aurkitu Mac Steam-en overlay fitxategiak."
+            },
+            "toast": {
+                "body": "{{step}} Jokoa Steam overlay gabe abiarazten ari da.",
+                "title": "Steam overlay ez dago erabilgarri"
+            }
         }
     },
     "steamgriddb": {

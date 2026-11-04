@@ -529,6 +529,20 @@
                     "cxMissing": "CrossOver が見つかりません"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "オーバーレイ用のCrossOverのコピーを準備できませんでした。",
+                "crossoverDetect": "CrossOverが見つかりませんでした。",
+                "env": "オーバーレイのパスに、GameLibがゲームに渡せない文字が含まれています。",
+                "resign": "オーバーレイ用のCrossOverのコピーに署名できませんでした。",
+                "shim": "GameLibのオーバーレイヘルパーがこのビルドに含まれていません。",
+                "steamDylibs": "Mac Steamのオーバーレイファイルが見つかりませんでした。"
+            },
+            "toast": {
+                "body": "{{step}} ゲームはSteamオーバーレイなしで起動します。",
+                "title": "Steamオーバーレイを利用できません"
+            }
         }
     },
     "steamgriddb": {

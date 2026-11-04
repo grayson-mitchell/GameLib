@@ -543,6 +543,20 @@
                     "cxMissing": "CrossOver sa nenašiel"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Kópiu CrossOver pre prekrytie sa nepodarilo pripraviť.",
+                "crossoverDetect": "CrossOver sa nepodarilo nájsť.",
+                "env": "Cesta k prekrytiu obsahuje znak, ktorý GameLib nedokáže odovzdať hre.",
+                "resign": "Kópiu CrossOver pre prekrytie sa nepodarilo podpísať.",
+                "shim": "Pomocník prekrytia GameLib v tejto zostave chýba.",
+                "steamDylibs": "Súbory prekrytia Mac Steamu sa nenašli."
+            },
+            "toast": {
+                "body": "{{step}} Hra sa spúšťa bez prekrytia Steamu.",
+                "title": "Prekrytie Steamu nie je k dispozícii"
+            }
         }
     },
     "steamgriddb": {

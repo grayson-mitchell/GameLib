@@ -543,6 +543,20 @@
                     "cxMissing": "CrossOver nebyl nalezen"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Kopii CrossOver pro překryv se nepodařilo připravit.",
+                "crossoverDetect": "CrossOver se nepodařilo najít.",
+                "env": "Cesta k překryvu obsahuje znak, který GameLib nedokáže předat hře.",
+                "resign": "Kopii CrossOver pro překryv se nepodařilo podepsat.",
+                "shim": "Pomocný modul překryvu GameLib v tomto sestavení chybí.",
+                "steamDylibs": "Soubory překryvu Mac Steamu nebyly nalezeny."
+            },
+            "toast": {
+                "body": "{{step}} Hra se spouští bez překryvu Steamu.",
+                "title": "Překryv Steamu není dostupný"
+            }
         }
     },
     "steamgriddb": {

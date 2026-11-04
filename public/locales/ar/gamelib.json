@@ -557,6 +557,20 @@
                     "cxMissing": "لم يتم العثور على CrossOver"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "تعذّر إعداد نسخة التراكب من CrossOver.",
+                "crossoverDetect": "تعذّر العثور على CrossOver.",
+                "env": "يحتوي مسار التراكب على حرف لا يستطيع GameLib تمريره إلى اللعبة.",
+                "resign": "تعذّر توقيع نسخة التراكب من CrossOver.",
+                "shim": "أداة التراكب المساعدة في GameLib مفقودة من هذا الإصدار.",
+                "steamDylibs": "لم يتم العثور على ملفات التراكب في Mac Steam."
+            },
+            "toast": {
+                "body": "{{step}} يتم تشغيل اللعبة بدون تراكب Steam.",
+                "title": "تراكب Steam غير متاح"
+            }
         }
     },
     "steamgriddb": {

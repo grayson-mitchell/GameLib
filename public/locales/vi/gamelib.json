@@ -529,6 +529,20 @@
                     "cxMissing": "Không tìm thấy CrossOver"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Không thể chuẩn bị bản sao overlay của CrossOver.",
+                "crossoverDetect": "Không thể tìm thấy CrossOver.",
+                "env": "Đường dẫn overlay chứa một ký tự mà GameLib không thể chuyển cho trò chơi.",
+                "resign": "Không thể ký bản sao overlay của CrossOver.",
+                "shim": "Trình hỗ trợ overlay của GameLib bị thiếu trong bản dựng này.",
+                "steamDylibs": "Không tìm thấy các tệp overlay của Mac Steam."
+            },
+            "toast": {
+                "body": "{{step}} Trò chơi đang khởi chạy mà không có overlay Steam.",
+                "title": "Overlay Steam không khả dụng"
+            }
         }
     },
     "steamgriddb": {

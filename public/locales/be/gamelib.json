@@ -543,6 +543,20 @@
                     "cxMissing": "CrossOver не знойдзены"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Не ўдалося падрыхтаваць overlay-копію CrossOver.",
+                "crossoverDetect": "Не ўдалося знайсці CrossOver.",
+                "env": "Шлях да overlay змяшчае сімвал, які GameLib не можа перадаць гульні.",
+                "resign": "Не ўдалося падпісаць overlay-копію CrossOver.",
+                "shim": "Дапаможны модуль overlay для GameLib адсутнічае ў гэтай зборцы.",
+                "steamDylibs": "Файлы overlay для Mac Steam не знойдзены."
+            },
+            "toast": {
+                "body": "{{step}} Гульня запускаецца без Steam overlay.",
+                "title": "Steam overlay недаступны"
+            }
         }
     },
     "steamgriddb": {

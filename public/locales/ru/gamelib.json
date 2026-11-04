@@ -543,6 +543,20 @@
                     "cxMissing": "CrossOver не найден"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Не удалось подготовить копию CrossOver для оверлея.",
+                "crossoverDetect": "Не удалось найти CrossOver.",
+                "env": "Путь оверлея содержит символ, который GameLib не может передать игре.",
+                "resign": "Не удалось подписать копию CrossOver для оверлея.",
+                "shim": "Вспомогательный модуль оверлея GameLib отсутствует в этой сборке.",
+                "steamDylibs": "Файлы оверлея Mac Steam не найдены."
+            },
+            "toast": {
+                "body": "{{step}} Игра запускается без оверлея Steam.",
+                "title": "Оверлей Steam недоступен"
+            }
         }
     },
     "steamgriddb": {

@@ -529,6 +529,20 @@
                     "cxMissing": "Non se atopou CrossOver"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Non se puido preparar a copia de CrossOver para a superposición.",
+                "crossoverDetect": "Non se puido atopar CrossOver.",
+                "env": "Unha ruta da superposición contén un carácter que GameLib non pode pasar ao xogo.",
+                "resign": "Non se puido asinar a copia de CrossOver para a superposición.",
+                "shim": "Falta o axudante da superposición de GameLib nesta compilación.",
+                "steamDylibs": "Non se atoparon os ficheiros da superposición de Mac Steam."
+            },
+            "toast": {
+                "body": "{{step}} O xogo está a iniciarse sen a superposición de Steam.",
+                "title": "A superposición de Steam non está dispoñible"
+            }
         }
     },
     "steamgriddb": {

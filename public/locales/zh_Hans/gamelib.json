@@ -529,6 +529,20 @@
                     "cxMissing": "未找到 CrossOver"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "无法准备 CrossOver 的叠加层副本。",
+                "crossoverDetect": "找不到 CrossOver。",
+                "env": "叠加层路径包含 GameLib 无法传递给游戏的字符。",
+                "resign": "无法为 CrossOver 的叠加层副本签名。",
+                "shim": "此版本缺少 GameLib 的叠加层辅助程序。",
+                "steamDylibs": "找不到 Mac Steam 的叠加层文件。"
+            },
+            "toast": {
+                "body": "{{step}} 游戏将在没有 Steam 叠加层的情况下启动。",
+                "title": "Steam 叠加层不可用"
+            }
         }
     },
     "steamgriddb": {

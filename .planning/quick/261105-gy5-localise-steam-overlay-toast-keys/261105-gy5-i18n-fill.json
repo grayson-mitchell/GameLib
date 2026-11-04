@@ -1,0 +1,492 @@
+{
+  "en": {
+    "steam.overlay.step.clone": "The overlay copy of CrossOver could not be prepared.",
+    "steam.overlay.step.crossoverDetect": "CrossOver could not be found.",
+    "steam.overlay.step.env": "An overlay path contains a character GameLib cannot pass to the game.",
+    "steam.overlay.step.resign": "The overlay copy of CrossOver could not be signed.",
+    "steam.overlay.step.shim": "GameLib's overlay helper is missing from this build.",
+    "steam.overlay.step.steamDylibs": "Mac Steam's overlay files were not found.",
+    "steam.overlay.toast.body": "{{step}} The game is launching without the Steam overlay.",
+    "steam.overlay.toast.title": "Steam overlay unavailable"
+  },
+  "ar": {
+    "steam.overlay.step.clone": "تعذّر إعداد نسخة التراكب من CrossOver.",
+    "steam.overlay.step.crossoverDetect": "تعذّر العثور على CrossOver.",
+    "steam.overlay.step.env": "يحتوي مسار التراكب على حرف لا يستطيع GameLib تمريره إلى اللعبة.",
+    "steam.overlay.step.resign": "تعذّر توقيع نسخة التراكب من CrossOver.",
+    "steam.overlay.step.shim": "أداة التراكب المساعدة في GameLib مفقودة من هذا الإصدار.",
+    "steam.overlay.step.steamDylibs": "لم يتم العثور على ملفات التراكب في Mac Steam.",
+    "steam.overlay.toast.body": "{{step}} يتم تشغيل اللعبة بدون تراكب Steam.",
+    "steam.overlay.toast.title": "تراكب Steam غير متاح"
+  },
+  "az": {
+    "steam.overlay.step.clone": "CrossOver-in overlay surəti hazırlana bilmədi.",
+    "steam.overlay.step.crossoverDetect": "CrossOver tapılmadı.",
+    "steam.overlay.step.env": "Overlay yolunda GameLib-in oyuna ötürə bilmədiyi simvol var.",
+    "steam.overlay.step.resign": "CrossOver-in overlay surəti imzalana bilmədi.",
+    "steam.overlay.step.shim": "GameLib-in overlay köməkçisi bu quruluşda yoxdur.",
+    "steam.overlay.step.steamDylibs": "Mac Steam-in overlay faylları tapılmadı.",
+    "steam.overlay.toast.body": "{{step}} Oyun Steam overlay olmadan başladılır.",
+    "steam.overlay.toast.title": "Steam overlay əlçatmazdır"
+  },
+  "be": {
+    "steam.overlay.step.clone": "Не ўдалося падрыхтаваць overlay-копію CrossOver.",
+    "steam.overlay.step.crossoverDetect": "Не ўдалося знайсці CrossOver.",
+    "steam.overlay.step.env": "Шлях да overlay змяшчае сімвал, які GameLib не можа перадаць гульні.",
+    "steam.overlay.step.resign": "Не ўдалося падпісаць overlay-копію CrossOver.",
+    "steam.overlay.step.shim": "Дапаможны модуль overlay для GameLib адсутнічае ў гэтай зборцы.",
+    "steam.overlay.step.steamDylibs": "Файлы overlay для Mac Steam не знойдзены.",
+    "steam.overlay.toast.body": "{{step}} Гульня запускаецца без Steam overlay.",
+    "steam.overlay.toast.title": "Steam overlay недаступны"
+  },
+  "bg": {
+    "steam.overlay.step.clone": "Копието на CrossOver за наслагването не можа да бъде подготвено.",
+    "steam.overlay.step.crossoverDetect": "CrossOver не можа да бъде намерен.",
+    "steam.overlay.step.env": "Пътят към наслагването съдържа символ, който GameLib не може да предаде на играта.",
+    "steam.overlay.step.resign": "Копието на CrossOver за наслагването не можа да бъде подписано.",
+    "steam.overlay.step.shim": "Помощникът за наслагването на GameLib липсва в тази версия.",
+    "steam.overlay.step.steamDylibs": "Файловете за наслагването на Mac Steam не бяха намерени.",
+    "steam.overlay.toast.body": "{{step}} Играта се стартира без наслагването на Steam.",
+    "steam.overlay.toast.title": "Наслагването на Steam не е налично"
+  },
+  "br": {
+    "steam.overlay.step.clone": "N'eus ket bet gallet prientiñ eilenn overlay CrossOver.",
+    "steam.overlay.step.crossoverDetect": "N'eus ket bet gallet kavout CrossOver.",
+    "steam.overlay.step.env": "Un arouez a zo e treug an overlay na c'hall ket GameLib treuzkas d'ar c'hoari.",
+    "steam.overlay.step.resign": "N'eus ket bet gallet sinañ eilenn overlay CrossOver.",
+    "steam.overlay.step.shim": "Mankout a ra skoazeller overlay GameLib er stumm-mañ.",
+    "steam.overlay.step.steamDylibs": "N'eo ket bet kavet restroù overlay Mac Steam.",
+    "steam.overlay.toast.body": "{{step}} Al c'hoari a loc'h hep overlay Steam.",
+    "steam.overlay.toast.title": "Overlay Steam ha n'eo ket hegerz"
+  },
+  "bs": {
+    "steam.overlay.step.clone": "Overlay kopija programa CrossOver nije mogla biti pripremljena.",
+    "steam.overlay.step.crossoverDetect": "CrossOver nije pronađen.",
+    "steam.overlay.step.env": "Putanja overlaya sadrži znak koji GameLib ne može proslijediti igri.",
+    "steam.overlay.step.resign": "Overlay kopija programa CrossOver nije mogla biti potpisana.",
+    "steam.overlay.step.shim": "GameLibov overlay pomoćnik nedostaje u ovoj verziji.",
+    "steam.overlay.step.steamDylibs": "Overlay datoteke za Mac Steam nisu pronađene.",
+    "steam.overlay.toast.body": "{{step}} Igra se pokreće bez Steam overlaya.",
+    "steam.overlay.toast.title": "Steam overlay nije dostupan"
+  },
+  "ca": {
+    "steam.overlay.step.clone": "No s'ha pogut preparar la còpia de CrossOver per a la superposició.",
+    "steam.overlay.step.crossoverDetect": "No s'ha pogut trobar CrossOver.",
+    "steam.overlay.step.env": "La ruta de la superposició conté un caràcter que GameLib no pot passar al joc.",
+    "steam.overlay.step.resign": "No s'ha pogut signar la còpia de CrossOver per a la superposició.",
+    "steam.overlay.step.shim": "L'ajudant de superposició de GameLib no és en aquesta compilació.",
+    "steam.overlay.step.steamDylibs": "No s'han trobat els fitxers de superposició de Mac Steam.",
+    "steam.overlay.toast.body": "{{step}} El joc s'inicia sense la superposició de Steam.",
+    "steam.overlay.toast.title": "La superposició de Steam no està disponible"
+  },
+  "cs": {
+    "steam.overlay.step.clone": "Kopii CrossOver pro překryv se nepodařilo připravit.",
+    "steam.overlay.step.crossoverDetect": "CrossOver se nepodařilo najít.",
+    "steam.overlay.step.env": "Cesta k překryvu obsahuje znak, který GameLib nedokáže předat hře.",
+    "steam.overlay.step.resign": "Kopii CrossOver pro překryv se nepodařilo podepsat.",
+    "steam.overlay.step.shim": "Pomocný modul překryvu GameLib v tomto sestavení chybí.",
+    "steam.overlay.step.steamDylibs": "Soubory překryvu Mac Steamu nebyly nalezeny.",
+    "steam.overlay.toast.body": "{{step}} Hra se spouští bez překryvu Steamu.",
+    "steam.overlay.toast.title": "Překryv Steamu není dostupný"
+  },
+  "da": {
+    "steam.overlay.step.clone": "Overlay-kopien af CrossOver kunne ikke forberedes.",
+    "steam.overlay.step.crossoverDetect": "CrossOver kunne ikke findes.",
+    "steam.overlay.step.env": "En overlay-sti indeholder et tegn, som GameLib ikke kan give videre til spillet.",
+    "steam.overlay.step.resign": "Overlay-kopien af CrossOver kunne ikke signeres.",
+    "steam.overlay.step.shim": "GameLibs overlay-hjælper mangler i denne build.",
+    "steam.overlay.step.steamDylibs": "Mac Steams overlay-filer blev ikke fundet.",
+    "steam.overlay.toast.body": "{{step}} Spillet starter uden Steam-overlay.",
+    "steam.overlay.toast.title": "Steam-overlay er ikke tilgængeligt"
+  },
+  "de": {
+    "steam.overlay.step.clone": "Die Overlay-Kopie von CrossOver konnte nicht vorbereitet werden.",
+    "steam.overlay.step.crossoverDetect": "CrossOver wurde nicht gefunden.",
+    "steam.overlay.step.env": "Ein Overlay-Pfad enthält ein Zeichen, das GameLib nicht an das Spiel übergeben kann.",
+    "steam.overlay.step.resign": "Die Overlay-Kopie von CrossOver konnte nicht signiert werden.",
+    "steam.overlay.step.shim": "Der Overlay-Helfer von GameLib fehlt in diesem Build.",
+    "steam.overlay.step.steamDylibs": "Die Overlay-Dateien von Mac Steam wurden nicht gefunden.",
+    "steam.overlay.toast.body": "{{step}} Das Spiel wird ohne das Steam-Overlay gestartet.",
+    "steam.overlay.toast.title": "Steam-Overlay nicht verfügbar"
+  },
+  "el": {
+    "steam.overlay.step.clone": "Δεν ήταν δυνατή η προετοιμασία του αντιγράφου επικάλυψης του CrossOver.",
+    "steam.overlay.step.crossoverDetect": "Δεν ήταν δυνατή η εύρεση του CrossOver.",
+    "steam.overlay.step.env": "Μια διαδρομή της επικάλυψης περιέχει έναν χαρακτήρα που το GameLib δεν μπορεί να περάσει στο παιχνίδι.",
+    "steam.overlay.step.resign": "Δεν ήταν δυνατή η υπογραφή του αντιγράφου επικάλυψης του CrossOver.",
+    "steam.overlay.step.shim": "Ο βοηθός επικάλυψης του GameLib λείπει από αυτήν τη δομή.",
+    "steam.overlay.step.steamDylibs": "Τα αρχεία επικάλυψης του Mac Steam δεν βρέθηκαν.",
+    "steam.overlay.toast.body": "{{step}} Το παιχνίδι ξεκινά χωρίς την επικάλυψη του Steam.",
+    "steam.overlay.toast.title": "Η επικάλυψη του Steam δεν είναι διαθέσιμη"
+  },
+  "es": {
+    "steam.overlay.step.clone": "No se pudo preparar la copia de CrossOver para el overlay.",
+    "steam.overlay.step.crossoverDetect": "No se pudo encontrar CrossOver.",
+    "steam.overlay.step.env": "Una ruta del overlay contiene un carácter que GameLib no puede pasar al juego.",
+    "steam.overlay.step.resign": "No se pudo firmar la copia de CrossOver para el overlay.",
+    "steam.overlay.step.shim": "Falta el ayudante del overlay de GameLib en esta compilación.",
+    "steam.overlay.step.steamDylibs": "No se encontraron los archivos del overlay de Mac Steam.",
+    "steam.overlay.toast.body": "{{step}} El juego se está iniciando sin el overlay de Steam.",
+    "steam.overlay.toast.title": "Overlay de Steam no disponible"
+  },
+  "et": {
+    "steam.overlay.step.clone": "CrossOveri ülekatte koopiat ei õnnestunud ette valmistada.",
+    "steam.overlay.step.crossoverDetect": "CrossOveri ei leitud.",
+    "steam.overlay.step.env": "Ülekatte tee sisaldab märki, mida GameLib ei saa mängule edastada.",
+    "steam.overlay.step.resign": "CrossOveri ülekatte koopiat ei õnnestunud allkirjastada.",
+    "steam.overlay.step.shim": "GameLibi ülekatte abiline puudub sellest versioonist.",
+    "steam.overlay.step.steamDylibs": "Mac Steami ülekatte faile ei leitud.",
+    "steam.overlay.toast.body": "{{step}} Mäng käivitub ilma Steami ülekatteta.",
+    "steam.overlay.toast.title": "Steami ülekate pole saadaval"
+  },
+  "eu": {
+    "steam.overlay.step.clone": "Ezin izan da CrossOver-en overlay kopia prestatu.",
+    "steam.overlay.step.crossoverDetect": "Ezin izan da CrossOver aurkitu.",
+    "steam.overlay.step.env": "Overlay bideak GameLib-ek jokoari pasa ezin dion karaktere bat dauka.",
+    "steam.overlay.step.resign": "Ezin izan da CrossOver-en overlay kopia sinatu.",
+    "steam.overlay.step.shim": "GameLib-en overlay laguntzailea falta da bertsio honetan.",
+    "steam.overlay.step.steamDylibs": "Ez dira aurkitu Mac Steam-en overlay fitxategiak.",
+    "steam.overlay.toast.body": "{{step}} Jokoa Steam overlay gabe abiarazten ari da.",
+    "steam.overlay.toast.title": "Steam overlay ez dago erabilgarri"
+  },
+  "fa": {
+    "steam.overlay.step.clone": "آماده‌سازی نسخه Overlay مربوط به CrossOver ممکن نبود.",
+    "steam.overlay.step.crossoverDetect": "CrossOver پیدا نشد.",
+    "steam.overlay.step.env": "مسیر Overlay شامل نویسه‌ای است که GameLib نمی‌تواند به بازی بدهد.",
+    "steam.overlay.step.resign": "امضای نسخه Overlay مربوط به CrossOver ممکن نبود.",
+    "steam.overlay.step.shim": "ابزار کمکی Overlay مربوط به GameLib در این ساخت وجود ندارد.",
+    "steam.overlay.step.steamDylibs": "فایل‌های Overlay مربوط به Mac Steam پیدا نشد.",
+    "steam.overlay.toast.body": "{{step}} بازی بدون Steam Overlay اجرا می‌شود.",
+    "steam.overlay.toast.title": "Steam Overlay در دسترس نیست"
+  },
+  "fi": {
+    "steam.overlay.step.clone": "CrossOverin päällisen kopiota ei voitu valmistella.",
+    "steam.overlay.step.crossoverDetect": "CrossOveria ei löytynyt.",
+    "steam.overlay.step.env": "Päällisen polku sisältää merkin, jota GameLib ei voi välittää peliin.",
+    "steam.overlay.step.resign": "CrossOverin päällisen kopiota ei voitu allekirjoittaa.",
+    "steam.overlay.step.shim": "GameLibin päällisen apuohjelma puuttuu tästä koontiversiosta.",
+    "steam.overlay.step.steamDylibs": "Mac Steamin päällisen tiedostoja ei löytynyt.",
+    "steam.overlay.toast.body": "{{step}} Peli käynnistyy ilman Steamin päällistä.",
+    "steam.overlay.toast.title": "Steamin päällinen ei ole käytettävissä"
+  },
+  "fr": {
+    "steam.overlay.step.clone": "La copie de CrossOver pour la surcouche n'a pas pu être préparée.",
+    "steam.overlay.step.crossoverDetect": "CrossOver est introuvable.",
+    "steam.overlay.step.env": "Un chemin de la surcouche contient un caractère que GameLib ne peut pas transmettre au jeu.",
+    "steam.overlay.step.resign": "La copie de CrossOver pour la surcouche n'a pas pu être signée.",
+    "steam.overlay.step.shim": "L'assistant de surcouche de GameLib est absent de cette version.",
+    "steam.overlay.step.steamDylibs": "Les fichiers de la surcouche de Mac Steam sont introuvables.",
+    "steam.overlay.toast.body": "{{step}} Le jeu se lance sans la surcouche Steam.",
+    "steam.overlay.toast.title": "Surcouche Steam indisponible"
+  },
+  "ga": {
+    "steam.overlay.step.clone": "Níorbh fhéidir cóip forleagan CrossOver a ullmhú.",
+    "steam.overlay.step.crossoverDetect": "Níorbh fhéidir CrossOver a aimsiú.",
+    "steam.overlay.step.env": "Tá carachtar i gcosán an fhorleagain nach féidir le GameLib a chur ar aghaidh chuig an gcluiche.",
+    "steam.overlay.step.resign": "Níorbh fhéidir cóip forleagan CrossOver a shíniú.",
+    "steam.overlay.step.shim": "Tá cúntóir forleagan GameLib ar iarraidh ón mbuild seo.",
+    "steam.overlay.step.steamDylibs": "Níor aimsíodh comhaid forleagan Mac Steam.",
+    "steam.overlay.toast.body": "{{step}} Tá an cluiche ag tosú gan forleagan Steam.",
+    "steam.overlay.toast.title": "Níl forleagan Steam ar fáil"
+  },
+  "gl": {
+    "steam.overlay.step.clone": "Non se puido preparar a copia de CrossOver para a superposición.",
+    "steam.overlay.step.crossoverDetect": "Non se puido atopar CrossOver.",
+    "steam.overlay.step.env": "Unha ruta da superposición contén un carácter que GameLib non pode pasar ao xogo.",
+    "steam.overlay.step.resign": "Non se puido asinar a copia de CrossOver para a superposición.",
+    "steam.overlay.step.shim": "Falta o axudante da superposición de GameLib nesta compilación.",
+    "steam.overlay.step.steamDylibs": "Non se atoparon os ficheiros da superposición de Mac Steam.",
+    "steam.overlay.toast.body": "{{step}} O xogo está a iniciarse sen a superposición de Steam.",
+    "steam.overlay.toast.title": "A superposición de Steam non está dispoñible"
+  },
+  "he": {
+    "steam.overlay.step.clone": "לא ניתן היה להכין את עותק שכבת-העל של CrossOver.",
+    "steam.overlay.step.crossoverDetect": "לא ניתן היה למצוא את CrossOver.",
+    "steam.overlay.step.env": "נתיב שכבת-העל מכיל תו ש-GameLib אינו יכול להעביר למשחק.",
+    "steam.overlay.step.resign": "לא ניתן היה לחתום על עותק שכבת-העל של CrossOver.",
+    "steam.overlay.step.shim": "העוזר של שכבת-העל של GameLib חסר בגרסה זו.",
+    "steam.overlay.step.steamDylibs": "קובצי שכבת-העל של Mac Steam לא נמצאו.",
+    "steam.overlay.toast.body": "{{step}} המשחק מופעל ללא שכבת-העל של Steam.",
+    "steam.overlay.toast.title": "שכבת-העל של Steam אינה זמינה"
+  },
+  "hr": {
+    "steam.overlay.step.clone": "Overlay kopija programa CrossOver nije mogla biti pripremljena.",
+    "steam.overlay.step.crossoverDetect": "CrossOver nije pronađen.",
+    "steam.overlay.step.env": "Putanja overlaya sadrži znak koji GameLib ne može proslijediti igri.",
+    "steam.overlay.step.resign": "Overlay kopija programa CrossOver nije mogla biti potpisana.",
+    "steam.overlay.step.shim": "Pomoćnik za overlay u GameLibu nedostaje u ovoj verziji.",
+    "steam.overlay.step.steamDylibs": "Datoteke overlaya za Mac Steam nisu pronađene.",
+    "steam.overlay.toast.body": "{{step}} Igra se pokreće bez Steam overlaya.",
+    "steam.overlay.toast.title": "Steam overlay nije dostupan"
+  },
+  "hu": {
+    "steam.overlay.step.clone": "A CrossOver átfedéshez használt másolatát nem sikerült előkészíteni.",
+    "steam.overlay.step.crossoverDetect": "A CrossOver nem található.",
+    "steam.overlay.step.env": "Az átfedés elérési útja olyan karaktert tartalmaz, amelyet a GameLib nem tud átadni a játéknak.",
+    "steam.overlay.step.resign": "A CrossOver átfedéshez használt másolatát nem sikerült aláírni.",
+    "steam.overlay.step.shim": "A GameLib átfedés-segédje hiányzik ebből a buildből.",
+    "steam.overlay.step.steamDylibs": "A Mac Steam átfedésfájljai nem találhatók.",
+    "steam.overlay.toast.body": "{{step}} A játék a Steam átfedése nélkül indul.",
+    "steam.overlay.toast.title": "A Steam átfedése nem érhető el"
+  },
+  "id": {
+    "steam.overlay.step.clone": "Salinan overlay CrossOver tidak dapat disiapkan.",
+    "steam.overlay.step.crossoverDetect": "CrossOver tidak dapat ditemukan.",
+    "steam.overlay.step.env": "Jalur overlay berisi karakter yang tidak dapat diteruskan GameLib ke game.",
+    "steam.overlay.step.resign": "Salinan overlay CrossOver tidak dapat ditandatangani.",
+    "steam.overlay.step.shim": "Pembantu overlay GameLib tidak ada di build ini.",
+    "steam.overlay.step.steamDylibs": "File overlay Mac Steam tidak ditemukan.",
+    "steam.overlay.toast.body": "{{step}} Game dijalankan tanpa overlay Steam.",
+    "steam.overlay.toast.title": "Overlay Steam tidak tersedia"
+  },
+  "it": {
+    "steam.overlay.step.clone": "Non è stato possibile preparare la copia di CrossOver per l'overlay.",
+    "steam.overlay.step.crossoverDetect": "Impossibile trovare CrossOver.",
+    "steam.overlay.step.env": "Un percorso dell'overlay contiene un carattere che GameLib non può passare al gioco.",
+    "steam.overlay.step.resign": "Non è stato possibile firmare la copia di CrossOver per l'overlay.",
+    "steam.overlay.step.shim": "L'helper dell'overlay di GameLib manca in questa build.",
+    "steam.overlay.step.steamDylibs": "I file dell'overlay di Mac Steam non sono stati trovati.",
+    "steam.overlay.toast.body": "{{step}} Il gioco si avvia senza l'overlay di Steam.",
+    "steam.overlay.toast.title": "Overlay di Steam non disponibile"
+  },
+  "ja": {
+    "steam.overlay.step.clone": "オーバーレイ用のCrossOverのコピーを準備できませんでした。",
+    "steam.overlay.step.crossoverDetect": "CrossOverが見つかりませんでした。",
+    "steam.overlay.step.env": "オーバーレイのパスに、GameLibがゲームに渡せない文字が含まれています。",
+    "steam.overlay.step.resign": "オーバーレイ用のCrossOverのコピーに署名できませんでした。",
+    "steam.overlay.step.shim": "GameLibのオーバーレイヘルパーがこのビルドに含まれていません。",
+    "steam.overlay.step.steamDylibs": "Mac Steamのオーバーレイファイルが見つかりませんでした。",
+    "steam.overlay.toast.body": "{{step}} ゲームはSteamオーバーレイなしで起動します。",
+    "steam.overlay.toast.title": "Steamオーバーレイを利用できません"
+  },
+  "ka": {
+    "steam.overlay.step.clone": "CrossOver-ის ოვერლეის ასლის მომზადება ვერ მოხერხდა.",
+    "steam.overlay.step.crossoverDetect": "CrossOver ვერ მოიძებნა.",
+    "steam.overlay.step.env": "ოვერლეის გზა შეიცავს სიმბოლოს, რომლის თამაშისთვის გადაცემაც GameLib-ს არ შეუძლია.",
+    "steam.overlay.step.resign": "CrossOver-ის ოვერლეის ასლის ხელმოწერა ვერ მოხერხდა.",
+    "steam.overlay.step.shim": "GameLib-ის ოვერლეის დამხმარე ამ აგებაში არ არის.",
+    "steam.overlay.step.steamDylibs": "Mac Steam-ის ოვერლეის ფაილები ვერ მოიძებნა.",
+    "steam.overlay.toast.body": "{{step}} თამაში Steam-ის ოვერლეის გარეშე იწყება.",
+    "steam.overlay.toast.title": "Steam-ის ოვერლეი მიუწვდომელია"
+  },
+  "ko": {
+    "steam.overlay.step.clone": "CrossOver의 오버레이용 사본을 준비하지 못했습니다.",
+    "steam.overlay.step.crossoverDetect": "CrossOver를 찾을 수 없습니다.",
+    "steam.overlay.step.env": "오버레이 경로에 GameLib이 게임에 전달할 수 없는 문자가 포함되어 있습니다.",
+    "steam.overlay.step.resign": "CrossOver의 오버레이용 사본에 서명하지 못했습니다.",
+    "steam.overlay.step.shim": "GameLib의 오버레이 도우미가 이 빌드에 없습니다.",
+    "steam.overlay.step.steamDylibs": "Mac Steam의 오버레이 파일을 찾을 수 없습니다.",
+    "steam.overlay.toast.body": "{{step}} 게임이 Steam 오버레이 없이 실행됩니다.",
+    "steam.overlay.toast.title": "Steam 오버레이를 사용할 수 없음"
+  },
+  "lt": {
+    "steam.overlay.step.clone": "Nepavyko paruošti CrossOver perdangos kopijos.",
+    "steam.overlay.step.crossoverDetect": "Nepavyko rasti CrossOver.",
+    "steam.overlay.step.env": "Perdangos kelyje yra simbolis, kurio GameLib negali perduoti žaidimui.",
+    "steam.overlay.step.resign": "Nepavyko pasirašyti CrossOver perdangos kopijos.",
+    "steam.overlay.step.shim": "GameLib perdangos pagalbininko šioje versijoje nėra.",
+    "steam.overlay.step.steamDylibs": "Mac Steam perdangos failų nerasta.",
+    "steam.overlay.toast.body": "{{step}} Žaidimas paleidžiamas be Steam perdangos.",
+    "steam.overlay.toast.title": "Steam perdanga nepasiekiama"
+  },
+  "ml": {
+    "steam.overlay.step.clone": "CrossOver-ന്റെ ഓവർലേ പകർപ്പ് തയ്യാറാക്കാൻ കഴിഞ്ഞില്ല.",
+    "steam.overlay.step.crossoverDetect": "CrossOver കണ്ടെത്താൻ കഴിഞ്ഞില്ല.",
+    "steam.overlay.step.env": "ഓവർലേ പാതയിൽ GameLib-ന് ഗെയിമിലേക്ക് കൈമാറാൻ കഴിയാത്ത ഒരു പ്രതീകമുണ്ട്.",
+    "steam.overlay.step.resign": "CrossOver-ന്റെ ഓവർലേ പകർപ്പ് ഒപ്പിടാൻ കഴിഞ്ഞില്ല.",
+    "steam.overlay.step.shim": "GameLib-ന്റെ ഓവർലേ സഹായി ഈ ബിൽഡിൽ ഇല്ല.",
+    "steam.overlay.step.steamDylibs": "Mac Steam-ന്റെ ഓവർലേ ഫയലുകൾ കണ്ടെത്തിയില്ല.",
+    "steam.overlay.toast.body": "{{step}} Steam ഓവർലേ ഇല്ലാതെയാണ് ഗെയിം ആരംഭിക്കുന്നത്.",
+    "steam.overlay.toast.title": "Steam ഓവർലേ ലഭ്യമല്ല"
+  },
+  "nb_NO": {
+    "steam.overlay.step.clone": "Overlay-kopien av CrossOver kunne ikke klargjøres.",
+    "steam.overlay.step.crossoverDetect": "Finner ikke CrossOver.",
+    "steam.overlay.step.env": "En overlay-sti inneholder et tegn som GameLib ikke kan sende videre til spillet.",
+    "steam.overlay.step.resign": "Overlay-kopien av CrossOver kunne ikke signeres.",
+    "steam.overlay.step.shim": "GameLibs overlay-hjelper mangler i denne builden.",
+    "steam.overlay.step.steamDylibs": "Mac Steams overlay-filer ble ikke funnet.",
+    "steam.overlay.toast.body": "{{step}} Spillet starter uten Steam-overlay.",
+    "steam.overlay.toast.title": "Steam-overlay er utilgjengelig"
+  },
+  "nl": {
+    "steam.overlay.step.clone": "De overlaykopie van CrossOver kon niet worden voorbereid.",
+    "steam.overlay.step.crossoverDetect": "CrossOver kon niet worden gevonden.",
+    "steam.overlay.step.env": "Een overlaypad bevat een teken dat GameLib niet aan de game kan doorgeven.",
+    "steam.overlay.step.resign": "De overlaykopie van CrossOver kon niet worden ondertekend.",
+    "steam.overlay.step.shim": "De overlayhulp van GameLib ontbreekt in deze build.",
+    "steam.overlay.step.steamDylibs": "De overlaybestanden van Mac Steam zijn niet gevonden.",
+    "steam.overlay.toast.body": "{{step}} De game wordt gestart zonder de Steam-overlay.",
+    "steam.overlay.toast.title": "Steam-overlay niet beschikbaar"
+  },
+  "pl": {
+    "steam.overlay.step.clone": "Nie udało się przygotować kopii CrossOver dla nakładki.",
+    "steam.overlay.step.crossoverDetect": "Nie udało się znaleźć CrossOver.",
+    "steam.overlay.step.env": "Ścieżka nakładki zawiera znak, którego GameLib nie może przekazać grze.",
+    "steam.overlay.step.resign": "Nie udało się podpisać kopii CrossOver dla nakładki.",
+    "steam.overlay.step.shim": "W tej wersji brakuje pomocnika nakładki GameLib.",
+    "steam.overlay.step.steamDylibs": "Nie znaleziono plików nakładki Mac Steam.",
+    "steam.overlay.toast.body": "{{step}} Gra uruchamia się bez nakładki Steam.",
+    "steam.overlay.toast.title": "Nakładka Steam jest niedostępna"
+  },
+  "pt": {
+    "steam.overlay.step.clone": "Não foi possível preparar a cópia de sobreposição do CrossOver.",
+    "steam.overlay.step.crossoverDetect": "Não foi possível encontrar o CrossOver.",
+    "steam.overlay.step.env": "Um caminho da sobreposição contém um carácter que o GameLib não consegue passar ao jogo.",
+    "steam.overlay.step.resign": "Não foi possível assinar a cópia de sobreposição do CrossOver.",
+    "steam.overlay.step.shim": "O auxiliar de sobreposição do GameLib não está presente nesta compilação.",
+    "steam.overlay.step.steamDylibs": "Os ficheiros de sobreposição do Mac Steam não foram encontrados.",
+    "steam.overlay.toast.body": "{{step}} O jogo está a iniciar sem a sobreposição do Steam.",
+    "steam.overlay.toast.title": "Sobreposição do Steam indisponível"
+  },
+  "pt_BR": {
+    "steam.overlay.step.clone": "Não foi possível preparar a cópia do CrossOver para o overlay.",
+    "steam.overlay.step.crossoverDetect": "Não foi possível encontrar o CrossOver.",
+    "steam.overlay.step.env": "Um caminho do overlay contém um caractere que o GameLib não consegue passar para o jogo.",
+    "steam.overlay.step.resign": "Não foi possível assinar a cópia do CrossOver para o overlay.",
+    "steam.overlay.step.shim": "O auxiliar de overlay do GameLib está ausente nesta versão.",
+    "steam.overlay.step.steamDylibs": "Os arquivos de overlay do Mac Steam não foram encontrados.",
+    "steam.overlay.toast.body": "{{step}} O jogo está sendo iniciado sem o overlay do Steam.",
+    "steam.overlay.toast.title": "Overlay do Steam indisponível"
+  },
+  "ro": {
+    "steam.overlay.step.clone": "Copia CrossOver pentru overlay nu a putut fi pregătită.",
+    "steam.overlay.step.crossoverDetect": "CrossOver nu a putut fi găsit.",
+    "steam.overlay.step.env": "O cale a overlay-ului conține un caracter pe care GameLib nu îl poate transmite jocului.",
+    "steam.overlay.step.resign": "Copia CrossOver pentru overlay nu a putut fi semnată.",
+    "steam.overlay.step.shim": "Asistentul de overlay al GameLib lipsește din această versiune.",
+    "steam.overlay.step.steamDylibs": "Fișierele de overlay ale Mac Steam nu au fost găsite.",
+    "steam.overlay.toast.body": "{{step}} Jocul pornește fără overlay-ul Steam.",
+    "steam.overlay.toast.title": "Overlay-ul Steam nu este disponibil"
+  },
+  "ru": {
+    "steam.overlay.step.clone": "Не удалось подготовить копию CrossOver для оверлея.",
+    "steam.overlay.step.crossoverDetect": "Не удалось найти CrossOver.",
+    "steam.overlay.step.env": "Путь оверлея содержит символ, который GameLib не может передать игре.",
+    "steam.overlay.step.resign": "Не удалось подписать копию CrossOver для оверлея.",
+    "steam.overlay.step.shim": "Вспомогательный модуль оверлея GameLib отсутствует в этой сборке.",
+    "steam.overlay.step.steamDylibs": "Файлы оверлея Mac Steam не найдены.",
+    "steam.overlay.toast.body": "{{step}} Игра запускается без оверлея Steam.",
+    "steam.overlay.toast.title": "Оверлей Steam недоступен"
+  },
+  "sk": {
+    "steam.overlay.step.clone": "Kópiu CrossOver pre prekrytie sa nepodarilo pripraviť.",
+    "steam.overlay.step.crossoverDetect": "CrossOver sa nepodarilo nájsť.",
+    "steam.overlay.step.env": "Cesta k prekrytiu obsahuje znak, ktorý GameLib nedokáže odovzdať hre.",
+    "steam.overlay.step.resign": "Kópiu CrossOver pre prekrytie sa nepodarilo podpísať.",
+    "steam.overlay.step.shim": "Pomocník prekrytia GameLib v tejto zostave chýba.",
+    "steam.overlay.step.steamDylibs": "Súbory prekrytia Mac Steamu sa nenašli.",
+    "steam.overlay.toast.body": "{{step}} Hra sa spúšťa bez prekrytia Steamu.",
+    "steam.overlay.toast.title": "Prekrytie Steamu nie je k dispozícii"
+  },
+  "sl": {
+    "steam.overlay.step.clone": "Kopije CrossOver za prekrivni sloj ni bilo mogoče pripraviti.",
+    "steam.overlay.step.crossoverDetect": "CrossOver ni bilo mogoče najti.",
+    "steam.overlay.step.env": "Pot prekrivnega sloja vsebuje znak, ki ga GameLib ne more posredovati igri.",
+    "steam.overlay.step.resign": "Kopije CrossOver za prekrivni sloj ni bilo mogoče podpisati.",
+    "steam.overlay.step.shim": "Pomočnika za prekrivni sloj GameLib v tej gradnji ni.",
+    "steam.overlay.step.steamDylibs": "Datotek prekrivnega sloja za Mac Steam ni bilo mogoče najti.",
+    "steam.overlay.toast.body": "{{step}} Igra se zaganja brez prekrivnega sloja Steam.",
+    "steam.overlay.toast.title": "Prekrivni sloj Steam ni na voljo"
+  },
+  "sr": {
+    "steam.overlay.step.clone": "Копију програма CrossOver за преклапање није било могуће припремити.",
+    "steam.overlay.step.crossoverDetect": "CrossOver није пронађен.",
+    "steam.overlay.step.env": "Путања преклапања садржи знак који GameLib не може да проследи игри.",
+    "steam.overlay.step.resign": "Копију програма CrossOver за преклапање није било могуће потписати.",
+    "steam.overlay.step.shim": "Помоћник за преклапање у програму GameLib недостаје у овој верзији.",
+    "steam.overlay.step.steamDylibs": "Датотеке преклапања за Mac Steam нису пронађене.",
+    "steam.overlay.toast.body": "{{step}} Игра се покреће без Steam преклапања.",
+    "steam.overlay.toast.title": "Steam преклапање није доступно"
+  },
+  "sv": {
+    "steam.overlay.step.clone": "Overlay-kopian av CrossOver kunde inte förberedas.",
+    "steam.overlay.step.crossoverDetect": "CrossOver kunde inte hittas.",
+    "steam.overlay.step.env": "En overlay-sökväg innehåller ett tecken som GameLib inte kan skicka vidare till spelet.",
+    "steam.overlay.step.resign": "Overlay-kopian av CrossOver kunde inte signeras.",
+    "steam.overlay.step.shim": "GameLibs overlay-hjälpare saknas i den här versionen.",
+    "steam.overlay.step.steamDylibs": "Mac Steams overlay-filer hittades inte.",
+    "steam.overlay.toast.body": "{{step}} Spelet startar utan Steam-overlay.",
+    "steam.overlay.toast.title": "Steam-overlay är inte tillgänglig"
+  },
+  "ta": {
+    "steam.overlay.step.clone": "CrossOver-இன் மேலடுக்கு நகலைத் தயாரிக்க முடியவில்லை.",
+    "steam.overlay.step.crossoverDetect": "CrossOver-ஐக் கண்டறிய முடியவில்லை.",
+    "steam.overlay.step.env": "மேலடுக்கு பாதையில் GameLib விளையாட்டுக்கு அனுப்ப முடியாத எழுத்து உள்ளது.",
+    "steam.overlay.step.resign": "CrossOver-இன் மேலடுக்கு நகலில் கையொப்பமிட முடியவில்லை.",
+    "steam.overlay.step.shim": "GameLib-இன் மேலடுக்கு உதவியாளர் இந்த உருவாக்கத்தில் இல்லை.",
+    "steam.overlay.step.steamDylibs": "Mac Steam-இன் மேலடுக்கு கோப்புகள் கிடைக்கவில்லை.",
+    "steam.overlay.toast.body": "{{step}} Steam மேலடுக்கு இல்லாமல் விளையாட்டு தொடங்குகிறது.",
+    "steam.overlay.toast.title": "Steam மேலடுக்கு கிடைக்கவில்லை"
+  },
+  "th": {
+    "steam.overlay.step.clone": "ไม่สามารถเตรียมสำเนาโอเวอร์เลย์ของ CrossOver ได้",
+    "steam.overlay.step.crossoverDetect": "ไม่พบ CrossOver",
+    "steam.overlay.step.env": "เส้นทางโอเวอร์เลย์มีอักขระที่ GameLib ส่งต่อให้เกมไม่ได้",
+    "steam.overlay.step.resign": "ไม่สามารถลงนามสำเนาโอเวอร์เลย์ของ CrossOver ได้",
+    "steam.overlay.step.shim": "ไม่พบตัวช่วยโอเวอร์เลย์ของ GameLib ในบิลด์นี้",
+    "steam.overlay.step.steamDylibs": "ไม่พบไฟล์โอเวอร์เลย์ของ Mac Steam",
+    "steam.overlay.toast.body": "{{step}} เกมกำลังเปิดโดยไม่มีโอเวอร์เลย์ของ Steam",
+    "steam.overlay.toast.title": "โอเวอร์เลย์ของ Steam ไม่พร้อมใช้งาน"
+  },
+  "tr": {
+    "steam.overlay.step.clone": "CrossOver'ın kaplama kopyası hazırlanamadı.",
+    "steam.overlay.step.crossoverDetect": "CrossOver bulunamadı.",
+    "steam.overlay.step.env": "Kaplama yolu, GameLib'in oyuna aktaramadığı bir karakter içeriyor.",
+    "steam.overlay.step.resign": "CrossOver'ın kaplama kopyası imzalanamadı.",
+    "steam.overlay.step.shim": "GameLib'in kaplama yardımcısı bu derlemede eksik.",
+    "steam.overlay.step.steamDylibs": "Mac Steam'in kaplama dosyaları bulunamadı.",
+    "steam.overlay.toast.body": "{{step}} Oyun, Steam kaplaması olmadan başlatılıyor.",
+    "steam.overlay.toast.title": "Steam kaplaması kullanılamıyor"
+  },
+  "uk": {
+    "steam.overlay.step.clone": "Не вдалося підготувати копію CrossOver для накладання.",
+    "steam.overlay.step.crossoverDetect": "Не вдалося знайти CrossOver.",
+    "steam.overlay.step.env": "Шлях накладання містить символ, який GameLib не може передати грі.",
+    "steam.overlay.step.resign": "Не вдалося підписати копію CrossOver для накладання.",
+    "steam.overlay.step.shim": "Допоміжний модуль накладання GameLib відсутній у цій збірці.",
+    "steam.overlay.step.steamDylibs": "Файли накладання Mac Steam не знайдено.",
+    "steam.overlay.toast.body": "{{step}} Гра запускається без накладання Steam.",
+    "steam.overlay.toast.title": "Накладання Steam недоступне"
+  },
+  "uz": {
+    "steam.overlay.step.clone": "CrossOver'ning overlay nusxasini tayyorlab bo'lmadi.",
+    "steam.overlay.step.crossoverDetect": "CrossOver topilmadi.",
+    "steam.overlay.step.env": "Overlay yo'lida GameLib o'yinga uzata olmaydigan belgi bor.",
+    "steam.overlay.step.resign": "CrossOver'ning overlay nusxasini imzolab bo'lmadi.",
+    "steam.overlay.step.shim": "GameLib'ning overlay yordamchisi ushbu buildda yo'q.",
+    "steam.overlay.step.steamDylibs": "Mac Steam'ning overlay fayllari topilmadi.",
+    "steam.overlay.toast.body": "{{step}} O'yin Steam overlaysiz ishga tushmoqda.",
+    "steam.overlay.toast.title": "Steam overlay mavjud emas"
+  },
+  "vi": {
+    "steam.overlay.step.clone": "Không thể chuẩn bị bản sao overlay của CrossOver.",
+    "steam.overlay.step.crossoverDetect": "Không thể tìm thấy CrossOver.",
+    "steam.overlay.step.env": "Đường dẫn overlay chứa một ký tự mà GameLib không thể chuyển cho trò chơi.",
+    "steam.overlay.step.resign": "Không thể ký bản sao overlay của CrossOver.",
+    "steam.overlay.step.shim": "Trình hỗ trợ overlay của GameLib bị thiếu trong bản dựng này.",
+    "steam.overlay.step.steamDylibs": "Không tìm thấy các tệp overlay của Mac Steam.",
+    "steam.overlay.toast.body": "{{step}} Trò chơi đang khởi chạy mà không có overlay Steam.",
+    "steam.overlay.toast.title": "Overlay Steam không khả dụng"
+  },
+  "zh_Hans": {
+    "steam.overlay.step.clone": "无法准备 CrossOver 的叠加层副本。",
+    "steam.overlay.step.crossoverDetect": "找不到 CrossOver。",
+    "steam.overlay.step.env": "叠加层路径包含 GameLib 无法传递给游戏的字符。",
+    "steam.overlay.step.resign": "无法为 CrossOver 的叠加层副本签名。",
+    "steam.overlay.step.shim": "此版本缺少 GameLib 的叠加层辅助程序。",
+    "steam.overlay.step.steamDylibs": "找不到 Mac Steam 的叠加层文件。",
+    "steam.overlay.toast.body": "{{step}} 游戏将在没有 Steam 叠加层的情况下启动。",
+    "steam.overlay.toast.title": "Steam 叠加层不可用"
+  },
+  "zh_Hant": {
+    "steam.overlay.step.clone": "無法準備 CrossOver 的疊加層副本。",
+    "steam.overlay.step.crossoverDetect": "找不到 CrossOver。",
+    "steam.overlay.step.env": "疊加層路徑包含 GameLib 無法傳遞給遊戲的字元。",
+    "steam.overlay.step.resign": "無法簽署 CrossOver 的疊加層副本。",
+    "steam.overlay.step.shim": "此版本缺少 GameLib 的疊加層輔助程式。",
+    "steam.overlay.step.steamDylibs": "找不到 Mac Steam 的疊加層檔案。",
+    "steam.overlay.toast.body": "{{step}} 遊戲將在沒有 Steam 疊加層的情況下啟動。",
+    "steam.overlay.toast.title": "Steam 疊加層無法使用"
+  }
+}

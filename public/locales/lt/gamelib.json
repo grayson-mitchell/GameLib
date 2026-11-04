@@ -543,6 +543,20 @@
                     "cxMissing": "CrossOver nerastas"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Nepavyko paruošti CrossOver perdangos kopijos.",
+                "crossoverDetect": "Nepavyko rasti CrossOver.",
+                "env": "Perdangos kelyje yra simbolis, kurio GameLib negali perduoti žaidimui.",
+                "resign": "Nepavyko pasirašyti CrossOver perdangos kopijos.",
+                "shim": "GameLib perdangos pagalbininko šioje versijoje nėra.",
+                "steamDylibs": "Mac Steam perdangos failų nerasta."
+            },
+            "toast": {
+                "body": "{{step}} Žaidimas paleidžiamas be Steam perdangos.",
+                "title": "Steam perdanga nepasiekiama"
+            }
         }
     },
     "steamgriddb": {

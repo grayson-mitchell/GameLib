@@ -529,6 +529,20 @@
                     "cxMissing": "CrossOver ble ikke funnet"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Overlay-kopien av CrossOver kunne ikke klargjøres.",
+                "crossoverDetect": "Finner ikke CrossOver.",
+                "env": "En overlay-sti inneholder et tegn som GameLib ikke kan sende videre til spillet.",
+                "resign": "Overlay-kopien av CrossOver kunne ikke signeres.",
+                "shim": "GameLibs overlay-hjelper mangler i denne builden.",
+                "steamDylibs": "Mac Steams overlay-filer ble ikke funnet."
+            },
+            "toast": {
+                "body": "{{step}} Spillet starter uten Steam-overlay.",
+                "title": "Steam-overlay er utilgjengelig"
+            }
         }
     },
     "steamgriddb": {

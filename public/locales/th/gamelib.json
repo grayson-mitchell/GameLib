@@ -529,6 +529,20 @@
                     "cxMissing": "ไม่พบ CrossOver"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "ไม่สามารถเตรียมสำเนาโอเวอร์เลย์ของ CrossOver ได้",
+                "crossoverDetect": "ไม่พบ CrossOver",
+                "env": "เส้นทางโอเวอร์เลย์มีอักขระที่ GameLib ส่งต่อให้เกมไม่ได้",
+                "resign": "ไม่สามารถลงนามสำเนาโอเวอร์เลย์ของ CrossOver ได้",
+                "shim": "ไม่พบตัวช่วยโอเวอร์เลย์ของ GameLib ในบิลด์นี้",
+                "steamDylibs": "ไม่พบไฟล์โอเวอร์เลย์ของ Mac Steam"
+            },
+            "toast": {
+                "body": "{{step}} เกมกำลังเปิดโดยไม่มีโอเวอร์เลย์ของ Steam",
+                "title": "โอเวอร์เลย์ของ Steam ไม่พร้อมใช้งาน"
+            }
         }
     },
     "steamgriddb": {

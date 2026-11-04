@@ -529,6 +529,20 @@
                     "cxMissing": "CrossOver پیدا نشد"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "آماده‌سازی نسخه Overlay مربوط به CrossOver ممکن نبود.",
+                "crossoverDetect": "CrossOver پیدا نشد.",
+                "env": "مسیر Overlay شامل نویسه‌ای است که GameLib نمی‌تواند به بازی بدهد.",
+                "resign": "امضای نسخه Overlay مربوط به CrossOver ممکن نبود.",
+                "shim": "ابزار کمکی Overlay مربوط به GameLib در این ساخت وجود ندارد.",
+                "steamDylibs": "فایل‌های Overlay مربوط به Mac Steam پیدا نشد."
+            },
+            "toast": {
+                "body": "{{step}} بازی بدون Steam Overlay اجرا می‌شود.",
+                "title": "Steam Overlay در دسترس نیست"
+            }
         }
     },
     "steamgriddb": {

@@ -529,6 +529,20 @@
                     "cxMissing": "CrossOver topilmadi"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "CrossOver'ning overlay nusxasini tayyorlab bo'lmadi.",
+                "crossoverDetect": "CrossOver topilmadi.",
+                "env": "Overlay yo'lida GameLib o'yinga uzata olmaydigan belgi bor.",
+                "resign": "CrossOver'ning overlay nusxasini imzolab bo'lmadi.",
+                "shim": "GameLib'ning overlay yordamchisi ushbu buildda yo'q.",
+                "steamDylibs": "Mac Steam'ning overlay fayllari topilmadi."
+            },
+            "toast": {
+                "body": "{{step}} O'yin Steam overlaysiz ishga tushmoqda.",
+                "title": "Steam overlay mavjud emas"
+            }
         }
     },
     "steamgriddb": {

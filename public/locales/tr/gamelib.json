@@ -529,6 +529,20 @@
                     "cxMissing": "CrossOver bulunamadı"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "CrossOver'ın kaplama kopyası hazırlanamadı.",
+                "crossoverDetect": "CrossOver bulunamadı.",
+                "env": "Kaplama yolu, GameLib'in oyuna aktaramadığı bir karakter içeriyor.",
+                "resign": "CrossOver'ın kaplama kopyası imzalanamadı.",
+                "shim": "GameLib'in kaplama yardımcısı bu derlemede eksik.",
+                "steamDylibs": "Mac Steam'in kaplama dosyaları bulunamadı."
+            },
+            "toast": {
+                "body": "{{step}} Oyun, Steam kaplaması olmadan başlatılıyor.",
+                "title": "Steam kaplaması kullanılamıyor"
+            }
         }
     },
     "steamgriddb": {

@@ -543,6 +543,20 @@
                     "cxMissing": "CrossOver ni bil najden"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Kopije CrossOver za prekrivni sloj ni bilo mogoče pripraviti.",
+                "crossoverDetect": "CrossOver ni bilo mogoče najti.",
+                "env": "Pot prekrivnega sloja vsebuje znak, ki ga GameLib ne more posredovati igri.",
+                "resign": "Kopije CrossOver za prekrivni sloj ni bilo mogoče podpisati.",
+                "shim": "Pomočnika za prekrivni sloj GameLib v tej gradnji ni.",
+                "steamDylibs": "Datotek prekrivnega sloja za Mac Steam ni bilo mogoče najti."
+            },
+            "toast": {
+                "body": "{{step}} Igra se zaganja brez prekrivnega sloja Steam.",
+                "title": "Prekrivni sloj Steam ni na voljo"
+            }
         }
     },
     "steamgriddb": {

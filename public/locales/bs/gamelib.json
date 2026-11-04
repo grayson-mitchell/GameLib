@@ -536,6 +536,20 @@
                     "cxMissing": "CrossOver nije pronađen"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Overlay kopija programa CrossOver nije mogla biti pripremljena.",
+                "crossoverDetect": "CrossOver nije pronađen.",
+                "env": "Putanja overlaya sadrži znak koji GameLib ne može proslijediti igri.",
+                "resign": "Overlay kopija programa CrossOver nije mogla biti potpisana.",
+                "shim": "GameLibov overlay pomoćnik nedostaje u ovoj verziji.",
+                "steamDylibs": "Overlay datoteke za Mac Steam nisu pronađene."
+            },
+            "toast": {
+                "body": "{{step}} Igra se pokreće bez Steam overlaya.",
+                "title": "Steam overlay nije dostupan"
+            }
         }
     },
     "steamgriddb": {

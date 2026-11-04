@@ -550,6 +550,20 @@
                     "cxMissing": "CrossOver n’eo ket bet kavet"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "N'eus ket bet gallet prientiñ eilenn overlay CrossOver.",
+                "crossoverDetect": "N'eus ket bet gallet kavout CrossOver.",
+                "env": "Un arouez a zo e treug an overlay na c'hall ket GameLib treuzkas d'ar c'hoari.",
+                "resign": "N'eus ket bet gallet sinañ eilenn overlay CrossOver.",
+                "shim": "Mankout a ra skoazeller overlay GameLib er stumm-mañ.",
+                "steamDylibs": "N'eo ket bet kavet restroù overlay Mac Steam."
+            },
+            "toast": {
+                "body": "{{step}} Al c'hoari a loc'h hep overlay Steam.",
+                "title": "Overlay Steam ha n'eo ket hegerz"
+            }
         }
     },
     "steamgriddb": {

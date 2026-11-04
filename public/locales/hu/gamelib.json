@@ -529,6 +529,20 @@
                     "cxMissing": "A CrossOver nem található"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "A CrossOver átfedéshez használt másolatát nem sikerült előkészíteni.",
+                "crossoverDetect": "A CrossOver nem található.",
+                "env": "Az átfedés elérési útja olyan karaktert tartalmaz, amelyet a GameLib nem tud átadni a játéknak.",
+                "resign": "A CrossOver átfedéshez használt másolatát nem sikerült aláírni.",
+                "shim": "A GameLib átfedés-segédje hiányzik ebből a buildből.",
+                "steamDylibs": "A Mac Steam átfedésfájljai nem találhatók."
+            },
+            "toast": {
+                "body": "{{step}} A játék a Steam átfedése nélkül indul.",
+                "title": "A Steam átfedése nem érhető el"
+            }
         }
     },
     "steamgriddb": {

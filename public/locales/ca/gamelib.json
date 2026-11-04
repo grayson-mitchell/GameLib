@@ -536,6 +536,20 @@
                     "cxMissing": "No s'ha trobat CrossOver"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "No s'ha pogut preparar la còpia de CrossOver per a la superposició.",
+                "crossoverDetect": "No s'ha pogut trobar CrossOver.",
+                "env": "La ruta de la superposició conté un caràcter que GameLib no pot passar al joc.",
+                "resign": "No s'ha pogut signar la còpia de CrossOver per a la superposició.",
+                "shim": "L'ajudant de superposició de GameLib no és en aquesta compilació.",
+                "steamDylibs": "No s'han trobat els fitxers de superposició de Mac Steam."
+            },
+            "toast": {
+                "body": "{{step}} El joc s'inicia sense la superposició de Steam.",
+                "title": "La superposició de Steam no està disponible"
+            }
         }
     },
     "steamgriddb": {

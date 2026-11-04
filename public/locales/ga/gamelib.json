@@ -550,6 +550,20 @@
                     "cxMissing": "Níor aimsíodh CrossOver"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Níorbh fhéidir cóip forleagan CrossOver a ullmhú.",
+                "crossoverDetect": "Níorbh fhéidir CrossOver a aimsiú.",
+                "env": "Tá carachtar i gcosán an fhorleagain nach féidir le GameLib a chur ar aghaidh chuig an gcluiche.",
+                "resign": "Níorbh fhéidir cóip forleagan CrossOver a shíniú.",
+                "shim": "Tá cúntóir forleagan GameLib ar iarraidh ón mbuild seo.",
+                "steamDylibs": "Níor aimsíodh comhaid forleagan Mac Steam."
+            },
+            "toast": {
+                "body": "{{step}} Tá an cluiche ag tosú gan forleagan Steam.",
+                "title": "Níl forleagan Steam ar fáil"
+            }
         }
     },
     "steamgriddb": {

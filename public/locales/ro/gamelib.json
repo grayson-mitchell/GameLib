@@ -536,6 +536,20 @@
                     "cxMissing": "CrossOver nu a fost găsit"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Copia CrossOver pentru overlay nu a putut fi pregătită.",
+                "crossoverDetect": "CrossOver nu a putut fi găsit.",
+                "env": "O cale a overlay-ului conține un caracter pe care GameLib nu îl poate transmite jocului.",
+                "resign": "Copia CrossOver pentru overlay nu a putut fi semnată.",
+                "shim": "Asistentul de overlay al GameLib lipsește din această versiune.",
+                "steamDylibs": "Fișierele de overlay ale Mac Steam nu au fost găsite."
+            },
+            "toast": {
+                "body": "{{step}} Jocul pornește fără overlay-ul Steam.",
+                "title": "Overlay-ul Steam nu este disponibil"
+            }
         }
     },
     "steamgriddb": {

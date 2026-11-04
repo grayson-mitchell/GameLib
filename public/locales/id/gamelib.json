@@ -529,6 +529,20 @@
                     "cxMissing": "CrossOver tidak ditemukan"
                 }
             }
+        },
+        "overlay": {
+            "step": {
+                "clone": "Salinan overlay CrossOver tidak dapat disiapkan.",
+                "crossoverDetect": "CrossOver tidak dapat ditemukan.",
+                "env": "Jalur overlay berisi karakter yang tidak dapat diteruskan GameLib ke game.",
+                "resign": "Salinan overlay CrossOver tidak dapat ditandatangani.",
+                "shim": "Pembantu overlay GameLib tidak ada di build ini.",
+                "steamDylibs": "File overlay Mac Steam tidak ditemukan."
+            },
+            "toast": {
+                "body": "{{step}} Game dijalankan tanpa overlay Steam.",
+                "title": "Overlay Steam tidak tersedia"
+            }
         }
     },
     "steamgriddb": {
