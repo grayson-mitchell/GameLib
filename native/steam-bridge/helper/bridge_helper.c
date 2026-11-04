@@ -183,6 +183,10 @@
 // beside this file, so no extra -I flag is needed.
 #include "gamelib_cbqueue.h"
 #include "gamelib_callresult.h"
+#include "gamelib_overlay_signal.h"
+
+// 60-15: GameOverlayActivated (331) -> Darwin notification, probe flag only.
+static gl_ovl_state g_ovl;
 
 // === Frame constants (MUST match src/backend/storeManagers/steam/bridge/protocol.ts) ===
 
@@ -1746,6 +1750,17 @@ static void gl_manual_pump_into_ring(void) {
         }
       }
     } else {
+      if (g_ovl.enabled && msg.m_iCallback == GL_OVL_CALLBACK_ID) {
+        int active = gl_ovl_parse_active(msg.m_pubParam, (int)msg.m_cubParam);
+        if (active == 0 || active == 1) {
+          struct timeval tv;
+          int pub = gl_ovl_publish(&g_ovl, active);
+          gettimeofday(&tv, NULL);
+          if (gl_ovl_log_take(&g_ovl))
+            logts_f("OVL", "overlay-activated active=%d cub=%d t=%lld publish=%d", active,
+                    (int)msg.m_cubParam, (long long)tv.tv_sec * 1000LL + tv.tv_usec / 1000, pub);
+        }
+      }
       const gl_cbq_allow_row *row = gl_cbq_row(msg.m_iCallback);
       int queued = 0;
       if (row == NULL) {
@@ -3205,6 +3220,12 @@ int main(int argc, char **argv) {
   strncpy(g_appid, appIdArg, MAX_APPID_DIGITS);
   g_appid[MAX_APPID_DIGITS] = '\0';
   g_appid_u64 = strtoull(g_appid, NULL, 10); // validated digits-only above
+
+  // 60-15: overlay signal, opt-in. Real appId = --report-appid else --appid.
+  g_ovl.enabled = gl_ovl_enabled_from_env(getenv("GAMELIB_OVERLAY_INPUT_PROBE"));
+  if (g_ovl.enabled &&
+      gl_ovl_notify_name(g_ovl.name, sizeof g_ovl.name, reportAppIdArg ? reportAppIdArg : g_appid) != 0)
+    g_ovl.enabled = 0;
 
   bridge_dispatch_set_identity_only(
     identityOnly, reportAppIdArg ? (uint32_t)strtoul(reportAppIdArg, NULL, 10) : 0
