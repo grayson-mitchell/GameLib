@@ -1750,7 +1750,7 @@ static void gl_manual_pump_into_ring(void) {
         }
       }
     } else {
-      if (g_ovl.enabled && msg.m_iCallback == GL_OVL_CALLBACK_ID) {
+      if (g_ovl.publish && msg.m_iCallback == GL_OVL_CALLBACK_ID) {
         int active = gl_ovl_parse_active(msg.m_pubParam, (int)msg.m_cubParam);
         if (active == 0 || active == 1) {
           struct timeval tv;
@@ -3221,11 +3221,11 @@ int main(int argc, char **argv) {
   g_appid[MAX_APPID_DIGITS] = '\0';
   g_appid_u64 = strtoull(g_appid, NULL, 10); // validated digits-only above
 
-  // 60-15: overlay signal, opt-in. Real appId = --report-appid else --appid.
-  g_ovl.enabled = gl_ovl_enabled_from_env(getenv("GAMELIB_OVERLAY_INPUT_PROBE"));
-  if (g_ovl.enabled &&
-      gl_ovl_notify_name(g_ovl.name, sizeof g_ovl.name, reportAppIdArg ? reportAppIdArg : g_appid) != 0)
-    g_ovl.enabled = 0;
+  // 60-19: overlay signal published on every launch (publish), logged only
+  // behind the probe flag (log). Real appId = --report-appid else --appid.
+  g_ovl.log = gl_ovl_enabled_from_env(getenv("GAMELIB_OVERLAY_INPUT_PROBE"));
+  g_ovl.publish =
+    gl_ovl_notify_name(g_ovl.name, sizeof g_ovl.name, reportAppIdArg ? reportAppIdArg : g_appid) == 0;
 
   bridge_dispatch_set_identity_only(
     identityOnly, reportAppIdArg ? (uint32_t)strtoul(reportAppIdArg, NULL, 10) : 0

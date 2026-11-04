@@ -84,6 +84,9 @@ int main(void) {
   gl_ovl_state b; memset(&b, 0, sizeof b);
   int taken = 0, i;
   for (i = 0; i < 400; i++) taken += gl_ovl_log_take(&b);
+  printf("budget_off=%d\\n", taken);
+  b.log = 1; taken = 0;
+  for (i = 0; i < 400; i++) taken += gl_ovl_log_take(&b);
   printf("budget=%d\\n", taken);
   return 0;
 }
@@ -131,6 +134,7 @@ int main(void) {
       expect(kv.pub0).toBe('0')
       expect(kv.state_after_0).toBe('0')
       expect(kv.changed_0).toBe('1')
+      expect(kv.budget_off).toBe('0')
       expect(kv.budget).toBe('256')
     } finally {
       profile.dispose()

@@ -4,10 +4,13 @@
  * Phase 60 plan 15. 60-12 returned V-NONE: the probe saw no overlay open /
  * close marker in the game process. Mac Steam does report the transition to
  * the bridge helper as GameOverlayActivated_t (k_iCallback 331); the helper
- * used to drop it as "unlisted". Behind GAMELIB_OVERLAY_INPUT_PROBE=1 the
- * helper publishes each transition as the Darwin notification
+ * used to drop it as "unlisted". Plan 60-19 (60-18 verdict X-RELEASE+BLOCK,
+ * signal cb): the helper now publishes each transition on every launch as the
+ * Darwin notification
  *   com.gamelib.steambridge.overlay.<appid>
- * (state 1 = open, 0 = closed) that the in-game probe (60-17) listens to.
+ * (state 1 = open, 0 = closed) that overlay_input.dylib listens to. The publish
+ * is production; the per-transition log stays diagnostic, behind
+ * GAMELIB_OVERLAY_INPUT_PROBE=1.
  *
  * Self-contained: stdint/string/notify only, no allocation, no logging.
  * 331 is NEVER added to the callback allowlist (the game gets no new callback).
@@ -24,7 +27,8 @@
 #define GL_OVL_LOG_BUDGET 256
 
 typedef struct {
-  int enabled;
+  int publish; /* production: on whenever name is valid */
+  int log;     /* diagnostic: GAMELIB_OVERLAY_INPUT_PROBE=1 only */
   int registered;
   int token;
   char name[64];
@@ -71,7 +75,7 @@ static inline int gl_ovl_publish(gl_ovl_state *s, int active) {
 }
 
 static inline int gl_ovl_log_take(gl_ovl_state *s) {
-  if (s == NULL || s->logged >= GL_OVL_LOG_BUDGET) return 0;
+  if (s == NULL || !s->log || s->logged >= GL_OVL_LOG_BUDGET) return 0;
   s->logged++;
   return 1;
 }
