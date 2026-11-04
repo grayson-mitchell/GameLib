@@ -1,5 +1,5 @@
 ---
-status: testing
+status: complete
 phase: 60-steam-overlay-in-bridged-games-on-macos
 source: [60-10-PLAN.md]
 ---
@@ -86,39 +86,44 @@ result: pass — 2026-11-03, The Planet Crafter (1284190) under no-crossover.sb,
 
 ### 10. Schedule I Free Sample (3205720) re-run (G1, D-15)
 expected: CrossOver overlay runner. The launch log has `overlay=on source=default`, `overlay input fix=X-RELEASE+BLOCK applied=true` and `overlay attach: attached`. In gameplay with the camera under mouse control (not only the menu), Shift+Tab shows a cursor, the overlay takes clicks, and the camera does not turn while it is open. Closing the overlay returns mouse-look to the game. Bridge verified strictly (HELLO plus a clean game Steam-init log; In-Game never counts). vmmap of the game pid lists overlay_shim, steamloader, gameoverlayrenderer and overlay_input.
-result: pending
+result: pass — 2026-11-04 20:17. Operator: cursor yes, clicks yes, camera still yes, mouse-look back yes. Evidence: `engine=crossover build=26.3.0.39832 reason=cx-healthy`, `overlay=on source=user`, `overlay input fix=X-RELEASE+BLOCK applied=true` (20:16:29); `overlay attach: attached gameoverlayui pid=71213 game pid=71150 after 2007ms`; bridge verified (`HELLO shim attached appid=3205720`, `GINIT fn=SteamInternal_SteamAPI_Init ret=0 ok=1 session=1`). vmmap 71150 lists overlay_shim, steamloader, gameoverlayrenderer, overlay_input. Overlay wine log: overlay_input open 1 / set_active 1 1 / set_active 0 1 / close 1 / inactive 9, so only one process acted.
 
 ### 11. The Planet Crafter (1284190) re-run (G1, D-15)
 expected: Same as item 10, for this title.
-result: pending
+result: pass — 2026-11-04 20:21. Operator: cursor yes, clicks yes, camera still yes, mouse-look back yes. Evidence: `engine=crossover` cx-healthy, `overlay=on source=default`, `overlay input fix=X-RELEASE+BLOCK applied=true` (20:20:48); `overlay attach: attached gameoverlayui pid=73942 game pid=73865 after 4009ms`; bridge verified (`HELLO shim attached appid=1284190`, `GINIT fn=SteamAPI_Init ret=1 ok=1`). vmmap 73865 lists all four dylibs. overlay_input open 1 / close 1, inactive 9.
 
 ### 12. Manor Lords (1363080) regression (D-15)
 expected: Item 3's expected unchanged (UE stub, RGB10A2 shim line, overlay takes clicks, bridge verified), and the launch log has an `overlay input fix=` line.
-result: pending
+result: pass — 2026-11-04 20:24. Operator: overlay opens yes, clicks yes. Evidence: `engine=crossover` cx-healthy, `overlay=on source=default`, `overlay input fix=X-RELEASE+BLOCK applied=true` (20:23:24); UE stub launch; `overlay_shim` RGB10A2Unorm pipeline substitution logged 20:23:30; `overlay attach: attached gameoverlayui pid=75496 game pid=75431 after 3005ms`; bridge verified (HELLO, `GINIT fn=SteamAPI_Init ok=1`). `np_overlay_shim_set_active` blocking 20:24:15 / passing 20:24:23 and 20:24:33 / 20:24:34. vmmap 75431 (and stub 75429) lists all four dylibs. overlay_input open 2 / close 2, inactive 9.
 
 ### 13. Grim Dawn (219990) regression and attach window (D-15, G2)
 expected: Item 4's expected, plus the launch log has `overlay attach: attached`, no `not attached within` line, and `overlay input fix=X-RELEASE+BLOCK applied=false reason=route`.
-result: pending
+result: pass — 2026-11-04 20:27. Operator: overlay opens yes, clicks yes. Evidence (20:26:13): `bottle: appId 219990 uses DRM runner crossover-26.3.0.39832`, `[bridge-drm] mode=steamclient-layer`, `overlay=on source=default`, `overlay input fix=X-RELEASE+BLOCK applied=false reason=route`; `overlay attach: attached gameoverlayui pid=77237 game pid=77105 after 10018ms`, no `not attached within` line. Bridge verified by the lsteamclient game-process trace (`role=game event=create-interface iface=SteamClient017`, then CreateSteamPipe, ConnectToGlobalUser, GetAppOwnershipTicketData, GetSteamID). vmmap 77105 lists overlay_shim, steamloader, gameoverlayrenderer (no overlay_input, as expected for the route).
 
 ### 14. Fallback engine re-gate in gameplay (G1, D-07; item 9 contradiction)
 expected: Under no-crossover.sb, The Planet Crafter logs `Wine-Staging` in the engine line, `overlay=env reason=fallback-engine (D-07)`, and `overlay input fix=X-RELEASE+BLOCK applied=true`. In gameplay with the camera under mouse control, Shift+Tab shows a cursor, the overlay takes clicks, the camera does not turn, and mouse-look returns after close. Bridge verified strictly. No `overlay-exit-abnormal` dialog. Also check probe/stderr logs for `overlay_input open` lines from non-game pids and record any process name.
-result: pending
+result: pass — 2026-11-04 20:44. Operator: cursor yes, clicks yes, camera still yes, mouse-look back yes. Evidence: `engine=pinned name="Wine-Staging 11.20 + DXVK-macOS 1.10.3 (built-in)" version=11.20 reason=cx-missing`, `overlay=on source=default`, `overlay input fix=X-RELEASE+BLOCK applied=true`, `overlay=env reason=fallback-engine (D-07)` (20:44:19); bridge verified (HELLO, `GINIT fn=SteamAPI_Init ok=1`, 20:44:27); `overlay attach: attached gameoverlayui pid=89403 game pid=89203 after 7013ms`. vmmap 89203 lists all four dylibs. set_active blocking/passing at 20:44:35/38, 20:44:51/59, 20:45:15/17. overlay_input open 3 / close 3 / set_active 1 x3 and 0 x3, inactive 9: no non-game process acted, so the 60-19 non-game-pid caveat is cleared (the unnamed windows=9 process from 60-18 no longer opens). No overlay-exit-abnormal dialog reported. No G5 needed.
 
 ### 15. Steam overlay setting survives reopening settings (G3, D-02)
 expected: On Schedule I, set Advanced > Steam overlay to Off, close the settings, and reopen them: the select shows Off. A launch logs `overlay=off source=user` and no `overlay input fix=` line. Set Automatic, close, reopen: it shows Automatic, and GamesConfig/3205720.json has `"steamOverlayOverride": "automatic"`.
-result: pending
+result: pass — 2026-11-04 20:30. Off persisted after close and reopen; the launch logged `overlay=off source=user` (20:30:01) and no `overlay input fix=` line. Automatic persisted after reopen; GamesConfig/3205720.json has `"steamOverlayOverride": "automatic"`.
 
 ### 16. Overlay-unavailable notice is seen in the app (G4, D-08, D-09)
 expected: With public/bin/arm64/darwin/overlay_shim.dylib renamed, two consecutive launches of Schedule I each show a non-modal 'Steam overlay unavailable' notice inside GameLib that names the missing helper. The notice is still there on switching back from the game and stays about 8 s after GameLib regains focus. No dialog opens. Each log has `[bridge-notice] appId=3205720 reason=overlay-shim` and `overlay notice surface=in-app pushed=true`. The game launches both times. Restore the file and re-run lipo.
-result: pending
+result: pass — 2026-11-04 20:32, 20:40, 20:41. With the shim renamed to .off, three launches each logged `overlay notice surface=in-app pushed=true` and `[bridge-notice] reason=overlay-shim cause=overlay-shim-missing` (20:32:20, 20:40:54, 20:41:22). Operator: the in-app non-modal notice was visible, stayed about 8 s after GameLib regained focus, no macOS banner, no dialog. Observations (not failures): the log also shows `notify(): "Steam overlay unavailable" handed to tauri-plugin-notification (delivery not confirmable)` and the operator saw no banner; `applied=true` was logged on the shim-missing launch. Toast look polish is filed as `.planning/todos/pending/2026-11-04-polish-steam-launch-notice-toast.md`. Shim restored: `lipo -info public/bin/arm64/darwin/overlay_shim.dylib` lists x86_64 arm64, no .off file remains.
 
 ### 17. UAT item 9 re-examined: Staging without the fix (record only)
 expected: Under no-crossover.sb with GAMELIB_OVERLAY_INPUT_FIX=off, The Planet Crafter logs `Wine-Staging`, `overlay=env reason=fallback-engine (D-07)` and `overlay input fix=X-RELEASE+BLOCK applied=false reason=disabled`. The operator opens the overlay with Shift+Tab in the main menu, in the game's pause menu, and in gameplay with the camera under mouse control, and records for each whether there is a cursor and whether the overlay takes clicks. Any observation passes once recorded; the result states whether item 9's pass is explained (for example, it was opened from a menu) and compares with 60-12 Run B and the 60-18 `## UAT item 9` paragraph.
-result: pending
+result: pass — 2026-11-04 20:46 (record only). Launched with GAMELIB_OVERLAY_INPUT_FIX=off under no-crossover.sb: `Wine-Staging` cx-missing, `overlay=env reason=fallback-engine (D-07)`, `overlay input fix=X-RELEASE+BLOCK applied=false reason=disabled` (20:46:36); zero overlay_input lines in the wine log. Operator: (a) main menu cursor yes, clicks yes; (b) pause menu cursor yes, clicks yes; (c) gameplay cursor NO, clicks NO. Item 9's pass is explained: it was a menu-state pass, and gameplay without the fix reproduces G1 on Staging, matching 60-12 Run B. Item 14 shows the fix resolves it. This is the expected confirmation, not a regression.
 
 ## Gaps
 
 - **G1 — Overlay takes no mouse in gameplay in Unity titles on the CrossOver overlay path (items 1, 2).** Symptom: Shift+Tab opens the overlay and it works in the game's menu, but in gameplay mouse movement still turns the camera and there is no cursor to click. Seen in Schedule I (3205720, DXVK) and The Planet Crafter (1284190, D3DMetal), both Unity, both on the overlay runner crossover-26.3.0.39832. Not seen in Manor Lords (Unreal, same runner, item 3), Grim Dawn (DRM clone, item 4), or The Planet Crafter on the Wine-Staging fallback engine (item 9). Lead (untested): nothing calls `np_overlay_shim_set_active` (RESEARCH Pitfall 9 / A3), so the game keeps its cursor lock/hide while the overlay is open; why winemac on Staging differs is open. Blocks D-15 (items 1-4 must all pass).
+  - G1 resolution: 60-15/60-17/60-18/60-19/60-20; verified by items 10, 11 and 14 (pass)
+  - Item 9 re-examined: explained. Item 9's Staging pass was a menu-state pass; item 17 (fix off) shows menu and pause menu work but gameplay has no cursor and no clicks, reproducing G1 as 60-12 Run B found, and item 14 (fix on) passes in gameplay.
 - **G2 — D-11 attach watch gives a false negative in DRM mode (item 4).** Symptom: launch log `overlay attach: not attached within 10s` at 07:16:02 while console_log shows `GameOverlay: started ... for game process 62423` at 07:16:05. The steam.exe helper hop makes DRM attach later than the 10 s window. Diagnostic only; the overlay worked.
+  - G2 resolution: 60-13; verified by item 13 (pass)
 - **G3 — Advanced > Steam overlay shows Automatic after reopening settings while Off is stored (item 6/7 setup).** Symptom: after item 6 set Off (GamesConfig/3205720.json `"steamOverlayOverride": "off"`, written 07:25:53, and honoured by the launch: `overlay=off source=user`), reopening the game's settings showed Automatic. Operator is ~90% sure they did not change it back; the stored value was still `off` when checked. Operator reports the settings window has been unreliable generally. SteamOverlayOverride.tsx / useSetting read path looks correct on inspection; cause not found.
+  - G3 resolution: 60-13; verified by item 15 (pass)
 - **G4 — "Steam overlay unavailable" never reaches the operator (item 7).** Symptom: on two shim-missing launches the backend logs `reason=overlay-shim cause=overlay-shim-missing` and hands the notice to tauri-plugin-notification, but no notification or toast was seen. The overlay notice is OS-notification-only by design (D-08: "never a dialog"); unlike the engine/bridge notices it has no in-app surface and no display confirmation. Whether the dev app's macOS notification permission or Focus suppressed it is unchecked. D-09's "user is told" is not met in practice.
+  - G4 resolution: 60-14; verified by item 16 (pass)

@@ -996,7 +996,7 @@ Plans:
 **Goal:** Shift+Tab opens Mac Steam's own overlay, drawn correctly and taking clicks, in games GameLib launches through the macOS Steam bridge. GameLib injects the user's own `steamloader.dylib` + `gameoverlayrenderer.dylib` (with `SteamOverlayGameId`) through `CX_ENV` on a cloned CrossOver runner whose `bin/wineloader` and `lib/wine/x86_64-unix/wine` are both re-signed with `allow-dyld-environment-variables`. Mac Steam then attaches `gameoverlayui` itself. A vendored, self-built copy of NotProton's GPLv3 `overlay_shim.m` fixes 10-bit (`RGB10A2Unorm`) and Metal 4 layers. Blueprint: `spike-findings-gamelib` → `references/steam-overlay-in-bottles.md` (spikes 061–064).
 **Requirements**: TBD
 **Depends on:** Phase 56
-**Plans:** 19/20 plans executed
+**Plans:** 20/20 plans complete
 
 Plans:
 **Wave 1**
@@ -1058,4 +1058,4 @@ Plans:
 
 **Wave 13** *(blocked on Wave 12 completion)*
 
-- [ ] 60-16-PLAN.md — Gap re-run live gate: UAT items 10-17 (D-15 titles, G2-G4 checks, Staging re-gate, item 9 re-examined) (checkpoint)
+- [x] 60-16-PLAN.md — Gap re-run live gate: UAT items 10-17 (D-15 titles, G2-G4 checks, Staging re-gate, item 9 re-examined) (checkpoint)
