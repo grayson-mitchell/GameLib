@@ -10,16 +10,12 @@
  * Nothing runs at import; heavy collaborators are reached through injectable
  * deps whose defaults are built lazily inside each function.
  */
-import {
-  accessSync,
-  constants as fsConstants,
-  existsSync,
-  readFileSync
-} from 'fs'
+import { accessSync, constants as fsConstants, existsSync } from 'fs'
 import { dirname, isAbsolute, join, relative } from 'path'
-import { gamesConfigPath, toolsPath } from 'backend/constants/paths'
+import { toolsPath } from 'backend/constants/paths'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SteamEngineOption } from 'common/types/steam'
+import { readStoredTitleConfig } from '../titleSettings'
 import { probeDemoStatus } from './demoStatus'
 import type { DemoStatusProbe } from './demoStatus'
 import { ENGINE_PINS } from './enginePins'
@@ -392,22 +388,11 @@ function pinnedSelection(
  * 59-UAT G11: the title's stored override, read straight from its GameConfig
  * file. `GameConfig.get(id).config` is filled asynchronously after
  * construction, so the first read after a restart saw undefined and the
- * launch silently ran Automatic; GameConfig.get also creates a missing file.
+ * launch silently ran Automatic (file-read rationale: titleSettings.ts).
  * Unvalidated: callers pass the value through parseEngineOverride.
  */
 export function readStoredEngineOverride(appId: string): unknown {
-  if (!/^[0-9]{1,10}$/.test(appId)) return undefined
-  const path = join(gamesConfigPath, `${appId}.json`)
-  if (!existsSync(path)) return undefined
-  try {
-    const raw = JSON.parse(readFileSync(path, 'utf8')) as Record<
-      string,
-      { steamEngineOverride?: unknown } | undefined
-    >
-    return raw[appId]?.steamEngineOverride
-  } catch {
-    return undefined
-  }
+  return readStoredTitleConfig(appId)?.steamEngineOverride
 }
 
 export async function decideLaunchEngine(

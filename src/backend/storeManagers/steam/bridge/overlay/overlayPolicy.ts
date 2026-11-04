@@ -3,9 +3,7 @@
  * D-03 a known fix can turn it off and the user wins both ways, D-10 the
  * abnormal-exit predicate. No global switch.
  */
-import { existsSync, readFileSync } from 'fs'
-import { join } from 'path'
-import { gamesConfigPath } from 'backend/constants/paths'
+import { readStoredTitleConfig } from '../../titleSettings'
 
 // ts-prune-ignore-next
 export type OverlayOverride = 'automatic' | 'on' | 'off'
@@ -33,24 +31,12 @@ export function resolveOverlayEnabled(a: {
 }
 
 /**
- * The title's stored overlay override, read straight from its GameConfig
- * file: GameConfig.get(id).config is filled asynchronously after
- * construction (59-UAT G11). Unvalidated: pass through parseOverlayOverride.
+ * The title's stored overlay override (file-read rationale: titleSettings.ts).
+ * Unvalidated: pass through parseOverlayOverride.
  */
 // ts-prune-ignore-next
 export function readStoredOverlayOverride(appId: string): unknown {
-  if (!/^[0-9]{1,10}$/.test(appId)) return undefined
-  const path = join(gamesConfigPath, `${appId}.json`)
-  if (!existsSync(path)) return undefined
-  try {
-    const raw = JSON.parse(readFileSync(path, 'utf8')) as Record<
-      string,
-      { steamOverlayOverride?: unknown } | undefined
-    >
-    return raw[appId]?.steamOverlayOverride
-  } catch {
-    return undefined
-  }
+  return readStoredTitleConfig(appId)?.steamOverlayOverride
 }
 
 // ts-prune-ignore-next
