@@ -222,23 +222,32 @@ export default function GamesSettings() {
             <CrossoverBottle />
           </>
         )}
+        {/* quick 261104-uxr: for macOS Steam titles these toggles write the
+            per-game file, which the bridged launch never reads for them:
+            getBridgeBottleSettings spreads GlobalConfig, and
+            TITLE_AUTHORITATIVE_KEYS (titleSettings.ts) excludes them. Tools
+            stays because it acts on the shared Steam bottle. */}
         {!isCrossover && (
           <>
-            <AutoDXVK />
-            {isLinux && (
+            {!isMacSteamTitle && (
               <>
-                {!window.isSteamDeck && <AutoDXVKNVAPI />}
-                <AutoVKD3D />
+                <AutoDXVK />
+                {isLinux && (
+                  <>
+                    {!window.isSteamDeck && <AutoDXVKNVAPI />}
+                    <AutoVKD3D />
+                  </>
+                )}
+                <EnableEsync />
+                <EnableFsync />
+                <EnableWineWayland />
+                <EnableWoW64 />
+                <EnableMsync />
+                <AdvertiseAvxForRosetta />
+                <EnableFSR />
+                {isMac && <EnableDXVKFpsLimit />}
               </>
             )}
-            <EnableEsync />
-            <EnableFsync />
-            <EnableWineWayland />
-            <EnableWoW64 />
-            <EnableMsync />
-            <AdvertiseAvxForRosetta />
-            <EnableFSR />
-            {isMac && <EnableDXVKFpsLimit />}
             <Tools />
           </>
         )}
