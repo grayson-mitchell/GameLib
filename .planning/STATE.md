@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Tauri Shell
 status: milestone_complete
-stopped_at: Milestone complete (Phase 60 was final phase)
+stopped_at: Phase 60 complete — milestone complete (final phase)
 last_updated: 2026-11-04T08:00:11.271Z
 last_activity: 2026-11-04
 progress:
