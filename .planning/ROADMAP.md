@@ -1059,3 +1059,13 @@ Plans:
 **Wave 13** *(blocked on Wave 12 completion)*
 
 - [x] 60-16-PLAN.md — Gap re-run live gate: UAT items 10-17 (D-15 titles, G2-G4 checks, Staging re-gate, item 9 re-examined) (checkpoint)
+
+### Phase 61: Unified macOS engine for all stores
+
+**Goal:** Every Windows game GameLib runs under Wine on macOS, from any store (Epic/legendary, GOG, Amazon/nile, sideload, Steam), gets one per-game **Engine** control: Automatic (CrossOver first, then GameLib's pinned Wine-Staging + DXVK build), CrossOver, the pinned builds, or a Wine Manager build. For non-Steam games it replaces the Wine Version selector, which today is their only engine choice. Behind it, the Phase 59 engine decision moves out of `src/backend/storeManagers/steam/engine/` so non-Steam launches get the same protection: a trial-expiry check before each launch plus the "N days remaining" notice, a timeout on every CrossOver launch, broken-CrossOver detection, and creation of a fallback bottle for non-Steam CrossOver bottles and prefixes. Open questions for discuss-phase: (1) how the "Unsupported — known fixes and compatibility ratings don't apply" warning reads for stores that have no Steam-keyed fixes or ratings; (2) how existing per-game `wineVersion` choices migrate into the new control. Extends Phase 59, whose `59-CONTEXT.md` scoped this to Steam bridge titles; the Steam-side UI is now on the Wine tab (quick 261104-tm6).
+**Requirements**: TBD
+**Depends on:** Phase 59
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 61 to break down)
