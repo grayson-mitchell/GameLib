@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "ค่าเริ่มต้นของ Wine",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "เรียกใช้"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "แลกรหัส Steam"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "การดำเนินการนี้จะลบสำเนาที่ติดตั้งไว้ของเกมนี้ทั้งหมดในทุกตำแหน่งติดตั้ง ไม่สามารถย้อนกลับได้",
             "removeAllCopiesConfirmTitle": "ลบทุกสำเนาหรือไม่?",
             "removeAllCopiesLabel": "ลบทุกสำเนา…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib เลือกเอนจิน Wine และบอตเทิลสำหรับเกม Steam"
         }
     },
     "steamgriddb": {

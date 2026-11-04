@@ -367,7 +367,10 @@
             }
         },
         "wineDefaultLabel": "Wine implicit",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Rulare"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Revendică o cheie Steam"
@@ -519,6 +522,9 @@
             "removeAllCopiesConfirmMessage": "Aceasta elimină fiecare copie instalată a acestui joc din toate locațiile de instalare. Această acțiune nu poate fi anulată.",
             "removeAllCopiesConfirmTitle": "Elimini toate copiile?",
             "removeAllCopiesLabel": "Elimină toate copiile…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib alege motorul Wine și bottle-ul pentru jocurile Steam."
         }
     },
     "steamgriddb": {

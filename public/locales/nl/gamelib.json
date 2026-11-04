@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine-standaard",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Uitvoeren"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Een Steam-key inwisselen"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "Dit verwijdert elke geïnstalleerde kopie van deze game op alle installatielocaties. Dit kan niet ongedaan worden gemaakt.",
             "removeAllCopiesConfirmTitle": "Alle kopieën verwijderen?",
             "removeAllCopiesLabel": "Alle kopieën verwijderen…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib kiest de Wine-engine en de bottle voor Steam-games."
         }
     },
     "steamgriddb": {

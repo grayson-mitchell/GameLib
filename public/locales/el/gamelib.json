@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Προεπιλογή Wine",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Εκτέλεση"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Εξαργύρωση κλειδιού Steam"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "Αυτό αφαιρεί κάθε εγκατεστημένο αντίγραφο αυτού του παιχνιδιού σε όλες τις θέσεις εγκατάστασης. Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
             "removeAllCopiesConfirmTitle": "Αφαίρεση όλων των αντιγράφων;",
             "removeAllCopiesLabel": "Αφαίρεση όλων των αντιγράφων…"
+        },
+        "engine": {
+            "wineTabHint": "Το GameLib επιλέγει τη μηχανή Wine και το bottle για τα παιχνίδια Steam."
         }
     },
     "steamgriddb": {

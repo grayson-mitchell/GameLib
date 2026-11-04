@@ -374,7 +374,10 @@
             }
         },
         "wineDefaultLabel": "Predvolené Wine",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Spustenie"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Uplatniť kľúč Steam"
@@ -526,6 +529,9 @@
             "removeAllCopiesConfirmMessage": "Toto odstráni každú nainštalovanú kópiu tejto hry vo všetkých umiestneniach inštalácie. Túto akciu nemožno vrátiť späť.",
             "removeAllCopiesConfirmTitle": "Odstrániť všetky kópie?",
             "removeAllCopiesLabel": "Odstrániť všetky kópie…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib vyberá pre hry zo Steamu engine Wine a bottle."
         }
     },
     "steamgriddb": {

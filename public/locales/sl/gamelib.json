@@ -374,7 +374,10 @@
             }
         },
         "wineDefaultLabel": "Privzeti Wine",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Zagon"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Unovči Steam ključ"
@@ -526,6 +529,9 @@
             "removeAllCopiesConfirmMessage": "To odstrani vse nameščene kopije te igre na vseh mestih namestitve. Tega dejanja ni mogoče razveljaviti.",
             "removeAllCopiesConfirmTitle": "Odstranim vse kopije?",
             "removeAllCopiesLabel": "Odstrani vse kopije …"
+        },
+        "engine": {
+            "wineTabHint": "GameLib izbere pogon Wine in bottle za igre Steam."
         }
     },
     "steamgriddb": {

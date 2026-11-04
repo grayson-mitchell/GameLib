@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine இயல்புநிலை",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "இயக்கு"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Steam விசையை மீட்டுப் பெறு"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "இது அனைத்து நிறுவல் இருப்பிடங்களிலும் உள்ள இந்த விளையாட்டின் நிறுவப்பட்ட எல்லா நகல்களையும் நீக்கும். இதை மீட்டெடுக்க முடியாது.",
             "removeAllCopiesConfirmTitle": "அனைத்து நகல்களையும் நீக்கவா?",
             "removeAllCopiesLabel": "அனைத்து நகல்களையும் நீக்கு…"
+        },
+        "engine": {
+            "wineTabHint": "Steam விளையாட்டுகளுக்கான Wine இயந்திரத்தையும் பாட்டிலையும் GameLib தேர்ந்தெடுக்கிறது."
         }
     },
     "steamgriddb": {

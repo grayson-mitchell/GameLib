@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine پیش‌فرض",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "اجرا"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "استفاده از کد Steam"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "این کار هر نسخه نصب‌شده این بازی را در تمام محل‌های نصب حذف می‌کند. این عمل قابل بازگشت نیست.",
             "removeAllCopiesConfirmTitle": "همه نسخه‌ها حذف شوند؟",
             "removeAllCopiesLabel": "حذف همه نسخه‌ها…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib موتور Wine و بطری را برای بازی‌های Steam انتخاب می‌کند."
         }
     },
     "steamgriddb": {

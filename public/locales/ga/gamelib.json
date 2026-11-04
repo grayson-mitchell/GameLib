@@ -381,7 +381,10 @@
             }
         },
         "wineDefaultLabel": "Réamhshocrú Wine",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Rith"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Fuascail eochair Steam"
@@ -533,6 +536,9 @@
             "removeAllCopiesConfirmMessage": "Bainfidh sé seo gach cóip suiteáilte den chluiche seo ó gach suíomh suiteála. Ní féidir é seo a chur ar ceal.",
             "removeAllCopiesConfirmTitle": "Bain gach cóip?",
             "removeAllCopiesLabel": "Bain gach cóip…"
+        },
+        "engine": {
+            "wineTabHint": "Roghnaíonn GameLib an t-inneall Wine agus an buidéal do chluichí Steam."
         }
     },
     "steamgriddb": {

@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine standart",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Ishga tushirish"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Steam kalitini faollashtirish"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "Bu barcha o'rnatish joylaridagi ushbu o'yinning barcha o'rnatilgan nusxalarini olib tashlaydi. Bu amalni bekor qilib bo'lmaydi.",
             "removeAllCopiesConfirmTitle": "Barcha nusxalar olib tashlansinmi?",
             "removeAllCopiesLabel": "Barcha nusxalarni olib tashlash…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib Steam o‘yinlari uchun Wine dvigateli va bottle’ni tanlaydi."
         }
     },
     "steamgriddb": {

@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine por defecto",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Execución"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Canxear unha clave de Steam"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "Isto elimina todas as copias instaladas deste xogo en todas as localizacións de instalación. Isto non se pode desfacer.",
             "removeAllCopiesConfirmTitle": "Eliminar todas as copias?",
             "removeAllCopiesLabel": "Eliminar todas as copias…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib escolle o motor Wine e a bottle para os xogos de Steam."
         }
     },
     "steamgriddb": {

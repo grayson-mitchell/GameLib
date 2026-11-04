@@ -265,6 +265,9 @@
             "help": {
                 "unavailableDetail": "Die Unterstützung für SteamGridDB-Artwork ist auf eine zukünftige Version verschoben (D-03, Phase 34.6) und kann in diesem Build nicht konfiguriert werden."
             }
+        },
+        "navbar": {
+            "run": "Ausführen"
         }
     },
     "sideload": {
@@ -414,6 +417,9 @@
         },
         "resumeAvailable": {
             "notify": "Eine unterbrochene Installation für {{game}} kann fortgesetzt werden — klicke auf Installieren, um fortzufahren"
+        },
+        "engine": {
+            "wineTabHint": "GameLib wählt die Wine-Engine und die Bottle für Steam-Spiele aus."
         }
     },
     "themeSelector": {

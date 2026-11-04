@@ -374,7 +374,10 @@
             }
         },
         "wineDefaultLabel": "Numatytoji Wine versija",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Paleidimas"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Aktyvuoti Steam raktą"
@@ -526,6 +529,9 @@
             "removeAllCopiesConfirmMessage": "Tai pašalins visas įdiegtas šio žaidimo kopijas iš visų diegimo vietų. Šio veiksmo anuliuoti negalima.",
             "removeAllCopiesConfirmTitle": "Pašalinti visas kopijas?",
             "removeAllCopiesLabel": "Pašalinti visas kopijas…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib parenka Wine variklį ir bottle „Steam“ žaidimams."
         }
     },
     "steamgriddb": {

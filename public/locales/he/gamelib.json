@@ -367,7 +367,10 @@
             }
         },
         "wineDefaultLabel": "ברירת המחדל של Wine",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "הרצה"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "ממש מפתח Steam"
@@ -519,6 +522,9 @@
             "removeAllCopiesConfirmMessage": "פעולה זו תסיר את כל העותקים המותקנים של משחק זה מכל מיקומי ההתקנה. לא ניתן לבטל פעולה זו.",
             "removeAllCopiesConfirmTitle": "להסיר את כל העותקים?",
             "removeAllCopiesLabel": "הסר את כל העותקים…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib בוחר את מנוע Wine ואת ה-bottle עבור משחקי Steam."
         }
     },
     "steamgriddb": {

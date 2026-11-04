@@ -381,7 +381,10 @@
             }
         },
         "wineDefaultLabel": "Wine Dre Ziouer",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Lañsañ"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Aotren ur alc'hwez Steam"
@@ -533,6 +536,9 @@
             "removeAllCopiesConfirmMessage": "Kement-mañ a zilamo pep eilskrid staliet eus ar c'hoarigell-mañ e pep lec'h staliañ. Ne c'hell ket bezañ dizoueret.",
             "removeAllCopiesConfirmTitle": "Dilemel an holl eilskridoù?",
             "removeAllCopiesLabel": "Dilemel an holl eilskridoù…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib a ziuz ar c’heflusker Wine hag ar voutailh evit c’hoarioù Steam."
         }
     },
     "steamgriddb": {

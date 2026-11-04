@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine mặc định",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Chạy"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Kích hoạt mã Steam"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "Thao tác này sẽ xóa mọi bản sao đã cài đặt của trò chơi này tại tất cả vị trí cài đặt. Không thể hoàn tác.",
             "removeAllCopiesConfirmTitle": "Xóa tất cả bản sao?",
             "removeAllCopiesLabel": "Xóa tất cả bản sao…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib chọn engine Wine và bottle cho các game Steam."
         }
     },
     "steamgriddb": {

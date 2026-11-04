@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine Lehenetsia",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Exekuzioa"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Kanjeatu Steam gako bat"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "Honek joko honen instalatutako kopia guztiak kentzen ditu instalazio-kokaleku guztietan. Ezin da desegin.",
             "removeAllCopiesConfirmTitle": "Kopia guztiak kendu?",
             "removeAllCopiesLabel": "Kendu kopia guztiak…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib-ek Wine motorra eta bottle-a hautatzen ditu Steam jokoetarako."
         }
     },
     "steamgriddb": {

@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine vaikeversioon",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Käivitus"
+        }
     },
     "sideload": {
         "filter": {
@@ -509,6 +512,9 @@
                 "stopWaiting": "Stop waiting",
                 "title": "Ootab Steami…"
             }
+        },
+        "engine": {
+            "wineTabHint": "GameLib valib Steami mängudele Wine'i mootori ja bottle'i."
         }
     },
     "steamgriddb": {

@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine 기본값",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "실행"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Steam 키 사용하기"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "모든 설치 위치에서 이 게임의 설치된 모든 사본이 제거됩니다. 이 작업은 되돌릴 수 없습니다.",
             "removeAllCopiesConfirmTitle": "모든 사본을 제거하시겠습니까?",
             "removeAllCopiesLabel": "모든 사본 제거…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib이 Steam 게임에 사용할 Wine 엔진과 보틀을 선택합니다."
         }
     },
     "steamgriddb": {

@@ -374,7 +374,10 @@
             }
         },
         "wineDefaultLabel": "Domyślne Wine",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Uruchamianie"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Aktywuj klucz Steam"
@@ -526,6 +529,9 @@
             "removeAllCopiesConfirmMessage": "Spowoduje to usunięcie każdej zainstalowanej kopii tej gry ze wszystkich lokalizacji instalacji. Tej operacji nie można cofnąć.",
             "removeAllCopiesConfirmTitle": "Usunąć wszystkie kopie?",
             "removeAllCopiesLabel": "Usuń wszystkie kopie…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib wybiera silnik Wine i bottle dla gier ze Steam."
         }
     },
     "steamgriddb": {

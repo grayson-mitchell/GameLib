@@ -388,7 +388,10 @@
             }
         },
         "wineDefaultLabel": "Wine الافتراضي",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "تشغيل"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "استبدال مفتاح Steam"
@@ -540,6 +543,9 @@
             "removeAllCopiesConfirmMessage": "يؤدي هذا إلى إزالة كل نسخة مثبتة من هذه اللعبة في جميع مواقع التثبيت. لا يمكن التراجع عن هذا الإجراء.",
             "removeAllCopiesConfirmTitle": "إزالة جميع النسخ؟",
             "removeAllCopiesLabel": "إزالة جميع النسخ…"
+        },
+        "engine": {
+            "wineTabHint": "يختار GameLib محرك Wine وbottle لألعاب Steam."
         }
     },
     "steamgriddb": {

@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine Standart",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "İşə sal"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Steam açarını aktivləşdir"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "Bu, bütün quraşdırma yerlərindəki bu oyunun hər bir quraşdırılmış nüsxəsini siləcək. Bu geri qaytarıla bilməz.",
             "removeAllCopiesConfirmTitle": "Bütün nüsxələr silinsin?",
             "removeAllCopiesLabel": "Bütün nüsxələri sil…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib Steam oyunları üçün Wine mühərrikini və bottle-ı seçir."
         }
     },
     "steamgriddb": {

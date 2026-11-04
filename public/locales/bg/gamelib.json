@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine по подразбиране",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Стартиране"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Активиране на Steam ключ"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "Това премахва всяко инсталирано копие на тази игра от всички места за инсталиране. Това не може да бъде отменено.",
             "removeAllCopiesConfirmTitle": "Премахване на всички копия?",
             "removeAllCopiesLabel": "Премахване на всички копия…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib избира двигателя Wine и bottle за игрите от Steam."
         }
     },
     "steamgriddb": {

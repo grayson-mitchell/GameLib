@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine-standard",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Kjør"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Løs inn en Steam-nøkkel"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "Dette fjerner alle installerte kopier av dette spillet på alle installasjonssteder. Dette kan ikke angres.",
             "removeAllCopiesConfirmTitle": "Fjerne alle kopier?",
             "removeAllCopiesLabel": "Fjern alle kopier…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib velger Wine-motoren og bottle for Steam-spill."
         }
     },
     "steamgriddb": {

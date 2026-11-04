@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine Varsayılanı",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Çalıştır"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Steam anahtarı kullan"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "Bu, tüm yükleme konumlarındaki bu oyunun her kurulu kopyasını kaldırır. Bu işlem geri alınamaz.",
             "removeAllCopiesConfirmTitle": "Tüm kopyalar kaldırılsın mı?",
             "removeAllCopiesLabel": "Tüm kopyaları kaldır…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib, Steam oyunları için Wine motorunu ve bottle'ı seçer."
         }
     },
     "steamgriddb": {

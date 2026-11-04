@@ -1,0 +1,198 @@
+{
+  "en": {
+    "steam.engine.wineTabHint": "GameLib chooses the Wine engine and bottle for Steam games.",
+    "settings.navbar.run": "Run"
+  },
+  "ar": {
+    "steam.engine.wineTabHint": "يختار GameLib محرك Wine وbottle لألعاب Steam.",
+    "settings.navbar.run": "تشغيل"
+  },
+  "az": {
+    "steam.engine.wineTabHint": "GameLib Steam oyunları üçün Wine mühərrikini və bottle-ı seçir.",
+    "settings.navbar.run": "İşə sal"
+  },
+  "be": {
+    "steam.engine.wineTabHint": "GameLib выбірае рухавік Wine і bottle для гульняў Steam.",
+    "settings.navbar.run": "Запуск"
+  },
+  "bg": {
+    "steam.engine.wineTabHint": "GameLib избира двигателя Wine и bottle за игрите от Steam.",
+    "settings.navbar.run": "Стартиране"
+  },
+  "br": {
+    "steam.engine.wineTabHint": "GameLib a ziuz ar c’heflusker Wine hag ar voutailh evit c’hoarioù Steam.",
+    "settings.navbar.run": "Lañsañ"
+  },
+  "bs": {
+    "steam.engine.wineTabHint": "GameLib bira Wine engine i bottle za Steam igre.",
+    "settings.navbar.run": "Pokretanje"
+  },
+  "ca": {
+    "steam.engine.wineTabHint": "GameLib tria el motor Wine i la bottle per als jocs de Steam.",
+    "settings.navbar.run": "Execució"
+  },
+  "cs": {
+    "steam.engine.wineTabHint": "GameLib vybírá pro hry ze Steamu engine Wine a bottle.",
+    "settings.navbar.run": "Spuštění"
+  },
+  "da": {
+    "steam.engine.wineTabHint": "GameLib vælger Wine-motoren og bottle til Steam-spil.",
+    "settings.navbar.run": "Kør"
+  },
+  "de": {
+    "steam.engine.wineTabHint": "GameLib wählt die Wine-Engine und die Bottle für Steam-Spiele aus.",
+    "settings.navbar.run": "Ausführen"
+  },
+  "el": {
+    "steam.engine.wineTabHint": "Το GameLib επιλέγει τη μηχανή Wine και το bottle για τα παιχνίδια Steam.",
+    "settings.navbar.run": "Εκτέλεση"
+  },
+  "es": {
+    "steam.engine.wineTabHint": "GameLib elige el motor Wine y la bottle para los juegos de Steam.",
+    "settings.navbar.run": "Ejecución"
+  },
+  "et": {
+    "steam.engine.wineTabHint": "GameLib valib Steami mängudele Wine'i mootori ja bottle'i.",
+    "settings.navbar.run": "Käivitus"
+  },
+  "eu": {
+    "steam.engine.wineTabHint": "GameLib-ek Wine motorra eta bottle-a hautatzen ditu Steam jokoetarako.",
+    "settings.navbar.run": "Exekuzioa"
+  },
+  "fa": {
+    "steam.engine.wineTabHint": "GameLib موتور Wine و بطری را برای بازی‌های Steam انتخاب می‌کند.",
+    "settings.navbar.run": "اجرا"
+  },
+  "fi": {
+    "steam.engine.wineTabHint": "GameLib valitsee Steam-peleille Wine-moottorin ja bottlen.",
+    "settings.navbar.run": "Käynnistys"
+  },
+  "fr": {
+    "steam.engine.wineTabHint": "GameLib choisit le moteur Wine et la bouteille pour les jeux Steam.",
+    "settings.navbar.run": "Exécution"
+  },
+  "ga": {
+    "steam.engine.wineTabHint": "Roghnaíonn GameLib an t-inneall Wine agus an buidéal do chluichí Steam.",
+    "settings.navbar.run": "Rith"
+  },
+  "gl": {
+    "steam.engine.wineTabHint": "GameLib escolle o motor Wine e a bottle para os xogos de Steam.",
+    "settings.navbar.run": "Execución"
+  },
+  "he": {
+    "steam.engine.wineTabHint": "GameLib בוחר את מנוע Wine ואת ה-bottle עבור משחקי Steam.",
+    "settings.navbar.run": "הרצה"
+  },
+  "hr": {
+    "steam.engine.wineTabHint": "GameLib bira Wine engine i bottle za Steam igre.",
+    "settings.navbar.run": "Pokretanje"
+  },
+  "hu": {
+    "steam.engine.wineTabHint": "A GameLib választja ki a Wine motort és a bottle-t a Steam-játékokhoz.",
+    "settings.navbar.run": "Futtatás"
+  },
+  "id": {
+    "steam.engine.wineTabHint": "GameLib memilih mesin Wine dan bottle untuk game Steam.",
+    "settings.navbar.run": "Jalankan"
+  },
+  "it": {
+    "steam.engine.wineTabHint": "GameLib sceglie il motore Wine e la bottle per i giochi Steam.",
+    "settings.navbar.run": "Esecuzione"
+  },
+  "ja": {
+    "steam.engine.wineTabHint": "GameLib が Steam ゲーム用の Wine エンジンとボトルを選びます。",
+    "settings.navbar.run": "実行"
+  },
+  "ka": {
+    "steam.engine.wineTabHint": "GameLib ირჩევს Wine-ის ძრავას და bottle-ს Steam-ის თამაშებისთვის.",
+    "settings.navbar.run": "გაშვება"
+  },
+  "ko": {
+    "steam.engine.wineTabHint": "GameLib이 Steam 게임에 사용할 Wine 엔진과 보틀을 선택합니다.",
+    "settings.navbar.run": "실행"
+  },
+  "lt": {
+    "steam.engine.wineTabHint": "GameLib parenka Wine variklį ir bottle „Steam“ žaidimams.",
+    "settings.navbar.run": "Paleidimas"
+  },
+  "ml": {
+    "steam.engine.wineTabHint": "Steam ഗെയിമുകൾക്കായി GameLib Wine എഞ്ചിനും ബോട്ടിലും തിരഞ്ഞെടുക്കുന്നു.",
+    "settings.navbar.run": "പ്രവർത്തിപ്പിക്കുക"
+  },
+  "nb_NO": {
+    "steam.engine.wineTabHint": "GameLib velger Wine-motoren og bottle for Steam-spill.",
+    "settings.navbar.run": "Kjør"
+  },
+  "nl": {
+    "steam.engine.wineTabHint": "GameLib kiest de Wine-engine en de bottle voor Steam-games.",
+    "settings.navbar.run": "Uitvoeren"
+  },
+  "pl": {
+    "steam.engine.wineTabHint": "GameLib wybiera silnik Wine i bottle dla gier ze Steam.",
+    "settings.navbar.run": "Uruchamianie"
+  },
+  "pt": {
+    "steam.engine.wineTabHint": "O GameLib escolhe o motor Wine e a bottle para os jogos do Steam.",
+    "settings.navbar.run": "Execução"
+  },
+  "pt_BR": {
+    "steam.engine.wineTabHint": "O GameLib escolhe o mecanismo Wine e a bottle para os jogos da Steam.",
+    "settings.navbar.run": "Execução"
+  },
+  "ro": {
+    "steam.engine.wineTabHint": "GameLib alege motorul Wine și bottle-ul pentru jocurile Steam.",
+    "settings.navbar.run": "Rulare"
+  },
+  "ru": {
+    "steam.engine.wineTabHint": "GameLib выбирает движок Wine и bottle для игр Steam.",
+    "settings.navbar.run": "Запуск"
+  },
+  "sk": {
+    "steam.engine.wineTabHint": "GameLib vyberá pre hry zo Steamu engine Wine a bottle.",
+    "settings.navbar.run": "Spustenie"
+  },
+  "sl": {
+    "steam.engine.wineTabHint": "GameLib izbere pogon Wine in bottle za igre Steam.",
+    "settings.navbar.run": "Zagon"
+  },
+  "sr": {
+    "steam.engine.wineTabHint": "GameLib бира Wine енџин и bottle за Steam игре.",
+    "settings.navbar.run": "Покретање"
+  },
+  "sv": {
+    "steam.engine.wineTabHint": "GameLib väljer Wine-motorn och flaskan för Steam-spel.",
+    "settings.navbar.run": "Kör"
+  },
+  "ta": {
+    "steam.engine.wineTabHint": "Steam விளையாட்டுகளுக்கான Wine இயந்திரத்தையும் பாட்டிலையும் GameLib தேர்ந்தெடுக்கிறது.",
+    "settings.navbar.run": "இயக்கு"
+  },
+  "th": {
+    "steam.engine.wineTabHint": "GameLib เลือกเอนจิน Wine และบอตเทิลสำหรับเกม Steam",
+    "settings.navbar.run": "เรียกใช้"
+  },
+  "tr": {
+    "steam.engine.wineTabHint": "GameLib, Steam oyunları için Wine motorunu ve bottle'ı seçer.",
+    "settings.navbar.run": "Çalıştır"
+  },
+  "uk": {
+    "steam.engine.wineTabHint": "GameLib вибирає рушій Wine і бутлку для ігор Steam.",
+    "settings.navbar.run": "Запуск"
+  },
+  "uz": {
+    "steam.engine.wineTabHint": "GameLib Steam o‘yinlari uchun Wine dvigateli va bottle’ni tanlaydi.",
+    "settings.navbar.run": "Ishga tushirish"
+  },
+  "vi": {
+    "steam.engine.wineTabHint": "GameLib chọn engine Wine và bottle cho các game Steam.",
+    "settings.navbar.run": "Chạy"
+  },
+  "zh_Hans": {
+    "steam.engine.wineTabHint": "GameLib 为 Steam 游戏选择 Wine 引擎和容器。",
+    "settings.navbar.run": "运行"
+  },
+  "zh_Hant": {
+    "steam.engine.wineTabHint": "GameLib 會為 Steam 遊戲選擇 Wine 引擎和 bottle。",
+    "settings.navbar.run": "執行"
+  }
+}

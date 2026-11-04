@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine-oletus",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Käynnistys"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Lunasta Steam-avain"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "Tämä poistaa kaikki tämän pelin asennetut kopiot kaikista asennussijainneista. Tätä ei voi kumota.",
             "removeAllCopiesConfirmTitle": "Poistetaanko kaikki kopiot?",
             "removeAllCopiesLabel": "Poista kaikki kopiot…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib valitsee Steam-peleille Wine-moottorin ja bottlen."
         }
     },
     "steamgriddb": {

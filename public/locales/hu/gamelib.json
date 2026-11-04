@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine alapértelmezett",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Futtatás"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Steam kulcs beváltása"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "Ez eltávolítja a játék minden telepített példányát az összes telepítési helyről. Ez nem vonható vissza.",
             "removeAllCopiesConfirmTitle": "Eltávolítod az összes példányt?",
             "removeAllCopiesLabel": "Összes példány eltávolítása…"
+        },
+        "engine": {
+            "wineTabHint": "A GameLib választja ki a Wine motort és a bottle-t a Steam-játékokhoz."
         }
     },
     "steamgriddb": {

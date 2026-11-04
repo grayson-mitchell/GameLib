@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine സ്ഥിരസ്ഥിതി",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "പ്രവർത്തിപ്പിക്കുക"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "ഒരു Steam കീ റിഡീം ചെയ്യുക"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "ഇത് എല്ലാ ഇൻസ്റ്റാൾ ലൊക്കേഷനുകളിലുമുള്ള ഈ ഗെയിമിന്റെ എല്ലാ ഇൻസ്റ്റാൾ ചെയ്ത കോപ്പികളും നീക്കം ചെയ്യും. ഇത് പഴയപടിയാക്കാൻ കഴിയില്ല.",
             "removeAllCopiesConfirmTitle": "എല്ലാ കോപ്പികളും നീക്കം ചെയ്യണോ?",
             "removeAllCopiesLabel": "എല്ലാ കോപ്പികളും നീക്കം ചെയ്യുക…"
+        },
+        "engine": {
+            "wineTabHint": "Steam ഗെയിമുകൾക്കായി GameLib Wine എഞ്ചിനും ബോട്ടിലും തിരഞ്ഞെടുക്കുന്നു."
         }
     },
     "steamgriddb": {

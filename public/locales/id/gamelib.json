@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine Bawaan",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Jalankan"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Tukarkan kunci Steam"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "Ini akan menghapus setiap salinan game yang terpasang di semua lokasi instalasi. Tindakan ini tidak dapat dibatalkan.",
             "removeAllCopiesConfirmTitle": "Hapus semua salinan?",
             "removeAllCopiesLabel": "Hapus semua salinan…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib memilih mesin Wine dan bottle untuk game Steam."
         }
     },
     "steamgriddb": {

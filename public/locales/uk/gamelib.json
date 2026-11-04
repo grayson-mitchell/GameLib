@@ -374,7 +374,10 @@
             }
         },
         "wineDefaultLabel": "Wine за замовчуванням",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "Запуск"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Активувати ключ Steam"
@@ -526,6 +529,9 @@
             "removeAllCopiesConfirmMessage": "Це видалить усі встановлені копії цієї гри з усіх місць встановлення. Цю дію неможливо скасувати.",
             "removeAllCopiesConfirmTitle": "Видалити всі копії?",
             "removeAllCopiesLabel": "Видалити всі копії…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib вибирає рушій Wine і бутлку для ігор Steam."
         }
     },
     "steamgriddb": {

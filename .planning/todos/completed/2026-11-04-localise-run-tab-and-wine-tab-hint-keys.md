@@ -28,3 +28,11 @@ pass each one through `validateTranslation`, then re-sync the baseline with
 in the presence baseline to silence the gate (commit 6de4cce9b did that once and hid the
 failures). Then run `lintTranslations.test.ts`, `gamelibCatalogParity.test.ts`,
 `i18nCatalogChurnGuard.test.ts`, `i18nGlossary.test.ts` and `pnpm i18n-churn-guard` and confirm all are green.
+
+## Closed 2026-11-05 (quick 261105-9sr)
+
+- 2 keys x 48 locales translated via `.planning/quick/261105-9sr-localise-settings-navbar-run-and-steam-e/261105-9sr-i18n-fill.json`; `validateTranslation` passed 96/96 and a sabotaged de value (GameLib replaced) was rejected.
+- Commit `30ccb0b5f` (quick 261104-vvz) had recorded these 96 pairs in the presence baseline, masking the failures. The baseline was re-synced via the writer after the fill: 6960 -> 6864, exactly these pairs gone.
+- The four `steam.engine.toast.*` keys vvz also masked are handed to `2026-11-05-localise-steam-engine-toast-keys.md`.
+- Gates run: lintTranslations, gamelibCatalogParity, i18nCatalogChurnGuard, i18nGlossary jest suites; `pnpm lint-translations:gamelib`; `pnpm i18n-churn-guard`.
+- Row 51-04-02 of `51-VALIDATION.md` flipped to green.

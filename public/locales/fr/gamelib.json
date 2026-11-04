@@ -271,6 +271,9 @@
             "help": {
                 "unavailableDetail": "La prise en charge des illustrations SteamGridDB est reportée à une version future (D-03, Phase 34.6) et ne peut pas être configurée depuis cette version."
             }
+        },
+        "navbar": {
+            "run": "Exécution"
         }
     },
     "sideload": {
@@ -420,6 +423,9 @@
         },
         "resumeAvailable": {
             "notify": "Une installation interrompue pour {{game}} est prête à reprendre — cliquez sur Installer pour continuer"
+        },
+        "engine": {
+            "wineTabHint": "GameLib choisit le moteur Wine et la bouteille pour les jeux Steam."
         }
     },
     "themeSelector": {

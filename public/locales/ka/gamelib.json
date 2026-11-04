@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine-ის ნაგულისხმევი",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "გაშვება"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Steam-ის გასაღების გააქტიურება"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "ეს წაშლის ამ თამაშის ყველა დაინსტალირებულ ასლს ყველა ინსტალაციის მდებარეობიდან. ამის დაბრუნება შეუძლებელია.",
             "removeAllCopiesConfirmTitle": "წავშალო ყველა ასლი?",
             "removeAllCopiesLabel": "ყველა ასლის წაშლა…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib ირჩევს Wine-ის ძრავას და bottle-ს Steam-ის თამაშებისთვის."
         }
     },
     "steamgriddb": {

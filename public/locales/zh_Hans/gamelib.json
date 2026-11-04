@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine 默认",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam（Steam Flatpak）"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam（Steam Flatpak）",
+        "navbar": {
+            "run": "运行"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "兑换 Steam 密钥"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "这将删除此游戏在所有安装位置上的每个已安装副本。此操作无法撤销。",
             "removeAllCopiesConfirmTitle": "删除所有副本？",
             "removeAllCopiesLabel": "删除所有副本…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib 为 Steam 游戏选择 Wine 引擎和容器。"
         }
     },
     "steamgriddb": {

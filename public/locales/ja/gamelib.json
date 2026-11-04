@@ -360,7 +360,10 @@
             }
         },
         "wineDefaultLabel": "Wine既定",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "navbar": {
+            "run": "実行"
+        }
     },
     "sidebar": {
         "redeemSteamKey": "Steamキーを引き換える"
@@ -512,6 +515,9 @@
             "removeAllCopiesConfirmMessage": "すべてのインストール先にあるこのゲームのインストール済みコピーがすべて削除されます。この操作は元に戻せません。",
             "removeAllCopiesConfirmTitle": "すべてのコピーを削除しますか？",
             "removeAllCopiesLabel": "すべてのコピーを削除…"
+        },
+        "engine": {
+            "wineTabHint": "GameLib が Steam ゲーム用の Wine エンジンとボトルを選びます。"
         }
     },
     "steamgriddb": {
