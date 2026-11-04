@@ -268,6 +268,21 @@ export interface SteamEngineState {
     reason: 'cx-missing' | 'cx-expired' | 'cx-broken'
     seq: number
   } | null
+  /**
+   * Phase 60 G4: set only on the push from publishOverlayNotice; renderer shows
+   * once per seq. The step is the closed OverlayStep union, spelled out here
+   * because common/ must not import backend.
+   */
+  overlayNotice?: {
+    step:
+      | 'steam-dylibs'
+      | 'shim'
+      | 'crossover-detect'
+      | 'clone'
+      | 'resign'
+      | 'env'
+    seq: number
+  } | null
 }
 
 /** Phase 59: one choice in the per-game engine override picker (D-14). */

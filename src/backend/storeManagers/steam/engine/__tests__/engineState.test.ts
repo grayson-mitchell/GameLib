@@ -5,11 +5,21 @@ import {
   __resetEngineStateForTests,
   dismissSteamEngineNotice,
   getSteamEngineState,
+  publishOverlayNotice,
   recordLaunchDecision,
   setEngineStatePublisher
 } from '../engineState'
 import type { EngineStateDeps } from '../engineState'
 import type { CrossoverPreflight, LaunchDecision } from '../engineDecision'
+import type { OverlayStep } from '../../bridge/overlay/overlayNotice'
+import type { SteamEngineState } from 'common/types/steam'
+
+// G4: the common/ literal union and backend OverlayStep stay assignable both ways.
+type OverlayNoticeStep = NonNullable<SteamEngineState['overlayNotice']>['step']
+const _a: (s: OverlayStep) => OverlayNoticeStep = (s) => s
+const _b: (s: OverlayNoticeStep) => OverlayStep = (s) => s
+void _a
+void _b
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -130,7 +140,8 @@ describe('getSteamEngineState', () => {
       overrideEligible: true,
       overlayEligible: true,
       overrideWarning: null,
-      launchNotice: null
+      launchNotice: null,
+      overlayNotice: null
     })
     expect(probe).not.toHaveBeenCalled()
     ready = true
@@ -556,6 +567,48 @@ describe('recordLaunchDecision and publisher', () => {
     expect(pub.mock.calls[0][0].launchNotice).toBeNull()
     expect(pub.mock.calls[1][0].launchNotice).toBeNull()
     expect((await getSteamEngineState('1', deps))?.launchNotice).toBeNull()
+  })
+  describe('publishOverlayNotice (G4)', () => {
+    it('re-pushes the last state with overlayNotice and a rising shared seq, keeping launchNotice', () => {
+      const { deps } = mk(healthy(null))
+      const pub = jest.fn()
+      setEngineStatePublisher(pub)
+      recordLaunchDecision(
+        '3205720',
+        fallback('cx-expired'),
+        'GameLibSteamBridge-1',
+        deps
+      )
+      expect(pub.mock.calls[0][0].overlayNotice).toBeNull()
+      expect(publishOverlayNotice('3205720', 'shim')).toBe(true)
+      expect(publishOverlayNotice('3205720', 'shim')).toBe(true)
+      const first = pub.mock.calls[1][0]
+      const second = pub.mock.calls[2][0]
+      expect(first).toEqual({
+        ...pub.mock.calls[0][0],
+        overlayNotice: { step: 'shim', seq: 2 }
+      })
+      expect(first.launchNotice).toEqual({ reason: 'cx-expired', seq: 1 })
+      expect(second.overlayNotice).toEqual({ step: 'shim', seq: 3 })
+    })
+    it('returns false without publishing for no base state, bad appId or bad step', () => {
+      const { deps } = mk(healthy(null))
+      const pub = jest.fn()
+      setEngineStatePublisher(pub)
+      expect(publishOverlayNotice('3205720', 'shim')).toBe(false)
+      recordLaunchDecision(
+        '3205720',
+        decision(healthy(null)),
+        'GameLibSteamBridge-1',
+        deps
+      )
+      pub.mockClear()
+      expect(publishOverlayNotice('abc', 'shim')).toBe(false)
+      expect(publishOverlayNotice('3205720', 'bogus' as OverlayStep)).toBe(
+        false
+      )
+      expect(pub).not.toHaveBeenCalled()
+    })
   })
   it('carries the last crossoverInstalled forward when no preflight exists (IN-03)', async () => {
     const a = mk(healthy(null), {

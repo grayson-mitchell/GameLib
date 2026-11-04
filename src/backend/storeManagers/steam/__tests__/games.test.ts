@@ -119,7 +119,10 @@ import {
   readBottleEngineMarkerKind,
   restoreNeedsAbsentPin
 } from '../engine/engineSwitch'
-import { recordLaunchDecision } from '../engine/engineState'
+import {
+  publishOverlayNotice,
+  recordLaunchDecision
+} from '../engine/engineState'
 import {
   clearEngineSelection,
   getEngineSelection
@@ -623,7 +626,8 @@ jest.mock('../engine/engineSwitch', () => ({
   restoreNeedsAbsentPin: jest.fn()
 }))
 jest.mock('../engine/engineState', () => ({
-  recordLaunchDecision: jest.fn()
+  recordLaunchDecision: jest.fn(),
+  publishOverlayNotice: jest.fn()
 }))
 jest.mock('../engine/fallbackEngine', () => ({
   ensurePinnedEngine: jest.fn(),
@@ -13531,6 +13535,15 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             String(c[0]).includes(`appId=${id} reason=overlay-shim`)
           )
         ).toHaveLength(2)
+        // G4/D-09: one in-app push per launch; D-08: never a dialog.
+        expect(publishOverlayNotice).toHaveBeenCalledTimes(2)
+        expect(publishOverlayNotice).toHaveBeenCalledWith(id, 'shim')
+        expect(
+          jest.requireMock('backend/dialog/dialog').showDialogBoxModalAuto
+        ).not.toHaveBeenCalled()
+        expect(
+          jest.requireMock('backend/platform').app?.raiseMainWindow ?? jest.fn()
+        ).not.toHaveBeenCalled()
       })
 
       it('overlay off: no tokens, no notify, policy source is logged', async () => {

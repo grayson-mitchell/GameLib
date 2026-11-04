@@ -20,6 +20,8 @@ import type {
   EngineDecisionDeps,
   LaunchDecision
 } from './engineDecision'
+import { OVERLAY_STEPS } from '../bridge/overlay/overlayNotice'
+import type { OverlayStep } from '../bridge/overlay/overlayNotice'
 import { parseEngineOverride } from './engineIds'
 import type { EngineOverrideId } from './engineIds'
 import { isNonCrossover } from './engineTypes'
@@ -50,6 +52,8 @@ const preflightCache = new Map<
 /** IN-03: the last crossoverInstalled value getSteamEngineState computed. */
 const lastCrossoverInstalled = new Map<string, boolean>()
 let launchNoticeSeq = 0
+/** Phase 60 G4: last state pushed per appId, the base for publishOverlayNotice. */
+const lastPublished = new Map<string, SteamEngineState>()
 const inflight = new Map<string, Promise<CrossoverPreflight>>()
 let publisher: (state: SteamEngineState) => void = () => {}
 
@@ -65,6 +69,7 @@ export function __resetEngineStateForTests(): void {
   preflightCache.clear()
   lastCrossoverInstalled.clear()
   launchNoticeSeq = 0
+  lastPublished.clear()
   inflight.clear()
   publisher = () => {}
 }
@@ -225,7 +230,8 @@ function compute(
     overrideEligible,
     overlayEligible,
     overrideWarning,
-    launchNotice
+    launchNotice,
+    overlayNotice: null
   }
 }
 
@@ -352,12 +358,43 @@ export function recordLaunchDecision(
       true,
       launchNotice
     )
+    lastPublished.set(appId, state)
     publisher(state)
   } catch (e) {
     logError(
       `SteamEngine: engine state publisher failed: ${String(e)}`,
       LogPrefix.Steam
     )
+  }
+}
+
+/**
+ * Phase 60 G4 / D-09: push an in-app overlay-unavailable notice. Re-pushes the
+ * last published state for the title with a fresh seq (shared counter), so the
+ * renderer shows it once per failure, never deduplicated. Returns whether it
+ * published. Never throws: the game launches regardless (D-08).
+ */
+export function publishOverlayNotice(
+  appId: string,
+  step: OverlayStep
+): boolean {
+  if (!/^\d+$/.test(appId)) return false
+  if (!(OVERLAY_STEPS as readonly string[]).includes(step)) return false
+  const base = lastPublished.get(appId)
+  if (!base) return false
+  try {
+    const state: SteamEngineState = {
+      ...base,
+      overlayNotice: { step, seq: ++launchNoticeSeq }
+    }
+    publisher(state)
+    return true
+  } catch (e) {
+    logError(
+      `SteamEngine: overlay notice publisher failed: ${String(e)}`,
+      LogPrefix.Steam
+    )
+    return false
   }
 }
 

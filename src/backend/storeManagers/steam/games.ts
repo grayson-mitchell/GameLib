@@ -163,6 +163,7 @@ import {
   OVERLAY_STEP_TEXT,
   type OverlayStep
 } from './bridge/overlay/overlayNotice'
+import { publishOverlayNotice } from './engine/engineState'
 import { readKnownFixes } from 'backend/knownFixes'
 import type { OverlayRunnerReady } from './bridge/overlay/overlayRunnerClone'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
@@ -4745,13 +4746,19 @@ export default class SteamGame implements Game {
 
   /**
    * Phase 60 (D-08/D-09): an overlay setup failure is a log line plus a toast
-   * on EVERY affected launch, never a dialog, never deduped. Deliberately the
+   * in-app (SteamEngineLaunchNotice) and an OS notification on EVERY affected
+   * launch, never a dialog, never deduped. Deliberately the
    * opposite of DRM's fail-closed rule (D-56-13): the overlay is an
    * enhancement, so the game still launches.
    */
   private notifyOverlaySetupFailed(step: OverlayStep, cause: string): void {
     logWarning(
       formatOverlayNoticeLine(this.appId, step, cause),
+      LogPrefix.Steam
+    )
+    const pushed = publishOverlayNotice(this.appId, step)
+    logInfo(
+      `SteamGame: appId ${this.appId} overlay notice surface=in-app pushed=${pushed}`,
       LogPrefix.Steam
     )
     notify({
