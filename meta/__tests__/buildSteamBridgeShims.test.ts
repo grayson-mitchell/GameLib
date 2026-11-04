@@ -647,7 +647,7 @@ describe('buildSteamBridgeShims', () => {
           '@rpath/overlay_input_probe.dylib'
         ])
       )
-      for (const fw of ['AppKit', 'CoreGraphics']) {
+      for (const fw of ['AppKit', 'CoreGraphics', 'ApplicationServices']) {
         const i = args.indexOf(fw)
         expect(i).toBeGreaterThan(0)
         expect(args[i - 1]).toBe('-framework')

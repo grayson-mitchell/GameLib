@@ -752,6 +752,8 @@ export function buildOverlayInputProbeCompileArgv(
       '-framework',
       'CoreGraphics',
       '-framework',
+      'ApplicationServices',
+      '-framework',
       'AppKit',
       '-framework',
       'CoreFoundation',
