@@ -605,6 +605,7 @@ export async function main(): Promise<void> {
   await compileShim64()
   await compileOverlayShim()
   await compileOverlayInputProbe()
+  await compileOverlayInput()
 }
 
 /**
@@ -818,6 +819,110 @@ async function compileOverlayInputProbe(): Promise<void> {
       throw new Error(`overlay input probe is not universal: ${info.stdout}`)
     }
     console.log(`Overlay input probe built -> ${output}`)
+  } finally {
+    await rm(tmp, { recursive: true, force: true })
+    profile.dispose()
+  }
+}
+
+/**
+ * Phase 60 plan 19 (G1): GameLib's production overlay input fix, loaded after the
+ * Steam dylibs by the launch routes (60-20). Built beside overlay_shim.dylib with
+ * the same recipe as the probe.
+ */
+const OVERLAY_INPUT_SOURCE_PATH = join(
+  'native',
+  'steam-bridge',
+  'overlay-input',
+  'overlay_input.m'
+)
+
+// ts-prune-ignore-next
+export function buildOverlayInputCompileArgv(
+  slice: 'arm64' | 'x86_64',
+  outPath: string
+): { command: string; args: string[] } {
+  return {
+    command: 'clang',
+    args: [
+      '-arch',
+      slice,
+      `-mmacosx-version-min=${OVERLAY_SHIM_MIN_MACOS}`,
+      '-dynamiclib',
+      '-O2',
+      '-Wall',
+      '-Wextra',
+      '-install_name',
+      '@rpath/overlay_input.dylib',
+      '-framework',
+      'CoreGraphics',
+      '-framework',
+      'ApplicationServices',
+      '-framework',
+      'AppKit',
+      '-framework',
+      'CoreFoundation',
+      '-framework',
+      'Foundation',
+      '-o',
+      outPath,
+      OVERLAY_INPUT_SOURCE_PATH
+    ]
+  }
+}
+
+// ts-prune-ignore-next
+export function overlayInputOutputPath(
+  arch: string = resolveBridgeArch()
+): string {
+  return join(bundledBinDir(arch), 'overlay_input.dylib')
+}
+
+async function compileOverlayInput(): Promise<void> {
+  if (process.platform !== 'darwin') {
+    console.log('Skipping overlay input build: not macOS')
+    return
+  }
+  const profile = createFakeHomeProfile({ prefix: 'gamelib-overlay-input-' })
+  const tmp = await mkdtemp(join(tmpdir(), 'overlay-input-'))
+  try {
+    const env = profile.childEnv(process.env)
+    const slices: string[] = []
+    for (const slice of OVERLAY_SHIM_SLICES) {
+      const out = join(tmp, `overlay_input.${slice}.dylib`)
+      const { command, args } = buildOverlayInputCompileArgv(slice, out)
+      console.log(`Overlay input: ${command} ${args.join(' ')}`)
+      const r = await spawnArgv(command, args, { env })
+      if (r.code !== 0) {
+        throw new Error(
+          `overlay input ${slice} compile failed (${r.code}):\n${r.stderr}`
+        )
+      }
+      slices.push(out)
+    }
+    const output = overlayInputOutputPath()
+    mkdirSync(bundledBinDir(), { recursive: true })
+    const lipo = await spawnArgv(
+      'lipo',
+      ['-create', ...slices, '-output', output],
+      { env }
+    )
+    if (lipo.code !== 0) {
+      throw new Error(`lipo -create failed (${lipo.code}):\n${lipo.stderr}`)
+    }
+    const sign = await spawnArgv('codesign', ['-fs', '-', output], { env })
+    if (sign.code !== 0) {
+      throw new Error(`codesign failed (${sign.code}):\n${sign.stderr}`)
+    }
+    const info = await spawnArgv('lipo', ['-info', output], { env })
+    if (
+      info.code !== 0 ||
+      !info.stdout.includes('arm64') ||
+      !info.stdout.includes('x86_64')
+    ) {
+      throw new Error(`overlay input is not universal: ${info.stdout}`)
+    }
+    console.log(`Overlay input built -> ${output}`)
   } finally {
     await rm(tmp, { recursive: true, force: true })
     profile.dispose()

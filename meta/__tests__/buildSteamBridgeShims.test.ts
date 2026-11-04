@@ -11,12 +11,14 @@ import { join } from 'path'
 
 import {
   buildHelperCompileArgv,
+  buildOverlayInputCompileArgv,
   buildOverlayInputProbeCompileArgv,
   buildOverlayShimCompileArgv,
   buildShim64CompileArgv,
   buildShimCompileArgv,
   helperOutputPath,
   machoArchFlag,
+  overlayInputOutputPath,
   overlayShimOutputPath,
   pruneShim64BuildByproducts,
   pruneShimBuildByproducts,
@@ -627,7 +629,8 @@ describe('buildSteamBridgeShims', () => {
         'compileShim',
         'compileShim64',
         'compileOverlayShim',
-        'compileOverlayInputProbe'
+        'compileOverlayInputProbe',
+        'compileOverlayInput'
       ])
     })
   })
@@ -653,6 +656,35 @@ describe('buildSteamBridgeShims', () => {
         expect(args[i - 1]).toBe('-framework')
       }
       expect(args[args.length - 1]).toContain('overlay_input_probe.m')
+    })
+  })
+
+  describe('overlay input build (60-19, G1)', () => {
+    it.each(['arm64', 'x86_64'] as const)('argv for %s', (slice) => {
+      const { command, args } = buildOverlayInputCompileArgv(
+        slice,
+        '/tmp/x/overlay_input.dylib'
+      )
+      expect(command).toBe('clang')
+      expect(args).toEqual(expect.arrayContaining(['-arch', slice]))
+      expect(args).toContain('-mmacosx-version-min=11.0')
+      expect(args).toContain('-dynamiclib')
+      expect(args).toEqual(
+        expect.arrayContaining(['-install_name', '@rpath/overlay_input.dylib'])
+      )
+      for (const fw of ['AppKit', 'CoreGraphics', 'Foundation']) {
+        const i = args.indexOf(fw)
+        expect(i).toBeGreaterThan(0)
+        expect(args[i - 1]).toBe('-framework')
+      }
+      expect(args[args.indexOf('-o') + 1]).toBe('/tmp/x/overlay_input.dylib')
+      expect(args[args.length - 1]).toMatch(/overlay_input\.m$/)
+    })
+
+    it('output path sits beside overlay_shim.dylib', () => {
+      expect(overlayInputOutputPath('arm64')).toBe(
+        join('public', 'bin', 'arm64', 'darwin', 'overlay_input.dylib')
+      )
     })
   })
 

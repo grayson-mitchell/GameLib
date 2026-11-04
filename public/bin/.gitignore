@@ -22,6 +22,7 @@
 **/steam-bridge-helper
 **/overlay_shim.dylib
 **/overlay_input_probe.dylib
+**/overlay_input.dylib
 **/steam_api.dll
 **/steam_api.pdb
 **/steam_api_shim.lib
