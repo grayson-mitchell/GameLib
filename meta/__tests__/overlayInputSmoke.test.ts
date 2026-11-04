@@ -27,6 +27,8 @@ const DRIVER_SOURCE = `
 #import <dlfcn.h>
 #import <notify.h>
 #import <objc/runtime.h>
+#import <sys/wait.h>
+#import <unistd.h>
 
 extern CFDictionaryRef CGSessionCopyCurrentDictionary(void);
 
@@ -34,25 +36,33 @@ static void spin(double seconds) {
   CFRunLoopRunInMode(kCFRunLoopDefaultMode, seconds, false);
 }
 
-static void post_cb(const char *appid, int state) {
+static void post_cb(const char *appid, uint64_t state) {
   char name[96];
   int token = 0;
   snprintf(name, sizeof(name), "com.gamelib.steambridge.overlay.%s", appid);
   notify_register_check(name, &token);
-  notify_set_state(token, (uint64_t)state);
+  notify_set_state(token, state);
   notify_post(name);
   spin(0.3);
   notify_cancel(token);
 }
 
+// WR-01: the helper's open state, (pid << 8) | 1 (gamelib_overlay_signal.h).
+static uint64_t open_state(pid_t pid) {
+  return ((uint64_t)(uint32_t)pid << 8) | 1u;
+}
+
 // argv: <appid> <winemac.so> <setactive.dylib|-> [--noclass] [--flood]
+//       [--livepub | --deadpub]
 int main(int argc, char **argv) {
   @autoreleasepool {
     const char *appid = argv[1];
-    int noclass = 0, flood = 0;
+    int noclass = 0, flood = 0, livepub = 0, deadpub = 0;
     for (int i = 4; i < argc; i++) {
       if (strcmp(argv[i], "--noclass") == 0) noclass = 1;
       if (strcmp(argv[i], "--flood") == 0) flood = 1;
+      if (strcmp(argv[i], "--livepub") == 0) livepub = 1;
+      if (strcmp(argv[i], "--deadpub") == 0) deadpub = 1;
     }
     CFDictionaryRef session = CGSessionCopyCurrentDictionary();
     if (session == NULL) {
@@ -78,7 +88,21 @@ int main(int argc, char **argv) {
     spin(0.4);
     wm_assoc(0);
     wm_hide();
-    post_cb(appid, 1);
+    if (livepub) {
+      // A live publisher (this process): the watch must never close.
+      post_cb(appid, open_state(getpid()));
+      spin(4.5);
+    } else if (deadpub) {
+      // A reaped child's pid: kill(pid, 0) is ESRCH, the watch must close.
+      pid_t child = fork();
+      if (child == 0) _exit(0);
+      waitpid(child, NULL, 0);
+      post_cb(appid, open_state(child));
+      spin(4.5);
+      printf("deadpub-waited\\n");
+    } else {
+      post_cb(appid, 1);
+    }
     wm_assoc(0);
     wm_warp();
     if (flood) for (int i = 0; i < 500; i++) wm_assoc(0);
@@ -279,6 +303,41 @@ describeDarwin('overlay_input.dylib smoke (60-19, G1)', () => {
     expect(stdout.indexOf('set_active 1')).toBeGreaterThanOrEqual(0)
     expect(stdout.indexOf('set_active 0')).toBeGreaterThan(
       stdout.indexOf('set_active 1')
+    )
+  })
+
+  it('WR-01: a live publisher pid never closes the overlay by itself', async () => {
+    const { stdout, stderr } = await runDriver([
+      winemac,
+      setactive,
+      '--livepub'
+    ])
+    if (noServer(stdout)) return
+    expect(stderr).not.toContain('overlay_input publisher gone')
+    // Still open after two poll intervals: the later winemac call is deferred.
+    expect(stderr).toContain('overlay_input deferred CGWarpMouseCursorPosition')
+    expect(countOf(stderr, 'overlay_input close')).toBe(1)
+  })
+
+  it('WR-01: a dead publisher pid closes once (set_active 0) without a close post', async () => {
+    const { stdout, stderr } = await runDriver([
+      winemac,
+      setactive,
+      '--deadpub'
+    ])
+    if (noServer(stdout)) return
+    expect(stderr).toMatch(/overlay_input publisher gone pid=\d+/)
+    const gone = stderr.indexOf('overlay_input publisher gone')
+    expect(stderr.indexOf('overlay_input close')).toBeGreaterThan(gone)
+    // The driver's later close post finds nothing open: still one close.
+    expect(countOf(stderr, 'overlay_input close')).toBe(1)
+    // Closed before the driver's own winemac calls: nothing deferred.
+    expect(stderr).not.toContain('overlay_input deferred')
+    expect(stdout.indexOf('set_active 0')).toBeGreaterThan(
+      stdout.indexOf('set_active 1')
+    )
+    expect(stdout.indexOf('set_active 0')).toBeLessThan(
+      stdout.indexOf('deadpub-waited')
     )
   })
 

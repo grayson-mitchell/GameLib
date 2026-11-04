@@ -12,7 +12,14 @@
  * is production; the per-transition log stays diagnostic, behind
  * GAMELIB_OVERLAY_INPUT_PROBE=1.
  *
- * Self-contained: stdint/string/notify only, no allocation, no logging.
+ * 60-REVIEW WR-01: the open state carries the publishing helper's pid,
+ *   state = (pid << 8) | 1   (open; never 0)
+ *   state = 0                (closed)
+ * so overlay_input can tell a dead publisher from a long, legitimate open and
+ * close only when the helper is provably gone (kill(pid, 0) fails with ESRCH).
+ * A listener that only tests `state != 0` (the 60-11 probe) reads it unchanged.
+ *
+ * Self-contained: stdint/string/notify/unistd only, no allocation, no logging.
  * 331 is NEVER added to the callback allowlist (the game gets no new callback).
  */
 #ifndef GAMELIB_OVERLAY_SIGNAL_H
@@ -21,6 +28,7 @@
 #include <notify.h>
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 
 #define GL_OVL_CALLBACK_ID 331
 #define GL_OVL_NOTIFY_PREFIX "com.gamelib.steambridge.overlay."
@@ -62,6 +70,11 @@ static inline int gl_ovl_enabled_from_env(const char *v) {
   return v != NULL && strcmp(v, "1") == 0;
 }
 
+/* WR-01: the open state for publisher `pid` (see the header comment). */
+static inline uint64_t gl_ovl_open_state(pid_t pid) {
+  return ((uint64_t)(uint32_t)pid << 8) | 1u;
+}
+
 /* Returns 0 on success, -1 on failure. */
 static inline int gl_ovl_publish(gl_ovl_state *s, int active) {
   if (s == NULL || s->name[0] == '\0') return -1;
@@ -69,7 +82,8 @@ static inline int gl_ovl_publish(gl_ovl_state *s, int active) {
     if (notify_register_check(s->name, &s->token) != NOTIFY_STATUS_OK) return -1;
     s->registered = 1;
   }
-  if (notify_set_state(s->token, active ? 1 : 0) != NOTIFY_STATUS_OK) return -1;
+  if (notify_set_state(s->token, active ? gl_ovl_open_state(getpid()) : 0) != NOTIFY_STATUS_OK)
+    return -1;
   if (notify_post(s->name) != NOTIFY_STATUS_OK) return -1;
   return 0;
 }

@@ -17,14 +17,25 @@
 // carry WineApplication and ran the experiment in the 60-18 live runs.
 //
 // No timeout: the overlay may legitimately stay open a long time. A missed close
-// leaves the cursor free until the next close or game exit (T-60-19-03).
+// leaves the cursor free AND the game's input blocked (set_active(1) makes
+// overlay_shim swallow every masked event) until the next close or game exit
+// (T-60-19-03). 60-REVIEW WR-01 bounds the case where the publisher died: the
+// open state carries the helper's pid (gamelib_overlay_signal.h), and while open
+// this module checks that pid every PUBLISHER_POLL_SEC; only when kill(pid, 0)
+// reports ESRCH (the helper is provably gone) does it close by itself. A live
+// helper never triggers it, however long the overlay stays open. The helper
+// also publishes 0 at startup and on a normal exit. Not covered: a live helper
+// whose Steam never sends m_bActive=0, and pid reuse inside one poll interval
+// (both degrade to the no-timeout behaviour above).
 
 #import <AppKit/AppKit.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import <Foundation/Foundation.h>
 #import <dispatch/dispatch.h>
 #import <dlfcn.h>
+#import <errno.h>
 #import <notify.h>
+#import <signal.h>
 #import <objc/message.h>
 #import <objc/runtime.h>
 #import <os/lock.h>
@@ -41,6 +52,7 @@
 
 #define LOG_CAP 64
 #define HIDE_DEPTH_CAP 8
+#define PUBLISHER_POLL_SEC 2
 
 static int log_lines;
 static int inactive_logged;
@@ -268,11 +280,52 @@ static void call_set_active(int active)
 }
 #endif
 
-static void overlay_open(void)
+// ---- publisher watch (60-REVIEW WR-01) ----------------------------------------
+// Main queue only (the notify handler and the timer both run there).
+static pid_t pub_pid;
+static dispatch_source_t pub_timer;
+
+static void overlay_close(void);
+
+static void publisher_check(void)
+{
+	pid_t pid = pub_pid;
+	if (pid <= 0 || !is_open)
+		return;
+	if (kill(pid, 0) == 0 || errno != ESRCH)
+		return; // alive (or not ours to signal): never close on a doubt
+	ovl_log("publisher gone pid=%d", (int)pid);
+	overlay_close();
+}
+
+static void publisher_watch(pid_t pid)
+{
+	pub_pid = pid;
+	if (pid <= 0) {
+		if (pub_timer != NULL)
+			dispatch_source_set_timer(pub_timer, DISPATCH_TIME_FOREVER, DISPATCH_TIME_FOREVER, 0);
+		return;
+	}
+	if (pub_timer == NULL) {
+		pub_timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
+		if (pub_timer == NULL)
+			return;
+		dispatch_source_set_event_handler(pub_timer, ^{
+			publisher_check();
+		});
+		dispatch_resume(pub_timer);
+	}
+	dispatch_source_set_timer(pub_timer,
+	                          dispatch_time(DISPATCH_TIME_NOW, PUBLISHER_POLL_SEC * NSEC_PER_SEC),
+	                          PUBLISHER_POLL_SEC * NSEC_PER_SEC, NSEC_PER_SEC / 2);
+}
+
+static void overlay_open(pid_t publisher)
 {
 	int hide_real;
 	if (!game_gate())
 		return;
+	publisher_watch(publisher);
 	os_unfair_lock_lock(&st_lock);
 	if (is_open) {
 		os_unfair_lock_unlock(&st_lock);
@@ -321,6 +374,7 @@ static void overlay_close(void)
 	hide = st_hide_desired;
 	st_hide_real = hide;
 	os_unfair_lock_unlock(&st_lock);
+	publisher_watch(0);
 
 #if OVERLAY_INPUT_BLOCK
 	call_set_active(0);
@@ -365,8 +419,9 @@ static void register_cb_listener(void)
 	                                           ^(int token) {
 		                                           uint64_t state = 0;
 		                                           notify_get_state(token, &state);
+		                                           // WR-01: open = (pid << 8) | 1; a bare 1 has no pid.
 		                                           if (state != 0)
-			                                           overlay_open();
+			                                           overlay_open((pid_t)(uint32_t)(state >> 8));
 		                                           else
 			                                           overlay_close();
 	                                           });

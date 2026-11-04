@@ -1,6 +1,7 @@
 /**
  * 60-15: compiled C driver test of gamelib_overlay_signal.h (parse, name
- * validation, notify state round trip). Darwin only.
+ * validation, notify state round trip, the WR-01 pid-carrying open state).
+ * Darwin only.
  */
 import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -71,6 +72,8 @@ int main(void) {
   uint64_t st;
   notify_register_check(s.name, &tok);
   notify_check(tok, &chk); /* consume initial */
+  printf("pid=%d\\n", (int)getpid());
+  printf("open_state_7=%llu\\n", (unsigned long long)gl_ovl_open_state(7));
   printf("pub1=%d\\n", gl_ovl_publish(&s, 1));
   notify_get_state(tok, &st);
   printf("state_after_1=%llu\\n", (unsigned long long)st);
@@ -129,7 +132,9 @@ int main(void) {
       expect(kv.env_11).toBe('0')
       expect(kv.env_null).toBe('0')
       expect(kv.pub1).toBe('0')
-      expect(kv.state_after_1).toBe('1')
+      // 60-REVIEW WR-01: open = (publisher pid << 8) | 1, closed = 0.
+      expect(kv.open_state_7).toBe(String(7 * 256 + 1))
+      expect(kv.state_after_1).toBe(String(Number(kv.pid) * 256 + 1))
       expect(kv.changed_1).toBe('1')
       expect(kv.pub0).toBe('0')
       expect(kv.state_after_0).toBe('0')

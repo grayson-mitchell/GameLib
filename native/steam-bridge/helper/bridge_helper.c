@@ -188,6 +188,12 @@
 // 60-15: GameOverlayActivated (331) -> Darwin notification, probe flag only.
 static gl_ovl_state g_ovl;
 
+// 60-REVIEW WR-01: publish "closed" on a normal exit. SIGTERM/SIGKILL skip
+// atexit; overlay_input covers those by watching the pid in the open state.
+static void gl_ovl_publish_closed_at_exit(void) {
+  if (g_ovl.publish) (void)gl_ovl_publish(&g_ovl, 0);
+}
+
 // === Frame constants (MUST match src/backend/storeManagers/steam/bridge/protocol.ts) ===
 
 #define LENGTH_FIELD_BYTES 4
@@ -3226,6 +3232,13 @@ int main(int argc, char **argv) {
   g_ovl.log = gl_ovl_enabled_from_env(getenv("GAMELIB_OVERLAY_INPUT_PROBE"));
   g_ovl.publish =
     gl_ovl_notify_name(g_ovl.name, sizeof g_ovl.name, reportAppIdArg ? reportAppIdArg : g_appid) == 0;
+  // 60-REVIEW WR-01: start closed. A predecessor helper that died with the
+  // overlay open (SIGKILL, crash) left state != 0; a game still listening is
+  // released here. Closing when nothing is open is a no-op in overlay_input.
+  if (g_ovl.publish) {
+    (void)gl_ovl_publish(&g_ovl, 0);
+    atexit(gl_ovl_publish_closed_at_exit);
+  }
 
   bridge_dispatch_set_identity_only(
     identityOnly, reportAppIdArg ? (uint32_t)strtoul(reportAppIdArg, NULL, 10) : 0
