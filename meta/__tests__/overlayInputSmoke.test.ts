@@ -108,6 +108,12 @@ int main(int argc, char **argv) {
     if (flood) for (int i = 0; i < 500; i++) wm_assoc(0);
     (void)CGAssociateMouseAndMouseCursorPosition(false); // driver itself: forwarded
     post_cb(appid, 0);
+    if (flood) {
+      // WR-03: a second open/close after the flood must still be logged.
+      post_cb(appid, 1);
+      wm_warp();
+      post_cb(appid, 0);
+    }
     // Leave the user's mouse and cursor as we found them.
     (void)CGAssociateMouseAndMouseCursorPosition(true);
     [NSCursor unhide];
@@ -297,6 +303,8 @@ describeDarwin('overlay_input.dylib smoke (60-19, G1)', () => {
     // The driver's own dissociate while open is forwarded, never reported deferred.
     expect(countOf(stderr, 'overlay_input deferred CGAssociate')).toBe(1)
     expect(countOf(stderr, 'overlay_input close')).toBe(1)
+    // WR-03: the per-open deferred total rides the close line (assoc + warp).
+    expect(stderr).toContain('overlay_input close deferred=2')
     expect(stderr.indexOf('overlay_input close')).toBeGreaterThan(
       stderr.indexOf('overlay_input open')
     )
@@ -366,13 +374,25 @@ describeDarwin('overlay_input.dylib smoke (60-19, G1)', () => {
     expect(stdout).not.toContain('set_active')
   })
 
-  it('caps stderr at 64 lines under 500 deferred calls', async () => {
+  it('caps deferred lines under 500 deferred calls and keeps every lifecycle line (WR-03)', async () => {
     const { stdout, stderr } = await runDriver([winemac, '-', '--flood'])
     if (noServer(stdout)) return
     const lines = stderr
       .split('\n')
       .filter((l) => l.startsWith('overlay_input'))
-    expect(lines.length).toBeLessThanOrEqual(64)
-    expect(lines.length).toBeGreaterThan(0)
+    const deferred = lines.filter((l) =>
+      l.startsWith('overlay_input deferred ')
+    )
+    expect(deferred.length).toBe(32)
+    expect(lines.length).toBeLessThanOrEqual(256 + 32)
+    // Both cycles' lifecycle lines survive the flood; counts are per open.
+    expect(lines.filter((l) => l === 'overlay_input open')).toHaveLength(2)
+    expect(
+      lines.filter((l) => l.startsWith('overlay_input close deferred='))
+    ).toEqual([
+      'overlay_input close deferred=502',
+      'overlay_input close deferred=1'
+    ])
+    expect(countOf(stderr, 'overlay_input set_active absent')).toBe(1)
   })
 })

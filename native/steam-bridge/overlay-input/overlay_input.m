@@ -50,11 +50,19 @@
 // 60-18 verdict: X-RELEASE+BLOCK. Run 1 (release alone) still turned the camera.
 #define OVERLAY_INPUT_BLOCK 1
 
-#define LOG_CAP 64
+// 60-REVIEW WR-03: two budgets, so a per-frame flood of deferred calls can never
+// use up the lifecycle lines (open, close, set_active, inactive, register
+// failed, publisher gone) that the live verification reads. Deferred calls are
+// logged individually only while DEFER_LOG_CAP lasts; every one is counted and
+// the per-open total is reported on the close line (`close deferred=N`).
+#define LOG_CAP 256
+#define DEFER_LOG_CAP 32
 #define HIDE_DEPTH_CAP 8
 #define PUBLISHER_POLL_SEC 2
 
 static int log_lines;
+static int defer_log_lines;
+static unsigned deferred_count; // reset on open, reported on close
 static int inactive_logged;
 static int process_active = -1; // -1 = not decided
 static int is_open;
@@ -67,20 +75,38 @@ static long st_rect_win;
 static int st_hide_desired; // hides winemac believes are in force
 static int st_hide_real;    // hides actually applied to the system
 
-static void ovl_log(const char *fmt, ...)
+static void ovl_vlog(int *budget, int cap, const char *fmt, va_list ap)
 {
 	char line[256];
-	va_list ap;
 	int n;
-	if (__sync_fetch_and_add(&log_lines, 1) >= LOG_CAP)
+	if (__sync_fetch_and_add(budget, 1) >= cap)
 		return;
 	n = snprintf(line, sizeof(line), "overlay_input ");
-	va_start(ap, fmt);
 	vsnprintf(line + n, sizeof(line) - (size_t)n - 2, fmt, ap);
-	va_end(ap);
 	size_t len = strlen(line);
 	line[len] = '\n';
 	(void)!write(STDERR_FILENO, line, len + 1);
+}
+
+// Lifecycle lines.
+static void ovl_log(const char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	ovl_vlog(&log_lines, LOG_CAP, fmt, ap);
+	va_end(ap);
+}
+
+// One deferred winemac call: always counted, logged while its own budget lasts.
+static void ovl_log_deferred(const char *api)
+{
+	__sync_fetch_and_add(&deferred_count, 1);
+	if (__sync_fetch_and_add(&defer_log_lines, 1) >= DEFER_LOG_CAP)
+		return;
+	char line[128];
+	int len = snprintf(line, sizeof(line), "overlay_input deferred %s\n", api);
+	if (len > 0 && (size_t)len < sizeof(line))
+		(void)!write(STDERR_FILENO, line, (size_t)len);
 }
 
 static int is_winemac(const void *addr)
@@ -152,7 +178,7 @@ static CGError ovl_associate(boolean_t connected)
 		int defer = is_open && !connected;
 		os_unfair_lock_unlock(&st_lock);
 		if (defer) {
-			ovl_log("deferred CGAssociateMouseAndMouseCursorPosition");
+			ovl_log_deferred("CGAssociateMouseAndMouseCursorPosition");
 			return kCGErrorSuccess;
 		}
 	}
@@ -162,7 +188,7 @@ static CGError ovl_associate(boolean_t connected)
 static CGError ovl_warp(CGPoint point)
 {
 	if (is_winemac(__builtin_return_address(0)) && is_open) {
-		ovl_log("deferred CGWarpMouseCursorPosition");
+		ovl_log_deferred("CGWarpMouseCursorPosition");
 		return kCGErrorSuccess;
 	}
 	return CGWarpMouseCursorPosition(point);
@@ -193,7 +219,7 @@ static void ovl_cursor_hide(id self, SEL cmd)
 			st_hide_real++;
 		os_unfair_lock_unlock(&st_lock);
 		if (defer) {
-			ovl_log("deferred NSCursor-hide");
+			ovl_log_deferred("NSCursor-hide");
 			return;
 		}
 	}
@@ -229,7 +255,7 @@ static void ovl_confine(id self, SEL cmd, NSRect rect)
 		int defer = is_open && !zero;
 		os_unfair_lock_unlock(&st_lock);
 		if (defer) {
-			ovl_log("deferred setMouseConfinementRect");
+			ovl_log_deferred("setMouseConfinementRect");
 			return;
 		}
 	}
@@ -332,6 +358,7 @@ static void overlay_open(pid_t publisher)
 		return;
 	}
 	is_open = 1;
+	deferred_count = 0;
 	hide_real = st_hide_real;
 	st_hide_real = 0;
 	os_unfair_lock_unlock(&st_lock);
@@ -359,6 +386,7 @@ static void overlay_open(pid_t publisher)
 static void overlay_close(void)
 {
 	int assoc, has_rect, hide;
+	unsigned deferred;
 	NSRect rect;
 	long win;
 	os_unfair_lock_lock(&st_lock);
@@ -373,6 +401,7 @@ static void overlay_close(void)
 	win = st_rect_win;
 	hide = st_hide_desired;
 	st_hide_real = hide;
+	deferred = __sync_fetch_and_add(&deferred_count, 0);
 	os_unfair_lock_unlock(&st_lock);
 	publisher_watch(0);
 
@@ -394,7 +423,7 @@ static void overlay_close(void)
 				    w, sel_registerName("setMouseConfinementRect:"), rect);
 		}
 	}
-	ovl_log("close");
+	ovl_log("close deferred=%u", deferred);
 }
 
 // ---- signal (cb): the helper's Darwin notification ---------------------------
