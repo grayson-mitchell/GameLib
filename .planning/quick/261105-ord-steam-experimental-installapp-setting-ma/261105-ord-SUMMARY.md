@@ -93,27 +93,27 @@ Prep: run `pnpm build-steam-bridge`, then restart `pnpm tauri:dev` (dev does not
 
 ### 1. Fresh install, setting ON + downloader OFF
 expected: No Steam window or dialog appears; the game downloads in Steam; GameLib's Downloads view tracks progress to Installed.
-result: pending
+result: pass — 2026-11-05, appId 112100, library folder 0. Operator saw no Steam window or dialog, only Steam's install toast. Log: `via InstallApp (library folder index 0)` at 20:37:05; install polling (`delegatedToSteamClient true`) flipped the badge to installed at 20:37:20.
 
 ### 2. Adoption of a GameLib-downloaded install (downloader ON)
 expected: After GameLib finishes the depot download, Steam shows the game Fully Installed within seconds with no restart and no window; Play does not restart Steam.
-result: pending
+result: pass after quick 261105-sqe. First run (2026-11-05, appId 112100, 1 depot) was an issue: Steam half passed: operator saw Fully Installed with no restart and no window; log `Steam adopted appId 112100 via InstallApp without a restart` at 20:39:28. GameLib half failed: install polling still entered `steam-waiting-for-restart` at 20:39:31 (`shouldHoldForSteamRestart`, library.ts), and the game page says to restart Steam to finish. The adoption branch in games.ts skips `recordPendingAdoption` but starts the poll as a plain native handoff, so the D-UAT-13 hold is not told Steam already adopted the install. Re-run after quick 261105-sqe (fc0509fa2): pass — 2026-11-05, appId 112100. Operator: GameLib shows Installed, Steam shows Fully Installed with no restart, and the game runs from Play. Log: adoption at 20:50:05, poll started with `adoptedBySteamClient true`, badge flipped to installed at 20:50:08 with no `steam-waiting-for-restart` hold; launched via steam://rungameid at 20:51:04.
 
 ### 3. Multi-depot adoption (XCOM 200510)
 expected: Same as item 2 for a multi-depot title; Steam's content log shows pre-existing matching files and no full re-download.
-result: pending
+result: pass — 2026-11-05, run on Civilization V (8930, 22 depots, native x86_64) instead of XCOM. Log: 22-depot plan at 21:35:14, adoption at 21:42:59, poll `source native ... adoptedBySteamClient true`, installed at 21:43:20 with no hold. Steam content_log: `Found N pre-existing matching files` for all 22 depots at 21:43:17, `preallocated 0 files (0 MB)`, `finished update, 22 mounted depots (BuildID 4390913)` at 21:43:19, about 3 s, nothing re-downloaded. Operator: GameLib and Steam both show installed. Amnesia 57300 was also tried and went to the bridge (32-bit Mac build). Earlier XCOM 200510 attempt on 2026-11-05 did not exercise InstallApp: the Mac build is 32-bit, so GameLib routed it to the bottle (`source bottle`, 9 depots, 75 cross-depot collisions resolved, installed at 21:18:34) and adoption correctly did not run (`adoptedBySteamClient false`; Mac Steam does not list it). Needs a native multi-depot title; candidate appId 411300 (3 depots, native route in earlier logs).
 
 ### 4. Non-default library folder
 expected: Install into a second registered Steam library lands there (folder index > 0) and Steam reports it installed in that library.
-result: pending
+result: pass — 2026-11-05, appId 112100 into a USB drive added as Steam library 1 (`/Volumes/Untitled/SteamLibrary`, HFS+). Log: depot plan targeted that steamapps at 21:53:33, adoption with `adoptedBySteamClient true` at 21:54:16, installed at 21:54:22. Steam content_log: `Found 1209 pre-existing matching files for depot 112102`, preallocated 0 MB, commit into `/Volumes/Untitled/SteamLibrary/steamapps/common/Avadon The Black Fortress`, so Steam got folder index 1 (index 0 would have gone to the Mac drive). Operator: Steam lists it on the Untitled drive. The adoption path does not log the folder index; the Steam-side commit path is the evidence.
 
 ### 5. Steam not running
 expected: OFF route falls back to steam://install (Steam launches with its dialog); ON route records restart-on-Play as before; no crash, log shows reason steam-not-running.
-result: pending
+result: pass — 2026-11-05, appId 112100. Downloader OFF: helper `unavailable: steam-not-running` then `falling back to steam://install` at 21:56:02; Steam launched with its install dialog, no crash. Downloader ON: GameLib wrote the manifest at 21:58:53, no InstallApp call and no hold (`adoptedBySteamClient false`, no Steam pid), installed at 21:58:56; Steam showed it installed once opened.
 
 ### 6. Steam signed out
 expected: Clean fallback as in item 5, log shows reason not-signed-in.
-result: pending
+result: issue — 2026-11-05, appId 112100, downloader ON, Steam open at its sign-in screen (pid 10645). Clean fallback, no crash: GameLib wrote the manifest at 22:02:00, then `unavailable: library-lookup-unverified` -> `recording restart-on-Play instead` -> steam-waiting-for-restart hold at 22:02:03. Two findings. (1) The reason is wrong: `gl_ia_attach` treats ConnectToGlobalUser <= 0 as not-signed-in, but a signed-out Steam still returned a user handle; the call only failed because signed-out Steam reports no library folders, and only routes that pass `--library` do that lookup. (2) Stale hold: after the operator signed in, the same Steam pid 10645 logged `Loaded Steam library folders configuration` and `Loaded 14 apps from install folder` at 22:04:44 and showed Avadon installed, while GameLib still said to restart Steam. Sign-in rescans manifests without a restart, but the D-UAT-13 hold only releases on Steam process exit. Downloader-OFF signed-out case (6b, 22:25:29): the helper did report `unavailable: not-signed-in` and fell back to `steam://install/112100` with an install poll (`delegatedToSteamClient true`). Signed-out Steam only raised its sign-in window and dropped the request; after the operator signed in, Steam queued nothing and GameLib stayed on Installing. So finding (1) is intermittent, not constant: not-signed-in fired at 22:25 but not at 22:02, when Steam had started only at 22:01:17. And any `steam://` delegation to a signed-out Steam is silently dropped while GameLib's poll waits up to MAX_TICKS (~6 h); that is tracked in `.planning/todos/pending/2026-11-05-steam-uninstall-silently-dropped-when-signed-out.md`.
 
 ### 7. Unowned or bad appId
 expected: Install fails with a message naming the EAppUpdateError code; nothing is swallowed.

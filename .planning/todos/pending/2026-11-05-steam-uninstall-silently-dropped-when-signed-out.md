@@ -1,6 +1,6 @@
 ---
 created: 2026-11-05T22:25:00.000Z
-title: "Uninstall via steam://uninstall is silently dropped by a signed-out Steam; GameLib sticks on Uninstalling"
+title: "steam://install and steam://uninstall are silently dropped by a signed-out Steam; GameLib sticks on Installing/Uninstalling"
 area: steam-install
 files:
   - src/backend/storeManagers/steam/games.ts (uninstall delegation via steam://uninstall)
@@ -29,9 +29,13 @@ Without that manual step, the uninstall poll runs until its safety cap,
 grace logic for "a plain installed manifest means uninstall hasn't started or
 was cancelled" did not revert the status within the ~48 s observed.
 
-This is not specific to the InstallApp setting. Any `steam://` delegation to a
-signed-out Steam probably behaves the same way, including `steam://install` on
-the downloader-OFF route.
+This is not specific to the InstallApp setting. **Confirmed for install too**
+(gate item 6b, 22:25:29): with downloader OFF and Steam signed out, InstallApp
+reported `not-signed-in` and GameLib fell back to `steam://install/112100` with
+an install poll (`delegatedToSteamClient true`). Steam only raised its sign-in
+window. After sign-in it queued nothing, and GameLib stayed on **Installing**.
+Unlike the uninstall case, there is no manual Steam action that makes GameLib
+recover; the user has to cancel or wait out the cap.
 
 ## Solution (to decide)
 
