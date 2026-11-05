@@ -19,6 +19,28 @@ pub(crate) enum StoreEmbedBrowserHandoffDecision {
     /// Drop it AND count it as a D-14 Epic Games Launcher attempt (Phase 50), exactly as a
     /// navigation to that scheme is counted. No throttle slot consumed.
     RejectLauncherScheme,
+    /// Open it in an in-app popup window that keeps the opener relationship (todo 2026-11-02).
+    /// The ONLY exception to the D-28 / D-12 system-browser default: an OAuth authorize popup
+    /// (Amazon's "link your Epic account") completes through `window.opener`, so handing it to
+    /// the system browser leaves the embed's page spinning forever. Matched narrowly -- see
+    /// `is_in_app_popup_url`. No throttle slot consumed (the caller's fixed window label already
+    /// bounds it to one popup at a time).
+    OpenInAppPopup,
+}
+
+/// The single host a popup may be opened in-app for. Exact match: no subdomain, no suffix.
+pub(crate) const IN_APP_POPUP_HOST: &str = "www.epicgames.com";
+/// Path prefix under [`IN_APP_POPUP_HOST`] (Epic's OAuth authorize lives at `/id/authorize`).
+pub(crate) const IN_APP_POPUP_PATH_PREFIX: &str = "/id/";
+
+/// `https`, host exactly `www.epicgames.com`, default port, no userinfo, path under `/id/`.
+fn is_in_app_popup_url(parsed: &tauri::Url) -> bool {
+    parsed.scheme() == "https"
+        && parsed.host_str() == Some(IN_APP_POPUP_HOST)
+        && parsed.port().is_none()
+        && parsed.username().is_empty()
+        && parsed.password().is_none()
+        && parsed.path().starts_with(IN_APP_POPUP_PATH_PREFIX)
 }
 
 /// Epic Games Launcher's own custom URL scheme (Phase 50 D-14). `macos_epic_embed`'s navigation
@@ -41,12 +63,100 @@ pub(crate) fn store_embed_browser_handoff_policy(url: &str) -> StoreEmbedBrowser
     let Ok(parsed) = tauri::Url::parse(url) else {
         return StoreEmbedBrowserHandoffDecision::Reject;
     };
+    if is_in_app_popup_url(&parsed) {
+        return StoreEmbedBrowserHandoffDecision::OpenInAppPopup;
+    }
     match parsed.scheme() {
         "http" | "https" if parsed.host_str().is_some_and(|h| !h.is_empty()) => {
             StoreEmbedBrowserHandoffDecision::HandToSystemBrowser
         }
         EPIC_GAMES_LAUNCHER_SCHEME => StoreEmbedBrowserHandoffDecision::RejectLauncherScheme,
         _ => StoreEmbedBrowserHandoffDecision::Reject,
+    }
+}
+
+#[cfg(test)]
+mod in_app_popup_tests {
+    use super::*;
+    use StoreEmbedBrowserHandoffDecision as D;
+
+    fn d(url: &str) -> D {
+        store_embed_browser_handoff_policy(url)
+    }
+
+    #[test]
+    fn exact_host_and_id_path_opens_in_app() {
+        assert_eq!(
+            d("https://www.epicgames.com/id/authorize?client_id=x&state=y"),
+            D::OpenInAppPopup
+        );
+        assert_eq!(d("https://www.epicgames.com/id/login"), D::OpenInAppPopup);
+    }
+
+    #[test]
+    fn lookalike_hosts_go_to_the_browser() {
+        for u in [
+            "https://www.epicgames.com.evil.example/id/authorize",
+            "https://evilwww.epicgames.com/id/authorize",
+            "https://www-epicgames.com/id/authorize",
+            "https://www.epicgames.com@evil.example/id/authorize",
+            "https://evil.example/id/authorize",
+        ] {
+            assert_eq!(d(u), D::HandToSystemBrowser, "{u}");
+        }
+    }
+
+    #[test]
+    fn userinfo_and_port_do_not_qualify() {
+        assert_eq!(
+            d("https://user:pw@www.epicgames.com/id/authorize"),
+            D::HandToSystemBrowser
+        );
+        assert_eq!(
+            d("https://www.epicgames.com:8443/id/authorize"),
+            D::HandToSystemBrowser
+        );
+    }
+
+    #[test]
+    fn http_downgrade_goes_to_the_browser() {
+        assert_eq!(
+            d("http://www.epicgames.com/id/authorize"),
+            D::HandToSystemBrowser
+        );
+    }
+
+    #[test]
+    fn paths_outside_id_go_to_the_browser() {
+        for u in [
+            "https://www.epicgames.com/",
+            "https://www.epicgames.com/store/en-US/",
+            "https://www.epicgames.com/id",
+            "https://www.epicgames.com/identity/x",
+            "https://www.epicgames.com/account/id/x",
+        ] {
+            assert_eq!(d(u), D::HandToSystemBrowser, "{u}");
+        }
+    }
+
+    #[test]
+    fn other_epicgames_subdomains_go_to_the_browser() {
+        for u in [
+            "https://epicgames.com/id/authorize",
+            "https://store.epicgames.com/id/authorize",
+            "https://id.epicgames.com/id/authorize",
+        ] {
+            assert_eq!(d(u), D::HandToSystemBrowser, "{u}");
+        }
+    }
+
+    #[test]
+    fn dot_dot_segments_cannot_escape_the_prefix() {
+        // The URL parser normalises these, so the path check sees the real target.
+        assert_eq!(
+            d("https://www.epicgames.com/id/../store"),
+            D::HandToSystemBrowser
+        );
     }
 }
 
@@ -223,7 +333,7 @@ mod store_embed_browser_handoff_policy_tests {
             let start = source
                 .find(marker)
                 .unwrap_or_else(|| panic!("missing {marker}"));
-            &source[start..(start + 3000).min(source.len())]
+            &source[start..(start + 4000).min(source.len())]
         }
         let main_rs = body_after(include_str!("main.rs"), ".on_new_window({");
         let epic_rs = body_after(

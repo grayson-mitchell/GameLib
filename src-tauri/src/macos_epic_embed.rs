@@ -1715,7 +1715,10 @@ define_class!(
                 store_embed_browser_handoff_policy, StoreEmbedBrowserHandoffDecision as Popup,
             };
             match store_embed_browser_handoff_policy(&url_string) {
-                Popup::HandToSystemBrowser => {
+                // `OpenInAppPopup` is the Tauri-managed embed's exception (Amazon's Epic-link
+                // popup, todo 2026-11-02). This raw Epic view keeps its current behaviour: that
+                // URL is handed to the system browser like any other http(s) popup (D-12).
+                Popup::HandToSystemBrowser | Popup::OpenInAppPopup => {
                     if crate::store_embed_handoff_admitted(&crate::STORE_EMBED_POPUP_THROTTLE) {
                         crate::shell_diag(
                             "macos_epic_embed: denied window.open request, routing to \
@@ -1913,9 +1916,13 @@ fn epic_embed_route_download(app: &AppHandle, navigation_response: &WKNavigation
     if !navigation_response_is_download(can_show_mime_type, content_disposition.as_deref()) {
         return false;
     }
-    if store_embed_browser_handoff_policy(&url_string)
-        != StoreEmbedBrowserHandoffDecision::HandToSystemBrowser
-    {
+    // `OpenInAppPopup` is a popup-only exception (Amazon's embed); a download is handed to the
+    // system browser exactly as before.
+    if !matches!(
+        store_embed_browser_handoff_policy(&url_string),
+        StoreEmbedBrowserHandoffDecision::HandToSystemBrowser
+            | StoreEmbedBrowserHandoffDecision::OpenInAppPopup
+    ) {
         crate::shell_diag(
             "macos_epic_embed: denied in-embed download from a non-http(s) URL -- not \
              routed to the system browser",

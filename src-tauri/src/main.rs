@@ -6900,6 +6900,38 @@ impl HandoffThrottle {
     }
 }
 
+/// Label of the single in-app OAuth link popup; a second `window.open` while it is up fails to
+/// build (duplicate label) and is denied, which is the cap on stacking.
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+const STORE_EMBED_LINK_POPUP_LABEL: &str = "store-embed-link-popup";
+
+/// Builds the in-app popup for an allowlisted OAuth authorize `window.open` (see the
+/// `on_new_window` comment). `window_features` carries the opener's webview configuration /
+/// environment / related view, so the popup shares the embed's data store and cookies and keeps
+/// `window.opener`. A plain titled window, deliberately not a child or sheet: child attachment
+/// was measured live-broken on macOS (login-window-ux-macos spike findings, D-C). Navigation is
+/// limited to http(s); `window.close()` from the page closes it.
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+fn store_embed_open_link_popup(
+    app: &AppHandle,
+    url: tauri::Url,
+    features: tauri::webview::NewWindowFeatures,
+) -> Result<tauri::WebviewWindow, String> {
+    tauri::WebviewWindowBuilder::new(
+        app,
+        STORE_EMBED_LINK_POPUP_LABEL,
+        tauri::WebviewUrl::External("about:blank".parse().map_err(|e| format!("{e}"))?),
+    )
+    .window_features(features)
+    .user_agent(STORE_EMBED_USER_AGENT)
+    .title(format!("Sign in - {}", url.host_str().unwrap_or("")))
+    .inner_size(520.0, 700.0)
+    .center()
+    .on_navigation(|u| matches!(u.scheme(), "https" | "http" | "about"))
+    .build()
+    .map_err(|e| e.to_string())
+}
+
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 static STORE_EMBED_STEAM_THROTTLE: Mutex<HandoffThrottle> =
     Mutex::new(HandoffThrottle { last: None });
@@ -7094,7 +7126,16 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
         // Rate-limited (todo 2026-10-05): the hook carries no user gesture, so without a cap
         // any frame could open system-browser tabs in a loop.
         //
-        // Phase 50 review: only http(s) popups are handed off -- see
+        // The ONE exception (todo 2026-11-02): an OAuth authorize popup needs its opener. Amazon's
+        // "link your Epic account" opens `https://www.epicgames.com/id/authorize` and finishes
+        // through `window.opener`; handed to the system browser, the claim page spins forever and
+        // a reload still offers "link account" (measured live on luna.amazon.com). That exact
+        // shape (`StoreEmbedBrowserHandoffDecision::OpenInAppPopup`: https, host exactly
+        // `www.epicgames.com`, path under `/id/`) opens an in-app popup sharing the embed's data
+        // store. Everything else stays on the D-28 path. The popup is NOT throttled: its fixed
+        // label permits one at a time, so a looping frame cannot stack windows.
+        //
+        // Phase 50 review: otherwise only http(s) popups are handed off -- see
         // `store_embed_browser_handoff_policy` for why `steam:` (which `open_external` itself
         // would accept) never is from a popup. Decided BEFORE the throttle, so a rejected or
         // `about:blank` popup cannot use up the slot. A launcher-scheme popup is simply rejected
@@ -7102,13 +7143,30 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
         // only on the macOS Epic surface).
         .on_new_window({
             let app_handle = app.clone();
-            move |url, _features| {
+            move |url, features| {
                 use store_embed_handoff_policy::{
                     store_embed_browser_handoff_policy, StoreEmbedBrowserHandoffDecision,
                 };
-                if store_embed_browser_handoff_policy(url.as_str())
-                    != StoreEmbedBrowserHandoffDecision::HandToSystemBrowser
-                {
+                let decision = store_embed_browser_handoff_policy(url.as_str());
+                if decision == StoreEmbedBrowserHandoffDecision::OpenInAppPopup {
+                    // Host and path only: the query string carries OAuth state.
+                    shell_eprintln!(
+                        "[shell] store_embed: window.open to {}{} -- opening in-app popup \
+                         (opener kept, todo 2026-11-02)",
+                        url.host_str().unwrap_or("?"),
+                        url.path()
+                    );
+                    return match store_embed_open_link_popup(&app_handle, url, features) {
+                        Ok(window) => tauri::webview::NewWindowResponse::Create { window },
+                        Err(e) => {
+                            shell_eprintln!(
+                                "[shell] store_embed: in-app popup failed, denying: {e}"
+                            );
+                            tauri::webview::NewWindowResponse::Deny
+                        }
+                    };
+                }
+                if decision != StoreEmbedBrowserHandoffDecision::HandToSystemBrowser {
                     shell_eprintln!(
                         "[shell] store_embed: denied window.open request to scheme '{}' -- not \
                          routed to the system browser",
@@ -7151,9 +7209,13 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
                     use store_embed_handoff_policy::{
                         store_embed_browser_handoff_policy, StoreEmbedBrowserHandoffDecision,
                     };
-                    if store_embed_browser_handoff_policy(url.as_str())
-                        != StoreEmbedBrowserHandoffDecision::HandToSystemBrowser
-                    {
+                    // A download is never an in-app popup: `OpenInAppPopup` is a popup-only
+                    // exception, so for a download it means the same as a browser hand-off.
+                    if !matches!(
+                        store_embed_browser_handoff_policy(url.as_str()),
+                        StoreEmbedBrowserHandoffDecision::HandToSystemBrowser
+                            | StoreEmbedBrowserHandoffDecision::OpenInAppPopup
+                    ) {
                         shell_eprintln!(
                             "[shell] store_embed: denied in-embed download with scheme '{}' -- \
                              not routed to the system browser",
