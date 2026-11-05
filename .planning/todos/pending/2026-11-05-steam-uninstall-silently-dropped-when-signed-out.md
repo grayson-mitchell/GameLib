@@ -53,3 +53,16 @@ Installing state (2026-11-05, after 6b).
   `not-signed-in` check does not fire at the sign-in screen (261105-ord gate
   item 6). See
   `.planning/todos/pending/2026-11-05-steam-restart-hold-brittle-discuss.md`.
+
+## Fix landed, live check pending (quick 261105-vfq, 2026-11-05)
+
+`a171c7a02`, `c4c6d434f`. Delegated install and uninstall polls now give up
+after 40 ticks (~2 min) with no Steam activity. A dropped install reverts to
+Not installed and a dropped uninstall stays Installed; each shows a "make sure
+Steam is signed in" notice. Downloads > Managed by Steam > Cancel stops a
+delegated install poll at once. No sign-in pre-check, by decision (see
+261105-vfq CONTEXT.md). Close this todo after a live run on a signed-out Mac
+Steam:
+- steam://install reverts with the notice after ~2 min.
+- steam://uninstall stays Installed with the notice after ~2 min.
+- Cancel clears a stuck delegated install immediately.
