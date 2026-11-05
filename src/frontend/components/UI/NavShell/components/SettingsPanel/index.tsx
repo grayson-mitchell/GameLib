@@ -2,11 +2,17 @@ import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   faBookOpen,
+  faBug,
+  faCircleInfo,
   faCircleQuestion,
   faCoffee,
-  faUniversalAccess,
-  faWineGlass,
-  faCircleInfo
+  faCompactDisc,
+  faFileLines,
+  faGear,
+  faMicrochip,
+  faPalette,
+  faScrewdriverWrench,
+  faWineGlass
 } from '@fortawesome/free-solid-svg-icons'
 
 import ContextProvider from 'frontend/state/ContextProvider'
@@ -18,11 +24,14 @@ import { NAV_TOUR_ID } from '../NavShellTour'
 
 /**
  * Settings tier-2 nav list (34.10-05 Task 2). Carries every Settings-related
- * destination the retired left navigation held, in the settled order, plus
- * the relocated quit action last.
+ * destination the retired left navigation held, plus the relocated quit
+ * action last. The list is two groups -- settings pages, then help and app
+ * actions -- split by a separator, and every row carries an icon (sketch 007,
+ * quick 261105-o65).
  *
  * Two of these rows are reparented rather than relocated: Wine Manager and
- * Accessibility used to be structural siblings of the Settings item rather
+ * Accessibility (now the Appearance row: icon faPalette, replacing
+ * faUniversalAccess) used to be structural siblings of the Settings item rather
  * than members of its submenu -- each keeps the exact guard (or lack of one)
  * it carried at its old position. A third former sibling, Console Mode, has
  * since moved again (quick 261002-b63): it no longer lives here at all, and
@@ -127,17 +136,26 @@ export default function SettingsPanel() {
     <div className="NavShell__tier2List">
       <NavItem
         url="/settings/general"
+        icon={faGear}
         label={t('settings.navbar.general', 'General')}
       />
       {!isWin && (
         <NavItem
           url="/settings/games_settings"
+          icon={faCompactDisc}
           label={t('settings.navbar.games_settings_defaults', 'Game Defaults')}
         />
       )}
       <NavItem
         url="/settings/advanced"
+        icon={faScrewdriverWrench}
         label={t('settings.navbar.advanced', 'Advanced')}
+      />
+      <NavItem
+        url="/accessibility"
+        icon={faPalette}
+        label={t('accessibility.title', 'Appearance')}
+        data-tour="nav-accessibility"
       />
       {!isWin && (
         <NavItem
@@ -148,18 +166,19 @@ export default function SettingsPanel() {
         />
       )}
       <NavItem
-        url="/accessibility"
-        icon={faUniversalAccess}
-        label={t('accessibility.title', 'Appearance')}
-        data-tour="nav-accessibility"
+        url="/settings/log"
+        icon={faFileLines}
+        label={t('settings.navbar.log', 'Log')}
       />
-      <NavItem url="/settings/log" label={t('settings.navbar.log', 'Log')} />
       <NavItem
         url="/settings/systeminfo"
+        icon={faMicrochip}
         label={t('settings.navbar.systemInformation', 'System Information')}
       />
+      <div className="NavShell__tier2Divider" role="separator" />
       <NavItem
         url="/settings/report"
+        icon={faBug}
         label={tGamelib('gamelib:reportProblem.navLabel', 'Report a problem')}
       />
       <NavItem
@@ -167,6 +186,13 @@ export default function SettingsPanel() {
         icon={faBookOpen}
         label={t('docs', 'Documentation')}
         data-tour="nav-docs"
+      />
+      <NavItem
+        elementType="button"
+        onClick={handleStartTour}
+        icon={faCircleQuestion}
+        label={t('tour.nav.launcher', 'App Tour')}
+        data-tour="nav-launcher"
       />
       <NavItem
         elementType="button"
@@ -180,13 +206,6 @@ export default function SettingsPanel() {
         icon={faCoffee}
         label={tGamelib('gamelib:donate.navLabel', 'Donate')}
         data-tour="nav-community"
-      />
-      <NavItem
-        elementType="button"
-        onClick={handleStartTour}
-        icon={faCircleQuestion}
-        label={t('tour.nav.launcher', 'App Tour')}
-        data-tour="nav-launcher"
       />
       <QuitButton />
     </div>

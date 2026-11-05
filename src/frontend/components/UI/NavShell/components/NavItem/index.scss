@@ -24,6 +24,21 @@
   // (260815-j24 Test C, which fails if they drift apart).
   --tier2-row-padding-inline: var(--space-sm);
 
+  // quick 261105-o65 (sketch 007): group divider. Colour derives from the
+  // rows' own inactive colour at reduced opacity, so it is visible on every
+  // theme by construction (the rows are legible). `--neutral-04` is not
+  // declared and vanishes on dracula (see NavShell/index.scss FIFTH ATTEMPT),
+  // and a no-fallback `--divider` is the same defect class; every var() here
+  // carries a fallback.
+  .NavShell__tier2Divider {
+    height: 0;
+    border: none;
+    border-block-start: 1px solid currentColor;
+    margin: var(--space-xs, 4px) var(--tier2-row-padding-inline, 8px);
+    color: var(--navbar-inactive, var(--navbar-accent, currentColor));
+    opacity: 0.3;
+  }
+
   .NavItem {
     --navitem-inactive-color: var(--navbar-inactive, var(--navbar-accent));
     --navitem-hover-color: var(--text-hover);
