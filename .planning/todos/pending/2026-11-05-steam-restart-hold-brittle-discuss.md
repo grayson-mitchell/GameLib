@@ -62,3 +62,24 @@ The same gate item found that the helper's `not-signed-in` check
 screen. Fallback only happened because the library lookup failed. That is
 tracked with the 261105-ord live gate. A robust hold design may depend on
 detecting sign-in state reliably.
+
+## Also observed: GameLib restart while held (2026-11-05, same gate item)
+
+- The operator restarted GameLib (22:11, again 22:14) while the 112100 hold was
+  active and Steam was still pid 10645. `store_cache/steam_restart_hold.json`
+  kept the record (pid 10645, start token `Thu Nov 5 22:01:17 2026`).
+- Avadon then showed **not installed**, although the ACF was `StateFlags 4` and
+  the files were on disk. A few minutes later it showed **Installed** with
+  Steam still pid 10645, and the hold record was still on disk.
+- `rearmPersistedSteamRestartHolds()` (library.ts ~781) logs on every outcome
+  (re-armed / dropped / could not be verified). None of those lines appears in
+  `gamelib.log` for either boot. Neither does `Steam: loaded N games from
+  cache` from the same `init()`. So either early `SteamLibraryManager.init()`
+  logging is lost, or init stalls before them. While a rearm is pending,
+  `isHoldingForSteamRestart()` fails closed, so the game reads as not
+  installed. That fits the not-installed window, but it is not proven.
+- This needs a `/gsd-debug` look before any redesign is settled. Questions:
+  - Why are the init logs missing?
+  - Did the rearm run, and with which decision?
+  - Why did the game read as not installed rather than "restart Steam to
+    finish"?
