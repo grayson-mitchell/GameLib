@@ -137,3 +137,64 @@ Item 1 (macOS) and the macOS half of item 3 are done.
 - Item 3 is now done on every platform except Linux, which is folded into item 2.
 - Frontmatter retargeted to `platform: linux`, `ready: blocked`: the only open item is the Linux
   live run (R1-R7), which needs the Linux machine.
+
+## Linux live run (2026-11-05, quick 261105-q1j)
+
+Host: GTK 3.24.33, X11 (`DISPLAY=:1`), `pnpm tauri:dev`, the operator's real profile (the
+two-profile rule's real-profile arm; only `store_embed(linux)` geometry lines were kept). Window
+1000x700 at 100% zoom unless a scenario says otherwise.
+
+Orchestrator's earlier single run, as reported to this task (not re-measured as such):
+
+- R1, R3, R4 and R5 were fine.
+- R2, R6 and R7 failed with the requested position but a stale size: R2 requested `307,98,973x702`
+  with embed `1024x718`; R6 requested `213,68,787x632` with embed `744x618`; R7 requested
+  `213,68,937x652` with embed `744x618`.
+
+Same-session baseline against the unmodified build (BASE `7dd88b23d`), then the experiment arm on
+`72d632ac4` (`embed_w.queue_resize()` after `set_size_request` in `apply_bounds`). Counts are
+files scored by `score.py` through `check_settled.py`'s `judge_line`:
+
+| scenario | baseline | arm A (kept) |
+| -------- | -------- | ------------ |
+| R1       | 1 PASS   | 1 PASS       |
+| R2       | 2 FAIL   | 6 PASS       |
+| R3       | not run  | 1 PASS       |
+| R4       | not run  | 2 PASS       |
+| R5       | 4 PASS   | 11 PASS      |
+| R6       | 2 FAIL   | 5 PASS       |
+| R7       | 1 FAIL, 1 PASS | 6 PASS |
+
+No NO-LINE file and no `store_embed(linux): error` line in either arm. Every baseline failure had
+the requested position and the 100% size (`744x618`) left in place, e.g. R2 requested `693x602`
+with embed `744x618`. Arm B (`fixed.queue_resize()`) was not needed and was not built.
+
+Verdict: KEEP-A, computed by `score.py verdict` (`evidence/verdict.txt`). The change stays.
+
+The GTK source reading (planner's, from the 3.24.33 source: `set_size_request` queues a resize only
+on a visible widget, so a rect applied while the embed is hidden leaves the cached preferred size
+that `gtk_fixed_size_allocate` reads) is SUPPORTED by this evidence, not proven by it. The
+intervention fixes every observed case; nothing here isolates the cache as the mechanism beyond
+that, and Arm B was never run to rule the Fixed's own queue out.
+
+R5 observations:
+
+- The R5-shaped zoom reset (120 or 80 back to 100) PASSES on the unmodified build too, in all 4
+  baseline attempts. That is not a reset recovering: the request at 100% is `744x618`, which is
+  exactly the stale size the failed R2 or R6 left behind. The same holds for the baseline R7
+  shrink (back to 1000x700). The earlier single R5 pass is explained by this, so R5 at 100% cannot
+  discriminate a stale-size defect.
+- With the change, all 11 R5-shaped returns passed, which is no longer trivial.
+
+NOT VERIFIED:
+
+- Wayland, HiDPI or `GDK_SCALE` above 1, the packaged build, and any other host or driver.
+- macOS and Windows (code untouched there; `store_embed_open` is byte-identical to BASE).
+- Zoom steps other than 100 to 120 and 100 to 80, and window sizes other than 1000x700 and
+  1150x720.
+- Whether the open-time apply or the renderer's follow-up flush repaired the size. One debounced
+  settled line cannot tell them apart.
+- The settled line is GTK's allocation; the pixels were not compared.
+
+Item 2 and the Linux half of item 3 are done. Items 1, 4 and 5 were already done or decided, so
+this todo is closed (2026-11-05).
