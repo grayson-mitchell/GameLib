@@ -4505,9 +4505,10 @@ describe('tauriShellSource helper scope', () => {
   const REPO_ROOT = join(__dirname, '..', '..', '..')
   const SHELL_SRC = join(REPO_ROOT, 'src-tauri', 'src')
 
-  it('lists main.rs first and none of the pre-split sibling modules', () => {
+  it('lists main.rs LAST (its mod tests is the final item) and none of the pre-split sibling modules', () => {
     const files = listTauriShellSourceFiles()
-    expect(files[0]).toBe('main.rs')
+    expect(files[files.length - 1]).toBe('main.rs')
+    expect(files.filter((f) => f === 'main.rs')).toHaveLength(1)
     for (const sibling of PRE_SPLIT_SIBLING_MODULES) {
       expect(files).not.toContain(sibling)
     }
@@ -4540,7 +4541,7 @@ describe('tauriShellSource helper scope', () => {
     const ALLOWED: Record<string, string> = {
       'src/backend/testUtils/tauriShellSource.ts': 'the helper itself',
       'src/backend/__tests__/tauriShellSource.test.ts':
-        'this guard (names main.rs as the first listed file)',
+        'this guard (names main.rs as the last listed file)',
       'meta/captureShellScrollback.ts':
         'assertRepoRoot only checks main.rs EXISTS, it never reads it',
       'meta/__tests__/captureShellScrollback.test.ts':

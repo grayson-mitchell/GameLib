@@ -45,7 +45,12 @@ function walk(dirAbs: string, relPrefix: string, out: string[]): void {
 
 /**
  * Posix-relative paths (relative to `src-tauri/src`) of every shell `.rs` file
- * except the pre-split siblings: `main.rs` first, then the rest sorted.
+ * except the pre-split siblings: the module files sorted, then `main.rs` LAST.
+ *
+ * `main.rs` goes last on purpose: its `#[cfg(test)] mod tests {` is the final item of the file, and
+ * several tests take "production code" as everything before the first `mod tests {`. With `main.rs`
+ * last that idiom still yields every module's code plus `main.rs`'s own production code, and
+ * excludes only the cargo test module -- with `main.rs` first it would silently drop every module.
  */
 export function listTauriShellSourceFiles(
   repoRoot: string = DEFAULT_REPO_ROOT
@@ -55,7 +60,7 @@ export function listTauriShellSourceFiles(
   const rest = all
     .filter((p) => p !== 'main.rs' && !PRE_SPLIT_SIBLING_MODULES.includes(p))
     .sort()
-  return ['main.rs', ...rest]
+  return [...rest, 'main.rs']
 }
 
 /** One shell file's text (path relative to `src-tauri/src`). */
