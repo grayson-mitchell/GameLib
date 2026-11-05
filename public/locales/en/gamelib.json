@@ -94,6 +94,8 @@
         },
         "steamManaged": {
             "cancel": "Cancel",
+            "cancelHint": "Stops GameLib waiting for Steam. Anything Steam has already started keeps going in Steam.",
+            "note": "Managed by Steam. Pause it in Steam.",
             "pause": "Pause",
             "title": "Managed by Steam",
             "unavailable": "Managed by Steam. Pause or cancel it in Steam."
@@ -689,6 +691,7 @@
             "libraryPickerLabel": "Choose Steam library",
             "libraryPrimarySuffix": "default",
             "noCrossoverEngine": "No CrossOver installation was found. CrossOver is required to install this game. Install it from codeweavers.com, then reopen this dialog.",
+            "notStarted": "Steam didn't start the install. Make sure Steam is signed in, then try again.",
             "sharedBottleNotice": "The wine version you choose here is used for every Steam game that needs a bottle — not just this one. Changing it later will change how those games run too.",
             "signInRequiredAction": "Sign in to Steam",
             "signInRequiredNotice": "GameLib isn't signed in to Steam, so it can't download this game. Sign in to Steam again, then install.",
@@ -734,6 +737,7 @@
                 "native": "Mac Steam"
             },
             "copySurvives": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+            "notStarted": "Steam didn't start the uninstall. Make sure Steam is signed in, then try again.",
             "removeAllCopiesConfirmMessage": "This removes every installed copy of this game across all install locations. This cannot be undone.",
             "removeAllCopiesConfirmTitle": "Remove all copies?",
             "removeAllCopiesLabel": "Remove all copies…"
