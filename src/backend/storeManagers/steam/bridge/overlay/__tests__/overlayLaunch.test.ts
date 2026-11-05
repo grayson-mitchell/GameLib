@@ -1,8 +1,7 @@
 /**
  * Phase 60 plan 07: overlayLaunch.ts (D-08, D-12, D-13).
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
-import { readFileSync } from 'fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -168,7 +167,7 @@ describe('prepareOverlayLaunch', () => {
     shimPath: '/A/o.dylib',
     steamBinDir: SBIN
   }
-  const okInputs = async () => ({ status: 'ok' as const })
+  const okInputs = () => Promise.resolve({ status: 'ok' as const })
   const crossover = {
     appPath: '/Applications/CrossOver.app',
     cxRoot: '/x',
@@ -180,8 +179,8 @@ describe('prepareOverlayLaunch', () => {
   test('success returns runner and tokens', async () => {
     const r = await prepareOverlayLaunch(a, {
       checkInputs: okInputs,
-      detect: async () => ({ status: 'ok', crossover }),
-      ensure: async () => ({ status: 'ok', runner })
+      detect: () => Promise.resolve({ status: 'ok', crossover }),
+      ensure: () => Promise.resolve({ status: 'ok', runner })
     })
     expect(r.status).toBe('ok')
     if (r.status === 'ok') {
@@ -192,19 +191,21 @@ describe('prepareOverlayLaunch', () => {
   test('detect error is returned', async () => {
     const r = await prepareOverlayLaunch(a, {
       checkInputs: okInputs,
-      detect: async () => ({
-        status: 'error',
-        step: 'crossover-detect',
-        cause: 'none'
-      })
+      detect: () =>
+        Promise.resolve({
+          status: 'error',
+          step: 'crossover-detect',
+          cause: 'none'
+        })
     })
     expect(r).toMatchObject({ step: 'crossover-detect' })
   })
   test('ensure error is returned', async () => {
     const r = await prepareOverlayLaunch(a, {
       checkInputs: okInputs,
-      detect: async () => ({ status: 'ok', crossover }),
-      ensure: async () => ({ status: 'error', step: 'clone', cause: 'x' })
+      detect: () => Promise.resolve({ status: 'ok', crossover }),
+      ensure: () =>
+        Promise.resolve({ status: 'error', step: 'clone', cause: 'x' })
     })
     expect(r).toMatchObject({ step: 'clone' })
   })
@@ -212,11 +213,12 @@ describe('prepareOverlayLaunch', () => {
     const detect = jest.fn()
     const ensure = jest.fn()
     const r = await prepareOverlayLaunch(a, {
-      checkInputs: async () => ({
-        status: 'error',
-        step: 'shim',
-        cause: 'missing'
-      }),
+      checkInputs: () =>
+        Promise.resolve({
+          status: 'error',
+          step: 'shim',
+          cause: 'missing'
+        }),
       detect,
       ensure
     })
@@ -286,14 +288,14 @@ describe('prepareOverlayEnv', () => {
   it('returns the input check error unchanged', async () => {
     const err = { status: 'error', step: 'shim', cause: 'missing' } as const
     const r = await prepareOverlayEnv(a, {
-      checkInputs: async () => err
+      checkInputs: () => Promise.resolve(err)
     })
     expect(r).toEqual(err)
   })
 
   it('returns vars on ok', async () => {
     const r = await prepareOverlayEnv(a, {
-      checkInputs: async () => ({ status: 'ok' })
+      checkInputs: () => Promise.resolve({ status: 'ok' })
     })
     expect(r).toEqual(buildOverlayEnvVars(a))
   })
