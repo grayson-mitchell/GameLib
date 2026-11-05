@@ -39,3 +39,21 @@ list length, then show the library dropdown and free-space line for it without
 changing the sign-in gate or notice copy. The settings read must stay in the
 backend accessor `isSteamExperimentalInstallAppEnabled()` (RESEARCH Pitfall 4
 forbids a second settings read in the renderer).
+
+## Resolution
+
+Closed by quick 261105-upw. A new backend-authoritative IPC,
+`getSteamInstallAppTargets(appName)`, returns `{ installAppRoute, libraries }`
+(true only for feature ON + native OFF + non-bottle title on macOS). The modal
+calls it only when `listSteamLibraryTargets` resolved `[]`, then feeds the
+section-gating resolver `steamLibraryChoiceOwned`, so the library dropdown and
+free-space line render on the InstallApp route. `SteamDialog` keeps receiving
+`steamNativeInstallOn`, so its sign-in gate and notice copy are unchanged.
+
+Single-library behaviour matches native-ON: no picker and no free-space line;
+the install goes to the primary library.
+
+The `files:` paths above were stale. The real ones are
+`src/backend/sidecar/installFlowRegistration.ts`,
+`src/frontend/screens/Library/components/InstallModal/` and
+`src/frontend/screens/Library/components/InstallModal/SteamDialog/index.tsx`.

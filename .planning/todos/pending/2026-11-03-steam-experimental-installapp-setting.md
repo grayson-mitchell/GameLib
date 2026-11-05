@@ -59,7 +59,8 @@ InstallApp Feature"** setting (default OFF), with today's behaviour as the fallb
    (`GetNumLibraryFolders` / `GetLibraryFolderPath`, slots 75/76 in 066's `slotmap.txt`). Only
    index 0 has been tested.
 6. **Lost confirmations:** with no Steam dialog, GameLib's install modal owns disk-space and
-   folder checks.
+   folder checks. The modal half is done in quick 261105-upw (library dropdown and free-space
+   line on the InstallApp route).
 
 ## Live gate (the test the operator asked to run as part of this todo)
 
