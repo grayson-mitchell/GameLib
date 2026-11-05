@@ -26,7 +26,8 @@ export function getStatusLabel({
     queued: `${t('gamepage:status.queued', 'Queued')}`,
     uninstalling: t('gamepage:status.uninstalling', 'Uninstalling'),
     updating: `${t('gamepage:status.updating')} ${Math.ceil(percent || 0)}%`,
-    // Steam installs have no progress percentage (Steam owns the download) — D-07
+    // Steam installs carry a percentage only when a progress source feeds it
+    // (the native depot installer, or the ACF poller for a steam://install hand-off).
     // D-UAT-04 (21-16): while GameLib's written 1026 manifest awaits Steam's
     // next full restart to adopt it, show a passive "restart to finish" hint
     // instead of an indefinite spinner. GameLib never auto-drives Steam.
@@ -44,7 +45,15 @@ export function getStatusLabel({
               )
             : statusContext === 'steam-paused'
               ? t('gamepage:status.steamPaused', 'Paused')
-              : t('gamepage:status.steamInstalling', 'Installing…')
+              : percent && percent > 0
+                ? // debug/steam-dl-missing-in-downloads: the poller's percent
+                  // is real (ACF byte counts), so show it once it arrives.
+                  t(
+                    'gamelib:gamepage.steamInstallingPercent',
+                    'Installing… {{percent}}%',
+                    { percent: Math.min(100, Math.floor(percent)) }
+                  )
+                : t('gamepage:status.steamInstalling', 'Installing…')
         : `${t('gamepage:status.downloading', 'Downloading')} ${Math.ceil(
             percent || 0
           )}%`,

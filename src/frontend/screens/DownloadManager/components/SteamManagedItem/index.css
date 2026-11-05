@@ -1,0 +1,57 @@
+.steamManagedItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+}
+
+.steamManagedItem__text {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-md);
+}
+
+.steamManagedItem__title {
+  color: var(--text-default);
+  font-weight: 600;
+}
+
+.steamManagedItem__progress {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.steamManagedItem__bar {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--text-secondary) 20%, transparent);
+}
+
+.steamManagedItem__barFill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.steamManagedItem__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  color: var(--text-secondary);
+}
+
+.steamManagedItem__note {
+  flex: 1;
+}
+
+.steamManagedItem__actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.steamManagedItem__actions .button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

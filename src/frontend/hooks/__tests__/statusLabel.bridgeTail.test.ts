@@ -44,3 +44,25 @@ describe('getStatusLabel bridge install tail (quick 261029-exu)', () => {
     ).toBe('Finishing install…')
   })
 })
+
+describe('getStatusLabel steam installing percent (debug/steam-dl-missing-in-downloads)', () => {
+  it('shows the percent once the poller has fed one', () => {
+    expect(
+      getStatusLabel({
+        status: 'installing',
+        t,
+        runner: 'steam',
+        percent: 39.6
+      })
+    ).toBe('Installing… 39%')
+  })
+
+  it('stays the plain label at zero or no percent', () => {
+    expect(
+      getStatusLabel({ status: 'installing', t, runner: 'steam', percent: 0 })
+    ).toBe('Installing…')
+    expect(getStatusLabel({ status: 'installing', t, runner: 'steam' })).toBe(
+      'Installing…'
+    )
+  })
+})

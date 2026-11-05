@@ -3071,7 +3071,12 @@ export async function pollInstallOnce(
         ? { context: 'steam-waiting-for-restart' }
         : isPaused
           ? { context: 'steam-paused' }
-          : {})
+          : {}),
+      // debug/steam-dl-missing-in-downloads: a steam://install hand-off has no
+      // DownloadManager queue element (the queue element finishes the moment
+      // the hand-off is dispatched), so this flag is what lets the Downloads
+      // screen list it, as a row that cannot be paused or cancelled here.
+      ...(poll?.delegatedToSteamClient ? { managedBySteam: true } : {})
     })
 
     if (isWaitingForSteamRestart && poll && !poll.notifiedWaiting) {

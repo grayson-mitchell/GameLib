@@ -92,6 +92,12 @@
             "steamClient": "Steam client installer",
             "title": "Setup"
         },
+        "steamManaged": {
+            "cancel": "Cancel",
+            "pause": "Pause",
+            "title": "Managed by Steam",
+            "unavailable": "Managed by Steam. Pause or cancel it in Steam."
+        },
         "upNext": "Up Next"
     },
     "edit-game": {
@@ -108,6 +114,7 @@
         "extraInfoErrorTitle": "Couldn't load extra info",
         "extraInfoRetry": "Retry",
         "extraInfoStaleBody": "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
+        "steamInstallingPercent": "Installing… {{percent}}%",
         "steamShortcut": {
             "failed": "Updating the Steam shortcut failed."
         },

@@ -383,6 +383,9 @@ export interface GameStatus {
   context?: string // Additional context e.g current step
   runner?: Runner
   status: Status
+  /** True while the Steam client owns the download (steam://install hand-off):
+   *  no queue element exists, and pause/cancel are not available from GameLib. */
+  managedBySteam?: boolean
 }
 
 export type GlobalConfigVersion = 'auto' | 'v0'

@@ -7038,6 +7038,77 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     expect((existsSync as jest.Mock).mock.calls.length).toBe(callsAfter)
   })
 
+  // ── debug/steam-dl-missing-in-downloads ────────────────────────────────────
+
+  it('D4: a delegated poll feeds the game page a percent and flags the status managedBySteam (Downloads lists it from that flag)', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(false)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    // The live ATOM RPG manifest shape: StateFlags 1026, ~39 % of 6.0 GB.
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '1026',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '2361633008',
+        BytesToDownload: '6004493952'
+      }
+    })
+    jest.mocked(sendFrontendMessage).mockClear()
+
+    const interval = 10
+    startInstallPolling('730', {
+      intervalMs: interval,
+      delegatedToSteamClient: true
+    })
+    await jest.advanceTimersByTimeAsync(interval * 2)
+
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'progressUpdate',
+      expect.objectContaining({
+        appName: '730',
+        runner: 'steam',
+        progress: expect.objectContaining({ percent: 39 })
+      })
+    )
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({
+        appName: '730',
+        status: 'installing',
+        managedBySteam: true
+      })
+    )
+  })
+
+  it('D5: a non-delegated poll never flags managedBySteam (a GameLib-driven install already has its own queue row)', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(false)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(vdf.parse as jest.Mock).mockReturnValue(delegatedAcf('1026'))
+    jest.mocked(sendFrontendMessage).mockClear()
+
+    const interval = 10
+    startInstallPolling('730', { intervalMs: interval })
+    await jest.advanceTimersByTimeAsync(interval * 2)
+
+    const installing = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel, payload]) =>
+        channel === 'gameStatusUpdate' && payload?.status === 'installing'
+    )
+    expect(installing.length).toBeGreaterThan(0)
+    for (const [, payload] of installing) {
+      expect(payload).not.toHaveProperty('managedBySteam')
+    }
+  })
+
   // ── 17-03: startInstallPolling(appId, { source: 'bottle' }) ────────────────
 
   it('startInstallPolling(appId, { source: "bottle" }) polls the bottle steamapps root, not the native one', async () => {

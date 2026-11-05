@@ -1,6 +1,6 @@
 import './index.css'
 
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DMQueueElement, DownloadManagerState } from 'common/types'
 import type { IpcRendererEvent } from 'backend/platform'
@@ -10,6 +10,9 @@ import { downloadManagerStore } from 'frontend/helpers/electronStores'
 import { DMQueue } from 'frontend/types'
 import DownloadManagerItem from './components/DownloadManagerItem'
 import SetupDownloadItem from './components/SetupDownloadItem'
+import SteamManagedItem from './components/SteamManagedItem'
+import { steamManagedRows } from './components/SteamManagedItem/steamManagedModel'
+import ContextProvider from 'frontend/state/ContextProvider'
 import { useSteamSetupDownloads } from 'frontend/state/SteamSetupDownloads'
 import { hasHelp } from 'frontend/hooks/hasHelp'
 
@@ -17,6 +20,8 @@ export default React.memo(function DownloadManager(): JSX.Element | null {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
   const setupRows = useSteamSetupDownloads()
+  const { libraryStatus } = useContext(ContextProvider)
+  const managedRows = steamManagedRows(libraryStatus)
   const [refreshing, setRefreshing] = useState(false)
   const [state, setState] = useState<DownloadManagerState>('idle')
   const [plannendElements, setPlannendElements] = useState<DMQueueElement[]>([])
@@ -118,6 +123,24 @@ export default React.memo(function DownloadManager(): JSX.Element | null {
           <div className="dmSection__list">
             {setupRows.map((row) => (
               <SetupDownloadItem key={row.kind} row={row} />
+            ))}
+          </div>
+        </section>
+      )}
+      {managedRows.length > 0 && (
+        <section className="dmSection">
+          <header className="dmSection__header">
+            <h5 className="dmSection__title">
+              {tGamelib(
+                'gamelib:downloadManager.steamManaged.title',
+                'Managed by Steam'
+              )}
+              <span className="dmSection__count">{`(${managedRows.length})`}</span>
+            </h5>
+          </header>
+          <div className="dmSection__list">
+            {managedRows.map((row) => (
+              <SteamManagedItem key={row.appName} row={row} />
             ))}
           </div>
         </section>

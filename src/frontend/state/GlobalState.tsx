@@ -1479,7 +1479,8 @@ class GlobalState extends PureComponent<Props> {
     folder,
     context,
     progress,
-    runner
+    runner,
+    managedBySteam
   }: GameStatus) => {
     const { libraryStatus, gameUpdates } = this.state
 
@@ -1499,13 +1500,25 @@ class GlobalState extends PureComponent<Props> {
       return this.setState({
         libraryStatus: [
           ...libraryStatus,
-          { appName, status, folder, context, progress, runner }
+          {
+            appName,
+            status,
+            folder,
+            context,
+            progress,
+            runner,
+            ...(managedBySteam ? { managedBySteam } : {})
+          }
         ]
       })
     }
 
     // if the app's status didn't change, do nothing
-    if (currentApp.status === status && currentApp.context === context) {
+    if (
+      currentApp.status === status &&
+      currentApp.context === context &&
+      !!currentApp.managedBySteam === !!managedBySteam
+    ) {
       return
     }
 
@@ -1536,7 +1549,8 @@ class GlobalState extends PureComponent<Props> {
         folder,
         context,
         progress,
-        runner
+        runner,
+        ...(managedBySteam ? { managedBySteam } : {})
       })
       this.setState({ libraryStatus: newLibraryStatus })
     }
