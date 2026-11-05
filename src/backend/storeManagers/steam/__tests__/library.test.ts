@@ -6045,6 +6045,51 @@ describe('install poller holds steam-waiting-for-restart on the StateFlags=4 fas
     expect(wasStopped()).toBe(true)
   })
 
+  it('an adoptedBySteamClient poll (InstallApp ok) never probes, never holds and is installed immediately (quick 261105-sqe)', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    startInstallPolling('730', {
+      intervalMs: 60000,
+      isNativeHandoff: true,
+      macNativeRoute: true,
+      adoptedBySteamClient: true
+    })
+
+    await pollInstallOnce('730')
+
+    expect(listSteamClientPids).not.toHaveBeenCalled()
+    expect(readSteamProcessStartTokens).not.toHaveBeenCalled()
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(1)
+    expect(statusPayloads()).toContainEqual(
+      expect.objectContaining({ status: 'done' })
+    )
+    expect(statusPayloads()).not.toContainEqual(
+      expect.objectContaining({ context: 'steam-waiting-for-restart' })
+    )
+    expect(notify).not.toHaveBeenCalledWith(RESTART_NOTIFY)
+    expect(wasStopped()).toBe(true)
+  })
+
+  it('adoptedBySteamClient arriving on an in-flight poll (upgrade branch) releases the hold (quick 261105-sqe)', async () => {
+    jest.mocked(listSteamClientPids).mockResolvedValue([111])
+    startInstallPolling('730', { intervalMs: 60000 })
+    startInstallPolling('730', {
+      isNativeHandoff: true,
+      macNativeRoute: true,
+      adoptedBySteamClient: true
+    })
+
+    await pollInstallOnce('730')
+
+    expect(listSteamClientPids).not.toHaveBeenCalled()
+    expect(readSteamProcessStartTokens).not.toHaveBeenCalled()
+    expect(sentCalls('pushGameToLibrary')).toHaveLength(1)
+    expect(statusPayloads()).not.toContainEqual(
+      expect.objectContaining({ context: 'steam-waiting-for-restart' })
+    )
+    expect(notify).not.toHaveBeenCalledWith(RESTART_NOTIFY)
+    expect(wasStopped()).toBe(true)
+  })
+
   it('fail-open: an inconclusive FIRST probe (undefined) takes the unchanged installed flow immediately', async () => {
     jest.mocked(listSteamClientPids).mockResolvedValue(undefined)
     startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })

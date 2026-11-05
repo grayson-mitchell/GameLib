@@ -141,6 +141,12 @@ type PollOptions = {
    *  user to confirm Steam's dialog before any appmanifest exists. Install-
    *  poller-only (quick 261024-exo). */
   delegatedToSteamClient?: boolean
+  /** True only when a running Steam client accepted GameLib's finished depot
+   *  install via InstallApp, so Steam already knows the manifest and the
+   *  D-UAT-13 restart hold's premise does not apply. The poll starts with the
+   *  hold released, never probes Steam PIDs and never persists a restart hold.
+   *  Install-poller-only (quick 261105-sqe). */
+  adoptedBySteamClient?: boolean
   /** Boot re-arm only (quick 261029-pkp): start the poll already holding for
    *  a Steam restart, with `startTicks` already elapsed so the MAX_TICKS cap
    *  stays measured from the original finalize. */
@@ -3449,6 +3455,17 @@ export function startInstallPolling(
         LogPrefix.Steam
       )
     }
+    if (
+      typeof intervalMsOrOptions !== 'number' &&
+      intervalMsOrOptions.adoptedBySteamClient === true &&
+      existingEntry.steamHold !== 'released'
+    ) {
+      releaseSteamHold(appId, existingEntry)
+      logInfo(
+        `Steam: in-flight install poll for appId ${appId} adopted by the Steam client via InstallApp — restart hold released (quick 261105-sqe)`,
+        LogPrefix.Steam
+      )
+    }
     // quick 261029-sex: an upgrade to handoff or a retarget ends eligibility;
     // a delegated native poll gains it. Start is idempotent per appId.
     if (isLiveMonitorEligible(existingEntry)) {
@@ -3466,6 +3483,7 @@ export function startInstallPolling(
     macNativeRoute,
     skippedDepots,
     delegatedToSteamClient,
+    adoptedBySteamClient,
     restoredSteamHold
   }: {
     intervalMs: number
@@ -3474,6 +3492,7 @@ export function startInstallPolling(
     macNativeRoute: boolean
     skippedDepots: string[]
     delegatedToSteamClient: boolean
+    adoptedBySteamClient: boolean
     restoredSteamHold: PollOptions['restoredSteamHold']
   } =
     typeof intervalMsOrOptions === 'number'
@@ -3484,6 +3503,7 @@ export function startInstallPolling(
           macNativeRoute: false,
           skippedDepots: [],
           delegatedToSteamClient: false,
+          adoptedBySteamClient: false,
           restoredSteamHold: undefined
         }
       : {
@@ -3494,13 +3514,22 @@ export function startInstallPolling(
           skippedDepots: intervalMsOrOptions.skippedDepots ?? [],
           delegatedToSteamClient:
             intervalMsOrOptions.delegatedToSteamClient ?? false,
+          adoptedBySteamClient:
+            intervalMsOrOptions.adoptedBySteamClient ?? false,
           restoredSteamHold: intervalMsOrOptions.restoredSteamHold
         }
 
   logInfo(
-    `Steam: starting install polling for appId ${appId} (interval ${intervalMs}ms, source ${source}, isNativeHandoff ${isNativeHandoff}, skippedDepots ${skippedDepots.length}, delegatedToSteamClient ${delegatedToSteamClient})`,
+    `Steam: starting install polling for appId ${appId} (interval ${intervalMs}ms, source ${source}, isNativeHandoff ${isNativeHandoff}, skippedDepots ${skippedDepots.length}, delegatedToSteamClient ${delegatedToSteamClient}, adoptedBySteamClient ${adoptedBySteamClient})`,
     LogPrefix.Steam
   )
+
+  const initialSteamHold: 'unprobed' | 'holding' | 'released' =
+    restoredSteamHold
+      ? 'holding'
+      : adoptedBySteamClient
+        ? 'released'
+        : 'unprobed'
 
   const entry = {
     timer: null as unknown as NodeJS.Timeout,
@@ -3516,10 +3545,7 @@ export function startInstallPolling(
     notifiedDepotSkipped: false,
     delegatedToSteamClient,
     absentTicksSinceSeen: 0,
-    steamHold: (restoredSteamHold ? 'holding' : 'unprobed') as
-      | 'unprobed'
-      | 'holding'
-      | 'released',
+    steamHold: initialSteamHold,
     steamPidsAtHandoff: restoredSteamHold?.pids ?? ([] as number[]),
     lastSteamProbeMs: restoredSteamHold ? Date.now() : 0
   }
