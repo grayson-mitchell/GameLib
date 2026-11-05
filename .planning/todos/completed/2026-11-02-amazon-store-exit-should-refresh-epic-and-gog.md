@@ -31,3 +31,19 @@ time throttle. Steam, Epic and GOG rows stay single-runner and their tests stay 
   respects in-flight. Steam, Epic and GOG are unchanged.
 - Live: an Epic-delivered Prime claim appears after leaving `/store/amazon` without a manual
   Refresh, and the log shows `origin=amazon-store-exit` against `legendary`.
+
+## Closed 2026-11-05 (quick 261105-pnh)
+
+Store-exit rows now carry `targets`. The Amazon exit refreshes nile, legendary and gog, each
+behind its own `resolveSignInState(collectSignInInputs(...)[key])` gate. A signed-out runner
+does nothing and never prompts. The in-flight guard is per runner and shared across stores, so
+an Epic exit and an Amazon exit cannot stack two legendary refreshes. There is no time
+throttle. Steam, Epic and GOG rows stay single-runner and their existing tests are untouched.
+
+Commits: 37563875e (test), c2666b23a (feat, module), 60d3d880f (feat, caller wiring).
+
+- Live check NOT yet done (human step): leave `/store/amazon` after an Epic-delivered Prime
+  claim, without a manual Refresh, and confirm the claim appears and the log shows
+  `origin=amazon-store-exit runner=legendary` (and `[refreshLibrary] runner=legendary
+  origin=amazon-store-exit`). Run it under `pnpm tauri:dev`; the change is frontend-only, so no
+  sidecar rebuild is needed.
