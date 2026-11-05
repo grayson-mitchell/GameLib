@@ -351,6 +351,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [2026-10-29] [login-window] "Epic login window presents as a macOS sheet on main, like GOG and the other logins (lift the REQ-34.4.2-10 Epic descope)" — [todo file](.planning/todos/pending/2026-10-29-epic-login-window-as-macos-sheet-like-gog.md)
 - [2026-10-31] [feedback] In-app "Report a problem" form for non-technical users — no account, auto-attached redacted diagnostics — [todo file](.planning/todos/pending/2026-10-31-in-app-report-a-problem-form-for-non-technical-users.md)
 - [2026-11-03] [steam-install] "Add setting to use Steam Experimental InstallApp Feature — IClientAppManager::InstallApp installs headless and adopts GameLib downloads without restart (spikes 065/066)" — [todo file](.planning/todos/pending/2026-11-03-steam-experimental-installapp-setting.md)
+- [2026-11-05] [steam-install] "Discuss a more robust way to manage the 'restart Steam to finish' hold — it releases only on Steam pid exit, but sign-in rescans manifests in the same process (261105-ord gate item 6), leaving the user stuck" — [todo file](.planning/todos/pending/2026-11-05-steam-restart-hold-brittle-discuss.md)
 
 ### Blockers/Concerns
 
