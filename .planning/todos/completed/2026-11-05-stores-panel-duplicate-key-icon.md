@@ -26,3 +26,7 @@ destinations (Epic, GOG, Steam, Amazon Luna) with tools (Store Search, Deals,
 Humble Keys, Redeem a Steam key); a `NavShell__tier2Divider` between the two
 groups would match the Settings list. That part is a design call, so confirm it
 with the user before doing it.
+
+## Resolution
+
+2026-11-05, commit `8d5afdca0`: Redeem a Steam key now uses `faTicket`; Humble Keys keeps `faKey`. The optional store/tool divider was not done (design call, not requested).
