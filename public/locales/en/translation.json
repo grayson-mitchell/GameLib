@@ -530,6 +530,7 @@
         },
         "preferSystemLibs": "Custom Wine versions (Wine-GE, Wine-Lutris) are shipped with their library dependencies. By enabling this option, these shipped libraries will be ignored and Wine will load system libraries instead. Warning! Issues may occur if dependencies are not met.",
         "shareDetectedFixes": "Off by default. When on, and GameLib detects on this Mac that a Steam game needs a known fix (a 32-bit Mac build, Steam CEG DRM, or a curated 32-bit entry that turns out to be wrong), it sends the game's Steam app id, the detected fix (for example macArch: 32), whether to add or remove it, and your GameLib version to GameLib's relay. The relay looks the game's title up from Steam and opens a pull request on the public known-fixes repository for review. It never sends a user id, the game title, file paths or logs. The relay sees your IP address; it keeps only a hashed form for about two hours to limit abuse and never publishes it. Backups of the relay's database can keep that hashed form for up to 30 days.",
+        "steamExperimentalInstallApp": "Off by default. Asks the running Steam app to install games through an undocumented internal Steam interface, so Steam's window and install dialog stay closed, and games GameLib downloads are added to Steam without restarting it. If Steam isn't running, you're signed out, or a Steam update changed the interface, GameLib falls back to the normal behaviour automatically.",
         "steam_native_install": "Downloads Steam games in GameLib with real progress and cancel. When off, Steam installs games that have a Mac version. Games without one always download in GameLib.",
         "steam_native_install_other": "Downloads Steam games in GameLib with real progress and cancel. When off, GameLib hands installs to the Steam client.",
         "steam_path": {
@@ -973,6 +974,7 @@
         "scripts": "Scripts:",
         "select_theme": "Select Theme",
         "shareDetectedFixes": "Share detected game fixes",
+        "steamExperimentalInstallApp": "Steam Experimental InstallApp Feature",
         "show_valve_proton": {
             "confirmation": {
                 "dont_show": "Don't show them",

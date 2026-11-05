@@ -10,6 +10,7 @@ import {
   EgsSettings,
   EnableSteamNativeInstall,
   ShareDetectedFixes,
+  SteamExperimentalInstallApp,
   HideChangelogOnStartup,
   MaxWorkers,
   MinimizeOnGameLaunch,
@@ -39,6 +40,7 @@ export default function GeneralSettings() {
       <DefaultSteamPath />
 
       <EnableSteamNativeInstall />
+      <SteamExperimentalInstallApp />
       <ShareDetectedFixes />
 
       <EgsSettings />

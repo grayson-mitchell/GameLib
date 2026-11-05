@@ -1,0 +1,42 @@
+import { mkdtempSync, rmSync } from 'fs'
+import { tmpdir } from 'os'
+import { join } from 'path'
+
+// quick 261105-ord: a fresh config must not opt the user in to InstallApp.
+const dir = mkdtempSync(join(tmpdir(), 'gamelib-config-default-'))
+
+jest.mock('../constants/paths', () => ({
+  ...jest.requireActual('../constants/paths'),
+  configPath: join(dir, 'config.json'),
+  gamesConfigPath: dir,
+  sharedWinePrefix: join(dir, 'prefixes'),
+  userHome: dir
+}))
+jest.mock('../utils/compatibility_layers', () => ({
+  getDefaultWine: () => ({ name: 'x', bin: '', type: 'wine' })
+}))
+jest.mock('../logger', () => ({
+  logError: jest.fn(),
+  logInfo: jest.fn(),
+  logWarning: jest.fn(),
+  logDebug: jest.fn(),
+  LogPrefix: new Proxy({}, { get: (_t, k) => String(k) })
+}))
+
+import { GlobalConfig } from '../config'
+
+afterAll(() => rmSync(dir, { recursive: true, force: true }))
+
+describe('steamExperimentalInstallApp default', () => {
+  it('factory defaults keep the experimental InstallApp feature off', () => {
+    expect(
+      GlobalConfig.get().getFactoryDefaults().steamExperimentalInstallApp
+    ).toBe(false)
+  })
+
+  it('a fresh config with no config file reports it off', () => {
+    expect(GlobalConfig.get().getSettings().steamExperimentalInstallApp).toBe(
+      false
+    )
+  })
+})

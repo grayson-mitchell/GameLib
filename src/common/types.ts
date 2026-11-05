@@ -142,6 +142,7 @@ export interface AppSettings extends GameSettings {
   downloadNoHttps: boolean
   downloadProtonToSteam: boolean
   enableSteamNativeInstall: boolean
+  steamExperimentalInstallApp: boolean
   egsLinkedPath: string
   enableUpdates: boolean
   exitToTray: boolean
