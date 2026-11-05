@@ -14,18 +14,18 @@ import { existsSync } from 'node:fs'
 import { steamBridgeHelperPath } from 'backend/constants/paths'
 import { LogPrefix, logWarning } from 'backend/logger'
 
-export type SteamInstallAppOutcome =
+type SteamInstallAppOutcome =
   | { kind: 'ok'; folderIndex: number }
   | { kind: 'unavailable'; reason: string }
   | { kind: 'error'; code: number }
 
-export interface SteamInstallAppRunResult {
+interface SteamInstallAppRunResult {
   stdout: string
   stderr: string
   code: number | null
 }
 
-export interface SteamInstallAppDeps {
+interface SteamInstallAppDeps {
   helperPath?: string
   run?: (
     file: string,

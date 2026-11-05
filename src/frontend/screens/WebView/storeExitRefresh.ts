@@ -9,7 +9,7 @@ import type { Runner } from 'common/types'
 
 export type StoreExitStoreKey = 'steam' | 'epic' | 'gog' | 'amazon'
 
-export type StoreExitRefreshOutcome =
+type StoreExitRefreshOutcome =
   | 'refreshed'
   | 'skipped-signed-out'
   | 'skipped-in-flight'
@@ -124,7 +124,7 @@ function isAmazonPurchaseIntentUrl(url: string): boolean {
   return httpsSegments(url, AMAZON_HOSTS) !== null
 }
 
-export interface StoreExitTarget {
+interface StoreExitTarget {
   runner: Runner
   /** Key of `collectSignInInputs`. */
   signInKey: 'steam' | 'legendary' | 'gog' | 'nile'
@@ -264,7 +264,7 @@ export const runSteamStoreExitRefresh = (
   deps: StoreExitRefreshDeps
 ): StoreExitRefreshOutcome => runStoreExitRefresh('steam', deps)
 
-export interface StoreExitRefreshAllDeps {
+interface StoreExitRefreshAllDeps {
   signInStateFor: (signInKey: StoreExitTarget['signInKey']) => string
   refreshInFlightFor: (runner: Runner) => boolean
   refreshLibrary: (runner: Runner, origin: string) => Promise<void>
