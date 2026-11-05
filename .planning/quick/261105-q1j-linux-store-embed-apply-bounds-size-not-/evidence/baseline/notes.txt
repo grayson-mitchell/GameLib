@@ -1,0 +1,13 @@
+start-state: zoom=80 window=1280x800 (recorded in evidence/start-state.txt); working state zoom=100 window=1000x700
+R1-1 Stores opened at zoom 100 win=1000x700 (route restored the GOG store view) -> PASS
+R2-1 zoom 100->120 win=1000x700 origin_matches_zoom=True -> FAIL
+R5-1 reset zoom 120->100 win=1000x700 -> PASS
+R6-1 zoom 100->80 win=1000x700 origin_matches_zoom=True -> FAIL
+R5-2 reset zoom 80->100 win=1000x700 -> PASS
+R2-2 zoom 100->120 win=1000x700 origin_matches_zoom=True -> FAIL
+R5-3 reset zoom 120->100 win=1000x700 -> PASS
+R6-2 zoom 100->80 win=1000x700 origin_matches_zoom=True -> FAIL
+R5-4 reset zoom 80->100 win=1000x700 -> PASS
+R7-1 grow requested 1150x720 from 1000x700 actual 1150x720 -> FAIL
+R7-2 shrink requested 1000x700 from 1150x720 actual 1000x700 -> PASS
+teardown: zoom restored to 80 (confirmed by cropped screenshot), window restored to 1280x800, POST_TEARDOWN_PROCS=0
