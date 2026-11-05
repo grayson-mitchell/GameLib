@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sketch 007 — Settings nav icons</title>
+    <link rel="stylesheet" href="../themes/default.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&family=Cabin:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+    <style>
+      /* ───────────────────────────────────────────────────────────────
+         Sketch 007 — icons in the Settings tier-2 nav list.
+
+         Row styling is lifted from the SHIPPED NavItem/index.scss
+         (.NavShell__tier2 .NavItem): 10px gap, 24px icon slot, --space-xs /
+         --space-sm padding, hover nudge to 12px, active background from
+         --navbar-active-background. Column width is the real
+         --tier2-width: 256px. Rows come from SettingsPanel/index.tsx.
+         ─────────────────────────────────────────────────────────────── */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 64px var(--space-4) var(--space-12);
+        background: var(--color-bg);
+        color: var(--color-text);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ── top bar ───────────────────────────────────────────────────── */
+      #bar {
+        position: fixed;
+        inset: 0 0 auto 0;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+        align-items: center;
+        padding: var(--space-2) var(--space-4);
+        background: var(--color-surface);
+        border-bottom: 1px solid var(--color-border);
+        font-size: var(--text-sm);
+      }
+      #bar b {
+        font-weight: var(--semibold);
+      }
+      #bar label {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        color: var(--color-text-muted);
+      }
+      #bar select {
+        font: inherit;
+        background: var(--color-surface-raised);
+        color: var(--color-text);
+        border: 1px solid var(--color-border-strong);
+        border-radius: var(--radius-sm);
+        padding: 2px 6px;
+      }
+      .spacer {
+        flex: 1;
+      }
+
+      /* ── columns ───────────────────────────────────────────────────── */
+      #cols {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(256px, 1fr));
+        gap: var(--space-6);
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      .col h2 {
+        margin: 0 0 4px;
+        font-size: var(--text-base);
+        font-weight: var(--semibold);
+      }
+      .col h2 .star {
+        color: var(--accent);
+      }
+      .col p.rule {
+        margin: 0 0 var(--space-3);
+        min-height: 3.2em;
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+        line-height: 1.4;
+      }
+      .col.ref {
+        opacity: 0.72;
+      }
+
+      /* ── the tier-2 panel (NavShell__tier2) ───────────────────────── */
+      .tier2 {
+        --tier2-row-padding-inline: 8px;
+        width: 256px;
+        max-width: 100%;
+        background: var(--navbar-background);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: var(--space-2) 0;
+      }
+      .NavItem {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 4px var(--tier2-row-padding-inline);
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-size: 1rem;
+        line-height: 1.6;
+        color: var(--navbar-inactive, var(--navbar-accent));
+        transition: color 250ms;
+        text-align: start;
+        font-family: var(--font-sans);
+      }
+      .NavItem__icon {
+        width: 24px;
+        flex: none;
+        display: inline-flex;
+        justify-content: center;
+      }
+      .NavItem:hover {
+        background-color: var(--navbar-active-background);
+        transition: 0.1s;
+        padding-inline-start: 12px;
+      }
+      .NavItem.active {
+        color: var(--navbar-active, var(--accent-overlay, var(--accent)));
+        background-color: var(--navbar-active-background);
+      }
+      .NavItem:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: -3px;
+      }
+      .divider {
+        height: 1px;
+        margin: var(--space-2) var(--tier2-row-padding-inline);
+        background: var(--color-border-strong);
+      }
+
+      /* Option 3 only: text rows in group 1 indent to the icon column so
+         both groups share one label edge. Toggleable — see the bar. */
+      .tier2.align-labels .NavItem.textonly {
+        padding-inline-start: calc(var(--tier2-row-padding-inline) + 34px);
+      }
+      .tier2.align-labels .NavItem.textonly:hover {
+        padding-inline-start: calc(12px + 34px);
+      }
+
+      .notes {
+        margin-top: var(--space-3);
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+        line-height: 1.45;
+      }
+      .notes ul {
+        margin: 0;
+        padding-inline-start: 18px;
+      }
+      .notes code {
+        font-size: 0.92em;
+        color: var(--color-text);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="bar">
+      <b>Sketch 007 — Settings nav icons</b>
+      <label
+        >Theme
+        <select id="theme">
+          <option value="default">midnightMirage</option>
+          <option value="gruvbox">gruvbox_dark</option>
+          <option value="dracula">dracula</option>
+        </select>
+      </label>
+      <label
+        >Platform
+        <select id="platform">
+          <option value="mac">macOS / Linux</option>
+          <option value="win">Windows</option>
+        </select>
+      </label>
+      <label
+        ><input type="checkbox" id="align" /> Option 3: indent text rows to
+        icon column</label
+      >
+      <span class="spacer"></span>
+      <span style="color: var(--color-text-muted)"
+        >Click rows to move the active state · hover to see the nudge</span
+      >
+    </div>
+
+    <div id="cols"></div>
+
+    <script>
+      /* Rows from SettingsPanel/index.tsx. `win: false` rows are hidden on
+         Windows exactly as `!isWin &&` hides them today. `cur` = the icon
+         the row ships with now (null = text-only). `opt1` = proposed icon
+         for option 1. */
+      const ROWS = {
+        general: { label: 'General', cur: null, opt1: 'fa-gear' },
+        defaults: { label: 'Game Defaults', cur: null, opt1: 'fa-compact-disc', win: false },
+        advanced: { label: 'Advanced', cur: null, opt1: 'fa-screwdriver-wrench' },
+        wine: { label: 'Wine Manager', cur: 'fa-wine-glass', opt1: 'fa-wine-glass', win: false },
+        appearance: { label: 'Appearance', cur: 'fa-universal-access', opt1: 'fa-palette' },
+        log: { label: 'Log', cur: null, opt1: 'fa-file-lines' },
+        sysinfo: { label: 'System Information', cur: null, opt1: 'fa-microchip' },
+        report: { label: 'Report a problem', cur: null, opt1: 'fa-bug' },
+        docs: { label: 'Documentation', cur: 'fa-book-open', opt1: 'fa-book-open' },
+        about: { label: 'About', cur: 'fa-circle-info', opt1: 'fa-circle-info' },
+        donate: { label: 'Donate', cur: 'fa-mug-saucer', opt1: 'fa-mug-saucer' },
+        tour: { label: 'App Tour', cur: 'fa-circle-question', opt1: 'fa-circle-question' },
+        quit: { label: 'Quit', cur: 'fa-power-off', opt1: 'fa-power-off' }
+      }
+
+      const CURRENT_ORDER = [
+        ['general', 'defaults', 'advanced', 'wine', 'appearance', 'log', 'sysinfo', 'report', 'docs', 'about', 'donate', 'tour', 'quit']
+      ]
+      const GROUPED = [
+        ['general', 'defaults', 'advanced', 'appearance', 'wine', 'log', 'sysinfo'],
+        ['report', 'docs', 'tour', 'about', 'donate', 'quit']
+      ]
+
+      const COLS = [
+        {
+          id: 'current',
+          ref: true,
+          title: 'Current (reference)',
+          rule: 'Icons on rows that were top-level in Heroic’s old sidebar; text on rows from its Settings submenu. Interleaved.',
+          groups: CURRENT_ORDER,
+          icon: (k) => ROWS[k].cur,
+          notes: []
+        },
+        {
+          id: 'opt1',
+          title: 'Option 1 — icons on every row <span class="star">★ Selected</span>',
+          rule: 'Every row gets an icon. Two groups split by a divider: settings pages / help &amp; app actions.',
+          groups: GROUPED,
+          icon: (k) => ROWS[k].opt1,
+          notes: [
+            'New glyphs: General <code>gear</code>, Game Defaults <code>compact-disc</code>, Advanced <code>screwdriver-wrench</code>, Log <code>file-lines</code>, System Info <code>microchip</code>, Report <code>bug</code>.',
+            'Appearance swaps <code>universal-access</code> → <code>palette</code>: the row was renamed from Accessibility, the glyph wasn’t.',
+            'Avoided <code>gamepad</code> / <code>sliders</code> — those are already the Games and Settings tier-1 tab icons.'
+          ]
+        },
+        {
+          id: 'opt3',
+          title: 'Option 3 — icons mark actions',
+          rule: 'Same two groups. Settings pages are text-only; only help &amp; app actions carry icons.',
+          groups: GROUPED,
+          icon: (k, gi) => (gi === 0 ? null : ROWS[k].opt1),
+          notes: [
+            'Wine Manager and Appearance lose their icons — they are settings pages under this rule.',
+            'Toggle “indent text rows” in the bar to see the labels share one edge vs. hug the left.'
+          ]
+        }
+      ]
+
+      const state = { active: 'general', platform: 'mac', align: false }
+
+      function render() {
+        const root = document.getElementById('cols')
+        root.innerHTML = ''
+        for (const col of COLS) {
+          const el = document.createElement('div')
+          el.className = 'col' + (col.ref ? ' ref' : '')
+          let html = `<h2>${col.title}</h2><p class="rule">${col.rule}</p>`
+          const cls = 'tier2' + (col.id === 'opt3' && state.align ? ' align-labels' : '')
+          html += `<nav class="${cls}">`
+          col.groups.forEach((g, gi) => {
+            if (gi > 0) html += '<div class="divider" role="separator"></div>'
+            for (const k of g) {
+              const r = ROWS[k]
+              if (state.platform === 'win' && r.win === false) continue
+              const ic = col.icon(k, gi)
+              const active = k === state.active ? ' active' : ''
+              html += `<button class="NavItem${active}${ic ? '' : ' textonly'}" data-k="${k}">`
+              if (ic) html += `<span class="NavItem__icon"><i class="fa-solid ${ic}"></i></span>`
+              html += `<span>${r.label}</span></button>`
+            }
+          })
+          html += '</nav>'
+          if (col.notes.length)
+            html += `<div class="notes"><ul>${col.notes.map((n) => `<li>${n}</li>`).join('')}</ul></div>`
+          el.innerHTML = html
+          root.appendChild(el)
+        }
+      }
+
+      document.getElementById('cols').addEventListener('click', (e) => {
+        const b = e.target.closest('.NavItem')
+        if (!b || b.dataset.k === 'quit') return
+        state.active = b.dataset.k
+        render()
+      })
+      document.getElementById('theme').addEventListener('change', (e) => {
+        document.querySelector('link[href*=themes]').href = '../themes/' + e.target.value + '.css'
+      })
+      document.getElementById('platform').addEventListener('change', (e) => {
+        state.platform = e.target.value
+        if (state.platform === 'win' && ROWS[state.active].win === false) state.active = 'general'
+        render()
+      })
+      document.getElementById('align').addEventListener('change', (e) => {
+        state.align = e.target.checked
+        render()
+      })
+      render()
+    </script>
+  </body>
+</html>
