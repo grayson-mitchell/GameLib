@@ -42,8 +42,9 @@ throttle. Steam, Epic and GOG rows stay single-runner and their existing tests a
 
 Commits: 37563875e (test), c2666b23a (feat, module), 60d3d880f (feat, caller wiring).
 
-- Live check NOT yet done (human step): leave `/store/amazon` after an Epic-delivered Prime
-  claim, without a manual Refresh, and confirm the claim appears and the log shows
-  `origin=amazon-store-exit runner=legendary` (and `[refreshLibrary] runner=legendary
-  origin=amazon-store-exit`). Run it under `pnpm tauri:dev`; the change is frontend-only, so no
-  sidecar rebuild is needed.
+- Live check PASSED 2026-11-05 (operator): Epic-delivered Prime claim *Ad Infinitum* appeared
+  after leaving `/store/amazon` with no manual Refresh. Log 18:48:59 shows
+  `[amazonStoreExitRefresh] origin=amazon-store-exit runner=legendary outcome=refreshed` and
+  `[refreshLibrary] runner=legendary origin=amazon-store-exit`; legendary went 18 -> 19 entries at
+  18:49:05. The tile was not visible at first only because the title is Windows-only (not Mac
+  native), so the grid's runnability view did not show it; it is there under the non-native view.
