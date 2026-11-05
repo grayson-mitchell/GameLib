@@ -36,7 +36,7 @@ import {
 import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
 import { parseMetacriticScore } from 'common/metacriticScore'
-import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { checkConnectivityNow } from 'backend/connectivityNow'
 import { reportDetectedFix } from 'backend/knownFixReport'
 import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
@@ -186,8 +186,11 @@ import { downloadSteamDepots, prescreenBridgeDepots } from './depot'
 import { ensureSteamClientReady } from './clientSetup' // Plan 10 seam
 import {
   resolveSteamInstallTarget,
+  resolveSteamLibraryRoot,
   UnsafeInstalldirError
 } from './installLocation' // Plan 09 seam
+import { isSteamExperimentalInstallAppEnabled } from './experimentalInstallAppSetting'
+import { requestSteamInstallApp } from './steamInstallApp'
 import { classifyDepotError } from './depotErrors'
 import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
 // Phase 24 Plan 08 (R4/R7): allowlist-based bridge-vs-fallback routing.
@@ -2078,6 +2081,41 @@ export default class SteamGame implements Game {
       }
     }
 
+    // quick 261105-ord: opt-in macOS "Steam Experimental InstallApp Feature".
+    // Ask the running Steam client to install through its internal
+    // IClientAppManager::InstallApp so no Steam window / dialog opens. Any
+    // 'unavailable' outcome falls through to the unchanged steam://install
+    // hand-off below; a Steam-reported EAppUpdateError is surfaced, not
+    // swallowed.
+    if (isSteamExperimentalInstallAppEnabled()) {
+      const libraryPath = await resolveSteamLibraryRoot(args?.path).catch(
+        () => undefined
+      )
+      const outcome = await requestSteamInstallApp(this.appId, { libraryPath })
+      if (outcome.kind === 'ok') {
+        logInfo(
+          `SteamGame: Steam is installing appId ${this.appId} via InstallApp (library folder index ${outcome.folderIndex})`,
+          LogPrefix.Steam
+        )
+        startInstallPolling(this.appId, { delegatedToSteamClient: true })
+        return { status: 'done' }
+      }
+      if (outcome.kind === 'error') {
+        logError(
+          `SteamGame: Steam refused InstallApp for appId ${this.appId} (EAppUpdateError ${outcome.code})`,
+          LogPrefix.Steam
+        )
+        return {
+          status: 'error',
+          error: `Steam refused the install of ${this.appId} (EAppUpdateError ${outcome.code})`
+        }
+      }
+      logInfo(
+        `SteamGame: InstallApp unavailable for appId ${this.appId} (${outcome.reason}) — falling back to steam://install`,
+        LogPrefix.Steam
+      )
+    }
+
     logInfo(
       `SteamGame: delegating install for appId ${this.appId} via ${url}`,
       LogPrefix.Steam
@@ -3326,10 +3364,38 @@ export default class SteamGame implements Game {
       // depot download finished here (the lease is released first so the
       // go-offline wrap is restored). Steam-performed installs (steam-client,
       // bottle, bridge, pollerSource) never reach this branch.
+      // quick 261105-ord: with the experimental InstallApp setting ON, a
+      // running Steam is first asked to adopt the install directly; only a
+      // non-ok outcome falls through to the record below.
       if (deferredPoll.handoff && leasedResult.status === 'done') {
         const handoff = deferredPoll.handoff
         const pid = await probeMacSteamPid().catch(() => null)
-        if (pid !== null) {
+        let adoptedByInstallApp = false
+        if (pid !== null && isSteamExperimentalInstallAppEnabled()) {
+          const outcome = await requestSteamInstallApp(this.appId, {
+            libraryPath: dirname(dirname(handoff.manifestPath))
+          })
+          if (outcome.kind === 'ok') {
+            adoptedByInstallApp = true
+            clearPendingAdoption(this.appId)
+            logInfo(
+              `SteamGame: Steam adopted appId ${this.appId} via InstallApp without a restart`,
+              LogPrefix.Steam
+            )
+          } else {
+            logWarning(
+              `SteamGame: InstallApp adoption of ${this.appId} not used (${
+                outcome.kind === 'error'
+                  ? `EAppUpdateError ${outcome.code}`
+                  : outcome.reason
+              }) — recording restart-on-Play instead`,
+              LogPrefix.Steam
+            )
+          }
+        }
+        if (adoptedByInstallApp) {
+          // Steam already knows the install; nothing to record.
+        } else if (pid !== null) {
           const baseline = readAcfSnapshot(handoff.manifestPath)
           if (baseline) {
             recordPendingAdoption(this.appId, {

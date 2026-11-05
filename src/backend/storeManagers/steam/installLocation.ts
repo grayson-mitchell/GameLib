@@ -362,6 +362,19 @@ function resolveOverride(
 }
 
 /**
+ * quick 261105-ord: the registered Steam library ROOT an install override maps
+ * to (D-08 rule via resolveOverride), or undefined when there are no libraries.
+ * Used to hand Steam's own InstallApp a folder it already knows.
+ */
+export async function resolveSteamLibraryRoot(
+  overridePath?: string
+): Promise<string | undefined> {
+  const libraries = await listSteamLibraryTargets()
+  if (!libraries.length) return undefined
+  return resolveOverride(overridePath, libraries).path
+}
+
+/**
  * Resolves the steamapps dir + installdir a depot download should target.
  * Replaces Plan 07's first-library stub: default is the primary registered
  * library (D-09 zero-friction), an `args.path` override is honoured only

@@ -78,10 +78,13 @@ import { library, pendingFetches } from '../state'
 import { SteamUser } from '../user'
 import type { GameInfo, InstallParams } from 'common/types'
 import { isSteamNativeInstallEnabled } from '../nativeInstallSetting'
+import { isSteamExperimentalInstallAppEnabled } from '../experimentalInstallAppSetting'
+import { requestSteamInstallApp } from '../steamInstallApp'
 import { downloadSteamDepots, prescreenBridgeDepots } from '../depot'
 import { ensureSteamClientReady } from '../clientSetup'
 import {
   resolveSteamInstallTarget,
+  resolveSteamLibraryRoot,
   UnsafeInstalldirError
 } from '../installLocation'
 import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
@@ -671,6 +674,16 @@ jest.mock('../nativeInstallSetting', () => ({
   isSteamNativeInstallEnabled: jest.fn()
 }))
 
+// quick 261105-ord: experimental InstallApp accessor + helper caller. Plain
+// jest.fn()s: resetMocks makes the accessor return undefined (OFF) unless a
+// test sets it, so every pre-existing test is unaffected.
+jest.mock('../experimentalInstallAppSetting', () => ({
+  isSteamExperimentalInstallAppEnabled: jest.fn()
+}))
+jest.mock('../steamInstallApp', () => ({
+  requestSteamInstallApp: jest.fn()
+}))
+
 // ── depot.ts mock — downloadSteamDepots + prescreenBridgeDepots (D-51-06,
 // Plan 17) are the only two games.ts needs; depot.ts itself pulls in
 // steam-user's heavy internal manifest parser, which games.test.ts has no
@@ -689,6 +702,7 @@ jest.mock('../clientSetup', () => ({
 }))
 jest.mock('../installLocation', () => ({
   resolveSteamInstallTarget: jest.fn(),
+  resolveSteamLibraryRoot: jest.fn(),
   // T-37-01/T-37-03: real class (not a stub) so `err instanceof
   // UnsafeInstalldirError` in games.ts's catch block works against an error
   // a test constructs via `new UnsafeInstalldirError(...)` on the mocked
@@ -15023,6 +15037,201 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
 })
 
 // ── Phase 59 (59-10): per-launch engine selection and the launch deadline ────
+describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
+  let shellOpenExternal: jest.Mock
+  let startInstallPollingSpy: jest.SpyInstance
+  let envMock: any
+  const adoption = () =>
+    jest.requireMock<Record<string, jest.Mock>>('../macSteamAdoption')
+  const settingOn = () =>
+    (isSteamExperimentalInstallAppEnabled as jest.Mock).mockReturnValue(true)
+  const installApp = () => requestSteamInstallApp as jest.Mock
+  const TARGET = {
+    targetSteamappsDir: '/mock/steam/steamapps',
+    installdir: APP_ID
+  }
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    const { shell } = jest.requireMock('backend/platform')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    startInstallPollingSpy = jest
+      .spyOn(libraryModule, 'startInstallPolling')
+      .mockImplementation(() => {})
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: true
+    })
+    ;(isBottleReady as jest.Mock).mockReturnValue(false)
+    ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
+    ;(resolveSteamLibraryRoot as jest.Mock).mockResolvedValue('/mock/steam')
+    adoption().probeMacSteamPid.mockResolvedValue(null)
+    adoption().readAcfSnapshot.mockReturnValue({ mtimeMs: 1, content: 'x' })
+    adoption().readPendingAdoption.mockReturnValue(undefined)
+  })
+
+  afterEach(() => {
+    startInstallPollingSpy.mockRestore()
+    envMock.isMac = false
+  })
+
+  describe('downloader OFF route (steam://install)', () => {
+    beforeEach(() => {
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
+    })
+
+    it('ok: no openExternal, polls delegated, passes the resolved library root', async () => {
+      settingOn()
+      installApp().mockResolvedValue({ kind: 'ok', folderIndex: 0 })
+
+      const result = await new SteamGame(APP_ID).install({
+        path: '/mock/steam'
+      } as any)
+
+      expect(result).toEqual({ status: 'done' })
+      expect(resolveSteamLibraryRoot).toHaveBeenCalledWith('/mock/steam')
+      expect(installApp()).toHaveBeenCalledWith(APP_ID, {
+        libraryPath: '/mock/steam'
+      })
+      expect(shellOpenExternal).not.toHaveBeenCalled()
+      expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+        delegatedToSteamClient: true
+      })
+    })
+
+    it('unavailable: falls back to steam://install with the same polling call', async () => {
+      settingOn()
+      installApp().mockResolvedValue({
+        kind: 'unavailable',
+        reason: 'steam-not-running'
+      })
+
+      const result = await new SteamGame(APP_ID).install({} as any)
+
+      expect(result).toEqual({ status: 'done' })
+      expect(shellOpenExternal).toHaveBeenCalledWith(
+        `steam://install/${APP_ID}`
+      )
+      expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+        delegatedToSteamClient: true
+      })
+    })
+
+    it('error code 2: returns an install error naming the code, no openExternal, no polling', async () => {
+      settingOn()
+      installApp().mockResolvedValue({ kind: 'error', code: 2 })
+
+      const result = await new SteamGame(APP_ID).install({} as any)
+
+      expect(result.status).toBe('error')
+      expect((result as { error: string }).error).toContain('EAppUpdateError 2')
+      expect(shellOpenExternal).not.toHaveBeenCalled()
+      expect(startInstallPollingSpy).not.toHaveBeenCalled()
+    })
+
+    it('Steam client needs install: deferred as today, helper never called', async () => {
+      settingOn()
+      ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({
+        ready: false,
+        status: 'needs-install'
+      })
+
+      const result = await new SteamGame(APP_ID).install({} as any)
+
+      expect(result).toEqual({ status: 'done', deferredToSetup: true })
+      expect(installApp()).not.toHaveBeenCalled()
+    })
+
+    it('setting OFF: helper never called, steam://install as before', async () => {
+      await new SteamGame(APP_ID).install({} as any)
+
+      expect(installApp()).not.toHaveBeenCalled()
+      expect(shellOpenExternal).toHaveBeenCalledWith(
+        `steam://install/${APP_ID}`
+      )
+    })
+  })
+
+  describe('downloader ON route (adoption after GameLib download)', () => {
+    beforeEach(() => {
+      ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
+      ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue(TARGET)
+      ;(createAbortController as jest.Mock).mockReturnValue({
+        signal: 'mock-signal'
+      })
+      ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+    })
+
+    it('Steam running + ok: no pending record, record cleared, polling opts unchanged, library root derived from the manifest', async () => {
+      settingOn()
+      adoption().probeMacSteamPid.mockResolvedValue(123)
+      installApp().mockResolvedValue({ kind: 'ok', folderIndex: 0 })
+
+      const result = await new SteamGame(APP_ID).install({} as any)
+
+      expect(result).toEqual({ status: 'done' })
+      expect(installApp()).toHaveBeenCalledWith(APP_ID, {
+        libraryPath: '/mock/steam'
+      })
+      expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
+      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+      expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+        isNativeHandoff: true,
+        skippedDepots: [],
+        macNativeRoute: true
+      })
+    })
+
+    it.each([
+      [{ kind: 'unavailable', reason: 'not-signed-in' }],
+      [{ kind: 'error', code: 18 }]
+    ])(
+      'Steam running + %j: records the pending adoption exactly as today',
+      async (outcome) => {
+        settingOn()
+        adoption().probeMacSteamPid.mockResolvedValue(123)
+        installApp().mockResolvedValue(outcome)
+
+        const result = await new SteamGame(APP_ID).install({} as any)
+
+        expect(result).toEqual({ status: 'done' })
+        expect(adoption().recordPendingAdoption).toHaveBeenCalledTimes(1)
+        expect(adoption().recordPendingAdoption).toHaveBeenCalledWith(
+          APP_ID,
+          expect.objectContaining({ steamPid: 123 })
+        )
+      }
+    )
+
+    it('Steam not running: helper not called, stale record cleared', async () => {
+      settingOn()
+      adoption().probeMacSteamPid.mockResolvedValue(null)
+
+      await new SteamGame(APP_ID).install({} as any)
+
+      expect(installApp()).not.toHaveBeenCalled()
+      expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+      expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
+    })
+
+    it('setting OFF: helper never called, pending adoption recorded as today', async () => {
+      adoption().probeMacSteamPid.mockResolvedValue(123)
+
+      await new SteamGame(APP_ID).install({} as any)
+
+      expect(installApp()).not.toHaveBeenCalled()
+      expect(adoption().recordPendingAdoption).toHaveBeenCalledTimes(1)
+    })
+  })
+})
+
 describe('SteamGame.launch() — phase 59 engine selection and launch deadline (59-10)', () => {
   const ID = '570'
   const PER_GAME = `GameLibSteamBridge-${ID}`
