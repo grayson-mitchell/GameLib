@@ -173,7 +173,7 @@ import type { OverlayRunnerReady } from './bridge/overlay/overlayRunnerClone'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import type { CrossoverPreflight } from './engine/engineDecision'
-import type { EngineSelection } from './engine/engineTypes'
+import type { EngineSelection, NonCrossoverEngine } from './engine/engineTypes'
 import type { LaunchDeadline } from './engine/launchDeadline'
 import { noteSteamAuthTrigger } from './authTrigger'
 // quick-260817-d61: verified during planning that user.ts imports nothing
@@ -260,7 +260,6 @@ import {
 } from 'backend/constants/paths'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import type { EnginePin } from './engine/enginePins'
-import type { NonCrossoverEngine } from './engine/engineTypes'
 
 /** The project-wide appId shape guard (clientSetup.ts, installFormIpc.ts,
  * bottle.ts, bridge/allowlist.ts all carry the identical regex). Used by

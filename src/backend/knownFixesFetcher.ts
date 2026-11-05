@@ -100,7 +100,7 @@ async function run(appName: string, runner: Runner, get: KnownFixesGet) {
       res = await get(url)
     } catch (error) {
       logWarning(
-        `Known fixes: ${label} request failed for ${url}: ${error}`,
+        `Known fixes: ${label} request failed for ${url}: ${String(error)}`,
         LogPrefix.Backend
       )
       return
@@ -123,7 +123,7 @@ async function run(appName: string, runner: Runner, get: KnownFixesGet) {
       )
     } catch (error) {
       logWarning(
-        `Known fixes: ${label} body for ${url} is not valid JSON: ${error}`,
+        `Known fixes: ${label} body for ${url} is not valid JSON: ${String(error)}`,
         LogPrefix.Backend
       )
       return
@@ -163,7 +163,7 @@ export async function fetchRemoteKnownFixes(
     await run(appName, runner, get)
   } catch (error) {
     logWarning(
-      `Known fixes fetch failed for ${appName}: ${error}`,
+      `Known fixes fetch failed for ${appName}: ${String(error)}`,
       LogPrefix.Backend
     )
   }

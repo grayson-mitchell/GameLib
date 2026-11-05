@@ -409,7 +409,7 @@ export function pruneUnpinnedEngines(): void {
       rmSync(full, { recursive: true, force: true })
     }
   } catch (err) {
-    logWarning(`Steam engine: prune failed: ${err}`, LogPrefix.Steam)
+    logWarning(`Steam engine: prune failed: ${String(err)}`, LogPrefix.Steam)
   }
 }
 
@@ -440,7 +440,7 @@ export function sweepStaleEngineTemps(): void {
         removed++
       } catch (err) {
         logWarning(
-          `Steam engine: could not remove stale temp ${name}: ${err}`,
+          `Steam engine: could not remove stale temp ${name}: ${String(err)}`,
           LogPrefix.Steam
         )
       }
@@ -452,6 +452,9 @@ export function sweepStaleEngineTemps(): void {
       )
     }
   } catch (err) {
-    logWarning(`Steam engine: temp sweep failed: ${err}`, LogPrefix.Steam)
+    logWarning(
+      `Steam engine: temp sweep failed: ${String(err)}`,
+      LogPrefix.Steam
+    )
   }
 }

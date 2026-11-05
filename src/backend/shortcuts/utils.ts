@@ -16,7 +16,7 @@ function createImage(
       encoding: 'ascii'
     })
   } catch (error) {
-    return `${error}`
+    return String(error)
   }
   return
 }
@@ -32,7 +32,7 @@ async function downloadImage(
       abortSignal: createAbortController(imageURL).signal
     })
   } catch (error) {
-    return `Donwloading of ${imageURL} failed with:\n${error}`
+    return `Donwloading of ${imageURL} failed with:\n${String(error)}`
   }
   return
 }
@@ -41,7 +41,7 @@ function removeImage(imagePath: string): string | undefined {
   try {
     unlinkSync(imagePath)
   } catch (error) {
-    return `Removing of ${imagePath} failed with:\n${error}`
+    return `Removing of ${imagePath} failed with:\n${String(error)}`
   }
   return
 }
