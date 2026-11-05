@@ -6,6 +6,7 @@ jest.mock('backend/logger', () => ({
 }))
 jest.mock('../steamClientProcess', () => ({ listSteamClientPids: jest.fn() }))
 
+import { buildWatchdogSpawn } from '../childWatchdog'
 import {
   readSteamDownloadMonitor,
   startSteamDownloadMonitor,
@@ -37,6 +38,7 @@ function setup(over: Partial<MonitorDeps> & { tail?: string[] } = {}) {
     spawn: spawnFn,
     readTail: () => ({ text: tails.shift() ?? '', offset: 1 }),
     now: () => (t += 1000),
+    parentPid: 4242,
     ...over
   }
   return { child, deps, spawnFn }
@@ -51,26 +53,28 @@ const block = (rows: Record<string, number>) =>
 afterEach(() => stopAllSteamDownloadMonitors())
 
 describe('steamDownloadMonitor', () => {
-  it('spawns script/nettop for the lowest pid with no env, and unrefs', async () => {
+  it('spawns the watchdog around script/nettop for the lowest pid with no env, and unrefs', async () => {
     const { deps, spawnFn, child } = setup()
     await startSteamDownloadMonitor('43160', deps)
-    expect(spawnFn).toHaveBeenCalledWith(
+    const inner = [
       '/usr/bin/script',
-      [
-        '-q',
-        '/dev/null',
-        '/usr/bin/nettop',
-        '-x',
-        '-n',
-        '-L',
-        '0',
-        '-s',
-        '1',
-        '-J',
-        'bytes_in',
-        '-p',
-        '500'
-      ],
+      '-q',
+      '/dev/null',
+      '/usr/bin/nettop',
+      '-x',
+      '-n',
+      '-L',
+      '0',
+      '-s',
+      '1',
+      '-J',
+      'bytes_in',
+      '-p',
+      '500'
+    ]
+    expect(spawnFn).toHaveBeenCalledWith(
+      '/bin/sh',
+      buildWatchdogSpawn(4242, 500, inner).args,
       { stdio: ['ignore', 'pipe', 'ignore'] }
     )
     const opts = (spawnFn.mock.calls[0] as unknown[])[2] as object

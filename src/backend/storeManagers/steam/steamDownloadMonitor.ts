@@ -11,16 +11,21 @@
  * Two-profile rule (CLAUDE.md "Fake-HOME isolation"): nettop reads no user profile and the spawn
  * passes no `env`, matching steamClientProcess.ts. There is no real-profile arm.
  *
- * Sidecar exit contract: the child and its stdout socket are unref'd (a piped stdout socket holds
- * the loop even after child.unref()), nothing runs at import, there is no timer or watcher, and
- * start does no network work. The child is killed by stopSteamDownloadMonitor (poll stop) and by
- * stopAllSteamDownloadMonitors (stdin EOF, see stdinEofRelease.ts). It is non-detached, so the
- * Rust shutdown_child process-group SIGTERM is the backstop.
+ * Sidecar exit contract: the node child is a /bin/sh watchdog (childWatchdog.ts) that runs
+ * script/nettop; the child and its stdout socket are unref'd (a piped stdout socket holds the
+ * loop even after child.unref()), nothing runs at import, node adds no timer or watcher, and
+ * start does no network work. The watchdog polls the sidecar pid, so a hard kill (SIGKILL, Force
+ * Quit) takes the tree down within about 1s, and it exits when the pinned Steam pid exits. Clean
+ * stops go through stopSteamDownloadMonitor (poll stop) and stopAllSteamDownloadMonitors (stdin
+ * EOF, see stdinEofRelease.ts). The Rust shutdown_child process-group SIGTERM remains the
+ * backstop for normal exit: the watchdog traps it and kills script and nettop. nettop runs in
+ * script's own pty session, so the group signal never reached it directly.
  */
 import { spawn } from 'child_process'
 import { closeSync, fstatSync, openSync, readSync } from 'fs'
 import { join } from 'path'
 import { logWarning, LogPrefix } from 'backend/logger'
+import { buildWatchdogSpawn } from './childWatchdog'
 import { listSteamClientPids } from './steamClientProcess'
 import {
   activeCount,
@@ -63,6 +68,8 @@ export type MonitorDeps = {
   /** Returns newly appended log text and the new offset. `offset` undefined = first read. */
   readTail: (offset: number | undefined) => { text: string; offset: number }
   now: () => number
+  /** The sidecar pid the watchdog polls for parent death. */
+  parentPid: number
 }
 
 type Monitor = {
@@ -128,7 +135,8 @@ function defaultDeps(): MonitorDeps {
       // No `env`: nettop reads no user profile (two-profile rule, see module docstring).
       spawn(file, args, options) as unknown as MonitorChild,
     readTail: defaultReadTail,
-    now: () => Date.now()
+    now: () => Date.now(),
+    parentPid: process.pid
   }
 }
 
@@ -183,25 +191,26 @@ export async function startSteamDownloadMonitor(
     }
     const pid = Math.min(...pids)
     scanLog(m)
-    const child = deps.spawn(
+    const inner = [
       '/usr/bin/script',
-      [
-        '-q',
-        '/dev/null',
-        '/usr/bin/nettop',
-        '-x',
-        '-n',
-        '-L',
-        '0',
-        '-s',
-        '1',
-        '-J',
-        'bytes_in',
-        '-p',
-        String(pid)
-      ],
-      { stdio: ['ignore', 'pipe', 'ignore'] }
-    )
+      '-q',
+      '/dev/null',
+      '/usr/bin/nettop',
+      '-x',
+      '-n',
+      '-L',
+      '0',
+      '-s',
+      '1',
+      '-J',
+      'bytes_in',
+      '-p',
+      String(pid)
+    ]
+    const { file, args } = buildWatchdogSpawn(deps.parentPid, pid, inner)
+    const child = deps.spawn(file, args, {
+      stdio: ['ignore', 'pipe', 'ignore']
+    })
     m.child = child
     let buf = ''
     child.stdout?.on('data', (d) => {
