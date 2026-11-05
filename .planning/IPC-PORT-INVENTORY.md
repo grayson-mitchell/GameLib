@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 237 |
-| Ported to sidecar | 82 |
+| Unique channels | 238 |
+| Ported to sidecar | 83 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -703,3 +703,13 @@ both numbers moved together by +2 and `Unported` (159) is unchanged.
 - **Phase 33 D-04** — boot-time auto-resume, deferred to Phase 35.
 - **Parked renderer bugs** (`debug-uninstall-game-vanishes-parked`) must be re-tested against
   Tauri rather than fixed in Electron.
+
+## Quick 261105-upw — InstallApp-route discriminator (1 channel) — **PORTED**
+
+`getSteamInstallAppTargets` is BRAND NEW (quick 261105-upw), invoke-kind (`makeHandlerInvoker`,
+`src/preload/api/steam.ts`), registered only in the sidecar, in `installFlowRegistration.ts`. It is
+filed in the "Already ported" bucket line. There is no Electron leg, so `Ported to sidecar` rises
+along with `Unique channels`.
+
+**Unique channels raised 237 → 238, Ported to sidecar raised 82 → 83 (quick 261105-upw, 2026-11-05):**
+both numbers moved together by +1 and `Unported` (159) is unchanged.
