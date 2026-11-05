@@ -558,3 +558,30 @@ capabilities: (1) a **modal** login window that cannot get lost behind the main 
 | 053b | renewal-mint | standard | Given GameLib's SteamClient refresh token, when GenerateAccessTokenForApp is called with renewal ALLOWED (no CM logon), then a web access token is issued | ✗ INVALIDATED (AccessDenied 15 on CM-websocket and HTTPS; no new refresh token; Keychain verified unchanged, backup deleted) | steam, steam-session, access-token, renewal, live |
 | 065 | steamclient-installapp | standard | Given running native Mac Steam, when a separate native process loads steamclient.dylib, connects via CLIENTENGINE_INTERFACE_VERSION005 and calls IClientAppManager::InstallApp(appId), then Steam downloads it with no main window and no install dialog | ✓ VALIDATED (macOS n=1, TF2 440: EAppUpdateError 0, ACF + downloading/440 within 5s, operator saw no window/dialog; OpenSteamClient header indices stale — engine GetIClientAppManager is slot 43 not 45 and a new app-manager method at slot 8 shifts 8+; resolved by RTTI name + IPC function-ID high half, so a build must verify at runtime and fall back to steam://install; untested: Steam not running, unowned app, Windows/Linux) | steam, macos, install, steamclient, iclientengine, iclientappmanager, ipc, no-ui |
 | 066 | steamclient-register-install | standard | Given a complete game on disk plus an ACF the running Mac Steam has not loaded, when a separate process calls an IClientAppManager method, then Steam registers it Fully Installed with no restart, re-download or window | ✓ VALIDATED (macOS n=1, WazHack 264160: control stays state 1 for 30s; RefreshLibraryFolders no effect; RecoverAppFromFolder → 18 NotInstalled (repair-only); InstallApp(264160) → "Found 171 pre-existing matching files", manifest-only fetch, state 4 in ~2s, no window, toast + library entry → replaces "Restart Steam to finish"; untested: GameLib-written ACF, large/multi-depot, non-default folder, Windows/Linux) | steam, macos, install, adoption, acf, steamclient, iclientappmanager, ipc, no-ui |
+
+## Idea E — Incremental Rust migration (Node sidecar → Rust, piece by piece)
+
+The sidecar exists because the backend is Node and Tauri has no JavaScript runtime (spikes
+009–012). This line sizes moving it to Rust one piece at a time through `rustInvoke`, keeping
+TypeScript signatures, with a parity harness and a TypeScript fallback flag per step. Phase 63
+is the first step (the executable scanners). The Steam depot pipeline was the candidate second
+step, on the premise that Rust would make installs faster.
+
+### Requirements (Idea E)
+
+- **A Rust depot pipeline must be justified on CPU, memory or code removal, not speed.** On this
+  machine's connection the Node pipeline is network-bound at ~18 MiB/s with decode at 3 ms per
+  chunk; raising concurrency adds latency and timeouts, not throughput. *(067a)*
+- **Do not raise `TARGET_INFLIGHT_CHUNKS` above 32 on current evidence:** 96 gave no gain and 57
+  timeouts. *(067a)*
+- **Spike harnesses that reuse production Steam code must use production's steam-user options**
+  (`enablePicsCache: false, autoRelogin: false`) and wait for `licenses` before planning; the
+  PICS cache makes the plan's DLC lookup time out. *(067a)*
+
+### Spikes (Idea E)
+
+| # | Name | Type | Validates | Verdict | Tags |
+|---|------|------|-----------|---------|------|
+| 067a | node-pipeline-stage-profile | standard | Given a real Civ V (8930) macOS depot install through today's unchanged Node pipeline, when fetch and decode are timed and CPU/RSS/pool sampled per second, then we know whether the network or decoding limits throughput | ✓ VALIDATED — network-bound (18.3 MiB/s steady at 31.3 in flight × 534 ms; budget 96 → 18.4 MiB/s, 780 ms, 57 timeouts); decode 3 ms/chunk, 16 native workers never saturated; ~1.1 cores, 2.75 GB peak RSS. The Rust speed premise is invalidated | steam, depot, download, throughput, decompress, rust-migration, live |
+| 067b | chunk-decode-bench | comparison | Given 067a's corpus of decrypted chunks, when decompressed offline by Node and by Rust, then compare MiB/s per core with byte-identical output | PENDING (re-scoped after 067a) | depot, decompress, lzma, zip, rust-migration, benchmark |
+| 067c | rust-depot-job | standard | Given the same job description handed over stdin, when a Rust binary runs the whole fetch → write loop, then compare throughput, CPU and memory with 067a, files byte-identical | PENDING (re-scoped after 067a) | depot, download, rust-migration, memory |
