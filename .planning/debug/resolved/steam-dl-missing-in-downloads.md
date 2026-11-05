@@ -1,5 +1,5 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "Native Steam download show in Downloads (todo .planning/todos/pending/2026-11-02-native-steam-download-show-in-downloads.md)"
 created: 2026-11-05
 updated: 2026-11-05
@@ -88,3 +88,8 @@ fix: library.ts flags the poller's gameStatusUpdate `managedBySteam: true` for a
 verification: jest (steam, hooks, DownloadManager, state, common) green, tsc --noEmit clean, prettier clean; new tests library D4/D5, steamManagedModel, statusLabel percent. Live check pending (operator).
 live_percent_fix: steamDownloadProgress.ts clears the update tracker on the content_log `Client version:` session line; tests in steamDownloadMonitor.test.ts and steamDownloadProgress.test.ts.
 files_changed: [src/backend/storeManagers/steam/steamDownloadProgress.ts, src/backend/storeManagers/steam/library.ts, src/common/types.ts, src/frontend/state/GlobalState.tsx, src/frontend/hooks/constants.ts, src/frontend/screens/DownloadManager/index.tsx, src/frontend/screens/DownloadManager/components/SteamManagedItem/*, public/locales/en/gamelib.json, tests]
+
+## Verification (operator, 2026-11-05)
+
+DATA_START "it works now." DATA_END — after `311c98271`, the Downloads "Managed by Steam" row
+shows a live, moving percent during a Steam-performed download.
