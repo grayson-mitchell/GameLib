@@ -335,7 +335,7 @@ mod store_embed_browser_handoff_policy_tests {
                 .unwrap_or_else(|| panic!("missing {marker}"));
             &source[start..(start + 4000).min(source.len())]
         }
-        let main_rs = body_after(include_str!("main.rs"), ".on_new_window({");
+        let main_rs = body_after(include_str!("store_embed.rs"), ".on_new_window({");
         let epic_rs = body_after(
             include_str!("macos_epic_embed.rs"),
             "fn create_web_view_for_navigation_action(",
@@ -364,7 +364,7 @@ mod store_embed_browser_handoff_policy_tests {
     /// download URL never reaches the OS.
     #[test]
     fn tauri_embed_on_download_decides_policy_before_open_external() {
-        let main_rs = include_str!("main.rs");
+        let main_rs = include_str!("store_embed.rs");
         let start = main_rs
             .find(".on_download({")
             .expect("missing .on_download({");
