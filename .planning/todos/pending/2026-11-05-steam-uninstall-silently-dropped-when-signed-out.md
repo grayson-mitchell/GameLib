@@ -34,8 +34,9 @@ This is not specific to the InstallApp setting. **Confirmed for install too**
 reported `not-signed-in` and GameLib fell back to `steam://install/112100` with
 an install poll (`delegatedToSteamClient true`). Steam only raised its sign-in
 window. After sign-in it queued nothing, and GameLib stayed on **Installing**.
-Unlike the uninstall case, there is no manual Steam action that makes GameLib
-recover; the user has to cancel or wait out the cap.
+As with uninstall, the user can recover only by doing the action by hand in
+Steam (the poll would then see the manifest), by cancelling in GameLib, or by
+waiting out the cap. Nothing tells them which.
 
 ## Solution (to decide)
 
