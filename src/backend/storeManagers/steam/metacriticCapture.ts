@@ -74,7 +74,6 @@ export async function captureOwnedAppMetacritic(
 
         const score = parseMetacriticScore(appinfo.common.metacritic_score)
         const existing = steamMetadataStore.get(String(id))
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { metacritic_score: _stale, ...rest } = existing ?? {}
         // Partial entry cast: this bulk writer has no art source, so
         // `existing` can legitimately be absent (same as mergePlatformCapture).
