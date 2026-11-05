@@ -230,10 +230,70 @@ publisher was not decided.
 
 ---
 
+## Views as a segmented control (sketch 005) — HELD, not built
+
+**Status: deliberately held pending Phase 48 scope question 1** (is Library Rows a fifth view that
+swaps the grid for shelves, or does it replace the grid with Views filtering inside every row?).
+Under the second model Views stops meaning "which slice am I looking at" and D's premise weakens.
+Settle that in `/gsd-spec-phase 48` before building D. The sketch is committed (`4f8dac642`).
+
+### Design Decisions
+
+**Winner D: C's segmented block + A's `VIEWS` micro-label.** Views becomes a bordered, rounded
+block of four cells with a filled active cell, under the same uppercase micro-label as the facet
+disclosures below it. The two halves answer two separate complaints: the label answers "no
+title", the filled cell answers "the highlighted bar doesn't look right". Neither A nor C alone
+answered both.
+
+**Why the shipped active row fails** (measured in `themes.scss`, not estimated):
+`--navbar-active-background` is declared in 11 of 11 theme blocks but is a desaturated grey
+lightness step in 10 of them. `--navbar-active` is declared in only 4 of 11. In `gruvbox_dark`
+`--navbar-active` resolves to the same `#f9f5d7` as inactive rows; in `midnightMirage` the
+active text is dimmer than its neighbours. In two of three stress themes "selected" is a grey
+band alone, which reads as a stuck hover.
+
+### CSS Pattern (from the sketch, not shipped)
+
+```css
+.views {
+  border: 1px solid var(--color-border-strong);   /* map to a real app token with a fallback */
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  --seg-active: var(--accent-overlay, var(--accent));  /* skips --navbar-active on purpose */
+}
+.views .row          { padding: 7px var(--space-3); font-size: var(--text-sm); border-radius: 0; }
+.views .row + .row   { border-top: 1px solid var(--color-border); }
+.views .row:hover    { background: var(--navbar-active-background); }
+.views .row.active   { background: var(--seg-active); color: var(--color-bg); font-weight: var(--semibold); }
+.sec-label           { margin-block-end: 6px; }   /* the only addition over variant C */
+```
+
+### Open decisions to settle before implementing
+
+- **The token chain.** D paints from `--accent-overlay → --accent`, not `--navbar-active`.
+  `themeTokens.test.ts`'s `NAVBAR_ACTIVE_CONSUMERS` census therefore will not see it: either
+  correct (it does not consume the token) or a silent gap (a second active-state chain with
+  nothing asserting it survives all 11 themes). Do not pick the option that makes the gate green
+  by being invisible to it. CR-03 already shipped this defect class once.
+- **One new `gamelib:` key** for the `VIEWS` label, with its 48-locale fill.
+- **Root cause is untouched.** gruvbox_dark's `--navbar-active == --navbar-accent` still affects
+  Collections and checked facet rows. Fixing it is an app-wide `themes.scss` change (NavTabs and
+  GamePage consume the token) and belongs in its own todo.
+
+### What to Avoid
+
+- **Do not make Views collapsible.** It has no off state; collapsing it hides the one filter that
+  is always active. Its header is a `<span>`, not a `Dropdown` disclosure.
+- **Do not signal Views selection with the inherited grey bar.** That is the defect.
+- **Do not judge selection in dracula.** It is the one theme where selection is genuinely
+  coloured, so it hides the problem. Judge in gruvbox_dark.
+
+---
+
 ## Origin
 
-Synthesized from sketch: **004**
-Source file: `sources/004-games-filter-panel/index.html`
+Synthesized from sketches: **004**, **005**
+Source files: `sources/004-games-filter-panel/index.html`, `sources/005-views-section-distinction/index.html`
 
 The source is a **working filter engine**, not a mockup — 24 games with store, install state,
 platform, genre, favourite, recency and collection. Search, views, collections and facets all

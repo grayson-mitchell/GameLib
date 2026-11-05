@@ -65,6 +65,19 @@
   --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.55);
 
+  /* Tier-2 nav row tokens — verbatim from themes.scss's
+     body.dracula, body.dracula-classic block, added for sketch 005.
+
+     This is the ONE of the three stress themes where the shipped active row
+     is genuinely coloured: --navbar-active resolves to --accent (#bd93f9).
+     It is therefore the theme a selection treatment looks BEST in, and the
+     least informative one to judge it in. */
+  --navbar-accent: #eae8e5; /* inactive row text */
+  --navbar-active: var(--accent); /* active row text  #bd93f9 */
+  --navbar-active-background: #555869;
+  --accent: #bd93f9;
+  --accent-overlay: #d5b8ff;
+
   --traffic-light-inset: 78px;
   --titlebar-height: 38px;
 }

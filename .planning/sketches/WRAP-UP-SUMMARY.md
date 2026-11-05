@@ -72,3 +72,47 @@ computed **excluding their own facet**.
 
 - **Phase 34.10** — Navigation shell → `references/navigation-shell.md`
 - **Phase 34.11** — Library filtering → `references/library-filtering.md`
+
+---
+
+# Sketch Wrap-Up Summary — second pass
+
+**Date:** 2026-11-05
+**Sketches processed:** 3 (3 included, 0 excluded)
+**Design areas:** Library filtering (appended) · Navigation shell (appended) · Notices and toasts (new)
+**Skill output:** `./.claude/skills/sketch-findings-gamelib/` (append mode)
+
+## Included Sketches
+
+| # | Name | Winner | Design Area |
+|---|------|--------|-------------|
+| 005 | views-section-distinction | **D** — C's segmented block + A's `VIEWS` label | Library filtering — **held**, not built |
+| 006 | launch-notice-toast | **A** — refined stripe | Notices and toasts — shipped `261104-vvz` |
+| 007 | settings-nav-icons | **Option 1** — icons on every row, divider grouping | Navigation shell — shipped `261105-o65` |
+
+## Excluded Sketches
+
+None.
+
+## Key Decisions
+
+**Selection state** (005) — the shipped tier-2 active row is a grey lightness step in 10 of 11
+themes, and in gruvbox_dark `--navbar-active == --navbar-accent`. D answers it with a filled
+segmented cell painted from `--accent-overlay → --accent`. That chain is invisible to the
+`NAVBAR_ACTIVE_CONSUMERS` census, so it has to be settled before building. D is held pending
+Phase 48 scope question 1.
+
+**Toasts** (006) — one fixed bottom-right stack; 10px radius, 3px `--status-warning` leading
+stripe, two-layer shadow; title/body split; 8s hairline pausing on hover and frozen while
+GameLib is backgrounded; slide-right motion, fade-only under reduced motion; dismiss always
+visible.
+
+**Nav-list icons** (007) — every tier-2 nav row is iconed; groups are separated by a divider
+painted from the rows' inactive colour at 0.3 opacity (every `var()` with a fallback), never by
+icon presence; `gamepad` and `sliders` are reserved for tier-1 tabs.
+
+## Housekeeping
+
+`sources/themes/*.css` in the skill were refreshed. The 2026-08-07 copies predated the tier-2 row
+tokens (`--navbar-accent`, `--navbar-active`, `--navbar-active-background`, `--accent`,
+`--accent-overlay`) that sketch 005 added, and sketches 005–007 depend on those tokens.

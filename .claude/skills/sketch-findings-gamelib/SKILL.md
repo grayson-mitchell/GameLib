@@ -1,6 +1,6 @@
 ---
 name: sketch-findings-gamelib
-description: Validated design decisions, CSS patterns, and visual direction from GameLib's navigation-redesign sketches — app-level card/folder tabs replacing the sidebar, the two-tier nav structure, the macOS traffic-light inset, multi-theme survival rules, and the Games library filter panel (search, views, collections, cross-store facets, filter chips). Auto-loaded during UI implementation on GameLib, especially Phases 34.10 and 34.11.
+description: Validated design decisions, CSS patterns, and visual direction from GameLib's navigation-redesign sketches — app-level card/folder tabs replacing the sidebar, the two-tier nav structure, the macOS traffic-light inset, multi-theme survival rules, the Games library filter panel (search, views, collections, cross-store facets, filter chips), the held Views segmented control, tier-2 nav-list icons and grouping dividers, and the bottom-right toast/notice stack. Auto-loaded during UI implementation on GameLib, especially nav, tier-2 panel, library filter and notice/toast work.
 ---
 
 <context>
@@ -20,7 +20,7 @@ Reference points during intake: MUI Tabs (already in the stack), Vercel Geist, m
 `NSSegmentedControl`, Ant Design card tabs, Steam and GOG Galaxy library sidebars, Playnite's
 filter panel.
 
-Sketch session wrapped: 2026-08-07
+Sketch sessions wrapped: 2026-08-07 (001–004), 2026-11-05 (005–007)
 </context>
 
 <design_direction>
@@ -67,12 +67,17 @@ are `.12s–.22s ease`; the one cubic-bezier is `cubic-bezier(.4,0,.2,1)` for pa
 | Area | Reference | Key Decision |
 |---|---|---|
 | Navigation shell | `references/navigation-shell.md` | Card/folder tabs won on **theme survival**, not looks; tier 2 is vertical; Downloads was an ambient ring until 2026-10-12, when the user reversed it (quick 261012-dhs): it is now the fourth tier-1 tab |
-| Library filtering | `references/library-filtering.md` | Hybrid panel — views and collections one click, facets collapsed below, removable chips above the grid; facet counts **exclude their own facet** |
+| Library filtering | `references/library-filtering.md` | Hybrid panel — views and collections one click, facets collapsed below, removable chips above the grid; facet counts **exclude their own facet**. Views as a segmented control (005-D) is **held** pending Phase 48 Q1 |
+| Tier-2 nav icons | `references/navigation-shell.md` § Tier-2 nav lists | Every tier-2 nav row carries an icon; group with a divider tinted from the row colour, never with icon presence; tier-1 glyphs reserved (007) |
+| Notices and toasts | `references/notices-and-toasts.md` | One bottom-right stack; refined warning stripe, title/body, 8s pausable hairline, slide right / fade-only under reduced motion (006) |
 
 ## Phase Mapping
 
 - **Phase 34.10** — navigation shell → read `references/navigation-shell.md`
 - **Phase 34.11** — library filtering → read `references/library-filtering.md`
+- **Phase 48** (Library Rows) — read the held 005 section in `references/library-filtering.md` first
+- **Any tier-2 nav list** (Settings, Stores) → `references/navigation-shell.md` § Tier-2 nav lists
+- **Any transient notice / toast** → `references/notices-and-toasts.md`
 
 ## Theme
 
@@ -82,9 +87,11 @@ any nav change against all three. Dracula is the one that breaks naive implement
 
 ## Source Files
 
-Original sketch HTML is preserved in `sources/`. All four are interactive and self-contained —
-open them directly in a browser. Each carries a toolbar (bottom-right) with a theme switcher,
-viewport widths, and an **Annotate** toggle that renders the 78px traffic-light reserve.
+Original sketch HTML is preserved in `sources/`. All seven are interactive — open them directly in
+a browser (they load `../themes/*.css`, Google Fonts, and 007 loads Font Awesome from cdnjs). Every
+one has a theme switcher. 001–004 add viewport widths and an **Annotate** toggle that renders the
+78px traffic-light reserve; 006 adds reduced-motion and "GameLib in front" toggles; 007 adds a
+macOS/Windows platform toggle.
 
 Sketch 004 is a **working filter engine** over 24 games, not a static mockup.
 </findings_index>
@@ -96,6 +103,9 @@ Sketch 004 is a **working filter engine** over 24 games, not a static mockup.
 - 002-sidebar-overflow-strategy — winner: **B adapted** (two tiers, second level vertical)
 - 003-two-tier-card-nav — winner: **Synthesis** (only Manage Accounts full-bleed)
 - 004-games-filter-panel — winner: **C** (hybrid)
+- 005-views-section-distinction — winner: **D** (segmented block + `VIEWS` label) — HELD, not built
+- 006-launch-notice-toast — winner: **A** (refined stripe) — shipped 261104-vvz
+- 007-settings-nav-icons — winner: **Option 1** (icons on every row, divider grouping) — shipped 261105-o65
 
 Planning record: `.planning/sketches/MANIFEST.md` and each sketch's `README.md`.
 </metadata>

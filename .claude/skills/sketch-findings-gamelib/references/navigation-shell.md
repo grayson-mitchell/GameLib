@@ -270,11 +270,89 @@ matching `id="tab-{index}"`.
 
 ---
 
+## Tier-2 nav lists: icons and grouping (sketch 007)
+
+Shipped in quick `261105-o65` (2026-11-05); live three-theme check passed.
+
+### Design Decisions
+
+**Every row in a tier-2 nav list carries an icon.** Option 1 won over Option 3 (icons only on
+help & app actions, settings pages text-only). The Settings list had icons on 7 of 13 rows, and
+the split was inherited, not designed: rows that were top-level items in Heroic's old sidebar
+kept their icons, rows from its Settings submenu stayed text-only, and the two were interleaved.
+Option 3 encodes a meaning in icon-vs-no-icon that users must learn, and most read it as the same
+inconsistency. Option 1 matches the tier-1 tabs and `StoresPanel`, which are iconed.
+
+**Group with a divider, not with icon presence.** The Settings list is two groups:
+
+```
+General              gear
+Game Defaults        compact-disc         (!isWin)
+Advanced             screwdriver-wrench
+Appearance           palette              (was universal-access; row renamed from Accessibility)
+Wine Manager         wine-glass           (!isWin)
+Log                  file-lines
+System Information   microchip
+──────────────────── divider
+Report a problem     bug
+Documentation        book-open
+App Tour             circle-question
+About                circle-info
+Donate               coffee
+Quit                 power-off            (QuitButton, always last)
+```
+
+**Glyph reservation.** `gamepad` (Games) and `sliders` (Settings) are tier-1 tab icons. Do not
+reuse them for a tier-2 row; the same glyph at two levels reads as the same destination.
+
+### CSS Pattern — the divider
+
+```scss
+.NavShell__tier2 {
+  .NavShell__tier2Divider {
+    height: 0;
+    border: none;
+    border-block-start: 1px solid currentColor;
+    margin: var(--space-xs, 4px) var(--tier2-row-padding-inline, 8px);
+    color: var(--navbar-inactive, var(--navbar-accent, currentColor));
+    opacity: 0.3;
+  }
+}
+```
+
+The line is a faded copy of the rows' own inactive text colour, so it is visible in any theme
+where the rows are readable. Three tokens were rejected: `--divider` (no fallback, a known
+defect site in `NavShell/index.scss`), `--neutral-04` (vanishes on dracula's light navbar), and
+the sketch's `--color-border-strong` (exists only in the sketch themes, not in the app).
+
+### HTML Structure
+
+```tsx
+<NavItem url="/settings/log" icon={faFileLines} label={…} />
+<NavItem url="/settings/systeminfo" icon={faMicrochip} label={…} />
+<div className="NavShell__tier2Divider" role="separator" />
+<NavItem url="/settings/report" icon={faBug} label={…} />
+```
+
+`role="separator"` without `aria-hidden`, so assistive tech still announces the group break. No
+`tabIndex` and no handler, so Tab and controller focus skip it.
+
+### What to Avoid
+
+- **Do not let icon presence carry meaning in a nav list.** It reads as inconsistency.
+- **Do not reuse a tier-1 tab glyph on a tier-2 row.**
+- **Do not paint a divider from `--divider` or a neutral step.** Derive it from the row colour.
+
+---
+
 ## Origin
 
-Synthesized from sketches: **001**, **002**, **003**
+Synthesized from sketches: **001**, **002**, **003**, **007**
 Source files: `sources/001-app-level-tab-bar/`, `sources/002-sidebar-overflow-strategy/`,
-`sources/003-two-tier-card-nav/`
+`sources/003-two-tier-card-nav/`, `sources/007-settings-nav-icons/`
+
+Sketch 007 renders Current / Option 1 / Option 3 side by side with a theme and platform switcher
+(Windows hides Game Defaults and Wine Manager).
 
 All three are interactive. Each has a toolbar (bottom-right) with a theme switcher, viewport
 widths, and an **Annotate** toggle that reveals the traffic-light reserve.

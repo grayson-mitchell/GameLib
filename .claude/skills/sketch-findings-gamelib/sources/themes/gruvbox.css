@@ -65,6 +65,21 @@
   --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.55);
 
+  /* Tier-2 nav row tokens — verbatim from themes.scss's body.gruvbox_dark
+     block, added for sketch 005.
+
+     THE FINDING THIS THEME EXISTS TO EXPOSE: --navbar-active resolves to
+     var(--navbar-accent), which is the SAME #f9f5d7 the INACTIVE rows use.
+     So an active Views row here differs from an inactive one by the grey
+     background bar and by nothing else at all — no colour change, no chroma.
+     Any selection treatment that leans on the active TEXT colour is invisible
+     in this theme. */
+  --navbar-accent: #f9f5d7; /* inactive row text */
+  --navbar-active: var(--navbar-accent); /* active row text — identical */
+  --navbar-active-background: #514f4e;
+  --accent: #b57614;
+  --accent-overlay: #d79921;
+
   --traffic-light-inset: 78px;
   --titlebar-height: 38px;
 }
