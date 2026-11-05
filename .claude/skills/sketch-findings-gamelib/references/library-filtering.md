@@ -230,12 +230,16 @@ publisher was not decided.
 
 ---
 
-## Views as a segmented control (sketch 005) — HELD, not built
+## Views as a segmented control (sketch 005) — unblocked, not yet built
 
-**Status: deliberately held pending Phase 48 scope question 1** (is Library Rows a fifth view that
-swaps the grid for shelves, or does it replace the grid with Views filtering inside every row?).
-Under the second model Views stops meaning "which slice am I looking at" and D's premise weakens.
-Settle that in `/gsd-spec-phase 48` before building D. The sketch is committed (`4f8dac642`).
+**Status: unblocked, not yet built.** D was held on Phase 48's scope question 1 (are Library Rows
+a fifth view, or do they replace the grid?). Phase 48 settled it: rows are **inserted above the
+grid** and the grid behaves as before (`48-CONTEXT.md`, decision 1), which leaves D's
+"which slice am I looking at" premise intact. Building D was explicitly left out of Phase 48.
+
+Phase 48 also added a `FOCUS ROW` panel section with its own `Views` sub-group micro-label
+(`--text-xs`, `--regular`, `--text-secondary`). If D lands, its `VIEWS` label and that sub-group
+label are two treatments of the same word in one panel. Reconcile them when building D.
 
 ### Design Decisions
 

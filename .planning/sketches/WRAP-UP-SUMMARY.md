@@ -86,7 +86,7 @@ computed **excluding their own facet**.
 
 | # | Name | Winner | Design Area |
 |---|------|--------|-------------|
-| 005 | views-section-distinction | **D** — C's segmented block + A's `VIEWS` label | Library filtering — **held**, not built |
+| 005 | views-section-distinction | **D** — C's segmented block + A's `VIEWS` label | Library filtering — unblocked, not yet built |
 | 006 | launch-notice-toast | **A** — refined stripe | Notices and toasts — shipped `261104-vvz` |
 | 007 | settings-nav-icons | **Option 1** — icons on every row, divider grouping | Navigation shell — shipped `261105-o65` |
 
@@ -99,8 +99,8 @@ None.
 **Selection state** (005) — the shipped tier-2 active row is a grey lightness step in 10 of 11
 themes, and in gruvbox_dark `--navbar-active == --navbar-accent`. D answers it with a filled
 segmented cell painted from `--accent-overlay → --accent`. That chain is invisible to the
-`NAVBAR_ACTIVE_CONSUMERS` census, so it has to be settled before building. D is held pending
-Phase 48 scope question 1.
+`NAVBAR_ACTIVE_CONSUMERS` census, so it has to be settled before building. D is unblocked:
+Phase 48 inserted rows above the grid (`48-CONTEXT.md`), but D has not been built.
 
 **Toasts** (006) — one fixed bottom-right stack; 10px radius, 3px `--status-warning` leading
 stripe, two-layer shadow; title/body split; 8s hairline pausing on hover and frozen while
