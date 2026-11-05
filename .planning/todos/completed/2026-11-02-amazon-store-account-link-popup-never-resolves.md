@@ -56,6 +56,7 @@ ruled out.
   system-browser path.
 - Operator live check passed 2026-11-05: the Epic sign-in opened in-app and the account linked
   without leaving the app.
-- Not done: GOG, Ubisoft and other Prime Gaming account links are not allowlisted, because their
-  popup URLs have not been measured. Each needs its own live capture (the new log line shows the
-  host) before it is added.
+- Other Prime Gaming links: none needed today. GOG claims hand you a code that you redeem on
+  GOG's site outside the embed, and the operator confirmed that flow works (2026-11-05). No Ubisoft
+  claims are available to test. If an unworked link popup turns up, the hand-off log line shows its
+  host. Capture it live before adding it to the allowlist.
