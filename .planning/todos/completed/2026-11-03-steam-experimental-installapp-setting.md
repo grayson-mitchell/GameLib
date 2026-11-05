@@ -73,3 +73,33 @@ InstallApp Feature"** setting (default OFF), with today's behaviour as the fallb
 - Setting OFF → behaviour byte-identical to today.
 - Windows/Linux are out of scope until verified the same way. Keep the setting macOS-only, or
   split them into their own todo.
+
+## Closed 2026-11-05 (quick 261105-ord, live gate run 2026-11-05)
+
+Built in quick 261105-ord (`225e562e8`, `17ab5af22`, `10dfe024d`). The modal
+half was done in 261105-upw, and one gate fix in 261105-sqe (`ef698edaa`,
+`fc0509fa2`): an ok InstallApp adoption no longer leaves the game in
+`steam-waiting-for-restart`. Full results are in
+`.planning/quick/261105-ord-steam-experimental-installapp-setting-ma/261105-ord-SUMMARY.md`.
+
+- **Pass:** 1 (headless install), 2 (adoption, after 261105-sqe),
+  3 (multi-depot), 4 (second library), 5 (Steam not running), 7 (bad or
+  unowned appId), 8 (setting OFF).
+  - Item 3 ran on Civilization V (8930, 22 depots): XCOM 200510 and Amnesia
+    57300 have 32-bit Mac builds, so they route to the bottle or bridge and
+    never reach adoption. Steam logged pre-existing matching files for all 22
+    depots and downloaded nothing.
+  - Item 4 ran on a USB drive registered as Steam library 1.
+  - Item 7 ran as a direct helper call (EAppUpdateError 9 for both cases),
+    because GameLib lists only owned apps.
+- **Issue:** 6 (Steam signed out). The fallback is clean and nothing crashes,
+  but the findings are filed as their own todos:
+  - `.planning/todos/pending/2026-11-05-steam-restart-hold-brittle-discuss.md`:
+    the hold releases only on Steam process exit, sign-in rescans manifests
+    without one, and the hold behaves oddly across a GameLib restart.
+  - `.planning/todos/pending/2026-11-05-steam-uninstall-silently-dropped-when-signed-out.md`:
+    signed-out Steam silently drops `steam://install` and `steam://uninstall`,
+    and GameLib waits up to the 6 h cap.
+  - The helper's `not-signed-in` check is intermittent: it missed at 22:02,
+    just after Steam started, and fired at 22:25. Recorded in both todos.
+- **Still out of scope:** Windows and Linux. The setting stays macOS-only.
