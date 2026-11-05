@@ -319,6 +319,13 @@ interface AsyncIPCFunctions {
   listSteamLibraryTargets: (
     appName?: string
   ) => Promise<{ path: string; steamappsDir: string; isPrimary: boolean }[]>
+  // quick 261105-upw: backend-authoritative InstallApp-route discriminator for
+  // the install modal. installAppRoute is true only for feature ON + native
+  // OFF + non-bottle title on macOS; libraries are then the registered targets.
+  getSteamInstallAppTargets: (appName?: string) => Promise<{
+    installAppRoute: boolean
+    libraries: { path: string; steamappsDir: string; isPrimary: boolean }[]
+  }>
   // Phase 17 (17-04): provisions the dedicated Steam CrossOver bottle
   // (create via the locked cxbottle mechanism, fetch + non-silently run
   // SteamSetup.exe, D-02). Bottled-Steam auth stays opaque (D-04) — this

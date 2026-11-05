@@ -4,7 +4,7 @@
  * re-routed onto the real download queue in Phase 32 Plan 02, D-01; `moveInstall`/
  * `importGame` added Phase 34.6 Plan 06, REQ-34.6-04/REQ-34.6-13, D-02).
  *
- * Registers exactly seven invoke handlers the Tauri build's install-slice
+ * Registers exactly eight invoke handlers the Tauri build's install-slice
  * needs onto electronStub's `ipcMain` recorder, importing the REAL backend
  * code paths unchanged (mirrors `steamFlowRegistration.ts`'s own objective —
  * prove the real logic runs behind the new transport, not a
@@ -58,6 +58,10 @@
  *     decides whether GameLib has a local install target at all, so
  *     leaving it unported would degrade every Tauri Steam install to the
  *     delegated path. The minimum-read-gate conclusion stands.
+ *   - `getSteamInstallAppTargets` -> `{ installAppRoute, libraries }` (quick
+ *     261105-upw): the install modal's own backend-authoritative
+ *     discriminator for the opt-in InstallApp route (feature ON + native
+ *     OFF + non-bottle title).
  *   - `moveInstall` -> ported byte-equivalently from `main.ts:1112-1158`
  *     (Phase 34.6 Plan 06, D-02). Plan 34.6-11 (REQ-34.6-05) originally
  *     hardened it by containing the renderer-supplied `path` against
@@ -129,6 +133,7 @@ import { checkGameUpdates } from '../utils/checkGameUpdates'
 import { listSteamLibraryTargets } from '../storeManagers/steam/installLocation'
 import { isSteamNativeInstallEnabled } from '../storeManagers/steam/nativeInstallSetting'
 import { getSteamBottleEligibilityVerdict } from '../storeManagers/steam/installFormIpc'
+import { isSteamExperimentalInstallAppEnabled } from '../storeManagers/steam/experimentalInstallAppSetting'
 import { addToQueue } from '../downloadmanager/downloadqueue'
 import { resolveGameTitle } from '../downloadmanager/utils'
 // Plan 34.6-06 (REQ-34.6-04): byte-equivalent port of moveInstall/importGame
@@ -177,7 +182,7 @@ function rejectedPathDialogTitle(): string {
 }
 
 /**
- * Registers the seven install-slice invoke handlers. Called once from
+ * Registers the eight install-slice invoke handlers. Called once from
  * `handlers.ts` — this module owns no side effects at import time beyond the
  * imports above; the caller decides when registration onto the handler
  * registry happens.
@@ -283,6 +288,43 @@ export function registerInstallFlows(): void {
         return verdict.eligible ? listSteamLibraryTargets() : []
       } catch {
         return []
+      }
+    }
+  )
+
+  // quick 261105-upw: the install modal's own discriminator for the InstallApp
+  // route. `listSteamLibraryTargets` stays [] there so its list length keeps
+  // meaning only "GameLib's depot installer installs this" (SteamDialog's
+  // sign-in gate and notice-copy signal). The settings read stays in
+  // `isSteamExperimentalInstallAppEnabled()` (RESEARCH Pitfall 4: no renderer
+  // settings read). Never rejects; every failure is the closed reply
+  // (T-upw-01: shape-check the renderer value before the verdict call).
+  const closedInstallAppReply = () => ({
+    installAppRoute: false,
+    libraries: [] as Awaited<ReturnType<typeof listSteamLibraryTargets>>
+  })
+  ipcMain.handle(
+    'getSteamInstallAppTargets',
+    async (_event: unknown, ...args: unknown[]) => {
+      if (
+        !isSteamExperimentalInstallAppEnabled() ||
+        isSteamNativeInstallEnabled()
+      ) {
+        return closedInstallAppReply()
+      }
+      const appName = args[0]
+      if (typeof appName !== 'string' || !/^\d+$/.test(appName)) {
+        return closedInstallAppReply()
+      }
+      try {
+        const verdict = await getSteamBottleEligibilityVerdict(appName)
+        if (verdict.eligible) return closedInstallAppReply()
+        return {
+          installAppRoute: true,
+          libraries: await listSteamLibraryTargets()
+        }
+      } catch {
+        return closedInstallAppReply()
       }
     }
   )

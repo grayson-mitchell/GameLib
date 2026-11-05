@@ -160,6 +160,12 @@ jest.mock('../../storeManagers/steam/installFormIpc', () => ({
   getSteamBottleEligibilityVerdict: jest.fn()
 }))
 
+// ── quick 261105-upw: the InstallApp-route discriminator reads the backend-only
+// setting through this one function; controllable here regardless of host isMac.
+jest.mock('../../storeManagers/steam/experimentalInstallAppSetting', () => ({
+  isSteamExperimentalInstallAppEnabled: jest.fn()
+}))
+
 // ── SteamGame — the deepest boundary this plan's install/uninstall/updateGame
 // channels touch. Mocked so a real `install` invoke never reaches the real
 // depot-download orchestrator, PICS, or the filesystem. Mock fns are exposed
@@ -225,6 +231,7 @@ import i18next from 'i18next'
 import { getSteamLibraries, writeConfig } from 'backend/utils'
 import { GlobalConfig } from 'backend/config'
 import { getSteamBottleEligibilityVerdict } from '../../storeManagers/steam/installFormIpc'
+import { isSteamExperimentalInstallAppEnabled } from '../../storeManagers/steam/experimentalInstallAppSetting'
 import { libraryManagerMap } from 'backend/storeManagers'
 import SteamGame from '../../storeManagers/steam/games'
 import { handlerRegistry, listenerRegistry } from '../../platform'
@@ -433,6 +440,103 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       const result = await invokeTargets(['570'])
       expect(result).toHaveLength(1)
       expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('quick 261105-upw: getSteamInstallAppTargets', () => {
+    const closed = { installAppRoute: false, libraries: [] }
+    const invokeInstallApp = async (args: unknown[]) => {
+      jest.mocked(getSteamLibraries).mockResolvedValue(['/fake/steam/library'])
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'targets-upw', 'getSteamInstallAppTargets', args)
+      await flush()
+      return (
+        frames.find((frame) => frame.id === 'targets-upw') as
+          | { ok: boolean; result: unknown }
+          | undefined
+      )?.result
+    }
+
+    beforeEach(() => {
+      jest.mocked(isSteamExperimentalInstallAppEnabled).mockReturnValue(true)
+      mockSettings({ enableSteamNativeInstall: false, autoUpdateGames: false })
+      jest.mocked(getSteamBottleEligibilityVerdict).mockReset()
+      jest
+        .mocked(getSteamBottleEligibilityVerdict)
+        .mockResolvedValue({ eligible: false } as never)
+    })
+
+    it('feature ON, native OFF, mac-native title -> InstallApp route with libraries', async () => {
+      expect(await invokeInstallApp(['570'])).toEqual({
+        installAppRoute: true,
+        libraries: [
+          {
+            path: '/fake/steam/library',
+            steamappsDir: '/fake/steam/library/steamapps',
+            isPrimary: true
+          }
+        ]
+      })
+    })
+
+    it('feature OFF -> closed, verdict not asked', async () => {
+      jest.mocked(isSteamExperimentalInstallAppEnabled).mockReturnValue(false)
+      expect(await invokeInstallApp(['570'])).toEqual(closed)
+      expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
+    })
+
+    it('native ON -> closed, verdict not asked', async () => {
+      mockSettings({ enableSteamNativeInstall: true, autoUpdateGames: false })
+      expect(await invokeInstallApp(['570'])).toEqual(closed)
+      expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
+    })
+
+    it('bottle-eligible title -> closed', async () => {
+      jest
+        .mocked(getSteamBottleEligibilityVerdict)
+        .mockResolvedValue({ eligible: true } as never)
+      expect(await invokeInstallApp(['570'])).toEqual(closed)
+    })
+
+    it('throwing verdict -> closed', async () => {
+      jest
+        .mocked(getSteamBottleEligibilityVerdict)
+        .mockRejectedValue(new Error('boom'))
+      expect(await invokeInstallApp(['570'])).toEqual(closed)
+    })
+
+    it('no appName -> closed without asking the verdict', async () => {
+      expect(await invokeInstallApp([])).toEqual(closed)
+      expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
+    })
+
+    it.each([[123], [''], ['12; rm -rf /'], ['abc'], [null]])(
+      'a malformed appName (%p) -> closed without asking the verdict',
+      async (bad) => {
+        expect(await invokeInstallApp([bad])).toEqual(closed)
+        expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
+      }
+    )
+
+    it('no registered libraries -> InstallApp route with empty libraries', async () => {
+      jest.mocked(getSteamLibraries).mockResolvedValue([])
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'targets-upw2', 'getSteamInstallAppTargets', ['570'])
+      await flush()
+      const reply = frames.find((f) => f.id === 'targets-upw2') as
+        | { result: unknown }
+        | undefined
+      expect(reply?.result).toEqual({ installAppRoute: true, libraries: [] })
+    })
+
+    it('listSteamLibraryTargets stays [] on the InstallApp route (sign-in signal unchanged)', async () => {
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'targets-upw3', 'listSteamLibraryTargets', ['570'])
+      await flush()
+      const reply = frames.find((f) => f.id === 'targets-upw3') as
+        | { result: unknown }
+        | undefined
+      expect(reply?.result).toEqual([])
     })
   })
 
