@@ -15,6 +15,7 @@ GameLib forks Heroic Games Launcher and adds Steam as a first-class platform alo
 - ✅ **v0.6 Aggregated Store Search** — Phase 20 (shipped 2026-07-15) — `milestones/v0.6-phases/`
 - ✅ **v0.7 Steam Native Install** — Phases 21, 23–26 (closed 2026-10-16 with live-only UAT PARKED, not verified — see MILESTONES.md; Phase 23's gaps G-23-01/G-23-02 were closed 2026-08-19) — `milestones/v0.7-phases/`
 - ✅ **v0.8 Tauri Shell** — Phases 27–50 plus parked Phase 22 (shipped 2026-10-16, **override closeout** — see MILESTONES.md) — archive: `milestones/v0.8-ROADMAP.md` (full phase details, 6008 lines), `milestones/v0.8-phases/`
+- 🚧 **v0.9 Steam Bridge & Engine** — Phases 51–60 (all executed and verified; audited 2026-11-05, status `tech_debt` — `v0.9-MILESTONE-AUDIT.md`; not yet closed through `/gsd-complete-milestone`). Phase 61 is outside v0.9's scope.
 
 v0.2–v0.7 were never archived through `/gsd-complete-milestone`; their phase directories (5–26) remain under `.planning/phases/` and their full roadmap entries are preserved verbatim in `milestones/v0.8-ROADMAP.md` lines 238–1051.
 
@@ -126,6 +127,23 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 </details>
 
+**v0.9 — Steam Bridge & Engine** — widening the macOS native Steam bridge (interface coverage, SteamStub/DRM mode, callbacks, multiplayer, overlay), no authenticated CM logon at launch, opt-in known-fix sharing, and the CrossOver-unavailable engine fallback. Audit: `v0.9-MILESTONE-AUDIT.md` (2026-11-05, `tech_debt`, 17/17 requirements, no blockers).
+
+- [x] **Phase 51: Widen the native Steam bridge — more interface proxies, scan-derived eligibility** — 30/30 plans; verified 7/7 (done-when met via Phase 53)
+- [x] **Phase 52: Bridge-backed steamclient.dll for SteamStub titles** — 37/37 plans; verified 7/7 against the amended done-when (Grim Dawn menu delivered by Phase 56)
+- [x] **Phase 53: Steam bridge coverage: modern-SDK exports, flat API** — 20/20 plans; verified (10 of 18 census titles, majority)
+- [x] **Phase 54: No authenticated Steam logon at launch, browse or Play** — 14/14 plans; verified 6/6
+- [x] **Phase 55: Steam bridge callback delivery for the web-API auth ticket** — 7/7 plans; verified 10/10
+- [x] **Phase 56: Bridge steamclient-layer DRM mode for SteamStub titles** — 34/34 plans; verified 2/2
+- [x] **Phase 57: Opt-in known-fix sharing via relay** — 12/12 plans; verified 6/6
+- [x] **Phase 58: Steam bridge multiplayer** — 37/37 plans; verified 7/7 (M-01..M-07, caveats recorded)
+- [x] **Phase 59: Steam engine fallback when CrossOver is unavailable** — 53/53 plans; verified 13/13 (1 override)
+- [x] **Phase 60: Steam overlay in bridged games on macOS** — 20/20 plans; verified 6/6
+
+**Unassigned (outside v0.9 scope)**
+
+- [ ] **Phase 61: Unified macOS engine for all stores** — 0 plans; not started
+
 ## Phase Details
 
 Phase details for every phase through 50 live in the archived roadmap, `milestones/v0.8-ROADMAP.md`
@@ -169,6 +187,10 @@ them `.github/workflows/release-tauri.yml` ships unsigned, giving each release a
 identity so the macOS Keychain ACL never matches and users get re-prompted on every update. That
 is the actual lever on prompt *quantity*, it is independent of this phase, and it should not wait
 on it.
+
+## v0.9 Phase Details
+
+Phases 51–60 are v0.9. Phase 61, at the end of this section, is outside v0.9's scope.
 
 ### Phase 51: Widen the native Steam bridge — more interface proxies, scan-derived eligibility
 

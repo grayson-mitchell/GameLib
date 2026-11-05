@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.8
-milestone_name: Tauri Shell
+milestone: v0.9
+milestone_name: Steam Bridge & Engine
 status: milestone_complete
-stopped_at: Phase 60 complete — milestone complete (final phase)
+stopped_at: v0.9 audited 2026-11-05 (tech_debt, no blockers) — ready for /gsd-complete-milestone v0.9
 last_updated: 2026-11-04T08:00:11.271Z
-last_activity: 2026-11-04
+last_activity: 2026-11-05
 progress:
   total_phases: 10
   completed_phases: 10
@@ -21,14 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** None — milestone complete
+**Current focus:** v0.9 Steam Bridge & Engine (Phases 51–60) — all phases complete, audited 2026-11-05 (`v0.9-MILESTONE-AUDIT.md`, tech_debt); awaiting close. Phase 61 is outside v0.9's scope.
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
 > v1.N → v0.(N+1)). Milestones are now: **v0.1** Steam Platform · **v0.2** Polish ·
 > **v0.3** Humble · **v0.4** Compatibility Data · **v0.5** macOS Compat Runtime (17–19,
 > done) · **v0.6** Store Search · **v0.7** Steam Native Install (21–26, never formally
-> closed) · **v0.8** Tauri Shell (27–50, shipped 2026-10-16, override closeout).
+> closed) · **v0.8** Tauri Shell (27–50, shipped 2026-10-16, override closeout) ·
+> **v0.9** Steam Bridge & Engine (51–60, audited 2026-11-05, not yet closed).
 > The earlier v0.5-vs-v0.7 taxonomy split is resolved: macOS-compat = v0.5 (complete),
 > native-install = **v0.7**. `package.json` is 0.8.0.
 
