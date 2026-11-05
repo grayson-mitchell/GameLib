@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import {
   faTags,
   faKey,
-  faMagnifyingGlassDollar
+  faMagnifyingGlassDollar,
+  faTicket
 } from '@fortawesome/free-solid-svg-icons'
 
 import ContextProvider from 'frontend/state/ContextProvider'
@@ -82,7 +83,7 @@ export default function StoresPanel() {
         <NavItem
           elementType="button"
           onClick={() => handleRedeemKeyDialog(true)}
-          icon={faKey}
+          icon={faTicket}
           label={tGamelib('sidebar.redeemSteamKey', 'Redeem a Steam key')}
         />
       )}
