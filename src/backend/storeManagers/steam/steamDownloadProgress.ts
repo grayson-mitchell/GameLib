@@ -18,11 +18,14 @@ type ContentLogEvent =
     }
   | { kind: 'phase'; appId: string; phase: string }
   | { kind: 'ended'; appId: string }
+  | { kind: 'session' }
 
 /** content_log.txt is CRLF and `.` never matches `\r`, so strip it before matching. */
 // ts-prune-ignore-next
 export function parseContentLogLine(raw: string): ContentLogEvent | null {
   const line = raw.replace(/\r/g, '')
+  // Steam writes this once per client start-up; no update survives a restart.
+  if (/^\[[^\]]*\] Client version: /.test(line)) return { kind: 'session' }
   let m = line.match(
     /AppID (\d+) update started : download (\d+)\/(\d+)(?:,|\s|$)/
   )
@@ -115,7 +118,10 @@ export function applyContentLogEvent(
   event: ContentLogEvent,
   cumNow: number
 ): UpdateTracker {
-  if (event.kind === 'started') {
+  if (event.kind === 'session') {
+    // A new Steam client session: any `update started` before it can never get its end line.
+    tracker.active.clear()
+  } else if (event.kind === 'started') {
     tracker.active.set(event.appId, {
       downloadDone: event.downloadDone,
       downloadTotal: event.downloadTotal,

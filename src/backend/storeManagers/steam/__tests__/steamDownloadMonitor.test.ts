@@ -125,6 +125,40 @@ describe('steamDownloadMonitor', () => {
     expect(readSteamDownloadMonitor('43160')).toBeUndefined()
   })
 
+  it('ignores a ghost update from before the last Steam client start (284100 shape)', async () => {
+    const ghost =
+      '[2026-10-25 21:38:12] AppID 284100 update started : download 0/223021728, store 0/0 \r\n'
+    const boot = '[2026-11-03 19:49:43] Client version: 1792618285\r\n'
+    const live =
+      '[2026-11-05 17:29:38] AppID 333300 update started : download 0/5000, store 0/0 \r\n'
+    const { deps, child } = setup({ tail: [ghost + boot + live] })
+    await startSteamDownloadMonitor('333300', deps)
+    child.stdout.emit('data', block({ x: 1 }) + block({ x: 2 }))
+    child.stdout.emit('data', block({ x: 502 }))
+    const r = readSteamDownloadMonitor('333300')!
+    expect(r.bytesTotal).toBe(5000)
+    expect(r.bytesDone).toBe(501)
+  })
+
+  it('keeps this app anchor that predates the monitor (boot re-armed poll)', async () => {
+    const boot = '[x] Client version: 1\r\n'
+    const { deps, child } = setup({
+      tail: [boot + STARTED],
+      now: () => 1
+    })
+    await startSteamDownloadMonitor('43160', deps)
+    child.stdout.emit('data', block({ x: 1 }) + block({ x: 2 }))
+    expect(readSteamDownloadMonitor('43160')?.bytesTotal).toBe(8736151712)
+  })
+
+  it('still falls back for a genuine concurrent pair in the same client session', async () => {
+    const boot = '[x] Client version: 1\r\n'
+    const { deps, child } = setup({ tail: [boot + STARTED_OTHER + STARTED] })
+    await startSteamDownloadMonitor('43160', deps)
+    child.stdout.emit('data', block({ x: 1 }) + block({ x: 2 }))
+    expect(readSteamDownloadMonitor('43160')).toBeUndefined()
+  })
+
   it('falls back after child error or exit', async () => {
     for (const ev of ['error', 'exit']) {
       const { deps, child } = setup()

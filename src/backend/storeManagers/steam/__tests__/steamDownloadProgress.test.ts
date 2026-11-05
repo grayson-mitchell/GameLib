@@ -48,6 +48,11 @@ describe('parseContentLogLine', () => {
   ])('ended: %s', (line) => {
     expect(parseContentLogLine(line)).toEqual({ kind: 'ended', appId: '43160' })
   })
+  it('parses the client start-up line as a session boundary', () => {
+    expect(
+      parseContentLogLine('[2026-11-03 19:49:43] Client version: 1792618285\r')
+    ).toEqual({ kind: 'session' })
+  })
   it('ignores unrelated lines', () => {
     expect(
       parseContentLogLine('[x] AppID 43160 preallocated 29 files (9168 MB) \r')
@@ -107,6 +112,12 @@ describe('flow accumulator', () => {
 })
 
 describe('update tracker', () => {
+  it('a session boundary drops every earlier update', () => {
+    const t = createUpdateTracker()
+    applyContentLogEvent(t, parseContentLogLine(STARTED)!, 0)
+    applyContentLogEvent(t, { kind: 'session' }, 0)
+    expect(t.active.size).toBe(0)
+  })
   it('tracks start, end and re-baseline', () => {
     const t = createUpdateTracker()
     applyContentLogEvent(
