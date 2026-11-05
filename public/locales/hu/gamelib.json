@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "A játék 30 másodpercen belül kilépett bekapcsolt Steam-átfedés mellett. Ha ez összeomlás, és ismétlődik, próbálja meg kikapcsolni az átfedést a játék beállításaiban: Futtatás > Steam-átfedés.",
+                "title": "A játék röviddel az indítás után bezárult"
+            },
+            "override": {
+                "automatic": "Automatikus (be, hacsak egy ismert javítás ki nem kapcsolja)",
+                "help": "A Shift+Tab megnyitja a Mac Steam átfedését ebben a játékban. Kapcsolja ki, ha a játék összeomlik vagy hibásan jelenik meg vele.",
+                "label": "Steam-átfedés",
+                "off": "Ki",
+                "on": "Be",
+                "summary": "Steam-átfedés (speciális)"
+            },
             "step": {
                 "clone": "A CrossOver átfedéshez használt másolatát nem sikerült előkészíteni.",
                 "crossoverDetect": "A CrossOver nem található.",

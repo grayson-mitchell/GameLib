@@ -545,6 +545,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Hra skončila do 30 sekund se zapnutým překryvem Steamu. Pokud jde o pád a opakuje se, zkuste v nastavení této hry překryv vypnout: Spuštění > Překryv Steamu.",
+                "title": "Hra se brzy po spuštění zavřela"
+            },
+            "override": {
+                "automatic": "Automaticky (zapnuto, pokud ho známá oprava nevypne)",
+                "help": "Shift+Tab otevře v této hře překryv Mac Steam. Vypněte ho, pokud hra padá nebo se s ním špatně vykresluje.",
+                "label": "Překryv Steamu",
+                "off": "Vypnuto",
+                "on": "Zapnuto",
+                "summary": "Překryv Steamu (pokročilé)"
+            },
             "step": {
                 "clone": "Kopii CrossOver pro překryv se nepodařilo připravit.",
                 "crossoverDetect": "CrossOver se nepodařilo najít.",

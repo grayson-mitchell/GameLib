@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Het spel is binnen 30 seconden afgesloten met de Steam-overlay aan. Als dit een crash is en het blijft gebeuren, probeer dan de overlay uit te zetten in de instellingen van dit spel: Uitvoeren > Steam-overlay.",
+                "title": "Spel kort na het starten gesloten"
+            },
+            "override": {
+                "automatic": "Automatisch (aan, tenzij een bekende oplossing het uitzet)",
+                "help": "Met Shift+Tab open je in dit spel de overlay van Mac Steam. Zet hem uit als het spel ermee crasht of verkeerd wordt weergegeven.",
+                "label": "Steam-overlay",
+                "off": "Uit",
+                "on": "Aan",
+                "summary": "Steam-overlay (geavanceerd)"
+            },
             "step": {
                 "clone": "De overlaykopie van CrossOver kon niet worden voorbereid.",
                 "crossoverDetect": "CrossOver kon niet worden gevonden.",

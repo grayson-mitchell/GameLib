@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "遊戲在 Steam 疊加層開啟的情況下於 30 秒內結束。如果這是當機且反覆發生，請嘗試在此遊戲的設定中關閉疊加層：執行 > Steam 疊加層。",
+                "title": "遊戲在啟動後不久關閉"
+            },
+            "override": {
+                "automatic": "自動（開啟，除非已知修復將其關閉）",
+                "help": "按 Shift+Tab 可在此遊戲中開啟 Mac Steam 的疊加層。如果遊戲因此當機或畫面異常，請將其關閉。",
+                "label": "Steam 疊加層",
+                "off": "關閉",
+                "on": "開啟",
+                "summary": "Steam 疊加層（進階）"
+            },
             "step": {
                 "clone": "無法準備 CrossOver 的疊加層副本。",
                 "crossoverDetect": "找不到 CrossOver。",

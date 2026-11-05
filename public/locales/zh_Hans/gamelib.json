@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "游戏在 Steam 叠加层开启的情况下于 30 秒内退出。如果这是崩溃且反复出现，请尝试在此游戏的设置中关闭叠加层：运行 > Steam 叠加层。",
+                "title": "游戏在启动后不久关闭"
+            },
+            "override": {
+                "automatic": "自动（开启，除非已知修复将其关闭）",
+                "help": "按 Shift+Tab 可在此游戏中打开 Mac Steam 的叠加层。如果游戏因此崩溃或画面异常，请将其关闭。",
+                "label": "Steam 叠加层",
+                "off": "关闭",
+                "on": "开启",
+                "summary": "Steam 叠加层（高级）"
+            },
             "step": {
                 "clone": "无法准备 CrossOver 的叠加层副本。",
                 "crossoverDetect": "找不到 CrossOver。",

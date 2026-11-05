@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "O xogo saíu en menos de 30 segundos coa superposición de Steam activada. Se é un fallo e segue pasando, tenta desactivar a superposición nos axustes deste xogo: Execución > Superposición de Steam.",
+                "title": "O xogo pechouse pouco despois de iniciarse"
+            },
+            "override": {
+                "automatic": "Automático (activada, salvo que unha corrección coñecida a desactive)",
+                "help": "Shift+Tab abre a superposición de Mac Steam neste xogo. Desactívaa se o xogo falla ou se debuxa mal con ela.",
+                "label": "Superposición de Steam",
+                "off": "Desactivada",
+                "on": "Activada",
+                "summary": "Superposición de Steam (avanzado)"
+            },
             "step": {
                 "clone": "Non se puido preparar a copia de CrossOver para a superposición.",
                 "crossoverDetect": "Non se puido atopar CrossOver.",

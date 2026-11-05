@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Game keluar dalam 30 detik dengan overlay Steam aktif. Jika ini adalah crash dan terus terjadi, coba matikan overlay di pengaturan game ini: Jalankan > Overlay Steam.",
+                "title": "Game tertutup tak lama setelah dimulai"
+            },
+            "override": {
+                "automatic": "Otomatis (aktif, kecuali perbaikan yang diketahui mematikannya)",
+                "help": "Shift+Tab membuka overlay Mac Steam di game ini. Matikan jika game crash atau tergambar salah dengannya.",
+                "label": "Overlay Steam",
+                "off": "Nonaktif",
+                "on": "Aktif",
+                "summary": "Overlay Steam (lanjutan)"
+            },
             "step": {
                 "clone": "Salinan overlay CrossOver tidak dapat disiapkan.",
                 "crossoverDetect": "CrossOver tidak dapat ditemukan.",

@@ -545,6 +545,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Igra se je zaprla v 30 sekundah, ko je bil prekrivni sloj Steam vklopljen. Če gre za zrušitev, ki se ponavlja, poskusite izklopiti prekrivni sloj v nastavitvah te igre: Zagon > Prekrivni sloj Steam.",
+                "title": "Igra se je kmalu po zagonu zaprla"
+            },
+            "override": {
+                "automatic": "Samodejno (vklopljeno, razen če ga znan popravek izklopi)",
+                "help": "Shift+Tab odpre prekrivni sloj Mac Steam v tej igri. Izklopite ga, če se igra z njim zruši ali se napačno izrisuje.",
+                "label": "Prekrivni sloj Steam",
+                "off": "Izklopljeno",
+                "on": "Vklopljeno",
+                "summary": "Prekrivni sloj Steam (napredno)"
+            },
             "step": {
                 "clone": "Kopije CrossOver za prekrivni sloj ni bilo mogoče pripraviti.",
                 "crossoverDetect": "CrossOver ni bilo mogoče najti.",

@@ -552,6 +552,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Scoir an cluiche laistigh de 30 soicind agus forleagan Steam ar siúl. Más tuairt é seo agus má leanann sé de tarlú, bain triail as an bhforleagan a chur as i socruithe an chluiche seo: Rith > Forleagan Steam.",
+                "title": "Dúnadh an cluiche go luath tar éis tosú"
+            },
+            "override": {
+                "automatic": "Uathoibríoch (ar siúl, mura gcuireann deisiú aitheanta as é)",
+                "help": "Osclaíonn Shift+Tab forleagan Mac Steam sa chluiche seo. Cuir as é má thuairteann an cluiche nó má dhéantar é a tharraingt go mícheart leis.",
+                "label": "Forleagan Steam",
+                "off": "As",
+                "on": "Ar siúl",
+                "summary": "Forleagan Steam (ardleibhéil)"
+            },
             "step": {
                 "clone": "Níorbh fhéidir cóip forleagan CrossOver a ullmhú.",
                 "crossoverDetect": "Níorbh fhéidir CrossOver a aimsiú.",

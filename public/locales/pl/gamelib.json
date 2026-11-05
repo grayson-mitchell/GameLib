@@ -545,6 +545,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Gra zakończyła działanie w ciągu 30 sekund przy włączonej nakładce Steam. Jeśli to awaria i powtarza się, spróbuj wyłączyć nakładkę w ustawieniach tej gry: Uruchamianie > Nakładka Steam.",
+                "title": "Gra zamknęła się wkrótce po uruchomieniu"
+            },
+            "override": {
+                "automatic": "Automatycznie (włączona, chyba że znana poprawka ją wyłączy)",
+                "help": "Shift+Tab otwiera w tej grze nakładkę Mac Steam. Wyłącz ją, jeśli gra z nią ulega awarii lub jest źle wyświetlana.",
+                "label": "Nakładka Steam",
+                "off": "Wyłączona",
+                "on": "Włączona",
+                "summary": "Nakładka Steam (zaawansowane)"
+            },
             "step": {
                 "clone": "Nie udało się przygotować kopii CrossOver dla nakładki.",
                 "crossoverDetect": "Nie udało się znaleźć CrossOver.",

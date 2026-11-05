@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Jokoa 30 segundo barru irten da Steam overlay aktibatuta zegoela. Hau kraskada bada eta berriz gertatzen bada, saiatu overlay desaktibatzen joko honen ezarpenetan: Exekuzioa > Steam overlay.",
+                "title": "Jokoa abiarazi eta gutxira itxi da"
+            },
+            "override": {
+                "automatic": "Automatikoa (aktibatuta, konponketa ezagun batek desaktibatzen ez badu)",
+                "help": "Shift+Tab sakatuta Mac Steam-en overlay irekitzen da joko honetan. Desaktibatu jokoa kraskatzen bada edo gaizki marrazten bada.",
+                "label": "Steam overlay",
+                "off": "Desaktibatuta",
+                "on": "Aktibatuta",
+                "summary": "Steam overlay (aurreratua)"
+            },
             "step": {
                 "clone": "Ezin izan da CrossOver-en overlay kopia prestatu.",
                 "crossoverDetect": "Ezin izan da CrossOver aurkitu.",

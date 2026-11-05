@@ -433,6 +433,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Das Spiel wurde innerhalb von 30 Sekunden bei aktiviertem Steam-Overlay beendet. Wenn es sich um einen Absturz handelt und er immer wieder auftritt, schalte das Overlay in den Einstellungen dieses Spiels aus: Ausführen > Steam-Overlay.",
+                "title": "Spiel kurz nach dem Start beendet"
+            },
+            "override": {
+                "automatic": "Automatisch (an, sofern keine bekannte Korrektur es ausschaltet)",
+                "help": "Mit Shift+Tab öffnest du in diesem Spiel das Overlay von Mac Steam. Schalte es aus, wenn das Spiel damit abstürzt oder falsch darstellt.",
+                "label": "Steam-Overlay",
+                "off": "Aus",
+                "on": "An",
+                "summary": "Steam-Overlay (erweitert)"
+            },
             "step": {
                 "clone": "Die Overlay-Kopie von CrossOver konnte nicht vorbereitet werden.",
                 "crossoverDetect": "CrossOver wurde nicht gefunden.",

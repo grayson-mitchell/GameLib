@@ -528,6 +528,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Mäng sulgus 30 sekundi jooksul, kui Steami ülekate oli sees. Kui tegu on kokkujooksmisega ja see kordub, proovige ülekate selle mängu seadetes välja lülitada: Käivitus > Steami ülekate.",
+                "title": "Mäng sulgus pärast käivitamist peagi"
+            },
+            "override": {
+                "automatic": "Automaatne (sees, kui tuntud parandus seda välja ei lülita)",
+                "help": "Shift+Tab avab selles mängus Mac Steami ülekatte. Lülitage see välja, kui mäng jookseb sellega kokku või joonistab valesti.",
+                "label": "Steami ülekate",
+                "off": "Väljas",
+                "on": "Sees",
+                "summary": "Steami ülekate (täpsemad)"
+            },
             "step": {
                 "clone": "CrossOveri ülekatte koopiat ei õnnestunud ette valmistada.",
                 "crossoverDetect": "CrossOveri ei leitud.",

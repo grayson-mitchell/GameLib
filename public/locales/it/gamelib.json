@@ -538,6 +538,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Il gioco è uscito entro 30 secondi con l'overlay di Steam attivo. Se si tratta di un crash che si ripete, prova a disattivare l'overlay nelle impostazioni di questo gioco: Esecuzione > Overlay di Steam.",
+                "title": "Il gioco si è chiuso poco dopo l'avvio"
+            },
+            "override": {
+                "automatic": "Automatico (attivo, a meno che una correzione nota non lo disattivi)",
+                "help": "Shift+Tab apre l'overlay di Mac Steam in questo gioco. Disattivalo se il gioco va in crash o viene disegnato in modo errato con esso.",
+                "label": "Overlay di Steam",
+                "off": "Disattivato",
+                "on": "Attivo",
+                "summary": "Overlay di Steam (avanzato)"
+            },
             "step": {
                 "clone": "Non è stato possibile preparare la copia di CrossOver per l'overlay.",
                 "crossoverDetect": "Impossibile trovare CrossOver.",

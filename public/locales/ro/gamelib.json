@@ -538,6 +538,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Jocul s-a oprit în 30 de secunde cu overlay-ul Steam activat. Dacă este o cădere și se repetă, încearcă să dezactivezi overlay-ul din setările acestui joc: Rulare > Overlay-ul Steam.",
+                "title": "Jocul s-a închis la scurt timp după pornire"
+            },
+            "override": {
+                "automatic": "Automat (activat, cu excepția cazului în care o remediere cunoscută îl dezactivează)",
+                "help": "Shift+Tab deschide overlay-ul Mac Steam în acest joc. Dezactivează-l dacă jocul se blochează sau este desenat greșit cu el.",
+                "label": "Overlay-ul Steam",
+                "off": "Dezactivat",
+                "on": "Activat",
+                "summary": "Overlay-ul Steam (avansat)"
+            },
             "step": {
                 "clone": "Copia CrossOver pentru overlay nu a putut fi pregătită.",
                 "crossoverDetect": "CrossOver nu a putut fi găsit.",

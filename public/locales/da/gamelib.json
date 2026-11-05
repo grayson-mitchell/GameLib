@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Spillet afsluttede inden for 30 sekunder med Steam-overlayet slået til. Hvis det er et nedbrud, og det bliver ved, så prøv at slå overlayet fra i dette spils indstillinger: Kør > Steam-overlay.",
+                "title": "Spillet lukkede kort efter start"
+            },
+            "override": {
+                "automatic": "Automatisk (til, medmindre en kendt rettelse slår det fra)",
+                "help": "Shift+Tab åbner Mac Steams overlay i dette spil. Slå det fra, hvis spillet går ned eller tegner forkert med det.",
+                "label": "Steam-overlay",
+                "off": "Fra",
+                "on": "Til",
+                "summary": "Steam-overlay (avanceret)"
+            },
             "step": {
                 "clone": "Overlay-kopien af CrossOver kunne ikke forberedes.",
                 "crossoverDetect": "CrossOver kunne ikke findes.",

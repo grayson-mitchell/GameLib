@@ -552,6 +552,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Kuitaet en deus ar c'hoari e-pad 30 eilenn gant an overlay Steam enaouet. Mard eo ur c'hrash hag e chom da c'hoarvezout, klaskit lazhañ an overlay e arventennoù ar c'hoari-mañ: Lañsañ > Overlay Steam.",
+                "title": "Serret eo bet ar c'hoari berr goude m'eo bet loc'het"
+            },
+            "override": {
+                "automatic": "Emgefreek (enaouet, nemet ma lazh ur reizhadenn anavezet anezhañ)",
+                "help": "Shift+Tab a ziskouez overlay Mac Steam er c'hoari-mañ. Lazhit anezhañ ma krasha ar c'hoari pe ma vez graet fall gantañ.",
+                "label": "Overlay Steam",
+                "off": "Lazhet",
+                "on": "Enaouet",
+                "summary": "Overlay Steam (araokaet)"
+            },
             "step": {
                 "clone": "N'eus ket bet gallet prientiñ eilenn overlay CrossOver.",
                 "crossoverDetect": "N'eus ket bet gallet kavout CrossOver.",

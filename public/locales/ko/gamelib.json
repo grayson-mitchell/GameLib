@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Steam 오버레이가 켜진 상태에서 게임이 30초 이내에 종료되었습니다. 충돌이며 계속 발생한다면 이 게임의 설정에서 오버레이를 꺼 보세요: 실행 > Steam 오버레이.",
+                "title": "게임이 시작 직후 종료되었습니다"
+            },
+            "override": {
+                "automatic": "자동 (켜짐, 알려진 수정으로 꺼지는 경우 제외)",
+                "help": "Shift+Tab을 누르면 이 게임에서 Mac Steam의 오버레이가 열립니다. 오버레이 때문에 게임이 충돌하거나 화면이 잘못 그려지면 끄세요.",
+                "label": "Steam 오버레이",
+                "off": "꺼짐",
+                "on": "켜짐",
+                "summary": "Steam 오버레이 (고급)"
+            },
             "step": {
                 "clone": "CrossOver의 오버레이용 사본을 준비하지 못했습니다.",
                 "crossoverDetect": "CrossOver를 찾을 수 없습니다.",

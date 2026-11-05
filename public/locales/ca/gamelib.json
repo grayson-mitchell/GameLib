@@ -538,6 +538,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "El joc ha sortit en menys de 30 segons amb la superposició de Steam activada. Si és un error i continua passant, prova de desactivar la superposició a la configuració d'aquest joc: Execució > Superposició de Steam.",
+                "title": "El joc s'ha tancat poc després d'iniciar-se"
+            },
+            "override": {
+                "automatic": "Automàtic (activada, tret que una correcció coneguda la desactivi)",
+                "help": "Shift+Tab obre la superposició de Mac Steam en aquest joc. Desactiva-la si el joc falla o es dibuixa malament amb ella.",
+                "label": "Superposició de Steam",
+                "off": "Desactivada",
+                "on": "Activada",
+                "summary": "Superposició de Steam (avançat)"
+            },
             "step": {
                 "clone": "No s'ha pogut preparar la còpia de CrossOver per a la superposició.",
                 "crossoverDetect": "No s'ha pogut trobar CrossOver.",

@@ -538,6 +538,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Igra je izašla unutar 30 sekundi s uključenim Steam overlayem. Ako je ovo rušenje i ponavlja se, pokušajte isključiti overlay u postavkama ove igre: Pokretanje > Steam overlay.",
+                "title": "Igra se zatvorila ubrzo nakon pokretanja"
+            },
+            "override": {
+                "automatic": "Automatski (uključeno, osim ako ga poznata popravka ne isključi)",
+                "help": "Shift+Tab otvara Mac Steam overlay u ovoj igri. Isključite ga ako se igra ruši ili se pogrešno iscrtava s njim.",
+                "label": "Steam overlay",
+                "off": "Isključeno",
+                "on": "Uključeno",
+                "summary": "Steam overlay (napredno)"
+            },
             "step": {
                 "clone": "Overlay kopija programa CrossOver nije mogla biti pripremljena.",
                 "crossoverDetect": "CrossOver nije pronađen.",

@@ -538,6 +538,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "El juego se cerró en menos de 30 segundos con el overlay de Steam activado. Si es un fallo y sigue ocurriendo, prueba a desactivar el overlay en los ajustes de este juego: Ejecución > Overlay de Steam.",
+                "title": "El juego se cerró poco después de iniciarse"
+            },
+            "override": {
+                "automatic": "Automático (activado, salvo que una corrección conocida lo desactive)",
+                "help": "Shift+Tab abre el overlay de Mac Steam en este juego. Desactívalo si el juego falla o se dibuja mal con él.",
+                "label": "Overlay de Steam",
+                "off": "Desactivado",
+                "on": "Activado",
+                "summary": "Overlay de Steam (avanzado)"
+            },
             "step": {
                 "clone": "No se pudo preparar la copia de CrossOver para el overlay.",
                 "crossoverDetect": "No se pudo encontrar CrossOver.",

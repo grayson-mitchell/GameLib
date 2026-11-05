@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Oyun Steam overlay aktiv olarkən 30 saniyə ərzində bağlandı. Bu çökmədirsə və təkrarlanırsa, bu oyunun parametrlərində overlay-i söndürməyə cəhd edin: İşə sal > Steam overlay.",
+                "title": "Oyun başladıqdan qısa müddət sonra bağlandı"
+            },
+            "override": {
+                "automatic": "Avtomatik (aktiv, məlum düzəliş söndürmədikdə)",
+                "help": "Shift+Tab bu oyunda Mac Steam overlay-ini açır. Oyun çökürsə və ya onunla səhv təsvir edilirsə, onu söndürün.",
+                "label": "Steam overlay",
+                "off": "Deaktiv",
+                "on": "Aktiv",
+                "summary": "Steam overlay (qabaqcıl)"
+            },
             "step": {
                 "clone": "CrossOver-in overlay surəti hazırlana bilmədi.",
                 "crossoverDetect": "CrossOver tapılmadı.",

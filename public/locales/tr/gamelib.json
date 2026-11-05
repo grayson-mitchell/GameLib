@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Oyun, Steam kaplaması açıkken 30 saniye içinde kapandı. Bu bir çökmeyse ve tekrar ediyorsa, bu oyunun ayarlarında kaplamayı kapatmayı deneyin: Çalıştır > Steam kaplaması.",
+                "title": "Oyun başladıktan kısa süre sonra kapandı"
+            },
+            "override": {
+                "automatic": "Otomatik (açık, bilinen bir düzeltme kapatmadıkça)",
+                "help": "Shift+Tab bu oyunda Mac Steam kaplamasını açar. Oyun çöküyorsa veya onunla yanlış çiziliyorsa kapatın.",
+                "label": "Steam kaplaması",
+                "off": "Kapalı",
+                "on": "Açık",
+                "summary": "Steam kaplaması (gelişmiş)"
+            },
             "step": {
                 "clone": "CrossOver'ın kaplama kopyası hazırlanamadı.",
                 "crossoverDetect": "CrossOver bulunamadı.",

@@ -1,0 +1,492 @@
+{
+  "en": {
+    "steam.overlay.exit.body": "The game exited within 30 seconds with the Steam overlay on. If this is a crash and keeps happening, try turning the overlay off in this game's settings: Run > Steam overlay.",
+    "steam.overlay.exit.title": "Game closed soon after starting",
+    "steam.overlay.override.automatic": "Automatic (on, unless a known fix turns it off)",
+    "steam.overlay.override.help": "Shift+Tab opens Mac Steam's overlay in this game. Turn it off if the game crashes or draws wrongly with it.",
+    "steam.overlay.override.label": "Steam overlay",
+    "steam.overlay.override.off": "Off",
+    "steam.overlay.override.on": "On",
+    "steam.overlay.override.summary": "Steam overlay (advanced)"
+  },
+  "ar": {
+    "steam.overlay.exit.body": "خرجت اللعبة خلال 30 ثانية والتراكب Steam قيد التشغيل. إذا كان ذلك انهيارًا ويتكرر، فجرّب إيقاف التراكب في إعدادات هذه اللعبة: تشغيل > تراكب Steam.",
+    "steam.overlay.exit.title": "أُغلقت اللعبة بعد وقت قصير من بدئها",
+    "steam.overlay.override.automatic": "تلقائي (قيد التشغيل، ما لم يوقفه إصلاح معروف)",
+    "steam.overlay.override.help": "يفتح Shift+Tab تراكب Mac Steam في هذه اللعبة. أوقفه إذا انهارت اللعبة أو ظهر الرسم بشكل خاطئ معه.",
+    "steam.overlay.override.label": "تراكب Steam",
+    "steam.overlay.override.off": "متوقف",
+    "steam.overlay.override.on": "قيد التشغيل",
+    "steam.overlay.override.summary": "تراكب Steam (متقدم)"
+  },
+  "az": {
+    "steam.overlay.exit.body": "Oyun Steam overlay aktiv olarkən 30 saniyə ərzində bağlandı. Bu çökmədirsə və təkrarlanırsa, bu oyunun parametrlərində overlay-i söndürməyə cəhd edin: İşə sal > Steam overlay.",
+    "steam.overlay.exit.title": "Oyun başladıqdan qısa müddət sonra bağlandı",
+    "steam.overlay.override.automatic": "Avtomatik (aktiv, məlum düzəliş söndürmədikdə)",
+    "steam.overlay.override.help": "Shift+Tab bu oyunda Mac Steam overlay-ini açır. Oyun çökürsə və ya onunla səhv təsvir edilirsə, onu söndürün.",
+    "steam.overlay.override.label": "Steam overlay",
+    "steam.overlay.override.off": "Deaktiv",
+    "steam.overlay.override.on": "Aktiv",
+    "steam.overlay.override.summary": "Steam overlay (qabaqcıl)"
+  },
+  "be": {
+    "steam.overlay.exit.body": "Гульня завяршылася на працягу 30 секунд з уключаным Steam overlay. Калі гэта збой і ён паўтараецца, паспрабуйце выключыць overlay у наладах гэтай гульні: Запуск > Steam overlay.",
+    "steam.overlay.exit.title": "Гульня закрылася неўзабаве пасля запуску",
+    "steam.overlay.override.automatic": "Аўтаматычна (уключана, калі вядомае выпраўленне не выключае)",
+    "steam.overlay.override.help": "Shift+Tab адкрывае overlay Mac Steam у гэтай гульні. Выключыце яго, калі гульня падае або няправільна адлюстроўваецца.",
+    "steam.overlay.override.label": "Steam overlay",
+    "steam.overlay.override.off": "Выключана",
+    "steam.overlay.override.on": "Уключана",
+    "steam.overlay.override.summary": "Steam overlay (пашыраныя)"
+  },
+  "bg": {
+    "steam.overlay.exit.body": "Играта излезе в рамките на 30 секунди при включено наслагване на Steam. Ако това е срив и се повтаря, опитайте да изключите наслагването в настройките на тази игра: Стартиране > Наслагване на Steam.",
+    "steam.overlay.exit.title": "Играта се затвори скоро след стартирането",
+    "steam.overlay.override.automatic": "Автоматично (включено, освен ако известна корекция не го изключи)",
+    "steam.overlay.override.help": "Shift+Tab отваря наслагването на Mac Steam в тази игра. Изключете го, ако играта се срива или изглежда неправилно с него.",
+    "steam.overlay.override.label": "Наслагване на Steam",
+    "steam.overlay.override.off": "Изключено",
+    "steam.overlay.override.on": "Включено",
+    "steam.overlay.override.summary": "Наслагване на Steam (разширени)"
+  },
+  "br": {
+    "steam.overlay.exit.body": "Kuitaet en deus ar c'hoari e-pad 30 eilenn gant an overlay Steam enaouet. Mard eo ur c'hrash hag e chom da c'hoarvezout, klaskit lazhañ an overlay e arventennoù ar c'hoari-mañ: Lañsañ > Overlay Steam.",
+    "steam.overlay.exit.title": "Serret eo bet ar c'hoari berr goude m'eo bet loc'het",
+    "steam.overlay.override.automatic": "Emgefreek (enaouet, nemet ma lazh ur reizhadenn anavezet anezhañ)",
+    "steam.overlay.override.help": "Shift+Tab a ziskouez overlay Mac Steam er c'hoari-mañ. Lazhit anezhañ ma krasha ar c'hoari pe ma vez graet fall gantañ.",
+    "steam.overlay.override.label": "Overlay Steam",
+    "steam.overlay.override.off": "Lazhet",
+    "steam.overlay.override.on": "Enaouet",
+    "steam.overlay.override.summary": "Overlay Steam (araokaet)"
+  },
+  "bs": {
+    "steam.overlay.exit.body": "Igra je izašla unutar 30 sekundi s uključenim Steam overlayem. Ako je ovo rušenje i ponavlja se, pokušajte isključiti overlay u postavkama ove igre: Pokretanje > Steam overlay.",
+    "steam.overlay.exit.title": "Igra se zatvorila ubrzo nakon pokretanja",
+    "steam.overlay.override.automatic": "Automatski (uključeno, osim ako ga poznata popravka ne isključi)",
+    "steam.overlay.override.help": "Shift+Tab otvara Mac Steam overlay u ovoj igri. Isključite ga ako se igra ruši ili se pogrešno iscrtava s njim.",
+    "steam.overlay.override.label": "Steam overlay",
+    "steam.overlay.override.off": "Isključeno",
+    "steam.overlay.override.on": "Uključeno",
+    "steam.overlay.override.summary": "Steam overlay (napredno)"
+  },
+  "ca": {
+    "steam.overlay.exit.body": "El joc ha sortit en menys de 30 segons amb la superposició de Steam activada. Si és un error i continua passant, prova de desactivar la superposició a la configuració d'aquest joc: Execució > Superposició de Steam.",
+    "steam.overlay.exit.title": "El joc s'ha tancat poc després d'iniciar-se",
+    "steam.overlay.override.automatic": "Automàtic (activada, tret que una correcció coneguda la desactivi)",
+    "steam.overlay.override.help": "Shift+Tab obre la superposició de Mac Steam en aquest joc. Desactiva-la si el joc falla o es dibuixa malament amb ella.",
+    "steam.overlay.override.label": "Superposició de Steam",
+    "steam.overlay.override.off": "Desactivada",
+    "steam.overlay.override.on": "Activada",
+    "steam.overlay.override.summary": "Superposició de Steam (avançat)"
+  },
+  "cs": {
+    "steam.overlay.exit.body": "Hra skončila do 30 sekund se zapnutým překryvem Steamu. Pokud jde o pád a opakuje se, zkuste v nastavení této hry překryv vypnout: Spuštění > Překryv Steamu.",
+    "steam.overlay.exit.title": "Hra se brzy po spuštění zavřela",
+    "steam.overlay.override.automatic": "Automaticky (zapnuto, pokud ho známá oprava nevypne)",
+    "steam.overlay.override.help": "Shift+Tab otevře v této hře překryv Mac Steam. Vypněte ho, pokud hra padá nebo se s ním špatně vykresluje.",
+    "steam.overlay.override.label": "Překryv Steamu",
+    "steam.overlay.override.off": "Vypnuto",
+    "steam.overlay.override.on": "Zapnuto",
+    "steam.overlay.override.summary": "Překryv Steamu (pokročilé)"
+  },
+  "da": {
+    "steam.overlay.exit.body": "Spillet afsluttede inden for 30 sekunder med Steam-overlayet slået til. Hvis det er et nedbrud, og det bliver ved, så prøv at slå overlayet fra i dette spils indstillinger: Kør > Steam-overlay.",
+    "steam.overlay.exit.title": "Spillet lukkede kort efter start",
+    "steam.overlay.override.automatic": "Automatisk (til, medmindre en kendt rettelse slår det fra)",
+    "steam.overlay.override.help": "Shift+Tab åbner Mac Steams overlay i dette spil. Slå det fra, hvis spillet går ned eller tegner forkert med det.",
+    "steam.overlay.override.label": "Steam-overlay",
+    "steam.overlay.override.off": "Fra",
+    "steam.overlay.override.on": "Til",
+    "steam.overlay.override.summary": "Steam-overlay (avanceret)"
+  },
+  "de": {
+    "steam.overlay.exit.body": "Das Spiel wurde innerhalb von 30 Sekunden bei aktiviertem Steam-Overlay beendet. Wenn es sich um einen Absturz handelt und er immer wieder auftritt, schalte das Overlay in den Einstellungen dieses Spiels aus: Ausführen > Steam-Overlay.",
+    "steam.overlay.exit.title": "Spiel kurz nach dem Start beendet",
+    "steam.overlay.override.automatic": "Automatisch (an, sofern keine bekannte Korrektur es ausschaltet)",
+    "steam.overlay.override.help": "Mit Shift+Tab öffnest du in diesem Spiel das Overlay von Mac Steam. Schalte es aus, wenn das Spiel damit abstürzt oder falsch darstellt.",
+    "steam.overlay.override.label": "Steam-Overlay",
+    "steam.overlay.override.off": "Aus",
+    "steam.overlay.override.on": "An",
+    "steam.overlay.override.summary": "Steam-Overlay (erweitert)"
+  },
+  "el": {
+    "steam.overlay.exit.body": "Το παιχνίδι τερμάτισε μέσα σε 30 δευτερόλεπτα με ενεργή την επικάλυψη του Steam. Αν πρόκειται για κατάρρευση και επαναλαμβάνεται, δοκιμάστε να απενεργοποιήσετε την επικάλυψη στις ρυθμίσεις αυτού του παιχνιδιού: Εκτέλεση > Επικάλυψη του Steam.",
+    "steam.overlay.exit.title": "Το παιχνίδι έκλεισε λίγο μετά την εκκίνηση",
+    "steam.overlay.override.automatic": "Αυτόματα (ενεργή, εκτός αν μια γνωστή διόρθωση την απενεργοποιεί)",
+    "steam.overlay.override.help": "Το Shift+Tab ανοίγει την επικάλυψη του Mac Steam σε αυτό το παιχνίδι. Απενεργοποιήστε την αν το παιχνίδι καταρρέει ή σχεδιάζεται λάθος με αυτήν.",
+    "steam.overlay.override.label": "Επικάλυψη του Steam",
+    "steam.overlay.override.off": "Ανενεργή",
+    "steam.overlay.override.on": "Ενεργή",
+    "steam.overlay.override.summary": "Επικάλυψη του Steam (για προχωρημένους)"
+  },
+  "es": {
+    "steam.overlay.exit.body": "El juego se cerró en menos de 30 segundos con el overlay de Steam activado. Si es un fallo y sigue ocurriendo, prueba a desactivar el overlay en los ajustes de este juego: Ejecución > Overlay de Steam.",
+    "steam.overlay.exit.title": "El juego se cerró poco después de iniciarse",
+    "steam.overlay.override.automatic": "Automático (activado, salvo que una corrección conocida lo desactive)",
+    "steam.overlay.override.help": "Shift+Tab abre el overlay de Mac Steam en este juego. Desactívalo si el juego falla o se dibuja mal con él.",
+    "steam.overlay.override.label": "Overlay de Steam",
+    "steam.overlay.override.off": "Desactivado",
+    "steam.overlay.override.on": "Activado",
+    "steam.overlay.override.summary": "Overlay de Steam (avanzado)"
+  },
+  "et": {
+    "steam.overlay.exit.body": "Mäng sulgus 30 sekundi jooksul, kui Steami ülekate oli sees. Kui tegu on kokkujooksmisega ja see kordub, proovige ülekate selle mängu seadetes välja lülitada: Käivitus > Steami ülekate.",
+    "steam.overlay.exit.title": "Mäng sulgus pärast käivitamist peagi",
+    "steam.overlay.override.automatic": "Automaatne (sees, kui tuntud parandus seda välja ei lülita)",
+    "steam.overlay.override.help": "Shift+Tab avab selles mängus Mac Steami ülekatte. Lülitage see välja, kui mäng jookseb sellega kokku või joonistab valesti.",
+    "steam.overlay.override.label": "Steami ülekate",
+    "steam.overlay.override.off": "Väljas",
+    "steam.overlay.override.on": "Sees",
+    "steam.overlay.override.summary": "Steami ülekate (täpsemad)"
+  },
+  "eu": {
+    "steam.overlay.exit.body": "Jokoa 30 segundo barru irten da Steam overlay aktibatuta zegoela. Hau kraskada bada eta berriz gertatzen bada, saiatu overlay desaktibatzen joko honen ezarpenetan: Exekuzioa > Steam overlay.",
+    "steam.overlay.exit.title": "Jokoa abiarazi eta gutxira itxi da",
+    "steam.overlay.override.automatic": "Automatikoa (aktibatuta, konponketa ezagun batek desaktibatzen ez badu)",
+    "steam.overlay.override.help": "Shift+Tab sakatuta Mac Steam-en overlay irekitzen da joko honetan. Desaktibatu jokoa kraskatzen bada edo gaizki marrazten bada.",
+    "steam.overlay.override.label": "Steam overlay",
+    "steam.overlay.override.off": "Desaktibatuta",
+    "steam.overlay.override.on": "Aktibatuta",
+    "steam.overlay.override.summary": "Steam overlay (aurreratua)"
+  },
+  "fa": {
+    "steam.overlay.exit.body": "بازی با فعال بودن Steam Overlay ظرف 30 ثانیه خارج شد. اگر این یک خرابی است و تکرار می‌شود، Overlay را در تنظیمات همین بازی خاموش کنید: اجرا > Steam Overlay.",
+    "steam.overlay.exit.title": "بازی اندکی پس از شروع بسته شد",
+    "steam.overlay.override.automatic": "خودکار (روشن، مگر اینکه یک رفع‌ مشکل شناخته‌شده آن را خاموش کند)",
+    "steam.overlay.override.help": "Shift+Tab در این بازی Overlay مربوط به Mac Steam را باز می‌کند. اگر بازی با آن خراب می‌شود یا اشتباه نمایش داده می‌شود، آن را خاموش کنید.",
+    "steam.overlay.override.label": "Steam Overlay",
+    "steam.overlay.override.off": "خاموش",
+    "steam.overlay.override.on": "روشن",
+    "steam.overlay.override.summary": "Steam Overlay (پیشرفته)"
+  },
+  "fi": {
+    "steam.overlay.exit.body": "Peli sulkeutui 30 sekunnin sisällä Steamin päällisen ollessa käytössä. Jos kyse on kaatumisesta ja se toistuu, kokeile poistaa päällinen käytöstä tämän pelin asetuksissa: Käynnistys > Steamin päällinen.",
+    "steam.overlay.exit.title": "Peli sulkeutui pian käynnistyksen jälkeen",
+    "steam.overlay.override.automatic": "Automaattinen (päällä, ellei tunnettu korjaus poista sitä käytöstä)",
+    "steam.overlay.override.help": "Shift+Tab avaa tässä pelissä Mac Steamin päällisen. Poista se käytöstä, jos peli kaatuu tai piirtyy sen kanssa väärin.",
+    "steam.overlay.override.label": "Steamin päällinen",
+    "steam.overlay.override.off": "Pois",
+    "steam.overlay.override.on": "Päällä",
+    "steam.overlay.override.summary": "Steamin päällinen (lisäasetukset)"
+  },
+  "fr": {
+    "steam.overlay.exit.body": "Le jeu s'est arrêté en moins de 30 secondes avec la surcouche Steam activée. S'il s'agit d'un plantage qui se répète, essayez de désactiver la surcouche dans les paramètres de ce jeu : Exécution > Surcouche Steam.",
+    "steam.overlay.exit.title": "Le jeu s'est fermé peu après son lancement",
+    "steam.overlay.override.automatic": "Automatique (activée, sauf si un correctif connu la désactive)",
+    "steam.overlay.override.help": "Shift+Tab ouvre la surcouche de Mac Steam dans ce jeu. Désactivez-la si le jeu plante ou s'affiche mal avec elle.",
+    "steam.overlay.override.label": "Surcouche Steam",
+    "steam.overlay.override.off": "Désactivée",
+    "steam.overlay.override.on": "Activée",
+    "steam.overlay.override.summary": "Surcouche Steam (avancé)"
+  },
+  "ga": {
+    "steam.overlay.exit.body": "Scoir an cluiche laistigh de 30 soicind agus forleagan Steam ar siúl. Más tuairt é seo agus má leanann sé de tarlú, bain triail as an bhforleagan a chur as i socruithe an chluiche seo: Rith > Forleagan Steam.",
+    "steam.overlay.exit.title": "Dúnadh an cluiche go luath tar éis tosú",
+    "steam.overlay.override.automatic": "Uathoibríoch (ar siúl, mura gcuireann deisiú aitheanta as é)",
+    "steam.overlay.override.help": "Osclaíonn Shift+Tab forleagan Mac Steam sa chluiche seo. Cuir as é má thuairteann an cluiche nó má dhéantar é a tharraingt go mícheart leis.",
+    "steam.overlay.override.label": "Forleagan Steam",
+    "steam.overlay.override.off": "As",
+    "steam.overlay.override.on": "Ar siúl",
+    "steam.overlay.override.summary": "Forleagan Steam (ardleibhéil)"
+  },
+  "gl": {
+    "steam.overlay.exit.body": "O xogo saíu en menos de 30 segundos coa superposición de Steam activada. Se é un fallo e segue pasando, tenta desactivar a superposición nos axustes deste xogo: Execución > Superposición de Steam.",
+    "steam.overlay.exit.title": "O xogo pechouse pouco despois de iniciarse",
+    "steam.overlay.override.automatic": "Automático (activada, salvo que unha corrección coñecida a desactive)",
+    "steam.overlay.override.help": "Shift+Tab abre a superposición de Mac Steam neste xogo. Desactívaa se o xogo falla ou se debuxa mal con ela.",
+    "steam.overlay.override.label": "Superposición de Steam",
+    "steam.overlay.override.off": "Desactivada",
+    "steam.overlay.override.on": "Activada",
+    "steam.overlay.override.summary": "Superposición de Steam (avanzado)"
+  },
+  "he": {
+    "steam.overlay.exit.body": "המשחק יצא תוך 30 שניות כששכבת-העל של Steam הייתה פעילה. אם זו קריסה והיא חוזרת, נסו לכבות את שכבת-העל בהגדרות המשחק הזה: הרצה > שכבת-העל של Steam.",
+    "steam.overlay.exit.title": "המשחק נסגר זמן קצר לאחר ההפעלה",
+    "steam.overlay.override.automatic": "אוטומטי (פעילה, אלא אם תיקון ידוע מכבה אותה)",
+    "steam.overlay.override.help": "Shift+Tab פותח את שכבת-העל של Mac Steam במשחק הזה. כבו אותה אם המשחק קורס או מצויר באופן שגוי איתה.",
+    "steam.overlay.override.label": "שכבת-העל של Steam",
+    "steam.overlay.override.off": "כבויה",
+    "steam.overlay.override.on": "פעילה",
+    "steam.overlay.override.summary": "שכבת-העל של Steam (מתקדם)"
+  },
+  "hr": {
+    "steam.overlay.exit.body": "Igra je izašla unutar 30 sekundi s uključenim Steam overlayem. Ako je riječ o rušenju koje se ponavlja, pokušajte isključiti overlay u postavkama ove igre: Pokretanje > Steam overlay.",
+    "steam.overlay.exit.title": "Igra se zatvorila ubrzo nakon pokretanja",
+    "steam.overlay.override.automatic": "Automatski (uključeno, osim ako ga poznati popravak ne isključi)",
+    "steam.overlay.override.help": "Shift+Tab otvara Mac Steam overlay u ovoj igri. Isključite ga ako se igra ruši ili se s njim pogrešno iscrtava.",
+    "steam.overlay.override.label": "Steam overlay",
+    "steam.overlay.override.off": "Isključeno",
+    "steam.overlay.override.on": "Uključeno",
+    "steam.overlay.override.summary": "Steam overlay (napredno)"
+  },
+  "hu": {
+    "steam.overlay.exit.body": "A játék 30 másodpercen belül kilépett bekapcsolt Steam-átfedés mellett. Ha ez összeomlás, és ismétlődik, próbálja meg kikapcsolni az átfedést a játék beállításaiban: Futtatás > Steam-átfedés.",
+    "steam.overlay.exit.title": "A játék röviddel az indítás után bezárult",
+    "steam.overlay.override.automatic": "Automatikus (be, hacsak egy ismert javítás ki nem kapcsolja)",
+    "steam.overlay.override.help": "A Shift+Tab megnyitja a Mac Steam átfedését ebben a játékban. Kapcsolja ki, ha a játék összeomlik vagy hibásan jelenik meg vele.",
+    "steam.overlay.override.label": "Steam-átfedés",
+    "steam.overlay.override.off": "Ki",
+    "steam.overlay.override.on": "Be",
+    "steam.overlay.override.summary": "Steam-átfedés (speciális)"
+  },
+  "id": {
+    "steam.overlay.exit.body": "Game keluar dalam 30 detik dengan overlay Steam aktif. Jika ini adalah crash dan terus terjadi, coba matikan overlay di pengaturan game ini: Jalankan > Overlay Steam.",
+    "steam.overlay.exit.title": "Game tertutup tak lama setelah dimulai",
+    "steam.overlay.override.automatic": "Otomatis (aktif, kecuali perbaikan yang diketahui mematikannya)",
+    "steam.overlay.override.help": "Shift+Tab membuka overlay Mac Steam di game ini. Matikan jika game crash atau tergambar salah dengannya.",
+    "steam.overlay.override.label": "Overlay Steam",
+    "steam.overlay.override.off": "Nonaktif",
+    "steam.overlay.override.on": "Aktif",
+    "steam.overlay.override.summary": "Overlay Steam (lanjutan)"
+  },
+  "it": {
+    "steam.overlay.exit.body": "Il gioco è uscito entro 30 secondi con l'overlay di Steam attivo. Se si tratta di un crash che si ripete, prova a disattivare l'overlay nelle impostazioni di questo gioco: Esecuzione > Overlay di Steam.",
+    "steam.overlay.exit.title": "Il gioco si è chiuso poco dopo l'avvio",
+    "steam.overlay.override.automatic": "Automatico (attivo, a meno che una correzione nota non lo disattivi)",
+    "steam.overlay.override.help": "Shift+Tab apre l'overlay di Mac Steam in questo gioco. Disattivalo se il gioco va in crash o viene disegnato in modo errato con esso.",
+    "steam.overlay.override.label": "Overlay di Steam",
+    "steam.overlay.override.off": "Disattivato",
+    "steam.overlay.override.on": "Attivo",
+    "steam.overlay.override.summary": "Overlay di Steam (avanzato)"
+  },
+  "ja": {
+    "steam.overlay.exit.body": "Steamオーバーレイが有効な状態で、ゲームが30秒以内に終了しました。クラッシュであり、繰り返し発生する場合は、このゲームの設定でオーバーレイをオフにしてみてください：実行 > Steamオーバーレイ。",
+    "steam.overlay.exit.title": "ゲームが起動直後に終了しました",
+    "steam.overlay.override.automatic": "自動（オン。既知の修正でオフになる場合を除く）",
+    "steam.overlay.override.help": "Shift+Tabで、このゲームでMac Steamのオーバーレイが開きます。ゲームがクラッシュしたり、オーバーレイで描画が乱れたりする場合はオフにしてください。",
+    "steam.overlay.override.label": "Steamオーバーレイ",
+    "steam.overlay.override.off": "オフ",
+    "steam.overlay.override.on": "オン",
+    "steam.overlay.override.summary": "Steamオーバーレイ（詳細設定）"
+  },
+  "ka": {
+    "steam.overlay.exit.body": "თამაში 30 წამში გავიდა Steam-ის ოვერლეის ჩართვით. თუ ეს კრაშია და მეორდება, სცადეთ ოვერლეის გამორთვა ამ თამაშის პარამეტრებში: გაშვება > Steam-ის ოვერლეი.",
+    "steam.overlay.exit.title": "თამაში გაშვებისთანავე მალევე დაიხურა",
+    "steam.overlay.override.automatic": "ავტომატური (ჩართული, თუ ცნობილი გამოსწორება არ გამორთავს)",
+    "steam.overlay.override.help": "Shift+Tab ხსნის Mac Steam-ის ოვერლეის ამ თამაშში. გამორთეთ, თუ თამაში ებრძვის კრაშს ან მასთან არასწორად ჩანს.",
+    "steam.overlay.override.label": "Steam-ის ოვერლეი",
+    "steam.overlay.override.off": "გამორთულია",
+    "steam.overlay.override.on": "ჩართულია",
+    "steam.overlay.override.summary": "Steam-ის ოვერლეი (გაფართოებული)"
+  },
+  "ko": {
+    "steam.overlay.exit.body": "Steam 오버레이가 켜진 상태에서 게임이 30초 이내에 종료되었습니다. 충돌이며 계속 발생한다면 이 게임의 설정에서 오버레이를 꺼 보세요: 실행 > Steam 오버레이.",
+    "steam.overlay.exit.title": "게임이 시작 직후 종료되었습니다",
+    "steam.overlay.override.automatic": "자동 (켜짐, 알려진 수정으로 꺼지는 경우 제외)",
+    "steam.overlay.override.help": "Shift+Tab을 누르면 이 게임에서 Mac Steam의 오버레이가 열립니다. 오버레이 때문에 게임이 충돌하거나 화면이 잘못 그려지면 끄세요.",
+    "steam.overlay.override.label": "Steam 오버레이",
+    "steam.overlay.override.off": "꺼짐",
+    "steam.overlay.override.on": "켜짐",
+    "steam.overlay.override.summary": "Steam 오버레이 (고급)"
+  },
+  "lt": {
+    "steam.overlay.exit.body": "Žaidimas išėjo per 30 sekundžių, kai Steam perdanga buvo įjungta. Jei tai strigtis ir ji kartojasi, pabandykite išjungti perdangą šio žaidimo nustatymuose: Paleidimas > Steam perdanga.",
+    "steam.overlay.exit.title": "Žaidimas užsidarė netrukus po paleidimo",
+    "steam.overlay.override.automatic": "Automatinė (įjungta, nebent žinomas pataisymas ją išjungia)",
+    "steam.overlay.override.help": "Shift+Tab šiame žaidime atidaro Mac Steam perdangą. Išjunkite ją, jei žaidimas strigsta arba su ja piešiamas neteisingai.",
+    "steam.overlay.override.label": "Steam perdanga",
+    "steam.overlay.override.off": "Išjungta",
+    "steam.overlay.override.on": "Įjungta",
+    "steam.overlay.override.summary": "Steam perdanga (papildoma)"
+  },
+  "ml": {
+    "steam.overlay.exit.body": "Steam ഓവർലേ ഓണായിരിക്കെ ഗെയിം 30 സെക്കൻഡിനുള്ളിൽ പുറത്തുകടന്നു. ഇതൊരു ക്രാഷ് ആണെങ്കിൽ, അത് ആവർത്തിക്കുന്നുവെങ്കിൽ, ഈ ഗെയിമിന്റെ ക്രമീകരണങ്ങളിൽ ഓവർലേ ഓഫ് ചെയ്യാൻ ശ്രമിക്കുക: പ്രവർത്തിപ്പിക്കുക > Steam ഓവർലേ.",
+    "steam.overlay.exit.title": "ഗെയിം ആരംഭിച്ച ഉടനെ അടഞ്ഞു",
+    "steam.overlay.override.automatic": "സ്വയമേവ (ഓൺ, അറിയപ്പെടുന്ന ഒരു പരിഹാരം ഓഫ് ചെയ്യുന്നില്ലെങ്കിൽ)",
+    "steam.overlay.override.help": "Shift+Tab ഈ ഗെയിമിൽ Mac Steam-ന്റെ ഓവർലേ തുറക്കുന്നു. ഗെയിം ക്രാഷ് ആകുകയോ അതിനൊപ്പം തെറ്റായി വരയ്ക്കുകയോ ചെയ്താൽ അത് ഓഫ് ചെയ്യുക.",
+    "steam.overlay.override.label": "Steam ഓവർലേ",
+    "steam.overlay.override.off": "ഓഫ്",
+    "steam.overlay.override.on": "ഓൺ",
+    "steam.overlay.override.summary": "Steam ഓവർലേ (വിപുലമായത്)"
+  },
+  "nb_NO": {
+    "steam.overlay.exit.body": "Spillet avsluttet innen 30 sekunder med Steam-overlay slått på. Hvis dette er en krasj og det fortsetter, prøv å slå av overlayet i innstillingene for dette spillet: Kjør > Steam-overlay.",
+    "steam.overlay.exit.title": "Spillet lukket seg kort tid etter start",
+    "steam.overlay.override.automatic": "Automatisk (på, med mindre en kjent rettelse slår det av)",
+    "steam.overlay.override.help": "Shift+Tab åpner Mac Steams overlay i dette spillet. Slå det av hvis spillet krasjer eller tegnes feil med det.",
+    "steam.overlay.override.label": "Steam-overlay",
+    "steam.overlay.override.off": "Av",
+    "steam.overlay.override.on": "På",
+    "steam.overlay.override.summary": "Steam-overlay (avansert)"
+  },
+  "nl": {
+    "steam.overlay.exit.body": "Het spel is binnen 30 seconden afgesloten met de Steam-overlay aan. Als dit een crash is en het blijft gebeuren, probeer dan de overlay uit te zetten in de instellingen van dit spel: Uitvoeren > Steam-overlay.",
+    "steam.overlay.exit.title": "Spel kort na het starten gesloten",
+    "steam.overlay.override.automatic": "Automatisch (aan, tenzij een bekende oplossing het uitzet)",
+    "steam.overlay.override.help": "Met Shift+Tab open je in dit spel de overlay van Mac Steam. Zet hem uit als het spel ermee crasht of verkeerd wordt weergegeven.",
+    "steam.overlay.override.label": "Steam-overlay",
+    "steam.overlay.override.off": "Uit",
+    "steam.overlay.override.on": "Aan",
+    "steam.overlay.override.summary": "Steam-overlay (geavanceerd)"
+  },
+  "pl": {
+    "steam.overlay.exit.body": "Gra zakończyła działanie w ciągu 30 sekund przy włączonej nakładce Steam. Jeśli to awaria i powtarza się, spróbuj wyłączyć nakładkę w ustawieniach tej gry: Uruchamianie > Nakładka Steam.",
+    "steam.overlay.exit.title": "Gra zamknęła się wkrótce po uruchomieniu",
+    "steam.overlay.override.automatic": "Automatycznie (włączona, chyba że znana poprawka ją wyłączy)",
+    "steam.overlay.override.help": "Shift+Tab otwiera w tej grze nakładkę Mac Steam. Wyłącz ją, jeśli gra z nią ulega awarii lub jest źle wyświetlana.",
+    "steam.overlay.override.label": "Nakładka Steam",
+    "steam.overlay.override.off": "Wyłączona",
+    "steam.overlay.override.on": "Włączona",
+    "steam.overlay.override.summary": "Nakładka Steam (zaawansowane)"
+  },
+  "pt": {
+    "steam.overlay.exit.body": "O jogo terminou em menos de 30 segundos com a sobreposição do Steam ativada. Se for uma falha e continuar a acontecer, tente desativar a sobreposição nas definições deste jogo: Execução > Sobreposição do Steam.",
+    "steam.overlay.exit.title": "O jogo fechou pouco depois de iniciar",
+    "steam.overlay.override.automatic": "Automático (ativada, a menos que uma correção conhecida a desative)",
+    "steam.overlay.override.help": "Shift+Tab abre a sobreposição do Mac Steam neste jogo. Desative-a se o jogo falhar ou for desenhado incorretamente com ela.",
+    "steam.overlay.override.label": "Sobreposição do Steam",
+    "steam.overlay.override.off": "Desativada",
+    "steam.overlay.override.on": "Ativada",
+    "steam.overlay.override.summary": "Sobreposição do Steam (avançado)"
+  },
+  "pt_BR": {
+    "steam.overlay.exit.body": "O jogo foi encerrado em menos de 30 segundos com o overlay do Steam ativado. Se for um crash e continuar acontecendo, tente desativar o overlay nas configurações deste jogo: Execução > Overlay do Steam.",
+    "steam.overlay.exit.title": "O jogo fechou logo após iniciar",
+    "steam.overlay.override.automatic": "Automático (ativado, a menos que uma correção conhecida o desative)",
+    "steam.overlay.override.help": "Shift+Tab abre o overlay do Mac Steam neste jogo. Desative-o se o jogo travar ou for desenhado errado com ele.",
+    "steam.overlay.override.label": "Overlay do Steam",
+    "steam.overlay.override.off": "Desativado",
+    "steam.overlay.override.on": "Ativado",
+    "steam.overlay.override.summary": "Overlay do Steam (avançado)"
+  },
+  "ro": {
+    "steam.overlay.exit.body": "Jocul s-a oprit în 30 de secunde cu overlay-ul Steam activat. Dacă este o cădere și se repetă, încearcă să dezactivezi overlay-ul din setările acestui joc: Rulare > Overlay-ul Steam.",
+    "steam.overlay.exit.title": "Jocul s-a închis la scurt timp după pornire",
+    "steam.overlay.override.automatic": "Automat (activat, cu excepția cazului în care o remediere cunoscută îl dezactivează)",
+    "steam.overlay.override.help": "Shift+Tab deschide overlay-ul Mac Steam în acest joc. Dezactivează-l dacă jocul se blochează sau este desenat greșit cu el.",
+    "steam.overlay.override.label": "Overlay-ul Steam",
+    "steam.overlay.override.off": "Dezactivat",
+    "steam.overlay.override.on": "Activat",
+    "steam.overlay.override.summary": "Overlay-ul Steam (avansat)"
+  },
+  "ru": {
+    "steam.overlay.exit.body": "Игра завершилась в течение 30 секунд при включённом оверлее Steam. Если это сбой и он повторяется, попробуйте выключить оверлей в настройках этой игры: Запуск > Оверлей Steam.",
+    "steam.overlay.exit.title": "Игра закрылась вскоре после запуска",
+    "steam.overlay.override.automatic": "Автоматически (включён, если известное исправление не выключает его)",
+    "steam.overlay.override.help": "Shift+Tab открывает оверлей Mac Steam в этой игре. Выключите его, если игра с ним вылетает или рисуется неправильно.",
+    "steam.overlay.override.label": "Оверлей Steam",
+    "steam.overlay.override.off": "Выключен",
+    "steam.overlay.override.on": "Включён",
+    "steam.overlay.override.summary": "Оверлей Steam (дополнительно)"
+  },
+  "sk": {
+    "steam.overlay.exit.body": "Hra skončila do 30 sekúnd so zapnutým prekrytím Steamu. Ak ide o pád a opakuje sa, skúste v nastaveniach tejto hry prekrytie vypnúť: Spustenie > Prekrytie Steamu.",
+    "steam.overlay.exit.title": "Hra sa krátko po spustení zavrela",
+    "steam.overlay.override.automatic": "Automaticky (zapnuté, ak ho známa oprava nevypne)",
+    "steam.overlay.override.help": "Shift+Tab otvorí v tejto hre prekrytie Mac Steam. Vypnite ho, ak hra padá alebo sa s ním zle vykresľuje.",
+    "steam.overlay.override.label": "Prekrytie Steamu",
+    "steam.overlay.override.off": "Vypnuté",
+    "steam.overlay.override.on": "Zapnuté",
+    "steam.overlay.override.summary": "Prekrytie Steamu (pokročilé)"
+  },
+  "sl": {
+    "steam.overlay.exit.body": "Igra se je zaprla v 30 sekundah, ko je bil prekrivni sloj Steam vklopljen. Če gre za zrušitev, ki se ponavlja, poskusite izklopiti prekrivni sloj v nastavitvah te igre: Zagon > Prekrivni sloj Steam.",
+    "steam.overlay.exit.title": "Igra se je kmalu po zagonu zaprla",
+    "steam.overlay.override.automatic": "Samodejno (vklopljeno, razen če ga znan popravek izklopi)",
+    "steam.overlay.override.help": "Shift+Tab odpre prekrivni sloj Mac Steam v tej igri. Izklopite ga, če se igra z njim zruši ali se napačno izrisuje.",
+    "steam.overlay.override.label": "Prekrivni sloj Steam",
+    "steam.overlay.override.off": "Izklopljeno",
+    "steam.overlay.override.on": "Vklopljeno",
+    "steam.overlay.override.summary": "Prekrivni sloj Steam (napredno)"
+  },
+  "sr": {
+    "steam.overlay.exit.body": "Игра је изашла у року од 30 секунди са укљученим Steam преклапањем. Ако је ово рушење које се понавља, покушајте да искључите преклапање у подешавањима ове игре: Покретање > Steam преклапање.",
+    "steam.overlay.exit.title": "Игра се затворила убрзо након покретања",
+    "steam.overlay.override.automatic": "Аутоматски (укључено, осим ако га познато решење не искључи)",
+    "steam.overlay.override.help": "Shift+Tab отвара Mac Steam преклапање у овој игри. Искључите га ако се игра руши или се са њим погрешно приказује.",
+    "steam.overlay.override.label": "Steam преклапање",
+    "steam.overlay.override.off": "Искључено",
+    "steam.overlay.override.on": "Укључено",
+    "steam.overlay.override.summary": "Steam преклапање (напредно)"
+  },
+  "sv": {
+    "steam.overlay.exit.body": "Spelet avslutades inom 30 sekunder med Steam-overlayen på. Om det är en krasch som fortsätter, prova att stänga av overlayen i det här spelets inställningar: Kör > Steam-overlay.",
+    "steam.overlay.exit.title": "Spelet stängdes strax efter start",
+    "steam.overlay.override.automatic": "Automatiskt (på, om inte en känd korrigering stänger av den)",
+    "steam.overlay.override.help": "Shift+Tab öppnar Mac Steams overlay i det här spelet. Stäng av den om spelet kraschar eller ritas fel med den.",
+    "steam.overlay.override.label": "Steam-overlay",
+    "steam.overlay.override.off": "Av",
+    "steam.overlay.override.on": "På",
+    "steam.overlay.override.summary": "Steam-overlay (avancerat)"
+  },
+  "ta": {
+    "steam.overlay.exit.body": "Steam மேலடுக்கு இயக்கத்தில் இருக்கும்போது விளையாட்டு 30 வினாடிகளுக்குள் வெளியேறியது. இது செயலிழப்பாக இருந்து தொடர்ந்தால், இந்த விளையாட்டின் அமைப்புகளில் மேலடுக்கை அணைத்துப் பாருங்கள்: இயக்கு > Steam மேலடுக்கு.",
+    "steam.overlay.exit.title": "விளையாட்டு தொடங்கிய சிறிது நேரத்தில் மூடப்பட்டது",
+    "steam.overlay.override.automatic": "தானியங்கி (இயக்கம், அறியப்பட்ட திருத்தம் அணைக்காவிட்டால்)",
+    "steam.overlay.override.help": "Shift+Tab இந்த விளையாட்டில் Mac Steam-இன் மேலடுக்கைத் திறக்கும். அதனுடன் விளையாட்டு செயலிழந்தாலோ தவறாக வரையப்பட்டாலோ அதை அணைக்கவும்.",
+    "steam.overlay.override.label": "Steam மேலடுக்கு",
+    "steam.overlay.override.off": "அணைப்பு",
+    "steam.overlay.override.on": "இயக்கம்",
+    "steam.overlay.override.summary": "Steam மேலடுக்கு (மேம்பட்டது)"
+  },
+  "th": {
+    "steam.overlay.exit.body": "เกมออกภายใน 30 วินาทีขณะเปิดโอเวอร์เลย์ของ Steam หากเป็นการแครชและเกิดซ้ำ ให้ลองปิดโอเวอร์เลย์ในการตั้งค่าของเกมนี้ เรียกใช้ > โอเวอร์เลย์ของ Steam",
+    "steam.overlay.exit.title": "เกมปิดลงไม่นานหลังเริ่มต้น",
+    "steam.overlay.override.automatic": "อัตโนมัติ (เปิด เว้นแต่การแก้ไขที่ทราบจะปิด)",
+    "steam.overlay.override.help": "Shift+Tab เปิดโอเวอร์เลย์ของ Mac Steam ในเกมนี้ ให้ปิดหากเกมแครชหรือแสดงผลผิดเพี้ยนเมื่อใช้โอเวอร์เลย์",
+    "steam.overlay.override.label": "โอเวอร์เลย์ของ Steam",
+    "steam.overlay.override.off": "ปิด",
+    "steam.overlay.override.on": "เปิด",
+    "steam.overlay.override.summary": "โอเวอร์เลย์ของ Steam (ขั้นสูง)"
+  },
+  "tr": {
+    "steam.overlay.exit.body": "Oyun, Steam kaplaması açıkken 30 saniye içinde kapandı. Bu bir çökmeyse ve tekrar ediyorsa, bu oyunun ayarlarında kaplamayı kapatmayı deneyin: Çalıştır > Steam kaplaması.",
+    "steam.overlay.exit.title": "Oyun başladıktan kısa süre sonra kapandı",
+    "steam.overlay.override.automatic": "Otomatik (açık, bilinen bir düzeltme kapatmadıkça)",
+    "steam.overlay.override.help": "Shift+Tab bu oyunda Mac Steam kaplamasını açar. Oyun çöküyorsa veya onunla yanlış çiziliyorsa kapatın.",
+    "steam.overlay.override.label": "Steam kaplaması",
+    "steam.overlay.override.off": "Kapalı",
+    "steam.overlay.override.on": "Açık",
+    "steam.overlay.override.summary": "Steam kaplaması (gelişmiş)"
+  },
+  "uk": {
+    "steam.overlay.exit.body": "Гра завершилася протягом 30 секунд за ввімкненого накладання Steam. Якщо це збій і він повторюється, спробуйте вимкнути накладання в налаштуваннях цієї гри: Запуск > Накладання Steam.",
+    "steam.overlay.exit.title": "Гра закрилася невдовзі після запуску",
+    "steam.overlay.override.automatic": "Автоматично (ввімкнено, якщо відоме виправлення не вимикає його)",
+    "steam.overlay.override.help": "Shift+Tab відкриває накладання Mac Steam у цій грі. Вимкніть його, якщо гра з ним вилітає або неправильно відображається.",
+    "steam.overlay.override.label": "Накладання Steam",
+    "steam.overlay.override.off": "Вимкнено",
+    "steam.overlay.override.on": "Увімкнено",
+    "steam.overlay.override.summary": "Накладання Steam (додатково)"
+  },
+  "uz": {
+    "steam.overlay.exit.body": "O'yin Steam overlay yoqilgan holda 30 soniya ichida chiqib ketdi. Agar bu ishdan chiqish bo'lsa va takrorlanayotgan bo'lsa, ushbu o'yin sozlamalarida overlayni o'chirib ko'ring: Ishga tushirish > Steam overlay.",
+    "steam.overlay.exit.title": "O'yin ishga tushgandan so'ng tez orada yopildi",
+    "steam.overlay.override.automatic": "Avtomatik (yoqilgan, ma'lum tuzatish o'chirmasa)",
+    "steam.overlay.override.help": "Shift+Tab ushbu o'yinda Mac Steam overlayini ochadi. O'yin u bilan ishdan chiqsa yoki noto'g'ri chizilsa, uni o'chiring.",
+    "steam.overlay.override.label": "Steam overlay",
+    "steam.overlay.override.off": "O'chirilgan",
+    "steam.overlay.override.on": "Yoqilgan",
+    "steam.overlay.override.summary": "Steam overlay (qo'shimcha)"
+  },
+  "vi": {
+    "steam.overlay.exit.body": "Trò chơi đã thoát trong vòng 30 giây khi overlay Steam đang bật. Nếu đây là sự cố treo và cứ lặp lại, hãy thử tắt overlay trong cài đặt của trò chơi này: Chạy > Overlay Steam.",
+    "steam.overlay.exit.title": "Trò chơi đã đóng ngay sau khi khởi động",
+    "steam.overlay.override.automatic": "Tự động (bật, trừ khi một bản sửa lỗi đã biết tắt nó)",
+    "steam.overlay.override.help": "Shift+Tab mở overlay của Mac Steam trong trò chơi này. Hãy tắt nó nếu trò chơi bị treo hoặc hiển thị sai khi dùng overlay.",
+    "steam.overlay.override.label": "Overlay Steam",
+    "steam.overlay.override.off": "Tắt",
+    "steam.overlay.override.on": "Bật",
+    "steam.overlay.override.summary": "Overlay Steam (nâng cao)"
+  },
+  "zh_Hans": {
+    "steam.overlay.exit.body": "游戏在 Steam 叠加层开启的情况下于 30 秒内退出。如果这是崩溃且反复出现，请尝试在此游戏的设置中关闭叠加层：运行 > Steam 叠加层。",
+    "steam.overlay.exit.title": "游戏在启动后不久关闭",
+    "steam.overlay.override.automatic": "自动（开启，除非已知修复将其关闭）",
+    "steam.overlay.override.help": "按 Shift+Tab 可在此游戏中打开 Mac Steam 的叠加层。如果游戏因此崩溃或画面异常，请将其关闭。",
+    "steam.overlay.override.label": "Steam 叠加层",
+    "steam.overlay.override.off": "关闭",
+    "steam.overlay.override.on": "开启",
+    "steam.overlay.override.summary": "Steam 叠加层（高级）"
+  },
+  "zh_Hant": {
+    "steam.overlay.exit.body": "遊戲在 Steam 疊加層開啟的情況下於 30 秒內結束。如果這是當機且反覆發生，請嘗試在此遊戲的設定中關閉疊加層：執行 > Steam 疊加層。",
+    "steam.overlay.exit.title": "遊戲在啟動後不久關閉",
+    "steam.overlay.override.automatic": "自動（開啟，除非已知修復將其關閉）",
+    "steam.overlay.override.help": "按 Shift+Tab 可在此遊戲中開啟 Mac Steam 的疊加層。如果遊戲因此當機或畫面異常，請將其關閉。",
+    "steam.overlay.override.label": "Steam 疊加層",
+    "steam.overlay.override.off": "關閉",
+    "steam.overlay.override.on": "開啟",
+    "steam.overlay.override.summary": "Steam 疊加層（進階）"
+  }
+}

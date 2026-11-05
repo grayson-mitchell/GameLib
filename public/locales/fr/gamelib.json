@@ -439,6 +439,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Le jeu s'est arrêté en moins de 30 secondes avec la surcouche Steam activée. S'il s'agit d'un plantage qui se répète, essayez de désactiver la surcouche dans les paramètres de ce jeu : Exécution > Surcouche Steam.",
+                "title": "Le jeu s'est fermé peu après son lancement"
+            },
+            "override": {
+                "automatic": "Automatique (activée, sauf si un correctif connu la désactive)",
+                "help": "Shift+Tab ouvre la surcouche de Mac Steam dans ce jeu. Désactivez-la si le jeu plante ou s'affiche mal avec elle.",
+                "label": "Surcouche Steam",
+                "off": "Désactivée",
+                "on": "Activée",
+                "summary": "Surcouche Steam (avancé)"
+            },
             "step": {
                 "clone": "La copie de CrossOver pour la surcouche n'a pas pu être préparée.",
                 "crossoverDetect": "CrossOver est introuvable.",

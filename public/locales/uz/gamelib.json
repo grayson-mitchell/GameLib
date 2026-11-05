@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "O'yin Steam overlay yoqilgan holda 30 soniya ichida chiqib ketdi. Agar bu ishdan chiqish bo'lsa va takrorlanayotgan bo'lsa, ushbu o'yin sozlamalarida overlayni o'chirib ko'ring: Ishga tushirish > Steam overlay.",
+                "title": "O'yin ishga tushgandan so'ng tez orada yopildi"
+            },
+            "override": {
+                "automatic": "Avtomatik (yoqilgan, ma'lum tuzatish o'chirmasa)",
+                "help": "Shift+Tab ushbu o'yinda Mac Steam overlayini ochadi. O'yin u bilan ishdan chiqsa yoki noto'g'ri chizilsa, uni o'chiring.",
+                "label": "Steam overlay",
+                "off": "O'chirilgan",
+                "on": "Yoqilgan",
+                "summary": "Steam overlay (qo'shimcha)"
+            },
             "step": {
                 "clone": "CrossOver'ning overlay nusxasini tayyorlab bo'lmadi.",
                 "crossoverDetect": "CrossOver topilmadi.",

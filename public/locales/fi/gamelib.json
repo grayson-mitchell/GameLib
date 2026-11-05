@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Peli sulkeutui 30 sekunnin sisällä Steamin päällisen ollessa käytössä. Jos kyse on kaatumisesta ja se toistuu, kokeile poistaa päällinen käytöstä tämän pelin asetuksissa: Käynnistys > Steamin päällinen.",
+                "title": "Peli sulkeutui pian käynnistyksen jälkeen"
+            },
+            "override": {
+                "automatic": "Automaattinen (päällä, ellei tunnettu korjaus poista sitä käytöstä)",
+                "help": "Shift+Tab avaa tässä pelissä Mac Steamin päällisen. Poista se käytöstä, jos peli kaatuu tai piirtyy sen kanssa väärin.",
+                "label": "Steamin päällinen",
+                "off": "Pois",
+                "on": "Päällä",
+                "summary": "Steamin päällinen (lisäasetukset)"
+            },
             "step": {
                 "clone": "CrossOverin päällisen kopiota ei voitu valmistella.",
                 "crossoverDetect": "CrossOveria ei löytynyt.",

@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Trò chơi đã thoát trong vòng 30 giây khi overlay Steam đang bật. Nếu đây là sự cố treo và cứ lặp lại, hãy thử tắt overlay trong cài đặt của trò chơi này: Chạy > Overlay Steam.",
+                "title": "Trò chơi đã đóng ngay sau khi khởi động"
+            },
+            "override": {
+                "automatic": "Tự động (bật, trừ khi một bản sửa lỗi đã biết tắt nó)",
+                "help": "Shift+Tab mở overlay của Mac Steam trong trò chơi này. Hãy tắt nó nếu trò chơi bị treo hoặc hiển thị sai khi dùng overlay.",
+                "label": "Overlay Steam",
+                "off": "Tắt",
+                "on": "Bật",
+                "summary": "Overlay Steam (nâng cao)"
+            },
             "step": {
                 "clone": "Không thể chuẩn bị bản sao overlay của CrossOver.",
                 "crossoverDetect": "Không thể tìm thấy CrossOver.",

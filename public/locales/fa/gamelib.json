@@ -531,6 +531,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "بازی با فعال بودن Steam Overlay ظرف 30 ثانیه خارج شد. اگر این یک خرابی است و تکرار می‌شود، Overlay را در تنظیمات همین بازی خاموش کنید: اجرا > Steam Overlay.",
+                "title": "بازی اندکی پس از شروع بسته شد"
+            },
+            "override": {
+                "automatic": "خودکار (روشن، مگر اینکه یک رفع‌ مشکل شناخته‌شده آن را خاموش کند)",
+                "help": "Shift+Tab در این بازی Overlay مربوط به Mac Steam را باز می‌کند. اگر بازی با آن خراب می‌شود یا اشتباه نمایش داده می‌شود، آن را خاموش کنید.",
+                "label": "Steam Overlay",
+                "off": "خاموش",
+                "on": "روشن",
+                "summary": "Steam Overlay (پیشرفته)"
+            },
             "step": {
                 "clone": "آماده‌سازی نسخه Overlay مربوط به CrossOver ممکن نبود.",
                 "crossoverDetect": "CrossOver پیدا نشد.",

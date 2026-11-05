@@ -538,6 +538,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "O jogo terminou em menos de 30 segundos com a sobreposição do Steam ativada. Se for uma falha e continuar a acontecer, tente desativar a sobreposição nas definições deste jogo: Execução > Sobreposição do Steam.",
+                "title": "O jogo fechou pouco depois de iniciar"
+            },
+            "override": {
+                "automatic": "Automático (ativada, a menos que uma correção conhecida a desative)",
+                "help": "Shift+Tab abre a sobreposição do Mac Steam neste jogo. Desative-a se o jogo falhar ou for desenhado incorretamente com ela.",
+                "label": "Sobreposição do Steam",
+                "off": "Desativada",
+                "on": "Ativada",
+                "summary": "Sobreposição do Steam (avançado)"
+            },
             "step": {
                 "clone": "Não foi possível preparar a cópia de sobreposição do CrossOver.",
                 "crossoverDetect": "Não foi possível encontrar o CrossOver.",

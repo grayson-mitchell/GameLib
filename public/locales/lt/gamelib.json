@@ -545,6 +545,18 @@
             }
         },
         "overlay": {
+            "exit": {
+                "body": "Žaidimas išėjo per 30 sekundžių, kai Steam perdanga buvo įjungta. Jei tai strigtis ir ji kartojasi, pabandykite išjungti perdangą šio žaidimo nustatymuose: Paleidimas > Steam perdanga.",
+                "title": "Žaidimas užsidarė netrukus po paleidimo"
+            },
+            "override": {
+                "automatic": "Automatinė (įjungta, nebent žinomas pataisymas ją išjungia)",
+                "help": "Shift+Tab šiame žaidime atidaro Mac Steam perdangą. Išjunkite ją, jei žaidimas strigsta arba su ja piešiamas neteisingai.",
+                "label": "Steam perdanga",
+                "off": "Išjungta",
+                "on": "Įjungta",
+                "summary": "Steam perdanga (papildoma)"
+            },
             "step": {
                 "clone": "Nepavyko paruošti CrossOver perdangos kopijos.",
                 "crossoverDetect": "Nepavyko rasti CrossOver.",
