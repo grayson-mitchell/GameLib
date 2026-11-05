@@ -36,7 +36,9 @@ an install poll (`delegatedToSteamClient true`). Steam only raised its sign-in
 window. After sign-in it queued nothing, and GameLib stayed on **Installing**.
 As with uninstall, the user can recover only by doing the action by hand in
 Steam (the poll would then see the manifest), by cancelling in GameLib, or by
-waiting out the cap. Nothing tells them which.
+waiting out the cap. Nothing tells them which. In practice, cancelling did not
+clear it: the operator had to restart GameLib to get rid of the stuck
+Installing state (2026-11-05, after 6b).
 
 ## Solution (to decide)
 
