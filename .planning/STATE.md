@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60
 Plan: 0 of 0
 Status: Milestone complete
-Last activity: 2026-11-05 - Completed quick task 261105-h5h: set STATE.md Plan field to N of M shape
+Last activity: 2026-11-05 - Completed quick task 261105-o65: Settings nav icons on every row, grouped with a divider
 
 Progress: [██████████] 100%
 
@@ -436,6 +436,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261105-ast | Steam overlay early-exit notice moved from a native dialog to the in-app toast stack (new exitNotice push + third toast slot, focus-gated 8s countdown, dismiss); body reworded to "If this is a crash and keeps happening, try turning the overlay off ... Run > Steam overlay." | 2026-11-05 | 1962f8ee0 | backend jest 731/731; frontend jest 233 pass/1 skip; tsc exit 0; pnpm lint warning caps over (src 1135/1130, tests 665/661; per-file counts unchanged, pre-existing by inference); live tauri:dev check pass 2026-11-05 | [261105-ast-show-the-overlay-early-exit-notice-as-an](./quick/261105-ast-show-the-overlay-early-exit-notice-as-an/) |
 | 261105-gy5 | Steam overlay toast title/body + the 6 `steam.overlay.step.*` sentences that fill `{{step}}` localised in all 48 non-en gamelib catalogs (scope widened from 2 keys); baseline 6528 -> 6144; todo closed, exit/override follow-up filed. | 2026-11-05 | 7796dd9c1 | validateTranslation 384/384; lint-translations exit 0; 4 jest suites pass (267 tests) | [261105-gy5-localise-steam-overlay-toast-keys](./quick/261105-gy5-localise-steam-overlay-toast-keys/) |
 | 261105-h5h | STATE.md `Plan: Not started` -> `Plan: 0 of 0` (hand edit: `gsd-sdk query state.update` also rewrote 4 frontmatter keys, so reverted); state-sdk-field-anchor gate green; todo closed | 2026-11-05 | 4031236a3 | planning-gates 12/12 (was 11/12) | [261105-h5h-set-state-md-plan-field-to-n-of-m-shape-](./quick/261105-h5h-set-state-md-plan-field-to-n-of-m-shape-/) |
+| 261105-o65 | Settings tier-2 nav (sketch 007 Option 1): every row iconed (new gear/compact-disc/screwdriver-wrench/file-lines/microchip/bug; Appearance universal-access -> palette), regrouped into settings pages / help & app actions split by a themed `role="separator"` divider; anchors, guards, handlers unchanged. | 2026-11-05 | 7ce89335f | SettingsPanel + destinationCoverage pass; NavShell jest 648/649 in dirty tree (themeTokens census fails on other session's uncommitted DownloadManager work; passes on clean HEAD); live 3-theme look check pending | [261105-o65-settings-nav-icons-on-every-row-with-gro](./quick/261105-o65-settings-nav-icons-on-every-row-with-gro/) |
 
 ## Deferred Items
 
