@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60
 Plan: 0 of 0
 Status: Milestone complete
-Last activity: 2026-11-05 - Completed quick task 261105-vfq: dropped steam:// install/uninstall requests time out after ~2 min and revert; Cancel stops a Steam-owned install poll; live check pending
+Last activity: 2026-11-06 - Completed quick task 261106-ab1: split src-tauri main.rs into modules (20,324 → 7,886 lines)
 
 Progress: [██████████] 100%
 
@@ -454,6 +454,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261105-svg | Steam download monitor's script/nettop child now runs under a `/bin/sh` parent-death watchdog (`childWatchdog.ts`): polls the sidecar pid each second, kills script + nettop on parent death, clean stop, or pinned Steam pid exit. Todo closed. | 2026-11-05 | bf49c17ab | Jest pass (18, 2 env-gated); live SIGKILL proof: tree gone in 123ms; baseline did not reproduce the field orphan (cause still inferred) | [261105-svg-orphaned-nettop-monitor-child-survives-a](./quick/261105-svg-orphaned-nettop-monitor-child-survives-a/) |
 | 261105-u96 | Steam-managed download keys (`downloadManager.steamManaged.*`, `gamepage.steamInstallingPercent`) localised in all 48 non-en gamelib.json + gamelib.mt.json; baseline totalPairs 6000 -> 5760 (exactly the 240 pairs). Todo closed. | 2026-11-05 | 6d6da44e9 | validateTranslation 240/240 + 2 sabotage rejects; lint-translations, 4 jest suites (267), planning-gates 12/12 | [261105-u96-localise-the-steam-managed-download-keys](./quick/261105-u96-localise-the-steam-managed-download-keys/) |
 | 261105-upw | New `getSteamInstallAppTargets` IPC gives the install modal its own InstallApp-route discriminator; library dropdown + free-space line now show on that route (multi-library, same as native-ON); SteamDialog sign-in gate and copy unchanged. Todo closed. | 2026-11-05 | 8e4694a85 | installFlows+census (118), InstallModal jest (548), tsc, lint 0 errors, planning-gates 12/12; 2 Backend failures pre-exist at ecc054a0a; live check pending | [261105-upw-install-modal-should-own-disk-space-and-](./quick/261105-upw-install-modal-should-own-disk-space-and-/) |
+| 261106-ab1 | `src-tauri/src/main.rs` split 20,324 → 7,886 lines into 11 sibling modules + `wake_lock/{macos,windows,linux}.rs`; mechanical move (193 items `pub(crate)`). Shell source-text tests (15 jest + `meta/captureShellScrollback.ts`) read through new `testUtils/tauriShellSource.ts`; Rust `include_str!` tests use a combined `SHELL_SOURCE` with a guard. | 2026-11-06 | 5f53f7f8e | cargo test 420/0; jest same 5 failing suites as baseline (tauriShellSource WR-07 confirmed failing at 1c61e03aa); Windows compile only via CI, Linux-gated code uncompiled | [261106-ab1-split-src-tauri-main-rs-into-modules](./quick/261106-ab1-split-src-tauri-main-rs-into-modules/) |
 
 ## Deferred Items
 
