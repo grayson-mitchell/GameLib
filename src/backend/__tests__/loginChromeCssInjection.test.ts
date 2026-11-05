@@ -14,27 +14,16 @@
  * avoid), and all production-code-scoped assertions are bounded to everything before
  * `mod tests {`.
  */
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
 import {
   stripSourceComments,
   stripTrailingLineComment
 } from '../testUtils/stripSourceComments'
 import { HUMBLE_LOGIN_CHROME_CSS } from 'common/humble/loginChromeCss'
 
-const MAIN_RS_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'src-tauri',
-  'src',
-  'main.rs'
-)
-
 /** Identical two-stage stripping to `tauriShellSource.test.ts`'s own `loadMainRsCode`. */
 function loadMainRsCode(source?: string): string {
-  const raw = source ?? readFileSync(MAIN_RS_PATH, 'utf-8')
+  const raw = source ?? readTauriShellSource()
   return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
@@ -260,7 +249,7 @@ describe('WR-08 local guard: every line of the login_chrome_css_script fn body k
 
 describe('Cargo-test survival pin (CI runs no cargo step)', () => {
   test('the RAW (unstripped) main.rs source still contains the try/catch and ordering cargo tests', () => {
-    const raw = readFileSync(MAIN_RS_PATH, 'utf-8')
+    const raw = readTauriShellSource()
     expect(raw).toContain(
       'fn login_chrome_css_script_is_wrapped_in_a_single_top_level_try_catch'
     )

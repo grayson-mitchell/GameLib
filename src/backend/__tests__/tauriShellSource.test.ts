@@ -14,23 +14,19 @@
  * so an unfiltered grep/match would be self-satisfying and could pass on prose alone even if
  * the real code never changed.
  */
-import { readFileSync } from 'node:fs'
+import {
+  listTauriShellSourceFiles,
+  PRE_SPLIT_SIBLING_MODULES,
+  readTauriShellFile,
+  readTauriShellSource
+} from 'backend/testUtils/tauriShellSource'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   normalizeSourceWhitespace,
   stripSourceComments,
   stripTrailingLineComment
 } from '../testUtils/stripSourceComments'
-
-const MAIN_RS_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'src-tauri',
-  'src',
-  'main.rs'
-)
 
 const CAPABILITIES_PATH = join(
   __dirname,
@@ -72,7 +68,7 @@ const CAPABILITIES_PATH = join(
  * `stripTrailingLineComment`, which cuts only at a `//` found OUTSIDE a quoted string.
  */
 function loadMainRsCode(source?: string): string {
-  const raw = source ?? readFileSync(MAIN_RS_PATH, 'utf-8')
+  const raw = source ?? readTauriShellSource()
   return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
@@ -4119,7 +4115,7 @@ describe('quick 260930-lyk: tray Auto reads the TASKBAR theme, never the app the
   })
 
   test('NON-VACUITY: the RAW main.rs does carry AppsUseLightTheme (the rationale comment), so the negative gate above is comment-scoped rather than trivially true', () => {
-    const raw = readFileSync(MAIN_RS_PATH, 'utf-8')
+    const raw = readTauriShellSource()
     expect(raw).toContain('AppsUseLightTheme')
     expect(loadMainRsCode(raw)).not.toContain('AppsUseLightTheme')
   })
@@ -4380,7 +4376,7 @@ describe('quick 260930-q11: both login-sheet paths resolve their NSWindow handle
   })
 
   test('NON-VACUITY arm 2: the RAW main.rs names the deleted `SendPtr` wrapper in the replacement prose, and stripping removes it -- so the negatives above are genuinely comment-scoped, not accidentally true because the phrase left the file', () => {
-    const raw = readFileSync(MAIN_RS_PATH, 'utf-8')
+    const raw = readTauriShellSource()
     // This exact phrase occurs ONLY in the doc-comment prose this quick task wrote on both
     // login-sheet paths ("The `SendPtr` wrapper and the two raw-address ... casts this function
     // used to carry are gone"), never in code. NOTE for a future reader: because
@@ -4497,5 +4493,82 @@ describe('main.rs sidecar_send does not write the pipe on the main thread (todo 
     const body = code.slice(fnIdx, code.indexOf('\n}', fnIdx))
     expect(body).not.toContain('write_frame(')
     expect(body).toContain('SidecarSendQueue')
+  })
+})
+
+/**
+ * Guard for the shared shell-source helper (quick task 261106-ab1): `main.rs` was split into
+ * module files, and every source-text test reads through `readTauriShellSource()`. These pins keep
+ * a new module, or a new direct `main.rs` reader, from dropping out of scope silently.
+ */
+describe('tauriShellSource helper scope', () => {
+  const REPO_ROOT = join(__dirname, '..', '..', '..')
+  const SHELL_SRC = join(REPO_ROOT, 'src-tauri', 'src')
+
+  it('lists main.rs first and none of the pre-split sibling modules', () => {
+    const files = listTauriShellSourceFiles()
+    expect(files[0]).toBe('main.rs')
+    for (const sibling of PRE_SPLIT_SIBLING_MODULES) {
+      expect(files).not.toContain(sibling)
+    }
+  })
+
+  it('every pre-split sibling exclusion names a file that exists on disk', () => {
+    for (const sibling of PRE_SPLIT_SIBLING_MODULES) {
+      expect(existsSync(join(SHELL_SRC, sibling))).toBe(true)
+    }
+  })
+
+  it('every `mod x;` declared in main.rs resolves to a listed file (or a pre-split sibling)', () => {
+    const code = stripSourceComments(readTauriShellFile('main.rs'))
+    const listed = listTauriShellSourceFiles()
+    const decl =
+      /(?:#\[path\s*=\s*"([^"]+)"\]\s*)?^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;/gm
+    const unresolved: string[] = []
+    let seen = 0
+    for (const m of code.matchAll(decl)) {
+      seen++
+      const rel = m[1] ?? `${m[2]}.rs`
+      if (PRE_SPLIT_SIBLING_MODULES.includes(rel)) continue
+      if (!listed.includes(rel)) unresolved.push(`${m[2]} -> ${rel}`)
+    }
+    expect(seen).toBeGreaterThanOrEqual(PRE_SPLIT_SIBLING_MODULES.length)
+    expect(unresolved).toEqual([])
+  })
+
+  it('no test or meta script reads main.rs directly (only the helper and two allowlisted files)', () => {
+    const ALLOWED: Record<string, string> = {
+      'src/backend/testUtils/tauriShellSource.ts': 'the helper itself',
+      'src/backend/__tests__/tauriShellSource.test.ts':
+        'this guard (names main.rs as the first listed file)',
+      'meta/captureShellScrollback.ts':
+        'assertRepoRoot only checks main.rs EXISTS, it never reads it',
+      'meta/__tests__/captureShellScrollback.test.ts':
+        'an exists() mock for assertRepoRoot, not a read'
+    }
+    const offenders: string[] = []
+    const visit = (dir: string): void => {
+      for (const e of readdirSync(join(REPO_ROOT, dir), {
+        withFileTypes: true
+      })) {
+        const rel = `${dir}/${e.name}`
+        if (e.isDirectory()) {
+          if (e.name !== 'node_modules') visit(rel)
+        } else if (/\.(ts|tsx)$/.test(e.name) && !(rel in ALLOWED)) {
+          const code = stripSourceComments(
+            readFileSync(join(REPO_ROOT, rel), 'utf-8')
+          )
+          if (
+            /(['"\x60])main\.rs\1/.test(code) ||
+            /src-tauri\/src\/main\.rs['"\x60]/.test(code)
+          ) {
+            offenders.push(rel)
+          }
+        }
+      }
+    }
+    visit('src')
+    visit('meta')
+    expect(offenders).toEqual([])
   })
 })

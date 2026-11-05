@@ -25,22 +25,11 @@
  * comments Task 1 added to `main.rs` quote the exact shapes this gate matches, so an unfiltered
  * match would pass on explanatory prose alone even if the real call sites were reverted.
  */
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
 import { stripSourceComments } from '../testUtils/stripSourceComments'
 
-const MAIN_RS_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'src-tauri',
-  'src',
-  'main.rs'
-)
-
 function loadMainRsRaw(): string {
-  return readFileSync(MAIN_RS_PATH, 'utf-8')
+  return readTauriShellSource()
 }
 
 /** Comment-stripped main.rs, via the shared stripper — never a hand-rolled pass. */

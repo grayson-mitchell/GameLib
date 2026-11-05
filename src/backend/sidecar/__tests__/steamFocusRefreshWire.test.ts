@@ -25,8 +25,7 @@
  *   T-D — fail-soft consumer: same transport, `refreshInstallState` mocked to REJECT; no
  *         unhandled rejection, and a subsequent frame is still processed afterward.
  */
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
 import { PassThrough } from 'node:stream'
 
 import {
@@ -35,17 +34,6 @@ import {
 } from '../../testUtils/stripSourceComments'
 import { SHELL_WINDOW_FOCUSED } from '../../../common/types/sidecarTransport'
 
-const MAIN_RS_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  '..',
-  'src-tauri',
-  'src',
-  'main.rs'
-)
-
 /**
  * Two-stage comment-stripping recipe copied verbatim from `tauriShellSource.test.ts` (per this
  * task's own instruction: reuse the recipe, do not invent a new one). `main.rs`'s own doc
@@ -53,7 +41,7 @@ const MAIN_RS_PATH = join(
  * strings under assertion below, so an unstripped match could pass on prose alone.
  */
 function loadMainRsCode(source?: string): string {
-  const raw = source ?? readFileSync(MAIN_RS_PATH, 'utf-8')
+  const raw = source ?? readTauriShellSource()
   return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))

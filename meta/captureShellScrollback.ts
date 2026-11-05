@@ -54,6 +54,7 @@
  * this file is a macOS/Linux operator tool -- which is true of the live gesture (a Humble
  * login window) regardless of that constraint.
  */
+import { readTauriShellSource } from '../src/backend/testUtils/tauriShellSource'
 import {
   appendFileSync,
   copyFileSync,
@@ -91,7 +92,6 @@ import {
 // `cwd` this harness spawns `pnpm tauri:dev` in, so the __dirname form would
 // have launched the app from a temp directory.
 const REPO_ROOT = process.cwd()
-const MAIN_RS_PATH = join(REPO_ROOT, 'src-tauri', 'src', 'main.rs')
 const USER_TS_PATH = join(REPO_ROOT, 'src', 'backend', 'humble', 'user.ts')
 
 /**
@@ -133,7 +133,7 @@ export function assertRepoRoot(
  * body by a non-greedy bracket match, then pull every quoted literal out of it).
  */
 function readLongRunningChannels(): string[] {
-  const raw = readFileSync(MAIN_RS_PATH, 'utf-8')
+  const raw = readTauriShellSource(REPO_ROOT)
   const stripped = stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))

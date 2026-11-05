@@ -17,6 +17,7 @@
  * Plain functions, not `jest.fn()`, wherever a behaviour must survive
  * `resetMocks: true`.
  */
+import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
 import { readdirSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
@@ -281,10 +282,7 @@ afterEach(() => {
 
 describe('SIGN_IN_PROBE_BOUND_MS (D-01)', () => {
   it('equals the Rust KEYRING_READ_TIMEOUT, read from the source rather than retyped here', () => {
-    const rust = readFileSync(
-      join(__dirname, '..', '..', '..', '..', 'src-tauri', 'src', 'main.rs'),
-      'utf8'
-    )
+    const rust = readTauriShellSource()
     const match =
       /const KEYRING_READ_TIMEOUT: Duration = Duration::from_secs\((\d+)\)/.exec(
         rust

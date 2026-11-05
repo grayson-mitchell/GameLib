@@ -278,7 +278,7 @@ jest.mock('../anonymousClient', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { join } from 'path'
+import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
 import { EventEmitter } from 'events'
 import { sendFrontendMessage } from '../../../ipc'
 import SteamLibraryManager from '../library'
@@ -678,29 +678,16 @@ describe('SteamUser.ensureConnected() unreadable outcome — constraint 5 regres
 // ---------------------------------------------------------------------------
 
 describe('constraint 1 — KEYRING_READ_TIMEOUT stays at 45s', () => {
-  const MAIN_RS = join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    '..',
-    '..',
-    'src-tauri',
-    'src',
-    'main.rs'
-  )
   const PIN = 'const KEYRING_READ_TIMEOUT: Duration = Duration::from_secs(45);'
 
   it('src-tauri/src/main.rs still declares KEYRING_READ_TIMEOUT as 45 seconds', () => {
-    const { readFileSync } = jest.requireActual<typeof import('fs')>('fs')
-    expect(readFileSync(MAIN_RS, 'utf-8')).toContain(PIN)
+    expect(readTauriShellSource()).toContain(PIN)
   })
 
   // Anti-vacuity: a `toContain` on a file that failed to load, or a pin whose
   // text no longer resembles the declaration, would pass silently forever.
   it('self-test: main.rs is really being read, and the pin is specific to 45s', () => {
-    const { readFileSync } = jest.requireActual<typeof import('fs')>('fs')
-    const source = readFileSync(MAIN_RS, 'utf-8')
+    const source = readTauriShellSource()
 
     expect(source.length).toBeGreaterThan(100_000)
     expect(source).toContain('const INVOKE_TIMEOUT: Duration')

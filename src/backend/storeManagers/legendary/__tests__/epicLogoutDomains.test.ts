@@ -127,6 +127,7 @@ jest.mock('../../../humble/userAgent', () => ({
     'Mozilla/5.0 (Test) Chrome/100.0 Safari/537.36'
 }))
 
+import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { LegendaryUser } from '../user'
@@ -137,8 +138,6 @@ import {
 } from '../../../humble/loginWindowSeam'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
-const REPO_ROOT = join(__dirname, '../../../../..')
-const MAIN_RS = join(REPO_ROOT, 'src-tauri/src/main.rs')
 const LEGENDARY_USER_TS = join(__dirname, '../user.ts')
 
 /**
@@ -541,7 +540,7 @@ describe('the TS list and main.rs EPIC_COOKIE_DOMAINS are the SAME list (T-35-41
   }
 
   it('main.rs EPIC_COOKIE_DOMAINS is exactly the approved set', () => {
-    const raw = readFileSync(MAIN_RS, 'utf-8')
+    const raw = readTauriShellSource()
     // Stripper-integrity guard: `stripSourceComments` drops every line starting
     // with `*`, so a source gate over Rust can go silently vacuous. Prove the
     // entries survive the strip by counting them in the RAW file first — a drop

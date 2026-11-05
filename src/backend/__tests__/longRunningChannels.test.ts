@@ -21,6 +21,7 @@
  * that decision so the reason is legible at the failure site if a future
  * change silently adds it to the exemption list.
  */
+import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
@@ -34,16 +35,6 @@ import {
   stripRustEscapes,
   stripRustRawStrings
 } from '../testUtils/rustQuoteBalance'
-
-const MAIN_RS_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'src-tauri',
-  'src',
-  'main.rs'
-)
 
 const EXPECTED_LONG_RUNNING_CHANNELS = [
   'install',
@@ -103,7 +94,7 @@ const EXPECTED_LONG_RUNNING_CHANNELS = [
  * copy this exact stripper pattern, so a defect found here is worth guarding against once, here.
  */
 function loadMainRsCode(source?: string): string {
-  const raw = source ?? readFileSync(MAIN_RS_PATH, 'utf-8')
+  const raw = source ?? readTauriShellSource()
   return stripRustLineComments(raw)
 }
 
@@ -165,7 +156,7 @@ describe('loadMainRsCode comment-stripping helper (self-test)', () => {
  * only — it does not replace `loadMainRsCode()` for the exemption-list assertions above.
  */
 function loadMainRsRaw(): string {
-  return readFileSync(MAIN_RS_PATH, 'utf-8')
+  return readTauriShellSource()
 }
 
 /**

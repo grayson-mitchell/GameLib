@@ -17,12 +17,12 @@
  * is not evidence, and this repo has repeatedly shipped ones that convict correct code or
  * acquit broken code.
  */
+import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { stripSourceComments } from '../testUtils/stripSourceComments'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..')
-const MAIN_RS_PATH = join(REPO_ROOT, 'src-tauri', 'src', 'main.rs')
 const SIDECAR_RPC_PATH = join(
   REPO_ROOT,
   'src',
@@ -60,7 +60,7 @@ function extractMatchArm(source: string, channel: string): string {
 
 describe('main.rs dialog_open arm forwards the caller options (quick task 260902-8wc)', () => {
   const arm = extractMatchArm(
-    stripSourceComments(readFileSync(MAIN_RS_PATH, 'utf-8')),
+    stripSourceComments(readTauriShellSource()),
     'dialog_open'
   )
 
@@ -137,7 +137,7 @@ describe('main.rs dialog_open arm forwards the caller options (quick task 260902
   // third-party crate, which is not this gate's business -- but the arm must keep SAYING why,
   // so the next reader does not re-derive it or "fix" it with a method that does not exist.
   test('the arm documents why buttonLabel is not forwarded', () => {
-    const raw = readFileSync(MAIN_RS_PATH, 'utf-8')
+    const raw = readTauriShellSource()
     expect(raw).toContain('buttonLabel')
     expect(raw).toMatch(/tauri-plugin-dialog 2\.7\.2/)
   })

@@ -16,6 +16,7 @@
  * test can script a resolve/reject outcome and assert on exactly what was called.
  */
 
+import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
@@ -1820,27 +1821,15 @@ describe('SidecarKeyringTokenStore', () => {
  * relationship must fail this test, naming both file paths.
  */
 describe('KEYRING_FAILURE_MEMO_MS vs KEYRING_READ_TIMEOUT ordering invariant (Routing item 3)', () => {
-  const MAIN_RS_PATH = join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    '..',
-    'src-tauri',
-    'src',
-    'main.rs'
-  )
   const KEYRING_TOKEN_STORE_PATH = join(__dirname, '..', 'keyringTokenStore.ts')
 
   function extractKeyringReadTimeoutMs(): number {
-    const raw = readFileSync(MAIN_RS_PATH, 'utf-8')
+    const raw = readTauriShellSource()
     const match = raw.match(
       /const KEYRING_READ_TIMEOUT: Duration = Duration::from_secs\((\d+)\);/
     )
     if (!match) {
-      throw new Error(
-        `KEYRING_READ_TIMEOUT literal not found in ${MAIN_RS_PATH}`
-      )
+      throw new Error(`KEYRING_READ_TIMEOUT literal not found in src-tauri/src`)
     }
     return Number(match[1]) * 1000
   }
@@ -1856,7 +1845,7 @@ describe('KEYRING_FAILURE_MEMO_MS vs KEYRING_READ_TIMEOUT ordering invariant (Ro
     return Number(match[1].replace(/_/g, ''))
   }
 
-  test('KEYRING_FAILURE_MEMO_MS is at least 2x the KEYRING_READ_TIMEOUT parsed live from src-tauri/src/main.rs', () => {
+  test('KEYRING_FAILURE_MEMO_MS is at least 2x the KEYRING_READ_TIMEOUT parsed live from the Rust shell source', () => {
     const readTimeoutMs = extractKeyringReadTimeoutMs()
     const memoMs = extractKeyringFailureMemoMs()
 

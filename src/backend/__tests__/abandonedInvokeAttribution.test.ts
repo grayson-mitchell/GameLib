@@ -26,22 +26,11 @@
  * the prose that names its subject" failure this project has already paid for. Presence
  * assertions run against stripped code; the stripper itself is self-tested below.
  */
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
 import { stripSourceComments } from '../testUtils/stripSourceComments'
 
-const MAIN_RS_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'src-tauri',
-  'src',
-  'main.rs'
-)
-
 function loadMainRsRaw(): string {
-  return readFileSync(MAIN_RS_PATH, 'utf-8')
+  return readTauriShellSource()
 }
 
 /**

@@ -31,7 +31,8 @@
  * (`backend/constants/paths.ts`) rather than restating it.
  */
 
-import { existsSync, readFileSync } from 'node:fs'
+import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   stripSourceComments,
@@ -39,20 +40,9 @@ import {
 } from '../../testUtils/stripSourceComments'
 import { app } from '../../platform'
 
-const MAIN_RS_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  '..',
-  'src-tauri',
-  'src',
-  'main.rs'
-)
-
 /** Mirrors tauriShellSource.test.ts's loadMainRsCode — comment-stripped source only. */
 function loadMainRsCode(): string {
-  const raw = readFileSync(MAIN_RS_PATH, 'utf-8')
+  const raw = readTauriShellSource()
   return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
