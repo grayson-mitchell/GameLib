@@ -100,7 +100,11 @@ export interface SteamSectionGatingInput {
    * gate (T-34.13-05-03).
    */
   bottleRequired: boolean
-  /** Whether Settings > Steam > "Enable Steam native install" is ON. */
+  /**
+   * Whether GameLib owns the library choice: Settings > Steam > "Enable Steam
+   * native install" is ON, OR the opt-in InstallApp route is active (Steam's
+   * own install dialog never opens there; quick 261105-upw).
+   */
   nativeInstallOn: boolean
   /**
    * `listSteamLibraryTargets()`'s result length. Already gate-adjusted to
@@ -189,7 +193,8 @@ export function resolveSteamSectionGating(
   // on Windows (D-11) or Linux (D-18) from a caller-supplied `true`.
   const effectiveBottleRequired = isMac && input.bottleRequired
 
-  // Step 3: whether a real library choice exists. Both conjuncts are kept
+  // Step 3: whether a real library choice exists (`nativeInstallOn` = GameLib
+  // owns the choice: native ON or the InstallApp route, quick 261105-upw). Both conjuncts are kept
   // even though the backend IPC gate (`installFlowRegistration.ts`) already
   // zeroes the list when native install is OFF for a mac-native title (quick
   // 261030-o77), making `nativeInstallOn` redundant with

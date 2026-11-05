@@ -35,6 +35,10 @@ import {
   type SteamPlatformRowMode
 } from './steamSectionGating'
 import {
+  deriveSteamLibraryOwnership,
+  resolveSteamLibraryRoute
+} from './steamLibraryRoute'
+import {
   hasSteamWindowsDepot,
   hasSteamMacDepot,
   hasSteamDepotSignalCaptured,
@@ -66,7 +70,11 @@ import { DEFAULT_STEAM_BOTTLE_NAME } from 'frontend/screens/Game/GamePage/compon
  */
 type SteamLibraryFetch =
   | { phase: 'pending' }
-  | { phase: 'ok'; targets: SteamDialogLibraryOption[] }
+  | {
+      phase: 'ok'
+      targets: SteamDialogLibraryOption[]
+      installAppRoute: boolean
+    }
   | { phase: 'failed' }
 
 type Props = {
@@ -376,9 +384,14 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
     setLibraryFetch({ phase: 'pending' })
     window.api
       .listSteamLibraryTargets(appName)
-      .then((libraries) => {
+      .then((libraries) =>
+        // quick 261105-upw: follow-up only when the list is empty; never
+        // rejects, so the `.catch` below still means "primary fetch rejected".
+        resolveSteamLibraryRoute(window.api, appName, libraries)
+      )
+      .then(({ targets, installAppRoute }) => {
         if (cancelled) return
-        setLibraryFetch({ phase: 'ok', targets: libraries })
+        setLibraryFetch({ phase: 'ok', targets, installAppRoute })
       })
       .catch(() => {
         if (cancelled) return
@@ -415,14 +428,27 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   // content-light copy selection read ONE expression, not two copies of it.
   // The handler is server-gated on `isSteamNativeInstallEnabled()` for
   // mac-native titles only (a bottle-routed title always gets targets, quick
-  // 261030-o77), so a non-empty list IS the "GameLib installs this" signal --
-  // RESEARCH.md Pitfall 4 forbids a second settings read.
+  // 261030-o77), so a non-empty list IS the "GameLib's depot installer
+  // installs this" signal -- RESEARCH.md Pitfall 4 forbids a second settings
+  // read. It is no longer the only "GameLib owns the library choice" signal:
+  // the opt-in InstallApp route supplies its own backend discriminator
+  // (quick 261105-upw), exposed as `steamLibraryChoiceOwned`. SteamDialog's
+  // sign-in gate and notice copy keep reading `steamNativeInstallOn`.
   // (34.13 review B-WR-02: reads the derived list, so an UNSETTLED fetch is
   // `false` here exactly as an empty settled one is -- the difference is
   // carried by `steamLibrariesSettled` and consumed only by
   // `applyLibraryFetchPending` below, which is the one place the distinction
   // changes what the user is told.)
-  const steamNativeInstallOn = steamLibraryList.length > 0
+  const {
+    nativeInstallOn: steamNativeInstallOn,
+    libraryChoiceOwned: steamLibraryChoiceOwned
+  } = useMemo(
+    () =>
+      deriveSteamLibraryOwnership(
+        libraryFetch.phase === 'ok' ? libraryFetch : undefined
+      ),
+    [libraryFetch]
+  )
 
   const steamGatingRaw: SteamSectionGatingVerdict = useMemo(
     () =>
@@ -449,12 +475,15 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
         // it, and 34.13-05's matrix renders OFF and ON-with-<=1-library
         // identically, so this derivation is not merely convenient, it is
         // indistinguishable by construction.
-        nativeInstallOn: steamNativeInstallOn,
+        // quick 261105-upw: this input means "GameLib owns the library
+        // choice" -- native ON, or the InstallApp route (Steam's own dialog
+        // never opens there).
+        nativeInstallOn: steamLibraryChoiceOwned,
         libraryCount: steamLibraryList.length
       }),
     // WR-15: `isSteamManagedApp` was listed but never referenced by the memo
     // body -- an unnecessary dependency ESLint flagged. Removed.
-    // `steamNativeInstallOn` IS referenced (it replaced the inline
+    // `steamLibraryChoiceOwned` IS referenced (it replaced the inline
     // `steamLibraries.length > 0` in WR-04) and is therefore listed; it is
     // derived from `steamLibraries`, which stays listed for
     // `libraryCount`.
@@ -469,7 +498,7 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
       windowsDepotOffered,
       depotSignalResolved,
       steamLibraryList,
-      steamNativeInstallOn,
+      steamLibraryChoiceOwned,
       eligibility.bottleRequired
     ]
   )

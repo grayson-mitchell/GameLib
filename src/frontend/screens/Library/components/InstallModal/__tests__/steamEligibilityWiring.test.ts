@@ -282,7 +282,7 @@ describe('Group B: the loading row is mounted, in the right slot, behind the rig
     // which is how the round-1 fix suppressed the notice permanently.
     expect(flat).toMatch(/\{ phase: 'pending' \}/)
     expect(flat).toMatch(
-      /\{ phase: 'ok'; targets: SteamDialogLibraryOption\[\] \}/
+      /\{ phase: 'ok';? targets: SteamDialogLibraryOption\[\];? installAppRoute: boolean ;?\}/
     )
     expect(flat).toMatch(/\{ phase: 'failed' \}/)
     // ...and `settled` must be "not pending", never "not the initial value".
@@ -300,6 +300,34 @@ describe('Group B: the loading row is mounted, in the right slot, behind the rig
     expect(flat.slice(catchIdx, catchIdx + 400)).not.toContain(
       "setLibraryFetch({ phase: 'pending' })"
     )
+  })
+
+  const signInGuardHolds = (src: string) =>
+    src.includes('nativeInstallOn={steamNativeInstallOn}')
+
+  it('upw: SteamDialog keeps steamNativeInstallOn; the resolver gets steamLibraryChoiceOwned; one route call', () => {
+    expect(signInGuardHolds(source)).toBe(true)
+    expect(source).toContain('nativeInstallOn: steamLibraryChoiceOwned,')
+    expect(countOccurrences(source, 'resolveSteamLibraryRoute(')).toBe(1)
+  })
+
+  it('upw-RED: feeding SteamDialog the choice-owned value breaks the sign-in-gate guard', () => {
+    const bad = source.replace(
+      'nativeInstallOn={steamNativeInstallOn}',
+      'nativeInstallOn={steamLibraryChoiceOwned}'
+    )
+    expect(bad).not.toBe(source)
+    expect(signInGuardHolds(bad)).toBe(false)
+  })
+
+  it('upw: the renderer never reads the InstallApp / native-install settings', () => {
+    const route = stripped(
+      'screens/Library/components/InstallModal/steamLibraryRoute.ts'
+    )
+    for (const src of [source, route]) {
+      expect(src).not.toContain('steamExperimentalInstallApp')
+      expect(src).not.toContain('enableSteamNativeInstall')
+    }
   })
 
   it('B6/B7-RED: known-bads DERIVED FROM THE REAL SOURCE break each obligation', () => {
