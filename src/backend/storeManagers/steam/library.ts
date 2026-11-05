@@ -2173,8 +2173,12 @@ const activePolls = new Map<
      *  show. */
     notifiedDepotSkipped: boolean
     /** quick 261024-exo: true when Steam owns the download (steam://install). Selects the long no-manifest window and
-     *  the manifest-gone stop instead of the 20-tick GRACE_TICKS branch. */
+     *  the manifest-gone stop and the no-activity window instead of the
+     *  20-tick GRACE_TICKS branch. */
     delegatedToSteamClient: boolean
+    /** quick 261105-vfq: the tick at which the poll became delegated, so the
+     *  no-activity window counts from the request, not from an older bare poll. */
+    delegatedSinceTick: number
     /** quick 261024-exo: consecutive 'absent' ticks AFTER a manifest was seen
      *  (seenDownloading). Reset on every 'downloading' tick; reaching
      *  MANIFEST_GONE_TICKS on a delegated poll means Steam-side cancel. */
@@ -2211,15 +2215,18 @@ const STEAM_HOLD_PROBE_MIN_INTERVAL_MS = 10_000
 
 const GRACE_TICKS = 20 // ≈60 s at 3 000 ms default interval — stop if no manifest appeared
 const MAX_TICKS = 7200 // ≈6 h at 3 000 ms default interval — absolute safety cap
-// quick 261024-exo: delegated (Steam-owned) installs. 600 ticks ≈ 30 min at
-// 3 000 ms covers a fresh-Mac Steam self-update + login + the user's time on
-// Steam's install dialog. 10 consecutive absent ticks (≈30 s) after a manifest
-// was seen = cancelled/removed in Steam, tolerant of Steam briefly rewriting
-// the acf. MAX_TICKS stays the absolute ceiling. Sidecar exit contract: the
-// interval is unref'd and each tick is a bounded local ACF read — no new
-// handle, socket or network call — so a longer-lived poll cannot hold the
-// event loop past stdin EOF.
-const DELEGATED_NO_MANIFEST_TICKS = 600
+// quick 261105-vfq: no-activity window after GameLib sends a steam://install /
+// InstallApp / steam://uninstall request. 40 ticks ≈ 2 min at 3 000 ms. A
+// signed-out Mac Steam silently drops these requests; real requests show
+// activity within seconds. Any activity (install: a manifest or a
+// downloading/staging entry; uninstall: StateFlags 0x800, bit 4 cleared, or
+// the manifest gone) disarms it, after which today's rules apply unchanged.
+// MAX_TICKS stays the absolute ceiling. It is tick-counted inside the
+// existing unref'd interval, so no new handle is created (sidecar exit
+// contract). 10 consecutive absent ticks (≈30 s) after a manifest was seen =
+// cancelled/removed in Steam (quick 261024-exo), tolerant of Steam briefly
+// rewriting the acf.
+const STEAM_REQUEST_NO_ACTIVITY_TICKS = 40
 const MANIFEST_GONE_TICKS = 10
 /** T-AOG (quick/260719-aog): consecutive frozen 'downloading' ticks (at the
  *  default 3 000 ms poll interval, ≈9 s) before a genuinely in-flight
@@ -3364,10 +3371,12 @@ export async function pollInstallOnce(
  *     for this appId (user likely cancelled Steam's install dialog —
  *     T-03-06 mitigation; the in-flight exception is 260822-dkf, see the
  *     grace branch below)
- *   - delegatedToSteamClient polls only (quick 261024-exo): no manifest ever
- *     appeared after DELEGATED_NO_MANIFEST_TICKS, or the manifest disappeared
- *     for MANIFEST_GONE_TICKS consecutive ticks after having appeared (these
- *     replace the GRACE_TICKS rule for such polls)
+ *   - delegatedToSteamClient polls only (quick 261024-exo): no activity
+ *     within STEAM_REQUEST_NO_ACTIVITY_TICKS (~2 min) of the request, which
+ *     reverts with a sign-in notice (quick 261105-vfq), or the manifest
+ *     disappeared for MANIFEST_GONE_TICKS consecutive ticks after having
+ *     appeared (these replace the GRACE_TICKS rule for such polls)
+ *   - cancelDelegatedInstall() for a delegated poll (the Downloads Cancel)
  *   - MAX_TICKS elapsed (D-01 focus backstop takes over — T-03-06 mitigation)
  *
  * The second parameter accepts EITHER a plain intervalMs number (existing
@@ -3450,6 +3459,8 @@ export function startInstallPolling(
       !existingEntry.delegatedToSteamClient
     ) {
       existingEntry.delegatedToSteamClient = true
+      existingEntry.delegatedSinceTick = existingEntry.ticks
+      markManagedBySteam(appId)
       logInfo(
         `Steam: upgrading in-flight install poll for appId ${appId} to delegatedToSteamClient (quick 261024-exo)`,
         LogPrefix.Steam
@@ -3544,6 +3555,7 @@ export function startInstallPolling(
     skippedDepots,
     notifiedDepotSkipped: false,
     delegatedToSteamClient,
+    delegatedSinceTick: 0,
     absentTicksSinceSeen: 0,
     steamHold: initialSteamHold,
     steamPidsAtHandoff: restoredSteamHold?.pids ?? ([] as number[]),
@@ -3629,9 +3641,27 @@ export function startInstallPolling(
       let delegatedStopReason: string | null = null
       if (
         !entry.seenDownloading &&
-        entry.ticks >= DELEGATED_NO_MANIFEST_TICKS
+        entry.ticks - entry.delegatedSinceTick >=
+          STEAM_REQUEST_NO_ACTIVITY_TICKS
       ) {
-        delegatedStopReason = `no manifest after ${entry.ticks} ticks; Steam install dialog likely cancelled or Steam never started`
+        logWarning(
+          `Steam: Steam did not start the install for appId ${appId} — no activity within ${STEAM_REQUEST_NO_ACTIVITY_TICKS} ticks (~2 min) of the request; reverting to not installed (quick 261105-vfq)`,
+          LogPrefix.Steam
+        )
+        sendFrontendMessage('gameStatusUpdate', {
+          appName: appId,
+          runner: 'steam',
+          status: 'done'
+        })
+        notify({
+          title: library.get(appId)?.title ?? '',
+          body: i18next.t(
+            'gamelib:steam.install.notStarted',
+            "Steam didn't start the install. Make sure Steam is signed in, then try again."
+          )
+        })
+        stopInstallPolling(appId)
+        return
       } else if (
         entry.seenDownloading &&
         entry.absentTicksSinceSeen >= MANIFEST_GONE_TICKS
@@ -3690,7 +3720,22 @@ export function startInstallPolling(
 
   entry.timer = timer
   activePolls.set(appId, entry)
+  if (delegatedToSteamClient) markManagedBySteam(appId)
   if (isLiveMonitorEligible(entry)) void startSteamDownloadMonitor(appId)
+}
+
+/**
+ * quick 261105-vfq: lists a Steam-owned install in Downloads > Managed by
+ * Steam from the moment the request is sent (not only after the first
+ * downloading tick), so its Cancel is reachable while Steam is silent.
+ */
+function markManagedBySteam(appId: string): void {
+  sendFrontendMessage('gameStatusUpdate', {
+    appName: appId,
+    runner: 'steam',
+    status: 'installing',
+    managedBySteam: true
+  })
 }
 
 /**
@@ -3721,6 +3766,29 @@ export function stopInstallPolling(appId: string): void {
   activePolls.delete(appId)
   stopSteamDownloadMonitor(appId)
   logInfo(`Steam: stopped install polling for appId ${appId}`, LogPrefix.Steam)
+}
+
+/**
+ * Cancel for a Steam-owned (delegated) install (quick 261105-vfq, CONTEXT
+ * D-Cancel): stops GameLib's wait and reverts the status at once. Nothing is
+ * cancelled inside Steam; if Steam installs the game anyway, the normal
+ * library/ACF reconcile picks it up. Returns true when a delegated poll was
+ * stopped; false when there is no poll or it is not delegated.
+ */
+export function cancelDelegatedInstall(appId: string): boolean {
+  const entry = activePolls.get(appId)
+  if (!entry || !entry.delegatedToSteamClient) return false
+  logInfo(
+    `Steam: Cancel stops GameLib's wait for the Steam-owned install of appId ${appId}; nothing is cancelled inside Steam (quick 261105-vfq)`,
+    LogPrefix.Steam
+  )
+  stopInstallPolling(appId)
+  sendFrontendMessage('gameStatusUpdate', {
+    appName: appId,
+    runner: 'steam',
+    status: 'done'
+  })
+  return true
 }
 
 // ── Uninstall polling lifecycle (D-07, symmetric to install) ─────────────────
@@ -3942,8 +4010,9 @@ export async function pollUninstallOnce(
  * Stops automatically when:
  *   - the manifest disappears (uninstall complete) via pollUninstallOnce
  *   - the game is still installed and no active uninstall was ever observed
- *     after GRACE_TICKS (user likely cancelled Steam's confirm dialog) — clears
- *     any transient status, leaving the badge installed
+ *     within STEAM_REQUEST_NO_ACTIVITY_TICKS (~2 min; Steam dropped the request
+ *     or the user left its confirm dialog — quick 261105-vfq) — clears any
+ *     transient status, leaving the badge installed, and shows a sign-in notice
  *   - MAX_TICKS elapsed (D-01 focus backstop takes over — T-03-06 mitigation)
  *
  * The second parameter accepts EITHER a plain intervalMs number (existing
@@ -4013,12 +4082,16 @@ export function startUninstallPolling(
     // pollUninstallOnce may have stopped the poll (manifest absent = complete)
     if (!activeUninstallPolls.has(appId)) return
 
-    // Cancellation/timeout: if no active uninstall was ever observed after the
-    // grace window, the user probably cancelled Steam's confirm dialog — clear
-    // any transient status and stop (badge stays installed).
-    if (!entry.seenUninstalling && entry.ticks >= GRACE_TICKS) {
+    // No-activity timeout (quick 261105-vfq): if Steam showed no uninstall
+    // activity within ~2 min, it dropped the request (signed-out Steam) or the
+    // user left its confirm dialog — clear any transient status and stop
+    // (badge stays installed).
+    if (
+      !entry.seenUninstalling &&
+      entry.ticks >= STEAM_REQUEST_NO_ACTIVITY_TICKS
+    ) {
       logWarning(
-        `Steam: uninstall polling for appId ${appId} stopped after grace window (${GRACE_TICKS} ticks) — no uninstall detected; user may have cancelled`,
+        `Steam: Steam did not start the uninstall for appId ${appId} — no activity within ${STEAM_REQUEST_NO_ACTIVITY_TICKS} ticks (~2 min) of the request; keeping it installed (quick 261105-vfq)`,
         LogPrefix.Steam
       )
       sendFrontendMessage('gameStatusUpdate', {
@@ -4026,18 +4099,14 @@ export function startUninstallPolling(
         runner: 'steam',
         status: 'done'
       })
-      // debug/wazhack-uninstall-reverts: this branch previously gave the user
-      // ZERO feedback — a bare gameStatusUpdate{done} with no notify() call —
-      // so a native uninstall whose Steam confirm dialog was never answered
-      // (never surfaced, or dismissed) looked identical to "nothing happened
-      // at all", the exact reported symptom. The badge correctly stays
-      // installed (D-02); the user now gets an honest, distinct toast saying
-      // so instead of a silent revert.
+      // debug/wazhack-uninstall-reverts: this branch once gave ZERO feedback,
+      // so an unanswered request looked like "nothing happened"; the badge
+      // correctly stays installed (D-02) and the user gets an honest toast.
       notify({
         title: library.get(appId)?.title ?? '',
         body: i18next.t(
-          'notify.uninstallNotConfirmed',
-          'Uninstall not confirmed by Steam — please check Steam and try again'
+          'gamelib:steam.uninstall.notStarted',
+          "Steam didn't start the uninstall. Make sure Steam is signed in, then try again."
         )
       })
       stopUninstallPolling(appId)

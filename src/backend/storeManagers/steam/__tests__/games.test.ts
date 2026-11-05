@@ -3936,6 +3936,39 @@ describe('SteamGame.stop() — pending launch monitor (261024-gvu)', () => {
   })
 })
 
+describe('SteamGame.stop() — delegated install cancel (261105-vfq)', () => {
+  const warnedNoOp = () => {
+    const { logWarning } = jest.requireMock('backend/logger')
+    return (logWarning as jest.Mock).mock.calls.some((c) =>
+      String(c[0]).includes('Steam owns process lifecycle')
+    )
+  }
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('cancels the delegated poll and skips the no-op path', async () => {
+    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
+    const spy = jest
+      .spyOn(libraryModule, 'cancelDelegatedInstall')
+      .mockReturnValue(true)
+    await new SteamGame(APP_ID).stop()
+    expect(spy).toHaveBeenCalledWith(APP_ID)
+    expect(warnedNoOp()).toBe(false)
+  })
+
+  it('keeps the no-op warning when there is no delegated poll', async () => {
+    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
+    const spy = jest
+      .spyOn(libraryModule, 'cancelDelegatedInstall')
+      .mockReturnValue(false)
+    await new SteamGame(APP_ID).stop()
+    expect(spy).toHaveBeenCalledWith(APP_ID)
+    expect(warnedNoOp()).toBe(true)
+  })
+})
+
 // ── SteamGame.stop() — D-02 real abort for an in-flight native depot download ─
 //
 // stop() converts from an unconditional no-op into: if a depot download

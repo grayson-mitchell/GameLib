@@ -20,6 +20,7 @@ import SteamLibraryManager, {
   resolveInstallRoot,
   startInstallPolling,
   stopInstallPolling,
+  cancelDelegatedInstall,
   pollInstallOnce,
   markBridgeInstallFinalized,
   clearBridgeInstallFinalized,
@@ -6987,13 +6988,15 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
         channel === 'gameStatusUpdate' && payload?.status === 'done'
     )
 
-  it('D1: a delegated poll survives the 60 s grace window with no manifest, and stops only after DELEGATED_NO_MANIFEST_TICKS', async () => {
+  it('D1: a delegated poll survives the 60 s grace window with no manifest, and stops with a sign-in notice after STEAM_REQUEST_NO_ACTIVITY_TICKS', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(false)
     isNativeInstallInFlightSpy = jest
       .spyOn(gamesModule, 'isNativeInstallInFlight')
       .mockReturnValue(false)
     jest.mocked(sendFrontendMessage).mockClear()
+    ;(notify as jest.Mock).mockClear()
+    g9oLogger().logWarning.mockClear()
 
     const interval = 10
     startInstallPolling('730', {
@@ -7008,9 +7011,25 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
       ticksSoFar
     )
 
-    // DELEGATED_NO_MANIFEST_TICKS = 600; already advanced 26 ticks.
-    await jest.advanceTimersByTimeAsync(interval * 580)
+    // STEAM_REQUEST_NO_ACTIVITY_TICKS = 40; already advanced 26 ticks.
+    await jest.advanceTimersByTimeAsync(interval * 13)
+    expect(doneCalls()).toHaveLength(0)
+    expect(notify).not.toHaveBeenCalled()
+    await jest.advanceTimersByTimeAsync(interval * 2)
     expect(doneCalls()).toHaveLength(1)
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(notify).toHaveBeenCalledWith({
+      title: expect.any(String),
+      body: expect.stringContaining('signed in')
+    })
+    expect(
+      g9oLogger().logWarning.mock.calls.some(
+        ([m]: [unknown]) =>
+          String(m).includes('730') &&
+          String(m).includes('install') &&
+          String(m).includes('~2 min')
+      )
+    ).toBe(true)
     const ticksAtStop = (existsSync as jest.Mock).mock.calls.length
     await jest.advanceTimersByTimeAsync(interval * 5)
     expect((existsSync as jest.Mock).mock.calls.length).toBe(ticksAtStop)
@@ -7081,6 +7100,113 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     const callsAfter = (existsSync as jest.Mock).mock.calls.length
     await jest.advanceTimersByTimeAsync(interval * 5)
     expect((existsSync as jest.Mock).mock.calls.length).toBe(callsAfter)
+  })
+
+  // ── quick 261105-vfq: no-activity timeout, early flag, Cancel ──────────────
+
+  it('VFQ-1: a manifest that stays downloading disarms the no-activity timeout', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(false)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(vdf.parse as jest.Mock).mockReturnValue(delegatedAcf('1026'))
+    jest.mocked(sendFrontendMessage).mockClear()
+    ;(notify as jest.Mock).mockClear()
+
+    const interval = 10
+    startInstallPolling('730', {
+      intervalMs: interval,
+      delegatedToSteamClient: true
+    })
+    await jest.advanceTimersByTimeAsync(interval * 20)
+    const ticksSoFar = (existsSync as jest.Mock).mock.calls.length
+    await jest.advanceTimersByTimeAsync(interval * 40)
+    expect(doneCalls()).toHaveLength(0)
+    expect(notify).not.toHaveBeenCalled()
+    expect((existsSync as jest.Mock).mock.calls.length).toBeGreaterThan(
+      ticksSoFar
+    )
+  })
+
+  it('VFQ-2: a delegated poll flags managedBySteam at registration, before any tick', () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    jest.mocked(sendFrontendMessage).mockClear()
+    startInstallPolling('730', {
+      intervalMs: 10,
+      delegatedToSteamClient: true
+    })
+    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
+      appName: '730',
+      runner: 'steam',
+      status: 'installing',
+      managedBySteam: true
+    })
+  })
+
+  it('VFQ-3: upgrading a bare poll to delegated flags it and counts the window from the upgrade', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(true)
+    jest.mocked(sendFrontendMessage).mockClear()
+    ;(notify as jest.Mock).mockClear()
+
+    const interval = 10
+    startInstallPolling('730', { intervalMs: interval })
+    await jest.advanceTimersByTimeAsync(interval * 30)
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({ managedBySteam: true })
+    )
+    startInstallPolling('730', {
+      intervalMs: interval,
+      delegatedToSteamClient: true
+    })
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({ status: 'installing', managedBySteam: true })
+    )
+    await jest.advanceTimersByTimeAsync(interval * 39)
+    expect(doneCalls()).toHaveLength(0)
+    await jest.advanceTimersByTimeAsync(interval * 2)
+    expect(doneCalls()).toHaveLength(1)
+    expect(notify).toHaveBeenCalledTimes(1)
+  })
+
+  it('VFQ-4: cancelDelegatedInstall stops a delegated poll with one done; false otherwise', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(true)
+    jest.mocked(sendFrontendMessage).mockClear()
+    ;(notify as jest.Mock).mockClear()
+
+    expect(cancelDelegatedInstall('730')).toBe(false) // no poll
+
+    const interval = 10
+    startInstallPolling('730', { intervalMs: interval }) // bare poll
+    expect(cancelDelegatedInstall('730')).toBe(false)
+    await jest.advanceTimersByTimeAsync(interval * 2)
+    const ticking = (existsSync as jest.Mock).mock.calls.length
+    await jest.advanceTimersByTimeAsync(interval * 2)
+    expect((existsSync as jest.Mock).mock.calls.length).toBeGreaterThan(ticking)
+    stopInstallPolling('730')
+
+    startInstallPolling('730', {
+      intervalMs: interval,
+      delegatedToSteamClient: true
+    })
+    expect(cancelDelegatedInstall('730')).toBe(true)
+    expect(doneCalls()).toHaveLength(1)
+    expect(notify).not.toHaveBeenCalled()
+    const callsAfter = (existsSync as jest.Mock).mock.calls.length
+    await jest.advanceTimersByTimeAsync(interval * 5)
+    expect((existsSync as jest.Mock).mock.calls.length).toBe(callsAfter)
+    expect(cancelDelegatedInstall('730')).toBe(false)
   })
 
   // ── debug/steam-dl-missing-in-downloads ────────────────────────────────────
@@ -7699,6 +7825,9 @@ describe('pollUninstallOnce()', () => {
 // ── D-07: startUninstallPolling / stopUninstallPolling ────────────────────────
 
 describe('startUninstallPolling() idempotency and stopUninstallPolling()', () => {
+  const g9oLogger = () =>
+    jest.requireMock<{ logWarning: jest.Mock }>('backend/logger')
+
   beforeEach(() => {
     jest.useFakeTimers()
     library.clear()
@@ -7734,7 +7863,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
   // making a silently-abandoned uninstall indistinguishable from "nothing
   // happened at all" — the exact reported symptom. Now it must also fire a
   // distinct, honest toast.
-  it('notifies the user (and does not flip the badge) when the grace window expires with the manifest still installed', async () => {
+  it('notifies the user (and does not flip the badge) when the no-activity window expires with the manifest still installed', async () => {
     library.set('730', {
       runner: 'steam',
       app_name: '730',
@@ -7766,15 +7895,31 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
 
     const interval = 10
     startUninstallPolling('730', interval)
-    // GRACE_TICKS (20) + 1 ticks so the grace branch fires
+    g9oLogger().logWarning.mockClear()
+    // The old 60 s grace is gone: nothing at tick 21 or 39.
     await jest.advanceTimersByTimeAsync(interval * 21)
+    expect(notify).not.toHaveBeenCalled()
+    await jest.advanceTimersByTimeAsync(interval * 18)
+    expect(notify).not.toHaveBeenCalled()
+    // STEAM_REQUEST_NO_ACTIVITY_TICKS (40) + 1 ticks so the branch fires
+    await jest.advanceTimersByTimeAsync(interval * 2)
 
-    expect(notify).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'CS:GO',
-        body: expect.any(String)
-      })
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(notify).toHaveBeenCalledWith({
+      title: 'CS:GO',
+      body: expect.stringContaining('uninstall')
+    })
+    expect((notify as jest.Mock).mock.calls[0][0].body as string).toContain(
+      'signed in'
     )
+    expect(
+      g9oLogger().logWarning.mock.calls.some(
+        ([m]: [unknown]) =>
+          String(m).includes('730') &&
+          String(m).includes('uninstall') &&
+          String(m).includes('~2 min')
+      )
+    ).toBe(true)
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'gameStatusUpdate',
       expect.objectContaining({
@@ -7789,6 +7934,83 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
       'pushGameToLibrary',
       expect.objectContaining({ is_installed: false })
     )
+  })
+
+  it('VFQ-5: an actively uninstalling manifest (StateFlags 2052) disarms the no-activity window', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2052',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    jest.mocked(sendFrontendMessage).mockClear()
+    ;(notify as jest.Mock).mockClear()
+
+    const interval = 10
+    startUninstallPolling('730', interval)
+    await jest.advanceTimersByTimeAsync(interval * 60)
+    expect(notify).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.objectContaining({ status: 'done' })
+    )
+    const callsBefore = (existsSync as jest.Mock).mock.calls.length
+    await jest.advanceTimersByTimeAsync(interval * 3)
+    expect((existsSync as jest.Mock).mock.calls.length).toBeGreaterThan(
+      callsBefore
+    )
+  })
+
+  it('VFQ-6: a manifest that goes absent completes the uninstall and never fires the no-activity notice', async () => {
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: true,
+      install: {
+        install_path: '/steam/steamapps/common/csgo',
+        platform: 'Windows'
+      },
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    jest.mocked(sendFrontendMessage).mockClear()
+    ;(notify as jest.Mock).mockClear()
+
+    const interval = 10
+    startUninstallPolling('730', interval)
+    await jest.advanceTimersByTimeAsync(interval * 5)
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    await jest.advanceTimersByTimeAsync(interval * 3)
+
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ is_installed: false })
+    )
+    expect(notify).toHaveBeenCalledWith({
+      title: 'CS:GO',
+      body: 'Game Uninstalled'
+    })
+    expect(notify).toHaveBeenCalledTimes(1)
   })
 })
 

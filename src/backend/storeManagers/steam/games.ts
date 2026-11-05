@@ -81,6 +81,7 @@ import {
 import {
   startInstallPolling,
   stopInstallPolling,
+  cancelDelegatedInstall,
   startUninstallPolling,
   resumeInterruptedSteamInstall,
   markSteamInstallIncomplete,
@@ -6980,6 +6981,7 @@ export default class SteamGame implements Game {
   /**
    * Stop the game, by route:
    * - native depot download in flight (D-02, SNI-07): abort it;
+   * - Steam-owned (delegated) install poll: stop GameLib's wait (261105-vfq);
    * - bridge launch (GameLib spawned the Wine command itself, quick
    *   261024-urq): `wineserver -k` the game's own per-game bottle, stop the
    *   helper, and end the monitor (terminal `done`, UI leaves Playing). A game
@@ -7006,6 +7008,10 @@ export default class SteamGame implements Game {
       callAbortController(this.appId)
       return
     }
+
+    // Delegated-install cancel route (IPC kill -> dispatch.kill -> stop();
+    // quick 261105-vfq): stops GameLib's wait for a Steam-owned install.
+    if (cancelDelegatedInstall(this.appId)) return
 
     // quick 261024-urq: bridge route. GameLib spawned the Wine command itself,
     // so (unlike bottled Steam) it can and must end it. Kill only the game's
