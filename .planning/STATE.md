@@ -352,6 +352,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [2026-10-31] [feedback] In-app "Report a problem" form for non-technical users — no account, auto-attached redacted diagnostics — [todo file](.planning/todos/pending/2026-10-31-in-app-report-a-problem-form-for-non-technical-users.md)
 - [2026-11-05] [steam-install] "Discuss a more robust way to manage the 'restart Steam to finish' hold — it releases only on Steam pid exit, but sign-in rescans manifests in the same process (261105-ord gate item 6), leaving the user stuck" — [todo file](.planning/todos/pending/2026-11-05-steam-restart-hold-brittle-discuss.md)
 - [2026-11-05] [steam-install] "Uninstall via steam://uninstall is silently dropped by a signed-out Steam; GameLib sticks on Uninstalling for up to the 6 h poll cap" — [todo file](.planning/todos/pending/2026-11-05-steam-uninstall-silently-dropped-when-signed-out.md)
+- [2026-11-05] [steam-install] "Add GameLib-side delete for Steam games (uninstall without handing off to Steam)" — [todo file](.planning/todos/pending/2026-11-05-gamelib-native-steam-game-delete.md)
 
 ### Blockers/Concerns
 
