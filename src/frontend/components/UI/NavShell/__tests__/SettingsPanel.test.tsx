@@ -146,6 +146,21 @@ jest.mock('../components/QuitButton', () => ({
 import NavItem from '../components/NavItem'
 import QuitButton from '../components/QuitButton'
 import SettingsPanel from '../components/SettingsPanel'
+import {
+  faBookOpen,
+  faBug,
+  faCircleInfo,
+  faCircleQuestion,
+  faCoffee,
+  faCompactDisc,
+  faFileLines,
+  faGear,
+  faMicrochip,
+  faPalette,
+  faScrewdriverWrench,
+  faUniversalAccess,
+  faWineGlass
+} from '@fortawesome/free-solid-svg-icons'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -224,20 +239,73 @@ describe('SettingsPanel', () => {
       'General',
       'Game Defaults',
       'Advanced',
-      'Wine Manager',
       'Appearance',
+      'Wine Manager',
       'Log',
       'System Information',
       'Report a problem',
       'Documentation',
+      'App Tour',
       'About',
-      'Donate',
-      'App Tour'
+      'Donate'
     ])
     expect(labels).not.toContain('Console Mode')
 
     const children = topLevelChildren(tree)
     expect(children[children.length - 1].type).toBe(QuitButton)
+  })
+
+  function separatorChecks(children: AnyElement[]) {
+    const seps = children.filter(
+      (c) =>
+        c.type === 'div' &&
+        c.props.role === 'separator' &&
+        c.props.className === 'NavShell__tier2Divider'
+    )
+    expect(seps).toHaveLength(1)
+    const i = children.indexOf(seps[0])
+    expect(children[i - 1].type).toBe(NavItem)
+    expect(children[i - 1].props.label).toBe('System Information')
+    expect(children[i + 1].type).toBe(NavItem)
+    expect(children[i + 1].props.label).toBe('Report a problem')
+    expect(seps[0].props).not.toHaveProperty('tabIndex')
+    expect(seps[0].props).not.toHaveProperty('onClick')
+  }
+
+  it('places a separator between System Information and Report a problem', () => {
+    contextValue = makeContextValue({ platform: 'linux' })
+    separatorChecks(
+      topLevelChildren(SettingsPanel() as unknown as ReactElement)
+    )
+    contextValue = makeContextValue({ platform: 'win32' })
+    separatorChecks(
+      topLevelChildren(SettingsPanel() as unknown as ReactElement)
+    )
+  })
+
+  it('every NavItem row carries its sketch-007 icon', () => {
+    contextValue = makeContextValue({ platform: 'linux' })
+    const tree = SettingsPanel() as unknown as ReactElement
+    const expected: Array<[string, unknown]> = [
+      ['General', faGear],
+      ['Game Defaults', faCompactDisc],
+      ['Advanced', faScrewdriverWrench],
+      ['Appearance', faPalette],
+      ['Wine Manager', faWineGlass],
+      ['Log', faFileLines],
+      ['System Information', faMicrochip],
+      ['Report a problem', faBug],
+      ['Documentation', faBookOpen],
+      ['App Tour', faCircleQuestion],
+      ['About', faCircleInfo],
+      ['Donate', faCoffee]
+    ]
+    for (const [label, icon] of expected) {
+      expect(findNavItem(tree, label)?.props.icon).toBe(icon)
+    }
+    expect(findNavItem(tree, 'Appearance')?.props.icon).not.toBe(
+      faUniversalAccess
+    )
   })
 
   it('omits Game Defaults, Wine Manager and Console Mode on win32 while keeping Advanced', () => {

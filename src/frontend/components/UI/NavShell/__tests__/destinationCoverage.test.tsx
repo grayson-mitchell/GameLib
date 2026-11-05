@@ -275,15 +275,15 @@ describe('Destination coverage -- the settled tree', () => {
       'General',
       'Game Defaults',
       'Advanced',
-      'Wine Manager',
       'Appearance',
+      'Wine Manager',
       'Log',
       'System Information',
       'Report a problem',
       'Documentation',
+      'App Tour',
       'About',
-      'Donate',
-      'App Tour'
+      'Donate'
     ])
     // Console Mode is deliberately absent -- it moved to an icon-only control
     // in the Games tier-2 filter panel's Header (quick 261002-b63), a surface
