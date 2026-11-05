@@ -7123,9 +7123,12 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
                     );
                     return tauri::webview::NewWindowResponse::Deny;
                 }
+                // Host and path only: the query string may carry tokens.
                 shell_eprintln!(
-                    "[shell] store_embed: denied window.open request, routing to system \
-                     browser (D-28)"
+                    "[shell] store_embed: denied window.open request to {}{}, routing to \
+                     system browser (D-28)",
+                    url.host_str().unwrap_or("?"),
+                    url.path()
                 );
                 if let Err(e) = open_external(url.to_string(), app_handle.clone()) {
                     shell_eprintln!(
