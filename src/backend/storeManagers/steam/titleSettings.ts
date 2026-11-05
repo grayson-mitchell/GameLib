@@ -38,6 +38,17 @@ export function readStoredTitleConfig(
 }
 
 /**
+ * Identity helper: keeps the literal tuple type while checking every key against
+ * GameSettings. Stands in for `as const satisfies readonly (keyof GameSettings)[]`,
+ * whose `satisfies`/`readonly` tokens ts-prune reports as unreachable exports.
+ */
+function settingsKeys<const T extends readonly (keyof GameSettings)[]>(
+  keys: T
+): T {
+  return keys
+}
+
+/**
  * Keys where the title file wins over bottle/global settings when present
  * (LD-1). Never bottle-shaped keys (wineVersion/wineCrossoverBottle/winePrefix):
  * the title file can hold stale ones, so the bottle stays authoritative (LD-2).
@@ -47,7 +58,7 @@ export function readStoredTitleConfig(
  * real keys are `targetExe` and `language`.
  */
 // ts-prune-ignore-next
-export const TITLE_AUTHORITATIVE_KEYS = [
+export const TITLE_AUTHORITATIVE_KEYS = settingsKeys([
   'launcherArgs',
   'targetExe',
   'enviromentOptions',
@@ -59,7 +70,7 @@ export const TITLE_AUTHORITATIVE_KEYS = [
   'showFps',
   'showMangohud',
   'lastUsedLaunchOption'
-] as const satisfies readonly (keyof GameSettings)[]
+])
 
 /** Only the allowlisted keys present (`!== undefined`) in the entry. */
 // ts-prune-ignore-next
