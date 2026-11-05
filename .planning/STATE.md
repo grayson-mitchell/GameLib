@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60
 Plan: 0 of 0
 Status: Milestone complete
-Last activity: 2026-11-05 - Completed quick task 261105-sqe: InstallApp adoption releases the D-UAT-13 restart hold; 261105-ord live gate item 2 re-run pending
+Last activity: 2026-11-05 - Completed quick task 261105-svg: parent-death watchdog so a hard-killed sidecar cannot orphan nettop
 
 Progress: [██████████] 100%
 
@@ -445,6 +445,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261105-s7f | Last 8 `steam.overlay` keys (`exit.{title,body}`, `override.{automatic,help,label,off,on,summary}`) localised in all 48 non-en gamelib catalogs + mt manifests; baseline 6384 -> 6000, no `steam.overlay.*` left masked; todo closed. | 2026-11-05 | 7f3877fa2 | validateTranslation 384/384; lint-translations exit 0; 4 jest suites pass (267 tests); planning-gates 12/12 | [261105-s7f-localise-the-remaining-8-steam-overlay-e](./quick/261105-s7f-localise-the-remaining-8-steam-overlay-e/) |
 | 261105-gx2 | Lint ceilings back under cap at source, no ceiling/config/disable change: src 1134 -> 1123 (cap 1130; dup engineTypes import in steam/games.ts, `String(err)` in fallbackEngine/knownFixesFetcher/shortcuts utils templates), tests 666 -> 655 (cap 661; overlayLaunch.test.ts dup fs import + 9 non-throwing async mocks -> `Promise.resolve`). Pre-push still red on find-deadcode: 6 pre-existing used-in-module type exports in steamInstallApp.ts (261105-ord) and storeExitRefresh.ts (261105-pnh). | 2026-11-05 | 381d53482 | `pnpm lint` exit 0; 797 + 63 touched tests unchanged; tsc clean; not pushed | [261105-gx2-bring-pnpm-lint-src-and-tests-warning-co](./quick/261105-gx2-bring-pnpm-lint-src-and-tests-warning-co/) |
 | 261105-sqe | InstallApp adoption no longer leaves the game in `steam-waiting-for-restart`: new `adoptedBySteamClient` poll option starts the D-UAT-13 hold released (no PID probe, no persisted hold); games.ts passes it only on an ok InstallApp outcome. Fixes 261105-ord live gate item 2 (appId 112100). | 2026-11-05 | fc0509fa2 | Jest 1038 pass (library, steamRestartHold, games); codecheck, eslint, scoped prettier clean; live re-run of gate item 2 pending | [261105-sqe-release-the-d-uat-13-restart-hold-when-s](./quick/261105-sqe-release-the-d-uat-13-restart-hold-when-s/) |
+| 261105-svg | Steam download monitor's script/nettop child now runs under a `/bin/sh` parent-death watchdog (`childWatchdog.ts`): polls the sidecar pid each second, kills script + nettop on parent death, clean stop, or pinned Steam pid exit. Todo closed. | 2026-11-05 | bf49c17ab | Jest pass (18, 2 env-gated); live SIGKILL proof: tree gone in 123ms; baseline did not reproduce the field orphan (cause still inferred) | [261105-svg-orphaned-nettop-monitor-child-survives-a](./quick/261105-svg-orphaned-nettop-monitor-child-survives-a/) |
 
 ## Deferred Items
 
