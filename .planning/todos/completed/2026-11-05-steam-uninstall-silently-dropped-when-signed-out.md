@@ -8,6 +8,7 @@ files:
 severity: medium
 platform: macos
 ready: live-gate
+status: "RESOLVED 2026-11-06. Live gate on signed-out Mac Steam passed: install reverts, uninstall stays Installed, Cancel clears, each after ~2 min. Notice-channel gap filed as 2026-11-06-steam-delegated-give-up-notice-is-system-toast-not-in-app.md"
 ---
 
 ## Problem
@@ -66,3 +67,12 @@ Steam:
 - steam://install reverts with the notice after ~2 min.
 - steam://uninstall stays Installed with the notice after ~2 min.
 - Cancel clears a stuck delegated install immediately.
+
+## Live gate result (2026-11-06)
+
+Signed-out Mac Steam, `tauri:dev`, driven through the UI:
+
+- Install (Avadon 112100): `no activity within 40 ticks (~2 min)`, reverted to Not installed at exactly 2:00.
+- Uninstall (7 Days to Die 251570): kept installed at exactly 2:00.
+- Cancel (Tomb Raider 203160): poll stopped 20 s after the request, immediately on Cancel.
+- Defect found: the notice is a system toast, not the in-app toast stack. Filed as a follow-up todo.
