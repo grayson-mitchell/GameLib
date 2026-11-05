@@ -3366,6 +3366,8 @@ export default class SteamGame implements Game {
       // quick 261105-ord: with the experimental InstallApp setting ON, a
       // running Steam is first asked to adopt the install directly; only a
       // non-ok outcome falls through to the record below.
+      // An ok adoption also tells the poller Steam already knows the install,
+      // so no D-UAT-13 restart hold arms (quick 261105-sqe).
       if (deferredPoll.handoff && leasedResult.status === 'done') {
         const handoff = deferredPoll.handoff
         const pid = await probeMacSteamPid().catch(() => null)
@@ -3419,7 +3421,8 @@ export default class SteamGame implements Game {
         startInstallPolling(this.appId, {
           isNativeHandoff: true,
           skippedDepots: handoff.skippedDepots,
-          macNativeRoute: true
+          macNativeRoute: true,
+          ...(adoptedByInstallApp ? { adoptedBySteamClient: true } : {})
         })
       }
       return leasedResult

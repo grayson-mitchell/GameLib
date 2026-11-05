@@ -15169,7 +15169,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
     })
 
-    it('Steam running + ok: no pending record, record cleared, polling opts unchanged, library root derived from the manifest', async () => {
+    it('Steam running + ok: no pending record, record cleared, polling marked adopted by the Steam client, library root derived from the manifest', async () => {
       settingOn()
       adoption().probeMacSteamPid.mockResolvedValue(123)
       installApp().mockResolvedValue({ kind: 'ok', folderIndex: 0 })
@@ -15185,7 +15185,8 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
         isNativeHandoff: true,
         skippedDepots: [],
-        macNativeRoute: true
+        macNativeRoute: true,
+        adoptedBySteamClient: true
       })
     })
 
@@ -15207,6 +15208,11 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
           APP_ID,
           expect.objectContaining({ steamPid: 123 })
         )
+        expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+          isNativeHandoff: true,
+          skippedDepots: [],
+          macNativeRoute: true
+        })
       }
     )
 
@@ -15219,6 +15225,11 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       expect(installApp()).not.toHaveBeenCalled()
       expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
       expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
+      expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+        isNativeHandoff: true,
+        skippedDepots: [],
+        macNativeRoute: true
+      })
     })
 
     it('setting OFF: helper never called, pending adoption recorded as today', async () => {
@@ -15228,6 +15239,11 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
 
       expect(installApp()).not.toHaveBeenCalled()
       expect(adoption().recordPendingAdoption).toHaveBeenCalledTimes(1)
+      expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+        isNativeHandoff: true,
+        skippedDepots: [],
+        macNativeRoute: true
+      })
     })
   })
 })
