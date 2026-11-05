@@ -40,3 +40,22 @@ and other Prime Gaming account links, and to any popup-based OAuth inside a stor
 
 Live: link an Amazon account to Epic from inside `/store/amazon` (unlink first in the
 browser), and confirm the claim page sees the link without leaving the app.
+
+## Closed 2026-11-05 (debug amazon-account-link-popup)
+
+The cause was as the todo guessed. The link step is a `window.open` popup to
+`www.epicgames.com/id/authorize` (logged live, embed host `luna.amazon.com`) that completes
+through `window.opener`. Sending it to the system browser cannot work: the browser tab has no
+opener, and reloading the embed still offered "link account". So a finish-in-browser prompt was
+ruled out.
+
+- `fe33598ed`: popup hand-off log lines now include the host and path (no query string).
+- `d8682c350`: new `OpenInAppPopup` decision in `store_embed_handoff_policy.rs`, for https +
+  `www.epicgames.com` + `/id/` only. `on_new_window` opens an in-app window that keeps the
+  opener and session (`window_features`). Every other http(s) popup keeps the D-28
+  system-browser path.
+- Operator live check passed 2026-11-05: the Epic sign-in opened in-app and the account linked
+  without leaving the app.
+- Not done: GOG, Ubisoft and other Prime Gaming account links are not allowlisted, because their
+  popup URLs have not been measured. Each needs its own live capture (the new log line shows the
+  host) before it is added.
