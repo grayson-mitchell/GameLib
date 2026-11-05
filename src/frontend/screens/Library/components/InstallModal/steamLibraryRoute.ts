@@ -21,7 +21,7 @@ import type { SteamDialogLibraryOption } from './SteamDialog/installTarget'
  * settings read).
  */
 
-export type SteamLibraryRoute = {
+type SteamLibraryRoute = {
   targets: SteamDialogLibraryOption[]
   installAppRoute: boolean
 }
