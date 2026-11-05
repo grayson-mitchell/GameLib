@@ -69,6 +69,12 @@
             "steamBottle": "Steam pentru CrossOver",
             "steamClient": "Programul de instalare a clientului Steam",
             "title": "Configurare"
+        },
+        "steamManaged": {
+            "cancel": "Anulează",
+            "pause": "Pauză",
+            "title": "Gestionat de Steam",
+            "unavailable": "Gestionat de Steam. Pune pe pauză sau anulează din Steam."
         }
     },
     "edit-game": {
@@ -85,6 +91,7 @@
         "extraInfoErrorTitle": "Nu s-au putut încărca informațiile suplimentare",
         "extraInfoRetry": "Reîncearcă",
         "extraInfoStaleBody": "Acest rezultat a fost stocat în cache înainte de a se înregistra rezultatele încărcării, deci poate fi depășit. Reîmprospătează pentru a verifica.",
+        "steamInstallingPercent": "Se instalează… {{percent}}%",
         "tabsAriaLabel": "file gameinfo",
         "wineLabel": "Wine:"
     },

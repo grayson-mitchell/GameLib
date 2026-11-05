@@ -68,6 +68,12 @@
             "steamBottle": "Steam за CrossOver",
             "steamClient": "Инсталатор на клиента на Steam",
             "title": "Настройка"
+        },
+        "steamManaged": {
+            "cancel": "Отказ",
+            "pause": "Пауза",
+            "title": "Управлява се от Steam",
+            "unavailable": "Управлява се от Steam. Поставете на пауза или откажете в Steam."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Допълнителната информация не можа да се зареди",
         "extraInfoRetry": "Опитайте отново",
         "extraInfoStaleBody": "Този резултат е кеширан преди да се записват резултатите от зареждането, така че може да е неактуален. Обновете, за да проверите.",
+        "steamInstallingPercent": "Инсталира се… {{percent}}%",
         "tabsAriaLabel": "раздели за информация за играта",
         "wineLabel": "Wine:"
     },

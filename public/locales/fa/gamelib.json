@@ -68,6 +68,12 @@
             "steamBottle": "Steam برای CrossOver",
             "steamClient": "نصب‌کننده کلاینت Steam",
             "title": "راه‌اندازی"
+        },
+        "steamManaged": {
+            "cancel": "انصراف",
+            "pause": "توقف موقت",
+            "title": "مدیریت‌شده توسط Steam",
+            "unavailable": "مدیریت‌شده توسط Steam. آن را در Steam متوقف یا لغو کنید."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "بارگذاری اطلاعات اضافی ممکن نشد",
         "extraInfoRetry": "تلاش دوباره",
         "extraInfoStaleBody": "این نتیجه پیش از ثبت نتایج بارگذاری کش شده است، پس ممکن است قدیمی باشد. برای بررسی، تازه‌سازی کنید.",
+        "steamInstallingPercent": "در حال نصب… {{percent}}%",
         "tabsAriaLabel": "برگه‌های اطلاعات بازی",
         "wineLabel": "Wine:"
     },

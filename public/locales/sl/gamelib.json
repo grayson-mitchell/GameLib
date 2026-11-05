@@ -70,6 +70,12 @@
             "steamBottle": "Steam za CrossOver",
             "steamClient": "Namestitveni program odjemalca Steam",
             "title": "Namestitev"
+        },
+        "steamManaged": {
+            "cancel": "Prekliči",
+            "pause": "Začasno ustavi",
+            "title": "Upravlja Steam",
+            "unavailable": "Upravlja Steam. Začasno ustavite ali prekličite v odjemalcu Steam."
         }
     },
     "edit-game": {
@@ -86,6 +92,7 @@
         "extraInfoErrorTitle": "Dodatnih informacij ni bilo mogoče naložiti",
         "extraInfoRetry": "Poskusi znova",
         "extraInfoStaleBody": "Ta rezultat je bil shranjen v predpomnilnik, preden so se beležili izidi nalaganja, zato je morda zastarel. Osvežite za preverjanje.",
+        "steamInstallingPercent": "Nameščanje… {{percent}} %",
         "tabsAriaLabel": "zavihki informacij o igri",
         "wineLabel": "Wine:"
     },

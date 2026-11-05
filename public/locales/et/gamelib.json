@@ -68,6 +68,12 @@
             "steamBottle": "Steam CrossOver jaoks",
             "steamClient": "Steam kliendi installija",
             "title": "Seadistamine"
+        },
+        "steamManaged": {
+            "cancel": "Tühista",
+            "pause": "Peata",
+            "title": "Haldab Steam",
+            "unavailable": "Haldab Steam. Peata või tühista see rakenduses Steam."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Lisainfo laadimine ebaõnnestus",
         "extraInfoRetry": "Proovi uuesti",
         "extraInfoStaleBody": "See tulemus salvestati vahemällu enne laadimistulemuste registreerimist, seega võib see olla vananenud. Värskenda kontrollimiseks.",
+        "steamInstallingPercent": "Paigaldamine… {{percent}}%",
         "tabsAriaLabel": "mänguinfo vahekaardid",
         "wineLabel": "Wine:"
     },

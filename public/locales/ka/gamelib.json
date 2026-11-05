@@ -68,6 +68,12 @@
             "steamBottle": "Steam CrossOver-ისთვის",
             "steamClient": "Steam კლიენტის ინსტალერი",
             "title": "დაყენება"
+        },
+        "steamManaged": {
+            "cancel": "გაუქმება",
+            "pause": "შეჩერება",
+            "title": "Steam მართავს",
+            "unavailable": "Steam მართავს. შეაჩერეთ ან გააუქმეთ Steam აპლიკაციაში."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "დამატებითი ინფორმაციის ჩატვირთვა ვერ მოხერხდა",
         "extraInfoRetry": "ხელახლა ცდა",
         "extraInfoStaleBody": "ეს შედეგი ქეშირებულია ჩატვირთვის შედეგების ჩაწერამდე, ამიტომ შეიძლება მოძველებული იყოს. განაახლეთ შესამოწმებლად.",
+        "steamInstallingPercent": "მიმდინარეობს დაყენება… {{percent}}%",
         "tabsAriaLabel": "თამაშის ინფორმაციის ჩანართები",
         "wineLabel": "Wine:"
     },

@@ -68,6 +68,12 @@
             "steamBottle": "CrossOver üçün Steam",
             "steamClient": "Steam müştəri quraşdırıcısı",
             "title": "Quraşdırma"
+        },
+        "steamManaged": {
+            "cancel": "Ləğv et",
+            "pause": "Fasilə ver",
+            "title": "Steam tərəfindən idarə olunur",
+            "unavailable": "Steam tərəfindən idarə olunur. Onu Steam daxilində fasiləyə verin və ya ləğv edin."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Əlavə məlumat yüklənə bilmədi",
         "extraInfoRetry": "Yenidən cəhd et",
         "extraInfoStaleBody": "Bu nəticə yükləmə nəticələri qeydə alınmazdan əvvəl keşlənib, ona görə köhnəlmiş ola bilər. Yoxlamaq üçün yeniləyin.",
+        "steamInstallingPercent": "Quraşdırılır… {{percent}}%",
         "wineLabel": "Wine:",
         "tabsAriaLabel": "oyun məlumatı tabları"
     },

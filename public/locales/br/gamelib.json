@@ -71,6 +71,12 @@
             "steamBottle": "Steam evit CrossOver",
             "steamClient": "Stalier arval Steam",
             "title": "Staliadur"
+        },
+        "steamManaged": {
+            "cancel": "Nullañ",
+            "pause": "Ehanañ",
+            "title": "Renet gant Steam",
+            "unavailable": "Renet gant Steam. Ehanit pe nullit anezhañ e-barzh Steam."
         }
     },
     "edit-game": {
@@ -87,6 +93,7 @@
         "extraInfoErrorTitle": "N'eo ket bet gouest da gargañ an titour ouzhpenn",
         "extraInfoRetry": "Adklask",
         "extraInfoStaleBody": "Er c'hrubuilh eo bet ar disoc'h-mañ a-raok ma voe enrollet an disoc'hoù kargañ, dre-se marteze n'eo ket dedennus mui. Freskaat evit gwiriañ.",
+        "steamInstallingPercent": "O staliañ… {{percent}}%",
         "tabsAriaLabel": "ivinelloù titouroù ar c'hoari",
         "wineLabel": "Wine:"
     },

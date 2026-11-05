@@ -68,6 +68,12 @@
             "steamBottle": "Steam a CrossOver számára",
             "steamClient": "Steam-kliens telepítője",
             "title": "Beállítás"
+        },
+        "steamManaged": {
+            "cancel": "Mégse",
+            "pause": "Szüneteltetés",
+            "title": "Steam kezeli",
+            "unavailable": "Steam kezeli. Szüneteltesd vagy szakítsd meg a Steam alkalmazásban."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Az extra információk betöltése sikertelen",
         "extraInfoRetry": "Újra",
         "extraInfoStaleBody": "Ez az eredmény a betöltési kimenetek rögzítése előtt lett gyorsítótárazva, így elavult lehet. Frissítsd az ellenőrzéshez.",
+        "steamInstallingPercent": "Telepítés… {{percent}}%",
         "tabsAriaLabel": "játékinfó fülek",
         "wineLabel": "Wine:"
     },

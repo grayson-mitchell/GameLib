@@ -69,6 +69,12 @@
             "steamBottle": "Steam za CrossOver",
             "steamClient": "Instalacijski program Steam klijenta",
             "title": "Postavljanje"
+        },
+        "steamManaged": {
+            "cancel": "Otkaži",
+            "pause": "Pauziraj",
+            "title": "Upravlja Steam",
+            "unavailable": "Upravlja Steam. Pauzirajte ili otkažite u klijentu Steam."
         }
     },
     "edit-game": {
@@ -85,6 +91,7 @@
         "extraInfoErrorTitle": "Nije moguće učitati dodatne informacije",
         "extraInfoRetry": "Pokušaj ponovo",
         "extraInfoStaleBody": "Ovaj rezultat je keširan prije nego što su ishodi učitavanja zabilježeni, pa može biti zastario. Osvježite da provjerite.",
+        "steamInstallingPercent": "Instaliranje… {{percent}}%",
         "tabsAriaLabel": "kartice informacija o igri",
         "wineLabel": "Wine:"
     },

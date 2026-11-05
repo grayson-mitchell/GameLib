@@ -68,6 +68,12 @@
             "steamBottle": "Steam CrossOver-erako",
             "steamClient": "Steam bezeroaren instalatzailea",
             "title": "Konfigurazioa"
+        },
+        "steamManaged": {
+            "cancel": "Ezeztatu",
+            "pause": "Pausatu",
+            "title": "Steam bidez kudeatua",
+            "unavailable": "Steam bidez kudeatua. Pausatu edo ezeztatu Steam aplikazioan."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Ezin izan da informazio gehigarria kargatu",
         "extraInfoRetry": "Saiatu berriro",
         "extraInfoStaleBody": "Emaitza hau kargaren emaitzak erregistratu baino lehen katxeatu zen, beraz baliteke eguneratua ez egotea. Freskatu egiaztatzeko.",
+        "steamInstallingPercent": "Instalatzen… {{percent}}%",
         "tabsAriaLabel": "joko informazioaren fitxak",
         "wineLabel": "Wine:"
     },

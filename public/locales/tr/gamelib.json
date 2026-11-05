@@ -68,6 +68,12 @@
             "steamBottle": "CrossOver için Steam",
             "steamClient": "Steam istemcisi yükleyicisi",
             "title": "Kurulum"
+        },
+        "steamManaged": {
+            "cancel": "İptal",
+            "pause": "Duraklat",
+            "title": "Steam tarafından yönetiliyor",
+            "unavailable": "Steam tarafından yönetiliyor. Steam içinde duraklatın veya iptal edin."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Ek bilgi yüklenemedi",
         "extraInfoRetry": "Tekrar dene",
         "extraInfoStaleBody": "Bu sonuç, yükleme sonuçları kaydedilmeden önce önbelleğe alındı, bu yüzden güncel olmayabilir. Kontrol etmek için yenileyin.",
+        "steamInstallingPercent": "Kuruluyor… %{{percent}}",
         "tabsAriaLabel": "oyun bilgisi sekmeleri",
         "wineLabel": "Wine:"
     },

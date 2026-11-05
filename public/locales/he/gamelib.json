@@ -69,6 +69,12 @@
             "steamBottle": "Steam עבור CrossOver",
             "steamClient": "מתקין לקוח Steam",
             "title": "הגדרה"
+        },
+        "steamManaged": {
+            "cancel": "ביטול",
+            "pause": "השהיה",
+            "title": "מנוהל על ידי Steam",
+            "unavailable": "מנוהל על ידי Steam. ניתן להשהות או לבטל זאת בתוך Steam."
         }
     },
     "edit-game": {
@@ -85,6 +91,7 @@
         "extraInfoErrorTitle": "לא ניתן היה לטעון מידע נוסף",
         "extraInfoRetry": "נסה שוב",
         "extraInfoStaleBody": "תוצאה זו נשמרה במטמון לפני שתוצאות הטעינה נרשמו, ולכן ייתכן שהיא אינה עדכנית. רענן כדי לבדוק.",
+        "steamInstallingPercent": "מתקין… {{percent}}%",
         "tabsAriaLabel": "לשוניות מידע על המשחק",
         "wineLabel": "Wine:"
     },

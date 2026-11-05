@@ -69,6 +69,12 @@
             "steamBottle": "Steam para CrossOver",
             "steamClient": "Instalador do cliente Steam",
             "title": "Configuração"
+        },
+        "steamManaged": {
+            "cancel": "Cancelar",
+            "pause": "Pausar",
+            "title": "Gerido pelo Steam",
+            "unavailable": "Gerido pelo Steam. Coloque em pausa ou cancele no Steam."
         }
     },
     "edit-game": {
@@ -85,6 +91,7 @@
         "extraInfoErrorTitle": "Não foi possível carregar informação extra",
         "extraInfoRetry": "Tentar novamente",
         "extraInfoStaleBody": "Este resultado foi guardado em cache antes de os resultados de carregamento serem registados, pelo que pode estar desatualizado. Atualize para verificar.",
+        "steamInstallingPercent": "A instalar… {{percent}}%",
         "tabsAriaLabel": "separadores de informação do jogo",
         "wineLabel": "Wine:"
     },

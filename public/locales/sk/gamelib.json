@@ -70,6 +70,12 @@
             "steamBottle": "Steam pre CrossOver",
             "steamClient": "Inštalátor klienta Steam",
             "title": "Nastavenie"
+        },
+        "steamManaged": {
+            "cancel": "Zrušiť",
+            "pause": "Pozastaviť",
+            "title": "Spravované službou Steam",
+            "unavailable": "Spravované službou Steam. Pozastavte alebo zrušte to v službe Steam."
         }
     },
     "edit-game": {
@@ -86,6 +92,7 @@
         "extraInfoErrorTitle": "Nepodarilo sa načítať ďalšie informácie",
         "extraInfoRetry": "Skúsiť znova",
         "extraInfoStaleBody": "Tento výsledok bol uložený do vyrovnávacej pamäte pred zaznamenaním výsledkov načítania, takže môže byť neaktuálny. Obnovte a skontrolujte.",
+        "steamInstallingPercent": "Inštaluje sa… {{percent}} %",
         "tabsAriaLabel": "karty s informáciami o hre",
         "wineLabel": "Wine:"
     },

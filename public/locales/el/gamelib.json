@@ -68,6 +68,12 @@
             "steamBottle": "Steam για CrossOver",
             "steamClient": "Πρόγραμμα εγκατάστασης του προγράμματος-πελάτη Steam",
             "title": "Ρύθμιση"
+        },
+        "steamManaged": {
+            "cancel": "Ακύρωση",
+            "pause": "Παύση",
+            "title": "Διαχειρίζεται το Steam",
+            "unavailable": "Διαχειρίζεται το Steam. Θέστε το σε παύση ή ακυρώστε το από το Steam."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Δεν ήταν δυνατή η φόρτωση επιπλέον πληροφοριών",
         "extraInfoRetry": "Επανάληψη",
         "extraInfoStaleBody": "Αυτό το αποτέλεσμα αποθηκεύτηκε προσωρινά πριν καταγραφούν τα αποτελέσματα φόρτωσης, οπότε ίσως είναι παρωχημένο. Ανανεώστε για να ελέγξετε.",
+        "steamInstallingPercent": "Εγκατάσταση… {{percent}}%",
         "tabsAriaLabel": "καρτέλες πληροφοριών παιχνιδιού",
         "wineLabel": "Wine:"
     },

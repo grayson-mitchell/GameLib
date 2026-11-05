@@ -68,6 +68,12 @@
             "steamBottle": "Steam CrossOverille",
             "steamClient": "Steam-asiakasohjelman asennusohjelma",
             "title": "Asennus"
+        },
+        "steamManaged": {
+            "cancel": "Peruuta",
+            "pause": "Keskeytä",
+            "title": "Hallinnoija: Steam",
+            "unavailable": "Hallinnoija: Steam. Keskeytä tai peruuta se sovelluksessa Steam."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Lisätietoja ei voitu ladata",
         "extraInfoRetry": "Yritä uudelleen",
         "extraInfoStaleBody": "Tämä tulos tallennettiin välimuistiin ennen kuin latauksen tuloksia alettiin tallentaa, joten se voi olla vanhentunut. Päivitä tarkistaaksesi.",
+        "steamInstallingPercent": "Asennetaan… {{percent}} %",
         "tabsAriaLabel": "pelitietojen välilehdet",
         "wineLabel": "Wine:"
     },

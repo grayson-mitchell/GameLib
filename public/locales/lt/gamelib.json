@@ -70,6 +70,12 @@
             "steamBottle": "Steam, skirta CrossOver",
             "steamClient": "Steam kliento diegimo programa",
             "title": "Sąranka"
+        },
+        "steamManaged": {
+            "cancel": "Atšaukti",
+            "pause": "Pristabdyti",
+            "title": "Tvarko Steam",
+            "unavailable": "Tvarko Steam. Pristabdykite arba atšaukite programoje Steam."
         }
     },
     "edit-game": {
@@ -86,6 +92,7 @@
         "extraInfoErrorTitle": "Nepavyko įkelti papildomos informacijos",
         "extraInfoRetry": "Bandyti dar kartą",
         "extraInfoStaleBody": "Šis rezultatas buvo talpinamas podėlyje prieš pradedant registruoti įkėlimo rezultatus, todėl jis gali būti pasenęs. Atnaujinkite, kad patikrintumėte.",
+        "steamInstallingPercent": "Diegiama… {{percent}} %",
         "tabsAriaLabel": "žaidimo informacijos skirtukai",
         "wineLabel": "Wine:"
     },

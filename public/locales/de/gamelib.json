@@ -28,6 +28,12 @@
             "steamBottle": "Steam für CrossOver",
             "steamClient": "Steam-Client-Installer",
             "title": "Einrichtung"
+        },
+        "steamManaged": {
+            "cancel": "Abbrechen",
+            "pause": "Pausieren",
+            "title": "Von Steam verwaltet",
+            "unavailable": "Von Steam verwaltet. Pausiere oder brich den Vorgang in Steam ab."
         }
     },
     "gamepage": {
@@ -39,6 +45,7 @@
         "extraInfoErrorTitle": "Zusatzinfos konnten nicht geladen werden",
         "extraInfoRetry": "Erneut versuchen",
         "extraInfoStaleBody": "Dieses Ergebnis wurde zwischengespeichert, bevor Ladeergebnisse erfasst wurden, und könnte daher veraltet sein. Aktualisieren, um zu prüfen.",
+        "steamInstallingPercent": "Wird installiert… {{percent}} %",
         "tabsAriaLabel": "Spieleinfo-Tabs",
         "wineLabel": "Wine:"
     },

@@ -68,6 +68,12 @@
             "steamBottle": "Steam สำหรับ CrossOver",
             "steamClient": "ตัวติดตั้งไคลเอนต์ Steam",
             "title": "การตั้งค่า"
+        },
+        "steamManaged": {
+            "cancel": "ยกเลิก",
+            "pause": "หยุดชั่วคราว",
+            "title": "จัดการโดย Steam",
+            "unavailable": "จัดการโดย Steam หยุดชั่วคราวหรือยกเลิกได้ใน Steam"
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "ไม่สามารถโหลดข้อมูลเพิ่มเติมได้",
         "extraInfoRetry": "ลองอีกครั้ง",
         "extraInfoStaleBody": "ผลลัพธ์นี้ถูกแคชไว้ก่อนที่จะมีการบันทึกผลการโหลด จึงอาจไม่เป็นข้อมูลล่าสุด รีเฟรชเพื่อตรวจสอบ",
+        "steamInstallingPercent": "กำลังติดตั้ง… {{percent}}%",
         "tabsAriaLabel": "แท็บข้อมูลเกม",
         "wineLabel": "Wine:"
     },

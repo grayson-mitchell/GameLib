@@ -70,6 +70,12 @@
             "steamBottle": "Steam для CrossOver",
             "steamClient": "Інсталятор клієнта Steam",
             "title": "Налаштування"
+        },
+        "steamManaged": {
+            "cancel": "Скасувати",
+            "pause": "Призупинити",
+            "title": "Керується Steam",
+            "unavailable": "Керується Steam. Призупиніть або скасуйте в Steam."
         }
     },
     "edit-game": {
@@ -86,6 +92,7 @@
         "extraInfoErrorTitle": "Не вдалося завантажити додаткову інформацію",
         "extraInfoRetry": "Повторити",
         "extraInfoStaleBody": "Цей результат був кешований до фіксації результатів завантаження, тож може бути застарілим. Оновіть, щоб перевірити.",
+        "steamInstallingPercent": "Встановлення… {{percent}}%",
         "tabsAriaLabel": "вкладки інформації про гру",
         "wineLabel": "Wine:"
     },

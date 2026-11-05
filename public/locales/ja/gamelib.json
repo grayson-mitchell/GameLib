@@ -68,6 +68,12 @@
             "steamBottle": "CrossOver 用 Steam",
             "steamClient": "Steam クライアントのインストーラー",
             "title": "セットアップ"
+        },
+        "steamManaged": {
+            "cancel": "キャンセル",
+            "pause": "一時停止",
+            "title": "Steamが管理中",
+            "unavailable": "Steamが管理中です。Steamで一時停止またはキャンセルしてください。"
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "追加情報を読み込めませんでした",
         "extraInfoRetry": "再試行",
         "extraInfoStaleBody": "この結果は読み込み結果が記録される前にキャッシュされたため、古い可能性があります。更新して確認してください。",
+        "steamInstallingPercent": "インストール中… {{percent}}%",
         "tabsAriaLabel": "ゲーム情報タブ",
         "wineLabel": "Wine:"
     },

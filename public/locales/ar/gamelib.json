@@ -72,6 +72,12 @@
             "steamBottle": "Steam لـ CrossOver",
             "steamClient": "مثبّت عميل Steam",
             "title": "الإعداد"
+        },
+        "steamManaged": {
+            "cancel": "إلغاء",
+            "pause": "إيقاف مؤقت",
+            "title": "تتم إدارته بواسطة Steam",
+            "unavailable": "تتم إدارته بواسطة Steam. أوقفه مؤقتًا أو ألغِه من Steam."
         }
     },
     "edit-game": {
@@ -88,6 +94,7 @@
         "extraInfoErrorTitle": "تعذّر تحميل المعلومات الإضافية",
         "extraInfoRetry": "أعد المحاولة",
         "extraInfoStaleBody": "تم تخزين هذه النتيجة مؤقتًا قبل تسجيل نتائج التحميل، لذا قد تكون قديمة. حدّثها للتحقق.",
+        "steamInstallingPercent": "جارٍ التثبيت… {{percent}}%",
         "tabsAriaLabel": "علامات تبويب معلومات اللعبة",
         "wineLabel": "Wine:"
     },

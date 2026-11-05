@@ -68,6 +68,12 @@
             "steamBottle": "Steam for CrossOver",
             "steamClient": "Installasjonsprogram for Steam-klienten",
             "title": "Oppsett"
+        },
+        "steamManaged": {
+            "cancel": "Avbryt",
+            "pause": "Sett på pause",
+            "title": "Administreres av Steam",
+            "unavailable": "Administreres av Steam. Sett det på pause eller avbryt det i Steam."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Kunne ikke laste tilleggsinfo",
         "extraInfoRetry": "Prøv igjen",
         "extraInfoStaleBody": "Dette resultatet ble hurtiglagret før lasteutfall ble registrert, så det kan være utdatert. Oppdater for å kontrollere.",
+        "steamInstallingPercent": "Installerer… {{percent}} %",
         "tabsAriaLabel": "faner for spillinfo",
         "wineLabel": "Wine:"
     },

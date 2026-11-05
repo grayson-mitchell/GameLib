@@ -68,6 +68,12 @@
             "steamBottle": "Steam voor CrossOver",
             "steamClient": "Installatieprogramma voor de Steam-client",
             "title": "Installatie"
+        },
+        "steamManaged": {
+            "cancel": "Annuleren",
+            "pause": "Pauzeren",
+            "title": "Beheerd door Steam",
+            "unavailable": "Beheerd door Steam. Pauzeer of annuleer het in Steam."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Kon extra informatie niet laden",
         "extraInfoRetry": "Opnieuw proberen",
         "extraInfoStaleBody": "Dit resultaat is gecachet voordat laadresultaten werden geregistreerd, dus het kan verouderd zijn. Vernieuw om te controleren.",
+        "steamInstallingPercent": "Installeren… {{percent}}%",
         "tabsAriaLabel": "gameinfo-tabbladen",
         "wineLabel": "Wine:"
     },

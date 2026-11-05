@@ -71,6 +71,12 @@
             "steamBottle": "Steam do CrossOver",
             "steamClient": "Suiteálaí chliant Steam",
             "title": "Socrú"
+        },
+        "steamManaged": {
+            "cancel": "Cealaigh",
+            "pause": "Cuir ar sos",
+            "title": "Á bhainistiú ag Steam",
+            "unavailable": "Á bhainistiú ag Steam. Cuir ar sos nó cealaigh é i Steam."
         }
     },
     "edit-game": {
@@ -87,6 +93,7 @@
         "extraInfoErrorTitle": "Níorbh fhéidir eolas breise a lódáil",
         "extraInfoRetry": "Bain triail eile as",
         "extraInfoStaleBody": "Cuireadh an toradh seo i dtaisce sula taifeadadh torthaí lódála, mar sin d'fhéadfadh sé a bheith as dáta. Athnuaigh chun a sheiceáil.",
+        "steamInstallingPercent": "Ag suiteáil… {{percent}}%",
         "tabsAriaLabel": "cluaisíní gameinfo",
         "wineLabel": "Wine:"
     },

@@ -68,6 +68,12 @@
             "steamBottle": "CrossOver-നുള്ള Steam",
             "steamClient": "Steam ക്ലയന്റ് ഇൻസ്റ്റാളർ",
             "title": "സജ്ജീകരണം"
+        },
+        "steamManaged": {
+            "cancel": "റദ്ദാക്കുക",
+            "pause": "താൽക്കാലികമായി നിർത്തുക",
+            "title": "Steam കൈകാര്യം ചെയ്യുന്നു",
+            "unavailable": "Steam കൈകാര്യം ചെയ്യുന്നു. Steam ആപ്പിൽ ഇത് താൽക്കാലികമായി നിർത്തുകയോ റദ്ദാക്കുകയോ ചെയ്യുക."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "അധിക വിവരങ്ങൾ ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല",
         "extraInfoRetry": "വീണ്ടും ശ്രമിക്കുക",
         "extraInfoStaleBody": "ലോഡ് ഫലങ്ങൾ രേഖപ്പെടുത്തുന്നതിന് മുമ്പ് ഈ ഫലം കാഷെ ചെയ്തതാണ്, അതിനാൽ ഇത് കാലഹരണപ്പെട്ടതാകാം. പരിശോധിക്കാൻ പുതുക്കുക.",
+        "steamInstallingPercent": "ഇൻസ്റ്റാൾ ചെയ്യുന്നു… {{percent}}%",
         "tabsAriaLabel": "gameinfo ടാബുകൾ",
         "wineLabel": "Wine:"
     },

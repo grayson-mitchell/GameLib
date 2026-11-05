@@ -69,6 +69,12 @@
             "steamBottle": "Steam per a CrossOver",
             "steamClient": "Instal·lador del client de Steam",
             "title": "Configuració"
+        },
+        "steamManaged": {
+            "cancel": "Cancel·la",
+            "pause": "Pausa",
+            "title": "Gestionat per Steam",
+            "unavailable": "Gestionat per Steam. Posa'l en pausa o cancel·la'l des de Steam."
         }
     },
     "edit-game": {
@@ -85,6 +91,7 @@
         "extraInfoErrorTitle": "No s'ha pogut carregar la informació addicional",
         "extraInfoRetry": "Torna-ho a provar",
         "extraInfoStaleBody": "Aquest resultat es va desar en memòria cau abans de registrar els resultats de la càrrega, per la qual cosa pot estar desactualitzat. Actualitza-ho per comprovar-ho.",
+        "steamInstallingPercent": "S'està instal·lant… {{percent}}%",
         "tabsAriaLabel": "pestanyes d'informació del joc",
         "wineLabel": "Wine:"
     },

@@ -68,6 +68,12 @@
             "steamBottle": "CrossOver uchun Steam",
             "steamClient": "Steam mijoz oʻrnatuvchisi",
             "title": "Oʻrnatish"
+        },
+        "steamManaged": {
+            "cancel": "Bekor qilish",
+            "pause": "Pauza",
+            "title": "Steam tomonidan boshqariladi",
+            "unavailable": "Steam tomonidan boshqariladi. Uni Steam ichida pauza qiling yoki bekor qiling."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Qo'shimcha ma'lumotni yuklab bo'lmadi",
         "extraInfoRetry": "Qayta urinish",
         "extraInfoStaleBody": "Bu natija yuklash holatlari qayd etilishidan oldin keshlangan, shuning uchun eskirgan bo'lishi mumkin. Tekshirish uchun yangilang.",
+        "steamInstallingPercent": "Oʻrnatilmoqda… {{percent}}%",
         "tabsAriaLabel": "o'yin ma'lumotlari yorliqlari",
         "wineLabel": "Wine:"
     },

@@ -68,6 +68,12 @@
             "steamBottle": "Steam til CrossOver",
             "steamClient": "Installationsprogram til Steam-klienten",
             "title": "Opsætning"
+        },
+        "steamManaged": {
+            "cancel": "Afbryd",
+            "pause": "Sæt på pause",
+            "title": "Administreres af Steam",
+            "unavailable": "Administreres af Steam. Sæt det på pause eller afbryd det i Steam."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Kunne ikke indlæse ekstra info",
         "extraInfoRetry": "Prøv igen",
         "extraInfoStaleBody": "Dette resultat blev cachet før indlæsningsresultater blev registreret, så det kan være forældet. Opdater for at kontrollere.",
+        "steamInstallingPercent": "Installerer… {{percent}} %",
         "tabsAriaLabel": "gameinfo-faneblade",
         "wineLabel": "Wine:"
     },

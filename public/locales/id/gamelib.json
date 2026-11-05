@@ -68,6 +68,12 @@
             "steamBottle": "Steam untuk CrossOver",
             "steamClient": "Penginstal klien Steam",
             "title": "Penyiapan"
+        },
+        "steamManaged": {
+            "cancel": "Batalkan",
+            "pause": "Jeda",
+            "title": "Dikelola oleh Steam",
+            "unavailable": "Dikelola oleh Steam. Jeda atau batalkan di Steam."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Tidak dapat memuat info tambahan",
         "extraInfoRetry": "Coba Lagi",
         "extraInfoStaleBody": "Hasil ini disimpan dalam cache sebelum hasil pemuatan dicatat, sehingga mungkin sudah kedaluwarsa. Segarkan untuk memeriksanya.",
+        "steamInstallingPercent": "Menginstal… {{percent}}%",
         "tabsAriaLabel": "tab info game",
         "wineLabel": "Wine:"
     },

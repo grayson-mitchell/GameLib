@@ -1,0 +1,345 @@
+{
+  "en": {
+    "downloadManager.steamManaged.cancel": "Cancel",
+    "downloadManager.steamManaged.pause": "Pause",
+    "downloadManager.steamManaged.title": "Managed by Steam",
+    "downloadManager.steamManaged.unavailable": "Managed by Steam. Pause or cancel it in Steam.",
+    "gamepage.steamInstallingPercent": "Installing… {{percent}}%"
+  },
+  "ar": {
+    "downloadManager.steamManaged.cancel": "إلغاء",
+    "downloadManager.steamManaged.pause": "إيقاف مؤقت",
+    "downloadManager.steamManaged.title": "تتم إدارته بواسطة Steam",
+    "downloadManager.steamManaged.unavailable": "تتم إدارته بواسطة Steam. أوقفه مؤقتًا أو ألغِه من Steam.",
+    "gamepage.steamInstallingPercent": "جارٍ التثبيت… {{percent}}%"
+  },
+  "az": {
+    "downloadManager.steamManaged.cancel": "Ləğv et",
+    "downloadManager.steamManaged.pause": "Fasilə ver",
+    "downloadManager.steamManaged.title": "Steam tərəfindən idarə olunur",
+    "downloadManager.steamManaged.unavailable": "Steam tərəfindən idarə olunur. Onu Steam daxilində fasiləyə verin və ya ləğv edin.",
+    "gamepage.steamInstallingPercent": "Quraşdırılır… {{percent}}%"
+  },
+  "be": {
+    "downloadManager.steamManaged.cancel": "Скасаваць",
+    "downloadManager.steamManaged.pause": "Прыпыніць",
+    "downloadManager.steamManaged.title": "Кіруецца Steam",
+    "downloadManager.steamManaged.unavailable": "Кіруецца Steam. Прыпыніце або скасуйце гэта ў Steam.",
+    "gamepage.steamInstallingPercent": "Усталяванне… {{percent}}%"
+  },
+  "bg": {
+    "downloadManager.steamManaged.cancel": "Отказ",
+    "downloadManager.steamManaged.pause": "Пауза",
+    "downloadManager.steamManaged.title": "Управлява се от Steam",
+    "downloadManager.steamManaged.unavailable": "Управлява се от Steam. Поставете на пауза или откажете в Steam.",
+    "gamepage.steamInstallingPercent": "Инсталира се… {{percent}}%"
+  },
+  "br": {
+    "downloadManager.steamManaged.cancel": "Nullañ",
+    "downloadManager.steamManaged.pause": "Ehanañ",
+    "downloadManager.steamManaged.title": "Renet gant Steam",
+    "downloadManager.steamManaged.unavailable": "Renet gant Steam. Ehanit pe nullit anezhañ e-barzh Steam.",
+    "gamepage.steamInstallingPercent": "O staliañ… {{percent}}%"
+  },
+  "bs": {
+    "downloadManager.steamManaged.cancel": "Otkaži",
+    "downloadManager.steamManaged.pause": "Pauziraj",
+    "downloadManager.steamManaged.title": "Upravlja Steam",
+    "downloadManager.steamManaged.unavailable": "Upravlja Steam. Pauzirajte ili otkažite u klijentu Steam.",
+    "gamepage.steamInstallingPercent": "Instaliranje… {{percent}}%"
+  },
+  "ca": {
+    "downloadManager.steamManaged.cancel": "Cancel·la",
+    "downloadManager.steamManaged.pause": "Pausa",
+    "downloadManager.steamManaged.title": "Gestionat per Steam",
+    "downloadManager.steamManaged.unavailable": "Gestionat per Steam. Posa'l en pausa o cancel·la'l des de Steam.",
+    "gamepage.steamInstallingPercent": "S'està instal·lant… {{percent}}%"
+  },
+  "cs": {
+    "downloadManager.steamManaged.cancel": "Zrušit",
+    "downloadManager.steamManaged.pause": "Pozastavit",
+    "downloadManager.steamManaged.title": "Spravováno službou Steam",
+    "downloadManager.steamManaged.unavailable": "Spravováno službou Steam. Pozastavte nebo zrušte to ve službě Steam.",
+    "gamepage.steamInstallingPercent": "Instaluji… {{percent}} %"
+  },
+  "da": {
+    "downloadManager.steamManaged.cancel": "Afbryd",
+    "downloadManager.steamManaged.pause": "Sæt på pause",
+    "downloadManager.steamManaged.title": "Administreres af Steam",
+    "downloadManager.steamManaged.unavailable": "Administreres af Steam. Sæt det på pause eller afbryd det i Steam.",
+    "gamepage.steamInstallingPercent": "Installerer… {{percent}} %"
+  },
+  "de": {
+    "downloadManager.steamManaged.cancel": "Abbrechen",
+    "downloadManager.steamManaged.pause": "Pausieren",
+    "downloadManager.steamManaged.title": "Von Steam verwaltet",
+    "downloadManager.steamManaged.unavailable": "Von Steam verwaltet. Pausiere oder brich den Vorgang in Steam ab.",
+    "gamepage.steamInstallingPercent": "Wird installiert… {{percent}} %"
+  },
+  "el": {
+    "downloadManager.steamManaged.cancel": "Ακύρωση",
+    "downloadManager.steamManaged.pause": "Παύση",
+    "downloadManager.steamManaged.title": "Διαχειρίζεται το Steam",
+    "downloadManager.steamManaged.unavailable": "Διαχειρίζεται το Steam. Θέστε το σε παύση ή ακυρώστε το από το Steam.",
+    "gamepage.steamInstallingPercent": "Εγκατάσταση… {{percent}}%"
+  },
+  "es": {
+    "downloadManager.steamManaged.cancel": "Cancelar",
+    "downloadManager.steamManaged.pause": "Pausar",
+    "downloadManager.steamManaged.title": "Gestionado por Steam",
+    "downloadManager.steamManaged.unavailable": "Gestionado por Steam. Páusalo o cancélalo desde Steam.",
+    "gamepage.steamInstallingPercent": "Instalando… {{percent}} %"
+  },
+  "et": {
+    "downloadManager.steamManaged.cancel": "Tühista",
+    "downloadManager.steamManaged.pause": "Peata",
+    "downloadManager.steamManaged.title": "Haldab Steam",
+    "downloadManager.steamManaged.unavailable": "Haldab Steam. Peata või tühista see rakenduses Steam.",
+    "gamepage.steamInstallingPercent": "Paigaldamine… {{percent}}%"
+  },
+  "eu": {
+    "downloadManager.steamManaged.cancel": "Ezeztatu",
+    "downloadManager.steamManaged.pause": "Pausatu",
+    "downloadManager.steamManaged.title": "Steam bidez kudeatua",
+    "downloadManager.steamManaged.unavailable": "Steam bidez kudeatua. Pausatu edo ezeztatu Steam aplikazioan.",
+    "gamepage.steamInstallingPercent": "Instalatzen… {{percent}}%"
+  },
+  "fa": {
+    "downloadManager.steamManaged.cancel": "انصراف",
+    "downloadManager.steamManaged.pause": "توقف موقت",
+    "downloadManager.steamManaged.title": "مدیریت‌شده توسط Steam",
+    "downloadManager.steamManaged.unavailable": "مدیریت‌شده توسط Steam. آن را در Steam متوقف یا لغو کنید.",
+    "gamepage.steamInstallingPercent": "در حال نصب… {{percent}}%"
+  },
+  "fi": {
+    "downloadManager.steamManaged.cancel": "Peruuta",
+    "downloadManager.steamManaged.pause": "Keskeytä",
+    "downloadManager.steamManaged.title": "Hallinnoija: Steam",
+    "downloadManager.steamManaged.unavailable": "Hallinnoija: Steam. Keskeytä tai peruuta se sovelluksessa Steam.",
+    "gamepage.steamInstallingPercent": "Asennetaan… {{percent}} %"
+  },
+  "fr": {
+    "downloadManager.steamManaged.cancel": "Annuler",
+    "downloadManager.steamManaged.pause": "Mettre en pause",
+    "downloadManager.steamManaged.title": "Géré par Steam",
+    "downloadManager.steamManaged.unavailable": "Géré par Steam. Mettez-le en pause ou annulez-le dans Steam.",
+    "gamepage.steamInstallingPercent": "Installation… {{percent}} %"
+  },
+  "ga": {
+    "downloadManager.steamManaged.cancel": "Cealaigh",
+    "downloadManager.steamManaged.pause": "Cuir ar sos",
+    "downloadManager.steamManaged.title": "Á bhainistiú ag Steam",
+    "downloadManager.steamManaged.unavailable": "Á bhainistiú ag Steam. Cuir ar sos nó cealaigh é i Steam.",
+    "gamepage.steamInstallingPercent": "Ag suiteáil… {{percent}}%"
+  },
+  "gl": {
+    "downloadManager.steamManaged.cancel": "Cancelar",
+    "downloadManager.steamManaged.pause": "Pausar",
+    "downloadManager.steamManaged.title": "Xestionado por Steam",
+    "downloadManager.steamManaged.unavailable": "Xestionado por Steam. Púsao en pausa ou cancélao desde Steam.",
+    "gamepage.steamInstallingPercent": "Instalando… {{percent}} %"
+  },
+  "he": {
+    "downloadManager.steamManaged.cancel": "ביטול",
+    "downloadManager.steamManaged.pause": "השהיה",
+    "downloadManager.steamManaged.title": "מנוהל על ידי Steam",
+    "downloadManager.steamManaged.unavailable": "מנוהל על ידי Steam. ניתן להשהות או לבטל זאת בתוך Steam.",
+    "gamepage.steamInstallingPercent": "מתקין… {{percent}}%"
+  },
+  "hr": {
+    "downloadManager.steamManaged.cancel": "Odustani",
+    "downloadManager.steamManaged.pause": "Pauziraj",
+    "downloadManager.steamManaged.title": "Upravlja Steam",
+    "downloadManager.steamManaged.unavailable": "Upravlja Steam. Pauziraj ili odustani u aplikaciji Steam.",
+    "gamepage.steamInstallingPercent": "Instaliranje… {{percent}} %"
+  },
+  "hu": {
+    "downloadManager.steamManaged.cancel": "Mégse",
+    "downloadManager.steamManaged.pause": "Szüneteltetés",
+    "downloadManager.steamManaged.title": "Steam kezeli",
+    "downloadManager.steamManaged.unavailable": "Steam kezeli. Szüneteltesd vagy szakítsd meg a Steam alkalmazásban.",
+    "gamepage.steamInstallingPercent": "Telepítés… {{percent}}%"
+  },
+  "id": {
+    "downloadManager.steamManaged.cancel": "Batalkan",
+    "downloadManager.steamManaged.pause": "Jeda",
+    "downloadManager.steamManaged.title": "Dikelola oleh Steam",
+    "downloadManager.steamManaged.unavailable": "Dikelola oleh Steam. Jeda atau batalkan di Steam.",
+    "gamepage.steamInstallingPercent": "Menginstal… {{percent}}%"
+  },
+  "it": {
+    "downloadManager.steamManaged.cancel": "Annulla",
+    "downloadManager.steamManaged.pause": "Metti in pausa",
+    "downloadManager.steamManaged.title": "Gestito da Steam",
+    "downloadManager.steamManaged.unavailable": "Gestito da Steam. Mettilo in pausa o annullalo da Steam.",
+    "gamepage.steamInstallingPercent": "Installazione in corso… {{percent}}%"
+  },
+  "ja": {
+    "downloadManager.steamManaged.cancel": "キャンセル",
+    "downloadManager.steamManaged.pause": "一時停止",
+    "downloadManager.steamManaged.title": "Steamが管理中",
+    "downloadManager.steamManaged.unavailable": "Steamが管理中です。Steamで一時停止またはキャンセルしてください。",
+    "gamepage.steamInstallingPercent": "インストール中… {{percent}}%"
+  },
+  "ka": {
+    "downloadManager.steamManaged.cancel": "გაუქმება",
+    "downloadManager.steamManaged.pause": "შეჩერება",
+    "downloadManager.steamManaged.title": "Steam მართავს",
+    "downloadManager.steamManaged.unavailable": "Steam მართავს. შეაჩერეთ ან გააუქმეთ Steam აპლიკაციაში.",
+    "gamepage.steamInstallingPercent": "მიმდინარეობს დაყენება… {{percent}}%"
+  },
+  "ko": {
+    "downloadManager.steamManaged.cancel": "취소",
+    "downloadManager.steamManaged.pause": "일시중지",
+    "downloadManager.steamManaged.title": "Steam에서 관리 중",
+    "downloadManager.steamManaged.unavailable": "Steam에서 관리 중입니다. Steam에서 일시중지하거나 취소하세요.",
+    "gamepage.steamInstallingPercent": "설치 중… {{percent}}%"
+  },
+  "lt": {
+    "downloadManager.steamManaged.cancel": "Atšaukti",
+    "downloadManager.steamManaged.pause": "Pristabdyti",
+    "downloadManager.steamManaged.title": "Tvarko Steam",
+    "downloadManager.steamManaged.unavailable": "Tvarko Steam. Pristabdykite arba atšaukite programoje Steam.",
+    "gamepage.steamInstallingPercent": "Diegiama… {{percent}} %"
+  },
+  "ml": {
+    "downloadManager.steamManaged.cancel": "റദ്ദാക്കുക",
+    "downloadManager.steamManaged.pause": "താൽക്കാലികമായി നിർത്തുക",
+    "downloadManager.steamManaged.title": "Steam കൈകാര്യം ചെയ്യുന്നു",
+    "downloadManager.steamManaged.unavailable": "Steam കൈകാര്യം ചെയ്യുന്നു. Steam ആപ്പിൽ ഇത് താൽക്കാലികമായി നിർത്തുകയോ റദ്ദാക്കുകയോ ചെയ്യുക.",
+    "gamepage.steamInstallingPercent": "ഇൻസ്റ്റാൾ ചെയ്യുന്നു… {{percent}}%"
+  },
+  "nb_NO": {
+    "downloadManager.steamManaged.cancel": "Avbryt",
+    "downloadManager.steamManaged.pause": "Sett på pause",
+    "downloadManager.steamManaged.title": "Administreres av Steam",
+    "downloadManager.steamManaged.unavailable": "Administreres av Steam. Sett det på pause eller avbryt det i Steam.",
+    "gamepage.steamInstallingPercent": "Installerer… {{percent}} %"
+  },
+  "nl": {
+    "downloadManager.steamManaged.cancel": "Annuleren",
+    "downloadManager.steamManaged.pause": "Pauzeren",
+    "downloadManager.steamManaged.title": "Beheerd door Steam",
+    "downloadManager.steamManaged.unavailable": "Beheerd door Steam. Pauzeer of annuleer het in Steam.",
+    "gamepage.steamInstallingPercent": "Installeren… {{percent}}%"
+  },
+  "pl": {
+    "downloadManager.steamManaged.cancel": "Anuluj",
+    "downloadManager.steamManaged.pause": "Wstrzymaj",
+    "downloadManager.steamManaged.title": "Zarządzane przez Steam",
+    "downloadManager.steamManaged.unavailable": "Zarządzane przez Steam. Wstrzymaj lub anuluj to w Steam.",
+    "gamepage.steamInstallingPercent": "Instalowanie… {{percent}}%"
+  },
+  "pt": {
+    "downloadManager.steamManaged.cancel": "Cancelar",
+    "downloadManager.steamManaged.pause": "Pausar",
+    "downloadManager.steamManaged.title": "Gerido pelo Steam",
+    "downloadManager.steamManaged.unavailable": "Gerido pelo Steam. Coloque em pausa ou cancele no Steam.",
+    "gamepage.steamInstallingPercent": "A instalar… {{percent}}%"
+  },
+  "pt_BR": {
+    "downloadManager.steamManaged.cancel": "Cancelar",
+    "downloadManager.steamManaged.pause": "Pausar",
+    "downloadManager.steamManaged.title": "Gerenciado pelo Steam",
+    "downloadManager.steamManaged.unavailable": "Gerenciado pelo Steam. Pause ou cancele no Steam.",
+    "gamepage.steamInstallingPercent": "Instalando… {{percent}}%"
+  },
+  "ro": {
+    "downloadManager.steamManaged.cancel": "Anulează",
+    "downloadManager.steamManaged.pause": "Pauză",
+    "downloadManager.steamManaged.title": "Gestionat de Steam",
+    "downloadManager.steamManaged.unavailable": "Gestionat de Steam. Pune pe pauză sau anulează din Steam.",
+    "gamepage.steamInstallingPercent": "Se instalează… {{percent}}%"
+  },
+  "ru": {
+    "downloadManager.steamManaged.cancel": "Отмена",
+    "downloadManager.steamManaged.pause": "Пауза",
+    "downloadManager.steamManaged.title": "Управляется Steam",
+    "downloadManager.steamManaged.unavailable": "Управляется Steam. Приостановите или отмените в Steam.",
+    "gamepage.steamInstallingPercent": "Установка… {{percent}}%"
+  },
+  "sk": {
+    "downloadManager.steamManaged.cancel": "Zrušiť",
+    "downloadManager.steamManaged.pause": "Pozastaviť",
+    "downloadManager.steamManaged.title": "Spravované službou Steam",
+    "downloadManager.steamManaged.unavailable": "Spravované službou Steam. Pozastavte alebo zrušte to v službe Steam.",
+    "gamepage.steamInstallingPercent": "Inštaluje sa… {{percent}} %"
+  },
+  "sl": {
+    "downloadManager.steamManaged.cancel": "Prekliči",
+    "downloadManager.steamManaged.pause": "Začasno ustavi",
+    "downloadManager.steamManaged.title": "Upravlja Steam",
+    "downloadManager.steamManaged.unavailable": "Upravlja Steam. Začasno ustavite ali prekličite v odjemalcu Steam.",
+    "gamepage.steamInstallingPercent": "Nameščanje… {{percent}} %"
+  },
+  "sr": {
+    "downloadManager.steamManaged.cancel": "Откажи",
+    "downloadManager.steamManaged.pause": "Паузирај",
+    "downloadManager.steamManaged.title": "Управља Steam",
+    "downloadManager.steamManaged.unavailable": "Управља Steam. Паузирајте или откажите у апликацији Steam.",
+    "gamepage.steamInstallingPercent": "Инсталирање… {{percent}}%"
+  },
+  "sv": {
+    "downloadManager.steamManaged.cancel": "Avbryt",
+    "downloadManager.steamManaged.pause": "Pausa",
+    "downloadManager.steamManaged.title": "Hanteras av Steam",
+    "downloadManager.steamManaged.unavailable": "Hanteras av Steam. Pausa eller avbryt i Steam.",
+    "gamepage.steamInstallingPercent": "Installerar… {{percent}} %"
+  },
+  "ta": {
+    "downloadManager.steamManaged.cancel": "ரத்து செய்",
+    "downloadManager.steamManaged.pause": "இடைநிறுத்து",
+    "downloadManager.steamManaged.title": "Steam நிர்வகிக்கிறது",
+    "downloadManager.steamManaged.unavailable": "Steam நிர்வகிக்கிறது. Steam பயன்பாட்டில் இடைநிறுத்தவும் அல்லது ரத்து செய்யவும்.",
+    "gamepage.steamInstallingPercent": "நிறுவப்படுகிறது… {{percent}}%"
+  },
+  "th": {
+    "downloadManager.steamManaged.cancel": "ยกเลิก",
+    "downloadManager.steamManaged.pause": "หยุดชั่วคราว",
+    "downloadManager.steamManaged.title": "จัดการโดย Steam",
+    "downloadManager.steamManaged.unavailable": "จัดการโดย Steam หยุดชั่วคราวหรือยกเลิกได้ใน Steam",
+    "gamepage.steamInstallingPercent": "กำลังติดตั้ง… {{percent}}%"
+  },
+  "tr": {
+    "downloadManager.steamManaged.cancel": "İptal",
+    "downloadManager.steamManaged.pause": "Duraklat",
+    "downloadManager.steamManaged.title": "Steam tarafından yönetiliyor",
+    "downloadManager.steamManaged.unavailable": "Steam tarafından yönetiliyor. Steam içinde duraklatın veya iptal edin.",
+    "gamepage.steamInstallingPercent": "Kuruluyor… %{{percent}}"
+  },
+  "uk": {
+    "downloadManager.steamManaged.cancel": "Скасувати",
+    "downloadManager.steamManaged.pause": "Призупинити",
+    "downloadManager.steamManaged.title": "Керується Steam",
+    "downloadManager.steamManaged.unavailable": "Керується Steam. Призупиніть або скасуйте в Steam.",
+    "gamepage.steamInstallingPercent": "Встановлення… {{percent}}%"
+  },
+  "uz": {
+    "downloadManager.steamManaged.cancel": "Bekor qilish",
+    "downloadManager.steamManaged.pause": "Pauza",
+    "downloadManager.steamManaged.title": "Steam tomonidan boshqariladi",
+    "downloadManager.steamManaged.unavailable": "Steam tomonidan boshqariladi. Uni Steam ichida pauza qiling yoki bekor qiling.",
+    "gamepage.steamInstallingPercent": "Oʻrnatilmoqda… {{percent}}%"
+  },
+  "vi": {
+    "downloadManager.steamManaged.cancel": "Hủy",
+    "downloadManager.steamManaged.pause": "Tạm dừng",
+    "downloadManager.steamManaged.title": "Do Steam quản lý",
+    "downloadManager.steamManaged.unavailable": "Do Steam quản lý. Hãy tạm dừng hoặc hủy trong Steam.",
+    "gamepage.steamInstallingPercent": "Đang cài đặt… {{percent}}%"
+  },
+  "zh_Hans": {
+    "downloadManager.steamManaged.cancel": "取消",
+    "downloadManager.steamManaged.pause": "暂停",
+    "downloadManager.steamManaged.title": "由 Steam 管理",
+    "downloadManager.steamManaged.unavailable": "由 Steam 管理。请在 Steam 中暂停或取消。",
+    "gamepage.steamInstallingPercent": "正在安装… {{percent}}%"
+  },
+  "zh_Hant": {
+    "downloadManager.steamManaged.cancel": "取消",
+    "downloadManager.steamManaged.pause": "暫停",
+    "downloadManager.steamManaged.title": "由 Steam 管理",
+    "downloadManager.steamManaged.unavailable": "由 Steam 管理。請在 Steam 中暫停或取消。",
+    "gamepage.steamInstallingPercent": "正在安裝… {{percent}}%"
+  }
+}

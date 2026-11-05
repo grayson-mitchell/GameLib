@@ -68,6 +68,12 @@
             "steamBottle": "Steam cho CrossOver",
             "steamClient": "Trình cài đặt ứng dụng khách Steam",
             "title": "Thiết lập"
+        },
+        "steamManaged": {
+            "cancel": "Hủy",
+            "pause": "Tạm dừng",
+            "title": "Do Steam quản lý",
+            "unavailable": "Do Steam quản lý. Hãy tạm dừng hoặc hủy trong Steam."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Không thể tải thông tin bổ sung",
         "extraInfoRetry": "Thử lại",
         "extraInfoStaleBody": "Kết quả này được lưu vào bộ nhớ đệm trước khi kết quả tải được ghi nhận, nên có thể đã lỗi thời. Làm mới để kiểm tra.",
+        "steamInstallingPercent": "Đang cài đặt… {{percent}}%",
         "tabsAriaLabel": "tab thông tin game",
         "wineLabel": "Wine:"
     },

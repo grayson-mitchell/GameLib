@@ -68,6 +68,12 @@
             "steamBottle": "CrossOver-க்கான Steam",
             "steamClient": "Steam கிளையன்ட் நிறுவி",
             "title": "அமைவு"
+        },
+        "steamManaged": {
+            "cancel": "ரத்து செய்",
+            "pause": "இடைநிறுத்து",
+            "title": "Steam நிர்வகிக்கிறது",
+            "unavailable": "Steam நிர்வகிக்கிறது. Steam பயன்பாட்டில் இடைநிறுத்தவும் அல்லது ரத்து செய்யவும்."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "கூடுதல் தகவலை ஏற்ற முடியவில்லை",
         "extraInfoRetry": "மீண்டும் முயற்சி",
         "extraInfoStaleBody": "ஏற்றல் முடிவுகள் பதிவு செய்யப்படுவதற்கு முன்பே இந்த முடிவு தற்காலிக சேமிப்பில் வைக்கப்பட்டது, எனவே இது காலாவதியானதாக இருக்கலாம். சரிபார்க்க புதுப்பிக்கவும்.",
+        "steamInstallingPercent": "நிறுவப்படுகிறது… {{percent}}%",
         "tabsAriaLabel": "ஆட்ட தகவல் தாவல்கள்",
         "wineLabel": "Wine:"
     },

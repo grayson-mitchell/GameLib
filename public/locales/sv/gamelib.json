@@ -68,6 +68,12 @@
             "steamBottle": "Steam för CrossOver",
             "steamClient": "Installationsprogram för Steam-klienten",
             "title": "Installation"
+        },
+        "steamManaged": {
+            "cancel": "Avbryt",
+            "pause": "Pausa",
+            "title": "Hanteras av Steam",
+            "unavailable": "Hanteras av Steam. Pausa eller avbryt i Steam."
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "Kunde inte läsa in extra information",
         "extraInfoRetry": "Försök igen",
         "extraInfoStaleBody": "Detta resultat cachades innan utfall från inläsningar registrerades, så det kan vara inaktuellt. Uppdatera för att kontrollera.",
+        "steamInstallingPercent": "Installerar… {{percent}} %",
         "tabsAriaLabel": "flikar för spelinformation",
         "wineLabel": "Wine:"
     },

@@ -68,6 +68,12 @@
             "steamBottle": "适用于 CrossOver 的 Steam",
             "steamClient": "Steam 客户端安装程序",
             "title": "安装设置"
+        },
+        "steamManaged": {
+            "cancel": "取消",
+            "pause": "暂停",
+            "title": "由 Steam 管理",
+            "unavailable": "由 Steam 管理。请在 Steam 中暂停或取消。"
         }
     },
     "edit-game": {
@@ -84,6 +90,7 @@
         "extraInfoErrorTitle": "无法加载额外信息",
         "extraInfoRetry": "重试",
         "extraInfoStaleBody": "此结果是在记录加载结果之前缓存的，可能已过期。请刷新以检查。",
+        "steamInstallingPercent": "正在安装… {{percent}}%",
         "tabsAriaLabel": "游戏信息标签页",
         "wineLabel": "Wine："
     },
