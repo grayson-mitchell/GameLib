@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60
 Plan: 0 of 0
 Status: Milestone complete
-Last activity: 2026-11-05 - Completed quick task 261105-gx2: lint back under both ceilings at source (src 1123/1130, tests 655/661); pre-push still blocked by find-deadcode
+Last activity: 2026-11-05 - Completed quick task 261105-sqe: InstallApp adoption releases the D-UAT-13 restart hold; 261105-ord live gate item 2 re-run pending
 
 Progress: [██████████] 100%
 
@@ -444,6 +444,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261105-lnt | Pre-push gate unblocked: removed an unused `eslint-disable-next-line @typescript-eslint/no-unused-vars` in `metacriticCapture.ts` (the underscore-prefixed destructure is already exempt), production lint warnings 1131 -> 1130 against SRC_CEILING 1130, ceiling unchanged. Not traced to one commit: 14+ warnings sit in files new since the ceiling was set, so production is now AT the ceiling with zero headroom. Gate `production: PASS \| tests: PASS`, `tsc --noEmit` clean, prettier clean; `origin/main` 7dd88b23d -> 96c1582aa. | 2026-11-05 | 96c1582aa | Lint gate production PASS, tests PASS; tsc + prettier clean | [fast, no task dir](./quick/) |
 | 261105-s7f | Last 8 `steam.overlay` keys (`exit.{title,body}`, `override.{automatic,help,label,off,on,summary}`) localised in all 48 non-en gamelib catalogs + mt manifests; baseline 6384 -> 6000, no `steam.overlay.*` left masked; todo closed. | 2026-11-05 | 7f3877fa2 | validateTranslation 384/384; lint-translations exit 0; 4 jest suites pass (267 tests); planning-gates 12/12 | [261105-s7f-localise-the-remaining-8-steam-overlay-e](./quick/261105-s7f-localise-the-remaining-8-steam-overlay-e/) |
 | 261105-gx2 | Lint ceilings back under cap at source, no ceiling/config/disable change: src 1134 -> 1123 (cap 1130; dup engineTypes import in steam/games.ts, `String(err)` in fallbackEngine/knownFixesFetcher/shortcuts utils templates), tests 666 -> 655 (cap 661; overlayLaunch.test.ts dup fs import + 9 non-throwing async mocks -> `Promise.resolve`). Pre-push still red on find-deadcode: 6 pre-existing used-in-module type exports in steamInstallApp.ts (261105-ord) and storeExitRefresh.ts (261105-pnh). | 2026-11-05 | 381d53482 | `pnpm lint` exit 0; 797 + 63 touched tests unchanged; tsc clean; not pushed | [261105-gx2-bring-pnpm-lint-src-and-tests-warning-co](./quick/261105-gx2-bring-pnpm-lint-src-and-tests-warning-co/) |
+| 261105-sqe | InstallApp adoption no longer leaves the game in `steam-waiting-for-restart`: new `adoptedBySteamClient` poll option starts the D-UAT-13 hold released (no PID probe, no persisted hold); games.ts passes it only on an ok InstallApp outcome. Fixes 261105-ord live gate item 2 (appId 112100). | 2026-11-05 | fc0509fa2 | Jest 1038 pass (library, steamRestartHold, games); codecheck, eslint, scoped prettier clean; live re-run of gate item 2 pending | [261105-sqe-release-the-d-uat-13-restart-hold-when-s](./quick/261105-sqe-release-the-d-uat-13-restart-hold-when-s/) |
 
 ## Deferred Items
 
