@@ -117,11 +117,11 @@ result: issue — 2026-11-05, appId 112100, downloader ON, Steam open at its sig
 
 ### 7. Unowned or bad appId
 expected: Install fails with a message naming the EAppUpdateError code; nothing is swallowed.
-result: pending
+result: pass — 2026-11-05 22:30, run as a direct helper call because GameLib's library lists only owned apps (operator agreed). Mac Steam signed in. `steam-bridge-helper --steam-installapp 546560` (Half-Life: Alyx, unowned) and `999999990` (nonexistent) each printed `{"result":"error",...,"eAppUpdateError":9}`, exit 0, no crash; Steam content_log `Failed installing AppID ... (Missing configuration)` for both, nothing queued. The UI half (games.ts returns `status: 'error'` naming `EAppUpdateError N`) is covered by games.test.ts, not by this live run. Note: an unowned app and a bad appId give the same code (9), so the message cannot tell the user which one it was.
 
 ### 8. Setting OFF
 expected: Both routes behave exactly as before this change (steam://install dialog; restart-on-Play after a GameLib download).
-result: pending
+result: pass — 2026-11-05, appId 112100, setting OFF. Downloader OFF: `delegating install ... via steam://install/112100` at 22:33:07, Steam showed its window and install dialog, installed at 22:33:28, no InstallApp line in the log. Downloader ON (Steam pid 35158 running): `recorded pending Steam adoption` at 22:34:50, no InstallApp call, `holding in steam-waiting-for-restart` at 22:34:53; operator saw "restart Steam to finish". Both match the pre-change behaviour.
 
 ## Self-Check: PASSED
 
