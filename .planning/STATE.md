@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60 (steam-overlay-in-bridged-games-on-macos) — EXECUTING
 Plan: 5 of 10
 Status: Ready to execute
-Last activity: 2026-11-02
+Last activity: 2026-11-05
 
 Progress: [██████████] 99%
 
@@ -411,6 +411,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261102-s32 | Amazon store-exit refresh: store entry arms from `startUrl` (SPA claims and hidden-embed re-entry never page-load), one `armed host=<h> via=<entry\|nav>` log line; nile `refresh()` awaits `library sync` before publishing (F3 confirmed live: pre-sync list published). | 2026-11-02 | 3c067504c, 0ae9213d6, a8a707c51 | Jest pass (176 tests, 4 suites); codecheck clean; live retest pending | [261102-s32-amazon-store-exit-refresh-arm-on-entry-a](./quick/261102-s32-amazon-store-exit-refresh-arm-on-entry-a/) |
 | 261102-sk8 | Shared store embed records SPA same-document navigations: `store_embed_take_nav_events` reads `Webview::url()` (no lock held) and `observe_live_url` pushes/moves/replaces under page-loading, suppression, nav-generation and same-origin guards, so Back works on gaming.amazon.com; Epic surface untouched. | 2026-11-02 | db6236f99, f8782dbbf | cargo test 405 pass (56 store_embed, 11 new); fmt clean; live retest pending | [261102-sk8-store-embed-records-spa-same-document-na](./quick/261102-sk8-store-embed-records-spa-same-document-na/) |
 | 261102-szs | Store-embed Back loop on luna.amazon.com fixed: a 3s settle window after a Back/Forward/Reload/navigate landing makes a URL rewrite replace the current entry (not append/move), adjacent duplicates collapse; drain logs recorded/replaced/moved + host; `luna.amazon.com` added to AMAZON_HOSTS (measured). | 2026-11-02 | 9e182b84a, 6d0d11343, 5e78b0252 | cargo store_embed 62 pass; fmt clean; jest storeExitRefresh 93 pass; prettier clean; live retest pending | [261102-szs-store-embed-treats-post-load-url-rewrite](./quick/261102-szs-store-embed-treats-post-load-url-rewrite/) |
+| 261105-q1j | Linux store embed stale size FIXED on the measured shapes: `apply_bounds` now calls `embed_w.queue_resize()` after `set_size_request` (GTK 3.24 queues no resize for a HIDDEN widget, and D-21 hides the embed on route leave). Same-session baseline failed R2 2/2, R6 2/2, R7-grow 1/1 (right position, stale size); arm A passed 32/32 scored files (R1 1, R2 6, R3 1, R4 2, R5 11, R6 5, R7 6), 0 FAIL, 0 NO-LINE. R5 at 100% passes on the unmodified build because its target equals the stale size: it cannot discriminate this defect. Mechanism read from GTK source, not isolated; arm B (`fixed.queue_resize`) never run. Not verified: Wayland, HiDPI, packaged build, other zoom/window sizes, pixels. Store-embed follow-ups todo moved to completed/. | 2026-11-05 | 72d632ac4 | [261105-q1j-linux-store-embed-apply-bounds-size-not-](./quick/261105-q1j-linux-store-embed-apply-bounds-size-not-/) |
 
 ## Deferred Items
 
