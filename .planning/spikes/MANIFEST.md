@@ -574,6 +574,12 @@ step, on the premise that Rust would make installs faster.
   chunk; raising concurrency adds latency and timeouts, not throughput. *(067a)*
 - **Do not raise `TARGET_INFLIGHT_CHUNKS` above 32 on current evidence:** 96 gave no gain and 57
   timeouts. *(067a)*
+- **The decode-worker memory is a Node packaging problem, not a reason to port:** each worker
+  loads a 14 MB bundle (~160 MiB RSS idle) and the pool spawns up to 16 while ~0.2 are busy.
+  Fix with a slim worker entry and a smaller pool before weighing Rust on memory. *(067b)*
+- **A Rust depot pipeline must use `--cfg aes_armv8` and a non-default `flate2` backend
+  (`zlib-rs`)**: the defaults are 20× (AES) and ~2.5× (deflate) slower than Node's C paths.
+  Prefer `xz2` (C liblzma) over `lzma-rs` (pure Rust, ~30% slower). *(067b)*
 - **Spike harnesses that reuse production Steam code must use production's steam-user options**
   (`enablePicsCache: false, autoRelogin: false`) and wait for `licenses` before planning; the
   PICS cache makes the plan's DLC lookup time out. *(067a)*
@@ -583,5 +589,5 @@ step, on the premise that Rust would make installs faster.
 | # | Name | Type | Validates | Verdict | Tags |
 |---|------|------|-----------|---------|------|
 | 067a | node-pipeline-stage-profile | standard | Given a real Civ V (8930) macOS depot install through today's unchanged Node pipeline, when fetch and decode are timed and CPU/RSS/pool sampled per second, then we know whether the network or decoding limits throughput | ✓ VALIDATED — network-bound (18.3 MiB/s steady at 31.3 in flight × 534 ms; budget 96 → 18.4 MiB/s, 780 ms, 57 timeouts); decode 3 ms/chunk, 16 native workers never saturated; ~1.1 cores, 2.75 GB peak RSS. The Rust speed premise is invalidated | steam, depot, download, throughput, decompress, rust-migration, live |
-| 067b | chunk-decode-bench | comparison | Given 067a's corpus of decrypted chunks, when decompressed offline by Node and by Rust, then compare MiB/s per core with byte-identical output | PENDING (re-scoped after 067a) | depot, decompress, lzma, zip, rust-migration, benchmark |
-| 067c | rust-depot-job | standard | Given the same job description handed over stdin, when a Rust binary runs the whole fetch → write loop, then compare throughput, CPU and memory with 067a, files byte-identical | PENDING (re-scoped after 067a) | depot, download, rust-migration, memory |
+| 067b | chunk-decode-bench | comparison | Given 067a's corpus of 978 decrypted Civ V chunks, when decrypted and decompressed single-threaded by production's Node functions and by Rust, then compare MiB/s and cpu-s/GiB with SHA1-verified output | ✓ WINNER Rust on decode CPU (5.8 vs 9.3 cpu-s/GiB at equal 177 MiB/s; needs `--cfg aes_armv8` and `flate2` `zlib-rs`), but decode is ~20% of the pipeline's ~1 core → ~8% system CPU. 067a's 2.75 GB RSS = 16 idle decode workers × ~160 MiB (14 MB worker bundle) — fixable in Node | depot, decompress, lzma, zip, aes, rust-migration, benchmark, memory |
+| 067c | rust-depot-job | standard | Given the same depot job handed over stdin, when a Rust binary runs the whole fetch → write loop, then compare throughput, CPU and memory with 067a, files byte-identical | — NOT RUN: re-scoped trigger (memory inherent to Node) not met by 067b | depot, download, rust-migration, memory |

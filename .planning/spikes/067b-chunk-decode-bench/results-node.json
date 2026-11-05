@@ -1,0 +1,66 @@
+{
+  "runtime": "node v22.23.4",
+  "lzmaLoaderKind": "unknown",
+  "rows": [
+    {
+      "label": "aes only (all)",
+      "stage": "decrypt",
+      "chunks": 978,
+      "passes": 3,
+      "outMiB": 901,
+      "wallS": 0.15,
+      "cpuS": 0.19,
+      "MiBperS": 5840.1,
+      "cpuSecPerGiB": 0.21,
+      "sha1Mismatches": 0
+    },
+    {
+      "label": "zip  (production)",
+      "stage": "full",
+      "chunks": 917,
+      "passes": 3,
+      "outMiB": 1237,
+      "wallS": 1.77,
+      "cpuS": 1.79,
+      "MiBperS": 697.4,
+      "cpuSecPerGiB": 1.49,
+      "sha1Mismatches": 0
+    },
+    {
+      "label": "lzma (lzma-native, production)",
+      "stage": "full",
+      "chunks": 61,
+      "passes": 3,
+      "outMiB": 183,
+      "wallS": 6.19,
+      "cpuS": 8.18,
+      "MiBperS": 29.6,
+      "cpuSecPerGiB": 45.75,
+      "sha1Mismatches": 0
+    },
+    {
+      "label": "lzma (pure-JS lzma, inline fallback)",
+      "stage": "full",
+      "chunks": 61,
+      "passes": 3,
+      "outMiB": 183,
+      "wallS": 36.52,
+      "cpuS": 37.37,
+      "MiBperS": 5,
+      "cpuSecPerGiB": 209.12,
+      "sha1Mismatches": 0
+    },
+    {
+      "label": "all  (production)",
+      "stage": "full",
+      "chunks": 978,
+      "passes": 3,
+      "outMiB": 1420,
+      "wallS": 8,
+      "cpuS": 12.95,
+      "MiBperS": 177.4,
+      "cpuSecPerGiB": 9.34,
+      "sha1Mismatches": 0
+    }
+  ]
+}

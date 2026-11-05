@@ -280,9 +280,12 @@ async function main(): Promise<void> {
     return
   }
   if (process.env.SPIKE_SMOKE === '1') {
+    const rssMiB = () => Math.round(process.memoryUsage().rss / 2 ** 20)
+    const before = rssMiB()
     const p = new DecompressPool()
     await p.init()
-    console.log(JSON.stringify({ smoke: 'pool', ...p.stats() }))
+    await new Promise((r) => setTimeout(r, 1500))
+    console.log(JSON.stringify({ smoke: 'pool', rssBeforeMiB: before, rssAfterInitMiB: rssMiB(), ...p.stats() }))
     await p.shutdown()
     return
   }

@@ -115,7 +115,7 @@ that 023 removed.
 
 **What this means for the Rust migration:** on this connection a Rust depot pipeline cannot be
 faster; the ceiling is the network. Its possible wins are CPU (~1 core today; small), memory
-(2.75 GB peak RSS is large and unexplained, measured with the harness wrappers present) and
+(2.75 GB peak RSS, which 067b traced to the decode-worker bundle, fixable in Node) and
 deleting the ~1,060 lines that exist only to load `lzma-native` in the SEA plus the 800-line
 worker pool. The depot slice of the migration has to be justified on those, not on speed.
 
@@ -130,5 +130,6 @@ worker pool. The depot slice of the migration has to be justified on those, not 
 - **Mac Steam's own client** logged ~25 MB/s (~198 Mbps) in spike 047's runs, a different game
   and day. Not comparable enough to call a gap, but a same-game, same-hour Steam-client run
   would show whether host choice (e.g. `alibaba.cdn` among the worst hosts) costs anything.
-- **2.75 GB peak RSS** at ~1 core of work is the largest number on the table and has no
-  explanation yet.
+- **2.75 GB peak RSS** at ~1 core of work: explained by 067b. It is ~16 idle decode workers ×
+  ~160 MiB, each loading a 14 MB worker bundle that pulls in most of the backend. Present
+  before any download starts; fixable in Node.

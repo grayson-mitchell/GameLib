@@ -1,0 +1,65 @@
+{
+  "rows": [
+    {
+      "MiBperS": 12173.8,
+      "chunks": 978,
+      "cpuS": 0.07,
+      "cpuSecPerGiB": 0.08,
+      "label": "aes only (all)",
+      "outMiB": 901.0,
+      "passes": 3,
+      "sha1Mismatches": 0,
+      "stage": "decrypt",
+      "wallS": 0.07
+    },
+    {
+      "MiBperS": 563.7,
+      "chunks": 917,
+      "cpuS": 2.19,
+      "cpuSecPerGiB": 1.81,
+      "label": "zip  (flate2 / zlib-rs)",
+      "outMiB": 1237.0,
+      "passes": 3,
+      "sha1Mismatches": 0,
+      "stage": "full",
+      "wallS": 2.19
+    },
+    {
+      "MiBperS": 31.3,
+      "chunks": 61,
+      "cpuS": 5.84,
+      "cpuSecPerGiB": 32.68,
+      "label": "lzma (xz2 = C liblzma)",
+      "outMiB": 183.0,
+      "passes": 3,
+      "sha1Mismatches": 0,
+      "stage": "full",
+      "wallS": 5.85
+    },
+    {
+      "MiBperS": 22.8,
+      "chunks": 61,
+      "cpuS": 8.02,
+      "cpuSecPerGiB": 44.85,
+      "label": "lzma (lzma-rs, pure Rust)",
+      "outMiB": 183.0,
+      "passes": 3,
+      "sha1Mismatches": 0,
+      "stage": "full",
+      "wallS": 8.02
+    },
+    {
+      "MiBperS": 177.2,
+      "chunks": 978,
+      "cpuS": 8.01,
+      "cpuSecPerGiB": 5.77,
+      "label": "all  (xz2 + flate2)",
+      "outMiB": 1420.0,
+      "passes": 3,
+      "sha1Mismatches": 0,
+      "stage": "full",
+      "wallS": 8.01
+    }
+  ],
+  "runtime": "rust release"
+}

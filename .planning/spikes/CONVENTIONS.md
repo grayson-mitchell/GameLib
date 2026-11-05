@@ -73,6 +73,18 @@ question requires otherwise.
   unless the spike set them itself (`spike_*`). Enough to prove identity and change across polls;
   never a real session token on disk. Mirrors `user.ts`'s existing secrecy discipline.
 
+- **Live Steam-pipeline spikes that reuse production code (Idea E, 067a):** an esbuild bundle
+  (`--packages=external`, the sidecar's flags) of a TypeScript harness that imports the real
+  `src/backend` functions, next to the app's dev decode worker (`build/main/decompressWorker.js`,
+  found via `__dirname`). Sign in with a **steam-session QR code** shown as a local HTML page
+  (operator's choice: the refresh token stays in memory and is never written; raise
+  `loginTimeout` from its 30 s default), build the steam-user client with production's options
+  (`enablePicsCache: false, autoRelogin: false`), wait for `licenses`, then swap it into the
+  `SteamUser` statics. Call `initHeadless(true)` before any backend code logs, run with `HOME`
+  pointed at `state/home` so a GameLib app starting mid-run cannot rotate the log away, and
+  flush for 3 s before `process.exit`. Mac Steam must be quit (Phase 54 Friends sign-out). Keys
+  never touch disk: chunks are saved post-decrypt, and benches re-encrypt with a throwaway key.
+
 ## Structure
 
 - One directory per spike: `.planning/spikes/NNN-descriptive-name/`. Sub-probes of a single
@@ -95,6 +107,12 @@ question requires otherwise.
   the real build inherits them.
 
 ## Tools & Libraries
+
+- **Rust crypto/compression for Steam chunks (067b):** `aes` 0.8 needs `--cfg aes_armv8` in
+  `.cargo/config.toml` or it runs a software fallback ~20× slower than Node's OpenSSL; `flate2`'s
+  default `miniz_oxide` is ~2.5× slower than Node's zlib, use the `zlib-rs` feature; `xz2`
+  (`static`) beats `lzma-rs` by ~30%. Naive Rust loses to Node here because Node's hot paths
+  are already C.
 
 - `steam-user` (CM auth, PICS, raw manifests, depot keys) — but reimplement its `getManifest()`
   filename handling and chunk download by hand (broken; see 002).

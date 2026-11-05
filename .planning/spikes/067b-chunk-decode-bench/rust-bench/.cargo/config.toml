@@ -1,0 +1,3 @@
+[build]
+# aes 0.8 uses ARMv8 AES instructions only with this cfg (aes-0.8.4/src/lib.rs:104).
+rustflags = ["--cfg", "aes_armv8"]
