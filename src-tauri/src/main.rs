@@ -7423,7 +7423,8 @@ fn store_embed_linux_settled_line(
 /// a "sensible default bounds" fallback here -- that is exactly the second writer D-18 forbids.
 ///
 /// On Linux the sole writer is the `#[cfg(target_os = "linux")]` branch below
-/// (`linux_store_embed_layout::apply_bounds`, a `gtk::Fixed::move_` + `set_size_request`), plus
+/// (`linux_store_embed_layout::apply_bounds`, a `gtk::Fixed::move_` + `set_size_request` +
+/// `queue_resize`), plus
 /// the one initial `put` in `linux_store_embed_layout::mount` -- mirroring `add_child`'s initial
 /// rect on macOS. `Webview::set_position`/`set_size` are never called on Linux: wry's `set_bounds`
 /// is a silent no-op there unless the widget's parent is already a fixed container, so calling
@@ -7649,6 +7650,13 @@ mod linux_store_embed_layout {
     }
 
     /// The sole Linux geometry writer after the initial `put` in `mount` (D-18).
+    ///
+    /// `queue_resize()` follows `set_size_request` on purpose: GTK 3.24 only queues a resize from
+    /// `set_size_request` when the widget is VISIBLE. D-21 hides the embed on route leave and the
+    /// existing-embed branch of `store_embed_open` applies the rect BEFORE `show()`, so without it
+    /// a rect applied while hidden lands at the new position with the old cached size -- and the
+    /// renderer's identical follow-up rect cannot repair it, because `set_size_request` then sees
+    /// no change. Measured 2026-11-05 on Linux (R2/R6/R7 stale embed size), quick 261105-q1j.
     pub fn apply_bounds(embed: &tauri::Webview, rect: Rect) -> Result<(), String> {
         on_gtk_thread(embed, "store_embed_set_bounds", move |embed_w| {
             let fixed = embed_w
@@ -7659,6 +7667,7 @@ mod linux_store_embed_layout {
                 .ok_or_else(|| "store_embed_set_bounds:linux-not-mounted".to_string())?;
             fixed.move_(&embed_w, rect.0, rect.1);
             embed_w.set_size_request(rect.2, rect.3);
+            embed_w.queue_resize();
             schedule_settled_log(&embed_w, rect);
             Ok(())
         })
@@ -20084,6 +20093,65 @@ mod tests {
             ),
             "[shell] store_embed(linux): settled requested=291,97,760x561 \
              embed=291,97,760x561 main=0,0,1280x800 vbox=1280x800"
+        );
+    }
+
+    /// Pins STRUCTURE, not GTK behaviour: `linux_store_embed_layout::apply_bounds` must call
+    /// `embed_w.queue_resize()` after `embed_w.set_size_request(..)` and before the settled log
+    /// is scheduled. The behaviour evidence is quick 261105-q1j's live baseline-vs-experiment
+    /// arms on Linux (R2 zoom, R6 zoom, R7 window resize), not this test.
+    ///
+    /// The mutation it exists to catch: a later "cleanup" deleting the call because
+    /// `set_size_request` "already queues a resize". That claim is false for a hidden widget.
+    /// GTK 3.24.33 `gtk_widget_set_usize_internal` queues a resize only when the widget is
+    /// visible, and `gtk_fixed_size_allocate` allocates each child at its cached preferred size
+    /// (`gtk_widget_get_preferred_size`, cleared only when `resize_needed` is set). D-21 hides
+    /// the embed on route leave, so a rect applied while hidden would otherwise land at the new
+    /// position with the OLD size.
+    ///
+    /// Unconditional (no cfg), like the other `include_str!("main.rs")` structural tests here,
+    /// so it runs on every CI leg.
+    #[test]
+    fn store_embed_linux_apply_bounds_queues_a_resize_after_set_size_request() {
+        // Bound the slice to JUST `apply_bounds`: from its signature to the first following line
+        // that is exactly four spaces and a closing brace. The first match of the signature is
+        // the real definition, because this test quotes it again later in the file.
+        let source = include_str!("main.rs");
+        let fn_start = source
+            .find("pub fn apply_bounds(embed: &tauri::Webview, rect: Rect) -> Result<(), String> {")
+            .expect("apply_bounds definition not found in main.rs");
+        let after = &source[fn_start..];
+        let fn_end = after
+            .find("\n    }\n")
+            .expect("apply_bounds's closing brace not found");
+        let body = &after[..fn_end];
+
+        // Anti-vacuity: the slice must be non-empty and must really be the geometry writer.
+        assert!(
+            !body.is_empty(),
+            "apply_bounds's bounded slice must not be empty"
+        );
+        assert!(
+            body.contains("fixed.move_(&embed_w, rect.0, rect.1);"),
+            "the slice must contain apply_bounds's Fixed::move_ call"
+        );
+
+        let size_pos = body
+            .find("embed_w.set_size_request(rect.2, rect.3);")
+            .expect("apply_bounds must still call set_size_request on the embed");
+        let queue_pos = body
+            .find("embed_w.queue_resize();")
+            .expect("apply_bounds must queue a resize on the embed (hidden-widget stale size)");
+        let log_pos = body
+            .find("schedule_settled_log(")
+            .expect("apply_bounds must still schedule the settled log");
+        assert!(
+            queue_pos > size_pos,
+            "queue_resize() must come AFTER set_size_request(): the request is what it re-reads"
+        );
+        assert!(
+            queue_pos < log_pos,
+            "queue_resize() must come BEFORE the settled log is scheduled"
         );
     }
 

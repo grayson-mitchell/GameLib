@@ -1,0 +1,34 @@
+build check: commit 72d632ac4 ct=1793858932; binary mtime 1793858946 (rebuilt by tauri:dev, size changed from 383557120 to 383557712); running process image cmp-identical to the binary at path
+R1-1 first try navigated to Downloads by mistake (zoom still 80, not an attempt, overwritten); redone at zoom 100 win=1000x700 -> PASS
+R2-1 zoom 100->120 win=1000x700 origin_matches_zoom=True -> PASS
+R5-1 reset zoom 120->100 win=1000x700 -> PASS
+R2-2 zoom 100->120 win=1000x700 origin_matches_zoom=True -> PASS
+R5-2 reset zoom 120->100 win=1000x700 -> PASS
+R2-3 zoom 100->120 win=1000x700 origin_matches_zoom=True -> PASS
+R5-3 reset zoom 120->100 win=1000x700 -> PASS
+R2-4 zoom 100->120 win=1000x700 origin_matches_zoom=True -> PASS
+R5-4 reset zoom 120->100 win=1000x700 -> PASS
+R2-5 zoom 100->120 win=1000x700 origin_matches_zoom=True -> PASS
+R5-5 reset zoom 120->100 win=1000x700 -> PASS
+R6-1 zoom 100->80 win=1000x700 origin_matches_zoom=True -> PASS
+R5-6 reset zoom 80->100 win=1000x700 -> PASS
+R6-2 zoom 100->80 win=1000x700 origin_matches_zoom=True -> PASS
+R5-7 reset zoom 80->100 win=1000x700 -> PASS
+R6-3 zoom 100->80 win=1000x700 origin_matches_zoom=True -> PASS
+R5-8 reset zoom 80->100 win=1000x700 -> PASS
+R6-4 zoom 100->80 win=1000x700 origin_matches_zoom=True -> PASS
+R5-9 reset zoom 80->100 win=1000x700 -> PASS
+R6-5 zoom 100->80 win=1000x700 origin_matches_zoom=True -> PASS
+R5-10 reset zoom 80->100 win=1000x700 -> PASS
+R7-1 grow requested 1150x720 from 1000x700 actual 1150x720 -> PASS
+R7-2 shrink requested 1000x700 from 1150x720 actual 1000x700 -> PASS
+R7-3 grow requested 1150x720 from 1000x700 actual 1150x720 -> PASS
+R7-4 shrink requested 1000x700 from 1150x720 actual 1000x700 -> PASS
+R7-5 grow requested 1150x720 from 1000x700 actual 1150x720 -> PASS
+R7-6 shrink requested 1000x700 from 1150x720 actual 1000x700 -> PASS
+R2-6 zoom 100->120 win=1000x700 (extra, entering the zoom-120 state for R3/R4) -> PASS
+R3-1 on Stores at zoom 120: 1000x700 -> 1150x720 -> 1000x700 -> PASS
+R4-2 (extra) at zoom 120: GOG -> Epic -> GOG, lines from the whole sequence -> PASS
+R4-1 at zoom 120: GOG -> Epic -> GOG -> Library -> Stores, lines from the final return -> PASS
+R5-11 reset zoom 120->100 after R3/R4 win=1000x700 -> PASS
+teardown: zoom restored to 80 (confirmed by cropped screenshot), window restored to 1280x800, POST_TEARDOWN_PROCS=0
