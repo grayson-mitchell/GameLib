@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60
 Plan: 0 of 0
 Status: Milestone complete
-Last activity: 2026-11-05 - Completed quick task 261105-svg: parent-death watchdog so a hard-killed sidecar cannot orphan nettop
+Last activity: 2026-11-05 - Completed quick task 261105-u96: Steam-managed download keys localised in all 48 non-en catalogs
 
 Progress: [██████████] 100%
 
@@ -446,6 +446,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261105-gx2 | Lint ceilings back under cap at source, no ceiling/config/disable change: src 1134 -> 1123 (cap 1130; dup engineTypes import in steam/games.ts, `String(err)` in fallbackEngine/knownFixesFetcher/shortcuts utils templates), tests 666 -> 655 (cap 661; overlayLaunch.test.ts dup fs import + 9 non-throwing async mocks -> `Promise.resolve`). Pre-push still red on find-deadcode: 6 pre-existing used-in-module type exports in steamInstallApp.ts (261105-ord) and storeExitRefresh.ts (261105-pnh). | 2026-11-05 | 381d53482 | `pnpm lint` exit 0; 797 + 63 touched tests unchanged; tsc clean; not pushed | [261105-gx2-bring-pnpm-lint-src-and-tests-warning-co](./quick/261105-gx2-bring-pnpm-lint-src-and-tests-warning-co/) |
 | 261105-sqe | InstallApp adoption no longer leaves the game in `steam-waiting-for-restart`: new `adoptedBySteamClient` poll option starts the D-UAT-13 hold released (no PID probe, no persisted hold); games.ts passes it only on an ok InstallApp outcome. Fixes 261105-ord live gate item 2 (appId 112100). | 2026-11-05 | fc0509fa2 | Jest 1038 pass (library, steamRestartHold, games); codecheck, eslint, scoped prettier clean; live re-run of gate item 2 pending | [261105-sqe-release-the-d-uat-13-restart-hold-when-s](./quick/261105-sqe-release-the-d-uat-13-restart-hold-when-s/) |
 | 261105-svg | Steam download monitor's script/nettop child now runs under a `/bin/sh` parent-death watchdog (`childWatchdog.ts`): polls the sidecar pid each second, kills script + nettop on parent death, clean stop, or pinned Steam pid exit. Todo closed. | 2026-11-05 | bf49c17ab | Jest pass (18, 2 env-gated); live SIGKILL proof: tree gone in 123ms; baseline did not reproduce the field orphan (cause still inferred) | [261105-svg-orphaned-nettop-monitor-child-survives-a](./quick/261105-svg-orphaned-nettop-monitor-child-survives-a/) |
+| 261105-u96 | Steam-managed download keys (`downloadManager.steamManaged.*`, `gamepage.steamInstallingPercent`) localised in all 48 non-en gamelib.json + gamelib.mt.json; baseline totalPairs 6000 -> 5760 (exactly the 240 pairs). Todo closed. | 2026-11-05 | 6d6da44e9 | validateTranslation 240/240 + 2 sabotage rejects; lint-translations, 4 jest suites (267), planning-gates 12/12 | [261105-u96-localise-the-steam-managed-download-keys](./quick/261105-u96-localise-the-steam-managed-download-keys/) |
 
 ## Deferred Items
 
