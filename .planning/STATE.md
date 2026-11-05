@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60
 Plan: 0 of 0
 Status: Milestone complete
-Last activity: 2026-11-05 - Completed quick task 261105-u96: Steam-managed download keys localised in all 48 non-en catalogs
+Last activity: 2026-11-05 - Completed quick task 261105-upw: Install modal owns disk-space and library choice on the Steam InstallApp route
 
 Progress: [██████████] 100%
 
@@ -449,6 +449,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261105-sqe | InstallApp adoption no longer leaves the game in `steam-waiting-for-restart`: new `adoptedBySteamClient` poll option starts the D-UAT-13 hold released (no PID probe, no persisted hold); games.ts passes it only on an ok InstallApp outcome. Fixes 261105-ord live gate item 2 (appId 112100). | 2026-11-05 | fc0509fa2 | Jest 1038 pass (library, steamRestartHold, games); codecheck, eslint, scoped prettier clean; live re-run of gate item 2 pending | [261105-sqe-release-the-d-uat-13-restart-hold-when-s](./quick/261105-sqe-release-the-d-uat-13-restart-hold-when-s/) |
 | 261105-svg | Steam download monitor's script/nettop child now runs under a `/bin/sh` parent-death watchdog (`childWatchdog.ts`): polls the sidecar pid each second, kills script + nettop on parent death, clean stop, or pinned Steam pid exit. Todo closed. | 2026-11-05 | bf49c17ab | Jest pass (18, 2 env-gated); live SIGKILL proof: tree gone in 123ms; baseline did not reproduce the field orphan (cause still inferred) | [261105-svg-orphaned-nettop-monitor-child-survives-a](./quick/261105-svg-orphaned-nettop-monitor-child-survives-a/) |
 | 261105-u96 | Steam-managed download keys (`downloadManager.steamManaged.*`, `gamepage.steamInstallingPercent`) localised in all 48 non-en gamelib.json + gamelib.mt.json; baseline totalPairs 6000 -> 5760 (exactly the 240 pairs). Todo closed. | 2026-11-05 | 6d6da44e9 | validateTranslation 240/240 + 2 sabotage rejects; lint-translations, 4 jest suites (267), planning-gates 12/12 | [261105-u96-localise-the-steam-managed-download-keys](./quick/261105-u96-localise-the-steam-managed-download-keys/) |
+| 261105-upw | New `getSteamInstallAppTargets` IPC gives the install modal its own InstallApp-route discriminator; library dropdown + free-space line now show on that route (multi-library, same as native-ON); SteamDialog sign-in gate and copy unchanged. Todo closed. | 2026-11-05 | 8e4694a85 | installFlows+census (118), InstallModal jest (548), tsc, lint 0 errors, planning-gates 12/12; 2 Backend failures pre-exist at ecc054a0a; live check pending | [261105-upw-install-modal-should-own-disk-space-and-](./quick/261105-upw-install-modal-should-own-disk-space-and-/) |
 
 ## Deferred Items
 
