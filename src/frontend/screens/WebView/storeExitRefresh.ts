@@ -9,7 +9,7 @@ import type { Runner } from 'common/types'
 
 export type StoreExitStoreKey = 'steam' | 'epic' | 'gog' | 'amazon'
 
-type StoreExitRefreshOutcome =
+export type StoreExitRefreshOutcome =
   | 'refreshed'
   | 'skipped-signed-out'
   | 'skipped-in-flight'
@@ -124,10 +124,15 @@ function isAmazonPurchaseIntentUrl(url: string): boolean {
   return httpsSegments(url, AMAZON_HOSTS) !== null
 }
 
-interface StoreExitRow {
+export interface StoreExitTarget {
   runner: Runner
   /** Key of `collectSignInInputs`. */
   signInKey: 'steam' | 'legendary' | 'gog' | 'nile'
+}
+
+interface StoreExitRow {
+  /** First target is the store's own runner. */
+  targets: readonly StoreExitTarget[]
   origin: string
   isPurchaseIntentUrl: (url: string) => boolean
 }
@@ -136,26 +141,30 @@ export const STORE_EXIT_ROWS: Readonly<
   Record<StoreExitStoreKey, StoreExitRow>
 > = Object.freeze({
   steam: {
-    runner: 'steam',
-    signInKey: 'steam',
+    targets: [{ runner: 'steam', signInKey: 'steam' }],
     origin: STEAM_STORE_EXIT_REFRESH_ORIGIN,
     isPurchaseIntentUrl: isSteamPurchaseIntentUrl
   },
   epic: {
-    runner: 'legendary',
-    signInKey: 'legendary',
+    targets: [{ runner: 'legendary', signInKey: 'legendary' }],
     origin: 'epic-store-exit',
     isPurchaseIntentUrl: isEpicPurchaseIntentUrl
   },
   gog: {
-    runner: 'gog',
-    signInKey: 'gog',
+    targets: [{ runner: 'gog', signInKey: 'gog' }],
     origin: 'gog-store-exit',
     isPurchaseIntentUrl: isGogPurchaseIntentUrl
   },
+  // Prime Gaming claims are often delivered to Epic or GOG via a linked
+  // account (live 2026-11-02: an Epic-delivered claim only appeared on the
+  // next full refresh; nile synced 0), so the exit refreshes all three, each
+  // behind its own sign-in gate.
   amazon: {
-    runner: 'nile',
-    signInKey: 'nile',
+    targets: [
+      { runner: 'nile', signInKey: 'nile' },
+      { runner: 'legendary', signInKey: 'legendary' },
+      { runner: 'gog', signInKey: 'gog' }
+    ],
     origin: 'amazon-store-exit',
     isPurchaseIntentUrl: isAmazonPurchaseIntentUrl
   }
@@ -194,7 +203,9 @@ export function armForUrl(
   return false
 }
 
-const inFlight = new Set<StoreExitStoreKey>()
+// Keyed by runner, shared across stores: an Epic exit and an Amazon exit
+// cannot stack two legendary refreshes.
+const inFlight = new Set<Runner>()
 
 export function resetStoreExitRefreshState(): void {
   inFlight.clear()
@@ -211,12 +222,13 @@ interface StoreExitRefreshDeps {
 
 export function runStoreExitRefresh(
   store: StoreExitStoreKey,
-  deps: StoreExitRefreshDeps
+  deps: StoreExitRefreshDeps,
+  runner: Runner = STORE_EXIT_ROWS[store].targets[0].runner
 ): StoreExitRefreshOutcome {
   const prefix = `[${store}StoreExitRefresh]`
   const emit = (outcome: StoreExitRefreshOutcome) => {
     deps.log(
-      `${prefix} origin=${STORE_EXIT_ROWS[store].origin} outcome=${outcome}`
+      `${prefix} origin=${STORE_EXIT_ROWS[store].origin} runner=${runner} outcome=${outcome}`
     )
     return outcome
   }
@@ -224,15 +236,15 @@ export function runStoreExitRefresh(
   if (deps.signInState !== 'connected' && deps.signInState !== 'unknown') {
     return emit('skipped-signed-out')
   }
-  if (deps.refreshInFlight || inFlight.has(store)) {
+  if (deps.refreshInFlight || inFlight.has(runner)) {
     return emit('skipped-in-flight')
   }
   // No time throttle: the 261030-qqh live test showed a 2-minute window
   // swallowing the one exit that followed a grant. The in-flight guard above
   // is what stops refreshes stacking.
-  inFlight.add(store)
+  inFlight.add(runner)
   const clear = () => {
-    inFlight.delete(store)
+    inFlight.delete(runner)
   }
   let p: Promise<void>
   try {
@@ -251,3 +263,31 @@ export function runStoreExitRefresh(
 export const runSteamStoreExitRefresh = (
   deps: StoreExitRefreshDeps
 ): StoreExitRefreshOutcome => runStoreExitRefresh('steam', deps)
+
+export interface StoreExitRefreshAllDeps {
+  signInStateFor: (signInKey: StoreExitTarget['signInKey']) => string
+  refreshInFlightFor: (runner: Runner) => boolean
+  refreshLibrary: (runner: Runner, origin: string) => Promise<void>
+  log: (line: string) => void
+}
+
+/** Runs every target of the store's row; each is gated independently. */
+export function runStoreExitRefreshAll(
+  store: StoreExitStoreKey,
+  deps: StoreExitRefreshAllDeps
+): ReadonlyArray<{ runner: Runner; outcome: StoreExitRefreshOutcome }> {
+  const row = STORE_EXIT_ROWS[store]
+  return row.targets.map((t) => ({
+    runner: t.runner,
+    outcome: runStoreExitRefresh(
+      store,
+      {
+        signInState: deps.signInStateFor(t.signInKey),
+        refreshInFlight: deps.refreshInFlightFor(t.runner),
+        refreshLibrary: () => deps.refreshLibrary(t.runner, row.origin),
+        log: deps.log
+      },
+      t.runner
+    )
+  }))
+}
