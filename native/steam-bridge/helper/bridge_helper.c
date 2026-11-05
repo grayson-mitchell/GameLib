@@ -184,6 +184,8 @@
 #include "gamelib_cbqueue.h"
 #include "gamelib_callresult.h"
 #include "gamelib_overlay_signal.h"
+// quick 261105-ord: --steam-installapp subcommand (runtime-resolved InstallApp).
+#include "gamelib_installapp.h"
 
 // 60-15: GameOverlayActivated (331) -> Darwin notification, probe flag only.
 static gl_ovl_state g_ovl;
@@ -3149,6 +3151,12 @@ int main(int argc, char **argv) {
   // kill this helper.  send_all() above already treats the resulting
   // EPIPE like any other terminal send error.
   signal(SIGPIPE, SIG_IGN);
+
+  // quick 261105-ord: one-shot InstallApp subcommand. Dispatched before the
+  // secret block, steam_appid.txt, libsteam_api and the socket server.
+  if (argc > 1 && strcmp(argv[1], "--steam-installapp") == 0) {
+    return gamelib_installapp_main(argc, argv);
+  }
 
   // WR-03: load the per-launch secret from env, never argv (argv is
   // world-visible in `ps`). getenv() returns a pointer into the process's

@@ -37,3 +37,11 @@ it (`on_new_window`, `on_navigation`, the handoff policy or the throttle) and th
 ## Verify
 
 Live: every Prime Gaming tile in `/store/amazon` opens its detail or claim view in the embed.
+
+## Closed 2026-11-05 (not a GameLib defect)
+
+Operator re-checked live: the "dead" tiles are in Amazon's top carousel panel. On Amazon's own
+store page, clicking a game there only moves the carousel's highlight to that tile. It does not
+open a detail or claim view. Other stores' carousels do navigate, which is why it looked broken.
+This is how Amazon's page works, and no embed hook drops the click. The UI is arguably poor, but
+it is Amazon's. No code change.
