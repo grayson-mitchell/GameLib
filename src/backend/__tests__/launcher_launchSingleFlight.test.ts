@@ -6,7 +6,10 @@ const getGameMock = jest.fn()
 jest.mock('backend/storeManagers', () => ({
   libraryManagerMap: {
     legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
-  }
+  },
+  // 62-14: launcher.ts dispatches store-specific work through the hook table;
+  // legendary has none of the optional hooks under test here.
+  storeLaunchHooks: { legendary: {} }
 }))
 
 jest.mock('backend/logger', () => ({

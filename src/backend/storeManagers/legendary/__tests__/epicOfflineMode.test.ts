@@ -61,14 +61,14 @@ describe('resolveEpicOfflineMode (R8)', () => {
 /**
  * Pure source inspection so the gate can be run against both the real tree and
  * RED specimens: how many times is the expired flag read, and are all reads
- * inside `prepareLaunch`'s body?
+ * inside the legendary `resolveOfflineMode` hook body?
  */
-function inspectExpiredReads(launcherSource: string) {
-  const code = stripSourceComments(launcherSource)
+function inspectExpiredReads(source: string) {
+  const code = stripSourceComments(source)
   const read = /legendaryConfigStore\.get_nodefault\(\s*'expired'\s*\)/g
   const total = (code.match(read) ?? []).length
-  const start = code.indexOf('async function prepareLaunch(')
-  const end = start === -1 ? -1 : code.indexOf('\n}\n', start)
+  const start = code.indexOf('resolveOfflineMode:')
+  const end = start === -1 ? -1 : code.indexOf('isOverlayEnabled:', start)
   const body = start === -1 || end === -1 ? '' : code.slice(start, end)
   const inside = (body.match(read) ?? []).length
   return { total, inside }
@@ -76,17 +76,24 @@ function inspectExpiredReads(launcherSource: string) {
 
 describe('R8 source gate (comment-stripped)', () => {
   const backendDir = join(__dirname, '..', '..', '..')
+  // 62-14: the read moved from launcher.ts into the storeLaunchHooks table.
   const launcherSource = readFileSync(join(backendDir, 'launcher.ts'), 'utf8')
+  const hooksSource = readFileSync(
+    join(backendDir, 'storeManagers', 'index.ts'),
+    'utf8'
+  )
 
-  it('Test 6a: launcher.ts reads legendaryConfigStore expired exactly once, inside prepareLaunch', () => {
-    expect(inspectExpiredReads(launcherSource)).toEqual({
-      total: 1,
-      inside: 1
-    })
+  it('Test 6a: the expired flag is read exactly once, inside the legendary resolveOfflineMode hook, and launcher.ts calls the hook once', () => {
+    expect(inspectExpiredReads(hooksSource)).toEqual({ total: 1, inside: 1 })
+    expect(inspectExpiredReads(launcherSource).total).toBe(0)
+    const calls = stripSourceComments(launcherSource).match(
+      /\.resolveOfflineMode\?\.\(/g
+    )
+    expect(calls).toHaveLength(1)
   })
 
-  it('Test 6b: the gate has teeth - a second read outside prepareLaunch is caught', () => {
-    const specimen = `${launcherSource}
+  it('Test 6b: the gate has teeth - a second read outside the hook is caught', () => {
+    const specimen = `${hooksSource}
 async function sneakyLaunchGate() {
   return legendaryConfigStore.get_nodefault('expired')
 }

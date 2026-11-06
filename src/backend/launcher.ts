@@ -42,7 +42,11 @@ import {
 // unresolvable `require("backend/storeManagers")` in the emitted chunk for
 // synchronous require() calls, even though it resolves the alias fine for
 // static `import`/`import()`.
-import { libraryManagerMap } from 'backend/storeManagers'
+// `storeLaunchHooks` rides the same safe cycle: it is only dereferenced inside
+// function bodies, never at this module's top level.
+import { libraryManagerMap, storeLaunchHooks } from 'backend/storeManagers'
+import type { LegendaryCommand } from 'backend/storeManagers'
+import { hasCapability, isStore } from 'common/storeCapabilities'
 import {
   createGameLogWriter,
   getRunnerLogWriter,
@@ -54,17 +58,11 @@ import {
 } from './logger'
 import { GlobalConfig } from './config'
 import { DXVK, runWineCommandOnGame, Winetricks } from './tools'
-import gogSetup from './storeManagers/gog/setup'
-import nileSetup from './storeManagers/nile/setup'
 import { spawn, spawnSync } from 'child_process'
 import shlex from 'shlex'
 import { isOnline } from './online_monitor'
 import { showDialogBoxModalAuto } from './dialog/dialog'
-import { legendarySetup } from './storeManagers/legendary/setup'
 import { readFileSync, writeFileSync } from 'fs'
-import { LegendaryCommand } from './storeManagers/legendary/commands'
-import { legendaryConfigStore } from './storeManagers/legendary/electronStores'
-import { resolveEpicOfflineMode } from './storeManagers/legendary/epicOfflineMode'
 import { searchForExecutableOnPath } from './utils/os/path'
 import {
   createAbortController,
@@ -72,12 +70,10 @@ import {
 } from './utils/aborthandler/aborthandler'
 import { download, isInstalled } from './wine/runtimes/runtimes'
 import { getMainWindow } from './main_window'
-import { sendFrontendMessage } from './ipc'
 import { recordPlaySession } from './runsForMe'
 import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
 import { copyFile } from 'fs/promises'
 import { app, powerSaveBlocker } from 'backend/platform'
-import gogPresence from './storeManagers/gog/presence'
 import { addRecentGame } from './recent_games/recent_games'
 import { tsStore } from './constants/key_value_stores'
 import { readKnownFixes } from './knownFixes'
@@ -108,7 +104,6 @@ import { gameAnticheatInfo } from './anticheat/utils'
 import { singleFlightLaunch } from './launchSingleFlight'
 import type { PartialDeep } from 'type-fest'
 import type LogWriter from './logger/log_writer'
-import { isEnabled } from './storeManagers/legendary/eos_overlay/eos_overlay'
 import { Game } from 'common/types/game_manager'
 
 let powerDisplayId: number | null
@@ -251,11 +246,9 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
     // validation call. Steam's isNative() is false ONLY for a bottle-eligible
     // game, so this block is unreachable for native Steam games (Linux/
     // Windows) and for every other runner.
-    if (runner === 'steam') {
-      const { persistBottleWineVersion } =
-        await import('backend/storeManagers/steam/bottle')
-      persistBottleWineVersion(gameSettings.wineVersion)
-    }
+    await storeLaunchHooks[runner].persistBottleWineVersion?.(
+      gameSettings.wineVersion
+    )
   }
 
   await runBeforeLaunchScript(gameInfo, gameSettings, logWriter)
@@ -276,10 +269,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
     skipVersionCheck
   )
 
-  if (runner === 'gog') {
-    gogPresence.setCurrentGame(appName)
-    await gogPresence.setPresence()
-  }
+  await storeLaunchHooks[runner].setPresence?.(appName)
 
   const launchResult = await command
     .catch(async (exception) => {
@@ -300,14 +290,11 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
   // exits for the generic runners, so its duration is a play signal. Steam is
   // skipped: its launch promise tracks a steam:// hand-off or a bridge spawn,
   // not the game; bottleProcessMonitor records Steam sessions.
-  if (runner !== 'steam' && launchResult) {
+  if (!hasCapability(runner, 'playtimeTrackedExternally') && launchResult) {
     recordPlaySession(appName, runner, Date.now() - launchedAt)
   }
 
-  if (runner === 'gog') {
-    gogPresence.setCurrentGame('')
-    await gogPresence.setPresence()
-  }
+  await storeLaunchHooks[runner].clearPresence?.()
   // Stop display sleep blocker
   if (powerDisplayId !== null) {
     logInfo('Stopping Display Power Saver Blocker', LogPrefix.Backend)
@@ -325,7 +312,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
   tsStore.set(`${appName}.totalPlayed`, Math.floor(totalPlaytime))
 
   const { disablePlaytimeSync } = GlobalConfig.get().getSettings()
-  if (runner === 'gog') {
+  if (isStore(runner, 'gog')) {
     if (!disablePlaytimeSync) {
       await libraryManagerMap['gog']
         .getGame(appName)
@@ -555,19 +542,19 @@ async function prepareLaunch(
 
   let offlineMode = gameSettings.offlineMode || !isOnline()
 
-  if (!offlineMode && gameInfo.runner === 'legendary') {
+  if (!offlineMode && isStore(gameInfo, 'legendary')) {
     offlineMode = await isEpicServiceOffline()
   }
 
   // R8 (Phase 49): an expired Epic store goes offline for games that can run
   // offline. The flag is read ONCE, here; a probe that latches it after this
   // point only affects the next launch, never one already in flight.
-  offlineMode = resolveEpicOfflineMode({
-    offlineMode,
-    runner: gameInfo.runner,
-    canRunOffline: Boolean(gameInfo.canRunOffline),
-    storeExpired: Boolean(legendaryConfigStore.get_nodefault('expired'))
-  })
+  offlineMode =
+    storeLaunchHooks[gameInfo.runner].resolveOfflineMode?.({
+      offlineMode,
+      runner: gameInfo.runner,
+      canRunOffline: Boolean(gameInfo.canRunOffline)
+    }) ?? offlineMode
 
   // Check if the game needs an internet connection
   if (!gameInfo.canRunOffline && offlineMode) {
@@ -611,10 +598,9 @@ async function prepareLaunch(
       '\n\n'
     ])
   } else {
-    const installPath =
-      gameInfo.runner === 'sideload'
-        ? gameInfo.folder_name
-        : gameInfo.install.install_path
+    const installPath = isStore(gameInfo, 'sideload')
+      ? gameInfo.folder_name
+      : gameInfo.install.install_path
 
     await logWriter.logInfo(['Installed in:', installPath, '\n\n'])
   }
@@ -890,9 +876,10 @@ async function prepareWineLaunch(
   // We only want to log this for legendary on Linux
   // On windows, the overlay is installed globally
   // On mac, the overlay doesn't work
-  if (gameInfo.runner === 'legendary' && isLinux) {
-    const checkEOSOverlayStatusPromise = isEnabled(gameInfo.app_name)
-
+  const checkEOSOverlayStatusPromise = isLinux
+    ? storeLaunchHooks[gameInfo.runner].isOverlayEnabled?.(gameInfo.app_name)
+    : undefined
+  if (checkEOSOverlayStatusPromise) {
     // The first time a game runs, the overlay is not enabled yet at this point
     void logWriter.logInfo(
       checkEOSOverlayStatusPromise.then(
@@ -943,20 +930,10 @@ async function prepareWineLaunch(
       ['Created/Updated Wineprefix at', gameSettings.winePrefix],
       LogPrefix.Backend
     )
-    if (gameInfo.runner === 'gog') {
-      await gogSetup(gameInfo.app_name)
-      sendFrontendMessage('gameStatusUpdate', {
-        appName: gameInfo.app_name,
-        runner: 'gog',
-        status: 'launching'
-      })
-    }
-    if (gameInfo.runner === 'nile') {
-      await nileSetup(gameInfo.app_name)
-    }
-    if (gameInfo.runner === 'legendary') {
-      await legendarySetup(gameInfo.app_name, logWriter)
-    }
+    await storeLaunchHooks[gameInfo.runner].prepareLaunch?.(
+      gameInfo.app_name,
+      logWriter
+    )
 
     await installFixes(gameInfo.app_name, gameInfo.runner)
   }
@@ -999,7 +976,7 @@ async function prepareWineLaunch(
 
   try {
     if (
-      gameInfo.runner === 'gog' &&
+      isStore(gameInfo, 'gog') &&
       experimentalFeatures?.cometSupport !== false
     ) {
       const galaxyCommWinePath =
@@ -1157,6 +1134,15 @@ function setupEnvVars(gameSettings: GameSettings, installPath?: string) {
  * @param wrapperEnv The info to be added into the environment variables
  * @returns Environment variables
  */
+// Per-store GAMEID source env. steam sets neither, as before.
+const wrapperStoreEnv: Record<Runner, Record<string, string>> = {
+  gog: { HEROIC_APP_SOURCE: 'gog', STORE: 'gog' },
+  legendary: { HEROIC_APP_SOURCE: 'epic', STORE: 'egs' },
+  nile: { HEROIC_APP_SOURCE: 'amazon', STORE: 'amazon' },
+  sideload: { HEROIC_APP_SOURCE: 'sideload' },
+  steam: {}
+}
+
 function setupWrapperEnvVars(wrapperEnv: WrapperEnv) {
   const ret: Record<string, string> = {}
 
@@ -1164,23 +1150,7 @@ function setupWrapperEnvVars(wrapperEnv: WrapperEnv) {
   ret.HEROIC_APP_RUNNER = wrapperEnv.appRunner
   ret.GAMEID = 'umu-0'
 
-  switch (wrapperEnv.appRunner) {
-    case 'gog':
-      ret.HEROIC_APP_SOURCE = 'gog'
-      ret.STORE = 'gog'
-      break
-    case 'legendary':
-      ret.HEROIC_APP_SOURCE = 'epic'
-      ret.STORE = 'egs'
-      break
-    case 'nile':
-      ret.HEROIC_APP_SOURCE = 'amazon'
-      ret.STORE = 'amazon'
-      break
-    case 'sideload':
-      ret.HEROIC_APP_SOURCE = 'sideload'
-      break
-  }
+  Object.assign(ret, wrapperStoreEnv[wrapperEnv.appRunner])
 
   return ret
 }
@@ -1720,46 +1690,41 @@ const commandsRunning: Record<string, Promise<ExecResult>> = {}
 
 let shouldUsePowerShell: boolean | null = null
 
-function appNameFromCommandParts(commandParts: string[], runner: Runner) {
-  let appNameIndex = -1
-  let idx = -1
-
-  switch (runner) {
-    case 'gog':
-      idx = commandParts.findIndex((value) => value === 'launch')
+// Index of the appName within a runner's command parts, per store (-1: none).
+const appNameIndexFinders: Record<Runner, (commandParts: string[]) => number> =
+  {
+    gog: (commandParts) => {
+      const idx = commandParts.findIndex((value) => value === 'launch')
       if (idx > -1) {
         // for GOGdl, between `launch` and the app name there's another element
-        appNameIndex = idx + 2
-      } else {
-        // for the `download`, `repair` and `update` command it's right after
-        idx = commandParts.findIndex((value) =>
-          ['download', 'repair', 'update'].includes(value)
-        )
-        if (idx > -1) {
-          appNameIndex = idx + 1
-        }
+        return idx + 2
       }
-      break
-    case 'legendary':
+      // for the `download`, `repair` and `update` command it's right after
+      const other = commandParts.findIndex((value) =>
+        ['download', 'repair', 'update'].includes(value)
+      )
+      return other > -1 ? other + 1 : -1
+    },
+    legendary: (commandParts) => {
       // for legendary, the appName comes right after the commands
-      idx = commandParts.findIndex((value) =>
+      const idx = commandParts.findIndex((value) =>
         ['launch', 'install', 'repair', 'update'].includes(value)
       )
-      if (idx > -1) {
-        appNameIndex = idx + 1
-      }
-      break
-    case 'nile':
+      return idx > -1 ? idx + 1 : -1
+    },
+    nile: (commandParts) => {
       // for nile, we pass the appName as the last command part
-      idx = commandParts.findIndex((value) =>
+      const idx = commandParts.findIndex((value) =>
         ['launch', 'install', 'update', 'verify'].includes(value)
       )
-      if (idx > -1) {
-        appNameIndex = commandParts.length - 1
-      }
-      break
+      return idx > -1 ? commandParts.length - 1 : -1
+    },
+    sideload: () => -1,
+    steam: () => -1
   }
 
+function appNameFromCommandParts(commandParts: string[], runner: Runner) {
+  const appNameIndex = appNameIndexFinders[runner](commandParts)
   return appNameIndex > -1 ? commandParts[appNameIndex] : ''
 }
 
