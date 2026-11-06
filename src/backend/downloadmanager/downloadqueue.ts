@@ -32,6 +32,11 @@ import { onConnectivityChange } from 'backend/online_monitor'
 import { libraryManagerMap } from 'backend/storeManagers'
 import { downloadManager } from './electronStores'
 import { isRunner } from 'common/utils'
+import {
+  hasCapability,
+  isStore,
+  storeCapabilities
+} from 'common/storeCapabilities'
 
 /*
 #### Private ####
@@ -153,7 +158,10 @@ async function initQueue(isStartup = false) {
   let element = getFirstQueueElement()
 
   while (element) {
-    if (isStartup && element.params.runner === 'steam') {
+    if (
+      isStartup &&
+      storeCapabilities[element.params.runner].installManagedExternally
+    ) {
       // Defer without mutating the persisted queue entry. Re-point
       // currentElement at it (it may currently reference an earlier,
       // already-completed item processed by THIS same startup call) so
@@ -250,7 +258,7 @@ async function addToQueue(element: DMQueueElement) {
       // Steam-specific size path (D-04): fetch via store appdetails API at enqueue
       // time so the DM queue shows a real GB/MB figure instead of '?? MB'.
       // GOG/Epic/Amazon continue to use getInstallInfo unchanged.
-      if (element.params.runner === 'steam') {
+      if (storeCapabilities[element.params.runner].installSizeFromSteamStore) {
         element.params.size = await getSteamInstallSize(
           element.params.appName,
           element.params.gameInfo
@@ -272,7 +280,7 @@ async function addToQueue(element: DMQueueElement) {
           : '?? MB'
 
         if (
-          element.params.runner === 'gog' &&
+          isStore(element.params.runner, 'gog') &&
           element.params.platformToInstall.toLowerCase() === 'windows' &&
           installInfo &&
           installInfo.manifest &&
@@ -341,7 +349,10 @@ function removeFromQueue(appName: string, forceStatusUpdate = false) {
     }
 
     // Steam: ACF poller emits the real done — suppress it here to prevent badge flash.
-    if (removedRunner !== 'steam' || forceStatusUpdate) {
+    if (
+      !hasCapability(removedRunner, 'installManagedExternally') ||
+      forceStatusUpdate
+    ) {
       sendGameStatusUpdate({
         appName,
         status: 'done'
@@ -384,7 +395,7 @@ function cancelCurrentDownload({ removeDownloaded = false }) {
 
     if (removeDownloaded) {
       const { appName, runner } = currentElement.params
-      if (runner === 'steam') {
+      if (storeCapabilities[runner].installManagedExternally) {
         // Steam never sets folder_name, so the generic delete below is a
         // no-op for it. deleteCancelledSteamInstall waits for the aborted
         // native run to settle itself (this function is synchronous), never
@@ -436,7 +447,7 @@ function processNotification(
 ) {
   const action = element.type === 'install' ? 'Installation' : 'Update'
   if (
-    element.params.runner === 'gog' &&
+    isStore(element.params.runner, 'gog') &&
     element.params.appName === 'gog-redist'
   ) {
     return
@@ -485,7 +496,7 @@ function processNotification(
   } else if (status === 'done') {
     // Steam: ACF poller owns the confirmed-completion toast — suppress the DM one
     // (mirrors the gog-redist early-return guard above). Epic/GOG/Amazon unchanged.
-    if (element.params.runner !== 'steam') {
+    if (!storeCapabilities[element.params.runner].installManagedExternally) {
       // i18next.t('notify.update.finished', 'Update Finished')
       // i18next.t('notify.install.finished', 'Installation Finished')
       notify({

@@ -31,7 +31,8 @@ const {
 const FRONTEND_CEILING = 136
 // 2026-11-06 62-02: BACKEND_CEILING 65 measured with the ratified selector
 // 2026-11-07 62-14: 65 -> 51, launcher.ts
-const BACKEND_CEILING = 51
+// 2026-11-07 62-15: 51 -> 31, downloadmanager + gamedetails/dispatch
+const BACKEND_CEILING = 31
 // Floors: 50% of the measured file count (as lintScoped does).
 const FRONTEND_MIN_FILES = 224 // 448 files measured
 const BACKEND_MIN_FILES = 115 // 231 files measured

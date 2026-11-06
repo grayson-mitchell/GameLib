@@ -6,6 +6,7 @@ import {
 } from 'backend/utils/aborthandler/aborthandler'
 import { ButtonOptions, DMStatus, InstallParams, Runner } from 'common/types'
 import { InstallResult, InstallErrorAction } from 'common/types/game_manager'
+import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import i18next from 'i18next'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
 import { isOnline } from '../online_monitor'
@@ -149,7 +150,7 @@ async function installQueueElement(params: InstallParams): Promise<{
     return { status: 'error' }
   }
 
-  if (runner === 'legendary') {
+  if (isStore(runner, 'legendary')) {
     const epicOffline = await isEpicServiceOffline()
     if (epicOffline) {
       showDialogBoxModalAuto({
@@ -164,7 +165,7 @@ async function installQueueElement(params: InstallParams): Promise<{
     }
   }
 
-  if (runner === 'gog') {
+  if (isStore(runner, 'gog')) {
     // Sometimes, a game manifest file already exists and that makes the installation
     // end as soon as it's started. We have to delete the file to prevent that issue.
     const manifestPath = pathModule.join(gogdlConfigPath, 'manifests', appName)
@@ -180,7 +181,7 @@ async function installQueueElement(params: InstallParams): Promise<{
 
   // Steam install is fire-and-forget via steam:// — the ACF poller owns all status
   // transitions. Suppress premature "Installation Started" toast for steam runners.
-  if (runner !== 'steam') {
+  if (!storeCapabilities[runner].installManagedExternally) {
     notify({
       title,
       body: i18next.t('notify.install.startInstall', 'Installation Started')
@@ -198,7 +199,11 @@ async function installQueueElement(params: InstallParams): Promise<{
   // the Epic/GOG DLC fan-out that a non-Steam install() call previously
   // silently dropped is an intentionally re-scoped boundary, not a bug. Log
   // it as a guarded/declared case rather than letting it vanish silently.
-  if (runner !== 'steam' && installDlcs && installDlcs.length > 0) {
+  if (
+    !storeCapabilities[runner].installManagedExternally &&
+    installDlcs &&
+    installDlcs.length > 0
+  ) {
     logWarning(
       `installDlcs (${installDlcs.length} DLC(s)) present for non-Steam runner '${runner}' — the Steam-focused install path does not fan these out; Epic/GOG DLC install is intentionally out of scope (WR-02/D-11).`,
       LogPrefix.DownloadManager
@@ -363,7 +368,7 @@ async function installQueueElement(params: InstallParams): Promise<{
           LogPrefix.DownloadManager
         )
       }
-      if (runner === 'steam') {
+      if (storeCapabilities[runner].installManagedExternally) {
         libraryManagerMap[runner]
           .getGame(appName)
           .stop(false)
@@ -377,7 +382,7 @@ async function installQueueElement(params: InstallParams): Promise<{
     }
 
     if (
-      runner !== 'steam' ||
+      !storeCapabilities[runner].installManagedExternally ||
       deferredToSetup ||
       wasAborted ||
       status === 'error'
@@ -388,7 +393,10 @@ async function installQueueElement(params: InstallParams): Promise<{
         status: 'done'
       })
     }
-    if (runner === 'steam' && status === 'error') {
+    if (
+      storeCapabilities[runner].installManagedExternally &&
+      status === 'error'
+    ) {
       // 37-02 (D-06/D-07): a 'signIn' affordance gets a single "Sign in to
       // Steam" button; every other value (including undefined) passes no
       // `buttons` at all — byte-identical to the dialog before this plan.
@@ -439,7 +447,7 @@ async function updateQueueElement(params: InstallParams): Promise<{
     return { status: 'error' }
   }
 
-  if (runner === 'legendary') {
+  if (isStore(runner, 'legendary')) {
     const epicOffline = await isEpicServiceOffline()
     if (epicOffline) {
       showDialogBoxModalAuto({

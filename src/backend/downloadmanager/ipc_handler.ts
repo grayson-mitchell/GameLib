@@ -9,6 +9,7 @@ import {
 } from './downloadqueue'
 
 import type { DMQueueElement } from 'common/types'
+import { isStore } from 'common/storeCapabilities'
 
 addHandler('install', async (_e, args) => {
   const dmQueueElement: DMQueueElement = {
@@ -25,7 +26,7 @@ addHandler('install', async (_e, args) => {
   if (
     Array.isArray(args.installDlcs) &&
     args.installDlcs.length > 0 &&
-    args.runner === 'legendary'
+    isStore(args.runner, 'legendary')
   ) {
     for (const dlc of args.installDlcs) {
       const dlcQueueElement: DMQueueElement = {

@@ -50,6 +50,7 @@ import type {
   Runner
 } from 'common/types'
 import type { GameOverride, SelectiveDownload } from 'common/types/legendary'
+import { isStore, storeCapabilities } from 'common/storeCapabilities'
 
 import { libraryManagerMap } from '../storeManagers'
 import { attachOverrides } from '../game_overrides'
@@ -75,7 +76,7 @@ export async function getGameInfo(
 ): Promise<GameInfo | null> {
   // Fastpath since we sometimes have to request info for a GOG game as Legendary because we don't know it's a GOG game yet
   if (
-    runner === 'legendary' &&
+    isStore(runner, 'legendary') &&
     !libraryManagerMap['legendary'].hasGame(appName)
   ) {
     return null
@@ -96,7 +97,7 @@ export async function getExtraInfo(
 ): Promise<ExtraInfo | null> {
   // Fastpath since we sometimes have to request info for a GOG game as Legendary because we don't know it's a GOG game yet
   if (
-    runner === 'legendary' &&
+    isStore(runner, 'legendary') &&
     !libraryManagerMap['legendary'].hasGame(appName)
   ) {
     return null
@@ -142,7 +143,7 @@ export async function getInstallInfo(
   } catch (error) {
     logError(
       error,
-      runner === 'legendary' ? LogPrefix.Legendary : LogPrefix.Gog
+      isStore(runner, 'legendary') ? LogPrefix.Legendary : LogPrefix.Gog
     )
     return null
   }
@@ -152,7 +153,12 @@ export async function kill(appName: string, runner: Runner): Promise<void> {
   // A Steam-owned (delegated) install has no abort controller by design;
   // SteamGame.stop() -> cancelDelegatedInstall ends it, and a lookup here
   // would log a false "Aborting not possible" ERROR (quick 261106-pvk).
-  if (!(runner === 'steam' && isDelegatedInstallPolling(appName))) {
+  if (
+    !(
+      storeCapabilities[runner].installManagedExternally &&
+      isDelegatedInstallPolling(appName)
+    )
+  ) {
     callAbortController(appName)
   }
   return libraryManagerMap[runner].getGame(appName).stop()
