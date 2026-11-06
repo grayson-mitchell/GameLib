@@ -1,21 +1,10 @@
-// D-09: non-blocking, dismissible - no backdrop, no focus trap, does not
-// intercept pointer events outside its own bounds so Manage Accounts and any
-// cached view stay fully interactive while this is shown.
+// D-09: non-blocking, dismissible - no backdrop, no focus trap. Position and
+// the toast surface (sketch 006 variant A) come from NoticeStack/index.scss;
+// the region keeps pointer-events off so Manage Accounts and any cached view
+// stay fully interactive while this is shown.
 .humbleExpiryToast {
-  position: fixed;
-  bottom: var(--space-lg);
-  right: var(--space-lg);
-  z-index: 20;
-  display: flex;
+  // Single-line message + action layout (the shared surface aligns to start).
   align-items: center;
-  gap: var(--space-sm);
-  max-width: min(420px, calc(100vw - 2 * var(--space-lg)));
-  background: var(--background-darker, var(--body-background));
-  color: var(--text-default);
-  padding: var(--space-md);
-  border-radius: var(--space-2xs);
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.35);
-  border-inline-start: var(--space-3xs) solid var(--status-warning);
 }
 
 .humbleExpiryToastIcon {

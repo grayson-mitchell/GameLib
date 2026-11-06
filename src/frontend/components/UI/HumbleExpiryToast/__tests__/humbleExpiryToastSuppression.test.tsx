@@ -134,6 +134,7 @@ jest.mock('react', () => {
 // Imported after the mocks above (textual order -- this project's ts-jest
 // setup does not hoist jest.mock like babel-jest).
 import HumbleExpiryToast from '../index'
+import { PHASE_FALLBACK_MS } from 'frontend/components/UI/NoticeStack/noticeSlot'
 
 type HookHarness = { __beginRender: () => void; __resetMount: () => void }
 
@@ -152,25 +153,82 @@ function reinvoke(): ReactElement | null {
   return HumbleExpiryToast() as unknown as ReactElement | null
 }
 
+type El = ReactElement<{
+  className?: string
+  role?: string
+  children?: ReactNode
+  onClick?: () => void
+  onAnimationEnd?: (e: unknown) => void
+}>
+
+function walk(node: ReactNode, pred: (e: El) => boolean, out: El[] = []): El[] {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return out
+  }
+  if (Array.isArray(node)) {
+    node.forEach((child: ReactNode) => walk(child, pred, out))
+    return out
+  }
+  if (typeof node === 'object' && 'type' in node) {
+    const el = node as El
+    if (pred(el)) out.push(el)
+    if (el.props?.children !== undefined) walk(el.props.children, pred, out)
+  }
+  return out
+}
+
+const cls = (e: El | undefined): string => e?.props?.className ?? ''
+const toastOf = (tree: ReactNode): El | undefined =>
+  walk(tree, (e) => e.props?.role === 'status')[0]
+const slotOf = (tree: ReactNode): El | undefined =>
+  walk(tree, (e) => cls(e).startsWith('noticeStackSlot'))[0]
+const byClass = (tree: ReactNode, part: string): El | undefined =>
+  walk(tree, (e) => cls(e).includes(part))[0]
+const ev = (animationName: string) => ({
+  target: 'a',
+  currentTarget: 'a',
+  animationName
+})
+
+// Flip expired true and settle: the first reinvoke fires the expired effect,
+// the second reads the new phase.
+function showToast(): ReactElement | null {
+  humbleExpired = true
+  reinvoke()
+  return reinvoke()
+}
+
+// Drive a leaving toast through both animationends to removal.
+function finishExit(tree: ReactNode): ReactElement | null {
+  toastOf(tree)?.props.onAnimationEnd?.(ev('noticeStackToastOut'))
+  const collapsing = reinvoke()
+  slotOf(collapsing)?.props.onAnimationEnd?.(ev('noticeStackSlotClose'))
+  return reinvoke()
+}
+
 describe('HumbleExpiryToast acquires store-embed suppression while visible (Phase 40 Plan 06, D-18/D-20)', () => {
   beforeEach(() => {
+    jest.useFakeTimers()
     humbleExpired = false
     mockNavigate.mockClear()
     acquire.mockClear()
     release.mockClear()
   })
 
-  // NOTE on the two-`reinvoke()` pattern below: `visible` only ever changes
-  // via `setVisible` inside the `humble.expired`-keyed `useEffect`, and (as
-  // in real React) a render reads the state slot's value from BEFORE that
-  // render's own effects run -- so flipping `humbleExpired` and calling
-  // `reinvoke()` once only fires the effect (updating the slot); a SECOND
-  // `reinvoke()` is required for the render to read the now-updated
-  // `visible` value and, in turn, for `useSuppressStoreEmbedWhile`'s own
-  // effect (keyed on that value) to fire. This differs from
-  // `dropdownDisclosure.test.tsx`, where `setIsExpanded` is called directly
-  // from a click handler rather than from an effect, so one `reinvoke()`
-  // suffices there.
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  // NOTE on the two-`reinvoke()` pattern below: `phase` only changes via
+  // `setPhase` inside the `humble.expired`-keyed `useEffect`, and (as in real
+  // React) a render reads the state slot's value from BEFORE that render's
+  // own effects run -- so flipping `humbleExpired` and calling `reinvoke()`
+  // once only fires the effect (updating the slot); a SECOND `reinvoke()` is
+  // required for the render to read the now-updated `phase` value and, in
+  // turn, for `useSuppressStoreEmbedWhile`'s own effect (keyed on that
+  // value) to fire. A click handler calls `setPhase` directly, so one
+  // `reinvoke()` suffices after it. Exit is a lifecycle: leaving ->
+  // collapsing -> null, each step one more reinvoke.
 
   it('does not acquire while not visible (humble.expired stays false)', () => {
     mount()
@@ -181,84 +239,127 @@ describe('HumbleExpiryToast acquires store-embed suppression while visible (Phas
 
   it('acquires exactly once when humble.expired flips true and the toast becomes visible', () => {
     mount()
-    humbleExpired = true
-    reinvoke() // fires the humble.expired effect, sets visible -> true
-    const tree = reinvoke() // reads visible === true; fires the suppression effect
+    const tree = showToast()
 
     expect(tree).not.toBeNull()
+    expect(cls(tree as El)).toBe('noticeStackSlot')
+    const toast = toastOf(tree)
+    expect(toast).toBeDefined()
+    expect(cls(toast)).toContain('noticeStackToast')
+    expect(cls(toast)).toContain('humbleExpiryToast')
     expect(acquire).toHaveBeenCalledTimes(1)
     expect(release).not.toHaveBeenCalled()
   })
 
-  it('releases when humble.expired flips back false (successful reconnect)', () => {
+  it('releases once humble.expired flips back false (successful reconnect) and the exit finishes', () => {
     mount()
-    humbleExpired = true
-    reinvoke()
-    reinvoke()
+    showToast()
     expect(acquire).toHaveBeenCalledTimes(1)
 
     humbleExpired = false
-    reinvoke() // fires the humble.expired effect, sets visible -> false
-    const tree = reinvoke() // reads visible === false; fires the suppression cleanup
+    reinvoke() // fires the humble.expired effect, sets phase -> leaving
+    const leaving = reinvoke()
+    expect(leaving).not.toBeNull()
+    expect(cls(toastOf(leaving))).toContain('noticeStackToast--leaving')
+    expect(release).not.toHaveBeenCalled()
 
-    expect(tree).toBeNull()
+    expect(finishExit(leaving)).toBeNull()
     expect(acquire).toHaveBeenCalledTimes(1)
     expect(release).toHaveBeenCalledTimes(1)
   })
 
-  it('dismissing the toast (X) also releases -- setVisible(false) via handleDismiss', () => {
+  it('dismissing the toast (X) leaves through the slot lifecycle, then releases', () => {
     mount()
+    const tree = showToast()
+    expect(acquire).toHaveBeenCalledTimes(1)
+
+    const dismissButton = byClass(tree, 'humbleExpiryToastDismiss')
+    dismissButton?.props.onClick?.()
+    const leaving = reinvoke()
+
+    expect(leaving).not.toBeNull()
+    expect(cls(toastOf(leaving))).toContain('noticeStackToast--leaving')
+    expect(release).not.toHaveBeenCalled()
+
+    expect(finishExit(leaving)).toBeNull()
+    expect(acquire).toHaveBeenCalledTimes(1)
+    expect(release).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('HumbleExpiryToast slot lifecycle (quick 261106-pr4)', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    humbleExpired = false
+    mockNavigate.mockClear()
+    acquire.mockClear()
+    release.mockClear()
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('falls back to collapsing then removal when animationend never arrives', () => {
+    mount()
+    const tree = showToast()
+    byClass(tree, 'humbleExpiryToastDismiss')?.props.onClick?.()
+    const leaving = reinvoke()
+    expect(leaving).not.toBeNull()
+
+    jest.advanceTimersByTime(PHASE_FALLBACK_MS)
+    const collapsing = reinvoke()
+    expect(cls(slotOf(collapsing))).toContain('noticeStackSlot--collapsing')
+    expect(release).not.toHaveBeenCalled()
+
+    jest.advanceTimersByTime(PHASE_FALLBACK_MS)
+    expect(reinvoke()).toBeNull()
+    expect(release).toHaveBeenCalledTimes(1)
+  })
+
+  it('Reconnect navigates to the humble login path and the toast leaves', () => {
+    mount()
+    const tree = showToast()
+    byClass(tree, 'humbleExpiryToastAction')?.props.onClick?.()
+    const leaving = reinvoke()
+
+    expect(mockNavigate).toHaveBeenCalledTimes(1)
+    expect(mockNavigate).toHaveBeenCalledWith('/loginweb/humble')
+    expect(cls(toastOf(leaving))).toContain('noticeStackToast--leaving')
+  })
+
+  it('shows once per expiry and again after expired flips false then true', () => {
+    mount()
+    const tree = showToast()
+    const firstKey = toastOf(tree)?.key
+    byClass(tree, 'humbleExpiryToastDismiss')?.props.onClick?.()
+    expect(finishExit(reinvoke())).toBeNull()
+
+    // expired is still true: stays gone across renders.
+    expect(reinvoke()).toBeNull()
+    expect(reinvoke()).toBeNull()
+
+    humbleExpired = false
+    reinvoke()
+    reinvoke()
     humbleExpired = true
     reinvoke()
-    let tree = reinvoke() as ReactElement<{
-      children: ReactNode[]
-    }>
-    expect(acquire).toHaveBeenCalledTimes(1)
+    const again = reinvoke()
+    expect(again).not.toBeNull()
+    expect(toastOf(again)?.key).not.toBe(firstKey)
+  })
 
-    function collectByClassPart(
-      node: ReactNode,
-      part: string,
-      out: ReactElement[] = []
-    ): ReactElement[] {
-      if (node === null || node === undefined || typeof node === 'boolean') {
-        return out
-      }
-      if (Array.isArray(node)) {
-        node.forEach((child: ReactNode) => collectByClassPart(child, part, out))
-        return out
-      }
-      if (typeof node === 'object' && 'type' in node) {
-        const el = node as ReactElement<{
-          className?: string
-          children?: ReactNode
-        }>
-        if (
-          typeof el.props?.className === 'string' &&
-          el.props.className.includes(part)
-        ) {
-          out.push(el)
-        }
-        if (el.props?.children !== undefined) {
-          collectByClassPart(el.props.children, part, out)
-        }
-        return out
-      }
-      return out
-    }
+  it('does not vanish instantly when expired flips false while shown', () => {
+    mount()
+    showToast()
+    humbleExpired = false
+    reinvoke()
+    const leaving = reinvoke()
 
-    const dismissButton = collectByClassPart(
-      tree,
-      'humbleExpiryToastDismiss'
-    )[0] as ReactElement<{ onClick: () => void }>
-    // handleDismiss calls setVisible(false) directly (not via an effect), so
-    // -- unlike the humble.expired-driven transitions above -- a single
-    // reinvoke() is enough for the next render to both read the updated
-    // `visible` value and fire the suppression effect's cleanup.
-    dismissButton.props.onClick()
-    tree = reinvoke() as ReactElement<{ children: ReactNode[] }>
-
-    expect(tree).toBeNull()
-    expect(acquire).toHaveBeenCalledTimes(1)
+    expect(leaving).not.toBeNull()
+    expect(cls(toastOf(leaving))).toContain('noticeStackToast--leaving')
+    expect(release).not.toHaveBeenCalled()
+    expect(finishExit(leaving)).toBeNull()
     expect(release).toHaveBeenCalledTimes(1)
   })
 })
