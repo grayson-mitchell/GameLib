@@ -232,6 +232,17 @@ beforeEach(() => {
   jest.mocked(createReadStream).mockImplementation(actualCreateReadStream)
 })
 
+/** depot.ts plus every submodule folded out of it (62-09): negative source
+ *  censuses ("nowhere in depot.ts") must keep covering the moved code. */
+function readDepotFoldedSources(): string {
+  return [
+    '../depot.ts',
+    ...['planModel', 'plan', 'machO', 'download'].map((n) => `../depot/${n}.ts`)
+  ]
+    .map((f) => readFileSync(join(__dirname, f), 'utf8'))
+    .join('\n')
+}
+
 const APP_ID = '12345'
 const BASE_OPTS = {
   targetSteamappsDir: '/tmp/steamapps',
@@ -1791,7 +1802,10 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
     }
 
     it("D-04: canWriteFullOwnership's parameter object declares EXACTLY the five Phase 23 fields — outcome, failures, buildid, allFilesVerified, allModesApplied — and nothing resembling a skip/bypass/override parameter", () => {
-      const source = readFileSync(join(__dirname, '..', 'depot.ts'), 'utf8')
+      const source = readFileSync(
+        join(__dirname, '..', 'depot', 'download.ts'),
+        'utf8'
+      )
       const fieldNames = extractCanWriteFullOwnershipFieldNames(source)
 
       expect(fieldNames.length).toBeGreaterThan(0)
@@ -1822,9 +1836,7 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
     })
 
     it('D-05: depot.ts (after stripSourceComments) has no retry/repair/re-check path keyed on skippedDepots — the skipped set is read for reporting only (D-05: no recovery path)', () => {
-      const source = stripSourceComments(
-        readFileSync(join(__dirname, '..', 'depot.ts'), 'utf8')
-      )
+      const source = stripSourceComments(readDepotFoldedSources())
       const skipLines = source
         .split('\n')
         .filter((l) => l.includes('skippedDepots'))
@@ -2959,7 +2971,7 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
   })
 
   it('never writes StateFlags "4" anywhere in depot.ts (T-21-07)', () => {
-    const source = readFileSync(join(__dirname, '../depot.ts'), 'utf8')
+    const source = readDepotFoldedSources()
     const uncommented = source
       .split('\n')
       .filter(
