@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 62 context gathered
-last_updated: "2026-11-06T09:59:39.411Z"
+last_updated: "2026-11-06T10:03:41.624Z"
 last_activity: 2026-11-06
 progress:
-  total_phases: 4
+  total_phases: 6
   completed_phases: 0
   total_plans: 21
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 62 (module-boundaries-and-decomposition) — EXECUTING
-Plan: 2 of 21
+Plan: 3 of 21
 Status: Ready to execute
 Last activity: 2026-11-06
 
-Progress: [█░░░░░░░░░] 5%
+Progress: [█░░░░░░░░░] 10%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -225,6 +225,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 60 P07 | 15m | 2 tasks | 4 files |
 | Phase 59 P40 | 20m | 2 tasks | 4 files |
 | Phase 60 P16 | 1h | 3 tasks | 1 files |
+| Phase 62 P02 | 20min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -232,6 +233,8 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 
 Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archive (2026-10-15).
 
+- Phase 66 added 2026-11-06: **Backend dependency injection replacing module-level singletons.** The operator asked what else could improve the architecture after Phase 62. The review measured 144 top-level `let` declarations in `src/backend` and 2,197 `jest.mock(` calls across 706 test files, a sign of hidden module state and import-coupled tests, and proposed a boot-time context object passed to store managers and `launcher.ts`. The operator chose to open it as this phase. `Depends on` hand-corrected from Phase 65 (positional) to Phase 62. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
+- Phase 65 added 2026-11-06: **Steam store manager decomposition, continued.** From the same post-Phase-62 review: Phase 62 splits `steam/games.ts` and `steam/depot.ts` but not `steam/library.ts` (4,393 lines), `steam/bottle.ts` (2,567) or the four `steam/bridge/` files over 1,000 lines. The operator chose to open it as this phase. `Depends on` hand-corrected from Phase 64 (positional, unrelated) to Phase 62. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 64 added 2026-11-06: **UI to edit themes.** The operator asked how the 10 built-in themes differ; the answer was a comparison page of per-theme launcher thumbnails and resolved token values. The operator liked it and chose to open this phase: that thumbnail gallery plus a token editor, working on a copy of an existing theme and never editing a built-in in place. Checking at filing found quick 261031-bst (2026-10-31) removed the old custom-CSS-file themes, so the phase stores custom themes as token data and `setTheme` needs a custom branch again. `Depends on` hand-corrected from Phase 63 (positional, unrelated) to None. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 63 added 2026-11-06: **Rust migration pattern and executable scanners.** The operator asked where an incremental move from the Node sidecar to Rust would start. The answer ranked the PE / Mach-O executable scanners first, to prove the pattern cheaply, and the Steam depot pipeline as the first real target; the operator chose to open this phase for the scanners only, with the depot pipeline to follow after a measuring spike. Checking callers at filing found `meta/bridgeCensus.ts` imports `peSteamDrm` and runs without the Rust shell, recorded as the open headless-access question. `Depends on` hand-corrected from Phase 62 (positional) to None; Phase 62's `steam/games.ts` split moves two scanner call sites, so sequencing matters for merge churn, not correctness. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 62 added 2026-11-06: **Module boundaries and decomposition.** Came from an architecture review of GameLib's modularity. The operator chose to put items 2–4 of the review's suggested order in this phase: dependency-cruiser boundary rules (warn-only, baselined), store capability flags replacing `runner === 'steam'` branching (66 frontend sites, 31 backend sites outside `storeManagers/`), and splitting `steam/games.ts`, `steam/depot.ts` and `common/types/ipc.ts`. Item 1, splitting the 20,324-line `src-tauri/src/main.rs`, goes to a separate quick task. `Depends on` hand-corrected from Phase 61 (positional, unrelated) to None. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
@@ -557,7 +560,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-06T09:59:39.405Z
+Last session: 2026-11-06T10:03:37.764Z
 Stopped at: Phase 62 context gathered
 Resume file: None
 

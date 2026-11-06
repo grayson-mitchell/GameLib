@@ -151,6 +151,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 62: Module boundaries and decomposition** — 21 plans; planned
 - [ ] **Phase 63: Rust migration pattern and executable scanners** — 0 plans; not started
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
+- [ ] **Phase 65: Steam store manager decomposition, continued** — 0 plans; not started
+- [ ] **Phase 66: Backend dependency injection replacing module-level singletons** — 0 plans; not started
 
 ## Phase Details
 
@@ -219,13 +221,13 @@ Plans:
 **Goal:** Module boundaries in the TypeScript backend and frontend are explicit, enforced by a tool, and no longer bypassed by branching on store identity. Three parts: (1) **Boundary rules.** Add dependency-cruiser with rules in warn-only mode and record a baseline violation count. The rules: no store manager imports another store manager; `launcher.ts` reaches stores only through `storeManagers/index` (today it imports `gog/setup`, `legendary/commands`, `gog/presence` and `eos_overlay` directly); no `runner === '<literal>'` checks in `frontend/screens/**`. (2) **Store capabilities.** Give `GameInfo`/`LibraryManager` capability flags (e.g. install managed externally, DLC selection, resumable install) and replace runner-literal branching with them: 66 `runner === 'steam'` sites in the frontend (Library, Game page, ConsoleMode, InstallModal, filterEngine) and 31 in the backend outside `storeManagers/` (11 in `downloadmanager/`). `helpers/steamInstallOptionsEntry.ts` already shows the single-decision-site pattern. (3) **Decomposition.** Split `steam/games.ts` (7,150 lines, 73 imports) into launch, DRM and requirements modules; fold `steam/depot.ts` (4,598 lines) into `steam/depot/`; split `common/types/ipc.ts` (~280 channels) into per-domain channel types co-located with the sidecar `*FlowRegistration.ts` files; add a parity test for the transport constants Rust's `main.rs` mirrors from `common/types/sidecarTransport.ts` by hand. Promote the dependency-cruiser rules from warn to error once the counts reach zero. Out of scope: the `src-tauri/src/main.rs` split, which is a separate quick task. Came from an architecture review on 2026-11-06.
 **Requirements**: TBD
 **Depends on:** None
-**Plans:** 1/21 plans executed
+**Plans:** 2/21 plans executed
 
 Plans:
 **Wave 1**
 
 - [x] 62-01-PLAN.md — dependency-cruiser (human-verified, pinned 18.7.2), graph rules at error + shrink-only baseline, seeded-violation tests
-- [ ] 62-02-PLAN.md — runner-literal ESLint selector + equality-ceiling ratchet (frontend/backend)
+- [x] 62-02-PLAN.md — runner-literal ESLint selector + equality-ceiling ratchet (frontend/backend)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -325,3 +327,25 @@ Plans:
 Plans:
 
 - [ ] TBD (run /gsd-plan-phase 64 to break down)
+
+### Phase 65: Steam store manager decomposition, continued
+
+**Goal:** The Steam store manager files Phase 62 leaves untouched are split along their natural seams, so no file under `storeManagers/steam/` is a multi-thousand-line grab-bag. Targets, measured 2026-11-06: `steam/library.ts` (4,393 lines), `steam/bottle.ts` (2,567), and the largest `steam/bridge/` files: `shimGenerate.ts` (1,496), `drm/runnerClone.ts` (1,376), `helperProcess.ts` (1,143) and `drm/stageDrmBottle.ts` (1,021). `shimExports.generated.ts` is generated and out of scope. Reuse Phase 62's method: a cluster map of each file first, pure moves before mechanical lifts, no behaviour change in a move commit (D-06), and the dependency-cruiser rules Phase 62 adds must stay at zero. Splitting `bottle.ts` first is worth considering because Phase 61 moves the engine and bottle decision out of `steam/`, so a clean split shrinks 61's diff. Open questions for discuss-phase: the minimum module set for `library.ts` (owned-apps fetch, local ACF/VDF scan, metadata/artwork enrichment and cache look like the seams), and whether to sequence before or after Phase 61. Came from the post-Phase-62 architecture review on 2026-11-06.
+**Requirements**: TBD
+**Depends on:** Phase 62
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 65 to break down)
+
+### Phase 66: Backend dependency injection replacing module-level singletons
+
+**Goal:** Backend modules receive their dependencies instead of reaching for module-level state, so tests need far fewer module mocks and each long-lived handle has one owner. Measured 2026-11-06: 144 top-level `let` declarations in `src/backend` (outside tests) and 2,197 `jest.mock(` calls across 706 test files. Two parts: (1) **The pattern.** A small context object built once at sidecar boot (`sidecar/bootstrap.ts`) carrying paths, logger, config/stores, the child-process spawner (which must still go through `createFakeHomeProfile()` in tests) and the clock, passed down to store managers and `launcher.ts`, with a documented way to construct a test context. (2) **Migration.** Convert the store managers and `launcher.ts` first (Phase 62 narrows `launcher.ts` to `storeManagers/index` and `storeLaunchHooks`), then other backend modules by count. Track the remaining top-level `let` and `jest.mock(` counts with a shrink-only ratchet like Phase 62's. Owning handles in the context should make the sidecar exit contract (every timer, watcher, socket and child `unref()`d, no unbounded in-flight boot work) easier to keep and to check. It also gives Phase 63's Rust ports one place to swap an implementation. Open questions for discuss-phase: plain constructor/parameter passing versus a container library (default: none), and whether module-level caches that are genuinely process-wide may stay as explicitly registered singletons. Came from the post-Phase-62 architecture review on 2026-11-06.
+**Requirements**: TBD
+**Depends on:** Phase 62
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 66 to break down)
