@@ -574,8 +574,8 @@ async function raiseFrontmostBottledProcess(
       try {
         // quick/260815-vvz (defect 1): this line used to destructure `app` off a native
         // dynamic ESM import of the 'electron' module, awaited inline right here. That
-        // bypasses the sidecar's `Module._load` electron interception
-        // (`installElectronHook.ts`), because esbuild's `--external:electron` (package.json's
+        // bypassed the sidecar's `Module._load` electron interception
+        // (`installElectronHook.ts`, since retired), because esbuild's `--external:electron` (package.json's
         // `build:sidecar`) leaves such a dynamic import as a real ESM one in the CJS bundle
         // rather than downleveling it to a `require()`. Node's ESM loader never consults
         // `Module._load`, so the real `electron` npm package (whose CJS export is a bare path

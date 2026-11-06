@@ -60,7 +60,7 @@
  * whose own graph is empty. Two earlier attempts kept the
  * `import { logWarning } from 'backend/logger'` line that used to sit here and
  * both failed for that one reason: importing this module early dragged the
- * whole backend graph into evaluation ahead of `installElectronHook`, so
+ * whole backend graph into evaluation ahead of `../platform`, so
  * `app.getPath()` returned `undefined` and the sidecar died on boot (`727be5dbb`),
  * or the handler graph initialised in a different order and
  * `installFlows.test.ts` Test 1b went red. See `src/sidecar/index.ts`.

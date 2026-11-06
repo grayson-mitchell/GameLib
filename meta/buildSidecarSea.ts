@@ -52,7 +52,7 @@
  *    Pitfall 3), and does so via a special `embedderRequire` that bypasses
  *    Node's normal `Module`/`Module._load` machinery entirely -- so even a
  *    `Module._load` monkeypatch (like this project's own
- *    `installElectronHook.ts`, used for the dev/Electron builds) has NO
+ *    `installElectronHook.ts`, since retired, used for the dev builds) has NO
  *    effect inside a compiled SEA binary. Fixed by bundling a fully
  *    self-contained copy for the SEA path specifically (`bundleForSea()`
  *    below), separate from `build:sidecar`'s dev/Electron output ("extend,

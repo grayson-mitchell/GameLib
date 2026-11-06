@@ -82,8 +82,8 @@
  * `TypeError: Cannot redefine property: homedir` (Node's core-module
  * exports are non-configurable getters under CJS `require()` in this Node
  * version — same reason `jest.spyOn` would fail identically); and a
- * `Module._load` hook (the technique `installElectronHook.ts` uses
- * successfully for `require('electron')`) does NOT intercept `require('os')`
+ * `Module._load` hook (the technique the retired `installElectronHook.ts` used
+ * for `require('electron')`) does NOT intercept `require('os')`
  * under Jest, because Jest's Runtime resolves Node builtins through its own
  * captured `require()`, bypassing `Module._load` entirely — verified
  * empirically, a test-local `Module._load` override left a downstream

@@ -2,10 +2,13 @@
  * AST gate: forbid native dynamic `import('electron')` under `src/backend` and
  * `src/sidecar` (quick/260815-vvz, defect 1).
  *
+ * Since quick-261107-a1j the `Module._load` hook is gone, so a `require('electron')` now throws
+ * (the package is absent) rather than being rewritten: this gate guards a crash, not a stub bypass.
+ *
  * **Why this exists.** `package.json`'s `build:sidecar` script marks `electron` `--external`
  * for esbuild, so a STATIC `import { app } from 'electron'`
  * compiles to a plain CJS `require('electron')` — which the sidecar's `Module._load` hook
- * (`installElectronHook.ts`) intercepts and rewrites to `platform/index.ts` before any backend
+ * (the retired `installElectronHook.ts`) intercepts and rewrites to `platform/index.ts` before any backend
  * module is imported. A DYNAMIC `import('electron')`, by contrast, esbuild leaves untouched as
  * a native ESM dynamic import in the CJS bundle (because the target is external) — Node's
  * native ESM loader resolves it, and that loader never consults `Module._load`. The real
@@ -37,7 +40,7 @@ const REPO_ROOT = resolve(join(__dirname, '../../../..'))
  * Phase 35 Plan 05 (D-04): `'electron-store'` was removed from this list because the package
  * itself was removed from `package.json`. A gate entry naming a package that no longer exists
  * is a trap -- it reads as coverage while asserting nothing. `electron` is now the ONLY
- * specifier `installElectronHook.ts` intercepts, and therefore the only one where a dynamic
+ * specifier the retired `installElectronHook.ts` intercepts, and therefore the only one where a dynamic
  * `import()` silently gets different semantics from the static form. Its replacement,
  * `conf` (via the first-party `backend/store_backend.ts`), is not intercepted by anything, so
  * a dynamic import of it would resolve the same module as the static form -- no hazard, and

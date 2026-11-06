@@ -6,29 +6,21 @@
  * `src-tauri/src/main.rs`, 27-01), which imports `init` from this module and
  * calls it unconditionally.
  *
- * This module's ordering is load-bearing (spike 009's sharp edge): the
- * `Module._load` hook that redirects `require('electron')` -> platformApi MUST
- * be installed BEFORE `./handlers` is imported, because
- * `backend/constants/paths.ts` calls `app.getPath()` at MODULE SCOPE.
- *
- * Phase 35 Plan 05 (D-04): this paragraph used to describe a SECOND redirect,
- * `require('electron-store')` -> fileStore, for the module-scope `new Store()`
- * calls in `backend/typed_store.ts` / `backend/cache.ts`. That wall no
- * longer exists — `electron-store` was replaced by `backend/store_backend.ts`,
- * a first-party shim over `conf` that needs no Electron runtime — so the
- * interception and this half of its documentation were deleted together.
- *
- * The hook lives in `./installElectronHook` (imported FIRST below), NOT inline
- * here: ES modules evaluate every static import before a module's own
- * executable statements, so an inline hook-install statement would run AFTER
- * `import './handlers'` had already reached `app.getPath()` against the real
- * `electron` — crashing the sidecar on boot (Phase 27 Plan 05 blank-screen
- * fix; see installElectronHook.ts for the full rationale).
+ * This module's ordering is load-bearing (spike 009's sharp edge): nothing in
+ * `src/` imports `electron` any more (`meta/__tests__/electronAbsence.test.ts`
+ * gates that, and `backend/constants/paths.ts` reads `app.getPath` from
+ * `backend/platform`), so no `Module._load` hook is installed. `../platform` is
+ * still imported FIRST: Phase 27 Plan 05 found that a module which touches
+ * `app.getPath()` at module scope must run after platform/index.ts has loaded
+ * (it polyfills `process.getSystemVersion` and builds the stub's ipc
+ * registries), and ES modules evaluate every static import in declaration order
+ * before the module's own statements. Reordering this first import re-opens the
+ * blank-screen boot failure.
  */
 
-// ---- Step 1: install the require hook — MUST be the first import so it runs
-//              before `./handlers` (below) pulls in the backend module graph. --
-import './installElectronHook'
+// ---- Step 1: load the platform layer FIRST, before `./handlers` (below) pulls
+//              in the backend module graph. --------------------------------
+import '../platform'
 
 import type { Readable, Writable } from 'node:stream'
 import { existsSync } from 'graceful-fs'
@@ -44,7 +36,7 @@ import { releaseOnStdinEof } from './stdinEofRelease'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
 import { i18nextLanguageOptions, localeFileSegments } from 'common/languages'
 
-// ---- Step 2: import the backend registration path — AFTER the hook -------
+// ---- Step 2: import the backend registration path — AFTER the platform import -------
 
 import './handlers'
 // Block D (finding A1, quick-260907-odi). Adds NO new module to the sidecar bundle:
@@ -60,9 +52,9 @@ import { playtimeSyncQueue } from '../storeManagers/gog/stores'
 // `installFlowRegistration.ts:125`, `appShellFlowRegistration.ts:164` all also import it), not a
 // new edge.
 import { libraryManagerMap } from '../storeManagers'
-// Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09, REQ-34.5-01/05/12): `protocol.ts` imports
-// `dialog`/`app` from `electron`, so this import is safe ONLY because `./installElectronHook`
-// (Step 1, above) has already installed the `Module._load` redirect by the time this
+// Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09, REQ-34.5-01/05/12): `protocol.ts` reads
+// `dialog`/`app` from `backend/platform`, so this import is safe ONLY because `../platform`
+// (Step 1, above) has already been evaluated by the time this
 // statement runs — ES modules evaluate every static import before a module's own executable
 // statements run, so the exact ordering that makes `import './handlers'` safe makes this safe
 // too. `bootstrap.ts` is deliberately absent from `electronReachLedger.test.ts`'s
@@ -807,7 +799,7 @@ export function init(
     // WR-04 (gap cycle 1): `processGuards.ts` has ZERO static imports so that
     // `src/sidecar/index.ts` can install the unhandledRejection guard as its FIRST
     // import, ahead of this module's own graph (and therefore ahead of
-    // `installElectronHook`). The price of that is a logger it cannot import, so the
+    // `../platform`). The price of that is a logger it cannot import, so the
     // sink is bound here instead -- the first moment `heroicLogWriter` exists. Before
     // this line the guard writes to stderr, which is the only safe channel that early
     // anyway. Adding an import of `logWarning` to `processGuards.ts` instead would

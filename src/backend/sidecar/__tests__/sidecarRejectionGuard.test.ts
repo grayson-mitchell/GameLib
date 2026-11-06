@@ -390,7 +390,7 @@ function loadFreshProcessGuards(): {
     const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
     // WR-04 (gap cycle 1): `processGuards.ts` no longer imports `logWarning` -- it
     // cannot, because a single static import there drags the whole backend graph into
-    // evaluation ahead of `installElectronHook` and kills the sidecar on boot. The
+    // evaluation ahead of the retired `installElectronHook` and kills the sidecar on boot. The
     // logger is late-bound, and `bootstrap.init()` binds it right after `initLogger()`.
     // This helper reproduces exactly that binding, which is why every assertion in
     // Group 2 below still reads `logWarningMock` unchanged: the observable contract
@@ -1452,7 +1452,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       // This is the gate that stands between the current, working arrangement and
       // the two boot failures recorded in `src/sidecar/index.ts`. A single
       // `import ... from 'backend/logger'` here drags the entire backend module graph
-      // into evaluation ahead of `installElectronHook`, so `app.getPath()` returns
+      // into evaluation ahead of the retired `installElectronHook`, so `app.getPath()` returns
       // undefined and the sidecar dies before writing READY. Jest cannot observe that
       // (all 176 backend suites stayed green through it) -- this source gate and
       // `pnpm smoke:sidecar` are the two checks that can. The second half of that

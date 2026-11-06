@@ -13,7 +13,7 @@
  * appended to either would run -- the module-scope `playtimeQueueDrainInitialized` guard would
  * already be consumed by that first call, so a wiring test placed in either file could only ever
  * measure a consumed guard, i.e. a no-op. The alternative, `jest.resetModules()` + a fresh
- * `require('../bootstrap')`, was rejected too: that re-evaluates `installElectronHook`, which
+ * `require('../bootstrap')`, was rejected too: that re-evaluates the retired `installElectronHook`, which
  * has NO idempotency guard of its own and would leave a nested global hook in the worker for
  * every subsequent suite. This is the exact reasoning `playtimeLockBootClear.test.ts`'s and
  * `bootstrapUserReconcile.test.ts`'s own docstrings record for their own existence, and this

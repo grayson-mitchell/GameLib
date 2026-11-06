@@ -28,9 +28,9 @@
  *
  * Hard constraint: this file must NOT import the real `electron` module,
  * directly or transitively at import time — same acceptance criterion
- * `handlers.ts` documents. `platformApi` is already installed by
- * `bootstrap.ts`'s `Module._load` hook by the time this module is required
- * (`bootstrap.ts` imports `./installElectronHook` before `./handlers`, and
+ * `handlers.ts` documents. `platformApi` is already loaded by
+ * `bootstrap.ts` by the time this module is required
+ * (`bootstrap.ts` imports `../platform` before `./handlers`, and
  * `./handlers` is what calls `ensureStoresRegistered()`), but the
  * source-level rule stands regardless of runtime ordering.
  */

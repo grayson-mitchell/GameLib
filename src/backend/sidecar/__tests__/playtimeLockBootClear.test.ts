@@ -21,8 +21,8 @@
  * with `bootstrap.ts`'s other seven guards) -- placed anywhere in `bootstrap.test.ts` that guard
  * would already be consumed by that first `init()` call, so a boot-clear test placed there could
  * only ever measure a no-op. The alternative, `jest.resetModules()` + a fresh
- * `require('../bootstrap')`, was rejected too: that re-evaluates `installElectronHook`, which has
- * NO idempotency guard of its own (`installElectronHook.ts:44-46` rebinds `Module._load`
+ * `require('../bootstrap')`, was rejected too: that re-evaluates the retired `installElectronHook`, which has
+ * NO idempotency guard of its own (the retired `installElectronHook.ts:44-46` rebinds `Module._load`
  * unconditionally) and would leave a nested global hook in the worker for every subsequent suite.
  * A virgin file gets a virgin module registry and a virgin guard flag for free, with zero module
  * tricks -- `migrationsWiring.test.ts` exists for exactly this reason, and this file follows its

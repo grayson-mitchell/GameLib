@@ -124,9 +124,9 @@ if (
 }
 // NOTE: this file must NOT import 'backend/logger' (or anything else from the backend module
 // graph) -- backend/logger's import chain (game_config -> config -> compatibility_layers ->
-// constants/paths.ts) calls `app.getPath('appData')` at MODULE SCOPE, which requires the
-// Module._load hook (installElectronHook.ts) to already be installed. That hook installs
-// itself by requiring THIS file first (bootstrap.ts's doc comment), so importing backend/logger
+// constants/paths.ts) calls `app.getPath('appData')` at MODULE SCOPE, which requires this file to
+// have loaded first (the retired installElectronHook.ts used to guarantee that; bootstrap.ts now
+// imports this file first itself), so importing backend/logger
 // here would reintroduce the exact "second wall" bootstrap.ts's docstring warns about, just one
 // file earlier in the chain. `console.warn` is used instead for the one error path below.
 

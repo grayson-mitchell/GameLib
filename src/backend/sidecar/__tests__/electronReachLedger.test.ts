@@ -11,7 +11,7 @@
  * real, two-hop edge those gates structurally cannot detect.
  *
  * **A non-empty reach set here is EXPECTED, not a defect.** `platform/index.ts`
- * installs a `Module._load` interception (`installElectronHook`) that
+ * installs a `Module._load` interception (the retired `installElectronHook`) that
  * rewrites every `require('electron')` inside the sidecar process to the
  * stub module BEFORE any backend module is imported — that is the real,
  * load-bearing mechanism that makes transitive electron reach safe at
