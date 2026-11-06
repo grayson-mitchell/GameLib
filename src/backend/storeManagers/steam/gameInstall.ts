@@ -105,6 +105,12 @@ import {
 import { hostSteamDepotOs } from './gameRequirements'
 import { buildSteamProtocolUrl } from './gameProtocolUrl'
 import type SteamGame from './games'
+import {
+  bridgeRoute as resolveEligibilityBridgeRoute,
+  clearStaleBridgeVerdict,
+  ensurePlatformsCaptured,
+  isBottleEligible
+} from './gameEligibility'
 
 export async function install(
   steamGame: SteamGame,
@@ -118,7 +124,7 @@ export async function install(
   // decision below reads it — the top of install(), before the resume
   // check, so a bridge route taken later in this same call already sees
   // the cleared state.
-  steamGame.clearStaleBridgeVerdict()
+  clearStaleBridgeVerdict(steamGame)
   // steam-startup-resume-crash (2026-07-18) / D-04 softened: a
   // startup-detected interrupted install is surfaced (steamResumePending)
   // but never auto-driven — the user's own Install click IS the resume
@@ -155,7 +161,7 @@ export async function install(
     })
   }
 
-  await steamGame.ensurePlatformsCaptured()
+  await ensurePlatformsCaptured(steamGame)
 
   // D-17 (34.13-06): whether the renderer explicitly requested the
   // Windows-via-bottle override. The ONLY line in this method that reads
@@ -192,7 +198,7 @@ export async function install(
   }
 
   const routeThroughBottle =
-    forceWindowsViaBottle || steamGame.isBottleEligible()
+    forceWindowsViaBottle || isBottleEligible(steamGame)
 
   if (routeThroughBottle) {
     // quick 261024-cjq (todo no-crossover-notice): a missing CrossOver is a
@@ -211,7 +217,7 @@ export async function install(
     // BEFORE anything else in this branch runs — HOARD proved a demoted
     // title can be bridge-eligible AND hold a native orphan at the same
     // time, so this must precede the isBridgeEligible() check below.
-    await steamGame.removeDemotedNativeOrphan()
+    await removeDemotedNativeOrphan(steamGame)
 
     // Phase 24 Plan 08 (R4/D-01): allowlisted-title bridge routing — the
     // FIRST check inside this block, BEFORE the Phase 17 isBottleReady()
@@ -232,7 +238,7 @@ export async function install(
     // steamBottleSetupRequired deferral immediately below so the
     // DownloadManager clears the transient 'installing' badge the same
     // way -- nothing is installed and no ACF poller starts on this path.
-    let bridgeRoute = steamGame.bridgeRoute()
+    let bridgeRoute = resolveEligibilityBridgeRoute(steamGame)
 
     // 51-REVIEW WR-08: launch() and uninstall() route by LOCATION, but the
     // widened pending-scan default routes every non-seed bottle-eligible
@@ -246,7 +252,7 @@ export async function install(
     if (
       bridgeRoute.route === 'bridge' &&
       bridgeRoute.reason !== 'user-forced-bridge' &&
-      steamGame.hasBottledSteamCopy()
+      hasBottledSteamCopy(steamGame)
     ) {
       logInfo(
         `SteamGame: appId ${steamGame.appId} already has bits in the GameLibSteam bottle -- keeping the bottled install path instead of starting a second download into a bridge bottle (51-REVIEW WR-08)`,
@@ -280,7 +286,7 @@ export async function install(
         forceWindowsViaBottle: args.steamForceWindowsViaBottle
       })
       if (!prescreenLease.ok) {
-        return steamGame.installResultForRefusal(prescreenLease.reason)
+        return installResultForRefusal(steamGame, prescreenLease.reason)
       }
       try {
         const prescreenResult = await prescreenBridgeDepots(steamGame.appId, {
@@ -294,7 +300,7 @@ export async function install(
       } finally {
         prescreenLease.release()
       }
-      bridgeRoute = steamGame.bridgeRoute()
+      bridgeRoute = resolveEligibilityBridgeRoute(steamGame)
     }
 
     if (crossoverMissing && bridgeRoute.route !== 'bridge') {
@@ -302,7 +308,7 @@ export async function install(
         `SteamGame: CrossOver is not installed — bottled-Steam install of appId ${steamGame.appId} stopped (precondition, not a bridge failure)`,
         LogPrefix.Steam
       )
-      return steamGame.crossoverRequiredError()
+      return crossoverRequiredError(steamGame)
     }
 
     if (
@@ -474,6 +480,40 @@ export async function install(
   return { status: 'done' }
 }
 
+/**
+ * quick-260821-le0: closes the 32-bit Mac Steam orphan defect at the
+ * "stop creating new ones" end. `install()`'s `routeThroughBottle` branch
+ * calls this as its FIRST statement, before the bridge/bottle-provisioning
+ * checks below — a demoted title can be bridge-eligible AND already hold
+ * a leftover native i386 install at the same time (the HOARD/63000 shape
+ * that made this defect visible).
+ *
+ * Triple-gated, ALL of:
+ *  1. `isAppleSiliconMac` — the load-bearing safety gate. i386 STILL RUNS
+ *     on an Intel Mac, so an Intel host must keep its native copy. Never
+ *     widen this to a bare `isMac` or to a negated-Intel-probe equivalent
+ *     (see environment.ts's own comment on the positive-probe requirement).
+ *  2. `steamMetadataStore.get(appId)?.mac_arch === '32'` — the specific
+ *     demotion signal, read directly rather than via `isBottleEligible()`,
+ *     which is also true for a merely-not-mac-native title whose native
+ *     install is a DIFFERENT case and out of scope here.
+ *  3. `readAcfState(appId, 'native').state === 'installed'` — the guard
+ *     `install()` has never had.
+ *
+ * On a match: `removeSteamInstallCopy` deletes the native copy, then
+ * `pollUninstallOnce('native')` is the ONLY state update on this path —
+ * it is the existing honest reconciliation mechanism, re-probing bottle/
+ * bridge for a survivor and re-resolving `install_path`, or flipping to
+ * not-installed when nothing survives. No `library.set()` is hand-written
+ * here and no badge is force-flipped in either direction (the badge
+ * follows confirmed on-disk ACF state, per the locked constraint and
+ * `60e89349a`) — a transient "Game Uninstalled" toast immediately before
+ * the bottle install starts is ACCEPTED as honest, not papered over.
+ *
+ * A cleanup failure is never fatal to the install: the whole body is
+ * wrapped in try/catch and only `logWarning`s on failure, following the
+ * same shape as `resumeInterruptedSteamInstall`'s own call site above.
+ */
 export async function removeDemotedNativeOrphan(
   steamGame: SteamGame
 ): Promise<void> {
@@ -513,9 +553,19 @@ export async function installNative(
   steamGame: SteamGame,
   args: InstallArgs
 ): Promise<InstallResult> {
-  return steamGame.installDepotDownload(args, { os: hostSteamDepotOs() })
+  return installDepotDownload(steamGame, args, { os: hostSteamDepotOs() })
 }
 
+/**
+ * 51-REVIEW WR-08: true when an interrupted native download for this appId
+ * targeted the Phase 17 GameLibSteam bottle -- the install-start breadcrumb
+ * (`markSteamNativeInstallStarted`, written before the download await and
+ * cleared only on success) points at that bottle's steamapps dir. The
+ * breadcrumb, not an ACF, is the signal: a hard kill runs no JS, so an
+ * interrupted download leaves no `appmanifest_*.acf` at all. A COMPLETE
+ * GameLibSteam install never reaches install() (it is already installed),
+ * so the breadcrumb covers the resume case the review names.
+ */
 export function hasBottledSteamCopy(steamGame: SteamGame): boolean {
   const breadcrumb = library.get(steamGame.appId)?.install
     ?.steamResumeTargetSteamappsDir
@@ -535,7 +585,7 @@ export async function installBottleNative(
   const targetSteamappsDir = getBottleSteamappsDir(
     getSteamBottleSettings().wineCrossoverBottle
   )
-  return steamGame.installDepotDownload(args, {
+  return installDepotDownload(steamGame, args, {
     targetSteamappsDirOverride: targetSteamappsDir,
     os: 'windows',
     pollerSource: 'bottle'
@@ -675,7 +725,7 @@ export async function installBridgeGame(
     forceWindowsViaBottle: args.steamForceWindowsViaBottle
   })
   if (!lease.ok) {
-    return steamGame.installResultForRefusal(lease.reason)
+    return installResultForRefusal(steamGame, lease.reason)
   }
   // Quick 261029-exu: the bridge poller no longer sends 'done' when the
   // manifest lands, so a path that stops after the download (CEG, shim
@@ -715,7 +765,8 @@ export async function installBridgeGame(
           ? getAbortSignal(steamGame.appId)
           : createAbortController(steamGame.appId).signal
         ownsController = !reused
-        const provisioned = await steamGame.provisionBridgeBottleForInstall(
+        const provisioned = await provisionBridgeBottleForInstall(
+          steamGame,
           bridgeBottleName,
           signal
         )
@@ -728,7 +779,8 @@ export async function installBridgeGame(
           return stop()
         }
       }
-      const result = await steamGame.installBridgeGameLeased(
+      const result = await installBridgeGameLeased(
+        steamGame,
         args,
         bridgeBottleName,
         installEngine,
@@ -753,6 +805,11 @@ export async function installBridgeGame(
   }
 }
 
+/**
+ * The inline bridge-bottle creation of installBridgeGame (BLOCKER 1), now
+ * run under the install lease. Returns the engine that owns the new bottle,
+ * or the InstallResult to stop with.
+ */
 export async function provisionBridgeBottleForInstall(
   steamGame: SteamGame,
   bridgeBottleName: string,
@@ -792,7 +849,8 @@ export async function provisionBridgeBottleForInstall(
   let provisionResult: Awaited<ReturnType<typeof provisionBridgeBottle>>
   let engineUsed: NonCrossoverEngine | 'crossover' = 'crossover'
   if (creation.kind === 'pinned') {
-    const engine = await steamGame.ensureBuiltInEngineForInstall(
+    const engine = await ensureBuiltInEngineForInstall(
+      steamGame,
       creation.pin,
       signal
     )
@@ -831,7 +889,8 @@ export async function provisionBridgeBottleForInstall(
         LogPrefix.Steam
       )
       const { ENGINE_PINS } = await import('./engine/enginePins')
-      const engine = await steamGame.ensureBuiltInEngineForInstall(
+      const engine = await ensureBuiltInEngineForInstall(
+        steamGame,
         ENGINE_PINS.current,
         signal
       )
@@ -880,6 +939,11 @@ export async function provisionBridgeBottleForInstall(
   }
 }
 
+/**
+ * 59-REVIEW CR-02 (D-01/D-04): the settings every install-time wine step
+ * uses, from the engine that owns the bottle. null means no usable engine,
+ * so the wine steps are skipped (they never fail an install).
+ */
 export async function resolveInstallEngineSettings(
   steamGame: SteamGame,
   bridgeBottleName: string,
@@ -905,7 +969,7 @@ export async function resolveInstallEngineSettings(
     return { skipped: `engine unavailable: ${decision.detail}` }
   }
   if (decision.needsDownload && decision.pin) {
-    const engine = await steamGame.ensureBuiltInEngineForInstall(decision.pin)
+    const engine = await ensureBuiltInEngineForInstall(steamGame, decision.pin)
     if ('status' in engine) return { skipped: 'engine download failed' }
   }
   const sel = decision.selection
@@ -929,6 +993,7 @@ export async function resolveInstallEngineSettings(
   return { settings: getBridgeBottleSettings(steamGame.appId) }
 }
 
+/** The lease-held part of installBridgeGame: download, shim, redists. */
 export async function installBridgeGameLeased(
   steamGame: SteamGame,
   args: InstallArgs,
@@ -949,7 +1014,7 @@ export async function installBridgeGameLeased(
   // a new install must show finishing again (quick 261031-ihs)
   clearBridgeInstallFinalized(steamGame.appId)
   const targetSteamappsDir = getBottleSteamappsDir(bridgeBottleName)
-  const downloadResult = await steamGame.installDepotDownload(args, {
+  const downloadResult = await installDepotDownload(steamGame, args, {
     targetSteamappsDirOverride: targetSteamappsDir,
     os: 'windows',
     pollerSource: 'bridge',
@@ -995,7 +1060,7 @@ export async function installBridgeGameLeased(
   const shimResult = await placeShimForGame(steamGame.appId, exePath, {
     bottleName: bridgeBottleName,
     gameInstallRoot:
-      steamGame.resolveBridgeGameInstallRoot(exePath, bridgeBottleName) ??
+      resolveBridgeGameInstallRoot(steamGame, exePath, bridgeBottleName) ??
       undefined
   })
   // Phase 51 Plan 07 (fix during integration, Rule 1): placeShimForGame
@@ -1086,7 +1151,8 @@ export async function installBridgeGameLeased(
   // orphaned (D-51-05: the fallback re-downloads, nothing is moved), so
   // the per-game bridge bottle is removed. userRoute is NOT cleared: by
   // construction it is not 'bridge' here, and a forced 'bridge' proceeds.
-  const cegMarkers = steamGame.persistBridgeDrmSignal(
+  const cegMarkers = persistBridgeDrmSignal(
+    steamGame,
     shimResult.drm,
     'installBridgeGame'
   )
@@ -1121,7 +1187,7 @@ export async function installBridgeGameLeased(
       LogPrefix.Steam
     )
   }
-  steamGame.reconcileBridgePrescreen(shimResult)
+  reconcileBridgePrescreen(steamGame, shimResult)
 
   // 24-13 (D-UAT-24-05 wiring, was Rule-2 deviation during Task 3): the
   // `pollerSource: 'bridge'` passed to installDepotDownload above starts a
@@ -1137,12 +1203,13 @@ export async function installBridgeGameLeased(
   // already both succeeded by this point, so is_installed is set directly
   // (mirrors library.ts's pollInstallOnce() 'installed' branch shape)
   // rather than relying solely on the poller.
-  const installRoot = steamGame.resolveBridgeGameInstallRoot(
+  const installRoot = resolveBridgeGameInstallRoot(
+    steamGame,
     exePath,
     bridgeBottleName
   )
   if (installRoot) {
-    steamGame.markBridgeGameInstalled(installRoot)
+    markBridgeGameInstalled(steamGame, installRoot)
   }
 
   // D-UAT-24-03 cascade (a): a successful (re)install un-poisons the
@@ -1171,9 +1238,11 @@ export async function installBridgeGameLeased(
   try {
     // 59-REVIEW CR-02, D-01/D-04: the redists run on the engine that owns
     // the bottle, never stock CrossOver on a built-in-engine bottle.
-    const redistEngine = await steamGame
-      .resolveInstallEngineSettings(bridgeBottleName, installEngine)
-      .catch((error: unknown) => ({ skipped: String(error) }))
+    const redistEngine = await resolveInstallEngineSettings(
+      steamGame,
+      bridgeBottleName,
+      installEngine
+    ).catch((error: unknown) => ({ skipped: String(error) }))
     if ('skipped' in redistEngine) {
       logWarning(
         `SteamGame: appId ${steamGame.appId} install-time shared redists skipped: no usable engine (${redistEngine.skipped})`,
@@ -1220,6 +1289,14 @@ export async function installBridgeGameLeased(
   return { status: 'done' }
 }
 
+/**
+ * Quick 261024-br4: persists `placeShimForGame`'s Steam DRM signal
+ * (`bridge.drm`) and decides whether it is a dead end. An absent signal
+ * (not checked / PE did not parse) leaves the stored value alone; `null`
+ * (parsed, not CEG) clears a stale 'ceg'. Returns the CEG markers when the
+ * caller must stop, or null -- including when the user forced 'bridge'
+ * (D-51-11), which is logged and honoured.
+ */
 export function persistBridgeDrmSignal(
   steamGame: SteamGame,
   drm: { kind: 'ceg'; markers: string[] } | null | undefined,
@@ -1248,6 +1325,12 @@ export function persistBridgeDrmSignal(
   return drm.markers
 }
 
+/**
+ * CR-04: reconcile the persisted steam_api prescreen with a placement
+ * result. 'none' is only ever written over undefined/'none'/'unknown'
+ * (never downgrading a real x86/x64/both), and a persisted 'none' is
+ * upgraded to the scanned arch when the placement found a real import.
+ */
 export function reconcileBridgePrescreen(
   steamGame: SteamGame,
   shimResult: {
@@ -1273,6 +1356,18 @@ export function reconcileBridgePrescreen(
   }
 }
 
+/**
+ * Given a resolved bridge launch exe path (resolveBridgeLaunchExe, Task
+ * 1), derives the game's own install ROOT directory —
+ * `steamapps/common/<installdir>` — via resolve()+relative() containment
+ * (never path.join/string-prefix — the project's own established "path.join
+ * is not containment" lesson, mirrored from shimGenerate.ts's
+ * isContainedWithin). Returns undefined if exePath does not resolve
+ * inside the bridge bottle's `common/` dir at all — should be
+ * unreachable in practice since resolveBridgeLaunchExe only ever returns
+ * paths it built from that SAME root, but this is a defensive check, not
+ * an assumption of trust.
+ */
 export function resolveBridgeGameInstallRoot(
   steamGame: SteamGame,
   exePath: string,
@@ -1305,6 +1400,14 @@ export function resolveBridgeGameInstallRoot(
   return join(commonRoot, installdirSegment)
 }
 
+/**
+ * Directly flips is_installed:true for a completed bridge install —
+ * mirrors library.ts's pollInstallOnce() 'installed'-branch shape
+ * (`{ ...existing, is_installed: true, install: { install_path,
+ * install_size, platform } }` + persist + pushGameToLibrary), since the
+ * bridge path has no ACF poller that can observe completion (see the
+ * deviation note in installBridgeGame above).
+ */
 export function markBridgeGameInstalled(
   steamGame: SteamGame,
   installPath: string
@@ -1329,6 +1432,20 @@ export function markBridgeGameInstalled(
   // an early one cleared "Finishing install…" and showed Play for a moment.
 }
 
+/**
+ * Directly flips is_installed:false for a bridge uninstall — the bridge
+ * bottle has no ACF poller either (uninstallBridgeGame below performs a
+ * real, synchronous file removal, so this is the correct completion
+ * signal, not an ACF observation). Mirrors forceUninstall()'s keep-entry
+ * shape (never library.delete's the entry).
+ *
+ * D-UAT-24-07 fold-in: also emits a gameStatusUpdate 'done', mirroring
+ * markBridgeGameInstalled() above — without it, the frontend's
+ * "Uninstalling" pill never clears even though the backend uninstall
+ * succeeded. Emitted OUTSIDE the `if (existing)` guard (same placement as
+ * markBridgeGameInstalled's) so the pill clears regardless of whether the
+ * library entry happens to be present.
+ */
 export function markBridgeGameUninstalled(steamGame: SteamGame): void {
   const existing = library.get(steamGame.appId)
   if (existing) {
@@ -1348,6 +1465,60 @@ export function markBridgeGameUninstalled(steamGame: SteamGame): void {
   })
 }
 
+/**
+ * Shared depot-download engine for both installNative() (native, opt-in ON,
+ * non-bottle-eligible) and installBottleNative() (D-15, opt-in ON,
+ * bottle-eligible). Calls the Plan 10 (ensureSteamClientReady) and Plan 09
+ * (resolveSteamInstallTarget) seams — the SAME authenticated-CM-connection
+ * check and PICS-derived installdir resolution both paths need — then hands
+ * off to depot.ts's downloadSteamDepots orchestrator (Plan 04-06) with the
+ * caller-selected write target/os. `targetSteamappsDirOverride` replaces
+ * resolveSteamInstallTarget's own (native-library) targetSteamappsDir when
+ * present — the bottle path discards that native-library resolution
+ * entirely and reuses only the PICS-derived `installdir`; `pollerSource`
+ * lets the bottle path reuse the bottle-scoped ACF poller (Plan 08) while
+ * leaving the native path's `startInstallPolling(appId)` call signature
+ * byte-for-byte unchanged.
+ *
+ * Maps downloadSteamDepots's NEVER-throwing { status, error? } outcome onto
+ * InstallResult using the SAME conventions gog/legendary's own install()
+ * functions already use — 'done' -> success, 'error' -> the outcome's
+ * already-classified (Plan 06 classifyDepotError) message so the
+ * DownloadManager queue's EXISTING generic error+Retry surface renders it
+ * (D-06/D-07 reuse, no steam-specific UI, downloadqueue.ts untouched),
+ * 'cancelled' -> the abort-shaped result other runners return on user
+ * cancel (not an error).
+ *
+ * Registers this.appId in nativeInstallsInFlight + a real AbortController
+ * (D-02) for the duration of the download so stop() can abort it — for
+ * EITHER path — released in the finally regardless of outcome.
+ *
+ * D-UAT-05 fix: registration happens FIRST, before either seam await
+ * (ensureSteamClientReady/resolveSteamInstallTarget) — previously it only
+ * happened after both had resolved, so a stop()/cancel() issued while
+ * either was still pending saw nativeInstallsInFlight.has(appId) === false
+ * and hit the historic no-op branch (observed in the field as "SteamGame.stop:
+ * Steam owns process lifecycle ...; no-op"). Registering synchronously up
+ * front closes that window entirely; the two `controller.signal.aborted`
+ * checks below make a cancel issued DURING either seam await still abort
+ * the install promptly instead of silently continuing to downloadSteamDepots.
+ *
+ * T-23-12 single-flight guard: if a LIVE entry already exists for
+ * this.appId, join it — return its stored promise instead of starting a
+ * second downloadSteamDepots (the Gate 1 progress-percent flip-flop root
+ * cause was exactly two concurrent runs each emitting progress against
+ * their own doneBytes). The guard check + registration below happen
+ * synchronously before runNativeDepotDownload's first real await, so the
+ * D-UAT-05 property (stop() issued during either seam await still finds
+ * the appId registered) is preserved.
+ *
+ * T-23-15 pause/resume abort-before-restart: an existing entry whose
+ * `aborted` flag is true (stop() was called) is TEARING DOWN, not live —
+ * joining it would return an aborted result to a caller expecting a fresh
+ * install. Instead, await its settlement first (guaranteeing its `finally`
+ * cleanup has run) before starting a brand-new run, so the prior and the
+ * resumed run never overlap (no stacking).
+ */
 export async function installDepotDownload(
   steamGame: SteamGame,
   args: InstallArgs,
@@ -1375,7 +1546,7 @@ export async function installDepotDownload(
   }
   if (opts.signal?.aborted) return { status: 'abort' }
 
-  const runPromise = steamGame.runNativeDepotDownload(args, opts)
+  const runPromise = runNativeDepotDownload(steamGame, args, opts)
   nativeInstallsInFlight.set(steamGame.appId, {
     promise: runPromise,
     aborted: false
@@ -1383,6 +1554,13 @@ export async function installDepotDownload(
   return runPromise
 }
 
+/**
+ * The actual native depot-download run — split out of installDepotDownload
+ * (T-23-12) so its promise can be registered in nativeInstallsInFlight
+ * BEFORE its first await, letting a concurrent caller for the same appId
+ * join the SAME promise instead of starting a second downloadSteamDepots.
+ * Body/contract unchanged from the pre-Phase-23-05 installDepotDownload.
+ */
 export async function runNativeDepotDownload(
   steamGame: SteamGame,
   args: InstallArgs,
@@ -1456,11 +1634,12 @@ export async function runNativeDepotDownload(
       forceWindowsViaBottle: args.steamForceWindowsViaBottle
     })
     if (!lease.ok) {
-      return steamGame.installResultForRefusal(lease.reason)
+      return installResultForRefusal(steamGame, lease.reason)
     }
     let leasedResult: InstallResult
     try {
-      leasedResult = await steamGame.runNativeDepotDownloadLeased(
+      leasedResult = await runNativeDepotDownloadLeased(
+        steamGame,
         args,
         opts,
         controller,
@@ -1557,6 +1736,12 @@ export async function runNativeDepotDownload(
   }
 }
 
+/**
+ * Phase 54: maps a refused authenticated acquire to an install result. A
+ * go-offline refusal means the guided dialog owns the next step (the install
+ * did not fail), so it returns the same deferredToSetup contract the bridge
+ * route notice uses. Every other refusal carries the fixed not-signed-in copy.
+ */
 export function installResultForRefusal(
   steamGame: SteamGame,
   reason: AuthSessionRefusal
@@ -1582,6 +1767,11 @@ export function installResultForRefusal(
   }
 }
 
+/**
+ * The body of runNativeDepotDownload that needs the authenticated lease:
+ * target resolution, crash breadcrumb, depot download, polling. The caller
+ * owns the lease and the in-flight registry cleanup.
+ */
 export async function runNativeDepotDownloadLeased(
   steamGame: SteamGame,
   args: InstallArgs,

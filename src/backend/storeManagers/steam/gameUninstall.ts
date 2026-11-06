@@ -40,12 +40,17 @@ import { resolveBridgeLaunchExe } from './bridge/launchTarget'
 import { NUMERIC_APP_ID } from './gameConstants'
 import { buildSteamProtocolUrl } from './gameProtocolUrl'
 import type SteamGame from './games'
+import { ensurePlatformsCaptured, isBottleEligible } from './gameEligibility'
+import {
+  markBridgeGameUninstalled,
+  resolveBridgeGameInstallRoot
+} from './gameInstall'
 
 export async function uninstall(
   steamGame: SteamGame,
   _args: RemoveArgs
 ): Promise<ExecResult> {
-  await steamGame.ensurePlatformsCaptured()
+  await ensurePlatformsCaptured(steamGame)
 
   // Phase 51 Plan 09 (D-51-09): LOCATION, not eligibility — see launch()'s
   // identical comment above. uninstall() must act on wherever this
@@ -60,7 +65,7 @@ export async function uninstall(
   // provisioned has nothing installed there for install_path to resolve
   // against — request guided setup instead of a generic refuse. Unaffected
   // by the routing fix (orthogonal to WHERE install_path resolves).
-  if (steamGame.isBottleEligible() && !isBottleReady()) {
+  if (isBottleEligible(steamGame) && !isBottleReady()) {
     logInfo(
       `SteamGame: appId ${steamGame.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of uninstalling`,
       LogPrefix.Steam
@@ -203,11 +208,12 @@ export async function uninstallBridgeGame(
       `SteamGame: uninstallBridgeGame could not resolve the bridge install location for appId ${steamGame.appId} — nothing to remove`,
       LogPrefix.Steam
     )
-    steamGame.markBridgeGameUninstalled()
+    markBridgeGameUninstalled(steamGame)
     return { stdout: '', stderr: '' }
   }
 
-  const installRoot = steamGame.resolveBridgeGameInstallRoot(
+  const installRoot = resolveBridgeGameInstallRoot(
+    steamGame,
     exePath,
     bottleName
   )

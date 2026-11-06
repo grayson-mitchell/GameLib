@@ -13,6 +13,7 @@ import {
 import { restoreBridgeSteamApiOriginals } from './bridge/originalRestore'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
 import type SteamGame from './games'
+import { resolveBridgeGameInstallRoot } from './gameInstall'
 
 export async function moveInstall(
   steamGame: SteamGame,
@@ -38,7 +39,7 @@ export async function repair(steamGame: SteamGame): Promise<ExecResult> {
   if (!exePath || !isBridgeBottleReady(bottle) || !existsSync(exePath)) {
     throw scoped()
   }
-  const installRoot = steamGame.resolveBridgeGameInstallRoot(exePath, bottle)
+  const installRoot = resolveBridgeGameInstallRoot(steamGame, exePath, bottle)
   if (!installRoot) throw scoped()
 
   const result = await restoreBridgeSteamApiOriginals({

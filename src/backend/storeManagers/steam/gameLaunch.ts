@@ -74,6 +74,12 @@ import {
   drmStepNoticeText
 } from './gameDrmLaunch'
 import type SteamGame from './games'
+import {
+  clearStaleBridgeVerdict,
+  ensurePlatformsCaptured,
+  isBottleEligible
+} from './gameEligibility'
+import { ensureBuiltInEngineForInstall } from './gameInstall'
 
 export async function launch(
   steamGame: SteamGame,
@@ -88,9 +94,9 @@ export async function launch(
   noteSteamAuthTrigger('user-play')
   // D-51-07: same auto-clear as install()'s top, before any routing
   // decision below reads the persisted verdict.
-  steamGame.clearStaleBridgeVerdict()
-  await steamGame.ensurePlatformsCaptured()
-  if (steamGame.isBottleEligible()) {
+  clearStaleBridgeVerdict(steamGame)
+  await ensurePlatformsCaptured(steamGame)
+  if (isBottleEligible(steamGame)) {
     // quick/261024-gvu: single-flight. While a bottle/bridge monitor for
     // this appId is live (still starting, or already running) a second Play
     // must not queue another `-applaunch` / wine exe — the monitor keeps
@@ -509,7 +515,7 @@ export async function selectLaunchEngine(
   }
 
   if (decision.needsDownload && decision.pin) {
-    const engine = await steamGame.ensureBuiltInEngineForInstall(decision.pin)
+    const engine = await ensureBuiltInEngineForInstall(steamGame, decision.pin)
     if ('status' in engine && engine.status === 'abort') {
       return { ok: false }
     }

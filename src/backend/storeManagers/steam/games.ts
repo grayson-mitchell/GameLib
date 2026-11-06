@@ -14,10 +14,7 @@ import { parseMetacriticScore } from 'common/metacriticScore'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type LogWriter from 'backend/logger/log_writer'
 import { GameConfig } from 'backend/game_config'
-import {
-  createAbortController,
-  callAbortController
-} from 'backend/utils/aborthandler/aborthandler'
+import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { sendFrontendMessage } from '../../ipc'
 import {
   addShortcuts as addShortcutsUtil,
@@ -57,20 +54,9 @@ import { type OverlayStep } from './bridge/overlay/overlayNotice'
 import type { CrossoverPreflight } from './engine/engineDecision'
 import type { EngineSelection, NonCrossoverEngine } from './engine/engineTypes'
 import { noteSteamAuthTrigger } from './authTrigger'
-// quick-260817-d61: verified during planning that user.ts imports nothing
-// from games.ts (no import of './games' anywhere in user.ts), so this
-// introduces no cycle. Used ONLY by getExtraInfo()'s fire-and-forget
-// locked->unlocked transition below — install()/update()/launch() only need
-// noteSteamAuthTrigger, not SteamUser itself.
-import { type AuthSessionRefusal } from './user'
 import { type DrmLaunchReady } from './bridge/drm/drmLaunchSetup'
 import { type DrmStep } from './bridge/drm/steamclientLayerMode'
 import { stopBridgeHelper } from './bridge/helperProcess'
-// Phase 51 Plan 09 (D-51-07/09): the pure routing resolver + the persisted
-// verdict read/clear family + the current-shim coverage check. games.ts is
-// the sole assembler of resolveBridgeRoute's input and the sole writer of
-// the persisted verdict (bridgeRoute.ts's own header).
-import { type BridgeRouteInput } from './bridge/bridgeRoute'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import type { EnginePin } from './engine/enginePins'
 import { STEAM_STORE_API, NUMERIC_APP_ID } from './gameConstants'
@@ -83,38 +69,17 @@ import { macArchFromMinOS } from './gameRequirements'
 import { type DrmWineLaunch } from './gameDrmLaunch'
 import {
   isNative,
-  isBottleEligibleFromPlatforms,
-  isForcedWindowsViaBottle,
   isBottleEligible,
-  assembleBridgeRouteInput,
-  bridgeRoute,
   checkBridgeRoute,
   isBridgeEligible,
-  clearStaleBridgeVerdict,
-  checkBottleEligibility,
-  ensurePlatformsCaptured
+  checkBottleEligibility
 } from './gameEligibility'
 import {
   install,
-  removeDemotedNativeOrphan,
   installNative,
-  hasBottledSteamCopy,
   installBottleNative,
-  crossoverRequiredError,
   ensureBuiltInEngineForInstall,
-  installBridgeGame,
-  provisionBridgeBottleForInstall,
-  resolveInstallEngineSettings,
-  installBridgeGameLeased,
-  persistBridgeDrmSignal,
-  reconcileBridgePrescreen,
-  resolveBridgeGameInstallRoot,
-  markBridgeGameInstalled,
-  markBridgeGameUninstalled,
-  installDepotDownload,
-  runNativeDepotDownload,
-  installResultForRefusal,
-  runNativeDepotDownloadLeased
+  installBridgeGame
 } from './gameInstall'
 import {
   resolveLaunchOverlay,
@@ -680,44 +645,6 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * quick-260821-le0: closes the 32-bit Mac Steam orphan defect at the
-   * "stop creating new ones" end. `install()`'s `routeThroughBottle` branch
-   * calls this as its FIRST statement, before the bridge/bottle-provisioning
-   * checks below — a demoted title can be bridge-eligible AND already hold
-   * a leftover native i386 install at the same time (the HOARD/63000 shape
-   * that made this defect visible).
-   *
-   * Triple-gated, ALL of:
-   *  1. `isAppleSiliconMac` — the load-bearing safety gate. i386 STILL RUNS
-   *     on an Intel Mac, so an Intel host must keep its native copy. Never
-   *     widen this to a bare `isMac` or to a negated-Intel-probe equivalent
-   *     (see environment.ts's own comment on the positive-probe requirement).
-   *  2. `steamMetadataStore.get(appId)?.mac_arch === '32'` — the specific
-   *     demotion signal, read directly rather than via `isBottleEligible()`,
-   *     which is also true for a merely-not-mac-native title whose native
-   *     install is a DIFFERENT case and out of scope here.
-   *  3. `readAcfState(appId, 'native').state === 'installed'` — the guard
-   *     `install()` has never had.
-   *
-   * On a match: `removeSteamInstallCopy` deletes the native copy, then
-   * `pollUninstallOnce('native')` is the ONLY state update on this path —
-   * it is the existing honest reconciliation mechanism, re-probing bottle/
-   * bridge for a survivor and re-resolving `install_path`, or flipping to
-   * not-installed when nothing survives. No `library.set()` is hand-written
-   * here and no badge is force-flipped in either direction (the badge
-   * follows confirmed on-disk ACF state, per the locked constraint and
-   * `60e89349a`) — a transient "Game Uninstalled" toast immediately before
-   * the bottle install starts is ACCEPTED as honest, not papered over.
-   *
-   * A cleanup failure is never fatal to the install: the whole body is
-   * wrapped in try/catch and only `logWarning`s on failure, following the
-   * same shape as `resumeInterruptedSteamInstall`'s own call site above.
-   */
-  removeDemotedNativeOrphan(): Promise<void> {
-    return removeDemotedNativeOrphan(this)
-  }
-
-  /**
    * SNI-07 (D-13 opt-in ON, non-bottle-eligible) native depot-download install
    * path. Calls the Plan 10 (ensureSteamClientReady) and Plan 09
    * (resolveSteamInstallTarget) seams so those plans can implement the real
@@ -750,22 +677,21 @@ export default class SteamGame implements Game {
    * unchanged so the bottled Windows Steam client's own verify pass
    * (StateFlags 1026 -> 4) is reflected in the UI.
    */
-  /**
-   * 51-REVIEW WR-08: true when an interrupted native download for this appId
-   * targeted the Phase 17 GameLibSteam bottle -- the install-start breadcrumb
-   * (`markSteamNativeInstallStarted`, written before the download await and
-   * cleared only on success) points at that bottle's steamapps dir. The
-   * breadcrumb, not an ACF, is the signal: a hard kill runs no JS, so an
-   * interrupted download leaves no `appmanifest_*.acf` at all. A COMPLETE
-   * GameLibSteam install never reaches install() (it is already installed),
-   * so the breadcrumb covers the resume case the review names.
-   */
-  hasBottledSteamCopy(): boolean {
-    return hasBottledSteamCopy(this)
-  }
-
   installBottleNative(args: InstallArgs): Promise<InstallResult> {
     return installBottleNative(this, args)
+  }
+
+  /**
+   * Phase 59 (D-05): download the pinned built-in engine on first need, with
+   * `engine-download` progress. A failure is a PRECONDITION failure, like a
+   * missing CrossOver: it never marks the bridge failed, so it can never
+   * reroute the title to bottled Steam.
+   */
+  private ensureBuiltInEngineForInstall(
+    pin: EnginePin,
+    signal?: AbortSignal
+  ): Promise<NonCrossoverEngine | InstallResult> {
+    return ensureBuiltInEngineForInstall(this, pin, signal)
   }
 
   /**
@@ -804,276 +730,16 @@ export default class SteamGame implements Game {
    * fallback re-invocation of install() reaches the existing bottled path
    * instead of looping back into the same failing bridge (T-24-17).
    */
-  crossoverRequiredError(): InstallResult {
-    return crossoverRequiredError(this)
-  }
-
-  /**
-   * Phase 59 (D-05): download the pinned built-in engine on first need, with
-   * `engine-download` progress. A failure is a PRECONDITION failure, like a
-   * missing CrossOver: it never marks the bridge failed, so it can never
-   * reroute the title to bottled Steam.
-   */
-  ensureBuiltInEngineForInstall(
-    pin: EnginePin,
-    signal?: AbortSignal
-  ): Promise<NonCrossoverEngine | InstallResult> {
-    return ensureBuiltInEngineForInstall(this, pin, signal)
-  }
-
   installBridgeGame(args: InstallArgs): Promise<InstallResult> {
     return installBridgeGame(this, args)
   }
 
-  /**
-   * The inline bridge-bottle creation of installBridgeGame (BLOCKER 1), now
-   * run under the install lease. Returns the engine that owns the new bottle,
-   * or the InstallResult to stop with.
-   */
-  provisionBridgeBottleForInstall(
-    bridgeBottleName: string,
-    signal?: AbortSignal
-  ): Promise<
-    | { engine: NonCrossoverEngine | 'crossover'; createdHere: boolean }
-    | { result: InstallResult }
-  > {
-    return provisionBridgeBottleForInstall(this, bridgeBottleName, signal)
-  }
-
-  /**
-   * 59-REVIEW CR-02 (D-01/D-04): the settings every install-time wine step
-   * uses, from the engine that owns the bottle. null means no usable engine,
-   * so the wine steps are skipped (they never fail an install).
-   */
   /** engineSwitch's pin source: downloads with the same engine-download statuses as a launch. */
   restorePinEngine = async (
     pin: EnginePin
   ): Promise<NonCrossoverEngine | null> => {
     const result = await this.ensureBuiltInEngineForInstall(pin)
     return 'status' in result ? null : result
-  }
-
-  resolveInstallEngineSettings(
-    bridgeBottleName: string,
-    installEngine: NonCrossoverEngine | 'crossover' | null
-  ): Promise<{ settings: GameSettings } | { skipped: string }> {
-    return resolveInstallEngineSettings(this, bridgeBottleName, installEngine)
-  }
-
-  /** The lease-held part of installBridgeGame: download, shim, redists. */
-  installBridgeGameLeased(
-    args: InstallArgs,
-    bridgeBottleName: string,
-    installEngine: NonCrossoverEngine | 'crossover' | null,
-    signal?: AbortSignal
-  ): Promise<InstallResult> {
-    return installBridgeGameLeased(
-      this,
-      args,
-      bridgeBottleName,
-      installEngine,
-      signal
-    )
-  }
-
-  /**
-   * CR-04: reconcile the persisted steam_api prescreen with a placement
-   * result. 'none' is only ever written over undefined/'none'/'unknown'
-   * (never downgrading a real x86/x64/both), and a persisted 'none' is
-   * upgraded to the scanned arch when the placement found a real import.
-   */
-  /**
-   * Quick 261024-br4: persists `placeShimForGame`'s Steam DRM signal
-   * (`bridge.drm`) and decides whether it is a dead end. An absent signal
-   * (not checked / PE did not parse) leaves the stored value alone; `null`
-   * (parsed, not CEG) clears a stale 'ceg'. Returns the CEG markers when the
-   * caller must stop, or null -- including when the user forced 'bridge'
-   * (D-51-11), which is logged and honoured.
-   */
-  persistBridgeDrmSignal(
-    drm: { kind: 'ceg'; markers: string[] } | null | undefined,
-    caller: 'installBridgeGame' | 'launchBridgeGame'
-  ): string[] | null {
-    return persistBridgeDrmSignal(this, drm, caller)
-  }
-
-  reconcileBridgePrescreen(shimResult: {
-    status: string
-    verdict?: { arch: 'x86' | 'x64' }
-  }): void {
-    return reconcileBridgePrescreen(this, shimResult)
-  }
-
-  /**
-   * Given a resolved bridge launch exe path (resolveBridgeLaunchExe, Task
-   * 1), derives the game's own install ROOT directory —
-   * `steamapps/common/<installdir>` — via resolve()+relative() containment
-   * (never path.join/string-prefix — the project's own established "path.join
-   * is not containment" lesson, mirrored from shimGenerate.ts's
-   * isContainedWithin). Returns undefined if exePath does not resolve
-   * inside the bridge bottle's `common/` dir at all — should be
-   * unreachable in practice since resolveBridgeLaunchExe only ever returns
-   * paths it built from that SAME root, but this is a defensive check, not
-   * an assumption of trust.
-   */
-  resolveBridgeGameInstallRoot(
-    exePath: string,
-    bottleNameOverride?: string
-  ): string | undefined {
-    return resolveBridgeGameInstallRoot(this, exePath, bottleNameOverride)
-  }
-
-  /**
-   * Directly flips is_installed:true for a completed bridge install —
-   * mirrors library.ts's pollInstallOnce() 'installed'-branch shape
-   * (`{ ...existing, is_installed: true, install: { install_path,
-   * install_size, platform } }` + persist + pushGameToLibrary), since the
-   * bridge path has no ACF poller that can observe completion (see the
-   * deviation note in installBridgeGame above).
-   */
-  markBridgeGameInstalled(installPath: string): void {
-    return markBridgeGameInstalled(this, installPath)
-  }
-
-  /**
-   * Directly flips is_installed:false for a bridge uninstall — the bridge
-   * bottle has no ACF poller either (uninstallBridgeGame below performs a
-   * real, synchronous file removal, so this is the correct completion
-   * signal, not an ACF observation). Mirrors forceUninstall()'s keep-entry
-   * shape (never library.delete's the entry).
-   *
-   * D-UAT-24-07 fold-in: also emits a gameStatusUpdate 'done', mirroring
-   * markBridgeGameInstalled() above — without it, the frontend's
-   * "Uninstalling" pill never clears even though the backend uninstall
-   * succeeded. Emitted OUTSIDE the `if (existing)` guard (same placement as
-   * markBridgeGameInstalled's) so the pill clears regardless of whether the
-   * library entry happens to be present.
-   */
-  markBridgeGameUninstalled(): void {
-    return markBridgeGameUninstalled(this)
-  }
-
-  /**
-   * Shared depot-download engine for both installNative() (native, opt-in ON,
-   * non-bottle-eligible) and installBottleNative() (D-15, opt-in ON,
-   * bottle-eligible). Calls the Plan 10 (ensureSteamClientReady) and Plan 09
-   * (resolveSteamInstallTarget) seams — the SAME authenticated-CM-connection
-   * check and PICS-derived installdir resolution both paths need — then hands
-   * off to depot.ts's downloadSteamDepots orchestrator (Plan 04-06) with the
-   * caller-selected write target/os. `targetSteamappsDirOverride` replaces
-   * resolveSteamInstallTarget's own (native-library) targetSteamappsDir when
-   * present — the bottle path discards that native-library resolution
-   * entirely and reuses only the PICS-derived `installdir`; `pollerSource`
-   * lets the bottle path reuse the bottle-scoped ACF poller (Plan 08) while
-   * leaving the native path's `startInstallPolling(appId)` call signature
-   * byte-for-byte unchanged.
-   *
-   * Maps downloadSteamDepots's NEVER-throwing { status, error? } outcome onto
-   * InstallResult using the SAME conventions gog/legendary's own install()
-   * functions already use — 'done' -> success, 'error' -> the outcome's
-   * already-classified (Plan 06 classifyDepotError) message so the
-   * DownloadManager queue's EXISTING generic error+Retry surface renders it
-   * (D-06/D-07 reuse, no steam-specific UI, downloadqueue.ts untouched),
-   * 'cancelled' -> the abort-shaped result other runners return on user
-   * cancel (not an error).
-   *
-   * Registers this.appId in nativeInstallsInFlight + a real AbortController
-   * (D-02) for the duration of the download so stop() can abort it — for
-   * EITHER path — released in the finally regardless of outcome.
-   *
-   * D-UAT-05 fix: registration happens FIRST, before either seam await
-   * (ensureSteamClientReady/resolveSteamInstallTarget) — previously it only
-   * happened after both had resolved, so a stop()/cancel() issued while
-   * either was still pending saw nativeInstallsInFlight.has(appId) === false
-   * and hit the historic no-op branch (observed in the field as "SteamGame.stop:
-   * Steam owns process lifecycle ...; no-op"). Registering synchronously up
-   * front closes that window entirely; the two `controller.signal.aborted`
-   * checks below make a cancel issued DURING either seam await still abort
-   * the install promptly instead of silently continuing to downloadSteamDepots.
-   *
-   * T-23-12 single-flight guard: if a LIVE entry already exists for
-   * this.appId, join it — return its stored promise instead of starting a
-   * second downloadSteamDepots (the Gate 1 progress-percent flip-flop root
-   * cause was exactly two concurrent runs each emitting progress against
-   * their own doneBytes). The guard check + registration below happen
-   * synchronously before runNativeDepotDownload's first real await, so the
-   * D-UAT-05 property (stop() issued during either seam await still finds
-   * the appId registered) is preserved.
-   *
-   * T-23-15 pause/resume abort-before-restart: an existing entry whose
-   * `aborted` flag is true (stop() was called) is TEARING DOWN, not live —
-   * joining it would return an aborted result to a caller expecting a fresh
-   * install. Instead, await its settlement first (guaranteeing its `finally`
-   * cleanup has run) before starting a brand-new run, so the prior and the
-   * resumed run never overlap (no stacking).
-   */
-  installDepotDownload(
-    args: InstallArgs,
-    opts: {
-      targetSteamappsDirOverride?: string
-      os: string
-      pollerSource?: 'bottle' | 'bridge'
-      signal?: AbortSignal
-    }
-  ): Promise<InstallResult> {
-    return installDepotDownload(this, args, opts)
-  }
-
-  /**
-   * The actual native depot-download run — split out of installDepotDownload
-   * (T-23-12) so its promise can be registered in nativeInstallsInFlight
-   * BEFORE its first await, letting a concurrent caller for the same appId
-   * join the SAME promise instead of starting a second downloadSteamDepots.
-   * Body/contract unchanged from the pre-Phase-23-05 installDepotDownload.
-   */
-  runNativeDepotDownload(
-    args: InstallArgs,
-    opts: {
-      targetSteamappsDirOverride?: string
-      os: string
-      pollerSource?: 'bottle' | 'bridge'
-      signal?: AbortSignal
-    }
-  ): Promise<InstallResult> {
-    return runNativeDepotDownload(this, args, opts)
-  }
-
-  /**
-   * Phase 54: maps a refused authenticated acquire to an install result. A
-   * go-offline refusal means the guided dialog owns the next step (the install
-   * did not fail), so it returns the same deferredToSetup contract the bridge
-   * route notice uses. Every other refusal carries the fixed not-signed-in copy.
-   */
-  installResultForRefusal(reason: AuthSessionRefusal): InstallResult {
-    return installResultForRefusal(this, reason)
-  }
-
-  /**
-   * The body of runNativeDepotDownload that needs the authenticated lease:
-   * target resolution, crash breadcrumb, depot download, polling. The caller
-   * owns the lease and the in-flight registry cleanup.
-   */
-  runNativeDepotDownloadLeased(
-    args: InstallArgs,
-    opts: {
-      targetSteamappsDirOverride?: string
-      os: string
-      pollerSource?: 'bottle' | 'bridge'
-    },
-    controller: ReturnType<typeof createAbortController>,
-    runStart: number,
-    deferredPoll: {
-      handoff?: { manifestPath: string; skippedDepots: string[] }
-    }
-  ): Promise<InstallResult> {
-    return runNativeDepotDownloadLeased(
-      this,
-      args,
-      opts,
-      controller,
-      runStart,
-      deferredPoll
-    )
   }
 
   /**
@@ -1095,34 +761,6 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * D-11/MAC32 PLATFORM-derived half of the bottle-eligibility verdict —
-   * true only for a CONFIRMED not-native macOS game. Split from
-   * `isBottleEligible()` below by 34.13-14 so the Phase 24 bridge
-   * (`isBridgeEligible()`) can compose ONLY this platform signal and never
-   * the D-17 forced verdict (see `isBottleEligible()`'s own doc comment for
-   * why). Body is byte-identical to the pre-34.13-14 `isBottleEligible()`.
-   */
-  isBottleEligibleFromPlatforms(): boolean {
-    return isBottleEligibleFromPlatforms(this)
-  }
-
-  /**
-   * D-17 (34.13-14) durability half of the bottle-eligibility verdict — true
-   * only when a PRIOR install actually committed bits to the Phase 17
-   * bottle via the D-17 override (34.13-06's `forceWindowsViaBottle`) and
-   * that verdict was persisted (`markForcedWindowsViaBottle`,
-   * `fetchMetadataIfNeeded`'s carry-forward). `=== true` strict equality
-   * only — an absent or explicit-`false` field never re-routes. The `isMac`
-   * guard here is independent of `isBottleEligible()`'s own (not merely
-   * redundant with it): this method is reached on its own by the wrapper
-   * below, and D-18 means a renderer-era flag must never resurrect a bottle
-   * path on a host with no bottle at all.
-   */
-  isForcedWindowsViaBottle(): boolean {
-    return isForcedWindowsViaBottle(this)
-  }
-
-  /**
    * The single source of truth for whether getSettings()/isNative()/
    * install()/launch()/uninstall() should route through the bottled Steam
    * client instead of the native steam:// path — the OR of the platform-
@@ -1131,36 +769,8 @@ export default class SteamGame implements Game {
    * this split and become consistent together the moment either half
    * changes.
    */
-  isBottleEligible(): boolean {
+  private isBottleEligible(): boolean {
     return isBottleEligible(this)
-  }
-
-  /**
-   * Phase 51 Plan 09 (D-51-07/09): the SOLE input assembler for
-   * `resolveBridgeRoute()` (bridgeRoute.ts) — the only place in this file
-   * allowed to call `bridgeAllowlist.has` with an appId (assumption_delta_decision,
-   * acceptance-counted at exactly one call-site occurrence). Every other routing
-   * decision in this file goes through `bridgeRoute()` below instead of a
-   * second direct allowlist/verdict read.
-   *
-   * D-17 (34.13-14) pin, carried forward unchanged: `platformsBottleEligible`
-   * reads `isBottleEligibleFromPlatforms()`, NEVER the widened
-   * `isBottleEligible()` / the D-17 forced-verdict wrapper — see
-   * `bridgeRoute.ts`'s own doc comment for why widening this would resolve a
-   * route into a bottle (`GameLibSteamBridge`) that a D-17 forced install
-   * never wrote a single byte into (that install went to `GameLibSteam`).
-   */
-  assembleBridgeRouteInput(): BridgeRouteInput {
-    return assembleBridgeRouteInput(this)
-  }
-
-  /**
-   * D-51-07: the single routing read for this appId. `resolveBridgeRoute()`
-   * is a pure function (bridgeRoute.ts) — this method is the sole place in
-   * games.ts that assembles its input and calls it.
-   */
-  bridgeRoute(): SteamBridgeRouteVerdict {
-    return bridgeRoute(this)
   }
 
   /**
@@ -1195,20 +805,6 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * D-51-07: auto-clears a persisted scan-miss the moment the currently
-   * shipped shim is proven to cover every symbol it used to miss —
-   * `isScanVerdictNowCovered()` (shimCoverage.ts) decides "now covered"
-   * against the CURRENT exported-symbol/served-interface tables, never a
-   * re-scan. No-op when there is no persisted miss, or the miss still isn't
-   * covered — `clearBridgeScanVerdict()` itself already no-ops on
-   * nothing-to-clear (bridgeVerdict.ts), so this can never fabricate a
-   * metadata entry.
-   */
-  clearStaleBridgeVerdict(): void {
-    return clearStaleBridgeVerdict(this)
-  }
-
-  /**
    * D-09's single backend-authoritative bottle-eligibility seam, consumed
    * over IPC by plan 34.13-07 (`isSteamBottleEligible`) and, through that
    * channel, by 34.13-11's in-dialog eligibility probe (D-25 — the options
@@ -1226,32 +822,6 @@ export default class SteamGame implements Game {
    */
   checkBottleEligibility(): Promise<boolean> {
     return checkBottleEligibility(this)
-  }
-
-  /**
-   * Phase 17 Plan 09 (MACSTEAM-04 gap closure): forces platform data to be
-   * resolved BEFORE install()/launch()/uninstall() consult isBottleEligible(),
-   * decoupling bottle routing from the async fetchMetadataIfNeeded race
-   * (.planning/debug/steam-bottle-guided-setup-never-fires.md). Previously,
-   * isBottleEligible() only saw fresh platform data if the fire-and-forget
-   * lazy fetch (triggered by getGameInfo()) had already completed by the time
-   * the user clicked Install/Play — a cold cache or a slow/failed fetch left
-   * platformsCaptured false, silently routing a Windows-only macOS game down
-   * the native steam:// path with no guided-setup dialog.
-   *
-   * No-op on non-macOS (native steam:// delegation is unaffected) and when
-   * this appId's platforms are already captured (no redundant network on the
-   * hot path).
-   *
-   * getGameInfo() call below re-triggers the SAME lazy fetch as a fire-and-forget
-   * side effect (adding this.appId to pendingFetches synchronously). Our own
-   * explicit fetchMetadataIfNeeded() call then hits the T-2-03 dedup guard and
-   * returns immediately without a second network request — so we fall into the
-   * bounded poll below and wait for that single in-flight fetch to resolve
-   * platformsCaptured, rather than hoping it finishes before routing happens.
-   */
-  ensurePlatformsCaptured(): Promise<void> {
-    return ensurePlatformsCaptured(this)
   }
 
   /**

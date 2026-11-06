@@ -27,9 +27,17 @@ import { bridgeFailedThisSession } from './gameSessionState'
 import type SteamGame from './games'
 
 export function isNative(steamGame: SteamGame): boolean {
-  return !steamGame.isBottleEligible()
+  return !isBottleEligible(steamGame)
 }
 
+/**
+ * D-11/MAC32 PLATFORM-derived half of the bottle-eligibility verdict —
+ * true only for a CONFIRMED not-native macOS game. Split from
+ * `isBottleEligible()` below by 34.13-14 so the Phase 24 bridge
+ * (`isBridgeEligible()`) can compose ONLY this platform signal and never
+ * the D-17 forced verdict (see `isBottleEligible()`'s own doc comment for
+ * why). Body is byte-identical to the pre-34.13-14 `isBottleEligible()`.
+ */
 export function isBottleEligibleFromPlatforms(steamGame: SteamGame): boolean {
   if (!isMac) return false
   const meta = steamMetadataStore.get(steamGame.appId)
@@ -49,6 +57,18 @@ export function isBottleEligibleFromPlatforms(steamGame: SteamGame): boolean {
   return meta?.platformsCaptured === true && meta?.is_mac_native === false
 }
 
+/**
+ * D-17 (34.13-14) durability half of the bottle-eligibility verdict — true
+ * only when a PRIOR install actually committed bits to the Phase 17
+ * bottle via the D-17 override (34.13-06's `forceWindowsViaBottle`) and
+ * that verdict was persisted (`markForcedWindowsViaBottle`,
+ * `fetchMetadataIfNeeded`'s carry-forward). `=== true` strict equality
+ * only — an absent or explicit-`false` field never re-routes. The `isMac`
+ * guard here is independent of `isBottleEligible()`'s own (not merely
+ * redundant with it): this method is reached on its own by the wrapper
+ * below, and D-18 means a renderer-era flag must never resurrect a bottle
+ * path on a host with no bottle at all.
+ */
 export function isForcedWindowsViaBottle(steamGame: SteamGame): boolean {
   return (
     isMac &&
@@ -58,16 +78,31 @@ export function isForcedWindowsViaBottle(steamGame: SteamGame): boolean {
 
 export function isBottleEligible(steamGame: SteamGame): boolean {
   return (
-    steamGame.isBottleEligibleFromPlatforms() ||
-    steamGame.isForcedWindowsViaBottle()
+    isBottleEligibleFromPlatforms(steamGame) ||
+    isForcedWindowsViaBottle(steamGame)
   )
 }
 
+/**
+ * Phase 51 Plan 09 (D-51-07/09): the SOLE input assembler for
+ * `resolveBridgeRoute()` (bridgeRoute.ts) — the only place in this file
+ * allowed to call `bridgeAllowlist.has` with an appId (assumption_delta_decision,
+ * acceptance-counted at exactly one call-site occurrence). Every other routing
+ * decision in this file goes through `bridgeRoute()` below instead of a
+ * second direct allowlist/verdict read.
+ *
+ * D-17 (34.13-14) pin, carried forward unchanged: `platformsBottleEligible`
+ * reads `isBottleEligibleFromPlatforms()`, NEVER the widened
+ * `isBottleEligible()` / the D-17 forced-verdict wrapper — see
+ * `bridgeRoute.ts`'s own doc comment for why widening this would resolve a
+ * route into a bottle (`GameLibSteamBridge`) that a D-17 forced install
+ * never wrote a single byte into (that install went to `GameLibSteam`).
+ */
 export function assembleBridgeRouteInput(
   steamGame: SteamGame
 ): BridgeRouteInput {
   return {
-    platformsBottleEligible: steamGame.isBottleEligibleFromPlatforms(),
+    platformsBottleEligible: isBottleEligibleFromPlatforms(steamGame),
     isSeed: bridgeAllowlist.has(steamGame.appId),
     // `?? null`: bridgeAllowlist.knownBadReason's own contract already
     // returns `null` for "no match", but this coerces any other falsy
@@ -82,21 +117,36 @@ export function assembleBridgeRouteInput(
   }
 }
 
+/**
+ * D-51-07: the single routing read for this appId. `resolveBridgeRoute()`
+ * is a pure function (bridgeRoute.ts) — this method is the sole place in
+ * games.ts that assembles its input and calls it.
+ */
 export function bridgeRoute(steamGame: SteamGame): SteamBridgeRouteVerdict {
-  return resolveBridgeRoute(steamGame.assembleBridgeRouteInput())
+  return resolveBridgeRoute(assembleBridgeRouteInput(steamGame))
 }
 
 export async function checkBridgeRoute(
   steamGame: SteamGame
 ): Promise<SteamBridgeRouteVerdict> {
-  await steamGame.ensurePlatformsCaptured()
-  return steamGame.bridgeRoute()
+  await ensurePlatformsCaptured(steamGame)
+  return bridgeRoute(steamGame)
 }
 
 export function isBridgeEligible(steamGame: SteamGame): boolean {
-  return steamGame.bridgeRoute().route === 'bridge'
+  return bridgeRoute(steamGame).route === 'bridge'
 }
 
+/**
+ * D-51-07: auto-clears a persisted scan-miss the moment the currently
+ * shipped shim is proven to cover every symbol it used to miss —
+ * `isScanVerdictNowCovered()` (shimCoverage.ts) decides "now covered"
+ * against the CURRENT exported-symbol/served-interface tables, never a
+ * re-scan. No-op when there is no persisted miss, or the miss still isn't
+ * covered — `clearBridgeScanVerdict()` itself already no-ops on
+ * nothing-to-clear (bridgeVerdict.ts), so this can never fabricate a
+ * metadata entry.
+ */
 export function clearStaleBridgeVerdict(steamGame: SteamGame): void {
   const verdict = readBridgeVerdict(steamGame.appId)
   const scan = verdict?.scan
@@ -112,10 +162,32 @@ export function clearStaleBridgeVerdict(steamGame: SteamGame): void {
 export async function checkBottleEligibility(
   steamGame: SteamGame
 ): Promise<boolean> {
-  await steamGame.ensurePlatformsCaptured()
-  return steamGame.isBottleEligible()
+  await ensurePlatformsCaptured(steamGame)
+  return isBottleEligible(steamGame)
 }
 
+/**
+ * Phase 17 Plan 09 (MACSTEAM-04 gap closure): forces platform data to be
+ * resolved BEFORE install()/launch()/uninstall() consult isBottleEligible(),
+ * decoupling bottle routing from the async fetchMetadataIfNeeded race
+ * (.planning/debug/steam-bottle-guided-setup-never-fires.md). Previously,
+ * isBottleEligible() only saw fresh platform data if the fire-and-forget
+ * lazy fetch (triggered by getGameInfo()) had already completed by the time
+ * the user clicked Install/Play — a cold cache or a slow/failed fetch left
+ * platformsCaptured false, silently routing a Windows-only macOS game down
+ * the native steam:// path with no guided-setup dialog.
+ *
+ * No-op on non-macOS (native steam:// delegation is unaffected) and when
+ * this appId's platforms are already captured (no redundant network on the
+ * hot path).
+ *
+ * getGameInfo() call below re-triggers the SAME lazy fetch as a fire-and-forget
+ * side effect (adding this.appId to pendingFetches synchronously). Our own
+ * explicit fetchMetadataIfNeeded() call then hits the T-2-03 dedup guard and
+ * returns immediately without a second network request — so we fall into the
+ * bounded poll below and wait for that single in-flight fetch to resolve
+ * platformsCaptured, rather than hoping it finishes before routing happens.
+ */
 export async function ensurePlatformsCaptured(
   steamGame: SteamGame
 ): Promise<void> {

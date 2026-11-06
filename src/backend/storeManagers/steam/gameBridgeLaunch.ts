@@ -76,6 +76,11 @@ import {
   type DrmWineLaunch
 } from './gameDrmLaunch'
 import type SteamGame from './games'
+import {
+  persistBridgeDrmSignal,
+  reconcileBridgePrescreen,
+  resolveBridgeGameInstallRoot
+} from './gameInstall'
 /**
  * Phase 60 (D-10): how long after the process monitor reports the game gone we
  * wait for the wine wrapper's exit code before deciding on lifetime alone.
@@ -216,7 +221,8 @@ export async function launchBridgeGameBody(
     wantsDrm ? 'steamclient-layer' : 'tcp'
   )
   const drmInstallRoot = wantsDrm
-    ? steamGame.resolveBridgeGameInstallRoot(
+    ? resolveBridgeGameInstallRoot(
+        steamGame,
         exePath,
         bridgeBottleSettings.wineCrossoverBottle
       )
@@ -346,7 +352,8 @@ export async function launchBridgeGameBody(
   const shimResult = await placeShimForGame(steamGame.appId, exePath, {
     bottleName: bridgeBottleSettings.wineCrossoverBottle,
     gameInstallRoot:
-      steamGame.resolveBridgeGameInstallRoot(
+      resolveBridgeGameInstallRoot(
+        steamGame,
         exePath,
         bridgeBottleSettings.wineCrossoverBottle
       ) ?? undefined,
@@ -421,7 +428,8 @@ export async function launchBridgeGameBody(
   // would otherwise idle ~30s and exit silently. Same dialog as install,
   // but the bottle is NOT removed -- launch never deletes (mirrors the
   // win64-no-shim handling above). A forced 'bridge' proceeds.
-  const cegMarkers = steamGame.persistBridgeDrmSignal(
+  const cegMarkers = persistBridgeDrmSignal(
+    steamGame,
     shimResult.drm,
     'launchBridgeGame'
   )
@@ -440,7 +448,7 @@ export async function launchBridgeGameBody(
   }
 
   // CR-04: already-installed titles self-heal a wrong persisted 'none'.
-  steamGame.reconcileBridgePrescreen(shimResult)
+  reconcileBridgePrescreen(steamGame, shimResult)
 
   // D-51-09 (Task 2): a title that imports nothing from
   // steam_api(64)?.dll at all has nothing for the bridge helper to
@@ -661,7 +669,8 @@ export async function fireBridgeWineLaunch(
     // game, so starting the monitor after the await meant it started after
     // its own game had exited. The wine promise is therefore never awaited:
     // its settlement is routed to the monitor's launcherExited() instead.
-    const installRoot = steamGame.resolveBridgeGameInstallRoot(
+    const installRoot = resolveBridgeGameInstallRoot(
+      steamGame,
       exePath,
       bridgeBottleSettings.wineCrossoverBottle
     )
@@ -1023,7 +1032,8 @@ export async function fireBridgeWineLaunch(
     // this cwd as its Windows current directory.
     const launchCwd =
       resolveBridgeLaunchWorkingDir(steamGame.appId) ??
-      steamGame.resolveBridgeGameInstallRoot(
+      resolveBridgeGameInstallRoot(
+        steamGame,
         exePath,
         bridgeBottleSettings.wineCrossoverBottle
       ) ??
