@@ -1,6 +1,7 @@
 /**
  * quick 261105-ord: backend caller for the bridge helper's
- * `--steam-installapp` subcommand (native/steam-bridge/helper/
+ * `--steam-installapp` subcommand, and (quick 261106-s3n) its
+ * `--steam-uninstallapp` subcommand (native/steam-bridge/helper/
  * gamelib_installapp.h). Never throws; every failure maps to a typed
  * 'unavailable' outcome so callers fall back to today's behaviour.
  *
@@ -25,8 +26,15 @@ interface SteamInstallAppRunResult {
   code: number | null
 }
 
+export type SteamUninstallAppOutcome =
+  | { kind: 'ok' }
+  | { kind: 'unavailable'; reason: string }
+  | { kind: 'error'; code: number; installedApps: number | null }
+
 interface SteamInstallAppDeps {
   helperPath?: string
+  /** Only consulted by the uninstall caller (default process.platform). */
+  platform?: NodeJS.Platform
   run?: (
     file: string,
     args: string[],
@@ -66,6 +74,47 @@ function warn(appId: string, detail: string, stderr = ''): void {
   )
 }
 
+type HelperCall =
+  | { ok: true; parsed: Record<string, unknown>; stderr: string }
+  | { ok: false; reason: string; stderr: string }
+
+/** Shared spawn + last-line JSON parse for both subcommands. */
+async function callHelper(
+  appId: string,
+  helperPath: string,
+  args: string[],
+  deps: SteamInstallAppDeps
+): Promise<HelperCall> {
+  let res: SteamInstallAppRunResult
+  try {
+    res = await (deps.run ?? defaultRun)(helperPath, args, HELPER_TIMEOUT_MS)
+  } catch (error) {
+    warn(appId, `helper-failed (${String(error)})`)
+    return { ok: false, reason: 'helper-failed', stderr: '' }
+  }
+
+  const lines = res.stdout.split('\n').filter((l) => l.trim() !== '')
+  const last = lines[lines.length - 1]
+  try {
+    const value: unknown = last === undefined ? undefined : JSON.parse(last)
+    if (value && typeof value === 'object') {
+      return {
+        ok: true,
+        parsed: value as Record<string, unknown>,
+        stderr: res.stderr
+      }
+    }
+  } catch {
+    // fall through to the no-result-line report
+  }
+  warn(
+    appId,
+    `helper-failed (exit ${String(res.code)}, no result line)`,
+    res.stderr
+  )
+  return { ok: false, reason: 'helper-failed', stderr: res.stderr }
+}
+
 export async function requestSteamInstallApp(
   appId: string,
   opts: { libraryPath?: string } = {},
@@ -83,46 +132,72 @@ export async function requestSteamInstallApp(
   const args = ['--steam-installapp', appId]
   if (opts.libraryPath !== undefined) args.push('--library', opts.libraryPath)
 
-  let res: SteamInstallAppRunResult
-  try {
-    res = await (deps.run ?? defaultRun)(helperPath, args, HELPER_TIMEOUT_MS)
-  } catch (error) {
-    warn(appId, `helper-failed (${String(error)})`)
-    return { kind: 'unavailable', reason: 'helper-failed' }
-  }
+  const call = await callHelper(appId, helperPath, args, deps)
+  if (!call.ok) return { kind: 'unavailable', reason: call.reason }
+  const { parsed, stderr } = call
 
-  const lines = res.stdout.split('\n').filter((l) => l.trim() !== '')
-  const last = lines[lines.length - 1]
-  let parsed: Record<string, unknown> | undefined
-  try {
-    const value: unknown = last === undefined ? undefined : JSON.parse(last)
-    if (value && typeof value === 'object') {
-      parsed = value as Record<string, unknown>
-    }
-  } catch {
-    parsed = undefined
-  }
-
-  if (parsed?.result === 'ok') {
+  if (parsed.result === 'ok') {
     const folderIndex =
       typeof parsed.folderIndex === 'number' ? parsed.folderIndex : 0
     return { kind: 'ok', folderIndex }
   }
-  if (parsed?.result === 'unavailable' && typeof parsed.reason === 'string') {
-    warn(appId, `unavailable: ${parsed.reason}`, res.stderr)
+  if (parsed.result === 'unavailable' && typeof parsed.reason === 'string') {
+    warn(appId, `unavailable: ${parsed.reason}`, stderr)
     return { kind: 'unavailable', reason: parsed.reason }
   }
-  if (
-    parsed?.result === 'error' &&
-    typeof parsed.eAppUpdateError === 'number'
-  ) {
-    warn(appId, `EAppUpdateError ${parsed.eAppUpdateError}`, res.stderr)
+  if (parsed.result === 'error' && typeof parsed.eAppUpdateError === 'number') {
+    warn(appId, `EAppUpdateError ${parsed.eAppUpdateError}`, stderr)
     return { kind: 'error', code: parsed.eAppUpdateError }
   }
-  warn(
+  warn(appId, 'helper-failed (unrecognised result line)', stderr)
+  return { kind: 'unavailable', reason: 'helper-failed' }
+}
+
+/**
+ * quick 261106-s3n: ask running, signed-in Steam to UninstallApp(appId).
+ * macOS arm64 only; elsewhere (and for any helper doubt) the caller falls
+ * back to deleting the files itself.
+ */
+export async function requestSteamUninstallApp(
+  appId: string,
+  deps: SteamInstallAppDeps = {}
+): Promise<SteamUninstallAppOutcome> {
+  if (!/^\d{1,10}$/.test(appId)) {
+    return { kind: 'unavailable', reason: 'bad-appid' }
+  }
+  if ((deps.platform ?? process.platform) !== 'darwin') {
+    return { kind: 'unavailable', reason: 'unsupported-platform' }
+  }
+  const helperPath = deps.helperPath ?? steamBridgeHelperPath
+  if (!existsSync(helperPath)) {
+    warn(appId, 'helper-missing')
+    return { kind: 'unavailable', reason: 'helper-missing' }
+  }
+
+  const call = await callHelper(
     appId,
-    `helper-failed (exit ${String(res.code)}, no result line)`,
-    res.stderr
+    helperPath,
+    ['--steam-uninstallapp', appId],
+    deps
   )
+  if (!call.ok) return { kind: 'unavailable', reason: call.reason }
+  const { parsed, stderr } = call
+
+  if (parsed.result === 'ok') return { kind: 'ok' }
+  if (parsed.result === 'unavailable' && typeof parsed.reason === 'string') {
+    warn(appId, `uninstall unavailable: ${parsed.reason}`, stderr)
+    return { kind: 'unavailable', reason: parsed.reason }
+  }
+  if (parsed.result === 'error' && typeof parsed.eAppUpdateError === 'number') {
+    const n = parsed.installedApps
+    const installedApps = typeof n === 'number' && n >= 0 ? n : null
+    warn(
+      appId,
+      `UninstallApp EAppUpdateError ${parsed.eAppUpdateError}`,
+      stderr
+    )
+    return { kind: 'error', code: parsed.eAppUpdateError, installedApps }
+  }
+  warn(appId, 'helper-failed (unrecognised result line)', stderr)
   return { kind: 'unavailable', reason: 'helper-failed' }
 }

@@ -30,6 +30,15 @@
  *     are NOT decoded: the InstallApp guard is that the NEXT slot carries
  *     UninstallApp's ID (the 065 neighbour order).
  *
+ * quick 261106-s3n. `steam-bridge-helper --steam-uninstallapp <appId>
+ * [--dry-run]` asks the same running client to UninstallApp (spike 067). The
+ * UninstallApp slot is only called when it is the verified InstallApp slot + 1
+ * and carries the unique 0x4505 function ID; GetNumInstalledApps (0xde40) is
+ * only called on its own unique slot, otherwise installedApps is reported -1.
+ *   {"result":"ok","appId":N,"eAppUpdateError":0,...}              exit 0
+ *   {"result":"error","appId":N,"eAppUpdateError":E,"installedApps":K} exit 3
+ * (error 18 with installedApps 0 = signed-out Steam; nothing was deleted.)
+ *
  * Output: exactly ONE JSON line on the original stdout; everything Steam logs
  * goes to stderr (fd 1 is redirected to fd 2 while Steam code runs).
  *   {"result":"ok",...}                       exit 0
@@ -66,6 +75,7 @@
 
 #define GL_IA_FN_INSTALLAPP 0xdd9au
 #define GL_IA_FN_UNINSTALLAPP 0x4505u
+#define GL_IA_FN_NUMINSTALLED 0xde40u
 #define GL_IA_FN_NUMFOLDERS 0xab50u
 #define GL_IA_FN_FOLDERPATH 0xf27cu
 
@@ -463,11 +473,65 @@ static int gl_ia_run(uint32_t app_id, const char *library, bool dry_run) {
   return GL_IA_EXIT_ERROR;
 }
 
+/* quick 261106-s3n: --steam-uninstallapp. Same attach order as gl_ia_run. */
+static int gl_ia_run_uninstall(uint32_t app_id, bool dry_run) {
+  fflush(NULL);
+  gl_ia_out_fd = dup(1);
+  if (gl_ia_out_fd < 0) gl_ia_out_fd = 1;
+  else dup2(2, 1);
+
+  const char *reason = NULL;
+  int getter_slot = gl_ia_find_getter_slot(&reason);
+  if (getter_slot < 0) return gl_ia_unavailable(reason ? reason : "app-manager-not-found");
+
+  gl_ia_session s = {0};
+  const char *why = gl_ia_attach(&s);
+  if (why) return gl_ia_unavailable(why);
+  void *apm = gl_ia_call_getter(&s, getter_slot);
+  if (!apm || !strstr(gl_ia_rtti(apm), "IClientAppManager"))
+    return gl_ia_unavailable("app-manager-not-found");
+
+  void **vt = gl_ia_vt(apm);
+  /* Inverted InstallApp guard: UninstallApp must be the slot right after the
+   * verified InstallApp slot (spike 067) and carry its own unique ID. */
+  int install_slot = gl_ia_find_method_slot(vt, GL_IA_FN_INSTALLAPP);
+  int uninstall_slot = gl_ia_find_method_slot(vt, GL_IA_FN_UNINSTALLAPP);
+  if (install_slot < 0 || uninstall_slot != install_slot + 1)
+    return gl_ia_unavailable("method-unverified:UninstallApp");
+
+  int num_slot = gl_ia_find_method_slot(vt, GL_IA_FN_NUMINSTALLED);
+
+  if (dry_run) {
+    int64_t k = num_slot >= 0
+                    ? (int64_t)((uint32_t (*)(void *))vt[num_slot])(apm)
+                    : -1;
+    gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"dryRun\":true,"
+               "\"engineSlot\":%d,\"uninstallAppSlot\":%d,\"installedApps\":%lld}",
+               app_id, getter_slot, uninstall_slot, (long long)k);
+    return GL_IA_EXIT_OK;
+  }
+
+  uint32_t err = ((uint32_t (*)(void *, uint32_t))vt[uninstall_slot])(apm, app_id);
+  if (err == 0) {
+    gl_ia_emit("{\"result\":\"ok\",\"appId\":%u,\"eAppUpdateError\":0,"
+               "\"engineSlot\":%d,\"uninstallAppSlot\":%d}",
+               app_id, getter_slot, uninstall_slot);
+    return GL_IA_EXIT_OK;
+  }
+  int64_t k = num_slot >= 0
+                  ? (int64_t)((uint32_t (*)(void *))vt[num_slot])(apm)
+                  : -1;
+  gl_ia_emit("{\"result\":\"error\",\"appId\":%u,\"eAppUpdateError\":%u,"
+             "\"installedApps\":%lld}",
+             app_id, err, (long long)k);
+  return GL_IA_EXIT_ERROR;
+}
+
 #endif /* __aarch64__ */
 
-/* argv[1] == "--steam-installapp". Never touches the secret env block,
- * steam_appid.txt, libsteam_api or the socket server. */
-static int gamelib_installapp_main(int argc, char **argv) {
+/* Shared appId parse: 1..10 digits, 1..0xFFFFFFFF. Returns a usage exit code
+ * on failure, or -1 with *out set. */
+static int gl_ia_parse_app_id(int argc, char **argv, uint32_t *out) {
   if (argc < 3) return gl_ia_usage("missing-appid");
   const char *id = argv[2];
   size_t idlen = strlen(id);
@@ -476,6 +540,16 @@ static int gamelib_installapp_main(int argc, char **argv) {
     if (id[i] < '0' || id[i] > '9') return gl_ia_usage("bad-appid");
   unsigned long long parsed = strtoull(id, NULL, 10);
   if (parsed == 0 || parsed > 0xFFFFFFFFull) return gl_ia_usage("bad-appid");
+  *out = (uint32_t)parsed;
+  return -1;
+}
+
+/* argv[1] == "--steam-installapp". Never touches the secret env block,
+ * steam_appid.txt, libsteam_api or the socket server. */
+static int gamelib_installapp_main(int argc, char **argv) {
+  uint32_t app_id = 0;
+  int rc = gl_ia_parse_app_id(argc, argv, &app_id);
+  if (rc >= 0) return rc;
 
   const char *library = NULL;
   bool dry_run = false;
@@ -492,10 +566,32 @@ static int gamelib_installapp_main(int argc, char **argv) {
   }
 
 #if defined(__aarch64__)
-  return gl_ia_run((uint32_t)parsed, library, dry_run);
+  return gl_ia_run(app_id, library, dry_run);
 #else
   (void)library;
   (void)dry_run;
+  return gl_ia_unavailable("unsupported-arch");
+#endif
+}
+
+/* argv[1] == "--steam-uninstallapp" (quick 261106-s3n). Same isolation as
+ * the install subcommand; only --dry-run is accepted. */
+static int gamelib_uninstallapp_main(int argc, char **argv) {
+  uint32_t app_id = 0;
+  int rc = gl_ia_parse_app_id(argc, argv, &app_id);
+  if (rc >= 0) return rc;
+
+  bool dry_run = false;
+  for (int i = 3; i < argc; i++) {
+    if (strcmp(argv[i], "--dry-run") == 0) dry_run = true;
+    else return gl_ia_usage("unknown-argument");
+  }
+
+#if defined(__aarch64__)
+  return gl_ia_run_uninstall(app_id, dry_run);
+#else
+  (void)dry_run;
+  (void)app_id;
   return gl_ia_unavailable("unsupported-arch");
 #endif
 }

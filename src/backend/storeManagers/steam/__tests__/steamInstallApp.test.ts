@@ -1,4 +1,7 @@
-import { requestSteamInstallApp } from '../steamInstallApp'
+import {
+  requestSteamInstallApp,
+  requestSteamUninstallApp
+} from '../steamInstallApp'
 
 jest.mock('backend/logger', () => ({
   logError: jest.fn(),
@@ -115,6 +118,98 @@ describe('requestSteamInstallApp', () => {
     await expect(
       requestSteamInstallApp('4;40', {}, { helperPath: '/h', run })
     ).resolves.toEqual({ kind: 'unavailable', reason: 'bad-appid' })
+    expect(run).not.toHaveBeenCalled()
+  })
+})
+
+describe('requestSteamUninstallApp (quick 261106-s3n)', () => {
+  const deps = (run: jest.Mock) => ({
+    helperPath: '/h',
+    run,
+    platform: 'darwin' as const
+  })
+
+  beforeEach(() => {
+    mockedExists.mockReturnValue(true)
+  })
+
+  it('maps an ok line and passes exactly the uninstall argv', async () => {
+    const run = runWith('{"result":"ok","appId":440,"eAppUpdateError":0}')
+    await expect(requestSteamUninstallApp('440', deps(run))).resolves.toEqual({
+      kind: 'ok'
+    })
+    expect(run).toHaveBeenCalledWith(
+      '/h',
+      ['--steam-uninstallapp', '440'],
+      expect.any(Number)
+    )
+  })
+
+  it('maps error 18 with installedApps 0', async () => {
+    const run = runWith(
+      '{"result":"error","eAppUpdateError":18,"installedApps":0}',
+      3
+    )
+    await expect(requestSteamUninstallApp('440', deps(run))).resolves.toEqual({
+      kind: 'error',
+      code: 18,
+      installedApps: 0
+    })
+  })
+
+  it.each([
+    ['missing', '{"result":"error","eAppUpdateError":18}'],
+    ['-1', '{"result":"error","eAppUpdateError":18,"installedApps":-1}']
+  ])('maps %s installedApps to null', async (_n, line) => {
+    await expect(
+      requestSteamUninstallApp('440', deps(runWith(line, 3)))
+    ).resolves.toEqual({ kind: 'error', code: 18, installedApps: null })
+  })
+
+  it('maps an unavailable line', async () => {
+    const run = runWith('{"result":"unavailable","reason":"not-signed-in"}', 2)
+    await expect(requestSteamUninstallApp('440', deps(run))).resolves.toEqual({
+      kind: 'unavailable',
+      reason: 'not-signed-in'
+    })
+  })
+
+  it('maps no JSON, a timeout and a rejected run to helper-failed', async () => {
+    for (const run of [
+      runWith('garbage', 1),
+      runWith('', null),
+      jest.fn().mockRejectedValue(new Error('boom'))
+    ]) {
+      await expect(requestSteamUninstallApp('440', deps(run))).resolves.toEqual(
+        { kind: 'unavailable', reason: 'helper-failed' }
+      )
+    }
+  })
+
+  it('maps a missing helper to helper-missing without spawning', async () => {
+    mockedExists.mockReturnValue(false)
+    const run = jest.fn()
+    await expect(requestSteamUninstallApp('440', deps(run))).resolves.toEqual({
+      kind: 'unavailable',
+      reason: 'helper-missing'
+    })
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('never spawns for a non-digit appId', async () => {
+    const run = jest.fn()
+    await expect(requestSteamUninstallApp('4;40', deps(run))).resolves.toEqual({
+      kind: 'unavailable',
+      reason: 'bad-appid'
+    })
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('reports unsupported-platform off darwin without spawning', async () => {
+    const run = jest.fn()
+    await expect(
+      requestSteamUninstallApp('440', { ...deps(run), platform: 'linux' })
+    ).resolves.toEqual({ kind: 'unavailable', reason: 'unsupported-platform' })
     expect(run).not.toHaveBeenCalled()
   })
 })

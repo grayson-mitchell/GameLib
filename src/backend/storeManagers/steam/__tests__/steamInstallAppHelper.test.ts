@@ -107,5 +107,37 @@ describeDarwinOnly(
       expect(res.status).toBe(64)
       expect(oneLine(res.stdout).result).toBe('usage')
     })
+
+    describe('--steam-uninstallapp (quick 261106-s3n)', () => {
+      it('reports steamclient-missing under a fresh HOME, one line, exit 2', () => {
+        const res = run('--steam-uninstallapp', '264160')
+        expect(res.status).toBe(2)
+        expect(oneLine(res.stdout)).toEqual({
+          result: 'unavailable',
+          reason: 'steamclient-missing'
+        })
+        expect(res.stderr).not.toMatch(/^AUTH/m)
+      })
+
+      it('accepts --dry-run', () => {
+        const res = run('--steam-uninstallapp', '264160', '--dry-run')
+        expect(res.status).toBe(2)
+        expect(oneLine(res.stdout).reason).toBe('steamclient-missing')
+      })
+
+      it.each([
+        ['non-numeric appId', ['--steam-uninstallapp', 'abc'], 'bad-appid'],
+        ['missing appId', ['--steam-uninstallapp'], 'missing-appid'],
+        [
+          'a --library argument',
+          ['--steam-uninstallapp', '264160', '--library', '/x'],
+          'unknown-argument'
+        ]
+      ])('rejects %s with a usage line and exit 64', (_n, args, error) => {
+        const res = run(...args)
+        expect(res.status).toBe(64)
+        expect(oneLine(res.stdout)).toEqual({ result: 'usage', error })
+      })
+    })
   }
 )
