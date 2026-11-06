@@ -2,14 +2,7 @@ import axios from 'axios'
 import i18next from 'i18next'
 import { app, shell } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
-import {
-  closeSync,
-  lstatSync,
-  mkdirSync,
-  openSync,
-  readSync,
-  rmSync
-} from 'node:fs'
+import { closeSync, openSync, readSync, rmSync } from 'node:fs'
 import {
   basename,
   dirname,
@@ -92,23 +85,16 @@ import {
   stopPerGameBridgeBottle,
   findBridgeInstallBottle,
   getDrmBridgeRunner,
-  clearDrmBridgeRunner,
-  setOverlayBridgeRunner,
-  endPerGameBridgeBottleSessionWith,
   killBridgeBottleWineServer
 } from './bottle'
 // Phase 60: Steam overlay in bridged games (macOS).
 import {
   appendCxEnvTokens,
   mergeOverlayEnvVars,
-  overlayInputProbeFromEnv,
-  prepareOverlayEnv,
-  prepareOverlayLaunch,
   prepareOverlayTokens,
   type OverlayLaunchPayload
 } from './bridge/overlay/overlayLaunch'
 import {
-  resolveOverlayEnabled,
   readStoredOverlayOverride,
   parseOverlayOverride,
   isAbnormalOverlayExit
@@ -126,16 +112,9 @@ import {
 import { buildOverlayPaths } from './bridge/overlay/overlayPaths'
 import {
   formatOverlayExitNoticeLine,
-  formatOverlayNoticeLine,
-  OVERLAY_STEP_TEXT,
   type OverlayStep
 } from './bridge/overlay/overlayNotice'
-import {
-  publishOverlayNotice,
-  publishOverlayExitNotice
-} from './engine/engineState'
-import { readKnownFixes } from 'backend/knownFixes'
-import type { OverlayRunnerReady } from './bridge/overlay/overlayRunnerClone'
+import { publishOverlayExitNotice } from './engine/engineState'
 import { isSteamNativeDeleteEnabled } from './nativeInstallSetting'
 import { decideSteamNativeDelete } from './nativeDelete'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
@@ -155,7 +134,6 @@ import { detectSteamDrmInPe } from './bridge/peSteamDrm'
 import {
   drmLaunchSetup,
   prefetchDrmDownloads,
-  DRM_END_SESSION_TIMEOUT_MS,
   type DrmLaunchReady
 } from './bridge/drm/drmLaunchSetup'
 import {
@@ -189,8 +167,6 @@ import {
 } from './bridge/bridgeVerdict'
 import {
   builtOverlayShimPath,
-  builtOverlayInputPath,
-  builtOverlayInputProbePath,
   appFolder,
   userHome
 } from 'backend/constants/paths'
@@ -259,6 +235,15 @@ import {
   installResultForRefusal,
   runNativeDepotDownloadLeased
 } from './gameInstall'
+import {
+  resolveLaunchOverlay,
+  notifyOverlaySetupFailed,
+  overlayInputLine,
+  overlayInputArg,
+  logOverlayInputOutcome,
+  overlayProbeArg,
+  prepareTcpOverlay
+} from './gameLaunchOverlay'
 
 /** The project-wide appId shape guard (clientSetup.ts, installFormIpc.ts,
  * bottle.ts, bridge/allowlist.ts all carry the identical regex). Used by
@@ -273,14 +258,6 @@ const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
  * wait for the wine wrapper's exit code before deciding on lifetime alone.
  */
 const OVERLAY_EXIT_GRACE_MS = 3000
-
-// 60-18 `## G1 experiment verdict`: verdict code and `fix routes:` line. The
-// DRM route is never in the set (D-04: unchanged).
-const OVERLAY_INPUT_FIX_CODE = 'X-RELEASE+BLOCK'
-const OVERLAY_INPUT_FIX_ROUTES: ReadonlySet<string> = new Set([
-  'tcp-clone',
-  'env'
-])
 
 export default class SteamGame implements Game {
   readonly appId: string
@@ -2253,26 +2230,8 @@ export default class SteamGame implements Game {
    * Phase 60 (D-01/D-03): whether the overlay is on for this launch, and why.
    * Never throws: a failure here means no overlay, never a blocked launch.
    */
-  private resolveLaunchOverlay(): { enabled: boolean; source: string } {
-    try {
-      const r = resolveOverlayEnabled({
-        platform: process.platform,
-        userOverride: readStoredOverlayOverride(this.appId),
-        knownFixOff:
-          readKnownFixes(this.appId, 'steam')?.steamGameOverlay === 'off'
-      })
-      logInfo(
-        `SteamGame: appId ${this.appId} overlay=${r.enabled ? 'on' : 'off'} source=${r.source}`,
-        LogPrefix.Steam
-      )
-      return r
-    } catch (error) {
-      logWarning(
-        `SteamGame: appId ${this.appId} overlay policy failed, launching without the overlay: ${String(error)}`,
-        LogPrefix.Steam
-      )
-      return { enabled: false, source: 'default' }
-    }
+  resolveLaunchOverlay(): { enabled: boolean; source: string } {
+    return resolveLaunchOverlay(this)
   }
 
   /**
@@ -2282,38 +2241,12 @@ export default class SteamGame implements Game {
    * opposite of DRM's fail-closed rule (D-56-13): the overlay is an
    * enhancement, so the game still launches.
    */
-  private notifyOverlaySetupFailed(step: OverlayStep, cause: string): void {
-    logWarning(
-      formatOverlayNoticeLine(this.appId, step, cause),
-      LogPrefix.Steam
-    )
-    const pushed = publishOverlayNotice(this.appId, step)
-    logInfo(
-      `SteamGame: appId ${this.appId} overlay notice surface=in-app pushed=${pushed}`,
-      LogPrefix.Steam
-    )
-    notify({
-      title: i18next.t(
-        'gamelib:steam.overlay.toast.title',
-        'Steam overlay unavailable'
-      ),
-      body: i18next.t(
-        'gamelib:steam.overlay.toast.body',
-        '{{step}} The game is launching without the Steam overlay.',
-        {
-          step: i18next.t(
-            'gamelib:' + OVERLAY_STEP_TEXT[step].key,
-            OVERLAY_STEP_TEXT[step].en
-          )
-        }
-      )
-    })
+  notifyOverlaySetupFailed(step: OverlayStep, cause: string): void {
+    return notifyOverlaySetupFailed(this, step, cause)
   }
 
-  private overlayInputLine(applied: boolean, reason?: string): string {
-    return `SteamGame: appId ${this.appId} overlay input fix=${OVERLAY_INPUT_FIX_CODE} applied=${applied}${
-      reason ? ` reason=${reason}` : ''
-    }`
+  overlayInputLine(applied: boolean, reason?: string): string {
+    return overlayInputLine(this, applied, reason)
   }
 
   /**
@@ -2325,48 +2258,10 @@ export default class SteamGame implements Game {
    * once the launch values are known (60-REVIEW WR-04). The DRM route only logs:
    * its result is not spread into the launch (D-04).
    */
-  private overlayInputArg(
+  overlayInputArg(
     route: 'tcp-clone' | 'env' | 'drm'
   ): { inputModulePath: string } | Record<string, never> {
-    const line = (applied: boolean, reason?: string) =>
-      this.overlayInputLine(applied, reason)
-    try {
-      if (!OVERLAY_INPUT_FIX_ROUTES.has(route)) {
-        logInfo(line(false, 'route'), LogPrefix.Steam)
-        return {}
-      }
-      if (process.env.GAMELIB_OVERLAY_INPUT_FIX === 'off') {
-        logInfo(line(false, 'disabled'), LogPrefix.Steam)
-        return {}
-      }
-      const armed = overlayInputProbeFromEnv(process.env, {
-        appId: this.appId,
-        traceRoot: '/',
-        dylibPath: builtOverlayInputProbePath,
-        now: 0
-      })
-      // 60-REVIEW WR-02: never load the fix beside the probe. Both hook the same
-      // entry points, so each one's winemac caller check sees the other image
-      // and the fix degrades to set_active only. Order: route, disabled,
-      // experiment, probe, missing.
-      if (armed) {
-        logInfo(
-          line(false, armed.experiment ? 'experiment' : 'probe'),
-          LogPrefix.Steam
-        )
-        return {}
-      }
-      if (
-        !lstatSync(builtOverlayInputPath, { throwIfNoEntry: false })?.isFile()
-      ) {
-        logWarning(line(false, 'missing'), LogPrefix.Steam)
-        return {}
-      }
-      return { inputModulePath: builtOverlayInputPath }
-    } catch (e) {
-      logWarning(line(false, `missing: ${String(e)}`), LogPrefix.Steam)
-      return {}
-    }
+    return overlayInputArg(this, route)
   }
 
   /**
@@ -2376,31 +2271,11 @@ export default class SteamGame implements Game {
    * otherwise (prepare error, runner refused, unsafe path dropped by the value
    * builder, a throw) applied=false reason=not-injected. Never throws.
    */
-  private logOverlayInputOutcome(
+  logOverlayInputOutcome(
     arg: { inputModulePath: string } | Record<string, never>,
     carried: readonly string[]
   ): void {
-    try {
-      if (!('inputModulePath' in arg)) return
-      const path = arg.inputModulePath
-      const key = 'DYLD_INSERT_LIBRARIES='
-      const applied = carried.some((entry) => {
-        if (!entry.startsWith(key)) return false
-        let v = entry.slice(key.length)
-        if (v.length >= 2 && v.startsWith("'") && v.endsWith("'")) {
-          v = v.slice(1, -1)
-        }
-        return v.split(':').includes(path)
-      })
-      if (applied) logInfo(this.overlayInputLine(true), LogPrefix.Steam)
-      else
-        logWarning(
-          this.overlayInputLine(false, 'not-injected'),
-          LogPrefix.Steam
-        )
-    } catch {
-      // Diagnostics only: never affects the launch.
-    }
+    return logOverlayInputOutcome(this, arg, carried)
   }
 
   /**
@@ -2408,50 +2283,12 @@ export default class SteamGame implements Game {
    * started with GAMELIB_OVERLAY_INPUT_PROBE=1. Never blocks a launch and never
    * raises a notice: a missing or unusable probe just logs a warning.
    */
-  private overlayProbeArg():
+  overlayProbeArg():
     | {
         probe: { dylibPath: string; logPath: string; experiment?: string }
       }
     | Record<string, never> {
-    try {
-      const traceRoot = buildOverlayPaths(appFolder)?.traceRoot
-      if (!traceRoot) return {}
-      const probe = overlayInputProbeFromEnv(process.env, {
-        appId: this.appId,
-        traceRoot,
-        dylibPath: builtOverlayInputProbePath,
-        now: Date.now()
-      })
-      if (!probe) return {}
-      if (!lstatSync(probe.dylibPath, { throwIfNoEntry: false })?.isFile()) {
-        logWarning(
-          `SteamGame: appId ${this.appId} overlay input probe=missing`,
-          LogPrefix.Steam
-        )
-        return {}
-      }
-      mkdirSync(traceRoot, { recursive: true, mode: 0o700 })
-      logInfo(
-        `SteamGame: appId ${this.appId} overlay input probe=on log=${probe.logPath.replace(userHome, '~')} experiment=${probe.experiment ?? 'off'}`,
-        LogPrefix.Steam
-      )
-      if (
-        process.env.GAMELIB_OVERLAY_RELEASE_EXPERIMENT !== undefined &&
-        !probe.experiment
-      ) {
-        logWarning(
-          `SteamGame: appId ${this.appId} overlay release experiment=invalid (ignored)`,
-          LogPrefix.Steam
-        )
-      }
-      return { probe }
-    } catch (e) {
-      logWarning(
-        `SteamGame: appId ${this.appId} overlay input probe=unavailable: ${String(e)}`,
-        LogPrefix.Steam
-      )
-      return {}
-    }
+    return overlayProbeArg(this)
   }
 
   /**
@@ -2462,124 +2299,14 @@ export default class SteamGame implements Game {
    * wineserver whenever the runner changes (stock/overlay/DRM never share one).
    * Never throws and never blocks the launch.
    */
-  private async prepareTcpOverlay(
+  private prepareTcpOverlay(
     settings: GameSettings,
     previousRunner: ReturnType<typeof getDrmBridgeRunner>
   ): Promise<{
     settings: GameSettings
     overlayLaunch?: OverlayLaunchPayload
   }> {
-    let registered = false
-    // 60-REVIEW WR-04: the input-fix candidate and the values the launch really
-    // carries; the one outcome line is logged in `finally`, after every exit.
-    let inputArg:
-      | { inputModulePath: string }
-      | Record<string, never>
-      | undefined
-    let carried: readonly string[] = []
-    try {
-      const { getEngineSelection } = await import('./engine/engineRegistry')
-      const { isNonCrossover } = await import('./engine/engineTypes')
-      const sel = getEngineSelection(this.appId)
-      const fallbackEngine = sel
-        ? isNonCrossover(sel)
-        : settings.wineVersion.type !== 'crossover'
-      let ok:
-        | {
-            runner: OverlayRunnerReady
-            tokens: string[]
-          }
-        | undefined
-      let envVars:
-        | Extract<OverlayLaunchPayload, { kind: 'env' }>['vars']
-        | undefined
-      if (fallbackEngine) {
-        if (this.resolveLaunchOverlay().enabled) {
-          inputArg = this.overlayInputArg('env')
-          const result = await prepareOverlayEnv({
-            appId: this.appId,
-            shimPath: builtOverlayShimPath,
-            steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH),
-            ...inputArg,
-            ...this.overlayProbeArg()
-          })
-          if (result.status === 'error') {
-            this.notifyOverlaySetupFailed(result.step, result.cause)
-          } else {
-            envVars = result.vars
-            logInfo(
-              `SteamGame: appId ${this.appId} overlay=env reason=fallback-engine (D-07)`,
-              LogPrefix.Steam
-            )
-          }
-        }
-      } else if (this.resolveLaunchOverlay().enabled) {
-        inputArg = this.overlayInputArg('tcp-clone')
-        const result = await prepareOverlayLaunch({
-          appId: this.appId,
-          appFolder,
-          shimPath: builtOverlayShimPath,
-          steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH),
-          ...inputArg,
-          ...this.overlayProbeArg()
-        })
-        if (result.status === 'error') {
-          this.notifyOverlaySetupFailed(result.step, result.cause)
-        } else {
-          ok = { runner: result.runner, tokens: result.tokens }
-        }
-      }
-      const nextRunnerDir = ok?.runner.runnerDir
-      if (nextRunnerDir !== previousRunner?.runner.runnerDir) {
-        await endPerGameBridgeBottleSessionWith(
-          this.appId,
-          settings.wineCrossoverBottle,
-          previousRunner
-            ? join(previousRunner.runner.cxRoot, 'bin')
-            : undefined,
-          DRM_END_SESSION_TIMEOUT_MS
-        )
-      }
-      if (ok) {
-        if (setOverlayBridgeRunner(this.appId, ok.runner)) {
-          registered = true
-          const launched = {
-            settings: getBridgeBottleSettings(this.appId),
-            overlayLaunch: {
-              kind: 'cx-env' as const,
-              tokens: ok.tokens,
-              runnerBin: ok.runner.wrapperBin
-            }
-          }
-          carried = ok.tokens
-          return launched
-        }
-        this.notifyOverlaySetupFailed(
-          'clone',
-          'overlay runner registration refused'
-        )
-      }
-      // Stock CrossOver (or the fallback engine) again: a previous overlay
-      // entry was already cleared by drmLaunchSetup, so a stale clone
-      // wineVersion must not ride along.
-      if (previousRunner?.kind === 'overlay' && !fallbackEngine) {
-        return { settings: getBridgeBottleSettings(this.appId) }
-      }
-      if (envVars) {
-        carried = envVars.map((v) => `${v.key}=${v.value}`)
-        return { settings, overlayLaunch: { kind: 'env', vars: envVars } }
-      }
-      return { settings }
-    } catch (error) {
-      logWarning(
-        `SteamGame: appId ${this.appId} overlay setup threw, launching without the overlay: ${String(error)}`,
-        LogPrefix.Steam
-      )
-      if (registered) clearDrmBridgeRunner(this.appId)
-      return { settings }
-    } finally {
-      if (inputArg) this.logOverlayInputOutcome(inputArg, carried)
-    }
+    return prepareTcpOverlay(this, settings, previousRunner)
   }
 
   /**
