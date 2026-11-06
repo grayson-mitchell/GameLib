@@ -13,7 +13,7 @@ fn list_prints_ops() {
     assert_eq!(out.status.code(), Some(0));
     assert_eq!(
         String::from_utf8_lossy(&out.stdout).trim(),
-        r#"["scan_contained_real","scan_pe_delay_imports","scan_pe_imported_dlls","scan_steam_api_imports","scan_steam_drm","scan_steamstub_section"]"#
+        r#"["scan_contained_real","scan_pe_delay_imports","scan_pe_imported_dlls","scan_steam_api_imports","scan_steam_drm","scan_steamstub_section","scan_winemac_metal_exports"]"#
     );
 }
 

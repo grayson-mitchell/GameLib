@@ -4,6 +4,7 @@
 
 pub mod closure;
 pub mod contain;
+pub mod macho;
 pub mod pe;
 pub mod reader;
 
@@ -19,6 +20,7 @@ pub const OPS: &[&str] = &[
     "scan_steam_api_imports",
     "scan_steam_drm",
     "scan_steamstub_section",
+    "scan_winemac_metal_exports",
 ];
 /// Ops reachable from the CLI only.
 pub const CLI_ONLY_OPS: &[&str] = &["scan_pe_delay_imports"];
@@ -41,6 +43,12 @@ struct ExePathArgs {
 struct SteamApiImportsArgs {
     exe_path: String,
     app_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct WinemacArgs {
+    wine_bundle_path: String,
 }
 
 fn parse_args<T: for<'de> Deserialize<'de>>(op: &str, args: &[Value]) -> Result<T, String> {
@@ -89,6 +97,13 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
             to_value(
                 op,
                 pe::sections::scan_steamstub_section(Path::new(&a.exe_path)),
+            )
+        }
+        "scan_winemac_metal_exports" => {
+            let a: WinemacArgs = parse_args(op, args)?;
+            to_value(
+                op,
+                macho::check_winemac_metal_view_exports(Path::new(&a.wine_bundle_path)),
             )
         }
         #[cfg(test)]
@@ -225,6 +240,10 @@ mod tests {
             pe::delay::tests::delay_pe(true, &[("steam_api64.dll", &["A", "#2"])]),
         ];
         pes.push(Spec::new(false).build());
+        pes.push(macho::tests::thin(
+            &[("_macdrv_functions", 0x0f), ("_x", 0x0f)],
+            Some((0, 2)),
+        ));
         for pe_bytes in &pes {
             for len in 0..=pe_bytes.len() {
                 let prefix = &pe_bytes[..len];
@@ -233,6 +252,7 @@ mod tests {
                 let _ = pe::imports::imported_dll_names(&mut SliceReader::new(prefix));
                 let _ = pe::imports::steam_api_import_table(&mut SliceReader::new(prefix));
                 let _ = pe::imports::all_import_dll_names(&mut SliceReader::new(prefix));
+                let _ = macho::parse_defined_externals(prefix);
                 let _ = pe::delay::steam_api_delay_imports(&mut SliceReader::new(prefix));
             }
         }
