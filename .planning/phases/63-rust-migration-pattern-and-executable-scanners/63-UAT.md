@@ -17,7 +17,7 @@ Record only pass/issue and the log excerpts needed; no tokens, no account ids, n
 | peSteamDrm | rust | `impl=rust` |
 | drmScanExe | rust | `impl=rust` |
 | machoExports | rust | `impl=rust` |
-| importScan | ts (held, 4 VirtualSize-0 diffs awaiting user acceptance, see 63-PARITY.md) | `impl=ts`; if the user accepts and the default is flipped before 63-12 runs, change these lines to `impl=rust` |
+| importScan | rust (4 VirtualSize-0 diffs accepted by user 2026-11-07, see 63-PARITY.md) | `impl=rust` |
 
 Positive evidence is always the full line `scanner <name> op=<op> caller=<tag>: impl=<x>` in
 `~/Library/Logs/GameLib/gamelib.log` (emitted by `runScanner` in `src/backend/scanners/rustScan.ts:47`,
@@ -70,7 +70,7 @@ expected: launch 1 only. `build/main/sidecar.js` mtime is newer than the newest 
 result: pending
 
 ### 2. Shim placement on Avernum 6 (206060)
-expected: launch 2 only; launch Avernum 6 from its game page (Play button). gamelib-launch-2.log contains `scanner drmScanExe op=scan_contained_real caller=detectLaunchDrmWrapper: impl=rust`, `scanner peSections op=scan_steamstub_section caller=detectLaunchDrmWrapper: impl=rust`, `scanner peSteamDrm op=scan_steam_drm caller=placeShimForGame: impl=rust`, `scanner importScan op=scan_steam_api_imports caller=placeShimForGame: impl=ts`, `scanner importScan op=scan_steam_api_imports caller=bridgeScan: impl=ts` (bridgeScan only if the bridge scan walks PEs; record if absent), plus the existing `placeShimForGame` result line (shim placed or already-placed) and no `rust scan failed`. Launch ordinal 2.
+expected: launch 2 only; launch Avernum 6 from its game page (Play button). gamelib-launch-2.log contains `scanner drmScanExe op=scan_contained_real caller=detectLaunchDrmWrapper: impl=rust`, `scanner peSections op=scan_steamstub_section caller=detectLaunchDrmWrapper: impl=rust`, `scanner peSteamDrm op=scan_steam_drm caller=placeShimForGame: impl=rust`, `scanner importScan op=scan_steam_api_imports caller=placeShimForGame: impl=rust`, `scanner importScan op=scan_steam_api_imports caller=bridgeScan: impl=rust` (bridgeScan only if the bridge scan walks PEs; record if absent), plus the existing `placeShimForGame` result line (shim placed or already-placed) and no `rust scan failed`. Launch ordinal 2.
 result: pending
 
 ### 3. GameMaker detection on Mining Mechs (1603180)

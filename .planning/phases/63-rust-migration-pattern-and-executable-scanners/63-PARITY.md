@@ -13,7 +13,7 @@
 | --- | --- | --- | --- | --- |
 | peSections | 497 | 497 | 0 | clean |
 | peSteamDrm | 1491 | 1491 | 0 | clean |
-| importScan | 103 | 99 | 4 | divergent (Rust correct; awaiting user acceptance) |
+| importScan | 103 | 99 | 4 | accepted (user, 2026-11-07) |
 | drmScanExe | 103 | 103 | 0 | clean |
 | machoExports | 2 | 2 | 0 | clean |
 
@@ -42,7 +42,7 @@ All four are the same cause, op `scan_steam_api_imports`:
   fixture was added because the TS golden oracle (objdump) cannot represent the case.
 - Caller impact: both outcomes mean "no steam_api import found, no shim import closure", so the
   shim decision is the same; only the status label differs.
-- User decision: pending (Task 3 checkpoint). Until accepted, `importScan` stays `'ts'`.
+- User decision: accepted (user, 2026-11-07). `importScan` default flipped to `'rust'`.
 
 ## A5 (ordinal-only static imports)
 

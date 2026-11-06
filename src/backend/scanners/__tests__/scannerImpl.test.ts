@@ -14,12 +14,12 @@ describe('resolveScannerImpl', () => {
     expect(resolveScannerImpl('importScan', {})).toBe(
       SCANNER_DEFAULTS.importScan
     )
-    // 63-11: the clean scanners default to rust; importScan is held on ts
-    // pending user acceptance of its divergence (63-PARITY.md).
+    // 63-11: all five default to rust; importScan's divergence was accepted
+    // by the user 2026-11-07 (63-PARITY.md).
     expect(SCANNER_DEFAULTS).toEqual({
       peSections: 'rust',
       peSteamDrm: 'rust',
-      importScan: 'ts',
+      importScan: 'rust',
       drmScanExe: 'rust',
       machoExports: 'rust'
     })
@@ -36,7 +36,7 @@ describe('resolveScannerImpl', () => {
   it.each(['RUST', '', 'yes', ' rust'])('ignores %j', (v) => {
     expect(
       resolveScannerImpl('importScan', { GAMELIB_SCANNER_IMPORT_SCAN: v })
-    ).toBe('ts')
+    ).toBe('rust')
   })
 
   it('maps each scanner to its env key', () => {

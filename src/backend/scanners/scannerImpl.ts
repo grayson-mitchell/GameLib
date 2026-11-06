@@ -18,14 +18,14 @@ export type ScannerImpl = 'rust' | 'ts'
 
 /**
  * Plan 63-11 flips an entry to 'rust' only after that scanner's sweep is clean
- * (zero diff against the TS oracle). importScan stays 'ts': 4 sweep diffs
- * (objdump rejects VirtualSize-0 sections, Rust is correct), held until the user
- * accepts the divergence, see 63-PARITY.md.
+ * or its divergence is accepted. importScan: 4 sweep diffs (objdump rejects
+ * VirtualSize-0 sections, Rust is correct), accepted by the user 2026-11-07,
+ * see 63-PARITY.md.
  */
 export const SCANNER_DEFAULTS: Readonly<Record<ScannerName, ScannerImpl>> = {
   peSections: 'rust',
   peSteamDrm: 'rust',
-  importScan: 'ts',
+  importScan: 'rust',
   drmScanExe: 'rust',
   machoExports: 'rust'
 }
