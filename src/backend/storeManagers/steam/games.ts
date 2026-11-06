@@ -265,6 +265,7 @@ import {
 } from 'backend/constants/paths'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import type { EnginePin } from './engine/enginePins'
+import { STEAM_STORE_API } from './gameConstants'
 
 /** The project-wide appId shape guard (clientSetup.ts, installFormIpc.ts,
  * bottle.ts, bridge/allowlist.ts all carry the identical regex). Used by
@@ -273,7 +274,6 @@ import type { EnginePin } from './engine/enginePins'
 const NUMERIC_APP_ID = /^\d+$/
 
 const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
-const STEAM_STORE_API = 'https://store.steampowered.com/api/appdetails'
 
 /**
  * A single tracked native depot-download run for one appId — the value type
