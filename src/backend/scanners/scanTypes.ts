@@ -26,7 +26,10 @@ export const SCAN_OPS: readonly ScanOp[] = [
   'scan_winemac_metal_exports'
 ]
 
-/** Library and CLI ops with no rustInvoke channel (its only caller is the census). */
+/**
+ * Library and CLI ops with no rustInvoke channel (its only caller is the census).
+ * @public consumed by the rustInvoke allow-list in 63-06
+ */
 export const CLI_ONLY_SCAN_OPS: readonly ScanOp[] = ['scan_pe_delay_imports']
 
 export type ScanDiagnostic = { level: 'info' | 'warn'; message: string }

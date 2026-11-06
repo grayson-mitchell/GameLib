@@ -413,7 +413,10 @@ export async function steamApiImportsTs(
   }
 }
 
-/** Dispatch by op string; `deps` is only used by `scan_steam_api_imports`. */
+/**
+ * Dispatch by op string; `deps` is only used by `scan_steam_api_imports`.
+ * @public consumed by the goldens (63-03) and the sweep (63-10)
+ */
 export async function runLegacyOp<Op extends ScanOp>(
   op: Op,
   args: ScanArgsFor<Op>,
