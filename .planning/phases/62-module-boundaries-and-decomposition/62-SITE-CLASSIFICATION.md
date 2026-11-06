@@ -265,3 +265,17 @@ Per-runner values (runner order: legendary, gog, sideload, nile, steam). Per-gam
 
 - `isHandOffInstall(runner, action)` = `hasCapability(runner, 'installHandOffToClient') && action === 'install'`. Inputs are common types, so it lives in `src/common/storeCapabilities.ts`. Replaces InstallModal:193, steamEligibilityProbe:82, state/InstallGameModal:407.
 - Other compounds (GameStatus steam+installing, MainButton steam+installing, steamInstallOptionsEntry) combine a flag with frontend-only state; the converting plan builds them in `src/frontend/helpers/<name>.ts` (62-17 owns frontend helpers) as `hasCapability(runner, flag) && <state>`.
+
+## 62-23: WR-02 sites (gap closure)
+
+| site | expression | class | target | decision IDs nearby | note |
+|---|---|---|---|---|---|
+| src/backend/utils.ts:455 | `if (library === 'gog' \|\| !library) {` | identity | isStore(x,'gog') | D-02 | per-store cache clear |
+| src/backend/utils.ts:461 | `if (library === 'legendary' \|\| !library) {` | identity | isStore(x,'legendary') | D-02 | per-store cache clear |
+| src/backend/utils.ts:476 | `if (library === 'nile' \|\| !library) {` | identity | isStore(x,'nile') | D-02 | per-store cache clear |
+| src/frontend/components/UI/NavShell/components/FilterStoreFacet/index.tsx:72 | `value === 'sideload'` | identity | isStore(x,'sideload') | D-02 | facet value is the runner; sideload has no brand, label Other |
+| src/frontend/components/UI/NavShell/components/FilterFocusRow/index.tsx:135 | `value === 'sideload'` | identity | isStore(x,'sideload') | D-02 | facet value is the runner; sideload has no brand, label Other |
+| src/frontend/screens/Library/components/FocusRowStrip/index.tsx:228 | `focusRow.value === 'sideload'` | identity | isStore(x,'sideload') | D-02 | facet value is the runner; sideload has no brand, label Other |
+| src/frontend/screens/Library/components/FilterChipRow/chipLabels.ts:84 | `descriptor.value === 'sideload'` | identity | isStore(x,'sideload') | D-02 | facet value is the runner; sideload has no brand, label Other |
+
+The filter `value` is a genuine store identity, not an opaque facet value or a capability: `StoreFacetValue` is the runner union, and the `'sideload'` branch only picks a label (`RunnerToStore` deliberately has no `sideload` key), so `isStore` is correct. The widened selector's remaining blind spots are documented in the `meta/runnerLiteralSelectors.cjs` header. Task 1's lint run surfaced exactly these seven sites and no others.

@@ -16,3 +16,7 @@ The `no-restricted-syntax` runner-literal ban (meta/runnerLiteralSelectors.cjs, 
 Shapes it cannot see at all: `gameInfo['runner']`, `(runner as string) ===`, `.indexOf`/`Set.has`, names like `runnerStr`/`storeName`.
 
 Decide per site: convert to `isStore`/`hasCapability`, or document as a deliberate identity check, then widen the selector set (with hit/non-hit tests in meta/__tests__/runnerLiteralSelectors.test.ts) so "zero at error" means what it says.
+
+## Resolution
+
+Resolved by plan 62-23. The seven sites were converted to `isStore`. The selector was widened (`library`/`value` names, `runner*`/`store*` prefixes, cast/non-null/computed access, `indexOf`, inline `Set.has`, switch gated on a store-literal case), with HIT/NON-HIT tests. The remaining blind spots are documented in the `meta/runnerLiteralSelectors.cjs` header.
