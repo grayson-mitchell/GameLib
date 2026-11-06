@@ -1,0 +1,21 @@
+{"step":"state","appId":264160,"installState":1,"numInstalled":0}
+## signed-out arm
+06:08:36
+{"step":"pipe","pipe":1}
+{"step":"user","user":1}
+{"step":"UninstallApp","appId":264160,"EAppUpdateError":18}
+{"step":"state","appId":264160,"installState":1,"numInstalled":0}
+files present:      171
+/Users/graysonmitchell/Library/Application Support/Steam/steamapps/appmanifest_264160.acf
+{"step":"state","appId":264160,"installState":4,"numInstalled":14}
+## signed-in arm
+06:57:54
+{"step":"UninstallApp","appId":264160,"EAppUpdateError":0}
++1s {"step":"state","appId":264160,"installState":1,"numInstalled":13} files=0 acf=no
++2s {"step":"state","appId":264160,"installState":1,"numInstalled":13} files=0 acf=no
++5s {"step":"state","appId":264160,"installState":1,"numInstalled":13} files=0 acf=no
++10s {"step":"state","appId":264160,"installState":1,"numInstalled":13} files=0 acf=no
++20s {"step":"state","appId":264160,"installState":1,"numInstalled":13} files=0 acf=no
+ls: /Users/graysonmitchell/Library/Application Support/Steam/steamapps/compatdata/264160: No such file or directory
+ls: /Users/graysonmitchell/Library/Application Support/Steam/steamapps/shadercache/264160: No such file or directory
+ls: /Users/graysonmitchell/Library/Application Support/Steam/steamapps/workshop/content/264160: No such file or directory

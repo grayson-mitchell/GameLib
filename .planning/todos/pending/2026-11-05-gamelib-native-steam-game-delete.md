@@ -19,7 +19,7 @@ That makes uninstall depend on Steam's state:
 
 - A signed-out Steam silently drops the request, and GameLib sits on
   Uninstalling (261105-ord gate, 2026-11-05 22:18:13; see
-  `.planning/todos/pending/2026-11-05-steam-uninstall-silently-dropped-when-signed-out.md`).
+  `.planning/todos/completed/2026-11-05-steam-uninstall-silently-dropped-when-signed-out.md`).
 - It raises Steam's window and confirmation dialog.
 
 GameLib already deletes a game itself in one narrow case.
@@ -46,3 +46,22 @@ without going through Steam. Points to settle:
   library. Refuse while the game is running.
 - **Cloud saves:** deleting locally does not touch Steam Cloud. Confirm that
   is acceptable.
+
+## Spike 067 result (2026-11-06): `UninstallApp` is a silent Steam-side uninstall
+
+`.planning/spikes/067-steamclient-uninstallapp/README.md`. Tested on macOS with WazHack 264160,
+same steamclient build as the InstallApp helper (slot 1, function-ID high half `0x4505`):
+
+- **Signed in:** returns 0. Within 1 s Steam deletes `common/WazHack`, the ACF and the Workshop
+  content, and reports state 1 and `finished uninstall (No Error)`. No window, no confirmation
+  dialog, no toast seen. Steam updates its own state, so the "Running Steam" point above is
+  moot on this route.
+- **Signed out (login screen):** returns **18 `k_EAppErrorNotInstalled` synchronously** and
+  deletes nothing. GameLib gets a definite failure instead of sticking on Uninstalling. 18 also
+  means "not installed", so check `GetNumInstalledApps` (0 when signed out) to tell the two
+  apart.
+
+This suggests a route for the Trigger decision: with the InstallApp setting on, uninstall
+through `UninstallApp` first. On 18 while signed out, or on helper verification failure, fall
+back to GameLib's own file delete (this todo) or `steam://uninstall`. GameLib's uninstall dialog
+becomes the only confirmation, so it must refuse while the game is running.
