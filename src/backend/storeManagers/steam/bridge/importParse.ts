@@ -104,7 +104,7 @@ export function parseSteamApiImportTable(
   for (const line of objdumpOutput.split('\n')) {
     const headingMatch = line.match(STEAM_API_HEADING)
     if (headingMatch) {
-      const isX64 = /64/.test(headingMatch[1])
+      const isX64 = /64/.test(headingMatch[1] ?? '')
       const headingDll: ImportTableResult['dll'] = isX64
         ? 'steam_api64.dll'
         : 'steam_api.dll'
@@ -129,8 +129,9 @@ export function parseSteamApiImportTable(
       continue
     }
     const symbolMatch = line.match(TRAILING_IDENTIFIER)
-    if (symbolMatch) {
-      symbols.push(symbolMatch[1])
+    const symbol = symbolMatch?.[1]
+    if (symbol !== undefined) {
+      symbols.push(symbol)
     }
   }
 
@@ -149,10 +150,12 @@ export function parseImportedDllNames(objdumpOutput: string): string[] {
     // Case-sensitive: the export table's `DLL name:` line is not an import.
     const m = line.match(/DLL Name:\s*(\S+)\s*$/)
     if (!m) continue
-    const key = m[1].toLowerCase()
+    const dllName = m[1]
+    if (dllName === undefined) continue
+    const key = dllName.toLowerCase()
     if (seen.has(key)) continue
     seen.add(key)
-    names.push(m[1])
+    names.push(dllName)
   }
   return names
 }

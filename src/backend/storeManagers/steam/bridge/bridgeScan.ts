@@ -422,7 +422,8 @@ const FLAT_ACCESSOR_FAMILY = /^SteamAPI_(Steam[A-Za-z0-9]+)_v\d{3}$/
 
 function familyOfManagedImport(name: string): string | null {
   const m = FLAT_METHOD_FAMILY.exec(name) ?? FLAT_ACCESSOR_FAMILY.exec(name)
-  return m ? m[1].toLowerCase() : null
+  const family = m?.[1]
+  return family === undefined ? null : family.toLowerCase()
 }
 
 /**

@@ -711,7 +711,7 @@ async function run(
         const until = backoffUntil(ledger, key, depot.gid)
         if (until !== null) {
           logWarning(
-            `Steam ${appId}: ${depot.label} (${entry.name}) failed ${ledger.failures[key].count} times in a row at manifest ${depot.gid}, skipping until ${new Date(until).toISOString()}`,
+            `Steam ${appId}: ${depot.label} (${entry.name}) failed ${ledger.failures[key]?.count ?? 0} times in a row at manifest ${depot.gid}, skipping until ${new Date(until).toISOString()}`,
             LogPrefix.Steam
           )
           anyFailed = true

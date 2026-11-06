@@ -111,6 +111,11 @@ const ANCHOR_RE =
 const LOG_HEADER_RE =
   /^\(\d{2}:\d{2}:\d{2}\) \[[A-Z]+\]:\s+(?:\[[A-Za-z]+\]:\s+)?/
 
+/** Capture group that the matched regex guarantees is present. */
+function grp(m: RegExpExecArray, i: number): string {
+  return m[i] ?? ''
+}
+
 function stripCr(line: string): string {
   return line.endsWith('\r') ? line.slice(0, -1) : line
 }
@@ -124,70 +129,83 @@ export function parseDrmTraceLine(line: string): DrmTraceEvent | null {
     let m = TRACE_CREATE_RE.exec(l)
     if (m) {
       return {
-        appId: m[1],
-        pid: Number(m[2]),
-        role: m[3] as DrmTraceRole,
+        appId: grp(m, 1),
+        pid: Number(grp(m, 2)),
+        role: grp(m, 3) as DrmTraceRole,
         event: 'create-interface',
-        iface: m[4]
+        iface: grp(m, 4)
       }
     }
     m = TRACE_CALL_RE.exec(l)
     if (m) {
       return {
-        appId: m[1],
-        pid: Number(m[2]),
-        role: m[3] as DrmTraceRole,
+        appId: grp(m, 1),
+        pid: Number(grp(m, 2)),
+        role: grp(m, 3) as DrmTraceRole,
         event: 'call',
-        name: m[4]
+        name: grp(m, 4)
       }
     }
     m = TRACE_CALLBACK_RE.exec(l)
     if (m) {
-      const id = Number(m[4])
+      const id = Number(grp(m, 4))
       const key = m[5] as 'resp' | 'state' | undefined
       if (key === 'resp' && id !== 504) return null
       if (key === 'state' && id !== 1221) return null
-      if (m[7] !== undefined && (id !== 1202 || /^0+$/.test(m[7]))) return null
+      const cbPeer = m[7]
+      if (cbPeer !== undefined && (id !== 1202 || /^0+$/.test(cbPeer))) {
+        return null
+      }
       const base = {
-        appId: m[1],
-        pid: Number(m[2]),
-        role: m[3] as DrmTraceRole,
+        appId: grp(m, 1),
+        pid: Number(grp(m, 2)),
+        role: grp(m, 3) as DrmTraceRole,
         event: 'callback' as const,
         id
       }
-      if (m[7] !== undefined) return { ...base, peer: m[7] }
-      return key ? { ...base, detail: { key, value: Number(m[6]) } } : base
+      if (cbPeer !== undefined) return { ...base, peer: cbPeer }
+      return key ? { ...base, detail: { key, value: Number(grp(m, 6)) } } : base
     }
     m = TRACE_P2P_RE.exec(l)
     if (m) {
       const head = {
-        appId: m[1],
-        pid: Number(m[2]),
-        role: m[3] as DrmTraceRole,
+        appId: grp(m, 1),
+        pid: Number(grp(m, 2)),
+        role: grp(m, 3) as DrmTraceRole,
         event: 'p2p' as const
       }
-      if (m[4]) {
-        if (/^0+$/.test(m[5])) return null
+      if (grp(m, 4)) {
+        const acceptPeer = m[5]
+        if (acceptPeer === undefined || /^0+$/.test(acceptPeer)) return null
         return {
           ...head,
           op: 'accept' as const,
-          peer: m[5],
+          peer: acceptPeer,
           ok: m[6] === '1' ? (1 as const) : (0 as const)
         }
       }
-      const bytes = Number(m[9])
-      if (/^0+$/.test(m[8]) || bytes > MAX_U32) return null
-      return { ...head, op: m[7] as 'send' | 'read', peer: m[8], bytes }
+      const bytes = Number(grp(m, 9))
+      const sendOp = m[7]
+      const sendPeer = m[8]
+      if (
+        sendOp === undefined ||
+        sendPeer === undefined ||
+        /^0+$/.test(sendPeer) ||
+        bytes > MAX_U32
+      ) {
+        return null
+      }
+      return { ...head, op: sendOp as 'send' | 'read', peer: sendPeer, bytes }
     }
     m = TRACE_APPS_RE.exec(l)
     if (m) {
       return {
-        appId: m[1],
-        pid: Number(m[2]),
-        role: m[3] as DrmTraceRole,
+        appId: grp(m, 1),
+        pid: Number(grp(m, 2)),
+        role: grp(m, 3) as DrmTraceRole,
         event: 'apps',
-        op: m[4] as 'build-id' | 'build-id-given',
-        ret: Number(m[5])
+        op: grp(m, 4) as 'build-id' | 'build-id-given',
+        ret: Number(grp(m, 5))
       }
     }
     return null
@@ -234,11 +252,11 @@ export function parseDrmLaunchAnchor(payload: string): DrmLaunchAnchor | null {
     const m = ANCHOR_RE.exec(stripCr(payload))
     if (!m) return null
     return {
-      appId: m[1],
+      appId: grp(m, 1),
       mode: 'steamclient-layer',
-      crossover: m[2],
-      client: m[3],
-      trace: m[4]
+      crossover: grp(m, 2),
+      client: grp(m, 3),
+      trace: grp(m, 4)
     }
   } catch {
     return null
@@ -303,8 +321,9 @@ export function extractDrmEvidence(
     const lines = appLogText.split('\n')
     let anchorIdx = -1
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].length > MAX_DRM_ANCHOR_CHARS + 128) continue
-      const a = parseDrmLaunchAnchor(appLogPayload(lines[i]))
+      const line = lines[i] ?? ''
+      if (line.length > MAX_DRM_ANCHOR_CHARS + 128) continue
+      const a = parseDrmLaunchAnchor(appLogPayload(line))
       if (a && a.appId === appId) anchorIdx = i
     }
     if (anchorIdx < 0) return empty
@@ -322,8 +341,9 @@ export function extractDrmEvidence(
     let helperEvents = 0
     let considered = 0
     for (let i = anchorIdx + 1; i < lines.length; i++) {
-      if (lines[i].length > MAX_DRM_TRACE_LINE_CHARS + 128) continue
-      const payload = appLogPayload(lines[i])
+      const line = lines[i] ?? ''
+      if (line.length > MAX_DRM_TRACE_LINE_CHARS + 128) continue
+      const payload = appLogPayload(line)
       if (!payload.startsWith(prefix)) continue
       const ev = parseDrmTraceLine(payload.slice(prefix.length))
       if (!ev || ev.appId !== appId) continue

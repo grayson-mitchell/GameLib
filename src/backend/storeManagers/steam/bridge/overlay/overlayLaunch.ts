@@ -51,7 +51,7 @@ export function appendCxEnvTokens(
     return { status: 'error', cause: 'invalid CX_ENV value' }
   }
   const idx = env.findIndex((e) => e.key.toUpperCase() === 'CX_ENV')
-  const existing = idx >= 0 ? env[idx].value : ''
+  const existing = idx >= 0 ? (env[idx]?.value ?? '') : ''
   const joined = tokens.join(' ')
   const value = existing ? `${existing} ${joined}` : joined
   const rest = env.filter((_, i) => i !== idx)

@@ -1258,6 +1258,10 @@ async function buildRunner(
       }
       hashes.push(h)
     }
+    const [dllHash, soHash] = hashes
+    if (dllHash === undefined || soHash === undefined) {
+      return stepFail('runner-patch', 'component file hashes missing')
+    }
     const rm = await run(
       '/usr/bin/codesign',
       ['--remove-signature', soTarget],
@@ -1277,7 +1281,7 @@ async function buildRunner(
     if (dv.code === 0 || !/not signed at all/i.test(dv.stderr)) {
       stepFail('runner-patch', 'lsteamclient.so is signed')
     }
-    if ((await sha256File(soTarget)) !== hashes[1]) {
+    if ((await sha256File(soTarget)) !== soHash) {
       stepFail(
         'runner-patch',
         'lsteamclient.so changed after signature removal'
@@ -1347,8 +1351,8 @@ async function buildRunner(
       cleanNtdllSha256: crossover.cleanNtdllSha256,
       patchedNtdllSha256: row.patchedSha256,
       componentId: component.componentId,
-      lsteamclientDllSha256: hashes[0],
-      lsteamclientSoSha256: hashes[1],
+      lsteamclientDllSha256: dllHash,
+      lsteamclientSoSha256: soHash,
       loaderSha256: await sha256File(loader),
       wineloaderSha256: await sha256File(wineloader),
       wineloaderResigned,

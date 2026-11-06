@@ -157,14 +157,18 @@ export function drmRegistryMismatches(text: string): string[] {
     let current: Map<string, string> | null = null
     for (const line of text.split('\n')) {
       const header = /^\[(.+?)\](\s+\d+)?\s*$/.exec(line)
-      if (header) {
-        const name = header[1]
+      const name = header?.[1]
+      if (header && name !== undefined) {
         current = sections.get(name) ?? new Map<string, string>()
         sections.set(name, current)
         continue
       }
       const value = /^"([^"]+)"="(.*)"\s*$/.exec(line)
-      if (value && current) current.set(value[1], value[2])
+      const valueKey = value?.[1]
+      const valueText = value?.[2]
+      if (valueKey !== undefined && valueText !== undefined && current) {
+        current.set(valueKey, valueText)
+      }
     }
     const activeName = 'Software\\\\Valve\\\\Steam\\\\ActiveProcess'
     const steamName = 'Software\\\\Valve\\\\Steam'
@@ -357,7 +361,7 @@ export async function restoreDrmOriginals(
     if (bad !== -1) {
       return {
         ok: false,
-        cause: `no restorable original for ${relOf(ctx, shims[bad].path)}`
+        cause: `no restorable original for ${relOf(ctx, shims[bad]?.path ?? '')}`
       }
     }
     // Backups must be plain files too (probe covers symlinks; belt and braces).
@@ -536,7 +540,7 @@ async function defaultListBottleProcesses(
   for (const line of stdout.split('\n')) {
     const m = /^\s*(\d+)\s+([\d.]+)\s+(.*)$/.exec(line)
     if (!m) continue
-    const command = m[3]
+    const command = m[3] ?? ''
     if (
       !command.includes(bottleDir) &&
       !command.includes('steam-bridge/drm/runners/')
@@ -547,7 +551,7 @@ async function defaultListBottleProcesses(
       /([^/\\]+?\.exe)(?=\s|$)/i.exec(command)?.[1] ??
       /([^/\\\s]*wine[^/\\\s]*)(?=\s|$)/i.exec(command)?.[1] ??
       'unknown'
-    entries.push(`${m[1]}:${m[2]}:${exe}`)
+    entries.push(`${m[1] ?? ''}:${m[2] ?? ''}:${exe}`)
   }
   return entries
 }
@@ -577,7 +581,7 @@ export function pidsOfBottleSession(
     if (!m) continue
     const pid = Number(m[1])
     if (pid === ownPid || pid <= 1) continue
-    const rest = m[2]
+    const rest = m[2] ?? ''
     if (!WINE_COMMAND.test(rest)) continue
     if (prefix.test(rest) || bottle.test(rest)) pids.push(pid)
   }
@@ -603,7 +607,7 @@ export function pidsWithCwdInBottle(
   const wine = new Set<number>()
   for (const line of psOutput.split('\n')) {
     const m = /^\s*(\d+)\s+(.*)$/.exec(line)
-    if (m && WINE_COMMAND.test(m[2])) wine.add(Number(m[1]))
+    if (m && WINE_COMMAND.test(m[2] ?? '')) wine.add(Number(m[1]))
   }
   const pids: number[] = []
   let pid = 0

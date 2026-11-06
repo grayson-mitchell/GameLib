@@ -168,12 +168,14 @@ export function usesRuntimeInterfaceLookup(symbols: string[]): boolean {
 export function familyOfInterfaceVersion(version: string): string | null {
   const macroMatch = version.match(MACRO_VERSION_PATTERN)
   if (macroMatch) {
-    return MACRO_FAMILY[macroMatch[1]] ?? null
+    const macroKey = macroMatch[1]
+    return macroKey === undefined ? null : (MACRO_FAMILY[macroKey] ?? null)
   }
 
   const camelMatch = version.match(CAMEL_VERSION_PATTERN)
-  if (camelMatch && CAMEL_CASE_FAMILIES.has(camelMatch[1])) {
-    return CAMEL_FAMILY_ALIAS[camelMatch[1]] ?? camelMatch[1]
+  const camelKey = camelMatch?.[1]
+  if (camelKey !== undefined && CAMEL_CASE_FAMILIES.has(camelKey)) {
+    return CAMEL_FAMILY_ALIAS[camelKey] ?? camelKey
   }
 
   return null
@@ -190,7 +192,8 @@ export function parseInterfaceVersionStrings(bytes: Buffer): string[] {
   const text = bytes.toString('latin1')
   const found = new Set<string>()
   for (const match of text.matchAll(VERSION_STRING_PATTERN)) {
-    found.add(match[1])
+    const version = match[1]
+    if (version !== undefined) found.add(version)
   }
   return Array.from(found).sort()
 }
@@ -288,7 +291,8 @@ export function parseInterfaceVersionStringsUtf16(bytes: Buffer): string[] {
   for (const start of [0, 1]) {
     const text = bytes.subarray(start).toString('utf16le')
     for (const match of text.matchAll(VERSION_STRING_PATTERN)) {
-      found.add(match[1])
+      const version = match[1]
+      if (version !== undefined) found.add(version)
     }
   }
   return Array.from(found).sort()
@@ -412,7 +416,12 @@ export function resolveRequiredInterfaceVersions(args: {
       )
       return
     }
-    required[family] = Array.from(versions)[0]
+    const only = Array.from(versions)[0]
+    if (only === undefined) {
+      problems.push(`${family}@unknown-version`)
+      return
+    }
+    required[family] = only
   }
 
   if (usesRuntimeInterfaceLookup(importedSymbols)) {

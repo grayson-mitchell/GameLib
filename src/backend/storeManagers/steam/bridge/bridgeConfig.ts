@@ -259,6 +259,9 @@ export function writeBridgeConfig(
   }
 
   const [path, ...extraPaths] = configPaths
+  if (path === undefined) {
+    return { status: 'error', error: 'No bridge config path was written' }
+  }
   return extraPaths.length > 0
     ? { status: 'written', path, extraPaths }
     : { status: 'written', path }

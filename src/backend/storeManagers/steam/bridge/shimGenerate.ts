@@ -898,7 +898,8 @@ async function placeShimForGameInner(
       unreal?.steamworksDir ? [unreal.steamworksDir] : [],
       scanDeps(appId)
     )
-    if (runtimeDlls.length > 0) {
+    const firstRuntimeDll = runtimeDlls[0]
+    if (firstRuntimeDll !== undefined) {
       const names = (['steam_api.dll', 'steam_api64.dll'] as const).filter(
         (n) => runtimeDlls.some((d) => d.name === n)
       )
@@ -953,7 +954,7 @@ async function placeShimForGameInner(
         )
         return {
           status: 'already-placed',
-          shimPath: runtimeDlls[0].path,
+          shimPath: firstRuntimeDll.path,
           shimPaths: allShimPaths
         }
       }
@@ -1221,7 +1222,7 @@ async function placeShimForGameInner(
         )
         return {
           status: 'placed',
-          shimPath: allShimPaths[0],
+          shimPath: resolve(firstRuntimeDll.path),
           shimPaths: allShimPaths,
           verdict: { status: 'clean', missingSymbols: [], ...verdictBase }
         }

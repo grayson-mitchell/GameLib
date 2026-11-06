@@ -53,7 +53,7 @@ export function findNtdllPatchRow(
     return null
   }
   const row = NTDLL_PATCH_ROWS[build]
-  return row.cleanSha256 === cleanSha256 ? row : null
+  return row !== undefined && row.cleanSha256 === cleanSha256 ? row : null
 }
 
 // ts-prune-ignore-next

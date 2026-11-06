@@ -92,7 +92,7 @@ export function parseKv1(text: string): KvNode[] {
 
   const next = (): Token => {
     for (;;) {
-      while (pos < len && /\s/.test(text[pos])) pos++
+      while (pos < len && /\s/.test(text.charAt(pos))) pos++
       if (pos >= len) return { t: 'eof' }
       if (text[pos] === '/' && text[pos + 1] === '/') {
         while (pos < len && text[pos] !== '\n') pos++
@@ -129,7 +129,9 @@ export function parseKv1(text: string): KvNode[] {
       }
     }
     let out = ''
-    while (pos < len && !/[\s{}"]/.test(text[pos])) out += text[pos++]
+    while (pos < len && !/[\s{}"]/.test(text.charAt(pos))) {
+      out += text.charAt(pos++)
+    }
     return { t: 'str', v: out }
   }
 
@@ -146,7 +148,7 @@ export function parseKv1(text: string): KvNode[] {
     if (close === -1 || (nl !== -1 && nl < close)) return
     if (beforeBlock) {
       let q = close + 1
-      while (q < len && /\s/.test(text[q])) q++
+      while (q < len && /\s/.test(text.charAt(q))) q++
       if (text[q] !== '{') return
     }
     pos = close + 1
@@ -266,7 +268,7 @@ export function classifySharedRedist(
     names.add(n)
   }
 
-  const family = m[1].toLowerCase()
+  const family = (m[1] ?? '').toLowerCase()
   const kind: SharedRedistKind | null =
     family === 'vcredist' ? 'vcredist' : family === 'directx' ? 'directx' : null
   if (!kind) return { kind: 'other', label }
@@ -440,7 +442,8 @@ export function buildHasRunKeyQueryParts(key: string, name: string): string[] {
 /** Parse the DWORD out of `reg query` stdout; null when no REG_DWORD value is present. */
 export function parseRegQueryDword(stdout: string): number | null {
   const m = /REG_DWORD\s+0x([0-9a-f]+)/i.exec(stdout)
-  return m ? parseInt(m[1], 16) : null
+  const hex = m?.[1]
+  return hex === undefined ? null : parseInt(hex, 16)
 }
 
 /** Wine's per-user driver selection key (Graphics value picks the display driver). */

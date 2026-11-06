@@ -241,6 +241,13 @@ const CUSTOM_ATTRIBUTE_TYPE = [0x06, 0x0a]
 const T_MODULE_REF = 0x1a
 const T_IMPL_MAP = 0x1c
 
+/** Table-indexed lookup; the tables are dense over 0..T_IMPL_MAP. */
+function tableAt(table: number[], i: number): number {
+  const v = table[i]
+  if (v === undefined) throw new BoundsError('table index')
+  return v
+}
+
 function tableRowSizes(heapSizes: number, rows: number[]) {
   const str = heapSizes & 1 ? 4 : 2
   const guid = heapSizes & 2 ? 4 : 2
@@ -346,7 +353,7 @@ function parseManaged(
   let dataCursor = rowsCursor - tildeOff
   for (let t = 0; t <= T_IMPL_MAP; t++) {
     tableOffset[t] = dataCursor
-    dataCursor += rows[t] * sizes[t]
+    dataCursor += (rows[t] ?? 0) * tableAt(sizes, t)
     if (dataCursor > tildeEnd) throw new BoundsError('tables past stream')
   }
 
@@ -367,12 +374,12 @@ function parseManaged(
 
   // ModuleRef rows: Name only.
   const moduleNames: string[] = []
-  const mrRows = rows[T_MODULE_REF]
+  const mrRows = rows[T_MODULE_REF] ?? 0
   if (mrRows > 0) {
     const mr = readExact(
       read,
-      tildeOff + tableOffset[T_MODULE_REF],
-      mrRows * sizes[T_MODULE_REF]
+      tildeOff + tableAt(tableOffset, T_MODULE_REF),
+      mrRows * tableAt(sizes, T_MODULE_REF)
     )
     for (let i = 0; i < mrRows; i++) {
       moduleNames.push(
@@ -384,14 +391,15 @@ function parseManaged(
   // ImplMap rows: flags, MemberForwarded, ImportName, ImportScope.
   const result = emptyResult(true, true)
   const byModule = new Map<string, string[]>()
-  const imRows = rows[T_IMPL_MAP]
+  const imRows = rows[T_IMPL_MAP] ?? 0
   if (imRows > 0) {
-    const rowSize = sizes[T_IMPL_MAP]
-    const mfWidth = Math.max(rows[0x04], rows[0x06]) >= 1 << 15 ? 4 : 2
-    const scopeWidth = rows[T_MODULE_REF] >= 65536 ? 4 : 2
+    const rowSize = tableAt(sizes, T_IMPL_MAP)
+    const mfWidth =
+      Math.max(rows[0x04] ?? 0, rows[0x06] ?? 0) >= 1 << 15 ? 4 : 2
+    const scopeWidth = mrRows >= 65536 ? 4 : 2
     const im = readExact(
       read,
-      tildeOff + tableOffset[T_IMPL_MAP],
+      tildeOff + tableAt(tableOffset, T_IMPL_MAP),
       imRows * rowSize
     )
     for (let i = 0; i < imRows; i++) {
@@ -402,6 +410,7 @@ function parseManaged(
         throw new BoundsError('scope index')
       }
       const mod = moduleNames[scope - 1]
+      if (mod === undefined) throw new BoundsError('scope index')
       const list = byModule.get(mod) ?? []
       list.push(name)
       byModule.set(mod, list)

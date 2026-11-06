@@ -481,6 +481,7 @@ function ensureHelperSpawned(
     if (!match) return
     const [, errText, matchedAppId] = match
     if (matchedAppId !== expectedListenAppId) return
+    if (errText === undefined) return
     const entry = helpers.get(appId)
     if (entry && entry.child === child) {
       entry.initError = errText

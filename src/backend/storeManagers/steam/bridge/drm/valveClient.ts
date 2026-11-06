@@ -496,9 +496,10 @@ function parseListing(stdout: string): ValveFail | null {
   const seen = new Map<string, number>()
   for (const line of stdout.split(/\r?\n/)) {
     const m = LIST_LINE_RE.exec(line)
-    if (!m) continue
-    if (seen.has(m[2])) return { reason: `duplicate entry ${m[2]}` }
-    seen.set(m[2], Number(m[1]))
+    const entryName = m?.[2]
+    if (!m || entryName === undefined) continue
+    if (seen.has(entryName)) return { reason: `duplicate entry ${entryName}` }
+    seen.set(entryName, Number(m[1]))
   }
   for (const name of VALVE_CLIENT_DLLS) {
     const len = seen.get(name)
