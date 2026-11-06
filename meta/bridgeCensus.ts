@@ -69,6 +69,11 @@
  * operator's bottles and the persisted `steam_metadata.json` scan verdict,
  * read-only, and still passes no `env` to any spawn.
  *
+ * Phase 63 (D-01, D-09): the census no longer imports `peSteamDrm.ts`; its two PE reads
+ * (delay imports, Steam DRM) go through `gamelibScanCli.ts`, which spawns the Rust
+ * `gamelib-scan-cli` argv-form under a fresh fake-HOME profile. That CLI spawn is the isolated
+ * half of the two-profile rule; the objdump spawns stay the declared real-profile arm above.
+ *
  * Zero backend imports by design, same discipline `importParse.ts`/
  * `interfaceVersions.ts`/`shimCoverage.ts` already established (D-51-15's
  * own doc comment on `importParse.ts`): only `node:*` builtins, the four
@@ -128,10 +133,8 @@ import {
   parseDrmLaunchAnchor,
   type DrmEvidence
 } from '../src/backend/storeManagers/steam/bridge/drm/drmTrace'
-import {
-  detectSteamDrmInPe,
-  readPeSteamApiDelayImports
-} from '../src/backend/storeManagers/steam/bridge/peSteamDrm'
+import { runScanCliSync } from './gamelibScanCli'
+import type { PeDelayImportScanResult } from '../src/backend/scanners/scanTypes'
 import {
   findRuntimeLoadedSteamApiDlls,
   findSteamApiImporterPes,
@@ -1256,7 +1259,7 @@ export function formatCensusMarkdown(rows: CensusRow[]): string {
 // Impure I/O driver (operator-run, never unit-tested with a real filesystem)
 // ---------------------------------------------------------------------------
 
-const BOTTLES_DIR = join(
+export const BOTTLES_DIR = join(
   homedir(),
   'Library/Application Support/CrossOver/Bottles'
 )
@@ -1302,7 +1305,7 @@ function isGameLibShimBytes(buf: Buffer): boolean {
 const REDIST_EXE_NAME = /^(vcredist|dxsetup|unitycrashhandler).*\.exe$/i
 const UNINSTALLER_EXE_NAME = /unins.*\.exe$/i
 
-function isExcludedExeName(name: string): boolean {
+export function isExcludedExeName(name: string): boolean {
   return REDIST_EXE_NAME.test(name) || UNINSTALLER_EXE_NAME.test(name)
 }
 
@@ -1343,7 +1346,7 @@ interface AcfAppState {
  * throws -- a missing dir, unreadable file, or corrupt/incomplete ACF is a
  * normal "nothing to report for this entry" outcome, the same discipline
  * `acfInstalldir.ts`'s `readAcfInstalldir` already follows. */
-function readManifests(
+export function readManifests(
   steamappsDir: string,
   bottleName: string
 ): ManifestEntry[] {
@@ -1381,7 +1384,7 @@ function readManifests(
 
 /** Collects every `*.exe` under `dir`, depth-bounded, excluding known
  * redistributable/uninstaller names. */
-function walkExes(dir: string, depth: number, out: string[]): void {
+export function walkExes(dir: string, depth: number, out: string[]): void {
   if (depth > MAX_EXE_DEPTH || !existsSync(dir)) {
     return
   }
@@ -1427,30 +1430,18 @@ function runObjdump(exePath: string): string | null {
   return result.stdout
 }
 
-/** Ranged fd reads into the pure delay-import reader (never a slurp). Null on
- * any fs error -- "no delay evidence". */
+/** D-09: the Rust `scan_pe_delay_imports` scanner via the CLI. Null on any
+ * failure or read error -- "no delay evidence". */
 function readDelayImports(
   exePath: string
-): ReturnType<typeof readPeSteamApiDelayImports> | null {
-  let fd: number | null = null
+): Omit<PeDelayImportScanResult, 'readError'> | null {
   try {
-    fd = openSync(exePath, 'r')
-    const handle = fd
-    return readPeSteamApiDelayImports((offset, length) => {
-      const buf = Buffer.alloc(length)
-      const n = readSync(handle, buf, 0, length, offset)
-      return n < length ? null : new Uint8Array(buf.buffer, buf.byteOffset, n)
+    const { readError, ...rest } = runScanCliSync('scan_pe_delay_imports', {
+      exePath
     })
+    return readError !== null ? null : rest
   } catch {
     return null
-  } finally {
-    if (fd !== null) {
-      try {
-        closeSync(fd)
-      } catch {
-        // nothing left to release
-      }
-    }
   }
 }
 
@@ -2203,34 +2194,18 @@ async function readVersionsOrEmpty(path: string): Promise<string[]> {
   }
 }
 
-/** Quick 261024-br4: ranged fd reads (never slurps the exe) into the pure
- * `peSteamDrm.ts` scanner. A failed parse or an fs error reads as null --
- * not CEG. Read-only. */
+/** Quick 261024-br4 / D-09: the Rust `scan_steam_drm` scanner via the CLI. A
+ * failed parse or a read error reads as null -- not CEG. Read-only. */
 function scanExeSteamDrm(
   exePath: string
 ): { cegMarkers: string[]; hasBindSection: boolean } | null {
-  let fd: number | null = null
   try {
-    fd = openSync(exePath, 'r')
-    const handle = fd
-    const result = detectSteamDrmInPe((offset, length) => {
-      const buf = Buffer.alloc(length)
-      const n = readSync(handle, buf, 0, length, offset)
-      return n < length ? null : new Uint8Array(buf.buffer, buf.byteOffset, n)
-    })
-    return result.parsed
+    const result = runScanCliSync('scan_steam_drm', { exePath })
+    return result.parsed && result.readError === null
       ? { cegMarkers: result.cegMarkers, hasBindSection: result.hasBindSection }
       : null
   } catch {
     return null
-  } finally {
-    if (fd !== null) {
-      try {
-        closeSync(fd)
-      } catch {
-        // already closed / never opened -- nothing to release
-      }
-    }
   }
 }
 
