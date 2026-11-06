@@ -14,6 +14,23 @@ import i18next from 'i18next'
 import { readFileSync, rmSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+
+/**
+ * Every game*.ts module beside games.ts, discovered from the directory (the 62
+ * split moved code out of games.ts, so negative source scans must see them all).
+ * Uses the real fs: graceful-fs is mocked below, but node:fs is not.
+ */
+const gameModuleFiles = (): string[] => {
+  const files = (
+    jest
+      .requireActual<typeof import('node:fs')>('node:fs')
+      .readdirSync(join(__dirname, '..')) as string[]
+  ).filter((f) => /^game.*\.ts$/.test(f))
+  // anti-vacuity: 13 game*.ts modules exist today
+  expect(files).toContain('games.ts')
+  expect(files.length).toBeGreaterThanOrEqual(13)
+  return files
+}
 import { sendFrontendMessage } from '../../../ipc'
 import * as shortcutsModule from '../../../shortcuts/shortcuts/shortcuts'
 import { steamMetadataStore, steamLibraryStore } from '../electronStores'
@@ -9215,9 +9232,14 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     })
 
     it('A-19: the source carries no writer, eraser or store declaration for it', () => {
-      // A census, so the deletion cannot be half-undone in one file. The
-      // three files that used to carry it are named explicitly.
-      for (const relative of ['games.ts', 'library.ts', 'electronStores.ts']) {
+      // A census, so the deletion cannot be half-undone in one file. The 62
+      // split moved code out of games.ts, so it now covers every game*.ts
+      // module plus library.ts and electronStores.ts.
+      for (const relative of [
+        ...gameModuleFiles(),
+        'library.ts',
+        'electronStores.ts'
+      ]) {
         const source = stripSourceComments(
           readFileSync(join(__dirname, '..', relative), 'utf8')
         )
@@ -16187,8 +16209,10 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     })
 
     it('nag_blocks is no (59-01): no nag notification exists in code', () => {
-      const src = readFileSync(join(__dirname, '../games.ts'), 'utf8')
-      expect(stripSourceComments(src)).not.toMatch(/nagNotice|NagTime/)
+      for (const file of gameModuleFiles()) {
+        const src = readFileSync(join(__dirname, '..', file), 'utf8')
+        expect(stripSourceComments(src)).not.toMatch(/nagNotice|NagTime/)
+      }
     })
   })
 

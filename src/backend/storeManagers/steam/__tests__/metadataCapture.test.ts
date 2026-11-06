@@ -29,7 +29,7 @@
  * leans on a type error surfacing as a jest failure. Every assertion is a
  * runtime assertion or a comment-stripped source-text match.
  */
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { depotSignalCaptured } from '../metadataCapture'
@@ -153,6 +153,15 @@ const gamesSource = readStripped('../games.ts')
 // 62-06: the eligibility cluster (isBottleEligibleFromPlatforms, assembleBridgeRouteInput,
 // ensurePlatformsCaptured) was lifted out of the class into gameEligibility.ts.
 const eligibilitySource = readStripped('../gameEligibility.ts')
+// Every game*.ts module, discovered from the directory so a lifted module is
+// never invisible to a negative/count scan. Floor: 13 exist today.
+const gameModuleNames = readdirSync(join(__dirname, '..')).filter((f) =>
+  /^game.*\.ts$/.test(f)
+)
+const allGameModulesSource = gameModuleNames
+  .map((f) => readStripped(`../${f}`))
+  .join('\n')
+
 const librarySource = readStripped('../library.ts')
 const installFormIpcSource = readStripped('../installFormIpc.ts')
 const steamPlatformRowSource = readStripped(
@@ -218,9 +227,11 @@ describe('source gate: Phase 51 Plan 09 bridge verdict carry-forward (D-51-07)',
     )
   })
 
-  it('bridgeAllowlist.has( appears exactly once across games.ts and gameEligibility.ts — assembleBridgeRouteInput is the sole caller (assumption_delta_decision)', () => {
+  it('bridgeAllowlist.has( appears exactly once across every game*.ts module — assembleBridgeRouteInput is the sole caller (assumption_delta_decision)', () => {
+    expect(gameModuleNames).toContain('games.ts')
+    expect(gameModuleNames.length).toBeGreaterThanOrEqual(13)
     const occurrences =
-      (gamesSource + eligibilitySource).match(/bridgeAllowlist\.has\(/g) ?? []
+      allGameModulesSource.match(/bridgeAllowlist\.has\(/g) ?? []
     expect(occurrences.length).toBe(1)
   })
 

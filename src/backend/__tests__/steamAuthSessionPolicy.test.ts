@@ -51,6 +51,12 @@ const GAMES = `${S}games.ts`
 // 62-06: the install cluster (acquireAuthenticated, allowLogon: true) was lifted out of games.ts.
 const INSTALL = `${S}gameInstall.ts`
 
+// Every game*.ts module (the 62 split lifted games.ts into these), discovered
+// from the directory so a module dropping out of the walk fails must-scan.
+const GAME_MODULES = readdirSync(join(REPO_ROOT, S))
+  .filter((f) => /^game.*\.ts$/.test(f))
+  .map((f) => `${S}${f}`)
+
 const ACQUIRE_AUTH_ALLOW = [
   USER,
   `${S}library.ts`,
@@ -145,11 +151,17 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
     expect(scannedRelPaths.length).toBeGreaterThanOrEqual(MIN_FILES_SCANNED)
   })
 
+  it('floor: every game*.ts module is discovered (anti-vacuity)', () => {
+    expect(GAME_MODULES).toContain(GAMES)
+    expect(GAME_MODULES.length).toBeGreaterThanOrEqual(13)
+  })
+
   it('must-scan: every allow-listed and launch-path file is in the scanned set', () => {
     const must = new Set([
       USER,
       ANON,
       GAMES,
+      ...GAME_MODULES,
       ...ACQUIRE_AUTH_ALLOW,
       ...ACQUIRE_OPEN_ALLOW,
       ...ENSURE_CONNECTED_ALLOW,
