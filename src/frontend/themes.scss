@@ -6,6 +6,9 @@ body {
   --tertiary-button-overlay: var(--status-warning-hover);
   --cancel-button: var(--status-warning);
   --cancel-button-overlay: var(--status-warning-hover);
+  /* Default for themes that set no hover-danger token, so the Downloads cancel
+     hover never resolves to an invalid var (quick 261107-aru). */
+  --danger-hover: var(--status-danger-hover);
   --background-darker-80: var(--eighty-percent-black);
   /* Structural edge for 7 consumers across 4 components (WineManager table
      and rows, the Popover frame, the SteamGridDB picker header). It was never
@@ -391,6 +394,7 @@ body.dracula {
   --primary: #ff79c6;
   --primary-hover: #f560b4;
   --danger: #ff5555;
+  --danger-hover: #ff6e6e;
   --text-title: #8be9fd;
   --text-default: white;
   --icons-background: #17131c;

@@ -151,7 +151,7 @@
 }
 
 .downloadHero .cancelIcon:hover circle {
-  fill: var(--danger-hover);
+  fill: var(--danger-hover, var(--status-danger-hover));
 }
 
 .downloadHero .playIcon circle {
