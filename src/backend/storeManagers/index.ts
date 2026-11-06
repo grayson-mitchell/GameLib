@@ -4,11 +4,29 @@ import LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
 import NileLibraryManager from 'backend/storeManagers/nile/library'
 import SteamLibraryManager from 'backend/storeManagers/steam/library'
 
+import gogSetup from 'backend/storeManagers/gog/setup'
+import nileSetup from 'backend/storeManagers/nile/setup'
+import { legendarySetup } from 'backend/storeManagers/legendary/setup'
+import { legendaryConfigStore } from 'backend/storeManagers/legendary/electronStores'
+import { resolveEpicOfflineMode } from 'backend/storeManagers/legendary/epicOfflineMode'
+import gogPresence from 'backend/storeManagers/gog/presence'
+import { isEnabled as isEosOverlayEnabled } from 'backend/storeManagers/legendary/eos_overlay/eos_overlay'
+import { sendFrontendMessage } from 'backend/ipc'
+
 import { logInfo, RunnerToLogPrefixMap } from 'backend/logger'
 import { addToQueue } from 'backend/downloadmanager/downloadqueue'
 
-import type { DMQueueElement, GameInfo, Runner } from 'common/types'
+import type {
+  DMQueueElement,
+  GameInfo,
+  Runner,
+  WineInstallation
+} from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
+import type LogWriter from 'backend/logger/log_writer'
+
+// launcher.ts reaches store-specific code only through this module (D-13).
+export type { LegendaryCommand } from 'backend/storeManagers/legendary/commands'
 
 export const libraryManagerMap = {
   sideload: new SideloadLibraryManager(),
@@ -17,6 +35,82 @@ export const libraryManagerMap = {
   nile: new NileLibraryManager(),
   steam: new SteamLibraryManager()
 } satisfies Record<Runner, LibraryManager>
+
+interface OfflineModeInput {
+  offlineMode: boolean
+  runner: Runner
+  canRunOffline: boolean
+}
+
+/**
+ * Store-specific launch work that launcher.ts used to branch on by runner.
+ * Members are optional because most runners have none of them; the Record type
+ * below still forces every runner to have an entry. Each body is the exact
+ * statement(s) launcher.ts ran for that runner before the hook existed.
+ */
+export interface StoreLaunchHooks {
+  /** Setup that runs after the wine prefix is prepared, before the game starts. */
+  prepareLaunch?: (appName: string, logWriter: LogWriter) => Promise<void>
+  /** Presence announced just before the game process starts. */
+  setPresence?: (appName: string) => Promise<void>
+  /** Presence cleared after the game process ends. */
+  clearPresence?: () => Promise<void>
+  /** Turns offline mode on for an expired store; never turns it off. */
+  resolveOfflineMode?: (input: OfflineModeInput) => boolean
+  /** Whether the store's overlay is enabled for this game. */
+  isOverlayEnabled?: (appName: string) => Promise<boolean>
+  /** Persists the bottle wine version (lazy import keeps module load timing). */
+  persistBottleWineVersion?: (wineVersion: WineInstallation) => Promise<void>
+}
+
+const launchHooks = {
+  sideload: {},
+  gog: {
+    prepareLaunch: async (appName) => {
+      await gogSetup(appName)
+      sendFrontendMessage('gameStatusUpdate', {
+        appName,
+        runner: 'gog',
+        status: 'launching'
+      })
+    },
+    setPresence: async (appName) => {
+      gogPresence.setCurrentGame(appName)
+      await gogPresence.setPresence()
+    },
+    clearPresence: async () => {
+      gogPresence.setCurrentGame('')
+      await gogPresence.setPresence()
+    }
+  },
+  legendary: {
+    prepareLaunch: async (appName, logWriter) => {
+      await legendarySetup(appName, logWriter)
+    },
+    // R8 (Phase 49): the expired flag is read here, once per launch.
+    resolveOfflineMode: (input) =>
+      resolveEpicOfflineMode({
+        ...input,
+        storeExpired: Boolean(legendaryConfigStore.get_nodefault('expired'))
+      }),
+    isOverlayEnabled: (appName) => isEosOverlayEnabled(appName)
+  },
+  nile: {
+    prepareLaunch: async (appName) => {
+      await nileSetup(appName)
+    }
+  },
+  steam: {
+    persistBottleWineVersion: async (wineVersion) => {
+      const { persistBottleWineVersion } =
+        await import('backend/storeManagers/steam/bottle')
+      persistBottleWineVersion(wineVersion)
+    }
+  }
+} satisfies Record<Runner, StoreLaunchHooks>
+
+// Widened so a call site can write `storeLaunchHooks[runner].prepareLaunch?.()`.
+export const storeLaunchHooks: Record<Runner, StoreLaunchHooks> = launchHooks
 
 function getDMElement(gameInfo: GameInfo, appName: string) {
   const {
