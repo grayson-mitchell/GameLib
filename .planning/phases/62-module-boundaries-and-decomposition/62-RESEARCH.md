@@ -423,16 +423,16 @@ depcruise --config .dependency-cruiser.cjs --baseline --baseline-mode shrink-onl
 | A6 | Classification table sites are behaviour vs identity as guessed from one-line context | Inventory | Wrong flag shape; planner must read each site's comment before converting |
 | A7 | Cross-manager production count is 0 and test count 12 (script-derived, not tool-derived) | Baselines | depcruise may count `import type` or dynamic imports differently; Plan 1 records the tool's own number |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Is a `this.`-to-parameter lift acceptable under D-06 "pure move"?**
    - Known: the launch/install/uninstall bodies are class methods; ~600 `this.` uses.
    - Unclear: whether the user reads "pure move" as byte-identical.
-   - Recommendation: plan type-A pure moves for all free code first (ends with `games.ts` ~5,900 lines); then type-B mechanical lifts, each reviewed with `git diff --color-moved` and gated by `games.test.ts`. Surface to the user at plan-check, not mid-execution.
-2. **Should the depcruise rules start at `error` + baseline, or `warn`?** ROADMAP says warn-only, D-14 says ceiling that only goes down. Recommend `error` + known-violations file (strictly safer, equivalent ceiling). The cross-manager rule's production baseline is 0, so it can be `error` with an empty baseline and no ceiling at all from day one; only test-file edges (12) and the `launcher.ts` imports (8) need baselining (or exempt `__tests__` from the cross-manager rule per Discretion).
-3. **Do test files fall under the literal ban?** Counts: 5 frontend + 6 backend. Recommend exempt `__tests__`/`__mocks__` (fixtures set `runner: 'steam'` legitimately), document in the rule comment.
-4. **Does `humble` belong in the runner ban?** `Runner` has no `'humble'`; humble literals compare other fields. D-03 says every runner literal; define the selector's name set (`runner` only vs `runner|store`).
-5. **Where do the 64 owner-less channels live (D-09)?** Recommend dedicated non-paired domain files and an allowlist in the census test.
+   - **RESOLVED (user ruling 2026-11-06):** mechanical lift allowed. Free code moves byte-for-byte (62-05); class-method clusters are lifted by `this` -> `steamGame` in their own commits (62-06..62-08, THE LIFT RECIPE L1-L10 in 62-06-PLAN.md). Oracle: tsc, byte-unchanged `games.test.ts`, `git diff --color-moved`.
+2. **Should the depcruise rules start at `error` + baseline, or `warn`?** **RESOLVED (user ruling 2026-11-06):** `error` from day one with a shrink-only known-violations baseline (62-01), superseding the roadmap's warn-only wording; a CI test also fails on a stale baseline entry. ROADMAP says warn-only, D-14 says ceiling that only goes down. Recommend `error` + known-violations file (strictly safer, equivalent ceiling). The cross-manager rule's production baseline is 0, so it can be `error` with an empty baseline and no ceiling at all from day one; only test-file edges (12) and the `launcher.ts` imports (8) need baselining (or exempt `__tests__` from the cross-manager rule per Discretion).
+3. **Do test files fall under the literal ban?** **RESOLVED (planner, 62-02):** exempt `__tests__`, `__mocks__`, `*.test.ts(x)`, `src/backend/jest.setup*.ts`, `*.d.ts`; test files are also exempt from `no-cross-store-manager` (62-01). Counts: 5 frontend + 6 backend. Recommend exempt `__tests__`/`__mocks__` (fixtures set `runner: 'steam'` legitimately), document in the rule comment.
+4. **Does `humble` belong in the runner ban?** **RESOLVED (planner, 62-02/62-13):** yes. Literal set steam/gog/legendary/nile/sideload/humble, compared against any name matching `^(runner|store)$|[a-z0-9]Runner$|[a-z0-9]Store$` (widened after plan check); `StoreKey = Runner | 'humble'` for `isStore`. `Runner` has no `'humble'`; humble literals compare other fields. D-03 says every runner literal; define the selector's name set (`runner` only vs `runner|store`).
+5. **Where do the 64 owner-less channels live (D-09)?** **RESOLVED (planner, 62-11):** unpaired domain files (`window`, `testStubs`, `mainProcess`, per-runner) by handler location; FrontendMessages by sender path; the census test's `NO_REGISTRATION_OWNER` allowlist is the tripwire. Recommend dedicated non-paired domain files and an allowlist in the census test.
 
 ## Environment Availability
 

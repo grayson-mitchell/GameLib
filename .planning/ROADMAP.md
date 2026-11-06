@@ -148,7 +148,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Unassigned (next milestone not yet defined)**
 
 - [ ] **Phase 61: Unified macOS engine for all stores** — 0 plans; not started
-- [ ] **Phase 62: Module boundaries and decomposition** — 0 plans; not started
+- [ ] **Phase 62: Module boundaries and decomposition** — 21 plans; planned
 - [ ] **Phase 63: Rust migration pattern and executable scanners** — 0 plans; not started
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
 
@@ -211,6 +211,7 @@ Phases 61–64 are not assigned to a milestone yet. Phase details for 51–60 (v
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 61 to break down)
 
 ### Phase 62: Module boundaries and decomposition
@@ -218,10 +219,90 @@ Plans:
 **Goal:** Module boundaries in the TypeScript backend and frontend are explicit, enforced by a tool, and no longer bypassed by branching on store identity. Three parts: (1) **Boundary rules.** Add dependency-cruiser with rules in warn-only mode and record a baseline violation count. The rules: no store manager imports another store manager; `launcher.ts` reaches stores only through `storeManagers/index` (today it imports `gog/setup`, `legendary/commands`, `gog/presence` and `eos_overlay` directly); no `runner === '<literal>'` checks in `frontend/screens/**`. (2) **Store capabilities.** Give `GameInfo`/`LibraryManager` capability flags (e.g. install managed externally, DLC selection, resumable install) and replace runner-literal branching with them: 66 `runner === 'steam'` sites in the frontend (Library, Game page, ConsoleMode, InstallModal, filterEngine) and 31 in the backend outside `storeManagers/` (11 in `downloadmanager/`). `helpers/steamInstallOptionsEntry.ts` already shows the single-decision-site pattern. (3) **Decomposition.** Split `steam/games.ts` (7,150 lines, 73 imports) into launch, DRM and requirements modules; fold `steam/depot.ts` (4,598 lines) into `steam/depot/`; split `common/types/ipc.ts` (~280 channels) into per-domain channel types co-located with the sidecar `*FlowRegistration.ts` files; add a parity test for the transport constants Rust's `main.rs` mirrors from `common/types/sidecarTransport.ts` by hand. Promote the dependency-cruiser rules from warn to error once the counts reach zero. Out of scope: the `src-tauri/src/main.rs` split, which is a separate quick task. Came from an architecture review on 2026-11-06.
 **Requirements**: TBD
 **Depends on:** None
-**Plans:** 0 plans
+**Plans:** 21 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 62 to break down)
+**Wave 1**
+
+- [ ] 62-01-PLAN.md — dependency-cruiser (human-verified, pinned 18.7.2), graph rules at error + shrink-only baseline, seeded-violation tests
+- [ ] 62-02-PLAN.md — runner-literal ESLint selector + equality-ceiling ratchet (frontend/backend)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 62-03-PLAN.md — `pnpm boundaries` wired into lint.yml and pre-push, wiring test
+- [ ] 62-04-PLAN.md — TS/Rust transport parity test by marker (sidecar.rs, store_embed.rs dispatch arms)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 62-05-PLAN.md — games.ts pure moves: session state, requirements, DRM helpers; surface guard
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 62-06-PLAN.md — games.ts mechanical lifts: eligibility and install clusters
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 62-07-PLAN.md — games.ts mechanical lifts: launch, overlay, bridge launch
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 62-08-PLAN.md — games.ts mechanical lifts: maintenance, uninstall; D-06 cleanup todos
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 62-09-PLAN.md — depot.ts fold part 1 + back-edge repoint
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 62-10-PLAN.md — depot.ts fold part 2 + depot/index.ts swap
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 62-11-PLAN.md — ipc.ts split per domain + ipcDomainCensus test
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 62-12-PLAN.md — live macOS smoke #1 (after split)
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 62-13-PLAN.md — per-site classification + storeCapabilities table + isStore
+
+**Wave 12** *(blocked on Wave 11 completion)*
+
+- [ ] 62-14-PLAN.md — launcher.ts boundary via storeLaunchHooks + launcher literals
+
+**Wave 13** *(blocked on Wave 12 completion)*
+
+- [ ] 62-15-PLAN.md — backend conversions: downloadmanager, gamedetails, tools, utils
+
+**Wave 14** *(blocked on Wave 13 completion)*
+
+- [ ] 62-16-PLAN.md — backend conversions: sidecar registrations and rest (backend to 0)
+
+**Wave 15** *(blocked on Wave 14 completion)*
+
+- [ ] 62-17-PLAN.md — frontend conversions: helpers, hooks, state, components, DownloadManager, WebView, Settings
+
+**Wave 16** *(blocked on Wave 15 completion)*
+
+- [ ] 62-18-PLAN.md — frontend conversions: screens/Game
+
+**Wave 17** *(blocked on Wave 16 completion)*
+
+- [ ] 62-19-PLAN.md — frontend conversions: Library, ConsoleMode, rest (frontend to 0)
+
+**Wave 18** *(blocked on Wave 17 completion)*
+
+- [ ] 62-20-PLAN.md — promote literal ban to eslint error, delete ratchet and baselines
+
+**Wave 19** *(blocked on Wave 18 completion)*
+
+- [ ] 62-21-PLAN.md — live macOS smoke #2 (after capabilities) + zero-at-error proof
+
+**Cross-cutting constraints:**
+
+- FRONTEND_CEILING drops by exactly the converted count in each commit (D-14)
 
 ### Phase 63: Rust migration pattern and executable scanners
 
@@ -231,6 +312,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 63 to break down)
 
 ### Phase 64: UI to edit themes
@@ -241,4 +323,5 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 64 to break down)
