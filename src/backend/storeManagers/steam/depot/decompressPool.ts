@@ -69,7 +69,7 @@ function forwardWorkerLog(entry: unknown): void {
     if (level === 'warning') logWarning(lines, LogPrefix.Steam)
     else logInfo(lines, LogPrefix.Steam)
   } catch {
-    console.error(`[DecompressPool] ${(lines as string[]).join(' ')}`)
+    console.error(`[DecompressPool] ${lines.join(' ')}`)
   }
 }
 
