@@ -13308,8 +13308,8 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           )
         ).steam.bridge.drm
         // The DRM step texts moved to gameDrmLaunch.ts (62-05); the
-        // title/detail keys stay in games.ts. Search both owners.
-        const src = ['games.ts', 'gameDrmLaunch.ts']
+        // title/detail keys moved to gameLaunch.ts (62-07). Search all owners.
+        const src = ['games.ts', 'gameLaunch.ts', 'gameDrmLaunch.ts']
           .map((f) => realFs.readFileSync(realJoin(__dirname, '..', f), 'utf8'))
           .join('\n')
         const pairs: [string, string][] = [
