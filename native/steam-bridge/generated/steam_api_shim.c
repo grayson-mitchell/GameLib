@@ -70,6 +70,8 @@
 #define BRIDGE_CONTROL_SLOT_REQUEST_CURRENT_STATS 9
 // quick 261027-k51: each relayed callback the registry dispatched or held is reported (the helper logs CBDISP); an old helper answers STATUS_ERR, which is harmless.
 #define BRIDGE_CONTROL_SLOT_REPORT_CB_DISPATCH 10
+// quick 261106-qvp: game registrations of unlisted callback ids (and ManualDispatch_Init) are reported from the Run paths and logged by the helper as CBREG; an old helper answers STATUS_ERR, which is harmless.
+#define BRIDGE_CONTROL_SLOT_REPORT_CB_REGISTER 15
 // Phase 58 (58-10): SteamAPI_RunCallbacks drains one completed call result at a time ([u32 count][u64 h][i32 id][u32 failed][u32 cub][bytes]); an old helper answers STATUS_ERR, which bridge_transact reports as 0 and the registry treats as empty.
 #define BRIDGE_CONTROL_SLOT_DRAIN_CALL_RESULTS 11
 // Phase 58 (58-21): SteamAPI_RunCallbacks, ManualDispatch RunFrame and ISteamNetworkingSockets::RunCallbacks drain one server-browser event at a time ([u32 count][u8 kind][u32 hRequest][i32 iServer][i32 value][u32 cub][bytes]); an old helper answers STATUS_ERR, which bridge_transact reports as 0 and the registry backs off.
@@ -617,6 +619,14 @@ static void gl_cb_report_dispatch(int32_t id, uint32_t ndispatched, uint32_t hel
   memcpy(req + 4, &ndispatched, 4);
   memcpy(req + 8, &held, 4);
   (void)bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_REPORT_CB_DISPATCH, req, 12, retbuf, sizeof(retbuf), &retlen);
+}
+/* quick 261106-qvp: {i32 iCallback, u32 path}; the registry calls this with no lock held. The result is ignored. */
+static void gl_cb_report_register(int32_t id, uint32_t path) {
+  uint8_t req[8];
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  memcpy(req, &id, 4);
+  memcpy(req + 4, &path, 4);
+  (void)bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_REPORT_CB_REGISTER, req, 8, retbuf, sizeof(retbuf), &retlen);
 }
 /* ---- networking value types, message pool and config store (58-14, x64 only) ----
  * GameLib-authored C implementing the semantics of the Steamworks inline
@@ -1885,6 +1895,15 @@ static int gl_cb_have_drained;
 static uint32_t gl_cb_fail_count;
 static uint32_t gl_cb_overflow;
 static uint32_t gl_cb_no_target;
+/* quick 261106-qvp: game registrations of ids that are not relay rows,
+ * recorded under the lock and reported later by gl_cbreg_flush (never from
+ * inside gl_cb_register: the report is a socket round trip). */
+#define GL_CBREG_MAX 32
+static int32_t gl_cbreg_ids[GL_CBREG_MAX];
+static uint32_t gl_cbreg_n;
+static uint32_t gl_cbreg_flushed;
+static int gl_cbreg_md_pending;
+static int gl_cbreg_md_done;
 /* In-flight state (55 WR-01), all guarded by the registry lock. */
 static int gl_cb_running;
 static uint32_t gl_cb_run_tid;
@@ -1922,6 +1941,11 @@ static void gl_cb_register(void *cb, int iCallback) {
   int idx;
   if (!cb) return;
   GL_CB_LOCK();
+  if (id > 0 && gl_cb_relay_size(id) == 0 && gl_cbreg_n < GL_CBREG_MAX) {
+    uint32_t k;
+    for (k = 0; k < gl_cbreg_n; k++) if (gl_cbreg_ids[k] == id) break;
+    if (k == gl_cbreg_n) gl_cbreg_ids[gl_cbreg_n++] = id;
+  }
   idx = gl_cb_find(cb);
   if (idx >= 0) {
     if (gl_cb_relay_size(gl_cb_entries[idx].iCallback)) gl_cb_relay_count--;
@@ -1942,6 +1966,23 @@ static void gl_cb_register(void *cb, int iCallback) {
   *flags = (uint8_t)(*flags | GL_CB_FLAG_REGISTERED);
   memcpy((uint8_t *)cb + GL_CB_ICALLBACK_OFF, &id, sizeof(id));
   GL_CB_UNLOCK();
+}
+
+/* quick 261106-qvp: report the recorded registrations with no lock held. */
+static void gl_cbreg_flush(void) {
+  int32_t ids[GL_CBREG_MAX];
+  uint32_t n = 0, i;
+  int md = 0;
+  GL_CB_LOCK();
+  while (gl_cbreg_flushed < gl_cbreg_n) ids[n++] = gl_cbreg_ids[gl_cbreg_flushed++];
+  if (gl_cbreg_md_pending && !gl_cbreg_md_done) {
+    md = 1;
+    gl_cbreg_md_done = 1;
+  }
+  gl_cbreg_md_pending = 0;
+  GL_CB_UNLOCK();
+  for (i = 0; i < n; i++) gl_cb_report_register(ids[i], 0);
+  if (md) gl_cb_report_register(0, 1);
 }
 
 static void gl_cb_unregister(void *cb) {
@@ -2887,6 +2928,7 @@ static int gl_md_get_api_call_result(uint64_t h, void *out, int cub,
 static void gl_md_init(void) {
   GL_CB_LOCK();
   gl_md_enabled = 1;
+  if (!gl_cbreg_md_done) gl_cbreg_md_pending = 1;
   GL_CB_UNLOCK();
 }
 
@@ -2896,6 +2938,7 @@ static void gl_md_run_frame(void) {
   uint8_t buf[GL_CR_DRAIN_RESP_MAX_BYTES];
   uint32_t now, iter, interval;
   int crskip;
+  gl_cbreg_flush();
   GL_CB_LOCK();
   if (!gl_md_enabled || gl_md_running) {
     GL_CB_UNLOCK();
@@ -3107,6 +3150,7 @@ static void gl_cb_run_callbacks(void) {
   uint32_t hi;
   int do_bcast, do_cr;
 
+  gl_cbreg_flush();
   GL_CB_LOCK();
   if (gl_cb_running || gl_md_enabled ||
       (gl_cb_relay_count == 0 && gl_cr_count == 0 && gl_cr_held_count == 0 &&

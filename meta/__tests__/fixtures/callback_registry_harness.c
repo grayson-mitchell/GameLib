@@ -158,6 +158,23 @@ static void gl_cb_report_dispatch(int32_t id, uint32_t ndispatched,
   g_nrep++;
 }
 
+/* quick 261106-qvp: the CBREG embedder hook. Records every report and asserts
+ * the registry lock is NOT held when it is called. */
+static struct {
+  int32_t id;
+  uint32_t path;
+} g_creg[64];
+static int g_ncreg;
+static void gl_cb_report_register(int32_t id, uint32_t path) {
+  int r = pthread_mutex_trylock(&g_reg);
+  CHECK(r == 0); /* cbreg: registry lock must NOT be held */
+  pthread_mutex_unlock(&g_reg);
+  CHECK(g_ncreg < 64);
+  g_creg[g_ncreg].id = id;
+  g_creg[g_ncreg].path = path;
+  g_ncreg++;
+}
+
 /* 58-14: the networking function-pointer hook. Inert (id 0, any 0) except in
  * the net_intercept_* cases. Asserts the registry lock is NOT held. */
 static int32_t g_net_icept_id;
@@ -407,6 +424,9 @@ static void reset(void) {
   g_ctcalls = 0;
   g_lastcrbuf = NULL;
   g_nrep = 0;
+  g_ncreg = 0;
+  gl_cbreg_n = gl_cbreg_flushed = 0;
+  gl_cbreg_md_pending = gl_cbreg_md_done = 0;
   g_qhead = g_qtail = 0;
   g_tcalls = 0;
   g_lastbuf = NULL;
@@ -889,6 +909,61 @@ static void case_report_hook_unlocked(void) {
   gl_cb_run_callbacks();
   /* the hook CHECKs trylock==0 on every call */
   CHECK(g_nrep == 2);
+  PASS();
+}
+
+/* quick 261106-qvp: an unlisted id is reported once, from the Run path. */
+static void case_cbreg_unlisted_reported(void) {
+  g_case = "cbreg_unlisted_reported";
+  reset();
+  gl_cb_register(&objA, 1298);
+  CHECK(g_ncreg == 0); /* nothing inside register */
+  gl_cb_run_callbacks();
+  CHECK(g_ncreg == 1 && g_creg[0].id == 1298 && g_creg[0].path == 0);
+  gl_cb_register(&objB, 1298);
+  gl_cb_run_callbacks();
+  CHECK(g_ncreg == 1);
+  PASS();
+}
+
+static void case_cbreg_listed_silent(void) {
+  g_case = "cbreg_listed_silent";
+  reset();
+  gl_cb_register(&objU, 1101);
+  gl_cb_run_callbacks();
+  CHECK(g_ncreg == 0);
+  PASS();
+}
+
+static void case_cbreg_not_in_register(void) {
+  g_case = "cbreg_not_in_register";
+  reset();
+  gl_cb_register(&objA, 1298);
+  gl_cb_register(&objB, 1299);
+  CHECK(g_ncreg == 0);
+  PASS();
+}
+
+static void case_cbreg_cap(void) {
+  int i;
+  g_case = "cbreg_cap";
+  reset();
+  /* one object re-registered 40 times: the question is whether the game asked */
+  for (i = 0; i < 40; i++) gl_cb_register(&objA, 2000 + i);
+  gl_cb_run_callbacks();
+  CHECK(g_ncreg == 32);
+  PASS();
+}
+
+static void case_cbreg_md_once(void) {
+  g_case = "cbreg_md_once";
+  reset();
+  gl_md_init();
+  gl_md_init();
+  gl_md_run_frame();
+  CHECK(g_ncreg == 1 && g_creg[0].id == 0 && g_creg[0].path == 1);
+  gl_md_run_frame();
+  CHECK(g_ncreg == 1);
   PASS();
 }
 
@@ -1955,6 +2030,11 @@ int main(void) {
   case_hold_1101_no_expiry();
   case_no_hold_168();
   case_report_hook_unlocked();
+  case_cbreg_unlisted_reported();
+  case_cbreg_listed_silent();
+  case_cbreg_not_in_register();
+  case_cbreg_cap();
+  case_cbreg_md_once();
   case_relay_504_dispatch();
   case_relay_1221_dispatch();
   case_net_intercept_registry();

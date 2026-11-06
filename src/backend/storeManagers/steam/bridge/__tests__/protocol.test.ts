@@ -328,6 +328,17 @@ describe('protocol -- CONTROL_SLOT.reportCbRegister (quick 261106-qvp)', () => {
     )
     expect(Number(helperValue![1])).toBe(CONTROL_SLOT.reportCbRegister)
   })
+
+  it('equals the shim #define in gen_vtables.ts and the generated shim', () => {
+    const gen = readFileSync(join(root, 'meta/gen_vtables.ts'), 'utf-8')
+    const shim = readFileSync(
+      join(root, 'native/steam-bridge/generated/steam_api_shim.c'),
+      'utf-8'
+    )
+    const re = /#define BRIDGE_CONTROL_SLOT_REPORT_CB_REGISTER (\d+)/
+    expect(Number(re.exec(gen)![1])).toBe(CONTROL_SLOT.reportCbRegister)
+    expect(Number(re.exec(shim)![1])).toBe(CONTROL_SLOT.reportCbRegister)
+  })
 })
 
 describe('protocol -- WR-03 secret/role constants match the shim and helper', () => {
