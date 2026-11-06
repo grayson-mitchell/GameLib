@@ -35,5 +35,3 @@ graphify-out
 # presence-idempotent -- see [[download-helper-binaries-is-tag-idempotent-not-presence-idempotent]].
 public/bin
 
-# Tool-written by `depcruise --baseline`; formatting it would churn on every regen.
-.dependency-cruiser-known-violations.json

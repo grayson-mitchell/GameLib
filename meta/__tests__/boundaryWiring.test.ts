@@ -5,7 +5,7 @@
  */
 
 import { load } from 'js-yaml'
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 
 const REPO_ROOT = join(__dirname, '..', '..')
@@ -66,6 +66,10 @@ describe('boundary gate wiring', () => {
     const script = pkg.scripts.boundaries
     expect(script).toContain('.dependency-cruiser.cjs')
     expect(script).not.toContain('boundaryRatchet')
+    expect(script).not.toContain('--ignore-known')
+    expect(
+      existsSync(join(REPO_ROOT, '.dependency-cruiser-known-violations.json'))
+    ).toBe(false)
   })
 
   it('eslint.config.mjs enforces the runner-literal ban at error', () => {

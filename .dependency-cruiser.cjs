@@ -2,11 +2,8 @@
 
 // Phase 62 import-graph rules (D-13, D-14).
 //
-// Every rule runs at severity 'error' from day one (user ruling 2026-11-06, supersedes the
-// roadmap's warn-only). Violations that already exist are held in
-// .dependency-cruiser-known-violations.json and ignored with `--ignore-known`; the baseline is
-// only ever rewritten with `--baseline --baseline-mode shrink-only`, so it can shrink but never
-// absorb a new violation.
+// Every rule runs at severity 'error' with a zero count; there is no baseline file and
+// `pnpm boundaries` runs without `--ignore-known` (D-15).
 
 const STEAM = '^src/backend/storeManagers/steam/'
 const DEPOT_SUBTREE = `${STEAM}depot(\\.ts$|/)`

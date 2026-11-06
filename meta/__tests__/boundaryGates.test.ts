@@ -10,7 +10,13 @@
  * `--baseline-mode <full|shrink-only|format>`, `--ignore-known [file]`, `--output-type json`.
  */
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync
+} from 'node:fs'
 import { dirname, join } from 'node:path'
 
 import { createFakeHomeProfile } from '../../src/backend/testUtils/fakeHomeProfile'
@@ -369,15 +375,16 @@ describe('real repository', () => {
     }
   }
 
-  test('src/backend is clean under --ignore-known', () => {
-    const run = cruiseRepo(['--ignore-known', '--output-type', 'err'])
+  test('src/backend is clean with no baseline', () => {
+    const run = cruiseRepo(['--output-type', 'err'])
     expect(run.status).toBe(0)
   })
 
-  test('the baseline file equals the live violation set (no stale entries)', () => {
-    const run = cruiseRepo(['--no-ignore-known', '--output-type', 'json'])
-    expect(baselineKeys(readFileSync(BASELINE, 'utf-8'))).toEqual(
-      liveKeys(run.stdout)
-    )
+  test('no baseline file exists and the boundaries script does not use one', () => {
+    expect(existsSync(BASELINE)).toBe(false)
+    const pkg = JSON.parse(
+      readFileSync(join(REPO_ROOT, 'package.json'), 'utf-8')
+    ) as { scripts: Record<string, string> }
+    expect(pkg.scripts.boundaries).not.toContain('--ignore-known')
   })
 })
