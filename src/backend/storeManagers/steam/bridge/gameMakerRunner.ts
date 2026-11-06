@@ -21,6 +21,9 @@
  * GEN8 IDE version 2.0.0.0). Fields of Mistria (2142790; Rust/SDL3, no
  * data.win, no d3d11 import) is the counter-example and must not match.
  *
+ * The PE import read is a Phase 63 path-based scanner call; the MSAA probe
+ * still reads the whole exe (bounded by MAX_EXE_SCAN_BYTES).
+ *
  * Never throws: failures log a warning and report no match. The caller logs
  * the applied default.
  */
@@ -29,7 +32,7 @@ import { dirname, join } from 'node:path'
 
 import { logWarning, LogPrefix } from 'backend/logger'
 
-import { readPeImportedDllNames } from './peSteamDrm'
+import { readPeImportedDllNames } from './peScan'
 
 export const GAMEMAKER_MSAA_PROBE =
   'GR_D3D_Device->CheckMultisampleQualityLevels'
@@ -82,12 +85,9 @@ export async function detectGameMakerD3d11Runner(
       )
       return signals(true)
     }
+    // Pitfall 7: the whole exe is still read for the MSAA byte probe.
     const buf = await readFile(exePath)
-    const names = readPeImportedDllNames((offset, length) =>
-      offset + length > buf.length
-        ? null
-        : buf.subarray(offset, offset + length)
-    )
+    const names = await readPeImportedDllNames(exePath, 'gameMakerRunner')
     const d3d11Import =
       names?.some((n) => n.toLowerCase() === 'd3d11.dll') ?? false
     const msaaProbe = buf.includes(GAMEMAKER_MSAA_PROBE, 0, 'latin1')

@@ -14,6 +14,10 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
+jest.mock('backend/sidecar/sidecarRpc', () => ({
+  requestRustInvoke: jest.fn()
+}))
+
 const mockReadFile = jest.fn()
 jest.mock('node:fs/promises', () => {
   const actual = jest.requireActual('node:fs/promises')
@@ -26,6 +30,8 @@ jest.mock('node:fs/promises', () => {
   }
 })
 
+import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+import { runLegacyOp } from 'backend/scanners/legacyTsScanners'
 import {
   detectGameMakerD3d11Runner,
   GAMEMAKER_MSAA_PROBE
@@ -36,13 +42,23 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
   let dir: string
   let exe: string
 
+  const savedEnv = process.env.GAMELIB_SCANNER_PE_STEAM_DRM
+
   beforeEach(() => {
+    process.env.GAMELIB_SCANNER_PE_STEAM_DRM = 'rust'
+    // The TS oracle stands in for the Rust leaf on the real fixture files.
+    jest
+      .mocked(requestRustInvoke)
+      .mockImplementation(((channel: string, [args]: [never]) =>
+        runLegacyOp(channel as never, args)) as never)
     mockLogWarning.mockClear()
     mockReadFile.mockClear()
     dir = mkdtempSync(join(tmpdir(), 'gamelib-gm-runner-'))
     exe = join(dir, 'game.exe')
   })
   afterEach(() => {
+    if (savedEnv === undefined) delete process.env.GAMELIB_SCANNER_PE_STEAM_DRM
+    else process.env.GAMELIB_SCANNER_PE_STEAM_DRM = savedEnv
     jest.restoreAllMocks()
     rmSync(dir, { recursive: true, force: true })
   })
@@ -120,5 +136,27 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
     const r = await detectGameMakerD3d11Runner(exe)
     expect(r.match).toBe(false)
     expect(r.d3d11Import).toBe(false)
+  })
+
+  it('reads the imported DLLs by path through scan_pe_imported_dlls', async () => {
+    writeExe(['d3d11.dll'])
+    writeFileSync(join(dir, 'data.win'), 'FORM')
+    jest
+      .mocked(requestRustInvoke)
+      .mockResolvedValueOnce({ names: ['D3D11.dll'], readError: null } as never)
+    const r = await detectGameMakerD3d11Runner(exe)
+    expect(r.d3d11Import).toBe(true)
+    expect(requestRustInvoke).toHaveBeenCalledWith('scan_pe_imported_dlls', [
+      { exePath: exe }
+    ])
+  })
+
+  it('reports no d3d11 import and does not throw when the transport rejects', async () => {
+    writeExe(['d3d11.dll'])
+    writeFileSync(join(dir, 'data.win'), 'FORM')
+    jest.mocked(requestRustInvoke).mockRejectedValueOnce(new Error('pipe'))
+    const r = await detectGameMakerD3d11Runner(exe)
+    expect(r.d3d11Import).toBe(false)
+    expect(r.match).toBe(false)
   })
 })
