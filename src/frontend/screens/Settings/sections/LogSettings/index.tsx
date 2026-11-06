@@ -15,6 +15,7 @@ import Cloud from '@mui/icons-material/Cloud'
 import classNames from 'classnames'
 
 import type { GetLogFileArgs } from 'backend/logger/paths'
+import {} from 'common/storeCapabilities'
 
 interface LogBoxProps {
   logFileContent: string
@@ -143,16 +144,16 @@ export default function LogSettings() {
         { gameTitle }
       )
     }
-    if (showLogOf.runner === 'legendary')
-      return t(
-        'setting.log.descriptiveNames.legendary',
-        'Epic Games / Legendary log'
-      )
-    if (showLogOf.runner === 'gog')
-      return t('setting.log.descriptiveNames.gog', 'GOG log')
-    if (showLogOf.runner === 'nile')
-      return t('setting.log.descriptiveNames.nile', 'Amazon / Nile log')
-    return ''
+    const labelByRunner: Partial<Record<string, () => string>> = {
+      legendary: () =>
+        t(
+          'setting.log.descriptiveNames.legendary',
+          'Epic Games / Legendary log'
+        ),
+      gog: () => t('setting.log.descriptiveNames.gog', 'GOG log'),
+      nile: () => t('setting.log.descriptiveNames.nile', 'Amazon / Nile log')
+    }
+    return labelByRunner[showLogOf.runner]?.() ?? ''
   }, [showLogOf, installedGames, t])
 
   const logFilesToShow = useMemo(() => {

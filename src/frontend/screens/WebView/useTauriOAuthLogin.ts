@@ -4,6 +4,7 @@ import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { OAuthCaptureOutcome, OAuthRunner } from 'common/types/oauthLogin'
 import type { NileLoginData } from 'common/types/nile'
 import { EPIC_LOGIN_URL, GOG_LOGIN_URL } from './loginRoutes'
+import { isStore } from 'common/storeCapabilities'
 
 /**
  * The renderer half of REQ-34.4.1-08's "wired" claim (Phase 34.4.1 Plan 09, D-04), extended by
@@ -120,21 +121,23 @@ type OAuthLoginCompletionDeps = {
  * the full `GlobalState` React component (see `useTauriOAuthLogin.test.tsx`'s "library refresh"
  * suite).
  */
+const LOGIN_STATE_SLICE: Record<
+  OAuthRunner,
+  (who: { username?: string; user_id?: string }) => Record<string, unknown>
+> = {
+  legendary: ({ username }) => ({ epic: { library: [], username } }),
+  gog: ({ username }) => ({ gog: { library: [], username } }),
+  nile: ({ username, user_id }) => ({
+    amazon: { library: [], user_id, username }
+  })
+}
+
 export function createOAuthLoginCompletion(
   deps: OAuthLoginCompletionDeps
 ): (payload: OAuthLoginCompletionPayload) => void {
   return ({ runner, username, user_id }) => {
-    switch (runner) {
-      case 'legendary':
-        deps.setState({ epic: { library: [], username } })
-        break
-      case 'gog':
-        deps.setState({ gog: { library: [], username } })
-        break
-      case 'nile':
-        deps.setState({ amazon: { library: [], user_id, username } })
-        break
-    }
+    const slice = LOGIN_STATE_SLICE[runner]?.({ username, user_id })
+    if (slice) deps.setState(slice)
     deps.handleSuccessfulLogin(runner)
   }
 }
@@ -196,9 +199,9 @@ export function useTauriOAuthLogin(
       let url: string
       let amazonData: NileLoginData | undefined
       try {
-        if (activeRunner === 'legendary') {
+        if (isStore(activeRunner, 'legendary')) {
           url = EPIC_LOGIN_URL
-        } else if (activeRunner === 'gog') {
+        } else if (isStore(activeRunner, 'gog')) {
           url = GOG_LOGIN_URL
         } else {
           // nile: account-session-dependent, fetched fresh per attempt (mirrors index.tsx's
@@ -338,11 +341,11 @@ export function useTauriOAuthLogin(
         let username: string | undefined
         let user_id: string | undefined
 
-        if (activeRunner === 'legendary') {
+        if (isStore(activeRunner, 'legendary')) {
           const response = await window.api.login(outcome.code ?? '')
           status = response.status
           username = response.data?.displayName
-        } else if (activeRunner === 'gog') {
+        } else if (isStore(activeRunner, 'gog')) {
           const response = await window.api.authGOG(outcome.code ?? '')
           status = response.status
           username = response.data?.username

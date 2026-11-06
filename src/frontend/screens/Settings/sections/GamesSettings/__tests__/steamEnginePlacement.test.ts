@@ -30,7 +30,7 @@ function slice(startMarker: string): string {
 describe('Steam engine override placement (quick 261104-tm6)', () => {
   test('defines the shared macOS Steam gate', () => {
     expect(source).toContain(
-      "const isMacSteamTitle = !isDefault && isMac && gameInfo?.runner === 'steam'"
+      "const isMacSteamTitle =\n    !isDefault && isMac && hasCapability(gameInfo?.runner, 'usesBottleRuntime')"
     )
   })
 

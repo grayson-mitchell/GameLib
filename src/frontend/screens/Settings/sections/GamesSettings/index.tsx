@@ -55,6 +55,7 @@ import DisableUMU from '../../components/DisableUMU'
 import VerboseLogs from '../../components/VerboseLogs'
 import WinetricksSettings from '../WinetricksSettings'
 import { shouldShowWinetricksTab } from '../WinetricksSettings/visibility'
+import { hasCapability, isStore } from 'common/storeCapabilities'
 
 const windowsPlatforms = ['Win32', 'Windows', 'windows']
 function getStartingTab(platform: string, gameInfo?: GameInfo | null): string {
@@ -83,12 +84,15 @@ export default function GamesSettings() {
   const isWin = platform === 'win32'
   const isMac = platform === 'darwin'
   const isCrossover = wineVersion?.type === 'crossover'
-  const showCloudSavesTab =
-    gameInfo?.runner === 'gog' || gameInfo?.runner === 'legendary'
+  const showCloudSavesTab = hasCapability(
+    gameInfo?.runner,
+    'supportsCloudSaves'
+  )
   const isBrowserGame = gameInfo?.install.platform === 'Browser'
-  const isSideloaded = gameInfo?.runner === 'sideload'
+  const isSideloaded = isStore(gameInfo, 'sideload')
   // Shared gate (was D-14's): per-game Steam titles on macOS, never Default.
-  const isMacSteamTitle = !isDefault && isMac && gameInfo?.runner === 'steam'
+  const isMacSteamTitle =
+    !isDefault && isMac && hasCapability(gameInfo?.runner, 'usesBottleRuntime')
   const showWineTab = !(isWin || isNative || isBrowserGame)
   // Native Linux games and native macOS Steam games (steam://rungameid cannot take env vars) are excluded; nile is listed but inert because isNative is Windows-only for it. Browser games are not launched via setupEnvVars.
   const showStatsOverlay =

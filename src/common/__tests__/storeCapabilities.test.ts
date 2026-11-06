@@ -105,3 +105,16 @@ describe('62-13 isHandOffInstall (replaces runner===steam && action===install)',
     expect(isHandOffInstall(runner, action)).toBe(expected)
   })
 })
+
+describe('62-17 isStore type-predicate overload', () => {
+  type Game = { runner: 'sideload'; a: 1 } | { runner: 'gog'; b: 2 }
+  it('narrows a discriminated union on both branches (compile-time) and agrees at runtime', () => {
+    const g = { runner: 'gog', b: 2 } as Game
+    if (isStore(g, 'sideload')) {
+      expect(g.a).toBe(1)
+    } else {
+      expect(g.b).toBe(2)
+    }
+    expect(isStore(g, 'gog')).toBe(true)
+  })
+})

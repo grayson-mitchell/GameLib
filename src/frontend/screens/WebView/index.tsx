@@ -35,6 +35,7 @@ import {
 import { resolveStoreForUrl, isEmbeddableOrigin } from './storeEmbedOrigins'
 import { resolveSignInState } from 'common/signInState'
 import { collectSignInInputs } from 'frontend/helpers/signInInputs'
+import { isStore } from 'common/storeCapabilities'
 
 // D-30: the key the last-URL restore reads/writes under, per store. Kept as a named helper
 // (not inlined at each of the two call sites) so the read side (below) and the write side
@@ -311,7 +312,7 @@ export default function WebView() {
     store ??
     (pathname === '/wiki' ? 'wiki' : (deepLinkConfig?.key ?? 'store-page'))
   const isStoreRoute =
-    !LOGIN_PATHNAMES.includes(pathname) && runner !== 'humble'
+    !LOGIN_PATHNAMES.includes(pathname) && !isStore(runner, 'humble')
   // CR-02 (quick task 260929-qth): deliberately placed AFTER `isStoreRoute` above, not
   // immediately below `storeKey`'s own declaration -- `WebViewDeepLinkAndRestore.test.ts` extracts
   // the RAW source slice between the `isStorePageDeepLink` and `isStoreRoute` markers above and
@@ -491,7 +492,7 @@ export default function WebView() {
   // affiliate start URL is the one that redirects through `track.adtraction.com`) -- so this
   // line fires once per GOG store visit rather than on every route.
   useEffect(() => {
-    if (store !== 'gog') return
+    if (!isStore(store, 'gog')) return
     window.api.logInfo(
       '[WebView] D-32 gap: adtraction/ad-block detection is not implemented under the Tauri ' +
         'embed -- no navigation-failure signal exists (40-EMBED-API-VERIFICATION.md Q3: ABSENT) ' +
@@ -537,7 +538,7 @@ export default function WebView() {
   // stays alive, unchanged in URL, for `HumbleExpiryToast` and
   // `Humble/Keys`, which still navigate here directly. Placed AFTER every
   // hook above (rules of hooks) and BEFORE the login-pathname branch below.
-  if (runner === 'humble') {
+  if (isStore(runner, 'humble')) {
     return (
       <HumbleLoginSurface
         onDone={() => navigate('/login')}

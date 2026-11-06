@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { TauriOAuthLoginState } from '../useTauriOAuthLogin'
 import { getStoreDisplayName } from 'frontend/helpers/storeDisplayName'
 import type { Runner } from 'common/types'
+import { isStore } from 'common/storeCapabilities'
 
 interface Props {
   runner?: string
@@ -45,7 +46,7 @@ const OAUTH_CHANNEL_BY_RUNNER: Record<string, string> = {
  */
 const displayNameFor = (runner?: string): string | undefined => {
   if (!runner) return undefined
-  if (runner === 'humble') return 'Humble Bundle'
+  if (isStore(runner, 'humble')) return 'Humble Bundle'
   return getStoreDisplayName(
     runner as Runner,
     runner.charAt(0).toUpperCase() + runner.slice(1)
@@ -108,7 +109,7 @@ const TauriLoginPanel = ({ runner, state, onRetry }: Props) => {
     ? `\`${channel}\``
     : tGamelib('webview.login.oauth.genericChannel', 'the sign-in channel')
 
-  if (runner === 'humble' && phase !== 'error' && phase !== 'timeout') {
+  if (isStore(runner, 'humble') && phase !== 'error' && phase !== 'timeout') {
     const heading = tGamelib(
       'webview.login.humble.heading',
       'Signing in to Humble Bundle'

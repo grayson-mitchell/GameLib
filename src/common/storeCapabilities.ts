@@ -161,11 +161,11 @@ export function isStore<T extends { runner: StoreKey }, K extends StoreKey>(
   store: K
 ): subject is T & { runner: K }
 export function isStore(
-  subject: StoreKey | null | undefined | { runner?: StoreKey | null },
+  subject: string | null | undefined | { runner?: string | null },
   store: StoreKey
 ): boolean
 export function isStore(
-  subject: StoreKey | null | undefined | { runner?: StoreKey | null },
+  subject: string | null | undefined | { runner?: string | null },
   store: StoreKey
 ): boolean {
   if (subject === null || subject === undefined) return false

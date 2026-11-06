@@ -82,12 +82,12 @@ function extractEnclosingBlock(
 describe('WebView adtraction gap declaration (D-32, T-40-09-06)', () => {
   const gapEffect = extractEnclosingBlock(
     strippedSource,
-    "if (store !== 'gog') return",
+    "if (!isStore(store, 'gog')) return",
     'useEffect(() => {'
   )
 
   it('logs the gap once per GOG store visit, gated on store === "gog"', () => {
-    expect(gapEffect).toContain("if (store !== 'gog') return")
+    expect(gapEffect).toContain("if (!isStore(store, 'gog')) return")
     expect(gapEffect).toContain('window.api.logInfo(')
   })
 
@@ -97,10 +97,13 @@ describe('WebView adtraction gap declaration (D-32, T-40-09-06)', () => {
   })
 
   it('does not silently swallow the gap -- the effect body is not empty', () => {
-    // Guards against a regression that keeps the `if (store !== 'gog') return` guard but drops
+    // Guards against a regression that keeps the `if (!isStore(store, 'gog')) return` guard but drops
     // the log call, which would satisfy a narrower "gated correctly" assertion while still being
     // silent -- the exact failure mode "logged, never silent" exists to prevent.
-    const bodyAfterGuard = gapEffect.replace("if (store !== 'gog') return", '')
+    const bodyAfterGuard = gapEffect.replace(
+      "if (!isStore(store, 'gog')) return",
+      ''
+    )
     expect(
       bodyAfterGuard
         .trim()
@@ -144,14 +147,14 @@ describe('WebView adtraction gap declaration (D-32, T-40-09-06)', () => {
     })
 
     it('detects a regression that guards the gap log on the wrong store', () => {
-      const regressedGate = "if (store !== 'epic') return"
-      expect(regressedGate).not.toContain("store !== 'gog'")
+      const regressedGate = "if (!isStore(store, 'epic')) return"
+      expect(regressedGate).not.toContain("isStore(store, 'gog')")
     })
 
     it('detects a regression that keeps the guard but drops the log call', () => {
-      const regressedEmpty = "{ if (store !== 'gog') return }"
+      const regressedEmpty = "{ if (!isStore(store, 'gog')) return }"
       const bodyAfterGuard = regressedEmpty.replace(
-        "if (store !== 'gog') return",
+        "if (!isStore(store, 'gog')) return",
         ''
       )
       expect(

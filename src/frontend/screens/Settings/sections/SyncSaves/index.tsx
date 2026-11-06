@@ -7,6 +7,7 @@ import { defaultWineVersion } from '../..'
 import GOGSyncSaves from './gog'
 import LegendarySyncSaves from './legendary'
 import { ToggleSwitch } from 'frontend/components/UI'
+import { isStore } from 'common/storeCapabilities'
 
 const SyncSaves = () => {
   const { t } = useTranslation()
@@ -48,7 +49,7 @@ const SyncSaves = () => {
     )
   }
 
-  if (runner === 'legendary') {
+  if (isStore(runner, 'legendary')) {
     return (
       <LegendarySyncSaves
         featureSupported={!!gameInfo?.cloud_save_enabled}
@@ -64,7 +65,7 @@ const SyncSaves = () => {
     )
   }
 
-  if (runner === 'gog') {
+  if (isStore(runner, 'gog')) {
     return (
       <GOGSyncSaves
         featureSupported={!!gameInfo?.cloud_save_enabled}

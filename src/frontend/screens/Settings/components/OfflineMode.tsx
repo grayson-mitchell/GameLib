@@ -6,6 +6,7 @@ import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from '../SettingsContext'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faExclamationTriangle } from '@fortawesome/free-solid-svg-icons'
+import { isStore } from 'common/storeCapabilities'
 
 const OfflineMode = () => {
   const { t } = useTranslation()
@@ -29,7 +30,7 @@ const OfflineMode = () => {
 
   const [offlineMode, setOfflineMode] = useSetting('offlineMode', false)
 
-  if (isDefault || runner !== 'legendary') {
+  if (isDefault || !isStore(runner, 'legendary')) {
     return <></>
   }
 

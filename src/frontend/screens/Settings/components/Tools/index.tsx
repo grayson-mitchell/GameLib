@@ -9,6 +9,7 @@ import { getGameInfo } from 'frontend/helpers'
 import SettingsContext from '../../SettingsContext'
 import ContextProvider from 'frontend/state/ContextProvider'
 import useOpenDialog from 'frontend/hooks/useOpenDialog'
+import { isStore } from 'common/storeCapabilities'
 
 export default function Tools() {
   const { t } = useTranslation()
@@ -49,8 +50,9 @@ export default function Tools() {
     let exe = ''
     const gameinfo = await getGameInfo(appName, runner)
     if (!gameinfo) return
-    const defaultPath =
-      gameinfo.runner === 'sideload' ? undefined : gameinfo.install.install_path
+    const defaultPath = isStore(gameinfo, 'sideload')
+      ? undefined
+      : gameinfo.install.install_path
 
     const path = await openDialog({
       buttonLabel: t('box.select.button', 'Select'),
