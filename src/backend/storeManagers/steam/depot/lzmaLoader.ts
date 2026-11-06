@@ -17,4 +17,3 @@ export {
   resetLzmaLoaderForTests,
   setNativeLzmaDecodeEnabledForTests
 } from './lzmaLoaderCore'
-export type { LzmaDecoderKind } from './lzmaLoaderCore'

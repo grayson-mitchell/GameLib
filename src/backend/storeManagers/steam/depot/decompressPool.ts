@@ -1,7 +1,10 @@
 // Phase 21 gap closure (21-15, D-UAT-03): worker_threads pool for depot
-// chunk decode. Bounded fan-out (min(cores,DECOMPRESS_POOL_MAX_WORKERS) --
-// raised 8->16, debug/humankind-depot-full-stall 2026-08-17, see that
-// constant's own doc comment for the full evidence trail), transferable
+// chunk decode. Bounded fan-out: min(cores, 4) while every worker decodes
+// natively (spikes 067a/067b: ~160 MiB per idle worker, ~0.2 workers busy at
+// native speed), growing to min(cores, DECOMPRESS_POOL_MAX_WORKERS) -- raised
+// 8->16, debug/humankind-depot-full-stall 2026-08-17, see that constant's own
+// doc comment -- only when a worker reports a non-native decoder;
+// GAMELIB_DECOMPRESS_POOL_SIZE / opts.size pin it. Transferable
 // ArrayBuffers, a per-task timeout with terminate+replace recovery, and a
 // transparent
 // inline main-thread fallback if the pool cannot initialize — LZMA/zlib
@@ -58,8 +61,8 @@ function forwardWorkerLog(entry: unknown): void {
   ) {
     return
   }
-  if (level === 'warning') logWarning(lines as string[], LogPrefix.Steam)
-  else logInfo(lines as string[], LogPrefix.Steam)
+  if (level === 'warning') logWarning(lines, LogPrefix.Steam)
+  else logInfo(lines, LogPrefix.Steam)
 }
 
 /** Debug/humankind-depot-full-stall (2026-08-17): where the pool's worker
@@ -126,6 +129,26 @@ const DEFAULT_TASK_TIMEOUT_MS = 30_000
 // comment, not an import (`pnpm find-deadcode` / ts-prune flagged the
 // previously-exported forms as over-broad `export` keywords).
 const DECOMPRESS_POOL_MAX_WORKERS = 16
+
+/** Ceiling when every worker decodes natively. Spikes 067a/067b: an idle
+ *  worker held ~160 MiB RSS (16 workers = 2.67 GB before any work), and native
+ *  decode (3 ms/chunk against ~534 ms/download) keeps only ~0.2 workers busy.
+ *  Pure-JS workers (~500 ms/chunk) still need the full
+ *  DECOMPRESS_POOL_MAX_WORKERS fan-out (see the humankind-depot-full-stall
+ *  evidence above), so the pool grows to it when any worker is not native. */
+const DECOMPRESS_POOL_NATIVE_MAX_WORKERS = 4
+
+/** Pool size for `cpus` cores: min(cpus, 4) when every worker is native,
+ *  min(cpus, 16) otherwise; never below 1. */
+export function decompressPoolSizeFor(
+  cpus: number,
+  allNative: boolean
+): number {
+  const ceiling = allNative
+    ? DECOMPRESS_POOL_NATIVE_MAX_WORKERS
+    : DECOMPRESS_POOL_MAX_WORKERS
+  return Math.max(1, Math.min(cpus, ceiling))
+}
 
 /** Debug/humankind-depot-full-stall (2026-08-17), P/E-core saturation
  *  hypothesis (Current Focus blind_spots item 1, reopened once
@@ -281,7 +304,10 @@ export class DecompressPool {
    *  discipline every other `stats()` field's own doc comment already
    *  carries. */
   private nativeWorkerSet = new Set<Worker>()
-  private readonly size: number
+  private size: number
+  /** True when opts.size or GAMELIB_DECOMPRESS_POOL_SIZE fixed the size:
+   *  the pool never grows. */
+  private readonly sizePinned: boolean
   private readonly taskTimeoutMs: number
   private readonly workerPathOverride?: string
   /** Debug/humankind-depot-full-stall (2026-08-17): resolveWorkerSpec()'s
@@ -292,10 +318,12 @@ export class DecompressPool {
   private workerSpecCache: WorkerSpec | undefined
 
   constructor(opts: DecompressPoolOpts = {}) {
-    this.size =
-      opts.size ??
-      resolvePoolSizeOverride() ??
-      Math.min(os.cpus().length, DECOMPRESS_POOL_MAX_WORKERS)
+    // Unpinned default: start at the native-sized pool (min(cpus, 4)) and let
+    // init() grow toward min(cpus, 16) only if a spawned worker is not native.
+    // An explicit size or the diagnostic env override pins the size exactly.
+    const pinned = opts.size ?? resolvePoolSizeOverride()
+    this.sizePinned = pinned !== undefined
+    this.size = pinned ?? decompressPoolSizeFor(os.cpus().length, true)
     this.taskTimeoutMs = opts.taskTimeoutMs ?? DEFAULT_TASK_TIMEOUT_MS
     this.workerPathOverride = opts.workerPath
   }
@@ -419,6 +447,7 @@ export class DecompressPool {
       }
       this.workers = spawned
       this.idle = [...spawned]
+      await this.growIfNotNative(spec)
     } catch (err) {
       this.inlineFallback = true
       await Promise.all(
@@ -442,6 +471,50 @@ export class DecompressPool {
         LogPrefix.Steam
       )
     }
+  }
+
+  /** Grows an unpinned pool toward min(cpus, 16) when any spawned worker is
+   *  not native (pure-JS LZMA is ~170x slower per chunk, so a small pool would
+   *  bind). A growth failure keeps the working base pool -- it never collapses
+   *  it to inline decode. */
+  private async growIfNotNative(spec: WorkerSpec): Promise<void> {
+    if (this.sizePinned || this.nativeWorkerSet.size >= this.workers.length) {
+      return
+    }
+    const target = decompressPoolSizeFor(os.cpus().length, false)
+    if (target <= this.size) return
+    const from = this.size
+    const baseNative = this.nativeWorkerSet.size
+    const grown: Worker[] = []
+    try {
+      for (let i = from; i < target; i++) {
+        grown.push(await this.spawnWorker(spec))
+      }
+    } catch (err) {
+      await Promise.all(grown.map((w) => w.terminate().catch(() => undefined)))
+      for (const w of grown) this.nativeWorkerSet.delete(w)
+      logWarning(
+        [
+          `DecompressPool: could not grow the pool from ${from} to ${target}`,
+          'workers after a non-native decoder was reported -- keeping the',
+          `${from}-worker pool.`,
+          `Cause: ${(err as Error)?.message ?? String(err)}.`
+        ],
+        LogPrefix.Steam
+      )
+      return
+    }
+    this.workers.push(...grown)
+    this.idle.push(...grown)
+    this.size = target
+    logInfo(
+      [
+        `DecompressPool: grew from ${from} to ${target} workers because`,
+        `only ${baseNative} of the initial ${from} workers decode natively`,
+        `(pure-JS LZMA needs the wider fan-out).`
+      ],
+      LogPrefix.Steam
+    )
   }
 
   /**

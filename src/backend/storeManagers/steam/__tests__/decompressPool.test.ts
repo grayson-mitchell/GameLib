@@ -18,7 +18,7 @@ import {
   type LzmaModule
 } from '../depot/decompress'
 import { handleDecodeMessage } from '../depot/decompressWorker'
-import { DecompressPool } from '../depot/decompressPool'
+import { DecompressPool, decompressPoolSizeFor } from '../depot/decompressPool'
 import {
   loadLzmaModule,
   lzmaDecoderKind,
@@ -631,6 +631,94 @@ const NATIVE_POOL_TEST_WORKER_PATH = path.join(
   'fixtures',
   'poolTestWorkerNative.js'
 )
+
+// ── Native-aware default pool size (quick 261106-ote; spikes 067a/067b) ──
+// Idle workers cost ~160 MiB RSS each and native decode keeps ~0.2 busy, so an
+// unpinned pool starts at min(cpus, 4) and only grows toward min(cpus, 16)
+// when a spawned worker reports a non-native decoder.
+
+describe('decompressPoolSizeFor', () => {
+  it.each([
+    [8, true, 4],
+    [2, true, 2],
+    [8, false, 8],
+    [32, false, 16],
+    [32, true, 4],
+    [0, true, 1]
+  ])('cpus=%p allNative=%p -> %p', (cpus, allNative, expected) => {
+    expect(decompressPoolSizeFor(cpus, allNative)).toBe(expected)
+  })
+})
+
+describe('DecompressPool native-aware sizing', () => {
+  const ENV_KEY = 'GAMELIB_DECOMPRESS_POOL_SIZE'
+  const originalEnv = process.env[ENV_KEY]
+  // Required (not `import * as`) so the spy lands on the real module object
+  // decompressPool.ts reads through.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const realOs = require('node:os') as typeof import('node:os')
+
+  beforeEach(() => {
+    delete process.env[ENV_KEY]
+    jest
+      .spyOn(realOs, 'cpus')
+      .mockReturnValue(new Array(8).fill({}) as ReturnType<typeof realOs.cpus>)
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+    if (originalEnv === undefined) delete process.env[ENV_KEY]
+    else process.env[ENV_KEY] = originalEnv
+  })
+
+  it('stays at min(cpus, 4) when every worker is native', async () => {
+    const pool = new DecompressPool({
+      workerPath: NATIVE_POOL_TEST_WORKER_PATH
+    })
+    try {
+      await pool.init()
+      expect(pool.stats().size).toBe(4)
+      expect(pool.stats().nativeWorkers).toBe(4)
+    } finally {
+      await pool.shutdown()
+    }
+  })
+
+  it('grows to min(cpus, 16) when a worker is not native', async () => {
+    const pool = new DecompressPool({ workerPath: POOL_TEST_WORKER_PATH })
+    try {
+      await pool.init()
+      expect(pool.stats().size).toBe(8)
+      expect(pool.stats().inlineFallback).toBe(false)
+    } finally {
+      await pool.shutdown()
+    }
+  })
+
+  it('GAMELIB_DECOMPRESS_POOL_SIZE pins the size (no growth)', async () => {
+    process.env[ENV_KEY] = '3'
+    const pool = new DecompressPool({ workerPath: POOL_TEST_WORKER_PATH })
+    try {
+      await pool.init()
+      expect(pool.stats().size).toBe(3)
+    } finally {
+      await pool.shutdown()
+    }
+  })
+
+  it('an explicit opts.size pins the size (no growth)', async () => {
+    const pool = new DecompressPool({
+      size: 2,
+      workerPath: POOL_TEST_WORKER_PATH
+    })
+    try {
+      await pool.init()
+      expect(pool.stats().size).toBe(2)
+    } finally {
+      await pool.shutdown()
+    }
+  })
+})
 
 describe('DecompressPool stats().nativeWorkers (Phase 23.1 plan 04)', () => {
   it('stats() includes a nativeWorkers number field alongside the pre-existing five fields', async () => {

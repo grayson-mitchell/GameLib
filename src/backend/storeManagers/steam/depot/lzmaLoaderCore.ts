@@ -45,12 +45,12 @@ import type { LzmaNativeStream } from 'lzma-native'
 // RSS per idle worker, spikes 067a/067b). Entries go to an injectable sink;
 // main-thread code imports ./lzmaLoader, which wires the sink to backend/logger,
 // and the worker forwards its entries to the parent over postMessage.
-export type LzmaLogLevel = 'info' | 'warning'
+type LzmaLogLevel = 'info' | 'warning'
 export interface LzmaLogEntry {
   level: LzmaLogLevel
   lines: string[]
 }
-export type LzmaLogSink = (entry: LzmaLogEntry) => void
+type LzmaLogSink = (entry: LzmaLogEntry) => void
 
 let logSink: LzmaLogSink | undefined
 let logBuffer: LzmaLogEntry[] = []
