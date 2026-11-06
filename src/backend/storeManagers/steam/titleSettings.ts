@@ -15,7 +15,6 @@ import type { GameSettings } from 'common/types'
  * unvalidated. Returns undefined on a bad appId, missing or corrupt file, or a
  * missing/non-object entry.
  */
-// ts-prune-ignore-next
 export function readStoredTitleConfig(
   appId: string
 ): Record<string, unknown> | undefined {
@@ -57,7 +56,6 @@ function settingsKeys<const T extends readonly (keyof GameSettings)[]>(
  * `alternativeExe` and `preferedLanguage` were Settings component names; the
  * real keys are `targetExe` and `language`.
  */
-// ts-prune-ignore-next
 export const TITLE_AUTHORITATIVE_KEYS = settingsKeys([
   'launcherArgs',
   'targetExe',
@@ -73,7 +71,6 @@ export const TITLE_AUTHORITATIVE_KEYS = settingsKeys([
 ])
 
 /** Only the allowlisted keys present (`!== undefined`) in the entry. */
-// ts-prune-ignore-next
 export function pickTitleSettings(
   entry: Record<string, unknown> | undefined
 ): Partial<GameSettings> {

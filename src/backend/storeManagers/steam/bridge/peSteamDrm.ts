@@ -41,7 +41,6 @@
  */
 
 // Exported for meta/bridgeCensus.ts and tests.
-// ts-prune-ignore-next
 export const CEG_RESOURCE_NAMES = [
   'STEAM_SPLIT_GUID',
   'STEAM_GUIDD',
@@ -484,7 +483,6 @@ export function readPeImportedDllNames(read: PeReader): string[] | null {
 }
 
 // Convenience wrapper over an in-memory buffer; used by tests and tooling.
-// ts-prune-ignore-next
 export function detectSteamDrmInPeBytes(bytes: Uint8Array): PeSteamDrmResult {
   return detectSteamDrmInPe((offset, length) =>
     offset + length > bytes.length

@@ -31,7 +31,6 @@ type DrmTraceRole = 'game' | 'helper'
 
 // Exported for meta/bridgeCensus.ts, which lints under tsconfig.meta.json --
 // outside ts-prune's tsconfig.json project, so its import is invisible here.
-// ts-prune-ignore-next
 export type DrmTraceEvent = {
   appId: string
   pid: number
@@ -56,7 +55,6 @@ type DrmP2pOp =
   | { op: 'send' | 'read'; peer: string; bytes: number }
 
 // Exported for meta/bridgeCensus.ts; see DrmTraceEvent.
-// ts-prune-ignore-next
 export interface DrmP2pEvent {
   /** Order of the line among the game's trace events (ascending). */
   seq: number
@@ -75,7 +73,6 @@ interface DrmLaunchAnchor {
 }
 
 // Exported for meta/bridgeCensus.ts; see DrmTraceEvent.
-// ts-prune-ignore-next
 export interface DrmEvidence {
   anchored: boolean
   gameInterfaces: string[]
@@ -399,7 +396,6 @@ export function extractDrmEvidence(
  * is missing. The peer is never returned: callers print fixed phrases only.
  */
 // Exported for meta/bridgeCensus.ts; see DrmTraceEvent.
-// ts-prune-ignore-next
 export function scoreLegacyP2pJoin(events: DrmP2pEvent[]): {
   request: boolean
   accepted: boolean

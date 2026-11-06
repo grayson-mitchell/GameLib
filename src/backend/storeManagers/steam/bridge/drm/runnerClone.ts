@@ -58,7 +58,6 @@ import {
   type DrmStepResult
 } from './steamclientLayerMode'
 
-// ts-prune-ignore-next
 export type RunnerTool =
   | '/bin/cp'
   | '/usr/bin/xattr'
@@ -74,7 +73,6 @@ const RUNNER_TOOLS: readonly RunnerTool[] = [
   '/bin/ps'
 ]
 
-// ts-prune-ignore-next
 export type RunToolResult = {
   code: number | null
   stdout: string
@@ -83,7 +81,6 @@ export type RunToolResult = {
   aborted: boolean
 }
 
-// ts-prune-ignore-next
 export type RunTool = (
   tool: RunnerTool,
   args: readonly string[],
@@ -93,7 +90,6 @@ export type RunTool = (
 const OUTPUT_CAP = 1024 * 1024
 
 // cp gets 900 s because the `cp -R` fallback copies about 1 GB.
-// ts-prune-ignore-next
 export const RUNNER_TIMEOUTS = {
   cp: 900_000,
   xattr: 180_000,
@@ -109,7 +105,6 @@ function unrefHandle(handle: unknown): void {
 /**
  * Never rejects. Only the five allowlisted absolute tool paths can be run.
  */
-// ts-prune-ignore-next
 export const defaultRunTool: RunTool = async (tool, args, opts) => {
   const result: RunToolResult = {
     code: null,
@@ -184,26 +179,21 @@ export const defaultRunTool: RunTool = async (tool, args, opts) => {
   }
 }
 
-// ts-prune-ignore-next
 export const CROSSOVER_BUILD_RE = /^[0-9]{1,4}(\.[0-9]{1,6}){2,4}$/
 const MAX_NTDLL_BYTES = 16 * 1024 * 1024
 const MAX_SO_BYTES = 4 * 1024 * 1024
 // Measured: the real lsteamclient.dll (PE, debug-rich) is about 34 MB.
 const MAX_DLL_BYTES = 64 * 1024 * 1024
-// ts-prune-ignore-next
 export const MAX_LOADER_BYTES = 16 * 1024 * 1024
 
 const WIN_DLL_REL = join('lib', 'wine', 'x86_64-windows')
 const UNIX_DLL_REL = join('lib', 'wine', 'x86_64-unix')
 const NTDLL_REL = join(WIN_DLL_REL, 'ntdll.dll')
-// ts-prune-ignore-next
 export const LOADER_REL = join(UNIX_DLL_REL, 'wine')
-// ts-prune-ignore-next
 export const WINELOADER_REL = join('bin', 'wineloader')
 const DLL_REL = join(WIN_DLL_REL, 'lsteamclient.dll')
 const SO_REL = join(UNIX_DLL_REL, 'lsteamclient.so')
 
-// ts-prune-ignore-next
 export async function sha256File(path: string): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const hash = createHash('sha256')
@@ -217,7 +207,6 @@ export async function sha256File(path: string): Promise<string> {
 const sha256Bytes = (b: Buffer) => createHash('sha256').update(b).digest('hex')
 
 /** lstat a path that must be a regular non-symlink file of at most maxBytes. */
-// ts-prune-ignore-next
 export async function statRegular(
   path: string,
   maxBytes: number
@@ -230,7 +219,6 @@ export async function statRegular(
   return st
 }
 
-// ts-prune-ignore-next
 export function isContained(root: string, candidate: string): boolean {
   const rel = relative(root, candidate)
   return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
@@ -244,7 +232,6 @@ function errText(e: unknown): string {
 // D-09: CrossOver allowlist
 // ---------------------------------------------------------------------------
 
-// ts-prune-ignore-next
 export type CrossoverAllowed = {
   appPath: string
   cxRoot: string
@@ -255,7 +242,6 @@ export type CrossoverAllowed = {
   supportedBuilds: string[]
 }
 
-// ts-prune-ignore-next
 export type DetectCrossoverDeps = {
   resolveCrossoverBinDir?: () => Promise<string | undefined>
   runTool?: RunTool
@@ -264,10 +250,8 @@ export type DetectCrossoverDeps = {
   platform?: NodeJS.Platform
 }
 
-// ts-prune-ignore-next
 export const CX_ROOT_SUFFIX = `${sep}Contents${sep}SharedSupport${sep}CrossOver`
 
-// ts-prune-ignore-next
 export async function defaultResolveBinDir(): Promise<string | undefined> {
   try {
     const mod = await import('backend/storeManagers/steam/crossoverLocation')
@@ -281,7 +265,6 @@ export async function defaultResolveBinDir(): Promise<string | undefined> {
  * Reads CFBundleVersion of a CrossOver.app. 'unreadable' = plutil failed;
  * 'invalid' = it did not match the build pattern (value is the raw text).
  */
-// ts-prune-ignore-next
 export async function readCrossoverBundleVersion(
   run: RunTool,
   appPath: string,
@@ -316,7 +299,6 @@ export async function readCrossoverBundleVersion(
  * The 'CrossOver allowlist' step. Creates nothing on disk and never calls
  * /bin/cp. Never rejects.
  */
-// ts-prune-ignore-next
 export async function detectAllowedCrossover(
   opts: { crossoverBinDir?: string; appFolder?: string } = {},
   deps: DetectCrossoverDeps = {}
@@ -403,22 +385,16 @@ export async function detectAllowedCrossover(
 // `-p` and no post-clone mtime restore is needed ... The `cp -R` fallback is
 // still wise for non-APFS or cross-volume layouts, where the mtime must be
 // re-checked." The fallback keeps -p so a plain copy preserves mtimes too.
-// ts-prune-ignore-next
 export const CLONE_ARGV_PRIMARY: readonly string[] = ['-c', '-R']
-// ts-prune-ignore-next
 export const CLONE_ARGV_FALLBACK: readonly string[] = ['-R', '-p']
 // The post-clone mtime check and utimes restore are mandatory whatever cp did:
 // a missing wine.inf mtime triggers a prefix update (56-01 contract).
-// ts-prune-ignore-next
 export const MTIME_PINNED_PATHS: readonly string[] = [
   join('share', 'wine', 'wine.inf')
 ]
-// ts-prune-ignore-next
 export const RUNNER_MARKER_FILE = 'gamelib-runner.json'
-// ts-prune-ignore-next
 export const DYLD_ENTITLEMENT =
   'com.apple.security.cs.allow-dyld-environment-variables'
-// ts-prune-ignore-next
 export const STOCK_LOADER_ENTITLEMENTS: readonly string[] = [
   'com.apple.security.cs.allow-unsigned-executable-memory',
   'com.apple.security.cs.disable-executable-page-protection',
@@ -428,7 +404,6 @@ export const STOCK_LOADER_ENTITLEMENTS: readonly string[] = [
 ]
 
 /** 56-10's `SteamclientLayerReady` is passed as is. */
-// ts-prune-ignore-next
 export type RunnerComponentInput = {
   componentId: string
   files: {
@@ -438,7 +413,6 @@ export type RunnerComponentInput = {
   }
 }
 
-// ts-prune-ignore-next
 export type RunnerReady = {
   crossoverBuild: string
   runnerDir: string
@@ -457,7 +431,6 @@ export type RunnerReady = {
   pruneSkipped: string[]
 }
 
-// ts-prune-ignore-next
 export type RunnerCloneDeps = {
   runTool?: RunTool
   applyPatch?: (
@@ -470,7 +443,6 @@ export type RunnerCloneDeps = {
   timeouts?: Partial<typeof RUNNER_TIMEOUTS>
 }
 
-// ts-prune-ignore-next
 export type RunnerVerifyExpect = {
   crossover: CrossoverAllowed
   component: RunnerComponentInput
@@ -495,7 +467,6 @@ const STALE_CLONE_RE = /^crossover-[0-9]{1,4}(\.[0-9]{1,6}){2,4}$/
 const STALE_PARTIAL_RE = /^\.crossover-([0-9.]+)\.partial-[A-Za-z0-9]+$/
 
 /** The only removal path for entries directly under the runners root. */
-// ts-prune-ignore-next
 export async function safeRemove(
   root: string,
   target: string
@@ -513,7 +484,6 @@ export async function safeRemove(
 }
 
 /** Remove something inside a partial dir (containment checked, never throws). */
-// ts-prune-ignore-next
 export async function removeInside(
   root: string,
   target: string
@@ -527,7 +497,6 @@ export async function removeInside(
   }
 }
 
-// ts-prune-ignore-next
 export function parseEntitlementKeys(stdout: string): string[] | null {
   const start = stdout.search(/<\?xml|<plist/)
   if (start < 0) return null
@@ -548,7 +517,6 @@ export function parseEntitlementKeys(stdout: string): string[] | null {
   return keys
 }
 
-// ts-prune-ignore-next
 export async function dumpLoaderEntitlements(
   run: RunTool,
   loader: string,
@@ -625,7 +593,6 @@ const sec = (ms: number) => Math.floor(ms / 1000)
 /**
  * The cheap per-launch verify (RESEARCH F8, D-10). Never throws.
  */
-// ts-prune-ignore-next
 export async function verifyRunnerClone(
   runnerDir: string,
   expect: RunnerVerifyExpect,
@@ -767,7 +734,6 @@ export async function verifyRunnerClone(
 /**
  * Lists processes. null means ps failed or timed out, which counts as in use.
  */
-// ts-prune-ignore-next
 export async function psListing(
   run: RunTool,
   timeoutMs: number
@@ -781,7 +747,6 @@ export async function psListing(
 // process in the bottle lives, which is why this full-width command scan
 // catches a running game even though Wine retitles game processes to Windows
 // paths. A failed ps counts as in use (fail safe).
-// ts-prune-ignore-next
 export async function isPathInUse(
   dir: string,
   run: RunTool,
@@ -796,7 +761,6 @@ const inFlight = new Map<string, Promise<DrmStepResult<RunnerReady>>>()
 /**
  * The 'runner' step. Never rejects.
  */
-// ts-prune-ignore-next
 export async function ensureRunnerClone(
   opts: {
     appFolder: string
@@ -970,7 +934,6 @@ async function pruneStale(
  * Clones a CrossOver tree: cp -c -R (APFS clonefile), then cp -R -p as the
  * fallback. Registers an abort controller under opts.abortId. Never throws.
  */
-// ts-prune-ignore-next
 export async function cloneCrossoverTree(
   run: RunTool,
   src: string,
@@ -1021,7 +984,6 @@ export async function cloneCrossoverTree(
  * entitlements the loader has and adds the dyld one. The stock binary is kept
  * next to it as <loader>.gamelib-orig.
  */
-// ts-prune-ignore-next
 export async function resignLoader(
   run: RunTool,
   loader: string,
@@ -1100,7 +1062,6 @@ let resignCounter = 0
  * Targeted xattr scrub of a clone. Never `xattr -c`: it would strip the
  * com.apple.cs.* signature xattrs from stock-signed files.
  */
-// ts-prune-ignore-next
 export async function scrubCloneXattrs(
   run: RunTool,
   dest: string,

@@ -10,14 +10,12 @@
  * Pure data and helpers: no node or electron imports.
  */
 
-// ts-prune-ignore-next
 export type SteamclientLayerFileLicence =
   | 'Steamworks-SDK-License'
   | 'GPL-3.0'
   | 'BSD-3-Clause'
   | 'licence-text'
 
-// ts-prune-ignore-next
 export interface SteamclientLayerCatalogueEntry {
   id: string
   crossoverBuild: string
@@ -33,15 +31,12 @@ export interface SteamclientLayerCatalogueEntry {
   }>
 }
 
-// ts-prune-ignore-next
 export const STEAMCLIENT_LAYER_RELEASE_REPO = 'grayson-mitchell/GameLib'
 
-// ts-prune-ignore-next
 export const STEAMWORKS_LICENSE_SHA256 =
   '80fda9147f8ee707cd18d1d6d71b307063fa3a02057a7c789de47f7c003510f1'
 
 /** The six archive members for a build, sorted by byte order. */
-// ts-prune-ignore-next
 export function steamclientLayerFileNames(
   crossoverBuild: string
 ): readonly string[] {
@@ -55,7 +50,6 @@ export function steamclientLayerFileNames(
   ].sort()
 }
 
-// ts-prune-ignore-next
 export function steamclientLayerLicenceFor(
   path: string,
   crossoverBuild: string
@@ -76,7 +70,6 @@ export function steamclientLayerLicenceFor(
   }
 }
 
-// ts-prune-ignore-next
 export const STEAMCLIENT_LAYER_CATALOGUE: Readonly<
   Record<string, SteamclientLayerCatalogueEntry>
 > = {
@@ -140,7 +133,6 @@ export const STEAMCLIENT_LAYER_CATALOGUE: Readonly<
 }
 
 /** Own-property lookup only, so `__proto__` and `constructor` miss. */
-// ts-prune-ignore-next
 export function lookupSteamclientLayer(
   crossoverBuild: unknown
 ): SteamclientLayerCatalogueEntry | undefined {
@@ -153,7 +145,6 @@ export function lookupSteamclientLayer(
     : undefined
 }
 
-// ts-prune-ignore-next
 export function steamclientLayerArchiveUrl(
   entry: SteamclientLayerCatalogueEntry
 ) {
@@ -161,7 +152,6 @@ export function steamclientLayerArchiveUrl(
   return `https://github.com/${repo}/releases/download/${tag}/${asset}`
 }
 
-// ts-prune-ignore-next
 export function steamclientLayerReleasePageUrl(
   entry: SteamclientLayerCatalogueEntry
 ) {

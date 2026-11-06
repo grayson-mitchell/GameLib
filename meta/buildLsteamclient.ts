@@ -42,7 +42,6 @@ import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
 import { createFakeHomeProfile } from '../src/backend/testUtils/fakeHomeProfile'
 
-// ts-prune-ignore-next
 export const LSTEAMCLIENT_PINS = {
   protonCommit: '164e0ccd2ea2b1ec2e5d08dc97f65b184c2539ca',
   protonTarballUrl:
@@ -62,7 +61,6 @@ export const LSTEAMCLIENT_PINS = {
   }
 } as const
 
-// ts-prune-ignore-next
 export const LSTEAMCLIENT_BASES = {
   crossover: {
     '26.3.0.39832': {
@@ -80,7 +78,6 @@ export const LSTEAMCLIENT_BASES = {
   }
 } as const
 
-// ts-prune-ignore-next
 export const DEFAULT_LSTEAMCLIENT_BASE: 'crossover' | 'wine' = 'wine'
 
 const DEFAULT_BUILD = '26.3.0.39832'
@@ -110,7 +107,6 @@ function compareSegments(a: string[], b: string[]): number {
  * sorted(pathlib.Path) order (segment-wise), per file updating with
  * sha256(utf8 relpath).digest() then sha256(bytes).digest().
  */
-// ts-prune-ignore-next
 export function lsteamclientTreeDigest(
   files: { relPath: string; bytes: Uint8Array }[]
 ): string {
@@ -129,7 +125,6 @@ const TRACE_BEGIN = '/* GAMELIB-DRM-TRACE BEGIN (Phase 56 D-15/D-16) */'
 const TRACE_END = '/* GAMELIB-DRM-TRACE END */'
 
 /** Remove every GAMELIB-DRM-TRACE block, marker lines included. Null on any malformed marker. */
-// ts-prune-ignore-next
 export function stripGameLibTraceBlocks(text: string): string | null {
   const lines = text.split('\n')
   const out: string[] = []
@@ -161,7 +156,6 @@ const ANCHOR_MAKEFILE =
   /^wine_fn_config_makefile dlls\/localui\/tests enable_tests$/m
 
 /** Register dlls/lsteamclient in Wine's generated configure. Null when an anchor is missing. */
-// ts-prune-ignore-next
 export function registerLsteamclientInConfigure(text: string): string | null {
   if (!ANCHOR_ENABLE.test(text) || !ANCHOR_MAKEFILE.test(text)) return null
   if (text.includes('enable_lsteamclient')) return text
@@ -175,7 +169,6 @@ export function registerLsteamclientInConfigure(text: string): string | null {
 }
 
 /** The unix half's SOURCES: Makefile.in `*.cpp` lines, in file order. */
-// ts-prune-ignore-next
 export function unixSourcesFromMakefileIn(text: string): string[] {
   const out: string[] = []
   for (const line of text.split('\n')) {
@@ -190,7 +183,6 @@ interface Argv {
   args: string[]
 }
 
-// ts-prune-ignore-next
 export function buildUnixCompileArgv(opts: {
   src: string
   build: string
@@ -228,7 +220,6 @@ export function buildUnixCompileArgv(opts: {
   }
 }
 
-// ts-prune-ignore-next
 export function buildUnixLinkArgv(opts: {
   build: string
   objs: string[]
@@ -257,7 +248,6 @@ export function buildUnixLinkArgv(opts: {
   }
 }
 
-// ts-prune-ignore-next
 export function buildConfigureArgv(opts: {
   srcDir: string
   buildDir: string
@@ -281,7 +271,6 @@ export function buildConfigureArgv(opts: {
 }
 
 /** PE machine field, or null on any bounds/magic failure. Never throws. */
-// ts-prune-ignore-next
 export function peMachine(bytes: Uint8Array): number | null {
   if (bytes.length < 0x40) return null
   const lfanew =
@@ -297,7 +286,6 @@ export function peMachine(bytes: Uint8Array): number | null {
   return bytes[lfanew + 4] | (bytes[lfanew + 5] << 8)
 }
 
-// ts-prune-ignore-next
 export interface OutputFacts {
   peHead: Uint8Array
   peSize: number
@@ -314,7 +302,6 @@ export interface OutputFacts {
 const MIN_BINARY_SIZE = 1_000_000
 
 /** Every compile gate, over injected facts. Failures are named in a fixed order. */
-// ts-prune-ignore-next
 export function checkLsteamclientOutputs(
   f: OutputFacts
 ): { ok: true } | { ok: false; failures: string[] } {
@@ -350,7 +337,6 @@ const ALLOWED_HOSTS = new Set([
   'gitlab.winehq.org'
 ])
 
-// ts-prune-ignore-next
 export function isAllowedSourceUrl(url: string): boolean {
   let u: URL
   try {
@@ -372,13 +358,11 @@ function assertBuild(build: string): void {
   if (!BUILD_RE.test(build)) throw new Error(`invalid --build "${build}"`)
 }
 
-// ts-prune-ignore-next
 export function lsteamclientOutputDir(build: string): string {
   assertBuild(build)
   return join('build', 'steamclient-layer', `steamclient-layer-cx${build}`)
 }
 
-// ts-prune-ignore-next
 export function buildRecordPath(build: string): string {
   assertBuild(build)
   return join(
@@ -518,7 +502,6 @@ function now(): number {
   return Math.round(Date.now() / 1000)
 }
 
-// ts-prune-ignore-next
 export async function main(): Promise<void> {
   const argv = process.argv.slice(2)
   const arg = (name: string): string | undefined => {

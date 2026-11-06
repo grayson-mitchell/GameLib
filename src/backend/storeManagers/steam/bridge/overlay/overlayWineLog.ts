@@ -33,7 +33,6 @@ type OverlayWineLog = {
   close: () => void
 }
 
-// ts-prune-ignore-next
 export function openOverlayWineLog(
   traceRoot: string,
   appId: string,
@@ -122,7 +121,6 @@ export function openOverlayWineLog(
   }
 }
 
-// ts-prune-ignore-next
 export function createShimLineForwarder(
   onLine: (line: string) => void,
   maxLines = 50

@@ -31,7 +31,6 @@ import { logWarning, LogPrefix } from 'backend/logger'
 
 import { readPeImportedDllNames } from './peSteamDrm'
 
-// ts-prune-ignore-next
 export const GAMEMAKER_MSAA_PROBE =
   'GR_D3D_Device->CheckMultisampleQualityLevels'
 

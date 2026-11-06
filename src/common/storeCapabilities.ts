@@ -60,11 +60,9 @@ export interface StoreCapabilities {
   winePrefixToolsAvailable: boolean
 }
 
-// ts-prune-ignore-next -- consumed from 62-14 on: call sites name a flag in helper signatures
 export type CapabilityFlag = keyof Omit<StoreCapabilities, 'store'>
 
 /** A runner, or the Humble key store which is compared at login but is not a Runner. */
-// ts-prune-ignore-next -- consumed from 62-14 on: isStore callers type login/key stores with it
 export type StoreKey = Runner | 'humble'
 
 const NOT_STEAM = {

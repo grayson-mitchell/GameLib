@@ -41,7 +41,6 @@ const knownFixReportSchema = z
     message: 'only macArch can be removed'
   })
 
-// ts-prune-ignore-next -- imported by relay/src/publish.ts, which ts-prune does not scan
 export type KnownFixReport = z.infer<typeof knownFixReportSchema>
 
 export function parseKnownFixReport(
@@ -76,8 +75,11 @@ export const RELAY_RESPONSE_STATUSES = [
 ] as const
 type RelayResponseStatus = (typeof RELAY_RESPONSE_STATUSES)[number]
 
-/** The relay writes this body; the client logs only `status` (D-10). */
-// ts-prune-ignore-next -- imported by relay/src/handler.ts, which ts-prune does not scan
+/**
+ * The relay writes this body; the client logs only `status` (D-10).
+ *
+ * @public imported by relay/src/handler.ts, which knip does not scan
+ */
 export type RelayResponseBody = {
   status: RelayResponseStatus
   detail?: string

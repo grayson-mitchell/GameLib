@@ -43,7 +43,6 @@ import { steamclientLayerComponentId } from '../src/backend/storeManagers/steam/
 const USAGE =
   'usage: pnpm build:steamclient-layer-archive [--build <CFBundleVersion>] [--source <dir>] [--out <file>]'
 
-// ts-prune-ignore-next
 export const NOTICE_SOURCE_PATH = 'native/steam-bridge/steamclient-layer/NOTICE'
 
 const MIN_BINARY_BYTES = 1_000_000
@@ -54,12 +53,10 @@ const LC_CODE_SIGNATURE = 0x1d
 const sha256 = (b: Buffer | Uint8Array) =>
   createHash('sha256').update(b).digest('hex')
 
-// ts-prune-ignore-next
 export function componentStagingDir(build: string): string {
   return join('build', 'steamclient-layer', `steamclient-layer-cx${build}`)
 }
 
-// ts-prune-ignore-next
 export function componentArchivePath(build: string): string {
   return join(
     'build',
@@ -69,7 +66,6 @@ export function componentArchivePath(build: string): string {
 }
 
 /** PE machine type, or null when the header is not a well-formed PE. */
-// ts-prune-ignore-next
 export function peMachine(bytes: Uint8Array): number | null {
   if (bytes.length < 0x40) return null
   const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
@@ -92,7 +88,6 @@ export function peMachine(bytes: Uint8Array): number | null {
  * changes the file bytes, so the pinned sha of an unsigned build also proves
  * the shipped file is unsigned (RESEARCH Pitfall 1, F6).
  */
-// ts-prune-ignore-next
 export function machOX8664SignatureState(
   bytes: Uint8Array
 ): 'unsigned' | 'signed' | null {
@@ -117,10 +112,8 @@ export function machOX8664SignatureState(
   return signed ? 'signed' : 'unsigned'
 }
 
-// ts-prune-ignore-next
 export type ComponentSourceFile = { path: string; data: Buffer }
 
-// ts-prune-ignore-next
 export function checkComponentSources(input: {
   build: string
   files: ReadonlyArray<ComponentSourceFile>
@@ -182,7 +175,6 @@ export function checkComponentSources(input: {
   return failures.length === 0 ? { ok: true } : { ok: false, failures }
 }
 
-// ts-prune-ignore-next
 export function componentPinLines(
   files: ReadonlyArray<ComponentSourceFile>
 ): string[] {
@@ -195,7 +187,6 @@ export function componentPinLines(
     })
 }
 
-// ts-prune-ignore-next
 export function buildComponentArchive(
   files: ReadonlyArray<ComponentSourceFile>
 ): Buffer {
@@ -211,7 +202,6 @@ export function buildComponentArchive(
   return buildOverlayTarGz(files)
 }
 
-// ts-prune-ignore-next
 export function comparePins(
   build: string,
   files: ReadonlyArray<ComponentSourceFile>,
@@ -251,7 +241,6 @@ function readRegular(path: string): Buffer {
   return readFileSync(path)
 }
 
-// ts-prune-ignore-next
 export async function main(
   argv: string[] = process.argv.slice(2)
 ): Promise<number> {

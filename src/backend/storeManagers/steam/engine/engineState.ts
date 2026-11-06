@@ -63,7 +63,6 @@ export function setEngineStatePublisher(
   publisher = fn
 }
 
-// ts-prune-ignore-next
 export function __resetEngineStateForTests(): void {
   lastDecision.clear()
   preflightCache.clear()

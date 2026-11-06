@@ -115,7 +115,6 @@ export function cancelLaunchDeadline(
   active.get(appId)?.cancel(reason)
 }
 
-// ts-prune-ignore-next
 export function __activeLaunchDeadlineCount(): number {
   return active.size
 }

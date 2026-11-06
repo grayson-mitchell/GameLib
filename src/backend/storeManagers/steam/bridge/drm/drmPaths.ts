@@ -20,7 +20,6 @@ const COMPONENT_ID_RE = /^steamclient-layer-cx[0-9]{1,4}(\.[0-9]{1,6}){2,4}$/
 const APP_ID_RE = /^[0-9]{1,10}$/
 const LAUNCH_ID_RE = /^[0-9]{1,16}$/
 
-// ts-prune-ignore-next
 export type DrmPaths = {
   root: string
   valveClientRoot: string
@@ -40,7 +39,6 @@ function contained(root: string, path: string): string | null {
   return path
 }
 
-// ts-prune-ignore-next
 export function buildDrmPaths(appFolder: string): DrmPaths | null {
   // eslint-disable-next-line no-control-regex
   if (!appFolder || !isAbsolute(appFolder) || /[\x00-\x1f]/.test(appFolder)) {
@@ -89,7 +87,6 @@ export function buildDrmPaths(appFolder: string): DrmPaths | null {
 /**
  * The release-asset id 56-10 packages, one per allowlisted CrossOver build.
  */
-// ts-prune-ignore-next
 export function steamclientLayerComponentId(
   crossoverBuild: string
 ): string | null {
@@ -100,7 +97,6 @@ export function steamclientLayerComponentId(
 }
 
 /** The `<launch>` token in the trace file name, generated per launch (56-12). */
-// ts-prune-ignore-next
 export function newDrmLaunchId(now: number = Date.now()): string {
   return Number.isFinite(now) && now >= 0 ? String(Math.trunc(now)) : '0'
 }

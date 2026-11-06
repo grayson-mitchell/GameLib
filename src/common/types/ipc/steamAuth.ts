@@ -13,12 +13,10 @@ import type {
   SteamUserData
 } from '../steam'
 
-// ts-prune-ignore-next
 export interface SteamAuthSync {
   logoutSteam: () => void
 }
 
-// ts-prune-ignore-next
 export interface SteamAuthAsync {
   steamStartQR: () => Promise<{
     status: 'done' | 'error'

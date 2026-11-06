@@ -114,7 +114,6 @@ export function isValidExeOverrideShape(value: unknown): value is string {
  * Keys that only change where a title is installed or launched from; they are
  * not a fix and never make the GameLib row claim one (quick 261027-gtd).
  */
-// ts-prune-ignore-next -- exported for the D-03 drift test (knownFixReportDrift.test.ts)
 export const TIER1_ROUTING_KEYS = ['macArch', 'drm'] as const
 
 // `overlays` was added by quick 261027-n77, `dllOverrides` by quick

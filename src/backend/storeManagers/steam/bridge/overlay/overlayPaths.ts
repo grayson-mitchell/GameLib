@@ -8,7 +8,6 @@ import { isAbsolute, join, relative } from 'path'
 
 const CROSSOVER_BUILD_RE = /^[0-9]{1,4}(\.[0-9]{1,6}){2,4}$/
 
-// ts-prune-ignore-next
 export type OverlayPaths = {
   root: string
   runnersRoot: string
@@ -23,7 +22,6 @@ function contained(root: string, path: string): string | null {
   return path
 }
 
-// ts-prune-ignore-next
 export function buildOverlayPaths(appFolder: string): OverlayPaths | null {
   // eslint-disable-next-line no-control-regex
   if (!appFolder || !isAbsolute(appFolder) || /[\x00-\x1f]/.test(appFolder)) {

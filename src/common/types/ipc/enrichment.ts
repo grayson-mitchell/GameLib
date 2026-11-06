@@ -13,7 +13,6 @@ import type {
   StoreSearchStore
 } from '../storeSearch'
 
-// ts-prune-ignore-next
 export interface EnrichmentAsync {
   getAnticheatInfo: (appNamespace: string) => Promise<AntiCheatInfo | null>
   getKnownFixes: (appName: string, runner: Runner) => KnowFixesInfo | null

@@ -27,7 +27,6 @@ export function isTestedCrossover(build: string | null): boolean {
   return Object.prototype.hasOwnProperty.call(TESTED_CROSSOVER_BUILDS, build)
 }
 
-// ts-prune-ignore-next
 export function testedCrossoverBuilds(): string[] {
   return Object.keys(TESTED_CROSSOVER_BUILDS).sort()
 }

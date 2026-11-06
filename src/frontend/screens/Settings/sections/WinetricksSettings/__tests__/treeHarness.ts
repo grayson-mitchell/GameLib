@@ -47,7 +47,6 @@ interface ReactHarness {
   __expand: (node: unknown) => unknown
 }
 
-// ts-prune-ignore-next -- consumed by tests through `jest.requireActual('./treeHarness')` inside a hoisted `jest.mock` factory, a string path static analysis cannot follow
 export function createReactMock() {
   const actualReact = jest.requireActual<typeof import('react')>('react')
   let nextInstanceId = 0
@@ -184,7 +183,6 @@ export function createReactMock() {
   }
 }
 
-// ts-prune-ignore-next -- consumed by tests through `jest.requireActual('./treeHarness')` inside a hoisted `jest.mock` factory, a string path static analysis cannot follow
 export function createI18nMock() {
   const interpolate = (
     template: string,
@@ -229,7 +227,6 @@ export function createI18nMock() {
 // FontAwesomeIcon renders to a host `svg` carrying its class names and icon
 // name, so a test can assert "this row shows the success icon" without
 // pulling the SVG renderer into a node-environment run.
-// ts-prune-ignore-next -- consumed by tests through `jest.requireActual('./treeHarness')` inside a hoisted `jest.mock` factory, a string path static analysis cannot follow
 export function createFontAwesomeMock() {
   return {
     FontAwesomeIcon: (props: {

@@ -63,31 +63,23 @@ import { openStageWineLog } from './stageWineLog'
 import { BRIDGE_CONFIG_FILENAME } from '../bridgeConfig'
 import { drmStepError, type DrmStepResult } from './steamclientLayerMode'
 
-// ts-prune-ignore-next
 export const DRM_STEAM_DIR_SEGMENTS = ['Program Files (x86)', 'Steam'] as const
-// ts-prune-ignore-next
 export const DRM_STEAM_DIR_WIN = 'C:\\Program Files (x86)\\Steam'
-// ts-prune-ignore-next
 export const DRM_STEAMCLIENT64_WIN = DRM_STEAM_DIR_WIN + '\\steamclient64.dll'
-// ts-prune-ignore-next
 export const DRM_HELPER_WIN = DRM_STEAM_DIR_WIN + '\\steam.exe'
 /** Genuine Valve client files (D-06), from the 56-07 cache. */
-// ts-prune-ignore-next
 export const DRM_VALVE_FILES = [
   'steamclient64.dll',
   'tier0_s64.dll',
   'vstdlib_s64.dll'
 ] as const
 /** Files from the 56-10 steamclient-layer component. */
-// ts-prune-ignore-next
 export const DRM_COMPONENT_FILES = ['lsteamclient.dll', 'steam.exe'] as const
-// ts-prune-ignore-next
 export const DRM_REG_ADD_TIMEOUT_MS = 15_000
 /**
  * Extra attempts after a timed-out reg add. A fresh bottle's first wine session
  * can wedge in winedevice (winebus HID spin); the next fresh session passes.
  */
-// ts-prune-ignore-next
 export const DRM_REG_ADD_RETRIES = 1
 
 const ACTIVE_PROCESS_KEY = 'HKCU\\Software\\Valve\\Steam\\ActiveProcess'
@@ -109,7 +101,6 @@ const PHASE52_FORWARDER_MARKER_UTF16 = Buffer.from(
  * Four argv arrays (no shell). Throws only inside this pure builder, on a
  * value that could not be a plain Windows drive path.
  */
-// ts-prune-ignore-next
 export function buildDrmRegistryCommands(): string[][] {
   const add = (key: string, name: string, data: string): string[] => {
     if (
@@ -147,7 +138,6 @@ const sameSteamPath = (v: string | undefined): boolean =>
  * writes that are missing or different in a wine user.reg body; [] when fully
  * staged. Pure; never throws (an unreadable body reports `user.reg:unparseable`).
  */
-// ts-prune-ignore-next
 export function drmRegistryMismatches(text: string): string[] {
   try {
     if (typeof text !== 'string' || text.length > MAX_USER_REG_BYTES) {
@@ -197,18 +187,15 @@ export function drmRegistryMismatches(text: string): string[] {
  * True when a wine user.reg body already holds all four values written by
  * buildDrmRegistryCommands(). Pure; never throws.
  */
-// ts-prune-ignore-next
 export function drmRegistryStagedInUserReg(text: string): boolean {
   return drmRegistryMismatches(text).length === 0
 }
 
 /** True when the bytes carry the Phase 52 forwarder version string. */
-// ts-prune-ignore-next
 export function isPhase52ForwarderBytes(buf: Buffer): boolean {
   return buf.includes(PHASE52_FORWARDER_MARKER_UTF16)
 }
 
-// ts-prune-ignore-next
 export type StageDrmBottleInput = {
   appId: string
   bottleName: string
@@ -225,7 +212,6 @@ export type StageDrmBottleInput = {
   signal?: AbortSignal
 }
 
-// ts-prune-ignore-next
 export type StageDrmBottleDeps = {
   getBottleDir?: typeof getBottleDir
   findDlls?: typeof findRuntimeLoadedSteamApiDlls
@@ -253,7 +239,6 @@ export type StageDrmBottleDeps = {
   env?: NodeJS.ProcessEnv
 }
 
-// ts-prune-ignore-next
 export type StageDrmBottleOk = {
   steamDirHost: string
   steamDirWin: string
@@ -329,7 +314,6 @@ async function walkRuntimeDlls(ctx: WalkCtx) {
  * Phase B renames the backups into place.
  * @internal exported for tests
  */
-// ts-prune-ignore-next
 export async function restoreDrmOriginals(
   ctx: WalkCtx
 ): Promise<{ ok: true; restored: string[] } | { ok: false; cause: string }> {
@@ -415,7 +399,6 @@ export async function restoreDrmOriginals(
  * marker is left in place and reported.
  * @internal exported for tests
  */
-// ts-prune-ignore-next
 export function removeTcpBridgeArtifacts(
   ctx: Pick<WalkCtx, 'appId' | 'bottleDir' | 'exePath' | 'installRoot'>,
   runtimeDllPaths: string[],
@@ -565,7 +548,6 @@ const WINE_COMMAND =
  * `CX_BOTTLE=<name>` as a whole env entry. Pure; never throws.
  * @internal exported for tests
  */
-// ts-prune-ignore-next
 export function pidsOfBottleSession(
   psOutput: string,
   bottleDir: string,
@@ -597,7 +579,6 @@ export function pidsOfBottleSession(
  * picked. Pure; never throws.
  * @internal exported for tests
  */
-// ts-prune-ignore-next
 export function pidsWithCwdInBottle(
   lsofOutput: string,
   psOutput: string,
@@ -736,7 +717,6 @@ async function runRegArgv(
  * Stages a DRM-mode bottle from the title's existing bridge bottle. Never
  * throws; every failure is a `bottle-stage` DrmStepError.
  */
-// ts-prune-ignore-next
 export async function stageDrmBottle(
   input: StageDrmBottleInput,
   deps: StageDrmBottleDeps = {}

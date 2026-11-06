@@ -154,7 +154,6 @@ export function isEmbeddableOrigin(url: string, platform: string): boolean {
  * enumeration automatically, rather than the test staying green because it never heard about it.
  * Test-only: no renderer code calls this.
  */
-// ts-prune-ignore-next
 export function listConfiguredStores(): ReadonlyArray<{
   key: string
   startUrl: string

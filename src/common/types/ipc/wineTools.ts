@@ -12,7 +12,6 @@ import type {
   WineVersionInfo
 } from '../../types'
 
-// ts-prune-ignore-next
 export interface WineToolsAsync {
   runWineCommand: (
     args: WineCommandArgs
@@ -49,7 +48,6 @@ export interface WineToolsAsync {
   toggleDXVKNVAPI: (args: ToolArgs) => Promise<boolean>
 }
 
-// ts-prune-ignore-next
 export interface WineToolsFrontendMessages {
   wineVersionsUpdated: () => void
   progressOfWinetricks: (payload: {

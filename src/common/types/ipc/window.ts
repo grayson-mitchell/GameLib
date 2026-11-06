@@ -1,4 +1,3 @@
-// ts-prune-ignore-next
 export interface WindowSync {
   setZoomFactor: (zoomFactor: string) => void
   minimizeWindow: () => void
@@ -8,7 +7,6 @@ export interface WindowSync {
   setFullscreen: (enabled: boolean) => void
 }
 
-// ts-prune-ignore-next
 export interface WindowAsync {
   isFullscreen: () => boolean
   isFrameless: () => boolean

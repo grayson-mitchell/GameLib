@@ -45,7 +45,6 @@ const MAC_STEAM_ONLINE_SETTLE_MS = 2000
 export const GUIDED_RESTORE_TTL_MS = 600000
 export const STEAM_GO_OFFLINE_URL = 'steam://open/gooffline'
 export const STEAM_GO_ONLINE_URL = 'steam://open/goonline'
-// ts-prune-ignore-next
 export const MAC_STEAM_OFFLINE_OWED_FILE = 'mac-steam-offline-owed.json'
 export const MAC_STEAM_RESTORE_CONFIRM_MS = 10000
 // 54-REVIEW WR-02: a gooffline whose LogOff was not seen within
@@ -67,7 +66,6 @@ export type MacSteamWrapKind =
   | 'not-darwin'
   | 'guided-restore'
 
-// ts-prune-ignore-next
 export type MacSteamRestoreTrigger = 'boot' | 'shutdown'
 export type MacSteamRestoreOutcome =
   | 'not-darwin'
@@ -238,7 +236,6 @@ const restoreInFlight: {
   shutdown: Promise<MacSteamRestoreOutcome> | null
 } = { boot: null, shutdown: null }
 
-// ts-prune-ignore-next
 export function __resetMacSteamOfflineForTests(): void {
   disarmGuided()
   restoreInFlight.boot = null
@@ -250,7 +247,6 @@ export function __resetMacSteamOfflineForTests(): void {
   shutdownSignal = newShutdownSignal()
 }
 
-// ts-prune-ignore-next
 export function __macSteamOnlineConfirmForTests(): Promise<void> {
   return onlineConfirmInFlight ?? Promise.resolve()
 }

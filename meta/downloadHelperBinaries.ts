@@ -384,7 +384,6 @@ async function downloadGithubAssets(
 // Exported for test (meta/__tests__/downloadHelperBinaries.test.ts): asserts
 // the darwin onedir call site below is skipped when the resolved target
 // platform is not darwin.
-// ts-prune-ignore-next
 export async function downloadLegendary() {
   const targetPlatform = resolveRunnerTargetPlatform()
   const promises: Promise<unknown>[] = [
@@ -429,7 +428,6 @@ export async function downloadLegendary() {
 }
 
 // Exported for test -- see downloadLegendary()'s comment above.
-// ts-prune-ignore-next
 export async function downloadGogdl() {
   const targetPlatform = resolveRunnerTargetPlatform()
   const promises: Promise<unknown>[] = [
@@ -464,7 +462,6 @@ export async function downloadGogdl() {
 }
 
 // Exported for test -- see downloadLegendary()'s comment above.
-// ts-prune-ignore-next
 export async function downloadNile() {
   const targetPlatform = resolveRunnerTargetPlatform()
   const promises: Promise<unknown>[] = [

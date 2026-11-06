@@ -2,7 +2,6 @@ import type { SystemInformation } from 'backend/utils/systeminfo'
 import type { AppSettings, GameSettings, Runner } from '../../types'
 import type { GetLogFileArgs } from 'backend/logger/paths'
 
-// ts-prune-ignore-next
 export interface SettingsSync {
   setSetting: (args: {
     appName: string
@@ -11,7 +10,6 @@ export interface SettingsSync {
   }) => void
 }
 
-// ts-prune-ignore-next
 export interface SettingsAsync {
   getMaxCpus: () => number
   showUpdateSetting: () => boolean

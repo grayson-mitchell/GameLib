@@ -8,7 +8,6 @@ import type {
 // Consumed by SteamBridgeRouteNotice.tsx only through inferred call-site types
 // (resolveRouteNoticeContent's parameter), never a named type import -- ts-prune
 // sees that as module-local even though it's this module's public IPC contract.
-// ts-prune-ignore-next
 export interface SteamBridgeRouteNoticePayload {
   appName: string
   reason: SteamBridgeRouteReason
@@ -100,7 +99,6 @@ export const handleSteamBridgeRouteNoticeSignal = (
 
 // Same as SteamBridgeRouteNoticePayload above: only consumed via resolveRouteNoticeContent's
 // inferred return type (destructured in the .tsx, never imported by name).
-// ts-prune-ignore-next
 export interface RouteNoticeContent {
   bodyKey: 'knownBad' | 'scanMiss' | 'win64NoShim'
   showTryBridge: boolean

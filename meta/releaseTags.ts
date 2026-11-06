@@ -26,13 +26,11 @@
 // within-module reference introduced by resolveRunnerTargetPlatform() would
 // otherwise flip that mis-classification to a NEW used-in-module finding
 // rather than resolving it.
-// ts-prune-ignore-next
 export type SupportedPlatform = 'win32' | 'darwin' | 'linux'
 
 // Parked (260922-vzw decision): imported by
 // meta/downloadHelperBinaries.ts:15 (`import { ... type DownloadedBinary }
 // from './releaseTags'`), a production meta/ script invisible to ts-prune.
-// ts-prune-ignore-next
 export type DownloadedBinary =
   | 'legendary'
   | 'gogdl'
@@ -78,7 +76,6 @@ export const RELEASE_TAGS = {
 // Consumed by meta/downloadHelperBinaries.ts and
 // meta/pruneStaleHelperBinaries.ts (production meta/ scripts invisible to
 // ts-prune) plus meta/__tests__/runnerTargetPlatform.test.ts.
-// ts-prune-ignore-next
 export function resolveRunnerTargetPlatform(
   env: NodeJS.ProcessEnv = process.env,
   hostPlatform: NodeJS.Platform = process.platform

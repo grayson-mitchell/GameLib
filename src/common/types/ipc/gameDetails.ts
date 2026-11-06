@@ -10,7 +10,6 @@ import type {
 } from '../../types'
 import type { GameOverride, SelectiveDownload } from '../legendary'
 
-// ts-prune-ignore-next
 export interface GameDetailsSync {
   addNewApp: (args: GameInfo) => void
   changeGameVersionPinnedStatus: (
@@ -26,7 +25,6 @@ export interface GameDetailsSync {
   }) => void
 }
 
-// ts-prune-ignore-next
 export interface GameDetailsAsync {
   kill: (appName: string, runner: Runner) => Promise<void>
   getGameInfo: (appName: string, runner: Runner) => Promise<GameInfo | null>

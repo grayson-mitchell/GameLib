@@ -8,12 +8,10 @@ import type {
   RedeemOutcome
 } from '../humble'
 
-// ts-prune-ignore-next
 export interface HumbleSync {
   humbleDisconnect: () => void
 }
 
-// ts-prune-ignore-next
 export interface HumbleAsync {
   humbleGetUserInfo: () => Promise<HumbleUserData | undefined>
   humbleCheckHealth: () => Promise<void>
@@ -77,7 +75,6 @@ export interface HumbleAsync {
   humbleGetClaimAnnotations: () => Promise<Record<string, ClaimAnnotation>>
 }
 
-// ts-prune-ignore-next
 export interface HumbleFrontendMessages {
   openScreen: (screen: string) => void
   // Plan 02 (Phase 10): pushed by HumbleUser.checkHealthAndFlagExpiry() on a

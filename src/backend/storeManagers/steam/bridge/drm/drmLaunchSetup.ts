@@ -56,7 +56,6 @@ import { DRM_LAUNCH_FORM, type DrmLaunchForm } from '../../bottle'
 import { buildDrmPaths } from './drmPaths'
 
 /** Orchestrator stage names, used in logs; distinct from 56-04's DrmStep. */
-// ts-prune-ignore-next
 export const DRM_SETUP_STEPS = [
   'steam-check',
   'crossover-allowlist',
@@ -72,18 +71,14 @@ export const DRM_SETUP_STEPS = [
  * download reports `Steam client files`. These are the only two contexts and
  * are constants with no game- or network-supplied text.
  */
-// ts-prune-ignore-next
 export const DRM_PROGRESS_CONTEXT = {
   runner: 'Compatibility runner',
   valveClient: 'Steam client files'
 } as const
 
-// ts-prune-ignore-next
 export const MAC_STEAM_PROBE_TIMEOUT_MS = 5000
-// ts-prune-ignore-next
 export const DRM_END_SESSION_TIMEOUT_MS = 15000
 
-// ts-prune-ignore-next
 export type DrmLaunchSetupInput = {
   appId: string
   appFolder: string
@@ -106,7 +101,6 @@ export type DrmLaunchSetupInput = {
  * `getBridgeBottleSettings(appId)` (the same variant now), never with settings
  * computed before this call.
  */
-// ts-prune-ignore-next
 export type DrmLaunchReady = {
   mode: 'steamclient-layer'
   appId: string
@@ -121,12 +115,10 @@ export type DrmLaunchReady = {
   progressSent: boolean
 }
 
-// ts-prune-ignore-next
 export type DrmLaunchSetupResult =
   | DrmStepResult<DrmLaunchReady>
   | { status: 'not-applicable'; mode: 'tcp' }
 
-// ts-prune-ignore-next
 export type DrmLaunchSetupDeps = {
   isMacSteamRunning?: () => Promise<boolean>
   detectCrossover?: typeof detectAllowedCrossover
@@ -171,7 +163,6 @@ const messageOf = (err: unknown): string =>
  * an error. Isolated half of the two-profile rule: the env is
  * `createFakeHomeProfile().childEnv()`, never a hand-rolled literal.
  */
-// ts-prune-ignore-next
 export async function isMacSteamRunning(
   timeoutMs: number = MAC_STEAM_PROBE_TIMEOUT_MS
 ): Promise<boolean> {
@@ -481,7 +472,6 @@ async function runSetup(
 }
 
 /** Never rejects. */
-// ts-prune-ignore-next
 export async function drmLaunchSetup(
   input: DrmLaunchSetupInput,
   deps: DrmLaunchSetupDeps = {}
@@ -529,7 +519,6 @@ export async function drmLaunchSetup(
   }
 }
 
-// ts-prune-ignore-next
 export type DrmPrefetchInput = {
   appId: string
   appFolder: string
@@ -537,7 +526,6 @@ export type DrmPrefetchInput = {
   cegMarkers?: readonly string[]
 }
 
-// ts-prune-ignore-next
 export type DrmPrefetchResult =
   | { status: 'ok' }
   | { status: 'not-applicable' }
@@ -550,7 +538,6 @@ export type DrmPrefetchResult =
  * still runs every step, and the cached ones are no-ops. Progress goes out as
  * the same 'drm-setup' status. Never rejects.
  */
-// ts-prune-ignore-next
 export async function prefetchDrmDownloads(
   input: DrmPrefetchInput,
   deps: DrmLaunchSetupDeps = {}

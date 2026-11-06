@@ -3,7 +3,6 @@ import type {
   StoreEmbedNavEvent
 } from 'backend/store/storeEmbedSeam'
 
-// ts-prune-ignore-next
 export interface StoreEmbedSync {
   // Phase 40 Plan 05 (D-18/D-29): fire-and-forget re-bound, fires on every ResizeObserver
   // tick. Send-kind is load-bearing here, not incidental — an invoke-kind channel would
@@ -12,7 +11,6 @@ export interface StoreEmbedSync {
   storeEmbedSetBounds: (bounds: StoreEmbedBounds) => void
 }
 
-// ts-prune-ignore-next
 export interface StoreEmbedAsync {
   // Phase 40 Plan 05 (D-01/REQ-40-02): opens or re-points the store embed. `storeKey`
   // (e.g. 'steam') is the caller's own bookkeeping — the Rust arm this reaches takes no such

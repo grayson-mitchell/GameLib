@@ -1,6 +1,5 @@
 import type { DMQueueElement, DownloadManagerState } from '../../types'
 
-// ts-prune-ignore-next
 export interface DownloadQueueSync {
   removeFromDMQueue: (appName: string) => void
   resumeCurrentDownload: () => void
@@ -8,7 +7,6 @@ export interface DownloadQueueSync {
   cancelDownload: (removeDownloaded: boolean) => void
 }
 
-// ts-prune-ignore-next
 export interface DownloadQueueAsync {
   getDMQueueInformation: () => {
     elements: DMQueueElement[]
@@ -17,7 +15,6 @@ export interface DownloadQueueAsync {
   }
 }
 
-// ts-prune-ignore-next
 export interface DownloadQueueFrontendMessages {
   changedDMQueueInformation: (
     elements: DMQueueElement[],

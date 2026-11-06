@@ -161,12 +161,10 @@ export {
   // re-export of a symbol owned by meta/esbuildWorkerBundleShared.ts:31,
   // used internally in this file (see the decompress-worker build path
   // below).
-  // ts-prune-ignore-next
   DECOMPRESS_WORKER_ENTRY_PATH,
   // Consumed by meta/__tests__/buildSidecarSea.test.ts, which imports this
   // BY NAME from '../buildSidecarSea' (this re-export path itself) -- a
   // meta/__tests__ file, invisible to ts-prune.
-  // ts-prune-ignore-next
   resolveEsbuildCli
 }
 // seaEsbuildFlags, spawnArgv, assertNodeGypBuildSingleConsumer and
@@ -215,7 +213,6 @@ const SEA_WORKER_BUNDLE_PATH = join(
  *  assert the two sides never drift apart. */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export const SEA_WORKER_ASSET_KEY = 'decompressWorker.js'
 
 // 23.1-02 (spike 023 VALIDATED, 23.1-01-SUMMARY): the native lzma-native
@@ -244,7 +241,6 @@ export const LZMA_NATIVE_ASSET_KEY = 'lzma_native.node'
 // in lzmaNativeBinding.test.ts guards the pair.
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export const LZMA_NATIVE_DLL_ASSET_KEY = 'liblzma.dll'
 
 // 23.1-01-SUMMARY's spike OBSERVED this filename by listing
@@ -284,7 +280,6 @@ const LZMA_NATIVE_PREBUILDS_ROOT = join(
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export const NATIVE_LZMA_REQUIRED_TRIPLES: readonly string[] = [
   'aarch64-apple-darwin',
   'x86_64-unknown-linux-gnu',
@@ -317,7 +312,6 @@ const SIDECAR_BIN_DIR = join('src-tauri', 'binaries')
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function resolvePostjectCli(): string {
   try {
     return require.resolve('postject/dist/cli.js')
@@ -360,7 +354,6 @@ export function buildSeaConfigPath(): string {
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function sidecarOutputPath(triple: string): string {
   const ext = triple.includes('windows') ? '.exe' : ''
   return join(SIDECAR_BIN_DIR, `gamelib-sidecar-${triple}${ext}`)
@@ -375,7 +368,6 @@ export function sidecarOutputPath(triple: string): string {
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function buildPostjectArgv(
   binaryPath: string,
   blobPath: string,
@@ -441,7 +433,6 @@ export function buildPostjectArgv(
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function buildEsbuildArgv(
   platform: NodeJS.Platform = process.platform
 ): { command: string; args: string[] } {
@@ -467,7 +458,6 @@ export function buildEsbuildArgv(
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function buildWorkerEsbuildArgv(
   platform: NodeJS.Platform = process.platform
 ): { command: string; args: string[] } {
@@ -490,7 +480,6 @@ export function buildWorkerEsbuildArgv(
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function buildCodesignArgv(
   binaryPath: string,
   platform: NodeJS.Platform = process.platform
@@ -514,7 +503,6 @@ export function buildCodesignArgv(
 /** Matches the plan's verify-command host-triple resolution exactly. */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function hostTriple(): string {
   if (process.platform === 'win32') {
     return 'x86_64-pc-windows-msvc'
@@ -545,7 +533,6 @@ export function hostTriple(): string {
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function resolveTriple(env: NodeJS.ProcessEnv = process.env): string {
   const override = env.GAMELIB_SIDECAR_TARGET_TRIPLE
   if (typeof override === 'string' && override.length > 0) {
@@ -562,7 +549,6 @@ export function resolveTriple(env: NodeJS.ProcessEnv = process.env): string {
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function triplePlatform(triple: string): NodeJS.Platform {
   if (triple.endsWith('-apple-darwin')) {
     return 'darwin'
@@ -583,7 +569,6 @@ export function triplePlatform(triple: string): NodeJS.Platform {
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function expectedMachoArch(triple: string): string {
   if (triple === 'aarch64-apple-darwin') {
     return 'arm64'
@@ -597,7 +582,6 @@ export function expectedMachoArch(triple: string): string {
 /** Maps a Rust target triple to Node's dist platform-arch segment. */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function nodeDistName(triple: string): string {
   switch (triple) {
     case 'aarch64-apple-darwin':
@@ -630,7 +614,6 @@ export function nodeDistName(triple: string): string {
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function lzmaNativePrebuildDir(triple: string): string {
   switch (triple) {
     case 'aarch64-apple-darwin':
@@ -657,7 +640,6 @@ export function lzmaNativePrebuildDir(triple: string): string {
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function lzmaNativePrebuildPath(triple: string): string {
   return join(
     LZMA_NATIVE_PREBUILDS_ROOT,
@@ -675,7 +657,6 @@ export function lzmaNativePrebuildPath(triple: string): string {
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function lzmaNativeDllPath(triple: string): string | undefined {
   if (triple !== 'x86_64-pc-windows-msvc') {
     return undefined
@@ -712,7 +693,6 @@ export function lzmaNativeDllPath(triple: string): string | undefined {
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export async function resolveNativeLzmaAssets(
   triple: string,
   exists: (p: string) => boolean = existsSync
@@ -772,7 +752,6 @@ export async function resolveNativeLzmaAssets(
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function nodeDistUrls(
   triple: string,
   version: string = process.version
@@ -822,7 +801,6 @@ export function nodeDistUrls(
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function buildSeaConfig(
   nativeLzmaPath?: string,
   nativeLzmaDllPath?: string
@@ -970,7 +948,6 @@ async function bundleWorkerForSea(): Promise<void> {
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function buildSeaBlobArgv(): { command: string; args: string[] } {
   return {
     command: process.execPath,
@@ -1112,7 +1089,6 @@ const LIBNODE_LINKAGE_RE =
  * otherwise the size floor decides.
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible to ts-prune).
-// ts-prune-ignore-next
 export function classifyNodeBase(input: {
   linkage: string | undefined
   sizeBytes: number
@@ -1130,7 +1106,6 @@ export function classifyNodeBase(input: {
  * streams are always included.
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible to ts-prune).
-// ts-prune-ignore-next
 export function formatPostjectFailure(
   code: number | null,
   stdout: string,

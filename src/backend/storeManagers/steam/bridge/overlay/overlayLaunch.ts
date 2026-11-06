@@ -20,7 +20,6 @@ import {
 } from './overlayRunnerClone'
 import type { RunTool } from '../drm/runnerClone'
 
-// ts-prune-ignore-next
 export type EnvVar = { key: string; value: string }
 
 const APP_ID_RE = /^[0-9]{1,10}$/
@@ -42,7 +41,6 @@ function safePath(p: unknown): p is string {
  * Appends tokens to the CX_ENV entry (case-insensitive key), keeping the
  * existing value first. Rejects a single-quoted value containing a quote.
  */
-// ts-prune-ignore-next
 export function appendCxEnvTokens(
   env: readonly EnvVar[],
   tokens: readonly string[]
@@ -91,7 +89,6 @@ type OverlayEnvArgs = {
  * The probe is armed only by the sidecar's own env, exactly '1'. Pure; the
  * caller supplies the trace root, the dylib path and the clock.
  */
-// ts-prune-ignore-next
 export function overlayInputProbeFromEnv(
   env: Record<string, string | undefined>,
   a: { appId: string; traceRoot: string; dylibPath: string; now: number }
@@ -162,7 +159,6 @@ function overlayEnvValues(a: OverlayEnvArgs): OverlayStepResult<{
 }
 
 /** D-12 tokens, shim first. No GPU or OS gate (D-13). */
-// ts-prune-ignore-next
 export function buildOverlayCxTokens(
   a: OverlayEnvArgs
 ): OverlayStepResult<{ tokens: string[] }> {
@@ -181,7 +177,6 @@ export function buildOverlayCxTokens(
 }
 
 /** Fallback-engine route (D-07): the same values as plain, unquoted env. */
-// ts-prune-ignore-next
 export function buildOverlayEnvVars(
   a: OverlayEnvArgs
 ): OverlayStepResult<{ vars: EnvVar[] }> {
@@ -201,7 +196,6 @@ const OVERLAY_ENV_KEYS = new Set([
  * entries (case-sensitive). An existing DYLD_INSERT_LIBRARIES is kept, with
  * ours prepended so the shim stays first. Pure; never mutates its input.
  */
-// ts-prune-ignore-next
 export function mergeOverlayEnvVars(
   env: readonly EnvVar[],
   vars: readonly EnvVar[]
@@ -230,7 +224,6 @@ export function mergeOverlayEnvVars(
   return [...rest, ...out]
 }
 
-// ts-prune-ignore-next
 export type OverlayLaunchPayload =
   | { kind: 'cx-env'; tokens: string[]; runnerBin: string }
   | { kind: 'env'; vars: EnvVar[] }
@@ -242,7 +235,6 @@ type LstatLike = (p: string) => Promise<{ isFile(): boolean }>
  * T-60-07-03). The Steam dylibs are in the user's own Steam install, which may
  * legitimately be reached through links, so they are checked with stat.
  */
-// ts-prune-ignore-next
 export async function checkOverlayInputs(
   a: { shimPath: string; steamBinDir: string },
   deps: { lstat?: LstatLike; stat?: LstatLike } = {}
@@ -276,7 +268,6 @@ export async function checkOverlayInputs(
 type TokenArgs = OverlayEnvArgs
 
 /** DRM route: inputs, then tokens. Never rejects. */
-// ts-prune-ignore-next
 export async function prepareOverlayTokens(
   a: TokenArgs,
   deps: {
@@ -293,7 +284,6 @@ export async function prepareOverlayTokens(
 }
 
 /** Fallback-engine route: inputs, then plain env vars. Never rejects. */
-// ts-prune-ignore-next
 export async function prepareOverlayEnv(
   a: TokenArgs,
   deps: { checkInputs?: typeof checkOverlayInputs } = {}
@@ -308,7 +298,6 @@ export async function prepareOverlayEnv(
 }
 
 /** TCP route: inputs, detect, clone, tokens. Never rejects. */
-// ts-prune-ignore-next
 export async function prepareOverlayLaunch(
   a: TokenArgs & { appFolder: string },
   deps: {

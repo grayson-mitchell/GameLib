@@ -39,7 +39,6 @@ import type { WineToolsAsync, WineToolsFrontendMessages } from './wineTools'
 
 export type { SteamSyncStatus } from './steam'
 
-// ts-prune-ignore-next
 export type SyncIPCFunctions = AppShellSync &
   ClipboardSync &
   DownloadQueueSync &
@@ -57,10 +56,8 @@ export type SyncIPCFunctions = AppShellSync &
   TestStubsSync &
   WindowSync
 
-// ts-prune-ignore-next
 export type TestSyncIPCFunctions = TestStubsTestSync
 
-// ts-prune-ignore-next
 export type AsyncIPCFunctions = AppShellAsync &
   ClipboardAsync &
   DialogAsync &
@@ -86,7 +83,6 @@ export type AsyncIPCFunctions = AppShellAsync &
   WindowAsync &
   WineToolsAsync
 
-// ts-prune-ignore-next
 export type FrontendMessages = AppShellFrontendMessages &
   DownloadQueueFrontendMessages &
   GogFrontendMessages &

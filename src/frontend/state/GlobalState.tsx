@@ -292,7 +292,7 @@ type SleepAssertionKind = 'display' | 'system' | null
 // Dropping `export` breaks that search. Do not spell that declaration line
 // out verbatim anywhere in a comment above this function -- see the
 // DELIBERATE note above reconcileSleepAssertionCalls below for why.
-// ts-prune-ignore-next
+/** @public consumed by GlobalStateSleepAssertionClassification.test.ts, which reads this file's source text and extracts the function body; dropping the export breaks that extraction. */
 export function classifySleepAssertionKind(status: Status): SleepAssertionKind {
   switch (status) {
     case 'launching':
@@ -378,7 +378,7 @@ interface SleepAssertionCall {
 // comment reproducing it exactly would be found FIRST and extracted instead
 // of the real function below (measured while writing this edit: an earlier
 // revision of this exact comment did precisely that).
-// ts-prune-ignore-next
+/** @public consumed by GlobalStateSleepAssertionClassification.test.ts, which reads this file's source text and extracts the function body; dropping the export breaks that extraction. */
 export function reconcileSleepAssertionCalls(
   previous: SleepAssertionState,
   next: SleepAssertionState

@@ -1501,7 +1501,6 @@ function stockBridgeBottleSettings(appId: string): GameSettings {
 export type DrmLaunchForm = 'bin/wine+CX_BOTTLE' | 'raw WINELOADER+WINEPREFIX'
 
 // 56-01-SUMMARY.md (.planning/phases/56-bridge-steamclient-layer-drm-mode-for-steamstub-titles/56-01-SUMMARY.md) records: "launch_form: bin/wine+CX_BOTTLE"
-// ts-prune-ignore-next
 export const DRM_LAUNCH_FORM: DrmLaunchForm = 'bin/wine+CX_BOTTLE'
 
 /**
@@ -1509,7 +1508,6 @@ export const DRM_LAUNCH_FORM: DrmLaunchForm = 'bin/wine+CX_BOTTLE'
  * is a structural superset. bottle.ts does not import the drm modules, which
  * keeps the static import graph acyclic.
  */
-// ts-prune-ignore-next
 export type DrmBridgeRunner = {
   crossoverBuild: string
   runnerDir: string
@@ -1522,7 +1520,6 @@ export type DrmBridgeRunner = {
 }
 
 /** Which feature owns a registered runner (D-04: overlay clones live apart). */
-// ts-prune-ignore-next
 export type BridgeRunnerKind = 'drm' | 'overlay'
 
 const BRIDGE_RUNNER_CXROOT_RE =
@@ -1569,7 +1566,6 @@ function isValidDrmRunner(
 
 // 56-01-SUMMARY.md, consequences for 56-11: "swap the wine version to `bin: <clone>/bin/wine`
 // with `wineserver: <clone>/bin/wineserver`, keep `type: 'crossover'`".
-// ts-prune-ignore-next
 export function drmRunnerWineInstallation(
   runner: DrmBridgeRunner,
   form: DrmLaunchForm,
@@ -1607,7 +1603,6 @@ export function drmRunnerWineInstallation(
  * 56-01 launch form. Launch-time env (WINEDLLOVERRIDES, WINEDLLPATH, trace
  * file) is 56-12's. Throws for a bad appId or an invalid runner.
  */
-// ts-prune-ignore-next
 export function getDrmBridgeBottleSettings(
   appId: string,
   runner: DrmBridgeRunner,
@@ -1645,7 +1640,6 @@ const drmBridgeRunners = new Map<
   { runner: DrmBridgeRunner; form: DrmLaunchForm; kind: BridgeRunnerKind }
 >()
 
-// ts-prune-ignore-next
 export function setDrmBridgeRunner(
   appId: string,
   runner: DrmBridgeRunner,
@@ -1668,7 +1662,6 @@ export function setDrmBridgeRunner(
  * every per-appId wine spawn shares one runner and one wineserver. Always the
  * bin/wine+CX_BOTTLE form. Returns false for an invalid appId or runner.
  */
-// ts-prune-ignore-next
 export function setOverlayBridgeRunner(
   appId: string,
   runner: DrmBridgeRunner
@@ -1686,19 +1679,16 @@ export function setOverlayBridgeRunner(
   return true
 }
 
-// ts-prune-ignore-next
 export function getBridgeRunnerKind(
   appId: string
 ): BridgeRunnerKind | undefined {
   return drmBridgeRunners.get(appId)?.kind
 }
 
-// ts-prune-ignore-next
 export function clearDrmBridgeRunner(appId: string): void {
   drmBridgeRunners.delete(appId)
 }
 
-// ts-prune-ignore-next
 export function getDrmBridgeRunner(
   appId: string
 ):
@@ -2097,7 +2087,6 @@ async function killForRegisteredEngine(
  * must use the PREVIOUS runner's own wineserver (RESEARCH Pitfall 2): a clone
  * never joins a stock wineserver or the reverse. Same guards; never throws.
  */
-// ts-prune-ignore-next
 export async function endPerGameBridgeBottleSessionWith(
   appId: string,
   bottleName: string | undefined,
@@ -2132,7 +2121,6 @@ export async function endPerGameBridgeBottleSessionWith(
  * engine actually running it. Refuses (false, no spawn) when the per-game
  * guard refuses. Never throws.
  */
-// ts-prune-ignore-next
 export async function killBridgeBottleWineServer(
   appId: string,
   timeoutMs: number

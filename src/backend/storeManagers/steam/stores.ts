@@ -39,7 +39,7 @@ const steamSyncStore = new CacheStore<number, 'syncedAt'>('steam_sync', null)
 // Consumed only through the lazy `require('./stores')` in macSteamAdoption.ts
 // `defaultStore()` -- kept lazy so electron-store stays out of module load -- which ts-prune
 // cannot trace; macSteamAdoption.test.ts also mocks it by name. The export is deliberate.
-// ts-prune-ignore-next
+/** @public consumed only through the lazy `require('./stores')` in macSteamAdoption.ts `defaultStore()`, which knip cannot trace; macSteamAdoption.test.ts also mocks it by name. */
 export const steamPendingAdoptionStore = new CacheStore<unknown>(
   'steam_pending_adoption',
   null
@@ -50,7 +50,6 @@ export const steamPendingAdoptionStore = new CacheStore<unknown>(
 // restart, so the hold survives a GameLib restart. Consumed only through the
 // lazy `require('./stores')` in steamRestartHold.ts, which ts-prune
 // cannot trace. The export is deliberate.
-// ts-prune-ignore-next
 export const steamRestartHoldStore = new CacheStore<unknown>(
   'steam_restart_hold',
   null
@@ -59,7 +58,7 @@ export const steamRestartHoldStore = new CacheStore<unknown>(
 // ── Phase 57: persisted "known-fix report sent" records (D-16/D-17) ─────────
 // Consumed only through the lazy `require` in backend/knownFixReport.ts, which
 // ts-prune cannot trace. The export is deliberate.
-// ts-prune-ignore-next
+/** @public consumed only through the lazy `require` in backend/knownFixReport.ts, which knip cannot trace. */
 export const steamKnownFixReportStore = new CacheStore<unknown>(
   'steam_known_fix_reports',
   null
@@ -353,7 +352,6 @@ export interface SteamBridgeVerdict {
 // declaration), never from this re-export, and this file itself never
 // referenced the type beyond that re-export.
 // Phase 59 (D-04, D-15): persisted dismissals for the engine notices.
-// ts-prune-ignore-next
 export const steamEngineNoticeStore = new CacheStore<unknown>(
   'steam_engine_notices',
   null

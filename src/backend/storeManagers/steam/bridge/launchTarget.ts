@@ -292,7 +292,6 @@ export async function resolveBridgeLaunchExe(
  * unsafe (absolute, drive-lettered, or escaping the install root), so the
  * caller falls back to the install root.
  */
-// ts-prune-ignore-next
 export function containWorkingDir(
   installRoot: string,
   workingdir: string | undefined

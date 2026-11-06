@@ -21,7 +21,6 @@ type ContentLogEvent =
   | { kind: 'session' }
 
 /** content_log.txt is CRLF and `.` never matches `\r`, so strip it before matching. */
-// ts-prune-ignore-next
 export function parseContentLogLine(raw: string): ContentLogEvent | null {
   const line = raw.replace(/\r/g, '')
   // Steam writes this once per client start-up; no update survives a restart.
@@ -59,7 +58,6 @@ export type NettopRow =
   | { kind: 'flow'; flow: string; bytesIn: number }
 
 /** Parses one line of `nettop -x -J bytes_in` output (pty, so CRLF). */
-// ts-prune-ignore-next
 export function parseNettopRow(raw: string): NettopRow | null {
   const line = raw.replace(/\r/g, '')
   if (line.startsWith(',bytes_in')) return { kind: 'header' }
@@ -78,13 +76,11 @@ export type FlowAccumulator = {
   flows: Map<string, number>
 }
 
-// ts-prune-ignore-next
 export function createFlowAccumulator(): FlowAccumulator {
   return { cum: 0, blocks: 0, flows: new Map() }
 }
 
 /** Applies a parsed row. The first block is a baseline only. Mutates and returns the accumulator. */
-// ts-prune-ignore-next
 export function applyNettopRow(
   acc: FlowAccumulator,
   row: NettopRow
@@ -111,12 +107,10 @@ type ActiveUpdate = {
 
 export type UpdateTracker = { active: Map<string, ActiveUpdate> }
 
-// ts-prune-ignore-next
 export function createUpdateTracker(): UpdateTracker {
   return { active: new Map() }
 }
 
-// ts-prune-ignore-next
 export function applyContentLogEvent(
   tracker: UpdateTracker,
   event: ContentLogEvent,
@@ -137,7 +131,6 @@ export function applyContentLogEvent(
   return tracker
 }
 
-// ts-prune-ignore-next
 export function activeCount(tracker: UpdateTracker): number {
   return tracker.active.size
 }
@@ -149,7 +142,6 @@ type LiveProgress = {
   percent: number
 }
 
-// ts-prune-ignore-next
 export function liveProgress(input: {
   downloadDone: number
   downloadTotal: number
@@ -171,7 +163,6 @@ export function liveProgress(input: {
 }
 
 /** Bytes/s over the samples inside `windowMs`. undefined when not measurable. */
-// ts-prune-ignore-next
 export function windowRate(
   samples: { ms: number; cum: number }[],
   nowMs: number,

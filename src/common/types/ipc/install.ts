@@ -7,7 +7,6 @@ import type {
   UpdateParams
 } from '../../types'
 
-// ts-prune-ignore-next
 export interface InstallAsync {
   checkGameUpdates: () => Promise<string[]>
   // Phase 21 (21-09), D-09: registered Steam libraries for the multi-library

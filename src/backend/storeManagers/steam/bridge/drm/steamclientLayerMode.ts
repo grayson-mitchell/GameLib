@@ -16,10 +16,8 @@
  * Nothing in this module throws.
  */
 
-// ts-prune-ignore-next
 export type BridgeMode = 'tcp' | 'steamclient-layer'
 
-// ts-prune-ignore-next
 export const STEAMCLIENT_LAYER_MODE = 'steamclient-layer' as const
 
 /**
@@ -28,7 +26,6 @@ export const STEAMCLIENT_LAYER_MODE = 'steamclient-layer' as const
  * `undefined` (unreadable exe) stays on the existing TCP path, unchanged from
  * today. This function never returns a bottled-Steam route (D-13).
  */
-// ts-prune-ignore-next
 export function resolveBridgeMode(
   drmWrapper: 'steamstub' | 'none' | undefined,
   cegMarkers?: readonly string[]
@@ -43,7 +40,6 @@ export function resolveBridgeMode(
  * allowlist, then the component, then the runner, then the Valve client,
  * then bottle staging.
  */
-// ts-prune-ignore-next
 export const DRM_STEPS = [
   'steam-not-running',
   'unsupported-crossover',
@@ -56,10 +52,8 @@ export const DRM_STEPS = [
   'bottle-stage'
 ] as const
 
-// ts-prune-ignore-next
 export type DrmStep = (typeof DRM_STEPS)[number]
 
-// ts-prune-ignore-next
 export function isDrmStep(value: unknown): value is DrmStep {
   return (
     typeof value === 'string' &&
@@ -67,23 +61,18 @@ export function isDrmStep(value: unknown): value is DrmStep {
   )
 }
 
-// ts-prune-ignore-next
 export type DrmNoticeReason = `drm-${DrmStep}`
 
-// ts-prune-ignore-next
 export function drmNoticeReason(step: DrmStep): DrmNoticeReason {
   return `drm-${step}`
 }
 
-// ts-prune-ignore-next
 export type DrmStepError = { status: 'error'; step: DrmStep; cause: string }
 
-// ts-prune-ignore-next
 export type DrmStepResult<T extends object = Record<never, never>> =
   | ({ status: 'ok' } & T)
   | DrmStepError
 
-// ts-prune-ignore-next
 export const DRM_CAUSE_MAX_CHARS = 160
 
 function normaliseCause(cause: unknown): string {
@@ -106,7 +95,6 @@ function normaliseCause(cause: unknown): string {
 }
 
 /** Builds the error arm from any thrown value. Never throws. */
-// ts-prune-ignore-next
 export function drmStepError(step: DrmStep, cause: unknown): DrmStepError {
   return { status: 'error', step, cause: normaliseCause(cause) }
 }
@@ -116,7 +104,6 @@ export function drmStepError(step: DrmStep, cause: unknown): DrmStepError {
  * single whitespace-free token, so a game- or filesystem-supplied string
  * cannot inject a second log line or a forged `[bridge-drm]` prefix.
  */
-// ts-prune-ignore-next
 export function formatDrmNoticeLine(
   appId: string,
   step: DrmStep,
@@ -130,7 +117,6 @@ export function formatDrmNoticeLine(
   return `[bridge-notice] appId=${id} reason=${drmNoticeReason(step)} cause=${token}`
 }
 
-// ts-prune-ignore-next
 export type BridgeDrmAnchorFields = {
   appId: string
   crossover: string
@@ -145,7 +131,6 @@ export type BridgeDrmAnchorFields = {
  * space (`Application Support`). The 56-05 parser therefore reads trace as the
  * rest of the line, not as a `\S+` token. Returns null on any invalid field.
  */
-// ts-prune-ignore-next
 export function formatBridgeDrmAnchor(f: BridgeDrmAnchorFields): string | null {
   if (!/^[0-9]{1,10}$/.test(f.appId)) return null
   if (!/^[0-9]{1,4}(\.[0-9]{1,6}){2,4}$/.test(f.crossover)) return null

@@ -13,7 +13,6 @@ import type {
 import type { RunsForMeState } from '../../runsForMe'
 import type { SignInProbeOutcomeMap } from '../../signInState'
 
-// ts-prune-ignore-next
 export interface AppShellSync {
   changeLanguage: (language: string) => void
   notify: (args: { title: string; body: string }) => void
@@ -31,7 +30,6 @@ export interface AppShellSync {
   setTitleBarOverlay: (options: TitleBarOverlay) => void
 }
 
-// ts-prune-ignore-next
 export interface AppShellAsync {
   getHeroicVersion: () => string
   getAppManagementStatus: () => Promise<AppManagementStatus>
@@ -43,7 +41,6 @@ export interface AppShellAsync {
   getLoginBackground: () => Promise<string>
 }
 
-// ts-prune-ignore-next
 export interface AppShellFrontendMessages {
   gameStatusUpdate: (status: GameStatus) => void
   showDialog: (

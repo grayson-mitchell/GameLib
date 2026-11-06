@@ -6,7 +6,6 @@
  * Values equal 56-03's DETOUR_BUILD_ROWS for the same build.
  */
 
-// ts-prune-ignore-next
 export type NtdllPatchRow = {
   crossoverBuild: string
   cleanSize: number
@@ -23,7 +22,6 @@ export type NtdllPatchRow = {
   patchedSha256: string
 }
 
-// ts-prune-ignore-next
 export const NTDLL_PATCH_ROWS: Readonly<Record<string, NtdllPatchRow>> = {
   '26.3.0.39832': {
     crossoverBuild: '26.3.0.39832',
@@ -44,7 +42,6 @@ export const NTDLL_PATCH_ROWS: Readonly<Record<string, NtdllPatchRow>> = {
   }
 }
 
-// ts-prune-ignore-next
 export function findNtdllPatchRow(
   build: string,
   cleanSha256: string
@@ -56,7 +53,6 @@ export function findNtdllPatchRow(
   return row !== undefined && row.cleanSha256 === cleanSha256 ? row : null
 }
 
-// ts-prune-ignore-next
 export function supportedCrossoverBuilds(): string[] {
   return Object.keys(NTDLL_PATCH_ROWS).sort()
 }

@@ -1,6 +1,5 @@
 import type { DiskSpaceData } from '../../types'
 
-// ts-prune-ignore-next
 export interface ShellFilesSync {
   openExternalUrl: (url: string) => void
   openFolder: (folder: string) => void
@@ -21,7 +20,6 @@ export interface ShellFilesSync {
   showItemInFolder: (item: string) => void
 }
 
-// ts-prune-ignore-next
 export interface ShellFilesAsync {
   checkDiskSpace: (folder: string) => Promise<DiskSpaceData>
   getShellPath: (path: string) => Promise<string>

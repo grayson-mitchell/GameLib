@@ -118,7 +118,6 @@ export function bottledSteamLogPaths(bottleDir: string): {
 
 /** A single `[YYYY-MM-DD HH:MM:SS]`-prefixed log line, parsed as LOCAL
  * time per the task's own instruction. */
-// ts-prune-ignore-next
 export interface ParsedLine {
   timestampMs: number
   rest: string
@@ -126,7 +125,6 @@ export interface ParsedLine {
 
 const TIMESTAMP_PREFIX = /^\[(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})\]/
 
-// ts-prune-ignore-next
 export function parseTimestampedLine(line: string): ParsedLine | null {
   const match = TIMESTAMP_PREFIX.exec(line.replace(/\r$/, ''))
   if (!match) return null

@@ -199,7 +199,7 @@ export const RUST_NOTIFICATION_SHOW = 'notification_show' as const
  * is not proof of display. A shell that predates WR-01 resolves the bare `'user-notifications'`.
  */
 // Exported as the TS record of the Rust contract; the sidecar treats the label as an opaque string
-// ts-prune-ignore-next
+/** @public exported as the TS record of the Rust contract; the sidecar treats the label as an opaque string. */
 export type RustNotificationBackendLabel =
   | 'user-notifications'
   | `user-notifications;${string}`

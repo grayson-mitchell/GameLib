@@ -96,7 +96,6 @@ export const FAKE_HOME_ENV_KEYS = [
 // ... from '../src/backend/testUtils/fakeHomeProfile'`, used at its own line
 // 596). That file is only ever spawned, never imported -- outside the
 // analysed tsconfig project.
-// ts-prune-ignore-next
 export type FakeHomeEnvKey = (typeof FAKE_HOME_ENV_KEYS)[number]
 
 export interface FakeHomeProfile {

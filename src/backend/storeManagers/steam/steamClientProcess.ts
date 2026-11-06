@@ -68,7 +68,6 @@ const START_TOKEN_TIMEOUT_MS = 15_000
  * unrelated image are ignored. Case-insensitive on the image name because
  * Windows image names are.
  */
-// ts-prune-ignore-next
 export function parseTasklistSteamPids(stdout: string): number[] {
   const pids: number[] = []
   for (const line of stdout.split(/\r?\n/)) {
@@ -81,7 +80,6 @@ export function parseTasklistSteamPids(stdout: string): number[] {
 }
 
 /** Parses `pgrep` stdout (one PID per line) into a PID list. */
-// ts-prune-ignore-next
 export function parsePgrepPids(stdout: string): number[] {
   const pids: number[] = []
   for (const line of stdout.split(/\r?\n/)) {
@@ -159,7 +157,6 @@ export async function listSteamClientPids(
  * lines) into a PID -> opaque token map. Internal whitespace in the token is
  * collapsed so equal instants compare equal.
  */
-// ts-prune-ignore-next
 export function parsePidTokenLines(stdout: string): Map<number, string> {
   const out = new Map<number, string>()
   for (const line of stdout.split(/\r?\n/)) {

@@ -14,25 +14,19 @@
  */
 
 /** vtable slot of CCallbackBase::Run(void*). */
-// ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export const MSVC_CCALLBACKBASE_VSLOT_RUN_1ARG = 1
 /** vtable slot of CCallbackBase::Run(void*, bool, SteamAPICall_t). */
-// ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export const MSVC_CCALLBACKBASE_VSLOT_RUN_3ARG = 0
 /** vtable slot of CCallbackBase::GetCallbackSizeBytes(). */
-// ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export const MSVC_CCALLBACKBASE_VSLOT_GET_SIZE = 2
 
 /** Byte offsets of m_nCallbackFlags / m_iCallback per target arch. */
-// ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export const MSVC_CCALLBACKBASE_OFFSETS = {
   x64: { flags: 8, iCallback: 12 },
   x86: { flags: 4, iCallback: 8 }
 } as const
 
-// ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export const STEAM_CALLBACK_FLAG_REGISTERED = 0x01
-// ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export const STEAM_CALLBACK_FLAG_GAMESERVER = 0x02
 
 interface MsvcCallbackLayout {
@@ -99,7 +93,6 @@ function parseSection(section: string, triple: string): MsvcCallbackLayout {
  * Parses dumper output sections introduced by `=== triple: <triple> ...`
  * header lines. Throws (never defaults) when a triple or block is missing.
  */
-// ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export function parseMsvcCallbackLayoutDump(
   text: string
 ): Record<MsvcTriple, MsvcCallbackLayout> {
@@ -155,7 +148,6 @@ interface UserStatsReceivedLayout {
   size: number
 }
 
-// ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export const USER_STATS_RECEIVED_LAYOUT = {
   x64: { gameID: 0, eResult: 8, steamID: 16, size: 24 },
   x86: { gameID: 0, eResult: 8, steamID: 16, size: 24 },
@@ -165,7 +157,6 @@ export const USER_STATS_RECEIVED_LAYOUT = {
 // Compile-time shape check (kept off the export: ts-prune reads `satisfies` / `Record` there as export names).
 USER_STATS_RECEIVED_LAYOUT satisfies Record<string, UserStatsReceivedLayout>
 
-// ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export type UserStatsTriple =
   | 'x86_64-pc-windows-msvc'
   | 'i686-pc-windows-msvc'
@@ -202,7 +193,6 @@ function parseUserStatsSection(
  * Parses dumper output sections introduced by `=== triple: <triple> ...`
  * header lines. Throws (never defaults) when a triple or the record is missing.
  */
-// ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export function parseUserStatsReceivedLayoutDump(
   text: string
 ): Record<UserStatsTriple, UserStatsReceivedLayout> {
@@ -250,7 +240,6 @@ export function parseUserStatsReceivedLayoutDump(
  * declaration order (parseCallbackLayoutsDump relies on that order). `id` is
  * the callback's k_iCallback, or null for a plain struct.
  */
-// ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export type CallbackLayoutArch = 'x64' | 'x86' | 'mac'
 
 interface StructLayout {
@@ -260,7 +249,6 @@ interface StructLayout {
   fields: Readonly<Record<string, number>>
 }
 
-// ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export interface CallbackLayoutEntry {
   id: number | null
   x64: StructLayout
@@ -955,7 +943,6 @@ function splitDumpSections(text: string): Map<string, string> {
  * literal; the numbers come only from the dump. Throws, never defaults, naming
  * the triple and struct when a section, a record or a field count is missing.
  */
-// ts-prune-ignore-next -- measured layout data consumed by meta/gen_vtables.ts / meta/__tests__ (plan 58-02/58-10); ts-prune cannot see that use
 export function parseCallbackLayoutsDump(
   text: string
 ): Record<string, Record<CallbackLayoutArch, StructLayout>> {

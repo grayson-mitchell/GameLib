@@ -48,7 +48,6 @@ export const DRM_DLLOVERRIDES_CHANNEL: DrmDllOverridesChannel = 'dll-option'
 // The Research staging recipe (NotProton compat_run.sh). The genuine
 // steamclient64.dll loads native from its full SteamClientDll64 path, and
 // lsteamclient loads builtin from the clone.
-// ts-prune-ignore-next
 export const DRM_DLL_OVERRIDES = 'steamclient=n;steamclient64=n;lsteamclient=b'
 
 export const DRM_TRACE_KEEP_PER_APP = 8
@@ -65,7 +64,6 @@ export const MAC_STEAM_CLIENT_SUBPATH = [
   'MacOS'
 ] as const
 
-// ts-prune-ignore-next
 export type DrmLaunchEnvInput = {
   appId: string
   traceFile: string
@@ -80,7 +78,6 @@ export type DrmLaunchEnvInput = {
   // Phase 60 (D-05): overlay CX_ENV tokens merged with the DRM ones.
   overlayTokens?: readonly string[]
 }
-// ts-prune-ignore-next
 export type DrmLaunchEnv =
   | {
       status: 'ok'

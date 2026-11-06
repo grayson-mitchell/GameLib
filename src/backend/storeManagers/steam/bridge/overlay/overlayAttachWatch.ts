@@ -26,9 +26,7 @@ import {
   readBoundedTail
 } from 'backend/storeManagers/steam/bottleLaunchSignals'
 
-// ts-prune-ignore-next
 export const OVERLAY_ATTACH_POLL_MS = 1000
-// ts-prune-ignore-next
 export const OVERLAY_ATTACH_TIMEOUT_MS = 10_000
 // 60-UAT G2: in DRM mode the steam.exe helper hop makes Mac Steam attach
 // gameoverlayui about 13 s after launch (TCP: 4 s, Staging: 7 s).
@@ -65,7 +63,6 @@ type WatchDeps = {
   log?: (message: string) => void
 }
 
-// ts-prune-ignore-next
 export function macSteamConsoleLogPath(userHome: string): string {
   return join(
     userHome,
@@ -82,7 +79,6 @@ function sanitize(line: string): string {
   return line.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, MAX_LINE)
 }
 
-// ts-prune-ignore-next
 export function findOverlayAttach(
   tail: string,
   launchStartedAt: number,
@@ -106,7 +102,6 @@ export function findOverlayAttach(
   return first
 }
 
-// ts-prune-ignore-next
 export async function watchOverlayAttach(
   opts: {
     appId: string

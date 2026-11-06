@@ -5,15 +5,12 @@
  */
 import { readStoredTitleConfig } from '../../titleSettings'
 
-// ts-prune-ignore-next
 export type OverlayOverride = 'automatic' | 'on' | 'off'
 
-// ts-prune-ignore-next
 export function parseOverlayOverride(value: unknown): OverlayOverride {
   return value === 'on' || value === 'off' ? value : 'automatic'
 }
 
-// ts-prune-ignore-next
 export function resolveOverlayEnabled(a: {
   platform: NodeJS.Platform
   userOverride: unknown
@@ -34,19 +31,16 @@ export function resolveOverlayEnabled(a: {
  * The title's stored overlay override (file-read rationale: titleSettings.ts).
  * Unvalidated: pass through parseOverlayOverride.
  */
-// ts-prune-ignore-next
 export function readStoredOverlayOverride(appId: string): unknown {
   return readStoredTitleConfig(appId)?.steamOverlayOverride
 }
 
-// ts-prune-ignore-next
 export const OVERLAY_ABNORMAL_EXIT_WINDOW_MS = 30_000
 
 /**
  * D-10: a game seen and then gone within the window, with a non-zero or
  * unknown wrapper code, is abnormal. Never-seen is Phase 59's deadline.
  */
-// ts-prune-ignore-next
 export function isAbnormalOverlayExit(a: {
   firstMatchAt?: number
   stoppedAt: number

@@ -45,7 +45,6 @@ import {
   SHIM_SERVED_INTERFACE_VERSIONS
 } from './shimCoverage'
 
-// ts-prune-ignore-next -- imported by meta/bridgeCensus.ts, which the dead-code scan does not cover
 export type BridgeImportScan =
   | {
       status: 'ok'

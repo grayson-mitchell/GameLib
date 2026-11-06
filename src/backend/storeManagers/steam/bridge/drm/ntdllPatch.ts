@@ -6,7 +6,6 @@
 import { createHash } from 'crypto'
 import type { NtdllPatchRow } from './ntdllPatchTable'
 
-// ts-prune-ignore-next
 export type NtdllPatchResult =
   | { status: 'patched'; bytes: Buffer }
   | { status: 'refused'; reason: string }
@@ -18,7 +17,6 @@ const refuse = (reason: string): NtdllPatchResult => ({
   reason
 })
 
-// ts-prune-ignore-next
 export function applyNtdllPatch(
   cleanBytes: Buffer,
   payload: Buffer,

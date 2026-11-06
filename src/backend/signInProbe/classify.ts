@@ -64,7 +64,6 @@ export const SIGN_IN_PROBE_OUTPUT_CAP = 64_000
 
 // WHY exported ahead of its consumer: 49-05 / 49-06 type their probe-function
 // capture parameters with it. Remove this marker when they land.
-// ts-prune-ignore-next
 export interface BoundedOutputCapture {
   /** Feed one raw chunk (stdout or stderr) from `CallRunnerOptions.onOutput`. */
   onOutput(chunk: string): void

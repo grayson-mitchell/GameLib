@@ -1,12 +1,10 @@
 import type { ConnectivitySnapshot } from '../../types'
 import type { SignInProbeOutcomeMap } from '../../signInState'
 
-// ts-prune-ignore-next
 export interface MainProcessSync {
   'set-connectivity-online': () => void
 }
 
-// ts-prune-ignore-next
 export interface MainProcessAsync {
   'get-connectivity-status': () => ConnectivitySnapshot
   // Phase 49 (49-04), D-08: read-only pull of this launch's sign-in probe

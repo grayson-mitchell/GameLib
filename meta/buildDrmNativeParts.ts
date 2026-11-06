@@ -35,7 +35,6 @@ const SHIM_S = `${PATCH_DIR}/shim.S`
 const LINK_LD = `${PATCH_DIR}/link.ld`
 const HELPER_C = `${HELPER_DIR}/steam.c`
 
-// ts-prune-ignore-next
 export const DRM_NATIVE_SOURCES = [DETOUR_C, SHIM_S, LINK_LD, HELPER_C] as const
 
 const MINGW_TOOLS = [
@@ -50,10 +49,8 @@ const MINGW_TOOLS = [
 const HELPER_RELEASE_CFLAGS = ['-O2', '-fno-sanitize=undefined'] as const
 
 // Measured: zig leaves steam.pdb beside steam.exe.
-// ts-prune-ignore-next
 export const HELPER_BUILD_BYPRODUCTS = ['steam.pdb'] as const
 
-// ts-prune-ignore-next
 export interface DetourBuildRow {
   build: string
   cleanNtdllSha256: string

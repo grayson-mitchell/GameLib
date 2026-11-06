@@ -621,7 +621,6 @@ export {
   // (line ~349), then read directly. `require()`'s return type is `any`, so
   // this reference is invisible to ts-prune despite both files being in
   // tsconfig `include`.
-  // ts-prune-ignore-next
   containmentRoot,
   realHomeAtSetup
 }

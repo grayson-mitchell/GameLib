@@ -75,7 +75,6 @@ const RUNNERS_OUT_DIR = join(RUNNERS_ROOT_DIR, 'out')
 // Consumed by meta/checkRunnerInvocations.ts:60 (production, type import) and
 // meta/runnerBuildInvocations.ts:62 (production, type import) -- both are meta/
 // scripts outside tsconfig `include`, invisible to ts-prune.
-// ts-prune-ignore-next
 export type OnedirRunnerName = 'legendary' | 'gogdl' | 'nile'
 
 // Not exported (this and OnedirCommandResult, OnedirInvocationResult,
@@ -90,7 +89,6 @@ interface OnedirRunnerSpec {
 
 // Consumed by meta/checkRunnerInvocations.ts:60 (production) and this file's
 // own meta/__tests__ suite -- both invisible to ts-prune (meta/ scope).
-// ts-prune-ignore-next
 export const ONEDIR_RUNNERS: Record<OnedirRunnerName, OnedirRunnerSpec> = {
   legendary: {
     repo: 'legendary-gl/legendary',
@@ -288,7 +286,6 @@ function extractRunValues(text: string): RunValueMatch[] {
 // Parked (260922-vzw decision): imported by meta/runnerBuildInvocations.ts:62
 // (`import type { InvocationForm, OnedirRunnerName } from './buildRunnersOnedir'`),
 // a production meta/ script invisible to ts-prune.
-// ts-prune-ignore-next
 export type InvocationForm = 'bare' | 'uv-run-module' | 'python-m'
 
 interface InvocationFormMatch {
@@ -349,7 +346,6 @@ interface UpstreamPyinstallerCommand {
 // Consumed by meta/checkRunnerInvocations.ts:60 (production, non-test meta/
 // script) and this file's own meta/__tests__ suite -- both invisible to
 // ts-prune (meta/ scope).
-// ts-prune-ignore-next
 export function extractUpstreamPyinstallerCommand(
   repoDir: string
 ): UpstreamPyinstallerCommand {
@@ -460,7 +456,6 @@ interface OnedirInvocationResult extends OnedirCommandResult {
 
 // Consumed by this file's own meta/__tests__ suite (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function deriveOnedirInvocation(
   upstream: Pick<UpstreamPyinstallerCommand, 'pyinstallerArgs'>
 ): OnedirInvocationResult {
@@ -796,7 +791,6 @@ async function captureVersion(bin: string, args: string[]): Promise<string> {
 
 // Consumed by this file's own meta/__tests__ suite (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export interface RunnerBuildResult {
   runner: OnedirRunnerName
   repo: string
@@ -905,7 +899,6 @@ async function buildRunner(
 
 // Consumed by this file's own meta/__tests__ suite (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function formatSha256Sums(
   arch: string,
   results: RunnerBuildResult[]
@@ -922,7 +915,6 @@ export function formatSha256Sums(
 //
 // Consumed by this file's own meta/__tests__ suite (meta/ scope, invisible
 // to ts-prune).
-// ts-prune-ignore-next
 export function buildManifestObject(
   arch: string,
   results: RunnerBuildResult[]

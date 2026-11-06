@@ -15,7 +15,6 @@ import type { EngineSelection } from './engineTypes'
 
 const engineSelections = new Map<string, EngineSelection>()
 
-// ts-prune-ignore-next
 export function setEngineSelection(
   appId: string,
   sel: EngineSelection
@@ -42,7 +41,6 @@ export function getEngineSelection(appId: string): EngineSelection | undefined {
   return engineSelections.get(appId)
 }
 
-// ts-prune-ignore-next
 export function clearEngineSelection(appId: string): void {
   engineSelections.delete(appId)
 }

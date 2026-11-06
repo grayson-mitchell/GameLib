@@ -7,7 +7,6 @@ import type {
 } from '../../types'
 import type { GOGCloudSavesLocation } from '../gog'
 
-// ts-prune-ignore-next
 export interface RunnerMiscAsync {
   callTool: (args: Tools) => Promise<void>
   getLegendaryVersion: () => Promise<string>

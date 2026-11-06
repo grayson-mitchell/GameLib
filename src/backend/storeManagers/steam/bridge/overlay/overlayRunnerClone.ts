@@ -58,7 +58,6 @@ import {
 } from './overlayNotice'
 import { buildOverlayPaths } from './overlayPaths'
 
-// ts-prune-ignore-next
 export type OverlayCrossover = {
   appPath: string
   cxRoot: string
@@ -66,7 +65,6 @@ export type OverlayCrossover = {
   crossoverBuild: string
 }
 
-// ts-prune-ignore-next
 export const OVERLAY_MARKER_SCHEMA = 'overlay-1'
 
 type OverlayMarker = {
@@ -82,7 +80,6 @@ type OverlayMarker = {
 
 const MAX_MARKER_BYTES = 64 * 1024
 
-// ts-prune-ignore-next
 export type OverlayRunnerReady = {
   crossoverBuild: string
   runnerDir: string
@@ -125,7 +122,6 @@ class StepError extends Error {
  * The 'crossover-detect' step. Creates nothing on disk. No allowlist (D-06):
  * any CFBundleVersion matching the build pattern is attempted. Never rejects.
  */
-// ts-prune-ignore-next
 export async function detectCrossoverForOverlay(
   opts: { appFolder: string; crossoverBinDir?: string },
   deps: {
@@ -209,7 +205,6 @@ function readyFor(
  * Per-launch verification: marker, clone loader hashes, source loader hashes
  * and the dyld entitlement on both clone loaders. Never throws.
  */
-// ts-prune-ignore-next
 export async function verifyOverlayRunnerClone(
   runnerDir: string,
   crossover: OverlayCrossover,
@@ -269,7 +264,6 @@ const inFlight = new Map<
 /**
  * The 'clone' / 'resign' steps. Never rejects.
  */
-// ts-prune-ignore-next
 export async function ensureOverlayRunnerClone(
   opts: { appFolder: string; crossover: OverlayCrossover },
   deps: OverlayDeps = {}

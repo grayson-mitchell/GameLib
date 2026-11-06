@@ -235,7 +235,6 @@ export function isPublicOnlyEntry(entry: unknown): boolean {
   return false
 }
 
-// ts-prune-ignore-next
 export function __resetAnonymousClientForTests(): void {
   clearIdle()
   cached = null

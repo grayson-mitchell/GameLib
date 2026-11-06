@@ -107,7 +107,6 @@ function assertContained(candidate: string, root: string, label: string): void {
 // (line ~115), then CALLED and asserted on. `jest.requireActual`'s return
 // type is `any`, so this reference is invisible to ts-prune despite both
 // files being in tsconfig `include`.
-// ts-prune-ignore-next
 export function translateStoreOptions<T extends Record<string, unknown>>(
   options: StoreOptions<T> = {}
 ): TranslatedOptions<T> {

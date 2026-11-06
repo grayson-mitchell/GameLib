@@ -2,12 +2,10 @@ import type { UserInfo } from '../../types'
 import type { UserData } from '../gog'
 import type { NileLoginData, NileRegisterData, NileUserData } from '../nile'
 
-// ts-prune-ignore-next
 export interface RunnerAuthSync {
   logoutGOG: () => void
 }
 
-// ts-prune-ignore-next
 export interface RunnerAuthAsync {
   getEpicGamesStatus: () => Promise<boolean>
   getUserInfo: () => Promise<UserInfo | undefined>

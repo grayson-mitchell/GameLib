@@ -6,7 +6,6 @@ export type NoticePhase = 'in' | 'leaving' | 'collapsing'
 
 // Safety net when an animationend never arrives (hidden window, a theme that
 // kills animations): comfortably above the 180ms exit and 200ms slot close.
-// ts-prune-ignore-next
 export const PHASE_FALLBACK_MS = 500
 
 const NOTICE_EXIT_ANIMATIONS = [

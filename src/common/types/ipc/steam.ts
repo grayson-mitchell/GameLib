@@ -14,7 +14,6 @@ import type {
   SteamSetupDownloadProgress
 } from '../steam'
 
-// ts-prune-ignore-next
 export interface SteamAsync {
   // `origin` (quick-260817-d61) is observability + the Steam keyring deferral
   // trigger ONLY — it must never carry user data. GlobalState.tsx already
@@ -26,7 +25,6 @@ export interface SteamAsync {
   launch: (args: LaunchParams) => StatusPromise
 }
 
-// ts-prune-ignore-next
 export interface SteamFrontendMessages {
   // Phase 17 (17-04): pushed by SteamGame.install()/launch() (17-05) when a
   // bottle-eligible game is un-provisioned; the global listener (17-06)

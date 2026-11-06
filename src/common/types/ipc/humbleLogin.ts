@@ -1,13 +1,11 @@
 import type { RevealOutcome } from '../humble'
 
-// ts-prune-ignore-next
 export interface HumbleLoginSync {
   // D-06 silent cancel: fired when the /loginweb/humble route unmounts
   // before a candidate cookie is accepted.
   humbleStopLogin: () => void
 }
 
-// ts-prune-ignore-next
 export interface HumbleLoginAsync {
   // `'cancelled'` (quick task 260808-gl6) = the user closed the sign-in window. Distinct
   // from `'error'` (the watch could not continue) so the renderer can return to Manage

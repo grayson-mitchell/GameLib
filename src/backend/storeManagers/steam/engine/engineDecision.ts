@@ -123,7 +123,6 @@ export interface EngineDecisionDeps {
   wineManagerRoot: string
 }
 
-// ts-prune-ignore-next
 export function defaultEngineDecisionDeps(): EngineDecisionDeps {
   return {
     async resolveCrossoverBinDir() {

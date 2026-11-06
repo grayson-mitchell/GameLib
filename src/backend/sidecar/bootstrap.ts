@@ -311,7 +311,6 @@ let i18nReady: Promise<void> = Promise.resolve()
 // (line ~253), then actually CALLED. `require()`'s return type is `any`, so
 // this reference is invisible to ts-prune despite both files being in
 // tsconfig `include`.
-// ts-prune-ignore-next
 export function deliverStartupProtocolUrl(
   argv: string[] = process.argv
 ): boolean {

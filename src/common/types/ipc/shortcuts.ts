@@ -1,11 +1,9 @@
 import type { Runner } from '../../types'
 
-// ts-prune-ignore-next
 export interface ShortcutsSync {
   processShortcut: (combination: string) => void
 }
 
-// ts-prune-ignore-next
 export interface ShortcutsAsync {
   shortcutsExists: (appName: string, runner: Runner) => boolean
   // Resolves whether shortcuts exist on disk once the add has settled (the `shortcutsExists`

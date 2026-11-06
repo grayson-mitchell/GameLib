@@ -37,28 +37,22 @@ import {
 import { buildDrmPaths } from './drmPaths'
 import { drmStepError, type DrmStepResult } from './steamclientLayerMode'
 
-// ts-prune-ignore-next
 export const VALVE_CLIENT_BASES = [
   'https://client-update.akamai.steamstatic.com',
   'https://steamcdn-a.akamaihd.net/client',
   'https://media.steampowered.com/client'
 ] as const
 
-// ts-prune-ignore-next
 export const VALVE_CLIENT_MANIFEST_NAME = 'steam_client_win64'
 
-// ts-prune-ignore-next
 export const VALVE_CLIENT_DLLS = [
   'steamclient64.dll',
   'tier0_s64.dll',
   'vstdlib_s64.dll'
 ] as const
 
-// ts-prune-ignore-next
 export const MAX_VALVE_MANIFEST_BYTES = 512 * 1024
-// ts-prune-ignore-next
 export const MAX_VALVE_PACKAGE_BYTES = 200 * 1024 * 1024
-// ts-prune-ignore-next
 export const MAX_VALVE_DLL_BYTES = 128 * 1024 * 1024
 
 const FILE_RE = /^bins_win64\.zip\.[0-9a-f]{40}$/
@@ -70,7 +64,6 @@ const HOST_UPDATE = 'client-update.akamai.steamstatic.com'
 const ROOT_PATH_RE = /^\/[A-Za-z0-9._-]+$/
 const CLIENT_PATH_RE = /^\/client\/[A-Za-z0-9._-]+$/
 
-// ts-prune-ignore-next
 export function isAllowedValveUrl(url: string): boolean {
   try {
     const parsed = new URL(url)
@@ -102,20 +95,17 @@ export function isAllowedValveUrl(url: string): boolean {
   }
 }
 
-// ts-prune-ignore-next
 export function valveManifestUrl(base: string): string | null {
   const url = `${base}/${VALVE_CLIENT_MANIFEST_NAME}`
   return isAllowedValveUrl(url) ? url : null
 }
 
-// ts-prune-ignore-next
 export function valvePackageUrl(base: string, file: string): string | null {
   if (typeof file !== 'string' || !FILE_RE.test(file)) return null
   const url = `${base}/${file}`
   return isAllowedValveUrl(url) ? url : null
 }
 
-// ts-prune-ignore-next
 export type ValveClientPackage = {
   manifestVersion: string
   file: string
@@ -136,7 +126,6 @@ function own(obj: unknown, key: string): unknown {
   return undefined
 }
 
-// ts-prune-ignore-next
 export function parseValveClientManifest(
   text: unknown
 ): { ok: true; pkg: ValveClientPackage } | Fail {
@@ -196,20 +185,17 @@ export function parseValveClientManifest(
   }
 }
 
-// ts-prune-ignore-next
 export type ValveFetchText = (
   url: string,
   opts: { signal: AbortSignal; maxBytes: number }
 ) => Promise<string>
 
-// ts-prune-ignore-next
 export type ValveFetchToFile = (
   url: string,
   destPath: string,
   opts: { signal: AbortSignal; maxBytes: number }
 ) => Promise<{ bytes: number }>
 
-// ts-prune-ignore-next
 export type ValveUnzipRunner = (
   args: readonly string[],
   opts: { timeoutMs: number }
@@ -220,7 +206,6 @@ export type ValveUnzipRunner = (
   timedOut: boolean
 }>
 
-// ts-prune-ignore-next
 export type ValveClientReady = {
   clientDir: string
   manifestVersion: string
@@ -228,7 +213,6 @@ export type ValveClientReady = {
   source: 'cache' | 'download'
 }
 
-// ts-prune-ignore-next
 export type ValveClientDeps = {
   fetchText?: ValveFetchText
   fetchToFile?: ValveFetchToFile
@@ -756,7 +740,6 @@ const inFlight = new Map<string, Promise<DrmStepResult<ValveClientReady>>>()
  * Returns the verified Valve client DLLs, from the per-manifest-version cache
  * when present, otherwise after one bounded download. Never rejects.
  */
-// ts-prune-ignore-next
 export async function ensureValveClient(
   opts: { appFolder: string },
   deps: ValveClientDeps = {}

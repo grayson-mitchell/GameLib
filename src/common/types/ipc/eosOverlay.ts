@@ -1,4 +1,3 @@
-// ts-prune-ignore-next
 export interface EosOverlayAsync {
   getEosOverlayStatus: () => {
     isInstalled: boolean

@@ -3,7 +3,6 @@
  * Import-free on purpose (symmetry with the DRM module); nothing throws.
  */
 
-// ts-prune-ignore-next
 export const OVERLAY_STEPS = [
   'steam-dylibs',
   'shim',
@@ -13,20 +12,16 @@ export const OVERLAY_STEPS = [
   'env'
 ] as const
 
-// ts-prune-ignore-next
 export type OverlayStep = (typeof OVERLAY_STEPS)[number]
 
-// ts-prune-ignore-next
 export const OVERLAY_CAUSE_MAX_CHARS = 160
 
-// ts-prune-ignore-next
 export type OverlayStepError = {
   status: 'error'
   step: OverlayStep
   cause: string
 }
 
-// ts-prune-ignore-next
 export type OverlayStepResult<T extends object = Record<never, never>> =
   | ({ status: 'ok' } & T)
   | OverlayStepError
@@ -51,7 +46,6 @@ function normaliseCause(cause: unknown): string {
 }
 
 /** Builds the error arm from any thrown value. Never throws. */
-// ts-prune-ignore-next
 export function overlayStepError(
   step: OverlayStep,
   cause: unknown
@@ -67,7 +61,6 @@ function safeId(appId: string): string {
  * `[bridge-notice] appId=<id> reason=overlay-<step> cause=<token>`. The cause
  * is a single whitespace-free token, so it cannot inject a second log line.
  */
-// ts-prune-ignore-next
 export function formatOverlayNoticeLine(
   appId: string,
   step: OverlayStep,
@@ -80,12 +73,10 @@ export function formatOverlayNoticeLine(
   return `[bridge-notice] appId=${safeId(appId)} reason=overlay-${step} cause=${token}`
 }
 
-// ts-prune-ignore-next
 export function formatOverlayExitNoticeLine(appId: string): string {
   return `[bridge-notice] appId=${safeId(appId)} reason=overlay-exit-abnormal`
 }
 
-// ts-prune-ignore-next
 export const OVERLAY_STEP_TEXT: Record<
   OverlayStep,
   { key: string; en: string }

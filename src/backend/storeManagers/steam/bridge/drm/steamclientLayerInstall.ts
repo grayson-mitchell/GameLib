@@ -60,7 +60,6 @@ const URL_PREFIX = `https://github.com/${STEAMCLIENT_LAYER_RELEASE_REPO}/release
  * 56-08 reads `lsteamclientDll`, `lsteamclientSo` and `detourPayload`; 56-09
  * reads `componentDir` (`lsteamclient.dll` and `steam.exe`).
  */
-// ts-prune-ignore-next
 export type SteamclientLayerReady = {
   componentId: string
   componentDir: string
@@ -76,13 +75,11 @@ export type SteamclientLayerReady = {
   source: 'cache' | 'download'
 }
 
-// ts-prune-ignore-next
 export type SteamclientLayerArchiveFetch = (
   url: string,
   opts: { signal: AbortSignal; maxBytes: number }
 ) => Promise<Buffer>
 
-// ts-prune-ignore-next
 export type CodesignRunner = (
   args: readonly string[],
   opts: { timeoutMs: number }
@@ -93,7 +90,6 @@ export type CodesignRunner = (
   timedOut: boolean
 }>
 
-// ts-prune-ignore-next
 export type SteamclientLayerInstallDeps = {
   fetchArchive?: SteamclientLayerArchiveFetch
   runCodesign?: CodesignRunner
@@ -462,7 +458,6 @@ async function installOnce(
 }
 
 /** Installs or verifies the pinned component. Never rejects. */
-// ts-prune-ignore-next
 export async function ensureSteamclientLayerComponent(
   opts: { appFolder: string; crossoverBuild: string },
   deps: SteamclientLayerInstallDeps = {}
