@@ -18,7 +18,7 @@ import {
   DIRECTORY_FLAG,
   SYMLINK_FLAG,
   type DepotPlan
-} from '../depot'
+} from './planModel'
 
 // Distinct-flag-value log cap (T-23-17). Expressed as a bit shift rather than
 // a raw decimal literal — this cap is unrelated to any EDepotFileFlag bit

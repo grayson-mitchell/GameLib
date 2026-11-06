@@ -29,7 +29,7 @@
 import { stat as fsStat } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import type { DepotPlan, DepotPlanFile } from '../depot'
+import type { DepotPlan, DepotPlanFile } from './planModel'
 
 /** EDepotFileFlag.Directory — same value depot.ts and reconcile.ts use. */
 const DIRECTORY_FLAG = 64

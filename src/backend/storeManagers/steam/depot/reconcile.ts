@@ -17,7 +17,7 @@
 
 import { lstat, readlink, stat } from 'node:fs/promises'
 import { sha1File, resolveContainedPath } from '../depot'
-import type { DepotPlan, DepotPlanFile } from '../depot'
+import type { DepotPlan, DepotPlanFile } from './planModel'
 import { pathCollisionKey } from './pathCollisions'
 
 // EDepotFileFlag bit values, per steam-user's own authoritative enum
