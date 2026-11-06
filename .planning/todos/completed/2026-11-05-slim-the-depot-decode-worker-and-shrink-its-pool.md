@@ -75,3 +75,37 @@ Not a reason to port the pipeline to Rust: 067b found Rust decodes at the same 1
   checks every chunk's SHA1.
 - Optional live check (would make this `ready: live-gate` if required): one native install with
   067a's `run.sh`, confirming throughput stays at the network ceiling and peak RSS drops.
+
+## Resolution
+
+Closed by quick task 261106-ote (2026-11-06), commits b8f015a08, db95a4373,
+0528027ac and 7655f4d44.
+
+- **Worker bundle:** `build/main/decompressWorker.js` went from 14,243,004
+  bytes to 278,516 bytes. The decoder moved to a leaf `chunkDecode.ts`, the
+  LZMA loader split into a logger-free `lzmaLoaderCore.ts`, and the worker's
+  once-per-worker decoder log line now reaches the parent over `postMessage`
+  (the parent logs it). `decompressWorkerRealBuild.test.ts` guards the size
+  (under 1 MiB) and that `backend/logger` and `steam-user` stay out of it.
+- **Pool size:** an unpinned pool starts at `min(cpus, 4)` and grows to
+  `min(cpus, 16)` only when a spawned worker reports a non-native decoder.
+  `GAMELIB_DECOMPRESS_POOL_SIZE` and `opts.size` pin it exactly.
+- **RSS after `DecompressPool.init()` (067a smoke harness):**
+
+  | Pool size | Before | After |
+  |---|---|---|
+  | 1 | 342 MiB | 160 MiB |
+  | 4 | 817 MiB | 186 MiB |
+  | 16 | 2,668 MiB | 290 MiB |
+  | default (4 here) | 2,668 MiB at 16 | 185 MiB |
+
+- **Decode correctness:** 067b's bench (`PASSES=1`) reports 0 sha1 mismatches
+  across all 978 chunks, and `lzmaNativeSeaRealBuild.test.ts` passes against a
+  cold SEA build (native engaged on every worker).
+- **Found on the way:** the pool's worker-log forwarder threw when
+  `backend/logger` was uninitialized (the sidecar self-test never boots it),
+  crashing the process from a worker message handler. It now falls back to
+  stderr.
+
+Optional follow-up: one live native install via 067a's `run.sh` to confirm
+throughput stays at the network ceiling and peak RSS drops.
