@@ -51,7 +51,13 @@ const GAMES = `${S}games.ts`
 // 62-06: the install cluster (acquireAuthenticated, allowLogon: true) was lifted out of games.ts.
 const INSTALL = `${S}gameInstall.ts`
 
-const ACQUIRE_AUTH_ALLOW = [USER, `${S}library.ts`, `${S}depot.ts`, INSTALL]
+const ACQUIRE_AUTH_ALLOW = [
+  USER,
+  `${S}library.ts`,
+  `${S}depot.ts`,
+  `${S}depot/plan.ts`,
+  INSTALL
+]
 const ACQUIRE_OPEN_ALLOW = [
   USER,
   `${S}library.ts`,
