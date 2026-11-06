@@ -51,3 +51,11 @@ SteamEngineNotices count (4) are unchanged; only the total is off.
 
 Verify: `npx jest src/frontend/components/UI/NavShell/__tests__/themeTokens.test.ts`
 passes, plus a scoped `npx prettier --check` on the edited files.
+
+## Closed 2026-11-06 (261106-qwz, `0ca6ac683`)
+
+Yes to step 1: the classes are kept. The census now pins 29 in total, with a
+2-site `SteamManagedItemView.tsx` arm next to the pure DownloadManager arm.
+The contrast checks measure `.button.is-text` against its own fill and hover
+fill, so they cover this row. The row's only button rule is a disabled-only
+`opacity: 0.5`. themeTokens jest passes, 270/270.
