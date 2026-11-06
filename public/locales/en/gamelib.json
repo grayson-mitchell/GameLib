@@ -734,12 +734,15 @@
             "resumeInstallHint": "Install incomplete — resume the download in GameLib"
         },
         "uninstall": {
+            "cloudSavesKept": "Steam Cloud saves are not touched.",
             "copySource": {
                 "bottle": "Windows Steam (CrossOver)",
                 "bridge": "Steam bridge",
                 "native": "Mac Steam"
             },
             "copySurvives": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+            "directConfirm": "Uninstall \"{{title}}\"? This deletes its files from your Steam library and frees {{size}}.",
+            "directConfirmNoSize": "Uninstall \"{{title}}\"? This deletes its files from your Steam library.",
             "gameRunning": "{{game}} is running. Quit it, then uninstall again.",
             "notStarted": "Steam didn't start the uninstall. Make sure Steam is signed in, then try again.",
             "removeAllCopiesConfirmMessage": "This removes every installed copy of this game across all install locations. This cannot be undone.",

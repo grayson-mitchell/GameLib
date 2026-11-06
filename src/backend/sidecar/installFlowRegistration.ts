@@ -62,6 +62,9 @@
  *     261105-upw): the install modal's own backend-authoritative
  *     discriminator for the opt-in InstallApp route (feature ON + native
  *     OFF + non-bottle title).
+ *   - `getSteamDeleteRoute` -> `{ gamelibDelete }` (quick 261106-s3n): whether
+ *     the "Delete Steam games directly in GameLib" setting applies to this
+ *     native-root install; drives the renderer's confirm dialog.
  *   - `moveInstall` -> ported byte-equivalently from `main.ts:1112-1158`
  *     (Phase 34.6 Plan 06, D-02). Plan 34.6-11 (REQ-34.6-05) originally
  *     hardened it by containing the renderer-supplied `path` against
@@ -131,7 +134,13 @@ import { libraryManagerMap } from '../storeManagers'
 import { uninstallGameCallback } from '../utils/uninstaller'
 import { checkGameUpdates } from '../utils/checkGameUpdates'
 import { listSteamLibraryTargets } from '../storeManagers/steam/installLocation'
-import { isSteamNativeInstallEnabled } from '../storeManagers/steam/nativeInstallSetting'
+import {
+  isSteamNativeDeleteEnabled,
+  isSteamNativeInstallEnabled
+} from '../storeManagers/steam/nativeInstallSetting'
+import { findBridgeInstallBottle } from '../storeManagers/steam/bottle'
+import { resolveInstallRoot } from '../storeManagers/steam/library'
+import { library as steamLibraryMap } from '../storeManagers/steam/state'
 import { getSteamBottleEligibilityVerdict } from '../storeManagers/steam/installFormIpc'
 import { isSteamExperimentalInstallAppEnabled } from '../storeManagers/steam/experimentalInstallAppSetting'
 import { addToQueue } from '../downloadmanager/downloadqueue'
@@ -325,6 +334,32 @@ export function registerInstallFlows(): void {
         }
       } catch {
         return closedInstallAppReply()
+      }
+    }
+  )
+
+  // quick 261106-s3n: does GameLib itself delete this Steam game? True only
+  // when the delete setting is ON, no bridge bottle holds the install and its
+  // recorded install_path resolves to the native root. Reads the raw library
+  // Map entry (no metadata side effect); never rejects, closed on any doubt.
+  ipcMain.handle(
+    'getSteamDeleteRoute',
+    async (_event: unknown, ...args: unknown[]) => {
+      const appName = args[0]
+      if (typeof appName !== 'string' || !/^\d+$/.test(appName)) {
+        return { gamelibDelete: false }
+      }
+      try {
+        if (!isSteamNativeDeleteEnabled()) return { gamelibDelete: false }
+        if (findBridgeInstallBottle(appName) !== null) {
+          return { gamelibDelete: false }
+        }
+        const root = await resolveInstallRoot(
+          steamLibraryMap.get(appName)?.install?.install_path
+        )
+        return { gamelibDelete: root === 'native' }
+      } catch {
+        return { gamelibDelete: false }
       }
     }
   )

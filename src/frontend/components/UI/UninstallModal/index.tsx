@@ -36,6 +36,9 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
   const location = useLocation()
   const { installingEpicGame, libraryStatus } = useContext(ContextProvider)
   const [gameTitle, setGameTitle] = useState('')
+  // quick 261106-s3n: GameLib deletes this Steam game itself (setting ON)
+  const [gamelibDelete, setGamelibDelete] = useState(false)
+  const [installSize, setInstallSize] = useState('')
 
   const isGameRunning = libraryStatus.find(
     (st) =>
@@ -67,6 +70,15 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
     setGameTitle(gameInfo.overrides?.title || gameInfo.title)
 
     const { install } = gameInfo
+    if (runner === 'steam') {
+      // Backend-authoritative: true only for a native-root install with the
+      // "Delete Steam games directly in GameLib" setting ON.
+      const route = await window.api
+        .getSteamDeleteRoute(appName)
+        .catch(() => ({ gamelibDelete: false }))
+      setGamelibDelete(route.gamelibDelete)
+      setInstallSize(install?.install_size ?? '')
+    }
     if (install.platform?.toLowerCase() !== 'windows') {
       return
     }
@@ -171,11 +183,32 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
                     defaultValue: 'Do you want to uninstall "{{title}}" (DLC)?',
                     title: gameTitle
                   })
-                : t('gamepage:box.uninstall.message', {
-                    defaultValue: 'Do you want to uninstall "{{title}}"?',
-                    title: gameTitle
-                  })}
+                : gamelibDelete
+                  ? installSize
+                    ? t('gamelib:steam.uninstall.directConfirm', {
+                        defaultValue:
+                          'Uninstall "{{title}}"? This deletes its files from your Steam library and frees {{size}}.',
+                        title: gameTitle,
+                        size: installSize
+                      })
+                    : t('gamelib:steam.uninstall.directConfirmNoSize', {
+                        defaultValue:
+                          'Uninstall "{{title}}"? This deletes its files from your Steam library.',
+                        title: gameTitle
+                      })
+                  : t('gamepage:box.uninstall.message', {
+                      defaultValue: 'Do you want to uninstall "{{title}}"?',
+                      title: gameTitle
+                    })}
             </div>
+            {gamelibDelete && !isDlc && (
+              <div className="uninstallModalMessage">
+                {t(
+                  'gamelib:steam.uninstall.cloudSavesKept',
+                  'Steam Cloud saves are not touched.'
+                )}
+              </div>
+            )}
             {showWineCheckbox && (
               <ToggleSwitch
                 htmlId="uninstallCheckbox"

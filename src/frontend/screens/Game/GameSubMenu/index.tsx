@@ -538,8 +538,19 @@ export default function GamesSubmenu({
               <button
                 onClick={async () => {
                   if (isSteam) {
-                    // D-05: delegate straight to Steam's own uninstall dialog — no GamerLib confirm
-                    window.api.uninstall(appName, runner, false, false)
+                    // D-05: delegate straight to Steam's own uninstall dialog
+                    // — no GamerLib confirm. quick 261106-s3n: unless the
+                    // "Delete Steam games directly in GameLib" setting is ON
+                    // for this native install, where GameLib's dialog is the
+                    // only confirmation.
+                    const route = await window.api
+                      .getSteamDeleteRoute(appName)
+                      .catch(() => ({ gamelibDelete: false }))
+                    if (route.gamelibDelete) {
+                      setShowUninstallModal(true)
+                    } else {
+                      window.api.uninstall(appName, runner, false, false)
+                    }
                   } else {
                     setShowUninstallModal(true)
                   }

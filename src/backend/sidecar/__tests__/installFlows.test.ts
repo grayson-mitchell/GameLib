@@ -166,6 +166,19 @@ jest.mock('../../storeManagers/steam/experimentalInstallAppSetting', () => ({
   isSteamExperimentalInstallAppEnabled: jest.fn()
 }))
 
+// ── quick 261106-s3n: getSteamDeleteRoute reads bridge-bottle presence and the
+// install root through these two seams; both controllable. ───────────────────
+jest.mock('../../storeManagers/steam/bottle', () => ({
+  __esModule: true,
+  ...jest.requireActual('../../storeManagers/steam/bottle'),
+  findBridgeInstallBottle: jest.fn()
+}))
+jest.mock('../../storeManagers/steam/library', () => ({
+  __esModule: true,
+  ...jest.requireActual('../../storeManagers/steam/library'),
+  resolveInstallRoot: jest.fn()
+}))
+
 // ── SteamGame — the deepest boundary this plan's install/uninstall/updateGame
 // channels touch. Mocked so a real `install` invoke never reaches the real
 // depot-download orchestrator, PICS, or the filesystem. Mock fns are exposed
@@ -233,6 +246,9 @@ import { GlobalConfig } from 'backend/config'
 import { getSteamBottleEligibilityVerdict } from '../../storeManagers/steam/installFormIpc'
 import { isSteamExperimentalInstallAppEnabled } from '../../storeManagers/steam/experimentalInstallAppSetting'
 import { libraryManagerMap } from 'backend/storeManagers'
+import { findBridgeInstallBottle } from '../../storeManagers/steam/bottle'
+import { resolveInstallRoot } from '../../storeManagers/steam/library'
+import { library as steamLibraryMap } from '../../storeManagers/steam/state'
 import SteamGame from '../../storeManagers/steam/games'
 import { handlerRegistry, listenerRegistry } from '../../platform'
 import { showDialogBoxModalAuto, notify } from '../../dialog/dialog'
@@ -440,6 +456,74 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       const result = await invokeTargets(['570'])
       expect(result).toHaveLength(1)
       expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('quick 261106-s3n: getSteamDeleteRoute', () => {
+    const invokeRoute = async (args: unknown[]) => {
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'route-s3n', 'getSteamDeleteRoute', args)
+      await flush()
+      return (
+        frames.find((frame) => frame.id === 'route-s3n') as
+          | { ok: boolean; result: unknown }
+          | undefined
+      )?.result
+    }
+
+    beforeEach(() => {
+      mockSettings({ enableSteamNativeDelete: true, autoUpdateGames: false })
+      jest.mocked(findBridgeInstallBottle).mockReturnValue(null)
+      jest.mocked(resolveInstallRoot).mockResolvedValue('native')
+      steamLibraryMap.set('570', {
+        install: { install_path: '/fake/steam/library/steamapps/common/Dota' }
+      } as never)
+    })
+
+    afterEach(() => {
+      steamLibraryMap.delete('570')
+    })
+
+    it('setting ON + native root + no bridge bottle -> gamelibDelete true', async () => {
+      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: true })
+      expect(resolveInstallRoot).toHaveBeenCalledWith(
+        '/fake/steam/library/steamapps/common/Dota'
+      )
+    })
+
+    it('setting unset follows enableSteamNativeInstall', async () => {
+      mockSettings({ enableSteamNativeInstall: true, autoUpdateGames: false })
+      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: true })
+      mockSettings({ enableSteamNativeInstall: false, autoUpdateGames: false })
+      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: false })
+    })
+
+    it('setting OFF -> false without resolving a root', async () => {
+      mockSettings({ enableSteamNativeDelete: false, autoUpdateGames: false })
+      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: false })
+      expect(resolveInstallRoot).not.toHaveBeenCalled()
+    })
+
+    it('bridge bottle install -> false', async () => {
+      jest.mocked(findBridgeInstallBottle).mockReturnValue('GameLibSteamBridge')
+      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: false })
+    })
+
+    it.each(['bottle', null] as const)('root %s -> false', async (root) => {
+      jest.mocked(resolveInstallRoot).mockResolvedValue(root)
+      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: false })
+    })
+
+    it.each([[['abc']], [[570]], [[]], [['5;70']]])(
+      'bad appName %j -> false',
+      async (args) => {
+        expect(await invokeRoute(args)).toEqual({ gamelibDelete: false })
+      }
+    )
+
+    it('never rejects: a throwing resolver is a closed reply', async () => {
+      jest.mocked(resolveInstallRoot).mockRejectedValue(new Error('boom'))
+      expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: false })
     })
   })
 

@@ -14,6 +14,8 @@ export const getSteamInstallSize = makeHandlerInvoker('getSteamInstallSize')
 export const listSteamLibraryTargets = makeHandlerInvoker('listSteamLibraryTargets')
 // quick 261105-upw: modal's backend-authoritative InstallApp-route discriminator.
 export const getSteamInstallAppTargets = makeHandlerInvoker('getSteamInstallAppTargets')
+// quick 261106-s3n: backend-authoritative "GameLib deletes this Steam game" verdict.
+export const getSteamDeleteRoute = makeHandlerInvoker('getSteamDeleteRoute')
 export const logoutSteam = makeListenerCaller('logoutSteam')
 
 // Phase 17 (17-04): dedicated Steam CrossOver bottle provisioning + status.

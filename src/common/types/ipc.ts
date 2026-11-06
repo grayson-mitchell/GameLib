@@ -323,6 +323,9 @@ interface AsyncIPCFunctions {
   // quick 261105-upw: backend-authoritative InstallApp-route discriminator for
   // the install modal. installAppRoute is true only for feature ON + native
   // OFF + non-bottle title on macOS; libraries are then the registered targets.
+  // quick 261106-s3n: true only when "Delete Steam games directly in GameLib"
+  // is ON and this appId is a native-root install (backend-authoritative).
+  getSteamDeleteRoute: (appName?: string) => Promise<{ gamelibDelete: boolean }>
   getSteamInstallAppTargets: (appName?: string) => Promise<{
     installAppRoute: boolean
     libraries: { path: string; steamappsDir: string; isPrimary: boolean }[]
