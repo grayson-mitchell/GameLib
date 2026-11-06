@@ -276,7 +276,7 @@ function runObjdump(
     if (r.error) throw r.error
     return Promise.resolve({ code: r.status, stdout: r.stdout ?? '' })
   } catch (e) {
-    return Promise.reject(e)
+    return Promise.reject(e instanceof Error ? e : new Error(String(e)))
   } finally {
     try {
       profile.dispose()

@@ -141,7 +141,7 @@ export function runScanCliBatch(
       try {
         resolve(parseNdjsonLines(stdout))
       } catch (e) {
-        reject(e)
+        reject(e instanceof Error ? e : new Error(String(e)))
       }
     })
     child.stdin?.on('error', () => {
