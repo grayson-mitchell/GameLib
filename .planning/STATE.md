@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 62 (module-boundaries-and-decomposition) — EXECUTING
 Plan: 21 of 21
 Status: Phase complete — ready for verification
-Last activity: 2026-11-06
+Last activity: 2026-11-07
 
 Progress: [██████████] 100%
 
@@ -480,6 +480,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261107-99k | 62 games.ts split cleanups: `NUMERIC_APP_ID` lives only in gameConstants.ts (~20 sites import it; drmLaunchSetup's different regex kept), DRM-notice test reset helper, 14/17 stale ts-prune markers removed, lifted-module comments refreshed, negative scans widened to every game*.ts (dir-derived, floor 13, RED-checked). Bullets 7 (split below 1,400 lines, `ready: human`) and 8 (lift stubs, `ready: code`) refiled; todo closed. | 2026-11-07 | 6cdce5d95 | codecheck, lint 0 errors, find-deadcode, planning-gates 12/12 green; jest 6144 pass / 4 fail (3 reproduce with the src changes reverted; tauriShellSource WR-07 is Rust-only, not revert-tested) | [261107-99k-games-split-cleanups-62](./quick/261107-99k-games-split-cleanups-62/) |
 | 261107-9lq | noUncheckedIndexedAccess measured (src 2,186 + meta 380 raw) and adopted for steam/ non-test code incl. bridge/: 145 sites narrowed, no `!`; per-bucket shrink-only ratchet `pnpm typecheck:indexed-access` (compiler API, flag not in tsconfig) wired into codecheck CI, 38 buckets / 2,023 baselined. Remaining buckets refiled; todo closed. | 2026-11-07 | 0466c399e | ratchet PASS, codecheck, lint, planning-gates 12/12 green; bridge jest 1525 pass; steam jest 4649 pass / 3 fail (2 read missing 56-01-SUMMARY.md; macArch Intel case reproduces with steam edits reverted) | [261107-9lq-measure-then-adopt-nouncheckedindexedacc](./quick/261107-9lq-measure-then-adopt-nouncheckedindexedacc/) |
 | 261107-a1j | Electron-era store modules renamed (`electronStore(s).ts` -> `stores.ts`, `electron_store.ts` -> `typed_store.ts`, `electronStub` -> `platformApi`; on-disk cwd/name literals diff-empty); zero runtime `electron` callers, so `installElectronHook.ts` deleted (deletion landed in concurrent 82b153915) and `bootstrap.ts` imports `../platform` first. Todo closed. | 2026-11-07 | 86451c8da | codecheck, boundaries, deadcode, smoke:sidecar, planning-gates green; jest 17938 pass / 6 suites fail (4 reproduce at pre-change HEAD or read missing 56-01 files; x86 Wine harness flaky); lint 1 error in untouched games.test.ts:25; live tauri:dev check pending | [261107-a1j-rename-electron-era-store-modules-to-neu](./quick/261107-a1j-rename-electron-era-store-modules-to-neu/) |
+| 261107-aru | Downloads cancel "x" no longer goes transparent on hover under Dracula: `--danger-hover` was set by only 3 of 10 themes; base `body` now defaults it to `var(--status-danger-hover)`, `body.dracula` gets `#ff6e6e`, and both `.cancelIcon:hover circle` rules fall back to `--status-danger-hover`. | 2026-11-07 | 783a48dc1 | jest 3 suites 300/300 pass; prettier clean; live Dracula hover check pending | [261107-aru-fix-dracula-theme-on-the-downloads-page-](./quick/261107-aru-fix-dracula-theme-on-the-downloads-page-/) |
 
 ## Deferred Items
 
