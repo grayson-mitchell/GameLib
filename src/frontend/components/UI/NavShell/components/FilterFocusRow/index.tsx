@@ -14,6 +14,7 @@ import FilterFacetGroup from '../FilterFacetGroup'
 import { runnabilityLabel } from '../FilterRunnabilityFacet'
 import NavItem from '../NavItem'
 import './index.scss'
+import { isStore } from 'common/storeCapabilities'
 
 /**
  * FOCUS ROW panel section (48-02 Task 2, widened by 48-03 Task 1) -- four
@@ -128,11 +129,11 @@ export default function FilterFocusRow() {
     'Runnability'
   )
 
-  // `value === 'sideload'` is special-cased BEFORE the brand map is consulted:
+  // `isStore(value, 'sideload')` is special-cased BEFORE the brand map is consulted:
   // `RunnerToStore` deliberately has no `sideload` entry (facetLabels.ts), and
   // copying `FilterStoreFacet`'s split keeps both surfaces on one label source.
   const storeLabel = (value: StoreFacetValue) =>
-    value === 'sideload'
+    isStore(value, 'sideload')
       ? tGamelib('gamelib:library.storeOther', 'Other')
       : RunnerToStore[value]
 

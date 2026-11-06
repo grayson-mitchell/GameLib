@@ -20,6 +20,7 @@
 import { RunnerToStore, RUNNABILITY_LABELS } from '../../facetLabels'
 import { PRESET_UNCATEGORIZED } from '../../filterEngine'
 import type { ActiveFilterDescriptor } from 'frontend/types'
+import { isStore } from 'common/storeCapabilities'
 
 export type ChipLabelSpec =
   | { ns: 'gamelib' | 'default'; key: string; defaultText: string }
@@ -81,7 +82,7 @@ export function chipLabelSpec(
       return { literal: `"${descriptor.value}"` }
 
     case 'store': {
-      if (descriptor.value === 'sideload') {
+      if (isStore(descriptor.value, 'sideload')) {
         return {
           ns: 'gamelib',
           key: 'gamelib:library.storeOther',

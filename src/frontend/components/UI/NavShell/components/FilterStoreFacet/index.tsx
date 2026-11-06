@@ -14,6 +14,7 @@ import { RunnerToStore } from 'frontend/screens/Library/facetLabels'
 import type { StoreFacetValue } from 'frontend/types'
 import FilterFacetGroup, { FilterFacetRow } from '../FilterFacetGroup'
 import { countDescriptorsOfKind } from '../FilterFacetGroup/selectionCount'
+import { isStore } from 'common/storeCapabilities'
 
 export default function FilterStoreFacet() {
   const { t: tGamelib } = useTranslation('gamelib')
@@ -69,7 +70,7 @@ export default function FilterStoreFacet() {
         <FilterFacetRow
           key={value}
           label={
-            value === 'sideload'
+            isStore(value, 'sideload')
               ? tGamelib('gamelib:library.storeOther', 'Other')
               : RunnerToStore[value]
           }

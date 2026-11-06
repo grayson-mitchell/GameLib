@@ -452,13 +452,13 @@ function clearCache(
   fromVersionChange = false
 ) {
   wikiGameInfoStore.clear()
-  if (library === 'gog' || !library) {
+  if (isStore(library, 'gog') || !library) {
     GOGapiInfoCache.clear()
     GOGlibraryStore.clear()
     GOGinstallInfoStore.clear()
     GOGAchievementStore.clear()
   }
-  if (library === 'legendary' || !library) {
+  if (isStore(library, 'legendary') || !library) {
     installStore.clear()
     libraryStore.clear()
     gameInfoStore.clear()
@@ -473,7 +473,7 @@ function clearCache(
       )
     })
   }
-  if (library === 'nile' || !library) {
+  if (isStore(library, 'nile') || !library) {
     nileInstallStore.clear()
     nileLibraryStore.clear()
   }

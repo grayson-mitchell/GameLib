@@ -33,6 +33,7 @@ import {
   scrollWithSnapSuspended
 } from './focusRowOverflow'
 import './index.css'
+import { isStore } from 'common/storeCapabilities'
 
 interface Props {
   focusRow: FocusRowSelection
@@ -224,10 +225,9 @@ function FocusRowStrip({
         ? t('header.uncategorized', 'Uncategorized')
         : focusRow.value
   } else if (focusRow?.kind === 'store') {
-    label =
-      focusRow.value === 'sideload'
-        ? tGamelib('gamelib:library.storeOther', 'Other')
-        : RunnerToStore[focusRow.value]
+    label = isStore(focusRow.value, 'sideload')
+      ? tGamelib('gamelib:library.storeOther', 'Other')
+      : RunnerToStore[focusRow.value]
   } else if (focusRow?.kind === 'runnability') {
     label = runnabilityLabel(
       focusRow.value as Parameters<typeof runnabilityLabel>[0],
