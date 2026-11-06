@@ -54,15 +54,15 @@ const INSTALL = `${S}gameInstall.ts`
 const ACQUIRE_AUTH_ALLOW = [
   USER,
   `${S}library.ts`,
-  `${S}depot.ts`,
   `${S}depot/plan.ts`,
   `${S}depot/outcome.ts`,
+  `${S}depot/sharedRedist.ts`,
   INSTALL
 ]
 const ACQUIRE_OPEN_ALLOW = [
   USER,
   `${S}library.ts`,
-  `${S}depot.ts`,
+  `${S}depot/sharedRedist.ts`,
   `${S}installLocation.ts`,
   `${S}bridge/launchTarget.ts`
 ]

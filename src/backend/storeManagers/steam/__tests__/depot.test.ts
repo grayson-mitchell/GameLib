@@ -5050,7 +5050,9 @@ describe('downloadDepotFiles', () => {
   })
 
   it('never RAM-buffers a whole file (no Buffer.alloc(Number(file.size)) grep gate)', () => {
-    const source = readFileSync(join(__dirname, '../depot.ts'), 'utf8')
+    const source = ['downloadFiles', 'download']
+      .map((n) => readFileSync(join(__dirname, `../depot/${n}.ts`), 'utf8'))
+      .join('\n')
     expect(source).not.toContain('Buffer.alloc(Number(file.size))')
     expect(source).not.toContain('Buffer.alloc(Number(f.size))')
     expect(source).toMatch(/truncate/)
