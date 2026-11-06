@@ -29,14 +29,14 @@ import {
   gogConfigStore,
   nileConfigStore,
   steamConfigStore
-} from 'frontend/helpers/electronStores'
+} from 'frontend/helpers/stores'
 import { resolveSignInTile } from '../signInTileState'
 
 interface StoreSpy {
   get_nodefault: jest.Mock
 }
 
-jest.mock('frontend/helpers/electronStores', () => ({
+jest.mock('frontend/helpers/stores', () => ({
   legendaryConfigStore: { get_nodefault: jest.fn() },
   gogConfigStore: { get_nodefault: jest.fn() },
   nileConfigStore: { get_nodefault: jest.fn() },

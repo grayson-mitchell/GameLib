@@ -206,7 +206,7 @@ describeOnDarwin(
       // A real PNG requested as JPEG: the fast path (no ops + magic already matching) does not
       // apply, so a genuine conversion -- and therefore the platform check -- is reached.
       expect(() => nativeImage.createFromBuffer(REAL_PNG).toJPEG(90)).toThrow(
-        /\[electronStub\] nativeImage:.*linux/
+        /\[platformApi\] nativeImage:.*linux/
       )
     })
   }

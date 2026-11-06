@@ -1,6 +1,6 @@
 // F-1b (34.4.1-LIVE-GATE.md): this module has the SAME direct-`safeStorage`-import shape
 // that produced F-1 (see 34.4.1-13-SUMMARY.md), and under the Tauri sidecar
-// `import { safeStorage } from 'electron'` resolves to `electronStub.ts`'s hardcoded-dead
+// `import { safeStorage } from 'electron'` resolves to `platform/index.ts`'s hardcoded-dead
 // stub, which would silently persist the SteamGridDB API key in PLAINTEXT.
 //
 // It was measured -- twice, independently, by plan 10's original sweep and plan 14's

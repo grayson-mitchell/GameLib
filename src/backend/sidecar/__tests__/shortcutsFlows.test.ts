@@ -30,14 +30,14 @@
  *
  * UPDATED (Phase 34.5 gap cycle 6, plan 34.5-45, F-34.5-G6-07): `convertPngToICNS`'s full chain
  * now runs REAL, nothing mocked — `nativeImage.createFromBuffer` resolves to the real
- * `sips`-backed shim (`nativeImageShim.ts`, via `electron`'s real `electronStub` forward) and
+ * `sips`-backed shim (`nativeImageShim.ts`, via `electron`'s real `platformApi` forward) and
  * `@shockpkg/icon-encoder`'s `IconIcns` is the real encoder. This file previously mocked BOTH
  * (`createFromBuffer: jest.fn()` on the `electron` factory, plus a whole-module
  * `jest.mock('@shockpkg/icon-encoder', ...)`) with an explicit comment naming
  * `nativeImage.createFromBuffer` as "the one member `convertPngToICNS` needs and the real stub
  * does not implement" — that pair of mocks is exactly why a 4462-test green suite never caught
  * `nativeImage`'s missing members (F-34.5-G6-07); both are gone, not merely adjusted
- * (T-34.5-C6-24). `app.getPath` was already the REAL `electronStub` forward to `pathShim.ts`
+ * (T-34.5-C6-24). `app.getPath` was already the REAL `platformApi` forward to `pathShim.ts`
  * before this change and still is.
  */
 
@@ -74,7 +74,7 @@ jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn()
 }))
 
-// ── backend/dialog/dialog — notify() would otherwise construct a real electronStub Notification
+// ── backend/dialog/dialog — notify() would otherwise construct a real platformApi Notification
 // and attempt a real (unbound, in this file) rustInvoke round-trip; not this suite's concern
 // (covered by lifecycleStub.test.ts's own Notification describe block).
 jest.mock('backend/dialog/dialog', () => ({
@@ -126,7 +126,7 @@ jest.mock('backend/shortcuts/utils', () => ({
 }))
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL sidecar shims.
-// `nativeImage` (F-34.5-G6-07 fix) and `app.getPath` are BOTH the real electronStub forward now
+// `nativeImage` (F-34.5-G6-07 fix) and `app.getPath` are BOTH the real platformApi forward now
 // — proving the real `sips`-backed `nativeImageShim.ts` chain (and, for `app.getPath('exe')`,
 // GAMELIB_SHELL_EXE -> getPath('exe') -> shortcuts.ts:227) is this suite's whole point.
 jest.mock('backend/store_backend', () => ({
@@ -759,7 +759,7 @@ describe('processShortcut — six-case switch behaviour', () => {
     expect(mockHandleExit).toHaveBeenCalledTimes(1)
   })
 
-  it('ctrl+r does not throw and reaches the electronStub fakeWindow.reload() no-op (T-34.5-27, declared degraded)', async () => {
+  it('ctrl+r does not throw and reaches the platformApi fakeWindow.reload() no-op (T-34.5-27, declared degraded)', async () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       const listener = listenerRegistry.get('processShortcut')?.[0]
@@ -773,7 +773,7 @@ describe('processShortcut — six-case switch behaviour', () => {
     }
   })
 
-  it('ctrl+shift+i does not throw and reaches the electronStub fakeWebContents.openDevTools() no-op (T-34.5-27, declared degraded)', async () => {
+  it('ctrl+shift+i does not throw and reaches the platformApi fakeWebContents.openDevTools() no-op (T-34.5-27, declared degraded)', async () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
     try {
       const listener = listenerRegistry.get('processShortcut')?.[0]

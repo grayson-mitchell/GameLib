@@ -377,7 +377,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // direction; the describe block below this one pins that direction specifically. This
       // gate only pins that no OTHER, undeclared arm has crept in since.
       'humble_login_cookies_for_domain',
-      // quick task 260815-vvz (commit 206a31db7, "wire electronStub app.hide to Tauri
+      // quick task 260815-vvz (commit 206a31db7, "wire platformApi app.hide to Tauri
       // AppHandle::hide") legitimately added exactly this one arm; this gate only pins that no
       // OTHER, undeclared arm has crept in since.
       //
@@ -402,7 +402,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // the AppKit focus restore are proven live only (operator gate).
       'bridge_invite_picker_open',
       // Phase 35 Plan 08 (D-08/D-05, REQ-35-06) legitimately added exactly these two wake-lock
-      // arms, replacing electronStub's `powerSaveBlocker` logged no-op; this gate only pins that
+      // arms, replacing platformApi's `powerSaveBlocker` logged no-op; this gate only pins that
       // no OTHER, undeclared arm has crept in since.
       //
       // PROOF STATUS -- split, and recorded as such. main.rs's own #[cfg(test)] mod IS the

@@ -8,7 +8,7 @@
  * pass and confirmed to be Phase 28's keyring/`configStore` byte-identity
  * proof: it asserts that `SidecarKeyringTokenStore`'s four operations never
  * write to the shared `configStore`, plus two narrow by-construction gates
- * scoped to `keyringTokenStore.ts`/`bootstrap.ts`/`electronStub.ts`. It makes
+ * scoped to `keyringTokenStore.ts`/`bootstrap.ts`/`platform/index.ts`. It makes
  * NO assertion about `main.ts`'s textual state or about any sidecar/
  * gamedetails import graph beyond those three named files — so this slice's
  * curated-import gate, delegation-shape gate, and two do-not-touch gates
@@ -80,7 +80,7 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   it('REQ-34.2-14 Gate 2 (self-test): stripComments removes a comment-only "from \'electron\'" line before matching', () => {
     const source = [
       "// this comment intentionally says: from 'backend/platform'",
-      "import { ipcMain } from './electronStub'"
+      "import { ipcMain } from './platformApi'"
     ].join('\n')
     const stripped = stripComments(source)
     expect(stripped).not.toMatch(/from\s+['"]electron['"]/)
@@ -153,8 +153,8 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // independently by the semantic-pin test below, which stayed green throughout.
   // Re-pinned 2026-08-29 by Phase 35 Plan 13 (D-02), per this gate's own documented
   // procedure. The ONLY change to the pinned file is ONE import specifier --
-  // `from './electronStub'` became `from '../platform'` -- because that plan MOVED
-  // `electronStub.ts` to `src/backend/platform/index.ts`. The import resolves to the
+  // `from './platformApi'` became `from '../platform'` -- because that plan MOVED
+  // `platform/index.ts` to `src/backend/platform/index.ts`. The import resolves to the
   // same module object it always did. No registration, no argument and no guard moved;
   // the D-09 bottle-launch fix (`steamLibrary.has(appName)` in `requestGameSettings`)
   // is untouched, and is proven directly and independently by the two semantic-pin tests
@@ -170,8 +170,10 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // `steamLibrary.has(appName)` gate is untouched and still proven by the semantic
   // pins below. 2 insertions, 1 deletion. Prior digest:
   // b408ff7c38a5238b5c1c88eba9f63382294428246a290c0ef7602f48f0414862
+  // quick-261107-a1j: rename-only re-pin (electronStores -> stores in a comment/import path).
+  // Previous digest: 4c818e88579365b61da196d5f95975dcc785d5cf0e1cc3126f2ce8abfb209657
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '4c818e88579365b61da196d5f95975dcc785d5cf0e1cc3126f2ce8abfb209657'
+    '7120ad92f0f8e0121039685b327b2adb882a4e8f87743c9d80e7957ca86e2aa0'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
@@ -262,9 +264,9 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // Prior digest: 66645e8e33437a9da352619ce06b361450dcc78da294a6fc6161ef2cedc67f99
   // Re-pinned 2026-08-29 by Phase 35 Plan 13 (D-02), per this gate's own documented
   // procedure. The ONLY changes to the pinned file are TWO path repoints forced by the
-  // MOVE of `electronStub.ts` to `src/backend/platform/index.ts`: the
-  // `jest.mock('electron', ...)` factory specifier `'../electronStub'` -> `'../../platform'`,
-  // and the by-construction gate's `readFileSync` path `'../electronStub.ts'` ->
+  // MOVE of `platform/index.ts` to `src/backend/platform/index.ts`: the
+  // `jest.mock('electron', ...)` factory specifier `'../platformApi'` -> `'../../platform'`,
+  // and the by-construction gate's `readFileSync` path `'../platform/index.ts'` ->
   // `'../../platform/index.ts'`. Both still resolve to the SAME module and the SAME file
   // content -- the move was byte-preserving apart from four relative-import lines. No
   // assertion, fixture or proof was altered, weakened or repurposed: the
@@ -314,8 +316,10 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // `git diff --stat -- src/backend/sidecar/__tests__/electronUntouched.test.ts` across both
   // task commits. Prior digest:
   // 5e8bbe4f27c24d29910a1aa63ecb99e577451da900a65515f5fbd52722d4871b
+  // quick-261107-a1j: rename-only re-pin (electronStores -> stores path references).
+  // Previous digest: 466327c30fca5097b24ec36fafadfe6b7d620175869c7e2e8bad5fa4ce7e874e
   const ELECTRON_UNTOUCHED_SHA256 =
-    '466327c30fca5097b24ec36fafadfe6b7d620175869c7e2e8bad5fa4ce7e874e'
+    'da9dda5ab90b78820eed3bd11b3d7669245eaa8c7952e674949a6fc041653348'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

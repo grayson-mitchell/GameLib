@@ -14,7 +14,7 @@
  * sidecar's shimmed `app.getPath` -- which is the half the todo asked to verify.
  *
  * `jest.mock('electron')` / `jest.mock('backend/store_backend')` route Jest's own module resolution at
- * the real `electronStub.ts`/`fileStore.ts` (the same singletons `bootstrap.ts` binds onto)
+ * the real `platform/index.ts`/`fileStore.ts` (the same singletons `bootstrap.ts` binds onto)
  * rather than the backend-wide manual mock, so `app.getPath('appData')` resolves through
  * `pathShim.ts` exactly as it does in production. See `skeletonFlows.test.ts`'s header for the
  * full rationale.
@@ -66,7 +66,7 @@ import { app } from 'backend/platform'
 import { cp } from 'fs/promises'
 import { init } from '../bootstrap'
 import MigrationSystem from '../../migration'
-import { migrationsStore } from '../../migration/electronStores'
+import { migrationsStore } from '../../migration/stores'
 import { isLinux } from '../../constants/environment'
 import { userHome } from '../../constants/paths'
 import { legendaryConfigPath } from '../../storeManagers/legendary/constants'

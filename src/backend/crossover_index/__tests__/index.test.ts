@@ -1,7 +1,7 @@
 import { axiosClient } from 'backend/utils'
 import { GameInfo } from 'common/types'
 
-import { crossoverIndexStore } from '../electronStore'
+import { crossoverIndexStore } from '../stores'
 import { CrossoverIndex } from '../schema'
 
 jest.mock('backend/logger')

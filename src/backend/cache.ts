@@ -93,7 +93,7 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
   /**
    * BOTH writes below must be announced, not just the value one.
    *
-   * The renderer's mirror of this class (`frontend/helpers/electronStores.ts`'s
+   * The renderer's mirror of this class (`frontend/helpers/stores.ts`'s
    * `CacheStore.get`) reads TWO fields before it will return anything: `storeHas(key)`
    * AND `storeGet('__timestamp.' + key)`. It returns the caller's fallback if EITHER is
    * missing. Announcing only the value would therefore leave the renderer with a

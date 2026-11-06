@@ -93,7 +93,7 @@ function defaultDeps(): ReportDeps {
     (require('./platform') as typeof import('./platform')).app.getVersion()
   const lazyStore = () =>
     (
-      require('./storeManagers/steam/electronStores') as typeof import('./storeManagers/steam/electronStores')
+      require('./storeManagers/steam/stores') as typeof import('./storeManagers/steam/stores')
     ).steamKnownFixReportStore
   return {
     post: (url, body, signal) =>

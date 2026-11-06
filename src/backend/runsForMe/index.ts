@@ -7,7 +7,7 @@ import {
   type RunsForMeState
 } from 'common/runsForMe'
 import type { Runner } from 'common/types'
-import { runsForMeStore } from './electronStores'
+import { runsForMeStore } from './stores'
 
 const VALID_STATES: ReadonlySet<string> = new Set([
   'auto',

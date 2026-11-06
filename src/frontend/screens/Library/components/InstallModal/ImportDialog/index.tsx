@@ -17,7 +17,7 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import React, { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AvailablePlatforms } from '../index'
-import { configStore } from 'frontend/helpers/electronStores'
+import { configStore } from 'frontend/helpers/stores'
 
 interface Props {
   backdropClick: () => void

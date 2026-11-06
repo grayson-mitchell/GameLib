@@ -18,7 +18,7 @@ jest.mock('../downloader/main', () => ({
   getAvailableVersions: jest.fn(),
   installVersion: jest.fn()
 }))
-jest.mock('../electronStores', () => {
+jest.mock('../stores', () => {
   // Plain functions, not `jest.fn()`: the backend project sets `resetMocks: true`, which would
   // strip a `jest.fn()` implementation before each test.
   let releases: unknown[] = []
@@ -34,7 +34,7 @@ jest.mock('../electronStores', () => {
 })
 
 import { removeWineVersion } from '../utils'
-import { wineDownloaderInfoStore } from '../electronStores'
+import { wineDownloaderInfoStore } from '../stores'
 
 function release(over: Partial<WineVersionInfo>): WineVersionInfo {
   return {

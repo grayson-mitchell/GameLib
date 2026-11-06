@@ -66,7 +66,7 @@ import {
  * handler registry happens.
  *
  * No idempotence guard is needed: all 8 registrations are `ipcMain.handle`, which is naturally
- * idempotent (`electronStub.ts`'s `handlerRegistry` is a `Map`, so a second `.set()` for the same
+ * idempotent (`platform/index.ts`'s `handlerRegistry` is a `Map`, so a second `.set()` for the same
  * channel replaces the prior entry rather than stacking a duplicate — unlike `ipcMain.on`'s
  * array-append semantics, which is what forces the `let registered = false` guard in modules that
  * register a send-kind channel, e.g. `wineToolsFlowRegistration.ts`).

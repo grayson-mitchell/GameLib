@@ -17,7 +17,7 @@
  * before initQueue() has ever run.
  *
  * Mock strategy:
- *  - ../electron_store's TypeCheckedStoreBackend is replaced with a simple
+ *  - ../typed_store's TypeCheckedStoreBackend is replaced with a simple
  *    in-memory object (exposed via `__store`) so a test can seed the
  *    persisted `queue` BEFORE importing downloadqueue.ts (module load order
  *    matters here — that's the exact bug).
@@ -30,7 +30,7 @@
 
 const __store: Record<string, unknown> = {}
 
-jest.mock('../../electron_store', () => ({
+jest.mock('../../typed_store', () => ({
   TypeCheckedStoreBackend: jest.fn().mockImplementation(() => ({
     has: (key: string) => key in __store,
     get: (key: string, def: unknown) => (key in __store ? __store[key] : def),

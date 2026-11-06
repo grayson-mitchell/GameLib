@@ -4,18 +4,18 @@
  *
  * Drives the REAL sidecar RPC server in-process (`installFlows.test.ts`'s own
  * real-shim black-box pattern — the shims under test are the actual
- * electronStub.ts/fileStore.ts modules, unmocked) against injected
+ * platform/index.ts/fileStore.ts modules, unmocked) against injected
  * `stream.PassThrough` pairs.
  *
  * **GAP FIX precedent (2026-07-22, see skeletonFlows.test.ts's own header):**
  * this suite's config directory is NOT the real OS config directory. The
  * `jest.mock('os', ...)` below overrides `homedir()` to a disposable
- * per-process tmp directory so the real electronStub/fileStore CODE runs
+ * per-process tmp directory so the real platformApi/fileStore CODE runs
  * (preserving this suite's fidelity), while the location it reads/writes can
  * never be the developer's real config directory.
  *
  * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` below
- * point Jest's OWN module resolution at electronStub.ts/fileStore.ts
+ * point Jest's OWN module resolution at platform/index.ts/fileStore.ts
  * directly — see skeletonFlows.test.ts's header for why this is necessary.
  *
  * Mocked only at the boundaries `settingsFlowRegistration.ts`'s own module
@@ -39,7 +39,7 @@
  *
  * Every other module in the registration/transport/store path
  * (`settingsFlowRegistration.ts`, `handlers.ts`, `sidecarRpc.ts`,
- * `bootstrap.ts`, `electronStub.ts`, `fileStore.ts`) runs for real,
+ * `bootstrap.ts`, `platform/index.ts`, `fileStore.ts`) runs for real,
  * unmodified.
  */
 
@@ -68,7 +68,7 @@ jest.mock('backend/store_backend', () => ({
 
 // ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init()` now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
-// electronStub's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real
+// platformApi's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real
 // `pingSites()`, a live `axios.head()` against github/epic/gog/cloudflare. Mocked so this suite
 // (which drives the real, unmocked RPC/handler graph) never makes a real network call.
 jest.mock('axios', () => {

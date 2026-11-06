@@ -25,7 +25,7 @@ const mockConfigStore = {
   clear: jest.fn(),
   delete: jest.fn()
 }
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   configStore: mockConfigStore,
   humbleLibraryStore: { clear: jest.fn() },
   humbleSyncStore: { clear: jest.fn() },

@@ -44,7 +44,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Nile: 'Nile' }
 }))
 
-jest.mock('backend/storeManagers/nile/electronStores', () => ({
+jest.mock('backend/storeManagers/nile/stores', () => ({
   configStore: {
     set: jest.fn(),
     delete: jest.fn(),

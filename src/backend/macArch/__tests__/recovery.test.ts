@@ -13,7 +13,7 @@ import * as macArch from 'backend/utils/macArch'
 
 const mem: { verdicts: Record<string, unknown> } = { verdicts: {} }
 
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   macArchStore: {
     get: (_k: string, d: unknown) => (mem.verdicts ? mem.verdicts : d),
     set: (_k: string, v: Record<string, unknown>) => {

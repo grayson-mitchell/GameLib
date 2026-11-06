@@ -1,7 +1,7 @@
 import { existsSync } from 'graceful-fs'
 import { join } from 'path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { configStore } from './electronStores'
+import { configStore } from './stores'
 import { STEAM_INSTALL_PATHS } from './constants'
 import { getTokenStore, readTokenOutcome } from './tokenStore'
 import { currentTriggerLabel, noteSteamAuthTrigger } from './authTrigger'
@@ -746,7 +746,7 @@ export class SteamUser {
    * `configStore.clear()` was replaced with targeted deletes of the specific
    * session keys it used to wipe (isLoggedIn, userData) so the observable
    * Electron behavior is unchanged — a blanket clear() would also nuke any
-   * other key ever added to this shared store (see electronStores.ts).
+   * other key ever added to this shared store (see stores.ts).
    * clearToken() may be an async RPC round-trip to Rust in the sidecar build,
    * so this method is async; addListener('logoutSteam', ...) in main.ts
    * awaits it inside its own async wrapper, matching this file's existing
@@ -788,7 +788,7 @@ export class SteamUser {
     SteamUser.credSessionState = { status: 'error' }
     for (const cb of pendingCbs) cb({ status: 'error' })
     // Token through the seam (D-09) first, then the remaining session keys
-    // configStore.clear() used to wipe — see electronStores.ts's configStore
+    // configStore.clear() used to wipe — see stores.ts's configStore
     // schema (isLoggedIn/userData are the only other keys ever written there).
     await getTokenStore().clearToken()
     configStore.delete('isLoggedIn')

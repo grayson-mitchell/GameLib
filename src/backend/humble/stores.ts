@@ -1,4 +1,4 @@
-import { TypeCheckedStoreBackend } from '../electron_store'
+import { TypeCheckedStoreBackend } from '../typed_store'
 import CacheStore from '../cache'
 import {
   HumbleKey,

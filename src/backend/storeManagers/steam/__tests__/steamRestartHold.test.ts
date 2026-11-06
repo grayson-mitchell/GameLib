@@ -1,6 +1,6 @@
 /**
  * Quick 261029-pkp: persisted "Restart Steam to finish" hold record. Uses an
- * injectable in-memory store; electronStores is not mocked.
+ * injectable in-memory store; stores is not mocked.
  */
 import {
   clearSteamRestartHold,

@@ -398,7 +398,7 @@ export async function launchBridgeGameBody(
 
   // shimGenerate stamps a fresh `drmWrapper` ('steamstub' | 'none') on most
   // results. A fresh 'none' clears a stale persisted 'steamstub', so the
-  // persisted scan that meta/bridgeCensus.ts and the electronStores record
+  // persisted scan that meta/bridgeCensus.ts and the stores record
   // read stays honest. Routing reads the exe directly in the 56-12 DRM
   // branch above (D-12), not this value.
   const freshDrm =

@@ -44,7 +44,7 @@ jest.mock('backend/online_monitor', () => ({
   isOnline: jest.fn(() => true),
   runOnceWhenOnline: jest.fn()
 }))
-jest.mock('../legendary/electronStores', () => ({
+jest.mock('../legendary/stores', () => ({
   libraryStore: { get: jest.fn(() => []), set: jest.fn() },
   installStore: {
     get: jest.fn(),

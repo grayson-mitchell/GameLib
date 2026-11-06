@@ -30,7 +30,7 @@
  *
  * ---------------------------------------------------------------------------
  * PHASE 35 PLAN 13 (D-02, REQ-35-01/REQ-35-02): MOVED HERE from
- * `src/backend/sidecar/electronStub.ts`. The move was mechanical — the file's
+ * `src/backend/sidecar/platform/index.ts`. The move was mechanical — the file's
  * own content changed by exactly four lines out of 926 (the relative imports
  * whose depth changed). Everything above this block is the original
  * provenance comment, carried forward unaltered because it still documents
@@ -132,7 +132,7 @@ if (
 
 // ---- Transport binding ------------------------------------------------------
 //
-// electronStub.ts has no knowledge of the RPC transport (sidecarRpc.ts,
+// platform/index.ts has no knowledge of the RPC transport (sidecarRpc.ts,
 // Task 2) to avoid a circular import — sidecarRpc dispatches TO the handlers
 // this stub's ipcMain records. bootstrap.ts wires the two together via
 // bindTransport() strictly after the RPC server starts, which is always
@@ -311,13 +311,13 @@ export const app = {
     // independently-dispatched app_exit frame cannot win the race and quit instead of restart.
     if (relaunchInFlight) {
       console.warn(
-        '[electronStub] app.quit(): suppressed -- a relaunch is already in flight'
+        '[platformApi] app.quit(): suppressed -- a relaunch is already in flight'
       )
       return
     }
     requestRustInvoke(RUST_APP_EXIT, []).catch((error) => {
       console.warn(
-        `[electronStub] app.quit(): ${RUST_APP_EXIT} failed:`,
+        `[platformApi] app.quit(): ${RUST_APP_EXIT} failed:`,
         error instanceof Error ? error.message : String(error)
       )
     })
@@ -326,13 +326,13 @@ export const app = {
     // D-06: see quit()'s comment above -- same suppression, same reason.
     if (relaunchInFlight) {
       console.warn(
-        '[electronStub] app.exit(): suppressed -- a relaunch is already in flight'
+        '[platformApi] app.exit(): suppressed -- a relaunch is already in flight'
       )
       return
     }
     requestRustInvoke(RUST_APP_EXIT, []).catch((error) => {
       console.warn(
-        `[electronStub] app.exit(): ${RUST_APP_EXIT} failed:`,
+        `[platformApi] app.exit(): ${RUST_APP_EXIT} failed:`,
         error instanceof Error ? error.message : String(error)
       )
     })
@@ -353,7 +353,7 @@ export const app = {
       // the app closable only by force-quit. resetHeroic() runs this on every reset.
       relaunchInFlight = false
       console.warn(
-        `[electronStub] app.relaunch(): ${RUST_APP_RELAUNCH} failed:`,
+        `[platformApi] app.relaunch(): ${RUST_APP_RELAUNCH} failed:`,
         error instanceof Error ? error.message : String(error)
       )
     })
@@ -377,7 +377,7 @@ export const app = {
   hide: (): void => {
     requestRustInvoke(RUST_APP_HIDE, []).catch((error) => {
       console.warn(
-        `[electronStub] app.hide(): ${RUST_APP_HIDE} failed:`,
+        `[platformApi] app.hide(): ${RUST_APP_HIDE} failed:`,
         error instanceof Error ? error.message : String(error)
       )
     })
@@ -388,7 +388,7 @@ export const app = {
   raiseMainWindow: (): void => {
     requestRustInvoke(RUST_MAIN_WINDOW_RAISE, []).catch((error) => {
       console.warn(
-        `[electronStub] app.raiseMainWindow(): ${RUST_MAIN_WINDOW_RAISE} failed:`,
+        `[platformApi] app.raiseMainWindow(): ${RUST_MAIN_WINDOW_RAISE} failed:`,
         error instanceof Error ? error.message : String(error)
       )
     })
@@ -404,7 +404,7 @@ export const app = {
       () => true,
       (error) => {
         console.warn(
-          `[electronStub] app.openBridgeInvitePicker(): ${RUST_BRIDGE_INVITE_PICKER_OPEN} failed:`,
+          `[platformApi] app.openBridgeInvitePicker(): ${RUST_BRIDGE_INVITE_PICKER_OPEN} failed:`,
           error instanceof Error ? error.message : String(error)
         )
         return false
@@ -418,10 +418,10 @@ export const app = {
 // (Phase 31 Plan 02, D-03/REQ-31-03/REQ-31-05) forward to the Rust shell's native dialogs via
 // the existing generic `requestRustInvoke()` channel. This is a deliberate, narrow exception
 // to this module's own "no knowledge of the RPC transport" rule above (which exists to avoid
-// a circular import between electronStub.ts and sidecarRpc.ts for the
+// a circular import between platform/index.ts and sidecarRpc.ts for the
 // openExternal/pushFrontendMessage bindTransport() pair) — `requestRustInvoke` is imported
 // directly here, matching `keyringTokenStore.ts`'s call shape, because unlike
-// openExternal/pushFrontendMessage this is a one-directional call (electronStub -> sidecarRpc
+// openExternal/pushFrontendMessage this is a one-directional call (platformApi -> sidecarRpc
 // only) with no callback the other way, so it does not reintroduce the bidirectional cycle
 // bindTransport() was built to avoid.
 //
@@ -482,7 +482,7 @@ export const dialog = {
       // Never throw to the caller (total-method convention) -- an error dialog that itself
       // fails to render must not crash the caller's error-handling path.
       console.warn(
-        `[electronStub] dialog.showErrorBox(): ${RUST_DIALOG_MESSAGE} failed:`,
+        `[platformApi] dialog.showErrorBox(): ${RUST_DIALOG_MESSAGE} failed:`,
         error instanceof Error ? error.message : String(error)
       )
     }
@@ -540,7 +540,7 @@ export const dialog = {
       }
     } catch (error) {
       console.warn(
-        `[electronStub] dialog.showMessageBox(): ${RUST_DIALOG_MESSAGE} failed, defaulting to safe index ${safeIndex}:`,
+        `[platformApi] dialog.showMessageBox(): ${RUST_DIALOG_MESSAGE} failed, defaulting to safe index ${safeIndex}:`,
         error instanceof Error ? error.message : String(error)
       )
       return { response: safeIndex, checkboxChecked: false }
@@ -548,7 +548,7 @@ export const dialog = {
   },
   showMessageBoxSync: (_window?: unknown, _options?: unknown): number => {
     console.warn(
-      '[electronStub] dialog.showMessageBoxSync(): logged no-op (D-03) -- synchronous dialogs cannot cross the async rustInvoke transport; returns the default response (0)'
+      '[platformApi] dialog.showMessageBoxSync(): logged no-op (D-03) -- synchronous dialogs cannot cross the async rustInvoke transport; returns the default response (0)'
     )
     return 0
   },
@@ -569,7 +569,7 @@ export const dialog = {
       // console.warn, not logWarning: this file must not import 'backend/logger' (see the
       // module-scope note above the imports).
       console.warn(
-        `[electronStub] dialog.showOpenDialog(): ${RUST_DIALOG_OPEN} failed:`,
+        `[platformApi] dialog.showOpenDialog(): ${RUST_DIALOG_OPEN} failed:`,
         error instanceof Error ? error.message : String(error)
       )
       return { canceled: true, filePaths: [] }
@@ -577,7 +577,7 @@ export const dialog = {
   },
   showOpenDialogSync: (): undefined => {
     console.warn(
-      '[electronStub] dialog.showOpenDialogSync(): logged no-op (D-03) -- synchronous dialogs cannot cross the async rustInvoke transport'
+      '[platformApi] dialog.showOpenDialogSync(): logged no-op (D-03) -- synchronous dialogs cannot cross the async rustInvoke transport'
     )
     return undefined
   },
@@ -595,7 +595,7 @@ export const dialog = {
     } catch (error) {
       // Never throw to the caller (mirrors keyringTokenStore.ts's total-method convention).
       console.warn(
-        `[electronStub] dialog.showSaveDialog(): ${RUST_DIALOG_SAVE} failed:`,
+        `[platformApi] dialog.showSaveDialog(): ${RUST_DIALOG_SAVE} failed:`,
         error instanceof Error ? error.message : String(error)
       )
       return { canceled: true, filePath: undefined }
@@ -667,7 +667,7 @@ export class Notification {
             listener({ sender: this }, backend)
           } catch (listenerError) {
             console.warn(
-              "[electronStub] Notification 'show' listener threw:",
+              "[platformApi] Notification 'show' listener threw:",
               listenerError instanceof Error
                 ? listenerError.message
                 : String(listenerError)
@@ -678,7 +678,7 @@ export class Notification {
       .catch((error) => {
         const message = error instanceof Error ? error.message : String(error)
         console.warn(
-          `[electronStub] Notification.show(): ${RUST_NOTIFICATION_SHOW} failed:`,
+          `[platformApi] Notification.show(): ${RUST_NOTIFICATION_SHOW} failed:`,
           message
         )
         for (const listener of this.listeners.get('failed') ?? []) {
@@ -686,7 +686,7 @@ export class Notification {
             listener({ sender: this }, message)
           } catch (listenerError) {
             console.warn(
-              "[electronStub] Notification 'failed' listener threw:",
+              "[platformApi] Notification 'failed' listener threw:",
               listenerError instanceof Error
                 ? listenerError.message
                 : String(listenerError)
@@ -738,7 +738,7 @@ export const shell = {
     if (shouldOpenInBackground(process.platform, url, options)) {
       spawnOpenDetached(url, (code) =>
         console.warn(
-          `[electronStub] shell.openExternal(): background open failed (${code})`
+          `[platformApi] shell.openExternal(): background open failed (${code})`
         )
       )
       return
@@ -753,7 +753,7 @@ export const shell = {
     requestRustInvoke(RUST_SHELL_SHOW_ITEM_IN_FOLDER, [fullPath]).catch(
       (error) => {
         console.warn(
-          `[electronStub] shell.showItemInFolder(): ${RUST_SHELL_SHOW_ITEM_IN_FOLDER} failed:`,
+          `[platformApi] shell.showItemInFolder(): ${RUST_SHELL_SHOW_ITEM_IN_FOLDER} failed:`,
           error instanceof Error ? error.message : String(error)
         )
       }
@@ -765,7 +765,7 @@ export const shell = {
   // plugin to forward to. Declared as an accepted gap for Plan 06's 33-PORTED-CHANNELS.md.
   trashItem: async (): Promise<void> => {
     console.warn(
-      '[electronStub] shell.trashItem(): logged no-op (D-05, Phase 33) -- no vetted Tauri v2 trash-capable plugin found; item is NOT moved to the OS trash'
+      '[platformApi] shell.trashItem(): logged no-op (D-05, Phase 33) -- no vetted Tauri v2 trash-capable plugin found; item is NOT moved to the OS trash'
     )
   },
   // Phase 33 Plan 04 (D-05): real forward via tauri-plugin-opener's open_path
@@ -778,7 +778,7 @@ export const shell = {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       console.warn(
-        `[electronStub] shell.openPath(): ${RUST_SHELL_OPEN_PATH} failed:`,
+        `[platformApi] shell.openPath(): ${RUST_SHELL_OPEN_PATH} failed:`,
         message
       )
       return message
@@ -809,7 +809,7 @@ const fakeWebContents = {
   // Logs once per call so the degradation is visible, never silent.
   openDevTools: (): void => {
     console.warn(
-      '[electronStub] fakeWebContents.openDevTools(): logged no-op (T-34.5-27, declared degraded) -- ' +
+      '[platformApi] fakeWebContents.openDevTools(): logged no-op (T-34.5-27, declared degraded) -- ' +
         'devtools is a Chromium/renderer-chrome concept with no Tauri WebView equivalent under the sidecar'
     )
   }
@@ -847,7 +847,7 @@ const fakeWindow = {
   // call so the degradation is visible, never silent.
   reload: (): void => {
     console.warn(
-      '[electronStub] fakeWindow.reload(): logged no-op (T-34.5-27, declared degraded) -- ' +
+      '[platformApi] fakeWindow.reload(): logged no-op (T-34.5-27, declared degraded) -- ' +
         'a renderer reload has no sidecar/window equivalent under the sidecar'
     )
   }
@@ -912,7 +912,7 @@ export interface SidecarSession {
 // previous `return {}` produced. That was the stated goal of this stub all along.
 const sessionUnavailable = (member: string) => async (): Promise<never> => {
   throw new Error(
-    `[electronStub] session.${member}(): not available in the sidecar (D-09, accepted gap)`
+    `[platformApi] session.${member}(): not available in the sidecar (D-09, accepted gap)`
   )
 }
 
@@ -938,7 +938,7 @@ export const session = {
   defaultSession: fakeSession,
   fromPartition: (_partition: string): SidecarSession => {
     console.warn(
-      '[electronStub] session.fromPartition(): logged no-op (D-09, accepted gap) -- session partitions are not available in the sidecar'
+      '[platformApi] session.fromPartition(): logged no-op (D-09, accepted gap) -- session partitions are not available in the sidecar'
     )
     return fakeSession
   }
@@ -1029,9 +1029,7 @@ export const net = {
     const handlers: Record<string, (arg?: unknown) => void> = {}
     setImmediate(() => {
       handlers['error']?.(
-        new Error(
-          '[electronStub] net.request(): not implemented in the sidecar'
-        )
+        new Error('[platformApi] net.request(): not implemented in the sidecar')
       )
     })
     return {
@@ -1147,7 +1145,7 @@ export const powerSaveBlocker = {
         // entry is what makes a later stop() on this id a silent no-op instead of an error.
         heldWakeLocks.delete(id)
         console.warn(
-          `[electronStub] powerSaveBlocker.start(): ${RUST_WAKE_LOCK_START} failed:`,
+          `[platformApi] powerSaveBlocker.start(): ${RUST_WAKE_LOCK_START} failed:`,
           error instanceof Error ? error.message : String(error)
         )
       })
@@ -1164,7 +1162,7 @@ export const powerSaveBlocker = {
     if (rustId === null || rustId === undefined) return
     requestRustInvoke(RUST_WAKE_LOCK_STOP, [rustId]).catch((error) => {
       console.warn(
-        `[electronStub] powerSaveBlocker.stop(): ${RUST_WAKE_LOCK_STOP} failed:`,
+        `[platformApi] powerSaveBlocker.stop(): ${RUST_WAKE_LOCK_STOP} failed:`,
         error instanceof Error ? error.message : String(error)
       )
     })
@@ -1186,7 +1184,7 @@ export const clipboard = {
   writeText: (text: string): void => {
     requestRustInvoke(RUST_CLIPBOARD_WRITE_TEXT, [text]).catch((error) => {
       console.warn(
-        `[electronStub] clipboard.writeText(): ${RUST_CLIPBOARD_WRITE_TEXT} failed:`,
+        `[platformApi] clipboard.writeText(): ${RUST_CLIPBOARD_WRITE_TEXT} failed:`,
         error instanceof Error ? error.message : String(error)
       )
     })

@@ -2,7 +2,7 @@
  * Curated channel registration for the OAuth login-capture driver (Phase 34.4.1 Plan 09,
  * D-01/D-04, REQ-34.4.1-08).
  *
- * Registers exactly one channel, `oauthCaptureLogin`, onto `electronStub`'s `ipcMain` recorder.
+ * Registers exactly one channel, `oauthCaptureLogin`, onto `platformApi`'s `ipcMain` recorder.
  * It is a `handle` (never a `send`) because the renderer must await the typed outcome — a
  * send-kind mistake here would fail 100% SILENTLY at runtime (no reject, no timeout, no log
  * line — `sidecar-send-channels-fail-silently`), so both directions are cross-checked in
@@ -15,7 +15,7 @@
  * their own slices.
  *
  * D-01/D-02 (curated-import discipline, inherited from Phase 30 D-08 -> ... -> Phase 34.4.1
- * D-01/D-02): import `./oauthLoginCapture` and `./electronStub` directly, and NOTHING else — no
+ * D-01/D-02): import `./oauthLoginCapture` and `./platformApi` directly, and NOTHING else — no
  * feature module's `ipc_handler.ts`, no `humble/*` module (this channel captures a redirect
  * code, it does not authenticate — Humble's own six browser-auth channels are a completely
  * separate concern registered by their own dedicated module).

@@ -16,7 +16,7 @@ const mockConfigStore = {
   delete: jest.fn(),
   clear: jest.fn()
 }
-jest.mock('../electronStores', () => ({ configStore: mockConfigStore }))
+jest.mock('../stores', () => ({ configStore: mockConfigStore }))
 
 const mockReadTokenOutcome = jest.fn()
 const mockTokenStore = {

@@ -10,7 +10,7 @@
  * edge two hops away. `dispatch.ts` -> `../dialog/dialog` -> `electron` is a
  * real, two-hop edge those gates structurally cannot detect.
  *
- * **A non-empty reach set here is EXPECTED, not a defect.** `electronStub.ts`
+ * **A non-empty reach set here is EXPECTED, not a defect.** `platform/index.ts`
  * installs a `Module._load` interception (`installElectronHook`) that
  * rewrites every `require('electron')` inside the sidecar process to the
  * stub module BEFORE any backend module is imported — that is the real,
@@ -292,7 +292,7 @@ const ENTRY_POINTS = [
 // dialog/dialog.ts, utils.ts, utils/aborthandler/aborthandler.ts, config.ts,
 // constants/key_value_stores.ts, logger/index.ts,
 // common/types/sidecarTransport.ts, sendChannelObservable.ts, sidecarRpc.ts,
-// electronStub.ts) were either already electron-free or already visited via
+// platform/index.ts) were either already electron-free or already visited via
 // other entry points in this same file's graph (`dialog/dialog.ts` was
 // already baselined above, reached via gamedetails/dispatch.ts). No new entry
 // below. visitedFiles.size grew by +5 (239 -> 244), reflecting exactly the
@@ -352,7 +352,7 @@ const ENTRY_POINTS = [
 // below. visitedFiles.size grew by +1 (246 -> 247), exactly the one
 // newly-visited first-party file this entry point alone contributes:
 // eosOverlayFlowRegistration.ts itself (every module it imports --
-// electronStub.ts and eos_overlay.ts -- was already visited via other entry
+// platform/index.ts and eos_overlay.ts -- was already visited via other entry
 // points in this same file's graph). The `> 224` floor in the 'reachability
 // sanity' test is unchanged (247 is even more comfortably above it than the
 // prior 246 reading was) and is not raised, per that test's own
@@ -553,7 +553,7 @@ describe('electronReachLedger (Phase 34.2 Plan 11 — REQ-34.2-03, gap #3 / WR-0
       throw new Error(
         `A NEW electron-importing module has entered the sidecar's reach graph and is ` +
           `NOT in the committed baseline: ${newModules.join(', ')}. This is not ` +
-          `automatically a bug -- electronStub.ts's Module._load hook safely rescues ` +
+          `automatically a bug -- platform/index.ts's Module._load hook safely rescues ` +
           `transitive electron reach at runtime -- but the baseline must be updated ` +
           `deliberately, after review, never silently. If this addition was reviewed and ` +
           `accepted, add the new path(s) to BASELINE_ELECTRON_REACHING_MODULES above with ` +

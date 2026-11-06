@@ -5,7 +5,7 @@ import { slugify } from 'backend/wiki_game_info/codeweavers/utils'
 
 import { loadIndex, IndexDescriptor } from './fetcher'
 import { crossoverIndexSchema, CrossoverIndex } from './schema'
-import { crossoverIndexStore, CachedIndex } from './electronStore'
+import { crossoverIndexStore, CachedIndex } from './stores'
 import { normalize, NAME_MATCHING_SHIPS } from './normalize'
 
 /**

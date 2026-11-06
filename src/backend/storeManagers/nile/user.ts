@@ -12,7 +12,7 @@ import {
 } from 'common/types/nile'
 import { libraryManagerMap } from '..'
 import { existsSync, readFileSync } from 'graceful-fs'
-import { configStore } from './electronStores'
+import { configStore } from './stores'
 import { clearCache } from 'backend/utils'
 import { nileUserData } from './constants'
 import { isMac } from 'backend/constants/environment'

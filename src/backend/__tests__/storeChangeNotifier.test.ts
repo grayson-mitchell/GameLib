@@ -18,7 +18,7 @@
 import Store from 'backend/store_backend'
 
 import CacheStore from '../cache'
-import { TypeCheckedStoreBackend } from '../electron_store'
+import { TypeCheckedStoreBackend } from '../typed_store'
 import {
   hasStoreChangeNotifier,
   notifyStoreChanged,
@@ -26,7 +26,7 @@ import {
   setStoreChangeNotifier,
   withStoreChangeSuppressed
 } from '../storeChangeNotifier'
-import { installedGamesStore } from '../storeManagers/gog/electronStores'
+import { installedGamesStore } from '../storeManagers/gog/stores'
 import { isAllowedStoreField } from 'common/types/storePolicy'
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
 
@@ -115,7 +115,7 @@ describe('backend/storeChangeNotifier.ts', () => {
   describe('CacheStore — the class that persists the runner libraries', () => {
     test('set announces BOTH the value and its __timestamp', () => {
       // Load-bearing, and the reason a value-only push would have silently failed to fix
-      // anything: the renderer's mirror (`frontend/helpers/electronStores.ts`
+      // anything: the renderer's mirror (`frontend/helpers/stores.ts`
       // `CacheStore.get`) returns the caller fallback unless `storeHas(key)` AND
       // `storeGet('__timestamp.' + key)` BOTH resolve. Announce only the value and the
       // renderer still renders nothing.
@@ -260,7 +260,7 @@ describe('backend/storeChangeNotifier.ts', () => {
   //   (1) GOGGame.uninstall writes through installedGamesStore.set('installed', …)
   //       (gog/games.ts:986) — verified by direct source read, not re-proven here.
   //   (2) that store is a TypeCheckedStoreBackend, whose set() announces via
-  //       notifyStoreChanged (electron_store.ts:113) — covered by the positive case below.
+  //       notifyStoreChanged (typed_store.ts:113) — covered by the positive case below.
   //   (3) pushStoreChanged forwards it only if isAllowedStoreField('gogInstalledGamesStore',
   //       'installed') — the one link that could still silently DROP the push, and the
   //       reason this task exists rather than a paper assertion. Covered by both the

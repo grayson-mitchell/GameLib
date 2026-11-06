@@ -65,7 +65,7 @@ const mockConfigStoreClear = jest.fn()
 const mockConfigStoreGetNodefault = jest.fn((key: string): unknown =>
   key === 'isLoggedIn' ? true : undefined
 )
-jest.mock('backend/storeManagers/gog/electronStores', () => ({
+jest.mock('backend/storeManagers/gog/stores', () => ({
   configStore: {
     set: mockConfigStoreSet,
     // Phase 49: login() clears the persisted expiry flag.

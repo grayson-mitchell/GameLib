@@ -21,7 +21,7 @@
  * original stub's own async-emission timing) with a named cause, and asserts that cause -- not
  * the pre-fix timeout message -- reaches `revealKey`'s caller, with `REQUEST_TIMEOUT_MS`'s
  * fake timer never advanced. Group 1 (below) is UNCHANGED: it still pins
- * `electronStub.net.request()`'s own isolated contract directly. The two are now fully
+ * `platformApi.net.request()`'s own isolated contract directly. The two are now fully
  * unrelated, not merely decoupled: `humblePostRequest` has no electron-net transport left to
  * call it through, and `backend/platform`'s `net` export sits outside this plan's
  * login-window-seam collapse entirely.
@@ -32,7 +32,7 @@
  * touch the transport under test.
  *
  * `app.userAgentFallback` gap (found while writing this suite, unrelated to D-06): the real
- * sidecar's `electronStub.ts` `app` object has no `userAgentFallback` member (confirmed absent
+ * sidecar's `platform/index.ts` `app` object has no `userAgentFallback` member (confirmed absent
  * by direct read; `adapter.test.ts`/`user.test.ts` both work around it with their own full
  * `electron` mocks). `humble/userAgent.ts`'s `standardBrowserUserAgent()` reads
  * `app.userAgentFallback` and is called INSIDE `humblePostRequest`, BEFORE the seam's
@@ -43,7 +43,7 @@
  * callers of `standardBrowserUserAgent()`) are both deferred to Phase 34.4.1 per D-01/D-02, so
  * this gap is currently dormant in production -- nothing in the ported 34.4 scope reaches it
  * except `humblePostRequest` itself. Patched HERE, at this suite's own `electron` mock factory
- * (not in `electronStub.ts`), to keep Task 1's diff scoped to the D-06 `net.request` fix this
+ * (not in `platform/index.ts`), to keep Task 1's diff scoped to the D-06 `net.request` fix this
  * plan owns; recorded as a Rule 3 deviation in `34.4-06-SUMMARY.md`.
  */
 
@@ -107,7 +107,7 @@ function flushImmediate(times = 3): Promise<void> {
   })()
 }
 
-describe('electronStub net.request — D-06 own contract (Phase 34.4 Plan 06, REQ-34.4-11)', () => {
+describe('platformApi net.request — D-06 own contract (Phase 34.4 Plan 06, REQ-34.4-11)', () => {
   it('returns an object exposing on/end/write/setHeader', () => {
     const req = net.request()
     expect(typeof req.on).toBe('function')

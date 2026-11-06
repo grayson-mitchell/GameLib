@@ -4,7 +4,7 @@
  *
  * Drives the REAL sidecar RPC server in-process (`appShellFlows.test.ts`'s
  * own real-shim black-box pattern — the shims under test are the actual
- * electronStub.ts/fileStore.ts modules, unmocked) against injected
+ * platform/index.ts/fileStore.ts modules, unmocked) against injected
  * `stream.PassThrough` pairs. The harness below (mock preamble, `startSidecar`/
  * `writeSend`/`writeInvoke`/`flush`) is copied from `appShellFlows.test.ts`
  * rather than invented fresh, since that suite already proves this exact mock
@@ -64,7 +64,7 @@ jest.mock('os', () => {
 
 // ── pathShim — CR-03 (34.2-10 precedent): the REAL choke point.
 // `constants/paths.ts`'s module-scope `app.getPath('appData'|'userData')`
-// calls resolve through `electronStub.ts` -> `pathShim.getPath()`, whose real
+// calls resolve through `platform/index.ts` -> `pathShim.getPath()`, whose real
 // `resolveAppDataDir()` prefers `env.APPDATA`/`env.XDG_CONFIG_HOME` over
 // `homedir()` on win32/default — bypassing the `os` mock above on those
 // platforms. `resetHeroic` deletes `configPath`/`gamesConfigPath` for real,
@@ -150,14 +150,14 @@ jest.mock('backend/config', () => ({
   }
 }))
 
-// ── legendary electronStores mock — avoids a real disk-backed CacheStore
+// ── legendary stores mock — avoids a real disk-backed CacheStore
 // construction (this repo's own "tests clobbering real store" precedent).
 // `installStore`/`libraryStore` added alongside `gameInfoStore` for Plan
 // 02's `clearCache` coverage — utils.ts's real `clearCache()` body calls
 // `.clear()` on all three; without a mock, the missing two throw
 // synchronously (caught by clearCache's own try/catch, but BEFORE
 // `pushFrontendMessage('refreshLibrary')` ever runs) ────────────────────────
-jest.mock('../../storeManagers/legendary/electronStores', () => ({
+jest.mock('../../storeManagers/legendary/stores', () => ({
   gameInfoStore: {
     clear: jest.fn()
   },
@@ -220,7 +220,7 @@ import { GlobalConfig } from 'backend/config'
 import { requestRustInvoke } from '../sidecarRpc'
 import { listenerRegistry, handlerRegistry } from '../../platform'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
-import { achievementStore } from '../../storeManagers/gog/electronStores'
+import { achievementStore } from '../../storeManagers/gog/stores'
 import {
   RUST_SHELL_OPEN_PATH,
   RUST_SHELL_SHOW_ITEM_IN_FOLDER,

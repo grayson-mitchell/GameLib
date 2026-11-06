@@ -11,7 +11,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { sendFrontendMessage } from 'backend/ipc'
-import { configStore as nileConfigStore } from 'backend/storeManagers/nile/electronStores'
+import { configStore as nileConfigStore } from 'backend/storeManagers/nile/stores'
 import {
   __resetSignInEpochsForTests,
   captureSignInEpoch
@@ -49,35 +49,35 @@ jest.mock('../..', () => ({
 }))
 
 // Plain-object fake stores (immune to resetMocks), one per store verdict.ts reaches.
-jest.mock('backend/storeManagers/nile/electronStores', () => ({
+jest.mock('backend/storeManagers/nile/stores', () => ({
   configStore: jest
     .requireActual<
       typeof import('backend/signInProbe/__tests__/fakeFlagStore')
     >('backend/signInProbe/__tests__/fakeFlagStore')
     .makeFakeFlagStore()
 }))
-jest.mock('backend/storeManagers/legendary/electronStores', () => ({
+jest.mock('backend/storeManagers/legendary/stores', () => ({
   legendaryConfigStore: jest
     .requireActual<
       typeof import('backend/signInProbe/__tests__/fakeFlagStore')
     >('backend/signInProbe/__tests__/fakeFlagStore')
     .makeFakeFlagStore()
 }))
-jest.mock('backend/storeManagers/gog/electronStores', () => ({
+jest.mock('backend/storeManagers/gog/stores', () => ({
   configStore: jest
     .requireActual<
       typeof import('backend/signInProbe/__tests__/fakeFlagStore')
     >('backend/signInProbe/__tests__/fakeFlagStore')
     .makeFakeFlagStore()
 }))
-jest.mock('backend/storeManagers/steam/electronStores', () => ({
+jest.mock('backend/storeManagers/steam/stores', () => ({
   configStore: jest
     .requireActual<
       typeof import('backend/signInProbe/__tests__/fakeFlagStore')
     >('backend/signInProbe/__tests__/fakeFlagStore')
     .makeFakeFlagStore()
 }))
-jest.mock('backend/humble/electronStores', () => ({
+jest.mock('backend/humble/stores', () => ({
   configStore: jest
     .requireActual<
       typeof import('backend/signInProbe/__tests__/fakeFlagStore')

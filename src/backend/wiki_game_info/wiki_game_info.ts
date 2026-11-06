@@ -2,7 +2,7 @@ import { getInfoFromGamesDB } from 'backend/wiki_game_info/gamesdb/utils'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import { getInfoFromProtonDB } from 'backend/wiki_game_info/protondb/utils'
 import { getSteamDeckComp } from 'backend/wiki_game_info/steamdeck/utils'
-import { wikiGameInfoStore } from './electronStore'
+import { wikiGameInfoStore } from './stores'
 import { removeSpecialcharacters } from '../utils'
 import {
   HowLongToBeatOutcome,

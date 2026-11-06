@@ -16,7 +16,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-jest.mock('../../electronStores', () => {
+jest.mock('../../stores', () => {
   const backing = new Map<string, unknown>()
   return {
     steamMetadataStore: {
@@ -30,8 +30,8 @@ jest.mock('../../electronStores', () => {
 })
 
 import { logInfo, logWarning } from 'backend/logger'
-import { steamMetadataStore } from '../../electronStores'
-import type { SteamBridgeScanVerdict } from '../../electronStores'
+import { steamMetadataStore } from '../../stores'
+import type { SteamBridgeScanVerdict } from '../../stores'
 import {
   readBridgeVerdict,
   writeBridgeScanVerdict,

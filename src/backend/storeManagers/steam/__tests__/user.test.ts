@@ -9,7 +9,7 @@
  *  - graceful-fs   → existsSync
  *  - backend/config → GlobalConfig.get (Windows Default Steam path)
  *  - backend/logger
- *  - ../electronStores → configStore
+ *  - ../stores → configStore
  */
 
 // ── Electron mock (must be first, jest.mock is hoisted) ──────────────────────
@@ -62,7 +62,7 @@ jest.mock('backend/config', () => ({
   GlobalConfig: { get: mockGlobalConfigGet }
 }))
 
-// ── electronStores mock ───────────────────────────────────────────────────────
+// ── stores mock ───────────────────────────────────────────────────────
 const mockConfigStore = {
   get: jest.fn(),
   get_nodefault: jest.fn(),
@@ -70,7 +70,7 @@ const mockConfigStore = {
   delete: jest.fn(),
   clear: jest.fn()
 }
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   configStore: mockConfigStore
 }))
 // NOTE: '../tokenStore' is intentionally NOT mocked here. logout() must

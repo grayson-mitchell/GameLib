@@ -8,11 +8,11 @@ import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { logInfo } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
-import { legendaryConfigStore } from 'backend/storeManagers/legendary/electronStores'
-import { configStore as gogConfigStore } from 'backend/storeManagers/gog/electronStores'
-import { configStore as nileConfigStore } from 'backend/storeManagers/nile/electronStores'
-import { configStore as steamConfigStore } from 'backend/storeManagers/steam/electronStores'
-import { configStore as humbleConfigStore } from 'backend/humble/electronStores'
+import { legendaryConfigStore } from 'backend/storeManagers/legendary/stores'
+import { configStore as gogConfigStore } from 'backend/storeManagers/gog/stores'
+import { configStore as nileConfigStore } from 'backend/storeManagers/nile/stores'
+import { configStore as steamConfigStore } from 'backend/storeManagers/steam/stores'
+import { configStore as humbleConfigStore } from 'backend/humble/stores'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
 import {
@@ -31,27 +31,27 @@ jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn(),
   addHandler: jest.fn()
 }))
-jest.mock('backend/storeManagers/legendary/electronStores', () => ({
+jest.mock('backend/storeManagers/legendary/stores', () => ({
   legendaryConfigStore: jest
     .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
     .makeFakeFlagStore()
 }))
-jest.mock('backend/storeManagers/gog/electronStores', () => ({
+jest.mock('backend/storeManagers/gog/stores', () => ({
   configStore: jest
     .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
     .makeFakeFlagStore()
 }))
-jest.mock('backend/storeManagers/nile/electronStores', () => ({
+jest.mock('backend/storeManagers/nile/stores', () => ({
   configStore: jest
     .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
     .makeFakeFlagStore()
 }))
-jest.mock('backend/storeManagers/steam/electronStores', () => ({
+jest.mock('backend/storeManagers/steam/stores', () => ({
   configStore: jest
     .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
     .makeFakeFlagStore()
 }))
-jest.mock('backend/humble/electronStores', () => ({
+jest.mock('backend/humble/stores', () => ({
   configStore: jest
     .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
     .makeFakeFlagStore()

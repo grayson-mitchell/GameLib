@@ -2,7 +2,7 @@
  * Phase 49 Plan 07 (D-06): `collectSignInInputs` reads all five persisted
  * verdicts at call time, and is the only renderer reader of those keys.
  *
- * `frontend/helpers/electronStores` is mocked with plain `get_nodefault` spies
+ * `frontend/helpers/stores` is mocked with plain `get_nodefault` spies
  * (the real module opens a Tauri-backed store at import). The spies are
  * re-armed in `beforeEach` so no test inherits another's flag.
  */
@@ -14,7 +14,7 @@ import {
   gogConfigStore,
   nileConfigStore,
   steamConfigStore
-} from 'frontend/helpers/electronStores'
+} from 'frontend/helpers/stores'
 
 interface StoreSpy {
   get_nodefault: jest.Mock
@@ -22,7 +22,7 @@ interface StoreSpy {
 
 // The factory is hoisted above the imports, so the spies are created inside it
 // and read back through the (mocked) module.
-jest.mock('frontend/helpers/electronStores', () => ({
+jest.mock('frontend/helpers/stores', () => ({
   legendaryConfigStore: { get_nodefault: jest.fn() },
   gogConfigStore: { get_nodefault: jest.fn() },
   nileConfigStore: { get_nodefault: jest.fn() },

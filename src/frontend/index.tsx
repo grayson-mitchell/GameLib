@@ -8,7 +8,7 @@ import './bootErrorSurface'
 // BLOCKER-1 (27-01) / T-27-07: must be the FIRST *meaningful* import in this file. ES modules
 // resolve every static import in a file, in declaration order, before any of that file's own
 // top-level statements run -- and `preload/tauriAttach`'s attach-window.api side effect
-// must complete before `./helpers/electronStores` (transitively imported by
+// must complete before `./helpers/stores` (transitively imported by
 // `./state/GlobalState`, imported below) evaluates: that module constructs several
 // `TypeCheckedStoreFrontend`s at ITS OWN module scope, each of which calls
 // `window.api.storeNew(...)` synchronously the moment it is first imported. Being this
@@ -33,7 +33,7 @@ import './index.scss'
 import './themes.scss'
 import GlobalState from './state/GlobalState'
 import { initShortcuts } from './helpers/shortcuts'
-import { configStore } from './helpers/electronStores'
+import { configStore } from './helpers/stores'
 import { resolveBootLanguage } from './helpers/resolveBootLanguage'
 import { initOnlineMonitor } from './helpers/onlineMonitor'
 import { installKeyboardNavTracking } from './helpers/inputModality'

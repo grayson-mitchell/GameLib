@@ -30,7 +30,7 @@ jest.mock('backend/logger', () => ({
 }))
 
 const mockMeta = new Map<string, unknown>()
-jest.mock('../../electronStores', () => ({
+jest.mock('../../stores', () => ({
   steamMetadataStore: {
     get: (id: string) => mockMeta.get(id),
     set: (id: string, v: unknown) => void mockMeta.set(id, v)

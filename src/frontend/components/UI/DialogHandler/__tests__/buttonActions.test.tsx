@@ -100,7 +100,7 @@ jest.mock('react-i18next', () => ({
   })
 }))
 
-jest.mock('frontend/helpers/electronStores', () => ({
+jest.mock('frontend/helpers/stores', () => ({
   configStore: { set: mockConfigStoreSet }
 }))
 

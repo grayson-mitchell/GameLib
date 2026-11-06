@@ -12,7 +12,7 @@ import {
 import axios from 'axios'
 import https from 'node:https'
 // Static import, matching `utils/systeminfo/heroicVersion.ts` and
-// `sidecar/electronStub.ts`: `process.env.npm_package_version` is UNSET in the packaged
+// `sidecar/platform/index.ts`: `process.env.npm_package_version` is UNSET in the packaged
 // SEA sidecar binary, so it cannot be the source of the User-Agent version below.
 import pkg_json from 'backend/../../package.json'
 import { app, dialog, shell, Notification } from 'backend/platform'
@@ -35,13 +35,13 @@ import {
   gameInfoStore,
   installStore,
   libraryStore
-} from 'backend/storeManagers/legendary/electronStores'
+} from 'backend/storeManagers/legendary/stores'
 import {
   achievementStore as GOGAchievementStore,
   apiInfoCache as GOGapiInfoCache,
   installInfoStore as GOGinstallInfoStore,
   libraryStore as GOGlibraryStore
-} from './storeManagers/gog/electronStores'
+} from './storeManagers/gog/stores'
 import gogPresence from './storeManagers/gog/presence'
 import { libraryManagerMap } from './storeManagers'
 import { SteamUser } from './storeManagers/steam/user'
@@ -50,7 +50,7 @@ import { resolveTitleForGame } from './utils/gameTitle'
 import {
   installStore as nileInstallStore,
   libraryStore as nileLibraryStore
-} from './storeManagers/nile/electronStores'
+} from './storeManagers/nile/stores'
 import * as fileSize from 'filesize'
 import { Client as discordClient } from '@xhayper/discord-rpc'
 import { showDialogBoxModalAuto } from './dialog/dialog'
@@ -66,7 +66,7 @@ import {
 } from './wine/manager/utils'
 import { readdir, lstat } from 'fs/promises'
 import { backendEvents } from './backend_events'
-import { wikiGameInfoStore } from './wiki_game_info/electronStore'
+import { wikiGameInfoStore } from './wiki_game_info/stores'
 import EasyDl from 'easydl'
 
 import {
@@ -288,7 +288,7 @@ async function handleExit() {
       // index 0 is the SAFE "No" and index 1 is the DESTRUCTIVE "Yes"
       // (killPattern('legendary'|'gogdl'|'nile') + callAllAbortControllers() +
       // app.exit(), i.e. killing an in-flight install/download). The sidecar's
-      // `electronStub.showMessageBox` fail-safe default is
+      // `platformApi.showMessageBox` fail-safe default is
       // `options?.cancelId ?? (buttons.length ?? 1) - 1`, which without an explicit
       // cancelId evaluates to 1 here -- so ANY transport error or timeout on the
       // newly-sidecar-reachable `quit` path returned the DESTRUCTIVE answer. Declaring

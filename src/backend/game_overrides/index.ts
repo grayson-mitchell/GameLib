@@ -1,5 +1,5 @@
 import { GameInfo } from 'common/types'
-import { gameOverridesStore, GameMetadataOverride } from './electronStores'
+import { gameOverridesStore, GameMetadataOverride } from './stores'
 import { logInfo, logError, LogPrefix } from 'backend/logger'
 import { userDataPath } from 'backend/constants/paths'
 import { existsSync, readdirSync, unlinkSync } from 'graceful-fs'

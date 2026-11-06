@@ -34,9 +34,9 @@
  * by live ES import, even though that is what the plan for this task asked for: that
  * module's own test file (`src/backend/humble/__tests__/user.test.ts`) jest.mock()s SIX
  * of its dependencies (`backend/platform`, `backend/logger`, `backend/ipc`,
- * `../electronStores`, `../adapter`, `../syncFence`) before importing it, which is a
+ * `../stores`, `../adapter`, `../syncFence`) before importing it, which is a
  * strong signal that an unmocked import executes Electron/store-construction side effects
- * at module scope (`electronStores.ts` calls `new TypeCheckedStoreBackend(...)` at the top
+ * at module scope (`stores.ts` calls `new TypeCheckedStoreBackend(...)` at the top
  * level) -- exactly the kind of side effect this CLI-run, non-Electron script must never
  * trigger. Instead, `COOKIE_POLL_INTERVAL_MS` is read by parsing `user.ts`'s own source
  * text, the same anti-hard-coding technique this file already needs for

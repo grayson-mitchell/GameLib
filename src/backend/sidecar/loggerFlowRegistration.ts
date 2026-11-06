@@ -14,7 +14,7 @@
  * rejection it replaced.
  *
  * Phase 34.3 (slice 6) must NOT register `logError` a second time.
- * `electronStub.ts`'s `listenerRegistry` holds an ARRAY per channel and
+ * `platform/index.ts`'s `listenerRegistry` holds an ARRAY per channel and
  * `dispatchSend` iterates every listener in it — a second `ipcMain.on`
  * registration for this channel would duplicate every frontend log line, not
  * merely be redundant. Both `.planning/IPC-PORT-INVENTORY.md` and this slice's
@@ -32,7 +32,7 @@
  * cross-checked against that Electron-only handler's own line 15 `addListener`
  * call for this exact channel before being written.
  *
- * Imports `ipcMain` from `./electronStub` (never `electron`, never
+ * Imports `ipcMain` from `./platformApi` (never `electron`, never
  * `backend/ipc`) and never side-effect-imports the Electron-only logger
  * IPC-handler file (D-04): that file also registers five OTHER slice-6
  * channels and pulls in `backend/ipc` -> the real `electron` module, which

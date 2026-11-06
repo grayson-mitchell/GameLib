@@ -5,7 +5,7 @@
  * `importGame` added Phase 34.6 Plan 06, REQ-34.6-04/REQ-34.6-13, D-02).
  *
  * Registers exactly nine invoke handlers the Tauri build's install-slice
- * needs onto electronStub's `ipcMain` recorder, importing the REAL backend
+ * needs onto platformApi's `ipcMain` recorder, importing the REAL backend
  * code paths unchanged (mirrors `steamFlowRegistration.ts`'s own objective —
  * prove the real logic runs behind the new transport, not a
  * reimplementation):
@@ -109,7 +109,7 @@
  * `DownloadDialog` channel invoke still keeps rejecting non-fatally with
  * `UNPORTED_CHANNEL_MARKER` per SEAM.md Load-Bearing Invariant B.
  *
- * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
+ * Uses platformApi's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`) — no file under `src/backend/sidecar/` may import the real
  * `electron` module.
  */

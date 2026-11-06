@@ -105,7 +105,7 @@ function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
     store:
       deps?.store ??
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      (require('../electronStores') as typeof import('../electronStores'))
+      (require('../stores') as typeof import('../stores'))
         .steamEngineNoticeStore,
     bridgeInstallBottleFor:
       deps?.bridgeInstallBottleFor ??
@@ -431,8 +431,7 @@ export async function dismissSteamEngineNotice(
   const s =
     store ??
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    (require('../electronStores') as typeof import('../electronStores'))
-      .steamEngineNoticeStore
+    (require('../stores') as typeof import('../stores')).steamEngineNoticeStore
   if (typeof args !== 'object' || args === null) return { ok: false }
   const a = args as { kind?: unknown; build?: unknown }
   if (a.kind === 'no-crossover') {

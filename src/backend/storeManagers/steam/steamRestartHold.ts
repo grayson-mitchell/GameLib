@@ -33,7 +33,7 @@ function defaultStore(): SteamRestartHoldStore {
   // Lazy: keeps electron-store out of module load (nothing runs at import).
   /* eslint-disable @typescript-eslint/no-require-imports */
   const { steamRestartHoldStore } =
-    require('./electronStores') as typeof import('./electronStores')
+    require('./stores') as typeof import('./stores')
   /* eslint-enable @typescript-eslint/no-require-imports */
   return steamRestartHoldStore as unknown as SteamRestartHoldStore
 }

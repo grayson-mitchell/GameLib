@@ -25,7 +25,7 @@ export interface CachedIndex<T> {
  * `descriptor.name`, not hardcoded to one index shape).
  *
  * `invalidateCheck: () => false` mirrors the `umuStore` precedent
- * (wiki_game_info/electronStore.ts): CacheStore.get() only *deletes* an
+ * (wiki_game_info/stores.ts): CacheStore.get() only *deletes* an
  * expired entry when invalidateCheck returns true, so passing `() => false`
  * means an entry is NEVER auto-evicted on read — it is only ever REPLACED by
  * a validated newer `set()`. This is the D-09 keep-last-good mitigation

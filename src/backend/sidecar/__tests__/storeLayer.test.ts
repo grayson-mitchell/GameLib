@@ -34,7 +34,7 @@
  * `bootstrap`/etc.'s own tmp homes when tests run in parallel workers).
  *
  * `electron`/`electron-store` are pointed at the REAL sidecar shims
- * (`electronStub.ts`/`fileStore.ts`) the same way `skeletonFlows.test.ts`
+ * (`platform/index.ts`/`fileStore.ts`) the same way `skeletonFlows.test.ts`
  * does — Jest's own manual mocks for these node_modules packages
  * (`src/backend/__mocks__/electron.ts` / `.../electron-store.ts`) are
  * auto-applied to EVERY backend test before Node's `Module._load` (which
@@ -75,10 +75,7 @@ jest.mock('backend/constants/environment', () => ({
 jest.mock('../../storeManagers/steam/user')
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import {
-  getRegisteredStore,
-  TypeCheckedStoreBackend
-} from '../../electron_store'
+import { getRegisteredStore, TypeCheckedStoreBackend } from '../../typed_store'
 import { ensureStoresRegistered } from '../storeRegistration'
 import { handlerRegistry } from '../../platform'
 import CacheStore from '../../cache'
@@ -89,14 +86,14 @@ import {
 } from 'common/types/sidecarTransport'
 
 // Importing '../handlers' registers every invoke handler (including the
-// store-layer ones under test) onto electronStub's `handlerRegistry`, and
+// store-layer ones under test) onto platformApi's `handlerRegistry`, and
 // its own module-scope call to `registerSteamFlows()` /
 // `ensureStoresRegistered()` constructs every store this suite exercises —
 // the same real, unmodified code path production runs.
 import '../handlers'
 
-import { configStore as steamConfigStore } from '../../storeManagers/steam/electronStores'
-import { configStore as humbleConfigStore } from '../../humble/electronStores'
+import { configStore as steamConfigStore } from '../../storeManagers/steam/stores'
+import { configStore as humbleConfigStore } from '../../humble/stores'
 
 /**
  * Narrow escape hatch for probing an arbitrary key on a `TypeCheckedStoreBackend`
@@ -176,13 +173,13 @@ describe('round-trip', () => {
     'gogPrivateBranches',
     // 'wikigameinfo' is NOT excluded — see the cache-backed round-trip
     // block below. It IS a `ValidStoreName`, but `wiki_game_info/
-    // electronStore.ts` constructs it as a `CacheStore`, not a
+    // stores.ts` constructs it as a `CacheStore`, not a
     // `TypeCheckedStoreBackend`, so `getRegisteredStore()` can never
     // resolve it — it round-trips through the same mechanism as the D-13
     // cache stores instead, immediately below.
     //
     // uploadedLogs is NOT excluded — plan 29-02 extracted it into its own
-    // thin electronStores.ts module for exactly this reason: it must
+    // thin stores.ts module for exactly this reason: it must
     // round-trip like every other store.
     'uploadedLogs',
     'migrationsStore',
@@ -224,11 +221,11 @@ describe('round-trip', () => {
     '%s (cache-backed store) round-trips a probe value through the real backend/cache.ts CacheStore',
     (name) => {
       // Indefinite lifespan (null), matching how each store's own
-      // electronStores.ts module constructs its `libraryStore` — a fresh
+      // stores.ts module constructs its `libraryStore` — a fresh
       // `CacheStore` instance at the SAME filename resolves through
       // fileStore.ts's D-14 path-keyed cell, so this reads/writes the
       // identical underlying data as the instance storeRegistration.ts (or,
-      // for wikigameinfo, wiki_game_info/electronStore.ts) already
+      // for wikigameinfo, wiki_game_info/stores.ts) already
       // constructed.
       const cache = new CacheStore<string, '__gsdProbe'>(name, null)
 

@@ -4,7 +4,7 @@ import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 
 import { SmallInfo } from 'frontend/components/UI'
-import { timestampStore } from 'frontend/helpers/electronStores'
+import { timestampStore } from 'frontend/helpers/stores'
 
 import './index.css'
 import PopoverComponent from 'frontend/components/UI/PopoverComponent'

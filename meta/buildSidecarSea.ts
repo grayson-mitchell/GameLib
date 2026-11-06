@@ -59,7 +59,7 @@
  *    do NOT replace").
  * 2. `electron`/`electron-store` are both genuinely reachable at sidecar
  *    startup (electron-store is a real, direct dependency of
- *    `backend/electron_store.ts`/`sidecar/handlers.ts`, not merely
+ *    `backend/typed_store.ts`/`sidecar/handlers.ts`, not merely
  *    Electron-guarded) -- bundling them naively still crashes, because
  *    `electron-store`'s own top-level `require('electron')` becomes just
  *    another unresolvable SEA require. Fixed with esbuild's `--alias`,

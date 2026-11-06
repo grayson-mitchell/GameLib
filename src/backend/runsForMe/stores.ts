@@ -1,4 +1,4 @@
-import { TypeCheckedStoreBackend } from '../electron_store'
+import { TypeCheckedStoreBackend } from '../typed_store'
 import { join } from 'node:path'
 import { userDataPath } from 'backend/constants/paths'
 

@@ -5,7 +5,7 @@
  *
  * Drives the REAL sidecar RPC server in-process (`gameDetailsFlows.test.ts`'s
  * own real-shim black-box pattern — the shim under test is the actual
- * `electronStub.ts`/`loggerFlowRegistration.ts`/`backend/logger` code,
+ * `platform/index.ts`/`loggerFlowRegistration.ts`/`backend/logger` code,
  * unmocked) against injected `stream.PassThrough` pairs, and asserts a
  * POSITIVE SIDE EFFECT: a `send` frame for `logError` carrying a unique
  * marker string must actually appear inside the sidecar's real log file. "It
@@ -43,7 +43,7 @@
  *      entry is ever removed. Do NOT cite it as this suite's live mechanism.
  *   2. `jest.mock('../pathShim', ...)` — the REAL choke point:
  *      `constants/paths.ts`'s module-scope `app.getPath('appData'|'userData')`
- *      calls resolve through `electronStub.ts` -> `pathShim.getPath()`, whose
+ *      calls resolve through `platform/index.ts` -> `pathShim.getPath()`, whose
  *      real `resolveAppDataDir()` prefers `env.APPDATA` (win32) /
  *      `env.XDG_CONFIG_HOME` (default/Linux) over `homedir()` — bypassing any
  *      `homedir()` redirection on those platforms, element 1's or
@@ -74,7 +74,7 @@
  * `backend/config` (`GlobalConfig.get()`, so `init()`'s i18next-init read
  * doesn't need a real config.json), `backend/constants/environment`
  * (deterministic platform branch), and Jest's own module resolution for
- * `electron`/`electron-store` pointed at the real `electronStub.ts`/
+ * `electron`/`electron-store` pointed at the real `platform/index.ts`/
  * `fileStore.ts` shims. `backend/logger` itself is NEVER mocked — only
  * `jest.spyOn`'d in place (see the note above the import) — so the REAL
  * `LogWriter`/`logError` code runs and genuinely writes the log line this
@@ -248,7 +248,7 @@ jest.mock('../../online_monitor', () => ({
 // ── sidecarRpc — Phase 34.3 plan 04: PARTIAL mock (mirrors
 // shellFilesFlows.test.ts), real startRpcServer/pushFrontendMessage,
 // scriptable requestRustInvoke only. Needed for showLogFileInFolder's
-// showItemInFolder -> electronStub.shell.showItemInFolder ->
+// showItemInFolder -> platformApi.shell.showItemInFolder ->
 // requestRustInvoke(RUST_SHELL_SHOW_ITEM_IN_FOLDER, ...) round-trip. ───────
 jest.mock('../sidecarRpc', () => ({
   ...jest.requireActual('../sidecarRpc'),
@@ -282,7 +282,7 @@ import { getLogFilePath } from 'backend/logger/paths'
 import * as logger from '../../logger'
 import { LogPrefix } from '../../logger/constants'
 import { requestRustInvoke } from '../sidecarRpc'
-import { uploadedLogFileStore } from '../../logger/electronStores'
+import { uploadedLogFileStore } from '../../logger/stores'
 import * as uploaderModule from '../../logger/uploader'
 
 // ── Containment guard (WR-10 correction, Phase 34.2 gap cycle 4, plan

@@ -35,7 +35,7 @@ jest.mock('backend/logger', () => ({
 const mockConfigSet = jest.fn()
 const mockConfigDelete = jest.fn()
 
-jest.mock('backend/storeManagers/nile/electronStores', () => ({
+jest.mock('backend/storeManagers/nile/stores', () => ({
   configStore: {
     set: (...args: unknown[]) => mockConfigSet(...args),
     delete: (...args: unknown[]) => mockConfigDelete(...args),

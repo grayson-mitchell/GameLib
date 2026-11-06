@@ -58,7 +58,7 @@ function defaultStore(): PendingAdoptionStore {
   // Lazy: keeps electron-store out of module load (nothing runs at import).
   /* eslint-disable @typescript-eslint/no-require-imports */
   const { steamPendingAdoptionStore } =
-    require('./electronStores') as typeof import('./electronStores')
+    require('./stores') as typeof import('./stores')
   /* eslint-enable @typescript-eslint/no-require-imports */
   return steamPendingAdoptionStore as unknown as PendingAdoptionStore
 }

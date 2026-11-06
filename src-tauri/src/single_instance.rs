@@ -338,7 +338,7 @@ pub(crate) fn resolve_dev_app_root() -> String {
 /// (`Manager` is already imported at line 43, so no new import is needed). A failure there
 /// yields the empty string via `app_root_env_value`'s `Err` arm, never a panic — see
 /// `app_root_env_value`'s own doc comment for why an empty value is safe here (the JS side
-/// treats it as unset). `electronStub.app.isPackaged` stays `false` under the sidecar
+/// treats it as unset). `platformApi.app.isPackaged` stays `false` under the sidecar
 /// regardless of this value, so `publicDir` still appends `'public'`, not `'build'`, even when
 /// this resolves correctly — the packaged asset root itself is a named, deliberately unclosed
 /// residual (`R-34.5-G1-PKG`, `34.5-APP-ROOT-SWEEP.md` § 3), not something this function claims

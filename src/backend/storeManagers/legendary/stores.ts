@@ -1,5 +1,5 @@
 import CacheStore from '../../cache'
-import { TypeCheckedStoreBackend } from 'backend/electron_store'
+import { TypeCheckedStoreBackend } from 'backend/typed_store'
 import { ExtraInfo, GameInfo } from 'common/types'
 import { GameOverride, LegendaryInstallInfo } from 'common/types/legendary'
 

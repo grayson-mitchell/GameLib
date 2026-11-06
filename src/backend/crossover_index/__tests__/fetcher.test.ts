@@ -9,7 +9,7 @@ import {
   FAILURE_BACKOFF_MINUTES,
   resetIndexFailureBackoff
 } from '../fetcher'
-import { crossoverIndexStore } from '../electronStore'
+import { crossoverIndexStore } from '../stores'
 import { crossoverIndexSchema, CrossoverIndex } from '../schema'
 import { crossoverIndexHas, crossoverIndexDescriptor } from '../index'
 

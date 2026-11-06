@@ -1,7 +1,7 @@
 /**
  * Phase 34.5 Plan 16, Task 3 (G-1, REQ-34.5-12/REQ-34.5-13).
  *
- * Proves both arms of `electronStub.app.getAppPath()`'s `GAMELIB_APP_ROOT` handoff and, from
+ * Proves both arms of `platformApi.app.getAppPath()`'s `GAMELIB_APP_ROOT` handoff and, from
  * the JS side, the Rust half of that handoff (mirroring
  * `src/backend/__tests__/tauriShellSource.test.ts`'s existing approach for asserting against
  * real `main.rs` source text rather than reimplementing the Rust logic here).
@@ -68,7 +68,7 @@ function extractFnBody(
   return code.slice(start, end)
 }
 
-describe('electronStub.app.getAppPath() — GAMELIB_APP_ROOT env-set arm', () => {
+describe('platformApi.app.getAppPath() — GAMELIB_APP_ROOT env-set arm', () => {
   let saved: string | undefined
 
   beforeEach(() => {
@@ -97,7 +97,7 @@ describe('electronStub.app.getAppPath() — GAMELIB_APP_ROOT env-set arm', () =>
   })
 })
 
-describe('electronStub.app.getAppPath() — unset/empty arms fall back to process.cwd()', () => {
+describe('platformApi.app.getAppPath() — unset/empty arms fall back to process.cwd()', () => {
   let saved: string | undefined
   let cwdSpy: jest.SpyInstance<string, []>
 
@@ -173,7 +173,7 @@ describe('main.rs sets GAMELIB_APP_ROOT on BOTH sidecar spawn paths (Rust half o
 // below therefore does two things together: (1) forces `process.cwd()` to `<repo>/src-tauri`, the
 // literal sidecar condition, and (2) calls the REAL, unmocked `node:fs` `existsSync` against
 // paths resolved by the actual production code path (`backend/constants/paths.ts`, required fresh
-// with `electron` swapped for the real, non-mocked `electronStub` — never restated by hand).
+// with `electron` swapped for the real, non-mocked `platformApi` — never restated by hand).
 describe('real-filesystem sidecar-conditions: publicDir resolution under cwd=src-tauri (Phase 34.5 G-1, plan 34.5-17)', () => {
   // Derived from THIS file's own __dirname (src/backend/sidecar/__tests__), never from
   // process.cwd() -- this block mocks process.cwd() for the very things under test, so anything
@@ -202,7 +202,7 @@ describe('real-filesystem sidecar-conditions: publicDir resolution under cwd=src
   /**
    * Requires `backend/constants/paths` fresh inside a `jest.isolateModules` sandbox. This suite
    * declares no `jest.mock('backend/platform', ...)`, so `paths.ts` resolves against the REAL,
-   * unmocked `electronStub` module both here and at this file's own top-level imports -- the
+   * unmocked `platformApi` module both here and at this file's own top-level imports -- the
    * isolation exists purely to get a FRESH module instance per arm, so `publicDir` (a
    * module-scope constant computed once at import time) is recomputed by `paths.ts:73` itself,
    * against this test's mocked `process.cwd()` and whatever `GAMELIB_APP_ROOT` the calling test

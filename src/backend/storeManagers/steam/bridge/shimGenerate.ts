@@ -88,7 +88,7 @@ import {
   builtBridgeShim64Path,
   builtBridgeShimPath
 } from 'backend/constants/paths'
-import type { SteamBridgeScanVerdict } from '../electronStores'
+import type { SteamBridgeScanVerdict } from '../stores'
 import {
   getBottleDir,
   resolveBridgeBottleName,

@@ -67,7 +67,7 @@ export function isSafeKeyPath(key: string): boolean {
 /**
  * Per-store allow-list of TOP-LEVEL field names the renderer may read via the Tauri
  * store snapshot/fetch/set paths. Every one of `StoreStructure`'s 22 keys
- * (src/common/types/electron_store.ts) has an entry here.
+ * (src/common/types/typed_store.ts) has an entry here.
  *
  * A value of `'*'` means the store's `StoreStructure` type is an open index signature
  * (e.g. `timestampStore: { [K: string]: ... }`) — there is no closed field list to
@@ -157,7 +157,7 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
 }
 
 /**
- * `CacheStore`s (src/backend/cache.ts, src/frontend/helpers/electronStores.ts) are NOT
+ * `CacheStore`s (src/backend/cache.ts, src/frontend/helpers/stores.ts) are NOT
  * `ValidStoreName`s — they are constructed with an arbitrary filename string through
  * `window.api.storeNew` (`{ cwd: 'store_cache', name: <filename>, clearInvalidConfig: true }`)
  * and carry dynamic, non-`StoreStructure` keys. A RECOGNIZED cache store is `'*'`
@@ -418,9 +418,9 @@ export const STORE_UNIVERSE: readonly string[] = [
  * also carries the four non-`ValidStoreName` cache-store names (D-13).
  *
  * The `export type { ValidStoreName }` re-export that used to sit here was dropped
- * (260922-vzw): every current consumer (`src/backend/electron_store.ts`,
- * `src/frontend/helpers/electronStores.ts`) imports `ValidStoreName` directly from
- * `common/types/electron_store` (the original declaration), never from this
+ * (260922-vzw): every current consumer (`src/backend/typed_store.ts`,
+ * `src/frontend/helpers/stores.ts`) imports `ValidStoreName` directly from
+ * `common/types/typed_store` (the original declaration), never from this
  * re-export, and this module's own comment-only mentions above never needed the
  * type import at runtime either.
  */

@@ -72,7 +72,7 @@ import {
   steamMetadataStore,
   steamSyncStore,
   steamRestartHoldStore
-} from '../electronStores'
+} from '../stores'
 import {
   getBottleSteamappsDir,
   getSteamBottleSettings,
@@ -207,8 +207,8 @@ jest.mock('backend/constants/environment', () => ({
   isLinux: true
 }))
 
-// ── electronStores mock — steamLibraryStore, steamMetadataStore, etc. ────────
-jest.mock('../electronStores', () => ({
+// ── stores mock — steamLibraryStore, steamMetadataStore, etc. ────────
+jest.mock('../stores', () => ({
   configStore: {
     get: jest.fn(),
     get_nodefault: jest.fn(),
@@ -760,7 +760,7 @@ describe('SteamLibraryManager', () => {
   // Windows install un-offerable. Pinning the literal `false` additionally
   // asserted that a never-captured entry is INDISTINGUISHABLE from a
   // confirmed-no-Windows-depot one, which contradicts the three-valued
-  // contract both `common/types.ts` and `electronStores.ts` document. The
+  // contract both `common/types.ts` and `stores.ts` document. The
   // assertions below pin the safety property AND the preserved
   // distinction.
   it('D-17 false-safe: synced GameInfo never carries is_windows_native:true when cachedMeta is absent, and preserves undefined ("never captured")', async () => {

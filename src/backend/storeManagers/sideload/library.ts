@@ -1,7 +1,7 @@
 import { ExecResult, GameInfo } from 'common/types'
 import { readdirSync } from 'graceful-fs'
 import { dirname, join } from 'path'
-import { libraryStore } from './electronStores'
+import { libraryStore } from './stores'
 import { logWarning } from 'backend/logger'
 import { addShortcuts } from 'backend/shortcuts/shortcuts/shortcuts'
 import { sendFrontendMessage } from 'backend/ipc'

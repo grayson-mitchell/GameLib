@@ -19,7 +19,7 @@ import {
   filterStoreSnapshot
 } from '../storePolicy'
 
-// Hardcoded reference of all 18 StoreStructure keys (src/common/types/electron_store.ts).
+// Hardcoded reference of all 18 StoreStructure keys (src/common/types/typed_store.ts).
 // This list must NOT be derived from storePolicy.ts's own exports — the whole point is
 // that a StoreStructure addition without a matching storePolicy.ts entry FAILS this test.
 const ALL_VALID_STORE_NAMES = [

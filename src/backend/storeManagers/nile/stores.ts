@@ -1,5 +1,5 @@
 import CacheStore from 'backend/cache'
-import { TypeCheckedStoreBackend } from 'backend/electron_store'
+import { TypeCheckedStoreBackend } from 'backend/typed_store'
 import { GameInfo } from 'common/types'
 import { NileInstallInfo } from 'common/types/nile'
 

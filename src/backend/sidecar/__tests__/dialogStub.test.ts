@@ -12,11 +12,11 @@
  * convention, so each test can script a resolve/reject outcome and assert on exactly what was
  * called and returned.
  *
- * `jest.mock('electron', ...)` routes Jest's own module resolution at the REAL `electronStub.ts`
+ * `jest.mock('electron', ...)` routes Jest's own module resolution at the REAL `platform/index.ts`
  * (mirrors `skeletonFlows.test.ts`/`electronUntouched.test.ts`'s three-way mock preamble) so
  * the dialog members' actual forwarding logic runs, not the generic backend-wide
  * `src/backend/__mocks__/electron.ts` manual mock. `jest.mock('os', ...)` keeps any import-time
- * path resolution inside electronStub.ts's module graph away from the developer's real config
+ * path resolution inside platform/index.ts's module graph away from the developer's real config
  * directory (same gotcha `electronUntouched.test.ts`'s header documents).
  *
  * `shell.showItemInFolder` graduated from a D-04 logged no-op to real forwarding in Phase 33
@@ -51,9 +51,9 @@ jest.mock('../sidecarRpc', () => ({
   requestRustInvoke: jest.fn()
 }))
 
-// NOTE: electronStub.ts deliberately does NOT import 'backend/logger' (it would reintroduce
+// NOTE: platform/index.ts deliberately does NOT import 'backend/logger' (it would reintroduce
 // the app.getPath() import-time wall bootstrap.ts's docstring warns about -- see the note above
-// electronStub.ts's imports) -- its error paths use `console.warn` directly, spied on below.
+// platform/index.ts's imports) -- its error paths use `console.warn` directly, spied on below.
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { clipboard, dialog } from '../../platform'
@@ -75,7 +75,7 @@ let program: ProgrammedOutcome | null = null
 let callLog: Array<{ channel: string; args: unknown[] }> = []
 let warnSpy: jest.SpyInstance
 
-describe('electronStub dialog.showOpenDialog (Phase 30 Plan 03)', () => {
+describe('platformApi dialog.showOpenDialog (Phase 30 Plan 03)', () => {
   beforeEach(() => {
     program = null
     callLog = []
@@ -147,7 +147,7 @@ describe('electronStub dialog.showOpenDialog (Phase 30 Plan 03)', () => {
   })
 })
 
-describe('electronStub dialog.showMessageBox (Phase 33 Plan 03, D-06/D-07 real multi-button)', () => {
+describe('platformApi dialog.showMessageBox (Phase 33 Plan 03, D-06/D-07 real multi-button)', () => {
   beforeEach(() => {
     program = null
     callLog = []
@@ -323,7 +323,7 @@ function i18nLike(key: string): string {
   return key
 }
 
-describe('electronStub dialog.showErrorBox (Phase 31 Plan 02, D-03/REQ-31-03)', () => {
+describe('platformApi dialog.showErrorBox (Phase 31 Plan 02, D-03/REQ-31-03)', () => {
   beforeEach(() => {
     program = null
     callLog = []
@@ -376,7 +376,7 @@ describe('electronStub dialog.showErrorBox (Phase 31 Plan 02, D-03/REQ-31-03)', 
   })
 })
 
-describe('electronStub dialog.showSaveDialog (Phase 31 Plan 02, D-03/REQ-31-03)', () => {
+describe('platformApi dialog.showSaveDialog (Phase 31 Plan 02, D-03/REQ-31-03)', () => {
   beforeEach(() => {
     program = null
     callLog = []
@@ -443,7 +443,7 @@ describe('electronStub dialog.showSaveDialog (Phase 31 Plan 02, D-03/REQ-31-03)'
   })
 })
 
-describe('electronStub dialog Sync members stay logged no-ops (D-03)', () => {
+describe('platformApi dialog Sync members stay logged no-ops (D-03)', () => {
   beforeEach(() => {
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
   })
@@ -466,10 +466,10 @@ describe('electronStub dialog Sync members stay logged no-ops (D-03)', () => {
 // `shell.showItemInFolder`'s D-04 coverage was here until Phase 33 Plan 04 graduated it to real
 // forwarding (D-05) -- see `lifecycleStub.test.ts` for its current coverage. `clipboard.writeText`
 // followed the same path in Phase 34.3 Plan 05 (D-01/D-03) -- see `lifecycleStub.test.ts`'s
-// `electronStub clipboard.writeText real forwarding` describe block for its current coverage.
+// `platformApi clipboard.writeText real forwarding` describe block for its current coverage.
 // `clipboard.readText` did NOT graduate (D-04): it stays a documented, deliberately-dead
 // synchronous no-op, so its assertion remains here rather than being deleted.
-describe('electronStub clipboard — D-04 no-op GRADUATED to real forwarding (Phase 34.3 Plan 05, REQ-34.3-03/04)', () => {
+describe('platformApi clipboard — D-04 no-op GRADUATED to real forwarding (Phase 34.3 Plan 05, REQ-34.3-03/04)', () => {
   it("clipboard.readText() still returns '' synchronously and is documented-dead (REQ-34.3-04)", () => {
     expect(clipboard.readText()).toBe('')
   })

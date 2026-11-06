@@ -3,11 +3,11 @@
  *
  * Reads newline-delimited `SidecarRpcRequest` frames from an input stream
  * (`process.stdin` in production), dispatches `invoke` requests to the
- * matching handler in electronStub's `handlerRegistry` and writes a
+ * matching handler in platformApi's `handlerRegistry` and writes a
  * `SidecarRpcResponse` (correlated by id) to an output stream
  * (`process.stdout` in production); dispatches `send` requests to
  * `listenerRegistry` fire-and-forget. Also exposes `pushFrontendMessage`
- * (backend->frontend push, wired onto electronStub's fake
+ * (backend->frontend push, wired onto platformApi's fake
  * `BrowserWindow.webContents.send` by bootstrap.ts) and
  * `requestOpenExternal` (the `shell.openExternal` parity path — the sidecar
  * has no direct Tauri-command access, so it emits a well-formed
@@ -65,7 +65,7 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  *
  * `dialog_open` blocks on a native modal the user has to interact with. Sixty seconds is well
  * inside normal file-browsing time, and the failure was silent AND wrong: the rejection was
- * swallowed by `electronStub.showOpenDialog`'s catch, which reports `{canceled: true}` — i.e.
+ * swallowed by `platformApi.showOpenDialog`'s catch, which reports `{canceled: true}` — i.e.
  * the sidecar claimed "the user cancelled" while the picker was still on screen. The user's
  * later selection then arrived for an id already removed from `rustPending` and was dropped,
  * so picking a folder simply did nothing, with no error surfaced anywhere in the UI.
@@ -360,7 +360,7 @@ export function startRpcServer(
 }
 
 /**
- * Backend->frontend push path. Wired onto electronStub's fake
+ * Backend->frontend push path. Wired onto platformApi's fake
  * `BrowserWindow.webContents.send` (via `bindTransport`) so the existing,
  * unmodified `backend/ipc.ts`'s `sendFrontendMessage` -> `getMainWindow()`
  * chain produces a well-formed `SidecarNotification` frame headlessly.
@@ -375,7 +375,7 @@ export function pushFrontendMessage(channel: string, ...args: unknown[]): void {
 }
 
 /**
- * `shell.openExternal` parity path. Wired onto electronStub's `shell.openExternal`
+ * `shell.openExternal` parity path. Wired onto platformApi's `shell.openExternal`
  * (via `bindTransport`).
  */
 export function requestOpenExternal(url: string): void {

@@ -41,9 +41,9 @@ import {
   LOW_SPACE_FLOOR_BYTES
 } from '../InstallGameModal'
 import type { SteamInstallLibraryTarget } from '../InstallGameModal'
-import { steamConfigStore } from 'frontend/helpers/electronStores'
+import { steamConfigStore } from 'frontend/helpers/stores'
 
-jest.mock('frontend/helpers/electronStores', () => ({
+jest.mock('frontend/helpers/stores', () => ({
   legendaryConfigStore: { get_nodefault: jest.fn() },
   gogConfigStore: { get_nodefault: jest.fn() },
   nileConfigStore: { get_nodefault: jest.fn() },

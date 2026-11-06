@@ -106,7 +106,7 @@ function logSendFailure(channel: string, error: unknown): void {
  *
  * Idempotence guard (Rule 1 fix, discovered by `__tests__/runnerSliceRegistration.test.ts`'s own
  * pre-existing "calling registerXFlows() twice does not throw or stack duplicate listeners"
- * case): `ipcMain.on` (`electronStub.ts`) appends to an array on every call, so a second
+ * case): `ipcMain.on` (`platform/index.ts`) appends to an array on every call, so a second
  * unguarded call to this function would double-register `logoutGOG`'s listener — unlike the 6
  * `ipcMain.handle` calls above/below, which are naturally idempotent (`Map.set` replaces the
  * existing entry). Mirrors `storeRegistration.ts`'s own `let registered = false` guard.
@@ -173,7 +173,7 @@ export function registerRunnerAuthFlows(): void {
 
   // Source: main.ts:882 -> `NileUser.getLoginData()`. D-12, corrected: the nile CLI's own
   // credential directory is `nile_config` (`nile/constants.ts:4`, wired via `NILE_CONFIG_PATH` at
-  // `nile/library.ts:486`) — not `nile_store` (`nile/electronStores.ts:13`), which is the
+  // `nile/library.ts:486`) — not `nile_store` (`nile/stores.ts:13`), which is the
   // separate PROFILE `configStore` cwd this handler's sibling `getAmazonUserInfo` reads/writes
   // through. Both derive from `appFolder` and resolve through `pathShim`'s already-implemented
   // `userData`, so this delegation needs no new path work.

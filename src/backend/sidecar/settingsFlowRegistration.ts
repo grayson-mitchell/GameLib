@@ -53,7 +53,7 @@
  * `GOGGame.getBranchPassword()`/`setBranchPassword()`
  * (`storeManagers/gog/games.ts:1398,1402`), the SAME GOG branch-password key
  * store `main.ts` reads/writes through — this module never addresses that
- * store directly (see `storeManagers/gog/electronStores.ts`).
+ * store directly (see `storeManagers/gog/stores.ts`).
  */
 
 import { existsSync, readFileSync } from 'graceful-fs'

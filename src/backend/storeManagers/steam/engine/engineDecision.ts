@@ -161,7 +161,7 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
     wineManagerReleases() {
       const { wineDownloaderInfoStore } =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('backend/wine/manager/electronStores') as typeof import('backend/wine/manager/electronStores')
+        require('backend/wine/manager/stores') as typeof import('backend/wine/manager/stores')
       return wineDownloaderInfoStore.get(
         'wine-releases',
         []

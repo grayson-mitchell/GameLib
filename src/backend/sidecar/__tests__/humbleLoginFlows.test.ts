@@ -72,7 +72,7 @@ jest.mock('../../humble/user')
 jest.mock('../../humble/library')
 
 // ── standardBrowserUserAgent — factory-mocked to a fixed, assertable string. The real
-// implementation reads `app.userAgentFallback`, which electronStub does not populate. ──────────
+// implementation reads `app.userAgentFallback`, which platformApi does not populate. ──────────
 const FAKE_USER_AGENT =
   'Mozilla/5.0 (Test) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/999.0.0.0 Safari/537.36'
 jest.mock('../../humble/userAgent', () => ({

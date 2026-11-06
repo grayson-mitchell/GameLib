@@ -4,7 +4,7 @@
 // MigrationSystem or its import-time side effects (spike 009's import-time
 // wall). Constructed at module scope (not lazily) so registration is
 // guaranteed by import time.
-import { TypeCheckedStoreBackend } from '../electron_store'
+import { TypeCheckedStoreBackend } from '../typed_store'
 
 export const migrationsStore = new TypeCheckedStoreBackend('migrationsStore', {
   cwd: 'store',

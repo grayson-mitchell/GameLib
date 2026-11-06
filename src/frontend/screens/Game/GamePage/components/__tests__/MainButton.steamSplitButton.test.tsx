@@ -68,10 +68,10 @@ let mockGameContext: GameContextType = {
   wikiInfo: null
 }
 
-// Quick 261029-s5l: InstallGameModal now imports the electronStores helper,
+// Quick 261029-s5l: InstallGameModal now imports the stores helper,
 // which opens a Tauri-backed store at import. Mocked here as in
 // signInInputs.test.ts.
-jest.mock('frontend/helpers/electronStores', () => ({
+jest.mock('frontend/helpers/stores', () => ({
   legendaryConfigStore: { get_nodefault: jest.fn() },
   gogConfigStore: { get_nodefault: jest.fn() },
   nileConfigStore: { get_nodefault: jest.fn() },

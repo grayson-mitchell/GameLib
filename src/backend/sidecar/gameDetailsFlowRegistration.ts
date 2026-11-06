@@ -5,7 +5,7 @@
  *
  * Registers the 19 game-details/settings/override channels (16 invoke + 3
  * send) the game-details page and its settings/override affordances depend
- * on, onto electronStub's `ipcMain` recorder, importing the REAL
+ * on, onto platformApi's `ipcMain` recorder, importing the REAL
  * `backend/gamedetails/dispatch.ts`/`backend/gamedetails/overrides.ts`
  * bodies plans 34.2-02/34.2-05 extracted unchanged (mirrors
  * `appShellFlowRegistration.ts`'s / `downloadQueueFlowRegistration.ts`'s own
@@ -90,7 +90,7 @@
  *     Electron's own design; deduping them is a recorded Phase 35 cutover
  *     cleanup, not this slice's work.
  *
- * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
+ * Uses platformApi's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`/`addListener`) — `backend/ipc.ts` itself imports the real
  * `electron` module, and no file under `src/backend/sidecar/` may import it
  * either directly or transitively.

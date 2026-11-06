@@ -77,7 +77,7 @@ jest.mock('graceful-fs', () => ({
   rmSync: jest.fn()
 }))
 
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   achievementStore: { get: jest.fn(), set: jest.fn() },
   configStore: { get: jest.fn(), get_nodefault: jest.fn(), set: jest.fn() },
   installedGamesStore: { get: jest.fn(() => []), set: jest.fn() },

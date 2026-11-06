@@ -145,7 +145,7 @@ describe('notification failure logging', () => {
     n.show()
     await flush()
     expect(console.warn).toHaveBeenCalledWith(
-      "[electronStub] Notification 'show' listener threw:",
+      "[platformApi] Notification 'show' listener threw:",
       'boom'
     )
     expect(failed).not.toHaveBeenCalled()

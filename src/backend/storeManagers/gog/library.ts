@@ -47,7 +47,7 @@ import {
   privateBranchesStore,
   configStore,
   playtimeSyncQueue
-} from './electronStores'
+} from './stores'
 import { callRunner } from '../../launcher'
 import { isOnline, runOnceWhenOnline } from '../../online_monitor'
 import i18next from 'i18next'
@@ -208,7 +208,7 @@ export default class GOGLibraryManager implements LibraryManager {
 
   async syncQueuedPlaytime() {
     // finding A1 (quick-260907-odi): `playtimeSyncQueue` is a file-backed `CacheStore`
-    // (`gog/electronStores.ts:42`) that survives process restarts. `CacheStore` evaluates its
+    // (`gog/stores.ts:42`) that survives process restarts. `CacheStore` evaluates its
     // lifespan/expiry only inside `get()` (`cache.ts:64-88`, which deletes the stale key and
     // returns the fallback) -- the guard below uses `has()` (`cache.ts:142`), a raw
     // `current_store.has(key)` passthrough with NO expiry check at all. Nothing ever calls

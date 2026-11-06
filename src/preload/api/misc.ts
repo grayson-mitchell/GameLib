@@ -120,7 +120,7 @@ export const processShortcut = makeListenerCaller('processShortcut')
 export const handleGoToScreen = frontendListenerSlot('openScreen')
 export const handleShowDialog = frontendListenerSlot('showDialog')
 
-import type { StoreOptions } from 'common/types/electron_store'
+import type { StoreOptions } from 'common/types/typed_store'
 import { isAllowedStoreField } from 'common/types/storePolicy'
 import {
   ensureStoreHydrated,

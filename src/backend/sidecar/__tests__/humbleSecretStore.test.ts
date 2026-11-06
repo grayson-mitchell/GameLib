@@ -8,7 +8,7 @@
  * is NOT mocked — the real registry (`setHumbleSecretStore`/`getHumbleSecretStore`) is exercised
  * so the install() test proves an actual registry swap, not a mocked one.
  *
- * Task 2 adds the one-time plaintext-migration tests below. `../../humble/electronStores` IS
+ * Task 2 adds the one-time plaintext-migration tests below. `../../humble/stores` IS
  * mocked with an in-memory backing object (never `requireActual` — `tests-clobbering-real-steam-store`
  * documents that an unmocked electron-store reaches the REAL app-support dir and `afterAll` is
  * not a safety net).
@@ -53,7 +53,7 @@ jest.mock('../../logger', () => ({
   }
 }))
 
-// ── electronStores mock — in-memory map standing in for configStore (Task 2 migration) ─────────
+// ── stores mock — in-memory map standing in for configStore (Task 2 migration) ─────────
 let backingStore: Record<string, unknown> = {}
 const mockConfigStore = {
   get_nodefault: jest.fn((key: string) => backingStore[key]),
@@ -64,7 +64,7 @@ const mockConfigStore = {
     delete backingStore[key]
   })
 }
-jest.mock('../../humble/electronStores', () => ({
+jest.mock('../../humble/stores', () => ({
   configStore: mockConfigStore
 }))
 
@@ -653,7 +653,7 @@ describe('SidecarHumbleSecretStore', () => {
   })
 
   // Structural proof: no reference to the Steam slot's literal string, outside comments -- the
-  // exact clobber D-GAP-01 exists to prevent. (Task 1's sibling "no configStore/electronStores
+  // exact clobber D-GAP-01 exists to prevent. (Task 1's sibling "no configStore/stores
   // reference" structural check was valid only before Task 2's migration logic legitimately
   // added a read/delete of configStore for the one-time plaintext migration below -- superseded
   // by the migration-specific structural/behavioral tests in this file's own describe block.)

@@ -95,7 +95,7 @@ function classifyKeyringFailure(error: unknown): TokenUnreadableReason {
  * This module implements D-06 (honest-unavailable → clean signed-out) and D-04 (it
  * structurally cannot corrupt Electron's session): it MUST NOT import the shared Electron
  * config store or the Steam token's storage-key/prefix constants (see
- * `backend/storeManagers/steam/tokenStore.ts` and `./electronStores`) under any circumstance.
+ * `backend/storeManagers/steam/tokenStore.ts` and `./stores`) under any circumstance.
  * That absence is REQ-28-02's by-construction enforcement, grep-gated at the phase level by
  * plan 28-05 and asserted structurally by this module's own test file
  * (`keyringTokenStore.test.ts`).

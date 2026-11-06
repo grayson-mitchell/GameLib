@@ -398,7 +398,7 @@ describe('idempotence — calling registerXFlows() twice does not throw or stack
       // at all, then compared against the count after TWO calls. That comparison can only ever
       // hold if the module registers zero send-kind listeners — true for every module while all
       // four were declared-but-empty (34.5-04), but mathematically incompatible with a real
-      // `ipcMain.on` registration (`electronStub.ts`'s listener array is appended to, so ANY
+      // `ipcMain.on` registration (`platform/index.ts`'s listener array is appended to, so ANY
       // genuine first registration makes the post-call count > 0, permanently unequal to a
       // pre-any-call baseline of 0). This is exactly the case `registerRunnerAuthFlows` now
       // triggers once it registers `logoutGOG` for real (34.5-06 Task 2). The fix: call
@@ -533,7 +533,7 @@ describe("containment pin — each module registers only its own declared channe
 
   afterAll(() => {
     // Leave the shared registries in a known state for any test file that runs after this one in
-    // the same worker (electronStub's maps are module-scope singletons within a worker's module
+    // the same worker (platformApi's maps are module-scope singletons within a worker's module
     // registry), and for Describes 6/7 below in THIS file. Rule 1 fix: re-invoking the four
     // `registerXFlows()` functions here is NOT safe for `registerRunnerAuthFlows`/
     // `registerShortcutsFlows` — their permanent idempotence guards make it a no-op after the

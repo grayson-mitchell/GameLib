@@ -6,7 +6,7 @@ import { getLogFilePath, logError, logInfo, LogPrefix } from '../logger'
 import { sendFrontendMessage } from '../ipc'
 
 import type { UploadedLogData } from 'common/types'
-import { uploadedLogFileStore } from './electronStores'
+import { uploadedLogFileStore } from './stores'
 
 async function sendRequestToApi(
   formData: FormData | string,

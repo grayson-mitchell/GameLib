@@ -5,7 +5,7 @@
  * **Why this exists.** `package.json`'s `build:sidecar` script marks `electron` `--external`
  * for esbuild, so a STATIC `import { app } from 'electron'`
  * compiles to a plain CJS `require('electron')` — which the sidecar's `Module._load` hook
- * (`installElectronHook.ts`) intercepts and rewrites to `electronStub.ts` before any backend
+ * (`installElectronHook.ts`) intercepts and rewrites to `platform/index.ts` before any backend
  * module is imported. A DYNAMIC `import('electron')`, by contrast, esbuild leaves untouched as
  * a native ESM dynamic import in the CJS bundle (because the target is external) — Node's
  * native ESM loader resolves it, and that loader never consults `Module._load`. The real

@@ -52,7 +52,7 @@ import React, {
 } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { AvailablePlatforms } from '../index'
-import { configStore } from 'frontend/helpers/electronStores'
+import { configStore } from 'frontend/helpers/stores'
 import DLCDownloadListing from './DLCDownloadListing'
 import BuildSelector from './BuildSelector'
 import GameLanguageSelector from './GameLanguageSelector'

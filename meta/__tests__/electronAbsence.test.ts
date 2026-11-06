@@ -25,19 +25,19 @@
  *
  * FOUR REFERENCE FORMS, NEVER THE BARE SUBSTRING:
  * A naive `grep -rc "electron" src` gate would false-fire on every file whose own FILENAME
- * contains the substring -- `src/backend/logger/electronStores.ts`,
- * `src/backend/electron_store.ts`, `src/frontend/helpers/electronStores.ts`, and a dozen more
- * same-named siblings across the store-manager tree, plus `src/common/types/electron_store.ts`.
+ * contains the substring -- `src/backend/logger/stores.ts`,
+ * `src/backend/typed_store.ts`, `src/frontend/helpers/stores.ts`, and a dozen more
+ * same-named siblings across the store-manager tree, plus `src/common/types/typed_store.ts`.
  * None of these are references to the npm package: they
  * are first-party module names that happen to share a substring with it, and renaming them was
  * out of scope for this plan. A bare-substring gate would also false-fire on any local import
- * like `import { x } from './electronStores'` or `from '../logger/electronStores'`, which
+ * like `import { x } from './stores'` or `from '../logger/stores'`, which
  * contain the substring `electron` but are NOT `electron`-package references. This is exactly
  * the failure class that hit this repo's plan-phase UI gate once already (18 false hits on `ui`
  * inside `build`) -- so every regex below requires the matched token to be the WHOLE quoted
  * specifier or the WHOLE namespace identifier, not a substring of something longer:
  *   - `from 'electron'` / `from "electron"` requires the quoted string between the quote marks
- *     to be exactly `electron` -- `'./electronStores'` has more characters between its quotes
+ *     to be exactly `electron` -- `'./stores'` has more characters between its quotes
  *     and does not match.
  *   - `require('electron')` / `require("electron")` is the same exact-specifier requirement
  *     inside the call parens.
@@ -234,7 +234,7 @@ describe('D-03: electron package absence -- mechanized, mutation-proven gate', (
     // inside it. This is a plain, case-insensitive, whole-file substring scan (not a
     // reference-form regex like the src/ checks above): package.json is a single small JSON
     // manifest with no comments and no legitimate same-named-file substring collisions the
-    // way `src/` has `electronStores.ts`, so a bare substring match is the correct instrument
+    // way `src/` has `stores.ts`, so a bare substring match is the correct instrument
     // here, not an under-approximation of one.
     const raw = readFileSync(PACKAGE_JSON_PATH, 'utf8')
     const idx = raw.toLowerCase().indexOf('electron')

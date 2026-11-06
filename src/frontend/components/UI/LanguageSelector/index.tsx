@@ -1,6 +1,6 @@
 import { useContext, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { configStore } from 'frontend/helpers/electronStores'
+import { configStore } from 'frontend/helpers/stores'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { SelectField } from '..'
 import { MenuItem } from '@mui/material'

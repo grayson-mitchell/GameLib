@@ -2,7 +2,7 @@ use super::*;
 
 // ---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----
 //
-// Replaces `electronStub.ts`'s `powerSaveBlocker` logged no-op, which returned `-1` and held
+// Replaces `platform/index.ts`'s `powerSaveBlocker` logged no-op, which returned `-1` and held
 // nothing. Its real cost, now paid off: the machine idle-slept mid depot download, and
 // `launcher.ts`'s `prevent-display-sleep` let the screen blank while a game was running.
 //

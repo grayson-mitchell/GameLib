@@ -97,7 +97,7 @@ jest.mock('frontend/helpers', () => ({
     )
 }))
 // useNonSteamLastPlayed (source of the retry-delay constant) imports this.
-jest.mock('frontend/helpers/electronStores', () => ({ timestampStore: {} }))
+jest.mock('frontend/helpers/stores', () => ({ timestampStore: {} }))
 
 const mockApi = {
   storeEnsureHydrated: jest.fn<Promise<boolean>, [string]>(),

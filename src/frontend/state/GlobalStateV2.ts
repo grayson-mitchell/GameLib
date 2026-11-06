@@ -6,7 +6,7 @@ import type { GameInfo } from 'common/types'
 import type { RunsForMeState } from 'common/runsForMe'
 import type { GameSettingsModalType } from '../screens/Settings/components/SettingsModal'
 import { notify } from 'frontend/helpers'
-import { gameOverridesStore } from 'frontend/helpers/electronStores'
+import { gameOverridesStore } from 'frontend/helpers/stores'
 import { t } from 'i18next'
 
 type GameOverride = NonNullable<GameInfo['overrides']>

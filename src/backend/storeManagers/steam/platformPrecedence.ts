@@ -50,7 +50,7 @@ export interface PlatformWriteResolution {
 /**
  * Structural view of the fields this function reads off an existing cache
  * entry. Deliberately a LOCAL structural twin of the relevant slice of
- * `SteamMetadataCacheEntry` — importing that type would pull `./electronStores`
+ * `SteamMetadataCacheEntry` — importing that type would pull `./stores`
  * (and therefore `electron-store`) in, breaking the dependency-free contract
  * documented above. Also deliberately NOT importing `platformCapture.ts`'s
  * `CapturedPlatforms` for the same reason `platformCapture.ts` doesn't import

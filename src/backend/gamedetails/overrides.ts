@@ -25,7 +25,7 @@
  * notifier at import time, producing the byte-identical
  * `sendFrontendMessage('metadataChanged', getAllGameOverrides())` call it
  * replaces. The sidecar's registration module (plan 34.2-04) installs one
- * backed by `electronStub`'s own relay, riding the EXISTING generic
+ * backed by `platformApi`'s own relay, riding the EXISTING generic
  * `frontend_message` relay -- zero new Rust arms expected (the Phase 29
  * `storeChanged` precedent); if new Rust work seems necessary, stop and ask
  * why.
@@ -35,7 +35,7 @@
  */
 
 import { getAllGameOverrides, setGameOverrides } from '../game_overrides'
-import type { GameMetadataOverride } from '../game_overrides/electronStores'
+import type { GameMetadataOverride } from '../game_overrides/stores'
 import { logWarning, LogPrefix } from '../logger'
 
 type MetadataChangedNotifier = (
@@ -60,7 +60,7 @@ let metadataChangedNotifier: MetadataChangedNotifier = () => {
  * Installs the function that pushes `metadataChanged` to the frontend.
  * `main.ts` installs a `sendFrontendMessage`-backed notifier at module
  * scope; the sidecar registration module installs one backed by
- * `electronStub`'s own relay.
+ * `platformApi`'s own relay.
  */
 export function setMetadataChangedNotifier(fn: MetadataChangedNotifier): void {
   metadataChangedNotifier = fn

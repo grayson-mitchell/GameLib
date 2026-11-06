@@ -2,7 +2,7 @@
  * Sidecar boot-time stranded playtime-lock clear (finding A1 LEG 2, quick-260907-odi).
  *
  * `syncQueuedPlaytime()`'s `lock` sentinel (`gog/library.ts:169`) is stored in
- * `playtimeSyncQueue`, a file-backed `CacheStore` (`gog/electronStores.ts:42`) that survives
+ * `playtimeSyncQueue`, a file-backed `CacheStore` (`gog/stores.ts:42`) that survives
  * process restarts. `CacheStore` evaluates its lifespan/expiry only inside `get()`
  * (`cache.ts:64-88`); the guard at `library.ts:170` uses `has()` (`cache.ts:142`), a raw
  * passthrough with NO expiry check, and nothing ever calls `get('lock')` for that key -- so a
@@ -52,7 +52,7 @@ jest.mock('axios', () => ({
 import { PassThrough } from 'node:stream'
 import { init, clearStrandedPlaytimeSyncLock } from '../bootstrap'
 import * as loggerModule from '../../logger'
-import { playtimeSyncQueue } from '../../storeManagers/gog/electronStores'
+import { playtimeSyncQueue } from '../../storeManagers/gog/stores'
 
 const EXPECTED_LOG_MESSAGE =
   '[bootstrap] Cleared a stranded GOG playtime sync lock left by an interrupted sync'

@@ -19,7 +19,7 @@ import { tmpdir } from 'os'
 import { dirname, sep } from 'path'
 import { GlobalConfig } from 'backend/config'
 import { configPath } from 'backend/constants/paths'
-import { configStore as gogConfigStore } from 'backend/storeManagers/gog/electronStores'
+import { configStore as gogConfigStore } from 'backend/storeManagers/gog/stores'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
 import { __resetSignInEpochsForTests } from '../sessionEpoch'
@@ -38,27 +38,27 @@ jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn(),
   addHandler: jest.fn()
 }))
-jest.mock('backend/storeManagers/legendary/electronStores', () => ({
+jest.mock('backend/storeManagers/legendary/stores', () => ({
   legendaryConfigStore: jest
     .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
     .makeFakeFlagStore()
 }))
-jest.mock('backend/storeManagers/gog/electronStores', () => ({
+jest.mock('backend/storeManagers/gog/stores', () => ({
   configStore: jest
     .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
     .makeFakeFlagStore()
 }))
-jest.mock('backend/storeManagers/nile/electronStores', () => ({
+jest.mock('backend/storeManagers/nile/stores', () => ({
   configStore: jest
     .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
     .makeFakeFlagStore()
 }))
-jest.mock('backend/storeManagers/steam/electronStores', () => ({
+jest.mock('backend/storeManagers/steam/stores', () => ({
   configStore: jest
     .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
     .makeFakeFlagStore()
 }))
-jest.mock('backend/humble/electronStores', () => ({
+jest.mock('backend/humble/stores', () => ({
   configStore: jest
     .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
     .makeFakeFlagStore()

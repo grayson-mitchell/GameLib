@@ -4,7 +4,7 @@
  *
  * Drives the REAL sidecar RPC server in-process (bootstrap.test.ts's
  * real-shim black-box pattern — the shims under test are the actual
- * electronStub.ts/fileStore.ts modules, unmocked) against injected
+ * platform/index.ts/fileStore.ts modules, unmocked) against injected
  * `stream.PassThrough` pairs, mirroring `skeletonFlows.test.ts`'s own shape.
  *
  * **GAP FIX precedent (2026-07-22, see skeletonFlows.test.ts's own header):**
@@ -14,12 +14,12 @@
  * that doing so against a developer's REAL
  * `~/Library/Application Support/GameLib/` is an active data-loss hazard. The
  * `jest.mock('os', ...)` below overrides `homedir()` to a disposable
- * per-process tmp directory so the real electronStub/fileStore CODE runs
+ * per-process tmp directory so the real platformApi/fileStore CODE runs
  * (preserving this suite's fidelity), while the location it reads/writes can
  * never be the developer's real config directory.
  *
  * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` below
- * point Jest's OWN module resolution at electronStub.ts/fileStore.ts
+ * point Jest's OWN module resolution at platform/index.ts/fileStore.ts
  * directly — see skeletonFlows.test.ts's header for why this is necessary,
  * not incidental (Jest's own manual mocks for these node_modules packages
  * would otherwise shadow the real sidecar shims this suite exists to prove).
@@ -33,7 +33,7 @@
  * regardless of host OS) — all four mirror `skeletonFlows.test.ts`'s own
  * mock set exactly. Every other module in the registration/transport/store
  * path (`steamAuthFlowRegistration.ts`, `handlers.ts`, `sidecarRpc.ts`,
- * `bootstrap.ts`, `electronStub.ts`, `fileStore.ts`, `keyringTokenStore.ts`,
+ * `bootstrap.ts`, `platform/index.ts`, `fileStore.ts`, `keyringTokenStore.ts`,
  * `storeManagers/steam/tokenStore.ts`) runs for real, unmodified.
  *
  * The token-seam test (Test 4) does NOT mock or spy on `requestRustInvoke` —
@@ -66,7 +66,7 @@ jest.mock('backend/store_backend', () => ({
 
 // ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init()` now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
-// electronStub's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real
+// platformApi's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real
 // `pingSites()`, a live `axios.head()` against github/epic/gog/cloudflare. Mocked so this suite
 // (which drives the real, unmocked RPC/handler graph) never makes a real network call; `.create`
 // is also stubbed for `backend/utils.ts`'s module-scope `axiosClient` singleton.
@@ -129,7 +129,7 @@ import { getSteamLibraries } from 'backend/utils'
 import {
   configStore as steamConfigStore,
   steamBottleConfigStore
-} from '../../storeManagers/steam/electronStores'
+} from '../../storeManagers/steam/stores'
 import { getTokenStore } from '../../storeManagers/steam/tokenStore'
 import { KEYRING_SLOT_STEAM_REFRESH_TOKEN } from '../keyringTokenStore'
 import {

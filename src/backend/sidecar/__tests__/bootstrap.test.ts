@@ -83,7 +83,7 @@ import { handlerRegistry } from '../../platform'
 import { getLogFilePath } from '../../logger/paths'
 import * as loggerModule from '../../logger'
 import * as storeWriteHandlersModule from '../storeWriteHandlers'
-import { configStore as steamConfigStore } from '../../storeManagers/steam/electronStores'
+import { configStore as steamConfigStore } from '../../storeManagers/steam/stores'
 import {
   READY_SENTINEL,
   UNPORTED_CHANNEL_MARKER
@@ -144,7 +144,7 @@ describe('sidecar bootstrap (headless boot)', () => {
 
   // Behavior 1: building + running the sidecar entry under bare `node`
   // (electron absent) reaches READY without an uncaught exception --
-  // proves paths.ts's app.getPath() and electron_store.ts's `new Store()`
+  // proves paths.ts's app.getPath() and typed_store.ts's `new Store()`
   // import-time walls (spike 009) are shimmed before backend code sees them.
   describe('boot-time owed Mac Steam goonline (54-13)', () => {
     beforeEach(() => {
@@ -267,21 +267,21 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   // Behavior 3: importing REAL backend modules under the installed stub does
-  // not throw -- require('backend/electron_store') constructs a store
+  // not throw -- require('backend/typed_store') constructs a store
   // (electron-store wall shimmed) AND
   // require('backend/storeManagers/steam/library') imports headlessly (the
   // transitive Electron coupling the live 27-05 run hits -- it pulls in
   // backend/utils.ts -> backend/storeManagers/index.ts, which eagerly
   // constructs EVERY store manager at import time). At least one ipcMain
   // handler (bootstrap's own ./handlers import) is recorded in the
-  // electronStub registry.
+  // platformApi registry.
   it('imports real backend modules headlessly under the installed stub', () => {
     // The assertion is literally that this require call does not throw; a static
     // import would move the load to module-eval time and destroy the test.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    expect(() => require('backend/electron_store')).not.toThrow()
+    expect(() => require('backend/typed_store')).not.toThrow()
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { TypeCheckedStoreBackend } = require('backend/electron_store')
+    const { TypeCheckedStoreBackend } = require('backend/typed_store')
     const store = new TypeCheckedStoreBackend('configStore', { cwd: 'store' })
     expect(typeof store.get).toBe('function')
     expect(typeof store.set).toBe('function')
@@ -363,7 +363,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   // Phase 34.5 Plan 18, Task 2 (G-1/G-3, REQ-34.5-12). `publicDir` (`constants/paths.ts:73`) is
-  // a MODULE-SCOPE constant computed once, at import time, from `electronStub.app.getAppPath()`
+  // a MODULE-SCOPE constant computed once, at import time, from `platformApi.app.getAppPath()`
   // -- so neither arm below can use this file's already-imported `init`/`publicDir`; both need
   // a fresh module instance so `publicDir` gets recomputed against whatever `GAMELIB_APP_ROOT`
   // each arm sets. `jest.isolateModules` + a fresh `require('../bootstrap')` gets that fresh
@@ -376,7 +376,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   // `src/backend/platform/__mocks__/index.ts` is a first-party module mock, which Jest never
   // auto-applies without an explicit per-suite `jest.mock()` call. This suite declares none, so
   // both this file's top-level `init`/`publicDir` AND the isolated re-require below already
-  // resolve against the REAL `electronStub` by default -- the `doMock` swap became a no-op and
+  // resolve against the REAL `platformApi` by default -- the `doMock` swap became a no-op and
   // was deleted.)
   describe('boot-time asset-root self-check (Phase 34.5 G-1/G-3, plan 34.5-18)', () => {
     const REPO_ROOT = join(__dirname, '..', '..', '..', '..')
@@ -384,7 +384,7 @@ describe('sidecar bootstrap (headless boot)', () => {
     /**
      * Requires `../bootstrap` fresh inside an isolated module registry (so `publicDir` is
      * recomputed against whatever `GAMELIB_APP_ROOT` the calling arm set, against the REAL,
-     * unmocked `electronStub`), calls its `init()`, and returns the isolated `logError` spy's
+     * unmocked `platformApi`), calls its `init()`, and returns the isolated `logError` spy's
      * calls plus the transport output lines -- so each arm below only supplies the env var and
      * the assertions.
      */

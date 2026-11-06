@@ -28,7 +28,7 @@ import {
   promptMac32WindowsReinstall,
   verdictFromArchs
 } from 'backend/utils/macArch'
-import { macArchStore } from './electronStores'
+import { macArchStore } from './stores'
 import type { Runner } from 'common/types'
 
 export const MAX_SWEEP_PROBES = 20

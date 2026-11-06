@@ -5,7 +5,7 @@
  */
 import { captureOwnedAppMetacritic } from '../metacriticCapture'
 import { PlatformCapturePicsClient } from '../platformCapture'
-import { steamMetadataStore } from '../electronStores'
+import { steamMetadataStore } from '../stores'
 import { logInfo, logError } from 'backend/logger'
 import { STEAM_PICS_BULK_TIMEOUT_MS } from '../withTimeout'
 import appinfo64 from './fixtures/appinfo-64bit.json'
@@ -17,7 +17,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   steamMetadataStore: { get: jest.fn(), set: jest.fn(), entries: jest.fn() }
 }))
 

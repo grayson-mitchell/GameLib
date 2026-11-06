@@ -10,13 +10,13 @@ import {
   resolveSteamInstallSignInState,
   steamInstallNeedsSignIn
 } from '../steamInstallSignIn'
-import { steamConfigStore } from 'frontend/helpers/electronStores'
+import { steamConfigStore } from 'frontend/helpers/stores'
 
 interface StoreSpy {
   get_nodefault: jest.Mock
 }
 
-jest.mock('frontend/helpers/electronStores', () => ({
+jest.mock('frontend/helpers/stores', () => ({
   legendaryConfigStore: { get_nodefault: jest.fn() },
   gogConfigStore: { get_nodefault: jest.fn() },
   nileConfigStore: { get_nodefault: jest.fn() },

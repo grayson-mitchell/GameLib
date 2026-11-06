@@ -105,7 +105,7 @@ jest.mock('os', () => {
 })
 
 // ── pathShim — CR-03: the REAL choke point. `constants/paths.ts`'s module-scope
-// `app.getPath('appData'|'userData')` calls resolve through `electronStub.ts` ->
+// `app.getPath('appData'|'userData')` calls resolve through `platform/index.ts` ->
 // `pathShim.getPath()`, whose real `resolveAppDataDir()` prefers `env.APPDATA` (win32) /
 // `env.XDG_CONFIG_HOME` (default/Linux) over `homedir()` -- bypassing the `jest.mock('os', ...)`
 // redirect above on those platforms. Copied verbatim from `gameDetailsFlows.test.ts:136-161`

@@ -62,7 +62,7 @@
  * `humbleSyncStore.clear()`) — that IS the real sign-out and the actual
  * security boundary, and it is fully functional under Tauri. Only the
  * subsequent best-effort `session.fromPartition(HUMBLE_LOGIN_PARTITION)`
- * wipe loop no-ops, against `electronStub.session`'s accepted Phase 29 D-09
+ * wipe loop no-ops, against `platformApi.session`'s accepted Phase 29 D-09
  * stub — and under Tauri that partition never held anything, so surfacing a
  * "your browser session may survive" warning here would be actively FALSE
  * (34.3 D-01's rider against inflating a precautionary no-op into a shipped
@@ -76,7 +76,7 @@
  * real Electron gates this behind a negated `app` "already packaged" flag
  * (`main.ts:965-970`), kept out of `humble/ipc_handler.ts`'s always-on
  * registrar specifically so it can never be accidentally exposed in a
- * packaged build (`ipc_handler.ts:13-16`). `electronStub`'s `app` shim
+ * packaged build (`ipc_handler.ts:13-16`). `platformApi`'s `app` shim
  * HARDCODED that same flag to `false` always until Phase 35 plan 04, so
  * reusing that guard verbatim would have registered this dev-only trigger in
  * EVERY Tauri build, packaged or not. Resolved via `isPackagedSidecar()`
@@ -108,7 +108,7 @@ import { ipcMain } from '../platform'
 // Load-bearing FIRST import (mirrors steamAuthFlowRegistration.ts's Phase 27
 // Plan 05 circular-dep fix, copied verbatim per-file): `humble/library.ts`
 // (imported below, transitively via `HumbleLibrary`) statically imports
-// `steamLibraryStore` from `backend/storeManagers/steam/electronStores` and
+// `steamLibraryStore` from `backend/storeManagers/steam/stores` and
 // `SteamUser` from `backend/storeManagers/steam/user` at its own top
 // (library.ts:41-42) — the SAME storeManagers-under-steam reach that made
 // this fix load-bearing in `steamAuthFlowRegistration.ts`. Forcing
@@ -132,7 +132,7 @@ import { runHumbleValidation } from '../humble/validation'
  * fail-closed `catch` — verbatim into `./isPackagedSidecar`. Nothing about the
  * derivation changed; only its address did.
  *
- * Why: `electronStub.ts`'s `app.isPackaged` needed the same answer, and the one
+ * Why: `platform/index.ts`'s `app.isPackaged` needed the same answer, and the one
  * thing that must never happen is a SECOND independent derivation of it. Two
  * copies of a fail-closed detector can drift, and the first time they disagree
  * one of them is unlocking something `devSecretVault.ts`'s guardrail (c)
@@ -307,7 +307,7 @@ export function registerHumbleFlows(): void {
   //       and the actual security boundary, and it is fully functional
   //       under Tauri.
   //   (b) only the subsequent best-effort session.fromPartition(...) wipe
-  //       loop no-ops, against electronStub.session's accepted Phase 29 D-09
+  //       loop no-ops, against platformApi.session's accepted Phase 29 D-09
   //       stub -- and under Tauri that partition never held anything, so
   //       surfacing a "your browser session may survive" warning here would
   //       be actively FALSE (34.3 D-01's rider).
@@ -329,7 +329,7 @@ export function registerHumbleFlows(): void {
   // Real Electron gates this behind a negated `app` "already packaged" flag
   // (main.ts:965-970), deliberately kept out of humble/ipc_handler.ts's
   // always-on registrar so it can never be accidentally exposed in a
-  // packaged build (ipc_handler.ts:13-16). electronStub's `app` shim
+  // packaged build (ipc_handler.ts:13-16). platformApi's `app` shim
   // HARDCODED that same flag to false until Phase 35 plan 04, so reusing that
   // guard verbatim would have registered this dev-only trigger in EVERY Tauri
   // build. See isPackagedSidecar()'s own docstring (./isPackagedSidecar) for

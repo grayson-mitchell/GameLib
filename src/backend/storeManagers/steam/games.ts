@@ -27,7 +27,7 @@ import {
   steamMetadataStore,
   steamLibraryStore,
   type SteamBridgeVerdict
-} from './electronStores'
+} from './stores'
 import { depotSignalCaptured } from './metadataCapture'
 import { knownFixSaysMac32 } from './macArchKnownFix'
 import { resolvePlatformWrite } from './platformPrecedence'

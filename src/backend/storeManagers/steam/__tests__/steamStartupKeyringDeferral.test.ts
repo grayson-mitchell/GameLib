@@ -59,7 +59,7 @@ jest.mock('../../../ipc', () => ({
   sendFrontendMessage: jest.fn()
 }))
 
-// ── electronStores mock — configStore/steamLibraryStore/steamMetadataStore/
+// ── stores mock — configStore/steamLibraryStore/steamMetadataStore/
 // steamSyncStore. `configStore.get_nodefault` drives SteamUser.isLoggedIn(). ─
 const mockConfigStore = {
   get: jest.fn(),
@@ -68,7 +68,7 @@ const mockConfigStore = {
   clear: jest.fn(),
   delete: jest.fn()
 }
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   configStore: mockConfigStore,
   steamLibraryStore: {
     get: jest.fn(),
@@ -348,7 +348,7 @@ beforeEach(() => {
   // Defaults so init()/migrateStaleArtUrls have empty caches to scan
   // (mirrors library.test.ts's own shared beforeEach).
   const { steamLibraryStore, steamMetadataStore } =
-    jest.requireMock('../electronStores')
+    jest.requireMock('../stores')
   ;(steamLibraryStore.get as jest.Mock).mockReturnValue([])
   ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([])
 })
@@ -378,7 +378,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
       { app_name: '111', runner: 'steam' } as GameInfo,
       { app_name: '222', runner: 'steam' } as GameInfo
     ]
-    const { steamLibraryStore } = jest.requireMock('../electronStores')
+    const { steamLibraryStore } = jest.requireMock('../stores')
     ;(steamLibraryStore.get as jest.Mock).mockReturnValue(cachedGames)
 
     const manager = new SteamLibraryManager()

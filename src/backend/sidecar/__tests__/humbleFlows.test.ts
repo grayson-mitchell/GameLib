@@ -466,7 +466,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         expect((isolationListenerRegistry.get(channel) ?? []).length).toBe(1)
         expect(isolationHandlerRegistry.has(channel)).toBe(false)
       }
-      // Sanity: isolationIpcMain is the same electronStub export
+      // Sanity: isolationIpcMain is the same platformApi export
       // humbleFlowRegistration.ts itself imports — proves this guard is
       // inspecting the real registry the module under test writes to, not a
       // reimplementation.
@@ -938,7 +938,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
   // T-34.4-26) ─────────────────────────────────────────────────────────────
   // These tests bypass this FILE's own top-level `jest.mock('../../humble/user')`
   // /`jest.mock('../../humble/library')` automocks by dynamically re-requiring
-  // `../humbleFlowRegistration` and `../electronStub` after `jest.resetModules()`
+  // `../humbleFlowRegistration` and `../platformApi` after `jest.resetModules()`
   // -- Jest keeps applying the SAME automock factories on re-require (resetModules
   // only clears the instantiated-module cache, not the configured mock list), so
   // this stays safe/automocked; only `node:sea` is freshly (re-)mocked per test via
@@ -1024,7 +1024,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
   // This describe block bypasses the file-wide automock for ONE test via
   // `jest.resetModules()` + a dynamic, unmocked `require`, mirroring
   // `user.test.ts`'s own sanctioned mock boundaries: backend/logger -> log*
-  // per user.test.ts's own boundary; ../electronStores is left REAL and spied
+  // per user.test.ts's own boundary; ../stores is left REAL and spied
   // on directly, since `jest.setupContainment.ts` already redirects HOME/XDG
   // structurally for this whole file (Phase 34.2 gap cycle 4), so the real
   // store files this touches are disposable, never real developer data.
@@ -1033,7 +1033,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
   // `session.fromPartition()` branch into a single, unconditional,
   // seam-driven `wipeSteps` array -- `getLoginWindowSeamOrThrow()` now throws
   // if no seam is installed, so this test can no longer rely on the real
-  // electronStub's `session.fromPartition()` returning `{}` to fabricate
+  // platformApi's `session.fromPartition()` returning `{}` to fabricate
   // failing wipe steps for free. Instead it installs an all-rejecting fake
   // `LoginWindowSeam` (every method rejects) via `setLoginWindowSeam()`
   // before calling the real `disconnect()`, and clears it again in a
@@ -1088,7 +1088,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           ) => void
         }
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const realStores = require('../../humble/electronStores') as {
+      const realStores = require('../../humble/stores') as {
         configStore: {
           set: (key: string, value: unknown) => void
           get_nodefault: (key: string) => unknown

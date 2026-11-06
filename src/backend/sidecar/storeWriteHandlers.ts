@@ -16,7 +16,7 @@
  * from what is actually on disk — do not add a second frontend-push call site for the
  * `STORE_CHANGED_CHANNEL` event anywhere else.
  *
- * No import of the real `electron` module — uses `./electronStub`'s `ipcMain`, same as
+ * No import of the real `electron` module — uses `./platformApi`'s `ipcMain`, same as
  * every other file under this directory.
  */
 
@@ -27,7 +27,7 @@ import { ipcMain } from '../platform'
 // the ONLY line in the file naming that function — see the header comment and the D-06
 // single-choke-point note above `applyStoreWrite`.
 import * as sidecarRpc from './sidecarRpc'
-import { getRegisteredStore } from '../electron_store'
+import { getRegisteredStore } from '../typed_store'
 import {
   setStoreChangeNotifier,
   withStoreChangeSuppressed
@@ -78,7 +78,7 @@ function resolveWritableStore(
     // TypeCheckedStoreBackend's generic `set<KeyType>`/`delete<KeyType>` signatures are
     // only meaningfully typed against a literal `Name`/`KeyType` pair — this dispatch is
     // deliberately name-generic (a `ValidStoreName` arriving as a runtime string), the
-    // same class of cast `electron_store.ts`'s own registry already uses
+    // same class of cast `typed_store.ts`'s own registry already uses
     // (`instance: this as unknown as TypeCheckedStoreBackend<ValidStoreName>`).
     return registered as unknown as WritableStoreBackend
   }
@@ -121,7 +121,7 @@ export function applyStoreWrite(
   // did not exist. The real gate was guard (c) alone. Testing against
   // `RECOGNIZED_CACHE_STORE_NAMES` makes the guard mean what it says. The four D-13
   // names plus `humble_library` are the ONLY dynamic cache stores the frontend ever
-  // constructs (`new CacheStore(...)`, src/frontend/helpers/electronStores.ts).
+  // constructs (`new CacheStore(...)`, src/frontend/helpers/stores.ts).
   const isUniverseMember = STORE_UNIVERSE.includes(storeName)
   const isRecognizedCacheName = RECOGNIZED_CACHE_STORE_NAMES.includes(storeName)
   if (!isUniverseMember && !isRecognizedCacheName) {
@@ -229,7 +229,7 @@ export function applyStoreWrite(
  * Extracted from `applyStoreWrite`'s body so a SECOND class of producer can reach it
  * without violating that single-call-site rule. `applyStoreWrite` covers writes the
  * RENDERER initiated (`storeSet`/`storeDelete` frames); the sidecar's own store managers
- * write straight through `cache.ts`/`electron_store.ts` and used to announce nothing at
+ * write straight through `cache.ts`/`typed_store.ts` and used to announce nothing at
  * all — the divergence this file's header warned about, live-confirmed in
  * `.planning/debug/gog-login-ui-never-updates.md` (GOG login persisted 7 games while the
  * renderer rendered none, silently, until restart). Those writers now reach this same

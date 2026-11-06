@@ -4,7 +4,7 @@
  *
  * Drives the REAL sidecar RPC server in-process (bootstrap.test.ts's
  * real-shim black-box pattern — the shims under test are the actual
- * electronStub.ts/fileStore.ts modules, unmocked) against injected
+ * platform/index.ts/fileStore.ts modules, unmocked) against injected
  * `stream.PassThrough` pairs.
  *
  * **GAP FIX (2026-07-22):** this suite's config directory is NOT the real OS
@@ -14,12 +14,12 @@
  * doing so against a developer's REAL
  * `~/Library/Application Support/GameLib/` is an active data-loss hazard. The
  * `jest.mock('os', ...)` below overrides `homedir()` to a disposable
- * per-process tmp directory so the real electronStub/fileStore CODE runs
+ * per-process tmp directory so the real platformApi/fileStore CODE runs
  * (preserving this suite's fidelity), while the location it reads/writes can
  * never be the developer's real config directory.
  *
  * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` below
- * point Jest's OWN module resolution at electronStub.ts/fileStore.ts
+ * point Jest's OWN module resolution at platform/index.ts/fileStore.ts
  * directly. This is necessary, not incidental: `src/backend/__mocks__/
  * electron.ts` and `.../electron-store.ts` are Jest manual mocks for
  * node_modules packages, which Jest auto-applies to EVERY backend test —
@@ -34,7 +34,7 @@
  * bridge — the exact seams this test exists to prove — would ever be
  * exercised. `jest.requireActual` resolves the SAME singleton module
  * instance `bootstrap.ts`/`sidecarRpc.ts` bind their transport onto, so this
- * is the real electronStub/FileStore, wired through Jest's mock system
+ * is the real platformApi/FileStore, wired through Jest's mock system
  * instead of the production `Module._load` hook (which only takes effect in
  * the real bundled `build/main/sidecar.js` process, outside Jest).
  *
@@ -46,8 +46,8 @@
  * branches (mac-only) never fire, keeping this test on the native
  * steam:// action-flow branch without a real network call to the Steam
  * store API. Every other module in the read/action flow paths (library.ts,
- * games.ts, electronStores.ts, backend/ipc.ts, main_window.ts,
- * electronStub.ts, sidecarRpc.ts, bootstrap.ts, steamFlowRegistration.ts,
+ * games.ts, stores.ts, backend/ipc.ts, main_window.ts,
+ * platform/index.ts, sidecarRpc.ts, bootstrap.ts, steamFlowRegistration.ts,
  * handlers.ts) runs for real, unmodified.
  *
  * Assertions are made only on the observable RPC frames (SidecarRpcResponse
@@ -64,7 +64,7 @@
 // `~/Library/Application Support/GameLib/steam_store/config.json`, the exact
 // file a previous version of `electronUntouched.test.ts` destroyed (see that
 // file's header). Overriding `homedir()` to a disposable per-process tmp
-// directory keeps the real electronStub/fileStore code paths under test (the
+// directory keeps the real platformApi/fileStore code paths under test (the
 // whole point of this suite) while making it structurally impossible for any
 // test in this file to touch real user data.
 jest.mock('os', () => {
@@ -89,7 +89,7 @@ jest.mock('backend/store_backend', () => ({
 
 // ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init()` now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
-// electronStub's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real
+// platformApi's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real
 // `pingSites()`, a live `axios.head()` against github/epic/gog/cloudflare. Mocked so this suite
 // (which drives the real, unmocked RPC/handler graph) never makes a real network call; `.create`
 // is also stubbed for `backend/utils.ts`'s module-scope `axiosClient` singleton.
@@ -145,7 +145,7 @@ import { SteamUser } from '../../storeManagers/steam/user'
 import { mockLeaseOk } from '../../storeManagers/steam/__tests__/depotLeaseMocks'
 import { getAnonymousPicsClient } from '../../storeManagers/steam/anonymousClient'
 import { getSteamLibraries } from 'backend/utils'
-import { configStore as steamConfigStore } from '../../storeManagers/steam/electronStores'
+import { configStore as steamConfigStore } from '../../storeManagers/steam/stores'
 import { configStore } from 'backend/constants/key_value_stores'
 import { libraryManagerMap } from '../../storeManagers'
 

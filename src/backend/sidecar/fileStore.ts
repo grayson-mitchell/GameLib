@@ -33,7 +33,7 @@
  * future caller forgets to validate.
  *
  * D-14 (in-process same-path sharing): `steamConfigStore` and
- * `steamBottleConfigStore` (src/backend/storeManagers/steam/electronStores.ts)
+ * `steamBottleConfigStore` (src/backend/storeManagers/steam/stores.ts)
  * both construct with `{ cwd: 'steam_store' }` and no `name`, so BOTH resolve
  * to the same on-disk file, `${userData}/steam_store/config.json`. Real
  * Electron's `electron-store`/`conf` survives this because it re-reads the
@@ -125,7 +125,7 @@ function resolveStorePath(options: FileStoreOptions): string {
   //
   // Phase 18's lesson applies: `path.join` is not containment — use resolve+relative.
   // Every real call site resolves inside `userData` (including
-  // `game_overrides/electronStores.ts`, whose `cwd` is an ABSOLUTE
+  // `game_overrides/stores.ts`, whose `cwd` is an ABSOLUTE
   // `join(userDataPath, 'store')`), so this throws only on a genuine escape.
   const relativeToUserData = relative(resolve(userData), full)
   if (
@@ -259,7 +259,7 @@ export default class FileStore {
   /**
    * CR-04: electron-store's `accessPropertiesByDotNotation` option, which this class
    * previously accepted into its index signature and then never acted on.
-   * `uploadedLogFileStore` (src/backend/logger/electronStores.ts) sets it to `false`
+   * `uploadedLogFileStore` (src/backend/logger/stores.ts) sets it to `false`
    * ON PURPOSE because its KEYS ARE dpaste URLs (`uploadedLogFileStore.set(url, …)`,
    * uploader.ts) — split on `.`, `https://dpaste.com/AB12` was written as
    * `{"https://dpaste": {"com/AB12": {…}}}`. That broke the file's own headline

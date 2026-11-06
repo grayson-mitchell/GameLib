@@ -1,6 +1,6 @@
 /**
  * Phase 51 Plan 03 (D-51-07/D-51-10): the sole reader/writer family for
- * `SteamMetadataCacheEntry.bridge` (`SteamBridgeVerdict`, electronStores.ts).
+ * `SteamMetadataCacheEntry.bridge` (`SteamBridgeVerdict`, stores.ts).
  * Every writer here follows the GAP-B / `markForcedWindowsViaBottle` idiom
  * (games.ts): read-modify-write via `{ ...existing, bridge: { ...existing?.bridge,
  * <change> } }`, NEVER a bare `steamMetadataStore.set` with a fresh object
@@ -22,7 +22,7 @@ import {
   type SteamBridgeScanVerdict,
   type SteamBridgeVerdict,
   type SteamMetadataCacheEntry
-} from '../electronStores'
+} from '../stores'
 import { NUMERIC_APP_ID } from '../gameConstants'
 
 // Pattern repeated verbatim across bottle.ts:826, clientSetup.ts:40,

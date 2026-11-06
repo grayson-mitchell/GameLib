@@ -1,6 +1,6 @@
 import { InstallResult } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { steamMetadataStore } from './electronStores'
+import { steamMetadataStore } from './stores'
 
 /**
  * A single tracked native depot-download run for one appId — the value type

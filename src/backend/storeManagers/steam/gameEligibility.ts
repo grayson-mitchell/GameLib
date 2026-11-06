@@ -5,7 +5,7 @@
 import { existsSync } from 'graceful-fs'
 import { logInfo, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
-import { steamMetadataStore } from './electronStores'
+import { steamMetadataStore } from './stores'
 import { seedMacArchFromKnownFix } from './macArchKnownFix'
 import { knownFixSaysCeg } from './drmKnownFix'
 import { pendingFetches, METADATA_FETCH_TIMEOUT_MS } from './state'

@@ -50,7 +50,7 @@ pub(crate) fn send_trace_enabled() -> bool {
 ///
 /// SEND-PATH TRACE (Phase 34.6 Plan 16, gap cycle for the live gate's Step 4 FAIL).
 ///
-/// `winetricksInstall` is a live silent no-op: the listener IS registered (`electronStub.ts`'s
+/// `winetricksInstall` is a live silent no-op: the listener IS registered (`platform/index.ts`'s
 /// `ipcMain.on` is an unconditional `Map` insert with no failure mode, on a path proven to
 /// execute), so the frame never arrives. Ten hypotheses are already excluded by code reading;
 /// what remains needs runtime observation.

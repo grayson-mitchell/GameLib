@@ -5,7 +5,7 @@
  * `humbleFlowRegistration.ts`, where it had lived since Phase 34.4 plan 05.
  * It was moved rather than copied so that all THREE of its consumers —
  * `humbleFlowRegistration.ts`'s `humbleRunValidation` gate, `devSecretVault.ts`'s
- * fail-closed guardrail (c), and `electronStub.ts`'s `app.isPackaged` getter —
+ * fail-closed guardrail (c), and `platform/index.ts`'s `app.isPackaged` getter —
  * are callers of ONE function and never independent derivations of the same
  * fact. Two derivations that can drift apart is a latent bypass of a
  * fail-closed security guard (T-35-11), not untidiness: the moment
@@ -37,7 +37,7 @@
  *
  * Resolves the `humbleRunValidation` dev-vs-packaged divergence that reusing
  * Electron's negated `app` "already packaged" flag guard verbatim cannot:
- * `electronStub`'s `app` shim (see `./electronStub.ts`) hardcoded that same
+ * `platformApi`'s `app` shim (see `./platform/index.ts`) hardcoded that same
  * flag to `false` always until Phase 35 plan 04, so that guard would always
  * pass and register this dev-only trigger in every Tauri build. `main.rs`
  * confirms there is no env var or CLI flag distinguishing the two spawn paths
@@ -61,7 +61,7 @@
  * Guarded: an older or unavailable Node runtime must not throw at
  * registration time. On any failure to determine, choose the SAFE default —
  * treat the build as packaged (i.e. do NOT register the dev-only channel) —
- * and log the fallback once, mirroring `electronStub.ts`'s own "fails loudly
+ * and log the fallback once, mirroring `platform/index.ts`'s own "fails loudly
  * with a clear log line" house style (D-09/D-06).
  *
  * Exported (34.5 gap cycle 4 plan 36) so `devSecretVault.ts`'s production-refusal guardrail can

@@ -30,7 +30,7 @@ import { onConnectivityChange } from 'backend/online_monitor'
 // Other call sites already prove this pattern is safe for synchronous access
 // (e.g. utils/uninstaller.ts's `libraryManagerMap[runner].getGame(appName)`).
 import { libraryManagerMap } from 'backend/storeManagers'
-import { downloadManager } from './electronStores'
+import { downloadManager } from './stores'
 import { isRunner } from 'common/utils'
 import {
   hasCapability,

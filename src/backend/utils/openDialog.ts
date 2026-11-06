@@ -9,7 +9,7 @@
  * `dialog.showOpenDialog` had exactly one backend caller (`main.ts`), and `main.ts` is not in
  * the sidecar's import graph — so `openDialog` still rejected with `UNPORTED_CHANNEL_MARKER`
  * and the whole 30-03 chain (Cargo dependency, capability grant, rustInvoke allowlist entry,
- * `electronStub.showOpenDialog`) was dead weight in production.
+ * `platformApi.showOpenDialog`) was dead weight in production.
  *
  * `dialog` resolves to the REAL electron module under Electron and to
  * `backend/platform/index.ts` under the sidecar (bootstrap's `Module._load` hook), which
@@ -31,7 +31,7 @@ import type { BrowserWindow } from 'backend/platform/types'
  * Shows a native open dialog and returns the first picked path, or `false` on cancel.
  *
  * `parentWindow` is the modal's owner. It is `undefined` in the sidecar, which has no real
- * `BrowserWindow` — `electronStub.showOpenDialog` ignores the argument entirely and forwards
+ * `BrowserWindow` — `platformApi.showOpenDialog` ignores the argument entirely and forwards
  * to Rust's `dialog_open` rustInvoke channel. Under Electron the caller is responsible for
  * supplying a live window (see `main.ts`, which returns `false` when there is none).
  */

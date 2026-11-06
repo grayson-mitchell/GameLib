@@ -95,7 +95,7 @@ const mockPlaytimeGet = jest.fn()
 const mockPlaytimeSet = jest.fn()
 const mockPlaytimeDelete = jest.fn()
 const mockConfigStoreGetNodefault = jest.fn()
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   libraryStore: {
     get: (...a: unknown[]) => mockLibraryStoreGet(...a),
     set: jest.fn()

@@ -12,7 +12,7 @@ import {
   NOTICE_REASONS,
   type BridgeRouteInput
 } from '../bridgeRoute'
-import type { SteamBridgeVerdict } from '../../electronStores'
+import type { SteamBridgeVerdict } from '../../stores'
 
 const baseInput: BridgeRouteInput = {
   platformsBottleEligible: true,

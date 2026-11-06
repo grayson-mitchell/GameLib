@@ -93,9 +93,9 @@ jest.mock('backend/platform', () => ({
   }
 }))
 
-// ── ../electronStores mock — avoids real TypeCheckedStoreBackend/CacheStore
+// ── ../stores mock — avoids real TypeCheckedStoreBackend/CacheStore
 //    instantiation at module load (bottle.ts imports steamBottleConfigStore). ─
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   steamBottleConfigStore: {
     get: jest.fn(),
     get_nodefault: jest.fn(),

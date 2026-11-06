@@ -1,6 +1,6 @@
 import { GameInfo, Runner } from 'common/types'
 import { create } from 'zustand'
-import { steamConfigStore } from 'frontend/helpers/electronStores'
+import { steamConfigStore } from 'frontend/helpers/stores'
 import {
   resolveSteamInstallSignInState,
   steamInstallNeedsSignIn

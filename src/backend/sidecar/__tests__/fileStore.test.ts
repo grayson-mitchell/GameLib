@@ -218,7 +218,7 @@ describe('sidecar fileStore', () => {
   })
 
   it('CR-04: accessPropertiesByDotNotation:false keeps a URL key FLAT on disk', () => {
-    // Mirrors src/backend/logger/electronStores.ts's uploadedLogFileStore exactly —
+    // Mirrors src/backend/logger/stores.ts's uploadedLogFileStore exactly —
     // its keys are dpaste URLs (uploader.ts: `uploadedLogFileStore.set(url, data)`),
     // which contain dots. Split on '.', the entry landed as
     // {"https://dpaste": {"com/AB12": {…}}}, so getUploadedLogFiles() read

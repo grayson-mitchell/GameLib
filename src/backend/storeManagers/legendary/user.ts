@@ -10,7 +10,7 @@ import { NonEmptyString } from './commands/base'
 import { configStore } from 'backend/constants/key_value_stores'
 import { isMac } from 'backend/constants/environment'
 import { legendaryUserInfo } from './constants'
-import { legendaryConfigStore } from './electronStores'
+import { legendaryConfigStore } from './stores'
 import {
   noteSignedOut,
   noteSignInSucceeded

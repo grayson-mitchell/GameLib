@@ -2,7 +2,7 @@
  * Curated shell/files/diagnostics channel registration (Phase 34.3 Plans 01
  * and 02, D-14, REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06/REQ-34.3-13).
  *
- * Registers 20 of this slice's 28 channels onto electronStub's `ipcMain`
+ * Registers 20 of this slice's 28 channels onto platformApi's `ipcMain`
  * recorder, importing the REAL `backend/utils.ts` / `backend/utils/filesystem`
  * functions UNCHANGED:
  *
@@ -37,7 +37,7 @@
  *     - `resetHeroic` -> `utils.ts`'s `resetHeroic()`, UNMODIFIED — no
  *       build-conditional branch added here or in `utils.ts`; the
  *       `app.relaunch()` -> `app.quit()` ordering race is fixed entirely
- *       inside `electronStub` by plan 34.3-05 (`main.ts:813`)
+ *       inside `platformApi` by plan 34.3-05 (`main.ts:813`)
  *
  *   invoke (ipcMain.handle, 3):
  *     - `checkDiskSpace` -> `utils/filesystem`'s `getDiskInfo`/`isWritable`/
@@ -298,7 +298,7 @@ export function registerShellFilesFlows(): void {
 
   // ── send (1): resetHeroic — main.ts:813. Calls the UNMODIFIED utils.ts
   // body; no build-conditional branch here or in utils.ts. The relaunch/quit
-  // ordering race is fixed entirely inside electronStub by plan 34.3-05.
+  // ordering race is fixed entirely inside platformApi by plan 34.3-05.
   // Real blast radius: deletes ONLY configPath + gamesConfigPath — every
   // other electron-store file in appFolder (Steam token/library, all 10
   // Humble stores, download manager, Wine/wiki/crossover caches) survives ──

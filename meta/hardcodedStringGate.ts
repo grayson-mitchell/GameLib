@@ -839,11 +839,11 @@ function isPartOfSplitGlossaryTerm(
  * KEY, never prose — `configStore.get('games.hidden', [])`,
  * `nileConfigStore.get_nodefault('userData.name')`,
  * `window.api.storeGet(this.storeName, \`__timestamp.${key}\`)`
- * (`electronStores.ts`, `GlobalState.tsx`, `RecentlyPlayed/index.tsx`).
+ * (`stores.ts`, `GlobalState.tsx`, `RecentlyPlayed/index.tsx`).
  * Method-name-gated (not tied to a specific store variable name, since this
  * codebase has `configStore`/`gogConfigStore`/`nileConfigStore`/
  * `wineDownloaderInfoStore`, all sharing the same
- * `TypeCheckedStoreFrontend` method names from `electronStores.ts`).
+ * `TypeCheckedStoreFrontend` method names from `stores.ts`).
  */
 const STORE_KEY_METHOD_NAMES = new Set([
   'get',

@@ -21,7 +21,7 @@ jest.mock('../../storeManagers/steam/bridge/inviteBridge', () => ({
 }))
 jest.mock('../../storeManagers', () => ({}))
 jest.mock('../../storeManagers/steam/user', () => ({ SteamUser: {} }))
-jest.mock('../../storeManagers/steam/electronStores', () => ({}))
+jest.mock('../../storeManagers/steam/stores', () => ({}))
 jest.mock('../../storeManagers/steam/bottle', () => ({}))
 jest.mock('../../storeManagers/steam/clientSetup', () => ({}))
 jest.mock('../../storeManagers/steam/games', () => ({}))

@@ -20,7 +20,7 @@
  */
 
 import { join } from 'path'
-import type { StoreOptions } from 'common/types/electron_store'
+import type { StoreOptions } from 'common/types/typed_store'
 
 const OriginalStore = jest.requireActual('../store_backend').default
 

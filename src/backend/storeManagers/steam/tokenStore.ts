@@ -1,6 +1,6 @@
 import { safeStorage } from 'backend/platform'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { configStore } from './electronStores'
+import { configStore } from './stores'
 import { TOKEN_PREFIX, TOKEN_STORE_KEY } from './constants'
 
 /**
@@ -17,7 +17,7 @@ import { TOKEN_PREFIX, TOKEN_STORE_KEY } from './constants'
  * (b) A future Tauri sidecar build installs a different `TokenStore`
  *     implementation via `setTokenStore()` (plan 28-04). That implementation
  *     MUST NEVER import `configStore` or `TOKEN_STORE_KEY` from this module
- *     or from `./electronStores` — it talks to a real OS keyring instead.
+ *     or from `./stores` — it talks to a real OS keyring instead.
  *     `setTokenStore` has no env-var-driven auto-selection (REQ-28-07/D-08);
  *     the override is installed only by an explicit call from the sidecar's
  *     own bootstrap path.

@@ -169,7 +169,7 @@ pub(crate) fn shell_exe_env_value(current_exe: std::io::Result<std::path::PathBu
 
 /// Formats a resolved app-root `PathBuf` for the `GAMELIB_APP_ROOT` spawn-time env var handoff
 /// (Phase 34.5 Plan 16, Task 2, G-1). This is the fix for the root cause of live-gate items
-/// 1/2/3 and (transitively) 5: under the sidecar, `electronStub.getAppPath()` resolved to
+/// 1/2/3 and (transitively) 5: under the sidecar, `platformApi.getAppPath()` resolved to
 /// `process.cwd()` (`src-tauri/`), so `publicDir` (`paths.ts:73`) resolved to a directory that
 /// does not exist and every bundled runner binary ENOENT'd on spawn. Pure and `AppHandle`-free
 /// so it can be proven by `#[cfg(test)] mod tests` below, mirroring `shell_exe_env_value`'s
@@ -177,7 +177,7 @@ pub(crate) fn shell_exe_env_value(current_exe: std::io::Result<std::path::PathBu
 ///
 /// - `Ok(path)` returns the path's `display()` form, UNQUOTED and UNTRIMMED.
 /// - `Err(_)` returns the EMPTY STRING, deliberately never panicking — the shell must still
-///   start even if app-root resolution fails, and `electronStub.getAppPath()` (JS side) treats
+///   start even if app-root resolution fails, and `platformApi.getAppPath()` (JS side) treats
 ///   an empty string exactly like an unset env var, falling back to today's `process.cwd()`
 ///   behaviour (REQ-34.5-13: the Electron build and the jest suite see no behaviour change).
 ///
@@ -523,7 +523,7 @@ pub(crate) fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std
             // phase closes (27-02-SUMMARY.md: "the frame is currently silently ignored on
             // the Rust side"). Minimal fix — kept fire-and-forget, no response frame written
             // (Open Question 2, resolved: converting this to a rustInvoke request/response
-            // call would change electronStub.shell.openExternal's contract, out of scope).
+            // call would change platformApi.shell.openExternal's contract, out of scope).
             if kind == Some("openExternal") {
                 if let Some(url) = value
                     .get("args")

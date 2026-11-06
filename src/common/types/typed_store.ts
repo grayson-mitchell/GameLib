@@ -188,7 +188,7 @@ export interface StoreStructure {
 // type-checking against the option names it actually passes.
 //
 // Deliberately a TYPE-ONLY import of `conf` — erased at compile time, so
-// `src/frontend/helpers/electronStores.ts` (which imports from this module)
+// `src/frontend/helpers/stores.ts` (which imports from this module)
 // never pulls a Node-only, fs-backed package into the renderer bundle.
 export type StoreOptions<T extends Record<string, unknown>> = Omit<
   ConfOptions<T>,

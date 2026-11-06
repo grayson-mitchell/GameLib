@@ -60,7 +60,7 @@
  *                           without pulling in real HTTP/CLI machinery)
  *  - `../../../launcher` -> callRunner (not on the call path; needed for module resolution)
  *  - `backend/online_monitor` -> isOnline/runOnceWhenOnline (not on the call path)
- *  - `../electronStores`  -> libraryStore/installStore/gamesOverrideStore stubs (not on the
+ *  - `../stores`  -> libraryStore/installStore/gamesOverrideStore stubs (not on the
  *                           call path this probe drives)
  *  - `../user`           -> LegendaryUser (not on the call path; `../user` itself pulls in
  *                           `GlobalConfig`/`humble/loginWindowSeam` and other heavy chains)
@@ -155,8 +155,8 @@ jest.mock('backend/online_monitor', () => ({
   runOnceWhenOnline: jest.fn()
 }))
 
-// ── ../electronStores mock ───────────────────────────────────────────────────────────────────
-jest.mock('../electronStores', () => ({
+// ── ../stores mock ───────────────────────────────────────────────────────────────────
+jest.mock('../stores', () => ({
   libraryStore: { get: jest.fn(() => []), set: jest.fn() },
   installStore: {
     get: jest.fn(),

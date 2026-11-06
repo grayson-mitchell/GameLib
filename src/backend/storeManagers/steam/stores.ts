@@ -1,4 +1,4 @@
-import { TypeCheckedStoreBackend } from '../../electron_store'
+import { TypeCheckedStoreBackend } from '../../typed_store'
 import CacheStore from '../../cache'
 import { GameInfo, ExtraInfo } from 'common/types'
 
@@ -36,7 +36,7 @@ const steamSyncStore = new CacheStore<number, 'syncedAt'>('steam_sync', null)
 // A DEDICATED store (not a field on steamMetadataStore, whose whole-entry
 // replace would drop it). Indefinite lifespan: it must survive a GameLib
 // restart, and it is cleared on uninstall / adoption.
-// Consumed only through the lazy `require('./electronStores')` in macSteamAdoption.ts
+// Consumed only through the lazy `require('./stores')` in macSteamAdoption.ts
 // `defaultStore()` -- kept lazy so electron-store stays out of module load -- which ts-prune
 // cannot trace; macSteamAdoption.test.ts also mocks it by name. The export is deliberate.
 // ts-prune-ignore-next
@@ -48,7 +48,7 @@ export const steamPendingAdoptionStore = new CacheStore<unknown>(
 // ── quick 261029-pkp: persisted "Restart Steam to finish" hold records ──────
 // One record per appId whose native install is held waiting for a Steam
 // restart, so the hold survives a GameLib restart. Consumed only through the
-// lazy `require('./electronStores')` in steamRestartHold.ts, which ts-prune
+// lazy `require('./stores')` in steamRestartHold.ts, which ts-prune
 // cannot trace. The export is deliberate.
 // ts-prune-ignore-next
 export const steamRestartHoldStore = new CacheStore<unknown>(
@@ -347,7 +347,7 @@ export interface SteamBridgeVerdict {
 
 // The `import type { SteamBottleConfig }` and its `export type { ... }`
 // re-export that used to sit here were both dropped (260922-vzw): all three
-// hits outside this module (src/common/types/electron_store.ts,
+// hits outside this module (src/common/types/typed_store.ts,
 // src/common/types/ipc.ts, src/common/types/steam.ts) import
 // `SteamBottleConfig` directly from `common/types/steam` (the original
 // declaration), never from this re-export, and this file itself never

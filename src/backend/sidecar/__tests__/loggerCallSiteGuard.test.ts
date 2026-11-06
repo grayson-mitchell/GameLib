@@ -158,7 +158,7 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
     initHeadless()
     registerLoggerFlows()
     // A second registration would duplicate every frontend log line —
-    // electronStub's dispatchSend iterates every listener in the array for
+    // platformApi's dispatchSend iterates every listener in the array for
     // a channel.
     expect(listenerRegistry.get('logError')?.length).toBe(1)
   })

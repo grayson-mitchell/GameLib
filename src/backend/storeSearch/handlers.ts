@@ -32,7 +32,7 @@ import type {
  * package TRANSITIVELY, through a top-of-file import inside `cheapshark.ts`
  * itself — that hop is already accounted for in `electronReachLedger.test.ts`'s
  * committed baseline (plan 34.2-11) and is rescued at sidecar runtime by
- * `electronStub`'s `Module._load` interception. This module does NOT claim
+ * `platformApi`'s `Module._load` interception. This module does NOT claim
  * transitive electron-freedom — only the absence of a DIRECT import of the
  * curated-IPC layer, the `electron` package, or the registration sibling.
  */

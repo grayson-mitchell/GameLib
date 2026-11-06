@@ -1,6 +1,6 @@
 import { logInfo, logError, LogPrefix } from 'backend/logger'
 import { parseMetacriticScore } from 'common/metacriticScore'
-import { steamMetadataStore, SteamMetadataCacheEntry } from './electronStores'
+import { steamMetadataStore, SteamMetadataCacheEntry } from './stores'
 import {
   withPlatformCaptureLock,
   PlatformCapturePicsClient

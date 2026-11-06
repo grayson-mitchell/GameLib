@@ -1,9 +1,9 @@
 import { logError, logInfo } from '../logger'
 
 import { LegendaryGlobalConfigFolderMigration } from './migrations/legendary'
-import { migrationsStore } from './electronStores'
+import { migrationsStore } from './stores'
 
-import type { TypeCheckedStore } from 'common/types/electron_store'
+import type { TypeCheckedStore } from 'common/types/typed_store'
 
 export interface Migration {
   identifier: string

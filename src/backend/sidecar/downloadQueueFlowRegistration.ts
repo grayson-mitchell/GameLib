@@ -3,7 +3,7 @@
  * REQ-32-02/REQ-32-03/REQ-32-04/REQ-32-05/REQ-32-08).
  *
  * Registers the five queue-management channels the Download Manager screen
- * and the Sidebar's queue badge depend on, onto electronStub's `ipcMain`
+ * and the Sidebar's queue badge depend on, onto platformApi's `ipcMain`
  * recorder, importing the REAL `downloadmanager/downloadqueue.ts` functions
  * unchanged (mirrors `installFlowRegistration.ts`'s / `settingsFlowRegistration.ts`'s
  * own objective — prove the real logic runs behind the new transport, not a
@@ -48,8 +48,8 @@
  * Push channels (`progressUpdate`, `changedDMQueueInformation`) are NOT
  * registered here — they need no `ipcMain` registration at all. Both already
  * flow through the existing, unmodified `sendFrontendMessage` ->
- * `getMainWindow().webContents.send` -> electronStub's `fakeWebContents.send`
- * -> `pushFrontendMessage` chain (`ipc.ts`, `electronStub.ts`,
+ * `getMainWindow().webContents.send` -> platformApi's `fakeWebContents.send`
+ * -> `pushFrontendMessage` chain (`ipc.ts`, `platform/index.ts`,
  * `sidecarRpc.ts`) with zero `src-tauri` changes, and this module adds no
  * timer-based rate-limiting logic of its own on top of them — `depot.ts`'s
  * `emitProgress()` already rate-limits at the source (500ms/1%/1000ms
@@ -63,7 +63,7 @@
  * This module only owns the *pull* side (pause/resume/cancel/remove/inspect)
  * plus the push-relay proof.
  *
- * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
+ * Uses platformApi's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`/`addListener`) — no file under `src/backend/sidecar/` may
  * import the real `electron` module (REQ-32-08).
  */

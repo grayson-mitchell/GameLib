@@ -3,7 +3,7 @@
  * D-01/D-02/D-04/D-07/D-08, REQ-34.4.1-02/REQ-34.4.1-03/REQ-34.4.1-04/REQ-34.4.1-05/
  * REQ-34.4.1-13).
  *
- * Registers the 4 browser-auth channels onto `electronStub`'s `ipcMain` recorder and installs a
+ * Registers the 4 browser-auth channels onto `platformApi`'s `ipcMain` recorder and installs a
  * `rustInvoke`-backed implementation of `LoginWindowSeam` (`backend/humble/loginWindowSeam.ts`) at
  * sidecar startup. This is the ONLY module that constructs that implementation and the ONLY call
  * site of `setLoginWindowSeam()` in the whole repo (T-34.4.1-10) -- kept in its own dedicated

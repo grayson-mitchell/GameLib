@@ -57,7 +57,7 @@ jest.mock('backend/storeManagers/index', () => ({
 }))
 
 const mockConfigStoreClear = jest.fn<unknown, unknown[]>()
-jest.mock('backend/storeManagers/gog/electronStores', () => ({
+jest.mock('backend/storeManagers/gog/stores', () => ({
   configStore: {
     set: jest.fn(),
     get_nodefault: jest.fn(),

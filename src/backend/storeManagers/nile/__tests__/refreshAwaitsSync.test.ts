@@ -6,7 +6,7 @@
  * `runRunnerCommand` is spied, so no binary is spawned and the fake-HOME rule
  * does not apply.
  */
-import { libraryStore } from 'backend/storeManagers/nile/electronStores'
+import { libraryStore } from 'backend/storeManagers/nile/stores'
 import { NileUser } from '../user'
 import NileLibraryManager from '../library'
 
@@ -47,7 +47,7 @@ jest.mock('graceful-fs', () => ({
       : JSON.stringify(libraryFile),
   writeFileSync: () => undefined
 }))
-jest.mock('backend/storeManagers/nile/electronStores', () => ({
+jest.mock('backend/storeManagers/nile/stores', () => ({
   configStore: { get: jest.fn(), set: jest.fn(), delete: jest.fn() },
   installStore: { get: jest.fn(), set: jest.fn(), delete: jest.fn() },
   libraryStore: { get: () => [], set: jest.fn() }

@@ -91,8 +91,8 @@ meta/buildSidecarSea.ts - buildSeaConfigPath
 # NEW used-in-module one rather than resolving it.
 src/backend/constants/paths.ts - webviewPreloadPath
 src/backend/constants/urls.ts - GITHUB_API
-src/backend/electron_store.ts - getRegisteredStoreNames
-src/backend/electron_store.ts - getRegisteredStoreOptions
+src/backend/typed_store.ts - getRegisteredStoreNames
+src/backend/typed_store.ts - getRegisteredStoreOptions
 src/backend/humble/adapter.ts - OrderDetailTpk
 src/backend/humble/constants.ts - HUMBLE_FUZZY_MATCH_THRESHOLD
 src/backend/humble/constants.ts - HUMBLE_LOGIN_PARTITION

@@ -33,11 +33,7 @@ import {
   noteSteamAuthTrigger
 } from './authTrigger'
 import { getAnonymousPicsClient } from './anonymousClient'
-import {
-  steamLibraryStore,
-  steamMetadataStore,
-  steamSyncStore
-} from './electronStores'
+import { steamLibraryStore, steamMetadataStore, steamSyncStore } from './stores'
 import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from './state'
 import { formatMacArch32KnownFixEntry } from './macArchKnownFix'
@@ -1442,7 +1438,7 @@ export default class SteamLibraryManager implements LibraryManager {
           // DETAIL-01: seed native platform flags from the metadata cache so the
           // platform icons survive a resync (fetchMetadataIfNeeded populates these).
           // D-17: is_windows_native is deliberately NOT defaulted (34.13
-          // review WR-16). Both `common/types.ts` and `electronStores.ts`
+          // review WR-16). Both `common/types.ts` and `stores.ts`
           // document this field as THREE-valued: `undefined` means "never
           // captured (pre-34.13 entry)", `false` means "confirmed no Windows
           // depot", and only `=== true` permits offering a Windows install.

@@ -7,7 +7,7 @@ import { publicDir } from 'backend/constants/paths'
 import { axiosClient } from 'backend/utils'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 
-import { crossoverIndexStore, type CachedIndex } from './electronStore'
+import { crossoverIndexStore, type CachedIndex } from './stores'
 
 /**
  * D-19: the single seam this plan introduces — parameterized by index

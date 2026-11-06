@@ -15,7 +15,7 @@ import {
   NileInstallMetadataInfo
 } from 'common/types/nile'
 import { existsSync, readFileSync, writeFileSync } from 'graceful-fs'
-import { installStore, libraryStore } from './electronStores'
+import { installStore, libraryStore } from './stores'
 import { getFileSize, getNileBin, removeSpecialcharacters } from 'backend/utils'
 import { callRunner } from 'backend/launcher'
 import { dirname, join } from 'path'

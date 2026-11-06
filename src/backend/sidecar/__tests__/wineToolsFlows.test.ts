@@ -27,7 +27,7 @@
  *      `installOrUpdateTool` -> `tools/index.ts:137`) never throws and never produces an
  *      unhandled promise rejection even when its primary frontend push fails, using a
  *      `jest.isolateModules()` sandbox (mirrors `sidecarRejectionGuard.test.ts`'s own harness
- *      shape) so the real, non-mocked `electronStub.dialog` fallback (proven non-throwing in its
+ *      shape) so the real, non-mocked `platformApi.dialog` fallback (proven non-throwing in its
  *      own dedicated suite, `dialogStub.test.ts`) is what's actually exercised here, without
  *      disturbing this file's already-loaded `config.ts`/`game_config.ts` module instances
  *      (Phase 35 Plan 18: those instances now resolve against the REAL `backend/platform` by
@@ -225,7 +225,7 @@ describe('pass-through proof — runWineCommand forwards args[0] unchanged, not 
 // The one dialog `toggleDXVK`/`toggleDXVKNVAPI`/`toggleVKD3D` can reach is `showDialogBoxModalAuto`
 // (`tools/index.ts:137`, via `DXVK.installRemove` -> `DXVK.getLatest()` -> `installOrUpdateTool`
 // on a download failure). This pins the property D-15 actually cares about: even when the primary
-// `sendFrontendMessage('showDialog', ...)` push fails, the fallback to `electronStub.dialog.*`
+// `sendFrontendMessage('showDialog', ...)` push fails, the fallback to `platformApi.dialog.*`
 // never throws and never leaves an unhandled promise rejection behind.
 //
 // A dedicated `jest.isolateModules()` sandbox is used (mirrors `sidecarRejectionGuard.test.ts`'s
@@ -245,7 +245,7 @@ describe('pass-through proof — runWineCommand forwards args[0] unchanged, not 
 // `backend/platform` directly, both at this file's top level and inside this isolated sandbox,
 // so the `doMock` swap became a no-op and was deleted.)
 describe('D-15/T-34.5-30 dialog safety pin — showDialogBoxModalAuto never propagates a rejection', () => {
-  it('does not throw synchronously and produces no unhandled rejection when the frontend push fails, using the real electronStub dialog fallback', async () => {
+  it('does not throw synchronously and produces no unhandled rejection when the frontend push fails, using the real platformApi dialog fallback', async () => {
     let isolatedShowDialogBoxModalAuto!: (props: {
       title: string
       message: string
@@ -298,7 +298,7 @@ describe('D-15/T-34.5-30 dialog safety pin — showDialogBoxModalAuto never prop
         })
       ).not.toThrow()
 
-      // Let the fire-and-forget `electronStub.dialog.showErrorBox(...)` promise settle before
+      // Let the fire-and-forget `platformApi.dialog.showErrorBox(...)` promise settle before
       // asserting nothing escaped as an unhandled rejection.
       await new Promise((resolve) => setImmediate(resolve))
 

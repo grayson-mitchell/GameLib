@@ -13,8 +13,8 @@
  * Transitive reach to `electron` DOES exist here and is EXPECTED -- this
  * file's own `import { notify } from '../dialog/dialog'` below reaches
  * `dialog.ts`'s `import { dialog, Notification } from 'electron'` -- and is
- * safe at runtime because `electronStub`'s `Module._load` interception
- * (`sidecar/electronStub.ts`) rewrites every `require('electron')` inside
+ * safe at runtime because `platformApi`'s `Module._load` interception
+ * (`sidecar/platform/index.ts`) rewrites every `require('electron')` inside
  * the sidecar process. See `sidecar/__tests__/electronReachLedger.test.ts`
  * for the measured, enforced set of electron-importing modules actually
  * reachable from this slice's four gated entry points.

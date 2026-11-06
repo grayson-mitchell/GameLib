@@ -16,7 +16,7 @@ import {
   CapturedPlatforms,
   PlatformCapturePicsClient
 } from '../platformCapture'
-import { steamMetadataStore } from '../electronStores'
+import { steamMetadataStore } from '../stores'
 import { STEAM_PICS_BULK_TIMEOUT_MS } from '../withTimeout'
 
 jest.mock('backend/logger', () => ({
@@ -29,7 +29,7 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   steamMetadataStore: {
     get: jest.fn(),
     set: jest.fn(),

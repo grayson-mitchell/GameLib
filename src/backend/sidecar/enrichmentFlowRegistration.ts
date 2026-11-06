@@ -3,7 +3,7 @@
  * D-10, REQ-34.2-04/REQ-34.2-11/REQ-34.2-12/REQ-34.2-14).
  *
  * Registers the 17 enrichment channels the game-details page and store
- * search container depend on, onto electronStub's own `ipcMain` recorder,
+ * search container depend on, onto platformApi's own `ipcMain` recorder,
  * importing the REAL underlying bodies plans 34.2-01/34.2-03 already
  * extracted or wired unchanged (mirrors `gameDetailsFlowRegistration.ts`'s
  * own objective — prove the real logic runs behind the new transport, not a
@@ -91,7 +91,7 @@
  * `removeRecentGame`, of which this channel needs only the last (curated-import
  * discipline, D-04).
  *
- * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
+ * Uses platformApi's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`/`addListener`) — `backend/ipc.ts` itself imports the real
  * `electron` module, and no file under `src/backend/sidecar/` may import
  * `electron`, `backend/ipc`, `../ipc`, `../launcher`, or `main_window`
@@ -100,7 +100,7 @@
  * this file's own `import { ... } from '../storeSearch/handlers'` below
  * reaches `handlers.ts`'s own import of `cheapshark.ts`, which itself
  * `import { app } from 'electron'` -- and is safe at runtime because
- * `electronStub`'s `Module._load` interception rewrites every
+ * `platformApi`'s `Module._load` interception rewrites every
  * `require('electron')` inside the sidecar process. See
  * `sidecar/__tests__/electronReachLedger.test.ts` for the measured, enforced
  * set of electron-importing modules actually reachable from this slice's
@@ -115,7 +115,7 @@
  * underlying-module-not-`ipc_handler` rule D-04 already states, applied to
  * the last duplicated surface (Phase 34.2 Plan 13, WR-09).
  *
- * `wiki_game_info/electronStore` is already registered by
+ * `wiki_game_info/stores` is already registered by
  * `storeRegistration.ts:104` (Phase 29) — this module needs no new store
  * plumbing for the `getWikiGameInfo` cache self-heal path.
  *
@@ -135,7 +135,7 @@
  *     through `GlobalConfig`/`steamgrid/secureKey.ts` directly. This is a
  *     narrow, explicit exception to this file's own D-02 port-then-harden
  *     rule (applied everywhere else in this file): under the sidecar,
- *     `safeStorage` resolves to `electronStub.ts`'s dead stub, so a
+ *     `safeStorage` resolves to `platform/index.ts`'s dead stub, so a
  *     byte-equivalent port would persist a real key to `config.json` in
  *     the clear (T-34.6-01). `steamgrid/ipc_handler.ts` itself is NEVER
  *     imported here (it calls `addHandler`, which imports the real

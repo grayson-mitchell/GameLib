@@ -4,7 +4,7 @@ import { GlobalConfig } from 'backend/config'
 import { isSteamDeckGameMode } from 'backend/constants/environment'
 import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'
-import { humbleNotifiedExpirationStore } from './electronStores'
+import { humbleNotifiedExpirationStore } from './stores'
 import { HumbleKey } from 'common/types/humble'
 
 /**
@@ -91,7 +91,7 @@ export function detectAndNotifyExpirationTransitions(
 /**
  * D-90 digest copy. Reads ONLY the display-safe `title`/`expiration` fields
  * off `HumbleKey` (Pitfall 5) — the internal-only secret-surface fields
- * carried by the cache's internal key shape (see electronStores.ts) must
+ * carried by the cache's internal key shape (see stores.ts) must
  * never be touched here.
  */
 function buildDigestCopy(newlyExpiring: HumbleKey[]): {

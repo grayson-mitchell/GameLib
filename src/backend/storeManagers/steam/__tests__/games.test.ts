@@ -33,7 +33,7 @@ const gameModuleFiles = (): string[] => {
 }
 import { sendFrontendMessage } from '../../../ipc'
 import * as shortcutsModule from '../../../shortcuts/shortcuts/shortcuts'
-import { steamMetadataStore, steamLibraryStore } from '../electronStores'
+import { steamMetadataStore, steamLibraryStore } from '../stores'
 import { TITLE_AUTHORITATIVE_KEYS } from '../titleSettings'
 import SteamGame, { getBridgeRouteVerdict } from '../games'
 import {
@@ -233,7 +233,7 @@ jest.mock('../../../ipc', () => ({
 }))
 
 // ── Metadata cache store mock — controls steamMetadataStore ──────────────────
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   configStore: {
     get: jest.fn(),
     get_nodefault: jest.fn(),
@@ -9234,11 +9234,11 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     it('A-19: the source carries no writer, eraser or store declaration for it', () => {
       // A census, so the deletion cannot be half-undone in one file. The 62
       // split moved code out of games.ts, so it now covers every game*.ts
-      // module plus library.ts and electronStores.ts.
+      // module plus library.ts and stores.ts.
       for (const relative of [
         ...gameModuleFiles(),
         'library.ts',
-        'electronStores.ts'
+        'stores.ts'
       ]) {
         const source = stripSourceComments(
           readFileSync(join(__dirname, '..', relative), 'utf8')

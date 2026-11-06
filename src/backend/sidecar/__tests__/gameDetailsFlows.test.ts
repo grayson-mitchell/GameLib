@@ -5,7 +5,7 @@
  *
  * Drives the REAL sidecar RPC server in-process (`appShellFlows.test.ts`'s /
  * `downloadQueueFlows.test.ts`'s own real-shim black-box pattern — the shims
- * under test are the actual electronStub.ts/fileStore.ts modules, unmocked)
+ * under test are the actual platform/index.ts/fileStore.ts modules, unmocked)
  * against injected `stream.PassThrough` pairs.
  *
  * **This suite does NOT mock `i18next`.** `repair`'s notification body is
@@ -18,7 +18,7 @@
  * **GAP FIX precedent (2026-07-22, see skeletonFlows.test.ts's own header):**
  * this suite's config directory is NOT the real OS config directory. The
  * `jest.mock('os', ...)` below overrides `homedir()` to a disposable
- * per-process tmp directory so the real electronStub/fileStore CODE runs
+ * per-process tmp directory so the real platformApi/fileStore CODE runs
  * (preserving this suite's fidelity), while the location it reads/writes can
  * never be the developer's real config directory.
  *
@@ -31,7 +31,7 @@
  * `gameOverridesStore.set('overrides', {})`, wiping a real user's title/art
  * customizations. `jest.mock('os', ...)` is KEPT below as defence-in-depth;
  * the actual redirect mocks `pathShim` itself — the single choke point
- * `electronStub.ts`'s `app.getPath()` calls through — with no platform
+ * `platform/index.ts`'s `app.getPath()` calls through — with no platform
  * branch and no environment variable participating, and a `beforeAll`
  * containment guard (`resolve`+`relative`, never `startsWith`/`join` — see
  * Phase 18's recorded "join is not containment" lesson) asserts
@@ -39,10 +39,10 @@
  * before the first destructive write can run.
  *
  * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` below
- * point Jest's OWN module resolution at electronStub.ts/fileStore.ts
+ * point Jest's OWN module resolution at platform/index.ts/fileStore.ts
  * directly — see skeletonFlows.test.ts's header for why this is necessary.
  * Because `electron-store` resolves to the REAL `fileStore.ts` (not a mock
- * class), `game_overrides/electronStores.ts`'s `gameOverridesStore` is a
+ * class), `game_overrides/stores.ts`'s `gameOverridesStore` is a
  * REAL, disk-backed `TypeCheckedStoreBackend` for this suite — the
  * `getGameMetadataOverride`/`getAllGameOverrides` tests below write through
  * it directly, proving the Phase 29 store registration
@@ -87,7 +87,7 @@
  *
  * Every other module in the registration/transport/store path
  * (`gameDetailsFlowRegistration.ts`, `handlers.ts`, `bootstrap.ts`,
- * `electronStub.ts`, `fileStore.ts`, `backend/logger`, every OTHER curated
+ * `platform/index.ts`, `fileStore.ts`, `backend/logger`, every OTHER curated
  * registration module `handlers.ts` also wires up) runs for real, unmodified.
  */
 
@@ -125,7 +125,7 @@ jest.mock('os', () => {
 
 // ── pathShim — CR-03: the REAL choke point. `constants/paths.ts`'s
 // module-scope `app.getPath('appData'|'userData')` calls resolve through
-// `electronStub.ts` -> `pathShim.getPath()`, whose real `resolveAppDataDir()`
+// `platform/index.ts` -> `pathShim.getPath()`, whose real `resolveAppDataDir()`
 // prefers `env.APPDATA`/`env.XDG_CONFIG_HOME` over `homedir()` — bypassing
 // the `jest.mock('os', ...)` redirect above on win32/default. This factory
 // reimplements all four names the real shim supports, rooted at a single
@@ -342,7 +342,7 @@ import { handlerRegistry, listenerRegistry } from '../../platform'
 // time — real, unmocked `sidecarRpc.ts`, per this suite's own module
 // docstring (every module in the transport/registration path runs for real).
 import * as sidecarRpc from '../sidecarRpc'
-import { gameOverridesStore } from '../../game_overrides/electronStores'
+import { gameOverridesStore } from '../../game_overrides/stores'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import { relative, resolve, isAbsolute, join } from 'path'
 import { readFileSync } from 'fs'

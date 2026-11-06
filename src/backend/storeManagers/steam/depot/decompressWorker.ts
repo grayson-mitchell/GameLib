@@ -26,7 +26,7 @@
 // spawned as a real worker_threads.Worker. The actual fix lives at BUILD
 // TIME instead (`meta/buildDecompressWorkerDev.ts`, `pnpm
 // build:decompress-worker-dev`), which esbuild-aliases `electron` directly
-// to `electronStub.ts` -- mirroring the packaged SEA worker bundle's own
+// to `platform/index.ts` -- mirroring the packaged SEA worker bundle's own
 // `--alias:electron` fix (quick-260817-pkx) -- so there is no runtime
 // require('electron') left to intercept, in either bundler's chunking
 // behavior.

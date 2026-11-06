@@ -4,18 +4,18 @@
  *
  * Drives the REAL sidecar RPC server in-process (`downloadQueueFlows.test.ts`'s
  * own real-shim black-box pattern — the shims under test are the actual
- * electronStub.ts/fileStore.ts modules, unmocked) against injected
+ * platform/index.ts/fileStore.ts modules, unmocked) against injected
  * `stream.PassThrough` pairs.
  *
  * **GAP FIX precedent (2026-07-22, see skeletonFlows.test.ts's own header):**
  * this suite's config directory is NOT the real OS config directory. The
  * `jest.mock('os', ...)` below overrides `homedir()` to a disposable
- * per-process tmp directory so the real electronStub/fileStore CODE runs
+ * per-process tmp directory so the real platformApi/fileStore CODE runs
  * (preserving this suite's fidelity), while the location it reads/writes can
  * never be the developer's real config directory.
  *
  * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` below
- * point Jest's OWN module resolution at electronStub.ts/fileStore.ts
+ * point Jest's OWN module resolution at platform/index.ts/fileStore.ts
  * directly — see skeletonFlows.test.ts's header for why this is necessary.
  *
  * `../sidecarRpc` is PARTIALLY mocked (`jest.requireActual` spread, only
@@ -23,7 +23,7 @@
  * suite that needs BOTH the real RPC dispatch loop (`init()`, for
  * `startRpcServer`/`pushFrontendMessage`/`requestOpenExternal`) AND a
  * scriptable `requestRustInvoke` (for `notify`/`quit`, which reach it via
- * `electronStub.Notification.show()`/`app.exit()`). A full `{
+ * `platformApi.Notification.show()`/`app.exit()`). A full `{
  * requestRustInvoke: jest.fn() }` replacement (`lifecycleStub.test.ts`'s
  * style) would leave `startRpcServer` undefined and break the whole loop —
  * this suite is not a candidate for that shape (mirrors `dialogStub.test.ts`'s
@@ -36,7 +36,7 @@
  *     avoids GlobalConfigV0's own on-disk read/write path.
  *   - `i18next` — `changeLanguage()`'s real call target; mirrors
  *     `appshellModules.test.ts`'s own `__esModule` default-shape mock.
- *   - `backend/storeManagers/legendary/electronStores` (`gameInfoStore`) —
+ *   - `backend/storeManagers/legendary/stores` (`gameInfoStore`) —
  *     mirrors `appshellModules.test.ts`'s own choice to avoid a real
  *     disk-backed `CacheStore` construction for this plan's own extracted
  *     `changeLanguage` body (this repo's own "tests clobbering real store"
@@ -48,7 +48,7 @@
  *
  * Every other module in the registration/transport/store path
  * (`appShellFlowRegistration.ts`, `handlers.ts`, `bootstrap.ts`,
- * `electronStub.ts`, `fileStore.ts`, `backend/utils` — `handleExit`/
+ * `platform/index.ts`, `fileStore.ts`, `backend/utils` — `handleExit`/
  * `openUrlOrFile`, `backend/dialog/dialog` — `notify`, `backend/appshell/*`,
  * `backend/main_window`, `backend/online_monitor`) runs for real, unmodified
  * — in particular `backend/logger` is intentionally NOT mocked (mirrors
@@ -113,7 +113,7 @@ jest.mock('../../storeManagers/steam/macSteamOffline', () => ({
 
 // ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init()` now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
-// electronStub's `net.isOnline()` returns `true` -- immediately calls the real `pingSites()`,
+// platformApi's `net.isOnline()` returns `true` -- immediately calls the real `pingSites()`,
 // a live `axios.head()` against github/epic/gog/cloudflare. Mocked so this suite (which drives
 // the real, unmocked RPC/handler graph) never makes a real network call.
 jest.mock('axios', () => {
@@ -192,10 +192,10 @@ jest.mock('i18next', () => ({
   }
 }))
 
-// ── legendary electronStores mock — gameInfoStore is a real CacheStore
+// ── legendary stores mock — gameInfoStore is a real CacheStore
 // backed by electron-store; mocked to avoid any real disk I/O (this repo's
 // own "tests clobbering real store" precedent, mirrors appshellModules.test.ts) ─
-jest.mock('../../storeManagers/legendary/electronStores', () => ({
+jest.mock('../../storeManagers/legendary/stores', () => ({
   gameInfoStore: {
     clear: jest.fn()
   }
@@ -279,7 +279,7 @@ jest.mock('../../utils', () => ({
 import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import { GlobalConfig } from 'backend/config'
 import i18next from 'i18next'
-import { gameInfoStore } from '../../storeManagers/legendary/electronStores'
+import { gameInfoStore } from '../../storeManagers/legendary/stores'
 import { backendEvents } from '../../backend_events'
 import {
   callAbortController,
@@ -513,7 +513,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   // ── CR-04 (Phase 34.1 code review): the pending-operations quit confirm ───
   //
   // Registering `quit` made `handleExit()` sidecar-reachable for the first time, which
-  // invalidated the invariant `electronStub.showMessageBox`'s own comment block reasoned
+  // invalidated the invariant `platformApi.showMessageBox`'s own comment block reasoned
   // from. `handleExit` is the ONE caller in this codebase whose dialog sense is inverted
   // (index 0 = safe "No", index 1 = destructive "Yes" -> kill legendary/gogdl/nile +
   // callAllAbortControllers + app.exit). These two tests pin the consequences.
@@ -529,7 +529,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       if (existsSync(lockFile)) rmSync(lockFile)
     })
 
-    // NOTE on what is (and is not) observable here: `electronStub.showMessageBox`
+    // NOTE on what is (and is not) observable here: `platformApi.showMessageBox`
     // deliberately does NOT forward `cancelId` into the Rust payload -- it consumes it
     // locally as the `safeIndex` fail-safe default. So `cancelId: 0` cannot be asserted
     // on the wire; the second test below asserts its BEHAVIOUR instead, which is the
@@ -590,7 +590,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     // Quick task 260907-juv (Gate A3): a cancelled quit must not tear down long-lived
     // children. Reuses this describe block's lockFile fixture with the SUITE'S DEFAULT
     // mock (mockRequestRustInvoke resolving `undefined` for every channel, un-overridden)
-    // -- per `electronStub.showMessageBox`'s own logic, `result === false` is false for an
+    // -- per `platformApi.showMessageBox`'s own logic, `result === false` is false for an
     // `undefined` resolution, so the safe/"No"/cancelled `response: 0` path is taken and
     // `handleExit()` returns before reaching either the abort fan-out or the registry.
     it('REQ-260907-juv A3: a cancelled quit (response === 0) does NOT tear down long-lived children', async () => {
@@ -1060,7 +1060,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     // ── CR-02 (35-REVIEW.md, plan 35-21): once-semantics for the boot-time
     // auto-resume, restored via `frontendReadyBootWorkDone`'s module-scoped guard. The
     // sidecar OUTLIVES the renderer, so a renderer reload re-delivers `frontendReady` into
-    // this SAME registration -- `electronStub`'s `ipcMain.on` has no once-semantics of its
+    // this SAME registration -- `platformApi`'s `ipcMain.on` has no once-semantics of its
     // own, unlike Electron's real `ipcMain` the original code reached via
     // `addOneTimeListener`. `initQueue` has no re-entrancy guard, so an unguarded second
     // delivery would start a second concurrent install of the same queue head.
@@ -1617,7 +1617,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       // double-register every OTHER channel's listener too (breaking the lock/unlock/
       // abort tests elsewhere in this file, whose bodies assume exactly one listener
       // each). jest.isolateModules gives a fresh module registry -- a fresh
-      // electronStub (own listenerRegistry), a fresh sidecarRpc mock instance, and a
+      // platformApi (own listenerRegistry), a fresh sidecarRpc mock instance, and a
       // fresh backend/config mock instance -- so this test's own registration can
       // never leak into the shared suite state.
       jest.isolateModules(() => {

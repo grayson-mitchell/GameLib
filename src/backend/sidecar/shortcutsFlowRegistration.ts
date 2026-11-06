@@ -29,7 +29,7 @@
  * `humbleLoginFlowRegistration.ts` uses for its own `humbleStopLogin` listener, since the Electron
  * original (`main.ts:1465`) is itself an already-async body with no wrapping try/catch --
  * Electron's own listener registrar catches handler exceptions for you; this sidecar's
- * `electronStub.ts` recorder does not.
+ * `platform/index.ts` recorder does not.
  *
  * EXE ATTRIBUTION, verified against source (this supersedes CONTEXT.md D-09 and
  * 34.5-RESEARCH.md's Correction 3, both of which originally filed `shortcuts.ts:227` under the
@@ -63,7 +63,7 @@
  * `processShortcut` needs neither `desktop` nor `exe` -- it is an app-shell HOTKEY channel
  * (`main.ts:1465`, ctrl+r/q/k/j/l/shift+i), not a game-shortcut channel. Its `ctrl+r` and
  * `ctrl+shift+i` cases call `mainWindow?.reload()` and `mainWindow?.webContents?.openDevTools()`;
- * `electronStub`'s `fakeWindow`/`fakeWebContents` (Phase 34.5 Plan 08, Task 1) implement both as
+ * `platformApi`'s `fakeWindow`/`fakeWebContents` (Phase 34.5 Plan 08, Task 1) implement both as
  * logged no-ops rather than throwing -- these two hotkeys are DECLARED DEGRADED under Tauri
  * (T-34.5-27, `34.5-PORTED-CHANNELS.md`), not silently broken and not reimplemented with new
  * Tauri window plumbing (that would be new shell work, not a port).
@@ -158,7 +158,7 @@ function shortcutsExistOnDisk(appName: string, runner: Runner): boolean {
  *
  * Idempotence guard (Rule 1 fix, discovered by `__tests__/runnerSliceRegistration.test.ts`'s own
  * pre-existing "calling registerXFlows() twice does not throw or stack duplicate listeners" case,
- * and by plan 34.5-08's own `shortcutsFlows.test.ts`): `ipcMain.on` (`electronStub.ts`) appends to
+ * and by plan 34.5-08's own `shortcutsFlows.test.ts`): `ipcMain.on` (`platform/index.ts`) appends to
  * an array on every call, so a second unguarded call to this function would double-register
  * `processShortcut`'s listener -- unlike `ipcMain.handle`, which is
  * naturally idempotent (`Map.set` replaces the existing entry) and therefore does not itself need
@@ -366,7 +366,7 @@ export function registerShortcutsFlows(): void {
   // ── send (1) ──────────────────────────────────────────────────────────────
 
   // App-shell hotkey channel (`main.ts:1465`), ported verbatim as a six-case switch. `ctrl+r` and
-  // `ctrl+shift+i` reach `electronStub`'s `fakeWindow.reload()`/`fakeWebContents.openDevTools()`
+  // `ctrl+shift+i` reach `platformApi`'s `fakeWindow.reload()`/`fakeWebContents.openDevTools()`
   // logged no-ops (Task 1 of this plan, T-34.5-27) -- DECLARED DEGRADED under Tauri, recorded in
   // `34.5-PORTED-CHANNELS.md`. Neither case is deleted and neither is reimplemented with new
   // Tauri window plumbing; that would be new shell work, not a port.
@@ -378,7 +378,7 @@ export function registerShortcutsFlows(): void {
 
         switch (combination) {
           // hotkey to reload the app -- DECLARED DEGRADED under Tauri (T-34.5-27): no sidecar/
-          // WebView reload equivalent, see electronStub.ts's fakeWindow.reload() comment.
+          // WebView reload equivalent, see platform/index.ts's fakeWindow.reload() comment.
           case 'ctrl+r':
             mainWindow?.reload()
             break
@@ -399,7 +399,7 @@ export function registerShortcutsFlows(): void {
             sendFrontendMessage('openScreen', '/library')
             break
           // DECLARED DEGRADED under Tauri (T-34.5-27): no sidecar/WebView devtools equivalent,
-          // see electronStub.ts's fakeWebContents.openDevTools() comment.
+          // see platform/index.ts's fakeWebContents.openDevTools() comment.
           case 'ctrl+shift+i':
             mainWindow?.webContents?.openDevTools()
             break

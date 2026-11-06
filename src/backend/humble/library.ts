@@ -35,7 +35,7 @@ import {
   humbleRevealedStore,
   humbleSettleDeclinedStore,
   humbleSyncStore
-} from './electronStores'
+} from './stores'
 import {
   HUMBLE_SYNC_CONCURRENCY,
   HUMBLE_COOLDOWN_MS,
@@ -43,7 +43,7 @@ import {
 } from './constants'
 import { currentSyncGeneration } from './syncFence'
 import { HumbleUser } from './user'
-import { steamLibraryStore } from 'backend/storeManagers/steam/electronStores'
+import { steamLibraryStore } from 'backend/storeManagers/steam/stores'
 import { SteamUser } from 'backend/storeManagers/steam/user'
 import { GameInfo } from 'common/types'
 

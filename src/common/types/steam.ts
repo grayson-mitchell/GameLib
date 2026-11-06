@@ -31,7 +31,7 @@ export interface RedeemKeyResult {
 // Phase 17 (17-02): dedicated Steam CrossOver bottle settings, persisted in
 // its own `steamBottleConfigStore` — NOT a phantom GameConfig entry (see
 // RESEARCH.md "Alternatives Considered"). Shared by
-// src/backend/storeManagers/steam/electronStores.ts and the StoreStructure
+// src/backend/storeManagers/steam/stores.ts and the StoreStructure
 // map below.
 // NOTE: must stay a `type` alias (not `interface`) — TypeScript only permits
 // implicit index-signature assignability (required by StoreStructure's

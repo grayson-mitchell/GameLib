@@ -14,7 +14,7 @@
  * (never rejects) on every failure path, and never introduces a pending timer after settling
  * (Task 1).
  *
- * `registerOAuthLoginFlows()` is proven against `electronStub`'s registry directly (mirrors
+ * `registerOAuthLoginFlows()` is proven against `platformApi`'s registry directly (mirrors
  * `humbleLoginFlows.test.ts`'s "registration kind" describe block): `oauthCaptureLogin` is
  * registered as `ipcMain.handle` and NOT as `ipcMain.on` — a send-vs-handle mismatch fails 100%
  * SILENTLY at runtime — plus the two boundary-validation cases (unknown runner, non-https url)

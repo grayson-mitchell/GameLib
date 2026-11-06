@@ -95,7 +95,7 @@ import {
   getRecentGames,
   testingExportsRecentGames
 } from 'backend/recent_games/recent_games'
-import { steamLibraryStore } from 'backend/storeManagers/steam/electronStores'
+import { steamLibraryStore } from 'backend/storeManagers/steam/stores'
 import type { GameInfo } from 'common/types'
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */

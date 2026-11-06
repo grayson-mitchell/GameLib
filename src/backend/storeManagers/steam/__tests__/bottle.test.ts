@@ -30,7 +30,7 @@ import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
 import { runWineCommand } from 'backend/launcher'
 import { DXVK } from 'backend/tools'
 import { writeCxbottleConf } from '../engine/adoptBottle'
-import { steamBottleConfigStore } from '../electronStores'
+import { steamBottleConfigStore } from '../stores'
 import { library } from '../state'
 import {
   startBottleProcessMonitor,
@@ -105,7 +105,7 @@ jest.mock('graceful-fs', () => ({
   rmSync: jest.fn()
 }))
 
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   steamBottleConfigStore: {
     get: jest.fn(),
     get_nodefault: jest.fn(),

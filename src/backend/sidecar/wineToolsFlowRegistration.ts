@@ -245,7 +245,7 @@ export function registerWineToolsFlows(): void {
   // (`tools/index.ts:137`, via `DXVK.installRemove` -> `DXVK.getLatest()` -> `installOrUpdateTool`
   // on a download failure). Its primary path is the fire-and-forget
   // `sendFrontendMessage('showDialog', ...)` push; its `catch` fallback lands on
-  // `electronStub.dialog.showErrorBox`/`showMessageBox`, both async and non-throwing by
+  // `platformApi.dialog.showErrorBox`/`showMessageBox`, both async and non-throwing by
   // construction (each has its own internal try/catch that never rethrows). No fix was built here
   // — the existing wiring already satisfies the concern this plan set out to verify.
   ipcMain.handle('toggleDXVK', async (_event: unknown, ...args: unknown[]) => {

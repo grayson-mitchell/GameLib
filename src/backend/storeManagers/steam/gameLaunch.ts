@@ -15,7 +15,7 @@ import { sendGameStatusUpdate } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { isMac, isWindows } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
-import { type SteamBridgeVerdict } from './electronStores'
+import { type SteamBridgeVerdict } from './stores'
 import {
   probeMacSteamPid,
   readAcfSnapshot,

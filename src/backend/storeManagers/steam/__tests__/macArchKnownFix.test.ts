@@ -25,7 +25,7 @@ jest.mock('backend/constants/environment', () => ({
 jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 
 const metaStore = new Map<string, Record<string, unknown>>()
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   steamMetadataStore: {
     get: jest.fn(),
     set: jest.fn()
@@ -42,7 +42,7 @@ import {
   knownFixSaysMac32,
   seedMacArchFromKnownFix
 } from '../macArchKnownFix'
-import { steamMetadataStore } from '../electronStores'
+import { steamMetadataStore } from '../stores'
 
 const readFixes = readKnownFixes as jest.Mock
 // eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock handle, never invoked unbound

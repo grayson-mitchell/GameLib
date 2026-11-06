@@ -7,7 +7,7 @@
  * compile-time literal check (the field/interface exists with the right
  * shape) or a source-text check over a comment-stripped file (a declaration
  * — or, for D-26, an absence — actually landed in the right place). Nothing
- * in this file imports `backend/config` or `../electronStores` at runtime:
+ * in this file imports `backend/config` or `../stores` at runtime:
  * those two files are asserted against via `readFileSync`, because a
  * runtime import of either would pull `electron-store` into the Backend
  * jest project for a plan that has no reason to touch it.
@@ -33,7 +33,7 @@
  * — the plan's assumed "ts-jest type errors (TS2353/TS2339)" failure mode
  * does not occur in this project's jest config. Every identifier this gate
  * must RED-prove is therefore ALSO asserted via a comment-stripped
- * source-text `toMatch`, exactly like the two `electronStores.ts` checks —
+ * source-text `toMatch`, exactly like the two `stores.ts` checks —
  * the compile-time literals are kept for documentation/editor value and for
  * `pnpm codecheck` (`tsc --noEmit`, a real full-program check) but are not
  * load-bearing for this gate's RED proof.
@@ -46,10 +46,10 @@ import type { SteamBottleEligibilityVerdict } from 'common/types/steam'
 // 34.13 review A-07: a TYPE-ONLY import of the production interface. This is
 // deliberately `import type`, so nothing pulls `electron-store` into the
 // Backend jest project at runtime -- the constraint this file's header
-// records for `../electronStores` still holds; only the compile-time shape
+// records for `../stores` still holds; only the compile-time shape
 // crosses the boundary, which is exactly what the replaced hand-built
 // replica was standing in for.
-import type { SteamMetadataCacheEntry } from '../electronStores'
+import type { SteamMetadataCacheEntry } from '../stores'
 import type { ExtraInfo } from 'common/types'
 
 const commonTypesSource = stripSourceComments(
@@ -60,8 +60,8 @@ const steamCommonTypesSource = stripSourceComments(
   readFileSync(join(__dirname, '../../../../common/types/steam.ts'), 'utf8')
 )
 
-const electronStoresSource = stripSourceComments(
-  readFileSync(join(__dirname, '../electronStores.ts'), 'utf8')
+const storesSource = stripSourceComments(
+  readFileSync(join(__dirname, '../stores.ts'), 'utf8')
 )
 
 const backendConfigSource = stripSourceComments(
@@ -116,12 +116,12 @@ describe('D-17: Windows depot-availability signal and forced-install verdict', (
     expect(commonTypesSource).toMatch(/is_windows_native\?:\s*boolean/)
   })
 
-  it('declares SteamMetadataCacheEntry.is_windows_native?: boolean in electronStores.ts source', () => {
-    expect(electronStoresSource).toMatch(/is_windows_native\?:\s*boolean/)
+  it('declares SteamMetadataCacheEntry.is_windows_native?: boolean in stores.ts source', () => {
+    expect(storesSource).toMatch(/is_windows_native\?:\s*boolean/)
   })
 
-  it('declares SteamMetadataCacheEntry.forcedWindowsViaBottle?: boolean in electronStores.ts source', () => {
-    expect(electronStoresSource).toMatch(/forcedWindowsViaBottle\?:\s*boolean/)
+  it('declares SteamMetadataCacheEntry.forcedWindowsViaBottle?: boolean in stores.ts source', () => {
+    expect(storesSource).toMatch(/forcedWindowsViaBottle\?:\s*boolean/)
   })
 
   it("pins forcedWindowsViaBottle's optionality against the REAL SteamMetadataCacheEntry (34.13 review A-07)", () => {

@@ -52,8 +52,8 @@ let mockLogError: jest.SpyInstance
 
 // ── pathShim mock — REAL module for every name except 'temp', which each test points at a
 // disposable per-test mkdtemp dir (never the developer's real os.tmpdir()). Must stay REAL for
-// every other name: `electronStub.ts`'s `app.getPath` is a direct re-export of THIS SAME
-// module's `getPath` (`electronStub.ts:39,203`), and `backend/constants/paths.ts` calls
+// every other name: `platform/index.ts`'s `app.getPath` is a direct re-export of THIS SAME
+// module's `getPath` (`platform/index.ts:39,203`), and `backend/constants/paths.ts` calls
 // `app.getPath('appData'|'userData')` at MODULE SCOPE — a full-replacement mock (Task 1's
 // original, pre-Task-2 shape) would throw on that call the instant anything in this file
 // imports the real `./handlers` graph (Task 2's bootstrap wiring block does, via `../bootstrap`). ─
@@ -137,7 +137,7 @@ describe('devSecretVault', () => {
     vaultDir = mkdtempSync(join(tmpdir(), 'gamelib-dev-secret-vault-test-'))
     mockGetPath.mockImplementation((name: string) =>
       // 'temp' is the only name this suite ever redirects — every other name (Task 2's real
-      // bootstrap `init()` needs 'appData'/'userData'/etc. via electronStub's app.getPath) falls
+      // bootstrap `init()` needs 'appData'/'userData'/etc. via platformApi's app.getPath) falls
       // through to the REAL pathShim, see the mock declaration's own comment above.
       name === 'temp' ? vaultDir : realPathShim.getPath(name)
     )

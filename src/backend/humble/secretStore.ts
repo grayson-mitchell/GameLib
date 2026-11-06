@@ -11,7 +11,7 @@
  * `FILE_HEADER_SEARCH_WINDOW` (3000 chars) or the sweep stops reading it.
  *
  * `humble/user.ts` used to call `safeStorage` directly. Under the Tauri
- * sidecar, `safeStorage` resolves to `electronStub.ts`'s hardcoded-dead stub
+ * sidecar, `safeStorage` resolves to `platform/index.ts`'s hardcoded-dead stub
  * (`isEncryptionAvailable` always `false`; `encryptString`/`decryptString`
  * throw) -- so every Humble session was silently persisted in PLAINTEXT under
  * Tauri (F-1). This module is the seam that lets a future implementation
@@ -52,7 +52,7 @@ import { safeStorage } from 'backend/platform'
 
 import { logWarning, LogPrefix } from 'backend/logger'
 
-import { configStore } from './electronStores'
+import { configStore } from './stores'
 import { HUMBLE_TOKEN_PREFIX, HUMBLE_TOKEN_STORE_KEY } from './constants'
 import type { TokenReadOutcome } from 'backend/storeManagers/steam/tokenStore'
 

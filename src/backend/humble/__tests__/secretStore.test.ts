@@ -20,7 +20,7 @@
  * convention:
  *  - electron          → safeStorage (encrypt/decrypt/availability)
  *  - backend/logger
- *  - ../electronStores → configStore (in-memory map, not electron-store)
+ *  - ../stores → configStore (in-memory map, not electron-store)
  */
 
 import { readFileSync } from 'fs'
@@ -49,7 +49,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend' }
 }))
 
-// ── electronStores mock — in-memory map standing in for configStore ─────────
+// ── stores mock — in-memory map standing in for configStore ─────────
 let backingStore: Record<string, unknown> = {}
 const mockConfigStore = {
   get_nodefault: jest.fn((key: string) => backingStore[key]),
@@ -60,7 +60,7 @@ const mockConfigStore = {
     delete backingStore[key]
   })
 }
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   configStore: mockConfigStore
 }))
 

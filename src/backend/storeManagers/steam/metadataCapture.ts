@@ -71,7 +71,7 @@
  *     burst.
  *
  * The parameter is deliberately STRUCTURAL rather than
- * `SteamMetadataCacheEntry` from `./electronStores`: keeping this module
+ * `SteamMetadataCacheEntry` from `./stores`: keeping this module
  * dependency-free means the Backend jest project can unit-test it without
  * pulling `electron-store` in — the same extraction pattern
  * `steamPlatformRow.ts` uses and documents in its own header.

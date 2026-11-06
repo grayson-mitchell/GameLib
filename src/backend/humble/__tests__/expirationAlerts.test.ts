@@ -23,13 +23,13 @@
  *                               args + the registered click handler)
  *  - ../main_window          -> getMainWindow
  *  - ../ipc                  -> sendFrontendMessage
- *  - ../electronStores       -> humbleNotifiedExpirationStore (Map-backed)
+ *  - ../stores       -> humbleNotifiedExpirationStore (Map-backed)
  *  - backend/config          -> GlobalConfig.get().getSettings()
  *  - backend/constants/environment -> isSteamDeckGameMode (mutable double)
  */
 
 import type { HumbleKey } from 'common/types/humble'
-import type { HumbleKeyInternal } from '../electronStores'
+import type { HumbleKeyInternal } from '../stores'
 
 // ── electron mock (Notification class double) ──────────────────────────────
 const mockNotificationCtor = jest.fn()
@@ -74,7 +74,7 @@ jest.mock('backend/ipc', () => ({
   sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
 }))
 
-// ── ../electronStores mock (Map-backed humbleNotifiedExpirationStore) ──────
+// ── ../stores mock (Map-backed humbleNotifiedExpirationStore) ──────
 const notifiedExpirationData = new Map<string, { expiration: string }>()
 const mockNotifiedExpirationStore = {
   get: jest.fn((key: string) => notifiedExpirationData.get(key)),
@@ -84,7 +84,7 @@ const mockNotifiedExpirationStore = {
   has: jest.fn((key: string) => notifiedExpirationData.has(key)),
   clear: jest.fn(() => notifiedExpirationData.clear())
 }
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   humbleNotifiedExpirationStore: mockNotifiedExpirationStore
 }))
 

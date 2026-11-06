@@ -29,7 +29,7 @@ import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
 import * as libraryModule from '../library'
 import { library } from '../state'
-import { steamMetadataStore } from '../electronStores'
+import { steamMetadataStore } from '../stores'
 import SteamGame from '../games'
 import { SteamUser } from '../user'
 import { removeAllSteamInstallCopies } from '../removeAllCopies'
@@ -131,8 +131,8 @@ jest.mock('backend/constants/environment', () => ({
   isAppleSiliconMac: true
 }))
 
-// ── electronStores mock ───────────────────────────────────────────────────────
-jest.mock('../electronStores', () => ({
+// ── stores mock ───────────────────────────────────────────────────────
+jest.mock('../stores', () => ({
   configStore: {
     get: jest.fn(),
     get_nodefault: jest.fn(),

@@ -22,7 +22,7 @@ import {
   steamLibraryStore,
   steamMetadataStore,
   SteamMetadataCacheEntry
-} from './electronStores'
+} from './stores'
 import { library } from './state'
 import { sendFrontendMessage } from '../../ipc'
 

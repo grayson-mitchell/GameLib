@@ -1,7 +1,7 @@
-Similar to our IPC system, we also type-check our Electron Stores. If you want to use its functionality in your code, remember:
+Similar to our IPC system, we also type-check our stores. If you want to use its functionality in your code, remember:
 
 - Use `TypeCheckedStoreBackend` and `TypeCheckedStoreFrontend`
-- Modifying our list of stores (adding new ones, changing the structure) can be done in `src/common/types/electron_store.ts`  
+- Modifying our list of stores (adding new ones, changing the structure) can be done in `src/common/types/typed_store.ts`  
   Note that you'll have to be _very_ careful when changing an existing store's structure, as the old structure does not get converted to
   your new format automatically (to facilitate this, you can use [migrations](https://github.com/sindresorhus/electron-store#migrations))
 - When accessing elements, use `<store>.get` with a default value, or `<store>.get_nodefault` if you can't/don't want to

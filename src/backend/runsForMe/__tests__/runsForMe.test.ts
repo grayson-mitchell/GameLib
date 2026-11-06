@@ -4,7 +4,7 @@
  */
 const mockData: { games?: Record<string, string> } = {}
 
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   runsForMeStore: {
     get: (key: 'games', def: unknown) =>
       mockData[key] === undefined ? def : mockData[key],

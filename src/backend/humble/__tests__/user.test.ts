@@ -15,7 +15,7 @@
  *  - electron       → safeStorage, session.fromPartition
  *  - backend/logger  → logInfo/logError/logWarning
  *  - backend/ipc     → sendFrontendMessage
- *  - ../electronStores → configStore
+ *  - ../stores → configStore
  *  - ../adapter      → getGamekeys
  */
 
@@ -79,7 +79,7 @@ jest.mock('backend/signInProbe/outcomes', () => ({
   noteSignedOut: (...args: unknown[]) => mockNoteSignedOut(...args)
 }))
 
-// ── electronStores mock ───────────────────────────────────────────────────────
+// ── stores mock ───────────────────────────────────────────────────────
 const mockConfigStore = {
   get: jest.fn(),
   get_nodefault: jest.fn(),
@@ -89,7 +89,7 @@ const mockConfigStore = {
   // ElectronHumbleSecretStore.clearSecrets() calls configStore.delete() twice
   // -- disconnect() now invokes it via getHumbleSecretStore(), which this
   // file does NOT mock (it exercises the real secretStore.ts module against
-  // this same electronStores mock, matching the rest of this file's
+  // this same stores mock, matching the rest of this file's
   // convention).
   delete: jest.fn()
 }
@@ -99,7 +99,7 @@ const mockConfigStore = {
 const mockHumbleLibraryStore = { clear: jest.fn() }
 const mockHumbleSyncStore = { clear: jest.fn() }
 const mockHumbleRevealedStore = { clear: jest.fn() }
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   configStore: mockConfigStore,
   humbleLibraryStore: mockHumbleLibraryStore,
   humbleSyncStore: mockHumbleSyncStore,
@@ -1210,7 +1210,7 @@ describe('HumbleUser', () => {
     // ── Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure) ────────────────
     // disconnect() now also clears the keyring-backed session/csrf secrets via
     // getHumbleSecretStore().clearSecrets() -- these tests exercise the REAL
-    // (unmocked) secretStore.ts module against this file's own electronStores
+    // (unmocked) secretStore.ts module against this file's own stores
     // mock, same convention the rest of this describe block already uses.
 
     test('F-1: disconnect() clears configStore BEFORE clearing the keyring-backed secrets', async () => {

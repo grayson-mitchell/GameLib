@@ -9,9 +9,9 @@
  * Mock boundaries:
  *  - ../adapter        -> getGamekeys, getOrderDetail
  *  - ../user           -> HumbleUser.getCredentials
- *  - ../electronStores -> humbleLibraryStore, humbleSyncStore, humbleRevealedStore,
+ *  - ../stores -> humbleLibraryStore, humbleSyncStore, humbleRevealedStore,
  *                         humbleOwnershipOverrideStore
- *  - backend/storeManagers/steam/electronStores -> steamLibraryStore
+ *  - backend/storeManagers/steam/stores -> steamLibraryStore
  *  - backend/storeManagers/steam/user -> SteamUser.isLoggedIn
  *  - backend/ipc       -> sendFrontendMessage
  *  - backend/logger    -> logInfo/logError/logWarning
@@ -28,9 +28,9 @@ import type {
   HumbleOrderCacheEntry,
   HumbleSyncState
 } from 'common/types/humble'
-import type { HumbleKeyInternal } from '../electronStores'
+import type { HumbleKeyInternal } from '../stores'
 
-// ── electronStores mock (in-memory Map/Set-backed CacheStore doubles) ──────
+// ── stores mock (in-memory Map/Set-backed CacheStore doubles) ──────
 // NOTE: jest.config's `resetMocks: true` strips mock implementations before
 // EVERY test, so the has/get/set/entries/clear implementations below are
 // re-established in beforeEach() (resetStoreMocks()), not just once here —
@@ -211,7 +211,7 @@ function resetStoreMocks() {
   )
 }
 
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   humbleLibraryStore: mockLibraryStore,
   humbleSyncStore: mockSyncStore,
   humbleRevealedStore: mockRevealedStore,
@@ -224,7 +224,7 @@ jest.mock('../electronStores', () => ({
 // ── Steam store manager mocks (D-48 connectivity double-gate) ──────────────
 
 const mockSteamLibraryStoreGet = jest.fn()
-jest.mock('backend/storeManagers/steam/electronStores', () => ({
+jest.mock('backend/storeManagers/steam/stores', () => ({
   steamLibraryStore: {
     get: (...args: unknown[]) => mockSteamLibraryStoreGet(...args)
   }

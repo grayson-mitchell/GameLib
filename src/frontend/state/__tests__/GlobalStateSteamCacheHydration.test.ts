@@ -9,7 +9,7 @@
  * (storePolicy.ts) only listed `legendary_library` / `gog_library` /
  * `nile_library`; `steam_library` was absent from that
  * list, from the sidecar's `CACHE_BACKED_STORE_NAMES` read path
- * (handlers.ts), and from `src/frontend/helpers/electronStores.ts`
+ * (handlers.ts), and from `src/frontend/helpers/stores.ts`
  * entirely. `GlobalState.tsx` hardcoded `steam: { library: [] }` in its
  * `state` field initialiser, so Steam was the only runner absent from the
  * synchronous pre-mount boot snapshot — its library stayed empty until the
@@ -58,13 +58,7 @@ import {
 } from 'common/types/storePolicy'
 
 const globalStatePath = join(__dirname, '..', 'GlobalState.tsx')
-const electronStoresPath = join(
-  __dirname,
-  '..',
-  '..',
-  'helpers',
-  'electronStores.ts'
-)
+const storesPath = join(__dirname, '..', '..', 'helpers', 'stores.ts')
 const handlersPath = join(
   __dirname,
   '..',
@@ -230,12 +224,12 @@ describe('GlobalState.tsx steam.library — seeded synchronously from the persis
   it('Test 5: steam_library carries no credential surface — absent from STORE_ALLOWLIST, and the renderer store is a GameInfo CacheStore', () => {
     expect(Object.keys(STORE_ALLOWLIST)).not.toContain('steam_library')
 
-    const rawElectronStores = readFileSync(electronStoresPath, 'utf-8')
-    const strippedElectronStores = stripSourceComments(rawElectronStores)
+    const rawStores = readFileSync(storesPath, 'utf-8')
+    const strippedStores = stripSourceComments(rawStores)
 
     expect(
       /steamLibraryStore\s*=\s*new CacheStore<GameInfo\[\],\s*'games'>\(\s*'steam_library'/.test(
-        strippedElectronStores
+        strippedStores
       )
     ).toBe(true)
   })

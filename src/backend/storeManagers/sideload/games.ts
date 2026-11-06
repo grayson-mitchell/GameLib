@@ -5,7 +5,7 @@ import {
   GameSettings,
   LaunchOption
 } from 'common/types'
-import { libraryStore } from './electronStores'
+import { libraryStore } from './stores'
 import { GameConfig } from '../../game_config'
 import { killPattern, sendGameStatusUpdate, shutdownWine } from '../../utils'
 import { logInfo, LogPrefix, logWarning } from 'backend/logger'

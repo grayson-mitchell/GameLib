@@ -19,7 +19,7 @@ import {
   getAbortSignal
 } from 'backend/utils/aborthandler/aborthandler'
 import { sendFrontendMessage } from '../../ipc'
-import { steamMetadataStore, steamLibraryStore } from './electronStores'
+import { steamMetadataStore, steamLibraryStore } from './stores'
 import { library } from './state'
 import {
   startInstallPolling,

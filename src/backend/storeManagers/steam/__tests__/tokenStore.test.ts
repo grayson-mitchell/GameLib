@@ -20,7 +20,7 @@
  *  - electron       → safeStorage (encrypt/decrypt/availability) + app.getPath
  *                      (constants.ts calls app.getPath('userData') at import time)
  *  - backend/logger
- *  - ../electronStores → configStore (in-memory map, not electron-store)
+ *  - ../stores → configStore (in-memory map, not electron-store)
  *  - steam-session / steam-user / graceful-fs → minimal stubs so `../user`
  *    can be imported for the registry-swap proof without pulling in real
  *    network/OS dependencies.
@@ -60,7 +60,7 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-// ── electronStores mock — in-memory map standing in for configStore ─────────
+// ── stores mock — in-memory map standing in for configStore ─────────
 let backingStore: Record<string, unknown> = {}
 const mockConfigStore = {
   has: jest.fn((key: string) => key in backingStore),
@@ -75,7 +75,7 @@ const mockConfigStore = {
     backingStore = {}
   })
 }
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   configStore: mockConfigStore
 }))
 

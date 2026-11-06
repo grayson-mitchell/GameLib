@@ -5,7 +5,7 @@
  * `steamgrid/secureKey.ts`'s header used to record the exact hazard: the moment any future
  * plan wires `steamgrid/ipc_handler.ts` (or any other route to `encryptApiKey`/`decryptApiKey`)
  * into a sidecar registration module, its `safeStorage` import (sourced from the `electron`
- * package) resolves to `electronStub.ts`'s deliberately-dead stub, `encryptionAvailable()`
+ * package) resolves to `platform/index.ts`'s deliberately-dead stub, `encryptionAvailable()`
  * catches to `false`, and `encryptApiKey()` takes its plaintext branch — so the SteamGridDB API
  * key would be persisted to `config.json` in the clear. This module is the seam that discharges
  * that hazard BEFORE the

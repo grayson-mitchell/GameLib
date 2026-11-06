@@ -66,7 +66,7 @@
  * `__tests__/flowRegistrationCensus.test.ts` gates every one of them against the actual
  * `ipcMain.handle`/`ipcMain.on` registrations in that module.
  *
- * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
+ * Uses platformApi's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`) because none of this file's channels are entries in the
  * existing `AsyncIPCFunctions` contract — and no file under this directory
  * may import the real electron module (Task 1/2 acceptance criterion),
@@ -100,7 +100,7 @@ import { registerEosOverlayFlows } from './eosOverlayFlowRegistration'
 import { registerStoreEmbedFlows } from './storeEmbedFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
-import { getRegisteredStore } from '../electron_store'
+import { getRegisteredStore } from '../typed_store'
 import {
   BOOT_SET_STORES,
   // WR-10: T-29-13's dynamic-store-name pattern is single-sourced in storePolicy.ts.
@@ -163,7 +163,7 @@ registerGameDetailsFlows()
 // Phase 34.2 Plan 06: the enrichment channels — no ordering
 // constraint relative to the other calls above (own channel names, no
 // cross-module runtime dependency at registration time), placed alongside
-// them, before `ensureStoresRegistered()`. `wiki_game_info/electronStore`
+// them, before `ensureStoresRegistered()`. `wiki_game_info/stores`
 // is already registered by `storeRegistration.ts:104` (Phase 29), so this
 // module needs no new store plumbing.
 registerEnrichmentFlows()
@@ -253,10 +253,10 @@ registerStoreWriteHandlers()
  *
  * PLUS `wikigameinfo` — discovered by this plan's own coverage test (Task
  * 3), not anticipated by 29-RESEARCH: `wikigameinfo` IS declared as a
- * `ValidStoreName` in `StoreStructure` (electron_store.ts), but
- * `wiki_game_info/electronStore.ts` constructs it as a `CacheStore`, not a
+ * `ValidStoreName` in `StoreStructure` (typed_store.ts), but
+ * `wiki_game_info/stores.ts` constructs it as a `CacheStore`, not a
  * `TypeCheckedStoreBackend` — so it never self-registers into
- * `electron_store.ts`'s typed registry (plan 29-02) despite its type
+ * `typed_store.ts`'s typed registry (plan 29-02) despite its type
  * declaration. It resolves through the exact same cache-shaped
  * construction as the D-13 four; the only difference is it sits in
  * `LAZY_STORES`, not `BOOT_SET_STORES`, so it is reachable only through the

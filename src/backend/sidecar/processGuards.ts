@@ -189,7 +189,7 @@ function installUnhandledRejectionGuard(
  *         window a white screen happens in. The dialog would be absent when it mattered most.
  *      b) `showDialogBoxModalAuto` reaches the user by pushing a `showDialog` frame through
  *         `sendFrontendMessage` over the RPC transport, and its failure branch fires an
- *         un-awaited `electronStub` `dialog.showErrorBox` promise. Adding a user-facing,
+ *         un-awaited `platformApi` `dialog.showErrorBox` promise. Adding a user-facing,
  *         transport-dependent, promise-producing call INSIDE a handler that is already
  *         processing a crash is the literal shape of `sidecar-dialog-reject-crashes`, and the
  *         transport may be the thing that just broke.

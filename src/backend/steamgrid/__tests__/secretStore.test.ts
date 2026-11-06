@@ -13,7 +13,7 @@
  *  - The `setSteamGridDbSecretStore`/`getSteamGridDbSecretStore` registry swap point.
  *
  * Mock boundaries mirror `humble/__tests__/secretStore.test.ts`'s convention, substituting
- * `backend/config`'s `GlobalConfig` for Humble's `../electronStores` `configStore`:
+ * `backend/config`'s `GlobalConfig` for Humble's `../stores` `configStore`:
  *  - electron       → safeStorage (encrypt/decrypt/availability)
  *  - backend/logger
  *  - backend/config → GlobalConfig.get().getSettings()/setSetting() (in-memory settings object,

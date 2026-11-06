@@ -14,7 +14,7 @@ import {
   StoreStructure,
   TypeCheckedStore,
   UnknownGuard
-} from 'common/types/electron_store'
+} from 'common/types/typed_store'
 import { GameInfo } from 'common/types'
 
 class TypeCheckedStoreFrontend<

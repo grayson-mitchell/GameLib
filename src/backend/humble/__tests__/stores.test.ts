@@ -6,7 +6,7 @@
  *
  * Runs against the REAL CacheStore + electron-store (redirected to a tmp cwd
  * by src/backend/__mocks__/electron-store.ts) — mirrors
- * library.realstore.test.ts's approach — rather than mocking ../electronStores
+ * library.realstore.test.ts's approach — rather than mocking ../stores
  * with a Map double, so the assertion exercises actual on-disk persistence
  * semantics, not a test double's own bookkeeping.
  */
@@ -22,7 +22,7 @@ import {
   humbleAuditStore,
   humbleLocalRedeemedStore,
   humbleNotifiedExpirationStore
-} from '../electronStores'
+} from '../stores'
 
 describe('humbleOwnershipOverrideStore', () => {
   beforeEach(() => {

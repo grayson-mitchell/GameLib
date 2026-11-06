@@ -32,11 +32,7 @@ import {
   LogPrefix,
   logWarning
 } from 'backend/logger'
-import {
-  gamesOverrideStore,
-  installStore,
-  libraryStore
-} from './electronStores'
+import { gamesOverrideStore, installStore, libraryStore } from './stores'
 import { callRunner } from '../../launcher'
 import { dirname, join } from 'path'
 import { isOnline } from 'backend/online_monitor'

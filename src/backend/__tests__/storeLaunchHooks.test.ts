@@ -24,7 +24,7 @@ jest.mock('backend/storeManagers/nile/setup', () => ({
 jest.mock('backend/storeManagers/legendary/setup', () => ({
   legendarySetup: (...a: unknown[]) => legendarySetupMock(...a)
 }))
-jest.mock('backend/storeManagers/legendary/electronStores', () => ({
+jest.mock('backend/storeManagers/legendary/stores', () => ({
   legendaryConfigStore: {
     get_nodefault: (...a: unknown[]) => getNodefaultMock(...a)
   }

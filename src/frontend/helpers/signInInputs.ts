@@ -3,7 +3,7 @@ import {
   legendaryConfigStore,
   nileConfigStore,
   steamConfigStore
-} from 'frontend/helpers/electronStores'
+} from 'frontend/helpers/stores'
 import type {
   SignInProbeOutcomeMap,
   SignInSelectorInputs

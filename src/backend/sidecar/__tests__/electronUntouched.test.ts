@@ -13,7 +13,7 @@
  * Covers REQ-28-02/REQ-28-04/D-04: the sidecar's `SidecarKeyringTokenStore` — and the
  * `TokenStore` seam that selects it in a sidecar build — must never write, mutate, or delete
  * anything in the shared Electron `configStore`. This suite drives the REAL (unmocked)
- * `configStore` from `../../storeManagers/steam/electronStores` — the exact module instance
+ * `configStore` from `../../storeManagers/steam/stores` — the exact module instance
  * `user.ts`/`tokenStore.ts` read/write in production — while faking `requestRustInvoke` (no
  * real Rust process exists in Jest) so every one of `SidecarKeyringTokenStore`'s four
  * operations, success and failure, actually runs.
@@ -37,7 +37,7 @@
  * The Steam-token-surface gate (quick-260909-iz2) encodes D-04's BINDING-level constraint:
  * `keyringTokenStore.ts` and `bootstrap.ts` may not bind `configStore`, `TOKEN_STORE_KEY`,
  * `TOKEN_PREFIX` or `ElectronTokenStore` from the Steam token surface
- * (`storeManagers/steam/{electronStores,tokenStore,constants}`, and its sibling `./` form), and
+ * (`storeManagers/steam/{stores,tokenStore,constants}`, and its sibling `./` form), and
  * may not name `TOKEN_STORE_KEY`/`TOKEN_PREFIX` at all, anywhere. It used to be a bare
  * `configStore` substring ban across the whole file, which was wrong: `bootstrap.ts:100`'s
  * unrelated Epic/GOG `import { configStore } from '../constants/key_value_stores'` -- used only
@@ -99,13 +99,13 @@ jest.mock('backend/logger', () => ({
 // ── Imports (after mocks) — configStore is the REAL, unmocked module ───────
 import { requestRustInvoke } from '../sidecarRpc'
 import { SidecarKeyringTokenStore } from '../keyringTokenStore'
-import { configStore as steamConfigStore } from '../../storeManagers/steam/electronStores'
+import { configStore as steamConfigStore } from '../../storeManagers/steam/stores'
 import {
   setTokenStore,
   getTokenStore,
   ElectronTokenStore
 } from '../../storeManagers/steam/tokenStore'
-// Real (unmocked) pathShim — same module electronStub.ts / fileStore.ts resolve
+// Real (unmocked) pathShim — same module platform/index.ts / fileStore.ts resolve
 // paths through in production, used here ONLY to compute the real store file's
 // path for a read-only byte comparison. Never used to write.
 import { getPath } from '../pathShim'
@@ -196,14 +196,14 @@ beforeEach(() => {
 // ── D-04 binding-level gate helper (quick-260909-iz2) ───────────────────────
 // D-04's actual wording is narrower than a bare `configStore` substring ban:
 // "the sidecar must never write TOKEN_STORE_KEY into the shared configStore"
-// — the STEAM store from `storeManagers/steam/electronStores`. A bare-substring
+// — the STEAM store from `storeManagers/steam/stores`. A bare-substring
 // ban also convicts `bootstrap.ts`'s unrelated Epic/GOG
 // `import { configStore } from '../constants/key_value_stores'` (used only for
 // `configStore.delete('userInfo')`, an Epic user record, not a token), which is
 // why that ban held the whole Backend suite red. This helper instead bans
 // BINDING one of these four names from a Steam-token-surface module specifier.
 const BANNED_STEAM_TOKEN_BINDINGS = [
-  // The Steam electronStores singleton itself -- the shared store D-04 forbids
+  // The Steam stores singleton itself -- the shared store D-04 forbids
   // the sidecar from writing into.
   'configStore',
   // Unique to the Steam token surface (src/backend/storeManagers/steam/constants.ts:15-16) --
@@ -220,9 +220,9 @@ const BANNED_STEAM_TOKEN_BINDINGS = [
 
 // Steam token surface specifiers, and ONLY these -- everything else (in
 // particular `../constants/key_value_stores` and any `storeManagers/<other-runner>/...`
-// path such as GOG's `electronStores`) is deliberately out of scope.
+// path such as GOG's `stores`) is deliberately out of scope.
 const STEAM_TOKEN_SURFACE_SPECIFIER =
-  /(?:^|\/)storeManagers\/steam\/(?:electronStores|tokenStore|constants)(?:\.(?:ts|js|mts|cts))?$|^\.\/(?:electronStores|tokenStore|constants)(?:\.(?:ts|js|mts|cts))?$/
+  /(?:^|\/)storeManagers\/steam\/(?:stores|tokenStore|constants)(?:\.(?:ts|js|mts|cts))?$|^\.\/(?:stores|tokenStore|constants)(?:\.(?:ts|js|mts|cts))?$/
 
 // Matches: `import [type] <clause> from '<spec>'`, allowing the clause to span
 // multiple lines (bootstrap.ts has multi-line brace imports).
@@ -347,13 +347,13 @@ function findSteamTokenSurfaceViolations(
 }
 
 describe('steam token surface binding gate helper', () => {
-  it('trips on a real Steam electronStores configStore import (a)', () => {
-    const src = `import { configStore } from '../storeManagers/steam/electronStores'\n`
+  it('trips on a real Steam stores configStore import (a)', () => {
+    const src = `import { configStore } from '../storeManagers/steam/stores'\n`
     expect(findSteamTokenSurfaceViolations(src, 'synthetic')).not.toEqual([])
   })
 
   it('trips on an ALIASED configStore import (aliasing does not evade) (b)', () => {
-    const src = `import { configStore as steamStore } from './electronStores'\n`
+    const src = `import { configStore as steamStore } from './stores'\n`
     expect(findSteamTokenSurfaceViolations(src, 'synthetic')).not.toEqual([])
   })
 
@@ -368,12 +368,12 @@ describe('steam token surface binding gate helper', () => {
   })
 
   it('trips on a require() destructure of configStore from the Steam surface (e)', () => {
-    const src = `const { configStore } = require('../storeManagers/steam/electronStores')\n`
+    const src = `const { configStore } = require('../storeManagers/steam/stores')\n`
     expect(findSteamTokenSurfaceViolations(src, 'synthetic')).not.toEqual([])
   })
 
   it('trips on a dynamic import() destructure of configStore from the Steam surface (f)', () => {
-    const src = `const { configStore } = await import('./electronStores')\n`
+    const src = `const { configStore } = await import('./stores')\n`
     expect(findSteamTokenSurfaceViolations(src, 'synthetic')).not.toEqual([])
   })
 
@@ -387,13 +387,13 @@ describe('steam token surface binding gate helper', () => {
     expect(findSteamTokenSurfaceViolations(src, 'synthetic')).toEqual([])
   })
 
-  it('does NOT trip on a real GOG electronStores import (i)', () => {
-    const src = `import { playtimeSyncQueue } from '../storeManagers/gog/electronStores'\n`
+  it('does NOT trip on a real GOG stores import (i)', () => {
+    const src = `import { playtimeSyncQueue } from '../storeManagers/gog/stores'\n`
     expect(findSteamTokenSurfaceViolations(src, 'synthetic')).toEqual([])
   })
 
   it('does NOT trip on a trailing-comment-only mention (proves the trailing-comment strip is wired) (j)', () => {
-    const src = `const foo = 1 // import { configStore } from './electronStores'\n`
+    const src = `const foo = 1 // import { configStore } from './stores'\n`
     expect(findSteamTokenSurfaceViolations(src, 'synthetic')).toEqual([])
   })
 })
@@ -532,7 +532,7 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
     }
   })
 
-  it('by-construction gate: electronStub.ts safeStorage.isEncryptionAvailable never regresses to the "always true" lie (comments stripped)', () => {
+  it('by-construction gate: platform/index.ts safeStorage.isEncryptionAvailable never regresses to the "always true" lie (comments stripped)', () => {
     const src = readFileSync(
       join(__dirname, '../../platform/index.ts'),
       'utf-8'

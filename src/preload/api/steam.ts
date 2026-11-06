@@ -77,7 +77,7 @@ export const handleSteamMetadataSyncing = frontendListenerSlot('steamMetadataSyn
 // Phase 34.15 (34.15-02), D-06/D-07: one-way push, mirrors
 // handleSteamMetadataSyncing above. This export is the highest-risk omission
 // in the phase -- for a backend->renderer push, the sidecar's
-// electronStub.pushFrontendMessage forwarder is channel-agnostic, so the emit
+// platformApi.pushFrontendMessage forwarder is channel-agnostic, so the emit
 // side needs no allowlist. The silent-failure risk is entirely here: without
 // this export (and GlobalState's subscription) the backend emits fine, Rust
 // forwards fine, and the renderer simply has nobody listening -- no compile

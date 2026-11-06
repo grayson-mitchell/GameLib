@@ -98,8 +98,8 @@ jest.mock('backend/constants/environment', () => ({
   isAppleSiliconMac: true
 }))
 
-// ── electronStores mock ───────────────────────────────────────────────────────
-jest.mock('../electronStores', () => ({
+// ── stores mock ───────────────────────────────────────────────────────
+jest.mock('../stores', () => ({
   configStore: {
     get: jest.fn(),
     get_nodefault: jest.fn(),
@@ -214,7 +214,7 @@ import { getSteamLibraries } from 'backend/utils'
 import { shell } from 'backend/platform'
 import { readKnownFixes } from 'backend/knownFixes'
 import { library } from '../state'
-import { steamMetadataStore } from '../electronStores'
+import { steamMetadataStore } from '../stores'
 import { downloadSteamDepots } from '../depot'
 import SteamGame from '../games'
 import { SteamUser } from '../user'

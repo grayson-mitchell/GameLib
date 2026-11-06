@@ -170,7 +170,7 @@ export const RUST_DIALOG_OPEN = 'dialog_open' as const
  * Rust-side channel name: show a native message/error dialog via the Tauri dialog plugin
  * (Phase 31 Plan 02, D-03/REQ-31-03/REQ-31-05). Backs both `dialog.showMessageBox` and
  * `dialog.showErrorBox` (the latter forwards with an error `kind`). Resolves the underlying
- * `blocking_show()` bool result — electronStub maps `true`→`response:0`, `false`→`response:1`;
+ * `blocking_show()` bool result — platformApi maps `true`→`response:0`, `false`→`response:1`;
  * there is no v2 checkbox-return equivalent (documented accepted gap, zero real callers read
  * `checkboxChecked`).
  */
@@ -185,7 +185,7 @@ export const RUST_DIALOG_SAVE = 'dialog_save' as const
 
 /**
  * Rust-side channel name: show a real OS notification via `tauri-plugin-notification`
- * (Phase 33 Plan 04, D-05). Backs `electronStub.ts`'s `Notification.show()`. Takes a single
+ * (Phase 33 Plan 04, D-05). Backs `platform/index.ts`'s `Notification.show()`. Takes a single
  * `{ title?, body? }` object arg; resolves the backend label (see
  * `RustNotificationBackendLabel`) on success; an older shell resolves null. No icon/nativeImage
  * plumbing (33-RESEARCH confirmed the plugin's icon param is optional).
@@ -218,8 +218,8 @@ export const RUST_NOTIFICATION_AUTH_DENIED_PREFIX =
 
 /**
  * Rust-side channel name: reveal a path in the OS file manager via `tauri-plugin-opener`'s
- * `reveal_item_in_dir` (Phase 33 Plan 04, D-05). Backs `electronStub.ts`'s
- * `shell.showItemInFolder()`. Fire-and-forget from the caller's perspective (electronStub does
+ * `reveal_item_in_dir` (Phase 33 Plan 04, D-05). Backs `platform/index.ts`'s
+ * `shell.showItemInFolder()`. Fire-and-forget from the caller's perspective (platformApi does
  * not await it), but a real request/response `rustInvoke` frame under the hood so failures are
  * observable (logged), never silent.
  */
@@ -228,7 +228,7 @@ export const RUST_SHELL_SHOW_ITEM_IN_FOLDER =
 
 /**
  * Rust-side channel name: open a path with the default (or specified) program via
- * `tauri-plugin-opener`'s `open_path` (Phase 33 Plan 04, D-05). Backs `electronStub.ts`'s
+ * `tauri-plugin-opener`'s `open_path` (Phase 33 Plan 04, D-05). Backs `platform/index.ts`'s
  * `shell.openPath()`. Mirrors real Electron's `shell.openPath` contract: resolves an empty
  * string on success, or a human-readable error string on failure — never rejects.
  */
@@ -236,7 +236,7 @@ export const RUST_SHELL_OPEN_PATH = 'shell_open_path' as const
 
 /**
  * Rust-side channel name: exit the real Tauri process via `AppHandle::exit()` (Phase 33 Plan 04,
- * D-05 app lifecycle essentials). Backs `electronStub.ts`'s `app.exit()`/`app.quit()`. The two
+ * D-05 app lifecycle essentials). Backs `platform/index.ts`'s `app.exit()`/`app.quit()`. The two
  * sidecar-reachable call sites (`resetHeroic()`, the `handleExit`-shaped uninstall/quit path) are
  * both deliberate user/exit actions (T-33-12, accepted DoS disposition).
  */
@@ -244,13 +244,13 @@ export const RUST_APP_EXIT = 'app_exit' as const
 
 /**
  * Rust-side channel name: restart the real Tauri process via `AppHandle::restart()` (Phase 33
- * Plan 04, D-05 app lifecycle essentials). Backs `electronStub.ts`'s `app.relaunch()`.
+ * Plan 04, D-05 app lifecycle essentials). Backs `platform/index.ts`'s `app.relaunch()`.
  */
 export const RUST_APP_RELAUNCH = 'app_relaunch' as const
 
 /**
  * Rust-side channel name: hide the real Tauri application via `AppHandle::hide()`
- * (quick/260815-vvz). Backs `electronStub.ts`'s `app.hide()` — the yield-fallback
+ * (quick/260815-vvz). Backs `platform/index.ts`'s `app.hide()` — the yield-fallback
  * `raiseFrontmostBottledProcess` (Steam bottle install/uninstall, bottle.ts) reaches
  * when no matching installer/uninstaller window could be raised within ~18s, so
  * GameLib at least steps aside instead of staying in front of an invisible dialog.
@@ -261,7 +261,7 @@ export const RUST_APP_HIDE = 'app_hide' as const
 
 /**
  * Rust-side channel name: bring the main GameLib window to the front
- * (`unminimize()` + `show()` + `set_focus()`). Backs `electronStub.ts`'s
+ * (`unminimize()` + `show()` + `set_focus()`). Backs `platform/index.ts`'s
  * `app.raiseMainWindow()`, called before a bridge-notice dialog so a failure
  * that happens while a game is in front is not rendered into a hidden window.
  * Caller: the bridge notice only. The bridge invite picker moved to
@@ -283,7 +283,7 @@ export const RUST_BRIDGE_INVITE_PICKER_OPEN =
 
 /**
  * Rust-side channel name: write text to the OS clipboard via `tauri-plugin-clipboard-manager`
- * (Phase 34.3 Plan 03, D-01/D-02). Backs `electronStub.ts`'s `clipboard.writeText()`.
+ * (Phase 34.3 Plan 03, D-01/D-02). Backs `platform/index.ts`'s `clipboard.writeText()`.
  * Fire-and-forget from the caller's perspective (D-03, mirrors real Electron's void-returning
  * API), but a real request/response `rustInvoke` frame under the hood so failures are
  * observable (logged), never silent.
@@ -294,7 +294,7 @@ export const RUST_CLIPBOARD_WRITE_TEXT = 'clipboard_write_text' as const
  * Rust-side channel name: read text from the OS clipboard via
  * `tauri-plugin-clipboard-manager` (Phase 34.3 Plan 03, D-01/D-02). Backs the sidecar's
  * `clipboardReadText` handler, which awaits this directly rather than going through
- * `electronStub.ts`'s deliberately-dead synchronous `clipboard.readText()` stub (D-04).
+ * `platform/index.ts`'s deliberately-dead synchronous `clipboard.readText()` stub (D-04).
  */
 export const RUST_CLIPBOARD_READ_TEXT = 'clipboard_read_text' as const
 
@@ -313,7 +313,7 @@ export const RUST_TRAY_SET_ICON = 'tray_set_icon' as const
 
 /**
  * Rust-side channel name: take an OS power assertion (Phase 35 Plan 08, D-08, REQ-35-06).
- * Backs `electronStub.ts`'s `powerSaveBlocker.start()`, which until Phase 35 was a logged no-op
+ * Backs `platform/index.ts`'s `powerSaveBlocker.start()`, which until Phase 35 was a logged no-op
  * returning `-1` and holding nothing — so the machine idle-slept mid depot download and
  * `launcher.ts`'s `prevent-display-sleep` did nothing while a game ran.
  *
@@ -329,7 +329,7 @@ export const RUST_WAKE_LOCK_START = 'wake_lock_start' as const
 
 /**
  * Rust-side channel name: release the OS power assertion a {@link RUST_WAKE_LOCK_START} call
- * created (Phase 35 Plan 08, D-08, REQ-35-06). Backs `electronStub.ts`'s `powerSaveBlocker.stop()`.
+ * created (Phase 35 Plan 08, D-08, REQ-35-06). Backs `platform/index.ts`'s `powerSaveBlocker.stop()`.
  *
  * Takes ONE numeric arg: the id `wake_lock_start` resolved. Rejects an unknown or
  * already-released id rather than silently succeeding, so a mismatch is observable — an

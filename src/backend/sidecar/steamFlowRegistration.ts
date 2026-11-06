@@ -2,7 +2,7 @@
  * Curated Steam E2E flow channel registration (Phase 27 Plan 04).
  *
  * Registers exactly the two invoke handlers the skeleton's real Steam flows
- * need onto electronStub's `ipcMain` recorder, importing the REAL backend
+ * need onto platformApi's `ipcMain` recorder, importing the REAL backend
  * code paths unchanged (per the plan's own objective — prove the real logic
  * runs behind the new transport, not a reimplementation):
  *
@@ -12,14 +12,14 @@
  *     resolved game (backend/storeManagers/steam/library.ts) — that
  *     existing call is what reaches the renderer as a `SidecarNotification`
  *     once `backend/ipc.ts`'s `sendFrontendMessage` -> `getMainWindow()` ->
- *     electronStub's fake `BrowserWindow.webContents.send` is wired to the
+ *     platformApi's fake `BrowserWindow.webContents.send` is wired to the
  *     RPC transport (27-02). Nothing here re-implements that push.
  *   - `launch` -> runner-aware dispatch through `libraryManagerMap` (GAP
  *     CYCLE 6, plan 34.5-46 — see below). `runner === 'steam'` keeps the
  *     curated native path — `libraryManagerMap.steam.getGame(appName)` +
  *     `SteamGame.launch()`'s native branch, which already funnels through
  *     `buildSteamProtocolUrl` (T-27-08's numeric-appId guard) +
- *     `shell.openExternal` (bridged to the Rust opener by electronStub's
+ *     `shell.openExternal` (bridged to the Rust opener by platformApi's
  *     `shell.openExternal` forwarder, 27-02). Every other runner delegates
  *     to `launcher.ts`'s `launchEventCallback`, the same dispatch this
  *     module already reproduces for `refreshLibrary` below.

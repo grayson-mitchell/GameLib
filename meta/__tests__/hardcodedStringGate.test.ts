@@ -832,7 +832,7 @@ describe('hardcodedStringGate', () => {
       )
 
       it.each(['storeGet', 'storeSet', 'storeHas', 'storeDelete'])(
-        'never flags a string key argument to window.api.%s(...) — real electronStores.ts idiom',
+        'never flags a string key argument to window.api.%s(...) — real stores.ts idiom',
         (method) => {
           const source = `
             function run(key: string) {

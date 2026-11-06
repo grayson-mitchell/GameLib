@@ -3,7 +3,7 @@
 // step (plan 29-04) can import it without dragging in the Wine
 // download/install pipeline's import-time side effects (spike 009's
 // import-time wall).
-import { TypeCheckedStoreBackend } from 'backend/electron_store'
+import { TypeCheckedStoreBackend } from 'backend/typed_store'
 
 export const wineDownloaderInfoStore = new TypeCheckedStoreBackend(
   'wineDownloaderInfoStore',

@@ -51,7 +51,7 @@ jest.mock('backend/platform', () => ({
   }
 }))
 
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   steamBottleConfigStore: {
     get: jest.fn(),
     get_nodefault: jest.fn(),

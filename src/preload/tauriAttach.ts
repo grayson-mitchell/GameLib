@@ -11,7 +11,7 @@
  * Runs as a SIDE EFFECT on import (deliberately not a callable export the caller invokes
  * later): index.tsx imports this as its very first import specifically so this module's
  * dependency subtree (`./api` + `./tauriTransport`, both Electron/Node-free) evaluates
- * before any other import in that file -- critically before `frontend/helpers/electronStores`
+ * before any other import in that file -- critically before `frontend/helpers/stores`
  * (transitively pulled in by `frontend/state/GlobalState`), whose module-level
  * `new TypeCheckedStoreFrontend(...)` calls read `window.api.storeNew` synchronously the
  * moment THAT module is first imported. ES modules resolve all of a file's static imports,

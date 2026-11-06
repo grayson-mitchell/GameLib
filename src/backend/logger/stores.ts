@@ -5,7 +5,7 @@
 // needs no exclusion for uploadedLogs. uploader.ts pulls in Electron's
 // `app`, the IPC layer's `sendFrontendMessage`, and the logger — light, but
 // not zero, and not worth an execution-time judgement call.
-import { TypeCheckedStoreBackend } from '../electron_store'
+import { TypeCheckedStoreBackend } from '../typed_store'
 
 export const uploadedLogFileStore = new TypeCheckedStoreBackend(
   'uploadedLogs',

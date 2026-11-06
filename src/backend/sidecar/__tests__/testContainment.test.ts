@@ -564,7 +564,7 @@ const IN_SCOPE_SUITES = [
  * `electron-store`, `pathShim`, or `../bootstrap`'s `init()` at all, because
  * `oauthLoginCapture.ts`/`oauthLoginFlowRegistration.ts` import nothing from
  * any of those (their only dependencies are `../humble/loginWindowSeam`,
- * pure types with no I/O, and `./electronStub`'s `ipcMain` recorder). No new
+ * pure types with no I/O, and `./platformApi`'s `ipcMain` recorder). No new
  * containment surface.
  *
  * `runnerSliceRegistration.test.ts` (Phase 34.5 Plan 04, REQ-34.5-13) is
@@ -574,7 +574,7 @@ const IN_SCOPE_SUITES = [
  * project-wide, tmpdir-based `src/backend/__mocks__/electron.ts` auto-mock -- the
  * SAME "contained by construction, no per-suite opt-in required" floor Block C's own
  * docstring describes, not a hand-maintained kit of its own. The file's own direct
- * import of `../electronStub` (for `handlerRegistry`/`listenerRegistry`) touches no
+ * import of `../platformApi` (for `handlerRegistry`/`listenerRegistry`) touches no
  * filesystem at module scope. No new containment surface.
  *
  * `pathShim.test.ts` (Phase 34.5 Plan 01, REQ-34.5-01) is classified as
@@ -599,7 +599,7 @@ const IN_SCOPE_SUITES = [
  * its own. Its one per-suite addition is a factory mock of `../../launcher`
  * (avoiding that heavier module's launch-orchestration/child_process side
  * effects, irrelevant to proving registration kind and pass-through
- * forwarding), and a direct import of `../electronStub` for
+ * forwarding), and a direct import of `../platformApi` for
  * `handlerRegistry`/`listenerRegistry` that touches no filesystem at module
  * scope. No new containment surface. A `readdirSync` recount at this plan's
  * execution time (not carried forward by hand, correcting the stale "34"
@@ -654,7 +654,7 @@ const IN_SCOPE_SUITES = [
  * -- none of this is a containment mock, all of it is scoping which real code path runs. It cannot
  * be an `IN_SCOPE_SUITE`: those are required to carry a `jest.mock('../pathShim', ...)` call, and
  * this suite deliberately imports the REAL `pathShim.getPath` (via the real, unmocked
- * `electronStub.app.getPath`) because proving the `GAMELIB_SHELL_EXE -> getPath('exe') ->
+ * `platformApi.app.getPath`) because proving the `GAMELIB_SHELL_EXE -> getPath('exe') ->
  * shortcuts.ts:227` chain end-to-end is this suite's whole point. A `readdirSync` recount at this
  * plan's execution time puts the directory at 38 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 34 below.
  *
@@ -671,25 +671,25 @@ const IN_SCOPE_SUITES = [
  * `humbleSecretStore.test.ts` (Phase 34.4.1 gap-cycle plan 13, F-1 BLOCKING closure) is
  * classified as structurally contained: it follows `keyringTokenStore.test.ts`'s own
  * already-approved convention exactly -- it mocks `../sidecarRpc` (`requestRustInvoke`) and
- * `../../logger` directly, and additionally mocks `../../humble/electronStores` with an in-memory
+ * `../../logger` directly, and additionally mocks `../../humble/stores` with an in-memory
  * map (never `requireActual`, per `tests-clobbering-real-steam-store`'s warning that an unmocked
  * electron-store reaches the REAL app-support dir). `../humble/secretStore` is exercised for
  * real (its own default `ElectronHumbleSecretStore` only ever touches the mocked `electron`
- * (safeStorage) via the project-wide auto-mock and the mocked `electronStores` above -- no real
+ * (safeStorage) via the project-wide auto-mock and the mocked `stores` above -- no real
  * `pathShim`/`os.homedir()` surface anywhere in this suite's import graph. A `readdirSync`
  * recount at this plan's execution time puts the directory at 40 `*.test.ts` files: 4
  * `IN_SCOPE_SUITES` + 36 below.
  *
  * `appRootResolution.test.ts` (Phase 34.5 gap cycle, plan 34.5-16 Task 3, G-1) is classified as
  * structurally contained: it declares no `jest.mock(...)` of any kind. It imports the real
- * `../electronStub` (asserting `app.getAppPath()`'s two arms directly, saving/restoring
+ * `../platformApi` (asserting `app.getAppPath()`'s two arms directly, saving/restoring
  * `process.env.GAMELIB_APP_ROOT` around every test and spying on `process.cwd()` rather than
  * mocking any module) and reads real `.ts`/`.rs` source files off disk via plain
  * `fs.readFileSync` for its static text assertions against `main.rs` -- the same "contained by
  * construction, no per-suite opt-in required" floor `electronReachLedger.test.ts`/
  * `seamBranchParity.test.ts` already rely on. It cannot be an `IN_SCOPE_SUITE`: those are
  * required to carry a `jest.mock('../pathShim', ...)` call, which this suite has no reason to
- * make (it never touches `pathShim` at all -- `electronStub.getAppPath()` is the seam under
+ * make (it never touches `pathShim` at all -- `platformApi.getAppPath()` is the seam under
  * test, not `pathShim`'s own `case 'exe'`). A `readdirSync` recount at this plan's execution
  * time puts the directory at 41 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 37 below.
  *
@@ -699,7 +699,7 @@ const IN_SCOPE_SUITES = [
  * disposable per-test `mkdtemp` dir), not the four-element hostile-env-var containment kit
  * `IN_SCOPE_SUITES` requires (Block B's own gate) -- so it cannot be an `IN_SCOPE_SUITE`. Its
  * second describe block (Task 2, the bootstrap wiring exclusivity proof) drives the REAL
- * `../bootstrap` `init()`, whose real `electronStub.app.getPath('appData'|'userData')` resolution
+ * `../bootstrap` `init()`, whose real `platformApi.app.getPath('appData'|'userData')` resolution
  * relies on the structural floor (`jest.setupContainment.ts`) precisely because this suite adds no
  * hand-rolled `homedir()`/env-var containment of its own -- exactly the "contained by
  * construction, no per-suite opt-in required" guarantee this whole Block C exists to prove. A
@@ -729,7 +729,7 @@ const IN_SCOPE_SUITES = [
  * structurally contained: it declares NO `jest.mock(...)` of any kind. It imports only
  * `../nativeImageShim` (a pure `sips`-backed module with no `electron`/`electron-store`/
  * `pathShim` surface at all -- it shells out to `/usr/bin/sips` directly, never through
- * `electronStub`) plus Node built-ins (`node:child_process`, `node:fs`, `node:os`, `node:path`)
+ * `platformApi`) plus Node built-ins (`node:child_process`, `node:fs`, `node:os`, `node:path`)
  * for its own fixture generation and dimension probing. No containment surface exists for this
  * suite to opt into. A `readdirSync` recount at this plan's execution time puts the directory at
  * 45 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 41 below.
@@ -771,7 +771,7 @@ const IN_SCOPE_SUITES = [
  * `outputStreamBinding.test.ts` (IN-04, `34.2-REVIEW.md` round 1) is classified structurally
  * contained. It declares NO `jest.mock(...)` of any kind and requires exactly one real backend
  * module, `../sidecarRpc`, whose entire import surface is `node:stream` (types only),
- * `node:crypto`, `common/types/sidecarTransport` and `./electronStub` -- no path module, no
+ * `node:crypto`, `common/types/sidecarTransport` and `./platformApi` -- no path module, no
  * `homedir()`, no filesystem read or write anywhere in the chain. Its only other disk access is
  * a `readFileSync` of `sidecarRpc.ts`'s own source for the anti-vacuity pin. It cannot be an
  * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` kit
@@ -791,7 +791,7 @@ const IN_SCOPE_SUITES = [
  * structurally contained. It declares exactly ONE `jest.mock(...)`, a full factory mock of
  * `../../storeManagers/legendary/eos_overlay/eos_overlay` -- so the real `eos_overlay.ts` (whose
  * own line 1 is `import { dialog } from 'electron'`) is NEVER required by this suite; the module
- * under test, `../eosOverlayFlowRegistration`, imports only the mocked module and `./electronStub`
+ * under test, `../eosOverlayFlowRegistration`, imports only the mocked module and `./platformApi`
  * -- no `pathShim`, no real `electron`/`electron-store`, no `homedir()`, no filesystem access
  * anywhere in its chain (its one `readFileSync` call reads its own source file for an anti-vacuity
  * pin, mirroring `flowRegistrationCensus.test.ts`'s pattern above). It cannot be an
@@ -804,7 +804,7 @@ const IN_SCOPE_SUITES = [
  * structurally contained on a READ of its import graph, not on assumption. It declares no
  * file-wide `jest.mock` at all -- every mock is a `jest.doMock` inside a test body -- and the
  * only production modules it requires are `../isPackagedSidecar` (whose sole dependency is the
- * `node:sea` builtin) and `../electronStub`. `electronStub`'s graph does reach `./pathShim`, but
+ * `node:sea` builtin) and `../platformApi`. `platformApi`'s graph does reach `./pathShim`, but
  * `pathShim`'s `resolveAppDataDir()`/`homedir()` calls all live INSIDE `getPath()` and none runs
  * at module scope, so nothing in that chain resolves a path at import time; `./sidecarRpc`'s
  * module scope is likewise inert (constants and empty containers). Its `readFileSync` calls read
@@ -816,8 +816,8 @@ const IN_SCOPE_SUITES = [
  * `wakeLock.test.ts` (Phase 35 plan 08, D-08/D-05 / REQ-35-06, 2026-08-29) is classified
  * structurally contained on a READ of its import graph, not on assumption. It declares exactly
  * ONE file-wide `jest.mock`, a factory mock of `../sidecarRpc`, and requires only two production
- * modules: `../electronStub` and `common/types/sidecarTransport` (the latter is pure `const`
- * declarations and types, with no imports of its own). `electronStub`'s graph reaches
+ * modules: `../platformApi` and `common/types/sidecarTransport` (the latter is pure `const`
+ * declarations and types, with no imports of its own). `platformApi`'s graph reaches
  * `./pathShim`, but as `isPackagedSidecar.test.ts`'s entry above already establishes,
  * `pathShim`'s `resolveAppDataDir()`/`homedir()` calls all live INSIDE `getPath()` and none runs
  * at module scope, so nothing in that chain resolves a path at import time. It touches no

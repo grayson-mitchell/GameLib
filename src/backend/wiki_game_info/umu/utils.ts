@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { storeCapabilities } from 'common/storeCapabilities'
 import { Runner } from 'common/types'
-import { umuStore } from '../electronStore'
+import { umuStore } from '../stores'
 
 interface GameObject {
   title: string

@@ -1,6 +1,6 @@
 /**
  * Installs the `Module._load` hook that redirects `require('electron')` ->
- * electronStub, satisfying spike 009's import-time wall: `app.getPath()` is
+ * platformApi, satisfying spike 009's import-time wall: `app.getPath()` is
  * called at MODULE SCOPE in `constants/paths.ts`.
  *
  * PHASE 35 PLAN 05 (D-04) — the second interception is GONE. This hook used to
@@ -8,7 +8,7 @@
  * `electron-store` does `require('electron')` on line 3 of its `index.js` and
  * threw `TypeError: The "path" argument must be of type string. Received
  * undefined` under bare Node, which is spike 009's second import-time wall
- * (`new Store()` at module scope in `electron_store.ts` and `cache.ts`).
+ * (`new Store()` at module scope in `typed_store.ts` and `cache.ts`).
  * `electron-store` has been replaced by `backend/store_backend.ts` — a
  * first-party shim over `conf` that resolves its `cwd` from `pathShim` and
  * requires no Electron runtime at all. Nothing asks for `electron-store` by
@@ -28,13 +28,13 @@
  * Installing the hook as a SIDE EFFECT of a module that is the FIRST-declared
  * import in `bootstrap.ts` guarantees hook-before-graph: ES modules evaluate
  * imports depth-first in declaration order, and this module's own import
- * (`electronStub`, transitively `pathShim`) touches only Node built-ins —
+ * (`platformApi`, transitively `pathShim`) touches only Node built-ins —
  * never the backend graph — so nothing here triggers an `app.getPath()` call
  * before the hook is up.
  */
 
 import Module from 'node:module'
-import * as electronStub from '../platform'
+import * as platformApi from '../platform'
 
 interface ModuleWithLoad {
   _load: (request: string, parent: unknown, isMain: boolean) => unknown
@@ -49,7 +49,7 @@ moduleWithLoad._load = (
   isMain: boolean
 ): unknown => {
   if (request === 'electron') {
-    return electronStub
+    return platformApi
   }
   return originalLoad(request, parent, isMain)
 }

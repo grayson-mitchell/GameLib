@@ -83,6 +83,6 @@ pnpm start                             # dev mode with HMR
 ## Key Conventions
 
 - **Runner type**: `'legendary' | 'gog' | 'nile' | 'sideload'` — always use this union, never hardcode store-specific logic without the manager maps.
-- **Persistence**: `electron-store` with typed wrappers (`TypeCheckedStoreBackend`/`TypeCheckedStoreFrontend`). Store schema is the `StoreStructure` interface in `src/common/types/electron_store.ts`; `src/backend/schemas.ts` only contains the Zod schema for validating file paths.
+- **Persistence**: `electron-store` with typed wrappers (`TypeCheckedStoreBackend`/`TypeCheckedStoreFrontend`). Store schema is the `StoreStructure` interface in `src/common/types/typed_store.ts`; `src/backend/schemas.ts` only contains the Zod schema for validating file paths.
 - **i18n**: `i18next` — backend uses `i18next-fs-backend`, frontend uses `i18next-http-backend`. 50+ locales in `public/locales/`.
 - **No direct Electron imports in frontend** — everything goes through `window.api` (enforced by ESLint `no-restricted-imports`).

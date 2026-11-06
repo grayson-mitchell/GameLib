@@ -4,11 +4,11 @@
  *
  * Calls `registerClipboardFlows()` directly (never through `../bootstrap`'s full `init()`), so
  * this suite only ever loads `clipboardFlowRegistration.ts`'s own import graph
- * (`./electronStub`, `./sidecarRpc`, `../utils/systeminfo`, `common/types/sidecarTransport`) —
+ * (`./platformApi`, `./sidecarRpc`, `../utils/systeminfo`, `common/types/sidecarTransport`) —
  * never the rest of `handlers.ts`'s side-effecting module-scope registrations, which this
  * module never touches and which would otherwise require mocking a much larger surface (axios,
  * `GlobalConfig`, `backend/storeManagers`, dialog, ...) for no reason. Mirrors
- * `lifecycleStub.test.ts`'s own "mock only the Rust boundary, invoke electronStub's real
+ * `lifecycleStub.test.ts`'s own "mock only the Rust boundary, invoke platformApi's real
  * members directly, assert channel + args + logged-not-thrown failures" shape — the closest
  * analog in this codebase for this exact kind of coverage.
  *
@@ -228,7 +228,7 @@ describe('sidecar clipboard flows (Phase 34.3 Plan 06 — REQ-34.3-03/REQ-34.3-0
     expect(warned).toBe(true)
   })
 
-  it('REQ-34.3-04 clipboardReadText (invoke) never calls electronStub.clipboard.readText (D-04)', async () => {
+  it('REQ-34.3-04 clipboardReadText (invoke) never calls platformApi.clipboard.readText (D-04)', async () => {
     const readTextSpy = jest.spyOn(clipboard, 'readText')
     program = { type: 'resolve', value: 'pasted' }
 

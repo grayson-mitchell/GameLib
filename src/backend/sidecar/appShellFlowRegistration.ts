@@ -2,7 +2,7 @@
  * Curated app-shell channel registration (Phase 34.1 Plan 04,
  * D-03/D-08/D-09/D-13, REQ-34.1-05/REQ-34.1-09/REQ-34.1-12).
  *
- * Registers the 21 sidecar-routed app-shell channels (7 invoke + 14 send) onto electronStub's
+ * Registers the 21 sidecar-routed app-shell channels (7 invoke + 14 send) onto platformApi's
  * `ipcMain` recorder, importing the REAL `backend/appshell/*` functions
  * extracted by Plan 34.1-02 unchanged (mirrors `installFlowRegistration.ts`'s
  * / `settingsFlowRegistration.ts`'s own objective — prove the real logic runs
@@ -13,7 +13,7 @@
  *       Custom CSS reads beside it were removed in quick 261031-bst)
  *     - `getAppManagementStatus` (quick 261026-b9r) -> `appshell/appManagement.ts`
  *       create-and-unlink probe inside the CrossOver bundle (macOS only)
- *     - `getHeroicVersion` -> `electronStub`'s `app.getVersion()` — Electron
+ *     - `getHeroicVersion` -> `platformApi`'s `app.getVersion()` — Electron
  *       parity is the BARE `app.getVersion()` (`main.ts:754`), not the
  *       decorated `utils/systeminfo/heroicVersion.ts` form; do not "improve"
  *       it
@@ -38,19 +38,19 @@
  *       -> `app.relaunch()` then `app.quit()`, the same pair `resetHeroic` uses
  *     - `changeLanguage` -> `appshell/language.ts` (`main.ts:526-528`)
  *     - `notify` -> `backend/dialog/dialog`'s `notify()` (`main.ts:538`),
- *       reaching `electronStub.Notification` -> the existing
+ *       reaching `platformApi.Notification` -> the existing
  *       `notification_show` rustInvoke arm (Phase 33)
  *     - `dialogDisplayed` -> `dialog/displayAck`'s `acknowledgeDialogDisplay()` (renderer ack that a showDialog frame is on screen)
  *     - `quit` -> `backend/utils`'s `handleExit()` (`main.ts:680`), reaching
- *       `electronStub.app.exit()` -> the existing `app_exit` rustInvoke arm
+ *       `platformApi.app.exit()` -> the existing `app_exit` rustInvoke arm
  *     - `openReleases`/`openWebviewPage` -> thin
  *       re-wirings of `backend/utils`'s `openUrlOrFile()` (`main.ts:716/727/
- *       730-732`), reaching `electronStub.shell.openExternal`/`openPath` ->
+ *       730-732`), reaching `platformApi.shell.openExternal`/`openPath` ->
  *       the existing `open_external`/`shell_open_path` rustInvoke arms
  *     - `abort` -> `callAbortController(id)`, imported directly from
  *       `utils/aborthandler/aborthandler.ts` (`main.ts:15` shape) — NOT via
  *       `utils/ipc_handler.ts` (D-09 below)
- *     - `lock`/`unlock` -> `electronStub.powerSaveBlocker.start()`/`.stop()`,
+ *     - `lock`/`unlock` -> `platformApi.powerSaveBlocker.start()`/`.stop()`,
  *       mirroring `main.ts:618-644`'s module-scope `powerId`/`displaySleepId`
  *       guards exactly — an accepted Phase 33 D-08 logged no-op, carried
  *       forward unchanged (D-13)
@@ -92,7 +92,7 @@
  *   - `createNewWindow`, `showAboutWindow`, and `gamepadAction` — plans
  *     34.1-05/07 own these as from-scratch Tauri work, not extraction.
  *   - `set-connectivity-online` — already live via `bootstrap.ts`'s
- *     `initOnlineMonitor()` call (Phase 33); `electronStub`'s
+ *     `initOnlineMonitor()` call (Phase 33); `platformApi`'s
  *     `listenerRegistry` holds an ARRAY per channel, so a second
  *     `ipcMain.on` registration here would make `setStatus('online')` fire
  *     twice per message.
@@ -149,7 +149,7 @@
  * including across two deliveries into the same isolated registration, and
  * that a synchronous throw from it does not prevent `initQueue(true)` firing).
  *
- * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
+ * Uses platformApi's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`/`addListener`) — `backend/ipc.ts` itself imports the real
  * `electron` module.
  *
@@ -341,7 +341,7 @@ export function registerAppShellFlows(
     }
   })
 
-  // Quick 261026-b9r: electronStub owns the relaunch-vs-quit ordering race
+  // Quick 261026-b9r: platformApi owns the relaunch-vs-quit ordering race
   // (platform/index.ts), so use the same pair resetHeroic does.
   ipcMain.on('relaunchApp', () => {
     try {
@@ -373,7 +373,7 @@ export function registerAppShellFlows(
   })
 
   // D-13/D-08: mirrors main.ts:618-631. Phase 35 Plan 08 (REQ-35-06) closed the D-08 gap here
-  // as well as in electronStub -- these two calls previously passed NO kind at all, because the
+  // as well as in platformApi -- these two calls previously passed NO kind at all, because the
   // Phase 33 stub took no argument and held nothing, so there was nothing for a kind to select.
   // Now that the stub takes real, DISTINCT OS assertions, the kind is load-bearing and the two
   // branches must pass the same strings main.ts:650/655 passes: a download blocks system sleep,
@@ -518,7 +518,7 @@ export function registerAppShellFlows(
       //
       // CR-02 (35-REVIEW.md, plan 35-21): the sidecar OUTLIVES the renderer, so a renderer
       // reload (devtools reload, webview crash-recovery, a future in-app reload path)
-      // re-delivers `frontendReady` into this SAME process. `electronStub`'s `ipcMain.on`
+      // re-delivers `frontendReady` into this SAME process. `platformApi`'s `ipcMain.on`
       // has no once-semantics of its own (unlike Electron's real `ipcMain`, which the
       // original `main.ts:560` reached via `addOneTimeListener` -> `ipcMain.once`), so a
       // second delivery would schedule a SECOND `initQueue(true)` against the same queue

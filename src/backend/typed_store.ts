@@ -21,7 +21,7 @@ import {
   TypeCheckedStore,
   UnknownGuard,
   ValidStoreName
-} from 'common/types/electron_store'
+} from 'common/types/typed_store'
 import { Get } from 'type-fest'
 import {
   notifyStoreChanged,
@@ -91,7 +91,7 @@ export class TypeCheckedStoreBackend<
     // must at least be greppable.
     if (storeRegistry.has(name)) {
       process.stderr.write(
-        `[electron_store] duplicate registration for '${name}' — keeping the first instance\n`
+        `[typed_store] duplicate registration for '${name}' — keeping the first instance\n`
       )
     } else {
       storeRegistry.set(name, {

@@ -11,7 +11,7 @@
  *      `catch` return `false` would unlock that vault inside a shipped binary and every
  *      other test in the repo would stay green.
  *
- *   2. `electronStub`'s `app.isPackaged` DELEGATES to it rather than re-deriving it, and
+ *   2. `platformApi`'s `app.isPackaged` DELEGATES to it rather than re-deriving it, and
  *      does so through a getter rather than a value captured at module-construction time.
  *      Both directions are exercised against ONE loaded module instance, because a
  *      snapshot would pass a single-direction test and fail the second read.
@@ -59,7 +59,7 @@ describe('isPackagedSidecar() — the one derivation', () => {
     //     in a packaged build (T-35-12).
     //   - humbleFlowRegistration.ts does NOT register the dev-only humbleRunValidation
     //     channel.
-    //   - electronStub.ts's app.isPackaged reports packaged, so paths.ts resolves
+    //   - platform/index.ts's app.isPackaged reports packaged, so paths.ts resolves
     //     publicDir to `build` — the bundled layout — rather than the source `public/`.
     // The unsafe direction is the one that looks harmless.
     jest.resetModules()
@@ -81,7 +81,7 @@ describe('isPackagedSidecar() — the one derivation', () => {
   })
 })
 
-describe('electronStub app.isPackaged — a delegating getter, not a second derivation', () => {
+describe('platformApi app.isPackaged — a delegating getter, not a second derivation', () => {
   afterEach(() => {
     jest.dontMock('node:sea')
     jest.dontMock('../isPackagedSidecar')
@@ -148,7 +148,7 @@ describe('T-35-11 source gate: exactly ONE derivation exists in the sidecar tree
     expect(read('devSecretVault.ts')).toContain('isPackagedSidecar()')
   })
 
-  it('electronStub.ts delegates and never re-derives, and no longer hardcodes the flag', () => {
+  it('platform/index.ts delegates and never re-derives, and no longer hardcodes the flag', () => {
     const src = readPlatform('index.ts')
     expect(src).not.toContain("require('node:sea')")
     expect(src).not.toContain('isPackaged: false')

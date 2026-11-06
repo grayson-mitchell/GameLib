@@ -86,7 +86,7 @@ function magicMatches(buffer: Buffer, magicHex: string): boolean {
 function validateDimension(value: number, label: string): number {
   if (!Number.isInteger(value) || value <= 0 || value > 16384) {
     throw new Error(
-      `[electronStub] nativeImage: invalid ${label} dimension: ${String(value)}`
+      `[platformApi] nativeImage: invalid ${label} dimension: ${String(value)}`
     )
   }
   return value
@@ -139,13 +139,13 @@ function runSips(
 ): Buffer {
   if (process.platform !== 'darwin') {
     throw new Error(
-      `[electronStub] nativeImage: no image converter available on platform '${process.platform}' (sips is macOS-only)`
+      `[platformApi] nativeImage: no image converter available on platform '${process.platform}' (sips is macOS-only)`
     )
   }
 
   if (sourceBuffer.length > MAX_INPUT_BYTES) {
     throw new Error(
-      `[electronStub] nativeImage: input buffer (${String(sourceBuffer.length)} bytes) exceeds the 32 MiB cap`
+      `[platformApi] nativeImage: input buffer (${String(sourceBuffer.length)} bytes) exceeds the 32 MiB cap`
     )
   }
 

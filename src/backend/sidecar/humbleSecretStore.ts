@@ -56,7 +56,7 @@ import {
   type HumbleSecretKey
 } from '../humble/secretStore'
 import type { TokenReadOutcome } from '../storeManagers/steam/tokenStore'
-import { configStore } from '../humble/electronStores'
+import { configStore } from '../humble/stores'
 import { HUMBLE_TOKEN_STORE_KEY } from '../humble/constants'
 
 /** One `SidecarKeyringSlotStore` per secret, bound once at module load. Each instance is

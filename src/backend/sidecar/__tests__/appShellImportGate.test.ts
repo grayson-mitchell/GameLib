@@ -7,7 +7,7 @@
  * pass and confirmed to be Phase 28's keyring/`configStore` byte-identity
  * proof: it asserts that `SidecarKeyringTokenStore`'s four operations never
  * write to the shared `configStore`, plus two narrow by-construction gates
- * scoped to `keyringTokenStore.ts`/`bootstrap.ts`/`electronStub.ts`. It makes
+ * scoped to `keyringTokenStore.ts`/`bootstrap.ts`/`platform/index.ts`. It makes
  * NO assertion about `main.ts`'s textual state or about any sidecar import
  * graph beyond those three files (RESEARCH.md Pitfall 2 / CONTEXT.md
  * Assumption A1) — so D-09's curated-import gate and D-08's delegation-shape
@@ -59,7 +59,7 @@ describe('appShellImportGate (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-12)', 
   it('REQ-34.1-12/D-09 Gate 1 self-test: stripComments removes a comment-only "from \'electron\'" line before matching', () => {
     const source = [
       "// this comment intentionally says: from 'backend/platform'",
-      "import { ipcMain } from './electronStub'"
+      "import { ipcMain } from './platformApi'"
     ].join('\n')
     const stripped = stripComments(source)
     expect(stripped).not.toMatch(/from\s+['"]electron['"]/)

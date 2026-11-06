@@ -92,7 +92,7 @@ jest.mock('react', () => {
 const lastPlayedByApp: Record<string, { lastPlayed?: string } | undefined> = {}
 const mockGetNodefault = jest.fn((appName: string) => lastPlayedByApp[appName])
 
-jest.mock('frontend/helpers/electronStores', () => ({
+jest.mock('frontend/helpers/stores', () => ({
   timestampStore: {
     get_nodefault: (appName: string) => mockGetNodefault(appName)
   }

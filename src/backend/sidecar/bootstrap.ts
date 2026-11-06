@@ -7,13 +7,13 @@
  * calls it unconditionally.
  *
  * This module's ordering is load-bearing (spike 009's sharp edge): the
- * `Module._load` hook that redirects `require('electron')` -> electronStub MUST
+ * `Module._load` hook that redirects `require('electron')` -> platformApi MUST
  * be installed BEFORE `./handlers` is imported, because
  * `backend/constants/paths.ts` calls `app.getPath()` at MODULE SCOPE.
  *
  * Phase 35 Plan 05 (D-04): this paragraph used to describe a SECOND redirect,
  * `require('electron-store')` -> fileStore, for the module-scope `new Store()`
- * calls in `backend/electron_store.ts` / `backend/cache.ts`. That wall no
+ * calls in `backend/typed_store.ts` / `backend/cache.ts`. That wall no
  * longer exists — `electron-store` was replaced by `backend/store_backend.ts`,
  * a first-party shim over `conf` that needs no Electron runtime — so the
  * interception and this half of its documentation were deleted together.
@@ -35,7 +35,7 @@ import { existsSync } from 'graceful-fs'
 import { join } from 'node:path'
 import Backend from 'i18next-fs-backend'
 import i18next from 'i18next'
-import * as electronStub from '../platform'
+import * as platformApi from '../platform'
 import { sweepStaleEngineTemps } from '../storeManagers/steam/engine/fallbackEngine'
 import { restoreMacSteamOnlineIfOwed } from '../storeManagers/steam/macSteamOffline'
 import { startInstalledJsonWatcher } from './installedJsonWatcher'
@@ -50,7 +50,7 @@ import './handlers'
 // Block D (finding A1, quick-260907-odi). Adds NO new module to the sidecar bundle:
 // `sidecar/storeRegistration.ts:61` already imports `playtimeSyncQueue` from this exact
 // module, so this is a second binding onto an already-resident singleton, not a new edge.
-import { playtimeSyncQueue } from '../storeManagers/gog/electronStores'
+import { playtimeSyncQueue } from '../storeManagers/gog/stores'
 // Block G (todo 2026-09-06, quick-260908-wk0). Adds NO new module to the sidecar bundle:
 // `grep -rn "libraryManagerMap" src/backend/sidecar/*.ts` (re-run at execution time) confirms
 // `bootstrap.ts` already imports `./installedJsonWatcher` at its own line 39, and
@@ -92,7 +92,7 @@ import { installDevSecretVault } from './devSecretVault'
 // (backend/online_monitor.ts) read `undefined === 'online'` forever, so
 // `downloadmanager/utils.ts`'s pre-install guard rejected EVERY Steam install instantly with
 // "App offline, skipping install" even when fully online. Paired with the sidecar
-// `net.isOnline()` stub (electronStub.ts) so the very first status check falls through to the
+// `net.isOnline()` stub (platform/index.ts) so the very first status check falls through to the
 // real `pingSites()` ping instead of pinning `'offline'` permanently.
 import { initOnlineMonitor, runOnceWhenOnline } from '../online_monitor'
 // Block E (todo 2026-09-06, quick-260908-fre). `grep -rn
@@ -188,7 +188,7 @@ import {
 
 /**
  * Starts the sidecar: begins serving the stdio JSON-RPC loop, wires
- * electronStub's `shell.openExternal`/`sendFrontendMessage` push path onto
+ * platformApi's `shell.openExternal`/`sendFrontendMessage` push path onto
  * it, then prints `READY_SENTINEL`. Streams are injectable for testing
  * (`bootstrap.test.ts` drives this with `stream.PassThrough` pairs);
  * production use (`src/sidecar/index.ts`) relies on the
@@ -198,7 +198,7 @@ let loggerInitialized = false
 // Guards initOnlineMonitor() (fix/steam-native-install-stability, 33-05 live-gate gap): unlike
 // loggerInitialized's target (initLogger() is naturally idempotent — it just reassigns a
 // singleton), initOnlineMonitor() calls `addListener`/`addHandler`, which push onto
-// electronStub's `ipcMain.on` listener arrays every call. Without this guard, each repeated
+// platformApi's `ipcMain.on` listener arrays every call. Without this guard, each repeated
 // init() (bootstrap.test.ts / skeletonFlows.test.ts call it many times per file with fresh
 // streams; production calls it once) would register another `connectivity-changed`/
 // `set-connectivity-online` listener, firing `setStatus()` (and a fresh `pingSites()` ping) once
@@ -224,7 +224,7 @@ let releasesFetchInitialized = false
 let migrationsInitialized = false
 // Guards registerProtocolUrlHandler()'s ipcMain.handle() registration below (Phase 34.5 gap
 // cycle 6 plan 44). Same reason as the guards above: bootstrap.test.ts / *Flows.test.ts call
-// init() many times per file, and electronStub's handlerRegistry is a plain module-scope Map
+// init() many times per file, and platformApi's handlerRegistry is a plain module-scope Map
 // keyed by channel name — a second handle('handleProtocolUrl', ...) call would just silently
 // overwrite the first, which is harmless today but is exactly the kind of "works by accident"
 // idempotency this file's other five guards exist to make explicit instead.
@@ -372,7 +372,7 @@ export function deliverStartupProtocolUrl(
 function registerProtocolUrlHandler(): void {
   if (protocolUrlHandlerRegistered) return
   protocolUrlHandlerRegistered = true
-  electronStub.ipcMain.handle(
+  platformApi.ipcMain.handle(
     'handleProtocolUrl',
     (_event: unknown, url?: unknown) => {
       if (typeof url !== 'string' || !url.startsWith('gamelib://')) {
@@ -402,7 +402,7 @@ function registerProtocolUrlHandler(): void {
  * This function is the only thing that can recover from THAT case, and it only runs at boot.
  *
  * The lock never ages out on its own: `playtimeSyncQueue` is a file-backed `CacheStore`
- * (`gog/electronStores.ts:42`) that survives restarts, and `CacheStore` evaluates its
+ * (`gog/stores.ts:42`) that survives restarts, and `CacheStore` evaluates its
  * lifespan/expiry only inside `get()` (`cache.ts:64-88`) -- `has()` (`cache.ts:142`) is a raw
  * `current_store.has(key)` passthrough with no expiry check, and nothing else ever calls
  * `get('lock')` for this key.
@@ -931,7 +931,7 @@ export function init(
     const appRootEnv = process.env.GAMELIB_APP_ROOT
     const appRootSource = appRootEnv ? 'GAMELIB_APP_ROOT' : 'process.cwd'
     logInfo(
-      `[bootstrap] appRoot resolved=${electronStub.app.getAppPath()} source=${appRootSource}`,
+      `[bootstrap] appRoot resolved=${platformApi.app.getAppPath()} source=${appRootSource}`,
       LogPrefix.Backend
     )
 
@@ -1002,7 +1002,7 @@ export function init(
       const settings = GlobalConfig.get().getSettings()
       const localesDir = join(publicDir, 'locales')
       // Loud-not-silent locale resolution (publicdir-getapppath-chunking gotcha family):
-      // under the sidecar, electronStub's `app.getAppPath()` resolves to `process.cwd()`,
+      // under the sidecar, platformApi's `app.getAppPath()` resolves to `process.cwd()`,
       // not a packaged asar root -- so the packaged-build half of this path cannot be
       // proven by jest and is a named deferred-UAT item. If the resolved directory is
       // absent, warn loudly naming the resolved path rather than silently falling back --
@@ -1101,7 +1101,7 @@ export function init(
   // startRpcServer() and BEFORE the READY_SENTINEL write below, so the shell can never send a
   // handleProtocolUrl frame for an unregistered channel.
   registerProtocolUrlHandler()
-  electronStub.bindTransport({
+  platformApi.bindTransport({
     openExternal: requestOpenExternal,
     pushFrontendMessage
   })
@@ -1289,7 +1289,7 @@ export function init(
   // module header for the sidecar exit-contract reasoning).
   if (!legacyZoomCleanupInitialized) {
     legacyZoomCleanupInitialized = true
-    void removeLegacyZoomData(electronStub.app.getPath('userData'))
+    void removeLegacyZoomData(platformApi.app.getPath('userData'))
   }
   // Stale engine temp sweep (G20): removes steam-engines/.tmp-* left by an interrupted unpack.
   // Placed after `initLogger()` (it logs) and before READY (no install can hold a temp dir yet).
@@ -1321,7 +1321,7 @@ export function init(
   // Placement is constrained from both sides:
   //   - Must be AFTER the i18next block above so `i18nReady` holds the real init promise
   //     rather than the `Promise.resolve()` initial value.
-  //   - Must be AFTER `startRpcServer(input, output)` and `electronStub.bindTransport(...)`
+  //   - Must be AFTER `startRpcServer(input, output)` and `platformApi.bindTransport(...)`
   //     above, because the dialog reaches the shell via `requestRustInvoke`, which needs a
   //     live write stream -- do not rely on the `i18nReady` await pushing this into a later
   //     macrotask; the placement itself must carry it.

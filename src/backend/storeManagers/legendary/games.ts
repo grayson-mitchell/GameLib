@@ -46,7 +46,7 @@ import {
   removeShortcuts as removeShortcutsUtil
 } from '../../shortcuts/shortcuts/shortcuts'
 import { join } from 'path'
-import { gameInfoStore } from './electronStores'
+import { gameInfoStore } from './stores'
 import { removeNonSteamGame } from '../../shortcuts/nonesteamgame/nonesteamgame'
 import shlex from 'shlex'
 import { legendaryLaunchArgumentFields } from '../runnerLaunchArgv'

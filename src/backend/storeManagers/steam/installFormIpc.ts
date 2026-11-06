@@ -22,7 +22,7 @@ import type {
 import { logWarning, LogPrefix } from 'backend/logger'
 import { GlobalConfig } from 'backend/config'
 import SteamGame, { getBridgeRouteVerdict } from './games'
-import { steamBottleConfigStore, steamMetadataStore } from './electronStores'
+import { steamBottleConfigStore, steamMetadataStore } from './stores'
 import { persistBottleWineVersion } from './bottle'
 import { depotSignalCaptured } from './metadataCapture'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'

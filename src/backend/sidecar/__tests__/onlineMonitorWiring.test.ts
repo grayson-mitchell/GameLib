@@ -8,7 +8,7 @@
  * so `isOnline()`'s module-level `status` stayed `undefined` forever. `bootstrap.ts`'s `init()`
  * now calls the real `initOnlineMonitor()`.
  *
- * This suite drives the REAL, unmocked `initOnlineMonitor()`/`electronStub.ts` pair end-to-end
+ * This suite drives the REAL, unmocked `initOnlineMonitor()`/`platform/index.ts` pair end-to-end
  * (mirrors `skeletonFlows.test.ts`'s real-shim convention) rather than `bootstrap.test.ts`'s
  * default-automock convention, because the default automock (`src/backend/__mocks__/
  * electron.ts`) has neither `net` nor an `ipcMain.handle` -- see `bootstrap.test.ts`'s own
@@ -21,12 +21,12 @@
  * `electronUntouched.test.ts`'s header.
  *
  * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` route Jest's own module
- * resolution at the real `electronStub.ts`/`fileStore.ts` (the same singleton instances
+ * resolution at the real `platform/index.ts`/`fileStore.ts` (the same singleton instances
  * `bootstrap.ts`/`online_monitor.ts` bind onto), rather than the generic backend-wide manual
  * mock Jest auto-applies to `require('electron')` -- see `skeletonFlows.test.ts`'s header for
  * the full rationale for why this override is necessary, not incidental.
  *
- * `axios` is mocked: once the real electronStub's `net.isOnline()` returns `true`,
+ * `axios` is mocked: once the real platformApi's `net.isOnline()` returns `true`,
  * `initOnlineMonitor()` immediately calls `online_monitor.ts`'s real `pingSites()` (a live
  * `axios.head()` against github/epic/gog/cloudflare) -- this suite must never make a real
  * network call.
@@ -127,7 +127,7 @@ describe('sidecar bootstrap wires the online monitor for real (fix/steam-native-
 
     // This is the exact regression this fix closes: pre-fix, `status` stayed `undefined`
     // forever (isOnline() === false always) because initOnlineMonitor() was never called at
-    // all under the sidecar. Post-fix, with net.isOnline() -> true (electronStub) and a
+    // all under the sidecar. Post-fix, with net.isOnline() -> true (platformApi) and a
     // healthy ping (mocked axios.head), the status must reach 'online' -- never 'offline'.
     expect(result.status).toBe('online')
   })

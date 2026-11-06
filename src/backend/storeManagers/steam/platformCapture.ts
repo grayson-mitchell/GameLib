@@ -1,5 +1,5 @@
 import { logInfo, logError, LogPrefix } from 'backend/logger'
-import { steamMetadataStore, SteamMetadataCacheEntry } from './electronStores'
+import { steamMetadataStore, SteamMetadataCacheEntry } from './stores'
 import { depotSignalCaptured } from './metadataCapture'
 import { withTimeout, STEAM_PICS_BULK_TIMEOUT_MS } from './withTimeout'
 import { resolvePlatformWrite } from './platformPrecedence'
@@ -146,7 +146,7 @@ export function parseOslistPlatforms(
  * absent after the merge.
  *
  * Kept LOCAL to this module rather than added as a new named helper on
- * `./electronStores` (Claude's Discretion, D-02): a new shared merge surface
+ * `./stores` (Claude's Discretion, D-02): a new shared merge surface
  * invites a future writer to misuse it for a different cache shape's
  * carry-forward rules, which do not generalise.
  *

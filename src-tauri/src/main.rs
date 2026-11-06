@@ -440,7 +440,7 @@ const KEYRING_REACHABILITY_PROBE_ACCOUNT: &str = "reachability-probe-never-writt
 /// 01 (`34.6-CONTEXT.md` amendment A-03) is that future plan: the `steamgrid-api-key` arm below
 /// lands BEFORE the SteamGridDB channels are registered on the sidecar (plan 34.6-09), not after,
 /// because D-06's live gate would otherwise write a real operator API key to disk in plaintext at
-/// the moment `secureKey.ts`'s `safeStorage` import resolves to `electronStub.ts`'s dead stub.
+/// the moment `secureKey.ts`'s `safeStorage` import resolves to `platform/index.ts`'s dead stub.
 fn keyring_account(slot: &str) -> Result<&'static str, String> {
     match slot {
         "steam-refresh-token" => Ok(KEYRING_ACCOUNT),

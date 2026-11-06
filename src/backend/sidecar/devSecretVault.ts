@@ -13,7 +13,7 @@
  * time (`34.5-CYCLE4-ROUTING.md`'s `## Authorisation`).
  *
  * This project has already shipped a credential store that persisted secrets in PLAINTEXT
- * SILENTLY — the `safeStorage` stub under Tauri (`electronStub.ts`), which became finding F-1
+ * SILENTLY — the `safeStorage` stub under Tauri (`platform/index.ts`), which became finding F-1
  * at a live gate (`34.4.1-08-gate-failed.md`) before `keyringTokenStore.ts`/`humbleSecretStore.ts`
  * closed it. This module MUST NOT become a second instance of that defect. Three guardrails,
  * each independently tested, each non-negotiable:

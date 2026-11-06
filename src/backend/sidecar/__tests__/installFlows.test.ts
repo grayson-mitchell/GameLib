@@ -4,18 +4,18 @@
  *
  * Drives the REAL sidecar RPC server in-process (bootstrap.test.ts's
  * real-shim black-box pattern — the shims under test are the actual
- * electronStub.ts/fileStore.ts modules, unmocked) against injected
+ * platform/index.ts/fileStore.ts modules, unmocked) against injected
  * `stream.PassThrough` pairs, mirroring `steamAuthFlows.test.ts`'s own shape.
  *
  * **GAP FIX precedent (2026-07-22, see skeletonFlows.test.ts's own header):**
  * this suite's config directory is NOT the real OS config directory. The
  * `jest.mock('os', ...)` below overrides `homedir()` to a disposable
- * per-process tmp directory so the real electronStub/fileStore CODE runs
+ * per-process tmp directory so the real platformApi/fileStore CODE runs
  * (preserving this suite's fidelity), while the location it reads/writes can
  * never be the developer's real config directory.
  *
  * `jest.mock('electron', ...)` / `jest.mock('backend/store_backend', ...)` below
- * point Jest's OWN module resolution at electronStub.ts/fileStore.ts
+ * point Jest's OWN module resolution at platform/index.ts/fileStore.ts
  * directly — see skeletonFlows.test.ts's header for why this is necessary.
  *
  * Mocked only at the DEEPEST boundary this plan's own module docstring names:
@@ -46,7 +46,7 @@
  *
  * Every other module in the registration/transport/store path
  * (`installFlowRegistration.ts`, `handlers.ts`, `sidecarRpc.ts`,
- * `bootstrap.ts`, `electronStub.ts`, `fileStore.ts`,
+ * `bootstrap.ts`, `platform/index.ts`, `fileStore.ts`,
  * `backend/utils/uninstaller.ts`, `backend/utils/checkGameUpdates.ts`,
  * `backend/storeManagers` incl. all six library managers,
  * `storeManagers/steam/installLocation.ts`,
@@ -79,7 +79,7 @@ jest.mock('backend/store_backend', () => ({
 
 // ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init()` now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
-// electronStub's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real
+// platformApi's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real
 // `pingSites()`, a live `axios.head()` against github/epic/gog/cloudflare. Mocked so this suite
 // (which drives the real, unmocked RPC/handler graph, including the real `backend/utils` below)
 // never makes a real network call; `.create` is also stubbed for `backend/utils.ts`'s
@@ -220,7 +220,7 @@ jest.mock('../../storeManagers/steam/games', () => {
 // shellFilesFlows.test.ts's own boundary choice) — `showDialogBoxModalAuto`
 // bare `jest.fn()` here (Plan 34.6-06's error-branch/D-15-adjacent assertion
 // needs to observe the call, not exercise the real sendFrontendMessage/
-// electronStub fallback chain, which shellFilesFlows.test.ts/wineToolsFlows
+// platformApi fallback chain, which shellFilesFlows.test.ts/wineToolsFlows
 // .test.ts already cover).
 //
 // 260905-mv5 (site 2): `notify` is ALSO now a bare `jest.fn()`, not real via

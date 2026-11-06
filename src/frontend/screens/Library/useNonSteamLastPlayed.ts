@@ -1,7 +1,7 @@
 import { hasCapability } from 'common/storeCapabilities'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GameInfo } from 'common/types'
-import { timestampStore } from 'frontend/helpers/electronStores'
+import { timestampStore } from 'frontend/helpers/stores'
 
 type NonSteamLastPlayedMap = Readonly<Record<string, string | undefined>>
 

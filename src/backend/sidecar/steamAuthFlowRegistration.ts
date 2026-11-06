@@ -140,7 +140,7 @@ import { SteamUser } from '../storeManagers/steam/user'
 import {
   steamSyncStore,
   steamBottleConfigStore
-} from '../storeManagers/steam/electronStores'
+} from '../storeManagers/steam/stores'
 import {
   provisionBottle,
   isBottleProvisioned

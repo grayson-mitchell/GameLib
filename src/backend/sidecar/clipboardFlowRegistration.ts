@@ -2,7 +2,7 @@
  * Curated clipboard channel registration (Phase 34.3 Plan 06, D-01/D-02/D-03/D-04,
  * REQ-34.3-03/REQ-34.3-04/REQ-34.3-13).
  *
- * Registers the 3 clipboard channels onto electronStub's `ipcMain` recorder. These are the
+ * Registers the 3 clipboard channels onto platformApi's `ipcMain` recorder. These are the
  * ONLY consumers of the two new `dispatch_rust_channel` arms this slice adds
  * (`clipboard_write_text`/`clipboard_read_text`, Plan 03) — kept in this dedicated module
  * (rather than folded into `shellFilesFlowRegistration.ts`) specifically so the claim "this
@@ -10,7 +10,7 @@
  * one file:
  *
  *   send (ipcMain.on, 2):
- *     - `clipboardWriteText` -> `electronStub`'s `clipboard.writeText(text)`, itself a real
+ *     - `clipboardWriteText` -> `platformApi`'s `clipboard.writeText(text)`, itself a real
  *       fire-and-forget forward to `RUST_CLIPBOARD_WRITE_TEXT` (Plan 05, `main.ts:1427`)
  *     - `copySystemInfoToClipboard` -> `utils/systeminfo`'s `getSystemInfo()` +
  *       `formatSystemInfo()`, then `clipboard.writeText(formatted)`
@@ -18,7 +18,7 @@
  *
  *   invoke (ipcMain.handle, 1):
  *     - `clipboardReadText` -> awaits `requestRustInvoke(RUST_CLIPBOARD_READ_TEXT, [])`
- *       DIRECTLY in this module's own handler — D-04: `electronStub.clipboard.readText()` is
+ *       DIRECTLY in this module's own handler — D-04: `platformApi.clipboard.readText()` is
  *       synchronous and structurally cannot await a Rust round-trip, so this channel bypasses
  *       that stub entirely rather than calling it (`main.ts:1425`). On rejection or a
  *       non-string result, resolves `''` rather than rejecting — the same degraded-but-safe
@@ -83,7 +83,7 @@ export function registerClipboardFlows(): void {
   })
 
   // ── invoke (1): clipboardReadText — D-04: awaits Rust DIRECTLY, bypassing the sync,
-  // deliberately-dead electronStub.clipboard.readText() stub. On rejection or a non-string
+  // deliberately-dead platformApi.clipboard.readText() stub. On rejection or a non-string
   // result, resolves '' rather than rejecting — SIDLogin/index.tsx:137 consumes the value
   // directly and must never see an unhandled rejection ───────────────────────────────────────
 

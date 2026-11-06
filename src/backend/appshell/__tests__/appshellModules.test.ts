@@ -43,10 +43,10 @@ jest.mock('i18next', () => ({
   }
 }))
 
-// ── legendary electronStores mock (language.ts) — gameInfoStore is a real
+// ── legendary stores mock (language.ts) — gameInfoStore is a real
 // CacheStore backed by electron-store; mocked to avoid any real disk I/O
 // (this repo's own "tests clobbering real store" precedent) ────────────────
-jest.mock('../../storeManagers/legendary/electronStores', () => ({
+jest.mock('../../storeManagers/legendary/stores', () => ({
   gameInfoStore: {
     clear: jest.fn()
   }
@@ -66,7 +66,7 @@ import {
   getCurrentChangelog as mockedGetCurrentChangelog
 } from '../../utils'
 import i18next from 'i18next'
-import { gameInfoStore } from '../../storeManagers/legendary/electronStores'
+import { gameInfoStore } from '../../storeManagers/legendary/stores'
 import { backendEvents } from '../../backend_events'
 
 import {

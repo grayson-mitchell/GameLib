@@ -46,7 +46,7 @@ import {
   STEAM_SETUP_EXE_URL,
   steamSupportPath
 } from './constants'
-import { steamBottleConfigStore } from './electronStores'
+import { steamBottleConfigStore } from './stores'
 import { getEngineSelection } from './engine/engineRegistry'
 import { isNonCrossover } from './engine/engineTypes'
 import type {

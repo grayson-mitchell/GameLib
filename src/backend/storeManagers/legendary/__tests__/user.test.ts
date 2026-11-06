@@ -4,7 +4,7 @@
  *
  * No test file existed for this module before Phase 34.5 Plan 06. These tests originally
  * covered the defect that plan fixed: under the Tauri sidecar, `session.fromPartition(
- * 'persist:epicstore')` resolved the sidecar's `{}` stub (electronStub.ts) which had no
+ * 'persist:epicstore')` resolved the sidecar's `{}` stub (platform/index.ts) which had no
  * `clear*` methods, so the FIRST `ses.clearStorageData()` call used to throw a TypeError and
  * abort logout() before `configStore.delete('userInfo')`/`clearCache('legendary')` ever ran —
  * leaving the stored profile behind despite CLI credential revocation succeeding.
@@ -246,7 +246,7 @@ describe('LegendaryUser.logout()', () => {
   // Phase 39 Plan 04 Task 3: the test that used to live here — "with a session object exposing
   // no clear* methods, logout() does NOT throw and configStore.delete('userInfo') STILL runs" —
   // drove the now-deleted `if (seam === null)` Electron branch directly (it simulated
-  // electronStub.ts's `{}` session stub). Task 1 removed that branch from source entirely, so
+  // platform/index.ts's `{}` session stub). Task 1 removed that branch from source entirely, so
   // the scenario is unreachable. Its invariant — the credential-side cleanup
   // (configStore.delete('userInfo') + clearCache('legendary')) runs even when the ENTIRE
   // partition wipe fails — survives, unweakened, in "F-6 twin: the credential-side cleanup runs

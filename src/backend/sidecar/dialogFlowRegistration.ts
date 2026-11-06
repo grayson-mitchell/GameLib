@@ -3,7 +3,7 @@
  *
  * Plan 30-03 built the whole native-picker chain (Cargo `tauri-plugin-dialog`
  * dependency, the `dialog_open` rustInvoke channel in `src-tauri/src/main.rs`,
- * the `RUST_DIALOG_OPEN` allowlist entry, `electronStub.showOpenDialog`) but
+ * the `RUST_DIALOG_OPEN` allowlist entry, `platformApi.showOpenDialog`) but
  * never registered the IPC channel that reaches it. `dialog.showOpenDialog`
  * has exactly one backend caller repo-wide — `main.ts`'s
  * `addHandler('openDialog', ...)` — and `main.ts` is NOT in the sidecar's
@@ -19,10 +19,10 @@
  * follows, so the two builds cannot fork on picker behavior.
  *
  * `parentWindow` is `undefined` here: the sidecar has no real `BrowserWindow`,
- * and `electronStub.showOpenDialog` ignores that argument entirely, forwarding
+ * and `platformApi.showOpenDialog` ignores that argument entirely, forwarding
  * to Rust's `dialog_open` channel instead.
  *
- * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
+ * Uses platformApi's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`) — no file under `src/backend/sidecar/` may import the real
  * `electron` module, which `backend/ipc.ts` itself does. The electron import
  * lives in `backend/utils/openDialog.ts`, outside this directory, exactly as

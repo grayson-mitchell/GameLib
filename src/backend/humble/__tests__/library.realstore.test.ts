@@ -2,7 +2,7 @@
  * Regression tests for the Phase 11 live-UAT failure (debug session:
  * humble-sync-spinner-never-ends).
  *
- * Unlike library.test.ts (which mocks ../electronStores with clean Map-backed
+ * Unlike library.test.ts (which mocks ../stores with clean Map-backed
  * doubles), these tests run HumbleLibrary against the REAL CacheStore +
  * electron-store (redirected to a tmp cwd by src/backend/__mocks__/
  * electron-store.ts). The live bug was invisible to any Map double:
@@ -57,10 +57,10 @@ jest.mock('../expirationAlerts', () => ({
   detectAndNotifyExpirationTransitions: jest.fn()
 }))
 
-// ── Imports (after mocks) — REAL electronStores/CacheStore ──────────────
+// ── Imports (after mocks) — REAL stores/CacheStore ──────────────
 
 import { HumbleLibrary } from '../library'
-import { humbleLibraryStore, humbleSyncStore } from '../electronStores'
+import { humbleLibraryStore, humbleSyncStore } from '../stores'
 
 function makeRawOrder(gamekey: string) {
   return {

@@ -5,7 +5,7 @@
  *
  * Drives the REAL sidecar RPC server in-process (`gameDetailsFlows.test.ts`'s
  * own real-shim black-box pattern — the shims under test are the actual
- * electronStub.ts/fileStore.ts modules, unmocked) against injected
+ * platform/index.ts/fileStore.ts modules, unmocked) against injected
  * `stream.PassThrough` pairs. This suite's config directory is redirected to
  * a disposable per-process tmp home, never the developer's real config
  * directory.
@@ -21,7 +21,7 @@
  * true })` and `configStore.set('games.recent', [])`. The `jest.mock('os',
  * ...)` block below is KEPT as defence-in-depth for any code that calls
  * `homedir()` directly, but the actual redirect now mocks `pathShim` itself
- * — the single choke point `electronStub.ts`'s `app.getPath()` calls through
+ * — the single choke point `platform/index.ts`'s `app.getPath()` calls through
  * — with no platform branch and no environment variable participating. A
  * `beforeAll` containment guard (below the mocks) additionally asserts, via
  * `resolve`+`relative` (never `startsWith`/`join` — see Phase 18's recorded
@@ -87,7 +87,7 @@ jest.mock('os', () => {
 
 // ── pathShim — CR-03: the REAL choke point. `constants/paths.ts`'s
 // module-scope `app.getPath('appData'|'userData')` calls resolve through
-// `electronStub.ts` -> `pathShim.getPath()`, whose real `resolveAppDataDir()`
+// `platform/index.ts` -> `pathShim.getPath()`, whose real `resolveAppDataDir()`
 // prefers `env.APPDATA`/`env.XDG_CONFIG_HOME` over `homedir()` — bypassing
 // the `jest.mock('os', ...)` redirect above on win32/default. This factory
 // reimplements all four names the real shim supports, rooted at a single
@@ -353,7 +353,7 @@ import { libraryManagerMap } from 'backend/storeManagers'
 import { handlerRegistry } from '../../platform'
 import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
 import { getLogFilePath } from 'backend/logger/paths'
-import { wikiGameInfoStore } from '../../wiki_game_info/electronStore'
+import { wikiGameInfoStore } from '../../wiki_game_info/stores'
 import { configStore } from '../../constants/key_value_stores'
 import { isOnline, runOnceWhenOnline } from '../../online_monitor'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
@@ -1423,7 +1423,7 @@ describe('REQ-34.2-04 enrichmentFlowRegistration.ts import gates', () => {
   it('REQ-34.2-04 self-test: stripComments removes a comment-only forbidden-pattern line before matching', () => {
     const source = [
       "// this comment intentionally says: from 'backend/platform'",
-      "import { ipcMain } from './electronStub'"
+      "import { ipcMain } from './platformApi'"
     ].join('\n')
     expect(stripComments(source)).not.toMatch(/from\s+['"]electron['"]/)
   })

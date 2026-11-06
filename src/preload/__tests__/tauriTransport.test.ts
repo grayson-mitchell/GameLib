@@ -610,7 +610,7 @@ describe('allow-list', () => {
  * `key.split('.')`. The two were not inverses, so the shipped dot-key call sites --
  * `configStore.set('games.hidden'|'games.favourites'|'games.customCategories', …)`
  * (GlobalState.tsx) and every frontend `CacheStore.set()` (which writes a
- * `__timestamp.<key>` entry, electronStores.ts:116) -- read back the PRE-write value
+ * `__timestamp.<key>` entry, stores.ts:116) -- read back the PRE-write value
  * for the rest of the session. A hidden game un-hid itself; a freshly written cache
  * entry could never be read back in-session.
  */

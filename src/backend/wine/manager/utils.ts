@@ -23,7 +23,7 @@ import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import { GlobalConfig } from '../../config'
 import { join } from 'path'
 import { backendEvents } from 'backend/backend_events'
-import { wineDownloaderInfoStore } from './electronStores'
+import { wineDownloaderInfoStore } from './stores'
 
 export { wineDownloaderInfoStore }
 

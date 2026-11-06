@@ -49,7 +49,7 @@ jest.mock('../games', () => ({
   getBridgeRouteVerdict: jest.fn()
 }))
 
-jest.mock('../electronStores', () => ({
+jest.mock('../stores', () => ({
   steamBottleConfigStore: {
     get: jest.fn(),
     get_nodefault: jest.fn(),
@@ -83,7 +83,7 @@ jest.mock('backend/config', () => ({
 }))
 
 import SteamGame, { getBridgeRouteVerdict } from '../games'
-import { steamBottleConfigStore, steamMetadataStore } from '../electronStores'
+import { steamBottleConfigStore, steamMetadataStore } from '../stores'
 import { persistBottleWineVersion, getSteamBottleSettings } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 // Plan 13 (D-51-10/11): real (unmocked) readBridgeVerdict proves

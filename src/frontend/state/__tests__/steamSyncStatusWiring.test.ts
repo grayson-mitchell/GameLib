@@ -16,7 +16,7 @@
  *   W1: `common/types/ipc/steam.ts` declares the `steamSyncStatus` channel.
  *   W2: `preload/api/steam.ts` exports the `handleSteamSyncStatus` listener
  *       slot -- THE HIGHEST-RISK OMISSION IN THE PHASE. For a
- *       backend->renderer push, the sidecar's `electronStub.ts`
+ *       backend->renderer push, the sidecar's `platform/index.ts`
  *       `pushFrontendMessage` forwarder is channel-agnostic (any string
  *       works, no allowlist on the emit side); if this export is missing,
  *       the backend emits fine, Rust forwards fine, and the renderer simply

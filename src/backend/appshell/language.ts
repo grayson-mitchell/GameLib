@@ -20,7 +20,7 @@ import i18next from 'i18next'
 import { toI18nextCode } from '../../common/languages'
 import { GlobalConfig } from '../config'
 import { backendEvents } from '../backend_events'
-import { gameInfoStore } from '../storeManagers/legendary/electronStores'
+import { gameInfoStore } from '../storeManagers/legendary/stores'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 
 /**

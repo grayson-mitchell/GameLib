@@ -1,11 +1,7 @@
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 
-import {
-  configStore,
-  humbleLibraryStore,
-  humbleSyncStore
-} from './electronStores'
+import { configStore, humbleLibraryStore, humbleSyncStore } from './stores'
 import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from './constants'
 import { getGamekeys } from './adapter'
 import {

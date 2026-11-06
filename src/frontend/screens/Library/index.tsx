@@ -50,7 +50,7 @@ import { renderableActiveFilters } from './components/FilterChipRow/chipLabels'
 import FilterZeroResult from './components/FilterZeroResult'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { Tier2PortalContext } from 'frontend/components/UI/NavShell/Tier2PortalContext'
-import { configStore, steamConfigStore } from 'frontend/helpers/electronStores'
+import { configStore, steamConfigStore } from 'frontend/helpers/stores'
 import {
   defaultDirectionFor,
   readLibrarySortPrefs,

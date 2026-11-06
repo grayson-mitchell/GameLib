@@ -1,7 +1,7 @@
 /**
  * Sidecar store registration (Phase 29 Plan 04 — Task 1).
  *
- * REQ-29-01 / 29-RESEARCH Pitfall 6: importing a thin `electronStores.ts`
+ * REQ-29-01 / 29-RESEARCH Pitfall 6: importing a thin `stores.ts`
  * module inside a UNIT TEST (which imports that specific module itself)
  * proves nothing about the real running sidecar — the sidecar process only
  * ever imports `./handlers` (via `bootstrap.ts`), and `handlers.ts` never
@@ -11,9 +11,9 @@
  * returns `{}` for every store nobody happened to import along the way.
  *
  * Every import below exists ONLY for its side effect: each thin
- * `electronStores.ts` module constructs `new TypeCheckedStoreBackend(...)` /
+ * `stores.ts` module constructs `new TypeCheckedStoreBackend(...)` /
  * `new CacheStore(...)` at module scope, and `TypeCheckedStoreBackend`'s
- * constructor self-registers into `electron_store.ts`'s `storeRegistry`
+ * constructor self-registers into `typed_store.ts`'s `storeRegistry`
  * (plan 29-02) — so importing the module is what makes the store resolvable
  * by name later, through `getRegisteredStore()`.
  *
@@ -22,13 +22,13 @@
  * manager's utility host module, or the migration system's host module
  * (D-15). Those heavy host modules pull in Electron-app-only side effects
  * and cross-manager wiring (spike 009's import-time wall) — plan 29-02
- * extracted their store declarations into dedicated thin `electronStores.ts`
+ * extracted their store declarations into dedicated thin `stores.ts`
  * modules precisely so this file can import the STORE without ever
  * touching its host module.
  *
  * Hard constraint: this file must NOT import the real `electron` module,
  * directly or transitively at import time — same acceptance criterion
- * `handlers.ts` documents. `electronStub` is already installed by
+ * `handlers.ts` documents. `platformApi` is already installed by
  * `bootstrap.ts`'s `Module._load` hook by the time this module is required
  * (`bootstrap.ts` imports `./installElectronHook` before `./handlers`, and
  * `./handlers` is what calls `ensureStoresRegistered()`), but the
@@ -48,7 +48,7 @@ import {
   steamLibraryStore as _steamLibraryStore,
   steamMetadataStore as _steamMetadataStore,
   steamSyncStore as _steamSyncStore
-} from '../storeManagers/steam/electronStores'
+} from '../storeManagers/steam/stores'
 
 import {
   configStore as _gogConfigStore,
@@ -60,15 +60,15 @@ import {
   installInfoStore as _gogInstallInfoStore,
   playtimeSyncQueue as _gogPlaytimeSyncQueue,
   privateBranchesStore as _gogPrivateBranchesStore
-} from '../storeManagers/gog/electronStores'
+} from '../storeManagers/gog/stores'
 
 import {
   installStore as _nileInstallStore,
   libraryStore as _nileLibraryStore,
   configStore as _nileConfigStore
-} from '../storeManagers/nile/electronStores'
+} from '../storeManagers/nile/stores'
 
-import { libraryStore as _sideloadLibraryStore } from '../storeManagers/sideload/electronStores'
+import { libraryStore as _sideloadLibraryStore } from '../storeManagers/sideload/stores'
 
 import {
   installStore as _legendaryInstallStore,
@@ -76,7 +76,7 @@ import {
   gamesOverrideStore as _legendaryGamesOverrideStore,
   gameInfoStore as _legendaryGameInfoStore,
   legendaryConfigStore as _legendaryConfigStore
-} from '../storeManagers/legendary/electronStores'
+} from '../storeManagers/legendary/stores'
 
 import {
   configStore as _humbleConfigStore,
@@ -89,26 +89,26 @@ import {
   humbleLocalRedeemedStore as _humbleLocalRedeemedStore,
   humbleNotifiedExpirationStore as _humbleNotifiedExpirationStore,
   humbleSettleDeclinedStore as _humbleSettleDeclinedStore
-} from '../humble/electronStores'
+} from '../humble/stores'
 
-import { gameOverridesStore as _gameOverridesStore } from '../game_overrides/electronStores'
-import { runsForMeStore as _runsForMeStore } from '../runsForMe/electronStores'
+import { gameOverridesStore as _gameOverridesStore } from '../game_overrides/stores'
+import { runsForMeStore as _runsForMeStore } from '../runsForMe/stores'
 
 import {
   wikiGameInfoStore as _wikiGameInfoStore,
   umuStore as _umuStore
-} from '../wiki_game_info/electronStore'
+} from '../wiki_game_info/stores'
 
 // D-15 extractions (plan 29-02) — thin modules avoiding the heavy hosts.
-import { wineDownloaderInfoStore as _wineDownloaderInfoStore } from '../wine/manager/electronStores'
-import { downloadManager as _downloadManager } from '../downloadmanager/electronStores'
-import { migrationsStore as _migrationsStore } from '../migration/electronStores'
+import { wineDownloaderInfoStore as _wineDownloaderInfoStore } from '../wine/manager/stores'
+import { downloadManager as _downloadManager } from '../downloadmanager/stores'
+import { migrationsStore as _migrationsStore } from '../migration/stores'
 // D-15's fourth extraction: NEVER import `uploadedLogFileStore` from its
 // old host module — that module pulls in Electron's `app`, the IPC
 // layer's `sendFrontendMessage`, and the logger. `uploadedLogs` is inside
 // D-02's LOCKED coverage bar (plan 29-04 Task 3's walk test asserts it
 // round-trips); there is no "known gap" exclusion available for it.
-import { uploadedLogFileStore as _uploadedLogFileStore } from '../logger/electronStores'
+import { uploadedLogFileStore as _uploadedLogFileStore } from '../logger/stores'
 
 // `fontsStore` is EXCLUDED — 29-RESEARCH Pitfall 2: `fontsStore` has ZERO
 // construction sites anywhere in the backend. It is a dead `StoreStructure`

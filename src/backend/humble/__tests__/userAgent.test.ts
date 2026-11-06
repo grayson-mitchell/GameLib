@@ -1,9 +1,9 @@
 /**
  * Pins `standardBrowserUserAgent()`'s behavior when running against the REAL sidecar
- * `electronStub.ts` (Phase 34.4.1 Plan 02, Task 4, DEFECT 3).
+ * `platform/index.ts` (Phase 34.4.1 Plan 02, Task 4, DEFECT 3).
  *
  * `standardBrowserUserAgent()` (declared in `../userAgent.ts`) reads `app.userAgentFallback`
- * unconditionally. Real Electron populates that property at startup; `electronStub.ts` (the
+ * unconditionally. Real Electron populates that property at startup; `platform/index.ts` (the
  * sidecar's `require('electron')` replacement, installed by `bootstrap.ts`'s `Module._load`
  * hook) previously left it `undefined`, so this function threw
  * `Cannot read properties of undefined (reading 'replace')` the first time anything in the
@@ -15,19 +15,19 @@
  *
  * Unlike `humbleFlows.test.ts`/`humbleLoginFlows.test.ts` (which `jest.mock('electron', () =>
  * jest.requireActual('../../platform'))` to get a REAL ipcMain/app pair alongside a
- * lot of other sidecar wiring this file has no need for), this suite imports `electronStub.ts`
+ * lot of other sidecar wiring this file has no need for), this suite imports `platform/index.ts`
  * directly and mocks only the bare `'electron'` specifier to point at it -- `userAgent.ts`'s
  * only touchpoint is `app.userAgentFallback`.
  */
 
 import { standardBrowserUserAgent } from '../userAgent'
 
-describe('standardBrowserUserAgent() against the real sidecar electronStub', () => {
+describe('standardBrowserUserAgent() against the real sidecar platformApi', () => {
   it('returns a Chrome-shaped UA string with no Electron/x.y.z token', () => {
     const ua = standardBrowserUserAgent()
 
     // Happy-path shape produced by the UA template string in userAgent.ts -- proves
-    // electronStub's `app.userAgentFallback` matched the platform-extraction regex in
+    // platformApi's `app.userAgentFallback` matched the platform-extraction regex in
     // userAgent.ts directly, rather than falling through to the defensive
     // `fallback.replace(...)` branch on line 33 (which is what threw before this fix).
     expect(ua).toMatch(

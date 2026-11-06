@@ -85,7 +85,7 @@ import { PassThrough } from 'node:stream'
 import { init, syncQueuedPlaytimeWhenOnline } from '../bootstrap'
 import * as loggerModule from '../../logger'
 import { libraryManagerMap } from '../../storeManagers'
-import { playtimeSyncQueue } from '../../storeManagers/gog/electronStores'
+import { playtimeSyncQueue } from '../../storeManagers/gog/stores'
 import { GlobalConfig } from '../../config'
 import { runOnceWhenOnline as mockedRunOnceWhenOnline } from '../../online_monitor'
 

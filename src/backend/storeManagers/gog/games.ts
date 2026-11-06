@@ -35,7 +35,7 @@ import {
   playtimeSyncQueue,
   privateBranchesStore,
   syncStore
-} from './electronStores'
+} from './stores'
 import {
   logError,
   logInfo,

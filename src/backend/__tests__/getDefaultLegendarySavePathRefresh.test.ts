@@ -87,7 +87,7 @@
  *                            `./launcher` import. None of the three wine helpers are reached in
  *                            this test: the fake game's `isNative()` returns `true`, which skips
  *                            both call sites that would otherwise invoke them.
- *  - `backend/online_monitor`, `../storeManagers/legendary/electronStores`,
+ *  - `backend/online_monitor`, `../storeManagers/legendary/stores`,
  *    `../storeManagers/legendary/user`, `../storeManagers/legendary/games` -> qop's set,
  *    verbatim, not on this call path either, needed only for module resolution.
  *  - `backend/macArch/recovery` -> `recordedMacArch` / `scheduleMacArchSweep` stubs (7f9920654,
@@ -184,15 +184,15 @@ jest.mock('backend/online_monitor', () => ({
 
 // ── backend/macArch/recovery mock ────────────────────────────────────────────────────────────
 // 7f9920654 (quick 261029-t39) made legendary/library.ts import this module, whose load chain
-// (macArch/electronStores -> constants/paths) evaluates app.getAppPath() and constructs a real
+// (macArch/stores -> constants/paths) evaluates app.getAppPath() and constructs a real
 // TypeCheckedStoreBackend. The macOS-arch sweep is irrelevant to the save-path refresh under test.
 jest.mock('backend/macArch/recovery', () => ({
   recordedMacArch: jest.fn(() => undefined),
   scheduleMacArchSweep: jest.fn()
 }))
 
-// ── ../storeManagers/legendary/electronStores mock ───────────────────────────────────────────
-jest.mock('../storeManagers/legendary/electronStores', () => ({
+// ── ../storeManagers/legendary/stores mock ───────────────────────────────────────────
+jest.mock('../storeManagers/legendary/stores', () => ({
   libraryStore: { get: jest.fn(() => []), set: jest.fn() },
   installStore: {
     get: jest.fn(),

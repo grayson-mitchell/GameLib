@@ -2092,7 +2092,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             }
         }
         // Native message/error dialog (Phase 31 Plan 02, D-03/REQ-31-03/REQ-31-05): backs both
-        // `dialog.showMessageBox` and `dialog.showErrorBox` on the electronStub side. Default
+        // `dialog.showMessageBox` and `dialog.showErrorBox` on the platformApi side. Default
         // kind is Info when unspecified; the showErrorBox caller always sends `kind:"error"`.
         // Runs on the existing spawned worker thread (same
         // modal-dialog-must-not-block-the-reader-thread reasoning as `dialog_open` above).
@@ -2101,7 +2101,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // two-button confirm (`OkCancelCustom`) instead of the OK-only default.
         //
         // Returns the chosen button's index (`0` / `1`), or `null` when the dialog was
-        // DISMISSED (Esc / window close) without a button -- electronStub maps `null` to the
+        // DISMISSED (Esc / window close) without a button -- platformApi maps `null` to the
         // caller's `cancelId`, Electron's own dismissal semantics. Todo 2026-10-05
         // dialog-dismiss: this used to return `blocking_show()`'s bool, which is `false` for a
         // dismissal AND for buttons[1], so Esc on Windows/Linux resolved as buttons[1] -- the
@@ -2180,7 +2180,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
                 Value::Null
             })
         }
-        // Real OS notification (Phase 33 Plan 04, D-05). Backs `electronStub.ts`'s
+        // Real OS notification (Phase 33 Plan 04, D-05). Backs `platform/index.ts`'s
         // `Notification.show()`. Mirrors `dialog_message`'s args-parse idiom -- read an optional
         // `title`/`body` from args[0]. No icon/nativeImage plumbing.
         //
@@ -2228,7 +2228,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         }
         // Reveal a path in the OS file manager (Phase 33 Plan 04, D-05) via
         // `tauri-plugin-opener`'s `reveal_item_in_dir` (already installed for `open_external`).
-        // Backs `electronStub.ts`'s `shell.showItemInFolder()`. The path originates from
+        // Backs `platform/index.ts`'s `shell.showItemInFolder()`. The path originates from
         // in-app backend callers, not renderer free-text (T-33-11) -- forwarded to the vetted
         // opener plugin's own scoping, not a raw shell-out.
         //
@@ -2250,7 +2250,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             Ok(Value::Null)
         }
         // Open a path with the default program (Phase 33 Plan 04, D-05) via
-        // `tauri-plugin-opener`'s `open_path`. Backs `electronStub.ts`'s `shell.openPath()`.
+        // `tauri-plugin-opener`'s `open_path`. Backs `platform/index.ts`'s `shell.openPath()`.
         // Same path-provenance note as `shell_show_item_in_folder` above (T-33-11).
         "shell_open_path" => {
             let path = args
@@ -2264,7 +2264,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         }
         // Write text to the OS clipboard (Phase 34.3 Plan 03, D-01/D-02, REQ-34.3-03) via
         // `tauri-plugin-clipboard-manager`'s `app.clipboard().write_text()`. Backs
-        // `electronStub.ts`'s `clipboard.writeText()`. This arm and `clipboard_read_text`
+        // `platform/index.ts`'s `clipboard.writeText()`. This arm and `clipboard_read_text`
         // below are the ONLY two new `dispatch_rust_channel` arms the entire 34.3 slice adds
         // -- D-02's zero-renderer-capability-grant stance holds (capabilities/default.json is
         // untouched; the plugin has no `js_init_script`, confirmed by 34.3-RESEARCH.md Q2).
@@ -2278,7 +2278,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // Read text from the OS clipboard (Phase 34.3 Plan 03, D-01/D-02, REQ-34.3-03) via
         // `tauri-plugin-clipboard-manager`'s `app.clipboard().read_text()`. Backs the
         // sidecar's `clipboardReadText` handler (D-04 -- the read path bypasses
-        // `electronStub`'s sync stub and awaits this rustInvoke directly, since a sync
+        // `platformApi`'s sync stub and awaits this rustInvoke directly, since a sync
         // function structurally cannot await a Rust round-trip). Safe to call `read_text()`
         // here specifically because `dispatch_rust_channel` always runs on a
         // `thread::spawn`'d worker thread (see `start_reader`), never the main/reader thread
@@ -2289,7 +2289,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             clipboard_read_value(app.clipboard().read_text().map_err(|e| e.to_string()))
         }
         // Exit the real Tauri process (Phase 33 Plan 04, D-05 app lifecycle essentials) via
-        // `AppHandle::exit()`. Backs `electronStub.ts`'s `app.exit()`/`app.quit()`. Only two
+        // `AppHandle::exit()`. Backs `platform/index.ts`'s `app.exit()`/`app.quit()`. Only two
         // sidecar-reachable call sites invoke this (`resetHeroic()`, the uninstall/quit exit
         // path) -- both deliberate user/exit actions (T-33-12, accepted DoS disposition).
         "app_exit" => {
@@ -2297,7 +2297,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             Ok(Value::Null)
         }
         // Restart the real Tauri process (Phase 33 Plan 04, D-05 app lifecycle essentials) via
-        // `AppHandle::restart()`. Backs `electronStub.ts`'s `app.relaunch()`. `restart()` never
+        // `AppHandle::restart()`. Backs `platform/index.ts`'s `app.relaunch()`. `restart()` never
         // returns (`-> !`) -- it either restarts the process directly (main thread) or blocks
         // this spawned worker thread until the process exits (background thread), which is safe
         // since the whole process is about to go away regardless.
@@ -2326,7 +2326,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             app.restart();
         }
         // Hide the real Tauri application (quick/260815-vvz) via `AppHandle::hide()`. Backs
-        // `electronStub.ts`'s `app.hide()`, whose one reachable caller is
+        // `platform/index.ts`'s `app.hide()`, whose one reachable caller is
         // `raiseFrontmostBottledProcess`'s (`bottle.ts`) ~18s-miss yield fallback for bottled
         // Steam install/uninstall -- when no matching installer/uninstaller window can be
         // raised within that window, GameLib steps aside instead of staying in front of an
@@ -4474,7 +4474,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             }
         }
         // Take an OS power assertion (Phase 35 Plan 08, D-08, REQ-35-06). Backs
-        // `electronStub.ts`'s `powerSaveBlocker.start()`, which until this plan returned `-1`
+        // `platform/index.ts`'s `powerSaveBlocker.start()`, which until this plan returned `-1`
         // and held nothing. `args[0]` is one of exactly two Electron kind strings; anything
         // else is REJECTED by `wake_lock_kind` rather than defaulted (threat T-35-32).
         //

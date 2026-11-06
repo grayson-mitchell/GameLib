@@ -24,7 +24,7 @@
  * own test suite for the explicit prohibition assertion.
  */
 
-import type { SteamBridgeVerdict } from '../electronStores'
+import type { SteamBridgeVerdict } from '../stores'
 import type {
   SteamBridgeKnownBadReason,
   SteamBridgeRouteReason,
@@ -67,7 +67,7 @@ export interface BridgeRouteInput {
    * `verdict.drm === 'ceg'`, so it reaches bottled Steam before any download. */
   knownFixDrm: 'ceg' | null
   /** The persisted `SteamBridgeVerdict` for this title (51-03's
-   * `electronStores.ts` shape), or `undefined` when never persisted. */
+   * `stores.ts` shape), or `undefined` when never persisted. */
   verdict: SteamBridgeVerdict | undefined
   /** games.ts's module-scoped `bridgeFailedThisSession` circuit breaker. */
   failedThisSession: boolean
