@@ -723,6 +723,9 @@
                 "title": "Steam overlay unavailable"
             }
         },
+        "requestNotice": {
+            "fallbackTitle": "Steam"
+        },
         "resumeAvailable": {
             "notify": "An interrupted install for {{game}} is ready to resume — click Install to continue"
         },

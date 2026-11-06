@@ -32,6 +32,12 @@ jest.mock('frontend/state/SteamEngineState', () => ({
     sel({ byAppId: storeState })
 }))
 
+let requestState: unknown = null
+jest.mock('frontend/state/SteamRequestNotice', () => ({
+  useSteamRequestNotice: (sel: (s: { latest: unknown }) => unknown) =>
+    sel({ latest: requestState })
+}))
+
 jest.mock('react', () => {
   const rt = {
     states: [] as unknown[],
@@ -84,6 +90,7 @@ import {
   faClock,
   faEyeSlash,
   faMagnifyingGlass,
+  faRightToBracket,
   faTriangleExclamation,
   faWrench
 } from '@fortawesome/free-solid-svg-icons'
@@ -223,6 +230,7 @@ beforeEach(() => {
   rt.cleanups = []
   rt.pending = []
   storeState = {}
+  requestState = null
 })
 afterEach(() => jest.useRealTimers())
 
@@ -543,5 +551,74 @@ describe('SteamEngineLaunchNotice', () => {
       storeState = exitState('3')
       expect(render()).toBeNull()
     })
+  })
+})
+
+describe('SteamEngineLaunchNotice request slot (quick 261106-pvk)', () => {
+  const req = (over: Record<string, unknown> = {}) => ({
+    appId: '203160',
+    title: '7 Days to Die',
+    kind: 'install-not-started',
+    seq: 1,
+    ...over
+  })
+
+  it('renders the install give-up sentence in a role=status slot', () => {
+    requestState = req()
+    const out = render()
+    expect(toast(out)).toBeDefined()
+    expect(text(out)).toBe(
+      "7 Days to Die Steam didn't start the install. Make sure Steam is signed in, then try again."
+    )
+    expect(find(out, (e) => e.props.icon === faRightToBracket)).toBeDefined()
+  })
+
+  it('renders the uninstall sentence for uninstall-not-started', () => {
+    requestState = req({ kind: 'uninstall-not-started' })
+    expect(text(render())).toBe(
+      "7 Days to Die Steam didn't start the uninstall. Make sure Steam is signed in, then try again."
+    )
+  })
+
+  it('falls back to the title Steam when the title is empty', () => {
+    requestState = req({ title: '' })
+    expect(text(render())).toMatch(/^Steam Steam didn't start the install/)
+  })
+
+  it('renders nothing for an unknown kind (T-pvk-01)', () => {
+    requestState = req({ kind: '<script>' })
+    expect(render()).toBeNull()
+  })
+
+  it('shows once per seq: dismiss removes it, same seq stays gone, higher seq returns', () => {
+    requestState = req()
+    const leaving = dismiss(render())
+    expect(cls(toast(leaving))).toContain('noticeStackToast--leaving')
+    expect(jest.mocked(useSuppressStoreEmbedWhile).mock.calls.at(-1)).toEqual([
+      true
+    ])
+    expect(exit(leaving)).toBeNull()
+    expect(jest.mocked(useSuppressStoreEmbedWhile).mock.calls.at(-1)).toEqual([
+      false
+    ])
+    requestState = req()
+    expect(render()).toBeNull()
+    requestState = req({ seq: 2 })
+    expect(text(render())).toContain('7 Days to Die')
+  })
+
+  it('freezes the countdown until GameLib is in front, then auto-hides after 8s', () => {
+    env.focused = false
+    requestState = req()
+    const waiting = render()
+    expect(cls(toast(waiting))).toContain('steamEngineLaunchNotice--waiting')
+    jest.advanceTimersByTime(20000)
+    expect(cls(toast(render()))).toContain('--waiting')
+    expect(cls(toast(render()))).not.toContain('--leaving')
+    env.focused = true
+    fire('focus')
+    expect(cls(toast(render()))).not.toContain('--waiting')
+    jest.advanceTimersByTime(8000)
+    expect(cls(toast(render()))).toContain('noticeStackToast--leaving')
   })
 })

@@ -5,6 +5,7 @@ import {
   faClock,
   faEyeSlash,
   faMagnifyingGlass,
+  faRightToBracket,
   faTriangleExclamation,
   faWrench,
   faXmark
@@ -12,6 +13,7 @@ import {
 import type { IconDefinition } from '@fortawesome/free-solid-svg-icons'
 
 import { useSteamEngineState } from 'frontend/state/SteamEngineState'
+import { useSteamRequestNotice } from 'frontend/state/SteamRequestNotice'
 import { useSuppressStoreEmbedWhile } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 import {
   renderNoticeSlot,
@@ -41,6 +43,14 @@ interface ShownOverlay {
 }
 
 interface ShownExit {
+  seq: number
+  phase: NoticePhase
+}
+
+type RequestKind = 'install-not-started' | 'uninstall-not-started'
+interface ShownRequest {
+  kind: RequestKind
+  title: string
   seq: number
   phase: NoticePhase
 }
@@ -114,6 +124,11 @@ const isReason = (r: unknown): r is Reason =>
 // Quick 261105-ast: a third stream shows the overlay early-exit notice
 // (exitNotice), which used to be a modal dialog. Same rules: once per seq,
 // frozen until GameLib is in front, catalogue strings only (T-ast-01).
+// Quick 261106-pvk: a fourth stream shows "Steam never started your install /
+// uninstall" (SteamRequestNotice store, fed by the steamRequestNotice push),
+// which used to be a system notification that could land on another monitor.
+// Same rules: once per seq, frozen until GameLib is in front, catalogue
+// strings chosen by the closed `kind` only (T-pvk-01).
 // Sketch 006 variant A. Every exit goes through a leaving phase so the store
 // embed stays suppressed until the notice is actually removed (L3).
 export default function SteamEngineLaunchNotice() {
@@ -122,6 +137,15 @@ export default function SteamEngineLaunchNotice() {
   const lastSeq = useRef(0)
   const lastOverlaySeq = useRef(0)
   const lastExitSeq = useRef(0)
+  const latestRequest = useSteamRequestNotice((s) => s.latest)
+  const lastRequestSeq = useRef(0)
+  const [shownRequest, setShownRequest] = useState<ShownRequest | null>(null)
+  const [hoveredRequest, setHoveredRequest] = useState(false)
+  const [waitingRequest, setWaitingRequest] = useState(false)
+  const remainingRequest = useRef(AUTO_HIDE_MS)
+  const pendingRequest = useRef<ShownRequest | null>(null)
+  const shownRequestRef = useRef<ShownRequest | null>(null)
+  shownRequestRef.current = shownRequest
   const [shown, setShown] = useState<Shown | null>(null)
   const [shownOverlay, setShownOverlay] = useState<ShownOverlay | null>(null)
   const [shownExit, setShownExit] = useState<ShownExit | null>(null)
@@ -178,6 +202,19 @@ export default function SteamEngineLaunchNotice() {
       setShownExit({ ...p, phase: 'in' })
     } else {
       setShownExit(null)
+    }
+  }
+
+  const finishRequest = () => {
+    const p = pendingRequest.current
+    pendingRequest.current = null
+    if (p) {
+      remainingRequest.current = AUTO_HIDE_MS
+      setHoveredRequest(false)
+      setWaitingRequest(!gameLibInFront())
+      setShownRequest({ ...p, phase: 'in' })
+    } else {
+      setShownRequest(null)
     }
   }
 
@@ -250,6 +287,55 @@ export default function SteamEngineLaunchNotice() {
       if (cur.phase === 'in') setShownExit({ ...cur, phase: 'leaving' })
     }
   }, [byAppId])
+
+  // Quick 261106-pvk: Steam never picked up a delegated request. A fourth seq
+  // stream, fed by its own push rather than the engine state.
+  useEffect(() => {
+    const n = latestRequest
+    if (!n || typeof n.seq !== 'number' || n.seq <= lastRequestSeq.current) {
+      return
+    }
+    if (
+      n.kind !== 'install-not-started' &&
+      n.kind !== 'uninstall-not-started'
+    ) {
+      return
+    }
+    lastRequestSeq.current = n.seq
+    const next: ShownRequest = {
+      kind: n.kind,
+      title: typeof n.title === 'string' ? n.title : '',
+      seq: n.seq,
+      phase: 'in'
+    }
+    const cur = shownRequestRef.current
+    if (!cur) {
+      remainingRequest.current = AUTO_HIDE_MS
+      setHoveredRequest(false)
+      setWaitingRequest(!gameLibInFront())
+      setShownRequest(next)
+    } else {
+      pendingRequest.current = next
+      if (cur.phase === 'in') setShownRequest({ ...cur, phase: 'leaving' })
+    }
+  }, [latestRequest])
+
+  // The user is usually in Steam when this fires: freeze the countdown until
+  // GameLib is visible and focused so they still see it on return.
+  useEffect(() => {
+    if (!shownRequest || !waitingRequest) return
+    const check = () => {
+      if (gameLibInFront()) setWaitingRequest(false)
+    }
+    window.addEventListener('focus', check)
+    document.addEventListener('visibilitychange', check)
+    check()
+    return () => {
+      window.removeEventListener('focus', check)
+      document.removeEventListener('visibilitychange', check)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on seq/phase like the sibling streams
+  }, [shownRequest?.seq, waitingRequest])
 
   // The exit notice no longer raises the window, so GameLib may still be
   // behind: freeze the countdown until it is visible and focused.
@@ -343,6 +429,26 @@ export default function SteamEngineLaunchNotice() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on seq/phase like the sibling streams
   }, [exitSeq, exitPhase, hoveredExit, waitingExit])
 
+  const requestSeq = shownRequest?.seq
+  const requestPhase = shownRequest?.phase
+  useEffect(() => {
+    if (!shownRequest || shownRequest.phase !== 'in') return
+    if (hoveredRequest || waitingRequest) return
+    const startedAt = Date.now()
+    const id = setTimeout(
+      () => setShownRequest({ ...shownRequest, phase: 'leaving' }),
+      remainingRequest.current
+    )
+    return () => {
+      clearTimeout(id)
+      remainingRequest.current = Math.max(
+        0,
+        remainingRequest.current - (Date.now() - startedAt)
+      )
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on seq/phase like the sibling streams
+  }, [requestSeq, requestPhase, hoveredRequest, waitingRequest])
+
   // Phase fallbacks (T-vvz-02): never get stuck if animationend is lost.
   useNoticePhaseFallback(
     shown?.phase ?? null,
@@ -363,13 +469,23 @@ export default function SteamEngineLaunchNotice() {
     () => shownExit && setShownExit({ ...shownExit, phase: 'collapsing' }),
     finishExit
   )
+  useNoticePhaseFallback(
+    shownRequest?.phase ?? null,
+    requestSeq,
+    () =>
+      shownRequest && setShownRequest({ ...shownRequest, phase: 'collapsing' }),
+    finishRequest
+  )
 
   // The native store embed would cover the notice, as for HumbleExpiryToast.
   useSuppressStoreEmbedWhile(
-    shown !== null || shownOverlay !== null || shownExit !== null
+    shown !== null ||
+      shownOverlay !== null ||
+      shownExit !== null ||
+      shownRequest !== null
   )
 
-  if (!shown && !shownOverlay && !shownExit) return null
+  if (!shown && !shownOverlay && !shownExit && !shownRequest) return null
 
   // A plain (non-hook) helper: one slot + toast.
   const renderSlot = (o: {
@@ -432,6 +548,36 @@ export default function SteamEngineLaunchNotice() {
       )
     })
   }
+
+  const requestNode = shownRequest
+    ? renderSlot({
+        slotKey: 'request',
+        seq: shownRequest.seq,
+        phase: shownRequest.phase,
+        overlay: false,
+        paused: hoveredRequest,
+        waiting: waitingRequest,
+        icon: faRightToBracket,
+        title:
+          shownRequest.title || t('steam.requestNotice.fallbackTitle', 'Steam'),
+        body:
+          shownRequest.kind === 'install-not-started'
+            ? t(
+                'steam.install.notStarted',
+                "Steam didn't start the install. Make sure Steam is signed in, then try again."
+              )
+            : t(
+                'steam.uninstall.notStarted',
+                "Steam didn't start the uninstall. Make sure Steam is signed in, then try again."
+              ),
+        setHover: setHoveredRequest,
+        beginLeave: () =>
+          setShownRequest({ ...shownRequest, phase: 'leaving' }),
+        toCollapsing: () =>
+          setShownRequest({ ...shownRequest, phase: 'collapsing' }),
+        remove: finishRequest
+      })
+    : null
 
   const exitNode = shownExit
     ? renderSlot({
@@ -514,6 +660,7 @@ export default function SteamEngineLaunchNotice() {
   // The slots go straight into NoticeStack's region (no wrapper node).
   return (
     <>
+      {requestNode}
       {exitNode}
       {overlayNode}
       {engineNode}
