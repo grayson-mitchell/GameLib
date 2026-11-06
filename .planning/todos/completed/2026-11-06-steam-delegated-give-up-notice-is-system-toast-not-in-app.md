@@ -67,3 +67,14 @@ Parent todo: `2026-11-05-steam-uninstall-silently-dropped-when-signed-out.md`
 (no `notify()`), drawn as a `request` slot in the existing toast stack; its
 countdown waits until GameLib is focused. `dispatch.kill()` skips the abort
 lookup for a Steam-delegated install. Close after the live check above.
+
+## Closed 2026-11-06 (live check passed)
+
+Signed-out Mac Steam, `pnpm tauri:dev` restarted 18:53 on the 261106-pvk build,
+GameLib on the same monitor. Operator saw the in-app toast for both give-ups;
+`gamelib.log` agrees:
+
+- Install 41900: delegated 18:54:07, gave up 18:56:07, in-app toast.
+- Uninstall 112100: delegated 18:58:26, gave up 19:00:26, kept installed, in-app toast.
+- Cancel 41900 at 18:56:20: poll stopped, no `Aborting not possible` ERROR
+  (the pre-fix run logged it at 18:34:44).
