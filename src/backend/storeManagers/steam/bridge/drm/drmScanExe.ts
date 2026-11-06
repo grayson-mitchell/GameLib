@@ -18,14 +18,20 @@
  * The no-bottle fallback in shimGenerate.ts uses the same policy through
  * containedGameExeReal (quick 261029-my4).
  *
+ * Phase 63 Option A: realpath containment and byte detection run in Rust
+ * (scan_contained_real, scan_steamstub_section); this module only orchestrates
+ * the UE layout probe, which stays TS (bridgeScan.findUnrealLayout).
+ *
  * Callers (games.ts, wired in 56-21) must read CEG markers from `drmExe`, not
  * from the launch exe. Never throws.
  */
 import { basename, dirname, resolve } from 'path'
-import { realpath } from 'fs/promises'
 
 import { logWarning, LogPrefix } from 'backend/logger'
-import { findUnrealLayout, isContainedWithin } from '../bridgeScan'
+import { runScanner } from 'backend/scanners/rustScan'
+import { containedRealTs } from 'backend/scanners/legacyTsScanners'
+import type { ContainedRealResult } from 'backend/scanners/scanTypes'
+import { findUnrealLayout } from '../bridgeScan'
 import { detectDrmWrapper } from '../shimGenerate'
 
 export interface LaunchDrmWrapper {
@@ -33,28 +39,62 @@ export interface LaunchDrmWrapper {
   drmExe: string
 }
 
-/** Real path of `path` if it resolves inside `rootReal`, else null (logged). */
-async function containedReal(
-  rootReal: string,
+type ContainFn = (
   path: string,
-  label: string
-): Promise<string | null> {
+  rootDir: string,
+  caller: string
+) => Promise<ContainedRealResult>
+
+function containLeaf(
+  path: string,
+  rootDir: string,
+  caller: string
+): Promise<ContainedRealResult> {
+  return runScanner(
+    'drmScanExe',
+    'scan_contained_real',
+    { path, rootDir },
+    () => containedRealTs({ path, rootDir }),
+    caller
+  )
+}
+
+/**
+ * Real path of `path` if it resolves inside `rootDir`, else null (logged).
+ * A transport failure is treated as not contained. Never throws.
+ */
+async function containedUnder(
+  rootDir: string,
+  path: string,
+  label: string,
+  contain: ContainFn
+): Promise<{ real: string | null; reason: ContainedRealResult['reason'] }> {
   const name = basename(path)
-  let real: string
+  let r: ContainedRealResult
   try {
-    real = await realpath(path)
-  } catch {
-    logWarning(`${label}: skipped ${name} (realpath failed)`, LogPrefix.Steam)
-    return null
+    r = await contain(path, rootDir, label)
+  } catch (error) {
+    logWarning(
+      `${label}: skipped ${name} (containment check failed: ${String(error)})`,
+      LogPrefix.Steam
+    )
+    return { real: null, reason: null }
   }
-  if (!isContainedWithin(rootReal, real)) {
+  if (r.real !== null) return { real: r.real, reason: null }
+  if (r.reason === 'root-unresolvable') {
+    logWarning(
+      `${label}: skipped ${name} (game folder unresolvable)`,
+      LogPrefix.Steam
+    )
+  } else if (r.reason === 'realpath-failed') {
+    logWarning(`${label}: skipped ${name} (realpath failed)`, LogPrefix.Steam)
+  } else {
     logWarning(
       `${label}: skipped ${name} (escapes game folder)`,
       LogPrefix.Steam
     )
-    return null
   }
-  return real
+  return { real: null, reason: r.reason }
 }
 
 /**
@@ -67,17 +107,13 @@ export async function containedGameExeReal(
   label: string
 ): Promise<string | null> {
   try {
-    let rootReal: string
-    try {
-      rootReal = await realpath(dirname(exePath))
-    } catch {
-      logWarning(
-        `${label}: skipped ${basename(exePath)} (game folder unresolvable)`,
-        LogPrefix.Steam
-      )
-      return null
-    }
-    return await containedReal(rootReal, exePath, label)
+    const { real } = await containedUnder(
+      dirname(exePath),
+      exePath,
+      label,
+      containLeaf
+    )
+    return real
   } catch {
     return null
   }
@@ -87,32 +123,30 @@ export async function detectLaunchDrmWrapper(
   bottleDir: string,
   exePath: string,
   deps: {
-    detect?: typeof detectDrmWrapper
+    detect?: (p: string) => Promise<'steamstub' | 'none' | undefined>
     findUnreal?: typeof findUnrealLayout
+    contain?: ContainFn
   } = {}
 ): Promise<LaunchDrmWrapper> {
-  const detect = deps.detect ?? detectDrmWrapper
+  const detect =
+    deps.detect ??
+    ((p: string) => detectDrmWrapper(p, 'detectLaunchDrmWrapper'))
   const findUnreal = deps.findUnreal ?? findUnrealLayout
-
-  let ueRootReal: string
-  try {
-    ueRootReal = await realpath(dirname(exePath))
-  } catch {
-    logWarning(
-      `detectLaunchDrmWrapper: skipped ${basename(exePath)} (game folder unresolvable)`,
-      LogPrefix.Steam
-    )
-    return { drmWrapper: undefined, drmExe: exePath }
-  }
+  const contain = deps.contain ?? containLeaf
+  const gameDir = dirname(exePath)
 
   let launchResult: 'steamstub' | 'none' | undefined
   try {
-    const real = await containedReal(
-      ueRootReal,
+    const launch = await containedUnder(
+      gameDir,
       exePath,
-      'detectLaunchDrmWrapper'
+      'detectLaunchDrmWrapper',
+      contain
     )
-    launchResult = real ? detect(real) : undefined
+    if (launch.reason === 'root-unresolvable') {
+      return { drmWrapper: undefined, drmExe: exePath }
+    }
+    launchResult = launch.real ? await detect(launch.real) : undefined
   } catch {
     launchResult = undefined
   }
@@ -120,18 +154,19 @@ export async function detectLaunchDrmWrapper(
   if (launchResult === 'steamstub') return own
 
   try {
-    const layout = await findUnreal(bottleDir, dirname(exePath))
+    const layout = await findUnreal(bottleDir, gameDir)
     if (!layout) return own
     for (const candidate of [...layout.shippingExes].sort()) {
       if (!candidate.toLowerCase().endsWith('.exe')) continue
-      const real = await containedReal(
-        ueRootReal,
+      const { real } = await containedUnder(
+        gameDir,
         candidate,
-        'detectLaunchDrmWrapper'
+        'detectLaunchDrmWrapper',
+        contain
       )
       if (!real) continue
       try {
-        if (detect(real) === 'steamstub') {
+        if ((await detect(real)) === 'steamstub') {
           return { drmWrapper: 'steamstub', drmExe: resolve(candidate) }
         }
       } catch {
