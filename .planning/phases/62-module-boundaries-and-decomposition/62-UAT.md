@@ -1,3 +1,9 @@
+---
+status: partial
+phase: 62-module-boundaries-and-decomposition
+source: [62-12-PLAN.md, 62-21-PLAN.md]
+---
+
 # Phase 62 UAT
 
 ## Smoke 1 — after split (D-16 step 2)
