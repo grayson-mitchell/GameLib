@@ -21,11 +21,10 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
  * Uses the real fs: graceful-fs is mocked below, but node:fs is not.
  */
 const gameModuleFiles = (): string[] => {
-  const files = (
-    jest
-      .requireActual<typeof import('node:fs')>('node:fs')
-      .readdirSync(join(__dirname, '..')) as string[]
-  ).filter((f) => /^game.*\.ts$/.test(f))
+  const files = jest
+    .requireActual<typeof import('node:fs')>('node:fs')
+    .readdirSync(join(__dirname, '..'))
+    .filter((f) => /^game.*\.ts$/.test(f))
   // anti-vacuity: 13 game*.ts modules exist today
   expect(files).toContain('games.ts')
   expect(files.length).toBeGreaterThanOrEqual(13)
