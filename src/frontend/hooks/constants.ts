@@ -1,6 +1,7 @@
 import { GameInfo, Runner, Status } from 'common/types'
 import { TFunction } from 'i18next'
 import { engineDownloadLabel } from './engineDownloadLabel'
+import { hasCapability } from 'common/storeCapabilities'
 
 type StatusArgs = {
   status: Status
@@ -34,35 +35,31 @@ export function getStatusLabel({
     // T-AOG (quick/260719-aog): a frozen-bytes download surfaces a "Paused"
     // hint instead of a silently stalled bar — restart-hint precedence is
     // preserved (checked first, matching the backend's own precedence).
-    installing:
-      runner === 'steam'
-        ? statusContext === 'steam-bridge-finishing'
-          ? t('gamepage:status.steamFinishing', 'Finishing install…')
-          : statusContext === 'steam-waiting-for-restart'
-            ? t(
-                'gamepage:status.steamWaitingRestart',
-                'Restart Steam to finish'
-              )
-            : statusContext === 'steam-paused'
-              ? t('gamepage:status.steamPaused', 'Paused')
-              : percent && percent > 0
-                ? // debug/steam-dl-missing-in-downloads: the poller's percent
-                  // is real (ACF byte counts), so show it once it arrives.
-                  t(
-                    'gamelib:gamepage.steamInstallingPercent',
-                    'Installing… {{percent}}%',
-                    { percent: Math.min(100, Math.floor(percent)) }
-                  )
-                : t('gamepage:status.steamInstalling', 'Installing…')
-        : `${t('gamepage:status.downloading', 'Downloading')} ${Math.ceil(
-            percent || 0
-          )}%`,
+    installing: hasCapability(runner, 'installManagedExternally')
+      ? statusContext === 'steam-bridge-finishing'
+        ? t('gamepage:status.steamFinishing', 'Finishing install…')
+        : statusContext === 'steam-waiting-for-restart'
+          ? t('gamepage:status.steamWaitingRestart', 'Restart Steam to finish')
+          : statusContext === 'steam-paused'
+            ? t('gamepage:status.steamPaused', 'Paused')
+            : percent && percent > 0
+              ? // debug/steam-dl-missing-in-downloads: the poller's percent
+                // is real (ACF byte counts), so show it once it arrives.
+                t(
+                  'gamelib:gamepage.steamInstallingPercent',
+                  'Installing… {{percent}}%',
+                  { percent: Math.min(100, Math.floor(percent)) }
+                )
+              : t('gamepage:status.steamInstalling', 'Installing…')
+      : `${t('gamepage:status.downloading', 'Downloading')} ${Math.ceil(
+          percent || 0
+        )}%`,
     extracting: t('gamepage:status.extracting', 'Extracting'),
     'syncing-saves': t('gamepage:status.syncingSaves', 'Syncing Saves'),
     moving: t('gamepage:gamecard.moving', 'Moving'),
     repairing: t('gamepage:gamecard.repairing', 'Repairing'),
     installed: `${t('gamepage:status.installed')} ${
-      runner === 'sideload' ? '' : size
+      hasCapability(runner, 'hasStoreCatalog') ? size : ''
     }`,
     // D-UAT-09 (21-17): an incomplete steam install (same-session cancel or
     // a startup-surfaced interrupted download, threaded via statusContext —
@@ -73,7 +70,8 @@ export function getStatusLabel({
     // Steam. `gamelib:` prefix is required to cross into the fork-owned
     // namespace from this `TFunction<'gamepage'>`-typed call site.
     notInstalled:
-      runner === 'steam' && statusContext === 'steam-incomplete'
+      hasCapability(runner, 'installManagedExternally') &&
+      statusContext === 'steam-incomplete'
         ? t('gamelib:steam.status.resumeInstall', 'Resume Install')
         : t('gamepage:status.notinstalled'),
     launching: t('gamepage:status.launching', 'Launching'),

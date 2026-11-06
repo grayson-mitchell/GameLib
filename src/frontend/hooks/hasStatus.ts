@@ -4,6 +4,7 @@ import { GameInfo, GameStatus, Status } from 'common/types'
 import { hasProgress } from './hasProgress'
 import { useTranslation } from 'react-i18next'
 import { getStatusLabel, handleNonAvailableGames } from './constants'
+import { hasCapability } from 'common/storeCapabilities'
 
 /**
  * Pure precedence derivation shared by hasStatus's checkGameStatus effect and
@@ -181,7 +182,8 @@ export function hasStatus(gameInfo: GameInfo, gameSize?: string) {
       // incomplete' is a DISTINCT value from those (this game is NOT
       // currently installing; no active poll).
       const resumeContext =
-        runner === 'steam' && newGameInfo?.install?.steamResumePending
+        hasCapability(runner, 'installManagedExternally') &&
+        newGameInfo?.install?.steamResumePending
           ? 'steam-incomplete'
           : statusContext
       const label = getStatusLabel({

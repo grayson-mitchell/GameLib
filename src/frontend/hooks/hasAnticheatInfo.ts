@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { AntiCheatInfo, GameInfo } from 'common/types'
+import { isStore } from 'common/storeCapabilities'
 
 export const hasAnticheatInfo = (gameInfo: GameInfo) => {
   const [anticheatInfo, setAnticheatInfo] = useState<AntiCheatInfo | null>(null)
 
   useEffect(() => {
     if (
-      gameInfo.runner !== 'sideload' &&
+      !isStore(gameInfo, 'sideload') &&
       gameInfo.title &&
       gameInfo.namespace !== undefined
     ) {

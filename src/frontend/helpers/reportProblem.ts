@@ -6,6 +6,7 @@ import {
 } from 'common/reportProblem'
 
 import type { GameInfo } from 'common/types'
+import { isStore } from 'common/storeCapabilities'
 
 /**
  * Web3Forms Access Key. The operator pastes it here. Access keys are public by
@@ -56,7 +57,7 @@ async function launchRouteFor(game: ReportGame): Promise<string> {
       runner: game.runner
     })
     if (native) return 'native'
-    if (game.runner !== 'steam') return 'compatibility layer'
+    if (!isStore(game.runner, 'steam')) return 'compatibility layer'
     const verdict = await window.api.getSteamBridgeRoute(game.app_name)
     return verdict.route === 'bottle' ? 'bottled' : verdict.route
   } catch {

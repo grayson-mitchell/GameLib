@@ -1,4 +1,5 @@
 import { Runner } from 'common/types'
+import { hasCapability } from 'common/storeCapabilities'
 
 /**
  * D-27 rows 3 (`GameCard`), 5 (`GameSubMenu`) and the `MainButton` caret each
@@ -65,7 +66,7 @@ export function showSteamCardInstallOptions({
   isDelisted
 }: SteamCardInstallOptionsState): boolean {
   return (
-    runner === 'steam' &&
+    hasCapability(runner, 'installHandOffToClient') &&
     !isInstalled &&
     !isQueued &&
     isInstallable &&
@@ -78,7 +79,11 @@ export function showSteamSubMenuInstallOptions({
   isInstalled,
   isDelisted
 }: SteamSubMenuInstallOptionsState): boolean {
-  return runner === 'steam' && !isInstalled && !isDelisted
+  return (
+    hasCapability(runner, 'installHandOffToClient') &&
+    !isInstalled &&
+    !isDelisted
+  )
 }
 
 /**
@@ -107,7 +112,7 @@ export function showSteamMainButtonInstallOptions({
   installDisabled
 }: SteamMainButtonInstallOptionsState): boolean {
   return (
-    runner === 'steam' &&
+    hasCapability(runner, 'installHandOffToClient') &&
     !isInstalled &&
     !isQueued &&
     !isDelisted &&

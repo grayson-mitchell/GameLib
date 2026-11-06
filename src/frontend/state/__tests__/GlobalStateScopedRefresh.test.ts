@@ -264,13 +264,13 @@ describe('GlobalState.tsx refreshLibrary — scopes the global refreshing flags 
 
 function refreshScopesFetchAndFinalSetStatePerRunner(block: string): boolean {
   const derivesIncludes =
-    /const\s+includesEpic\s*=\s*!scopedRunner\s*\|\|\s*scopedRunner\s*===\s*'legendary'/.test(
+    /const\s+includesEpic\s*=\s*!scopedRunner\s*\|\|\s*isStore\(scopedRunner,\s*'legendary'\)/.test(
       block
     ) &&
-    /const\s+includesGog\s*=\s*!scopedRunner\s*\|\|\s*scopedRunner\s*===\s*'gog'/.test(
+    /const\s+includesGog\s*=\s*!scopedRunner\s*\|\|\s*isStore\(scopedRunner,\s*'gog'\)/.test(
       block
     ) &&
-    /const\s+includesAmazon\s*=\s*!scopedRunner\s*\|\|\s*scopedRunner\s*===\s*'nile'/.test(
+    /const\s+includesAmazon\s*=\s*!scopedRunner\s*\|\|\s*isStore\(scopedRunner,\s*'nile'\)/.test(
       block
     )
 
@@ -310,9 +310,9 @@ describe('GlobalState.tsx refresh() — a scoped library arg only overwrites tha
     const correctShape = [
       '{',
       "  const scopedRunner = library && library !== 'all' ? library : undefined",
-      "  const includesEpic = !scopedRunner || scopedRunner === 'legendary'",
-      "  const includesGog = !scopedRunner || scopedRunner === 'gog'",
-      "  const includesAmazon = !scopedRunner || scopedRunner === 'nile'",
+      "  const includesEpic = !scopedRunner || isStore(scopedRunner, 'legendary')",
+      "  const includesGog = !scopedRunner || isStore(scopedRunner, 'gog')",
+      "  const includesAmazon = !scopedRunner || isStore(scopedRunner, 'nile')",
       '',
       '  this.setState((prevState: StateProps) => {',
       '    const next: Partial<StateProps> = {}',
@@ -362,9 +362,9 @@ describe('GlobalState.tsx refresh() — a scoped library arg only overwrites tha
     const fetchOnlyScopedShape = [
       '{',
       "  const scopedRunner = library && library !== 'all' ? library : undefined",
-      "  const includesEpic = !scopedRunner || scopedRunner === 'legendary'",
-      "  const includesGog = !scopedRunner || scopedRunner === 'gog'",
-      "  const includesAmazon = !scopedRunner || scopedRunner === 'nile'",
+      "  const includesEpic = !scopedRunner || isStore(scopedRunner, 'legendary')",
+      "  const includesGog = !scopedRunner || isStore(scopedRunner, 'gog')",
+      "  const includesAmazon = !scopedRunner || isStore(scopedRunner, 'nile')",
       "  if (includesEpic) { epicLibrary = libraryStore.get('library', []) }",
       '  if (includesGog) { gogLibrary = this.loadGOGLibrary(overrides) }',
       "  if (includesAmazon) { amazonLibrary = nileLibraryStore.get('library', []) }",

@@ -78,6 +78,7 @@ import {
 } from './BottleLaunchWaiting'
 import { performSteamLogout } from './SteamSignOut'
 import { createOAuthLoginCompletion } from '../screens/WebView/useTauriOAuthLogin'
+import { isStore } from 'common/storeCapabilities'
 
 const storage: Storage = window.localStorage
 
@@ -1252,9 +1253,9 @@ class GlobalState extends PureComponent<Props> {
     // no-argument behavior exactly). Every `includesX` below reads as "no
     // scope => touch everything, same as before this fix".
     const scopedRunner = library && library !== 'all' ? library : undefined
-    const includesEpic = !scopedRunner || scopedRunner === 'legendary'
-    const includesGog = !scopedRunner || scopedRunner === 'gog'
-    const includesAmazon = !scopedRunner || scopedRunner === 'nile'
+    const includesEpic = !scopedRunner || isStore(scopedRunner, 'legendary')
+    const includesGog = !scopedRunner || isStore(scopedRunner, 'gog')
+    const includesAmazon = !scopedRunner || isStore(scopedRunner, 'nile')
 
     let updates = gameUpdates
     if (checkUpdates) {
@@ -1627,7 +1628,7 @@ class GlobalState extends PureComponent<Props> {
       )[0]
       if (!currentApp || (currentApp && currentApp.status !== 'installing')) {
         const gameInfo = await getGameInfo(appName, runner)
-        if (!gameInfo || gameInfo.runner === 'sideload') {
+        if (!gameInfo || isStore(gameInfo, 'sideload')) {
           return
         }
         return this.setState({
@@ -1865,7 +1866,7 @@ class GlobalState extends PureComponent<Props> {
 
     window.api.handleGamePush((e: IpcRendererEvent, args: GameInfo) => {
       if (!args.app_name) return
-      if (args.runner === 'gog') {
+      if (isStore(args, 'gog')) {
         const library = [...this.state.gog.library]
         const index = library.findIndex(
           (game) => game.app_name === args.app_name
@@ -1881,7 +1882,7 @@ class GlobalState extends PureComponent<Props> {
             username: this.state.gog.username
           }
         })
-      } else if (args.runner === 'legendary') {
+      } else if (isStore(args, 'legendary')) {
         this.setState((prevState: StateProps) => {
           const library = [...prevState.epic.library]
           const index = library.findIndex(
@@ -1899,7 +1900,7 @@ class GlobalState extends PureComponent<Props> {
             }
           }
         })
-      } else if (args.runner === 'steam') {
+      } else if (isStore(args, 'steam')) {
         this.setState((prevState: StateProps) => {
           const library = [...prevState.steam.library]
           const index = library.findIndex(
@@ -2147,7 +2148,7 @@ class GlobalState extends PureComponent<Props> {
     const isRTL = RTL_LANGUAGES.includes(language)
 
     const installingEpicGame = libraryStatus.some(
-      (game) => game.status === 'installing' && game.runner === 'legendary'
+      (game) => game.status === 'installing' && isStore(game, 'legendary')
     )
 
     return (

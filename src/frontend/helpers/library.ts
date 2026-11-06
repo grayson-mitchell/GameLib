@@ -12,6 +12,7 @@ import {
 import { TFunction } from 'i18next'
 import { getGameInfo } from './index'
 import { DialogModalOptions } from 'frontend/types'
+import { isStore } from 'common/storeCapabilities'
 
 const storage: Storage = window.localStorage
 
@@ -203,7 +204,7 @@ const launch = async ({
               text: t('gamepage:box.yes'),
               onClick: async () => {
                 const gameInfo = await getGameInfo(appName, runner)
-                if (gameInfo && gameInfo.runner !== 'sideload') {
+                if (gameInfo && !isStore(gameInfo, 'sideload')) {
                   void updateGame({ appName, runner, gameInfo })
                   res({ status: 'done' })
                 }

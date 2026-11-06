@@ -129,7 +129,7 @@ describe('GlobalState.refresh() cache guards', () => {
 
   describe('handleGamePush legendary branch (quick 261029-t39)', () => {
     const LEGENDARY_PUSH_BRANCH =
-      /args\.runner === 'legendary'\s*\)\s*\{\s*this\.setState\(\(prevState: StateProps\) => \{[\s\S]*?epic:\s*\{\s*library/
+      /isStore\(args,\s*'legendary'\)\s*\)\s*\{\s*this\.setState\(\(prevState: StateProps\) => \{[\s\S]*?epic:\s*\{\s*library/
 
     it('pushes Epic library entries live via the functional setState form', () => {
       const source = stripSourceComments(readFileSync(globalStatePath, 'utf-8'))
@@ -138,7 +138,7 @@ describe('GlobalState.refresh() cache guards', () => {
 
     it('negative control: rejects a source lacking the branch', () => {
       const lacking =
-        "if (args.runner === 'gog') { this.setState({}) } else if (args.runner === 'steam') { this.setState((prevState: StateProps) => { return { steam: { library } } }) }"
+        "if (isStore(args, 'gog')) { this.setState({}) } else if (isStore(args, 'steam')) { this.setState((prevState: StateProps) => { return { steam: { library } } }) }"
       expect(lacking).not.toMatch(LEGENDARY_PUSH_BRANCH)
     })
   })

@@ -16,17 +16,13 @@ import type { Runner } from 'common/types'
  * `helpers/index.ts` re-exports this as `getStoreName`, so there is a single source of truth and
  * the two cannot drift.
  */
-export const getStoreDisplayName = (runner: Runner, other: string): string => {
-  switch (runner) {
-    case 'legendary':
-      return 'Epic Games'
-    case 'gog':
-      return 'GOG'
-    case 'nile':
-      return 'Amazon Games'
-    case 'steam':
-      return 'Steam'
-    default:
-      return other
-  }
+// Sideload has no store name; callers pass `other` for it.
+const STORE_DISPLAY_NAMES: Partial<Record<Runner, string>> = {
+  legendary: 'Epic Games',
+  gog: 'GOG',
+  nile: 'Amazon Games',
+  steam: 'Steam'
 }
+
+export const getStoreDisplayName = (runner: Runner, other: string): string =>
+  STORE_DISPLAY_NAMES[runner] ?? other

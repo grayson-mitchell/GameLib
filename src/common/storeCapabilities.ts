@@ -156,6 +156,14 @@ export function hasCapability(
  * The one sanctioned raw store-identity comparison (D-02). False for
  * null/undefined and for an object without a runner.
  */
+export function isStore<T extends { runner: StoreKey }, K extends StoreKey>(
+  subject: T,
+  store: K
+): subject is T & { runner: K }
+export function isStore(
+  subject: StoreKey | null | undefined | { runner?: StoreKey | null },
+  store: StoreKey
+): boolean
 export function isStore(
   subject: StoreKey | null | undefined | { runner?: StoreKey | null },
   store: StoreKey

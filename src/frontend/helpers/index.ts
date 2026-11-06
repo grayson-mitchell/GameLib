@@ -27,6 +27,7 @@ import {
 import { install, launch, repair, updateGame } from './library'
 import * as fileSize from 'filesize'
 import { getStoreDisplayName } from './storeDisplayName'
+import { isStore } from 'common/storeCapabilities'
 const readFile = window.api.readConfig
 
 const writeConfig = window.api.writeConfig
@@ -107,7 +108,7 @@ function handleRunnersPlatforms(
   platform: InstallPlatform,
   runner: Runner
 ): InstallPlatform {
-  if (runner === 'legendary') {
+  if (isStore(runner, 'legendary')) {
     return platform
   }
   switch (platform) {

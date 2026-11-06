@@ -1,6 +1,7 @@
 import type { IpcRendererEvent } from 'backend/platform'
 import { create } from 'zustand'
 import { Runner } from 'common/types'
+import { hasCapability } from 'common/storeCapabilities'
 
 interface SteamBottleSetupState {
   isOpen: boolean
@@ -47,5 +48,9 @@ export const isSteamBottleSetupActiveFor = (
   appName: string,
   runner: Runner
 ): boolean => {
-  return state.isOpen && state.appName === appName && runner === 'steam'
+  return (
+    state.isOpen &&
+    state.appName === appName &&
+    hasCapability(runner, 'usesBottleRuntime')
+  )
 }

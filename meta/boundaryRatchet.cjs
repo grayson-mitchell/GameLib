@@ -28,7 +28,8 @@ const {
 
 // Ceilings, each at its exact measured count for the ratified selector.
 // 2026-11-06 62-02: FRONTEND_CEILING 136 measured with the ratified selector
-const FRONTEND_CEILING = 136
+// 2026-11-07 62-17: 136 -> 114, frontend helpers + hooks + state
+const FRONTEND_CEILING = 114
 // 2026-11-06 62-02: BACKEND_CEILING 65 measured with the ratified selector
 // 2026-11-07 62-14: 65 -> 51, launcher.ts
 // 2026-11-07 62-15: 51 -> 31, downloadmanager + gamedetails/dispatch

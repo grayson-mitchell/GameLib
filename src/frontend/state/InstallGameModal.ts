@@ -5,6 +5,7 @@ import {
   resolveSteamInstallSignInState,
   steamInstallNeedsSignIn
 } from 'frontend/helpers/steamInstallSignIn'
+import { isHandOffInstall } from 'common/storeCapabilities'
 
 /**
  * The frontend mirror of the `listSteamLibraryTargets()` IPC element shape,
@@ -404,7 +405,7 @@ export const openInstallGameModal = ({
   // forever on Getting download size…" hazard this chokepoint used to guard
   // against is now closed by dialog design rather than by this
   // short-circuit.
-  if (runner === 'steam' && action === 'install' && gameInfo) {
+  if (isHandOffInstall(runner, action) && gameInfo) {
     void startSteamQuickInstall(appName, gameInfo)
     return
   }
