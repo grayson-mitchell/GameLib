@@ -1,0 +1,1933 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "bad-pe-signature",
+      "file": "pe/bad-pe-signature.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": false,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": null,
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": false,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "error",
+          "error": "<unreadable-pe>"
+        }
+      },
+      "objdumpCaptures": {
+        "pe/bad-pe-signature.bin": {
+          "code": 1,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "bind-absent",
+      "file": "pe/bind-absent.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/bind-absent.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "bind-binder",
+      "file": "pe/bind-binder.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/bind-binder.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "bind-present",
+      "file": "pe/bind-present.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "steamstub",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": true,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/bind-present.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "bind-upper",
+      "file": "pe/bind-upper.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/bind-upper.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "ceg-all-three",
+      "file": "pe/ceg-all-three.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": ["STEAM_SPLIT_GUID", "STEAM_GUIDD", "STEAM_MINSTANCE"],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/ceg-all-three.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "ceg-guidd",
+      "file": "pe/ceg-guidd.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": ["STEAM_GUIDD"],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/ceg-guidd.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "ceg-ids-not-names",
+      "file": "pe/ceg-ids-not-names.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/ceg-ids-not-names.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "ceg-lowercase",
+      "file": "pe/ceg-lowercase.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": ["steam_guidd"],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/ceg-lowercase.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "ceg-minstance",
+      "file": "pe/ceg-minstance.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": ["STEAM_MINSTANCE"],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/ceg-minstance.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "ceg-pe32plus",
+      "file": "pe/ceg-pe32plus.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": ["STEAM_GUIDD"],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/ceg-pe32plus.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "ceg-rva-outside",
+      "file": "pe/ceg-rva-outside.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": false,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/ceg-rva-outside.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "ceg-self-reference",
+      "file": "pe/ceg-self-reference.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": false,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/ceg-self-reference.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "ceg-size-zero",
+      "file": "pe/ceg-size-zero.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/ceg-size-zero.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "ceg-split-guid",
+      "file": "pe/ceg-split-guid.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": ["STEAM_SPLIT_GUID"],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/ceg-split-guid.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "closure-arch-conflict",
+      "file": "pe/closure-arch-conflict/game.exe",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": ["steam_api.dll", "Engine.dll"],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "error",
+          "error": "conflicting steam_api.dll and steam_api64.dll import headings"
+        }
+      },
+      "objdumpCaptures": {
+        "pe/closure-arch-conflict/game.exe": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001060 time 00000000 fwd 00000000 name 0000103c addr 00001068\n\n    DLL Name: steam_api.dll\n    Hint/Ord  Name\n           0  SteamAPI_Init\n\n  lookup 00001090 time 00000000 fwd 00000000 name 00001070 addr 00001098\n\n    DLL Name: Engine.dll\n    Hint/Ord  Name\n           0  EngineInit\n\n"
+        },
+        "pe/closure-arch-conflict/Engine.dll": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001048 time 00000000 fwd 00000000 name 00001028 addr 00001058\n\n    DLL Name: steam_api64.dll\n    Hint/Ord  Name\n           0  SteamAPI_Init\n\n"
+        }
+      }
+    },
+    {
+      "name": "closure-depth1",
+      "file": "pe/closure-depth1/game.exe",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": ["Engine.dll"],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "x86",
+          "dll": "steam_api.dll",
+          "symbols": ["SteamAPI_Init"]
+        }
+      },
+      "objdumpCaptures": {
+        "pe/closure-depth1/game.exe": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001048 time 00000000 fwd 00000000 name 00001028 addr 00001050\n\n    DLL Name: Engine.dll\n    Hint/Ord  Name\n           0  EngineInit\n\n"
+        },
+        "pe/closure-depth1/Engine.dll": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001048 time 00000000 fwd 00000000 name 00001028 addr 00001050\n\n    DLL Name: steam_api.dll\n    Hint/Ord  Name\n           0  SteamAPI_Init\n\n"
+        }
+      }
+    },
+    {
+      "name": "closure-depth2",
+      "file": "pe/closure-depth2/game.exe",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": ["A.dll"],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "x64",
+          "dll": "steam_api64.dll",
+          "symbols": ["SteamAPI_Init"]
+        }
+      },
+      "objdumpCaptures": {
+        "pe/closure-depth2/game.exe": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001038 time 00000000 fwd 00000000 name 00001028 addr 00001048\n\n    DLL Name: A.dll\n    Hint/Ord  Name\n           0  AInit\n\n"
+        },
+        "pe/closure-depth2/A.dll": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001038 time 00000000 fwd 00000000 name 00001028 addr 00001048\n\n    DLL Name: B.dll\n    Hint/Ord  Name\n           0  BInit\n\n"
+        },
+        "pe/closure-depth2/B.dll": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001048 time 00000000 fwd 00000000 name 00001028 addr 00001058\n\n    DLL Name: steam_api64.dll\n    Hint/Ord  Name\n           0  SteamAPI_Init\n\n"
+        }
+      }
+    },
+    {
+      "name": "closure-merge",
+      "file": "pe/closure-merge/game.exe",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": ["steam_api.dll", "Engine.dll"],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "x86",
+          "dll": "steam_api.dll",
+          "symbols": ["SteamAPI_Init", "SteamUser", "SteamFriends"]
+        }
+      },
+      "objdumpCaptures": {
+        "pe/closure-merge/game.exe": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001068 time 00000000 fwd 00000000 name 0000103c addr 00001074\n\n    DLL Name: steam_api.dll\n    Hint/Ord  Name\n           0  SteamAPI_Init\n           0  SteamUser\n\n  lookup 000010a0 time 00000000 fwd 00000000 name 00001080 addr 000010a8\n\n    DLL Name: Engine.dll\n    Hint/Ord  Name\n           0  EngineInit\n\n"
+        },
+        "pe/closure-merge/Engine.dll": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001058 time 00000000 fwd 00000000 name 00001028 addr 00001064\n\n    DLL Name: steam_api.dll\n    Hint/Ord  Name\n           0  SteamUser\n           0  SteamFriends\n\n"
+        }
+      }
+    },
+    {
+      "name": "delay-arch-conflict",
+      "file": "pe/delay-arch-conflict.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": "steam_api.dll",
+          "arch": "x86",
+          "symbols": ["A", "B"],
+          "conflict": true,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "error",
+          "error": "conflicting steam_api.dll and steam_api64.dll import headings"
+        }
+      },
+      "objdumpCaptures": {
+        "pe/delay-arch-conflict.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "delay-ordinal",
+      "file": "pe/delay-ordinal.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": "steam_api.dll",
+          "arch": "x86",
+          "symbols": ["SteamAPI_Init", "#7"],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "x86",
+          "dll": "steam_api.dll",
+          "symbols": ["SteamAPI_Init", "#7"],
+          "delaySymbols": ["SteamAPI_Init", "#7"]
+        }
+      },
+      "objdumpCaptures": {
+        "pe/delay-ordinal.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "delay-overlong-name",
+      "file": "pe/delay-overlong-name.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": false,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/delay-overlong-name.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "delay-va-form",
+      "file": "pe/delay-va-form.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": "steam_api.dll",
+          "arch": "x86",
+          "symbols": ["A", "B"],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "x86",
+          "dll": "steam_api.dll",
+          "symbols": ["A", "B"],
+          "delaySymbols": ["A", "B"]
+        }
+      },
+      "objdumpCaptures": {
+        "pe/delay-va-form.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "delay-x64",
+      "file": "pe/delay-x64.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": "steam_api64.dll",
+          "arch": "x64",
+          "symbols": ["SteamAPI_Init"],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "x64",
+          "dll": "steam_api64.dll",
+          "symbols": ["SteamAPI_Init"],
+          "delaySymbols": ["SteamAPI_Init"]
+        }
+      },
+      "objdumpCaptures": {
+        "pe/delay-x64.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "delay-x86",
+      "file": "pe/delay-x86.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": "steam_api.dll",
+          "arch": "x86",
+          "symbols": ["SteamAPI_Init", "SteamUser"],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "x86",
+          "dll": "steam_api.dll",
+          "symbols": ["SteamAPI_Init", "SteamUser"],
+          "delaySymbols": ["SteamAPI_Init", "SteamUser"]
+        }
+      },
+      "objdumpCaptures": {
+        "pe/delay-x86.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "empty-file",
+      "file": "pe/empty-file.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": false,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": null,
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": false,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "error",
+          "error": "<unreadable-pe>"
+        }
+      },
+      "objdumpCaptures": {
+        "pe/empty-file.bin": {
+          "code": 1,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "fat-with-x86_64",
+      "bundle": "macho/fat-with-x86_64",
+      "ops": {
+        "scan_winemac_metal_exports": {
+          "ok": true
+        }
+      }
+    },
+    {
+      "name": "fat-without-x86_64",
+      "bundle": "macho/fat-without-x86_64",
+      "ops": {
+        "scan_winemac_metal_exports": {
+          "ok": false,
+          "winemacPath": "${FIXTURES}/macho/fat-without-x86_64/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+          "reason": "winemac.so is not a parseable x86_64 Mach-O",
+          "missing": [
+            "_macdrv_functions",
+            "_macdrv_view_create_metal_view",
+            "_macdrv_view_get_metal_layer",
+            "_macdrv_view_release_metal_view"
+          ]
+        }
+      }
+    },
+    {
+      "name": "godot-overlay",
+      "file": "pe/godot-overlay.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": ["STEAM_GUIDD"],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/godot-overlay.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "import-arch-conflict",
+      "file": "pe/import-arch-conflict.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": ["steam_api.dll", "steam_api64.dll"],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "error",
+          "error": "conflicting steam_api.dll and steam_api64.dll import headings"
+        }
+      },
+      "objdumpCaptures": {
+        "pe/import-arch-conflict.bin": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001060 time 00000000 fwd 00000000 name 0000103c addr 00001068\n\n    DLL Name: steam_api.dll\n    Hint/Ord  Name\n           0  SteamAPI_Init\n\n  lookup 00001090 time 00000000 fwd 00000000 name 00001070 addr 00001098\n\n    DLL Name: steam_api64.dll\n    Hint/Ord  Name\n           0  SteamAPI_Init\n\n"
+        }
+      }
+    },
+    {
+      "name": "import-missing-sibling-dll",
+      "file": "pe/import-missing-sibling-dll.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": ["Engine.dll"],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/import-missing-sibling-dll.bin": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001048 time 00000000 fwd 00000000 name 00001028 addr 00001050\n\n    DLL Name: Engine.dll\n    Hint/Ord  Name\n           0  EngineInit\n\n"
+        }
+      }
+    },
+    {
+      "name": "import-no-steam",
+      "file": "pe/import-no-steam.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": ["KERNEL32.dll"],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/import-no-steam.bin": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001040 time 00000000 fwd 00000000 name 00001028 addr 00001050\n\n    DLL Name: KERNEL32.dll\n    Hint/Ord  Name\n           0  Sleep\n\n"
+        }
+      }
+    },
+    {
+      "name": "import-ordinal-mixed",
+      "file": "pe/import-ordinal-mixed.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": ["steam_api64.dll"],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "x64",
+          "dll": "steam_api64.dll",
+          "symbols": ["SteamAPI_Init", "SteamUser"]
+        }
+      },
+      "objdumpCaptures": {
+        "pe/import-ordinal-mixed.bin": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001058 time 00000000 fwd 00000000 name 00001028 addr 00001078\n\n    DLL Name: steam_api64.dll\n    Hint/Ord  Name\n           0  SteamAPI_Init\n           9\n           0  SteamUser\n\n"
+        }
+      }
+    },
+    {
+      "name": "import-ordinal-only",
+      "file": "pe/import-ordinal-only.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": ["steam_api.dll", "KERNEL32.dll"],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "x86",
+          "dll": "steam_api.dll",
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/import-ordinal-only.bin": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001050 time 00000000 fwd 00000000 name 0000103c addr 00001058\n\n    DLL Name: steam_api.dll\n    Hint/Ord  Name\n           5\n\n  lookup 00001078 time 00000000 fwd 00000000 name 00001060 addr 00001080\n\n    DLL Name: KERNEL32.dll\n    Hint/Ord  Name\n           0  Sleep\n\n"
+        }
+      }
+    },
+    {
+      "name": "import-steam-api-repeated",
+      "file": "pe/import-steam-api-repeated.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": ["steam_api.dll", "steam_api.dll"],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "x86",
+          "dll": "steam_api.dll",
+          "symbols": ["SteamAPI_Init", "SteamAPI_Init", "SteamUser"]
+        }
+      },
+      "objdumpCaptures": {
+        "pe/import-steam-api-repeated.bin": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001060 time 00000000 fwd 00000000 name 0000103c addr 00001068\n\n    DLL Name: steam_api.dll\n    Hint/Ord  Name\n           0  SteamAPI_Init\n\n  lookup 000010a0 time 00000000 fwd 00000000 name 00001070 addr 000010ac\n\n    DLL Name: steam_api.dll\n    Hint/Ord  Name\n           0  SteamAPI_Init\n           0  SteamUser\n\n"
+        }
+      }
+    },
+    {
+      "name": "import-steam-api-x86",
+      "file": "pe/import-steam-api-x86.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": ["KERNEL32.dll", "steam_api.dll"],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "x86",
+          "dll": "steam_api.dll",
+          "symbols": ["SteamAPI_Init", "SteamUser"]
+        }
+      },
+      "objdumpCaptures": {
+        "pe/import-steam-api-x86.bin": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001058 time 00000000 fwd 00000000 name 0000103c addr 00001060\n\n    DLL Name: KERNEL32.dll\n    Hint/Ord  Name\n           0  Sleep\n\n  lookup 00001098 time 00000000 fwd 00000000 name 00001068 addr 000010a4\n\n    DLL Name: steam_api.dll\n    Hint/Ord  Name\n           0  SteamAPI_Init\n           0  SteamUser\n\n"
+        }
+      }
+    },
+    {
+      "name": "import-steam-api64-x64",
+      "file": "pe/import-steam-api64-x64.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": ["steam_api64.dll"],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "x64",
+          "dll": "steam_api64.dll",
+          "symbols": ["SteamAPI_Init", "SteamFriends"]
+        }
+      },
+      "objdumpCaptures": {
+        "pe/import-steam-api64-x64.bin": {
+          "code": 0,
+          "stdout": "\nThe Import Tables:\n  lookup 00001058 time 00000000 fwd 00000000 name 00001028 addr 00001070\n\n    DLL Name: steam_api64.dll\n    Hint/Ord  Name\n           0  SteamAPI_Init\n           0  SteamFriends\n\n"
+        }
+      }
+    },
+    {
+      "name": "no-dysymtab",
+      "bundle": "macho/no-dysymtab",
+      "ops": {
+        "scan_winemac_metal_exports": {
+          "ok": true
+        }
+      }
+    },
+    {
+      "name": "not-macho",
+      "bundle": "macho/not-macho",
+      "ops": {
+        "scan_winemac_metal_exports": {
+          "ok": false,
+          "winemacPath": "${FIXTURES}/macho/not-macho/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+          "reason": "winemac.so is not a parseable x86_64 Mach-O",
+          "missing": [
+            "_macdrv_functions",
+            "_macdrv_view_create_metal_view",
+            "_macdrv_view_get_metal_layer",
+            "_macdrv_view_release_metal_view"
+          ]
+        }
+      }
+    },
+    {
+      "name": "not-mz",
+      "file": "pe/not-mz.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": false,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": null,
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": false,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "error",
+          "error": "<unreadable-pe>"
+        }
+      },
+      "objdumpCaptures": {
+        "pe/not-mz.bin": {
+          "code": 1,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "sections-96",
+      "file": "pe/sections-96.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "steamstub",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": true,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/sections-96.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "sections-97",
+      "file": "pe/sections-97.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": true,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": [],
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "ok",
+          "arch": "none",
+          "dll": null,
+          "symbols": []
+        }
+      },
+      "objdumpCaptures": {
+        "pe/sections-97.bin": {
+          "code": 0,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "thin-all-exports",
+      "bundle": "macho/thin-all-exports",
+      "ops": {
+        "scan_winemac_metal_exports": {
+          "ok": true
+        }
+      }
+    },
+    {
+      "name": "thin-macdrv-functions-only",
+      "bundle": "macho/thin-macdrv-functions-only",
+      "ops": {
+        "scan_winemac_metal_exports": {
+          "ok": true
+        }
+      }
+    },
+    {
+      "name": "thin-missing-all",
+      "bundle": "macho/thin-missing-all",
+      "ops": {
+        "scan_winemac_metal_exports": {
+          "ok": false,
+          "winemacPath": "${FIXTURES}/macho/thin-missing-all/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+          "reason": "winemac.so lacks the macdrv metal-view exports",
+          "missing": [
+            "_macdrv_functions",
+            "_macdrv_view_create_metal_view",
+            "_macdrv_view_get_metal_layer",
+            "_macdrv_view_release_metal_view"
+          ]
+        }
+      }
+    },
+    {
+      "name": "thin-three-view-symbols",
+      "bundle": "macho/thin-three-view-symbols",
+      "ops": {
+        "scan_winemac_metal_exports": {
+          "ok": true
+        }
+      }
+    },
+    {
+      "name": "trunc-coff",
+      "file": "pe/trunc-coff.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": false,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": null,
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": false,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "error",
+          "error": "<unreadable-pe>"
+        }
+      },
+      "objdumpCaptures": {
+        "pe/trunc-coff.bin": {
+          "code": 1,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "trunc-e-lfanew",
+      "file": "pe/trunc-e-lfanew.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": false,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": null,
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": false,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "error",
+          "error": "<unreadable-pe>"
+        }
+      },
+      "objdumpCaptures": {
+        "pe/trunc-e-lfanew.bin": {
+          "code": 1,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "trunc-mz",
+      "file": "pe/trunc-mz.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": false,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": null,
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": false,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "error",
+          "error": "<unreadable-pe>"
+        }
+      },
+      "objdumpCaptures": {
+        "pe/trunc-mz.bin": {
+          "code": 1,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "trunc-optional-header",
+      "file": "pe/trunc-optional-header.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": false,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": null,
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": false,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "error",
+          "error": "<unreadable-pe>"
+        }
+      },
+      "objdumpCaptures": {
+        "pe/trunc-optional-header.bin": {
+          "code": 1,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "trunc-pe-signature",
+      "file": "pe/trunc-pe-signature.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": false,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": null,
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": false,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "error",
+          "error": "<unreadable-pe>"
+        }
+      },
+      "objdumpCaptures": {
+        "pe/trunc-pe-signature.bin": {
+          "code": 1,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "trunc-section-table",
+      "file": "pe/trunc-section-table.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": false,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": null,
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": true,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "error",
+          "error": "<unreadable-pe>"
+        }
+      },
+      "objdumpCaptures": {
+        "pe/trunc-section-table.bin": {
+          "code": 1,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "truncated-symtab",
+      "bundle": "macho/truncated-symtab",
+      "ops": {
+        "scan_winemac_metal_exports": {
+          "ok": false,
+          "winemacPath": "${FIXTURES}/macho/truncated-symtab/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+          "reason": "winemac.so is not a parseable x86_64 Mach-O",
+          "missing": [
+            "_macdrv_functions",
+            "_macdrv_view_create_metal_view",
+            "_macdrv_view_get_metal_layer",
+            "_macdrv_view_release_metal_view"
+          ]
+        }
+      }
+    },
+    {
+      "name": "unknown-optional-magic",
+      "file": "pe/unknown-optional-magic.bin",
+      "ops": {
+        "scan_steamstub_section": {
+          "drmWrapper": "none",
+          "readError": null
+        },
+        "scan_steam_drm": {
+          "parsed": false,
+          "cegMarkers": [],
+          "hasBindSection": false,
+          "readError": null
+        },
+        "scan_pe_imported_dlls": {
+          "names": null,
+          "readError": null
+        },
+        "scan_pe_delay_imports": {
+          "parsed": false,
+          "dll": null,
+          "arch": "none",
+          "symbols": [],
+          "conflict": false,
+          "readError": null
+        },
+        "scan_steam_api_imports": {
+          "status": "error",
+          "error": "<unreadable-pe>"
+        }
+      },
+      "objdumpCaptures": {
+        "pe/unknown-optional-magic.bin": {
+          "code": 1,
+          "stdout": ""
+        }
+      }
+    },
+    {
+      "name": "winemac-missing",
+      "bundle": "macho/winemac-missing",
+      "ops": {
+        "scan_winemac_metal_exports": {
+          "ok": false,
+          "winemacPath": "${FIXTURES}/macho/winemac-missing/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so",
+          "reason": "winemac.so not found",
+          "missing": [
+            "_macdrv_functions",
+            "_macdrv_view_create_metal_view",
+            "_macdrv_view_get_metal_layer",
+            "_macdrv_view_release_metal_view"
+          ]
+        }
+      }
+    }
+  ]
+}

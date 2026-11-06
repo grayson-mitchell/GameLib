@@ -12,3 +12,9 @@ pnpm-lock.yaml linguist-generated=true
 # normalised by the `* text=auto eol=lf` rule above -- this line must stay
 # AFTER it, since later .gitattributes lines win.
 *.evidence.txt -text
+
+# Phase 63-03: synthetic scanner fixtures are binary; never normalise line endings.
+src-tauri/crates/gamelib-scan/tests/fixtures/**/*.bin binary
+src-tauri/crates/gamelib-scan/tests/fixtures/**/winemac.so binary
+src-tauri/crates/gamelib-scan/tests/fixtures/**/*.exe binary
+src-tauri/crates/gamelib-scan/tests/fixtures/**/*.dll binary
