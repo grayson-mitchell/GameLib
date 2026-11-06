@@ -14,8 +14,8 @@ import path from 'node:path'
 // `require('../tauriDevPreflight.cjs')` below is only safe because the module
 // wraps its own `main()` call in `if (require.main === module && ...)`; if
 // that guard is ever removed, this require() starts a real process-table scan
-// at import time under jest. Same precedent as `meta/__tests__/findDeadcode.test.ts`'s
-// require of `findDeadcode.cjs`.
+// at import time under jest. Same precedent as `meta/__tests__/knipRatchet.test.ts`'s
+// require of `knipRatchet.cjs`.
 // ---------------------------------------------------------------------------
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const tauriDevPreflight = require('../tauriDevPreflight.cjs')

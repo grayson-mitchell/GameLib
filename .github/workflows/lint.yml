@@ -26,6 +26,9 @@ jobs:
         run: pnpm lint
       - name: Prettier code.
         run: pnpm prettier
+      # Quick 261107-brs: this step is the knip identity ratchet (meta/knipRatchet.cjs against
+      # meta/knip-baseline.txt). It fails on a new finding AND on a vanished one; lower
+      # meta/knip-baseline.txt in the same commit that removes dead code.
       - name: Find dead code
         run: pnpm find-deadcode
       - name: Module boundaries
