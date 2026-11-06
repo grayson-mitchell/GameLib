@@ -1,4 +1,5 @@
 import './index.css'
+import { hasCapability, isStore } from 'common/storeCapabilities'
 
 import { useCallback, useContext, useEffect, useState } from 'react'
 
@@ -105,8 +106,8 @@ export default function GamesSubmenu({
   // in the DEFAULT ('translation') namespace, not 'gamepage'/'gamelib' -- neither of this file's
   // other two `t`s resolves them.
   const { t: tDefault } = useTranslation()
-  const isSideloaded = runner === 'sideload'
-  const isSteam = runner === 'steam'
+  const isSideloaded = !hasCapability(runner, 'hasStoreCatalog')
+  const isSteam = !hasCapability(runner, 'winePrefixToolsAvailable')
   const isThirdPartyManaged = !!gameInfo.thirdPartyManagedApp
 
   async function onMoveInstallYesClick() {
@@ -373,7 +374,7 @@ export default function GamesSubmenu({
     })
 
     // only unix specific
-    if (!isWin && runner === 'legendary') {
+    if (!isWin && isStore(runner, 'legendary')) {
       // check if eos overlay is enabled
       const { status } =
         libraryStatus.filter(
@@ -418,7 +419,7 @@ export default function GamesSubmenu({
 
   const showModifyItem =
     onShowModifyInstall &&
-    ['legendary', 'gog'].includes(runner) &&
+    hasCapability(runner, 'supportsModifyInstall') &&
     isInstalled &&
     !isThirdPartyManaged
 
@@ -613,7 +614,7 @@ export default function GamesSubmenu({
                 </button>
               )}{' '}
               {isLinux &&
-                runner === 'legendary' &&
+                isStore(runner, 'legendary') &&
                 (eosOverlayRefresh ? (
                   refreshCircle()
                 ) : (

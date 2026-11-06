@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { hasCapability } from 'common/storeCapabilities'
 
 import { useTranslation } from 'react-i18next'
 
@@ -51,8 +52,12 @@ function TimeContainer({ gameInfo }: Props) {
 
   // Steam tracks playtime itself (Steam launches the game, not GameLib), so
   // surface the Steam-reported total directly from the synced library data.
-  const steamPlaytimeMinutes =
-    runner === 'steam' ? gameInfo.extra?.steamPlaytimeMinutes : undefined
+  const steamPlaytimeMinutes = hasCapability(
+    runner,
+    'playtimeFromStoreMetadata'
+  )
+    ? gameInfo.extra?.steamPlaytimeMinutes
+    : undefined
 
   const formatSteamPlaytime = (mins: number) => {
     if (mins === 0) return t('game.neverPlayed', 'Never')
@@ -65,7 +70,7 @@ function TimeContainer({ gameInfo }: Props) {
   // Steam titles. Render a dedicated branch using Steam's own rtime_last_played
   // and playtime data sourced from the synced library (extra.steamLastPlayed /
   // extra.steamPlaytimeMinutes). Non-Steam games fall through to the tsInfo path.
-  if (runner === 'steam') {
+  if (hasCapability(runner, 'playtimeFromStoreMetadata')) {
     const steamLastPlayed = gameInfo.extra?.steamLastPlayed
     const lastPlayedDisplay = steamLastPlayed
       ? new Intl.DateTimeFormat(undefined, {

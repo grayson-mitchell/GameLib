@@ -1,4 +1,5 @@
 import './index.scss'
+import { isStore } from 'common/storeCapabilities'
 import {
   Dialog,
   DialogContent,
@@ -42,10 +43,10 @@ export default function ModifyInstallModal({
       <DialogContent>
         {gameInstallInfo ? (
           <>
-            {gameInfo.runner === 'gog' && (
+            {isStore(gameInfo, 'gog') && (
               <GOGModifyInstallModal gameInfo={gameInfo} onClose={onClose} />
             )}
-            {gameInfo.runner === 'legendary' && (
+            {isStore(gameInfo, 'legendary') && (
               <LegendaryModifyInstallModal
                 dlcs={(gameInstallInfo as LegendaryInstallInfo)?.game.owned_dlc}
                 gameInfo={gameInfo}

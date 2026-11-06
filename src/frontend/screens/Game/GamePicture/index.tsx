@@ -1,4 +1,5 @@
 import React from 'react'
+import { isStore } from 'common/storeCapabilities'
 import { CachedImage } from 'frontend/components/UI'
 
 import './index.css'
@@ -20,7 +21,7 @@ function GamePicture({
   function getImageFormatting() {
     if (art_square === 'fallback' || !art_square)
       return { src: fallbackImage, fallback: fallbackImage }
-    if (store === 'legendary') {
+    if (isStore(store, 'legendary')) {
       return {
         src: `${art_square}?h=800&resize=1&w=600`,
         fallback: `${art_square}?h=400&resize=1&w=300`
