@@ -740,10 +740,12 @@
                 "native": "Mac Steam"
             },
             "copySurvives": "Removed the {{removed}} copy. A {{survivor}} copy is still installed — use Remove all copies… to remove it too.",
+            "gameRunning": "{{game}} is running. Quit it, then uninstall again.",
             "notStarted": "Steam didn't start the uninstall. Make sure Steam is signed in, then try again.",
             "removeAllCopiesConfirmMessage": "This removes every installed copy of this game across all install locations. This cannot be undone.",
             "removeAllCopiesConfirmTitle": "Remove all copies?",
-            "removeAllCopiesLabel": "Remove all copies…"
+            "removeAllCopiesLabel": "Remove all copies…",
+            "steamError": "Steam couldn't uninstall {{game}} (error {{code}})."
         }
     },
     "steamgriddb": {

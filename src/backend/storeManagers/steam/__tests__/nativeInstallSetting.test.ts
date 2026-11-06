@@ -11,7 +11,10 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { GlobalConfig } from 'backend/config'
 import * as nativeInstallSettingModule from '../nativeInstallSetting'
-import { isSteamNativeInstallEnabled } from '../nativeInstallSetting'
+import {
+  isSteamNativeDeleteEnabled,
+  isSteamNativeInstallEnabled
+} from '../nativeInstallSetting'
 import type { AppSettings } from 'common/types'
 
 jest.mock('backend/config', () => ({
@@ -53,11 +56,33 @@ describe('nativeInstallSetting.ts', () => {
     })
   })
 
+  describe('isSteamNativeDeleteEnabled (quick 261106-s3n)', () => {
+    it.each([
+      ['unset + install unset', {}, true],
+      ['unset + install false', { enableSteamNativeInstall: false }, false],
+      ['unset + install true', { enableSteamNativeInstall: true }, true],
+      [
+        'false + install true',
+        { enableSteamNativeDelete: false, enableSteamNativeInstall: true },
+        false
+      ],
+      [
+        'true + install false',
+        { enableSteamNativeDelete: true, enableSteamNativeInstall: false },
+        true
+      ]
+    ])('%s -> %s', (_name, settings, expected) => {
+      mockSettings(settings)
+      expect(isSteamNativeDeleteEnabled()).toBe(expected)
+    })
+  })
+
   // ── Phase 23 (23-02, D-03): no new user-facing toggle ───────────────────
   describe('D-03: StateFlags=4 inherits the D-13 opt-in, no new setting', () => {
     it('nativeInstallSetting.ts exports ONLY isSteamNativeInstallEnabled — no second StateFlags4-specific accessor was added', () => {
       expect(Object.keys(nativeInstallSettingModule)).toEqual([
-        'isSteamNativeInstallEnabled'
+        'isSteamNativeInstallEnabled',
+        'isSteamNativeDeleteEnabled'
       ])
     })
 

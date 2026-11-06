@@ -142,6 +142,9 @@ export interface AppSettings extends GameSettings {
   downloadNoHttps: boolean
   downloadProtonToSteam: boolean
   enableSteamNativeInstall: boolean
+  // quick 261106-s3n: OPTIONAL and deliberately absent from config.ts defaults;
+  // unset means "follow enableSteamNativeInstall" (isSteamNativeDeleteEnabled).
+  enableSteamNativeDelete?: boolean
   steamExperimentalInstallApp: boolean
   egsLinkedPath: string
   enableUpdates: boolean

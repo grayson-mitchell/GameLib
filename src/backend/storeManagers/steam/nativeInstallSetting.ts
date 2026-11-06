@@ -11,9 +11,27 @@
  * This is the ONLY place that should read `enableSteamNativeInstall` — the
  * install() branch point (Plan 07) and the bottle branch (Plan 11) both
  * consult this accessor rather than duplicating the read inline.
+ *
+ * quick 261106-s3n: `isSteamNativeDeleteEnabled()` is the matching single
+ * read seam for `enableSteamNativeDelete` ("Delete Steam games directly in
+ * GameLib").
  */
 import { GlobalConfig } from 'backend/config'
 
 export function isSteamNativeInstallEnabled(): boolean {
   return GlobalConfig.get().getSettings().enableSteamNativeInstall ?? true
+}
+
+/**
+ * quick 261106-s3n: whether GameLib uninstalls native Steam games itself
+ * (UninstallApp, then a guarded file delete) instead of `steam://uninstall`.
+ * An absent key means the user never chose, so it follows the downloader
+ * setting; a persisted value wins either way. This is the ONLY reader of
+ * `enableSteamNativeDelete` (it is intentionally not in config.ts defaults).
+ */
+export function isSteamNativeDeleteEnabled(): boolean {
+  return (
+    GlobalConfig.get().getSettings().enableSteamNativeDelete ??
+    isSteamNativeInstallEnabled()
+  )
 }

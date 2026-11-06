@@ -205,8 +205,10 @@ jest.mock('../metacriticCapture', () => ({
 
 // ── nativeInstallSetting mock ─────────────────────────────────────────────────
 jest.mock('../nativeInstallSetting', () => ({
-  isSteamNativeInstallEnabled: jest.fn()
+  isSteamNativeInstallEnabled: jest.fn(),
+  isSteamNativeDeleteEnabled: jest.fn()
 }))
+jest.mock('../nativeDelete', () => ({ decideSteamNativeDelete: jest.fn() }))
 
 // ── clientSetup / installLocation mocks (Plan 09/10 seams) ──────────────────
 jest.mock('../clientSetup', () => ({ ensureSteamClientReady: jest.fn() }))
@@ -732,6 +734,101 @@ describe('removeSteamInstallCopy', () => {
       join(NATIVE_STEAMAPPS, 'common', 'SharedGame'),
       expect.anything()
     )
+  })
+})
+
+// quick 261106-s3n: the ON delete fallback leans on these guards for any
+// registered library and for hostile installdir values.
+describe('removeSteamInstallCopy — delete-in-GameLib containment (quick 261106-s3n)', () => {
+  it('removes a manifest found in a NON-default registered library from that library', async () => {
+    const lib2 = '/lib2'
+    const lib2Steamapps = join(lib2, 'steamapps')
+    ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIB, lib2])
+    addManifest(
+      '63000',
+      { appid: '63000', StateFlags: INSTALLED_FLAGS, installdir: 'HOARD' },
+      lib2Steamapps
+    )
+
+    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
+
+    expect(result).toEqual({
+      status: 'removed',
+      source: 'native',
+      manifestOnly: false
+    })
+    expect(rmSync).toHaveBeenCalledWith(
+      join(lib2Steamapps, 'common', 'HOARD'),
+      {
+        recursive: true,
+        force: true
+      }
+    )
+    expect(rmSync).toHaveBeenCalledWith(
+      join(lib2Steamapps, 'appmanifest_63000.acf'),
+      { force: true }
+    )
+    expect(rmSync).not.toHaveBeenCalledWith(
+      expect.stringContaining(NATIVE_STEAMAPPS),
+      expect.anything()
+    )
+  })
+
+  it('refuses an installdir that climbs out of common/ (../../..)', async () => {
+    addManifest('63000', {
+      appid: '63000',
+      StateFlags: INSTALLED_FLAGS,
+      installdir: '../../..'
+    })
+
+    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
+
+    expect(result).toMatchObject({ status: 'refused' })
+    expect(rmSync).not.toHaveBeenCalled()
+  })
+
+  it('an absolute-looking installdir is joined under common/ and never deletes the real absolute path', async () => {
+    addManifest('63000', {
+      appid: '63000',
+      StateFlags: INSTALLED_FLAGS,
+      installdir: '/etc'
+    })
+
+    await libraryModule.removeSteamInstallCopy('63000', 'native')
+
+    expect(rmSync).not.toHaveBeenCalledWith('/etc', expect.anything())
+    for (const [target] of (rmSync as jest.Mock).mock.calls) {
+      expect(target.startsWith(NATIVE_STEAMAPPS)).toBe(true)
+    }
+  })
+
+  it('a common/<installdir> symlink to an outside directory removes the link only, never the target files', async () => {
+    const real = jest.requireActual<typeof import('node:fs')>('node:fs')
+    const root = real.mkdtempSync(join(real.realpathSync('/tmp'), 's3n-'))
+    try {
+      const lib = join(root, 'lib')
+      const steamapps = join(lib, 'steamapps')
+      const outside = join(root, 'outside')
+      real.mkdirSync(join(steamapps, 'common'), { recursive: true })
+      real.mkdirSync(outside)
+      real.writeFileSync(join(outside, 'precious.txt'), 'keep')
+      const link = join(steamapps, 'common', 'LinkGame')
+      real.symlinkSync(outside, link)
+      ;(getSteamLibraries as jest.Mock).mockResolvedValue([lib])
+      addManifest(
+        '63000',
+        { appid: '63000', StateFlags: INSTALLED_FLAGS, installdir: 'LinkGame' },
+        steamapps
+      )
+      ;(rmSync as jest.Mock).mockImplementation(real.rmSync)
+
+      await libraryModule.removeSteamInstallCopy('63000', 'native')
+
+      expect(real.existsSync(join(outside, 'precious.txt'))).toBe(true)
+      expect(real.existsSync(link)).toBe(false)
+    } finally {
+      real.rmSync(root, { recursive: true, force: true })
+    }
   })
 })
 

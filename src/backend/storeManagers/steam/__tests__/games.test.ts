@@ -77,7 +77,11 @@ import type { DrmDllPathChannel, DrmDllOverridesChannel } from '../games'
 import { library, pendingFetches } from '../state'
 import { SteamUser } from '../user'
 import type { GameInfo, InstallParams } from 'common/types'
-import { isSteamNativeInstallEnabled } from '../nativeInstallSetting'
+import {
+  isSteamNativeDeleteEnabled,
+  isSteamNativeInstallEnabled
+} from '../nativeInstallSetting'
+import { decideSteamNativeDelete } from '../nativeDelete'
 import { isSteamExperimentalInstallAppEnabled } from '../experimentalInstallAppSetting'
 import { requestSteamInstallApp } from '../steamInstallApp'
 import { downloadSteamDepots, prescreenBridgeDepots } from '../depot'
@@ -671,8 +675,11 @@ jest.mock('backend/launcher', () => ({
 // every pre-existing test (which never touches this) keeps exercising the
 // opt-in-OFF / legacy steam://install path with zero changes.
 jest.mock('../nativeInstallSetting', () => ({
-  isSteamNativeInstallEnabled: jest.fn()
+  isSteamNativeInstallEnabled: jest.fn(),
+  // quick 261106-s3n: undefined (OFF) unless a test sets it.
+  isSteamNativeDeleteEnabled: jest.fn()
 }))
+jest.mock('../nativeDelete', () => ({ decideSteamNativeDelete: jest.fn() }))
 
 // quick 261105-ord: experimental InstallApp accessor + helper caller. Plain
 // jest.fn()s: resetMocks makes the accessor return undefined (OFF) unless a
@@ -9789,6 +9796,165 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
       status: 'done'
     })
     expect(result.stderr).toContain('EACCES')
+  })
+})
+
+// ── quick 261106-s3n: delete in GameLib (setting ON) ─────────────────────────
+
+describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', () => {
+  let envMock: any
+  let shellOpenExternal: jest.Mock
+  let startPollingSpy: jest.SpyInstance
+  let removeCopySpy: jest.SpyInstance
+  let pollOnceSpy: jest.SpyInstance
+  const adoption = () =>
+    jest.requireMock<Record<string, jest.Mock>>('../macSteamAdoption')
+  const done = {
+    appName: APP_ID,
+    runner: 'steam',
+    status: 'done'
+  }
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    const { shell } = jest.requireMock('backend/platform')
+    shellOpenExternal = shell.openExternal as jest.Mock
+    shellOpenExternal.mockResolvedValue(undefined)
+    library.set(
+      APP_ID,
+      makeEntry({
+        title: 'Dota 2',
+        is_installed: true,
+        install: { install_path: NATIVE_INSTALL_PATH }
+      })
+    )
+    ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIBRARY_ROOT])
+    ;(isSteamNativeDeleteEnabled as jest.Mock).mockReturnValue(true)
+    startPollingSpy = jest
+      .spyOn(libraryModule, 'startUninstallPolling')
+      .mockImplementation(() => {})
+    removeCopySpy = jest
+      .spyOn(libraryModule, 'removeSteamInstallCopy')
+      .mockResolvedValue({
+        status: 'removed',
+        source: 'native',
+        manifestOnly: false
+      } as any)
+    pollOnceSpy = jest
+      .spyOn(libraryModule, 'pollUninstallOnce')
+      .mockResolvedValue(undefined)
+    ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+      wineCrossoverBottle: 'Steam'
+    })
+    ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
+      '/mock/bottle/steamapps'
+    )
+  })
+
+  afterEach(() => {
+    envMock.isMac = false
+    startPollingSpy.mockRestore()
+    removeCopySpy.mockRestore()
+    pollOnceSpy.mockRestore()
+  })
+
+  it('steam-uninstalled: polls the ACF, opens no steam:// URL, deletes nothing', async () => {
+    ;(decideSteamNativeDelete as jest.Mock).mockResolvedValue({
+      route: 'steam-uninstalled'
+    })
+
+    const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+    expect(decideSteamNativeDelete).toHaveBeenCalledWith(APP_ID)
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(startPollingSpy).toHaveBeenCalledWith(APP_ID)
+    expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
+    expect(removeCopySpy).not.toHaveBeenCalled()
+    expect(result).toEqual({ stdout: '', stderr: '' })
+  })
+
+  it('fallback: removeSteamInstallCopy(native) then pollUninstallOnce, no steam:// URL', async () => {
+    ;(decideSteamNativeDelete as jest.Mock).mockResolvedValue({
+      route: 'fallback',
+      why: 'signed-out'
+    })
+
+    const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(startPollingSpy).not.toHaveBeenCalled()
+    expect(removeCopySpy).toHaveBeenCalledWith(APP_ID, 'native')
+    expect(pollOnceSpy).toHaveBeenCalledWith(APP_ID, 'native')
+    expect(removeCopySpy.mock.invocationCallOrder[0]).toBeLessThan(
+      pollOnceSpy.mock.invocationCallOrder[0]
+    )
+    expect(result).toEqual({ stdout: '', stderr: '' })
+  })
+
+  it('fallback with a refused copy: nothing polled, status cleared, stderr set', async () => {
+    ;(decideSteamNativeDelete as jest.Mock).mockResolvedValue({
+      route: 'fallback',
+      why: 'steam-not-running'
+    })
+    removeCopySpy.mockResolvedValue({
+      status: 'refused',
+      source: 'native',
+      reason: 'install path outside common/'
+    })
+
+    const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+    expect(pollOnceSpy).not.toHaveBeenCalled()
+    expect(shellOpenExternal).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', done)
+    expect(result.stderr).toContain('Refused')
+  })
+
+  it.each([
+    [{ route: 'refused-running' }, 'running'],
+    [{ route: 'steam-error', code: 2 }, 'error 2'],
+    [{ route: 'refused', reason: 'running-check-failed' }, 'running-check']
+  ])(
+    '%j: deletes nothing, clears status, sets stderr',
+    async (decision, text) => {
+      ;(decideSteamNativeDelete as jest.Mock).mockResolvedValue(decision)
+
+      const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+      expect(removeCopySpy).not.toHaveBeenCalled()
+      expect(pollOnceSpy).not.toHaveBeenCalled()
+      expect(startPollingSpy).not.toHaveBeenCalled()
+      expect(shellOpenExternal).not.toHaveBeenCalled()
+      expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', done)
+      expect(result.stderr).toContain(text)
+    }
+  )
+
+  it('a running-game refusal notifies the user under the game title', async () => {
+    ;(decideSteamNativeDelete as jest.Mock).mockResolvedValue({
+      route: 'refused-running'
+    })
+    await new SteamGame(APP_ID).uninstall({} as any)
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Dota 2',
+        body: expect.stringContaining('gameRunning')
+      })
+    )
+  })
+
+  it('OFF: the decision is never consulted and steam://uninstall is used', async () => {
+    ;(isSteamNativeDeleteEnabled as jest.Mock).mockReturnValue(false)
+
+    await new SteamGame(APP_ID).uninstall({} as any)
+
+    expect(decideSteamNativeDelete).not.toHaveBeenCalled()
+    expect(shellOpenExternal).toHaveBeenCalledWith(
+      `steam://uninstall/${APP_ID}`
+    )
   })
 })
 

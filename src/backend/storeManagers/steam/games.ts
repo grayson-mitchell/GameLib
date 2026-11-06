@@ -171,7 +171,11 @@ import {
 } from './engine/engineState'
 import { readKnownFixes } from 'backend/knownFixes'
 import type { OverlayRunnerReady } from './bridge/overlay/overlayRunnerClone'
-import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
+import {
+  isSteamNativeDeleteEnabled,
+  isSteamNativeInstallEnabled
+} from './nativeInstallSetting'
+import { decideSteamNativeDelete } from './nativeDelete'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
 import type { CrossoverPreflight } from './engine/engineDecision'
 import type { EngineSelection, NonCrossoverEngine } from './engine/engineTypes'
@@ -6316,6 +6320,11 @@ export default class SteamGame implements Game {
    *     legitimately be installed in a bottle that was never provisioned;
    *     request guided setup rather than a generic refuse.
    *
+   * quick 261106-s3n: with "Delete Steam games directly in GameLib" ON the
+   * native root is handled by uninstallNativeInGameLib() instead (refuse while
+   * running, Steam's UninstallApp, else GameLib deletes the files itself); no
+   * steam:// URL is opened. OFF keeps the delegation below.
+   *
    * Native delegation itself is unchanged (one exception, quick 261029-l9w: a
    * Mac install the running Steam never adopted is removed directly, see
    * uninstallUnadoptedMacNativeDirectly()): does NOT show a GamerLib
@@ -6396,6 +6405,10 @@ export default class SteamGame implements Game {
       if (!url) {
         return { stdout: '', stderr: `Invalid appId: ${this.appId}` }
       }
+
+      // quick 261106-s3n: "Delete Steam games directly in GameLib" ON. OFF
+      // falls through to everything below, unchanged.
+      if (isSteamNativeDeleteEnabled()) return this.uninstallNativeInGameLib()
 
       // quick 261029-l9w: a running Steam that never adopted a GameLib install
       // ignores steam://uninstall, so remove that one state directly.
@@ -6561,6 +6574,62 @@ export default class SteamGame implements Game {
   }
 
   /**
+   * quick 261106-s3n: the ON route for a native-root uninstall. Every refusal
+   * sends `done` itself because uninstaller.ts suppresses it for steam.
+   */
+  private async uninstallNativeInGameLib(): Promise<ExecResult> {
+    const decision = await decideSteamNativeDelete(this.appId)
+    const game = this.getGameInfo().title
+    const refuse = (stderr: string): ExecResult => {
+      sendFrontendMessage('gameStatusUpdate', {
+        appName: this.appId,
+        runner: 'steam',
+        status: 'done'
+      })
+      return { stdout: '', stderr }
+    }
+
+    switch (decision.route) {
+      case 'steam-uninstalled':
+        startUninstallPolling(this.appId)
+        clearPendingAdoption(this.appId)
+        return { stdout: '', stderr: '' }
+      case 'fallback':
+        logInfo(
+          `SteamGame: deleting appId ${this.appId} in GameLib (${decision.why})`,
+          LogPrefix.Steam
+        )
+        return this.removeNativeInstallDirectly()
+      case 'refused-running':
+        notify({
+          title: game,
+          body: i18next.t(
+            'gamelib:steam.uninstall.gameRunning',
+            '{{game}} is running. Quit it, then uninstall again.',
+            { game }
+          )
+        })
+        return refuse(`Refused to uninstall: ${this.appId} is running`)
+      case 'steam-error':
+        notify({
+          title: game,
+          body: i18next.t(
+            'gamelib:steam.uninstall.steamError',
+            "Steam couldn't uninstall {{game}} (error {{code}}).",
+            { game, code: decision.code }
+          )
+        })
+        return refuse(
+          `Steam refused to uninstall ${this.appId} (error ${decision.code})`
+        )
+      case 'refused':
+        return refuse(
+          `Refused to uninstall: ${decision.reason} for appId ${this.appId}`
+        )
+    }
+  }
+
+  /**
    * quick 261029-l9w: direct removal of a GameLib native install the running
    * Mac Steam never adopted. Returns null to mean "delegate as before".
    *
@@ -6613,6 +6682,15 @@ export default class SteamGame implements Game {
       LogPrefix.Steam
     )
 
+    return this.removeNativeInstallDirectly()
+  }
+
+  /**
+   * Shared guarded direct removal of the native install (quick 261106-s3n
+   * extracted this from uninstallUnadoptedMacNativeDirectly): files via
+   * removeSteamInstallCopy's guards, completion via pollUninstallOnce.
+   */
+  private async removeNativeInstallDirectly(): Promise<ExecResult> {
     let failure: string
     try {
       const result = await removeSteamInstallCopy(this.appId, 'native')
