@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60
 Plan: 0 of 0
 Status: Milestone complete
-Last activity: 2026-11-06 - Completed quick task 261106-pvk: Steam give-up notice in the in-app toast stack
+Last activity: 2026-11-06 - Completed quick task 261106-qnw: stylesheet gate keeping notices inside the NoticeStack
 
 Progress: [██████████] 100%
 
@@ -460,6 +460,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261106-ote | Depot decode worker slimmed: leaf `chunkDecode.ts` + logger-free `lzmaLoaderCore.ts`, worker logs via postMessage; bundle 14.2 MB → 279 KB. Pool defaults to min(cpus,4) when native (grows to 16 only for pure-JS); idle RSS at 16 workers 2,668 → 290 MiB; todo closed. | 2026-11-06 | b0af46618 | 381 jest + SEA real-build pass; 067b SHA1 0 mismatches; live install check optional, not run | [261106-ote-slim-the-depot-decode-worker-bundle-and-](./quick/261106-ote-slim-the-depot-decode-worker-bundle-and-/) |
 | 261106-pr4 | Humble expiry toast moved into a shared app-level `NoticeStack` region as its last (corner) slot; `SteamEngineLaunchNotice` returns a fragment of slots; slot lifecycle shared via `renderNoticeSlot`/`useNoticePhaseFallback`; Humble surface now sketch 006 variant A. | 2026-11-06 | 7dc212ce7 | Jest 3 suites / 36 tests, codecheck + lint pass; live gate outstanding (todo stays pending) | [261106-pr4-stack-the-humble-expiry-toast-in-a-share](./quick/261106-pr4-stack-the-humble-expiry-toast-in-a-share/) |
 | 261106-pvk | Steam delegated install/uninstall 2-min give-up now shows in the in-app toast stack (new `steamRequestNotice` push, 4th `request` slot in `SteamEngineLaunchNotice`) instead of a system notification; `dispatch.kill()` skips `callAbortController` for a Steam-delegated install so Cancel no longer logs `Aborting not possible` | 2026-11-06 | 0b24d6f2c | codecheck, i18n gates, scoped prettier pass; jest 1662/1663 (1 unrelated `themeTokens` census failure); live gate outstanding (todo stays pending) | [261106-pvk-steam-delegated-give-up-notice-in-app-to](./quick/261106-pvk-steam-delegated-give-up-notice-in-app-to/) |
+| 261106-qnw | NoticeStack stylesheet gate: jest source-gate parses the NoticeStack/Steam/Humble scss; only `.noticeStack` may be `position: fixed`, toast-root rules may not be absolute/sticky or anchored (inner absolute elements allowed); discovery guard fails on unregistered `renderNoticeSlot(` callers or `<NoticeStack>` children. | 2026-11-06 | a736d833e | 2 suites / 14 tests pass; mutation (`position: fixed` on `.humbleExpiryToast`) fails the gate; full Frontend run red only on pre-existing themeTokens census (39f721b36) | [261106-qnw-add-a-stylesheet-gate-keeping-notices-in](./quick/261106-qnw-add-a-stylesheet-gate-keeping-notices-in/) |
 
 ## Deferred Items
 
