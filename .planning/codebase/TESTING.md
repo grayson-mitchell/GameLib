@@ -59,7 +59,7 @@ The test surface is covered by several jobs, not only `jest`:
 - `.github/workflows/lint.yml` runs `pnpm lint`, `pnpm prettier`, `pnpm find-deadcode`, `pnpm boundaries`.
 - `.husky/pre-push` runs `codecheck`, `lint`, `prettier`, `i18n --fail-on-update`, `find-deadcode`, and `boundaries`. It does **not** run `jest`. Run `pnpm test` before pushing.
 
-Clippy is not run anywhere. No workflow mentions it.
+Clippy runs in CI as a shrink-only per-lint ratchet (`meta/clippyRatchet.cjs`, pinned toolchain) on the macOS leg of `.github/workflows/rust-test.yml` only (quick 261107-8yq). Windows- and Linux-gated code is not linted.
 
 ## Test File Organization
 
@@ -282,7 +282,7 @@ Assert the message, not only that it throws. Classified prefixes (`UNPORTED_CHAN
 
 - `@testing-library/*` is in `package.json` and unused. Remove it or adopt it deliberately; it is not usable in the Frontend project as configured.
 - No coverage threshold, so coverage can fall silently.
-- Clippy is not run in CI.
+- Clippy runs on the macOS leg only; `cfg(windows)`/`cfg(target_os = "linux")` code is never linted.
 - Frontend component behaviour (rendering, user events) is not tested; only the element tree and hooks are.
 
 ---
