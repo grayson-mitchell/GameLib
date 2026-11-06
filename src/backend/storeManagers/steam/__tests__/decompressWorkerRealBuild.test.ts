@@ -35,7 +35,7 @@
 // developer's real `~/Library/Logs/GameLib`.
 
 import { execFileSync, fork, type ChildProcess } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 import {
@@ -62,7 +62,11 @@ interface ChildResult {
   message?: string
   stack?: string
   code?: number | null
-  ready?: { type: 'ready'; lzmaKind?: string }
+  ready?: {
+    type: 'ready'
+    lzmaKind?: string
+    logs?: { level: string; lines: string[] }[]
+  }
 }
 
 describe('decompressWorker.ts real compiled worker spawn (Phase 23.1 plan 05 regression)', () => {
@@ -168,5 +172,19 @@ describe('decompressWorker.ts real compiled worker spawn (Phase 23.1 plan 05 reg
     // rejects) before sending 'ready' -- so it must be present and one of
     // the two known decoder kinds.
     expect(['native', 'pure-js']).toContain(result.ready?.lzmaKind)
+    // The worker owns no log writer: lzmaLoader's once-per-worker decoder
+    // line travels to the parent on the ready message.
+    expect(result.ready?.logs?.length).toBeGreaterThan(0)
+    expect(result.ready?.logs?.[0].lines[0]).toMatch(/^lzmaLoader:/)
   }, 30000)
+
+  // Spikes 067a/067b: the worker bundle was 14 MB (most of the backend via
+  // backend/logger and decompress.ts's CDN imports), ~160 MiB RSS per idle
+  // worker. Guard the import graph, not just a number.
+  test('the compiled worker bundle stays slim (< 1 MiB) and does not bundle backend/logger or steam-user', () => {
+    expect(statSync(DEV_WORKER_BUNDLE_PATH).size).toBeLessThan(1_048_576)
+    const text = readFileSync(DEV_WORKER_BUNDLE_PATH, 'utf8')
+    expect(text).not.toContain('src/backend/logger')
+    expect(text).not.toContain('node_modules/steam-user')
+  })
 })

@@ -20,13 +20,14 @@
 import { Worker } from 'node:worker_threads'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { decodeChunk } from './decompress'
+import { decodeChunk } from './chunkDecode'
 import { loadLzmaModule } from './lzmaLoader'
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type {
   DecompressWorkerRequest,
   DecompressWorkerResponse,
-  DecompressWorkerReady
+  DecompressWorkerReady,
+  DecompressWorkerLog
 } from './decompressWorker'
 
 function isReadyMessage(msg: unknown): msg is DecompressWorkerReady {
@@ -35,6 +36,30 @@ function isReadyMessage(msg: unknown): msg is DecompressWorkerReady {
     msg !== null &&
     (msg as { type?: string }).type === 'ready'
   )
+}
+
+function isLogMessage(msg: unknown): msg is DecompressWorkerLog {
+  return (
+    typeof msg === 'object' &&
+    msg !== null &&
+    (msg as { type?: string }).type === 'log'
+  )
+}
+
+/** Logs a lzmaLoader entry a worker buffered on its behalf (workers own no
+ *  log writer). Malformed entries are ignored, never thrown. */
+function forwardWorkerLog(entry: unknown): void {
+  if (typeof entry !== 'object' || entry === null) return
+  const { level, lines } = entry as { level?: unknown; lines?: unknown }
+  if (
+    (level !== 'info' && level !== 'warning') ||
+    !Array.isArray(lines) ||
+    !lines.every((l) => typeof l === 'string')
+  ) {
+    return
+  }
+  if (level === 'warning') logWarning(lines as string[], LogPrefix.Steam)
+  else logInfo(lines as string[], LogPrefix.Steam)
 }
 
 /** Debug/humankind-depot-full-stall (2026-08-17): where the pool's worker
@@ -457,6 +482,9 @@ export class DecompressPool {
         if (msg.lzmaKind === 'native') {
           this.nativeWorkerSet.add(worker)
         }
+        if (Array.isArray(msg.logs)) {
+          for (const entry of msg.logs) forwardWorkerLog(entry)
+        }
         this.wireWorker(worker)
         resolvePromise(worker)
       }
@@ -474,30 +502,37 @@ export class DecompressPool {
   private wireWorker(worker: Worker): void {
     this.allWorkers.add(worker)
 
-    worker.on('message', (response: DecompressWorkerResponse) => {
-      if (isReadyMessage(response)) return
-      const task = this.pending.get(response.id)
-      if (!task) return
-      this.pending.delete(response.id)
-      clearTimeout(task.timer)
-      if (response.ok) {
-        task.resolve(Buffer.from(response.data))
-      } else {
-        // Debug/steam-install-slow-start (cycle 13): reconstruct the error
-        // WITH its `.code` (when the worker sent one — see
-        // decompressWorker.ts's `handleDecodeMessage`) instead of the
-        // pre-cycle-13 bare `new Error(response.error)`, which silently
-        // discarded any distinguishing code the original decode-stage
-        // failure carried, collapsing it to the generic `"Error"` name by
-        // the time it reached `attemptFailureReason`.
-        task.reject(
-          response.code
-            ? taggedPoolError(response.error, response.code)
-            : new Error(response.error)
-        )
+    worker.on(
+      'message',
+      (response: DecompressWorkerResponse | DecompressWorkerLog) => {
+        if (isReadyMessage(response)) return
+        if (isLogMessage(response)) {
+          forwardWorkerLog(response.entry)
+          return
+        }
+        const task = this.pending.get(response.id)
+        if (!task) return
+        this.pending.delete(response.id)
+        clearTimeout(task.timer)
+        if (response.ok) {
+          task.resolve(Buffer.from(response.data))
+        } else {
+          // Debug/steam-install-slow-start (cycle 13): reconstruct the error
+          // WITH its `.code` (when the worker sent one — see
+          // decompressWorker.ts's `handleDecodeMessage`) instead of the
+          // pre-cycle-13 bare `new Error(response.error)`, which silently
+          // discarded any distinguishing code the original decode-stage
+          // failure carried, collapsing it to the generic `"Error"` name by
+          // the time it reached `attemptFailureReason`.
+          task.reject(
+            response.code
+              ? taggedPoolError(response.error, response.code)
+              : new Error(response.error)
+          )
+        }
+        this.releaseWorker(worker)
       }
-      this.releaseWorker(worker)
-    })
+    )
 
     worker.on('error', (err) => this.handleWorkerFailure(worker, err))
     worker.on('exit', (code) => {
