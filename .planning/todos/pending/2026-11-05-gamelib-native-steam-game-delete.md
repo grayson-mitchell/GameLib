@@ -8,7 +8,7 @@ files:
   - src/frontend/screens/Settings/components/EnableSteamNativeInstall.tsx
 severity: minor
 platform: macos
-ready: human
+ready: live-gate
 ---
 
 ## Problem
@@ -27,7 +27,7 @@ GameLib already deletes a game itself in one narrow case.
 install that the running Steam never adopted (log, 22:16:08: `removing it
 directly instead of steam://uninstall`). There is no general GameLib delete.
 
-## Solution (to discuss)
+## Solution (original options — superseded by "Decided" below)
 
 Add a GameLib delete path for Steam games. It removes the install folder and
 `appmanifest_<appId>.acf` (and any workshop/shadercache leftovers decided on)
@@ -65,3 +65,47 @@ This suggests a route for the Trigger decision: with the InstallApp setting on, 
 through `UninstallApp` first. On 18 while signed out, or on helper verification failure, fall
 back to GameLib's own file delete (this todo) or `steam://uninstall`. GameLib's uninstall dialog
 becomes the only confirmation, so it must refuse while the game is running.
+
+## Decided (operator, 2026-11-06): a "Delete Steam games directly in GameLib" setting
+
+This settles the Trigger, Running Steam and Cloud saves points above. Safety stands as written.
+
+**Setting:** "Delete Steam games directly in GameLib". It is a separate GlobalConfig key, not a
+side effect of the InstallApp setting, because delete is the riskier action and a user may want
+silent installs with Steam-confirmed deletes. It sits beside `EnableSteamNativeInstall.tsx`, with
+an (i) help icon on the label line, and is read through one backend accessor beside
+`isSteamNativeInstallEnabled()`.
+
+- **Default:** follows "Download Steam games directly in GameLib". It is ON when that setting is
+  ON (GameLib owns those installs) and OFF otherwise. An explicit user choice is persisted and
+  respected.
+- **Not labelled experimental.** Step 2 below is GameLib's own code. `UninstallApp` is the
+  preferred path, not a requirement.
+
+**OFF:** today's behaviour, `steam://uninstall/<appId>` (Steam window and confirm dialog).
+
+**ON:** GameLib performs the uninstall with no Steam UI and GameLib's own confirmation:
+
+1. **Steam running and signed in:** `UninstallApp(appId)` through the bridge helper's
+   runtime-verified method map (spike 067). Steam deletes the install dir, the ACF and the
+   Workshop content and updates its own state.
+2. **Fallback:** used when Steam is signed out (`GetNumInstalledApps` 0, `UninstallApp` → 18),
+   not running, or the helper's slot verification fails. GameLib deletes the install folder and
+   `appmanifest_<appId>.acf` itself, only inside a registered Steam library, resolved from the
+   ACF `installdir` and never following one that escapes it. Steam picks up the change at its
+   next start. This generalises `uninstallUnadoptedMacNativeDirectly()`.
+3. **Always:** refuse while the game is running. The confirm dialog names the game and the space
+   freed, and states that Steam Cloud saves are not touched.
+
+**Cloud saves:** local delete only; Steam Cloud is untouched. Accepted.
+
+**Live gate:**
+
+- ON, signed in → `UninstallApp` path, no Steam UI, Steam shows not installed.
+- ON, signed out → fallback deletes the files and the tile clears. After sign-in, Steam shows not
+  installed.
+- ON, Steam not running → fallback. On Steam start, no "Files Missing" ghost entry.
+- ON, game running → refused with a message.
+- ON, a GameLib download Steam never adopted → fallback (expect `UninstallApp` 18).
+- Non-default library folder, both paths.
+- OFF → byte-identical to today.
