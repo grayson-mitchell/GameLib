@@ -128,7 +128,6 @@ src/backend/platform/__tests__/types.usage.test.ts - assert_shortcutDetails
 src/backend/store/storeEmbedSeam.ts - getStoreEmbedSeam
 src/backend/storeManagers/steam/bridge/protocol.ts - InterfaceOrdinalName
 src/backend/storeManagers/steam/depot/flagsCensus.ts - FLAGS_CENSUS_LOG_PREFIX
-src/common/types/sidecarTransport.ts - RUST_INVOKE_KIND
 src/common/types/steam.ts - SteamCredentials
 #
 # selectionCount.ts:46 is `] as const satisfies readonly DescriptorKind[]`.

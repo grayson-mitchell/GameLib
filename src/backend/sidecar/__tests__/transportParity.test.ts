@@ -31,7 +31,7 @@ const TS_VALUES: Record<string, string> = {
 
 type Found = { name: string; value: string | undefined; file: string }
 
-export function extractMarkedConsts(sources: Record<string, string>): Found[] {
+function extractMarkedConsts(sources: Record<string, string>): Found[] {
   const out: Found[] = []
   for (const [file, text] of Object.entries(sources)) {
     const lines = text.split('\n')
@@ -55,7 +55,7 @@ export function extractMarkedConsts(sources: Record<string, string>): Found[] {
   return out
 }
 
-export function extractDispatchArms(source: string): string[] {
+function extractDispatchArms(source: string): string[] {
   const fnAt = source.indexOf('fn dispatch_rust_channel')
   if (fnAt < 0) throw new Error('dispatch_rust_channel not found')
   const start = source.indexOf('match channel {', fnAt)
