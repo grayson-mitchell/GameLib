@@ -28,3 +28,5 @@ jobs:
         run: pnpm prettier
       - name: Find dead code
         run: pnpm find-deadcode
+      - name: Module boundaries
+        run: pnpm boundaries
