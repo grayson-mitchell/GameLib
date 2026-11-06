@@ -345,6 +345,8 @@ export const RUST_WAKE_LOCK_STOP = 'wake_lock_stop' as const
  * Takes ONE object arg (`{ exePath, appId }`), all string fields (D-08: paths in, never bytes).
  * Resolves a `SteamApiImportScanResult` (see `backend/scanners/scanTypes.ts`). Bad args reject
  * `scan_steam_api_imports:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ *
+ * @public Channel contract; 63-13 calls it directly via invokeScan.
  */
 export const RUST_SCAN_STEAM_API_IMPORTS = 'scan_steam_api_imports' as const
 
@@ -365,6 +367,8 @@ export const RUST_SCAN_STEAM_DRM = 'scan_steam_drm' as const
  * Takes ONE object arg (`{ exePath }`), all string fields (D-08: paths in, never bytes).
  * Resolves a `SteamstubSectionResult` (see `backend/scanners/scanTypes.ts`). Bad args reject
  * `scan_steamstub_section:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ *
+ * @public Channel contract; 63-13 calls it directly via invokeScan.
  */
 export const RUST_SCAN_STEAMSTUB_SECTION = 'scan_steamstub_section' as const
 
@@ -375,6 +379,8 @@ export const RUST_SCAN_STEAMSTUB_SECTION = 'scan_steamstub_section' as const
  * Takes ONE object arg (`{ exePath }`), all string fields (D-08: paths in, never bytes).
  * Resolves a `PeImportedDllsResult` (see `backend/scanners/scanTypes.ts`). Bad args reject
  * `scan_pe_imported_dlls:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ *
+ * @public Channel contract; 63-13 calls it directly via invokeScan.
  */
 export const RUST_SCAN_PE_IMPORTED_DLLS = 'scan_pe_imported_dlls' as const
 
@@ -385,6 +391,8 @@ export const RUST_SCAN_PE_IMPORTED_DLLS = 'scan_pe_imported_dlls' as const
  * Takes ONE object arg (`{ path, rootDir }`), all string fields (D-08: paths in, never bytes).
  * Resolves a `ContainedRealResult` (see `backend/scanners/scanTypes.ts`). Bad args reject
  * `scan_contained_real:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ *
+ * @public Channel contract; 63-13 calls it directly via invokeScan.
  */
 export const RUST_SCAN_CONTAINED_REAL = 'scan_contained_real' as const
 
@@ -395,6 +403,8 @@ export const RUST_SCAN_CONTAINED_REAL = 'scan_contained_real' as const
  * Takes ONE object arg (`{ wineBundlePath }`), all string fields (D-08: paths in, never bytes).
  * Resolves a `WinemacMetalCheck` (see `backend/scanners/scanTypes.ts`). Bad args reject
  * `scan_winemac_metal_exports:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ *
+ * @public Channel contract; 63-13 calls it directly via invokeScan.
  */
 export const RUST_SCAN_WINEMAC_METAL_EXPORTS =
   'scan_winemac_metal_exports' as const
