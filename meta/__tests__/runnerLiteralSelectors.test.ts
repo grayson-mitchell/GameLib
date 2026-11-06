@@ -40,7 +40,21 @@ describe('runner literal selectors: HIT', () => {
     ["switch (gameInfo.runner) { case 'steam': break }"],
     ["switch (scopedRunner) { case 'gog': break }"],
     ["const a = ['legendary', 'gog'].includes(runner)"],
-    ["const a = ['legendary', 'gog'].includes(game.runner)"]
+    ["const a = ['legendary', 'gog'].includes(game.runner)"],
+    ["const a = library === 'gog'"],
+    ["const a = value === 'sideload'"],
+    ["const a = descriptor.value === 'sideload'"],
+    ["const a = focusRow.value !== 'sideload'"],
+    ["const a = (runner as string) === 'steam'"],
+    ["const a = runner! === 'steam'"],
+    ["const a = gameInfo['runner'] === 'steam'"],
+    ["const a = game?.['runner'] === 'gog'"],
+    ["const a = ['gog', 'nile'].indexOf(runner)"],
+    ["const a = new Set(['gog', 'nile']).has(runner)"],
+    ["const a = runnerStr === 'gog'"],
+    ["const a = storeName === 'nile'"],
+    ["const a = storeKey !== 'humble'"],
+    ["switch (library) { case 'gog': break }"]
   ])('%s', async (code) => {
     expect(await hits(code)).toBeGreaterThanOrEqual(1)
   })
@@ -61,7 +75,18 @@ describe('runner literal selectors: NON-HIT', () => {
     ["const a = store === 'electron'"],
     ['const a = `${runner}` === `steam`'],
     ["const a = ['a', 'b'].includes(runner)"],
-    ["const a = ['steam'].includes(platform)"]
+    ["const a = ['steam'].includes(platform)"],
+    ["switch (value) { case 'a': break }"],
+    ["const a = value === 'x'"],
+    ['const a = library === otherLibrary'],
+    ["const a = platform === 'steam'"],
+    ["const a = activationKind === 'steam'"],
+    ["const a = new Set(['a']).has(runner)"],
+    ["const a = ['a', 'b'].indexOf(runner)"],
+    ["const a = gameInfo['platform'] === 'steam'"],
+    // Documented blind spot (see the selector header): the literals are not
+    // inline, so a named set is not seen. Pinned at 0 on purpose.
+    ['const a = STORES.has(runner)']
   ])('%s', async (code) => {
     expect(await hits(code)).toBe(0)
   })
