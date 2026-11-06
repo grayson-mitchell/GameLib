@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom'
 import PlayIcon from 'frontend/assets/play-icon.svg?react'
 import PauseIcon from 'frontend/assets/pause-icon.svg?react'
 import { classifyDMItemStatus } from './status'
+import { isStore } from 'common/storeCapabilities'
 
 type Props = {
   element?: DMQueueElement
@@ -82,7 +83,7 @@ const DownloadManagerItem = ({
   useEffect(() => {
     const getNewInfo = async () => {
       const newInfo = await getGameInfo(appName, runner)
-      if (newInfo && newInfo.runner !== 'sideload') {
+      if (newInfo && !isStore(newInfo, 'sideload')) {
         setGameInfo(newInfo)
       }
     }

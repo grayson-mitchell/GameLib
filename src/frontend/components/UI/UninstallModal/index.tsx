@@ -11,6 +11,7 @@ import { Runner } from 'common/types'
 import ToggleSwitch from '../ToggleSwitch'
 import { useNavigate, useLocation } from 'react-router-dom'
 import ContextProvider from 'frontend/state/ContextProvider'
+import { hasCapability, isStore } from 'common/storeCapabilities'
 
 interface UninstallModalProps {
   appName: string
@@ -70,7 +71,7 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
     setGameTitle(gameInfo.overrides?.title || gameInfo.title)
 
     const { install } = gameInfo
-    if (runner === 'steam') {
+    if (hasCapability(runner, 'installHandOffToClient')) {
       // Backend-authoritative: true only for a native-root install with the
       // "Delete Steam games directly in GameLib" setting ON.
       const route = await window.api
@@ -108,7 +109,7 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
       deletePrefixChecked,
       deleteSettingsChecked
     )
-    if (runner === 'sideload' && location.pathname.match(/gamepage/)) {
+    if (isStore(runner, 'sideload') && location.pathname.match(/gamepage/)) {
       navigate('/#library')
     }
     storage.removeItem(appName)
@@ -117,7 +118,7 @@ const UninstallModal: React.FC<UninstallModalProps> = function ({
   const showWineCheckbox = !isNative && !isDlc
 
   // disallow uninstalling epic games if an epic game is being installed
-  if (installingEpicGame && runner === 'legendary') {
+  if (installingEpicGame && isStore(runner, 'legendary')) {
     return (
       <>
         {showUninstallModal && (

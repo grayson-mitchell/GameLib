@@ -21,6 +21,7 @@ import {
   heroPhase,
   type HeroPhase
 } from './heroModel'
+import { isStore } from 'common/storeCapabilities'
 
 type Props = {
   element?: DMQueueElement
@@ -58,7 +59,7 @@ export default function DownloadHero({ element, state }: Props) {
     if (!appName) return
     const getNewInfo = async () => {
       const newInfo = await getGameInfo(appName, runner)
-      if (newInfo && newInfo.runner !== 'sideload') {
+      if (newInfo && !isStore(newInfo, 'sideload')) {
         setGameInfo(newInfo)
       }
     }

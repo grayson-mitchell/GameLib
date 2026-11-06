@@ -11,6 +11,7 @@
 // (D-UAT-06 acceptance: "Do NOT regress GOG/Epic/Amazon").
 
 import { DMStatus, Runner } from 'common/types'
+import { hasCapability } from 'common/storeCapabilities'
 
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
 // flagged the previously-exported form as a used-in-module finding -- there
@@ -40,7 +41,8 @@ export function classifyDMItemStatus(
   current: boolean
 ): DMItemStatusInfo {
   const finished = status === 'done'
-  const isSteamError = runner === 'steam' && status === 'error'
+  const isSteamError =
+    hasCapability(runner, 'installManagedExternally') && status === 'error'
   const canceled =
     !isSteamError && (status === 'error' || (status === 'abort' && !current))
   const showRemoveAction = isSteamError && !current

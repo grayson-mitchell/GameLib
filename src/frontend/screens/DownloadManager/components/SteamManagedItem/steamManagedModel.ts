@@ -10,12 +10,13 @@
  * that distinguishes it from a GameLib-driven install, which has a queue row.
  */
 import type { GameStatus } from 'common/types'
+import { hasCapability } from 'common/storeCapabilities'
 
 /** The steam installs Steam itself is downloading, in library-status order. */
 export function steamManagedRows(libraryStatus: GameStatus[]): GameStatus[] {
   return libraryStatus.filter(
     (entry) =>
-      entry.runner === 'steam' &&
+      hasCapability(entry.runner, 'installManagedExternally') &&
       entry.status === 'installing' &&
       entry.managedBySteam === true
   )
