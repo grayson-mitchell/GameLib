@@ -1,3 +1,4 @@
+import { isStore } from 'common/storeCapabilities'
 import { Runner } from 'common/types'
 import fallbackImage from 'frontend/assets/gamelib_card.svg?url'
 
@@ -6,7 +7,7 @@ export function getImageFormatting(cover: string, runner: Runner) {
   if (imageBase === 'fallback' || !cover) {
     return fallbackImage
   }
-  if (runner === 'legendary') {
+  if (isStore(runner, 'legendary')) {
     return `${imageBase}?h=400&resize=1&w=300`
   } else {
     return imageBase

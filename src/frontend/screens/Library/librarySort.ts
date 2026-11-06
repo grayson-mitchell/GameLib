@@ -23,6 +23,7 @@
  * (`common/metacriticScore` is a pure common module.)
  */
 
+import { hasCapability } from 'common/storeCapabilities'
 import type { GameInfo } from 'common/types'
 import { parseMetacriticScore } from 'common/metacriticScore'
 import { RunnerToStore } from './facetLabels'
@@ -203,7 +204,7 @@ export function lastPlayedMs(
   game: GameInfo,
   nonSteamLastPlayedIso: Readonly<Record<string, string | undefined>>
 ): number | undefined {
-  if (game.runner === 'steam') {
+  if (hasCapability(game.runner, 'playtimeFromStoreMetadata')) {
     const seconds = game.extra?.steamLastPlayed
     return typeof seconds === 'number' &&
       Number.isFinite(seconds) &&

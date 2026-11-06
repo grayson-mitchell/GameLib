@@ -1,3 +1,4 @@
+import { hasCapability } from 'common/storeCapabilities'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GameInfo } from 'common/types'
 import { timestampStore } from 'frontend/helpers/electronStores'
@@ -105,7 +106,11 @@ export function useNonSteamLastPlayed(
 
   const nonSteamAppNames = useMemo(
     () =>
-      games.filter((game) => game.runner !== 'steam').map((g) => g.app_name),
+      games
+        .filter(
+          (game) => !hasCapability(game.runner, 'playtimeFromStoreMetadata')
+        )
+        .map((g) => g.app_name),
     [games]
   )
 

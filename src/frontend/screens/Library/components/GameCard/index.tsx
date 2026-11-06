@@ -1,3 +1,4 @@
+import { hasCapability, isStore } from 'common/storeCapabilities'
 import './index.css'
 
 import { useContext, CSSProperties, useMemo, useState, useEffect } from 'react'
@@ -185,7 +186,7 @@ const GameCard = ({
   }, [status])
 
   async function handleUpdate() {
-    if (gameInfo.runner !== 'sideload')
+    if (!isStore(gameInfo, 'sideload'))
       updateGame({ appName, runner, gameInfo })
   }
 
@@ -356,8 +357,8 @@ const GameCard = ({
     setShowUninstallModal(true)
   }
 
-  const isSideloaded = runner === 'sideload'
-  const isSteam = runner === 'steam'
+  const isSideloaded = !hasCapability(runner, 'hasStoreCatalog')
+  const isSteam = hasCapability(runner, 'canBeDelisted')
   // 37-REVIEW W-01: mirrors filterEngine's canonical `isNoStorePageGame`
   // (`game.runner === 'steam' && !!game.is_delisted`). The runner guard is NOT
   // redundant: `is_delisted` lives on the shared `GameInfo` interface, not a
@@ -624,7 +625,7 @@ const GameCard = ({
                 alt="cover"
               />
             )}
-            {(justPlayed || runner !== 'nile') && logo && (
+            {(justPlayed || !isStore(runner, 'nile')) && logo && (
               <CachedImage
                 alt="logo"
                 src={`${logo}?h=400&resize=1&w=300`}
@@ -737,13 +738,13 @@ const GameCard = ({
       !isInstalled &&
       !isQueued &&
       !isDelisted &&
-      gameInfo.runner === 'steam'
+      hasCapability(gameInfo.runner, 'installHandOffToClient')
     ) {
       openInstallGameModal({ appName, runner: gameInfo.runner, gameInfo })
       return
     }
 
-    if (!isInstalled && !isQueued && gameInfo.runner !== 'sideload') {
+    if (!isInstalled && !isQueued && !isStore(gameInfo, 'sideload')) {
       return install({
         gameInfo,
         installPath: folder || 'default',

@@ -283,7 +283,9 @@ describe('GameCard/index.tsx source gates (D-27 row 3, D-28 -- comment-stripped)
     expect(start).toBeGreaterThan(-1)
     const body = source.slice(start).replace(/\s+/g, ' ')
 
-    const steamGuard = body.indexOf("gameInfo.runner === 'steam'")
+    const steamGuard = body.indexOf(
+      "hasCapability(gameInfo.runner, 'installHandOffToClient')"
+    )
     const genericInstall = body.indexOf('return install({')
     expect(steamGuard).toBeGreaterThan(-1)
     expect(genericInstall).toBeGreaterThan(-1)
@@ -298,8 +300,15 @@ describe('GameCard/index.tsx source gates (D-27 row 3, D-28 -- comment-stripped)
     const knownBad = source
       .slice(start)
       .replace(/\s+/g, ' ')
-      .replace("gameInfo.runner === 'steam'", 'REMOVED')
-    expect(knownBad.indexOf("gameInfo.runner === 'steam'")).toBe(-1)
+      .replace(
+        "hasCapability(gameInfo.runner, 'installHandOffToClient')",
+        'REMOVED'
+      )
+    expect(
+      knownBad.indexOf(
+        "hasCapability(gameInfo.runner, 'installHandOffToClient')"
+      )
+    ).toBe(-1)
   })
 
   // ── 34.13 review B-WR-05 ────────────────────────────────────────────────
@@ -338,9 +347,9 @@ describe('GameCard/index.tsx source gates (D-27 row 3, D-28 -- comment-stripped)
       const body = knownBad
         .slice(knownBad.indexOf('async function handlePlay'))
         .replace(/\s+/g, ' ')
-      expect(body.indexOf("gameInfo.runner === 'steam'")).toBeLessThan(
-        body.indexOf('return install({')
-      )
+      expect(
+        body.indexOf("hasCapability(gameInfo.runner, 'installHandOffToClient')")
+      ).toBeLessThan(body.indexOf('return install({'))
     }
   )
 })
@@ -349,10 +358,14 @@ describe('GameCard/index.tsx source gates (D-27 row 3, D-28 -- comment-stripped)
 function sliceSteamGuard(source: string): string {
   const flattened = source.replace(/\s+/g, ' ')
   const marker = flattened.indexOf(
-    "gameInfo.runner === 'steam' ) { openInstallGameModal("
+    "hasCapability(gameInfo.runner, 'installHandOffToClient') ) { openInstallGameModal("
   )
   const at =
-    marker === -1 ? flattened.indexOf("gameInfo.runner === 'steam'") : marker
+    marker === -1
+      ? flattened.indexOf(
+          "hasCapability(gameInfo.runner, 'installHandOffToClient')"
+        )
+      : marker
   if (at === -1) {
     throw new Error('sliceSteamGuard: the Steam guard is gone')
   }

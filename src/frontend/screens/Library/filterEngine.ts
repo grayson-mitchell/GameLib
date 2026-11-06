@@ -26,6 +26,7 @@
  * to this module here — that happens in plan 05.
  */
 
+import { hasCapability } from 'common/storeCapabilities'
 import { GameInfo } from 'common/types'
 import { isRunsForMeOn, type RunsForMeState } from 'common/runsForMe'
 import {
@@ -368,7 +369,8 @@ function passesMore(
   // install_path went missing", has exactly one writer, and a second writer
   // would collide at every existing reader. This is the same expression
   // 37-03a removed from `isNonAvailableGame`.
-  const isNoStorePageGame = game.runner === 'steam' && !!game.is_delisted
+  const isNoStorePageGame =
+    hasCapability(game.runner, 'canBeDelisted') && !!game.is_delisted
 
   // Step 1: an explicit 'hide' beats an unrelated 'only' in another
   // tri-state, because 'hide' is the user's direct instruction about THIS

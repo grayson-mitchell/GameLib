@@ -28,6 +28,7 @@
  * Pure module, no React: that is what makes it reachable from a test at all
  * in a project with no jsdom (`src/frontend/jest.config.js`).
  */
+import { isStore } from 'common/storeCapabilities'
 import { GameInfo } from 'common/types'
 import { FilterEngineDeps } from 'frontend/types'
 import { DEFAULT_FILTER_ENGINE_STATE, filterLibrary } from './filterEngine'
@@ -43,7 +44,7 @@ export function countGamesExcludingDlc(
   // unconditionally is harmless and is what makes the count accurate on the
   // combined "all games" list -- carried over from the original comment.
   const dlcCount = list.filter(
-    (lib) => lib.runner !== 'sideload' && lib.install.is_dlc
+    (lib) => !isStore(lib, 'sideload') && lib.install.is_dlc
   ).length
 
   const total = list.length - dlcCount
@@ -136,7 +137,7 @@ export function findSilentlyExcludedGames(
         // Steam-only, so `runner !== 'sideload'` (the DLC quirk's guard in
         // countGamesExcludingDlc) is always true here -- a plain
         // `install.is_dlc` check is exact for this scope.
-        game.runner === 'steam' &&
+        isStore(game, 'steam') &&
         !game.install.is_dlc &&
         deps.nonAvailableAppNames.includes(game.app_name)
     )

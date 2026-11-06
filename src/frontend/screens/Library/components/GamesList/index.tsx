@@ -1,3 +1,4 @@
+import { isStore } from 'common/storeCapabilities'
 import React, { useContext, useEffect, useRef } from 'react'
 import { GameInfo, Runner } from 'common/types'
 import cx from 'classnames'
@@ -92,7 +93,7 @@ const GamesList = ({
           const { app_name, is_installed, runner } = gameInfo
           const isJustPlayed = (isFavourite || isRecent) && index === 0
           let is_dlc = false
-          if (gameInfo.runner !== 'sideload') {
+          if (!isStore(gameInfo, 'sideload')) {
             is_dlc = gameInfo.install.is_dlc ?? false
           }
 
@@ -109,7 +110,7 @@ const GamesList = ({
               key={`${runner}_${app_name}${isFirstLane ? '_firstlane' : ''}`}
               hasUpdate={hasUpdate}
               buttonClick={() => {
-                if (gameInfo.runner !== 'sideload')
+                if (!isStore(gameInfo, 'sideload'))
                   handleGameCardClick(app_name, runner, gameInfo)
               }}
               forceCard={layout === 'grid'}

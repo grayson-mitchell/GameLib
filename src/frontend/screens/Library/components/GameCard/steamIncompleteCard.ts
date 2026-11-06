@@ -1,3 +1,5 @@
+import { hasCapability } from 'common/storeCapabilities'
+
 /**
  * D-UAT-12: the library card showed a plain "Install" for an incomplete Steam
  * install while the detail page showed "Resume Install". This mirrors the
@@ -12,7 +14,7 @@ export function isSteamIncompleteCard(args: {
   statusContext: string | undefined
 }): boolean {
   return (
-    args.runner === 'steam' &&
+    hasCapability(args.runner, 'installManagedExternally') &&
     args.status === 'notInstalled' &&
     args.statusContext === 'steam-incomplete'
   )
