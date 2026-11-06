@@ -77,6 +77,7 @@ import type {
   BridgeInviteResult,
   SteamBridgeRouteVerdict,
   SteamEngineState,
+  SteamRequestNoticePayload,
   SteamEngineOption,
   SteamSetupDownloadProgress,
   SteamUserData
@@ -830,6 +831,8 @@ interface FrontendMessages {
   steamGoOfflineRequired: (payload: SteamGoOfflinePayload) => void
   // Phase 59 (D-04/D-06): the per-title engine display state changed
   steamEngineStateChanged: (payload: SteamEngineState) => void
+  // quick 261106-pvk: one-way push when Steam never starts a delegated request
+  steamRequestNotice: (payload: SteamRequestNoticePayload) => void
   // WR-04: a per-game setting write failed twice; the renderer re-reads the stored value
   gameSettingWriteFailed: (payload: { appName: string; key: string }) => void
   steamBridgeRouteNotice: (payload: {

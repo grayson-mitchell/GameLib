@@ -3653,12 +3653,14 @@ export function startInstallPolling(
           runner: 'steam',
           status: 'done'
         })
-        notify({
+        // quick 261106-pvk: the system notification can land on another
+        // monitor or not be delivered at all, so the give-up notice goes to
+        // GameLib's own toast stack (renderer maps `kind` to the string).
+        sendFrontendMessage('steamRequestNotice', {
+          appId,
           title: library.get(appId)?.title ?? '',
-          body: i18next.t(
-            'gamelib:steam.install.notStarted',
-            "Steam didn't start the install. Make sure Steam is signed in, then try again."
-          )
+          kind: 'install-not-started',
+          seq: ++steamRequestNoticeSeq
         })
         stopInstallPolling(appId)
         return
@@ -3766,6 +3768,19 @@ export function stopInstallPolling(appId: string): void {
   activePolls.delete(appId)
   stopSteamDownloadMonitor(appId)
   logInfo(`Steam: stopped install polling for appId ${appId}`, LogPrefix.Steam)
+}
+
+// quick 261106-pvk: monotonic id so the renderer shows each give-up notice once.
+let steamRequestNoticeSeq = 0
+
+/**
+ * True while a Steam-owned (delegated) install poll is active for `appId`.
+ * Its one caller is `gamedetails/dispatch.kill()`, which skips the abort
+ * controller lookup for it (a delegated install has none by design;
+ * quick 261106-pvk).
+ */
+export function isDelegatedInstallPolling(appId: string): boolean {
+  return activePolls.get(appId)?.delegatedToSteamClient === true
 }
 
 /**
@@ -4099,15 +4114,15 @@ export function startUninstallPolling(
         runner: 'steam',
         status: 'done'
       })
-      // debug/wazhack-uninstall-reverts: this branch once gave ZERO feedback,
-      // so an unanswered request looked like "nothing happened"; the badge
-      // correctly stays installed (D-02) and the user gets an honest toast.
-      notify({
+      // debug/wazhack-uninstall-reverts: this branch once gave ZERO feedback;
+      // the badge correctly stays installed (D-02). quick 261106-pvk: the
+      // notice goes to the in-app stack because the system notification can
+      // land on another monitor or not be delivered.
+      sendFrontendMessage('steamRequestNotice', {
+        appId,
         title: library.get(appId)?.title ?? '',
-        body: i18next.t(
-          'gamelib:steam.uninstall.notStarted',
-          "Steam didn't start the uninstall. Make sure Steam is signed in, then try again."
-        )
+        kind: 'uninstall-not-started',
+        seq: ++steamRequestNoticeSeq
       })
       stopUninstallPolling(appId)
     }

@@ -122,6 +122,13 @@ jest.mock('backend/utils/aborthandler/aborthandler', () => ({
   callAbortController: (...args: [string]) => callAbortControllerMock(...args)
 }))
 
+// ── backend/storeManagers/steam/library mock (quick 261106-pvk) ─────────
+const isDelegatedInstallPollingMock = jest.fn()
+jest.mock('backend/storeManagers/steam/library', () => ({
+  isDelegatedInstallPolling: (...args: [string]) =>
+    isDelegatedInstallPollingMock(...args)
+}))
+
 // ── backend/logger mock -- heroicLogWriter is unset until bootstrap.ts's
 // init() runs (this repo's own documented gotcha); mocked so logInfo/
 // logWarning/logError are no-ops rather than throwing on the unset writer.
@@ -312,6 +319,32 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
 
     expect(order).toEqual(['abort', 'stop'])
     expect(result).toBe(stopResult)
+  })
+
+  it('PVK-5 kill skips callAbortController for a delegated Steam install but still stops it', async () => {
+    isDelegatedInstallPollingMock.mockReturnValue(true)
+    const stopResult = Symbol('stopped')
+    const gameDouble = makeGameDouble({
+      stop: jest.fn().mockResolvedValue(stopResult)
+    })
+    managerMocks.steam.getGame.mockReturnValue(gameDouble)
+
+    const result = await kill('203160', 'steam')
+
+    expect(callAbortControllerMock).not.toHaveBeenCalled()
+    expect(managerMocks.steam.getGame).toHaveBeenCalledWith('203160')
+    expect(gameDouble.stop).toHaveBeenCalled()
+    expect(result).toBe(stopResult)
+  })
+
+  it('PVK-6 kill still calls callAbortController for other runners and never consults the predicate', async () => {
+    isDelegatedInstallPollingMock.mockReturnValue(true)
+    managerMocks.legendary.getGame.mockReturnValue(makeGameDouble({}))
+
+    await kill('x', 'legendary')
+
+    expect(callAbortControllerMock).toHaveBeenCalledWith('x')
+    expect(isDelegatedInstallPollingMock).not.toHaveBeenCalled()
   })
 
   // ── repair ──────────────────────────────────────────────────────────

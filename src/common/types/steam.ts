@@ -326,3 +326,14 @@ export type BridgeInviteResult =
 export type BridgeListFriendsResult =
   | { ok: true; friends: BridgeFriend[] }
   | { ok: false; reason: 'no-helper' | 'error' }
+
+/**
+ * quick 261106-pvk: Steam never picked up a delegated request. The renderer
+ * maps `kind` to catalogue strings and shows each notice once per `seq`.
+ */
+export interface SteamRequestNoticePayload {
+  appId: string
+  title: string
+  kind: 'install-not-started' | 'uninstall-not-started'
+  seq: number
+}

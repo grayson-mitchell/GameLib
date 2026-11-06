@@ -21,6 +21,7 @@ import SteamLibraryManager, {
   startInstallPolling,
   stopInstallPolling,
   cancelDelegatedInstall,
+  isDelegatedInstallPolling,
   pollInstallOnce,
   markBridgeInstallFinalized,
   clearBridgeInstallFinalized,
@@ -6988,7 +6989,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
         channel === 'gameStatusUpdate' && payload?.status === 'done'
     )
 
-  it('D1: a delegated poll survives the 60 s grace window with no manifest, and stops with a sign-in notice after STEAM_REQUEST_NO_ACTIVITY_TICKS', async () => {
+  it('D1: a delegated poll survives the 60 s grace window with no manifest, and stops with an in-app notice (no notify()) after STEAM_REQUEST_NO_ACTIVITY_TICKS', async () => {
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     ;(existsSync as jest.Mock).mockReturnValue(false)
     isNativeInstallInFlightSpy = jest
@@ -7017,11 +7018,23 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     expect(notify).not.toHaveBeenCalled()
     await jest.advanceTimersByTimeAsync(interval * 2)
     expect(doneCalls()).toHaveLength(1)
-    expect(notify).toHaveBeenCalledTimes(1)
-    expect(notify).toHaveBeenCalledWith({
-      title: expect.any(String),
-      body: expect.stringContaining('signed in')
-    })
+    expect(notify).not.toHaveBeenCalled()
+    // PVK-1: the give-up goes to the in-app stack, once.
+    expect(
+      (sendFrontendMessage as jest.Mock).mock.calls.filter(
+        ([c]) => c === 'steamRequestNotice'
+      )
+    ).toEqual([
+      [
+        'steamRequestNotice',
+        {
+          appId: '730',
+          title: expect.any(String),
+          kind: 'install-not-started',
+          seq: expect.any(Number)
+        }
+      ]
+    ])
     expect(
       g9oLogger().logWarning.mock.calls.some(
         ([m]: [unknown]) =>
@@ -7173,7 +7186,12 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     expect(doneCalls()).toHaveLength(0)
     await jest.advanceTimersByTimeAsync(interval * 2)
     expect(doneCalls()).toHaveLength(1)
-    expect(notify).toHaveBeenCalledTimes(1)
+    // quick 261106-pvk: the give-up is an in-app notice now, not notify().
+    expect(notify).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamRequestNotice',
+      expect.objectContaining({ appId: '730', kind: 'install-not-started' })
+    )
   })
 
   it('VFQ-4: cancelDelegatedInstall stops a delegated poll with one done; false otherwise', async () => {
@@ -7207,6 +7225,44 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     await jest.advanceTimersByTimeAsync(interval * 5)
     expect((existsSync as jest.Mock).mock.calls.length).toBe(callsAfter)
     expect(cancelDelegatedInstall('730')).toBe(false)
+  })
+
+  it('PVK-3: two install give-ups in one session carry strictly increasing seq', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(false)
+    jest.mocked(sendFrontendMessage).mockClear()
+    const interval = 10
+    for (let i = 0; i < 2; i++) {
+      startInstallPolling('730', {
+        intervalMs: interval,
+        delegatedToSteamClient: true
+      })
+      await jest.advanceTimersByTimeAsync(interval * 43)
+    }
+    const seqs = (sendFrontendMessage as jest.Mock).mock.calls
+      .filter(([c]) => c === 'steamRequestNotice')
+      .map(([, p]) => p.seq as number)
+    expect(seqs).toHaveLength(2)
+    expect(seqs[1]).toBeGreaterThan(seqs[0])
+  })
+
+  it('PVK-4: isDelegatedInstallPolling is true only for a live delegated poll', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(true)
+    expect(isDelegatedInstallPolling('730')).toBe(false) // no poll
+    startInstallPolling('730', { intervalMs: 10 }) // bare poll
+    expect(isDelegatedInstallPolling('730')).toBe(false)
+    stopInstallPolling('730')
+    startInstallPolling('730', { intervalMs: 10, delegatedToSteamClient: true })
+    expect(isDelegatedInstallPolling('730')).toBe(true)
+    cancelDelegatedInstall('730')
+    expect(isDelegatedInstallPolling('730')).toBe(false)
   })
 
   // ── debug/steam-dl-missing-in-downloads ────────────────────────────────────
@@ -7897,21 +7953,30 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     startUninstallPolling('730', interval)
     g9oLogger().logWarning.mockClear()
     // The old 60 s grace is gone: nothing at tick 21 or 39.
+    const requestNotices = () =>
+      (sendFrontendMessage as jest.Mock).mock.calls.filter(
+        ([c]) => c === 'steamRequestNotice'
+      )
     await jest.advanceTimersByTimeAsync(interval * 21)
-    expect(notify).not.toHaveBeenCalled()
+    expect(requestNotices()).toHaveLength(0)
     await jest.advanceTimersByTimeAsync(interval * 18)
-    expect(notify).not.toHaveBeenCalled()
+    expect(requestNotices()).toHaveLength(0)
     // STEAM_REQUEST_NO_ACTIVITY_TICKS (40) + 1 ticks so the branch fires
     await jest.advanceTimersByTimeAsync(interval * 2)
 
-    expect(notify).toHaveBeenCalledTimes(1)
-    expect(notify).toHaveBeenCalledWith({
-      title: 'CS:GO',
-      body: expect.stringContaining('uninstall')
-    })
-    expect((notify as jest.Mock).mock.calls[0][0].body as string).toContain(
-      'signed in'
-    )
+    // PVK-2: in-app notice, no notify()
+    expect(notify).not.toHaveBeenCalled()
+    expect(requestNotices()).toEqual([
+      [
+        'steamRequestNotice',
+        {
+          appId: '730',
+          title: 'CS:GO',
+          kind: 'uninstall-not-started',
+          seq: expect.any(Number)
+        }
+      ]
+    ])
     expect(
       g9oLogger().logWarning.mock.calls.some(
         ([m]: [unknown]) =>

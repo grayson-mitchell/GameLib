@@ -53,6 +53,7 @@ import type { GameOverride, SelectiveDownload } from 'common/types/legendary'
 
 import { libraryManagerMap } from '../storeManagers'
 import { attachOverrides } from '../game_overrides'
+import { isDelegatedInstallPolling } from '../storeManagers/steam/library'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
 import { isOnline } from '../online_monitor'
 import { sendGameStatusUpdate } from '../utils'
@@ -148,7 +149,12 @@ export async function getInstallInfo(
 }
 
 export async function kill(appName: string, runner: Runner): Promise<void> {
-  callAbortController(appName)
+  // A Steam-owned (delegated) install has no abort controller by design;
+  // SteamGame.stop() -> cancelDelegatedInstall ends it, and a lookup here
+  // would log a false "Aborting not possible" ERROR (quick 261106-pvk).
+  if (!(runner === 'steam' && isDelegatedInstallPolling(appName))) {
+    callAbortController(appName)
+  }
   return libraryManagerMap[runner].getGame(appName).stop()
 }
 
