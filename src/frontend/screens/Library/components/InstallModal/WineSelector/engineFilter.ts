@@ -1,3 +1,4 @@
+import { hasCapability } from 'common/storeCapabilities'
 import { Runner, WineInstallation } from 'common/types'
 
 // Phase 34.13-03 (D-16, D-05): the four pure decision functions behind
@@ -28,7 +29,7 @@ export function resolveCrossoverOnly(
   runner: Runner | undefined,
   crossoverOnly: boolean | undefined
 ): boolean {
-  return crossoverOnly ?? runner === 'steam'
+  return crossoverOnly ?? hasCapability(runner, 'usesBottleRuntime')
 }
 
 /**

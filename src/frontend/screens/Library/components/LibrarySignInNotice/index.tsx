@@ -60,19 +60,16 @@ import { resolveLibrarySignInRows } from '../../librarySignInRows'
 import './index.scss'
 
 // The same five assets the Login screen's store tiles use.
+const STORE_LOGOS: Record<SignInStore, () => React.JSX.Element> = {
+  legendary: () => <EpicLogo />,
+  gog: () => <GOGLogo />,
+  nile: () => <AmazonLogo />,
+  humble: () => <HumbleLogo />,
+  steam: () => <SteamLogo />
+}
+
 function StoreLogo({ store }: { store: SignInStore }) {
-  switch (store) {
-    case 'legendary':
-      return <EpicLogo />
-    case 'gog':
-      return <GOGLogo />
-    case 'nile':
-      return <AmazonLogo />
-    case 'humble':
-      return <HumbleLogo />
-    case 'steam':
-      return <SteamLogo />
-  }
+  return STORE_LOGOS[store]()
 }
 
 export default function LibrarySignInNotice() {

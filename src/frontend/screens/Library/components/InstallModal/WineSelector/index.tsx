@@ -1,3 +1,4 @@
+import { hasCapability } from 'common/storeCapabilities'
 import {
   SelectField,
   ToggleSwitch,
@@ -195,7 +196,7 @@ export default function WineSelector({
   const isKnownNotToWork =
     !runsForMeOn &&
     platform === 'darwin' &&
-    runner === 'steam' &&
+    hasCapability(runner, 'usesBottleRuntime') &&
     showBottle &&
     typeof crossoverRating === 'number' &&
     crossoverRating <= 2

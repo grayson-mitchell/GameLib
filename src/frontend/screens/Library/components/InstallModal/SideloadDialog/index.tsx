@@ -1,3 +1,4 @@
+import { isStore } from 'common/storeCapabilities'
 import './index.scss'
 import short from 'short-uuid'
 import { faSpinner, faSearch } from '@fortawesome/free-solid-svg-icons'
@@ -116,7 +117,7 @@ export default function SideloadDialog({
 
     if (appName) {
       void getGameInfo(appName, 'sideload').then((info) => {
-        if (!info || info.runner !== 'sideload') {
+        if (!info || !isStore(info, 'sideload')) {
           return
         }
         setGameInfo(info)

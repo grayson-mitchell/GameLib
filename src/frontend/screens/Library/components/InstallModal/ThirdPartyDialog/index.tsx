@@ -1,3 +1,4 @@
+import { isStore } from 'common/storeCapabilities'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   GameInfo,
@@ -190,7 +191,7 @@ export default function ThirdPartyDialog({
         <button
           className={`button is-secondary`}
           onClick={handleInstall}
-          disabled={runner !== 'legendary'}
+          disabled={!isStore(runner, 'legendary')}
         >
           {t('button.install')}
         </button>

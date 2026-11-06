@@ -1,3 +1,4 @@
+import { hasCapability, isStore } from 'common/storeCapabilities'
 import {
   faDownload,
   faHardDrive,
@@ -492,7 +493,7 @@ export default function DownloadDialog({
 
   useEffect(() => {
     const getGameSdl = async () => {
-      if (runner === 'legendary') {
+      if (isStore(runner, 'legendary')) {
         const { sdl_config } = await window.api.getGameOverride()
         if (sdl_config && sdl_config[appName]) {
           const sdl = await window.api.getGameSdl(appName)
@@ -636,7 +637,9 @@ export default function DownloadDialog({
     installPath && !!diskSize && !gettingInstallInfo && validFlatpakPath
 
   const showDlcSelector =
-    ['legendary', 'gog'].includes(runner) && DLCList && DLCList?.length > 0
+    hasCapability(runner, 'supportsDlcSelection') &&
+    DLCList &&
+    DLCList?.length > 0
 
   return (
     <>

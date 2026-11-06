@@ -33,7 +33,8 @@ const {
 // 2026-11-07 62-17: 106 -> 84, WebView + Settings
 // 2026-11-07 62-18: 84 -> 41, screens/Game
 // 2026-11-07 62-19: 41 -> 26, Library filter/sort/count, GameCard, GamesList
-const FRONTEND_CEILING = 26
+// 2026-11-07 62-19: 26 -> 14, Library InstallModal + LibrarySignInNotice
+const FRONTEND_CEILING = 14
 // 2026-11-06 62-02: BACKEND_CEILING 65 measured with the ratified selector
 // 2026-11-07 62-14: 65 -> 51, launcher.ts
 // 2026-11-07 62-15: 51 -> 31, downloadmanager + gamedetails/dispatch

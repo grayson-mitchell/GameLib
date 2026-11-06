@@ -1,3 +1,4 @@
+import { isHandOffInstall } from 'common/storeCapabilities'
 import { useEffect, useRef, useState } from 'react'
 import type { Runner } from 'common/types'
 import type { SteamBottleEligibilityVerdict } from 'common/types/steam'
@@ -79,7 +80,7 @@ export function shouldProbeEligibility({
    * so a new caller cannot silently re-open the gap. */
   action: 'install' | 'import'
 }): boolean {
-  if (runner !== 'steam' || action !== 'install') {
+  if (!isHandOffInstall(runner, action)) {
     return false
   }
   // Written as an explicit win32/linux SKIP, never as

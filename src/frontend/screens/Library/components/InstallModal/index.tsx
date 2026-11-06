@@ -1,3 +1,8 @@
+import {
+  hasCapability,
+  isHandOffInstall,
+  isStore
+} from 'common/storeCapabilities'
 import { faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
 import { IconDefinition, faGlobe } from '@fortawesome/free-solid-svg-icons'
 
@@ -183,14 +188,14 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   const isMac = platform === 'darwin'
   const isWin = platform === 'win32'
   const isLinux = platform === 'linux'
-  const isSideload = runner === 'sideload'
+  const isSideload = !hasCapability(runner, 'hasStoreCatalog')
   // D-01 (34.13-12): mirrors 34.13-08's own dispatch guard
   // (`runner === 'steam' && action === 'install' && gameInfo`) in
   // `InstallGameModal.ts`'s `installSteamGame` short-circuit, so a Steam
   // IMPORT still falls through to `ImportDialog` unchanged. `gameInfo` is
   // required because both the verdict and `SteamDialog` need it.
   const isSteamManagedApp =
-    runner === 'steam' && action === 'install' && Boolean(gameInfo)
+    isHandOffInstall(runner, action) && Boolean(gameInfo)
 
   // D-17 (34.13-12): the depot signal this file owns outright --
   // `gameInfo` is already in scope here, so a second copy anywhere else
@@ -622,7 +627,9 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
     if (platformRowMode === 'absent') {
       return null
     }
-    const disabledPlatformSelection = Boolean(runner === 'sideload' && appName)
+    const disabledPlatformSelection = Boolean(
+      isStore(runner, 'sideload') && appName
+    )
     return (
       <SelectField
         label={`${t('game.platform', 'Select Platform Version to Install')}:`}

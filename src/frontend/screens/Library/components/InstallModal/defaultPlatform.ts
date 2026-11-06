@@ -22,6 +22,7 @@
  * `legendary install Iris --platform Windows`.
  */
 
+import { hasCapability } from 'common/storeCapabilities'
 import type { InstallPlatform, Runner } from 'common/types'
 
 interface DefaultPlatformInput {
@@ -54,7 +55,9 @@ export function resolveMacNativeOffered({
   macDepotOffered,
   isMacNative
 }: Omit<DefaultPlatformInput, 'isMac'>): boolean {
-  return runner === 'steam' ? macDepotOffered : isMacNative
+  return hasCapability(runner, 'usesBottleRuntime')
+    ? macDepotOffered
+    : isMacNative
 }
 
 /**
