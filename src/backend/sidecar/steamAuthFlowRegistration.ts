@@ -148,10 +148,8 @@ import {
   startGuidedClientInstall,
   ensureSteamClientReady
 } from '../storeManagers/steam/clientSetup'
-import {
-  getSteamInstallSize,
-  getBridgeRouteVerdict
-} from '../storeManagers/steam/games'
+import { getBridgeRouteVerdict } from '../storeManagers/steam/games'
+import { getSteamInstallSize } from '../storeManagers/steam/gameRequirements'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../storeManagers/steam/constants'
 import {
   getSteamBottleEligibilityVerdict,

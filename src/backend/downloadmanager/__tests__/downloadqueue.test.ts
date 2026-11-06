@@ -143,7 +143,7 @@ jest.mock('backend/storeManagers/gog/redist', () => ({
   createRedistDMQueueElement: jest.fn()
 }))
 
-jest.mock('backend/storeManagers/steam/games', () => ({
+jest.mock('backend/storeManagers/steam/gameRequirements', () => ({
   getSteamInstallSize: jest.fn().mockResolvedValue('20 GB')
 }))
 

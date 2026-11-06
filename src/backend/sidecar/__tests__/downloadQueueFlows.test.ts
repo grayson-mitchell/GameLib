@@ -33,7 +33,7 @@
  *     these directly; a real `SteamGame`/`SteamLibraryManager` construction
  *     would otherwise pull in the real depot/PICS/filesystem machinery this
  *     suite must not exercise.
- *   - `storeManagers/steam/games`'s `getSteamInstallSize` — `addToQueue()`'s
+ *   - `storeManagers/steam/gameRequirements`'s `getSteamInstallSize` — `addToQueue()`'s
  *     Steam-size-fetch branch hits the real Steam store appdetails API; not
  *     exercised by this plan's channels directly, but mocked defensively per
  *     32-PATTERNS.md L206 (the module is imported into `downloadqueue.ts`'s
@@ -150,13 +150,13 @@ jest.mock('backend/storeManagers', () => ({
   }
 }))
 
-// ── storeManagers/steam/games mock — override ONLY getSteamInstallSize (the
+// ── storeManagers/steam/gameRequirements mock — override ONLY getSteamInstallSize (the
 // real Steam store appdetails network call), preserve the real default
 // `SteamGame` export for installFlowRegistration.ts's own transitively-loaded
 // import (32-PATTERNS.md L206) ───────────────────────────────────────────────
-jest.mock('../../storeManagers/steam/games', () => ({
+jest.mock('../../storeManagers/steam/gameRequirements', () => ({
   __esModule: true,
-  ...jest.requireActual('../../storeManagers/steam/games'),
+  ...jest.requireActual('../../storeManagers/steam/gameRequirements'),
   getSteamInstallSize: jest.fn()
 }))
 

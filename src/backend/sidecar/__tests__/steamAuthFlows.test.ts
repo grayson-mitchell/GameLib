@@ -111,6 +111,7 @@ jest.mock('../../storeManagers/steam/user')
 jest.mock('../../storeManagers/steam/bottle')
 jest.mock('../../storeManagers/steam/clientSetup')
 jest.mock('../../storeManagers/steam/games')
+jest.mock('../../storeManagers/steam/gameRequirements')
 
 // ── Phase 34.13 Plan 07 addition — the shared install-form seam mocked at
 // the module boundary (its own logic is covered by
@@ -139,7 +140,7 @@ import {
   startGuidedClientInstall,
   ensureSteamClientReady
 } from '../../storeManagers/steam/clientSetup'
-import { getSteamInstallSize } from '../../storeManagers/steam/games'
+import { getSteamInstallSize } from '../../storeManagers/steam/gameRequirements'
 import {
   getSteamBottleEligibilityVerdict,
   persistInstallFormWineVersion

@@ -19,10 +19,6 @@ import * as shortcutsModule from '../../../shortcuts/shortcuts/shortcuts'
 import { steamMetadataStore, steamLibraryStore } from '../electronStores'
 import { TITLE_AUTHORITATIVE_KEYS } from '../titleSettings'
 import SteamGame, {
-  parseSteamStorageRequirement,
-  getSteamInstallSize,
-  parseSteamMacMinOSVersion,
-  macArchFromMinOS,
   getBridgeRouteVerdict,
   buildDrmLaunchEnvironment,
   drmBottleWinPath,
@@ -37,6 +33,12 @@ import SteamGame, {
   MAC_STEAM_CLIENT_SUBPATH,
   buildSteamProtocolUrl
 } from '../games'
+import {
+  parseSteamStorageRequirement,
+  getSteamInstallSize,
+  parseSteamMacMinOSVersion,
+  macArchFromMinOS
+} from '../gameRequirements'
 import {
   markBridgeFailedThisSession,
   clearBridgeFailedThisSession,
