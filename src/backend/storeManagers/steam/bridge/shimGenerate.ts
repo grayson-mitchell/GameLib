@@ -72,13 +72,10 @@
  */
 
 import {
-  closeSync,
   copyFileSync,
   existsSync,
   lstatSync,
-  openSync,
   readFileSync,
-  readSync,
   statSync
 } from 'node:fs'
 import { createHash } from 'node:crypto'
@@ -95,13 +92,10 @@ import {
   sanitizeBottleName
 } from '../bottle'
 import { scanSteamApiImports } from './importScan'
-import {
-  hasSteamStubSection,
-  parsePeSectionNames,
-  PE_SECTION_SCAN_BYTES
-} from './peSections'
 import { runtimeLoadedSteamApiMarker } from './importParse'
-import { detectSteamDrmInPe } from './peSteamDrm'
+import { detectSteamDrmInPe } from './peScan'
+import { runScanner } from 'backend/scanners/rustScan'
+import { steamstubSectionTs } from 'backend/scanners/legacyTsScanners'
 import { containedGameExeReal, detectLaunchDrmWrapper } from './drm/drmScanExe'
 import {
   readInterfaceVersionStrings,
@@ -493,13 +487,18 @@ export async function placeShimForGame(
   // CR-02: drm (CEG) is read from the same exe the resolver chose for
   // drmWrapper, so launch routing and the persisted verdict agree.
   const drmSource = launchWrapper ? launchWrapper.drmExe : fallbackReal
-  const drm = drmSource ? detectExeSteamDrm(appId, drmSource) : undefined
+  const drm = drmSource ? await detectExeSteamDrm(appId, drmSource) : undefined
+  const fallbackWrapper = launchWrapper
+    ? undefined
+    : fallbackReal
+      ? await detectDrmWrapper(fallbackReal)
+      : undefined
   const flagged = withDrmWrapper(
     appId,
     gameExePath,
     result,
     launchWrapper ?? {
-      drmWrapper: fallbackReal ? detectDrmWrapper(fallbackReal) : undefined,
+      drmWrapper: fallbackWrapper,
       drmExe: resolve(gameExePath)
     }
   )
@@ -508,37 +507,39 @@ export async function placeShimForGame(
 
 /**
  * Phase 52 Plan 08 (ROADMAP Scope 4): true SteamStub detection from the PE
- * section table. Reads at most PE_SECTION_SCAN_BYTES, closes the fd in
- * finally, never throws. Callers invoke it only on a real path already
- * confirmed to lie inside the real path of the game folder (dirname of the
- * launch exe). Both callers enforce this: detectLaunchDrmWrapper, and
- * placeShimForGame's no-bottle fallback via containedGameExeReal.
+ * section table. Phase 63: the Rust op reads at most 8192 bytes
+ * (PE_SECTION_SCAN_BYTES); never rejects. Callers pass only a contained real
+ * path already confirmed to lie inside the real path of the game folder
+ * (dirname of the launch exe). Both callers enforce this:
+ * detectLaunchDrmWrapper, and placeShimForGame's no-bottle fallback via
+ * containedGameExeReal.
  */
-export function detectDrmWrapper(
-  exePath: string
-): 'steamstub' | 'none' | undefined {
-  let fd: number | null = null
+export async function detectDrmWrapper(
+  exePath: string,
+  caller = 'placeShimForGame'
+): Promise<'steamstub' | 'none' | undefined> {
   try {
-    fd = openSync(exePath, 'r')
-    const buf = Buffer.alloc(PE_SECTION_SCAN_BYTES)
-    const n = readSync(fd, buf, 0, PE_SECTION_SCAN_BYTES, 0)
-    return hasSteamStubSection(parsePeSectionNames(buf.subarray(0, n)))
-      ? 'steamstub'
-      : 'none'
+    const r = await runScanner(
+      'peSections',
+      'scan_steamstub_section',
+      { exePath },
+      () => steamstubSectionTs({ exePath }),
+      caller
+    )
+    if (r.drmWrapper === null) {
+      logWarning(
+        `detectDrmWrapper: could not read "${exePath}" (${String(r.readError)})`,
+        LogPrefix.Steam
+      )
+      return undefined
+    }
+    return r.drmWrapper
   } catch (error) {
     logWarning(
       `detectDrmWrapper: could not read "${exePath}" (${String(error)})`,
       LogPrefix.Steam
     )
     return undefined
-  } finally {
-    if (fd !== null) {
-      try {
-        closeSync(fd)
-      } catch {
-        // nothing left to release
-      }
-    }
   }
 }
 
@@ -587,63 +588,46 @@ function withDrmWrapper(
 }
 
 /**
- * Quick 261024-br4: fd-based ranged reads of the exe into the pure
- * `peSteamDrm.ts` scanner -- never slurps the exe (T-br4-02), and the fd is
- * always closed. Returns undefined when the PE did not parse or the read
- * failed (logged, treated as not CEG). A SteamStub `.bind` section is
- * logged here. Routing happens at launch: games.ts sends a `.bind` exe with
- * no CEG markers to steamclient-layer DRM mode before any shim placement
- * (Phase 56, D-12).
+ * Quick 261024-br4: path-based SteamStub/CEG scan (Phase 63: the Rust op
+ * does the ranged reads, never slurping the exe, T-br4-02). Returns
+ * undefined when the PE did not parse or the read failed (logged, treated as
+ * not CEG). A SteamStub `.bind` section is logged here. Routing happens at
+ * launch: games.ts sends a `.bind` exe with no CEG markers to
+ * steamclient-layer DRM mode before any shim placement (Phase 56, D-12).
  */
-function detectExeSteamDrm(
+async function detectExeSteamDrm(
   appId: string,
   exePath: string
-): SteamExeDrmSignal | null | undefined {
-  let fd: number | null = null
-  try {
-    fd = openSync(exePath, 'r')
-    const handle = fd
-    const result = detectSteamDrmInPe((offset, length) => {
-      const buf = Buffer.alloc(length)
-      const n = readSync(handle, buf, 0, length, offset)
-      return n < length ? null : new Uint8Array(buf.buffer, buf.byteOffset, n)
-    })
-    if (!result.parsed) {
-      logWarning(
-        `placeShimForGame: Steam DRM detection could not parse the exe as a PE for appId ${appId} -- treating as not CEG`,
-        LogPrefix.Steam
-      )
-      return undefined
-    }
-    if (result.hasBindSection) {
-      logInfo(
-        `placeShimForGame: SteamStub .bind section present in the exe for appId ${appId} (launch routes it to steamclient-layer DRM mode, Phase 56)`,
-        LogPrefix.Steam
-      )
-    }
-    if (result.cegMarkers.length > 0) {
-      logWarning(
-        `placeShimForGame: Steam CEG DRM detected in the exe for appId ${appId} (${result.cegMarkers.join(', ')})`,
-        LogPrefix.Steam
-      )
-      return { kind: 'ceg', markers: result.cegMarkers }
-    }
-    return null
-  } catch (error) {
+): Promise<SteamExeDrmSignal | null | undefined> {
+  const result = await detectSteamDrmInPe(exePath, 'placeShimForGame')
+  if (result.readError !== null) {
     logWarning(
-      `placeShimForGame: Steam DRM detection could not read the exe for appId ${appId} -- treating as not CEG (${String(error)})`,
+      `placeShimForGame: Steam DRM detection could not read the exe for appId ${appId} -- treating as not CEG (${result.readError})`,
       LogPrefix.Steam
     )
     return undefined
-  } finally {
-    if (fd !== null) {
-      try {
-        closeSync(fd)
-      } catch {
-        // nothing left to release
-      }
-    }
   }
+  if (!result.parsed) {
+    logWarning(
+      `placeShimForGame: Steam DRM detection could not parse the exe as a PE for appId ${appId} -- treating as not CEG`,
+      LogPrefix.Steam
+    )
+    return undefined
+  }
+  if (result.hasBindSection) {
+    logInfo(
+      `placeShimForGame: SteamStub .bind section present in the exe for appId ${appId} (launch routes it to steamclient-layer DRM mode, Phase 56)`,
+      LogPrefix.Steam
+    )
+  }
+  if (result.cegMarkers.length > 0) {
+    logWarning(
+      `placeShimForGame: Steam CEG DRM detected in the exe for appId ${appId} (${result.cegMarkers.join(', ')})`,
+      LogPrefix.Steam
+    )
+    return { kind: 'ceg', markers: result.cegMarkers }
+  }
+  return null
 }
 
 /**

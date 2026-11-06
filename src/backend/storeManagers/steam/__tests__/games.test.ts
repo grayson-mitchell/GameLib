@@ -483,18 +483,12 @@ jest.mock('../bridge/drm/drmScanExe', () => {
   const override: { fn?: (exe: string) => unknown } = {}
   return {
     __detectLaunchOverride: override,
-    detectLaunchDrmWrapper: (_bottle: string, exe: string) =>
-      Promise.resolve(
-        override.fn
-          ? override.fn(exe)
-          : {
-              // eslint-disable-next-line @typescript-eslint/no-require-imports
-              drmWrapper: require('../bridge/shimGenerate').detectDrmWrapper(
-                exe
-              ),
-              drmExe: exe
-            }
-      )
+    detectLaunchDrmWrapper: async (_bottle: string, exe: string) => {
+      if (override.fn) return override.fn(exe)
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const shim = require('../bridge/shimGenerate')
+      return { drmWrapper: await shim.detectDrmWrapper(exe), drmExe: exe }
+    }
   }
 })
 
@@ -12910,7 +12904,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         callOrder.push('shim')
         return Promise.resolve({ status: 'placed', shimPath: exePath })
       })
-      ;(detectDrmWrapper as jest.Mock).mockImplementation(() => {
+      ;(detectDrmWrapper as jest.Mock).mockImplementation(async () => {
         callOrder.push('detect')
         return 'steamstub'
       })
@@ -13123,7 +13117,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         'wrapper %s continues on the TCP path unchanged',
         async (wrapper) => {
           const id = freshId()
-          ;(detectDrmWrapper as jest.Mock).mockReturnValue(wrapper)
+          ;(detectDrmWrapper as jest.Mock).mockResolvedValue(wrapper)
           expect(await new SteamGame(id).launch({} as never)).toBe(true)
           expect(__drmLaunchSetupMock.mock.calls[0][0]).toMatchObject({
             drmWrapper: wrapper,
@@ -13142,7 +13136,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
 
       it('not-applicable after a registered runner re-reads the bottle settings', async () => {
         const id = freshId()
-        ;(detectDrmWrapper as jest.Mock).mockReturnValue('none')
+        ;(detectDrmWrapper as jest.Mock).mockResolvedValue('none')
         ;(getDrmBridgeRunner as jest.Mock).mockReturnValue({ kind: 'drm' })
         let calls = 0
         ;(getBridgeBottleSettings as jest.Mock).mockImplementation(() => {
@@ -14019,7 +14013,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       const registered = { current: false }
       beforeEach(() => {
         registered.current = false
-        ;(detectDrmWrapper as jest.Mock).mockReturnValue('none')
+        ;(detectDrmWrapper as jest.Mock).mockResolvedValue('none')
         __resolveOverlayEnabledMock.mockReturnValue({
           enabled: true,
           source: 'default'
@@ -14764,7 +14758,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           write: jest.fn(),
           close: jest.fn()
         }
-        ;(detectDrmWrapper as jest.Mock).mockReturnValue('none')
+        ;(detectDrmWrapper as jest.Mock).mockResolvedValue('none')
         __resolveOverlayEnabledMock.mockReturnValue({
           enabled: true,
           source: 'default'
@@ -16167,7 +16161,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     it.each(['expired', 'missing', 'broken'])(
       'DRM launch with %s pre-flight: CrossOver-required dialog, no engine decision, no drmLaunchSetup',
       async (kind) => {
-        ;(detectDrmWrapper as jest.Mock).mockReturnValue('steamstub')
+        ;(detectDrmWrapper as jest.Mock).mockResolvedValue('steamstub')
         ;(preflightCrossover as jest.Mock).mockResolvedValue({
           kind,
           binDir: '/cx/bin',

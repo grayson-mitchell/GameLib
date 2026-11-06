@@ -58,6 +58,8 @@ import {
   placeShimForGame
 } from '../shimGenerate'
 import * as drmScanExe from '../drm/drmScanExe'
+import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+import { runLegacyOp } from 'backend/scanners/legacyTsScanners'
 import { scanSteamApiImports } from '../importScan'
 import { SHIM64_EXPORTED_SYMBOLS } from '../shimCoverage'
 import * as bridgeScan from '../bridgeScan'
@@ -83,6 +85,14 @@ jest.mock('backend/constants/paths', () => ({
 
 jest.mock('../importScan', () => ({
   scanSteamApiImports: jest.fn()
+}))
+
+// Phase 63 plan 07: the rustInvoke leaf. Caller logic is tested against this
+// boundary; by default it answers like the Rust op would, via the TS oracle on
+// the fixture files (scanner semantics themselves live in the Rust tests, the
+// goldens and legacyTsScanners.test.ts). Tests override it with canned results.
+jest.mock('backend/sidecar/sidecarRpc', () => ({
+  requestRustInvoke: jest.fn()
 }))
 
 jest.mock('../../bottle', () => ({
@@ -217,6 +227,29 @@ describe('isGameLibShimBytes', () => {
 })
 
 describe('shimGenerate', () => {
+  const SCANNER_ENVS = [
+    'GAMELIB_SCANNER_PE_SECTIONS',
+    'GAMELIB_SCANNER_PE_STEAM_DRM',
+    'GAMELIB_SCANNER_DRM_SCAN_EXE'
+  ]
+  const savedEnv: Record<string, string | undefined> = {}
+  beforeEach(() => {
+    for (const k of SCANNER_ENVS) {
+      savedEnv[k] = process.env[k]
+      process.env[k] = 'rust'
+    }
+    jest
+      .mocked(requestRustInvoke)
+      .mockImplementation(((channel: string, [args]: [never]) =>
+        runLegacyOp(channel as never, args)) as never)
+  })
+  afterEach(() => {
+    for (const k of SCANNER_ENVS) {
+      if (savedEnv[k] === undefined) delete process.env[k]
+      else process.env[k] = savedEnv[k]
+    }
+  })
+
   let root: string
   let bottleDir: string
   let gameDir: string
@@ -2269,12 +2302,64 @@ describe('shimGenerate', () => {
         symbols: ['SteamAPI_Init']
       })
 
-    it('detectDrmWrapper flags .bind, ignores others and unreadable files', () => {
-      writeFileSync(gameExePath, makePe('.bind'))
-      expect(detectDrmWrapper(gameExePath)).toBe('steamstub')
-      writeFileSync(gameExePath, makePe('.text'))
-      expect(detectDrmWrapper(gameExePath)).toBe('none')
-      expect(detectDrmWrapper(join(root, 'missing.exe'))).toBeUndefined()
+    it('detectDrmWrapper maps the scan_steamstub_section result', async () => {
+      const rpc = jest.mocked(requestRustInvoke)
+      rpc.mockResolvedValueOnce({ drmWrapper: 'steamstub', readError: null })
+      await expect(detectDrmWrapper(gameExePath)).resolves.toBe('steamstub')
+      expect(rpc).toHaveBeenCalledWith('scan_steamstub_section', [
+        { exePath: gameExePath }
+      ])
+      rpc.mockResolvedValueOnce({ drmWrapper: 'none', readError: null })
+      await expect(detectDrmWrapper(gameExePath)).resolves.toBe('none')
+    })
+
+    it('detectDrmWrapper logs and resolves undefined on a readError', async () => {
+      jest
+        .mocked(requestRustInvoke)
+        .mockResolvedValueOnce({ drmWrapper: null, readError: 'ENOENT boom' })
+      await expect(detectDrmWrapper('/x/missing.exe')).resolves.toBeUndefined()
+      expect(
+        (
+          jest.requireMock('backend/logger').logWarning as jest.Mock
+        ).mock.calls.some(
+          (c) =>
+            c[0] ===
+            'detectDrmWrapper: could not read "/x/missing.exe" (ENOENT boom)'
+        )
+      ).toBe(true)
+    })
+
+    it('detectDrmWrapper fails closed when the transport rejects', async () => {
+      jest
+        .mocked(requestRustInvoke)
+        .mockRejectedValueOnce(new Error('sidecar down'))
+      await expect(detectDrmWrapper('/x/a.exe')).resolves.toBeUndefined()
+      expect(
+        (
+          jest.requireMock('backend/logger').logWarning as jest.Mock
+        ).mock.calls.some(
+          (c) =>
+            String(c[0]).startsWith(
+              'detectDrmWrapper: could not read "/x/a.exe"'
+            ) && String(c[0]).includes('sidecar down')
+        )
+      ).toBe(true)
+    })
+
+    it('placeShimForGame drops the stamp and the CEG signal when every scan rejects', async () => {
+      scanOk()
+      jest
+        .mocked(requestRustInvoke)
+        .mockImplementation(((channel: string) =>
+          channel === 'scan_contained_real'
+            ? Promise.resolve({ real: gameExePath, reason: null })
+            : Promise.reject(new Error('sidecar down'))) as never)
+      const res = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+      expect(res.status).toBe('placed')
+      expect('drmWrapper' in res && res.drmWrapper).toBeFalsy()
+      expect(res.drm).toBeUndefined()
     })
 
     it('flags result and verdict for a .bind exe, then already-placed', async () => {
@@ -2347,8 +2432,10 @@ describe('shimGenerate', () => {
       expect('drmWrapper' in again && again.drmWrapper).toBe('none')
     })
 
-    it('omits drmWrapper when the exe cannot be read', () => {
-      expect(detectDrmWrapper(join(root, 'missing.exe'))).toBeUndefined()
+    it('omits drmWrapper when the exe cannot be read', async () => {
+      await expect(
+        detectDrmWrapper(join(root, 'missing.exe'))
+      ).resolves.toBeUndefined()
     })
 
     it('reports exeArch from the PE machine type', async () => {
