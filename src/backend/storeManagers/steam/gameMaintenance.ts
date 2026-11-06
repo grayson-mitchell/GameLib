@@ -1,4 +1,10 @@
 // Maintenance cluster (moveInstall, repair, syncSaves) lifted out of SteamGame (62-08, mechanical this->steamGame).
+// Public SteamGame entry points keep a delegating stub on the class; internal
+// helpers are called directly by sibling lifted modules (this one may import
+// gameEligibility and gameInstall), importing forward only
+// (gameEligibility/gameLaunchOverlay -> gameInstall -> gameLaunch ->
+// gameBridgeLaunch). A call a test spies on stays a `steamGame.X()` call
+// (quick-261107-an2).
 import { existsSync } from 'graceful-fs'
 import { basename, relative, resolve } from 'node:path'
 import { ExecResult } from 'common/types'

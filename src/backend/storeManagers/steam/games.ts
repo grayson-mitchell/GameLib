@@ -86,14 +86,7 @@ import {
   launchDrmModeGame
 } from './gameLaunch'
 import { moveInstall, repair, syncSaves } from './gameMaintenance'
-import {
-  uninstall,
-  uninstallBridgeGame,
-  uninstallNativeInGameLib,
-  uninstallUnadoptedMacNativeDirectly,
-  removeNativeInstallDirectly,
-  uninstallBottleGameDirectly
-} from './gameUninstall'
+import { uninstall, uninstallBridgeGame } from './gameUninstall'
 
 const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
 
@@ -271,6 +264,10 @@ export default class SteamGame implements Game {
    * On success: caches metadata in steamMetadataStore (D-05) and pushes the
    * enriched GameInfo to the frontend via sendFrontendMessage.
    * On failure: logs a warning and returns silently (no throw).
+   *
+   * @internal Public only so lifted modules reach it via
+   * steamGame.fetchMetadataIfNeeded() (test spy: games.test.ts:1062); do not
+   * call from outside steam/.
    */
   async fetchMetadataIfNeeded(current: GameInfo): Promise<void> {
     // Guard: if a fetch is already in-flight for this appId, return immediately
@@ -636,6 +633,10 @@ export default class SteamGame implements Game {
    *
    * Delegates to installDepotDownload() using the resolved native library
    * target + host os (unchanged behavior/call signature from Plan 07).
+   *
+   * @internal Public only so lifted modules reach it via
+   * steamGame.installNative() (test spy: games.test.ts:8003); do not call from
+   * outside steam/.
    */
   installNative(args: InstallArgs): Promise<InstallResult> {
     return installNative(this, args)
@@ -652,6 +653,10 @@ export default class SteamGame implements Game {
    * poller (startInstallPolling(appId,{source:'bottle'}), Plan 08) is reused
    * unchanged so the bottled Windows Steam client's own verify pass
    * (StateFlags 1026 -> 4) is reflected in the UI.
+   *
+   * @internal Public only so lifted modules reach it via
+   * steamGame.installBottleNative() (test spies: games.test.ts:5234, 7999,
+   * 9004); do not call from outside steam/.
    */
   installBottleNative(args: InstallArgs): Promise<InstallResult> {
     return installBottleNative(this, args)
@@ -705,12 +710,22 @@ export default class SteamGame implements Game {
    * (finding #3, markBridgeFailedThisSession above) so a later D-05
    * fallback re-invocation of install() reaches the existing bottled path
    * instead of looping back into the same failing bridge (T-24-17).
+   *
+   * @internal Public only so lifted modules reach it via
+   * steamGame.installBridgeGame() (test spy: games.test.ts:7995); do not call
+   * from outside steam/.
    */
   installBridgeGame(args: InstallArgs): Promise<InstallResult> {
     return installBridgeGame(this, args)
   }
 
-  /** engineSwitch's pin source: downloads with the same engine-download statuses as a launch. */
+  /**
+   * engineSwitch's pin source: downloads with the same engine-download statuses as a launch.
+   *
+   * @internal Public only so lifted modules reach it via
+   * steamGame.restorePinEngine() (class-bound callback handed to engineSwitch
+   * by gameInstall/gameLaunch); do not call from outside steam/.
+   */
   restorePinEngine = async (
     pin: EnginePin
   ): Promise<NonCrossoverEngine | null> => {
@@ -845,6 +860,10 @@ export default class SteamGame implements Game {
    * Quick 261029-e2t: the install-time half of DRM mode. Resolves the mode the
    * same way launchBridgeGame does (UE-aware `.bind` detection, CEG markers
    * from the `.bind` exe) and prefetches only when it is steamclient-layer.
+   *
+   * @internal Public only so lifted modules reach it via
+   * steamGame.prefetchBridgeDrmDownloads() (gameInstall -> gameLaunch would be
+   * an import cycle); do not call from outside steam/.
    */
   prefetchBridgeDrmDownloads(
     exePath: string,
@@ -858,6 +877,10 @@ export default class SteamGame implements Game {
    * `steam.exe <game exe>` under the clone runner. The Phase 52 forwarder is
    * never reached in this mode. Every failure is a D-13 notice with no
    * session mark.
+   *
+   * @internal Public only so lifted modules reach it via
+   * steamGame.launchDrmModeGame() (test spy: games.test.ts:13580); do not call
+   * from outside steam/.
    */
   launchDrmModeGame(
     exePath: string,
@@ -912,11 +935,20 @@ export default class SteamGame implements Game {
    * `steamBridgeSetupRequired` itself (defensive — never assumes the
    * signal was already fired upstream) before returning `false` — never
    * optimistically flips any running state.
+   *
+   * @internal Public only so lifted modules reach it via
+   * steamGame.launchBridgeGame() (test spy: games.test.ts:8734); do not call
+   * from outside steam/.
    */
   launchBridgeGame(): Promise<boolean> {
     return launchBridgeGame(this)
   }
 
+  /**
+   * @internal Public only so lifted modules reach it via
+   * steamGame.launchBridgeGameBody() (test spies: games.test.ts:15945, 16049);
+   * do not call from outside steam/.
+   */
   launchBridgeGameBody(): Promise<boolean> {
     return launchBridgeGameBody(this)
   }
@@ -928,6 +960,10 @@ export default class SteamGame implements Game {
    * exact same wine-invocation and teardown-wiring code — duplicating this
    * would risk the two paths drifting (e.g. one forgetting the monitor's
    * `onStopped` -> `stopBridgeHelper` wiring).
+   *
+   * @internal Public only so lifted modules reach it via
+   * steamGame.fireBridgeWineLaunch() (gameLaunch -> gameBridgeLaunch would be
+   * an import cycle); do not call from outside steam/.
    */
   fireBridgeWineLaunch(
     exePath: string,
@@ -1053,141 +1089,13 @@ export default class SteamGame implements Game {
    * 261016-wsq, Arm 2 (uninstalling Avernum 5 / 206040 from the legacy
    * bottle). The per-game branch above gets the same result by
    * construction, because it removes the whole bottle.
+   *
+   * @internal Public only so lifted modules reach it via
+   * steamGame.uninstallBridgeGame() (test spy: games.test.ts:8763); do not
+   * call from outside steam/.
    */
   uninstallBridgeGame(): Promise<ExecResult> {
     return uninstallBridgeGame(this)
-  }
-
-  /**
-   * quick 261106-s3n: the ON route for a native-root uninstall. Every refusal
-   * sends `done` itself because uninstaller.ts suppresses it for steam.
-   */
-  uninstallNativeInGameLib(): Promise<ExecResult> {
-    return uninstallNativeInGameLib(this)
-  }
-
-  /**
-   * quick 261029-l9w: direct removal of a GameLib native install the running
-   * Mac Steam never adopted. Returns null to mean "delegate as before".
-   *
-   * Live evidence (2026-10-29, WazHack 264160): a Steam that still holds the
-   * app as Uninstalled ignores steam://uninstall (three dispatches, files
-   * untouched, same steam_osx PID), so the pill sat on "Uninstalling" until
-   * the poller's ~60 s grace expired.
-   *
-   * Gate: ji2's own decidePlayAdoption(...) === 'restart' (record present,
-   * same PID, ACF still GameLib's). Steam not running, a different PID or an
-   * adopted ACF all delegate: Steam then owns the app and handles the URL (a
-   * not-running Steam adopts at startup before processing it). A non-
-   * 'installed' ACF (fail-closed 1026 handoff) also delegates, unchanged.
-   *
-   * Deletion reuses removeSteamInstallCopy's guards (the port of
-   * uninstallBottleGameDirectly's); completion is pollUninstallOnce, which
-   * flips is_installed, pushes, sends done and fires the toast.
-   */
-  uninstallUnadoptedMacNativeDirectly(): Promise<ExecResult | null> {
-    return uninstallUnadoptedMacNativeDirectly(this)
-  }
-
-  /**
-   * Shared guarded direct removal of the native install (quick 261106-s3n
-   * extracted this from uninstallUnadoptedMacNativeDirectly): files via
-   * removeSteamInstallCopy's guards, completion via pollUninstallOnce.
-   */
-  removeNativeInstallDirectly(): Promise<ExecResult> {
-    return removeNativeInstallDirectly(this)
-  }
-
-  /**
-   * debug/steam-bottle-uninstall-reverts (FINAL): direct-deletion uninstall
-   * for EVERY bottle-eligible, non-bridge title — GameLib-authored
-   * (installBottleNative(), D-15/SNI-08) AND legacy-delegated/genuinely
-   * Steam-authored titles (e.g. Hoard) alike. Formerly named
-   * `uninstallBottleNativeGame` and reached only when the (since-removed,
-   * 34.13 review A-19) `nativeBottleInstall` provenance flag was true; that
-   * gate is gone (uninstall() now calls this unconditionally
-   * for every bottle-eligible non-bridge title) because delegating to the
-   * bottled Steam client's own steam://uninstall confirm dialog was PROVEN
-   * architecturally unworkable in this CrossOver bottle for ALL titles, not
-   * only GameLib-authored ones — see uninstall()'s own JSDoc for the full
-   * evidence chain (CW_USEDEFAULT window-position defect). Mirrors
-   * uninstallBridgeGame()'s direct-deletion model above, but targets the
-   * Phase 17 GameLibSteam bottle's steamapps/ (readAcfState('bottle') /
-   * getBottleSteamappsDir) instead of the dedicated bridge bottle.
-   *
-   * NAMING-CONVENTION GENERALIZATION: the install root is resolved via
-   * readAcfState('bottle').installPath, which is built directly from the
-   * ACF's own on-disk `AppState.installdir` field (library.ts) — never from
-   * FALLBACK_INSTALLDIR_PREFIX ('app_...', installLocation.ts) or any other
-   * GameLib-specific naming assumption. A Steam-authored installdir like
-   * "Hoard" and a GameLib-authored one like "app_2706020" are handled
-   * identically by construction; no naming-convention branch was needed
-   * here even before this generalization.
-   *
-   * SHAREDDEPOTS HAZARD (handled by construction, not by refcounting):
-   * a bottle title's ACF may declare SharedDepots pointing at another app's
-   * depot (e.g. Hoard references the Steamworks Common Redistributables
-   * depots, owned by a different appId). This function NEVER walks
-   * SharedDepots or touches any directory besides (a) the single top-level
-   * segment of THIS title's own installdir under common/, resolved and
-   * containment-checked below, and (b) THIS title's own
-   * appmanifest_<appId>.acf. A shared depot's actual files live under the
-   * OWNING app's own installdir (a sibling directory under common/,
-   * resolved from THAT app's own manifest) — a completely different path
-   * this function never constructs or touches. Cleaning up now-orphaned
-   * shared-depot content after every referencing title is gone is an
-   * explicit NON-GOAL (would require a real cross-manifest refcount system)
-   * — left for a future, separate investigation if it's ever needed;
-   * over-deleting is the only actual risk here, and this function is scoped
-   * to make that structurally impossible rather than runtime-checked.
-   *
-   * LIVE-CLIENT HAZARD: whether the bottled Steam client is running or not
-   * is irrelevant to correctness here. rmSync() below is synchronous with
-   * no `await` between it and the containment check that produced its
-   * path, so there is no in-process race window; deleting a directory entry
-   * that a separate OS process (steam.exe under Wine) still has open file
-   * descriptors against is safe POSIX/macOS-filesystem behavior (the
-   * process keeps working against the now-unlinked inode until it closes
-   * its handles, and the directory entry itself is simply gone) rather than
-   * a crash or hang. Any failure (permissions, a locked file) is caught
-   * below and reported as a normal error result — never thrown, never left
-   * to hang. This function does not attempt to prove Steam is not running,
-   * pause/kill it, or wait for it to release anything, by design — see
-   * Resolution in the debug file for the full rationale.
-   *
-   * Resolves the install root via readAcfState('bottle') — the SAME reader
-   * pollUninstallOnce()/library.ts already use for this bottle root — then
-   * containment-checks it with the established resolve()+relative() idiom
-   * (mirroring resolveBridgeGameInstallRoot; "path.join is not containment",
-   * Phase 18) before deleting, since the ACF's on-disk `installdir` is
-   * untrusted input.
-   *
-   * PRIMARY GUARD (debug/steam-bottle-uninstall-reverts, OPERATOR PRODUCT
-   * DECISION, LOCKED, item 3): promoted from a nice-to-have to REQUIRED —
-   * before touching the ACF at all, re-verifies the library entry's own
-   * recorded install.install_path ALSO resolves inside this bottle root
-   * (resolveInstallRoot(), library.ts) and aborts, deleting nothing, if not.
-   * This is defense-in-depth on top of uninstall()'s own routing decision
-   * (the caller only reaches this method when that same check already
-   * returned 'bottle') — it answers "is this the install the user is
-   * actually looking at", a DIFFERENT question from the ACF-installdir
-   * containment check below ("is the ACF's own installdir safe to delete").
-   * Both guards are kept; neither replaces the other.
-   *
-   * After deletion, reuses pollUninstallOnce('bottle')'s existing 'absent'
-   * branch (badge flip, persist, notify, clear forcedWindowsViaBottle/
-   * forcedWindowsViaBottle) rather than re-implementing that completion
-   * pipeline a second time — the manifest is now confirmed absent, exactly
-   * the condition that branch already handles for the delegated path's own
-   * poller. Because our own rmSync() calls just completed synchronously
-   * (no yield to the event loop in between), the readAcfState() re-read
-   * inside pollUninstallOnce() reliably observes 'absent' from our own
-   * write; it is not depending on winning a race against Steam.
-   * pollUninstallOnce() ALSO checks the native root for a surviving copy
-   * (dual-install partial removal, item 4/5) — see its own JSDoc.
-   */
-  uninstallBottleGameDirectly(): Promise<ExecResult> {
-    return uninstallBottleGameDirectly(this)
   }
 
   async update(): Promise<InstallResult> {

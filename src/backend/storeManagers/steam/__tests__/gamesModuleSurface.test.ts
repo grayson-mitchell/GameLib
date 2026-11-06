@@ -6,6 +6,9 @@
  * (and gameProtocolUrl.ts / gameConstants.ts). Every importer and jest.mock
  * targets the owning module, so games.ts must not re-export any of them. A
  * re-export would hide a stale import path and fork jest.mock targets.
+ *
+ * It also pins the sibling import order of the lifted modules: forward only
+ * (quick-261107-an2), so direct calls between them can never form a cycle.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -94,6 +97,32 @@ describe('steam/games.ts module surface (D-05)', () => {
       expect(names.length).toBeGreaterThan(0)
       for (const name of names) {
         expect(gamesExports.has(name)).toBe(false)
+      }
+    }
+  })
+
+  it('lifted modules import siblings forward only (no cycle)', () => {
+    // gameEligibility/gameLaunchOverlay -> gameInstall -> gameLaunch ->
+    // gameBridgeLaunch; gameUninstall and gameMaintenance sit beside them
+    // and nothing imports those two.
+    const FORWARD: Record<string, number> = {
+      gameEligibility: 0,
+      gameLaunchOverlay: 0,
+      gameInstall: 1,
+      gameLaunch: 2,
+      gameBridgeLaunch: 3,
+      gameUninstall: 4,
+      gameMaintenance: 4
+    }
+    for (const owner of LIFTED_OWNERS) {
+      const ownerName = owner.replace(/\.ts$/, '')
+      expect(FORWARD[ownerName]).toBeDefined()
+      const text = readFileSync(join(__dirname, '..', owner), 'utf8')
+      const targets = [...text.matchAll(/from\s+'\.\/(game\w+)'/g)]
+        .map((m) => m[1])
+        .filter((name) => `${name}.ts` !== owner && name in FORWARD)
+      for (const target of targets) {
+        expect(FORWARD[target]).toBeLessThan(FORWARD[ownerName])
       }
     }
   })

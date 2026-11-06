@@ -1,6 +1,11 @@
 /**
  * Install cluster lifted out of SteamGame (62-06, D-06 mechanical lift:
- * this -> steamGame). Each function has a delegating stub on the class.
+ * this -> steamGame).
+ * Public SteamGame entry points keep a delegating stub on the class;
+ * internal helpers are called directly by sibling lifted modules, importing
+ * forward only (gameEligibility/gameLaunchOverlay -> gameInstall ->
+ * gameLaunch -> gameBridgeLaunch). A call a test spies on stays a
+ * `steamGame.X()` call (quick-261107-an2).
  */
 import i18next from 'i18next'
 import { shell } from 'backend/platform'
