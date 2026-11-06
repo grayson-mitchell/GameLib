@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { isStore } from 'common/storeCapabilities'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import type { Game } from 'common/types/game_manager'
 import { pickBestMatch, toSearchTerms } from './titleMatch'
@@ -325,7 +326,7 @@ export async function getHowLongToBeat(
   hltbId?: string
 ): Promise<HeroicHowLongToBeatEntry | null> {
   const gameInfo = game.getGameInfo()
-  if (gameInfo.runner == 'gog') {
+  if (isStore(gameInfo, 'gog')) {
     logInfo(
       `Getting HowLongToBeat data for ${gameInfo.title} ${gameInfo.app_name} - ${gameInfo.runner}`,
       LogPrefix.ExtraGameInfo
@@ -359,7 +360,7 @@ export async function getHowLongToBeat(
   // this existed every non-GOG game whose article carried no HLTB ID showed no playtime,
   // permanently -- and re-visiting the page could never fix it. Reached both when the ID is
   // absent and when a stale ID 404s above.
-  if (gameInfo.runner !== 'gog' && gameInfo.title) {
+  if (!isStore(gameInfo, 'gog') && gameInfo.title) {
     logInfo(
       `No HLTB ID for ${gameInfo.title}, searching by title`,
       LogPrefix.ExtraGameInfo

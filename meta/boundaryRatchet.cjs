@@ -34,7 +34,8 @@ const FRONTEND_CEILING = 136
 // 2026-11-07 62-15: 51 -> 31, downloadmanager + gamedetails/dispatch
 // 2026-11-07 62-15: 31 -> 24, tools + save_sync + utils + uninstaller + macArch
 // 2026-11-07 62-16: 24 -> 16, sidecar registrations + oauthLoginCapture
-const BACKEND_CEILING = 16
+// 2026-11-07 62-16: 16 -> 0, remaining backend sites
+const BACKEND_CEILING = 0
 // Floors: 50% of the measured file count (as lintScoped does).
 const FRONTEND_MIN_FILES = 224 // 448 files measured
 const BACKEND_MIN_FILES = 115 // 231 files measured

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { storeCapabilities } from 'common/storeCapabilities'
 import { Runner } from 'common/types'
 import { umuStore } from '../electronStore'
 
@@ -19,7 +20,7 @@ export async function getUmuId(
   runner: Runner
 ): Promise<string | null> {
   // if it's a sideload, there won't be any umu id
-  if (runner === 'sideload') {
+  if (!storeCapabilities[runner].hasStoreCatalog) {
     return null
   }
 

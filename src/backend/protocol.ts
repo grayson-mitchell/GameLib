@@ -1,4 +1,5 @@
 import { dialog, app } from 'backend/platform'
+import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import { logError, logInfo, LogPrefix } from './logger'
 import i18next from 'i18next'
 import { GameInfo, LaunchOption, Runner } from 'common/types'
@@ -131,12 +132,12 @@ async function handleLaunch(url: URL) {
     // URL-supplied `arg`/`altExe` are attacker-authored (any web page can emit this link).
     // Steam's dispatch below takes only the appName, so they never reach it; every other
     // runner gets them vetted and confirmed first.
-    if (gameInfo.runner !== 'steam') {
+    if (!storeCapabilities[gameInfo.runner].launchHandedToClient) {
       // gogdl cannot take a `--` end-of-options marker (it forwards the literal `--` to the
       // game), so a `-`-prefixed URL arg could be parsed as one of ITS options (`--wrapper`,
       // `--override-exe`, or any abbreviation argparse accepts). Drop them for gog only;
       // legendary and nile receive passthrough args behind `--` (`runnerLaunchArgv.ts`).
-      if (gameInfo.runner === 'gog') {
+      if (isStore(gameInfo, 'gog')) {
         const dropped = args.filter((arg) => arg.startsWith('-'))
         if (dropped.length) {
           logInfo(
@@ -209,7 +210,7 @@ async function handleLaunch(url: URL) {
     // stat. Imported lazily (`await import(...)`) mirroring `launchEventCallback`'s own lazy
     // `await import('backend/storeManagers')` at `launcher.ts`, so no new static edge is added
     // to this module's import graph.
-    if (gameInfo.runner === 'steam') {
+    if (storeCapabilities[gameInfo.runner].launchHandedToClient) {
       const { dispatchSteamLaunch } =
         await import('backend/storeManagers/steam/launchDispatch')
       const launched = await dispatchSteamLaunch(appName)

@@ -1,4 +1,5 @@
 import { logError, LogPrefix } from 'backend/logger'
+import { storeCapabilities } from 'common/storeCapabilities'
 import { CodeweaversInfo, GameInfo } from 'common/types'
 import { slugify } from 'backend/wiki_game_info/codeweavers/utils'
 
@@ -73,7 +74,7 @@ function resolveRating(
   gameInfo: IndexLookupInput,
   maps: IndexMaps
 ): number | null {
-  if (gameInfo.runner === 'steam') {
+  if (storeCapabilities[gameInfo.runner].appNameIsSteamAppId) {
     const bySteamId = maps.bySteamId.get(gameInfo.app_name)
     if (bySteamId !== undefined) {
       return bySteamId
@@ -198,5 +199,8 @@ export function crossoverIndexHas(gameInfo: IndexLookupInput): boolean {
 export function isCrossoverIndexEligible(
   gameInfo: Pick<GameInfo, 'runner'>
 ): boolean {
-  return gameInfo.runner === 'steam' || NAME_MATCHING_SHIPS
+  return (
+    storeCapabilities[gameInfo.runner].appNameIsSteamAppId ||
+    NAME_MATCHING_SHIPS
+  )
 }

@@ -1,4 +1,5 @@
 import { GamesDBInfo, Runner } from 'common/types'
+import { storeCapabilities } from 'common/storeCapabilities'
 import { logInfo, LogPrefix } from 'backend/logger'
 import { GamesDBData } from 'common/types/gog'
 import { libraryManagerMap } from '../../storeManagers'
@@ -14,7 +15,7 @@ export async function getInfoFromGamesDB(
   const storeName = storeMap[runner]
   // A Steam title's own appId already is its Steam ID; this also keeps
   // storeMap.steam = 'steam' (quick 261024-tny) from adding a GOG gamesdb call.
-  if (!storeName || runner === 'steam') {
+  if (!storeName || storeCapabilities[runner].appNameIsSteamAppId) {
     return { steamID: '' }
   }
   const gamesdb: { data?: GamesDBData } = await libraryManagerMap['gog']

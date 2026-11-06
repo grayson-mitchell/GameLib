@@ -1,4 +1,5 @@
 import { app, nativeImage, type ShortcutDetails } from 'backend/platform'
+import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import {
   chmodSync,
   existsSync,
@@ -45,7 +46,7 @@ async function addShortcuts(game: Game, fromMenu?: boolean) {
     GlobalConfig.get().getSettings()
 
   // A Steam game is already in Steam (the "Add to Steam" menu item is hidden for it too).
-  if (addSteamShortcuts && runner !== 'steam') {
+  if (addSteamShortcuts && storeCapabilities[runner].canAddSteamShortcut) {
     addNonSteamGame(game)
   }
 
@@ -108,7 +109,7 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
         target: launchWithProtocol
       }
       let executable = gameInfo.install.executable
-      if (gameInfo.runner === 'gog') {
+      if (isStore(gameInfo, 'gog')) {
         executable = libraryManagerMap['gog'].getExecutable(gameInfo.app_name)
       }
       if (executable) {

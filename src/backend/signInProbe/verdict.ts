@@ -32,6 +32,7 @@
  * It is only called after a probe has resolved or been bounded by 49-08's
  * `boundedSignInProbe`.
  */
+import { isStore } from 'common/storeCapabilities'
 import { sendFrontendMessage } from 'backend/ipc'
 import { logInfo, LogPrefix } from 'backend/logger'
 import { configStore as humbleConfigStore } from 'backend/humble/electronStores'
@@ -110,7 +111,7 @@ function decide(
       return 'unchanged'
     }
     flag.latch()
-    if (store === 'humble') {
+    if (isStore(store, 'humble')) {
       pushHumbleAuthState(true)
     }
     return 'latched'
@@ -121,7 +122,7 @@ function decide(
     return 'unchanged'
   }
   flag.clear()
-  if (store === 'humble') {
+  if (isStore(store, 'humble')) {
     pushHumbleAuthState(false)
   }
   return 'cleared'

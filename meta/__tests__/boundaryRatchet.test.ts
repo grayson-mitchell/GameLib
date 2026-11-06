@@ -62,9 +62,10 @@ describe('boundaryRatchet evaluate', () => {
   test('every failing condition is collected', () => {
     expect(evaluate(at(11, 2, 1), scopes).length).toBe(3)
   })
-  test('committed constants are positive and floors are set', () => {
+  test('committed ceilings are non-negative and floors are set', () => {
     expect(FRONTEND_CEILING).toBeGreaterThan(0)
-    expect(BACKEND_CEILING).toBeGreaterThan(0)
+    // 62-16 took the backend to zero literals; zero is the goal, not a broken constant.
+    expect(BACKEND_CEILING).toBeGreaterThanOrEqual(0)
     expect(FRONTEND_MIN_FILES).toBeGreaterThan(0)
     expect(BACKEND_MIN_FILES).toBeGreaterThan(0)
   })

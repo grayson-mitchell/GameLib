@@ -1,4 +1,5 @@
 import { getInfoFromGamesDB } from 'backend/wiki_game_info/gamesdb/utils'
+import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import { getInfoFromProtonDB } from 'backend/wiki_game_info/protondb/utils'
 import { getSteamDeckComp } from 'backend/wiki_game_info/steamdeck/utils'
 import { wikiGameInfoStore } from './electronStore'
@@ -111,7 +112,10 @@ export async function getWikiGameInfo(
 
     const [pcgamingwikiResult, gamesdb, applegamingwiki, umuId, codeweavers] =
       await Promise.all([
-        getInfoFromPCGamingWiki(title, runner === 'gog' ? appName : undefined),
+        getInfoFromPCGamingWiki(
+          title,
+          isStore(runner, 'gog') ? appName : undefined
+        ),
         getInfoFromGamesDB(title, appName, runner),
         isMac ? getInfoFromAppleGamingWiki(title) : null,
         isLinux ? getUmuId(appName, runner) : null,
@@ -163,8 +167,9 @@ export async function getWikiGameInfo(
       // and skip the wiki round-trip. Otherwise fall back to wiki resolution:
       // gamesdb is more accurate since we always query by appName,
       // pcgamingwiki is queried by title in most cases.
-      const steamID =
-        runner === 'steam' ? appName : gamesdb?.steamID || pcgamingwiki?.steamID
+      const steamID = storeCapabilities[runner].appNameIsSteamAppId
+        ? appName
+        : gamesdb?.steamID || pcgamingwiki?.steamID
       const [protondb, steamdeck] = await Promise.all([
         getInfoFromProtonDB(steamID),
         getSteamDeckComp(steamID)

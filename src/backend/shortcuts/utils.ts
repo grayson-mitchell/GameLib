@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'graceful-fs'
+import { isStore } from 'common/storeCapabilities'
 import { GameInfo } from 'common/types'
 import { basename, dirname, extname, join } from 'path'
 import { libraryManagerMap } from '../storeManagers'
@@ -73,7 +74,7 @@ async function getIcon(
     .replace('{ext}', 'jpg')
   let icon = `${iconsFolder}/${appName}.jpg`
 
-  if (gameInfo.runner === 'gog') {
+  if (isStore(gameInfo, 'gog')) {
     const installPath = gameInfo.install.install_path
     if (installPath) {
       const icoPath = join(installPath, `goggame-${appName}.ico`)
