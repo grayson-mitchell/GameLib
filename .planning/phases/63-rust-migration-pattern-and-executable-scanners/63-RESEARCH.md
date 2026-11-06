@@ -520,17 +520,23 @@ Security properties to carry (D-10), each needs a named Rust test: realpath of `
 | A5 | Real games have no ordinal-only steam_api imports (so skipping them matches objdump) | Pitfall 1 | Sweep will show diffs; resolved by D-07 investigation. |
 | A6 | A Linux leg for `cargo test -p gamelib-scan` is feasible because the crates are Tauri-free | Workspace table | If a CI runner lacks cargo defaults, keep to the two existing OS legs. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`detectLaunchDrmWrapper` placement (Option A vs B above).**
    - Known: depends on TS `findUnrealLayout`; tests inject `detect`/`findUnreal`.
    - Unclear: whether the user reads D-13 "TS scanners deleted" as including the orchestrator.
    - Recommendation: Option A (thin TS orchestrator, Rust leaves); state it in PLAN.md so it is not re-litigated.
+   - RESOLVED: Option A. `detectLaunchDrmWrapper` stays a TS orchestrator over the Rust leaves `scan_contained_real` and `scan_steamstub_section`, and `findUnrealLayout` stays in TS. Confirmed with the user at the 63-11 checkpoint (plan 63-07).
 2. **Census import scan: leave on objdump or move to CLI?** Recommendation: leave (Pitfall 2); `importParse.ts` stays.
+   - RESOLVED: the census objdump arm stays. Only census lines ~1439/~2216 route through the CLI (plan 63-10).
 3. **Ordinal imports in the static import table:** emit `#n` (like the delay reader) or skip (like the objdump regex)? Decide from the sweep (A5).
+   - RESOLVED: skip ordinal-only static imports, matching objdump. The 63-11 sweep confirms this, and any diff is a D-07 finding (plan 63-05).
 4. **`readPeMachineArch` has no production caller.** Recommend not porting it (delete with its tests); confirm with the user only if they want it kept for a future placer.
+   - RESOLVED: not ported; it is deleted with `peSteamDrm.ts` (plan 63-02).
 5. **Where the hidden flag lives** (AppSettings vs env only). Recommendation in Pattern 3.
+   - RESOLVED: an env var (`GAMELIB_SCANNER_<NAME>`) plus a defaults table, with no AppSettings key. Listed at the 63-11 checkpoint (plan 63-02).
 6. **Does the user want a Linux `cargo test` leg for the new crates?** Optional; cheap and a good template for later ports.
+   - RESOLVED: no Linux leg. The crates are tested on the existing Windows and macOS legs, and clippy runs with `--workspace` (plan 63-01).
 
 ## Environment Availability
 
