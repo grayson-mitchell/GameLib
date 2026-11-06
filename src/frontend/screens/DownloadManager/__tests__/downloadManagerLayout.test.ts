@@ -190,3 +190,55 @@ describe('hero art is an <img>, never a CSS url() (T-261012-dhs-01)', () => {
     expect('background: url(x.png)').toMatch(CSS_URL_ART_PATTERN)
   })
 })
+
+describe('cancel icon hover survives every theme (quick 261107-aru)', () => {
+  const themes = read('..', '..', 'themes.scss')
+  const BARE_HOVER = /var\(\s*--danger-hover\s*\)/
+  const FALLBACK_HOVER = /var\(\s*--danger-hover\s*,/
+  const hoverRules: Array<[string, string, string]> = [
+    [
+      'DownloadManagerItem',
+      'DownloadManagerItem',
+      '.downloadManagerListItem .cancelIcon:hover circle'
+    ],
+    ['DownloadHero', 'DownloadHero', '.downloadHero .cancelIcon:hover circle']
+  ]
+
+  it('base body block declares a --danger-hover default', () => {
+    expect(cssBlock(themes, 'body')).toMatch(/--danger-hover\s*:/)
+  })
+
+  it('body.dracula declares a --danger-hover distinct from its --danger', () => {
+    const dracula = cssBlock(themes, 'body.dracula')
+    const danger = /--danger\s*:\s*([^;]+);/.exec(dracula)
+    const hover = /--danger-hover\s*:\s*([^;]+);/.exec(dracula)
+    expect(danger?.[1].trim()).toBe('#ff5555')
+    expect(hover).not.toBeNull()
+    expect(hover?.[1].trim()).not.toBe(danger?.[1].trim())
+  })
+
+  it.each(['body.midnightMirage', 'body.cyberSpaceOasis', 'body.gruvbox_dark'])(
+    'NON-VACUITY: %s still declares its own --danger-hover',
+    (selector) => {
+      expect(cssBlock(themes, selector)).toMatch(/--danger-hover\s*:/)
+    }
+  )
+
+  it.each(hoverRules)(
+    '%s hover fill uses var(--danger-hover, <fallback>)',
+    (_name, dir, selector) => {
+      const css = read('components', dir, 'index.css')
+      expect(css).toContain('--danger-hover')
+      const rule = cssBlock(css, selector)
+      expect(rule).toMatch(FALLBACK_HOVER)
+      expect(rule).not.toMatch(BARE_HOVER)
+    }
+  )
+
+  it('SANITY: the bare/fallback detectors tell the two forms apart', () => {
+    expect('fill: var(--danger-hover);').toMatch(BARE_HOVER)
+    expect('fill: var(--danger-hover);').not.toMatch(FALLBACK_HOVER)
+    expect('fill: var(--danger-hover, red);').toMatch(FALLBACK_HOVER)
+    expect('fill: var(--danger-hover, red);').not.toMatch(BARE_HOVER)
+  })
+})
