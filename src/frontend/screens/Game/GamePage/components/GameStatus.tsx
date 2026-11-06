@@ -1,4 +1,5 @@
 import React, { useContext } from 'react'
+import { hasCapability, isStore } from 'common/storeCapabilities'
 import GameContext from '../../GameContext'
 import { GameInfo, InstallProgress } from 'common/types'
 import type { SteamBottleLaunchWaitingCause } from 'common/types/steam'
@@ -61,7 +62,7 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
   ): React.ReactNode {
     const { eta, bytes, percent, file } = progress
 
-    if (runner === 'gog' && is.notInstallable) {
+    if (isStore(runner, 'gog') && is.notInstallable) {
       return t(
         'status.gog-goodie',
         "This game doesn't appear to be installable. Check downloadable content on https://gog.com/account"
@@ -172,7 +173,7 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
       return `${t('status.updating')} ${currentProgress}`
     }
 
-    if (runner === 'steam' && is.installing) {
+    if (hasCapability(runner, 'installManagedExternally') && is.installing) {
       // quick 261029-exu: a bridge install's post-download tail.
       if (statusContext === 'steam-bridge-finishing') {
         return (
@@ -190,7 +191,7 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
     // full Steam client restart to be adopted — not an endless "Installing".
     // GameLib never auto-drives Steam; this is a passive hint only.
     if (
-      runner === 'steam' &&
+      hasCapability(runner, 'installManagedExternally') &&
       is.installing &&
       statusContext === 'steam-waiting-for-restart'
     ) {
@@ -239,7 +240,7 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
     // resumeInterruptedSteamInstall — the hint now tells the user that,
     // instead of sending them to Steam.
     if (
-      runner === 'steam' &&
+      hasCapability(runner, 'installHandOffToClient') &&
       !is_installed &&
       statusContext === 'steam-incomplete'
     ) {

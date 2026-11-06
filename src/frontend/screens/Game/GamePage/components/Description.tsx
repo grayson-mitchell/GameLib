@@ -1,4 +1,5 @@
 import { useContext } from 'react'
+import { hasCapability } from 'common/storeCapabilities'
 import GameContext from '../../GameContext'
 import { useTranslation } from 'react-i18next'
 
@@ -8,7 +9,7 @@ const Description = () => {
 
   let description = ''
 
-  if (runner !== 'sideload') {
+  if (hasCapability(runner, 'hasStoreCatalog')) {
     description =
       gameExtraInfo?.about?.shortDescription ||
       gameExtraInfo?.about?.description ||

@@ -1,4 +1,5 @@
 import './index.css'
+import { hasCapability, isStore } from 'common/storeCapabilities'
 
 import React, {
   useCallback,
@@ -174,7 +175,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
   const isWin = platform === 'win32'
   const isLinux = platform === 'linux'
   const isMac = platform === 'darwin'
-  const isSideloaded = runner === 'sideload'
+  const isSideloaded = !hasCapability(runner, 'hasStoreCatalog')
 
   // Phase 17 (17-11), GAP 3 gap-closure: single source of truth shared with
   // the guided bottle-setup toast (SteamBottleSetup.tsx) — see
@@ -203,7 +204,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
   const isStartingSteam = status === 'steam-starting'
   const notAvailable = !gameAvailable && gameInfo.is_installed
   const notSupportedGame =
-    gameInfo.runner !== 'sideload' &&
+    hasCapability(gameInfo.runner, 'hasStoreCatalog') &&
     !!gameInfo.thirdPartyManagedApp &&
     !gameInfo.isEAManaged &&
     !gameInfo.isUbisoftManaged
@@ -227,7 +228,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
     wasLaunchingOrPlaying.current && !isLaunching && !isPlaying
   wasLaunchingOrPlaying.current = isLaunching || isPlaying
   useEffect(() => {
-    if (runner !== 'steam' || !isMac) return
+    if (!hasCapability(runner, 'usesBottleRuntime') || !isMac) return
     let cancelled = false
     void window.api.getSteamEngineState(appName).then((result) => {
       if (cancelled) return
@@ -286,8 +287,8 @@ export default React.memo(function GamePage(): JSX.Element | null {
           install.platform || (is_mac_native && isMac ? 'Mac' : 'Windows')
 
         if (
-          runner !== 'sideload' &&
-          runner !== 'steam' &&
+          hasCapability(runner, 'hasStoreCatalog') &&
+          !hasCapability(runner, 'installManagedExternally') &&
           !notSupportedGame &&
           !notInstallable &&
           !thirdPartyManagedApp &&
@@ -367,7 +368,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
   }, [status])
 
   function handleUpdate() {
-    if (gameInfo.runner !== 'sideload')
+    if (!isStore(gameInfo, 'sideload'))
       updateGame({ appName, runner, gameInfo })
   }
 
@@ -754,7 +755,10 @@ export default React.memo(function GamePage(): JSX.Element | null {
     // startSteamQuickInstall closes that gap: it resolves Steam's primary
     // library, runs the local check, and either installs with no friction
     // or degrades into the options dialog carrying the reason.
-    if (gameInfo.runner === 'steam' && !is_installed) {
+    if (
+      hasCapability(gameInfo.runner, 'installHandOffToClient') &&
+      !is_installed
+    ) {
       return startSteamQuickInstall(appName, gameInfo)
     }
 
@@ -766,7 +770,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
       return
     }
 
-    if (gameInfo.runner === 'sideload') return
+    if (isStore(gameInfo, 'sideload')) return
 
     return install({
       gameInfo,

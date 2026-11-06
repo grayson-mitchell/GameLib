@@ -1,4 +1,5 @@
 import React, { useContext } from 'react'
+import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import {
   openInstallGameModal,
@@ -66,7 +67,8 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     is.importing ||
     is.downloadingEngine ||
     // Steam installs cannot be cancelled from GamerLib — disable the button while polling (D-07).
-    (gameInfo.runner === 'steam' && is.installing) ||
+    (hasCapability(gameInfo.runner, 'installManagedExternally') &&
+      is.installing) ||
     // Phase 17 (17-11), GAP 3 gap-closure: a guided bottle-setup surface is
     // active for this game — disable Install so a click cannot re-dispatch
     // a no-op install while setup is in progress
@@ -198,7 +200,7 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     // restarts Steam), but the label no longer looks like an active download.
     if (
       is.installing &&
-      gameInfo.runner === 'steam' &&
+      hasCapability(gameInfo.runner, 'installManagedExternally') &&
       statusContext === 'steam-waiting-for-restart'
     ) {
       return (
@@ -224,7 +226,10 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     }
 
     // Steam installs are controlled by the Steam client — no pause/cancel surface (D-07)
-    if (is.installing && gameInfo.runner === 'steam') {
+    if (
+      is.installing &&
+      hasCapability(gameInfo.runner, 'installManagedExternally')
+    ) {
       return (
         <span className="buttonWithIcon">
           <FontAwesomeIcon icon={faSyncAlt} className="fa-spin" />
@@ -273,7 +278,7 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
     // words changed here, the click handler below still routes steam to
     // handleInstall (the correct resume action) unconditionally.
     if (
-      gameInfo.runner === 'steam' &&
+      hasCapability(gameInfo.runner, 'installHandOffToClient') &&
       !gameInfo.is_installed &&
       gameInfo.install?.steamResumePending &&
       !is.installing &&
@@ -349,7 +354,7 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
                 !is_installed &&
                 !is.queued &&
                 !is.installing &&
-                gameInfo.runner !== 'steam'
+                !hasCapability(gameInfo.runner, 'installManagedExternally')
               ) {
                 openInstallGameModal({
                   appName: gameInfo.app_name,

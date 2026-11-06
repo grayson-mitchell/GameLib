@@ -1,4 +1,5 @@
 import { MouseEvent, useContext, useEffect, useState } from 'react'
+import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
 import { Build, CheckCircle, Refresh, WineBar } from '@mui/icons-material'
@@ -32,7 +33,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
   >(undefined)
 
   useEffect(() => {
-    if (gameInfo.runner !== 'steam') {
+    if (!hasCapability(gameInfo.runner, 'appNameIsSteamAppId')) {
       return
     }
     let bridgeRouteCancelled = false
@@ -59,7 +60,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
   >(undefined)
 
   useEffect(() => {
-    if (gameInfo.runner === 'sideload') {
+    if (!hasCapability(gameInfo.runner, 'hasStoreCatalog')) {
       return
     }
     let gamelibFixCancelled = false
@@ -104,7 +105,9 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
   const steamInfo = wikiInfo?.steamInfo
 
   const showProton =
-    is.linux && gameInfo.runner === 'steam' && !!steamInfo?.compatibilityLevel
+    is.linux &&
+    hasCapability(gameInfo.runner, 'appNameIsSteamAppId') &&
+    !!steamInfo?.compatibilityLevel
   const showCrossover = is.mac && !!codeweavers
   const showWine = !!applegamingwiki && !showProton
   // D-08 (Phase 17): confirmed-not-native macOS Steam games run through the
@@ -120,7 +123,7 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
   // indicator for a game that hasn't actually been confirmed Windows-only.
   const showBottle =
     is.mac &&
-    gameInfo.runner === 'steam' &&
+    hasCapability(gameInfo.runner, 'usesBottleRuntime') &&
     gameInfo.is_mac_native === false &&
     gameInfo.steamPlatformsCaptured === true
 

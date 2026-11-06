@@ -1,4 +1,5 @@
 import { useContext } from 'react'
+import { hasCapability } from 'common/storeCapabilities'
 import GameContext from '../../GameContext'
 import { GameInfo } from 'common/types'
 
@@ -9,7 +10,7 @@ interface Props {
 const Developer = ({ gameInfo }: Props) => {
   const { runner } = useContext(GameContext)
 
-  if (runner === 'sideload') {
+  if (!hasCapability(runner, 'hasStoreCatalog')) {
     return null
   }
 

@@ -1,4 +1,5 @@
 import { useContext } from 'react'
+import { isStore } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 
 import ContextProvider from 'frontend/state/ContextProvider'
@@ -21,7 +22,7 @@ const HumbleOriginInfo = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamepage')
   const { humble } = useContext(ContextProvider)
 
-  if (gameInfo.runner !== 'steam') {
+  if (!isStore(gameInfo, 'steam')) {
     return null
   }
 

@@ -1,4 +1,5 @@
 import { useContext, useState } from 'react'
+import { hasCapability, isStore } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
 import { CloudOff, CloudQueue } from '@mui/icons-material'
@@ -39,7 +40,7 @@ const CloudSavesSync = ({ gameInfo }: Props) => {
     return null
   }
 
-  if (gameInfo.runner === 'sideload') {
+  if (!hasCapability(gameInfo.runner, 'hasStoreCatalog')) {
     return null
   }
 
@@ -97,7 +98,7 @@ const CloudSavesSync = ({ gameInfo }: Props) => {
     setIsSyncing(true)
 
     try {
-      if (gameInfo.runner === 'gog') {
+      if (isStore(gameInfo, 'gog')) {
         let locations = gogSaves
         if (!locations.length) {
           locations = (await window.api.getDefaultSavePath(
@@ -141,7 +142,7 @@ const CloudSavesSync = ({ gameInfo }: Props) => {
   }
 
   const handleOpenFolder = () => {
-    if (gameInfo.runner === 'gog') {
+    if (isStore(gameInfo, 'gog')) {
       gogSaves.forEach((save) => {
         window.api.openFolder(save.location)
       })
@@ -162,8 +163,8 @@ const CloudSavesSync = ({ gameInfo }: Props) => {
   ]
 
   const disableItem =
-    (gameInfo.runner === 'legendary' && savesPath === '') ||
-    (gameInfo.runner === 'gog' && !gogSaves.some((save) => save.location))
+    (isStore(gameInfo, 'legendary') && savesPath === '') ||
+    (isStore(gameInfo, 'gog') && !gogSaves.some((save) => save.location))
 
   return (
     <>

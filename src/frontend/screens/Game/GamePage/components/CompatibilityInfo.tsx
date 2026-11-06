@@ -1,4 +1,5 @@
 import { useContext } from 'react'
+import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
 import {
@@ -55,7 +56,7 @@ const CompatibilityInfo = ({ gameInfo }: Props) => {
   ]
 
   let protonDBurl = `https://www.protondb.com/search?q=${gameInfo.title}`
-  if (gameInfo.runner === 'steam') {
+  if (hasCapability(gameInfo.runner, 'appNameIsSteamAppId')) {
     // For native Steam games, app_name IS the Steam AppID — link directly.
     protonDBurl = `https://www.protondb.com/app/${gameInfo.app_name}`
   } else if (wikiInfo.pcgamingwiki?.steamID) {

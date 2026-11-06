@@ -1,4 +1,5 @@
 import { useContext } from 'react'
+import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
 import { DownloadDone } from '@mui/icons-material'
@@ -50,7 +51,7 @@ const InstalledInfo = ({ gameInfo }: Props) => {
     return null
   }
 
-  const isSideloaded = runner === 'sideload'
+  const isSideloaded = !hasCapability(runner, 'hasStoreCatalog')
   const isThirdParty = !!gameInfo.thirdPartyManagedApp
 
   const {

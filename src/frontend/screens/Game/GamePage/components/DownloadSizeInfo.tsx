@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from 'react'
+import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
 import { CloudDownload, Storage, Assignment } from '@mui/icons-material'
@@ -56,11 +57,11 @@ const DownloadSizeInfo = ({ gameInfo }: Props) => {
     return null
   }
 
-  if (runner === 'sideload') {
+  if (!hasCapability(runner, 'hasStoreCatalog')) {
     return null
   }
 
-  if (runner === 'steam') {
+  if (hasCapability(runner, 'installSizeFromSteamStore')) {
     return <SteamInstallSize appId={gameInfo.app_name} />
   }
 
