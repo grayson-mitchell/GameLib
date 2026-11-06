@@ -30,6 +30,18 @@ const MOVED_OWNERS = [
   'gameProtocolUrl.ts'
 ]
 
+// Lifted method clusters (62-06..62-08): free functions taking `steamGame`.
+// They may reference the class only via `import type SteamGame from './games'`.
+const LIFTED_OWNERS = [
+  'gameEligibility.ts',
+  'gameInstall.ts',
+  'gameLaunchOverlay.ts',
+  'gameBridgeLaunch.ts',
+  'gameLaunch.ts',
+  'gameMaintenance.ts',
+  'gameUninstall.ts'
+]
+
 describe('steam/games.ts module surface (D-05)', () => {
   const src = readFileSync(join(__dirname, '..', 'games.ts'), 'utf8')
 
@@ -60,6 +72,29 @@ describe('steam/games.ts module surface (D-05)', () => {
     for (const owner of MOVED_OWNERS) {
       const text = readFileSync(join(__dirname, '..', owner), 'utf8')
       expect(text).not.toMatch(/from\s+'\.\/games'/)
+    }
+  })
+
+  it('lifted modules import games.ts type-only and re-export nothing', () => {
+    for (const owner of LIFTED_OWNERS) {
+      const text = readFileSync(join(__dirname, '..', owner), 'utf8')
+      const imports = [...text.matchAll(/^import\b[^\n]*from\s+'\.\/games'/gm)]
+      for (const m of imports) {
+        expect(m[0]).toBe("import type SteamGame from './games'")
+      }
+      expect(text).not.toMatch(/^export\s*\{/m)
+      expect(text).not.toMatch(/^export\b[^\n]*\bfrom\s+'/m)
+    }
+  })
+
+  it('does not export any symbol owned by a lifted module', () => {
+    const gamesExports = new Set(exportedNames('games.ts'))
+    for (const owner of LIFTED_OWNERS) {
+      const names = exportedNames(owner)
+      expect(names.length).toBeGreaterThan(0)
+      for (const name of names) {
+        expect(gamesExports.has(name)).toBe(false)
+      }
     }
   })
 })
