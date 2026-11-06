@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Completed 62-11-PLAN.md
-last_updated: "2026-11-06T16:05:10.938Z"
+last_updated: "2026-11-06T16:13:15.212Z"
 last_activity: 2026-11-06
 progress:
   total_phases: 11
   completed_phases: 0
   total_plans: 21
-  completed_plans: 12
+  completed_plans: 13
   percent: 0
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 62 (module-boundaries-and-decomposition) — EXECUTING
-Plan: 13 of 21
+Plan: 14 of 21
 Status: Ready to execute
 Last activity: 2026-11-06
 
-Progress: [█████░░░░░] 52%
+Progress: [██████░░░░] 62%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -338,6 +338,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 60]: [60-18] G1 verdict X-RELEASE+BLOCK (signal cb): release on open + set_active, replay on close; scope to game process not explorer.exe
 - [Phase 62]: 62-05: only STEAM_STORE_API moved to gameConstants.ts; OVERLAY_EXIT_GRACE_MS stays in games.ts; games.ts re-exports nothing (pinned by gamesModuleSurface.test.ts)
 - [Phase 62]: 62-06: async lift stubs return the free function's promise (no async) to preserve microtask timing
+- [Phase 62]: 62-13: 15 capability flags; narrowing sites classed identity; switches become Record lookups
 
 ### Pending Todos
 
