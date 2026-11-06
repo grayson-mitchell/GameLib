@@ -2,6 +2,7 @@
 //! sidecar bridge and `gamelib-scan-cli`. Not-a-PE / truncated / unreadable input is a RESULT;
 //! `Err` means bad arguments, an unknown op or a panic only.
 
+pub mod closure;
 pub mod contain;
 pub mod pe;
 pub mod reader;
@@ -15,6 +16,7 @@ pub const OPS: &[&str] = &[
     "scan_contained_real",
     "scan_pe_delay_imports",
     "scan_pe_imported_dlls",
+    "scan_steam_api_imports",
     "scan_steam_drm",
     "scan_steamstub_section",
 ];
@@ -32,6 +34,13 @@ struct ContainedRealArgs {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct ExePathArgs {
     exe_path: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SteamApiImportsArgs {
+    exe_path: String,
+    app_id: String,
 }
 
 fn parse_args<T: for<'de> Deserialize<'de>>(op: &str, args: &[Value]) -> Result<T, String> {
@@ -62,6 +71,13 @@ fn run_op(op: &str, args: &[Value]) -> Result<Value, String> {
             to_value(
                 op,
                 pe::imports::scan_pe_imported_dlls(Path::new(&a.exe_path)),
+            )
+        }
+        "scan_steam_api_imports" => {
+            let a: SteamApiImportsArgs = parse_args(op, args)?;
+            to_value(
+                op,
+                closure::scan_steam_api_imports(Path::new(&a.exe_path), &a.app_id),
             )
         }
         "scan_steam_drm" => {
@@ -199,6 +215,8 @@ mod tests {
         use crate::reader::SliceReader;
         use pe::pe_builder::Spec;
         let mut pes: Vec<Vec<u8>> = vec![
+            pe::imports::tests::sym_pe(false, &[("steam_api.dll", &["A", "#2", "B"])]),
+            pe::imports::tests::sym_pe(true, &[("steam_api64.dll", &["A", "#2"])]),
             pe::drm::tests::ceg_pe(false, &["STEAM_GUIDD", "steam_split_guid"], false),
             pe::drm::tests::ceg_pe(true, &["STEAM_MINSTANCE"], true),
             pe::imports::tests::import_pe(false, &["a.dll", "steam_api.dll"]),
@@ -213,6 +231,8 @@ mod tests {
                 let _ = pe::sections::parse_section_names(prefix);
                 let _ = pe::drm::detect_steam_drm(&mut SliceReader::new(prefix));
                 let _ = pe::imports::imported_dll_names(&mut SliceReader::new(prefix));
+                let _ = pe::imports::steam_api_import_table(&mut SliceReader::new(prefix));
+                let _ = pe::imports::all_import_dll_names(&mut SliceReader::new(prefix));
                 let _ = pe::delay::steam_api_delay_imports(&mut SliceReader::new(prefix));
             }
         }
