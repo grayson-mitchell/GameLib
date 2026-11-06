@@ -4,7 +4,7 @@
  * re-routed onto the real download queue in Phase 32 Plan 02, D-01; `moveInstall`/
  * `importGame` added Phase 34.6 Plan 06, REQ-34.6-04/REQ-34.6-13, D-02).
  *
- * Registers exactly eight invoke handlers the Tauri build's install-slice
+ * Registers exactly nine invoke handlers the Tauri build's install-slice
  * needs onto electronStub's `ipcMain` recorder, importing the REAL backend
  * code paths unchanged (mirrors `steamFlowRegistration.ts`'s own objective —
  * prove the real logic runs behind the new transport, not a
@@ -191,7 +191,7 @@ function rejectedPathDialogTitle(): string {
 }
 
 /**
- * Registers the eight install-slice invoke handlers. Called once from
+ * Registers the nine install-slice invoke handlers. Called once from
  * `handlers.ts` — this module owns no side effects at import time beyond the
  * imports above; the caller decides when registration onto the handler
  * registry happens.
