@@ -327,7 +327,7 @@ Plans:
 **Goal:** The executable scanners run in Rust, and the pattern for moving sidecar code to Rust one piece at a time is settled and reusable. Two parts: (1) **The pattern.** Where ported code lives in `src-tauri/`, how the sidecar calls it through `rustInvoke` with the TypeScript function signature unchanged, a parity harness that runs the TypeScript and Rust implementations against the same fixtures, and a flag that keeps the TypeScript path as a fallback until the Rust one is verified live. Only a description of the work crosses the JSON-lines pipe, never bulk bytes. (2) **The scanners.** Port the PE scanners in `steam/bridge/` (`peSections.ts`, `importScan.ts`, `peSteamDrm.ts`, `drm/drmScanExe.ts`) and the Mach-O export reader `tools/machoExports.ts`, 1,168 lines in total. They are pure byte parsing: a path in, a small result out, no npm packages. Callers today are `shimGenerate.ts`, `gameMakerRunner.ts`, `steam/games.ts` and `tools/dxmt.ts`. Open question for discuss-phase: **how headless Node tools reach the Rust code.** `meta/bridgeCensus.ts` (`pnpm bridge-census`) imports `peSteamDrm` and runs under plain Node with no Rust shell, so `rustInvoke` is not available to it. The options are a standalone Rust command-line binary the tools call, or keeping the TypeScript scanners permanently as the headless path, which means two implementations. This is the first step of the incremental Rust migration path (deck slide "An incremental path from Node to Rust"). The second step, the Steam depot download pipeline, waits on a spike that measures a Rust pipeline against today's ~10 MiB/s. Came from an architecture discussion on 2026-11-06.
 **Requirements**: TBD
 **Depends on:** None
-**Plans:** 2/14 plans executed
+**Plans:** 3/14 plans executed
 
 Plans:
 
@@ -338,7 +338,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 63-03-PLAN.md — Tier-1 parity: synthetic fixtures, TS-derived goldens, generator, Jest golden test
+- [x] 63-03-PLAN.md — Tier-1 parity: synthetic fixtures, TS-derived goldens, generator, Jest golden test
 - [ ] 63-04-PLAN.md — Rust PE core: sections/SteamStub, CEG + .bind, imported DLLs, delay imports
 
 **Wave 3** *(blocked on Wave 2 completion)*
