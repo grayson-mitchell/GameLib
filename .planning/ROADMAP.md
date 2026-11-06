@@ -226,7 +226,7 @@ Plans:
 **Goal:** Module boundaries in the TypeScript backend and frontend are explicit, enforced by a tool, and no longer bypassed by branching on store identity. Three parts: (1) **Boundary rules.** Add dependency-cruiser with rules in warn-only mode and record a baseline violation count. The rules: no store manager imports another store manager; `launcher.ts` reaches stores only through `storeManagers/index` (today it imports `gog/setup`, `legendary/commands`, `gog/presence` and `eos_overlay` directly); no `runner === '<literal>'` checks in `frontend/screens/**`. (2) **Store capabilities.** Give `GameInfo`/`LibraryManager` capability flags (e.g. install managed externally, DLC selection, resumable install) and replace runner-literal branching with them: 66 `runner === 'steam'` sites in the frontend (Library, Game page, ConsoleMode, InstallModal, filterEngine) and 31 in the backend outside `storeManagers/` (11 in `downloadmanager/`). `helpers/steamInstallOptionsEntry.ts` already shows the single-decision-site pattern. (3) **Decomposition.** Split `steam/games.ts` (7,150 lines, 73 imports) into launch, DRM and requirements modules; fold `steam/depot.ts` (4,598 lines) into `steam/depot/`; split `common/types/ipc.ts` (~280 channels) into per-domain channel types co-located with the sidecar `*FlowRegistration.ts` files; add a parity test for the transport constants Rust's `main.rs` mirrors from `common/types/sidecarTransport.ts` by hand. Promote the dependency-cruiser rules from warn to error once the counts reach zero. Out of scope: the `src-tauri/src/main.rs` split, which is a separate quick task. Came from an architecture review on 2026-11-06.
 **Requirements**: TBD
 **Depends on:** None
-**Plans:** 4/21 plans executed
+**Plans:** 5/21 plans executed
 
 Plans:
 **Wave 1**
@@ -241,7 +241,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 62-05-PLAN.md — games.ts pure moves: session state, requirements, DRM helpers; surface guard
+- [x] 62-05-PLAN.md — games.ts pure moves: session state, requirements, DRM helpers; surface guard
 
 **Wave 4** *(blocked on Wave 3 completion)*
 

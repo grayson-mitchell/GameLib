@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 62 context gathered
-last_updated: "2026-11-06T10:07:32.912Z"
+last_updated: "2026-11-06T10:26:20.027Z"
 last_activity: 2026-11-06
 progress:
-  total_phases: 8
+  total_phases: 11
   completed_phases: 0
   total_plans: 21
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 62 (module-boundaries-and-decomposition) — EXECUTING
-Plan: 5 of 21
+Plan: 6 of 21
 Status: Ready to execute
 Last activity: 2026-11-06
 
-Progress: [██░░░░░░░░] 19%
+Progress: [██░░░░░░░░] 24%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -226,6 +226,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 59 P40 | 20m | 2 tasks | 4 files |
 | Phase 60 P16 | 1h | 3 tasks | 1 files |
 | Phase 62 P02 | 20min | 2 tasks | 4 files |
+| Phase 62 P05 | 60min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -233,6 +234,9 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 
 Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archive (2026-10-15).
 
+- Phase 71 added 2026-11-06: **Rust shell module decomposition.** From the first post-Phase-62 architecture review (Rust modules over 2,000 lines). The operator asked whether the four remaining review items should be one phase; the answer split them, and this one became its own phase because each move needs a live macOS check of embeds and login windows. Quick 261106-ab1 had already split `main.rs`, so the phase follows its layout and includes what remains in `main.rs`. `Depends on` hand-corrected from Phase 70 (positional, unrelated) to None. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
+- Phase 70 added 2026-11-06: **Split GameInfo into shared and per-store shapes.** Same review and same answer: `GameInfo` (41 fields, 119 non-test referencing files) mixes shared and store-specific fields, and Phase 62 adds capability flags to it. `Depends on` hand-corrected from Phase 69 (positional) to Phase 62. Same session: Phase 67's goal gained part (3), generating the TS and Rust IPC contract from its channel schemas, and the Electron-leftovers item was filed as todo `2026-11-06-remove-electron-naming-leftovers.md`. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
+- Phase 69 added 2026-11-06: **Consolidate frontend state onto GlobalStateV2.** From the first post-Phase-62 architecture review (item 3). The operator asked whether it should be a phase or a todo; the answer was a phase, because it spans 130 `ContextProvider` consumers, needs live checks between waves, and has open decisions. The review's earlier figures (161 vs 41) included test files; the goal uses non-test counts (130 vs 20). `Depends on` hand-corrected from Phase 68 (positional, unrelated) to Phase 62, whose plans 62-17 to 62-19 touch the same screens. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 68 added 2026-11-06: **Versioned persisted stores and migrations.** From the second architecture review: 19 persisted store modules carry no schema version, so a shape change either needs an ad hoc fix-up or resets to defaults. The review first said no migration system existed; checking before filing found Heroic's `src/backend/migration/` runner (one migration) and the `config.ts` fix-ups, so the goal builds on the runner. The operator chose to open it as this phase. `Depends on` hand-corrected from Phase 67 (positional, unrelated) to None. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 67 added 2026-11-06: **Schema validation at the sidecar IPC boundary.** From the second architecture review: only 4 of 23 sidecar `*Registration.ts` files validate arguments, across ~282 channels, and the renderer hosts embedded store and login webviews. The operator chose to open it as this phase. `Depends on` hand-corrected from Phase 66 (positional) to Phase 62, whose per-domain split of `common/types/ipc.ts` is where the schemas live. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 66 added 2026-11-06: **Backend dependency injection replacing module-level singletons.** The operator asked what else could improve the architecture after Phase 62. The review measured 144 top-level `let` declarations in `src/backend` and 2,197 `jest.mock(` calls across 706 test files, a sign of hidden module state and import-coupled tests, and proposed a boot-time context object passed to store managers and `launcher.ts`. The operator chose to open it as this phase, and later the same day added the second review's single process-runner item to it as part (3) (32 backend files import `child_process` directly). `Depends on` hand-corrected from Phase 65 (positional) to Phase 62. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
@@ -332,6 +336,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 57]: [57-11] wrangler 4.156.0 user-approved; compatibility_date 2026-10-30 (workerd limit)
 - [Phase 59]: G27 accepted (operator 2026-11-03): D-09 unchanged, offline probe latency accepted
 - [Phase 60]: [60-18] G1 verdict X-RELEASE+BLOCK (signal cb): release on open + set_active, replay on close; scope to game process not explorer.exe
+- [Phase 62]: 62-05: only STEAM_STORE_API moved to gameConstants.ts; OVERLAY_EXIT_GRACE_MS stays in games.ts; games.ts re-exports nothing (pinned by gamesModuleSurface.test.ts)
 
 ### Pending Todos
 
@@ -562,7 +567,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-06T10:07:32.905Z
+Last session: 2026-11-06T10:26:14.606Z
 Stopped at: Phase 62 context gathered
 Resume file: None
 
