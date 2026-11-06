@@ -1,0 +1,104 @@
+// knip config (quick 261107-brs). Replaces ts-prune. `pnpm find-deadcode` runs knip through the
+// shrink-only identity ratchet meta/knipRatchet.cjs against meta/knip-baseline.txt.
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  "entry": [
+    // (src/frontend/index.tsx is the vite input via index.html and is found by the vite plugin.)
+    // (src/sidecar/index.ts, the `build:sidecar` esbuild entry, is found from package.json scripts.
+    // The .cjs meta runners are likewise found from package.json scripts, so they are not listed.)
+    // Worker thread entry, bundled by meta/buildDecompressWorkerDev.ts (DECOMPRESS_WORKER_ENTRY_PATH)
+    // and loaded at runtime via `new Worker`, so no import edge reaches it.
+    "src/backend/storeManagers/steam/depot/decompressWorker.ts",
+    // src/preload is imported by src/frontend/index.tsx (tauriAttach, tauriTransport, api/*) and
+    // tauri injects nothing separately; its own jest project covers __tests__. No extra entry needed.
+
+    // meta tools invoked from package.json scripts (`node meta/runTs.cjs ... meta/X.ts` hides the
+    // .ts argument from knip's script parser, so each is listed explicitly), .github/workflows,
+    // .husky and src-tauri/*.json. A blanket meta/* glob is deliberately not used: it would hide
+    // uninvoked meta tools, which are exactly the dead files knip should report.
+    "meta/assembleRendererDist.ts",
+    "meta/bridgeCensus.ts",
+    "meta/buildCrossoverIndex.ts",
+    "meta/buildDecompressWorkerDev.ts",
+    "meta/buildDrmNativeParts.ts",
+    "meta/buildLsteamclient.ts",
+    "meta/buildOverlayArchive.ts",
+    "meta/buildRunnersOnedir.ts",
+    "meta/buildSidecarSea.ts",
+    "meta/buildSteamBridgeShims.ts",
+    "meta/buildSteamClientLayerArchive.ts",
+    "meta/captureShellScrollback.ts",
+    "meta/checkBuildBinMirror.ts",
+    "meta/checkRunnerInvocations.ts",
+    "meta/cleanDist.ts",
+    "meta/downloadHelperBinaries.ts",
+    "meta/extractProtonInventory.ts",
+    "meta/genI18nGateScope.ts",
+    "meta/gen_vtables.ts",
+    "meta/graphifyCodeViz.ts",
+    "meta/i18nCatalogChurnGuard.ts",
+    "meta/lintTranslations.ts",
+    "meta/machineFillGamelib.ts",
+    "meta/pinRunnerDigests.ts",
+    "meta/rebrandUpstreamCatalogs.ts",
+    "meta/releaseTags.ts",
+    "meta/signMachOResources.ts",
+    "meta/trayIconVariants.ts",
+    "meta/verifyRunnerBundle.ts",
+    "meta/verifyUpdaterSigningKey.ts",
+    // Standalone operator scripts (not imported by anything).
+    "scripts/*.cjs"
+  ],
+  // The vite plugin only auto-enables when `vite` is a listed dependency, and it is not (it arrives
+  // transitively: a real finding in the baseline). vite.config.ts is the consumer of
+  // @vitejs/plugin-react-swc and vite-plugin-svgr, so enable the plugin explicitly.
+  "vite": true,
+  "ignoreDependencies": [
+    // src/frontend/App.css pulls both in with CSS `@import '@fontsource/<font>/index.css'`, an edge
+    // knip does not follow.
+    "@fontsource/cabin",
+    "@fontsource/rubik"
+  ],
+  "ignoreBinaries": [
+    // Operating-system and external-toolchain commands spawned at runtime by the named files; none
+    // is an npm bin, so none can be (or should be) a package.json dependency.
+    // pgrep/pkill: meta/captureShellScrollback.ts, src/backend/utils.ts (macOS/Linux process tools).
+    "pgrep",
+    "pkill",
+    // Stop-Process: PowerShell cmdlet run by src/backend/utils.ts on Windows.
+    "Stop-Process",
+    // graphify: per-developer `pip install --user` binary, run by meta/graphifyCodeViz.ts.
+    "graphify",
+    // file/lipo: macOS developer tools run by meta/verifyRunnerBundle.ts and src/backend/utils/macArch.ts.
+    "file",
+    "lipo",
+    // flatpak: host binary probed by src/backend/config.ts on Linux.
+    "flatpak",
+    // reg / reg.exe / attrib: Windows system commands run by steam/library.ts, sidecar/knownFolders.ts
+    // and steam/depot/fileAttributes.ts.
+    "reg",
+    "reg.exe",
+    "attrib",
+    // clang: C toolchain compiler invoked by the bridge test steam/bridge/__tests__/cbqueue.test.ts.
+    "clang",
+    // wine: the Windows-compat runner launched by src/backend/utils/compatibility_layers.ts.
+    "wine",
+    // du: disk-usage tool run by src/backend/wine/manager/downloader/utilities.ts.
+    "du"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx,scss,sass}",
+    "meta/**/*.{ts,cjs,mjs}",
+    "scripts/**/*.cjs"
+  ],
+  "ignore": [
+    // Carried over from .ts-prunerc: type definition shims.
+    "src/common/typedefs/**",
+    // relay/ (separate package, not a workspace member; imports two src/ exports, tagged @public
+    // at their declarations), spike/, native/, build/, graphify-out/ and .planning/ match no
+    // `project` glob, so knip never scans them and they need no ignore (knip hints on redundant ones).
+    // Out-of-workspace trees: spikes, native code, the Rust shell, build output, tooling state.
+    "src-tauri/**",
+    ".claude/**"
+  ]
+}
