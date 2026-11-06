@@ -1113,3 +1113,13 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 63 to break down)
+
+### Phase 64: UI to edit themes
+
+**Goal:** Users can make their own theme by copying a built-in one and editing its colours, without the built-in themes ever changing. Three parts: (1) **Theme gallery.** A thumbnail of every theme, each a small launcher preview drawn from that theme's real token values (body, sidebar, active nav row, accent and search outline, library tiles, primary / secondary / success / danger buttons), like the comparison page made on 2026-11-05 (https://claude.ai/artifact/Ji88yFXU7ymdVoTn1kV4kY). (2) **Duplicate, then edit.** Picking a theme and choosing Duplicate creates a new custom theme seeded with the source's resolved token values (`var()` chains followed through `styles/_colors.scss`). The 10 built-in themes in `src/frontend/themes.scss` are read-only. The copy opens a token editor that lists each token with a colour swatch and value, and the copy's thumbnail updates as values change. (3) **Use it.** Saved custom themes appear in the theme selector beside the built-ins and apply app-wide. Custom themes are stored as token data, not CSS files: quick 261031-bst removed the old custom-CSS-file themes and their IPC channels, and `window.setTheme` (`src/frontend/index.tsx`) now maps any non-built-in key to the default, so that fallback needs a custom-theme branch again. Open questions for discuss-phase: whether a copy of Nord Light carries its 23 nested component overrides (they are selectors, not tokens; without them a light copy breaks MUI dialogs, genre tags and context menus); which tokens the editor shows (themes declare 25–56 each); and whether the contrast floors `themeTokens.test.ts` enforces (3:1 border against body and modal backgrounds, accent against the sidebar) become live warnings in the editor. Came from the theme comparison on 2026-11-05.
+**Requirements**: TBD
+**Depends on:** None
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 64 to break down)
