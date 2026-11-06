@@ -76,3 +76,15 @@ Signed-out Mac Steam, `tauri:dev`, driven through the UI:
 - Uninstall (7 Days to Die 251570): kept installed at exactly 2:00.
 - Cancel (Tomb Raider 203160): poll stopped 20 s after the request, immediately on Cancel.
 - Defect found: the notice is a system toast, not the in-app toast stack. Filed as a follow-up todo.
+
+## Second live run (2026-11-06, operator)
+
+Signed-out Mac Steam, downloader OFF, sidecar built 2026-11-06 07:45 (includes
+`a171c7a02`/`c4c6d434f`). All three operator checks passed and match `gamelib.log`:
+
+- **Uninstall (112100):** delegated 18:16:55; at 18:18:55 (40 ticks) `Steam did
+  not start the uninstall ... keeping it installed`. Stayed Installed, notice shown.
+- **Install (290300):** delegated 18:30:03; at 18:32:03 `Steam did not start the
+  install ... reverting to not installed`. Reverted, notice shown.
+- **Cancel (290300):** delegated 18:34:39; Cancel at 18:34:44 `Cancel stops
+  GameLib's wait for the Steam-owned install`, poll stopped, Not installed at once.
