@@ -89,6 +89,7 @@
 // the steam manager (and every other manager) off THIS named import instead
 // — so the direct-import hazard this docstring describes cannot recur here
 // by construction, not merely by convention.
+import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import { libraryManagerMap } from '../storeManagers'
 import { noteRefreshTrigger } from '../storeManagers/steam/authTrigger'
 
@@ -212,7 +213,7 @@ async function handleRefreshLibrary(
     // and has no dependency on `storeManagers`/`steam/library`, so
     // importing it here directly adds no new module to the bundle and
     // carries none of this file's circular-import risk.
-    if (runner === 'steam') {
+    if (isStore(runner, 'steam')) {
       try {
         HumbleLibrary.recomputeOwnership()
       } catch (err) {
@@ -358,7 +359,7 @@ async function handleLaunch(
   // single module that now owns both the launch call and that side effect,
   // shared with `protocol.ts`'s deep-link branch so the two paths cannot
   // drift again.
-  if (runner === 'steam') {
+  if (storeCapabilities[runner].launchHandedToClient) {
     const launched = await dispatchSteamLaunch(appName)
     return { status: launched ? 'done' : 'error' }
   }

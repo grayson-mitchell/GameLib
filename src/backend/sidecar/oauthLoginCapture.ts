@@ -125,6 +125,60 @@ function resolveUserAgent(runner: OAuthRunner): string {
   return USER_AGENTS[runner]
 }
 
+type RedirectMatcher = (parsed: URL, url: string) => OAuthRedirectMatch | null
+
+const OAUTH_REDIRECT_MATCHERS: Record<OAuthRunner, RedirectMatcher> = {
+  legendary: (parsed, url) => {
+    // WebView/index.tsx L268: `parsedUrl.hostname === 'localhost'` + a non-empty `code` param.
+    if (parsed.hostname !== 'localhost') return null
+    const code = parsed.searchParams.get('code')
+    if (!code) return null
+    return { code, redirectUrl: url }
+  },
+  gog: (parsed, url) => {
+    // Deliberate TIGHTENING of index.tsx L74's `gogEmbedRegExp`
+    // (`new RegExp('https://embed.gog.com/on_login_success?')`), which treats the trailing
+    // `?` as an optional preceding character and is an unanchored substring match — it would
+    // match a url that merely CONTAINS that text anywhere, not just one whose host+path IS
+    // embed.gog.com/on_login_success. This matcher requires both explicitly. The Electron
+    // `<webview>` path keeps L74's original regex untouched — this tightening applies only to
+    // this new capture path (T-34.4.1-44a).
+    if (
+      parsed.hostname !== 'embed.gog.com' ||
+      parsed.pathname !== '/on_login_success'
+    ) {
+      return null
+    }
+    const code = parsed.searchParams.get('code')
+    if (!code) return null
+    return { code, redirectUrl: url }
+  },
+  nile: (parsed, url) => {
+    // T-34.4.1-44b CLOSED for nile by this host check.
+    //
+    // `www.amazon.com` derives from upstream `imLinguin/nile`'s `openid.return_to` parameter
+    // (`authorization.py`) — MEDIUM confidence (research Assumption A1) until live-gate item 3
+    // confirms it against one real captured redirect. If that capture instead shows a
+    // country-TLD variant (e.g. `amazon.co.uk`), the correct response is a documented suffix
+    // match, NOT removing the anchor.
+    if (parsed.hostname !== 'www.amazon.com') {
+      if (parsed.searchParams.has('openid.oa2.authorization_code')) {
+        // Sole automated evidence path for Assumption A1 — must survive until the live gate
+        // records item 3. Origin ONLY: never the code, the full url, or parsed.search — a
+        // captured authorization code is a credential (ASVS V5/V6).
+        logWarning(
+          `[oauthLoginCapture] runner=nile origin-mismatch origin=${parsed.origin}`,
+          LogPrefix.Backend
+        )
+      }
+      return null
+    }
+    const code = parsed.searchParams.get('openid.oa2.authorization_code')
+    if (!code) return null
+    return { code, redirectUrl: url }
+  }
+}
+
 /**
  * PURE. No seam, no timers, no logging of values. Parses `url` inside a try/catch that returns
  * `null` on a parse failure — a malformed url must never throw, for any runner.
@@ -140,59 +194,8 @@ export function matchOAuthRedirect(
     return null
   }
 
-  switch (runner) {
-    case 'legendary': {
-      // WebView/index.tsx L268: `parsedUrl.hostname === 'localhost'` + a non-empty `code` param.
-      if (parsed.hostname !== 'localhost') return null
-      const code = parsed.searchParams.get('code')
-      if (!code) return null
-      return { code, redirectUrl: url }
-    }
-    case 'gog': {
-      // Deliberate TIGHTENING of index.tsx L74's `gogEmbedRegExp`
-      // (`new RegExp('https://embed.gog.com/on_login_success?')`), which treats the trailing
-      // `?` as an optional preceding character and is an unanchored substring match — it would
-      // match a url that merely CONTAINS that text anywhere, not just one whose host+path IS
-      // embed.gog.com/on_login_success. This matcher requires both explicitly. The Electron
-      // `<webview>` path keeps L74's original regex untouched — this tightening applies only to
-      // this new capture path (T-34.4.1-44a).
-      if (
-        parsed.hostname !== 'embed.gog.com' ||
-        parsed.pathname !== '/on_login_success'
-      ) {
-        return null
-      }
-      const code = parsed.searchParams.get('code')
-      if (!code) return null
-      return { code, redirectUrl: url }
-    }
-    case 'nile': {
-      // T-34.4.1-44b CLOSED for nile by this host check.
-      //
-      // `www.amazon.com` derives from upstream `imLinguin/nile`'s `openid.return_to` parameter
-      // (`authorization.py`) — MEDIUM confidence (research Assumption A1) until live-gate item 3
-      // confirms it against one real captured redirect. If that capture instead shows a
-      // country-TLD variant (e.g. `amazon.co.uk`), the correct response is a documented suffix
-      // match, NOT removing the anchor.
-      if (parsed.hostname !== 'www.amazon.com') {
-        if (parsed.searchParams.has('openid.oa2.authorization_code')) {
-          // Sole automated evidence path for Assumption A1 — must survive until the live gate
-          // records item 3. Origin ONLY: never the code, the full url, or parsed.search — a
-          // captured authorization code is a credential (ASVS V5/V6).
-          logWarning(
-            `[oauthLoginCapture] runner=nile origin-mismatch origin=${parsed.origin}`,
-            LogPrefix.Backend
-          )
-        }
-        return null
-      }
-      const code = parsed.searchParams.get('openid.oa2.authorization_code')
-      if (!code) return null
-      return { code, redirectUrl: url }
-    }
-    default:
-      return null
-  }
+  // Preserve the old `default: return null` for a runner that slips past the type.
+  return OAUTH_REDIRECT_MATCHERS[runner]?.(parsed, url) ?? null
 }
 
 /**

@@ -114,6 +114,7 @@
  * `electron` module.
  */
 
+import { isStore } from 'common/storeCapabilities'
 import { ipcMain } from '../platform'
 // Load-bearing FIRST import (mirrors steamFlowRegistration.ts's / plan
 // 30-01's steamAuthFlowRegistration.ts's Phase 27 Plan 05 circular-dep fix):
@@ -574,7 +575,7 @@ export function registerInstallFlows(): void {
         throw error
       }
 
-      if (runner === 'legendary') {
+      if (isStore(runner, 'legendary')) {
         const epicOffline = await isEpicServiceOffline()
         if (epicOffline) {
           // No `event` property — see the identical rationale on `moveInstall` above.

@@ -76,6 +76,7 @@
  * the SUMMARY for this plan for the full trace.
  */
 
+import { isStore } from 'common/storeCapabilities'
 import { ipcMain } from '../platform'
 import {
   getCometVersion,
@@ -170,7 +171,7 @@ export function registerRunnerMiscFlows(): void {
         break
     }
 
-    if (runner === 'gog') {
+    if (isStore(runner, 'gog')) {
       // Check if game was modified by offline installer / wine uninstaller
       await libraryManagerMap['gog'].checkForOfflineInstallerChanges(appName)
       const maybeNewGameInfo = libraryManagerMap['gog'].getGameInfo(appName)
@@ -237,7 +238,7 @@ export function registerRunnerMiscFlows(): void {
     // (storeManagers/gog/games.ts:850-910) never prompts either — so no dialog/prompt is
     // reachable from either path; D-15's fire-and-forget-rejection landmine does not apply
     // here. This is a byte-faithful port of inherited Electron behaviour, not a redesign.
-    if (runner === 'legendary') {
+    if (isStore(runner, 'legendary')) {
       const epicOffline = await isEpicServiceOffline()
       if (epicOffline) {
         logWarning(
@@ -302,8 +303,8 @@ export function registerRunnerMiscFlows(): void {
       if (disablePlaytimeSync) {
         return
       }
-      if (runner === 'gog') {
-        return libraryManagerMap[runner].getGame(appName).getGOGPlaytime()
+      if (isStore(runner, 'gog')) {
+        return libraryManagerMap['gog'].getGame(appName).getGOGPlaytime()
       }
 
       return

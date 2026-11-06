@@ -119,6 +119,7 @@
  * 34.5 lands.
  */
 
+import { isStore, type StoreKey } from 'common/storeCapabilities'
 import { ipcMain } from '../platform'
 // Load-bearing FIRST import (mirrors steamFlowRegistration.ts's Phase 27 Plan
 // 05 circular-dep fix): force `storeManagers/index.ts` to be the
@@ -250,10 +251,14 @@ export function registerSteamAuthFlows(): void {
       const payload = args[0] as { store?: unknown; key?: unknown }
       const store = payload?.store
       const key = payload?.key
-      if (store !== 'steam' || typeof key !== 'string' || key.length === 0) {
+      if (
+        !isStore(store as StoreKey | undefined, 'steam') ||
+        typeof key !== 'string' ||
+        key.length === 0
+      ) {
         return { store: 'steam', outcome: 'error', message: 'invalid-request' }
       }
-      return SteamUser.redeemKey(store, key)
+      return SteamUser.redeemKey('steam', key)
     }
   )
 
