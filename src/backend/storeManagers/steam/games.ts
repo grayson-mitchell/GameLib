@@ -61,8 +61,7 @@ import {
   type SteamBridgeVerdict
 } from './electronStores'
 import { depotSignalCaptured } from './metadataCapture'
-import { knownFixSaysMac32, seedMacArchFromKnownFix } from './macArchKnownFix'
-import { knownFixSaysCeg } from './drmKnownFix'
+import { knownFixSaysMac32 } from './macArchKnownFix'
 import { resolvePlatformWrite } from './platformPrecedence'
 import {
   library,
@@ -190,8 +189,6 @@ import { isSteamExperimentalInstallAppEnabled } from './experimentalInstallAppSe
 import { requestSteamInstallApp } from './steamInstallApp'
 import { classifyDepotError } from './depotErrors'
 import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
-// Phase 24 Plan 08 (R4/R7): allowlist-based bridge-vs-fallback routing.
-import { bridgeAllowlist } from './bridge/allowlist'
 import { placeShimForGame } from './bridge/shimGenerate'
 import { detectLaunchDrmWrapper } from './bridge/drm/drmScanExe'
 import { detectSteamDrmInPe } from './bridge/peSteamDrm'
@@ -222,15 +219,10 @@ import { writeBridgeConfig } from './bridge/bridgeConfig'
 // verdict read/clear family + the current-shim coverage check. games.ts is
 // the sole assembler of resolveBridgeRoute's input and the sole writer of
 // the persisted verdict (bridgeRoute.ts's own header).
-import {
-  resolveBridgeRoute,
-  NOTICE_REASONS,
-  type BridgeRouteInput
-} from './bridge/bridgeRoute'
+import { NOTICE_REASONS, type BridgeRouteInput } from './bridge/bridgeRoute'
 import {
   readBridgeVerdict,
   writeBridgeScanVerdict,
-  clearBridgeScanVerdict,
   setBridgeSteamApiPrescreen,
   setBridgeUserRoute,
   markBridgeLimitedNoticeShown,
@@ -238,9 +230,7 @@ import {
   writeBridgeDrmVerdict,
   writeBridgeModeVerdict
 } from './bridge/bridgeVerdict'
-import { isScanVerdictNowCovered } from './bridge/shimCoverage'
 import {
-  builtBridgeShim64Path,
   builtOverlayShimPath,
   builtOverlayInputPath,
   builtOverlayInputProbePath,
@@ -280,6 +270,19 @@ import {
   type DrmWineLaunch,
   drmStepNoticeText
 } from './gameDrmLaunch'
+import {
+  isNative,
+  isBottleEligibleFromPlatforms,
+  isForcedWindowsViaBottle,
+  isBottleEligible,
+  assembleBridgeRouteInput,
+  bridgeRoute,
+  checkBridgeRoute,
+  isBridgeEligible,
+  clearStaleBridgeVerdict,
+  checkBottleEligibility,
+  ensurePlatformsCaptured
+} from './gameEligibility'
 
 /** The project-wide appId shape guard (clientSetup.ts, installFormIpc.ts,
  * bottle.ts, bridge/allowlist.ts all carry the identical regex). Used by
@@ -304,7 +307,7 @@ const OVERLAY_INPUT_FIX_ROUTES: ReadonlySet<string> = new Set([
 ])
 
 export default class SteamGame implements Game {
-  private readonly appId: string
+  readonly appId: string
 
   constructor(appId: string) {
     this.appId = appId
@@ -478,7 +481,7 @@ export default class SteamGame implements Game {
    * enriched GameInfo to the frontend via sendFrontendMessage.
    * On failure: logs a warning and returns silently (no throw).
    */
-  private async fetchMetadataIfNeeded(current: GameInfo): Promise<void> {
+  async fetchMetadataIfNeeded(current: GameInfo): Promise<void> {
     // Guard: if a fetch is already in-flight for this appId, return immediately
     // (pendingFetches.add MUST come before the await — prevents T-2-03 race)
     if (pendingFetches.has(this.appId)) return
@@ -2737,7 +2740,7 @@ export default class SteamGame implements Game {
    * platform support isn't known yet) from being misrouted into the bottle.
    */
   isNative(): boolean {
-    return !this.isBottleEligible()
+    return isNative(this)
   }
 
   /**
@@ -2748,23 +2751,8 @@ export default class SteamGame implements Game {
    * the D-17 forced verdict (see `isBottleEligible()`'s own doc comment for
    * why). Body is byte-identical to the pre-34.13-14 `isBottleEligible()`.
    */
-  private isBottleEligibleFromPlatforms(): boolean {
-    if (!isMac) return false
-    const meta = steamMetadataStore.get(this.appId)
-    // MAC32-02: a confirmed-32-bit mac build is bottle-eligible independent of
-    // is_mac_native/platformsCaptured — a confirmed-32 game reports
-    // is_mac_native true (it DOES have a mac depot, just not a runnable one on
-    // modern macOS). Pre-install the min-OS heuristic (games.ts macArchFromMinOS)
-    // NEVER yields '32', so this branch fires from Plan 18-03's post-install
-    // Mach-O ground-truth check, or from a curated known-fix macArch "32" seed
-    // on Apple silicon (macArchKnownFix.ts, quick 261027-bqe).
-    if (meta?.mac_arch === '32') return true
-    // Quick task 260816-hdg PIN — this gate deliberately keeps the raw read and
-    // must NOT be routed through depotSignalCaptured. It asks the MAC question,
-    // which a pre-D-17 residue entry genuinely did answer; narrowing here would
-    // de-route bottle-eligible games over a fact already in the cache. A source
-    // assertion in metadataCapture.test.ts holds this line in place.
-    return meta?.platformsCaptured === true && meta?.is_mac_native === false
+  isBottleEligibleFromPlatforms(): boolean {
+    return isBottleEligibleFromPlatforms(this)
   }
 
   /**
@@ -2779,11 +2767,8 @@ export default class SteamGame implements Game {
    * below, and D-18 means a renderer-era flag must never resurrect a bottle
    * path on a host with no bottle at all.
    */
-  private isForcedWindowsViaBottle(): boolean {
-    return (
-      isMac &&
-      steamMetadataStore.get(this.appId)?.forcedWindowsViaBottle === true
-    )
+  isForcedWindowsViaBottle(): boolean {
+    return isForcedWindowsViaBottle(this)
   }
 
   /**
@@ -2795,10 +2780,8 @@ export default class SteamGame implements Game {
    * this split and become consistent together the moment either half
    * changes.
    */
-  private isBottleEligible(): boolean {
-    return (
-      this.isBottleEligibleFromPlatforms() || this.isForcedWindowsViaBottle()
-    )
+  isBottleEligible(): boolean {
+    return isBottleEligible(this)
   }
 
   /**
@@ -2816,21 +2799,8 @@ export default class SteamGame implements Game {
    * route into a bottle (`GameLibSteamBridge`) that a D-17 forced install
    * never wrote a single byte into (that install went to `GameLibSteam`).
    */
-  private assembleBridgeRouteInput(): BridgeRouteInput {
-    return {
-      platformsBottleEligible: this.isBottleEligibleFromPlatforms(),
-      isSeed: bridgeAllowlist.has(this.appId),
-      // `?? null`: bridgeAllowlist.knownBadReason's own contract already
-      // returns `null` for "no match", but this coerces any other falsy
-      // read (e.g. a test double that returns undefined) to the same
-      // not-known-bad default resolveBridgeRoute's `!== null` check needs.
-      knownBadReason: bridgeAllowlist.knownBadReason(this.appId) ?? null,
-      // quick 261027-gtd: curated known-fix drm "ceg" is a pre-download drm-wrapped signal.
-      knownFixDrm: knownFixSaysCeg(this.appId) ? 'ceg' : null,
-      verdict: readBridgeVerdict(this.appId),
-      failedThisSession: bridgeFailedThisSession.has(this.appId),
-      win64ShimPresent: existsSync(builtBridgeShim64Path)
-    }
+  assembleBridgeRouteInput(): BridgeRouteInput {
+    return assembleBridgeRouteInput(this)
   }
 
   /**
@@ -2838,8 +2808,8 @@ export default class SteamGame implements Game {
    * is a pure function (bridgeRoute.ts) — this method is the sole place in
    * games.ts that assembles its input and calls it.
    */
-  private bridgeRoute(): SteamBridgeRouteVerdict {
-    return resolveBridgeRoute(this.assembleBridgeRouteInput())
+  bridgeRoute(): SteamBridgeRouteVerdict {
+    return bridgeRoute(this)
   }
 
   /**
@@ -2850,9 +2820,8 @@ export default class SteamGame implements Game {
    * `checkBottleEligibility()` does: a cold metadata cache must never read
    * as a routing answer.
    */
-  async checkBridgeRoute(): Promise<SteamBridgeRouteVerdict> {
-    await this.ensurePlatformsCaptured()
-    return this.bridgeRoute()
+  checkBridgeRoute(): Promise<SteamBridgeRouteVerdict> {
+    return checkBridgeRoute(this)
   }
 
   /**
@@ -2871,7 +2840,7 @@ export default class SteamGame implements Game {
    * / the D-17 forced verdict — see that method's own doc comment above.
    */
   private isBridgeEligible(): boolean {
-    return this.bridgeRoute().route === 'bridge'
+    return isBridgeEligible(this)
   }
 
   /**
@@ -2885,15 +2854,7 @@ export default class SteamGame implements Game {
    * metadata entry.
    */
   private clearStaleBridgeVerdict(): void {
-    const verdict = readBridgeVerdict(this.appId)
-    const scan = verdict?.scan
-    if (scan?.status === 'miss' && isScanVerdictNowCovered(scan)) {
-      clearBridgeScanVerdict(this.appId)
-      logInfo(
-        `SteamGame: appId ${this.appId} — bridge verdict auto-cleared (D-51-07), the current shim now covers: ${scan.missingSymbols.join(', ')}`,
-        LogPrefix.Steam
-      )
-    }
+    return clearStaleBridgeVerdict(this)
   }
 
   /**
@@ -2912,9 +2873,8 @@ export default class SteamGame implements Game {
    * own bounded poll, capped at `METADATA_FETCH_TIMEOUT_MS` (15000ms,
    * `state.ts:30`) — the number 34.13-11's D-25 loading row must cite.
    */
-  async checkBottleEligibility(): Promise<boolean> {
-    await this.ensurePlatformsCaptured()
-    return this.isBottleEligible()
+  checkBottleEligibility(): Promise<boolean> {
+    return checkBottleEligibility(this)
   }
 
   /**
@@ -2939,51 +2899,8 @@ export default class SteamGame implements Game {
    * bounded poll below and wait for that single in-flight fetch to resolve
    * platformsCaptured, rather than hoping it finishes before routing happens.
    */
-  private async ensurePlatformsCaptured(): Promise<void> {
-    if (!isMac) return
-
-    // quick 261027-bqe: seed a curated macArch "32" BEFORE any caller consults
-    // isBottleEligible(), above the alreadyCaptured early return below.
-    seedMacArchFromKnownFix(this.appId)
-
-    // Quick task 260816-hdg PIN — the FOURTH read site, and the one that stays
-    // RAW. Three reasons, all load-bearing:
-    //  1. Its only consumer is checkBottleEligibility() -> isBottleEligible(),
-    //     which asks the MAC question. A pre-D-17 residue entry genuinely
-    //     captured its mac answer, so this early return is answering from real
-    //     data, not from a stale claim.
-    //  2. Narrowing it would push every residue game through the bounded
-    //     METADATA_FETCH_TIMEOUT_MS poll below, on the install/launch hot path,
-    //     for a fact the cache already holds.
-    //  3. Convergence does not depend on it. getGameInfo()'s normalized
-    //     self-heal gate fires the refetch on library render, and until that
-    //     lands installFormIpc reports the depot signal as not-captured, which
-    //     is exactly what lets Phase 34.14's D-04 fail-open offer Windows. The
-    //     install form is correct DURING the window and correct after it.
-    // A source assertion in metadataCapture.test.ts holds this line in place.
-    const alreadyCaptured = (): boolean =>
-      steamMetadataStore.get(this.appId)?.platformsCaptured === true
-
-    if (alreadyCaptured()) return
-
-    await this.fetchMetadataIfNeeded(this.getGameInfo())
-
-    // Bounded poll for the T-2-03 dedup race: fetchMetadataIfNeeded() may have
-    // early-returned because a concurrent fetch (the getGameInfo() side effect
-    // above, or an earlier render's lazy fetch) is already in flight for this
-    // appId. Wait for it to resolve platformsCaptured, drain from
-    // pendingFetches, or hit METADATA_FETCH_TIMEOUT_MS — whichever first, so
-    // install()/launch()/uninstall() can never hang indefinitely (T-17-09-01).
-    if (!alreadyCaptured() && pendingFetches.has(this.appId)) {
-      const deadline = Date.now() + METADATA_FETCH_TIMEOUT_MS
-      while (
-        !alreadyCaptured() &&
-        pendingFetches.has(this.appId) &&
-        Date.now() < deadline
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, 100))
-      }
-    }
+  ensurePlatformsCaptured(): Promise<void> {
+    return ensurePlatformsCaptured(this)
   }
 
   /**

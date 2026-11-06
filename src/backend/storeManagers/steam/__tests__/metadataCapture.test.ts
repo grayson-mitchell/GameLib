@@ -150,6 +150,9 @@ const readStripped = (relPath: string): string =>
   stripSourceComments(readFileSync(join(__dirname, relPath), 'utf8'))
 
 const gamesSource = readStripped('../games.ts')
+// 62-06: the eligibility cluster (isBottleEligibleFromPlatforms, assembleBridgeRouteInput,
+// ensurePlatformsCaptured) was lifted out of the class into gameEligibility.ts.
+const eligibilitySource = readStripped('../gameEligibility.ts')
 const librarySource = readStripped('../library.ts')
 const installFormIpcSource = readStripped('../installFormIpc.ts')
 const steamPlatformRowSource = readStripped(
@@ -193,17 +196,17 @@ describe('source gate: the deliberate non-changes stay raw', () => {
   const MAC_GATE =
     /platformsCaptured === true && meta\?\.is_mac_native === false/
 
-  it('games.ts isBottleEligibleFromPlatforms still reads the raw flag for the MAC question', () => {
-    expect(gamesSource).toMatch(MAC_GATE)
+  it('gameEligibility.ts isBottleEligibleFromPlatforms still reads the raw flag for the MAC question', () => {
+    expect(eligibilitySource).toMatch(MAC_GATE)
   })
 
   it('library.ts isBridgeAuthoritativeForInstallState still reads the raw flag for the MAC question', () => {
     expect(librarySource).toMatch(MAC_GATE)
   })
 
-  it("games.ts ensurePlatformsCaptured's alreadyCaptured (the fourth site) still reads the raw flag", () => {
-    expect(gamesSource).toMatch(
-      /steamMetadataStore\.get\(this\.appId\)\?\.platformsCaptured === true/
+  it("gameEligibility.ts ensurePlatformsCaptured's alreadyCaptured (the fourth site) still reads the raw flag", () => {
+    expect(eligibilitySource).toMatch(
+      /steamMetadataStore\.get\(steamGame\.appId\)\?\.platformsCaptured === true/
     )
   })
 })
@@ -215,14 +218,15 @@ describe('source gate: Phase 51 Plan 09 bridge verdict carry-forward (D-51-07)',
     )
   })
 
-  it('bridgeAllowlist.has( appears exactly once in games.ts — assembleBridgeRouteInput is the sole caller (assumption_delta_decision)', () => {
-    const occurrences = gamesSource.match(/bridgeAllowlist\.has\(/g) ?? []
+  it('bridgeAllowlist.has( appears exactly once across games.ts and gameEligibility.ts — assembleBridgeRouteInput is the sole caller (assumption_delta_decision)', () => {
+    const occurrences =
+      (gamesSource + eligibilitySource).match(/bridgeAllowlist\.has\(/g) ?? []
     expect(occurrences.length).toBe(1)
   })
 
   it('assembleBridgeRouteInput never reads forcedWindowsViaBottle (D-17 pin — composes isBottleEligibleFromPlatforms only)', () => {
-    const fnMatch = gamesSource.match(
-      /private assembleBridgeRouteInput\(\)[^{]*\{[\s\S]*?\n {2}\}/
+    const fnMatch = eligibilitySource.match(
+      /export function assembleBridgeRouteInput\([^)]*\)[^{]*\{[\s\S]*?\n\}/
     )
     expect(fnMatch).not.toBeNull()
     expect(fnMatch![0]).not.toMatch(/forcedWindowsViaBottle/)
