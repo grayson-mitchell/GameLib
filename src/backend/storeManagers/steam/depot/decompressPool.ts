@@ -61,8 +61,16 @@ function forwardWorkerLog(entry: unknown): void {
   ) {
     return
   }
-  if (level === 'warning') logWarning(lines, LogPrefix.Steam)
-  else logInfo(lines, LogPrefix.Steam)
+  // backend/logger throws when its writer is not initialized (the sidecar's
+  // decompress-pool self-test never boots it). This runs inside a worker
+  // 'message' handler, so a throw here would be an uncaught exception that
+  // kills the process -- fall back to stderr instead.
+  try {
+    if (level === 'warning') logWarning(lines, LogPrefix.Steam)
+    else logInfo(lines, LogPrefix.Steam)
+  } catch {
+    console.error(`[DecompressPool] ${(lines as string[]).join(' ')}`)
+  }
 }
 
 /** Debug/humankind-depot-full-stall (2026-08-17): where the pool's worker
