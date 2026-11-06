@@ -118,7 +118,7 @@ describe('steam/games.ts module surface (D-05)', () => {
       const ownerName = owner.replace(/\.ts$/, '')
       expect(FORWARD[ownerName]).toBeDefined()
       const text = readFileSync(join(__dirname, '..', owner), 'utf8')
-      const targets = [...text.matchAll(/from\s+'\.\/(game\w+)'/g)]
+      const targets = [...text.matchAll(/(?:from|import)\s+'\.\/(game\w+)'/g)]
         .map((m) => m[1])
         .filter((name) => `${name}.ts` !== owner && name in FORWARD)
       for (const target of targets) {
