@@ -1,5 +1,5 @@
 ---
-status: pending
+status: gaps
 phase: 63-rust-migration-pattern-and-executable-scanners
 source: [63-11-PLAN.md]
 ---
@@ -100,35 +100,35 @@ Run in this order before launch 1. Each must hold or the run is aborted.
 
 ### 1. Sidecar freshness
 expected: launch 1 only. `build/main/sidecar.js` mtime is newer than the newest changed `src/` file since `342895f84^` (`git log -1 --format=%cd` for each, or the P2 command), and `gamelib.log` for launch 1 contains `scanner ` lines at all (so the build carries `runScanner`); one gamelib-shell PID recorded. Launch ordinal 1.
-result: pending
+result: pass. P2 held at 12:00:00 (sidecar.js newer than the newest phase-63 src change, scannerImpl.test.ts 11:57:51). Launch 1, gamelib-launch-1.log:102 'scanner machoExports op=scan_winemac_metal_exports caller=wineVersionInstalled: impl=rust' (a scanner line, so the build carries runScanner). One shell PID recorded for launch 1 (19207, pids.txt). Note: build/main/sidecar.js mtime read 12:26:11 at scoring time, i.e. it was rebuilt by the dev flow around the start of launch 6; no src change since 11:57:51, so the freshness condition still holds.
 
 ### 2. Shim placement on Avernum 6 (206060)
 expected: launch 2 only; launch Avernum 6 from its game page (Play button). gamelib-launch-2.log contains `scanner drmScanExe op=scan_contained_real caller=detectLaunchDrmWrapper: impl=rust`, `scanner peSections op=scan_steamstub_section caller=detectLaunchDrmWrapper: impl=rust`, `scanner peSteamDrm op=scan_steam_drm caller=placeShimForGame: impl=rust`, `scanner importScan op=scan_steam_api_imports caller=placeShimForGame: impl=rust`, `scanner importScan op=scan_steam_api_imports caller=bridgeScan: impl=rust` (bridgeScan only if the bridge scan walks PEs; record if absent), plus the existing `placeShimForGame` result line (shim placed or already-placed) and no `rust scan failed`. Launch ordinal 2.
-result: pending
+result: pass. Launch 2, gamelib-launch-2.log:110 'scanner drmScanExe op=scan_contained_real caller=detectLaunchDrmWrapper: impl=rust', :111 'scanner peSections op=scan_steamstub_section caller=detectLaunchDrmWrapper: impl=rust', :122 'scanner peSteamDrm op=scan_steam_drm caller=placeShimForGame: impl=rust', :120 'scanner importScan op=scan_steam_api_imports caller=placeShimForGame: impl=rust'. placeShimForGame result line at :121 (shim already present and byte-identical). caller=bridgeScan absent in launch 2 (the contract says record if absent; it is conditional on the bridge scan walking PEs). No 'rust scan failed' or 'containment check failed'.
 
 ### 3. GameMaker detection on Mining Mechs (1603180)
 expected: launch 3 only; launch Mining Mechs with the CrossOver engine selected. gamelib-launch-3.log contains `scanner peSteamDrm op=scan_pe_imported_dlls caller=gameMakerRunner: impl=rust` plus the CX_GRAPHICS_BACKEND dxvk default source line `GameMaker D3D11 runner default: data.win + d3d11.dll import + CheckMultisampleQualityLevels probe`. Launch ordinal 3. If the title is not on a crossover engine the line cannot appear (bridgeKnownFixes.ts gate on `wineVersion.type !== 'crossover'`): record BLOCKED, not pass.
-result: pending
+result: blocked. Launch 3 (gamelib-launch-3.log): engine confirmed at :117 'SteamEngine: appId 1603180 uses engine=crossover build=26.3.0.39832', but there is no 'caller=gameMakerRunner' scanner line and no 'GameMaker D3D11 runner default' line. Cause: :146 'known-fix env applied: CX_GRAPHICS_BACKEND=dxvk (tier-1)' from public/fixes/1603180-steam.json; bridgeKnownFixes.ts:154 returns null before detectGameMakerD3d11Runner when CX_GRAPHICS_BACKEND is already set. The contract's chosen title can never emit this evidence (UAT design defect, not a Rust regression). A missing positive line is not a pass, so the item is not scored pass. Other scanner lines in launch 3 (:114,:115,:122,:124,:127) are rust.
 
 ### 4. DRM-mode launch of Grim Dawn (219990)
 expected: launch 4 only; launch Grim Dawn. gamelib-launch-4.log contains `scanner peSteamDrm op=scan_steam_drm caller=launchBridgeGameBody: impl=rust`, `scanner peSections op=scan_steamstub_section caller=detectLaunchDrmWrapper: impl=rust`, `scanner drmScanExe op=scan_contained_real caller=detectLaunchDrmWrapper: impl=rust`, plus the steamclient-layer / DRM mode routing line and the lsteamclient game-process trace. `caller=prefetchBridgeDrmDownloads` is install-time only (`gameInstall.ts:1273`), so it is not required on a launch; record it as not reached. Launch ordinal 4.
-result: pending
+result: pass. Launch 4, gamelib-launch-4.log:95 'scanner peSteamDrm op=scan_steam_drm caller=launchBridgeGameBody: impl=rust', :94 'scanner peSections op=scan_steamstub_section caller=detectLaunchDrmWrapper: impl=rust', :93 'scanner drmScanExe op=scan_contained_real caller=detectLaunchDrmWrapper: impl=rust'. Routing line :106 '[bridge-drm] appId=219990 mode=steamclient-layer ... trace=...' and :107 'launching appId 219990 in steamclient-layer DRM mode'. Game-process trace relogged in the same log, :161-:201 '[drm-trace] appId=219990 pid=244 role=game event=create-interface iface=SteamClient017' through role=game calls (GetAppOwnershipTicketData :168, GetSteamID :170), :202 'DRM trace for appId 219990 relogged events=41 rejected=0'. caller=prefetchBridgeDrmDownloads not reached (install-time only, as the contract states).
 
 ### 5. Ordinary bridge launch of The Age of Decadence (230070)
 expected: launch 5 only; launch The Age of Decadence. gamelib-launch-5.log contains `scanner drmScanExe op=scan_contained_real caller=detectLaunchDrmWrapper: impl=rust` and `scanner peSections op=scan_steamstub_section caller=detectLaunchDrmWrapper: impl=rust` (the first-in-process occurrence of those triples, which is why this is a separate launch from 2 and 4) and NO `caller=launchBridgeGameBody` line (non-steamstub exe never reads CEG, `gameBridgeLaunch.ts:223-226`). Launch ordinal 5.
-result: pending
+result: pass. Launch 5, gamelib-launch-5.log:90 'scanner drmScanExe op=scan_contained_real caller=detectLaunchDrmWrapper: impl=rust', :91 'scanner peSections op=scan_steamstub_section caller=detectLaunchDrmWrapper: impl=rust'. grep -c launchBridgeGameBody gamelib-launch-5.log is 0, as required.
 
 ### 6. DXMT boot check on a -DXMT copy
 expected: launch 1 only. gamelib-launch-1.log contains `scanner machoExports op=scan_winemac_metal_exports caller=dxmtBootUpdate: impl=rust`, emitted when `releasesInfoReady` fires and a `<install>-DXMT` directory exists (`dxmt.ts:219-226`), plus either the `Not updating DXMT copy of` skip line or a DXMT update. CONDITIONAL: no `-DXMT` directory is installed today, so the line cannot appear; create a DXMT copy first (Wine Manager install of Wine-Staging-macOS whose winemac.so passes the export check, via item 7) and relaunch, or record BLOCKED. Launch ordinal 1 (or a later launch 7 if the copy is created during launch 1).
-result: pending
+result: blocked. Launch 1: no 'caller=dxmtBootUpdate' line. Only a Wine-Staging-macOS install (Wine-11.21) was available, and gamelib-launch-1.log:103 WARNING 'Not creating DXMT copy of Wine-11.21: ... winemac.so lacks the macdrv metal-view exports'. With no -DXMT directory, dxmt.ts:219-226 never fires the boot check. The contract marks this CONDITIONAL on a -DXMT copy existing; launch 7 was not run since no copy was created.
 
 ### 7. wineVersionInstalled check on a Wine-Staging-macOS install
 expected: launch 1 only; in Settings, Wine Manager, install a Wine-Staging-macOS release that is not yet installed (WineItem install button). gamelib-launch-1.log contains `scanner machoExports op=scan_winemac_metal_exports caller=wineVersionInstalled: impl=rust` (`dxmt.ts:150-155`, emitted on the `wineVersionInstalled` event from `downloader/main.ts:359`). Launch ordinal 1. This downloads a large archive; the operator chooses whether to proceed.
-result: pending
+result: pass. Launch 1, gamelib-launch-1.log:102 'scanner machoExports op=scan_winemac_metal_exports caller=wineVersionInstalled: impl=rust' at 12:14:24, after the Wine-11.21 download finished (:101, 12:14:12).
 
 ### 8. Record only: scan wall time on the largest title
 expected: launch 6; launch Manor Lords; record the wall time between the `scanner drmScanExe ... caller=detectLaunchDrmWrapper` line and the next launch log line, compared with the objdump-era note if any (63-PARITY.md has none, so record the absolute number); also record the closing `ls -la $S/` and `wc -l $S/*`. Launch ordinal 6. No pass/fail threshold.
-result: pending
+result: pass. Record-only. Launch 6 (Manor Lords): gamelib-launch-6.log:95 drmScanExe/detectLaunchDrmWrapper at 12:27:50 and :96 peSections at 12:27:50 (same second; the scans themselves are sub-second); next launch log line is the demo-status probe at 12:27:54 (about 4 s, dominated by the probe elapsedMs=3967, not by the scans). Closing inventory is below.
 
 ## Structural Reachability Review
 
@@ -174,3 +174,20 @@ share a launch but not a triple. No pair left unresolved.
 | Test 2 (concurrency) | all | nothing driven concurrently | REACHABLE | one action per item, one launch per item (except 6/7 which are sequential in launch 1) |
 | Test 5 (interaction) | all | see mapping table | REACHABLE | pairing pass recorded above |
 | Test 6 (external state) | 2, 3, 4, 6, 7 | titles installed; DXMT copy | CONDITIONAL | titles 206060, 1603180, 219990, 230070, 1363080 appear in `pnpm bridge-census` with per-game bottles; DXMT copy absent (items 6) |
+
+## Session inventory (item 8 closing record)
+
+`ls -la /tmp/gamelib-gate-63-20261106T230010Z/`: gamelib-launch-1..6.log (17786, 29565, 39191, 34435, 29820, 36701 bytes), gamelib-pre-session.log (14398), gamelib-pre-session.old.log (13392), pids.txt (402), terminal.log (25957).
+
+`wc -l`: launch-1 107, launch-2 195, launch-3 254, launch-4 213, launch-5 196, launch-6 230, pre-session 114, pre-session.old 92, pids.txt 6, terminal.log 444, total 1851.
+
+PIDs (one per launch): 19207, 20347, 21845, 24542, 26063, 27720. Prior instance 99880 (failed P1) was quit before launch 1.
+
+`grep -n "rust scan failed\|containment check failed" gamelib-launch-*.log`: no hits in any launch.
+
+## Gaps
+
+- Item 3 (blocked): GameMaker evidence unreachable on Mining Mechs. Tier-1 fix public/fixes/1603180-steam.json sets CX_GRAPHICS_BACKEND=dxvk, and bridgeKnownFixes.ts:154 short-circuits before detectGameMakerD3d11Runner, so no `caller=gameMakerRunner` line is emitted. Evidence: gamelib-launch-3.log:146 vs. absence of the line. Closing options: re-drive on a GameMaker title with a data.win and no tier-1 CX_GRAPHICS_BACKEND fix, or temporarily run Mining Mechs with that tier-1 entry unset.
+- Item 6 (blocked): `caller=dxmtBootUpdate` needs a `<install>-DXMT` copy, which is only created for a Wine build whose winemac.so has the macdrv metal-view exports; Wine-11.21 lacks them (gamelib-launch-1.log:103). Closing option: install a Wine-Staging-macOS build with those exports, then relaunch (launch 7).
+
+Gate verdict: D-13 live condition NOT fully met (6 of 8 items pass; items 3 and 6 blocked, no scanner regression observed). Plans 63-13 and 63-14 must not run until these are closed or the user explicitly accepts them.
