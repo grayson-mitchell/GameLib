@@ -56,6 +56,7 @@ const ACQUIRE_AUTH_ALLOW = [
   `${S}library.ts`,
   `${S}depot.ts`,
   `${S}depot/plan.ts`,
+  `${S}depot/outcome.ts`,
   INSTALL
 ]
 const ACQUIRE_OPEN_ALLOW = [

@@ -2263,7 +2263,7 @@ describe('selectPrimaryDepotFailure (quick 260927-v8i)', () => {
   // only ONE call site feeding both consumers.
   it("B6: exactly one shared selectPrimaryDepotFailure call feeds both consumers — the only failures[0] read left is the helper's own tier-2 fallback", () => {
     const source = stripSourceComments(
-      readFileSync(join(__dirname, '..', 'depot.ts'), 'utf8')
+      readFileSync(join(__dirname, '..', 'depot', 'outcome.ts'), 'utf8')
     )
 
     // Non-vacuity: a broken read path or an over-eager strip cannot make the
