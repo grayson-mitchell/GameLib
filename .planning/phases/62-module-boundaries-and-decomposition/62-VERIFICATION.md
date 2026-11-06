@@ -1,97 +1,99 @@
 ---
 phase: 62-module-boundaries-and-decomposition
-verified: 2026-11-07T00:00:00Z
-status: gaps_found
-score: 8/10 must-haves verified
-gaps:
-  - truth: "Boundaries are enforced by a tool and `pnpm lint` is green"
-    status: failed
-    reason: "`pnpm lint` exits 1: tests scope has 1 error, src/backend/storeManagers/steam/__tests__/games.test.ts:25 @typescript-eslint/no-unnecessary-type-assertion (the `as string[]` on readdirSync in gameModuleFiles). The helper came from the post-62 quick tasks (6cdce5d95 / 86451c8da), not a plan task, but it sits in the phase's own guard test and the lint gate is red."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/__tests__/games.test.ts"
-        issue: "line 25 unnecessary type assertion (error)"
-    missing:
-      - "Drop the `as string[]` cast at games.test.ts:25 and re-run `pnpm lint`"
-  - truth: "No runner-literal checks remain in frontend/backend outside storeManagers (ESLint ban at error, zero)"
-    status: partial
-    reason: "The gate is at error with zero reported sites, but the selector is name-based (62-REVIEW WR-02). Live identity comparisons escape it: backend/utils.ts:455,461,476 (`library === 'gog'|'legendary'|'nile'`) and `value === 'sideload'` in FilterStoreFacet:72, FilterFocusRow:135, FocusRowStrip:228, chipLabels.ts:84. Filed as todo 2026-11-07-runner-literal-ban-misses-non-runner-names.md."
-    artifacts:
-      - path: "meta/runnerLiteralSelectors.cjs"
-        issue: "RUNNER_NAME only matches runner/store-named operands"
-    missing:
-      - "Convert the 7 surviving sites to isStore/capabilities, and widen the selector (add `library`, TSAsExpression, computed access, indexOf/has), or document the blind spots in the selector header"
+verified: 2026-11-07T12:00:00Z
+status: human_needed
+score: 10/10 must-haves verified
+overrides_applied: 0
+re_verification:
+  previous_status: gaps_found
+  previous_score: 8/10
+  gaps_closed:
+    - "Boundaries are enforced by a tool and `pnpm lint` is green (62-22: games.test.ts:25 cast removed; pnpm lint exits 0)"
+    - "No runner-literal checks remain outside storeManagers (62-23: 7 surviving sites routed through isStore; selector widened to library/value/computed/cast/non-null/indexOf/Set.has)"
+  gaps_remaining: []
+  regressions: []
 human_verification:
   - test: "Epic offline launch with offlineMode=true (resolveOfflineMode expired-flag hook)"
     expected: "Hook reached; offline launch honours the flag"
-    why_human: "Not exercised in UAT 13; the observed failure is pre-existing (isOnline/isEpicServiceOffline) and filed as a todo"
-  - test: "Sideloaded game card, game page and install dialog (UAT 14e, 15, 16)"
+    why_human: "Not exercised in UAT 13; observed failure is pre-existing (isOnline/isEpicServiceOffline), filed as a todo"
+  - test: "Sideloaded game card, game page, install dialog and the Library filter chips/facet (UAT 14e, 15, 16)"
     expected: "Sideload store-specific controls unchanged"
-    why_human: "Skipped (operator has no sideloaded game). Note the surviving `value === 'sideload'` sites are in exactly these filter files."
+    why_human: "Skipped (no sideloaded game). 62-23 swapped `value === 'sideload'` to isStore in the filter files, which makes this pass more worthwhile"
   - test: "Managed-by-Steam hand-off and Steam-failure download-queue cases (UAT 18c)"
     expected: "Download queue behaves as before"
-    why_human: "Skipped. This is the downloadqueue.ts/utils.ts literal-to-capability swap area."
+    why_human: "Skipped. downloadqueue.ts/utils.ts literal-to-capability swap area; 62-23 touched backend/utils.ts library comparisons"
   - test: "GOG Wine 'launching' status (Windows GOG title)"
     expected: "Status emitted"
-    why_human: "Balrum is native macOS so it was not reached"
+    why_human: "Balrum is native macOS so not reached"
   - test: "GOG resume-from-0 (Endless Sky) against a pre-62 build"
-    expected: "Same resume-from-0 behaviour on pre-62 (confirms not a regression)"
-    why_human: "Judged pre-existing but never compared with a pre-62 build"
+    expected: "Same behaviour on pre-62 (confirms not a regression)"
+    why_human: "Judged pre-existing, never compared with a pre-62 build"
 ---
 
-# Phase 62: Module boundaries and decomposition: Verification Report
+# Phase 62: Module boundaries and decomposition: Verification Report (re-verification)
 
 **Phase Goal:** Module boundaries in the TS backend and frontend are explicit, tool-enforced, and no longer bypassed by branching on store identity: dependency-cruiser rules, store capability flags, and the games.ts / depot.ts / ipc.ts decomposition plus a TS to Rust transport parity test.
-**Status:** gaps_found
-**Re-verification:** No
+**Verified:** 2026-11-07
+**Status:** human_needed
+**Re-verification:** Yes. Previous status gaps_found 8/10; both gaps are closed.
 
-Note: `.planning/REQUIREMENTS.md` does not exist. Plan "requirements" are D-01..D-17 from 62-CONTEXT.md, accounted for below.
+Note: `.planning/REQUIREMENTS.md` does not exist; requirements are D-01..D-17 from 62-CONTEXT.md.
+
+## Gap re-check
+
+| Gap | Result | Evidence |
+|-----|--------|----------|
+| `pnpm lint` red (games.test.ts:25) | CLOSED | `pnpm lint` run by me: exit 0 (warnings only). `pnpm codecheck` passes. |
+| Runner-literal ban misses live identity checks (WR-02) | CLOSED | The previously named sites (backend/utils.ts library comparisons; sideload comparisons in the filter facet/focus-row/strip/chipLabels) no longer contain `=== 'gog'/'sideload'` literals; chipLabels.ts:85 now uses `isStore(descriptor.value, 'sideload')`. A src-wide grep for `(library\|runner) === '<store>'` outside storeManagers finds comments only. Selector now covers `library`, `value`, computed access, `as`, non-null, `indexOf`, `Set.has`, and carries an explicit Known-blind-spots list. |
 
 ## Observable Truths
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | dependency-cruiser rules at error, zero violations (no cross-store-manager import; launcher only via storeManagers/index) | VERIFIED | `pnpm boundaries`: "no dependency violations found (973 modules)". `.dependency-cruiser.cjs` has 5 rules, all `severity: 'error'`, no baseline file. launcher.ts has no direct imports from gog/legendary/nile managers. |
-| 2 | Runner-literal ban is an ESLint rule at error | VERIFIED | `eslint.config.mjs:115` `no-restricted-syntax: ['error', ...runnerLiteral.SELECTORS]` from `meta/runnerLiteralSelectors.cjs`. Selector test passes. |
-| 3 | The ban actually reaches zero literal identity checks | PARTIAL (gap) | Zero reported, but WR-02 shows 7 surviving store-literal comparisons the selector cannot see (see gaps). |
-| 4 | Capability flags replace runner-literal branching (D-01/D-02) | VERIFIED | `src/common/storeCapabilities.ts` exists, with its test passing; 62-SITE-CLASSIFICATION records per-site classification; src lint reports 0 errors. |
-| 5 | games.ts split into launch/DRM/requirements modules; no façade (D-05/D-07) | VERIFIED | `gameLaunch`, `gameBridgeLaunch`, `gameLaunchOverlay`, `gameDrmLaunch`, `gameRequirements`, `gameInstall`, `gameUninstall`, `gameSessionState`, `gameEligibility`, `gameMaintenance`, `gameProtocolUrl`, `gameConstants` exist and are substantive (10 to 1,788 lines). The `games-split-modules-are-leaves` cruiser rule passes. |
-| 6 | games.ts is not a grab-bag | VERIFIED | 2,043 lines (from 7,228). One top-level export (`getBridgeRouteVerdict`) beyond the SteamGame class, which is the retained cohesive class (D-07). The plan targets (<2,000, <1,400) were missed. This is a plan-estimate miss, not a goal gap: the goal is the split into launch/DRM/requirements modules, which is met. |
-| 7 | depot.ts folded into steam/depot/ with index entry, no back-edge (D-08) | VERIFIED | `steam/depot.ts` absent; `depot/index.ts` present; `no-depot-parent-back-edge` and `no-circular-depot` rules at error, passing. |
-| 8 | ipc.ts split per domain, intersection umbrella, census (D-09..D-11) | VERIFIED | `common/types/ipc.ts` absent; 26 domain files plus `ipc/index.ts`; `ipcDomainCensus.test.ts` passes. |
-| 9 | TS to Rust transport parity test (D-12) | VERIFIED | `transportParity.test.ts` passes. |
-| 10 | Lint/typecheck gates green | FAILED | `pnpm codecheck` passes. `pnpm lint` exits 1 (see gap 1). |
+| 1 | dependency-cruiser rules at error, zero violations | VERIFIED | `pnpm boundaries`: no violations (973 modules, 5003 dependencies) |
+| 2 | Runner-literal ban is an ESLint rule at error | VERIFIED | `no-restricted-syntax` error from `meta/runnerLiteralSelectors.cjs`; selector test passes |
+| 3 | Ban reaches zero literal identity checks | VERIFIED | See gap table. Residual blind spots are documented in the selector header |
+| 4 | Capability flags replace runner-literal branching | VERIFIED | storeCapabilities test passes; lint has 0 errors |
+| 5 | games.ts split into launch/DRM/requirements modules, no façade | VERIFIED | Unchanged from previous report (regression-checked via boundaries pass) |
+| 6 | games.ts not a grab-bag | VERIFIED | Unchanged |
+| 7 | depot fold, no back-edge | VERIFIED | cruiser rules pass |
+| 8 | ipc split per domain + census | VERIFIED | census test passes |
+| 9 | TS to Rust transport parity test | VERIFIED | transportParity test passes |
+| 10 | Lint/typecheck gates green | VERIFIED | `pnpm lint` exit 0; `pnpm codecheck` passes |
 
-**Score:** 8/10 (truth 3 partial, truth 10 failed)
+**Score:** 10/10
 
 ## Behavioral Checks
 
 | Check | Result |
 |-------|--------|
-| `pnpm boundaries` | PASS (0 violations) |
+| `pnpm boundaries` | PASS |
 | `pnpm codecheck` | PASS |
-| `pnpm lint` | FAIL (1 error, tests scope, games.test.ts:25) |
-| jest: transportParity, ipcDomainCensus, storeCapabilities, runnerLiteralSelectors | PASS (75 tests) |
+| `pnpm lint` | PASS (exit 0) |
+| jest transportParity, ipc census, storeCapabilities, runnerLiteralSelectors | PASS (87 tests in the selector+capabilities run; 86 in the parity+types+capabilities run) |
 
-The six pre-existing jest failures were not counted and the full suite was not re-run.
+Full jest: not re-run by me. Orchestrator reports 8 failed suites, six matching the documented pre-existing baseline (games.test 56-01 constants, bottle DRM_LAUNCH_FORM, macArchKnownFixRouting, findDeadcode CLI drift, genI18nGateScope anti-rot, tauriShellSource). I observed genI18nGateScope, findDeadcode and x86CallbackWineHarness failing in a meta jest run. x86CallbackWineHarness (unexpected slot 15) fails in isolation but covers no file changed by 62-22/62-23; it is outside the gap-closure diff and should be tracked separately. dxvkInstallRemove is a known load flake.
 
-## D-xx Accounting (62-CONTEXT.md)
+## Review findings (62-REVIEW.md) judged against "enforced by a tool"
 
-D-01..D-04 (capabilities, isStore helper, all-runner reach, scope): implemented. The D-03/D-04 "reach zero" claim is partial because of WR-02.
-D-05..D-08 (no façade, pure moves, minimum modules, depot index): satisfied.
-D-09..D-12 (ipc domains, intersection, census, transport parity): satisfied.
-D-13/D-14/D-15 (two tools; ratchets deleted when zero; every rule at error and zero): satisfied as measured by the tools, with the WR-02 caveat on the ESLint ban. The cruiser rules are fully satisfied.
-D-16 (ordering): followed.
-D-17 (two live smokes): run (62-UAT), status partial; see residue below.
+- **WR-01 (nested switch false positive):** the `:has` gate matches descendants, so a store-literal case in a nested switch can flag an unrelated outer switch. Direction is over-reporting, not under-reporting, and lint is at 0 today, so no current breakage and the tool still enforces. Non-blocking; fix is the `:has(> SwitchCase...)` scoping plus a pinned non-hit test.
+- **WR-02 (multi-level casts):** `(game?.runner as string) === 'steam'`, `(runner as Runner)! === 'steam'`, `(['gog'] as const).includes(runner)` and `lastIndexOf` are missed, and the header's "seen through casts" wording is slightly overstated because these composed forms are not in the Known-blind-spots list. This is narrower than the original gap (those shapes are rare and none exist in the tree now), so the goal "enforced by a tool" holds; the residual is documentation accuracy. Non-blocking warning. Recommend either adding the arms or listing them as blind spots.
 
-## UAT Residue Judgement
+Neither finding blocks the phase goal.
 
-- GOG resume-from-0 (item 18b): the phase-62 diffs there are 1:1 literal-to-capability swaps and the gogdl command is byte-identical, so it is plausibly pre-existing. It is unconfirmed against a pre-62 build, so it stays a human item but is not a goal blocker.
-- Sideload, Managed-by-Steam, GOG Wine "launching" and the Epic offline hook: acceptable human-verification residue. Sideload and Managed-by-Steam are the paths touched by capability swaps, so a quick manual pass is worth doing before closing the milestone.
+## D-xx accounting
+
+D-01..D-17 satisfied as in the previous report; D-03/D-04 "reach zero" is now met, subject to the documented blind spots. D-17 live smokes ran (62-UAT, partial); the residue is carried as human items.
+
+## Anti-patterns
+
+None blocking found in the gap-closure scope; no TBD/FIXME/XXX introduced that I checked in meta/runnerLiteralSelectors.cjs.
 
 ## Gaps Summary
 
-Two gaps, neither structural:
-1. `pnpm lint` is red because of one unnecessary type assertion in games.test.ts:25. This is a one-line fix and should be done first.
-2. WR-02: "ceiling 0" overstates coverage. Seven live store-literal comparisons escape the name-based selector. This is a genuine, small gap against "no longer bypassed by branching on store identity" and "enforced by a tool". It is already tracked as a todo; fix it either by converting those sites and widening the selector, or by explicitly documenting the blind spots.
+No gaps. Automated checks all pass. Status is human_needed only because of the UAT residue above (sideload, Managed-by-Steam queue, Epic offline hook, GOG Wine status, GOG resume baseline), which cannot be verified programmatically. Sideload and Managed-by-Steam are the paths touched by capability swaps and are worth a manual pass before closing the milestone.
 
-The games.ts line-count miss is NOT a gap. The decomposition, depot fold, ipc split, boundary rules and parity test all exist, are wired, and are tool-verified.
+---
+
+_Verified: 2026-11-07_
+_Verifier: Claude (gsd-verifier)_
