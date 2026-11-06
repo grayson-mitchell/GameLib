@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60
 Plan: 0 of 0
 Status: Milestone complete
-Last activity: 2026-11-06 - Completed quick task 261106-qnw: stylesheet gate keeping notices inside the NoticeStack
+Last activity: 2026-11-06 - Completed quick task 261106-s3n: GameLib-side delete for Steam games
 
 Progress: [██████████] 100%
 
@@ -462,6 +462,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261106-pvk | Steam delegated install/uninstall 2-min give-up now shows in the in-app toast stack (new `steamRequestNotice` push, 4th `request` slot in `SteamEngineLaunchNotice`) instead of a system notification; `dispatch.kill()` skips `callAbortController` for a Steam-delegated install so Cancel no longer logs `Aborting not possible` | 2026-11-06 | 0b24d6f2c | codecheck, i18n gates, scoped prettier pass; jest 1662/1663 (1 unrelated `themeTokens` census failure); live gate outstanding (todo stays pending) | [261106-pvk-steam-delegated-give-up-notice-in-app-to](./quick/261106-pvk-steam-delegated-give-up-notice-in-app-to/) |
 | 261106-qnw | NoticeStack stylesheet gate: jest source-gate parses the NoticeStack/Steam/Humble scss; only `.noticeStack` may be `position: fixed`, toast-root rules may not be absolute/sticky or anchored (inner absolute elements allowed); discovery guard fails on unregistered `renderNoticeSlot(` callers or `<NoticeStack>` children. | 2026-11-06 | a736d833e | 2 suites / 14 tests pass; mutation (`position: fixed` on `.humbleExpiryToast`) fails the gate; full Frontend run red only on pre-existing themeTokens census (39f721b36) | [261106-qnw-add-a-stylesheet-gate-keeping-notices-in](./quick/261106-qnw-add-a-stylesheet-gate-keeping-notices-in/) |
 | 261106-qvp | Callback 1298 step 1 (D-09 follow-up): helper unlisted-drop line now ends `cub=<m_cubParam>` (prefix unchanged); new CONTROL slot 15 `REPORT_CB_REGISTER` logs `CBREG iCallback=<id> role=game path=register` for unlisted ids the game registers via SteamAPI_RegisterCallback (cap 32), or one `path=manual-dispatch registration=unobservable` line; todo gains gate log reads and a static `CallbackIdentity(1298)` byte-count fallback for manual-dispatch titles. No relay row or struct name. | 2026-11-06 | 023ef005d | Jest pass (552 tests across 5 suites); gen-vtables + build-steam-bridge OK, .def unchanged; codecheck + planning-gates 12/12 clean; live gate pending | [261106-qvp-callback-1298-step-1-log-game-listener-r](./quick/261106-qvp-callback-1298-step-1-log-game-listener-r/) |
+| 261106-s3n | "Delete Steam games directly in GameLib" setting (key `enableSteamNativeDelete`, default follows the native-install setting, all platforms per operator): ON refuses while running, then helper `--steam-uninstallapp` (slot-verified UninstallApp; 18 → fallback), else guarded GameLib delete of installdir + ACF inside a registered library; GameLib confirm dialog; OFF unchanged. | 2026-11-06 | 457d82031 | Jest pass on touched suites; codecheck + planning-gates 12/12 clean; 1 pre-existing failure (macArchKnownFixRouting Intel); live gate pending | [261106-s3n-gamelib-side-delete-for-steam-games](./quick/261106-s3n-gamelib-side-delete-for-steam-games/) |
 
 ## Deferred Items
 
