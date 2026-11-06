@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 62 (module-boundaries-and-decomposition) — EXECUTING
 Plan: 21 of 21
 Status: Ready to execute
-Last activity: 2026-11-07 - Completed quick task 261107-99k: Cleanups found during the 62 games.ts split
+Last activity: 2026-11-07 - Completed quick task 261107-9lq: Measure, then adopt, noUncheckedIndexedAccess per directory (steam/ and bridge/ first)
 
 Progress: [████████░░] 81%
 
@@ -478,6 +478,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261107-8yq | Clippy ratchet in CI: `meta/clippyRatchet.cjs` reads `cargo clippy --message-format=json`, per-lint darwin baseline, fails on any rise and on a drop the commit does not record (23 unique / 14 lints); macOS leg only, pinned 1.99.1 toolchain; `[lints.clippy]` denies `dbg_macro`, `todo`. Windows leg filed as follow-up todo. | 2026-11-07 | bbf863316 | ratchet passes on fresh local run; jest 20 tests; no .rs changed; CI steps not yet run on a runner | [261107-8yq-run-cargo-clippy-in-ci-warn-only-with-a-](./quick/261107-8yq-run-cargo-clippy-in-ci-warn-only-with-a-/) |
 | fast | Unexported `SteamNativeDeleteDecision` (nativeDelete.ts, from 261106-s3n), which the pre-push find-deadcode used-in-module gate had flagged and which was blocking the v0.9 tag push. | 2026-11-06 | c0bc58505 | find-deadcode 0 new; prettier OK | — |
 | 261107-99k | 62 games.ts split cleanups: `NUMERIC_APP_ID` lives only in gameConstants.ts (~20 sites import it; drmLaunchSetup's different regex kept), DRM-notice test reset helper, 14/17 stale ts-prune markers removed, lifted-module comments refreshed, negative scans widened to every game*.ts (dir-derived, floor 13, RED-checked). Bullets 7 (split below 1,400 lines, `ready: human`) and 8 (lift stubs, `ready: code`) refiled; todo closed. | 2026-11-07 | 6cdce5d95 | codecheck, lint 0 errors, find-deadcode, planning-gates 12/12 green; jest 6144 pass / 4 fail (3 reproduce with the src changes reverted; tauriShellSource WR-07 is Rust-only, not revert-tested) | [261107-99k-games-split-cleanups-62](./quick/261107-99k-games-split-cleanups-62/) |
+| 261107-9lq | noUncheckedIndexedAccess measured (src 2,186 + meta 380 raw) and adopted for steam/ non-test code incl. bridge/: 145 sites narrowed, no `!`; per-bucket shrink-only ratchet `pnpm typecheck:indexed-access` (compiler API, flag not in tsconfig) wired into codecheck CI, 38 buckets / 2,023 baselined. Remaining buckets refiled; todo closed. | 2026-11-07 | 0466c399e | ratchet PASS, codecheck, lint, planning-gates 12/12 green; bridge jest 1525 pass; steam jest 4649 pass / 3 fail (2 read missing 56-01-SUMMARY.md; macArch Intel case reproduces with steam edits reverted) | [261107-9lq-measure-then-adopt-nouncheckedindexedacc](./quick/261107-9lq-measure-then-adopt-nouncheckedindexedacc/) |
 
 ## Deferred Items
 
