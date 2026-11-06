@@ -426,3 +426,7 @@ todo = "deny"
 opt-level = "s"
 lto = true
 strip = true
+
+[workspace]
+members = ["crates/gamelib-scan", "crates/gamelib-scan-cli"]
+resolver = "2"

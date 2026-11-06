@@ -1,0 +1,21 @@
+[package]
+name = "gamelib-scan-cli"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[[bin]]
+name = "gamelib-scan-cli"
+path = "src/main.rs"
+
+[dependencies]
+gamelib-scan = { path = "../gamelib-scan" }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"

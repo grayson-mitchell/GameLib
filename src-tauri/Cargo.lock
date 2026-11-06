@@ -1269,6 +1269,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "gamelib-scan"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "gamelib-scan-cli"
+version = "0.1.0"
+dependencies = [
+ "gamelib-scan",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "gamelib-shell"
 version = "0.8.0"
 dependencies = [
