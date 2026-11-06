@@ -16,7 +16,7 @@
 // NOT reimplement either (Shared Patterns rule).
 
 import { lstat, readlink, stat } from 'node:fs/promises'
-import { sha1File, resolveContainedPath } from '../depot'
+import { sha1File, resolveContainedPath } from './download'
 import type { DepotPlan, DepotPlanFile } from './planModel'
 import { pathCollisionKey } from './pathCollisions'
 

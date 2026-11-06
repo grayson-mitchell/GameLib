@@ -127,49 +127,5 @@
       "severity": "error",
       "name": "launcher-only-via-store-managers-index"
     }
-  },
-  {
-    "type": "cycle",
-    "from": "src/backend/storeManagers/steam/depot.ts",
-    "to": "src/backend/storeManagers/steam/depot/reconcile.ts",
-    "unresolvedTo": "./depot/reconcile",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular-depot"
-    },
-    "cycle": [
-      {
-        "name": "src/backend/storeManagers/steam/depot/reconcile.ts",
-        "dependencyTypes": [
-          "local",
-          "import"
-        ]
-      },
-      {
-        "name": "src/backend/storeManagers/steam/depot.ts",
-        "dependencyTypes": [
-          "local",
-          "import"
-        ]
-      }
-    ]
-  },
-  {
-    "type": "dependency",
-    "from": "src/backend/storeManagers/steam/depot/reconcile.ts",
-    "to": "src/backend/storeManagers/steam/depot.ts",
-    "unresolvedTo": "../depot",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-depot-parent-back-edge"
-    }
   }
 ]
