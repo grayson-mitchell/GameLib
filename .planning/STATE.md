@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 62 context gathered
-last_updated: "2026-11-06T10:03:41.624Z"
+last_updated: "2026-11-06T10:05:17.778Z"
 last_activity: 2026-11-06
 progress:
-  total_phases: 6
+  total_phases: 8
   completed_phases: 0
   total_plans: 21
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 62 (module-boundaries-and-decomposition) — EXECUTING
-Plan: 3 of 21
+Plan: 4 of 21
 Status: Ready to execute
 Last activity: 2026-11-06
 
-Progress: [█░░░░░░░░░] 10%
+Progress: [█░░░░░░░░░] 14%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -233,6 +233,8 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 
 Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archive (2026-10-15).
 
+- Phase 68 added 2026-11-06: **Versioned persisted stores and migrations.** From the second architecture review: 19 persisted store modules carry no schema version, so a shape change either needs an ad hoc fix-up or resets to defaults. The review first said no migration system existed; checking before filing found Heroic's `src/backend/migration/` runner (one migration) and the `config.ts` fix-ups, so the goal builds on the runner. The operator chose to open it as this phase. `Depends on` hand-corrected from Phase 67 (positional, unrelated) to None. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
+- Phase 67 added 2026-11-06: **Schema validation at the sidecar IPC boundary.** From the second architecture review: only 4 of 23 sidecar `*Registration.ts` files validate arguments, across ~282 channels, and the renderer hosts embedded store and login webviews. The operator chose to open it as this phase. `Depends on` hand-corrected from Phase 66 (positional) to Phase 62, whose per-domain split of `common/types/ipc.ts` is where the schemas live. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 66 added 2026-11-06: **Backend dependency injection replacing module-level singletons.** The operator asked what else could improve the architecture after Phase 62. The review measured 144 top-level `let` declarations in `src/backend` and 2,197 `jest.mock(` calls across 706 test files, a sign of hidden module state and import-coupled tests, and proposed a boot-time context object passed to store managers and `launcher.ts`. The operator chose to open it as this phase. `Depends on` hand-corrected from Phase 65 (positional) to Phase 62. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 65 added 2026-11-06: **Steam store manager decomposition, continued.** From the same post-Phase-62 review: Phase 62 splits `steam/games.ts` and `steam/depot.ts` but not `steam/library.ts` (4,393 lines), `steam/bottle.ts` (2,567) or the four `steam/bridge/` files over 1,000 lines. The operator chose to open it as this phase. `Depends on` hand-corrected from Phase 64 (positional, unrelated) to Phase 62. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 64 added 2026-11-06: **UI to edit themes.** The operator asked how the 10 built-in themes differ; the answer was a comparison page of per-theme launcher thumbnails and resolved token values. The operator liked it and chose to open this phase: that thumbnail gallery plus a token editor, working on a copy of an existing theme and never editing a built-in in place. Checking at filing found quick 261031-bst (2026-10-31) removed the old custom-CSS-file themes, so the phase stores custom themes as token data and `setTheme` needs a custom branch again. `Depends on` hand-corrected from Phase 63 (positional, unrelated) to None. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
@@ -560,7 +562,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-06T10:03:37.764Z
+Last session: 2026-11-06T10:05:17.772Z
 Stopped at: Phase 62 context gathered
 Resume file: None
 

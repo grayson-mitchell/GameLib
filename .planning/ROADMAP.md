@@ -153,6 +153,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
 - [ ] **Phase 65: Steam store manager decomposition, continued** — 0 plans; not started
 - [ ] **Phase 66: Backend dependency injection replacing module-level singletons** — 0 plans; not started
+- [ ] **Phase 67: Schema validation at the sidecar IPC boundary** — 0 plans; not started
+- [ ] **Phase 68: Versioned persisted stores and migrations** — 0 plans; not started
 
 ## Phase Details
 
@@ -221,7 +223,7 @@ Plans:
 **Goal:** Module boundaries in the TypeScript backend and frontend are explicit, enforced by a tool, and no longer bypassed by branching on store identity. Three parts: (1) **Boundary rules.** Add dependency-cruiser with rules in warn-only mode and record a baseline violation count. The rules: no store manager imports another store manager; `launcher.ts` reaches stores only through `storeManagers/index` (today it imports `gog/setup`, `legendary/commands`, `gog/presence` and `eos_overlay` directly); no `runner === '<literal>'` checks in `frontend/screens/**`. (2) **Store capabilities.** Give `GameInfo`/`LibraryManager` capability flags (e.g. install managed externally, DLC selection, resumable install) and replace runner-literal branching with them: 66 `runner === 'steam'` sites in the frontend (Library, Game page, ConsoleMode, InstallModal, filterEngine) and 31 in the backend outside `storeManagers/` (11 in `downloadmanager/`). `helpers/steamInstallOptionsEntry.ts` already shows the single-decision-site pattern. (3) **Decomposition.** Split `steam/games.ts` (7,150 lines, 73 imports) into launch, DRM and requirements modules; fold `steam/depot.ts` (4,598 lines) into `steam/depot/`; split `common/types/ipc.ts` (~280 channels) into per-domain channel types co-located with the sidecar `*FlowRegistration.ts` files; add a parity test for the transport constants Rust's `main.rs` mirrors from `common/types/sidecarTransport.ts` by hand. Promote the dependency-cruiser rules from warn to error once the counts reach zero. Out of scope: the `src-tauri/src/main.rs` split, which is a separate quick task. Came from an architecture review on 2026-11-06.
 **Requirements**: TBD
 **Depends on:** None
-**Plans:** 2/21 plans executed
+**Plans:** 3/21 plans executed
 
 Plans:
 **Wave 1**
@@ -231,7 +233,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 62-03-PLAN.md — `pnpm boundaries` wired into lint.yml and pre-push, wiring test
+- [x] 62-03-PLAN.md — `pnpm boundaries` wired into lint.yml and pre-push, wiring test
 - [ ] 62-04-PLAN.md — TS/Rust transport parity test by marker (sidecar.rs, store_embed.rs dispatch arms)
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -349,3 +351,25 @@ Plans:
 Plans:
 
 - [ ] TBD (run /gsd-plan-phase 66 to break down)
+
+### Phase 67: Schema validation at the sidecar IPC boundary
+
+**Goal:** Every channel the sidecar serves checks its arguments against a schema before the handler runs, so a malformed or hostile call from the renderer is rejected at the boundary instead of reaching store, file or process code. The renderer hosts embedded store pages and login webviews, so it is a trust boundary. Measured 2026-11-06: 4 of the 23 `src/backend/sidecar/*Registration.ts` files validate arguments (`runnerMiscFlowRegistration`, `runnerAuthFlowRegistration`, `shellFilesFlowRegistration`, `wineToolsFlowRegistration`), across ~282 channels. Two parts: (1) **The pattern.** One schema per channel, co-located with the per-domain channel types Phase 62 splits out of `common/types/ipc.ts`, checked once in the shared `ipcMain.handle`/`ipcMain.on` registration path rather than in each handler; a rejected call is logged and returns a typed error, never throws into the transport. Schema-inferred argument types should replace the hand-written ones so the two cannot drift. (2) **Coverage.** Convert channels domain by domain, starting with those that touch files, processes, credentials or URLs, and track the unvalidated count with a shrink-only ratchet that ends at zero and becomes a test asserting every registered channel has a schema. Open questions for discuss-phase: zod (already used in 15 files) versus a lighter validator, given the sidecar's SEA bundle size; whether push relays and `rustInvoke` dialog channels are in scope; and whether this phase should also generate the Rust-side dispatch types (the "IPC contract from one schema" idea from the first architecture review). Came from the second architecture review on 2026-11-06.
+**Requirements**: TBD
+**Depends on:** Phase 62
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 67 to break down)
+
+### Phase 68: Versioned persisted stores and migrations
+
+**Goal:** Every persisted store has a schema version, and a change to its shape ships with an ordered migration, so an upgrade never silently resets a user's settings, library cache or Steam state to defaults. The 19 store modules (`*/electronStores.ts`, `constants/key_value_stores.ts`, the `TypeCheckedStoreBackend`, `GameLibStore`, `CacheStore` and sidecar `FileStore` classes) have no version field today. GameLib already has a migration runner inherited from Heroic: `src/backend/migration/` applies named one-off migrations in order and records them in `migrationsStore`, and holds one (`LegendaryGlobalConfigFolderMigration`). Settings also carry ad hoc fix-ups in `config.ts` (`migrateTrayIconVariant`, `migrateFocusRowSelection`). Build on that runner rather than replace it. Scope: a version per store; migrations keyed by store and version that run before first read; the existing `config.ts` fix-ups folded in; a backup of the pre-migration file and a logged, non-destructive fallback when a migration fails; and a test per migration from a fixture of the old shape. Phase 61 (existing per-game `wineVersion` choices moving into the Engine control) and Phase 64 (custom themes as token data) are the first known shape changes and should use this if it lands first. Open questions for discuss-phase: whether caches that can be refetched (store metadata, artwork, the CrossOver index) are simply discarded on a version mismatch instead of migrated; how a downgrade behaves when it meets a newer version; and the order relative to Phase 61. Came from the second architecture review on 2026-11-06.
+**Requirements**: TBD
+**Depends on:** None
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 68 to break down)
