@@ -33,3 +33,13 @@ The helper and shim now log what the next live join gate needs to answer two que
    - 1 or more = a struct exists. Resolve its type name only with a metadata tool already installed (`command -v monodis ikdasm ilspycmd`; install nothing), then count that exact name in the other `Managed/*.dll` files (Assembly-CSharp, FishNet, FishySteamworks) as a TypeRef string. If no tool is present, record "struct present, name unresolved" and do not write a name.
    - This mirrors how D-08a established that Raft's assemblies referenced neither 504 nor 1221.
 4. What still decides the todo: the cub number plus the listener answer go to the operator; a relay row and layout remain a later step and need the struct identified from the runtime, not guessed.
+
+## Closed 2026-11-06 (safe to drop for Schedule I)
+
+Decision: keep dropping 1298. No relay row and no layout.
+
+- Static check (step 1 item 3) on the installed demo, `GameLibSteamBridge-3205720` bottle, `Schedule I Free Sample_Data/Managed/com.rlabrecque.steamworks.net.dll`: the `CallbackIdentity(1298)` blob `080100120500000000` counts **0**. Control: the 1281 blob `080100010500000000` (SteamRelayNetworkStatus_t) counts **1**, so the pattern does find a defined callback.
+- Schedule I runs Steamworks.NET in manual-dispatch mode, so a managed listener needs a struct tagged with that id. None exists, so the game cannot listen for 1298 and dropping it loses nothing, which fits both 58-34 joins passing.
+- 1298's payload size (`cub=`) has not been measured live. It only matters if a title listens for it.
+
+Reopen if a future test title's DLL count for 1298 is nonzero, or its gate shows `CBREG +iCallback=1298 role=game path=register`. Then identify the struct from the real Steam client (never a guessed name) before adding a row.
