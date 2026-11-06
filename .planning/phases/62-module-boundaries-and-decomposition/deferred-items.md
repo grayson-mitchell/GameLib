@@ -10,3 +10,13 @@ Pre-existing failures, each confirmed present before any 62-05 change; none caus
 - `macArchKnownFixRouting.test.ts` "Intel: never seeds and does not take the bottle-branch result" fails at the commit before 62-05 started (checked in a detached worktree).
 - `pnpm find-deadcode` (and the Meta test `meta/findDeadcode.cjs CLI exits 0`) fails from 62-04: stale baseline entry `sidecarTransport.ts - RUST_INVOKE_KIND`, new used-in-module findings `extractDispatchArms` / `extractMarkedConsts` in `transportParity.test.ts`. The output was byte-identical before and after every 62-05 commit, so no baseline edit was needed here.
 - Meta `genI18nGateScope` A-17 anti-rot (`i18nForkTouchedFiles.json` vs live git derivation) fails before and after 62-05.
+
+# Deferred items (62-06)
+
+Pre-existing failures, each confirmed at an unmodified HEAD (games.ts restored, new modules moved aside) before the 62-06 lift; not caused or fixed here.
+
+- `sidecar/__tests__/testContainment.test.ts` T-34.2-83: `transportParity.test.ts` (added by 62-04) is in neither declared classification list.
+- `sidecar/__tests__/steamEngineFlows.test.ts`: suite fails to run (`app.getPath` of undefined at `backend/constants/paths`).
+- `steam/__tests__/bottle.test.ts` "DRM_LAUNCH_FORM equals launch_form in 56-01-SUMMARY.md": same archived-56-01-SUMMARY ENOENT class as the games.test.ts channel-constants test.
+- Meta `x86CallbackWineHarness.test.ts` (needs a Wine harness) fails in a full run; environmental.
+- `pnpm find-deadcode` is now green (the 62-04 drift was cleared upstream of 62-06).

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
-stopped_at: Phase 62 context gathered
-last_updated: "2026-11-06T10:26:20.027Z"
+stopped_at: Completed 62-06-PLAN.md
+last_updated: "2026-11-06T10:42:18.120Z"
 last_activity: 2026-11-06
 progress:
   total_phases: 11
   completed_phases: 0
   total_plans: 21
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
 ---
 
@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 62 (module-boundaries-and-decomposition) — EXECUTING
-Plan: 6 of 21
+Plan: 7 of 21
 Status: Ready to execute
 Last activity: 2026-11-06
 
@@ -337,6 +337,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 59]: G27 accepted (operator 2026-11-03): D-09 unchanged, offline probe latency accepted
 - [Phase 60]: [60-18] G1 verdict X-RELEASE+BLOCK (signal cb): release on open + set_active, replay on close; scope to game process not explorer.exe
 - [Phase 62]: 62-05: only STEAM_STORE_API moved to gameConstants.ts; OVERLAY_EXIT_GRACE_MS stays in games.ts; games.ts re-exports nothing (pinned by gamesModuleSurface.test.ts)
+- [Phase 62]: 62-06: async lift stubs return the free function's promise (no async) to preserve microtask timing
 
 ### Pending Todos
 
@@ -567,8 +568,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-06T10:26:14.606Z
-Stopped at: Phase 62 context gathered
+Last session: 2026-11-06T10:42:18.114Z
+Stopped at: Completed 62-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
