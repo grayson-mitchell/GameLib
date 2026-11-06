@@ -10,11 +10,21 @@ import {
 const NAMES = Object.keys(SCANNER_ENV_KEYS) as ScannerName[]
 
 describe('resolveScannerImpl', () => {
-  it('returns the default (ts) with an empty env', () => {
+  it('returns the default with an empty env', () => {
     expect(resolveScannerImpl('importScan', {})).toBe(
       SCANNER_DEFAULTS.importScan
     )
-    for (const n of NAMES) expect(SCANNER_DEFAULTS[n]).toBe('ts')
+    // 63-11: the clean scanners default to rust; importScan is held on ts
+    // pending user acceptance of its divergence (63-PARITY.md).
+    expect(SCANNER_DEFAULTS).toEqual({
+      peSections: 'rust',
+      peSteamDrm: 'rust',
+      importScan: 'ts',
+      drmScanExe: 'rust',
+      machoExports: 'rust'
+    })
+    for (const n of NAMES)
+      expect(resolveScannerImpl(n, {})).toBe(SCANNER_DEFAULTS[n])
   })
 
   it('accepts exactly rust and ts', () => {
