@@ -1,4 +1,5 @@
 import { InstalledInfo, Runner } from 'common/types'
+
 import { GOGCloudSavesLocation, SaveFolderVariable } from 'common/types/gog'
 import { getWinePath, setupWineEnvVars, verifyWinePrefix } from './launcher'
 import { logDebug, LogPrefix, logInfo, logError, logWarning } from './logger'
@@ -19,18 +20,17 @@ async function getDefaultSavePath(
   runner: Runner,
   alreadyDefinedGogSaves: GOGCloudSavesLocation[]
 ): Promise<string | GOGCloudSavesLocation[]> {
-  switch (runner) {
-    case 'legendary':
-      return getDefaultLegendarySavePath(appName)
-    case 'gog':
-      return getDefaultGogSavePaths(appName, alreadyDefinedGogSaves)
-    case 'nile':
-      return ''
-    case 'sideload':
-      return ''
-    case 'steam':
-      return ''
+  const defaultSavePath: Record<
+    Runner,
+    () => Promise<string | GOGCloudSavesLocation[]>
+  > = {
+    legendary: () => getDefaultLegendarySavePath(appName),
+    gog: () => getDefaultGogSavePaths(appName, alreadyDefinedGogSaves),
+    nile: () => Promise.resolve(''),
+    sideload: () => Promise.resolve(''),
+    steam: () => Promise.resolve('')
   }
+  return defaultSavePath[runner]()
 }
 
 async function getDefaultLegendarySavePath(appName: string): Promise<string> {

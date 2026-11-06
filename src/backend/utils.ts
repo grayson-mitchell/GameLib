@@ -93,6 +93,7 @@ import type LogWriter from 'backend/logger/log_writer'
 import { isRunning } from './downloadmanager/downloadqueue'
 import { isOnline } from './online_monitor'
 import type { Game } from 'common/types/game_manager'
+import { isStore } from 'common/storeCapabilities'
 
 const execAsync = promisify(exec)
 
@@ -378,7 +379,7 @@ async function errorHandler(
   appName: string,
   runner: Runner
 ): Promise<void> {
-  const plat = runner === 'legendary' ? 'Legendary (Epic Games)' : runner
+  const plat = isStore(runner, 'legendary') ? 'Legendary (Epic Games)' : runner
   const deletedFolderMsg = 'appears to be deleted'
   const expiredCredentials = 'No saved credentials'
   const legendaryRegex = /legendary.*\.py/

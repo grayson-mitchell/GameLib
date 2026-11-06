@@ -14,6 +14,7 @@ import i18next from 'i18next'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { dialog } from 'backend/platform'
 import type { Runner } from 'common/types'
+import { storeCapabilities } from 'common/storeCapabilities'
 
 /** Maximum bundle files probed per game (false-flag-safe union). */
 const MAX_CANDIDATES = 8
@@ -245,7 +246,7 @@ export async function promptMac32WindowsReinstall(
   title?: string
 ): Promise<boolean> {
   try {
-    const isSteam = runner === 'steam'
+    const isSteam = storeCapabilities[runner].usesBottleRuntime
     const { response } = await dialog.showMessageBox(
       isSteam
         ? {

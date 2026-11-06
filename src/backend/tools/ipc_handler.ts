@@ -4,6 +4,7 @@ import { Winetricks, runWineCommandOnGame } from '.'
 import path from 'path'
 import { execAsync, getGame, sendGameStatusUpdate } from 'backend/utils'
 import { isWindows } from 'backend/constants/environment'
+import { isStore } from 'common/storeCapabilities'
 
 addHandler(
   'runWineCommandForGame',
@@ -47,7 +48,7 @@ addHandler('callTool', async (event, { tool, exe, appName, runner }) => {
       }
       break
   }
-  if (runner === 'gog') {
+  if (isStore(runner, 'gog')) {
     // Check if game was modified by offline installer / wine uninstaller
     await libraryManagerMap['gog'].checkForOfflineInstallerChanges(appName)
     const maybeNewGameInfo = libraryManagerMap['gog'].getGameInfo(appName)

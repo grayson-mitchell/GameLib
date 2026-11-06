@@ -66,6 +66,7 @@ import { toolsPath, userHome } from 'backend/constants/paths'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import './dxmt'
 import { Game } from '../../common/types/game_manager'
+import { storeCapabilities } from 'common/storeCapabilities'
 import { parseWinetricksListAll } from './winetricksListParse'
 import {
   deriveNeedsGuiVerbs,
@@ -1497,7 +1498,7 @@ export async function runWineCommandOnGame(
   // game.isNative() check below so it applies regardless of platform/OS.
   // Defense-in-depth: the frontend GameSubMenu already hides these entry
   // points for Steam (!isSteam gates).
-  if (runner === 'steam') {
+  if (!storeCapabilities[runner].winePrefixToolsAvailable) {
     logError(
       'runWineCommand called on a Steam game — Steam has no per-game Wine prefix (Pitfall 5)',
       LogPrefix.Gog

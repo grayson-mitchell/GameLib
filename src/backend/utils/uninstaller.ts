@@ -11,6 +11,7 @@ import { sendGameStatusUpdate } from 'backend/utils'
 import { resolveGameTitle } from 'backend/utils/gameTitle'
 import { Runner } from 'common/types'
 import { storeMap } from 'common/utils'
+import { storeCapabilities } from 'common/storeCapabilities'
 import { Event } from 'backend/platform'
 import { existsSync, readdirSync, rmSync } from 'graceful-fs'
 import i18next from 'i18next'
@@ -143,7 +144,7 @@ export const uninstallGameCallback = async (
     // GAME-03: Steam uninstall is confirmed by the ACF poller (pollUninstallOnce),
     // which fires the "Game Uninstalled" toast when the manifest disappears.
     // Suppress the success notify here for steam to avoid a duplicate/premature toast.
-    if (runner !== 'steam') {
+    if (!storeCapabilities[runner].installManagedExternally) {
       notify({ title, body: i18next.t('notify.uninstalled') })
     }
     logInfo('Finished uninstalling', LogPrefix.Backend)
@@ -151,7 +152,7 @@ export const uninstallGameCallback = async (
 
   // Steam: ACF poller emits the real done signal — suppress it here to prevent
   // the badge flash caused by uninstallGameCallback resolving instantly (GAME-03).
-  if (runner !== 'steam') {
+  if (!storeCapabilities[runner].installManagedExternally) {
     sendGameStatusUpdate({
       appName,
       runner,
