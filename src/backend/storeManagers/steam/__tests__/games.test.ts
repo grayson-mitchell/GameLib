@@ -30,7 +30,8 @@ import {
   DRM_DLLPATH_CHANNEL,
   DRM_DLLOVERRIDES_CHANNEL,
   DRM_TRACE_KEEP_PER_APP,
-  MAC_STEAM_CLIENT_SUBPATH
+  MAC_STEAM_CLIENT_SUBPATH,
+  __resetDrmModeNoticeShownForTests
 } from '../gameDrmLaunch'
 import { buildSteamProtocolUrl } from '../gameProtocolUrl'
 import {
@@ -2209,6 +2210,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
   beforeEach(() => {
     __resetBridgeFailedSessionForTests()
+    __resetDrmModeNoticeShownForTests()
     __resetBridgeLaunchBottlesForTests()
     library.clear()
     pendingFetches.clear()
@@ -5479,6 +5481,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
   beforeEach(() => {
     __resetBridgeFailedSessionForTests()
+    __resetDrmModeNoticeShownForTests()
     libraryModule.clearBridgeInstallFinalized(APP_ID)
     library.clear()
     pendingFetches.clear()
@@ -10826,6 +10829,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
 
   beforeEach(() => {
     __resetBridgeFailedSessionForTests()
+    __resetDrmModeNoticeShownForTests()
     library.clear()
     pendingFetches.clear()
     library.set(APP_ID, makeEntry({ title: 'Avernum 4', is_installed: true }))

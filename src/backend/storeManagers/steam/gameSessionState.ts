@@ -164,7 +164,7 @@ export function isNativeInstallInFlight(appId: string): boolean {
  * `?? { art_cover: '', art_square: '', extra: { reqs: [] } }` is REMOVED and
  * replaced by an early return. It was unreachable — the only caller is
  * install()'s bottle terminal, reached through
- * `routeThroughBottle = forceWindowsViaBottle || this.isBottleEligible()`,
+ * `routeThroughBottle = forceWindowsViaBottle || steamGame.isBottleEligible()`,
  * every arm of which requires a `steamMetadataStore` entry to already exist —
  * and it was also WRONG: the entry it fabricated would carry no
  * `platformsCaptured`, i.e. a strictly worse state than the missing read it

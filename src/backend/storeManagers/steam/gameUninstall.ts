@@ -72,14 +72,15 @@ export async function uninstall(
   }
 
   // Reads the raw `library` Map entry directly rather than
-  // this.getGameInfo() — getGameInfo() has a fire-and-forget lazy
+  // getGameInfo() — getGameInfo() has a fire-and-forget lazy
   // metadata-fetch side effect (art_cover/platform capture) that an
   // internal routing read must never trigger (D-01/D-02: uninstall() must
   // not have side effects beyond the uninstall itself).
   //
   // 260907-e7a: this bypass forfeits MORE than the metadata fetch — it also
   // forfeits getGameInfo()'s `steamLibraryStore` fallback AND its Map
-  // self-heal (games.ts:596-604; `library.set(this.appId, cached)` at L601).
+  // self-heal (SteamGame.getGameInfo() in games.ts; its
+  // `library.set(this.appId, cached)` write-back).
   // So a bare Map read here would see nothing in the one state getGameInfo()
   // recovers from: Map miss + store hit. Audited and found UNREACHABLE — do
   // not re-open this without new evidence. The killing fact is ordering, not
@@ -89,12 +90,12 @@ export async function uninstall(
   // `resolveGameTitle(libraryManagerMap, runner, appName)` ->
   // `utils/gameTitle.ts:58`'s `getGameInfo()` for THIS SAME appId. That call
   // already performed the store fallback and already wrote the entry back
-  // into the Map. There is no `await` between L113 and L118, so nothing can
+  // into the Map. There is no `await` between those two calls, so nothing can
   // interleave and undo it. Corroborating (not load-bearing): SteamLibrary
   // `refresh()`'s clear->rebuild->persist span is one uninterrupted
-  // synchronous block — `library.clear()` at library.ts:1090, the plain
-  // (non-`for await`) rebuild loop at L1091-1217, and
-  // `steamLibraryStore.set('games', Array.from(library.values()))` at L1220,
+  // synchronous block — `library.clear()` in library.ts's refresh(), the
+  // plain (non-`for await`) rebuild loop after it, and the closing
+  // `steamLibraryStore.set('games', Array.from(library.values()))`,
   // with ZERO await/.then/yield/return/throw in between — so no IPC handler
   // can observe a cleared Map, and the store is written FROM the Map and can
   // never hold an entry a completed refresh dropped.
@@ -222,11 +223,11 @@ export async function uninstallBridgeGame(
   }
 
   // 261017-bqw (A-12 answered): no NUMERIC_APP_ID guard is added here.
-  // It would be unreachable — getBridgeBottleSettings(this.appId) on this
+  // It would be unreachable — getBridgeBottleSettings(steamGame.appId) on this
   // method's first line already throws for a non-numeric appId (via
   // bridgeBottleNameFor's NUMERIC_APP_ID test), and isBridgeEligible()
   // only admits allowlisted ids, which bridge/allowlist.ts validates with
-  // a `^\d+$` zod regex. manifestPath is built only from this.appId and
+  // a `^\d+$` zod regex. manifestPath is built only from steamGame.appId and
   // the resolved bottle's own steamapps dir, never from any other string.
   const manifestPath = join(
     getBottleSteamappsDir(bottleName),
@@ -386,7 +387,7 @@ export async function uninstallBottleGameDirectly(
   // 34.13 review A-12: validate the appId BEFORE building either delete
   // target. The method containment-checks `installRoot` with the full
   // resolve()+relative()+isAbsolute() idiom, then deletes a SECOND path —
-  // `appmanifest_${this.appId}.acf` — that got none of it. `this.appId` is
+  // `appmanifest_${steamGame.appId}.acf` — that got none of it. `steamGame.appId` is
   // renderer-supplied (getGame(appName) off the `uninstall` IPC channel)
   // and is validated nowhere else on this path: the sibling native branch
   // validates it via buildSteamProtocolUrl, and getSteamBottleEligibilityVerdict
@@ -405,15 +406,15 @@ export async function uninstallBottleGameDirectly(
   }
 
   // Reads the raw `library` Map entry directly rather than
-  // this.getGameInfo() — see uninstall()'s own comment on the same
+  // getGameInfo() — see uninstall()'s own comment on the same
   // pattern (avoids getGameInfo()'s fire-and-forget metadata-fetch side
   // effect on what must be a side-effect-free routing/guard read).
   //
   // 260907-e7a: like uninstall()'s read, this forfeits getGameInfo()'s
-  // `steamLibraryStore` fallback and Map self-heal (games.ts:596-604), not
+  // `steamLibraryStore` fallback and Map self-heal (SteamGame.getGameInfo() in games.ts), not
   // just the metadata fetch. Audited and found UNREACHABLE for the same
   // reason, and this site is strictly safer than uninstall()'s: the method
-  // is `private` and its ONLY call site is `uninstall()` at games.ts:2363,
+  // is `private` and its ONLY call site is `uninstall()` in gameUninstall.ts,
   // so it inherits uninstall()'s guarantee that `uninstaller.ts:113`'s
   // `resolveGameTitle` -> `getGameInfo()` already self-healed the Map for
   // this appId before control ever reached here. See uninstall()'s comment

@@ -32,9 +32,7 @@ import { buildDrmPaths, newDrmLaunchId } from './bridge/drm/drmPaths'
 // These helpers are pure, or touch only GameLib's own trace dir. None of them
 // throws, and nothing runs at module load (sidecar exit contract).
 
-// ts-prune-ignore-next
 export type DrmDllPathChannel = 'env' | 'cx_env' | 'not-needed' | 'raw-only'
-// ts-prune-ignore-next
 export type DrmDllOverridesChannel =
   | 'env'
   | 'dll-option'
@@ -43,10 +41,8 @@ export type DrmDllOverridesChannel =
   | 'raw-only'
 
 // 56-01-SUMMARY.md (.planning/phases/56-*/56-01-SUMMARY.md) records `dllpath_channel: not-needed`.
-// ts-prune-ignore-next
 export const DRM_DLLPATH_CHANNEL: DrmDllPathChannel = 'not-needed'
 // 56-01-SUMMARY.md records `dlloverrides_channel: dll-option`: carried as the wrapper's `--dll=<overrides>` argv.
-// ts-prune-ignore-next
 export const DRM_DLLOVERRIDES_CHANNEL: DrmDllOverridesChannel = 'dll-option'
 
 // The Research staging recipe (NotProton compat_run.sh). The genuine
@@ -55,13 +51,10 @@ export const DRM_DLLOVERRIDES_CHANNEL: DrmDllOverridesChannel = 'dll-option'
 // ts-prune-ignore-next
 export const DRM_DLL_OVERRIDES = 'steamclient=n;steamclient64=n;lsteamclient=b'
 
-// ts-prune-ignore-next
 export const DRM_TRACE_KEEP_PER_APP = 8
-// ts-prune-ignore-next
 export const DRM_REGISTRY_TIMEOUT_MS = 30000
 // lsteamclient.so dlopens $STEAM_COMPAT_CLIENT_INSTALL_PATH/steamclient.dylib
 // (spike 043 step 2).
-// ts-prune-ignore-next
 export const MAC_STEAM_CLIENT_SUBPATH = [
   'Library',
   'Application Support',
@@ -100,7 +93,6 @@ export type DrmLaunchEnv =
 // eslint-disable-next-line no-control-regex
 const DRM_CONTROL_CHARS = /[\x00-\x1f\x7f]/
 
-// ts-prune-ignore-next
 export function buildDrmLaunchEnvironment(
   input: DrmLaunchEnvInput
 ): DrmLaunchEnv {
@@ -252,7 +244,6 @@ export function buildDrmLaunchEnvironment(
  * The helper passes this string verbatim to CreateProcessW (56-03), so it is
  * the game's C:\ path, never the Z: mapping.
  */
-// ts-prune-ignore-next
 export function drmBottleWinPath(
   bottleDir: string,
   hostPath: string
@@ -272,13 +263,11 @@ export function drmBottleWinPath(
 }
 
 /** `<id>.log` -> `<id>.wine.log`: the wine child's output beside its trace. */
-// ts-prune-ignore-next
 export function drmWineLogPathFor(traceFile: string): string {
   return traceFile.replace(/\.log$/, '.wine.log')
 }
 
 /** GAMELIB_DRM_WINEDEBUG allowlist (T-56-20-01); anything else is ignored. */
-// ts-prune-ignore-next
 export function drmWineDebugFromEnv(
   value: string | undefined
 ): string | undefined {
@@ -288,7 +277,6 @@ export function drmWineDebugFromEnv(
 }
 
 /** Synchronous, size-capped (T-56-20-02), 0600 append sink for the wine log. */
-// ts-prune-ignore-next
 export function createDrmWineLogAppender(
   path: string,
   maxBytes: number = 8 * 1024 * 1024
@@ -335,7 +323,6 @@ export function createDrmWineLogAppender(
   }
 }
 
-// ts-prune-ignore-next
 export function prepareDrmTraceFile(
   appFolderPath: string,
   appId: string,
@@ -402,7 +389,6 @@ export function prepareDrmTraceFile(
   }
 }
 
-// ts-prune-ignore-next
 export function relogDrmTrace(
   appId: string,
   traceFile: string
@@ -450,6 +436,17 @@ export function relogDrmTrace(
 // and notify fire once per title and failed step per session. A different
 // failed step is new information, so it shows again. Keyed `${appId}|${step}`.
 export const drmModeNoticeShownThisSession = new Set<string>()
+
+/**
+ * Test-only reset for drmModeNoticeShownThisSession — mirrors gameSessionState.ts's
+ * `__resetBridgeFailedSessionForTests()` convention. A test that drives
+ * maybeNotifyDrmModeFailed records a per-`${appId}|${step}` notice, which
+ * would silence the same notice in a later test sharing that key; call this
+ * in a `beforeEach`.
+ */
+export function __resetDrmModeNoticeShownForTests(): void {
+  drmModeNoticeShownThisSession.clear()
+}
 
 export function engineLabelForLog(sel: EngineSelection): string {
   return sel.kind === 'crossover' ? 'crossover' : `${sel.kind} ${sel.label}`
