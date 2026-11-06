@@ -18,8 +18,8 @@ import { sendFrontendMessage } from '../../../ipc'
 import * as shortcutsModule from '../../../shortcuts/shortcuts/shortcuts'
 import { steamMetadataStore, steamLibraryStore } from '../electronStores'
 import { TITLE_AUTHORITATIVE_KEYS } from '../titleSettings'
-import SteamGame, {
-  getBridgeRouteVerdict,
+import SteamGame, { getBridgeRouteVerdict } from '../games'
+import {
   buildDrmLaunchEnvironment,
   drmBottleWinPath,
   prepareDrmTraceFile,
@@ -31,7 +31,7 @@ import SteamGame, {
   DRM_DLLOVERRIDES_CHANNEL,
   DRM_TRACE_KEEP_PER_APP,
   MAC_STEAM_CLIENT_SUBPATH
-} from '../games'
+} from '../gameDrmLaunch'
 import { buildSteamProtocolUrl } from '../gameProtocolUrl'
 import {
   parseSteamStorageRequirement,
@@ -77,7 +77,10 @@ import {
   killBridgeBottleWineServer
 } from '../bottle'
 import type { DrmLaunchForm } from '../bottle'
-import type { DrmDllPathChannel, DrmDllOverridesChannel } from '../games'
+import type {
+  DrmDllPathChannel,
+  DrmDllOverridesChannel
+} from '../gameDrmLaunch'
 import { library, pendingFetches } from '../state'
 import { SteamUser } from '../user'
 import type { GameInfo, InstallParams } from 'common/types'
@@ -13304,10 +13307,11 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             'utf8'
           )
         ).steam.bridge.drm
-        const src = realFs.readFileSync(
-          realJoin(__dirname, '..', 'games.ts'),
-          'utf8'
-        )
+        // The DRM step texts moved to gameDrmLaunch.ts (62-05); the
+        // title/detail keys stay in games.ts. Search both owners.
+        const src = ['games.ts', 'gameDrmLaunch.ts']
+          .map((f) => realFs.readFileSync(realJoin(__dirname, '..', f), 'utf8'))
+          .join('\n')
         const pairs: [string, string][] = [
           ['gamelib:steam.bridge.drm.title', catalog.title],
           ['gamelib:steam.bridge.drm.detail', catalog.detail],
