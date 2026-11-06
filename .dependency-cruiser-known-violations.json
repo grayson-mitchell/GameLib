@@ -1,0 +1,303 @@
+[
+  {
+    "type": "dependency",
+    "from": "src/backend/launcher.ts",
+    "to": "src/backend/storeManagers/gog/presence.ts",
+    "unresolvedTo": "./storeManagers/gog/presence",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "launcher-only-via-store-managers-index"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/backend/launcher.ts",
+    "to": "src/backend/storeManagers/gog/setup.ts",
+    "unresolvedTo": "./storeManagers/gog/setup",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "launcher-only-via-store-managers-index"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/backend/launcher.ts",
+    "to": "src/backend/storeManagers/legendary/commands/index.ts",
+    "unresolvedTo": "./storeManagers/legendary/commands",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "launcher-only-via-store-managers-index"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/backend/launcher.ts",
+    "to": "src/backend/storeManagers/legendary/electronStores.ts",
+    "unresolvedTo": "./storeManagers/legendary/electronStores",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "launcher-only-via-store-managers-index"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/backend/launcher.ts",
+    "to": "src/backend/storeManagers/legendary/eos_overlay/eos_overlay.ts",
+    "unresolvedTo": "./storeManagers/legendary/eos_overlay/eos_overlay",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "launcher-only-via-store-managers-index"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/backend/launcher.ts",
+    "to": "src/backend/storeManagers/legendary/epicOfflineMode.ts",
+    "unresolvedTo": "./storeManagers/legendary/epicOfflineMode",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "launcher-only-via-store-managers-index"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/backend/launcher.ts",
+    "to": "src/backend/storeManagers/legendary/setup.ts",
+    "unresolvedTo": "./storeManagers/legendary/setup",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "launcher-only-via-store-managers-index"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/backend/launcher.ts",
+    "to": "src/backend/storeManagers/nile/setup.ts",
+    "unresolvedTo": "./storeManagers/nile/setup",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "launcher-only-via-store-managers-index"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/backend/launcher.ts",
+    "to": "src/backend/storeManagers/steam/bottle.ts",
+    "unresolvedTo": "backend/storeManagers/steam/bottle",
+    "dependencyTypes": [
+      "aliased",
+      "aliased-tsconfig",
+      "aliased-tsconfig-base-url",
+      "local",
+      "dynamic-import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "launcher-only-via-store-managers-index"
+    }
+  },
+  {
+    "type": "cycle",
+    "from": "src/backend/storeManagers/steam/depot.ts",
+    "to": "src/backend/storeManagers/steam/depot/flagsCensus.ts",
+    "unresolvedTo": "./depot/flagsCensus",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular-depot"
+    },
+    "cycle": [
+      {
+        "name": "src/backend/storeManagers/steam/depot/flagsCensus.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/backend/storeManagers/steam/depot.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/backend/storeManagers/steam/depot.ts",
+    "to": "src/backend/storeManagers/steam/depot/pathCollisions.ts",
+    "unresolvedTo": "./depot/pathCollisions",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular-depot"
+    },
+    "cycle": [
+      {
+        "name": "src/backend/storeManagers/steam/depot/pathCollisions.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/backend/storeManagers/steam/depot.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/backend/storeManagers/steam/depot.ts",
+    "to": "src/backend/storeManagers/steam/depot/reconcile.ts",
+    "unresolvedTo": "./depot/reconcile",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular-depot"
+    },
+    "cycle": [
+      {
+        "name": "src/backend/storeManagers/steam/depot/reconcile.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/backend/storeManagers/steam/depot.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/backend/storeManagers/steam/depot/reconcile.ts",
+    "to": "src/backend/storeManagers/steam/depot/pathCollisions.ts",
+    "unresolvedTo": "./pathCollisions",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular-depot"
+    },
+    "cycle": [
+      {
+        "name": "src/backend/storeManagers/steam/depot/pathCollisions.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/backend/storeManagers/steam/depot.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      },
+      {
+        "name": "src/backend/storeManagers/steam/depot/reconcile.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "dependency",
+    "from": "src/backend/storeManagers/steam/depot/flagsCensus.ts",
+    "to": "src/backend/storeManagers/steam/depot.ts",
+    "unresolvedTo": "../depot",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-depot-parent-back-edge"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/backend/storeManagers/steam/depot/pathCollisions.ts",
+    "to": "src/backend/storeManagers/steam/depot.ts",
+    "unresolvedTo": "../depot",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-depot-parent-back-edge"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/backend/storeManagers/steam/depot/reconcile.ts",
+    "to": "src/backend/storeManagers/steam/depot.ts",
+    "unresolvedTo": "../depot",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-depot-parent-back-edge"
+    }
+  }
+]
