@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 60
 Plan: 0 of 0
 Status: Milestone complete
-Last activity: 2026-11-06 - Completed quick task 261106-pr4: stack the Humble expiry toast in the shared notice stack
+Last activity: 2026-11-06 - Completed quick task 261106-pvk: Steam give-up notice in the in-app toast stack
 
 Progress: [██████████] 100%
 
@@ -458,6 +458,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261106-ab1 | `src-tauri/src/main.rs` split 20,324 → 7,886 lines into 11 sibling modules + `wake_lock/{macos,windows,linux}.rs`; mechanical move (193 items `pub(crate)`). Shell source-text tests (15 jest + `meta/captureShellScrollback.ts`) read through new `testUtils/tauriShellSource.ts`; Rust `include_str!` tests use a combined `SHELL_SOURCE` with a guard. | 2026-11-06 | 5f53f7f8e | cargo test 420/0; jest same 5 failing suites as baseline (tauriShellSource WR-07 confirmed failing at 1c61e03aa); Windows compile only via CI, Linux-gated code uncompiled | [261106-ab1-split-src-tauri-main-rs-into-modules](./quick/261106-ab1-split-src-tauri-main-rs-into-modules/) |
 | 261106-ote | Depot decode worker slimmed: leaf `chunkDecode.ts` + logger-free `lzmaLoaderCore.ts`, worker logs via postMessage; bundle 14.2 MB → 279 KB. Pool defaults to min(cpus,4) when native (grows to 16 only for pure-JS); idle RSS at 16 workers 2,668 → 290 MiB; todo closed. | 2026-11-06 | b0af46618 | 381 jest + SEA real-build pass; 067b SHA1 0 mismatches; live install check optional, not run | [261106-ote-slim-the-depot-decode-worker-bundle-and-](./quick/261106-ote-slim-the-depot-decode-worker-bundle-and-/) |
 | 261106-pr4 | Humble expiry toast moved into a shared app-level `NoticeStack` region as its last (corner) slot; `SteamEngineLaunchNotice` returns a fragment of slots; slot lifecycle shared via `renderNoticeSlot`/`useNoticePhaseFallback`; Humble surface now sketch 006 variant A. | 2026-11-06 | 7dc212ce7 | Jest 3 suites / 36 tests, codecheck + lint pass; live gate outstanding (todo stays pending) | [261106-pr4-stack-the-humble-expiry-toast-in-a-share](./quick/261106-pr4-stack-the-humble-expiry-toast-in-a-share/) |
+| 261106-pvk | Steam delegated install/uninstall 2-min give-up now shows in the in-app toast stack (new `steamRequestNotice` push, 4th `request` slot in `SteamEngineLaunchNotice`) instead of a system notification; `dispatch.kill()` skips `callAbortController` for a Steam-delegated install so Cancel no longer logs `Aborting not possible` | 2026-11-06 | 0b24d6f2c | codecheck, i18n gates, scoped prettier pass; jest 1662/1663 (1 unrelated `themeTokens` census failure); live gate outstanding (todo stays pending) | [261106-pvk-steam-delegated-give-up-notice-in-app-to](./quick/261106-pvk-steam-delegated-give-up-notice-in-app-to/) |
 
 ## Deferred Items
 

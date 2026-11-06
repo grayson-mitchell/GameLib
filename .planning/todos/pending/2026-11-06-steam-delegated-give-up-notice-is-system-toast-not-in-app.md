@@ -9,7 +9,7 @@ files:
   - src/backend/downloadmanager/ (Aborting not possible log, utils.test.ts ~219, ~924)
 severity: medium
 platform: macos
-ready: code
+ready: live-gate
 ---
 
 ## Problem
@@ -60,3 +60,10 @@ ERROR firing on every sideload/CLI-gap cancel.
 
 Parent todo: `2026-11-05-steam-uninstall-silently-dropped-when-signed-out.md`
 (timeout/revert/Cancel verified by this gate; this todo is the notice channel).
+
+## Fix landed, live check pending (quick 261106-pvk, 2026-11-06)
+
+`4d8aade9b`, `0ca02bbd0`, `0b24d6f2c`. Both give-ups push `steamRequestNotice`
+(no `notify()`), drawn as a `request` slot in the existing toast stack; its
+countdown waits until GameLib is focused. `dispatch.kill()` skips the abort
+lookup for a Steam-delegated install. Close after the live check above.
