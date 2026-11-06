@@ -15,6 +15,7 @@ import {
   containedRealTs,
   peDelayImportsTs,
   peImportedDllsTs,
+  steamApiImportsTs,
   steamDrmTs,
   steamstubSectionTs,
   winemacMetalExportsTs
@@ -307,5 +308,60 @@ describe('winemacMetalExportsTs', () => {
       ok: false,
       reason: 'winemac.so is not a parseable x86_64 Mach-O'
     })
+  })
+})
+
+describe('steamApiImportsTs', () => {
+  it('rejects a non-numeric appId without calling objdump', async () => {
+    const runObjdump = jest.fn()
+    const r = await steamApiImportsTs(
+      { exePath: join(dir, 'a.exe'), appId: '1 2' },
+      { runObjdump }
+    )
+    expect(runObjdump).not.toHaveBeenCalled()
+    expect(r.status).toBe('error')
+    expect(r).toMatchObject({ error: 'Invalid appId: "1 2"' })
+    expect(r.diagnostics).toHaveLength(1)
+    expect(r.diagnostics[0].level).toBe('warn')
+    expect(r.diagnostics[0].message).toContain('T-24-06')
+  })
+
+  it('maps a runner rejection to a typed error with one warn diagnostic', async () => {
+    const r = await steamApiImportsTs(
+      { exePath: join(dir, 'a.exe'), appId: '1' },
+      { runObjdump: async () => Promise.reject(new Error('spawn ENOENT')) }
+    )
+    expect(r).toMatchObject({
+      status: 'error',
+      error: 'Failed to run objdump: Error: spawn ENOENT'
+    })
+    expect(r.diagnostics.map((d) => d.level)).toEqual(['warn'])
+  })
+
+  it('maps a non-zero exit to a typed error naming the exe', async () => {
+    const exe = join(dir, 'a.exe')
+    const r = await steamApiImportsTs(
+      { exePath: exe, appId: '1' },
+      { runObjdump: async () => ({ code: 1, stdout: '' }) }
+    )
+    expect(r).toMatchObject({
+      status: 'error',
+      error: `objdump exited with code 1 for "${exe}"`
+    })
+  })
+
+  it('omits delaySymbols and emits no diagnostics for a plain ok scan', async () => {
+    const r = await steamApiImportsTs(
+      { exePath: join(dir, 'missing.exe'), appId: '1' },
+      { runObjdump: async () => ({ code: 0, stdout: '' }) }
+    )
+    expect(r).toEqual({
+      status: 'ok',
+      arch: 'none',
+      dll: null,
+      symbols: [],
+      diagnostics: []
+    })
+    expect('delaySymbols' in r).toBe(false)
   })
 })
