@@ -222,7 +222,7 @@ export async function launchBridgeGameBody(
   // CEG markers come from the exe that carries .bind (T-56-21-02).
   const launchCegMarkers =
     launchDrmWrapper === 'steamstub'
-      ? readLaunchExeCegMarkers(steamGame, drmExe)
+      ? await readLaunchExeCegMarkers(steamGame, drmExe, 'launchBridgeGameBody')
       : []
   const previousRunner = getDrmBridgeRunner(steamGame.appId)
   // Only a DRM runner's absence changes the settings drmLaunchSetup clears;

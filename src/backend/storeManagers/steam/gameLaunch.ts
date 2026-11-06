@@ -10,7 +10,6 @@
 import i18next from 'i18next'
 import { app, shell } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
-import { closeSync, openSync, readSync } from 'node:fs'
 import { join } from 'node:path'
 import { GameSettings, LaunchOption } from 'common/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -45,7 +44,7 @@ import type { CrossoverPreflight } from './engine/engineDecision'
 import type { EngineSelection } from './engine/engineTypes'
 import { noteSteamAuthTrigger } from './authTrigger'
 import { detectLaunchDrmWrapper } from './bridge/drm/drmScanExe'
-import { detectSteamDrmInPe } from './bridge/peSteamDrm'
+import { detectSteamDrmInPe } from './bridge/peScan'
 import {
   prefetchDrmDownloads,
   type DrmLaunchReady
@@ -774,7 +773,13 @@ export async function prefetchBridgeDrmDownloads(
   )
   // CEG markers are read once, and only for a steamstub exe.
   const cegMarkers =
-    drmWrapper === 'steamstub' ? readLaunchExeCegMarkers(steamGame, drmExe) : []
+    drmWrapper === 'steamstub'
+      ? await readLaunchExeCegMarkers(
+          steamGame,
+          drmExe,
+          'prefetchBridgeDrmDownloads'
+        )
+      : []
   // 59-REVIEW WR-04 / 59-15: persist the mode this install resolves so a
   // fresh DRM-mode title is excluded from the override before first launch.
   writeBridgeModeVerdict(
@@ -793,45 +798,30 @@ export async function prefetchBridgeDrmDownloads(
 }
 
 /**
- * Reads the launch exe's CEG markers through the bounded PE reader (never
- * the whole exe). 56-04's resolveBridgeMode sends a CEG-marked exe to 'tcp',
- * so the existing CEG refusal keeps handling it; the markers are therefore
- * read BEFORE drmLaunchSetup. Never throws.
+ * Reads the launch exe's CEG markers through the path-based scanner (Rust
+ * ranged reads; never the whole exe). 56-04's resolveBridgeMode sends a
+ * CEG-marked exe to 'tcp', so the existing CEG refusal keeps handling it;
+ * the markers are therefore read BEFORE drmLaunchSetup. Never throws.
  */
-export function readLaunchExeCegMarkers(
+export async function readLaunchExeCegMarkers(
   steamGame: SteamGame,
-  exePath: string
-): string[] {
-  let fd: number | null = null
-  try {
-    fd = openSync(exePath, 'r')
-    const handle = fd
-    const result = detectSteamDrmInPe((offset, length) => {
-      const buf = Buffer.alloc(length)
-      const n = readSync(handle, buf, 0, length, offset)
-      return n < length ? null : new Uint8Array(buf.buffer, buf.byteOffset, n)
-    })
-    if (result?.parsed) return result.cegMarkers
+  exePath: string,
+  caller: string
+): Promise<string[]> {
+  const result = await detectSteamDrmInPe(exePath, caller)
+  if (result.readError !== null) {
     logWarning(
-      `SteamGame: CEG detection could not parse the exe as a PE for appId ${steamGame.appId} -- treating as not CEG`,
+      `SteamGame: CEG detection could not read the exe for appId ${steamGame.appId}: ${result.readError}`,
       LogPrefix.Steam
     )
     return []
-  } catch (error) {
-    logWarning(
-      `SteamGame: CEG detection could not read the exe for appId ${steamGame.appId}: ${String(error)}`,
-      LogPrefix.Steam
-    )
-    return []
-  } finally {
-    if (fd !== null) {
-      try {
-        closeSync(fd)
-      } catch {
-        // nothing left to release
-      }
-    }
   }
+  if (result.parsed) return result.cegMarkers
+  logWarning(
+    `SteamGame: CEG detection could not parse the exe as a PE for appId ${steamGame.appId} -- treating as not CEG`,
+    LogPrefix.Steam
+  )
+  return []
 }
 
 export async function launchDrmModeGame(

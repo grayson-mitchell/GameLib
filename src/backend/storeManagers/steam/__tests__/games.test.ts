@@ -119,7 +119,7 @@ import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { knownFixSaysCeg } from '../drmKnownFix'
 import { placeShimForGame, detectDrmWrapper } from '../bridge/shimGenerate'
-import { detectSteamDrmInPe } from '../bridge/peSteamDrm'
+import { detectSteamDrmInPe } from '../bridge/peScan'
 import { restoreBridgeSteamApiOriginals } from '../bridge/originalRestore'
 import {
   resolveBridgeLaunchExe,
@@ -570,8 +570,8 @@ jest.mock('../bridge/overlay/overlayLaunch', () => {
 
 // Phase 56 (56-12): detectSteamDrmInPe is undefined under resetMocks, which
 // games.ts treats as "not parsed".
-jest.mock('../bridge/peSteamDrm', () => ({
-  ...jest.requireActual('../bridge/peSteamDrm'),
+jest.mock('../bridge/peScan', () => ({
+  ...jest.requireActual('../bridge/peScan'),
   detectSteamDrmInPe: jest.fn()
 }))
 
@@ -744,6 +744,13 @@ beforeEach(() => {
   ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({
     status: 'ready',
     ready: true
+  })
+  // Resolved "not parsed" by default; scenarios override per test.
+  ;(detectSteamDrmInPe as jest.Mock).mockResolvedValue({
+    parsed: false,
+    cegMarkers: [],
+    hasBindSection: false,
+    readError: null
   })
 })
 
@@ -12908,7 +12915,12 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         callOrder.push('detect')
         return 'steamstub'
       })
-      ;(detectSteamDrmInPe as jest.Mock).mockReturnValue(undefined)
+      ;(detectSteamDrmInPe as jest.Mock).mockResolvedValue({
+        parsed: false,
+        cegMarkers: [],
+        hasBindSection: false,
+        readError: null
+      })
       ;(startBottleProcessMonitor as jest.Mock).mockImplementation(
         (args: { onStopped: () => void }) => {
           onStopped = args.onStopped
@@ -13057,10 +13069,11 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             drmWrapper: 'steamstub',
             drmExe: realShipping
           })
-          ;(detectSteamDrmInPe as jest.Mock).mockReturnValue({
+          ;(detectSteamDrmInPe as jest.Mock).mockResolvedValue({
             parsed: true,
             cegMarkers: ['STEAM_GUIDD'],
-            hasBindSection: true
+            hasBindSection: true,
+            readError: null
           })
           ;(placeShimForGame as jest.Mock).mockResolvedValue({
             status: 'placed',
@@ -13092,10 +13105,11 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
 
       it('CEG markers are read before drmLaunchSetup and the CEG refusal still runs', async () => {
         const id = freshId()
-        ;(detectSteamDrmInPe as jest.Mock).mockReturnValue({
+        ;(detectSteamDrmInPe as jest.Mock).mockResolvedValue({
           parsed: true,
           cegMarkers: ['STEAM_GUIDD'],
-          hasBindSection: true
+          hasBindSection: true,
+          readError: null
         })
         ;(placeShimForGame as jest.Mock).mockResolvedValue({
           status: 'placed',
