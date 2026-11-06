@@ -1,8 +1,8 @@
 /**
  * Phase 62 plan 02 (D-03, D-04, D-13). The single source of the runner/store
  * literal ban: the selector set, the literal list, the compared-name pattern,
- * and the scope + exemption globs. `meta/boundaryRatchet.cjs` consumes this now;
- * `eslint.config.mjs` imports it in 62-20 when both counts reach 0.
+ * and the scope + exemption globs. `eslint.config.mjs` imports it and enforces
+ * it at `error` (62-20; the ratchet that preceded it is deleted).
  *
  * A comparison of a runner/store-named value against a store literal
  * (`runner === 'steam'`, `switch (store)`, `['gog','nile'].includes(runner)`)

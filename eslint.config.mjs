@@ -6,6 +6,7 @@ import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import prettier from 'eslint-config-prettier'
 import { importX } from 'eslint-plugin-import-x'
+import runnerLiteral from './meta/runnerLiteralSelectors.cjs'
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -98,6 +99,20 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/unbound-method': 'warn'
+    }
+  },
+  {
+    // Phase 62 D-13/D-14/D-15: comparing a runner/store value against a store
+    // literal is banned in frontend and backend code. The identity/capability
+    // home is `src/common/storeCapabilities.ts`. The selector set has one
+    // source, meta/runnerLiteralSelectors.cjs.
+    files: [
+      ...runnerLiteral.SCOPE_FILES.frontend,
+      ...runnerLiteral.SCOPE_FILES.backend
+    ],
+    ignores: [...runnerLiteral.SCOPE_IGNORES],
+    rules: {
+      'no-restricted-syntax': ['error', ...runnerLiteral.SELECTORS]
     }
   },
   {

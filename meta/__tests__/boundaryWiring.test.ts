@@ -30,6 +30,17 @@ function hasBoundariesStep(doc: ParsedWorkflow): boolean {
 
 const lintYml = read('.github', 'workflows', 'lint.yml')
 const prePush = read('.husky', 'pre-push')
+const eslintConfig = read('eslint.config.mjs')
+
+function hasLiteralBanAtError(src: string): boolean {
+  return (
+    src.includes("from './meta/runnerLiteralSelectors.cjs'") &&
+    /'no-restricted-syntax':\s*\[\s*'error',\s*\.\.\.runnerLiteral\.SELECTORS/.test(
+      src
+    )
+  )
+}
+
 const pkg = JSON.parse(read('package.json')) as {
   scripts: Record<string, string>
 }
@@ -51,11 +62,25 @@ describe('boundary gate wiring', () => {
     expect(lines[1]).toContain('pnpm boundaries')
   })
 
-  it('package.json boundaries script runs both gates', () => {
+  it('package.json boundaries script runs depcruise only', () => {
     const script = pkg.scripts.boundaries
-    expect(script).toContain('--ignore-known')
     expect(script).toContain('.dependency-cruiser.cjs')
-    expect(script).toContain('meta/boundaryRatchet.cjs')
+    expect(script).not.toContain('boundaryRatchet')
+  })
+
+  it('eslint.config.mjs enforces the runner-literal ban at error', () => {
+    expect(hasLiteralBanAtError(eslintConfig)).toBe(true)
+  })
+
+  it('near-miss: the eslint matcher rejects warn severity and a missing import', () => {
+    expect(
+      hasLiteralBanAtError(eslintConfig.replace("['error',", "['warn',"))
+    ).toBe(false)
+    expect(
+      hasLiteralBanAtError(
+        eslintConfig.replace('./meta/runnerLiteralSelectors.cjs', './x.cjs')
+      )
+    ).toBe(false)
   })
 
   it('near-miss: the matcher rejects a workflow with the step removed', () => {
