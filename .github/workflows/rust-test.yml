@@ -71,6 +71,10 @@ concurrency:
 #       "windows")` code is never linted. The Windows leg has no clippy baseline until the
 #       follow-up todo `2026-11-07-clippy-ratchet-windows-leg` lands, so a lint regression that
 #       only exists under Windows cfg passes here.
+#   (g) The Tauri-free scanner crates (gamelib-scan, gamelib-scan-cli) are covered only by the
+#       explicit `-p` test step and the `--workspace` clippy run: `cargo test --bin gamelib-shell`
+#       alone selects only the root package. They have no Linux leg (a later, separate job could
+#       add one since they need no webkit deps).
 # And: passing here does not make this a "required check" on `main`. That is a GitHub
 # branch-protection/ruleset setting under Settings -> Branches, performed by a repo admin, and is
 # NOT established by this file.
@@ -104,6 +108,10 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
+      - name: cargo test (gamelib-scan crates)
+        shell: bash
+        working-directory: src-tauri
+        run: cargo test -p gamelib-scan -p gamelib-scan-cli
       # `tauri_build::build()` (tauri-build 2.6.3, src/lib.rs:545) copies every
       # `bundle.externalBin` entry UNCONDITIONALLY -- not gated on profile, feature, or whether
       # this is `tauri build` -- and aborts the build script when one is missing. This crate
@@ -193,5 +201,5 @@ jobs:
         shell: bash
         working-directory: src-tauri
         run: |
-          cargo +1.99.1 clippy --all-targets --message-format=json > "$RUNNER_TEMP/clippy.json"
+          cargo +1.99.1 clippy --workspace --all-targets --message-format=json > "$RUNNER_TEMP/clippy.json"
           node ../meta/clippyRatchet.cjs "$RUNNER_TEMP/clippy.json" --list
