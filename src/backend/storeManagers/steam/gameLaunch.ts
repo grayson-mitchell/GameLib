@@ -80,6 +80,12 @@ import {
   isBottleEligible
 } from './gameEligibility'
 import { ensureBuiltInEngineForInstall } from './gameInstall'
+import {
+  notifyOverlaySetupFailed,
+  overlayInputArg,
+  overlayProbeArg,
+  resolveLaunchOverlay
+} from './gameLaunchOverlay'
 
 export async function launch(
   steamGame: SteamGame,
@@ -156,8 +162,8 @@ export async function launch(
       getSteamBottleSettings()?.wineCrossoverBottle ?? DEFAULT_STEAM_BOTTLE_NAME
     )
     if (pre.kind !== 'healthy') {
-      steamGame.notifyCrossoverRequired('bottled', pre)
-      steamGame.sendLaunchDone()
+      notifyCrossoverRequired(steamGame, 'bottled', pre)
+      sendLaunchDone(steamGame)
       return false
     }
     const result = await tellBottledSteamToLaunch(steamGame.appId)
@@ -248,6 +254,23 @@ export async function launch(
   return true
 }
 
+/**
+ * D-51-02/D-51-04 (Phase 51 Plan 12): the one-time "limited Steam
+ * features" notice plus the every-launch `[bridge-notice]` log line.
+ * Called from `launchBridgeGame()` once the helper has reported ready or
+ * fallback-identity, and before `runWineCommand` fires -- never for the
+ * no-steam-api branch, which spawns no helper and has nothing to stub.
+ *
+ * `setBridgeIdentityFallback` is persisted on EVERY call (true or false)
+ * so a game that regains real-AppID init after a prior fallback clears
+ * the stale flag -- the log line and `notify()` only fire when there is
+ * something limited to report (stubbed interfaces or an identity
+ * fallback); a clean verdict with no fallback logs nothing and never
+ * calls `notify()`. `notify()` itself is gated separately, by
+ * `verdict.limitedNoticeShown` (D-51-02: shown once per game, logged
+ * every time) -- `markBridgeLimitedNoticeShown` persists that flag the
+ * first time it fires.
+ */
 export function maybeNotifyBridgeLimited(
   steamGame: SteamGame,
   verdict: SteamBridgeVerdict | undefined,
@@ -298,6 +321,17 @@ export function maybeNotifyBridgeLimited(
   markBridgeLimitedNoticeShown(steamGame.appId)
 }
 
+/**
+ * D-13 (56-12): a steamclient-layer DRM mode step failed. Logs the
+ * [bridge-notice] line on every attempt, and shows the dialog plus notify
+ * once per (appId, step) per session, naming the failed step and its cause.
+ * Does not launch, and has no fallback to the Phase 52 forwarder or to
+ * bottled Steam. It never calls markBridgeFailedThisSession (RESEARCH A9 /
+ * F10: that would send the next Play to bottled Steam) and never sends
+ * steamBridgeSetupRequired, whose dialog offers the bottled fallback. The
+ * cause in the body is the 56-04-normalised readable form; the log line
+ * carries the tokenised form.
+ */
 export function maybeNotifyDrmModeFailed(
   steamGame: SteamGame,
   step: DrmStep,
@@ -345,6 +379,7 @@ export function maybeNotifyDrmModeFailed(
   )
 }
 
+/** Terminal 'done' status for a launch that will not start (idempotent). */
 export function sendLaunchDone(steamGame: SteamGame): void {
   sendGameStatusUpdate({
     appName: steamGame.appId,
@@ -353,6 +388,11 @@ export function sendLaunchDone(steamGame: SteamGame): void {
   })
 }
 
+/**
+ * Phase 59: notify plus an in-app dialog, copied from
+ * maybeNotifyDrmModeFailed's surface. Never marks the bridge failed and
+ * never sends steamBridgeSetupRequired (no path reroutes to bottled Steam).
+ */
 export function showEngineDialog(
   steamGame: SteamGame,
   title: string,
@@ -383,6 +423,11 @@ export function showEngineDialog(
   )
 }
 
+/**
+ * Phase 59: DRM-mode and bottled-Steam launches are CrossOver-only. Shown on
+ * every blocked attempt (the user pressed Play and nothing else will tell
+ * them why it did nothing).
+ */
 export function notifyCrossoverRequired(
   steamGame: SteamGame,
   kind: 'drm' | 'bottled',
@@ -419,13 +464,20 @@ export function notifyCrossoverRequired(
           'This game runs through Windows Steam, which needs CrossOver ({{reason}}). Install or renew CrossOver, then try again.',
           { reason }
         )
-  steamGame.showEngineDialog(
+  showEngineDialog(
+    steamGame,
     steamGame.getGameInfo().title,
     body,
     `crossover-required-${kind}`
   )
 }
 
+/**
+ * Phase 59 (D-05/D-06/D-07/D-09/D-14/D-15): a fresh pre-flight and engine
+ * decision for every TCP bridge launch. Downloads the built-in engine on
+ * first need, registers the choice, prepares the bottle for it, and
+ * re-reads the settings so every later spawn uses the registered engine.
+ */
 export async function selectLaunchEngine(
   steamGame: SteamGame,
   current: GameSettings,
@@ -480,7 +532,8 @@ export async function selectLaunchEngine(
         `SteamGame: appId ${steamGame.appId} launch blocked before pre-flight: ${why} (${refusal.arm})`,
         LogPrefix.Steam
       )
-      steamGame.showEngineDialog(
+      showEngineDialog(
+        steamGame,
         title,
         i18next.t(
           'gamelib:steam.engine.downloadFailed',
@@ -502,7 +555,8 @@ export async function selectLaunchEngine(
       `SteamGame: appId ${steamGame.appId} engine override ${decision.override} is unavailable: ${decision.detail}`,
       LogPrefix.Steam
     )
-    steamGame.showEngineDialog(
+    showEngineDialog(
+      steamGame,
       title,
       i18next.t(
         'gamelib:steam.engine.overrideUnavailable',
@@ -520,7 +574,8 @@ export async function selectLaunchEngine(
       return { ok: false }
     }
     if ('status' in engine) {
-      steamGame.showEngineDialog(
+      showEngineDialog(
+        steamGame,
         title,
         engine.error ?? '',
         'engine-download-failed'
@@ -535,7 +590,8 @@ export async function selectLaunchEngine(
       `SteamGame: appId ${steamGame.appId} engine selection was rejected (${engineLabelForLog(sel)}); not launching`,
       LogPrefix.Steam
     )
-    steamGame.showEngineDialog(
+    showEngineDialog(
+      steamGame,
       title,
       i18next.t(
         'gamelib:steam.engine.selectionRejected',
@@ -574,7 +630,8 @@ export async function selectLaunchEngine(
         `SteamGame: appId ${steamGame.appId} could not switch back to CrossOver (${prep.detail}); not launching`,
         LogPrefix.Steam
       )
-      steamGame.showEngineDialog(
+      showEngineDialog(
+        steamGame,
         title,
         i18next.t(
           'gamelib:steam.engine.restoreFailed',
@@ -599,7 +656,8 @@ export async function selectLaunchEngine(
         `SteamGame: appId ${steamGame.appId} cannot switch engine (${prep.reason}: ${prep.detail}); not launching`,
         LogPrefix.Steam
       )
-      steamGame.showEngineDialog(
+      showEngineDialog(
+        steamGame,
         title,
         i18next.t(
           'gamelib:steam.engine.sharedBottle',
@@ -653,6 +711,15 @@ export async function selectLaunchEngine(
   return { ok: true, settings: getBridgeBottleSettings(steamGame.appId) }
 }
 
+/**
+ * Phase 59 (D-10/D-11): the launch deadline fired with no game process
+ * seen. Stops the bottle with the running engine's own wineserver (before
+ * the registry entry that names it is cleared), stops the helper, and tells
+ * the user. No fallback retry, no markBridgeFailedThisSession, no
+ * steamBridgeSetupRequired: a game that never appeared on CrossOver is not
+ * evidence that the bridge is broken, and retrying on the built-in engine
+ * would hide the problem the user needs to see.
+ */
 export async function onBridgeLaunchDeadline(
   steamGame: SteamGame,
   clearLaunchRecord: () => void,
@@ -675,8 +742,9 @@ export async function onBridgeLaunchDeadline(
   stopBridgeHelper(steamGame.appId)
   clearLaunchRecord()
   clearEngineSelection(steamGame.appId)
-  steamGame.sendLaunchDone()
-  steamGame.showEngineDialog(
+  sendLaunchDone(steamGame)
+  showEngineDialog(
+    steamGame,
     i18next.t('gamelib:steam.engine.didntStart.title', "Game didn't start"),
     i18next.t(
       'gamelib:steam.engine.didntStart.body',
@@ -701,7 +769,7 @@ export async function prefetchBridgeDrmDownloads(
   )
   // CEG markers are read once, and only for a steamstub exe.
   const cegMarkers =
-    drmWrapper === 'steamstub' ? steamGame.readLaunchExeCegMarkers(drmExe) : []
+    drmWrapper === 'steamstub' ? readLaunchExeCegMarkers(steamGame, drmExe) : []
   // 59-REVIEW WR-04 / 59-15: persist the mode this install resolves so a
   // fresh DRM-mode title is excluded from the override before first launch.
   writeBridgeModeVerdict(
@@ -719,6 +787,12 @@ export async function prefetchBridgeDrmDownloads(
   })
 }
 
+/**
+ * Reads the launch exe's CEG markers through the bounded PE reader (never
+ * the whole exe). 56-04's resolveBridgeMode sends a CEG-marked exe to 'tcp',
+ * so the existing CEG refusal keeps handling it; the markers are therefore
+ * read BEFORE drmLaunchSetup. Never throws.
+ */
 export function readLaunchExeCegMarkers(
   steamGame: SteamGame,
   exePath: string
@@ -763,7 +837,8 @@ export async function launchDrmModeGame(
 ): Promise<boolean> {
   const macSteamClientDir = join(userHome, ...MAC_STEAM_CLIENT_SUBPATH)
   if (!existsSync(join(macSteamClientDir, 'steamclient.dylib'))) {
-    steamGame.maybeNotifyDrmModeFailed(
+    maybeNotifyDrmModeFailed(
+      steamGame,
       'steam-not-running',
       drmStepError(
         'steam-not-running',
@@ -774,7 +849,8 @@ export async function launchDrmModeGame(
   }
   const trace = prepareDrmTraceFile(appFolder, steamGame.appId)
   if (trace.status === 'error') {
-    steamGame.maybeNotifyDrmModeFailed(
+    maybeNotifyDrmModeFailed(
+      steamGame,
       'bottle-stage',
       drmStepError('bottle-stage', trace.cause).cause
     )
@@ -787,7 +863,8 @@ export async function launchDrmModeGame(
     trace: trace.traceFile
   })
   if (!anchorLine) {
-    steamGame.maybeNotifyDrmModeFailed(
+    maybeNotifyDrmModeFailed(
+      steamGame,
       'bottle-stage',
       drmStepError('bottle-stage', 'invalid [bridge-drm] anchor fields').cause
     )
@@ -798,7 +875,8 @@ export async function launchDrmModeGame(
     exePath
   )
   if (!gameWinPath) {
-    steamGame.maybeNotifyDrmModeFailed(
+    maybeNotifyDrmModeFailed(
+      steamGame,
       'bottle-stage',
       drmStepError('bottle-stage', "game exe is not under the bottle's drive_c")
         .cause
@@ -814,9 +892,10 @@ export async function launchDrmModeGame(
   // Phase 60 (D-05/D-08): the overlay rides the DRM clone only when its
   // wineloader is re-signed; any failure launches the clone without tokens.
   let overlayTokens: string[] | undefined
-  if (steamGame.resolveLaunchOverlay().enabled) {
+  if (resolveLaunchOverlay(steamGame).enabled) {
     if (ready.runner.wineloaderResigned !== true) {
-      steamGame.notifyOverlaySetupFailed(
+      notifyOverlaySetupFailed(
+        steamGame,
         'resign',
         'DRM runner wineloader not re-signed'
       )
@@ -825,11 +904,11 @@ export async function launchDrmModeGame(
         appId: steamGame.appId,
         shimPath: builtOverlayShimPath,
         steamBinDir: macSteamClientDir,
-        ...steamGame.overlayInputArg('drm'),
-        ...steamGame.overlayProbeArg()
+        ...overlayInputArg(steamGame, 'drm'),
+        ...overlayProbeArg(steamGame)
       })
       if (r.status === 'ok') overlayTokens = r.tokens
-      else steamGame.notifyOverlaySetupFailed(r.step, r.cause)
+      else notifyOverlaySetupFailed(steamGame, r.step, r.cause)
     }
   }
   return steamGame.fireBridgeWineLaunch(exePath, ready.bottleSettings, {

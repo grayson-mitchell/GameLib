@@ -81,6 +81,19 @@ import {
   reconcileBridgePrescreen,
   resolveBridgeGameInstallRoot
 } from './gameInstall'
+import {
+  maybeNotifyBridgeLimited,
+  maybeNotifyDrmModeFailed,
+  notifyCrossoverRequired,
+  onBridgeLaunchDeadline,
+  readLaunchExeCegMarkers,
+  selectLaunchEngine,
+  sendLaunchDone
+} from './gameLaunch'
+import {
+  notifyOverlaySetupFailed,
+  prepareTcpOverlay
+} from './gameLaunchOverlay'
 /**
  * Phase 60 (D-10): how long after the process monitor reports the game gone we
  * wait for the wine wrapper's exit code before deciding on lifetime alone.
@@ -106,7 +119,7 @@ export function launchBridgeGame(steamGame: SteamGame): Promise<boolean> {
     })
     return existing
   }
-  const run = steamGame.runBridgeLaunch()
+  const run = runBridgeLaunch(steamGame)
   bridgeLaunchesInFlight.set(appId, run)
   run
     .finally(() => {
@@ -204,7 +217,7 @@ export async function launchBridgeGameBody(
   // CEG markers come from the exe that carries .bind (T-56-21-02).
   const launchCegMarkers =
     launchDrmWrapper === 'steamstub'
-      ? steamGame.readLaunchExeCegMarkers(drmExe)
+      ? readLaunchExeCegMarkers(steamGame, drmExe)
       : []
   const previousRunner = getDrmBridgeRunner(steamGame.appId)
   // Only a DRM runner's absence changes the settings drmLaunchSetup clears;
@@ -228,7 +241,8 @@ export async function launchBridgeGameBody(
       )
     : undefined
   if (wantsDrm && !drmInstallRoot) {
-    steamGame.maybeNotifyDrmModeFailed(
+    maybeNotifyDrmModeFailed(
+      steamGame,
       'bottle-stage',
       drmStepError('bottle-stage', 'install root not resolved').cause
     )
@@ -242,17 +256,18 @@ export async function launchBridgeGameBody(
       bridgeBottleSettings.wineCrossoverBottle
     )
     if (pre.kind !== 'healthy') {
-      steamGame.notifyCrossoverRequired('drm', pre)
-      steamGame.sendLaunchDone()
+      notifyCrossoverRequired(steamGame, 'drm', pre)
+      sendLaunchDone(steamGame)
       return false
     }
   } else {
-    const engine = await steamGame.selectLaunchEngine(
+    const engine = await selectLaunchEngine(
+      steamGame,
       bridgeBottleSettings,
       connectivity
     )
     if (!engine.ok) {
-      steamGame.sendLaunchDone()
+      sendLaunchDone(steamGame)
       return false
     }
     bridgeBottleSettings = engine.settings
@@ -278,7 +293,8 @@ export async function launchBridgeGameBody(
     // Phase 60: on by default (D-01); with the overlay off a TCP-mode game
     // runs on stock CrossOver exactly as before (D-04). Runs on every TCP
     // launch so a runner change always ends the old wineserver.
-    const tcp = await steamGame.prepareTcpOverlay(
+    const tcp = await prepareTcpOverlay(
+      steamGame,
       bridgeBottleSettings,
       previousRunner
     )
@@ -290,7 +306,7 @@ export async function launchBridgeGameBody(
     // it sent 'drm-setup' progress: the Steam launch is dispatched by
     // dispatchSteamLaunch (steamFlowRegistration.ts) and never reaches
     // launcher.ts's 'done' (IN-01, D-05).
-    steamGame.maybeNotifyDrmModeFailed(drm.step, drm.cause)
+    maybeNotifyDrmModeFailed(steamGame, drm.step, drm.cause)
     return false
   } else {
     // WR-01 (quick 261029-m68): 'done' is sent on every non-launch (a false
@@ -529,7 +545,8 @@ export async function launchBridgeGameBody(
   // functionality BEFORE runWineCommand fires. Re-reads the verdict
   // fresh (not the `persistedScan` captured before placeShimForGame
   // ran) so a 'placed'/'no-steam-api' write above is reflected.
-  steamGame.maybeNotifyBridgeLimited(
+  maybeNotifyBridgeLimited(
+    steamGame,
     readBridgeVerdict(steamGame.appId),
     helperReady.status === 'fallback-identity'
   )
@@ -604,7 +621,8 @@ export async function fireBridgeWineLaunch(
     )
     if (drm) {
       // D-13: no session mark, no steamBridgeSetupRequired.
-      steamGame.maybeNotifyDrmModeFailed(
+      maybeNotifyDrmModeFailed(
+        steamGame,
         'bottle-stage',
         drmStepError('bottle-stage', 'wine launch failed: ' + String(error))
           .cause
@@ -691,7 +709,7 @@ export async function fireBridgeWineLaunch(
       deadline = armLaunchDeadline({
         appId: steamGame.appId,
         onDeadline: () =>
-          steamGame.onBridgeLaunchDeadline(clearLaunchRecord, sel)
+          onBridgeLaunchDeadline(steamGame, clearLaunchRecord, sel)
       })
     }
 
@@ -789,7 +807,8 @@ export async function fireBridgeWineLaunch(
         ...(drm.overlayTokens ? { overlayTokens: drm.overlayTokens } : {})
       })
       if (env.status === 'error') {
-        steamGame.maybeNotifyDrmModeFailed(
+        maybeNotifyDrmModeFailed(
+          steamGame,
           'bottle-stage',
           drmStepError('bottle-stage', env.cause).cause
         )
@@ -851,7 +870,8 @@ export async function fireBridgeWineLaunch(
           if (timer) clearTimeout(timer)
         }
         if (failure !== undefined) {
-          steamGame.maybeNotifyDrmModeFailed(
+          maybeNotifyDrmModeFailed(
+            steamGame,
             'bottle-stage',
             drmStepError(
               'bottle-stage',
@@ -877,7 +897,7 @@ export async function fireBridgeWineLaunch(
         }
         overlayInjected = true
       } catch (error) {
-        steamGame.notifyOverlaySetupFailed('env', String(error))
+        notifyOverlaySetupFailed(steamGame, 'env', String(error))
       }
     } else if (!drm && overlay?.kind === 'cx-env') {
       // One runner per bottle (T-60-08-04): a known fix must not swap it.
@@ -899,7 +919,7 @@ export async function fireBridgeWineLaunch(
         launchSettings = { ...launchSettings, enviromentOptions: merged.env }
         overlayInjected = true
       } else {
-        steamGame.notifyOverlaySetupFailed('env', merged.cause)
+        notifyOverlaySetupFailed(steamGame, 'env', merged.cause)
       }
     }
 

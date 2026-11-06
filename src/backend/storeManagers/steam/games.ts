@@ -20,11 +20,7 @@ import {
   addShortcuts as addShortcutsUtil,
   removeShortcuts as removeShortcutsUtil
 } from '../../shortcuts/shortcuts/shortcuts'
-import {
-  steamMetadataStore,
-  steamLibraryStore,
-  type SteamBridgeVerdict
-} from './stores'
+import { steamMetadataStore, steamLibraryStore } from './stores'
 import { depotSignalCaptured } from './metadataCapture'
 import { knownFixSaysMac32 } from './macArchKnownFix'
 import { resolvePlatformWrite } from './platformPrecedence'
@@ -50,12 +46,9 @@ import {
   parseOverlayOverride
 } from './bridge/overlay/overlayPolicy'
 import { readStoredTitleConfig, pickTitleSettings } from './titleSettings'
-import { type OverlayStep } from './bridge/overlay/overlayNotice'
-import type { CrossoverPreflight } from './engine/engineDecision'
-import type { EngineSelection, NonCrossoverEngine } from './engine/engineTypes'
+import type { NonCrossoverEngine } from './engine/engineTypes'
 import { noteSteamAuthTrigger } from './authTrigger'
 import { type DrmLaunchReady } from './bridge/drm/drmLaunchSetup'
-import { type DrmStep } from './bridge/drm/steamclientLayerMode'
 import { stopBridgeHelper } from './bridge/helperProcess'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import type { EnginePin } from './engine/enginePins'
@@ -81,32 +74,15 @@ import {
   ensureBuiltInEngineForInstall,
   installBridgeGame
 } from './gameInstall'
-import {
-  resolveLaunchOverlay,
-  notifyOverlaySetupFailed,
-  overlayInputLine,
-  overlayInputArg,
-  logOverlayInputOutcome,
-  overlayProbeArg,
-  prepareTcpOverlay
-} from './gameLaunchOverlay'
+import { prepareTcpOverlay } from './gameLaunchOverlay'
 import {
   launchBridgeGame,
-  runBridgeLaunch,
   launchBridgeGameBody,
   fireBridgeWineLaunch
 } from './gameBridgeLaunch'
 import {
   launch,
-  maybeNotifyBridgeLimited,
-  maybeNotifyDrmModeFailed,
-  sendLaunchDone,
-  showEngineDialog,
-  notifyCrossoverRequired,
-  selectLaunchEngine,
-  onBridgeLaunchDeadline,
   prefetchBridgeDrmDownloads,
-  readLaunchExeCegMarkers,
   launchDrmModeGame
 } from './gameLaunch'
 import { moveInstall, repair, syncSaves } from './gameMaintenance'
@@ -866,6 +842,55 @@ export default class SteamGame implements Game {
   }
 
   /**
+   * Quick 261029-e2t: the install-time half of DRM mode. Resolves the mode the
+   * same way launchBridgeGame does (UE-aware `.bind` detection, CEG markers
+   * from the `.bind` exe) and prefetches only when it is steamclient-layer.
+   */
+  prefetchBridgeDrmDownloads(
+    exePath: string,
+    bridgeBottleName: string
+  ): Promise<void> {
+    return prefetchBridgeDrmDownloads(this, exePath, bridgeBottleName)
+  }
+
+  /**
+   * Phase 56 (D-11/D-12/D-13/D-15): launches a DRM-mode title as the helper
+   * `steam.exe <game exe>` under the clone runner. The Phase 52 forwarder is
+   * never reached in this mode. Every failure is a D-13 notice with no
+   * session mark.
+   */
+  launchDrmModeGame(
+    exePath: string,
+    installRoot: string,
+    ready: DrmLaunchReady
+  ): Promise<boolean> {
+    return launchDrmModeGame(this, exePath, installRoot, ready)
+  }
+
+  /**
+   * Phase 60 (D-01/D-04/D-07/D-08): the TCP-route overlay decision. Returns the
+   * settings to launch with and, when the overlay is injecting, its tokens and
+   * runner. On the fallback engine (Wine-Staging + DXVK) the overlay is plain
+   * env vars (kind 'env', D-07): no clone, no re-sign, no runner change. Ends the bottle's wineserver with the PREVIOUS runner's own
+   * wineserver whenever the runner changes (stock/overlay/DRM never share one).
+   * Never throws and never blocks the launch.
+   */
+  private prepareTcpOverlay(
+    settings: GameSettings,
+    previousRunner: ReturnType<typeof getDrmBridgeRunner>
+  ): Promise<{
+    settings: GameSettings
+    overlayLaunch?: OverlayLaunchPayload
+  }> {
+    return prepareTcpOverlay(this, settings, previousRunner)
+  }
+
+  /**
+   * Phase 59: the engine registered for this launch (launchBridgeGameBody)
+   * must not outlive a launch that did not start. A started launch keeps it
+   * until the process monitor's onStopped clears it.
+   */
+  /**
    * Phase 24 Plan 08 (R4/R6/R7), reordered by Phase 51 Plan 01 (D-51-01):
    * allowlisted-title bridge launch path. Runs the game's OWN resolved
    * Windows `.exe` (resolveBridgeLaunchExe, Task 1) directly via
@@ -888,230 +913,8 @@ export default class SteamGame implements Game {
    * signal was already fired upstream) before returning `false` — never
    * optimistically flips any running state.
    */
-  /**
-   * D-51-02/D-51-04 (Phase 51 Plan 12): the one-time "limited Steam
-   * features" notice plus the every-launch `[bridge-notice]` log line.
-   * Called from `launchBridgeGame()` once the helper has reported ready or
-   * fallback-identity, and before `runWineCommand` fires -- never for the
-   * no-steam-api branch, which spawns no helper and has nothing to stub.
-   *
-   * `setBridgeIdentityFallback` is persisted on EVERY call (true or false)
-   * so a game that regains real-AppID init after a prior fallback clears
-   * the stale flag -- the log line and `notify()` only fire when there is
-   * something limited to report (stubbed interfaces or an identity
-   * fallback); a clean verdict with no fallback logs nothing and never
-   * calls `notify()`. `notify()` itself is gated separately, by
-   * `verdict.limitedNoticeShown` (D-51-02: shown once per game, logged
-   * every time) -- `markBridgeLimitedNoticeShown` persists that flag the
-   * first time it fires.
-   */
-  maybeNotifyBridgeLimited(
-    verdict: SteamBridgeVerdict | undefined,
-    identityFallback: boolean
-  ): void {
-    return maybeNotifyBridgeLimited(this, verdict, identityFallback)
-  }
-
-  /**
-   * D-13 (56-12): a steamclient-layer DRM mode step failed. Logs the
-   * [bridge-notice] line on every attempt, and shows the dialog plus notify
-   * once per (appId, step) per session, naming the failed step and its cause.
-   * Does not launch, and has no fallback to the Phase 52 forwarder or to
-   * bottled Steam. It never calls markBridgeFailedThisSession (RESEARCH A9 /
-   * F10: that would send the next Play to bottled Steam) and never sends
-   * steamBridgeSetupRequired, whose dialog offers the bottled fallback. The
-   * cause in the body is the 56-04-normalised readable form; the log line
-   * carries the tokenised form.
-   */
-  maybeNotifyDrmModeFailed(step: DrmStep, cause: string): void {
-    return maybeNotifyDrmModeFailed(this, step, cause)
-  }
-
-  /** Terminal 'done' status for a launch that will not start (idempotent). */
-  sendLaunchDone(): void {
-    return sendLaunchDone(this)
-  }
-
-  /**
-   * Phase 59: notify plus an in-app dialog, copied from
-   * maybeNotifyDrmModeFailed's surface. Never marks the bridge failed and
-   * never sends steamBridgeSetupRequired (no path reroutes to bottled Steam).
-   */
-  showEngineDialog(title: string, body: string, tag: string): void {
-    return showEngineDialog(this, title, body, tag)
-  }
-
-  /**
-   * Phase 59: DRM-mode and bottled-Steam launches are CrossOver-only. Shown on
-   * every blocked attempt (the user pressed Play and nothing else will tell
-   * them why it did nothing).
-   */
-  notifyCrossoverRequired(
-    kind: 'drm' | 'bottled',
-    pre: CrossoverPreflight
-  ): void {
-    return notifyCrossoverRequired(this, kind, pre)
-  }
-
-  /**
-   * Phase 59 (D-05/D-06/D-07/D-09/D-14/D-15): a fresh pre-flight and engine
-   * decision for every TCP bridge launch. Downloads the built-in engine on
-   * first need, registers the choice, prepares the bottle for it, and
-   * re-reads the settings so every later spawn uses the registered engine.
-   */
-  selectLaunchEngine(
-    current: GameSettings,
-    connectivity: { offline: boolean }
-  ): Promise<{ ok: true; settings: GameSettings } | { ok: false }> {
-    return selectLaunchEngine(this, current, connectivity)
-  }
-
-  /**
-   * Phase 59 (D-10/D-11): the launch deadline fired with no game process
-   * seen. Stops the bottle with the running engine's own wineserver (before
-   * the registry entry that names it is cleared), stops the helper, and tells
-   * the user. No fallback retry, no markBridgeFailedThisSession, no
-   * steamBridgeSetupRequired: a game that never appeared on CrossOver is not
-   * evidence that the bridge is broken, and retrying on the built-in engine
-   * would hide the problem the user needs to see.
-   */
-  onBridgeLaunchDeadline(
-    clearLaunchRecord: () => void,
-    armedSelection: EngineSelection | undefined
-  ): Promise<void> {
-    return onBridgeLaunchDeadline(this, clearLaunchRecord, armedSelection)
-  }
-
-  /**
-   * Reads the launch exe's CEG markers through the bounded PE reader (never
-   * the whole exe). 56-04's resolveBridgeMode sends a CEG-marked exe to 'tcp',
-   * so the existing CEG refusal keeps handling it; the markers are therefore
-   * read BEFORE drmLaunchSetup. Never throws.
-   */
-  /**
-   * Quick 261029-e2t: the install-time half of DRM mode. Resolves the mode the
-   * same way launchBridgeGame does (UE-aware `.bind` detection, CEG markers
-   * from the `.bind` exe) and prefetches only when it is steamclient-layer.
-   */
-  prefetchBridgeDrmDownloads(
-    exePath: string,
-    bridgeBottleName: string
-  ): Promise<void> {
-    return prefetchBridgeDrmDownloads(this, exePath, bridgeBottleName)
-  }
-
-  readLaunchExeCegMarkers(exePath: string): string[] {
-    return readLaunchExeCegMarkers(this, exePath)
-  }
-
-  /**
-   * Phase 56 (D-11/D-12/D-13/D-15): launches a DRM-mode title as the helper
-   * `steam.exe <game exe>` under the clone runner. The Phase 52 forwarder is
-   * never reached in this mode. Every failure is a D-13 notice with no
-   * session mark.
-   */
-  launchDrmModeGame(
-    exePath: string,
-    installRoot: string,
-    ready: DrmLaunchReady
-  ): Promise<boolean> {
-    return launchDrmModeGame(this, exePath, installRoot, ready)
-  }
-
-  /**
-   * Phase 60 (D-01/D-03): whether the overlay is on for this launch, and why.
-   * Never throws: a failure here means no overlay, never a blocked launch.
-   */
-  resolveLaunchOverlay(): { enabled: boolean; source: string } {
-    return resolveLaunchOverlay(this)
-  }
-
-  /**
-   * Phase 60 (D-08/D-09): an overlay setup failure is a log line plus a toast
-   * in-app (SteamEngineLaunchNotice) and an OS notification on EVERY affected
-   * launch, never a dialog, never deduped. Deliberately the
-   * opposite of DRM's fail-closed rule (D-56-13): the overlay is an
-   * enhancement, so the game still launches.
-   */
-  notifyOverlaySetupFailed(step: OverlayStep, cause: string): void {
-    return notifyOverlaySetupFailed(this, step, cause)
-  }
-
-  overlayInputLine(applied: boolean, reason?: string): string {
-    return overlayInputLine(this, applied, reason)
-  }
-
-  /**
-   * 60-20 (G1): route-scoped overlay_input.dylib. Synchronous, no handle or
-   * timer, never throws, never raises a notice (D-08). Together with
-   * logOverlayInputOutcome it logs exactly one `overlay input fix=` line per
-   * overlay launch: a refusal (route, disabled, experiment, probe, missing) is
-   * logged here; a candidate path is returned unlogged and its outcome is logged
-   * once the launch values are known (60-REVIEW WR-04). The DRM route only logs:
-   * its result is not spread into the launch (D-04).
-   */
-  overlayInputArg(
-    route: 'tcp-clone' | 'env' | 'drm'
-  ): { inputModulePath: string } | Record<string, never> {
-    return overlayInputArg(this, route)
-  }
-
-  /**
-   * 60-REVIEW WR-04: the outcome line for a candidate from overlayInputArg,
-   * read from the values the launch actually carries (CX_ENV tokens or env
-   * values). applied=true only when DYLD_INSERT_LIBRARIES names the module;
-   * otherwise (prepare error, runner refused, unsafe path dropped by the value
-   * builder, a throw) applied=false reason=not-injected. Never throws.
-   */
-  logOverlayInputOutcome(
-    arg: { inputModulePath: string } | Record<string, never>,
-    carried: readonly string[]
-  ): void {
-    return logOverlayInputOutcome(this, arg, carried)
-  }
-
-  /**
-   * 60-11 (G1): the dev-only input probe. Armed only when the sidecar was
-   * started with GAMELIB_OVERLAY_INPUT_PROBE=1. Never blocks a launch and never
-   * raises a notice: a missing or unusable probe just logs a warning.
-   */
-  overlayProbeArg():
-    | {
-        probe: { dylibPath: string; logPath: string; experiment?: string }
-      }
-    | Record<string, never> {
-    return overlayProbeArg(this)
-  }
-
-  /**
-   * Phase 60 (D-01/D-04/D-07/D-08): the TCP-route overlay decision. Returns the
-   * settings to launch with and, when the overlay is injecting, its tokens and
-   * runner. On the fallback engine (Wine-Staging + DXVK) the overlay is plain
-   * env vars (kind 'env', D-07): no clone, no re-sign, no runner change. Ends the bottle's wineserver with the PREVIOUS runner's own
-   * wineserver whenever the runner changes (stock/overlay/DRM never share one).
-   * Never throws and never blocks the launch.
-   */
-  prepareTcpOverlay(
-    settings: GameSettings,
-    previousRunner: ReturnType<typeof getDrmBridgeRunner>
-  ): Promise<{
-    settings: GameSettings
-    overlayLaunch?: OverlayLaunchPayload
-  }> {
-    return prepareTcpOverlay(this, settings, previousRunner)
-  }
-
-  /**
-   * Phase 59: the engine registered for this launch (launchBridgeGameBody)
-   * must not outlive a launch that did not start. A started launch keeps it
-   * until the process monitor's onStopped clears it.
-   */
   launchBridgeGame(): Promise<boolean> {
     return launchBridgeGame(this)
-  }
-
-  runBridgeLaunch(): Promise<boolean> {
-    return runBridgeLaunch(this)
   }
 
   launchBridgeGameBody(): Promise<boolean> {

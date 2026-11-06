@@ -53,6 +53,10 @@ const OVERLAY_INPUT_FIX_ROUTES: ReadonlySet<string> = new Set([
   'env'
 ])
 
+/**
+ * Phase 60 (D-01/D-03): whether the overlay is on for this launch, and why.
+ * Never throws: a failure here means no overlay, never a blocked launch.
+ */
 export function resolveLaunchOverlay(steamGame: SteamGame): {
   enabled: boolean
   source: string
@@ -78,6 +82,13 @@ export function resolveLaunchOverlay(steamGame: SteamGame): {
   }
 }
 
+/**
+ * Phase 60 (D-08/D-09): an overlay setup failure is a log line plus a toast
+ * in-app (SteamEngineLaunchNotice) and an OS notification on EVERY affected
+ * launch, never a dialog, never deduped. Deliberately the
+ * opposite of DRM's fail-closed rule (D-56-13): the overlay is an
+ * enhancement, so the game still launches.
+ */
 export function notifyOverlaySetupFailed(
   steamGame: SteamGame,
   step: OverlayStep,
@@ -120,12 +131,21 @@ export function overlayInputLine(
   }`
 }
 
+/**
+ * 60-20 (G1): route-scoped overlay_input.dylib. Synchronous, no handle or
+ * timer, never throws, never raises a notice (D-08). Together with
+ * logOverlayInputOutcome it logs exactly one `overlay input fix=` line per
+ * overlay launch: a refusal (route, disabled, experiment, probe, missing) is
+ * logged here; a candidate path is returned unlogged and its outcome is logged
+ * once the launch values are known (60-REVIEW WR-04). The DRM route only logs:
+ * its result is not spread into the launch (D-04).
+ */
 export function overlayInputArg(
   steamGame: SteamGame,
   route: 'tcp-clone' | 'env' | 'drm'
 ): { inputModulePath: string } | Record<string, never> {
   const line = (applied: boolean, reason?: string) =>
-    steamGame.overlayInputLine(applied, reason)
+    overlayInputLine(steamGame, applied, reason)
   try {
     if (!OVERLAY_INPUT_FIX_ROUTES.has(route)) {
       logInfo(line(false, 'route'), LogPrefix.Steam)
@@ -165,6 +185,13 @@ export function overlayInputArg(
   }
 }
 
+/**
+ * 60-REVIEW WR-04: the outcome line for a candidate from overlayInputArg,
+ * read from the values the launch actually carries (CX_ENV tokens or env
+ * values). applied=true only when DYLD_INSERT_LIBRARIES names the module;
+ * otherwise (prepare error, runner refused, unsafe path dropped by the value
+ * builder, a throw) applied=false reason=not-injected. Never throws.
+ */
 export function logOverlayInputOutcome(
   steamGame: SteamGame,
   arg: { inputModulePath: string } | Record<string, never>,
@@ -182,10 +209,10 @@ export function logOverlayInputOutcome(
       }
       return v.split(':').includes(path)
     })
-    if (applied) logInfo(steamGame.overlayInputLine(true), LogPrefix.Steam)
+    if (applied) logInfo(overlayInputLine(steamGame, true), LogPrefix.Steam)
     else
       logWarning(
-        steamGame.overlayInputLine(false, 'not-injected'),
+        overlayInputLine(steamGame, false, 'not-injected'),
         LogPrefix.Steam
       )
   } catch {
@@ -193,6 +220,11 @@ export function logOverlayInputOutcome(
   }
 }
 
+/**
+ * 60-11 (G1): the dev-only input probe. Armed only when the sidecar was
+ * started with GAMELIB_OVERLAY_INPUT_PROBE=1. Never blocks a launch and never
+ * raises a notice: a missing or unusable probe just logs a warning.
+ */
 export function overlayProbeArg(steamGame: SteamGame):
   | {
       probe: { dylibPath: string; logPath: string; experiment?: string }
@@ -269,17 +301,17 @@ export async function prepareTcpOverlay(
       | Extract<OverlayLaunchPayload, { kind: 'env' }>['vars']
       | undefined
     if (fallbackEngine) {
-      if (steamGame.resolveLaunchOverlay().enabled) {
-        inputArg = steamGame.overlayInputArg('env')
+      if (resolveLaunchOverlay(steamGame).enabled) {
+        inputArg = overlayInputArg(steamGame, 'env')
         const result = await prepareOverlayEnv({
           appId: steamGame.appId,
           shimPath: builtOverlayShimPath,
           steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH),
           ...inputArg,
-          ...steamGame.overlayProbeArg()
+          ...overlayProbeArg(steamGame)
         })
         if (result.status === 'error') {
-          steamGame.notifyOverlaySetupFailed(result.step, result.cause)
+          notifyOverlaySetupFailed(steamGame, result.step, result.cause)
         } else {
           envVars = result.vars
           logInfo(
@@ -288,18 +320,18 @@ export async function prepareTcpOverlay(
           )
         }
       }
-    } else if (steamGame.resolveLaunchOverlay().enabled) {
-      inputArg = steamGame.overlayInputArg('tcp-clone')
+    } else if (resolveLaunchOverlay(steamGame).enabled) {
+      inputArg = overlayInputArg(steamGame, 'tcp-clone')
       const result = await prepareOverlayLaunch({
         appId: steamGame.appId,
         appFolder,
         shimPath: builtOverlayShimPath,
         steamBinDir: join(userHome, ...MAC_STEAM_CLIENT_SUBPATH),
         ...inputArg,
-        ...steamGame.overlayProbeArg()
+        ...overlayProbeArg(steamGame)
       })
       if (result.status === 'error') {
-        steamGame.notifyOverlaySetupFailed(result.step, result.cause)
+        notifyOverlaySetupFailed(steamGame, result.step, result.cause)
       } else {
         ok = { runner: result.runner, tokens: result.tokens }
       }
@@ -327,7 +359,8 @@ export async function prepareTcpOverlay(
         carried = ok.tokens
         return launched
       }
-      steamGame.notifyOverlaySetupFailed(
+      notifyOverlaySetupFailed(
+        steamGame,
         'clone',
         'overlay runner registration refused'
       )
@@ -351,6 +384,6 @@ export async function prepareTcpOverlay(
     if (registered) clearDrmBridgeRunner(steamGame.appId)
     return { settings }
   } finally {
-    if (inputArg) steamGame.logOverlayInputOutcome(inputArg, carried)
+    if (inputArg) logOverlayInputOutcome(steamGame, inputArg, carried)
   }
 }
