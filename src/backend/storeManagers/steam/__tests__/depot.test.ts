@@ -236,7 +236,7 @@ beforeEach(() => {
  *  censuses ("nowhere in depot.ts") must keep covering the moved code. */
 function readDepotFoldedSources(): string {
   return [
-    '../depot.ts',
+    '../depot/index.ts',
     ...[
       'planModel',
       'plan',
@@ -1057,10 +1057,15 @@ describe('buildDepotPlan', () => {
       // using the base game's appId (Steam adopts the install as
       // appmanifest_{BASE_appId}.acf regardless of which sub-app a depot's
       // decryption key was fetched under).
-      const source = readFileSync(join(__dirname, '../depot.ts'), 'utf8')
+      const source = readFileSync(
+        join(__dirname, '../depot/finalize.ts'),
+        'utf8'
+      )
       const finalizeToSteamFn = source.slice(
         source.indexOf('export async function finalizeToSteam')
       )
+      // Non-vacuity: indexOf must have found the function.
+      expect(source).toContain('export async function finalizeToSteam')
       const acfCallSite = finalizeToSteamFn.slice(
         0,
         finalizeToSteamFn.indexOf('writeAppManifest')
