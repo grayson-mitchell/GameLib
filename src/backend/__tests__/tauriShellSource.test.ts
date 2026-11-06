@@ -527,7 +527,20 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // NOT ATTEMPTED: the live confirmation on `/store/gog` that the host label moves from
       // `af.gog.com` to `www.gog.com`. It needs real hardware and is recorded UNTICKED on the
       // closed todo, not implied by the automated half passing.
-      'store_embed_take_nav_events'
+      'store_embed_take_nav_events',
+
+      // Phase 63 plan 06 (D-03, D-08) -- six pass-through arms into the Tauri-free
+      // `gamelib-scan` crate, one per RUST_SCAN_* channel in sidecarTransport.ts. Each arm is
+      // `gamelib_scan::dispatch("scan_...", args)`, the same dispatch gamelib-scan-cli uses.
+      // PROVEN: `scan_channels_are_gamelib_scan_app_ops` (main.rs shell test) pins the arm set
+      // to the crate's app ops, and `scanChannelParity.test.ts` pins it to RUST_SCAN_CHANNELS.
+      // NOT ATTEMPTED here: a live rustInvoke round trip; that is the 63-12 live gate.
+      'scan_steam_api_imports',
+      'scan_steam_drm',
+      'scan_steamstub_section',
+      'scan_pe_imported_dlls',
+      'scan_contained_real',
+      'scan_winemac_metal_exports'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)
