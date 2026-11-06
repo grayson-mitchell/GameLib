@@ -521,7 +521,7 @@ function checkPopulation(population, findings) {
           '`// ts-prune-ignore-next` plus a comment saying WHY. This fork ' +
           'already does exactly that at src/backend/utils.ts:1809, ' +
           'src/backend/recent_games/recent_games.ts:64, and ' +
-          'src/common/types/ipc.ts:81 and :185.'
+          'src/common/types/ipc/*.ts, above each interface and umbrella type.'
       ].join('\n')
     )
   }

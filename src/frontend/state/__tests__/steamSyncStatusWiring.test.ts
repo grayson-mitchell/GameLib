@@ -13,7 +13,7 @@
  *
  * What this proves, one gate per obligation:
  *
- *   W1: `common/types/ipc.ts` declares the `steamSyncStatus` channel.
+ *   W1: `common/types/ipc/steam.ts` declares the `steamSyncStatus` channel.
  *   W2: `preload/api/steam.ts` exports the `handleSteamSyncStatus` listener
  *       slot -- THE HIGHEST-RISK OMISSION IN THE PHASE. For a
  *       backend->renderer push, the sidecar's `electronStub.ts`
@@ -47,7 +47,16 @@ import {
   stripTrailingLineComment
 } from 'backend/testUtils/stripSourceComments'
 
-const IPC_PATH = join(__dirname, '..', '..', '..', 'common', 'types', 'ipc.ts')
+const IPC_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'common',
+  'types',
+  'ipc',
+  'steam.ts'
+)
 const PRELOAD_STEAM_PATH = join(
   __dirname,
   '..',
@@ -153,7 +162,7 @@ function gateW1_ipcDeclaresChannel(source: string): void {
   expectPresent(
     source,
     'steamSyncStatus: (payload',
-    'W1: common/types/ipc.ts must declare the steamSyncStatus FrontendMessages entry'
+    'W1: common/types/ipc/steam.ts must declare the steamSyncStatus FrontendMessages entry'
   )
 }
 
@@ -217,7 +226,7 @@ describe('steamSyncStatus wiring -- the five-touchpoint chain (34.15-02, D-06/D-
   const frontendTypesSource = readGated(FRONTEND_TYPES_PATH)
   const contextProviderSource = readGated(CONTEXT_PROVIDER_PATH)
 
-  it('W1: common/types/ipc.ts declares the steamSyncStatus FrontendMessages channel', () => {
+  it('W1: common/types/ipc/steam.ts declares the steamSyncStatus FrontendMessages channel', () => {
     expect(() => gateW1_ipcDeclaresChannel(ipcSource)).not.toThrow()
   })
 

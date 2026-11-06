@@ -1416,7 +1416,7 @@ describe('steamRemoveAllCopies IPC seam census (Task 3)', () => {
   // stopped being checked. The three surviving seams are the type declaration, the sidecar
   // registration and the preload invoker, which is the full path a channel now travels.
   const SEAM_FILES = [
-    'src/common/types/ipc.ts',
+    'src/common/types/ipc/steamAuth.ts',
     'src/backend/sidecar/steamAuthFlowRegistration.ts',
     'src/preload/api/steam.ts'
   ]

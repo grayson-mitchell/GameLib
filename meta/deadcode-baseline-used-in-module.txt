@@ -31,7 +31,7 @@
 #     deliberate, mark the site with `// ts-prune-ignore-next` plus a
 #     comment saying why -- this fork already does that at
 #     src/backend/utils.ts:1809, src/backend/recent_games/recent_games.ts:64
-#     and src/common/types/ipc.ts:81 and :185).
+#     and src/common/types/ipc/*.ts, above each interface and umbrella type).
 #   * a line here with no matching finding -> the code is gone. Delete that
 #     one line. A ledger carrying stale entries is not an accurate census.
 #
