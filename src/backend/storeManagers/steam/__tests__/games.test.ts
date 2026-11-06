@@ -23,13 +23,6 @@ import SteamGame, {
   getSteamInstallSize,
   parseSteamMacMinOSVersion,
   macArchFromMinOS,
-  markBridgeFailedThisSession,
-  clearBridgeFailedThisSession,
-  __resetBridgeFailedSessionForTests,
-  __resetBridgeLaunchBottlesForTests,
-  markForcedWindowsViaBottle,
-  clearForcedWindowsViaBottle,
-  __resetLoggedEmptyGameInfoMissesForTests,
   getBridgeRouteVerdict,
   buildDrmLaunchEnvironment,
   drmBottleWinPath,
@@ -44,6 +37,15 @@ import SteamGame, {
   MAC_STEAM_CLIENT_SUBPATH,
   buildSteamProtocolUrl
 } from '../games'
+import {
+  markBridgeFailedThisSession,
+  clearBridgeFailedThisSession,
+  __resetBridgeFailedSessionForTests,
+  __resetBridgeLaunchBottlesForTests,
+  markForcedWindowsViaBottle,
+  clearForcedWindowsViaBottle,
+  __resetLoggedEmptyGameInfoMissesForTests
+} from '../gameSessionState'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
 // Phase 51 Plan 09 Task 3: namespace import so setBridgeUserRoute (real,
@@ -55,7 +57,7 @@ import * as bridgeVerdictModule from '../bridge/bridgeVerdict'
 // consumed by library.ts's init()) can be spied per-test to simulate a
 // process restart's cleared in-memory registry — mirrors the same pattern
 // library.test.ts already uses for the reverse direction (T-23-14).
-import * as gamesModule from '../games'
+import * as gamesModule from '../gameSessionState'
 import {
   isBottleReady,
   tellBottledSteamToLaunch,

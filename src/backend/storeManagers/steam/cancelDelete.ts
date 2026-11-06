@@ -29,7 +29,7 @@ import { isAbsolute, join, relative, resolve, sep } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getSteamLibraries, sendProgressUpdate } from 'backend/utils'
 import { library } from './state'
-import { isNativeInstallInFlight } from './games'
+import { isNativeInstallInFlight } from './gameSessionState'
 import {
   clearSteamResumeBreadcrumb,
   findOtherManifestsWithInstalldir,

@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { getSteamLibraries, sendProgressUpdate } from 'backend/utils'
 import { library } from '../state'
-import { isNativeInstallInFlight } from '../games'
+import { isNativeInstallInFlight } from '../gameSessionState'
 import {
   clearSteamResumeBreadcrumb,
   findOtherManifestsWithInstalldir,
@@ -29,7 +29,9 @@ jest.mock('backend/utils', () => ({
   getSteamLibraries: jest.fn(),
   sendProgressUpdate: jest.fn()
 }))
-jest.mock('../games', () => ({ isNativeInstallInFlight: jest.fn() }))
+jest.mock('../gameSessionState', () => ({
+  isNativeInstallInFlight: jest.fn()
+}))
 jest.mock('../library', () => ({
   clearSteamResumeBreadcrumb: jest.fn(),
   findOtherManifestsWithInstalldir: jest.fn(),

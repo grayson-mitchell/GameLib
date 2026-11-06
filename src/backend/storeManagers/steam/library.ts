@@ -42,10 +42,11 @@ import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from './state'
 import { formatMacArch32KnownFixEntry } from './macArchKnownFix'
 import { reportDetectedFix } from 'backend/knownFixReport'
-import SteamGame, {
+import SteamGame from './games'
+import {
   isNativeInstallInFlight,
   clearForcedWindowsViaBottle
-} from './games'
+} from './gameSessionState'
 import {
   getBottleSteamappsDir,
   getSteamBottleSettings,
