@@ -237,9 +237,14 @@ beforeEach(() => {
 function readDepotFoldedSources(): string {
   return [
     '../depot.ts',
-    ...['planModel', 'plan', 'machO', 'download', 'downloadFiles'].map(
-      (n) => `../depot/${n}.ts`
-    )
+    ...[
+      'planModel',
+      'plan',
+      'machO',
+      'download',
+      'downloadFiles',
+      'finalize'
+    ].map((n) => `../depot/${n}.ts`)
   ]
     .map((f) => readFileSync(join(__dirname, f), 'utf8'))
     .join('\n')
