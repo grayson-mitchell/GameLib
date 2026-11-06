@@ -125,7 +125,7 @@ beforeEach(() => {
   storeGetMock.mockReturnValue([])
   existsSyncMock.mockReturnValue(false)
   readFileSyncMock.mockReturnValue('')
-  checkMock.mockReturnValue({ ok: true })
+  checkMock.mockResolvedValue({ ok: true })
 })
 
 afterEach(() => {
@@ -158,7 +158,7 @@ describe('wineVersionInstalled gate', () => {
 
   it('skips download and copy and warns when the check fails', async () => {
     const src = `${WINES}/wine-staging-bad`
-    checkMock.mockReturnValue(failResult(src))
+    checkMock.mockResolvedValue(failResult(src))
 
     emitInstalled(makeWine('wine-staging-bad'))
     await flush()
@@ -181,7 +181,7 @@ describe('wineVersionInstalled gate', () => {
   })
 
   it('treats a missing winemac.so as a failure carrying the reason', async () => {
-    checkMock.mockReturnValue({
+    checkMock.mockResolvedValue({
       ...failResult(`${WINES}/wine-staging-nofile`),
       reason: 'winemac.so not found'
     })
@@ -224,7 +224,7 @@ describe('releasesInfoReady gate', () => {
     const wine = makeWine('wine-b')
     storeGetMock.mockReturnValue([wine])
     dxmtPathsExist(`${wine.installDir}-DXMT`)
-    checkMock.mockReturnValue(failResult(`${wine.installDir}-DXMT`))
+    checkMock.mockResolvedValue(failResult(`${wine.installDir}-DXMT`))
 
     emitReleasesInfoReady()
     await flush()
@@ -240,7 +240,9 @@ describe('releasesInfoReady gate', () => {
     storeGetMock.mockReturnValue([good, bad])
     dxmtPathsExist(`${good.installDir}-DXMT`, `${bad.installDir}-DXMT`)
     checkMock.mockImplementation((p: string) =>
-      p === `${bad.installDir}-DXMT` ? failResult(p) : { ok: true }
+      Promise.resolve(
+        p === `${bad.installDir}-DXMT` ? failResult(p) : { ok: true }
+      )
     )
 
     emitReleasesInfoReady()

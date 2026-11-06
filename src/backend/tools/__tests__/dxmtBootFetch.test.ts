@@ -126,7 +126,7 @@ beforeEach(() => {
   // return is not taken) and keeps the post-download copy loop inert. The decision under
   // test is whether the FETCH is issued, not whether files are copied afterwards.
   existsSyncMock.mockReturnValue(false)
-  ;(checkWinemacMetalViewExports as jest.Mock).mockReturnValue({ ok: true })
+  ;(checkWinemacMetalViewExports as jest.Mock).mockResolvedValue({ ok: true })
 })
 
 describe('boot-time DXMT fetch is gated on there being an installed wine to update', () => {

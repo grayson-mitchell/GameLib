@@ -1,22 +1,41 @@
 /**
- * In-process Mach-O defined-external symbol reader (quick 261031-rjv).
+ * Winemac Metal-view export check (quick 261031-rjv, Phase 63).
  *
- * The parser now lives in `backend/scanners/legacyMachoParse.ts` (Phase 63,
- * the TS oracle for the Rust port); this module keeps the sync API and the
- * graceful-fs seam until 63-09 makes it async.
+ * Native in Rust as `scan_winemac_metal_exports` (gamelib-scan, D-05); the path-based
+ * wrapper below picks the implementation per `GAMELIB_SCANNER_MACHO_EXPORTS`. The TS
+ * parser in `backend/scanners/legacyMachoParse.ts` stays as the `ts` fallback until
+ * 63-13 (the module is deleted in 63-14).
+ *
+ * Fail-closed: a transport rejection resolves `ok:false` (the DXMT gate skips), never `ok:true`.
  */
-import { existsSync, readFileSync } from 'graceful-fs'
-import { checkWinemacMetalViewExportsSync } from '../scanners/legacyMachoParse'
-import type { WinemacMetalCheck } from '../scanners/scanTypes'
+import { runScanner } from '../scanners/rustScan'
+import {
+  DXMT_REQUIRED_MACDRV_SYMBOLS,
+  winemacPathFor,
+  type WinemacMetalCheck
+} from '../scanners/scanTypes'
+import { winemacMetalExportsTs } from '../scanners/legacyTsScanners'
 
-export { parseMachODefinedExternals } from '../scanners/legacyMachoParse'
 export type { WinemacMetalCheck } from '../scanners/scanTypes'
 
-export function checkWinemacMetalViewExports(
-  wineBundlePath: string
-): WinemacMetalCheck {
-  return checkWinemacMetalViewExportsSync(wineBundlePath, {
-    existsSync,
-    readFileSync
-  })
+export async function checkWinemacMetalViewExports(
+  wineBundlePath: string,
+  caller: string
+): Promise<WinemacMetalCheck> {
+  try {
+    return await runScanner(
+      'machoExports',
+      'scan_winemac_metal_exports',
+      { wineBundlePath },
+      () => winemacMetalExportsTs({ wineBundlePath }),
+      caller
+    )
+  } catch (error) {
+    return {
+      ok: false,
+      winemacPath: winemacPathFor(wineBundlePath),
+      reason: `could not read winemac.so: rust scan failed: ${String(error)}`,
+      missing: [...DXMT_REQUIRED_MACDRV_SYMBOLS]
+    }
+  }
 }

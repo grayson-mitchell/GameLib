@@ -9,8 +9,11 @@
  * without CLT. Reading LC_SYMTAB / LC_DYSYMTAB directly spawns nothing.
  */
 import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import type { WinemacMetalCheck } from './scanTypes'
+import {
+  DXMT_REQUIRED_MACDRV_SYMBOLS,
+  winemacPathFor,
+  type WinemacMetalCheck
+} from './scanTypes'
 
 const MH_MAGIC_64 = 0xfeedfacf
 const FAT_MAGIC = 0xcafebabe
@@ -21,13 +24,6 @@ const NLIST_64_SIZE = 16
 const N_EXT = 0x01
 const N_TYPE_MASK = 0x0e
 const N_STAB_MASK = 0xe0
-
-const DXMT_REQUIRED_MACDRV_SYMBOLS = [
-  '_macdrv_functions',
-  '_macdrv_view_create_metal_view',
-  '_macdrv_view_get_metal_layer',
-  '_macdrv_view_release_metal_view'
-] as const
 
 function readCString(buf: Buffer, start: number, limit: number): string | null {
   if (start < 0 || start >= limit) return null
@@ -124,16 +120,7 @@ export function checkWinemacMetalViewExportsSync(
   wineBundlePath: string,
   fs: SyncFs = { existsSync, readFileSync }
 ): WinemacMetalCheck {
-  const winemacPath = join(
-    wineBundlePath,
-    'Contents',
-    'Resources',
-    'wine',
-    'lib',
-    'wine',
-    'x86_64-unix',
-    'winemac.so'
-  )
+  const winemacPath = winemacPathFor(wineBundlePath)
   const all = [...DXMT_REQUIRED_MACDRV_SYMBOLS] as string[]
   let buf: Buffer
   try {

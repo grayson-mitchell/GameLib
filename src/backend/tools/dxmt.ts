@@ -149,8 +149,9 @@ const DXMT = {
 
 backendEvents.on('wineVersionInstalled', async (versionInfo, installDir) => {
   if (isMac && versionInfo.type === 'Wine-Staging-macOS') {
-    const check = checkWinemacMetalViewExports(
-      join(installDir, versionInfo.version)
+    const check = await checkWinemacMetalViewExports(
+      join(installDir, versionInfo.version),
+      'wineVersionInstalled'
     )
     if (!check.ok) {
       logDXMTSkip('creating', versionInfo.version, check)
@@ -205,22 +206,30 @@ backendEvents.on('releasesInfoReady', async (releasesInfo) => {
   // winemac.so passes the export check, so a Wine with no usable `-DXMT` copy never
   // triggers the boot fetch. Failing copies are deliberately left on disk (operator
   // decision: games pinned to them must keep launching).
+  //
+  // Phase 63: the export check is now an async rustInvoke whose 60 s timer is unref()'d and
+  // which holds no referenced handle, so it adds no unbounded in-flight boot work (exit
+  // contract half 2). It runs only for existing `-DXMT` copies, sequentially; do not move it
+  // earlier in boot.
   const availableWines = wineDownloaderInfoStore.get('wine-releases', [])
   const installedWineStagingVersions = availableWines.filter(
     (wine) => wine.type === 'Wine-Staging-macOS' && wine.isInstalled
   )
 
   const copiesToUpdate: string[] = []
-  installedWineStagingVersions.forEach((wine) => {
+  for (const wine of installedWineStagingVersions) {
     const wineWithDXMTFilePath = `${wine.installDir}-DXMT`
-    if (!existsSync(wineWithDXMTFilePath)) return
-    const check = checkWinemacMetalViewExports(wineWithDXMTFilePath)
+    if (!existsSync(wineWithDXMTFilePath)) continue
+    const check = await checkWinemacMetalViewExports(
+      wineWithDXMTFilePath,
+      'dxmtBootUpdate'
+    )
     if (check.ok) {
       copiesToUpdate.push(wineWithDXMTFilePath)
     } else {
       logDXMTSkip('updating', wine.version, check)
     }
-  })
+  }
 
   if (copiesToUpdate.length === 0) return
 

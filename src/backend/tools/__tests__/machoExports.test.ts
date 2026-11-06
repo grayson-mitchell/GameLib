@@ -1,13 +1,19 @@
-jest.mock('graceful-fs', () => ({
-  existsSync: jest.fn(),
-  readFileSync: jest.fn()
+jest.mock('backend/logger', () => ({
+  logInfo: jest.fn(),
+  logWarning: jest.fn(),
+  LogPrefix: { Backend: 'Backend' }
+}))
+jest.mock('backend/sidecar/sidecarRpc', () => ({
+  requestRustInvoke: jest.fn()
 }))
 
-import { existsSync, readFileSync } from 'graceful-fs'
-import {
-  checkWinemacMetalViewExports,
-  parseMachODefinedExternals
-} from '../machoExports'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
+import { tmpdir } from 'os'
+import { dirname, join } from 'path'
+import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+import { checkWinemacMetalViewExports } from '../machoExports'
+import { parseMachODefinedExternals } from 'backend/scanners/legacyMachoParse'
+import { winemacPathFor } from 'backend/scanners/scanTypes'
 import {
   buildFat,
   buildThin,
@@ -17,9 +23,6 @@ import {
   STAB,
   type Sym
 } from './fixtures/machoFixtures'
-
-const existsSyncMock = existsSync as unknown as jest.Mock
-const readFileSyncMock = readFileSync as unknown as jest.Mock
 
 const staging: Sym[] = [
   { name: '___wine_unix_call_funcs', type: EXT_DEF },
@@ -97,87 +100,143 @@ describe('parseMachODefinedExternals', () => {
   })
 })
 
+const ALL_FOUR = [
+  '_macdrv_functions',
+  '_macdrv_view_create_metal_view',
+  '_macdrv_view_get_metal_layer',
+  '_macdrv_view_release_metal_view'
+]
+
 describe('checkWinemacMetalViewExports', () => {
-  const setImage = (syms: Sym[]) => {
-    existsSyncMock.mockReturnValue(true)
-    readFileSyncMock.mockReturnValue(buildThin(syms))
+  const envKey = 'GAMELIB_SCANNER_MACHO_EXPORTS'
+  const savedEnv = process.env[envKey]
+  let bundle: string
+
+  beforeEach(() => {
+    bundle = mkdtempSync(join(tmpdir(), 'macho-exports-'))
+  })
+  afterEach(() => {
+    if (savedEnv === undefined) delete process.env[envKey]
+    else process.env[envKey] = savedEnv
+    rmSync(bundle, { recursive: true, force: true })
+  })
+
+  const writeImage = (data: Buffer) => {
+    const p = winemacPathFor(bundle)
+    mkdirSync(dirname(p), { recursive: true })
+    writeFileSync(p, data)
   }
-  const path = '/w/Contents/Resources/wine/lib/wine/x86_64-unix/winemac.so'
 
-  it('passes when _macdrv_functions is defined', () => {
-    setImage([{ name: '_macdrv_functions', type: EXT_DEF }])
-    expect(checkWinemacMetalViewExports('/w')).toEqual({ ok: true })
-  })
+  describe('ts path', () => {
+    beforeEach(() => {
+      process.env[envKey] = 'ts'
+    })
 
-  it('passes when all three metal-view names are defined', () => {
-    setImage([
-      { name: '_macdrv_view_create_metal_view', type: EXT_DEF },
-      { name: '_macdrv_view_get_metal_layer', type: EXT_DEF },
-      { name: '_macdrv_view_release_metal_view', type: EXT_DEF }
-    ])
-    expect(checkWinemacMetalViewExports('/w')).toEqual({ ok: true })
-  })
+    it('passes when _macdrv_functions is defined', async () => {
+      writeImage(buildThin([{ name: '_macdrv_functions', type: EXT_DEF }]))
+      expect(await checkWinemacMetalViewExports(bundle, 'test')).toEqual({
+        ok: true
+      })
+      expect(requestRustInvoke).not.toHaveBeenCalled()
+    })
 
-  it('fails listing the missing names when only two of three exist', () => {
-    setImage([
-      { name: '_macdrv_view_create_metal_view', type: EXT_DEF },
-      { name: '_macdrv_view_get_metal_layer', type: EXT_DEF }
-    ])
-    const r = checkWinemacMetalViewExports('/w')
-    expect(r.ok).toBe(false)
-    expect(r).toEqual({
-      ok: false,
-      winemacPath: path,
-      reason: 'winemac.so lacks the macdrv metal-view exports',
-      missing: ['_macdrv_functions', '_macdrv_view_release_metal_view']
+    it('passes when all three metal-view names are defined', async () => {
+      writeImage(
+        buildThin([
+          { name: '_macdrv_view_create_metal_view', type: EXT_DEF },
+          { name: '_macdrv_view_get_metal_layer', type: EXT_DEF },
+          { name: '_macdrv_view_release_metal_view', type: EXT_DEF }
+        ])
+      )
+      expect(await checkWinemacMetalViewExports(bundle, 'test')).toEqual({
+        ok: true
+      })
+    })
+
+    it('fails listing the missing names when only two of three exist', async () => {
+      writeImage(
+        buildThin([
+          { name: '_macdrv_view_create_metal_view', type: EXT_DEF },
+          { name: '_macdrv_view_get_metal_layer', type: EXT_DEF }
+        ])
+      )
+      expect(await checkWinemacMetalViewExports(bundle, 'test')).toEqual({
+        ok: false,
+        winemacPath: winemacPathFor(bundle),
+        reason: 'winemac.so lacks the macdrv metal-view exports',
+        missing: ['_macdrv_functions', '_macdrv_view_release_metal_view']
+      })
+    })
+
+    it('fails with all four missing for the Staging 11.20 shape', async () => {
+      writeImage(buildThin(staging))
+      expect(await checkWinemacMetalViewExports(bundle, 'test')).toEqual({
+        ok: false,
+        winemacPath: winemacPathFor(bundle),
+        reason: 'winemac.so lacks the macdrv metal-view exports',
+        missing: ALL_FOUR
+      })
+    })
+
+    it('fails when winemac.so is absent', async () => {
+      expect(await checkWinemacMetalViewExports(bundle, 'test')).toEqual({
+        ok: false,
+        winemacPath: winemacPathFor(bundle),
+        reason: 'winemac.so not found',
+        missing: ALL_FOUR
+      })
+    })
+
+    it('fails when the file is not a parseable Mach-O', async () => {
+      writeImage(Buffer.from('not macho'))
+      expect(await checkWinemacMetalViewExports(bundle, 'test')).toEqual({
+        ok: false,
+        winemacPath: winemacPathFor(bundle),
+        reason: 'winemac.so is not a parseable x86_64 Mach-O',
+        missing: ALL_FOUR
+      })
     })
   })
 
-  it('fails with all four missing for the Staging 11.20 shape', () => {
-    setImage(staging)
-    expect(checkWinemacMetalViewExports('/w')).toEqual({
-      ok: false,
-      winemacPath: path,
-      reason: 'winemac.so lacks the macdrv metal-view exports',
-      missing: [
-        '_macdrv_functions',
-        '_macdrv_view_create_metal_view',
-        '_macdrv_view_get_metal_layer',
-        '_macdrv_view_release_metal_view'
-      ]
+  describe('rust path', () => {
+    beforeEach(() => {
+      process.env[envKey] = 'rust'
     })
-  })
 
-  it('fails when winemac.so is absent', () => {
-    existsSyncMock.mockReturnValue(false)
-    const r = checkWinemacMetalViewExports('/w')
-    expect(r).toEqual({
-      ok: false,
-      winemacPath: path,
-      reason: 'winemac.so not found',
-      missing: [
-        '_macdrv_functions',
-        '_macdrv_view_create_metal_view',
-        '_macdrv_view_get_metal_layer',
-        '_macdrv_view_release_metal_view'
-      ]
+    it('makes one scan_winemac_metal_exports round-trip and returns its result', async () => {
+      ;(requestRustInvoke as jest.Mock).mockResolvedValue({ ok: true })
+      expect(await checkWinemacMetalViewExports(bundle, 'test')).toEqual({
+        ok: true
+      })
+      expect(requestRustInvoke).toHaveBeenCalledTimes(1)
+      expect(requestRustInvoke).toHaveBeenCalledWith(
+        'scan_winemac_metal_exports',
+        [{ wineBundlePath: bundle }]
+      )
     })
-  })
 
-  it('fails when the file is not a parseable Mach-O', () => {
-    existsSyncMock.mockReturnValue(true)
-    readFileSyncMock.mockReturnValue(Buffer.from('not macho'))
-    const r = checkWinemacMetalViewExports('/w')
-    expect(r).toEqual({
-      ok: false,
-      winemacPath: path,
-      reason: 'winemac.so is not a parseable x86_64 Mach-O',
-      missing: [
-        '_macdrv_functions',
-        '_macdrv_view_create_metal_view',
-        '_macdrv_view_get_metal_layer',
-        '_macdrv_view_release_metal_view'
-      ]
+    it('passes a typed failure through untouched', async () => {
+      const failure = {
+        ok: false,
+        winemacPath: winemacPathFor(bundle),
+        reason: 'winemac.so not found',
+        missing: ALL_FOUR
+      }
+      ;(requestRustInvoke as jest.Mock).mockResolvedValue(failure)
+      expect(await checkWinemacMetalViewExports(bundle, 'test')).toEqual(
+        failure
+      )
+    })
+
+    it('fails closed (ok:false, all four missing) when the transport rejects', async () => {
+      ;(requestRustInvoke as jest.Mock).mockRejectedValue(new Error('boom'))
+      const r = await checkWinemacMetalViewExports(bundle, 'test')
+      expect(r).toEqual({
+        ok: false,
+        winemacPath: winemacPathFor(bundle),
+        reason: 'could not read winemac.so: rust scan failed: Error: boom',
+        missing: ALL_FOUR
+      })
     })
   })
 })
