@@ -9,6 +9,39 @@ source: [63-11-PLAN.md]
 Authored by plan 63-11, run by plan 63-12 (standing rule D-E: the author never runs the gate).
 Record only pass/issue and the log excerpts needed; no tokens, no account ids, no full paths.
 
+## Current Test
+
+Session dir (created once by plan 63-12 preflight): `/tmp/gamelib-gate-63-20261106T230010Z`.
+Pre-existing logs archived there as `gamelib-pre-session.log` and `gamelib-pre-session.old.log`.
+
+Preflight results (plan 63-12):
+
+- P1: FAILED at preflight. A `gamelib-shell` instance (PID 99880, started 11:22) was already running. Quit it before launch 1.
+- P2: PASS. `build/main/sidecar.js` rebuilt 12:00:00, newer than the newest phase-63 `src/` change (`scannerImpl.test.ts`, 11:57:51).
+- P3: PASS. No `GAMELIB_SCANNER_*` in env.
+- P4: PASS. Session dir created and logs archived.
+- `cd src-tauri && cargo build`: PASS (finished, one dead_code warning).
+
+Launch block for launch N (replace `N`; run before EVERY launch, after quitting any running instance):
+
+```sh
+S=/tmp/gamelib-gate-63-20261106T230010Z; N=1
+pgrep -f 'target/debug/gamelib-shell'   # must print nothing
+echo "=== GATE LAUNCH ${N} — $(date -u +%Y-%m-%dT%H:%M:%SZ) ===" | tee -a $S/terminal.log
+cd /Users/graysonmitchell/Projects/GameLib && pnpm tauri:dev 2>&1 | tee -a $S/terminal.log
+```
+
+After the window appears, tell Claude, then in another terminal run `pgrep -f 'target/debug/gamelib-shell'` (exactly one PID).
+
+Archive block for launch N (run after quitting the app, BEFORE the next launch):
+
+```sh
+S=/tmp/gamelib-gate-63-20261106T230010Z; N=1
+cp ~/Library/Logs/GameLib/gamelib.log $S/gamelib-launch-${N}.log
+```
+
+Items per launch: 1 -> items 1, 6, 7; 2 -> item 2; 3 -> item 3; 4 -> item 4; 5 -> item 5; 6 -> item 8 (closing `ls -la $S/` and `wc -l $S/*`); 7 (only if needed) -> item 6 relaunch.
+
 ## Shipped defaults under test
 
 | scanner | default | expected evidence suffix |
