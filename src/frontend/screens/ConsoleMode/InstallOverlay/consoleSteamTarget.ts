@@ -1,3 +1,4 @@
+import { hasCapability } from 'common/storeCapabilities'
 import type { Runner } from 'common/types'
 import {
   resolveQuickInstallTarget,
@@ -168,7 +169,7 @@ export function resolveConsoleActionIntent({
   runner: Runner
   focused: ConsoleFocusKey
 }): 'install' | 'dismiss' | 'handoff' | 'none' {
-  if (runner === 'steam') {
+  if (hasCapability(runner, 'installHandOffToClient')) {
     return focused === 'setupSteam' ? 'handoff' : 'dismiss'
   }
   if (focused === 'install') {

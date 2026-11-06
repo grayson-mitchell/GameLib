@@ -1,3 +1,4 @@
+import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import classNames from 'classnames'
 
@@ -48,7 +49,7 @@ export default function LaunchOverlay({
   // the back button (gamepad); fires `sendKill` after CANCEL_HOLD_MS.
   // Disabled for Steam (fire-and-forget — no in-flight operation to cancel).
   const { holdStart, startHold, stopHold } = useCancelOnHold({
-    active: !!game && game.runner !== 'steam',
+    active: !!game && !hasCapability(game.runner, 'launchHandedToClient'),
     holdMs: CANCEL_HOLD_MS,
     onCancel: () => {
       if (game) void sendKill(game.app_name, game.runner)
@@ -87,7 +88,7 @@ export default function LaunchOverlay({
   // Intentionally not depending on the launch inputs.
   useEffect(() => {
     let cleanup: (() => void) | undefined
-    if (game.runner === 'steam') {
+    if (hasCapability(game.runner, 'launchHandedToClient')) {
       void launch({
         appName: game.app_name,
         t,
@@ -183,18 +184,20 @@ export default function LaunchOverlay({
     <div className="consoleLaunchOverlay" role="status" aria-live="polite">
       <div
         className={classNames('consoleLaunchSpinner', {
-          idle: status === 'playing' || game.runner === 'steam'
+          idle:
+            status === 'playing' ||
+            hasCapability(game.runner, 'launchHandedToClient')
         })}
       />
       <div className="consoleLaunchText">
-        {game.runner === 'steam'
+        {hasCapability(game.runner, 'launchHandedToClient')
           ? t('console.steam.launched', 'Launched in Steam')
           : label || t('console.launching', 'Launching')}
       </div>
       <div className="consoleLaunchGameTitle">
         {game.overrides?.title || game.title}
       </div>
-      {game.runner !== 'steam' && (
+      {!hasCapability(game.runner, 'launchHandedToClient') && (
         <BackHint
           prefix={t('console.cancel.hintPrefix', 'Hold')}
           suffix={t('console.cancel.hintSuffix', 'for 3s to cancel')}

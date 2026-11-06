@@ -1,3 +1,4 @@
+import { isStore } from 'common/storeCapabilities'
 import './index.scss'
 import {
   Dialog,
@@ -31,7 +32,7 @@ const LoginWarning = function ({
       "You are not logged in with an Epic account in GameLib. Don't use the store page to login, click the following button instead:"
     )
     loginPath = epicLoginPath
-  } else if (warnLoginForStore === 'gog') {
+  } else if (isStore(warnLoginForStore, 'gog')) {
     textContent = t(
       'not_logged_in.gog',
       "You are not logged in with a GOG account in GameLib. Don't use the store page to login, click the following button instead:"

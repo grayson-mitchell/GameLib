@@ -1,3 +1,4 @@
+import { isStore } from 'common/storeCapabilities'
 import './index.scss'
 
 import {
@@ -282,7 +283,7 @@ export default function ConsoleMode() {
     if (!updateNoticeGame) return
     const game = updateNoticeGame
     setUpdateNoticeGame(null)
-    if (game.runner !== 'sideload') {
+    if (!isStore(game, 'sideload')) {
       void updateGame({
         appName: game.app_name,
         runner: game.runner as Runner,

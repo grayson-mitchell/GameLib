@@ -1,3 +1,4 @@
+import { hasCapability, isStore } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import classNames from 'classnames'
 import { useContext, useEffect, useMemo, useRef, useState } from 'react'
@@ -54,7 +55,7 @@ export default function InstallOverlay({
   const isWin = platform === 'win32'
   const isMac = platform === 'darwin'
   const isLinux = platform === 'linux'
-  const isSideload = game.runner === 'sideload'
+  const isSideload = isStore(game, 'sideload')
 
   const availablePlatforms = useMemo<PlatformOption[]>(() => {
     const options: PlatformOption[] = []
@@ -132,7 +133,7 @@ export default function InstallOverlay({
   // is the 1500ms auto-dismiss timer armed. Escape/Backspace still dismiss
   // immediately via the existing keydown handler on either path.
   useEffect(() => {
-    if (game.runner !== 'steam') return
+    if (!hasCapability(game.runner, 'installManagedExternally')) return
     let cancelled = false
     let clientSetupSeen = false
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -207,7 +208,10 @@ export default function InstallOverlay({
     const rows: FocusKey[] = []
     if (availablePlatforms.length > 1) rows.push('platform')
     if (hasWine) rows.push('wine')
-    if (game.runner === 'steam' && clientSetupHandOff) {
+    if (
+      hasCapability(game.runner, 'installHandOffToClient') &&
+      clientSetupHandOff
+    ) {
       return ['cancel', 'setupSteam']
     }
     rows.push('cancel', 'install')
@@ -402,7 +406,7 @@ export default function InstallOverlay({
   return (
     <div className="consoleInstallOverlay" role="dialog" aria-live="polite">
       <div className="consoleModal">
-        {game.runner === 'steam' ? (
+        {hasCapability(game.runner, 'installHandOffToClient') ? (
           steamBlocked ? (
             // D-29's resolved open question: an in-place TERMINAL failure
             // card, reusing classes already in this file. No platform row,

@@ -86,21 +86,15 @@ function humbleKeysEmbedPath(): string {
 }
 
 // D-43-12/D-43-13: the one GameLib route that connects each login store.
-// Exhaustive switch — `pnpm codecheck` fails if `HumbleGameLibLoginStore`
+// Exhaustive Record — `pnpm codecheck` fails if `HumbleGameLibLoginStore`
 // ever grows a fourth member without a matching route here.
 function loginPathForStore(store: HumbleGameLibLoginStore): string {
-  switch (store) {
-    case 'steam':
-      return steamLoginPath
-    case 'gog':
-      return gogLoginPath
-    case 'epic':
-      return epicLoginPath
-    default: {
-      const _exhaustive: never = store
-      return _exhaustive
-    }
+  const paths: Record<HumbleGameLibLoginStore, string> = {
+    steam: steamLoginPath,
+    gog: gogLoginPath,
+    epic: epicLoginPath
   }
+  return paths[store]
 }
 
 // Unified Humble Keys screen (Phase 43): one leaf route (`/humble-keys`)
@@ -408,18 +402,12 @@ export default function HumbleKeys() {
   }
 
   function isStoreLoginConnected(store: HumbleGameLibLoginStore): boolean {
-    switch (store) {
-      case 'steam':
-        return !!steam.username
-      case 'gog':
-        return !!gog.username
-      case 'epic':
-        return !!epic.username
-      default: {
-        const _exhaustive: never = store
-        return _exhaustive
-      }
+    const connected: Record<HumbleGameLibLoginStore, boolean> = {
+      steam: !!steam.username,
+      gog: !!gog.username,
+      epic: !!epic.username
     }
+    return connected[store]
   }
 
   // D-53's Keys-waiting membership predicate, reused here as the per-row
