@@ -46,3 +46,44 @@ result: pass — operator confirmed.
 ### 9. Download queue
 expected: A GameLib-driven Steam depot download and a GOG/Epic download each show advancing progress with working pause/resume/cancel; Steam failures show error + Remove (not "canceled"); steam:// hand-offs appear under "Managed by Steam".
 result: skipped — operator had no time for a Steam install. Exercises the moved depot code, so deferred to smoke #2 (62-21).
+
+## Smoke 2 — after capabilities (D-16 step 3)
+
+Live macOS run after the capability conversion (D-17). Record only pass/issue and the log
+excerpts needed; no tokens or account ids.
+
+### 10. Fresh sidecar
+expected: build/main/sidecar.js mtime is newer than the 62-20 commit (421e43bce, 06:17:49 Nov 7) after quitting and restarting `pnpm tauri:dev`.
+result: pending
+
+### 11. Bridged Steam title launches (Avernum 6, appId 206060)
+expected: Launch completes without added delay (bottle-state persist is now awaited); gamelib.log shows HELLO and the game's Steam-init (GINIT SteamAPI_Init ok=1) is clean.
+result: pending
+
+### 12. Grim Dawn (219990) launches in DRM mode
+expected: Grim Dawn launches in DRM mode and the lsteamclient game-process trace is present.
+result: pending
+
+### 13. Epic and GOG launch
+expected: A GOG game (Balrum) shows its "launching" status message; an Epic game launches, including with the network off (offline-mode resolution); no Steam-only behaviour.
+result: pending
+
+### 14. Library cards
+expected: Steam-only controls on Steam cards only; a sideloaded game's card renders correctly.
+result: pending
+
+### 15. Game page per store
+expected: Steam, Grim Dawn, Epic/GOG and sideloaded game pages each show correct store-specific controls, cloud saves and playtime per store.
+result: pending
+
+### 16. Install modal per store
+expected: Steam install options only on an uninstalled Steam game; DLC selection on Epic only; modify-install options per store as before.
+result: pending
+
+### 17. Console mode overlays
+expected: Console mode launch and install overlays behave per store (Steam options only on Steam games).
+result: pending
+
+### 18. Download queue
+expected: A GameLib-driven Steam depot download and a GOG/Epic download each show advancing progress with working pause/resume/cancel; Steam failures show error + Remove (not "canceled"); steam:// hand-offs appear under "Managed by Steam".
+result: pending
