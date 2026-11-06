@@ -161,7 +161,12 @@ export const CONTROL_SLOT = {
   // snapshot; reply [i32 result] (see INVITE_RESULT). The target lobby is the
   // one the game itself named via ActivateGameOverlayInviteDialog. Never D-08
   // evidence.
-  inviteFriend: 14
+  inviteFriend: 14,
+  // quick 261106-qvp: the shim reports game registrations of unlisted callback
+  // ids. Request {i32 iCallback, u32 path}; path 0 = register, 1 =
+  // manual-dispatch init (iCallback 0). Logged by the helper as CBREG. An old
+  // helper answers STATUS_ERR, harmless.
+  reportCbRegister: 15
 } as const
 
 /** Env var carrying the per-spawn secret backend -> helper (never argv). */

@@ -135,6 +135,17 @@
  *     with no log. Logged as `CBDISP iCallback=<id> targets=<n> held=<h>`
  *     (max 32 lines plus one cap line). Never pumps, never logs CALL.
  *
+ *   - REPORT_CB_REGISTER (slot 15, quick 261106-qvp): argBlob is exactly 8
+ *     bytes {i32 iCallback, u32 path}; path 0 = the game registered a C++
+ *     CCallback for iCallback (> 0), path 1 = the game called
+ *     SteamAPI_ManualDispatch_Init (iCallback 0). Authenticated only; any
+ *     other shape is STATUS_ERR with no log. Listed ids are silent. Logged as
+ *     `CBREG iCallback=<id> role=game path=register` (once per id, max 32) and
+ *     `CBREG role=game path=manual-dispatch registration=unobservable` (once).
+ *     Registration is observable only through the shim's RegisterCallback;
+ *     manual dispatch and DRM mode (genuine steam_api64.dll) cannot be seen.
+ *     Never pumps, never logs CALL.
+ *
  *   - Slot 3 (Phase 52 CREATE_INTERFACE) was retired in Phase 56 (56-14, D-20)
  *     and is refused as an unknown slot; never reuse it.
  *
@@ -243,6 +254,8 @@ static void gl_ovl_publish_closed_at_exit(void) {
 // Phase 58 (58-29): GameLib's own UI lists the signed-in account's friends (ordinals, never SteamIDs) and invites one to the lobby the game asked to invite to.
 #define CONTROL_SLOT_LIST_FRIENDS 13
 #define CONTROL_SLOT_INVITE_FRIEND 14
+// quick 261106-qvp: the shim reports game registrations of unlisted callback ids, logged as CBREG.
+#define CONTROL_SLOT_REPORT_CB_REGISTER 15
 
 #define STATUS_OK 0
 #define STATUS_ERR 1
@@ -355,6 +368,8 @@ static gl_logbudget g_cbq_budget;
 static gl_logbudget g_cr_done_budget;
 static gl_logbudget g_cr_drain_budget;
 static gl_logbudget g_cbdisp_budget;
+static gl_logbudget g_cbreg_budget;
+static int g_cbreg_md_logged;
 
 // quick 261027-k51: UserStatsReceived_t (1101) forwarding. Both exports are
 // NULL-tolerant: a missing one degrades only the fetch path.
@@ -1774,9 +1789,11 @@ static void gl_manual_pump_into_ring(void) {
       if (row == NULL) {
         if (gl_cbq_note_unlisted(msg.m_iCallback)) {
           if (gl_cr_allowed_size(msg.m_iCallback) != 0)
-            logts_f("CBQ", "unlisted iCallback=%d action=drop callresult=1", (int)msg.m_iCallback);
+            logts_f("CBQ", "unlisted iCallback=%d action=drop callresult=1 cub=%d", (int)msg.m_iCallback,
+                    (int)msg.m_cubParam);
           else
-            logts_f("CBQ", "unlisted iCallback=%d action=drop callresult=0", (int)msg.m_iCallback);
+            logts_f("CBQ", "unlisted iCallback=%d action=drop callresult=0 cub=%d", (int)msg.m_iCallback,
+                    (int)msg.m_cubParam);
         }
       } else if (msg.m_pubParam != NULL && msg.m_cubParam > 0 &&
                  (uint32_t)msg.m_cubParam == row->macSize) {
@@ -2802,6 +2819,33 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
         else
           logts_f("CBDISP", "iCallback=%d targets=%u held=%u", (int)did, (unsigned)dn,
                   (unsigned)dheld);
+      }
+      send_response(fd, requestId, STATUS_OK, NULL, 0);
+      return;
+    }
+    if (slot == CONTROL_SLOT_REPORT_CB_REGISTER) {
+      // quick 261106-qvp (T-qvp-01/02/03): behind the auth gate; exactly 8
+      // bytes; only (path 0, id > 0) or (path 1, id 0). Integers and fixed
+      // words only. Never pumps, never logs CALL.
+      if (argBlob == NULL || argLen != 8) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      int32_t rid;
+      uint32_t rpath;
+      memcpy(&rid, argBlob, 4);
+      memcpy(&rpath, argBlob + 4, 4);
+      if (!((rpath == 0 && rid > 0) || (rpath == 1 && rid == 0))) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      if (rpath == 0) {
+        if (gl_cbq_allowed_size(rid) == 0 && gl_cr_allowed_size(rid) == 0 &&
+            gl_logbudget_take(&g_cbreg_budget, rid, 1) == 1)
+          logts_f("CBREG", "iCallback=%d role=game path=register", (int)rid);
+      } else if (!g_cbreg_md_logged) {
+        g_cbreg_md_logged = 1;
+        logts_f("CBREG", "role=game path=manual-dispatch registration=unobservable");
       }
       send_response(fd, requestId, STATUS_OK, NULL, 0);
       return;

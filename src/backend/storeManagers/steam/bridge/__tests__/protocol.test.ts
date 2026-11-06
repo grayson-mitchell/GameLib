@@ -313,6 +313,23 @@ describe('protocol -- CONTROL_SLOT.reportCbDispatch (quick 261027-k51)', () => {
   })
 })
 
+describe('protocol -- CONTROL_SLOT.reportCbRegister (quick 261106-qvp)', () => {
+  const root = join(__dirname, '..', '..', '..', '..', '..', '..')
+  it('is 15, equals the helper #define and keeps slots distinct', () => {
+    expect(CONTROL_SLOT.reportCbRegister).toBe(15)
+    const values = Object.values(CONTROL_SLOT)
+    expect(new Set(values).size).toBe(values.length)
+    const helper = readFileSync(
+      join(root, 'native/steam-bridge/helper/bridge_helper.c'),
+      'utf-8'
+    )
+    const helperValue = /#define CONTROL_SLOT_REPORT_CB_REGISTER (\d+)/.exec(
+      helper
+    )
+    expect(Number(helperValue![1])).toBe(CONTROL_SLOT.reportCbRegister)
+  })
+})
+
 describe('protocol -- WR-03 secret/role constants match the shim and helper', () => {
   const root = join(__dirname, '..', '..', '..', '..', '..', '..')
   const shim = readFileSync(

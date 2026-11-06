@@ -129,6 +129,14 @@ function cbDispatchBlob(id: number, ndispatched: number, held: number) {
   return b
 }
 
+// quick 261106-qvp: REPORT_CB_REGISTER argBlob {i32 iCallback, u32 path}.
+function cbRegisterBlob(id: number, path: number) {
+  const b = Buffer.alloc(8)
+  b.writeInt32LE(id, 0)
+  b.writeUInt32LE(path, 4)
+  return b
+}
+
 // quick 261027-jgs: REPORT_STUB_CALL argBlob {u32 kind, u32 slot, u32 vlen, u32 mlen, ver, method}.
 function stubCallBlob(
   kind: number,
@@ -1393,6 +1401,94 @@ describeDarwinOnly(
       }
     }, 30000)
 
+    test('REPORT_CB_REGISTER (slot 15): refused unauthenticated, rejects malformed frames silently, logs CBREG once per id, manual-dispatch once, caps at 32, never logs CALL', async () => {
+      const h = await startAuthHelper('qvp-cbreg-', authedEnv())
+      try {
+        const socket = await h.connect()
+        const req = (id: number, blob: Buffer) =>
+          encodeRequest(
+            id,
+            CONTROL_ORDINAL,
+            CONTROL_SLOT.reportCbRegister,
+            blob
+          )
+        try {
+          expect(
+            (await sendFrameOnSocket(socket, req(1, cbRegisterBlob(1298, 0))))
+              .status
+          ).toBe(STATUS_ERR)
+          await authenticate(socket)
+          const before = h.getStderr().length
+          const bad = [
+            req(2, Buffer.alloc(0)),
+            req(3, Buffer.alloc(7)),
+            req(4, Buffer.alloc(9)),
+            req(5, cbRegisterBlob(0, 0)),
+            req(6, cbRegisterBlob(-5, 0)),
+            req(7, cbRegisterBlob(1298, 2)),
+            req(8, cbRegisterBlob(7, 1))
+          ]
+          for (const f of bad) {
+            expect((await sendFrameOnSocket(socket, f)).status).toBe(STATUS_ERR)
+          }
+          await settle()
+          expect(h.getStderr().slice(before)).not.toMatch(/CBREG/)
+          // A listed id is silent.
+          expect(
+            (await sendFrameOnSocket(socket, req(9, cbRegisterBlob(1101, 0))))
+              .status
+          ).toBe(STATUS_OK)
+          await settle()
+          expect(h.getStderr().slice(before)).not.toMatch(/CBREG/)
+          for (const rid of [10, 11]) {
+            expect(
+              (
+                await sendFrameOnSocket(
+                  socket,
+                  req(rid, cbRegisterBlob(1298, 0))
+                )
+              ).status
+            ).toBe(STATUS_OK)
+          }
+          for (const rid of [12, 13]) {
+            expect(
+              (await sendFrameOnSocket(socket, req(rid, cbRegisterBlob(0, 1))))
+                .status
+            ).toBe(STATUS_OK)
+          }
+          for (let i = 0; i < 40; i++) {
+            expect(
+              (
+                await sendFrameOnSocket(
+                  socket,
+                  req(100 + i, cbRegisterBlob(5000 + i, 0))
+                )
+              ).status
+            ).toBe(STATUS_OK)
+          }
+        } finally {
+          socket.destroy()
+        }
+        await settle()
+        const log = h.getStderr()
+        expect(
+          log.match(/ CBREG +iCallback=1298 role=game path=register\n/g) ?? []
+        ).toHaveLength(1)
+        expect(
+          log.match(
+            / CBREG +role=game path=manual-dispatch registration=unobservable\n/g
+          ) ?? []
+        ).toHaveLength(1)
+        // 1298 took one of the 32 table slots; the cap is on distinct ids.
+        expect(
+          log.match(/CBREG +iCallback=\d+ role=game path=register/g)
+        ).toHaveLength(32)
+        expect(log).not.toMatch(/\] CALL /)
+      } finally {
+        h.child.kill()
+      }
+    }, 30000)
+
     test('REPORT_CB_DISPATCH (slot 10): refused unauthenticated, rejects malformed frames without logging, logs CBDISP, caps at 32 plus one cap line, never logs CALL', async () => {
       const h = await startAuthHelper('k51-cbdisp-', authedEnv())
       try {
@@ -1656,10 +1752,10 @@ describeDarwinOnly(
         )
       }
       expect(src).toContain(
-        'CBQ", "unlisted iCallback=%d action=drop callresult=1"'
+        'CBQ", "unlisted iCallback=%d action=drop callresult=1 cub=%d"'
       )
       expect(src).toContain(
-        'CBQ", "unlisted iCallback=%d action=drop callresult=0"'
+        'CBQ", "unlisted iCallback=%d action=drop callresult=0 cub=%d"'
       )
       expect(src).not.toMatch(/action=drop"/)
       expect(src).toContain('CBQ", "callresult iCallback=%d failed=%d cub=%u"')

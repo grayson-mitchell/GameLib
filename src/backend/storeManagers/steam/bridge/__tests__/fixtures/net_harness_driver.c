@@ -523,6 +523,16 @@ int main(int argc, char **argv) {
   if (strncmp(c, "mms-", 4) == 0 && strcmp(c, "mms-lobby-args") != 0) return run_mms_case(c);
   g_dylib_handle = RTLD_DEFAULT;
   if (strncmp(c, "p2pfb-", 6) == 0) return run_pfb_case(c);
+  if (strcmp(c, "unlisted-cub") == 0) {
+    /* quick 261106-qvp: an unlisted id logs once per id with its payload size. */
+    inj_setup();
+    inj_push(1298, 0, 0);
+    inj_pump();
+    inj_push(1298, 0, 0);
+    inj_pump();
+    printf("unlisted-cub done\n");
+    return 0;
+  }
   if (strncmp(c, "invite-", 7) == 0 || strcmp(c, "list-friends") == 0 || strcmp(c, "control-unauth") == 0 ||
       strcmp(c, "mms-lobby-args") == 0) {
     uint8_t body[GL_INVITE_FRIENDS_RESP_MAX];

@@ -59,6 +59,17 @@ describeDarwinOnly(
     // WR-07 legacy-P2P fallback (host harness only; no legacy-TCP-mode title is live-tested).
     const pfbBase = BigInt('76561198100000000')
 
+    test('unlisted-cub: an unlisted id logs its payload size once per id', () => {
+      const { out, err } = runBoth('unlisted-cub')
+      expect(out).toContain('unlisted-cub done')
+      const lines =
+        err.match(
+          / CBQ +unlisted iCallback=1298 action=drop callresult=0 cub=12\n/g
+        ) ?? []
+      expect(lines).toHaveLength(1)
+      expect(err.match(/CBQ +unlisted iCallback=1298/g) ?? []).toHaveLength(1)
+    })
+
     test('p2pfb-order: each report accepts the remote of the 1202 it reports', () => {
       const { out } = runBoth('p2pfb-order')
       expect(out).toContain('order accepts=2 idx=1,2,')
