@@ -24,7 +24,7 @@ import type {
   ScanResultFor
 } from '../src/backend/scanners/scanTypes'
 
-export const SCAN_CLI_BUILD_COMMAND =
+const SCAN_CLI_BUILD_COMMAND =
   'cargo build -p gamelib-scan-cli --manifest-path src-tauri/Cargo.toml'
 
 const MAX_BUFFER = 16 * 1024 * 1024

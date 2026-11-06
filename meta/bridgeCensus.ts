@@ -2573,8 +2573,10 @@ async function main(): Promise<void> {
 // a private tmpdir (same reasoning as `extractProtonInventory.ts`'s own
 // bottom guard) -- but this module is also imported directly by its jest
 // suite, so `JEST_WORKER_ID` still reliably distinguishes "imported under
-// test" from "run as the CLI entrypoint".
-if (!process.env.JEST_WORKER_ID) {
+// test" from "run as the CLI entrypoint". `meta/scannerParitySweep.ts` also imports this
+// module's enumeration helpers; its package.json script compiles with
+// `--define:process.env.GAMELIB_SWEEP_BUNDLE=true` so the census does not run inside the sweep.
+if (!process.env.JEST_WORKER_ID && !process.env.GAMELIB_SWEEP_BUNDLE) {
   main().catch((error: unknown) => {
     console.error(error)
     process.exit(1)

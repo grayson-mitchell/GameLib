@@ -43,6 +43,7 @@
     "meta/pinRunnerDigests.ts",
     "meta/rebrandUpstreamCatalogs.ts",
     "meta/releaseTags.ts",
+    "meta/scannerParitySweep.ts",
     "meta/signMachOResources.ts",
     "meta/trayIconVariants.ts",
     "meta/verifyRunnerBundle.ts",
