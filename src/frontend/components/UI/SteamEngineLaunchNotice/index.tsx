@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import type { AnimationEvent } from 'react'
 import {
   faClock,
   faEyeSlash,
@@ -14,15 +13,18 @@ import type { IconDefinition } from '@fortawesome/free-solid-svg-icons'
 
 import { useSteamEngineState } from 'frontend/state/SteamEngineState'
 import { useSuppressStoreEmbedWhile } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
+import {
+  renderNoticeSlot,
+  useNoticePhaseFallback
+} from 'frontend/components/UI/NoticeStack/noticeSlot'
+import type { NoticePhase } from 'frontend/components/UI/NoticeStack/noticeSlot'
 import './index.scss'
 
 type Reason = 'cx-missing' | 'cx-expired' | 'cx-broken'
-// in -> leaving (exit animation) -> collapsing (slot closes) -> removed.
-type Phase = 'in' | 'leaving' | 'collapsing'
 interface Shown {
   reason: Reason
   seq: number
-  phase: Phase
+  phase: NoticePhase
 }
 
 type OverlayStepId =
@@ -35,30 +37,19 @@ type OverlayStepId =
 interface ShownOverlay {
   step: OverlayStepId
   seq: number
-  phase: Phase
+  phase: NoticePhase
 }
 
 interface ShownExit {
   seq: number
-  phase: Phase
+  phase: NoticePhase
 }
 
 const AUTO_HIDE_MS = 8000
-// Safety net when an animationend never arrives (hidden window, a theme that
-// kills animations): comfortably above the 180ms exit and 200ms slot close.
-// ts-prune-ignore-next
-export const PHASE_FALLBACK_MS = 500
-
-const EXIT_ANIMATIONS = [
-  'steamEngineLaunchNoticeOut',
-  'steamEngineLaunchNoticeFadeOut'
-]
 const TOAST_CLASS = 'steamEngineLaunchNotice'
 const TOAST_OVERLAY = `${TOAST_CLASS}--overlay`
-const TOAST_LEAVING = `${TOAST_CLASS}--leaving`
 const TOAST_PAUSED = `${TOAST_CLASS}--paused`
 const TOAST_WAITING = `${TOAST_CLASS}--waiting`
-const SLOT_CLOSE_ANIMATION = 'steamEngineLaunchNoticeSlotClose'
 
 const REASON_ICON: Record<Reason, IconDefinition> = {
   'cx-expired': faClock,
@@ -353,45 +344,25 @@ export default function SteamEngineLaunchNotice() {
   }, [exitSeq, exitPhase, hoveredExit, waitingExit])
 
   // Phase fallbacks (T-vvz-02): never get stuck if animationend is lost.
-  useEffect(() => {
-    if (!shown || shown.phase === 'in') return
-    const cur = shown
-    const id = setTimeout(
-      () =>
-        cur.phase === 'leaving'
-          ? setShown({ ...cur, phase: 'collapsing' })
-          : finish(),
-      PHASE_FALLBACK_MS
-    )
-    return () => clearTimeout(id)
-  }, [engineSeq, enginePhase])
-
-  useEffect(() => {
-    if (!shownOverlay || shownOverlay.phase === 'in') return
-    const cur = shownOverlay
-    const id = setTimeout(
-      () =>
-        cur.phase === 'leaving'
-          ? setShownOverlay({ ...cur, phase: 'collapsing' })
-          : finishOverlay(),
-      PHASE_FALLBACK_MS
-    )
-    return () => clearTimeout(id)
-  }, [overlaySeq, overlayPhase])
-
-  useEffect(() => {
-    if (!shownExit || shownExit.phase === 'in') return
-    const cur = shownExit
-    const id = setTimeout(
-      () =>
-        cur.phase === 'leaving'
-          ? setShownExit({ ...cur, phase: 'collapsing' })
-          : finishExit(),
-      PHASE_FALLBACK_MS
-    )
-    return () => clearTimeout(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on seq/phase like the sibling streams
-  }, [exitSeq, exitPhase])
+  useNoticePhaseFallback(
+    shown?.phase ?? null,
+    engineSeq,
+    () => shown && setShown({ ...shown, phase: 'collapsing' }),
+    finish
+  )
+  useNoticePhaseFallback(
+    shownOverlay?.phase ?? null,
+    overlaySeq,
+    () =>
+      shownOverlay && setShownOverlay({ ...shownOverlay, phase: 'collapsing' }),
+    finishOverlay
+  )
+  useNoticePhaseFallback(
+    shownExit?.phase ?? null,
+    exitSeq,
+    () => shownExit && setShownExit({ ...shownExit, phase: 'collapsing' }),
+    finishExit
+  )
 
   // The native store embed would cover the notice, as for HumbleExpiryToast.
   useSuppressStoreEmbedWhile(
@@ -404,7 +375,7 @@ export default function SteamEngineLaunchNotice() {
   const renderSlot = (o: {
     slotKey: string
     seq: number
-    phase: Phase
+    phase: NoticePhase
     overlay: boolean
     paused: boolean
     waiting: boolean
@@ -416,75 +387,50 @@ export default function SteamEngineLaunchNotice() {
     toCollapsing: () => void
     remove: () => void
   }) => {
-    const toastClass = [
+    const toastClassName = [
       TOAST_CLASS,
       o.overlay ? TOAST_OVERLAY : '',
-      o.phase !== 'in' ? TOAST_LEAVING : '',
       o.paused ? TOAST_PAUSED : '',
       o.waiting ? TOAST_WAITING : ''
     ]
       .filter(Boolean)
       .join(' ')
-    return (
-      <div
-        key={o.slotKey}
-        className={
-          'steamEngineLaunchNoticeSlot' +
-          (o.phase === 'collapsing'
-            ? ' steamEngineLaunchNoticeSlot--collapsing'
-            : '')
-        }
-        onAnimationEnd={(e: AnimationEvent) => {
-          if (
-            e.target === e.currentTarget &&
-            e.animationName === SLOT_CLOSE_ANIMATION &&
-            o.phase === 'collapsing'
-          )
-            o.remove()
-        }}
-      >
-        <div>
-          <div
-            key={o.seq}
-            className={toastClass}
-            role="status"
-            onMouseEnter={() => o.setHover(true)}
-            onMouseLeave={() => o.setHover(false)}
-            onAnimationEnd={(e: AnimationEvent) => {
-              if (
-                e.target === e.currentTarget &&
-                EXIT_ANIMATIONS.includes(e.animationName) &&
-                o.phase === 'leaving'
-              )
-                o.toCollapsing()
+    return renderNoticeSlot({
+      slotKey: o.slotKey,
+      toastKey: o.seq,
+      phase: o.phase,
+      toastClassName,
+      onMouseEnter: () => o.setHover(true),
+      onMouseLeave: () => o.setHover(false),
+      toCollapsing: o.toCollapsing,
+      remove: o.remove,
+      children: (
+        <>
+          <FontAwesomeIcon
+            icon={o.icon}
+            className="steamEngineLaunchNoticeIcon"
+          />
+          <span className="steamEngineLaunchNoticeText">
+            <span className="steamEngineLaunchNoticeTitle">{o.title}</span>{' '}
+            <span className="steamEngineLaunchNoticeBody">{o.body}</span>
+          </span>
+          <button
+            className="steamEngineLaunchNoticeDismiss"
+            aria-label={t('steam.engine.notice.dismiss', 'Dismiss')}
+            onClick={() => {
+              if (o.phase === 'in') o.beginLeave()
             }}
           >
-            <FontAwesomeIcon
-              icon={o.icon}
-              className="steamEngineLaunchNoticeIcon"
-            />
-            <span className="steamEngineLaunchNoticeText">
-              <span className="steamEngineLaunchNoticeTitle">{o.title}</span>{' '}
-              <span className="steamEngineLaunchNoticeBody">{o.body}</span>
-            </span>
-            <button
-              className="steamEngineLaunchNoticeDismiss"
-              aria-label={t('steam.engine.notice.dismiss', 'Dismiss')}
-              onClick={() => {
-                if (o.phase === 'in') o.beginLeave()
-              }}
-            >
-              <FontAwesomeIcon icon={faXmark} />
-            </button>
-            <span
-              className="steamEngineLaunchNoticeBar"
-              aria-hidden="true"
-              style={{ animationDuration: `${AUTO_HIDE_MS}ms` }}
-            />
-          </div>
-        </div>
-      </div>
-    )
+            <FontAwesomeIcon icon={faXmark} />
+          </button>
+          <span
+            className="steamEngineLaunchNoticeBar"
+            aria-hidden="true"
+            style={{ animationDuration: `${AUTO_HIDE_MS}ms` }}
+          />
+        </>
+      )
+    })
   }
 
   const exitNode = shownExit
@@ -565,11 +511,12 @@ export default function SteamEngineLaunchNotice() {
     })
   }
 
+  // The slots go straight into NoticeStack's region (no wrapper node).
   return (
-    <div className="steamEngineLaunchNoticeRegion">
+    <>
       {exitNode}
       {overlayNode}
       {engineNode}
-    </div>
+    </>
   )
 }

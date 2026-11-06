@@ -88,10 +88,8 @@ import {
   faWrench
 } from '@fortawesome/free-solid-svg-icons'
 import { useSuppressStoreEmbedWhile } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
-import SteamEngineLaunchNotice, {
-  OVERLAY_STEP_KEYS,
-  PHASE_FALLBACK_MS
-} from '../index'
+import { PHASE_FALLBACK_MS } from 'frontend/components/UI/NoticeStack/noticeSlot'
+import SteamEngineLaunchNotice, { OVERLAY_STEP_KEYS } from '../index'
 import { OVERLAY_STEP_TEXT } from 'backend/storeManagers/steam/bridge/overlay/overlayNotice'
 
 type Rt = {
@@ -167,14 +165,14 @@ const cls = (e: El | undefined): string => e?.props.className ?? ''
 const toast = (out: ReactNode): El | undefined =>
   find(out, (e) => e.props.role === 'status')
 const slotOf = (out: ReactNode): El | undefined =>
-  find(out, (e) => cls(e).startsWith('steamEngineLaunchNoticeSlot'))
+  find(out, (e) => cls(e).startsWith('noticeStackSlot'))
 const ev = (name: string, same = true) => ({
   target: 'a',
   currentTarget: same ? 'a' : 'b',
   animationName: name
 })
-const OUT = 'steamEngineLaunchNoticeOut'
-const CLOSE = 'steamEngineLaunchNoticeSlotClose'
+const OUT = 'noticeStackToastOut'
+const CLOSE = 'noticeStackSlotClose'
 // Dismiss then drive the exit through both animationends.
 const exit = (out: ReactNode): ReactNode => {
   toast(out)?.props.onAnimationEnd?.(ev(OUT))
@@ -262,6 +260,20 @@ describe('SteamEngineLaunchNotice', () => {
     expect(find(o2, (e) => e.props.icon === faWrench)).toBeDefined()
   })
 
+  it('returns its slots as a fragment and owns no region (NoticeStack does)', () => {
+    storeState = {
+      ...notice('cx-expired', 1),
+      ...overlay('shim', 1)
+    }
+    const out = render() as ReactElement
+    expect(out.type).toBe(React.Fragment)
+    const stray = find(
+      out,
+      (e) => cls(e).includes('Region') || cls(e) === 'noticeStack'
+    )
+    expect(stray).toBeUndefined()
+  })
+
   it('renders nothing for an unknown reason value (T-59-72)', () => {
     storeState = notice('<script>', 1)
     expect(render()).toBeNull()
@@ -272,7 +284,7 @@ describe('SteamEngineLaunchNotice', () => {
     const out = render()
     const leaving = dismiss(out)
     expect(toast(leaving)).toBeDefined()
-    expect(cls(toast(leaving))).toContain('steamEngineLaunchNotice--leaving')
+    expect(cls(toast(leaving))).toContain('noticeStackToast--leaving')
     expect(jest.mocked(useSuppressStoreEmbedWhile).mock.calls.at(-1)).toEqual([
       true
     ])

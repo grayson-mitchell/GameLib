@@ -30,8 +30,7 @@ import UploadedLogFilesList from './screens/Settings/sections/LogSettings/compon
 import { TourProvider } from './state/TourContext'
 import { InstallGameWrapper } from './screens/Library/components/InstallModal'
 import { SettingsModalWrapper } from './screens/Settings/components/SettingsModal'
-import HumbleExpiryToast from './components/UI/HumbleExpiryToast'
-import SteamEngineLaunchNotice from './components/UI/SteamEngineLaunchNotice'
+import { AppNoticeStack } from './components/UI/NoticeStack'
 import SteamBottleSetup from './screens/Game/GamePage/components/SteamBottleSetup'
 import SteamClientSetup from './screens/Game/GamePage/components/SteamClientSetup'
 import SteamBridgeSetup from './screens/Game/GamePage/components/SteamBridgeSetup'
@@ -140,8 +139,7 @@ function Root() {
                   <LogFileUploadDialog />
                   <UploadedLogFilesList />
                   <Outlet />
-                  <HumbleExpiryToast />
-                  <SteamEngineLaunchNotice />
+                  <AppNoticeStack />
                 </main>
                 <div className="controller">
                   <ControllerHints />
