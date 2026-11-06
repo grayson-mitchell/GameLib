@@ -158,6 +158,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 69: Consolidate frontend state onto GlobalStateV2** — 0 plans; not started
 - [ ] **Phase 70: Split GameInfo into shared and per-store shapes** — 0 plans; not started
 - [ ] **Phase 71: Rust shell module decomposition** — 0 plans; not started
+- [ ] **Phase 72: Renderer trust boundary and process hardening** — 0 plans; not started
 
 ## Phase Details
 
@@ -409,3 +410,14 @@ Plans:
 Plans:
 
 - [ ] TBD (run /gsd-plan-phase 71 to break down)
+
+### Phase 72: Renderer trust boundary and process hardening
+
+**Goal:** Close the concerns from the 2026-11-07 concerns map (`.planning/codebase/CONCERNS.md`) that no other phase owns, in three groups. (1) **Renderer trust boundary**: the `openExternalUrl`/`openFolder` channels route every non-http(s) value to `shell.openPath`, and the Rust `shell_open_path` arm (`store_embed.rs:2255`) opens it unchecked, so `file://`, `smb://`, `.app` bundles and executables all pass — add a scheme/path allow-list enforced in the shell, not only the sidecar; `removeFolder` (`utils.ts:1490`) deletes recursively under any renderer-supplied parent, and its 5 s timer is not `unref()`-ed (sidecar exit contract); trim `capabilities/default.json` to what the renderer uses (`shell:allow-execute`, `opener:default`, `updater:default`) and decide `withGlobalTauri`; delete the 13 dead `*/ipc_handler.ts` modules, including the `execAsync(commandParts.join(' '))` path in `tools/ipc_handler.ts`; make the Steam token store's plaintext fallback (`tokenStore.ts:198`) impossible rather than relying on `bootstrap.ts` swapping it out first. (2) **Process lifecycle**: the shell spawns the sidecar once (`main.rs:829`) and only fails pending invokes at stdout EOF (`sidecar.rs:565`) — add restart-or-surface so the user is told; the log-only `uncaughtException` handler (`processGuards.ts:259`) leaves a broken sidecar running; quit-time `pkill -f` pattern kills (`utils.ts:972`, sideload `stop()` by basename) can hit unrelated processes — kill by tracked PID/process group, building on Phase 66's process runner if it has landed; on Windows `shutdown_child` (`shell_state.rs:109`) kills only the sidecar PID, so store CLIs outlive the app — use a Job Object or equivalent (needs a Windows check). (3) **Supply chain and CI**: `pnpm audit --prod` reported 22 advisories (6 high) on 2026-11-07, including undici TLS validation (the `undici@^6: ^6.28.1` override is below the fix) and zod (which Phase 67 builds on) — bump, then add an audit step or Dependabot/Renovate to CI; add a Linux compile leg to `rust-test.yml` (31 `cfg(target_os = "linux")` sites are never compiled before a tag), ideally before Phase 71 starts. Groups are independent and can ship as separate plans. Open questions for discuss-phase: restart vs surface-and-quit for a dead sidecar, and whether the open-path allow-list lives in Rust only or both layers. Came from `/gsd-map-codebase --concerns` on 2026-11-07.
+**Requirements**: TBD
+**Depends on:** None
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 72 to break down)
