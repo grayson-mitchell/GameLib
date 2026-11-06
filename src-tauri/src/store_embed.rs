@@ -4503,6 +4503,28 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             wake_lock_stop(id as u32)?;
             Ok(Value::Null)
         }
+        // Phase 63 (D-03): executable scanners. Each arm is a one-line pass-through to the
+        // Tauri-free gamelib-scan crate, the same dispatch the headless gamelib-scan-cli uses.
+        // dispatch_rust_channel arms, not generate_handler! commands: the caller is the sidecar
+        // over `requestRustInvoke`, and the renderer gets no scanner capability.
+        "scan_steam_api_imports" => {
+            gamelib_scan::dispatch("scan_steam_api_imports", args)
+        }
+        "scan_steam_drm" => {
+            gamelib_scan::dispatch("scan_steam_drm", args)
+        }
+        "scan_steamstub_section" => {
+            gamelib_scan::dispatch("scan_steamstub_section", args)
+        }
+        "scan_pe_imported_dlls" => {
+            gamelib_scan::dispatch("scan_pe_imported_dlls", args)
+        }
+        "scan_contained_real" => {
+            gamelib_scan::dispatch("scan_contained_real", args)
+        }
+        "scan_winemac_metal_exports" => {
+            gamelib_scan::dispatch("scan_winemac_metal_exports", args)
+        }
         // ---- In-app store/wiki embed (Phase 40 Plan 02, D-01/D-03). Every arm is macOS + Linux
         // (quick 260930-blh) + Windows (quick 261012-f25) per D-03's target-gated `unstable`
         // feature; a target outside those three returns a legible error rather than silently

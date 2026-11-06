@@ -7883,4 +7883,23 @@ mod tests {
             assert!(should_auto_open_devtools(host));
         }
     }
+
+    #[test]
+    fn scan_channels_are_gamelib_scan_app_ops() {
+        for s in [
+            "scan_steam_api_imports",
+            "scan_steam_drm",
+            "scan_steamstub_section",
+            "scan_pe_imported_dlls",
+            "scan_contained_real",
+            "scan_winemac_metal_exports",
+        ] {
+            assert!(
+                gamelib_scan::OPS.contains(&s) && !gamelib_scan::CLI_ONLY_OPS.contains(&s),
+                "{s}"
+            );
+            let err = gamelib_scan::dispatch(s, &[]).expect_err(s);
+            assert!(err.ends_with(":bad-args"), "{s}: {err}");
+        }
+    }
 }

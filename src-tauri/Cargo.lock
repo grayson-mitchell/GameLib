@@ -1292,6 +1292,7 @@ version = "0.8.0"
 dependencies = [
  "block2",
  "dispatch2",
+ "gamelib-scan",
  "gilrs",
  "gtk",
  "keyring",

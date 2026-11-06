@@ -339,6 +339,67 @@ export const RUST_WAKE_LOCK_START = 'wake_lock_start' as const
 export const RUST_WAKE_LOCK_STOP = 'wake_lock_stop' as const
 
 /**
+ * Rust-side channel name: Phase 63 (D-03) executable scanner `scan_steam_api_imports`, a pass-through to the
+ * Tauri-free `gamelib-scan` crate (the same dispatch `gamelib-scan-cli` uses).
+ *
+ * Takes ONE object arg (`{ exePath, appId }`), all string fields (D-08: paths in, never bytes).
+ * Resolves a `SteamApiImportScanResult` (see `backend/scanners/scanTypes.ts`). Bad args reject
+ * `scan_steam_api_imports:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_SCAN_STEAM_API_IMPORTS = 'scan_steam_api_imports' as const
+
+/**
+ * Rust-side channel name: Phase 63 (D-03) executable scanner `scan_steam_drm`, a pass-through to the
+ * Tauri-free `gamelib-scan` crate (the same dispatch `gamelib-scan-cli` uses).
+ *
+ * Takes ONE object arg (`{ exePath }`), all string fields (D-08: paths in, never bytes).
+ * Resolves a `SteamDrmScanResult` (see `backend/scanners/scanTypes.ts`). Bad args reject
+ * `scan_steam_drm:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_SCAN_STEAM_DRM = 'scan_steam_drm' as const
+
+/**
+ * Rust-side channel name: Phase 63 (D-03) executable scanner `scan_steamstub_section`, a pass-through to the
+ * Tauri-free `gamelib-scan` crate (the same dispatch `gamelib-scan-cli` uses).
+ *
+ * Takes ONE object arg (`{ exePath }`), all string fields (D-08: paths in, never bytes).
+ * Resolves a `SteamstubSectionResult` (see `backend/scanners/scanTypes.ts`). Bad args reject
+ * `scan_steamstub_section:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_SCAN_STEAMSTUB_SECTION = 'scan_steamstub_section' as const
+
+/**
+ * Rust-side channel name: Phase 63 (D-03) executable scanner `scan_pe_imported_dlls`, a pass-through to the
+ * Tauri-free `gamelib-scan` crate (the same dispatch `gamelib-scan-cli` uses).
+ *
+ * Takes ONE object arg (`{ exePath }`), all string fields (D-08: paths in, never bytes).
+ * Resolves a `PeImportedDllsResult` (see `backend/scanners/scanTypes.ts`). Bad args reject
+ * `scan_pe_imported_dlls:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_SCAN_PE_IMPORTED_DLLS = 'scan_pe_imported_dlls' as const
+
+/**
+ * Rust-side channel name: Phase 63 (D-03) executable scanner `scan_contained_real`, a pass-through to the
+ * Tauri-free `gamelib-scan` crate (the same dispatch `gamelib-scan-cli` uses).
+ *
+ * Takes ONE object arg (`{ path, rootDir }`), all string fields (D-08: paths in, never bytes).
+ * Resolves a `ContainedRealResult` (see `backend/scanners/scanTypes.ts`). Bad args reject
+ * `scan_contained_real:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_SCAN_CONTAINED_REAL = 'scan_contained_real' as const
+
+/**
+ * Rust-side channel name: Phase 63 (D-03) executable scanner `scan_winemac_metal_exports`, a pass-through to the
+ * Tauri-free `gamelib-scan` crate (the same dispatch `gamelib-scan-cli` uses).
+ *
+ * Takes ONE object arg (`{ wineBundlePath }`), all string fields (D-08: paths in, never bytes).
+ * Resolves a `WinemacMetalCheck` (see `backend/scanners/scanTypes.ts`). Bad args reject
+ * `scan_winemac_metal_exports:bad-args`; unreadable or unparseable files RESOLVE with a typed result.
+ */
+export const RUST_SCAN_WINEMAC_METAL_EXPORTS =
+  'scan_winemac_metal_exports' as const
+
+/**
  * Rust-side channel name: open a fail-closed child `WebviewWindow` on any https URL
  * (Phase 34.4.1 Plan 01, D-01/D-02, REQ-34.4.1-01/REQ-34.4.1-09). Runner-agnostic by
  * design -- nothing in Rust knows what Humble is; this is the mechanism Phase 34.5
@@ -560,8 +621,26 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_STORE_EMBED_RELOAD,
   RUST_STORE_EMBED_NAVIGATE,
   RUST_WAKE_LOCK_START,
-  RUST_WAKE_LOCK_STOP
+  RUST_WAKE_LOCK_STOP,
+  RUST_SCAN_STEAM_API_IMPORTS,
+  RUST_SCAN_STEAM_DRM,
+  RUST_SCAN_STEAMSTUB_SECTION,
+  RUST_SCAN_PE_IMPORTED_DLLS,
+  RUST_SCAN_CONTAINED_REAL,
+  RUST_SCAN_WINEMAC_METAL_EXPORTS
 ] as const
+
+/** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
+export const RUST_SCAN_CHANNELS = [
+  RUST_SCAN_STEAM_API_IMPORTS,
+  RUST_SCAN_STEAM_DRM,
+  RUST_SCAN_STEAMSTUB_SECTION,
+  RUST_SCAN_PE_IMPORTED_DLLS,
+  RUST_SCAN_CONTAINED_REAL,
+  RUST_SCAN_WINEMAC_METAL_EXPORTS
+] as const
+
+export type RustScanChannel = (typeof RUST_SCAN_CHANNELS)[number]
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */
 export type RustInvokeChannel = (typeof RUST_INVOKE_CHANNELS)[number]
