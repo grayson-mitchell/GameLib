@@ -384,7 +384,18 @@ export class HostHealthTracker {
     if (!hosts.length) {
       throw new Error('HostHealthTracker.pickHost: empty hosts list')
     }
-    const rotated = hosts.map((_, i) => hosts[(seed + i) % hosts.length])
+    const rotated: string[] = []
+    for (let i = 0; i < hosts.length; i++) {
+      const rotatedHost = hosts[(seed + i) % hosts.length]
+      if (rotatedHost !== undefined) rotated.push(rotatedHost)
+    }
+    const pick = (list: string[], idx: number): string => {
+      const picked = list[idx]
+      if (picked === undefined) {
+        throw new Error('HostHealthTracker.pickHost: no candidate host')
+      }
+      return picked
+    }
 
     const healthy: string[] = []
     const unhealthy: string[] = []
@@ -425,7 +436,7 @@ export class HostHealthTracker {
         healthy.length > 0 &&
         this.attemptZeroCounter % DEMOTED_PROBE_INTERVAL === 0
       ) {
-        return unhealthy[0]
+        return pick(unhealthy, 0)
       }
     }
 
@@ -437,13 +448,13 @@ export class HostHealthTracker {
     // selection, unchanged.
     const N = Math.min(TOP_N_FANOUT, healthy.length)
     if (attemptIndex === 0 && N > 1) {
-      return healthy[workerSlot % N]
+      return pick(healthy, workerSlot % N)
     }
     if (attemptIndex > 0 && previousHost !== undefined) {
       const others = ordered.filter((host) => host !== previousHost)
-      if (others.length) return others[(attemptIndex - 1) % others.length]
+      if (others.length) return pick(others, (attemptIndex - 1) % others.length)
     }
-    return ordered[attemptIndex % ordered.length]
+    return pick(ordered, attemptIndex % ordered.length)
   }
 
   /** Read-only snapshot for logging/observability (Fix Applied, cycle 3) --

@@ -386,8 +386,9 @@ export function readMacSteamCmState(path: string): string | null {
     readSync(fd, buf, 0, len, size - len)
     const lines = buf.toString('utf8').split('\n')
     for (let i = lines.length - 1; i >= 0; i--) {
-      const m = STATE_LINE_RE.exec(lines[i].replace(/\r$/, ''))
-      if (m) return m[1]
+      const m = STATE_LINE_RE.exec((lines[i] ?? '').replace(/\r$/, ''))
+      const state = m?.[1]
+      if (state !== undefined) return state
     }
     return null
   } catch {
@@ -416,7 +417,7 @@ export function readMacSteamCmStateSince(
     readSync(fd, buf, 0, len, size - len)
     const lines = buf.toString('utf8').split('\n')
     for (let i = lines.length - 1; i >= 0; i--) {
-      const m = STATE_LINE_TS_RE.exec(lines[i].replace(/\r$/, ''))
+      const m = STATE_LINE_TS_RE.exec((lines[i] ?? '').replace(/\r$/, ''))
       if (!m) continue
       const ts = new Date(
         Number(m[1]),
@@ -426,7 +427,8 @@ export function readMacSteamCmStateSince(
         Number(m[5]),
         Number(m[6])
       ).getTime()
-      if (ts >= floor) return m[7]
+      const stamp = m[7]
+      if (ts >= floor && stamp !== undefined) return stamp
     }
     return null
   } catch {

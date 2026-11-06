@@ -180,7 +180,10 @@ function resolveBottleSteamRoot(bottleName: string): string {
   const byDir = candidateRoots.find((root) => existsSync(root))
   if (byDir) return byDir
 
-  return candidateRoots[0]
+  return (
+    candidateRoots[0] ??
+    join(bottleDir, 'drive_c', 'Program Files (x86)', 'Steam')
+  )
 }
 
 /**

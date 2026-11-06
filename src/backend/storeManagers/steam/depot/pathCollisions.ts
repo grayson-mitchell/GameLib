@@ -161,11 +161,12 @@ export function resolveDepotPathCollisions(
   const drop = new Set<DepotPlanFile>()
 
   for (const [, claims] of byPath) {
-    if (claims.length < 2) continue
+    const firstClaim = claims[0]
+    if (claims.length < 2 || firstClaim === undefined) continue
 
     // Report/log with the first claim's un-folded spelling so case-sensitive
     // output is byte-identical to before.
-    const path = pathCollisionKey(claims[0].file.filename, false)
+    const path = pathCollisionKey(firstClaim.file.filename, false)
     const spellings = new Map<string, string[]>()
     for (const c of claims) {
       const sp = pathCollisionKey(c.file.filename, false)
@@ -187,7 +188,8 @@ export function resolveDepotPathCollisions(
 
     // The Fallout 2 shape: one or more bare directory markers against exactly
     // one real file. The file wins, matching the real Steam client's result.
-    if (emptyDirs.length > 0 && content.length === 1) {
+    const onlyContent = content[0]
+    if (emptyDirs.length > 0 && content.length === 1 && onlyContent) {
       for (const d of emptyDirs) drop.add(d.file)
       resolved.push(path)
       logWarning(
@@ -195,8 +197,8 @@ export function resolveDepotPathCollisions(
           `"${path}" — depot(s) ${emptyDirs
             .map((d) => d.depotId)
             .join(',')} declare it a Directory while depot ` +
-          `${content[0].depotId} declares a file of ` +
-          `${Number(content[0].file.size)} bytes (${content[0].file.chunks.length} chunks). ` +
+          `${onlyContent.depotId} declares a file of ` +
+          `${Number(onlyContent.file.size)} bytes (${onlyContent.file.chunks.length} chunks). ` +
           `Keeping the FILE and dropping the directory marker(s) — without this ` +
           `the directory can win the write race and the file fails EISDIR.` +
           caseNote,
@@ -217,7 +219,7 @@ export function resolveDepotPathCollisions(
         c,
         entry: depotById.get(c.depotId)
       }))
-      const owner = ranked[0].entry?.ownerAppId
+      const owner = ranked[0]?.entry?.ownerAppId
       const orderKnown =
         owner !== undefined &&
         ranked.every(

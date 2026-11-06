@@ -96,7 +96,11 @@ interface DepotDownloadOutcome {
 export function selectPrimaryDepotFailure(
   failures: DepotDownloadFailure[]
 ): DepotDownloadFailure {
-  return failures.find((f) => f.scope === 'run') ?? failures[0]
+  const primary = failures.find((f) => f.scope === 'run') ?? failures[0]
+  if (primary === undefined) {
+    throw new Error('selectPrimaryDepotFailure: failures must be non-empty')
+  }
+  return primary
 }
 
 /**

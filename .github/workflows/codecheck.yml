@@ -24,6 +24,12 @@ jobs:
       - uses: ./.github/actions/install-deps
       - name: Check Typescript syntax
         run: pnpm codecheck
+      # Quick 261107-9lq. steam/ (non-test) is adopted at 0 noUncheckedIndexedAccess
+      # sites; every other bucket is an equality ceiling in
+      # meta/indexedAccessBaseline.json. Lower a bucket in the same commit that
+      # fixes sites. Follow-up: 2026-11-07-nouncheckedindexedaccess-remaining-buckets.
+      - name: Check noUncheckedIndexedAccess ratchet
+        run: pnpm typecheck:indexed-access
       # Phase 34.2 gap cycle 4, WR-11. Six planning gates existed for weeks
       # wired into nothing; two were silently red the first time anyone ran
       # them. Discovery is by '*-gate.py' suffix, so a seventh gate is picked

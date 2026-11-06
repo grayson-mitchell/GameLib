@@ -192,11 +192,14 @@ function deriveWindowsPrefix(
 function parsePsLine(line: string): { pid: string; command: string } | null {
   const match = /^\s*(\d+)\s(.*)$/.exec(line)
   if (!match) return null
-  let command = match[2].trim()
+  const pid = match[1]
+  const rawCommand = match[2]
+  if (pid === undefined || rawCommand === undefined) return null
+  let command = rawCommand.trim()
   if (command.startsWith('"')) {
     command = command.slice(1)
   }
-  return { pid: match[1], command }
+  return { pid, command }
 }
 
 /**

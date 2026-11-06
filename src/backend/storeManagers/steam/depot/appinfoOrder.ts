@@ -26,7 +26,7 @@ function* tokenize(text: string): Generator<{ t: string; quoted: boolean }> {
   let i = 0
   const n = text.length
   while (i < n) {
-    const c = text[i]
+    const c = text.charAt(i)
     if (c === '{' || c === '}') {
       yield { t: c, quoted: false }
       i++
@@ -49,7 +49,9 @@ function* tokenize(text: string): Generator<{ t: string; quoted: boolean }> {
       i++
     } else {
       let s = ''
-      while (i < n && !/[\s{}"]/.test(text[i])) s += text[i++]
+      while (i < n && !/[\s{}"]/.test(text.charAt(i))) {
+        s += text.charAt(i++)
+      }
       yield { t: s, quoted: true }
     }
   }
@@ -75,12 +77,14 @@ export function extractDepotOrder(vdfText: string): string[] | undefined {
     if (!quoted && t === '{') {
       stack.push(pendingKey ?? '')
       depth++
+      const depotId = stack[2]
       if (
         depth === 3 &&
         stack[1]?.toLowerCase() === 'depots' &&
-        /^\d+$/.test(stack[2])
+        depotId !== undefined &&
+        /^\d+$/.test(depotId)
       ) {
-        order.push(stack[2])
+        order.push(depotId)
       }
       if (depth === 2 && stack[1]?.toLowerCase() === 'depots') found = true
       pendingKey = undefined

@@ -196,7 +196,7 @@ export function mapRefreshOriginToTrigger(
   if (!Object.prototype.hasOwnProperty.call(ORIGIN_TO_TRIGGER, origin)) {
     return 'startup'
   }
-  return ORIGIN_TO_TRIGGER[origin]
+  return ORIGIN_TO_TRIGGER[origin] ?? 'startup'
 }
 
 /**

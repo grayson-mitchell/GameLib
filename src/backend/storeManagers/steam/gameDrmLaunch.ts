@@ -192,11 +192,12 @@ export function buildDrmLaunchEnvironment(
       // through the `--dll=<overrides>` option (argv, so `bin/wine --dll=...`)".
       commandPrefix.push('--dll=' + DRM_DLL_OVERRIDES)
     } else if (overridesChannel === 'registry') {
-      for (const [name, mode] of [
+      const dllOverrides: Array<[string, string]> = [
         ['steamclient', 'native'],
         ['steamclient64', 'native'],
         ['lsteamclient', 'builtin']
-      ]) {
+      ]
+      for (const [name, mode] of dllOverrides) {
         registryCommands.push([
           'reg',
           'add',

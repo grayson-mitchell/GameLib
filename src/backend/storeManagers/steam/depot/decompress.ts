@@ -618,9 +618,13 @@ export async function fetchChunk(
     if (signal?.aborted) {
       throw new ChunkFetchAbortedError()
     }
-    const host = hostHealth
+    const pickedHost = hostHealth
       ? hostHealth.pickHost(hosts, seed, i, workerSlot, previousHost)
       : hosts[(seed + i) % hosts.length]
+    if (pickedHost === undefined) {
+      throw new Error('fetchChunk: empty hosts list')
+    }
+    const host = pickedHost
     previousHost = host
     const meta = hostMeta?.get(host)
     // Debug/steam-install-slow-start (cycle 7): EXACT steam-user URL-scheme

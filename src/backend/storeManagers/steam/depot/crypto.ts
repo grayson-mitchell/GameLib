@@ -32,7 +32,7 @@ export function steamDecrypt(ciphertext: Buffer, key: Buffer): Buffer {
     dec.final()
   ])
 
-  const pad = plain[plain.length - 1]
+  const pad = plain[plain.length - 1] ?? 0
   const padOk =
     pad >= 1 &&
     pad <= 16 &&

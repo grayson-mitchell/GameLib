@@ -29,24 +29,28 @@ export function parseContentLogLine(raw: string): ContentLogEvent | null {
   let m = line.match(
     /AppID (\d+) update started : download (\d+)\/(\d+)(?:,|\s|$)/
   )
-  if (m) {
+  const startedAppId = m?.[1]
+  if (m && startedAppId !== undefined) {
     return {
       kind: 'started',
-      appId: m[1],
+      appId: startedAppId,
       downloadDone: Number(m[2]),
       downloadTotal: Number(m[3])
     }
   }
   m = line.match(/AppID (\d+) App update changed : (.*)$/)
-  if (m) {
-    const phase = m[2].trim().replace(/,$/, '')
-    if (phase === 'None') return { kind: 'ended', appId: m[1] }
-    return { kind: 'phase', appId: m[1], phase }
+  const changedAppId = m?.[1]
+  const changedPhase = m?.[2]
+  if (changedAppId !== undefined && changedPhase !== undefined) {
+    const phase = changedPhase.trim().replace(/,$/, '')
+    if (phase === 'None') return { kind: 'ended', appId: changedAppId }
+    return { kind: 'phase', appId: changedAppId, phase }
   }
   m = line.match(
     /AppID (\d+) (?:scheduler finished|finished update|update canceled)/
   )
-  if (m) return { kind: 'ended', appId: m[1] }
+  const endedAppId = m?.[1]
+  if (endedAppId !== undefined) return { kind: 'ended', appId: endedAppId }
   return null
 }
 
@@ -60,8 +64,8 @@ export function parseNettopRow(raw: string): NettopRow | null {
   const line = raw.replace(/\r/g, '')
   if (line.startsWith(',bytes_in')) return { kind: 'header' }
   const m = line.match(/^(?:tcp|udp)\S*\s+(\S+),(\d*),/)
-  if (!m || !m[2]) return null
-  const flow = m[1]
+  const flow = m?.[1]
+  if (!m || !m[2] || flow === undefined) return null
   if (flow.includes('127.0.0.1') || flow.includes('::1')) return null
   const bytesIn = Number(m[2])
   if (!Number.isFinite(bytesIn)) return null
@@ -177,6 +181,7 @@ export function windowRate(
   if (inWin.length < 2) return undefined
   const first = inWin[0]
   const last = inWin[inWin.length - 1]
+  if (first === undefined || last === undefined) return undefined
   const dt = last.ms - first.ms
   if (dt < 500) return undefined
   const rate = ((last.cum - first.cum) / dt) * 1000

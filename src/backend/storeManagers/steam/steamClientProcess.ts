@@ -166,8 +166,9 @@ export function parsePidTokenLines(stdout: string): Map<number, string> {
     const match = /^(\d+)\s+(.+)$/.exec(line.trim())
     if (!match) continue
     const pid = Number(match[1])
-    if (!Number.isSafeInteger(pid) || pid <= 0) continue
-    out.set(pid, match[2].replace(/\s+/g, ' '))
+    const token = match[2]
+    if (!Number.isSafeInteger(pid) || pid <= 0 || token === undefined) continue
+    out.set(pid, token.replace(/\s+/g, ' '))
   }
   return out
 }

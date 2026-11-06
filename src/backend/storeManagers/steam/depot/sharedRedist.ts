@@ -232,7 +232,10 @@ async function sharedRedistCacheProblem(
   for (const e of entries)
     for (const p of e.processes) {
       const m = /^%INSTALLDIR%[\\/](.+)$/i.exec(p.process.trim())
-      if (m) hashed.add(m[1].replace(/\//g, '\\').toLowerCase())
+      const installRel = m?.[1]
+      if (installRel !== undefined) {
+        hashed.add(installRel.replace(/\//g, '\\').toLowerCase())
+      }
     }
   for (const f of files) {
     const flags = f.flags ?? 0
@@ -440,7 +443,8 @@ async function downloadSharedRedistDepotsLeased(
       const scriptFiles = entry.files.filter(
         (f) => ((f.flags ?? 0) & INSTALLSCRIPT_FLAG) !== 0
       )
-      if (scriptFiles.length !== 1) {
+      const scriptFile = scriptFiles[0]
+      if (scriptFiles.length !== 1 || scriptFile === undefined) {
         logInfo(
           `shared redists: skipping depot ${id}, ${scriptFiles.length} installscript file(s) in manifest`,
           LogPrefix.Steam
@@ -448,7 +452,6 @@ async function downloadSharedRedistDepotsLeased(
         skipped.push(id)
         continue
       }
-      const scriptFile = scriptFiles[0]
       let scriptPath: string
       try {
         scriptPath = resolveContainedPath(installRoot, scriptFile.filename)

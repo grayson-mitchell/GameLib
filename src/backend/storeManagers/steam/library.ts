@@ -4229,7 +4229,8 @@ function windowsRunningAppId(): number {
     const match = result.stdout?.match(
       /RunningAppID\s+REG_DWORD\s+0x([0-9a-f]+)/i
     )
-    return match ? parseInt(match[1], 16) : 0
+    const hex = match?.[1]
+    return hex === undefined ? 0 : parseInt(hex, 16)
   } catch {
     return 0
   }
@@ -4289,7 +4290,8 @@ function linuxFallbackRunningAppId(): number {
       timeout: 1000
     })
     const match = output.match(/reaper SteamLaunch --AppId (\d+)/)
-    return match ? parseInt(match[1], 10) : 0
+    const digits = match?.[1]
+    return digits === undefined ? 0 : parseInt(digits, 10)
   } catch {
     return 0
   }

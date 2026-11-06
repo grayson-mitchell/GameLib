@@ -346,6 +346,9 @@ function resolveOverride(
   libraries: SteamLibraryTarget[]
 ): SteamLibraryTarget {
   const primary = libraries.find((lib) => lib.isPrimary) ?? libraries[0]
+  if (primary === undefined) {
+    throw new Error('resolveOverride: no Steam libraries registered')
+  }
   if (!overridePath || !overridePath.trim()) {
     return primary
   }

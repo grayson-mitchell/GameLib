@@ -35,8 +35,11 @@ export function parseSteamStorageRequirement(
     /(\d+(?:\.\d+)?)\s*(TB|GB|MB|KB)\s+available\s+space/i
   )
   if (!match) return undefined
-  const value = parseFloat(match[1])
-  const unit = match[2].toUpperCase()
+  const sizeText = match[1]
+  const unitText = match[2]
+  if (sizeText === undefined || unitText === undefined) return undefined
+  const value = parseFloat(sizeText)
+  const unit = unitText.toUpperCase()
   const multipliers: Record<string, number> = {
     KB: 1024,
     MB: 1024 ** 2,
@@ -120,7 +123,7 @@ export function parseSteamMacMinOSVersion(
   const labelMatch = tagFree.match(/\bOS(?:\s*X)?\s*:?\s*(.*)/i)
   if (!labelMatch) return null
 
-  let segment = labelMatch[1]
+  let segment = labelMatch[1] ?? ''
   // Bound the tagless/run-on case (d): stop at the next competing spec
   // keyword so a Processor/Memory figure never bleeds into the version
   // extraction.

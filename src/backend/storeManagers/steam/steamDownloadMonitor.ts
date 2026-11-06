@@ -226,9 +226,10 @@ export async function startSteamDownloadMonitor(
               // The previous block is complete: sample it and re-read the log.
               const ms = m.now()
               m.samples.push({ ms, cum: m.acc.cum })
-              while (
-                m.samples.length > 0 &&
-                ms - m.samples[0].ms > SAMPLE_RING_MS
+              for (
+                let oldest = m.samples[0];
+                oldest !== undefined && ms - oldest.ms > SAMPLE_RING_MS;
+                oldest = m.samples[0]
               ) {
                 m.samples.shift()
               }
