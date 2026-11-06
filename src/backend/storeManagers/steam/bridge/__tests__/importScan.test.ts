@@ -12,6 +12,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { spawnAsync } from 'backend/utils'
+import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+import { logInfo, logWarning } from 'backend/logger'
 import { parseSteamApiImports, scanSteamApiImports } from '../importScan'
 import { parseImportedDllNames, parseSteamApiImportTable } from '../importParse'
 import {
@@ -38,7 +40,11 @@ jest.mock('backend/utils', () => ({
 jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   logInfo: jest.fn(),
-  LogPrefix: { Steam: 'Steam' }
+  LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
+}))
+
+jest.mock('backend/sidecar/sidecarRpc', () => ({
+  requestRustInvoke: jest.fn()
 }))
 
 const mockedSpawnAsync = spawnAsync as jest.Mock
@@ -54,9 +60,17 @@ const HOARD_BARE_ACCESSORS = [
   'SteamUserStats'
 ]
 
+const IMPORT_SCAN_ENV = 'GAMELIB_SCANNER_IMPORT_SCAN'
+const savedImportScanEnv = process.env[IMPORT_SCAN_ENV]
+
 describe('importScan', () => {
   beforeEach(() => {
     mockedSpawnAsync.mockReset()
+    process.env[IMPORT_SCAN_ENV] = 'ts'
+  })
+  afterEach(() => {
+    if (savedImportScanEnv === undefined) delete process.env[IMPORT_SCAN_ENV]
+    else process.env[IMPORT_SCAN_ENV] = savedImportScanEnv
   })
 
   describe('parseSteamApiImports (pure wrapper over parseSteamApiImportTable)', () => {
@@ -564,6 +578,73 @@ Export Table:
       mockedSpawnAsync.mockClear()
       await scanSteamApiImports('1', join(dir, 'a.exe'))
       expect(mockedSpawnAsync).toHaveBeenCalledTimes(1 + 32)
+    })
+  })
+  describe('rust path', () => {
+    const mockedInvoke = requestRustInvoke as jest.Mock
+    beforeEach(() => {
+      process.env[IMPORT_SCAN_ENV] = 'rust'
+    })
+
+    it('makes one scan_steam_api_imports round-trip, strips diagnostics and forwards them', async () => {
+      mockedInvoke.mockResolvedValue({
+        status: 'ok',
+        arch: 'x64',
+        dll: 'steam_api64.dll',
+        symbols: ['SteamAPI_Init'],
+        diagnostics: [
+          { level: 'warn', message: 'rust warn' },
+          { level: 'info', message: 'rust info' }
+        ]
+      })
+      const result = await scanSteamApiImports('1234', '/g/Game.exe', 'test')
+      expect(mockedInvoke).toHaveBeenCalledTimes(1)
+      expect(mockedInvoke).toHaveBeenCalledWith('scan_steam_api_imports', [
+        { exePath: '/g/Game.exe', appId: '1234' }
+      ])
+      expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      expect(result).toEqual({
+        status: 'ok',
+        arch: 'x64',
+        dll: 'steam_api64.dll',
+        symbols: ['SteamAPI_Init']
+      })
+      expect(result).not.toHaveProperty('diagnostics')
+      expect(logWarning).toHaveBeenCalledWith('rust warn', 'Steam')
+      expect(logInfo).toHaveBeenCalledWith('rust info', 'Steam')
+    })
+
+    it('leaves delaySymbols absent when the Rust result has none', async () => {
+      mockedInvoke.mockResolvedValue({
+        status: 'ok',
+        arch: 'x86',
+        dll: 'steam_api.dll',
+        symbols: [],
+        diagnostics: []
+      })
+      const result = await scanSteamApiImports('1234', '/g/Game.exe', 'test')
+      expect(result).not.toHaveProperty('delaySymbols')
+    })
+
+    it('rejects a non-numeric appId before any scanner call', async () => {
+      const result = await scanSteamApiImports('abc', '/g/Game.exe', 'test')
+      expect(result).toEqual({
+        status: 'error',
+        error: 'Invalid appId: "abc"'
+      })
+      expect(mockedInvoke).not.toHaveBeenCalled()
+      expect(mockedSpawnAsync).not.toHaveBeenCalled()
+    })
+
+    it('fails closed with a typed error when the transport rejects', async () => {
+      mockedInvoke.mockRejectedValue(new Error('pipe closed'))
+      const result = await scanSteamApiImports('1234', '/g/Game.exe', 'test')
+      expect(result).toEqual({
+        status: 'error',
+        error: 'Rust scan failed: Error: pipe closed'
+      })
+      expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      expect(logWarning).toHaveBeenCalled()
     })
   })
 })

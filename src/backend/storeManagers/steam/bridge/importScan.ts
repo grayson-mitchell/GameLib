@@ -25,10 +25,12 @@
  * exe loads steam_api through an importing DLL (Grim Dawn: Engine.dll) reports
  * that arch and those symbols.
  *
- * Phase 63: the objdump scan (closure walk, delay merge, conflict checks) now
- * lives in `backend/scanners/legacyTsScanners.ts` as the TS oracle for the Rust
- * port; this module validates appId, injects the objdump runner and forwards the
- * oracle's diagnostics to the logger.
+ * Phase 63: the scan is native in Rust (gamelib-scan `scan_steam_api_imports`,
+ * D-05/D-06: closure walk, delay merge and conflict checks in one round-trip). The
+ * objdump implementation is kept as the `ts` fallback in
+ * `backend/scanners/legacyTsScanners.ts` until 63-13 (the module is deleted in
+ * 63-14). This module validates appId, picks the implementation and forwards the
+ * diagnostics to the logger. A transport failure fails closed to a typed error.
  *
  * Quick 261024-j4l: `objdump --private-headers` does NOT list the PE Delay
  * Import Directory, so a delay-only importer (Manor Lords' Shipping exe) used
@@ -44,6 +46,7 @@ import {
   OBJDUMP_BIN,
   steamApiImportsTs
 } from '../../../scanners/legacyTsScanners'
+import { runScanner } from '../../../scanners/rustScan'
 import type { ImportScanResult } from '../../../scanners/scanTypes'
 
 /**
@@ -68,7 +71,8 @@ export function parseSteamApiImports(objdumpOutput: string): string[] {
  */
 export async function scanSteamApiImports(
   appId: string,
-  exePath: string
+  exePath: string,
+  caller = 'scanSteamApiImports'
 ): Promise<ImportScanResult> {
   if (!NUMERIC_APP_ID.test(appId)) {
     logWarning(
@@ -78,15 +82,31 @@ export async function scanSteamApiImports(
     return { status: 'error', error: `Invalid appId: "${appId}"` }
   }
 
-  const { diagnostics, ...result } = await steamApiImportsTs(
-    { exePath, appId },
-    {
-      runObjdump: (path) => spawnAsync(OBJDUMP_BIN, ['--private-headers', path])
+  try {
+    const { diagnostics, ...result } = await runScanner(
+      'importScan',
+      'scan_steam_api_imports',
+      { exePath, appId },
+      () =>
+        steamApiImportsTs(
+          { exePath, appId },
+          {
+            runObjdump: (path) =>
+              spawnAsync(OBJDUMP_BIN, ['--private-headers', path])
+          }
+        ),
+      caller
+    )
+    for (const d of diagnostics ?? []) {
+      if (d.level === 'warn') logWarning(d.message, LogPrefix.Steam)
+      else logInfo(d.message, LogPrefix.Steam)
     }
-  )
-  for (const d of diagnostics) {
-    if (d.level === 'warn') logWarning(d.message, LogPrefix.Steam)
-    else logInfo(d.message, LogPrefix.Steam)
+    return result
+  } catch (error) {
+    logWarning(
+      `scanSteamApiImports: rust scan failed for appId ${appId} ("${exePath}"): ${String(error)}`,
+      LogPrefix.Steam
+    )
+    return { status: 'error', error: `Rust scan failed: ${String(error)}` }
   }
-  return result
 }

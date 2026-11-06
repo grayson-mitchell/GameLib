@@ -1377,7 +1377,11 @@ describe('shimGenerate', () => {
           expect(result.shimPaths).toEqual([resolve(dll)])
         }
         expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
-        expect(mockedScanSteamApiImports).toHaveBeenCalledWith(appId, shipping)
+        expect(mockedScanSteamApiImports).toHaveBeenCalledWith(
+          appId,
+          shipping,
+          'bridgeScan'
+        )
       }
     )
 

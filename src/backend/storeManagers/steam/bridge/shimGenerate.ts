@@ -803,7 +803,7 @@ function withhold(input: WithholdInput): PlaceShimResultBase {
 /** D-53-12: the shared scan module's injected dependencies. */
 function scanDeps(appId: string): BridgeScanDeps {
   return {
-    scanImports: (p) => scanSteamApiImports(appId, p),
+    scanImports: (p) => scanSteamApiImports(appId, p, 'bridgeScan'),
     warn: (m) => logWarning(m, LogPrefix.Steam),
     isShimBytes: isGameLibShimBytes
   }
@@ -863,7 +863,11 @@ async function placeShimForGameInner(
 
   // Scan FIRST: the arch (and therefore the target filename) is not known
   // until the exe's own import table says so.
-  const importResult = await scanSteamApiImports(appId, resolvedExePath)
+  const importResult = await scanSteamApiImports(
+    appId,
+    resolvedExePath,
+    'placeShimForGame'
+  )
   if (importResult.status === 'error') {
     return { status: 'error', error: importResult.error }
   }
