@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: milestone_complete
-stopped_at: v0.9 milestone completed and archived 2026-11-06 — next is /gsd-new-milestone
-last_updated: 2026-11-04T08:00:11.271Z
-last_activity: 2026-11-06
+status: Awaiting next milestone
+stopped_at: Phase 62 context gathered
+last_updated: "2026-11-06T08:58:48.873Z"
+last_activity: 2026-11-06 — Milestone v0.9 completed and archived
 progress:
   total_phases: 10
   completed_phases: 10
@@ -557,9 +557,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-06
-Stopped at: v0.9 milestone completed and archived (2026-11-06)
-Resume file: None
+Last session: 2026-11-06T08:58:48.865Z
+Stopped at: Phase 62 context gathered
+Resume file: .planning/phases/62-module-boundaries-and-decomposition/62-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
