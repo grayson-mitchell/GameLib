@@ -101,7 +101,7 @@ import { stopBridgeHelper } from './bridge/helperProcess'
 import { type BridgeRouteInput } from './bridge/bridgeRoute'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import type { EnginePin } from './engine/enginePins'
-import { STEAM_STORE_API } from './gameConstants'
+import { STEAM_STORE_API, NUMERIC_APP_ID } from './gameConstants'
 import {
   nativeInstallsInFlight,
   bridgeLaunchBottles,
@@ -174,12 +174,6 @@ import {
   launchDrmModeGame
 } from './gameLaunch'
 import { moveInstall, repair, syncSaves } from './gameMaintenance'
-
-/** The project-wide appId shape guard (clientSetup.ts, installFormIpc.ts,
- * bottle.ts, bridge/allowlist.ts all carry the identical regex). Used by
- * uninstallBottleGameDirectly to validate a renderer-supplied appId before it
- * is interpolated into a filesystem delete target — 34.13 review A-12. */
-const NUMERIC_APP_ID = /^\d+$/
 
 const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com/steam/apps'
 
