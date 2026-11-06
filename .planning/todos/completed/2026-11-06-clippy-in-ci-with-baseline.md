@@ -34,3 +34,19 @@ Run with `/gsd-quick`.
 Do not fix warnings in the same commit that adds the gate. Fixes go in separate follow-up commits
 that lower the baseline. If the `main.rs` split quick task is in flight, sequence after it to
 avoid churn.
+
+## Closure
+
+Closed by quick task 261107-8yq (2026-11-07).
+
+- Measured on rustc 1.99.1 / clippy 0.1.99, aarch64-apple-darwin: 23 unique warnings (38 raw,
+  deduplicated across the bin and test targets): doc_lazy_continuation 5; type_complexity 2;
+  needless_borrow 2; unnecessary_to_owned 2; cloned_ref_to_slice_refs 2; non_snake_case 2;
+  dead_code 1; incompatible_msrv 1; match_like_matches_macro 1; manual_hash_one 1;
+  useless_conversion 1; bool_comparison 1; needless_borrows_for_generic_args 1;
+  if_same_then_else 1.
+- The gate (`meta/clippyRatchet.cjs`) is equality/shrink-only per lint, on the macOS leg only,
+  with the toolchain pinned to 1.99.1.
+- `[lints.clippy]` in `src-tauri/Cargo.toml` denies `dbg_macro` and `todo`.
+- Windows is deferred to `2026-11-07-clippy-ratchet-windows-leg`.
+- No warnings were fixed in the gate commits, per the spec.
