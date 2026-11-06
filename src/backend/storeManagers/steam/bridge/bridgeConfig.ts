@@ -29,11 +29,11 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 
 import { logError, logWarning, LogPrefix } from 'backend/logger'
 import { getBottleDir, sanitizeBottleName } from '../bottle'
+import { NUMERIC_APP_ID } from '../gameConstants'
 
 // Pattern repeated verbatim across bottle.ts:836, clientSetup.ts:40,
 // importScan.ts, shimGenerate.ts -- reuse the SAME regex value/name, do not
 // redefine a divergent one.
-const NUMERIC_APP_ID = /^\d+$/
 
 /**
  * Matches `meta/gen_vtables.ts`'s `BRIDGE_CONFIG_FILENAME` define in the

@@ -31,13 +31,13 @@ import {
   setBridgeUserRoute,
   setBridgeNoticeAcknowledged
 } from './bridge/bridgeVerdict'
+import { NUMERIC_APP_ID } from './gameConstants'
 
 // T-21-05 pattern, reused a fourth time in this directory (depot.ts,
 // installLocation.ts, clientSetup.ts). This is the ONE seam both the
 // isSteamBottleEligible handler AND any future internal caller pass through,
 // so guarding here covers the untrusted-IPC-input case at its true entry
 // point without a second, duplicated guard in main.ts.
-const NUMERIC_APP_ID = /^\d+$/
 
 const WINE_INSTALLATION_TYPES = [
   'wine',

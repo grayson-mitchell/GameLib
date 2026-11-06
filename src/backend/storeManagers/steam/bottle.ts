@@ -59,6 +59,7 @@ import {
   resolveCrossoverBinDir,
   resolveCrossoverBinDirAsync
 } from './crossoverLocation'
+import { NUMERIC_APP_ID } from './gameConstants'
 
 // ── Phase 24 (24-04): dedicated bridge bottle (macOS native Steam bridge) ──
 // D-08/R6/Pitfall 1: the bridge bottle is a SEPARATE, shared CrossOver
@@ -1100,8 +1101,6 @@ export async function provisionBottle(opts?: {
 }
 
 // ── 17-04: bottled-Steam verb dispatch ──────────────────────────────────────
-
-const NUMERIC_APP_ID = /^\d+$/
 
 type BottledSteamVerb = 'install' | 'launch' | 'uninstall'
 type BottledSteamResult = { status: 'done' | 'error'; error?: string }

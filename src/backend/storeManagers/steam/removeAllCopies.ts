@@ -16,11 +16,10 @@ import {
   removeSteamInstallCopy,
   pollUninstallOnce
 } from './library'
+import { NUMERIC_APP_ID } from './gameConstants'
 
-// Mirrors installFormIpc.ts's own NUMERIC_APP_ID copy (34.13 review A-12
-// pattern) — each file in this directory carries its own local copy by
-// established convention rather than sharing one import.
-const NUMERIC_APP_ID = /^\d+$/
+// NUMERIC_APP_ID is the shared appId guard from gameConstants.ts (34.13
+// review A-12).
 
 // Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
 // file (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an

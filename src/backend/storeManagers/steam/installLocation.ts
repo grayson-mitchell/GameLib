@@ -26,10 +26,10 @@ import {
   STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS
 } from './withTimeout'
 import { readAcfInstalldir } from './acfInstalldir'
+import { NUMERIC_APP_ID } from './gameConstants'
 
 /** Numeric-only guard for appId before any PICS lookup (T-21-05 — reused from
  *  games.ts's buildSteamProtocolUrl / bottle.ts's dispatchToBottledSteam). */
-const NUMERIC_APP_ID = /^\d+$/
 
 /** Safe fallback installdir prefix used when PICS returns nothing usable, or
  *  when it returns a hostile value (T-21-01). Never derived from unsanitized

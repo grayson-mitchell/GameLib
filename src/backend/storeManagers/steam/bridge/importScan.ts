@@ -37,11 +37,11 @@ import { spawnAsync } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { parseImportedDllNames, parseSteamApiImportTable } from './importParse'
 import { readPeSteamApiDelayImports } from './peSteamDrm'
+import { NUMERIC_APP_ID } from '../gameConstants'
 
 // Pattern repeated verbatim across bottle.ts:836, clientSetup.ts:40,
 // allowlist.ts:33 -- reuse the SAME regex value/name, do not redefine a
 // divergent one.
-const NUMERIC_APP_ID = /^\d+$/
 
 const OBJDUMP_BIN = '/usr/bin/objdump'
 

@@ -97,6 +97,7 @@ import {
   captureOwnedAppPlatforms,
   type PlatformCapturePicsClient
 } from './platformCapture'
+import { NUMERIC_APP_ID } from './gameConstants'
 
 /**
  * Which Steam client's steamapps root an ACF scan/poll should target.
@@ -2459,11 +2460,6 @@ export type RemoveCopyResult =
     }
   | { status: 'absent'; source: AcfSource }
   | { status: 'refused'; source: AcfSource; reason: string }
-
-/** Shared appId shape guard (34.13 review A-12) — mirrors games.ts's own
- *  NUMERIC_APP_ID and installFormIpc.ts's own copy; each file in this repo
- *  carries its own local copy of this regex by established convention. */
-const NUMERIC_APP_ID = /^\d+$/
 
 /**
  * quick-260821-le0: deletes ONE root's install copy for `appId`. Ports the

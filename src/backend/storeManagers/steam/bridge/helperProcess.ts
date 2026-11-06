@@ -74,8 +74,7 @@ import {
   STATUS_OK,
   FrameTooLargeError
 } from './protocol'
-
-const NUMERIC_APP_ID = /^\d+$/
+import { NUMERIC_APP_ID } from '../gameConstants'
 
 // Same 127.0.0.1-only loopback host every native helper (bridge_helper.c)
 // binds -- T-51-01 (carries forward T-24-01), never a routable interface.

@@ -23,11 +23,11 @@ import {
   type SteamBridgeVerdict,
   type SteamMetadataCacheEntry
 } from '../electronStores'
+import { NUMERIC_APP_ID } from '../gameConstants'
 
 // Pattern repeated verbatim across bottle.ts:826, clientSetup.ts:40,
 // allowlist.ts, importScan.ts -- reuse the SAME regex value/name, do not
 // redefine a divergent one.
-const NUMERIC_APP_ID = /^\d+$/
 
 // quick 261026-u1a: the non-strict objects below strip undeclared keys on
 // read (Pitfall 2), so the lif backup fingerprints must be declared in both

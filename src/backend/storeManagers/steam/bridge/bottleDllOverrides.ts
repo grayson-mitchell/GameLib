@@ -21,6 +21,7 @@
 
 import type { GameSettings } from 'common/types'
 import { logWarning, LogPrefix } from 'backend/logger'
+import { NUMERIC_APP_ID } from '../gameConstants'
 
 interface BridgeBottleDllOverride {
   readonly dlls: readonly string[]
@@ -35,8 +36,6 @@ export const BRIDGE_BOTTLE_DLL_OVERRIDES: Readonly<
     exe: 'Overlooting.exe'
   })
 })
-
-const NUMERIC_APP_ID = /^\d+$/
 
 export function buildOverrideCommandParts(
   dll: string,

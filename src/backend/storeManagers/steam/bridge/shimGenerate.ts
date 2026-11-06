@@ -133,11 +133,11 @@ import {
   classifyUnservableInterfaceVersions,
   SHIM_EXPORT_SET_VERSION
 } from './shimCoverage'
+import { NUMERIC_APP_ID } from '../gameConstants'
 
 // Pattern repeated verbatim across bottle.ts:836, clientSetup.ts:40,
 // importScan.ts -- reuse the SAME regex value/name, do not redefine a
 // divergent one.
-const NUMERIC_APP_ID = /^\d+$/
 
 const BRIDGE_SHIM_FILENAME = 'steam_api.dll'
 const BRIDGE_SHIM64_FILENAME = 'steam_api64.dll'

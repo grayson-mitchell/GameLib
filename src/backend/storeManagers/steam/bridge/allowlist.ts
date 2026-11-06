@@ -56,10 +56,10 @@ import type { SteamBridgeKnownBadReason } from 'common/types/steam'
 // data is present in the bundle while preserving the fail-loud `.parse()`
 // posture below (a malformed asset still throws at module load).
 import bridgeAllowlistJson from './bridge-allowlist.json'
+import { NUMERIC_APP_ID } from '../gameConstants'
 
 // Pattern repeated verbatim across bottle.ts:826, clientSetup.ts:40 -- reuse
 // the SAME regex value/name, do not redefine a divergent one.
-const NUMERIC_APP_ID = /^\d+$/
 
 // D-51-08's closed reason taxonomy, as a zod enum. Kept as a `const` tuple
 // (not inlined into `z.enum([...])`) so the exhaustiveness check below can

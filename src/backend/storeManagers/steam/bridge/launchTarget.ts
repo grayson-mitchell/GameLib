@@ -44,11 +44,11 @@ import {
   STEAM_PICS_BULK_TIMEOUT_MS,
   STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS
 } from '../withTimeout'
+import { NUMERIC_APP_ID } from '../gameConstants'
 
 // Pattern repeated verbatim across bottle.ts, clientSetup.ts,
 // installLocation.ts, allowlist.ts, importScan.ts, shimGenerate.ts -- reuse
 // the SAME regex value/name, do not redefine a divergent one.
-const NUMERIC_APP_ID = /^\d+$/
 
 interface AppLaunchEntry {
   executable?: string

@@ -1,4 +1,5 @@
 import { logWarning, LogPrefix } from 'backend/logger'
+import { NUMERIC_APP_ID } from './gameConstants'
 
 /**
  * Build a validated steam:// protocol URL.
@@ -18,7 +19,7 @@ export function buildSteamProtocolUrl(
   verb: 'rungameid' | 'launch' | 'install' | 'uninstall',
   appId: string
 ): string | null {
-  if (!/^\d+$/.test(appId)) {
+  if (!NUMERIC_APP_ID.test(appId)) {
     logWarning(
       `SteamGame: rejected non-numeric appId "${appId}" — not constructing steam:// URL (T-03-01)`,
       LogPrefix.Steam

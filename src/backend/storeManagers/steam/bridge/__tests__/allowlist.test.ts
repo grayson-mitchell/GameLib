@@ -333,9 +333,12 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
 })
 
 describe('allowlist.ts reuses the shared NUMERIC_APP_ID convention', () => {
-  test('defines NUMERIC_APP_ID = /^\\d+$/ verbatim (bottle.ts:826 / clientSetup.ts:40 precedent), not a divergent regex', () => {
+  test('imports the single NUMERIC_APP_ID from gameConstants, not a divergent local regex', () => {
     const source = readFileSync(join(__dirname, '..', 'allowlist.ts'), 'utf-8')
 
-    expect(source).toContain('const NUMERIC_APP_ID = /^\\d+$/')
+    expect(source).toContain(
+      "import { NUMERIC_APP_ID } from '../gameConstants'"
+    )
+    expect(source).not.toContain('const NUMERIC_APP_ID')
   })
 })

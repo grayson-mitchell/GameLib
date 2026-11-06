@@ -37,9 +37,9 @@ import {
 } from './library'
 import { getBottleSteamappsDir, getSteamBottleSettings } from './bottle'
 import { sanitizeInstalldir } from './installLocation'
+import { NUMERIC_APP_ID } from './gameConstants'
 
 /** Local copy by directory convention (see library.ts). */
-const NUMERIC_APP_ID = /^\d+$/
 
 export const CANCEL_DELETE_POLL_MS = 100
 export const CANCEL_DELETE_TIMEOUT_MS = 60000

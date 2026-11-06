@@ -40,8 +40,7 @@ import {
   STEAM_SETUP_EXE_URL,
   steamSupportPath
 } from './constants'
-
-const NUMERIC_APP_ID = /^\d+$/
+import { NUMERIC_APP_ID } from './gameConstants'
 
 // Shown to the user after the frontend's "Steam setup could not start: " prefix;
 // the exit code and stderr detail go to the log instead.
