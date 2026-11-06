@@ -36,11 +36,14 @@ fn main() {
     let argv: Vec<String> = std::env::args().skip(1).collect();
     match argv.as_slice() {
         [flag] if flag == "--list" => {
-            let ops: Vec<&str> = gamelib_scan::OPS
+            // CLI_ONLY_OPS are also in OPS (the library dispatches them); dedupe the union.
+            let mut ops: Vec<&str> = gamelib_scan::OPS
                 .iter()
                 .chain(gamelib_scan::CLI_ONLY_OPS.iter())
                 .copied()
                 .collect();
+            ops.sort_unstable();
+            ops.dedup();
             println!("{}", serde_json::to_string(&ops).unwrap_or_default());
         }
         [flag] if flag == "--ndjson" => {
