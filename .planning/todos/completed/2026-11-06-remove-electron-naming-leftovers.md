@@ -47,3 +47,11 @@ Run with `/gsd-quick`, after Phase 62 and Phase 65 so their file moves don't con
    must be installed before any backend import (its header records the Phase 27 blank-screen
    incident), so check the sidecar still boots: `pnpm smoke:sidecar`, then a live `pnpm tauri:dev`.
    If there are many, raise a follow-up todo instead of growing this one.
+
+## Resolution (2026-11-07, quick-261107-a1j)
+
+Naming scheme: domain modules `<dir>/electronStores.ts` and `electronStore.ts` became `<dir>/stores.ts` (16 backend domains plus `src/frontend/helpers/stores.ts`); `backend/electron_store.ts` and `common/types/electron_store.ts` became `typed_store.ts`; `doc/electron_store.md` became `doc/typed_store.md`; the prose name `electronStub` became `platform/index.ts` / `platformApi`. Every store's on-disk identity (constructor store-name, `cwd:`, `name:`, `configName:`) was diffed before/after and is identical. Rename commit: 86451c8da. Hook retirement commit: d056981fc (its deletion of `installElectronHook.ts` was swept into the concurrent docs commit 82b153915 via the shared index).
+
+Hook verdict: retired. Measured 0 runtime `electron` specifier callers under src/ and meta/, and 0 `require("electron")` / `import("electron")` in `build/main/sidecar.js`. The `constants/paths.ts` repoint to `backend/platform` had already landed in Phase 35. `bootstrap.ts` keeps `import '../platform'` as its first import.
+
+Still pending as a human step: the live `pnpm tauri:dev` boot check.
