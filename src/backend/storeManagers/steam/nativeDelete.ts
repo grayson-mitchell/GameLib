@@ -12,7 +12,7 @@ import { readRunningAppId } from './library'
 import { requestSteamUninstallApp } from './steamInstallApp'
 import type { SteamUninstallAppOutcome } from './steamInstallApp'
 
-export type SteamNativeDeleteDecision =
+type SteamNativeDeleteDecision =
   | { route: 'refused-running' }
   | { route: 'steam-uninstalled' }
   | { route: 'fallback'; why: string }
