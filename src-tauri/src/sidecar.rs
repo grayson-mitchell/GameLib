@@ -1,21 +1,26 @@
 use super::*;
 
 // ---- Contract mirror (keep in lockstep with src/common/types/sidecarTransport.ts) ----
+// Marker contract: transportParity.test.ts finds these by `transport-mirror:` comment; keep the marker with its const if it moves files.
 
 /// Printed once by the sidecar on stdout when it has installed its Electron shims and
 /// finished importing the backend modules. Mirrors READY_SENTINEL.
+// transport-mirror: READY_SENTINEL
 const READY_SENTINEL: &str = "__GAMELIB_SIDECAR_READY__";
 
 /// Tauri event name re-emitted to the webview for every SidecarNotification.
 /// Mirrors FRONTEND_MESSAGE_EVENT.
+// transport-mirror: FRONTEND_MESSAGE_EVENT
 const FRONTEND_MESSAGE_EVENT: &str = "frontend_message";
 
 /// `send`-kind channel this shell writes to the sidecar's stdin from `.setup()`'s
 /// `WindowEvent::Focused(true)` handler, restoring the install-badge reconciliation trigger
 /// dropped in the Electron to Tauri cutover. Mirrors SHELL_WINDOW_FOCUSED.
+// transport-mirror: SHELL_WINDOW_FOCUSED
 pub(crate) const SHELL_WINDOW_FOCUSED: &str = "shellWindowFocused";
 
 /// Reserved channel the store-snapshot command invokes on.
+// transport-mirror: STORE_SNAPSHOT_CHANNEL
 pub(crate) const STORE_SNAPSHOT_CHANNEL: &str = "sidecar:store-snapshot";
 
 
@@ -484,6 +489,7 @@ pub(crate) fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std
             // until the user responds, and handling it on the reader thread would stall
             // every other sidecar response behind it (threat T-28-05, head-of-line blocking),
             // timing out unrelated pending `invoke`s at INVOKE_TIMEOUT.
+            // transport-mirror: RUST_INVOKE_KIND
             if kind == Some("rustInvoke") {
                 let id = value
                     .get("id")
