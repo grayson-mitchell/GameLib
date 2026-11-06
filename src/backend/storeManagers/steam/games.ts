@@ -3,7 +3,7 @@ import i18next from 'i18next'
 import { shell } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
-import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import {
   ExtraInfo,
   GameInfo,
@@ -64,8 +64,6 @@ import {
   isBottleReady,
   getSteamBottleSettings,
   getBottleSteamappsDir,
-  getBottleDir,
-  isBridgeBottleReady,
   getBridgeBottleSettings,
   bridgeBottleNameFor,
   removePerGameBridgeBottle,
@@ -94,7 +92,6 @@ import { noteSteamAuthTrigger } from './authTrigger'
 import { type AuthSessionRefusal } from './user'
 import { type DrmLaunchReady } from './bridge/drm/drmLaunchSetup'
 import { type DrmStep } from './bridge/drm/steamclientLayerMode'
-import { restoreBridgeSteamApiOriginals } from './bridge/originalRestore'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
 import { stopBridgeHelper } from './bridge/helperProcess'
 // Phase 51 Plan 09 (D-51-07/09): the pure routing resolver + the persisted
@@ -176,6 +173,7 @@ import {
   readLaunchExeCegMarkers,
   launchDrmModeGame
 } from './gameLaunch'
+import { moveInstall, repair, syncSaves } from './gameMaintenance'
 
 /** The project-wide appId shape guard (clientSetup.ts, installFormIpc.ts,
  * bottle.ts, bridge/allowlist.ts all carry the identical regex). Used by
@@ -1600,15 +1598,8 @@ export default class SteamGame implements Game {
     )
   }
 
-  async moveInstall(_newInstallPath: string): Promise<InstallResult> {
-    logWarning(
-      `SteamGame.moveInstall not implemented until Phase 2 (appId: ${this.appId})`,
-      LogPrefix.Steam
-    )
-    return {
-      status: 'error',
-      error: 'Steam library not implemented until Phase 2'
-    }
+  moveInstall(_newInstallPath: string): Promise<InstallResult> {
+    return moveInstall(this, _newInstallPath)
   }
 
   /**
@@ -1617,58 +1608,16 @@ export default class SteamGame implements Game {
    * bridge titles' steam_api originals only; a full-depot verify is out of
    * scope. The next launch sees the new backup and rescans (shimGenerate.ts).
    */
-  async repair(): Promise<ExecResult> {
-    const scoped = (): Error =>
-      new Error(
-        `Repair restores bridge steam_api originals; appId ${this.appId} has no bridge install (a full depot verify is not supported)`
-      )
-    const exePath = await resolveBridgeLaunchExe(this.appId)
-    const bottle = getBridgeBottleSettings(this.appId).wineCrossoverBottle
-    if (!exePath || !isBridgeBottleReady(bottle) || !existsSync(exePath)) {
-      throw scoped()
-    }
-    const installRoot = this.resolveBridgeGameInstallRoot(exePath, bottle)
-    if (!installRoot) throw scoped()
-
-    const result = await restoreBridgeSteamApiOriginals({
-      appId: this.appId,
-      bottleDir: resolve(getBottleDir(bottle)),
-      installRoot,
-      installdir: basename(installRoot)
-    })
-    const lines = result.outcomes.map((o) => {
-      const rel = relative(installRoot, o.path)
-      return `${rel}: ${o.outcome}${o.detail ? ` (${o.detail})` : ''}`
-    })
-    for (const line of lines) {
-      logInfo(`SteamGame.repair appId ${this.appId}: ${line}`, LogPrefix.Steam)
-    }
-    if (result.status !== 'ok') {
-      const failed = result.outcomes
-        .filter(
-          (o) => o.outcome === 'download-failed' || o.outcome === 'refused'
-        )
-        .map(
-          (o) =>
-            `${relative(installRoot, o.path)}: ${o.outcome}${o.detail ? ` (${o.detail})` : ''}`
-        )
-      throw new Error(
-        `Could not restore steam_api originals for appId ${this.appId}${failed.length ? `: ${failed.join('; ')}` : ' (restore failed)'}`
-      )
-    }
-    return { stdout: lines.join('\n'), stderr: '' }
+  repair(): Promise<ExecResult> {
+    return repair(this)
   }
 
-  async syncSaves(
+  syncSaves(
     _arg: string,
     _path: string,
     _gogSaves?: GOGCloudSavesLocation[]
   ): Promise<string> {
-    logWarning(
-      `SteamGame.syncSaves not implemented until Phase 2 (appId: ${this.appId})`,
-      LogPrefix.Steam
-    )
-    return 'Steam library not implemented until Phase 2'
+    return syncSaves(this, _arg, _path, _gogSaves)
   }
 
   /**
