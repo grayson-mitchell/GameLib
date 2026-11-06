@@ -30,9 +30,9 @@ import SteamGame, {
   DRM_DLLPATH_CHANNEL,
   DRM_DLLOVERRIDES_CHANNEL,
   DRM_TRACE_KEEP_PER_APP,
-  MAC_STEAM_CLIENT_SUBPATH,
-  buildSteamProtocolUrl
+  MAC_STEAM_CLIENT_SUBPATH
 } from '../games'
+import { buildSteamProtocolUrl } from '../gameProtocolUrl'
 import {
   parseSteamStorageRequirement,
   getSteamInstallSize,
