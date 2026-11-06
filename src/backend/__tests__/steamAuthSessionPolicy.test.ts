@@ -48,8 +48,10 @@ const S = 'src/backend/storeManagers/steam/'
 const USER = `${S}user.ts`
 const ANON = `${S}anonymousClient.ts`
 const GAMES = `${S}games.ts`
+// 62-06: the install cluster (acquireAuthenticated, allowLogon: true) was lifted out of games.ts.
+const INSTALL = `${S}gameInstall.ts`
 
-const ACQUIRE_AUTH_ALLOW = [USER, `${S}library.ts`, `${S}depot.ts`, GAMES]
+const ACQUIRE_AUTH_ALLOW = [USER, `${S}library.ts`, `${S}depot.ts`, INSTALL]
 const ACQUIRE_OPEN_ALLOW = [
   USER,
   `${S}library.ts`,
@@ -214,9 +216,9 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
     expect(offenders).toEqual([])
   })
 
-  it('Rule I: allowLogon: true occurs exactly once, in games.ts', () => {
+  it('Rule I: allowLogon: true occurs exactly once, in gameInstall.ts', () => {
     const hits = filesMatching(/allowLogon\s*:\s*true/)
-    expect([...hits.entries()]).toEqual([[GAMES, 1]])
+    expect([...hits.entries()]).toEqual([[INSTALL, 1]])
   })
 
   it('Rule J: getExtraInfo in games.ts calls nothing on SteamUser', () => {

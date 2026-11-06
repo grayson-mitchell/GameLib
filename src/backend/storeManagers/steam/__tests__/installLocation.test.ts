@@ -623,8 +623,12 @@ describe('classifyDepotError reachability — UnsafeInstalldirError (D-04, T-37-
  * asserting behaviour, so the non-vacuity check below pins that the gate
  * actually fails against the exact shipped-defect shape.
  */
-describe('37-REVIEW C-01: games.ts classifies UnsafeInstalldirError itself', () => {
-  const gamesSource = readFileSync(join(__dirname, '..', 'games.ts'), 'utf8')
+describe('37-REVIEW C-01: gameInstall.ts classifies UnsafeInstalldirError itself', () => {
+  // 62-06: the install cluster (incl. the handler) was lifted out of games.ts.
+  const gamesSource = readFileSync(
+    join(__dirname, '..', 'gameInstall.ts'),
+    'utf8'
+  )
 
   /** The `if (err instanceof UnsafeInstalldirError) { ... }` block. */
   const handler = (() => {
@@ -633,7 +637,7 @@ describe('37-REVIEW C-01: games.ts classifies UnsafeInstalldirError itself', () 
     )
     if (start === -1) {
       throw new Error(
-        'UnsafeInstalldirError handler not found in games.ts — this gate has ' +
+        'UnsafeInstalldirError handler not found in gameInstall.ts — this gate has ' +
           'rotted; find where the security abort moved to and re-point it.'
       )
     }
