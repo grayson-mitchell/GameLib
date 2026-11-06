@@ -67,6 +67,10 @@ concurrency:
 #       nothing about the real SEA sidecar or its externalBin naming/packaging -- a sidecar build
 #       that stopped emitting `gamelib-sidecar-<triple>` would still pass here and surface only in
 #       release-tauri.yml.
+#   (f) clippy lints only what compiles on macOS arm64. `cfg(windows)`/`cfg(target_os =
+#       "windows")` code is never linted. The Windows leg has no clippy baseline until the
+#       follow-up todo `2026-11-07-clippy-ratchet-windows-leg` lands, so a lint regression that
+#       only exists under Windows cfg passes here.
 # And: passing here does not make this a "required check" on `main`. That is a GitHub
 # branch-protection/ruleset setting under Settings -> Branches, performed by a repo admin, and is
 # NOT established by this file.
@@ -164,3 +168,30 @@ jobs:
         shell: bash
         working-directory: src-tauri
         run: cargo test --bin gamelib-shell
+
+      # Clippy runs on the macOS leg only: macos-latest is arm64, the same triple the ceilings in
+      # meta/clippyRatchet.cjs were measured on, and cfg-gated code differs per OS, so a Windows
+      # ceiling cannot be measured from a Mac (see caveat (f)).
+      #
+      # The toolchain is pinned rather than `@stable`: new clippy releases add and re-tune lints,
+      # and an equality ceiling would turn main red on a Rust release with no repo change. The pin
+      # MUST equal CLIPPY_TOOLCHAIN in meta/clippyRatchet.cjs; bumping it means re-measuring the
+      # ceilings in the same commit.
+      #
+      # This install MUST stay AFTER `cargo test`: dtolnay/rust-toolchain makes the toolchain it
+      # installs the default, so putting it earlier would silently re-pin the tests too.
+      #
+      # The ratchet fails on a rise AND on a fall (lower the ceiling in the same commit).
+      - name: Install pinned clippy toolchain (macOS leg only)
+        if: runner.os == 'macOS'
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+          components: clippy
+      - name: cargo clippy ratchet (macOS leg only, shrink-only baseline)
+        if: runner.os == 'macOS'
+        shell: bash
+        working-directory: src-tauri
+        run: |
+          cargo +1.99.1 clippy --all-targets --message-format=json > "$RUNNER_TEMP/clippy.json"
+          node ../meta/clippyRatchet.cjs "$RUNNER_TEMP/clippy.json" --list

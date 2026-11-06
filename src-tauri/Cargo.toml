@@ -415,6 +415,13 @@ windows-sys = { version = "0.60", features = [
 webview2-com = "0.38.2"
 windows = "0.61"
 
+# Restriction lints denied outright: both were at 0 hits on 2026-11-07 (quick 261107-8yq).
+# Everything else is held by meta/clippyRatchet.cjs rather than denied, so the warn-only baseline
+# is not undercut. This table changes no dependency, so Cargo.lock is untouched.
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+
 [profile.release]
 opt-level = "s"
 lto = true
