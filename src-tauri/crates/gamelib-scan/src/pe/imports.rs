@@ -288,6 +288,19 @@ pub(crate) mod tests {
         assert_eq!(steam_api_import_table(&mut SliceReader::new(&[0; 4])), None);
     }
 
+    /// 63-11 D-07: a Watcom-style section with VirtualSize 0 spans its raw size (the Windows
+    /// loader's rule). objdump rejects such a file ("RVA .. for import table not found"); the
+    /// native reader resolves the table. Rust is correct; the diff is recorded in 63-PARITY.md.
+    #[test]
+    fn zero_virtual_size_section_spans_raw_size() {
+        let mut b = sym_pe(false, &[("steam_api.dll", &["A"])]);
+        // Section table starts at 0x80 + 24 + 224; VirtualSize is at +8.
+        put32(&mut b, 0x80 + 24 + 224 + 8, 0);
+        let t = steam_api_import_table(&mut SliceReader::new(&b)).unwrap();
+        assert_eq!(t.dll, Some("steam_api.dll"));
+        assert_eq!(t.symbols, vec!["A"]);
+    }
+
     #[test]
     fn symbol_table_falls_back_to_first_thunk() {
         let mut b = sym_pe(false, &[("steam_api.dll", &["A"])]);
