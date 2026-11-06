@@ -119,7 +119,7 @@
  * 34.5 lands.
  */
 
-import { isStore, type StoreKey } from 'common/storeCapabilities'
+import { isStore } from 'common/storeCapabilities'
 import { ipcMain } from '../platform'
 // Load-bearing FIRST import (mirrors steamFlowRegistration.ts's Phase 27 Plan
 // 05 circular-dep fix): force `storeManagers/index.ts` to be the
@@ -252,7 +252,8 @@ export function registerSteamAuthFlows(): void {
       const store = payload?.store
       const key = payload?.key
       if (
-        !isStore(store as StoreKey | undefined, 'steam') ||
+        typeof store !== 'string' ||
+        !isStore(store, 'steam') ||
         typeof key !== 'string' ||
         key.length === 0
       ) {
