@@ -996,6 +996,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'installFlows.test.ts',
   'installedJsonWatcher.test.ts',
   'invokeReturnValueSweep.test.ts',
+  'ipcDomainCensus.test.ts',
   'isPackagedSidecar.test.ts',
   'keyringTokenStore.test.ts',
   'knownFolders.test.ts',
