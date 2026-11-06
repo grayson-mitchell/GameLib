@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: milestone_complete
-stopped_at: v0.9 audited 2026-11-05 (tech_debt, no blockers) — ready for /gsd-complete-milestone v0.9
+stopped_at: v0.9 milestone completed and archived 2026-11-06 — next is /gsd-new-milestone
 last_updated: 2026-11-04T08:00:11.271Z
-last_activity: 2026-11-05
+last_activity: 2026-11-06
 progress:
   total_phases: 10
   completed_phases: 10
@@ -18,10 +18,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-16)
+See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** v0.9 Steam Bridge & Engine (Phases 51–60) — all phases complete, audited 2026-11-05 (`v0.9-MILESTONE-AUDIT.md`, tech_debt); awaiting close. Phase 61 is outside v0.9's scope.
+**Current focus:** Planning the next milestone. v0.9 Steam Bridge & Engine (Phases 51–60) shipped 2026-11-06 and is archived in `milestones/v0.9-*`. Phases 61–64 (0 plans each) are unassigned.
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 > **v0.3** Humble · **v0.4** Compatibility Data · **v0.5** macOS Compat Runtime (17–19,
 > done) · **v0.6** Store Search · **v0.7** Steam Native Install (21–26, never formally
 > closed) · **v0.8** Tauri Shell (27–50, shipped 2026-10-16, override closeout) ·
-> **v0.9** Steam Bridge & Engine (51–60, audited 2026-11-05, not yet closed).
+> **v0.9** Steam Bridge & Engine (51–60, shipped 2026-11-06).
 > The earlier v0.5-vs-v0.7 taxonomy split is resolved: macOS-compat = v0.5 (complete),
 > native-install = **v0.7**. `package.json` is 0.8.0.
 
@@ -72,10 +72,10 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 60
+Phase: Milestone v0.9 complete
 Plan: 0 of 0
-Status: Milestone complete
-Last activity: 2026-11-06 - Completed quick task 261106-s3n: GameLib-side delete for Steam games
+Status: Awaiting next milestone
+Last activity: 2026-11-06 — Milestone v0.9 completed and archived
 
 Progress: [██████████] 100%
 
@@ -476,6 +476,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | Console / macOS | KNOWN LIMITATION — Launching a Steam game from Console mode on macOS shows a brief desktop-Space animation before the game appears. Cause: Console mode uses native fullscreen (its own macOS Space) so swipe-to-Space works; macOS must leave that Space when the game's window appears elsewhere. Not fixable from Electron without setSimpleFullScreen, which removes the swipe-able Space and has focus/chrome rough edges (prototyped + rejected in Phase 8 UAT test 11). `activate:false` on the steam:// handoff was tried and kept but does not remove the flash. Accepted as-is. | Accepted (won't fix) | Phase 8 UAT (2026-07-04) |
 | Humble Store | HSTORE-02: Read-only Humble bundle/deals listing in-app with "Buy on Humble" deep-links | Post-v0.3 | v0.3 requirements (separate data source; key management prioritized) |
 | v0.8 close 2026-10-16 | **Override closeout** — 429 items acknowledged via `audit-open acknowledge` (markers in the artifacts; verdict-preserving, self-invalidating), 140 evidence-table rows in five deferred-items.md ledgers left open because no row-level marker exists. 0 carried forward from a prior close. | override_closeout | 2026-10-16 (v0.8 close) |
+| v0.9 close 2026-11-06 | **782 items acknowledged and deferred** from the pre-close `audit-open` scan: 29 debug sessions, 5 todos, 748 quick tasks (738 `missing` + 10 `unknown`, i.e. a SUMMARY status the scanner cannot read). No markers were written, because the installed gsd-sdk has no acknowledge writer, so they will resurface at the next scan. Per-item rows are in STATE-HISTORY.md § Deferred Items archive — v0.9 close evidence rows. | acknowledged | 2026-11-06 (v0.9 close) |
 | fast | ELEX (411300) moved from bridge `knownBad` (does-not-run) to `seed`. Its loading-screen hang was the undelivered UserStatsReceived_t, fixed by 261027-k51. The live run reached the main menu with 529 s of play and game-originated stats calls. Seeded without `playVerified` because no UAT item records the run yet. Only the ELEX change was committed; the uncommitted Unclaimed World knownBad edit is left in the working tree. allowlist + games tests 425/425. | 2026-10-27 | `39ace9c19` | Done | — |
 | fast | Unclaimed World (284100) committed as bridge `knownBad` does-not-run, with the debug/unclaimed-world-wmv-mf root cause (no WMV3/WMA9 decoder in CrossOver GStreamer) and the architecture note. Playable on the operator machine only, through a hand-applied local fix: spike 042 gst-libav payload moved to `~/Library/Application Support/gamelib/overlays/gst-libav-1.24.13/`, `fixes/local/284100-steam.json` repointed. Todo stays pending until a shipped tier-2 overlays profile. allowlist tests 32/32. | 2026-10-27 | `b3d46f6ff` | Done | — |
 | fast | Library-sorting todo closed. The operator ran live checks 1-3 for 261027-jjz (Last played re-sorts after a GOG/Epic session, cold start with Last played saved, Group by Store / Install status) and all passed. The todo moved to `completed/`. | 2026-10-27 | (this commit) | live gate PASS | — |
@@ -555,8 +556,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-04T07:50:24.347Z
-Stopped at: Phase 60 context gathered
+Last session: 2026-11-06
+Stopped at: v0.9 milestone completed and archived (2026-11-06)
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

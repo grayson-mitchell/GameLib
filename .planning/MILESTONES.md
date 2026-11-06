@@ -1,5 +1,29 @@
 # Milestones
 
+## v0.9 Steam Bridge & Engine (Shipped: 2026-11-06)
+
+**Scope:** Phases 51–60, the post-v0.8 Steam bridge and engine work on macOS. It widened the native Steam bridge (interface proxies, scan-derived eligibility, modern-SDK exports and the flat API), added a bridge-backed steamclient layer and a DRM mode for SteamStub titles, delivered web-API auth-ticket callbacks, removed every authenticated Steam logon from launch, browse and Play, added opt-in known-fix sharing through a relay, and added bridge multiplayer, a Wine-Staging + DXVK engine fallback for when CrossOver is unavailable, and the Steam overlay in bridged games. Phases 61–64 (0 plans each) are outside the scope and remain unassigned.
+
+**Stats:** 10 phases, 264 plans, 620 tasks (counted from `<task>` blocks in the plans). Git range `4335a0c7f` (first Phase 51 commit, 2026-10-17) → `394d10fb4` (2026-11-06): 2,456 commits since the `v0.8` tag over 21 days, 1,299 files changed (+342,931 / −27,737) outside `.planning/`. `package.json` is still `0.8.0`; the version was not bumped.
+
+**Closeout type: verified closeout with tech debt.** All 10 phases have a `passed` VERIFICATION.md (Phase 59 has 1 override), `threats_open: 0`, and Nyquist compliance. The milestone audit, `milestones/v0.9-MILESTONE-AUDIT.md` (2026-11-05), is `tech_debt` with no blockers: requirements 17/17, integration 8/9, flows 7/7. The one partial seam is S9. A SteamStub title installed while CrossOver is missing gets a Wine-Staging bottle, and a later DRM-mode launch runs the CrossOver clone runner over it. The audit frontmatter carries the full debt list.
+
+**Requirements:** v0.9 had no REQUIREMENTS.md. Its requirements were each phase's ROADMAP done-when plus its VERIFICATION truths (Phase 58: M-01..M-07). The audit's requirements table is the record, so no `v0.9-REQUIREMENTS.md` archive exists.
+
+**Known deferred items at close: 782 (see STATE.md Deferred Items).** The pre-close `audit-open` scan found 29 debug sessions, 5 todos and 748 quick tasks. 738 of the quick tasks have status `missing` and 10 `unknown`, which means a SUMMARY status field the scanner cannot read, not open work. All 782 were acknowledged and deferred by the operator. No per-artifact `audit_acknowledged` markers were written: the installed gsd-sdk has no acknowledge writer, and its scanner does not honour the v0.8 markers, so these items will reappear at the next scan.
+
+**Key accomplishments:**
+1. **The native Steam bridge covers most Windows-only titles** (51, 53): more interface proxies, eligibility derived from an import scan, and modern-SDK exports plus the flat API. 10 of the 18 census titles reached bridge-verified (later 11).
+2. **SteamStub titles run with no Windows Steam client** (52, 56). Valve's genuine `steamclient64.dll` is fetched from the CDN, and its exports are trampolined to `lsteamclient` in a cloned CrossOver runner. Grim Dawn, Raft and Ranch Simulator are bridge-verified.
+3. **No authenticated Steam logon at launch, browse or Play** (54): an anonymous CM session serves public data, and one gated entry point takes Mac Steam offline around the logons that remain. Mac Steam's Friends list stays signed in.
+4. **Bridge callbacks and multiplayer** (55, 58): web-API auth tickets via callback 168, and host/join with a second account in both bridge modes (Schedule I in TCP mode, Raft in DRM mode).
+5. **The CrossOver-unavailable engine fallback** (59): a pinned Wine-Staging + DXVK build that GameLib installs and manages, `--demo-status` trial checks, launch timeouts, and a strict DXVK restore on the switch back.
+6. **Steam overlay and known-fix sharing** (60, 57): Shift+Tab opens Mac Steam's overlay in bridged games (CX_ENV dylib injection, the 10-bit/Metal 4 shim, an overlay_input release-and-block), and an opt-in relay opens known-fixes PRs from detected fixes.
+
+**Process record:** `milestone.complete` was not used for this close. Its phase filter keys on the roadmap's `v0.9 Phase Details` heading, which also held the unassigned Phases 61–64. The archive, phase move and this entry were done by hand.
+
+---
+
 ## v0.8 Tauri Shell (Shipped: 2026-10-16)
 
 **Scope:** Phases 27–50 (plus parked Phase 22, swept in by the archiver). The Tauri v2 rearchitecture — Rust shell, headless Node sidecar over stdio JSON-RPC, real OS-keyring token storage — the incremental IPC re-plumb (slices 1–9, 34.1–34.6), Windows/Linux/macOS packaging with signing, notarization and an auto-update feed, the Electron cutover (35), and the post-cutover work that followed: the embedded login and store webviews (34.4.1, 40, 50), the sidebar-to-card-tabs navigation redesign (34.10–34.12), library filtering and the focus row (34.11, 48), the macOS onedir runner repackaging (34.9, 34.16, 34.18), Steam install-time wine/bottle parity (34.13–34.15), Humble key identity and the unified keys screen (42, 43), the native Winetricks UI (45), and cross-store signed-out/offline mode (49).

@@ -10,6 +10,15 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 
 ## Current State
 
+**Shipped: v0.9 Steam Bridge & Engine — 2026-11-06** (Phases 51–60; `package.json` still 0.8.0). On macOS, Windows-only Steam games now run against the user's native Mac Steam client through the bridge, with no Windows Steam client in a bottle. That includes SteamStub/DRM-wrapped titles, games that need web-API auth tickets, online multiplayer in both bridge modes, and Mac Steam's own Shift+Tab overlay. When CrossOver is missing, its trial has expired or it is broken, a pinned Wine-Staging + DXVK build managed by GameLib takes over. GameLib no longer opens an authenticated Steam logon at launch, browse or Play, so Mac Steam's Friends list stays signed in. Detected known fixes can be shared through an opt-in relay. See `MILESTONES.md` and `milestones/v0.9-*`.
+
+**The v0.9 close was verified, with tech debt.** All 10 phases passed verification, and the audit (`milestones/v0.9-MILESTONE-AUDIT.md`) is `tech_debt` with no blockers: requirements 17/17, integration 8/9, flows 7/7. The one partial seam is S9 (install-time bottle engine vs DRM mode). 782 open planning artifacts were acknowledged and deferred without markers; see `STATE.md › Deferred Items`.
+
+**Earlier milestones:** v0.8 Tauri Shell (shipped 2026-10-16, override closeout) and v0.1 Steam Platform are archived in `milestones/`. v0.2–v0.6 are recorded as shipped in `MILESTONES.md`, and their phase directories are under `milestones/v0.N-phases/`. v0.7 Steam Native Install was never formally closed (Phase 23 gaps G-23-01/G-23-02 are open).
+
+<details>
+<summary>Current State as it stood before the v0.9 close (v0.8 entry and per-phase v0.9 notes)</summary>
+
 **Shipped: v0.8 Tauri Shell — 2026-10-16** (`package.json` 0.8.0). GameLib now runs on a Rust/Tauri v2 shell with a headless Node sidecar; the Electron build was removed in Phase 35 (2026-09-01). The milestone covered Phases 27–50: the incremental IPC port, cross-platform packaging with a fork-pointed update feed, embedded login and store webviews, the card-tab navigation and library-filter redesign, Steam install-time bottle parity, Humble key identity and the unified keys screen, the native Winetricks UI, and cross-store signed-out/offline mode. See `MILESTONES.md` for the entry and `milestones/v0.8-*` for the archives.
 
 **The v0.8 close was an override closeout, not a verified one.** 26 of 45 phases were not both complete and verified; 429 open planning artifacts were acknowledged (not resolved) and 140 evidence-table rows in five archived ledgers stay open in `audit-open`. The full disclosure is in `STATE.md › Deferred Items`.
@@ -32,7 +41,19 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 
 **Earlier milestones:** v0.1 Steam Platform (shipped 2026-06-29, archived), v0.2 Polish, v0.3 Humble Bundle, v0.4 Compatibility Data, v0.5 macOS Compat Runtime, v0.6 Store Search (all recorded shipped in `MILESTONES.md`, never archived — their phase directories 5–26 stay under `.planning/phases/`), and v0.7 Steam Native Install (never formally closed — Phase 23 gaps G-23-01/G-23-02 open).
 
+</details>
+
 ## Next Milestone Goals
+
+Not yet defined. Run `/gsd-new-milestone`. Candidates, in no decided order:
+
+- **Unassigned phases 61–64** (0 plans each): a unified macOS engine control for every store (61, extends Phase 59), module boundaries and decomposition (62), the Rust migration pattern starting with the executable scanners (63), and a UI to edit themes (64).
+- **v0.9 tech debt the audit ranks highest:** S9 (call `prepareBottleForEngine` in the DRM branch, or refuse); 57 WR-09 (the network-facing relay reads an unbounded body when `Content-Length` is missing); 56 WR-02 (an execFile handle holds the sidecar exit up to 3 s); 60 WR-01 (a missed overlay close leaves game input blocked); stale 52/53/58 verification and UAT records; the `macArchKnownFixRouting` failure and the three pre-existing failing sidecar suites.
+- **Carried from v0.8:** the 26 unverified v0.8 phases, Phase 47 (IsThereAnyDeal search), Phase 34.7 (Epic device-auth), Phase 23 gaps G-23-01/G-23-02, unsigned Windows releases, and the blank-render-on-one-launch-in-four todo.
+- **Planning hygiene:** an acknowledge writer (or scanner change) so `audit-open` stops resurfacing deferred items. The 738 quick tasks with an unreadable SUMMARY status are the bulk of them.
+
+<details>
+<summary>Next Milestone Goals as written at the v0.8 close</summary>
 
 Not yet defined — run `/gsd-new-milestone`. Candidates carried out of v0.8, in no decided order:
 
@@ -41,6 +62,8 @@ Not yet defined — run `/gsd-new-milestone`. Candidates carried out of v0.8, in
 - **Phase 23 gaps** G-23-01 (blocked depot key aborts the install) and G-23-02 — the open v0.7 items.
 - **Windows releases ship unsigned** (no certificate enrolled; parked 2026-10-08) and the packaged app's blank-render-on-one-launch-in-four todo.
 - The 140 un-markable table rows: either a gsd-core scanner change or a decision to restructure the five ledgers.
+
+</details>
 
 ## Requirements
 
@@ -81,6 +104,13 @@ Not yet defined — run `/gsd-new-milestone`. Candidates carried out of v0.8, in
 - ✓ Steam install-time wine/bottle form at GOG parity; platform-row depot signal and sync integrity; login-to-Steam crossfade; depot-decode / false-delisted defect cluster — v0.8 Phases 34.13–34.15, 36, 37
 - ✓ Evidenced Humble key platform identity; unified Humble Keys screen — v0.8 Phases 42, 43
 - ✓ Native in-app Winetricks UI (live gate re-run owed); Windows single-instance guard + `gamelib://` deep link; cross-store signed-out/offline mode — v0.8 Phases 45, 46, 49
+- ✓ Native Steam bridge widened to most Windows-only titles on macOS: more interface proxies, scan-derived eligibility, modern-SDK exports and the flat API — v0.9 Phases 51, 53
+- ✓ SteamStub/DRM-wrapped titles run through the bridge with no Windows Steam client (genuine Valve `steamclient64.dll` from the CDN, trampolined to `lsteamclient`) — v0.9 Phases 52, 56
+- ✓ No authenticated Steam logon at launch, browse or Play; Mac Steam Friends stays signed in — v0.9 Phase 54
+- ✓ Web-API auth-ticket callback delivery and bridge multiplayer (host/join in both bridge modes) — v0.9 Phases 55, 58
+- ✓ Opt-in sharing of detected known fixes through a relay to the known-fixes repo — v0.9 Phase 57
+- ✓ Steam engine fallback (pinned Wine-Staging + DXVK) when CrossOver is unavailable — v0.9 Phase 59
+- ✓ Mac Steam's Shift+Tab overlay in bridged games — v0.9 Phase 60
 
 ### Active
 
@@ -89,6 +119,8 @@ Not yet defined — run `/gsd-new-milestone`. Candidates carried out of v0.8, in
 - [ ] Store search on IsThereAnyDeal instead of CheapShark (Phase 47 — unplanned)
 - [ ] Epic device-auth single sign-in path (Phase 34.7 — on hold)
 - [ ] Phase 23 G-23-01 / G-23-02 (blocked depot key; resumed-install progress never reaches 100%)
+- [ ] One per-game Engine control for Windows games from every store on macOS (Phase 61)
+- [ ] v0.9 audit seam S9: a DRM-mode launch must not run over a bottle initialised by the fallback engine
 
 ### Future
 
@@ -98,7 +130,7 @@ Not yet defined — run `/gsd-new-milestone`. Candidates carried out of v0.8, in
 ### Out of Scope
 
 - Other new platforms (Ubisoft Connect, itch.io, Xbox) — Steam first, others later
-- Replacing Steam client functionality (friends, community, overlay) — launcher use only
+- Replacing Steam client functionality (friends, community, overlay) — launcher use only. v0.9 Phase 60 does not contradict this: it surfaces Mac Steam's own overlay in bridged games and reimplements none of it
 - Humble in-app checkout / purchasing — store surface is read-only + deep-links (v0.3)
 - One-click activation for non-Steam Humble key types (Epic/Ubisoft/GOG/…) — link out instead (v0.3)
 - Automated/unattended bulk redemption of Humble keys — user-initiated + throttled only (v0.3)
@@ -108,6 +140,7 @@ Not yet defined — run `/gsd-new-milestone`. Candidates carried out of v0.8, in
 
 - **Origin**: forked from Heroic Games Launcher v2.22.0 (https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher); no longer tracks upstream (see Constraints)
 - **Architecture** (since v0.8): Rust/Tauri v2 shell (`src-tauri/`) + headless Node sidecar built as a SEA (`meta/buildSidecarSea.ts`) over stdio JSON-RPC + React/TypeScript renderer; store managers in `src/backend/storeManagers/` (gog, legendary/Epic, nile/Amazon, steam, humble, sideload). The Electron build was removed in Phase 35.
+- **State at v0.9 close (2026-11-06)**: 2,456 commits over 21 days since the v0.8 tag; 1,299 files changed outside `.planning/` (+342,931 / −27,737). The macOS Steam path is now the native bridge in per-game bottles, with CrossOver first and a pinned Wine-Staging + DXVK fallback. The audit's test-health notes (`macArchKnownFixRouting`, three pre-existing failing sidecar suites) are unverified.
 - **State at v0.8 close (2026-10-16)**: 6,240 commits in the milestone over 88 days; jest suites green at zero headroom on the lint ceilings; `pnpm i18n` emits zero warnings across 43 offered locales; 140 evidence-table rows in five archived ledgers remain open in `audit-open` by tool limitation.
 - **Existing Steam touchpoints**: `steamgrid` (artwork fetching), `shortcuts/nonesteamgame` (add non-Steam games to Steam), Steam Deck detection — none of these are a Steam store manager
 - **Why a fork**: Heroic maintainers are explicitly anti-Steam and will not merge Steam support upstream
@@ -134,6 +167,10 @@ Not yet defined — run `/gsd-new-milestone`. Candidates carried out of v0.8, in
 | **Focus row replaces the Settings `Library Top Section` dropdown** (Phase 48, 2026-10-09) | One persisted `{kind,value}` pick from the Games tier-2 panel renders a horizontal strip above the grid; `Recent Games to Show` removed and the row sized by what fits. Mid-phase operator rulings amended the SPEC: strip cards match the grid's column width (not a fixed 156px), the controller-mode card keeps its mouse-mode geometry globally, hover wears the console-style ring, and controller mode keeps hiding the card's hover-action buttons (pre-existing upstream behaviour, ruled intended). Four live-gate rounds (macOS WebKit numeric, Windows controller by eye) closed 12 gaps. | ✓ Good — 12/12 UAT, verification 10/10, 64 threats closed; the one-ring and width-parity invariants now have WebKit-measured numbers |
 | **One consolidated sign-in notice across five stores, probed once at boot** (Phase 49, 2026-10-09) | A bounded 45 s parallel probe pass after READY classifies Epic/GOG/Amazon from real runner output, Steam/Humble from keyring presence, and latches only a proven `expired` per store; one pure selector (`resolveSignInState`: latched flag beats a missing session, `unknown` never surfaces) drives both the Library rows and the five Manage Accounts tiles; not-connected rows are dismissible and persisted, expired rows are not; Epic launches `--offline` when expired. The macOS live gate ran 9 launches on real accounts: runner strings A1/A2 confirmed, Keychain Deny and an ignored prompt degrade to `unknown` (45.009 s), the warm sidecar drains in 2.4 s. Two gate-found renderer defects fixed same day (dismiss hydration at mount; Epic user info rebuilt on every mount). Amazon zero-installed no-op accepted as a spec boundary; A3/A6 deferred (nile encrypts its tokens). | ✓ Good — UAT 10/11 pass + 1 deferred, verification 9/9, 46 threats closed, Nyquist compliant; four review warnings and the Amazon arm remain as triaged todos |
 
+| **Bridged games talk to native Mac Steam, never a bottled Windows Steam client** (v0.9, Phases 51–60) | One Steam client the user already runs. Bottled Steam is a narrow fallback, and only DRM might justify it. Phase 56 kept even SteamStub titles on the bridge by fetching Valve's genuine `steamclient64.dll` and trampolining it. | ✓ Good. Phases 51–60 all verified; known-bad titles stay known-bad and are not rerouted to bottled Steam |
+| **No authenticated CM logon outside explicit user actions** (v0.9, Phase 54) | Any authenticated steam-user logon landing while Mac Steam is online signs its Friends list out. Public data goes through an anonymous session, and Refresh, sign-in and installs go through one gated entry point. | ✓ Good. Live gate 13/13; `steamAuthSessionPolicy.test.ts` rules A–K enforce it |
+| **CrossOver first, one pinned Wine-Staging + DXVK build as fallback** (v0.9, Phase 59) | CrossOver trial expiry and breakage were stranding bridged titles. One pinned build per release keeps the support surface small; overrides are advanced and unsupported unless CrossOver. | ⚠️ Revisit S9: the engine is chosen at install, before DRM mode is known |
+
 ### Deferred / Follow-up
 
 - **steam-user license corroboration** — read license `payment_method === EPaymentMethod.ActivationCode` + `time_created` to auto-mark-redeemed (still undoable) keys revealed on Humble's website before GameLib synced. Interim signal is `ownedElsewhere` + the D-72 owned-note. Scope: future phase (post-Phase-14).
@@ -156,4 +193,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-04 after Phase 60 (Steam overlay in bridged games on macOS), verification 6/6, live re-gate 8/8 PASS. Previous footer, 2026-11-03: after Phase 59 (Steam engine fallback when CrossOver is unavailable), re-verification 13/13, re-UAT 6 PASS. Previous footer, 2026-11-02: after Phase 57 (opt-in known-fix sharing via relay), live gate PASS. Previous footer, 2026-11-01: after Phase 58 (Steam bridge multiplayer), live gates PASS in both bridge modes. Previous footer, 2026-10-29: after Phase 56 (bridge steamclient layer — DRM mode for SteamStub titles), live gate PASS. Previous footer, 2026-10-28: after Phase 54 (no authenticated Steam logon at launch, browse or Play), live gate PASS. Previous footer, 2026-10-26: after Phase 55 (Steam bridge callback delivery for the web-API auth ticket), live gate PASS. Previous footer, 2026-10-25: after Phase 52 (bridge-backed steamclient.dll for SteamStub titles), complete against the amended done-when. Previous footer, 2026-10-16: after the v0.8 Tauri Shell milestone (override closeout). Earlier footer, 2026-10-09: after Phase 49 (Cross-store signed-out / offline mode) COMPLETE: 12/12 plans, macOS live gate run once (10/11 pass, item 5 deferred), verification passed 9/9, code review 0 critical / 4 warning, 46 threats closed, Nyquist validated.*
+*Last updated: 2026-11-06 after the v0.9 Steam Bridge & Engine milestone (verified closeout with tech debt). Previous footer, 2026-11-04 after Phase 60 (Steam overlay in bridged games on macOS), verification 6/6, live re-gate 8/8 PASS. Previous footer, 2026-11-03: after Phase 59 (Steam engine fallback when CrossOver is unavailable), re-verification 13/13, re-UAT 6 PASS. Previous footer, 2026-11-02: after Phase 57 (opt-in known-fix sharing via relay), live gate PASS. Previous footer, 2026-11-01: after Phase 58 (Steam bridge multiplayer), live gates PASS in both bridge modes. Previous footer, 2026-10-29: after Phase 56 (bridge steamclient layer — DRM mode for SteamStub titles), live gate PASS. Previous footer, 2026-10-28: after Phase 54 (no authenticated Steam logon at launch, browse or Play), live gate PASS. Previous footer, 2026-10-26: after Phase 55 (Steam bridge callback delivery for the web-API auth ticket), live gate PASS. Previous footer, 2026-10-25: after Phase 52 (bridge-backed steamclient.dll for SteamStub titles), complete against the amended done-when. Previous footer, 2026-10-16: after the v0.8 Tauri Shell milestone (override closeout). Earlier footer, 2026-10-09: after Phase 49 (Cross-store signed-out / offline mode) COMPLETE: 12/12 plans, macOS live gate run once (10/11 pass, item 5 deferred), verification passed 9/9, code review 0 critical / 4 warning, 46 threats closed, Nyquist validated.*

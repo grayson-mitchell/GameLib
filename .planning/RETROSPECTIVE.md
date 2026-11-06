@@ -87,6 +87,49 @@ A Rust/Tauri v2 shell with a headless Node sidecar replaced Electron end to end:
 - Sessions: not counted; 235 quick tasks and 21 debug sessions in the milestone window.
 - Notable: three sessions once worked the same task in one tree; `ListAgents` first and an in-prompt HEAD assertion became the rule.
 
+## Milestone: v0.9 — Steam Bridge & Engine
+
+**Shipped:** 2026-11-06 (verified closeout, tech debt)
+**Phases:** 10 | **Plans:** 264 (620 tasks; 213 quick tasks in the milestone window)
+
+### What Was Built
+
+On macOS, Windows-only Steam games now run against the user's native Mac Steam client through the bridge, in per-game bottles. The work covered: wider interface coverage with scan-derived eligibility, modern-SDK exports and the flat API (51, 53); SteamStub titles through a genuine Valve `steamclient64.dll` trampolined to `lsteamclient` (52, 56); web-API auth-ticket callbacks (55); online multiplayer in both bridge modes (58); and Mac Steam's own Shift+Tab overlay (60). Alongside the bridge work: no authenticated CM logon at launch, browse or Play (54), opt-in known-fix sharing through a Cloudflare relay (57), and a pinned Wine-Staging + DXVK fallback for when CrossOver is unavailable (59). 2,456 commits over 21 days.
+
+### What Worked
+
+- **A full-scope audit before the close.** This repeats v0.8's lesson 2, and this time it was done. `/gsd-audit-milestone` ran over all of 51–60 the day before the close and found one partial seam (S9) and no blockers, so the close did not need an override.
+- **Verification inside the phase.** All 10 phases closed with a `passed` VERIFICATION.md and Nyquist compliance, against 19 of 45 in v0.8. This applies v0.8's lesson 1.
+- **Live gates on named titles as the done-when.** Grim Dawn, Raft, Schedule I, Abiotic Factor and Dungeons of Dredmor gave each phase a pass or fail that a unit suite could not fake. The strict "bridge-verified" criterion stopped In-Game reports from counting.
+- **Experiments that return a verdict before the fix.** The 60-18 experiment returned X-RELEASE+BLOCK before any overlay_input code was written, and the spikes (040/041 for SteamStub) fixed the DRM-mode design before Phase 56 was planned.
+
+### What Was Inefficient
+
+- **Gap-closure rounds dominated the large phases.** Phase 59 took six rounds to reach 53 plans, Phase 56 took three rounds (34 plans), and Phases 52 and 58 each reached 37. The first plan set kept underestimating what the live gate would find.
+- **Done-whens were amended in place.** Phase 51's "most titles" was met only through Phase 53's census, and Phase 52's Grim Dawn goal was delivered by Phase 56. Both VERIFICATION files were rewritten to match, so the record says passed while the original goal moved to another phase.
+- **Stale records piled up.** The 52-VERIFICATION body under a passed frontmatter, superseded `failed` rows in the 52/53 UATs, and 58's follow_ups listing items that were already fixed. Each was cheap to fix when it happened and now sits in the debt list.
+- **The deferred-item mechanism regressed.** v0.8's `audit-open acknowledge` writer is not in the installed gsd-sdk, so 782 items were deferred without markers and will resurface at every scan.
+
+### Patterns Established
+
+- **Native Mac Steam is the only Steam client a bridged game talks to.** Bottled Windows Steam is a narrow fallback, at most for DRM, and the goal is to remove it. Known-bad titles are not rerouted to it.
+- **Fetching Valve's genuine DLLs from the CDN and trampolining their exports is in bounds.** Capturing and replaying STEAMSTART is not something Claude builds.
+- **CrossOver first, one pinned fallback engine.** Every CrossOver launch runs `--demo-status` and a timeout first; a switch back to CrossOver strictly restores DXVK.
+- **One gated entry point for authenticated Steam logons**, pinned by policy tests (`steamAuthSessionPolicy.test.ts` rules A–K) so later phases (57, 58, 59) cannot add a second one.
+
+### Key Lessons
+
+1. **Don't amend a done-when in place. Split it.** When a goal moves to a later phase, record it as that phase's requirement and close the original as partial. The 51/52 amendments made the record harder to trust, not easier.
+2. **Fix stale verification and UAT rows in the gap-closure commit that supersedes them.** By the milestone audit they have become tech debt.
+3. **Plan the live gate's failure modes into the first plan set.** Six gap rounds in Phase 59 means the first plans assumed the happy path.
+4. **Keep phases that are outside the milestone out of its roadmap section.** Phases 61–64 under the "v0.9 Phase Details" heading would have been swept into the archive by `milestone.complete`'s phase filter, so the close was done by hand.
+
+### Cost Observations
+
+- Model mix: not measured for this milestone.
+- Sessions: not counted. There were 213 quick tasks in the window, and the debug directory holds 45 sessions (29 open at close).
+- Notable: the milestone ran 21 days against v0.8's 88, with roughly half v0.8's plans (264 vs 554) and all of them verified.
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Audit | Notable |
@@ -94,3 +137,4 @@ A Rust/Tauri v2 shell with a headless Node sidecar replaced Electron end to end:
 | v0.1 Steam Platform | 4 | 16 (+5 quick) | passed | 4-pass SteamGuard debug; instrument-first lesson |
 | v0.2–v0.7 | 22 | ~200 | v0.2 gaps_found; others none | never archived; v0.7 never closed (Phase 23 gaps) |
 | v0.8 Tauri Shell | 45 | 554 (+235 quick) | partial, gaps_found (27–28 only) | override closeout; 26/45 unverified; 429 acknowledged, 140 table rows un-markable |
+| v0.9 Steam Bridge & Engine | 10 | 264 (+213 quick) | tech_debt (full scope, no blockers) | verified closeout; 10/10 passed; 782 deferred unmarked |
