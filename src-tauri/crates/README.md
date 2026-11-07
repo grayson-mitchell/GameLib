@@ -1,0 +1,114 @@
+# Moving sidecar code to Rust: the pattern
+
+Worked example: Phase 63, the executable scanners (`gamelib-scan`, `gamelib-scan-cli`). Next
+application: the Steam depot pipeline (`gamelib-depot`). History lives in
+`.planning/phases/63-rust-migration-pattern-and-executable-scanners/`; this file is the recipe, not
+the record.
+
+## 1. Layout
+
+The app crate (`src-tauri`) stays the workspace root. Each port adds:
+
+| Path                          | What                                                          |
+| ----------------------------- | ------------------------------------------------------------- |
+| `src-tauri/crates/<name>`     | Tauri-free library. No `tauri` dependency, ever.              |
+| `src-tauri/crates/<name>-cli` | Optional bin, only if `meta/` tools need the code headlessly. |
+
+Every crate sets `rust-version = "1.77.2"` and the two `[lints.clippy]` deny lines
+(`dbg_macro`, `todo`). Adding a crate or dependency changes `Cargo.lock`: update
+`EXPECTED_LOCKFILE_CRATE_NAMES` in the same commit (`cargoFeatures.test.ts` fails otherwise).
+
+## 2. Library contract
+
+`gamelib-scan/src/lib.rs` is the model.
+
+- `dispatch(op: &str, args: &[Value]) -> Result<Value, String>`; `OPS` (sorted) lists the ops that
+  have an app channel, `CLI_ONLY_OPS` those reachable only from the CLI.
+- `dispatch` wraps the op in `catch_unwind`; a panic becomes `Err`, never a dead sidecar.
+- Args are structs with `#[serde(deny_unknown_fields, rename_all = "camelCase")]`.
+- Results, not errors: an unreadable file or malformed input is a normal result value
+  (`readError`, `parsed: false`). `Err` is only for bad args, an unknown op or a panic. Callers
+  then decide fail-open or fail-closed in one place.
+- All args are strings (paths). No bytes cross the pipe.
+
+## 3. App path
+
+1. A `RUST_*` const in `src/common/types/sidecarTransport.ts` and an entry in
+   `RUST_INVOKE_CHANNELS`.
+2. A one-line `"op" => {` arm in `dispatch_rust_channel` (`src-tauri/src/sidecar.rs`) calling
+   `<crate>::dispatch`.
+3. A static parity test in the style of `src/backend/scanners/__tests__/scanChannelParity.test.ts`:
+   `OPS` == the channel constants == the match arms.
+4. A typed helper (`invokeScan` in `src/backend/scanners/rustScan.ts`) over `requestRustInvoke`.
+5. Thin per-caller wrappers (`peScan.ts`, `importScan.ts`, `shimGenerate.ts`, `drmScanExe.ts`,
+   `machoExports.ts`) each with an explicit fail-closed `catch` mapping and unchanged log text.
+6. Caller tests mock `requestRustInvoke` (see `bridge/__tests__/fixtures/stubRustScan.ts`); parser
+   behaviour is tested in Rust only.
+
+## 4. Headless path
+
+- `gamelib-scan-cli`: `<op> <json-object>`, `--list`, `--ndjson` (one `{op,args}` per stdin line,
+  one `{ok,...}` per line out). Exit 64 on usage errors.
+- `meta/gamelibScanCli.ts` spawns it argv-form (never a shell) with a fresh
+  `createFakeHomeProfile({ prefix })` per spawn; the CLI reads no profile.
+- `cargo build` never runs from `meta/`: a fake HOME hides `~/.cargo`. The `scan-cli:build`
+  `package.json` script builds in the real environment and is a prefix of every script needing the
+  binary (`bridge-census`). A missing binary fails with that command in the message.
+
+## 5. Fallback flag during migration
+
+Each unit had `GAMELIB_SCANNER_<NAME>=rust|ts` and a `SCANNER_DEFAULTS` table. Defaults started at
+`ts`, flipped to `rust` per unit after a clean sweep, and the whole mechanism was deleted in 63-13.
+It was env-only, not AppSettings: it is a developer rollback lever with a short life, and a
+persisted user setting would have needed UI, migration and a removal path.
+
+## 6. Parity harness
+
+- **Tier 1 (permanent).** TS-builder fixtures, a generator that ran the TS oracle to produce
+  `gamelib-scan/tests/fixtures/expected.json`, Jest asserting TS == golden and
+  `cargo test -p gamelib-scan --test golden` asserting Rust == golden. A deliberate divergence is a
+  per-case `rustOverride` and must carry a `divergenceNote` (D-07). The normaliser (port of the old
+  `scanNormalize.ts`) is the exhaustive list of what parity ignores. After the oracle was deleted
+  the fixtures and `expected.json` stay; new cases are written by hand with a Rust-verified value
+  and a note naming the source of truth.
+- **Tier 2 (local, deleted).** A sweep diffed oracle against Rust over the real bottles with
+  redacted output (hash + basename) and exit 0 clean / 1 diff / 3 no inputs. Zero inputs must fail.
+
+## 7. Verification and deletion
+
+- The live gate is a UAT contract authored by one plan and run by a different one, following the
+  live-gate-contract-authoring standard: each item names the log line that proves the Rust path ran.
+- Deletion checklist: precondition (every UAT item resolved, every default flipped, divergences
+  accepted); remove call-site flag reads; `git rm` modules, oracle, generator, sweep and their tests;
+  `pnpm find-deadcode` and delete fixture builders only the deleted tests used; remove package.json
+  scripts and knip entries; baseline lines may only be removed.
+- Deletion gate: `src/backend/__tests__/scannerPortComplete.test.ts` asserts the paths stay
+  deleted, forbidden symbols are absent (comments stripped), the intended exemptions still exist,
+  `expected.json` still exists, and the walk saw at least 500 files.
+
+## 8. CI
+
+`.github/workflows/rust-test.yml` runs an explicit `cargo test -p gamelib-scan -p gamelib-scan-cli`
+and `clippy --workspace` on both legs. Workspace crates are not default members, so a plain
+`cargo test` in `src-tauri` silently skips them. A new crate needs its own `-p` entry.
+
+## 9. Lessons from the scanner port
+
+- **Divergences found (D-07).** One, in `scan_steam_api_imports`: four Fallout 2 executables are
+  Watcom-linked PEs whose section VirtualSize is 0. `objdump` fails ("RVA for import table not
+  found") and the TS oracle reported an error; the Rust reader follows the loader rule (raw size
+  spans the section) and returns ok with no imports. Rust is right; pinned by the unit test
+  `zero_virtual_size_section_spans_raw_size`. The user accepted it. 103 inputs, 4 diffs, the other
+  scanners 0.
+- **A5 (ordinal-only static imports).** No sweep diff was attributable to it; treated as holding on
+  the real corpus and still pinned by the synthetic golden `import-ordinal-mixed`.
+- **Live gate passed 7 of 8.** Item 3 first failed, then passed on retest: a tier-1 known-fix
+  (`CX_GRAPHICS_BACKEND`) short-circuited the code path under test. A UAT title must not be
+  pre-empted by a fixes or known-fix layer that skips the path being verified; check the title's
+  config before choosing it. Item 6 (the `dxmtBootUpdate` caller) was blocked and accepted: no -DXMT
+  copy can be made on Wine-11.21, so that caller is covered by unit tests only.
+- **Keep the exemptions explicit.** `bridgeScan.ts`, `importParse.ts` and the census objdump arm
+  were deliberately kept (outside the port list); the deletion gate asserts they still exist so the
+  exemption is real, not forgotten.
+- **Caller-test oracles.** Deleting the oracle broke tests that used it as a mock backend; replace
+  with a small stub (`stubRustScan.ts`), not a parser.
