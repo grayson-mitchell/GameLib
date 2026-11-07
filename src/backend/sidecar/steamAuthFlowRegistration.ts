@@ -384,7 +384,9 @@ export function registerSteamAuthFlows(): void {
 
   // Ids and labels only, never paths (T-59-36); renderer args are ignored.
   ipcMain.handle('listSteamEngineOptions', async () => {
-    return listEngineOverrideOptions()
+    const { steamDecisionDeps } =
+      await import('backend/storeManagers/steam/engine/steamEngineDeps')
+    return listEngineOverrideOptions(steamDecisionDeps())
   })
 
   ipcMain.handle(

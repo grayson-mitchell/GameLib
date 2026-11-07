@@ -19,14 +19,23 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-import { readStoredEngineOverride } from '../engineDecision'
+jest.mock('backend/storeManagers/steam/bottle', () => ({
+  bridgeBottleNameFor: jest.fn(),
+  getBridgeBottleSettings: jest.fn(),
+  persistedWineBins: jest.fn(() => [])
+}))
+jest.mock('backend/storeManagers/steam/bottleProcessMonitor', () => ({
+  getBottleProcessMonitorPhase: jest.fn()
+}))
+
+import { readSteamEngineOverride as readStoredEngineOverride } from '../engine/steamEngineDeps'
 
 afterAll(() => rmSync(mockDir, { recursive: true, force: true }))
 
 const writeConfig = (appId: string, body: unknown) =>
   writeFileSync(join(mockDir, `${appId}.json`), JSON.stringify(body))
 
-describe('readStoredEngineOverride (59-UAT G11)', () => {
+describe('readStoredEngineOverride (59-UAT G11, D-08)', () => {
   it('returns the stored value from the title config', () => {
     writeConfig('38400', {
       '38400': { steamEngineOverride: 'pinned:wine-staging-11.20' },
@@ -34,6 +43,17 @@ describe('readStoredEngineOverride (59-UAT G11)', () => {
       explicit: false
     })
     expect(readStoredEngineOverride('38400')).toBe('pinned:wine-staging-11.20')
+  })
+
+  it('engineOverride wins over steamEngineOverride (D-08)', () => {
+    writeConfig('38401', {
+      '38401': {
+        engineOverride: 'crossover',
+        steamEngineOverride: 'pinned:wine-staging-11.20'
+      },
+      version: 'v0'
+    })
+    expect(readStoredEngineOverride('38401')).toBe('crossover')
   })
 
   it('a missing file is undefined and is not created', () => {

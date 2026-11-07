@@ -875,7 +875,11 @@ export async function provisionBridgeBottleForInstall(
     LogPrefix.Steam
   )
   const { decideCreationEngine } = await import('backend/engine/engineDecision')
-  const creation = await decideCreationEngine({ appId: steamGame.appId })
+  const { steamDecisionDeps } = await import('./engine/steamEngineDeps')
+  const creation = await decideCreationEngine(
+    { key: steamGame.appId },
+    steamDecisionDeps()
+  )
   logInfo(
     `SteamGame: bridge bottle creation engine for appId ${steamGame.appId}: ${creation.kind}${creation.kind === 'pinned' ? ` (${creation.reason})` : ''}`,
     LogPrefix.Steam
@@ -999,10 +1003,12 @@ export async function resolveInstallEngineSettings(
   const { decideLaunchEngine } = await import('backend/engine/engineDecision')
   const { prepareBottleForEngine } = await import('backend/engine/engineSwitch')
   const { isNonCrossover } = await import('backend/engine/engineTypes')
-  const decision = await decideLaunchEngine({
-    appId: steamGame.appId,
-    bottleName: bridgeBottleName
-  })
+  const { steamDecisionDeps, steamSwitchDeps } =
+    await import('./engine/steamEngineDeps')
+  const decision = await decideLaunchEngine(
+    { key: steamGame.appId, bottleName: bridgeBottleName },
+    steamDecisionDeps()
+  )
   if (decision.kind === 'unavailable') {
     return { skipped: `engine unavailable: ${decision.detail}` }
   }
@@ -1012,11 +1018,14 @@ export async function resolveInstallEngineSettings(
   }
   const sel = decision.selection
   const prep = await prepareBottleForEngine({
-    appId: steamGame.appId,
+    key: steamGame.appId,
     bottleName: bridgeBottleName,
     next: sel,
     crossoverHealthy: decision.preflight?.kind === 'healthy',
-    deps: { ensurePinEngine: steamGame.restorePinEngine }
+    deps: {
+      ...steamSwitchDeps(),
+      ensurePinEngine: steamGame.restorePinEngine
+    }
   })
   if (!prep.ok && prep.reason !== 'dxvk-failed') {
     return { skipped: `${prep.reason}: ${prep.detail}` }

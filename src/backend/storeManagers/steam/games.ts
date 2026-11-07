@@ -119,9 +119,9 @@ export default class SteamGame implements Game {
       // settings alone made the Settings screen read it back as Automatic.
       const settings = getSteamBottleSettings()
       const title = pickTitleSettings(readStoredTitleConfig(this.appId))
-      const { readStoredEngineOverride } =
-        await import('backend/engine/engineDecision')
-      const override = readStoredEngineOverride(this.appId)
+      const { readSteamEngineOverride } =
+        await import('./engine/steamEngineDeps')
+      const override = readSteamEngineOverride(this.appId)
       // 60-UAT G3, same split as 59-UAT G11: the overlay override is also
       // written to the title's GameConfig, so merge it back ('on'/'off' only;
       // anything else stays Automatic, T-60-06-01).
@@ -141,7 +141,7 @@ export default class SteamGame implements Game {
         ...settings,
         ...title,
         ...(typeof override === 'string'
-          ? { steamEngineOverride: override }
+          ? { engineOverride: override, steamEngineOverride: override }
           : {}),
         ...(overlayOverride ? { steamOverlayOverride: overlayOverride } : {})
       }

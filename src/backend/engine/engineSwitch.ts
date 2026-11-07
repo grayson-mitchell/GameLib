@@ -15,17 +15,12 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { GameSettings } from 'common/types'
 import { DXVK } from 'backend/tools'
 import {
-  bridgeBottleNameFor,
-  getBridgeBottleSettings,
-  persistedWineBins
-} from 'backend/storeManagers/steam/bottle'
-import {
   buildFallbackGameSettings,
   getBottleDir,
   killBottleWineServerWith,
   sanitizeBottleName
 } from './bottlePrimitives'
-import { getBottleProcessMonitorPhase } from 'backend/storeManagers/steam/bottleProcessMonitor'
+import { otherGamesRunning } from './bottleLedger'
 import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
 import { ENGINE_PINS, pinById } from './enginePins'
 import type { EnginePin } from './enginePins'
@@ -53,12 +48,12 @@ type EngineMarker = {
 }
 
 export interface EngineSwitchDeps {
-  getMonitorPhase: (appId: string) => 'starting' | 'running' | null
+  getMonitorPhase: (key: string) => 'starting' | 'running' | null
   killWith: typeof killBottleWineServerWith
   resolveCrossoverBinDir: () => Promise<string | undefined>
   installRemove: typeof DXVK.installRemove
-  /** Must be called while the CrossOver selection is the one registered for the app. */
-  crossoverSettings: (appId: string) => GameSettings
+  /** Must be called while the CrossOver selection is the one registered for the game. */
+  crossoverSettings: (key: string) => GameSettings
   fallbackSettings: (
     bottleName: string,
     engine: NonCrossoverEngine
@@ -66,8 +61,11 @@ export interface EngineSwitchDeps {
   currentPinEngine: () => NonCrossoverEngine | null
   /** Makes a pinned engine available (downloads it when absent); null when that fails. */
   ensurePinEngine: (pin: EnginePin) => Promise<NonCrossoverEngine | null>
-  /** The title's own per-game bottle name (59-REVIEW WR-06). */
-  ownBottleName: (appId: string) => string | null
+  /**
+   * The title's own per-game bottle name (59-REVIEW WR-06). Supplied by Steam only; when absent
+   * the shared-bottle refusal does not apply and an idle shared bottle may switch (D-16).
+   */
+  ownBottleName?: (key: string) => string | null
 }
 
 export type PrepareResult =
@@ -79,6 +77,7 @@ export type PrepareResult =
         | 'dxvk-failed'
         | 'invalid-bottle'
         | 'shared-bottle'
+        | 'bottle-busy'
       detail: string
     }
 
@@ -109,17 +108,15 @@ async function defaultEnsurePinEngine(
   }
 }
 
-const defaultDeps: EngineSwitchDeps = {
-  getMonitorPhase: getBottleProcessMonitorPhase,
+/** Everything except `crossoverSettings`, which the caller supplies (store-specific). */
+const defaultDeps: Omit<EngineSwitchDeps, 'crossoverSettings'> = {
+  getMonitorPhase: () => null,
   killWith: killBottleWineServerWith,
-  resolveCrossoverBinDir: () =>
-    resolveCrossoverBinDirAsync({ hintWineBins: persistedWineBins() }),
+  resolveCrossoverBinDir: () => resolveCrossoverBinDirAsync({}),
   installRemove: (...args) => DXVK.installRemove(...args),
-  crossoverSettings: getBridgeBottleSettings,
   fallbackSettings: buildFallbackGameSettings,
   currentPinEngine: defaultCurrentPinEngine,
-  ensurePinEngine: defaultEnsurePinEngine,
-  ownBottleName: bridgeBottleNameFor
+  ensurePinEngine: defaultEnsurePinEngine
 }
 
 function isInside(root: string, path: string): boolean {
@@ -393,22 +390,31 @@ export function prepareBottleForEngine(
 const inFlightSwitches = new Map<string, Promise<PrepareResult>>()
 
 type PrepareArgs = {
-  appId: string
+  key: string
   bottleName: string
   next: EngineSelection
   /** False when CrossOver cannot run (expired/missing): the restore then uses the built-in engine. */
   crossoverHealthy?: boolean
   /** Called once when a real engine change is about to start, before any kill or DXVK step. */
   onSwitching?: () => void
-  deps?: Partial<EngineSwitchDeps>
+  deps: Partial<EngineSwitchDeps> & Pick<EngineSwitchDeps, 'crossoverSettings'>
 }
 
 async function prepareBottleForEngineBody(
   args: PrepareArgs
 ): Promise<PrepareResult> {
-  const { appId, bottleName, next } = args
+  const { key, bottleName, next } = args
   const crossoverHealthy = args.crossoverHealthy ?? true
   const deps: EngineSwitchDeps = { ...defaultDeps, ...args.deps }
+  // D-16: another game (any store) running in this bottle. Checked before any kill or rewrite.
+  const busyRefusal = (): PrepareResult | null => {
+    if (otherGamesRunning(bottleName, key).length === 0) return null
+    return {
+      ok: false,
+      reason: 'bottle-busy',
+      detail: `another game is running in bottle "${bottleName}"`
+    }
+  }
   const bottleDir = getBottleDir(bottleName)
   if (sanitizeBottleName(bottleName) !== bottleName || !existsSync(bottleDir)) {
     return {
@@ -418,7 +424,7 @@ async function prepareBottleForEngineBody(
     }
   }
   // Never kill a wineserver under a running game (Pitfall 2).
-  const phase = deps.getMonitorPhase(appId)
+  const phase = deps.getMonitorPhase(key)
   if (phase !== null) {
     return {
       ok: false,
@@ -465,19 +471,25 @@ async function prepareBottleForEngineBody(
   if (identityOf(prev) === identityOf(nextMarker)) {
     if (prev.dxvk === 'failed' && next.kind !== 'crossover' && next.dxvk) {
       // The last switch into this engine left DXVK uninstalled: retry, no wineserver kill.
-      return installNextDxvk(next)
+      return busyRefusal() ?? installNextDxvk(next)
     }
     if (!marker) writeMarker(bottleDir, nextMarker)
     return { ok: true, changed: false }
   }
 
-  // 59-REVIEW WR-06: a legacy shared bottle holds several titles; switching its engine would
-  // kill and rewrite it under the others.
-  if (deps.ownBottleName(appId) !== bottleName) {
+  // D-16: a real engine change kills the bottle's wineserver and rewrites DXVK, so it never
+  // happens under another running game of any store. Same-engine launches returned above.
+  const busy = busyRefusal()
+  if (busy) return busy
+
+  // 59-REVIEW WR-06: a Steam title in the legacy shared bottle holds several titles; switching
+  // its engine would kill and rewrite it under the others. Stores without an own-bottle notion
+  // skip this; their idle shared bottle switches (D-16).
+  if (deps.ownBottleName && deps.ownBottleName(key) !== bottleName) {
     return {
       ok: false,
       reason: 'shared-bottle',
-      detail: `engine switch refused on shared bottle "${bottleName}" for appId ${appId}`
+      detail: `engine switch refused on shared bottle "${bottleName}" for ${key}`
     }
   }
 
@@ -517,7 +529,7 @@ async function prepareBottleForEngineBody(
     let settings: GameSettings
     if (crossoverHealthy) {
       // 59-01 measurement: healthy CrossOver removed Staging-installed DXVK cleanly.
-      settings = { ...deps.crossoverSettings(appId), winePrefix: bottleDir }
+      settings = { ...deps.crossoverSettings(key), winePrefix: bottleDir }
     } else {
       if (!source.wineBin || !source.wineserverBin) {
         return {

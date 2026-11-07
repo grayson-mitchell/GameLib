@@ -43,6 +43,9 @@ const listOptions = jest.fn()
 jest.mock('backend/engine/engineDecision', () => ({
   listEngineOverrideOptions: (...a: unknown[]) => listOptions(...a)
 }))
+jest.mock('backend/storeManagers/steam/engine/steamEngineDeps', () => ({
+  steamDecisionDeps: () => ({ tag: 'steam-deps' })
+}))
 const send = jest.fn()
 jest.mock('../../ipc', () => ({
   sendFrontendMessage: (...a: unknown[]) => send(...a)
@@ -68,7 +71,7 @@ describe('steam engine flows', () => {
     expect(await handlers.get('listSteamEngineOptions')!({}, 'evil')).toEqual([
       { id: 'a' }
     ])
-    expect(listOptions).toHaveBeenCalledWith()
+    expect(listOptions).toHaveBeenCalledWith({ tag: 'steam-deps' })
   })
 
   it('passes dismissSteamEngineNotice args[0] through unmodified', async () => {

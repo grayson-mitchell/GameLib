@@ -57,3 +57,12 @@ export function isEngineKey(key: unknown): key is EngineKey {
 export function describeEngineKey(key: EngineKey): string {
   return key
 }
+
+/**
+ * The runner-local app name inside a key: a bare Steam appId is its own name,
+ * a prefixed key yields the part after the first `:`.
+ */
+export function appNameOf(key: EngineKey): string {
+  const idx = key.indexOf(':')
+  return idx < 0 ? key : key.slice(idx + 1)
+}

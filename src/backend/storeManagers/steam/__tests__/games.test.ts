@@ -673,8 +673,14 @@ jest.mock('backend/engine/engineDecision', () => ({
   decideCreationEngine: jest.fn(),
   decideLaunchEngine: jest.fn(),
   preflightCrossover: jest.fn(),
-  readStoredEngineOverride: jest.fn(),
   isCrossoverMissing: jest.fn()
+}))
+// Phase 61 (61-08): the Steam adapter that injects Steam-only inputs into the
+// store-agnostic decision and switch.
+jest.mock('../engine/steamEngineDeps', () => ({
+  readSteamEngineOverride: jest.fn(),
+  steamDecisionDeps: jest.fn(() => ({})),
+  steamSwitchDeps: jest.fn(() => ({ crossoverSettings: jest.fn() }))
 }))
 // Phase 59 (59-10): per-launch bottle preparation and state publishing.
 jest.mock('backend/engine/engineSwitch', () => ({
@@ -8593,14 +8599,15 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
-    const readStored = jest.requireMock('backend/engine/engineDecision')
-      .readStoredEngineOverride as jest.Mock
+    const readStored = jest.requireMock('../engine/steamEngineDeps')
+      .readSteamEngineOverride as jest.Mock
     readStored.mockReturnValueOnce('pinned:wine-staging-11.20')
 
     const settings = await new SteamGame(APP_ID).getSettings()
 
     expect(settings).toEqual({
       wineCrossoverBottle: 'GameLibSteam',
+      engineOverride: 'pinned:wine-staging-11.20',
       steamEngineOverride: 'pinned:wine-staging-11.20'
     })
   })
@@ -8610,8 +8617,8 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       jest.requireMock('../bridge/overlay/overlayPolicy')
         .__readStoredOverlayOverrideMock as jest.Mock
     const storedEngine = () =>
-      jest.requireMock('backend/engine/engineDecision')
-        .readStoredEngineOverride as jest.Mock
+      jest.requireMock('../engine/steamEngineDeps')
+        .readSteamEngineOverride as jest.Mock
     beforeEach(() => {
       ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
       ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
@@ -8634,6 +8641,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       const settings = await new SteamGame(APP_ID).getSettings()
       expect(settings).toEqual({
         wineCrossoverBottle: 'GameLibSteam',
+        engineOverride: 'pinned:wine-staging-11.20',
         steamEngineOverride: 'pinned:wine-staging-11.20',
         steamOverlayOverride: 'on'
       })
@@ -8657,8 +8665,8 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       jest.requireMock('../bridge/overlay/overlayPolicy')
         .__readStoredOverlayOverrideMock as jest.Mock
     const storedEngine = () =>
-      jest.requireMock('backend/engine/engineDecision')
-        .readStoredEngineOverride as jest.Mock
+      jest.requireMock('../engine/steamEngineDeps')
+        .readSteamEngineOverride as jest.Mock
     beforeEach(() => {
       ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
       ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
@@ -8743,6 +8751,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       const settings = await new SteamGame(APP_ID).getSettings()
       expect(settings).toEqual({
         wineCrossoverBottle: 'GameLibSteam',
+        engineOverride: 'pinned:wine-staging-11.20',
         steamEngineOverride: 'pinned:wine-staging-11.20',
         steamOverlayOverride: 'on',
         showFps: true
@@ -15743,7 +15752,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       expect(await new SteamGame(ID).launch({} as any)).toBe(true)
       expect(getEngineSelection(ID)).toMatchObject({ kind: 'crossover' })
       expect(prepareBottleForEngine).toHaveBeenCalledWith(
-        expect.objectContaining({ appId: ID, bottleName: PER_GAME })
+        expect.objectContaining({ key: ID, bottleName: PER_GAME })
       )
       expect(notify).not.toHaveBeenCalled()
       expect(
@@ -15979,8 +15988,8 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
             .isCrossoverMissing as jest.Mock
         ).mockResolvedValue(o.cxMissing)
         ;(
-          jest.requireMock('backend/engine/engineDecision')
-            .readStoredEngineOverride as jest.Mock
+          jest.requireMock('../engine/steamEngineDeps')
+            .readSteamEngineOverride as jest.Mock
         ).mockReturnValue(o.override)
         ;(readBottleEngineMarkerKind as jest.Mock).mockReturnValue(o.kind)
         ;(isPinnedEngineInstalled as jest.Mock).mockReturnValue(o.pinInstalled)

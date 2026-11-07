@@ -15,7 +15,9 @@ import { dirname, isAbsolute, join, relative } from 'path'
 import { toolsPath } from 'backend/constants/paths'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SteamEngineOption } from 'common/types/steam'
-import { readStoredTitleConfig } from 'backend/storeManagers/steam/titleSettings'
+import { readStoredGameConfig } from './engineConfig'
+import { appNameOf } from './gameKey'
+import { otherGamesRunning } from './bottleLedger'
 import { probeDemoStatus } from './demoStatus'
 import type { DemoStatusProbe } from './demoStatus'
 import { ENGINE_PINS } from './enginePins'
@@ -113,9 +115,11 @@ export interface EngineDecisionDeps {
   retrySettleMs?: number
   readBuild(binDir: string): Promise<string | null>
   killCrossoverWineserver(bottleName: string, binDir: string): Promise<void>
-  readOverride(appId: string): unknown
+  readOverride(key: string): unknown
   /** Process-monitor phase for a title; non-null means a game is running or starting. */
-  monitorPhase(appId: string): 'starting' | 'running' | null
+  monitorPhase(key: string): 'starting' | 'running' | null
+  /** D-16: true when another game (any store) is running in this bottle. */
+  bottleBusy(bottleName: string, key: string): boolean
   wineManagerReleases(): WineManagerRelease[]
   isPinInstalled(pin: EnginePin): boolean
   pins: Readonly<{ current: EnginePin; previous: EnginePin | null }>
@@ -128,9 +132,7 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
     async resolveCrossoverBinDir() {
       const { resolveCrossoverBinDirAsync } =
         await import('backend/engine/crossoverLocation')
-      const { persistedWineBins } =
-        await import('backend/storeManagers/steam/bottle')
-      return resolveCrossoverBinDirAsync({ hintWineBins: persistedWineBins() })
+      return resolveCrossoverBinDirAsync({})
     },
     isExecutable(path) {
       try {
@@ -151,13 +153,10 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
         15_000
       )
     },
-    readOverride: readStoredEngineOverride,
-    monitorPhase(appId) {
-      const { getBottleProcessMonitorPhase } =
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('backend/storeManagers/steam/bottleProcessMonitor') as typeof import('backend/storeManagers/steam/bottleProcessMonitor')
-      return getBottleProcessMonitorPhase(appId)
-    },
+    readOverride: (key) => readStoredGameConfig(appNameOf(key))?.engineOverride,
+    monitorPhase: () => null,
+    bottleBusy: (bottleName, key) =>
+      otherGamesRunning(bottleName, key).length > 0,
     wineManagerReleases() {
       const { wineDownloaderInfoStore } =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -178,11 +177,11 @@ function withDefaults(deps?: Partial<EngineDecisionDeps>): EngineDecisionDeps {
   return { ...defaultEngineDecisionDeps(), ...deps }
 }
 
-/** The CrossOver bin dir the engine layer resolves (persisted wine bins as hint). */
-export async function resolveCrossoverBinDirForEngine(): Promise<
-  string | undefined
-> {
-  return defaultEngineDecisionDeps().resolveCrossoverBinDir()
+/** The CrossOver bin dir the engine layer resolves (a store may inject a wine-bin hint). */
+export async function resolveCrossoverBinDirForEngine(
+  deps?: Partial<EngineDecisionDeps>
+): Promise<string | undefined> {
+  return withDefaults(deps).resolveCrossoverBinDir()
 }
 
 /**
@@ -207,7 +206,7 @@ export async function isCrossoverMissing(
 export async function preflightCrossover(
   bottleName: string,
   deps?: Partial<EngineDecisionDeps>,
-  opts?: { killOnTimeout?: boolean; appId?: string }
+  opts?: { killOnTimeout?: boolean; key?: string }
 ): Promise<CrossoverPreflight> {
   const d = withDefaults(deps)
   const binDir = await d.resolveCrossoverBinDir()
@@ -253,7 +252,9 @@ export async function preflightCrossover(
   const noKillReason =
     opts?.killOnTimeout === false
       ? 'page read'
-      : opts?.appId !== undefined && d.monitorPhase(opts.appId) !== null
+      : opts?.key !== undefined &&
+          (d.monitorPhase(opts.key) !== null ||
+            d.bottleBusy(bottleName, opts.key))
         ? 'game running'
         : null
   const settle = (ms: number) =>
@@ -384,23 +385,12 @@ function pinnedSelection(
   }
 }
 
-/**
- * 59-UAT G11: the title's stored override, read straight from its GameConfig
- * file. `GameConfig.get(id).config` is filled asynchronously after
- * construction, so the first read after a restart saw undefined and the
- * launch silently ran Automatic (file-read rationale: titleSettings.ts).
- * Unvalidated: callers pass the value through parseEngineOverride.
- */
-export function readStoredEngineOverride(appId: string): unknown {
-  return readStoredTitleConfig(appId)?.steamEngineOverride
-}
-
 export async function decideLaunchEngine(
-  args: { appId: string; bottleName: string },
+  args: { key: string; bottleName: string },
   deps?: Partial<EngineDecisionDeps>
 ): Promise<LaunchDecision> {
   const d = withDefaults(deps)
-  const override = parseEngineOverride(d.readOverride(args.appId))
+  const override = parseEngineOverride(d.readOverride(args.key))
   const logLines: string[] = []
   const finish = (
     selection: EngineSelection,
@@ -482,7 +472,7 @@ export async function decideLaunchEngine(
 
   const preflight = await preflightCrossover(args.bottleName, d, {
     killOnTimeout: true,
-    appId: args.appId
+    key: args.key
   })
 
   if (override === 'crossover') {
@@ -535,7 +525,7 @@ export async function decideLaunchEngine(
 }
 
 export async function decideCreationEngine(
-  args: { appId: string },
+  args: { key: string },
   deps?: Partial<EngineDecisionDeps>
 ): Promise<CreationDecision> {
   const d = withDefaults(deps)
@@ -560,7 +550,7 @@ export async function decideCreationEngine(
   }
   const decision = await decide()
   logInfo(
-    `SteamEngine: appId ${args.appId} bottle creation engine ${decision.kind} (presence check only; a CrossOver create failure falls back, 59-REVIEW WR-02/WR-03)`,
+    `SteamEngine: key ${args.key} bottle creation engine ${decision.kind} (presence check only; a CrossOver create failure falls back, 59-REVIEW WR-02/WR-03)`,
     LogPrefix.Steam
   )
   return decision

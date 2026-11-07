@@ -162,8 +162,11 @@ export async function launch(
     // Phase 59: bottled Steam stays CrossOver-only (no built-in engine).
     // A clear message beats a hang behind CrossOver's own dialog.
     const { preflightCrossover } = await import('backend/engine/engineDecision')
+    const { steamDecisionDeps } = await import('./engine/steamEngineDeps')
     const pre = await preflightCrossover(
-      getSteamBottleSettings()?.wineCrossoverBottle ?? DEFAULT_STEAM_BOTTLE_NAME
+      getSteamBottleSettings()?.wineCrossoverBottle ??
+        DEFAULT_STEAM_BOTTLE_NAME,
+      steamDecisionDeps()
     )
     if (pre.kind !== 'healthy') {
       notifyCrossoverRequired(steamGame, 'bottled', pre)
@@ -503,11 +506,12 @@ export async function selectLaunchEngine(
   // Play (the monitor status can be stale, 59-40 diagnosis). This only refuses: no engine is
   // selected and nothing is routed or launched, so D-07/D-09 hold, and every launch that can
   // start still probes below.
-  const { readStoredEngineOverride, isCrossoverMissing } =
-    await import('backend/engine/engineDecision')
+  const { isCrossoverMissing } = await import('backend/engine/engineDecision')
+  const { steamDecisionDeps, steamSwitchDeps, readSteamEngineOverride } =
+    await import('./engine/steamEngineDeps')
   const { parseEngineOverride } = await import('backend/engine/engineIds')
   const earlyOverride = parseEngineOverride(
-    readStoredEngineOverride(steamGame.appId)
+    readSteamEngineOverride(steamGame.appId)
   )
   if (
     connectivity.offline &&
@@ -523,7 +527,7 @@ export async function selectLaunchEngine(
     const refusal = offlineLaunchCertainlyBlocked({
       offline: connectivity.offline,
       override: earlyOverride,
-      crossoverMissing: await isCrossoverMissing(),
+      crossoverMissing: await isCrossoverMissing(steamDecisionDeps()),
       markerKind: readBottleEngineMarkerKind(bottleName),
       currentPinInstalled: isPinnedEngineInstalled(ENGINE_PINS.current),
       restoreNeedsAbsentPin: restoreNeedsAbsentPin(bottleName)
@@ -551,10 +555,10 @@ export async function selectLaunchEngine(
     }
   }
 
-  const decision = await decideLaunchEngine({
-    appId: steamGame.appId,
-    bottleName
-  })
+  const decision = await decideLaunchEngine(
+    { key: steamGame.appId, bottleName },
+    steamDecisionDeps()
+  )
   if (decision.kind === 'unavailable') {
     logWarning(
       `SteamGame: appId ${steamGame.appId} engine override ${decision.override} is unavailable: ${decision.detail}`,
@@ -608,14 +612,17 @@ export async function selectLaunchEngine(
     return { ok: false }
   }
   const prep = await prepareBottleForEngine({
-    appId: steamGame.appId,
+    key: steamGame.appId,
     bottleName,
     next: sel,
     // 59-UAT G10: an override to CrossOver on an expired bottle must not run
     // the DXVK restore through CrossOver.
     crossoverHealthy: decision.preflight?.kind === 'healthy',
     // WR-05: a restore's pin download reports the same progress as a launch download.
-    deps: { ensurePinEngine: steamGame.restorePinEngine },
+    deps: {
+      ...steamSwitchDeps(),
+      ensurePinEngine: steamGame.restorePinEngine
+    },
     // IN-05 (59-22): a real engine switch is "setting up", not a stale
     // "Downloading (100%)", until the monitor's launching status.
     onSwitching: () =>
@@ -654,7 +661,10 @@ export async function selectLaunchEngine(
         `SteamGame: appId ${steamGame.appId} DXVK setup failed (${prep.detail}); continuing`,
         LogPrefix.Steam
       )
-    } else if (prep.reason === 'shared-bottle') {
+    } else if (
+      prep.reason === 'shared-bottle' ||
+      prep.reason === 'bottle-busy'
+    ) {
       // 59-REVIEW WR-06: refuse, kill nothing, and say why.
       clearEngineSelection(steamGame.appId)
       logWarning(

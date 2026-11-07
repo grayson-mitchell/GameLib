@@ -26,14 +26,6 @@ jest.mock('backend/engine/bottlePrimitives', () => ({
   buildFallbackGameSettings: jest.fn(),
   killBottleWineServerWith: jest.fn()
 }))
-jest.mock('backend/storeManagers/steam/bottle', () => ({
-  bridgeBottleNameFor: (id: string) => `GameLibSteamBridge-${id}`,
-  persistedWineBins: () => [],
-  getBridgeBottleSettings: jest.fn()
-}))
-jest.mock('backend/storeManagers/steam/bottleProcessMonitor', () => ({
-  getBottleProcessMonitorPhase: jest.fn()
-}))
 jest.mock('backend/engine/crossoverLocation', () => ({
   resolveCrossoverBinDirAsync: jest.fn()
 }))
@@ -51,6 +43,7 @@ import {
   restoreNeedsAbsentPin
 } from '../engineSwitch'
 import type { EngineSwitchDeps } from '../engineSwitch'
+import { __resetBottleLedgerForTests, markGameRunning } from '../bottleLedger'
 import type { EngineSelection } from '../engineTypes'
 
 const BIN_DIR =
@@ -125,7 +118,7 @@ beforeEach(() => {
 afterEach(() => rmSync(mockState.root, { recursive: true, force: true }))
 
 const run = (next: EngineSelection) =>
-  prepareBottleForEngine({ appId: '620', bottleName: NAME, next, deps })
+  prepareBottleForEngine({ key: '620', bottleName: NAME, next, deps })
 
 describe('prepareBottleForEngine', () => {
   test('crossover -> pinned: kills CrossOver wineserver, installs DXVK from the pin, writes the marker', async () => {
@@ -273,7 +266,7 @@ describe('prepareBottleForEngine', () => {
 
   test('a missing bottle is invalid-bottle', async () => {
     const res = await prepareBottleForEngine({
-      appId: '620',
+      key: '620',
       bottleName: 'GameLibSteamBridge-999',
       next: pinned,
       deps
@@ -404,7 +397,7 @@ describe('prepareBottleForEngine health and shared bottles (G10, WR-06)', () => 
     bottleName = NAME
   ) =>
     prepareBottleForEngine({
-      appId: '620',
+      key: '620',
       bottleName,
       next,
       deps,
@@ -552,7 +545,7 @@ describe('prepareBottleForEngine ordered restore (CR-03, WR-05)', () => {
     deps.ensurePinEngine.mockResolvedValue(null)
     const onSwitching = jest.fn()
     const res = await prepareBottleForEngine({
-      appId: '620',
+      key: '620',
       bottleName: NAME,
       next: crossover,
       deps,
@@ -744,7 +737,7 @@ describe('G30 / WR-02 engine switch', () => {
     seedPinnedMarker()
     restoring(true)
     await prepareBottleForEngine({
-      appId: '620',
+      key: '620',
       bottleName: NAME,
       next: crossover,
       crossoverHealthy: false,
@@ -798,7 +791,7 @@ describe('G30 / WR-02 engine switch', () => {
     })
     const a = run(pinned)
     const b = prepareBottleForEngine({
-      appId: '730',
+      key: '730',
       bottleName: other,
       next: pinned,
       deps
@@ -828,5 +821,65 @@ describe('G30 / WR-02 engine switch', () => {
       new Promise((r) => setTimeout(() => r('hung'), 500).unref())
     ])
     expect(third).not.toBe('hung')
+  })
+})
+
+describe('prepareBottleForEngine D-16 bottle-busy', () => {
+  beforeEach(() => __resetBottleLedgerForTests())
+  afterAll(() => __resetBottleLedgerForTests())
+
+  const runKey = (
+    next: EngineSelection,
+    over: Partial<EngineSwitchDeps> = {}
+  ) =>
+    prepareBottleForEngine({
+      key: 'legendary:A',
+      bottleName: NAME,
+      next,
+      deps: { ...deps, ownBottleName: undefined, ...over }
+    })
+
+  test('another game running in the bottle refuses an engine change and kills nothing', async () => {
+    seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+    markGameRunning(NAME, 'gog:1')
+    const res = await runKey(pinned)
+    expect(res).toMatchObject({ ok: false, reason: 'bottle-busy' })
+    expect(deps.killWith).not.toHaveBeenCalled()
+    expect(deps.installRemove).not.toHaveBeenCalled()
+    expect(marker().kind).toBe('crossover')
+  })
+
+  test('an idle non-Steam shared bottle switches (no shared-bottle refusal)', async () => {
+    seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+    const res = await runKey(pinned)
+    expect(res).toEqual({ ok: true, changed: true })
+    expect(deps.killWith).toHaveBeenCalled()
+    expect(marker().kind).toBe('pinned')
+  })
+
+  test('marker already matching: no change and no kill even with another game running', async () => {
+    seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+    markGameRunning(NAME, 'gog:1')
+    const res = await runKey(crossover)
+    expect(res).toEqual({ ok: true, changed: false })
+    expect(deps.killWith).not.toHaveBeenCalled()
+  })
+
+  test('Steam deps still refuse a shared bottle', async () => {
+    seedMarker({ kind: 'crossover', id: 'crossover', wineserverBin: '' })
+    const res = await runKey(pinned, { ownBottleName: () => 'Other' })
+    expect(res).toMatchObject({ ok: false, reason: 'shared-bottle' })
+  })
+
+  test('crossoverSettings is a required dep', () => {
+    const call = () =>
+      prepareBottleForEngine({
+        key: '1',
+        bottleName: NAME,
+        next: pinned,
+        // @ts-expect-error crossoverSettings missing
+        deps: {}
+      })
+    expect(typeof call).toBe('function')
   })
 })

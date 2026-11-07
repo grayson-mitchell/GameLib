@@ -1,4 +1,4 @@
-import { engineKeyFor, isEngineKey } from '../gameKey'
+import { appNameOf, engineKeyFor, isEngineKey } from '../gameKey'
 
 describe('engineKeyFor', () => {
   test('Steam keeps its bare numeric appId', () => {
@@ -35,4 +35,12 @@ describe('isEngineKey', () => {
     'rejects %j',
     (k) => expect(isEngineKey(k)).toBe(false)
   )
+})
+
+describe('appNameOf', () => {
+  test('a bare Steam appId is its own name; a prefixed key yields the part after the first colon', () => {
+    expect(appNameOf('570')).toBe('570')
+    expect(appNameOf('gog:1207658930')).toBe('1207658930')
+    expect(appNameOf('legendary:a:b')).toBe('a:b')
+  })
 })

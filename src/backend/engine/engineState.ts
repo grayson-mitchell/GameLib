@@ -12,7 +12,6 @@ import { logError, LogPrefix } from 'backend/logger'
 import type { SteamEngineState } from 'common/types/steam'
 import {
   preflightCrossover,
-  readStoredEngineOverride,
   resolveCrossoverBinDirForEngine
 } from './engineDecision'
 import type {
@@ -91,6 +90,10 @@ const lazyBottle = () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('backend/storeManagers/steam/bottle') as typeof import('backend/storeManagers/steam/bottle')
 
+const lazySteamEngineDeps = () =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('backend/storeManagers/steam/engine/steamEngineDeps') as typeof import('backend/storeManagers/steam/engine/steamEngineDeps')
+
 const lazyBridgeVerdict = () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('backend/storeManagers/steam/bridge/bridgeVerdict') as typeof import('backend/storeManagers/steam/bridge/bridgeVerdict')
@@ -120,7 +123,12 @@ function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
       deps?.isBridgeBottleReady ?? ((n) => lazyBottle().isBridgeBottleReady(n)),
     preflight:
       deps?.preflight ??
-      ((n) => preflightCrossover(n, deps, { killOnTimeout: false })),
+      ((n) =>
+        preflightCrossover(
+          n,
+          { ...lazySteamEngineDeps().steamDecisionDeps(), ...deps },
+          { killOnTimeout: false }
+        )),
     ...deps
   } as EngineStateDeps
 }
@@ -148,7 +156,7 @@ export function isDrmModeFromVerdict(
 function readOverride(appId: string, deps: EngineStateDeps): EngineOverrideId {
   const raw = deps.readOverride
     ? deps.readOverride(appId)
-    : readStoredEngineOverride(appId)
+    : lazySteamEngineDeps().readSteamEngineOverride(appId)
   return parseEngineOverride(raw)
 }
 
@@ -258,7 +266,12 @@ export async function getSteamEngineState(
 
   let preflight: CrossoverPreflight | null = cachedPreflight(bottle, d.now())
   let crossoverInstalled: boolean
-  const resolveBin = d.resolveCrossoverBinDir ?? resolveCrossoverBinDirForEngine
+  const resolveBin =
+    d.resolveCrossoverBinDir ??
+    (() =>
+      resolveCrossoverBinDirForEngine(
+        lazySteamEngineDeps().steamDecisionDeps()
+      ))
   if (preflight) {
     crossoverInstalled = preflight.kind !== 'missing'
   } else {
