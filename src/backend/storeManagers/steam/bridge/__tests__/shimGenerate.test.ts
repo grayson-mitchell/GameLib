@@ -944,11 +944,21 @@ describe('shimGenerate', () => {
     })
   })
 
-  it('BLOCKER 2: shimGenerate.ts source imports builtBridgeShimPath from backend/constants/paths and defines no second hardcoded .dll source-location string', () => {
-    const source = readFileSync(
-      join(__dirname, '..', 'shimGenerate.ts'),
-      'utf-8'
+  it('BLOCKER 2: the shim placement sources import builtBridgeShimPath from backend/constants/paths and define no second hardcoded .dll source-location string', () => {
+    const files = [
+      'shimGenerate.ts',
+      'shimOriginals.ts',
+      'shimDrmWrapper.ts',
+      'shimPlacement.ts'
+    ]
+    const sources = files.map((f) =>
+      readFileSync(join(__dirname, '..', f), 'utf-8')
     )
+    // Non-vacuity (Phase 65 plan 16): the split must not leave the scan
+    // reading nothing -- every file is non-empty and the files together
+    // hold the destination FILENAME constants and the paths import.
+    for (const src of sources) expect(src.length).toBeGreaterThan(0)
+    const source = sources.join('\n')
     expect(source).toMatch(
       /import\s*\{[^}]*\bbuiltBridgeShimPath\b[^}]*\}\s*from\s*'backend\/constants\/paths'/
     )
@@ -958,6 +968,7 @@ describe('shimGenerate', () => {
     const dllStringLiterals = [...source.matchAll(/'[^']*\.dll'/g)].map(
       (m) => m[0]
     )
+    expect(dllStringLiterals.length).toBeGreaterThan(0)
     for (const literal of dllStringLiterals) {
       expect(['steam_api.dll', 'steam_api64.dll']).toContain(
         literal.slice(1, -1)
