@@ -16,6 +16,7 @@ import {
   scanScope,
   scanSource
 } from '../hardcodedStringGate'
+import { at } from './fixtures/indexed'
 
 const EMPTY_GLOSSARY = { glossary: [] as string[] }
 
@@ -85,7 +86,9 @@ describe('hardcodedStringGate', () => {
       const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
 
       expect(result.violations).toHaveLength(1)
-      expect(result.violations[0].text).toContain('Login failed for')
+      expect(at(result.violations, 0, 'violations').text).toContain(
+        'Login failed for'
+      )
     })
   })
 
@@ -272,7 +275,9 @@ describe('hardcodedStringGate', () => {
       const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
 
       expect(result.violations).toHaveLength(1)
-      expect(result.violations[0].text).toBe('Repair failed. See the log.')
+      expect(at(result.violations, 0, 'violations').text).toBe(
+        'Repair failed. See the log.'
+      )
     })
   })
 
@@ -316,7 +321,9 @@ describe('hardcodedStringGate', () => {
       const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
 
       expect(result.violations).toHaveLength(1)
-      expect(result.violations[0].text).toBe('Could not restore your last page')
+      expect(at(result.violations, 0, 'violations').text).toBe(
+        'Could not restore your last page'
+      )
     })
 
     it('STILL flags the same literal shape when the builder is NOT named *StorageKey', () => {
@@ -362,7 +369,9 @@ describe('hardcodedStringGate', () => {
       const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
 
       expect(result.violations).toHaveLength(1)
-      expect(result.violations[0].text).toBe('Could not hide the store window')
+      expect(at(result.violations, 0, 'violations').text).toBe(
+        'Could not hide the store window'
+      )
     })
 
     it('STILL flags a label passed to a MULTI-statement wrapper, even one that does log', () => {

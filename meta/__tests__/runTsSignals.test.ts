@@ -23,6 +23,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { at } from './fixtures/indexed'
 
 // Production path -- the RED proof below temporarily repoints ONLY this one
 // constant to meta/runTs.prefix.cjs (the pre-fix file), never anything else.
@@ -93,7 +94,10 @@ function launch(entryPath: string, wrapperPath: string = WRAPPER): Launched {
       )
       if (match) {
         wrapperChild.stdout?.off('data', onData)
-        resolve({ pid: Number(match[1]), dir: match[2].trim() })
+        resolve({
+          pid: Number(match[1]),
+          dir: at(match, 2, 'fixture dir').trim()
+        })
       }
     }
     wrapperChild.stdout?.on('data', onData)

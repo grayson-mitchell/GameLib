@@ -206,9 +206,12 @@ function extractExemptReason(
     const text = range.getText()
     const markerIndex = text.indexOf(FILE_EXEMPT_MARKER)
     if (markerIndex === -1) continue
-    const afterMarker = text
-      .slice(markerIndex + FILE_EXEMPT_MARKER.length)
-      .split('\n')[0]
+    const afterMarkerRest = text.slice(markerIndex + FILE_EXEMPT_MARKER.length)
+    const firstNewline = afterMarkerRest.indexOf('\n')
+    const afterMarker =
+      firstNewline === -1
+        ? afterMarkerRest
+        : afterMarkerRest.slice(0, firstNewline)
     const reason = afterMarker.replace(/\*\/\s*$/, '').trim()
     if (reason.length > 0) return reason
   }

@@ -273,6 +273,9 @@ function parseMacMedalRecords(xml: string): DumpRecord[] {
       compareVersion(String(y['@_version']), String(x['@_version']))
     )
     const best = macMedals[0]
+    if (best === undefined) {
+      continue
+    }
 
     records.push({
       ccxAppId: String(app['@_appid']),
@@ -296,7 +299,7 @@ function parseMacMedalRecords(xml: string): DumpRecord[] {
 // ---------------------------------------------------------------------------
 
 function pickWinner(records: DumpRecord[]): DumpRecord {
-  return records
+  const winner = records
     .slice()
     .sort(
       (a, b) =>
@@ -304,6 +307,10 @@ function pickWinner(records: DumpRecord[]): DumpRecord {
         b.num - a.num ||
         a.ccxAppId.localeCompare(b.ccxAppId)
     )[0]
+  if (winner === undefined) {
+    throw new Error('pickWinner: no records to choose a winner from')
+  }
+  return winner
 }
 
 function buildSteamIdIndex(records: DumpRecord[]): Map<string, DumpRecord> {

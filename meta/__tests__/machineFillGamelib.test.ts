@@ -19,6 +19,7 @@ import {
   type MtManifest
 } from '../machineFillGamelib'
 import { toI18nextCode } from '../../src/common/languages'
+import { at, defined } from './fixtures/indexed'
 
 // No network, no fs -- every fixture below is an in-memory object. Grepped
 // by this task's own acceptance criteria to confirm the suite is hermetic.
@@ -1022,15 +1023,17 @@ describe('createAnthropicTranslator -- note passthrough + system prompt rules', 
   })
 
   it('sends note in the user payload only when present, and states the two note rules in the system prompt', async () => {
-    let capturedBody: {
-      system: string
-      messages: Array<{ content: string }>
-    } | null = null
+    const captured: {
+      body: { system: string; messages: Array<{ content: string }> } | null
+    } = { body: null }
 
     global.fetch = jest.fn((_url, init) => {
-      capturedBody = JSON.parse((init as RequestInit).body as string)
+      const body: NonNullable<typeof captured.body> = JSON.parse(
+        String((init as RequestInit).body)
+      )
+      captured.body = body
       const userPayload = JSON.parse(
-        capturedBody!.messages[0].content
+        at(body.messages, 0, 'messages').content
       ) as Array<{
         keyPath: string
       }>
@@ -1071,18 +1074,19 @@ describe('createAnthropicTranslator -- note passthrough + system prompt rules', 
       { keyPath: 'b', source: 'B', locale: 'de', memory: [] }
     ])
 
-    expect(capturedBody).not.toBeNull()
-    const userPayload = JSON.parse(capturedBody!.messages[0].content) as Array<
-      Record<string, unknown>
-    >
+    expect(captured.body).not.toBeNull()
+    const sentBody = defined(captured.body, 'captured request body')
+    const userPayload = JSON.parse(
+      at(sentBody.messages, 0, 'messages').content
+    ) as Array<Record<string, unknown>>
     expect(userPayload[0]).toHaveProperty(
       'note',
       'CLDR plural category "few" -- sample count(s): 2, 3, 4'
     )
     expect(userPayload[1]).not.toHaveProperty('note')
 
-    expect(capturedBody!.system).toMatch(/BINDING translator/)
-    expect(capturedBody!.system).toMatch(/IDENTICALLY/)
+    expect(sentBody.system).toMatch(/BINDING translator/)
+    expect(sentBody.system).toMatch(/IDENTICALLY/)
   })
 })
 

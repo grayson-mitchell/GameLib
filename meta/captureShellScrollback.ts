@@ -146,7 +146,9 @@ function readLongRunningChannels(): string[] {
       'LONG_RUNNING_CHANNELS array not found in src-tauri/src/main.rs -- source shape drifted, re-verify captureShellScrollback.ts against HEAD'
     )
   }
-  return Array.from(match[1].matchAll(/"([^"]+)"/g)).map((m) => m[1])
+  return Array.from(
+    captureGroup(match, 1, 'LONG_RUNNING_CHANNELS body').matchAll(/"([^"]+)"/g)
+  ).map((m) => captureGroup(m, 1, 'LONG_RUNNING_CHANNELS entry'))
 }
 
 // Runs BEFORE the two module-scope source reads below, so a wrong cwd is named
@@ -332,6 +334,30 @@ export interface AnalyzeCaptureResult {
 
 /** Splits on `\n`, dropping exactly one trailing empty element from a final newline --
  * never more, so a genuinely blank last line is preserved. */
+function captureGroup(
+  match: RegExpMatchArray,
+  n: number,
+  label: string
+): string {
+  const value = match[n]
+  if (value === undefined) {
+    throw new Error(`regex capture group ${n} missing for ${label}`)
+  }
+  return value
+}
+
+function namedGroup(
+  groups: Record<string, string | undefined>,
+  name: string,
+  label: string
+): string {
+  const value = groups[name]
+  if (value === undefined) {
+    throw new Error(`regex named group "${name}" missing for ${label}`)
+  }
+  return value
+}
+
 function splitLines(text: string): string[] {
   const lines = text.split('\n')
   if (lines.length > 0 && lines[lines.length - 1] === '') {
@@ -343,7 +369,7 @@ function splitLines(text: string): string[] {
 function extractTimestamp(timestampedLine: string | undefined): string | null {
   if (timestampedLine === undefined) return null
   const match = TIMESTAMP_LINE_RE.exec(timestampedLine)
-  return match ? match[1] : null
+  return match ? captureGroup(match, 1, 'timestamp') : null
 }
 
 interface AnchorScan {
@@ -471,8 +497,8 @@ export function analyzeCapture(
     if (targetMatch?.groups) {
       targetMatches.push({
         line,
-        id: targetMatch.groups.id,
-        channel: targetMatch.groups.channel,
+        id: namedGroup(targetMatch.groups, 'id', 'target drop'),
+        channel: namedGroup(targetMatch.groups, 'channel', 'target drop'),
         timestamp: extractTimestamp(timestampedLines[i])
       })
       return
@@ -488,8 +514,8 @@ export function analyzeCapture(
     if (match?.groups) {
       cookieLegMatches.push({
         line,
-        channel: match.groups.channel,
-        ms: match.groups.ms
+        channel: namedGroup(match.groups, 'channel', 'cookie leg'),
+        ms: namedGroup(match.groups, 'ms', 'cookie leg')
       })
     }
   })
@@ -525,7 +551,11 @@ export function analyzeCapture(
   // adjacency to the cookie leg.
   let nesting: Nesting = null
   if (verdict === 'RECURRENCE' && cookieLegMatches.length > 0) {
-    const recurrenceChannel = targetMatches[0].channel
+    const firstTarget = targetMatches[0]
+    if (firstTarget === undefined) {
+      throw new Error('RECURRENCE verdict without a target match')
+    }
+    const recurrenceChannel = firstTarget.channel
     nesting = LONG_RUNNING_CHANNELS.includes(recurrenceChannel)
       ? 'EXEMPT_CHANNEL_CANNOT_TIMEOUT'
       : 'UNPROVEN_ADJACENCY'

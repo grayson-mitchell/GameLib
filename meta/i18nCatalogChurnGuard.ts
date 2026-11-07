@@ -130,11 +130,13 @@ export function parsePorcelainZ(output: string): string[] {
   const paths: string[] = []
   for (let i = 0; i < records.length; i++) {
     const record = records[i]
-    if (record.length < 4) continue
+    if (record === undefined || record.length < 4) continue
     const status = record.slice(0, 2)
     paths.push(record.slice(3))
-    if (/[RC]/.test(status) && i + 1 < records.length) {
-      paths.push(records[++i])
+    const original = records[i + 1]
+    if (/[RC]/.test(status) && original !== undefined) {
+      paths.push(original)
+      i++
     }
   }
   return paths.filter((path) => path.length > 0)

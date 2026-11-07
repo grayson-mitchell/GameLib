@@ -22,6 +22,7 @@
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { at } from './fixtures/indexed'
 
 const README = readFileSync(join(__dirname, '..', '..', 'README.md'), 'utf-8')
 
@@ -34,7 +35,7 @@ function supportedOsSection(markdown: string): string {
     /^## Supported Operating Systems[ \t]*$([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(
       markdown
     )
-  return match ? match[1] : ''
+  return match ? at(match, 1, 'section body') : ''
 }
 
 describe('D-02: README Intel-Mac disclosure', () => {

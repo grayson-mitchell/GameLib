@@ -13,6 +13,7 @@
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { at } from './fixtures/indexed'
 
 const PACKAGE_JSON_PATH = join(__dirname, '..', '..', 'package.json')
 const META_DIR = join(__dirname, '..')
@@ -156,7 +157,7 @@ function extractRunnerCjsPaths(source: string): string[] {
     found.add(m[0])
   }
   for (const m of source.matchAll(/node ([\w./-]+\.cjs)/g)) {
-    found.add(m[1])
+    found.add(at(m, 1, 'cjs path'))
   }
   return [...found].filter(
     (p) => !NON_EXECUTION_CJS_ALLOWLIST.some((allowed) => p.endsWith(allowed))

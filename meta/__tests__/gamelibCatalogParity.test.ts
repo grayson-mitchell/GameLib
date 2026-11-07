@@ -8,6 +8,7 @@ import {
   pluralCategoriesFor,
   type MtManifest
 } from '../machineFillGamelib'
+import { at } from './fixtures/indexed'
 
 /**
  * D-08/D-09/D-10 parity gate over every COMMITTED `gamelib.json`.
@@ -115,8 +116,9 @@ describe('gamelib catalog parity', () => {
       for (const keyPath of Object.keys(english)) {
         const match = keyPath.match(/^(.*)_(zero|one|two|few|many|other)$/)
         if (!match) continue
-        if (english[`${match[1]}_other`] === undefined) continue
-        bases.add(match[1])
+        const base = at(match, 1, 'plural base')
+        if (english[`${base}_other`] === undefined) continue
+        bases.add(base)
       }
 
       for (const base of bases) {

@@ -95,12 +95,19 @@ function setNested(obj: Catalog, path: string, value: string): void {
   let cursor = obj
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i]
+    if (part === undefined) {
+      throw new Error(`setNested: path segment ${i} missing in "${path}"`)
+    }
     if (!isPlainObject(cursor[part])) {
       cursor[part] = {}
     }
     cursor = cursor[part] as Catalog
   }
-  cursor[parts[parts.length - 1]] = value
+  const leaf = parts[parts.length - 1]
+  if (leaf === undefined) {
+    throw new Error(`setNested: empty path "${path}"`)
+  }
+  cursor[leaf] = value
 }
 
 function cloneCatalog(obj: Catalog): Catalog {
@@ -310,6 +317,9 @@ function buildNoteFor(
   const match = keyPath.match(PLURAL_SUFFIX_RE)
   if (match) {
     const category = match[1]
+    if (category === undefined) {
+      throw new Error(`plural suffix match without category: ${keyPath}`)
+    }
     const samples = samplePluralIntegers(locale, category)
     if (samples.length > 0) {
       parts.push(
@@ -380,7 +390,11 @@ export function collectMissingKeys(
       continue
     }
 
-    evaluate(key, enFlat[key])
+    const englishValue = enFlat[key]
+    if (englishValue === undefined) {
+      throw new Error(`English catalog key vanished while iterating: ${key}`)
+    }
+    evaluate(key, englishValue)
   }
 
   return { locale, missing, preserved }
@@ -434,7 +448,11 @@ function extractPlaceholders(text: string): Set<string> {
   const re = new RegExp(PLACEHOLDER_RE)
   let match: RegExpExecArray | null
   while ((match = re.exec(text)) !== null) {
-    found.add(match[1])
+    const placeholder = match[1]
+    if (placeholder === undefined) {
+      throw new Error(`placeholder match without capture group: ${text}`)
+    }
+    found.add(placeholder)
   }
   return found
 }
@@ -863,7 +881,11 @@ export function createAnthropicTranslator(
   return async (batch) => {
     if (batch.length === 0) return []
 
-    const locale = batch[0].locale
+    const first = batch[0]
+    if (first === undefined) {
+      throw new Error('translator batch unexpectedly empty')
+    }
+    const locale = first.locale
     const system = [
       `You are translating short UI strings for the GameLib desktop app`,
       `from English into the locale "${locale}".`,

@@ -11,6 +11,7 @@ import {
   createFakeHomeProfile,
   type FakeHomeProfile
 } from '../../src/backend/testUtils/fakeHomeProfile'
+import { at } from './fixtures/indexed'
 
 const HARNESS = join(__dirname, 'fixtures', 'acf_parse_harness.c')
 const SOURCE = join(
@@ -70,16 +71,20 @@ function extractParser(): string {
   const ends = idx('/* GAMELIB-ACF-PARSE END */')
   expect(begins).toHaveLength(1)
   expect(ends).toHaveLength(1)
-  const traceBegin = lines.flatMap((l, i) =>
-    l.includes('GAMELIB-DRM-TRACE BEGIN') ? [i] : []
-  )[1]
+  const traceBegin = at(
+    lines.flatMap((l, i) => (l.includes('GAMELIB-DRM-TRACE BEGIN') ? [i] : [])),
+    1,
+    'DRM trace begin marker'
+  )
   const traceEnd = lines.findIndex(
     (l, i) => i > traceBegin && l.includes('GAMELIB-DRM-TRACE END')
   )
-  expect(begins[0]).toBeGreaterThan(traceBegin)
-  expect(ends[0]).toBeLessThan(traceEnd)
-  expect(begins[0]).toBeLessThan(ends[0])
-  return lines.slice(begins[0] + 1, ends[0]).join('\n') + '\n'
+  const begin = at(begins, 0, 'parse begin marker')
+  const end = at(ends, 0, 'parse end marker')
+  expect(begin).toBeGreaterThan(traceBegin)
+  expect(end).toBeLessThan(traceEnd)
+  expect(begin).toBeLessThan(end)
+  return lines.slice(begin + 1, end).join('\n') + '\n'
 }
 
 describe('ACF/VDF KeyValues parser host harness (WR-02)', () => {

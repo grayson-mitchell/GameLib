@@ -1744,9 +1744,14 @@ function commentRangesCarryExemptMarker(
     const rangeText = range.getText()
     const markerIndex = rangeText.indexOf(FILE_EXEMPT_MARKER)
     if (markerIndex === -1) return false
-    const afterMarker = rangeText
-      .slice(markerIndex + FILE_EXEMPT_MARKER.length)
-      .split('\n')[0]
+    const afterMarkerRest = rangeText.slice(
+      markerIndex + FILE_EXEMPT_MARKER.length
+    )
+    const firstNewline = afterMarkerRest.indexOf('\n')
+    const afterMarker =
+      firstNewline === -1
+        ? afterMarkerRest
+        : afterMarkerRest.slice(0, firstNewline)
     const reason = afterMarker.replace(/\*\/\s*$/, '').trim()
     return reason.length > 0
   })

@@ -16,6 +16,7 @@
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
+import { at } from './fixtures/indexed'
 
 const REPO = join(__dirname, '..', '..')
 const SRC = join(REPO, 'src')
@@ -33,7 +34,7 @@ function valueImportSpecifiers(source: string): string[] {
   const text = stripComments(source)
   const specs: string[] = []
   const add = (re: RegExp) => {
-    for (const m of text.matchAll(re)) specs.push(m[1])
+    for (const m of text.matchAll(re)) specs.push(at(m, 1, 'specifier'))
   }
   // static `import ... from 'x'` / `export ... from 'x'`, excluding `import type` / `export type`
   add(/\b(?:import|export)\s+(?!type\b)[^;'"]*?\bfrom\s*['"]([^'"]+)['"]/g)

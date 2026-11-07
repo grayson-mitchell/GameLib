@@ -36,6 +36,7 @@ import {
   scanScope,
   scanSource
 } from '../logSecretGate'
+import { at } from './fixtures/indexed'
 
 const REPO_ROOT = join(__dirname, '..', '..')
 
@@ -131,7 +132,7 @@ describe('logSecretGate', () => {
       )
 
       expect(result.violations).toHaveLength(1)
-      expect(result.violations[0].identifier).toBe('stdout')
+      expect(at(result.violations, 0, 'violations').identifier).toBe('stdout')
     })
 
     it('flags an array-argument call — the real bottle.ts:805 shape', () => {
@@ -141,7 +142,7 @@ describe('logSecretGate', () => {
       )
 
       expect(result.violations).toHaveLength(1)
-      expect(result.violations[0].identifier).toBe('stderr')
+      expect(at(result.violations, 0, 'violations').identifier).toBe('stderr')
     })
 
     it('flags a writer-method call, not just the module-level helper', () => {
@@ -266,7 +267,7 @@ describe('logSecretGate', () => {
 
       expect(result.violations).toHaveLength(0)
       expect(result.exemptions).toHaveLength(1)
-      expect(result.exemptions[0].reason).toBe(
+      expect(at(result.exemptions, 0, 'exemptions').reason).toBe(
         'stderr of tar -xf, not an auth command'
       )
     })
@@ -298,7 +299,7 @@ describe('logSecretGate', () => {
 
       expect(result.exemptions).toHaveLength(1)
       expect(result.violations).toHaveLength(1)
-      expect(result.violations[0].line).toBe(4)
+      expect(at(result.violations, 0, 'violations').line).toBe(4)
     })
 
     it('has NO whole-file escape hatch — a marker at the top of the file exempts nothing below it', () => {

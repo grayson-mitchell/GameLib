@@ -78,6 +78,7 @@
 
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { at } from './fixtures/indexed'
 
 const SRC_ROOT = join(__dirname, '..', '..', 'src')
 const PACKAGE_JSON_PATH = join(__dirname, '..', '..', 'package.json')
@@ -153,8 +154,8 @@ function findHits(pattern: RegExp): Hit[] {
     const lines = blankLineCommentMarkers(blockStripped.split('\n'))
     const originalLines = original.split('\n')
     for (let i = 0; i < lines.length; i++) {
-      if (pattern.test(lines[i])) {
-        const originalContent = originalLines[i]
+      if (pattern.test(at(lines, i, 'stripped line'))) {
+        const originalContent = at(originalLines, i, 'original line')
         if (isTolerated(file, originalContent)) continue
         hits.push({ file, line: i + 1, content: originalContent.trim() })
       }
@@ -243,7 +244,7 @@ describe('D-03: electron package absence -- mechanized, mutation-proven gate', (
       throw new Error(
         `package.json contains the substring 'electron' at line ${line}, outside the ` +
           `dependencies/devDependencies keys the check above covers -- D-03 requires it ` +
-          `appear nowhere in the file at all:\n  ${raw.split('\n')[line - 1].trim()}`
+          `appear nowhere in the file at all:\n  ${at(raw.split('\n'), line - 1, 'package.json line').trim()}`
       )
     }
     expect(idx).toBe(-1)

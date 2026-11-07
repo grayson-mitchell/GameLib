@@ -143,6 +143,9 @@ export function parseArgs(argv: string[]): CliOptions {
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
+    if (arg === undefined) {
+      throw new Error(`argv[${i}] missing`)
+    }
     if (arg === '--aggregate') {
       aggregate = true
     } else if (arg === '--prefix') {

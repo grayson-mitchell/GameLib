@@ -66,6 +66,7 @@
  */
 import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
+import { at } from './fixtures/indexed'
 
 const REPO_ROOT = join(__dirname, '..', '..')
 const HUMBLE_ROOT = join(REPO_ROOT, 'src/backend/humble')
@@ -255,21 +256,29 @@ describe('REQ-39-03: getLoginWindowSeam() predicate-family static zero-match com
       ]) {
         expect(
           new RegExp(
-            PREDICATE_PATTERNS[0].regex.replace(/\[\[:space:\]\]/g, '\\s')
+            at(PREDICATE_PATTERNS, 0, 'predicate pattern').regex.replace(
+              /\[\[:space:\]\]/g,
+              '\\s'
+            )
           ).test(line)
         ).toBe(true)
       }
     })
 
     it('the bare-negation regex matches !seam and !activeSeam-style identifiers', () => {
-      const re = new RegExp(PREDICATE_PATTERNS[1].regex)
+      const re = new RegExp(
+        at(PREDICATE_PATTERNS, 1, 'predicate pattern').regex
+      )
       expect(re.test('if (!seam) {')).toBe(true)
       expect(re.test('if (!activeSeam) {')).toBe(true)
     })
 
     it('the ternary/optional-chaining regex matches same-line forms but NOT the seam?: type-annotation position', () => {
       const re = new RegExp(
-        PREDICATE_PATTERNS[3].regex.replace(/\[\[:space:\]\]/g, '\\s')
+        at(PREDICATE_PATTERNS, 3, 'predicate pattern').regex.replace(
+          /\[\[:space:\]\]/g,
+          '\\s'
+        )
       )
       expect(re.test('seam ? seamLabel : null')).toBe(true)
       expect(re.test('seam?.close()')).toBe(true)

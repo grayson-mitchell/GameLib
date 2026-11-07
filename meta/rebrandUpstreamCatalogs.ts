@@ -277,6 +277,11 @@ export function pruneDeadKeys(localesDir: string): number {
         // Split semantics are identical, newlines included.
         const [entryNs, dotted] = entry.split(/:([\s\S]*)/)
         if (entryNs !== ns) continue
+        if (dotted === undefined) {
+          throw new Error(
+            `malformed DEAD_HEROIC_KEYS entry (no ns:key): ${entry}`
+          )
+        }
 
         const segments = dotted.split('.')
         const leaf = segments.pop() as string
@@ -298,8 +303,20 @@ export function pruneDeadKeys(localesDir: string): number {
         delete node[leaf]
         removed += 1
         for (let i = chain.length - 1; i > 0; i -= 1) {
-          if (Object.keys(chain[i]).length > 0) break
-          delete chain[i - 1][segments[i - 1]]
+          const level = chain[i]
+          const parent = chain[i - 1]
+          const parentKey = segments[i - 1]
+          if (
+            level === undefined ||
+            parent === undefined ||
+            parentKey === undefined
+          ) {
+            throw new Error(
+              `rebrand prune chain out of range at depth ${i}: ${entry}`
+            )
+          }
+          if (Object.keys(level).length > 0) break
+          delete parent[parentKey]
         }
       }
 

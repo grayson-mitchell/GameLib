@@ -15,6 +15,7 @@ import {
   LONG_RUNNING_CHANNELS,
   type AnalyzeCaptureInput
 } from '../captureShellScrollback'
+import { at } from './fixtures/indexed'
 
 const BOOT_LINES = CAPTURE_ANCHORS.boot.map((a) =>
   a.endsWith('(') ? `${a}__GAMELIB_SIDECAR_READY__)` : a
@@ -107,10 +108,11 @@ describe('captureShellScrollback / analyzeCapture', () => {
     const result = analyzeCapture(input)
     expect(result.verdict).toBe('RECURRENCE')
     expect(result.targetMatches).toHaveLength(1)
-    expect(result.targetMatches[0].line).toBe(dropLine)
-    expect(result.targetMatches[0].id).toBe('42')
-    expect(result.targetMatches[0].channel).toBe('<unrecorded>')
-    expect(result.targetMatches[0].channel).not.toBeNull()
+    const targetMatch = at(result.targetMatches, 0, 'targetMatches')
+    expect(targetMatch.line).toBe(dropLine)
+    expect(targetMatch.id).toBe('42')
+    expect(targetMatch.channel).toBe('<unrecorded>')
+    expect(targetMatch.channel).not.toBeNull()
   })
 
   // T6 -- the old bare-id form (no channel=) must NOT match TARGET_DROP_RE, and must be
@@ -149,8 +151,9 @@ describe('captureShellScrollback / analyzeCapture', () => {
       makeInput(FULL_ANCHOR_LINES, { gamelibLogSnapshot: cookieLine })
     )
     expect(inSnapshot.cookieLegMatches).toHaveLength(1)
-    expect(inSnapshot.cookieLegMatches[0].channel).toBe('humble_login_cookies')
-    expect(inSnapshot.cookieLegMatches[0].ms).toBe('60000')
+    const cookieLeg = at(inSnapshot.cookieLegMatches, 0, 'cookieLegMatches')
+    expect(cookieLeg.channel).toBe('humble_login_cookies')
+    expect(cookieLeg.ms).toBe('60000')
 
     const inStderrInstead = analyzeCapture(
       makeInput([...FULL_ANCHOR_LINES, cookieLine])

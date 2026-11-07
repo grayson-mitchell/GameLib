@@ -564,7 +564,11 @@ function writePresenceBaseline(localesPath: string): void {
   }
   const sortedMissing: Record<string, string[]> = {}
   for (const key of Object.keys(missing).sort()) {
-    sortedMissing[key] = [...missing[key]].sort()
+    const locales = missing[key]
+    if (locales === undefined) {
+      throw new Error(`missing-locale list vanished for key: ${key}`)
+    }
+    sortedMissing[key] = [...locales].sort()
   }
 
   const currentSet = new Set(pairs.map((pair) => pairId(pair.locale, pair.key)))
