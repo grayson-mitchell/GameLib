@@ -11,7 +11,7 @@
  * import the SAME function and are physically incapable of drifting.
  */
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { pollUninstallOnce } from './library'
+import { pollUninstallOnce } from './library/uninstallPolling'
 import {
   enumerateSteamInstallCopies,
   removeSteamInstallCopy

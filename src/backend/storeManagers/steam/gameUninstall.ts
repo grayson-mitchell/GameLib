@@ -14,7 +14,10 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
 import { library } from './state'
-import { startUninstallPolling, pollUninstallOnce } from './library'
+import {
+  startUninstallPolling,
+  pollUninstallOnce
+} from './library/uninstallPolling'
 import {
   readAcfState,
   findOtherManifestsWithInstalldir,

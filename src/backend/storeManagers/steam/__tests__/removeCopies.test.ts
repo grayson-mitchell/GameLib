@@ -27,7 +27,7 @@ import { readFileSync as readSourceFile } from 'fs'
 import { join } from 'path'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
-import * as libraryModule from '../library'
+import * as uninstallPollingModule from '../library/uninstallPolling'
 import * as acfState from '../library/acfState'
 import type { AcfSource } from '../library/installRoot'
 import { library } from '../state'
@@ -1242,7 +1242,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
         })
       )
     const pollSpy = jest
-      .spyOn(libraryModule, 'pollUninstallOnce')
+      .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
     const result = await removeAllSteamInstallCopies(APP_ID)
@@ -1283,7 +1283,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
         })
       })
     const pollSpy = jest
-      .spyOn(libraryModule, 'pollUninstallOnce')
+      .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
     const result = await removeAllSteamInstallCopies(APP_ID)
@@ -1311,7 +1311,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
         })
       })
     const pollSpy = jest
-      .spyOn(libraryModule, 'pollUninstallOnce')
+      .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
     const { logWarning } = jest.requireMock<{ logWarning: jest.Mock }>(
       'backend/logger'
@@ -1333,7 +1333,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       .mockResolvedValue([])
     const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
     const pollSpy = jest
-      .spyOn(libraryModule, 'pollUninstallOnce')
+      .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
     const result = await removeAllSteamInstallCopies(APP_ID)
@@ -1360,7 +1360,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
         })
       )
     const pollSpy = jest
-      .spyOn(libraryModule, 'pollUninstallOnce')
+      .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
     await removeAllSteamInstallCopies(APP_ID)
@@ -1378,7 +1378,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       .spyOn(acfState, 'enumerateSteamInstallCopies')
       .mockRejectedValue(new Error('fs error'))
     const pollSpy = jest
-      .spyOn(libraryModule, 'pollUninstallOnce')
+      .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
     const result = await removeAllSteamInstallCopies(APP_ID)

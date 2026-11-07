@@ -26,7 +26,7 @@ import {
 import { sendFrontendMessage } from '../../ipc'
 import { steamMetadataStore, steamLibraryStore } from './stores'
 import { library } from './state'
-import { pollUninstallOnce } from './library'
+import { pollUninstallOnce } from './library/uninstallPolling'
 import * as resume from './library/resume'
 import { readAcfState, removeSteamInstallCopy } from './library/acfState'
 import { startInstallPolling } from './library/installPolling'
