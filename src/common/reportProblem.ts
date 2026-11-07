@@ -147,6 +147,7 @@ export function redactDiagnostics(
   for (const re of HOME_RES) {
     for (const m of text.matchAll(re)) {
       const name = m[2]
+      if (name === undefined) continue
       if (name.length >= 3 && !SKIP_NAMES.has(name.toLowerCase())) {
         harvested.push(name)
       }
@@ -212,9 +213,10 @@ interface ReportDiagnosticsInput {
 
 function countLogLines(log: string): number {
   const lines = log.split('\n')
+  const first = lines[0]
   if (
-    lines.length &&
-    /^\[\.\.\. \d+ earlier lines omitted \.\.\.\]$/.test(lines[0])
+    first !== undefined &&
+    /^\[\.\.\. \d+ earlier lines omitted \.\.\.\]$/.test(first)
   ) {
     lines.shift()
   }

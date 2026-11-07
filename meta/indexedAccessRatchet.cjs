@@ -66,7 +66,8 @@ const ADOPTED_BUCKETS = [
   'src/frontend/state',
   'src/frontend/hooks',
   'src/frontend/styles',
-  'src/common/winetricks'
+  'src/common/winetricks',
+  'src/common/reportProblem.ts'
 ]
 
 /**
