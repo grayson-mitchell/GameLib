@@ -12,7 +12,6 @@ import {
 } from 'common/types'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import { getInfoFromAppleGamingWiki } from './applegamingwiki/utils'
-import { getInfoFromCodeweavers } from './codeweavers/utils'
 import { getHowLongToBeat } from './howlongtobeat/utils'
 import { getInfoFromPCGamingWiki } from './pcgamingwiki/utils'
 import { getUmuId } from './umu/utils'
@@ -42,23 +41,21 @@ export async function getWikiGameInfo(
     // as a miss and re-fetch. Once re-fetched it caches a non-null value (real
     // ratings or the "checked, none found" marker) and refreshes on TTL expiry.
     const staleAppleData = isMac && !cachedResponse?.applegamingwiki
-    // Self-heal stale caches: entries populated before CodeWeavers data was
-    // captured (or on a Windows session) hold codeweavers=null. On Mac/Linux
-    // the CrossOver rating pill needs that data, so treat a null-codeweavers
-    // hit as a miss and re-fetch (mirrors staleAppleData above). Also treat
-    // an old-shaped cache (pre-per-OS-rating, no `macRating` field at all) as
-    // stale so it gets re-fetched into the new shape.
-    // D-13: additionally, on macOS a cached Phase-16 "checked, none found"
-    // miss (macRating === null, not undefined) is treated as stale ONLY when
-    // the index (crossoverIndexHas, D-02-gated) now covers this title —
-    // targeted, so a genuine miss (or a name-only title under a failed D-02
-    // gate) does NOT re-scrape on every details-page visit.
+    // Self-heal stale caches: the CrossOver rating pill is macOS-only and its
+    // rating comes from the daily index only (the CodeWeavers page scrape is
+    // gone: Cloudflare answers it with 403). A null codeweavers on macOS means
+    // "index unavailable", so it is retried (mirrors staleAppleData above). An
+    // old-shaped cache (pre-per-OS-rating, no `macRating` field) is also stale.
+    // Linux is excluded: linuxRating is rendered nowhere, so a Linux
+    // codeweavers=null entry would be stale forever and re-fetch every visit.
+    // D-13: a cached "checked, none found" miss (macRating === null, not
+    // undefined) is stale ONLY when the index (crossoverIndexHas, D-02-gated)
+    // now covers this title, so a genuine miss stays cached.
     const staleCrossoverData =
-      (isMac || isLinux) &&
+      isMac &&
       (!cachedResponse?.codeweavers ||
         cachedResponse.codeweavers.macRating === undefined ||
-        (isMac &&
-          cachedResponse.codeweavers.macRating === null &&
+        (cachedResponse.codeweavers.macRating === null &&
           crossoverIndexHas(gameInfo)))
     // Self-heal stale caches: a FAILED pcgamingwiki lookup (and the HLTB lookup it
     // starves of an ID) used to sit in this 30-day cache until it expired, so the
@@ -119,12 +116,7 @@ export async function getWikiGameInfo(
         getInfoFromGamesDB(title, appName, runner),
         isMac ? getInfoFromAppleGamingWiki(title) : null,
         isLinux ? getUmuId(appName, runner) : null,
-        isMac
-          ? ((await getCodeweaversFromIndex(gameInfo)) ??
-            getInfoFromCodeweavers(title))
-          : isLinux
-            ? getInfoFromCodeweavers(title)
-            : null
+        isMac ? getCodeweaversFromIndex(gameInfo) : null
       ])
 
     // Defensive read. `getInfoFromPCGamingWiki` always returns an object, but a bare

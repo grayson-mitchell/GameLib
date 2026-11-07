@@ -37,12 +37,6 @@ jest.mock('../umu/utils', () => ({
   getUmuId: jest.fn().mockResolvedValue(null)
 }))
 
-const getInfoFromCodeweaversMock = jest.fn()
-jest.mock('../codeweavers/utils', () => ({
-  getInfoFromCodeweavers: (...args: unknown[]) =>
-    getInfoFromCodeweaversMock(...args)
-}))
-
 const getCodeweaversFromIndexMock = jest.fn()
 const crossoverIndexHasMock = jest.fn()
 jest.mock('backend/crossover_index', () => ({
@@ -79,13 +73,13 @@ describe('getWikiGameInfo — D-10/D-11/D-13 index-first CrossOver wiring', () =
     envMock.isWindows = true
     envMock.isMac = false
     envMock.isLinux = false
-    getInfoFromCodeweaversMock.mockReset()
     getCodeweaversFromIndexMock.mockReset()
     crossoverIndexHasMock.mockReset()
+    wikiGameInfoStore.use_in_memory()
     wikiGameInfoStore.clear()
   })
 
-  test('macOS index hit: codeweavers slot resolves from the index, scrape (getInfoFromCodeweavers) is never called', async () => {
+  test('macOS index hit: codeweavers slot resolves from the index', async () => {
     envMock.isMac = true
     getCodeweaversFromIndexMock.mockResolvedValue({
       macRating: 5,
@@ -100,53 +94,63 @@ describe('getWikiGameInfo — D-10/D-11/D-13 index-first CrossOver wiring', () =
       linuxRating: null,
       slug: 'half-life-2'
     })
-    expect(getInfoFromCodeweaversMock).not.toHaveBeenCalled()
   })
 
-  test('macOS index miss: falls through to the lazy scrape', async () => {
+  test('macOS loaded miss: marker is returned and cached', async () => {
     envMock.isMac = true
-    getCodeweaversFromIndexMock.mockResolvedValue(null)
-    getInfoFromCodeweaversMock.mockResolvedValue({
-      macRating: 3,
-      linuxRating: null,
-      slug: 'half-life-2'
-    })
+    const marker = { macRating: null, linuxRating: null, slug: '' }
+    getCodeweaversFromIndexMock.mockResolvedValue(marker)
 
     const result = await getWikiGameInfo(makeGame())
 
     expect(getCodeweaversFromIndexMock).toHaveBeenCalled()
-    expect(getInfoFromCodeweaversMock).toHaveBeenCalledWith('Half-Life 2')
-    expect(result?.codeweavers).toStrictEqual({
-      macRating: 3,
-      linuxRating: null,
-      slug: 'half-life-2'
-    })
+    expect(result?.codeweavers).toStrictEqual(marker)
+    expect(wikiGameInfoStore.get('Half-Life 2')?.codeweavers).toStrictEqual(
+      marker
+    )
   })
 
-  test('Linux: getCodeweaversFromIndex is never called; codeweavers resolves via the unchanged scrape path', async () => {
+  test('macOS index unavailable: codeweavers is null and the next visit retries', async () => {
+    envMock.isMac = true
+    getCodeweaversFromIndexMock.mockResolvedValue(null)
+
+    const first = await getWikiGameInfo(makeGame())
+    await getWikiGameInfo(makeGame())
+
+    expect(first?.codeweavers).toBeNull()
+    expect(getCodeweaversFromIndexMock).toHaveBeenCalledTimes(2)
+  })
+
+  test('Linux: no index lookup, codeweavers null, cached entry is not re-fetched', async () => {
     envMock.isLinux = true
-    getInfoFromCodeweaversMock.mockResolvedValue({
-      macRating: null,
-      linuxRating: 4,
-      slug: 'half-life-2'
-    })
 
-    const result = await getWikiGameInfo(makeGame())
-
+    const first = await getWikiGameInfo(makeGame())
     expect(getCodeweaversFromIndexMock).not.toHaveBeenCalled()
-    expect(getInfoFromCodeweaversMock).toHaveBeenCalledWith('Half-Life 2')
-    expect(result?.codeweavers).toStrictEqual({
-      macRating: null,
-      linuxRating: 4,
-      slug: 'half-life-2'
-    })
+    expect(first?.codeweavers).toBeNull()
+
+    const seeded = {
+      pcgamingwiki: null,
+      applegamingwiki: null,
+      codeweavers: null,
+      howlongtobeat: null,
+      gamesdb: null,
+      steamInfo: null,
+      umuId: null,
+      fetchStatus: { pcgamingwiki: 'ok' as const, howlongtobeat: 'ok' as const }
+    }
+    wikiGameInfoStore.set('Half-Life 2', seeded)
+    getInfoFromPCGamingWikiMock.mockClear()
+
+    const second = await getWikiGameInfo(makeGame())
+
+    expect(getInfoFromPCGamingWikiMock).not.toHaveBeenCalled()
+    expect(second).toStrictEqual(seeded)
   })
 
   test('Windows (neither mac nor linux): codeweavers slot stays null, neither path runs', async () => {
     const result = await getWikiGameInfo(makeGame())
 
     expect(getCodeweaversFromIndexMock).not.toHaveBeenCalled()
-    expect(getInfoFromCodeweaversMock).not.toHaveBeenCalled()
     expect(result?.codeweavers).toBeNull()
   })
 
@@ -214,7 +218,6 @@ describe('getWikiGameInfo — D-10/D-11/D-13 index-first CrossOver wiring', () =
     const result = await getWikiGameInfo(makeGame())
 
     expect(getCodeweaversFromIndexMock).not.toHaveBeenCalled()
-    expect(getInfoFromCodeweaversMock).not.toHaveBeenCalled()
     expect(result).toStrictEqual(cached)
   })
 })
@@ -264,7 +267,6 @@ describe('getWikiGameInfo — cached wiki miss self-heals (todo 2026-08-22, task
     envMock.isWindows = true
     envMock.isMac = false
     envMock.isLinux = false
-    getInfoFromCodeweaversMock.mockReset()
     getCodeweaversFromIndexMock.mockReset()
     crossoverIndexHasMock.mockReset()
     wikiGameInfoStore.use_in_memory()

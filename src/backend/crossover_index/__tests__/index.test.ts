@@ -122,7 +122,7 @@ describe('getCodeweaversFromIndex', () => {
     })
   })
 
-  test('the SAME non-Steam title returns null (byName skipped) when NAME_MATCHING_SHIPS=false', async () => {
+  test('the SAME non-Steam title returns the loaded-miss marker (byName skipped) when NAME_MATCHING_SHIPS=false', async () => {
     normalizeMock.NAME_MATCHING_SHIPS = false
     loadIndexMock.mockResolvedValue(makeIndex())
 
@@ -134,10 +134,14 @@ describe('getCodeweaversFromIndex', () => {
       })
     )
 
-    expect(result).toBeNull()
+    expect(result).toStrictEqual({
+      macRating: null,
+      linuxRating: null,
+      slug: ''
+    })
   })
 
-  test('miss (title not in index) returns null', async () => {
+  test('miss (title not in index) returns the loaded-miss marker', async () => {
     loadIndexMock.mockResolvedValue(makeIndex())
 
     const result = await getCodeweaversFromIndex(
@@ -148,7 +152,11 @@ describe('getCodeweaversFromIndex', () => {
       })
     )
 
-    expect(result).toBeNull()
+    expect(result).toStrictEqual({
+      macRating: null,
+      linuxRating: null,
+      slug: ''
+    })
   })
 
   test('index unavailable (loadIndex resolves null) returns null, never throws', async () => {

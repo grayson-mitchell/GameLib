@@ -90,12 +90,20 @@ function resolveRating(
 }
 
 /**
- * Index-first CrossOver lookup (D-11). Returns a `CodeweaversInfo` on a hit
- * with ZERO network calls beyond `loadIndex`'s own cached/TTL'd fetch (which
- * itself never throws). Returns null on any miss — including a gated-out
- * non-Steam name match — so the caller's `?? getInfoFromCodeweavers(title)`
- * runs the lazy scrape. Never fabricates a rating and never adds a `medal`
- * field (D-12 — `CodeweaversInfo` is unchanged).
+ * Index-only CrossOver lookup (D-11). Three outcomes, with ZERO network calls
+ * beyond `loadIndex`'s own cached/TTL'd fetch (which itself never throws):
+ *  - hit: a `CodeweaversInfo` carrying the index rating and `slugify(title)`.
+ *  - loaded miss: the index loaded but has no admissible match (including a
+ *    gated-out non-Steam name match). Returns the "checked, none found" marker
+ *    `{ macRating: null, linuxRating: null, slug: '' }` so the caller caches it
+ *    and the UI shows "Unrated". The slug is empty on purpose: the official
+ *    dump has no Mac-rated entry, so a constructed /compatibility/crossover/
+ *    <slug> page would likely be a soft-404, and an empty slug makes the UI
+ *    open the CodeWeavers search instead.
+ *  - unavailable (index could not load, or the lookup threw): null, which the
+ *    caller treats as retryable rather than a cached miss.
+ * Never fabricates a rating and never adds a `medal` field (D-12 --
+ * `CodeweaversInfo` is unchanged).
  */
 export async function getCodeweaversFromIndex(
   gameInfo: IndexLookupInput
@@ -109,7 +117,7 @@ export async function getCodeweaversFromIndex(
     const maps = buildMaps(index)
     const rating = resolveRating(gameInfo, maps)
     if (rating === null) {
-      return null
+      return { macRating: null, linuxRating: null, slug: '' }
     }
 
     return {
