@@ -44,6 +44,15 @@ function missingBinaryError(cli: string): Error {
   )
 }
 
+/**
+ * Throws the missing-binary error up front when the CLI is not built. Callers that swallow
+ * per-exe scan failures (the census) call this once first, so a missing binary aborts the run
+ * instead of reading every exe as "no evidence" (63 WR-02).
+ */
+export function assertScanCliPresent(cli: string = resolveScanCliPath()): void {
+  if (!existsSync(cli)) throw missingBinaryError(cli)
+}
+
 /** Pure: the single-shot stdout contract (0 = one JSON value; 2 = dispatch error; 64 = usage). */
 export function parseCliResult(
   op: string,
@@ -82,7 +91,7 @@ export function runScanCliSync<Op extends ScanOp>(
   args: ScanArgsFor<Op>
 ): ScanResultFor<Op> {
   const cli = resolveScanCliPath()
-  if (!existsSync(cli)) throw missingBinaryError(cli)
+  assertScanCliPresent(cli)
   const profile = createFakeHomeProfile({ prefix: 'gamelib-scan-' })
   try {
     const r = spawnSync(cli, [op, JSON.stringify(args)], {

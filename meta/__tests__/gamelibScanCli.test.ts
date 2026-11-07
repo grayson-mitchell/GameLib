@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import {
+  assertScanCliPresent,
   parseCliResult,
   parseNdjsonLines,
   resolveScanCliPath,
@@ -21,6 +22,12 @@ describe('gamelibScanCli', () => {
     expect(resolveScanCliPath({ CARGO_TARGET_DIR: '/t' }, '/repo')).toContain(
       join('/t', 'debug')
     )
+  })
+
+  it('assertScanCliPresent names the build command when the binary is missing', () => {
+    expect(() =>
+      assertScanCliPresent(join(tmpdir(), 'definitely-not-gamelib-scan-cli'))
+    ).toThrow(/gamelib-scan-cli not found.*cargo build -p gamelib-scan-cli/)
   })
 
   it('parseCliResult parses status 0 and throws otherwise', () => {

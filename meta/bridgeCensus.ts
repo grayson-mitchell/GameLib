@@ -133,7 +133,7 @@ import {
   parseDrmLaunchAnchor,
   type DrmEvidence
 } from '../src/backend/storeManagers/steam/bridge/drm/drmTrace'
-import { runScanCliSync } from './gamelibScanCli'
+import { assertScanCliPresent, runScanCliSync } from './gamelibScanCli'
 import type { PeDelayImportScanResult } from '../src/backend/scanners/scanTypes'
 import {
   findRuntimeLoadedSteamApiDlls,
@@ -1430,8 +1430,25 @@ function runObjdump(exePath: string): string | null {
   return result.stdout
 }
 
-/** D-09: the Rust `scan_pe_delay_imports` scanner via the CLI. Null on any
- * failure or read error -- "no delay evidence". */
+/** 63 WR-02: a CLI transport failure (spawn error, non-zero exit, unparseable
+ * output) is not a scan result. It is logged to stderr and counted in the
+ * footer's scan warnings, never silently read as "no evidence". */
+function reportScanCliFailure(
+  op: string,
+  exePath: string,
+  error: unknown
+): void {
+  scanWarnings++
+  console.error(
+    `bridge-census: gamelib-scan-cli ${op} failed for ${basename(exePath)}: ${
+      error instanceof Error ? error.message : String(error)
+    }`
+  )
+}
+
+/** D-09: the Rust `scan_pe_delay_imports` scanner via the CLI. Null on a read
+ * error -- "no delay evidence". A CLI failure is also null but is reported
+ * (63 WR-02); a missing binary is caught up front by `runCensus`. */
 function readDelayImports(
   exePath: string
 ): Omit<PeDelayImportScanResult, 'readError'> | null {
@@ -1440,7 +1457,8 @@ function readDelayImports(
       exePath
     })
     return readError !== null ? null : rest
-  } catch {
+  } catch (error) {
+    reportScanCliFailure('scan_pe_delay_imports', exePath, error)
     return null
   }
 }
@@ -2195,7 +2213,8 @@ async function readVersionsOrEmpty(path: string): Promise<string[]> {
 }
 
 /** Quick 261024-br4 / D-09: the Rust `scan_steam_drm` scanner via the CLI. A
- * failed parse or a read error reads as null -- not CEG. Read-only. */
+ * failed parse or a read error reads as null -- not CEG. A CLI failure is also
+ * null but is reported (63 WR-02). Read-only. */
 function scanExeSteamDrm(
   exePath: string
 ): { cegMarkers: string[]; hasBindSection: boolean } | null {
@@ -2204,7 +2223,8 @@ function scanExeSteamDrm(
     return result.parsed && result.readError === null
       ? { cegMarkers: result.cegMarkers, hasBindSection: result.hasBindSection }
       : null
-  } catch {
+  } catch (error) {
+    reportScanCliFailure('scan_steam_drm', exePath, error)
     return null
   }
 }
@@ -2217,6 +2237,9 @@ function scanExeSteamDrm(
 let lastLogsRead: string[] = []
 
 export async function runCensus(): Promise<CensusRow[]> {
+  // 63 WR-02: without the CLI every exe would read as "no delay imports, not
+  // CEG" and the verdict table would be plausible but wrong. Abort instead.
+  assertScanCliPresent()
   resetCensusAccumulators()
   const knownBad = loadKnownBad()
   const playVerifiedSet = loadPlayVerified()
