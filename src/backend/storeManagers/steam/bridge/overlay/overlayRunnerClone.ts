@@ -43,14 +43,13 @@ import {
   sha256File,
   statRegular
 } from '../drm/runnerCrossover'
+import { RUNNER_MARKER_FILE, cloneCrossoverTree } from '../drm/runnerClone'
 import {
   DYLD_ENTITLEMENT,
-  RUNNER_MARKER_FILE,
-  cloneCrossoverTree,
   dumpLoaderEntitlements,
   resignLoader,
   scrubCloneXattrs
-} from '../drm/runnerClone'
+} from '../drm/runnerEntitlements'
 import { defaultRunTool, type RunTool } from 'backend/engine/runTool'
 import {
   overlayStepError,

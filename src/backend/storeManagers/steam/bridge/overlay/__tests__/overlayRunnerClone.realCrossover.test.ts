@@ -20,7 +20,7 @@ import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import {
   DYLD_ENTITLEMENT,
   STOCK_LOADER_ENTITLEMENTS
-} from '../../drm/runnerClone'
+} from '../../drm/runnerEntitlements'
 import {
   LOADER_REL,
   WINELOADER_REL,
