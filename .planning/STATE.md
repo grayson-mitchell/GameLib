@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: verifying
-stopped_at: Phase 71 context gathered
-last_updated: "2026-11-07T19:16:17.067Z"
+stopped_at: Completed 67-19-PLAN.md
+last_updated: "2026-11-07T19:24:57.417Z"
 last_activity: 2026-11-07
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 104
-  completed_plans: 87
+  completed_plans: 88
   percent: 25
 ---
 
@@ -364,6 +364,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 67]: 67-16: setApiKey allows empty string (clear gesture); legendary refreshLibrary push typing-only (name collides with steam invoke)
 - [Phase 67]: 67-17: setTitleBarOverlay accepts string-or-number height (renderer passes CSS strings); push 'message' is a variadic rest tuple
 - [Phase 67]: 67-18: direction-aware keying -- pushes sharing a name with an inbound channel live in collidingPushSchemas (pushSchemaFor); validateInbound fails closed (no_schema)
+- [Phase 67]: 67-19: renderer allow-list built from inbound-keyed channelSchemas only (renderer + invoke|send); colliding pushes never open the invoke/send direction
 
 ### Pending Todos
 
@@ -609,8 +610,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-07T18:48:16.636Z
-Stopped at: Phase 71 context gathered
+Last session: 2026-11-07T19:24:57.410Z
+Stopped at: Completed 67-19-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
