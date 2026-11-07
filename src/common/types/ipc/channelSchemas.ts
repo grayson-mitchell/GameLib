@@ -42,6 +42,11 @@ import {
 } from './appShell'
 import { gogFrontendMessagesArgs } from './gog'
 import { shellFilesAsyncArgs, shellFilesSyncArgs } from './shellFiles'
+import {
+  sidecarInternalCallers,
+  sidecarInternalInvokeArgs,
+  sidecarInternalSendArgs
+} from './sidecarInternal'
 
 export function mergeChannelEntries(
   ...parts: Record<string, ChannelEntry>[]
@@ -105,5 +110,11 @@ export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
     defineChannelEntries('push', gogFrontendMessagesArgs),
     defineChannelEntries('send', appShellSyncArgs),
     defineChannelEntries('invoke', appShellAsyncArgs),
-    defineChannelEntries('push', appShellFrontendMessagesArgs)
+    defineChannelEntries('push', appShellFrontendMessagesArgs),
+    defineChannelEntries('invoke', sidecarInternalInvokeArgs, {
+      callers: sidecarInternalCallers
+    }),
+    defineChannelEntries('send', sidecarInternalSendArgs, {
+      callers: sidecarInternalCallers
+    })
   )
