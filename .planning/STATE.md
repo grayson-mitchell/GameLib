@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 71 context gathered
-last_updated: "2026-11-07T18:36:06.447Z"
+last_updated: "2026-11-07T18:47:54.298Z"
 last_activity: 2026-11-07
 progress:
   total_phases: 13
   completed_phases: 3
   total_plans: 104
-  completed_plans: 76
+  completed_plans: 77
   percent: 23
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 65 (steam-store-manager-decomposition-continued) — EXECUTING
-Plan: 11 of 20
+Plan: 12 of 20
 Status: Ready to execute
-Last activity: 2026-11-07
+Last activity: 2026-11-08 - Completed quick task 261108-anw: keep settings on failed Steam uninstall
 
-Progress: [███████░░░] 73%
+Progress: [███████░░░] 74%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -485,6 +485,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261106-s3n | "Delete Steam games directly in GameLib" setting (key `enableSteamNativeDelete`, default follows the native-install setting, all platforms per operator): ON refuses while running, then helper `--steam-uninstallapp` (slot-verified UninstallApp; 18 → fallback), else guarded GameLib delete of installdir + ACF inside a registered library; GameLib confirm dialog; OFF unchanged. | 2026-11-06 | 457d82031 | Jest pass on touched suites; codecheck + planning-gates 12/12 clean; 1 pre-existing failure (macArchKnownFixRouting Intel); live gate pending | [261106-s3n-gamelib-side-delete-for-steam-games](./quick/261106-s3n-gamelib-side-delete-for-steam-games/) |
 | 261107-td5 | Steam GameLib-delete check-D fixes: running check adds a ps scan for processes inside the install folder (registry.vdf RunningAppID absent on Mac) and maps Steam error 16 to running; refusals set ExecResult.refused so the uninstaller keeps settings/logs/prefix/fix file; refusals show as in-app steamRequestNotice, not OS notify. | 2026-11-07 | 015befa7d | Jest pass on touched suites; codecheck clean; pre-existing failures: macArchKnownFixRouting Intel + 2 ENOENT from the v0.9 archive moving phase 56; live gate D pending | [261107-td5-fix-steam-delete-check-d-defects](./quick/261107-td5-fix-steam-delete-check-d-defects/) |
 | fast | Two DRM launch-form drift tests (games.test.ts, bridgeBottle.test.ts) read 56-01-SUMMARY.md from .planning/milestones/v0.9-phases/ after the v0.9 archive moved it. | 2026-11-08 | a50d078e5 | Both tests pass | — |
+| 261108-anw | Failed Steam uninstall (caught delete error, possible partial delete) now sets ExecResult.failed at all 5 gameUninstall.ts sites: uninstaller keeps settings/logs/prefix/fix file and sends one done for every runner; in-app uninstall-failed notice replaces the silent success. | 2026-11-08 | 379473402 | Jest pass (steam+utils 4458/4459, known macArchKnownFixRouting Intel failure); codecheck + translation lints clean; no live gate | [261108-anw-keep-settings-on-failed-steam-uninstall](./quick/261108-anw-keep-settings-on-failed-steam-uninstall/) |
 | 261107-8yq | Clippy ratchet in CI: `meta/clippyRatchet.cjs` reads `cargo clippy --message-format=json`, per-lint darwin baseline, fails on any rise and on a drop the commit does not record (23 unique / 14 lints); macOS leg only, pinned 1.99.1 toolchain; `[lints.clippy]` denies `dbg_macro`, `todo`. Windows leg filed as follow-up todo. | 2026-11-07 | bbf863316 | ratchet passes on fresh local run; jest 20 tests; no .rs changed; CI steps not yet run on a runner | [261107-8yq-run-cargo-clippy-in-ci-warn-only-with-a-](./quick/261107-8yq-run-cargo-clippy-in-ci-warn-only-with-a-/) |
 | fast | Unexported `SteamNativeDeleteDecision` (nativeDelete.ts, from 261106-s3n), which the pre-push find-deadcode used-in-module gate had flagged and which was blocking the v0.9 tag push. | 2026-11-06 | c0bc58505 | find-deadcode 0 new; prettier OK | — |
 | 261107-99k | 62 games.ts split cleanups: `NUMERIC_APP_ID` lives only in gameConstants.ts (~20 sites import it; drmLaunchSetup's different regex kept), DRM-notice test reset helper, 14/17 stale ts-prune markers removed, lifted-module comments refreshed, negative scans widened to every game*.ts (dir-derived, floor 13, RED-checked). Bullets 7 (split below 1,400 lines, `ready: human`) and 8 (lift stubs, `ready: code`) refiled; todo closed. | 2026-11-07 | 6cdce5d95 | codecheck, lint 0 errors, find-deadcode, planning-gates 12/12 green; jest 6144 pass / 4 fail (3 reproduce with the src changes reverted; tauriShellSource WR-07 is Rust-only, not revert-tested) | [261107-99k-games-split-cleanups-62](./quick/261107-99k-games-split-cleanups-62/) |
@@ -593,7 +594,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-07T18:36:02.969Z
+Last session: 2026-11-07T18:47:54.292Z
 Stopped at: Phase 71 context gathered
 Resume file: None
 
