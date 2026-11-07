@@ -86,8 +86,6 @@ import * as bridgeVerdictModule from '../bridge/bridgeVerdict'
 import * as gamesModule from '../gameSessionState'
 import {
   isBottleReady,
-  tellBottledSteamToLaunch,
-  tellBottledSteamToUninstall,
   getSteamBottleSettings,
   getBottleSteamappsDir,
   isBridgeBottleReady,
@@ -99,6 +97,10 @@ import {
   getDrmBridgeRunner,
   killBridgeBottleWineServer
 } from '../bottle'
+import {
+  tellBottledSteamToLaunch,
+  tellBottledSteamToUninstall
+} from '../bottledSteam'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import type { DrmLaunchForm } from '../bottle'
 import type {
@@ -409,8 +411,6 @@ jest.mock('../bottle', () => {
     PROVISION_ABORTED: 'provision-aborted',
     discardNewBridgeBottle: jest.fn(),
     isBottleReady: jest.fn(),
-    tellBottledSteamToLaunch: jest.fn(),
-    tellBottledSteamToUninstall: jest.fn(),
     getSteamBottleSettings: jest.fn(),
     // Phase 21 Plan 11 (D-15/SNI-08): bottle depot-download write target.
     getBottleSteamappsDir: jest.fn(),
@@ -457,6 +457,10 @@ jest.mock('../bottle', () => {
     }
   }
 })
+jest.mock('../bottledSteam', () => ({
+  tellBottledSteamToLaunch: jest.fn(),
+  tellBottledSteamToUninstall: jest.fn()
+}))
 
 // ── bridge/allowlist.ts mock (24-03) — controls isBridgeEligible()'s
 // bridgeAllowlist.has(appId) lookup without pulling in the real bundled

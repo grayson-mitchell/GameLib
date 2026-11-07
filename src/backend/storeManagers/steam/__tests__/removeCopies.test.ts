@@ -157,8 +157,6 @@ jest.mock('../bottle', () => ({
   isCrossoverInstalled: () => Promise.resolve(true),
   CROSSOVER_MISSING: 'crossover-missing',
   isBottleReady: jest.fn(),
-  tellBottledSteamToLaunch: jest.fn(),
-  tellBottledSteamToUninstall: jest.fn(),
   getSteamBottleSettings: jest.fn(),
   getBottleSteamappsDir: jest.fn(),
   isBridgeBottleReady: jest.fn(),
@@ -168,6 +166,10 @@ jest.mock('../bottle', () => ({
   resolveBridgeBottleName: jest.fn(),
   removePerGameBridgeBottle: jest.fn(),
   DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge'
+}))
+jest.mock('../bottledSteam', () => ({
+  tellBottledSteamToLaunch: jest.fn(),
+  tellBottledSteamToUninstall: jest.fn()
 }))
 
 // ── depot mock ─────────────────────────────────────────────────────────────────

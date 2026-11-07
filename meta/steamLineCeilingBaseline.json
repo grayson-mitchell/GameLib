@@ -1,5 +1,5 @@
 {
-  "src/backend/storeManagers/steam/bottle.ts": 2275,
+  "src/backend/storeManagers/steam/bottle.ts": 1883,
   "src/backend/storeManagers/steam/bridge/drm/runnerClone.ts": 1228,
   "src/backend/storeManagers/steam/bridge/drm/stageDrmBottle.ts": 1005,
   "src/backend/storeManagers/steam/bridge/helperProcess.ts": 1143,

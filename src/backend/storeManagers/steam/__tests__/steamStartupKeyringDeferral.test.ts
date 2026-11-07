@@ -152,14 +152,16 @@ jest.mock('backend/constants/environment', () => ({
 
 jest.mock('../bottle', () => ({
   isBottleReady: jest.fn(),
-  tellBottledSteamToLaunch: jest.fn(),
-  tellBottledSteamToUninstall: jest.fn(),
   getSteamBottleSettings: jest.fn(),
   getBottleSteamappsDir: jest.fn(),
   isBridgeBottleReady: jest.fn(),
   getBridgeBottleSettings: jest.fn(),
   provisionBridgeBottle: jest.fn(),
   isSteamBottleProvisioned: jest.fn()
+}))
+jest.mock('../bottledSteam', () => ({
+  tellBottledSteamToLaunch: jest.fn(),
+  tellBottledSteamToUninstall: jest.fn()
 }))
 
 jest.mock('../bridge/allowlist', () => ({
