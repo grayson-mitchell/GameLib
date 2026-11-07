@@ -50,6 +50,8 @@ const ANON = `${S}anonymousClient.ts`
 const GAMES = `${S}games.ts`
 // 62-06: the install cluster (acquireAuthenticated, allowLogon: true) was lifted out of games.ts.
 const INSTALL = `${S}gameInstall.ts`
+// 65-11: gameInstall was split; the depot engine holds an acquireAuthenticated( call.
+const INSTALL_DEPOT = `${S}gameInstallDepot.ts`
 
 // Every game*.ts module (the 62 split lifted games.ts into these), discovered
 // from the directory so a module dropping out of the walk fails must-scan.
@@ -63,7 +65,8 @@ const ACQUIRE_AUTH_ALLOW = [
   `${S}depot/plan.ts`,
   `${S}depot/outcome.ts`,
   `${S}depot/sharedRedist.ts`,
-  INSTALL
+  INSTALL,
+  INSTALL_DEPOT
 ]
 const ACQUIRE_OPEN_ALLOW = [
   USER,
