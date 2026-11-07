@@ -83,6 +83,8 @@ import {
   isBottleEligible
 } from './gameEligibility'
 import { ensureBuiltInEngineForInstall } from './gameInstall'
+import { launchBridgeGame } from './gameBridgeLaunchGate'
+import { fireBridgeWineLaunch } from './gameBridgeWineLaunch'
 import {
   notifyOverlaySetupFailed,
   overlayInputArg,
@@ -140,7 +142,7 @@ export async function launch(
       findBridgeInstallBottle(steamGame.appId) !== null &&
       !bridgeFailedThisSession.has(steamGame.appId)
     ) {
-      return steamGame.launchBridgeGame()
+      return launchBridgeGame(steamGame)
     }
 
     if (!isBottleReady()) {
@@ -927,7 +929,7 @@ export async function launchDrmModeGame(
       else notifyOverlaySetupFailed(steamGame, r.step, r.cause)
     }
   }
-  return steamGame.fireBridgeWineLaunch(exePath, ready.bottleSettings, {
+  return fireBridgeWineLaunch(steamGame, exePath, ready.bottleSettings, {
     ready,
     gameWinPath,
     traceFile: trace.traceFile,

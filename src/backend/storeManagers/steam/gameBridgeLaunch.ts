@@ -1,11 +1,9 @@
 /**
  * Bridge launch cluster lifted out of SteamGame (62-07, D-06 mechanical
  * lift: this -> steamGame).
- * Public SteamGame entry points keep a delegating stub on the class;
- * internal helpers are called directly by sibling lifted modules, importing
- * forward only (gameEligibility/gameLaunchOverlay -> gameInstall ->
- * gameLaunch -> gameBridgeLaunch). A call a test spies on stays a
- * `steamGame.X()` call (quick-261107-an2).
+ * The G26 in-flight dedupe wrapper lives in gameBridgeLaunchGate so this
+ * body is reachable as a module export (quick-261108-ca6). Cross-module calls
+ * are free functions, so a test spies on the module export.
  */
 import i18next from 'i18next'
 import { existsSync } from 'graceful-fs'
@@ -39,10 +37,7 @@ import {
   writeBridgeModeVerdict
 } from './bridge/bridgeVerdict'
 import { appFolder } from 'backend/constants/paths'
-import {
-  bridgeLaunchesInFlight,
-  markBridgeFailedThisSession
-} from './gameSessionState'
+import { markBridgeFailedThisSession } from './gameSessionState'
 import type SteamGame from './games'
 import {
   persistBridgeDrmSignal,
@@ -55,54 +50,11 @@ import {
   notifyCrossoverRequired,
   readLaunchExeCegMarkers,
   selectLaunchEngine,
-  sendLaunchDone
+  sendLaunchDone,
+  launchDrmModeGame
 } from './gameLaunch'
+import { fireBridgeWineLaunch } from './gameBridgeWineLaunch'
 import { prepareTcpOverlay } from './gameLaunchOverlay'
-
-export function launchBridgeGame(steamGame: SteamGame): Promise<boolean> {
-  const appId = steamGame.appId
-  const existing = bridgeLaunchesInFlight.get(appId)
-  if (existing) {
-    logInfo(
-      `SteamGame: appId ${appId} bridge launch already in progress; joining it instead of starting a second (G26)`,
-      LogPrefix.Steam
-    )
-    notify({
-      title: steamGame.getGameInfo().title,
-      // Same call shape as the file's other i18next.t uses; the lint ceiling counts warnings.
-      // eslint-disable-next-line import-x/no-named-as-default-member
-      body: i18next.t(
-        'gamelib:steam.bridge.alreadyLaunching',
-        'This game is already starting. Wait for its window to open.'
-      )
-    })
-    return existing
-  }
-  const run = runBridgeLaunch(steamGame)
-  bridgeLaunchesInFlight.set(appId, run)
-  run
-    .finally(() => {
-      if (bridgeLaunchesInFlight.get(appId) === run) {
-        bridgeLaunchesInFlight.delete(appId)
-      }
-    })
-    .catch(() => undefined)
-  return run
-}
-
-export async function runBridgeLaunch(steamGame: SteamGame): Promise<boolean> {
-  let started = false
-  try {
-    started = await steamGame.launchBridgeGameBody()
-    return started
-  } finally {
-    if (!started) {
-      const { clearEngineSelection } =
-        await import('backend/engine/engineRegistry')
-      clearEngineSelection(steamGame.appId)
-    }
-  }
-}
 
 export async function launchBridgeGameBody(
   steamGame: SteamGame
@@ -281,7 +233,8 @@ export async function launchBridgeGameBody(
     // a throw propagates untouched.
     let launched = false
     try {
-      launched = await steamGame.launchDrmModeGame(
+      launched = await launchDrmModeGame(
+        steamGame,
         exePath,
         drmInstallRoot as string,
         drm
@@ -443,7 +396,8 @@ export async function launchBridgeGameBody(
         : `SteamGame: launching appId ${steamGame.appId} via the Steam bridge bottle directly (no-steam-api, no helper)`,
       LogPrefix.Steam
     )
-    return steamGame.fireBridgeWineLaunch(
+    return fireBridgeWineLaunch(
+      steamGame,
       exePath,
       bridgeBottleSettings,
       undefined,
@@ -561,7 +515,8 @@ export async function launchBridgeGameBody(
     `SteamGame: launching appId ${steamGame.appId} via the Steam bridge (${exePath}, helper port=${helperReady.port}, cfg copies=${1 + (configResult.extraPaths?.length ?? 0)})`,
     LogPrefix.Steam
   )
-  return steamGame.fireBridgeWineLaunch(
+  return fireBridgeWineLaunch(
+    steamGame,
     exePath,
     bridgeBottleSettings,
     undefined,
