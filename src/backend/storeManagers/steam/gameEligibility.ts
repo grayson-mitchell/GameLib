@@ -96,18 +96,28 @@ export function isBottleEligible(steamGame: SteamGame): boolean {
  * decision in this file goes through `bridgeRoute()` below instead of a
  * second direct allowlist/verdict read.
  *
- * D-17 (34.13-14) pin, carried forward unchanged: `platformsBottleEligible`
- * reads `isBottleEligibleFromPlatforms()`, NEVER the widened
- * `isBottleEligible()` / the D-17 forced-verdict wrapper — see
- * `bridgeRoute.ts`'s own doc comment for why widening this would resolve a
- * route into a bottle (`GameLibSteamBridge`) that a D-17 forced install
- * never wrote a single byte into (that install went to `GameLibSteam`).
+ * D-17 (34.13-14) pin, carried forward: `platformsBottleEligible` reads
+ * `isBottleEligibleFromPlatforms()`, NEVER the widened
+ * `isBottleEligible()` / the persisted D-17 forced verdict — a persisted
+ * verdict belongs to an install that already committed bits to
+ * `GameLibSteam`, and resolving it into a `GameLibSteamBridge` bottle that
+ * install never wrote a byte into would be wrong (see `bridgeRoute.ts`).
+ *
+ * quick 261107-lum: a per-call `windowsBuildChosen` request is a different
+ * input. It is the user's not-yet-committed choice of the Windows build, so
+ * it has written no bytes anywhere; it is OR-ed in so the normal bridge
+ * verdict applies to a forced-Windows install of a Mac-native title.
+ * install()'s WR-08 `hasBottledSteamCopy` guard still covers a title whose
+ * bits already live in `GameLibSteam`.
  */
 export function assembleBridgeRouteInput(
-  steamGame: SteamGame
+  steamGame: SteamGame,
+  options?: { windowsBuildChosen?: boolean }
 ): BridgeRouteInput {
   return {
-    platformsBottleEligible: isBottleEligibleFromPlatforms(steamGame),
+    platformsBottleEligible:
+      isBottleEligibleFromPlatforms(steamGame) ||
+      options?.windowsBuildChosen === true,
     isSeed: bridgeAllowlist.has(steamGame.appId),
     // `?? null`: bridgeAllowlist.knownBadReason's own contract already
     // returns `null` for "no match", but this coerces any other falsy
@@ -127,15 +137,19 @@ export function assembleBridgeRouteInput(
  * is a pure function (bridgeRoute.ts) — this method is the sole place in
  * games.ts that assembles its input and calls it.
  */
-export function bridgeRoute(steamGame: SteamGame): SteamBridgeRouteVerdict {
-  return resolveBridgeRoute(assembleBridgeRouteInput(steamGame))
+export function bridgeRoute(
+  steamGame: SteamGame,
+  options?: { windowsBuildChosen?: boolean }
+): SteamBridgeRouteVerdict {
+  return resolveBridgeRoute(assembleBridgeRouteInput(steamGame, options))
 }
 
 export async function checkBridgeRoute(
-  steamGame: SteamGame
+  steamGame: SteamGame,
+  options?: { windowsBuildChosen?: boolean }
 ): Promise<SteamBridgeRouteVerdict> {
   await ensurePlatformsCaptured(steamGame)
-  return bridgeRoute(steamGame)
+  return bridgeRoute(steamGame, options)
 }
 
 export function isBridgeEligible(steamGame: SteamGame): boolean {

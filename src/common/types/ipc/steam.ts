@@ -49,6 +49,8 @@ export interface SteamFrontendMessages {
     // sees WHY the bridge is unavailable, not just that it is. Optional —
     // absent for every pre-Phase-51 reason this message already carries.
     missingSymbols?: string[]
+    // quick 261107-lum: replay the user's Windows-build choice on retry.
+    forceWindowsViaBottle?: true
   }) => void
   // Phase 51 Plan 03 (D-51-02/08): the one-time per-game notice fired when a
   // game launches through a stubbed interface, an identity fallback
@@ -75,6 +77,8 @@ export interface SteamFrontendMessages {
     missingSymbols: string[]
     route: 'bridge' | 'bottle'
     userRoute: 'bridge' | 'bottle' | null
+    // quick 261107-lum: replay the user's Windows-build choice on retry.
+    forceWindowsViaBottle?: true
   }) => void
   // Phase 51 Plan 03 (D-51-16, folded todo): pushed when a bottled-Steam
   // fallback launch has produced no game process within the grace window —

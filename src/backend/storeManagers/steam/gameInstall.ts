@@ -243,7 +243,9 @@ export async function install(
     // steamBottleSetupRequired deferral immediately below so the
     // DownloadManager clears the transient 'installing' badge the same
     // way -- nothing is installed and no ACF poller starts on this path.
-    let bridgeRoute = resolveEligibilityBridgeRoute(steamGame)
+    let bridgeRoute = resolveEligibilityBridgeRoute(steamGame, {
+      windowsBuildChosen: forceWindowsViaBottle
+    })
 
     // 51-REVIEW WR-08: launch() and uninstall() route by LOCATION, but the
     // widened pending-scan default routes every non-seed bottle-eligible
@@ -305,7 +307,9 @@ export async function install(
       } finally {
         prescreenLease.release()
       }
-      bridgeRoute = resolveEligibilityBridgeRoute(steamGame)
+      bridgeRoute = resolveEligibilityBridgeRoute(steamGame, {
+        windowsBuildChosen: forceWindowsViaBottle
+      })
     }
 
     if (crossoverMissing && bridgeRoute.route !== 'bridge') {
@@ -337,13 +341,33 @@ export async function install(
         knownBadReason: bridgeRoute.knownBadReason,
         missingSymbols: bridgeRoute.missingSymbols,
         route: bridgeRoute.route,
-        userRoute: bridgeRoute.userRoute
+        userRoute: bridgeRoute.userRoute,
+        // quick 261107-lum: replay the Windows-build choice on retry.
+        ...(forceWindowsViaBottle
+          ? { forceWindowsViaBottle: true as const }
+          : {})
       })
       return { status: 'done', deferredToSetup: true }
     }
 
     if (bridgeRoute.route === 'bridge') {
-      return steamGame.installBridgeGame(args)
+      if (forceWindowsViaBottle) {
+        logInfo(
+          `SteamGame: forced-Windows install of appId ${steamGame.appId} routed by the bridge verdict: ${bridgeRoute.route}/${String(bridgeRoute.reason)}`,
+          LogPrefix.Steam
+        )
+      }
+      const bridgeResult = await steamGame.installBridgeGame(args)
+      // quick 261107-lum (DC-2): persist the forced verdict only when THIS
+      // install was forced and completed, so launch()/isNative() follow it.
+      if (
+        forceWindowsViaBottle &&
+        bridgeResult.status === 'done' &&
+        !bridgeResult.deferredToSetup
+      ) {
+        markForcedWindowsViaBottle(steamGame.appId)
+      }
+      return bridgeResult
     }
 
     if (!isBottleReady()) {
@@ -361,6 +385,10 @@ export async function install(
       return { status: 'done', deferredToSetup: true }
     }
 
+    // quick 261107-lum: a forced-Windows install reaches this terminal only as
+    // the bridge verdict's own bottle fallback (user-forced-bottle, drm-wrapped,
+    // failed-this-session, win64-no-shim, WR-08), never by bypassing the verdict.
+    //
     // quick 261030-o77: every bottle-route install (bottle-eligible or
     // forced Windows-via-bottle) always uses GameLib's own depot installer:
     // depot-download the WINDOWS depot directly into the bottle's OWN
@@ -773,7 +801,8 @@ export async function installBridgeGame(
         const provisioned = await provisionBridgeBottleForInstall(
           steamGame,
           bridgeBottleName,
-          signal
+          signal,
+          { forceWindowsViaBottle: args.steamForceWindowsViaBottle === true }
         )
         if ('result' in provisioned) return provisioned.result
         installEngine = provisioned.engine
@@ -818,7 +847,8 @@ export async function installBridgeGame(
 export async function provisionBridgeBottleForInstall(
   steamGame: SteamGame,
   bridgeBottleName: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  opts?: { forceWindowsViaBottle?: boolean }
 ): Promise<
   | { engine: NonCrossoverEngine | 'crossover'; createdHere: boolean }
   | { result: InstallResult }
@@ -926,7 +956,10 @@ export async function provisionBridgeBottleForInstall(
     sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'bridge-bottle-provision-failed',
-      fallbackAvailable: true
+      fallbackAvailable: true,
+      ...(opts?.forceWindowsViaBottle
+        ? { forceWindowsViaBottle: true as const }
+        : {})
     })
     return { result: { status: 'done', deferredToSetup: true } }
   }
@@ -1054,7 +1087,10 @@ export async function installBridgeGameLeased(
     sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'launch-exe-not-resolved',
-      fallbackAvailable: true
+      fallbackAvailable: true,
+      ...(args.steamForceWindowsViaBottle === true
+        ? { forceWindowsViaBottle: true as const }
+        : {})
     })
     return {
       status: 'error',
@@ -1125,7 +1161,10 @@ export async function installBridgeGameLeased(
         appName: steamGame.appId,
         reason: 'win64-no-shim',
         missingSymbols,
-        fallbackAvailable: true
+        fallbackAvailable: true,
+        ...(args.steamForceWindowsViaBottle === true
+          ? { forceWindowsViaBottle: true as const }
+          : {})
       })
       return { status: 'error', error: shimError }
     }
@@ -1178,7 +1217,10 @@ export async function installBridgeGameLeased(
     sendFrontendMessage('steamBridgeSetupRequired', {
       appName: steamGame.appId,
       reason: 'drm-wrapped',
-      fallbackAvailable: true
+      fallbackAvailable: true,
+      ...(args.steamForceWindowsViaBottle === true
+        ? { forceWindowsViaBottle: true as const }
+        : {})
     })
     return {
       status: 'error',

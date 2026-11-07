@@ -8187,15 +8187,32 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
 
   // ── Override-PRESENT positive routing ────────────────────────────────────
 
-  it('F1: the headline D-17 behavior — mac-native + proven Windows depot + override → bottle dispatch', async () => {
+  /** quick 261107-lum: the forced-Windows install resolves the normal bridge
+   * verdict. A never-scanned non-seed title lands on 'pending-scan', which
+   * runs the pre-install prescreen -- so the lease and screen are mocked. */
+  function arrangeForcedBridge(
+    meta: Record<string, unknown> = {},
+    knownBad: string | null = null
+  ) {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
       is_mac_native: true,
-      is_windows_native: true
+      is_windows_native: true,
+      ...meta
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(knownBad)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(prescreenBridgeDepots as jest.Mock).mockReset()
+    ;(prescreenBridgeDepots as jest.Mock).mockResolvedValue('unknown')
+    ;(SteamUser.acquireAuthenticated as jest.Mock).mockImplementation(() =>
+      Promise.resolve({ ok: true, client: {}, release: jest.fn() })
+    )
+  }
+
+  it('F1: quick 261107-lum — mac-native + proven Windows depot + override routes through the bridge verdict (pending-scan prescreen, then installBridgeGame)', async () => {
+    arrangeForcedBridge()
 
     const game = new SteamGame(APP_ID)
     const terminals = spyOnAllTerminals(game)
@@ -8204,38 +8221,130 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     // Contrast with B1 above — the identical fixture minus the override,
     // which routes 'native-protocol'. F1 and B1 differ in exactly one key:
     // proof the override is the operative input, not the fixture shape.
-    assertExactlyOneRoute('bottle-native', terminals)
+    assertExactlyOneRoute('bridge', terminals)
+    expect(terminals.installBridgeGame).toHaveBeenCalledTimes(1)
+    expect(prescreenBridgeDepots).toHaveBeenCalledTimes(1)
   })
 
-  it('F2: D-15 preserved on the forced path — un-provisioned bottle still defers to guided setup', async () => {
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      platformsCaptured: true,
-      is_mac_native: true,
-      is_windows_native: true
-    })
-    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
-    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+  it('F2: quick 261107-lum — an un-provisioned GameLibSteam bottle does not block a bridge-routed forced install', async () => {
+    arrangeForcedBridge()
     ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
     const game = new SteamGame(APP_ID)
     const terminals = spyOnAllTerminals(game)
-    const result = await game.install(
-      argsWith({ steamForceWindowsViaBottle: true })
-    )
+    await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
-    assertExactlyOneRoute('deferred-to-setup', terminals)
-    expect(result).toEqual({ status: 'done', deferredToSetup: true })
+    assertExactlyOneRoute('bridge', terminals)
+    expect(
+      (sendFrontendMessage as jest.Mock).mock.calls.some(
+        (c) => c[0] === 'steamBottleSetupRequired'
+      )
+    ).toBe(false)
   })
 
-  it('F3: native install opt-in ON — a forced game depot-downloads into the BOTTLE, not the host', async () => {
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      platformsCaptured: true,
-      is_mac_native: true,
-      is_windows_native: true
-    })
+  it("F10: override + persisted userRoute 'bottle' — the old D-17 bottled path is the verdict's own fallback, and it marks the forced flag", async () => {
+    arrangeForcedBridge({ bridge: { userRoute: 'bottle' } })
+    const markSpy = jest.spyOn(gamesModule, 'markForcedWindowsViaBottle')
+
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+
+    assertExactlyOneRoute('bottle-native', terminals)
+    expect(markSpy).toHaveBeenCalledWith(APP_ID)
+    markSpy.mockRestore()
+  })
+
+  it("F11: override + drm-wrapped known-bad (acknowledged) reroutes to bottled Steam; 'does-not-run' stays on the bridge", async () => {
+    arrangeForcedBridge(
+      { bridge: { noticeAcknowledgedFor: 'known-bad' } },
+      'drm-wrapped'
+    )
+    let game = new SteamGame(APP_ID)
+    let terminals = spyOnAllTerminals(game)
+    await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+    assertExactlyOneRoute('bottle-native', terminals)
+    ;(sendFrontendMessage as jest.Mock).mockClear()
+    arrangeForcedBridge(
+      { bridge: { noticeAcknowledgedFor: 'known-bad' } },
+      'does-not-run'
+    )
+    game = new SteamGame(APP_ID)
+    terminals = spyOnAllTerminals(game)
+    await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+    expect(terminals.installBridgeGame).toHaveBeenCalledTimes(1)
+    expect(terminals.installBottleNative).not.toHaveBeenCalled()
+  })
+
+  it('F12: forced bridge install marks the forced flag only on a completed (non-deferred, done) result', async () => {
+    const markSpy = jest.spyOn(gamesModule, 'markForcedWindowsViaBottle')
+    const cases: Array<[any, boolean]> = [
+      [{ status: 'done' }, true],
+      [{ status: 'error', error: 'x' }, false],
+      [{ status: 'done', deferredToSetup: true }, false]
+    ]
+    for (const [result, expectMarked] of cases) {
+      markSpy.mockClear()
+      arrangeForcedBridge()
+      const game = new SteamGame(APP_ID)
+      const terminals = spyOnAllTerminals(game)
+      terminals.installBridgeGame.mockResolvedValue(result)
+      await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+      expect(terminals.installBridgeGame).toHaveBeenCalledTimes(1)
+      if (expectMarked) {
+        expect(markSpy).toHaveBeenCalledWith(APP_ID)
+      } else {
+        expect(markSpy).not.toHaveBeenCalled()
+      }
+    }
+    markSpy.mockRestore()
+  })
+
+  it('F13: a route notice raised during a forced install replays forceWindowsViaBottle; the same notice without the override has no such key', async () => {
+    // unacknowledged does-not-run known-bad -> bridge route with a notice
+    arrangeForcedBridge({}, 'does-not-run')
+    let game = new SteamGame(APP_ID)
+    let terminals = spyOnAllTerminals(game)
+    const forced = await game.install(
+      argsWith({ steamForceWindowsViaBottle: true })
+    )
+    expect(forced).toEqual({ status: 'done', deferredToSetup: true })
+    expect(terminals.installBridgeGame).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeRouteNotice',
+      expect.objectContaining({
+        appName: APP_ID,
+        route: 'bridge',
+        forceWindowsViaBottle: true
+      })
+    )
+
+    // Same notice WITHOUT the override: bottle-eligible fixture (no override
+    // needed), exact payload, no forceWindowsViaBottle key.
+    ;(sendFrontendMessage as jest.Mock).mockClear()
+    arrangeForcedBridge({ is_mac_native: false }, 'does-not-run')
+    game = new SteamGame(APP_ID)
+    terminals = spyOnAllTerminals(game)
+    await game.install(PRODUCTION_ARGS)
+    const noticeCall = (sendFrontendMessage as jest.Mock).mock.calls.find(
+      (c) => c[0] === 'steamBridgeRouteNotice'
+    )
+    expect(noticeCall).toBeDefined()
+    expect(noticeCall![1]).not.toHaveProperty('forceWindowsViaBottle')
+  })
+
+  it('F14: CrossOver missing does not block a bridge-routed forced install (the gate only stops non-bridge routes)', async () => {
+    arrangeForcedBridge()
+    jest.requireMock('../bottle').__crossoverInstalled.mockReturnValue(false)
+    const game = new SteamGame(APP_ID)
+    const terminals = spyOnAllTerminals(game)
+    await game.install(argsWith({ steamForceWindowsViaBottle: true }))
+    assertExactlyOneRoute('bridge', terminals)
+  })
+
+  it('F3: native install opt-in ON — a forced game with a user-forced bottle verdict depot-downloads into the BOTTLE, not the host', async () => {
+    arrangeForcedBridge({ bridge: { userRoute: 'bottle' } })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
-    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
     const game = new SteamGame(APP_ID)
     const terminals = spyOnAllTerminals(game)
@@ -8351,27 +8460,19 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     assertExactlyOneRoute('native-protocol', terminals)
   })
 
-  it('F9: bridge non-interaction — a forced install never enters the Phase 24 bridge even when allowlisted', async () => {
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      platformsCaptured: true,
-      is_mac_native: true,
-      is_windows_native: true
-    })
-    ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
-    // isBridgeEligible() composes isBottleEligible(), which stays false for
-    // a forced mac-native game — so the bridge branch is structurally
-    // unreachable from the forced path even for an allowlisted title. This
-    // is deliberate, not an oversight: the allowlist is curated for
-    // confirmed-not-native titles and the bridge spawns a separate process.
+  it('F9: quick 261107-lum — an allowlisted (seed) title with the override routes to the bridge, no prescreen', async () => {
+    arrangeForcedBridge()
+    // quick 261107-lum: the forced-Windows choice feeds the bridge route
+    // input, so a seed title resolves the seed row and dispatches the bridge.
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
     const game = new SteamGame(APP_ID)
     const terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
-    assertExactlyOneRoute('bottle-native', terminals)
-    expect(terminals.installBridgeGame).not.toHaveBeenCalled()
+    assertExactlyOneRoute('bridge', terminals)
+    expect(terminals.installBottleNative).not.toHaveBeenCalled()
+    expect(prescreenBridgeDepots).not.toHaveBeenCalled()
   })
 })
 
@@ -8994,7 +9095,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         extra: { reqs: [] },
         platformsCaptured: true,
         is_mac_native: true,
-        is_windows_native: true
+        is_windows_native: true,
+        // quick 261107-lum: a forced install now resolves the bridge verdict;
+        // pin the bottled terminal these specs characterise (rule 3).
+        bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
@@ -9021,7 +9125,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       mockStatefulMetadataStore({
         platformsCaptured: true,
         is_mac_native: true,
-        is_windows_native: true
+        is_windows_native: true,
+        // quick 261107-lum: a forced install now resolves the bridge verdict;
+        // pin the bottled terminal these specs characterise (rule 3).
+        bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
@@ -9048,7 +9155,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       mockStatefulMetadataStore({
         platformsCaptured: true,
         is_mac_native: true,
-        is_windows_native: true
+        is_windows_native: true,
+        // quick 261107-lum: a forced install now resolves the bridge verdict;
+        // pin the bottled terminal these specs characterise (rule 3).
+        bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
@@ -9075,7 +9185,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       mockStatefulMetadataStore({
         platformsCaptured: true,
         is_mac_native: true,
-        is_windows_native: true
+        is_windows_native: true,
+        // quick 261107-lum: a forced install now resolves the bridge verdict;
+        // pin the bottled terminal these specs characterise (rule 3).
+        bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
       ;(isBottleReady as jest.Mock).mockReturnValue(false)
@@ -9099,7 +9212,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       mockStatefulMetadataStore({
         platformsCaptured: true,
         is_mac_native: true,
-        is_windows_native: true
+        is_windows_native: true,
+        // quick 261107-lum: a forced install now resolves the bridge verdict;
+        // pin the bottled terminal these specs characterise (rule 3).
+        bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)

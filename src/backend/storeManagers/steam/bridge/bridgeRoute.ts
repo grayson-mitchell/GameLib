@@ -22,6 +22,10 @@
  * the exact defect `isBridgeEligible()`'s own doc comment (games.ts)
  * already warns against for its narrower composition. See this module's
  * own test suite for the explicit prohibition assertion.
+ *
+ * quick 261107-lum: the assembler MAY OR an explicit per-install Windows-build
+ * choice into `platformsBottleEligible`. That is a not-yet-committed request
+ * that has written no bytes anywhere, never the persisted D-17 verdict.
  */
 
 import type { SteamBridgeVerdict } from '../stores'
@@ -53,7 +57,9 @@ export const NOTICE_REASONS: ReadonlySet<SteamBridgeRouteReason> = new Set([
 export interface BridgeRouteInput {
   /** The platform-derived bottle-eligibility verdict (games.ts's
    * `isBottleEligibleFromPlatforms()`) -- NEVER the D-17-widened
-   * `isBottleEligible()`. See this module's doc comment. */
+   * `isBottleEligible()`. See this module's doc comment. The assembler may
+   * also OR in an explicit per-install Windows-build choice (quick
+   * 261107-lum), never the persisted verdict. */
   platformsBottleEligible: boolean
   /** True when this title is present in the bundled seed allowlist with no
    * scan yet (bridgeAllowlist.has, 51-03). */
