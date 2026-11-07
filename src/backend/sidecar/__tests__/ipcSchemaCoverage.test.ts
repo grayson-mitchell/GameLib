@@ -1,9 +1,7 @@
 /**
- * Shrink-only coverage ratchet for IPC channel schemas (Phase 67 Plan 02, D-15 precursor / D-20).
- *
- * Counts registered channels that have no entry in `channelSchemas`, per bucket, against an
- * EQUALITY ceiling: lowering OR raising the real count without editing CEILING turns the test
- * red, so the number can only ratchet down by converting channels in the same commit.
+ * Every registered or declared IPC channel has a schema (Phase 67 D-15, D-20). No ceiling table,
+ * no exemption list: the ratchet from plan 67-02 reached zero in plan 67-18, so adding a channel
+ * without a schema now fails here.
  *
  * Registered set = the union of
  *   - runtime registries after `import('backend/sidecar/handlers')` and
@@ -32,17 +30,6 @@ import {
 import { registerSignInProbeOutcomesHandler } from 'backend/signInProbe/outcomes'
 
 type Bucket = 'invoke' | 'send' | 'testOnly' | 'push' | 'local'
-
-// Lower a bucket in the SAME commit that converts channels in it. At zero, plan 67-18 replaces
-// this table with an exemption-free `toEqual([])` (D-15, D-20).
-// Measured on first run, plan 67-02.
-const CEILING: Record<Bucket, number> = {
-  invoke: 0,
-  send: 0,
-  testOnly: 0,
-  push: 0,
-  local: 0
-}
 
 const BACKEND_DIR = join(__dirname, '..', '..')
 
@@ -126,9 +113,9 @@ function bucketOf(entry: (typeof channelSchemas)[string]): Bucket {
   return entry.kind
 }
 
-describe('IPC schema coverage ratchet (D-20)', () => {
+describe('IPC schema coverage (D-15)', () => {
   it.each(['invoke', 'send', 'testOnly', 'push', 'local'] as Bucket[])(
-    'bucket %s: unvalidated channel count equals the ceiling',
+    'bucket %s: every channel has a schema in that bucket (no exemptions)',
     async (bucket) => {
       const reg = await registered()
       const missing = [...reg[bucket]].filter((name) => {
@@ -136,7 +123,7 @@ describe('IPC schema coverage ratchet (D-20)', () => {
           bucket === 'push' ? pushSchemaFor(name) : channelSchemas[name]
         return !entry || bucketOf(entry) !== bucket
       })
-      expect(missing.length).toBe(CEILING[bucket])
+      expect(missing).toEqual([])
     }
   )
 
@@ -162,6 +149,26 @@ describe('IPC schema coverage ratchet (D-20)', () => {
       'connectivity-changed',
       'refreshLibrary'
     ])
+  })
+
+  it('shell and local entries are invoke or send, and kinds match registration', async () => {
+    const reg = await registered()
+    for (const [name, entry] of Object.entries(channelSchemas)) {
+      // `caller` only describes who sends an inbound frame; a push (backend -> renderer) keeps
+      // the default tag and is never parsed (D-12).
+      if (entry.caller === 'shell' || entry.caller === 'local') {
+        expect(['invoke', 'send']).toContain(entry.kind)
+      }
+      if (reg.testOnly.has(name)) continue
+      if (handlerRegistry.has(name) || reg.invoke.has(name)) {
+        // A name can also be a push (collidingPushSchemas), but never in this map.
+        expect(entry.kind).toBe('invoke')
+      }
+    }
+    for (const name of reg.send) {
+      if (reg.invoke.has(name)) continue
+      expect(channelSchemas[name]?.kind).toBe('send')
+    }
   })
 
   it('testOnly and push entries carry the matching flags', async () => {

@@ -39,11 +39,14 @@ export function validateInbound(
   args: unknown[],
   schemas: Readonly<Record<string, ChannelEntry>> = channelSchemas
 ): InboundVerdict {
-  // Ratchet era only: a channel without a schema passes. Plan 67-18 makes this fail closed.
   const entry = Object.prototype.hasOwnProperty.call(schemas, channel)
     ? schemas[channel]
     : undefined
-  if (!entry) return { ok: true }
+  // Fail closed (D-08, D-09): ipcSchemaCoverage guarantees every registered channel has a
+  // schema, so a miss here is an unknown or newly added channel, never a legitimate caller.
+  if (!entry) {
+    return { ok: false, channel, paths: ['(channel)'], codes: ['no_schema'] }
+  }
   void kind
   const result = entry.args.safeParse(args)
   if (result.success) return { ok: true }

@@ -189,10 +189,32 @@ describe('validateInbound in the dispatch funnel', () => {
     expect(stderrWrites.some((l) => l.includes('IPC_INVALID_ARGS'))).toBe(true)
   })
 
-  it('(7) a channel with no schema passes through (ratchet era; plan 67-18 fails closed)', async () => {
+  it('(7) a registered channel with no schema fails closed', async () => {
     send({ id: '7', kind: 'invoke', channel: 'noSchemaInvoke', args: [1, 2] })
     await flush()
-    expect(frames[0]).toMatchObject({ ok: true, result: 'free' })
+    const f = frames[0]
+    expect(f.ok).toBe(false)
+    const p = parseIpcInvalidArgsError(String(f.error))
+    expect(p?.channel).toBe('noSchemaInvoke')
+    expect(p?.codes).toContain('no_schema')
+    expect(
+      stderrWrites.filter((l) => l.includes('IPC_INVALID_ARGS'))
+    ).toHaveLength(1)
+  })
+
+  it('(7b) a send with no schema is logged and dropped', async () => {
+    const dropped: unknown[][] = []
+    listenerRegistry.set('noSchemaSend', [
+      ((...a: unknown[]) => {
+        dropped.push(a)
+      }) as never
+    ])
+    send({ id: '7b', kind: 'send', channel: 'noSchemaSend', args: [] })
+    await flush()
+    expect(dropped).toHaveLength(0)
+    expect(stderrWrites.some((l) => l.includes('channel=noSchemaSend'))).toBe(
+      true
+    )
   })
 
   it('(8) an unregistered channel still gets the unported marker', async () => {

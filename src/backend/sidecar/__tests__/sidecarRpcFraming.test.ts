@@ -13,6 +13,23 @@ import { PassThrough } from 'node:stream'
 
 const MAX_LINE_LENGTH = 10 * 1024 * 1024
 
+// The validator fails closed (67-18), so the synthetic `echo` channel needs a schema. It accepts
+// any argument list: this suite tests framing, not argument shapes.
+jest.mock('common/types/ipc/channelSchemas', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { z } = require('zod')
+  return {
+    channelSchemas: {
+      echo: {
+        kind: 'invoke',
+        caller: 'renderer',
+        testOnly: false,
+        args: z.tuple([]).rest(z.unknown())
+      }
+    }
+  }
+})
+
 describe('sidecarRpc inbound framing', () => {
   let stderrSpy: jest.SpyInstance
 
