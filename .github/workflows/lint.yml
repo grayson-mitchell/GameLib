@@ -33,3 +33,7 @@ jobs:
         run: pnpm find-deadcode
       - name: Module boundaries
         run: pnpm boundaries
+      # Phase 65 D-02: shrink-only per-file line ceiling for storeManagers/steam/; lower
+      # meta/steamLineCeilingBaseline.json in the same commit as the move.
+      - name: Steam file line ceiling
+        run: pnpm steam-line-ceiling
