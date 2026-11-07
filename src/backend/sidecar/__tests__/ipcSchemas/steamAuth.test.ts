@@ -113,8 +113,19 @@ const asyncTable: FixtureTable<typeof steamAuthAsyncArgs> = {
     invalid: [['570', -1], ['570', 1.5], ['570', '1'], ['abc', 0], ['570']]
   },
   persistBottleWineVersion: {
-    valid: [[engine]],
-    invalid: [[{}], [{ bin: '/x', name: 'n', type: 'toolkit2' }], [], ['wine']]
+    // persisted-config values may carry extra keys or null lib fields (67 review WR-04)
+    valid: [
+      [engine],
+      [{ ...engine, legacyKey: 1 }],
+      [{ ...engine, lib: null, lib32: null, wineserver: null }]
+    ],
+    invalid: [
+      [{}],
+      [{ bin: '/x', name: 'n', type: 'toolkit2' }],
+      [{ name: 'n', type: 'wine' }],
+      [],
+      ['wine']
+    ]
   },
   steamClientSetupStart: { valid: [[]], invalid: [['x']] },
   steamClientSetupRecheck: {

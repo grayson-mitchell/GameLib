@@ -12,7 +12,7 @@
  */
 import { z } from 'zod'
 
-import type { Runner } from '../../types'
+import type { Runner, WineInstallation } from '../../types'
 
 /**
  * A positional optional argument. JSON turns a positional `undefined` into `null` on the
@@ -58,16 +58,22 @@ export function runnerArg() {
   return z.enum(RUNNERS)
 }
 
-/** WineInstallation, every key declared (D-06). */
+/**
+ * WineInstallation, every key declared (D-06). Loose and null-tolerant (67 review WR-04): the
+ * value can come from the persisted per-game config JSON, which may carry legacy extra keys
+ * or `lib: null`. `bin` and `type` stay required.
+ */
 export function wineInstallationArg() {
-  return z.strictObject({
+  // The cast keeps the derived call-site type the interface: zod's loose-object type carries
+  // an index signature that an interface cannot satisfy (same pattern as settings.ts configArg).
+  return z.looseObject({
     bin: nonEmptyString(),
     name: z.string().max(1024),
     type: z.enum(['wine', 'proton', 'crossover', 'toolkit']),
-    lib: z.string().max(4096).optional(),
-    lib32: z.string().max(4096).optional(),
-    wineserver: z.string().max(4096).optional()
-  })
+    lib: z.string().max(4096).nullish(),
+    lib32: z.string().max(4096).nullish(),
+    wineserver: z.string().max(4096).nullish()
+  }) as unknown as z.ZodType<WineInstallation, WineInstallation>
 }
 
 /** Any-scheme URL. Scheme allow-lists are Phase 72. */

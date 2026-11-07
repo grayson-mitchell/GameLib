@@ -134,9 +134,16 @@ const asyncTable: FixtureTable<typeof wineToolsAsyncArgs> = {
   'wine.isValidVersion': {
     valid: [
       [wineInstallation],
-      [{ ...wineInstallation, lib: '/l', lib32: '/l32', wineserver: '/ws' }]
+      [{ ...wineInstallation, lib: '/l', lib32: '/l32', wineserver: '/ws' }],
+      // persisted-config values may carry extra keys or null lib fields (67 review WR-04)
+      [{ ...wineInstallation, legacyKey: 1 }],
+      [{ ...wineInstallation, lib: null, lib32: null, wineserver: null }]
     ],
-    invalid: [[{ ...wineInstallation, type: 'dosbox' }], [{ bin: '/x' }]]
+    invalid: [
+      [{ ...wineInstallation, type: 'dosbox' }],
+      [{ bin: '/x' }],
+      [{ name: 'n', type: 'wine' }]
+    ]
   },
   toggleDXVK: {
     valid: [[toolArgs], [{ ...toolArgs, action: 'restore' }]],
