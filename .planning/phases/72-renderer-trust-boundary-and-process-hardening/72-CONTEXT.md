@@ -125,6 +125,22 @@ the `logSecretGate` CLI wiring, the Tauri `unstable` bump, and RPC frame size li
   Windows PC**: launch, start a legendary/gogdl operation, quit, and confirm in Task Manager that no
   child process survives. Follow the UAT item-shape convention.
 
+### Post-research amendments (2026-11-08, operator-confirmed after 72-RESEARCH.md)
+- **D-09 (amended): delete the renderer `removeFolder` channel instead of containing it.** Research
+  found no renderer caller of `window.api.removeFolder`; the only live caller is trusted backend code
+  (`downloadqueue.ts:410`), and containing against `defaultInstallPath` is circular (the renderer can
+  write it via `setSetting`) and breaks custom install locations. Remove the preload export, schema,
+  registration, regenerate the IPC contract, update the knip baseline. Keep an internal async helper
+  using `fs.promises.rm` with `maxRetries`/`retryDelay`, with no timer at all.
+- **D-18 (amended): cargo-deny has no severity threshold.** Clear the 6 rustls/rustls-webpki/
+  webpki-root-certs advisories with `cargo update`. The 4 `zip` advisories (need zip >= 9; sole
+  dependent is `tauri-plugin-updater`, which nothing invokes) get `ignore` entries in `deny.toml`,
+  each with that reason.
+- **D-19 (amended): `i18next-http-backend` goes to `^4.0.10`** (the operator prefers current
+  versions; 2→3 was already a major). This also clears the 3 lows. A live locale-load check is required.
+- **D-20 (confirmed): parity with Unix.** Games launched by the sidecar die with the Job Object on
+  quit, as the Unix process-group kill already does. No breakaway flags.
+
 ### Claude's Discretion
 - The final module and file names (`shell_open.rs` is the working name from 71 D-07).
 - The wording and buttons of the dead-sidecar dialog, within D-01/D-05.
