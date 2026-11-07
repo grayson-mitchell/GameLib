@@ -67,6 +67,7 @@ import {
 } from '../gameSessionState'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
+import * as installStopModule from '../library/installStop'
 import * as acfState from '../library/acfState'
 import * as macArch from '../library/macArch'
 import * as pollStateModule from '../library/pollState'
@@ -5529,7 +5530,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     startInstallPollingSpy = jest
       .spyOn(libraryModule, 'startInstallPolling')
       .mockImplementation(() => {})
-    stopInstallPollingSpy = jest.spyOn(libraryModule, 'stopInstallPolling')
+    stopInstallPollingSpy = jest.spyOn(installStopModule, 'stopInstallPolling')
     setBridgeUserRouteSpy = jest.spyOn(
       bridgeVerdictModule,
       'setBridgeUserRoute'

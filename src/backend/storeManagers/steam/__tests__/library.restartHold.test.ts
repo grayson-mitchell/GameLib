@@ -6,11 +6,8 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import {
-  pollInstallOnce,
-  startInstallPolling,
-  stopInstallPolling
-} from '../library'
+import { pollInstallOnce, startInstallPolling } from '../library'
+import { stopInstallPolling } from '../library/installStop'
 import { existsSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries, getFileSize } from 'backend/utils'

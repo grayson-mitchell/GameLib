@@ -13,7 +13,6 @@
 // ── Imports ───────────────────────────────────────────────────────────────────
 import SteamLibraryManager, {
   startInstallPolling,
-  stopInstallPolling,
   cancelDelegatedInstall,
   isDelegatedInstallPolling,
   pollInstallOnce,
@@ -26,6 +25,7 @@ import SteamLibraryManager, {
   startRunningPoll,
   stopRunningPoll
 } from '../library'
+import { stopInstallPolling } from '../library/installStop'
 import {
   buildInstalledMap,
   buildIncompleteInstallSet

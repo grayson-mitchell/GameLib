@@ -5,10 +5,8 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import SteamLibraryManager, {
-  startInstallPolling,
-  stopInstallPolling
-} from '../library'
+import SteamLibraryManager, { startInstallPolling } from '../library'
+import { stopInstallPolling } from '../library/installStop'
 import { locateMachOBinary, verifyMacArchGroundTruth } from '../library/macArch'
 import { machOArchsOf, verdictFromArchs } from 'backend/utils/macArch'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'

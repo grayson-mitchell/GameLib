@@ -28,11 +28,11 @@ import { steamMetadataStore, steamLibraryStore } from './stores'
 import { library } from './state'
 import {
   startInstallPolling,
-  stopInstallPolling,
   resumeInterruptedSteamInstall,
   pollUninstallOnce
 } from './library'
 import { readAcfState, removeSteamInstallCopy } from './library/acfState'
+import { stopInstallPolling } from './library/installStop'
 import * as resumeBreadcrumbs from './library/resumeBreadcrumbs'
 import * as pollState from './library/pollState'
 import {

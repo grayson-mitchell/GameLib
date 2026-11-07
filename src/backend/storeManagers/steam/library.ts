@@ -114,6 +114,7 @@ import {
   buildBottleInstalledMap,
   buildBridgeInstalledMap
 } from './library/installedMap'
+import { stopInstallPolling } from './library/installStop'
 
 /**
  * Maps the host OS to Steam's depot `oslist` vocabulary ('windows'|'macos'|
@@ -2217,24 +2218,6 @@ function isLiveMonitorEligible(poll: {
   isNativeHandoff: boolean
 }): boolean {
   return isMac && poll.source === 'native' && !poll.isNativeHandoff
-}
-
-/**
- * Stops the active polling loop for appId (clears the interval and removes the
- * activePolls entry). Safe to call when no poll is active (no-op).
- *
- * Exported for unit testing.
- */
-export function stopInstallPolling(appId: string): void {
-  const poll = activePolls.get(appId)
-  if (!poll) return
-  // quick 261029-pkp: a stopped holding poll (cancel, uninstall, manifest
-  // vanished) must not leave a record that re-arms at the next boot.
-  if (poll.steamHold === 'holding') clearSteamRestartHold(appId)
-  clearInterval(poll.timer)
-  activePolls.delete(appId)
-  stopSteamDownloadMonitor(appId)
-  logInfo(`Steam: stopped install polling for appId ${appId}`, LogPrefix.Steam)
 }
 
 /**
