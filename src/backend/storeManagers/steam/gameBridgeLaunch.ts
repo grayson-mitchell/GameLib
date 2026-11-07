@@ -22,6 +22,7 @@ import {
   getDrmBridgeRunner
 } from './bottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import { markGameRunning, markGameStopped } from 'backend/engine/bottleLedger'
 // Phase 60: Steam overlay in bridged games (macOS).
 import {
   appendCxEnvTokens,
@@ -995,7 +996,9 @@ export async function fireBridgeWineLaunch(
     }
 
     let handle: ReturnType<typeof startBottleProcessMonitor> = null
+    const ledgerBottle = bridgeBottleSettings.wineCrossoverBottle
     if (installRoot) {
+      markGameRunning(ledgerBottle, steamGame.appId)
       handle = bindDeadlineToMonitor(
         deadline,
         startBottleProcessMonitor({
@@ -1015,6 +1018,7 @@ export async function fireBridgeWineLaunch(
             clearLaunchRecord()
             stopBridgeHelper(steamGame.appId)
             clearEngineSelection(steamGame.appId)
+            markGameStopped(ledgerBottle, steamGame.appId)
             relogOnce()
             if (overlayInjected && stoppedAt === undefined) {
               stoppedAt = Date.now()
@@ -1138,6 +1142,7 @@ export async function fireBridgeWineLaunch(
         if (!handle) {
           clearLaunchRecord()
           clearEngineSelection(steamGame.appId)
+          markGameStopped(ledgerBottle, steamGame.appId)
           relogOnce()
         }
         if (getBottleProcessMonitorPhase(steamGame.appId) !== 'running') {
@@ -1150,6 +1155,7 @@ export async function fireBridgeWineLaunch(
         maybeReportOverlayAbnormalExit(false)
         deadline?.cancel('launch-error')
         clearEngineSelection(steamGame.appId)
+        markGameStopped(ledgerBottle, steamGame.appId)
         clearLaunchRecord()
         relogOnce()
         reportLaunchFailure(error)
@@ -1163,6 +1169,7 @@ export async function fireBridgeWineLaunch(
     void import('backend/engine/engineRegistry').then((m) =>
       m.clearEngineSelection(steamGame.appId)
     )
+    markGameStopped(bridgeBottleSettings.wineCrossoverBottle, steamGame.appId)
     clearLaunchRecord()
     reportLaunchFailure(error)
     return false

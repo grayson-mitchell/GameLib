@@ -161,6 +161,10 @@ import {
   getEngineSelection
 } from 'backend/engine/engineRegistry'
 import {
+  __resetBottleLedgerForTests,
+  gamesRunningIn
+} from 'backend/engine/bottleLedger'
+import {
   __activeLaunchDeadlineCount,
   cancelLaunchDeadline
 } from 'backend/engine/launchDeadline'
@@ -368,7 +372,12 @@ jest.mock('backend/engine/bottlePrimitives', () => ({
   buildFallbackGameSettings: jest.fn(),
   // Phase 51 Plan 01 (D-51-01): launchBridgeGame()'s bottleProcessMonitor
   // wiring resolves the bottle dir via this.
-  getBottleDir: jest.fn()
+  getBottleDir: jest.fn(),
+  // Plan 61-05: bottleLedger validates the bottle name with the real guard.
+  sanitizeBottleName: (name: string | null) =>
+    typeof name === 'string' && name.trim() && !/[/\\\0]|\.\./.test(name)
+      ? name.trim()
+      : null
 }))
 jest.mock('../bottle', () => {
   // Phase 24 Plan 08 (R4): dedicated bridge bottle readiness/provisioning
@@ -15679,6 +15688,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
   beforeEach(() => {
     __resetBridgeFailedSessionForTests()
     __resetBridgeLaunchBottlesForTests()
+    __resetBottleLedgerForTests()
     library.clear()
     pendingFetches.clear()
     library.set(ID, makeEntry({ title: 'Test Game' }))
@@ -16373,6 +16383,19 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         jest.useRealTimers()
       }
     }
+
+    it('D-16: a bridge launch marks the bottle ledger and onStopped clears it', async () => {
+      jest.useFakeTimers()
+      let onStopped: (() => void) | undefined
+      ;(startBottleProcessMonitor as jest.Mock).mockImplementation((a: any) => {
+        onStopped = a.onStopped
+        return { launcherExited: jest.fn() }
+      })
+      expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+      expect(gamesRunningIn(PER_GAME)).toEqual([ID])
+      onStopped?.()
+      expect(gamesRunningIn(PER_GAME)).toEqual([])
+    })
 
     it('arms a deadline and the first match cancels it (no timers left)', async () => {
       jest.useFakeTimers()
