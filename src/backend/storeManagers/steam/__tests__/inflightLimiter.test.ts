@@ -12,6 +12,7 @@
 // avoidance per this repo's own process lessons).
 
 import { InflightLimiter } from '../depot/inflightLimiter'
+import { at } from './fixtures/indexed'
 
 function createDeferred<T = void>() {
   let resolve!: (value: T) => void
@@ -88,17 +89,17 @@ describe('InflightLimiter', () => {
     await flushMicrotasks()
     expect(order).toEqual([0])
 
-    deferreds[0].resolve()
+    at(deferreds, 0).resolve()
     await runs[0]
     await flushMicrotasks()
     expect(order).toEqual([0, 1])
 
-    deferreds[1].resolve()
+    at(deferreds, 1).resolve()
     await runs[1]
     await flushMicrotasks()
     expect(order).toEqual([0, 1, 2])
 
-    deferreds[2].resolve()
+    at(deferreds, 2).resolve()
     await runs[2]
   })
 

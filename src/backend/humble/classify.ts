@@ -320,8 +320,10 @@ export function extractExpiration(
       if (!Number.isNaN(parsed.getTime())) {
         if (DATE_ONLY_RE.test(value)) {
           const [year, month, day] = value.split('-').map(Number)
-          const localMidnight = new Date(year, month - 1, day)
-          return localMidnight.toISOString()
+          if (year !== undefined && month !== undefined && day !== undefined) {
+            const localMidnight = new Date(year, month - 1, day)
+            return localMidnight.toISOString()
+          }
         }
         return parsed.toISOString()
       }

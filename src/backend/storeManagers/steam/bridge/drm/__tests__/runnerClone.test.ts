@@ -69,6 +69,7 @@ import {
 } from 'backend/engine/runTool'
 import { buildDrmPaths } from '../drmPaths'
 import type { NtdllPatchRow } from '../ntdllPatchTable'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 const sha = (b: Buffer | string) => createHash('sha256').update(b).digest('hex')
 const WINE_INF_MTIME = 1784047440
@@ -200,8 +201,8 @@ function fakeRun(o: FakeOpts = {}) {
       if (o.cpFails && cpCount <= o.cpFails) {
         return { ...base, code: 1, stderr: 'clonefile failed' }
       }
-      const src = args[args.length - 2]
-      const dst = args[args.length - 1]
+      const src = at(args, args.length - 2)
+      const dst = at(args, args.length - 1)
       await fsp.cp(src, dst, {
         recursive: true,
         verbatimSymlinks: true,
@@ -219,7 +220,7 @@ function fakeRun(o: FakeOpts = {}) {
           ? { ...base, code: 0, stderr: 'Identifier=x' }
           : { ...base, code: 1, stderr: 'code object is not signed at all' }
       }
-      const target = args[args.length - 1]
+      const target = at(args, args.length - 1)
       if (args[0] === '-d') return { ...base, stdout: entXml(keysOf(target)) }
       if (args[0] === '--force') {
         const isWl = target.endsWith('/wineloader')
@@ -306,7 +307,7 @@ describe('defaultRunTool', () => {
       timeoutMs: 10000
     })
     expect(mockSpawnCalls).toHaveLength(1)
-    const env = (mockSpawnCalls[0][2] as { env: NodeJS.ProcessEnv }).env
+    const env = (at(mockSpawnCalls, 0)[2] as { env: NodeJS.ProcessEnv }).env
     expect(env.HOME).toBeTruthy()
     expect(env.HOME).not.toBe(process.env.HOME)
     expect(existsSync(env.HOME as string)).toBe(false)
@@ -586,12 +587,12 @@ describe('ensureRunnerClone build path', () => {
 
   it('keeps every spawn argument inside the runners root except the cp source', async () => {
     const { s } = await build()
-    const first = s.fake.calls[0]
+    const first = at(s.fake.calls, 0)
     expect(first.tool).toBe('/bin/cp')
     expect(first.args.slice(0, CLONE_ARGV_PRIMARY.length)).toEqual([
       ...CLONE_ARGV_PRIMARY
     ])
-    expect(first.args[first.args.length - 2]).toBe(s.cx.cxRoot)
+    expect(at(first.args, first.args.length - 2)).toBe(s.cx.cxRoot)
     for (const c of s.fake.calls) {
       for (const a of c.args) {
         if (a.startsWith('/') && a !== s.cx.cxRoot) {
@@ -622,22 +623,23 @@ describe('ensureRunnerClone build path', () => {
       .filter((c) => c.tool === '/usr/bin/codesign')
       .map((c) => c.args)
     // the codesign steps run in the partial dir, before the atomic rename
-    const cpDest = s.fake.calls[0].args[s.fake.calls[0].args.length - 1]
+    const cpArgs = at(s.fake.calls, 0).args
+    const cpDest = at(cpArgs, cpArgs.length - 1)
     const cxRoot = cpDest
     const so = join(cxRoot, 'lib/wine/x86_64-unix/lsteamclient.so')
     const loader = join(cxRoot, 'lib/wine/x86_64-unix/wine')
     expect(cs[0]).toEqual(['--remove-signature', so].map((a) => a))
     expect(cs[1]).toEqual(['-dv', so])
     expect(cs[2]).toEqual(['-d', '--entitlements', '-', '--xml', loader])
-    expect(cs[3].slice(0, 5)).toEqual([
+    expect(at(cs, 3).slice(0, 5)).toEqual([
       '--force',
       '--sign',
       '-',
       '--options',
       'runtime'
     ])
-    expect(cs[3][5]).toBe('--entitlements')
-    expect(cs[3][7]).toBe(loader)
+    expect(at(cs, 3)[5]).toBe('--entitlements')
+    expect(at(cs, 3)[7]).toBe(loader)
     expect(cs[4]).toEqual(['-d', '--entitlements', '-', '--xml', loader])
     const xr = s.fake.calls
       .filter((c) => c.tool === '/usr/bin/xattr' && c.args[0] === '-r')
@@ -646,7 +648,7 @@ describe('ensureRunnerClone build path', () => {
       ['-r', '-d', 'com.apple.quarantine'],
       ['-r', '-d', 'com.apple.provenance']
     ])
-    expect(existsSync(cs[3][6])).toBe(false)
+    expect(existsSync(at(at(cs, 3), 6))).toBe(false)
   })
 
   it('the entitlements plist holds the five stock keys plus dyld', async () => {
@@ -654,7 +656,7 @@ describe('ensureRunnerClone build path', () => {
     let plistText = ''
     const run: RunTool = async (tool, args, opts) => {
       if (tool === '/usr/bin/codesign' && args[0] === '--force') {
-        plistText = readFileSync(args[6], 'utf8')
+        plistText = readFileSync(at(args, 6), 'utf8')
       }
       return s.fake.run(tool, args, opts)
     }
@@ -685,7 +687,7 @@ describe('ensureRunnerClone build path', () => {
     expect(res).toMatchObject({ status: 'ok', cloneMethod: 'cp -R' })
     const cps = s.fake.calls.filter((c) => c.tool === '/bin/cp')
     expect(cps).toHaveLength(2)
-    expect(cps[1].args.slice(0, CLONE_ARGV_FALLBACK.length)).toEqual([
+    expect(at(cps, 1).args.slice(0, CLONE_ARGV_FALLBACK.length)).toEqual([
       ...CLONE_ARGV_FALLBACK
     ])
   })
@@ -1224,7 +1226,7 @@ const LAYER = join(
   'steamclient-layer',
   'steamclient-layer-cx' + BUILD
 )
-const realInputs = [
+const realInputs: [string, string, string, string] = [
   join(REAL_CX, 'lib/wine/x86_64-windows/ntdll.dll'),
   join(LAYER, 'lsteamclient.dll'),
   join(LAYER, 'lsteamclient.so'),

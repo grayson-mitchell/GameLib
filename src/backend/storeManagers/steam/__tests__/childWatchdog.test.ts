@@ -11,6 +11,7 @@
  */
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
 import { buildWatchdogSpawn, WATCHDOG_SH } from '../childWatchdog'
+import { at } from './fixtures/indexed'
 
 jest.setTimeout(20000)
 
@@ -112,7 +113,8 @@ async function resolveTree(wdPid: number) {
   await waitFor(() => {
     // the watchdog also has a short-lived `sleep 1` tick child, so pick the inner sh by command
     inner =
-      childrenOf(wdPid).find((pid) => commandOf(pid).includes(INNER[2])) ?? 0
+      childrenOf(wdPid).find((pid) => commandOf(pid).includes(at(INNER, 2))) ??
+      0
     grand = inner ? (childrenOf(inner)[0] ?? 0) : 0
     return grand !== 0
   }, 2000)
@@ -248,7 +250,7 @@ describeLive('childWatchdog (live script/nettop, darwin only)', () => {
     const argv = [...NETTOP, String(sleepPid)]
     const built = withWatchdog
       ? buildWatchdogSpawn(0, sleepPid, argv)
-      : { file: argv[0], args: argv.slice(1) }
+      : { file: at(argv, 0), args: argv.slice(1) }
     // the bare arm has no placeholder to patch; patching args[3] there would corrupt the argv
     const src = withWatchdog
       ? PARENT_SRC

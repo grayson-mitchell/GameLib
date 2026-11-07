@@ -98,10 +98,10 @@ function buildDigestCopy(newlyExpiring: HumbleKey[]): {
   title: string
   body: string
 } {
-  if (newlyExpiring.length === 1) {
-    const key = newlyExpiring[0]
-    const date = key.expiration
-      ? new Date(key.expiration).toLocaleDateString()
+  const single = newlyExpiring[0]
+  if (newlyExpiring.length === 1 && single) {
+    const date = single.expiration
+      ? new Date(single.expiration).toLocaleDateString()
       : ''
     return {
       title: i18next.t(
@@ -111,7 +111,7 @@ function buildDigestCopy(newlyExpiring: HumbleKey[]): {
       body: i18next.t(
         'humble.notification.expiringBodySingle',
         "{{title}}'s Humble key now expires on {{date}}",
-        { title: key.title, date }
+        { title: single.title, date }
       )
     }
   }

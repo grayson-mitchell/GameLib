@@ -77,6 +77,7 @@ import {
   createFakeHomeProfile,
   type FakeHomeProfile
 } from '../../../testUtils/fakeHomeProfile'
+import { at } from './fixtures/indexed'
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..', '..')
 const BINARIES_DIR = join(REPO_ROOT, 'src-tauri', 'binaries')
@@ -185,7 +186,7 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
         `Expected exactly one gamelib-sidecar-* binary in ${BINARIES_DIR}, found: ${bins.join(', ')}`
       )
     }
-    binaryPath = join(BINARIES_DIR, bins[0])
+    binaryPath = join(BINARIES_DIR, at(bins, 0))
   }, 180000)
 
   // quick-260913-arr: was a hand-rolled `mkdtempSync` + a four-variable env

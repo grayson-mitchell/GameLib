@@ -175,7 +175,7 @@ describe('decompressWorker.ts real compiled worker spawn (Phase 23.1 plan 05 reg
     // The worker owns no log writer: lzmaLoader's once-per-worker decoder
     // line travels to the parent on the ready message.
     expect(result.ready?.logs?.length).toBeGreaterThan(0)
-    expect(result.ready?.logs?.[0].lines[0]).toMatch(/^lzmaLoader:/)
+    expect(result.ready?.logs?.[0]?.lines[0]).toMatch(/^lzmaLoader:/)
   }, 30000)
 
   // Spikes 067a/067b: the worker bundle was 14 MB (most of the backend via

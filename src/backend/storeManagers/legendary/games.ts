@@ -266,7 +266,7 @@ export default class LegendaryGame implements Game {
       if (requirements) {
         return {
           about: {
-            description: res.sandbox.configuration[0].configs.shortDescription,
+            description: configuration.configs.shortDescription,
             shortDescription: ''
           },
           reqs: requirements,
@@ -411,8 +411,9 @@ export default class LegendaryGame implements Game {
 
     // store the download size, needed for correct calculation
     // when cancel/resume downloads
-    if (downloadSizeMatch) {
-      this.currentDownloadSize = parseFloat(downloadSizeMatch[1])
+    const downloadSizeStr = downloadSizeMatch?.[1]
+    if (downloadSizeStr) {
+      this.currentDownloadSize = parseFloat(downloadSizeStr)
     }
 
     if (!this.tmpProgress) {
@@ -424,7 +425,7 @@ export default class LegendaryGame implements Game {
     // parse log for eta
     if (progress.eta === '') {
       const etaMatch = data.match(/ETA: (\d\d:\d\d:\d\d)/m)
-      progress.eta = etaMatch && etaMatch?.length >= 2 ? etaMatch[1] : ''
+      progress.eta = etaMatch?.[1] ?? ''
     }
 
     // parse log for game download progress

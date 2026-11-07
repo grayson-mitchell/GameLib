@@ -35,6 +35,7 @@ import {
   type PendingAdoptionStore,
   type RestartDeps
 } from '../macSteamAdoption'
+import { at } from './fixtures/indexed'
 
 function acf(fields: Record<string, string>, mtimeMs = 1000): AcfSnapshot {
   const body = Object.entries({ appid: '264160', ...fields })
@@ -184,9 +185,9 @@ describe('restartMacSteamForAdoption', () => {
     expect(deps.emitDone).toHaveBeenCalledTimes(1)
     expect(deps.emitDone).toHaveBeenCalledWith('264160')
     expect(
-      (deps.emitDone as jest.Mock).mock.invocationCallOrder[0]
+      at((deps.emitDone as jest.Mock).mock.invocationCallOrder, 0)
     ).toBeGreaterThan(
-      (deps.launchRunGameId as jest.Mock).mock.invocationCallOrder[0]
+      at((deps.launchRunGameId as jest.Mock).mock.invocationCallOrder, 0)
     )
   })
 

@@ -100,6 +100,7 @@ jest.mock('backend/ipc', () => ({
 
 import { SteamUser } from '../user'
 import { finishAuth, startQRLogin } from '../userSignIn'
+import { defined } from './fixtures/indexed'
 
 const CREDENTIALS_MISSING = 'credentialsMissing'
 
@@ -230,7 +231,7 @@ describe('credentialsMissing latch', () => {
       LoginSession.mockImplementation(() => fakeSession)
 
       await startQRLogin()
-      await handlers['authenticated']()
+      await defined(handlers['authenticated'], 'authenticated handler')()
 
       expect(mockConfigStore.delete).toHaveBeenCalledWith(CREDENTIALS_MISSING)
       expect(mockNoteSignInSucceeded).toHaveBeenCalledTimes(1)

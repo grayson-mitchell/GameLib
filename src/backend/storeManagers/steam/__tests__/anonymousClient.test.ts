@@ -40,6 +40,7 @@ import {
   isPublicOnlyEntry,
   releaseAnonymousForShutdown
 } from '../anonymousClient'
+import { at } from './fixtures/indexed'
 
 type Fake = {
   instances: Array<{
@@ -68,7 +69,7 @@ describe('getAnonymousPicsClient', () => {
     const a = getAnonymousPicsClient('platform-capture')
     const b = getAnonymousPicsClient('platform-capture')
     expect(fake.instances).toHaveLength(1)
-    const inst = fake.instances[0]
+    const inst = at(fake.instances, 0)
     expect(inst.logOn).toHaveBeenCalledTimes(1)
     expect(inst.logOn).toHaveBeenCalledWith({ anonymous: true })
     expect(inst.options).toMatchObject({
@@ -89,10 +90,10 @@ describe('getAnonymousPicsClient', () => {
 
   it('forwards getProductInfo arguments unchanged', async () => {
     const p = getAnonymousPicsClient('x')
-    fake.instances[0].emit('loggedOn')
+    at(fake.instances, 0).emit('loggedOn')
     const client = await p
     await client?.getProductInfo([1, 2], [3], true)
-    expect(fake.instances[0].getProductInfo).toHaveBeenCalledWith(
+    expect(at(fake.instances, 0).getProductInfo).toHaveBeenCalledWith(
       [1, 2],
       [3],
       true
@@ -105,51 +106,51 @@ describe('getAnonymousPicsClient', () => {
     jest.advanceTimersByTime(ANON_CONNECT_TIMEOUT_MS)
     expect(await a).toBeNull()
     expect(await b).toBeNull()
-    expect(fake.instances[0].logOff).toHaveBeenCalledTimes(1)
+    expect(at(fake.instances, 0).logOff).toHaveBeenCalledTimes(1)
     void getAnonymousPicsClient('x')
     expect(fake.instances).toHaveLength(2)
   })
 
   it('an error before loggedOn resolves null and logs off', async () => {
     const p = getAnonymousPicsClient('x')
-    fake.instances[0].emit('error', new Error('nope'))
+    at(fake.instances, 0).emit('error', new Error('nope'))
     expect(await p).toBeNull()
-    expect(fake.instances[0].logOff).toHaveBeenCalled()
+    expect(at(fake.instances, 0).logOff).toHaveBeenCalled()
   })
 
   it('a later error or disconnect does not throw, drops the cache and the next call reconnects', async () => {
     const p = getAnonymousPicsClient('x')
-    fake.instances[0].emit('loggedOn')
+    at(fake.instances, 0).emit('loggedOn')
     await p
     expect(() =>
-      fake.instances[0].emit('error', new Error('drop'))
+      at(fake.instances, 0).emit('error', new Error('drop'))
     ).not.toThrow()
     void getAnonymousPicsClient('x')
     expect(fake.instances).toHaveLength(2)
-    fake.instances[1].emit('loggedOn')
-    expect(() => fake.instances[1].emit('disconnected')).not.toThrow()
+    at(fake.instances, 1).emit('loggedOn')
+    expect(() => at(fake.instances, 1).emit('disconnected')).not.toThrow()
     void getAnonymousPicsClient('x')
     expect(fake.instances).toHaveLength(3)
   })
 
   it('closes itself after 60s idle, and a call at 59s re-arms the timer', async () => {
     const p = getAnonymousPicsClient('x')
-    fake.instances[0].emit('loggedOn')
+    at(fake.instances, 0).emit('loggedOn')
     await p
     jest.advanceTimersByTime(ANON_IDLE_CLOSE_MS - 1000)
     expect(await getAnonymousPicsClient('x')).not.toBeNull()
     expect(fake.instances).toHaveLength(1)
     jest.advanceTimersByTime(ANON_IDLE_CLOSE_MS - 1000)
-    expect(fake.instances[0].logOff).not.toHaveBeenCalled()
+    expect(at(fake.instances, 0).logOff).not.toHaveBeenCalled()
     jest.advanceTimersByTime(1000)
-    expect(fake.instances[0].logOff).toHaveBeenCalledTimes(1)
+    expect(at(fake.instances, 0).logOff).toHaveBeenCalledTimes(1)
   })
 })
 
 describe('idle close with reads in flight (54-REVIEW WR-09)', () => {
   it('a getProductInfo longer than the idle window is not cut off; the close comes 60 s after it settles', async () => {
     const p = getAnonymousPicsClient('platform-capture')
-    const inst = fake.instances[0]
+    const inst = at(fake.instances, 0)
     inst.emit('loggedOn')
     const client = await p
     let finish!: (v: unknown) => void
@@ -171,7 +172,7 @@ describe('idle close with reads in flight (54-REVIEW WR-09)', () => {
 
   it('a rejected read still releases the client for the idle close', async () => {
     const p = getAnonymousPicsClient('x')
-    const inst = fake.instances[0]
+    const inst = at(fake.instances, 0)
     inst.emit('loggedOn')
     const client = await p
     inst.getProductInfo.mockRejectedValue(new Error('timeout'))
@@ -182,7 +183,7 @@ describe('idle close with reads in flight (54-REVIEW WR-09)', () => {
 
   it('logout still closes the client while a read is in flight', async () => {
     const p = getAnonymousPicsClient('x')
-    const inst = fake.instances[0]
+    const inst = at(fake.instances, 0)
     inst.emit('loggedOn')
     const client = await p
     inst.getProductInfo.mockReturnValue(new Promise(() => undefined))
@@ -196,27 +197,27 @@ describe('shutdown and close', () => {
   it('a close during an in-flight connect discards the late logon', async () => {
     const p = getAnonymousPicsClient('x')
     closeAnonymousClient('logout')
-    fake.instances[0].emit('loggedOn')
+    at(fake.instances, 0).emit('loggedOn')
     expect(await p).toBeNull()
-    expect(fake.instances[0].logOff).toHaveBeenCalled()
+    expect(at(fake.instances, 0).logOff).toHaveBeenCalled()
   })
 
   it('releaseAnonymousForShutdown logs off and every later call resolves null', async () => {
     const p = getAnonymousPicsClient('x')
-    fake.instances[0].emit('loggedOn')
+    at(fake.instances, 0).emit('loggedOn')
     await p
     releaseAnonymousForShutdown()
-    expect(fake.instances[0].logOff).toHaveBeenCalled()
+    expect(at(fake.instances, 0).logOff).toHaveBeenCalled()
     expect(await getAnonymousPicsClient('x')).toBeNull()
     expect(fake.instances).toHaveLength(1)
   })
 
   it("closeAnonymousClient('logout') logs off and a later call reconnects", async () => {
     const p = getAnonymousPicsClient('x')
-    fake.instances[0].emit('loggedOn')
+    at(fake.instances, 0).emit('loggedOn')
     await p
     closeAnonymousClient('logout')
-    expect(fake.instances[0].logOff).toHaveBeenCalledTimes(1)
+    expect(at(fake.instances, 0).logOff).toHaveBeenCalledTimes(1)
     void getAnonymousPicsClient('x')
     expect(fake.instances).toHaveLength(2)
   })

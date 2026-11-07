@@ -321,7 +321,7 @@ describe('getGameInfo(appName, forceReload=true) stale-map characterisation (qui
       const onDisk = JSON.parse(
         readFileSync(installedJsonPath, 'utf-8')
       ) as Record<string, InstalledJsonMetadata>
-      expect(onDisk[APP_NAME].save_path).toBe(NEW_SENTINEL)
+      expect(onDisk[APP_NAME]?.save_path).toBe(NEW_SENTINEL)
 
       // Step 4 (plan): the exact call save_sync.ts L89-91 makes.
       const staleInfo = manager.getGameInfo(APP_NAME, true)

@@ -25,6 +25,7 @@
 
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { defined } from './defined'
 
 // ── Electron mock (must be first, jest.mock is hoisted) ──────────────────────
 const mockEncryptString = jest.fn((s: string) => Buffer.from(s))
@@ -106,7 +107,10 @@ describe('secretStore', () => {
         'sessionCookie',
         expect.stringMatching(/^humble:v1:/)
       )
-      const [, storedValue] = mockConfigStore.set.mock.calls[0]
+      const [, storedValue] = defined(
+        mockConfigStore.set.mock.calls[0],
+        'first set call'
+      )
       expect(storedValue).not.toBe('abc')
     })
 

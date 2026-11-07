@@ -49,6 +49,7 @@ import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
 import { fetchChunk } from '../depot/decompress'
 import { steamEncryptString } from './fixtures/steamEncryptedString'
+import { at } from './fixtures/indexed'
 
 // ── Logger mock (factory form) ────────────────────────────────────────────
 jest.mock('backend/logger', () => ({
@@ -244,7 +245,9 @@ describe('linktarget decryption (37-09)', () => {
 
       const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
 
-      expect(plan.depots[0].files[0].linktarget).toBe('Versions/A/Resources')
+      expect(at(at(plan.depots, 0).files, 0).linktarget).toBe(
+        'Versions/A/Resources'
+      )
     })
 
     it('T-37-09-03 (MUST BE RED AT HEAD): the written symlink RESOLVES to the real target directory', async () => {
@@ -312,7 +315,7 @@ describe('linktarget decryption (37-09)', () => {
       })
 
       expect(result.failures).toHaveLength(1)
-      expect(result.failures[0].error).toMatch(/traversal|escapes/i)
+      expect(at(result.failures, 0).error).toMatch(/traversal|escapes/i)
 
       // TRAP: existsSync follows symlinks and returns false for a DANGLING
       // one too, so at HEAD (where the un-decrypted ciphertext link IS
@@ -348,8 +351,8 @@ describe('linktarget decryption (37-09)', () => {
 
       const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
 
-      expect(plan.depots[0].files[0].linktarget).toBeUndefined()
-      expect(plan.depots[0].files[1].linktarget).toBe('')
+      expect(at(at(plan.depots, 0).files, 0).linktarget).toBeUndefined()
+      expect(at(at(plan.depots, 0).files, 1).linktarget).toBe('')
     })
   })
 })

@@ -16,6 +16,7 @@ import {
   prepareOverlayLaunch,
   prepareOverlayTokens
 } from '../overlayLaunch'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 const SBIN =
   '/Users/x/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS'
@@ -412,8 +413,8 @@ describe('overlay input probe (60-11, G1)', () => {
     const r = buildOverlayEnvVars({ ...base, probe })
     expect(r.status).toBe('ok')
     if (r.status !== 'ok') return
-    expect(r.vars[0].value.endsWith(`:${probe.dylibPath}`)).toBe(true)
-    expect(r.vars[0].value.startsWith('/A/overlay_shim.dylib:')).toBe(true)
+    expect(at(r.vars, 0).value.endsWith(`:${probe.dylibPath}`)).toBe(true)
+    expect(at(r.vars, 0).value.startsWith('/A/overlay_shim.dylib:')).toBe(true)
     expect(r.vars).toContainEqual({
       key: 'GAMELIB_OVERLAY_PROBE_LOG',
       value: probe.logPath

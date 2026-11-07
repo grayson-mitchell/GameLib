@@ -24,6 +24,7 @@ import { downloadSharedRedistDepots, type DepotPlan } from '../depot'
 import { SteamUser } from '../user'
 import { mockLeaseOk, mockLeaseRefused, mockOpenLease } from './depotLeaseMocks'
 import { decryptFilename } from '../depot/crypto'
+import { at, defined } from './fixtures/indexed'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -106,7 +107,8 @@ let manifestFiles: Record<string, unknown[]>
 const DX_EXE = '_CommonRedist\\DirectX\\Jun2010\\DXSETUP.exe'
 /** fakeDownloader writes `size` bytes of 'x' for every non-script file. */
 const sha1Of = (text: string) => createHash('sha1').update(text).digest('hex')
-const scriptSize = (id: string) => Buffer.byteLength(fx(FIXTURE_FOR[id]))
+const scriptSize = (id: string) =>
+  Buffer.byteLength(fx(defined(FIXTURE_FOR[id], `fixture for ${id}`)))
 const FIXTURE_FOR: Record<string, string> = {
   '228990': '228990-directx-jun2010.vdf',
   '229004': '229004-dotnet-4.5.2.vdf'
@@ -157,7 +159,7 @@ let redistInstalldir: unknown
 function makeClient() {
   return {
     getProductInfo: jest.fn((ids: number[]) => {
-      const id = ids[0]
+      const id = at(ids, 0, 'product id')
       if (id === 228980) {
         return Promise.resolve({
           apps: {
@@ -211,7 +213,7 @@ type DownloadFn = NonNullable<
 /** Writes fixture text for script files and 'x' for others, like a successful download. */
 function fakeDownloader(): jest.MockedFunction<DownloadFn> {
   return jest.fn(async (plan: DepotPlan, o) => {
-    for (const f of plan.depots[0].files) {
+    for (const f of at(plan.depots, 0).files) {
       const target = resolve(
         o.targetSteamappsDir,
         'common',
@@ -222,7 +224,9 @@ function fakeDownloader(): jest.MockedFunction<DownloadFn> {
       const isScript = ((f.flags ?? 0) & 256) !== 0
       writeFileSync(
         target,
-        isScript ? SCRIPT_TEXT[plan.depots[0].depotId] : 'x'.repeat(f.size)
+        isScript
+          ? defined(SCRIPT_TEXT[at(plan.depots, 0).depotId], 'script text')
+          : 'x'.repeat(f.size)
       )
     }
     return {
@@ -268,7 +272,7 @@ afterEach(() => {
 
 const callsFor = (dl: { mock: { calls: unknown[][] } }, depotId: string) =>
   dl.mock.calls.filter(
-    ([plan]) => (plan as DepotPlan).depots[0].depotId === depotId
+    ([plan]) => at((plan as DepotPlan).depots, 0).depotId === depotId
   )
 
 describe('downloadSharedRedistDepots', () => {
@@ -409,7 +413,7 @@ describe('downloadSharedRedistDepots', () => {
       label: 'DirectX Jun2010',
       installDirHost: resolve(cacheDir, 'common', 'Steamworks Shared')
     })
-    expect(r.depots[0].entries[0].name).toBe('dxsetup')
+    expect(at(at(r.depots, 0).entries, 0).name).toBe('dxsetup')
 
     // Key and manifest requested under the owner app, GID kept as a string.
     expect(client.getDepotDecryptionKey).toHaveBeenCalledWith(
@@ -447,10 +451,10 @@ describe('downloadSharedRedistDepots', () => {
     ]
     expect(scriptPlan.appId).toBe('228980')
     expect(scriptOpts.installdir).toBe('Steamworks Shared')
-    expect(scriptPlan.depots[0].files.map((f) => f.filename)).toEqual([
+    expect(at(scriptPlan.depots, 0).files.map((f) => f.filename)).toEqual([
       DX_SCRIPT
     ])
-    expect((dx[1][0] as DepotPlan).depots[0].files).toHaveLength(2)
+    expect(at((at(dx, 1)[0] as DepotPlan).depots, 0).files).toHaveLength(2)
     expect(callsFor(dl, '229004')).toHaveLength(1)
     expect(onComponent).toHaveBeenCalledTimes(1)
     expect(onComponent).toHaveBeenCalledWith('DirectX Jun2010')
@@ -472,10 +476,10 @@ describe('downloadSharedRedistDepots', () => {
       onComponent
     })
     const fullIdx = dl.mock.calls.findIndex(
-      ([plan]) => plan.depots[0].files.length === 2
+      ([plan]) => at(plan.depots, 0).files.length === 2
     )
     expect(onComponent.mock.invocationCallOrder[0]).toBeLessThan(
-      dl.mock.invocationCallOrder[fullIdx]
+      at(dl.mock.invocationCallOrder, fullIdx)
     )
   })
 
@@ -532,7 +536,7 @@ describe('downloadSharedRedistDepots', () => {
   it('files a failed installscript download under failed', async () => {
     const ok = fakeDownloader()
     const dl = jest.fn(async (plan: DepotPlan, o) => {
-      if (plan.depots[0].depotId === '228990')
+      if (at(plan.depots, 0).depotId === '228990')
         return {
           outcome: 'completed' as const,
           failures: [{ file: DX_SCRIPT, error: 'boom' }],
@@ -569,7 +573,7 @@ describe('downloadSharedRedistDepots', () => {
   it('files a failed full download under failed and writes no index', async () => {
     const ok = fakeDownloader()
     const dl = jest.fn(async (plan: DepotPlan, o) => {
-      if (plan.depots[0].files.length > 1)
+      if (at(plan.depots, 0).files.length > 1)
         return {
           outcome: 'completed' as const,
           failures: [{ file: 'x', error: 'boom' }],
@@ -674,7 +678,7 @@ describe('downloadSharedRedistDepots', () => {
         optInDepotIds: [],
         downloadFiles: fakeDownloader()
       })
-      expect(r.depots[0].installDirHost).toBe(
+      expect(at(r.depots, 0).installDirHost).toBe(
         resolve(cacheDir, 'common', 'Redist Cache')
       )
     })
@@ -685,7 +689,7 @@ describe('downloadSharedRedistDepots', () => {
     function slowDownloader(active: Map<string, number>, maxSeen: number[]) {
       const inner = fakeDownloader()
       return jest.fn(async (plan: DepotPlan, o) => {
-        const id = plan.depots[0].depotId
+        const id = at(plan.depots, 0).depotId
         active.set(id, (active.get(id) ?? 0) + 1)
         maxSeen.push(active.get(id)!)
         await new Promise((r) => setTimeout(r, 5))
@@ -731,7 +735,7 @@ describe('downloadSharedRedistDepots', () => {
       const inner = slowDownloader(active, maxSeen)
       // B is aborted while A holds 228990's lock; A must finish unaffected.
       const dlA = jest.fn(async (plan: DepotPlan, o) => {
-        if (plan.depots[0].depotId === '228990') ctlB.abort()
+        if (at(plan.depots, 0).depotId === '228990') ctlB.abort()
         return inner(plan, o)
       }) as unknown as jest.MockedFunction<DownloadFn>
       const dlB = slowDownloader(active, maxSeen)
@@ -760,7 +764,7 @@ describe('downloadSharedRedistDepots', () => {
 
     it('keeps both entries when two runs write the index concurrently, atomically', async () => {
       const declaresOnly = (depotId: string) => (ids: number[]) => {
-        const id = ids[0]
+        const id = at(ids, 0, 'product id')
         if (id === 228980)
           return Promise.resolve({
             apps: {
@@ -844,7 +848,7 @@ describe('downloadSharedRedistDepots', () => {
         downloadFiles: dl3
       })
       expect(callsFor(dl3, '228990')).toHaveLength(2)
-      expect(r3.depots[0].gid).toBe('9000000000000000099')
+      expect(at(r3.depots, 0).gid).toBe('9000000000000000099')
       expect(
         JSON.parse(
           readFileSync(
@@ -892,7 +896,7 @@ describe('downloadSharedRedistDepots', () => {
         // The cached script is fine, so only the full download re-runs.
         const dx = callsFor(dl, '228990')
         expect(dx).toHaveLength(1)
-        expect((dx[0][0] as DepotPlan).depots[0].files).toHaveLength(2)
+        expect(at((at(dx, 0)[0] as DepotPlan).depots, 0).files).toHaveLength(2)
         expect(onComponent).toHaveBeenCalledWith('DirectX Jun2010')
         expect(readFileSync(exe, 'utf8')).toBe('x'.repeat(90))
         expect(

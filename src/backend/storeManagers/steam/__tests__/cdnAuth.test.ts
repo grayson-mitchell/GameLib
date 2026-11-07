@@ -36,6 +36,7 @@ import {
   CContentServerDirectory_GetCDNAuthToken_Request,
   CContentServerDirectory_GetCDNAuthToken_Response as CdnAuthTokenResponse
 } from 'steam-user/protobufs/generated/_load.js'
+import { at } from './fixtures/indexed'
 
 const makeFakeClient = makeFakeSendClient
 
@@ -70,8 +71,10 @@ describe('CdnAuthTokenCache', () => {
 
     expect(token).toBe('?default-token')
     expect(calls).toHaveLength(1)
-    expect(calls[0].methodName).toBe('ContentServerDirectory.GetCDNAuthToken#1')
-    expect(calls[0].methodData).toEqual({
+    expect(at(calls, 0).methodName).toBe(
+      'ContentServerDirectory.GetCDNAuthToken#1'
+    )
+    expect(at(calls, 0).methodData).toEqual({
       app_id: 1091500,
       depot_id: 12345,
       host_name: 'cache1-akl-tpwr.steamcontent.com'

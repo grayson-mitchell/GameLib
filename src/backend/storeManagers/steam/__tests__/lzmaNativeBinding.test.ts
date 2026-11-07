@@ -27,6 +27,7 @@ import {
   LZMA_NATIVE_ASSET_KEY,
   LZMA_NATIVE_DLL_ASSET_KEY
 } from '../../../../../meta/buildSidecarSea'
+import { at } from './fixtures/indexed'
 
 type LzmaNativeBindingResolver = {
   (dir: string): unknown
@@ -305,7 +306,8 @@ describe('lzmaNativeBinding SEA branch', () => {
     expect(s.chmodSyncSpy).toHaveBeenCalledWith(FAKE_DIR, 0o700)
 
     expect(s.writeFileSyncSpy).toHaveBeenCalledTimes(2)
-    const [first, second] = s.writeFileSyncSpy.mock.calls
+    const first = at(s.writeFileSyncSpy.mock.calls, 0)
+    const second = at(s.writeFileSyncSpy.mock.calls, 1)
     expect(dirname(first[0] as string)).toBe(FAKE_DIR)
     expect(dirname(second[0] as string)).toBe(FAKE_DIR)
     expect(basename(first[0] as string)).toBe('liblzma.dll')
@@ -316,10 +318,10 @@ describe('lzmaNativeBinding SEA branch', () => {
     expect((second[2] as { mode: number }).mode).toBe(0o600)
 
     expect(s.dlopenSpy).toHaveBeenCalledTimes(1)
-    expect(s.dlopenSpy.mock.calls[0][1]).toBe(
+    expect(at(s.dlopenSpy.mock.calls, 0)[1]).toBe(
       join(FAKE_DIR, s.lzmaNativeBinding.LZMA_NATIVE_ADDON_FILENAME)
     )
-    const dlopenOrder = s.dlopenSpy.mock.invocationCallOrder[0]
+    const dlopenOrder = at(s.dlopenSpy.mock.invocationCallOrder, 0)
     for (const order of s.writeFileSyncSpy.mock.invocationCallOrder) {
       expect(order).toBeLessThan(dlopenOrder)
     }
@@ -335,12 +337,12 @@ describe('lzmaNativeBinding SEA branch', () => {
       s.lzmaNativeBinding.LZMA_NATIVE_DLL_SEA_ASSET_KEY
     )
     expect(s.writeFileSyncSpy).toHaveBeenCalledTimes(1)
-    const target = s.writeFileSyncSpy.mock.calls[0][0] as string
+    const target = at(s.writeFileSyncSpy.mock.calls, 0)[0] as string
     expect(dirname(target)).toBe(FAKE_DIR)
     expect(basename(target)).toBe(
       s.lzmaNativeBinding.LZMA_NATIVE_ADDON_FILENAME
     )
-    expect(s.dlopenSpy.mock.calls[0][1]).toBe(target)
+    expect(at(s.dlopenSpy.mock.calls, 0)[1]).toBe(target)
   })
 
   it('R3: on success removes the extraction DIR exactly once, recursively, AFTER process.dlopen', () => {
@@ -354,8 +356,8 @@ describe('lzmaNativeBinding SEA branch', () => {
       recursive: true,
       force: true
     })
-    expect(s.rmSyncSpy.mock.invocationCallOrder[0]).toBeGreaterThan(
-      s.dlopenSpy.mock.invocationCallOrder[0]
+    expect(at(s.rmSyncSpy.mock.invocationCallOrder, 0)).toBeGreaterThan(
+      at(s.dlopenSpy.mock.invocationCallOrder, 0)
     )
   })
 
@@ -371,7 +373,7 @@ describe('lzmaNativeBinding SEA branch', () => {
     )
 
     expect(s.rmSyncSpy).toHaveBeenCalledTimes(1)
-    expect(s.rmSyncSpy.mock.calls[0][0]).toBe(FAKE_DIR)
+    expect(at(s.rmSyncSpy.mock.calls, 0)[0]).toBe(FAKE_DIR)
   })
 
   it('R3: a cleanup failure never masks the dlopen error', () => {
@@ -454,8 +456,8 @@ describe('lzmaNativeBinding SEA branch', () => {
 
       expect(s.readdirSyncSpy).toHaveBeenCalledTimes(1)
       expect(s.readdirSyncSpy).toHaveBeenCalledWith(tmpdir())
-      expect(s.readdirSyncSpy.mock.invocationCallOrder[0]).toBeLessThan(
-        s.mkdtempSyncSpy.mock.invocationCallOrder[0]
+      expect(at(s.readdirSyncSpy.mock.invocationCallOrder, 0)).toBeLessThan(
+        at(s.mkdtempSyncSpy.mock.invocationCallOrder, 0)
       )
       expect(readSweepRecord()).toEqual({ examined: 0, removed: 0 })
     })
@@ -476,15 +478,15 @@ describe('lzmaNativeBinding SEA branch', () => {
       s.lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)
 
       expect(s.rmSyncSpy).toHaveBeenCalledTimes(2)
-      expect(s.rmSyncSpy.mock.calls[0][0]).toBe(join(tmpdir(), stale))
-      expect(s.rmSyncSpy.mock.calls[0][1]).toEqual({
+      expect(at(s.rmSyncSpy.mock.calls, 0)[0]).toBe(join(tmpdir(), stale))
+      expect(at(s.rmSyncSpy.mock.calls, 0)[1]).toEqual({
         recursive: true,
         force: true
       })
-      expect(s.rmSyncSpy.mock.invocationCallOrder[0]).toBeLessThan(
-        s.mkdtempSyncSpy.mock.invocationCallOrder[0]
+      expect(at(s.rmSyncSpy.mock.invocationCallOrder, 0)).toBeLessThan(
+        at(s.mkdtempSyncSpy.mock.invocationCallOrder, 0)
       )
-      expect(s.rmSyncSpy.mock.calls[1][0]).toBe(FAKE_DIR)
+      expect(at(s.rmSyncSpy.mock.calls, 1)[0]).toBe(FAKE_DIR)
       expect(s.dlopenSpy).toHaveBeenCalledTimes(1)
       expect(readSweepRecord()).toEqual({ examined: 1, removed: 1 })
     })
@@ -619,7 +621,7 @@ describe('lzmaNativeBinding dev branch', () => {
     lzmaNativeBinding!(REAL_LZMA_NATIVE_DIR)
 
     expect(dlopenSpy).toHaveBeenCalledTimes(1)
-    const dlopenPath = dlopenSpy.mock.calls[0][1]
+    const dlopenPath = at(dlopenSpy.mock.calls, 0)[1]
     expect(dlopenPath).toContain('prebuilds')
     expect(dlopenPath).toContain(`${process.platform}-${process.arch}`)
     expect(getRawAsset).not.toHaveBeenCalled()
@@ -642,7 +644,7 @@ describe('lzmaNativeBinding dev branch', () => {
     lzmaNativeBinding!(REAL_LZMA_NATIVE_DIR)
 
     expect(dlopenSpy).toHaveBeenCalledTimes(1)
-    const dlopenPath = dlopenSpy.mock.calls[0][1]
+    const dlopenPath = at(dlopenSpy.mock.calls, 0)[1]
     expect(dlopenPath).toContain('prebuilds')
   })
 })

@@ -18,6 +18,7 @@ import {
   normalizeTitle
 } from '../dedup'
 import { HumbleKey, HumbleKeyState } from 'common/types/humble'
+import { defined } from './defined'
 import {
   ownedSteamLibrary,
   steamOwnedGameX,
@@ -44,11 +45,12 @@ function makeKey(overrides: Partial<HumbleKey> = {}): HumbleKey {
 describe('recomputeOwnership — appid tier (D-44)', () => {
   it('appid: steamAppId present and owned → exact match', () => {
     const key = makeKey({ steamAppId: '620', title: 'Portal 2' })
-    const [result] = recomputeOwnership(
+    const [firstResult] = recomputeOwnership(
       [key],
       ownedSteamLibrary,
       NEVER_OVERRIDDEN
     )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result.ownedElsewhere).toBe(true)
     expect(result.matchConfidence).toBe('exact')
   })
@@ -57,11 +59,12 @@ describe('recomputeOwnership — appid tier (D-44)', () => {
     // Title would trivially fuzzy-match an owned title, but D-44 says the
     // AppID verdict is final — no second-guessing via the fuzzy tier.
     const key = makeKey({ steamAppId: '999999', title: 'Portal 2' })
-    const [result] = recomputeOwnership(
+    const [firstResult] = recomputeOwnership(
       [key],
       ownedSteamLibrary,
       NEVER_OVERRIDDEN
     )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result.ownedElsewhere).toBe(false)
     expect(result.matchConfidence).toBe('none')
   })
@@ -74,22 +77,24 @@ describe('recomputeOwnership — fuzzy match tier (D-45)', () => {
     ['Into the Breach', 'Into The Breach (Steam)']
   ])('fuzzy match: %s matches owned %s at 85%%+', (humbleTitle) => {
     const key = makeKey({ steamAppId: undefined, title: humbleTitle })
-    const [result] = recomputeOwnership(
+    const [firstResult] = recomputeOwnership(
       [key],
       ownedSteamLibrary,
       NEVER_OVERRIDDEN
     )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result.ownedElsewhere).toBe(true)
     expect(result.matchConfidence).toBe('fuzzy')
   })
 
   it('fuzzy match: unrelated title does not match anything', () => {
     const key = makeKey({ steamAppId: undefined, title: 'Totally Different' })
-    const [result] = recomputeOwnership(
+    const [firstResult] = recomputeOwnership(
       [key],
       ownedSteamLibrary,
       NEVER_OVERRIDDEN
     )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result.ownedElsewhere).toBe(false)
     expect(result.matchConfidence).toBe('none')
   })
@@ -100,11 +105,12 @@ describe('recomputeOwnership — fuzzy match tier (D-45)', () => {
       platform: 'gog',
       title: 'Stardew Valley'
     })
-    const [result] = recomputeOwnership(
+    const [firstResult] = recomputeOwnership(
       [key],
       ownedSteamLibrary,
       NEVER_OVERRIDDEN
     )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result.ownedElsewhere).toBe(true)
     expect(result.matchConfidence).toBe('fuzzy')
   })
@@ -113,22 +119,24 @@ describe('recomputeOwnership — fuzzy match tier (D-45)', () => {
 describe('recomputeOwnership — dlc guard (success criterion 3)', () => {
   it('dlc: "Game X: Season Pass" does NOT match owned "Game X"', () => {
     const key = makeKey({ steamAppId: undefined, title: 'Game X: Season Pass' })
-    const [result] = recomputeOwnership(
+    const [firstResult] = recomputeOwnership(
       [key],
       [steamOwnedGameX],
       NEVER_OVERRIDDEN
     )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result.ownedElsewhere).toBe(false)
     expect(result.matchConfidence).toBe('none')
   })
 
   it('dlc: "Batman" does NOT match owned "Batman: Arkham Knight"', () => {
     const key = makeKey({ steamAppId: undefined, title: 'Batman' })
-    const [result] = recomputeOwnership(
+    const [firstResult] = recomputeOwnership(
       [key],
       [steamOwnedBatmanArkhamKnight],
       NEVER_OVERRIDDEN
     )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result.ownedElsewhere).toBe(false)
     expect(result.matchConfidence).toBe('none')
   })
@@ -137,44 +145,48 @@ describe('recomputeOwnership — dlc guard (success criterion 3)', () => {
 describe('recomputeOwnership — WR-01 falsy steamAppId fix (D-71)', () => {
   it("falsy steamAppId '' falls through to the fuzzy tier instead of skipping both", () => {
     const key = makeKey({ steamAppId: '', title: 'Stardew Valley' })
-    const [result] = recomputeOwnership(
+    const [firstResult] = recomputeOwnership(
       [key],
       ownedSteamLibrary,
       NEVER_OVERRIDDEN
     )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result.ownedElsewhere).toBe(true)
     expect(result.matchConfidence).toBe('fuzzy')
   })
 
   it("falsy steamAppId '0' falls through to the fuzzy tier instead of skipping both", () => {
     const key = makeKey({ steamAppId: '0', title: 'Stardew Valley' })
-    const [result] = recomputeOwnership(
+    const [firstResult] = recomputeOwnership(
       [key],
       ownedSteamLibrary,
       NEVER_OVERRIDDEN
     )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result.ownedElsewhere).toBe(true)
     expect(result.matchConfidence).toBe('fuzzy')
   })
 
   it('regression: a real exact-matching steamAppId still returns exact (no regression)', () => {
     const key = makeKey({ steamAppId: '620', title: 'Portal 2' })
-    const [result] = recomputeOwnership(
+    const [firstResult] = recomputeOwnership(
       [key],
       ownedSteamLibrary,
       NEVER_OVERRIDDEN
     )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result.ownedElsewhere).toBe(true)
     expect(result.matchConfidence).toBe('exact')
   })
 
   it('regression: steamAppId undefined still fuzzy-matches (no regression)', () => {
     const key = makeKey({ steamAppId: undefined, title: 'Stardew Valley' })
-    const [result] = recomputeOwnership(
+    const [firstResult] = recomputeOwnership(
       [key],
       ownedSteamLibrary,
       NEVER_OVERRIDDEN
     )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result.ownedElsewhere).toBe(true)
     expect(result.matchConfidence).toBe('fuzzy')
   })
@@ -188,11 +200,12 @@ describe('recomputeOwnership — unpicked exclusion (D-27)', () => {
       steamAppId: undefined,
       title: 'Portal 2'
     })
-    const [result] = recomputeOwnership(
+    const [firstResult] = recomputeOwnership(
       [key],
       ownedSteamLibrary,
       NEVER_OVERRIDDEN
     )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result).toEqual(key)
     expect(result.ownedElsewhere).toBe(false)
     expect(result.matchConfidence).toBe('none')
@@ -225,14 +238,24 @@ describe('recomputeOwnership — keep-last-known (D-48 unit-level)', () => {
 describe('recomputeOwnership — D-42 override', () => {
   it('override clears a fuzzy match ("Not the same game")', () => {
     const key = makeKey({ steamAppId: undefined, title: 'Stardew Valley' })
-    const [result] = recomputeOwnership([key], ownedSteamLibrary, () => true)
+    const [firstResult] = recomputeOwnership(
+      [key],
+      ownedSteamLibrary,
+      () => true
+    )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result.ownedElsewhere).toBe(false)
     expect(result.matchConfidence).toBe('none')
   })
 
   it('override never clears an exact AppID match', () => {
     const key = makeKey({ steamAppId: '620', title: 'Portal 2' })
-    const [result] = recomputeOwnership([key], ownedSteamLibrary, () => true)
+    const [firstResult] = recomputeOwnership(
+      [key],
+      ownedSteamLibrary,
+      () => true
+    )
+    const result = defined(firstResult, 'recomputeOwnership result')
     expect(result.ownedElsewhere).toBe(true)
     expect(result.matchConfidence).toBe('exact')
   })

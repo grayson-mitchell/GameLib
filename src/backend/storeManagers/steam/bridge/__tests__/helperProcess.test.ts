@@ -19,6 +19,7 @@
  * an object overrides `this`), so each test fully controls what each
  * successive CONTROL probe "receives" over the wire.
  */
+import { at } from '../../__tests__/fixtures/indexed'
 import { EventEmitter } from 'node:events'
 import { spawn } from 'node:child_process'
 import { Socket } from 'node:net'
@@ -407,9 +408,11 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
 
     const secret = mockedSpawn.mock.calls[0][2].env[BRIDGE_SECRET_ENV]
     expect(result.secret).toBe(secret)
-    const writes = sockets[0].write.mock.calls.map(([b]) => decodeRequest(b))
+    const writes = at(sockets, 0).write.mock.calls.map(([b]) =>
+      decodeRequest(b)
+    )
     expect(writes.map((w) => w.slot)).toEqual([0, 2, 1])
-    const hello = writes[1].argBlob
+    const hello = at(writes, 1).argBlob
     expect(hello).toHaveLength(65)
     expect(hello.subarray(0, 64).toString('ascii')).toBe(secret)
     expect(hello[64]).toBe(HELLO_ROLE_PROBE)
@@ -780,7 +783,7 @@ function scriptSpawns(script: string[], appId = APP_ID_A) {
   const children: FakeChildProcess[] = []
   mockedSpawn.mockImplementation(() => {
     const child = new FakeChildProcess()
-    const step = script[Math.min(children.length, script.length - 1)]
+    const step = at(script, Math.min(children.length, script.length - 1))
     children.push(child)
     process.nextTick(() => {
       emitListenLine(child, 55000 + children.length, appId, null)
@@ -835,8 +838,8 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
     for (const [, args] of mockedSpawn.mock.calls) {
       expect(args).toEqual(['--appid', APP_ID_A, '--port', '0'])
     }
-    expect(children[0].kill).toHaveBeenCalled()
-    expect(children[1].kill).toHaveBeenCalled()
+    expect(at(children, 0).kill).toHaveBeenCalled()
+    expect(at(children, 1).kill).toHaveBeenCalled()
     expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
   })
 

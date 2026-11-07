@@ -41,6 +41,7 @@ import {
   type OverlayCrossover
 } from '../overlayRunnerClone'
 import { buildOverlayPaths } from '../overlayPaths'
+import { at, defined } from '../../../__tests__/fixtures/indexed'
 
 const sha = (b: Buffer | string) => createHash('sha256').update(b).digest('hex')
 const BUILD = '26.3.0.39832'
@@ -103,7 +104,7 @@ function fakeRun(o: FakeOpts = {}) {
     calls.push({ tool, args })
     if (tool === '/bin/cp') {
       if (o.cpFails) return { ...base, code: 1, stderr: 'no clonefile' }
-      await fsp.cp(args[args.length - 2], args[args.length - 1], {
+      await fsp.cp(at(args, args.length - 2), at(args, args.length - 1), {
         recursive: true,
         verbatimSymlinks: true
       })
@@ -114,7 +115,7 @@ function fakeRun(o: FakeOpts = {}) {
       return { ...base, stdout: (o.plutil ?? BUILD) + '\n' }
     }
     if (tool === '/usr/bin/codesign') {
-      const target = args[args.length - 1]
+      const target = at(args, args.length - 1)
       if (args[0] === '-d') {
         if (o.nonTrueDump) {
           return {
@@ -135,11 +136,11 @@ function fakeRun(o: FakeOpts = {}) {
           return { ...base, code: 1, stderr: 'sign failed' }
         }
         const plist = readFileSync(
-          args[args.indexOf('--entitlements') + 1],
+          at(args, args.indexOf('--entitlements') + 1),
           'utf8'
         )
-        const keys = [...plist.matchAll(/<key>([^<]+)<\/key>/g)].map(
-          (m) => m[1]
+        const keys = [...plist.matchAll(/<key>([^<]+)<\/key>/g)].map((m) =>
+          defined(m[1], 'entitlement key')
         )
         signed.set(rel(target), keys)
         // re-signing changes the binary

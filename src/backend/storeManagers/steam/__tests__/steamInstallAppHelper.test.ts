@@ -16,6 +16,7 @@ import {
 // Outside src/'s tsconfig include; same reviewed relative import as
 // helperIntegration.test.ts.
 import { buildHelperCompileArgv } from '../../../../../meta/buildSteamBridgeShims'
+import { at } from './fixtures/indexed'
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..', '..')
 const describeDarwinOnly =
@@ -64,7 +65,7 @@ describeDarwinOnly(
     const oneLine = (stdout: string) => {
       const lines = stdout.split('\n').filter(Boolean)
       expect(lines).toHaveLength(1)
-      return JSON.parse(lines[0]) as Record<string, unknown>
+      return JSON.parse(at(lines, 0)) as Record<string, unknown>
     }
 
     it('reports steamclient-missing under a fresh HOME, one line, exit 2, no AUTH', () => {

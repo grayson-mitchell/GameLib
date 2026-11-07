@@ -17,6 +17,7 @@ import {
   readSteamProcessStartTokens,
   parseTasklistSteamPids
 } from '../steamClientProcess'
+import { at } from './fixtures/indexed'
 
 jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
@@ -256,7 +257,7 @@ describe('readSteamProcessStartTokens()', () => {
     expect(args[3]).toContain('Get-Process -Id 13712,4410')
     expect(args[3]).toContain('-ErrorAction SilentlyContinue')
     expect(args[3]).toContain('StartTime.ToUniversalTime().Ticks')
-    expect(args[3].endsWith('exit 0')).toBe(true)
+    expect(at(args, 3).endsWith('exit 0')).toBe(true)
     mockExec(1)
     await expect(
       readSteamProcessStartTokens([13712], 'win32')

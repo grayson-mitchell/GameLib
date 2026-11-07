@@ -151,7 +151,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 62: Module boundaries and decomposition** — 23 plans (21 + 2 gap closure); complete (completed 2026-11-07)
 - [x] **Phase 63: Rust migration pattern and executable scanners** — 14 plans; planned (completed 2026-11-07)
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
-- [ ] **Phase 65: Steam store manager decomposition, continued** — 20 plans (1 executed); Phase 61 closed 2026-11-07 — unblocked, D-11
+- [x] **Phase 65: Steam store manager decomposition, continued** — 20/20 plans complete; Phase 61 closed 2026-11-07 — unblocked, D-11 (completed 2026-11-08)
 - [ ] **Phase 66: Backend dependency injection replacing module-level singletons** — 0 plans; not started
 - [x] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07 (completed 2026-11-07)
 - [ ] **Phase 68: Versioned persisted stores and migrations** — 0 plans; not started
@@ -465,7 +465,7 @@ Plans:
 **Goal:** The Steam store manager files Phase 62 leaves untouched are split along their natural seams, so no file under `storeManagers/steam/` is a multi-thousand-line grab-bag. Targets, measured 2026-11-06: `steam/library.ts` (4,393 lines), `steam/bottle.ts` (2,567), and the largest `steam/bridge/` files: `shimGenerate.ts` (1,496), `drm/runnerClone.ts` (1,376), `helperProcess.ts` (1,143) and `drm/stageDrmBottle.ts` (1,021). `shimExports.generated.ts` is generated and out of scope. Reuse Phase 62's method: a cluster map of each file first, pure moves before mechanical lifts, no behaviour change in a move commit (D-06), and the dependency-cruiser rules Phase 62 adds must stay at zero. Splitting `bottle.ts` first is worth considering because Phase 61 moves the engine and bottle decision out of `steam/`, so a clean split shrinks 61's diff. Open questions for discuss-phase: the minimum module set for `library.ts` (owned-apps fetch, local ACF/VDF scan, metadata/artwork enrichment and cache look like the seams), and whether to sequence before or after Phase 61. Came from the post-Phase-62 architecture review on 2026-11-06.
 **Requirements**: TBD
 **Depends on:** Phase 62
-**Plans:** 18/20 plans executed
+**Plans:** 20/20 plans complete
 
 Plans:
 
@@ -543,11 +543,11 @@ Plans:
 
 **Wave 19** *(blocked on Wave 18 completion)*
 
-- [ ] 65-19-PLAN.md — remove remaining install + launch lift stubs (D-18, D-19 fallback); close lift-stub todo
+- [x] 65-19-PLAN.md — remove remaining install + launch lift stubs (D-18, D-19 fallback); close lift-stub todo
 
 **Wave 20** *(blocked on Wave 19 completion)*
 
-- [ ] 65-20-PLAN.md — done-line proof, full battery + D-14 live smoke run 2 (checkpoint)
+- [x] 65-20-PLAN.md — done-line proof, full battery + D-14 live smoke run 2 (checkpoint)
 
 **Cross-cutting constraints:**
 

@@ -14,6 +14,7 @@ import {
   isServerTerminal,
   isFreezeEligible
 } from '../classify'
+import { defined } from './defined'
 import {
   unpickedChoiceMonthOrder,
   unpickedChoiceMonthMissingUrlOrder,
@@ -151,7 +152,7 @@ describe('classifyOrder', () => {
   test('D-27: unpicked Choice month -> single UNPICKED pseudo-entry', () => {
     const entry = classifyOrder(unpickedChoiceMonthOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNPICKED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNPICKED')
     expect(entry.allTerminal).toBe(false)
   })
 
@@ -160,7 +161,9 @@ describe('classifyOrder', () => {
   // never be copied raw into HumbleKey.expiration.
   test('WR-07: a parseable deadline_date is ISO-normalized on the UNPICKED pseudo-entry', () => {
     const entry = classifyOrder(unpickedChoiceMonthOrder, NEVER_REVEALED)
-    expect(entry.keys[0].expiration).toBe('2026-03-31T23:59:59.000Z')
+    expect(defined(entry.keys[0], 'entry.keys[0]').expiration).toBe(
+      '2026-03-31T23:59:59.000Z'
+    )
   })
 
   test('WR-07: an unparseable deadline_date degrades to null (no "Invalid Date" render, no NaN sort), never throws', () => {
@@ -174,8 +177,8 @@ describe('classifyOrder', () => {
     expect(() => classifyOrder(drifted, NEVER_REVEALED)).not.toThrow()
     const entry = classifyOrder(drifted, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNPICKED')
-    expect(entry.keys[0].expiration).toBe(null)
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNPICKED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').expiration).toBe(null)
   })
 
   test('i31: a bare date-only deadline_date on the UNPICKED pseudo-entry anchors to LOCAL midnight (WR-07 routing extends the fix here for free)', () => {
@@ -188,9 +191,11 @@ describe('classifyOrder', () => {
     }
     const entry = classifyOrder(bareDate, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNPICKED')
-    expect(entry.keys[0].expiration).not.toBe(null)
-    const result = new Date(entry.keys[0].expiration as string)
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNPICKED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').expiration).not.toBe(null)
+    const result = new Date(
+      defined(entry.keys[0], 'entry.keys[0]').expiration as string
+    )
     expect(result.getFullYear()).toBe(2026)
     expect(result.getMonth()).toBe(2)
     expect(result.getDate()).toBe(31)
@@ -210,7 +215,7 @@ describe('classifyOrder', () => {
   test('UNREVEALED tpk classifies UNREVEALED when not locally revealed', () => {
     const entry = classifyOrder(unrevealedOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNREVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREVEALED')
     expect(entry.allTerminal).toBe(false)
   })
 
@@ -219,20 +224,20 @@ describe('classifyOrder', () => {
       machineName === 'anothergame_steam'
     const entry = classifyOrder(revealedViaFlagOrder, isRevealed)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('REVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('REVEALED')
   })
 
   test('14-07 gap closure: redeemed_key_value present -> REVEALED, not REDEEMED (server truth means revealed only)', () => {
     const entry = classifyOrder(redeemedOrder, ALWAYS_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('REVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('REVEALED')
     expect(entry.allTerminal).toBe(false)
   })
 
   test('past expiration -> UNREDEEMABLE even when redeemedKeyValuePresent is true', () => {
     const entry = classifyOrder(unredeemableOrder, ALWAYS_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNREDEEMABLE')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREDEEMABLE')
     expect(entry.allTerminal).toBe(true)
   })
 
@@ -240,25 +245,29 @@ describe('classifyOrder', () => {
     expect(() => classifyOrder(malformedTpkOrder, NEVER_REVEALED)).not.toThrow()
     const entry = classifyOrder(malformedTpkOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNREVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREVEALED')
   })
 
   test('HSYNC-03: a cached tpk without expiration, re-classified with a newly-added expiration, returns UNREDEEMABLE', () => {
     const firstSync = classifyOrder(resyncTpkFirstSync, NEVER_REVEALED)
-    expect(firstSync.keys[0].state).toBe('UNREVEALED')
+    expect(defined(firstSync.keys[0], 'firstSync.keys[0]').state).toBe(
+      'UNREVEALED'
+    )
 
     // classifyOrder always reads the FRESH raw response, never merges the
     // previous cache entry forward (Pitfall 5) — calling it again with the
     // second-sync fixture (same tpk, now with an expiration) must reclassify.
     const secondSync = classifyOrder(resyncTpkSecondSync, NEVER_REVEALED)
-    expect(secondSync.keys[0].state).toBe('UNREDEEMABLE')
+    expect(defined(secondSync.keys[0], 'secondSync.keys[0]').state).toBe(
+      'UNREDEEMABLE'
+    )
   })
 
   test('D-28: a non-Steam key_type classifies through the same precedence and carries its own platform label', () => {
     const entry = classifyOrder(nonSteamPlatformOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNREVEALED')
-    expect(entry.keys[0].platform).toBe('gog')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').platform).toBe('gog')
   })
 
   test('D-29: a DRM-free-only order (no tpks, no subscriptioncontent product) yields zero HumbleKey entries', () => {
@@ -302,37 +311,41 @@ describe('classifyOrder — real-world payload shapes', () => {
       NEVER_REVEALED
     )
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNREVEALED')
-    expect(entry.keys[0].platform).toBe('steam')
-    expect(entry.keys[0].machineName).toBe('directgame_steam')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').platform).toBe('steam')
+    expect(defined(entry.keys[0], 'entry.keys[0]').machineName).toBe(
+      'directgame_steam'
+    )
   })
 
   test('14-07 gap closure: real `redeemed_key_val` field (not redeemed_key_value) -> REVEALED, not REDEEMED', () => {
     const entry = classifyOrder(realWorldRedeemedKeyValOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('REVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('REVEALED')
     expect(entry.allTerminal).toBe(false)
   })
 
   test('real `is_expired: true` flag (no expiration timestamp) -> UNREDEEMABLE even when redeemed_key_val present', () => {
     const entry = classifyOrder(realWorldExpiredFlagOrder, ALWAYS_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNREDEEMABLE')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREDEEMABLE')
   })
 
   test('gift key (is_gift: true, no redeemed_key_val) classifies UNREVEALED — never skipped (D-28)', () => {
     const entry = classifyOrder(realWorldGiftKeyOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNREVEALED')
-    expect(entry.keys[0].platform).toBe('steam')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').platform).toBe('steam')
   })
 
   test('shape-tolerance floor: a tpk carrying ONLY key_type still classifies with fallback identity', () => {
     const entry = classifyOrder(minimalTpkOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNREVEALED')
-    expect(entry.keys[0].machineName).toBe('order-minimal:0')
-    expect(entry.keys[0].platform).toBe('steam')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').machineName).toBe(
+      'order-minimal:0'
+    )
+    expect(defined(entry.keys[0], 'entry.keys[0]').platform).toBe('steam')
   })
 })
 
@@ -361,9 +374,11 @@ describe('classifyOrder — download entitlements without key_type (D-29)', () =
   test('mixed order (1 steam key + 2 download entitlements) yields exactly 1 row', () => {
     const entry = classifyOrder(mixedKeyAndEntitlementOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].machineName).toBe('actualgame_steam')
-    expect(entry.keys[0].platform).toBe('steam')
-    expect(entry.keys[0].state).toBe('UNREVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').machineName).toBe(
+      'actualgame_steam'
+    )
+    expect(defined(entry.keys[0], 'entry.keys[0]').platform).toBe('steam')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREVEALED')
   })
 
   test('D-28 untouched: any string key_type still classifies (generic/origin/ubisoft)', () => {
@@ -410,7 +425,7 @@ describe('classifyOrder — download entitlements without key_type (D-29)', () =
       NEVER_REVEALED
     )
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNPICKED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNPICKED')
   })
 })
 
@@ -435,23 +450,23 @@ describe('classifyOrder — direct-redeem entitlements (D-29 v2, round 6)', () =
       NEVER_REVEALED
     )
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].platform).toBe('uplay')
+    expect(defined(entry.keys[0], 'entry.keys[0]').platform).toBe('uplay')
     // 14-07 gap closure: redeemed_key_val present -> REVEALED (server truth
     // means revealed only, never REDEEMED without a local mark)
-    expect(entry.keys[0].state).toBe('REVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('REVEALED')
   })
 
   test('QT-260908-UIC-01: a gog_keyless direct-redeem entitlement (live-observed 2026-09-08) yields exactly ONE key, not zero', () => {
     const entry = classifyOrder(gogKeylessDirectRedeemOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].platform).toBe('gog_keyless')
+    expect(defined(entry.keys[0], 'entry.keys[0]').platform).toBe('gog_keyless')
   })
 
   test('D-28: an unknown-platform key WITHOUT direct_redeem is retained (no positive entitlement evidence)', () => {
     const entry = classifyOrder(unknownPlatformKeyOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].platform).toBe('weirdstore')
-    expect(entry.keys[0].state).toBe('UNREVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').platform).toBe('weirdstore')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREVEALED')
   })
 
   test('D-28: every evidenced game-store key_type survives even with direct_redeem:true', () => {
@@ -508,7 +523,9 @@ describe('classifyOrder — direct-redeem entitlements (D-29 v2, round 6)', () =
       NEVER_REVEALED
     )
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].machineName).toBe('actualgame2_steam')
+    expect(defined(entry.keys[0], 'entry.keys[0]').machineName).toBe(
+      'actualgame2_steam'
+    )
   })
 
   test('D-27 unaffected: the UNPICKED pseudo-entry still fires when all tpks are direct-redeem entitlements', () => {
@@ -533,7 +550,7 @@ describe('classifyOrder — direct-redeem entitlements (D-29 v2, round 6)', () =
       NEVER_REVEALED
     )
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNPICKED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNPICKED')
   })
 })
 
@@ -770,8 +787,10 @@ describe('classifyOrder — real-world expiration wiring (round 4)', () => {
       NOW
     )
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNREVEALED')
-    expect(entry.keys[0].expiration).toBe('2026-08-03T00:00:00.000Z')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').expiration).toBe(
+      '2026-08-03T00:00:00.000Z'
+    )
   })
 
   test('past `expiry_date` (no is_expired flag) -> UNREDEEMABLE via the date alone', () => {
@@ -781,8 +800,10 @@ describe('classifyOrder — real-world expiration wiring (round 4)', () => {
       NOW
     )
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('UNREDEEMABLE')
-    expect(entry.keys[0].expiration).toBe('2020-01-01T00:00:00.000Z')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREDEEMABLE')
+    expect(defined(entry.keys[0], 'entry.keys[0]').expiration).toBe(
+      '2020-01-01T00:00:00.000Z'
+    )
   })
 
   test('relative `num_days_until_expired` -> absolute expiration from sync time', () => {
@@ -792,8 +813,10 @@ describe('classifyOrder — real-world expiration wiring (round 4)', () => {
       NOW
     )
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].expiration).toBe('2026-08-05T00:00:00.000Z')
-    expect(entry.keys[0].state).toBe('UNREVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').expiration).toBe(
+      '2026-08-05T00:00:00.000Z'
+    )
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREVEALED')
   })
 })
 
@@ -935,7 +958,7 @@ describe('classifyOrder — keyIndexByComposite side-channel (Phase 14)', () => 
       NEVER_REVEALED,
       new Date('2026-01-01T00:00:00Z')
     )
-    expect(entry.keys[0].state).toBe('UNREVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREVEALED')
   })
 })
 
@@ -990,7 +1013,7 @@ describe('classifyOrder — revealedKeyValueByComposite side-channel (CR-01)', (
     const entry = classifyOrder(order, NEVER_REVEALED)
     expect(entry.revealedKeyValueByComposite).toEqual({})
     // Truthy object still counts as "revealed" for classification.
-    expect(entry.keys[0].state).toBe('REVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('REVEALED')
   })
 
   test('a tpk with no redeemed value is simply absent from the map', () => {
@@ -1035,7 +1058,7 @@ describe('classifyOrder — isLocallyRedeemed composite predicate (D-77)', () =>
       new Date('2026-01-01T00:00:00Z'),
       isLocallyRedeemed
     )
-    expect(entry.keys[0].state).toBe('REDEEMED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('REDEEMED')
   })
 
   test('isLocallyRedeemed false (default) -> classifies UNREVEALED, unaffected', () => {
@@ -1044,7 +1067,7 @@ describe('classifyOrder — isLocallyRedeemed composite predicate (D-77)', () =>
       NEVER_REVEALED,
       new Date('2026-01-01T00:00:00Z')
     )
-    expect(entry.keys[0].state).toBe('UNREVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREVEALED')
   })
 
   test('14-07 gap closure: isLocallyRedeemed wins over server redeemedKeyValuePresent at the classifyOrder level too', () => {
@@ -1067,7 +1090,7 @@ describe('classifyOrder — isLocallyRedeemed composite predicate (D-77)', () =>
       new Date('2026-01-01T00:00:00Z'),
       () => true
     )
-    expect(entry.keys[0].state).toBe('REDEEMED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('REDEEMED')
   })
 
   test('14-07 gap closure: a server-revealed key with NO local mark classifies REVEALED, never REDEEMED', () => {
@@ -1089,7 +1112,7 @@ describe('classifyOrder — isLocallyRedeemed composite predicate (D-77)', () =>
       NEVER_REVEALED,
       new Date('2026-01-01T00:00:00Z')
     )
-    expect(entry.keys[0].state).toBe('REVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('REVEALED')
   })
 })
 
@@ -1103,25 +1126,25 @@ describe('classifyOrder — steamAppId capture (Phase 12)', () => {
   test('a numeric steam_app_id (620) stringifies to steamAppId === "620"', () => {
     const entry = classifyOrder(steamKeyWithNumericAppIdOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].steamAppId).toBe('620')
+    expect(defined(entry.keys[0], 'entry.keys[0]').steamAppId).toBe('620')
   })
 
   test('a string steam_app_id ("620") yields steamAppId === "620"', () => {
     const entry = classifyOrder(steamKeyWithStringAppIdOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].steamAppId).toBe('620')
+    expect(defined(entry.keys[0], 'entry.keys[0]').steamAppId).toBe('620')
   })
 
   test('a non-Steam tpk (key_type: gog) yields steamAppId === undefined', () => {
     const entry = classifyOrder(nonSteamPlatformOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].steamAppId).toBeUndefined()
+    expect(defined(entry.keys[0], 'entry.keys[0]').steamAppId).toBeUndefined()
   })
 
   test('every classified key defaults ownedElsewhere: false and matchConfidence: "none"', () => {
     const entry = classifyOrder(steamKeyWithNumericAppIdOrder, NEVER_REVEALED)
-    expect(entry.keys[0].ownedElsewhere).toBe(false)
-    expect(entry.keys[0].matchConfidence).toBe('none')
+    expect(defined(entry.keys[0], 'entry.keys[0]').ownedElsewhere).toBe(false)
+    expect(defined(entry.keys[0], 'entry.keys[0]').matchConfidence).toBe('none')
   })
 
   test('T-12-01a: a malformed steam_app_id (an object) does not throw; order still classifies with steamAppId undefined', () => {
@@ -1130,7 +1153,7 @@ describe('classifyOrder — steamAppId capture (Phase 12)', () => {
     ).not.toThrow()
     const entry = classifyOrder(steamKeyWithMalformedAppIdOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].steamAppId).toBeUndefined()
+    expect(defined(entry.keys[0], 'entry.keys[0]').steamAppId).toBeUndefined()
   })
 })
 
@@ -1305,8 +1328,8 @@ describe('classifyOrder — freezeEligible (14-08 gap closure, restores D-24 fre
   test('an order whose only key is REVEALED (server redeemed_key_value, no expiration) computes freezeEligible:true', () => {
     const entry = classifyOrder(redeemedOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('REVEALED')
-    expect(entry.keys[0].expiration).toBe(null)
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('REVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').expiration).toBe(null)
     expect(entry.freezeEligible).toBe(true)
   })
 
@@ -1317,8 +1340,8 @@ describe('classifyOrder — freezeEligible (14-08 gap closure, restores D-24 fre
     // rejected_by_server outcomes leave behind.
     const entry = classifyOrder(revealedViaFlagOrder, ALWAYS_REVEALED)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('REVEALED')
-    expect(entry.keys[0].expiration).toBe(null)
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('REVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').expiration).toBe(null)
     expect(entry.freezeEligible).toBe(false)
   })
 
@@ -1331,14 +1354,14 @@ describe('classifyOrder — freezeEligible (14-08 gap closure, restores D-24 fre
       machineName === 'settlementsurvival_steam'
     const entry = classifyOrder(realWorldFutureExpiryDateOrder, isRevealed, NOW)
     expect(entry.keys).toHaveLength(1)
-    expect(entry.keys[0].state).toBe('REVEALED')
-    expect(entry.keys[0].expiration).not.toBe(null)
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('REVEALED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').expiration).not.toBe(null)
     expect(entry.freezeEligible).toBe(false)
   })
 
   test('REDEEMED/UNREDEEMABLE freeze exactly as before — no behavior change for those states', () => {
     const entry = classifyOrder(unredeemableOrder, ALWAYS_REVEALED)
-    expect(entry.keys[0].state).toBe('UNREDEEMABLE')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNREDEEMABLE')
     expect(entry.allTerminal).toBe(true)
     expect(entry.freezeEligible).toBe(true)
   })
@@ -1351,7 +1374,7 @@ describe('classifyOrder — freezeEligible (14-08 gap closure, restores D-24 fre
 
   test('D-27: an UNPICKED pseudo-entry never computes freezeEligible:true', () => {
     const entry = classifyOrder(unpickedChoiceMonthOrder, NEVER_REVEALED)
-    expect(entry.keys[0].state).toBe('UNPICKED')
+    expect(defined(entry.keys[0], 'entry.keys[0]').state).toBe('UNPICKED')
     expect(entry.freezeEligible).toBe(false)
   })
 })

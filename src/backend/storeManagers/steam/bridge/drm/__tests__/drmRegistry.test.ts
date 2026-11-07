@@ -14,6 +14,7 @@ import {
   drmRegistryStagedInUserReg,
   isPhase52ForwarderBytes
 } from '../drmRegistry'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 const FORWARDER = Buffer.concat([
   Buffer.from('MZ-fwd'),
@@ -84,7 +85,7 @@ describe('buildDrmRegistryCommands', () => {
   it('never names the local-machine hive', () => {
     for (const argv of buildDrmRegistryCommands()) {
       for (const el of argv) expect(el).not.toMatch(/HKLM|HKEY_LOCAL_MACHINE/i)
-      expect(argv[2].startsWith('HKCU\\')).toBe(true)
+      expect(at(argv, 2).startsWith('HKCU\\')).toBe(true)
     }
   })
 })
@@ -129,7 +130,7 @@ describe('drmRegistryStagedInUserReg', () => {
     ).toBe(false)
   })
   it('is false when the Steam-level SteamPath is missing', () => {
-    const t = STAGED_REG.split('\n\n')[1]
+    const t = at(STAGED_REG.split('\n\n'), 1)
     expect(drmRegistryStagedInUserReg(t)).toBe(false)
   })
   it('is false when the values live under a different section', () => {

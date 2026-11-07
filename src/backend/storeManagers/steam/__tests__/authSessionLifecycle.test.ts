@@ -144,6 +144,7 @@ jest.mock('../anonymousClient', () => ({
 import { SteamUser } from '../user'
 import { logInfo, logWarning } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
+import { at } from './fixtures/indexed'
 
 const FakeLib = jest.requireMock('steam-user')
 const macMock = jest.requireMock('../macSteamOffline')
@@ -377,7 +378,7 @@ describe('authenticated connect lifecycle', () => {
       logInfoLines().indexOf(line as string)
     ]
     expect(lineOrder).toBeLessThan(
-      instances()[0].logOn.mock.invocationCallOrder[0]
+      at(instances()[0].logOn.mock.invocationCallOrder, 0)
     )
     expect(logInfoLines().join('\n')).not.toContain('secret-refresh-token')
   })
@@ -578,8 +579,8 @@ describe('authenticated session lease', () => {
     a.release()
     SteamUser.releaseForShutdown()
     expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('shutdown')
-    expect(instances()[0].logOff.mock.invocationCallOrder[0]).toBeLessThan(
-      mockRestoreMacSteamOnlineIfOwed.mock.invocationCallOrder[0]
+    expect(at(instances()[0].logOff.mock.invocationCallOrder, 0)).toBeLessThan(
+      at(mockRestoreMacSteamOnlineIfOwed.mock.invocationCallOrder, 0)
     )
   })
 
@@ -724,8 +725,8 @@ describe('shutdown during a wrapped logon (debug/shutdown-mid-connect-logon-surv
     // bound, so it goes back online now and the refresh gets no client.
     expect(await lease).toEqual({ ok: false, reason: 'shutting-down' })
     expect(inst.logOff).toHaveBeenCalledTimes(1)
-    expect(inst.logOff.mock.invocationCallOrder[0]).toBeLessThan(
-      mockRestoreMacSteamOnlineIfOwed.mock.invocationCallOrder[0]
+    expect(at(inst.logOff.mock.invocationCallOrder, 0)).toBeLessThan(
+      at(mockRestoreMacSteamOnlineIfOwed.mock.invocationCallOrder, 0)
     )
     expect(internals.abandonPendingLogon).toBeNull()
     expect(internals.client).toBeNull()

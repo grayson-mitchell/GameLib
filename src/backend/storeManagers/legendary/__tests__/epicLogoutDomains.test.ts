@@ -536,7 +536,10 @@ describe('the TS list and main.rs EPIC_COOKIE_DOMAINS are the SAME list (T-35-41
     const open = source.indexOf('[', assign)
     const close = source.indexOf(']', open)
     const body = source.slice(open + 1, close)
-    return [...body.matchAll(/['"]([^'"]+)['"]/g)].map((m) => m[1])
+    return [...body.matchAll(/['"]([^'"]+)['"]/g)].flatMap((m) => {
+      const domain = m[1]
+      return domain === undefined ? [] : [domain]
+    })
   }
 
   it('main.rs EPIC_COOKIE_DOMAINS is exactly the approved set', () => {

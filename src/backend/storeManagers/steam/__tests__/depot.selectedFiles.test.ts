@@ -13,6 +13,7 @@ import { SteamUser } from '../user'
 import { mockLeaseOk, mockLeaseRefused } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
 import { decryptFilename } from '../depot/crypto'
+import { at } from './fixtures/indexed'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -159,7 +160,7 @@ describe('downloadSelectedDepotFiles', () => {
     expect(dl).toHaveBeenCalledTimes(1)
     const plan = dl.mock.calls[0][0] as DepotPlan
     expect(plan.depots).toHaveLength(1)
-    expect(plan.depots[0].files.map((f) => f.filename)).toEqual([
+    expect(at(plan.depots, 0).files.map((f) => f.filename)).toEqual([
       'bin\\steam_api64.dll'
     ])
     expect(plan.totalBytes).toBe(7)

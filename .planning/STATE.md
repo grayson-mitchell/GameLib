@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: executing
-stopped_at: Phase 71 context gathered
-last_updated: 2026-11-07T20:05:24.553Z
-last_activity: 2026-11-07
+status: ready_to_plan
+stopped_at: Phase 67 complete (20/20) — ready to discuss Phase 66
+last_updated: "2026-11-07T20:58:30.299Z"
+last_activity: 2026-11-08 - Phase 65 complete (20/20, verification passed, smoke runs 1+2 passed)
 progress:
   total_phases: 12
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 104
-  completed_plans: 102
-  percent: 33
+  completed_plans: 104
+  percent: 42
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 65 — steam-store-manager-decomposition-continued
+**Current focus:** Phase 66 — backend dependency injection replacing module level singleto
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,12 +72,12 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 65 (steam-store-manager-decomposition-continued) — EXECUTING
-Plan: 19 of 20
-Status: Ready to execute
-Last activity: 2026-11-07
+Phase: 66
+Plan: 0 of 0
+Status: Ready to plan
+Last activity: 2026-11-08 - Phase 65 complete (20/20, verification passed, smoke runs 1+2 passed)
 
-Progress: [████████░░] 81%
+Progress: [██████████] 100%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -516,6 +516,10 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261107-aru | Downloads cancel "x" no longer goes transparent on hover under Dracula: `--danger-hover` was set by only 3 of 10 themes; base `body` now defaults it to `var(--status-danger-hover)`, `body.dracula` gets `#ff6e6e`, and both `.cancelIcon:hover circle` rules fall back to `--status-danger-hover`. | 2026-11-07 | 783a48dc1 | jest 3 suites 300/300 pass; prettier clean; live Dracula hover check passed (operator, 2026-11-07) | [261107-aru-fix-dracula-theme-on-the-downloads-page-](./quick/261107-aru-fix-dracula-theme-on-the-downloads-page-/) |
 | 261107-brs | ts-prune replaced by knip 6.42.1: `find-deadcode` now pipes `knip --reporter json --no-exit-code` into an identity ratchet (`meta/knipRatchet.cjs`, 404 baselined findings); ts-prune, its ledgers and all 416 directives removed (391 deleted, 7 -> `@public` with reason, 18 left as baselined debt); ts-morph made a direct devDep. | 2026-11-07 | 2dbc96252 | find-deadcode PASS, planted line fails it; codecheck, lint, planning-gates green; gate suites pass (250 tests) | [261107-brs-replace-ts-prune-with-knip-for-unused-ex](./quick/261107-brs-replace-ts-prune-with-knip-for-unused-ex/) |
 | 261107-v6q | Phase 61 re-review WR-01 closed: under an inconclusive CrossOver pre-flight a wine-manager or retired-pin bottle now keeps its recorded engine (no wineserver kill, no marker rewrite); an unresolvable engine takes the CrossOver branch, never pins.current. Reverses 61-26's wine-manager -> pins.current choice; 61-HUMAN-UAT item 4 pass. | 2026-11-07 | 88c8296b7 | 4 engine jest suites 204/204, codecheck clean, scoped prettier clean | [261107-v6q-inconclusive-pre-flight-leaves-wine-mana](./quick/261107-v6q-inconclusive-pre-flight-leaves-wine-mana/) |
+| 261108-cut | noUncheckedIndexedAccess adopted for storeManagers/gog (34 sites incl. tests, no `!`/casts; added to ADOPTED_BUCKETS); first reconciled ratchet baseline drift from phases 63/65 (engine 45, scanners 3, sidecar/testUtils/screens raised, tools/wiki lowered) that had the CI step red on main. | 2026-11-08 | 83f114958 | ratchet exit 0; codecheck; gog + ratchet jest pass; planning-gates; scoped prettier | [261108-cut-adopt-nouncheckedindexedaccess-for-store](./quick/261108-cut-adopt-nouncheckedindexedaccess-for-store/) |
+| 261108-d1z | noUncheckedIndexedAccess adopted for storeManagers/legendary (15 sites incl. tests, no `!`/casts; added to ADOPTED_BUCKETS); empty Epic `releaseInfo` now logs the existing "No platforms info" warning instead of throwing. | 2026-11-08 | e8d6903bf | ratchet exit 0; codecheck; legendary + ratchet jest pass (103); planning-gates; scoped prettier | [261108-d1z-adopt-nouncheckedindexedaccess-for-store](./quick/261108-d1z-adopt-nouncheckedindexedaccess-for-store/) |
+| 261108-d3t | noUncheckedIndexedAccess adopted for backend/humble (176 sites: 10 source, 166 tests via local `__tests__/defined.ts` helper; no `!`/casts; added to ADOPTED_BUCKETS). | 2026-11-08 | 3605fb3ee | ratchet exit 0; codecheck; humble + ratchet jest pass (721); knip; planning-gates; scoped prettier | [261108-d3t-adopt-nouncheckedindexedaccess-for-backe](./quick/261108-d3t-adopt-nouncheckedindexedaccess-for-backe/) |
+| 261108-d5p | noUncheckedIndexedAccess adopted for steam tests (423 sites in 52 files over 3 commits via local `__tests__/fixtures/indexed.ts` `at`/`defined`; no `!`/casts/source edits) — all of storeManagers/steam now adopted; todo remaining total 1698. | 2026-11-08 | 3b4c8a4c1 | ratchet exit 0 each commit; codecheck; touched steam suites pass (3 env-gated skips in T2); boundaries; planning-gates; scoped prettier; find-deadcode red on main from unrelated phase-65 work | [261108-d5p-adopt-nouncheckedindexedaccess-for-steam](./quick/261108-d5p-adopt-nouncheckedindexedaccess-for-steam/) |
 
 ## Deferred Items
 
@@ -614,10 +618,11 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261107-lum | Forced-Windows Steam install of a Mac-native game now resolves the bridge verdict (own `GameLibSteamBridge-<appId>` bottle) instead of always landing on bottled Steam: per-call `windowsBuildChosen` into `assembleBridgeRouteInput`; forced flag persisted only after a committed install and cleared on bridge uninstall; `getSteamBridgeRoute(appId, windowsBuildChosen?)`; dialog re-requests the verdict on Platform flip; notice/setup retries replay the Windows choice. Follow-ups: console Platform row, Cat Quest shim-withheld todo. | 2026-11-07 | 850819137 | jest Frontend 5139 pass, backend pass except 3 pre-existing; codecheck/smoke:sidecar/scoped prettier pass; LIVE: routing PASS on 391540 + 593280, strict bridge-verified NOT met on either (shim coverage, independent) | [261107-lum-route-forced-windows-steam-installs-of-m](./quick/261107-lum-route-forced-windows-steam-installs-of-m/) |
 | 261107-mr0 | Console Mode Platform row for dual-build Steam games on macOS: macOS default, Windows offered only when `getSteamBridgeRoute(appId, true)` is `bridge`; hidden until probe + verdict resolve; no Wine row; Windows passes `forceWindowsViaBottle`; Install-to "Its own Windows bottle"; D13 gate replaced by `assertConsoleSteamPlatformContract`. | 2026-11-07 | 25839cfe6 | jest Frontend 5163 pass, codecheck/eslint/i18n gates/planning-gates/scoped prettier pass; not live-checked in Console Mode | [261107-mr0-console-mode-steam-platform-row-for-dual](./quick/261107-mr0-console-mode-steam-platform-row-for-dual/) |
 | 261108-avs | overlayInputSmoke + overlayInputProbeSmoke (cursor warp to 10,10, real windows, beeps) now opt-in via `GAMELIB_DESKTOP_SMOKE=1`: whole suite `describe.skip` + one logged warn when unset, launchctl probe short-circuited; opt-in path unchanged. | 2026-11-08 | 7f8217cca | 16/16 skipped unset; tsc meta/eslint/scoped prettier pass; opt-in run not exercised (would warp cursor) | [261108-avs-gate-overlay-desktop-smoke-tests](./quick/261108-avs-gate-overlay-desktop-smoke-tests/) |
+| 261108-ca6 | Removed the 10 non-interface SteamGame lift stubs; callers use the free functions, installNative/installBottleNative moved to gameInstallDepot, launchBridgeGame+runBridgeLaunch to new gameBridgeLaunchGate; all 19 stub spies now module spies; 4 accepted import cycles allow-listed in gamesModuleSurface; todo closed. | 2026-11-08 | 0c242e0ce | games+surface 720/720 pass; build:sidecar OK; cycle audit clean | [261108-ca6-remove-the-steamgame-lift-stubs-and-spy-](./quick/261108-ca6-remove-the-steamgame-lift-stubs-and-spy-/) |
 
 ## Session Continuity
 
-Last session: 2026-11-07T20:03:54.993Z
+Last session: 2026-11-07T20:30:10.623Z
 Stopped at: Phase 71 context gathered
 Resume file: None
 

@@ -36,7 +36,13 @@ const fs = require('node:fs')
 const path = require('node:path')
 const ts = require('typescript')
 
-const ADOPTED_BUCKETS = ['src/backend/storeManagers/steam']
+const ADOPTED_BUCKETS = [
+  'src/backend/storeManagers/steam',
+  'src/backend/storeManagers/gog',
+  'src/backend/storeManagers/legendary',
+  'src/backend/humble',
+  'src/backend/storeManagers/steam (tests)'
+]
 
 /**
  * Pure: repo-relative POSIX path -> bucket name.

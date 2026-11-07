@@ -14,7 +14,10 @@ import { createFakeHomeProfile } from '../../src/backend/testUtils/fakeHomeProfi
 const {
   countLines,
   collectFiles,
-  evaluate
+  evaluate,
+  parseArgs,
+  staleExemptions,
+  GENERATED_EXEMPT
 } = require('../steamLineCeiling.cjs')
 /* eslint-enable @typescript-eslint/no-require-imports */
 
@@ -53,6 +56,19 @@ describe('steamLineCeiling evaluate', () => {
       expect.stringContaining('remove a from the baseline in this commit')
     ])
   })
+  it('rejects an at/under-ceiling entry and still holds the file to the ceiling', () => {
+    expect(evaluate({ a: 1000 }, { a: 1001 })).toEqual([
+      expect.stringContaining('over ceiling: a has 1001 lines (max 1000)'),
+      expect.stringContaining('remove a from the baseline in this commit')
+    ])
+    expect(evaluate({ a: 500 }, { a: 5000 })).toEqual([
+      expect.stringContaining('over ceiling: a has 5000 lines (max 1000)'),
+      expect.stringContaining('remove a from the baseline in this commit')
+    ])
+    expect(evaluate({ a: 1000 }, { a: 1000 })).toEqual([
+      expect.stringContaining('remove a from the baseline in this commit')
+    ])
+  })
   it('flags an entry naming a missing file', () => {
     expect(evaluate({ a: 1200 }, {})).toEqual([
       expect.stringContaining('stale baseline entry: a')
@@ -74,7 +90,7 @@ function seed(files: Record<string, string>): string {
 }
 
 describe('steamLineCeiling collectFiles', () => {
-  it('excludes tests, mocks, generated files and non-code extensions', () => {
+  it('excludes tests, mocks, exempted files and non-code extensions', () => {
     const root = seed({
       'a.ts': 'x\n',
       'sub/b.cjs': 'x\n',
@@ -82,14 +98,89 @@ describe('steamLineCeiling collectFiles', () => {
       '__mocks__/d.ts': 'x\n',
       'e.test.ts': 'x\n',
       'f.spec.ts': 'x\n',
-      'g.generated.ts': 'x\n',
+      'gen/g.generated.ts': 'x\n',
       'h.json': '{}\n'
     })
     try {
-      expect(collectFiles(root, root).sort()).toEqual(['a.ts', 'sub/b.cjs'])
+      expect(
+        collectFiles(root, root, new Set(['gen/g.generated.ts'])).sort()
+      ).toEqual(['a.ts', 'sub/b.cjs'])
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
+  })
+  it('does not exempt a file just because it is named *.generated.*', () => {
+    const root = seed({ 'a.ts': 'x\n', 'renamed.generated.ts': 'x\n' })
+    try {
+      expect(collectFiles(root, root).sort()).toEqual([
+        'a.ts',
+        'renamed.generated.ts'
+      ])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('steamLineCeiling staleExemptions', () => {
+  it('passes when every exempted path exists', () => {
+    const root = seed({ 'gen/g.generated.ts': 'x\n' })
+    try {
+      expect(staleExemptions(root, new Set(['gen/g.generated.ts']))).toEqual([])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+  it('flags an exempted path that no longer exists', () => {
+    const root = seed({ 'a.ts': 'x\n' })
+    try {
+      expect(staleExemptions(root, new Set(['gone.generated.ts']))).toEqual([
+        expect.stringContaining('stale generated exemption: gone.generated.ts')
+      ])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+  it('the shipped exemption list matches the real tree', () => {
+    const steamRoot = join(
+      REPO_ROOT,
+      'src',
+      'backend',
+      'storeManagers',
+      'steam'
+    )
+    expect(staleExemptions(steamRoot, GENERATED_EXEMPT)).toEqual([])
+  })
+})
+
+describe('steamLineCeiling parseArgs', () => {
+  it('defaults the floor and accepts valid flags', () => {
+    expect(parseArgs([])).toEqual({
+      root: undefined,
+      baseline: undefined,
+      minFiles: 100
+    })
+    expect(
+      parseArgs(['--root', 'r', '--baseline', 'b.json', '--min-files', '3'])
+    ).toEqual({ root: 'r', baseline: 'b.json', minFiles: 3 })
+  })
+  it.each([['x'], ['0'], ['-1'], ['1.5'], ['NaN']])(
+    'rejects --min-files %s',
+    (v) => {
+      expect(parseArgs(['--min-files', v])).toEqual({
+        error: expect.stringContaining('invalid --min-files')
+      })
+    }
+  )
+  it.each([
+    [['--root']],
+    [['--baseline']],
+    [['--min-files']],
+    [['--root', '--baseline', 'b.json']]
+  ])('rejects a flag with no value: %j', (argv) => {
+    expect(parseArgs(argv)).toEqual({
+      error: expect.stringContaining('needs a value')
+    })
   })
 })
 
@@ -142,6 +233,12 @@ describe('steamLineCeiling CLI', () => {
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
+  })
+
+  it('exits non-zero on a non-numeric --min-files', () => {
+    const r = run(['--min-files', 'x'])
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/invalid --min-files/)
   })
 
   it('exits non-zero when the baseline cannot be read', () => {

@@ -1,3 +1,4 @@
+import { at } from '../../__tests__/fixtures/indexed'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -66,9 +67,9 @@ describe('parseKv1', () => {
 
   it('decodes \\\\ and \\" inside quoted strings', () => {
     const root = parseKv1(FIXTURES.physx)
-    const script = root[0].value as { key: string; value: unknown }[]
-    const run = script[0].value as { key: string; value: unknown }[]
-    const entry = run[0].value as { key: string; value: string }[]
+    const script = at(root, 0).value as { key: string; value: unknown }[]
+    const run = at(script, 0).value as { key: string; value: unknown }[]
+    const entry = at(run, 0).value as { key: string; value: string }[]
     const command = entry.find((n) => n.key === 'command 1')!.value
     expect(command).toBe(
       '/i "%INSTALLDIR%\\_CommonRedist\\PhysX\\9.14.0702\\PhysX-9.14.0702-SystemSoftware.msi" /quiet /norestart'
@@ -119,7 +120,7 @@ describe('parseKv1', () => {
     ].join('\n')
     const entries = parseInstallScript(text)!
     expect(entries).toHaveLength(1)
-    expect(entries[0].processes).toEqual([
+    expect(at(entries, 0).processes).toEqual([
       {
         process:
           '%INSTALLDIR%\\_CommonRedist\\vcredist\\2010\\vcredist_x86.exe',
@@ -140,19 +141,19 @@ describe('parseInstallScript', () => {
   it('parses the 2010 script (lowercase keys) with x86 and x64 entries', () => {
     const entries = parse('vc2010')
     expect(entries.map((e) => e.name)).toEqual(['x86', 'x64'])
-    expect(entries[0].hasRunKey).toBe(
+    expect(at(entries, 0).hasRunKey).toBe(
       'HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\vcredist\\2010'
     )
-    expect(entries[0].processes).toEqual([
+    expect(at(entries, 0).processes).toEqual([
       {
         process:
           '%INSTALLDIR%\\_CommonRedist\\vcredist\\2010\\vcredist_x86.exe',
         command: '/quiet /norestart'
       }
     ])
-    expect(entries[0].minimumHasRunValue).toBe(1)
-    expect(entries[0].requirementOs).toBeNull()
-    expect(entries[1].requirementOs).toEqual({
+    expect(at(entries, 0).minimumHasRunValue).toBe(1)
+    expect(at(entries, 0).requirementOs).toBeNull()
+    expect(at(entries, 1).requirementOs).toEqual({
       is64BitWindows: '1',
       osType: undefined
     })
@@ -161,16 +162,18 @@ describe('parseInstallScript', () => {
   it('parses the 2015 script (InstallScript / HasRunKey casing) without command', () => {
     const entries = parse('vc2015')
     expect(entries).toHaveLength(2)
-    expect(entries[1].requirementOs?.is64BitWindows).toBe('1')
-    expect(entries[0].processes[0].command).toBeUndefined()
+    expect(at(entries, 1).requirementOs?.is64BitWindows).toBe('1')
+    expect(at(at(entries, 0).processes, 0).command).toBeUndefined()
   })
 
   it('returns both duplicate .NET 4.8 entries with their own requirement_os', () => {
     const entries = parse('net48')
     expect(entries.map((e) => e.name)).toEqual(['4.8', '4.8'])
-    expect(entries[0].requirementOs?.osType).toBe('Windows XP')
-    expect(entries[1].requirementOs).toBeNull()
-    expect(entries[1].processes[0].process).toContain('Framework 4.8.cmd')
+    expect(at(entries, 0).requirementOs?.osType).toBe('Windows XP')
+    expect(at(entries, 1).requirementOs).toBeNull()
+    expect(at(at(entries, 1).processes, 0).process).toContain(
+      'Framework 4.8.cmd'
+    )
   })
 
   it('ignores kvsignatures and returns null for malformed or empty scripts', () => {
@@ -184,7 +187,7 @@ describe('parseInstallScript', () => {
     const entries = parseInstallScript(
       '"installscript" { "Run Process" { "a" { "MinimumHasRunValue" "3" "process 1" "x" } } }'
     ) as InstallScriptEntry[]
-    expect(entries[0].minimumHasRunValue).toBe(3)
+    expect(at(entries, 0).minimumHasRunValue).toBe(3)
   })
 })
 
@@ -271,7 +274,9 @@ describe('classifySharedRedist', () => {
 
   it('rejects duplicate entry names even on an otherwise valid vcredist path', () => {
     const e = parse('vc2010')
-    expect(classifySharedRedist(PATHS.vc2010, [e[0], e[0]]).kind).toBe('other')
+    expect(classifySharedRedist(PATHS.vc2010, [at(e, 0), at(e, 0)]).kind).toBe(
+      'other'
+    )
   })
 })
 
@@ -301,7 +306,9 @@ describe('entryAppliesToBottle', () => {
     ).toBe(true)
   })
   it('skips the noop .NET entry and keeps the real one', () => {
-    const [noop, real] = parse('net48')
+    const entries = parse('net48')
+    const noop = at(entries, 0)
+    const real = at(entries, 1)
     expect(entryAppliesToBottle(noop)).toBe(false)
     expect(entryAppliesToBottle(real)).toBe(true)
   })
@@ -324,9 +331,9 @@ describe('toBottleWindowsPath', () => {
 
 describe('buildRedistProcessCommandParts', () => {
   it('builds the 2010 x86 exe argv', () => {
-    const [x86] = parse('vc2010')
+    const x86 = at(parse('vc2010'), 0)
     expect(
-      buildRedistProcessCommandParts(x86.processes[0], 'vcredist', DIR)
+      buildRedistProcessCommandParts(at(x86.processes, 0), 'vcredist', DIR)
     ).toEqual([
       `${DIR}\\_CommonRedist\\vcredist\\2010\\vcredist_x86.exe`,
       '/quiet',
@@ -335,9 +342,9 @@ describe('buildRedistProcessCommandParts', () => {
   })
 
   it('wraps a .cmd in cmd /c', () => {
-    const x64 = parse('vc2022')[1]
+    const x64 = at(parse('vc2022'), 1)
     expect(
-      buildRedistProcessCommandParts(x64.processes[0], 'vcredist', DIR)
+      buildRedistProcessCommandParts(at(x64.processes, 0), 'vcredist', DIR)
     ).toEqual([
       'cmd',
       '/c',
@@ -348,7 +355,7 @@ describe('buildRedistProcessCommandParts', () => {
   it('builds DXSETUP /silent', () => {
     expect(
       buildRedistProcessCommandParts(
-        parse('dx')[0].processes[0],
+        at(at(parse('dx'), 0).processes, 0),
         'directx',
         DIR
       )
@@ -359,7 +366,7 @@ describe('buildRedistProcessCommandParts', () => {
   })
 
   it('rejects non-switch args for auto kinds and control characters', () => {
-    const p = parse('vc2010')[0].processes[0]
+    const p = at(at(parse('vc2010'), 0).processes, 0)
     expect(
       buildRedistProcessCommandParts(
         { ...p, command: '/quiet C:\\evil.exe' },
@@ -403,7 +410,7 @@ describe('buildRedistProcessCommandParts', () => {
   it('builds the PhysX msiexec argv for kind other with a quote-aware split', () => {
     expect(
       buildRedistProcessCommandParts(
-        parse('physx')[0].processes[0],
+        at(at(parse('physx'), 0).processes, 0),
         'other',
         DIR
       )
@@ -419,7 +426,7 @@ describe('buildRedistProcessCommandParts', () => {
   it('does not accept bare msiexec for an auto kind', () => {
     expect(
       buildRedistProcessCommandParts(
-        parse('physx')[0].processes[0],
+        at(at(parse('physx'), 0).processes, 0),
         'vcredist',
         DIR
       )
@@ -450,9 +457,9 @@ describe('buildRedistProcessCommandParts', () => {
   })
 
   it('handles the opt-in .NET cmd', () => {
-    const real = parse('net452')[1]
+    const real = at(parse('net452'), 1)
     expect(
-      buildRedistProcessCommandParts(real.processes[0], 'other', DIR)
+      buildRedistProcessCommandParts(at(real.processes, 0), 'other', DIR)
     ).toEqual([
       'cmd',
       '/c',
@@ -518,7 +525,7 @@ describe('buildRedistProcessCommandParts', () => {
     it('still builds the measured .cmd and .exe entries (spaces and + are not metacharacters)', () => {
       expect(
         buildRedistProcessCommandParts(
-          parse('vc2015')[0].processes[0],
+          at(at(parse('vc2015'), 0).processes, 0),
           'vcredist',
           DIR
         )

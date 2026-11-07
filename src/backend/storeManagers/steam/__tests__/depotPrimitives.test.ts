@@ -44,6 +44,7 @@ import {
   CContentServerDirectory_GetCDNAuthToken_Request,
   CContentServerDirectory_GetCDNAuthToken_Response as CdnAuthTokenResponse
 } from 'steam-user/protobufs/generated/_load.js'
+import { at, defined } from './fixtures/indexed'
 
 /** Debug/steam-install-slow-start cycle 11 ("DECISION 2026-07-19: OPTION B"):
  *  cdnAuth.ts's manual `_send` bypass expects a REAL, encoded response
@@ -582,7 +583,7 @@ describe('decompress', () => {
 
       global.fetch = jest.fn((url: unknown) => {
         const urlStr = String(url)
-        const host = urlStr.split('/')[2]
+        const host = at(urlStr.split('/'), 2)
         requestedHosts.push(host)
         return Promise.resolve({
           ok: true,
@@ -691,12 +692,12 @@ describe('decompress', () => {
         )
         const encrypted = await buildEncryptedChunkResponse(data)
         const expectedSha = sha1(data)
-        const badHost = hosts[0]
-        const goodHost = hosts[1]
+        const badHost = at(hosts, 0)
+        const goodHost = at(hosts, 1)
 
         global.fetch = jest.fn((url: unknown) => {
           const urlStr = String(url)
-          const host = urlStr.split('/')[2]
+          const host = at(urlStr.split('/'), 2)
           if (host === badHost) {
             return Promise.reject(new Error('ECONNRESET'))
           }
@@ -814,7 +815,7 @@ describe('decompress', () => {
 
         global.fetch = jest.fn((url: unknown) => {
           const urlStr = String(url)
-          const host = urlStr.split('/')[2]
+          const host = at(urlStr.split('/'), 2)
           attempt0Hosts.push(host)
           return Promise.resolve({
             ok: true,
@@ -895,7 +896,7 @@ describe('decompress', () => {
           const hostHealth = new HostHealthTracker()
           poolHosts.forEach((host, i) => {
             for (let n = 0; n < samples; n++) {
-              hostHealth.record(host, 'success', latencies[i])
+              hostHealth.record(host, 'success', at(latencies, i))
             }
           })
           // workerSlot 1 -> attempt 0 goes to the rank-1 host.
@@ -903,7 +904,7 @@ describe('decompress', () => {
           const requestedHosts: string[] = []
 
           global.fetch = jest.fn((url: unknown) => {
-            const host = String(url).split('/')[2]
+            const host = at(String(url).split('/'), 2)
             requestedHosts.push(host)
             if (host === failingHost) {
               return Promise.reject(new Error('ECONNRESET'))
@@ -997,7 +998,7 @@ describe('decompress', () => {
           const out = await pending
           expect(out.equals(data)).toBe(true)
           expect(events).toEqual([{ outcome: 'success', ms: 0 }])
-          const snap = hostHealth.snapshot(hosts[0])
+          const snap = hostHealth.snapshot(at(hosts, 0))
           expect(snap.consecutiveFailures).toBe(0)
           expect(snap.avgMs).toBe(0)
         } finally {
@@ -1119,11 +1120,11 @@ describe('decompress', () => {
         ).rejects.toThrow(/failed after 1 attempts/)
 
         expect(events).toHaveLength(1)
-        expect(events[0].outcome).toBe('error')
-        expect(events[0].reason).toBe('429')
+        expect(at(events, 0).outcome).toBe('error')
+        expect(at(events, 0).reason).toBe('429')
         // Cheap statusText is folded into the message (still matches
         // classifyDepotError's `/CDN \d/i` pattern -- see depotErrors.ts).
-        expect(events[0].message).toBe('CDN 429 Too Many Requests')
+        expect(at(events, 0).message).toBe('CDN 429 Too Many Requests')
       })
 
       it("reports the thrown error's `code` as `reason` for a network failure (e.g. ECONNRESET)", async () => {
@@ -1155,8 +1156,8 @@ describe('decompress', () => {
         ).rejects.toThrow(/failed after 1 attempts/)
 
         expect(events).toHaveLength(1)
-        expect(events[0].outcome).toBe('error')
-        expect(events[0].reason).toBe('ECONNRESET')
+        expect(at(events, 0).outcome).toBe('error')
+        expect(at(events, 0).reason).toBe('ECONNRESET')
       })
 
       it('reports "AbortError" as `reason` when the bounded per-attempt timeout fires', async () => {
@@ -1198,8 +1199,8 @@ describe('decompress', () => {
         await expect(pending).rejects.toThrow(/failed after 1 attempts/)
 
         expect(events).toHaveLength(1)
-        expect(events[0].outcome).toBe('timeout')
-        expect(events[0].reason).toBe('AbortError')
+        expect(at(events, 0).outcome).toBe('timeout')
+        expect(at(events, 0).reason).toBe('AbortError')
         jest.useRealTimers()
       })
 
@@ -1244,11 +1245,11 @@ describe('decompress', () => {
         ).rejects.toThrow(/failed after 1 attempts/)
 
         expect(events).toHaveLength(1)
-        expect(events[0].outcome).toBe('error')
+        expect(at(events, 0).outcome).toBe('error')
         // Must be the numeric status ('403'), NOT the fallback `name`
         // ('SomeOtherErrorShape') -- proves the `status` check runs first
         // and wins, regardless of class identity.
-        expect(events[0].reason).toBe('403')
+        expect(at(events, 0).reason).toBe('403')
       })
 
       // Debug/steam-install-slow-start (cycle 13): decode-stage failures
@@ -1302,8 +1303,8 @@ describe('decompress', () => {
         ).rejects.toThrow(/failed after 1 attempts/)
 
         expect(events).toHaveLength(1)
-        expect(events[0].outcome).toBe('error')
-        expect(events[0].reason).toBe('sha1_mismatch')
+        expect(at(events, 0).outcome).toBe('error')
+        expect(at(events, 0).reason).toBe('sha1_mismatch')
       })
 
       it('cycle 13: reports "unknown_container" as `reason` for a response body that is not a valid chunk container at all', async () => {
@@ -1350,8 +1351,8 @@ describe('decompress', () => {
         ).rejects.toThrow(/failed after 1 attempts/)
 
         expect(events).toHaveLength(1)
-        expect(events[0].outcome).toBe('error')
-        expect(events[0].reason).toBe('unknown_container')
+        expect(at(events, 0).outcome).toBe('error')
+        expect(at(events, 0).reason).toBe('unknown_container')
       })
 
       // Debug/steam-install-slow-start (cycle 15): cycle 14's hardware
@@ -1536,7 +1537,7 @@ describe('decompress', () => {
         ).rejects.toThrow(/failed after 1 attempts/)
 
         expect(events).toHaveLength(1)
-        expect(events[0].reason).toBe('ECONNRESET')
+        expect(at(events, 0).reason).toBe('ECONNRESET')
       })
 
       it('cycle 13: reports the first AggregateError-nested code ("ENOTFOUND") when undici throws a multi-address connect failure with no top-level `.code`', async () => {
@@ -1588,7 +1589,7 @@ describe('decompress', () => {
         ).rejects.toThrow(/failed after 1 attempts/)
 
         expect(events).toHaveLength(1)
-        expect(events[0].reason).toBe('ENOTFOUND')
+        expect(at(events, 0).reason).toBe('ENOTFOUND')
       })
     })
 
@@ -1635,7 +1636,7 @@ describe('decompress', () => {
         const { client } = makeFakeCdnClient('?token=abc123&expires=999')
         const cdnAuth = new CdnAuthTokenCache(client, 1091500)
         const hostMeta = new Map([
-          [hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]
+          [at(hosts, 0), { httpsSupport: 'mandatory', usetokenauth: true }]
         ])
 
         let requestedUrl = ''
@@ -1731,7 +1732,9 @@ describe('decompress', () => {
         // Real-world shape: every SteamCache host reduceContentServers has
         // ever observed has a hostMeta entry (httpsSupport known) but
         // usetokenauth is absent/false.
-        const hostMeta = new Map([[hosts[0], { httpsSupport: 'mandatory' }]])
+        const hostMeta = new Map([
+          [at(hosts, 0), { httpsSupport: 'mandatory' }]
+        ])
 
         let requestedUrl = ''
         global.fetch = jest.fn((url: unknown) => {
@@ -1777,7 +1780,7 @@ describe('decompress', () => {
         const encrypted2 = await buildEncryptedChunkResponse(data2)
         const { client, calls } = makeFakeCdnClient()
         const cdnAuth = new CdnAuthTokenCache(client, 1091500)
-        const hostMeta = new Map([[hosts[0], { usetokenauth: true }]])
+        const hostMeta = new Map([[at(hosts, 0), { usetokenauth: true }]])
 
         global.fetch = jest.fn((url: unknown) => {
           const urlStr = String(url)
@@ -1877,14 +1880,14 @@ describe('decompress', () => {
           })
         }
         const cdnAuth = new CdnAuthTokenCache(client, 1091500)
-        const badHost = hosts[0]
+        const badHost = at(hosts, 0)
         const hostMeta = new Map([[badHost, { usetokenauth: true }]])
         const requestedUrls: string[] = []
 
         global.fetch = jest.fn((url: unknown) => {
           const urlStr = String(url)
           requestedUrls.push(urlStr)
-          const host = urlStr.split('/')[2]
+          const host = at(urlStr.split('/'), 2)
           if (host === badHost) {
             // The FIRST request against badHost (carrying token-1) is
             // rejected with 401; any LATER request against badHost (carrying
@@ -1965,7 +1968,7 @@ describe('decompress', () => {
         }
         const cdnAuth = new CdnAuthTokenCache(client, 1091500)
         const hostMeta = new Map([
-          [hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]
+          [at(hosts, 0), { httpsSupport: 'mandatory', usetokenauth: true }]
         ])
 
         let requestedUrl = ''
@@ -2019,7 +2022,7 @@ describe('decompress', () => {
         // every real directory response, including type=CDN hosts -- the
         // widened gate must fire off `type` alone.
         const hostMeta = new Map([
-          [hosts[0], { httpsSupport: 'mandatory', type: 'CDN' }]
+          [at(hosts, 0), { httpsSupport: 'mandatory', type: 'CDN' }]
         ])
 
         let requestedUrl = ''
@@ -2067,7 +2070,7 @@ describe('decompress', () => {
         const { client, calls } = makeFakeCdnClient()
         const cdnAuth = new CdnAuthTokenCache(client, 1091500)
         const hostMeta = new Map([
-          [hosts[0], { httpsSupport: 'mandatory', type: 'SteamCache' }]
+          [at(hosts, 0), { httpsSupport: 'mandatory', type: 'SteamCache' }]
         ])
 
         let requestedUrl = ''
@@ -2131,7 +2134,7 @@ describe('decompress', () => {
           }
           const cdnAuth = new CdnAuthTokenCache(client, 1091500)
           const hostMeta = new Map([
-            [hosts[0], { httpsSupport: 'mandatory', type: 'CDN' }]
+            [at(hosts, 0), { httpsSupport: 'mandatory', type: 'CDN' }]
           ])
 
           global.fetch = jest.fn(() =>
@@ -2241,13 +2244,17 @@ describe('decompress', () => {
       }
 
       it('https_support: "mandatory" selects https://', async () => {
-        const hostMeta = new Map([[hosts[0], { httpsSupport: 'mandatory' }]])
+        const hostMeta = new Map([
+          [at(hosts, 0), { httpsSupport: 'mandatory' }]
+        ])
         const url = await fetchOneChunkAndCaptureUrl(hostMeta)
         expect(url).toMatch(/^https:\/\//)
       })
 
       it('https_support: "unavailable" (the real alibaba.cdn.steampipe.steamcontent.com value) selects http:// — unlocking an HTTP-only content server the pre-cycle-7 hardcoded https:// call could never reach', async () => {
-        const hostMeta = new Map([[hosts[0], { httpsSupport: 'unavailable' }]])
+        const hostMeta = new Map([
+          [at(hosts, 0), { httpsSupport: 'unavailable' }]
+        ])
         const url = await fetchOneChunkAndCaptureUrl(hostMeta)
         expect(url).toMatch(/^http:\/\//)
       })
@@ -2483,7 +2490,7 @@ describe('decompress', () => {
         const cdnAuth = new CdnAuthTokenCache(client, 1091500)
         const getTokenSpy = jest.spyOn(cdnAuth, 'getToken')
         const hostMeta = new Map([
-          [hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]
+          [at(hosts, 0), { httpsSupport: 'mandatory', usetokenauth: true }]
         ])
         const controller = new AbortController()
 
@@ -2520,7 +2527,7 @@ describe('decompress', () => {
         expect(out.equals(data)).toBe(true)
         expect(getTokenSpy).toHaveBeenCalledWith(
           depotId,
-          hosts[0],
+          at(hosts, 0),
           controller.signal
         )
       })
@@ -2537,7 +2544,7 @@ describe('decompress', () => {
           }
           const cdnAuth = new CdnAuthTokenCache(neverRespondingClient, 1091500)
           const hostMeta = new Map([
-            [hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]
+            [at(hosts, 0), { httpsSupport: 'mandatory', usetokenauth: true }]
           ])
           const controller = new AbortController()
 
@@ -2623,7 +2630,7 @@ describe('decompress', () => {
         }
         const cdnAuth = new CdnAuthTokenCache(client, 1091500)
         const hostMeta = new Map([
-          [hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]
+          [at(hosts, 0), { httpsSupport: 'mandatory', usetokenauth: true }]
         ])
 
         let requestedUrl = ''
@@ -2689,7 +2696,7 @@ describe('select', () => {
     const owned = makeOwned([], [100])
     const result = selectDepots(appinfo, owned, { os: 'windows' }, '12345')
     expect(result).toHaveLength(1)
-    expect(result[0].id).toBe('100')
+    expect(at(result, 0).id).toBe('100')
   })
 
   it('D-UAT-08: stamps the caller-supplied ownerAppId onto every emitted descriptor', () => {
@@ -2704,7 +2711,7 @@ describe('select', () => {
     const owned = makeOwned([], [100])
     const result = selectDepots(appinfo, owned, { os: 'windows' }, '99999')
     expect(result).toHaveLength(1)
-    expect(result[0].ownerAppId).toBe('99999')
+    expect(at(result, 0).ownerAppId).toBe('99999')
   })
 
   it('a depot carrying an owned dlcappid is selected; an unowned dlcappid excludes it (two channels, neither alone sufficient)', () => {
@@ -2725,7 +2732,7 @@ describe('select', () => {
       '12345'
     )
     expect(selected).toHaveLength(1)
-    expect(selected[0].id).toBe('200')
+    expect(at(selected, 0).id).toBe('200')
 
     const appinfoUnownedDlc = {
       depots: {
@@ -2759,8 +2766,8 @@ describe('select', () => {
     const owned = makeOwned([], [300])
     const result = selectDepots(appinfo, owned, { os: 'windows' }, '12345')
     expect(result).toHaveLength(1)
-    expect(typeof result[0].manifest).toBe('string')
-    expect(result[0].manifest).toBe(nineteenDigitGid)
+    expect(typeof at(result, 0).manifest).toBe('string')
+    expect(at(result, 0).manifest).toBe(nineteenDigitGid)
   })
 
   it('os is honoured as a parameter — { os: "windows" } vs { os: "linux" } filter os-specific depots accordingly', () => {
@@ -2870,7 +2877,7 @@ describe('select', () => {
       '12345'
     )
     expect(selected).toHaveLength(1)
-    expect(selected[0].ownerAppId).toBe('12345')
+    expect(at(selected, 0).ownerAppId).toBe('12345')
   })
 
   it('logs the chosen depot ids + os/arch/language decision, with no secrets in any logInfo argument (T-21-16-01)', () => {
@@ -2892,7 +2899,7 @@ describe('select', () => {
 
     // Regression guard: logging must not alter the returned descriptors.
     expect(result).toHaveLength(1)
-    expect(result[0].id).toBe('700')
+    expect(at(result, 0).id).toBe('700')
 
     expect(logInfo).toHaveBeenCalled()
     const calls = (logInfo as jest.Mock).mock.calls
@@ -3271,7 +3278,9 @@ describe('select', () => {
         const numeric = Object.keys(appinfo.depots ?? {}).filter((k) =>
           /^\d+$/.test(k)
         )
-        const shared = numeric.filter((id) => appinfo.depots![id].sharedinstall)
+        const shared = numeric.filter(
+          (id) => defined(appinfo.depots?.[id], `depot ${id}`).sharedinstall
+        )
         expect(shared.length).toBeGreaterThan(0)
 
         const result = selectDepots(

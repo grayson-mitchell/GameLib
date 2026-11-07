@@ -50,6 +50,7 @@ import {
   valveManifestUrl,
   valvePackageUrl
 } from '../valveClient'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 const FIXTURES = join(__dirname, 'fixtures')
 const MANIFEST = readFileSync(join(FIXTURES, 'steam_client_win64.vdf'), 'utf8')
@@ -295,7 +296,7 @@ describe('ensureValveClient', () => {
         'vstdlib_s64.dll'
       ])
       expect(onFetchStart).toHaveBeenCalledTimes(1)
-      expect(f.fetchText.mock.calls[0][0]).toBe(
+      expect(at(f.fetchText.mock.calls, 0)[0]).toBe(
         'https://client-update.akamai.steamstatic.com/steam_client_win64'
       )
     }
@@ -409,7 +410,7 @@ describe('ensureValveClient', () => {
     const r = await ensureValveClient({ appFolder }, { ...f, runUnzip })
     expect(r).toMatchObject({ status: 'error', step: 'valve-verify' })
     expect(calls).toHaveLength(1)
-    expect(calls[0][0]).toBe('-l')
+    expect(at(calls, 0)[0]).toBe('-l')
     noPartials()
   })
 
@@ -417,10 +418,10 @@ describe('ensureValveClient', () => {
     const f = fakes('bins_win64.fixture.zip')
     f.fetchText.mockRejectedValueOnce(new Error('first base down'))
     await ensureValveClient({ appFolder }, f)
-    expect(f.fetchText.mock.calls[1][0]).toBe(
+    expect(at(f.fetchText.mock.calls, 1)[0]).toBe(
       'https://steamcdn-a.akamaihd.net/client/steam_client_win64'
     )
-    expect(f.fetchToFile.mock.calls[0][0]).toMatch(
+    expect(at(f.fetchToFile.mock.calls, 0)[0]).toMatch(
       /^https:\/\/steamcdn-a\.akamaihd\.net\/client\/bins_win64\.zip\./
     )
   })

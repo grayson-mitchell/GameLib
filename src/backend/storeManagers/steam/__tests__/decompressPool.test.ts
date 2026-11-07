@@ -25,6 +25,7 @@ import {
   resetLzmaLoaderForTests,
   setNativeLzmaDecodeEnabledForTests
 } from '../depot/lzmaLoader'
+import { at } from './fixtures/indexed'
 
 // decompressPool.ts logs replaceWorker failures (WR-02) via backend/logger,
 // whose heroicLogWriter is not initialized in the jest environment — factory
@@ -383,7 +384,7 @@ describe('DecompressPool', () => {
       )
 
       results.forEach((out, i) => {
-        expect(out.equals(fixtures[i].data)).toBe(true)
+        expect(out.equals(at(fixtures, i).data)).toBe(true)
       })
     } finally {
       await pool.shutdown()

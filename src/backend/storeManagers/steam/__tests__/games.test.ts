@@ -227,9 +227,11 @@ import { tmpdir } from 'node:os'
  * caller must mockRestore() before any real-fs cleanup.
  */
 function failNextRmSync(): jest.SpyInstance {
-  return jest.spyOn(require('node:fs'), 'rmSync').mockImplementationOnce(() => {
-    throw Object.assign(new Error('EACCES'), { code: 'EACCES' })
-  })
+  return jest
+    .spyOn(jest.requireActual<typeof import('node:fs')>('node:fs'), 'rmSync')
+    .mockImplementationOnce(() => {
+      throw Object.assign(new Error('EACCES'), { code: 'EACCES' })
+    })
 }
 
 /** The single uninstall-failed notice pushed, for the given title. */
@@ -255,6 +257,7 @@ import {
   hasAbortController,
   getAbortSignal
 } from 'backend/utils/aborthandler/aborthandler'
+import { at } from './fixtures/indexed'
 
 jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
@@ -2671,13 +2674,15 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4`,
       RESOLVED_EXE_PATH
     )
-    const applierOrder = (applySteamBridgeKnownFixes as jest.Mock).mock
-      .invocationCallOrder[0]
-    expect(applierOrder).toBeLessThan(
-      (startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder[0]
+    const applierOrder = at(
+      (applySteamBridgeKnownFixes as jest.Mock).mock.invocationCallOrder,
+      0
     )
     expect(applierOrder).toBeLessThan(
-      (runWineCommand as jest.Mock).mock.invocationCallOrder[0]
+      at((startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder, 0)
+    )
+    expect(applierOrder).toBeLessThan(
+      at((runWineCommand as jest.Mock).mock.invocationCallOrder, 0)
     )
   })
 
@@ -2760,16 +2765,18 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(installSteamBridgeSharedRedists).toHaveBeenCalledWith(APP_ID, {
       wineCrossoverBottle: 'GameLibSteamBridge'
     })
-    const order = (installSteamBridgeSharedRedists as jest.Mock).mock
-      .invocationCallOrder[0]
+    const order = at(
+      (installSteamBridgeSharedRedists as jest.Mock).mock.invocationCallOrder,
+      0
+    )
     expect(order).toBeGreaterThan(
-      (applySteamBridgeKnownFixes as jest.Mock).mock.invocationCallOrder[0]
+      at((applySteamBridgeKnownFixes as jest.Mock).mock.invocationCallOrder, 0)
     )
     expect(order).toBeLessThan(
-      (startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder[0]
+      at((startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder, 0)
     )
     expect(order).toBeLessThan(
-      (runWineCommand as jest.Mock).mock.invocationCallOrder[0]
+      at((runWineCommand as jest.Mock).mock.invocationCallOrder, 0)
     )
   })
 
@@ -3391,7 +3398,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       try {
         await new SteamGame(id).launch({} as any)
         expect(writeSpy).toHaveBeenCalledTimes(1)
-        expect(writeSpy.mock.calls[0][1]).not.toHaveProperty('drmWrapper')
+        expect(at(writeSpy.mock.calls, 0)[1]).not.toHaveProperty('drmWrapper')
       } finally {
         jest.restoreAllMocks()
       }
@@ -3846,8 +3853,10 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       monitorArgs.onStopped()
       expect(stopBridgeHelper).toHaveBeenCalledWith(APP_ID)
       expect(
-        (startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder[0]
-      ).toBeLessThan((runWineCommand as jest.Mock).mock.invocationCallOrder[0])
+        at((startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder, 0)
+      ).toBeLessThan(
+        at((runWineCommand as jest.Mock).mock.invocationCallOrder, 0)
+      )
       expect(handle.launcherExited).not.toHaveBeenCalled()
     })
 
@@ -4258,9 +4267,11 @@ describe('SteamGame.install() — GAME-02', () => {
     const game = new SteamGame(APP_ID)
     await game.install({} as any)
 
-    const readyOrder = (ensureSteamClientReady as jest.Mock).mock
-      .invocationCallOrder[0]
-    const openOrder = shellOpenExternal.mock.invocationCallOrder[0]
+    const readyOrder = at(
+      (ensureSteamClientReady as jest.Mock).mock.invocationCallOrder,
+      0
+    )
+    const openOrder = at(shellOpenExternal.mock.invocationCallOrder, 0)
     expect(readyOrder).toBeLessThan(openOrder)
   })
 })
@@ -4414,12 +4425,18 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
 
-    const readyOrder = (ensureSteamClientReady as jest.Mock).mock
-      .invocationCallOrder[0]
-    const targetOrder = (resolveSteamInstallTarget as jest.Mock).mock
-      .invocationCallOrder[0]
-    const downloadOrder = (downloadSteamDepots as jest.Mock).mock
-      .invocationCallOrder[0]
+    const readyOrder = at(
+      (ensureSteamClientReady as jest.Mock).mock.invocationCallOrder,
+      0
+    )
+    const targetOrder = at(
+      (resolveSteamInstallTarget as jest.Mock).mock.invocationCallOrder,
+      0
+    )
+    const downloadOrder = at(
+      (downloadSteamDepots as jest.Mock).mock.invocationCallOrder,
+      0
+    )
     expect(readyOrder).toBeLessThan(targetOrder)
     expect(targetOrder).toBeLessThan(downloadOrder)
 
@@ -4453,14 +4470,16 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       guidedAction: 'install',
       appName: APP_ID
     })
-    const acquireOrder = (SteamUser.acquireAuthenticated as jest.Mock).mock
-      .invocationCallOrder[0]
+    const acquireOrder = at(
+      (SteamUser.acquireAuthenticated as jest.Mock).mock.invocationCallOrder,
+      0
+    )
     expect(acquireOrder).toBeLessThan(
-      (resolveSteamInstallTarget as jest.Mock).mock.invocationCallOrder[0]
+      at((resolveSteamInstallTarget as jest.Mock).mock.invocationCallOrder, 0)
     )
     expect(leaseRelease).toHaveBeenCalledTimes(1)
-    expect(leaseRelease.mock.invocationCallOrder[0]).toBeGreaterThan(
-      (downloadSteamDepots as jest.Mock).mock.invocationCallOrder[0]
+    expect(at(leaseRelease.mock.invocationCallOrder, 0)).toBeGreaterThan(
+      at((downloadSteamDepots as jest.Mock).mock.invocationCallOrder, 0)
     )
   })
 
@@ -4980,9 +4999,11 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
     if (clearingCallIndex === undefined) {
       throw new Error('unreachable: clearingCallIndex asserted defined above')
     }
-    const clearOrder = jest.mocked(steamLibraryStore.set).mock
-      .invocationCallOrder[clearingCallIndex]
-    const pollOrder = startInstallPollingSpy.mock.invocationCallOrder[0]
+    const clearOrder = at(
+      jest.mocked(steamLibraryStore.set).mock.invocationCallOrder,
+      clearingCallIndex
+    )
+    const pollOrder = at(startInstallPollingSpy.mock.invocationCallOrder, 0)
     expect(clearOrder).toBeLessThan(pollOrder)
   })
 
@@ -5652,10 +5673,12 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       undefined,
       { allowLogon: true }
     )
-    const redistOrder = (installSteamBridgeSharedRedists as jest.Mock).mock
-      .invocationCallOrder[0]
+    const redistOrder = at(
+      (installSteamBridgeSharedRedists as jest.Mock).mock.invocationCallOrder,
+      0
+    )
     expect(redistOrder).toBeGreaterThan(
-      (placeShimForGame as jest.Mock).mock.invocationCallOrder[0]
+      at((placeShimForGame as jest.Mock).mock.invocationCallOrder, 0)
     )
     expect(Math.max(...leaseRelease.mock.invocationCallOrder)).toBeGreaterThan(
       redistOrder
@@ -5675,7 +5698,10 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     const doneOrder = (sendGameStatusUpdate as jest.Mock).mock
       .invocationCallOrder
     expect(doneOrder[doneOrder.length - 1]).toBeGreaterThan(
-      (installSteamBridgeSharedRedists as jest.Mock).mock.invocationCallOrder[0]
+      at(
+        (installSteamBridgeSharedRedists as jest.Mock).mock.invocationCallOrder,
+        0
+      )
     )
   })
 
@@ -5701,11 +5727,15 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       .filter((i) => i !== -1)
     expect(doneIndexes).toHaveLength(1)
     expect(
-      (sendGameStatusUpdate as jest.Mock).mock.invocationCallOrder[
-        doneIndexes[0]
-      ]
+      at(
+        (sendGameStatusUpdate as jest.Mock).mock.invocationCallOrder,
+        at(doneIndexes, 0)
+      )
     ).toBeGreaterThan(
-      (installSteamBridgeSharedRedists as jest.Mock).mock.invocationCallOrder[0]
+      at(
+        (installSteamBridgeSharedRedists as jest.Mock).mock.invocationCallOrder,
+        0
+      )
     )
   })
 
@@ -6709,15 +6739,20 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         guidedAction: 'install',
         appName: APP_ID
       })
-      const prescreenOrder = (prescreenBridgeDepots as jest.Mock).mock
-        .invocationCallOrder[0]
+      const prescreenOrder = at(
+        (prescreenBridgeDepots as jest.Mock).mock.invocationCallOrder,
+        0
+      )
       expect(
-        (SteamUser.acquireAuthenticated as jest.Mock).mock
-          .invocationCallOrder[0]
+        at(
+          (SteamUser.acquireAuthenticated as jest.Mock).mock
+            .invocationCallOrder,
+          0
+        )
       ).toBeLessThan(prescreenOrder)
       expect(releases[0]).toHaveBeenCalledTimes(1)
-      expect(releases[0].mock.invocationCallOrder[0]).toBeLessThan(
-        (downloadSteamDepots as jest.Mock).mock.invocationCallOrder[0]
+      expect(at(at(releases, 0).mock.invocationCallOrder, 0)).toBeLessThan(
+        at((downloadSteamDepots as jest.Mock).mock.invocationCallOrder, 0)
       )
     })
 
@@ -7647,8 +7682,10 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           controller.signal
         )
         // only the depot run registers or removes controllers, after provisioning
-        const provisioned = (provisionBridgeBottle as jest.Mock).mock
-          .invocationCallOrder[0]
+        const provisioned = at(
+          (provisionBridgeBottle as jest.Mock).mock.invocationCallOrder,
+          0
+        )
         for (const m of [createAbortController, deleteAbortController]) {
           for (const order of (m as jest.Mock).mock.invocationCallOrder) {
             expect(order).toBeGreaterThan(provisioned)
@@ -9803,7 +9840,11 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
   let removeCopySpy: jest.SpyInstance
   let pollOnceSpy: jest.SpyInstance
   const adoption = () =>
-    jest.requireMock<Record<string, jest.Mock>>('../macSteamAdoption')
+    jest.mocked(
+      jest.requireMock<typeof import('../macSteamAdoption')>(
+        '../macSteamAdoption'
+      )
+    )
   const MANIFEST = `${NATIVE_LIBRARY_ROOT}/steamapps/appmanifest_${APP_ID}.acf`
   const BASELINE = { mtimeMs: 1, content: 'gamelib' }
   const RECORD = {
@@ -9889,8 +9930,8 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     expect(removeCopySpy).toHaveBeenCalledWith(APP_ID, 'native')
     expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
     expect(pollOnceSpy).toHaveBeenCalledWith(APP_ID, 'native')
-    expect(removeCopySpy.mock.invocationCallOrder[0]).toBeLessThan(
-      pollOnceSpy.mock.invocationCallOrder[0]
+    expect(at(removeCopySpy.mock.invocationCallOrder, 0)).toBeLessThan(
+      at(pollOnceSpy.mock.invocationCallOrder, 0)
     )
     expect(result).toEqual({ stdout: '', stderr: '' })
   })
@@ -10012,7 +10053,11 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
   let removeCopySpy: jest.SpyInstance
   let pollOnceSpy: jest.SpyInstance
   const adoption = () =>
-    jest.requireMock<Record<string, jest.Mock>>('../macSteamAdoption')
+    jest.mocked(
+      jest.requireMock<typeof import('../macSteamAdoption')>(
+        '../macSteamAdoption'
+      )
+    )
   const done = {
     appName: APP_ID,
     runner: 'steam',
@@ -10095,8 +10140,8 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
     expect(startPollingSpy).not.toHaveBeenCalled()
     expect(removeCopySpy).toHaveBeenCalledWith(APP_ID, 'native')
     expect(pollOnceSpy).toHaveBeenCalledWith(APP_ID, 'native')
-    expect(removeCopySpy.mock.invocationCallOrder[0]).toBeLessThan(
-      pollOnceSpy.mock.invocationCallOrder[0]
+    expect(at(removeCopySpy.mock.invocationCallOrder, 0)).toBeLessThan(
+      at(pollOnceSpy.mock.invocationCallOrder, 0)
     )
     expect(result).toEqual({ stdout: '', stderr: '' })
   })
@@ -13544,9 +13589,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           })
           await new SteamGame(confirmedId).launch({} as never)
           expect(app.raiseMainWindow).toHaveBeenCalledTimes(1)
-          expect(app.raiseMainWindow.mock.invocationCallOrder[0]).toBeLessThan(
-            dialogMock.mock.invocationCallOrder[0]
-          )
+          expect(
+            at(app.raiseMainWindow.mock.invocationCallOrder, 0)
+          ).toBeLessThan(at(dialogMock.mock.invocationCallOrder, 0))
           const ackId = dialogMock.mock.calls[0][0].ackId as string
           expect(typeof ackId).toBe('string')
           expect(infoLines().some((l) => l.includes('display=pending'))).toBe(
@@ -13782,7 +13827,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           .filter((i) => i >= 0)
         expect(relogIdx).toHaveLength(2)
         expect(relogIdx[0]).toBeGreaterThan(anchorIdx)
-        expect(lines[relogIdx[0]]).toBe(
+        expect(lines[at(relogIdx, 0)]).toBe(
           drmRelogPrefix(id) + traceLine(id, 'game', 1)
         )
       })
@@ -14362,10 +14407,13 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           bottleMod.endPerGameBridgeBottleSessionWith
         ).toHaveBeenCalledWith(id, bottleFor(id), undefined, 15000)
         expect(
-          bottleMod.endPerGameBridgeBottleSessionWith.mock
-            .invocationCallOrder[0]
+          at(
+            bottleMod.endPerGameBridgeBottleSessionWith.mock
+              .invocationCallOrder,
+            0
+          )
         ).toBeLessThan(
-          bridgeBottleMod.setOverlayBridgeRunner.mock.invocationCallOrder[0]
+          at(bridgeBottleMod.setOverlayBridgeRunner.mock.invocationCallOrder, 0)
         )
       })
 
@@ -14905,7 +14953,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           { key: 'SteamAppId', value: id }
         ])
         expect(env.find((e) => e.key === 'DYLD_INSERT_LIBRARIES')?.value).toBe(
-          envVarsFor(id)[0].value
+          at(envVarsFor(id), 0).value
         )
         expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
       })
@@ -15370,7 +15418,11 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
   let startInstallPollingSpy: jest.SpyInstance
   let envMock: any
   const adoption = () =>
-    jest.requireMock<Record<string, jest.Mock>>('../macSteamAdoption')
+    jest.mocked(
+      jest.requireMock<typeof import('../macSteamAdoption')>(
+        '../macSteamAdoption'
+      )
+    )
   const RECORD = {
     steamPid: 123,
     manifestPath: `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`,
@@ -15503,7 +15555,15 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
       expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
     })
 
-    it.each([
+    it.each<
+      [
+        Awaited<
+          ReturnType<
+            typeof import('../macSteamAdoption').restartMacSteamForAdoption
+          >
+        >
+      ]
+    >([
       [{ kind: 'game-running', runningAppId: 4000 }],
       [{ kind: 'steam-busy' }],
       [{ kind: 'quit-timeout' }]
@@ -15559,7 +15619,11 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
   let startInstallPollingSpy: jest.SpyInstance
   let envMock: any
   const adoption = () =>
-    jest.requireMock<Record<string, jest.Mock>>('../macSteamAdoption')
+    jest.mocked(
+      jest.requireMock<typeof import('../macSteamAdoption')>(
+        '../macSteamAdoption'
+      )
+    )
   const settingOn = () =>
     (isSteamExperimentalInstallAppEnabled as jest.Mock).mockReturnValue(true)
   const installApp = () => requestSteamInstallApp as jest.Mock
@@ -16174,9 +16238,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         expect(checkConnectivityNow).toHaveBeenCalledTimes(1)
         expect(checkConnectivityNow).toHaveBeenCalledWith(`launch ${ID}`)
         expect(
-          (checkConnectivityNow as jest.Mock).mock.invocationCallOrder[0]
+          at((checkConnectivityNow as jest.Mock).mock.invocationCallOrder, 0)
         ).toBeLessThan(
-          (resolveBridgeLaunchExe as jest.Mock).mock.invocationCallOrder[0]
+          at((resolveBridgeLaunchExe as jest.Mock).mock.invocationCallOrder, 0)
         )
         expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(ID, {
           offline: true
