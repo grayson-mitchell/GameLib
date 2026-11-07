@@ -6,6 +6,9 @@
  *
  * Like Steam, the in-app dialog is shown on every refused attempt: the user pressed Play and
  * nothing else will tell them why it did nothing.
+ *
+ * showEngineDialog is for refused launches. showEngineNotice is for notices about a game that may
+ * be running (61-27, WR-02): it must not take focus, so it never raises the window or opens a modal.
  */
 import { t } from 'i18next'
 import { app } from 'backend/platform'
@@ -41,6 +44,21 @@ export function showEngineDialog(args: {
   })
   logInfo(
     `[engine-notice] key=${key} tag=${tag} dispatched=in-app-dialog+notify dialog-frame-sent=${sent} display=pending`,
+    LogPrefix.Backend
+  )
+}
+
+/** Notify-only notice: a system notification, no window raise, no modal (61-27, WR-02). */
+export function showEngineNotice(args: {
+  key: string
+  title: string
+  body: string
+  ackId: string
+}): void {
+  const { key, title, body, ackId: tag } = args
+  notify({ title, body })
+  logInfo(
+    `[engine-notice] key=${key} tag=${tag} dispatched=notify raise=false`,
     LogPrefix.Backend
   )
 }

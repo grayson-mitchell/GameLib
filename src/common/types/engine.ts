@@ -71,6 +71,12 @@ export interface EngineState {
    * renderer shows it once per seq. The game has already exited.
    */
   exitNotice?: { seq: number } | null
+  /**
+   * Plan 61-27 (WR-02): set only on the push from publishLaunchDeadlineNotice; the renderer
+   * shows it once per seq. The 180 s launch deadline fired with no game process seen; nothing
+   * was stopped. The title is a display label, not a path (T-61-27 payload rule).
+   */
+  deadlineNotice?: { title: string; seconds: number; seq: number } | null
   /** Phase 61: closed engine id, or `legacy:<label>` for display only. */
   effectiveEngineId?: string
   engineSource?: 'stored' | 'derived'

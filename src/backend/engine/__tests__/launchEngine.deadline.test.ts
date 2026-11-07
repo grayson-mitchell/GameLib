@@ -21,7 +21,27 @@ jest.mock('graceful-fs', () => ({
   ...jest.requireActual('graceful-fs'),
   existsSync: () => true
 }))
+jest.mock('backend/platform', () => {
+  const actual = jest.requireActual('backend/platform')
+  return {
+    ...actual,
+    app: {
+      ...actual.app,
+      getPath: () => '/tmp/gamelib-test',
+      raiseMainWindow: jest.fn()
+    }
+  }
+})
+jest.mock('backend/dialog/dialog', () => ({
+  notify: jest.fn(),
+  showDialogBoxModalAuto: jest.fn()
+}))
+jest.mock('backend/dialog/displayAck', () => ({
+  newDialogAckId: jest.fn(),
+  trackDialogDisplay: jest.fn()
+}))
 jest.mock('../engineDialogs', () => ({
+  ...jest.requireActual('../engineDialogs'),
   showEngineDialog: jest.fn(),
   notifyEngineFallback: jest.fn()
 }))
@@ -54,7 +74,9 @@ import {
 } from '../launchSettings'
 import type { EngineSelection } from '../engineTypes'
 import { killBottleWineServerWith } from '../bottlePrimitives'
-import { showEngineDialog } from '../engineDialogs'
+import { showEngineDialog, showEngineNotice } from '../engineDialogs'
+import { app } from 'backend/platform'
+import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import {
   __resetBottleLedgerForTests,
   gamesRunningIn,
@@ -94,7 +116,7 @@ function makeGame(): Game & { stop: jest.Mock } {
 function deps(watcher: { stop(): void } | null = { stop: jest.fn() }) {
   return {
     watch: jest.fn(() => watcher),
-    showDialog: jest.fn()
+    publishNotice: jest.fn(() => true)
   }
 }
 
@@ -104,6 +126,10 @@ beforeEach(() => {
   __resetLaunchOverlayForTests()
   __resetBottleLedgerForTests()
   ;(killBottleWineServerWith as jest.Mock).mockClear()
+  ;(notify as jest.Mock).mockClear()
+  ;(app.raiseMainWindow as jest.Mock).mockClear()
+  ;(showDialogBoxModalAuto as jest.Mock).mockClear()
+  ;(showEngineDialog as jest.Mock).mockClear()
   clearEngineSelection(KEY)
 })
 afterEach(() => {
@@ -170,7 +196,7 @@ describe('armEngineLaunchDeadline', () => {
     expect(killBottleWineServerWith).not.toHaveBeenCalled()
   })
 
-  it('on expiry shows a no-kill notice and keeps the launch held', async () => {
+  it('on expiry shows a no-kill notice without raising the window (WR-02) and keeps the launch held', async () => {
     setUp(CX)
     const watcher = { stop: jest.fn() }
     const d = deps(watcher)
@@ -181,15 +207,22 @@ describe('armEngineLaunchDeadline', () => {
     expect(watcher.stop).toHaveBeenCalled()
     expect(killBottleWineServerWith).not.toHaveBeenCalled()
     expect(game.stop).not.toHaveBeenCalled()
-    expect(d.showDialog).toHaveBeenCalledTimes(1)
-    const dialog = d.showDialog.mock.calls[0]?.[0] as {
+    expect(app.raiseMainWindow).not.toHaveBeenCalled()
+    expect(showDialogBoxModalAuto).not.toHaveBeenCalled()
+    expect(showEngineDialog).not.toHaveBeenCalled()
+    expect(notify).toHaveBeenCalledTimes(1)
+    const note = (notify as jest.Mock).mock.calls[0]?.[0] as {
       title: string
       body: string
-      ackId: string
     }
-    expect(dialog.title).toContain('gamelib:steam.engine.notDetected.title')
-    expect(dialog.body).toContain('"seconds":180')
-    expect(dialog.ackId).toBe('launch-deadline-unconfirmed')
+    expect(note.title).toContain('gamelib:steam.engine.notDetected.title')
+    expect(note.body).toContain('"seconds":180')
+    expect(note.body).toContain('Quail')
+    expect(d.publishNotice).toHaveBeenCalledTimes(1)
+    expect(d.publishNotice).toHaveBeenCalledWith(
+      { runner: 'legendary', appName: 'Quail' },
+      { title: 'Quail', seconds: 180 }
+    )
     expect(getEngineSelection(KEY)).toBeDefined()
     expect(gamesRunningIn('GameLib-legendary-Quail')).toContain(KEY)
   })
@@ -207,7 +240,10 @@ describe('armEngineLaunchDeadline', () => {
     expect(killBottleWineServerWith).not.toHaveBeenCalled()
     expect(other.stop).not.toHaveBeenCalled()
     expect(gamesRunningIn('GameLib')).toContain('gog:A')
+    // The deadline fires here (it is a notice, not a kill): the neighbour is untouched and the
+    // window is not raised.
     expect(showEngineDialog).not.toHaveBeenCalled()
+    expect(app.raiseMainWindow).not.toHaveBeenCalled()
   })
 
   it('WR-01: a watcher that gives up stands the deadline down', async () => {
@@ -223,7 +259,8 @@ describe('armEngineLaunchDeadline', () => {
     args.onGiveUp('listing-failures')
     expect(__activeLaunchDeadlineCount()).toBe(0)
     await jest.advanceTimersByTimeAsync(200_000)
-    expect(d.showDialog).not.toHaveBeenCalled()
+    expect(notify).not.toHaveBeenCalled()
+    expect(d.publishNotice).not.toHaveBeenCalled()
   })
 
   it('endEngineLaunch cancels the deadline and stops the watcher', () => {
@@ -234,5 +271,19 @@ describe('armEngineLaunchDeadline', () => {
     endEngineLaunch(KEY)
     expect(watcher.stop).toHaveBeenCalled()
     expect(__activeLaunchDeadlineCount()).toBe(0)
+  })
+})
+
+describe('showEngineNotice', () => {
+  it('only notifies and logs raise=false', () => {
+    showEngineNotice({ key: KEY, title: 'T', body: 'B', ackId: 'x' })
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(app.raiseMainWindow).not.toHaveBeenCalled()
+    expect(showDialogBoxModalAuto).not.toHaveBeenCalled()
+    expect(
+      (logInfo as jest.Mock).mock.calls.some((c) =>
+        String(c[0]).includes('raise=false')
+      )
+    ).toBe(true)
   })
 })

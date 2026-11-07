@@ -216,6 +216,7 @@ function compute(
     launchNotice,
     overlayNotice: null,
     exitNotice: null,
+    deadlineNotice: null,
     effectiveEngineId: engineIdOf(effective),
     engineSource: effective.kind === 'override' ? effective.source : 'derived',
     prefixKind: extras.prefixKind ?? null,
@@ -451,6 +452,38 @@ export function publishOverlayExitNotice(identity: EngineIdentity): boolean {
   } catch (e) {
     logError(
       `Engine: overlay exit notice publisher failed: ${String(e)}`,
+      LogPrefix.Backend
+    )
+    return false
+  }
+}
+
+/**
+ * Plan 61-27 (WR-02): push the "couldn't confirm the game started" notice as an in-app toast.
+ * Same shared seq counter as the other notices. Nothing is stopped. Never throws.
+ */
+export function publishLaunchDeadlineNotice(
+  identity: EngineIdentity,
+  notice: { title: string; seconds: number }
+): boolean {
+  const key = engineKeyFor(identity.runner, identity.appName)
+  if (key === null) return false
+  const base = lastPublished.get(key)
+  if (!base) return false
+  try {
+    const state: EngineState = {
+      ...base,
+      deadlineNotice: {
+        title: notice.title.slice(0, 200),
+        seconds: notice.seconds,
+        seq: ++launchNoticeSeq
+      }
+    }
+    publisher(state)
+    return true
+  } catch (e) {
+    logError(
+      `Engine: launch deadline notice publisher failed: ${String(e)}`,
       LogPrefix.Backend
     )
     return false

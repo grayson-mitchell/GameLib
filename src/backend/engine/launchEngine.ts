@@ -41,8 +41,15 @@ import { decideLaunchEngine, isCrossoverMissing } from './engineDecision'
 import type { EngineDecisionDeps, LaunchDecision } from './engineDecision'
 import { readEngineForGame } from './engineConfig'
 import type { EffectiveEngine } from './engineConfig'
-import { notifyEngineFallback, showEngineDialog } from './engineDialogs'
-import { recordLaunchDecision } from './engineState'
+import {
+  notifyEngineFallback,
+  showEngineDialog,
+  showEngineNotice
+} from './engineDialogs'
+import {
+  publishLaunchDeadlineNotice,
+  recordLaunchDecision
+} from './engineState'
 import {
   prepareBottleForEngine,
   readBottleEngineMarkerKind,
@@ -443,12 +450,14 @@ const deadlineWatchers = new Map<EngineKey, { stop(): void }>()
 
 export interface DeadlineDeps {
   watch: typeof watchForGameProcess
-  showDialog: typeof showEngineDialog
+  showNotice: typeof showEngineNotice
+  publishNotice: typeof publishLaunchDeadlineNotice
 }
 
 const defaultDeadlineDeps: DeadlineDeps = {
   watch: watchForGameProcess,
-  showDialog: showEngineDialog
+  showNotice: showEngineNotice,
+  publishNotice: publishLaunchDeadlineNotice
 }
 
 function stopDeadlineWatcher(key: EngineKey): void {
@@ -462,6 +471,8 @@ function stopDeadlineWatcher(key: EngineKey): void {
  * (bare-basename and launcher-stub shapes are unmatchable), and a bottle can be shared with
  * another running game. So nothing is stopped: no wineserver -k, no game.stop, and the engine
  * registry, overlay context and ledger entry stay until the launcher exits (endEngineLaunch).
+ * Plan 61-27 (WR-02): the notice never raises the main window or opens a modal, because the game
+ * is very likely running and fullscreen. It is a system notification plus an in-app toast.
  */
 function onEngineLaunchDeadline(
   game: Game,
@@ -476,7 +487,10 @@ function onEngineLaunchDeadline(
     LogPrefix.Backend
   )
   stopDeadlineWatcher(key)
-  d.showDialog({
+  const info = game.getGameInfo()
+  const title = info.title
+  const seconds = LAUNCH_DEADLINE_MS / 1000
+  d.showNotice({
     key,
     title: t(
       'gamelib:steam.engine.notDetected.title',
@@ -485,13 +499,18 @@ function onEngineLaunchDeadline(
     body: t(
       'gamelib:steam.engine.notDetected.body',
       "GameLib couldn't confirm that {{title}} started within {{seconds}} seconds. It has not been stopped. If it is stuck, stop it from its game page and check the launch log (Settings > Logs).",
-      {
-        title: game.getGameInfo().title,
-        seconds: LAUNCH_DEADLINE_MS / 1000
-      }
+      { title, seconds }
     ),
     ackId: 'launch-deadline-unconfirmed'
   })
+  const pushed = d.publishNotice(
+    { runner: info.runner, appName: info.app_name },
+    { title, seconds }
+  )
+  logInfo(
+    `Engine: ${key} launch deadline notice surface=in-app pushed=${pushed} raise=false`,
+    LogPrefix.Backend
+  )
   return Promise.resolve()
 }
 

@@ -4,6 +4,7 @@ import {
   __resetEngineStateForTests,
   dismissEngineNotice,
   getEngineState,
+  publishLaunchDeadlineNotice as publishDeadline,
   publishOverlayExitNotice as publishExit,
   publishOverlayNotice as publishNotice,
   recordLaunchDecision as recordDecision,
@@ -76,6 +77,10 @@ const recordLaunchDecision = (
 const publishOverlayNotice = (appId: string, step: OverlayNoticeStep) =>
   publishNotice(idOf(appId), step)
 const publishOverlayExitNotice = (appId: string) => publishExit(idOf(appId))
+const publishLaunchDeadlineNotice = (
+  appId: string,
+  notice: { title: string; seconds: number }
+) => publishDeadline(idOf(appId), notice)
 const dismissSteamEngineNotice = dismissEngineNotice
 
 const TESTED = '26.3.0.39832'
@@ -186,6 +191,7 @@ describe('getSteamEngineState', () => {
       launchNotice: null,
       overlayNotice: null,
       exitNotice: null,
+      deadlineNotice: null,
       effectiveEngineId: 'automatic',
       engineSource: 'stored',
       prefixKind: null,
@@ -646,6 +652,47 @@ describe('recordLaunchDecision and publisher', () => {
       )
       pub.mockClear()
       expect(publishOverlayExitNotice('abc')).toBe(false)
+      expect(pub).not.toHaveBeenCalled()
+    })
+  })
+  describe('publishLaunchDeadlineNotice (61-27, WR-02)', () => {
+    it('re-pushes the last state with deadlineNotice on the shared seq, carrying other notices', () => {
+      const { deps } = mk(healthy(null))
+      const pub = jest.fn()
+      setEngineStatePublisher(pub)
+      recordLaunchDecision(
+        '3205720',
+        fallback('cx-expired'),
+        'GameLibSteamBridge-1',
+        deps
+      )
+      expect(pub.mock.calls[0][0].deadlineNotice).toBeNull()
+      expect(
+        publishLaunchDeadlineNotice('3205720', { title: 'Quail', seconds: 180 })
+      ).toBe(true)
+      const pushed = pub.mock.calls[1][0]
+      expect(pushed.deadlineNotice).toEqual({
+        title: 'Quail',
+        seconds: 180,
+        seq: 2
+      })
+      expect(pushed.launchNotice).toEqual({ reason: 'cx-expired', seq: 1 })
+      expect(pushed.exitNotice).toBeNull()
+    })
+    it('returns false without publishing for no base state or bad appId', () => {
+      const { deps } = mk(healthy(null))
+      const pub = jest.fn()
+      setEngineStatePublisher(pub)
+      const n = { title: 'Quail', seconds: 180 }
+      expect(publishLaunchDeadlineNotice('3205720', n)).toBe(false)
+      recordLaunchDecision(
+        '3205720',
+        decision(healthy(null)),
+        'GameLibSteamBridge-1',
+        deps
+      )
+      pub.mockClear()
+      expect(publishLaunchDeadlineNotice('abc', n)).toBe(false)
       expect(pub).not.toHaveBeenCalled()
     })
   })
