@@ -1,11 +1,6 @@
 import { z } from 'zod'
 
-import type {
-  GameStatus,
-  LaunchParams,
-  Runner,
-  StatusPromise
-} from '../../types'
+import type { GameStatus, LaunchParams, StatusPromise } from '../../types'
 import type {
   SteamBottleLaunchWaitingCause,
   SteamBridgeKnownBadReason,

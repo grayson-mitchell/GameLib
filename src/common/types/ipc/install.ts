@@ -59,11 +59,11 @@ const installFields = {
   size: z.string().max(256).optional()
 }
 
-const steamLibraryTarget = z.object({
-  path: z.string(),
-  steamappsDir: z.string(),
-  isPrimary: z.boolean()
-})
+interface SteamLibraryTarget {
+  path: string
+  steamappsDir: string
+  isPrimary: boolean
+}
 
 export const installAsyncArgs = {
   checkGameUpdates: z.tuple([]),
@@ -111,7 +111,7 @@ interface InstallAsyncReturns {
   // returns [] when native install is OFF, EXCEPT for a bottle-routed title:
   // pass its `appName` and the backend answers with targets regardless of the
   // toggle (quick 261030-o77: the toggle only scopes mac-native titles).
-  listSteamLibraryTargets: Promise<z.output<typeof steamLibraryTarget>[]>
+  listSteamLibraryTargets: Promise<SteamLibraryTarget[]>
   // quick 261105-upw: backend-authoritative InstallApp-route discriminator for
   // the install modal. installAppRoute is true only for feature ON + native
   // OFF + non-bottle title on macOS; libraries are then the registered targets.
@@ -120,7 +120,7 @@ interface InstallAsyncReturns {
   getSteamDeleteRoute: Promise<{ gamelibDelete: boolean }>
   getSteamInstallAppTargets: Promise<{
     installAppRoute: boolean
-    libraries: z.output<typeof steamLibraryTarget>[]
+    libraries: SteamLibraryTarget[]
   }>
   install: Promise<void>
   uninstall: Promise<void>
