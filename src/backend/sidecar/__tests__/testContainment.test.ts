@@ -970,6 +970,10 @@ const IN_SCOPE_SUITES = [
  * replaces `../../platform`, `../../config`, `../../game_config`, `../../utils`, the store modules
  * and `../../constants/paths` with `jest.mock` factories and drives the registered handlers
  * in-process, so no path module, `homedir()`, filesystem or child process is reached.
+ *
+ * `importGameEngine.test.ts` (Phase 61 Plan 19, T-61-58/59) is structurally contained: it calls the
+ * pure `importEngineSettings` (grammar guard plus bottle-name derivation), which reads no
+ * filesystem, `homedir()` or child process. Its landing commit classified it here.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -1000,6 +1004,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'humbleFlows.test.ts',
   'humbleLoginFlows.test.ts',
   'humbleSecretStore.test.ts',
+  'importGameEngine.test.ts',
   'installFlows.test.ts',
   'installedJsonWatcher.test.ts',
   'invokeReturnValueSweep.test.ts',

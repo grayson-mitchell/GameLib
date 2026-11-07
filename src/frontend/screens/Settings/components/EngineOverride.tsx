@@ -118,6 +118,8 @@ interface ViewProps {
   loaded: boolean
   onChange: (id: string) => void
   t: T
+  /** Install dialogs show the select expanded. */
+  open?: boolean
 }
 
 export function EngineOverrideView({
@@ -125,7 +127,8 @@ export function EngineOverrideView({
   value,
   loaded,
   onChange,
-  t
+  t,
+  open
 }: ViewProps) {
   const shown = visibleOptions(options, value)
   const extra = storedExtraOption(value, shown, loaded, t)
@@ -151,7 +154,7 @@ export function EngineOverrideView({
       : [])
   ]
   return (
-    <details className="engineOverride">
+    <details className="engineOverride" open={open}>
       <summary>
         {t('steam.engine.override.summary', 'Engine (advanced)')}
       </summary>

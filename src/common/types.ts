@@ -873,6 +873,8 @@ export interface ImportGameArgs {
   winePrefix?: string
   wineVersion?: WineInstallation
   wineCrossoverBottle?: string
+  /** Phase 61 D-17: engine id chosen at import; the backend computes the bottle. */
+  engineOverride?: string
 }
 
 export interface MoveGameArgs {

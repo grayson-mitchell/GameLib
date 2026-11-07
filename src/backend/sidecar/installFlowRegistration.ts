@@ -167,6 +167,8 @@ import {
   assertPlausibleAbsolutePath,
   PathShapeError
 } from './rendererPathGuard'
+import { isWritableEngineOverride } from '../engine/engineConfig'
+import { importEngineSettings } from '../engine/importEngineSettings'
 import { logError, logInfo, LogPrefix } from '../logger'
 import i18next from 'i18next'
 import type {
@@ -543,7 +545,8 @@ export function registerInstallFlows(): void {
         platform,
         winePrefix,
         wineVersion,
-        wineCrossoverBottle
+        wineCrossoverBottle,
+        engineOverride
       } = (args[0] ?? {}) as ImportGameArgs
 
       try {
@@ -626,7 +629,15 @@ export function registerInstallFlows(): void {
         return { status: 'error' }
       }
 
-      if (winePrefix && wineVersion) {
+      // Phase 61 D-17: an engine choice replaces the Wine picker; the bottle name
+      // is computed here (T-61-58, T-61-59), never taken from the renderer.
+      const engineSettings = isWritableEngineOverride(engineOverride)
+        ? importEngineSettings({ runner, appName, engineOverride })
+        : null
+      if (engineSettings) {
+        const gameSettings = await getGame(appName, runner).getSettings()
+        writeConfig(appName, { ...gameSettings, ...engineSettings })
+      } else if (winePrefix && wineVersion) {
         const gameSettings = await getGame(appName, runner).getSettings()
         writeConfig(appName, {
           ...gameSettings,
