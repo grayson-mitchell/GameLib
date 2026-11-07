@@ -31,6 +31,31 @@
 repo_root=$(git rev-parse --show-toplevel) || exit 1
 prettier_bin="$repo_root/node_modules/.bin/prettier"
 
+# Generated IPC contract freshness (Phase 67 D-18). Runs only when a staged path can change the
+# generated src-tauri/src/ipc_contract.rs, to keep the hook fast. Unlike the prettier step below
+# this reads the WORKING TREE (it regenerates from the sources on disk), so it is a fast local
+# nudge, not the gate: CI (codecheck.yml "Check generated IPC contract is fresh") is the real gate,
+# because rebase, cherry-pick and --no-verify skip this hook. The NUL-delimited list is piped into
+# the loop, never captured in $(...) (bash 3.2 drops NUL bytes).
+ipc_contract_touched=0
+while IFS= read -r -d '' file; do
+  case "$file" in
+    src/common/types/ipc/* | src/common/types/sidecarTransport.ts | meta/genIpcContract.ts | src-tauri/src/ipc_contract.rs)
+      ipc_contract_touched=1
+      ;;
+  esac
+done < <(git diff --cached --name-only --diff-filter=ACMRD -z)
+
+if [ "$ipc_contract_touched" = 1 ] && [ -d "$repo_root/node_modules" ]; then
+  if ! (cd "$repo_root" && pnpm -s check:ipc-contract); then
+    echo "" >&2
+    echo "pre-commit: src-tauri/src/ipc_contract.rs is stale. Regenerate, then stage it:" >&2
+    echo "  pnpm gen:ipc-contract && git add src-tauri/src/ipc_contract.rs" >&2
+    echo "" >&2
+    exit 1
+  fi
+fi
+
 # Fresh clone before `pnpm install` -- do not block the commit on a missing toolchain.
 if [ ! -x "$prettier_bin" ]; then
   echo "pre-commit: $prettier_bin not found, skipping the prettier check" >&2
