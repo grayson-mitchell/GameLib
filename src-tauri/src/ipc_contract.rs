@@ -8,6 +8,9 @@
 // cfg-specific code.
 #![allow(dead_code)]
 
+use serde::Deserialize;
+use serde_json::Value;
+
 pub(crate) const READY_SENTINEL: &str = "__GAMELIB_SIDECAR_READY__";
 pub(crate) const FRONTEND_MESSAGE_EVENT: &str = "frontend_message";
 pub(crate) const SHELL_WINDOW_FOCUSED: &str = "shellWindowFocused";
@@ -207,5 +210,595 @@ impl RustInvokeChannel {
             RustInvokeChannel::ScanContainedReal => "scan_contained_real",
             RustInvokeChannel::ScanWinemacMetalExports => "scan_winemac_metal_exports",
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct KeyringGetArgs {
+    pub(crate) slot: Option<String>,
+}
+
+impl KeyringGetArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let slot = args.get(0).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
+        Ok(Self { slot })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct KeyringSetArgs {
+    pub(crate) secret: String,
+    pub(crate) slot: Option<String>,
+}
+
+impl KeyringSetArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let secret = serde_json::from_value(args.get(0).ok_or_else(|| "keyring:bad-args".to_string())?.clone()).map_err(|_| "keyring:bad-args".to_string())?;
+        let slot = args.get(1).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
+        Ok(Self { secret, slot })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct KeyringDeleteArgs {
+    pub(crate) slot: Option<String>,
+}
+
+impl KeyringDeleteArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let slot = args.get(0).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
+        Ok(Self { slot })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct KeyringAvailableArgs {
+    pub(crate) slot: Option<String>,
+}
+
+impl KeyringAvailableArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let slot = args.get(0).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
+        Ok(Self { slot })
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct DialogOpenArgs {
+    #[serde(default)]
+    pub(crate) title: Option<String>,
+    #[serde(rename = "defaultPath")]
+    #[serde(default)]
+    pub(crate) default_path: Option<String>,
+    #[serde(default)]
+    pub(crate) properties: Option<Vec<String>>,
+    #[serde(default)]
+    pub(crate) filters: Option<Vec<DialogOpenArgsFiltersItem>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct DialogOpenArgsFiltersItem {
+    #[serde(default)]
+    pub(crate) name: Option<String>,
+    #[serde(default)]
+    pub(crate) extensions: Option<Vec<String>>,
+}
+
+impl DialogOpenArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "dialog_open:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "dialog_open:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct DialogMessageArgs {
+    #[serde(default)]
+    pub(crate) message: Option<String>,
+    #[serde(default)]
+    pub(crate) title: Option<String>,
+    #[serde(default)]
+    pub(crate) kind: Option<String>,
+    #[serde(default)]
+    pub(crate) buttons: Option<Vec<String>>,
+}
+
+impl DialogMessageArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "dialog_message:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "dialog_message:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct DialogSaveArgs {
+    #[serde(rename = "defaultPath")]
+    #[serde(default)]
+    pub(crate) default_path: Option<String>,
+    #[serde(default)]
+    pub(crate) filters: Option<Vec<DialogSaveArgsFiltersItem>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct DialogSaveArgsFiltersItem {
+    #[serde(default)]
+    pub(crate) name: Option<String>,
+    #[serde(default)]
+    pub(crate) extensions: Option<Vec<String>>,
+}
+
+impl DialogSaveArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "dialog_save:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "dialog_save:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct NotificationShowArgs {
+    #[serde(default)]
+    pub(crate) title: Option<String>,
+    #[serde(default)]
+    pub(crate) body: Option<String>,
+}
+
+impl NotificationShowArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "notification_show:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "notification_show:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ShellShowItemInFolderArgs {
+    pub(crate) path: String,
+}
+
+impl ShellShowItemInFolderArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let path = serde_json::from_value(args.get(0).ok_or_else(|| "shell_show_item_in_folder:bad-args".to_string())?.clone()).map_err(|_| "shell_show_item_in_folder:bad-args".to_string())?;
+        Ok(Self { path })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ShellOpenPathArgs {
+    pub(crate) path: String,
+}
+
+impl ShellOpenPathArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let path = serde_json::from_value(args.get(0).ok_or_else(|| "shell_open_path:bad-args".to_string())?.clone()).map_err(|_| "shell_open_path:bad-args".to_string())?;
+        Ok(Self { path })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct AppExitArgs;
+
+impl AppExitArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct AppRelaunchArgs;
+
+impl AppRelaunchArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct AppHideArgs;
+
+impl AppHideArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct MainWindowRaiseArgs;
+
+impl MainWindowRaiseArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct BridgeInvitePickerOpenArgs {
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+    #[serde(rename = "ackId")]
+    pub(crate) ack_id: String,
+}
+
+impl BridgeInvitePickerOpenArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "bridge_invite_picker_open:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "bridge_invite_picker_open:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ClipboardWriteTextArgs {
+    pub(crate) text: String,
+}
+
+impl ClipboardWriteTextArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let text = serde_json::from_value(args.get(0).ok_or_else(|| "clipboard_write_text:bad-args".to_string())?.clone()).map_err(|_| "clipboard_write_text:bad-args".to_string())?;
+        Ok(Self { text })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ClipboardReadTextArgs;
+
+impl ClipboardReadTextArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct TraySetIconArgs {
+    pub(crate) variant: TraySetIconArgsVariant,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub(crate) enum TraySetIconArgsVariant {
+    #[serde(rename = "auto")]
+    Auto,
+    #[serde(rename = "light")]
+    Light,
+    #[serde(rename = "dark")]
+    Dark,
+}
+
+impl TraySetIconArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "tray_set_icon:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "tray_set_icon:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct HumbleLoginOpenArgs {
+    pub(crate) url: String,
+    pub(crate) visible: bool,
+    pub(crate) user_agent: String,
+}
+
+impl HumbleLoginOpenArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let url = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_open:bad-args".to_string())?.clone()).map_err(|_| "humble_login_open:bad-args".to_string())?;
+        let visible = serde_json::from_value(args.get(1).ok_or_else(|| "humble_login_open:bad-args".to_string())?.clone()).map_err(|_| "humble_login_open:bad-args".to_string())?;
+        let user_agent = serde_json::from_value(args.get(2).ok_or_else(|| "humble_login_open:bad-args".to_string())?.clone()).map_err(|_| "humble_login_open:bad-args".to_string())?;
+        Ok(Self { url, visible, user_agent })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct HumbleLoginCookiesArgs {
+    pub(crate) label: String,
+    pub(crate) host: String,
+    pub(crate) names: Vec<String>,
+}
+
+impl HumbleLoginCookiesArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let label = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_cookies:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies:bad-args".to_string())?;
+        let host = serde_json::from_value(args.get(1).ok_or_else(|| "humble_login_cookies:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies:bad-args".to_string())?;
+        let names = serde_json::from_value(args.get(2).ok_or_else(|| "humble_login_cookies:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies:bad-args".to_string())?;
+        Ok(Self { label, host, names })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct HumbleLoginCookiesForDomainArgs {
+    pub(crate) label: String,
+    pub(crate) domain: String,
+    pub(crate) names: Vec<String>,
+}
+
+impl HumbleLoginCookiesForDomainArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let label = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies_for_domain:bad-args".to_string())?;
+        let domain = serde_json::from_value(args.get(1).ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies_for_domain:bad-args".to_string())?;
+        let names = serde_json::from_value(args.get(2).ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies_for_domain:bad-args".to_string())?;
+        Ok(Self { label, domain, names })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct HumbleLoginTakeEventsArgs {
+    pub(crate) label: String,
+}
+
+impl HumbleLoginTakeEventsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let label = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_take_events:bad-args".to_string())?.clone()).map_err(|_| "humble_login_take_events:bad-args".to_string())?;
+        Ok(Self { label })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct HumbleLoginCloseArgs {
+    pub(crate) label: String,
+}
+
+impl HumbleLoginCloseArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let label = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_close:bad-args".to_string())?.clone()).map_err(|_| "humble_login_close:bad-args".to_string())?;
+        Ok(Self { label })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct HumbleLoginClearCookiesArgs {
+    pub(crate) label: String,
+    pub(crate) domain: String,
+}
+
+impl HumbleLoginClearCookiesArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let label = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_clear_cookies:bad-args".to_string())?.clone()).map_err(|_| "humble_login_clear_cookies:bad-args".to_string())?;
+        let domain = serde_json::from_value(args.get(1).ok_or_else(|| "humble_login_clear_cookies:bad-args".to_string())?.clone()).map_err(|_| "humble_login_clear_cookies:bad-args".to_string())?;
+        Ok(Self { label, domain })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct HumbleRevealPostArgs {
+    pub(crate) origin_url: String,
+    pub(crate) path: String,
+    pub(crate) body: String,
+    pub(crate) csrf_token: Option<String>,
+    pub(crate) user_agent: String,
+}
+
+impl HumbleRevealPostArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let origin_url = serde_json::from_value(args.get(0).ok_or_else(|| "humble_reveal_post:bad-args".to_string())?.clone()).map_err(|_| "humble_reveal_post:bad-args".to_string())?;
+        let path = serde_json::from_value(args.get(1).ok_or_else(|| "humble_reveal_post:bad-args".to_string())?.clone()).map_err(|_| "humble_reveal_post:bad-args".to_string())?;
+        let body = serde_json::from_value(args.get(2).ok_or_else(|| "humble_reveal_post:bad-args".to_string())?.clone()).map_err(|_| "humble_reveal_post:bad-args".to_string())?;
+        let csrf_token = serde_json::from_value(args.get(3).ok_or_else(|| "humble_reveal_post:bad-args".to_string())?.clone()).map_err(|_| "humble_reveal_post:bad-args".to_string())?;
+        let user_agent = serde_json::from_value(args.get(4).ok_or_else(|| "humble_reveal_post:bad-args".to_string())?.clone()).map_err(|_| "humble_reveal_post:bad-args".to_string())?;
+        Ok(Self { origin_url, path, body, csrf_token, user_agent })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct HumbleLoginClearStorageArgs {
+    pub(crate) origin_url: String,
+    pub(crate) user_agent: String,
+}
+
+impl HumbleLoginClearStorageArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let origin_url = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_clear_storage:bad-args".to_string())?.clone()).map_err(|_| "humble_login_clear_storage:bad-args".to_string())?;
+        let user_agent = serde_json::from_value(args.get(1).ok_or_else(|| "humble_login_clear_storage:bad-args".to_string())?.clone()).map_err(|_| "humble_login_clear_storage:bad-args".to_string())?;
+        Ok(Self { origin_url, user_agent })
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct StoreEmbedOpenArgs {
+    pub(crate) url: String,
+    pub(crate) x: f64,
+    pub(crate) y: f64,
+    pub(crate) w: f64,
+    pub(crate) h: f64,
+    #[serde(rename = "storeKey")]
+    pub(crate) store_key: String,
+    #[serde(rename = "homeUrl")]
+    #[serde(default)]
+    pub(crate) home_url: Option<String>,
+}
+
+impl StoreEmbedOpenArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "store_embed_open:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "store_embed_open:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct StoreEmbedSetBoundsArgs {
+    pub(crate) x: f64,
+    pub(crate) y: f64,
+    pub(crate) w: f64,
+    pub(crate) h: f64,
+}
+
+impl StoreEmbedSetBoundsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "store_embed_set_bounds:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "store_embed_set_bounds:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct StoreEmbedHideArgs;
+
+impl StoreEmbedHideArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct StoreEmbedShowArgs;
+
+impl StoreEmbedShowArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct StoreEmbedCloseArgs;
+
+impl StoreEmbedCloseArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct StoreEmbedTakeNavEventsArgs;
+
+impl StoreEmbedTakeNavEventsArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct StoreEmbedBackArgs;
+
+impl StoreEmbedBackArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct StoreEmbedForwardArgs;
+
+impl StoreEmbedForwardArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct StoreEmbedReloadArgs;
+
+impl StoreEmbedReloadArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct StoreEmbedNavigateArgs {
+    pub(crate) url: String,
+}
+
+impl StoreEmbedNavigateArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "store_embed_navigate:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "store_embed_navigate:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WakeLockStartArgs {
+    pub(crate) kind: String,
+}
+
+impl WakeLockStartArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let kind = serde_json::from_value(args.get(0).ok_or_else(|| "wake_lock_start:bad-args".to_string())?.clone()).map_err(|_| "wake_lock_start:bad-args".to_string())?;
+        Ok(Self { kind })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WakeLockStopArgs {
+    pub(crate) id: i64,
+}
+
+impl WakeLockStopArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let id = serde_json::from_value(args.get(0).ok_or_else(|| "wake_lock_stop:bad-args".to_string())?.clone()).map_err(|_| "wake_lock_stop:bad-args".to_string())?;
+        Ok(Self { id })
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ScanSteamApiImportsArgs {
+    #[serde(rename = "exePath")]
+    pub(crate) exe_path: String,
+    #[serde(rename = "appId")]
+    pub(crate) app_id: String,
+}
+
+impl ScanSteamApiImportsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "scan_steam_api_imports:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "scan_steam_api_imports:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ScanSteamDrmArgs {
+    #[serde(rename = "exePath")]
+    pub(crate) exe_path: String,
+}
+
+impl ScanSteamDrmArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "scan_steam_drm:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "scan_steam_drm:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ScanSteamstubSectionArgs {
+    #[serde(rename = "exePath")]
+    pub(crate) exe_path: String,
+}
+
+impl ScanSteamstubSectionArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "scan_steamstub_section:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "scan_steamstub_section:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ScanPeImportedDllsArgs {
+    #[serde(rename = "exePath")]
+    pub(crate) exe_path: String,
+}
+
+impl ScanPeImportedDllsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "scan_pe_imported_dlls:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "scan_pe_imported_dlls:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ScanContainedRealArgs {
+    pub(crate) path: String,
+    #[serde(rename = "rootDir")]
+    pub(crate) root_dir: String,
+}
+
+impl ScanContainedRealArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "scan_contained_real:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "scan_contained_real:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ScanWinemacMetalExportsArgs {
+    #[serde(rename = "wineBundlePath")]
+    pub(crate) wine_bundle_path: String,
+}
+
+impl ScanWinemacMetalExportsArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "scan_winemac_metal_exports:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "scan_winemac_metal_exports:bad-args".to_string())
     }
 }

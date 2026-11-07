@@ -1,10 +1,213 @@
-import type { z } from 'zod'
-import type { RustInvokeChannel } from '../sidecarTransport'
+import { z } from 'zod'
+import {
+  RUST_APP_EXIT,
+  RUST_APP_HIDE,
+  RUST_APP_RELAUNCH,
+  RUST_BRIDGE_INVITE_PICKER_OPEN,
+  RUST_CLIPBOARD_READ_TEXT,
+  RUST_CLIPBOARD_WRITE_TEXT,
+  RUST_DIALOG_MESSAGE,
+  RUST_DIALOG_OPEN,
+  RUST_DIALOG_SAVE,
+  RUST_HUMBLE_LOGIN_CLEAR_COOKIES,
+  RUST_HUMBLE_LOGIN_CLEAR_STORAGE,
+  RUST_HUMBLE_LOGIN_CLOSE,
+  RUST_HUMBLE_LOGIN_COOKIES,
+  RUST_HUMBLE_LOGIN_COOKIES_FOR_DOMAIN,
+  RUST_HUMBLE_LOGIN_OPEN,
+  RUST_HUMBLE_LOGIN_TAKE_EVENTS,
+  RUST_HUMBLE_REVEAL_POST,
+  RUST_KEYRING_AVAILABLE,
+  RUST_KEYRING_DELETE,
+  RUST_KEYRING_GET,
+  RUST_KEYRING_SET,
+  RUST_MAIN_WINDOW_RAISE,
+  RUST_NOTIFICATION_SHOW,
+  RUST_SCAN_CONTAINED_REAL,
+  RUST_SCAN_PE_IMPORTED_DLLS,
+  RUST_SCAN_STEAMSTUB_SECTION,
+  RUST_SCAN_STEAM_API_IMPORTS,
+  RUST_SCAN_STEAM_DRM,
+  RUST_SCAN_WINEMAC_METAL_EXPORTS,
+  RUST_SHELL_OPEN_PATH,
+  RUST_SHELL_SHOW_ITEM_IN_FOLDER,
+  RUST_STORE_EMBED_BACK,
+  RUST_STORE_EMBED_CLOSE,
+  RUST_STORE_EMBED_FORWARD,
+  RUST_STORE_EMBED_HIDE,
+  RUST_STORE_EMBED_NAVIGATE,
+  RUST_STORE_EMBED_OPEN,
+  RUST_STORE_EMBED_RELOAD,
+  RUST_STORE_EMBED_SET_BOUNDS,
+  RUST_STORE_EMBED_SHOW,
+  RUST_STORE_EMBED_TAKE_NAV_EVENTS,
+  RUST_TRAY_SET_ICON,
+  RUST_WAKE_LOCK_START,
+  RUST_WAKE_LOCK_STOP,
+  type RustInvokeChannel
+} from '../sidecarTransport'
 
 /**
  * Phase 67 D-13: one args-tuple schema per RUST_INVOKE_CHANNELS entry, consumed by
- * `meta/genIpcContract.ts` to emit Rust arg structs. Filled by 67-06; the sidecar does not
+ * `meta/genIpcContract.ts` to emit Rust arg structs, and by `requestRustInvoke` (type-only,
+ * via `RustInvokeArgsOf`) so call sites are checked at compile time. The sidecar does not
  * re-check these at runtime. Kept out of `sidecarTransport.ts` because the preload value-imports
  * that file and zod must not reach the renderer.
+ *
+ * Written against what the Rust arms in `src-tauri/src/store_embed.rs` actually read. Plain
+ * `z.object` (not strict): args are sidecar-produced and Electron option objects carry extra keys
+ * Rust ignores. `.optional()` maps to serde `Option` (absent and null both read as None).
  */
-export const rustInvokeArgs: Partial<Record<RustInvokeChannel, z.ZodTuple>> = {}
+
+/** The keyring slot is optional on the wire: Rust defaults an ABSENT slot to the Steam token. */
+const slot = z.string().meta({ title: 'slot' })
+const label = z.string().meta({ title: 'label' })
+const names = z.array(z.string()).meta({ title: 'names' })
+const dialogFilters = z.array(
+  z.object({
+    name: z.string().optional(),
+    extensions: z.array(z.string()).optional()
+  })
+)
+const bounds = {
+  x: z.number(),
+  y: z.number(),
+  w: z.number(),
+  h: z.number()
+}
+const exePath = z.tuple([z.object({ exePath: z.string() })])
+const empty = z.tuple([])
+
+export const rustInvokeArgs = {
+  // ---- Keychain
+  [RUST_KEYRING_GET]: z.tuple([slot.optional()]).meta({
+    'x-error-prefix': 'keyring'
+  }),
+  [RUST_KEYRING_SET]: z
+    .tuple([z.string().meta({ title: 'secret' }), slot.optional()])
+    .meta({ 'x-error-prefix': 'keyring' }),
+  [RUST_KEYRING_DELETE]: z.tuple([slot.optional()]).meta({
+    'x-error-prefix': 'keyring'
+  }),
+  [RUST_KEYRING_AVAILABLE]: z.tuple([slot.optional()]).meta({
+    'x-error-prefix': 'keyring'
+  }),
+  // ---- Dialogs, notification, shell
+  [RUST_DIALOG_OPEN]: z.tuple([
+    z.object({
+      title: z.string().optional(),
+      defaultPath: z.string().optional(),
+      properties: z.array(z.string()).optional(),
+      filters: dialogFilters.optional()
+    })
+  ]),
+  [RUST_DIALOG_MESSAGE]: z.tuple([
+    z.object({
+      message: z.string().optional(),
+      title: z.string().optional(),
+      kind: z.string().optional(),
+      buttons: z.array(z.string()).optional()
+    })
+  ]),
+  [RUST_DIALOG_SAVE]: z.tuple([
+    z.object({
+      defaultPath: z.string().optional(),
+      filters: dialogFilters.optional()
+    })
+  ]),
+  [RUST_NOTIFICATION_SHOW]: z.tuple([
+    z.object({ title: z.string().optional(), body: z.string().optional() })
+  ]),
+  [RUST_SHELL_SHOW_ITEM_IN_FOLDER]: z.tuple([
+    z.string().meta({ title: 'path' })
+  ]),
+  [RUST_SHELL_OPEN_PATH]: z.tuple([z.string().meta({ title: 'path' })]),
+  // ---- App lifecycle
+  [RUST_APP_EXIT]: empty,
+  [RUST_APP_RELAUNCH]: empty,
+  [RUST_APP_HIDE]: empty,
+  [RUST_MAIN_WINDOW_RAISE]: empty,
+  [RUST_BRIDGE_INVITE_PICKER_OPEN]: z.tuple([
+    z.object({ appId: z.string(), ackId: z.string() })
+  ]),
+  // ---- Clipboard, tray
+  [RUST_CLIPBOARD_WRITE_TEXT]: z.tuple([z.string().meta({ title: 'text' })]),
+  [RUST_CLIPBOARD_READ_TEXT]: empty,
+  [RUST_TRAY_SET_ICON]: z.tuple([
+    z.object({ variant: z.enum(['auto', 'light', 'dark']) })
+  ]),
+  // ---- Login windows (Humble / Epic / GOG)
+  [RUST_HUMBLE_LOGIN_OPEN]: z.tuple([
+    z.string().meta({ title: 'url' }),
+    z.boolean().meta({ title: 'visible' }),
+    z.string().meta({ title: 'user_agent' })
+  ]),
+  [RUST_HUMBLE_LOGIN_COOKIES]: z.tuple([
+    label,
+    z.string().meta({ title: 'host' }),
+    names
+  ]),
+  [RUST_HUMBLE_LOGIN_COOKIES_FOR_DOMAIN]: z.tuple([
+    label,
+    z.string().meta({ title: 'domain' }),
+    names
+  ]),
+  [RUST_HUMBLE_LOGIN_TAKE_EVENTS]: z.tuple([label]),
+  [RUST_HUMBLE_LOGIN_CLOSE]: z.tuple([label]),
+  [RUST_HUMBLE_LOGIN_CLEAR_COOKIES]: z.tuple([
+    label,
+    z.string().meta({ title: 'domain' })
+  ]),
+  [RUST_HUMBLE_REVEAL_POST]: z.tuple([
+    z.string().meta({ title: 'origin_url' }),
+    z.string().meta({ title: 'path' }),
+    z.string().meta({ title: 'body' }),
+    z.string().nullable().meta({ title: 'csrf_token' }),
+    z.string().meta({ title: 'user_agent' })
+  ]),
+  [RUST_HUMBLE_LOGIN_CLEAR_STORAGE]: z.tuple([
+    z.string().meta({ title: 'origin_url' }),
+    z.string().meta({ title: 'user_agent' })
+  ]),
+  // ---- Store embed
+  [RUST_STORE_EMBED_OPEN]: z.tuple([
+    z.object({
+      url: z.string(),
+      ...bounds,
+      storeKey: z.string(),
+      homeUrl: z.string().nullish()
+    })
+  ]),
+  [RUST_STORE_EMBED_SET_BOUNDS]: z.tuple([z.object(bounds)]),
+  [RUST_STORE_EMBED_HIDE]: empty,
+  [RUST_STORE_EMBED_SHOW]: empty,
+  [RUST_STORE_EMBED_CLOSE]: empty,
+  [RUST_STORE_EMBED_TAKE_NAV_EVENTS]: empty,
+  [RUST_STORE_EMBED_BACK]: empty,
+  [RUST_STORE_EMBED_FORWARD]: empty,
+  [RUST_STORE_EMBED_RELOAD]: empty,
+  [RUST_STORE_EMBED_NAVIGATE]: z.tuple([z.object({ url: z.string() })]),
+  // ---- Wake lock
+  [RUST_WAKE_LOCK_START]: z.tuple([z.string().meta({ title: 'kind' })]),
+  [RUST_WAKE_LOCK_STOP]: z.tuple([
+    z.number().int().min(0).max(4294967295).meta({ title: 'id' })
+  ]),
+  // ---- Executable scanners (all-string args objects; D-08: paths in, never bytes)
+  [RUST_SCAN_STEAM_API_IMPORTS]: z.tuple([
+    z.object({ exePath: z.string(), appId: z.string() })
+  ]),
+  [RUST_SCAN_STEAM_DRM]: exePath,
+  [RUST_SCAN_STEAMSTUB_SECTION]: exePath,
+  [RUST_SCAN_PE_IMPORTED_DLLS]: exePath,
+  [RUST_SCAN_CONTAINED_REAL]: z.tuple([
+    z.object({ path: z.string(), rootDir: z.string() })
+  ]),
+  [RUST_SCAN_WINEMAC_METAL_EXPORTS]: z.tuple([
+    z.object({ wineBundlePath: z.string() })
+  ])
+} satisfies Record<RustInvokeChannel, z.ZodTuple>
+
+/** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */
+export type RustInvokeArgsOf<C extends RustInvokeChannel> = z.input<
+  (typeof rustInvokeArgs)[C]
+>

@@ -1031,6 +1031,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'runnerMiscFlows.test.ts',
   'runnerSliceRegistration.test.ts',
   'rustInvokeChannel.test.ts',
+  'rustInvokeSchemas.test.ts',
   'seamBranchParity.test.ts',
   'sendChannelObservable.test.ts',
   'settingsFlows.test.ts',
