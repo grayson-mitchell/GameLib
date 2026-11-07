@@ -44,6 +44,13 @@ jest.mock('../games', () => ({
   default: jest.fn()
 }))
 
+// 65-13: checkBottleEligibility is a free function in gameEligibility.ts now;
+// the SteamGame instance is only its argument.
+jest.mock('../gameEligibility', () => ({
+  checkBottleEligibility: (...args: unknown[]) =>
+    mockCheckBottleEligibility(...args)
+}))
+
 jest.mock('../bridgeRouteVerdict', () => ({
   // Plan 13 (D-51-09): getSteamBottleEligibilityVerdict composes this named
   // export when eligible -- mocked here so its own tests (the
@@ -127,9 +134,7 @@ const sentinelGlobalEngine: WineInstallation = {
 
 describe('installFormIpc.ts', () => {
   beforeEach(() => {
-    mockedSteamGame.mockImplementation(() => ({
-      checkBottleEligibility: mockCheckBottleEligibility
-    }))
+    mockedSteamGame.mockImplementation(() => ({}))
     mockedGetNodefault.mockReturnValue(undefined)
     // Default: uncaptured/absent cache entry — the timeout/offline shape.
     // Specs that need a captured entry override this per-test.

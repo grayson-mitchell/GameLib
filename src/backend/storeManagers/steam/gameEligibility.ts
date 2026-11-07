@@ -153,10 +153,6 @@ export async function checkBridgeRoute(
   return bridgeRoute(steamGame, options)
 }
 
-export function isBridgeEligible(steamGame: SteamGame): boolean {
-  return bridgeRoute(steamGame).route === 'bridge'
-}
-
 /**
  * D-51-07: auto-clears a persisted scan-miss the moment the currently
  * shipped shim is proven to cover every symbol it used to miss —

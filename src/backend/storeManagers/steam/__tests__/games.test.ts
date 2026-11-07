@@ -36,6 +36,7 @@ import { steamMetadataStore, steamLibraryStore } from '../stores'
 import { TITLE_AUTHORITATIVE_KEYS } from '../titleSettings'
 import SteamGame from '../games'
 import * as gameMetadata from '../gameMetadata'
+import { checkBottleEligibility } from '../gameEligibility'
 import {
   buildDrmLaunchEnvironment,
   drmBottleWinPath,
@@ -8889,18 +8890,19 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     // — the bridge composition is consulted independently by each caller.
     const uninstallGame = new SteamGame(APP_ID)
 
-    const uninstallBridgeSpy = jest
-      .spyOn(uninstallGame as any, 'uninstallBridgeGame')
-
-      .mockResolvedValue({ stdout: '', stderr: '' } as any)
+    // 65-13: uninstallBridgeGame is now a free function called from inside
+    // gameUninstall.ts, so a method spy can no longer intercept it. Observe
+    // the bridge branch through its first collaborator instead: the bridge
+    // uninstall always removes the per-game bottle through
+    // removePerGameBridgeBottle, which must stay untouched here.
     await uninstallGame.uninstall({} as any)
-    expect(uninstallBridgeSpy).not.toHaveBeenCalled()
+    expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
   })
 
   it('D6: checkBottleEligibility() resolves true for a forced game', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
     const game = new SteamGame(APP_ID)
-    await expect(game.checkBottleEligibility()).resolves.toBe(true)
+    await expect(checkBottleEligibility(game)).resolves.toBe(true)
   })
 
   // ── N1-N3: fail-safe baselines — must pass BEFORE and AFTER Task 2 ───────
@@ -9632,7 +9634,7 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
     mockStatefulMetadataStore({ platformsCaptured: undefined })
     ;(axios.get as jest.Mock).mockResolvedValue(windowsOnlyFixture)
 
-    const result = await new SteamGame(APP_ID).checkBottleEligibility()
+    const result = await checkBottleEligibility(new SteamGame(APP_ID))
 
     expect(result).toBe(true)
     expect(axios.get).toHaveBeenCalled()
@@ -9642,7 +9644,7 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
     mockStatefulMetadataStore({ platformsCaptured: undefined })
     ;(axios.get as jest.Mock).mockResolvedValue(macNativeFixture)
 
-    const result = await new SteamGame(APP_ID).checkBottleEligibility()
+    const result = await checkBottleEligibility(new SteamGame(APP_ID))
 
     expect(result).toBe(false)
   })
@@ -9650,7 +9652,7 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
   it('already-captured entry resolves true with no redundant network', async () => {
     mockStatefulMetadataStore({ platformsCaptured: true, is_mac_native: false })
 
-    const result = await new SteamGame(APP_ID).checkBottleEligibility()
+    const result = await checkBottleEligibility(new SteamGame(APP_ID))
 
     expect(result).toBe(true)
     expect(axios.get).not.toHaveBeenCalled()
@@ -9660,7 +9662,7 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
     envMock.isMac = false
     mockStatefulMetadataStore({ platformsCaptured: undefined })
 
-    const result = await new SteamGame(APP_ID).checkBottleEligibility()
+    const result = await checkBottleEligibility(new SteamGame(APP_ID))
 
     expect(result).toBe(false)
     expect(axios.get).not.toHaveBeenCalled()
@@ -9673,7 +9675,7 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
       mac_arch: '32'
     })
 
-    const result = await new SteamGame(APP_ID).checkBottleEligibility()
+    const result = await checkBottleEligibility(new SteamGame(APP_ID))
 
     expect(result).toBe(true)
   })

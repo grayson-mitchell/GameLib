@@ -223,6 +223,7 @@ import { library } from '../state'
 import { steamMetadataStore } from '../stores'
 import { downloadSteamDepots } from '../depot'
 import SteamGame from '../games'
+import { checkBottleEligibility } from '../gameEligibility'
 import { SteamUser } from '../user'
 
 const APP_ID = '63000'
@@ -320,9 +321,9 @@ describe('known-fix macArch 32 routing', () => {
   })
 
   it('checkBottleEligibility: true on Apple silicon, false on Intel', async () => {
-    expect(await new SteamGame(APP_ID).checkBottleEligibility()).toBe(true)
+    expect(await checkBottleEligibility(new SteamGame(APP_ID))).toBe(true)
     store.set(APP_ID, { ...store.get(APP_ID), mac_arch: 'unknown' })
     env().isAppleSiliconMac = false
-    expect(await new SteamGame(APP_ID).checkBottleEligibility()).toBe(false)
+    expect(await checkBottleEligibility(new SteamGame(APP_ID))).toBe(false)
   })
 })

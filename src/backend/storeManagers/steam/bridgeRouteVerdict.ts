@@ -8,7 +8,9 @@ import * as bridgeBottle from './bridgeBottle'
 import { NUMERIC_APP_ID } from './gameConstants'
 import {
   ensurePlatformsCaptured,
-  isForcedWindowsViaBottle
+  isForcedWindowsViaBottle,
+  checkBridgeRoute,
+  checkBottleEligibility
 } from './gameEligibility'
 
 /**
@@ -66,7 +68,7 @@ export async function getBridgeRouteVerdict(
     windowsBuildChosen === undefined &&
     isForcedWindowsViaBottle(game) &&
     bridgeBottle.findBridgeInstallBottle(appId) !== null
-  const verdict = await game.checkBridgeRoute({
+  const verdict = await checkBridgeRoute(game, {
     windowsBuildChosen: explicitChoice || locationChoice
   })
 
@@ -82,7 +84,7 @@ export async function getBridgeRouteVerdict(
     installedIn = 'bridge'
   } else if (
     library.get(appId)?.is_installed === true &&
-    (await game.checkBottleEligibility())
+    (await checkBottleEligibility(game))
   ) {
     installedIn = 'bottle'
   }

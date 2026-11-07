@@ -57,7 +57,6 @@ exports	src/backend/storeManagers/steam/gameBridgeLaunch.ts	runBridgeLaunch
 exports	src/backend/storeManagers/steam/gameDrmLaunch.ts	DRM_DLL_OVERRIDES
 exports	src/backend/storeManagers/steam/gameEligibility.ts	assembleBridgeRouteInput
 exports	src/backend/storeManagers/steam/gameEligibility.ts	isBottleEligibleFromPlatforms
-exports	src/backend/storeManagers/steam/gameEligibility.ts	isForcedWindowsViaBottle
 exports	src/backend/storeManagers/steam/gameInstall.ts	crossoverRequiredError
 exports	src/backend/storeManagers/steam/gameInstall.ts	hasBottledSteamCopy
 exports	src/backend/storeManagers/steam/gameInstall.ts	removeDemotedNativeOrphan

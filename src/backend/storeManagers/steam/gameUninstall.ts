@@ -67,7 +67,7 @@ export async function uninstall(
   // route (unaffected by the install_path routing fix below — see this
   // method's own JSDoc).
   if (findBridgeInstallBottle(steamGame.appId) !== null) {
-    return steamGame.uninstallBridgeGame()
+    return uninstallBridgeGame(steamGame)
   }
 
   // D-10/D-11: a bottle-eligible title whose CrossOver bottle was never
@@ -192,9 +192,7 @@ function failUninstall(steamGame: SteamGame, stderr: string): ExecResult {
   return { stdout: '', stderr, failed: true }
 }
 
-export async function uninstallBridgeGame(
-  steamGame: SteamGame
-): Promise<ExecResult> {
+async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
   const bottleName = getBridgeBottleSettings(
     steamGame.appId
   ).wineCrossoverBottle

@@ -37,7 +37,6 @@ import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
 import { noteSteamAuthTrigger } from './authTrigger'
 import { type DrmLaunchReady } from './bridge/drm/drmLaunchSetup'
 import { stopBridgeHelper } from './bridge/helperProcess'
-import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import type { EnginePin } from 'backend/engine/enginePins'
 import {
   nativeInstallsInFlight,
@@ -45,13 +44,7 @@ import {
   loggedEmptyGameInfoMisses
 } from './gameSessionState'
 import { type DrmWineLaunch } from './gameDrmLaunch'
-import {
-  isNative,
-  isBottleEligible,
-  checkBridgeRoute,
-  isBridgeEligible,
-  checkBottleEligibility
-} from './gameEligibility'
+import { isNative, isBottleEligible } from './gameEligibility'
 import {
   install,
   installNative,
@@ -71,7 +64,7 @@ import {
   launchDrmModeGame
 } from './gameLaunch'
 import { moveInstall, repair, syncSaves } from './gameMaintenance'
-import { uninstall, uninstallBridgeGame } from './gameUninstall'
+import { uninstall } from './gameUninstall'
 
 export default class SteamGame implements Game {
   readonly appId: string
@@ -93,7 +86,7 @@ export default class SteamGame implements Game {
    * bottle's real wineVersion/wineCrossoverBottle, not an empty config.
    */
   async getSettings(): Promise<GameSettings> {
-    if (this.isBottleEligible()) {
+    if (isBottleEligible(this)) {
       // 59-UAT G11: the engine override is per game and written to this
       // title's GameConfig (where the launch reads it), so the shared bottle
       // settings alone made the Settings screen read it back as Automatic.
@@ -452,72 +445,6 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * The single source of truth for whether getSettings()/isNative()/
-   * install()/launch()/uninstall() should route through the bottled Steam
-   * client instead of the native steam:// path — the OR of the platform-
-   * derived verdict and the D-17 persisted forced verdict. One seam, five
-   * consistent surfaces (34.13-14): all five callers below are unchanged by
-   * this split and become consistent together the moment either half
-   * changes.
-   */
-  private isBottleEligible(): boolean {
-    return isBottleEligible(this)
-  }
-
-  /**
-   * D-51-09: the backend-authoritative bridge-route read, exposed over IPC
-   * by the exported `getBridgeRouteVerdict()` below (51-13's actual IPC
-   * surface) — the `checkBottleEligibility()` precedent for a second
-   * resolver. Forces platform capture first for the same reason
-   * `checkBottleEligibility()` does: a cold metadata cache must never read
-   * as a routing answer.
-   */
-  checkBridgeRoute(options?: {
-    windowsBuildChosen?: boolean
-  }): Promise<SteamBridgeRouteVerdict> {
-    return checkBridgeRoute(this, options)
-  }
-
-  /**
-   * ROADMAP sub-decision 2 / D-51-07: delegates entirely to the pure
-   * resolver — true exactly when `bridgeRoute().route === 'bridge'`. The
-   * allowlist is no longer the gate by itself (assumption_delta_decision,
-   * 51-09): a non-seed, never-scanned, bottle-eligible title now ALSO
-   * routes to the bridge (reason `'pending-scan'`) and gets scanned on its
-   * own first install — superseding this method's pre-51-09 behavior, where
-   * a non-allowlisted title fell straight through to the D-15/D-13 opt-in
-   * branches below (see this file's test suite for the updated coverage).
-   *
-   * D-17 (34.13-14) pin, carried forward unchanged: `bridgeRoute()` (via
-   * `assembleBridgeRouteInput()`) composes ONLY
-   * `isBottleEligibleFromPlatforms()`, never the widened `isBottleEligible()`
-   * / the D-17 forced verdict — see that method's own doc comment above.
-   */
-  private isBridgeEligible(): boolean {
-    return isBridgeEligible(this)
-  }
-
-  /**
-   * D-09's single backend-authoritative bottle-eligibility seam, consumed
-   * over IPC by plan 34.13-07 (`isSteamBottleEligible`) and, through that
-   * channel, by 34.13-11's in-dialog eligibility probe (D-25 — the options
-   * dialog opens instantly and its wine section carries the loading state;
-   * the quick-install path deliberately never probes at all, because
-   * `install()` resolves eligibility itself). Composes the two private
-   * predicates below rather than widening either — the `isBridgeEligible()`
-   * pattern above, a third instance of it in this file, not a new one.
-   *
-   * The `await` is load-bearing: skipping it would let a cold metadata
-   * cache read as "not eligible" (the guided-setup-never-fires defect this
-   * seam exists to prevent). Worst-case latency is `ensurePlatformsCaptured`'s
-   * own bounded poll, capped at `METADATA_FETCH_TIMEOUT_MS` (15000ms,
-   * `state.ts:30`) — the number 34.13-11's D-25 loading row must cite.
-   */
-  checkBottleEligibility(): Promise<boolean> {
-    return checkBottleEligibility(this)
-  }
-
-  /**
    * Writes the per-OS shortcut through the shared shortcuts module. The target is
    * `gamelib://launch?appName={appId}&runner=steam`; protocol.ts hands that to
    * dispatchSteamLaunch, so a shortcut launch takes the same bridge/bottle/native route as the
@@ -758,46 +685,6 @@ export default class SteamGame implements Game {
    */
   uninstall(_args: RemoveArgs): Promise<ExecResult> {
     return uninstall(this, _args)
-  }
-
-  /**
-   * Phase 24 Plan 08 (R4/R6): allowlisted-title bridge uninstall path.
-   * Unlike the Phase 17 bottled-Steam-client dispatch above, the bridge
-   * bottle has no Steam client to hand a `steam://uninstall` verb to at
-   * all (R6 — no Windows Steam client in the bridge bottle) — GameLib owns
-   * removal directly, consistent with the files-on-disk ownership model
-   * the bridge install path already commits to (finding #10). Removes
-   * ONLY the game's own install root inside THIS game's own bridge bottle
-   * (getBridgeBottleSettings(appId), quick/261016-u1w D-B) — never touches
-   * the Phase 17 GameLibSteam bottle.
-   *
-   * quick/261016-u1w (D-D): when this game's bottle IS its own per-game
-   * bottle (`bridgeBottleNameFor(appId)`), the whole bottle belongs to the
-   * game, so the whole bottle is removed via removePerGameBridgeBottle —
-   * no resolveBridgeLaunchExe/install-root resolution needed. Otherwise
-   * (the game still lives in the legacy shared bottle), the direct-deletion
-   * body below resolves the install root the SAME way installBridgeGame()
-   * does (resolveBridgeGameInstallRoot, via resolveBridgeLaunchExe) rather
-   * than a second, divergent path-derivation — reuse, not a parallel
-   * implementation.
-   *
-   * quick/261017-bqw: the legacy branch ALSO removes this appId's own
-   * `appmanifest_<appId>.acf` from the legacy bottle's steamapps dir,
-   * together with the install root. A surviving manifest is read back by
-   * buildBridgeInstalledMap() and resolveBridgeBottleName() on the refresh
-   * that markBridgeGameUninstalled()'s `gameStatusUpdate done` triggers —
-   * that refresh re-marked the game installed with a deleted install_path
-   * and hid it from the Library grid, as measured live by quick task
-   * 261016-wsq, Arm 2 (uninstalling Avernum 5 / 206040 from the legacy
-   * bottle). The per-game branch above gets the same result by
-   * construction, because it removes the whole bottle.
-   *
-   * @internal Public only so lifted modules reach it via
-   * steamGame.uninstallBridgeGame() (test spy: games.test.ts:8763); do not
-   * call from outside steam/.
-   */
-  uninstallBridgeGame(): Promise<ExecResult> {
-    return uninstallBridgeGame(this)
   }
 
   async update(): Promise<InstallResult> {
