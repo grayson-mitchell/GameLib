@@ -3,8 +3,6 @@
   "src/backend/shortcuts": 52,
   "src/backend/sidecar": 165,
   "src/backend/tools": 120,
-  "src/common/knownFixOverlayCatalogue.ts": 1,
-  "src/common/types": 1,
   "src/frontend/components": 217,
   "src/frontend/helpers": 130,
   "src/frontend/screens": 335,

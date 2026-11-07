@@ -342,7 +342,9 @@ export function isWritableStoreField(storeName: string, key: string): boolean {
   if (!denied) {
     return true
   }
-  return !denied.includes(key.split('.')[0])
+  const topSegment = key.split('.')[0]
+  if (topSegment === undefined) return false
+  return !denied.includes(topSegment)
 }
 
 /**

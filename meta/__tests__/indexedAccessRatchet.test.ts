@@ -70,7 +70,9 @@ describe('indexedAccessRatchet bucketOf', () => {
       'src/frontend/hooks',
       'src/frontend/styles',
       'src/common/winetricks',
-      'src/common/reportProblem.ts'
+      'src/common/reportProblem.ts',
+      'src/common/knownFixOverlayCatalogue.ts',
+      'src/common/types'
     ])
   })
 })
