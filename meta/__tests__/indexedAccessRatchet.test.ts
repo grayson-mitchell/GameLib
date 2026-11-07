@@ -61,7 +61,8 @@ describe('indexedAccessRatchet bucketOf', () => {
       'src/backend/signInProbe',
       'src/backend/scanners',
       'src/backend/storeManagers/sideload',
-      'src/backend/appshell'
+      'src/backend/appshell',
+      'src/backend/logger'
     ])
   })
 })

@@ -69,7 +69,9 @@ const LINE_BREAK_ESCAPES: Readonly<Record<string, string>> = {
  * the single line it was logged on — without being able to forge a new one.
  */
 function escapeLineBreaks(value: string): string {
-  return value.replace(LINE_BREAK_RE, (char) => LINE_BREAK_ESCAPES[char])
+  // LINE_BREAK_RE only matches keys of the table. If that ever drifts, drop the raw break
+  // rather than let it through to forge a log line.
+  return value.replace(LINE_BREAK_RE, (char) => LINE_BREAK_ESCAPES[char] ?? '')
 }
 
 /**
