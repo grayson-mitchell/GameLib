@@ -476,7 +476,7 @@ pub(crate) struct KeyringGetArgs {
 
 impl KeyringGetArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let slot = args.get(0).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
+        let slot = args.first().filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
         Ok(Self { slot })
     }
 }
@@ -489,7 +489,7 @@ pub(crate) struct KeyringSetArgs {
 
 impl KeyringSetArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let secret = serde_json::from_value(args.get(0).ok_or_else(|| "keyring:bad-args".to_string())?.clone()).map_err(|_| "keyring:bad-args".to_string())?;
+        let secret = serde_json::from_value(args.first().ok_or_else(|| "keyring:bad-args".to_string())?.clone()).map_err(|_| "keyring:bad-args".to_string())?;
         let slot = args.get(1).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
         Ok(Self { secret, slot })
     }
@@ -502,7 +502,7 @@ pub(crate) struct KeyringDeleteArgs {
 
 impl KeyringDeleteArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let slot = args.get(0).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
+        let slot = args.first().filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
         Ok(Self { slot })
     }
 }
@@ -514,7 +514,7 @@ pub(crate) struct KeyringAvailableArgs {
 
 impl KeyringAvailableArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let slot = args.get(0).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
+        let slot = args.first().filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
         Ok(Self { slot })
     }
 }
@@ -612,7 +612,7 @@ pub(crate) struct ShellShowItemInFolderArgs {
 
 impl ShellShowItemInFolderArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let path = serde_json::from_value(args.get(0).ok_or_else(|| "shell_show_item_in_folder:bad-args".to_string())?.clone()).map_err(|_| "shell_show_item_in_folder:bad-args".to_string())?;
+        let path = serde_json::from_value(args.first().ok_or_else(|| "shell_show_item_in_folder:bad-args".to_string())?.clone()).map_err(|_| "shell_show_item_in_folder:bad-args".to_string())?;
         Ok(Self { path })
     }
 }
@@ -624,7 +624,7 @@ pub(crate) struct ShellOpenPathArgs {
 
 impl ShellOpenPathArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let path = serde_json::from_value(args.get(0).ok_or_else(|| "shell_open_path:bad-args".to_string())?.clone()).map_err(|_| "shell_open_path:bad-args".to_string())?;
+        let path = serde_json::from_value(args.first().ok_or_else(|| "shell_open_path:bad-args".to_string())?.clone()).map_err(|_| "shell_open_path:bad-args".to_string())?;
         Ok(Self { path })
     }
 }
@@ -687,7 +687,7 @@ pub(crate) struct ClipboardWriteTextArgs {
 
 impl ClipboardWriteTextArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let text = serde_json::from_value(args.get(0).ok_or_else(|| "clipboard_write_text:bad-args".to_string())?.clone()).map_err(|_| "clipboard_write_text:bad-args".to_string())?;
+        let text = serde_json::from_value(args.first().ok_or_else(|| "clipboard_write_text:bad-args".to_string())?.clone()).map_err(|_| "clipboard_write_text:bad-args".to_string())?;
         Ok(Self { text })
     }
 }
@@ -732,7 +732,7 @@ pub(crate) struct HumbleLoginOpenArgs {
 
 impl HumbleLoginOpenArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let url = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_open:bad-args".to_string())?.clone()).map_err(|_| "humble_login_open:bad-args".to_string())?;
+        let url = serde_json::from_value(args.first().ok_or_else(|| "humble_login_open:bad-args".to_string())?.clone()).map_err(|_| "humble_login_open:bad-args".to_string())?;
         let visible = serde_json::from_value(args.get(1).ok_or_else(|| "humble_login_open:bad-args".to_string())?.clone()).map_err(|_| "humble_login_open:bad-args".to_string())?;
         let user_agent = serde_json::from_value(args.get(2).ok_or_else(|| "humble_login_open:bad-args".to_string())?.clone()).map_err(|_| "humble_login_open:bad-args".to_string())?;
         Ok(Self { url, visible, user_agent })
@@ -748,7 +748,7 @@ pub(crate) struct HumbleLoginCookiesArgs {
 
 impl HumbleLoginCookiesArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let label = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_cookies:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies:bad-args".to_string())?;
+        let label = serde_json::from_value(args.first().ok_or_else(|| "humble_login_cookies:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies:bad-args".to_string())?;
         let host = serde_json::from_value(args.get(1).ok_or_else(|| "humble_login_cookies:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies:bad-args".to_string())?;
         let names = serde_json::from_value(args.get(2).ok_or_else(|| "humble_login_cookies:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies:bad-args".to_string())?;
         Ok(Self { label, host, names })
@@ -764,7 +764,7 @@ pub(crate) struct HumbleLoginCookiesForDomainArgs {
 
 impl HumbleLoginCookiesForDomainArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let label = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies_for_domain:bad-args".to_string())?;
+        let label = serde_json::from_value(args.first().ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies_for_domain:bad-args".to_string())?;
         let domain = serde_json::from_value(args.get(1).ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies_for_domain:bad-args".to_string())?;
         let names = serde_json::from_value(args.get(2).ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?.clone()).map_err(|_| "humble_login_cookies_for_domain:bad-args".to_string())?;
         Ok(Self { label, domain, names })
@@ -778,7 +778,7 @@ pub(crate) struct HumbleLoginTakeEventsArgs {
 
 impl HumbleLoginTakeEventsArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let label = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_take_events:bad-args".to_string())?.clone()).map_err(|_| "humble_login_take_events:bad-args".to_string())?;
+        let label = serde_json::from_value(args.first().ok_or_else(|| "humble_login_take_events:bad-args".to_string())?.clone()).map_err(|_| "humble_login_take_events:bad-args".to_string())?;
         Ok(Self { label })
     }
 }
@@ -790,7 +790,7 @@ pub(crate) struct HumbleLoginCloseArgs {
 
 impl HumbleLoginCloseArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let label = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_close:bad-args".to_string())?.clone()).map_err(|_| "humble_login_close:bad-args".to_string())?;
+        let label = serde_json::from_value(args.first().ok_or_else(|| "humble_login_close:bad-args".to_string())?.clone()).map_err(|_| "humble_login_close:bad-args".to_string())?;
         Ok(Self { label })
     }
 }
@@ -803,7 +803,7 @@ pub(crate) struct HumbleLoginClearCookiesArgs {
 
 impl HumbleLoginClearCookiesArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let label = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_clear_cookies:bad-args".to_string())?.clone()).map_err(|_| "humble_login_clear_cookies:bad-args".to_string())?;
+        let label = serde_json::from_value(args.first().ok_or_else(|| "humble_login_clear_cookies:bad-args".to_string())?.clone()).map_err(|_| "humble_login_clear_cookies:bad-args".to_string())?;
         let domain = serde_json::from_value(args.get(1).ok_or_else(|| "humble_login_clear_cookies:bad-args".to_string())?.clone()).map_err(|_| "humble_login_clear_cookies:bad-args".to_string())?;
         Ok(Self { label, domain })
     }
@@ -820,7 +820,7 @@ pub(crate) struct HumbleRevealPostArgs {
 
 impl HumbleRevealPostArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let origin_url = serde_json::from_value(args.get(0).ok_or_else(|| "humble_reveal_post:bad-args".to_string())?.clone()).map_err(|_| "humble_reveal_post:bad-args".to_string())?;
+        let origin_url = serde_json::from_value(args.first().ok_or_else(|| "humble_reveal_post:bad-args".to_string())?.clone()).map_err(|_| "humble_reveal_post:bad-args".to_string())?;
         let path = serde_json::from_value(args.get(1).ok_or_else(|| "humble_reveal_post:bad-args".to_string())?.clone()).map_err(|_| "humble_reveal_post:bad-args".to_string())?;
         let body = serde_json::from_value(args.get(2).ok_or_else(|| "humble_reveal_post:bad-args".to_string())?.clone()).map_err(|_| "humble_reveal_post:bad-args".to_string())?;
         let csrf_token = serde_json::from_value(args.get(3).ok_or_else(|| "humble_reveal_post:bad-args".to_string())?.clone()).map_err(|_| "humble_reveal_post:bad-args".to_string())?;
@@ -837,7 +837,7 @@ pub(crate) struct HumbleLoginClearStorageArgs {
 
 impl HumbleLoginClearStorageArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let origin_url = serde_json::from_value(args.get(0).ok_or_else(|| "humble_login_clear_storage:bad-args".to_string())?.clone()).map_err(|_| "humble_login_clear_storage:bad-args".to_string())?;
+        let origin_url = serde_json::from_value(args.first().ok_or_else(|| "humble_login_clear_storage:bad-args".to_string())?.clone()).map_err(|_| "humble_login_clear_storage:bad-args".to_string())?;
         let user_agent = serde_json::from_value(args.get(1).ok_or_else(|| "humble_login_clear_storage:bad-args".to_string())?.clone()).map_err(|_| "humble_login_clear_storage:bad-args".to_string())?;
         Ok(Self { origin_url, user_agent })
     }
@@ -973,7 +973,7 @@ pub(crate) struct WakeLockStartArgs {
 
 impl WakeLockStartArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let kind = serde_json::from_value(args.get(0).ok_or_else(|| "wake_lock_start:bad-args".to_string())?.clone()).map_err(|_| "wake_lock_start:bad-args".to_string())?;
+        let kind = serde_json::from_value(args.first().ok_or_else(|| "wake_lock_start:bad-args".to_string())?.clone()).map_err(|_| "wake_lock_start:bad-args".to_string())?;
         Ok(Self { kind })
     }
 }
@@ -985,7 +985,7 @@ pub(crate) struct WakeLockStopArgs {
 
 impl WakeLockStopArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let id = serde_json::from_value(args.get(0).ok_or_else(|| "wake_lock_stop:bad-args".to_string())?.clone()).map_err(|_| "wake_lock_stop:bad-args".to_string())?;
+        let id = serde_json::from_value(args.first().ok_or_else(|| "wake_lock_stop:bad-args".to_string())?.clone()).map_err(|_| "wake_lock_stop:bad-args".to_string())?;
         Ok(Self { id })
     }
 }

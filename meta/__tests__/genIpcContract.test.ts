@@ -106,8 +106,25 @@ describe('renderArgsStruct', () => {
           .meta({ 'x-error-prefix': 'keyring' })
       )
     )
-    expect(r.text).toContain('args.get(0).filter(|v| !v.is_null()).map(')
+    expect(r.text).toContain('args.first().filter(|v| !v.is_null()).map(')
+    expect(r.text).not.toContain('args.get(0)')
     expect(r.text).toContain('pub(crate) slot: Option<String>,')
+  })
+  it('index 0 uses first() and later indices keep get(n) (clippy::get_first)', () => {
+    const r = renderArgsStruct(
+      'keyring_set',
+      js(
+        z
+          .tuple([
+            z.string().meta({ title: 'service' }),
+            z.string().meta({ title: 'note' }).optional()
+          ])
+          .meta({ 'x-error-prefix': 'keyring' })
+      )
+    )
+    expect(r.text).toContain('args.first().ok_or_else(')
+    expect(r.text).toContain('args.get(1).filter(')
+    expect(r.text).not.toContain('args.get(0)')
   })
   it('throws on an untitled positional item', () => {
     expect(() =>

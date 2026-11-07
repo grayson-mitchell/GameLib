@@ -44,10 +44,12 @@ const CLIPPY_TOOLCHAIN = '1.99.1'
 const CLIPPY_CEILINGS = {
   // 2026-11-07 quick-261107-8yq: measured 23 unique warnings (38 raw) on
   // rustc 1.99.1 / clippy 0.1.99, aarch64-apple-darwin.
+  // 2026-11-07 quick-261107-uh4: needless_borrow fell 2 -> 0 (intervening
+  // commits; CI run 42417450472 on 4422ba2f3, macos-latest), entry deleted;
+  // darwin not re-measured locally.
   darwin: {
     'clippy::doc_lazy_continuation': 5,
     'clippy::type_complexity': 2,
-    'clippy::needless_borrow': 2,
     'clippy::unnecessary_to_owned': 2,
     'clippy::cloned_ref_to_slice_refs': 2,
     non_snake_case: 2,

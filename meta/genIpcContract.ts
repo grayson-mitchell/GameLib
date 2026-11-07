@@ -397,13 +397,16 @@ export function renderArgsStruct(
       if (i >= minItems && !ty.startsWith('Option<')) ty = `Option<${ty}>`
       fields.push(`    pub(crate) ${ident}: ${ty},`)
       names.push(ident)
+      // clippy::get_first is held at zero by the clippy ratchet
+      // (meta/clippyRatchet.cjs), so index 0 must be read with first().
+      const accessor = i === 0 ? 'args.first()' : `args.get(${i})`
       if (i >= minItems) {
         lets.push(
-          `        let ${ident} = args.get(${i}).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| ${rustStr(err)}.to_string())?;`
+          `        let ${ident} = ${accessor}.filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| ${rustStr(err)}.to_string())?;`
         )
       } else {
         lets.push(
-          `        let ${ident} = serde_json::from_value(args.get(${i}).ok_or_else(|| ${rustStr(err)}.to_string())?.clone()).map_err(|_| ${rustStr(err)}.to_string())?;`
+          `        let ${ident} = serde_json::from_value(${accessor}.ok_or_else(|| ${rustStr(err)}.to_string())?.clone()).map_err(|_| ${rustStr(err)}.to_string())?;`
         )
       }
     })
