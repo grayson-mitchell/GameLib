@@ -196,8 +196,22 @@ for the next milestone are added below this line by `/gsd-phase`.
 
 ## Backlog
 
-No items. Phase 999.1 (cross-store signed-out / offline mode) was promoted to Phase 49 on
+Phase 999.1 (cross-store signed-out / offline mode) was promoted to Phase 49 on
 2026-10-08; its full text now lives under that entry.
+
+### Phase 999.2: x86 shim coverage — flat C API and current interface versions (BACKLOG)
+
+32-bit-only titles get the shim withheld by design (D-53-09 deferred x86). The x86 export list
+is hand-pinned (~50 bare accessors); the generated flat `SteamAPI_ISteam*` API exists for x64
+only, and x86 does not serve SteamUser020, SteamFriends017, SteamUtils009 or the current
+SteamApps/SteamUserStats versions. `classifyUnservableInterfaceVersions` therefore blocks
+placement, and `gameBridgeLaunch.ts` launches direct with no helper.
+
+Scope if promoted: x86 flat-API generation in `meta/gen_vtables.ts`, x86 manifests and vtables
+for the missing versions, a 32-bit shim build verified under Wine. **Acceptance title:** Cat
+Quest (593280, 32-bit Mono Unity, Steamworks.NET) — strict verified bar: shim HELLO plus a
+clean game Steam-init line in its `error.log` / `output_log.txt`. Diagnosis:
+`.planning/debug/resolved/cat-quest-shim-withheld.md`.
 
 **Adjacent, deliberately NOT folded in:** confirming that `APPLE_CERTIFICATE`,
 `APPLE_CERTIFICATE_PASSWORD` and `APPLE_SIGNING_IDENTITY` are enrolled as repo secrets — without

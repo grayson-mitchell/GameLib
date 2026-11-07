@@ -13,3 +13,20 @@ Cat Quest (593280, Unity, Steamworks.NET) routes to the native bridge (`bridge/p
 Not caused by the forced-Windows routing: a Windows-only title shipping the same steam_api would hit the same wall. Find out why this SDK's export set is judged uncovered (is the list really all uncovered, or is the scan miscounting a full-export DLL whose game only calls a few?) and why the helper is absent ("no helper"), then either extend coverage or decide the withheld-shim behaviour is right. Strict verified bar applies: shim HELLO plus a clean game Steam-init line in `output_log.txt` / `error.log`.
 
 Also observed in the same gate: Undertale (391540, GameMaker) logged `shim coverage miss … steam_api.dll@runtime-loaded`, launched with the helper `READY init=ok`, but produced no shim HELLO and no game-originated call. Check whether it is the same class before splitting it out.
+
+## Resolution
+
+Closed 2026-11-08 as **withheld is correct for x86 titles until D-53-09 is reopened** (debug
+session `.planning/debug/resolved/cat-quest-shim-withheld.md`).
+
+- **Root cause:** Cat Quest is 32-bit only (PE32 i386 exe and `steam_api.dll`). The x86 shim has
+  no generated flat C API and does not serve SteamUser020 / SteamFriends017 / SteamUtils009 or the
+  current SteamApps/SteamUserStats versions, so the coverage verdict blocks placement.
+- **Scan miscounting?** No. Steamworks.NET P/Invokes every flat method of the served families;
+  P/Invoke binds lazily so the scan cannot narrow to called methods, but the interface-version
+  gaps block regardless.
+- **"No helper":** deliberate — `gameBridgeLaunch.ts` skips the helper for `withheld` (nothing
+  for it to talk to).
+- **Undertale (391540):** a different class (shim placed over a runtime-loaded dll, helper READY,
+  no HELLO). Not merged here; track separately.
+- **Follow-up:** ROADMAP backlog Phase 999.2 (x86 shim coverage), Cat Quest as acceptance title.
