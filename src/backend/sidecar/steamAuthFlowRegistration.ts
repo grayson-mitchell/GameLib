@@ -140,6 +140,7 @@ import {
   startQRLogin,
   submitSteamGuardCode
 } from '../storeManagers/steam/userSignIn'
+import { redeemKey } from '../storeManagers/steam/userRedeem'
 import {
   steamSyncStore,
   steamBottleConfigStore
@@ -253,7 +254,7 @@ export function registerSteamAuthFlows(): void {
       ) {
         return { store: 'steam', outcome: 'error', message: 'invalid-request' }
       }
-      return SteamUser.redeemKey('steam', key)
+      return redeemKey('steam', key)
     }
   )
 

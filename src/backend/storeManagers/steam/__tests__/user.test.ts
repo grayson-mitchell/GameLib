@@ -181,6 +181,7 @@ jest.mock('../anonymousClient', () => ({
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import { SteamUser } from '../user'
+import { redeemKey } from '../userRedeem'
 import {
   pollCredentialLogin,
   pollQRLogin,
@@ -2101,7 +2102,7 @@ describe('SteamUser', () => {
         packageList: { '123': 'Some Game' }
       })
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',
@@ -2118,7 +2119,7 @@ describe('SteamUser', () => {
     test('releases the lease when client.redeemKey rejects', async () => {
       mockSteamUserInstance.redeemKey.mockRejectedValue(new Error('boom'))
 
-      await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(releaseLease).toHaveBeenCalledTimes(1)
     })
@@ -2129,7 +2130,7 @@ describe('SteamUser', () => {
         reason: 'go-offline-required'
       })
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',
@@ -2162,7 +2163,7 @@ describe('SteamUser', () => {
         })
         mockSteamUserInstance.redeemKey.mockRejectedValue(err)
 
-        const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+        const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
         expect(result.store).toBe('steam')
         expect(result.outcome).toBe(bucket)
@@ -2176,7 +2177,7 @@ describe('SteamUser', () => {
     test('rejected Error with no purchaseResultDetails -> transport failure classified as "error"', async () => {
       mockSteamUserInstance.redeemKey.mockRejectedValue(new Error('boom'))
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result.store).toBe('steam')
       expect(result.outcome).toBe('error')
@@ -2191,7 +2192,7 @@ describe('SteamUser', () => {
       })
       mockSteamUserInstance.redeemKey.mockRejectedValue(err)
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result.store).toBe('steam')
       expect(result.outcome).toBe('error')
@@ -2200,7 +2201,7 @@ describe('SteamUser', () => {
     test('not connected (lease refused): returns outcome "error" and never calls client.redeemKey', async () => {
       acquireSpy.mockResolvedValue({ ok: false, reason: 'not-signed-in' })
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',
@@ -2213,7 +2214,7 @@ describe('SteamUser', () => {
     test('not connected (client not ready): returns outcome "error" and never calls client.redeemKey', async () => {
       acquireSpy.mockResolvedValue({ ok: false, reason: 'client-not-ready' })
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result.outcome).toBe('error')
       expect(mockSteamUserInstance.redeemKey).not.toHaveBeenCalled()
@@ -2226,7 +2227,7 @@ describe('SteamUser', () => {
         packageList: {}
       })
 
-      await SteamUser.redeemKey('steam', secretKey)
+      await redeemKey('steam', secretKey)
 
       const mockedLogInfo = jest.mocked(logInfo)
       const mockedLogWarning = jest.mocked(logWarning)
@@ -2385,7 +2386,7 @@ describe('SteamUser', () => {
         )
       )
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',
@@ -2401,7 +2402,7 @@ describe('SteamUser', () => {
 
     test('redeemKey with any other refusal reports not-connected and pushes nothing', async () => {
       // not signed in: get_nodefault stays undefined
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',

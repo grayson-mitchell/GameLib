@@ -50,6 +50,8 @@ const USER = `${S}user.ts`
 // are the only other caller of acquireAuthenticatedWithToken (D-15).
 const USER_SIGN_IN = `${S}userSignIn.ts`
 const USER_SIGN_IN_STATE = `${S}userSignInState.ts`
+// 65-12: redeemKey was lifted out of user.ts; it leases through acquireAuthenticated.
+const USER_REDEEM = `${S}userRedeem.ts`
 const ACQUIRE_WITH_TOKEN_ALLOW = [USER, USER_SIGN_IN]
 const ANON = `${S}anonymousClient.ts`
 const GAMES = `${S}games.ts`
@@ -67,6 +69,7 @@ const GAME_MODULES = readdirSync(join(REPO_ROOT, S))
 
 const ACQUIRE_AUTH_ALLOW = [
   USER,
+  USER_REDEEM,
   `${S}library/refresh.ts`,
   `${S}depot/plan.ts`,
   `${S}depot/outcome.ts`,

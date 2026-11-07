@@ -104,6 +104,7 @@ jest.mock('backend/constants/environment', () => ({
 // LIB-01 convention for this exact module ────────────────────────────────────
 jest.mock('../../storeManagers/steam/user')
 jest.mock('../../storeManagers/steam/userSignIn')
+jest.mock('../../storeManagers/steam/userRedeem')
 
 // ── Plan 34.4-02 additions — bottle/clientSetup/games mocked at the module
 // boundary (their own logic is already covered by
@@ -134,6 +135,7 @@ import {
   startQRLogin,
   submitSteamGuardCode
 } from '../../storeManagers/steam/userSignIn'
+import { redeemKey } from '../../storeManagers/steam/userRedeem'
 import { getSteamLibraries } from 'backend/utils'
 import {
   configStore as steamConfigStore,
@@ -786,7 +788,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   describe('redeem / install size', () => {
     it('REQ-34.4-05 redeemSteamKey invoke, valid payload: reaches SteamUser.redeemKey with exactly the two positional args and the result round-trips', async () => {
       jest
-        .spyOn(SteamUser, 'redeemKey')
+        .mocked(redeemKey)
         .mockResolvedValue({ store: 'steam', outcome: 'success' })
 
       const { input, frames } = startSidecar()
@@ -801,8 +803,8 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         ok: true,
         result: { store: 'steam', outcome: 'success' }
       })
-      expect(jest.spyOn(SteamUser, 'redeemKey')).toHaveBeenCalledTimes(1)
-      expect(jest.spyOn(SteamUser, 'redeemKey')).toHaveBeenCalledWith(
+      expect(jest.mocked(redeemKey)).toHaveBeenCalledTimes(1)
+      expect(jest.mocked(redeemKey)).toHaveBeenCalledWith(
         'steam',
         'AAAAA-BBBBB-CCCCC'
       )
@@ -830,7 +832,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
           message: 'invalid-request'
         }
       })
-      expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
+      expect(jest.mocked(redeemKey)).not.toHaveBeenCalled()
     })
 
     it('REQ-34.4-05 redeemSteamKey invoke rejects a non-string key before reaching SteamUser.redeemKey', async () => {
@@ -852,7 +854,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
           message: 'invalid-request'
         }
       })
-      expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
+      expect(jest.mocked(redeemKey)).not.toHaveBeenCalled()
     })
 
     it('REQ-34.4-05 redeemSteamKey invoke rejects an empty-string key before reaching SteamUser.redeemKey', async () => {
@@ -872,7 +874,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
           message: 'invalid-request'
         }
       })
-      expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
+      expect(jest.mocked(redeemKey)).not.toHaveBeenCalled()
     })
 
     it('REQ-34.4-05 redeemSteamKey invoke rejects a missing/null payload before reaching SteamUser.redeemKey', async () => {
@@ -892,7 +894,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
           message: 'invalid-request'
         }
       })
-      expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
+      expect(jest.mocked(redeemKey)).not.toHaveBeenCalled()
     })
 
     it('REQ-34.4-05 no emitted log line or response frame in the rejection cases contains the submitted key value', async () => {
@@ -920,7 +922,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
           .map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg)))
           .join('\n')
         expect(allLoggedText).not.toContain(SECRET_KEY)
-        expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
+        expect(jest.mocked(redeemKey)).not.toHaveBeenCalled()
       } finally {
         logSpy.mockRestore()
         warnSpy.mockRestore()

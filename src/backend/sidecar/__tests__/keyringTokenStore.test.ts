@@ -1615,7 +1615,8 @@ describe('SidecarKeyringTokenStore', () => {
     const USER_SRC_PATHS = [
       'user.ts',
       'userSignIn.ts',
-      'userSignInState.ts'
+      'userSignInState.ts',
+      'userRedeem.ts'
     ].map((f) => join(__dirname, '..', '..', 'storeManagers', 'steam', f))
     const USER_SRC_PATH = USER_SRC_PATHS[0]
 
@@ -1646,9 +1647,9 @@ describe('SidecarKeyringTokenStore', () => {
       expect(processEnvSpecimen).toMatch(/process\.env/)
     })
 
-    it('comment-stripped user.ts, userSignIn.ts and userSignInState.ts contain zero process.env', () => {
+    it('comment-stripped user.ts, userSignIn.ts, userSignInState.ts and userRedeem.ts contain zero process.env', () => {
       // Non-vacuity: every path is a real, non-empty file.
-      expect(USER_SRC_PATHS).toHaveLength(3)
+      expect(USER_SRC_PATHS).toHaveLength(4)
       for (const path of USER_SRC_PATHS) {
         const raw = readFileSync(path, 'utf-8')
         expect(raw.length).toBeGreaterThan(500)
