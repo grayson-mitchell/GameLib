@@ -267,6 +267,36 @@ describe('dependency-cruiser boundary rules (seeded violations)', () => {
       }
     )
   })
+
+  test('games-split-modules-are-leaves covers the phase 65 module names (runtime import fires)', () => {
+    for (const mod of ['gameInstallBridge', 'bridgeInstallState']) {
+      withSeededRoot(
+        {
+          [`${SM}/steam/games.ts`]: `export default class SteamGame {}\n`,
+          [`${SM}/steam/${mod}.ts`]: `import SteamGame from './games'\nexport const s = SteamGame\n`
+        },
+        ({ cruise }) => {
+          const r = cruise()
+          expect(r.status).not.toBe(0)
+          expect(names(r)).toContain('games-split-modules-are-leaves')
+        }
+      )
+    }
+  })
+
+  test('games-split-modules-are-leaves allows a type-only import in a phase 65 module', () => {
+    withSeededRoot(
+      {
+        [`${SM}/steam/games.ts`]: `export default class SteamGame {}\n`,
+        [`${SM}/steam/gameInstallBridge.ts`]: `import type SteamGame from './games'\nexport type S = SteamGame\n`
+      },
+      ({ cruise }) => {
+        const r = cruise()
+        expect(r.status).toBe(0)
+        expect(names(r)).toEqual([])
+      }
+    )
+  })
 })
 
 describe('known-violations baseline (D-14)', () => {

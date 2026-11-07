@@ -76,7 +76,7 @@ module.exports = {
       comment:
         'Modules split out of steam/games.ts must not runtime-import games.ts.',
       from: {
-        path: `${STEAM}game(Constants|SessionState|Requirements|ProtocolUrl|DrmLaunch|Eligibility|Install|Launch|LaunchOverlay|BridgeLaunch|Maintenance|Uninstall)\\.ts$`
+        path: `${STEAM}(game(Constants|SessionState|Requirements|ProtocolUrl|DrmLaunch|Eligibility|Install|Launch|LaunchOverlay|BridgeLaunch|Maintenance|Uninstall|InstallBridge|InstallDepot|BridgeWineLaunch|Metadata)|bridgeInstallState)\\.ts$`
       },
       to: {
         path: `${STEAM}games\\.ts$`,
