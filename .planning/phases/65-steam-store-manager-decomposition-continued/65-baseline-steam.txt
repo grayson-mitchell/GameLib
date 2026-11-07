@@ -1,0 +1,3 @@
+Phase 56: steamclient-layer DRM mode (56-12) helpers channel constants equal the 56-01 SUMMARY values
+bottle.ts bridge bottle (24-04) Phase 56 DRM runner (56-11) DRM_LAUNCH_FORM equals launch_form in 56-01-SUMMARY.md
+known-fix macArch 32 routing Intel: never seeds and does not take the bottle-branch result

@@ -1,0 +1,5 @@
+WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation gating -- static half only, live half owned by plan 29 item 1 no WebviewWindowBuilder chain passes a STRING LITERAL to .title( -- WR-07's negative half, amended: the prohibited thing is a hard-coded title, not the method
+genI18nGateScope staleness guard -- the reverse direction (REQ-34.10-14) with a real git diff against the upstream merge-base A-17 ANTI-ROT: the committed meta/i18nForkTouchedFiles.json equals the LIVE git derivation
+logSecretGate ratchet over src/backend finds zero violations
+logSecretGate ratchet over src/backend non-vacuity: a scratch copy of utils.ts with the gog defect appended IS caught
+x86 callback dispatch under Wine (P55-9) fake helper saw HELLO, one 168 drain and CBDISP 168/3/0
