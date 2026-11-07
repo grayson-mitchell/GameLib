@@ -782,7 +782,7 @@ async function rearmPersistedSteamRestartHolds(): Promise<{
   let dropped = 0
   const records = listSteamRestartHolds()
   if (records.length === 0) return { dropped }
-  reconcileRanDuringRearm = false
+  setReconcileRanDuringRearm(false)
   // Synchronously, before any await: fail closed until verified.
   for (const [appId] of records) pendingSteamHoldRearm.add(appId)
   try {
@@ -903,8 +903,8 @@ export default class SteamLibraryManager implements LibraryManager {
     // quick 261029-pkp: re-arm persisted "Restart Steam to finish" holds
     // before anything can reconcile install state.
     const { dropped } = await rearmPersistedSteamRestartHolds()
-    if (dropped > 0 && reconcileRanDuringRearm) {
-      reconcileRanDuringRearm = false
+    if (dropped > 0 && getReconcileRanDuringRearm()) {
+      setReconcileRanDuringRearm(false)
       void this.refreshInstallState()
     }
 
@@ -2774,6 +2774,12 @@ function isHoldingForSteamRestart(appId: string): boolean {
 const pendingSteamHoldRearm = new Set<string>()
 /** Set when a reconcile consulted the fail-closed window above. */
 let reconcileRanDuringRearm = false
+export function getReconcileRanDuringRearm(): boolean {
+  return reconcileRanDuringRearm
+}
+export function setReconcileRanDuringRearm(value: boolean): void {
+  reconcileRanDuringRearm = value
+}
 
 /**
  * quick 261029-pkp: the single place a hold ends. Sets 'released' and deletes
