@@ -152,6 +152,13 @@ export function __setSteamWaitScheduleForTests(
   steamWaitScheduleOverride = schedule
 }
 
+export function getSteamWaitScheduleOverride(): {
+  budgetMs: number
+  intervalMs: number
+} | null {
+  return steamWaitScheduleOverride
+}
+
 const MIN_EPHEMERAL_PORT = 1024
 const MAX_PORT = 65535
 
@@ -254,6 +261,10 @@ export function __setBridgeHelperPathForTests(path: string | null): void {
   bridgeHelperPathOverride = path
 }
 
+export function getBridgeHelperPathOverride(): string | null {
+  return bridgeHelperPathOverride
+}
+
 // Test-only override for the real, unmocked spawn's child env (Phase 51
 // Plan 01, Task 3 live-tracer divergence follow-up). `ensureHelperSpawned`
 // below passes NO `env` option in the default (null) case -- the production
@@ -280,6 +291,10 @@ export function __setBridgeHelperSpawnEnvForTests(
   env: NodeJS.ProcessEnv | null
 ): void {
   bridgeHelperSpawnEnvOverride = env
+}
+
+export function getBridgeHelperSpawnEnvOverride(): NodeJS.ProcessEnv | null {
+  return bridgeHelperSpawnEnvOverride
 }
 
 function unrefHandle(handle: unknown): void {
@@ -344,7 +359,7 @@ function ensureHelperSpawned(
   }
 
   const identityOnly = options?.identityOnly ?? false
-  const helperPath = bridgeHelperPathOverride ?? steamBridgeHelperPath
+  const helperPath = getBridgeHelperPathOverride() ?? steamBridgeHelperPath
   const stateDir = identityOnly
     ? join(steamBridgeHelperStateDir, appId, 'identity')
     : join(steamBridgeHelperStateDir, appId)
@@ -386,7 +401,7 @@ function ensureHelperSpawned(
     // createFakeHomeProfile()'s own env ever overrides it; never a
     // hand-rolled literal). The ONLY addition is the launch secret.
     env: {
-      ...(bridgeHelperSpawnEnvOverride ?? process.env),
+      ...(getBridgeHelperSpawnEnvOverride() ?? process.env),
       [BRIDGE_SECRET_ENV]: secret
     }
   })
@@ -926,9 +941,10 @@ export async function ensureBridgeHelperReady(
   let waitStart: number | null = null
   let steamStarted = false
   let notified = false
-  const budgetMs = steamWaitScheduleOverride?.budgetMs ?? STEAM_WAIT_BUDGET_MS
+  const budgetMs =
+    getSteamWaitScheduleOverride()?.budgetMs ?? STEAM_WAIT_BUDGET_MS
   const intervalMs =
-    steamWaitScheduleOverride?.intervalMs ?? STEAM_RETRY_INTERVAL_MS
+    getSteamWaitScheduleOverride()?.intervalMs ?? STEAM_RETRY_INTERVAL_MS
   while (probe.outcome === 'steam-wait') {
     const cause = probe.cause as InitFlatErrorCause
     waitStart ??= Date.now()
