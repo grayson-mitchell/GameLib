@@ -162,7 +162,8 @@ const allGameModulesSource = gameModuleNames
   .map((f) => readStripped(`../${f}`))
   .join('\n')
 
-const librarySource = readStripped('../library.ts')
+// Moved to library/refresh.ts by Phase 65 plan 06 (syncOwnedLibrary lift).
+const librarySource = readStripped('../library/refresh.ts')
 const installRootSource = readStripped('../library/installRoot.ts')
 const installFormIpcSource = readStripped('../installFormIpc.ts')
 const steamPlatformRowSource = readStripped(
@@ -173,14 +174,16 @@ const IMPORTS_HELPER =
   /import\s*\{\s*depotSignalCaptured\s*\}\s*from\s*'\.\/metadataCapture'/
 
 describe('source gate: the three depot-signal reads are normalized', () => {
-  it('library.ts seeds GameInfo.steamPlatformsCaptured through the helper', () => {
+  it('library/refresh.ts seeds GameInfo.steamPlatformsCaptured through the helper', () => {
     expect(librarySource).toMatch(
       /steamPlatformsCaptured:\s*depotSignalCaptured\(cachedMeta\)/
     )
   })
 
-  it('library.ts imports depotSignalCaptured from ./metadataCapture', () => {
-    expect(librarySource).toMatch(IMPORTS_HELPER)
+  it('library/refresh.ts imports depotSignalCaptured from ../metadataCapture', () => {
+    expect(librarySource).toMatch(
+      /import\s*\{\s*depotSignalCaptured\s*\}\s*from\s*'\.\.\/metadataCapture'/
+    )
   })
 
   it('installFormIpc.ts builds SteamBottleEligibilityVerdict.platformsCaptured through the helper', () => {
