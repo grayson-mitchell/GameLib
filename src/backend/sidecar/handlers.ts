@@ -78,6 +78,7 @@ import Store from '../store_backend'
 import { ipcMain } from '../platform'
 import { registerSteamFlows } from './steamFlowRegistration'
 import { registerSteamAuthFlows } from './steamAuthFlowRegistration'
+import { registerEngineFlows } from './engineFlowRegistration'
 import { registerInstallFlows } from './installFlowRegistration'
 import { registerSettingsFlows } from './settingsFlowRegistration'
 import { registerDevEpicCookieSweepFlow } from './devEpicCookieSweepRegistration'
@@ -121,6 +122,7 @@ ipcMain.handle('health', async () => 'ok')
 
 registerSteamFlows()
 registerSteamAuthFlows()
+registerEngineFlows()
 registerInstallFlows()
 registerSettingsFlows()
 // D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the

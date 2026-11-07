@@ -10,6 +10,7 @@ import type {
   DownloadQueueAsync,
   DownloadQueueFrontendMessages
 } from './downloadQueue'
+import type { EngineAsync, EngineFrontendMessages } from './engine'
 import type { EnrichmentAsync } from './enrichment'
 import type { EosOverlayAsync } from './eosOverlay'
 import type { GameDetailsSync, GameDetailsAsync } from './gameDetails'
@@ -62,6 +63,7 @@ export type AsyncIPCFunctions = AppShellAsync &
   ClipboardAsync &
   DialogAsync &
   DownloadQueueAsync &
+  EngineAsync &
   EnrichmentAsync &
   EosOverlayAsync &
   GameDetailsAsync &
@@ -85,6 +87,7 @@ export type AsyncIPCFunctions = AppShellAsync &
 
 export type FrontendMessages = AppShellFrontendMessages &
   DownloadQueueFrontendMessages &
+  EngineFrontendMessages &
   GogFrontendMessages &
   HumbleFrontendMessages &
   LegendaryFrontendMessages &

@@ -99,7 +99,7 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   'FrontendMessages:steamSetupDownloadProgress': 'steam',
   'FrontendMessages:steamBridgeSetupRequired': 'steam',
   'FrontendMessages:steamGoOfflineRequired': 'steam',
-  'FrontendMessages:steamEngineStateChanged': 'steam',
+  'FrontendMessages:engineStateChanged': 'engine',
   'FrontendMessages:steamRequestNotice': 'steam',
   'FrontendMessages:gameSettingWriteFailed': 'appShell',
   'FrontendMessages:steamBridgeRouteNotice': 'steam',
@@ -223,7 +223,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
 
   it('(a) every channel a FlowRegistration registers is declared in its paired ipc/<domain>.ts', () => {
     const files = registrationFiles()
-    expect(files.length).toBe(21)
+    expect(files.length).toBe(22)
     for (const f of files) {
       const domain = f.replace('FlowRegistration.ts', '')
       expect(Object.keys(domains)).toContain(domain)
@@ -280,8 +280,9 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
         .filter((p) => p.kind === kind)
         .reduce((n, p) => n + p.keys.length, 0)
     }
-    // 60 Sync + 6 TestSync + 186 Async + 42 FrontendMessages, as at the Plan 11 split.
-    expect(total).toBe(294)
+    // 60 Sync + 6 TestSync + 186 Async + 42 FrontendMessages, as at the Plan 11 split; +1 Async (EngineAsync) and +1 FrontendMessages
+    // (EngineFrontendMessages) in Phase 61 Plan 13.
+    expect(total).toBe(296)
   })
 
   it('(d) the owner-less channel allowlist equals the computed set', () => {

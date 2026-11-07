@@ -1,7 +1,7 @@
 /**
- * Phase 59 Plan 08: the engine IPC channels registered by
- * registerSteamAuthFlows -- renderer args pass through UNCAST to the backend
- * validators, and the state publisher pushes `steamEngineStateChanged`.
+ * Phase 61 Plan 13: the store-agnostic engine IPC channels registered by registerEngineFlows --
+ * renderer args pass through UNCAST to the backend validators, Steam is dispatched by capability,
+ * and the state publisher pushes `engineStateChanged`.
  */
 const handlers = new Map<string, (...a: unknown[]) => Promise<unknown>>()
 
@@ -13,79 +13,167 @@ jest.mock('../../platform', () => ({
     on: jest.fn()
   }
 }))
-// 58-31 (0a627de67) made the registration import bridge/inviteBridge, whose
-// helperProcess import pulls in the real constants/paths chain.
-jest.mock('../../storeManagers/steam/bridge/inviteBridge', () => ({
-  listBridgeFriends: jest.fn(),
-  sendBridgeInvite: jest.fn()
+const envState = { isMac: true }
+jest.mock('../../constants/environment', () => ({
+  get isMac() {
+    return envState.isMac
+  }
 }))
-jest.mock('../../storeManagers', () => ({}))
-jest.mock('../../storeManagers/steam/user', () => ({ SteamUser: {} }))
-jest.mock('../../storeManagers/steam/stores', () => ({}))
-jest.mock('../../storeManagers/steam/bottle', () => ({}))
-jest.mock('../../storeManagers/steam/clientSetup', () => ({}))
-jest.mock('../../storeManagers/steam/games', () => ({}))
-jest.mock('../../storeManagers/steam/gameRequirements', () => ({}))
-jest.mock('../../storeManagers/steam/constants', () => ({}))
-jest.mock('../../storeManagers/steam/installFormIpc', () => ({}))
-jest.mock('../../storeManagers/steam/removeAllCopies', () => ({}))
-jest.mock('../../storeManagers/steam/macSteamOffline', () => ({}))
+const getGame = jest.fn()
+jest.mock('../../storeManagers', () => ({
+  libraryManagerMap: {
+    legendary: { getGame: (...a: unknown[]) => getGame(...a) },
+    gog: { getGame: (...a: unknown[]) => getGame(...a) },
+    steam: { getGame: (...a: unknown[]) => getGame(...a) }
+  }
+}))
 
-const getState = jest.fn()
 const dismiss = jest.fn()
 const setPublisher = jest.fn()
 jest.mock('backend/engine/engineState', () => ({
   dismissEngineNotice: (...a: unknown[]) => dismiss(...a),
   setEngineStatePublisher: (...a: unknown[]) => setPublisher(...a)
 }))
-const listOptions = jest.fn()
-jest.mock('backend/engine/engineDecision', () => ({
-  listEngineOverrideOptions: (...a: unknown[]) => listOptions(...a)
+const gameState = jest.fn()
+const gameOptions = jest.fn()
+const defaultEngine = jest.fn()
+const bottleName = jest.fn()
+jest.mock('backend/engine/gameEngineState', () => ({
+  getGameEngineState: (...a: unknown[]) => gameState(...a),
+  listGameEngineOptions: (...a: unknown[]) => gameOptions(...a),
+  getDefaultEngine: (...a: unknown[]) => defaultEngine(...a),
+  getPerGameBottleNameFor: (...a: unknown[]) => bottleName(...a)
 }))
+const steamState = jest.fn()
 jest.mock('backend/storeManagers/steam/engine/steamEngineDeps', () => ({
-  steamDecisionDeps: () => ({ tag: 'steam-deps' }),
-  getSteamEngineState: (...a: unknown[]) => getState(...a)
+  getSteamEngineState: (...a: unknown[]) => steamState(...a)
 }))
 const send = jest.fn()
 jest.mock('../../ipc', () => ({
   sendFrontendMessage: (...a: unknown[]) => send(...a)
 }))
 
-import { registerSteamAuthFlows } from '../steamAuthFlowRegistration'
+import { registerEngineFlows } from '../engineFlowRegistration'
 
-describe('steam engine flows', () => {
-  beforeAll(() => registerSteamAuthFlows())
-  beforeEach(() => jest.clearAllMocks())
+function fakeGame(over: { native?: boolean; platform?: string } = {}) {
+  return {
+    isNative: () => over.native ?? false,
+    getGameInfo: () => ({ install: { platform: over.platform ?? 'Windows' } })
+  }
+}
 
-  it('passes getSteamEngineState args[0] through unmodified', async () => {
-    getState.mockResolvedValue({ kind: 'x' })
-    const arg = { weird: 1 }
-    expect(await handlers.get('getSteamEngineState')!({}, arg)).toEqual({
-      kind: 'x'
-    })
-    expect(getState).toHaveBeenCalledWith(arg)
+describe('engine flows', () => {
+  beforeAll(() => registerEngineFlows())
+  beforeEach(() => {
+    jest.clearAllMocks()
+    envState.isMac = true
   })
 
-  it('lists engine options ignoring renderer args', async () => {
-    listOptions.mockResolvedValue([{ id: 'a' }])
-    expect(await handlers.get('listSteamEngineOptions')!({}, 'evil')).toEqual([
-      { id: 'a' }
+  it('registers the five invoke channels', () => {
+    expect([...handlers.keys()].sort()).toEqual([
+      'dismissEngineNotice',
+      'getDefaultEngine',
+      'getEngineState',
+      'getPerGameBottleName',
+      'listEngineOptions'
     ])
-    expect(listOptions).toHaveBeenCalledWith({ tag: 'steam-deps' })
   })
 
-  it('passes dismissSteamEngineNotice args[0] through unmodified', async () => {
+  it('dispatches a bottle-runtime store to the Steam adapter with the app id', async () => {
+    steamState.mockResolvedValue({ kind: 's' })
+    expect(
+      await handlers.get('getEngineState')!(
+        {},
+        { runner: 'steam', appName: '220' }
+      )
+    ).toEqual({ kind: 's' })
+    expect(steamState).toHaveBeenCalledWith('220')
+    expect(getGame).not.toHaveBeenCalled()
+    expect(gameState).not.toHaveBeenCalled()
+  })
+
+  it('dispatches a non-Steam Windows game to the non-Steam state, args uncast', async () => {
+    getGame.mockReturnValue(fakeGame())
+    gameState.mockResolvedValue({ kind: 'n' })
+    const arg = { runner: 'legendary', appName: 'abc' }
+    expect(await handlers.get('getEngineState')!({}, arg)).toEqual({
+      kind: 'n'
+    })
+    expect(gameState).toHaveBeenCalledWith(arg)
+  })
+
+  it('returns null for an invalid identity without any game lookup', async () => {
+    for (const bad of [
+      null,
+      'x',
+      {},
+      { runner: 5, appName: 'a' },
+      { runner: 'nope', appName: 'a' },
+      { runner: 'legendary', appName: '../x' },
+      { runner: 'steam', appName: 'notanumber' }
+    ]) {
+      expect(await handlers.get('getEngineState')!({}, bad)).toBeNull()
+    }
+    expect(getGame).not.toHaveBeenCalled()
+    expect(gameState).not.toHaveBeenCalled()
+    expect(steamState).not.toHaveBeenCalled()
+  })
+
+  it('returns null for a native or Browser game, off macOS, or a failing lookup', async () => {
+    const arg = { runner: 'gog', appName: 'abc' }
+    getGame.mockReturnValue(fakeGame({ native: true }))
+    expect(await handlers.get('getEngineState')!({}, arg)).toBeNull()
+    getGame.mockReturnValue(fakeGame({ platform: 'Browser' }))
+    expect(await handlers.get('getEngineState')!({}, arg)).toBeNull()
+    getGame.mockImplementation(() => {
+      throw new Error('boom')
+    })
+    expect(await handlers.get('getEngineState')!({}, arg)).toBeNull()
+    getGame.mockReturnValue(fakeGame())
+    envState.isMac = false
+    expect(await handlers.get('getEngineState')!({}, arg)).toBeNull()
+    expect(gameState).not.toHaveBeenCalled()
+  })
+
+  it('lists options, passes args through, and exposes no path', async () => {
+    gameOptions.mockResolvedValue([{ id: 'a', label: 'A' }])
+    const arg = { appName: 'default' }
+    const out = await handlers.get('listEngineOptions')!({}, arg)
+    expect(gameOptions).toHaveBeenCalledWith(arg)
+    expect(JSON.stringify(out)).not.toContain('/')
+  })
+
+  it('serves the default engine and per-game bottle name', async () => {
+    defaultEngine.mockReturnValue({
+      effectiveEngineId: 'x',
+      engineSource: 'derived',
+      legacyLabel: null
+    })
+    expect(await handlers.get('getDefaultEngine')!({})).toEqual({
+      effectiveEngineId: 'x',
+      engineSource: 'derived',
+      legacyLabel: null
+    })
+    bottleName.mockReturnValue('GameLib-abc')
+    const arg = { runner: 'gog', appName: 'abc' }
+    expect(await handlers.get('getPerGameBottleName')!({}, arg)).toBe(
+      'GameLib-abc'
+    )
+    expect(bottleName).toHaveBeenCalledWith(arg)
+  })
+
+  it('passes dismissEngineNotice args[0] through unmodified', async () => {
     dismiss.mockResolvedValue({ ok: false })
     const arg = { kind: 'bogus' }
-    await handlers.get('dismissSteamEngineNotice')!({}, arg)
+    await handlers.get('dismissEngineNotice')!({}, arg)
     expect(dismiss).toHaveBeenCalledWith(arg)
   })
 
-  it('wires the publisher to steamEngineStateChanged', () => {
-    registerSteamAuthFlows()
+  it('wires the publisher to engineStateChanged', () => {
+    registerEngineFlows()
     const publisher = setPublisher.mock.calls[0][0] as (s: unknown) => void
     const state = { appId: '1' }
     publisher(state)
-    expect(send).toHaveBeenCalledWith('steamEngineStateChanged', state)
+    expect(send).toHaveBeenCalledWith('engineStateChanged', state)
   })
 })

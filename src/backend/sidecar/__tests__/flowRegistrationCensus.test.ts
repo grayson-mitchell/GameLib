@@ -68,6 +68,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Custom CSS removed (getCustomThemes, getThemeCSS, getCustomCSS, openCustomThemesWiki).
   'appShellFlowRegistration.ts': { invoke: 7, send: 14 },
   'clipboardFlowRegistration.ts': { invoke: 1, send: 2 },
+  // Phase 61 Plan 13 (2026-11-07): the store-agnostic engine domain (getEngineState, listEngineOptions,
+  // getDefaultEngine, getPerGameBottleName, dismissEngineNotice)
+  'engineFlowRegistration.ts': { invoke: 5, send: 0 },
   'dialogFlowRegistration.ts': { invoke: 1, send: 0 },
   'downloadQueueFlowRegistration.ts': { invoke: 1, send: 4 },
   // Quick 261027-ch9 (2026-10-27): invoke 14 -> 15 -- getGamelibFixStatus
@@ -105,7 +108,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // 54-REVIEW WR-05 (2026-10-28): invoke 22 -> 23 -- steamGoOfflineCancel, the guided Go Offline dialog's Cancel/close
   // Phase 59 Plan 08 (2026-11-01): invoke 22 -> 25 -- getSteamEngineState, listSteamEngineOptions, dismissSteamEngineNotice
   // Phase 58 Plan 31 (2026-11-01): invoke 25 -> 27 -- steamBridgeListFriends and steamBridgeInviteFriend, the Direction A friend picker
-  'steamAuthFlowRegistration.ts': { invoke: 27, send: 1 },
+  // Phase 61 Plan 13 (2026-11-07): invoke 27 -> 24 -- getSteamEngineState, listSteamEngineOptions, dismissSteamEngineNotice
+  // moved to the store-agnostic engine domain
+  'steamAuthFlowRegistration.ts': { invoke: 24, send: 1 },
   // Quick 260908-ci2 (2026-09-08): send 0 -> 1 -- `shellWindowFocused`, restoring the
   // install-badge reconciliation trigger dropped in the Electron to Tauri cutover
   // (`mainWindow.on('focus', ...)`, `main.ts:272-274`, deleted in `5643c7583`). Shell-originated

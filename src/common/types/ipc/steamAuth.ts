@@ -1,5 +1,4 @@
 import type { WineInstallation } from '../../types'
-import type { EngineState, EngineOption } from '../engine'
 import type {
   RedeemKeyResult,
   SteamBottleConfig,
@@ -74,14 +73,6 @@ export interface SteamAuthAsync {
     appId: string,
     windowsBuildChosen?: boolean
   ) => Promise<SteamBridgeRouteVerdict>
-  // Phase 59 (D-04/D-06/D-13/D-14/D-15)
-  getSteamEngineState: (appId: string) => Promise<EngineState | null>
-  listSteamEngineOptions: () => Promise<EngineOption[]>
-  dismissSteamEngineNotice: (
-    args:
-      | { kind: 'no-crossover' }
-      | { kind: 'untested-crossover'; build: string }
-  ) => Promise<{ ok: boolean }>
   // Phase 51 Plan 03 (D-51-10/11): persists the user's own bridge/bottle
   // override (D-51-10's install-dialog toggle, D-51-11's "Try the bridge
   // anyway" button) beside the scan verdict, via 51-09's bridgeVerdict.ts

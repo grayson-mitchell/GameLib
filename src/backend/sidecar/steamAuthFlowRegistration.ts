@@ -158,12 +158,6 @@ import {
   handleSetSteamBridgeUserRoute
 } from '../storeManagers/steam/installFormIpc'
 import {
-  dismissEngineNotice,
-  setEngineStatePublisher
-} from 'backend/engine/engineState'
-import { listEngineOverrideOptions } from 'backend/engine/engineDecision'
-import { sendFrontendMessage } from '../ipc'
-import {
   listBridgeFriends,
   sendBridgeInvite
 } from '../storeManagers/steam/bridge/inviteBridge'
@@ -369,38 +363,6 @@ export function registerSteamAuthFlows(): void {
     async (_event: unknown, ...args: unknown[]) => {
       return getBridgeRouteVerdict(args[0], args[1])
     }
-  )
-
-  // Phase 59 Plan 08 (D-04/D-06/D-13/D-14/D-15): engine state reads. args[0]
-  // is passed UNCAST -- steamEngineDeps.ts / engineState.ts's own guards (numeric appId, closed
-  // notice-kind set, build regex) are the validators (T-59-35).
-  ipcMain.handle(
-    'getSteamEngineState',
-    async (_event: unknown, ...args: unknown[]) => {
-      const { getSteamEngineState } =
-        await import('backend/storeManagers/steam/engine/steamEngineDeps')
-      return getSteamEngineState(args[0])
-    }
-  )
-
-  // Ids and labels only, never paths (T-59-36); renderer args are ignored.
-  ipcMain.handle('listSteamEngineOptions', async () => {
-    const { steamDecisionDeps } =
-      await import('backend/storeManagers/steam/engine/steamEngineDeps')
-    return listEngineOverrideOptions(steamDecisionDeps())
-  })
-
-  ipcMain.handle(
-    'dismissSteamEngineNotice',
-    async (_event: unknown, ...args: unknown[]) => {
-      return dismissEngineNotice(args[0])
-    }
-  )
-
-  // Registering a closure does no I/O and creates no timer/socket/handle, so
-  // it cannot hold the event loop open (sidecar exit contract).
-  setEngineStatePublisher((state) =>
-    sendFrontendMessage('steamEngineStateChanged', state)
   )
 
   ipcMain.handle(

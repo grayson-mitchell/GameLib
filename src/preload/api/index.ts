@@ -6,6 +6,7 @@ import * as Settings from './settings'
 import * as Wine from './wine'
 import * as DownloadManager from './downloadmanager'
 import * as Steam from './steam'
+import * as Engine from './engine'
 import * as Humble from './humble'
 import * as StoreSearch from './storeSearch'
 import * as StoreEmbed from './storeEmbed'
@@ -19,6 +20,7 @@ export default {
   ...Wine,
   ...DownloadManager,
   ...Steam,
+  ...Engine,
   ...Humble,
   ...StoreSearch,
   ...StoreEmbed

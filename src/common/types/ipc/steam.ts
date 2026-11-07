@@ -4,7 +4,6 @@ import type {
   Runner,
   StatusPromise
 } from '../../types'
-import type { EngineState } from '../engine'
 import type {
   SteamBottleLaunchWaitingCause,
   SteamBridgeKnownBadReason,
@@ -66,8 +65,6 @@ export interface SteamFrontendMessages {
   // Phase 54: user.ts acquireAuthenticated emits when the go-offline wrap did
   // not see Mac Steam log off; SteamGoOfflineNotice.ts subscribes.
   steamGoOfflineRequired: (payload: SteamGoOfflinePayload) => void
-  // Phase 59 (D-04/D-06): the per-title engine display state changed
-  steamEngineStateChanged: (payload: EngineState) => void
   // quick 261106-pvk: one-way push when Steam never starts a delegated request
   steamRequestNotice: (payload: SteamRequestNoticePayload) => void
   steamBridgeRouteNotice: (payload: {

@@ -28,12 +28,6 @@ export const isSteamBottleEligible = makeHandlerInvoker('isSteamBottleEligible')
 export const persistBottleWineVersion = makeHandlerInvoker('persistBottleWineVersion')
 // Phase 51 Plan 13 (D-51-09/10/11): the composed bridge-vs-bottle route pair.
 export const getSteamBridgeRoute = makeHandlerInvoker('getSteamBridgeRoute')
-// Phase 59 (D-04/D-06/D-13/D-14/D-15): engine state reads and notice dismissal -- sidecar-only.
-export const getSteamEngineState = makeHandlerInvoker('getSteamEngineState')
-export const listSteamEngineOptions = makeHandlerInvoker('listSteamEngineOptions')
-export const dismissSteamEngineNotice = makeHandlerInvoker('dismissSteamEngineNotice')
-// Phase 59: one-way push -- engineState.ts publishes a title's new engine state.
-export const handleSteamEngineStateChanged = frontendListenerSlot('steamEngineStateChanged')
 // quick 261106-pvk: one-way push, library.ts no-activity give-up.
 export const handleSteamRequestNotice = frontendListenerSlot('steamRequestNotice')
 export const setSteamBridgeUserRoute = makeHandlerInvoker('setSteamBridgeUserRoute')
