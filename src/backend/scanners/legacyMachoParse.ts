@@ -89,7 +89,7 @@ function parseThin(buf: Buffer): string[] | null {
 }
 
 /** Names of defined external symbols, or null when not a supported Mach-O. Never throws. */
-export function parseMachODefinedExternals(buf: Buffer): string[] | null {
+function parseMachODefinedExternals(buf: Buffer): string[] | null {
   try {
     if (buf.length >= 8 && buf.readUInt32BE(0) === FAT_MAGIC) {
       const n = buf.readUInt32BE(4)
