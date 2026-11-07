@@ -51,7 +51,8 @@ const ADOPTED_BUCKETS = [
   'src/backend/downloadmanager',
   'src/backend/knownFixesRegistry.ts',
   'src/backend/launcher.ts',
-  'src/backend/knownFixOverlayArchive.ts'
+  'src/backend/knownFixOverlayArchive.ts',
+  'src/backend/save_sync.ts'
 ]
 
 /**

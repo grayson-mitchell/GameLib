@@ -171,6 +171,7 @@ async function getDefaultGogSavePaths(
     for (const match of matches) {
       const matchedText = match[0]
       const variableName = match[1]
+      if (variableName === undefined) continue
       if (!gogVariableMap[variableName]) {
         logWarning(
           [
