@@ -3,10 +3,11 @@
  * Drives the REAL `startRpcServer` over PassThrough streams with a mocked `channelSchemas` map.
  */
 import { PassThrough } from 'node:stream'
+import { z } from 'zod'
 
 import { handlerRegistry, listenerRegistry } from '../../platform'
 import { startRpcServer } from '../sidecarRpc'
-import { setIpcRejectionLogSink } from '../ipcValidation'
+import { setIpcRejectionLogSink, validateInbound } from '../ipcValidation'
 import {
   UNPORTED_CHANNEL_MARKER,
   IPC_INVALID_ARGS_MARKER,
@@ -223,5 +224,41 @@ describe('validateInbound in the dispatch funnel', () => {
     const err = String(frames[0].error)
     expect(err.startsWith(UNPORTED_CHANNEL_MARKER)).toBe(true)
     expect(err).not.toContain(IPC_INVALID_ARGS_MARKER)
+  })
+})
+
+describe('validateInbound: push entries are never inbound schemas (67 review WR-01)', () => {
+  const lenient = z.tuple([]).rest(z.unknown())
+  const schemas = {
+    pushOnly: {
+      kind: 'push',
+      caller: 'renderer',
+      testOnly: false,
+      args: lenient
+    },
+    inboundOk: {
+      kind: 'invoke',
+      caller: 'renderer',
+      testOnly: false,
+      args: lenient
+    }
+  } as const
+
+  it('an inbound frame matching only a push name fails closed with no_schema', () => {
+    for (const kind of ['invoke', 'send'] as const) {
+      const v = validateInbound('pushOnly', kind, [1, 'x'], schemas)
+      expect(v).toEqual({
+        ok: false,
+        channel: 'pushOnly',
+        paths: ['(channel)'],
+        codes: ['no_schema']
+      })
+    }
+  })
+
+  it('a real inbound entry with the same lenient schema still passes', () => {
+    expect(validateInbound('inboundOk', 'invoke', [1, 'x'], schemas)).toEqual({
+      ok: true
+    })
   })
 })

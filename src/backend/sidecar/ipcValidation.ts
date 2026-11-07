@@ -44,7 +44,9 @@ export function validateInbound(
     : undefined
   // Fail closed (D-08, D-09): ipcSchemaCoverage guarantees every registered channel has a
   // schema, so a miss here is an unknown or newly added channel, never a legitimate caller.
-  if (!entry) {
+  // A push entry describes an OUTBOUND payload (often typing-only), never an inbound one, so an
+  // inbound frame that only matches a push name fails closed too (67 review WR-01).
+  if (!entry || entry.kind === 'push') {
     return { ok: false, channel, paths: ['(channel)'], codes: ['no_schema'] }
   }
   void kind
