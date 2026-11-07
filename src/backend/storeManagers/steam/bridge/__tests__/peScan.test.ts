@@ -14,17 +14,9 @@ jest.mock('backend/sidecar/sidecarRpc', () => ({
 import { detectSteamDrmInPe, readPeImportedDllNames } from '../peScan'
 
 const mockInvoke = requestRustInvoke as jest.Mock
-const ENV = 'GAMELIB_SCANNER_PE_STEAM_DRM'
-let saved: string | undefined
 
 beforeEach(() => {
-  saved = process.env[ENV]
-  process.env[ENV] = 'rust'
   jest.clearAllMocks()
-})
-afterEach(() => {
-  if (saved === undefined) delete process.env[ENV]
-  else process.env[ENV] = saved
 })
 
 describe('peScan', () => {

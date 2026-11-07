@@ -42,10 +42,7 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
   let dir: string
   let exe: string
 
-  const savedEnv = process.env.GAMELIB_SCANNER_PE_STEAM_DRM
-
   beforeEach(() => {
-    process.env.GAMELIB_SCANNER_PE_STEAM_DRM = 'rust'
     // The TS oracle stands in for the Rust leaf on the real fixture files.
     jest
       .mocked(requestRustInvoke)
@@ -57,8 +54,6 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
     exe = join(dir, 'game.exe')
   })
   afterEach(() => {
-    if (savedEnv === undefined) delete process.env.GAMELIB_SCANNER_PE_STEAM_DRM
-    else process.env.GAMELIB_SCANNER_PE_STEAM_DRM = savedEnv
     jest.restoreAllMocks()
     rmSync(dir, { recursive: true, force: true })
   })
