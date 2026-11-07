@@ -151,7 +151,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 62: Module boundaries and decomposition** — 23 plans (21 + 2 gap closure); complete (completed 2026-11-07)
 - [x] **Phase 63: Rust migration pattern and executable scanners** — 14 plans; planned (completed 2026-11-07)
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
-- [ ] **Phase 65: Steam store manager decomposition, continued** — 20 plans (1 executed); Phase 61 closed 2026-11-07 — unblocked, D-11
+- [x] **Phase 65: Steam store manager decomposition, continued** — 20/20 plans complete; Phase 61 closed 2026-11-07 — unblocked, D-11 (completed 2026-11-08)
 - [ ] **Phase 66: Backend dependency injection replacing module-level singletons** — 0 plans; not started
 - [ ] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07
 - [ ] **Phase 68: Versioned persisted stores and migrations** — 0 plans; not started

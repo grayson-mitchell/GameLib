@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: verifying
-stopped_at: Phase 71 context gathered
-last_updated: "2026-11-07T20:30:10.634Z"
+status: ready_to_plan
+stopped_at: Phase 65 complete (20/20) — ready to discuss Phase 66
+last_updated: 2026-11-07T20:40:37.381Z
 last_activity: 2026-11-07
 progress:
   total_phases: 13
   completed_phases: 3
   total_plans: 104
   completed_plans: 86
-  percent: 31
+  percent: 23
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 65 — steam-store-manager-decomposition-continued
+**Current focus:** Phase 66 — backend dependency injection replacing module level singleto
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,10 +72,10 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 65 (steam-store-manager-decomposition-continued) — EXECUTING
-Plan: 20 of 20
-Status: Plan 20 of 20 executed — awaiting phase verification
-Last activity: 2026-11-08 - Completed 65-20 closeout (final battery, live smoke run 2)
+Phase: 66
+Plan: 0 of 0
+Status: Ready to plan
+Last activity: 2026-11-08 - Phase 65 complete (20/20, verification passed, smoke runs 1+2 passed)
 
 Progress: [████████░░] 83%
 
