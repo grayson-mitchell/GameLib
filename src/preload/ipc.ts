@@ -11,6 +11,7 @@
 import type { IpcRendererEvent } from 'backend/platform'
 
 import type { AsyncIPCFunctions, SyncIPCFunctions, FrontendMessages } from 'common/types/ipc'
+import { IpcValidationError } from './ipcValidationError'
 import { invoke as tauriInvoke, send as tauriSend, listen as tauriListen } from './tauriTransport'
 
 // Creates a Promise<T> only if T isn't already a promise
@@ -26,7 +27,9 @@ function makeListenerCaller<ChannelName extends keyof SyncIPCFunctions>(channel:
 // Like `makeListenerCaller`, but for IPC handlers instead
 function makeHandlerInvoker<ChannelName extends keyof AsyncIPCFunctions>(channel: ChannelName) {
   return (...args: Parameters<AsyncIPCFunctions[ChannelName]>) => {
-    return tauriInvoke(channel, args) as PromiseOnce<ReturnType<AsyncIPCFunctions[ChannelName]>>
+    return tauriInvoke(channel, args).catch((err: unknown) => {
+      throw IpcValidationError.fromRejection(err) ?? err
+    }) as PromiseOnce<ReturnType<AsyncIPCFunctions[ChannelName]>>
   }
 }
 
