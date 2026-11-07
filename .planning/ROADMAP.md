@@ -159,6 +159,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 70: Split GameInfo into shared and per-store shapes** — 0 plans; not started
 - [ ] **Phase 71: Rust shell module decomposition** — 0 plans; not started
 - [ ] **Phase 72: Renderer trust boundary and process hardening** — 0 plans; not started
+- [ ] **Phase 73: Steam depot download pipeline in Rust** — 0 plans; not started
 
 ## Phase Details
 
@@ -216,7 +217,7 @@ Phases 61–64 are not assigned to a milestone yet. Phase details for 51–60 (v
 **Goal:** Every Windows game GameLib runs under Wine on macOS, from any store (Epic/legendary, GOG, Amazon/nile, sideload, Steam), gets one per-game **Engine** control: Automatic (CrossOver first, then GameLib's pinned Wine-Staging + DXVK build), CrossOver, the pinned builds, or a Wine Manager build. For non-Steam games it replaces the Wine Version selector, which today is their only engine choice. Behind it, the Phase 59 engine decision moves out of `src/backend/storeManagers/steam/engine/` so non-Steam launches get the same protection: a trial-expiry check before each launch plus the "N days remaining" notice, a timeout on every CrossOver launch, broken-CrossOver detection, and creation of a fallback bottle for non-Steam CrossOver bottles and prefixes. Open questions for discuss-phase: (1) how the "Unsupported — known fixes and compatibility ratings don't apply" warning reads for stores that have no Steam-keyed fixes or ratings; (2) how existing per-game `wineVersion` choices migrate into the new control. Extends Phase 59, whose `59-CONTEXT.md` scoped this to Steam bridge titles; the Steam-side UI is now on the Wine tab (quick 261104-tm6).
 **Requirements**: CONTEXT decisions D-01..D-20 (no REQUIREMENTS.md IDs)
 **Depends on:** Phase 59
-**Plans:** 25/27 plans complete
+**Plans:** 26/27 plans executed
 
 Plans:
 
@@ -289,7 +290,7 @@ Plans:
 
 **Gap closure, Wave 15** *(review WR-01/WR-02, decided FIX 2026-11-07)*
 
-- [ ] 61-26-PLAN.md — Inconclusive pre-flight keeps the bottle's marker engine, labelled cx-inconclusive, no fallback toast/notice; Steam + non-Steam tests (WR-01; D-05, D-13, D-16, 59 D-09)
+- [x] 61-26-PLAN.md — Inconclusive pre-flight keeps the bottle's marker engine, labelled cx-inconclusive, no fallback toast/notice; Steam + non-Steam tests (WR-01; D-05, D-13, D-16, 59 D-09)
 
 **Gap closure, Wave 16** *(blocked on Wave 15 completion)*
 
@@ -546,3 +547,14 @@ Plans:
 Plans:
 
 - [ ] TBD (run /gsd-plan-phase 72 to break down)
+
+### Phase 73: Steam depot download pipeline in Rust
+
+**Goal:** The Steam depot download pipeline (fetch → decrypt → decompress → write) runs in Rust, and the TypeScript pipeline and `lzma-native` are deleted. This is the second slice of the incremental Rust migration that Phase 63 started, and the reason is retiring the sidecar, **not speed or memory**. Spike 067a measured today's Node pipeline as network-bound: a Civ V install held ~18 MiB/s steady, and raising the in-flight budget from 32 to 96 chunks changed nothing. Spike 067b measured Rust decode at 5.8 vs Node's 9.3 cpu-s/GiB at the same 177 MiB/s, about 8% of one core across the whole pipeline. The 2.75 GB peak RSS was idle decode workers and was fixed in Node (`b8f015a08` slimmed the worker bundle from 14 MB to under 300 KB, `db95a4373` caps the pool at 4 when native). 067c's README names "the sidecar itself being retired" as the trigger to revisit, which is this phase. Reuse Phase 63's pattern: the code lives in the `src-tauri/` Cargo workspace; the sidecar calls it through `rustInvoke` with the TypeScript signature unchanged, and only a job description crosses the JSON-lines pipe, never chunk bytes; a parity harness runs both pipelines against the same jobs and requires byte-identical trees (SHA1 per file); a flag keeps the TypeScript path as the fallback until the Rust path is verified live; then the TypeScript path is deleted (`steam/depot/`, ~11.6k non-test lines measured 2026-11-07; the old `steam/depot.ts` became `depot/index.ts` in 62-10). Crate choices carried from 067b: `aes` + `cbc` built with `--cfg aes_armv8` (without it `aes` 0.8 falls back to software AES at 277 MiB/s), `flate2` on `zlib-rs`, `xz2` (static liblzma), `zstd`. Open questions for discuss-phase: **where the boundary sits** — `steam-user` owns CM auth, manifest request codes and depot keys in Node, so does Rust take manifest + depot key + CDN host list and own everything after, or also manifest fetch and parse; how progress, pause, cancel and per-chunk errors flow back to the UI over the pipe; whether reconcile/verify, ACF finalize and adoption (`depot/finalize.ts`, `depot/manifest.ts`) stay in TypeScript or move; how headless tools and tests reach it (Phase 63 answered this with a CLI binary); and Windows/Linux builds, including liblzma static linking that replaces the October `lzma-native` SEA packaging fixes. Came from the operator's request on 2026-11-07, after the 067 spikes.
+**Requirements**: TBD
+**Depends on:** Phase 63
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 73 to break down)

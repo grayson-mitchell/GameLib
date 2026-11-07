@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
-stopped_at: Phase 65 context gathered
-last_updated: "2026-11-07T08:36:16.854Z"
+stopped_at: Phase 67 context gathered
+last_updated: "2026-11-07T09:11:15.016Z"
 last_activity: 2026-11-07
 progress:
-  total_phases: 12
-  completed_phases: 3
-  total_plans: 62
-  completed_plans: 62
-  percent: 25
+  total_phases: 13
+  completed_phases: 2
+  total_plans: 64
+  completed_plans: 63
+  percent: 15
 ---
 
 # Project State
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 61 (unified-macos-engine-for-all-stores) — EXECUTING
-Plan: 6 of 25
+Plan: 2 of 27
 Status: Ready to execute
 Last activity: 2026-11-07
 
-Progress: [██████████] 100%
+Progress: [██████████] 98%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -237,6 +237,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 
 Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archive (2026-10-15).
 
+- Phase 73 added 2026-11-07: **Steam depot download pipeline in Rust.** The operator asked to look at moving the depot pipeline to Rust as a phase. Spikes 067a/067b had already shown it buys no speed (network-bound at ~18 MiB/s) and ~8% of one core, and the memory problem was fixed in Node; asked for the motivation, the operator chose **retiring the sidecar**, the revisit trigger 067c names. `Depends on` hand-corrected from Phase 72 (positional, unrelated) to Phase 63, whose migration pattern it reuses. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 72 added 2026-11-07: **Renderer trust boundary and process hardening.** From `/gsd-map-codebase --concerns` (`.planning/codebase/CONCERNS.md`, commit 5a038ddbd): the eight concerns no roadmap phase or todo owned — open-path allow-list, `removeFolder` scope, unused Tauri capabilities and dead `ipc_handler.ts` modules, token-store plaintext fallback, dead-sidecar restart/surfacing, `pkill -f` pattern kills, Windows child reaping, dependency advisories plus CI audit, and a Linux Rust compile leg. The operator chose to fold them into one phase rather than todos or Phase 67. `Depends on` hand-corrected from Phase 71 (positional) to None. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 71 added 2026-11-06: **Rust shell module decomposition.** From the first post-Phase-62 architecture review (Rust modules over 2,000 lines). The operator asked whether the four remaining review items should be one phase; the answer split them, and this one became its own phase because each move needs a live macOS check of embeds and login windows. Quick 261106-ab1 had already split `main.rs`, so the phase follows its layout and includes what remains in `main.rs`. `Depends on` hand-corrected from Phase 70 (positional, unrelated) to None. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 70 added 2026-11-06: **Split GameInfo into shared and per-store shapes.** Same review and same answer: `GameInfo` (41 fields, 119 non-test referencing files) mixes shared and store-specific fields, and Phase 62 adds capability flags to it. `Depends on` hand-corrected from Phase 69 (positional) to Phase 62. Same session: Phase 67's goal gained part (3), generating the TS and Rust IPC contract from its channel schemas, and the Electron-leftovers item was filed as todo `2026-11-06-remove-electron-naming-leftovers.md`. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
@@ -588,8 +589,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-07T08:36:16.845Z
-Stopped at: Phase 65 context gathered
+Last session: 2026-11-07T09:11:15.009Z
+Stopped at: Phase 67 context gathered
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
