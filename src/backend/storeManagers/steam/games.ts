@@ -53,11 +53,8 @@ import {
 } from './gameInstall'
 import { installBridgeGame } from './gameInstallBridge'
 import { prepareTcpOverlay } from './gameLaunchOverlay'
-import {
-  launchBridgeGame,
-  launchBridgeGameBody,
-  fireBridgeWineLaunch
-} from './gameBridgeLaunch'
+import { launchBridgeGame, launchBridgeGameBody } from './gameBridgeLaunch'
+import { fireBridgeWineLaunch } from './gameBridgeWineLaunch'
 import {
   launch,
   prefetchBridgeDrmDownloads,

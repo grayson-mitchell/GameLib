@@ -2,6 +2,5 @@
   "src/backend/storeManagers/steam/bridge/drm/runnerClone.ts": 1228,
   "src/backend/storeManagers/steam/bridge/drm/stageDrmBottle.ts": 1005,
   "src/backend/storeManagers/steam/bridge/helperProcess.ts": 1143,
-  "src/backend/storeManagers/steam/bridge/shimGenerate.ts": 1479,
-  "src/backend/storeManagers/steam/gameBridgeLaunch.ts": 1183
+  "src/backend/storeManagers/steam/bridge/shimGenerate.ts": 1479
 }

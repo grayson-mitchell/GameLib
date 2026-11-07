@@ -43,6 +43,7 @@ const LIFTED_OWNERS = [
   'gameInstallBridge.ts',
   'gameLaunchOverlay.ts',
   'gameBridgeLaunch.ts',
+  'gameBridgeWineLaunch.ts',
   'gameLaunch.ts',
   'gameMaintenance.ts',
   'gameUninstall.ts',
@@ -120,6 +121,7 @@ describe('steam/games.ts module surface (D-05)', () => {
       gameInstallBridge: 2,
       gameLaunch: 2,
       gameBridgeLaunch: 3,
+      gameBridgeWineLaunch: 4,
       gameUninstall: 4,
       gameMaintenance: 4
     }
