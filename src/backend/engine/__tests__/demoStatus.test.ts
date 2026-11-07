@@ -1,4 +1,10 @@
-import { chmodSync, copyFileSync, mkdirSync, readFileSync } from 'fs'
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync
+} from 'fs'
 import { join } from 'path'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import { parseDemoStatus, probeDemoStatus } from '../demoStatus'
@@ -134,12 +140,29 @@ describe('probeDemoStatus', () => {
     expect(r).toMatchObject({ kind: 'failed', reason: 'spawn-error' })
   })
 
-  it.each(['a/b', ''])('rejects bottle name %j without spawning', async (b) => {
-    const r = await probeDemoStatus({
-      binDir,
-      bottleName: b,
-      baseEnv: env('licensed')
-    })
-    expect(r).toMatchObject({ kind: 'failed', reason: 'invalid-bottle' })
-  })
+  it.each(['a/b', '', '..', 'x\\y', ' padded ', 'a'.repeat(256)])(
+    'rejects bottle name %j without spawning',
+    async (b) => {
+      const r = await probeDemoStatus({
+        binDir,
+        bottleName: b,
+        baseEnv: env('licensed')
+      })
+      expect(r).toMatchObject({ kind: 'failed', reason: 'invalid-bottle' })
+      expect(existsSync(join(profile.root, 'record'))).toBe(false)
+    }
+  )
+
+  it.each(['Windows 10 Games', 'My Bottle (2)', 'x '.repeat(60).trim()])(
+    'probes the bottle named %j (CX_BOTTLE travels in env)',
+    async (b) => {
+      const r = await probeDemoStatus({
+        binDir,
+        bottleName: b,
+        baseEnv: env('licensed')
+      })
+      expect(r).toMatchObject({ kind: 'ok', status: { kind: 'licensed' } })
+      expect(readFileSync(join(profile.root, 'record'), 'utf8')).toBe(b)
+    }
+  )
 })

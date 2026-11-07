@@ -12,12 +12,14 @@
 import { spawn } from 'child_process'
 import { join } from 'path'
 import { logInfo, LogPrefix } from 'backend/logger'
+import { sanitizeBottleName } from './bottlePrimitives'
 
 // Spike 060 measured 4.2 s cold, 0.9 s warm: about 3.5x headroom.
 const DEMO_STATUS_CAP_MS = 15_000
 
 const OUTPUT_CAP = 64 * 1024
-const BOTTLE_RE = /^[A-Za-z0-9._-]{1,64}$/
+// APFS file-name limit; a bottle is a directory.
+const BOTTLE_NAME_MAX = 255
 
 export type DemoStatus =
   | { kind: 'licensed' }
@@ -86,7 +88,12 @@ export async function probeDemoStatus(args: {
     }
   }
 
-  if (!BOTTLE_RE.test(bottleName)) {
+  // CX_BOTTLE travels in the child's env, not argv, so spaces and punctuation
+  // are safe; sanitizeBottleName is the engine layer's one name chokepoint.
+  if (
+    sanitizeBottleName(bottleName) !== bottleName ||
+    bottleName.length > BOTTLE_NAME_MAX
+  ) {
     return fail('invalid-bottle', 'bottle name rejected')
   }
 
