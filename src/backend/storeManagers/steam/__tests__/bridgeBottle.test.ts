@@ -629,7 +629,8 @@ describe('bottle.ts', () => {
             '..',
             '..',
             '.planning',
-            'phases',
+            'milestones',
+            'v0.9-phases',
             '56-bridge-steamclient-layer-drm-mode-for-steamstub-titles',
             '56-01-SUMMARY.md'
           ),
