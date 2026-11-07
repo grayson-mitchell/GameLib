@@ -139,7 +139,7 @@ function parseDiffLine(line: string): DiffEntry | null {
   // (status, old path, new path) -- the last field is the destination path,
   // which is what still exists on disk and is what must be scanned.
   const path = fields[fields.length - 1]
-  if (!path) return null
+  if (status === undefined || !path) return null
 
   return { status, path }
 }

@@ -104,6 +104,15 @@ interface PngChunk {
 // over its type+data bytes.
 // ---------------------------------------------------------------------------
 
+/** Indexed read that throws instead of yielding `undefined` on an out-of-range index. */
+function at<T>(arr: ArrayLike<T>, i: number, what: string): T {
+  const v = arr[i]
+  if (v === undefined) {
+    throw new Error(`${what}: index ${i} out of range (length ${arr.length})`)
+  }
+  return v
+}
+
 let crcTable: Uint32Array | null = null
 
 function getCrcTable(): Uint32Array {
@@ -123,8 +132,8 @@ function getCrcTable(): Uint32Array {
 function crc32(buf: Buffer): number {
   const table = getCrcTable()
   let crc = 0xffffffff
-  for (let i = 0; i < buf.length; i++) {
-    crc = (table[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8)) >>> 0
+  for (const byte of buf) {
+    crc = (at(table, (crc ^ byte) & 0xff, 'crc table') ^ (crc >>> 8)) >>> 0
   }
   return (crc ^ 0xffffffff) >>> 0
 }
@@ -218,16 +227,20 @@ export function decodeRgba(path: string): DecodedPng {
   let rawOffset = 0
   let prevLineStart = -1
   for (let y = 0; y < height; y++) {
-    const filterType = raw[rawOffset]
+    const filterType = at(raw, rawOffset, 'PNG filter byte')
     rawOffset += 1
     const lineStart = y * stride
     for (let x = 0; x < stride; x++) {
-      const rawByte = raw[rawOffset + x]
-      const a = x >= bytesPerPixel ? pixels[lineStart + x - bytesPerPixel] : 0
-      const b = prevLineStart >= 0 ? pixels[prevLineStart + x] : 0
+      const rawByte = at(raw, rawOffset + x, 'PNG raw byte')
+      const a =
+        x >= bytesPerPixel
+          ? at(pixels, lineStart + x - bytesPerPixel, 'PNG left pixel')
+          : 0
+      const b =
+        prevLineStart >= 0 ? at(pixels, prevLineStart + x, 'PNG up pixel') : 0
       const c =
         prevLineStart >= 0 && x >= bytesPerPixel
-          ? pixels[prevLineStart + x - bytesPerPixel]
+          ? at(pixels, prevLineStart + x - bytesPerPixel, 'PNG up-left pixel')
           : 0
       let value: number
       switch (filterType) {
@@ -308,11 +321,14 @@ function buildHueSegmentedTemplateAlpha(
 ): Buffer {
   const out = Buffer.alloc(width * height * 4)
   for (let i = 0; i < pixels.length; i += 4) {
-    const a = pixels[i + 3]
+    const a = at(pixels, i + 3, 'pixel alpha')
     const isGlyph =
       a > 16 &&
-      rgbToHueDegrees(pixels[i], pixels[i + 1], pixels[i + 2]) >=
-        hueSplitDegrees
+      rgbToHueDegrees(
+        at(pixels, i, 'pixel red'),
+        at(pixels, i + 1, 'pixel green'),
+        at(pixels, i + 2, 'pixel blue')
+      ) >= hueSplitDegrees
     out[i] = fill
     out[i + 1] = fill
     out[i + 2] = fill
@@ -333,8 +349,10 @@ function buildHueSegmentedTemplateAlpha(
 export function isUniformFill(pixels: Buffer, fill: number): boolean {
   for (let i = 0; i < pixels.length; i += 4) {
     if (
-      pixels[i + 3] > 0 &&
-      (pixels[i] !== fill || pixels[i + 1] !== fill || pixels[i + 2] !== fill)
+      at(pixels, i + 3, 'pixel alpha') > 0 &&
+      (at(pixels, i, 'pixel red') !== fill ||
+        at(pixels, i + 1, 'pixel green') !== fill ||
+        at(pixels, i + 2, 'pixel blue') !== fill)
     ) {
       return false
     }
@@ -361,7 +379,7 @@ export function opaqueFraction(
 ): number {
   let opaque = 0
   for (let i = 3; i < pixels.length; i += 4) {
-    if (pixels[i] > 16) opaque++
+    if (at(pixels, i, 'pixel alpha') > 16) opaque++
   }
   return opaque / (width * height)
 }
@@ -579,7 +597,13 @@ function runCli(): void {
       // shipped byte-identical for the project's entire history, which made
       // `darkTrayIcon` a switch wired to nothing. Asserting it here means the
       // generator itself can never reintroduce that, at any scale.
-      if (written[0].equals(written[1])) {
+      const [darkBytes, lightBytes] = written
+      if (darkBytes === undefined || lightBytes === undefined) {
+        throw new Error(
+          `expected a dark and a light tray icon to be written, got ${written.length}`
+        )
+      }
+      if (darkBytes.equals(lightBytes)) {
         throw new Error(
           `${paths.dark} and ${paths.light} are byte-identical -- the tray icon ` +
             'variant setting would be a visual no-op again'

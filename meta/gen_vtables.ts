@@ -2915,7 +2915,7 @@ export const LEGACY_CSTEAMWORKS_X64_EXPORTS: readonly string[] = Object.keys(
   LEGACY_CSTEAMWORKS_X64_EXPORT_BODIES
 ).sort()
 
-function lifecycleNoopBody(name: string, spec: string): string {
+function lifecycleNoopBody(name: string, spec: string | undefined): string {
   switch (spec) {
     case 'V':
       return `void ${name}(void) { }`
@@ -5052,13 +5052,14 @@ function emitStubBody(
   // parsed it as a connect string and threw). Declare the REAL param types for
   // such a stub -- a `uint32_t dummy` would truncate the pointer on Win64 --
   // which the i386 stackBytes already account for (pointer = 4 bytes there).
-  const textOutIdx = method.params.findIndex(
-    (p, i) =>
+  const textOutIdx = method.params.findIndex((p, i) => {
+    const next = method.params[i + 1]
+    return (
       p.type === 'char*' &&
-      i + 1 < method.params.length &&
-      (method.params[i + 1].type === 'int32' ||
-        method.params[i + 1].type === 'uint32')
-  )
+      next !== undefined &&
+      (next.type === 'int32' || next.type === 'uint32')
+    )
+  })
   const useRealParams =
     !sret &&
     textOutIdx >= 0 &&
@@ -5075,9 +5076,12 @@ function emitStubBody(
     : Array.from({ length: dummyCount }, (_, i) => `uint32_t dummy${i}`).join(
         ', '
       )
-  const textOutPrelude = useRealParams
-    ? `  if (${method.params[textOutIdx].name} != NULL && ${method.params[textOutIdx + 1].name} > 0) ${method.params[textOutIdx].name}[0] = '\\0';\n`
-    : ''
+  const textOutParam = method.params[textOutIdx]
+  const textOutCap = method.params[textOutIdx + 1]
+  const textOutPrelude =
+    useRealParams && textOutParam !== undefined && textOutCap !== undefined
+      ? `  if (${textOutParam.name} != NULL && ${textOutCap.name} > 0) ${textOutParam.name}[0] = '\\0';\n`
+      : ''
   const paramParts = [sretParam, dummyParams].filter(Boolean).join(', ')
   const signatureParams = paramParts
     ? `void *self, ${paramParts}`
@@ -5215,8 +5219,12 @@ function emitX64NullSretObjects(
   inventory: NullSretInventory | undefined
 ): string {
   const kept: [string, NullSretVersionEntry][] = []
-  for (const version of Object.keys(inventory?.versions ?? {}).sort()) {
-    const entry = inventory!.versions[version]
+  const inventoryVersions = inventory?.versions ?? {}
+  for (const version of Object.keys(inventoryVersions).sort()) {
+    const entry = inventoryVersions[version]
+    if (entry === undefined) {
+      throw new Error(`x64 null sret inventory: ${version} has no entry`)
+    }
     if (entry.slotCount > X64_NULL_OBJECT_SLOTS) {
       throw new Error(
         `x64 null sret inventory: ${version} slotCount ${entry.slotCount} exceeds ${X64_NULL_OBJECT_SLOTS}`
@@ -6066,8 +6074,9 @@ export function flatMethodName(
   let base = method.name.replace(/^DEPRECATED_/, '')
   const suffixed = base.match(/^(.*)_(\d+)$/)
   let overloaded = false
-  if (suffixed && siblings.some((s) => s.name === suffixed[1])) {
-    base = suffixed[1]
+  const stem = suffixed?.[1]
+  if (stem !== undefined && siblings.some((s) => s.name === stem)) {
+    base = stem
     overloaded = true
   } else if (siblings.some((s) => s.name === `${method.name}_2`)) {
     overloaded = true
@@ -6196,15 +6205,17 @@ function reconcileFlatPrototype(
       `${family}.${flatName} mixes struct-return conventions/sizes across versions (${hiddenSizes.map((h) => (h === null ? 'RAX/scalar' : `hidden pointer ${h}B`)).join(' / ')})`
     )
   }
-  const hiddenSize = hiddenSizes.length === 1 ? hiddenSizes[0] : null
+  const hiddenSize = hiddenSizes.length === 1 ? (hiddenSizes[0] ?? null) : null
   const arity = Math.max(...cases.map((c) => c.method.params.length))
   for (let i = 0; i < arity; i++) {
-    const types = cases
-      .filter((c) => i < c.method.params.length)
-      .map((c) => flatArgType(c.method.params[i].type))
+    const types = cases.flatMap((c) => {
+      const param = c.method.params[i]
+      return param === undefined ? [] : [flatArgType(param.type)]
+    })
     const distinct = [...new Set(types.map((t) => t.c))]
-    if (distinct.length === 1) {
-      params.push(distinct[0])
+    const [onlyType] = distinct
+    if (distinct.length === 1 && onlyType !== undefined) {
+      params.push(onlyType)
     } else if (types.every((t) => t.cls === 'gpr')) {
       params.push('uint64_t')
     } else {
@@ -6221,7 +6232,7 @@ function reconcileFlatPrototype(
   let ret: string
   if (distinctRets.length === 0) {
     ret = 'void'
-  } else if (distinctRets.length === 1) {
+  } else if (distinctRets.length === 1 && distinctRets[0] !== undefined) {
     ret = distinctRets[0]
   } else if (rets.every((r) => r.cls === 'gpr')) {
     ret = 'uint64_t'
@@ -6236,11 +6247,18 @@ function reconcileFlatPrototype(
 }
 
 function argExpr(
-  protoType: string,
+  protoParams: readonly string[],
   method: MethodSignature,
   i: number
 ): string {
-  const t = flatArgType(method.params[i].type)
+  const protoType = protoParams[i]
+  const param = method.params[i]
+  if (protoType === undefined || param === undefined) {
+    throw new Error(
+      `flat export: ${method.name} has no prototype/parameter at position ${i}`
+    )
+  }
+  const t = flatArgType(param.type)
   const a = `a${i + 1}`
   if (protoType === 'uint64_t' && t.c !== 'uint64_t' && t.narrow !== null) {
     return `(${t.c})(${t.narrow})${a}`
@@ -6266,7 +6284,7 @@ function emitFlatCase(
     const hiddenArgs = [
       'self',
       'ret',
-      ...method.params.map((_, i) => argExpr(protoParams[i], method, i))
+      ...method.params.map((_, i) => argExpr(protoParams, method, i))
     ].join(', ')
     return (
       `  if (self == (void *)&${instance}) {\n    vfn *vt = *(vfn **)self;\n` +
@@ -6277,7 +6295,7 @@ function emitFlatCase(
   }
   const sret = isSretReturn(method)
   const sigTypes = method.params.map((p) => flatArgType(p.type).c)
-  const args = method.params.map((_, i) => argExpr(protoParams[i], method, i))
+  const args = method.params.map((_, i) => argExpr(protoParams, method, i))
   const sigParams = ['void *', ...(sret ? ['void *'] : []), ...sigTypes].join(
     ', '
   )
@@ -6311,17 +6329,21 @@ function emitFlatClientLookup(
   funcSig: string,
   cases: readonly FlatCase[]
 ): string {
+  const firstCase = cases[0]
+  if (firstCase === undefined) {
+    throw new Error('flat export: client lookup has no cases')
+  }
   const idx = new Set(
     cases.map((c) => c.method.params.findIndex((p) => p.type === 'const char*'))
   )
-  if (idx.size !== 1) {
+  const versionIdx = [...idx][0]
+  if (idx.size !== 1 || versionIdx === undefined) {
     throw new Error(
-      `flat export: ${cases[0].triple} client lookup version parameter moves between versions`
+      `flat export: ${firstCase.triple} client lookup version parameter moves between versions`
     )
   }
-  const versionIdx = [...idx][0]
   const versionArg = `a${versionIdx + 1}`
-  const ignored = cases[0].method.params
+  const ignored = firstCase.method.params
     .map((_, i) => i)
     .filter((i) => i !== versionIdx)
     .map((i) => `  (void)a${i + 1};\n`)
@@ -8002,6 +8024,9 @@ function emitDispatchCase(
         lines.push(`      *respLen = respEnd;`, `      return 0;`)
       } else if (outBufferParams.length > 0) {
         const last = outBufferParams[0]
+        if (last === undefined) {
+          throw new Error('unreachable: outBufferParams is non-empty')
+        }
         lines.push(
           outBufferParams.length > 1
             ? `      *respLen = bufOff;`

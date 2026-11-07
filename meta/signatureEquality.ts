@@ -25,9 +25,13 @@ export function paramListsEqual(
 ): boolean {
   return (
     a.length === b.length &&
-    a.every(
-      (p, i) => normalizeParamType(p.type) === normalizeParamType(b[i].type)
-    )
+    a.every((p, i) => {
+      const other = b[i]
+      return (
+        other !== undefined &&
+        normalizeParamType(p.type) === normalizeParamType(other.type)
+      )
+    })
   )
 }
 

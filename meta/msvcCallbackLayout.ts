@@ -44,6 +44,15 @@ const TRIPLES: readonly MsvcTriple[] = [
   'i686-pc-windows-msvc'
 ]
 
+/** Regex capture group that must have participated in the match; throws otherwise. */
+function capture(m: RegExpExecArray, group: number, what: string): string {
+  const v = m[group]
+  if (v === undefined) {
+    throw new Error(`malformed dump: missing ${what} (capture group ${group})`)
+  }
+  return v
+}
+
 function vtableIndex(block: string, signature: string, triple: string) {
   for (const line of block.split('\n')) {
     const m = /^\s*(\d+) \| (.*?)\s*$/.exec(line)
@@ -62,7 +71,7 @@ function parseSection(section: string, triple: string): MsvcCallbackLayout {
   if (!vt) {
     throw new Error(`${triple}: missing VFTable block for 'CCallbackBase'`)
   }
-  const block = vt[1]
+  const block = capture(vt, 1, 'CCallbackBase VFTable block')
   const rec =
     /Type: class CCallbackBase\n[\s\S]*?FieldOffsets: \[(\d+), (\d+)\]/.exec(
       section
@@ -102,13 +111,13 @@ export function parseMsvcCallbackLayoutDump(
   let m: RegExpExecArray | null
   while ((m = re.exec(text))) {
     heads.push({
-      triple: m[1],
+      triple: capture(m, 1, 'triple name'),
       start: m.index,
       bodyStart: m.index + m[0].length
     })
   }
   heads.forEach((h, i) => {
-    const end = i + 1 < heads.length ? heads[i + 1].start : text.length
+    const end = heads[i + 1]?.start ?? text.length
     if (!sections.has(h.triple)) {
       sections.set(h.triple, text.slice(h.bodyStart, end))
     }
@@ -202,13 +211,13 @@ export function parseUserStatsReceivedLayoutDump(
   let m: RegExpExecArray | null
   while ((m = re.exec(text))) {
     heads.push({
-      triple: m[1],
+      triple: capture(m, 1, 'triple name'),
       start: m.index,
       bodyStart: m.index + m[0].length
     })
   }
   heads.forEach((h, i) => {
-    const end = i + 1 < heads.length ? heads[i + 1].start : text.length
+    const end = heads[i + 1]?.start ?? text.length
     if (!sections.has(h.triple)) {
       sections.set(h.triple, text.slice(h.bodyStart, end))
     }
@@ -923,13 +932,13 @@ function splitDumpSections(text: string): Map<string, string> {
   let m: RegExpExecArray | null
   while ((m = re.exec(text))) {
     heads.push({
-      triple: m[1],
+      triple: capture(m, 1, 'triple name'),
       start: m.index,
       bodyStart: m.index + m[0].length
     })
   }
   heads.forEach((h, i) => {
-    const end = i + 1 < heads.length ? heads[i + 1].start : text.length
+    const end = heads[i + 1]?.start ?? text.length
     if (!sections.has(h.triple)) {
       sections.set(h.triple, text.slice(h.bodyStart, end))
     }
@@ -962,11 +971,16 @@ export function parseCallbackLayoutsDump(
           `${triple}: missing record layout (Size/FieldOffsets) for ${name}`
         )
       }
-      const names = Object.keys(
-        (CALLBACK_LAYOUTS as Record<string, CallbackLayoutEntry>)[name][arch]
-          .fields
-      )
-      const offsets = rec[2].split(', ').map((o) => Number(o) / 8)
+      const entry = (CALLBACK_LAYOUTS as Record<string, CallbackLayoutEntry>)[
+        name
+      ]
+      if (entry === undefined) {
+        throw new Error(`${triple}: ${name} missing from the layout table`)
+      }
+      const names = Object.keys(entry[arch].fields)
+      const offsets = capture(rec, 2, `${name} FieldOffsets`)
+        .split(', ')
+        .map((o) => Number(o) / 8)
       if (offsets.length !== names.length) {
         throw new Error(
           `${triple}: ${name} has ${offsets.length} fields in the dump, ${names.length} in the table`
@@ -974,7 +988,13 @@ export function parseCallbackLayoutsDump(
       }
       const fields: Record<string, number> = {}
       names.forEach((n, i) => {
-        fields[n] = offsets[i]
+        const offset = offsets[i]
+        if (offset === undefined) {
+          throw new Error(
+            `${triple}: ${name} has no dump offset for field ${n}`
+          )
+        }
+        fields[n] = offset
       })
       ;(out[name] ??= {} as Record<CallbackLayoutArch, StructLayout>)[arch] = {
         size: Number(rec[1]) / 8,

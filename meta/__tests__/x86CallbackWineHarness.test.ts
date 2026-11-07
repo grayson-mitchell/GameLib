@@ -12,6 +12,7 @@ import { join } from 'node:path'
 
 import { createFakeHomeProfile } from '../../src/backend/testUtils/fakeHomeProfile'
 import { buildShimCompileArgv } from '../buildSteamBridgeShims'
+import { at } from './fixtures/indexed'
 
 const REPO = join(__dirname, '..', '..')
 const CX_BIN =
@@ -311,9 +312,10 @@ describe('x86 callback dispatch under Wine (P55-9)', () => {
     expect(f.filter((x) => x.slot === SLOT_DRAIN).length).toBeGreaterThan(0)
     const cb = f.filter((x) => x.slot === SLOT_CBDISP)
     expect(cb).toHaveLength(1)
-    expect(cb[0].args.readInt32LE(0)).toBe(168)
-    expect(cb[0].args.readUInt32LE(4)).toBe(3)
-    expect(cb[0].args.readUInt32LE(8)).toBe(0)
+    const cbFrame = at(cb, 0, 'callback dispatch frame')
+    expect(cbFrame.args.readInt32LE(0)).toBe(168)
+    expect(cbFrame.args.readUInt32LE(4)).toBe(3)
+    expect(cbFrame.args.readUInt32LE(8)).toBe(0)
     for (const fr of f) {
       expect([SLOT_HELLO, SLOT_DRAIN, SLOT_CBDISP]).toContain(fr.slot)
     }

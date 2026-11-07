@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { IPC_INVALID_CHANNEL_MARKER } from '../../src/common/types/sidecarTransport'
+import { at } from './fixtures/indexed'
 import {
   newCtx,
   parseCliFlags,
@@ -60,7 +61,7 @@ describe('renderArgsStruct', () => {
         'x-error-prefix': 'p'
       })
     )
-    expect((j.prefixItems as Node[])[0].title).toBe('a')
+    expect(at(j.prefixItems as Node[], 0, 'prefixItems').title).toBe('a')
     expect(j['x-error-prefix']).toBe('p')
   })
   it('single object element becomes a struct, optional fields Option', () => {

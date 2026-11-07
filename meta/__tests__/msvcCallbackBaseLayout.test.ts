@@ -16,6 +16,7 @@ import {
   type FakeHomeProfile
 } from '../../src/backend/testUtils/fakeHomeProfile'
 import { downloadZig } from '../downloadZig'
+import { defined } from './fixtures/indexed'
 import {
   MSVC_CCALLBACKBASE_OFFSETS,
   MSVC_CCALLBACKBASE_VSLOT_GET_SIZE,
@@ -354,6 +355,7 @@ describe('CALLBACK_LAYOUTS (58-02)', () => {
   let zigBinPath = ''
   const createdProfiles: FakeHomeProfile[] = []
   const entries = CALLBACK_LAYOUTS as Record<string, CallbackLayoutEntry>
+  const entry = (name: string) => defined(entries[name], `entries ${name}`)
   const ARCHES: readonly CallbackLayoutArch[] = ['x64', 'x86', 'mac']
 
   beforeAll(async () => {
@@ -379,10 +381,14 @@ describe('CALLBACK_LAYOUTS (58-02)', () => {
   ) {
     for (const name of Object.keys(entries)) {
       for (const arch of ARCHES) {
-        expect({ name, arch, layout: parsed[name][arch] }).toEqual({
+        expect({
           name,
           arch,
-          layout: entries[name][arch]
+          layout: defined(parsed[name], `parsed ${name}`)[arch]
+        }).toEqual({
+          name,
+          arch,
+          layout: defined(entries[name], `entries ${name}`)[arch]
         })
       }
     }
@@ -411,29 +417,28 @@ describe('CALLBACK_LAYOUTS (58-02)', () => {
     })
 
     it('settles A3 by measurement', () => {
-      expect(entries.LobbyEnter_t.mac.size).toBe(20)
-      expect(entries.LobbyEnter_t.x64.size).toBe(24)
-      expect(entries.LobbyCreated_t.mac.size).toBe(12)
-      expect(entries.LobbyCreated_t.x64.size).toBe(16)
-      expect(entries.SteamNetConnectionStatusChangedCallback_t.mac.size).toBe(
+      expect(entry('LobbyEnter_t').mac.size).toBe(20)
+      expect(entry('LobbyEnter_t').x64.size).toBe(24)
+      expect(entry('LobbyCreated_t').mac.size).toBe(12)
+      expect(entry('LobbyCreated_t').x64.size).toBe(16)
+      expect(entry('SteamNetConnectionStatusChangedCallback_t').mac.size).toBe(
         704
       )
-      expect(entries.SteamNetConnectionStatusChangedCallback_t.x64.size).toBe(
+      expect(entry('SteamNetConnectionStatusChangedCallback_t').x64.size).toBe(
         712
       )
       // CSteamID is pack(1) in the SDK, so these hold it at offset 0, size 9.
-      expect(entries.P2PSessionConnectFail_t.mac.size).toBe(9)
-      expect(entries.P2PSessionConnectFail_t.x64.size).toBe(9)
-      expect(entries.SteamNetworkingMessage_t.mac.size).toBe(216)
-      expect(entries.SteamNetworkingMessage_t.x64.size).toBe(216)
-      expect(entries.SteamNetworkingMessage_t.x86.size).toBe(208)
+      expect(entry('P2PSessionConnectFail_t').mac.size).toBe(9)
+      expect(entry('P2PSessionConnectFail_t').x64.size).toBe(9)
+      expect(entry('SteamNetworkingMessage_t').mac.size).toBe(216)
+      expect(entry('SteamNetworkingMessage_t').x64.size).toBe(216)
+      expect(entry('SteamNetworkingMessage_t').x86.size).toBe(208)
     })
 
     it('the repack set (mac differs from x64) is exactly the documented one', () => {
       const differing = Object.keys(entries)
         .filter(
-          (n) =>
-            JSON.stringify(entries[n].mac) !== JSON.stringify(entries[n].x64)
+          (n) => JSON.stringify(entry(n).mac) !== JSON.stringify(entry(n).x64)
         )
         .sort()
       expect(differing).toEqual(REPACK_SET)

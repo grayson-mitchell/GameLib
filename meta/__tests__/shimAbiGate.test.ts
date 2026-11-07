@@ -228,13 +228,15 @@ function rdxReturnedInRax(block: string): string | null {
   const parked = /\bmovq?\s+%rdx,\s*%(rbx|rsi|rdi|rbp|r12|r13|r14|r15)\b/.exec(
     block
   )
+  const parkedReg = parked?.[1]
   if (
     parked !== null &&
-    new RegExp(`\\bmovq?\\s+%${parked[1]},\\s*%rax\\b`).test(
+    parkedReg !== undefined &&
+    new RegExp(`\\bmovq?\\s+%${parkedReg},\\s*%rax\\b`).test(
       block.slice(parked.index + parked[0].length)
     )
   ) {
-    return parked[1]
+    return parkedReg
   }
   return null
 }

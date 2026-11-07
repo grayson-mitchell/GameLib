@@ -283,9 +283,9 @@ function renderStruct(name: string, node: JsonNode, ctx: RenderCtx): string {
   const props = (node.properties ?? {}) as Record<string, JsonNode>
   const required = new Set((node.required ?? []) as string[])
   const lines: string[] = []
-  for (const key of Object.keys(props)) {
+  for (const [key, prop] of Object.entries(props)) {
     const sub = child(ctx, `properties/${key}`, `${name}${pascal(key)}`)
-    let ty = rustTypeFor(props[key], sub)
+    let ty = rustTypeFor(prop, sub)
     merge(ctx, sub)
     ctx.decls.push(...sub.decls.splice(0))
     if (!required.has(key) && !ty.startsWith('Option<')) ty = `Option<${ty}>`
@@ -322,12 +322,17 @@ export function renderArgsStruct(
   const minItems = (tuple.minItems as number | undefined) ?? 0
 
   const decls: string[] = []
+  const firstItem = items[0]
   let main: string
   if (items.length === 0) {
     main = `#[derive(Debug, Clone, Copy)]\npub(crate) struct ${name};\n\nimpl ${name} {\n    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {\n        Ok(Self)\n    }\n}`
     ctx.usesValue = true
   } else if (tuple['x-field-errors'] === true) {
-    if (items.length !== 1 || items[0].type !== 'object') {
+    if (
+      items.length !== 1 ||
+      firstItem === undefined ||
+      firstItem.type !== 'object'
+    ) {
       fail(ctx, 'x-field-errors needs a tuple of exactly one object argument')
     }
     const sub: RenderCtx = {
@@ -335,21 +340,25 @@ export function renderArgsStruct(
       nameHint: name,
       pointer: '#/prefixItems/0'
     }
-    decls.push(renderStructInto(name, items[0], sub))
+    decls.push(renderStructInto(name, firstItem, sub))
     merge(ctx, sub)
     decls.push(...sub.decls)
-    const props = (items[0].properties ?? {}) as Record<string, JsonNode>
-    const required = new Set((items[0].required ?? []) as string[])
+    const props = (firstItem.properties ?? {}) as Record<string, JsonNode>
+    const required = new Set(
+      (Array.isArray(firstItem.required) ? firstItem.required : []).filter(
+        (r): r is string => typeof r === 'string'
+      )
+    )
     const lets: string[] = []
     const names: string[] = []
-    for (const key of Object.keys(props)) {
+    for (const [key, prop] of Object.entries(props)) {
       const scratch: RenderCtx = {
         ...ctx,
         nameHint: `${name}${pascal(key)}`,
         pointer: `#/prefixItems/0/properties/${key}`,
         decls: []
       }
-      let ty = rustTypeFor(props[key], scratch)
+      let ty = rustTypeFor(prop, scratch)
       if (scratch.decls.length > 0) {
         fail(
           scratch,
@@ -365,13 +374,17 @@ export function renderArgsStruct(
     }
     ctx.usesValue = true
     main = `impl ${name} {\n    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {\n        let obj = args.first().and_then(Value::as_object).ok_or_else(|| ${rustStr(err)}.to_string())?;\n${lets.join('\n')}\n        Ok(Self { ${names.join(', ')} })\n    }\n}`
-  } else if (items.length === 1 && items[0].type === 'object') {
+  } else if (
+    items.length === 1 &&
+    firstItem !== undefined &&
+    firstItem.type === 'object'
+  ) {
     const sub: RenderCtx = {
       ...ctx,
       nameHint: name,
       pointer: '#/prefixItems/0'
     }
-    decls.push(renderStructInto(name, items[0], sub))
+    decls.push(renderStructInto(name, firstItem, sub))
     merge(ctx, sub)
     decls.push(...sub.decls)
     ctx.usesValue = true
@@ -462,7 +475,9 @@ function rendererChannelNames(
     .filter((n) => {
       const e = entries[n]
       return (
-        e.caller === 'renderer' && (e.kind === 'invoke' || e.kind === 'send')
+        e !== undefined &&
+        e.caller === 'renderer' &&
+        (e.kind === 'invoke' || e.kind === 'send')
       )
     })
     .sort()
@@ -476,8 +491,8 @@ export function renderIpcContract(input: ContractInput): string {
   let usesValue = false
   let usesDeserialize = false
   const structBlocks: string[] = []
-  for (const channel of Object.keys(input.schemas)) {
-    const r = renderArgsStruct(channel, input.schemas[channel])
+  for (const [channel, schema] of Object.entries(input.schemas)) {
+    const r = renderArgsStruct(channel, schema)
     usesValue ||= r.usesValue
     usesDeserialize ||= r.usesDeserialize
     structBlocks.push(r.text)

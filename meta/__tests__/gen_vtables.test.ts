@@ -66,6 +66,7 @@ import {
   SHIM_SERVED_INTERFACE_VERSIONS,
   SHIM64_SERVED_INTERFACE_VERSIONS
 } from '../../src/backend/storeManagers/steam/bridge/shimCoverage'
+import { at, defined, group } from './fixtures/indexed'
 
 const SDK_DIR = join(__dirname, '..', 'sdk')
 const FIXTURE_DIR = join(__dirname, 'fixtures')
@@ -201,7 +202,7 @@ describe('gen_vtables', () => {
         /static vfn g_steamuser023_vtbl\[\d+\] = \{([\s\S]*?)\};/
       )
       expect(arrayMatch).not.toBeNull()
-      const arrayBody = arrayMatch![1]
+      const arrayBody = group(arrayMatch, 1, 'vtable array')
       const idxHSteamUser = arrayBody.indexOf('vt_SteamUser023_GetHSteamUser')
       const idxLoggedOn = arrayBody.indexOf('vt_SteamUser023_BLoggedOn')
       const idxSteamID = arrayBody.indexOf('vt_SteamUser023_GetSteamID')
@@ -509,7 +510,7 @@ describe('gen_vtables', () => {
         /SteamFriends018\.GetFriendPersonaName\n([\s\S]*?)\n {4}\}/
       )
       expect(caseBody).not.toBeNull()
-      const body = caseBody![1]
+      const body = group(caseBody, 1, 'case body')
       expect(body).toMatch(/uint64_t arg_steamIDFriend;/)
       expect(body).toMatch(/memcpy\(&arg_steamIDFriend, arg \+ \w+, 8\)/)
       expect(body).toMatch(/argLen < [^)]*8/)
@@ -569,8 +570,8 @@ describe('gen_vtables', () => {
       const withGap: InterfaceManifestV2 = {
         ...base,
         methods: [
-          { ...base.methods[0], slot: 0 },
-          { ...base.methods[0], slot: 2, name: 'Other' }
+          { ...at(base.methods, 0, 'base.methods'), slot: 0 },
+          { ...at(base.methods, 0, 'base.methods'), slot: 2, name: 'Other' }
         ]
       }
       const errors = validateManifest(withGap)
@@ -582,8 +583,8 @@ describe('gen_vtables', () => {
         ...base,
         complete: false,
         methods: [
-          { ...base.methods[0], slot: 0 },
-          { ...base.methods[0], slot: 2, name: 'Other' }
+          { ...at(base.methods, 0, 'base.methods'), slot: 0 },
+          { ...at(base.methods, 0, 'base.methods'), slot: 2, name: 'Other' }
         ]
       }
       expect(validateManifest(withGap)).toEqual([])
@@ -592,7 +593,7 @@ describe('gen_vtables', () => {
     it('flags a wire method whose computeRetN does not match stackBytes', () => {
       const bad: InterfaceManifestV2 = {
         ...base,
-        methods: [{ ...base.methods[0], stackBytes: 4 }]
+        methods: [{ ...at(base.methods, 0, 'base.methods'), stackBytes: 4 }]
       }
       const errors = validateManifest(bad)
       expect(errors.some((e) => /computeRetN|stackBytes/i.test(e))).toBe(true)
@@ -601,7 +602,12 @@ describe('gen_vtables', () => {
     it('flags an unknown returnKind', () => {
       const bad: InterfaceManifestV2 = {
         ...base,
-        methods: [{ ...base.methods[0], returnKind: 'nonsense' as never }]
+        methods: [
+          {
+            ...at(base.methods, 0, 'base.methods'),
+            returnKind: 'nonsense' as never
+          }
+        ]
       }
       const errors = validateManifest(bad)
       expect(errors.some((e) => /returnKind/i.test(e))).toBe(true)
@@ -610,7 +616,13 @@ describe('gen_vtables', () => {
     it('flags a class return without structSize', () => {
       const bad: InterfaceManifestV2 = {
         ...base,
-        methods: [{ ...base.methods[0], returnKind: 'class', stackBytes: 4 }]
+        methods: [
+          {
+            ...at(base.methods, 0, 'base.methods'),
+            returnKind: 'class',
+            stackBytes: 4
+          }
+        ]
       }
       const errors = validateManifest(bad)
       expect(errors.some((e) => /structSize/i.test(e))).toBe(true)
@@ -619,7 +631,9 @@ describe('gen_vtables', () => {
     it('flags a _TESTONLY method name', () => {
       const bad: InterfaceManifestV2 = {
         ...base,
-        methods: [{ ...base.methods[0], name: 'DoThing_TESTONLY' }]
+        methods: [
+          { ...at(base.methods, 0, 'base.methods'), name: 'DoThing_TESTONLY' }
+        ]
       }
       const errors = validateManifest(bad)
       expect(errors.some((e) => /_TESTONLY/.test(e))).toBe(true)
@@ -1071,7 +1085,7 @@ describe('gen_vtables', () => {
         ...base,
         methods: [
           {
-            ...base.methods[0],
+            ...at(base.methods, 0, 'base.methods'),
             params: [{ name: 'pchDir', type: 'char*', kind: 'out-buffer' }]
           }
         ]
@@ -1085,7 +1099,7 @@ describe('gen_vtables', () => {
         ...base,
         methods: [
           {
-            ...base.methods[0],
+            ...at(base.methods, 0, 'base.methods'),
             params: [{ name: 'gameID', type: 'CGameID', kind: 'value' }]
           }
         ]
@@ -1100,7 +1114,7 @@ describe('gen_vtables', () => {
           ...base,
           methods: [
             {
-              ...base.methods[0],
+              ...at(base.methods, 0, 'base.methods'),
               params: [
                 kind
                   ? { name: 'steamID', type: 'CSteamID', kind }
@@ -1359,7 +1373,7 @@ describe('gen_vtables', () => {
         /SteamFriends018\.GetPersonaName\n([\s\S]*?)\n {4}\}/
       )
       expect(caseBody).not.toBeNull()
-      const body = caseBody![1]
+      const body = group(caseBody, 1, 'case body')
       expect(body).toContain('if (strLen > 255) strLen = 255;')
       expect(body).toContain('memcpy(resp, &strLen, 4);')
       expect(body).toContain('memcpy(resp + 4, result, strLen);')
@@ -1380,8 +1394,8 @@ describe('gen_vtables', () => {
     it('a NULL-resolved flat or self pointer is checked BEFORE any call', () => {
       const caseBody = dispatch.match(
         /SteamUser023\.GetSteamID\n([\s\S]*?)\n {4}\}/
-      )!
-      const body = caseBody[1]
+      )
+      const body = group(caseBody, 1, 'GetSteamID case body')
       const nullCheckIdx = body.indexOf('== NULL')
       const callIdx = body.indexOf('g_bd_flat_SteamUser023_GetSteamID(')
       expect(nullCheckIdx).toBeGreaterThanOrEqual(0)
@@ -1418,7 +1432,7 @@ describe('gen_vtables', () => {
           /SteamUserStats013\.GetStatInt32Test_TESTONLY\n([\s\S]*?)\n {4}\}/
         )
         expect(caseBody).not.toBeNull()
-        const body = caseBody![1]
+        const body = group(caseBody, 1, 'case body')
         const gateIdx = body.indexOf('if (g_bd_identity_only)')
         const nullCheckIdx = body.indexOf('== NULL')
         expect(gateIdx).toBeGreaterThanOrEqual(0)
@@ -1435,7 +1449,7 @@ describe('gen_vtables', () => {
           helperInterface: 'SteamAPI_SteamRemoteStorage_v016',
           methods: [
             {
-              ...userStatsManifest.methods[0],
+              ...at(userStatsManifest.methods, 0, 'userStatsManifest.methods'),
               name: 'FileExistsTest_TESTONLY',
               helperFlat: 'SteamAPI_ISteamRemoteStorage_FileExistsTest_TESTONLY'
             }
@@ -1473,7 +1487,7 @@ describe('gen_vtables', () => {
         const c = generateDispatchHeader([steamUtilsManifest])
         const caseBody = c.match(/SteamUtils011\.GetAppID\n([\s\S]*?)\n {4}\}/)
         expect(caseBody).not.toBeNull()
-        const body = caseBody![1]
+        const body = group(caseBody, 1, 'case body')
         expect(body).toContain('if (g_bd_identity_only) {')
         expect(body).toContain('uint32_t v = g_bd_report_appid;')
         expect(body).toContain('memcpy(resp, &v, 4); *respLen = 4; return 0;')
@@ -1509,7 +1523,9 @@ describe('gen_vtables', () => {
       it('throws when a dispatch-eligible wire method has no helperFlat', () => {
         const bad: InterfaceManifestV2 = {
           ...base,
-          methods: [{ ...base.methods[0], helperFlat: undefined }]
+          methods: [
+            { ...at(base.methods, 0, 'base.methods'), helperFlat: undefined }
+          ]
         }
         expect(() => generateDispatchHeader([bad])).toThrow(/helperFlat/)
       })
@@ -1527,7 +1543,7 @@ describe('gen_vtables', () => {
           ...base,
           methods: [
             {
-              ...base.methods[0],
+              ...at(base.methods, 0, 'base.methods'),
               params: [
                 {
                   name: 'pValue',
@@ -1547,7 +1563,7 @@ describe('gen_vtables', () => {
           ...base,
           methods: [
             {
-              ...base.methods[0],
+              ...at(base.methods, 0, 'base.methods'),
               returns: 'int32',
               returnKind: 'int32',
               params: [
@@ -1569,7 +1585,7 @@ describe('gen_vtables', () => {
           ...base,
           methods: [
             {
-              ...base.methods[0],
+              ...at(base.methods, 0, 'base.methods'),
               name: 'GetSummary_TESTONLY',
               helperFlat: 'SteamAPI_IDispatchCheck_GetSummary_TESTONLY',
               returns: 'Summary_t',
@@ -1585,14 +1601,20 @@ describe('gen_vtables', () => {
         const stubManifest: InterfaceManifestV2 = {
           ...base,
           mode: 'stub',
-          methods: [{ ...base.methods[0], helperFlat: undefined }]
+          methods: [
+            { ...at(base.methods, 0, 'base.methods'), helperFlat: undefined }
+          ]
         }
         expect(() => generateDispatchHeader([stubManifest])).not.toThrow()
 
         const fallbackManifest: InterfaceManifestV2 = {
           ...base,
           methods: [
-            { ...base.methods[0], helperFlat: undefined, helperFallback: true }
+            {
+              ...at(base.methods, 0, 'base.methods'),
+              helperFlat: undefined,
+              helperFallback: true
+            }
           ]
         }
         expect(() => generateDispatchHeader([fallbackManifest])).not.toThrow()
@@ -1670,8 +1692,12 @@ describe('gen_vtables', () => {
           new RegExp(
             `g_x64_null_object_vtbl\\[${X64_NULL_OBJECT_SLOTS}\\] = \\{\\n([\\s\\S]*?)\\n\\};`
           )
-        )!
-        expect(vtbl[1].split('\n').map((l) => l.trim())).toEqual(
+        )
+        expect(
+          group(vtbl, 1, 'null object vtable')
+            .split('\n')
+            .map((l) => l.trim())
+        ).toEqual(
           Array.from(
             { length: X64_NULL_OBJECT_SLOTS },
             (_, i) => `(vfn)vt_x64_null_s${i},`
@@ -1732,8 +1758,12 @@ describe('gen_vtables', () => {
         expect(c).toContain('#define GLIB_X64_NULL_SRET_SITES 3')
         const m = c.match(
           /g_x64_null_nullfam003_vtbl\[4\] = \{\n([\s\S]*?)\n\};/
-        )!
-        expect(m[1].split('\n').map((l) => l.trim())).toEqual([
+        )
+        expect(
+          group(m, 1, 'nullfam003 vtable')
+            .split('\n')
+            .map((l) => l.trim())
+        ).toEqual([
           '(vfn)vt_x64_null_s0,',
           '(vfn)vt_x64_null_sret_nullfam003_s1,',
           '(vfn)vt_x64_null_s2,',
@@ -1784,7 +1814,7 @@ describe('gen_vtables', () => {
         const c = generateShimC(real, { x64NullSretInventory: realInventory })
         const rows = [
           ...c.matchAll(/^ {2}\{ "([^"]+)", (\d+), (\d+) \},$/gm)
-        ].filter((r) => !r[1].includes(' '))
+        ].filter((r) => !at(r, 1, 'site row version').includes(' '))
         const n = Number(/#define GLIB_X64_NULL_SRET_SITES (\d+)/.exec(c)![1])
         // The inventory holds 189 sret slots; versions an x64 manifest serves get
         // a real proxy instead of a null object, so only the rest are sites.
@@ -1798,7 +1828,10 @@ describe('gen_vtables', () => {
         expect(n).toBe(expected)
         const siteRows = rows.slice(-n)
         expect(siteRows).toHaveLength(n)
-        siteRows.forEach(([, ver, slot, size], k) => {
+        siteRows.forEach((row, k) => {
+          const ver = at(row, 1, 'site row version')
+          const slot = at(row, 2, 'site row slot')
+          const size = at(row, 3, 'site row size')
           const id = ver.toLowerCase().replace(/[^a-z0-9_]/g, '_')
           const fn = `vt_x64_null_sret_${id}_s${slot}`
           expect(c).toContain(
@@ -1806,8 +1839,14 @@ describe('gen_vtables', () => {
           )
           const vt = new RegExp(
             `g_x64_null_${id}_vtbl\\[\\d+\\] = \\{\\n([\\s\\S]*?)\\n\\};`
-          ).exec(c)!
-          expect(vt[1].split('\n')[Number(slot)].trim()).toBe(`(vfn)${fn},`)
+          ).exec(c)
+          expect(
+            at(
+              group(vt, 1, `${ver} vtable`).split('\n'),
+              Number(slot),
+              `${ver} vtable line`
+            ).trim()
+          ).toBe(`(vfn)${fn},`)
         })
         const defs = c.match(
           /^static void \*vt_x64_null_sret_[a-z0-9_]+_s\d+\(void \*self, void \*ret\)/gm
@@ -1892,8 +1931,10 @@ describe('gen_vtables', () => {
         const c = generateShimC(real, { x64NullSretInventory: realInventory })
         const m = c.match(
           /g_x64_null_steamcontroller003_vtbl\[17\] = \{\n([\s\S]*?)\n\};/
-        )!
-        const lines = m[1].split('\n').map((l) => l.trim())
+        )
+        const lines = group(m, 1, 'steamcontroller003 vtable')
+          .split('\n')
+          .map((l) => l.trim())
         expect(lines).toHaveLength(17)
         lines.forEach((l, i) => {
           const want =
@@ -2313,8 +2354,8 @@ describe('gen_vtables', () => {
       const strip = (n: string) => n.replace(/^DEPRECATED_/, '')
       expect(c14.methods).toHaveLength(29)
       for (let i = 0; i < 29; i++) {
-        const a = c14.methods[i]
-        const b = c17.methods[i]
+        const a = at(c14.methods, i, 'c14.methods')
+        const b = at(c17.methods, i, 'c17.methods')
         expect(strip(a.name)).toBe(strip(b.name))
         expect(a.returnKind).toBe(b.returnKind)
         expect(a.params.length).toBe(b.params.length)
@@ -3494,7 +3535,11 @@ describe('quick k51: RequestCurrentStats notify and dispatch report (shim)', () 
       '__attribute__((noinline)) static void gamelib_request_current_stats(void) {'
     )
     expect(defAt).toBeGreaterThan(-1)
-    expect(defAt).toBeLessThan(c.indexOf(fallbackBodies[0][0]))
+    expect(defAt).toBeLessThan(
+      c.indexOf(
+        at(at(fallbackBodies, 0, 'fallbackBodies'), 0, 'first fallback body')
+      )
+    )
     const def = c.slice(defAt, c.indexOf('\n}\n', defAt))
     expect(def).toContain('BRIDGE_CONTROL_SLOT_REQUEST_CURRENT_STATS')
     expect(def).not.toContain('Interlocked')
@@ -3510,7 +3555,11 @@ describe('quick k51: RequestCurrentStats notify and dispatch report (shim)', () 
       'id != 1202 && InterlockedIncrement(&g_gl_cb_report_n[i]) > 4'
     )
     expect(hook).toContain('gl_cb_report_ids[i] == id')
-    const idsLine = /gl_cb_report_ids\[\] = \{([^}]*)\}/.exec(c)![1]
+    const idsLine = group(
+      /gl_cb_report_ids\[\] = \{([^}]*)\}/.exec(c),
+      1,
+      'report ids'
+    )
     const ids = idsLine.split(',').map((x) => Number(x.trim()))
     const union = [
       ...new Set([
@@ -3566,7 +3615,11 @@ describe('quick k51: RequestCurrentStats notify and dispatch report (shim)', () 
       expect(hook).toContain('gl_cb_report_ids[i] == id')
       expect(hook).toContain('if (i == ')
       expect(hook).not.toContain('> 16')
-      const idsLine = /gl_cb_report_ids\[\] = \{([^}]*)\}/.exec(src)![1]
+      const idsLine = group(
+        /gl_cb_report_ids\[\] = \{([^}]*)\}/.exec(src),
+        1,
+        'report ids'
+      )
       const ids = idsLine.split(',').map((x) => Number(x.trim()))
       expect(ids).toContain(1202)
       expect(ids).not.toContain(703)
@@ -4405,8 +4458,11 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
         {
           ...sendMethod,
           params: [
-            { ...sendMethod.params[0], lenParam: undefined },
-            sendMethod.params[1]
+            {
+              ...at(sendMethod.params, 0, 'sendMethod.params'),
+              lenParam: undefined
+            },
+            at(sendMethod.params, 1, 'sendMethod.params')
           ]
         }
       ])
@@ -4416,7 +4472,10 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
       const floaty = wireManifest([
         {
           ...sendMethod,
-          params: [sendMethod.params[0], { name: 'cb', type: 'float' }]
+          params: [
+            at(sendMethod.params, 0, 'sendMethod.params'),
+            { name: 'cb', type: 'float' }
+          ]
         }
       ])
       expect(validateManifest(floaty).join('\n')).toMatch(/in-buffer.*lenParam/)
@@ -4424,8 +4483,11 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
         {
           ...sendMethod,
           params: [
-            { ...sendMethod.params[0], lenParam: 'nope' },
-            sendMethod.params[1]
+            {
+              ...at(sendMethod.params, 0, 'sendMethod.params'),
+              lenParam: 'nope'
+            },
+            at(sendMethod.params, 1, 'sendMethod.params')
           ]
         }
       ])
@@ -4446,7 +4508,10 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
           ...recvMethod,
           params: [
             recvMethod.params[0],
-            { ...recvMethod.params[1], countParam: undefined },
+            {
+              ...at(recvMethod.params, 1, 'recvMethod.params'),
+              countParam: undefined
+            },
             recvMethod.params[2]
           ]
         })
@@ -4456,7 +4521,10 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
           ...recvMethod,
           params: [
             recvMethod.params[0],
-            { ...recvMethod.params[1], countParam: 'nope' },
+            {
+              ...at(recvMethod.params, 1, 'recvMethod.params'),
+              countParam: 'nope'
+            },
             recvMethod.params[2]
           ]
         })
@@ -4476,7 +4544,10 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
           ...recvMethod,
           params: [
             recvMethod.params[0],
-            { ...recvMethod.params[1], type: 'void**' },
+            {
+              ...at(recvMethod.params, 1, 'recvMethod.params'),
+              type: 'void**'
+            },
             recvMethod.params[2]
           ]
         })
@@ -4524,7 +4595,9 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
       const wrongSize = wireManifest([
         {
           ...getMethod,
-          params: [{ ...getMethod.params[0], structSize: 100 }]
+          params: [
+            { ...at(getMethod.params, 0, 'getMethod.params'), structSize: 100 }
+          ]
         }
       ])
       expect(validateManifest(wrongSize).join('\n')).toMatch(
@@ -4909,7 +4982,7 @@ describe('58-06 extended wire kinds (in-buffer, in-struct, out-struct, capBytes,
       ])
       for (const x of handle) {
         expect(x.helperFlat).toBe(`SteamAPI_ISteamMatchmakingServers_${x.name}`)
-        expect(x.zeroHandleParam).toBe(x.params[0].name)
+        expect(x.zeroHandleParam).toBe(at(x.params, 0, `${x.name} params`).name)
       }
       // Release and CancelServerQuery also retire the shim's response mapping.
       expect(
@@ -5353,19 +5426,22 @@ describe('58-14 networking local block and registry hook', () => {
     method.helperFlat =
       'SteamAPI_ISteamNetworkingUtils_GetRealIdentityForFakeIP'
     method.params[0] = {
-      ...method.params[0],
+      ...at(method.params, 0, 'method.params'),
       kind: 'in-struct',
       structSize: 18
     }
     method.params[1] = {
-      ...method.params[1],
+      ...at(method.params, 1, 'method.params'),
       kind: 'out-struct',
       structSize: 136
     }
     expect(
       validateManifest(bad).filter((e) => /GetRealIdentityForFakeIP/.test(e))
     ).toEqual([])
-    method.params[1] = { ...method.params[1], structSize: 144 }
+    method.params[1] = {
+      ...at(method.params, 1, 'method.params'),
+      structSize: 144
+    }
     expect(
       validateManifest(bad).some((e) =>
         /differs from the measured x64 size 136/.test(e)
@@ -5458,13 +5534,17 @@ describe('58-14 SteamNetworkingUtils004 wire policy and served flip', () => {
   const utils = real.find((m) => m.interface === 'SteamNetworkingUtils004')!
   const header = generateDispatchHeader(real)
   const shim = generateShimC(real)
-  const method = (name: string) => utils.methods.find((m) => m.name === name)!
+  const method = (name: string) =>
+    defined(
+      utils.methods.find((m) => m.name === name),
+      `method ${name}`
+    )
 
   it('every virtual but the destructor is wire; SetDebugOutputFunction and AllocateMessage are shim-local with no helper case', () => {
     const wired = utils.methods.filter((m) => (m.mode ?? utils.mode) === 'wire')
     expect(wired.map((m) => m.name)).not.toContain('destructor')
     expect(wired).toHaveLength(utils.methods.length - 1)
-    for (const name of ['SetDebugOutputFunction', 'AllocateMessage']) {
+    for (const name of ['SetDebugOutputFunction', 'AllocateMessage'] as const) {
       expect(method(name).shimLocal).toBe(true)
       expect(method(name).helperCustom).toBeUndefined()
       expect(header).not.toContain(`SteamNetworkingUtils004.${name}`)
@@ -5478,7 +5558,7 @@ describe('58-14 SteamNetworkingUtils004 wire policy and served flip', () => {
       ['SetConfigValue', 'gl_net_set_config_value'],
       ['GetConfigValue', 'gl_net_get_config_value'],
       ['GetPOPList', 'gl_net_get_pop_list']
-    ]) {
+    ] as const) {
       expect(method(name).shimLocal).toBe(true)
       expect(method(name).helperCustom).toBe(fn)
       expect(header).toContain(`SteamNetworkingUtils004.${name}`)
@@ -5545,7 +5625,7 @@ describe('58-14 SteamNetworkingUtils004 wire policy and served flip', () => {
   it('a wire param named like a stub local is refused at validation', () => {
     const bad: InterfaceManifestV2 = JSON.parse(JSON.stringify(utils))
     const m = bad.methods.find((x) => x.name === 'ParsePingLocationString')!
-    m.params[1] = { ...m.params[1], name: 'result' }
+    m.params[1] = { ...at(m.params, 1, 'm.params'), name: 'result' }
     expect(
       validateManifest(bad).some((e) =>
         /collides with a generated stub local/.test(e)
@@ -5641,7 +5721,7 @@ describe('58-15 SteamNetworkingSockets013 wire policy and served flip', () => {
     for (const [name, fn] of [
       ['ReceiveMessagesOnConnection', 'gl_net_receive_messages'],
       ['ReceiveMessagesOnPollGroup', 'gl_net_receive_messages_pg']
-    ]) {
+    ] as const) {
       const m = method(name)
       expect(m.helperCustom).toBe(fn)
       expect(m.returnKind).toBe('int32')
@@ -5650,7 +5730,7 @@ describe('58-15 SteamNetworkingSockets013 wire policy and served flip', () => {
         'out-messages',
         'value'
       ])
-      expect(m.params[1].countParam).toBe('nMaxMessages')
+      expect(at(m.params, 1, `${name} params`).countParam).toBe('nMaxMessages')
       expect(header).toContain(`${fn}(g_bd_self_steamnetworkingsockets013`)
       expect(shim).toContain(`vt_SteamNetworkingSockets013_${name}(`)
     }
@@ -5705,7 +5785,7 @@ describe('58-16 SteamNetworkingMessages002 wire policy', () => {
       'out-messages',
       'value'
     ])
-    expect(recv.params[1].countParam).toBe('nMaxMessages')
+    expect(at(recv.params, 1, 'recv params').countParam).toBe('nMaxMessages')
     expect(method('SendMessageToUser').evidence).toEqual({
       kind: 'send',
       iface: 'Messages'
@@ -5718,7 +5798,9 @@ describe('58-16 SteamNetworkingMessages002 wire policy', () => {
 
   it('no method auto-accepts a session on the helper side', () => {
     expect(method('AcceptSessionWithUser').helperCustom).toBeUndefined()
-    expect(method('AcceptSessionWithUser').params[0].kind).toBe('in-struct')
+    expect(at(method('AcceptSessionWithUser').params, 0, 'params').kind).toBe(
+      'in-struct'
+    )
   })
 })
 
