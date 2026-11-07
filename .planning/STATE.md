@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 61 context gathered
-last_updated: "2026-11-07T07:46:03.103Z"
-last_activity: 2026-11-07 -- Phase 61 planning complete
+last_updated: "2026-11-07T08:24:15.999Z"
+last_activity: 2026-11-07
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 62
-  completed_plans: 57
+  completed_plans: 58
   percent: 17
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 61 (unified-macos-engine-for-all-stores) — EXECUTING
-Plan: 20 of 20
+Plan: 2 of 25
 Status: Ready to execute
-Last activity: 2026-11-07 - Completed quick task 261107-td5: Steam delete check-D fixes
+Last activity: 2026-11-07
 
-Progress: [██████████] 100%
+Progress: [█████████░] 94%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -588,7 +588,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-07T07:16:31.091Z
+Last session: 2026-11-07T08:24:15.992Z
 Stopped at: Phase 61 context gathered
 Resume file: None
 
