@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 71 context gathered
-last_updated: "2026-11-07T18:39:13.220Z"
+last_updated: "2026-11-07T18:48:16.644Z"
 last_activity: 2026-11-07
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 104
-  completed_plans: 83
+  completed_plans: 84
   percent: 25
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 65 (steam-store-manager-decomposition-continued) — EXECUTING
-Plan: 18 of 20
+Plan: 19 of 20
 Status: Ready to execute
 Last activity: 2026-11-07
 
-Progress: [████████░░] 79%
+Progress: [████████░░] 81%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -234,6 +234,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 67 P07 | 40m | 2 tasks | 10 files |
 | Phase 67 P13 | 35m | 2 tasks | 9 files |
 | Phase 67 P14 | 20min | 2 tasks | 10 files |
+| Phase 67 P15 | 25min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -358,6 +359,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase ?]: 67-12: steamAuth credentials bounded strings only (username key, not accountName); appId digit-only strings; boundary rejection supersedes handler invalid-request results
 - [Phase ?]: 67-13: wineVersion strictness needs no loosening; settings config/value are passthrough/unknown, so persisted wineVersion with extra keys is accepted
 - [Phase 67]: 67-14: callTool tool enum from handler switch; save paths NUL-free bounded strings; engine push typed via z.custom
+- [Phase 67]: 67-15: logError/logInfo = bounded union (string<=64KiB | string[]<=256 | strict Error-like); deleteUploadedLogFile uses httpUrlArg; humble args are ids only
 
 ### Pending Todos
 
@@ -603,7 +605,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-07T18:32:25.388Z
+Last session: 2026-11-07T18:48:16.636Z
 Stopped at: Phase 71 context gathered
 Resume file: None
 
