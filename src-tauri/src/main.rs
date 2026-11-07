@@ -453,19 +453,15 @@ fn keyring_account(slot: &str) -> Result<&'static str, String> {
     }
 }
 
-/// Reads the slot name argument for a keyring dispatch arm at `position`, defaulting to the
-/// `steam-refresh-token` slot when absent or non-string. **This default is deliberate and is what
-/// makes this change backward compatible**: every keyring frame the sidecar sent before this plan
-/// carried no slot argument at all, and it must keep resolving to the SAME Keychain entry it
-/// always has, with no user-visible re-login. Do not "tidy" this into a hard error -- an absent
-/// slot is the currently-shipping shape, not malformed input. This is a SEPARATE concern from
-/// `keyring_account`'s hard-error-on-unknown-slot: a present-but-unrecognised slot name is still
-/// always rejected; only an ABSENT slot argument gets this default.
-fn keyring_slot_arg(args: &[Value], position: usize) -> &str {
-    args.get(position)
-        .and_then(|v| v.as_str())
-        .unwrap_or("steam-refresh-token")
-}
+/// The slot a keyring arm uses when its optional `slot` argument is absent. **This default is
+/// deliberate and is what makes the slot argument backward compatible**: every keyring frame the
+/// sidecar sent before slots existed carried no slot argument at all, and it must keep resolving
+/// to the SAME Keychain entry it always has, with no user-visible re-login. Do not "tidy" this into
+/// a hard error -- an absent slot is the currently-shipping shape, not malformed input. A
+/// present-but-unrecognised slot is still always rejected by `keyring_account`
+/// (`keyring:unknown-slot`); a present non-string slot is rejected by the generated
+/// `Keyring*Args::from_args` (`keyring:bad-args`).
+const KEYRING_DEFAULT_SLOT: &str = "steam-refresh-token";
 
 /// A request frame written to the sidecar's stdin (one JSON object per line).
 /// Mirrors SidecarRpcRequest. `id` is always a string (64-bit-safe).
@@ -1825,7 +1821,7 @@ fn main() {
 /// (`cd src-tauri && cargo test`) and their continued existence is pinned by a jest gate in the
 /// JS file above rather than by any automated Rust step.
 ///
-/// Phase 34.3 Plan 03 / REQ-34.3-08 extends this module with `clipboard_text_arg` and
+/// Phase 34.3 Plan 03 / REQ-34.3-08 extends this module with the clipboard write args and
 /// `clipboard_read_value` — the pure, `AppHandle`-free surface extracted from the
 /// `clipboard_write_text`/`clipboard_read_text` dispatch arms, since those arms' own
 /// `app.clipboard()` calls need a live Tauri runtime a `#[test]` cannot construct. As with
@@ -3156,51 +3152,61 @@ mod tests {
             .contains("response for unknown/timed-out"));
     }
 
-    // ---- clipboard_text_arg (Phase 34.3 Plan 03, REQ-34.3-08) ----
+    // ---- clipboard_write_text args (Phase 34.3 Plan 03, REQ-34.3-08; now the generated Args) ----
     //
-    // RED direction: an implementation using `unwrap_or("")` instead of `ok_or_else` would
+    // RED direction: an implementation using `unwrap_or("")` instead of a hard parse would
     // flip the four rejection cases below to `Ok`.
 
     #[test]
     fn clipboard_text_arg_rejects_absent_args() {
-        assert!(clipboard_text_arg(&[]).is_err());
         assert_eq!(
-            clipboard_text_arg(&[]).unwrap_err(),
+            ClipboardWriteTextArgs::from_args(&[]).unwrap_err(),
             "clipboard_write_text:bad-args"
         );
     }
 
     #[test]
     fn clipboard_text_arg_rejects_null() {
-        assert!(clipboard_text_arg(&[Value::Null]).is_err());
+        assert_eq!(
+            ClipboardWriteTextArgs::from_args(&[Value::Null]).unwrap_err(),
+            "clipboard_write_text:bad-args"
+        );
     }
 
     #[test]
     fn clipboard_text_arg_rejects_number() {
-        assert!(clipboard_text_arg(&[json!(1)]).is_err());
+        assert!(ClipboardWriteTextArgs::from_args(&[json!(1)]).is_err());
     }
 
     #[test]
     fn clipboard_text_arg_rejects_bool() {
-        assert!(clipboard_text_arg(&[Value::Bool(true)]).is_err());
+        assert!(ClipboardWriteTextArgs::from_args(&[Value::Bool(true)]).is_err());
     }
 
     #[test]
     fn clipboard_text_arg_accepts_empty_string() {
         // An empty string is a VALID clipboard write, not a missing argument.
-        assert_eq!(clipboard_text_arg(&[json!("")]), Ok(""));
+        assert_eq!(
+            ClipboardWriteTextArgs::from_args(&[json!("")]).unwrap().text,
+            ""
+        );
     }
 
     #[test]
     fn clipboard_text_arg_accepts_nonempty_string() {
-        assert_eq!(clipboard_text_arg(&[json!("hi")]), Ok("hi"));
+        assert_eq!(
+            ClipboardWriteTextArgs::from_args(&[json!("hi")]).unwrap().text,
+            "hi"
+        );
     }
 
     #[test]
     fn clipboard_text_arg_ignores_trailing_args() {
         assert_eq!(
-            clipboard_text_arg(&[json!("hi"), json!("ignored")]),
-            Ok("hi")
+            ClipboardWriteTextArgs::from_args(&[json!("hi"), json!("ignored")])
+                .unwrap()
+                .text,
+            "hi"
         );
     }
 
@@ -4416,32 +4422,50 @@ mod tests {
         assert!(keyring_account("SteamGrid-Api-Key").is_err());
     }
 
-    // ---- keyring_slot_arg (34.4.1 gap cycle plan 11, D-GAP-01) ----
+    // ---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----
     //
     // Separate concern from keyring_account: this is the ONE deliberate default (absent slot
-    // arg -> steam-refresh-token), which is what keeps every pre-this-plan caller's frame valid.
+    // arg -> steam-refresh-token), which is what keeps every pre-slot caller's frame valid.
 
     #[test]
-    fn keyring_slot_arg_defaults_to_steam_refresh_token_when_absent() {
-        assert_eq!(keyring_slot_arg(&[], 0), "steam-refresh-token");
+    fn keyring_slot_defaults_to_steam_refresh_token_when_absent() {
+        // Absent is the shipping shape. A literal `null` slot is not (the TS schema forbids it)
+        // and is now `keyring:bad-args` rather than silently defaulting.
+        let a = KeyringGetArgs::from_args(&[]).unwrap();
+        assert_eq!(
+            a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT),
+            "steam-refresh-token"
+        );
     }
 
     #[test]
-    fn keyring_slot_arg_defaults_to_steam_refresh_token_when_non_string() {
-        assert_eq!(keyring_slot_arg(&[json!(1)], 0), "steam-refresh-token");
-        assert_eq!(keyring_slot_arg(&[Value::Null], 0), "steam-refresh-token");
+    fn keyring_slot_non_string_is_bad_args_with_the_pinned_string() {
+        assert_eq!(
+            KeyringGetArgs::from_args(&[json!(1)]).unwrap_err(),
+            "keyring:bad-args"
+        );
+        assert_eq!(
+            KeyringSetArgs::from_args(&[json!(1)]).unwrap_err(),
+            "keyring:bad-args"
+        );
+        assert_eq!(
+            KeyringSetArgs::from_args(&[json!("a-secret"), json!(2)]).unwrap_err(),
+            "keyring:bad-args"
+        );
     }
 
     #[test]
-    fn keyring_slot_arg_reads_a_present_string_slot_at_the_given_position() {
+    fn keyring_slot_reads_a_present_string_slot_at_the_given_position() {
         assert_eq!(
-            keyring_slot_arg(&[json!("humble-session")], 0),
-            "humble-session"
+            KeyringGetArgs::from_args(&[json!("humble-session")])
+                .unwrap()
+                .slot
+                .as_deref(),
+            Some("humble-session")
         );
-        assert_eq!(
-            keyring_slot_arg(&[json!("a-secret"), json!("humble-csrf")], 1),
-            "humble-csrf"
-        );
+        let set = KeyringSetArgs::from_args(&[json!("a-secret"), json!("humble-csrf")]).unwrap();
+        assert_eq!(set.secret, "a-secret");
+        assert_eq!(set.slot.as_deref(), Some("humble-csrf"));
     }
 
     // ---- keyring_get_result (34.4.1 gap cycle 2 plan 26, F-9 observability half,

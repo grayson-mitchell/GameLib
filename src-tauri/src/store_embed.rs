@@ -1834,7 +1834,8 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // candidate for a later plan, but this plan's own harness and fix are scoped to the
         // exact `keyring_get` signature F-9 was observed on.
         "keyring_get" => {
-            let account = keyring_account(keyring_slot_arg(args, 0))?;
+            let a = KeyringGetArgs::from_args(args)?;
+            let account = keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
             let result = bounded_keyring_read(KEYRING_READ_TIMEOUT, move || {
                 let outcome =
                     Entry::new(KEYRING_SERVICE, account).and_then(|entry| entry.get_password());
@@ -1871,13 +1872,10 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             result
         }
         "keyring_set" => {
-            let secret = match args.first().and_then(|v| v.as_str()) {
-                Some(s) => s,
-                None => return Err("keyring:bad-args".into()),
-            };
-            let account = keyring_account(keyring_slot_arg(args, 1))?;
+            let a = KeyringSetArgs::from_args(args)?;
+            let account = keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
             match Entry::new(KEYRING_SERVICE, account) {
-                Ok(entry) => match entry.set_password(secret) {
+                Ok(entry) => match entry.set_password(&a.secret) {
                     Ok(()) => {
                         shell_diag(&keyring_outcome_message(
                             channel,
@@ -1902,7 +1900,8 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             }
         }
         "keyring_delete" => {
-            let account = keyring_account(keyring_slot_arg(args, 0))?;
+            let a = KeyringDeleteArgs::from_args(args)?;
+            let account = keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
             match Entry::new(KEYRING_SERVICE, account) {
                 Ok(entry) => match entry.delete_credential() {
                     // Deleting an already-absent entry is success, not an error -- and the
@@ -1962,7 +1961,9 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             // success emission of its own.
             //
             // Validated for its rejection contract, intentionally unused for the lookup.
-            let _validated_slot = keyring_account(keyring_slot_arg(args, 0))?;
+            let a = KeyringAvailableArgs::from_args(args)?;
+            let _validated_slot =
+                keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
             match Entry::new(KEYRING_SERVICE, KEYRING_REACHABILITY_PROBE_ACCOUNT) {
                 Ok(entry) => match entry.get_password() {
                     // THE expected healthy answer. The backend answered, and answered that this
@@ -2024,22 +2025,18 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // next reader does not re-derive it -- the callers that send it (PathSelectionBox,
         // SideloadDialog, Tools, GameSubMenu) get the OS default label.
         "dialog_open" => {
-            let options = args.first();
+            let options = DialogOpenArgs::from_args(args)?;
             let wants_file = options
-                .and_then(|v| v.get("properties"))
-                .and_then(|v| v.as_array())
+                .properties
+                .as_ref()
                 .map(|props| {
-                    let has_dir = props.iter().any(|p| p.as_str() == Some("openDirectory"));
-                    let has_file = props.iter().any(|p| p.as_str() == Some("openFile"));
+                    let has_dir = props.iter().any(|p| p == "openDirectory");
+                    let has_file = props.iter().any(|p| p == "openFile");
                     has_file && !has_dir
                 })
                 .unwrap_or(false);
             let mut builder = app.dialog().file();
-            if let Some(title) = options
-                .and_then(|v| v.get("title"))
-                .and_then(|v| v.as_str())
-                .filter(|s| !s.is_empty())
-            {
+            if let Some(title) = options.title.as_deref().filter(|s| !s.is_empty()) {
                 builder = builder.set_title(title);
             }
             // Electron's `defaultPath` may name either a directory or a file; AppKit/rfd only
@@ -2047,11 +2044,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             // directory and pass nothing when there isn't one -- handing the panel a path that
             // does not exist is worse than handing it none, because rfd then falls back
             // inconsistently across platforms rather than to the OS's last-used location.
-            if let Some(default_path) = options
-                .and_then(|v| v.get("defaultPath"))
-                .and_then(|v| v.as_str())
-                .filter(|s| !s.is_empty())
-            {
+            if let Some(default_path) = options.default_path.as_deref().filter(|s| !s.is_empty()) {
                 let candidate = std::path::Path::new(default_path);
                 let start_dir = if candidate.is_dir() {
                     Some(candidate)
@@ -2066,16 +2059,13 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             // there would be noise. The parse mirrors `dialog_save`'s below verbatim -- same
             // wire shape, same `name`/`extensions` keys.
             if wants_file {
-                if let Some(filters) = options
-                    .and_then(|v| v.get("filters"))
-                    .and_then(|v| v.as_array())
-                {
+                if let Some(filters) = options.filters.as_ref() {
                     for filter in filters {
-                        let name = filter.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                        let name = filter.name.as_deref().unwrap_or("");
                         let extensions: Vec<&str> = filter
-                            .get("extensions")
-                            .and_then(|v| v.as_array())
-                            .map(|arr| arr.iter().filter_map(|e| e.as_str()).collect())
+                            .extensions
+                            .as_ref()
+                            .map(|arr| arr.iter().map(String::as_str).collect())
                             .unwrap_or_default();
                         builder = builder.add_filter(name, &extensions);
                     }
@@ -2118,34 +2108,21 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // the plugin's default title (the package name). Single-button / no-`buttons` calls
         // keep the plugin's OK-only dialog.
         "dialog_message" => {
-            let message = args
-                .first()
-                .and_then(|v| v.get("message"))
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let kind = args
-                .first()
-                .and_then(|v| v.get("kind"))
-                .and_then(|v| v.as_str())
+            let opts = DialogMessageArgs::from_args(args)?;
+            let message = opts.message.clone().unwrap_or_default();
+            let kind = opts
+                .kind
+                .as_deref()
                 .map(|s| match s {
                     "error" => MessageDialogKind::Error,
                     "warning" => MessageDialogKind::Warning,
                     _ => MessageDialogKind::Info,
                 })
                 .unwrap_or(MessageDialogKind::Info);
-            let title = args
-                .first()
-                .and_then(|v| v.get("title"))
-                .and_then(|v| v.as_str())
-                .map(str::to_string);
-            let buttons = args
-                .first()
-                .and_then(|v| v.get("buttons"))
-                .and_then(|v| v.as_array());
-            if let Some(btns) = buttons.filter(|b| b.len() == 2) {
-                let label0 = btns[0].as_str().unwrap_or("").to_string();
-                let label1 = btns[1].as_str().unwrap_or("").to_string();
+            let title = opts.title.clone();
+            if let Some(btns) = opts.buttons.as_ref().filter(|b| b.len() == 2) {
+                let label0 = btns[0].clone();
+                let label1 = btns[1].clone();
                 let title = title.unwrap_or_else(|| app.package_info().name.clone());
                 // The plugin's own `From<MessageDialogKind> for rfd::MessageLevel`, so the
                 // level matches what the OK-only path below renders.
@@ -2191,14 +2168,9 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // non-bundled runs, and Windows/Linux, use `tauri-plugin-notification` below, whose
         // `show()` dispatches its work onto `tauri::async_runtime::spawn` and returns promptly.
         "notification_show" => {
-            let title = args
-                .first()
-                .and_then(|v| v.get("title"))
-                .and_then(|v| v.as_str());
-            let body = args
-                .first()
-                .and_then(|v| v.get("body"))
-                .and_then(|v| v.as_str());
+            let opts = NotificationShowArgs::from_args(args)?;
+            let title = opts.title.as_deref();
+            let body = opts.body.as_deref();
             #[cfg(target_os = "macos")]
             if macos_notifications::backend()
                 == notification_backend::NotificationBackend::UserNotifications
@@ -2238,10 +2210,8 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // `macos_finder_reselect_workaround` below for the mechanism and evidence. The
         // follow-up call is a no-op on other platforms.
         "shell_show_item_in_folder" => {
-            let path = args
-                .first()
-                .and_then(|v| v.as_str())
-                .ok_or("shell_show_item_in_folder:bad-args")?;
+            let a = ShellShowItemInFolderArgs::from_args(args)?;
+            let path = a.path.as_str();
             app.opener()
                 .reveal_item_in_dir(path)
                 .map_err(|e| e.to_string())?;
@@ -2253,10 +2223,8 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // `tauri-plugin-opener`'s `open_path`. Backs `platform/index.ts`'s `shell.openPath()`.
         // Same path-provenance note as `shell_show_item_in_folder` above (T-33-11).
         "shell_open_path" => {
-            let path = args
-                .first()
-                .and_then(|v| v.as_str())
-                .ok_or("shell_open_path:bad-args")?;
+            let a = ShellOpenPathArgs::from_args(args)?;
+            let path = a.path.as_str();
             app.opener()
                 .open_path(path, None::<&str>)
                 .map_err(|e| e.to_string())?;
@@ -2269,9 +2237,9 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // -- D-02's zero-renderer-capability-grant stance holds (capabilities/default.json is
         // untouched; the plugin has no `js_init_script`, confirmed by 34.3-RESEARCH.md Q2).
         "clipboard_write_text" => {
-            let text = clipboard_text_arg(args)?;
+            let a = ClipboardWriteTextArgs::from_args(args)?;
             app.clipboard()
-                .write_text(text)
+                .write_text(a.text)
                 .map_err(|e| e.to_string())?;
             Ok(Value::Null)
         }
@@ -2382,17 +2350,8 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // re-validated by `bridge_invite_picker_path` because they land in a URL. The main window
         // is touched only to re-hide it after a Cmd+H-hidden GameLib was unhidden by activation.
         "bridge_invite_picker_open" => {
-            let appid = args
-                .first()
-                .and_then(|v| v.get("appId"))
-                .and_then(|v| v.as_str());
-            let ack = args
-                .first()
-                .and_then(|v| v.get("ackId"))
-                .and_then(|v| v.as_str());
-            let (Some(appid), Some(ack)) = (appid, ack) else {
-                return Err("bridge_invite_picker_open:bad-args".to_string());
-            };
+            let a = BridgeInvitePickerOpenArgs::from_args(args)?;
+            let (appid, ack) = (a.app_id.as_str(), a.ack_id.as_str());
             let path = bridge_invite_picker_path(appid, ack)?;
 
             // Record the frontmost app (the game) BEFORE the picker takes focus. A re-open keeps
@@ -2507,16 +2466,28 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // ONLY tray-icon `dispatch_rust_channel` arm -- D-01 keeps window chrome renderer-side
         // with zero new Rust arms.
         "tray_set_icon" => {
-            let mode = tray_set_icon_mode_from_args(&args);
-            if let Some(raw) = tray_set_icon_variant_str(&args) {
-                if parse_tray_icon_mode(Some(raw)) == TrayIconMode::Auto && raw != "auto" {
-                    // Length only, never the value (T-260930-lyk-01/05).
-                    shell_eprintln!(
-                        "[shell] WARN: tray_set_icon: unrecognised variant ({} bytes) -- treating as auto",
-                        raw.len()
-                    );
+            // Wire-compat (kept deliberately, not tidied into a hard error): the generated
+            // `TraySetIconArgs` accepts exactly the three shipped variants, but an unrecognised
+            // variant or the retired `{ dark }` shape has always resolved to Auto here (pinned by
+            // `tray_variant_wire_contract_retired_dark_bool_shape_is_auto_not_dark`). So a
+            // `from_args` failure falls back to the lenient Auto mapping instead of erroring.
+            let mode = match TraySetIconArgs::from_args(args) {
+                Ok(a) => match a.variant {
+                    TraySetIconArgsVariant::Auto => TrayIconMode::Auto,
+                    TraySetIconArgsVariant::Light => TrayIconMode::Light,
+                    TraySetIconArgsVariant::Dark => TrayIconMode::Dark,
+                },
+                Err(_) => {
+                    if let Some(raw) = tray_set_icon_variant_str(args) {
+                        // Length only, never the value (T-260930-lyk-01/05).
+                        shell_eprintln!(
+                            "[shell] WARN: tray_set_icon: unrecognised variant ({} bytes) -- treating as auto",
+                            raw.len()
+                        );
+                    }
+                    tray_set_icon_mode_from_args(args)
                 }
-            }
+            };
             store_tray_icon_mode(mode);
             let system_uses_light_theme = if mode == TrayIconMode::Auto {
                 read_system_uses_light_theme()
@@ -2551,25 +2522,18 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // `None` is a healthy user cancel (never an error). Runs on the same spawned worker
         // thread.
         "dialog_save" => {
+            let opts = DialogSaveArgs::from_args(args)?;
             let mut builder = app.dialog().file();
-            if let Some(file_name) = args
-                .first()
-                .and_then(|v| v.get("defaultPath"))
-                .and_then(|v| v.as_str())
-            {
+            if let Some(file_name) = opts.default_path.as_deref() {
                 builder = builder.set_file_name(file_name);
             }
-            if let Some(filters) = args
-                .first()
-                .and_then(|v| v.get("filters"))
-                .and_then(|v| v.as_array())
-            {
+            if let Some(filters) = opts.filters.as_ref() {
                 for filter in filters {
-                    let name = filter.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                    let name = filter.name.as_deref().unwrap_or("");
                     let extensions: Vec<&str> = filter
-                        .get("extensions")
-                        .and_then(|v| v.as_array())
-                        .map(|arr| arr.iter().filter_map(|e| e.as_str()).collect())
+                        .extensions
+                        .as_ref()
+                        .map(|arr| arr.iter().map(String::as_str).collect())
                         .unwrap_or_default();
                     builder = builder.add_filter(name, &extensions);
                 }
@@ -4484,23 +4448,17 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // code that also handed the webview a power-management capability it has no use for,
         // against D-02's zero-renderer-capability-grant stance.
         "wake_lock_start" => {
-            let kind = args
-                .first()
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| "wake_lock_start:bad-args".to_string())?;
-            let id = wake_lock_start(kind)?;
+            let a = WakeLockStartArgs::from_args(args)?;
+            let id = wake_lock_start(&a.kind)?;
             Ok(Value::from(id))
         }
         // Release exactly the assertion `args[0]` names (Phase 35 Plan 08, D-08, REQ-35-06).
         // An id outside u32 range cannot name a live assertion, so it is rejected as bad args
         // rather than truncated into one that could name somebody else's lock.
         "wake_lock_stop" => {
-            let id = args
-                .first()
-                .and_then(|v| v.as_u64())
-                .filter(|id| *id <= u64::from(u32::MAX))
-                .ok_or_else(|| "wake_lock_stop:bad-args".to_string())?;
-            wake_lock_stop(id as u32)?;
+            let a = WakeLockStopArgs::from_args(args)?;
+            let id = u32::try_from(a.id).map_err(|_| "wake_lock_stop:bad-args".to_string())?;
+            wake_lock_stop(id)?;
             Ok(Value::Null)
         }
         // Phase 63 (D-03): executable scanners. Each arm is a one-line pass-through to the
@@ -4508,21 +4466,27 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // dispatch_rust_channel arms, not generate_handler! commands: the caller is the sidecar
         // over `requestRustInvoke`, and the renderer gets no scanner capability.
         "scan_steam_api_imports" => {
+            ScanSteamApiImportsArgs::from_args(args)?;
             gamelib_scan::dispatch("scan_steam_api_imports", args)
         }
         "scan_steam_drm" => {
+            ScanSteamDrmArgs::from_args(args)?;
             gamelib_scan::dispatch("scan_steam_drm", args)
         }
         "scan_steamstub_section" => {
+            ScanSteamstubSectionArgs::from_args(args)?;
             gamelib_scan::dispatch("scan_steamstub_section", args)
         }
         "scan_pe_imported_dlls" => {
+            ScanPeImportedDllsArgs::from_args(args)?;
             gamelib_scan::dispatch("scan_pe_imported_dlls", args)
         }
         "scan_contained_real" => {
+            ScanContainedRealArgs::from_args(args)?;
             gamelib_scan::dispatch("scan_contained_real", args)
         }
         "scan_winemac_metal_exports" => {
+            ScanWinemacMetalExportsArgs::from_args(args)?;
             gamelib_scan::dispatch("scan_winemac_metal_exports", args)
         }
         // ---- In-app store/wiki embed (Phase 40 Plan 02, D-01/D-03). Every arm is macOS + Linux

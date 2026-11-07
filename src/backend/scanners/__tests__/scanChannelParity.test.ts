@@ -48,15 +48,20 @@ describe('scan channel parity (D-03)', () => {
     expect([...CLI_ONLY_SCAN_OPS].sort()).toEqual([...CLI_ONLY].sort())
   })
 
-  it('every shell scan arm passes straight to gamelib_scan::dispatch', () => {
+  it('every shell scan arm validates via its generated Args then passes straight to gamelib_scan::dispatch', () => {
     const lines = storeEmbed.split('\n')
     const arms: string[] = []
     lines.forEach((line, i) => {
       const m = /^\s*"(scan_[a-z_]+)" => \{\s*$/.exec(line)
       if (!m) return
       arms.push(m[1])
-      const next = lines.slice(i + 1).find((l) => l.trim() !== '') ?? ''
-      expect(next).toContain(`gamelib_scan::dispatch("${m[1]}", args)`)
+      // Phase 67 (D-13): the first line validates through the generated Args struct, the
+      // second passes straight to the library, which stays the stricter authority.
+      const [first, second] = lines.slice(i + 1).filter((l) => l.trim() !== '')
+      expect(first).toMatch(
+        new RegExp(`^\\s*[A-Za-z]+Args::from_args\\(args\\)\\?;$`)
+      )
+      expect(second).toContain(`gamelib_scan::dispatch("${m[1]}", args)`)
     })
     expect(arms.sort()).toEqual([...RUST_SCAN_CHANNELS].sort())
   })

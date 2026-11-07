@@ -10,15 +10,6 @@ use super::*;
 // actual plugin calls are proven empirically instead, by REQ-34.3-11's live-gate item 3 —
 // not by these tests.
 
-/// This channel's entire ASVS V5 input validation: `args[0]` must be present and a JSON
-/// string. An empty string is a VALID clipboard write and must not be conflated with a
-/// missing/wrong-typed argument — `unwrap_or("")` would silently accept both.
-pub(crate) fn clipboard_text_arg(args: &[Value]) -> Result<&str, String> {
-    args.first()
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "clipboard_write_text:bad-args".to_string())
-}
-
 /// Shapes the plugin's `Result<String, String>` into the arm's `Result<Value, String>`.
 /// An empty clipboard read is `Ok(Value::String(String::new()))`, deliberately NOT
 /// `Ok(Value::Null)` — the sidecar's `clipboardReadText` handler coerces a non-string result

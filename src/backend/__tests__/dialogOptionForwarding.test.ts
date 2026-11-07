@@ -65,24 +65,43 @@ describe('main.rs dialog_open arm forwards the caller options (quick task 260902
   )
 
   test('reads the `title` key and applies it via set_title', () => {
-    expect(arm).toContain('"title"')
+    expect(arm).toContain('options.title')
     expect(arm).toContain('set_title')
   })
 
   test('reads the `defaultPath` key and applies it via set_directory', () => {
-    expect(arm).toContain('"defaultPath"')
+    expect(arm).toContain('options.default_path')
     expect(arm).toContain('set_directory')
   })
 
   test('reads the `filters` key and applies them via add_filter', () => {
-    expect(arm).toContain('"filters"')
+    expect(arm).toContain('options.filters')
     expect(arm).toContain('add_filter')
   })
 
   test('still honours `properties` — the pre-existing WR-01 behaviour is not regressed', () => {
-    expect(arm).toContain('"properties"')
+    expect(arm).toContain('options')
+    expect(arm).toContain('.properties')
     expect(arm).toContain('openDirectory')
     expect(arm).toContain('openFile')
+  })
+
+  // Phase 67 (D-13): the wire keys are read by the generated `DialogOpenArgs`, so the key names
+  // live there (serde renames) and the arm must go through it.
+  test('the arm reads its options through the generated DialogOpenArgs, whose wire keys are title/defaultPath/properties/filters', () => {
+    expect(arm).toContain('DialogOpenArgs::from_args(args)')
+    const contract = readFileSync(
+      join(REPO_ROOT, 'src-tauri', 'src', 'ipc_contract.rs'),
+      'utf-8'
+    )
+    const struct = contract.slice(
+      contract.indexOf('pub(crate) struct DialogOpenArgs {'),
+      contract.indexOf('impl DialogOpenArgs')
+    )
+    expect(struct).toContain('#[serde(rename = "defaultPath")]')
+    for (const field of ['title', 'properties', 'filters']) {
+      expect(struct).toContain(`pub(crate) ${field}:`)
+    }
   })
 
   // The extractor must read the WHOLE arm. `defaultPath` handling sits inside a nested
@@ -119,11 +138,11 @@ describe('main.rs dialog_open arm forwards the caller options (quick task 260902
   ].join('\n')
 
   test('self-test: the pre-fix arm satisfies NONE of the three option assertions', () => {
-    expect(PRE_FIX_ARM).not.toContain('"title"')
+    expect(PRE_FIX_ARM).not.toContain('options.title')
     expect(PRE_FIX_ARM).not.toContain('set_title')
-    expect(PRE_FIX_ARM).not.toContain('"defaultPath"')
+    expect(PRE_FIX_ARM).not.toContain('options.default_path')
     expect(PRE_FIX_ARM).not.toContain('set_directory')
-    expect(PRE_FIX_ARM).not.toContain('"filters"')
+    expect(PRE_FIX_ARM).not.toContain('options.filters')
     expect(PRE_FIX_ARM).not.toContain('add_filter')
   })
 
