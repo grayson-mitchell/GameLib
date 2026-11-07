@@ -124,6 +124,7 @@ mod relay_commands;
 mod login_window;
 mod store_embed;
 mod single_instance;
+mod ipc_contract;
 mod sidecar;
 mod shell_state;
 use clipboard::*;
@@ -135,6 +136,7 @@ use relay_commands::*;
 use login_window::*;
 use store_embed::*;
 use single_instance::*;
+use ipc_contract::*;
 use sidecar::*;
 use shell_state::*;
 
@@ -1860,6 +1862,7 @@ mod tests {
     const SHELL_SOURCE_FILES: &[&str] = &[
         "main.rs",
         "clipboard.rs",
+        "ipc_contract.rs",
         "keyring_dispatch.rs",
         "login_window.rs",
         "relay_commands.rs",
@@ -1878,6 +1881,7 @@ mod tests {
     const SHELL_SOURCE: &str = concat!(
         include_str!("main.rs"), "\n",
         include_str!("clipboard.rs"), "\n",
+        include_str!("ipc_contract.rs"), "\n",
         include_str!("keyring_dispatch.rs"), "\n",
         include_str!("login_window.rs"), "\n",
         include_str!("relay_commands.rs"), "\n",

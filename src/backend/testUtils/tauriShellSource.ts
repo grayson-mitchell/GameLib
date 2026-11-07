@@ -29,6 +29,14 @@ export const PRE_SPLIT_SIBLING_MODULES: readonly string[] = [
   'store_embed_handoff_policy.rs'
 ]
 
+/**
+ * Generated files (Phase 67): hand-authored shell logic is what these tests pin. The generated
+ * contract mirrors every channel name (`RustInvokeChannel::from_name` arms), which would inflate
+ * dispatch-arm counts and trip negative assertions; its freshness is covered by
+ * `pnpm check:ipc-contract` instead.
+ */
+export const GENERATED_MODULES: readonly string[] = ['ipc_contract.rs']
+
 const DEFAULT_REPO_ROOT = join(__dirname, '..', '..', '..')
 const SHELL_SRC_REL = 'src-tauri/src'
 
@@ -58,7 +66,12 @@ export function listTauriShellSourceFiles(
   const all: string[] = []
   walk(join(repoRoot, SHELL_SRC_REL), '', all)
   const rest = all
-    .filter((p) => p !== 'main.rs' && !PRE_SPLIT_SIBLING_MODULES.includes(p))
+    .filter(
+      (p) =>
+        p !== 'main.rs' &&
+        !PRE_SPLIT_SIBLING_MODULES.includes(p) &&
+        !GENERATED_MODULES.includes(p)
+    )
     .sort()
   return [...rest, 'main.rs']
 }

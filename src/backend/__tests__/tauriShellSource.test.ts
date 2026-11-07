@@ -16,6 +16,7 @@
  */
 import {
   listTauriShellSourceFiles,
+  GENERATED_MODULES,
   PRE_SPLIT_SIBLING_MODULES,
   readTauriShellFile,
   readTauriShellSource
@@ -4544,6 +4545,7 @@ describe('tauriShellSource helper scope', () => {
       seen++
       const rel = m[1] ?? `${m[2]}.rs`
       if (PRE_SPLIT_SIBLING_MODULES.includes(rel)) continue
+      if (GENERATED_MODULES.includes(rel)) continue
       if (!listed.includes(rel)) unresolved.push(`${m[2]} -> ${rel}`)
     }
     expect(seen).toBeGreaterThanOrEqual(PRE_SPLIT_SIBLING_MODULES.length)

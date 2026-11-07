@@ -1,59 +1,18 @@
 /**
- * D-12: TS <-> Rust transport constant parity, enforced from the jest lane (no cargo).
+ * D-12 / D-17: TS <-> Rust dispatch-arm parity, enforced from the jest lane (no cargo).
  *
- * The Rust shell mirrors a handful of constants from `common/types/sidecarTransport.ts`. Each Rust
- * mirror carries a `// transport-mirror: NAME` marker comment; this test finds them by marker across
- * every `src-tauri/src/*.rs`, so it survives the main.rs split. It also pins the string-literal arms
- * of `dispatch_rust_channel` to `RUST_INVOKE_CHANNELS`. (tauriShellSource.test.ts may overlap on the
- * arm set; D-12 owns parity, so it is asserted here too.)
+ * The `// transport-mirror:` marker tests were retired by 67-03: the Rust transport constants and
+ * the channel-name enum are now generated into `src-tauri/src/ipc_contract.rs` and kept fresh by
+ * `pnpm check:ipc-contract`. The remaining test pins the string-literal arms of
+ * `dispatch_rust_channel` to `RUST_INVOKE_CHANNELS`; it is retired by 67-11 when dispatch matches
+ * on the generated enum (V67-F).
  */
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
-import {
-  FRONTEND_MESSAGE_EVENT,
-  READY_SENTINEL,
-  RUST_INVOKE_CHANNELS,
-  RUST_INVOKE_KIND,
-  SHELL_WINDOW_FOCUSED,
-  STORE_SNAPSHOT_CHANNEL
-} from 'common/types/sidecarTransport'
+import { RUST_INVOKE_CHANNELS } from 'common/types/sidecarTransport'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..')
 const RUST_DIR = join(REPO_ROOT, 'src-tauri', 'src')
-
-const TS_VALUES: Record<string, string> = {
-  READY_SENTINEL,
-  FRONTEND_MESSAGE_EVENT,
-  SHELL_WINDOW_FOCUSED,
-  STORE_SNAPSHOT_CHANNEL,
-  RUST_INVOKE_KIND
-}
-
-type Found = { name: string; value: string | undefined; file: string }
-
-function extractMarkedConsts(sources: Record<string, string>): Found[] {
-  const out: Found[] = []
-  for (const [file, text] of Object.entries(sources)) {
-    const lines = text.split('\n')
-    lines.forEach((line, i) => {
-      const m = /^\s*\/\/ transport-mirror: (\w+)\s*$/.exec(line)
-      if (!m) return
-      const name = m[1]
-      // The marker sits above the const (possibly with further comment lines in between) or above
-      // the `"rustInvoke"` comparison: take the first following line holding a string literal.
-      let value: string | undefined
-      for (let j = i + 1; j < Math.min(lines.length, i + 6); j++) {
-        if (/^\s*\/\//.test(lines[j])) continue
-        const c = /const\s+\w+\s*:\s*&str\s*=\s*"([^"]*)"/.exec(lines[j])
-        const s = /"([^"]*)"/.exec(lines[j])
-        value = (c ?? s)?.[1]
-        break
-      }
-      out.push({ name, value, file })
-    })
-  }
-  return out
-}
 
 function extractDispatchArms(source: string): string[] {
   const fnAt = source.indexOf('fn dispatch_rust_channel')
@@ -133,21 +92,6 @@ function readRustSources(): Record<string, string> {
 describe('TS <-> Rust transport parity (D-12)', () => {
   const sources = readRustSources()
 
-  it('finds each transport-mirror marker exactly once', () => {
-    const found = extractMarkedConsts(sources).map((f) => f.name)
-    expect([...found].sort()).toEqual(Object.keys(TS_VALUES).sort())
-  })
-
-  it('every marked Rust constant equals its TS export', () => {
-    for (const f of extractMarkedConsts(sources)) {
-      expect({ name: f.name, file: f.file, value: f.value }).toEqual({
-        name: f.name,
-        file: f.file,
-        value: TS_VALUES[f.name]
-      })
-    }
-  })
-
   it('dispatch_rust_channel arms equal RUST_INVOKE_CHANNELS', () => {
     const arms = extractDispatchArms(sources['store_embed.rs'])
     const rust = new Set(arms)
@@ -156,16 +100,6 @@ describe('TS <-> Rust transport parity (D-12)', () => {
     expect([...rust].filter((c) => !ts.has(c))).toEqual([]) // missing in TS
     expect(arms.length).toBe(rust.size)
     expect(rust.size).toBe(ts.size)
-  })
-
-  it('near-miss: a drifted value in an in-memory snippet is reported', () => {
-    const good =
-      '// transport-mirror: READY_SENTINEL\nconst READY_SENTINEL: &str = "x";\n'
-    const bad = good.replace('"x"', '"y"')
-    const [g] = extractMarkedConsts({ 'a.rs': good })
-    const [b] = extractMarkedConsts({ 'a.rs': bad })
-    expect(g.value).toBe('x')
-    expect(b.value).not.toBe(g.value)
   })
 
   it('near-miss: arm extractor handles or-patterns, block and expression bodies', () => {

@@ -59,6 +59,8 @@
     "prettier-fix": "prettier --write .",
     "download-helper-binaries": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/downloadHelperBinaries.ts",
     "pin:runner-digests": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/pinRunnerDigests.ts",
+    "gen:ipc-contract": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/genIpcContract.ts",
+    "check:ipc-contract": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/genIpcContract.ts --check",
     "check:build-bin-mirror": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/checkBuildBinMirror.ts",
     "capture:shell-scrollback": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/captureShellScrollback.ts",
     "check:runner-invocations": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/checkRunnerInvocations.ts",
