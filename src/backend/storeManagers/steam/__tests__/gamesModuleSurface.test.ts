@@ -14,13 +14,14 @@
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { defined } from './fixtures/indexed'
 
 const DECL =
   /^export\s+(?:default\s+)?(?:async\s+)?(?:function|const|let|class|type|interface)\s+(\w+)/gm
 
 const exportedNames = (file: string): string[] => {
   const src = readFileSync(join(__dirname, '..', file), 'utf8')
-  return [...src.matchAll(DECL)].map((m) => m[1])
+  return [...src.matchAll(DECL)].map((m) => defined(m[1], 'export name'))
 }
 
 // Changes only when a later phase-62 plan moves another symbol out of
@@ -144,11 +145,13 @@ describe('steam/games.ts module surface (D-05)', () => {
       expect(FORWARD[ownerName]).toBeDefined()
       const text = readFileSync(join(__dirname, '..', owner), 'utf8')
       const targets = [...text.matchAll(/(?:from|import)\s+'\.\/(game\w+)'/g)]
-        .map((m) => m[1])
+        .map((m) => defined(m[1], 'import target'))
         .filter((name) => `${name}.ts` !== owner && name in FORWARD)
       for (const target of targets) {
         if (CYCLE_EDGES.has(`${ownerName}->${target}`)) continue
-        expect(FORWARD[target]).toBeLessThan(FORWARD[ownerName])
+        expect(defined(FORWARD[target], target)).toBeLessThan(
+          defined(FORWARD[ownerName], ownerName)
+        )
       }
     }
   })

@@ -6,6 +6,7 @@ import {
   supportedCrossoverBuilds
 } from '../ntdllPatchTable'
 import type { NtdllPatchRow } from '../ntdllPatchTable'
+import { defined } from '../../../__tests__/fixtures/indexed'
 
 const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex')
 
@@ -71,7 +72,7 @@ const SYNTH_PATCHED_SHA =
   'fb011347bf0b9d75385623a540fdb598a35bfd2c7f09512652612676370a34ad'
 
 describe('ntdllPatchTable allowlist', () => {
-  const row = NTDLL_PATCH_ROWS['26.3.0.39832']
+  const row = defined(NTDLL_PATCH_ROWS['26.3.0.39832'], 'pinned ntdll row')
   it('returns the row for the matching build and sha', () => {
     expect(findNtdllPatchRow('26.3.0.39832', row.cleanSha256)).toBe(row)
   })

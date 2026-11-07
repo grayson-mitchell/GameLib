@@ -29,6 +29,7 @@ import { __stopBottledRaiseLoops } from '../bottledSteam'
 import { provisionBottle } from '../provisionBottle'
 import { STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
+import { at } from './fixtures/indexed'
 
 jest.mock('backend/platform', () => ({
   app: {
@@ -481,8 +482,8 @@ describe('bottle.ts', () => {
         expect.stringContaining('redist'),
         { recursive: true }
       )
-      const mkdirOrder = mockedMkdirSync.mock.invocationCallOrder[0]
-      const downloadOrder = mockedDownloadFile.mock.invocationCallOrder[0]
+      const mkdirOrder = at(mockedMkdirSync.mock.invocationCallOrder, 0)
+      const downloadOrder = at(mockedDownloadFile.mock.invocationCallOrder, 0)
       expect(mkdirOrder).toBeLessThan(downloadOrder)
     })
 
@@ -681,9 +682,9 @@ describe('bottle.ts', () => {
       expect(killIdx).toBeGreaterThanOrEqual(0)
       expect(deleteIdx).toBeGreaterThanOrEqual(0)
       // Ordering by real invocation sequence: kill must precede delete.
-      expect(mockedSpawnAsync.mock.invocationCallOrder[killIdx]).toBeLessThan(
-        mockedSpawnAsync.mock.invocationCallOrder[deleteIdx]
-      )
+      expect(
+        at(mockedSpawnAsync.mock.invocationCallOrder, killIdx)
+      ).toBeLessThan(at(mockedSpawnAsync.mock.invocationCallOrder, deleteIdx))
     })
 
     test('GAP-17-CEF-RECREATE-RUNNING: wineserver -k is scoped to the target bottle WINEPREFIX (never the shared GameLib bottle) and sets CX_ROOT', async () => {

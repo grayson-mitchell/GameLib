@@ -110,6 +110,7 @@ import type { WineInstallation } from 'common/types'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { at } from './fixtures/indexed'
 
 const mockedSteamGame = SteamGame as unknown as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
@@ -700,7 +701,7 @@ describe('D-02: the shared handler body is never forked', () => {
     )
 
     expect(hits).toHaveLength(1)
-    expect(relative(REPO_ROOT, hits[0]).split('\\').join('/')).toBe(
+    expect(relative(REPO_ROOT, at(hits, 0)).split('\\').join('/')).toBe(
       'src/backend/storeManagers/steam/installFormIpc.ts'
     )
   })

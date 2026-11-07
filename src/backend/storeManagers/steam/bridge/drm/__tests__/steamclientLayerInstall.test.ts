@@ -43,6 +43,7 @@ import {
 } from 'common/steamclientLayerCatalogue'
 import { buildDrmPaths, steamclientLayerComponentId } from '../drmPaths'
 import { ensureSteamclientLayerComponent } from '../steamclientLayerInstall'
+import { at, defined } from '../../../__tests__/fixtures/indexed'
 
 const BUILD = '26.3.0.39832'
 const ID = `steamclient-layer-cx${BUILD}`
@@ -79,7 +80,7 @@ function synthetic(
     path,
     sha256: sha(data.get(path)!),
     size: data.get(path)!.length,
-    licence: LICENCES[path]
+    licence: defined(LICENCES[path], `licence for ${path}`)
   }))
   const archive = buildOverlayTarGz(
     NAMES.map((path) => ({
@@ -166,16 +167,16 @@ describe('ensureSteamclientLayerComponent', () => {
       expect(readFileSync(join(dir(), n)).equals(data.get(n)!)).toBe(true)
     }
     expect(fetchArchive).toHaveBeenCalledTimes(1)
-    expect(fetchArchive.mock.calls[0][0]).toBe(
+    expect(at(fetchArchive.mock.calls, 0)[0]).toBe(
       steamclientLayerArchiveUrl(entry)
     )
-    expect(fetchArchive.mock.calls[0][1].maxBytes).toBe(entry.archiveSize)
+    expect(at(fetchArchive.mock.calls, 0)[1].maxBytes).toBe(entry.archiveSize)
     expect(onFetchStart).toHaveBeenCalledTimes(1)
     expect(runCodesign).toHaveBeenCalledTimes(1)
-    const args = runCodesign.mock.calls[0][0]
+    const args = at(runCodesign.mock.calls, 0)[0]
     expect(args[0]).toBe('--remove-signature')
-    expect(basename(args[1])).toBe('lsteamclient.so')
-    expect(basename(dirname(args[1]))).toMatch(
+    expect(basename(at(args, 1))).toBe('lsteamclient.so')
+    expect(basename(dirname(at(args, 1)))).toMatch(
       new RegExp(`^\\.${ID.replace(/\./g, '\\.')}\\.partial-`)
     )
     expect(statSync(root()).mode & 0o777).toBe(0o700)
@@ -346,7 +347,7 @@ describe('ensureSteamclientLayerComponent', () => {
       fetchArchive,
       runCodesign: async (args) => {
         const { appendFileSync } = await import('fs')
-        appendFileSync(args[1], 'X')
+        appendFileSync(at(args, 1), 'X')
         return { code: 0, stdout: '', stderr: '', timedOut: false }
       }
     })

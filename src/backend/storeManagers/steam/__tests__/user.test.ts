@@ -205,6 +205,7 @@ import {
   bumpSignInEpoch
 } from 'backend/signInProbe/sessionEpoch'
 import { __resetSignInProbeOutcomesForTests } from 'backend/signInProbe/outcomes'
+import { defined } from './fixtures/indexed'
 
 // Lets every pending microtask chain (wrap -> logon -> lease -> persona) settle.
 const flushAsync = () => new Promise<void>((resolve) => setImmediate(resolve))
@@ -643,7 +644,10 @@ describe('SteamUser', () => {
 
     test('emits a logInfo line when the authenticated event is received', async () => {
       await startQRLogin()
-      await sessionOnHandlers['authenticated']()
+      await defined(
+        sessionOnHandlers['authenticated'],
+        'authenticated handler'
+      )()
 
       const lines = jest
         .mocked(logInfo)
@@ -656,7 +660,10 @@ describe('SteamUser', () => {
 
     test('never logs the QR challenge URL or the refresh token across the whole QR flow', async () => {
       await startQRLogin()
-      await sessionOnHandlers['authenticated']()
+      await defined(
+        sessionOnHandlers['authenticated'],
+        'authenticated handler'
+      )()
       await pollQRLogin()
       await pollQRLogin()
 
@@ -717,7 +724,10 @@ describe('SteamUser', () => {
       // After the fix, qrSessionState is set to done synchronously (before the CM
       // connection resolves), so username is undefined at poll time.
       expect(sessionOnHandlers['authenticated']).toBeDefined()
-      await sessionOnHandlers['authenticated']()
+      await defined(
+        sessionOnHandlers['authenticated'],
+        'authenticated handler'
+      )()
 
       const result = await pollQRLogin()
       expect(result.status).toBe('done')
@@ -725,14 +735,20 @@ describe('SteamUser', () => {
     })
 
     test('after auth: encrypts and stores token (safeStorage.encryptString called)', async () => {
-      await sessionOnHandlers['authenticated']()
+      await defined(
+        sessionOnHandlers['authenticated'],
+        'authenticated handler'
+      )()
       expect(safeStorage.encryptString).toHaveBeenCalledWith(
         'mock-refresh-token'
       )
     })
 
     test('after auth: isLoggedIn becomes true in configStore', async () => {
-      await sessionOnHandlers['authenticated']()
+      await defined(
+        sessionOnHandlers['authenticated'],
+        'authenticated handler'
+      )()
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
     })
 
@@ -780,7 +796,10 @@ describe('SteamUser', () => {
 
     test('a status change from waiting to done emits a second line', async () => {
       await pollQRLogin()
-      await sessionOnHandlers['authenticated']()
+      await defined(
+        sessionOnHandlers['authenticated'],
+        'authenticated handler'
+      )()
       await pollQRLogin()
 
       const lines = pollLines()
@@ -790,7 +809,10 @@ describe('SteamUser', () => {
 
     test('never logs the persona name on a poll transition line (D-03)', async () => {
       await pollQRLogin()
-      await sessionOnHandlers['authenticated']()
+      await defined(
+        sessionOnHandlers['authenticated'],
+        'authenticated handler'
+      )()
 
       // Flush the background CM connect (logOn -> nextTick 'loggedOn' ->
       // getPersonas -> resolve -> .then) so the persona name resolves before
@@ -1026,7 +1048,10 @@ describe('SteamUser', () => {
       // Simulate DeviceConfirmation phone approval: 'authenticated' fires on
       // the session BEFORE the user calls submitSteamGuardCode.
       expect(sessionOnHandlers['authenticated']).toBeDefined()
-      await sessionOnHandlers['authenticated']()
+      await defined(
+        sessionOnHandlers['authenticated'],
+        'authenticated handler'
+      )()
 
       // finishAuth must have been called: token stored and isLoggedIn set
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
@@ -1173,7 +1198,10 @@ describe('SteamUser', () => {
       // qrSessionState='done', and (with the fix) assigns this.connectingPromise.
       // The handler is async (getTokenStore().setToken() is awaited), so the
       // test must await it before asserting on qrSessionState/pollQRLogin.
-      await sessionOnHandlers['authenticated']()
+      await defined(
+        sessionOnHandlers['authenticated'],
+        'authenticated handler'
+      )()
 
       // pollQRLogin must return 'done' with username undefined — the background
       // CM connect is still in-flight so the persona name has not arrived yet.
@@ -1210,7 +1238,10 @@ describe('SteamUser', () => {
       // Fire authenticated — with the fix, this.connectingPromise is set once the
       // awaited TokenStore seam's setToken() resolves. The handler is async, so
       // await it before asserting on connectingPromise/qrSessionState below.
-      await sessionOnHandlers['authenticated']()
+      await defined(
+        sessionOnHandlers['authenticated'],
+        'authenticated handler'
+      )()
 
       // Clear construction/call counts so we can assert "no new client" below.
       MockSteamUserLib.mockClear()
@@ -2356,7 +2387,10 @@ describe('SteamUser', () => {
       const savedSteamID = mockSteamUserInstance.steamID
       mockSteamUserInstance.steamID = null
       await startQRLogin()
-      await sessionOnHandlers['authenticated']()
+      await defined(
+        sessionOnHandlers['authenticated'],
+        'authenticated handler'
+      )()
 
       expect((await pollQRLogin()).status).toBe('done')
 

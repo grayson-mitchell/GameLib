@@ -33,6 +33,7 @@ import {
   type DepotPlan,
   type DepotPlanFile
 } from '../depot'
+import { at } from './fixtures/indexed'
 
 // ── Transitive-dependency mocks (depot.ts's own module graph) ───────────────
 jest.mock('backend/logger', () => ({
@@ -118,7 +119,7 @@ describe('reconcilePartialState', () => {
     const result = await reconcilePartialState(plan, dir)
 
     expect(result.jobs).toHaveLength(1)
-    expect(result.jobs[0].file.filename).toBe('missing.bin')
+    expect(at(result.jobs, 0).file.filename).toBe('missing.bin')
     expect(result.allFilesVerified).toBe(false)
   })
 
@@ -158,7 +159,7 @@ describe('reconcilePartialState', () => {
     const result = await reconcilePartialState(plan, dir)
 
     expect(result.jobs).toHaveLength(1)
-    expect(result.jobs[0].file.filename).toBe('corrupt.bin')
+    expect(at(result.jobs, 0).file.filename).toBe('corrupt.bin')
     expect(result.allFilesVerified).toBe(false)
   })
 

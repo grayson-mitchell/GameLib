@@ -10,6 +10,7 @@ import {
   LicensedDemosPicsClient
 } from '../licensedDemos'
 import { logWarning } from 'backend/logger'
+import { at } from './fixtures/indexed'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -97,7 +98,7 @@ describe('selectLicensedDemos', () => {
       { 7: app('Demo', 'Seven') }
     )
     expect(out).toHaveLength(1)
-    expect(out[0].appid).toBe(7)
+    expect(at(out, 0).appid).toBe(7)
   })
 
   test('missing name falls back to the appid string', () => {
@@ -107,7 +108,7 @@ describe('selectLicensedDemos', () => {
       { 1: pkg([9]) },
       { 9: app('Demo') }
     )
-    expect(out[0].name).toBe('9')
+    expect(at(out, 0).name).toBe('9')
   })
 })
 

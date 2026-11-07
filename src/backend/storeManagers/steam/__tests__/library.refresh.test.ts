@@ -46,6 +46,7 @@ import { captureOwnedAppMetacritic } from '../metacriticCapture'
 import { listSteamClientPids } from '../steamClientProcess'
 import { pollInstallOnce } from '../library/installPollOnce'
 import { startInstallPolling } from '../library/installPolling'
+import { at } from './fixtures/indexed'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -1044,14 +1045,16 @@ describe('SteamLibraryManager', () => {
       await manager.refresh()
 
       expect(captureOwnedAppMetacritic).toHaveBeenCalledWith(anon, [570])
-      const capOrder = jest.mocked(captureOwnedAppMetacritic).mock
-        .invocationCallOrder[0]
+      const capOrder = at(
+        jest.mocked(captureOwnedAppMetacritic).mock.invocationCallOrder,
+        0
+      )
       const pushIdx = jest
         .mocked(sendFrontendMessage)
         .mock.calls.findIndex(([m]) => m === 'pushGameToLibrary')
       expect(pushIdx).toBeGreaterThanOrEqual(0)
       expect(capOrder).toBeLessThan(
-        jest.mocked(sendFrontendMessage).mock.invocationCallOrder[pushIdx]
+        at(jest.mocked(sendFrontendMessage).mock.invocationCallOrder, pushIdx)
       )
     })
 
@@ -1449,7 +1452,7 @@ describe('SteamLibraryManager', () => {
         expect.arrayContaining(['206040', '206041'])
       )
       expect(
-        jest.mocked(backfillBridgeLaunchTargets).mock.calls[0][1]
+        at(jest.mocked(backfillBridgeLaunchTargets).mock.calls, 0)[1]
       ).toHaveLength(2)
     })
 

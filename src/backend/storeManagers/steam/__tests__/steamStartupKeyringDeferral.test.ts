@@ -306,6 +306,7 @@ import {
   currentTriggerLabel
 } from '../authTrigger'
 import type { GameInfo, InstallArgs } from 'common/types'
+import { at } from './fixtures/indexed'
 
 const APP_ID = '570'
 
@@ -411,7 +412,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
       .mocked(sendFrontendMessage)
       .mock.calls.filter(([channel]) => channel === 'steamSyncStatus')
     expect(syncStatusCalls).toHaveLength(1)
-    expect(syncStatusCalls[0][1]).toEqual({ status: 'idle' })
+    expect(at(syncStatusCalls, 0)[1]).toEqual({ status: 'idle' })
     expect(
       syncStatusCalls.some(
         (c) => (c[1] as { status: string }).status === 'syncing'

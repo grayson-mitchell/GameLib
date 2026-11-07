@@ -97,6 +97,7 @@ import {
   clearOrphanedElectronToken
 } from '../tokenStore'
 import { SteamUser } from '../user'
+import { at } from './fixtures/indexed'
 
 describe('tokenStore', () => {
   beforeEach(() => {
@@ -137,7 +138,7 @@ describe('tokenStore', () => {
         'refreshToken',
         expect.stringMatching(/^steam:v1:/)
       )
-      const [, storedValue] = mockConfigStore.set.mock.calls[0]
+      const [, storedValue] = at(mockConfigStore.set.mock.calls, 0)
       expect(storedValue).not.toBe('abc')
     })
 

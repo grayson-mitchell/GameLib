@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'fs'
 import * as path from 'path'
 import { applyNtdllPatch } from '../ntdllPatch'
 import { findNtdllPatchRow, NTDLL_PATCH_ROWS } from '../ntdllPatchTable'
+import { defined } from '../../../__tests__/fixtures/indexed'
 
 const BUILD = '26.3.0.39832'
 const NTDLL =
@@ -34,7 +35,7 @@ maybe('applyNtdllPatch against real CrossOver 26.3.0.39832', () => {
     const r = applyNtdllPatch(
       readFileSync(NTDLL),
       readFileSync(PAYLOAD),
-      NTDLL_PATCH_ROWS[BUILD]
+      defined(NTDLL_PATCH_ROWS[BUILD], 'ntdll patch row for BUILD')
     )
     expect(r.status).toBe('patched')
     if (r.status === 'patched') {

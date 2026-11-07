@@ -23,6 +23,7 @@ import {
   cancelDelegatedInstall,
   isDelegatedInstallPolling
 } from '../library/installPolling'
+import { at } from './fixtures/indexed'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -911,7 +912,7 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
       .filter(([c]) => c === 'steamRequestNotice')
       .map(([, p]) => p.seq as number)
     expect(seqs).toHaveLength(2)
-    expect(seqs[1]).toBeGreaterThan(seqs[0])
+    expect(at(seqs, 1)).toBeGreaterThan(at(seqs, 0))
   })
 
   it('PVK-4: isDelegatedInstallPolling is true only for a live delegated poll', async () => {

@@ -41,6 +41,7 @@ import {
 } from '../bottledSteam'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
+import { at } from './fixtures/indexed'
 
 jest.mock('backend/platform', () => ({
   app: {
@@ -305,9 +306,11 @@ describe('bottle.ts', () => {
 
         await tellBottledSteamToLaunch(GOOD_APP_ID)
 
-        const startOrder =
-          mockedStartBottleProcessMonitor.mock.invocationCallOrder[0]
-        const wineOrder = mockedRunWineCommand.mock.invocationCallOrder[0]
+        const startOrder = at(
+          mockedStartBottleProcessMonitor.mock.invocationCallOrder,
+          0
+        )
+        const wineOrder = at(mockedRunWineCommand.mock.invocationCallOrder, 0)
         expect(startOrder).toBeLessThan(wineOrder)
         expect(mockedStopBottleProcessMonitor).not.toHaveBeenCalled()
       })

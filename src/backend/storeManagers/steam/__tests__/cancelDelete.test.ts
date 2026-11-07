@@ -16,6 +16,7 @@ import { getBridgeBottleSteamappsRoot } from '../library/installRoot'
 import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
 import { deleteCancelledSteamInstall } from '../cancelDelete'
 import type { GameInfo } from 'common/types'
+import { at } from './fixtures/indexed'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -132,9 +133,9 @@ describe('deleteCancelledSteamInstall', () => {
       progress: { percent: 0, bytes: '0.00MB', eta: '' }
     })
     expect(
-      jest.mocked(sendProgressUpdate).mock.invocationCallOrder[0]
+      at(jest.mocked(sendProgressUpdate).mock.invocationCallOrder, 0)
     ).toBeGreaterThan(
-      jest.mocked(clearSteamResumeBreadcrumb).mock.invocationCallOrder[0]
+      at(jest.mocked(clearSteamResumeBreadcrumb).mock.invocationCallOrder, 0)
     )
   })
 
@@ -149,11 +150,11 @@ describe('deleteCancelledSteamInstall', () => {
     expect(r.status).toBe('deleted')
     const lastTrue = Math.max(
       ...inFlight.mock.results.map((res, i) =>
-        res.value === true ? inFlight.mock.invocationCallOrder[i] : -1
+        res.value === true ? at(inFlight.mock.invocationCallOrder, i) : -1
       )
     )
     expect(
-      jest.mocked(clearSteamResumeBreadcrumb).mock.invocationCallOrder[0]
+      at(jest.mocked(clearSteamResumeBreadcrumb).mock.invocationCallOrder, 0)
     ).toBeGreaterThan(lastTrue)
   })
 

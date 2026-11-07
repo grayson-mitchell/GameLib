@@ -22,6 +22,7 @@ import {
 } from '../depot/pathCollisions'
 import type { DepotPlan, DepotPlanFile } from '../depot'
 import { logWarning } from 'backend/logger'
+import { at } from './fixtures/indexed'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -76,7 +77,7 @@ function plan(
 }
 
 const names = (p: Pick<DepotPlan, 'depots'>, depotIdx: number): string[] =>
-  p.depots[depotIdx].files.map((f) => f.filename)
+  at(p.depots, depotIdx).files.map((f) => f.filename)
 
 describe('resolveDepotPathCollisions', () => {
   describe('the Fallout 2 shape (T-PC1)', () => {
@@ -94,8 +95,8 @@ describe('resolveDepotPathCollisions', () => {
       expect(names(p, 0)).toEqual([])
       // …and the real file survives, untouched
       expect(names(p, 1)).toEqual(['master.dat'])
-      expect(p.depots[1].files[0].size).toBe(333177805)
-      expect(p.depots[1].files[0].chunks).toHaveLength(318)
+      expect(at(at(p.depots, 1).files, 0).size).toBe(333177805)
+      expect(at(at(p.depots, 1).files, 0).chunks).toHaveLength(318)
     })
 
     it('logs the collision loudly — a silent resolution is how this hid', () => {
@@ -291,8 +292,8 @@ describe('resolveDepotPathCollisions', () => {
       // isEmptyDirectoryEntry is removed, this entry is dropped too and depot
       // a comes back empty.
       expect(names(p, 0)).toEqual(['odd'])
-      expect(p.depots[0].files[0].size).toBe(500)
-      expect(p.depots[0].files[0].chunks).toHaveLength(1)
+      expect(at(at(p.depots, 0).files, 0).size).toBe(500)
+      expect(at(at(p.depots, 0).files, 0).chunks).toHaveLength(1)
     })
 
     it('a Directory-flagged entry with content against a real file is ambiguous — nothing dropped', () => {
@@ -343,7 +344,7 @@ describe('resolveDepotPathCollisions', () => {
 
       expect(resolveDepotPathCollisions(p).resolved).toEqual(['master.dat'])
       expect(names(p, 0)).toEqual(['master.dat'])
-      expect(p.depots[0].files[0].size).toBe(999)
+      expect(at(at(p.depots, 0).files, 0).size).toBe(999)
     })
   })
 })
