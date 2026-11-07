@@ -36,6 +36,7 @@ are logged.
   the GPTK engine, not CrossOver.
 - Names: `cxbottle --create` accepted all five candidates (50, 64, 67, 120 chars; dots; `_20`/`_21`
   escapes), about 12 s each.
+- Checkpoint (user): replied "approved" to arming the non-Steam launch deadline in 61-16 (matchShape z-path, multi-form case-insensitive install-dir prefix with trailing separator) and a 120-char bottle-name cap for 61-07, after being told the live evidence was GPTK wine64, not CrossOver. No CrossOver re-run requested.
 
 ## Results
 
