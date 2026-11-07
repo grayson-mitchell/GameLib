@@ -3,7 +3,7 @@ status: partial
 phase: 61-unified-macos-engine-for-all-stores
 source: [61-VERIFICATION.md]
 started: 2026-11-07T10:00:00Z
-updated: 2026-11-07T12:00:00Z
+updated: 2026-11-07T13:00:00Z
 ---
 
 ## Current Test
@@ -18,7 +18,7 @@ result: pass — decided FIX 2026-11-07; fixed in 61-26: an inconclusive pre-fli
 
 ### 2. Decide on review WR-02: notice-only deadline raises the main window
 expected: Accept, or deliver the launch-deadline-unconfirmed notice without `raiseMainWindow` plus a modal over a running (possibly fullscreen) game the matcher cannot see.
-result: [pending]
+result: pass — decided FIX 2026-11-07; fixed in 61-27: the launch-deadline-unconfirmed notice is a bottom-right in-app toast plus a focus-free system notification; no raiseMainWindow, no modal, nothing stopped; asserted in launchEngine.deadline.test.ts
 
 ### 3. Run or waive 61-UAT items 13 and 14 (live CrossOver)
 expected: Item 13 — a game keeps running past 180 s and only a notice appears. Item 14 — Sideload Run installer runs in the game's own GameLib-sideload bottle. Both are covered by unit tests; record the result in 61-UAT.md.
@@ -27,9 +27,9 @@ result: [pending]
 ## Summary
 
 total: 3
-passed: 1
+passed: 2
 issues: 0
-pending: 2
+pending: 1
 skipped: 0
 blocked: 0
 
