@@ -74,6 +74,7 @@ import {
   getCurrentChangelogEntry
 } from '../releases'
 import { changeLanguage } from '../language'
+import { defined } from 'backend/testUtils/indexed'
 
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockedI18nextChangeLanguage = i18next.changeLanguage as jest.Mock
@@ -151,7 +152,10 @@ describe('backend/appshell/language.ts (REQ-34.1-04)', () => {
     await changeLanguage('de')
 
     const setSettingOrder = setSetting.mock.invocationCallOrder[0]
-    const emitOrder = emitSpy.mock.invocationCallOrder[0]
+    const emitOrder = defined(
+      emitSpy.mock.invocationCallOrder[0],
+      'emit call order'
+    )
 
     expect(setSettingOrder).toBeLessThan(emitOrder)
 

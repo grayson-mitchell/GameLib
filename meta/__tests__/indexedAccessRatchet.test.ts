@@ -60,7 +60,8 @@ describe('indexedAccessRatchet bucketOf', () => {
       'src/backend/wiki_game_info',
       'src/backend/signInProbe',
       'src/backend/scanners',
-      'src/backend/storeManagers/sideload'
+      'src/backend/storeManagers/sideload',
+      'src/backend/appshell'
     ])
   })
 })
