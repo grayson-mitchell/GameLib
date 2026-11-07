@@ -68,6 +68,7 @@ import {
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
 import * as acfState from '../library/acfState'
+import * as macArch from '../library/macArch'
 import * as pollStateModule from '../library/pollState'
 // Phase 51 Plan 09 Task 3: namespace import so setBridgeUserRoute (real,
 // unmocked module — bridgeVerdict.ts is never jest.mock'd in this file) can
@@ -11757,7 +11758,7 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
       .spyOn(SteamGame.prototype as any, 'installBottleNative')
       .mockResolvedValue({ status: 'done' } as any)
 
-    await libraryModule.promptI386Recovery(APP_ID)
+    await macArch.promptI386Recovery(APP_ID)
 
     expect(dialogShowMessageBox).toHaveBeenCalledTimes(1)
     // forceUninstall(): kept in the in-memory library, marked not-installed
@@ -11784,7 +11785,7 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
     })
     dialogShowMessageBox.mockResolvedValue({ response: 1 })
 
-    await libraryModule.promptI386Recovery(APP_ID)
+    await macArch.promptI386Recovery(APP_ID)
 
     expect(dialogShowMessageBox).toHaveBeenCalledTimes(1)
     expect(shellOpenExternal).not.toHaveBeenCalled()
