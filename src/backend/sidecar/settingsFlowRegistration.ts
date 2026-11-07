@@ -79,6 +79,7 @@ import '../storeManagers'
 import { GlobalConfig } from '../config'
 import { GameConfig } from '../game_config'
 import { applyGameSetting } from './gameSettingWrite'
+import { isWritableEngineOverride } from '../engine/engineConfig'
 import { libraryManagerMap } from '../storeManagers'
 // NOTE: the export is `library`, not `steamLibrary` — there is no export
 // named `steamLibrary` from this module. Aliased on import exactly as
@@ -173,6 +174,14 @@ export function registerSettingsFlows(): void {
       )
       return
     }
+    // Phase 61 (T-61-13): only closed-grammar engine ids are persisted, for a
+    // game and for the global default alike.
+    if (key === 'engineOverride' && !isWritableEngineOverride(value)) {
+      process.stderr.write(
+        '[settingsFlowRegistration] setSetting dropped an invalid engineOverride\n'
+      )
+      return
+    }
     if (appName === 'default') {
       GlobalConfig.get().setSetting(key as keyof AppSettings, value)
     } else {
@@ -212,7 +221,23 @@ export function registerSettingsFlows(): void {
       )
       return
     }
-    return writeConfig(appName as string, config ?? {})
+    let safeConfig: Partial<AppSettings> = config ?? {}
+    if (
+      'engineOverride' in safeConfig &&
+      !isWritableEngineOverride(
+        (safeConfig as { engineOverride?: unknown }).engineOverride
+      )
+    ) {
+      process.stderr.write(
+        '[settingsFlowRegistration] writeConfig dropped an invalid engineOverride\n'
+      )
+      const { engineOverride: _dropped, ...rest } = safeConfig as Record<
+        string,
+        unknown
+      >
+      safeConfig = rest as Partial<AppSettings>
+    }
+    return writeConfig(appName as string, safeConfig)
   })
 
   // ── GENERIC READS (Phase 31 Plan 01, REQ-31-01) ────────────────────────────

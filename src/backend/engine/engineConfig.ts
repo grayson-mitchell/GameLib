@@ -13,12 +13,8 @@ import { gamesConfigPath as defaultGamesConfigPath } from 'backend/constants/pat
 import { hasCapability } from 'common/storeCapabilities'
 import type { WineInstallation } from 'common/types'
 import { ENGINE_PINS } from './enginePins'
-import { pinnedEnginePaths } from './fallbackEngine'
 import { parseEngineOverride, type EngineOverrideId } from './engineIds'
-import {
-  defaultEngineDecisionDeps,
-  type WineManagerRelease
-} from './engineDecision'
+import type { WineManagerRelease } from './engineDecision'
 
 export type EffectiveEngine =
   | { kind: 'override'; id: EngineOverrideId; source: 'stored' | 'derived' }
@@ -37,11 +33,20 @@ export interface EngineConfigDeps {
 
 function defaultDeps(): EngineConfigDeps {
   return {
+    // Lazy: engineDecision and fallbackEngine pull in the whole backend utils
+    // graph, which game_config.ts (a leaf this module is imported from) must not.
     wineManagerReleases: () =>
-      defaultEngineDecisionDeps().wineManagerReleases(),
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      (require('./engineDecision') as typeof import('./engineDecision'))
+        .defaultEngineDecisionDeps()
+        .wineManagerReleases(),
     pins: ENGINE_PINS,
-    pinWineBin: (pin) =>
-      pinnedEnginePaths(pin as (typeof ENGINE_PINS)['current']).wineBin,
+    pinWineBin(pin) {
+      const { pinnedEnginePaths } =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('./fallbackEngine') as typeof import('./fallbackEngine')
+      return pinnedEnginePaths(pin as (typeof ENGINE_PINS)['current']).wineBin
+    },
     gamesConfigPath: defaultGamesConfigPath,
     globalSettings() {
       const { GlobalConfig } =

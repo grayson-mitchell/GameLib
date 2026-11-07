@@ -43,10 +43,15 @@ jest.mock('../logger', () => ({
   logInfo: jest.fn(),
   LogPrefix: { Backend: 'Backend', GameConfig: 'GameConfig' }
 }))
+const globalExtra: Record<string, unknown> = {}
 jest.mock('../config', () => ({
   GlobalConfig: {
     get: () => ({
-      getSettings: () => ({ enviromentOptions: [], wineVersion: {} })
+      getSettings: () => ({
+        enviromentOptions: [],
+        wineVersion: {},
+        ...globalExtra
+      })
     })
   }
 }))
@@ -137,6 +142,27 @@ describe('GameConfig first write (G17)', () => {
         readFileSync(join(dir, 'wr04c.json'), 'utf-8')
       )['wr04c']
       expect(written.steamEngineOverride).toBe('automatic')
+    })
+  })
+
+  describe('Phase 61: engineOverride new-game default (D-02, D-08)', () => {
+    afterEach(() => delete globalExtra.engineOverride)
+
+    it('a new game inherits the global key; an existing game does not', () => {
+      writeFileSync(join(dir, 'config.json'), '{}')
+      globalExtra.engineOverride = 'pinned:wine-staging-11.20'
+      expect(GameConfig.get('p61new').config.engineOverride).toBe(
+        'pinned:wine-staging-11.20'
+      )
+      writeFileSync(
+        join(dir, 'p61old.json'),
+        JSON.stringify({ p61old: {}, version: 'v0', explicit: true })
+      )
+      expect(GameConfig.get('p61old').config.engineOverride).toBeUndefined()
+    })
+
+    it('no global key leaves a new game without one', () => {
+      expect(GameConfig.get('p61none').config.engineOverride).toBeUndefined()
     })
   })
 })

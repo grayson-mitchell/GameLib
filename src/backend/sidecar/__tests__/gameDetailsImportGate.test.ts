@@ -172,8 +172,12 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // b408ff7c38a5238b5c1c88eba9f63382294428246a290c0ef7602f48f0414862
   // quick-261107-a1j: rename-only re-pin (electronStores -> stores in a comment/import path).
   // Previous digest: 4c818e88579365b61da196d5f95975dcc785d5cf0e1cc3126f2ce8abfb209657
+  // Phase 61 plan 06 (T-61-13): re-pin for the engineOverride write guard in setSetting and
+  // writeConfig (isWritableEngineOverride import + two drop branches); the
+  // `steamLibrary.has(appName)` gate is untouched. Prior digest:
+  // 7120ad92f0f8e0121039685b327b2adb882a4e8f87743c9d80e7957ca86e2aa0
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '7120ad92f0f8e0121039685b327b2adb882a4e8f87743c9d80e7957ca86e2aa0'
+    'eeb736f040ead01b46da0e346748f6472ffd569c4773966a5e64c8c8a12dfa5b'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
