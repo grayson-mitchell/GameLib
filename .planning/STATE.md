@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 65 (steam-store-manager-decomposition-continued) — EXECUTING
 Plan: 20 of 20
 Status: Ready to execute
-Last activity: 2026-11-08 - Completed quick task 261108-cut: adopt noUncheckedIndexedAccess for storeManagers/gog
+Last activity: 2026-11-08 - Completed quick task 261108-d1z: adopt noUncheckedIndexedAccess for storeManagers/legendary
 
 Progress: [████████░░] 82%
 
@@ -496,6 +496,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261107-brs | ts-prune replaced by knip 6.42.1: `find-deadcode` now pipes `knip --reporter json --no-exit-code` into an identity ratchet (`meta/knipRatchet.cjs`, 404 baselined findings); ts-prune, its ledgers and all 416 directives removed (391 deleted, 7 -> `@public` with reason, 18 left as baselined debt); ts-morph made a direct devDep. | 2026-11-07 | 2dbc96252 | find-deadcode PASS, planted line fails it; codecheck, lint, planning-gates green; gate suites pass (250 tests) | [261107-brs-replace-ts-prune-with-knip-for-unused-ex](./quick/261107-brs-replace-ts-prune-with-knip-for-unused-ex/) |
 | 261107-v6q | Phase 61 re-review WR-01 closed: under an inconclusive CrossOver pre-flight a wine-manager or retired-pin bottle now keeps its recorded engine (no wineserver kill, no marker rewrite); an unresolvable engine takes the CrossOver branch, never pins.current. Reverses 61-26's wine-manager -> pins.current choice; 61-HUMAN-UAT item 4 pass. | 2026-11-07 | 88c8296b7 | 4 engine jest suites 204/204, codecheck clean, scoped prettier clean | [261107-v6q-inconclusive-pre-flight-leaves-wine-mana](./quick/261107-v6q-inconclusive-pre-flight-leaves-wine-mana/) |
 | 261108-cut | noUncheckedIndexedAccess adopted for storeManagers/gog (34 sites incl. tests, no `!`/casts; added to ADOPTED_BUCKETS); first reconciled ratchet baseline drift from phases 63/65 (engine 45, scanners 3, sidecar/testUtils/screens raised, tools/wiki lowered) that had the CI step red on main. | 2026-11-08 | 83f114958 | ratchet exit 0; codecheck; gog + ratchet jest pass; planning-gates; scoped prettier | [261108-cut-adopt-nouncheckedindexedaccess-for-store](./quick/261108-cut-adopt-nouncheckedindexedaccess-for-store/) |
+| 261108-d1z | noUncheckedIndexedAccess adopted for storeManagers/legendary (15 sites incl. tests, no `!`/casts; added to ADOPTED_BUCKETS); empty Epic `releaseInfo` now logs the existing "No platforms info" warning instead of throwing. | 2026-11-08 | e8d6903bf | ratchet exit 0; codecheck; legendary + ratchet jest pass (103); planning-gates; scoped prettier | [261108-d1z-adopt-nouncheckedindexedaccess-for-store](./quick/261108-d1z-adopt-nouncheckedindexedaccess-for-store/) |
 
 ## Deferred Items
 
