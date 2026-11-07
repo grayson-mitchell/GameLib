@@ -57,7 +57,13 @@ const pickerParams = parseBridgeInvitePickerParams(window.location.search)
 initOnlineMonitor()
 
 window.addEventListener('error', (ev: ErrorEvent) => {
-  window.api.logError(ev.error)
+  // A real Error JSON-serialises to `{}` across IPC, so send its text, not the object.
+  const error: unknown = ev.error
+  window.api.logError(
+    error instanceof Error
+      ? (error.stack ?? error.message)
+      : String(error ?? ev.message)
+  )
 })
 
 // G-48-12a: body.keyboardNav keeps a Tab-focused card's ring while the pointer

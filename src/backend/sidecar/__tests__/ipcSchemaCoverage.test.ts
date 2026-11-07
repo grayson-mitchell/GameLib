@@ -33,10 +33,10 @@ type Bucket = 'invoke' | 'send' | 'testOnly' | 'push' | 'local'
 // this table with an exemption-free `toEqual([])` (D-15, D-20).
 // Measured on first run, plan 67-02.
 const CEILING: Record<Bucket, number> = {
-  invoke: 52,
-  send: 28,
+  invoke: 49,
+  send: 25,
   testOnly: 6,
-  push: 37,
+  push: 35,
   local: 14
 }
 
