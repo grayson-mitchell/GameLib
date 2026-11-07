@@ -9,6 +9,7 @@
 import { LogPrefix, logInfo, logWarning } from 'backend/logger'
 
 import { readRunningAppId } from './library'
+import { isProcessRunningFromFolder } from './runningFromFolder'
 import { requestSteamUninstallApp } from './steamInstallApp'
 import type { SteamUninstallAppOutcome } from './steamInstallApp'
 
@@ -21,6 +22,8 @@ type SteamNativeDeleteDecision =
 
 interface SteamNativeDeleteDeps {
   readRunningAppId?: () => number
+  isProcessRunningFromFolder?: (folder: string) => Promise<boolean>
+  platform?: NodeJS.Platform
   requestSteamUninstallApp?: (
     appId: string
   ) => Promise<SteamUninstallAppOutcome>
@@ -29,11 +32,20 @@ interface SteamNativeDeleteDeps {
 /** EAppUpdateError "not installed" -- also what signed-out Steam answers. */
 const EAPPUPDATE_NOT_INSTALLED = 18
 
+/**
+ * EAppUpdateError "app running". Seen as "UninstallApp EAppUpdateError 16" in
+ * the 2026-11-07 log while WazHack ran (live gate D).
+ */
+const EAPPUPDATE_APP_RUNNING = 16
+
 export async function decideSteamNativeDelete(
   appId: string,
+  installFolder: string | undefined,
   deps: SteamNativeDeleteDeps = {}
 ): Promise<SteamNativeDeleteDecision> {
   const running = deps.readRunningAppId ?? readRunningAppId
+  const inFolder = deps.isProcessRunningFromFolder ?? isProcessRunningFromFolder
+  const platform = deps.platform ?? process.platform
   const uninstall =
     deps.requestSteamUninstallApp ?? ((id) => requestSteamUninstallApp(id))
 
@@ -44,6 +56,16 @@ export async function decideSteamNativeDelete(
         LogPrefix.Steam
       )
       return { route: 'refused-running' }
+    }
+    if (platform !== 'win32') {
+      if (!installFolder) throw new Error('no install folder to check')
+      if (await inFolder(installFolder)) {
+        logInfo(
+          `SteamGame: delete of appId ${appId} refused: a process is running from ${installFolder}`,
+          LogPrefix.Steam
+        )
+        return { route: 'refused-running' }
+      }
     }
   } catch (error) {
     logWarning(
@@ -76,6 +98,13 @@ export async function decideSteamNativeDelete(
       LogPrefix.Steam
     )
     return { route: 'fallback', why }
+  }
+  if (outcome.code === EAPPUPDATE_APP_RUNNING) {
+    logInfo(
+      `SteamGame: UninstallApp error 16 for appId ${appId}: game is running`,
+      LogPrefix.Steam
+    )
+    return { route: 'refused-running' }
   }
   logWarning(
     `SteamGame: UninstallApp refused appId ${appId} with error ${outcome.code}; nothing deleted`,

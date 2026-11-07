@@ -12,15 +12,20 @@ jest.mock('../steamInstallApp', () => ({
   requestSteamUninstallApp: jest.fn()
 }))
 
+const FOLDER = '/lib/steamapps/common/WazHack'
+
 const decide = (
   outcome: SteamUninstallAppOutcome,
-  running: () => number = () => 0
+  running: () => number = () => 0,
+  inFolder: () => Promise<boolean> = async () => false
 ) => {
   const request = jest.fn().mockResolvedValue(outcome)
   return {
     request,
-    result: decideSteamNativeDelete('264160', {
+    result: decideSteamNativeDelete('264160', FOLDER, {
       readRunningAppId: running,
+      isProcessRunningFromFolder: inFolder,
+      platform: 'darwin',
       requestSteamUninstallApp: request
     })
   }
@@ -78,5 +83,48 @@ describe('decideSteamNativeDelete (quick 261106-s3n)', () => {
     await expect(
       decide({ kind: 'error', code: 2, installedApps: 3 }).result
     ).resolves.toEqual({ route: 'steam-error', code: 2 })
+  })
+
+  it('refuses when registry reads 0 but a process runs from the folder (gate D)', async () => {
+    const { request, result } = decide(
+      { kind: 'ok' },
+      () => 0,
+      async () => true
+    )
+    await expect(result).resolves.toEqual({ route: 'refused-running' })
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when the folder check rejects', async () => {
+    const { request, result } = decide(
+      { kind: 'ok' },
+      () => 0,
+      async () => {
+        throw new Error('ps failed')
+      }
+    )
+    await expect(result).resolves.toEqual({
+      route: 'refused',
+      reason: 'running-check-failed'
+    })
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('refuses when there is no install folder on a non-Windows platform', async () => {
+    const request = jest.fn().mockResolvedValue({ kind: 'ok' })
+    await expect(
+      decideSteamNativeDelete('264160', undefined, {
+        readRunningAppId: () => 0,
+        requestSteamUninstallApp: request,
+        platform: 'darwin'
+      })
+    ).resolves.toEqual({ route: 'refused', reason: 'running-check-failed' })
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('treats Steam error 16 as running', async () => {
+    await expect(
+      decide({ kind: 'error', code: 16, installedApps: 3 }).result
+    ).resolves.toEqual({ route: 'refused-running' })
   })
 })
