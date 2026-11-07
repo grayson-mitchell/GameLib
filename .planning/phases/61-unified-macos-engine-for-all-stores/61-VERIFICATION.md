@@ -2,7 +2,7 @@
 phase: 61-unified-macos-engine-for-all-stores
 verified: 2026-11-07T10:00:00Z
 status: human_needed
-score: 20/20 decisions verified in code (2 warnings need a developer decision)
+score: 22/22 must-haves verified (D-01..D-20 + 61-26/61-27); 1 residual warning and 1 pending live UAT need a human
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
@@ -18,13 +18,10 @@ re_verification:
   regressions: []
 gaps: []
 human_verification:
-  - test: "Decide on review WR-01: an inconclusive pre-flight (incl. busy-bottle timeout) now always launches on CrossOver without checking the bottle's engine marker, logged as cx-healthy; this rule lives in shared decideLaunchEngine, so Steam is affected too"
-    expected: "Either accept it (the 59 D-09 principle is that inconclusive is not broken) or have it fixed to keep the bottle's current engine / limit it to invalid-bottle, with an honest log label"
-    why_human: "Policy trade-off. Not a must-have failure, but it can force a switch back to a possibly expired CrossOver on a bottle whose marker is non-crossover, and it changes Steam behaviour that was not UAT-covered"
-  - test: "Decide on review WR-02: the notice-only deadline still calls raiseMainWindow plus a modal over a running (possibly fullscreen) game it cannot detect"
-    expected: "Accept, or deliver the launch-deadline-unconfirmed notice without raising the window"
-    why_human: "UX judgement. D-18 only requires a deadline notice. Nothing is killed, so the safety goal holds"
-  - test: "UAT 13 (deadline notice does not stop a running game) and UAT 14 (Sideload Run installer uses the game's bottle) are pending optional live checks"
+  - test: "Decide on new review WR-01 (residual): under an inconclusive pre-flight a wine-manager marker (pinId null) or an unknown legacy pin id falls back to pins.current (engineDecision.ts:503-508), and prepareBottleForEngine then performs a real engine switch (engineSwitch.ts:153-160)"
+    expected: "Either accept (narrow: needs Automatic override on a bottle previously on a Wine Manager engine, or a retired pin id) or fix by keeping the bottle untouched / taking the CrossOver branch when the marker is not a known pin"
+    why_human: "Policy call on a narrow edge. The main 61-26 contract (pinned-marker bottles keep their engine, cx-inconclusive label, no fallback toast) is verified"
+  - test: "UAT 13 (deadline notice does not stop a running game) and UAT 14 (Sideload Run installer uses the game's bottle) are pending optional live checks (HUMAN-UAT item 3)"
     expected: "Game keeps running after 180 s with a notice only; installer runs in the GameLib-sideload bottle"
     why_human: "Live CrossOver needed. Both are covered by unit tests, and the operator may waive them"
 ---
@@ -33,7 +30,7 @@ human_verification:
 
 **Phase goal:** One per-game Engine control for every Windows game on macOS (all stores), with the Phase 59 engine decision moved out of `steam/engine/` so non-Steam launches get trial-expiry pre-flight, N-days notice, launch timeout, broken-CrossOver detection and a fallback bottle.
 **Status:** human_needed
-**Re-verification:** Yes, after gap closure plans 61-21..61-25
+**Re-verification:** Yes, after gap closure plans 61-21..61-27
 
 ## Prior gaps, re-checked against the code
 
@@ -71,3 +68,14 @@ No must-have failures remain. Status is `human_needed` because of the open devel
 
 _Verified: 2026-11-07_
 _Verifier: Claude (gsd-verifier)_
+
+## Re-verification after 61-26 and 61-27
+
+| Must-have | Status | Evidence |
+| --- | --- | --- |
+| 61-26: inconclusive pre-flight keeps the marker engine, labelled `cx-inconclusive`, no fallback toast/notice, Steam and non-Steam share the path | VERIFIED (with residual) | `engineDecision.ts:497-527` reads `readBottleEngineMarkerSummary` (path-safe, read-only, `engineSwitch.ts:149-163`). Pinned markers (current or previous) keep their pin; missing/crossover markers launch CrossOver. |
+| 61-27: deadline notice without `raiseMainWindow`/modal; toast plus non-focusing notification; nothing stopped | VERIFIED | `engineDialogs.ts:51-64` `showEngineNotice` only notifies/logs; `publishLaunchDeadlineNotice` feeds the renderer toast; tests in `launchEngine.deadline.test.ts`. |
+
+**Judgement on new review WR-01:** confirmed real by reading `engineDecision.ts:503-508`: a `wine-manager` marker has `pinId: null`, so `pin = d.pins.current`, and an unknown pin id also resolves to current, which triggers a real switch. This does not defeat the 61-26 truth for the main case (pinned markers, the built-in engines GameLib manages), so it is scored as a warning, not a gap. It only violates "keeps the engine its marker records" for wine-manager markers under Automatic override and for retired pin ids. A developer decision is requested.
+
+Test status: 9 jest failures in 8 suites are pre-existing or environmental (two reproduce at pre-phase commit 2eb50b85a) and touch no 61-26/27 file; `pnpm codecheck` passes. HUMAN-UAT items 1 and 2 are recorded pass; item 3 is still pending.

@@ -3,7 +3,7 @@ status: partial
 phase: 61-unified-macos-engine-for-all-stores
 source: [61-VERIFICATION.md]
 started: 2026-11-07T10:00:00Z
-updated: 2026-11-07T13:00:00Z
+updated: 2026-11-07T14:00:00Z
 ---
 
 ## Current Test
@@ -24,12 +24,16 @@ result: pass — decided FIX 2026-11-07; fixed in 61-27: the launch-deadline-unc
 expected: Item 13 — a game keeps running past 180 s and only a notice appears. Item 14 — Sideload Run installer runs in the game's own GameLib-sideload bottle. Both are covered by unit tests; record the result in 61-UAT.md.
 result: [pending]
 
+### 4. Decide on review WR-01 (re-review): inconclusive pre-flight still switches a wine-manager or unknown-pin bottle
+expected: Accept, or fix so that under an inconclusive pre-flight a marker that is not a known pin (`wine-manager`, pinId null, or a retired pin id) leaves the bottle untouched or takes the CrossOver branch instead of falling to `pins.current` and running a real engine switch (`engineDecision.ts:503-508`, `engineSwitch.ts:153-160`); with a test pairing a `wine-manager` marker and an inconclusive pre-flight that asserts no switch.
+result: [pending]
+
 ## Summary
 
-total: 3
+total: 4
 passed: 2
 issues: 0
-pending: 1
+pending: 2
 skipped: 0
 blocked: 0
 
