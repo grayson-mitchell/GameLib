@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 66
 Plan: 0 of 0
 Status: Ready to plan
-Last activity: 2026-11-08 - Phase 65 complete (20/20, verification passed, smoke runs 1+2 passed)
+Last activity: 2026-11-08 - Completed quick task 261108-et2: adopt noUncheckedIndexedAccess for backend/__tests__
 
 Progress: [██████████] 100%
 
@@ -525,6 +525,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | fast | Cleared the 2 no-unused-vars lint errors from 67-16 that blocked pre-push (unused `Runner` import; type-only `steamLibraryTarget` zod object → interface). | 2026-11-08 | d75cc6f54 | codecheck + eslint + prettier pass; 5 failing jest suites pre-exist on baseline | — |
 | 261108-eps | Pre-push gate green again: 31 new knip findings resolved at source (deleted, export dropped, re-export removed, or `@public` with reason) and 10 stale baseline lines removed; no gate widened, no ipc_handler touched. | 2026-11-08 | 9509a10c9 | line-2 chain exit 0; 5 pre-existing jest failures recorded, not fixed | [261108-eps-make-the-pre-push-gate-pass-so-main-can-](./quick/261108-eps-make-the-pre-push-gate-pass-so-main-can-/) |
 | 261107-uh4 | Clippy ratchet extended to the Windows leg: win32 ceilings measured natively (14 lints / 27 unique, 1.99.1 x86_64-pc-windows-msvc), macOS-only gates dropped, caveat (f) deleted; red macOS leg repaired at source (generator emits `args.first()`, -17 get_first; stale darwin needless_borrow removed). | 2026-11-07 | da8dc1403 | native win32 ratchet PASS; 3 targeted jest files pass; check:ipc-contract pass; darwin green inferred, CI not yet run | [261107-uh4-extend-the-clippy-ratchet-to-the-windows](./quick/261107-uh4-extend-the-clippy-ratchet-to-the-windows/) |
+| 261108-et2 | adopt noUncheckedIndexedAccess for backend/__tests__ (125 sites + 4 drift files; local helpers/defined.ts; no `!`/casts) | 2026-11-08 | 181152fc2 | ratchet exit 0; codecheck; 937/938 jest (tauriShellSource Rust-source check fails identically on HEAD, pre-existing); boundaries; scoped prettier | [261108-et2-adopt-nuia-backend-tests](./quick/261108-et2-adopt-nuia-backend-tests/) |
 
 ## Deferred Items
 
