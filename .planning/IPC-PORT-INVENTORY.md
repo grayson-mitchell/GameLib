@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 239 |
-| Ported to sidecar | 84 |
+| Unique channels | 244 |
+| Ported to sidecar | 89 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -720,3 +720,18 @@ filed in the "Already ported" bucket line. There is no Electron leg.
 
 **Unique channels raised 238 → 239, Ported to sidecar raised 83 → 84 (quick 261106-s3n, 2026-11-06):**
 both numbers moved together by +1 and `Unported` (159) is unchanged.
+
+## Phase 61 — unified macOS engine (5 channels) — **PORTED**
+
+Added 2026-11-07 by Phase 61 plan 20 (gate fix). All five channels are BRAND NEW, invoke-kind
+(`makeHandlerInvoker`, `src/preload/api/engine.ts`), and registered only in the sidecar. There is
+no Electron leg, so `Ported to sidecar` rises along with `Unique channels`.
+
+**Unique channels raised 239 → 244, Ported to sidecar raised 84 → 89 (Phase 61, 2026-11-07):**
+all numbers moved together by +5 and `Unported` (159) is unchanged.
+
+`dismissEngineNotice`
+`getDefaultEngine`
+`getEngineState`
+`getPerGameBottleName`
+`listEngineOptions`
