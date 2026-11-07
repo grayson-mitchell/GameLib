@@ -35,7 +35,7 @@ import { STEAM_ENGINE_RUNNER } from './engine/steamEngineDeps'
 import type { LaunchDeadline } from 'backend/engine/launchDeadline'
 import { drmStepError } from './bridge/drm/steamclientLayerMode'
 import { resolveBridgeLaunchWorkingDir } from './bridge/launchTarget'
-import { stopBridgeHelper } from './bridge/helperProcess'
+import { stopBridgeHelper } from './bridge/helperRegistry'
 import { appFolder, userHome } from 'backend/constants/paths'
 import {
   bridgeLaunchBottles,

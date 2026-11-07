@@ -169,6 +169,9 @@ jest.mock('../bridge/launchTarget', () => ({
 jest.mock('../bridge/helperProcess', () => ({
   ensureBridgeHelperReady: jest.fn()
 }))
+jest.mock('../bridge/helperRegistry', () => ({
+  stopBridgeHelper: jest.fn()
+}))
 
 // ── platformCapture mock ──────────────────────────────────────────────────────
 jest.mock('../platformCapture', () => ({ captureOwnedAppPlatforms: jest.fn() }))

@@ -55,7 +55,7 @@ import {
   drmStepError,
   type DrmStep
 } from './bridge/drm/steamclientLayerMode'
-import { stopBridgeHelper } from './bridge/helperProcess'
+import { stopBridgeHelper } from './bridge/helperRegistry'
 import {
   markBridgeLimitedNoticeShown,
   setBridgeIdentityFallback,

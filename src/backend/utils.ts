@@ -45,7 +45,7 @@ import {
 import gogPresence from './storeManagers/gog/presence'
 import { libraryManagerMap } from './storeManagers'
 import { SteamUser } from './storeManagers/steam/user'
-import { hasLiveBridgeHelper } from './storeManagers/steam/bridge/helperProcess'
+import { hasLiveBridgeHelper } from './storeManagers/steam/bridge/helperRegistry'
 import { resolveTitleForGame } from './utils/gameTitle'
 import {
   installStore as nileInstallStore,

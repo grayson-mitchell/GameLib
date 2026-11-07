@@ -140,10 +140,8 @@ import {
   resolveBridgeLaunchExe,
   resolveBridgeLaunchWorkingDir
 } from '../bridge/launchTarget'
-import {
-  ensureBridgeHelperReady,
-  stopBridgeHelper
-} from '../bridge/helperProcess'
+import { ensureBridgeHelperReady } from '../bridge/helperProcess'
+import { stopBridgeHelper } from '../bridge/helperRegistry'
 import { writeBridgeConfig } from '../bridge/bridgeConfig'
 import {
   startBottleProcessMonitor,
@@ -677,7 +675,9 @@ jest.mock('../bridge/launchTarget', () => ({
 // ensureBridgeHelperReady() gate + stopBridgeHelper() teardown hook, both
 // consumed by launch()'s bridge branch.
 jest.mock('../bridge/helperProcess', () => ({
-  ensureBridgeHelperReady: jest.fn(),
+  ensureBridgeHelperReady: jest.fn()
+}))
+jest.mock('../bridge/helperRegistry', () => ({
   stopBridgeHelper: jest.fn()
 }))
 

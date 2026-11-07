@@ -41,15 +41,17 @@ import {
 } from '../protocol'
 import {
   ensureBridgeHelperReady,
+  classifyInitFlatError
+} from '../helperProcess'
+import {
   stopBridgeHelper,
   hasLiveBridgeHelper,
   shutdownAllBridgeHelpers,
-  classifyInitFlatError,
   __setSteamWaitScheduleForTests,
   __setBridgeHelperPathForTests,
   __setBridgeHelperSpawnEnvForTests,
   __resetBridgeHelperStateForTests
-} from '../helperProcess'
+} from '../helperRegistry'
 import {
   shutdownLongLivedChildren,
   __resetLongLivedChildrenForTests
@@ -1096,14 +1098,21 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
   // (repo grep-hygiene rule) so a prose mention in a docblock explaining
   // the history can never satisfy this gate.
   test('invariant: no module-level `let` of a ChildProcess, and no `shutdownBridgeHelper` symbol survives in source', () => {
-    const sourcePath = join(__dirname, '..', 'helperProcess.ts')
-    const stripped = stripSourceComments(readFileSync(sourcePath, 'utf-8'))
+    const files = ['helperProcess.ts', 'helperRegistry.ts']
+    let registrySeen = false
+    for (const file of files) {
+      const raw = readFileSync(join(__dirname, '..', file), 'utf-8')
+      // Non-vacuity: every scanned file was actually read and is non-empty.
+      expect(raw.length).toBeGreaterThan(0)
+      const stripped = stripSourceComments(raw)
 
-    expect(stripped).not.toMatch(/\blet\s+\w*\s*:\s*ChildProcess/)
-    expect(stripped).not.toMatch(/\bshutdownBridgeHelper\b/)
-    // Positive control: the registry map itself must still be declared, so
-    // this assertion is provably exercising real source, not an empty file.
-    expect(stripped).toMatch(/const helpers = new Map</)
+      expect(stripped).not.toMatch(/\blet\s+\w*\s*:\s*ChildProcess/)
+      expect(stripped).not.toMatch(/\bshutdownBridgeHelper\b/)
+      // Positive control: the registry map itself must still be declared, so
+      // this assertion is provably exercising real source, not an empty file.
+      if (/const helpers = new Map</.test(stripped)) registrySeen = true
+    }
+    expect(registrySeen).toBe(true)
   })
 
   describe('53-18 WR-05 line carry-over', () => {

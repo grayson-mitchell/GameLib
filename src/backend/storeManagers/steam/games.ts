@@ -36,7 +36,7 @@ import { readStoredTitleConfig, pickTitleSettings } from './titleSettings'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
 import { noteSteamAuthTrigger } from './authTrigger'
 import { type DrmLaunchReady } from './bridge/drm/drmLaunchSetup'
-import { stopBridgeHelper } from './bridge/helperProcess'
+import { stopBridgeHelper } from './bridge/helperRegistry'
 import type { EnginePin } from 'backend/engine/enginePins'
 import {
   nativeInstallsInFlight,
