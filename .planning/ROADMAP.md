@@ -692,16 +692,30 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 72-01-PLAN.md — Linux compile leg in rust-test.yml, proven on a pushed run; Phase 71 handoff notes (D-14, D-16)
 - [ ] 72-02-PLAN.md — Advisory bumps: undici/follow-redirects/source-map-js, react-router-dom 7, i18next-http-backend 4, dead plugin npm packages, rustls trio (D-19, D-18, D-10)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 72-03-PLAN.md — Supply-chain gates: deny.toml with reasoned zip ignores, audit.yml, security-only Dependabot (D-17, D-18)
 - [ ] 72-04-PLAN.md — Rust shell_open.rs: authoritative open-path/reveal policy and shared parity fixtures (D-06, D-07, D-08, D-15)
 - [ ] 72-05-PLAN.md — Delete the 14 dead ipc_handler.ts modules; fail-closed Steam token store (D-11, D-12)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 72-06-PLAN.md — Sidecar openPolicy.ts, strict openExternalUrl/openFolder split, openUrlOrFile removed (D-06, D-07, D-08)
 - [ ] 72-07-PLAN.md — Capability trim, withGlobalTauri false, opener link handler replacement, live boot check (D-10, D-19)
 - [ ] 72-08-PLAN.md — Fatal uncaughtException with bounded unref'd flush; unhandledRejection stays log-only (D-04)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 72-09-PLAN.md — Delete the renderer removeFolder channel; async timer-free helper (D-09)
 - [ ] 72-10-PLAN.md — Dead-sidecar Restart/Quit dialog with shutdown flag; live macOS check (D-01, D-02, D-03, D-05)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 72-11-PLAN.md — Tracked-children registry replacing pkill -f kills (D-13)
 - [ ] 72-12-PLAN.md — Windows kill-on-close Job Object; 72-UAT.md (D-20)
 
