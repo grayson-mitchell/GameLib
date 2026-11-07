@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method -- jest mock handles (SteamUser.acquire*), never invoked unbound; same reason as the line-level disables elsewhere in steam/__tests__ */
 /**
  * SteamLibraryManager.refresh() / refreshInstallState() behaviour (free functions in
  * library/refresh.ts). Moved out of library.test.ts by Phase 65 plan 06 (D-03);
