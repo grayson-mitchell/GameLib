@@ -1,5 +1,5 @@
 ---
-status: partial
+status: complete
 phase: 61-unified-macos-engine-for-all-stores
 source: [61-20-PLAN.md, 61-21-PLAN.md, 61-23-PLAN.md, 61-24-PLAN.md]
 ---
@@ -34,8 +34,7 @@ result: pass. Bloody Hell's Wine tab shows the hint and one Engine select (Autom
 ### 3. Legacy game
 
 expected: (D-07, D-14, D-15) A game previously on GPTK/toolkit or proton (GOG "Bloody Hell" is on GPTK wine64) shows "Legacy: <name>" selected with the Unsupported warning, and the game page shows the "Unsupported engine" badge right after the update; switching to Automatic removes the Legacy entry.
-result: issue (minor). Covered: the "Unsupported engine" badge, "Legacy: <GPTK>" selected with the Unsupported warning, and switching to Automatic removes the Legacy entry (pass). The gap: switching a Legacy game (prefixKind 'legacy', which has a winePrefix) to Automatic showed NO "Move this game to its own bottle?" warning. The config got `engineOverride: automatic` with `wineCrossoverBottle` left ''. Cause: `needsFreshBottleConfirm` in src/frontend/screens/Settings/components/engineOverrideLogic.ts:48 returns true only for prefixKind === 'plain'. The backend still routed the game to a fresh per-game bottle (resolveGamePrefix case 4), so D-04's "warn that saves stay behind" is skipped for legacy games that have a prefix.
-severity: minor
+result: pass — G-1 fix accepted on unit-test coverage by operator 2026-11-07; not re-run live (Bloody Hell, the only Legacy subject, is now Automatic). 61-23 (`59ad368e5`) makes `needsFreshBottleConfirm` return true for prefixKind 'legacy', asserted in engineOverrideLogic.test.ts. Original live run: the "Unsupported engine" badge, "Legacy: <GPTK>" selected with the Unsupported warning, and switching to Automatic removes the Legacy entry all passed. The gap found then: switching a Legacy game (prefixKind 'legacy', which has a winePrefix) to Automatic showed NO "Move this game to its own bottle?" warning. The config got `engineOverride: automatic` with `wineCrossoverBottle` left ''. Cause: `needsFreshBottleConfirm` in src/frontend/screens/Settings/components/engineOverrideLogic.ts:48 returns true only for prefixKind === 'plain'. The backend still routed the game to a fresh per-game bottle (resolveGamePrefix case 4), so D-04's "warn that saves stay behind" is skipped for legacy games that have a prefix.
 
 ### 4. New install gets its own bottle
 
@@ -95,8 +94,8 @@ result: skipped — waived by operator 2026-11-07 (61-HUMAN-UAT item 3); optiona
 ## Summary
 
 total: 14
-passed: 8
-issues: 1
+passed: 9
+issues: 0
 pending: 0
 skipped: 5
 
