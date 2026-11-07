@@ -12,8 +12,8 @@ interface SteamEngineStore {
 }
 
 // Phase 59 Plan 11: per-title engine display state for the game page.
-// Written ONLY from backend data -- the `steamEngineStateChanged` push and the
-// page's `getSteamEngineState` fetch. The renderer never derives engine state.
+// Written ONLY from backend data -- the `engineStateChanged` push and the
+// page's `getEngineState` fetch. The renderer never derives engine state.
 export const useSteamEngineState = create<SteamEngineStore>()((set) => ({
   byAppId: {},
   set: (state) =>
@@ -25,7 +25,7 @@ export const useSteamEngineState = create<SteamEngineStore>()((set) => ({
       return { byAppId: rest }
     }),
   // Optimistic hide so a dismissed note disappears at once; the backend
-  // persists the dismissal (dismissSteamEngineNotice).
+  // persists the dismissal (dismissEngineNotice).
   hideNotice: (appId, notice) =>
     set((s) => {
       const current = s.byAppId[appId]
@@ -40,7 +40,7 @@ export const useSteamEngineState = create<SteamEngineStore>()((set) => ({
 
 // Standalone so tests can simulate the push without mounting GlobalState.
 // T-59-49: payloads without a numeric appId are ignored.
-export const handleSteamEngineStateChangedSignal = (
+export const handleEngineStateChangedSignal = (
   _e: IpcRendererEvent,
   state: EngineState
 ): void => {

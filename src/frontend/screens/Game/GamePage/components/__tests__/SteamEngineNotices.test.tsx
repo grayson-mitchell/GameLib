@@ -58,7 +58,7 @@ beforeEach(() => {
   openExternalUrl.mockClear()
   dismiss.mockClear()
   ;(globalThis as unknown as { window: unknown }).window = {
-    api: { openExternalUrl, dismissSteamEngineNotice: dismiss }
+    api: { openExternalUrl, dismissEngineNotice: dismiss }
   }
   useSteamEngineState.setState({ byAppId: {} })
 })

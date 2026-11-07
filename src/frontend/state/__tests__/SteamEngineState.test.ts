@@ -1,7 +1,7 @@
 import type { IpcRendererEvent } from 'backend/platform'
 import type { EngineState } from 'common/types/engine'
 import {
-  handleSteamEngineStateChangedSignal,
+  handleEngineStateChangedSignal,
   useSteamEngineState
 } from '../SteamEngineState'
 
@@ -24,20 +24,20 @@ describe('SteamEngineState store', () => {
   beforeEach(() => useSteamEngineState.setState({ byAppId: {} }))
 
   it('stores a pushed state under its appId', () => {
-    handleSteamEngineStateChangedSignal(evt, make())
+    handleEngineStateChangedSignal(evt, make())
     expect(useSteamEngineState.getState().byAppId['730'].engine).toBe('builtin')
   })
 
   it.each(['', 'abc', '12 3', '../1', '123456789012'])(
     'ignores a payload whose appId is %p',
     (appId) => {
-      handleSteamEngineStateChangedSignal(evt, make({ appName: appId }))
+      handleEngineStateChangedSignal(evt, make({ appName: appId }))
       expect(useSteamEngineState.getState().byAppId).toEqual({})
     }
   )
 
   it('hideNotice clears only the named notice', () => {
-    handleSteamEngineStateChangedSignal(evt, make())
+    handleEngineStateChangedSignal(evt, make())
     useSteamEngineState.getState().hideNotice('730', 'no-crossover')
     const s = useSteamEngineState.getState().byAppId['730']
     expect(s.showNoCrossoverNote).toBe(false)
@@ -49,8 +49,8 @@ describe('SteamEngineState store', () => {
   })
 
   it('remove deletes one appId and leaves others', () => {
-    handleSteamEngineStateChangedSignal(evt, make({ appName: '63000' }))
-    handleSteamEngineStateChangedSignal(evt, make())
+    handleEngineStateChangedSignal(evt, make({ appName: '63000' }))
+    handleEngineStateChangedSignal(evt, make())
     useSteamEngineState.getState().remove('63000')
     expect(Object.keys(useSteamEngineState.getState().byAppId)).toEqual(['730'])
   })

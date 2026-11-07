@@ -19,7 +19,7 @@ type T = (
  * D-14 placed it under Advanced), collapsed, defaults to
  * Automatic, and loudly unsupported when used. D-08: this select is the only
  * route to the previous pinned build -- there is no separate rollback toggle.
- * Only ids returned by listSteamEngineOptions are offered (T-59-52), and no
+ * Only ids returned by listEngineOptions are offered (T-59-52), and no
  * filesystem path is ever built or shown.
  */
 export function optionLabel(o: EngineOption, t: T): string {
@@ -176,7 +176,9 @@ export function SteamEngineOverrideView({
 
 const SteamEngineOverride = () => {
   const { t } = useTranslation('gamelib')
-  const { appName } = useContext(SettingsContext)
+  const { appName, runner: contextRunner } = useContext(SettingsContext)
+  // The global-settings context carries no runner; this section is the Steam one.
+  const runner = contextRunner ?? 'steam'
   const [override, setOverride] = useSetting('steamEngineOverride', 'automatic')
   const [options, setOptions] = useState<EngineOption[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -190,7 +192,7 @@ const SteamEngineOverride = () => {
     if (hasState) return
     let cancelled = false
     void window.api
-      .getSteamEngineState(appName)
+      .getEngineState({ runner, appName })
       .then((result) => {
         if (!cancelled && result) useSteamEngineState.getState().set(result)
       })
@@ -198,13 +200,13 @@ const SteamEngineOverride = () => {
     return () => {
       cancelled = true
     }
-  }, [appName, hasState])
+  }, [appName, runner, hasState])
 
   useEffect(() => {
     if (!eligible) return
     let cancelled = false
     void window.api
-      .listSteamEngineOptions()
+      .listEngineOptions({ runner, appName })
       .then((o) => {
         if (cancelled) return
         setOptions(o)
@@ -214,7 +216,7 @@ const SteamEngineOverride = () => {
     return () => {
       cancelled = true
     }
-  }, [eligible])
+  }, [eligible, appName, runner])
 
   if (!eligible) return null
 

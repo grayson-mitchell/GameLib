@@ -7,7 +7,7 @@ let mockStore: Record<string, unknown> = {}
 const mockSet = jest.fn()
 jest.mock('react', () => ({
   ...jest.requireActual('react'),
-  useContext: () => ({ appName: 'default' }),
+  useContext: () => ({ appName: 'default', runner: 'steam' }),
   useState: (init: unknown) => [init, jest.fn()],
   useEffect: (fn: () => void) => {
     fn()
@@ -190,14 +190,14 @@ describe('SteamEngineOverride', () => {
 
 describe('SteamEngineOverride eligibility gate (WR-04)', () => {
   const api = {
-    getSteamEngineState: jest.fn(),
-    listSteamEngineOptions: jest.fn()
+    getEngineState: jest.fn(),
+    listEngineOptions: jest.fn()
   }
   beforeEach(() => {
     jest.clearAllMocks()
     ;(global as unknown as { window: unknown }).window = { api }
-    api.listSteamEngineOptions.mockResolvedValue(opts)
-    api.getSteamEngineState.mockResolvedValue(null)
+    api.listEngineOptions.mockResolvedValue(opts)
+    api.getEngineState.mockResolvedValue(null)
     mockStore = {}
   })
 
@@ -205,8 +205,8 @@ describe('SteamEngineOverride eligibility gate (WR-04)', () => {
     mockStore = { default: { overrideEligible: true } }
     const el = SteamEngineOverride() as El | null
     expect(el).not.toBeNull()
-    expect(api.listSteamEngineOptions).toHaveBeenCalledTimes(1)
-    expect(api.getSteamEngineState).not.toHaveBeenCalled()
+    expect(api.listEngineOptions).toHaveBeenCalledTimes(1)
+    expect(api.getEngineState).not.toHaveBeenCalled()
   })
 
   it.each([false, undefined])(
@@ -214,21 +214,24 @@ describe('SteamEngineOverride eligibility gate (WR-04)', () => {
     (v) => {
       mockStore = { default: { overrideEligible: v } }
       expect(SteamEngineOverride()).toBeNull()
-      expect(api.listSteamEngineOptions).not.toHaveBeenCalled()
+      expect(api.listEngineOptions).not.toHaveBeenCalled()
     }
   )
 
   it('fetches state once when absent; null result is not stored and renders nothing', async () => {
     expect(SteamEngineOverride()).toBeNull()
-    expect(api.getSteamEngineState).toHaveBeenCalledTimes(1)
-    expect(api.getSteamEngineState).toHaveBeenCalledWith('default')
+    expect(api.getEngineState).toHaveBeenCalledTimes(1)
+    expect(api.getEngineState).toHaveBeenCalledWith({
+      runner: 'steam',
+      appName: 'default'
+    })
     await Promise.resolve()
     expect(mockSet).not.toHaveBeenCalled()
   })
 
   it('stores a non-null fetched state', async () => {
     const result = { appId: 'default', overrideEligible: true }
-    api.getSteamEngineState.mockResolvedValue(result)
+    api.getEngineState.mockResolvedValue(result)
     SteamEngineOverride()
     await Promise.resolve()
     await Promise.resolve()

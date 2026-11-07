@@ -8,7 +8,7 @@ const mockSetter = jest.fn()
 const mockSet = jest.fn()
 jest.mock('react', () => ({
   ...jest.requireActual('react'),
-  useContext: () => ({ appName: '1' }),
+  useContext: () => ({ appName: '1', runner: 'steam' }),
   useEffect: (fn: () => void) => {
     fn()
   }
@@ -62,7 +62,7 @@ beforeEach(() => {
   mockSet.mockClear()
   getState.mockReset().mockResolvedValue(null)
   ;(globalThis as unknown as { window: unknown }).window = {
-    api: { getSteamEngineState: getState }
+    api: { getEngineState: getState }
   }
 })
 
@@ -120,7 +120,7 @@ describe('SteamOverlayOverride', () => {
     mockStore = {}
     expect(render()).toBeNull()
     expect(getState).toHaveBeenCalledTimes(1)
-    expect(getState).toHaveBeenCalledWith('1')
+    expect(getState).toHaveBeenCalledWith({ runner: 'steam', appName: '1' })
   })
 
   it('uses an icon-only help on the label line', () => {

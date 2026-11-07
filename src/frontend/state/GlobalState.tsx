@@ -70,7 +70,7 @@ import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
 import { handleSteamBridgeRouteNoticeSignal } from './SteamBridgeRouteNotice'
 import { handleSteamGoOfflineRequiredSignal } from './SteamGoOfflineNotice'
-import { handleSteamEngineStateChangedSignal } from './SteamEngineState'
+import { handleEngineStateChangedSignal } from './SteamEngineState'
 import { handleSteamRequestNoticeSignal } from './SteamRequestNotice'
 import {
   handleSteamBottleLaunchWaitingSignal,
@@ -1690,9 +1690,7 @@ class GlobalState extends PureComponent<Props> {
     window.api.handleSteamGoOfflineRequired(handleSteamGoOfflineRequiredSignal)
 
     // Phase 59 Plan 11: backend-computed per-title engine state for the game page.
-    window.api.handleSteamEngineStateChanged(
-      handleSteamEngineStateChangedSignal
-    )
+    window.api.handleEngineStateChanged(handleEngineStateChangedSignal)
 
     // quick 261106-pvk: Steam never picked up a delegated install/uninstall.
     window.api.handleSteamRequestNotice(handleSteamRequestNoticeSignal)

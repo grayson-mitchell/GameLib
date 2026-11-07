@@ -102,8 +102,8 @@ describe('SteamEngineOverride save chain (G17)', () => {
       api: {
         setSetting,
         logInfo: jest.fn(),
-        getSteamEngineState: jest.fn().mockResolvedValue(null),
-        listSteamEngineOptions: jest.fn().mockResolvedValue(opts)
+        getEngineState: jest.fn().mockResolvedValue(null),
+        listEngineOptions: jest.fn().mockResolvedValue(opts)
       }
     }
   })

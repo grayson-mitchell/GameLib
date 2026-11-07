@@ -116,7 +116,7 @@ const isReason = (r: unknown): r is Reason =>
 // inside the app, so it does not depend on a system notification (which
 // `tauri dev` never delivers and a packaged build may have turned off).
 // Non-blocking and dismissible, like HumbleExpiryToast. It reads only the
-// engine state store, fed by the backend's steamEngineStateChanged push;
+// engine state store, fed by the backend's engineStateChanged push;
 // `launchNotice` is non-null only in the push from recordLaunchDecision, so a
 // page re-fetch (launchNotice null) never re-shows it. T-59-72: only the
 // three closed reason values map to catalogue strings.

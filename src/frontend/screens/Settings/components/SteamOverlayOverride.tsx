@@ -20,7 +20,9 @@ export function parseOverlayValue(stored: unknown): OverlayValue {
 
 const SteamOverlayOverride = () => {
   const { t } = useTranslation('gamelib')
-  const { appName } = useContext(SettingsContext)
+  const { appName, runner: contextRunner } = useContext(SettingsContext)
+  // The global-settings context carries no runner; this section is the Steam one.
+  const runner = contextRunner ?? 'steam'
   const [override, setOverride] = useSetting(
     'steamOverlayOverride',
     'automatic'
@@ -35,7 +37,7 @@ const SteamOverlayOverride = () => {
     if (hasState) return
     let cancelled = false
     void window.api
-      .getSteamEngineState(appName)
+      .getEngineState({ runner, appName })
       .then((result) => {
         if (!cancelled && result) useSteamEngineState.getState().set(result)
       })
@@ -43,7 +45,7 @@ const SteamOverlayOverride = () => {
     return () => {
       cancelled = true
     }
-  }, [appName, hasState])
+  }, [appName, runner, hasState])
 
   if (!eligible) return null
 

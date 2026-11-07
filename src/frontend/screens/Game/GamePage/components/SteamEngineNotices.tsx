@@ -75,7 +75,7 @@ const SteamEngineNotices = ({ state }: Props) => {
             type="button"
             className="button is-text"
             onClick={async () => {
-              await window.api.dismissSteamEngineNotice({
+              await window.api.dismissEngineNotice({
                 kind: 'no-crossover'
               })
               useSteamEngineState
@@ -124,7 +124,7 @@ const SteamEngineNotices = ({ state }: Props) => {
             onClick={async () => {
               const build = state.untestedCrossoverBuild
               if (!build) return
-              await window.api.dismissSteamEngineNotice({
+              await window.api.dismissEngineNotice({
                 kind: 'untested-crossover',
                 build
               })
