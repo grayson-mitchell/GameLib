@@ -22,7 +22,7 @@ describe('launchDeadline', () => {
 
   test('fires once at the timeout, not before', () => {
     const onDeadline = jest.fn()
-    const d = armLaunchDeadline({ appId: '620', timeoutMs: 1000, onDeadline })
+    const d = armLaunchDeadline({ key: '620', timeoutMs: 1000, onDeadline })
     jest.advanceTimersByTime(999)
     expect(onDeadline).not.toHaveBeenCalled()
     jest.advanceTimersByTime(1)
@@ -34,7 +34,7 @@ describe('launchDeadline', () => {
 
   test('cancel before expiry prevents firing', () => {
     const onDeadline = jest.fn()
-    const d = armLaunchDeadline({ appId: '620', timeoutMs: 1000, onDeadline })
+    const d = armLaunchDeadline({ key: '620', timeoutMs: 1000, onDeadline })
     d.cancel('first-match')
     jest.advanceTimersByTime(5000)
     expect(onDeadline).not.toHaveBeenCalled()
@@ -44,7 +44,7 @@ describe('launchDeadline', () => {
 
   test('cancel after fire is a no-op and a second fire is impossible', () => {
     const onDeadline = jest.fn()
-    const d = armLaunchDeadline({ appId: '620', timeoutMs: 10, onDeadline })
+    const d = armLaunchDeadline({ key: '620', timeoutMs: 10, onDeadline })
     jest.advanceTimersByTime(10)
     d.cancel('first-match')
     expect(d.state).toBe('fired')
@@ -56,11 +56,11 @@ describe('launchDeadline', () => {
     const first = jest.fn()
     const second = jest.fn()
     const d1 = armLaunchDeadline({
-      appId: '620',
+      key: '620',
       timeoutMs: 1000,
       onDeadline: first
     })
-    armLaunchDeadline({ appId: '620', timeoutMs: 1000, onDeadline: second })
+    armLaunchDeadline({ key: '620', timeoutMs: 1000, onDeadline: second })
     expect(d1.state).toBe('cancelled')
     jest.advanceTimersByTime(1000)
     expect(first).not.toHaveBeenCalled()
@@ -69,7 +69,7 @@ describe('launchDeadline', () => {
 
   test('cancelLaunchDeadline cancels active; unknown appId is a no-op', () => {
     const onDeadline = jest.fn()
-    const d = armLaunchDeadline({ appId: '620', timeoutMs: 1000, onDeadline })
+    const d = armLaunchDeadline({ key: '620', timeoutMs: 1000, onDeadline })
     cancelLaunchDeadline('999', 'launcher-exited')
     expect(d.state).toBe('armed')
     cancelLaunchDeadline('620', 'launcher-exited')
@@ -79,7 +79,7 @@ describe('launchDeadline', () => {
 
   test('throwing or rejecting onDeadline is caught and the entry removed', async () => {
     armLaunchDeadline({
-      appId: '620',
+      key: '620',
       timeoutMs: 10,
       onDeadline: () => {
         throw new Error('boom')
@@ -88,7 +88,7 @@ describe('launchDeadline', () => {
     jest.advanceTimersByTime(10)
     expect(__activeLaunchDeadlineCount()).toBe(0)
     armLaunchDeadline({
-      appId: '620',
+      key: '620',
       timeoutMs: 10,
       onDeadline: () => Promise.reject(new Error('nope'))
     })
@@ -107,7 +107,7 @@ describe('launchDeadline', () => {
   test('default timeout is 180_000 ms', () => {
     expect(LAUNCH_DEADLINE_MS).toBe(180_000)
     const onDeadline = jest.fn()
-    armLaunchDeadline({ appId: '620', onDeadline })
+    armLaunchDeadline({ key: '620', onDeadline })
     jest.advanceTimersByTime(179_999)
     expect(onDeadline).not.toHaveBeenCalled()
     jest.advanceTimersByTime(1)
@@ -117,7 +117,7 @@ describe('launchDeadline', () => {
   test('timer handle is unref d', () => {
     const unref = jest.fn()
     armLaunchDeadline({
-      appId: '620',
+      key: '620',
       onDeadline: jest.fn(),
       setTimer: () => ({ unref }),
       clearTimer: jest.fn()
@@ -127,7 +127,7 @@ describe('launchDeadline', () => {
 
   test('non-numeric appId throws TypeError and arms nothing', () => {
     expect(() =>
-      armLaunchDeadline({ appId: '../x', onDeadline: jest.fn() })
+      armLaunchDeadline({ key: '../x', onDeadline: jest.fn() })
     ).toThrow(TypeError)
     expect(__activeLaunchDeadlineCount()).toBe(0)
     expect(jest.getTimerCount()).toBe(0)
@@ -137,7 +137,7 @@ describe('launchDeadline', () => {
     test('null handle stands the armed deadline down and never fires', () => {
       const onDeadline = jest.fn()
       const log = jest.fn()
-      const d = armLaunchDeadline({ appId: '620', onDeadline })
+      const d = armLaunchDeadline({ key: '620', onDeadline })
       expect(bindDeadlineToMonitor(d, null, log)).toBeNull()
       expect(d.state).toBe('cancelled')
       expect(log).toHaveBeenCalledTimes(1)
@@ -149,7 +149,7 @@ describe('launchDeadline', () => {
     test('a live handle leaves the deadline armed and is returned', () => {
       const log = jest.fn()
       const handle = { stop: jest.fn() }
-      const d = armLaunchDeadline({ appId: '620', onDeadline: jest.fn() })
+      const d = armLaunchDeadline({ key: '620', onDeadline: jest.fn() })
       expect(bindDeadlineToMonitor(d, handle, log)).toBe(handle)
       expect(d.state).toBe('armed')
       expect(log).not.toHaveBeenCalled()
@@ -164,7 +164,7 @@ describe('launchDeadline', () => {
     test('an already-fired deadline stays fired', () => {
       const log = jest.fn()
       const d = armLaunchDeadline({
-        appId: '620',
+        key: '620',
         timeoutMs: 10,
         onDeadline: jest.fn()
       })
@@ -173,5 +173,38 @@ describe('launchDeadline', () => {
       expect(d.state).toBe('fired')
       expect(log).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe('launchDeadline store-prefixed keys', () => {
+  beforeEach(() => jest.useFakeTimers())
+  afterEach(() => {
+    cancelLaunchDeadline('gog:1', 'launch-error')
+    cancelLaunchDeadline('620', 'launch-error')
+    jest.useRealTimers()
+  })
+
+  test('arms a prefixed key independently of a Steam key', () => {
+    const a = armLaunchDeadline({ key: 'gog:1', onDeadline: jest.fn() })
+    const b = armLaunchDeadline({ key: '620', onDeadline: jest.fn() })
+    expect(a.state).toBe('armed')
+    expect(b.state).toBe('armed')
+    expect(__activeLaunchDeadlineCount()).toBe(2)
+  })
+
+  test('an invalid key throws TypeError', () => {
+    expect(() =>
+      armLaunchDeadline({ key: 'gog:../x', onDeadline: jest.fn() })
+    ).toThrow(TypeError)
+  })
+
+  test('unref is called on the timer handle', () => {
+    const unref = jest.fn()
+    armLaunchDeadline({
+      key: 'gog:1',
+      onDeadline: jest.fn(),
+      setTimer: () => ({ unref })
+    })
+    expect(unref).toHaveBeenCalled()
   })
 })

@@ -1,5 +1,5 @@
 /**
- * Phase 59 (D-10/D-11): per-appId launch deadline.
+ * Phase 59 (D-10/D-11): per-key launch deadline.
  *
  * Armed by the launch path before the engine starts; cancelled the moment the
  * game process is seen in the bottle (bottleProcessMonitor's onFirstMatch).
@@ -11,6 +11,7 @@
  * load.
  */
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { isEngineKey } from './gameKey'
 
 /**
  * Discretion choice (CONTEXT Claude's Discretion; RESEARCH Pitfall 5 / A7):
@@ -29,24 +30,23 @@ export type DeadlineCancelReason =
   | 'monitor-unavailable'
 
 export interface LaunchDeadline {
-  readonly appId: string
+  readonly key: string
   readonly state: 'armed' | 'cancelled' | 'fired'
   cancel(reason: DeadlineCancelReason): void
 }
 
-const APP_ID_RE = /^[0-9]{1,10}$/
 const active = new Map<string, LaunchDeadline>()
 
 export function armLaunchDeadline(args: {
-  appId: string
+  key: string
   timeoutMs?: number
   onDeadline: () => void | Promise<void>
   setTimer?: (fn: () => void, ms: number) => { unref?: () => void } & object
   clearTimer?: (handle: unknown) => void
 }): LaunchDeadline {
-  const { appId, onDeadline } = args
-  if (typeof appId !== 'string' || !APP_ID_RE.test(appId)) {
-    throw new TypeError(`armLaunchDeadline: invalid appId "${String(appId)}"`)
+  const { key, onDeadline } = args
+  if (typeof key !== 'string' || !isEngineKey(key)) {
+    throw new TypeError(`armLaunchDeadline: invalid key "${String(key)}"`)
   }
   const timeoutMs = args.timeoutMs ?? LAUNCH_DEADLINE_MS
   const setTimer =
@@ -56,7 +56,7 @@ export function armLaunchDeadline(args: {
   const clearTimer =
     args.clearTimer ?? ((h: unknown) => clearTimeout(h as NodeJS.Timeout))
 
-  active.get(appId)?.cancel('superseded')
+  active.get(key)?.cancel('superseded')
 
   const startedAt = Date.now()
   let state: LaunchDeadline['state'] = 'armed'
@@ -64,7 +64,7 @@ export function armLaunchDeadline(args: {
   let handle: ({ unref?: () => void } & object) | undefined
 
   const deadline: LaunchDeadline = {
-    appId,
+    key,
     get state() {
       return state
     },
@@ -72,9 +72,9 @@ export function armLaunchDeadline(args: {
       if (state !== 'armed') return
       state = 'cancelled'
       clearTimer(handle)
-      if (active.get(appId) === deadline) active.delete(appId)
+      if (active.get(key) === deadline) active.delete(key)
       logInfo(
-        `SteamEngine: launch deadline for appId ${appId} cancelled (${reason})`,
+        `SteamEngine: launch deadline for key ${key} cancelled (${reason})`,
         LogPrefix.Steam
       )
     }
@@ -83,14 +83,14 @@ export function armLaunchDeadline(args: {
   handle = setTimer(() => {
     if (state !== 'armed') return
     state = 'fired'
-    if (active.get(appId) === deadline) active.delete(appId)
+    if (active.get(key) === deadline) active.delete(key)
     logWarning(
-      `SteamEngine: launch deadline fired for appId ${appId} after ${Date.now() - startedAt} ms (no game process seen)`,
+      `SteamEngine: launch deadline fired for key ${key} after ${Date.now() - startedAt} ms (no game process seen)`,
       LogPrefix.Steam
     )
     const logFailure = (error: unknown) =>
       logWarning(
-        [`SteamEngine: onDeadline for appId ${appId} failed`, error],
+        [`SteamEngine: onDeadline for key ${key} failed`, error],
         LogPrefix.Steam
       )
     try {
@@ -104,15 +104,15 @@ export function armLaunchDeadline(args: {
   }, timeoutMs)
   handle.unref?.()
 
-  active.set(appId, deadline)
+  active.set(key, deadline)
   return deadline
 }
 
 export function cancelLaunchDeadline(
-  appId: string,
+  key: string,
   reason: DeadlineCancelReason
 ): void {
-  active.get(appId)?.cancel(reason)
+  active.get(key)?.cancel(reason)
 }
 
 export function __activeLaunchDeadlineCount(): number {

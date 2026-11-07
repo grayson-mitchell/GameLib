@@ -713,7 +713,7 @@ export async function fireBridgeWineLaunch(
       )
     } else {
       deadline = armLaunchDeadline({
-        appId: steamGame.appId,
+        key: steamGame.appId,
         onDeadline: () =>
           onBridgeLaunchDeadline(steamGame, clearLaunchRecord, sel)
       })

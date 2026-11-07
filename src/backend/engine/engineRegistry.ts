@@ -10,16 +10,14 @@
  */
 import { existsSync } from 'graceful-fs'
 import { logInfo, LogPrefix } from 'backend/logger'
+import { isEngineKey } from './gameKey'
 import { engineLogLabel, isNonCrossover } from './engineTypes'
 import type { EngineSelection } from './engineTypes'
 
 const engineSelections = new Map<string, EngineSelection>()
 
-export function setEngineSelection(
-  appId: string,
-  sel: EngineSelection
-): boolean {
-  if (!/^[0-9]{1,10}$/.test(String(appId))) return false
+export function setEngineSelection(key: string, sel: EngineSelection): boolean {
+  if (!isEngineKey(key)) return false
   let copy: EngineSelection
   if (isNonCrossover(sel)) {
     if (!existsSync(sel.wineBin) || !existsSync(sel.wineserverBin)) {
@@ -29,18 +27,15 @@ export function setEngineSelection(
   } else {
     copy = { ...sel }
   }
-  engineSelections.set(appId, copy)
-  logInfo(
-    `SteamEngine: appId ${appId} uses ${engineLogLabel(copy)}`,
-    LogPrefix.Steam
-  )
+  engineSelections.set(key, copy)
+  logInfo(`SteamEngine: ${key} uses ${engineLogLabel(copy)}`, LogPrefix.Steam)
   return true
 }
 
-export function getEngineSelection(appId: string): EngineSelection | undefined {
-  return engineSelections.get(appId)
+export function getEngineSelection(key: string): EngineSelection | undefined {
+  return engineSelections.get(key)
 }
 
-export function clearEngineSelection(appId: string): void {
-  engineSelections.delete(appId)
+export function clearEngineSelection(key: string): void {
+  engineSelections.delete(key)
 }
