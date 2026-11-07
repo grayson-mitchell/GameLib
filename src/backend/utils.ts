@@ -123,32 +123,36 @@ function semverGt(target: string, base: string) {
 
   // beta to beta
   if (base.includes('-beta') && target.includes('-beta')) {
-    const bSplit = base.split('-beta.')
-    const tSplit = target.split('-beta.')
+    const [bHead = '', bBeta] = base.split('-beta.')
+    const [tHead = '', tBeta] = target.split('-beta.')
 
     // same major beta?
-    if (bSplit[0] === tSplit[0]) {
-      base = bSplit[1]
-      target = tSplit[1]
-      return target > base
+    if (bHead === tHead) {
+      // A missing beta number never compares greater (undefined comparisons are false)
+      if (bBeta === undefined || tBeta === undefined) return false
+      return tBeta > bBeta
     } else {
-      base = bSplit[0]
-      target = tSplit[0]
+      base = bHead
+      target = tHead
     }
   }
 
   // beta to stable
   if (base.includes('-beta')) {
-    base = base.split('-beta.')[0]
+    base = base.split('-beta.')[0] ?? ''
   }
 
   // stable to beta
   if (target.includes('-beta')) {
-    target = target.split('-beta.')[0]
+    target = target.split('-beta.')[0] ?? ''
   }
 
-  const [bmajor, bminor, bpatch] = base.split('.').map(Number)
-  const [tmajor, tminor, tpatch] = target.split('.').map(Number)
+  // Missing parts default to NaN: every comparison below is then false, exactly as
+  // the former `undefined` comparisons were
+  const [bmajor = NaN, bminor = NaN, bpatch = NaN] = base.split('.').map(Number)
+  const [tmajor = NaN, tminor = NaN, tpatch = NaN] = target
+    .split('.')
+    .map(Number)
 
   let isGE = false
   // A pretty nice piece of logic if you ask me. :P
@@ -1135,7 +1139,11 @@ export async function downloadDefaultWine() {
     try {
       const wineList = await GlobalConfig.get().getAlternativeWine()
       // update the game config to use that wine
-      downloadedWine = wineList[0]
+      const firstWine = wineList[0]
+      if (firstWine === undefined) {
+        throw new Error('No alternative wine version found after installing')
+      }
+      downloadedWine = firstWine
       logInfo(`Changing wine version to ${downloadedWine.name}`)
       GlobalConfig.get().setSetting('wineVersion', downloadedWine)
     } catch (error) {
@@ -1204,7 +1212,8 @@ export async function checkWineBeforeLaunch(
       const wineList = await GlobalConfig.get().getAlternativeWine()
       const firstFoundWine = wineList[0]
 
-      const isValidWine = await validWine(firstFoundWine)
+      const isValidWine =
+        firstFoundWine !== undefined && (await validWine(firstFoundWine))
 
       if (!wineList.length || !firstFoundWine || !isValidWine) {
         const firstFoundWine = await downloadDefaultWine()
@@ -1583,7 +1592,7 @@ export async function isMacSonomaOrHigher() {
 
   const release = (await getSystemInfo(true)).OS.version
   const [major] = release.split('.').map(Number)
-  const isMacSonomaOrHigher = major >= 14
+  const isMacSonomaOrHigher = major !== undefined && major >= 14
 
   logInfo(
     `macOS is ${

@@ -18,7 +18,6 @@
   "src/backend/storeSearch": 6,
   "src/backend/testUtils": 15,
   "src/backend/tools": 120,
-  "src/backend/utils.ts": 15,
   "src/backend/wiki_game_info": 6,
   "src/common/knownFixOverlayCatalogue.ts": 1,
   "src/common/reportProblem.ts": 4,

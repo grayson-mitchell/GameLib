@@ -48,7 +48,8 @@ describe('indexedAccessRatchet bucketOf', () => {
       'src/backend/engine',
       'src/backend/__tests__',
       'src/backend/wine',
-      'src/backend/utils'
+      'src/backend/utils',
+      'src/backend/utils.ts'
     ])
   })
 })
