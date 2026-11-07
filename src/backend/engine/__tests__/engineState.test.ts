@@ -505,7 +505,7 @@ describe('recordLaunchDecision and publisher', () => {
     expect(probe).toHaveBeenCalledTimes(1)
   })
   const fallback = (
-    reason: 'cx-missing' | 'cx-expired' | 'cx-broken',
+    reason: 'cx-missing' | 'cx-expired' | 'cx-broken' | 'cx-inconclusive',
     override: LaunchDecision extends infer L
       ? L extends { override: infer O }
         ? O
@@ -553,6 +553,41 @@ describe('recordLaunchDecision and publisher', () => {
       reason: 'cx-expired',
       seq: 2
     })
+  })
+  it('WR-01: inconclusive pinned decision publishes no launchNotice', () => {
+    const { deps } = mk(healthy(null))
+    const pub = jest.fn()
+    setEngineStatePublisher(pub)
+    recordLaunchDecision(
+      '1',
+      fallback('cx-inconclusive'),
+      'GameLibSteamBridge-1',
+      deps
+    )
+    expect(pub.mock.calls[0][0].launchNotice).toBeNull()
+  })
+  it('WR-01: inconclusive preflight never publishes a cx-broken badge', () => {
+    const { deps } = mk(healthy(null))
+    const pub = jest.fn()
+    setEngineStatePublisher(pub)
+    const d = fallback('cx-inconclusive')
+    if (d.kind !== 'use') throw new Error('expected use')
+    recordLaunchDecision(
+      '1',
+      {
+        ...d,
+        preflight: {
+          kind: 'broken',
+          binDir: '/cx/bin',
+          build: TESTED,
+          detail: 'timeout',
+          inconclusive: true
+        }
+      },
+      'GameLibSteamBridge-1',
+      deps
+    )
+    expect(pub.mock.calls[0][0].reason).not.toBe('cx-broken')
   })
   it('publishes launchNotice null for an override or CrossOver launch; get returns null', async () => {
     const { deps } = mk(healthy(null))

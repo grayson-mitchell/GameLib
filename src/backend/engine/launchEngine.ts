@@ -429,7 +429,8 @@ export async function selectEngineForLaunch(
     opts.purpose !== 'setup' &&
     isNonCrossover(sel) &&
     decision.override === 'automatic' &&
-    sel.reason !== 'override'
+    sel.reason !== 'override' &&
+    sel.reason !== 'cx-inconclusive'
   ) {
     d.notifyFallback(title, sel.reason)
   }

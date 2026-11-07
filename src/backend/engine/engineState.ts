@@ -349,7 +349,13 @@ export function recordLaunchDecision(
         at: now()
       })
     }
-    const preflight = decision.preflight ?? cachedPreflight(bottleName, now())
+    // WR-01: an inconclusive probe proves nothing, so it never drives the badge.
+    const inconclusive =
+      decision.preflight?.kind === 'broken' &&
+      decision.preflight.inconclusive === true
+    const preflight =
+      (inconclusive ? null : decision.preflight) ??
+      cachedPreflight(bottleName, now())
     const installed = preflight
       ? preflight.kind !== 'missing'
       : (lastCrossoverInstalled.get(key) ?? true)
@@ -358,7 +364,8 @@ export function recordLaunchDecision(
     const launchNotice: EngineState['launchNotice'] =
       isNonCrossover(sel) &&
       decision.override === 'automatic' &&
-      sel.reason !== 'override'
+      sel.reason !== 'override' &&
+      sel.reason !== 'cx-inconclusive'
         ? { reason: sel.reason, seq: ++launchNoticeSeq }
         : null
     const stored = effectiveFor(identity, deps)

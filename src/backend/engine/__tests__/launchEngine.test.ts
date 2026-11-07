@@ -88,7 +88,9 @@ const cx: EngineSelection = {
   crossoverBuild: '26.0.0.1',
   binDir: '/cx/bin'
 }
-const pinnedSel = (reason: 'cx-expired' | 'cx-missing' | 'override') =>
+const pinnedSel = (
+  reason: 'cx-expired' | 'cx-missing' | 'cx-inconclusive' | 'override'
+) =>
   ({
     kind: 'pinned',
     pinId: 'p1',
@@ -338,6 +340,13 @@ describe('fallback and refusal', () => {
     expect(logWriter.logInfo).toHaveBeenCalledWith(
       'engine=pinned name="Pin One" version=10.0 reason=cx-expired'
     )
+  })
+
+  it('WR-01: an inconclusive pinned decision shows no fallback toast', async () => {
+    decide.mockResolvedValue(useDecision(pinnedSel('cx-inconclusive')))
+    const step = await run(makeGame({ runner: 'legendary', appName: 'abc' }))
+    expect(step.kind).toBe('use')
+    expect(notifyFallback).not.toHaveBeenCalled()
   })
 
   it('setup purpose skips the toast', async () => {

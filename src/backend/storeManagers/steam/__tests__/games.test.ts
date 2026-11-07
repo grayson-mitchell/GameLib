@@ -15803,6 +15803,29 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       expect(recordLaunchDecision).toHaveBeenCalled()
     })
 
+    it('WR-01: Steam launch with an inconclusive pinned decision shows no engine toast', async () => {
+      ;(decideLaunchEngine as jest.Mock).mockResolvedValue({
+        ...pinnedDecision('cx-expired'),
+        selection: {
+          ...pinnedDecision('cx-expired').selection,
+          reason: 'cx-inconclusive'
+        },
+        preflight: {
+          kind: 'broken',
+          binDir: '/cx/bin',
+          build: '26.3',
+          detail: 'timeout',
+          inconclusive: true
+        }
+      })
+      expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+      expect(
+        (notify as jest.Mock).mock.calls.some((c) =>
+          String(c[0]?.body).includes('steam.engine.toast')
+        )
+      ).toBe(false)
+    })
+
     it('needs download: sends engine-download progress, then launches', async () => {
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         pinnedDecision('cx-missing', { needsDownload: true })

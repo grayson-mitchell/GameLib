@@ -706,7 +706,11 @@ export async function selectLaunchEngine(
     steamEngineStateDeps(steamGame.appId)
   )
 
-  if (isNonCrossover(sel) && decision.override === 'automatic') {
+  if (
+    isNonCrossover(sel) &&
+    decision.override === 'automatic' &&
+    sel.reason !== 'cx-inconclusive'
+  ) {
     const body =
       sel.reason === 'cx-expired'
         ? i18next.t(
