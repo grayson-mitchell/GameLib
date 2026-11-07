@@ -415,14 +415,20 @@ Applicable ASVS categories (local desktop app; the renderer is a semi-trusted bo
 | A4 | Keeping DXVK/esync toggles visible for non-Steam macOS games is correct | Frontend | Low; UI-only. |
 | A5 | Arming the deadline after `prepareWineLaunch` prerequisites (not before) for non-Steam | Pitfall 3 | Medium; a prerequisite installer could still hang behind a nag. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **First-match signal for non-Steam (A3).** What does `ps` show for a CrossOver-launched game at a macOS install path? Recommendation: a 1-hour spike (launch a sideloaded probe PE in a per-game bottle, capture `ps -axo pid=,command=`), then generalise `deriveWindowsPrefix`. Until then, the plan must mark deadline arming as dependent on this.
+   **RESOLVED:** D-18. Spike 068 runs first (plan 61-01); the non-Steam deadline is armed only on the signal its verdict proves, otherwise stood down and logged (plan 61-16).
 2. **Shared-bottle behaviour when CX expires (Pitfall 1).** Recommendation above (proceed unless another game is running in that bottle); confirm with the user in plan-check since D-02 accepted shared consequences but did not address concurrent games.
+   **RESOLVED:** D-16. Fallback proceeds on an idle shared bottle and is refused with a message when another game is running in it (per-bottle ledger, plans 61-05, 61-08, 61-12).
 3. **Install modal on macOS.** CONTEXT D-10 covers the Wine tab; the Install/Import modals also have `WineSelector`/bottle UI (`InstallModal/WineSelector`, `DownloadDialog`, `ImportDialog`, `ThirdPartyDialog`). Recommendation: on macOS non-Steam Windows installs, replace the Wine selector with the same Engine option (default Automatic) and write `engineOverride` + `wineCrossoverBottle` instead; confirm scope.
+   **RESOLVED:** D-17. The Install, Import and ThirdParty dialogs (and sideload, as D-01 coverage) use the Engine control (plan 61-19).
 4. **Phase 65 ordering.** Not discussed. `bottle.ts` is 2,557 lines. Recommendation: do not wait for Phase 65 (it depends only on 62); instead extract only the primitives this phase needs (`getBottleDir`, `sanitizeBottleName`, `killBottleWineServerWith`, `buildFallbackGameSettings`, `createFallbackBottle`, `isBottleProvisioned`) into `backend/engine/bottlePrimitives.ts` as a pure-move commit, and repoint `bottle.ts` importers (no re-export). Tell Phase 65 that those are gone. If the user prefers 65 first, 61's diff shrinks but 61 slips.
+   **RESOLVED:** D-19. Only the six primitives are extracted, as a pure move with no re-exports, without waiting for Phase 65 (plans 61-02, 61-03, 61-04).
 5. **Native macOS games and Windows Epic/GOG "Mac" builds.** `isNative()` true -> no engine. Confirm Browser/native games get no Engine control (assumed from `showWineTab`).
+   **RESOLVED:** native and Browser games skip the engine step entirely (`selectEngineForLaunch` returns `skip`, plan 61-12) and get no Engine control (the Wine tab is not shown).
 6. **Global default carry-over (D-09).** Where the global derived default is computed (config read) and whether it writes `engineOverride` into global config only on user save (consistent with D-08). Recommendation: derive, never write.
+   **RESOLVED:** derive, never write (plan 61-06 `resolveGlobalEngine`; plan 61-11 `getDefaultEngine`); only a user save writes the global `engineOverride` (D-08, D-09). A Legacy global default gives new installs Automatic (D-20).
 
 ## Sources
 

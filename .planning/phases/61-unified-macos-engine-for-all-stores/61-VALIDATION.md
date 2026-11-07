@@ -43,7 +43,7 @@ Filled in by the planner (2026-11-07); the executor updates Status. The requirem
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 61-01-01 | 01 | 1 | D-18, D-01 | T-61-01..03 | ps lines filtered; real bottles only cloned | spike | `grep -c '\[shapes\]\|\[names\]' .planning/spikes/068-*/logs/events.log` | ❌ W0 | ⬜ pending |
 | 61-01-02 | 01 | 1 | D-18 | T-61-01 | operator real-launch evidence filtered | manual checkpoint | `grep -c '\[watch\]' .planning/spikes/068-*/logs/events.log` | ❌ W0 | ⬜ pending |
-| 61-01-03 | 01 | 1 | D-18, D-01 | T-61-01 | home path redacted in verdict | spike verdict | `python3 -I -c (verdict.json schema check)` | ❌ W0 | ⬜ pending |
+| 61-01-03 | 01 | 1 | D-18, D-01 | T-61-01 | home path redacted in verdict | spike verdict + checkpoint (verdict shown to user) | `python3 -I -c (verdict.json schema check)` | ❌ W0 | ⬜ pending |
 | 61-02-01 | 02 | 1 | D-19, D-13 | T-61-04 | — | unit (moved) | `pnpm exec jest src/backend/engine` | ✅ (moved) | ⬜ pending |
 | 61-02-02 | 02 | 1 | D-19 | T-61-04 | stale mocks cannot let real wine run | integration + gates | `pnpm exec jest steam/__tests__/games.test.ts ... && pnpm boundaries && pnpm lint` | ✅ | ⬜ pending |
 | 61-03-01 | 03 | 2 | D-19, D-03 | T-61-06 | unsafe bottle names never spawn | unit | `pnpm exec jest src/backend/engine/__tests__/bottlePrimitives.test.ts` | ❌ W0 | ⬜ pending |
@@ -58,29 +58,31 @@ Filled in by the planner (2026-11-07); the executor updates Status. The requirem
 | 61-07-02 | 07 | 5 | D-02, D-04, D-05 | T-61-20 | old prefix never returned as bottle | unit (TDD) | `pnpm exec jest src/backend/engine/__tests__/gamePrefix.test.ts` | ❌ W0 | ⬜ pending |
 | 61-08-01 | 08 | 4 | D-08, D-12 | T-61-23, T-61-24 | override still closed-grammar parsed | unit | `pnpm exec jest src/backend/engine/__tests__/engineDecision.test.ts steamEngineDeps.test.ts` | ❌ W0 | ⬜ pending |
 | 61-08-02 | 08 | 4 | D-16 | T-61-22 | no kill under another running game | unit (TDD) | `pnpm exec jest src/backend/engine/__tests__/engineSwitch.test.ts` | ✅ (extend) | ⬜ pending |
-| 61-09-01 | 09 | 5 | D-12, D-15 | — | — | typecheck + unit | `pnpm codecheck && pnpm exec jest src/frontend/state ...` | ✅ | ⬜ pending |
-| 61-09-02 | 09 | 5 | D-12, D-15 | T-61-25..28 | identity validated; no paths in payload | unit | `pnpm exec jest src/backend/engine/__tests__/engineState.test.ts` | ✅ (extend) | ⬜ pending |
-| 61-09-03 | 09 | 5 | D-13 | — | engine dir has no store-manager import | gate | `pnpm boundaries` | ✅ | ⬜ pending |
-| 61-10-01 | 10 | 6 | D-04, D-12, D-15 | T-61-29, T-61-32 | no file creation on state read | unit (TDD) | `pnpm exec jest src/backend/engine/__tests__/gameEngineState.test.ts` | ❌ W0 | ⬜ pending |
-| 61-10-02 | 10 | 6 | D-07, D-09, D-11 | T-61-30, T-61-31 | options never contain paths/GPTK | unit (TDD) | same | ❌ W0 | ⬜ pending |
-| 61-11-01 | 11 | 6 | D-04, D-06, D-08 | T-61-35 | overlay never persists | unit (TDD) | `pnpm exec jest src/backend/engine/__tests__/launchSettings.test.ts` | ❌ W0 | ⬜ pending |
-| 61-11-02 | 11 | 6 | D-02, D-05, D-07, D-13, D-16 | T-61-33, T-61-34, T-61-36 | bottle-busy refusal; binaries only from pins/WM | unit (TDD) | `pnpm exec jest src/backend/engine/__tests__/launchEngine.test.ts` | ❌ W0 | ⬜ pending |
-| 61-12-01 | 12 | 7 | D-12, D-09, D-17 | T-61-37..40 | args validated before lookup | unit + census | `pnpm exec jest src/backend/sidecar/__tests__/engineFlows.test.ts flowRegistrationCensus.test.ts ipcDomainCensus.test.ts` | ✅ (rename/extend) | ⬜ pending |
-| 61-12-02 | 12 | 7 | D-12 | — | — | unit | `pnpm exec jest src/frontend/state src/frontend/screens/...` | ✅ | ⬜ pending |
-| 61-13-01 | 13 | 7 | D-05, D-08, D-13 | T-61-41, T-61-43, T-61-44 | self-heal skipped for engine launches | unit + source census | `pnpm exec jest src/backend/__tests__/launcher.engineStep.test.ts src/backend/engine/__tests__/launcherOverlayCensus.test.ts` | ❌ W0 | ⬜ pending |
-| 61-13-02 | 13 | 7 | D-02, D-04 | T-61-42 | fs snapshots unchanged | unit (fake HOME) | `pnpm exec jest src/backend/engine/__tests__/legacyBottleUntouched.test.ts` | ❌ W0 | ⬜ pending |
-| 61-14-01 | 14 | 7 | D-13 | T-61-45 | every launch read overlaid | source census | `pnpm exec jest src/backend/engine/__tests__/managerOverlayCensus.test.ts` | ❌ W0 | ⬜ pending |
-| 61-14-02 | 14 | 7 | D-01, D-03, D-08 | T-61-46, T-61-47 | setup self-heal skipped | unit | `pnpm exec jest src/backend/storeManagers/gog/__tests__/setup.engine.test.ts` | ❌ W0 | ⬜ pending |
-| 61-15-01 | 15 | 8 | D-18 | T-61-48, T-61-50, T-61-51 | watcher bounded + unref'd | unit (fake timers) | `pnpm exec jest src/backend/engine/__tests__/gameProcessWatch.test.ts` | ❌ W0 | ⬜ pending |
-| 61-15-02 | 15 | 8 | D-18 (59 D-10/D-11) | T-61-48, T-61-49 | deadline armed only on proven signal | unit + smoke | `pnpm exec jest src/backend/engine/__tests__/launchEngine.deadline.test.ts && pnpm smoke:sidecar` | ❌ W0 | ⬜ pending |
-| 61-16-01 | 16 | 8 | D-12 | T-61-52 | push payload shape-guarded | unit (TDD) | `pnpm exec jest src/frontend/state/__tests__/EngineState.test.ts` | ✅ (rename/extend) | ⬜ pending |
-| 61-16-02 | 16 | 8 | D-12, D-14, D-15 | T-61-53, T-61-54 | CrossOver URL constant | RTL | `pnpm exec jest src/frontend/screens/Game/GamePage` | ✅ (rename/extend) | ⬜ pending |
-| 61-17-01 | 17 | 9 | D-04, D-09, D-11, D-14, D-15 | T-61-55..57 | only listed ids writable; confirm before fresh bottle | unit + RTL | `pnpm exec jest src/frontend/screens/Settings/components` | ✅ (rename/extend) | ⬜ pending |
-| 61-17-02 | 17 | 9 | D-09, D-10 | — | — | RTL | `pnpm exec jest src/frontend/screens/Settings/sections/GamesSettings` | ✅ (rename/extend) | ⬜ pending |
-| 61-18-01 | 18 | 10 | D-17, D-09 | T-61-58, T-61-59 | server-side bottle name | unit | `pnpm exec jest .../WineSelector src/backend/sidecar/__tests__/importGameEngine.test.ts` | ❌ W0 | ⬜ pending |
-| 61-18-02 | 18 | 10 | D-17, D-01, D-10 | — | — | RTL | `pnpm exec jest src/frontend/screens/Library/components/InstallModal` | ❌ W0 | ⬜ pending |
-| 61-19-01 | 19 | 11 | all | T-61-61, T-61-62 | — | full gates | `pnpm test:ci && pnpm codecheck && pnpm lint && pnpm boundaries && pnpm planning-gates && pnpm lint-translations:gamelib && pnpm smoke:sidecar` | ✅ | ⬜ pending |
-| 61-19-02 | 19 | 11 | D-01..D-18 | T-61-61, T-61-62 | licence untouched | manual UAT | operator runs 61-UAT.md | manual | ⬜ pending |
+| 61-09-01 | 09 | 5 | D-12, D-15 | T-61-27 | payload type carries no paths | typecheck + unit | `pnpm codecheck && pnpm exec jest src/backend/engine/__tests__/engineState.test.ts src/backend/sidecar` | ✅ | ⬜ pending |
+| 61-09-02 | 09 | 5 | D-12, D-15 | — | — | typecheck + unit | `pnpm codecheck && pnpm exec jest src/frontend/state ...` | ✅ | ⬜ pending |
+| 61-10-01 | 10 | 6 | D-12, D-15 | T-61-25..28 | identity validated; no paths in payload | unit | `pnpm exec jest src/backend/engine/__tests__/engineState.test.ts` | ✅ (extend) | ⬜ pending |
+| 61-10-02 | 10 | 6 | D-13 | — | engine dir has no store-manager import | gate | `pnpm boundaries` | ✅ | ⬜ pending |
+| 61-11-01 | 11 | 7 | D-04, D-12, D-15 | T-61-29, T-61-32 | no file creation on state read | unit (TDD) | `pnpm exec jest src/backend/engine/__tests__/gameEngineState.test.ts` | ❌ W0 | ⬜ pending |
+| 61-11-02 | 11 | 7 | D-07, D-09, D-11 | T-61-30, T-61-31 | options never contain paths/GPTK | unit (TDD) | same | ❌ W0 | ⬜ pending |
+| 61-12-01 | 12 | 7 | D-04, D-06, D-08 | T-61-35 | overlay never persists | unit (TDD) | `pnpm exec jest src/backend/engine/__tests__/launchSettings.test.ts` | ❌ W0 | ⬜ pending |
+| 61-12-02 | 12 | 7 | D-02, D-05, D-07, D-13, D-16 | T-61-33, T-61-34, T-61-36 | bottle-busy refusal; binaries only from pins/WM | unit (TDD) | `pnpm exec jest src/backend/engine/__tests__/launchEngine.test.ts` | ❌ W0 | ⬜ pending |
+| 61-13-01 | 13 | 8 | D-12, D-09, D-17 | T-61-37..40 | args validated before lookup | unit + census | `pnpm exec jest src/backend/sidecar/__tests__/engineFlows.test.ts flowRegistrationCensus.test.ts ipcDomainCensus.test.ts` | ✅ (rename/extend) | ⬜ pending |
+| 61-13-02 | 13 | 8 | D-12 | — | — | unit | `pnpm exec jest src/frontend/state src/frontend/screens/...` | ✅ | ⬜ pending |
+| 61-14-01 | 14 | 8 | D-05, D-08, D-13 | T-61-41, T-61-43, T-61-44 | self-heal skipped for engine launches | unit + source census | `pnpm exec jest src/backend/__tests__/launcher.engineStep.test.ts src/backend/engine/__tests__/launcherOverlayCensus.test.ts` | ❌ W0 | ⬜ pending |
+| 61-14-02 | 14 | 8 | D-02, D-04 | T-61-42 | fs snapshots unchanged | unit (fake HOME) | `pnpm exec jest src/backend/engine/__tests__/legacyBottleUntouched.test.ts` | ❌ W0 | ⬜ pending |
+| 61-14-03 | 14 | 8 | D-02, D-04, D-07, D-13 | T-61-63 | tools target the real bottle; reads never create; no engine flip | unit + source census | `pnpm exec jest src/backend/engine/__tests__/toolSettings.test.ts src/backend/engine/__tests__/launcherOverlayCensus.test.ts src/backend/tools` | ❌ W0 | ⬜ pending |
+| 61-15-01 | 15 | 8 | D-13 | T-61-45 | every launch read overlaid | source census | `pnpm exec jest src/backend/engine/__tests__/managerOverlayCensus.test.ts` | ❌ W0 | ⬜ pending |
+| 61-15-02 | 15 | 8 | D-01, D-03, D-08 | T-61-46, T-61-47 | setup self-heal skipped | unit | `pnpm exec jest src/backend/storeManagers/gog/__tests__/setup.engine.test.ts` | ❌ W0 | ⬜ pending |
+| 61-16-01 | 16 | 9 | D-18 | T-61-48, T-61-50, T-61-51 | watcher bounded + unref'd | unit (fake timers) | `pnpm exec jest src/backend/engine/__tests__/gameProcessWatch.test.ts` | ❌ W0 | ⬜ pending |
+| 61-16-02 | 16 | 9 | D-18 (59 D-10/D-11) | T-61-48, T-61-49 | deadline armed only on proven signal | unit + smoke | `pnpm exec jest src/backend/engine/__tests__/launchEngine.deadline.test.ts && pnpm smoke:sidecar` | ❌ W0 | ⬜ pending |
+| 61-17-01 | 17 | 9 | D-12 | T-61-52 | push payload shape-guarded | unit (TDD) | `pnpm exec jest src/frontend/state/__tests__/EngineState.test.ts` | ✅ (rename/extend) | ⬜ pending |
+| 61-17-02 | 17 | 9 | D-12, D-14, D-15 | T-61-53, T-61-54 | CrossOver URL constant | RTL | `pnpm exec jest src/frontend/screens/Game/GamePage` | ✅ (rename/extend) | ⬜ pending |
+| 61-18-01 | 18 | 10 | D-04, D-09, D-11, D-14, D-15, D-20 | T-61-55..57 | only listed ids writable; confirm before fresh bottle | unit + RTL | `pnpm exec jest src/frontend/screens/Settings/components` | ✅ (rename/extend) | ⬜ pending |
+| 61-18-02 | 18 | 10 | D-09, D-10 | — | — | RTL | `pnpm exec jest src/frontend/screens/Settings/sections/GamesSettings` | ✅ (rename/extend) | ⬜ pending |
+| 61-19-01 | 19 | 11 | D-17, D-09, D-20 | T-61-58, T-61-59 | server-side bottle name | unit | `pnpm exec jest .../WineSelector src/backend/sidecar/__tests__/importGameEngine.test.ts` | ❌ W0 | ⬜ pending |
+| 61-19-02 | 19 | 11 | D-17, D-01, D-10 | — | — | RTL | `pnpm exec jest src/frontend/screens/Library/components/InstallModal` | ❌ W0 | ⬜ pending |
+| 61-20-01 | 20 | 12 | all | T-61-61, T-61-62 | — | full gates | `pnpm test:ci && pnpm codecheck && pnpm lint && pnpm boundaries && pnpm planning-gates && pnpm lint-translations:gamelib && pnpm smoke:sidecar` | ✅ | ⬜ pending |
+| 61-20-02 | 20 | 12 | D-01..D-20 | T-61-61, T-61-62 | licence untouched | manual UAT | operator runs 61-UAT.md | manual | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -90,11 +92,12 @@ Filled in by the planner (2026-11-07); the executor updates Status. The requirem
 
 - [ ] `src/backend/engine/__tests__/perGameBottle.test.ts`: D-01 name safety, determinism and cross-runner collision-freedom (61-07)
 - [ ] `engineConfig.test.ts`: D-05..D-08 derivation table; a read with no key never writes (61-06)
-- [ ] `launchEngine.test.ts` + `launchSettings.test.ts`: selection, overlay, D-13 log line, toasts (61-11); deadline wiring in `launchEngine.deadline.test.ts` (61-15)
-- [ ] `launcherOverlayCensus.test.ts` (61-13) and `managerOverlayCensus.test.ts` (61-14): every launch-path settings read goes through the overlay
-- [ ] `legacyBottleUntouched.test.ts`: D-02/D-04 filesystem snapshots (61-13)
+- [ ] `launchEngine.test.ts` + `launchSettings.test.ts`: selection, overlay, D-13 log line, toasts (61-12); deadline wiring in `launchEngine.deadline.test.ts` (61-16)
+- [ ] `launcherOverlayCensus.test.ts` (61-14) and `managerOverlayCensus.test.ts` (61-15): every launch-path settings read goes through the overlay; the launcher census also covers the `tools/index.ts` Winetricks/Run-EXE reads through `resolveToolSettings`
+- [ ] `toolSettings.test.ts`: Wine tools resolve the game's real bottle/engine without creating a bottle on read (61-14)
+- [ ] `legacyBottleUntouched.test.ts`: D-02/D-04 filesystem snapshots (61-14)
 - [ ] `bottleLedger.test.ts` (61-05) and the engineSwitch two-games-one-bottle cases (61-08)
-- [ ] First-match signal for non-Steam games: spike 068 (61-01) then `gameProcessWatch.test.ts` (61-15)
+- [ ] First-match signal for non-Steam games: spike 068 (61-01) then `gameProcessWatch.test.ts` (61-16)
 
 Each Wave 0 file is created by the task that needs it (tests written first in `tdd="true"` tasks), so no separate scaffolding plan is needed.
 

@@ -123,6 +123,10 @@ notice shows once and never blocks (D-15); the fallback toast and "Built-in engi
   `createFallbackBottle`, `isBottleProvisioned`) into `src/backend/engine/` as a pure move,
   and repoint importers with no re-exports. Do not wait for Phase 65. Phase 65's scope
   shrinks accordingly.
+- **D-20: A Legacy global default does not carry into new installs.** (User decision at plan
+  check, 2026-11-07.) When the macOS global default engine is Legacy, new non-Steam Windows
+  installs on macOS get Automatic, because Legacy cannot be chosen for a new game (D-07, D-11).
+  The global Engine control keeps showing the Legacy entry until the user changes it (D-09).
 
 ### Claude's Discretion
 - Where the engine decision code lives once it leaves `steam/engine/`, and its API. It must
