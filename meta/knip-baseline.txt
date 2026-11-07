@@ -76,6 +76,9 @@ exports	src/backend/storeManagers/steam/gameUninstall.ts	removeNativeInstallDire
 exports	src/backend/storeManagers/steam/gameUninstall.ts	uninstallBottleGameDirectly
 exports	src/backend/storeManagers/steam/gameUninstall.ts	uninstallNativeInGameLib
 exports	src/backend/storeManagers/steam/gameUninstall.ts	uninstallUnadoptedMacNativeDirectly
+exports	src/backend/storeManagers/steam/library.ts	libraryModule.getReconcileRanDuringRearm
+exports	src/backend/storeManagers/steam/library.ts	libraryModule.getSteamResumeBreadcrumbAppIds
+exports	src/backend/storeManagers/steam/library.ts	libraryModule.setReconcileRanDuringRearm
 exports	src/backend/storeManagers/steam/stores.ts	steamEngineNoticeStore
 exports	src/backend/typed_store.ts	getRegisteredStoreNames
 exports	src/backend/typed_store.ts	getRegisteredStoreOptions

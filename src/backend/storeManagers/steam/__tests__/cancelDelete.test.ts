@@ -12,9 +12,9 @@ import { library } from '../state'
 import { isNativeInstallInFlight } from '../gameSessionState'
 import {
   clearSteamResumeBreadcrumb,
-  findOtherManifestsWithInstalldir,
-  getBridgeBottleSteamappsRoot
+  findOtherManifestsWithInstalldir
 } from '../library'
+import { getBridgeBottleSteamappsRoot } from '../library/installRoot'
 import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
 import { deleteCancelledSteamInstall } from '../cancelDelete'
 import type { GameInfo } from 'common/types'
@@ -34,7 +34,9 @@ jest.mock('../gameSessionState', () => ({
 }))
 jest.mock('../library', () => ({
   clearSteamResumeBreadcrumb: jest.fn(),
-  findOtherManifestsWithInstalldir: jest.fn(),
+  findOtherManifestsWithInstalldir: jest.fn()
+}))
+jest.mock('../library/installRoot', () => ({
   getBridgeBottleSteamappsRoot: jest.fn()
 }))
 jest.mock('../bottle', () => ({

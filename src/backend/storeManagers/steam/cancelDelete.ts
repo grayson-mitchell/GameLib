@@ -32,9 +32,9 @@ import { library } from './state'
 import { isNativeInstallInFlight } from './gameSessionState'
 import {
   clearSteamResumeBreadcrumb,
-  findOtherManifestsWithInstalldir,
-  getBridgeBottleSteamappsRoot
+  findOtherManifestsWithInstalldir
 } from './library'
+import { getBridgeBottleSteamappsRoot } from './library/installRoot'
 import { getBottleSteamappsDir, getSteamBottleSettings } from './bottle'
 import { sanitizeInstalldir } from './installLocation'
 import { NUMERIC_APP_ID } from './gameConstants'

@@ -7,6 +7,6 @@
   "src/backend/storeManagers/steam/gameBridgeLaunch.ts": 1183,
   "src/backend/storeManagers/steam/gameInstall.ts": 1971,
   "src/backend/storeManagers/steam/games.ts": 1351,
-  "src/backend/storeManagers/steam/library.ts": 4400,
+  "src/backend/storeManagers/steam/library.ts": 4186,
   "src/backend/storeManagers/steam/user.ts": 1562
 }

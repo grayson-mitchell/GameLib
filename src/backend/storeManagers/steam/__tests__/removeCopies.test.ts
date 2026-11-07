@@ -28,6 +28,7 @@ import { join } from 'path'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
 import * as libraryModule from '../library'
+import type { AcfSource } from '../library/installRoot'
 import { library } from '../state'
 import { steamMetadataStore } from '../stores'
 import SteamGame from '../games'
@@ -1189,9 +1190,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
 describe('removeAllSteamInstallCopies (Task 3)', () => {
   const APP_ID = '63000'
 
-  function mockCopy(
-    source: libraryModule.AcfSource
-  ): libraryModule.SteamInstallCopy {
+  function mockCopy(source: AcfSource): libraryModule.SteamInstallCopy {
     return {
       source,
       installPath: `/${source}/steamapps/common/HOARD`,

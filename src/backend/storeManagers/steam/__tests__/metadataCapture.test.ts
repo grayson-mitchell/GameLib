@@ -163,6 +163,7 @@ const allGameModulesSource = gameModuleNames
   .join('\n')
 
 const librarySource = readStripped('../library.ts')
+const installRootSource = readStripped('../library/installRoot.ts')
 const installFormIpcSource = readStripped('../installFormIpc.ts')
 const steamPlatformRowSource = readStripped(
   '../../../../frontend/screens/Library/components/InstallModal/steamPlatformRow.ts'
@@ -210,7 +211,12 @@ describe('source gate: the deliberate non-changes stay raw', () => {
   })
 
   it('library.ts isBridgeAuthoritativeForInstallState still reads the raw flag for the MAC question', () => {
-    expect(librarySource).toMatch(MAC_GATE)
+    // Moved to library/installRoot.ts by Phase 65 plan 02; non-vacuity: the
+    // function must be present in the scanned source.
+    expect(installRootSource).toMatch(
+      /export function isBridgeAuthoritativeForInstallState/
+    )
+    expect(installRootSource).toMatch(MAC_GATE)
   })
 
   it("gameEligibility.ts ensurePlatformsCaptured's alreadyCaptured (the fourth site) still reads the raw flag", () => {

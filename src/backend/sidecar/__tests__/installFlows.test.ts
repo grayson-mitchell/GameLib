@@ -173,9 +173,9 @@ jest.mock('../../storeManagers/steam/bottle', () => ({
   ...jest.requireActual('../../storeManagers/steam/bottle'),
   findBridgeInstallBottle: jest.fn()
 }))
-jest.mock('../../storeManagers/steam/library', () => ({
+jest.mock('../../storeManagers/steam/library/installRoot', () => ({
   __esModule: true,
-  ...jest.requireActual('../../storeManagers/steam/library'),
+  ...jest.requireActual('../../storeManagers/steam/library/installRoot'),
   resolveInstallRoot: jest.fn()
 }))
 
@@ -247,7 +247,7 @@ import { getSteamBottleEligibilityVerdict } from '../../storeManagers/steam/inst
 import { isSteamExperimentalInstallAppEnabled } from '../../storeManagers/steam/experimentalInstallAppSetting'
 import { libraryManagerMap } from 'backend/storeManagers'
 import { findBridgeInstallBottle } from '../../storeManagers/steam/bottle'
-import { resolveInstallRoot } from '../../storeManagers/steam/library'
+import { resolveInstallRoot } from '../../storeManagers/steam/library/installRoot'
 import { library as steamLibraryMap } from '../../storeManagers/steam/state'
 import SteamGame from '../../storeManagers/steam/games'
 import { handlerRegistry, listenerRegistry } from '../../platform'

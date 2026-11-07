@@ -17,7 +17,6 @@ import SteamLibraryManager, {
   buildBridgeInstalledMap,
   findOtherManifestsWithInstalldir,
   readAcfState,
-  resolveInstallRoot,
   startInstallPolling,
   stopInstallPolling,
   cancelDelegatedInstall,
@@ -3725,93 +3724,6 @@ describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
     )
     // Native scan must never consult the bottle path resolver
     expect(getBottleSteamappsDir).not.toHaveBeenCalled()
-  })
-})
-
-// ── debug/steam-bottle-uninstall-reverts (OPERATOR PRODUCT DECISION, LOCKED):
-// resolveInstallRoot() — the SOLE source of truth games.ts's uninstall()
-// consults for bottle-vs-native-vs-refuse routing. ──────────────────────────
-
-describe('resolveInstallRoot() (debug/steam-bottle-uninstall-reverts, OPERATOR DECISION LOCKED)', () => {
-  let envMock: any
-
-  beforeEach(() => {
-    envMock = jest.requireMock('backend/constants/environment')
-    envMock.isMac = true
-    jest
-      .mocked(getSteamBottleSettings)
-      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
-    jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
-  })
-
-  afterEach(() => {
-    envMock.isMac = false
-  })
-
-  it('returns "bottle" for an install_path inside the bottle steamapps/common/', async () => {
-    const installPath = join(BOTTLE_STEAMAPPS_ROOT, 'common', 'Hoard')
-    await expect(resolveInstallRoot(installPath)).resolves.toBe('bottle')
-  })
-
-  it('returns "native" for an install_path inside a registered native library steamapps/common/', async () => {
-    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    const installPath = join('/steam', 'steamapps', 'common', 'CS:GO')
-    await expect(resolveInstallRoot(installPath)).resolves.toBe('native')
-  })
-
-  it('checks EVERY registered native library root, not just the first', async () => {
-    jest
-      .mocked(getSteamLibraries)
-      .mockResolvedValue(['/steam-primary', '/mnt/second-drive/SteamLibrary'])
-    const installPath = join(
-      '/mnt/second-drive/SteamLibrary',
-      'steamapps',
-      'common',
-      'CS:GO'
-    )
-    await expect(resolveInstallRoot(installPath)).resolves.toBe('native')
-  })
-
-  it('returns null for a stale/empty install_path — never falls through to a root', async () => {
-    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    await expect(resolveInstallRoot(undefined)).resolves.toBeNull()
-    await expect(resolveInstallRoot('')).resolves.toBeNull()
-    await expect(resolveInstallRoot('   ')).resolves.toBeNull()
-  })
-
-  it('returns null for an install_path resolving OUTSIDE every known root (bottle AND all native libraries)', async () => {
-    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    await expect(
-      resolveInstallRoot('/completely/unrelated/place/Game')
-    ).resolves.toBeNull()
-  })
-
-  it('never treats the bottle/native common/ root itself as "contained" (no installdir segment)', async () => {
-    jest.mocked(getSteamLibraries).mockResolvedValue([])
-    await expect(
-      resolveInstallRoot(join(BOTTLE_STEAMAPPS_ROOT, 'common'))
-    ).resolves.toBeNull()
-  })
-
-  it('rejects a traversal attempt disguised as a bottle-common child ("path.join is not containment", Phase 18)', async () => {
-    jest.mocked(getSteamLibraries).mockResolvedValue([])
-    const traversal = join(
-      BOTTLE_STEAMAPPS_ROOT,
-      'common',
-      '..',
-      '..',
-      'etc',
-      'passwd'
-    )
-    await expect(resolveInstallRoot(traversal)).resolves.toBeNull()
-  })
-
-  it('never consults the bottle root at all on a non-mac host — a bottle-shaped path still resolves null there', async () => {
-    envMock.isMac = false
-    jest.mocked(getSteamLibraries).mockResolvedValue([])
-    const installPath = join(BOTTLE_STEAMAPPS_ROOT, 'common', 'Hoard')
-    await expect(resolveInstallRoot(installPath)).resolves.toBeNull()
-    expect(getSteamBottleSettings).not.toHaveBeenCalled()
   })
 })
 
@@ -8439,101 +8351,6 @@ describe('startRunningPoll() and stopRunningPoll()', () => {
     startRunningPoll(5000) // new registration after stop
     expect(spy).toHaveBeenCalledTimes(2)
     spy.mockRestore()
-  })
-})
-
-// ── DETAIL-01 GAP2: hostInstallPlatform() — install.platform reflects host OS ──
-//
-// Verifies that the module-private hostInstallPlatform() helper in library.ts
-// returns the correct InstallPlatform for each OS, observable through
-// refreshInstallState() → install.platform on the resulting library entry.
-// Pattern: same envMock flipping used by readRunningAppId() describe (L1122-1261).
-
-describe('hostInstallPlatform() via refreshInstallState() — install.platform reflects host OS (DETAIL-01 GAP2)', () => {
-  let envMock: any
-  let manager: SteamLibraryManager
-
-  // Seed library with an uninstalled game, set up ACF mocks, call refreshInstallState.
-  // Uses the same ACF/vdf mock setup as the L508 refreshInstallState test.
-  const installGame570 = async (): Promise<void> => {
-    library.clear()
-    library.set('570', {
-      runner: 'steam',
-      app_name: '570',
-      title: 'Dota 2',
-      is_installed: false,
-      install: {},
-      art_cover: '',
-      art_square: '',
-      extra: { reqs: [] },
-      canRunOffline: true,
-      installable: true
-    } as any)
-
-    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
-    ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_570.acf'])
-    ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(vdf.parse as jest.Mock).mockReturnValue({
-      AppState: {
-        appid: '570',
-        StateFlags: '4',
-        installdir: 'dota2',
-        SizeOnDisk: '50000'
-      }
-    })
-
-    await manager.refreshInstallState()
-  }
-
-  beforeEach(() => {
-    manager = new SteamLibraryManager()
-    envMock = jest.requireMock('backend/constants/environment')
-    // Default to Linux (matches the top-level module mock declaration at L99-104)
-    envMock.isWindows = false
-    envMock.isMac = false
-    envMock.isLinux = true
-    // Provide empty caches so init()/migrateStaleArtUrls() are no-ops if called
-    ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([])
-    jest.mocked(steamLibraryStore.get).mockReturnValue([])
-    jest
-      .mocked(getFileSize)
-      .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
-  })
-
-  afterEach(() => {
-    // Restore Linux defaults to prevent cross-test bleed
-    envMock.isWindows = false
-    envMock.isMac = false
-    envMock.isLinux = true
-    library.clear()
-  })
-
-  it('install.platform resolves to "Mac" when host OS is macOS', async () => {
-    envMock.isWindows = false
-    envMock.isMac = true
-    envMock.isLinux = false
-
-    await installGame570()
-
-    expect(library.get('570')!.install.platform).toBe('Mac')
-  })
-
-  it('install.platform resolves to "linux" when host OS is Linux', async () => {
-    // envMock already set to Linux in beforeEach — no override needed
-    await installGame570()
-
-    expect(library.get('570')!.install.platform).toBe('linux')
-  })
-
-  it('install.platform resolves to "Windows" when host OS is Windows', async () => {
-    envMock.isWindows = true
-    envMock.isMac = false
-    envMock.isLinux = false
-
-    await installGame570()
-
-    expect(library.get('570')!.install.platform).toBe('Windows')
   })
 })
 

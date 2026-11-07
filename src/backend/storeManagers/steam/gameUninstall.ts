@@ -18,11 +18,11 @@ import {
   startUninstallPolling,
   readAcfState,
   pollUninstallOnce,
-  resolveInstallRoot,
   findOtherManifestsWithInstalldir,
   removeSteamInstallCopy,
   nextSteamRequestNoticeSeq
 } from './library'
+import { resolveInstallRoot } from './library/installRoot'
 import {
   probeMacSteamPid,
   readAcfSnapshot,
