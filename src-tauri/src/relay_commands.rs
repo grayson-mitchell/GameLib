@@ -245,7 +245,7 @@ pub(crate) async fn sidecar_store_snapshot(state: State<'_, Arc<SidecarState>>) 
 
 
 #[cfg(test)]
-mod tests {
+mod relay_allow_list_tests {
     use super::*;
 
     #[test]
