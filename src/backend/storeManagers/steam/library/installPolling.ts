@@ -1,8 +1,6 @@
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
-import { getSteamLibraries } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
-import { notify } from '../../../dialog/dialog'
 import { library } from '../state'
 import { isNativeInstallInFlight } from '../gameSessionState'
 import {
@@ -18,7 +16,6 @@ import {
   MANIFEST_GONE_TICKS,
   nextSteamRequestNoticeSeq
 } from './pollState'
-import { readAcfState } from './acfState'
 import { releaseSteamHold } from './restartHold'
 import { stopInstallPolling } from './installStop'
 import { pollInstallOnce } from './installPollOnce'

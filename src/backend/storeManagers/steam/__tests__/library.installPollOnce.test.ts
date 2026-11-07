@@ -288,19 +288,6 @@ const BRIDGE_BOTTLE_STEAMAPPS_ROOT = join(
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────
 
-const makeOwnedApp = (
-  appid: number,
-  name: string,
-  playtime_forever: number,
-  rtime_last_played = 0
-) => ({
-  appid,
-  name,
-  playtime_forever,
-  rtime_last_played,
-  img_icon_url: ''
-})
-
 // 23.2-04: this project's jest config sets `resetMocks: true`, which strips
 // jest.fn() implementations (not just call history) before EVERY test — so
 // the i18nextT mock's fallback-returning implementation (set once at
@@ -320,13 +307,6 @@ beforeEach(() => {
   // TypeError from calling .length on an un-mocked return value.
   jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
   jest.mocked(backfillBridgeLaunchTargets).mockResolvedValue(0)
-})
-
-const makeFakeClient = (apps: ReturnType<typeof makeOwnedApp>[]) => ({
-  steamID: 'STEAMID_TEST',
-  getUserOwnedApps: jest
-    .fn()
-    .mockResolvedValue({ app_count: apps.length, apps })
 })
 
 // ── Describe block ────────────────────────────────────────────────────────────

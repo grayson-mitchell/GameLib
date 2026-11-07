@@ -1,11 +1,10 @@
 import { GameInfo } from 'common/types'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
-import { resolve } from 'path'
 import { getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import i18next from 'i18next'
-import { steamLibraryStore, steamMetadataStore } from '../stores'
+import { steamLibraryStore } from '../stores'
 import { library } from '../state'
 import { clearForcedWindowsViaBottle } from '../gameSessionState'
 import {
@@ -21,7 +20,6 @@ import {
   nextSteamRequestNoticeSeq
 } from './pollState'
 import { readAcfState } from './acfState'
-import { startInstallPolling } from './installPolling'
 
 /** Module-level registry of active uninstall polls, keyed by appId string. */
 const activeUninstallPolls = new Map<
