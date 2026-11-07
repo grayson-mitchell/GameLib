@@ -149,9 +149,12 @@ const FALLBACK_STRIPPED_ENV_KEYS = new Set([
  */
 export function buildFallbackGameSettings(
   bottleName: string,
-  engine: NonCrossoverEngine
+  engine: NonCrossoverEngine,
+  base?: GameSettings
 ): GameSettings {
-  const globalSettings = GlobalConfig.get().getSettings()
+  // Phase 61: a non-Steam launch passes the game's own stored settings so its launcher args,
+  // target exe and environment survive; Steam passes nothing and gets the global settings.
+  const globalSettings = base ?? GlobalConfig.get().getSettings()
   const kept = (globalSettings.enviromentOptions ?? []).filter(
     (e) => !FALLBACK_STRIPPED_ENV_KEYS.has(String(e.key).toUpperCase())
   )
