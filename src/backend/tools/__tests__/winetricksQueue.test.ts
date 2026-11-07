@@ -87,6 +87,7 @@ jest.mock('backend/logger', () => {
 })
 
 import { Winetricks } from '../index'
+import { defined } from 'backend/testUtils/indexed'
 import { WinetricksQueue } from '../winetricksQueue'
 import {
   getEnvironmentReport,
@@ -109,6 +110,10 @@ function makeFakeChild(): FakeChild {
 }
 
 let children: FakeChild[]
+
+/** A spawned fake child; throws if that spawn never happened. */
+const child = (index: number): FakeChild =>
+  defined(children[index], `spawned child ${index}`)
 
 // One catalog fixture covering every verb used anywhere in this file --
 // `apply()` now validates against `Winetricks.catalogFor`, mocked below so
@@ -202,8 +207,8 @@ function gameStatuses(): string[] {
 // the queue loop's `await Winetricks.install(...)` settles before the next
 // verb's spawn is asserted.
 async function finishChild(index: number, exitCode: number): Promise<void> {
-  children[index].emit('close', exitCode)
-  children[index].emit('exit', exitCode)
+  child(index).emit('close', exitCode)
+  child(index).emit('exit', exitCode)
   await flushMicrotasks()
 }
 
@@ -228,7 +233,7 @@ describe('WinetricksQueue.apply N=1 tracer (D-01/D-11)', () => {
       (push) => push.run?.outcomes.vcrun2019 === 'installing'
     )
     expect(installingPush).toBeDefined()
-    const last = pushes[pushes.length - 1]
+    const last = defined(pushes[pushes.length - 1], 'last push')
     expect(last.run?.status).toBe('done')
     expect(last.run?.outcomes.vcrun2019).toBe('installed')
 
@@ -429,7 +434,10 @@ describe('WinetricksQueue environment push (D-16)', () => {
 
     const pushesAfterDeps = queueChangedPushes(appName)
     expect(pushesAfterDeps.length).toBeGreaterThan(0)
-    const lastAfterDeps = pushesAfterDeps[pushesAfterDeps.length - 1]
+    const lastAfterDeps = defined(
+      pushesAfterDeps[pushesAfterDeps.length - 1],
+      'last push after deps'
+    )
     expect(lastAfterDeps.run).toBeNull()
     expect(lastAfterDeps.environment).toEqual(
       getEnvironmentReport(runner, appName)
@@ -459,8 +467,8 @@ describe('WinetricksQueue run log (D-18 / E9)', () => {
     await WinetricksQueue.apply('gog', 'log-game', ['xact', 'corefonts'])
     await spawned(1)
 
-    children[0].stderr.emit('data', 'Executing w_do_call xact\n')
-    children[0].stderr.emit('data', `${CURL_ROW_42}\r${CURL_ROW_100}\r`)
+    child(0).stderr.emit('data', 'Executing w_do_call xact\n')
+    child(0).stderr.emit('data', `${CURL_ROW_42}\r${CURL_ROW_100}\r`)
 
     expect(WinetricksQueue.getState('gog', 'log-game').run?.log).toEqual([
       { kind: 'info', text: 'Executing w_do_call xact' },
@@ -469,7 +477,7 @@ describe('WinetricksQueue run log (D-18 / E9)', () => {
 
     await finishChild(0, 0)
     await spawned(2)
-    children[1].stderr.emit('data', 'Executing w_do_call corefonts\n')
+    child(1).stderr.emit('data', 'Executing w_do_call corefonts\n')
 
     const log = WinetricksQueue.getState('gog', 'log-game').run?.log ?? []
     expect(log[log.length - 1]).toEqual({
@@ -486,12 +494,12 @@ describe('WinetricksQueue run log (D-18 / E9)', () => {
     await spawned(1)
 
     const chunk = Array.from({ length: 250 }, (_, i) => `line ${i}\n`).join('')
-    children[0].stderr.emit('data', chunk)
+    child(0).stderr.emit('data', chunk)
 
     const log = WinetricksQueue.getState('gog', 'cap-game').run?.log ?? []
     expect(log).toHaveLength(200)
-    expect(log[0].text).toBe('line 50')
-    expect(log[log.length - 1].text).toBe('line 249')
+    expect(defined(log[0], 'first log line').text).toBe('line 50')
+    expect(defined(log[log.length - 1], 'last log line').text).toBe('line 249')
 
     await finishChild(0, 0)
   })
@@ -513,7 +521,7 @@ describe('WinetricksQueue run log (D-18 / E9)', () => {
     await spawned(1)
     const before = queueChangedPushes('push-game').length
 
-    children[0].stderr.emit(
+    child(0).stderr.emit(
       'data',
       Array.from({ length: 50 }, (_, i) => `line ${i}\n`).join('')
     )
@@ -543,7 +551,7 @@ describe('WinetricksQueue state revisions (261011-nqe)', () => {
 
     const pushes = queueChangedPushes('revision-apply-game')
     expect(pushes.length).toBeGreaterThanOrEqual(2)
-    const pushA = pushes[0]
+    const pushA = defined(pushes[0], 'first push')
     const pushB = pushes.find(
       (push) => push.run?.outcomes.xact === 'installing'
     )
@@ -568,7 +576,9 @@ describe('WinetricksQueue state revisions (261011-nqe)', () => {
     // the reply was taken) has a revision greater than the reply's.
     const after = queueChangedPushes('revision-apply-game')
     for (let i = 1; i < after.length; i++) {
-      expect(after[i].revision).toBeGreaterThan(after[i - 1].revision)
+      expect(defined(after[i], 'push').revision).toBeGreaterThan(
+        defined(after[i - 1], 'previous push').revision
+      )
     }
     expect(after.some((push) => push.revision === result.state.revision)).toBe(
       false
@@ -592,7 +602,7 @@ describe('WinetricksQueue state revisions (261011-nqe)', () => {
       'revision-cancel-game'
     )
     const pushes = queueChangedPushes('revision-cancel-game')
-    const lastPush = pushes[pushes.length - 1]
+    const lastPush = defined(pushes[pushes.length - 1], 'last push')
     expect(lastPush.run?.outcomes.corefonts).toBe('cancelled')
     expect(cancelled.run?.cancelRequested).toBe(true)
     expect(cancelled.revision).toBeGreaterThan(lastPush.revision)
