@@ -7,19 +7,22 @@
  * different one cannot net to green. There is no --update flag: ceilings move
  * by hand in the same commit that removes warnings.
  *
- * Only `darwin` is measured and committed. The CI clippy steps run on the
- * macOS leg only (macos-latest is arm64, the same triple as the measuring
- * Mac, so a local measurement predicts CI exactly). cfg-gated code differs
- * per OS, so ceilings are keyed by process.platform. A Windows ceiling was
- * not guessed: an equality ceiling fails in both directions, so a wrong
- * guess would put a red leg on main. Tracked in the todo
- * 2026-11-07-clippy-ratchet-windows-leg.
+ * Both `darwin` and `win32` are measured natively and committed, and the CI
+ * clippy steps run on both matrix legs of rust-test.yml. Each leg's runner has
+ * the same triple as its measuring machine: macos-latest is
+ * aarch64-apple-darwin, as on the measuring Mac, and windows-latest is
+ * x86_64-pc-windows-msvc, as on the operator's Windows box, so a local native
+ * measurement predicts CI. cfg-gated code differs per OS, so ceilings are
+ * keyed by process.platform. A ceiling is never guessed or measured
+ * cross-target: an equality ceiling fails in both directions, so a wrong
+ * guess would put a red leg on main. linux has no map because rust-test.yml
+ * has no Linux leg (its caveat (a)).
  *
  * The toolchain is pinned (CLIPPY_TOOLCHAIN, equal to the version in
  * .github/workflows/rust-test.yml) because new clippy releases add and
  * re-tune lints, which would turn main red with no repo change. Bumping the
- * pin means changing both places and re-measuring the ceilings in the same
- * commit.
+ * pin means changing both places and re-measuring BOTH ceiling maps in the
+ * same commit, each natively on its own OS.
  *
  * It reads a saved `--message-format=json` stream instead of spawning cargo:
  * that keeps it pure and testable, and a fake HOME would hide ~/.cargo and
@@ -27,7 +30,7 @@
  * build-finished success:true line and a gamelib-shell compiler-artifact.
  *
  * Local usage:
- *   cd src-tauri && cargo clippy --all-targets --message-format=json > /tmp/c.json && node ../meta/clippyRatchet.cjs /tmp/c.json --list
+ *   cd src-tauri && cargo +1.99.1 clippy --workspace --all-targets --message-format=json > /tmp/c.json && node ../meta/clippyRatchet.cjs /tmp/c.json --list
  *
  * Plain CommonJS, node: builtins only.
  */
@@ -61,6 +64,28 @@ const CLIPPY_CEILINGS = {
     'clippy::bool_comparison': 1,
     'clippy::needless_borrows_for_generic_args': 1,
     'clippy::if_same_then_else': 1
+  },
+  // 2026-11-07 quick-261107-uh4: measured natively on the operator's Windows 11
+  // box, rustc 1.99.1 / clippy 0.1.99, x86_64-pc-windows-msvc (the same triple
+  // as GitHub windows-latest), `cargo +1.99.1 clippy --workspace
+  // --all-targets`: 27 unique warnings after the generator fix, re-measured
+  // after regeneration. The 17 index-0 accessor (get_first) warnings were
+  // removed at the generator, so they have no entry.
+  win32: {
+    'clippy::doc_lazy_continuation': 5,
+    dead_code: 5,
+    'clippy::type_complexity': 2,
+    'clippy::unnecessary_to_owned': 2,
+    'clippy::cloned_ref_to_slice_refs': 2,
+    non_snake_case: 2,
+    unused_imports: 2,
+    'clippy::incompatible_msrv': 1,
+    'clippy::match_like_matches_macro': 1,
+    'clippy::manual_hash_one': 1,
+    'clippy::useless_conversion': 1,
+    'clippy::needless_borrows_for_generic_args': 1,
+    'clippy::if_same_then_else': 1,
+    unused_variables: 1
   }
 }
 
@@ -140,7 +165,7 @@ function evaluate(t, ceilings, platform) {
   }
   if (!ceilings) {
     failures.push(
-      `No measured clippy baseline for ${platform}; this gate runs on the macOS leg only.`
+      `No measured clippy baseline for ${platform}; ceilings exist for ${Object.keys(CLIPPY_CEILINGS).join(', ')} (measure natively on that OS, then add a map).`
     )
     return failures
   }

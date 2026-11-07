@@ -134,15 +134,24 @@ describe('clippyRatchet evaluate', () => {
   ])('%s fails even with zero warnings', (_n, text) => {
     expect(evaluate(tally(text), {}, 'darwin').length).toBeGreaterThan(0)
   })
-  test('undefined ceilings name the platform', () => {
-    const f = evaluate(ok(), undefined, 'win32')
+  test('undefined ceilings name the platform and the measured ones', () => {
+    const f = evaluate(ok(), undefined, 'linux')
     expect(f).toHaveLength(1)
+    expect(f[0]).toMatch(/linux/)
+    expect(f[0]).toMatch(/darwin/)
     expect(f[0]).toMatch(/win32/)
   })
-  test('constants: toolchain pinned, darwin ceilings positive', () => {
+  test('constants: toolchain pinned, ceilings keyed per platform and positive', () => {
     expect(CLIPPY_TOOLCHAIN).toBe('1.99.1')
-    for (const n of Object.values(CLIPPY_CEILINGS.darwin)) {
-      expect(n).toBeGreaterThan(0)
+    expect(Object.keys(CLIPPY_CEILINGS).sort()).toEqual(['darwin', 'win32'])
+    const maps: Record<string, number>[] = Object.values(CLIPPY_CEILINGS)
+    for (const map of maps) {
+      for (const n of Object.values(map)) {
+        expect(Number.isInteger(n)).toBe(true)
+        expect(n).toBeGreaterThan(0)
+      }
+      // get_first is fixed at the generator, never ceilinged.
+      expect(map).not.toHaveProperty(['clippy::get_first'])
     }
   })
 })
@@ -202,7 +211,25 @@ describe('clippyRatchet CLI', () => {
   test('exits 1 for a missing path', () => {
     expect(run([join(dir, 'nope.json'), '--platform', 'darwin']).status).toBe(1)
   })
-  test('exits 1 with --platform win32', () => {
+  test('exits 0 when the stream equals the win32 ceilings', () => {
+    const r = run([
+      file(streamFor(CLIPPY_CEILINGS.win32)),
+      '--platform',
+      'win32'
+    ])
+    expect(r.status).toBe(0)
+    expect(r.stderr + r.stdout).toMatch(/PASS \(win32/)
+  })
+  test('exits 1 with no baseline for --platform linux', () => {
+    const r = run([
+      file(streamFor(CLIPPY_CEILINGS.darwin)),
+      '--platform',
+      'linux'
+    ])
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/No measured clippy baseline for linux/)
+  })
+  test('a darwin-equal stream fails under --platform win32 (maps are per platform)', () => {
     const r = run([
       file(streamFor(CLIPPY_CEILINGS.darwin)),
       '--platform',
