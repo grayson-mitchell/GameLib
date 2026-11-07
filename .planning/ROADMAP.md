@@ -151,7 +151,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 62: Module boundaries and decomposition** — 23 plans (21 + 2 gap closure); complete (completed 2026-11-07)
 - [x] **Phase 63: Rust migration pattern and executable scanners** — 14 plans; planned (completed 2026-11-07)
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
-- [ ] **Phase 65: Steam store manager decomposition, continued** — 0 plans; not started
+- [ ] **Phase 65: Steam store manager decomposition, continued** — 19 plans; planned, not started (waits on Phase 61 close, D-11)
 - [ ] **Phase 66: Backend dependency injection replacing module-level singletons** — 0 plans; not started
 - [ ] **Phase 67: Schema validation at the sidecar IPC boundary** — 0 plans; not started
 - [ ] **Phase 68: Versioned persisted stores and migrations** — 0 plans; not started
@@ -465,11 +465,29 @@ Plans:
 **Goal:** The Steam store manager files Phase 62 leaves untouched are split along their natural seams, so no file under `storeManagers/steam/` is a multi-thousand-line grab-bag. Targets, measured 2026-11-06: `steam/library.ts` (4,393 lines), `steam/bottle.ts` (2,567), and the largest `steam/bridge/` files: `shimGenerate.ts` (1,496), `drm/runnerClone.ts` (1,376), `helperProcess.ts` (1,143) and `drm/stageDrmBottle.ts` (1,021). `shimExports.generated.ts` is generated and out of scope. Reuse Phase 62's method: a cluster map of each file first, pure moves before mechanical lifts, no behaviour change in a move commit (D-06), and the dependency-cruiser rules Phase 62 adds must stay at zero. Splitting `bottle.ts` first is worth considering because Phase 61 moves the engine and bottle decision out of `steam/`, so a clean split shrinks 61's diff. Open questions for discuss-phase: the minimum module set for `library.ts` (owned-apps fetch, local ACF/VDF scan, metadata/artwork enrichment and cache look like the seams), and whether to sequence before or after Phase 61. Came from the post-Phase-62 architecture review on 2026-11-06.
 **Requirements**: TBD
 **Depends on:** Phase 62
-**Plans:** 0 plans
+**Plans:** 19 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 65 to break down)
+- [ ] 65-01-PLAN.md — D-11 precondition, test/cycle baselines, steam-line-ceiling gate + wiring, depcruise leaf-rule extension, close games.ts 1,400 todo
+- [ ] 65-02-PLAN.md — library: accessor commit, pollState (D-16 leaf), installRoot, installedMap
+- [ ] 65-03-PLAN.md — library: acfState, macArch, resumeBreadcrumbs, restartHold
+- [ ] 65-04-PLAN.md — library: installPollOnce, installPolling (timer + unref), resume
+- [ ] 65-05-PLAN.md — library: uninstallPolling, runningPoll
+- [ ] 65-06-PLAN.md — library: D-07 refresh lift, git mv to library/index.ts, back-edge rule
+- [ ] 65-07-PLAN.md — bottle: bottledSteam, provisionBottle (flat siblings)
+- [ ] 65-08-PLAN.md — bottle: bridgeBottle, bridgeBottleLifecycle; bottle.ts off the allowlist
+- [ ] 65-09-PLAN.md — battery + D-14 live smoke run 1 (checkpoint)
+- [ ] 65-10-PLAN.md — gameInstall: bridgeInstallState, gameInstallDepot, gameInstallBridge
+- [ ] 65-11-PLAN.md — user.ts D-15: userTypes, userSignInState + userSignIn, userRedeem
+- [ ] 65-12-PLAN.md — games.ts: bridgeRouteVerdict, gameMetadata lift, eligibility + uninstall stubs; games.ts < 1,000
+- [ ] 65-13-PLAN.md — gameBridgeLaunch: gameBridgeWineLaunch; end-of-step-4 battery
+- [ ] 65-14-PLAN.md — helperProcess: helperRegistry (state owner), helperSpawn
+- [ ] 65-15-PLAN.md — shimGenerate: shimOriginals, shimDrmWrapper, shimPlacement
+- [ ] 65-16-PLAN.md — runnerClone: runnerCrossover, runnerEntitlements, runnerVerify
+- [ ] 65-17-PLAN.md — stageDrmBottle (D-09): stageDrmTypes, drmRegistry, drmRestore, bottleProcesses; allowlist {}
+- [ ] 65-18-PLAN.md — remove install + launch lift stubs with cycle-breaking leaves; close lift-stub todo
+- [ ] 65-19-PLAN.md — done-line proof, full battery + D-14 live smoke run 2 (checkpoint)
 
 ### Phase 66: Backend dependency injection replacing module-level singletons
 
