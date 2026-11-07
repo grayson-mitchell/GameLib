@@ -147,7 +147,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Unassigned (next milestone not yet defined)**
 
-- [ ] **Phase 61: Unified macOS engine for all stores** — 0 plans; not started
+- [ ] **Phase 61: Unified macOS engine for all stores** — 19 plans; planned
 - [x] **Phase 62: Module boundaries and decomposition** — 23 plans (21 + 2 gap closure); complete (completed 2026-11-07)
 - [x] **Phase 63: Rust migration pattern and executable scanners** — 14 plans; planned (completed 2026-11-07)
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
@@ -214,13 +214,31 @@ Phases 61–64 are not assigned to a milestone yet. Phase details for 51–60 (v
 ### Phase 61: Unified macOS engine for all stores
 
 **Goal:** Every Windows game GameLib runs under Wine on macOS, from any store (Epic/legendary, GOG, Amazon/nile, sideload, Steam), gets one per-game **Engine** control: Automatic (CrossOver first, then GameLib's pinned Wine-Staging + DXVK build), CrossOver, the pinned builds, or a Wine Manager build. For non-Steam games it replaces the Wine Version selector, which today is their only engine choice. Behind it, the Phase 59 engine decision moves out of `src/backend/storeManagers/steam/engine/` so non-Steam launches get the same protection: a trial-expiry check before each launch plus the "N days remaining" notice, a timeout on every CrossOver launch, broken-CrossOver detection, and creation of a fallback bottle for non-Steam CrossOver bottles and prefixes. Open questions for discuss-phase: (1) how the "Unsupported — known fixes and compatibility ratings don't apply" warning reads for stores that have no Steam-keyed fixes or ratings; (2) how existing per-game `wineVersion` choices migrate into the new control. Extends Phase 59, whose `59-CONTEXT.md` scoped this to Steam bridge titles; the Steam-side UI is now on the Wine tab (quick 261104-tm6).
-**Requirements**: TBD
+**Requirements**: CONTEXT decisions D-01..D-19 (no REQUIREMENTS.md IDs)
 **Depends on:** Phase 59
-**Plans:** 0 plans
+**Plans:** 19 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 61 to break down)
+- [ ] 61-01-PLAN.md — Spike 068: non-Steam first-match `ps` signal and per-game bottle-name limits (checkpoint)
+- [ ] 61-02-PLAN.md — Pure move: steam/engine/ to src/backend/engine/, importers and mocks repointed
+- [ ] 61-03-PLAN.md — D-19: extract the six bottle.ts primitives into engine/bottlePrimitives.ts
+- [ ] 61-04-PLAN.md — Pure moves: crossoverLocation, runTool, processListing into the engine
+- [ ] 61-05-PLAN.md — Game keys for the registry/deadline, and the per-bottle running-games ledger (D-16)
+- [ ] 61-06-PLAN.md — engineOverride key, read-time migration (D-05..D-09), backend write guard
+- [ ] 61-07-PLAN.md — Per-game bottle name/creation (D-01, D-03) and the bottle-or-prefix rule (D-02, D-04)
+- [ ] 61-08-PLAN.md — Store-agnostic engineDecision/engineSwitch, Steam adapter, bottle-busy refusal
+- [ ] 61-09-PLAN.md — Store-agnostic engine state and shared EngineState type; engine-is-store-agnostic rule
+- [ ] 61-10-PLAN.md — Non-Steam engine state, option list with Legacy, global default, bottle names
+- [ ] 61-11-PLAN.md — Non-Steam launch engine step and per-launch settings overlay
+- [ ] 61-12-PLAN.md — `engine` IPC domain replacing the Steam engine channels
+- [ ] 61-13-PLAN.md — Launcher wiring, overlay census, legacy-bottle snapshot test
+- [ ] 61-14-PLAN.md — Store-manager overlay reads and engine-aware GOG/Amazon setup
+- [ ] 61-15-PLAN.md — Non-Steam first-match watcher and launch deadline (per spike 068)
+- [ ] 61-16-PLAN.md — Frontend engine store, badge and notices keyed by game
+- [ ] 61-17-PLAN.md — Engine control for every store, Wine tab gating, global default (D-09, D-10)
+- [ ] 61-18-PLAN.md — Install/Import/ThirdParty/Sideload dialogs use the Engine control (D-17)
+- [ ] 61-19-PLAN.md — Phase gates and live UAT (checkpoint)
 
 ### Phase 62: Module boundaries and decomposition
 
