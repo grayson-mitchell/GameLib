@@ -20,7 +20,7 @@ export const PositiveInteger = z
   .brand('PositiveInteger')
 export type PositiveInteger = z.infer<typeof PositiveInteger>
 
-export const URL = z.string().url().brand('URL')
+export const URL = z.url().brand('URL')
 export type URL = z.infer<typeof URL>
 
 // FIXME: This doesn't feel right

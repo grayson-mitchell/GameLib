@@ -24,7 +24,7 @@ export const KNOWN_FIX_REPORT_VERSION = 1
 export const KNOWN_FIX_REPORT_MAX_BYTES = 2048
 
 const knownFixReportSchema = z
-  .object({
+  .strictObject({
     v: z.literal(KNOWN_FIX_REPORT_VERSION),
     store: z.literal('steam'),
     appId: z.string().regex(/^[1-9][0-9]{0,9}$/),
@@ -33,7 +33,6 @@ const knownFixReportSchema = z
     op: z.enum(KNOWN_FIX_REPORT_OPS),
     gamelibVersion: z.string().regex(/^[0-9A-Za-z.+-]{1,40}$/)
   })
-  .strict()
   .refine((r) => KNOWN_FIX_REPORT_PAIRS[r.key] === r.value, {
     message: 'pair not allowed'
   })

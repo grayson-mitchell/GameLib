@@ -107,9 +107,10 @@ const seedEntrySchema = allowlistEntrySchema.extend({
   playVerified: playVerifiedSchema.optional()
 })
 
-const knownBadEntrySchema = allowlistEntrySchema
-  .extend({ reason: knownBadReasonSchema })
-  .strict()
+const knownBadEntrySchema = z.strictObject({
+  ...allowlistEntrySchema.shape,
+  reason: knownBadReasonSchema
+})
 
 export const bridgeAllowlistSchema = z.object({
   version: z.literal(2),
