@@ -13,7 +13,7 @@ import { z } from 'zod'
  */
 export const crossoverIndexSchema = z.object({
   version: z.literal(1),
-  generatedAt: z.string().datetime(),
+  generatedAt: z.iso.datetime(),
   entries: z
     .array(
       z.object({

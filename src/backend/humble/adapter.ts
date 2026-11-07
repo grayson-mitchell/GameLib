@@ -35,7 +35,7 @@ import {
 // array where EVERY entry is malformed, is still a schema_error — that is
 // wholesale shape drift and must stay loudly self-diagnosing rather than
 // silently becoming "0 orders".
-const GamekeyEntrySchema = z.object({ gamekey: z.string() }).passthrough()
+const GamekeyEntrySchema = z.looseObject({ gamekey: z.string() })
 const GamekeysArraySchema = z.array(z.unknown())
 
 // Live-UAT round 3 (debug: humble-zero-keys-from-valid-orders): field names
@@ -50,69 +50,59 @@ const GamekeysArraySchema = z.array(z.unknown())
 // (PDF/ebook bundle contents), excluded per D-29 (live-UAT round 5;
 // classify.ts hasKeyEvidence does its own guarded read, so the schema stays
 // maximally tolerant here).
-// `.passthrough()` at every level keeps a shape drift from failing the whole
+// `z.looseObject` at every level keeps a shape drift from failing the whole
 // order (Pitfall 5).
-const OrderDetailTpkSchema = z
-  .object({
-    redeemed_key_val: z.unknown().nullish(),
-    redeemed_key_value: z.string().nullish(),
-    is_expired: z.boolean().nullish(),
-    expiration: z.string().nullish(),
-    key_type: z.string().nullish(),
-    human_name: z.string().nullish(),
-    machine_name: z.string().nullish(),
-    // Phase 14 (HCLAIM-01): the reveal endpoint's third form field. Real type
-    // is unconfirmed (likely numeric) — tolerant union, same .passthrough()
-    // convention as every sibling field. Never placed on the public
-    // HumbleKey type (classify.ts keeps it in a backend-only side-channel).
-    keyindex: z.union([z.string(), z.number()]).nullish()
-  })
-  .passthrough()
+const OrderDetailTpkSchema = z.looseObject({
+  redeemed_key_val: z.unknown().nullish(),
+  redeemed_key_value: z.string().nullish(),
+  is_expired: z.boolean().nullish(),
+  expiration: z.string().nullish(),
+  key_type: z.string().nullish(),
+  human_name: z.string().nullish(),
+  machine_name: z.string().nullish(),
+  // Phase 14 (HCLAIM-01): the reveal endpoint's third form field. Real type
+  // is unconfirmed (likely numeric) — tolerant union, same looseObject
+  // convention as every sibling field. Never placed on the public
+  // HumbleKey type (classify.ts keeps it in a backend-only side-channel).
+  keyindex: z.union([z.string(), z.number()]).nullish()
+})
 
 // Phase 14 (HCLAIM-01): the reveal endpoint's response shape, cross-verified
 // against two independent community implementations (14-RESEARCH.md "Reveal
 // Endpoint Contract"). `error_msg` is intentionally never logged/forwarded
 // verbatim by revealKey() below — it may echo a key value (C4).
-const RevealResponseSchema = z
-  .object({
-    success: z.boolean().nullish(),
-    key: z.string().nullish(),
-    error_msg: z.string().nullish()
-  })
-  .passthrough()
+const RevealResponseSchema = z.looseObject({
+  success: z.boolean().nullish(),
+  key: z.string().nullish(),
+  error_msg: z.string().nullish()
+})
 
-const OrderDetailSchema = z
-  .object({
-    gamekey: z.string().nullish(),
-    tpkd_dict: z
-      .object({
-        // T-11-05: unioned with z.unknown() so a single malformed element
-        // (wrong type, null, non-object) never fails validation of the
-        // WHOLE order — classify.ts's per-tpk try/skip loop is the layer
-        // that actually discards a malformed entry, not schema rejection.
-        // `.nullish()` (not `.optional()`) throughout: a live
-        // `"tpkd_dict": null` / `"all_tpks": null` must degrade to "no
-        // tpks" (diagnosed by library.ts's zero-key logging), never fail
-        // the whole order parse into a schema_error.
-        all_tpks: z
-          .array(z.union([OrderDetailTpkSchema, z.unknown()]))
-          .nullish()
-      })
-      .passthrough()
-      .nullish(),
-    // D-27: unpicked Humble Choice month detection fields (UNPICKED
-    // pseudo-entry branch in classify.ts) — Assumption A1, unconfirmed by
-    // live validation; defensive/optional throughout.
-    product: z
-      .object({
-        category: z.string().nullish(),
-        choice_url: z.string().nullish(),
-        human_name: z.string().nullish()
-      })
-      .passthrough()
-      .nullish()
-  })
-  .passthrough()
+const OrderDetailSchema = z.looseObject({
+  gamekey: z.string().nullish(),
+  tpkd_dict: z
+    .looseObject({
+      // T-11-05: unioned with z.unknown() so a single malformed element
+      // (wrong type, null, non-object) never fails validation of the
+      // WHOLE order — classify.ts's per-tpk try/skip loop is the layer
+      // that actually discards a malformed entry, not schema rejection.
+      // `.nullish()` (not `.optional()`) throughout: a live
+      // `"tpkd_dict": null` / `"all_tpks": null` must degrade to "no
+      // tpks" (diagnosed by library.ts's zero-key logging), never fail
+      // the whole order parse into a schema_error.
+      all_tpks: z.array(z.union([OrderDetailTpkSchema, z.unknown()])).nullish()
+    })
+    .nullish(),
+  // D-27: unpicked Humble Choice month detection fields (UNPICKED
+  // pseudo-entry branch in classify.ts) — Assumption A1, unconfirmed by
+  // live validation; defensive/optional throughout.
+  product: z
+    .looseObject({
+      category: z.string().nullish(),
+      choice_url: z.string().nullish(),
+      human_name: z.string().nullish()
+    })
+    .nullish()
+})
 
 export type OrderDetail = z.infer<typeof OrderDetailSchema>
 export type OrderDetailTpk = z.infer<typeof OrderDetailTpkSchema>
@@ -503,7 +493,8 @@ export async function getGamekeys(
         response,
         new z.ZodError([
           {
-            code: z.ZodIssueCode.custom,
+            code: 'custom',
+            input: undefined,
             path: [],
             message: `no entry carried a string gamekey (${parsed.data.length} entries)`
           }

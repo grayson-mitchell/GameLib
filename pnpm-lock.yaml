@@ -198,8 +198,8 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0(patch_hash=fd8d0025147c5f4fb08023710d6e67cbd2903442e8d2a2ce8c5846907064e4a4)(lzma-native@8.0.6)
       zod:
-        specifier: ^3.24.3
-        version: 3.25.6
+        specifier: ^4.6.7
+        version: 4.6.7
       zstddec:
         specifier: ^0.1.0
         version: 0.1.0
@@ -6064,9 +6064,6 @@ packages:
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
-
-  zod@3.25.6:
-    resolution: {integrity: sha512-kA1wikWvfsP+z3L6mzUJJRQz1Y28BR0Bu/MTWeYbfaFJ8c+OLOt1Bb8d4V3Mk1480H+poPYG6BjS/I4kJ1U8WA==}
 
   zod@4.6.7:
     resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
@@ -12528,8 +12525,6 @@ snapshots:
       yargs-parser: 21.1.1
 
   yocto-queue@0.1.0: {}
-
-  zod@3.25.6: {}
 
   zod@4.6.7: {}
 

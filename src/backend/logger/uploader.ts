@@ -76,7 +76,7 @@ async function uploadLogFile(
   // starts working in the future. I'll hide the delete option.
   const token = '1' // response.headers.get('X-Token')
   const responseText = (await response.text()).trim()
-  const maybeUrl = z.string().url().safeParse(responseText)
+  const maybeUrl = z.url().safeParse(responseText)
   if (!response.ok || !token || !maybeUrl.success) {
     logError(
       [
