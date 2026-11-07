@@ -18,7 +18,9 @@ addHandler('getLegendaryVersion', getLegendaryVersion)
 addHandler('getGogdlVersion', getGogdlVersion)
 addHandler('getCometVersion', getCometVersion)
 addHandler('getNileVersion', getNileVersion)
-addHandler('getSystemInfo', async (e, cache) => getSystemInfo(cache))
+addHandler('getSystemInfo', async (e, cache) =>
+  getSystemInfo(cache ?? undefined)
+)
 addListener('copySystemInfoToClipboard', async () => {
   const info = await getSystemInfo()
   const formatted = await formatSystemInfo(info)

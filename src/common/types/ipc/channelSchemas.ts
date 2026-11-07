@@ -12,6 +12,7 @@ import { steamAuthAsyncArgs, steamAuthSyncArgs } from './steamAuth'
 import { runnerAuthAsyncArgs, runnerAuthSyncArgs } from './runnerAuth'
 import { wineToolsAsyncArgs, wineToolsFrontendMessagesArgs } from './wineTools'
 import { defineChannelEntries, type ChannelEntry } from './schemaTypes'
+import { settingsAsyncArgs, settingsSyncArgs } from './settings'
 import { shellFilesAsyncArgs, shellFilesSyncArgs } from './shellFiles'
 
 export function mergeChannelEntries(
@@ -47,5 +48,7 @@ export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
     defineChannelEntries('send', storeEmbedSyncArgs),
     defineChannelEntries('invoke', storeEmbedAsyncArgs),
     defineChannelEntries('send', steamAuthSyncArgs),
-    defineChannelEntries('invoke', steamAuthAsyncArgs)
+    defineChannelEntries('invoke', steamAuthAsyncArgs),
+    defineChannelEntries('send', settingsSyncArgs),
+    defineChannelEntries('invoke', settingsAsyncArgs)
   )
