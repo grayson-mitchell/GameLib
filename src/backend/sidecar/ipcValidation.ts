@@ -22,6 +22,19 @@ export type InboundVerdict =
 const MAX_ENTRIES = 20
 const MAX_SEGMENT = 64
 
+const MAX_CHANNEL = 64
+
+/**
+ * Mirrors the Rust relay's `echo_channel` (T-67-61): an unknown channel name is attacker
+ * controlled, so it is cut to 64 chars and anything outside printable ASCII becomes `?`
+ * before it reaches the log line or the IPC_INVALID_ARGS wire error (67 review WR-02).
+ */
+export function sanitiseChannel(channel: string): string {
+  return String(channel)
+    .slice(0, MAX_CHANNEL)
+    .replace(/[^\x21-\x7e ]/g, '?')
+}
+
 function sanitisePath(path: readonly PropertyKey[]): string {
   if (path.length === 0) return '(args)'
   return path
@@ -47,7 +60,12 @@ export function validateInbound(
   // A push entry describes an OUTBOUND payload (often typing-only), never an inbound one, so an
   // inbound frame that only matches a push name fails closed too (67 review WR-01).
   if (!entry || entry.kind === 'push') {
-    return { ok: false, channel, paths: ['(channel)'], codes: ['no_schema'] }
+    return {
+      ok: false,
+      channel: sanitiseChannel(channel),
+      paths: ['(channel)'],
+      codes: ['no_schema']
+    }
   }
   void kind
   const result = entry.args.safeParse(args)

@@ -225,6 +225,38 @@ describe('validateInbound in the dispatch funnel', () => {
     expect(err.startsWith(UNPORTED_CHANNEL_MARKER)).toBe(true)
     expect(err).not.toContain(IPC_INVALID_ARGS_MARKER)
   })
+
+  it('(WR-02) a forged-newline channel yields one bounded log line and a bounded wire error', async () => {
+    handlerRegistry.set(
+      'evil\n[sidecarRpc] forged line',
+      (async () => 'x') as never
+    )
+    handlerRegistry.set('c'.repeat(10000), (async () => 'x') as never)
+    send({
+      id: 'w2a',
+      kind: 'invoke',
+      channel: 'evil\n[sidecarRpc] forged line',
+      args: []
+    })
+    send({ id: 'w2b', kind: 'invoke', channel: 'c'.repeat(10000), args: [] })
+    await flush()
+    const lines = stderrWrites.filter((l) => l.includes('IPC_INVALID_ARGS'))
+    expect(lines).toHaveLength(2)
+    for (const l of lines) {
+      expect(l.trimEnd()).not.toContain('\n')
+      expect(l.length).toBeLessThan(400)
+    }
+    expect(lines[0]).toContain('channel=evil?[sidecarRpc] forged line')
+    expect(sinkLines).toHaveLength(2)
+    expect(sinkLines.every((l) => !l.includes('\n'))).toBe(true)
+    for (const f of frames) {
+      expect(String(f.error).length).toBeLessThan(400)
+      expect(String(f.error)).not.toContain('\n')
+    }
+    expect(parseIpcInvalidArgsError(String(frames[1].error))?.channel).toBe(
+      'c'.repeat(64)
+    )
+  })
 })
 
 describe('validateInbound: push entries are never inbound schemas (67 review WR-01)', () => {
