@@ -628,6 +628,10 @@
                 "body": "CrossOver isn't installed. GameLib runs Windows games on its built-in engine; CrossOver gives better compatibility and performance.",
                 "link": "Get CrossOver"
             },
+            "notDetected": {
+                "body": "GameLib couldn't confirm that {{title}} started within {{seconds}} seconds. It has not been stopped. If it is stuck, stop it from its game page and check the launch log (Settings > Logs).",
+                "title": "Couldn't confirm the game started"
+            },
             "notice": {
                 "dismiss": "Dismiss"
             },

@@ -23,11 +23,7 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type LogWriter from 'backend/logger/log_writer'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { isMac } from 'backend/constants/environment'
-import {
-  isBottleProvisioned,
-  killBottleWineServerWith
-} from './bottlePrimitives'
-import { dirname, join } from 'path'
+import { getBottleDir, isBottleProvisioned } from './bottlePrimitives'
 import { markGameRunning, markGameStopped } from './bottleLedger'
 import {
   LAUNCH_DEADLINE_MS,
@@ -446,13 +442,11 @@ const deadlineWatchers = new Map<EngineKey, { stop(): void }>()
 
 export interface DeadlineDeps {
   watch: typeof watchForGameProcess
-  killWineserver: typeof killBottleWineServerWith
   showDialog: typeof showEngineDialog
 }
 
 const defaultDeadlineDeps: DeadlineDeps = {
   watch: watchForGameProcess,
-  killWineserver: killBottleWineServerWith,
   showDialog: showEngineDialog
 }
 
@@ -462,64 +456,50 @@ function stopDeadlineWatcher(key: EngineKey): void {
 }
 
 /**
- * Plan 61-16 (D-18, 59 D-10/D-11): the launch deadline fired with no game process seen. Stops
- * this launch's bottle with the running engine's own wineserver (before the registry entry that
- * names it is cleared), aborts the store runner, releases the engine and tells the user. No
- * fallback retry and no reroute: a game that never appeared is not evidence the engine is
- * broken, and a retry would hide the problem the user needs to see.
+ * Plan 61-21 (D-18, D-16; CR-02, CR-03): the launch deadline fired with no game process seen.
+ * This is a notice, never a kill: a missing `ps` match is not evidence the game is not running
+ * (bare-basename and launcher-stub shapes are unmatchable), and a bottle can be shared with
+ * another running game. So nothing is stopped: no wineserver -k, no game.stop, and the engine
+ * registry, overlay context and ledger entry stay until the launcher exits (endEngineLaunch).
  */
-async function onEngineLaunchDeadline(
+function onEngineLaunchDeadline(
   game: Game,
   key: EngineKey,
-  bottleName: string,
   armedSelection: EngineSelection | undefined,
   d: DeadlineDeps
 ): Promise<void> {
   // G5: the registry entry can be gone by now, so fall back to the selection seen at arm time.
   const sel = getEngineSelection(key) ?? armedSelection
   logWarning(
-    `Engine: ${key} launch deadline fired (${sel ? engineLogLabel(sel) : 'engine unknown'}); stopping the bottle`,
+    `Engine: ${key} launch deadline fired (${sel ? engineLogLabel(sel) : 'engine unknown'}) with no game process seen; not stopping anything`,
     LogPrefix.Backend
   )
   stopDeadlineWatcher(key)
-  if (sel !== undefined) {
-    const crossover = sel.kind === 'crossover'
-    await d.killWineserver(
-      bottleName,
-      crossover ? join(sel.binDir, 'wineserver') : sel.wineserverBin,
-      crossover ? { CX_ROOT: dirname(sel.binDir) } : {},
-      15_000
-    )
-  }
-  try {
-    await game.stop(false)
-  } catch (error) {
-    logWarning(
-      [`Engine: ${key} stopping the runner after the deadline failed`, error],
-      LogPrefix.Backend
-    )
-  }
-  endEngineLaunch(key)
   d.showDialog({
     key,
-    title: t('gamelib:steam.engine.didntStart.title', "Game didn't start"),
+    title: t(
+      'gamelib:steam.engine.notDetected.title',
+      "Couldn't confirm the game started"
+    ),
     body: t(
-      'gamelib:steam.engine.didntStart.body',
-      "{{title}} did not start within {{seconds}} seconds, so GameLib stopped it. Check the launch log (Settings > Logs) and this game's known fixes.",
+      'gamelib:steam.engine.notDetected.body',
+      "GameLib couldn't confirm that {{title}} started within {{seconds}} seconds. It has not been stopped. If it is stuck, stop it from its game page and check the launch log (Settings > Logs).",
       {
         title: game.getGameInfo().title,
         seconds: LAUNCH_DEADLINE_MS / 1000
       }
     ),
-    ackId: 'launch-deadline'
+    ackId: 'launch-deadline-unconfirmed'
   })
+  return Promise.resolve()
 }
 
 /**
  * Plan 61-16 (D-18): arm the launch deadline for a bottle-backed launch, after prerequisite
  * installers (called at the end of prepareWineLaunch). Plain-prefix launches are not armed.
  * The deadline is bound to the first-match watcher; with no derivable signal (a watcher of
- * `null`) it is stood down at once so a running game is never killed (59-REVIEW CR-01).
+ * `null`) or a watcher that gives up (WR-01) it is stood down. When it does fire it only shows
+ * a no-kill notice (CR-02/CR-03).
  */
 export function armEngineLaunchDeadline(
   game: Game,
@@ -537,17 +517,21 @@ export function armEngineLaunchDeadline(
 
   const deadline = armLaunchDeadline({
     key,
-    onDeadline: () =>
-      onEngineLaunchDeadline(game, key, bottleName, armedSelection, d)
+    onDeadline: () => onEngineLaunchDeadline(game, key, armedSelection, d)
   })
   stopDeadlineWatcher(key)
   const watcher = d.watch({
     installPath,
+    bottleDir: getBottleDir(bottleName),
     onFirstMatch: () => {
       deadlineWatchers.delete(key)
       cancelLaunchDeadline(key, 'first-match')
     },
-    onGiveUp: () => deadlineWatchers.delete(key)
+    onGiveUp: () => {
+      // WR-01: a lost signal source must not leave a stale deadline armed.
+      deadlineWatchers.delete(key)
+      cancelLaunchDeadline(key, 'monitor-unavailable')
+    }
   })
   if (watcher !== null) deadlineWatchers.set(key, watcher)
   bindDeadlineToMonitor(deadline, watcher, (msg) =>

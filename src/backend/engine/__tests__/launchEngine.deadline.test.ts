@@ -27,7 +27,9 @@ jest.mock('../engineDialogs', () => ({
 }))
 jest.mock('../bottlePrimitives', () => ({
   isBottleProvisioned: jest.fn(),
-  killBottleWineServerWith: jest.fn()
+  killBottleWineServerWith: jest.fn(),
+  getBottleDir: (name: string) => `/b/${name}`,
+  sanitizeBottleName: (name: string) => name
 }))
 
 import type { Game } from 'common/types/game_manager'
@@ -41,12 +43,23 @@ import {
   cancelLaunchDeadline
 } from '../launchDeadline'
 import { logInfo } from 'backend/logger'
-import { clearEngineSelection, setEngineSelection } from '../engineRegistry'
+import {
+  clearEngineSelection,
+  getEngineSelection,
+  setEngineSelection
+} from '../engineRegistry'
 import {
   __resetLaunchOverlayForTests,
   setLaunchOverlayContext
 } from '../launchSettings'
 import type { EngineSelection } from '../engineTypes'
+import { killBottleWineServerWith } from '../bottlePrimitives'
+import { showEngineDialog } from '../engineDialogs'
+import {
+  __resetBottleLedgerForTests,
+  gamesRunningIn,
+  markGameRunning
+} from '../bottleLedger'
 
 const KEY = 'legendary:Quail'
 const CX: EngineSelection = {
@@ -81,7 +94,6 @@ function makeGame(): Game & { stop: jest.Mock } {
 function deps(watcher: { stop(): void } | null = { stop: jest.fn() }) {
   return {
     watch: jest.fn(() => watcher),
-    killWineserver: jest.fn().mockResolvedValue(true),
     showDialog: jest.fn()
   }
 }
@@ -90,6 +102,8 @@ beforeEach(() => {
   jest.useFakeTimers()
   __resetLaunchEngineForTests()
   __resetLaunchOverlayForTests()
+  __resetBottleLedgerForTests()
+  ;(killBottleWineServerWith as jest.Mock).mockClear()
   clearEngineSelection(KEY)
 })
 afterEach(() => {
@@ -124,7 +138,7 @@ describe('armEngineLaunchDeadline', () => {
     args.onFirstMatch('1')
     expect(__activeLaunchDeadlineCount()).toBe(0)
     jest.advanceTimersByTime(200_000)
-    expect(d.killWineserver).not.toHaveBeenCalled()
+    expect(killBottleWineServerWith).not.toHaveBeenCalled()
   })
 
   it('does nothing for a plain prefix', () => {
@@ -153,50 +167,63 @@ describe('armEngineLaunchDeadline', () => {
       )
     ).toBe(true)
     jest.advanceTimersByTime(200_000)
-    expect(d.killWineserver).not.toHaveBeenCalled()
+    expect(killBottleWineServerWith).not.toHaveBeenCalled()
   })
 
-  it('on expiry kills this bottle with the armed CrossOver wineserver, stops the runner, shows the dialog', async () => {
+  it('on expiry shows a no-kill notice and keeps the launch held', async () => {
     setUp(CX)
     const watcher = { stop: jest.fn() }
     const d = deps(watcher)
     const game = makeGame()
     armEngineLaunchDeadline(game, KEY, d)
-    // G5: the registry entry is gone before the deadline fires.
-    clearEngineSelection(KEY)
+    markGameRunning('GameLib-legendary-Quail', KEY)
     await jest.advanceTimersByTimeAsync(180_000)
     expect(watcher.stop).toHaveBeenCalled()
-    expect(d.killWineserver).toHaveBeenCalledTimes(1)
-    expect(d.killWineserver).toHaveBeenCalledWith(
-      'GameLib-legendary-Quail',
-      `${CX.kind === 'crossover' ? CX.binDir : ''}/wineserver`,
-      {
-        CX_ROOT: '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver'
-      },
-      15_000
-    )
-    expect(game.stop).toHaveBeenCalledWith(false)
+    expect(killBottleWineServerWith).not.toHaveBeenCalled()
+    expect(game.stop).not.toHaveBeenCalled()
     expect(d.showDialog).toHaveBeenCalledTimes(1)
     const dialog = d.showDialog.mock.calls[0]?.[0] as {
       title: string
       body: string
+      ackId: string
     }
-    expect(dialog.title).toContain('gamelib:steam.engine.didntStart.title')
+    expect(dialog.title).toContain('gamelib:steam.engine.notDetected.title')
     expect(dialog.body).toContain('"seconds":180')
-    expect(game.stop).toHaveBeenCalledTimes(1)
+    expect(dialog.ackId).toBe('launch-deadline-unconfirmed')
+    expect(getEngineSelection(KEY)).toBeDefined()
+    expect(gamesRunningIn('GameLib-legendary-Quail')).toContain(KEY)
   })
 
-  it('uses the fallback engine wineserver without CX_ROOT', async () => {
-    setUp(PINNED)
+  it('CR-03: a deadline in a busy shared bottle never touches the neighbour', async () => {
+    expect(setEngineSelection(KEY, PINNED)).toBe(true)
+    setLaunchOverlayContext(KEY, {
+      prefix: { kind: 'bottle', bottleName: 'GameLib' }
+    })
+    markGameRunning('GameLib', 'gog:A')
+    const other = makeGame()
     const d = deps()
     armEngineLaunchDeadline(makeGame(), KEY, d)
     await jest.advanceTimersByTimeAsync(180_000)
-    expect(d.killWineserver).toHaveBeenCalledWith(
-      'GameLib-legendary-Quail',
-      '/pin/bin/wineserver',
-      {},
-      15_000
-    )
+    expect(killBottleWineServerWith).not.toHaveBeenCalled()
+    expect(other.stop).not.toHaveBeenCalled()
+    expect(gamesRunningIn('GameLib')).toContain('gog:A')
+    expect(showEngineDialog).not.toHaveBeenCalled()
+  })
+
+  it('WR-01: a watcher that gives up stands the deadline down', async () => {
+    setUp(CX)
+    const d = deps()
+    armEngineLaunchDeadline(makeGame(), KEY, d)
+    const args = (
+      d.watch.mock.calls[0] as unknown as [
+        { onGiveUp: (reason: string) => void; bottleDir: string }
+      ]
+    )[0]
+    expect(args.bottleDir).toBe('/b/GameLib-legendary-Quail')
+    args.onGiveUp('listing-failures')
+    expect(__activeLaunchDeadlineCount()).toBe(0)
+    await jest.advanceTimersByTimeAsync(200_000)
+    expect(d.showDialog).not.toHaveBeenCalled()
   })
 
   it('endEngineLaunch cancels the deadline and stops the watcher', () => {
