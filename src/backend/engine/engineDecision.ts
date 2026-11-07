@@ -306,6 +306,15 @@ export async function preflightCrossover(
     await settle(settleMs)
     probe = await runProbe()
   }
+  if (probe.kind === 'failed' && probe.reason === 'invalid-bottle') {
+    return {
+      kind: 'broken',
+      binDir,
+      build,
+      inconclusive: true,
+      detail: `--demo-status invalid-bottle (no evidence; not retried): ${probe.detail}`
+    }
+  }
   if (probe.kind === 'failed') {
     return {
       kind: 'broken',
@@ -474,6 +483,30 @@ export async function decideLaunchEngine(
     killOnTimeout: true,
     key: args.key
   })
+
+  // An inconclusive pre-flight is no evidence of breakage (59 D-09/G29): with
+  // a located CrossOver it is used, never replaced (and its bottle never
+  // rewritten) by the fallback.
+  if (
+    preflight.kind === 'broken' &&
+    preflight.inconclusive === true &&
+    preflight.binDir !== null
+  ) {
+    logLines.push(
+      `Engine: CrossOver pre-flight inconclusive (${preflight.detail}); launching on CrossOver`
+    )
+    return finish(
+      {
+        kind: 'crossover',
+        reason: override === 'crossover' ? 'override' : 'cx-healthy',
+        crossoverBuild: preflight.build,
+        binDir: preflight.binDir
+      },
+      preflight,
+      null,
+      false
+    )
+  }
 
   if (override === 'crossover') {
     if (preflight.kind === 'missing' || preflight.kind === 'broken') {

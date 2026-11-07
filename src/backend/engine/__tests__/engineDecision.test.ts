@@ -112,7 +112,6 @@ describe('preflightCrossover (stub deps)', () => {
     expect((r as { detail: string }).detail).toContain('not executable')
   })
   it.each([
-    ['invalid-bottle', failed('invalid-bottle'), 'broken'],
     ['unrecognised', ok({ kind: 'unrecognised' }), 'broken'],
     ['expired', ok({ kind: 'expired', daysAgo: 2 }), 'expired']
   ])(
@@ -683,5 +682,79 @@ describe('listEngineOverrideOptions', () => {
     expect(r).toMatchObject({ kind: 'broken', inconclusive: true })
     expect(bottleBusy).toHaveBeenCalledWith('B', 'gog:9')
     expect(kill).not.toHaveBeenCalled()
+  })
+})
+
+describe('inconclusive pre-flight never falls back (CR-01, D-05)', () => {
+  const args = { key: '1', bottleName: 'Windows 10 Games' }
+
+  it('invalid-bottle is inconclusive: one probe, no wineserver kill', async () => {
+    const probe = seq(failed('invalid-bottle'))
+    const kill = jest.fn(() => Promise.resolve(undefined))
+    const r = await preflightCrossover(
+      'Windows 10 Games',
+      mkDeps({ probe, killCrossoverWineserver: kill })
+    )
+    expect(r).toMatchObject({ kind: 'broken', inconclusive: true })
+    expect(probe).toHaveBeenCalledTimes(1)
+    expect(kill).not.toHaveBeenCalled()
+  })
+  it('Automatic + invalid-bottle launches on CrossOver, not cx-broken', async () => {
+    const r = await decideLaunchEngine(
+      args,
+      mkDeps({ probe: seq(failed('invalid-bottle')) })
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'crossover', reason: 'cx-healthy' },
+      needsDownload: false
+    })
+    if (r.kind !== 'use') throw new Error('expected use')
+    if (r.selection.kind !== 'crossover') throw new Error('expected crossover')
+    expect(r.selection.binDir).toBeTruthy()
+    expect(r.logLines.join('\n')).toContain('inconclusive')
+  })
+  it('forced CrossOver + invalid-bottle is usable, reason override', async () => {
+    const r = await decideLaunchEngine(
+      args,
+      mkDeps({
+        readOverride: () => 'crossover',
+        probe: seq(failed('invalid-bottle'))
+      })
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'crossover', reason: 'override' }
+    })
+  })
+  it('Automatic + busy-bottle timeout stays on CrossOver', async () => {
+    const r = await decideLaunchEngine(
+      args,
+      mkDeps({ probe: seq(failed('timeout')), bottleBusy: () => true })
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'crossover', reason: 'cx-healthy' }
+    })
+  })
+  it('regression: nonzero-exit twice still falls back as cx-broken', async () => {
+    const r = await decideLaunchEngine(
+      args,
+      mkDeps({ probe: seq(failed('nonzero-exit'), failed('nonzero-exit')) })
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'pinned', reason: 'cx-broken' }
+    })
+  })
+  it('regression: missing CrossOver still falls back as cx-missing', async () => {
+    const r = await decideLaunchEngine(
+      args,
+      mkDeps({ resolveCrossoverBinDir: () => Promise.resolve(undefined) })
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'pinned', reason: 'cx-missing' }
+    })
   })
 })
