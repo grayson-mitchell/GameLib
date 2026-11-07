@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
-stopped_at: Phase 61 context gathered
-last_updated: "2026-11-07T08:33:04.697Z"
+stopped_at: Phase 65 context gathered
+last_updated: "2026-11-07T08:34:24.906Z"
 last_activity: 2026-11-07
 progress:
   total_phases: 12
@@ -588,9 +588,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-07T08:33:04.691Z
-Stopped at: Phase 61 context gathered
-Resume file: None
+Last session: 2026-11-07T08:34:24.895Z
+Stopped at: Phase 65 context gathered
+Resume file: .planning/phases/65-steam-store-manager-decomposition-continued/65-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
