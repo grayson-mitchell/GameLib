@@ -150,6 +150,8 @@ const readStripped = (relPath: string): string =>
   stripSourceComments(readFileSync(join(__dirname, relPath), 'utf8'))
 
 const gamesSource = readStripped('../games.ts')
+// 65-13: fetchMetadataIfNeeded was lifted out of SteamGame into gameMetadata.ts.
+const gameMetadataSource = readStripped('../gameMetadata.ts')
 // 62-06: the eligibility cluster (isBottleEligibleFromPlatforms, assembleBridgeRouteInput,
 // ensurePlatformsCaptured) was lifted out of the class into gameEligibility.ts.
 const eligibilitySource = readStripped('../gameEligibility.ts')
@@ -230,8 +232,12 @@ describe('source gate: the deliberate non-changes stay raw', () => {
 })
 
 describe('source gate: Phase 51 Plan 09 bridge verdict carry-forward (D-51-07)', () => {
-  it("games.ts fetchMetadataIfNeeded's enumerated write carries forward an existing bridge field, mirroring forcedWindowsViaBottle", () => {
-    expect(gamesSource).toMatch(
+  it("gameMetadata.ts fetchMetadataIfNeeded's enumerated write carries forward an existing bridge field, mirroring forcedWindowsViaBottle", () => {
+    // non-vacuity: the lifted function must be present in the scanned source.
+    expect(gameMetadataSource).toMatch(
+      /export async function fetchMetadataIfNeeded/
+    )
+    expect(gameMetadataSource).toMatch(
       /existingMeta\?\.bridge\s*\?\s*\{\s*bridge:\s*existingMeta\.bridge\s*\}\s*:\s*\{\}/
     )
   })

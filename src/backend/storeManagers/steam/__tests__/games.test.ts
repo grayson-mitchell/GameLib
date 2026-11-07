@@ -35,6 +35,7 @@ import * as shortcutsModule from '../../../shortcuts/shortcuts/shortcuts'
 import { steamMetadataStore, steamLibraryStore } from '../stores'
 import { TITLE_AUTHORITATIVE_KEYS } from '../titleSettings'
 import SteamGame from '../games'
+import * as gameMetadata from '../gameMetadata'
 import {
   buildDrmLaunchEnvironment,
   drmBottleWinPath,
@@ -1126,7 +1127,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     process.on('unhandledRejection', rejectionSpy)
 
     const fetchSpy = jest
-      .spyOn(SteamGame.prototype as any, 'fetchMetadataIfNeeded')
+      .spyOn(gameMetadata, 'fetchMetadataIfNeeded')
       .mockRejectedValue(
         new Error('simulated crash inside fetchMetadataIfNeeded')
       )
