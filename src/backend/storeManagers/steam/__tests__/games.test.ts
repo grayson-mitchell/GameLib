@@ -8839,6 +8839,28 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     expect(launchBridgeSpy).not.toHaveBeenCalled()
   })
 
+  it('D5c: quick 261107-lum — a forced game whose bits live in a bridge bottle launches through the bridge, never steam://rungameid', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    // findBridgeInstallBottle (test double) reports GameLibSteamBridge-<appId>.
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+
+    const launchGame = new SteamGame(APP_ID)
+    const launchBridgeSpy = jest
+      .spyOn(launchGame as any, 'launchBridgeGame')
+      .mockResolvedValue(true as any)
+    await launchGame.launch({} as any)
+
+    expect(launchBridgeSpy).toHaveBeenCalledTimes(1)
+    const { shell } = jest.requireMock('backend/platform')
+    expect(
+      (shell.openExternal as jest.Mock).mock.calls.some((c) =>
+        String(c[0]).startsWith('steam://rungameid')
+      )
+    ).toBe(false)
+  })
+
   it('D5b: a forced+allowlisted game never enters the Phase 24 bridge on uninstall() — currently a VACUOUS pass, see Task 2', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)

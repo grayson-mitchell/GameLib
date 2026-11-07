@@ -7544,6 +7544,16 @@ describe('pollUninstallOnce()', () => {
     expect(clearForcedSpy).toHaveBeenCalledWith('730')
   })
 
+  it('R1b: quick 261107-lum — a confirmed-absent BRIDGE uninstall clears the forced verdict', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
+    jest
+      .mocked(getBridgeBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge-730' } as any)
+    startUninstallPolling('730', 60000)
+    await pollUninstallOnce('730', 'bridge')
+    expect(clearForcedSpy).toHaveBeenCalledWith('730')
+  })
+
   it('R2: a NATIVE uninstall confirmed-absent does NOT clear the forced verdict', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
     startUninstallPolling('730', 60000)

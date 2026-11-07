@@ -359,13 +359,16 @@ export function registerSteamAuthFlows(): void {
   // Phase 51 Plan 13 (D-51-09/10/11): the composed bridge-vs-bottle route
   // pair -- getSteamBridgeRoute delegates to games.ts's own
   // getBridgeRouteVerdict (which carries its own typeof/numeric guard, so
-  // this body passes args[0] through UNCAST), setSteamBridgeUserRoute
+  // this body passes args[0] through UNCAST; quick 261107-lum: args[1] is the
+  // optional Windows-build choice, also passed UNCAST -- the verdict function
+  // honours only a strict `true` under its own triple gate),
+  // setSteamBridgeUserRoute
   // delegates to installFormIpc.ts's handleSetSteamBridgeUserRoute (the
   // validation core for T-51-30).
   ipcMain.handle(
     'getSteamBridgeRoute',
     async (_event: unknown, ...args: unknown[]) => {
-      return getBridgeRouteVerdict(args[0])
+      return getBridgeRouteVerdict(args[0], args[1])
     }
   )
 

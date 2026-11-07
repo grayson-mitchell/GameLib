@@ -52,6 +52,7 @@ import { type DrmLaunchReady } from './bridge/drm/drmLaunchSetup'
 import { stopBridgeHelper } from './bridge/helperProcess'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import type { EnginePin } from './engine/enginePins'
+import { isMac } from 'backend/constants/environment'
 import { STEAM_STORE_API, NUMERIC_APP_ID } from './gameConstants'
 import {
   nativeInstallsInFlight,
@@ -65,7 +66,9 @@ import {
   isBottleEligible,
   checkBridgeRoute,
   isBridgeEligible,
-  checkBottleEligibility
+  checkBottleEligibility,
+  ensurePlatformsCaptured,
+  isForcedWindowsViaBottle
 } from './gameEligibility'
 import {
   install,
@@ -772,8 +775,10 @@ export default class SteamGame implements Game {
    * `checkBottleEligibility()` does: a cold metadata cache must never read
    * as a routing answer.
    */
-  checkBridgeRoute(): Promise<SteamBridgeRouteVerdict> {
-    return checkBridgeRoute(this)
+  checkBridgeRoute(options?: {
+    windowsBuildChosen?: boolean
+  }): Promise<SteamBridgeRouteVerdict> {
+    return checkBridgeRoute(this, options)
   }
 
   /**
@@ -1278,9 +1283,19 @@ export default class SteamGame implements Game {
  * LOCATION) and checkBottleEligibility() (an existing GameLibSteam install,
  * also LOCATION) -- resolveBridgeRoute() itself never fills this field (see
  * its own doc comment); it answers eligibility only.
+ *
+ * quick 261107-lum (DC-4): `windowsBuildChosen` is the install dialog's
+ * "Windows" platform choice for a dual-build title. It is an UNTRUSTED
+ * renderer value, honoured only under the same triple gate as install():
+ * `=== true` (any other type is ignored), AND macOS, AND the persisted
+ * `is_windows_native === true` (read after platform capture). With no
+ * argument, the choice is derived from LOCATION: a persisted forced-Windows
+ * flag whose bits are proven to live in a bridge bottle, so the GamePage /
+ * report-problem route display is honest for an installed forced game.
  */
 export async function getBridgeRouteVerdict(
-  appId: unknown
+  appId: unknown,
+  windowsBuildChosen?: unknown
 ): Promise<SteamBridgeRouteVerdict> {
   if (typeof appId !== 'string' || !NUMERIC_APP_ID.test(appId)) {
     logWarning(
@@ -1301,7 +1316,19 @@ export async function getBridgeRouteVerdict(
   }
 
   const game = new SteamGame(appId)
-  const verdict = await game.checkBridgeRoute()
+  let explicitChoice = false
+  if (windowsBuildChosen === true && isMac) {
+    // Capture first so is_windows_native is not read off a cold cache.
+    await ensurePlatformsCaptured(game)
+    explicitChoice = steamMetadataStore.get(appId)?.is_windows_native === true
+  }
+  const locationChoice =
+    windowsBuildChosen === undefined &&
+    isForcedWindowsViaBottle(game) &&
+    findBridgeInstallBottle(appId) !== null
+  const verdict = await game.checkBridgeRoute({
+    windowsBuildChosen: explicitChoice || locationChoice
+  })
 
   // D-51-09 (Task 2): installedIn answers "where does THIS install's bits
   // already live" (location), never "where would a NEW install go"

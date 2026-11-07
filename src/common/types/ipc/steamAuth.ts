@@ -71,7 +71,10 @@ export interface SteamAuthAsync {
   // route verdict for a single game, resolved by 51-07's pure resolver and
   // read here by 51-09's backend. See SteamBridgeRouteVerdict's own doc
   // comment (common/types/steam.ts) for the full field contract.
-  getSteamBridgeRoute: (appId: string) => Promise<SteamBridgeRouteVerdict>
+  getSteamBridgeRoute: (
+    appId: string,
+    windowsBuildChosen?: boolean
+  ) => Promise<SteamBridgeRouteVerdict>
   // Phase 59 (D-04/D-06/D-13/D-14/D-15)
   getSteamEngineState: (appId: string) => Promise<SteamEngineState | null>
   listSteamEngineOptions: () => Promise<SteamEngineOption[]>

@@ -193,7 +193,8 @@ export function markForcedWindowsViaBottle(appId: string): void {
 
 /**
  * The reversibility half of the pair above — cleared only on an
- * ACF-CONFIRMED bottle uninstall (library.ts's pollUninstallOnce, Task 3),
+ * ACF-CONFIRMED bottle or bridge-bottle uninstall (library.ts's
+ * pollUninstallOnce, Task 3; bridge added by quick 261107-lum),
  * never at dispatch time. Early-returns when no metadata entry exists at
  * all: without that guard, every native uninstall of a never-forced game
  * would fabricate a metadata entry purely to record `false`.

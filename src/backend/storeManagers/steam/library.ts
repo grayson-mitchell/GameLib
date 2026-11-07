@@ -3862,7 +3862,12 @@ export async function pollUninstallOnce(
     // install provenance that stopped deciding uninstall routing — so it
     // performed a full whole-entry steamMetadataStore rewrite on EVERY
     // confirmed-absent bottle tick for no decision. Field and pair removed.
-    if (source === 'bottle') {
+    //
+    // quick 261107-lum (DC-3): a forced-Windows install can now live in a
+    // dedicated bridge bottle too, so a confirmed-absent 'bridge' tick clears
+    // it as well. A stale flag would make the next install of a Mac-native
+    // title go Windows silently.
+    if (source === 'bottle' || source === 'bridge') {
       clearForcedWindowsViaBottle(appId)
     }
     const existing = library.get(appId)
