@@ -5,7 +5,7 @@
  */
 
 /** Which engine a title runs on (Phase 59 D-06, D-14). */
-export type EngineKind = 'crossover' | 'builtin' | 'unsupported'
+type EngineKind = 'crossover' | 'builtin' | 'unsupported'
 
 /** Phase 60 G4: the closed overlay-setup step union (common/ must not import backend). */
 export type OverlayNoticeStep =

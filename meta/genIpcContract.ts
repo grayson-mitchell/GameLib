@@ -71,7 +71,7 @@ function fail(ctx: RenderCtx, what: string): never {
   )
 }
 
-export function pascal(s: string): string {
+function pascal(s: string): string {
   return s
     .split(/[^A-Za-z0-9]+/)
     .filter(Boolean)
@@ -79,7 +79,7 @@ export function pascal(s: string): string {
     .join('')
 }
 
-export function snake(s: string): string {
+function snake(s: string): string {
   return s
     .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
     .replace(/[^A-Za-z0-9]+/g, '_')
@@ -452,7 +452,7 @@ export interface ContractInput {
 }
 
 /** Sorted names the renderer may invoke or send (D-14). Shell, local and push are excluded. */
-export function rendererChannelNames(
+function rendererChannelNames(
   entries: Record<string, { caller: string; kind: string }>
 ): string[] {
   return Object.keys(entries)
@@ -536,7 +536,7 @@ export function parseCliFlags(argv: string[]): { check: boolean } {
   return { check }
 }
 
-export function buildContract(): string {
+function buildContract(): string {
   const schemas: Record<string, JsonNode> = {}
   for (const channel of RUST_INVOKE_CHANNELS) {
     const s = (rustInvokeArgs as Record<string, z.ZodType | undefined>)[channel]

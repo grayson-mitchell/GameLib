@@ -6,7 +6,7 @@
  */
 import type { ArgsMap } from 'common/types/ipc/schemaTypes'
 
-export interface Fixtures {
+interface Fixtures {
   valid: unknown[][]
   invalid: unknown[][]
 }

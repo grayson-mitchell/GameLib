@@ -56,7 +56,7 @@ import {
   sidecarInternalSendArgs
 } from './sidecarInternal'
 
-export function mergeChannelEntries(
+function mergeChannelEntries(
   ...parts: Record<string, ChannelEntry>[]
 ): Record<string, ChannelEntry> {
   const out: Record<string, ChannelEntry> = {}

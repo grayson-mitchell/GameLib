@@ -29,7 +29,7 @@ const MAX_CHANNEL = 64
  * controlled, so it is cut to 64 chars and anything outside printable ASCII becomes `?`
  * before it reaches the log line or the IPC_INVALID_ARGS wire error (67 review WR-02).
  */
-export function sanitiseChannel(channel: string): string {
+function sanitiseChannel(channel: string): string {
   return String(channel)
     .slice(0, MAX_CHANNEL)
     .replace(/[^\x21-\x7e ]/g, '?')

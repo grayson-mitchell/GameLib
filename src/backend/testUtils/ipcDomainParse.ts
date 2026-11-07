@@ -21,7 +21,7 @@ export const KINDS = ['Sync', 'TestSync', 'Async', 'FrontendMessages'] as const
 export type Kind = (typeof KINDS)[number]
 
 // TestSync must be tested before Sync: `FooTestSync` also ends in `Sync`.
-export const DETECT_ORDER: readonly Kind[] = [
+const DETECT_ORDER: readonly Kind[] = [
   'TestSync',
   'FrontendMessages',
   'Async',
@@ -36,7 +36,7 @@ export interface DomainPart {
 
 const BACKEND_DIR = join(__dirname, '..')
 export const IPC_DIR = join(BACKEND_DIR, '..', 'common', 'types', 'ipc')
-export const TRANSPORT = join(
+const TRANSPORT = join(
   BACKEND_DIR,
   '..',
   'common',

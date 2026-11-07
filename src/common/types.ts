@@ -805,13 +805,6 @@ export interface ConnectivitySnapshot {
   seq: number
 }
 
-export interface Tools {
-  exe?: string
-  tool: string
-  appName: string
-  runner: Runner
-}
-
 export interface Tool {
   name: string
   url: string
@@ -865,23 +858,6 @@ export type WineCommandArgs = {
   resolveOnExit?: boolean
 }
 
-export interface SaveSyncArgs {
-  arg: string | undefined
-  path: string
-  appName: string
-  runner: Runner
-}
-
-export interface RunWineCommandArgs {
-  appName: string
-  runner: Runner
-  commandParts: string[]
-  /** Wait for the command to exit. Honoured only with `pendingInstall`. */
-  wait?: boolean
-  /** The game is not in the library yet: resolve its bottle from its config (sideload only). */
-  pendingInstall?: boolean
-}
-
 export interface ImportGameArgs {
   appName: string
   path: string
@@ -906,11 +882,6 @@ export interface DiskSpaceData {
   message: string
   validPath: boolean
   validFlatpakPath: boolean
-}
-
-export interface ToolArgs {
-  appName: string
-  action: 'backup' | 'restore'
 }
 
 export type StatusPromise = Promise<{ status: 'done' | 'error' | 'abort' }>

@@ -53,6 +53,7 @@ const IPC_INVALID_CHANNEL_MARKER = '[GAMELIB_IPC_INVALID_CHANNEL]'
  * Classifies a boot-time error message. An unported channel and a sidecar schema rejection
  * are both contract rejections, not bootstrap failures, so neither may paint over the app.
  */
+/** @public consumed by src/frontend/__tests__/bootErrorSurface.test.ts through a require() of the module, which knip does not count */
 export function classifyBootError(
   message: string
 ): 'unported' | 'invalid-args' | 'invalid-channel' | 'fatal' {
