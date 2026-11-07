@@ -52,11 +52,7 @@ import { join, resolve } from 'node:path'
 // to shimCoverage.ts / shimCoverage.test.ts -- this file no longer imports
 // it, since every remaining test here exercises placeShimForGame's own
 // behavior (via readDefExports() below), not the constant itself.
-import {
-  detectDrmWrapper,
-  isGameLibShimBytes,
-  placeShimForGame
-} from '../shimGenerate'
+import { detectDrmWrapper, placeShimForGame } from '../shimGenerate'
 import * as drmScanExe from '../drm/drmScanExe'
 import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import { stubRustScan } from './fixtures/stubRustScan'
@@ -211,24 +207,6 @@ function buildMinimalPe(cegNames: string[]): Buffer {
   }
   return buf
 }
-
-describe('isGameLibShimBytes', () => {
-  it('is true for a buffer containing the GameLibSteamBridgeShim marker', () => {
-    expect(
-      isGameLibShimBytes(Buffer.from('xxGameLibSteamBridgeShim/2xx'))
-    ).toBe(true)
-  })
-
-  it('is true for a buffer containing the ASCII loopback address', () => {
-    expect(isGameLibShimBytes(Buffer.from('xx127.0.0.1xx'))).toBe(true)
-  })
-
-  it('is false for a buffer containing neither marker', () => {
-    expect(isGameLibShimBytes(Buffer.from('just-a-games-own-dll-bytes'))).toBe(
-      false
-    )
-  })
-})
 
 describe('shimGenerate', () => {
   beforeEach(() => {

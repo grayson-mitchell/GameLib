@@ -56,7 +56,7 @@ import {
   isContainedWithin,
   resolveWalkRoot
 } from '../bridgeScan'
-import { isGameLibShimBytes, probeOriginalBackup } from '../shimGenerate'
+import { isGameLibShimBytes, probeOriginalBackup } from '../shimOriginals'
 import { runBoundedListing } from './boundedListing'
 import { restoreBridgeSteamApiOriginals } from '../originalRestore'
 import { openStageWineLog } from './stageWineLog'
