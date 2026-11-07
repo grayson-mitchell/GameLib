@@ -39,10 +39,8 @@ import {
   STATUS_OK,
   STATUS_ERR
 } from '../protocol'
-import {
-  ensureBridgeHelperReady,
-  classifyInitFlatError
-} from '../helperProcess'
+import { ensureBridgeHelperReady } from '../helperProcess'
+import { classifyInitFlatError } from '../helperSpawn'
 import {
   stopBridgeHelper,
   hasLiveBridgeHelper,
@@ -1098,7 +1096,7 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
   // (repo grep-hygiene rule) so a prose mention in a docblock explaining
   // the history can never satisfy this gate.
   test('invariant: no module-level `let` of a ChildProcess, and no `shutdownBridgeHelper` symbol survives in source', () => {
-    const files = ['helperProcess.ts', 'helperRegistry.ts']
+    const files = ['helperProcess.ts', 'helperRegistry.ts', 'helperSpawn.ts']
     let registrySeen = false
     for (const file of files) {
       const raw = readFileSync(join(__dirname, '..', file), 'utf-8')
