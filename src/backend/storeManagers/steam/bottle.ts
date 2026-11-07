@@ -23,7 +23,6 @@ import {
 } from 'graceful-fs'
 import { app } from 'backend/platform'
 import type { GameInfo, GameSettings, WineInstallation } from 'common/types'
-import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
 import {
   getRunnerLogWriter,
@@ -54,7 +53,15 @@ import type {
   NonCrossoverSelection
 } from 'backend/engine/engineTypes'
 import { library } from './state'
-import { writeCxbottleConf } from 'backend/engine/adoptBottle'
+import {
+  buildFallbackGameSettings,
+  createFallbackBottle,
+  getBottleDir,
+  isBottleProvisioned,
+  killBottleWineServerWith,
+  removeCreatedBottleDir,
+  sanitizeBottleName
+} from 'backend/engine/bottlePrimitives'
 import {
   resolveCrossoverBinDir,
   resolveCrossoverBinDirAsync
@@ -111,18 +118,6 @@ export async function isCrossoverInstalled(): Promise<boolean> {
     (await resolveCrossoverBinDirAsync({
       hintWineBins: persistedWineBins()
     })) !== undefined
-  )
-}
-
-/**
- * Directory of a named CrossOver bottle.
- * `<userHome>/Library/Application Support/CrossOver/Bottles/<bottleName>`
- */
-export function getBottleDir(bottleName: string): string {
-  return join(
-    userHome,
-    'Library/Application Support/CrossOver/Bottles',
-    bottleName
   )
 }
 
@@ -206,46 +201,14 @@ export function getBottleSteamExePath(bottleName: string): string {
 }
 
 /**
- * T-17-01 mitigation chokepoint: every bottle-name -> path/argv site must
- * pass the name through this guard first. Mirrors buildSteamProtocolUrl's
- * numeric-guard precedent (T-03-01). Rejects any name containing a path
- * separator, a parent-directory traversal sequence, a NUL byte, or an
- * empty/whitespace-only name. Returns the trimmed name when clean.
+ * isBottleProvisioned() for the Steam bottle: the stored bottle name, falling back to
+ * DEFAULT_STEAM_BOTTLE_NAME (the no-argument default that used to live in isBottleProvisioned).
  */
-export function sanitizeBottleName(name: string | null): string | null {
-  if (typeof name !== 'string') return null
-  const trimmed = name.trim()
-  if (!trimmed) return null
-  if (
-    trimmed.includes('/') ||
-    trimmed.includes('\\') ||
-    trimmed.includes('..') ||
-    trimmed.includes('\0')
-  ) {
-    return null
-  }
-  return trimmed
-}
-
-/**
- * Reuses the launcher.ts:828-836 cxbottle.conf existence predicate (the
- * existing CrossOver bottle-exists gate) as the provisioned-state signal.
- * `bottleName` defaults to the stored bottle name, falling back to
- * DEFAULT_STEAM_BOTTLE_NAME.
- *
- * NOTE: this retains its narrow, original meaning — "the bottle directory
- * has been created" — NOT "the bottle is ready to use". A bottle can have
- * cxbottle.conf on disk while the bottled Steam.exe install never completed
- * (half-provisioned, e.g. the SteamSetup.exe download failed). Used by
- * provisionBottle() to decide whether `cxbottle --create` needs to run again
- * (re-entrancy check). For the REAL completion signal, use isBottleReady().
- */
-export function isBottleProvisioned(bottleName?: string): boolean {
-  const name =
-    bottleName ??
+export function isSteamBottleProvisioned(): boolean {
+  return isBottleProvisioned(
     steamBottleConfigStore.get_nodefault('bottleName') ??
-    DEFAULT_STEAM_BOTTLE_NAME
-  return existsSync(join(getBottleDir(name), 'cxbottle.conf'))
+      DEFAULT_STEAM_BOTTLE_NAME
+  )
 }
 
 /**
@@ -719,60 +682,6 @@ async function killBottleWineServer(
     logWarning(
       [
         `killBottleWineServer: wineserver -k for bottle "${bottleName}" failed (best-effort — provisioning continues)`,
-        error
-      ],
-      LogPrefix.Steam
-    )
-    return false
-  }
-}
-
-/**
- * Phase 59: `wineserver -k` with an explicit (non-CrossOver) wineserver.
- * Same scope fence as killBottleWineServer (T-17-DoS): WINEPREFIX is always
- * the per-game bottle (spread last so extraEnv cannot override it), the name
- * must survive sanitizeBottleName and sit directly under the Bottles root.
- * Real-profile arm: the env inherits process.env (HOME) because the prefix is
- * explicit and wine needs nothing GameLib-private from HOME. Never throws.
- */
-export async function killBottleWineServerWith(
-  bottleName: string,
-  wineserverBin: string,
-  extraEnv: Record<string, string>,
-  timeoutMs: number
-): Promise<boolean> {
-  const bottlesRoot = resolve(dirname(getBottleDir(DEFAULT_BRIDGE_BOTTLE_NAME)))
-  if (
-    sanitizeBottleName(bottleName) !== bottleName ||
-    relative(bottlesRoot, resolve(getBottleDir(bottleName))) !== bottleName
-  ) {
-    logWarning(
-      `killBottleWineServerWith: refusing unsafe bottle "${bottleName}"`,
-      LogPrefix.Steam
-    )
-    return false
-  }
-  try {
-    const result = await spawnAsync(wineserverBin, ['-k'], {
-      env: {
-        ...process.env,
-        ...extraEnv,
-        WINEPREFIX: getBottleDir(bottleName)
-      },
-      timeout: timeoutMs
-    })
-    if (result?.code === null) {
-      logWarning(
-        `killBottleWineServerWith: wineserver -k for bottle "${bottleName}" was killed by its timeout`,
-        LogPrefix.Steam
-      )
-      return false
-    }
-    return true
-  } catch (error) {
-    logWarning(
-      [
-        `killBottleWineServerWith: wineserver -k for bottle "${bottleName}" failed`,
         error
       ],
       LogPrefix.Steam
@@ -1702,54 +1611,6 @@ function drmRunnerBinDir(appId: string): string | undefined {
   return entry ? join(entry.runner.cxRoot, 'bin') : undefined
 }
 
-const FALLBACK_STRIPPED_ENV_KEYS = new Set([
-  'USER',
-  'WINEPREFIX',
-  'CX_BOTTLE',
-  'CX_ROOT',
-  'WINELOADER',
-  'WINESERVER',
-  'WINEDEBUG',
-  'MVK_CONFIG_LOG_LEVEL'
-])
-
-/**
- * Phase 59 (D-01): GameSettings that run a bottle on a non-CrossOver engine
- * (pinned fallback or Wine Manager override). Takes a bottle name, not an
- * appId, so bottle creation (59-06) can use it too. DXVK is managed by the
- * engine switch, never by the generic auto-install.
- */
-export function buildFallbackGameSettings(
-  bottleName: string,
-  engine: NonCrossoverEngine
-): GameSettings {
-  const globalSettings = GlobalConfig.get().getSettings()
-  const kept = (globalSettings.enviromentOptions ?? []).filter(
-    (e) => !FALLBACK_STRIPPED_ENV_KEYS.has(String(e.key).toUpperCase())
-  )
-  return {
-    ...globalSettings,
-    wineCrossoverBottle: bottleName,
-    winePrefix: getBottleDir(bottleName),
-    wineVersion: {
-      type: 'wine',
-      bin: engine.wineBin,
-      name: engine.label,
-      wineserver: engine.wineserverBin
-    },
-    autoInstallDxvk: false,
-    autoInstallDxvkNvapi: false,
-    autoInstallVkd3d: false,
-    enviromentOptions: [
-      ...kept,
-      // Wine-Staging takes its profile name from USER; USER keeps C:\users\crossover.
-      { key: 'USER', value: 'crossover' },
-      { key: 'WINEDEBUG', value: '-all' },
-      { key: 'MVK_CONFIG_LOG_LEVEL', value: '0' }
-    ]
-  }
-}
-
 function fallbackBridgeBottleSettings(
   appId: string,
   sel: NonCrossoverSelection
@@ -2232,32 +2093,6 @@ export async function endPerGameBridgeBottleSession(
  * provisioning, per-game provisioning on install) must say which bottle it
  * means.
  */
-/**
- * Phase 59 removes a bottle dir only when this call created it, and only as a single safe
- * segment directly under the Bottles root (T-59-25).
- */
-function removeCreatedBottleDir(bottleName: string): void {
-  const bottlesRoot = resolve(dirname(getBottleDir(DEFAULT_BRIDGE_BOTTLE_NAME)))
-  const dir = resolve(getBottleDir(bottleName))
-  if (
-    sanitizeBottleName(bottleName) !== bottleName ||
-    relative(bottlesRoot, dir) !== bottleName
-  ) {
-    logWarning(
-      `provisionBridgeBottle: not removing partial bottle outside the Bottles root: ${dir}`,
-      LogPrefix.Steam
-    )
-    return
-  }
-  try {
-    rmSync(dir, { recursive: true, force: true })
-  } catch (error) {
-    logWarning(
-      ['provisionBridgeBottle: could not remove partial bottle', error],
-      LogPrefix.Steam
-    )
-  }
-}
 
 /**
  * Discard a bottle the caller created in this install (see ProvisionBottleResult.createdHere),
@@ -2270,119 +2105,6 @@ export function discardNewBridgeBottle(bottleName: string): void {
     LogPrefix.Steam
   )
   removeCreatedBottleDir(bottleName)
-}
-
-/**
- * Phase 59 (D-01/D-02/D-03): create the bridge bottle with the fallback engine, in CrossOver's own
- * Bottles directory, so the Windows profile is C:\users\crossover from the start. The
- * cxbottle.conf is written LAST so isBridgeBottleReady stays false until the bottle is complete.
- *
- * Real-profile arm (fakeHomeIsolation): the env inherits process.env because the engine runs
- * against the user's own bottle with an explicit WINEPREFIX; none of the HOME/config variables
- * are assigned here.
- */
-async function createFallbackBridgeBottle(
-  bottleName: string,
-  engine: NonCrossoverEngine,
-  signal?: AbortSignal
-): Promise<ProvisionBottleResult> {
-  const dir = getBottleDir(bottleName)
-  const createdHere = !existsSync(dir)
-  const env = {
-    ...process.env,
-    WINEPREFIX: dir,
-    USER: 'crossover',
-    // Only Gecko stays off. mscoree must stay enabled so wineboot registers the engine's bundled
-    // Wine Mono (offline); without it DXSETUP's Managed DirectX step fails with exit 247 (59-32 H1).
-    WINEDLLOVERRIDES: 'mshtml=',
-    WINEDEBUG: '-all',
-    MVK_CONFIG_LOG_LEVEL: '0'
-  }
-  const fail = async (error: string): Promise<ProvisionBottleResult> => {
-    logError(`provisionBridgeBottle: ${error}`, LogPrefix.Steam)
-    await killBottleWineServerWith(
-      bottleName,
-      engine.wineserverBin,
-      { USER: 'crossover' },
-      15_000
-    )
-    if (createdHere) removeCreatedBottleDir(bottleName)
-    return { status: 'error', error }
-  }
-  const aborted = async (): Promise<ProvisionBottleResult> => {
-    logInfo(
-      `provisionBridgeBottle: bottle creation cancelled for "${bottleName}"`,
-      LogPrefix.Steam
-    )
-    await killBottleWineServerWith(
-      bottleName,
-      engine.wineserverBin,
-      { USER: 'crossover' },
-      15_000
-    )
-    if (createdHere) removeCreatedBottleDir(bottleName)
-    return {
-      status: 'error',
-      errorCode: PROVISION_ABORTED,
-      error: 'bottle creation cancelled'
-    }
-  }
-  try {
-    mkdirSync(dirname(dir), { recursive: true })
-    const boot = await spawnAsync(engine.wineBin, ['wineboot', '-i'], {
-      env,
-      timeout: 180_000,
-      signal
-    })
-    if (signal?.aborted) return await aborted()
-    if (boot?.code !== 0) {
-      // log-secret-gate-exempt: stderr of wineboot, not an auth command
-      return await fail(
-        `wineboot -i failed for bottle "${bottleName}" (code=${boot?.code}): ${boot?.stderr ?? ''}`
-      )
-    }
-    // system.reg is flushed only once the wineserver exits.
-    const wait = await spawnAsync(engine.wineserverBin, ['-w'], {
-      env,
-      timeout: 60_000,
-      signal
-    })
-    if (signal?.aborted) return await aborted()
-    if (wait?.code === null) {
-      return await fail(`wineserver -w timed out for bottle "${bottleName}"`)
-    }
-    if (engine.dxvk) {
-      const { DXVK } = await import('backend/tools')
-      const ok = await DXVK.installRemove(
-        buildFallbackGameSettings(bottleName, engine),
-        'dxvk',
-        'backup',
-        engine.dxvk
-      )
-      if (signal?.aborted) return await aborted()
-      if (!ok || !existsSync(join(dir, 'current_dxvk-macOS'))) {
-        return await fail(`DXVK install failed for bottle "${bottleName}"`)
-      }
-    }
-    // D-03: last, so the bottle only counts as ready once everything above succeeded.
-    if (!writeCxbottleConf(dir)) {
-      return await fail(`cxbottle.conf not written for bottle "${bottleName}"`)
-    }
-  } catch (error) {
-    if (signal?.aborted) return await aborted()
-    return await fail(`fallback bottle creation threw: ${String(error)}`)
-  }
-  await killBottleWineServerWith(
-    bottleName,
-    engine.wineserverBin,
-    { USER: 'crossover' },
-    15_000
-  )
-  logInfo(
-    `provisionBridgeBottle: bridge bottle "${bottleName}" created by ${engine.label}`,
-    LogPrefix.Steam
-  )
-  return { status: 'done', createdHere }
 }
 
 export async function provisionBridgeBottle(opts: {
@@ -2437,11 +2159,7 @@ export async function provisionBridgeBottle(opts: {
 
   // Phase 59: an explicit fallback engine creates the bottle itself.
   if (opts.fallbackEngine) {
-    return createFallbackBridgeBottle(
-      bottleName,
-      opts.fallbackEngine,
-      opts.signal
-    )
+    return createFallbackBottle(bottleName, opts.fallbackEngine, opts.signal)
   }
 
   // (3b) quick 261024-cjq: CrossOver precondition, after the ready

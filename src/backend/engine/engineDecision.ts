@@ -143,8 +143,7 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
     probe: probeDemoStatus,
     readBuild: (binDir) => readCrossoverBuild(binDir),
     async killCrossoverWineserver(bottleName, binDir) {
-      const { killBottleWineServerWith } =
-        await import('backend/storeManagers/steam/bottle')
+      const { killBottleWineServerWith } = await import('./bottlePrimitives')
       await killBottleWineServerWith(
         bottleName,
         join(binDir, 'wineserver'),

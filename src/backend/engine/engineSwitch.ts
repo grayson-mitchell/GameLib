@@ -16,13 +16,15 @@ import type { GameSettings } from 'common/types'
 import { DXVK } from 'backend/tools'
 import {
   bridgeBottleNameFor,
+  getBridgeBottleSettings,
+  persistedWineBins
+} from 'backend/storeManagers/steam/bottle'
+import {
   buildFallbackGameSettings,
   getBottleDir,
-  getBridgeBottleSettings,
   killBottleWineServerWith,
-  persistedWineBins,
   sanitizeBottleName
-} from 'backend/storeManagers/steam/bottle'
+} from './bottlePrimitives'
 import { getBottleProcessMonitorPhase } from 'backend/storeManagers/steam/bottleProcessMonitor'
 import { resolveCrossoverBinDirAsync } from 'backend/storeManagers/steam/crossoverLocation'
 import { ENGINE_PINS, pinById } from './enginePins'

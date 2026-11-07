@@ -47,7 +47,7 @@ import {
   getBottleSteamappsDir,
   getSteamBottleSettings,
   getBridgeBottleSettings,
-  isBottleProvisioned,
+  isSteamBottleProvisioned,
   listReadyBridgeBottleNames,
   resolveBridgeBottleName,
   removePerGameBridgeBottle,
@@ -1334,7 +1334,9 @@ export default class SteamLibraryManager implements LibraryManager {
       // Steam client has never read their GameLib-written manifest).
       const installedMap = withoutSteamRestartHolds(await buildInstalledMap())
       const bottleInstalledMap =
-        isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
+        isMac && isSteamBottleProvisioned()
+          ? await buildBottleInstalledMap()
+          : null
       // D-UAT-24-07: consult every ready bridge bottle too (quick/261016-u1w
       // D-C), so a bridge-installed game (24-12's install poll flips
       // is_installed:true on install) stays installed across this periodic
@@ -1671,7 +1673,9 @@ export default class SteamLibraryManager implements LibraryManager {
     // installed — see withoutSteamRestartHolds().
     const installedMap = withoutSteamRestartHolds(await buildInstalledMap())
     const bottleInstalledMap =
-      isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
+      isMac && isSteamBottleProvisioned()
+        ? await buildBottleInstalledMap()
+        : null
     // D-UAT-24-07 (quick/261016-u1w D-C): same bridge-map consult as
     // refresh(), so a focus/post-launch reconciliation does not clobber a
     // bridge-installed game's badge back to false either. Gated on ANY

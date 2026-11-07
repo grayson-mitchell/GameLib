@@ -28,7 +28,10 @@ import { chmodSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 
 import { logError, logWarning, LogPrefix } from 'backend/logger'
-import { getBottleDir, sanitizeBottleName } from '../bottle'
+import {
+  getBottleDir,
+  sanitizeBottleName
+} from 'backend/engine/bottlePrimitives'
 import { NUMERIC_APP_ID } from '../gameConstants'
 
 // Pattern repeated verbatim across bottle.ts:836, clientSetup.ts:40,

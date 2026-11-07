@@ -86,11 +86,11 @@ import {
   builtBridgeShimPath
 } from 'backend/constants/paths'
 import type { SteamBridgeScanVerdict } from '../stores'
+import { resolveBridgeBottleName } from '../bottle'
 import {
   getBottleDir,
-  resolveBridgeBottleName,
   sanitizeBottleName
-} from '../bottle'
+} from 'backend/engine/bottlePrimitives'
 import { scanSteamApiImports } from './importScan'
 import { runtimeLoadedSteamApiMarker } from './importParse'
 import { detectSteamDrmInPe } from './peScan'

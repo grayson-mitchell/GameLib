@@ -60,9 +60,9 @@ import {
   CROSSOVER_CREATE_TIMEOUT,
   CROSSOVER_CREATE_FAILED,
   PROVISION_ABORTED,
-  discardNewBridgeBottle,
-  buildFallbackGameSettings
+  discardNewBridgeBottle
 } from './bottle'
+import { buildFallbackGameSettings } from 'backend/engine/bottlePrimitives'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
 import { noteSteamAuthTrigger } from './authTrigger'

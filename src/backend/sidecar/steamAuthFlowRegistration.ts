@@ -143,7 +143,7 @@ import {
 } from '../storeManagers/steam/stores'
 import {
   provisionBottle,
-  isBottleProvisioned
+  isSteamBottleProvisioned
 } from '../storeManagers/steam/bottle'
 import {
   startGuidedClientInstall,
@@ -281,7 +281,7 @@ export function registerSteamAuthFlows(): void {
   )
 
   ipcMain.handle('isSteamBottleProvisioned', async () => {
-    return isBottleProvisioned()
+    return isSteamBottleProvisioned()
   })
 
   // Source: main.ts:948-953 — the ONE genuinely inline body among the 15

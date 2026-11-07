@@ -70,11 +70,8 @@ import type { GameSettings } from 'common/types'
 import { readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import {
-  bridgeBottleNameFor,
-  endPerGameBridgeBottleSession,
-  getBottleDir
-} from '../bottle'
+import { bridgeBottleNameFor, endPerGameBridgeBottleSession } from '../bottle'
+import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { steamSupportPath } from '../constants'
 import {
   buildHasRunKeyAddParts,

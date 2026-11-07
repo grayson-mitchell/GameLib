@@ -17,11 +17,11 @@ import { notify } from 'backend/dialog/dialog'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { sendFrontendMessage } from '../../ipc'
 import {
-  getBottleDir,
   isBridgeBottleReady,
   getBridgeBottleSettings,
   getDrmBridgeRunner
 } from './bottle'
+import { getBottleDir } from 'backend/engine/bottlePrimitives'
 // Phase 60: Steam overlay in bridged games (macOS).
 import {
   appendCxEnvTokens,
