@@ -296,7 +296,11 @@ describe('dependency-cruiser boundary rules (seeded violations)', () => {
   })
 
   test('games-split-modules-are-leaves covers the phase 65 module names (runtime import fires)', () => {
-    for (const mod of ['gameInstallBridge', 'bridgeInstallState']) {
+    for (const mod of [
+      'gameInstallBridge',
+      'bridgeInstallState',
+      'gameBridgeLaunchGate'
+    ]) {
       withSeededRoot(
         {
           [`${SM}/steam/games.ts`]: `export default class SteamGame {}\n`,
