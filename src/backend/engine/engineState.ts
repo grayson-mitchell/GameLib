@@ -9,7 +9,7 @@
  * Sidecar exit contract: no timers, nothing runs at import.
  */
 import { logError, LogPrefix } from 'backend/logger'
-import type { SteamEngineState } from 'common/types/steam'
+import type { EngineState } from 'common/types/engine'
 import {
   preflightCrossover,
   resolveCrossoverBinDirForEngine
@@ -52,12 +52,12 @@ const preflightCache = new Map<
 const lastCrossoverInstalled = new Map<string, boolean>()
 let launchNoticeSeq = 0
 /** Phase 60 G4: last state pushed per appId, the base for publishOverlayNotice. */
-const lastPublished = new Map<string, SteamEngineState>()
+const lastPublished = new Map<string, EngineState>()
 const inflight = new Map<string, Promise<CrossoverPreflight>>()
-let publisher: (state: SteamEngineState) => void = () => {}
+let publisher: (state: EngineState) => void = () => {}
 
 export function setEngineStatePublisher(
-  fn: (state: SteamEngineState) => void
+  fn: (state: EngineState) => void
 ): void {
   publisher = fn
 }
@@ -188,11 +188,11 @@ function compute(
   store: EngineNoticeStore,
   overrideEligible: boolean,
   overlayEligible: boolean,
-  launchNotice: SteamEngineState['launchNotice']
-): SteamEngineState {
-  let engine: SteamEngineState['engine'] = null
-  let reason: SteamEngineState['reason'] = null
-  let overrideWarning: SteamEngineState['overrideWarning'] = null
+  launchNotice: EngineState['launchNotice']
+): EngineState {
+  let engine: EngineState['engine'] = null
+  let reason: EngineState['reason'] = null
+  let overrideWarning: EngineState['overrideWarning'] = null
   if (isUnsupportedOverride(override)) {
     engine = 'unsupported'
     reason = 'override'
@@ -224,7 +224,8 @@ function compute(
     preflight && preflight.kind !== 'missing' ? preflight.build : null
   const noteDismissed = store.get(NO_CROSSOVER_KEY, false) === true
   return {
-    appId,
+    runner: 'steam', // Phase 61 plan 09: moved to the Steam adapter in 61-10
+    appName: appId,
     engine,
     reason,
     engineLabel,
@@ -253,7 +254,7 @@ function labelFor(appId: string): string | null {
 export async function getSteamEngineState(
   appId: unknown,
   deps?: Partial<EngineStateDeps>
-): Promise<SteamEngineState | null> {
+): Promise<EngineState | null> {
   if (typeof appId !== 'string' || !/^\d+$/.test(appId)) return null
   const d = stateDeps(deps)
   if (!d.isMac) return null
@@ -352,7 +353,7 @@ export function recordLaunchDecision(
       : (lastCrossoverInstalled.get(appId) ?? true)
     lastCrossoverInstalled.set(appId, installed)
     const sel = decision.selection
-    const launchNotice: SteamEngineState['launchNotice'] =
+    const launchNotice: EngineState['launchNotice'] =
       isNonCrossover(sel) &&
       decision.override === 'automatic' &&
       sel.reason !== 'override'
@@ -397,7 +398,7 @@ export function publishOverlayNotice(
   const base = lastPublished.get(appId)
   if (!base) return false
   try {
-    const state: SteamEngineState = {
+    const state: EngineState = {
       ...base,
       overlayNotice: { step, seq: ++launchNoticeSeq }
     }
@@ -422,7 +423,7 @@ export function publishOverlayExitNotice(appId: string): boolean {
   const base = lastPublished.get(appId)
   if (!base) return false
   try {
-    const state: SteamEngineState = {
+    const state: EngineState = {
       ...base,
       exitNotice: { seq: ++launchNoticeSeq }
     }

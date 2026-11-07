@@ -1,4 +1,5 @@
 import type { WineInstallation } from '../../types'
+import type { EngineState, EngineOption } from '../engine'
 import type {
   RedeemKeyResult,
   SteamBottleConfig,
@@ -8,8 +9,6 @@ import type {
   BridgeListFriendsResult,
   BridgeInviteResult,
   SteamBridgeRouteVerdict,
-  SteamEngineState,
-  SteamEngineOption,
   SteamUserData
 } from '../steam'
 
@@ -76,8 +75,8 @@ export interface SteamAuthAsync {
     windowsBuildChosen?: boolean
   ) => Promise<SteamBridgeRouteVerdict>
   // Phase 59 (D-04/D-06/D-13/D-14/D-15)
-  getSteamEngineState: (appId: string) => Promise<SteamEngineState | null>
-  listSteamEngineOptions: () => Promise<SteamEngineOption[]>
+  getSteamEngineState: (appId: string) => Promise<EngineState | null>
+  listSteamEngineOptions: () => Promise<EngineOption[]>
   dismissSteamEngineNotice: (
     args:
       | { kind: 'no-crossover' }

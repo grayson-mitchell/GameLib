@@ -14,7 +14,7 @@ import { accessSync, constants as fsConstants, existsSync } from 'fs'
 import { dirname, isAbsolute, join, relative } from 'path'
 import { toolsPath } from 'backend/constants/paths'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import type { SteamEngineOption } from 'common/types/steam'
+import type { EngineOption } from 'common/types/engine'
 import { readStoredGameConfig } from './engineConfig'
 import { appNameOf } from './gameKey'
 import { otherGamesRunning } from './bottleLedger'
@@ -558,9 +558,9 @@ export async function decideCreationEngine(
 
 export async function listEngineOverrideOptions(
   deps?: Partial<EngineDecisionDeps>
-): Promise<SteamEngineOption[]> {
+): Promise<EngineOption[]> {
   const d = withDefaults(deps)
-  const out: SteamEngineOption[] = [
+  const out: EngineOption[] = [
     {
       id: 'automatic',
       kind: 'automatic',

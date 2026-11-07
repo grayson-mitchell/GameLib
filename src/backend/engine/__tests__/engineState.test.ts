@@ -13,10 +13,10 @@ import {
 import type { EngineStateDeps } from '../engineState'
 import type { CrossoverPreflight, LaunchDecision } from '../engineDecision'
 import type { OverlayStep } from 'backend/storeManagers/steam/bridge/overlay/overlayNotice'
-import type { SteamEngineState } from 'common/types/steam'
+import type { EngineState } from 'common/types/engine'
 
 // G4: the common/ literal union and backend OverlayStep stay assignable both ways.
-type OverlayNoticeStep = NonNullable<SteamEngineState['overlayNotice']>['step']
+type OverlayNoticeStep = NonNullable<EngineState['overlayNotice']>['step']
 const _a: (s: OverlayStep) => OverlayNoticeStep = (s) => s
 const _b: (s: OverlayNoticeStep) => OverlayStep = (s) => s
 void _a
@@ -129,7 +129,8 @@ describe('getSteamEngineState', () => {
       isBridgeBottleReady: () => ready
     })
     expect(await getSteamEngineState('1', deps)).toEqual({
-      appId: '1',
+      runner: 'steam',
+      appName: '1',
       engine: null,
       reason: null,
       engineLabel: null,
