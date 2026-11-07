@@ -151,7 +151,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 62: Module boundaries and decomposition** — 23 plans (21 + 2 gap closure); complete (completed 2026-11-07)
 - [x] **Phase 63: Rust migration pattern and executable scanners** — 14 plans; planned (completed 2026-11-07)
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
-- [ ] **Phase 65: Steam store manager decomposition, continued** — 19 plans; planned, not started (Phase 61 closed 2026-11-07 — unblocked, D-11)
+- [ ] **Phase 65: Steam store manager decomposition, continued** — 20 plans (1 executed); Phase 61 closed 2026-11-07 — unblocked, D-11
 - [ ] **Phase 66: Backend dependency injection replacing module-level singletons** — 0 plans; not started
 - [ ] **Phase 67: Schema validation at the sidecar IPC boundary** — 0 plans; not started
 - [ ] **Phase 68: Versioned persisted stores and migrations** — 0 plans; not started
@@ -476,18 +476,19 @@ Plans:
 - [ ] 65-05-PLAN.md — library: uninstallPolling, runningPoll
 - [ ] 65-06-PLAN.md — library: D-07 refresh lift, git mv to library/index.ts, back-edge rule
 - [ ] 65-07-PLAN.md — bottle: bottledSteam, provisionBottle (flat siblings)
-- [ ] 65-08-PLAN.md — bottle: bridgeBottle, bridgeBottleLifecycle; bottle.ts off the allowlist
-- [ ] 65-09-PLAN.md — battery + D-14 live smoke run 1 (checkpoint)
-- [ ] 65-10-PLAN.md — gameInstall: bridgeInstallState, gameInstallDepot, gameInstallBridge
-- [ ] 65-11-PLAN.md — user.ts D-15: userTypes, userSignInState + userSignIn, userRedeem
-- [ ] 65-12-PLAN.md — games.ts: bridgeRouteVerdict, gameMetadata lift, eligibility + uninstall stubs; games.ts < 1,000
-- [ ] 65-13-PLAN.md — gameBridgeLaunch: gameBridgeWineLaunch; end-of-step-4 battery
-- [ ] 65-14-PLAN.md — helperProcess: helperRegistry (state owner), helperSpawn
-- [ ] 65-15-PLAN.md — shimGenerate: shimOriginals, shimDrmWrapper, shimPlacement
-- [ ] 65-16-PLAN.md — runnerClone: runnerCrossover, runnerEntitlements, runnerVerify
-- [ ] 65-17-PLAN.md — stageDrmBottle (D-09): stageDrmTypes, drmRegistry, drmRestore, bottleProcesses; allowlist {}
-- [ ] 65-18-PLAN.md — remove install + launch lift stubs with cycle-breaking leaves; close lift-stub todo
-- [ ] 65-19-PLAN.md — done-line proof, full battery + D-14 live smoke run 2 (checkpoint)
+- [ ] 65-08-PLAN.md — bottle: resolveCrossoverWine relocation, bridgeBottle
+- [ ] 65-09-PLAN.md — bottle: bridgeBottleLifecycle; bottle.ts off the allowlist; bottle closeout
+- [ ] 65-10-PLAN.md — battery + D-14 live smoke run 1 (checkpoint)
+- [ ] 65-11-PLAN.md — gameInstall: bridgeInstallState, gameInstallDepot, gameInstallBridge (D-17, D-19)
+- [ ] 65-12-PLAN.md — user.ts D-15: userTypes, userSignInState + userSignIn, userRedeem
+- [ ] 65-13-PLAN.md — games.ts: bridgeRouteVerdict, gameMetadata lift, eligibility + uninstall stubs (D-18); games.ts < 1,000
+- [ ] 65-14-PLAN.md — gameBridgeLaunch: gameBridgeWineLaunch; end-of-step-4 battery
+- [ ] 65-15-PLAN.md — helperProcess: helperRegistry (state owner), helperSpawn
+- [ ] 65-16-PLAN.md — shimGenerate: shimOriginals, shimDrmWrapper, shimPlacement
+- [ ] 65-17-PLAN.md — runnerClone: runnerCrossover, runnerEntitlements, runnerVerify
+- [ ] 65-18-PLAN.md — stageDrmBottle (D-09): stageDrmTypes, drmRegistry, drmRestore, bottleProcesses; allowlist {}
+- [ ] 65-19-PLAN.md — remove remaining install + launch lift stubs (D-18, D-19 fallback); close lift-stub todo
+- [ ] 65-20-PLAN.md — done-line proof, full battery + D-14 live smoke run 2 (checkpoint)
 
 ### Phase 66: Backend dependency injection replacing module-level singletons
 

@@ -144,6 +144,24 @@ Phase 66.
   the `Game` interface and stay as thin methods. Only the 16 non-interface stubs and their 15
   internal call sites are removed.
 
+### Added after plan check (2026-11-07)
+- **D-17: D-03 clarification for `games.test.ts`.** Describe blocks that test extracted
+  functions *through* `SteamGame` stay in `games.test.ts`, and only their `jest.mock` and spy
+  targets are repointed to the owning module. Tests that call a moved free function directly
+  still move with it (D-03 as written).
+- **D-18: A named D-12 deviation.** 65-12 removes the eligibility (×4) and uninstall (×1)
+  stub clusters in step 4 so `games.ts` has headroom below 1,000. If `games.ts` is still at or
+  above 1,000 after that, 65-12 may also pull the install-cluster conversion forward. Step 6
+  (65-18) then removes only the stubs that remain, and records any reduced scope.
+- **D-19: Fallback for a cycle that a pure move can't break.** If a stub removal or a split
+  would create an import cycle (`gameLaunch`↔`gameBridgeLaunch`, `gameInstall`↔
+  `gameInstallBridge`) that can't be broken by a pure move into a shared leaf, that one
+  stub stays on `SteamGame` with a comment naming it as a cycle-breaker, and a todo is filed.
+  The todo carries `severity:`/`platform:`/`ready:` frontmatter. The cycle census never rises.
+  No stop-and-ask is needed, so these plans stay autonomous.
+- *Numbering note (revision 2026-11-07):* D-18's "65-12" and "65-18" are pre-revision plan
+  numbers. After 65-08 was split in two, they are **65-13** (games.ts) and **65-19** (step 6).
+
 ### Carried forward from Phase 62 (still binding)
 - No façade and no re-exports from the old path. Every importer and `jest.mock` targets the
   owning module (62 D-05).

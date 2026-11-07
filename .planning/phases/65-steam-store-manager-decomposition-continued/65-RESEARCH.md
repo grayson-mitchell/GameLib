@@ -621,16 +621,23 @@ jest.spyOn(installPolling, 'startInstallPolling')
 | A5  | The 3 steam-suite baseline failures and 5 adjacent-suite failures are pre-existing and unrelated (run on current `main` working tree, which has uncommitted changes in `.planning/spikes`)   | Validation     | A "new" failure may be misattributed. Re-run baseline on the clean commit before wave 1.                            |
 | A6  | `user.ts` sign-in methods are called only from `sidecar/steamAuthFlowRegistration.ts` and tests (AST/grep for `SteamUser.<method>`; dynamic property access not checked)                     | user.ts        | An unseen caller would need repointing.                                                                             |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`user.ts`: how far do we go, and may public static methods become free functions?**
    - Known: it is one static class with shared private state; sign-in flows (~390 lines) and `redeemKey` (~136) have a single non-test caller each. A no-stub extraction leaves ~870 lines.
    - Unclear: user may prefer keeping `SteamUser.startQRLogin` etc. as the public API (delegating statics, ~40 lines, still under the ceiling at ~910).
    - Recommendation: free functions, single-importer repoint, no stubs (consistent with D-07's stance). Confirm during planning because it changes ~5 test files' calls.
+   - RESOLVED: D-15 (free functions, no delegating statics; executed in 65-12).
 2. **D-10 exception for `activePolls`.** The Map has to live in a leaf for acyclicity while the timer is created/unref'd in `installPolling.ts`. Confirm this is acceptable (the exit-contract text remains satisfied: unref is adjacent to the `setInterval`).
+   - RESOLVED: D-16 (documented D-10 exception for `library/pollState.ts`; 65-02).
 3. **Lift-stub todo premise.** 9 stubs are interface methods; 15 (not ~30) call sites. Confirm the todo is closed on "16 internal stubs removed; interface methods stay".
+   - RESOLVED: corrected lift-stub scope in CONTEXT (16 non-interface stubs removed, 9 `Game` interface methods stay thin; 65-13 and 65-19).
 4. **Order of games.ts.** Stub removal (D-12 step 6) alone leaves games.ts at ~1,022; either pull one stub cluster into step 4 or add the `getBridgeRouteVerdict` + `fetchMetadataIfNeeded` cuts (this research recommends the latter plus a pulled-forward stub cluster).
+   - RESOLVED: 65-13 plus D-18 (eligibility + uninstall stubs pulled forward; install-cluster fallback if still >= 1,000).
 5. **`bottle/` directory vs flat siblings** (five pieces). Either works; flat avoids a rename of the file with the highest test fan-out.
+   - RESOLVED: flat siblings (65-07/65-08/65-09).
+
+- D-03 question (Assumption A2, `games.test.ts` describes under splits): RESOLVED: D-17 (describes that test through `SteamGame` stay; only mocks/spies repointed; direct free-function tests move).
 
 ## Validation Architecture
 
