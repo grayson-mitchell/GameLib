@@ -7,6 +7,7 @@ import { dialogAsyncArgs } from './dialog'
 import { humbleLoginAsyncArgs, humbleLoginSyncArgs } from './humbleLogin'
 import { installAsyncArgs } from './install'
 import { oauthLoginAsyncArgs } from './oauthLogin'
+import { storeEmbedAsyncArgs, storeEmbedSyncArgs } from './storeEmbed'
 import { runnerAuthAsyncArgs, runnerAuthSyncArgs } from './runnerAuth'
 import { wineToolsAsyncArgs, wineToolsFrontendMessagesArgs } from './wineTools'
 import { defineChannelEntries, type ChannelEntry } from './schemaTypes'
@@ -41,5 +42,7 @@ export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
     defineChannelEntries('invoke', runnerAuthAsyncArgs),
     defineChannelEntries('invoke', oauthLoginAsyncArgs),
     defineChannelEntries('send', humbleLoginSyncArgs),
-    defineChannelEntries('invoke', humbleLoginAsyncArgs)
+    defineChannelEntries('invoke', humbleLoginAsyncArgs),
+    defineChannelEntries('send', storeEmbedSyncArgs),
+    defineChannelEntries('invoke', storeEmbedAsyncArgs)
   )
