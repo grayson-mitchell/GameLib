@@ -43,6 +43,7 @@ import {
   substituteExpressions,
   writeStubExecutable
 } from './helpers/workflowSteps'
+import { defined } from './helpers/defined'
 
 const WORKFLOW_PATH = join(
   __dirname,
@@ -97,6 +98,11 @@ function parseWorkflow(): ParsedWorkflow {
   return loadYaml(loadWorkflow()) as ParsedWorkflow
 }
 
+/** A named job of a parsed workflow; throws if the workflow has no such job. */
+function jobOf(parsed: ParsedWorkflow, name: string) {
+  return defined(parsed.jobs[name], `job ${name}`)
+}
+
 /** Extracts the raw `build:` job's YAML block as text, for job-scoped negative assertions. */
 function extractBuildJobBlock(): string {
   const stripped = loadStrippedWorkflow()
@@ -109,11 +115,11 @@ function extractBuildJobBlock(): string {
   )
   expect(buildIndex).toBeGreaterThanOrEqual(0)
 
-  const buildIndent =
-    lines[buildIndex].length - lines[buildIndex].trimStart().length
+  const buildLine = defined(lines[buildIndex], 'build job line')
+  const buildIndent = buildLine.length - buildLine.trimStart().length
   let endIndex = lines.length
   for (let index = buildIndex + 1; index < lines.length; index += 1) {
-    const line = lines[index]
+    const line = defined(lines[index], 'workflow line')
     if (line.trim() === '') {
       continue
     }
@@ -183,12 +189,12 @@ describe('build-runners-onedir-macos.yml jobs shape', () => {
 
   test('build declares needs: prepare-release (the race guard, T-34.9-17)', () => {
     const parsed = parseWorkflow()
-    expect(parsed.jobs.build.needs).toBe('prepare-release')
+    expect(jobOf(parsed, 'build').needs).toBe('prepare-release')
   })
 
   test('prepare-release runs on ubuntu-latest', () => {
     const parsed = parseWorkflow()
-    expect(parsed.jobs['prepare-release']['runs-on']).toBe('ubuntu-latest')
+    expect(jobOf(parsed, 'prepare-release')['runs-on']).toBe('ubuntu-latest')
   })
 })
 
@@ -201,7 +207,7 @@ describe('build-runners-onedir-macos.yml matrix (parsed via YAML, not regex)', (
   // green even if a macos-13/x64 leg were reintroduced alongside it.
   test('declares exactly one leg: {os: macos-14, arch: arm64}', () => {
     const parsed = parseWorkflow()
-    const include = parsed.jobs.build.strategy?.matrix?.include
+    const include = jobOf(parsed, 'build').strategy?.matrix?.include
     expect(include).toBeDefined()
     expect(include).toHaveLength(1)
     expect(include).toEqual([{ os: 'macos-14', arch: 'arm64' }])
@@ -209,7 +215,7 @@ describe('build-runners-onedir-macos.yml matrix (parsed via YAML, not regex)', (
 
   test('build runs on ${{ matrix.os }}', () => {
     const parsed = parseWorkflow()
-    expect(parsed.jobs.build['runs-on']).toBe('${{ matrix.os }}')
+    expect(jobOf(parsed, 'build')['runs-on']).toBe('${{ matrix.os }}')
   })
 })
 
@@ -269,7 +275,7 @@ describe('build-runners-onedir-macos.yml prepare-release publish step', () => {
   // and the no-checkout premise without GH_REPO is the bug itself.
   test('the publish step passes GH_REPO, because prepare-release deliberately has no checkout for gh to infer the repo from', () => {
     const parsed = parseWorkflow()
-    const steps = parsed.jobs['prepare-release'].steps as NonNullable<
+    const steps = jobOf(parsed, 'prepare-release').steps as NonNullable<
       (typeof parsed.jobs)['prepare-release']['steps']
     >
 
@@ -352,7 +358,7 @@ describe('build-runners-onedir-macos.yml upload step', () => {
 // archives), so it must not be labelled as verification.
 describe('build-runners-onedir-macos.yml SHA256SUMS self-check step', () => {
   function buildSteps() {
-    return parseWorkflow().jobs.build.steps ?? []
+    return jobOf(parseWorkflow(), 'build').steps ?? []
   }
 
   test('the shasum -c check runs before the upload step', () => {
@@ -499,10 +505,12 @@ describe('build-runners-onedir-macos.yml build-script guard step', () => {
 
   test("prepare-release's FIRST step is the build-script guard (position, not mere presence -- a guard placed after gh release create would create the rolling release before refusing)", () => {
     const parsed = parseWorkflow()
-    const steps = parsed.jobs['prepare-release'].steps
+    const steps = jobOf(parsed, 'prepare-release').steps
     expect(steps).toBeDefined()
     expect((steps as NonNullable<typeof steps>).length).toBeGreaterThan(0)
-    expect((steps as NonNullable<typeof steps>)[0].name).toBe(GUARD_STEP_NAME)
+    expect(
+      defined((steps as NonNullable<typeof steps>)[0], 'first step').name
+    ).toBe(GUARD_STEP_NAME)
   })
 
   test('passes a dispatch on main when the commit carries both the script file and the package.json script', () => {
@@ -548,7 +556,7 @@ describe('build-runners-onedir-macos.yml build-script guard step', () => {
 
   test('reads the token, repo, ref and commit through env:, not by direct interpolation into the shell body', () => {
     const parsed = parseWorkflow()
-    const steps = parsed.jobs['prepare-release'].steps as NonNullable<
+    const steps = jobOf(parsed, 'prepare-release').steps as NonNullable<
       ParsedWorkflow['jobs'][string]['steps']
     >
     const guardStep = steps.find((step) => step.name === GUARD_STEP_NAME)

@@ -29,6 +29,7 @@ import {
 import { installedGamesStore } from '../storeManagers/gog/stores'
 import { isAllowedStoreField } from 'common/types/storePolicy'
 import type { StoreChangedPayload } from 'common/types/sidecarTransport'
+import { defined } from './helpers/defined'
 
 jest.mock('backend/store_backend')
 
@@ -134,7 +135,7 @@ describe('backend/storeChangeNotifier.ts', () => {
         store: 'gog_library',
         key: '__timestamp.games'
       })
-      expect(pushed[1].value).toBeTruthy()
+      expect(defined(pushed[1], 'second push').value).toBeTruthy()
     })
 
     test('delete announces both keys as deleted', () => {

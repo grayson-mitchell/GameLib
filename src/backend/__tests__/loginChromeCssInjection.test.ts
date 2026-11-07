@@ -20,6 +20,7 @@ import {
   stripTrailingLineComment
 } from '../testUtils/stripSourceComments'
 import { HUMBLE_LOGIN_CHROME_CSS } from 'common/humble/loginChromeCss'
+import { defined } from './helpers/defined'
 
 /** Identical two-stage stripping to `tauriShellSource.test.ts`'s own `loadMainRsCode`. */
 function loadMainRsCode(source?: string): string {
@@ -146,7 +147,8 @@ describe('D-2 gate: the login_chrome_css_script( call site is provably OUTSIDE a
     // Drop the call's own (partial) line, then take the nearest non-empty line above it.
     const lines = prefix.split('\n').slice(0, -1)
     for (let i = lines.length - 1; i >= 0; i--) {
-      if (lines[i].trim() !== '') return lines[i]
+      const line = defined(lines[i], 'prefix line')
+      if (line.trim() !== '') return line
     }
     return ''
   }
@@ -201,7 +203,7 @@ describe('D-2 gate: the login_chrome_css_script( call site is provably OUTSIDE a
 describe('DRIFT PIN (T-di1-06): the Rust literal and the TypeScript constant are byte-identical', () => {
   function extractCssLiteral(fnBody: string): string | null {
     const match = fnBody.match(/style\.textContent = '([^']*)';/)
-    return match ? match[1] : null
+    return match ? defined(match[1], 'css literal') : null
   }
 
   test('the real login_chrome_css_script fn body embeds exactly HUMBLE_LOGIN_CHROME_CSS', () => {

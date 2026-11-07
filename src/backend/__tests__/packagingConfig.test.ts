@@ -12,6 +12,7 @@
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { defined } from './helpers/defined'
 
 const TAURI_CONF_PATH = join(
   __dirname,
@@ -296,7 +297,7 @@ describe('R-34.5-G1-PKG half (a): bundle.resources targets a path publicDir can 
     )
     expect(localeKeys.length).toBe(1)
     expect(localeKeys[0]).not.toContain('*')
-    expect(localeKeys[0].endsWith('/')).toBe(true)
+    expect(defined(localeKeys[0], 'first locale key').endsWith('/')).toBe(true)
   })
 })
 

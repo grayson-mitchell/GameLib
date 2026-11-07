@@ -15,8 +15,8 @@ ready: code
 `noUncheckedIndexedAccess` is adopted for all of `src/backend/storeManagers/steam/`, tests included
 (non-test in quick 261107-9lq, tests in quick 261108-d5p) and for all of `src/backend/storeManagers/gog/`, tests included (quick
 261108-cut) and for all of `src/backend/storeManagers/legendary/`, tests included (quick
-261108-d1z) and for all of `src/backend/humble/`, tests included (quick 261108-d3t) and for all of `src/backend/engine/`, tests included (quick 261108-ekv). The ratchet `meta/indexedAccessRatchet.cjs` holds every other bucket at an equality
-ceiling. Remaining sites (1682 in all), largest first, as committed in
+261108-d1z) and for all of `src/backend/humble/`, tests included (quick 261108-d3t) and for all of `src/backend/engine/`, tests included (quick 261108-ekv) and for all of `src/backend/__tests__/` (quick 261108-et2). The ratchet `meta/indexedAccessRatchet.cjs` holds every other bucket at an equality
+ceiling. Remaining sites (1557 in all), largest first, as committed in
 `meta/indexedAccessBaseline.json`:
 
 - `src/frontend/screens`: 351
@@ -24,7 +24,6 @@ ceiling. Remaining sites (1682 in all), largest first, as committed in
 - `src/frontend/components`: 218
 - `src/backend/sidecar`: 165
 - `src/frontend/helpers`: 130
-- `src/backend/__tests__`: 125
 - `src/backend/tools`: 120
 - `src/backend/shortcuts`: 52
 - `src/frontend/state`: 30

@@ -25,6 +25,7 @@ import {
 } from '../utils/aborthandler/aborthandler'
 import { parseKnownFixReport } from 'common/knownFixReport'
 import { logInfo } from '../logger'
+import { defined } from './helpers/defined'
 
 // D-09: the real default deps read the setting through GlobalConfig; drive it.
 let mockSettings: Record<string, unknown> = {}
@@ -246,8 +247,10 @@ describe('sent', () => {
   it('posts exactly the allowed body', async () => {
     const { deps, calls } = makeDeps()
     await runKnownFixReport(addCeg, deps)
-    expect(calls[0].url).toBe('http://relay.test/v1/reports')
-    expect(calls[0].body).toEqual({
+    expect(defined(calls[0], 'first post').url).toBe(
+      'http://relay.test/v1/reports'
+    )
+    expect(defined(calls[0], 'first post').body).toEqual({
       v: 1,
       store: 'steam',
       appId: '220',
@@ -256,8 +259,12 @@ describe('sent', () => {
       op: 'add',
       gamelibVersion: '0.8.0'
     })
-    expect(Object.keys(calls[0].body as object)).not.toContain('title')
-    expect(parseKnownFixReport(calls[0].body).ok).toBe(true)
+    expect(
+      Object.keys(defined(calls[0], 'first post').body as object)
+    ).not.toContain('title')
+    expect(parseKnownFixReport(defined(calls[0], 'first post').body).ok).toBe(
+      true
+    )
   })
 
   it('malformed persisted values count as not sent', async () => {

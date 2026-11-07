@@ -17,6 +17,7 @@
 import { spawnSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { defined } from './defined'
 
 /**
  * Drops lines whose first non-whitespace character is `#`, so a workflow's own
@@ -58,10 +59,11 @@ export function extractRunBlock(workflow: string, stepName: string): string {
     throw new Error(`step "${stepName}" has no multi-line run: | block`)
   }
 
-  const runIndent = lines[runIndex].length - lines[runIndex].trimStart().length
+  const runLine = defined(lines[runIndex], 'run line')
+  const runIndent = runLine.length - runLine.trimStart().length
   const body: string[] = []
   for (let index = runIndex + 1; index < lines.length; index += 1) {
-    const line = lines[index]
+    const line = defined(lines[index], 'workflow line')
     if (line.trim() === '') {
       body.push('')
       continue
@@ -167,14 +169,15 @@ export function readGithubEnv(filePath: string): Record<string, string> {
   const result: Record<string, string> = {}
   let index = 0
   while (index < lines.length) {
-    const line = lines[index]
+    const line = defined(lines[index], 'workflow line')
     if (line === '') {
       index += 1
       continue
     }
     const heredocMatch = line.match(/^([A-Za-z_][A-Za-z0-9_]*)<<(.+)$/)
     if (heredocMatch) {
-      const [, name, delimiter] = heredocMatch
+      const name = defined(heredocMatch[1], 'heredoc name')
+      const delimiter = defined(heredocMatch[2], 'heredoc delimiter')
       const body: string[] = []
       index += 1
       let terminated = false
@@ -184,7 +187,7 @@ export function readGithubEnv(filePath: string): Record<string, string> {
           index += 1
           break
         }
-        body.push(lines[index])
+        body.push(defined(lines[index], 'heredoc line'))
         index += 1
       }
       if (!terminated) {
@@ -197,7 +200,8 @@ export function readGithubEnv(filePath: string): Record<string, string> {
     }
     const plainMatch = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/)
     if (plainMatch) {
-      const [, name, value] = plainMatch
+      const name = defined(plainMatch[1], 'variable name')
+      const value = defined(plainMatch[2], 'variable value')
       result[name] = value
     }
     index += 1

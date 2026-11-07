@@ -42,6 +42,7 @@ jest.mock('../logger', () => ({
 
 import { readKnownFixes, readKnownFixesWithLayer } from '../knownFixes'
 import { bundledFixesPath, fixesPath, localFixesPath } from '../constants/paths'
+import { defined } from './helpers/defined'
 
 function put(dir: string, app: string) {
   mkdirSync(dir, { recursive: true })
@@ -82,7 +83,7 @@ describe('readKnownFixesWithLayer (D-12)', () => {
       const res = readKnownFixesWithLayer('77', 'steam')
       expect(res?.layer).toBe(layer)
       expect(res?.fix).toEqual(readKnownFixes('77', 'steam'))
-      rmSync(dirs[i], { recursive: true, force: true })
+      rmSync(defined(dirs[i], 'layer dir'), { recursive: true, force: true })
     })
     expect(readKnownFixesWithLayer('77', 'steam')).toBeNull()
   })

@@ -60,6 +60,7 @@ import {
   wineRegistryValueIsSet,
   type ValidRegistryFix
 } from '../knownFixesRegistry'
+import { defined } from './helpers/defined'
 
 const CTX = { label: 'gog 123', logPrefix: 'Backend' } as never
 const KEY = 'HKCU\\Software\\Foo'
@@ -524,7 +525,7 @@ describe('dllOverridesToRegistryFixes', () => {
         [{ exe: 'a.exe', dlls: { x: mode } }],
         CTX
       )
-      expect(out[0].value).toBe(mode)
+      expect(defined(out[0], 'first registry fix').value).toBe(mode)
     }
   )
 

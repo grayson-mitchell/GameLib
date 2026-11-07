@@ -262,6 +262,7 @@ import type {
   GameMetadataInner
 } from 'common/types/legendary'
 import type LegendaryGame from '../storeManagers/legendary/games'
+import { defined } from './helpers/defined'
 
 // Two obviously distinct, greppable sentinels -- see the sentinel-distinctness guard below.
 const OLD_SENTINEL = '/rvv/OLD-stale-save-path'
@@ -429,7 +430,9 @@ describe(
 
         // (c) stub-was-called assertion, AFTER the call.
         expect(runRunnerCommandSpy).toHaveBeenCalledTimes(1)
-        expect(runRunnerCommandSpy.mock.calls[0][0]).toMatchObject({
+        expect(
+          defined(runRunnerCommandSpy.mock.calls[0], 'first runner call')[0]
+        ).toMatchObject({
           subcommand: 'sync-saves',
           '--accept-path': true
         })
@@ -438,7 +441,9 @@ describe(
         const onDisk = JSON.parse(
           readFileSync(installedJsonPath, 'utf-8')
         ) as Record<string, InstalledJsonFixtureEntry>
-        expect(onDisk[APP_NAME].save_path).toBe(NEW_SENTINEL)
+        expect(defined(onDisk[APP_NAME], 'installed entry').save_path).toBe(
+          NEW_SENTINEL
+        )
 
         // THE ASSERTION UNDER TEST. Without the fix this is `''` (the `if (!new_save_path)`
         // logError branch fires because the unrefreshed map still holds `null`).
@@ -466,7 +471,9 @@ describe(
 
         // (c) stub-was-called assertion, AFTER the call.
         expect(runRunnerCommandSpy).toHaveBeenCalledTimes(1)
-        expect(runRunnerCommandSpy.mock.calls[0][0]).toMatchObject({
+        expect(
+          defined(runRunnerCommandSpy.mock.calls[0], 'first runner call')[0]
+        ).toMatchObject({
           subcommand: 'sync-saves',
           '--accept-path': true
         })
@@ -475,7 +482,9 @@ describe(
         const onDisk = JSON.parse(
           readFileSync(installedJsonPath, 'utf-8')
         ) as Record<string, InstalledJsonFixtureEntry>
-        expect(onDisk[APP_NAME].save_path).toBe(NEW_SENTINEL)
+        expect(defined(onDisk[APP_NAME], 'installed entry').save_path).toBe(
+          NEW_SENTINEL
+        )
 
         // THE ASSERTION UNDER TEST. Without the fix this is `OLD_SENTINEL` (a present-but-wrong
         // value slips past the `if (!new_save_path)` guard).

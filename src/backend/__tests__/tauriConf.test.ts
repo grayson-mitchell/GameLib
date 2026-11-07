@@ -29,6 +29,7 @@ import {
   substituteExpressions,
   writeStubExecutable
 } from './helpers/workflowSteps'
+import { defined } from './helpers/defined'
 
 const TAURI_CONF_PATH = join(
   __dirname,
@@ -227,7 +228,7 @@ describe('tauri.conf.json content security policy (quick task 261008-gf1)', () =
   }
 
   function sources(directive: string): string[] {
-    const value = loadCsp()[directive]
+    const value = defined(loadCsp()[directive], `CSP directive ${directive}`)
     expect(typeof value).toBe('string')
     return value.split(/\s+/).filter(Boolean)
   }
@@ -409,7 +410,7 @@ describe('updater feed reachability given the release flags (CR-03 / GAP-3 regre
     const updater = plugins.updater as Record<string, unknown>
     const endpoints = updater.endpoints as string[]
 
-    const match = endpoints[0].match(
+    const match = defined(endpoints[0], 'first updater endpoint').match(
       /^https:\/\/github\.com\/grayson-mitchell\/GameLib\/releases\/download\/([^/]+)\/latest\.json$/
     )
     expect(match).not.toBeNull()

@@ -85,6 +85,7 @@ import {
   steamShimFeatureCfgLines,
   validateRegistryFixes
 } from '../storeManagers/steam/bridgeKnownFixes'
+import { defined } from './helpers/defined'
 
 const APP_ID = '480'
 const ROOT =
@@ -206,7 +207,10 @@ describe('applySteamBridgeKnownFixes', () => {
       expect(call[4].winePrefix).toBe('/mock/Bottles/GameLibSteamBridge-480')
     }
     expect(mockSendGameStatusUpdate.mock.invocationCallOrder[0]).toBeLessThan(
-      mockWinetricksInstall.mock.invocationCallOrder[0]
+      defined(
+        mockWinetricksInstall.mock.invocationCallOrder[0],
+        'winetricks call order'
+      )
     )
     expect(mockLogWarning).toHaveBeenCalledWith(
       expect.stringContaining('-q'),
@@ -613,7 +617,7 @@ describe('validateRegistryFixes', () => {
     (_n, entry) => {
       const out = validateRegistryFixes(APP_ID, [entry, ok])
       expect(out).toHaveLength(1)
-      expect(out[0].key).toBe(ok.key)
+      expect(defined(out[0], 'first registry fix').key).toBe(ok.key)
       expect(mockLogWarning).toHaveBeenCalledTimes(1)
     }
   )
@@ -625,7 +629,7 @@ describe('validateRegistryFixes', () => {
 
   it('dedupes and orders views', () => {
     const out = validateRegistryFixes(APP_ID, [{ ...ok, views: [64, 32, 64] }])
-    expect(out[0].views).toEqual([32, 64])
+    expect(defined(out[0], 'first registry fix').views).toEqual([32, 64])
   })
 
   it('stringifies REG_DWORD data and defaults to both views', () => {
@@ -662,8 +666,10 @@ describe('bundled 284100 profile', () => {
     )
     const out = validateRegistryFixes('284100', parsed.registry)
     expect(out).toHaveLength(1)
-    expect(out[0].views).toEqual([32, 64])
-    expect(out[0].key).toContain('22d6f312-b0f6-11d0-94ab-0080c74c7e95')
+    expect(defined(out[0], 'first registry fix').views).toEqual([32, 64])
+    expect(defined(out[0], 'first registry fix').key).toContain(
+      '22d6f312-b0f6-11d0-94ab-0080c74c7e95'
+    )
     expect(parsed.evidence).toContain(
       '2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need'
     )

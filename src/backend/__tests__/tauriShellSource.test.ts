@@ -28,6 +28,7 @@ import {
   stripSourceComments,
   stripTrailingLineComment
 } from '../testUtils/stripSourceComments'
+import { defined } from './helpers/defined'
 
 const CAPABILITIES_PATH = join(
   __dirname,
@@ -1134,7 +1135,12 @@ describe('D-35-29-01 (quick q93) the census arm falls back to the label-independ
     // by the negative self-tests below), while tolerating further OR'd terms and the
     // operand order rustfmt or a later widening might choose.
     const guardCondition = noWs.match(/existing_window\.is_none\(\)&&([^{]*)\{/)
-    if (!guardCondition?.[1].includes('epic_cookie_domain_matches(domain)')) {
+    if (
+      !guardCondition ||
+      !defined(guardCondition[1], 'guard condition').includes(
+        'epic_cookie_domain_matches(domain)'
+      )
+    ) {
       violations.push(
         'the Epic fallback guard (existing_window.is_none() && epic_cookie_domain_matches(domain)) is missing'
       )
@@ -2763,7 +2769,7 @@ describe('Phase 35 plan 07 main.rs OS deep-link registration (D-07/D-05)', () =>
     const callIdx = lines.findIndex((line) => line.includes('register_all()'))
     if (callIdx === -1) return null
     for (let i = callIdx; i >= 0; i--) {
-      const trimmed = lines[i].trim()
+      const trimmed = defined(lines[i], 'source line').trim()
       if (trimmed.startsWith('#[cfg(')) return trimmed
     }
     return null
@@ -2884,7 +2890,7 @@ describe('quick-260925-uok Windows gamelib:// HKCU self-heal on launch', () => {
     const callIdx = lines.findIndex((line) => line.includes(token))
     if (callIdx === -1) return null
     for (let i = callIdx; i >= 0; i--) {
-      const trimmed = lines[i].trim()
+      const trimmed = defined(lines[i], 'source line').trim()
       if (trimmed.startsWith('#[cfg(')) return trimmed
     }
     return null

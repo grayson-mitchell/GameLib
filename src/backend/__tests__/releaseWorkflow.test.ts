@@ -31,6 +31,7 @@ import {
   stripHashComments,
   substituteExpressions
 } from './helpers/workflowSteps'
+import { defined } from './helpers/defined'
 
 const RELEASE_WORKFLOW_PATH = join(
   __dirname,
@@ -63,7 +64,7 @@ function extractRunBlock(stepName: string): string {
 /** Substitutes this workflow's `${{ matrix.* }}` expressions (shared helper). */
 function substituteMatrixExpressions(
   script: string,
-  values: Record<string, string>
+  values: { platform: string; args: string }
 ): string {
   return substituteExpressions(script, {
     'matrix.platform': values.platform,
@@ -776,7 +777,9 @@ describeOnPosix(
     /** Reads back the `args<<DELIM` heredoc GitHub's $GITHUB_OUTPUT protocol uses. */
     function readArgsOutput(outputPath: string): string {
       const lines = readFileSync(outputPath, 'utf-8').split('\n')
-      const header = lines[0].match(/^args<<(.+)$/)
+      const header = defined(lines[0], 'first output line').match(
+        /^args<<(.+)$/
+      )
       expect(header).not.toBeNull()
       const delimiter = (header as RegExpMatchArray)[1]
       const body: string[] = []
@@ -784,7 +787,7 @@ describeOnPosix(
         if (lines[index] === delimiter) {
           return body.join('\n')
         }
-        body.push(lines[index])
+        body.push(defined(lines[index], 'output line'))
       }
       throw new Error(`unterminated args heredoc (delimiter ${delimiter})`)
     }
@@ -908,7 +911,10 @@ describeOnPosix(
       // as a sibling `evil=pwned` output key.
       expect(result.args).toContain('evil=pwned')
       expect(result.rawOutput.split('\n')[0]).toMatch(/^args<</)
-      const delimiter = result.rawOutput.split('\n')[0].replace('args<<', '')
+      const delimiter = defined(
+        result.rawOutput.split('\n')[0],
+        'first output line'
+      ).replace('args<<', '')
       const trailing = result.rawOutput.split(`\n${delimiter}\n`)[1] ?? ''
       expect(trailing.trim()).toBe('')
     })
@@ -1168,7 +1174,7 @@ interface ReleaseMatrixLeg {
 
 function parseReleaseSteps(): ParsedReleaseStep[] {
   const parsed = loadYaml(loadReleaseWorkflow()) as ParsedReleaseWorkflow
-  return parsed.jobs.release.steps
+  return releaseJobOf(parsed).steps
 }
 
 /**
@@ -1179,6 +1185,11 @@ function parseReleaseSteps(): ParsedReleaseStep[] {
  */
 function parseReleaseWorkflow(): ParsedReleaseWorkflow {
   return loadYaml(loadReleaseWorkflow()) as ParsedReleaseWorkflow
+}
+
+/** The `jobs.release` job of a parsed workflow; throws if the workflow has no such job. */
+function releaseJobOf(parsed: ParsedReleaseWorkflow) {
+  return defined(parsed.jobs.release, 'jobs.release')
 }
 
 /**
@@ -1206,7 +1217,7 @@ function evaluateGithubExpression(
   ctx: Record<string, string | boolean>
 ): string | boolean {
   const wrapped = expr.trim().match(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/)
-  const body = wrapped ? wrapped[1] : expr.trim()
+  const body = wrapped ? defined(wrapped[1], 'expression body') : expr.trim()
 
   const isFalsy = (v: string | boolean): boolean => v === false || v === ''
   const isTruthy = (v: string | boolean): boolean => !isFalsy(v)
@@ -1234,20 +1245,23 @@ function evaluateGithubExpression(
     const s = raw.trim()
 
     const literal = s.match(/^'([^']*)'$/)
-    if (literal) return literal[1]
+    if (literal) return defined(literal[1], 'string literal')
 
     const comparison = s.match(/^([\w.]+)\s*(==|!=)\s*'([^']*)'$/)
     if (comparison) {
-      const [, lookup, op, lit] = comparison
+      const lookup = defined(comparison[1], 'comparison lookup')
+      const op = defined(comparison[2], 'comparison operator')
+      const lit = defined(comparison[3], 'comparison literal')
       const actual = Object.prototype.hasOwnProperty.call(ctx, lookup)
-        ? ctx[lookup]
+        ? defined(ctx[lookup], 'context value')
         : ''
       const actualStr = typeof actual === 'boolean' ? String(actual) : actual
       const equal = actualStr === lit
       return op === '==' ? equal : !equal
     }
 
-    if (Object.prototype.hasOwnProperty.call(ctx, s)) return ctx[s]
+    if (Object.prototype.hasOwnProperty.call(ctx, s))
+      return defined(ctx[s], 'context value')
     return ''
   }
 
@@ -1338,7 +1352,7 @@ describe('release-tauri.yml signs the macOS helper tree before bundling (260917-
 
   test('GAP-A: no env: map anywhere in the job defines a key beginning APPLE_', () => {
     const parsed = loadYaml(loadReleaseWorkflow()) as ParsedReleaseWorkflow
-    const job = parsed.jobs.release
+    const job = releaseJobOf(parsed)
 
     const offenders: string[] = []
     for (const key of Object.keys(job.env ?? {})) {
@@ -1368,7 +1382,7 @@ describe('release-tauri.yml signs the macOS helper tree before bundling (260917-
     // workflow, so the negative half above is about a live shape, not a
     // hypothetical one.
     const parsed = loadYaml(loadReleaseWorkflow()) as ParsedReleaseWorkflow
-    const allEnvKeys = parsed.jobs.release.steps.flatMap((s) =>
+    const allEnvKeys = releaseJobOf(parsed).steps.flatMap((s) =>
       Object.keys(s.env ?? {})
     )
     expect(allEnvKeys).toContain('IN_APPLE_CERTIFICATE')
@@ -1548,7 +1562,7 @@ describe('release-tauri.yml dry-run dispatch mode (260924-rbx)', () => {
   describe('SINGLE SOURCE, GATED ON THE EVENT: jobs.release.env.GAMELIB_DRY_RUN', () => {
     test('is a string expression gated on github.event_name, not a second computation site, and never uses the string-valued github.event.inputs spelling (TRAP 2)', () => {
       const parsed = parseReleaseWorkflow()
-      const dryRunExpr = parsed.jobs.release.env?.GAMELIB_DRY_RUN
+      const dryRunExpr = releaseJobOf(parsed).env?.GAMELIB_DRY_RUN
 
       expect(typeof dryRunExpr).toBe('string')
       expect(dryRunExpr as string).toContain(
@@ -1559,7 +1573,7 @@ describe('release-tauri.yml dry-run dispatch mode (260924-rbx)', () => {
 
     test('resolves truthy on a workflow_dispatch run with dry_run true', () => {
       const parsed = parseReleaseWorkflow()
-      const dryRunExpr = parsed.jobs.release.env?.GAMELIB_DRY_RUN as string
+      const dryRunExpr = releaseJobOf(parsed).env?.GAMELIB_DRY_RUN as string
 
       const resolved = evaluateGithubExpression(dryRunExpr, {
         'github.event_name': 'workflow_dispatch',
@@ -1570,7 +1584,7 @@ describe('release-tauri.yml dry-run dispatch mode (260924-rbx)', () => {
 
     test('resolves falsy on a workflow_dispatch run with dry_run false', () => {
       const parsed = parseReleaseWorkflow()
-      const dryRunExpr = parsed.jobs.release.env?.GAMELIB_DRY_RUN as string
+      const dryRunExpr = releaseJobOf(parsed).env?.GAMELIB_DRY_RUN as string
 
       const resolved = evaluateGithubExpression(dryRunExpr, {
         'github.event_name': 'workflow_dispatch',
@@ -1581,7 +1595,7 @@ describe('release-tauri.yml dry-run dispatch mode (260924-rbx)', () => {
 
     test('FAILING DIRECTION: a push event resolves falsy even when inputs.dry_run resolves true -- a push can never enter dry-run', () => {
       const parsed = parseReleaseWorkflow()
-      const dryRunExpr = parsed.jobs.release.env?.GAMELIB_DRY_RUN as string
+      const dryRunExpr = releaseJobOf(parsed).env?.GAMELIB_DRY_RUN as string
 
       const resolved = evaluateGithubExpression(dryRunExpr, {
         'github.event_name': 'push',
@@ -1718,12 +1732,12 @@ const JAMMY_CENSUSED_APT_PACKAGES = [
 describe('release-tauri.yml Linux build base (glibc floor -- quick 260929-vyi / 38-W05)', () => {
   function linuxLeg(): ReleaseMatrixLeg {
     const include =
-      parseReleaseWorkflow().jobs.release.strategy?.matrix?.include ?? []
+      releaseJobOf(parseReleaseWorkflow()).strategy?.matrix?.include ?? []
     const legs = include.filter(
       (leg) => leg.sidecar_triple === LINUX_SIDECAR_TRIPLE
     )
     expect(legs).toHaveLength(1)
-    return legs[0]
+    return defined(legs[0], 'Linux matrix leg')
   }
 
   function aptStep(): ParsedReleaseStep {
@@ -1731,14 +1745,14 @@ describe('release-tauri.yml Linux build base (glibc floor -- quick 260929-vyi / 
       (s) => s.name === 'Install Ubuntu system dependencies'
     )
     expect(steps).toHaveLength(1)
-    return steps[0]
+    return defined(steps[0], 'apt step')
   }
 
   test('exactly one matrix leg targets Linux and it builds on ubuntu-22.04 (glibc 2.35 floor)', () => {
     expect(linuxLeg().platform).toBe(LINUX_BUILD_BASE)
 
     const include =
-      parseReleaseWorkflow().jobs.release.strategy?.matrix?.include ?? []
+      releaseJobOf(parseReleaseWorkflow()).strategy?.matrix?.include ?? []
     const ubuntuLegs = include.filter((leg) =>
       (leg.platform ?? '').startsWith('ubuntu-')
     )

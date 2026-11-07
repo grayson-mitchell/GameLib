@@ -42,6 +42,7 @@ import {
   OverlayArchiveFetch
 } from '../knownFixOverlayInstall'
 import { hasAbortController } from '../utils/aborthandler/aborthandler'
+import { defined } from './helpers/defined'
 
 const sha = (b: Buffer) => createHash('sha256').update(b).digest('hex')
 const ctx = { label: 'test', logPrefix: LogPrefix.Backend }
@@ -98,9 +99,15 @@ describe('ensureOverlayInstalled', () => {
     })
     expect(dir).toBe(join(root, entry.id))
     expect(fetchArchive).toHaveBeenCalledTimes(1)
-    expect(fetchArchive.mock.calls[0][0]).toBe(overlayArchiveUrl(entry))
-    expect(fetchArchive.mock.calls[0][1].maxBytes).toBe(entry.archiveSize)
-    expect(readFileSync(join(dir!, payload[0].path))).toEqual(payload[0].data)
+    expect(defined(fetchArchive.mock.calls[0], 'first fetch call')[0]).toBe(
+      overlayArchiveUrl(entry)
+    )
+    expect(
+      defined(fetchArchive.mock.calls[0], 'first fetch call')[1].maxBytes
+    ).toBe(entry.archiveSize)
+    expect(
+      readFileSync(join(dir!, defined(payload[0], 'first payload').path))
+    ).toEqual(defined(payload[0], 'first payload').data)
     expect(leftovers()).toEqual([])
     await ensureOverlayInstalled(entry, ctx, {
       overlaysRoot: root,

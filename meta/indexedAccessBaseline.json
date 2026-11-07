@@ -1,6 +1,5 @@
 {
   "meta": 342,
-  "src/backend/__tests__": 125,
   "src/backend/appshell": 1,
   "src/backend/downloadmanager": 8,
   "src/backend/knownFixOverlayArchive.ts": 2,

@@ -74,6 +74,7 @@ import {
   createGameLogWriter,
   logInfo
 } from 'backend/logger'
+import { defined } from './helpers/defined'
 
 class FakeStream extends EventEmitter {
   setEncoding() {
@@ -223,9 +224,9 @@ describe('in-flight dedup never swallows a caller that observes output (49-REVIE
 
     await flush()
     expect(children).toHaveLength(2)
-    children[1].stdout.emit('data', '[]\n')
-    children[0].emit('close', 0, null)
-    children[1].emit('close', 0, null)
+    defined(children[1], 'second child').stdout.emit('data', '[]\n')
+    defined(children[0], 'first child').emit('close', 0, null)
+    defined(children[1], 'second child').emit('close', 0, null)
     await Promise.all([first, probe])
     expect(seen).toEqual(['[]\n'])
   })
@@ -242,7 +243,7 @@ describe('in-flight dedup never swallows a caller that observes output (49-REVIE
     const b = callRunner(commandParts, runner, { abortId: 'b' })
     await flush()
     expect(children).toHaveLength(1)
-    children[0].emit('close', 0, null)
+    defined(children[0], 'first child').emit('close', 0, null)
     const [ra, rb] = await Promise.all([a, b])
     expect(ra).toBe(rb)
   })
@@ -262,8 +263,8 @@ describe('in-flight dedup never swallows a caller that observes output (49-REVIE
     const plain = callRunner(commandParts, runner, { abortId: 'plain-second' })
     await flush()
     expect(children).toHaveLength(2)
-    children[0].emit('close', 0, null)
-    children[1].emit('close', 0, null)
+    defined(children[0], 'first child').emit('close', 0, null)
+    defined(children[1], 'second child').emit('close', 0, null)
     await Promise.all([probe, plain])
   })
 })
@@ -419,7 +420,7 @@ describe('credential redaction census gate (34.5-61, F-34.5-G6-22/F-34.5-G6-24)'
       /for \(const sensitiveArg of \[([\s\S]*?)\]\)/
     )
     if (!listMatch) return []
-    return listMatch[1]
+    return defined(listMatch[1], 'redaction list')
       .split(',')
       .map((entry) => entry.trim())
       .filter(Boolean)

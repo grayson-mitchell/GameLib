@@ -21,6 +21,7 @@ import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { stripSourceComments } from '../testUtils/stripSourceComments'
+import { defined } from './helpers/defined'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..')
 const SIDECAR_RPC_PATH = join(
@@ -175,7 +176,7 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
   if (!match) {
     throw new Error('UNBOUNDED_RUST_CHANNELS array not found in sidecarRpc.ts')
   }
-  const members = match[1]
+  const members = defined(match[1], 'array members')
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean)

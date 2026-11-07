@@ -10,6 +10,7 @@
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { defined } from './helpers/defined'
 
 const CARGO_TOML_PATH = join(
   __dirname,
@@ -50,7 +51,7 @@ function extractTauriFeatures(source: string): string[] {
       'No `features = [...]` list found on the tauri dependency line'
     )
   }
-  return featuresMatch[1]
+  return defined(featuresMatch[1], 'features list')
     .split(',')
     .map((entry) => entry.trim().replace(/^"|"$/g, ''))
     .filter((entry) => entry.length > 0)
@@ -122,7 +123,7 @@ function extractObjc2AppKitFeatures(source: string): string[] {
       'No `features = [...]` list found on the objc2-app-kit dependency line'
     )
   }
-  return featuresMatch[1]
+  return defined(featuresMatch[1], 'features list')
     .split(',')
     .map((entry) => entry.trim().replace(/^"|"$/g, ''))
     .filter((entry) => entry.length > 0)
@@ -178,7 +179,9 @@ function loadCargoLock(): string {
 /** Unique, sorted crate names from every `[[package]]` entry in Cargo.lock. */
 function extractLockfileCrateNames(source: string): string[] {
   const matches = source.match(/^name = "([^"]+)"$/gm) ?? []
-  const names = matches.map((line) => line.match(/^name = "([^"]+)"$/)![1])
+  const names = matches.map((line) =>
+    defined(line.match(/^name = "([^"]+)"$/)?.[1], 'crate name')
+  )
   return Array.from(new Set(names)).sort()
 }
 

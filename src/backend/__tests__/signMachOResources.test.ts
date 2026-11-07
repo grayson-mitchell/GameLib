@@ -59,6 +59,7 @@ import {
 } from '../../../meta/signMachOResources'
 
 import { createFakeHomeProfile } from '../testUtils/fakeHomeProfile'
+import { defined } from './helpers/defined'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..')
 
@@ -306,7 +307,10 @@ describe('codesignArgs -- the argv shape, built once and used by both paths', ()
     expect(keys[0]).toBe('steam-bridge-helper')
 
     const resolved = resolveEntitlementsPath(
-      HELPER_ENTITLEMENTS['steam-bridge-helper'],
+      defined(
+        HELPER_ENTITLEMENTS['steam-bridge-helper'],
+        'helper entitlements path'
+      ),
       REPO_ROOT
     )
     expect(existsSync(resolved)).toBe(true)
@@ -335,7 +339,10 @@ describe('codesignArgs -- the argv shape, built once and used by both paths', ()
     // a binary that dies on launch. Two parsers, two answers; this covers the
     // stricter one.
     const resolved = resolveEntitlementsPath(
-      HELPER_ENTITLEMENTS['steam-bridge-helper'],
+      defined(
+        HELPER_ENTITLEMENTS['steam-bridge-helper'],
+        'helper entitlements path'
+      ),
       REPO_ROOT
     )
     const comments = readFileSync(resolved, 'utf-8').match(/<!--[\s\S]*?-->/g)
@@ -385,8 +392,12 @@ describe('preflightEntitlements -- resolves every mapped path before any codesig
       REPO_ROOT
     )
 
-    expect(resolved['steam-bridge-helper'].startsWith('/')).toBe(true)
-    expect(existsSync(resolved['steam-bridge-helper'])).toBe(true)
+    const helperPath = defined(
+      resolved['steam-bridge-helper'],
+      'resolved helper path'
+    )
+    expect(helperPath.startsWith('/')).toBe(true)
+    expect(existsSync(helperPath)).toBe(true)
   })
 
   test('throws for a map containing a path that does not exist', () => {
@@ -416,12 +427,14 @@ describe('signMachOResources -- driver behaviour, captured from a dry run', () =
     )
     expect(entitledCommands).toHaveLength(1)
 
-    const entitledArgs = entitledCommands[0]
-    expect(basename(entitledArgs[entitledArgs.length - 1])).toBe(
-      'steam-bridge-helper'
+    const entitledArgs = defined(entitledCommands[0], 'entitled command')
+    expect(
+      basename(defined(entitledArgs[entitledArgs.length - 1], 'last argument'))
+    ).toBe('steam-bridge-helper')
+    const entitlementsValue = defined(
+      entitledArgs[entitledArgs.indexOf('--entitlements') + 1],
+      'entitlements value'
     )
-    const entitlementsValue =
-      entitledArgs[entitledArgs.indexOf('--entitlements') + 1]
     expect(entitlementsValue.startsWith('/')).toBe(true)
     expect(existsSync(entitlementsValue)).toBe(true)
     expect(basename(entitlementsValue)).toBe(
@@ -568,7 +581,10 @@ function packageScriptTokens(): string[] {
     readFileSync(join(REPO_ROOT, 'package.json'), 'utf-8')
   ) as { scripts: Record<string, string> }
 
-  const script = pkg.scripts['sign:macos-resources']
+  const script = defined(
+    pkg.scripts['sign:macos-resources'],
+    'sign:macos-resources script'
+  )
   expect(script).toBeDefined()
 
   const tokens = script.split(/\s+/)

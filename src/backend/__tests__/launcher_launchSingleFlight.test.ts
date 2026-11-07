@@ -51,6 +51,7 @@ jest.mock('backend/runsForMe', () => ({ recordPlaySession: jest.fn() }))
 import { launchEventCallback } from 'backend/launcher'
 import { createGameLogWriter } from 'backend/logger'
 import { resetLaunchSingleFlightForTests } from 'backend/launchSingleFlight'
+import { defined } from './helpers/defined'
 
 function makeLogWriter() {
   return {
@@ -120,12 +121,12 @@ describe('launchEventCallback single-flight (WR-03)', () => {
   it('releases after settle: a later call launches again', async () => {
     const a = launchEventCallback({ appName: 'Quail', runner: 'legendary' })
     await tick()
-    resolvers[0](true)
+    defined(resolvers[0], 'first resolver')(true)
     await a
     await tick()
     const b = launchEventCallback({ appName: 'Quail', runner: 'legendary' })
     await tick()
-    resolvers[1](true)
+    defined(resolvers[1], 'second resolver')(true)
     await b
     expect(launchMock).toHaveBeenCalledTimes(2)
   })

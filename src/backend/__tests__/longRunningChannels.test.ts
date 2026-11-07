@@ -35,6 +35,7 @@ import {
   stripRustEscapes,
   stripRustRawStrings
 } from '../testUtils/rustQuoteBalance'
+import { defined } from './helpers/defined'
 
 const EXPECTED_LONG_RUNNING_CHANNELS = [
   'install',
@@ -110,8 +111,10 @@ function extractLongRunningChannels(): string[] {
   if (!match) {
     throw new Error('LONG_RUNNING_CHANNELS array not found in main.rs')
   }
-  const body = match[1]
-  return Array.from(body.matchAll(/"([^"]+)"/g)).map((m) => m[1])
+  const body = defined(match[1], 'channel list')
+  return Array.from(body.matchAll(/"([^"]+)"/g)).map((m) =>
+    defined(m[1], 'channel name')
+  )
 }
 
 describe('loadMainRsCode comment-stripping helper (self-test)', () => {
@@ -673,7 +676,10 @@ describe('stripper integrity (WR-08)', () => {
     // that made main.rs's app_hide message report as unbalanced. The fact held; the rationale
     // rotted. Odd-on-the-opening-PHYSICAL-line is now an intermediate state, not the verdict.
     const continued = 'let s = "first half \\\n             second half";'
-    const openingLine = stripRustEscapes(continued).split('\n')[0]
+    const openingLine = defined(
+      stripRustEscapes(continued).split('\n')[0],
+      'opening line'
+    )
     expect((openingLine.match(/"/g) ?? []).length % 2).toBe(1)
     expect(openingLine.endsWith('\\')).toBe(true)
   })
@@ -701,7 +707,10 @@ describe('stripper integrity (WR-08)', () => {
       'const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);',
       'const RUNGAME_PREFIX: &str = "steam://rungameid/"; // trailing note'
     ].join('\n')
-    const strippedLine = loadMainRsCode(syntheticSource).split('\n')[1]
+    const strippedLine = defined(
+      loadMainRsCode(syntheticSource).split('\n')[1],
+      'stripped line'
+    )
     const quoteCount = (strippedLine.match(/"/g) ?? []).length
     expect({
       quoteCount,
@@ -715,7 +724,10 @@ describe('stripper integrity (WR-08)', () => {
       'const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);',
       'const BROKEN: &str = "unterminated literal;'
     ].join('\n')
-    const strippedLine = loadMainRsCode(syntheticSource).split('\n')[1]
+    const strippedLine = defined(
+      loadMainRsCode(syntheticSource).split('\n')[1],
+      'stripped line'
+    )
     const quoteCount = (strippedLine.match(/"/g) ?? []).length
     expect(quoteCount % 2).toBe(1)
   })
@@ -754,9 +766,10 @@ describe('stripper integrity (WR-08)', () => {
       'const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);',
       'const BROKEN: &str = "steam://unterminated;'
     ].join('\n')
-    const strippedLine = stripRustRawStrings(
-      loadMainRsCode(syntheticSource)
-    ).split('\n')[1]
+    const strippedLine = defined(
+      stripRustRawStrings(loadMainRsCode(syntheticSource)).split('\n')[1],
+      'stripped line'
+    )
     const quoteCount = (stripRustCharLiterals(strippedLine).match(/"/g) ?? [])
       .length
     expect(quoteCount % 2).toBe(1)
@@ -869,7 +882,7 @@ function parseMsConstantFromSource(
   if (!match) {
     throw new Error(`${constantName} not found in the given source`)
   }
-  const expr = match[1].trim().replace(/_/g, '')
+  const expr = defined(match[1], 'constant expression').trim().replace(/_/g, '')
   if (!/^[\d\s*+\-/().]+$/.test(expr)) {
     throw new Error(
       `${constantName}'s expression "${expr}" contains characters outside the allowed numeric-arithmetic set`

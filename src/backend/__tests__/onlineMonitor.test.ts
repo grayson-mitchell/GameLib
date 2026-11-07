@@ -13,9 +13,9 @@
  * the request's AbortSignal fires.
  */
 
-// Makes this file a module: without an import/export its top-level names (`flush`, `pending`...)
+// The import below makes this file a module: without an import/export its top-level names (`flush`, `pending`...)
 // are global script declarations and collide with other test files under `tsc --noEmit`.
-export {}
+import { defined } from './helpers/defined'
 
 type Push = {
   status: string
@@ -173,7 +173,7 @@ describe('CR-01: getConnectivityStatus', () => {
     expect(monitor.getConnectivityStatus()).toBe('check-online')
     expect(monitor.isOnline()).toBe(false)
 
-    newestRound()[0].answer(200)
+    defined(newestRound()[0], 'first ping').answer(200)
     await flush()
 
     expect(monitor.getConnectivityStatus()).toBe('online')
@@ -198,9 +198,9 @@ describe('overlapping probe rounds', () => {
     // so aborted the module-level controller, which by then belonged to round 2: round 2 then
     // "failed" with a cancel error and pushed a "retrying in 5 seconds" countdown after the
     // monitor was already online.
-    round1[0].answer(200)
+    defined(round1[0], 'first ping').answer(200)
     await flush()
-    round2[1].answer(200)
+    defined(round2[1], 'second ping').answer(200)
     await flush()
     await jest.advanceTimersByTimeAsync(60_000)
 
@@ -271,7 +271,7 @@ describe('the retry countdown', () => {
     expect(lastPush()).toMatchObject({ status: 'check-online', retryIn: 0 })
     expect(pending.length).toBe(8) // a second round
 
-    newestRound()[1].answer(200)
+    defined(newestRound()[1], 'second ping').answer(200)
     await flush()
     expect(lastPush()).toMatchObject({ status: 'online', retryIn: 0 })
 
@@ -312,7 +312,7 @@ describe('listeners', () => {
     })
     monitor.initOnlineMonitor()
 
-    newestRound()[0].answer(200)
+    defined(newestRound()[0], 'first ping').answer(200)
     await flush()
     await jest.advanceTimersByTimeAsync(60_000)
 
@@ -337,22 +337,24 @@ describe('ordering stamps (a pull reply and a push take different routes to the 
     newestRound().forEach((ping) => ping.fail('ENOTFOUND'))
     await flush()
     await jest.advanceTimersByTimeAsync(5000)
-    newestRound()[0].answer(200)
+    defined(newestRound()[0], 'first ping').answer(200)
     await flush()
 
     const all = pushes()
     expect(all.length).toBeGreaterThan(3)
     expect(new Set(all.map((push) => push.epoch)).size).toBe(1)
-    expect(typeof all[0].epoch).toBe('string')
+    expect(typeof defined(all[0], 'first push').epoch).toBe('string')
     all.slice(1).forEach((push, i) => {
-      expect(push.seq).toBeGreaterThan(all[i].seq as number)
+      expect(push.seq).toBeGreaterThan(
+        defined(all[i], 'earlier push').seq as number
+      )
     })
   })
 
   it('answers the renderer pull with the newest stamp it has published', async () => {
     const monitor = await loadMonitor()
     monitor.initOnlineMonitor()
-    newestRound()[0].answer(200)
+    defined(newestRound()[0], 'first ping').answer(200)
     await flush()
 
     const snapshot = handlerFor('get-connectivity-status')()
@@ -378,7 +380,7 @@ describe('G25: recheckConnectivity', () => {
   const goOnline = async () => {
     const monitor = await loadMonitor()
     monitor.initOnlineMonitor()
-    newestRound()[0].answer(200)
+    defined(newestRound()[0], 'first ping').answer(200)
     await flush()
     expect(monitor.isOnline()).toBe(true)
     return monitor
@@ -408,7 +410,7 @@ describe('G25: recheckConnectivity', () => {
     expect(lastPush()).toMatchObject({ status: 'check-online', retryIn: 5 })
 
     await jest.advanceTimersByTimeAsync(5000)
-    newestRound()[0].answer(200)
+    defined(newestRound()[0], 'first ping').answer(200)
     await flush()
 
     expect(monitor.isOnline()).toBe(true)

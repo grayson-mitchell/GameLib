@@ -64,6 +64,7 @@ import {
 import type { KnowFixesInfo } from 'common/types'
 import { bundledFixesPath, fixesPath } from '../constants/paths'
 import { logWarning as mockedLogWarning } from '../logger'
+import { defined } from './helpers/defined'
 
 describe('readKnownFixes', () => {
   beforeEach(() => {
@@ -204,9 +205,12 @@ describe('filterTier1KnownFixes launchArgs/exeOverride (quick 261029-mbl)', () =
       const out = run({ launchArgs: bad })
       expect(out).not.toHaveProperty('launchArgs')
       expect(mockedLogWarning).toHaveBeenCalledTimes(1)
-      expect(jest.mocked(mockedLogWarning).mock.calls[0][0]).toContain(
-        'launchArgs'
-      )
+      expect(
+        defined(
+          jest.mocked(mockedLogWarning).mock.calls[0],
+          'first warning call'
+        )[0]
+      ).toContain('launchArgs')
     }
   )
 
@@ -231,9 +235,12 @@ describe('filterTier1KnownFixes launchArgs/exeOverride (quick 261029-mbl)', () =
     const out = run({ exeOverride: bad })
     expect(out).not.toHaveProperty('exeOverride')
     expect(mockedLogWarning).toHaveBeenCalledTimes(1)
-    expect(jest.mocked(mockedLogWarning).mock.calls[0][0]).toContain(
-      'exeOverride'
-    )
+    expect(
+      defined(
+        jest.mocked(mockedLogWarning).mock.calls[0],
+        'first warning call'
+      )[0]
+    ).toContain('exeOverride')
   })
 
   it('lists both keys as tier 1 and does not treat them as routing', () => {
