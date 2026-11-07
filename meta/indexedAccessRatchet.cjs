@@ -62,7 +62,8 @@ const ADOPTED_BUCKETS = [
   'src/backend/logger',
   'src/backend/platform',
   'src/backend/steamgrid',
-  'src/backend/storeManagers/nile'
+  'src/backend/storeManagers/nile',
+  'src/frontend/state'
 ]
 
 /**

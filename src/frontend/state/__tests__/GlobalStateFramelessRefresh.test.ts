@@ -23,6 +23,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { defined } from './defined'
 
 const globalStatePath = join(__dirname, '..', 'GlobalState.tsx')
 const appPath = join(__dirname, '..', '..', 'App.tsx')
@@ -98,8 +99,8 @@ function globalStateWiringViolations(strippedSource: string): string[] {
         'A3: the subscription argument is an arrow function with one parameter'
       )
     } else {
-      const param = arrow[1]
-      const body = arrow[2]
+      const param = defined(arrow[1], 'arrow param')
+      const body = defined(arrow[2], 'arrow body')
       const escaped = param.replace(/\$/g, '\\$')
       const assigned = new RegExp(
         `this\\.setState\\(\\s*\\{\\s*isFrameless\\s*:\\s*${escaped}\\s*\\}`
@@ -179,13 +180,17 @@ function readAppGate(strippedApp: string): AppGate {
   if (!destructure) {
     throw new Error('Root does not destructure useContext(ContextProvider)')
   }
-  const contextNames = destructure[1]
+  const contextNames = defined(destructure[1], 'destructured names')
     .split(',')
     .map((name) => name.trim())
     .filter(Boolean)
 
   const isMacLine = root.match(/const isMac = ([^\n]*)/)
-  const macLiteral = isMacLine?.[1].match(/platform === '([^']+)'/)?.[1]
+  const macLiteral = isMacLine
+    ? defined(isMacLine[1], 'isMac expression').match(
+        /platform === '([^']+)'/
+      )?.[1]
+    : undefined
   if (!macLiteral) {
     throw new Error('const isMac is not a platform === literal comparison')
   }
@@ -194,7 +199,9 @@ function readAppGate(strippedApp: string): AppGate {
   if (!gateLine) {
     throw new Error('const showOverlayControls not found')
   }
-  const conjuncts = parseConjuncts(gateLine[1])
+  const conjuncts = parseConjuncts(
+    defined(gateLine[1], 'showOverlayControls expression')
+  )
 
   const jsxGated =
     /\{\s*showOverlayControls\s*&&\s*<WindowControls\s*\/>\s*\}/.test(root)

@@ -1,4 +1,5 @@
 import { reduceDialogRequest, DialogQueueState } from '../dialogQueue'
+import { defined } from './defined'
 
 const closed: DialogQueueState = { current: { showDialog: false }, queue: [] }
 
@@ -84,11 +85,11 @@ describe('reduceDialogRequest', () => {
   it('CR-01: a same-dialogId request updates a queued entry in place', () => {
     let state = reduceDialogRequest(closed, { title: 'B' })
     state = reduceDialogRequest(state, { title: 'A', dialogId: 'p' })
-    const key = state.queue[0].dialogKey
+    const key = defined(state.queue[0], 'queue[0]').dialogKey
     state = reduceDialogRequest(state, { title: 'A2', dialogId: 'p' })
     expect(state.queue).toHaveLength(1)
-    expect(state.queue[0].title).toBe('A2')
-    expect(state.queue[0].dialogKey).toBe(key)
+    expect(defined(state.queue[0], 'queue[0]').title).toBe('A2')
+    expect(defined(state.queue[0], 'queue[0]').dialogKey).toBe(key)
   })
 
   it('CR-01: a different or missing dialogId still queues', () => {
@@ -116,7 +117,7 @@ describe('reduceDialogRequest', () => {
     state = reduceDialogRequest(state, { title: 'B' })
     state = reduceDialogRequest(state, {
       showDialog: false,
-      dialogKey: state.queue[0].dialogKey
+      dialogKey: defined(state.queue[0], 'queue[0]').dialogKey
     })
     expect(state.current.title).toBe('A')
     expect(state.queue).toEqual([])

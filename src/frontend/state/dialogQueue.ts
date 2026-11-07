@@ -65,13 +65,14 @@ export function reduceDialogRequest(
       }
     }
     const idx = state.queue.findIndex((d) => d.dialogId === dialogId)
-    if (idx >= 0) {
+    const existing = state.queue[idx]
+    if (idx >= 0 && existing) {
       const queue = [...state.queue]
       queue[idx] = {
-        ...queue[idx],
+        ...existing,
         ...options,
         showDialog: true,
-        dialogKey: queue[idx].dialogKey
+        dialogKey: existing.dialogKey
       }
       return { current: state.current, queue }
     }

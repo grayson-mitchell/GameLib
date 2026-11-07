@@ -28,6 +28,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { defined } from './defined'
 
 const globalStatePath = join(__dirname, '..', 'GlobalState.tsx')
 
@@ -152,7 +153,7 @@ function signInMountViolations(strippedSource: string): string[] {
   for (const match of strippedSource.matchAll(
     /window\.api\s*\.\s*(\w*Probe\w*)/g
   )) {
-    if (!ALLOWED_PROBE_MEMBERS.includes(match[1])) {
+    if (!ALLOWED_PROBE_MEMBERS.includes(defined(match[1], 'probe member'))) {
       violations.push(`P3: unexpected probe-named window.api.${match[1]}`)
     }
   }

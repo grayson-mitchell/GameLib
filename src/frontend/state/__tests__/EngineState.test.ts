@@ -1,5 +1,6 @@
 import type { IpcRendererEvent } from 'backend/platform'
 import type { EngineState } from 'common/types/engine'
+import { defined } from './defined'
 import {
   engineStateKey,
   handleEngineStateChangedSignal,
@@ -20,7 +21,7 @@ const make = (over: Partial<EngineState> = {}): EngineState => ({
   ...over
 })
 const evt = {} as IpcRendererEvent
-const get = (k: string) => useEngineState.getState().byGame[k]
+const get = (k: string) => defined(useEngineState.getState().byGame[k], k)
 
 describe('EngineState store', () => {
   beforeEach(() => useEngineState.setState({ byGame: {} }))

@@ -42,6 +42,7 @@ import {
 } from '../InstallGameModal'
 import type { SteamInstallLibraryTarget } from '../InstallGameModal'
 import { steamConfigStore } from 'frontend/helpers/stores'
+import { defined } from './defined'
 
 jest.mock('frontend/helpers/stores', () => ({
   legendaryConfigStore: { get_nodefault: jest.fn() },
@@ -155,7 +156,7 @@ describe('Group A: the pure D-24 decision', () => {
   })
 
   it('A3: evaluateQuickInstallTarget with validPath: false → not ok, reason library-missing', () => {
-    const target = makeTargets(1)[0]
+    const target = defined(makeTargets(1)[0], 'target')
     const result = evaluateQuickInstallTarget(
       target,
       makeDisk({ validPath: false })
@@ -167,7 +168,7 @@ describe('Group A: the pure D-24 decision', () => {
   })
 
   it('A4: free space boundary is asserted on BOTH sides of LOW_SPACE_FLOOR_BYTES', () => {
-    const target = makeTargets(1)[0]
+    const target = defined(makeTargets(1)[0], 'target')
     const belowFloor = evaluateQuickInstallTarget(
       target,
       makeDisk({ free: LOW_SPACE_FLOOR_BYTES - 1 })
@@ -185,7 +186,7 @@ describe('Group A: the pure D-24 decision', () => {
   })
 
   it('A5: DISCRIMINATOR: an UNKNOWN disk verdict is not a failed one', () => {
-    const target = makeTargets(1)[0]
+    const target = defined(makeTargets(1)[0], 'target')
     const result = evaluateQuickInstallTarget(target, undefined)
     expect(result.ok).toBe(true)
   })
@@ -199,7 +200,7 @@ describe('Group A: the pure D-24 decision', () => {
   // The name now matches the body, and both deletions are PINNED rather than
   // merely mis-described -- a name is not a gate.
   it('A6: the degrade record carries libraryPath and NOTHING ELSE -- freeBytes and onlyLibrary are deleted, not merely unused', () => {
-    const target = makeTargets(1)[0]
+    const target = defined(makeTargets(1)[0], 'target')
     const disk = makeDisk({ validPath: false, free: 42 })
     const result = evaluateQuickInstallTarget(target, disk)
     expect(result.ok).toBe(false)
@@ -263,8 +264,8 @@ describe('Group B: startSteamQuickInstall', () => {
 
     const arg = installMock.mock.calls[0][0]
     expect(arg.path).toBe('')
-    expect(arg.path).not.toBe(targets[0].path)
-    expect(arg.path).not.toBe(targets[1].path)
+    expect(arg.path).not.toBe(defined(targets[0], 'targets[0]').path)
+    expect(arg.path).not.toBe(defined(targets[1], 'targets[1]').path)
   })
 
   it('B5: probes the RESOLVED primary steamappsDir, never .path', async () => {
@@ -274,7 +275,9 @@ describe('Group B: startSteamQuickInstall', () => {
     await startSteamQuickInstall('570', makeGameInfo())
 
     expect(checkDiskSpaceMock).toHaveBeenCalledTimes(1)
-    expect(checkDiskSpaceMock).toHaveBeenCalledWith(targets[0].steamappsDir)
+    expect(checkDiskSpaceMock).toHaveBeenCalledWith(
+      defined(targets[0], 'targets[0]').steamappsDir
+    )
   })
 
   it('B6: rejected listSteamLibraryTargets → installs anyway (delegated path)', async () => {
@@ -405,7 +408,9 @@ describe('Group U: D-UAT-15 client-setup precedence', () => {
     const state = useInstallGameModal.getState()
     expect(state.isOpen).toBe(true)
     expect(state.steamDegrade?.reason).toBe('library-missing')
-    expect(state.steamDegrade?.libraryPath).toBe(makeTargets(1)[0].path)
+    expect(state.steamDegrade?.libraryPath).toBe(
+      defined(makeTargets(1)[0], 'target').path
+    )
   })
 
   it('U4: D-UAT-15 library-missing + rejected recheck -> never rejects, falls through to the degrade', async () => {
@@ -496,7 +501,7 @@ describe('Group C: openSteamInstallOptions', () => {
   })
 
   it('C4: missing library → degrades into the dialog', () => {
-    const target = makeTargets(1)[0]
+    const target = defined(makeTargets(1)[0], 'target')
     openSteamInstallOptions('570', makeGameInfo(), {
       reason: 'library-missing',
       libraryPath: target.path

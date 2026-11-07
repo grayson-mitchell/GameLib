@@ -760,10 +760,11 @@ class GlobalState extends PureComponent<Props> {
   }
 
   renameCustomCategory = (oldName: string, newName: string) => {
-    if (!this.state.customCategories[oldName]) return
+    const games = this.state.customCategories[oldName]
+    if (!games) return
 
     const newCustomCategories = this.state.customCategories
-    newCustomCategories[newName] = newCustomCategories[oldName]
+    newCustomCategories[newName] = games
     delete newCustomCategories[oldName]
 
     this.setState({ customCategories: { ...newCustomCategories } })
@@ -797,7 +798,7 @@ class GlobalState extends PureComponent<Props> {
     for (const [key, games] of Object.entries(this.state.customCategories)) {
       if (key === category)
         newCustomCategories[key] = games.filter((game) => game !== appName)
-      else newCustomCategories[key] = this.state.customCategories[key]
+      else newCustomCategories[key] = games
     }
 
     this.setState({
