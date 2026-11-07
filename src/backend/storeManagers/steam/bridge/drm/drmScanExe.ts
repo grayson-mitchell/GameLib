@@ -28,8 +28,8 @@
 import { basename, dirname, resolve } from 'path'
 
 import { logWarning, LogPrefix } from 'backend/logger'
-import { runScanner } from 'backend/scanners/rustScan'
-import { containedRealTs } from 'backend/scanners/legacyTsScanners'
+import { invokeScan } from 'backend/scanners/rustScan'
+import { RUST_SCAN_CONTAINED_REAL } from 'common/types/sidecarTransport'
 import type { ContainedRealResult } from 'backend/scanners/scanTypes'
 import { findUnrealLayout } from '../bridgeScan'
 import { detectDrmWrapper } from '../shimGenerate'
@@ -48,15 +48,9 @@ type ContainFn = (
 function containLeaf(
   path: string,
   rootDir: string,
-  caller: string
+  _caller: string
 ): Promise<ContainedRealResult> {
-  return runScanner(
-    'drmScanExe',
-    'scan_contained_real',
-    { path, rootDir },
-    () => containedRealTs({ path, rootDir }),
-    caller
-  )
+  return invokeScan(RUST_SCAN_CONTAINED_REAL, { path, rootDir })
 }
 
 /**

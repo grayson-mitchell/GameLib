@@ -227,29 +227,12 @@ describe('isGameLibShimBytes', () => {
 })
 
 describe('shimGenerate', () => {
-  const SCANNER_ENVS = [
-    'GAMELIB_SCANNER_PE_SECTIONS',
-    'GAMELIB_SCANNER_PE_STEAM_DRM',
-    'GAMELIB_SCANNER_DRM_SCAN_EXE'
-  ]
-  const savedEnv: Record<string, string | undefined> = {}
   beforeEach(() => {
-    for (const k of SCANNER_ENVS) {
-      savedEnv[k] = process.env[k]
-      process.env[k] = 'rust'
-    }
     jest
       .mocked(requestRustInvoke)
       .mockImplementation(((channel: string, [args]: [never]) =>
         runLegacyOp(channel as never, args)) as never)
   })
-  afterEach(() => {
-    for (const k of SCANNER_ENVS) {
-      if (savedEnv[k] === undefined) delete process.env[k]
-      else process.env[k] = savedEnv[k]
-    }
-  })
-
   let root: string
   let bottleDir: string
   let gameDir: string

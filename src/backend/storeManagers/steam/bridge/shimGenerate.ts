@@ -94,8 +94,8 @@ import {
 import { scanSteamApiImports } from './importScan'
 import { runtimeLoadedSteamApiMarker } from './importParse'
 import { detectSteamDrmInPe } from './peScan'
-import { runScanner } from 'backend/scanners/rustScan'
-import { steamstubSectionTs } from 'backend/scanners/legacyTsScanners'
+import { invokeScan } from 'backend/scanners/rustScan'
+import { RUST_SCAN_STEAMSTUB_SECTION } from 'common/types/sidecarTransport'
 import { containedGameExeReal, detectLaunchDrmWrapper } from './drm/drmScanExe'
 import {
   readInterfaceVersionStrings,
@@ -516,16 +516,10 @@ export async function placeShimForGame(
  */
 export async function detectDrmWrapper(
   exePath: string,
-  caller = 'placeShimForGame'
+  _caller = 'placeShimForGame'
 ): Promise<'steamstub' | 'none' | undefined> {
   try {
-    const r = await runScanner(
-      'peSections',
-      'scan_steamstub_section',
-      { exePath },
-      () => steamstubSectionTs({ exePath }),
-      caller
-    )
+    const r = await invokeScan(RUST_SCAN_STEAMSTUB_SECTION, { exePath })
     if (r.drmWrapper === null) {
       logWarning(
         `detectDrmWrapper: could not read "${exePath}" (${String(r.readError)})`,

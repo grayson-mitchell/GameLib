@@ -12,13 +12,8 @@
  * contract -- `shimGenerate.ts` (Task 2) is the "does our shim cover it"
  * half.
  *
- * Mirrors `bottle.ts`'s `killBottleWineServer` argv-form `spawnAsync`
- * call-site convention (T-24-06 / ASVS V5): objdump is invoked as
- * `spawnAsync('/usr/bin/objdump', ['--private-headers', exePath])` --
- * NEVER `spawnAsync('objdump --private-headers ' + exePath)`. Parsing is
- * delegated to the pure, dependency-free `importParse.ts` (D-51-15: the
- * closing census tool reuses it unchanged); we do NOT shell out to `grep`
- * (24-RESEARCH.md Don't-Hand-Roll table).
+ * The app no longer spawns objdump (Phase 63, D-05): the scan is native Rust only. The pure,
+ * dependency-free `importParse.ts` stays for the closing census tool's own objdump arm (D-51-15).
  *
  * Phase 52 Plan 05: the scan also follows a bounded static-import closure
  * (same directory as the exe only, depth <= 2, <= 32 DLLs) so a title whose
@@ -26,10 +21,7 @@
  * that arch and those symbols.
  *
  * Phase 63: the scan is native in Rust (gamelib-scan `scan_steam_api_imports`,
- * D-05/D-06: closure walk, delay merge and conflict checks in one round-trip). The
- * objdump implementation is kept as the `ts` fallback in
- * `backend/scanners/legacyTsScanners.ts` until 63-13 (the module is deleted in
- * 63-14). This module validates appId, picks the implementation and forwards the
+ * D-05/D-06: closure walk, delay merge and conflict checks in one round-trip). This module validates appId, calls Rust directly and forwards the
  * diagnostics to the logger. A transport failure fails closed to a typed error.
  *
  * Quick 261024-j4l: `objdump --private-headers` does NOT list the PE Delay
@@ -38,15 +30,11 @@
  * the zero-spawn ranged reader in `peSteamDrm.ts` and merges it in.
  */
 
-import { spawnAsync } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { parseSteamApiImportTable } from './importParse'
 import { NUMERIC_APP_ID } from '../gameConstants'
-import {
-  OBJDUMP_BIN,
-  steamApiImportsTs
-} from '../../../scanners/legacyTsScanners'
-import { runScanner } from '../../../scanners/rustScan'
+import { invokeScan } from '../../../scanners/rustScan'
+import { RUST_SCAN_STEAM_API_IMPORTS } from 'common/types/sidecarTransport'
 import type { ImportScanResult } from '../../../scanners/scanTypes'
 
 /**
@@ -62,8 +50,7 @@ export function parseSteamApiImports(objdumpOutput: string): string[] {
 }
 
 /**
- * Runs `objdump --private-headers <exePath>` (argv-form only) via the TS
- * oracle and returns the game's exact imported `steam_api(64)?.dll` arch, dll
+ * Scans <exePath> with the native Rust scanner (no objdump) and returns the game's exact imported `steam_api(64)?.dll` arch, dll
  * name, and symbol set. Never throws -- objdump failure (non-zero exit / spawn
  * error / missing file) surfaces as a logged warning + a typed
  * `{ status: 'error' }` result. A binary reporting BOTH a `steam_api.dll` and
@@ -72,7 +59,7 @@ export function parseSteamApiImports(objdumpOutput: string): string[] {
 export async function scanSteamApiImports(
   appId: string,
   exePath: string,
-  caller = 'scanSteamApiImports'
+  _caller = 'scanSteamApiImports'
 ): Promise<ImportScanResult> {
   if (!NUMERIC_APP_ID.test(appId)) {
     logWarning(
@@ -83,19 +70,9 @@ export async function scanSteamApiImports(
   }
 
   try {
-    const { diagnostics, ...result } = await runScanner(
-      'importScan',
-      'scan_steam_api_imports',
-      { exePath, appId },
-      () =>
-        steamApiImportsTs(
-          { exePath, appId },
-          {
-            runObjdump: (path) =>
-              spawnAsync(OBJDUMP_BIN, ['--private-headers', path])
-          }
-        ),
-      caller
+    const { diagnostics, ...result } = await invokeScan(
+      RUST_SCAN_STEAM_API_IMPORTS,
+      { exePath, appId }
     )
     for (const d of diagnostics ?? []) {
       if (d.level === 'warn') logWarning(d.message, LogPrefix.Steam)

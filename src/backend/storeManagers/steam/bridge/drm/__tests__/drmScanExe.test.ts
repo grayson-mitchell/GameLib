@@ -36,9 +36,6 @@ jest.mock('../../../bottle', () => ({
 
 jest.mock('../../importScan', () => ({ scanSteamApiImports: jest.fn() }))
 
-type Contain = NonNullable<
-  NonNullable<Parameters<typeof detectLaunchDrmWrapper>[2]>['contain']
->
 type Reason = 'root-unresolvable' | 'realpath-failed' | 'escapes'
 
 const BOTTLE = '/b'
@@ -257,15 +254,9 @@ describe('detectLaunchDrmWrapper', () => {
 })
 
 describe('default contain leaf (rust)', () => {
-  const saved = process.env.GAMELIB_SCANNER_DRM_SCAN_EXE
   beforeEach(() => {
-    process.env.GAMELIB_SCANNER_DRM_SCAN_EXE = 'rust'
     jest.mocked(requestRustInvoke).mockReset()
     jest.mocked(logWarning).mockClear()
-  })
-  afterEach(() => {
-    if (saved === undefined) delete process.env.GAMELIB_SCANNER_DRM_SCAN_EXE
-    else process.env.GAMELIB_SCANNER_DRM_SCAN_EXE = saved
   })
 
   it('sends scan_contained_real with { path, rootDir: dirname(exe) }', async () => {
