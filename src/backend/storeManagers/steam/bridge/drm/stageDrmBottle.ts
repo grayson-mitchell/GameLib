@@ -44,7 +44,6 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { runWineCommand } from 'backend/launcher'
 import { isPackagedSidecar } from 'backend/sidecar/isPackagedSidecar'
-import type { GameSettings } from 'common/types'
 import { endPerGameBridgeBottleSession } from '../../bridgeBottleLifecycle'
 import {
   getBottleDir,
@@ -62,6 +61,11 @@ import { restoreBridgeSteamApiOriginals } from '../originalRestore'
 import { openStageWineLog } from './stageWineLog'
 import { BRIDGE_CONFIG_FILENAME } from '../bridgeConfig'
 import { drmStepError, type DrmStepResult } from './steamclientLayerMode'
+import type {
+  StageDrmBottleDeps,
+  StageDrmBottleInput,
+  StageDrmBottleOk
+} from './stageDrmTypes'
 
 export const DRM_STEAM_DIR_SEGMENTS = ['Program Files (x86)', 'Steam'] as const
 export const DRM_STEAM_DIR_WIN = 'C:\\Program Files (x86)\\Steam'
@@ -194,62 +198,6 @@ export function drmRegistryStagedInUserReg(text: string): boolean {
 /** True when the bytes carry the Phase 52 forwarder version string. */
 export function isPhase52ForwarderBytes(buf: Buffer): boolean {
   return buf.includes(PHASE52_FORWARDER_MARKER_UTF16)
-}
-
-export type StageDrmBottleInput = {
-  appId: string
-  bottleName: string
-  bottleSettings: GameSettings
-  exePath: string
-  installRoot: string
-  installdir: string
-  valveClientDir: string
-  componentDir: string
-  /** Gap 11: extra exe dirs (UE Shipping exe) whose TCP artifacts are cleaned. */
-  extraExeDirs?: string[]
-  /** Plan 56-32: trace root for the stage session's wine log. */
-  stageLogDir?: string
-  signal?: AbortSignal
-}
-
-export type StageDrmBottleDeps = {
-  getBottleDir?: typeof getBottleDir
-  findDlls?: typeof findRuntimeLoadedSteamApiDlls
-  findUnreal?: typeof findUnrealLayout
-  restoreOriginals?: typeof restoreBridgeSteamApiOriginals
-  runReg?: (
-    commandParts: string[]
-  ) => Promise<{ code?: number; stderr?: string }>
-  regTimeoutMs?: number
-  /** Live wine processes of the bottle, logged on a reg add timeout. */
-  listBottleProcesses?: (bottleDir: string) => Promise<string[]>
-  /**
-   * Ends the stage's own wine session after a reg add timeout, so the retry
-   * starts a fresh one (debug drm-stage-winebus-hid-spin).
-   */
-  endStageSession?: (args: {
-    appId: string
-    bottleName: string
-    bottleDir: string
-  }) => Promise<void>
-  /** Plan 56-32: opens the stage wine log sink (injectable for tests). */
-  openStageLog?: typeof openStageWineLog
-  /** Plan 56-32: dev-only fault injection is ignored when this is true. */
-  isPackaged?: () => boolean
-  env?: NodeJS.ProcessEnv
-}
-
-export type StageDrmBottleOk = {
-  steamDirHost: string
-  steamDirWin: string
-  helperHostPath: string
-  helperWinPath: string
-  steamClient64WinPath: string
-  restored: string[]
-  removed: string[]
-  foreignSteamClientLeft: string[]
-  staged: string[]
-  registryWritten: boolean
 }
 
 /** Maps a host path inside `<bottle>/drive_c` to its `C:\` path, else null. */

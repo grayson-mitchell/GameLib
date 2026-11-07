@@ -47,11 +47,8 @@ import {
   type SteamclientLayerReady
 } from './steamclientLayerInstall'
 import { ensureValveClient, type ValveClientReady } from './valveClient'
-import {
-  stageDrmBottle,
-  type StageDrmBottleOk,
-  type StageDrmBottleInput
-} from './stageDrmBottle'
+import { stageDrmBottle } from './stageDrmBottle'
+import type { StageDrmBottleOk, StageDrmBottleInput } from './stageDrmTypes'
 import { DRM_LAUNCH_FORM, type DrmLaunchForm } from '../../bridgeBottle'
 import { buildDrmPaths } from './drmPaths'
 

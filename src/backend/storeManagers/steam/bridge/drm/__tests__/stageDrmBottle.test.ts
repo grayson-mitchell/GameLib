@@ -70,9 +70,9 @@ import {
   restoreDrmOriginals,
   stageDrmBottle,
   DRM_HELPER_WIN,
-  DRM_STEAMCLIENT64_WIN,
-  type StageDrmBottleInput
+  DRM_STEAMCLIENT64_WIN
 } from '../stageDrmBottle'
+import type { StageDrmBottleInput } from '../stageDrmTypes'
 import type { GameSettings } from 'common/types'
 
 const SHIM = Buffer.from('MZ....GameLibSteamBridgeShim....')
