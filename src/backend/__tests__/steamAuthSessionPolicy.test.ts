@@ -59,7 +59,7 @@ const GAME_MODULES = readdirSync(join(REPO_ROOT, S))
 
 const ACQUIRE_AUTH_ALLOW = [
   USER,
-  `${S}library.ts`,
+  `${S}library/refresh.ts`,
   `${S}depot/plan.ts`,
   `${S}depot/outcome.ts`,
   `${S}depot/sharedRedist.ts`,
@@ -67,7 +67,7 @@ const ACQUIRE_AUTH_ALLOW = [
 ]
 const ACQUIRE_OPEN_ALLOW = [
   USER,
-  `${S}library.ts`,
+  `${S}library/refresh.ts`,
   `${S}depot/sharedRedist.ts`,
   `${S}installLocation.ts`,
   `${S}bridge/launchTarget.ts`
