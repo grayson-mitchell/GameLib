@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 64
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-07 - Phase 62 gap closure (62-22, 62-23) executed, re-verified and human UAT passed
+Last activity: 2026-11-07 - Completed quick task 261107-k2l: Library grid smoothness (rootMargin 1500px, image fade dropped)
 
 Progress: [██████████] 100%
 
@@ -575,6 +575,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261106-qwz | themeTokens `.is-text` render-site census re-pinned 27 -> 29 with a 2-site SteamManagedItemView arm for the Downloads Managed-by-Steam row's Pause/Cancel (261105-vfq); classes kept, since contrast is measured against the button's own fill; todo closed. | 2026-11-06 | 0ca6ac683 | themeTokens jest 270/270; scoped prettier pass | [261106-qwz-themetokens-is-text-census-pins-managed-](./quick/261106-qwz-themetokens-is-text-census-pins-managed-/) |
 | 261107-an2 | SteamGame surface re-narrowed after the 62 lifts: 3 members private again, 40 stubs deleted (lifted modules call siblings directly, JSDoc moved), 11 kept public `@internal` (test spies / import cycles), appId stays readonly; forward-only import guard added; games.ts 2043 -> 1324 lines. | 2026-11-07 | bc448a9c4 | codecheck, boundaries, scoped prettier pass; steam jest 4650 pass, 3 fail as before this task (56-01 SUMMARY gone, host-dependent Intel test); lint error games.test.ts:25 pre-existing (62-22) | [261107-an2-re-narrow-steamgame-member-visibility-re](./quick/261107-an2-re-narrow-steamgame-member-visibility-re/) |
 | 261107-j08 | CrossOver rating sourced from the daily index only: the codeweavers.com page scrape (Cloudflare 403 despite a spoofed UA) is deleted, not worked around. macOS index miss caches an "Unrated" marker (empty slug -> CodeWeavers search link); index-unavailable stays null/retryable; Linux makes no CodeWeavers call and no longer treats null codeweavers as stale. `codeweavers/constants.ts` removed, `utils.ts` keeps `slugify`; todo closed. | 2026-11-07 | bc1c830fd | jest 16 suites 197/197, tsc clean, scoped prettier pass; lint 0 errors (warning cap pre-existing); planning-gates 11/12, STATE `Plan: Not started` anchor failure pre-existing | [261107-j08-codeweavers-crossover-rating-403-source-](./quick/261107-j08-codeweavers-crossover-rating-403-source-/) |
+| 261107-k2l | Library grid smoothness: card-visibility IntersectionObserver rootMargin 500px → 1500px (cards mount further ahead of scroll; hooks already ran pre-gate, so cost is only extra card DOM) and the 0.5s opacity fade dropped from `.gameImg`/`.gameLogo` (`all 0.2s` kept for the grayscale ramp); cardVisibility test re-pinned to 1500px. | 2026-11-07 | 735798969 | jest GameCard + FocusRowStrip 10 suites 259/259, scoped prettier pass; not live-checked in app | [261107-k2l-library-grid-smoothness-raise-card-rootm](./quick/261107-k2l-library-grid-smoothness-raise-card-rootm/) |
 
 ## Session Continuity
 
