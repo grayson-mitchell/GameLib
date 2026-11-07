@@ -2,12 +2,14 @@
  * Phase 61-16 (D-18): the non-Steam "a game process exists" first-match signal.
  *
  * Spike 068 verdict (PARTIAL, matchShape `z-path`): match a `ps` command line against the
- * game's install dir, case-insensitively, with a trailing separator kept, in three forms:
+ * game's install dir, case-insensitively, with a trailing separator kept, in up to four forms:
  * the unix path (persistent under GPTK, only the first 1-2 s under CrossOver), the `Z:` form
- * (`Z:` + the absolute path with backslashes) and, for installs under the home dir, the `Y:`
- * form (`Y:` + the path relative to home with backslashes). The trailing separator stops
+ * (`Z:` + the absolute path with backslashes), for installs under the home dir, the `Y:`
+ * form (`Y:` + the path relative to home with backslashes) and, for installs under the
+ * bottle's `drive_c`, the `C:` form (CR-02). The trailing separator stops
  * `Avernum 4` matching `Avernum 4 Remaster`. A bare-basename launch (cwd + `Game.exe`) cannot
- * be matched; the caller then has no signal and the deadline stands down (CR-01).
+ * be matched and is not detected; the non-Steam deadline never kills on a missing match
+ * (launchEngine.ts owns that: it only shows a notice).
  *
  * A form matches when the command line starts with it, or carries it as a later argument
  * (GPTK: `wine64-preloader .../wine64 <install>/Game.exe`), preceded by whitespace, a quote or
@@ -36,7 +38,8 @@ function withTrailingSep(path: string, sep: string): string {
  */
 export function deriveGameProcessPrefixes(
   installPath: string,
-  home: string = homedir()
+  home: string = homedir(),
+  bottleDir?: string
 ): string[] {
   if (typeof installPath !== 'string' || !installPath.startsWith('/')) return []
   const trimmed = installPath.replace(/\/+$/, '')
@@ -49,6 +52,12 @@ export function deriveGameProcessPrefixes(
   if (homeTrimmed !== '' && trimmed.startsWith(`${homeTrimmed}/`)) {
     const rel = trimmed.slice(homeTrimmed.length + 1)
     forms.push(`Y:\\${withTrailingSep(rel.split('/').join('\\'), '\\')}`)
+  }
+
+  const bottleTrimmed = (bottleDir ?? '').replace(/\/+$/, '')
+  if (bottleTrimmed !== '' && trimmed.startsWith(`${bottleTrimmed}/drive_c/`)) {
+    const rel = trimmed.slice(bottleTrimmed.length + '/drive_c/'.length)
+    forms.push(`C:\\${withTrailingSep(rel.split('/').join('\\'), '\\')}`)
   }
   return forms.map((form) => form.toLowerCase())
 }
@@ -91,6 +100,7 @@ export interface GameProcessWatchDeps {
 
 export function watchForGameProcess(args: {
   installPath: string
+  bottleDir?: string
   onFirstMatch: (pid: string) => void
   onGiveUp?: (reason: 'max-duration' | 'listing-failures') => void
   pollMs?: number
@@ -104,7 +114,11 @@ export function watchForGameProcess(args: {
     homeDir: () => homedir(),
     ...args.deps
   }
-  const prefixes = deriveGameProcessPrefixes(args.installPath, deps.homeDir())
+  const prefixes = deriveGameProcessPrefixes(
+    args.installPath,
+    deps.homeDir(),
+    args.bottleDir
+  )
   if (prefixes.length === 0) return null
 
   const pollMs = args.pollMs ?? 1500

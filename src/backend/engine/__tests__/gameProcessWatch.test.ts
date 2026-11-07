@@ -54,6 +54,24 @@ describe('deriveGameProcessPrefixes', () => {
     expect(deriveGameProcessPrefixes('relative/path', HOME)).toEqual([])
     expect(deriveGameProcessPrefixes('/', HOME)).toEqual([])
   })
+  const BOTTLE = '/Users/u/Library/Application Support/CrossOver/Bottles/B'
+  const CINSTALL = `${BOTTLE}/drive_c/Program Files/Game`
+  it('adds the C: form for an install under the bottle drive_c', () => {
+    expect(deriveGameProcessPrefixes(CINSTALL, HOME, BOTTLE)).toContain(
+      'c:\\program files\\game\\'
+    )
+  })
+  it('adds no C: form outside drive_c, and normalises a trailing slash', () => {
+    expect(deriveGameProcessPrefixes(INSTALL, HOME, BOTTLE)).toEqual(
+      deriveGameProcessPrefixes(INSTALL, HOME)
+    )
+    expect(deriveGameProcessPrefixes(CINSTALL, HOME, `${BOTTLE}/`)).toEqual(
+      deriveGameProcessPrefixes(CINSTALL, HOME, BOTTLE)
+    )
+  })
+  it('without bottleDir the output is unchanged', () => {
+    expect(deriveGameProcessPrefixes(CINSTALL, HOME)).toHaveLength(3)
+  })
   it('exposes the unix form via deriveGameProcessPrefix', () => {
     expect(deriveGameProcessPrefix('/a/B')).toBe('/a/b/')
     expect(deriveGameProcessPrefix('nope')).toBeNull()
@@ -109,6 +127,22 @@ describe('watchForGameProcess', () => {
     const z = make([' 8 Z:\\Users\\u\\Games\\Avernum 4\\Game.exe\n'])
     await z.timers.firePoll()
     expect(z.onFirstMatch).toHaveBeenCalledWith('8')
+  })
+
+  it('matches a C:\\ command line for a drive_c install, not a sibling', async () => {
+    const bottle = '/Users/u/Library/Application Support/CrossOver/Bottles/B'
+    const hit = make([' 123 C:\\Program Files\\Game\\Game.exe\n'], {
+      installPath: `${bottle}/drive_c/Program Files/Game`,
+      bottleDir: bottle
+    })
+    await hit.timers.firePoll()
+    expect(hit.onFirstMatch).toHaveBeenCalledWith('123')
+    const miss = make([' 124 C:\\Program Files\\Game Remastered\\x.exe\n'], {
+      installPath: `${bottle}/drive_c/Program Files/Game`,
+      bottleDir: bottle
+    })
+    await miss.timers.firePoll()
+    expect(miss.onFirstMatch).not.toHaveBeenCalled()
   })
 
   it('does not match a sibling dir or a glued longer path', async () => {
