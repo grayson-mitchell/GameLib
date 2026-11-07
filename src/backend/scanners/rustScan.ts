@@ -6,6 +6,7 @@
  * Exit contract: no timers, no handles, no work at import.
  */
 import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
 import type { RustScanChannel } from 'common/types/sidecarTransport'
 import type { ScanArgsFor, ScanResultFor } from './scanTypes'
 
@@ -13,5 +14,7 @@ export function invokeScan<C extends RustScanChannel>(
   channel: C,
   args: ScanArgsFor<C>
 ): Promise<ScanResultFor<C>> {
-  return requestRustInvoke(channel, [args]) as Promise<ScanResultFor<C>>
+  return requestRustInvoke(channel, [args] as RustInvokeArgsOf<C>) as Promise<
+    ScanResultFor<C>
+  >
 }

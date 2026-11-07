@@ -351,7 +351,7 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
   it('sanity: requestRustInvoke refuses a non-allowlisted channel without emitting a frame', async () => {
     const { frames } = startTransport()
     await expect(
-      requestRustInvoke('not_a_real_channel' as never, [])
+      requestRustInvoke('not_a_real_channel' as never, [] as never)
     ).rejects.toThrow(/channel not allowed/)
     expect(frames).toHaveLength(0)
   })

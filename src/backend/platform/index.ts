@@ -79,6 +79,7 @@ import pkgJson from '../../../package.json'
 import { getPath } from '../sidecar/pathShim'
 import { isPackagedSidecar } from '../sidecar/isPackagedSidecar'
 import { requestRustInvoke } from '../sidecar/sidecarRpc'
+import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
 import { shouldOpenInBackground, spawnOpenDetached } from './openDetached'
 import {
   RUST_APP_EXIT,
@@ -554,10 +555,10 @@ export const dialog = {
   },
   showOpenDialog: async (
     _window?: unknown,
-    options?: unknown
+    options?: RustInvokeArgsOf<typeof RUST_DIALOG_OPEN>[0]
   ): Promise<{ canceled: boolean; filePaths: string[] }> => {
     try {
-      const result = await requestRustInvoke(RUST_DIALOG_OPEN, [options])
+      const result = await requestRustInvoke(RUST_DIALOG_OPEN, [options ?? {}])
       if (typeof result === 'string') {
         return { canceled: false, filePaths: [result] }
       }
@@ -583,10 +584,10 @@ export const dialog = {
   },
   showSaveDialog: async (
     _window?: unknown,
-    options?: unknown
+    options?: RustInvokeArgsOf<typeof RUST_DIALOG_SAVE>[0]
   ): Promise<{ canceled: boolean; filePath?: string }> => {
     try {
-      const result = await requestRustInvoke(RUST_DIALOG_SAVE, [options])
+      const result = await requestRustInvoke(RUST_DIALOG_SAVE, [options ?? {}])
       if (typeof result === 'string') {
         return { canceled: false, filePath: result }
       }

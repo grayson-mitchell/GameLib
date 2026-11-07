@@ -51,6 +51,7 @@ import {
 } from 'common/types/sidecarTransport'
 import { handlerRegistry, listenerRegistry } from '../platform'
 import { validateInbound, logRejection } from './ipcValidation'
+import type { RustInvokeArgsOf } from 'common/types/ipc/rustInvoke'
 
 /** Guardrail against an unterminated line growing the input buffer unbounded. */
 const MAX_LINE_LENGTH = 10 * 1024 * 1024 // 10 MiB
@@ -428,9 +429,9 @@ export function requestOpenExternal(url: string): void {
  * `keyring_get` specifically after that plan: the Rust side now bounds its own Keychain read and
  * rejects with a distinct, faster `keyring:timeout` first.
  */
-export function requestRustInvoke(
-  channel: RustInvokeChannel,
-  args: unknown[]
+export function requestRustInvoke<C extends RustInvokeChannel>(
+  channel: C,
+  args: RustInvokeArgsOf<C>
 ): Promise<unknown> {
   if (!(RUST_INVOKE_CHANNELS as readonly string[]).includes(channel)) {
     return Promise.reject(
