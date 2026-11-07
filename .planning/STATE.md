@@ -5,7 +5,7 @@ milestone_name: Steam Bridge & Engine
 status: planning
 stopped_at: Phase 72 context gathered
 last_updated: "2026-11-07T21:23:01.588Z"
-last_activity: 2026-11-08 - Completed quick task 261108-eps: pre-push gate green
+last_activity: 2026-11-07 - Completed quick task 261107-uh4: Extend the clippy ratchet to the Windows leg
 progress:
   total_phases: 13
   completed_phases: 5
@@ -524,6 +524,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261108-e35 | Settings left panel: GameLib Version pinned to the panel bottom (tier-2 column made a flex column so the slot's existing margin-top:auto works) with tier-2 row inline padding (~12px) instead of 0px. | 2026-11-08 | 7cbdedc6b | Jest pass (NavShell, 686 tests); scoped prettier; live check pending | [261108-e35-settings-version-to-panel-bottom](./quick/261108-e35-settings-version-to-panel-bottom/) |
 | fast | Cleared the 2 no-unused-vars lint errors from 67-16 that blocked pre-push (unused `Runner` import; type-only `steamLibraryTarget` zod object → interface). | 2026-11-08 | d75cc6f54 | codecheck + eslint + prettier pass; 5 failing jest suites pre-exist on baseline | — |
 | 261108-eps | Pre-push gate green again: 31 new knip findings resolved at source (deleted, export dropped, re-export removed, or `@public` with reason) and 10 stale baseline lines removed; no gate widened, no ipc_handler touched. | 2026-11-08 | 9509a10c9 | line-2 chain exit 0; 5 pre-existing jest failures recorded, not fixed | [261108-eps-make-the-pre-push-gate-pass-so-main-can-](./quick/261108-eps-make-the-pre-push-gate-pass-so-main-can-/) |
+| 261107-uh4 | Clippy ratchet extended to the Windows leg: win32 ceilings measured natively (14 lints / 27 unique, 1.99.1 x86_64-pc-windows-msvc), macOS-only gates dropped, caveat (f) deleted; red macOS leg repaired at source (generator emits `args.first()`, -17 get_first; stale darwin needless_borrow removed). | 2026-11-07 | da8dc1403 | native win32 ratchet PASS; 3 targeted jest files pass; check:ipc-contract pass; darwin green inferred, CI not yet run | [261107-uh4-extend-the-clippy-ratchet-to-the-windows](./quick/261107-uh4-extend-the-clippy-ratchet-to-the-windows/) |
 
 ## Deferred Items
 
