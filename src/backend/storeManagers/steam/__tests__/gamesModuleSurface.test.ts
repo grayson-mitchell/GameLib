@@ -23,7 +23,7 @@ const exportedNames = (file: string): string[] => {
 
 // Changes only when a later phase-62 plan moves another symbol out of
 // games.ts (the class method lifts in 62-06..62-08 leave this list alone).
-const GAMES_TS_EXPORTS = ['SteamGame', 'getBridgeRouteVerdict']
+const GAMES_TS_EXPORTS = ['SteamGame']
 
 const MOVED_OWNERS = [
   'gameConstants.ts',

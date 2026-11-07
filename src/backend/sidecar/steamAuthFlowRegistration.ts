@@ -57,7 +57,7 @@
  *   - `persistBottleWineVersion` -> `persistInstallFormWineVersion(wineVersion)`
  *     (`main.ts:948-950`), Phase 34.13 Plan 07, D-14 — same shared seam.
  *     The trio above is now a trio plus these two install-form channels.
- *   - `getSteamBridgeRoute` -> `getBridgeRouteVerdict(appId)` (`games.ts`),
+ *   - `getSteamBridgeRoute` -> `getBridgeRouteVerdict(appId)` (`bridgeRouteVerdict.ts`),
  *     Phase 51 Plan 09/13, D-51-09: the composed bridge-vs-bottle route
  *     verdict for a single game (SteamBridgeRouteVerdict, common/types/steam.ts).
  *   - The engine state/options/dismiss channels and their push moved to the
@@ -151,7 +151,7 @@ import {
   startGuidedClientInstall,
   ensureSteamClientReady
 } from '../storeManagers/steam/clientSetup'
-import { getBridgeRouteVerdict } from '../storeManagers/steam/games'
+import { getBridgeRouteVerdict } from '../storeManagers/steam/bridgeRouteVerdict'
 import { getSteamInstallSize } from '../storeManagers/steam/gameRequirements'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../storeManagers/steam/constants'
 import {

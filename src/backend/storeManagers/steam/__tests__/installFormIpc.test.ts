@@ -41,10 +41,13 @@ jest.mock('backend/platform', () => ({
 const mockCheckBottleEligibility = jest.fn()
 jest.mock('../games', () => ({
   __esModule: true,
-  default: jest.fn(),
+  default: jest.fn()
+}))
+
+jest.mock('../bridgeRouteVerdict', () => ({
   // Plan 13 (D-51-09): getSteamBottleEligibilityVerdict composes this named
-  // export when eligible -- mocked here so its own tests (games.test.ts's
-  // getBridgeRouteVerdict() describe block) stay the single place that
+  // export when eligible -- mocked here so its own tests (the
+  // bridgeRouteVerdict.test.ts suite) stay the single place that
   // exercises its real logic.
   getBridgeRouteVerdict: jest.fn()
 }))
@@ -82,7 +85,8 @@ jest.mock('backend/config', () => ({
   }
 }))
 
-import SteamGame, { getBridgeRouteVerdict } from '../games'
+import SteamGame from '../games'
+import { getBridgeRouteVerdict } from '../bridgeRouteVerdict'
 import { steamBottleConfigStore, steamMetadataStore } from '../stores'
 import { persistBottleWineVersion, getSteamBottleSettings } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'

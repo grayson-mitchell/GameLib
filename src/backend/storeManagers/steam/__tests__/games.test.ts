@@ -34,7 +34,7 @@ import { sendFrontendMessage } from '../../../ipc'
 import * as shortcutsModule from '../../../shortcuts/shortcuts/shortcuts'
 import { steamMetadataStore, steamLibraryStore } from '../stores'
 import { TITLE_AUTHORITATIVE_KEYS } from '../titleSettings'
-import SteamGame, { getBridgeRouteVerdict } from '../games'
+import SteamGame from '../games'
 import {
   buildDrmLaunchEnvironment,
   drmBottleWinPath,
@@ -3928,71 +3928,6 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     await game.launch({} as any)
 
     expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
-  })
-})
-
-// ── getBridgeRouteVerdict() — D-51-09 Task 2's installedIn (LOCATION) wiring ──
-
-describe('getBridgeRouteVerdict() — D-51-09 installedIn (LOCATION, not eligibility)', () => {
-  let envMock: any
-
-  beforeEach(() => {
-    library.clear()
-    pendingFetches.clear()
-    envMock = jest.requireMock('backend/constants/environment')
-    envMock.isMac = true
-    envMock.isWindows = false
-    envMock.isLinux = false
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      platformsCaptured: true,
-      is_mac_native: false
-    })
-    ;(bridgeAllowlist.has as jest.Mock).mockReset().mockReturnValue(false)
-    ;(bridgeAllowlist.knownBadReason as jest.Mock)
-      .mockReset()
-      .mockReturnValue(null)
-    ;(isBridgeBottleReady as jest.Mock).mockReset().mockReturnValue(false)
-    ;(existsSync as jest.Mock).mockReset().mockReturnValue(false)
-  })
-
-  afterEach(() => {
-    envMock.isMac = false
-    envMock.isWindows = false
-    envMock.isLinux = true
-  })
-
-  it('rejects a non-numeric appId as not-eligible with installedIn null, never reaching checkBridgeRoute', async () => {
-    const result = await getBridgeRouteVerdict('not-numeric')
-
-    expect(result.route).toBe('not-eligible')
-    expect(result.installedIn).toBeNull()
-  })
-
-  it("installedIn is 'bridge' when findBridgeInstallBottle locates an existing bridge install, independent of the eligibility route", async () => {
-    // isBridgeBottleReady(true) drives the test-double findBridgeInstallBottle
-    // reimplementation (see the '../bottle' factory mock above) to a non-null
-    // result for ANY appId.
-    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
-
-    const result = await getBridgeRouteVerdict(APP_ID)
-
-    expect(result.installedIn).toBe('bridge')
-  })
-
-  it("installedIn is 'bottle' when no bridge bottle holds this install but the title is installed AND bottle-eligible (existing GameLibSteam install, D-51-09's core distinction)", async () => {
-    library.set(APP_ID, makeEntry({ title: 'Avernum 4', is_installed: true }))
-
-    const result = await getBridgeRouteVerdict(APP_ID)
-
-    expect(result.installedIn).toBe('bottle')
-  })
-
-  it('installedIn stays null when the title is not installed anywhere and no bridge bottle holds it', async () => {
-    library.set(APP_ID, makeEntry({ title: 'Avernum 4', is_installed: false }))
-
-    const result = await getBridgeRouteVerdict(APP_ID)
-
-    expect(result.installedIn).toBeNull()
   })
 })
 
