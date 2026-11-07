@@ -424,7 +424,9 @@ async function runBounded(
     if (aborted) return
     const i = index++
     if (i >= items.length) return
-    const result = await worker(items[i])
+    const item = items[i]
+    if (item === undefined) return
+    const result = await worker(item)
     results.push(result)
     if (
       result.outcome === 'access_denied' ||
@@ -724,6 +726,7 @@ function patchCachedState(
   if (index === -1) return
 
   const priorKey = entry.keys[index]
+  if (!priorKey) return
   const patchedKey: HumbleKeyInternal = {
     ...priorKey,
     state: newState,
@@ -852,6 +855,7 @@ function deriveRevealRefusedAt(
   const trail = humbleAuditStore.get(composite, [])
   for (let i = trail.length - 1; i >= 0; i--) {
     const record = trail[i]
+    if (!record) continue
     if (REVEAL_OUTCOME_EVENTS.has(record.event)) {
       return record.event === 'reveal_rejected' ? record.at : undefined
     }
