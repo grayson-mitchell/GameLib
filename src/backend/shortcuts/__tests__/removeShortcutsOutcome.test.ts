@@ -74,6 +74,7 @@ import { logError } from 'backend/logger'
 import { removeShortcuts, shortcutFiles } from '../shortcuts/shortcuts'
 import type { GameInfo } from 'common/types'
 import type { Game } from 'common/types/game_manager'
+import { defined } from 'backend/testUtils/indexed'
 
 const mockLogError = logError as jest.Mock
 
@@ -110,7 +111,9 @@ afterEach(() => {
 
 /** Both shortcut paths for `title`, asserted to sit under the jest containment home. */
 function containedPaths(title: string): [string, string] {
-  const [desktopFile, menuFile] = shortcutFiles(title)
+  const [desktopPath, menuPath] = shortcutFiles(title)
+  const desktopFile = defined(desktopPath, 'desktop shortcut path')
+  const menuFile = defined(menuPath, 'menu shortcut path')
   expect(desktopFile.startsWith(homedir())).toBe(true)
   expect(menuFile.startsWith(homedir())).toBe(true)
   created.push(desktopFile, menuFile)

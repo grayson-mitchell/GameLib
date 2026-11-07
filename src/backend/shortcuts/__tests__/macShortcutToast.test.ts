@@ -50,6 +50,7 @@ import { notify } from 'backend/dialog/dialog'
 import { shortcutFiles } from '../shortcuts/shortcuts'
 import { handlerRegistry } from 'backend/platform'
 import type { GameInfo } from 'common/types'
+import { defined } from 'backend/testUtils/indexed'
 
 import '../ipc_handler'
 
@@ -84,7 +85,9 @@ describe('261027-c4g: ipc_handler.ts mac toast names the Desktop', () => {
   })
 
   function contained(title: string) {
-    const [desktop, menu] = shortcutFiles(title)
+    const [desktopFile, menuFile] = shortcutFiles(title)
+    const desktop = defined(desktopFile, 'desktop shortcut path')
+    const menu = defined(menuFile, 'menu shortcut path')
     expect(desktop.startsWith(homedir())).toBe(true)
     expect(menu.startsWith(homedir())).toBe(true)
     created.push(desktop, menu)

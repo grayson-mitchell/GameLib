@@ -69,6 +69,16 @@ import { dirname, join } from 'path'
 import { addShortcuts, shortcutFiles } from '../shortcuts/shortcuts'
 import type { GameInfo } from 'common/types'
 import type { Game } from 'common/types/game_manager'
+import { defined } from 'backend/testUtils/indexed'
+
+/** Both shortcut paths for `title`; throws if the platform yields none. */
+function bothFiles(title: string): [string, string] {
+  const [first, second] = shortcutFiles(title)
+  return [
+    defined(first, 'desktop shortcut path'),
+    defined(second, 'menu shortcut path')
+  ]
+}
 
 function overrideProcessPlatform(os: string): string {
   const original = process.platform
@@ -134,7 +144,7 @@ describe('addShortcuts on linux', () => {
   })
 
   it('rejects when the desktop entry cannot be written', async () => {
-    const [desktopFile, menuFile] = shortcutFiles(gameInfo.title)
+    const [desktopFile, menuFile] = bothFiles(gameInfo.title)
     rmSync(dirname(desktopFile), { recursive: true, force: true })
     mkdirSync(dirname(menuFile), { recursive: true })
 
@@ -142,7 +152,7 @@ describe('addShortcuts on linux', () => {
   })
 
   it('resolves and writes both entries when both folders exist', async () => {
-    const [desktopFile, menuFile] = shortcutFiles(gameInfo.title)
+    const [desktopFile, menuFile] = bothFiles(gameInfo.title)
     mkdirSync(dirname(desktopFile), { recursive: true })
     mkdirSync(dirname(menuFile), { recursive: true })
 
@@ -166,7 +176,7 @@ describe('addShortcuts on win32', () => {
 
   it('writes the desktop and Start Menu .lnk through PowerShell, paths in env, never a shell', async () => {
     fakePowerShell(0)
-    const [desktopFile, menuFile] = shortcutFiles(gameInfo.title)
+    const [desktopFile, menuFile] = bothFiles(gameInfo.title)
 
     await expect(addShortcuts(game, true)).resolves.toBeUndefined()
 
@@ -204,7 +214,7 @@ describe('Steam game (261026-c7r)', () => {
 
   it('linux: both .desktop files Exec the steam gamelib:// URL', async () => {
     originalPlatform = overrideProcessPlatform('linux')
-    const [desktopFile, menuFile] = shortcutFiles(steamGameInfo.title)
+    const [desktopFile, menuFile] = bothFiles(steamGameInfo.title)
     mkdirSync(dirname(desktopFile), { recursive: true })
     mkdirSync(dirname(menuFile), { recursive: true })
 
@@ -218,7 +228,7 @@ describe('Steam game (261026-c7r)', () => {
   it('win32: both .lnk writes carry the steam gamelib:// URL', async () => {
     originalPlatform = overrideProcessPlatform('win32')
     fakePowerShell(0)
-    const [desktopFile, menuFile] = shortcutFiles(steamGameInfo.title)
+    const [desktopFile, menuFile] = bothFiles(steamGameInfo.title)
 
     await addShortcuts(steamGame, true)
 
@@ -248,7 +258,7 @@ describe('Steam game (261026-c7r)', () => {
     })
 
     it('writes run.sh with the quoted steam URL and an iconless plist', async () => {
-      const app = shortcutFiles(steamGameInfo.title)[1]
+      const app = bothFiles(steamGameInfo.title)[1]
 
       await addShortcuts(steamGame, true)
 
@@ -268,7 +278,7 @@ describe('Steam game (261026-c7r)', () => {
     })
 
     it('does not register a Steam game as a non-Steam game', async () => {
-      const [desktopFile, menuFile] = shortcutFiles(steamGameInfo.title)
+      const [desktopFile, menuFile] = bothFiles(steamGameInfo.title)
       mkdirSync(dirname(desktopFile), { recursive: true })
       mkdirSync(dirname(menuFile), { recursive: true })
 
@@ -278,7 +288,7 @@ describe('Steam game (261026-c7r)', () => {
     })
 
     it('still registers a legendary game', async () => {
-      const [desktopFile, menuFile] = shortcutFiles(gameInfo.title)
+      const [desktopFile, menuFile] = bothFiles(gameInfo.title)
       mkdirSync(dirname(desktopFile), { recursive: true })
       mkdirSync(dirname(menuFile), { recursive: true })
 
@@ -300,7 +310,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
   afterEach(() => {
     if (savedShellExe === undefined) delete process.env.GAMELIB_SHELL_EXE
     else process.env.GAMELIB_SHELL_EXE = savedShellExe
-    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    const [desktopApp, menuApp] = bothFiles(gameInfo.title)
     rmSync(desktopApp, { recursive: true, force: true })
     rmSync(menuApp, { recursive: true, force: true })
   })
@@ -308,7 +318,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
   const runSh = (app: string) => join(app, 'Contents', 'MacOS', 'run.sh')
 
   it('shortcutFiles returns distinct Desktop and Applications .app paths', () => {
-    const [desktopApp, menuApp] = shortcutFiles('X')
+    const [desktopApp, menuApp] = bothFiles('X')
     expect(desktopApp).toBe(join(homedir(), 'Desktop', 'X.app'))
     expect(menuApp).toBe(join(homedir(), 'Applications', 'X.app'))
     expect(desktopApp).not.toEqual(menuApp)
@@ -320,7 +330,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
       addDesktopShortcuts: false,
       addStartMenuShortcuts: false
     }
-    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    const [desktopApp, menuApp] = bothFiles(gameInfo.title)
 
     await addShortcuts(game, true)
 
@@ -336,7 +346,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
 
   it('261026-ctm menu add with the Desktop toggle on writes one bundle and a Desktop symlink to it', async () => {
     mockSettings = desktopOn
-    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    const [desktopApp, menuApp] = bothFiles(gameInfo.title)
 
     await addShortcuts(game, true)
 
@@ -348,7 +358,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
 
   it('261026-ctm install add with only the Desktop toggle on writes the Applications bundle and links it', async () => {
     mockSettings = desktopOn
-    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    const [desktopApp, menuApp] = bothFiles(gameInfo.title)
 
     await addShortcuts(game)
 
@@ -359,7 +369,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
 
   it('261026-ctm a legacy real Desktop bundle is replaced by the link', async () => {
     mockSettings = desktopOn
-    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    const [desktopApp, menuApp] = bothFiles(gameInfo.title)
     mkdirSync(join(desktopApp, 'Contents', 'MacOS'), { recursive: true })
     writeFileSync(runSh(desktopApp), '')
 
@@ -371,7 +381,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
 
   it('261026-ctm a dangling Desktop link is replaced by a link to the bundle', async () => {
     mockSettings = desktopOn
-    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    const [desktopApp, menuApp] = bothFiles(gameInfo.title)
     mkdirSync(dirname(desktopApp), { recursive: true })
     symlinkSync(
       join(homedir(), 'Applications', 'gone-261026-ctm.app'),
@@ -390,7 +400,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
       addDesktopShortcuts: false,
       addStartMenuShortcuts: false
     }
-    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    const [desktopApp, menuApp] = bothFiles(gameInfo.title)
 
     await expect(addShortcuts(game)).resolves.toBeUndefined()
 
@@ -404,7 +414,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
       addDesktopShortcuts: true,
       addStartMenuShortcuts: false
     }
-    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    const [desktopApp, menuApp] = bothFiles(gameInfo.title)
     const desktopDir = dirname(desktopApp)
     // ~/Desktop as a regular file makes the mkdir of <title>.app under it fail.
     rmSync(desktopDir, { recursive: true, force: true })
@@ -419,7 +429,7 @@ describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
 
   it('261026-ctm a failed Applications write rejects naming both paths and creates no link', async () => {
     mockSettings = desktopOn
-    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    const [desktopApp, menuApp] = bothFiles(gameInfo.title)
     const appsDir = dirname(menuApp)
     rmSync(appsDir, { recursive: true, force: true })
     writeFileSync(appsDir, '')

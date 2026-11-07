@@ -74,7 +74,8 @@ describe('indexedAccessRatchet bucketOf', () => {
       'src/common/knownFixOverlayCatalogue.ts',
       'src/common/types',
       'src/preload/__tests__',
-      'src/preload/api'
+      'src/preload/api',
+      'src/backend/shortcuts'
     ])
   })
 })
