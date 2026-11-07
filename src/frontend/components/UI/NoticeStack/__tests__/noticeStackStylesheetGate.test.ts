@@ -28,6 +28,7 @@
  */
 import { readdirSync, readFileSync } from 'fs'
 import path from 'path'
+import { at, defined } from '../../../__tests__/fixtures/indexed'
 
 import {
   stripSourceComments,
@@ -102,7 +103,7 @@ function parseScssDeclarations(text: string): Decl[] {
   const flushDecl = () => {
     const stmt = buf.trim()
     buf = ''
-    const top = stack[stack.length - 1]
+    const top = at(stack, -1)
     if (!stmt || top.skip) return
     if (stmt.startsWith('$') || stmt.startsWith('@')) return
     const idx = stmt.indexOf(':')
@@ -118,7 +119,7 @@ function parseScssDeclarations(text: string): Decl[] {
     if (ch === '{') {
       const header = buf.trim()
       buf = ''
-      const parent = stack[stack.length - 1]
+      const parent = at(stack, -1)
       if (parent.skip || /^@(-\w+-)?keyframes\b/.test(header)) {
         stack.push({ selectors: parent.selectors, skip: true })
       } else if (header.startsWith('@')) {
@@ -153,7 +154,7 @@ const ANCHOR_RE = /^(top|bottom|left|right|inset(-block.*|-inline.*)?)$/
 function subjectClasses(selector: string): string[] {
   const compounds = selector.split(/[\s>+~]+/).filter(Boolean)
   const subject = compounds[compounds.length - 1] ?? ''
-  return [...subject.matchAll(/\.([A-Za-z0-9_-]+)/g)].map((m) => m[1])
+  return [...subject.matchAll(/\.([A-Za-z0-9_-]+)/g)].map((m) => defined(m[1]))
 }
 
 function isToastRoot(selector: string, rootBase: string): boolean {
@@ -252,7 +253,7 @@ describe('NoticeStack stylesheet gate (real sources)', () => {
       (d) => d.prop === 'position' && d.value === 'fixed'
     )
     expect(fixed).toHaveLength(1)
-    expect(fixed[0].selectors).toEqual(['.noticeStack'])
+    expect(at(fixed, 0).selectors).toEqual(['.noticeStack'])
 
     const absolute = parsed.filter(
       (d) => d.prop === 'position' && d.value === 'absolute'
@@ -282,8 +283,8 @@ describe('NoticeStack stylesheet gate (real sources)', () => {
 })
 
 describe('NoticeStack stylesheet gate (derived specimens)', () => {
-  const humble = SLOTS[1]
-  const steam = SLOTS[0]
+  const humble = at(SLOTS, 1)
+  const steam = at(SLOTS, 0)
 
   it('flags position fixed + anchors reintroduced on the Humble toast root', () => {
     const text = derive(
@@ -364,12 +365,14 @@ describe('NoticeStack stylesheet gate (discovery guard)', () => {
     const src = strip(read(REGION_TSX))
     const inner = src.match(/<NoticeStack>([\s\S]*?)<\/NoticeStack>/)
     expect(inner).not.toBeNull()
-    const tags = [...inner![1].matchAll(/<([A-Z]\w*)/g)].map((m) => m[1])
+    const tags = [...defined(inner?.[1]).matchAll(/<([A-Z]\w*)/g)].map((m) =>
+      defined(m[1])
+    )
     expect(tags.length).toBeGreaterThan(0)
     for (const tag of tags) {
       const imp = src.match(new RegExp(`import\\s+${tag}\\s+from\\s+'([^']+)'`))
       expect(imp).not.toBeNull()
-      const rel = imp![1].replace(/^frontend\//, 'src/frontend/')
+      const rel = defined(imp?.[1]).replace(/^frontend\//, 'src/frontend/')
       expect(SLOTS.map((s) => path.dirname(s.tsx))).toContain(rel)
     }
   })

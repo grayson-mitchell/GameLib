@@ -318,6 +318,7 @@ import FormControl from '../../FormControl'
 import AddGameButton from 'frontend/screens/Library/components/AddGameButton'
 import TourButton from 'frontend/components/Tour/TourButton'
 import Header from '../index'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -403,7 +404,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     const matches = findByDataTour(tree, 'library-views-collections')
     expect(matches).toHaveLength(1)
 
-    const childTypes = collectElements(matches[0].props.children).map(
+    const childTypes = collectElements(at(matches, 0).props.children).map(
       (el) => el.type
     )
     expect(childTypes).toContain(FilterViewList)
@@ -415,7 +416,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     const matches = findByDataTour(tree, 'library-facets')
     expect(matches).toHaveLength(1)
 
-    const childTypes = collectElements(matches[0].props.children).map(
+    const childTypes = collectElements(at(matches, 0).props.children).map(
       (el) => el.type
     )
     expect(childTypes).toContain(FilterStoreFacet)
@@ -428,7 +429,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     const matches = findByDataTour(tree, 'library-focus-row')
     expect(matches).toHaveLength(1)
 
-    const childTypes = collectElements(matches[0].props.children).map(
+    const childTypes = collectElements(at(matches, 0).props.children).map(
       (el) => el.type
     )
     expect(childTypes).toContain(FilterFocusRow)
@@ -451,7 +452,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
   })
 
   it('the Filters heading reads the existing header.filters string', () => {
-    const heading = topLevelChildren(renderHeader())[4]
+    const heading = at(topLevelChildren(renderHeader()), 4)
     expect(heading.type).toBe('h2')
     expect(heading.props.children).toBe('Filters')
   })
@@ -471,7 +472,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
         (el) => el.type === Dropdown
       )
       expect(found).toHaveLength(1)
-      return found[0]
+      return at(found, 0)
     }
     const rowsOf = (dropdown: AnyElement): AnyElement[] =>
       (Array.isArray(dropdown.props.children)
@@ -506,7 +507,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
 
     describe('group-by row', () => {
       const groupRow = () =>
-        findByDataTour(sortGroupOf(renderHeader()), 'library-group-by')[0]
+        at(findByDataTour(sortGroupOf(renderHeader()), 'library-group-by'), 0)
 
       it('holds one closeOnSelect themed Dropdown with label, value and caret, and no direction button', () => {
         libraryContextValue = makeLibraryContextValue({ groupBy: 'store' })
@@ -549,7 +550,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
         expect(
           rows.every((r) => r.props.className === 'Header__sortOption')
         ).toBe(true)
-        fire(rows[2], 'onClick')
+        fire(at(rows, 2), 'onClick')
         expect(libraryContextValue.setGroupBy).toHaveBeenCalledTimes(1)
         expect(libraryContextValue.setGroupBy).toHaveBeenCalledWith('store')
       })
@@ -557,7 +558,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
 
     it('the sort row holds one closeOnSelect Dropdown with the Header__sortDropdown class', () => {
       const dropdown = dropdownIn(
-        findByDataTour(sortGroupOf(renderHeader()), 'library-sort')[0]
+        at(findByDataTour(sortGroupOf(renderHeader()), 'library-sort'), 0)
       )
       expect(String(dropdown.props.className)).toContain('Header__sortDropdown')
       expect(dropdown.props.closeOnSelect).toBe(true)
@@ -566,7 +567,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     it('its children are four NavItem button rows in LIBRARY_SORT_FIELDS order, the current field active', () => {
       libraryContextValue = makeLibraryContextValue({ sortField: 'lastPlayed' })
       const dropdown = dropdownIn(
-        findByDataTour(sortGroupOf(renderHeader()), 'library-sort')[0]
+        at(findByDataTour(sortGroupOf(renderHeader()), 'library-sort'), 0)
       )
       const rows = rowsOf(dropdown)
       expect(rows).toHaveLength(4)
@@ -593,10 +594,10 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
 
     it('clicking a row calls setSortField once with that row literal field', () => {
       const dropdown = dropdownIn(
-        findByDataTour(sortGroupOf(renderHeader()), 'library-sort')[0]
+        at(findByDataTour(sortGroupOf(renderHeader()), 'library-sort'), 0)
       )
       const rows = rowsOf(dropdown)
-      fire(rows[1], 'onClick')
+      fire(at(rows, 1), 'onClick')
       expect(libraryContextValue.setSortField).toHaveBeenCalledTimes(1)
       expect(libraryContextValue.setSortField).toHaveBeenCalledWith(
         'lastPlayed'
@@ -607,7 +608,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
       const titleText = (field: string): string => {
         libraryContextValue = makeLibraryContextValue({ sortField: field })
         const dropdown = dropdownIn(
-          findByDataTour(sortGroupOf(renderHeader()), 'library-sort')[0]
+          at(findByDataTour(sortGroupOf(renderHeader()), 'library-sort'), 0)
         )
         return collectElements(dropdown.props.title as ReactNode)
           .flatMap((el) => [el.props.children])
@@ -623,7 +624,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
       const tree = renderHeader()
       const group = sortGroupOf(tree)
       const button = collectElements(
-        findByDataTour(group, 'library-sort')[0].props.children
+        at(findByDataTour(group, 'library-sort'), 0).props.children
       ).find((el) => el.type === 'button') as AnyElement
       fire(button, 'onClick')
       expect(libraryContextValue.setSortDirection).toHaveBeenCalledWith('desc')
@@ -631,7 +632,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
       libraryContextValue = makeLibraryContextValue({ sortDirection: 'desc' })
       const tree2 = renderHeader()
       const button2 = collectElements(
-        findByDataTour(sortGroupOf(tree2), 'library-sort')[0].props.children
+        at(findByDataTour(sortGroupOf(tree2), 'library-sort'), 0).props.children
       ).find((el) => el.type === 'button') as AnyElement
       fire(button2, 'onClick')
       expect(libraryContextValue.setSortDirection).toHaveBeenCalledWith('asc')
@@ -641,8 +642,8 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
       const buttonFor = (sortDirection: 'asc' | 'desc'): AnyElement => {
         libraryContextValue = makeLibraryContextValue({ sortDirection })
         return collectElements(
-          findByDataTour(sortGroupOf(renderHeader()), 'library-sort')[0].props
-            .children
+          at(findByDataTour(sortGroupOf(renderHeader()), 'library-sort'), 0)
+            .props.children
         ).find((el) => el.type === 'button') as AnyElement
       }
       const asc = buttonFor('asc')
@@ -657,7 +658,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
   it('Header__utilities holds exactly four controls in the locked D-01 order, and no FormControl element survives anywhere in the tree', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    const utilities = children[0]
+    const utilities = at(children, 0)
 
     const controls = collectElements(utilities.props.children).filter(
       (el) => el.type === Link || el.type === 'button' || el.type === TourButton
@@ -665,10 +666,10 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     expect(controls).toHaveLength(4)
     // D-01's order: console mode, layout toggle, alphabet filter, tour. The
     // two sort buttons moved to `Header__sortGroup` (quick 261027-jjz).
-    expect(controls[0].type).toBe(Link)
-    expect(controls[1].type).toBe('button')
-    expect(controls[2].type).toBe('button')
-    expect(controls[3].type).toBe(TourButton)
+    expect(at(controls, 0).type).toBe(Link)
+    expect(at(controls, 1).type).toBe('button')
+    expect(at(controls, 2).type).toBe('button')
+    expect(at(controls, 3).type).toBe(TourButton)
 
     const formControlEls = collectElements(tree).filter(
       (el) => el.type === FormControl
@@ -678,18 +679,16 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
 
   it('the last top-level child of Header__footer is the LibraryTileSizeSlider, by identity (261011-t4y, D-02)', () => {
     const tree = renderHeader()
-    const footer = topLevelChildren(tree)[7]
+    const footer = at(topLevelChildren(tree), 7)
     const footerChildren = topLevelChildren(footer)
-    expect(footerChildren[0].props?.className).toBe('Header__footerRow')
-    expect(footerChildren[footerChildren.length - 1].type).toBe(
-      LibraryTileSizeSlider
-    )
+    expect(at(footerChildren, 0).props?.className).toBe('Header__footerRow')
+    expect(at(footerChildren, -1).type).toBe(LibraryTileSizeSlider)
   })
 
   it('Header__footer renders AddGameButton, by identity', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    const footer = children[7]
+    const footer = at(children, 7)
 
     const addGameButtonEls = collectElements(footer.props.children).filter(
       (el) => el.type === AddGameButton
@@ -700,14 +699,14 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
   it('Header__utilities holds exactly one Console Mode Link, by identity, with an accessible name and no visible text', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    const utilities = children[0]
+    const utilities = at(children, 0)
 
     const linkEls = collectElements(utilities.props.children).filter(
       (el) => el.type === Link
     )
     expect(linkEls).toHaveLength(1)
 
-    const link = linkEls[0]
+    const link = at(linkEls, 0)
     expect(link.props.to).toBe('/console')
     expect(link.props['aria-label']).toBe('Console Mode')
     expect(link.props.title).toBe('Console Mode')
@@ -721,12 +720,12 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
   it('the Console Mode Link carries no data-tour, so the two findByDataTour uniqueness assertions above stay meaningful', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    const utilities = children[0]
+    const utilities = at(children, 0)
 
     const linkEls = collectElements(utilities.props.children).filter(
       (el) => el.type === Link
     )
-    expect(linkEls[0].props['data-tour']).toBeUndefined()
+    expect(at(linkEls, 0).props['data-tour']).toBeUndefined()
   })
 
   it('both tour-anchor wrappers restate the .Header gap they intercepted, scoped per wrapper block', () => {
@@ -790,14 +789,14 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
   it('Header__footerRow renders the plus button, count pill, then refresh button in D-04/D-06 order', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    const footer = children[7]
-    const footerRow = topLevelChildren(footer)[0]
+    const footer = at(children, 7)
+    const footerRow = at(topLevelChildren(footer), 0)
     expect(footerRow.props?.className).toBe('Header__footerRow')
 
     const rowChildren = topLevelChildren(footerRow)
-    expect(rowChildren[0].type).toBe(AddGameButton)
-    expect(rowChildren[0].props?.iconOnly).toBe(true)
-    expect(rowChildren[1].props?.className).toMatch(/numberOfgames/)
-    expect(rowChildren[2].type).toBe('button')
+    expect(at(rowChildren, 0).type).toBe(AddGameButton)
+    expect(at(rowChildren, 0).props?.iconOnly).toBe(true)
+    expect(at(rowChildren, 1).props?.className).toMatch(/numberOfgames/)
+    expect(at(rowChildren, 2).type).toBe('button')
   })
 })

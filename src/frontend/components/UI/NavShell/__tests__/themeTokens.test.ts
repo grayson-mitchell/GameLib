@@ -24,6 +24,7 @@
 import { readFileSync, readdirSync } from 'fs'
 import { join, sep } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { at, defined } from '../../../__tests__/fixtures/indexed'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..')
 
@@ -434,7 +435,7 @@ const customProps = (blockBody: string): Map<string, string> => {
       buf = ''
     } else if (ch === ';' && depth === 0) {
       const m = /^\s*(--[\w-]+)\s*:\s*([\s\S]+)$/.exec(buf)
-      if (m) out.set(m[1], m[2].trim().replace(/\s+/g, ' '))
+      if (m) out.set(defined(m[1]), defined(m[2]).trim().replace(/\s+/g, ' '))
       buf = ''
     } else {
       buf += ch
@@ -453,7 +454,7 @@ const globalTokens = (): Map<string, string> => {
   const src = read(COLORS_SCSS)
   const out = new Map<string, string>()
   for (const m of src.matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)) {
-    if (!out.has(m[1])) out.set(m[1], m[2].trim())
+    if (!out.has(defined(m[1]))) out.set(defined(m[1]), defined(m[2]).trim())
   }
   return out
 }
@@ -512,7 +513,8 @@ const resolveValue = (
   const v = value.trim()
   const m = /^var\(\s*(--[\w-]+)\s*(?:,\s*([\s\S]+))?\)$/.exec(v)
   if (!m) return v
-  const [, name, fallback] = m
+  const name = defined(m[1])
+  const fallback = m[2]
   if (!seen.has(name)) {
     const next = scope.get(name) ?? globals.get(name)
     if (next !== undefined) {
@@ -534,7 +536,7 @@ const toRgb = (colour: string): [number, number, number] | null => {
   const c = (NAMED_COLOURS[colour.toLowerCase()] ?? colour).trim()
   const m = /^#([0-9a-f]{3,8})$/i.exec(c)
   if (!m) return null
-  let hex = m[1]
+  let hex = defined(m[1])
   if (hex.length === 3)
     hex = hex
       .split('')
@@ -561,9 +563,11 @@ const contrastRatio = (fg: string, bg: string): number => {
   const a = toRgb(fg)
   const b = toRgb(bg)
   if (!a || !b) throw new Error(`uncomparable colours: ${fg} / ${bg}`)
-  const [hi, lo] = [relativeLuminance(a), relativeLuminance(b)].sort(
+  const sorted = [relativeLuminance(a), relativeLuminance(b)].sort(
     (x, y) => y - x
   )
+  const hi = at(sorted, 0)
+  const lo = at(sorted, 1)
   return (hi + 0.05) / (lo + 0.05)
 }
 
@@ -581,10 +585,10 @@ const selectedTabColourDecl = (
   const scoped = new RegExp(
     `body\\.${themeClass}[^{]*\\{[^}]*?color:\\s*([^;]+);`
   ).exec(navTabsScss)
-  if (scoped) return scoped[1].trim()
+  if (scoped) return defined(scoped[1]).trim()
   const base = /&\.Mui-selected\s*\{[^}]*?color:\s*([^;]+);/.exec(navTabsScss)
   if (!base) throw new Error('no .Mui-selected color declaration in NavTabs')
-  return base[1].trim()
+  return defined(base[1]).trim()
 }
 
 describe('selected NavTab label contrast in every theme (CR-01 residual)', () => {
@@ -673,7 +677,7 @@ const declsAtDepthZero = (blockBody: string, prop: string): string[] => {
   const pattern = new RegExp(String.raw`^\s*${prop}\s*:\s*([\s\S]+)$`)
   const take = (statement: string) => {
     const m = pattern.exec(statement)
-    if (m) out.push(m[1].trim().replace(/\s+/g, ' '))
+    if (m) out.push(defined(m[1]).trim().replace(/\s+/g, ' '))
   }
   let depth = 0
   let buf = ''
@@ -701,7 +705,7 @@ const isOpaqueColour = (colour: string): boolean => {
     return true
   const m = /^#([0-9a-f]+)$/i.exec(colour.trim())
   if (!m) return false
-  const hex = m[1]
+  const hex = defined(m[1])
   if (hex.length === 3 || hex.length === 6) return true
   return hex.length === 8 && hex.slice(6).toLowerCase() === 'ff'
 }
@@ -848,7 +852,7 @@ const dividerColourDecl = (
     throw new Error(
       `expected exactly one depth-0 color in the ${themeClass} divider rule, found ${decls.length}`
     )
-  return decls[0]
+  return at(decls, 0)
 }
 
 /**
@@ -969,19 +973,19 @@ const applyTextColourDecl = (
     `body\\.${themeClass}\\s*${GUARDED_OVERRIDE_TAIL}\\s*\\{([^}]*)\\}`
   ).exec(controlBody)
   if (scoped) {
-    const decls = declsAtDepthZero(scoped[1], 'color')
+    const decls = declsAtDepthZero(defined(scoped[1]), 'color')
     if (decls.length !== 1)
       throw new Error(
         `expected exactly one depth-0 color in the ${themeClass} override, found ${decls.length}`
       )
-    return decls[0]
+    return at(decls, 0)
   }
   const base = declsAtDepthZero(controlBody, 'color')
   if (base.length !== 1)
     throw new Error(
       `expected exactly one depth-0 base color in the block, found ${base.length}`
     )
-  return base[0]
+  return defined(base[0])
 }
 
 /**
@@ -1018,7 +1022,7 @@ describe('Winetricks enabled Apply text contrast in every theme (45-12 G7)', () 
     ).exec(applyBody)
     expect(scoped).not.toBeNull()
     expect(
-      declsAtDepthZero((scoped as RegExpExecArray)[1], 'color')
+      declsAtDepthZero(defined((scoped as RegExpExecArray)[1]), 'color')
     ).toHaveLength(1)
   })
 
@@ -1081,8 +1085,8 @@ describe('Winetricks enabled Apply text contrast in every theme (45-12 G7)', () 
     // base background. If this resolves >= 4.5, gruvbox's tokens changed
     // and the override (and this test) should be deleted, not re-pinned.
     const scope = themeTokens(themesScss, 'body.gruvbox_dark')
-    const baseColour = declsAtDepthZero(applyBody, 'color')[0]
-    const baseBackground = declsAtDepthZero(applyBody, 'background')[0]
+    const baseColour = at(declsAtDepthZero(applyBody, 'color'), 0)
+    const baseBackground = at(declsAtDepthZero(applyBody, 'background'), 0)
     const fg = resolveValue(baseColour, scope, globals)
     const bg = resolveValue(baseBackground, scope, globals)
     expect(fg).not.toBeNull()
@@ -1121,7 +1125,7 @@ describe('Winetricks enabled Apply text contrast in every theme (45-12 G7)', () 
     const disabledColourDecls = declsAtDepthZero(disabledBody, 'color')
     expect(disabledColourDecls).toHaveLength(1)
     const scope = themeTokens(themesScss, 'body.gruvbox_dark')
-    expect(resolveValue(disabledColourDecls[0], scope, globals)).toEqual(
+    expect(resolveValue(at(disabledColourDecls, 0), scope, globals)).toEqual(
       resolveValue('var(--text-secondary, #a8aeaf)', scope, globals)
     )
   })
@@ -1242,7 +1246,7 @@ const expiredTriangleColourDecl = (
     throw new Error(
       `expected exactly one depth-0 color in the ${themeClass} expired triangle rule, found ${decls.length}`
     )
-  return decls[0]
+  return at(decls, 0)
 }
 
 /**
@@ -1539,7 +1543,7 @@ const mixSrgb = (a: string, b: string, weightA: number): string => {
     throw new Error(`mixSrgb: uncomparable colours: ${a} / ${b}`)
   }
   const mixed = rgbA.map((channelA, i) =>
-    Math.round(channelA * weightA + rgbB[i] * (1 - weightA))
+    Math.round(channelA * weightA + at(rgbB, i) * (1 - weightA))
   )
   return (
     '#' + mixed.map((channel) => channel.toString(16).padStart(2, '0')).join('')
@@ -1575,7 +1579,7 @@ const parseColourMixArg = (
 ): { colourExpr: string; weight: number | null } => {
   const trimmed = arg.trim()
   const m = /^([\s\S]+?)\s+(\d+)%$/.exec(trimmed)
-  if (m) return { colourExpr: m[1], weight: Number(m[2]) }
+  if (m) return { colourExpr: defined(m[1]), weight: Number(defined(m[2])) }
   return { colourExpr: trimmed, weight: null }
 }
 
@@ -1607,7 +1611,9 @@ const resolveColour = (
       `expected 3 color-mix() arguments, found ${args.length}: ${resolved}`
     )
   }
-  const [colourSpace, argA, argB] = args
+  const colourSpace = at(args, 0)
+  const argA = at(args, 1)
+  const argB = at(args, 2)
   if (colourSpace.trim() !== 'in srgb') {
     throw new Error(
       `expected 'in srgb' color-mix(), found '${colourSpace.trim()}'`
@@ -1729,7 +1735,7 @@ const dangerTagColourDecl = (rowScss: string): string => {
       `expected exactly one depth-0 color in the Row tag errored rule, found ${decls.length}`
     )
   }
-  return decls[0]
+  return at(decls, 0)
 }
 
 const dangerIconColourDecl = (rowScss: string): string => {
@@ -1741,7 +1747,7 @@ const dangerIconColourDecl = (rowScss: string): string => {
       `expected exactly one depth-0 color in the Row icon errored rule, found ${decls.length}`
     )
   }
-  return decls[0]
+  return at(decls, 0)
 }
 
 const dangerFailedCountColourDecl = (stickyBarScss: string): string => {
@@ -1755,7 +1761,7 @@ const dangerFailedCountColourDecl = (stickyBarScss: string): string => {
       `expected exactly one depth-0 color in the StickyBar failed rule, found ${decls.length}`
     )
   }
-  return decls[0]
+  return at(decls, 0)
 }
 
 const dangerLogErrorColourDecl = (logPanelScss: string): string => {
@@ -1766,7 +1772,7 @@ const dangerLogErrorColourDecl = (logPanelScss: string): string => {
       `expected exactly one depth-0 color in the LogPanel log-error rule, found ${decls.length}`
     )
   }
-  return decls[0]
+  return at(decls, 0)
 }
 
 /**
@@ -2042,7 +2048,7 @@ const winetricksRowBoxBody = (rowScss: string): string =>
  */
 const borderColourDecl = (ruleBody: string): string => {
   const borderColourDecls = declsAtDepthZero(ruleBody, 'border-color')
-  if (borderColourDecls.length > 0) return borderColourDecls[0]
+  if (borderColourDecls.length > 0) return at(borderColourDecls, 0)
   const borderDecls = declsAtDepthZero(ruleBody, 'border')
   for (const decl of borderDecls) {
     const idx = decl.indexOf('var(')
@@ -2089,7 +2095,7 @@ const queuedIndicator = (
         `expected exactly one depth-0 border-color in the queued tick, found ${colourDecls.length}`
       )
     }
-    return { colourDecl: colourDecls[0], alphaDecl: alphaDecls[0] }
+    return { colourDecl: at(colourDecls, 0), alphaDecl: at(alphaDecls, 0) }
   }
   const checkedBody = nestedRule(
     checkboxBody,
@@ -2108,7 +2114,7 @@ const queuedIndicator = (
       `expected exactly one depth-0 opacity in &:disabled, found ${alphaDecls.length}`
     )
   }
-  return { colourDecl: colourDecls[0], alphaDecl: alphaDecls[0] }
+  return { colourDecl: at(colourDecls, 0), alphaDecl: at(alphaDecls, 0) }
 }
 
 /**
@@ -2127,7 +2133,7 @@ const placeholderColourDecl = (inputBody: string): string => {
       `expected exactly one depth-0 color in &::placeholder, found ${decls.length}`
     )
   }
-  return decls[0]
+  return at(decls, 0)
 }
 
 /**
@@ -2248,7 +2254,7 @@ const indicatorFailures = ({
     }
     checkNonText(
       'disabled apply border',
-      applyBorderColourDecls[0],
+      at(applyBorderColourDecls, 0),
       1,
       [{ label: 'sticky-bar', colour: barSurface }],
       3
@@ -2619,8 +2625,8 @@ describe('Accent-filled Retry, Clear and .button.is-text text contrast in every 
       // Option (b), if ever taken, is exactly what turns this red.
       const block = blocks.get(control) as string
       const scope = themeTokens(themesScss, 'body.gruvbox_dark')
-      const baseColour = declsAtDepthZero(block, 'color')[0]
-      const baseBackground = declsAtDepthZero(block, 'background')[0]
+      const baseColour = at(declsAtDepthZero(block, 'color'), 0)
+      const baseBackground = at(declsAtDepthZero(block, 'background'), 0)
       const fg = resolveValue(baseColour, scope, globals)
       const bg = resolveValue(baseBackground, scope, globals)
       expect(fg).not.toBeNull()
@@ -2682,10 +2688,10 @@ describe('Accent-filled Retry, Clear and .button.is-text text contrast in every 
           (body) => declsAtDepthZero(body, 'color').length > 0
         )
         expect(withColour).toHaveLength(1)
-        expect(declsAtDepthZero(withColour[0], 'color')).toEqual([
+        expect(declsAtDepthZero(at(withColour, 0), 'color')).toEqual([
           'var(--text-secondary)'
         ])
-        expect(declsAtDepthZero(withColour[0], 'background')).toEqual([
+        expect(declsAtDepthZero(at(withColour, 0), 'background')).toEqual([
           'var(--disabled-button)'
         ])
       }
@@ -2861,8 +2867,8 @@ function pickWinningCandidate(candidates: ColourCandidate[]): ColourCandidate {
     const bestSpec = classTokenSpecificity(best.fullSelector)
     const candSpec = classTokenSpecificity(candidate.fullSelector)
     for (let i = 0; i < 3; i++) {
-      if (candSpec[i] !== bestSpec[i])
-        return candSpec[i] > bestSpec[i] ? candidate : best
+      if (at(candSpec, i) !== at(bestSpec, i))
+        return at(candSpec, i) > at(bestSpec, i) ? candidate : best
     }
     if (candidate.file === best.file) {
       return candidate.position > best.position ? candidate : best
@@ -2901,7 +2907,7 @@ function buttonFamilyColourCandidates(buttonsScss: string): ColourCandidate[] {
     }
     return {
       fullSelector,
-      value: decls[0],
+      value: at(decls, 0),
       file: 'buttons',
       position: buttonsScss.indexOf(`${needle} {`)
     }
@@ -2929,7 +2935,7 @@ function gameMenuColourCandidates(
     ...buttonFamilyColourCandidates(buttonsScss),
     {
       fullSelector: '.gameConfigContainer .game-actions .gameTools .link',
-      value: gameMenuDecls[0],
+      value: at(gameMenuDecls, 0),
       file: 'gamePage',
       position: gamePageCss.indexOf('.gameTools .link {')
     }
@@ -3022,7 +3028,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
         `expected exactly one depth-0 hover color for ${themeClass}, found ${decls.length}`
       )
     }
-    const resolved = resolveValue(decls[0], scope, globals)
+    const resolved = resolveValue(at(decls, 0), scope, globals)
     if (resolved === null) {
       throw new Error(`hover color for ${themeClass} did not resolve`)
     }
@@ -3156,7 +3162,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     (theme) => {
       const scope = themeTokens(themesScss, `body.${theme}`)
       const fg = gameMenuBaseForeground(scope, globals)
-      const bg = resolveValue(gameToolsSurfaceDecls[0], scope, globals)
+      const bg = resolveValue(at(gameToolsSurfaceDecls, 0), scope, globals)
       expect(bg).not.toBeNull()
       const ratio = contrastRatio(fg, bg as string)
       expect({ theme, fg, bg, ratio, passes: ratio >= 4.5 }).toEqual({
@@ -3174,7 +3180,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     (theme) => {
       const scope = themeTokens(themesScss, `body.${theme}`)
       const fg = gameMenuHoverForeground(theme, scope)
-      const bg = resolveValue(gameToolsSurfaceDecls[0], scope, globals)
+      const bg = resolveValue(at(gameToolsSurfaceDecls, 0), scope, globals)
       expect(bg).not.toBeNull()
       const ratio = contrastRatio(fg, bg as string)
       expect({ theme, fg, bg, ratio, passes: ratio >= 4.5 }).toEqual({
@@ -3189,7 +3195,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
 
   it('dracula hover fix: the theme-scoped override is load-bearing -- removing it in memory reproduces the pre-fix 3.79:1 miss', () => {
     const scope = themeTokens(themesScss, 'body.dracula')
-    const bg = resolveValue(gameToolsSurfaceDecls[0], scope, globals)
+    const bg = resolveValue(at(gameToolsSurfaceDecls, 0), scope, globals)
     expect(bg).not.toBeNull()
 
     const fixed = gameMenuHoverForeground('dracula', scope)
@@ -3197,7 +3203,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     expect(fixedRatio).toBeGreaterThanOrEqual(4.5)
 
     const withoutOverride = resolveValue(
-      hoverColourDecls[0],
+      at(hoverColourDecls, 0),
       scope,
       globals
     ) as string
@@ -3219,7 +3225,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     for (const theme of nonDraculaThemes) {
       const scope = themeTokens(themesScss, `body.${theme}`)
       const fg = gameMenuHoverForeground(theme, scope)
-      const bareFg = resolveValue(hoverColourDecls[0], scope, globals)
+      const bareFg = resolveValue(at(hoverColourDecls, 0), scope, globals)
       expect(fg).toBe(bareFg)
     }
   })
@@ -3310,10 +3316,10 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     expect(mainInfoSurfaceDecls).toEqual(['var(--body-background)'])
   })
 
-  const mainButtonSurfaceDecl = declsAtDepthZero(
-    cssBlock(gamePageCss, '.buttons'),
-    'background-color'
-  )[0]
+  const mainButtonSurfaceDecl = at(
+    declsAtDepthZero(cssBlock(gamePageCss, '.buttons'), 'background-color'),
+    0
+  )
   const mainButtonHoverBlock = cssBlock(buttonsScss, '.button.is-link:hover')
   const mainButtonHoverDecls = declsAtDepthZero(mainButtonHoverBlock, 'color')
 
@@ -3358,7 +3364,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
         `expected exactly one depth-0 MainButton hover color for ${themeClass}, found ${decls.length}`
       )
     }
-    return decls[0]
+    return at(decls, 0)
   }
 
   it('non-vacuity: MainButton dropdown family resolves its winner, surface and hover declaration', () => {
@@ -3381,7 +3387,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
       ''
     )
     const scope = themeTokens(themesScss, 'body.gruvbox_dark')
-    const preFixFg = resolveValue(mainButtonHoverDecls[0], scope, globals)
+    const preFixFg = resolveValue(at(mainButtonHoverDecls, 0), scope, globals)
     const preFixBg = resolveValue(mainButtonSurfaceDecl, scope, globals)
     expect(contrastRatio(preFixFg as string, preFixBg as string)).toBeCloseTo(
       3.9078232730305023,
@@ -3490,13 +3496,13 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
       `body\\.${themeClass}\\s*${GUARDED_OVERRIDE_TAIL}\\s*\\{([^}]*)\\}`
     ).exec(isTextHoverBlock)
     if (scoped) {
-      const decls = declsAtDepthZero(scoped[1], 'color')
+      const decls = declsAtDepthZero(defined(scoped[1]), 'color')
       if (decls.length !== 1) {
         throw new Error(
           `expected exactly one depth-0 color in the ${themeClass} hover override, found ${decls.length}`
         )
       }
-      return decls[0]
+      return at(decls, 0)
     }
     return applyTextColourDecl(isTextBlock, themeClass)
   }
@@ -3545,9 +3551,13 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
         scope,
         globals
       )
-      const preFixBg = resolveValue(isTextHoverSurfaceDecls[0], scope, globals)
+      const preFixBg = resolveValue(
+        at(isTextHoverSurfaceDecls, 0),
+        scope,
+        globals
+      )
       expect(contrastRatio(preFixFg as string, preFixBg as string)).toBeCloseTo(
-        preFixRatios[theme],
+        defined(preFixRatios[theme]),
         10
       )
     }
@@ -3569,7 +3579,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     (theme) => {
       const scope = themeTokens(themesScss, `body.${theme}`)
       const fg = resolveValue(isTextHoverForeground(theme), scope, globals)
-      const bg = resolveValue(isTextHoverSurfaceDecls[0], scope, globals)
+      const bg = resolveValue(at(isTextHoverSurfaceDecls, 0), scope, globals)
       expect(fg).not.toBeNull()
       expect(bg).not.toBeNull()
       const ratio = contrastRatio(fg as string, bg as string)
