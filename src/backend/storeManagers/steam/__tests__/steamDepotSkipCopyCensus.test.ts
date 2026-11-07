@@ -36,7 +36,7 @@ import translation from '../../../../../public/locales/en/translation.json'
 const REPO_ROOT = join(__dirname, '../../../../..')
 const LIBRARY_TS_PATH = join(
   REPO_ROOT,
-  'src/backend/storeManagers/steam/library.ts'
+  'src/backend/storeManagers/steam/library/installPollOnce.ts' // pollInstallOnce moved here (Phase 65-04)
 )
 const DEPOT_ERRORS_TS_PATH = join(
   REPO_ROOT,
