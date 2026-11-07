@@ -65,11 +65,11 @@ const normalise = (s: string): string => s.toLowerCase().trim().replace(/\s+/g, 
 function matchRule(browserId: string, pad: Pick<NativePad, 'id' | 'name' | 'vendorId' | 'productId'>): 0 | 1 | 2 | 3 {
   if (browserId === pad.id) return 1
   const hid = WEBKIT_HID_ID.exec(browserId)
-  if (hid && pad.vendorId != null && pad.productId != null) {
+  if (hid && hid[1] !== undefined && hid[2] !== undefined && pad.vendorId != null && pad.productId != null) {
     if (parseInt(hid[1], 16) === pad.vendorId && parseInt(hid[2], 16) === pad.productId) return 2
   }
   const gc = WEBKIT_GC_ID.exec(browserId)
-  if (gc && pad.name && normalise(gc[1]) === normalise(pad.name)) return 3
+  if (gc && gc[1] !== undefined && pad.name && normalise(gc[1]) === normalise(pad.name)) return 3
   return 0
 }
 

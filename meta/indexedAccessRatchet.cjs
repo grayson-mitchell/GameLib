@@ -69,7 +69,9 @@ const ADOPTED_BUCKETS = [
   'src/common/winetricks',
   'src/common/reportProblem.ts',
   'src/common/knownFixOverlayCatalogue.ts',
-  'src/common/types'
+  'src/common/types',
+  'src/preload/__tests__',
+  'src/preload/api'
 ]
 
 /**

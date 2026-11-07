@@ -79,6 +79,7 @@ import { applyFramelessDecorations, installDragRegionHandlers } from '../api/tau
 import { snapshotGet, send } from '../tauriTransport'
 import { setSetting } from '../api/settings'
 import { handleFramelessChanged } from '../api/misc'
+import { defined } from './defined'
 
 const mockedSnapshotGet = snapshotGet as jest.MockedFunction<typeof snapshotGet>
 const mockedTauriSend = send as jest.MockedFunction<typeof send>
@@ -124,9 +125,9 @@ class FakeElement {
 
 function chain(...elements: FakeElement[]): FakeElement {
   for (let i = 1; i < elements.length; i++) {
-    elements[i].parentElement = elements[i - 1]
+    defined(elements[i], 'chain element').parentElement = defined(elements[i - 1], 'chain parent')
   }
-  return elements[elements.length - 1]
+  return defined(elements[elements.length - 1], 'chain leaf')
 }
 
 ;(

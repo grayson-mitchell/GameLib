@@ -50,6 +50,7 @@ import {
   ensureStoreHydrated,
   onStoreChanged
 } from '../tauriTransport'
+import { defined } from './defined'
 import { STORE_FETCH_CHANNEL, STORE_CHANGED_CHANNEL, STORE_LAZY_MISS_MARKER } from 'common/types/sidecarTransport'
 
 const mockedInvoke = coreInvoke as jest.MockedFunction<typeof coreInvoke>
@@ -665,7 +666,7 @@ describe('WR-03: snapshotSet/snapshotDelete are allow-list gated', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
     snapshotSet('gogConfigStore', 'credentials', { access_token: 'x' })
     expect(warnSpy).toHaveBeenCalled()
-    expect(String(warnSpy.mock.calls[0][0])).toContain('blocked write')
+    expect(String(defined(warnSpy.mock.calls[0], 'first warn call')[0])).toContain('blocked write')
 
     // The optimistic local update must NOT have happened -- otherwise the UI would
     // show a value the sidecar refused to persist.
@@ -774,7 +775,7 @@ describe('send() rejection routing (debug session open-external-frame-noop)', ()
     // implementation calls window.api.logError here too (proven by the self-test below).
     expect(logError).not.toHaveBeenCalled()
     expect(errorSpy).toHaveBeenCalledTimes(1)
-    expect(String(errorSpy.mock.calls[0][0])).toContain('logError')
+    expect(String(defined(errorSpy.mock.calls[0], 'first error call')[0])).toContain('logError')
   })
 
   it('send() still returns undefined synchronously, throws nothing, and blocks nothing (fire-and-forget contract preserved)', () => {

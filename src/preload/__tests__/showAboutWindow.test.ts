@@ -34,6 +34,7 @@ jest.mock('../api/tauriChildWindows', () => ({
 
 import { showAboutWindow } from '../api/helpers'
 import { SHOW_ABOUT_DIALOG_EVENT } from 'common/aboutDialogEvent'
+import { defined } from './defined'
 
 describe('showAboutWindow (the tray + Settings seam)', () => {
   beforeEach(() => {
@@ -48,7 +49,7 @@ describe('showAboutWindow (the tray + Settings seam)', () => {
     showAboutWindow()
 
     expect(dispatched).toHaveLength(1)
-    expect(dispatched[0].type).toBe(SHOW_ABOUT_DIALOG_EVENT)
+    expect(defined(dispatched[0], 'dispatched event').type).toBe(SHOW_ABOUT_DIALOG_EVENT)
   })
 
   it('constructs no WebviewWindow -- About stopped being an OS window', () => {
