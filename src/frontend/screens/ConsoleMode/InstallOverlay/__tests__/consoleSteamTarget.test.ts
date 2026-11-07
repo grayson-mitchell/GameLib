@@ -303,13 +303,29 @@ describe('probeSteamQuickInstallTarget (D-29 inheriting D-24)', () => {
     expect(listSteamLibraryTargets).toHaveBeenCalledWith('570')
   })
 
-  it('A2: 1 valid library -> ok', async () => {
+  it('A2: 1 valid library -> ok, carrying the resolved library root as targetPath', async () => {
+    const targets = makeTargets(1)
     stubWindowApi({
-      listSteamLibraryTargets: jest.fn().mockResolvedValue(makeTargets(1)),
+      listSteamLibraryTargets: jest.fn().mockResolvedValue(targets),
       checkDiskSpace: jest.fn().mockResolvedValue(makeDisk({}))
     })
     const verdict = await probeSteamQuickInstallTarget()
-    expect(verdict).toEqual({ ok: true })
+    expect(verdict).toEqual({ ok: true, targetPath: targets[0].path })
+  })
+
+  it('A14: two libraries, index 1 primary, disk ok -> targetPath is the primary library root, never its steamappsDir', async () => {
+    const targets = makeTargets(2)
+    targets[0].isPrimary = false
+    targets[1].isPrimary = true
+    stubWindowApi({
+      listSteamLibraryTargets: jest.fn().mockResolvedValue(targets),
+      checkDiskSpace: jest.fn().mockResolvedValue(makeDisk({}))
+    })
+    const verdict = await probeSteamQuickInstallTarget()
+    expect(verdict).toEqual({ ok: true, targetPath: targets[1].path })
+    expect(verdict).not.toEqual(
+      expect.objectContaining({ targetPath: targets[1].steamappsDir })
+    )
   })
 
   it("A3: validPath false -> not ok, 'library-missing', degrade.libraryPath equals the resolved primary's path", async () => {
@@ -349,7 +365,7 @@ describe('probeSteamQuickInstallTarget (D-29 inheriting D-24)', () => {
         .mockResolvedValue(makeDisk({ free: LOW_SPACE_FLOOR_BYTES }))
     })
     const atFloor = await probeSteamQuickInstallTarget()
-    expect(atFloor).toEqual({ ok: true })
+    expect(atFloor).toEqual({ ok: true, targetPath: targets[0].path })
   })
 
   it("A5: probes the RESOLVED primary's steamappsDir, never .path, exactly once", async () => {
@@ -399,13 +415,14 @@ describe('probeSteamQuickInstallTarget (D-29 inheriting D-24)', () => {
     }
   })
 
-  it('A7 DISCRIMINATOR: an UNKNOWN disk verdict is not a failed one -- a rejected checkDiskSpace yields ok', async () => {
+  it('A7 DISCRIMINATOR: an UNKNOWN disk verdict is not a failed one -- a rejected checkDiskSpace yields ok, with the resolved targetPath', async () => {
+    const targets = makeTargets(1)
     stubWindowApi({
-      listSteamLibraryTargets: jest.fn().mockResolvedValue(makeTargets(1)),
+      listSteamLibraryTargets: jest.fn().mockResolvedValue(targets),
       checkDiskSpace: jest.fn().mockRejectedValue(new Error('probe failed'))
     })
     const verdict = await probeSteamQuickInstallTarget()
-    expect(verdict).toEqual({ ok: true })
+    expect(verdict).toEqual({ ok: true, targetPath: targets[0].path })
   })
 
   it('A8: a rejected listSteamLibraryTargets yields ok (the A1 shape, reached by failure)', async () => {
@@ -527,7 +544,7 @@ describe('probeSteamQuickInstallTarget client cause (quick 261102-pgy)', () => {
       steamClientSetupRecheck: okCheck
     })
     const okVerdict = await probeSteamQuickInstallTarget('570')
-    expect(okVerdict).toEqual({ ok: true })
+    expect(okVerdict).toEqual({ ok: true, targetPath: '/steam/library-0' })
     expect(okCheck).not.toHaveBeenCalled()
 
     const zero = recheck()
@@ -564,17 +581,26 @@ const ALL_FOCUS_KEYS: ConsoleFocusKeyLike[] = [
 const NON_STEAM_RUNNERS: Runner[] = ['gog', 'legendary', 'nile', 'sideload']
 
 describe('resolveConsoleActionIntent (the A-button bypass gate)', () => {
-  it("B1: { runner: 'steam', focused: 'install' } -> 'dismiss'", () => {
+  it("B1: { runner: 'steam', focused: 'install' } -> 'install' (quick 261107-kn8)", () => {
     expect(
       resolveConsoleActionIntent({ runner: 'steam', focused: 'install' })
-    ).toBe('dismiss')
+    ).toBe('install')
   })
 
   it.each(ALL_FOCUS_KEYS)(
-    "B2: runner 'steam' with focused '%s' -> 'dismiss' for every original FocusKey (the hand-off key 'setupSteam' is the one exception, see B5)",
+    "B2: runner 'steam' with focused '%s' resolves exactly like a non-Steam runner (the hand-off key 'setupSteam' is the one exception, see B5)",
     (focused) => {
+      const expected = {
+        install: 'install',
+        cancel: 'dismiss',
+        platform: 'none',
+        wine: 'none'
+      }[focused]
       expect(resolveConsoleActionIntent({ runner: 'steam', focused })).toBe(
-        'dismiss'
+        expected
+      )
+      expect(resolveConsoleActionIntent({ runner: 'gog', focused })).toBe(
+        expected
       )
     }
   )

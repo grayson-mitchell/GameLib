@@ -52,7 +52,10 @@ export type ConsoleClientSetupHandOff = NonNullable<
 // flagged the previously-exported form as a used-in-module finding -- there
 // is no external consumer, so the export served no purpose).
 type ConsoleSteamVerdict =
-  | { ok: true }
+  // `targetPath` is the resolved primary target's `path`, the library root the
+  // user recognises. It is backend-enumerated, so the renderer never composes
+  // it, and it is present only when a target resolved.
+  | { ok: true; targetPath?: string }
   | {
       ok: false
       degrade: SteamQuickInstallDegrade
@@ -103,6 +106,9 @@ export async function probeSteamQuickInstallTarget(
   }
 
   const verdict = evaluateQuickInstallTarget(target, disk)
+  if (verdict.ok) {
+    return { ok: true, targetPath: target.path }
+  }
   if (!verdict.ok && verdict.degrade.reason === 'library-missing' && appName) {
     const clientSetup = await steamClientSetupCause(appName)
     if (clientSetup) {
@@ -148,19 +154,19 @@ export function releaseUnclaimedSteamClientSetup(appName: string): void {
 }
 
 /**
- * The defect this closes: `focused` defaults to `'install'` and both the
- * confirm-button gamepad handler (`getActionButtonIndex`) and the Enter/Space
- * keydown branch called
- * `installGame()` with no runner test — so before this function, one A press
- * could fire the install a D-29 check had just refused (and, on the
- * transient "Opening Steam…" state, a second concurrent install). Both input
- * paths now route through this pure function instead of testing `focused`
- * directly. Steam's Console Mode branch renders no `FocusKey` row and no
- * install control on ANY path (the transient state or the D-29 failure
- * card), so for `runner === 'steam'` the only sane answer to "what does A
- * do?" is "get me out". A dismisses unless focus sits on the client-cause
- * card's hand-off chip (`setupSteam`), which is itself a way out (to desktop
- * mode).
+ * What does A (or Enter/Space) do for the focused row? Both the confirm-button
+ * gamepad handler (`getActionButtonIndex`) and the Enter/Space keydown branch
+ * route through this pure function instead of testing `focused` directly.
+ * Steam renders the same Cancel/Install row as every other store, so A on
+ * Install means install for Steam too; A on Cancel dismisses; A on the
+ * client-cause card's hand-off chip (`setupSteam`) hands off to desktop mode.
+ *
+ * The "no install before an ok verdict" guarantee is held by the overlay, not
+ * here: Install is disabled and `installGame` returns early until the probe
+ * resolved ok. That gate can't live in this function because the B4 test pins
+ * its parameters to `{runner, focused}`. History: before quick 261107-kn8 the
+ * Steam branch had no install control and auto-installed on mount, so A mapped
+ * to dismiss.
  */
 export function resolveConsoleActionIntent({
   runner,
@@ -169,8 +175,8 @@ export function resolveConsoleActionIntent({
   runner: Runner
   focused: ConsoleFocusKey
 }): 'install' | 'dismiss' | 'handoff' | 'none' {
-  if (hasCapability(runner, 'installHandOffToClient')) {
-    return focused === 'setupSteam' ? 'handoff' : 'dismiss'
+  if (focused === 'setupSteam') {
+    return hasCapability(runner, 'installHandOffToClient') ? 'handoff' : 'none'
   }
   if (focused === 'install') {
     return 'install'
