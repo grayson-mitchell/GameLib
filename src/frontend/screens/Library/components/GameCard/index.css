@@ -734,11 +734,12 @@ body:not(.controllerLayout):not(.keyboardNav)
   z-index: 7;
 }
 
+/* The 0.5s opacity fade was removed (quick 261107-k2l): it made tiles visibly
+   "draw in" as cards mounted during scroll. `all 0.2s` stays for the
+   filter/grayscale ramp. GamePicture's hero shares these classes; intended. */
 .gameImg,
 .gameLogo {
-  transition:
-    all 0.2s,
-    opacity 0.5s;
+  transition: all 0.2s;
 }
 
 /* The live value is set per-card in `index.tsx` on the <a> that wraps both
