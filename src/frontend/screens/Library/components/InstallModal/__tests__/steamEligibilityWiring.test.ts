@@ -154,26 +154,39 @@ describe('Group A: the quick path can never fire a probe', () => {
     expect(ALLOWLIST).not.toContain('state/InstallGameModal.ts')
   })
 
-  it('A4: steamEligibilityProbe is imported by exactly ONE non-test file under src/frontend, and it is InstallModal/index.tsx', () => {
+  it('A4: steamEligibilityProbe is imported by exactly TWO non-test files under src/frontend: InstallModal/index.tsx and the Console overlay (quick 261107-mr0)', () => {
     const importers = walk(FRONTEND_ROOT)
       .filter((file) => !file.includes('__tests__'))
       .filter((file) =>
-        stripSourceComments(readFileSync(file, 'utf8')).includes(
-          "from './steamEligibilityProbe'"
+        /from '[^']*steamEligibilityProbe'/.test(
+          stripSourceComments(readFileSync(file, 'utf8'))
         )
       )
       .map(toFrontendRelative)
+      .sort()
 
     expect(importers).toEqual([
+      'screens/ConsoleMode/InstallOverlay/index.tsx',
       'screens/Library/components/InstallModal/index.tsx'
     ])
   })
 
-  it('A4 non-vacuity: a specimen importing from a different relative path is NOT matched', () => {
-    const specimen = stripSourceComments(
-      "import { useSteamBottleEligibility } from '../steamEligibilityProbe'"
-    )
-    expect(specimen.includes("from './steamEligibilityProbe'")).toBe(false)
+  it('A4 non-vacuity: a lookalike module is NOT matched, an absolute import IS', () => {
+    const matcher = /from '[^']*steamEligibilityProbe'/
+    expect(
+      matcher.test(
+        stripSourceComments(
+          "import { x } from '../steamEligibilityProbeFixtures'"
+        )
+      )
+    ).toBe(false)
+    expect(
+      matcher.test(
+        stripSourceComments(
+          "import { useSteamBottleEligibility } from 'frontend/screens/Library/components/InstallModal/steamEligibilityProbe'"
+        )
+      )
+    ).toBe(true)
   })
 })
 

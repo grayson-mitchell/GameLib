@@ -70,6 +70,7 @@
         "steamInstallBlockedTitle": "Can't start this install",
         "steamInstallLibraryFull": "There isn't enough free space in your Steam library folder. Free up space and try again.",
         "steamInstallLibraryMissing": "Your Steam library folder couldn't be found. Check that Steam is installed and has been opened at least once, and that the library's drive is connected.",
+        "steamInstallTargetBridgeBottle": "Its own Windows bottle",
         "steamInstallTargetDefault": "Your Steam library"
     },
     "discounts": {

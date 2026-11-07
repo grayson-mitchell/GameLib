@@ -1,5 +1,6 @@
 import { hasCapability } from 'common/storeCapabilities'
-import type { Runner } from 'common/types'
+import type { InstallPlatform, Runner } from 'common/types'
+import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import {
   resolveQuickInstallTarget,
   evaluateQuickInstallTarget,
@@ -8,6 +9,14 @@ import {
   type SteamQuickInstallDegrade
 } from 'frontend/state/InstallGameModal'
 import { useSteamClientSetup } from 'frontend/state/SteamClientSetup'
+import {
+  hasSteamDepotSignalCaptured,
+  hasSteamMacDepot,
+  hasSteamWindowsDepot,
+  resolveDepotAvailability,
+  selectSteamPlatformOptions
+} from 'frontend/screens/Library/components/InstallModal/steamPlatformRow'
+import { resolveSteamSectionGating } from 'frontend/screens/Library/components/InstallModal/steamSectionGating'
 
 /**
  * The Console Mode half of D-24, extended by D-29. This module deliberately
@@ -241,4 +250,103 @@ export function steamBlockedMessageKey(
   reason: SteamQuickInstallDegrade['reason']
 ): string {
   return steamBlockedMessage(reason)[0]
+}
+
+/**
+ * Structurally the `useSteamBottleEligibility` hook result (the hook is called
+ * in index.tsx; it imports React so this module does not).
+ */
+export interface ConsoleSteamEligibility {
+  pending: boolean
+  bottleRequired: boolean
+  hasWindowsDepot: boolean
+  hasMacDepot: boolean
+  depotSignalCaptured: boolean
+}
+
+/**
+ * Quick 261107-mr0 DC-1/DC-2: is this a dual-build Steam game on macOS (Mac
+ * build plus a Windows depot, no bottle requirement)? Reuses the desktop
+ * pipeline (`resolveDepotAvailability`, `resolveSteamSectionGating`,
+ * `selectSteamPlatformOptions`) with no re-derived depot or bottle logic. The
+ * library inputs are fixed (Console has no library dropdown; neither affects
+ * `platformRow`). Pending is never dual-build: `bottleRequired` is fail-closed
+ * false while the probe is pending, so a 32-bit Mac title would flash
+ * 'selectable'.
+ */
+export function isConsoleSteamDualBuild({
+  hostPlatform,
+  game,
+  eligibility
+}: {
+  hostPlatform: string
+  game: {
+    is_windows_native?: boolean
+    is_mac_native?: boolean
+    steamPlatformsCaptured?: boolean
+  }
+  eligibility: ConsoleSteamEligibility
+}): boolean {
+  if (hostPlatform !== 'darwin' || eligibility.pending) return false
+  const { depotSignalResolved, windowsDepotOffered, macDepotOffered } =
+    resolveDepotAvailability({
+      seedHasWindowsDepot: hasSteamWindowsDepot(game),
+      seedHasMacDepot: hasSteamMacDepot(game),
+      seedDepotSignalCaptured: hasSteamDepotSignalCaptured(game),
+      probeHasWindowsDepot: eligibility.hasWindowsDepot,
+      probeHasMacDepot: eligibility.hasMacDepot,
+      probeDepotSignalCaptured: eligibility.depotSignalCaptured,
+      probeSettled: true
+    })
+  const { platformRow } = resolveSteamSectionGating({
+    hostPlatform,
+    selectedPlatform: 'Mac',
+    depotSignalResolved,
+    hasWindowsDepot: windowsDepotOffered,
+    bottleRequired: eligibility.bottleRequired,
+    nativeInstallOn: false,
+    libraryCount: 0
+  })
+  return (
+    platformRow === 'selectable' &&
+    selectSteamPlatformOptions(
+      platformRow,
+      [{ value: 'Mac' as InstallPlatform }, { value: 'Windows' }],
+      windowsDepotOffered,
+      macDepotOffered
+    ).length === 2
+  )
+}
+
+export interface ConsoleSteamPlatformOffer {
+  offered: boolean
+  options: Array<'Mac' | 'Windows'>
+}
+
+/**
+ * DC-3/DC-5: Windows is offered only for a dual-build game whose forced-Windows
+ * bridge verdict is the native bridge. Any other route (bottle, not-eligible),
+ * a failed or pending fetch (undefined) yields no row at all.
+ */
+export function resolveConsoleSteamPlatformOffer({
+  dualBuild,
+  bridgeVerdict
+}: {
+  dualBuild: boolean
+  bridgeVerdict: SteamBridgeRouteVerdict | undefined
+}): ConsoleSteamPlatformOffer {
+  const offered = dualBuild && bridgeVerdict?.route === 'bridge'
+  return { offered, options: offered ? ['Mac', 'Windows'] : [] }
+}
+
+/**
+ * DC-4/DC-8: Windows reaches the backend only when the row was offered AND
+ * Windows is the selected value, so Install can never fire with an unresolved
+ * Windows choice.
+ */
+export function consoleSteamWindowsChosen(
+  offer: ConsoleSteamPlatformOffer,
+  selected: InstallPlatform | undefined
+): boolean {
+  return offer.offered && selected === 'Windows'
 }

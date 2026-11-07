@@ -28,8 +28,12 @@ import type {
   SteamQuickInstallDegrade
 } from 'frontend/state/InstallGameModal'
 import { useSteamClientSetup } from 'frontend/state/SteamClientSetup'
+import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import {
+  consoleSteamWindowsChosen,
   handOffSteamClientSetupToDesktop,
+  isConsoleSteamDualBuild,
+  resolveConsoleSteamPlatformOffer,
   probeSteamQuickInstallTarget,
   releaseUnclaimedSteamClientSetup,
   resolveConsoleActionIntent,
@@ -52,8 +56,13 @@ const TARGET_MODULE_PATH = join(__dirname, '..', 'consoleSteamTarget.ts')
 
 const CONSOLE_MODE_PATH = join(__dirname, '..', '..', 'index.tsx')
 
+// Whitespace is collapsed (and padding inside parentheses removed) so the
+// gates see one canonical spelling however prettier wraps a call.
 function readStrippedOverlay(): string {
   return stripSourceComments(readFileSync(OVERLAY_PATH, 'utf8'))
+    .replace(/\s+/g, ' ')
+    .replace(/\( /g, '(')
+    .replace(/ \)/g, ')')
 }
 
 function readStrippedTargetModule(): string {
@@ -180,9 +189,13 @@ function assertCopyResolvedThroughTable(source: string) {
 }
 
 function assertSteamBranchMarshalsThroughInstallSteamGame(source: string) {
-  if (!source.includes('installSteamGame(game.app_name, game)')) {
+  if (
+    !source.includes(
+      'installSteamGame(game.app_name, game, undefined, steamWindowsChosen)'
+    )
+  ) {
     throw new Error(
-      'assertSteamBranchMarshalsThroughInstallSteamGame: the Steam branch does not marshal through installSteamGame( with no path'
+      'assertSteamBranchMarshalsThroughInstallSteamGame: the Steam branch does not marshal through installSteamGame( with no path argument (undefined keeps the default)'
     )
   }
   if (source.includes("installPath: 'default'")) {
@@ -808,7 +821,7 @@ describe('InstallOverlay/index.tsx source gates (D-29, comment-stripped)', () =>
     // Derived: the real overlay with its `installSteamGame(` call swapped for
     // the D-29-forbidden options door, i.e. the regression this guards.
     const knownBad = readStrippedOverlay().replace(
-      'installSteamGame(game.app_name, game)',
+      'installSteamGame(game.app_name, game, undefined, steamWindowsChosen)',
       'openSteamInstallOptions(game.app_name, game)'
     )
     expect(knownBad).not.toBe(readStrippedOverlay())
@@ -884,7 +897,7 @@ describe('InstallOverlay/index.tsx source gates (D-29, comment-stripped)', () =>
   it('D12-RED: moving the Steam call after writeConfig( is rejected, DERIVED FROM THE REAL SOURCE', () => {
     const real = readStrippedOverlay()
     const knownBad = `${real.replace(
-      'installSteamGame(game.app_name, game)',
+      'installSteamGame(game.app_name, game, undefined, steamWindowsChosen)',
       'noop(game.app_name, game)'
     )}\ninstallSteamGame(game.app_name, game)`
     expect(knownBad).not.toBe(real)
@@ -982,7 +995,7 @@ describe('InstallOverlay/index.tsx source gates (D-29, comment-stripped)', () =>
 
   it('D8-RED: the D8 gate itself trips against the pre-fix Steam-branch call, DERIVED FROM THE REAL SOURCE', () => {
     const knownBad = readStrippedOverlay().replace(
-      'installSteamGame(game.app_name, game)',
+      'installSteamGame(game.app_name, game, undefined, steamWindowsChosen)',
       "install({ gameInfo: game, installPath: 'default' })"
     )
     expect(knownBad).not.toBe(readStrippedOverlay())
@@ -1206,60 +1219,261 @@ describe('en catalog (quick 261107-kn8)', () => {
   })
 })
 
-describe('InstallOverlay/index.tsx never offers Windows or Wine for Steam (quick 261107-lum: a forced-Windows install now resolves the bridge verdict; Console still offers no Platform row until todo 2026-11-07-console-mode-steam-platform-row builds it)', () => {
-  it('D13: no forceWindowsViaBottle, a bare two-argument installSteamGame, and showPlatform/hasWine keep !isSteam', () => {
-    expect(() =>
-      assertNoWindowsOfferForSteam(readStrippedOverlay())
-    ).not.toThrow()
+describe('en catalog (quick 261107-mr0)', () => {
+  it('I3: consoleMode.steamInstallTargetBridgeBottle matches the overlay in-code default', () => {
+    const catalog = JSON.parse(
+      readFileSync(
+        join(
+          __dirname,
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          'public',
+          'locales',
+          'en',
+          'gamelib.json'
+        ),
+        'utf8'
+      )
+    ) as { consoleMode: Record<string, string> }
+    const match = readFileSync(OVERLAY_PATH, 'utf8').match(
+      /'gamelib:consoleMode\.steamInstallTargetBridgeBottle',\s*'([^']+)'/
+    )
+    expect(match).not.toBeNull()
+    expect(catalog.consoleMode.steamInstallTargetBridgeBottle).toBe(match?.[1])
+  })
+})
+
+describe('Console Steam platform offer (quick 261107-mr0)', () => {
+  const dualSeed = {
+    is_windows_native: true,
+    is_mac_native: true,
+    steamPlatformsCaptured: true
+  }
+  const emptySeed = {}
+  const dualElig = {
+    pending: false,
+    bottleRequired: false,
+    hasWindowsDepot: true,
+    hasMacDepot: true,
+    depotSignalCaptured: true
+  }
+  const verdict = (
+    route: SteamBridgeRouteVerdict['route'],
+    reason: SteamBridgeRouteVerdict['reason'],
+    knownBadReason: SteamBridgeRouteVerdict['knownBadReason'] = null
+  ): SteamBridgeRouteVerdict => ({
+    route,
+    reason,
+    knownBadReason,
+    missingSymbols: [],
+    noticeRequired: false,
+    stubbedInterfaces: [],
+    identityFallback: false,
+    userRoute: null,
+    installedIn: null
   })
 
-  it('D13-RED: an extra installSteamGame argument trips', () => {
-    const real = readStrippedOverlay()
-    const knownBad = real.replace(
-      'installSteamGame(game.app_name, game)',
-      "installSteamGame(game.app_name, game, '', true)"
-    )
-    expect(knownBad).not.toBe(real)
-    expect(() => assertNoWindowsOfferForSteam(knownBad)).toThrow(
+  it('P1: darwin + dual seed + dual eligibility -> dual-build', () => {
+    expect(
+      isConsoleSteamDualBuild({
+        hostPlatform: 'darwin',
+        game: dualSeed,
+        eligibility: dualElig
+      })
+    ).toBe(true)
+  })
+
+  it('P2: uncaptured seed but captured eligibility -> dual-build', () => {
+    expect(
+      isConsoleSteamDualBuild({
+        hostPlatform: 'darwin',
+        game: emptySeed,
+        eligibility: dualElig
+      })
+    ).toBe(true)
+  })
+
+  it.each([
+    ['win32 host', 'win32', dualSeed, dualElig],
+    ['linux host', 'linux', dualSeed, dualElig],
+    ['pending', 'darwin', dualSeed, { ...dualElig, pending: true }],
+    [
+      'bottleRequired',
+      'darwin',
+      dualSeed,
+      { ...dualElig, bottleRequired: true }
+    ],
+    [
+      'no windows depot',
+      'darwin',
+      emptySeed,
+      { ...dualElig, hasWindowsDepot: false }
+    ],
+    ['no mac depot', 'darwin', emptySeed, { ...dualElig, hasMacDepot: false }],
+    [
+      'settled but uncaptured',
+      'darwin',
+      emptySeed,
+      {
+        ...dualElig,
+        hasWindowsDepot: false,
+        hasMacDepot: false,
+        depotSignalCaptured: false
+      }
+    ]
+  ])(
+    'P3 known-bad: %s -> not dual-build',
+    (_l, hostPlatform, game, eligibility) => {
+      expect(isConsoleSteamDualBuild({ hostPlatform, game, eligibility })).toBe(
+        false
+      )
+    }
+  )
+
+  it.each(['pending-scan', 'scan-clean', 'seed'] as const)(
+    'P4: bridge verdict (%s) offers Mac then Windows',
+    (reason) => {
+      expect(
+        resolveConsoleSteamPlatformOffer({
+          dualBuild: true,
+          bridgeVerdict: verdict('bridge', reason)
+        })
+      ).toEqual({ offered: true, options: ['Mac', 'Windows'] })
+    }
+  )
+
+  it.each([
+    ['user-forced-bottle', true, verdict('bottle', 'user-forced-bottle')],
+    [
+      'known-bad drm-wrapped',
+      true,
+      verdict('bottle', 'known-bad', 'drm-wrapped')
+    ],
+    ['win64-no-shim', true, verdict('bottle', 'win64-no-shim')],
+    ['failed-this-session', true, verdict('bottle', 'failed-this-session')],
+    ['not-eligible', true, verdict('not-eligible', null)],
+    ['undefined verdict', true, undefined],
+    ['not dual-build', false, verdict('bridge', 'scan-clean')]
+  ])('P5 known-bad: %s -> no offer', (_l, dualBuild, bridgeVerdict) => {
+    expect(
+      resolveConsoleSteamPlatformOffer({ dualBuild, bridgeVerdict })
+    ).toEqual({ offered: false, options: [] })
+  })
+
+  it('P6: Windows is chosen only when offered and selected', () => {
+    const offered = {
+      offered: true,
+      options: ['Mac', 'Windows'] as Array<'Mac' | 'Windows'>
+    }
+    const none = { offered: false, options: [] }
+    expect(consoleSteamWindowsChosen(offered, 'Windows')).toBe(true)
+    expect(consoleSteamWindowsChosen(offered, 'Mac')).toBe(false)
+    expect(consoleSteamWindowsChosen(none, 'Windows')).toBe(false)
+    expect(consoleSteamWindowsChosen(offered, undefined)).toBe(false)
+  })
+})
+
+describe('InstallOverlay/index.tsx Steam Platform row contract (quick 261107-mr0)', () => {
+  const real = () => readStrippedOverlay()
+
+  it('D13: the real overlay satisfies the contract', () => {
+    expect(() => assertConsoleSteamPlatformContract(real())).not.toThrow()
+  })
+
+  it.each([
+    [
+      'D13-RED-a',
+      '!isSteam && platformToInstall',
+      'platformToInstall',
+      /hasWine/
+    ],
+    [
+      'D13-RED-b',
+      'undefined, steamWindowsChosen)',
+      'undefined, true)',
       /installSteamGame/
+    ],
+    [
+      'D13-RED-d',
+      'isSteam ? steamOffer.offered',
+      'isSteam ? steamDualBuild',
+      /showPlatform/
+    ],
+    [
+      'D13-RED-e',
+      'getSteamBridgeRoute(game.app_name, true)',
+      'getSteamBridgeRoute(game.app_name)',
+      /getSteamBridgeRoute/
+    ]
+  ])('%s: a derived known-bad trips', (_n, from, to, pattern) => {
+    const knownBad = real().replace(from, to)
+    expect(knownBad).not.toBe(real())
+    expect(() => assertConsoleSteamPlatformContract(knownBad)).toThrow(pattern)
+  })
+
+  it('D13-RED-c: a Windows choice not routed through consoleSteamWindowsChosen trips', () => {
+    const knownBad = real().replace(
+      /const steamWindowsChosen = .*?(?= const )/,
+      "const steamWindowsChosen = platformToInstall === 'Windows'"
+    )
+    expect(knownBad).not.toBe(real())
+    expect(() => assertConsoleSteamPlatformContract(knownBad)).toThrow(
+      /steamWindowsChosen/
     )
   })
 
-  it('D13-RED-b: dropping !isSteam from showPlatform trips', () => {
-    const real = readStrippedOverlay()
-    const knownBad = real.replace(
-      '!isSteam && availablePlatforms',
-      'availablePlatforms'
-    )
-    expect(knownBad).not.toBe(real)
-    expect(() => assertNoWindowsOfferForSteam(knownBad)).toThrow(/showPlatform/)
-  })
-
-  it('D13-RED-c: a forceWindowsViaBottle token trips', () => {
-    const knownBad = readStrippedOverlay() + '\nconst f = forceWindowsViaBottle'
-    expect(() => assertNoWindowsOfferForSteam(knownBad)).toThrow(
+  it('D13-RED-f: a forceWindowsViaBottle token trips', () => {
+    const knownBad = `${real()} const f = forceWindowsViaBottle`
+    expect(() => assertConsoleSteamPlatformContract(knownBad)).toThrow(
       /forceWindowsViaBottle/
     )
   })
 })
 
-function assertNoWindowsOfferForSteam(source: string) {
-  if (source.includes('forceWindowsViaBottle')) {
-    throw new Error('forceWindowsViaBottle appears in the Console overlay')
+function assertConsoleSteamPlatformContract(source: string) {
+  const hasWine = source.match(/const hasWine = .*?(?= const )/)
+  if (!hasWine || !hasWine[0].includes('!isSteam')) {
+    throw new Error('hasWine declaration must contain !isSteam')
   }
   const calls = source.match(/installSteamGame\([^)]*\)/g) ?? []
   if (
-    calls.length === 0 ||
-    calls.some((c) => c !== 'installSteamGame(game.app_name, game)')
+    calls.length !== 1 ||
+    calls[0] !==
+      'installSteamGame(game.app_name, game, undefined, steamWindowsChosen)'
   ) {
     throw new Error(
-      `installSteamGame calls must be exactly (game.app_name, game); found ${JSON.stringify(calls)}`
+      `installSteamGame calls must be exactly one (game.app_name, game, undefined, steamWindowsChosen); found ${JSON.stringify(calls)}`
     )
   }
-  for (const name of ['showPlatform', 'hasWine']) {
-    const m = source.match(new RegExp(`const ${name} =[^\\n]*`))
-    if (!m || !m[0].includes('!isSteam')) {
-      throw new Error(`${name} declaration must contain !isSteam`)
-    }
+  if (
+    !source.includes('const steamWindowsChosen = consoleSteamWindowsChosen(')
+  ) {
+    throw new Error(
+      'steamWindowsChosen must be declared via consoleSteamWindowsChosen('
+    )
+  }
+  const showPlatform = source.match(/const showPlatform = .*?(?= const )/)
+  if (
+    !showPlatform ||
+    !showPlatform[0].includes('isSteam ? steamOffer.offered')
+  ) {
+    throw new Error(
+      'showPlatform declaration must contain isSteam ? steamOffer.offered'
+    )
+  }
+  const bridgeCalls = source.match(/getSteamBridgeRoute\(/g)?.length ?? 0
+  const exact =
+    source.match(/getSteamBridgeRoute\(game\.app_name, true\)/g)?.length ?? 0
+  if (bridgeCalls !== 1 || exact !== 1) {
+    throw new Error(
+      'getSteamBridgeRoute( must appear exactly once, as getSteamBridgeRoute(game.app_name, true)'
+    )
+  }
+  if (source.includes('forceWindowsViaBottle')) {
+    throw new Error('forceWindowsViaBottle appears in the Console overlay')
   }
 }

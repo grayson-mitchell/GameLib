@@ -9,15 +9,21 @@ import { install, writeConfig } from 'frontend/helpers'
 import { hasProgress } from 'frontend/hooks/hasProgress'
 import ContextProvider from 'frontend/state/ContextProvider'
 
+import { useSteamBottleEligibility } from 'frontend/screens/Library/components/InstallModal/steamEligibilityProbe'
+
 import type { GameInfo, InstallPlatform, WineInstallation } from 'common/types'
+import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 
 import { getActionButtonIndex, getBackButtonIndex } from '../controller'
 import { useGamepadButtonPress, useGamepadInfo } from '../hooks'
 import {
+  consoleSteamWindowsChosen,
   handOffSteamClientSetupToDesktop,
+  isConsoleSteamDualBuild,
   probeSteamQuickInstallTarget,
   releaseUnclaimedSteamClientSetup,
   resolveConsoleActionIntent,
+  resolveConsoleSteamPlatformOffer,
   steamBlockedMessage,
   type ConsoleClientSetupHandOff,
   type ConsoleFocusKey as FocusKey
@@ -57,7 +63,48 @@ export default function InstallOverlay({
   const isLinux = platform === 'linux'
   const isSideload = isStore(game, 'sideload')
 
+  const isSteam = hasCapability(game.runner, 'installHandOffToClient')
+  // Dual-build detection reuses the desktop eligibility pipeline (DC-1); the
+  // Windows alternative is offered only on a native-bridge verdict (DC-3).
+  const eligibility = useSteamBottleEligibility({
+    platform,
+    runner: game.runner,
+    appName: game.app_name,
+    action: 'install'
+  })
+  const steamDualBuild =
+    isSteam &&
+    isConsoleSteamDualBuild({ hostPlatform: platform, game, eligibility })
+  const [steamBridgeVerdict, setSteamBridgeVerdict] = useState<
+    SteamBridgeRouteVerdict | undefined
+  >()
+  useEffect(() => {
+    if (!steamDualBuild) return
+    let bridgeRouteCancelled = false
+    window.api
+      .getSteamBridgeRoute(game.app_name, true)
+      .then((verdict) => {
+        if (!bridgeRouteCancelled) setSteamBridgeVerdict(verdict)
+      })
+      .catch(() => {
+        if (!bridgeRouteCancelled) setSteamBridgeVerdict(undefined)
+      })
+    return () => {
+      bridgeRouteCancelled = true
+    }
+  }, [steamDualBuild, game.app_name])
+  const steamOffer = resolveConsoleSteamPlatformOffer({
+    dualBuild: steamDualBuild,
+    bridgeVerdict: steamBridgeVerdict
+  })
+
   const availablePlatforms = useMemo<PlatformOption[]>(() => {
+    if (isSteam) {
+      return steamOffer.options.map((value) => ({
+        value,
+        label: value === 'Mac' ? 'macOS' : 'Windows'
+      }))
+    }
     const options: PlatformOption[] = []
     if (isLinux && (isSideload || game.is_linux_native)) {
       options.push({ value: 'linux', label: 'Linux' })
@@ -68,7 +115,18 @@ export default function InstallOverlay({
     // Windows is always installable (via Wine/Proton when not on Windows).
     options.push({ value: 'Windows', label: 'Windows' })
     return options
-  }, [isLinux, isMac, isSideload, game.is_linux_native, game.is_mac_native])
+    // `steamOffer.options` is a fresh array every render and derives solely
+    // from `steamOffer.offered`, so the boolean is the stable dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isSteam,
+    steamOffer.offered,
+    isLinux,
+    isMac,
+    isSideload,
+    game.is_linux_native,
+    game.is_mac_native
+  ])
 
   const defaultPlatform: InstallPlatform =
     (isMac && game.is_mac_native && 'Mac') ||
@@ -81,17 +139,17 @@ export default function InstallOverlay({
   })
   const platformToInstall =
     availablePlatforms[platformIndex]?.value ?? 'Windows'
-  const isSteam = hasCapability(game.runner, 'installHandOffToClient')
-  // Platform and Wine selection never applies to Steam here, and Console never
-  // offers Windows for a dual-build Steam game (quick 261107-li0). Since quick
-  // 261107-lum a forced-Windows install (`forceWindowsViaBottle`) resolves the
-  // normal bridge verdict (own `GameLibSteamBridge-<appId>` bottle), so the
-  // original premise (it always lands on the shared bottled client with a Wine
-  // choice) no longer holds. Console still offers no Platform row for Steam
-  // until the follow-up todo `2026-11-07-console-mode-steam-platform-row.md`
-  // builds one, and it never shows a Wine choice for Steam. A one-value
-  // Platform row would be a dead focus stop.
-  const showPlatform = !isSteam && availablePlatforms.length > 1
+  // A Steam game shows a Platform row (macOS default, Windows alternative) only
+  // when it is dual-build on macOS AND its forced-Windows verdict is the native
+  // bridge (own bottle). Console never shows a Wine row for Steam; a one-value
+  // row would be a dead focus stop.
+  const showPlatform = isSteam
+    ? steamOffer.offered
+    : availablePlatforms.length > 1
+  const steamWindowsChosen = consoleSteamWindowsChosen(
+    steamOffer,
+    availablePlatforms[platformIndex]?.value
+  )
   const hasWine = !isSteam && platformToInstall === 'Windows' && !isWin
 
   const [wineList, setWineList] = useState<WineInstallation[]>([])
@@ -256,9 +314,14 @@ export default function InstallOverlay({
       // marshalling site for `window.api.install` on the Steam path.
       // 34.13 review B-WR-01: it returns the dispatch promise, so the
       // fire-and-forget intent carries an explicit rejection handler.
-      installSteamGame(game.app_name, game).catch(
-        logSteamInstallDispatchFailure(game.app_name)
-      )
+      // The fourth argument is the only route by which a Windows choice
+      // reaches the backend; `undefined` keeps the "no path" rule above.
+      installSteamGame(
+        game.app_name,
+        game,
+        undefined,
+        steamWindowsChosen
+      ).catch(logSteamInstallDispatchFailure(game.app_name))
       onDismiss()
       return
     }
@@ -400,11 +463,16 @@ export default function InstallOverlay({
     ? installPath || '…'
     : !steamReady
       ? '…'
-      : (steamTargetPath ??
-        tGamelib(
-          'gamelib:consoleMode.steamInstallTargetDefault',
-          'Your Steam library'
-        ))
+      : steamWindowsChosen
+        ? tGamelib(
+            'gamelib:consoleMode.steamInstallTargetBridgeBottle',
+            'Its own Windows bottle'
+          )
+        : (steamTargetPath ??
+          tGamelib(
+            'gamelib:consoleMode.steamInstallTargetDefault',
+            'Your Steam library'
+          ))
   const wineLabel =
     wineList.length > 0
       ? (wineVersion?.name ?? t('console.install.wineMissing', 'Not selected'))
