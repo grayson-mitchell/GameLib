@@ -1,7 +1,7 @@
 ---
-status: complete
+status: partial
 phase: 61-unified-macos-engine-for-all-stores
-source: [61-20-PLAN.md]
+source: [61-20-PLAN.md, 61-21-PLAN.md, 61-23-PLAN.md, 61-24-PLAN.md]
 ---
 
 # Phase 61 UAT: Unified macOS engine for all stores
@@ -12,7 +12,7 @@ source: [61-20-PLAN.md]
 - Expire the trial: `sandbox-exec -f .planning/spikes/060-crossover-trial-expiry/nolicence.sb pnpm tauri:dev`.
 - Hide CrossOver: `sandbox-exec -f .planning/milestones/v0.9-phases/59-steam-engine-fallback-when-crossover-is-unavailable/wave0/no-crossover.sb pnpm tauri:dev`.
 - `tauri dev` does not rebuild the sidecar: restart dev after backend changes and confirm the mtime of `build/main/sidecar.js` is newer than the last change (`ls -l build/main/sidecar.js`).
-- Deadline branch: armed (z-path). Copied from `.planning/spikes/068-nonsteam-first-match-signal/verdict.json` (matchShape `z-path`) and 61-16-SUMMARY.md. Caveat: the live spike evidence was a GPTK launch, so CrossOver non-Steam launches are confirmed only synthetically, and bare-basename launches get no deadline.
+- Deadline branch: notice only (no kill); first-match forms unix, Z:, Y:, C: (drive_c). Changed by 61-21 (CR-02/CR-03/WR-01): when no game process is seen within 180 s, GameLib shows "Couldn't confirm the game started" and stops nothing.
 - Quit any running game before switching profiles.
 - Record the licence mtime before starting and again at the end; it must be unchanged: `ls -la ~/Library/Preferences/com.codeweavers.CrossOver.license`.
 - Backdate only a throwaway per-game bottle (the one made in item 4) with `.planning/spikes/060-crossover-trial-expiry/backdate.py`, and back up its `system.reg` first.
@@ -82,12 +82,22 @@ result: pass. Steam "Planet Crafter" (1284190) shows its badge, Engine control a
 expected: (D-10) On this Mac a Linux-only or Windows-only settings path is not reachable; mark `skipped` with a note unless another machine is available.
 result: skipped. Linux/Windows paths are not reachable on a Mac.
 
+### 13. Deadline notice does not stop a running game
+
+expected: (D-18, D-16, CR-02) Launch a non-Steam Windows game whose process GameLib cannot match (for example a launcher stub that execs from outside its install dir); after 180 s the "Couldn't confirm the game started" notice appears, the game keeps running, the launch log shows `launch deadline fired` and no `wineserver -k`; a second game in the same bottle keeps running.
+result: pending — optional live check; covered by launchEngine.deadline.test.ts (61-21)
+
+### 14. Sideload Run installer uses the game's bottle
+
+expected: (D-01, D-17, CR-04) In Add Game (sideload) on macOS with Engine Automatic, Run installer creates `~/Library/Application Support/CrossOver/Bottles/GameLib-sideload-<id>` and the installer runs in it (its files appear under that bottle's drive_c), not in the shared prefix.
+result: pending — optional live check; covered by runWineCommandForPendingInstall.test.ts and wineToolsFlows.test.ts (61-24)
+
 ## Summary
 
-total: 12
+total: 14
 passed: 8
 issues: 1
-pending: 0
+pending: 2
 skipped: 3
 
 Licence mtime `com.codeweavers.CrossOver.license`: Oct 22 19:57 before and after, unchanged. The throwaway bottle's InstallTime was restored to its original value after the tests.
@@ -96,6 +106,6 @@ Licence mtime `com.codeweavers.CrossOver.license`: Oct 22 19:57 before and after
 
 ### G-1. Legacy game with a prefix gets no "Move this game to its own bottle?" warning (item 3)
 
-status: open
+status: resolved
 severity: minor
-`needsFreshBottleConfirm` (src/frontend/screens/Settings/components/engineOverrideLogic.ts:48) returns true only for prefixKind === 'plain'. A Legacy game (prefixKind 'legacy') with a winePrefix switched to Automatic skips the D-04 warning that saves stay behind, yet the backend routes it to a fresh per-game bottle (resolveGamePrefix case 4). Item 9 confirmed the old prefix is left untouched.
+`needsFreshBottleConfirm` (src/frontend/screens/Settings/components/engineOverrideLogic.ts:48) returns true only for prefixKind === 'plain'. A Legacy game (prefixKind 'legacy') with a winePrefix switched to Automatic skips the D-04 warning that saves stay behind, yet the backend routes it to a fresh per-game bottle (resolveGamePrefix case 4). Item 9 confirmed the old prefix is left untouched. Resolved by 61-23: `needsFreshBottleConfirm` now returns true for prefixKind 'legacy' (D-04), covered by engineOverrideLogic.test.ts.
