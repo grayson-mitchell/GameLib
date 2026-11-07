@@ -590,6 +590,28 @@ describe('SteamEngineLaunchNotice request slot (quick 261106-pvk)', () => {
     )
   })
 
+  it.each([
+    [
+      { kind: 'uninstall-refused-running', title: 'WazHack' },
+      'WazHack WazHack is running. Quit it, then uninstall again.'
+    ],
+    [
+      { kind: 'uninstall-steam-error', code: 2, title: 'WazHack' },
+      "WazHack Steam couldn't uninstall WazHack (error 2)."
+    ],
+    [
+      { kind: 'uninstall-check-failed', title: 'WazHack' },
+      "WazHack Couldn't check whether WazHack is running, so it was not uninstalled. Try again."
+    ],
+    [
+      { kind: 'uninstall-refused-running', title: '' },
+      'Steam Steam is running. Quit it, then uninstall again.'
+    ]
+  ])('renders refusal notice %j', (over, expected) => {
+    requestState = req(over)
+    expect(text(render())).toBe(expected)
+  })
+
   it('falls back to the title Steam when the title is empty', () => {
     requestState = req({ title: '' })
     expect(text(render())).toMatch(/^Steam Steam didn't start the install/)

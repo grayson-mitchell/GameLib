@@ -17,6 +17,15 @@ export const useSteamRequestNotice = create<SteamRequestNoticeStore>()(
   })
 )
 
+// Closed set (T-pvk-01): the renderer maps each kind to a catalogue string.
+const REQUEST_KINDS: ReadonlySet<string> = new Set([
+  'install-not-started',
+  'uninstall-not-started',
+  'uninstall-refused-running',
+  'uninstall-steam-error',
+  'uninstall-check-failed'
+])
+
 // Standalone so tests can simulate the push without mounting GlobalState.
 // T-pvk-01: malformed payloads are dropped; an older/equal seq never replaces
 // a newer one.
@@ -27,11 +36,10 @@ export const handleSteamRequestNoticeSignal = (
   if (!payload || typeof payload !== 'object') return
   if (typeof payload.appId !== 'string') return
   if (!/^[0-9]{1,10}$/.test(payload.appId)) return
-  if (
-    payload.kind !== 'install-not-started' &&
-    payload.kind !== 'uninstall-not-started'
-  ) {
-    return
+  if (!REQUEST_KINDS.has(payload.kind)) return
+  // quick 261107-td5: the steam-error notice interpolates the code.
+  if (payload.kind === 'uninstall-steam-error') {
+    if (!Number.isInteger(payload.code)) return
   }
   if (typeof payload.seq !== 'number' || !Number.isFinite(payload.seq)) return
   if (typeof payload.title !== 'string') return

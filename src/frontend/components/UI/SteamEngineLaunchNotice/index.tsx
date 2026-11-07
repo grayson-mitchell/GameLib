@@ -47,10 +47,23 @@ interface ShownExit {
   phase: NoticePhase
 }
 
-type RequestKind = 'install-not-started' | 'uninstall-not-started'
+type RequestKind =
+  | 'install-not-started'
+  | 'uninstall-not-started'
+  | 'uninstall-refused-running'
+  | 'uninstall-steam-error'
+  | 'uninstall-check-failed'
+const REQUEST_KINDS: readonly string[] = [
+  'install-not-started',
+  'uninstall-not-started',
+  'uninstall-refused-running',
+  'uninstall-steam-error',
+  'uninstall-check-failed'
+]
 interface ShownRequest {
   kind: RequestKind
   title: string
+  code?: number
   seq: number
   phase: NoticePhase
 }
@@ -288,22 +301,19 @@ export default function SteamEngineLaunchNotice() {
   }, [byGame])
 
   // Quick 261106-pvk: Steam never picked up a delegated request. A fourth seq
-  // stream, fed by its own push rather than the engine state.
+  // stream, fed by its own push rather than the engine state. Also carries
+  // quick 261107-td5's uninstall refusals (running / Steam error / check failed).
   useEffect(() => {
     const n = latestRequest
     if (!n || typeof n.seq !== 'number' || n.seq <= lastRequestSeq.current) {
       return
     }
-    if (
-      n.kind !== 'install-not-started' &&
-      n.kind !== 'uninstall-not-started'
-    ) {
-      return
-    }
+    if (!REQUEST_KINDS.includes(n.kind)) return
     lastRequestSeq.current = n.seq
     const next: ShownRequest = {
       kind: n.kind,
       title: typeof n.title === 'string' ? n.title : '',
+      ...(typeof n.code === 'number' ? { code: n.code } : {}),
       seq: n.seq,
       phase: 'in'
     }
@@ -548,6 +558,42 @@ export default function SteamEngineLaunchNotice() {
     })
   }
 
+  const requestGame = shownRequest
+    ? shownRequest.title || t('steam.requestNotice.fallbackTitle', 'Steam')
+    : ''
+  const requestBody = (req: ShownRequest, game: string): string => {
+    switch (req.kind) {
+      case 'install-not-started':
+        return t(
+          'steam.install.notStarted',
+          "Steam didn't start the install. Make sure Steam is signed in, then try again."
+        )
+      case 'uninstall-not-started':
+        return t(
+          'steam.uninstall.notStarted',
+          "Steam didn't start the uninstall. Make sure Steam is signed in, then try again."
+        )
+      case 'uninstall-refused-running':
+        return t(
+          'steam.uninstall.gameRunning',
+          '{{game}} is running. Quit it, then uninstall again.',
+          { game }
+        )
+      case 'uninstall-steam-error':
+        return t(
+          'steam.uninstall.steamError',
+          "Steam couldn't uninstall {{game}} (error {{code}}).",
+          { game, code: req.code }
+        )
+      case 'uninstall-check-failed':
+        return t(
+          'steam.uninstall.checkFailed',
+          "Couldn't check whether {{game}} is running, so it was not uninstalled. Try again.",
+          { game }
+        )
+    }
+  }
+
   const requestNode = shownRequest
     ? renderSlot({
         slotKey: 'request',
@@ -557,18 +603,8 @@ export default function SteamEngineLaunchNotice() {
         paused: hoveredRequest,
         waiting: waitingRequest,
         icon: faRightToBracket,
-        title:
-          shownRequest.title || t('steam.requestNotice.fallbackTitle', 'Steam'),
-        body:
-          shownRequest.kind === 'install-not-started'
-            ? t(
-                'steam.install.notStarted',
-                "Steam didn't start the install. Make sure Steam is signed in, then try again."
-              )
-            : t(
-                'steam.uninstall.notStarted',
-                "Steam didn't start the uninstall. Make sure Steam is signed in, then try again."
-              ),
+        title: requestGame,
+        body: requestBody(shownRequest, requestGame),
         setHover: setHoveredRequest,
         beginLeave: () =>
           setShownRequest({ ...shownRequest, phase: 'leaving' }),

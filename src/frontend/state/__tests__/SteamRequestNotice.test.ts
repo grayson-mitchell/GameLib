@@ -37,6 +37,23 @@ describe('SteamRequestNotice store', () => {
     expect(useSteamRequestNotice.getState().latest).toBeNull()
   })
 
+  it.each([
+    ['uninstall-refused-running', undefined],
+    ['uninstall-check-failed', undefined],
+    ['uninstall-steam-error', 2]
+  ] as const)('accepts kind %s', (kind, code) => {
+    send(make({ kind, ...(code !== undefined ? { code } : {}) }))
+    expect(useSteamRequestNotice.getState().latest?.kind).toBe(kind)
+  })
+
+  it.each([undefined, 1.5, '2'])(
+    'drops uninstall-steam-error with code %p',
+    (code) => {
+      send({ ...make({ kind: 'uninstall-steam-error' }), code })
+      expect(useSteamRequestNotice.getState().latest).toBeNull()
+    }
+  )
+
   it('does not replace with a lower or equal seq', () => {
     send(make({ seq: 5, title: 'New' }))
     send(make({ seq: 5, title: 'Same' }))

@@ -751,6 +751,7 @@
             "resumeInstallHint": "Install incomplete — resume the download in GameLib"
         },
         "uninstall": {
+            "checkFailed": "Couldn't check whether {{game}} is running, so it was not uninstalled. Try again.",
             "cloudSavesKept": "Steam Cloud saves are not touched.",
             "copySource": {
                 "bottle": "Windows Steam (CrossOver)",
