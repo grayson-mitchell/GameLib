@@ -5,7 +5,7 @@ milestone_name: Steam Bridge & Engine
 status: planning
 stopped_at: Phase 61 context gathered
 last_updated: "2026-11-07T01:39:42.284Z"
-last_activity: "2026-11-07 - Completed quick task 261107-k2l: Library grid smoothness (rootMargin 1500px, image fade dropped)"
+last_activity: "2026-11-07 - Completed quick task 261107-kn8: Console Mode Steam install uses the shared install overlay"
 progress:
   total_phases: 12
   completed_phases: 2
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 64
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-11-07 - Completed quick task 261107-k2l: Library grid smoothness (rootMargin 1500px, image fade dropped)
+Last activity: 2026-11-07 - Completed quick task 261107-kn8: Console Mode Steam install uses the shared install overlay
 
 Progress: [██████████] 100%
 
@@ -576,6 +576,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261107-an2 | SteamGame surface re-narrowed after the 62 lifts: 3 members private again, 40 stubs deleted (lifted modules call siblings directly, JSDoc moved), 11 kept public `@internal` (test spies / import cycles), appId stays readonly; forward-only import guard added; games.ts 2043 -> 1324 lines. | 2026-11-07 | bc448a9c4 | codecheck, boundaries, scoped prettier pass; steam jest 4650 pass, 3 fail as before this task (56-01 SUMMARY gone, host-dependent Intel test); lint error games.test.ts:25 pre-existing (62-22) | [261107-an2-re-narrow-steamgame-member-visibility-re](./quick/261107-an2-re-narrow-steamgame-member-visibility-re/) |
 | 261107-j08 | CrossOver rating sourced from the daily index only: the codeweavers.com page scrape (Cloudflare 403 despite a spoofed UA) is deleted, not worked around. macOS index miss caches an "Unrated" marker (empty slug -> CodeWeavers search link); index-unavailable stays null/retryable; Linux makes no CodeWeavers call and no longer treats null codeweavers as stale. `codeweavers/constants.ts` removed, `utils.ts` keeps `slugify`; todo closed. | 2026-11-07 | bc1c830fd | jest 16 suites 197/197, tsc clean, scoped prettier pass; lint 0 errors (warning cap pre-existing); planning-gates 11/12, STATE `Plan: Not started` anchor failure pre-existing | [261107-j08-codeweavers-crossover-rating-403-source-](./quick/261107-j08-codeweavers-crossover-rating-403-source-/) |
 | 261107-k2l | Library grid smoothness: card-visibility IntersectionObserver rootMargin 500px → 1500px (cards mount further ahead of scroll; hooks already ran pre-gate, so cost is only extra card DOM) and the 0.5s opacity fade dropped from `.gameImg`/`.gameLogo` (`all 0.2s` kept for the grayscale ramp); cardVisibility test re-pinned to 1500px. | 2026-11-07 | 735798969 | jest GameCard + FocusRowStrip 10 suites 259/259, scoped prettier pass; not live-checked in app | [261107-k2l-library-grid-smoothness-raise-card-rootm](./quick/261107-k2l-library-grid-smoothness-raise-card-rootm/) |
+| 261107-kn8 | Console Mode Steam install uses the shared install overlay: "Install game" / title / "Install to" (resolved Steam library root, else "Your Steam library") / Cancel·Install; installs only on Install via `installSteamGame` (no mount-time install, no 1.5s auto-dismiss), Install disabled while the probe is pending; blocked + client-setup hand-off card unchanged; no Platform/Wine rows for Steam. | 2026-11-07 | da9ec3eac | jest Frontend 5118 pass, codecheck/eslint/i18n gates/scoped prettier pass; Meta: 2 pre-existing unrelated failures; not live-checked in app | [261107-kn8-console-mode-steam-install-uses-the-shar](./quick/261107-kn8-console-mode-steam-install-uses-the-shar/) |
 
 ## Session Continuity
 
