@@ -1,6 +1,11 @@
 import { existsSync } from 'graceful-fs'
 import path from 'node:path'
-import { InstalledInfo, WineCommandArgs } from 'common/types'
+import {
+  GameInfo,
+  GameSettings,
+  InstalledInfo,
+  WineCommandArgs
+} from 'common/types'
 import {
   checkWineBeforeLaunch,
   sendGameStatusUpdate,
@@ -24,6 +29,12 @@ import {
 } from 'common/types/gog'
 import { gogdlConfigPath, gogRedistPath, gogSupportPath } from './constants'
 import { isWindows } from 'backend/constants/environment'
+import { isOnline } from '../../online_monitor'
+import {
+  endEngineLaunch,
+  selectEngineForLaunch
+} from 'backend/engine/launchEngine'
+import { getLaunchSettings } from 'backend/engine/launchSettings'
 
 /*
  * Automatially executes command properly according to operating system
@@ -89,25 +100,63 @@ async function setup(
     return
   }
 
-  const gameSettings = GameConfig.get(appName).config
-  if (!isWindows) {
-    const logWriter = getRunnerLogWriter('gog')
-    const isWineOkToLaunch = await checkWineBeforeLaunch(
-      gameInfo,
-      gameSettings,
-      logWriter
-    )
-
-    if (!isWineOkToLaunch) {
-      logError(
-        `Was not possible to run setup using ${gameSettings.wineVersion.name}`,
-        LogPrefix.Backend
-      )
-      return
-    }
-    // Make sure prefix is initalized correctly
-    await verifyWinePrefix(gameSettings)
+  const stored = GameConfig.get(appName).config
+  if (isWindows) {
+    return runGogSetup(appName, gameInfo, stored, installRedist)
   }
+
+  // Phase 61 (D-01, D-03, D-08): on macOS the setup runs on the engine the step selects, in the
+  // game's own bottle. An engine-controlled setup skips checkWineBeforeLaunch: its self-heal would
+  // persist a derived or fallback engine into wineVersion.
+  const game = libraryManagerMap['gog'].getGame(appName)
+  const step = await selectEngineForLaunch(game, {
+    offline: !isOnline(),
+    purpose: 'setup'
+  })
+  if (step.kind === 'refused') {
+    logWarning(
+      ['Setup: no usable engine for', gameInfo.title, 'skipping setup'],
+      LogPrefix.Gog
+    )
+    return
+  }
+  if (step.kind === 'use') {
+    try {
+      return await runGogSetup(
+        appName,
+        gameInfo,
+        getLaunchSettings(step.key, stored),
+        installRedist
+      )
+    } finally {
+      endEngineLaunch(step.key)
+    }
+  }
+
+  const logWriter = getRunnerLogWriter('gog')
+  const isWineOkToLaunch = await checkWineBeforeLaunch(
+    gameInfo,
+    stored,
+    logWriter
+  )
+  if (!isWineOkToLaunch) {
+    logError(
+      ['Was not possible to run setup using', stored.wineVersion.name],
+      LogPrefix.Gog
+    )
+    return
+  }
+  return runGogSetup(appName, gameInfo, stored, installRedist)
+}
+
+async function runGogSetup(
+  appName: string,
+  gameInfo: GameInfo,
+  gameSettings: GameSettings,
+  installRedist: boolean
+): Promise<void> {
+  // Make sure prefix is initalized correctly
+  if (!isWindows) await verifyWinePrefix(gameSettings)
 
   // Read game manifest
   const manifestPath = path.join(gogdlConfigPath, 'manifests', appName)

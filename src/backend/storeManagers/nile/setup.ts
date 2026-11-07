@@ -14,6 +14,14 @@ import {
 } from 'backend/utils'
 import { runWineCommand, verifyWinePrefix } from 'backend/launcher'
 import { isWindows } from 'backend/constants/environment'
+import type { GameSettings } from 'common/types'
+import type { FuelSchema } from 'common/types/nile'
+import { isOnline } from '../../online_monitor'
+import {
+  endEngineLaunch,
+  selectEngineForLaunch
+} from 'backend/engine/launchEngine'
+import { getLaunchSettings } from 'backend/engine/launchSettings'
 
 /**
  * Handles installing dependencies for games that include PostInstall scripts
@@ -68,27 +76,69 @@ export default async function setup(
     LogPrefix.Nile
   )
 
-  const gameSettings = GameConfig.get(appName).config
-  if (!isWindows) {
-    const logWriter = getRunnerLogWriter('nile')
-    const isWineOkToLaunch = await checkWineBeforeLaunch(
-      gameInfo,
-      gameSettings,
-      logWriter
-    )
-
-    if (!isWineOkToLaunch) {
-      logError(
-        ['Was not possible to run setup using', gameSettings.wineVersion.name],
-        LogPrefix.Nile
-      )
-      return
-    }
-    // Make sure prefix is initialized correctly
-    await verifyWinePrefix(gameSettings)
+  const stored = GameConfig.get(appName).config
+  if (isWindows) {
+    return runNileSetup(appName, basePath, fuel.PostInstall, stored)
   }
 
-  logDebug(['PostInstall:', fuel.PostInstall], LogPrefix.Nile)
+  // Phase 61 (D-01, D-03, D-08): on macOS the setup runs on the engine the step selects, in the
+  // game's own bottle. An engine-controlled setup skips checkWineBeforeLaunch: its self-heal would
+  // persist a derived or fallback engine into wineVersion.
+  const game = libraryManagerMap['nile'].getGame(appName)
+  const step = await selectEngineForLaunch(game, {
+    offline: !isOnline(),
+    purpose: 'setup'
+  })
+  if (step.kind === 'refused') {
+    logWarning(
+      [
+        'Setup: no usable engine for',
+        gameInfo?.title ?? appName,
+        'skipping setup'
+      ],
+      LogPrefix.Nile
+    )
+    return
+  }
+  if (step.kind === 'use') {
+    try {
+      return await runNileSetup(
+        appName,
+        basePath,
+        fuel.PostInstall,
+        getLaunchSettings(step.key, stored)
+      )
+    } finally {
+      endEngineLaunch(step.key)
+    }
+  }
+
+  const logWriter = getRunnerLogWriter('nile')
+  const isWineOkToLaunch = await checkWineBeforeLaunch(
+    gameInfo,
+    stored,
+    logWriter
+  )
+  if (!isWineOkToLaunch) {
+    logError(
+      ['Was not possible to run setup using', stored.wineVersion.name],
+      LogPrefix.Nile
+    )
+    return
+  }
+  return runNileSetup(appName, basePath, fuel.PostInstall, stored)
+}
+
+async function runNileSetup(
+  appName: string,
+  basePath: string,
+  postInstall: FuelSchema['PostInstall'],
+  gameSettings: GameSettings
+): Promise<void> {
+  // Make sure prefix is initialized correctly
+  if (!isWindows) await verifyWinePrefix(gameSettings)
+
+  logDebug(['PostInstall:', postInstall], LogPrefix.Nile)
 
   sendGameStatusUpdate({
     appName,
@@ -98,7 +148,7 @@ export default async function setup(
   })
 
   // Actual setup logic
-  for (const action of fuel.PostInstall) {
+  for (const action of postInstall) {
     const exeArguments = action.Args ?? []
 
     if (isWindows) {

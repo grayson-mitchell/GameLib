@@ -96,6 +96,8 @@ import { registerLongLivedChild } from 'backend/longLivedChildren'
 
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import type LogWriter from 'backend/logger/log_writer'
+import { getLaunchSettings } from 'backend/engine/launchSettings'
+import { engineKeyFor } from 'backend/engine/gameKey'
 
 export default class GOGGame implements Game {
   private readonly id: string
@@ -584,7 +586,10 @@ export default class GOGGame implements Game {
     launchArguments?: LaunchOption,
     args: string[] = []
   ): Promise<boolean> {
-    const gameSettings = await this.getSettings()
+    const gameSettings = getLaunchSettings(
+      engineKeyFor(this.getGameInfo().runner, this.id),
+      await this.getSettings()
+    )
     const gameInfo = this.getGameInfo()
 
     if (
@@ -886,6 +891,7 @@ export default class GOGGame implements Game {
     newInstallPath: string
   ): Promise<{ status: 'done' } | { status: 'error'; error: string }> {
     const gameInfo = this.getGameInfo()
+    // overlay census: install/metadata read (prefix location for the move), stored settings
     const gameConfig = await this.getSettings()
     logInfo(`Moving ${gameInfo.title} to ${newInstallPath}`, LogPrefix.Gog)
 
@@ -1037,6 +1043,7 @@ export default class GOGGame implements Game {
 
     const res: ExecResult = { stdout: '', stderr: '' }
     if (existsSync(uninstallerPath)) {
+      // overlay census: install/metadata read (uninstall path translation), stored settings
       const gameSettings = await this.getSettings()
 
       const installDirectory = isWindows
@@ -1138,6 +1145,7 @@ export default class GOGGame implements Game {
       return { status: 'error' }
     }
 
+    // overlay census: install/metadata read (update prefix check), stored settings
     const gameConfig = await this.getSettings()
     const installedDlcs = gameData.install.installedDLCs || []
 
@@ -1319,6 +1327,7 @@ export default class GOGGame implements Game {
     gameObject.install_size = getFileSize(sizeOnDisk)
     installedGamesStore.set('installed', installedArray)
     libraryManagerMap['gog'].refreshInstalled()
+    // overlay census: install/metadata read (prefix exists check), stored settings
     const gameSettings = await this.getSettings()
     // Simple check if wine prefix exists and setup can be performed because of an
     // update
@@ -1399,7 +1408,10 @@ export default class GOGGame implements Game {
   // GOGDL now handles the signal, this is no longer needed
   async stop(stopWine = true): Promise<void> {
     if (stopWine && !this.isNative()) {
-      const gameSettings = await this.getSettings()
+      const gameSettings = getLaunchSettings(
+        engineKeyFor(this.getGameInfo().runner, this.id),
+        await this.getSettings()
+      )
       await shutdownWine(gameSettings)
     }
   }
