@@ -43,8 +43,6 @@ exports	src/backend/storeManagers/steam/bridge/overlay/overlayRunnerClone.ts	ver
 exports	src/backend/storeManagers/steam/cancelDelete.ts	CANCEL_DELETE_POLL_MS
 exports	src/backend/storeManagers/steam/cancelDelete.ts	CANCEL_DELETE_TIMEOUT_MS
 exports	src/backend/storeManagers/steam/depot/flagsCensus.ts	FLAGS_CENSUS_LOG_PREFIX
-exports	src/backend/storeManagers/steam/engine/engineDecision.ts	defaultEngineDecisionDeps
-exports	src/backend/storeManagers/steam/engine/testedCrossoverVersions.ts	testedCrossoverBuilds
 exports	src/backend/storeManagers/steam/gameDrmLaunch.ts	DRM_DLL_OVERRIDES
 exports	src/backend/storeManagers/steam/gameEligibility.ts	assembleBridgeRouteInput
 exports	src/backend/storeManagers/steam/gameEligibility.ts	isBottleEligibleFromPlatforms
@@ -57,7 +55,6 @@ exports	src/backend/storeManagers/steam/gameUninstall.ts	removeNativeInstallDire
 exports	src/backend/storeManagers/steam/gameUninstall.ts	uninstallBottleGameDirectly
 exports	src/backend/storeManagers/steam/gameUninstall.ts	uninstallNativeInGameLib
 exports	src/backend/storeManagers/steam/gameUninstall.ts	uninstallUnadoptedMacNativeDirectly
-exports	src/backend/storeManagers/steam/stores.ts	steamEngineNoticeStore
 exports	src/backend/typed_store.ts	getRegisteredStoreNames
 exports	src/backend/typed_store.ts	getRegisteredStoreOptions
 exports	src/frontend/App.tsx	routes
@@ -269,9 +266,7 @@ exports	src/preload/api/settings.ts	Settings.showUpdateSetting
 exports	src/preload/api/settings.ts	Settings.systemInfo
 exports	src/preload/api/settings.ts	Settings.updateEosOverlayInfo
 exports	src/preload/api/steam.ts	Steam.checkSteamInstalled
-exports	src/preload/api/steam.ts	Steam.dismissSteamEngineNotice
 exports	src/preload/api/steam.ts	Steam.getSteamDeleteRoute
-exports	src/preload/api/steam.ts	Steam.getSteamEngineState
 exports	src/preload/api/steam.ts	Steam.getSteamInstallAppTargets
 exports	src/preload/api/steam.ts	Steam.getSteamInstallSize
 exports	src/preload/api/steam.ts	Steam.getSteamSyncedAt
@@ -281,14 +276,12 @@ exports	src/preload/api/steam.ts	Steam.handleSteamBottleSetupRequired
 exports	src/preload/api/steam.ts	Steam.handleSteamBridgeRouteNotice
 exports	src/preload/api/steam.ts	Steam.handleSteamBridgeSetupRequired
 exports	src/preload/api/steam.ts	Steam.handleSteamClientSetupRequired
-exports	src/preload/api/steam.ts	Steam.handleSteamEngineStateChanged
 exports	src/preload/api/steam.ts	Steam.handleSteamGoOfflineRequired
 exports	src/preload/api/steam.ts	Steam.handleSteamMetadataSyncing
 exports	src/preload/api/steam.ts	Steam.handleSteamRequestNotice
 exports	src/preload/api/steam.ts	Steam.handleSteamSetupDownloadProgress
 exports	src/preload/api/steam.ts	Steam.handleSteamSyncStatus
 exports	src/preload/api/steam.ts	Steam.isSteamBottleProvisioned
-exports	src/preload/api/steam.ts	Steam.listSteamEngineOptions
 exports	src/preload/api/steam.ts	Steam.listSteamLibraryTargets
 exports	src/preload/api/steam.ts	Steam.logoutSteam
 exports	src/preload/api/steam.ts	Steam.redeemSteamKey
@@ -369,12 +362,9 @@ types	meta/logSecretGate.ts	Exemption
 types	meta/logSecretGate.ts	Violation
 types	meta/logSecretGate.ts	ViolationKind
 types	src/backend/humble/adapter.ts	OrderDetailTpk
-types	src/backend/storeManagers/steam/bridge/drm/runnerClone.ts	RunnerTool
 types	src/backend/storeManagers/steam/bridge/drm/steamclientLayerInstall.ts	CodesignRunner
 types	src/backend/storeManagers/steam/bridge/drm/steamclientLayerInstall.ts	SteamclientLayerArchiveFetch
 types	src/backend/storeManagers/steam/bridge/protocol.ts	InterfaceOrdinalName
-types	src/backend/storeManagers/steam/engine/engineDecision.ts	WineManagerRelease
-types	src/backend/storeManagers/steam/engine/engineTypes.ts	EngineReason
 types	src/common/types/steam.ts	SteamCredentials
 types	src/frontend/types.ts	Category
 types	src/frontend/types.ts	CrossoverRatingFilters

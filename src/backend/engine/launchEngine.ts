@@ -576,6 +576,3 @@ export function __resetLaunchEngineForTests(): void {
   ledgerBottles.clear()
   deadlineWatchers.clear()
 }
-
-/** Re-exported for the store launch paths (61-13) so they import one module. */
-export { getLaunchSettings } from './launchSettings'

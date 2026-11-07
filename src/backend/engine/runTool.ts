@@ -9,7 +9,7 @@ import { spawn } from 'child_process'
 
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 
-export type RunnerTool =
+type RunnerTool =
   | '/bin/cp'
   | '/usr/bin/xattr'
   | '/usr/bin/codesign'

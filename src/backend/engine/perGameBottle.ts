@@ -43,9 +43,9 @@ import type { PinnedEngineResult } from './pinnedEngineProgress'
 import type { Runner } from 'common/types'
 
 export const PER_GAME_BOTTLE_NAME_MAX = 64
-export const CROSSOVER_CREATE_TIMEOUT = 'crossover-create-timeout' as const
-export const CROSSOVER_CREATE_FAILED = 'crossover-create-failed' as const
-export const PROVISION_ABORTED = 'provision-aborted' as const
+const CROSSOVER_CREATE_TIMEOUT = 'crossover-create-timeout' as const
+const CROSSOVER_CREATE_FAILED = 'crossover-create-failed' as const
+const PROVISION_ABORTED = 'provision-aborted' as const
 const ENGINE_DOWNLOAD_FAILED = 'engine-download-failed' as const
 
 const PREFIX = 'GameLib'

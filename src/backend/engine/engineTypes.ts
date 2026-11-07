@@ -3,15 +3,6 @@
  * helpers only: nothing runs at module load.
  */
 
-export type EngineReason =
-  | 'cx-healthy'
-  | 'cx-missing'
-  | 'cx-expired'
-  | 'cx-broken'
-  /** An inconclusive pre-flight kept the bottle's current engine (59 D-09); never a fallback. */
-  | 'cx-inconclusive'
-  | 'override'
-
 export type FallbackReason = 'cx-missing' | 'cx-expired' | 'cx-broken'
 
 export interface NonCrossoverEngine {
