@@ -27,15 +27,27 @@ fn refuse(reason: ContainReason) -> ContainedReal {
     }
 }
 
+/// Drop the Windows verbatim prefix `std::fs::canonicalize` adds, matching Node `realpath`:
+/// `\\?\UNC\server\share\x` -> `\\server\share\x` (63 WR-03: stripping only `\\?\` left the
+/// relative `UNC\server\...`), `\\?\C:\x` -> `C:\x`. Pure so it is tested on every platform.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn strip_verbatim_prefix(s: &str) -> String {
+    if let Some(rest) = s.strip_prefix(r"\\?\UNC\") {
+        return format!(r"\\{rest}");
+    }
+    if let Some(stripped) = s.strip_prefix(r"\\?\") {
+        return stripped.to_string();
+    }
+    s.to_string()
+}
+
 fn display_path(p: &Path) -> Option<String> {
     let s = p.to_str()?;
     #[cfg(windows)]
-    {
-        if let Some(stripped) = s.strip_prefix(r"\\?\") {
-            return Some(stripped.to_string());
-        }
-    }
-    Some(s.to_string())
+    let s = strip_verbatim_prefix(s);
+    #[cfg(not(windows))]
+    let s = s.to_string();
+    Some(s)
 }
 
 pub fn contained_real(path: &Path, root_dir: &Path) -> ContainedReal {
@@ -72,6 +84,30 @@ pub fn contained_real(path: &Path, root_dir: &Path) -> ContainedReal {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn verbatim_prefix_strips_to_node_realpath_form() {
+        assert_eq!(
+            strip_verbatim_prefix(r"\\?\UNC\server\share\game\a.exe"),
+            r"\\server\share\game\a.exe"
+        );
+        assert_eq!(
+            strip_verbatim_prefix(r"\\?\C:\Games\a.exe"),
+            r"C:\Games\a.exe"
+        );
+        assert_eq!(strip_verbatim_prefix("/games/a.exe"), "/games/a.exe");
+    }
+
+    /// 63 WR-03: on Windows a UNC canonical path displays as an absolute `\\server\share`
+    /// path, never the relative `UNC\server\...`.
+    #[cfg(windows)]
+    #[test]
+    fn display_path_keeps_unc_absolute() {
+        let p = Path::new(r"\\?\UNC\server\share\a.exe");
+        let shown = display_path(p).unwrap();
+        assert_eq!(shown, r"\\server\share\a.exe");
+        assert!(Path::new(&shown).is_absolute());
+    }
 
     #[test]
     fn file_inside_root_returns_real() {
