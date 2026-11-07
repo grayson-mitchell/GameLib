@@ -226,6 +226,33 @@ describe('dependency-cruiser boundary rules (seeded violations)', () => {
     )
   })
 
+  test('no-library-index-back-edge fires on library/a.ts -> ./index', () => {
+    withSeededRoot(
+      {
+        [`${SM}/steam/library/index.ts`]: `export const x = 1\n`,
+        [`${SM}/steam/library/a.ts`]: `import './index'\n`
+      },
+      ({ cruise }) => {
+        const r = cruise()
+        expect(r.status).not.toBe(0)
+        expect(names(r)).toContain('no-library-index-back-edge')
+      }
+    )
+  })
+
+  test('no-library-index-back-edge stays quiet for games.ts -> ./library', () => {
+    withSeededRoot(
+      {
+        [`${SM}/steam/library/index.ts`]: `export const x = 1\n`,
+        [`${SM}/steam/games.ts`]: `import './library'\n`
+      },
+      ({ cruise }) => {
+        const r = cruise()
+        expect(names(r)).not.toContain('no-library-index-back-edge')
+      }
+    )
+  })
+
   test('no-circular-depot fires on a cycle inside the depot subtree', () => {
     withSeededRoot(
       {

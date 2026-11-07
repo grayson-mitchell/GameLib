@@ -57,7 +57,7 @@
  *   - `persistBottleWineVersion` -> `persistInstallFormWineVersion(wineVersion)`
  *     (`main.ts:948-950`), Phase 34.13 Plan 07, D-14 — same shared seam.
  *     The trio above is now a trio plus these two install-form channels.
- *   - `getSteamBridgeRoute` -> `getBridgeRouteVerdict(appId)` (`games.ts`),
+ *   - `getSteamBridgeRoute` -> `getBridgeRouteVerdict(appId)` (`bridgeRouteVerdict.ts`),
  *     Phase 51 Plan 09/13, D-51-09: the composed bridge-vs-bottle route
  *     verdict for a single game (SteamBridgeRouteVerdict, common/types/steam.ts).
  *   - The engine state/options/dismiss channels and their push moved to the
@@ -134,18 +134,24 @@ import { ipcMain } from '../platform'
 import '../storeManagers'
 import { SteamUser } from '../storeManagers/steam/user'
 import {
+  pollCredentialLogin,
+  pollQRLogin,
+  startCredentialLogin,
+  startQRLogin,
+  submitSteamGuardCode
+} from '../storeManagers/steam/userSignIn'
+import { redeemKey } from '../storeManagers/steam/userRedeem'
+import {
   steamSyncStore,
   steamBottleConfigStore
 } from '../storeManagers/steam/stores'
-import {
-  provisionBottle,
-  isSteamBottleProvisioned
-} from '../storeManagers/steam/bottle'
+import { isSteamBottleProvisioned } from '../storeManagers/steam/bottle'
+import { provisionBottle } from '../storeManagers/steam/provisionBottle'
 import {
   startGuidedClientInstall,
   ensureSteamClientReady
 } from '../storeManagers/steam/clientSetup'
-import { getBridgeRouteVerdict } from '../storeManagers/steam/games'
+import { getBridgeRouteVerdict } from '../storeManagers/steam/bridgeRouteVerdict'
 import { getSteamInstallSize } from '../storeManagers/steam/gameRequirements'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../storeManagers/steam/constants'
 import {
@@ -175,16 +181,16 @@ export function registerSteamAuthFlows(): void {
   })
 
   ipcMain.handle('steamStartQR', async () => {
-    return SteamUser.startQRLogin()
+    return startQRLogin()
   })
 
   ipcMain.handle('steamPollQR', async () => {
-    return SteamUser.pollQRLogin()
+    return pollQRLogin()
   })
 
   // Source: main.ts:899 — credential/SteamGuard/TOTP login trio (REQ-34.4-01).
   ipcMain.handle('steamPollCredential', async () => {
-    return SteamUser.pollCredentialLogin()
+    return pollCredentialLogin()
   })
 
   ipcMain.handle(
@@ -194,14 +200,14 @@ export function registerSteamAuthFlows(): void {
         username: string
         password: string
       }
-      return SteamUser.startCredentialLogin(username, password)
+      return startCredentialLogin(username, password)
     }
   )
 
   ipcMain.handle(
     'steamSubmitGuard',
     async (_event: unknown, ...args: unknown[]) => {
-      return SteamUser.submitSteamGuardCode(args[0] as string)
+      return submitSteamGuardCode(args[0] as string)
     }
   )
 
@@ -248,7 +254,7 @@ export function registerSteamAuthFlows(): void {
       ) {
         return { store: 'steam', outcome: 'error', message: 'invalid-request' }
       }
-      return SteamUser.redeemKey('steam', key)
+      return redeemKey('steam', key)
     }
   )
 

@@ -1,12 +1,11 @@
 import { existsSync } from 'graceful-fs'
 import { join } from 'path'
-import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { configStore } from './stores'
 import { STEAM_INSTALL_PATHS } from './constants'
 import { getTokenStore, readTokenOutcome } from './tokenStore'
 import { currentTriggerLabel, noteSteamAuthTrigger } from './authTrigger'
 import {
-  noteSignInSucceeded,
   noteSignedOut,
   publishSignInProbeOutcomes,
   recordSignInProbeOutcome
@@ -28,126 +27,29 @@ import {
 } from './macSteamOffline'
 import { abortSteamUserLogon } from './steamUserLogonAbort'
 import { platform } from 'process'
-import type {
-  RedeemKeyOutcome,
-  RedeemKeyResult,
-  SteamGoOfflineAction,
-  SteamUserData
-} from 'common/types/steam'
-import { LoginSession, EAuthTokenPlatformType } from 'steam-session'
+import type { SteamUserData } from 'common/types/steam'
 import SteamUserLib from 'steam-user'
 import type { SignInProbeOutcome } from 'common/signInState'
-
-// ── D-02 (Phase 33-02) / Phase 54: ensureConnected canary + wrapped re-entry ─
-//
-// CANARY_APP_ID = 753 is the Steam client's own AppID — a minimal,
-// universally-owned probe app that requires no per-user ownership check, so
-// the canary getProductInfo call never fails for reasons unrelated to CM
-// socket health.
-//
-// CANARY_TIMEOUT_MS is deliberately far below STEAM_PICS_TIMEOUT_MS (25s,
-// withTimeout.ts) — a healthy CM answers a single-app getProductInfo in well
-// under a second; 5s already generously covers network jitter before we
-// suspect a stale socket.
-//
-// Phase 54 (spike 046, debug verdict 2026-10-27): a second authenticated CM
-// session on the same account signs Mac Steam's Friends out. So this class
-// owns EVERY authenticated logon: autoRelogin is off, client.relog() is never
-// called, a post-logon drop ENDS the session, and a stale canary re-enters the
-// same wrapped cold connect (withMacSteamOffline) a first connect uses.
-const CANARY_APP_ID = 753
-const CANARY_TIMEOUT_MS = 5000
-
-// How long the last released lease keeps the session open (RESEARCH Pattern 2:
-// prescreen -> install -> shim resolve -> shared redist must not thrash).
-const AUTH_SESSION_IDLE_GRACE_MS = 60000
-// The authenticated connect waits this long for loggedOn/error, then logOff()s
-// the attempt. The wrap cannot fire goonline while a logon is in flight, so
-// this replaces the old 15 s fallback + separate 20 s grace window.
-const AUTH_LOGON_BOUND_MS = 35000
-// Persona name lookup at sign-in only; bounded so Mac Steam is not held offline.
-const SIGN_IN_PERSONA_TIMEOUT_MS = 5000
-
-export type AuthSessionReason =
-  | 'user-refresh'
-  | 'login'
-  | 'user-install'
-  | 'prescreen'
-  | 'redeem'
-  | 'shared-redist'
-  | 'plan-retry'
-  | 'original-restore'
-
-export type AuthSessionRefusal =
-  | 'shutting-down'
-  | 'not-signed-in'
-  | 'token-unreadable'
-  | 'token-absent'
-  | 'logon-rejected'
-  | 'client-not-ready'
-  | 'go-offline-required'
-
-interface AcquireAuthenticatedOpts {
-  reason: AuthSessionReason
-  guidedAction?: SteamGoOfflineAction
-  appName?: string
-  // 54-REVIEW CR-01: the install's own target, carried into the guided Go
-  // Offline push so Continue replays the install the user confirmed.
-  installPath?: string
-  forceWindowsViaBottle?: boolean
-}
-
-interface GuidedInstallTarget {
-  installPath?: string
-  forceWindowsViaBottle?: boolean
-}
-
-type SteamUserClient = InstanceType<typeof SteamUserLib>
-
-type AuthenticatedLease =
-  | { ok: true; client: SteamUserClient; release: () => void }
-  | { ok: false; reason: AuthSessionRefusal }
-
-interface OpenAuthenticatedLease {
-  client: SteamUserClient
-  release: () => void
-}
-
-// QR_LOGIN_TIMEOUT_MS is the single source of truth for the QR session's
-// loginTimeout. The challenge-issued log line below interpolates this same
-// constant (never a second hand-typed 120000) so the logged value cannot
-// drift from the value actually set on the session.
-const QR_LOGIN_TIMEOUT_MS = 120000
-
-// quick 261011-rj0: the EResults with which the CM refuses the CREDENTIAL
-// itself, as opposed to refusing this connection (LogonSessionReplaced,
-// RateLimitExceeded, ServiceUnavailable, ...). Only these mean "the stored
-// refresh token is no longer good" and so only these may latch
-// `credentialsMissing` -- the Library then shows the sign-in row with Sign in,
-// which is the one action that fixes it. Values from
-// node_modules/steam-user/enums/EResult.js; literal numbers rather than
-// `SteamUserLib.EResult` so the test double (which carries no enum) and the
-// runtime cannot disagree.
-const CREDENTIAL_REFUSAL_ERESULTS: ReadonlySet<number> = new Set([
-  5, // InvalidPassword
-  15, // AccessDenied -- the live case (gamelib.log 2026-10-10/11)
-  26, // Revoked
-  27, // Expired
-  63 // AccountLogonDenied
-])
-const CREDENTIAL_REFUSAL_NAMES: ReadonlySet<string> = new Set([
-  'InvalidPassword',
-  'AccessDenied',
-  'Revoked',
-  'Expired',
-  'AccountLogonDenied'
-])
+import { resetSignInState } from './userSignInState'
+import {
+  CANARY_APP_ID,
+  CANARY_TIMEOUT_MS,
+  AUTH_SESSION_IDLE_GRACE_MS,
+  AUTH_LOGON_BOUND_MS,
+  CREDENTIAL_REFUSAL_ERESULTS,
+  CREDENTIAL_REFUSAL_NAMES,
+  type AuthSessionReason,
+  type AuthSessionRefusal,
+  type AcquireAuthenticatedOpts,
+  type GuidedInstallTarget,
+  type AuthenticatedLease,
+  type OpenAuthenticatedLease
+} from './userTypes'
 
 // ── SteamUser static class ────────────────────────────────────────────────────
 
 export class SteamUser {
   private static client: InstanceType<typeof SteamUserLib> | null = null
-  private static session: InstanceType<typeof LoginSession> | null = null
   // Single-flight for the wrapped cold connect; resolves null when connected,
   // otherwise the refusal every joiner reports.
   private static connectingPromise: Promise<AuthSessionRefusal | null> | null =
@@ -187,35 +89,6 @@ export class SteamUser {
     message: string
     eresult?: number
   } | null = null
-  private static qrSessionState: {
-    status: 'waiting' | 'done' | 'error'
-    username?: string
-  } = { status: 'waiting' }
-  // Tracks the last status pollQRLogin() actually LOGGED (not just observed),
-  // so the poll loop below can emit a line only on a CHANGE of status. The
-  // frontend polls on a timer (steamAuthFlowRegistration.ts:154), so a line
-  // per poll would flood gamelib.log and would itself be a defect (D-02).
-  // `null` means "nothing logged yet for this attempt" — reset alongside
-  // qrSessionState at both of its reset sites (startQRLogin, logout) so the
-  // two fields can never drift into an incoherent pair.
-  private static qrLastLoggedStatus: 'waiting' | 'done' | 'error' | null = null
-
-  // Credential session completion state — parallel to qrSessionState.
-  // Settled by the 'authenticated'/'error'/'timeout' listeners registered in
-  // startCredentialLogin's guard_required branch. Allows:
-  //  (a) DeviceConfirmation phone-approval path to complete login out-of-band
-  //      (frontend polls pollCredentialLogin(), like pollQRLogin() for QR).
-  //  (b) submitSteamGuardCode to wait for the same settlement instead of
-  //      registering a second set of duplicate listeners.
-  private static credSessionState: {
-    status: 'waiting' | 'done' | 'error'
-    username?: string
-  } = { status: 'waiting' }
-  // Resolve callbacks waiting for credSessionState to change from 'waiting'.
-  private static _credSettleCallbacks: Array<
-    (result: { status: 'done' | 'error' }) => void
-  > = []
-
   // ── AUTH-05: Steam client detection ────────────────────────────────────────
 
   /**
@@ -380,7 +253,7 @@ export class SteamUser {
     return this.acquireInternal(opts)
   }
 
-  private static acquireAuthenticatedWithToken(
+  static acquireAuthenticatedWithToken(
     opts: AcquireAuthenticatedOpts,
     token: string
   ): Promise<AuthenticatedLease> {
@@ -778,15 +651,7 @@ export class SteamUser {
     this.logonFailure = null
     this.guidedInstallTargets.clear()
     closeAnonymousClient('logout')
-    this.session = null
-    this.qrSessionState = { status: 'waiting' }
-    this.qrLastLoggedStatus = null
-    // Drain any pending credential session callbacks so callers don't hang
-    // indefinitely if logout occurs while waiting for a guard code.
-    const pendingCbs = SteamUser._credSettleCallbacks
-    SteamUser._credSettleCallbacks = []
-    SteamUser.credSessionState = { status: 'error' }
-    for (const cb of pendingCbs) cb({ status: 'error' })
+    resetSignInState()
     // Token through the seam (D-09) first, then the remaining session keys
     // configStore.clear() used to wipe — see stores.ts's configStore
     // schema (isLoggedIn/userData are the only other keys ever written there).
@@ -822,93 +687,6 @@ export class SteamUser {
     )
     if (outcome.status !== 'present') return undefined
     return { refreshToken: outcome.token }
-  }
-
-  // ── Shared auth success path ───────────────────────────────────────────────
-
-  private static async finishAuth(
-    session: InstanceType<typeof LoginSession>
-  ): Promise<string> {
-    const refreshToken = session.refreshToken
-    // Store credentials immediately — don't block on the steam-user CM connection.
-    await getTokenStore().setToken(refreshToken)
-    configStore.set('isLoggedIn', true)
-    configStore.delete('credentialsMissing')
-    // Phase 49: a completed sign-in outranks any probe that began earlier.
-    noteSignInSucceeded('steam')
-
-    // Log on (through the wrapped entry point) only to read the persona name.
-    // If this fails the user is still logged in (credentials already stored
-    // above), so we fall back to a placeholder.
-    const personaName = await this.resolveSignInProfile(session)
-
-    logInfo(
-      `Steam auth complete — logged in as ${personaName}`,
-      LogPrefix.Steam
-    )
-    return personaName
-  }
-
-  /**
-   * Sign-in profile: logs on through the SAME wrapped entry point as every
-   * other authenticated connect (the token is passed in memory, so the keyring
-   * is not read again), reads the persona name bounded at 5 s, writes
-   * userData, and returns the display name. The steamId comes from the
-   * steam-session LoginSession, which needs no CM.
-   */
-  private static async resolveSignInProfile(
-    session: InstanceType<typeof LoginSession>
-  ): Promise<string> {
-    let personaName = session.accountName || 'Steam User'
-    let steamId = ''
-    try {
-      steamId = session.steamID?.getSteamID64() ?? ''
-    } catch {
-      // steamID is derived from the token; absence is not fatal here
-    }
-    const lease = await this.acquireAuthenticatedWithToken(
-      { reason: 'login' },
-      session.refreshToken
-    )
-    if (lease.ok) {
-      try {
-        const client = lease.client
-        const id = client.steamID
-        if (id) {
-          steamId = steamId || id.getSteamID64()
-          const result = await withTimeout(
-            client.getPersonas([id]),
-            SIGN_IN_PERSONA_TIMEOUT_MS,
-            'sign-in getPersonas'
-          )
-          personaName =
-            result.personas[id.getSteamID64()]?.player_name ?? personaName
-        }
-      } catch (err) {
-        logWarning(
-          ['getPersonas failed, using fallback username:', err],
-          LogPrefix.Steam
-        )
-      } finally {
-        lease.release()
-      }
-    }
-    configStore.set('userData', { username: personaName, steamId })
-    return personaName
-  }
-
-  private static async completeQrProfile(
-    session: InstanceType<typeof LoginSession>
-  ): Promise<void> {
-    try {
-      const username = await this.resolveSignInProfile(session)
-      this.qrSessionState = { status: 'done', username }
-    } catch (err) {
-      logWarning(
-        ['Steam QR background CM connect failed:', err],
-        LogPrefix.Steam
-      )
-    }
   }
 
   /**
@@ -1106,457 +884,5 @@ export class SteamUser {
       )
       client.logOn({ refreshToken })
     })
-  }
-
-  // ── Credential session settlement helpers ──────────────────────────────────
-
-  /**
-   * Called when the credential session authenticates, errors, or times out.
-   * Stores the final state and drains any _waitForCredSession() callers.
-   */
-  private static _settleCredSession(
-    status: 'done' | 'error',
-    username?: string
-  ): void {
-    SteamUser.credSessionState = { status, username }
-    const callbacks = SteamUser._credSettleCallbacks
-    SteamUser._credSettleCallbacks = []
-    for (const cb of callbacks) cb({ status })
-  }
-
-  /**
-   * Returns a Promise that resolves once credSessionState leaves 'waiting'.
-   * If already settled, resolves immediately. Used by submitSteamGuardCode
-   * so it can share the same authenticated/error/timeout listeners registered
-   * in startCredentialLogin without attaching duplicate handlers.
-   */
-  private static _waitForCredSession(): Promise<{ status: 'done' | 'error' }> {
-    const state = SteamUser.credSessionState
-    if (state.status !== 'waiting') {
-      return Promise.resolve({ status: state.status })
-    }
-    return new Promise<{ status: 'done' | 'error' }>((resolve) => {
-      SteamUser._credSettleCallbacks.push(resolve)
-    })
-  }
-
-  // ── AUTH-02: Credential login status poll ─────────────────────────────────
-
-  /**
-   * Returns the current credential session authentication state, mirroring
-   * pollQRLogin() for the credential+guard flow. Used by the frontend to
-   * detect out-of-band completion (e.g. DeviceConfirmation phone approval)
-   * while the user is on the guard-code entry screen.
-   */
-  static async pollCredentialLogin(): Promise<{
-    status: 'done' | 'waiting' | 'error'
-    username?: string
-  }> {
-    const state = this.credSessionState
-    return { status: state.status, username: state.username }
-  }
-
-  // ── AUTH-01: QR Login ──────────────────────────────────────────────────────
-
-  static async startQRLogin(): Promise<{
-    status: 'done' | 'error'
-    challengeUrl?: string
-  }> {
-    try {
-      logInfo('Steam QR login: attempt starting', LogPrefix.Steam)
-
-      // Tear down previous session before replacing it
-      if (this.session) {
-        logInfo(
-          'Steam QR login: cancelling a previous login session before starting a new one',
-          LogPrefix.Steam
-        )
-        this.session.cancelLoginAttempt()
-        this.session = null
-      }
-
-      const session = new LoginSession(EAuthTokenPlatformType.SteamClient)
-      // Give the user 2 minutes to scan and approve. The default 30 s kills the
-      // session before the phone's approval round-trip completes.
-      session.loginTimeout = QR_LOGIN_TIMEOUT_MS
-      this.session = session
-      this.qrSessionState = { status: 'waiting' }
-      this.qrLastLoggedStatus = null
-
-      const response = await session.startWithQR()
-
-      session.once('authenticated', async () => {
-        try {
-          logInfo(
-            'Steam QR login: authenticated event received — finalizing session',
-            LogPrefix.Steam
-          )
-          await getTokenStore().setToken(session.refreshToken)
-          configStore.set('isLoggedIn', true)
-          configStore.delete('credentialsMissing')
-          // Phase 49: a completed sign-in outranks any probe that began earlier.
-          noteSignInSucceeded('steam')
-
-          // Mark done synchronously so pollQRLogin() returns 'done' as soon as
-          // the user approves on their phone — don't block the UI on the CM
-          // connection. The persona name (and client.steamID) are populated in
-          // the background below and surface on a later poll.
-          this.qrSessionState = { status: 'done' }
-
-          // The background connect shares the single-flight connectingPromise
-          // (set synchronously below: the token is passed in memory), so a
-          // concurrent ensureConnected() from the post-login refresh awaits it
-          // instead of opening a second logon.
-          void this.completeQrProfile(session)
-        } catch (err) {
-          logError(['Steam QR auth finalization failed:', err], LogPrefix.Steam)
-          this.qrSessionState = { status: 'error' }
-        }
-      })
-
-      session.once('timeout', () => {
-        logWarning('Steam QR session timed out', LogPrefix.Steam)
-        this.qrSessionState = { status: 'error' }
-      })
-
-      session.once('error', (err: Error) => {
-        logError(['Steam QR session error:', err], LogPrefix.Steam)
-        this.qrSessionState = { status: 'error' }
-      })
-
-      logInfo(
-        `Steam QR login: challenge issued — waiting for phone approval (loginTimeout=${QR_LOGIN_TIMEOUT_MS}ms)`,
-        LogPrefix.Steam
-      )
-      return { status: 'done', challengeUrl: response.qrChallengeUrl }
-    } catch (err) {
-      logError(['Steam startQRLogin failed:', err], LogPrefix.Steam)
-      return { status: 'error' }
-    }
-  }
-
-  // ── AUTH-01: QR Poll ───────────────────────────────────────────────────────
-
-  static async pollQRLogin(): Promise<{
-    status: 'done' | 'waiting' | 'error'
-    username?: string
-  }> {
-    const state = this.qrSessionState
-    if (state.status !== this.qrLastLoggedStatus) {
-      logInfo(
-        `Steam QR poll: status ${this.qrLastLoggedStatus ?? 'none'} -> ${state.status}`,
-        LogPrefix.Steam
-      )
-      this.qrLastLoggedStatus = state.status
-    }
-    if (state.status === 'done') {
-      // username is undefined until the background CM connection resolves the
-      // persona name (see the QR 'authenticated' handler). The frontend picks
-      // up the real name on a subsequent poll once it's populated.
-      return { status: 'done', username: state.username }
-    }
-    if (state.status === 'error') {
-      return { status: 'error' }
-    }
-    return { status: 'waiting' }
-  }
-
-  // ── AUTH-02: Credential Login ──────────────────────────────────────────────
-
-  static async startCredentialLogin(
-    username: string,
-    password: string
-  ): Promise<{ status: 'done' | 'guard_required' | 'error' }> {
-    try {
-      // Drain any pending callbacks from a previous guard_required attempt
-      // (e.g. user pressed "Back to Credentials" and is starting a new login).
-      const staleCallbacks = SteamUser._credSettleCallbacks
-      SteamUser._credSettleCallbacks = []
-      SteamUser.credSessionState = { status: 'waiting' }
-      for (const cb of staleCallbacks) cb({ status: 'error' })
-
-      // Tear down previous session before replacing it
-      if (this.session) {
-        this.session.cancelLoginAttempt()
-        this.session = null
-      }
-
-      const session = new LoginSession(EAuthTokenPlatformType.SteamClient)
-      // Set loginTimeout before startWithCredentials (steam-session throws if
-      // changed after polling starts, LoginSession.js:107). 180 s gives ample
-      // time for email retrieval. Mirrors the QR path's 120 s setting.
-      session.loginTimeout = 180000
-      this.session = session
-
-      const response = await session.startWithCredentials({
-        accountName: username,
-        password
-        // NOTE: password is passed to steam-session but never written to configStore
-      })
-
-      if (response.actionRequired) {
-        // Attach persistent listeners BEFORE returning guard_required.
-        //
-        // When DeviceConfirmation (type 4) is in validActions, steam-session
-        // calls setImmediate(_doPoll) inside _processStartSessionResponse before
-        // returning. That setImmediate is queued but has NOT run yet — we are in
-        // the microtask checkpoint immediately after the await resolved. Registering
-        // here guarantees our handlers are in place before the first poll executes.
-        //
-        // Two purposes:
-        //  (a) DeviceConfirmation / phone-approval path: 'authenticated' fires
-        //      when the user approves on their phone. finishAuth stores the token
-        //      and the frontend picks up the done state via pollCredentialLogin().
-        //  (b) DeviceCode / typed-authenticator path: after submitSteamGuardCode()
-        //      resolves, steam-session triggers a poll that returns a refreshToken
-        //      and fires 'authenticated' here. _settleCredSession resolves
-        //      _waitForCredSession() inside submitSteamGuardCode without needing
-        //      a second set of duplicate listeners on the same session object.
-        session.once('authenticated', async () => {
-          try {
-            const personaName = await SteamUser.finishAuth(session)
-            SteamUser._settleCredSession('done', personaName)
-          } catch (err) {
-            logError(
-              ['Steam credential auth finalization failed:', err],
-              LogPrefix.Steam
-            )
-            SteamUser._settleCredSession('error')
-          }
-        })
-
-        session.once('error', (err: Error) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const errAny = err as any
-          const eresult = errAny?.eresult ?? errAny?.EResult ?? 'unknown'
-          logError(
-            [
-              `Steam credential session error: EResult=${eresult} msg=${err.message}`
-            ],
-            LogPrefix.Steam
-          )
-          SteamUser._settleCredSession('error')
-        })
-
-        session.once('timeout', () => {
-          logWarning('Steam credential session timed out', LogPrefix.Steam)
-          SteamUser._settleCredSession('error')
-        })
-
-        logInfo('Steam Guard required for credential login', LogPrefix.Steam)
-        return { status: 'guard_required' }
-      }
-
-      // No guard required — wait for authenticated event (polling started internally)
-      return new Promise<{ status: 'done' | 'error' }>((resolve) => {
-        session.once('authenticated', async () => {
-          try {
-            await this.finishAuth(session)
-            resolve({ status: 'done' })
-          } catch (err) {
-            logError(
-              ['Steam credential auth finalization failed:', err],
-              LogPrefix.Steam
-            )
-            resolve({ status: 'error' })
-          }
-        })
-
-        session.once('error', (err: Error) => {
-          logError(['Steam credential session error:', err], LogPrefix.Steam)
-          resolve({ status: 'error' })
-        })
-
-        session.once('timeout', () => {
-          logWarning('Steam credential session timed out', LogPrefix.Steam)
-          resolve({ status: 'error' })
-        })
-      })
-    } catch (err) {
-      logError(['Steam startCredentialLogin failed:', err], LogPrefix.Steam)
-      return { status: 'error' }
-    }
-  }
-
-  // ── AUTH-02: Submit SteamGuard code ───────────────────────────────────────
-
-  static async submitSteamGuardCode(
-    code: string
-  ): Promise<{ status: 'done' | 'error' }> {
-    if (!this.session) {
-      logWarning(
-        'submitSteamGuardCode called but no active session',
-        LogPrefix.Steam
-      )
-      return { status: 'error' }
-    }
-
-    const session = this.session
-
-    // Defense-in-depth: normalize to uppercase and strip whitespace so that
-    // 5-character alphanumeric EMAIL guard codes (e.g. kqm4f → KQM4F) are
-    // accepted regardless of how the frontend formatted them. .toUpperCase()
-    // is a no-op for purely numeric TOTP/authenticator codes (e.g. 12345).
-    const normalized = code.trim().toUpperCase()
-
-    try {
-      await session.submitSteamGuardCode(normalized)
-
-      // The 'authenticated'/'error'/'timeout' listeners on this session were
-      // registered in startCredentialLogin (guard_required branch). Do NOT
-      // register duplicate listeners here — instead wait for _settleCredSession
-      // to be called by the already-registered handlers. This prevents double
-      // finishAuth calls and avoids listener leaks.
-      return await SteamUser._waitForCredSession()
-    } catch (err) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const errAny = err as any
-      const eresult = errAny?.eresult ?? errAny?.EResult ?? 'unknown'
-      logError(
-        [
-          `Steam guard code submission failed: EResult=${eresult}, message=${errAny?.message ?? 'none'}`
-        ],
-        LogPrefix.Steam
-      )
-      return { status: 'error' }
-    }
-  }
-
-  // ── REQ-26-02/04/05/06: Redeem a single Steam key ──────────────────────────
-
-  /**
-   * Redeems a single Steam key on the live authenticated CM session. Mirrors
-   * submitSteamGuardCode's shape: guard clause first, plain JSON result,
-   * never throws across the IPC boundary.
-   *
-   * `client.redeemKey()`'s TypeScript signature is misleading — it resolves
-   * ONLY on EPurchaseResult.OK; every other outcome (already-owned, invalid,
-   * rate-limited) REJECTS with an Error carrying `purchaseResultDetails` and
-   * `packageList` as extra properties (verified against
-   * node_modules/steam-user/components/apps.js:887, not the .d.ts).
-   *
-   * `store` is REQ-26-06's hidden, store-aware-ready parameter (D-05) —
-   * callers default it to 'steam'; only 'steam' is wired today.
-   */
-  static async redeemKey(
-    store: 'steam',
-    key: string
-  ): Promise<RedeemKeyResult> {
-    const lease = await this.acquireAuthenticated({
-      reason: 'redeem',
-      guidedAction: 'redeem'
-    })
-    if (!lease.ok) {
-      logWarning(
-        'Steam redeemKey: not connected — skipping redeemKey call',
-        LogPrefix.Steam
-      )
-      return {
-        store,
-        outcome: 'error',
-        message:
-          lease.reason === 'go-offline-required'
-            ? 'go-offline-required'
-            : 'not-connected'
-      }
-    }
-    const client = lease.client
-
-    try {
-      const { purchaseResultDetails, packageList } = await client.redeemKey(key)
-      // purchaseResultDetails here should already be EPurchaseResult.OK (0) —
-      // the promise would have rejected otherwise — but classify defensively
-      // anyway rather than assuming.
-      return this.classifyPurchaseResult(
-        store,
-        purchaseResultDetails,
-        packageList
-      )
-    } catch (err) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const e = err as any
-      // WR-01: Only a rejection carrying a NUMERIC EPurchaseResult is a genuine
-      // Steam purchase verdict. A transport/timeout/unexpected failure (e.g. the
-      // 90s internal timeout in steam-user's redeemKey, or a mid-call CM
-      // disconnect) carries no purchaseResultDetails — classifying THAT as
-      // Unknown -> 'invalid' wrongly tells the user a valid key "doesn't look
-      // right". Map it to the generic 'error' outcome (connectivity copy).
-      if (typeof e?.purchaseResultDetails !== 'number') {
-        // WR-02: status-only diagnostic so genuine unexpected failures are
-        // traceable. NEVER log the raw key (T-26-01) — only store/outcome and
-        // the error shape (message/name), which never contain the key.
-        logWarning(
-          [
-            `Steam redeemKey failed without a purchase result: store=${store} outcome=error name=${
-              e?.name ?? 'unknown'
-            } message=${e?.message ?? 'none'}`
-          ],
-          LogPrefix.Steam
-        )
-        return { store, outcome: 'error', message: 'redeem-failed' }
-      }
-      // WR-02: log the rejected purchase-result status before classifying.
-      // classifyPurchaseResult's own log cannot distinguish a resolved vs a
-      // rejected redeemKey; this line records that the promise rejected.
-      logWarning(
-        [
-          `Steam redeemKey rejected with purchase result: store=${store} purchaseResultDetails=${e.purchaseResultDetails}`
-        ],
-        LogPrefix.Steam
-      )
-      return this.classifyPurchaseResult(
-        store,
-        e.purchaseResultDetails,
-        e.packageList ?? {}
-      )
-    } finally {
-      lease.release()
-    }
-  }
-
-  /**
-   * Classifies a raw EPurchaseResult value into exactly one of the 4 SPEC
-   * REQ5 outcome buckets. References the namespaced `SteamUserLib.EPurchaseResult`
-   * enum (8 values) — NEVER the differently-numbered 84-value
-   * `EPurchaseResultDetail` enum, which collides on the value 53 but means
-   * something different there.
-   *
-   * Logging is status-only (store/outcome/purchaseResultDetails) — mirrors
-   * humble/library.ts's doRevealKey discipline. The raw key value is never
-   * passed to this method and must never be logged anywhere in this path.
-   */
-  private static classifyPurchaseResult(
-    store: 'steam',
-    details: SteamUserLib.EPurchaseResult,
-    packageList: Record<string, string>
-  ): RedeemKeyResult {
-    let outcome: RedeemKeyOutcome
-
-    switch (details) {
-      case SteamUserLib.EPurchaseResult.OK:
-        outcome = 'success'
-        break
-      case SteamUserLib.EPurchaseResult.AlreadyOwned:
-        outcome = 'already-owned'
-        break
-      case SteamUserLib.EPurchaseResult.OnCooldown:
-        outcome = 'rate-limited'
-        break
-      case SteamUserLib.EPurchaseResult.InvalidKey:
-      case SteamUserLib.EPurchaseResult.DuplicatedKey:
-      case SteamUserLib.EPurchaseResult.RegionLockedKey:
-      case SteamUserLib.EPurchaseResult.BaseGameRequired:
-      case SteamUserLib.EPurchaseResult.Unknown:
-      default:
-        outcome = 'invalid'
-        break
-    }
-
-    logInfo(
-      `Steam redeemKey: store=${store} outcome=${outcome} purchaseResultDetails=${details}`,
-      LogPrefix.Steam
-    )
-
-    return { store, outcome, packageList }
   }
 }

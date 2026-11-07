@@ -170,7 +170,9 @@ jest.mock('../../storeManagers/steam/experimentalInstallAppSetting', () => ({
 // install root through these two seams; both controllable. ───────────────────
 jest.mock('../../storeManagers/steam/bottle', () => ({
   __esModule: true,
-  ...jest.requireActual('../../storeManagers/steam/bottle'),
+  ...jest.requireActual('../../storeManagers/steam/bottle')
+}))
+jest.mock('../../storeManagers/steam/bridgeBottle', () => ({
   findBridgeInstallBottle: jest.fn()
 }))
 jest.mock('../../storeManagers/steam/library/installRoot', () => ({
@@ -246,7 +248,7 @@ import { GlobalConfig } from 'backend/config'
 import { getSteamBottleEligibilityVerdict } from '../../storeManagers/steam/installFormIpc'
 import { isSteamExperimentalInstallAppEnabled } from '../../storeManagers/steam/experimentalInstallAppSetting'
 import { libraryManagerMap } from 'backend/storeManagers'
-import { findBridgeInstallBottle } from '../../storeManagers/steam/bottle'
+import { findBridgeInstallBottle } from '../../storeManagers/steam/bridgeBottle'
 import { resolveInstallRoot } from '../../storeManagers/steam/library/installRoot'
 import { library as steamLibraryMap } from '../../storeManagers/steam/state'
 import SteamGame from '../../storeManagers/steam/games'

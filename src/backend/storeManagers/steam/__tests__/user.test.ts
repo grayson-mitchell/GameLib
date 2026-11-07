@@ -181,6 +181,14 @@ jest.mock('../anonymousClient', () => ({
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import { SteamUser } from '../user'
+import { redeemKey } from '../userRedeem'
+import {
+  pollCredentialLogin,
+  pollQRLogin,
+  startCredentialLogin,
+  startQRLogin,
+  submitSteamGuardCode
+} from '../userSignIn'
 import { safeStorage } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
 import { join } from 'path'
@@ -564,14 +572,14 @@ describe('SteamUser', () => {
     })
 
     test('returns { status: "done", challengeUrl } on success', async () => {
-      const result = await SteamUser.startQRLogin()
+      const result = await startQRLogin()
       expect(result.status).toBe('done')
       expect(result.challengeUrl).toBe('steam://...qr_url_here')
     })
 
     test('creates a new LoginSession for each attempt', async () => {
       MockLoginSession.mockClear()
-      await SteamUser.startQRLogin()
+      await startQRLogin()
       expect(MockLoginSession).toHaveBeenCalledTimes(1)
     })
 
@@ -579,7 +587,7 @@ describe('SteamUser', () => {
       mockSessionInstance.startWithQR.mockRejectedValue(
         new Error('network error')
       )
-      const result = await SteamUser.startQRLogin()
+      const result = await startQRLogin()
       expect(result.status).toBe('error')
     })
 
@@ -587,7 +595,7 @@ describe('SteamUser', () => {
     // trace in gamelib.log) ────────────────────────────────────────────────
 
     test('emits a logInfo line when a login attempt starts', async () => {
-      await SteamUser.startQRLogin()
+      await startQRLogin()
 
       const lines = jest
         .mocked(logInfo)
@@ -603,8 +611,8 @@ describe('SteamUser', () => {
     })
 
     test('emits a logInfo line when cancelling a previous login session', async () => {
-      await SteamUser.startQRLogin()
-      await SteamUser.startQRLogin()
+      await startQRLogin()
+      await startQRLogin()
 
       const lines = jest
         .mocked(logInfo)
@@ -619,7 +627,7 @@ describe('SteamUser', () => {
     })
 
     test('emits a logInfo line naming the loginTimeout when the challenge is issued', async () => {
-      await SteamUser.startQRLogin()
+      await startQRLogin()
 
       expect(mockSessionInstance.loginTimeout).toBe(120000)
       const lines = jest
@@ -634,7 +642,7 @@ describe('SteamUser', () => {
     })
 
     test('emits a logInfo line when the authenticated event is received', async () => {
-      await SteamUser.startQRLogin()
+      await startQRLogin()
       await sessionOnHandlers['authenticated']()
 
       const lines = jest
@@ -647,10 +655,10 @@ describe('SteamUser', () => {
     })
 
     test('never logs the QR challenge URL or the refresh token across the whole QR flow', async () => {
-      await SteamUser.startQRLogin()
+      await startQRLogin()
       await sessionOnHandlers['authenticated']()
-      await SteamUser.pollQRLogin()
-      await SteamUser.pollQRLogin()
+      await pollQRLogin()
+      await pollQRLogin()
 
       const allLogArgs = [
         ...jest.mocked(logInfo).mock.calls,
@@ -669,7 +677,7 @@ describe('SteamUser', () => {
     })
 
     test('still logs a warning when the session times out (regression, D-01)', async () => {
-      await SteamUser.startQRLogin()
+      await startQRLogin()
       sessionOnHandlers['timeout']?.()
 
       const lines = jest
@@ -696,11 +704,11 @@ describe('SteamUser', () => {
           steamUserOnHandlers['loggedOn']?.({}, {})
         })
       })
-      await SteamUser.startQRLogin()
+      await startQRLogin()
     })
 
     test('returns { status: "waiting" } before authenticated event fires', async () => {
-      const result = await SteamUser.pollQRLogin()
+      const result = await pollQRLogin()
       expect(result.status).toBe('waiting')
     })
 
@@ -711,7 +719,7 @@ describe('SteamUser', () => {
       expect(sessionOnHandlers['authenticated']).toBeDefined()
       await sessionOnHandlers['authenticated']()
 
-      const result = await SteamUser.pollQRLogin()
+      const result = await pollQRLogin()
       expect(result.status).toBe('done')
       expect(result.username).toBeUndefined()
     })
@@ -730,7 +738,7 @@ describe('SteamUser', () => {
 
     test('returns { status: "error" } when session times out', async () => {
       sessionOnHandlers['timeout']?.()
-      const result = await SteamUser.pollQRLogin()
+      const result = await pollQRLogin()
       expect(result.status).toBe('error')
     })
 
@@ -745,7 +753,7 @@ describe('SteamUser', () => {
     }
 
     test('logs the first observation of a fresh attempt as none -> waiting', async () => {
-      await SteamUser.pollQRLogin()
+      await pollQRLogin()
 
       expect(pollLines().some((line) => line.includes('none -> waiting'))).toBe(
         true
@@ -753,17 +761,17 @@ describe('SteamUser', () => {
     })
 
     test('three consecutive polls with no state change emit exactly one line (flood guard, D-02)', async () => {
-      await SteamUser.pollQRLogin()
-      await SteamUser.pollQRLogin()
-      await SteamUser.pollQRLogin()
+      await pollQRLogin()
+      await pollQRLogin()
+      await pollQRLogin()
 
       expect(pollLines()).toHaveLength(1)
     })
 
     test('a status change from waiting to error emits a second line', async () => {
-      await SteamUser.pollQRLogin()
+      await pollQRLogin()
       sessionOnHandlers['timeout']?.()
-      await SteamUser.pollQRLogin()
+      await pollQRLogin()
 
       const lines = pollLines()
       expect(lines).toHaveLength(2)
@@ -771,9 +779,9 @@ describe('SteamUser', () => {
     })
 
     test('a status change from waiting to done emits a second line', async () => {
-      await SteamUser.pollQRLogin()
+      await pollQRLogin()
       await sessionOnHandlers['authenticated']()
-      await SteamUser.pollQRLogin()
+      await pollQRLogin()
 
       const lines = pollLines()
       expect(lines).toHaveLength(2)
@@ -781,7 +789,7 @@ describe('SteamUser', () => {
     })
 
     test('never logs the persona name on a poll transition line (D-03)', async () => {
-      await SteamUser.pollQRLogin()
+      await pollQRLogin()
       await sessionOnHandlers['authenticated']()
 
       // Flush the background CM connect (logOn -> nextTick 'loggedOn' ->
@@ -790,22 +798,22 @@ describe('SteamUser', () => {
       await new Promise((resolve) => process.nextTick(resolve))
       await flushAsync()
 
-      const result = await SteamUser.pollQRLogin()
+      const result = await pollQRLogin()
       expect(result.username).toBe('TestUser')
       expect(pollLines().some((line) => line.includes('TestUser'))).toBe(false)
     })
 
     test('the tracker resets across attempts so a second attempt logs its own first observation', async () => {
-      await SteamUser.pollQRLogin()
+      await pollQRLogin()
       sessionOnHandlers['timeout']?.()
-      await SteamUser.pollQRLogin()
+      await pollQRLogin()
 
       mockSessionInstance.startWithQR.mockResolvedValue({
         qrChallengeUrl: 'steam://...qr_url_here',
         actionRequired: true
       })
-      await SteamUser.startQRLogin()
-      await SteamUser.pollQRLogin()
+      await startQRLogin()
+      await pollQRLogin()
 
       const lines = pollLines()
       expect(lines).toHaveLength(3)
@@ -830,14 +838,14 @@ describe('SteamUser', () => {
         qrChallengeUrl: 'steam://test',
         actionRequired: true
       })
-      await SteamUser.startQRLogin()
+      await startQRLogin()
 
       // Trigger authenticated — stores credentials and sets qrSessionState=done,
       // then fires background CM connect (which never resolves in this test)
       await sessionOnHandlers['authenticated']?.()
 
       // pollQRLogin must be 'done' immediately — not blocked on CM loggedOn
-      const result = await SteamUser.pollQRLogin()
+      const result = await pollQRLogin()
       expect(result.status).toBe('done')
       expect(result.username).toBeUndefined()
     })
@@ -854,7 +862,7 @@ describe('SteamUser', () => {
         qrChallengeUrl: 'steam://test',
         actionRequired: true
       })
-      await SteamUser.startQRLogin()
+      await startQRLogin()
 
       // Kick off the background CM connect
       void sessionOnHandlers['authenticated']?.()
@@ -890,10 +898,7 @@ describe('SteamUser', () => {
         validActions: [{ type: 2 }] // EmailCode = 2
       })
 
-      const result = await SteamUser.startCredentialLogin(
-        'testuser',
-        'password123'
-      )
+      const result = await startCredentialLogin('testuser', 'password123')
       expect(result.status).toBe('guard_required')
     })
 
@@ -920,10 +925,7 @@ describe('SteamUser', () => {
         return { actionRequired: false }
       })
 
-      const result = await SteamUser.startCredentialLogin(
-        'testuser',
-        'password123'
-      )
+      const result = await startCredentialLogin('testuser', 'password123')
       expect(result.status).toBe('done')
 
       // Restore
@@ -936,10 +938,7 @@ describe('SteamUser', () => {
       mockSessionInstance.startWithCredentials.mockRejectedValue(
         new Error('InvalidPassword')
       )
-      const result = await SteamUser.startCredentialLogin(
-        'testuser',
-        'wrongpass'
-      )
+      const result = await startCredentialLogin('testuser', 'wrongpass')
       expect(result.status).toBe('error')
     })
 
@@ -947,7 +946,7 @@ describe('SteamUser', () => {
       mockSessionInstance.startWithCredentials.mockResolvedValue({
         actionRequired: true
       })
-      await SteamUser.startCredentialLogin('testuser', 'mysecretpassword')
+      await startCredentialLogin('testuser', 'mysecretpassword')
 
       for (const [key, value] of mockConfigStore.set.mock.calls) {
         expect(key).not.toBe('password')
@@ -978,7 +977,7 @@ describe('SteamUser', () => {
         return { actionRequired: true }
       })
 
-      await SteamUser.startCredentialLogin('testuser', 'password123')
+      await startCredentialLogin('testuser', 'password123')
 
       expect(loginTimeoutAtCallTime).toBeGreaterThanOrEqual(120000)
     })
@@ -998,7 +997,7 @@ describe('SteamUser', () => {
         validActions: [{ type: 3 }, { type: 4 }] // DeviceCode + DeviceConfirmation
       })
 
-      await SteamUser.startCredentialLogin('testuser', 'password123')
+      await startCredentialLogin('testuser', 'password123')
 
       // All three listeners must be registered so the session is handled for
       // its full lifetime — DeviceConfirmation polling starts automatically
@@ -1021,10 +1020,7 @@ describe('SteamUser', () => {
       })
 
       // Start the credential login — returns guard_required
-      const result = await SteamUser.startCredentialLogin(
-        'testuser',
-        'password123'
-      )
+      const result = await startCredentialLogin('testuser', 'password123')
       expect(result.status).toBe('guard_required')
 
       // Simulate DeviceConfirmation phone approval: 'authenticated' fires on
@@ -1037,7 +1033,7 @@ describe('SteamUser', () => {
 
       // pollCredentialLogin must reflect the done state so the frontend can
       // navigate away (out-of-band completion — no submitSteamGuardCode needed)
-      const poll = await SteamUser.pollCredentialLogin()
+      const poll = await pollCredentialLogin()
       expect(poll.status).toBe('done')
 
       // submitSteamGuardCode was NOT called — this is the phone-approval path
@@ -1053,7 +1049,7 @@ describe('SteamUser', () => {
       mockSessionInstance.startWithCredentials.mockResolvedValue({
         actionRequired: true
       })
-      await SteamUser.startCredentialLogin('testuser', 'pass')
+      await startCredentialLogin('testuser', 'pass')
     })
 
     test('returns { status: "done" } on successful code submission', async () => {
@@ -1069,7 +1065,7 @@ describe('SteamUser', () => {
         setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
       })
 
-      const result = await SteamUser.submitSteamGuardCode('12345')
+      const result = await submitSteamGuardCode('12345')
       expect(result.status).toBe('done')
     })
 
@@ -1077,14 +1073,14 @@ describe('SteamUser', () => {
       mockSessionInstance.submitSteamGuardCode.mockRejectedValue(
         new Error('TwoFactorCodeMismatch')
       )
-      const result = await SteamUser.submitSteamGuardCode('99999')
+      const result = await submitSteamGuardCode('99999')
       expect(result.status).toBe('error')
     })
 
     test('returns { status: "error" } when no active session', async () => {
       // Call logout to clear the session — logout() sets this.session = null
       await SteamUser.logout()
-      const result = await SteamUser.submitSteamGuardCode('12345')
+      const result = await submitSteamGuardCode('12345')
       expect(result.status).toBe('error')
     })
 
@@ -1100,7 +1096,7 @@ describe('SteamUser', () => {
         setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
       })
 
-      const result = await SteamUser.submitSteamGuardCode('KQM4F')
+      const result = await submitSteamGuardCode('KQM4F')
       expect(result.status).toBe('done')
       expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith(
         'KQM4F'
@@ -1117,7 +1113,7 @@ describe('SteamUser', () => {
         setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
       })
 
-      await SteamUser.submitSteamGuardCode('kqm4f')
+      await submitSteamGuardCode('kqm4f')
       expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith(
         'KQM4F'
       )
@@ -1133,7 +1129,7 @@ describe('SteamUser', () => {
         setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
       })
 
-      await SteamUser.submitSteamGuardCode('  kqm4f  ')
+      await submitSteamGuardCode('  kqm4f  ')
       expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith(
         'KQM4F'
       )
@@ -1149,7 +1145,7 @@ describe('SteamUser', () => {
         setTimeout(() => sessionOnHandlers['authenticated']?.(), 10)
       })
 
-      await SteamUser.submitSteamGuardCode('12345')
+      await submitSteamGuardCode('12345')
       expect(mockSessionInstance.submitSteamGuardCode).toHaveBeenCalledWith(
         '12345'
       )
@@ -1169,7 +1165,7 @@ describe('SteamUser', () => {
       mockSteamUserInstance.logOn.mockImplementation(() => {
         // intentionally does nothing — loggedOn fires later in each test
       })
-      await SteamUser.startQRLogin()
+      await startQRLogin()
     })
 
     test('(a) username is undefined immediately after authenticated, then populated when CM loggedOn fires', async () => {
@@ -1181,7 +1177,7 @@ describe('SteamUser', () => {
 
       // pollQRLogin must return 'done' with username undefined — the background
       // CM connect is still in-flight so the persona name has not arrived yet.
-      const poll1 = await SteamUser.pollQRLogin()
+      const poll1 = await pollQRLogin()
       expect(poll1.status).toBe('done')
       expect(poll1.username).toBeUndefined()
 
@@ -1192,7 +1188,7 @@ describe('SteamUser', () => {
       await flushAsync()
 
       // pollQRLogin should now carry the real persona name
-      const poll2 = await SteamUser.pollQRLogin()
+      const poll2 = await pollQRLogin()
       expect(poll2.status).toBe('done')
       expect(poll2.username).toBe('TestUser')
 
@@ -1293,7 +1289,7 @@ describe('SteamUser', () => {
         })
       })
 
-      await SteamUser.startQRLogin()
+      await startQRLogin()
       await sessionOnHandlers['authenticated']?.()
 
       // Now logout
@@ -1360,7 +1356,7 @@ describe('SteamUser', () => {
           steamUserOnHandlers['loggedOn']?.({}, {})
         })
       })
-      await SteamUser.startQRLogin()
+      await startQRLogin()
       await sessionOnHandlers['authenticated']?.()
       await new Promise((r) => process.nextTick(r)) // let background CM connect settle
       mockSteamUserInstance.logOn.mockClear()
@@ -1946,7 +1942,7 @@ describe('SteamUser', () => {
           steamUserOnHandlers['loggedOn']?.({}, {})
         })
       })
-      await SteamUser.startQRLogin()
+      await startQRLogin()
       await sessionOnHandlers['authenticated']?.()
       await new Promise((r) => process.nextTick(r)) // let background CM connect settle
       mockSteamUserInstance.logOn.mockClear()
@@ -2106,7 +2102,7 @@ describe('SteamUser', () => {
         packageList: { '123': 'Some Game' }
       })
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',
@@ -2123,7 +2119,7 @@ describe('SteamUser', () => {
     test('releases the lease when client.redeemKey rejects', async () => {
       mockSteamUserInstance.redeemKey.mockRejectedValue(new Error('boom'))
 
-      await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(releaseLease).toHaveBeenCalledTimes(1)
     })
@@ -2134,7 +2130,7 @@ describe('SteamUser', () => {
         reason: 'go-offline-required'
       })
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',
@@ -2167,7 +2163,7 @@ describe('SteamUser', () => {
         })
         mockSteamUserInstance.redeemKey.mockRejectedValue(err)
 
-        const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+        const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
         expect(result.store).toBe('steam')
         expect(result.outcome).toBe(bucket)
@@ -2181,7 +2177,7 @@ describe('SteamUser', () => {
     test('rejected Error with no purchaseResultDetails -> transport failure classified as "error"', async () => {
       mockSteamUserInstance.redeemKey.mockRejectedValue(new Error('boom'))
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result.store).toBe('steam')
       expect(result.outcome).toBe('error')
@@ -2196,7 +2192,7 @@ describe('SteamUser', () => {
       })
       mockSteamUserInstance.redeemKey.mockRejectedValue(err)
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result.store).toBe('steam')
       expect(result.outcome).toBe('error')
@@ -2205,7 +2201,7 @@ describe('SteamUser', () => {
     test('not connected (lease refused): returns outcome "error" and never calls client.redeemKey', async () => {
       acquireSpy.mockResolvedValue({ ok: false, reason: 'not-signed-in' })
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',
@@ -2218,7 +2214,7 @@ describe('SteamUser', () => {
     test('not connected (client not ready): returns outcome "error" and never calls client.redeemKey', async () => {
       acquireSpy.mockResolvedValue({ ok: false, reason: 'client-not-ready' })
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result.outcome).toBe('error')
       expect(mockSteamUserInstance.redeemKey).not.toHaveBeenCalled()
@@ -2231,7 +2227,7 @@ describe('SteamUser', () => {
         packageList: {}
       })
 
-      await SteamUser.redeemKey('steam', secretKey)
+      await redeemKey('steam', secretKey)
 
       const mockedLogInfo = jest.mocked(logInfo)
       const mockedLogWarning = jest.mocked(logWarning)
@@ -2277,7 +2273,7 @@ describe('SteamUser', () => {
       mockSessionInstance.startWithCredentials.mockResolvedValue({
         actionRequired: false
       })
-      const pending = SteamUser.startCredentialLogin('testuser', 'pw')
+      const pending = startCredentialLogin('testuser', 'pw')
       await flushAsync()
       void sessionOnHandlers['authenticated']?.()
       return pending
@@ -2331,7 +2327,7 @@ describe('SteamUser', () => {
       mockSessionInstance.startWithCredentials.mockResolvedValue({
         actionRequired: false
       })
-      const pending = SteamUser.startCredentialLogin('testuser', 'pw')
+      const pending = startCredentialLogin('testuser', 'pw')
       await flushAsync()
       void sessionOnHandlers['authenticated']?.()
       await flushAsync()
@@ -2359,10 +2355,10 @@ describe('SteamUser', () => {
       mockSteamUserInstance.logOn.mockImplementation(() => {})
       const savedSteamID = mockSteamUserInstance.steamID
       mockSteamUserInstance.steamID = null
-      await SteamUser.startQRLogin()
+      await startQRLogin()
       await sessionOnHandlers['authenticated']()
 
-      expect((await SteamUser.pollQRLogin()).status).toBe('done')
+      expect((await pollQRLogin()).status).toBe('done')
 
       mockConfigStore.get_nodefault.mockImplementation((key: string) =>
         key === 'isLoggedIn' ? true : undefined
@@ -2390,7 +2386,7 @@ describe('SteamUser', () => {
         )
       )
 
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',
@@ -2406,7 +2402,7 @@ describe('SteamUser', () => {
 
     test('redeemKey with any other refusal reports not-connected and pushes nothing', async () => {
       // not signed in: get_nodefault stays undefined
-      const result = await SteamUser.redeemKey('steam', 'TEST-KEY-VALUE')
+      const result = await redeemKey('steam', 'TEST-KEY-VALUE')
 
       expect(result).toEqual({
         store: 'steam',

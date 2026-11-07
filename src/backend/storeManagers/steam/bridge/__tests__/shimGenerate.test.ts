@@ -52,11 +52,8 @@ import { join, resolve } from 'node:path'
 // to shimCoverage.ts / shimCoverage.test.ts -- this file no longer imports
 // it, since every remaining test here exercises placeShimForGame's own
 // behavior (via readDefExports() below), not the constant itself.
-import {
-  detectDrmWrapper,
-  isGameLibShimBytes,
-  placeShimForGame
-} from '../shimGenerate'
+import { placeShimForGame } from '../shimGenerate'
+import { detectDrmWrapper } from '../shimDrmWrapper'
 import * as drmScanExe from '../drm/drmScanExe'
 import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import { stubRustScan } from './fixtures/stubRustScan'
@@ -64,7 +61,7 @@ import { scanSteamApiImports } from '../importScan'
 import { SHIM64_EXPORTED_SYMBOLS } from '../shimCoverage'
 import * as bridgeScan from '../bridgeScan'
 import { buildManagedPe } from './fixtures/managedPe'
-import { resolveBridgeBottleName } from '../../bottle'
+import { resolveBridgeBottleName } from '../../bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 
 jest.mock('backend/logger', () => ({
@@ -116,7 +113,9 @@ jest.mock('backend/engine/bottlePrimitives', () => ({
   getBottleDir: jest.fn()
 }))
 jest.mock('../../bottle', () => ({
-  DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge',
+  DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge'
+}))
+jest.mock('../../bridgeBottle', () => ({
   // quick/261016-u1w (D-B): plain arrow function, NOT jest.fn() -- resetMocks
   // wipes a jest.fn()'s implementation before every test, but shimGenerate.ts
   // calls this directly as a pure resolver, so the factory gives it a real
@@ -209,24 +208,6 @@ function buildMinimalPe(cegNames: string[]): Buffer {
   }
   return buf
 }
-
-describe('isGameLibShimBytes', () => {
-  it('is true for a buffer containing the GameLibSteamBridgeShim marker', () => {
-    expect(
-      isGameLibShimBytes(Buffer.from('xxGameLibSteamBridgeShim/2xx'))
-    ).toBe(true)
-  })
-
-  it('is true for a buffer containing the ASCII loopback address', () => {
-    expect(isGameLibShimBytes(Buffer.from('xx127.0.0.1xx'))).toBe(true)
-  })
-
-  it('is false for a buffer containing neither marker', () => {
-    expect(isGameLibShimBytes(Buffer.from('just-a-games-own-dll-bytes'))).toBe(
-      false
-    )
-  })
-})
 
 describe('shimGenerate', () => {
   beforeEach(() => {
@@ -963,11 +944,21 @@ describe('shimGenerate', () => {
     })
   })
 
-  it('BLOCKER 2: shimGenerate.ts source imports builtBridgeShimPath from backend/constants/paths and defines no second hardcoded .dll source-location string', () => {
-    const source = readFileSync(
-      join(__dirname, '..', 'shimGenerate.ts'),
-      'utf-8'
+  it('BLOCKER 2: the shim placement sources import builtBridgeShimPath from backend/constants/paths and define no second hardcoded .dll source-location string', () => {
+    const files = [
+      'shimGenerate.ts',
+      'shimOriginals.ts',
+      'shimDrmWrapper.ts',
+      'shimPlacement.ts'
+    ]
+    const sources = files.map((f) =>
+      readFileSync(join(__dirname, '..', f), 'utf-8')
     )
+    // Non-vacuity (Phase 65 plan 16): the split must not leave the scan
+    // reading nothing -- every file is non-empty and the files together
+    // hold the destination FILENAME constants and the paths import.
+    for (const src of sources) expect(src.length).toBeGreaterThan(0)
+    const source = sources.join('\n')
     expect(source).toMatch(
       /import\s*\{[^}]*\bbuiltBridgeShimPath\b[^}]*\}\s*from\s*'backend\/constants\/paths'/
     )
@@ -977,6 +968,7 @@ describe('shimGenerate', () => {
     const dllStringLiterals = [...source.matchAll(/'[^']*\.dll'/g)].map(
       (m) => m[0]
     )
+    expect(dllStringLiterals.length).toBeGreaterThan(0)
     for (const literal of dllStringLiterals) {
       expect(['steam_api.dll', 'steam_api64.dll']).toContain(
         literal.slice(1, -1)
@@ -2978,7 +2970,10 @@ describe('shimGenerate', () => {
     // no-bottle fallback in placeShimForGame runs.
     const forceNoBottle = () =>
       jest
-        .spyOn(jest.requireMock('../../bottle'), 'resolveBridgeBottleName')
+        .spyOn(
+          jest.requireMock('../../bridgeBottle'),
+          'resolveBridgeBottleName'
+        )
         .mockReturnValueOnce('GameLibSteamBridge-1234')
         .mockReturnValueOnce(null)
     const warnCalls = (): string[] =>

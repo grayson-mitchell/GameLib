@@ -20,9 +20,11 @@ jest.mock('backend/logger', () => ({
 }))
 
 jest.mock('backend/storeManagers/steam/bottle', () => ({
-  bridgeBottleNameFor: jest.fn(),
-  getBridgeBottleSettings: jest.fn(),
   persistedWineBins: jest.fn(() => [])
+}))
+jest.mock('backend/storeManagers/steam/bridgeBottle', () => ({
+  bridgeBottleNameFor: jest.fn(),
+  getBridgeBottleSettings: jest.fn()
 }))
 jest.mock('backend/storeManagers/steam/bottleProcessMonitor', () => ({
   getBottleProcessMonitorPhase: jest.fn()

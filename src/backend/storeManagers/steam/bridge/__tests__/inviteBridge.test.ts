@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { logInfo } from 'backend/logger'
 import { listBridgeFriends, sendBridgeInvite } from '../inviteBridge'
-import { getBridgeHelperConnection } from '../helperProcess'
+import { getBridgeHelperConnection } from '../helperRegistry'
 import {
   CONTROL_ORDINAL,
   CONTROL_SLOT,
@@ -24,7 +24,7 @@ jest.mock('backend/logger', () => ({
   logError: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
-jest.mock('../helperProcess', () => ({ getBridgeHelperConnection: jest.fn() }))
+jest.mock('../helperRegistry', () => ({ getBridgeHelperConnection: jest.fn() }))
 
 const SECRET = 'ab'.repeat(32)
 const mockedConn = getBridgeHelperConnection as jest.Mock

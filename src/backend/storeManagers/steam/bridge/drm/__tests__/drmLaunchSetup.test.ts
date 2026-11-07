@@ -20,13 +20,15 @@ import {
   type DrmLaunchSetupInput
 } from '../drmLaunchSetup'
 
-jest.mock('../../../bottle', () => ({
+jest.mock('../../../bridgeBottleLifecycle', () => ({
+  endPerGameBridgeBottleSession: jest.fn(() => Promise.resolve(true))
+}))
+jest.mock('../../../bridgeBottle', () => ({
   DRM_LAUNCH_FORM: 'bin/wine+CX_BOTTLE',
   clearDrmBridgeRunner: jest.fn(),
   getDrmBridgeRunner: jest.fn(),
   setDrmBridgeRunner: jest.fn(() => true),
-  getDrmBridgeBottleSettings: jest.fn(() => ({})),
-  endPerGameBridgeBottleSession: jest.fn(() => Promise.resolve(true))
+  getDrmBridgeBottleSettings: jest.fn(() => ({}))
 }))
 jest.mock('child_process', () => {
   const actual = jest.requireActual('child_process')

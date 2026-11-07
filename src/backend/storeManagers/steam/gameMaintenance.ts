@@ -11,12 +11,12 @@ import { ExecResult } from 'common/types'
 import { GOGCloudSavesLocation } from 'common/types/gog'
 import { InstallResult } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { isBridgeBottleReady, getBridgeBottleSettings } from './bottle'
+import { isBridgeBottleReady, getBridgeBottleSettings } from './bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { restoreBridgeSteamApiOriginals } from './bridge/originalRestore'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
 import type SteamGame from './games'
-import { resolveBridgeGameInstallRoot } from './gameInstall'
+import { resolveBridgeGameInstallRoot } from './bridgeInstallState'
 
 export async function moveInstall(
   steamGame: SteamGame,

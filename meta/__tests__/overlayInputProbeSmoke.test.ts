@@ -2,6 +2,10 @@
  * 60-11 (G1): proves the diagnostic input probe loads, logs caller-attributed
  * cursor-API calls to a 0600 file, and does not change behaviour. macOS only.
  *
+ * This suite is desktop-interactive (warps the real cursor, opens windows, may
+ * beep) and is skipped with a logged warning unless GAMELIB_DESKTOP_SMOKE=1 is
+ * set: GAMELIB_DESKTOP_SMOKE=1 npx jest --selectProjects Meta --runTestsByPath meta/__tests__/overlayInputProbeSmoke.test.ts
+ *
  * The unconditional assertions need no window server (CGAssociate... is logged
  * before the real call forwards, and the NSCursor swizzle is installed at load).
  * Only the NSCursor hide/unhide call assertion and the 60-17 experiment cases
@@ -175,7 +179,16 @@ function run(
   })
 }
 
-const describeDarwin = process.platform === 'darwin' ? describe : describe.skip
+// These cases warp the real cursor, open windows and beep, so they are opt-in.
+const desktopSmoke = process.env.GAMELIB_DESKTOP_SMOKE === '1'
+const describeDarwin =
+  process.platform === 'darwin' && desktopSmoke ? describe : describe.skip
+
+if (process.platform === 'darwin' && !desktopSmoke) {
+  console.warn(
+    'overlay input probe smoke: SKIPPED, desktop-interactive (warps the cursor, opens windows); set GAMELIB_DESKTOP_SMOKE=1 to run'
+  )
+}
 
 // WR-05: an explicit, logged skip without a window server, never a silent pass.
 function hasWindowServer(): boolean {
@@ -192,8 +205,8 @@ function hasWindowServer(): boolean {
     profile.dispose()
   }
 }
-const windowServer = hasWindowServer()
-if (process.platform === 'darwin' && !windowServer) {
+const windowServer = desktopSmoke && hasWindowServer()
+if (process.platform === 'darwin' && desktopSmoke && !windowServer) {
   console.warn(
     'overlay input probe smoke: GUI cases SKIPPED, no window server (launchctl managername is not Aqua)'
   )

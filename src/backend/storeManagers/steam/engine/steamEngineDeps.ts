@@ -15,13 +15,13 @@ import { parseEngineOverride } from 'backend/engine/engineIds'
 import { getEngineState } from 'backend/engine/engineState'
 import type { EngineStateDeps } from 'backend/engine/engineState'
 import type { EngineState } from 'common/types/engine'
+import { persistedWineBins } from '../bottle'
 import {
   bridgeBottleNameFor,
   findBridgeInstallBottle,
   getBridgeBottleSettings,
-  isBridgeBottleReady,
-  persistedWineBins
-} from '../bottle'
+  isBridgeBottleReady
+} from '../bridgeBottle'
 import { readBridgeVerdict } from '../bridge/bridgeVerdict'
 import { getBottleProcessMonitorPhase } from '../bottleProcessMonitor'
 import { readStoredTitleConfig } from '../titleSettings'

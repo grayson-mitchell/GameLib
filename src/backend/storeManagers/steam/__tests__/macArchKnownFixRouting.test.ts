@@ -122,17 +122,23 @@ jest.mock('../bottle', () => ({
   isCrossoverInstalled: () => Promise.resolve(true),
   CROSSOVER_MISSING: 'crossover-missing',
   isBottleReady: jest.fn(),
-  tellBottledSteamToLaunch: jest.fn(),
-  tellBottledSteamToUninstall: jest.fn(),
   getSteamBottleSettings: jest.fn(),
   getBottleSteamappsDir: jest.fn(),
+  isSteamBottleProvisioned: jest.fn(),
+  DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge'
+}))
+jest.mock('../bridgeBottleLifecycle', () => ({
+  provisionBridgeBottle: jest.fn(),
+  removePerGameBridgeBottle: jest.fn()
+}))
+jest.mock('../bridgeBottle', () => ({
   isBridgeBottleReady: jest.fn(),
   getBridgeBottleSettings: jest.fn(),
-  provisionBridgeBottle: jest.fn(),
-  isSteamBottleProvisioned: jest.fn(),
-  resolveBridgeBottleName: jest.fn(),
-  removePerGameBridgeBottle: jest.fn(),
-  DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge'
+  resolveBridgeBottleName: jest.fn()
+}))
+jest.mock('../bottledSteam', () => ({
+  tellBottledSteamToLaunch: jest.fn(),
+  tellBottledSteamToUninstall: jest.fn()
 }))
 
 // ── depot mock ─────────────────────────────────────────────────────────────────
@@ -162,6 +168,9 @@ jest.mock('../bridge/launchTarget', () => ({
 }))
 jest.mock('../bridge/helperProcess', () => ({
   ensureBridgeHelperReady: jest.fn()
+}))
+jest.mock('../bridge/helperRegistry', () => ({
+  stopBridgeHelper: jest.fn()
 }))
 
 // ── platformCapture mock ──────────────────────────────────────────────────────
@@ -217,6 +226,7 @@ import { library } from '../state'
 import { steamMetadataStore } from '../stores'
 import { downloadSteamDepots } from '../depot'
 import SteamGame from '../games'
+import { checkBottleEligibility } from '../gameEligibility'
 import { SteamUser } from '../user'
 
 const APP_ID = '63000'
@@ -314,9 +324,9 @@ describe('known-fix macArch 32 routing', () => {
   })
 
   it('checkBottleEligibility: true on Apple silicon, false on Intel', async () => {
-    expect(await new SteamGame(APP_ID).checkBottleEligibility()).toBe(true)
+    expect(await checkBottleEligibility(new SteamGame(APP_ID))).toBe(true)
     store.set(APP_ID, { ...store.get(APP_ID), mac_arch: 'unknown' })
     env().isAppleSiliconMac = false
-    expect(await new SteamGame(APP_ID).checkBottleEligibility()).toBe(false)
+    expect(await checkBottleEligibility(new SteamGame(APP_ID))).toBe(false)
   })
 })

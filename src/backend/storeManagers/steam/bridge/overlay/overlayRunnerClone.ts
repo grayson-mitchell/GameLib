@@ -30,25 +30,27 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import {
   CROSSOVER_BUILD_RE,
   CX_ROOT_SUFFIX,
-  DYLD_ENTITLEMENT,
   LOADER_REL,
   MAX_LOADER_BYTES,
-  RUNNER_MARKER_FILE,
   RUNNER_TIMEOUTS,
   WINELOADER_REL,
-  cloneCrossoverTree,
   defaultResolveBinDir,
-  dumpLoaderEntitlements,
   isContained,
   isPathInUse,
   psListing,
   readCrossoverBundleVersion,
-  resignLoader,
   safeRemove,
-  scrubCloneXattrs,
   sha256File,
   statRegular
-} from '../drm/runnerClone'
+} from '../drm/runnerCrossover'
+import { cloneCrossoverTree } from '../drm/runnerClone'
+import { RUNNER_MARKER_FILE } from '../drm/runnerVerify'
+import {
+  DYLD_ENTITLEMENT,
+  dumpLoaderEntitlements,
+  resignLoader,
+  scrubCloneXattrs
+} from '../drm/runnerEntitlements'
 import { defaultRunTool, type RunTool } from 'backend/engine/runTool'
 import {
   overlayStepError,

@@ -21,7 +21,7 @@ import {
   sha1File
 } from '../depot'
 import { findRuntimeLoadedSteamApiDlls, isContainedWithin } from './bridgeScan'
-import { isGameLibShimBytes, probeOriginalBackup } from './shimGenerate'
+import { isGameLibShimBytes, probeOriginalBackup } from './shimOriginals'
 
 const BACKUP_SUFFIX = '.gamelib-orig'
 

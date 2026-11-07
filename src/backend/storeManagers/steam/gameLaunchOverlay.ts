@@ -13,13 +13,13 @@ import { join } from 'node:path'
 import { GameSettings } from 'common/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
+import { endPerGameBridgeBottleSessionWith } from './bridgeBottleLifecycle'
 import {
   getBridgeBottleSettings,
   getDrmBridgeRunner,
   clearDrmBridgeRunner,
-  setOverlayBridgeRunner,
-  endPerGameBridgeBottleSessionWith
-} from './bottle'
+  setOverlayBridgeRunner
+} from './bridgeBottle'
 // Phase 60: Steam overlay in bridged games (macOS).
 import {
   overlayInputProbeFromEnv,

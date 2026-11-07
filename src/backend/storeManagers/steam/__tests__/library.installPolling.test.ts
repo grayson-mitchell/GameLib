@@ -5,58 +5,19 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import { resumeInterruptedSteamInstall } from '../library/resume'
 import { stopInstallPolling } from '../library/installStop'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
-import { spawnSync, execFileSync } from 'child_process'
-import { shell } from 'backend/platform'
-import { getSteamLibraries, getFileSize } from 'backend/utils'
+import { getSteamLibraries } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import { SteamUser } from '../user'
-import { getAnonymousPicsClient } from '../anonymousClient'
-import {
-  steamLibraryStore,
-  steamMetadataStore,
-  steamSyncStore,
-  steamRestartHoldStore
-} from '../stores'
-import {
-  getBottleSteamappsDir,
-  getSteamBottleSettings,
-  getBridgeBottleSettings,
-  isSteamBottleProvisioned,
-  listReadyBridgeBottleNames,
-  resolveBridgeBottleName
-} from '../bottle'
-import {
-  finalizeToSteam,
-  downloadSteamDepots,
-  buildDepotPlan,
-  healReconciledFileModes
-} from '../depot'
-import { reconcilePartialState } from '../depot/reconcile'
-import { runWineCommand } from 'backend/launcher'
+import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
+import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { join } from 'path'
 import { library } from '../state'
 import * as gamesModule from '../gameSessionState'
-import { bridgeAllowlist } from '../bridge/allowlist'
-import { captureOwnedAppPlatforms } from '../platformCapture'
-import { captureOwnedAppMetacritic } from '../metacriticCapture'
-import {
-  listSteamClientPids,
-  readSteamProcessStartTokens
-} from '../steamClientProcess'
-import { logInfo } from 'backend/logger'
-import {
-  readSteamDownloadMonitor,
-  startSteamDownloadMonitor,
-  stopSteamDownloadMonitor
-} from '../steamDownloadMonitor'
-import { pollInstallOnce } from '../library/installPollOnce'
 import {
   startInstallPolling,
   cancelDelegatedInstall,
@@ -200,8 +161,10 @@ jest.mock('../stores', () => ({
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
   getSteamBottleSettings: jest.fn(),
+  isSteamBottleProvisioned: jest.fn()
+}))
+jest.mock('../bridgeBottle', () => ({
   getBridgeBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
   resolveBridgeBottleName: jest.fn()
 }))
@@ -289,45 +252,7 @@ const BOTTLE_STEAMAPPS_ROOT = join(
   'drive_c/Program Files (x86)/Steam/steamapps'
 )
 
-/**
- * GAP-17-PFX86-PATH regression fixture: the same bottle steamapps root but
- * under a win32-prefix layout (no "(x86)" segment — 32-bit Steam installs
- * directly under `Program Files`). getBottleSteamappsDir is mocked in this
- * file, so this fixture proves the bottle-source ACF scan resolves manifests
- * identically regardless of which root the (real, unmocked) resolver in
- * bottle.ts returns.
- */
-const WIN32_BOTTLE_STEAMAPPS_ROOT = join(
-  '/Users/tester/Library/Application Support/CrossOver/Bottles',
-  'GameLibSteam',
-  'drive_c/Program Files/Steam/steamapps'
-)
-
-/**
- * Bridge bottle steamapps root used across the 'bridge' source tests
- * (D-UAT-24-05). Distinct bottle name (GameLibSteamBridge) from the Phase 17
- * bottle (GameLibSteam) — proves the two bottle roots are never conflated.
- */
-const BRIDGE_BOTTLE_STEAMAPPS_ROOT = join(
-  '/Users/tester/Library/Application Support/CrossOver/Bottles',
-  'GameLibSteamBridge',
-  'drive_c/Program Files (x86)/Steam/steamapps'
-)
-
 // ── Shared fixtures ───────────────────────────────────────────────────────────
-
-const makeOwnedApp = (
-  appid: number,
-  name: string,
-  playtime_forever: number,
-  rtime_last_played = 0
-) => ({
-  appid,
-  name,
-  playtime_forever,
-  rtime_last_played,
-  img_icon_url: ''
-})
 
 // 23.2-04: this project's jest config sets `resetMocks: true`, which strips
 // jest.fn() implementations (not just call history) before EVERY test — so
@@ -348,13 +273,6 @@ beforeEach(() => {
   // TypeError from calling .length on an un-mocked return value.
   jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
   jest.mocked(backfillBridgeLaunchTargets).mockResolvedValue(0)
-})
-
-const makeFakeClient = (apps: ReturnType<typeof makeOwnedApp>[]) => ({
-  steamID: 'STEAMID_TEST',
-  getUserOwnedApps: jest
-    .fn()
-    .mockResolvedValue({ app_count: apps.length, apps })
 })
 
 // ── Describe block ────────────────────────────────────────────────────────────

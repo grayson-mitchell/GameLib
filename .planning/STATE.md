@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: verifying
-stopped_at: Completed 67-19-PLAN.md
-last_updated: "2026-11-07T19:47:48.402Z"
+status: executing
+stopped_at: Phase 71 context gathered
+last_updated: "2026-11-07T19:54:09.336Z"
 last_activity: 2026-11-07
 progress:
   total_phases: 12
   completed_phases: 4
   total_plans: 104
-  completed_plans: 89
-  percent: 33
+  completed_plans: 83
+  percent: 23
 ---
 
 # Project State
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 65 (steam-store-manager-decomposition-continued) — EXECUTING
-Plan: 20 of 20
-Status: Phase complete — ready for verification
+Plan: 18 of 20
+Status: Ready to execute
 Last activity: 2026-11-07
 
-Progress: [████████░░] 84%
+Progress: [████████░░] 80%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -236,6 +236,8 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 67 P14 | 20min | 2 tasks | 10 files |
 | Phase 67 P15 | 25min | 2 tasks | 7 files |
 | Phase 67 P16 | 40min | 2 tasks | 15 files |
+| Phase 65 P10 | n/a | 2 tasks | 3 files |
+| Phase 65 P12 | 40min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -351,14 +353,14 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 62]: 62-06: async lift stubs return the free function's promise (no async) to preserve microtask timing
 - [Phase 62]: 62-13: 15 capability flags; narrowing sites classed identity; switches become Record lookups
 - [Phase 61]: 61-05: EngineKey = bare appId for Steam, runner:appName otherwise; per-bottle ledger fed by Steam bridge launches
-- [Phase ?]: 67-05: removeFolder nested tuple shape-only; checkDiskSpace/pathExists accept empty string, handler decides
-- [Phase ?]: 67-06: rustInvoke schemas non-strict z.object; keyring arms x-error-prefix 'keyring'; dialog open/save absent options sent as {}
-- [Phase ?]: 67-07: GameInfo/GameSettings passthroughs cast to ZodType<T,T>; move/import path left to assertPlausibleAbsolutePath so dialog+done survive
-- [Phase ?]: 67-08: scan arms validate via generated Args then forward to gamelib_scan::dispatch; tray_set_icon keeps lenient Auto fallback
-- [Phase ?]: 67-10: x-field-errors generator meta for field-suffixed bad-args strings; store_embed helpers kept as thin from_args wrappers
-- [Phase ?]: 67-11: dispatch_rust_channel matches exhaustively on RustInvokeChannel; humble arms on generated Args; transportParity.test.ts retired
-- [Phase ?]: 67-12: steamAuth credentials bounded strings only (username key, not accountName); appId digit-only strings; boundary rejection supersedes handler invalid-request results
-- [Phase ?]: 67-13: wineVersion strictness needs no loosening; settings config/value are passthrough/unknown, so persisted wineVersion with extra keys is accepted
+- [Phase 67]: 67-05: removeFolder nested tuple shape-only; checkDiskSpace/pathExists accept empty string, handler decides
+- [Phase 67]: 67-06: rustInvoke schemas non-strict z.object; keyring arms x-error-prefix 'keyring'; dialog open/save absent options sent as {}
+- [Phase 67]: 67-07: GameInfo/GameSettings passthroughs cast to ZodType<T,T>; move/import path left to assertPlausibleAbsolutePath so dialog+done survive
+- [Phase 67]: 67-08: scan arms validate via generated Args then forward to gamelib_scan::dispatch; tray_set_icon keeps lenient Auto fallback
+- [Phase 67]: 67-10: x-field-errors generator meta for field-suffixed bad-args strings; store_embed helpers kept as thin from_args wrappers
+- [Phase 67]: 67-11: dispatch_rust_channel matches exhaustively on RustInvokeChannel; humble arms on generated Args; transportParity.test.ts retired
+- [Phase 67]: 67-12: steamAuth credentials bounded strings only (username key, not accountName); appId digit-only strings; boundary rejection supersedes handler invalid-request results
+- [Phase 67]: 67-13: wineVersion strictness needs no loosening; settings config/value are passthrough/unknown, so persisted wineVersion with extra keys is accepted
 - [Phase 67]: 67-14: callTool tool enum from handler switch; save paths NUL-free bounded strings; engine push typed via z.custom
 - [Phase 67]: 67-15: logError/logInfo = bounded union (string<=64KiB | string[]<=256 | strict Error-like); deleteUploadedLogFile uses httpUrlArg; humble args are ids only
 - [Phase 67]: 67-16: setApiKey allows empty string (clear gesture); legendary refreshLibrary push typing-only (name collides with steam invoke)
@@ -366,6 +368,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 67]: 67-18: direction-aware keying -- pushes sharing a name with an inbound channel live in collidingPushSchemas (pushSchemaFor); validateInbound fails closed (no_schema)
 - [Phase 67]: 67-19: renderer allow-list built from inbound-keyed channelSchemas only (renderer + invoke|send); colliding pushes never open the invoke/send direction
 - [Phase 67]: 67-20: phase 67 gate passes; 8 pre-existing test failures, none phase 67; operator approved
+- [Phase 65]: [65-10] D-19 cycle census measure: no module outside the pre-phase cycle set (65-baseline-steam-cycle-modules.txt) may join a cycle, except modules split out of files already in it. Raw counts 321 -> 425 recorded for reference.
 
 ### Pending Todos
 
@@ -503,6 +506,8 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261106-qvp | Callback 1298 step 1 (D-09 follow-up): helper unlisted-drop line now ends `cub=<m_cubParam>` (prefix unchanged); new CONTROL slot 15 `REPORT_CB_REGISTER` logs `CBREG iCallback=<id> role=game path=register` for unlisted ids the game registers via SteamAPI_RegisterCallback (cap 32), or one `path=manual-dispatch registration=unobservable` line; todo gains gate log reads and a static `CallbackIdentity(1298)` byte-count fallback for manual-dispatch titles. No relay row or struct name. | 2026-11-06 | 023ef005d | Jest pass (552 tests across 5 suites); gen-vtables + build-steam-bridge OK, .def unchanged; codecheck + planning-gates 12/12 clean; live gate pending | [261106-qvp-callback-1298-step-1-log-game-listener-r](./quick/261106-qvp-callback-1298-step-1-log-game-listener-r/) |
 | 261106-s3n | "Delete Steam games directly in GameLib" setting (key `enableSteamNativeDelete`, default follows the native-install setting, all platforms per operator): ON refuses while running, then helper `--steam-uninstallapp` (slot-verified UninstallApp; 18 → fallback), else guarded GameLib delete of installdir + ACF inside a registered library; GameLib confirm dialog; OFF unchanged. | 2026-11-06 | 457d82031 | Jest pass on touched suites; codecheck + planning-gates 12/12 clean; 1 pre-existing failure (macArchKnownFixRouting Intel); live gate pending | [261106-s3n-gamelib-side-delete-for-steam-games](./quick/261106-s3n-gamelib-side-delete-for-steam-games/) |
 | 261107-td5 | Steam GameLib-delete check-D fixes: running check adds a ps scan for processes inside the install folder (registry.vdf RunningAppID absent on Mac) and maps Steam error 16 to running; refusals set ExecResult.refused so the uninstaller keeps settings/logs/prefix/fix file; refusals show as in-app steamRequestNotice, not OS notify. | 2026-11-07 | 015befa7d | Jest pass on touched suites; codecheck clean; pre-existing failures: macArchKnownFixRouting Intel + 2 ENOENT from the v0.9 archive moving phase 56; live gate D pending | [261107-td5-fix-steam-delete-check-d-defects](./quick/261107-td5-fix-steam-delete-check-d-defects/) |
+| fast | Two DRM launch-form drift tests (games.test.ts, bridgeBottle.test.ts) read 56-01-SUMMARY.md from .planning/milestones/v0.9-phases/ after the v0.9 archive moved it. | 2026-11-08 | a50d078e5 | Both tests pass | — |
+| 261108-anw | Failed Steam uninstall (caught delete error, possible partial delete) now sets ExecResult.failed at all 5 gameUninstall.ts sites: uninstaller keeps settings/logs/prefix/fix file and sends one done for every runner; in-app uninstall-failed notice replaces the silent success. | 2026-11-08 | 379473402 | Jest pass (steam+utils 4458/4459, known macArchKnownFixRouting Intel failure); codecheck + translation lints clean; no live gate | [261108-anw-keep-settings-on-failed-steam-uninstall](./quick/261108-anw-keep-settings-on-failed-steam-uninstall/) |
 | 261107-8yq | Clippy ratchet in CI: `meta/clippyRatchet.cjs` reads `cargo clippy --message-format=json`, per-lint darwin baseline, fails on any rise and on a drop the commit does not record (23 unique / 14 lints); macOS leg only, pinned 1.99.1 toolchain; `[lints.clippy]` denies `dbg_macro`, `todo`. Windows leg filed as follow-up todo. | 2026-11-07 | bbf863316 | ratchet passes on fresh local run; jest 20 tests; no .rs changed; CI steps not yet run on a runner | [261107-8yq-run-cargo-clippy-in-ci-warn-only-with-a-](./quick/261107-8yq-run-cargo-clippy-in-ci-warn-only-with-a-/) |
 | fast | Unexported `SteamNativeDeleteDecision` (nativeDelete.ts, from 261106-s3n), which the pre-push find-deadcode used-in-module gate had flagged and which was blocking the v0.9 tag push. | 2026-11-06 | c0bc58505 | find-deadcode 0 new; prettier OK | — |
 | 261107-99k | 62 games.ts split cleanups: `NUMERIC_APP_ID` lives only in gameConstants.ts (~20 sites import it; drmLaunchSetup's different regex kept), DRM-notice test reset helper, 14/17 stale ts-prune markers removed, lifted-module comments refreshed, negative scans widened to every game*.ts (dir-derived, floor 13, RED-checked). Bullets 7 (split below 1,400 lines, `ready: human`) and 8 (lift stubs, `ready: code`) refiled; todo closed. | 2026-11-07 | 6cdce5d95 | codecheck, lint 0 errors, find-deadcode, planning-gates 12/12 green; jest 6144 pass / 4 fail (3 reproduce with the src changes reverted; tauriShellSource WR-07 is Rust-only, not revert-tested) | [261107-99k-games-split-cleanups-62](./quick/261107-99k-games-split-cleanups-62/) |
@@ -608,11 +613,12 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261107-li0 | Steam install dialog: on the native-bridge route (verdict native, force-bottle toggle off) the Wine selector and shared-bottle notice are hidden and `persistBottleWineVersion` is skipped (bridge games get their own bottle; engine is per-game at launch); new `steam.install.bridgeEngineNotice` hint. Console Platform row NOT built: a forced-Windows install of a Mac-native game is bridge-ineligible (`isBottleEligibleFromPlatforms`) and lands on the shared bottled client; D13 gate pins Console to no Platform/Wine row for Steam. | 2026-11-07 | c9136deb3 | jest targeted InstallModal + consoleSteamTarget suites pass, codecheck/eslint/i18n gates/scoped prettier pass; not live-checked in app | [261107-li0-steam-install-dialog-wine-section-per-ro](./quick/261107-li0-steam-install-dialog-wine-section-per-ro/) |
 | 261107-lum | Forced-Windows Steam install of a Mac-native game now resolves the bridge verdict (own `GameLibSteamBridge-<appId>` bottle) instead of always landing on bottled Steam: per-call `windowsBuildChosen` into `assembleBridgeRouteInput`; forced flag persisted only after a committed install and cleared on bridge uninstall; `getSteamBridgeRoute(appId, windowsBuildChosen?)`; dialog re-requests the verdict on Platform flip; notice/setup retries replay the Windows choice. Follow-ups: console Platform row, Cat Quest shim-withheld todo. | 2026-11-07 | 850819137 | jest Frontend 5139 pass, backend pass except 3 pre-existing; codecheck/smoke:sidecar/scoped prettier pass; LIVE: routing PASS on 391540 + 593280, strict bridge-verified NOT met on either (shim coverage, independent) | [261107-lum-route-forced-windows-steam-installs-of-m](./quick/261107-lum-route-forced-windows-steam-installs-of-m/) |
 | 261107-mr0 | Console Mode Platform row for dual-build Steam games on macOS: macOS default, Windows offered only when `getSteamBridgeRoute(appId, true)` is `bridge`; hidden until probe + verdict resolve; no Wine row; Windows passes `forceWindowsViaBottle`; Install-to "Its own Windows bottle"; D13 gate replaced by `assertConsoleSteamPlatformContract`. | 2026-11-07 | 25839cfe6 | jest Frontend 5163 pass, codecheck/eslint/i18n gates/planning-gates/scoped prettier pass; not live-checked in Console Mode | [261107-mr0-console-mode-steam-platform-row-for-dual](./quick/261107-mr0-console-mode-steam-platform-row-for-dual/) |
+| 261108-avs | overlayInputSmoke + overlayInputProbeSmoke (cursor warp to 10,10, real windows, beeps) now opt-in via `GAMELIB_DESKTOP_SMOKE=1`: whole suite `describe.skip` + one logged warn when unset, launchctl probe short-circuited; opt-in path unchanged. | 2026-11-08 | 7f8217cca | 16/16 skipped unset; tsc meta/eslint/scoped prettier pass; opt-in run not exercised (would warp cursor) | [261108-avs-gate-overlay-desktop-smoke-tests](./quick/261108-avs-gate-overlay-desktop-smoke-tests/) |
 
 ## Session Continuity
 
-Last session: 2026-11-07T19:24:57.410Z
-Stopped at: Completed 67-19-PLAN.md
+Last session: 2026-11-07T19:54:09.329Z
+Stopped at: Phase 71 context gathered
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

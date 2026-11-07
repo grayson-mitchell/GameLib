@@ -28,11 +28,11 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend', Steam: 'Steam' }
 }))
 
+import { RUNNER_MARKER_FILE } from '../../drm/runnerVerify'
 import {
   DYLD_ENTITLEMENT,
-  RUNNER_MARKER_FILE,
   STOCK_LOADER_ENTITLEMENTS
-} from '../../drm/runnerClone'
+} from '../../drm/runnerEntitlements'
 import type { RunTool, RunToolResult } from 'backend/engine/runTool'
 import {
   OVERLAY_MARKER_SCHEMA,

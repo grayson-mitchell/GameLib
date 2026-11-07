@@ -4,11 +4,8 @@ import { getSteamLibraries } from 'backend/utils'
 import { resolve, relative, isAbsolute } from 'path'
 import i18next from 'i18next'
 import { steamMetadataStore } from '../stores'
-import {
-  getBottleSteamappsDir,
-  getSteamBottleSettings,
-  getBridgeBottleSettings
-} from '../bottle'
+import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
+import { getBridgeBottleSettings } from '../bridgeBottle'
 import { bridgeAllowlist } from '../bridge/allowlist'
 
 /**

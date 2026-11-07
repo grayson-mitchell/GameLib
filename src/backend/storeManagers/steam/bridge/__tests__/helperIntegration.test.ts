@@ -60,12 +60,12 @@ import {
   type FakeHomeProfile
 } from 'backend/testUtils/fakeHomeProfile'
 import { steamBridgeHelperStateDir } from 'backend/constants/paths'
+import { ensureBridgeHelperReady } from '../helperProcess'
 import {
-  ensureBridgeHelperReady,
   stopBridgeHelper,
   __setBridgeHelperPathForTests,
   __setBridgeHelperSpawnEnvForTests
-} from '../helperProcess'
+} from '../helperRegistry'
 import {
   BRIDGE_SECRET_ENV,
   HELLO_ROLE_PROBE,

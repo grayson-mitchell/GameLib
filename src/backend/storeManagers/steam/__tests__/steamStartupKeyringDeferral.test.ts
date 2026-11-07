@@ -152,14 +152,20 @@ jest.mock('backend/constants/environment', () => ({
 
 jest.mock('../bottle', () => ({
   isBottleReady: jest.fn(),
-  tellBottledSteamToLaunch: jest.fn(),
-  tellBottledSteamToUninstall: jest.fn(),
   getSteamBottleSettings: jest.fn(),
   getBottleSteamappsDir: jest.fn(),
-  isBridgeBottleReady: jest.fn(),
-  getBridgeBottleSettings: jest.fn(),
-  provisionBridgeBottle: jest.fn(),
   isSteamBottleProvisioned: jest.fn()
+}))
+jest.mock('../bridgeBottleLifecycle', () => ({
+  provisionBridgeBottle: jest.fn()
+}))
+jest.mock('../bridgeBottle', () => ({
+  isBridgeBottleReady: jest.fn(),
+  getBridgeBottleSettings: jest.fn()
+}))
+jest.mock('../bottledSteam', () => ({
+  tellBottledSteamToLaunch: jest.fn(),
+  tellBottledSteamToUninstall: jest.fn()
 }))
 
 jest.mock('../bridge/allowlist', () => ({
@@ -177,6 +183,9 @@ jest.mock('../bridge/launchTarget', () => ({
 }))
 jest.mock('../bridge/helperProcess', () => ({
   ensureBridgeHelperReady: jest.fn()
+}))
+jest.mock('../bridge/helperRegistry', () => ({
+  stopBridgeHelper: jest.fn()
 }))
 
 jest.mock('backend/launcher', () => ({

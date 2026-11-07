@@ -2,11 +2,11 @@ import { join } from 'path'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
+import { getBottleSteamappsDir } from '../bottle'
 import {
-  getBottleSteamappsDir,
   listReadyBridgeBottleNames,
   resolveBridgeBottleName
-} from '../bottle'
+} from '../bridgeBottle'
 import { getBottleSteamappsRoot } from './installRoot'
 
 /**

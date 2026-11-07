@@ -38,21 +38,18 @@ import {
 } from './steamclientLayerMode'
 import {
   detectAllowedCrossover,
-  ensureRunnerClone,
-  type CrossoverAllowed,
-  type RunnerReady
-} from './runnerClone'
+  type CrossoverAllowed
+} from './runnerCrossover'
+import { ensureRunnerClone } from './runnerClone'
+import type { RunnerReady } from './runnerVerify'
 import {
   ensureSteamclientLayerComponent,
   type SteamclientLayerReady
 } from './steamclientLayerInstall'
 import { ensureValveClient, type ValveClientReady } from './valveClient'
-import {
-  stageDrmBottle,
-  type StageDrmBottleOk,
-  type StageDrmBottleInput
-} from './stageDrmBottle'
-import { DRM_LAUNCH_FORM, type DrmLaunchForm } from '../../bottle'
+import { stageDrmBottle } from './stageDrmBottle'
+import type { StageDrmBottleOk, StageDrmBottleInput } from './stageDrmTypes'
+import { DRM_LAUNCH_FORM, type DrmLaunchForm } from '../../bridgeBottle'
 import { buildDrmPaths } from './drmPaths'
 
 /** Orchestrator stage names, used in logs; distinct from 56-04's DrmStep. */
@@ -284,14 +281,15 @@ async function runSetup(
   deps: DrmLaunchSetupDeps
 ): Promise<DrmLaunchSetupResult> {
   const { appId, appFolder } = input
-  const bottle = await import('../../bottle')
-  const clearRunner = deps.clearRunner ?? bottle.clearDrmBridgeRunner
-  const getRunner = deps.getRunner ?? bottle.getDrmBridgeRunner
-  const registerRunner = deps.registerRunner ?? bottle.setDrmBridgeRunner
+  const bottleLifecycle = await import('../../bridgeBottleLifecycle')
+  const bridgeBottle = await import('../../bridgeBottle')
+  const clearRunner = deps.clearRunner ?? bridgeBottle.clearDrmBridgeRunner
+  const getRunner = deps.getRunner ?? bridgeBottle.getDrmBridgeRunner
+  const registerRunner = deps.registerRunner ?? bridgeBottle.setDrmBridgeRunner
   const buildBottleSettings =
-    deps.buildBottleSettings ?? bottle.getDrmBridgeBottleSettings
+    deps.buildBottleSettings ?? bridgeBottle.getDrmBridgeBottleSettings
   const endBottleSession =
-    deps.endBottleSession ?? bottle.endPerGameBridgeBottleSession
+    deps.endBottleSession ?? bottleLifecycle.endPerGameBridgeBottleSession
   const sendStatus =
     deps.sendStatus ??
     ((await import('backend/utils')).sendGameStatusUpdate as (
@@ -486,7 +484,7 @@ export async function drmLaunchSetup(
         // A title whose exe lost `.bind` must not keep the clone.
         const clear =
           deps.clearRunner ??
-          (await import('../../bottle')).clearDrmBridgeRunner
+          (await import('../../bridgeBottle')).clearDrmBridgeRunner
         clear(input.appId)
       }
       return { status: 'not-applicable', mode: 'tcp' }

@@ -33,10 +33,8 @@
  * modification of the clone after the copy: ntdll, builtins and the loader
  * re-sign.
  */
-import { createHash } from 'crypto'
-import { createReadStream, constants as fsConstants, promises as fsp } from 'fs'
-import type { Stats } from 'fs'
-import { basename, dirname, isAbsolute, join, relative, sep } from 'path'
+import { constants as fsConstants, promises as fsp } from 'fs'
+import { basename, dirname, join } from 'path'
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { defaultRunTool, type RunTool } from 'backend/engine/runTool'
@@ -46,223 +44,43 @@ import {
 } from 'backend/utils/aborthandler/aborthandler'
 import { buildDrmPaths } from './drmPaths'
 import { applyNtdllPatch, type NtdllPatchResult } from './ntdllPatch'
+import type { NtdllPatchRow } from './ntdllPatchTable'
 import {
-  findNtdllPatchRow,
-  supportedCrossoverBuilds,
-  type NtdllPatchRow
-} from './ntdllPatchTable'
+  DLL_REL,
+  LOADER_REL,
+  MAX_DLL_BYTES,
+  MAX_NTDLL_BYTES,
+  MAX_SO_BYTES,
+  NTDLL_REL,
+  RUNNER_TIMEOUTS,
+  SO_REL,
+  WINELOADER_REL,
+  errText,
+  isPathInUse,
+  psListing,
+  removeInside,
+  safeRemove,
+  sha256Bytes,
+  sha256File,
+  statRegular,
+  type CrossoverAllowed
+} from './runnerCrossover'
+import { resignLoader, scrubCloneXattrs } from './runnerEntitlements'
+import {
+  MTIME_PINNED_PATHS,
+  RUNNER_MARKER_FILE,
+  readyFor,
+  sec,
+  verifyRunnerClone,
+  type Marker,
+  type RunnerComponentInput,
+  type RunnerReady
+} from './runnerVerify'
 import {
   drmStepError,
   type DrmStep,
   type DrmStepResult
 } from './steamclientLayerMode'
-
-// cp gets 900 s because the `cp -R` fallback copies about 1 GB.
-export const RUNNER_TIMEOUTS = {
-  cp: 900_000,
-  xattr: 180_000,
-  codesign: 60_000,
-  plutil: 15_000,
-  ps: 15_000
-}
-
-export const CROSSOVER_BUILD_RE = /^[0-9]{1,4}(\.[0-9]{1,6}){2,4}$/
-const MAX_NTDLL_BYTES = 16 * 1024 * 1024
-const MAX_SO_BYTES = 4 * 1024 * 1024
-// Measured: the real lsteamclient.dll (PE, debug-rich) is about 34 MB.
-const MAX_DLL_BYTES = 64 * 1024 * 1024
-export const MAX_LOADER_BYTES = 16 * 1024 * 1024
-
-const WIN_DLL_REL = join('lib', 'wine', 'x86_64-windows')
-const UNIX_DLL_REL = join('lib', 'wine', 'x86_64-unix')
-const NTDLL_REL = join(WIN_DLL_REL, 'ntdll.dll')
-export const LOADER_REL = join(UNIX_DLL_REL, 'wine')
-export const WINELOADER_REL = join('bin', 'wineloader')
-const DLL_REL = join(WIN_DLL_REL, 'lsteamclient.dll')
-const SO_REL = join(UNIX_DLL_REL, 'lsteamclient.so')
-
-export async function sha256File(path: string): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    const hash = createHash('sha256')
-    const stream = createReadStream(path)
-    stream.on('error', reject)
-    stream.on('data', (c) => hash.update(c))
-    stream.on('end', () => resolve(hash.digest('hex')))
-  })
-}
-
-const sha256Bytes = (b: Buffer) => createHash('sha256').update(b).digest('hex')
-
-/** lstat a path that must be a regular non-symlink file of at most maxBytes. */
-export async function statRegular(
-  path: string,
-  maxBytes: number
-): Promise<Stats> {
-  const st = await fsp.lstat(path)
-  if (st.isSymbolicLink() || !st.isFile()) {
-    throw new Error(`${basename(path)} is not a regular file`)
-  }
-  if (st.size > maxBytes) throw new Error(`${basename(path)} is too large`)
-  return st
-}
-
-export function isContained(root: string, candidate: string): boolean {
-  const rel = relative(root, candidate)
-  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
-}
-
-function errText(e: unknown): string {
-  return e instanceof Error ? e.message : String(e)
-}
-
-// ---------------------------------------------------------------------------
-// D-09: CrossOver allowlist
-// ---------------------------------------------------------------------------
-
-export type CrossoverAllowed = {
-  appPath: string
-  cxRoot: string
-  binDir: string
-  crossoverBuild: string
-  cleanNtdllSha256: string
-  row: NtdllPatchRow
-  supportedBuilds: string[]
-}
-
-export type DetectCrossoverDeps = {
-  resolveCrossoverBinDir?: () => Promise<string | undefined>
-  runTool?: RunTool
-  findRow?: (build: string, cleanSha256: string) => NtdllPatchRow | null
-  supportedBuilds?: () => string[]
-  platform?: NodeJS.Platform
-}
-
-export const CX_ROOT_SUFFIX = `${sep}Contents${sep}SharedSupport${sep}CrossOver`
-
-export async function defaultResolveBinDir(): Promise<string | undefined> {
-  try {
-    const mod = await import('backend/engine/crossoverLocation')
-    return await mod.resolveCrossoverBinDirAsync()
-  } catch {
-    return undefined
-  }
-}
-
-/**
- * Reads CFBundleVersion of a CrossOver.app. 'unreadable' = plutil failed;
- * 'invalid' = it did not match the build pattern (value is the raw text).
- */
-export async function readCrossoverBundleVersion(
-  run: RunTool,
-  appPath: string,
-  timeoutMs: number
-): Promise<
-  | { status: 'ok'; value: string }
-  | { status: 'invalid'; value: string }
-  | { status: 'unreadable'; value: '' }
-> {
-  const plist = await run(
-    '/usr/bin/plutil',
-    [
-      '-extract',
-      'CFBundleVersion',
-      'raw',
-      '-o',
-      '-',
-      join(appPath, 'Contents', 'Info.plist')
-    ],
-    { timeoutMs }
-  )
-  if (plist.code !== 0 || plist.timedOut || plist.aborted) {
-    return { status: 'unreadable', value: '' }
-  }
-  const value = plist.stdout.trim()
-  return CROSSOVER_BUILD_RE.test(value)
-    ? { status: 'ok', value }
-    : { status: 'invalid', value }
-}
-
-/**
- * The 'CrossOver allowlist' step. Creates nothing on disk and never calls
- * /bin/cp. Never rejects.
- */
-export async function detectAllowedCrossover(
-  opts: { crossoverBinDir?: string; appFolder?: string } = {},
-  deps: DetectCrossoverDeps = {}
-): Promise<DrmStepResult<CrossoverAllowed>> {
-  const fail = (cause: string) => drmStepError('unsupported-crossover', cause)
-  try {
-    const supported = (deps.supportedBuilds ?? supportedCrossoverBuilds)()
-    const list = supported.join(',')
-    if ((deps.platform ?? process.platform) !== 'darwin') {
-      return fail('DRM mode is macOS only')
-    }
-    const binDir =
-      opts.crossoverBinDir ??
-      (await (deps.resolveCrossoverBinDir ?? defaultResolveBinDir)())
-    if (!binDir) return fail(`CrossOver not found; supported ${list}`)
-    if (!binDir.endsWith(`${CX_ROOT_SUFFIX}${sep}bin`)) {
-      return fail(`unexpected CrossOver location; supported ${list}`)
-    }
-    const cxRoot = dirname(binDir)
-    const appPath = cxRoot.slice(0, cxRoot.length - CX_ROOT_SUFFIX.length)
-    if (!appPath.endsWith('.app')) {
-      return fail(`unexpected CrossOver location; supported ${list}`)
-    }
-    if (opts.appFolder) {
-      const paths = buildDrmPaths(opts.appFolder)
-      if (
-        paths &&
-        (cxRoot === paths.runnersRoot || isContained(paths.runnersRoot, cxRoot))
-      ) {
-        return fail('CrossOver path is inside the runners directory')
-      }
-    }
-
-    const run = deps.runTool ?? defaultRunTool
-    const version = await readCrossoverBundleVersion(
-      run,
-      appPath,
-      RUNNER_TIMEOUTS.plutil
-    )
-    if (version.status === 'unreadable') {
-      return fail('cannot read CrossOver version')
-    }
-    const build = version.value
-    if (version.status === 'invalid') {
-      return fail(`installed ${build.slice(0, 40)} supported ${list}`)
-    }
-
-    const ntdll = join(cxRoot, NTDLL_REL)
-    let sha: string
-    try {
-      await statRegular(ntdll, MAX_NTDLL_BYTES)
-      sha = await sha256File(ntdll)
-    } catch {
-      return fail(`cannot read CrossOver ntdll for ${build}; supported ${list}`)
-    }
-    const row = (deps.findRow ?? findNtdllPatchRow)(build, sha)
-    if (!row) {
-      return fail(
-        supported.includes(build)
-          ? `installed ${build} has an unrecognised ntdll (${sha.slice(0, 12)}); supported ${list}`
-          : `installed ${build} supported ${list}`
-      )
-    }
-    return {
-      status: 'ok',
-      appPath,
-      cxRoot,
-      binDir,
-      crossoverBuild: build,
-      cleanNtdllSha256: sha,
-      row,
-      supportedBuilds: supported
-    }
-  } catch (e) {
-    return fail(errText(e))
-  }
-}
 
 // ---------------------------------------------------------------------------
 // D-08 / D-10: the runner clone
@@ -274,49 +92,6 @@ export async function detectAllowedCrossover(
 // re-checked." The fallback keeps -p so a plain copy preserves mtimes too.
 export const CLONE_ARGV_PRIMARY: readonly string[] = ['-c', '-R']
 export const CLONE_ARGV_FALLBACK: readonly string[] = ['-R', '-p']
-// The post-clone mtime check and utimes restore are mandatory whatever cp did:
-// a missing wine.inf mtime triggers a prefix update (56-01 contract).
-export const MTIME_PINNED_PATHS: readonly string[] = [
-  join('share', 'wine', 'wine.inf')
-]
-export const RUNNER_MARKER_FILE = 'gamelib-runner.json'
-export const DYLD_ENTITLEMENT =
-  'com.apple.security.cs.allow-dyld-environment-variables'
-export const STOCK_LOADER_ENTITLEMENTS: readonly string[] = [
-  'com.apple.security.cs.allow-unsigned-executable-memory',
-  'com.apple.security.cs.disable-executable-page-protection',
-  'com.apple.security.cs.disable-library-validation',
-  'com.apple.security.device.audio-input',
-  'com.apple.security.device.camera'
-]
-
-/** 56-10's `SteamclientLayerReady` is passed as is. */
-export type RunnerComponentInput = {
-  componentId: string
-  files: {
-    lsteamclientDll: string
-    lsteamclientSo: string
-    detourPayload: string
-  }
-}
-
-export type RunnerReady = {
-  crossoverBuild: string
-  runnerDir: string
-  cxRoot: string
-  wrapperBin: string
-  wineloaderBin: string
-  wineserverBin: string
-  windowsDllDir: string
-  unixDllDir: string
-  source: 'cache' | 'clone'
-  cloneMethod?: 'cp -c' | 'cp -R'
-  provenanceRemaining?: boolean
-  /** Whether bin/wineloader carries the dyld entitlement (D-05, best effort). */
-  wineloaderResigned?: boolean
-  pruned: string[]
-  pruneSkipped: string[]
-}
 
 export type RunnerCloneDeps = {
   runTool?: RunTool
@@ -328,11 +103,6 @@ export type RunnerCloneDeps = {
   /** 56-11 maps this to the 'Compatibility runner' progress context. */
   onCloneStart?: () => void
   timeouts?: Partial<typeof RUNNER_TIMEOUTS>
-}
-
-export type RunnerVerifyExpect = {
-  crossover: CrossoverAllowed
-  component: RunnerComponentInput
 }
 
 class StepError extends Error {
@@ -348,300 +118,8 @@ const stepFail = (step: DrmStep, message: string): never => {
   throw new StepError(step, message)
 }
 
-const REMOVABLE_RE =
-  /^(crossover-[0-9.]+|\.crossover-[0-9.]+\.partial-[A-Za-z0-9]+)$/
 const STALE_CLONE_RE = /^crossover-[0-9]{1,4}(\.[0-9]{1,6}){2,4}$/
 const STALE_PARTIAL_RE = /^\.crossover-([0-9.]+)\.partial-[A-Za-z0-9]+$/
-
-/** The only removal path for entries directly under the runners root. */
-export async function safeRemove(
-  root: string,
-  target: string
-): Promise<boolean> {
-  try {
-    if (!isContained(root, target) || dirname(target) !== root) return false
-    if (!REMOVABLE_RE.test(basename(target))) return false
-    const st = await fsp.lstat(target)
-    if (st.isSymbolicLink()) return false
-    await fsp.rm(target, { recursive: true, force: true })
-    return true
-  } catch {
-    return false
-  }
-}
-
-/** Remove something inside a partial dir (containment checked, never throws). */
-export async function removeInside(
-  root: string,
-  target: string
-): Promise<void> {
-  try {
-    if (isContained(root, target)) {
-      await fsp.rm(target, { recursive: true, force: true })
-    }
-  } catch {
-    // best effort
-  }
-}
-
-export function parseEntitlementKeys(stdout: string): string[] | null {
-  const start = stdout.search(/<\?xml|<plist/)
-  if (start < 0) return null
-  const text = stdout.slice(start)
-  const open = text.indexOf('<dict>')
-  const close = text.lastIndexOf('</dict>')
-  if (open < 0 || close < open) return null
-  const inner = text.slice(open + '<dict>'.length, close)
-  const keys: string[] = []
-  const rest = inner.replace(
-    /<key>([^<]{1,200})<\/key>\s*<true\/>/g,
-    (_m, k: string) => {
-      keys.push(k)
-      return ''
-    }
-  )
-  if (rest.trim() !== '') return null
-  return keys
-}
-
-export async function dumpLoaderEntitlements(
-  run: RunTool,
-  loader: string,
-  timeoutMs: number
-): Promise<string[] | null> {
-  const r = await run(
-    '/usr/bin/codesign',
-    ['-d', '--entitlements', '-', '--xml', loader],
-    { timeoutMs }
-  )
-  if (r.code !== 0 || r.timedOut || r.aborted) return null
-  return parseEntitlementKeys(r.stdout)
-}
-
-function entitlementsPlist(): string {
-  return entitlementsPlistFor([...STOCK_LOADER_ENTITLEMENTS, DYLD_ENTITLEMENT])
-}
-
-function entitlementsPlistFor(keysIn: string[]): string {
-  const keys = [...keysIn].sort()
-  return (
-    '<?xml version="1.0" encoding="UTF-8"?>\n' +
-    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n' +
-    '<plist version="1.0">\n<dict>\n' +
-    keys.map((k) => `\t<key>${k}</key>\n\t<true/>\n`).join('') +
-    '</dict>\n</plist>\n'
-  )
-}
-
-function readyFor(
-  cxRoot: string,
-  runnerDir: string,
-  build: string,
-  extra: Partial<RunnerReady>
-): RunnerReady {
-  return {
-    crossoverBuild: build,
-    runnerDir,
-    cxRoot,
-    wrapperBin: join(cxRoot, 'bin', 'wine'),
-    wineloaderBin: join(cxRoot, 'bin', 'wineloader'),
-    wineserverBin: join(cxRoot, 'bin', 'wineserver'),
-    windowsDllDir: join(cxRoot, WIN_DLL_REL),
-    unixDllDir: join(cxRoot, UNIX_DLL_REL),
-    source: 'clone',
-    pruned: [],
-    pruneSkipped: [],
-    ...extra
-  }
-}
-
-/**
- * Marker schema 2 (D-05) adds wineloaderSha256 and wineloaderResigned. The bump
- * rebuilds every existing DRM clone once, which takes about 1 s on APFS and
- * refuses with "quit the game and retry" if the title is running.
- */
-type Marker = {
-  schema: number
-  crossoverBuild: string
-  cleanNtdllSha256: string
-  patchedNtdllSha256: string
-  componentId: string
-  lsteamclientDllSha256: string
-  lsteamclientSoSha256: string
-  loaderSha256: string
-  wineloaderSha256: string
-  wineloaderResigned: boolean
-  cloneMethod?: string
-  createdAt?: string
-}
-
-const sec = (ms: number) => Math.floor(ms / 1000)
-
-/**
- * The cheap per-launch verify (RESEARCH F8, D-10). Never throws.
- */
-export async function verifyRunnerClone(
-  runnerDir: string,
-  expect: RunnerVerifyExpect,
-  runTool: RunTool = defaultRunTool
-): Promise<{ ok: true } | { ok: false; reason: string }> {
-  const bad = (reason: string) => ({ ok: false as const, reason })
-  try {
-    const { crossover, component } = expect
-    const cx = join(runnerDir, 'CrossOver')
-    for (const d of [runnerDir, cx]) {
-      const st = await fsp.lstat(d)
-      if (st.isSymbolicLink() || !st.isDirectory()) {
-        return bad(`${basename(d)} is not a real directory`)
-      }
-    }
-
-    let marker: Marker
-    try {
-      marker = JSON.parse(
-        await fsp.readFile(join(runnerDir, RUNNER_MARKER_FILE), 'utf8')
-      ) as Marker
-    } catch {
-      return bad('marker unreadable')
-    }
-    if (!marker || marker.schema !== 2) return bad('marker schema mismatch')
-    if (
-      marker.crossoverBuild !== crossover.crossoverBuild ||
-      marker.cleanNtdllSha256 !== crossover.cleanNtdllSha256 ||
-      marker.patchedNtdllSha256 !== crossover.row.patchedSha256
-    ) {
-      return bad('marker does not match the installed CrossOver')
-    }
-    if (marker.componentId !== component.componentId) {
-      return bad('marker component id differs')
-    }
-
-    const link = await fsp.lstat(join(cx, 'bin'))
-    if (
-      !link.isSymbolicLink() ||
-      (await fsp.readlink(join(cx, 'bin'))) !== 'CrossOver-Hosted Application'
-    ) {
-      return bad('bin symlink missing or changed')
-    }
-    for (const b of ['wine', 'wineloader', 'wineserver']) {
-      const st = await fsp.stat(join(cx, 'bin', b))
-      if (!st.isFile() || (st.mode & 0o111) === 0) {
-        return bad(`bin/${b} is not executable`)
-      }
-    }
-
-    const ntdll = join(cx, NTDLL_REL)
-    await statRegular(ntdll, MAX_NTDLL_BYTES)
-    if ((await sha256File(ntdll)) !== crossover.row.patchedSha256) {
-      return bad('ntdll.dll does not match the patched hash')
-    }
-    const orig = ntdll + '.gamelib-orig'
-    await statRegular(orig, MAX_NTDLL_BYTES)
-    if ((await sha256File(orig)) !== crossover.cleanNtdllSha256) {
-      return bad('ntdll.dll.gamelib-orig does not match the clean hash')
-    }
-
-    const builtins: Array<[string, string, string, number]> = [
-      [
-        'lsteamclient.dll',
-        DLL_REL,
-        component.files.lsteamclientDll,
-        MAX_DLL_BYTES
-      ],
-      ['lsteamclient.so', SO_REL, component.files.lsteamclientSo, MAX_SO_BYTES]
-    ]
-    const markerHash: Record<string, string> = {
-      'lsteamclient.dll': marker.lsteamclientDllSha256,
-      'lsteamclient.so': marker.lsteamclientSoSha256
-    }
-    for (const [name, rel, src, max] of builtins) {
-      const path = join(cx, rel)
-      try {
-        await statRegular(path, max)
-      } catch {
-        return bad(`${name} missing or not a regular file`)
-      }
-      const h = await sha256File(path)
-      if (h !== markerHash[name]) return bad(`${name} differs from marker`)
-      let srcHash: string
-      try {
-        srcHash = await sha256File(src)
-      } catch {
-        return bad(`${name} component file unreadable`)
-      }
-      if (h !== srcHash) return bad(`${name} differs from the component`)
-    }
-
-    const loader = join(cx, LOADER_REL)
-    await statRegular(loader, MAX_LOADER_BYTES)
-    if ((await sha256File(loader)) !== marker.loaderSha256) {
-      return bad('loader differs from marker')
-    }
-
-    const wineloader = join(cx, WINELOADER_REL)
-    await statRegular(wineloader, MAX_LOADER_BYTES)
-    if ((await sha256File(wineloader)) !== marker.wineloaderSha256) {
-      return bad('wineloader differs from marker')
-    }
-
-    for (const rel of MTIME_PINNED_PATHS) {
-      const a = await fsp.stat(join(cx, rel))
-      const b = await fsp.stat(join(crossover.cxRoot, rel))
-      if (sec(a.mtimeMs) !== sec(b.mtimeMs)) {
-        return bad(`mtime of ${rel} differs from the installed copy`)
-      }
-    }
-
-    const keys = await dumpLoaderEntitlements(
-      runTool,
-      loader,
-      RUNNER_TIMEOUTS.codesign
-    )
-    if (!keys) return bad('loader entitlements unreadable')
-    for (const k of [...STOCK_LOADER_ENTITLEMENTS, DYLD_ENTITLEMENT]) {
-      if (!keys.includes(k)) return bad(`loader lacks entitlement ${k}`)
-    }
-    if (marker.wineloaderResigned === true) {
-      const wkeys = await dumpLoaderEntitlements(
-        runTool,
-        wineloader,
-        RUNNER_TIMEOUTS.codesign
-      )
-      if (!wkeys) return bad('wineloader entitlements unreadable')
-      for (const k of [...STOCK_LOADER_ENTITLEMENTS, DYLD_ENTITLEMENT]) {
-        if (!wkeys.includes(k)) return bad(`wineloader lacks entitlement ${k}`)
-      }
-    }
-    return { ok: true }
-  } catch (e) {
-    return bad(errText(e))
-  }
-}
-
-/**
- * Lists processes. null means ps failed or timed out, which counts as in use.
- */
-export async function psListing(
-  run: RunTool,
-  timeoutMs: number
-): Promise<string | null> {
-  const r = await run('/bin/ps', ['-axww', '-o', 'command='], { timeoutMs })
-  if (r.code !== 0 || r.timedOut || r.aborted) return null
-  return r.stdout
-}
-
-// The clone's wineserver runs under its own unix path for as long as any Wine
-// process in the bottle lives, which is why this full-width command scan
-// catches a running game even though Wine retitles game processes to Windows
-// paths. A failed ps counts as in use (fail safe).
-export async function isPathInUse(
-  dir: string,
-  run: RunTool,
-  timeoutMs: number
-): Promise<boolean> {
-  const listing = await psListing(run, timeoutMs)
-  return listing === null || listing.includes(dir + '/')
-}
 
 const inFlight = new Map<string, Promise<DrmStepResult<RunnerReady>>>()
 
@@ -862,118 +340,6 @@ export async function cloneCrossoverTree(
   } finally {
     deleteAbortController(opts.abortId)
   }
-}
-
-/**
- * Re-signs a Mach-O loader ad hoc with hardened runtime plus the dyld
- * environment entitlement. 'strict' accepts only the 5 stock keys (or the 6
- * with dyld) and signs exactly the 6; 'derived' keeps whatever boolean
- * entitlements the loader has and adds the dyld one. The stock binary is kept
- * next to it as <loader>.gamelib-orig.
- */
-export async function resignLoader(
-  run: RunTool,
-  loader: string,
-  partial: string,
-  timeoutMs: number,
-  mode: 'strict' | 'derived'
-): Promise<{ ok: true; keys: string[] } | { ok: false; cause: string }> {
-  try {
-    await fsp.copyFile(
-      loader,
-      loader + '.gamelib-orig',
-      fsConstants.COPYFILE_EXCL
-    )
-    const stock = await dumpLoaderEntitlements(run, loader, timeoutMs)
-    if (!stock) return { ok: false, cause: 'loader entitlements unreadable' }
-    let keys: string[]
-    if (mode === 'strict') {
-      const sorted = [...stock].sort().join('\n')
-      const stockSet = [...STOCK_LOADER_ENTITLEMENTS].sort()
-      const sixSet = [...stockSet, DYLD_ENTITLEMENT].sort()
-      if (sorted !== stockSet.join('\n') && sorted !== sixSet.join('\n')) {
-        return { ok: false, cause: 'unexpected loader entitlements' }
-      }
-      keys = sixSet
-    } else {
-      keys = Array.from(new Set([...stock, DYLD_ENTITLEMENT])).sort()
-    }
-    resignCounter += 1
-    const plist = join(
-      partial,
-      `entitlements-${basename(loader)}-${resignCounter}.plist`
-    )
-    await fsp.writeFile(
-      plist,
-      mode === 'strict' ? entitlementsPlist() : entitlementsPlistFor(keys),
-      { flag: 'wx', mode: 0o600 }
-    )
-    const sign = await run(
-      '/usr/bin/codesign',
-      [
-        '--force',
-        '--sign',
-        '-',
-        '--options',
-        'runtime',
-        '--entitlements',
-        plist,
-        loader
-      ],
-      { timeoutMs }
-    )
-    if (sign.code !== 0) {
-      await removeInside(partial, plist)
-      return {
-        ok: false,
-        cause: `loader re-sign failed (${sign.code}): ${sign.stderr.slice(0, 80)}`
-      }
-    }
-    const after = await dumpLoaderEntitlements(run, loader, timeoutMs)
-    await removeInside(partial, plist)
-    if (!after || !keys.every((k) => after.includes(k))) {
-      return {
-        ok: false,
-        cause: 'loader lacks the dyld entitlement after re-sign'
-      }
-    }
-    return { ok: true, keys }
-  } catch (e) {
-    return { ok: false, cause: errText(e) }
-  }
-}
-
-let resignCounter = 0
-
-/**
- * Targeted xattr scrub of a clone. Never `xattr -c`: it would strip the
- * com.apple.cs.* signature xattrs from stock-signed files.
- */
-export async function scrubCloneXattrs(
-  run: RunTool,
-  dest: string,
-  timeoutMs: number
-): Promise<
-  { ok: true; provenanceRemaining: boolean } | { ok: false; cause: string }
-> {
-  for (const attr of ['com.apple.quarantine', 'com.apple.provenance']) {
-    const r = await run('/usr/bin/xattr', ['-r', '-d', attr, dest], {
-      timeoutMs
-    })
-    if (r.timedOut || r.aborted) {
-      return { ok: false, cause: `xattr ${attr} scrub timed out` }
-    }
-  }
-  let provenanceRemaining = false
-  for (const rel of [LOADER_REL, NTDLL_REL, SO_REL, DLL_REL, WINELOADER_REL]) {
-    const r = await run('/usr/bin/xattr', [join(dest, rel)], { timeoutMs })
-    const lines = r.stdout.split('\n').map((l) => l.trim())
-    if (lines.includes('com.apple.quarantine')) {
-      return { ok: false, cause: `quarantine xattr remains on ${rel}` }
-    }
-    if (lines.includes('com.apple.provenance')) provenanceRemaining = true
-  }
-  return { ok: true, provenanceRemaining }
 }
 
 async function buildRunner(

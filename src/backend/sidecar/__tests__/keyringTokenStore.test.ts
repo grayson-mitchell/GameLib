@@ -1610,14 +1610,15 @@ describe('SidecarKeyringTokenStore', () => {
       '..',
       'keyringTokenStore.ts'
     )
-    const USER_SRC_PATH = join(
-      __dirname,
-      '..',
-      '..',
-      'storeManagers',
-      'steam',
-      'user.ts'
-    )
+    // 65-12: the sign-in flows (token and credential handling) moved out of
+    // user.ts; the process.env scan covers every module that now holds them.
+    const USER_SRC_PATHS = [
+      'user.ts',
+      'userSignIn.ts',
+      'userSignInState.ts',
+      'userRedeem.ts'
+    ].map((f) => join(__dirname, '..', '..', 'storeManagers', 'steam', f))
+    const USER_SRC_PATH = USER_SRC_PATHS[0]
 
     it('comment-stripped keyringTokenStore.ts contains zero configStore, zero TOKEN_STORE_KEY, zero process.env', () => {
       const stripped = stripSourceComments(
@@ -1646,9 +1647,14 @@ describe('SidecarKeyringTokenStore', () => {
       expect(processEnvSpecimen).toMatch(/process\.env/)
     })
 
-    it('comment-stripped user.ts contains zero process.env', () => {
-      const stripped = stripSourceComments(readFileSync(USER_SRC_PATH, 'utf-8'))
-      expect(stripped).not.toMatch(/process\.env/)
+    it('comment-stripped user.ts, userSignIn.ts, userSignInState.ts and userRedeem.ts contain zero process.env', () => {
+      // Non-vacuity: every path is a real, non-empty file.
+      expect(USER_SRC_PATHS).toHaveLength(4)
+      for (const path of USER_SRC_PATHS) {
+        const raw = readFileSync(path, 'utf-8')
+        expect(raw.length).toBeGreaterThan(500)
+        expect(stripSourceComments(raw)).not.toMatch(/process\.env/)
+      }
     })
 
     it('RED-proof: the user.ts process.env check trips against a specimen derived by inserting the forbidden line into the real source', () => {

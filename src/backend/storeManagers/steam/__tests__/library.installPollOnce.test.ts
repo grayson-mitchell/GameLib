@@ -12,49 +12,20 @@ import {
   clearBridgeInstallFinalized,
   isBridgeInstallFinalized
 } from '../library/pollState'
-import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
+import { existsSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
-import { spawnSync, execFileSync } from 'child_process'
-import { shell } from 'backend/platform'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import { SteamUser } from '../user'
-import { getAnonymousPicsClient } from '../anonymousClient'
+import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
 import {
-  steamLibraryStore,
-  steamMetadataStore,
-  steamSyncStore,
-  steamRestartHoldStore
-} from '../stores'
-import {
-  getBottleSteamappsDir,
-  getSteamBottleSettings,
   getBridgeBottleSettings,
-  isSteamBottleProvisioned,
-  listReadyBridgeBottleNames,
-  resolveBridgeBottleName
-} from '../bottle'
-import {
-  finalizeToSteam,
-  downloadSteamDepots,
-  buildDepotPlan,
-  healReconciledFileModes
-} from '../depot'
-import { reconcilePartialState } from '../depot/reconcile'
-import { runWineCommand } from 'backend/launcher'
+  listReadyBridgeBottleNames
+} from '../bridgeBottle'
 import { join } from 'path'
 import { library } from '../state'
-import { bridgeAllowlist } from '../bridge/allowlist'
-import { captureOwnedAppPlatforms } from '../platformCapture'
-import { captureOwnedAppMetacritic } from '../metacriticCapture'
-import {
-  listSteamClientPids,
-  readSteamProcessStartTokens
-} from '../steamClientProcess'
-import { logInfo } from 'backend/logger'
 import {
   readSteamDownloadMonitor,
   startSteamDownloadMonitor,
@@ -199,8 +170,10 @@ jest.mock('../stores', () => ({
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
   getSteamBottleSettings: jest.fn(),
+  isSteamBottleProvisioned: jest.fn()
+}))
+jest.mock('../bridgeBottle', () => ({
   getBridgeBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
   resolveBridgeBottleName: jest.fn()
 }))
@@ -315,19 +288,6 @@ const BRIDGE_BOTTLE_STEAMAPPS_ROOT = join(
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────
 
-const makeOwnedApp = (
-  appid: number,
-  name: string,
-  playtime_forever: number,
-  rtime_last_played = 0
-) => ({
-  appid,
-  name,
-  playtime_forever,
-  rtime_last_played,
-  img_icon_url: ''
-})
-
 // 23.2-04: this project's jest config sets `resetMocks: true`, which strips
 // jest.fn() implementations (not just call history) before EVERY test — so
 // the i18nextT mock's fallback-returning implementation (set once at
@@ -347,13 +307,6 @@ beforeEach(() => {
   // TypeError from calling .length on an un-mocked return value.
   jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
   jest.mocked(backfillBridgeLaunchTargets).mockResolvedValue(0)
-})
-
-const makeFakeClient = (apps: ReturnType<typeof makeOwnedApp>[]) => ({
-  steamID: 'STEAMID_TEST',
-  getUserOwnedApps: jest
-    .fn()
-    .mockResolvedValue({ app_count: apps.length, apps })
 })
 
 // ── Describe block ────────────────────────────────────────────────────────────

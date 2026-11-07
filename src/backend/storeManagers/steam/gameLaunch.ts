@@ -28,14 +28,13 @@ import {
   decidePlayAdoption,
   restartMacSteamForAdoption
 } from './macSteamAdoption'
+import { isBottleReady, getSteamBottleSettings } from './bottle'
+import { killBridgeBottleWineServer } from './bridgeBottleLifecycle'
 import {
-  isBottleReady,
-  tellBottledSteamToLaunch,
-  getSteamBottleSettings,
   getBridgeBottleSettings,
-  findBridgeInstallBottle,
-  killBridgeBottleWineServer
-} from './bottle'
+  findBridgeInstallBottle
+} from './bridgeBottle'
+import { tellBottledSteamToLaunch } from './bottledSteam'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 // Phase 60: Steam overlay in bridged games (macOS).
 import { prepareOverlayTokens } from './bridge/overlay/overlayLaunch'
@@ -56,7 +55,7 @@ import {
   drmStepError,
   type DrmStep
 } from './bridge/drm/steamclientLayerMode'
-import { stopBridgeHelper } from './bridge/helperProcess'
+import { stopBridgeHelper } from './bridge/helperRegistry'
 import {
   markBridgeLimitedNoticeShown,
   setBridgeIdentityFallback,

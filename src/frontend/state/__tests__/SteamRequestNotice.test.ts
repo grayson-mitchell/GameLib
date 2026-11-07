@@ -40,6 +40,7 @@ describe('SteamRequestNotice store', () => {
   it.each([
     ['uninstall-refused-running', undefined],
     ['uninstall-check-failed', undefined],
+    ['uninstall-failed', undefined],
     ['uninstall-steam-error', 2]
   ] as const)('accepts kind %s', (kind, code) => {
     send(make({ kind, ...(code !== undefined ? { code } : {}) }))

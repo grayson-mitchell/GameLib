@@ -23,7 +23,7 @@ const exportedNames = (file: string): string[] => {
 
 // Changes only when a later phase-62 plan moves another symbol out of
 // games.ts (the class method lifts in 62-06..62-08 leave this list alone).
-const GAMES_TS_EXPORTS = ['SteamGame', 'getBridgeRouteVerdict']
+const GAMES_TS_EXPORTS = ['SteamGame']
 
 const MOVED_OWNERS = [
   'gameConstants.ts',
@@ -38,11 +38,16 @@ const MOVED_OWNERS = [
 const LIFTED_OWNERS = [
   'gameEligibility.ts',
   'gameInstall.ts',
+  'bridgeInstallState.ts',
+  'gameInstallDepot.ts',
+  'gameInstallBridge.ts',
   'gameLaunchOverlay.ts',
   'gameBridgeLaunch.ts',
+  'gameBridgeWineLaunch.ts',
   'gameLaunch.ts',
   'gameMaintenance.ts',
-  'gameUninstall.ts'
+  'gameUninstall.ts',
+  'gameMetadata.ts'
 ]
 
 describe('steam/games.ts module surface (D-05)', () => {
@@ -105,12 +110,18 @@ describe('steam/games.ts module surface (D-05)', () => {
     // gameEligibility/gameLaunchOverlay -> gameInstall -> gameLaunch ->
     // gameBridgeLaunch; gameUninstall and gameMaintenance sit beside them
     // and nothing imports those two.
+    // gameMetadata (65-13) is a leaf beneath gameEligibility, which calls it.
     const FORWARD: Record<string, number> = {
+      gameMetadata: -1,
       gameEligibility: 0,
       gameLaunchOverlay: 0,
+      bridgeInstallState: 0,
+      gameInstallDepot: 0,
       gameInstall: 1,
+      gameInstallBridge: 2,
       gameLaunch: 2,
       gameBridgeLaunch: 3,
+      gameBridgeWineLaunch: 4,
       gameUninstall: 4,
       gameMaintenance: 4
     }

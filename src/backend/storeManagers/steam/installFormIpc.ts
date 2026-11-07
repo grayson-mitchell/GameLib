@@ -21,7 +21,9 @@ import type {
 } from 'common/types/steam'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { GlobalConfig } from 'backend/config'
-import SteamGame, { getBridgeRouteVerdict } from './games'
+import SteamGame from './games'
+import { checkBottleEligibility } from './gameEligibility'
+import { getBridgeRouteVerdict } from './bridgeRouteVerdict'
 import { steamBottleConfigStore, steamMetadataStore } from './stores'
 import { persistBottleWineVersion } from './bottle'
 import { depotSignalCaptured } from './metadataCapture'
@@ -113,7 +115,7 @@ export async function getSteamBottleEligibilityVerdict(
     }
   }
 
-  const eligible = await new SteamGame(appName).checkBottleEligibility()
+  const eligible = await checkBottleEligibility(new SteamGame(appName))
 
   // No new fetch and no new await occur here: the checkBottleEligibility()
   // call above has ALREADY driven ensurePlatformsCaptured() to completion or

@@ -26,7 +26,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { sendFrontendMessage } from 'backend/ipc'
-import { logInfo, logWarning } from 'backend/logger'
+import { logWarning } from 'backend/logger'
 import {
   steamBridgeHelperPath,
   steamBridgeHelperStateDir
@@ -39,23 +39,15 @@ import {
   STATUS_OK,
   STATUS_ERR
 } from '../protocol'
+import { ensureBridgeHelperReady } from '../helperProcess'
 import {
-  ensureBridgeHelperReady,
-  stopBridgeHelper,
-  hasLiveBridgeHelper,
-  shutdownAllBridgeHelpers,
-  classifyInitFlatError,
   __setSteamWaitScheduleForTests,
   __setBridgeHelperPathForTests,
   __setBridgeHelperSpawnEnvForTests,
   __resetBridgeHelperStateForTests
-} from '../helperProcess'
-import {
-  shutdownLongLivedChildren,
-  __resetLongLivedChildrenForTests
-} from 'backend/longLivedChildren'
-import { app, shell } from 'backend/platform'
-import { acknowledgeDialogDisplay } from 'backend/dialog/displayAck'
+} from '../helperRegistry'
+import { __resetLongLivedChildrenForTests } from 'backend/longLivedChildren'
+import { shell } from 'backend/platform'
 import { stripSourceComments } from '../../../../testUtils/stripSourceComments'
 
 jest.mock('backend/logger', () => ({
@@ -744,424 +736,26 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     expect(result.port).toBeUndefined()
   }, 10000)
 
-  test('stopBridgeHelper(appId) is a no-op when that appId was never spawned', () => {
-    expect(() => stopBridgeHelper(APP_ID_A)).not.toThrow()
-    expect(mockedSpawn).not.toHaveBeenCalled()
-  })
-
-  test("stopBridgeHelper(appId) kills ONLY that appId's child, leaving a sibling appId untouched", async () => {
-    const childA = new FakeChildProcess()
-    const childB = new FakeChildProcess()
-    mockedSpawn.mockReturnValueOnce(childA).mockReturnValueOnce(childB)
-    MockedSocket.mockImplementation(
-      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
-    )
-
-    const pendingA = ensureBridgeHelperReady(APP_ID_A)
-    emitListenLine(childA, 55001, APP_ID_A)
-    const pendingB = ensureBridgeHelperReady(APP_ID_B)
-    emitListenLine(childB, 55002, APP_ID_B)
-    await Promise.all([pendingA, pendingB])
-
-    stopBridgeHelper(APP_ID_A)
-
-    expect(childA.kill).toHaveBeenCalledTimes(1)
-    expect(childB.kill).not.toHaveBeenCalled()
-
-    // A second stop for the already-removed appId is a no-op.
-    stopBridgeHelper(APP_ID_A)
-    expect(childA.kill).toHaveBeenCalledTimes(1)
-  })
-
-  test('hasLiveBridgeHelper() is true from spawn until that appId is stopped (the quit confirm keys off it)', async () => {
-    expect(hasLiveBridgeHelper()).toBe(false)
-
-    const child = new FakeChildProcess()
-    mockedSpawn.mockReturnValueOnce(child)
-    MockedSocket.mockImplementation(
-      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
-    )
-    const pending = ensureBridgeHelperReady(APP_ID_A)
-    emitListenLine(child, 55001, APP_ID_A)
-    await pending
-
-    expect(hasLiveBridgeHelper()).toBe(true)
-    stopBridgeHelper(APP_ID_A)
-    expect(hasLiveBridgeHelper()).toBe(false)
-  })
-
-  // 51-REVIEW WR-06 (sidecar exit contract): the child handle and both piped
-  // streams must be unref'd so a leaked helper cannot hold the sidecar's event
-  // loop open past stdin EOF, and a process 'exit' listener must tear down any
-  // helper still running when the sidecar drains.
-  test('WR-06: the spawned child and its stdout/stderr pipes are unref()d, and a process exit listener kills a still-running helper', async () => {
-    const onSpy = jest.spyOn(process, 'on')
-    const child = new FakeChildProcess()
-    const childUnref = jest.fn()
-    const stdoutUnref = jest.fn()
-    const stderrUnref = jest.fn()
-    Object.assign(child, { unref: childUnref })
-    Object.assign(child.stdout, { unref: stdoutUnref })
-    Object.assign(child.stderr, { unref: stderrUnref })
-    mockedSpawn.mockReturnValue(child)
-    MockedSocket.mockImplementation(
-      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
-    )
-
-    const pending = ensureBridgeHelperReady(APP_ID_A)
-    emitListenLine(child, 55003, APP_ID_A)
-    const result = await pending
-
-    // unref() drops only the loop claim: the LISTEN line was still read.
-    expect(result).toEqual(expect.objectContaining({ ready: true }))
-    expect(childUnref).toHaveBeenCalledTimes(1)
-    expect(stdoutUnref).toHaveBeenCalledTimes(1)
-    expect(stderrUnref).toHaveBeenCalledTimes(1)
-
-    const exitListeners = onSpy.mock.calls
-      .filter(([event]) => event === 'exit')
-      .map(([, listener]) => listener as () => void)
-    onSpy.mockRestore()
-    // Installed at most once per module instance; this suite's first spawn
-    // may have happened in an earlier test, so read it from the live list.
-    const installed =
-      exitListeners[0] ??
-      (process
-        .listeners('exit')
-        .find((l) => String(l).includes('shutdownAllBridgeHelpers')) as
-        | (() => void)
-        | undefined)
-    expect(installed).toBeDefined()
-    installed?.()
-    expect(child.kill).toHaveBeenCalledTimes(1)
-  })
-
-  test('shutdownAllBridgeHelpers() kills every registered appId', async () => {
-    const childA = new FakeChildProcess()
-    const childB = new FakeChildProcess()
-    mockedSpawn.mockReturnValueOnce(childA).mockReturnValueOnce(childB)
-    MockedSocket.mockImplementation(
-      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
-    )
-
-    const pendingA = ensureBridgeHelperReady(APP_ID_A)
-    emitListenLine(childA, 55001, APP_ID_A)
-    const pendingB = ensureBridgeHelperReady(APP_ID_B)
-    emitListenLine(childB, 55002, APP_ID_B)
-    await Promise.all([pendingA, pendingB])
-
-    shutdownAllBridgeHelpers()
-
-    expect(childA.kill).toHaveBeenCalledTimes(1)
-    expect(childB.kill).toHaveBeenCalledTimes(1)
-  })
-
-  // ── Quick task 260907-juv (Gate B) lineage, now per-appId: the registry,
-  // not a direct export, is the production teardown path -- calling the
-  // shared `shutdownLongLivedChildren()` registry (the only thing
-  // `handleExit()` calls) must reach EACH registered appId's own helper
-  // independently, exactly once, even across repeated registry-wide
-  // teardown calls.
-  test('shutdownLongLivedChildren() reaches every registered appId helper via the registry, named steam-bridge-helper-<appId>', async () => {
-    const childA = new FakeChildProcess()
-    const childB = new FakeChildProcess()
-    mockedSpawn.mockReturnValueOnce(childA).mockReturnValueOnce(childB)
-    MockedSocket.mockImplementation(
-      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
-    )
-
-    const pendingA = ensureBridgeHelperReady(APP_ID_A)
-    emitListenLine(childA, 55001, APP_ID_A)
-    const pendingB = ensureBridgeHelperReady(APP_ID_B)
-    emitListenLine(childB, 55002, APP_ID_B)
-    await Promise.all([pendingA, pendingB])
-
-    shutdownLongLivedChildren()
-
-    expect(childA.kill).toHaveBeenCalledTimes(1)
-    expect(childB.kill).toHaveBeenCalledTimes(1)
-
-    // Idempotent: a second registry-wide teardown never re-kills.
-    shutdownLongLivedChildren()
-    expect(childA.kill).toHaveBeenCalledTimes(1)
-    expect(childB.kill).toHaveBeenCalledTimes(1)
-  })
-
-  test('__setBridgeHelperPathForTests overrides the spawned binary path; null restores the real packaged path', async () => {
-    const child = new FakeChildProcess()
-    mockedSpawn.mockReturnValue(child)
-    MockedSocket.mockImplementation(
-      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
-    )
-
-    __setBridgeHelperPathForTests('/custom/test/steam-bridge-helper')
-    const pending = ensureBridgeHelperReady(APP_ID_A)
-    emitListenLine(child, 55001, APP_ID_A)
-    await pending
-
-    expect(mockedSpawn.mock.calls[0][0]).toBe(
-      '/custom/test/steam-bridge-helper'
-    )
-
-    __setBridgeHelperPathForTests(null)
-  })
-
-  // ── Invariant (D-51-01 assumption_delta_decision, Task 2): the singleton
-  // Phase 58 Plan 31 (T-58-103): the helper's INVITE dialog line opens the picker window,
-  // own-stream and own-appid only, debounced. Quick 261101-llf: it opens the dedicated
-  // `bridge-invite` window instead of raising and pushing to the main window.
-  describe('INVITE dialog line', () => {
-    const invite = (appId: string) =>
-      Buffer.from(`[2026-11-01T00:00:00Z] INVITE dialog appid=${appId}\n`)
-    const open = app.openBridgeInvitePicker as jest.Mock
-    beforeEach(() => {
-      mockedSendFrontendMessage.mockClear()
-      ;(app.raiseMainWindow as jest.Mock).mockClear()
-      open.mockClear()
-      open.mockResolvedValue(true)
-    })
-    const inviteCalls = () => open.mock.calls
-
-    test('own appid -> one picker window open, no main-window raise or push', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      ;(logInfo as jest.Mock).mockClear()
-      void ensureBridgeHelperReady('3205720')
-      child.stderr.emit('data', invite('3205720'))
-      expect(open).toHaveBeenCalledTimes(1)
-      expect(open).toHaveBeenCalledWith({
-        appId: '3205720',
-        ackId: expect.stringMatching(/.+/)
-      })
-      expect(app.raiseMainWindow).not.toHaveBeenCalled()
-      expect(
-        mockedSendFrontendMessage.mock.calls.filter(
-          (c) => c[0] === 'steamBridgeInviteRequest'
-        )
-      ).toHaveLength(0)
-      expect(logInfo).toHaveBeenCalledWith(
-        'bridge invite [3205720]: picker window requested',
-        'Steam'
-      )
-    })
-
-    test('a failed picker open is logged', async () => {
-      open.mockResolvedValue(false)
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      ;(logWarning as jest.Mock).mockClear()
-      void ensureBridgeHelperReady('3205720')
-      child.stderr.emit('data', invite('3205720'))
-      await Promise.resolve()
-      await Promise.resolve()
-      expect(logWarning).toHaveBeenCalledWith(
-        'bridge invite [3205720]: picker window failed',
-        'Steam'
-      )
-    })
-
-    test('no ack -> display=unconfirmed after the bounded timeout', () => {
-      jest.useFakeTimers()
-      try {
-        const child = new FakeChildProcess()
-        mockedSpawn.mockReturnValue(child)
-        ;(logInfo as jest.Mock).mockClear()
-        void ensureBridgeHelperReady('3205720')
-        child.stderr.emit('data', invite('3205720'))
-        jest.advanceTimersByTime(15_000)
-        expect(logInfo).toHaveBeenCalledWith(
-          'bridge invite [3205720]: display=unconfirmed timeout=15000',
-          'Steam'
-        )
-      } finally {
-        jest.useRealTimers()
-      }
-    })
-
-    test('ack before the timeout -> display=confirmed', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      ;(logInfo as jest.Mock).mockClear()
-      void ensureBridgeHelperReady('3205720')
-      child.stderr.emit('data', invite('3205720'))
-      const ackId = inviteCalls()[0][0].ackId
-      expect(acknowledgeDialogDisplay(ackId)).toBe(true)
-      expect(logInfo).toHaveBeenCalledWith(
-        expect.stringMatching(
-          /^bridge invite \[3205720\]: display=confirmed elapsedMs=\d+$/
-        ),
-        'Steam'
-      )
-    })
-
-    test('a line naming another appid does nothing', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      void ensureBridgeHelperReady('3205720')
-      child.stderr.emit('data', invite('999'))
-      expect(inviteCalls()).toHaveLength(0)
-      expect(app.raiseMainWindow).not.toHaveBeenCalled()
-    })
-
-    test('a line from a stale child does nothing', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      void ensureBridgeHelperReady('3205720')
-      __resetBridgeHelperStateForTests()
-      child.stderr.emit('data', invite('3205720'))
-      expect(inviteCalls()).toHaveLength(0)
-    })
-
-    test('58 WR-05: the text embedded inside another line does nothing', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      void ensureBridgeHelperReady('3205720')
-      child.stderr.emit(
-        'data',
-        Buffer.from(
-          '[2026-11-01T00:00:00Z] VER    name=x INVITE dialog appid=3205720\n'
-        )
-      )
-      child.stderr.emit(
-        'data',
-        Buffer.from('INVITE dialog appid=3205720 trailing\n')
-      )
-      expect(inviteCalls()).toHaveLength(0)
-      expect(app.raiseMainWindow).not.toHaveBeenCalled()
-    })
-
-    test('two lines within 2000 ms give one picker open', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      void ensureBridgeHelperReady('3205720')
-      child.stderr.emit('data', invite('3205720'))
-      child.stderr.emit('data', invite('3205720'))
-      expect(inviteCalls()).toHaveLength(1)
-      expect(app.raiseMainWindow).not.toHaveBeenCalled()
-    })
-  })
-
-  // 53-13 WR-03 (relay side): one log call per non-empty stderr line, each
-  // with its own appid prefix and no embedded newline.
-  test('stderr chunk of 3 lines -> 3 logWarning calls, each prefixed with the appid, none multi-line', () => {
-    const child = new FakeChildProcess()
-    mockedSpawn.mockReturnValue(child)
-    ;(logWarning as jest.Mock).mockClear()
-
-    void ensureBridgeHelperReady('42')
-    child.stderr.emit(
-      'data',
-      Buffer.from(
-        '[t1] HELLO  shim attached appid=42\n[t2] CALL   SteamUser023.GetSteamID\n[t3] CALL   SteamFriends017.GetPersonaName\n'
-      )
-    )
-
-    const messages = (logWarning as jest.Mock).mock.calls
-      .map((c) => c[0] as string)
-      .filter((m) => m.startsWith('bridge helper [42]: '))
-    expect(messages).toEqual([
-      'bridge helper [42]: [t1] HELLO  shim attached appid=42',
-      'bridge helper [42]: [t2] CALL   SteamUser023.GetSteamID',
-      'bridge helper [42]: [t3] CALL   SteamFriends017.GetPersonaName'
-    ])
-    for (const m of messages) expect(m).not.toContain('\n')
-  })
-
-  test('stderr chunk with blank lines logs no empty-message call, and LISTEN parsing still sees every line', async () => {
-    const child = new FakeChildProcess()
-    mockedSpawn.mockReturnValue(child)
-    ;(logWarning as jest.Mock).mockClear()
-
-    const pending = ensureBridgeHelperReady(APP_ID_A)
-    child.stderr.emit(
-      'data',
-      Buffer.from(
-        `\n  \n[2026-10-17T00:00:00Z] LISTEN 127.0.0.1:55001 appid=999999 mode=full\n\n`
-      )
-    )
-    const messages = (logWarning as jest.Mock).mock.calls.map(
-      (c) => c[0] as string
-    )
-    expect(
-      messages.filter((m) => m.startsWith('bridge helper ['))
-    ).toHaveLength(1)
-    for (const m of messages) expect(m.trim().endsWith(': ')).toBe(false)
-    // handleStderrLine still ran: the mismatched appid LISTEN is rejected.
-    const result = await pending
-    expect(result.status).toBe('unreachable')
-  }, 10000)
-
   // helperProcess/unregisterLongLivedChild module state is DELETED, not
   // kept beside the registry. Matched against COMMENT-STRIPPED source
   // (repo grep-hygiene rule) so a prose mention in a docblock explaining
   // the history can never satisfy this gate.
   test('invariant: no module-level `let` of a ChildProcess, and no `shutdownBridgeHelper` symbol survives in source', () => {
-    const sourcePath = join(__dirname, '..', 'helperProcess.ts')
-    const stripped = stripSourceComments(readFileSync(sourcePath, 'utf-8'))
+    const files = ['helperProcess.ts', 'helperRegistry.ts', 'helperSpawn.ts']
+    let registrySeen = false
+    for (const file of files) {
+      const raw = readFileSync(join(__dirname, '..', file), 'utf-8')
+      // Non-vacuity: every scanned file was actually read and is non-empty.
+      expect(raw.length).toBeGreaterThan(0)
+      const stripped = stripSourceComments(raw)
 
-    expect(stripped).not.toMatch(/\blet\s+\w*\s*:\s*ChildProcess/)
-    expect(stripped).not.toMatch(/\bshutdownBridgeHelper\b/)
-    // Positive control: the registry map itself must still be declared, so
-    // this assertion is provably exercising real source, not an empty file.
-    expect(stripped).toMatch(/const helpers = new Map</)
-  })
-
-  describe('53-18 WR-05 line carry-over', () => {
-    const bridgeMessages = (mock: unknown) =>
-      (mock as jest.Mock).mock.calls
-        .map((c) => c[0] as string)
-        .filter((m) => m.startsWith('bridge helper ['))
-
-    test('a stderr line split across two chunks is logged once, whole', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      ;(logWarning as jest.Mock).mockClear()
-      void ensureBridgeHelperReady('42')
-      child.stderr.emit('data', Buffer.from('[ts] CA'))
-      child.stderr.emit('data', Buffer.from('LL   SteamUser021.GetSteamID\n'))
-      expect(bridgeMessages(logWarning)).toEqual([
-        'bridge helper [42]: [ts] CALL   SteamUser021.GetSteamID'
-      ])
-    })
-
-    test('a LISTEN line split across two chunks still resolves the port', async () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      MockedSocket.mockImplementation(
-        () => new FakeSocket(healthOkFrame, whoamiOkFrame)
-      )
-      const pending = ensureBridgeHelperReady(APP_ID_A)
-      const line = `[2026-10-17T00:00:00Z] LISTEN 127.0.0.1:55001 appid=${APP_ID_A} mode=full\n`
-      child.stderr.emit('data', Buffer.from(line.slice(0, 30)))
-      child.stderr.emit('data', Buffer.from(line.slice(30)))
-      emitReadyLine(child, APP_ID_A)
-      const result = await pending
-      expect(result.ready).toBe(true)
-    })
-
-    test('a trailing partial line is flushed exactly once on stream end', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      ;(logWarning as jest.Mock).mockClear()
-      void ensureBridgeHelperReady('42')
-      child.stderr.emit('data', Buffer.from('[ts] tail'))
-      expect(bridgeMessages(logWarning)).toEqual([])
-      child.stderr.emit('end')
-      child.emit('close')
-      expect(bridgeMessages(logWarning)).toEqual([
-        'bridge helper [42]: [ts] tail'
-      ])
-    })
-
-    test('stdout gets the same carry-over via logInfo', () => {
-      const child = new FakeChildProcess()
-      mockedSpawn.mockReturnValue(child)
-      ;(logInfo as jest.Mock).mockClear()
-      void ensureBridgeHelperReady('42')
-      child.stdout.emit('data', Buffer.from('hel'))
-      child.stdout.emit('data', Buffer.from('lo\n'))
-      expect(bridgeMessages(logInfo)).toEqual(['bridge helper [42]: hello'])
-    })
+      expect(stripped).not.toMatch(/\blet\s+\w*\s*:\s*ChildProcess/)
+      expect(stripped).not.toMatch(/\bshutdownBridgeHelper\b/)
+      // Positive control: the registry map itself must still be declared, so
+      // this assertion is provably exercising real source, not an empty file.
+      if (/const helpers = new Map</.test(stripped)) registrySeen = true
+    }
+    expect(registrySeen).toBe(true)
   })
 })
 
@@ -1216,16 +810,6 @@ describe('261027-aue: wait for Steam to start / sign in', () => {
     mockedSendFrontendMessage.mockClear()
     ;(shell.openExternal as jest.Mock).mockClear()
     __setSteamWaitScheduleForTests({ budgetMs: 150, intervalMs: 5 })
-  })
-
-  test.each([
-    [NOT_RUNNING, 'steam-not-running'],
-    [SIGNING_IN, 'steam-not-signed-in'],
-    ['some other InitFlat error', 'other'],
-    ['', 'other'],
-    [null, 'other']
-  ])('classifyInitFlatError(%p) -> %s', (err, expected) => {
-    expect(classifyInitFlatError(err)).toBe(expected)
   })
 
   test('Steam quit: starter called once, waiting hook once, no 480 spawn, ready on attempt 3', async () => {

@@ -14,6 +14,7 @@ import { steamMetadataStore } from './stores'
 import { seedMacArchFromKnownFix } from './macArchKnownFix'
 import { knownFixSaysCeg } from './drmKnownFix'
 import { pendingFetches, METADATA_FETCH_TIMEOUT_MS } from './state'
+import { fetchMetadataIfNeeded } from './gameMetadata'
 // Phase 24 Plan 08 (R4/R7): allowlist-based bridge-vs-fallback routing.
 import { bridgeAllowlist } from './bridge/allowlist'
 // Phase 51 Plan 09 (D-51-07/09): the pure routing resolver + the persisted
@@ -152,10 +153,6 @@ export async function checkBridgeRoute(
   return bridgeRoute(steamGame, options)
 }
 
-export function isBridgeEligible(steamGame: SteamGame): boolean {
-  return bridgeRoute(steamGame).route === 'bridge'
-}
-
 /**
  * D-51-07: auto-clears a persisted scan-miss the moment the currently
  * shipped shim is proven to cover every symbol it used to miss —
@@ -236,7 +233,7 @@ export async function ensurePlatformsCaptured(
 
   if (alreadyCaptured()) return
 
-  await steamGame.fetchMetadataIfNeeded(steamGame.getGameInfo())
+  await fetchMetadataIfNeeded(steamGame, steamGame.getGameInfo())
 
   // Bounded poll for the T-2-03 dedup race: fetchMetadataIfNeeded() may have
   // early-returned because a concurrent fetch (the getGameInfo() side effect

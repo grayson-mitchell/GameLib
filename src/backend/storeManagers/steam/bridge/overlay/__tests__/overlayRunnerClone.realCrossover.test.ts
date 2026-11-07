@@ -19,11 +19,13 @@ jest.mock('backend/logger', () => ({
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import {
   DYLD_ENTITLEMENT,
-  STOCK_LOADER_ENTITLEMENTS,
+  STOCK_LOADER_ENTITLEMENTS
+} from '../../drm/runnerEntitlements'
+import {
   LOADER_REL,
   WINELOADER_REL,
   sha256File
-} from '../../drm/runnerClone'
+} from '../../drm/runnerCrossover'
 import {
   detectCrossoverForOverlay,
   ensureOverlayRunnerClone

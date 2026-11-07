@@ -1,7 +1,7 @@
 // Depot plan model: flag constants, plan/option interfaces and steam-user client types (extracted from ../depot.ts, 62-09).
 
 import type SteamUserLib from 'steam-user'
-import { type AuthSessionReason } from '../user'
+import { type AuthSessionReason } from '../userTypes'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
 export const NUMERIC_ID = /^\d+$/

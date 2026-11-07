@@ -5,7 +5,6 @@ import { isMac, isLinux } from 'backend/constants/environment'
 import { getSteamLibraries } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { library } from '../state'
-import SteamGame from '../games'
 import { isNativeInstallInFlight } from '../gameSessionState'
 import {
   buildDepotPlan,
@@ -30,7 +29,7 @@ import {
   listSteamRestartHolds
 } from '../steamRestartHold'
 import { activePolls, MAX_TICKS } from './pollState'
-import { readAcfState, scanDownloadingAppIds } from './acfState'
+import { readAcfState } from './acfState'
 import {
   pendingSteamHoldRearm,
   setReconcileRanDuringRearm

@@ -9,7 +9,7 @@ import { sendFrontendMessage } from '../../../ipc'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { steamLibraryStore } from '../stores'
-import { listReadyBridgeBottleNames } from '../bottle'
+import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { library } from '../state'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
@@ -149,8 +149,10 @@ jest.mock('../stores', () => ({
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
   getSteamBottleSettings: jest.fn(),
+  isSteamBottleProvisioned: jest.fn()
+}))
+jest.mock('../bridgeBottle', () => ({
   getBridgeBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
   resolveBridgeBottleName: jest.fn()
 }))

@@ -16,7 +16,7 @@ import type {
   BridgeInviteResult,
   BridgeListFriendsResult
 } from 'common/types/steam'
-import { getBridgeHelperConnection } from './helperProcess'
+import { getBridgeHelperConnection } from './helperRegistry'
 import {
   CONTROL_ORDINAL,
   CONTROL_SLOT,

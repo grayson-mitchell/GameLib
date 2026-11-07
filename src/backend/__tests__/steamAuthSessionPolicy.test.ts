@@ -46,10 +46,20 @@ const MIN_FILES_SCANNED = 420
 
 const S = 'src/backend/storeManagers/steam/'
 const USER = `${S}user.ts`
+// 65-12: the sign-in flows were lifted out of user.ts into free functions; they
+// are the only other caller of acquireAuthenticatedWithToken (D-15).
+const USER_SIGN_IN = `${S}userSignIn.ts`
+const USER_SIGN_IN_STATE = `${S}userSignInState.ts`
+// 65-12: redeemKey was lifted out of user.ts; it leases through acquireAuthenticated.
+const USER_REDEEM = `${S}userRedeem.ts`
+const ACQUIRE_WITH_TOKEN_ALLOW = [USER, USER_SIGN_IN]
 const ANON = `${S}anonymousClient.ts`
 const GAMES = `${S}games.ts`
 // 62-06: the install cluster (acquireAuthenticated, allowLogon: true) was lifted out of games.ts.
 const INSTALL = `${S}gameInstall.ts`
+// 65-11: gameInstall was split; the depot engine holds an acquireAuthenticated( call.
+const INSTALL_DEPOT = `${S}gameInstallDepot.ts`
+const INSTALL_BRIDGE = `${S}gameInstallBridge.ts`
 
 // Every game*.ts module (the 62 split lifted games.ts into these), discovered
 // from the directory so a module dropping out of the walk fails must-scan.
@@ -59,15 +69,18 @@ const GAME_MODULES = readdirSync(join(REPO_ROOT, S))
 
 const ACQUIRE_AUTH_ALLOW = [
   USER,
-  `${S}library.ts`,
+  USER_REDEEM,
+  `${S}library/refresh.ts`,
   `${S}depot/plan.ts`,
   `${S}depot/outcome.ts`,
   `${S}depot/sharedRedist.ts`,
-  INSTALL
+  INSTALL,
+  INSTALL_DEPOT,
+  INSTALL_BRIDGE
 ]
 const ACQUIRE_OPEN_ALLOW = [
   USER,
-  `${S}library.ts`,
+  `${S}library/refresh.ts`,
   `${S}depot/sharedRedist.ts`,
   `${S}installLocation.ts`,
   `${S}bridge/launchTarget.ts`
@@ -159,6 +172,8 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
   it('must-scan: every allow-listed and launch-path file is in the scanned set', () => {
     const must = new Set([
       USER,
+      USER_SIGN_IN,
+      USER_SIGN_IN_STATE,
       ANON,
       GAMES,
       ...GAME_MODULES,
@@ -209,6 +224,14 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
     expect(offendersOutside(re, ACQUIRE_OPEN_ALLOW, 'F')).toEqual([])
   })
 
+  it('Rule L: acquireAuthenticatedWithToken( appears only in user.ts and userSignIn.ts', () => {
+    const re = /\bacquireAuthenticatedWithToken\(/
+    for (const f of ACQUIRE_WITH_TOKEN_ALLOW) {
+      expect({ f, n: countIn(f, re) > 0 }).toEqual({ f, n: true })
+    }
+    expect(offendersOutside(re, ACQUIRE_WITH_TOKEN_ALLOW, 'L')).toEqual([])
+  })
+
   it('Rule G: launch-path files call neither acquireAuthenticated( nor ensureConnected(', () => {
     const re = /\b(?:acquireAuthenticated|ensureConnected)\(/
     const offenders = LAUNCH_PATH.filter((f) => countIn(f, re) > 0).map(
@@ -235,9 +258,9 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
     expect(offenders).toEqual([])
   })
 
-  it('Rule I: allowLogon: true occurs exactly once, in gameInstall.ts', () => {
+  it('Rule I: allowLogon: true occurs exactly once, in gameInstallBridge.ts', () => {
     const hits = filesMatching(/allowLogon\s*:\s*true/)
-    expect([...hits.entries()]).toEqual([[INSTALL, 1]])
+    expect([...hits.entries()]).toEqual([[INSTALL_BRIDGE, 1]])
   })
 
   it('Rule J: getExtraInfo in games.ts calls nothing on SteamUser', () => {

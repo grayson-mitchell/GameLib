@@ -204,6 +204,13 @@ export type ExecResult = {
    * (quick 261107-td5).
    */
   refused?: boolean
+  /**
+   * Set by an uninstall whose delete errored and may be partial.
+   * uninstallGameCallback keeps settings/prefix/fix file and clears the
+   * status so the user can retry (quick 261108-anw). Distinct from `refused`
+   * (nothing changed).
+   */
+  failed?: boolean
 }
 
 export interface ExtraInfo {

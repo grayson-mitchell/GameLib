@@ -27,458 +27,57 @@
  * and drive_c path mapping.
  */
 import {
-  closeSync,
   constants,
   copyFileSync,
   lstatSync,
   mkdirSync,
-  openSync,
   readFileSync,
-  readSync,
   realpathSync,
   renameSync,
   unlinkSync
 } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { basename, dirname, join, relative, resolve, sep } from 'node:path'
+import { join, resolve } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { runWineCommand } from 'backend/launcher'
-import { isPackagedSidecar } from 'backend/sidecar/isPackagedSidecar'
-import type { GameSettings } from 'common/types'
-import { endPerGameBridgeBottleSession } from '../../bottle'
+import { endPerGameBridgeBottleSession } from '../../bridgeBottleLifecycle'
 import {
   getBottleDir,
   sanitizeBottleName
 } from 'backend/engine/bottlePrimitives'
-import {
-  findRuntimeLoadedSteamApiDlls,
-  findUnrealLayout,
-  isContainedWithin,
-  resolveWalkRoot
-} from '../bridgeScan'
-import { isGameLibShimBytes, probeOriginalBackup } from '../shimGenerate'
+import { isContainedWithin } from '../bridgeScan'
 import { runBoundedListing } from './boundedListing'
-import { restoreBridgeSteamApiOriginals } from '../originalRestore'
 import { openStageWineLog } from './stageWineLog'
-import { BRIDGE_CONFIG_FILENAME } from '../bridgeConfig'
 import { drmStepError, type DrmStepResult } from './steamclientLayerMode'
-
-export const DRM_STEAM_DIR_SEGMENTS = ['Program Files (x86)', 'Steam'] as const
-export const DRM_STEAM_DIR_WIN = 'C:\\Program Files (x86)\\Steam'
-export const DRM_STEAMCLIENT64_WIN = DRM_STEAM_DIR_WIN + '\\steamclient64.dll'
-export const DRM_HELPER_WIN = DRM_STEAM_DIR_WIN + '\\steam.exe'
-/** Genuine Valve client files (D-06), from the 56-07 cache. */
-export const DRM_VALVE_FILES = [
-  'steamclient64.dll',
-  'tier0_s64.dll',
-  'vstdlib_s64.dll'
-] as const
-/** Files from the 56-10 steamclient-layer component. */
-export const DRM_COMPONENT_FILES = ['lsteamclient.dll', 'steam.exe'] as const
-export const DRM_REG_ADD_TIMEOUT_MS = 15_000
-/**
- * Extra attempts after a timed-out reg add. A fresh bottle's first wine session
- * can wedge in winedevice (winebus HID spin); the next fresh session passes.
- */
-export const DRM_REG_ADD_RETRIES = 1
-
-const ACTIVE_PROCESS_KEY = 'HKCU\\Software\\Valve\\Steam\\ActiveProcess'
-const STEAM_KEY = 'HKCU\\Software\\Valve\\Steam'
-const ORIGINAL_SUFFIX = '.gamelib-orig'
-const MAX_FORWARDER_BYTES = 4 * 1024 * 1024
-const MAX_USER_REG_BYTES = 64 * 1024 * 1024
-
-/**
- * The Phase 52 forwarder's version-resource FileDescription, stored UTF-16LE.
- * A steamclient64.dll without it is not ours and is never deleted.
- */
-const PHASE52_FORWARDER_MARKER_UTF16 = Buffer.from(
-  'GameLib steamclient forwarder',
-  'utf16le'
-)
-
-/**
- * Four argv arrays (no shell). Throws only inside this pure builder, on a
- * value that could not be a plain Windows drive path.
- */
-export function buildDrmRegistryCommands(): string[][] {
-  const add = (key: string, name: string, data: string): string[] => {
-    if (
-      (data !== 'Public' && !/^[A-Za-z]:\\/.test(data)) ||
-      /["\r\n\0]/.test(data)
-    ) {
-      throw new Error('buildDrmRegistryCommands: invalid registry data')
-    }
-    return ['reg', 'add', key, '/v', name, '/t', 'REG_SZ', '/d', data, '/f']
-  }
-  return [
-    add(ACTIVE_PROCESS_KEY, 'SteamClientDll64', DRM_STEAMCLIENT64_WIN),
-    add(ACTIVE_PROCESS_KEY, 'Universe', 'Public'),
-    add(ACTIVE_PROCESS_KEY, 'SteamPath', DRM_STEAM_DIR_WIN),
-    add(STEAM_KEY, 'SteamPath', DRM_STEAM_DIR_WIN)
-  ]
-}
-
-const regEscape = (s: string): string => s.replace(/\\/g, '\\\\')
-
-/**
- * The helper steam.exe / lsteamclient rewrite SteamPath with a trailing
- * backslash after staging. That is the same directory, so it must not count as
- * "not staged": a needless `reg add` starts a fresh wine session whose
- * wineboot --init can hang on a crashing winebus (debug
- * drm-second-launch-bottle-stage).
- */
-const sameSteamPath = (v: string | undefined): boolean =>
-  v !== undefined &&
-  v.replace(/(\\\\)+$/, '').toLowerCase() ===
-    regEscape(DRM_STEAM_DIR_WIN).toLowerCase()
-
-/**
- * Names (`<section>:<value>`) of the four values buildDrmRegistryCommands()
- * writes that are missing or different in a wine user.reg body; [] when fully
- * staged. Pure; never throws (an unreadable body reports `user.reg:unparseable`).
- */
-export function drmRegistryMismatches(text: string): string[] {
-  try {
-    if (typeof text !== 'string' || text.length > MAX_USER_REG_BYTES) {
-      return ['user.reg:unparseable']
-    }
-    const sections = new Map<string, Map<string, string>>()
-    let current: Map<string, string> | null = null
-    for (const line of text.split('\n')) {
-      const header = /^\[(.+?)\](\s+\d+)?\s*$/.exec(line)
-      const name = header?.[1]
-      if (header && name !== undefined) {
-        current = sections.get(name) ?? new Map<string, string>()
-        sections.set(name, current)
-        continue
-      }
-      const value = /^"([^"]+)"="(.*)"\s*$/.exec(line)
-      const valueKey = value?.[1]
-      const valueText = value?.[2]
-      if (valueKey !== undefined && valueText !== undefined && current) {
-        current.set(valueKey, valueText)
-      }
-    }
-    const activeName = 'Software\\\\Valve\\\\Steam\\\\ActiveProcess'
-    const steamName = 'Software\\\\Valve\\\\Steam'
-    const active = sections.get(activeName)
-    const steam = sections.get(steamName)
-    const out: string[] = []
-    if (active?.get('SteamClientDll64') !== regEscape(DRM_STEAMCLIENT64_WIN)) {
-      out.push(`${activeName}:SteamClientDll64`)
-    }
-    if (active?.get('Universe') !== 'Public') {
-      out.push(`${activeName}:Universe`)
-    }
-    if (!sameSteamPath(active?.get('SteamPath'))) {
-      out.push(`${activeName}:SteamPath`)
-    }
-    if (!sameSteamPath(steam?.get('SteamPath'))) {
-      out.push(`${steamName}:SteamPath`)
-    }
-    return out
-  } catch {
-    return ['user.reg:unparseable']
-  }
-}
-
-/**
- * True when a wine user.reg body already holds all four values written by
- * buildDrmRegistryCommands(). Pure; never throws.
- */
-export function drmRegistryStagedInUserReg(text: string): boolean {
-  return drmRegistryMismatches(text).length === 0
-}
-
-/** True when the bytes carry the Phase 52 forwarder version string. */
-export function isPhase52ForwarderBytes(buf: Buffer): boolean {
-  return buf.includes(PHASE52_FORWARDER_MARKER_UTF16)
-}
-
-export type StageDrmBottleInput = {
-  appId: string
-  bottleName: string
-  bottleSettings: GameSettings
-  exePath: string
-  installRoot: string
-  installdir: string
-  valveClientDir: string
-  componentDir: string
-  /** Gap 11: extra exe dirs (UE Shipping exe) whose TCP artifacts are cleaned. */
-  extraExeDirs?: string[]
-  /** Plan 56-32: trace root for the stage session's wine log. */
-  stageLogDir?: string
-  signal?: AbortSignal
-}
-
-export type StageDrmBottleDeps = {
-  getBottleDir?: typeof getBottleDir
-  findDlls?: typeof findRuntimeLoadedSteamApiDlls
-  findUnreal?: typeof findUnrealLayout
-  restoreOriginals?: typeof restoreBridgeSteamApiOriginals
-  runReg?: (
-    commandParts: string[]
-  ) => Promise<{ code?: number; stderr?: string }>
-  regTimeoutMs?: number
-  /** Live wine processes of the bottle, logged on a reg add timeout. */
-  listBottleProcesses?: (bottleDir: string) => Promise<string[]>
-  /**
-   * Ends the stage's own wine session after a reg add timeout, so the retry
-   * starts a fresh one (debug drm-stage-winebus-hid-spin).
-   */
-  endStageSession?: (args: {
-    appId: string
-    bottleName: string
-    bottleDir: string
-  }) => Promise<void>
-  /** Plan 56-32: opens the stage wine log sink (injectable for tests). */
-  openStageLog?: typeof openStageWineLog
-  /** Plan 56-32: dev-only fault injection is ignored when this is true. */
-  isPackaged?: () => boolean
-  env?: NodeJS.ProcessEnv
-}
-
-export type StageDrmBottleOk = {
-  steamDirHost: string
-  steamDirWin: string
-  helperHostPath: string
-  helperWinPath: string
-  steamClient64WinPath: string
-  restored: string[]
-  removed: string[]
-  foreignSteamClientLeft: string[]
-  staged: string[]
-  registryWritten: boolean
-}
-
-/** Maps a host path inside `<bottle>/drive_c` to its `C:\` path, else null. */
-function bottleHostToWinPath(
-  bottleDir: string,
-  absPath: string
-): string | null {
-  const driveC = join(resolve(bottleDir), 'drive_c')
-  const target = resolve(absPath)
-  if (!isContainedWithin(driveC, target)) return null
-  return 'C:\\' + relative(driveC, target).split(sep).join('\\')
-}
-
-function readHeadCapped(path: string, maxBytes: number): Buffer | null {
-  let fd: number | undefined
-  try {
-    fd = openSync(path, 'r')
-    const buf = Buffer.alloc(maxBytes)
-    const n = readSync(fd, buf, 0, maxBytes, 0)
-    return buf.subarray(0, n)
-  } catch {
-    return null
-  } finally {
-    if (fd !== undefined) {
-      try {
-        closeSync(fd)
-      } catch {
-        // already closed
-      }
-    }
-  }
-}
-
-type WalkCtx = {
-  appId: string
-  bottleDir: string
-  exePath: string
-  installRoot: string
-  installdir: string
-  signal?: AbortSignal
-  deps: StageDrmBottleDeps
-}
-
-const relOf = (ctx: WalkCtx, p: string): string =>
-  isContainedWithin(ctx.installRoot, p)
-    ? relative(ctx.installRoot, p)
-    : relative(ctx.bottleDir, p)
-
-async function walkRuntimeDlls(ctx: WalkCtx) {
-  const findDlls = ctx.deps.findDlls ?? findRuntimeLoadedSteamApiDlls
-  const findUnreal = ctx.deps.findUnreal ?? findUnrealLayout
-  const root = resolveWalkRoot(ctx.bottleDir, ctx.exePath, ctx.installRoot)
-  const unreal = await findUnreal(ctx.bottleDir, dirname(ctx.exePath))
-  return findDlls(root, unreal?.steamworksDir ? [unreal.steamworksDir] : [], {
-    isShimBytes: isGameLibShimBytes
-  })
-}
-
-/**
- * Puts the game's original steam_api(64).dll back over every GameLib shim.
- * Phase A changes nothing and proves every shim has a restorable original;
- * Phase B renames the backups into place.
- * @internal exported for tests
- */
-export async function restoreDrmOriginals(
-  ctx: WalkCtx
-): Promise<{ ok: true; restored: string[] } | { ok: false; cause: string }> {
-  try {
-    const shims = (await walkRuntimeDlls(ctx)).filter((d) => d.isGameLibShim)
-
-    for (const d of shims) {
-      const st = lstatSync(d.path)
-      if (st.isSymbolicLink() || !st.isFile()) {
-        return {
-          ok: false,
-          cause: `live steam_api is not a regular file: ${relOf(ctx, d.path)}`
-        }
-      }
-    }
-
-    let states = shims.map((d) => probeOriginalBackup(ctx.bottleDir, d.path))
-    if (states.includes('no-backup')) {
-      await (ctx.deps.restoreOriginals ?? restoreBridgeSteamApiOriginals)({
-        appId: ctx.appId,
-        bottleDir: ctx.bottleDir,
-        installRoot: ctx.installRoot,
-        installdir: ctx.installdir,
-        signal: ctx.signal
-      })
-      states = shims.map((d) => probeOriginalBackup(ctx.bottleDir, d.path))
-    }
-    const bad = states.findIndex((s) => s !== 'restorable')
-    if (bad !== -1) {
-      return {
-        ok: false,
-        cause: `no restorable original for ${relOf(ctx, shims[bad]?.path ?? '')}`
-      }
-    }
-    // Backups must be plain files too (probe covers symlinks; belt and braces).
-    for (const d of shims) {
-      const st = lstatSync(d.path + ORIGINAL_SUFFIX)
-      if (st.isSymbolicLink() || !st.isFile()) {
-        return {
-          ok: false,
-          cause: `no restorable original for ${relOf(ctx, d.path)}`
-        }
-      }
-    }
-
-    const restored: string[] = []
-    try {
-      for (const d of shims) {
-        if (!isGameLibShimBytes(readFileSync(d.path))) {
-          return {
-            ok: false,
-            cause: `live steam_api changed during swap: ${relOf(ctx, d.path)}`
-          }
-        }
-        if (probeOriginalBackup(ctx.bottleDir, d.path) !== 'restorable') {
-          return {
-            ok: false,
-            cause: `no restorable original for ${relOf(ctx, d.path)}`
-          }
-        }
-        renameSync(d.path + ORIGINAL_SUFFIX, d.path)
-        restored.push(relOf(ctx, d.path))
-        logInfo(
-          `stageDrmBottle: appId ${ctx.appId} restored original ${relOf(ctx, d.path)}`,
-          LogPrefix.Steam
-        )
-      }
-    } catch (err) {
-      return {
-        ok: false,
-        cause: `shim swap failed for ${restored.length}: ${String(err)}`
-      }
-    }
-    return { ok: true, restored }
-  } catch (err) {
-    return { ok: false, cause: `shim swap failed: ${String(err)}` }
-  }
-}
-
-/**
- * Removes the TCP bridge's `gamelib_bridge.cfg` files and any Phase 52
- * forwarder steamclient64.dll. A steamclient64.dll without the forwarder
- * marker is left in place and reported.
- * @internal exported for tests
- */
-export function removeTcpBridgeArtifacts(
-  ctx: Pick<WalkCtx, 'appId' | 'bottleDir' | 'exePath' | 'installRoot'>,
-  runtimeDllPaths: string[],
-  extraExeDirs: string[] = []
-):
-  | { ok: true; removed: string[]; foreignSteamClientLeft: string[] }
-  | { ok: false; cause: string } {
-  const wctx = ctx as WalkCtx
-  const exeDir = dirname(ctx.exePath)
-  const removed: string[] = []
-  const foreign: string[] = []
-  try {
-    const dllDirs = runtimeDllPaths.map((p) => dirname(p))
-    const cfgDirs = new Set(
-      [
-        exeDir,
-        join(exeDir, 'compat'),
-        join(exeDir, 'x64'),
-        ...extraExeDirs,
-        ...dllDirs
-      ].map((d) => resolve(d))
-    )
-    for (const dir of cfgDirs) {
-      const cfg = join(dir, BRIDGE_CONFIG_FILENAME)
-      if (!isContainedWithin(ctx.bottleDir, cfg)) continue
-      let st
-      try {
-        st = lstatSync(cfg)
-      } catch {
-        continue
-      }
-      if (!st.isFile() && !st.isSymbolicLink()) {
-        return {
-          ok: false,
-          cause: `${BRIDGE_CONFIG_FILENAME} is not a file: ${relOf(wctx, cfg)}`
-        }
-      }
-      unlinkSync(cfg)
-      removed.push(relOf(wctx, cfg))
-    }
-
-    const fwdDirs = new Set(
-      [
-        exeDir,
-        ...extraExeDirs,
-        ...runtimeDllPaths
-          .filter((p) => basename(p).toLowerCase() === 'steam_api64.dll')
-          .map((p) => dirname(p))
-      ].map((d) => resolve(d))
-    )
-    for (const dir of fwdDirs) {
-      const dll = join(dir, 'steamclient64.dll')
-      if (!isContainedWithin(ctx.bottleDir, dll)) continue
-      let st
-      try {
-        st = lstatSync(dll)
-      } catch {
-        continue
-      }
-      if (st.isSymbolicLink() || !st.isFile()) continue
-      const head =
-        st.size <= MAX_FORWARDER_BYTES
-          ? readHeadCapped(dll, MAX_FORWARDER_BYTES)
-          : null
-      if (head && isPhase52ForwarderBytes(head)) {
-        unlinkSync(dll)
-        removed.push(relOf(wctx, dll))
-      } else {
-        foreign.push(relOf(wctx, dll))
-        logWarning(
-          `stageDrmBottle: appId ${ctx.appId} left foreign steamclient64.dll in place: ${relOf(wctx, dll)}`,
-          LogPrefix.Steam
-        )
-      }
-    }
-    return { ok: true, removed, foreignSteamClientLeft: foreign }
-  } catch (err) {
-    return { ok: false, cause: `artifact cleanup failed: ${String(err)}` }
-  }
-}
+import {
+  buildDrmRegistryCommands,
+  DRM_COMPONENT_FILES,
+  DRM_HELPER_WIN,
+  DRM_REG_ADD_RETRIES,
+  DRM_REG_ADD_TIMEOUT_MS,
+  DRM_STEAM_DIR_SEGMENTS,
+  DRM_STEAM_DIR_WIN,
+  DRM_STEAMCLIENT64_WIN,
+  DRM_VALVE_FILES,
+  drmRegistryMismatches,
+  drmRegistryStagedInUserReg,
+  forcedFirstTimeoutMs,
+  MAX_USER_REG_BYTES,
+  runRegArgv
+} from './drmRegistry'
+import {
+  bottleHostToWinPath,
+  readHeadCapped,
+  walkRuntimeDlls,
+  removeTcpBridgeArtifacts,
+  restoreDrmOriginals,
+  type WalkCtx
+} from './drmRestore'
+import type {
+  StageDrmBottleDeps,
+  StageDrmBottleInput,
+  StageDrmBottleOk
+} from './stageDrmTypes'
 
 const MAX_SOURCE_BYTES = 256 * 1024 * 1024
 const STAGE_TMP_SUFFIX = '.gamelib-stage-tmp'
@@ -667,50 +266,6 @@ async function defaultEndStageSession(args: {
   } catch {
     // best effort
   }
-}
-
-/**
- * Dev-only fault injection (T-56-32-01): GAMELIB_DRM_STAGE_FIRST_TIMEOUT_MS
- * shortens attempt 0 so the live gate can force the retry path. Ignored by a
- * packaged sidecar (isPackagedSidecar fails closed) and by anything but 3-5
- * digits.
- */
-function forcedFirstTimeoutMs(deps: StageDrmBottleDeps): number | null {
-  const raw = (deps.env ?? process.env).GAMELIB_DRM_STAGE_FIRST_TIMEOUT_MS
-  if (raw === undefined || !/^[0-9]{3,5}$/.test(raw)) return null
-  if ((deps.isPackaged ?? isPackagedSidecar)()) return null
-  return Number(raw)
-}
-
-async function runRegArgv(
-  commands: string[][],
-  run: NonNullable<StageDrmBottleDeps['runReg']>,
-  timeoutMs: number
-): Promise<string | null> {
-  for (const commandParts of commands) {
-    const valueName = commandParts[4]
-    // The timer is unref'd (sidecar exit contract, half 1) and cleared once the
-    // race settles.
-    let timer: ReturnType<typeof setTimeout> | undefined
-    const timeout = new Promise<'timeout'>((resolveTimeout) => {
-      timer = setTimeout(() => resolveTimeout('timeout'), timeoutMs)
-      timer.unref?.()
-    })
-    try {
-      const res = await Promise.race([run(commandParts), timeout])
-      if (res === 'timeout') {
-        return `reg add ${valueName} timed out after ${timeoutMs} ms`
-      }
-      if (res.code !== 0) {
-        return `reg add ${valueName} failed code=${String(res.code)} stderr=${String(res.stderr ?? '').slice(0, 120)}`
-      }
-    } catch (err) {
-      return `reg add ${valueName} failed: ${String(err)}`
-    } finally {
-      if (timer) clearTimeout(timer)
-    }
-  }
-  return null
 }
 
 /**

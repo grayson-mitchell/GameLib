@@ -34,7 +34,11 @@ import { sendFrontendMessage } from '../../../ipc'
 import * as shortcutsModule from '../../../shortcuts/shortcuts/shortcuts'
 import { steamMetadataStore, steamLibraryStore } from '../stores'
 import { TITLE_AUTHORITATIVE_KEYS } from '../titleSettings'
-import SteamGame, { getBridgeRouteVerdict } from '../games'
+import SteamGame from '../games'
+import * as gameMetadata from '../gameMetadata'
+import * as gameInstallDepot from '../gameInstallDepot'
+import * as gameInstallBridgeModule from '../gameInstallBridge'
+import { checkBottleEligibility } from '../gameEligibility'
 import {
   buildDrmLaunchEnvironment,
   drmBottleWinPath,
@@ -86,21 +90,27 @@ import * as bridgeVerdictModule from '../bridge/bridgeVerdict'
 import * as gamesModule from '../gameSessionState'
 import {
   isBottleReady,
-  tellBottledSteamToLaunch,
-  tellBottledSteamToUninstall,
   getSteamBottleSettings,
-  getBottleSteamappsDir,
-  isBridgeBottleReady,
-  getBridgeBottleSettings,
+  getBottleSteamappsDir
+} from '../bottle'
+import {
   provisionBridgeBottle,
   discardNewBridgeBottle,
   removePerGameBridgeBottle,
   stopPerGameBridgeBottle,
-  getDrmBridgeRunner,
   killBridgeBottleWineServer
-} from '../bottle'
+} from '../bridgeBottleLifecycle'
+import {
+  isBridgeBottleReady,
+  getBridgeBottleSettings,
+  getDrmBridgeRunner
+} from '../bridgeBottle'
+import {
+  tellBottledSteamToLaunch,
+  tellBottledSteamToUninstall
+} from '../bottledSteam'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
-import type { DrmLaunchForm } from '../bottle'
+import type { DrmLaunchForm } from '../bridgeBottle'
 import type {
   DrmDllPathChannel,
   DrmDllOverridesChannel
@@ -125,17 +135,16 @@ import {
 import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { knownFixSaysCeg } from '../drmKnownFix'
-import { placeShimForGame, detectDrmWrapper } from '../bridge/shimGenerate'
+import { placeShimForGame } from '../bridge/shimGenerate'
+import { detectDrmWrapper } from '../bridge/shimDrmWrapper'
 import { detectSteamDrmInPe } from '../bridge/peScan'
 import { restoreBridgeSteamApiOriginals } from '../bridge/originalRestore'
 import {
   resolveBridgeLaunchExe,
   resolveBridgeLaunchWorkingDir
 } from '../bridge/launchTarget'
-import {
-  ensureBridgeHelperReady,
-  stopBridgeHelper
-} from '../bridge/helperProcess'
+import { ensureBridgeHelperReady } from '../bridge/helperProcess'
+import { stopBridgeHelper } from '../bridge/helperRegistry'
 import { writeBridgeConfig } from '../bridge/bridgeConfig'
 import {
   startBottleProcessMonitor,
@@ -205,6 +214,33 @@ import {
 } from 'node:fs'
 import { join as realJoin } from 'node:path'
 import { tmpdir } from 'node:os'
+
+/**
+ * quick 261108-anw: make the NEXT node:fs rmSync throw EACCES (gameUninstall
+ * reaches rmSync via a CJS property access, so a spy intercepts it). The
+ * caller must mockRestore() before any real-fs cleanup.
+ */
+function failNextRmSync(): jest.SpyInstance {
+  return jest.spyOn(require('node:fs'), 'rmSync').mockImplementationOnce(() => {
+    throw Object.assign(new Error('EACCES'), { code: 'EACCES' })
+  })
+}
+
+/** The single uninstall-failed notice pushed, for the given title. */
+function expectOneFailedNotice(title: string): void {
+  const calls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    (c) => c[0] === 'steamRequestNotice'
+  )
+  expect(calls).toHaveLength(1)
+  expect(calls[0][1]).toEqual(
+    expect.objectContaining({
+      appId: APP_ID,
+      title,
+      kind: 'uninstall-failed',
+      seq: expect.any(Number)
+    })
+  )
+}
 import { reportDetectedFix } from 'backend/knownFixReport'
 import {
   createAbortController,
@@ -387,15 +423,6 @@ jest.mock('backend/engine/bottlePrimitives', () => ({
       : null
 }))
 jest.mock('../bottle', () => {
-  // Phase 24 Plan 08 (R4): dedicated bridge bottle readiness/provisioning
-  // surface — installBridgeGame()'s BLOCKER-1 inline provisioning call.
-  // Declared as a local const (not inline in the returned object) so
-  // findBridgeInstallBottle below can close over the SAME jest.fn() object
-  // identity -- resetMocks only clears a mock's calls/implementation, it
-  // never replaces the object reference, so every existing test that
-  // already drives isBridgeBottleReady for its own purposes also drives
-  // findBridgeInstallBottle's real-shaped reimplementation for free.
-  const isBridgeBottleReady = jest.fn()
   // quick 261024-cjq: plain function over a jest.fn() (survives resetMocks).
   // After reset crossoverInstalled() is undefined, which reads as installed.
   const crossoverInstalled = jest.fn()
@@ -407,26 +434,39 @@ jest.mock('../bottle', () => {
     CROSSOVER_CREATE_TIMEOUT: 'crossover-create-timeout',
     CROSSOVER_CREATE_FAILED: 'crossover-create-failed',
     PROVISION_ABORTED: 'provision-aborted',
-    discardNewBridgeBottle: jest.fn(),
     isBottleReady: jest.fn(),
-    tellBottledSteamToLaunch: jest.fn(),
-    tellBottledSteamToUninstall: jest.fn(),
     getSteamBottleSettings: jest.fn(),
     // Phase 21 Plan 11 (D-15/SNI-08): bottle depot-download write target.
-    getBottleSteamappsDir: jest.fn(),
+    getBottleSteamappsDir: jest.fn()
+  }
+})
+jest.mock('../bridgeBottleLifecycle', () => ({
+  discardNewBridgeBottle: jest.fn(),
+  endPerGameBridgeBottleSessionWith: jest.fn(),
+  killBridgeBottleWineServer: jest.fn(),
+  provisionBridgeBottle: jest.fn(),
+  // quick/261016-u1w (D-D): per-game bridge bottle removal on uninstall.
+  removePerGameBridgeBottle: jest.fn(),
+  // quick 261024-urq: Stop-button counterpart (per-game wineserver -k).
+  stopPerGameBridgeBottle: jest.fn()
+}))
+jest.mock('../bridgeBottle', () => {
+  // Phase 24 Plan 08 (R4): dedicated bridge bottle readiness/provisioning
+  // surface — installBridgeGame()'s BLOCKER-1 inline provisioning call.
+  // Declared as a local const (not inline in the returned object) so
+  // findBridgeInstallBottle below can close over the SAME jest.fn() object
+  // identity -- resetMocks only clears a mock's calls/implementation, it
+  // never replaces the object reference, so every existing test that
+  // already drives isBridgeBottleReady for its own purposes also drives
+  // findBridgeInstallBottle's real-shaped reimplementation for free.
+  const isBridgeBottleReady = jest.fn()
+  return {
     isBridgeBottleReady,
     getBridgeBottleSettings: jest.fn(),
     getDrmBridgeRunner: jest.fn(),
     // Phase 60: overlay runner registry surface (plan 07).
     clearDrmBridgeRunner: jest.fn(),
     setOverlayBridgeRunner: jest.fn(),
-    endPerGameBridgeBottleSessionWith: jest.fn(),
-    killBridgeBottleWineServer: jest.fn(),
-    provisionBridgeBottle: jest.fn(),
-    // quick/261016-u1w (D-D): per-game bridge bottle removal on uninstall.
-    removePerGameBridgeBottle: jest.fn(),
-    // quick 261024-urq: Stop-button counterpart (per-game wineserver -k).
-    stopPerGameBridgeBottle: jest.fn(),
     // quick/261016-u1w (D-A): plain arrow function, NOT jest.fn() -- resetMocks
     // wipes a jest.fn()'s implementation before every test, but games.ts calls
     // this directly as a pure, deterministic builder, so the factory gives it
@@ -457,6 +497,10 @@ jest.mock('../bottle', () => {
     }
   }
 })
+jest.mock('../bottledSteam', () => ({
+  tellBottledSteamToLaunch: jest.fn(),
+  tellBottledSteamToUninstall: jest.fn()
+}))
 
 // ── bridge/allowlist.ts mock (24-03) — controls isBridgeEligible()'s
 // bridgeAllowlist.has(appId) lookup without pulling in the real bundled
@@ -488,7 +532,9 @@ jest.mock('../drmKnownFix', () => ({ knownFixSaysCeg: jest.fn() }))
 // ── bridge/shimGenerate.ts mock (24-05) — installBridgeGame()'s post-download
 // shim-placement hook.
 jest.mock('../bridge/shimGenerate', () => ({
-  placeShimForGame: jest.fn(),
+  placeShimForGame: jest.fn()
+}))
+jest.mock('../bridge/shimDrmWrapper', () => ({
   // Phase 56 (56-12): undefined under resetMocks, which keeps every existing
   // test on the TCP path.
   detectDrmWrapper: jest.fn()
@@ -504,7 +550,7 @@ jest.mock('../bridge/drm/drmScanExe', () => {
     detectLaunchDrmWrapper: async (_bottle: string, exe: string) => {
       if (override.fn) return override.fn(exe)
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const shim = require('../bridge/shimGenerate')
+      const shim = require('../bridge/shimDrmWrapper')
       return { drmWrapper: await shim.detectDrmWrapper(exe), drmExe: exe }
     }
   }
@@ -634,7 +680,9 @@ jest.mock('../bridge/launchTarget', () => ({
 // ensureBridgeHelperReady() gate + stopBridgeHelper() teardown hook, both
 // consumed by launch()'s bridge branch.
 jest.mock('../bridge/helperProcess', () => ({
-  ensureBridgeHelperReady: jest.fn(),
+  ensureBridgeHelperReady: jest.fn()
+}))
+jest.mock('../bridge/helperRegistry', () => ({
   stopBridgeHelper: jest.fn()
 }))
 
@@ -1085,7 +1133,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     process.on('unhandledRejection', rejectionSpy)
 
     const fetchSpy = jest
-      .spyOn(SteamGame.prototype as any, 'fetchMetadataIfNeeded')
+      .spyOn(gameMetadata, 'fetchMetadataIfNeeded')
       .mockRejectedValue(
         new Error('simulated crash inside fetchMetadataIfNeeded')
       )
@@ -2202,6 +2250,17 @@ const ENGINE_OK = {
     dxvkDir: '/engine/dxvk'
   }
 }
+// Module-export spies outlive their test (the backend jest project sets
+// resetMocks, not restoreMocks), so every one is registered here and restored.
+const trackedSpies: jest.SpyInstance[] = []
+function trackSpy<T extends jest.SpyInstance>(spy: T): T {
+  trackedSpies.push(spy)
+  return spy
+}
+afterEach(() => {
+  for (const spy of trackedSpies.splice(0)) spy.mockRestore()
+})
+
 beforeEach(() => {
   leaseRelease = jest.fn()
   ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
@@ -3890,71 +3949,6 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
   })
 })
 
-// ── getBridgeRouteVerdict() — D-51-09 Task 2's installedIn (LOCATION) wiring ──
-
-describe('getBridgeRouteVerdict() — D-51-09 installedIn (LOCATION, not eligibility)', () => {
-  let envMock: any
-
-  beforeEach(() => {
-    library.clear()
-    pendingFetches.clear()
-    envMock = jest.requireMock('backend/constants/environment')
-    envMock.isMac = true
-    envMock.isWindows = false
-    envMock.isLinux = false
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      platformsCaptured: true,
-      is_mac_native: false
-    })
-    ;(bridgeAllowlist.has as jest.Mock).mockReset().mockReturnValue(false)
-    ;(bridgeAllowlist.knownBadReason as jest.Mock)
-      .mockReset()
-      .mockReturnValue(null)
-    ;(isBridgeBottleReady as jest.Mock).mockReset().mockReturnValue(false)
-    ;(existsSync as jest.Mock).mockReset().mockReturnValue(false)
-  })
-
-  afterEach(() => {
-    envMock.isMac = false
-    envMock.isWindows = false
-    envMock.isLinux = true
-  })
-
-  it('rejects a non-numeric appId as not-eligible with installedIn null, never reaching checkBridgeRoute', async () => {
-    const result = await getBridgeRouteVerdict('not-numeric')
-
-    expect(result.route).toBe('not-eligible')
-    expect(result.installedIn).toBeNull()
-  })
-
-  it("installedIn is 'bridge' when findBridgeInstallBottle locates an existing bridge install, independent of the eligibility route", async () => {
-    // isBridgeBottleReady(true) drives the test-double findBridgeInstallBottle
-    // reimplementation (see the '../bottle' factory mock above) to a non-null
-    // result for ANY appId.
-    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
-
-    const result = await getBridgeRouteVerdict(APP_ID)
-
-    expect(result.installedIn).toBe('bridge')
-  })
-
-  it("installedIn is 'bottle' when no bridge bottle holds this install but the title is installed AND bottle-eligible (existing GameLibSteam install, D-51-09's core distinction)", async () => {
-    library.set(APP_ID, makeEntry({ title: 'Avernum 4', is_installed: true }))
-
-    const result = await getBridgeRouteVerdict(APP_ID)
-
-    expect(result.installedIn).toBe('bottle')
-  })
-
-  it('installedIn stays null when the title is not installed anywhere and no bridge bottle holds it', async () => {
-    library.set(APP_ID, makeEntry({ title: 'Avernum 4', is_installed: false }))
-
-    const result = await getBridgeRouteVerdict(APP_ID)
-
-    expect(result.installedIn).toBeNull()
-  })
-})
-
 // ── SteamGame.stop() — no-op ──────────────────────────────────────────────────
 
 describe('SteamGame.stop() — no-op', () => {
@@ -5257,9 +5251,9 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
     const game = new SteamGame(APP_ID)
-    const installBottleNative = jest
-      .spyOn(game as any, 'installBottleNative')
-      .mockResolvedValue({ status: 'done' } as any)
+    const installBottleNative = trackSpy(
+      jest.spyOn(gameInstallDepot, 'installBottleNative')
+    ).mockResolvedValue({ status: 'done' } as any)
     const result = await game.install({} as any)
 
     expect(installBottleNative).toHaveBeenCalledTimes(1)
@@ -5275,9 +5269,9 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
     const game = new SteamGame(APP_ID)
-    jest
-      .spyOn(game as any, 'installBottleNative')
-      .mockResolvedValue({ status: 'error', error: 'boom' } as any)
+    trackSpy(
+      jest.spyOn(gameInstallDepot, 'installBottleNative')
+    ).mockResolvedValue({ status: 'error', error: 'boom' } as any)
     const result = await game.install({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -8012,24 +8006,25 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
   /** Spies on all three private-method terminals install() can reach, each
    * resolving { status: 'done' } like a real success — so a spec only has
    * to name the ONE terminal it expects, via assertExactlyOneRoute(). */
-  function spyOnAllTerminals(game: SteamGame): {
+  function spyOnAllTerminals(_game: SteamGame): {
     installBridgeGame: jest.SpyInstance
     installBottleNative: jest.SpyInstance
     installNative: jest.SpyInstance
   } {
-    const gameAny = game as any
-    const installBridgeGame = jest
-      .spyOn(gameAny, 'installBridgeGame')
-
-      .mockResolvedValue({ status: 'done' } as any)
-    const installBottleNative = jest
-      .spyOn(gameAny, 'installBottleNative')
-
-      .mockResolvedValue({ status: 'done' } as any)
-    const installNative = jest
-      .spyOn(gameAny, 'installNative')
-
-      .mockResolvedValue({ status: 'done' } as any)
+    const installBridgeGame = trackSpy(
+      jest.spyOn(gameInstallBridgeModule, 'installBridgeGame')
+    ).mockResolvedValue({ status: 'done' } as any)
+    const installBottleNative = trackSpy(
+      jest.spyOn(gameInstallDepot, 'installBottleNative')
+    ).mockResolvedValue({ status: 'done' } as any)
+    const installNative = trackSpy(
+      jest.spyOn(gameInstallDepot, 'installNative')
+    ).mockResolvedValue({ status: 'done' } as any)
+    // Module spies are shared across calls within a test (instance spies were
+    // fresh per game), so start every call from a clean count.
+    installBridgeGame.mockClear()
+    installBottleNative.mockClear()
+    installNative.mockClear()
     return { installBridgeGame, installBottleNative, installNative }
   }
 
@@ -8912,18 +8907,19 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     // — the bridge composition is consulted independently by each caller.
     const uninstallGame = new SteamGame(APP_ID)
 
-    const uninstallBridgeSpy = jest
-      .spyOn(uninstallGame as any, 'uninstallBridgeGame')
-
-      .mockResolvedValue({ stdout: '', stderr: '' } as any)
+    // 65-13: uninstallBridgeGame is now a free function called from inside
+    // gameUninstall.ts, so a method spy can no longer intercept it. Observe
+    // the bridge branch through its first collaborator instead: the bridge
+    // uninstall always removes the per-game bottle through
+    // removePerGameBridgeBottle, which must stay untouched here.
     await uninstallGame.uninstall({} as any)
-    expect(uninstallBridgeSpy).not.toHaveBeenCalled()
+    expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
   })
 
   it('D6: checkBottleEligibility() resolves true for a forced game', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
     const game = new SteamGame(APP_ID)
-    await expect(game.checkBottleEligibility()).resolves.toBe(true)
+    await expect(checkBottleEligibility(game)).resolves.toBe(true)
   })
 
   // ── N1-N3: fail-safe baselines — must pass BEFORE and AFTER Task 2 ───────
@@ -9156,9 +9152,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
       const game = new SteamGame(APP_ID)
-      jest
-        .spyOn(game as any, 'installBottleNative')
-        .mockResolvedValue({ status: 'done' } as any)
+      trackSpy(
+        jest.spyOn(gameInstallDepot, 'installBottleNative')
+      ).mockResolvedValue({ status: 'done' } as any)
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
       const stored = steamMetadataStore.get(APP_ID) as unknown as Record<
@@ -9187,10 +9183,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
       const game = new SteamGame(APP_ID)
 
-      jest
-        .spyOn(game as any, 'installBottleNative')
-
-        .mockResolvedValue({ status: 'done' } as any)
+      trackSpy(
+        jest.spyOn(gameInstallDepot, 'installBottleNative')
+      ).mockResolvedValue({ status: 'done' } as any)
 
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
@@ -9217,10 +9212,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
       const game = new SteamGame(APP_ID)
 
-      jest
-        .spyOn(game as any, 'installBottleNative')
-
-        .mockResolvedValue({ status: 'error', error: 'boom' } as any)
+      trackSpy(
+        jest.spyOn(gameInstallDepot, 'installBottleNative')
+      ).mockResolvedValue({ status: 'error', error: 'boom' } as any)
 
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
@@ -9273,9 +9267,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
       const game = new SteamGame(APP_ID)
-      jest
-        .spyOn(game as any, 'installBottleNative')
-        .mockResolvedValue({ status: 'error', error: 'nope' } as any)
+      trackSpy(
+        jest.spyOn(gameInstallDepot, 'installBottleNative')
+      ).mockResolvedValue({ status: 'error', error: 'nope' } as any)
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
       expect(
@@ -9303,9 +9297,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
       const game = new SteamGame(APP_ID)
-      const installBottleNative = jest
-        .spyOn(game as any, 'installBottleNative')
-        .mockResolvedValue({ status: 'done' } as any)
+      const installBottleNative = trackSpy(
+        jest.spyOn(gameInstallDepot, 'installBottleNative')
+      ).mockResolvedValue({ status: 'done' } as any)
       await game.install(PRODUCTION_ARGS)
 
       expect(installBottleNative).toHaveBeenCalledTimes(1)
@@ -9376,10 +9370,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
       const game = new SteamGame(APP_ID)
 
-      jest
-        .spyOn(game as any, 'installBottleNative')
-
-        .mockResolvedValue({ status: 'done' } as any)
+      trackSpy(
+        jest.spyOn(gameInstallDepot, 'installBottleNative')
+      ).mockResolvedValue({ status: 'done' } as any)
 
       await game.install(PRODUCTION_ARGS)
 
@@ -9402,10 +9395,18 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     it('A-19: the source carries no writer, eraser or store declaration for it', () => {
       // A census, so the deletion cannot be half-undone in one file. The 62
       // split moved code out of games.ts, so it now covers every game*.ts
-      // module plus library.ts and stores.ts.
+      // module plus every library/*.ts module and stores.ts.
+      const libraryModules = jest
+        .requireActual<typeof import('node:fs')>('node:fs')
+        .readdirSync(join(__dirname, '..', 'library'))
+        .filter((f) => f.endsWith('.ts'))
+        .map((f) => `library/${f}`)
+      // anti-vacuity: the census must actually see the library modules
+      expect(libraryModules).toContain('library/index.ts')
+      expect(libraryModules).toContain('library/refresh.ts')
       for (const relative of [
         ...gameModuleFiles(),
-        'library.ts',
+        ...libraryModules,
         'stores.ts'
       ]) {
         const source = stripSourceComments(
@@ -9647,7 +9648,7 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
     mockStatefulMetadataStore({ platformsCaptured: undefined })
     ;(axios.get as jest.Mock).mockResolvedValue(windowsOnlyFixture)
 
-    const result = await new SteamGame(APP_ID).checkBottleEligibility()
+    const result = await checkBottleEligibility(new SteamGame(APP_ID))
 
     expect(result).toBe(true)
     expect(axios.get).toHaveBeenCalled()
@@ -9657,7 +9658,7 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
     mockStatefulMetadataStore({ platformsCaptured: undefined })
     ;(axios.get as jest.Mock).mockResolvedValue(macNativeFixture)
 
-    const result = await new SteamGame(APP_ID).checkBottleEligibility()
+    const result = await checkBottleEligibility(new SteamGame(APP_ID))
 
     expect(result).toBe(false)
   })
@@ -9665,7 +9666,7 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
   it('already-captured entry resolves true with no redundant network', async () => {
     mockStatefulMetadataStore({ platformsCaptured: true, is_mac_native: false })
 
-    const result = await new SteamGame(APP_ID).checkBottleEligibility()
+    const result = await checkBottleEligibility(new SteamGame(APP_ID))
 
     expect(result).toBe(true)
     expect(axios.get).not.toHaveBeenCalled()
@@ -9675,7 +9676,7 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
     envMock.isMac = false
     mockStatefulMetadataStore({ platformsCaptured: undefined })
 
-    const result = await new SteamGame(APP_ID).checkBottleEligibility()
+    const result = await checkBottleEligibility(new SteamGame(APP_ID))
 
     expect(result).toBe(false)
     expect(axios.get).not.toHaveBeenCalled()
@@ -9688,7 +9689,7 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
       mac_arch: '32'
     })
 
-    const result = await new SteamGame(APP_ID).checkBottleEligibility()
+    const result = await checkBottleEligibility(new SteamGame(APP_ID))
 
     expect(result).toBe(true)
   })
@@ -9979,7 +9980,7 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     expect(result.stderr).toContain('Refused')
   })
 
-  it('throw arm: never throws out of uninstall(); same containment as refusal', async () => {
+  it('throw arm: never throws out of uninstall(); returns failed (quick 261108-anw: the callback owns done)', async () => {
     removeCopySpy.mockRejectedValue(new Error('EACCES'))
 
     const result = await new SteamGame(APP_ID).uninstall({} as any)
@@ -9988,11 +9989,11 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     expect(startPollingSpy).not.toHaveBeenCalled()
     expect(adoption().clearPendingAdoption).not.toHaveBeenCalled()
     expect(pollOnceSpy).not.toHaveBeenCalled()
-    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
-      appName: APP_ID,
-      runner: 'steam',
-      status: 'done'
-    })
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.anything()
+    )
+    expect(result.failed).toBe(true)
     expect(result.stderr).toContain('EACCES')
   })
 })
@@ -10113,6 +10114,27 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
     expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', done)
     expect(result.stderr).toContain('Refused')
     expect(result.refused).toBe(true)
+  })
+
+  it('quick 261108-anw: fallback with a caught rm error returns failed, notices once, sends no route-level done', async () => {
+    ;(decideSteamNativeDelete as jest.Mock).mockResolvedValue({
+      route: 'fallback',
+      why: 'signed-out'
+    })
+    removeCopySpy.mockRejectedValue(new Error('EACCES'))
+
+    const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+    expect(pollOnceSpy).not.toHaveBeenCalled()
+    expect(result.failed).toBe(true)
+    expect(result.refused).toBeUndefined()
+    expect(result.stderr).toContain('Failed to remove native install')
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      done
+    )
+    expect(notify).not.toHaveBeenCalled()
+    expectOneFailedNotice('Dota 2')
   })
 
   it.each([
@@ -10432,6 +10454,28 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     expect(result).toEqual({ stdout: '', stderr: '' })
   })
 
+  it('quick 261108-anw: an rm error on the bottle install returns failed, notices once, polls nothing', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    readAcfStateSpy.mockResolvedValue({
+      state: 'installed',
+      installPath: INSTALL_PATH
+    })
+    const rmSpy = failNextRmSync()
+
+    const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+    expect(rmSpy).toHaveBeenCalled()
+    rmSpy.mockRestore()
+    expect(result.failed).toBe(true)
+    expect(result.refused).toBeUndefined()
+    expect(result.stderr).toContain('Failed to remove bottle install')
+    expect(pollUninstallOnceSpy).not.toHaveBeenCalled()
+    expectOneFailedNotice('Hoard')
+  })
+
   it('containment: rejects an installPath outside the bottle common/ dir instead of deleting it', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
@@ -10697,6 +10741,32 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
 
       conflictSpy.mockRestore()
+    })
+
+    it('quick 261108-anw: an rm error on the shared-installdir manifest returns failed, notices once, polls nothing', async () => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      readAcfStateSpy.mockResolvedValue({
+        state: 'installed',
+        installPath: hoardInstallDir
+      })
+      const conflictSpy = jest
+        .spyOn(acfState, 'findOtherManifestsWithInstalldir')
+        .mockReturnValue(['228980'])
+      const rmSpy = failNextRmSync()
+
+      const result = await new SteamGame(APP_ID).uninstall({} as any)
+      conflictSpy.mockRestore()
+
+      expect(rmSpy).toHaveBeenCalled()
+      rmSpy.mockRestore()
+      expect(result.failed).toBe(true)
+      expect(result.refused).toBeUndefined()
+      expect(result.stderr).toContain('Failed to remove bottle install')
+      expect(pollUninstallOnceSpy).not.toHaveBeenCalled()
+      expectOneFailedNotice('Hoard')
     })
 
     it('A-13 DISCRIMINATOR: with NO conflicting manifest the directory IS deleted (the check cannot pass by refusing everything)', async () => {
@@ -11136,6 +11206,9 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
         status: 'error',
         error: 'cxbottle delete failed'
       })
+      const pollSpy = jest
+        .spyOn(uninstallPollingModule, 'pollUninstallOnce')
+        .mockResolvedValue(undefined)
 
       const game = new SteamGame(APP_ID)
       const result = await game.uninstall({} as any)
@@ -11143,6 +11216,12 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
       expect(result.stdout).toBe('')
       expect(result.stderr).toContain('cxbottle delete failed')
       expect(library.get(APP_ID)?.is_installed).toBe(true)
+      expect(result.failed).toBe(true)
+      expect(result.refused).toBeUndefined()
+      expect(result.stderr).toContain('Failed to remove bridge bottle')
+      expect(pollSpy).not.toHaveBeenCalled()
+      pollSpy.mockRestore()
+      expectOneFailedNotice('Avernum 4')
     })
   })
 
@@ -11232,6 +11311,24 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
       ).toBe(true)
       expect(library.get(APP_ID)?.is_installed).toBe(false)
       expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
+    })
+
+    it('quick 261108-anw: an rm error on the install root returns failed, notices once, polls nothing', async () => {
+      const pollSpy = jest
+        .spyOn(uninstallPollingModule, 'pollUninstallOnce')
+        .mockResolvedValue(undefined)
+      const rmSpy = failNextRmSync()
+
+      const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+      expect(rmSpy).toHaveBeenCalled()
+      rmSpy.mockRestore()
+      expect(result.failed).toBe(true)
+      expect(result.refused).toBeUndefined()
+      expect(result.stderr).toContain('Failed to remove bridge install')
+      expect(pollSpy).not.toHaveBeenCalled()
+      expectOneFailedNotice('Avernum 4')
+      pollSpy.mockRestore()
     })
 
     it('a manifest already missing before uninstall still completes with empty stderr (force:true, not an error)', async () => {
@@ -11758,9 +11855,9 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
     })
     dialogShowMessageBox.mockResolvedValue({ response: 0 })
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    const installBottleNative = jest
-      .spyOn(SteamGame.prototype as any, 'installBottleNative')
-      .mockResolvedValue({ status: 'done' } as any)
+    const installBottleNative = trackSpy(
+      jest.spyOn(gameInstallDepot, 'installBottleNative')
+    ).mockResolvedValue({ status: 'done' } as any)
 
     await macArch.promptI386Recovery(APP_ID)
 
@@ -12595,7 +12692,8 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           '..',
           '..',
           '.planning',
-          'phases',
+          'milestones',
+          'v0.9-phases',
           '56-bridge-steamclient-layer-drm-mode-for-steamstub-titles',
           '56-01-SUMMARY.md'
         ),
@@ -14193,9 +14291,11 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           __prepareOverlayEnvMock: jest.Mock
         }>('../bridge/overlay/overlayLaunch')
       const bottleMod = jest.requireMock<{
-        setOverlayBridgeRunner: jest.Mock
         endPerGameBridgeBottleSessionWith: jest.Mock
-      }>('../bottle')
+      }>('../bridgeBottleLifecycle')
+      const bridgeBottleMod = jest.requireMock<{
+        setOverlayBridgeRunner: jest.Mock
+      }>('../bridgeBottle')
       const runnerBin = '/ov/runner/CrossOver/bin/wine'
       const overlayRunner = {
         crossoverBuild: '26.3.0',
@@ -14219,7 +14319,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         __prepareOverlayLaunchMock.mockReset()
         __prepareOverlayEnvMock.mockReset()
         __prepareOverlayEnvMock.mockResolvedValue({ status: 'ok', vars: [] })
-        bottleMod.setOverlayBridgeRunner.mockImplementation(() => {
+        bridgeBottleMod.setOverlayBridgeRunner.mockImplementation(() => {
           registered.current = true
           return true
         })
@@ -14245,7 +14345,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         const id = freshId()
         __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
         expect(await new SteamGame(id).launch({} as never)).toBe(true)
-        expect(bottleMod.setOverlayBridgeRunner).toHaveBeenCalledWith(
+        expect(bridgeBottleMod.setOverlayBridgeRunner).toHaveBeenCalledWith(
           id,
           overlayRunner
         )
@@ -14265,7 +14365,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           bottleMod.endPerGameBridgeBottleSessionWith.mock
             .invocationCallOrder[0]
         ).toBeLessThan(
-          bottleMod.setOverlayBridgeRunner.mock.invocationCallOrder[0]
+          bridgeBottleMod.setOverlayBridgeRunner.mock.invocationCallOrder[0]
         )
       })
 
@@ -14315,7 +14415,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           cause: 'clone failed'
         })
         expect(await new SteamGame(id).launch({} as never)).toBe(true)
-        expect(bottleMod.setOverlayBridgeRunner).not.toHaveBeenCalled()
+        expect(bridgeBottleMod.setOverlayBridgeRunner).not.toHaveBeenCalled()
         expect(usedSettings().wineVersion.bin).toBe('/stock/bin/wine')
         expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
         expect(notify).toHaveBeenCalledTimes(1)
@@ -14329,7 +14429,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('a refused runner registration falls back to stock with a clone notice', async () => {
         const id = freshId()
         __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
-        bottleMod.setOverlayBridgeRunner.mockReturnValue(false)
+        bridgeBottleMod.setOverlayBridgeRunner.mockReturnValue(false)
         expect(await new SteamGame(id).launch({} as never)).toBe(true)
         expect(usedSettings().wineVersion.bin).toBe('/stock/bin/wine')
         expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
@@ -14398,7 +14498,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         expect(out.overlayLaunch).toEqual({ kind: 'env', vars: envVarsFor(id) })
         expect(out.settings).toBe(input)
         expect(__prepareOverlayLaunchMock).not.toHaveBeenCalled()
-        expect(bottleMod.setOverlayBridgeRunner).not.toHaveBeenCalled()
+        expect(bridgeBottleMod.setOverlayBridgeRunner).not.toHaveBeenCalled()
         expect(infoLines()).toContain(
           `SteamGame: appId ${id} overlay=env reason=fallback-engine (D-07)`
         )
@@ -14607,7 +14707,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         it('runner registration refused: applied=false reason=not-injected', async () => {
           const id = freshId()
           __prepareOverlayLaunchMock.mockImplementation(echoTokens(id))
-          bottleMod.setOverlayBridgeRunner.mockReturnValue(false)
+          bridgeBottleMod.setOverlayBridgeRunner.mockReturnValue(false)
           const out = await callPrepare(id, {
             wineCrossoverBottle: bottleFor(id),
             wineVersion: crossover
@@ -14916,9 +15016,11 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         __openOverlayWineLogMock: jest.Mock
       }>('../bridge/overlay/overlayWineLog')
       const bottleMod = jest.requireMock<{
-        setOverlayBridgeRunner: jest.Mock
         endPerGameBridgeBottleSessionWith: jest.Mock
-      }>('../bottle')
+      }>('../bridgeBottleLifecycle')
+      const bridgeBottleMod = jest.requireMock<{
+        setOverlayBridgeRunner: jest.Mock
+      }>('../bridgeBottle')
       const { showDialogBoxModalAuto } = jest.requireMock<{
         showDialogBoxModalAuto: jest.Mock
       }>('backend/dialog/dialog')
@@ -14966,7 +15068,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         __watchOverlayAttachMock
           .mockReset()
           .mockReturnValue(new Promise(() => {}))
-        bottleMod.setOverlayBridgeRunner.mockImplementation(() => {
+        bridgeBottleMod.setOverlayBridgeRunner.mockImplementation(() => {
           registered.current = true
           return true
         })

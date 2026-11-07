@@ -60,12 +60,14 @@ type RequestKind =
   | 'uninstall-refused-running'
   | 'uninstall-steam-error'
   | 'uninstall-check-failed'
+  | 'uninstall-failed'
 const REQUEST_KINDS: readonly string[] = [
   'install-not-started',
   'uninstall-not-started',
   'uninstall-refused-running',
   'uninstall-steam-error',
-  'uninstall-check-failed'
+  'uninstall-check-failed',
+  'uninstall-failed'
 ]
 interface ShownRequest {
   kind: RequestKind
@@ -365,7 +367,8 @@ export default function SteamEngineLaunchNotice() {
 
   // Quick 261106-pvk: Steam never picked up a delegated request. A fourth seq
   // stream, fed by its own push rather than the engine state. Also carries
-  // quick 261107-td5's uninstall refusals (running / Steam error / check failed).
+  // quick 261107-td5's uninstall refusals (running / Steam error / check failed) and
+  // quick 261108-anw's failed-delete notice.
   useEffect(() => {
     const n = latestRequest
     if (!n || typeof n.seq !== 'number' || n.seq <= lastRequestSeq.current) {
@@ -698,6 +701,12 @@ export default function SteamEngineLaunchNotice() {
         return t(
           'steam.uninstall.checkFailed',
           "Couldn't check whether {{game}} is running, so it was not uninstalled. Try again.",
+          { game }
+        )
+      case 'uninstall-failed':
+        return t(
+          'steam.uninstall.failed',
+          "Couldn't finish uninstalling {{game}}. Some files may remain; try uninstalling again.",
           { game }
         )
     }

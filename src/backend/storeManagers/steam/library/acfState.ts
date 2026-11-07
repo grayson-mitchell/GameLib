@@ -6,11 +6,9 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getSteamLibraries } from 'backend/utils'
 import { library } from '../state'
 import { NUMERIC_APP_ID } from '../gameConstants'
-import {
-  resolveBridgeBottleName,
-  removePerGameBridgeBottle,
-  DEFAULT_BRIDGE_BOTTLE_NAME
-} from '../bottle'
+import { DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
+import { removePerGameBridgeBottle } from '../bridgeBottleLifecycle'
+import { resolveBridgeBottleName } from '../bridgeBottle'
 import {
   type AcfSource,
   getBottleSteamappsRoot,
