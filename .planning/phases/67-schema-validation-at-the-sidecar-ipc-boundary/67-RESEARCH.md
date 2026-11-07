@@ -510,20 +510,24 @@ test('unvalidated channel count never rises', async () => {
 | A4 | Domain attribution of the 2 name-collision channels (`legendary`, `steam` rows) | Channel inventory | Cosmetic; the plan splits by registration file anyway |
 | A5 | `window.ts` / testStubs / mainProcess declared-but-unregistered channels (18) are handled outside the sidecar (Rust or preload) and need no runtime schema | Channel inventory | If some are actually dispatched somewhere not seen in the registry dump, the D-15 count is off by that many; confirm with the planner's first census run |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should the 18 declared-but-unregistered window/testStub/mainProcess channels be on the generated renderer allow-list?**
    - Known: they appear in `SyncIPCFunctions`/`AsyncIPCFunctions` but no sidecar handler exists, so today they reach `dispatchInvoke` and get `UNPORTED_CHANNEL_MARKER` (or are dropped for send).
    - Unclear: whether the renderer actually calls them through `sidecar_invoke` anywhere (window controls may go through Tauri window APIs directly).
    - Recommendation: generate the list from channels that are both declared and have `caller: 'renderer'`, and have the planner grep `window.api.minimizeWindow` etc. in the first plan; remove truly dead declarations rather than allow-listing them.
+   - RESOLVED: 67-18 Task 2 tags the window, preload-served and dead channels `caller: 'local'` with grep evidence recorded per channel, and 67-19 Task 1 generates `RENDERER_CHANNELS` only from entries with `caller: 'renderer'`, so none of them reach the relay allow-list.
 
 2. **Where do the 10 undeclared channels' schemas live, and do `storeSet/storeDelete/storeNew` take structured payloads that need D-07-style passthroughs?**
    - Known: they are registered by `storeWriteHandlers.ts` and `handlers.ts`, with policy in `common/types/storePolicy.ts` (`isAllowedStoreField`, `isSafeKeyPath`, `isWritableStoreField`).
    - Recommendation: schema checks the envelope (store name string, key path array/string), leave field policy in `storePolicy.ts`.
+   - RESOLVED: 67-18 Task 1 creates `sidecarInternal.ts` for the ten channels; `storeSet/storeDelete/storeNew` get envelope-only schemas (bounded store name, key-path shape, JSON value) and field policy stays in `storePolicy.ts`.
 
 3. **`shellFiles` has 17 send channels, several with tuple-as-single-argument (`removeFolder: ([path, folderName])`).** Confirm call-site shapes before writing the tuple; `removeFolder` shape validation is Phase 67's part, containment is Phase 72's (CONCERNS.md).
+   - RESOLVED: 67-05 Task 1 confirms the shapes against the call sites and validates `removeFolder` as a nested strict tuple (shape only; containment stays Phase 72).
 
 4. **Does `bootErrorSurface.ts` substring-match anything that `[GAMELIB_IPC_INVALID_ARGS]` could trip?** It matches `[GAMELIB_UNPORTED_CHANNEL]` only; verify no catch-all path hijacks the page on any rejection.
+   - RESOLVED: 67-04 found that every non-unported pre-mount rejection paints the page; its Task 2 adds `classifyBootError` so `[GAMELIB_IPC_INVALID_ARGS]` warns and continues (and 67-19 does the same for the invalid-channel marker).
 
 ## Runtime State Inventory
 

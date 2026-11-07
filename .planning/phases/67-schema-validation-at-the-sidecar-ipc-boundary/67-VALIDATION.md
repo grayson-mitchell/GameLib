@@ -1,8 +1,8 @@
 ---
 phase: 67
 slug: schema-validation-at-the-sidecar-ipc-boundary
-status: draft
-nyquist_compliant: false
+status: planned
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-11-07
 ---
