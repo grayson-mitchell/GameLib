@@ -469,26 +469,89 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [x] 65-01-PLAN.md — D-11 precondition, test/cycle baselines, steam-line-ceiling gate + wiring, depcruise leaf-rule extension, close games.ts 1,400 todo
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 65-02-PLAN.md — library: accessor commit, pollState (D-16 leaf), installRoot, installedMap
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 65-03-PLAN.md — library: acfState, macArch, resumeBreadcrumbs, restartHold
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 65-04-PLAN.md — library: installPollOnce, installPolling (timer + unref), resume
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 65-05-PLAN.md — library: uninstallPolling, runningPoll
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 65-06-PLAN.md — library: D-07 refresh lift, git mv to library/index.ts, back-edge rule
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
 - [ ] 65-07-PLAN.md — bottle: bottledSteam, provisionBottle (flat siblings)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
 - [ ] 65-08-PLAN.md — bottle: resolveCrossoverWine relocation, bridgeBottle
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
 - [ ] 65-09-PLAN.md — bottle: bridgeBottleLifecycle; bottle.ts off the allowlist; bottle closeout
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
 - [ ] 65-10-PLAN.md — battery + D-14 live smoke run 1 (checkpoint)
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
 - [ ] 65-11-PLAN.md — gameInstall: bridgeInstallState, gameInstallDepot, gameInstallBridge (D-17, D-19)
+
+**Wave 12** *(blocked on Wave 11 completion)*
+
 - [ ] 65-12-PLAN.md — user.ts D-15: userTypes, userSignInState + userSignIn, userRedeem
+
+**Wave 13** *(blocked on Wave 12 completion)*
+
 - [ ] 65-13-PLAN.md — games.ts: bridgeRouteVerdict, gameMetadata lift, eligibility + uninstall stubs (D-18); games.ts < 1,000
+
+**Wave 14** *(blocked on Wave 13 completion)*
+
 - [ ] 65-14-PLAN.md — gameBridgeLaunch: gameBridgeWineLaunch; end-of-step-4 battery
+
+**Wave 15** *(blocked on Wave 14 completion)*
+
 - [ ] 65-15-PLAN.md — helperProcess: helperRegistry (state owner), helperSpawn
+
+**Wave 16** *(blocked on Wave 15 completion)*
+
 - [ ] 65-16-PLAN.md — shimGenerate: shimOriginals, shimDrmWrapper, shimPlacement
+
+**Wave 17** *(blocked on Wave 16 completion)*
+
 - [ ] 65-17-PLAN.md — runnerClone: runnerCrossover, runnerEntitlements, runnerVerify
+
+**Wave 18** *(blocked on Wave 17 completion)*
+
 - [ ] 65-18-PLAN.md — stageDrmBottle (D-09): stageDrmTypes, drmRegistry, drmRestore, bottleProcesses; allowlist {}
+
+**Wave 19** *(blocked on Wave 18 completion)*
+
 - [ ] 65-19-PLAN.md — remove remaining install + launch lift stubs (D-18, D-19 fallback); close lift-stub todo
+
+**Wave 20** *(blocked on Wave 19 completion)*
+
 - [ ] 65-20-PLAN.md — done-line proof, full battery + D-14 live smoke run 2 (checkpoint)
+
+**Cross-cutting constraints:**
+
+- Every importer and every jest.mock / requireMock of a moved name targets the owning module (D-03, 62 D-05)
 
 ### Phase 66: Backend dependency injection replacing module-level singletons
 
