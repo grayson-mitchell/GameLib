@@ -16,6 +16,7 @@ import {
 } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { defined } from './defined'
 
 let mockTools = ''
 const mockDownload = jest.fn()
@@ -319,7 +320,7 @@ test('callAllAbortControllers aborts an in-flight download and cleans temp dirs'
   await tick()
   expect(seen).toHaveLength(1)
   callAllAbortControllers()
-  expect(seen[0].aborted).toBe(true)
+  expect(defined(seen[0], 'seen[0]').aborted).toBe(true)
   await expect(p).resolves.toMatchObject({ ok: false, reason: 'aborted' })
   expect(leftovers()).toEqual([])
   expect(hasAbortController(`steam-engine-download:${pin.id}`)).toBe(false)
@@ -348,7 +349,7 @@ test('one caller aborting does not abort the others', async () => {
   await tick()
   acA.abort()
   await expect(pa).resolves.toMatchObject({ ok: false, reason: 'aborted' })
-  expect(seen[0].aborted).toBe(false)
+  expect(defined(seen[0], 'seen[0]').aborted).toBe(false)
   // let B finish: release the hung download normally
   await makePin()
   mockDownload.mockImplementation(async (x: { url: string; dest: string }) => {
@@ -370,9 +371,9 @@ test('shared download aborts when every caller has aborted', async () => {
   const pb = ensurePinnedEngine(pin, { signal: b.signal })
   await tick()
   a.abort()
-  expect(seen[0].aborted).toBe(false)
+  expect(defined(seen[0], 'seen[0]').aborted).toBe(false)
   b.abort()
-  expect(seen[0].aborted).toBe(true)
+  expect(defined(seen[0], 'seen[0]').aborted).toBe(true)
   await expect(pa).resolves.toMatchObject({ reason: 'aborted' })
   await expect(pb).resolves.toMatchObject({ reason: 'aborted' })
   expect(leftovers()).toEqual([])
@@ -385,7 +386,7 @@ test('a single caller aborting its signal aborts the download', async () => {
   const p = ensurePinnedEngine(pin, { signal: ac.signal })
   await tick()
   ac.abort()
-  expect(seen[0].aborted).toBe(true)
+  expect(defined(seen[0], 'seen[0]').aborted).toBe(true)
   await expect(p).resolves.toMatchObject({ ok: false, reason: 'aborted' })
 })
 

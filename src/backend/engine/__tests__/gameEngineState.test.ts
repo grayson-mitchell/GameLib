@@ -12,6 +12,7 @@ import { __resetEngineStateForTests } from '../engineState'
 import { ENGINE_PINS } from '../enginePins'
 import type { CrossoverPreflight } from '../engineDecision'
 import type { EngineConfigDeps } from '../engineConfig'
+import { defined } from './defined'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -277,7 +278,7 @@ describe('listGameEngineOptions', () => {
       { appName: 'default' },
       { config: config(), decision }
     )
-    expect(opts[opts.length - 1].kind).toBe('legacy')
+    expect(defined(opts[opts.length - 1], 'last option').kind).toBe('legacy')
   })
 
   it('falls back to the plain list for unknown args', async () => {

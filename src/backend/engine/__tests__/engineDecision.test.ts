@@ -14,6 +14,7 @@ import type { EngineDecisionDeps } from '../engineDecision'
 import { ENGINE_PINS } from '../enginePins'
 import { parseEngineOverride } from '../engineIds'
 import type { DemoStatus, DemoStatusProbe } from '../demoStatus'
+import { defined } from './defined'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -35,7 +36,9 @@ const failed = (
 const seq = (...results: DemoStatusProbe[]) => {
   let i = 0
   return jest.fn(() =>
-    Promise.resolve(results[Math.min(i++, results.length - 1)])
+    Promise.resolve(
+      defined(results[Math.min(i++, results.length - 1)], 'seq() probe result')
+    )
   )
 }
 
@@ -657,7 +660,7 @@ describe('listEngineOverrideOptions', () => {
       'pinned',
       'wine-manager'
     ])
-    expect(opts[1].available).toBe(true)
+    expect(defined(opts[1], 'opts[1]').available).toBe(true)
     for (const o of opts) expect(parseEngineOverride(o.id)).toBe(o.id)
   })
   it('lists the previous pin when present', async () => {

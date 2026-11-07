@@ -46,6 +46,7 @@ import {
 import type { EngineSwitchDeps } from '../engineSwitch'
 import { __resetBottleLedgerForTests, markGameRunning } from '../bottleLedger'
 import type { EngineSelection } from '../engineTypes'
+import { defined } from './defined'
 
 const BIN_DIR =
   '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
@@ -255,7 +256,9 @@ describe('prepareBottleForEngine', () => {
   test('no marker: a conf with a Timestamp is crossover', async () => {
     writeFileSync(join(dir, 'cxbottle.conf'), '[Bottle]\n"Timestamp" = "1"\n')
     await run(pinned)
-    expect(deps.killWith.mock.calls[0][1]).toBe(`${BIN_DIR}/wineserver`)
+    expect(defined(deps.killWith.mock.calls[0], 'first killWith call')[1]).toBe(
+      `${BIN_DIR}/wineserver`
+    )
   })
 
   test('no marker: a conf without a Timestamp is the current pin', async () => {
@@ -619,8 +622,13 @@ describe('prepareBottleForEngine ordered restore (CR-03, WR-05)', () => {
       return true
     })
     await run(crossover)
-    const resolveOrder = deps.ensurePinEngine.mock.invocationCallOrder[0]
-    expect(resolveOrder).toBeLessThan(deps.killWith.mock.invocationCallOrder[0])
+    const resolveOrder = defined(
+      deps.ensurePinEngine.mock.invocationCallOrder[0],
+      'ensurePinEngine call order'
+    )
+    expect(resolveOrder).toBeLessThan(
+      defined(deps.killWith.mock.invocationCallOrder[0], 'killWith call order')
+    )
   })
 
   test('a marker wineserver that does not exist is not spawned', async () => {
@@ -633,7 +641,9 @@ describe('prepareBottleForEngine ordered restore (CR-03, WR-05)', () => {
     await run(crossover)
     // only the post-restore CrossOver stop (G30); the missing marker wineserver is not spawned
     expect(deps.killWith).toHaveBeenCalledTimes(1)
-    expect(deps.killWith.mock.calls[0][1]).toBe(`${BIN_DIR}/wineserver`)
+    expect(defined(deps.killWith.mock.calls[0], 'first killWith call')[1]).toBe(
+      `${BIN_DIR}/wineserver`
+    )
   })
 
   test('wineboot -u failure rewrites the marker with dxvk failed', async () => {
@@ -808,11 +818,16 @@ describe('G30 / WR-02 engine switch', () => {
       (c) => c[1] === `${BIN_DIR}/wineserver`
     )
     expect(cxKills).toHaveLength(1)
-    expect(cxKills[0][2]).toEqual({
+    expect(defined(cxKills[0], 'cxKills[0]')[2]).toEqual({
       CX_ROOT: '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver'
     })
-    expect(deps.killWith.mock.invocationCallOrder[0]).toBeGreaterThan(
-      (deps.installRemove as jest.Mock).mock.invocationCallOrder[0]
+    expect(
+      defined(deps.killWith.mock.invocationCallOrder[0], 'killWith call order')
+    ).toBeGreaterThan(
+      defined(
+        (deps.installRemove as jest.Mock).mock.invocationCallOrder[0],
+        'installRemove call order'
+      )
     )
   })
 
@@ -837,7 +852,9 @@ describe('G30 / WR-02 engine switch', () => {
       deps
     })
     expect(deps.killWith).toHaveBeenCalledTimes(1)
-    expect(deps.killWith.mock.calls[0][1]).toBe(PIN_WS)
+    expect(defined(deps.killWith.mock.calls[0], 'first killWith call')[1]).toBe(
+      PIN_WS
+    )
   })
 
   const deferred = () => {

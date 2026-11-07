@@ -15,24 +15,23 @@ ready: code
 `noUncheckedIndexedAccess` is adopted for all of `src/backend/storeManagers/steam/`, tests included
 (non-test in quick 261107-9lq, tests in quick 261108-d5p) and for all of `src/backend/storeManagers/gog/`, tests included (quick
 261108-cut) and for all of `src/backend/storeManagers/legendary/`, tests included (quick
-261108-d1z) and for all of `src/backend/humble/`, tests included (quick 261108-d3t). The ratchet `meta/indexedAccessRatchet.cjs` holds every other bucket at an equality
-ceiling. Remaining sites (1698 in all), largest first, as committed in
+261108-d1z) and for all of `src/backend/humble/`, tests included (quick 261108-d3t) and for all of `src/backend/engine/`, tests included (quick 261108-ekv). The ratchet `meta/indexedAccessRatchet.cjs` holds every other bucket at an equality
+ceiling. Remaining sites (1682 in all), largest first, as committed in
 `meta/indexedAccessBaseline.json`:
 
 - `src/frontend/screens`: 351
-- `meta`: 328
+- `meta`: 342
 - `src/frontend/components`: 218
-- `src/backend/sidecar`: 155
+- `src/backend/sidecar`: 165
 - `src/frontend/helpers`: 130
 - `src/backend/__tests__`: 125
 - `src/backend/tools`: 120
 - `src/backend/shortcuts`: 52
-- `src/backend/engine`: 45
 - `src/frontend/state`: 30
 - `src/backend/wine`: 24
+- `src/backend/testUtils`: 15
 - `src/backend/utils`: 15
 - `src/backend/utils.ts`: 15
-- `src/backend/testUtils`: 11
 - `src/common/winetricks`: 9
 - `src/backend/downloadmanager`: 8
 - `src/backend/knownFixesRegistry.ts`: 7
@@ -42,7 +41,7 @@ ceiling. Remaining sites (1698 in all), largest first, as committed in
 - `src/preload/__tests__`: 6
 - `src/backend/signInProbe`: 5
 - `src/common/reportProblem.ts`: 4
-- `src/backend/scanners`: 3
+- `src/backend/scanners`: 4
 - `src/preload/api`: 3
 - `src/backend/knownFixOverlayArchive.ts`: 2
 - `src/backend/save_sync.ts`: 2
@@ -57,10 +56,11 @@ ceiling. Remaining sites (1698 in all), largest first, as committed in
 - `src/common/types`: 1
 - `src/frontend/styles`: 1
 
-Note: phases 63/65 grew `src/backend/engine`, `src/backend/scanners`, `src/backend/sidecar`,
+Note: phases 63/65 grew `src/backend/scanners`, `src/backend/sidecar`,
 `src/backend/testUtils` and `src/frontend/screens` after the baseline landed, and the baseline was
 raised to match in quick 261108-cut. The drift sites were not fixed; they are candidates for their
-own buckets.
+own buckets. Phases 67/72 grew `meta`, `src/backend/scanners`, `src/backend/sidecar` and
+`src/backend/testUtils` again; the baseline was raised to match in quick 261108-ekv, those sites likewise unfixed.
 
 ## Solution
 

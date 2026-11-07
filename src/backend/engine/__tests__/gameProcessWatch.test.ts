@@ -13,6 +13,7 @@ import {
   deriveGameProcessPrefixes,
   watchForGameProcess
 } from '../gameProcessWatch'
+import { defined } from './defined'
 
 const HOME = '/Users/u'
 const INSTALL = '/Users/u/Games/Avernum 4'
@@ -83,7 +84,10 @@ describe('watchForGameProcess', () => {
     const timers = fakeTimers()
     let i = 0
     const listing = jest.fn(() => {
-      const next = listings[Math.min(i++, listings.length - 1)]
+      const next = defined(
+        listings[Math.min(i++, listings.length - 1)],
+        'listing'
+      )
       if (next instanceof Error) return Promise.reject(next)
       return Promise.resolve(next)
     })

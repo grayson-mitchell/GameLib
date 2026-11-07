@@ -54,8 +54,7 @@ const HASH_HEX = 10
 function encodeAppName(appName: string): string {
   const bytes = Buffer.from(appName, 'utf8')
   let out = ''
-  for (let i = 0; i < bytes.length; i++) {
-    const b = bytes[i]
+  for (const [i, b] of bytes.entries()) {
     const ch = String.fromCharCode(b)
     const dotInRun =
       b === 0x2e && (bytes[i - 1] === 0x2e || bytes[i + 1] === 0x2e)
