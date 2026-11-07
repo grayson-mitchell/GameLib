@@ -29,6 +29,13 @@ import {
   humbleSyncArgs
 } from './humble'
 import { enrichmentAsyncArgs } from './enrichment'
+import {
+  downloadQueueAsyncArgs,
+  downloadQueueFrontendMessagesArgs,
+  downloadQueueSyncArgs
+} from './downloadQueue'
+import { steamAsyncArgs, steamFrontendMessagesArgs } from './steam'
+import { gogFrontendMessagesArgs } from './gog'
 import { shellFilesAsyncArgs, shellFilesSyncArgs } from './shellFiles'
 
 export function mergeChannelEntries(
@@ -81,5 +88,14 @@ export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
     defineChannelEntries('send', humbleSyncArgs),
     defineChannelEntries('invoke', humbleAsyncArgs),
     defineChannelEntries('push', humbleFrontendMessagesArgs),
-    defineChannelEntries('invoke', enrichmentAsyncArgs)
+    defineChannelEntries('invoke', enrichmentAsyncArgs),
+    defineChannelEntries('send', downloadQueueSyncArgs),
+    defineChannelEntries('invoke', downloadQueueAsyncArgs),
+    defineChannelEntries('push', downloadQueueFrontendMessagesArgs),
+    defineChannelEntries('invoke', steamAsyncArgs),
+    defineChannelEntries('push', steamFrontendMessagesArgs),
+    // legendary's `refreshLibrary` push shares its name with steam's `refreshLibrary` invoke.
+    // The map is keyed by name alone and pushes are never validated at runtime (D-12), so the
+    // push stays typing-only in ./legendary and is deliberately not registered here.
+    defineChannelEntries('push', gogFrontendMessagesArgs)
   )

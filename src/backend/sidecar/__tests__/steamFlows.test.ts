@@ -167,7 +167,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
   })
 
   // Test B (the guard): an unrecognised runner — absent, and each of a prototype-chain
-  // name — responds { status: 'error' }, emits no openExternal frame, and calls no
+  // name — is rejected at the Phase 67 schema boundary (ok: false), emits no openExternal frame, and calls no
   // manager/launchEventCallback at all.
   describe('Test B: unknown-runner guard', () => {
     const badRunners: Array<{ label: string; runner: unknown }> = [
@@ -177,7 +177,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
     ]
 
     it.each(badRunners)(
-      'runner=$label responds { status: "error" }, emits no openExternal frame, and calls no manager',
+      'runner=$label is rejected by the channel schema, emits no openExternal frame, and calls no manager',
       async ({ runner, label }) => {
         const { input, frames } = startSidecar()
         const args: Record<string, unknown> = { appName: 'some-app-id' }
@@ -199,8 +199,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
         )
         expect(response).toMatchObject({
           id: `launch-bad-${label}`,
-          ok: true,
-          result: { status: 'error' }
+          ok: false
         })
       }
     )
