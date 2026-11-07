@@ -61,7 +61,7 @@ All 17 enrichment invokes (including the four dotted `steamgriddb.*` names), dow
 **4. Flow tests updated for boundary rejection.** `enrichmentFlows` (WR-01 non-string key), `steamFlows` (Test B bad runner) and `skeletonFlows` (unknown refresh runner) previously asserted handler-level no-op/`status: error`/runner-naming errors. They now assert `ok: false` at the schema boundary, store/manager untouched, and the rejection message value-free.
 
 ## Verification
-Fixture suites, enrichmentFlows, steamFlows, skeletonFlows, downloadQueueFlows, ipcDomainCensus, flowRegistrationCensus, ipcSchemaCoverage, rendererZodGuard green; `pnpm codecheck`, prettier --check and `check:ipc-contract` (pre-commit) green. Full Backend jest: only the known failures (games.test.ts, bottle.test.ts, macArchKnownFixRouting, tauriShellSource).
+Frontend steamSyncStatusWiring W1 token updated to the schema form (fixed in a follow-up commit). Fixture suites, enrichmentFlows, steamFlows, skeletonFlows, downloadQueueFlows, ipcDomainCensus, flowRegistrationCensus, ipcSchemaCoverage, rendererZodGuard green; `pnpm codecheck`, prettier --check and `check:ipc-contract` (pre-commit) green. Full Backend jest: only the known failures (games.test.ts, bottle.test.ts, macArchKnownFixRouting, tauriShellSource).
 
 ## Known Stubs
 None.

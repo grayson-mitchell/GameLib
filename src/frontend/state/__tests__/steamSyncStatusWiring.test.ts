@@ -161,7 +161,7 @@ function expectAbsentWithin(
 function gateW1_ipcDeclaresChannel(source: string): void {
   expectPresent(
     source,
-    'steamSyncStatus: (payload',
+    'steamSyncStatus: z.tuple(',
     'W1: common/types/ipc/steam.ts must declare the steamSyncStatus FrontendMessages entry'
   )
 }
@@ -314,7 +314,7 @@ describe('RED proofs -- each gate demonstrably trips against a source-derived kn
 
   it('W1 trips against a specimen with the steamSyncStatus declaration deleted (derived by string-removal from the real source)', () => {
     const realSource = readGated(IPC_PATH)
-    const declarationToken = 'steamSyncStatus: (payload'
+    const declarationToken = 'steamSyncStatus: z.tuple('
     expect(realSource).toContain(declarationToken)
 
     const missingDeclarationSpecimen = realSource.replace(
