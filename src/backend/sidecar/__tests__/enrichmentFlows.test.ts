@@ -1184,14 +1184,14 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       ['null', null],
       ['an object', { key: 'not-a-string' }]
     ])(
-      'WR-01 steamgriddb.setApiKey IGNORES %s and never reaches the secret store',
+      'WR-01 steamgriddb.setApiKey REJECTS %s at the schema boundary and never reaches the secret store',
       async (_label, badKey) => {
         const { input, frames } = startSidecar()
         writeInvoke(input, 'sgdb-bad-1', 'steamgriddb.setApiKey', [badKey])
         await flush()
 
-        // The handler still resolves -- it is a no-op, not a crash.
-        expect(findResponse(frames, 'sgdb-bad-1')?.ok).toBe(true)
+        // Phase 67: the channel schema rejects a non-string key before the handler runs.
+        expect(findResponse(frames, 'sgdb-bad-1')?.ok).toBe(false)
         // The load-bearing half: the store is never touched, so no keyring
         // round trip is attempted with a non-string.
         expect(mockSecretStoreSetApiKey).not.toHaveBeenCalled()

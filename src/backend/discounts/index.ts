@@ -10,5 +10,5 @@ import { getGogDiscounts } from './fetchDiscounts'
 addHandler(
   'getGogDiscounts',
   async (_event, locale, hideOwned = false, wishlistOnly = false) =>
-    getGogDiscounts(locale, hideOwned, wishlistOnly)
+    getGogDiscounts(locale, hideOwned ?? false, wishlistOnly ?? false)
 )

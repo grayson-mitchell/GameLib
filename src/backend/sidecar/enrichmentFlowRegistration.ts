@@ -203,7 +203,7 @@ export function registerEnrichmentFlows(): void {
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[1] as string
       const runner = args[2] as Runner
-      const forceRefresh = args[3] as boolean | undefined
+      const forceRefresh = (args[3] as boolean | null | undefined) ?? undefined
       const game = getGame(appName, runner)
       return getWikiGameInfo(game, forceRefresh)
     }
@@ -299,8 +299,8 @@ export function registerEnrichmentFlows(): void {
     async (_event: unknown, ...args: unknown[]) =>
       getGogDiscounts(
         args[0] as CatalogLocaleSettings,
-        args[1] as boolean | undefined,
-        args[2] as boolean | undefined
+        (args[1] as boolean | null | undefined) ?? undefined,
+        (args[2] as boolean | null | undefined) ?? undefined
       )
   )
 
