@@ -48,7 +48,8 @@ const ADOPTED_BUCKETS = [
   'src/backend/utils',
   'src/backend/utils.ts',
   'src/backend/testUtils',
-  'src/backend/downloadmanager'
+  'src/backend/downloadmanager',
+  'src/backend/knownFixesRegistry.ts'
 ]
 
 /**

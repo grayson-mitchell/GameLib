@@ -327,11 +327,13 @@ export function wineRegistryValueIsSet(
   if (arch === 'win64' && view === 64) {
     mapped = segments
   } else if (arch === 'win64' && view === 32) {
+    const [topSegment, subSegment] = segments
     if (
       !isHklm ||
-      segments[0].toLowerCase() !== 'software' ||
-      segments.length < 2 ||
-      segments[1].toLowerCase() === 'classes' ||
+      topSegment === undefined ||
+      topSegment.toLowerCase() !== 'software' ||
+      subSegment === undefined ||
+      subSegment.toLowerCase() === 'classes' ||
       segments.some((s) => s.toLowerCase() === 'wow6432node')
     ) {
       return false
@@ -360,8 +362,7 @@ export function wineRegistryValueIsSet(
   if (sectionStart === -1) return false
 
   const body: string[] = []
-  for (let i = sectionStart + 1; i < lines.length; i++) {
-    const l = lines[i]
+  for (const l of lines.slice(sectionStart + 1)) {
     if (l.startsWith('[')) break
     if (l.startsWith('#')) continue
     if (l.endsWith('\\')) return false
@@ -375,7 +376,11 @@ export function wineRegistryValueIsSet(
 
   if (fix.type === 'REG_DWORD') {
     const m = /^dword:([0-9a-fA-F]{8})$/.exec(stored)
-    return m !== null && parseInt(m[1], 16) === Number(fix.data)
+    return (
+      m !== null &&
+      m[1] !== undefined &&
+      parseInt(m[1], 16) === Number(fix.data)
+    )
   }
   if (fix.type === 'REG_SZ') {
     if (!PRINTABLE_ASCII.test(fix.data)) return false
