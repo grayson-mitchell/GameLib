@@ -1,4 +1,9 @@
 import { libraryManagerMap } from '..'
+import {
+  clearResumeBaseline,
+  parseGogdlProgress,
+  resumeAdjustedPercent
+} from './resumeProgress'
 import { join } from 'path'
 import { GameConfig } from '../../game_config'
 import { GlobalConfig } from '../../config'
@@ -294,6 +299,13 @@ export default class GOGGame implements Game {
       progress.percent = !Number.isNaN(Number(percentMatch?.at(1)))
         ? Number(percentMatch?.at(1))
         : undefined
+
+      // gogdl reports a resumed download's percent against the remaining
+      // bytes only; fold the bytes finished before the pause back in.
+      const parsed = parseGogdlProgress(data)
+      if (parsed && progress.percent !== undefined) {
+        progress.percent = resumeAdjustedPercent(this.id, parsed)
+      }
     }
 
     // parse log for eta
@@ -434,8 +446,11 @@ export default class GOGGame implements Game {
         ['Failed to install GOG game ', `${this.id}:`, res.error],
         LogPrefix.Gog
       )
+      clearResumeBaseline(this.id)
       return { status: 'error', error: res.error }
     }
+
+    clearResumeBaseline(this.id)
 
     // Installation succeded
     // Save new game info to installed games store
