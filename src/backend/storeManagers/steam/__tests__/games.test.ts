@@ -227,9 +227,11 @@ import { tmpdir } from 'node:os'
  * caller must mockRestore() before any real-fs cleanup.
  */
 function failNextRmSync(): jest.SpyInstance {
-  return jest.spyOn(require('node:fs'), 'rmSync').mockImplementationOnce(() => {
-    throw Object.assign(new Error('EACCES'), { code: 'EACCES' })
-  })
+  return jest
+    .spyOn(jest.requireActual<typeof import('node:fs')>('node:fs'), 'rmSync')
+    .mockImplementationOnce(() => {
+      throw Object.assign(new Error('EACCES'), { code: 'EACCES' })
+    })
 }
 
 /** The single uninstall-failed notice pushed, for the given title. */
