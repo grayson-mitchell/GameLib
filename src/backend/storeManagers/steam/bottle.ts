@@ -377,6 +377,41 @@ export function persistBottleWineVersion(wineVersion: WineInstallation): void {
   steamBottleConfigStore.set('wineVersion', wineVersion)
 }
 
+/**
+ * D-UAT-24-06 gap closure (24-15) — GENERALIZED (debug/steam-bottle-
+ * uninstall-reverts): resolves CrossOver's OWN wine binary — derived from
+ * the resolved CrossOver bin dir (sibling `wine` binary, exactly the
+ * path backend/utils/compatibility_layers.ts's getCrossover() computes) —
+ * rather than importing that async detector (which would force callers
+ * async and ripple to their synchronous callers, see module docstring
+ * above). Shared by BOTH the dedicated Steam bottle (getSteamBottleSettings)
+ * and the bridge bottle (getBridgeBottleSettings) below — both are
+ * CrossOver-created bottles (D-08 CrossOver-only lifecycle) and neither can
+ * be correctly dispatched into by a non-CrossOver engine (setupWineEnvVars
+ * only wires `CX_BOTTLE` for `type: 'crossover'`; anything else silently
+ * routes through `WINEPREFIX` instead, which these getters never point at
+ * the actual CrossOver bottle).
+ *
+ * Returns undefined when CrossOver's `wine` binary is not present on disk
+ * (dev/CI/non-macOS), so the caller can fall back to another wineVersion.
+ */
+function resolveCrossoverWine(label: string): WineInstallation | undefined {
+  const binDir = resolveCrossoverBinDir({ hintWineBins: persistedWineBins() })
+  if (!binDir) {
+    return undefined
+  }
+  const crossoverWineBin = join(binDir, 'wine')
+  if (!existsSync(crossoverWineBin)) {
+    return undefined
+  }
+  return {
+    bin: crossoverWineBin,
+    name: label,
+    type: 'crossover',
+    wineserver: wineserverIn(binDir)
+  }
+}
+
 // ── 24-04: dedicated bridge bottle provisioning ─────────────────────────────
 
 /**
@@ -509,41 +544,6 @@ export function findBridgeInstallBottle(appId: string): string | null {
   }
 
   return null
-}
-
-/**
- * D-UAT-24-06 gap closure (24-15) — GENERALIZED (debug/steam-bottle-
- * uninstall-reverts): resolves CrossOver's OWN wine binary — derived from
- * the resolved CrossOver bin dir (sibling `wine` binary, exactly the
- * path backend/utils/compatibility_layers.ts's getCrossover() computes) —
- * rather than importing that async detector (which would force callers
- * async and ripple to their synchronous callers, see module docstring
- * above). Shared by BOTH the dedicated Steam bottle (getSteamBottleSettings)
- * and the bridge bottle (getBridgeBottleSettings) below — both are
- * CrossOver-created bottles (D-08 CrossOver-only lifecycle) and neither can
- * be correctly dispatched into by a non-CrossOver engine (setupWineEnvVars
- * only wires `CX_BOTTLE` for `type: 'crossover'`; anything else silently
- * routes through `WINEPREFIX` instead, which these getters never point at
- * the actual CrossOver bottle).
- *
- * Returns undefined when CrossOver's `wine` binary is not present on disk
- * (dev/CI/non-macOS), so the caller can fall back to another wineVersion.
- */
-function resolveCrossoverWine(label: string): WineInstallation | undefined {
-  const binDir = resolveCrossoverBinDir({ hintWineBins: persistedWineBins() })
-  if (!binDir) {
-    return undefined
-  }
-  const crossoverWineBin = join(binDir, 'wine')
-  if (!existsSync(crossoverWineBin)) {
-    return undefined
-  }
-  return {
-    bin: crossoverWineBin,
-    name: label,
-    type: 'crossover',
-    wineserver: wineserverIn(binDir)
-  }
 }
 
 /**
