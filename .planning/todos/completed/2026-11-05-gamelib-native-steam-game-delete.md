@@ -109,3 +109,29 @@ an (i) help icon on the label line, and is read through one backend accessor bes
 - ON, a GameLib download Steam never adopted → fallback (expect `UninstallApp` 18).
 - Non-default library folder, both paths.
 - OFF → byte-identical to today.
+
+## Resolution
+
+Closed 2026-11-08. Built in quick 261106-s3n; live-gate check D defects fixed in quick 261107-td5.
+Live gate run by the operator on macOS arm64 with WazHack 264160 (log `~/Library/Logs/GameLib/gamelib.log`):
+
+- ON, signed in: pass. `Steam UninstallApp accepted` (11-07 20:48:50), no Steam UI, Steam shows not installed.
+  The first attempt fell back (`helper-failed`) because `public/bin` held a helper built before the
+  subcommand existed; `pnpm build-steam-bridge` fixed it.
+- ON, signed out: pass. The helper reports `not-signed-in` before calling UninstallApp (no error-18
+  line), then GameLib deletes the files.
+- ON, Steam not running: pass. `steam-not-running` fallback; no Files Missing entry on Steam start.
+- ON, game running: pass after 261107-td5. The first run showed `registry.vdf` has no `RunningAppID`
+  on this Mac, Steam's error 16 was the only guard, the refusal deleted the game's GameLib
+  settings/logs, and its OS notification went unseen. Re-run (11-08 06:10:29): folder process check
+  refuses, settings kept, in-app toast.
+- ON, unadopted GameLib download: not reachable through the UI. With experimental InstallApp off,
+  the install waits at the restart-Steam blocker with no uninstall; with it on, Steam adopts the
+  install and UninstallApp succeeds (11-08 07:18:26). The fallback stays covered by unit tests and
+  the signed-out / not-running checks.
+- Non-default library (`/Volumes/Untitled/SteamLibrary`): pass on both routes (07:31:06 UninstallApp,
+  07:34:33 fallback deleting only `common/WazHack`).
+- OFF: pass. `delegating uninstall … via steam://uninstall/264160` (07:37:38), Steam's dialog.
+
+Left open: the `Failed to remove …` returns (caught rm error, possible partial delete) still run the
+uninstaller's settings cleanup (261107-td5 SUMMARY).
