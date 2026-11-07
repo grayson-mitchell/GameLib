@@ -102,18 +102,33 @@ const asyncTable: FixtureTable<typeof wineToolsAsyncArgs> = {
     ]
   },
   installWineVersion: {
-    valid: [[wineVersionInfo]],
-    invalid: [
-      [{ ...wineVersionInfo, extra: 1 }],
-      [{ ...wineVersionInfo, type: 'Wine-Mystery' }]
-    ]
+    valid: [
+      [wineVersionInfo],
+      // 67 review CR-01: fetchReleases never sets checksum for Wine-Staging-macOS, and sets
+      // download/downsize only when a matching asset exists; JSON drops the undefined keys.
+      [
+        {
+          ...wineVersionInfo,
+          type: 'Wine-Staging-macOS',
+          checksum: undefined,
+          download: undefined,
+          downsize: undefined
+        }
+      ],
+      // The release cache is persisted on disk; older entries may carry extra keys.
+      [{ ...wineVersionInfo, extra: 1 }]
+    ],
+    invalid: [[{ ...wineVersionInfo, type: 'Wine-Mystery' }]]
   },
   refreshWineVersionInfo: {
     valid: [[true], [false], [], [undefined]],
     invalid: [['yes'], [true, true]]
   },
   removeWineVersion: {
-    valid: [[{ ...wineVersionInfo, isInstalled: true }]],
+    valid: [
+      [{ ...wineVersionInfo, isInstalled: true }],
+      [{ ...wineVersionInfo, isInstalled: true, checksum: undefined }]
+    ],
     invalid: [[{ version: 'x' }]]
   },
   'wine.isValidVersion': {
