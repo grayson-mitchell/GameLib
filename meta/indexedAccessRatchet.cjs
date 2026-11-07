@@ -59,7 +59,8 @@ const ADOPTED_BUCKETS = [
   'src/backend/scanners',
   'src/backend/storeManagers/sideload',
   'src/backend/appshell',
-  'src/backend/logger'
+  'src/backend/logger',
+  'src/backend/platform'
 ]
 
 /**

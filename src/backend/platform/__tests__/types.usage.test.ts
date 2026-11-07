@@ -243,7 +243,7 @@ export function assert_browserWindowHandle(): void {
       options
     )
     if (!canceled) {
-      return filePaths[0]
+      return filePaths[0] ?? false
     }
     return false
   }
