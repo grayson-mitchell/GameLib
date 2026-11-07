@@ -665,6 +665,14 @@ describe('SteamEngineLaunchNotice request slot (quick 261106-pvk)', () => {
       "WazHack Couldn't check whether WazHack is running, so it was not uninstalled. Try again."
     ],
     [
+      { kind: 'uninstall-failed', title: 'WazHack' },
+      "WazHack Couldn't finish uninstalling WazHack. Some files may remain; try uninstalling again."
+    ],
+    [
+      { kind: 'uninstall-failed', title: '' },
+      "Steam Couldn't finish uninstalling Steam. Some files may remain; try uninstalling again."
+    ],
+    [
       { kind: 'uninstall-refused-running', title: '' },
       'Steam Steam is running. Quit it, then uninstall again.'
     ]
