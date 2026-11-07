@@ -60,12 +60,8 @@
  *   - `getSteamBridgeRoute` -> `getBridgeRouteVerdict(appId)` (`games.ts`),
  *     Phase 51 Plan 09/13, D-51-09: the composed bridge-vs-bottle route
  *     verdict for a single game (SteamBridgeRouteVerdict, common/types/steam.ts).
- *   - `getSteamEngineState` -> the Steam adapter's `getSteamEngineState(args[0])`,
- *     `listSteamEngineOptions` -> `listEngineOverrideOptions()` and
- *     `dismissSteamEngineNotice` -> `dismissEngineNotice(args[0])`
- *     (`backend/engine/`), Phase 59 Plan 08, D-04/D-06/D-13/D-14/D-15: the
- *     renderer's engine badge/notice/override reads. Plus the one-way push
- *     `steamEngineStateChanged`, wired via `setEngineStatePublisher`.
+ *   - The engine state/options/dismiss channels and their push moved to the
+ *     store-agnostic `engineFlowRegistration.ts` (Phase 61 Plan 13).
  *   - `setSteamBridgeUserRoute` -> `handleSetSteamBridgeUserRoute(args[0])`
  *     (`installFormIpc.ts`), Phase 51 Plan 13, D-51-10/11: persists the
  *     user's own bridge/bottle override and/or notice acknowledgement.
