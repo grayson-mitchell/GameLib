@@ -351,11 +351,6 @@ export interface SteamBridgeVerdict {
 // `SteamBottleConfig` directly from `common/types/steam` (the original
 // declaration), never from this re-export, and this file itself never
 // referenced the type beyond that re-export.
-// Phase 59 (D-04, D-15): persisted dismissals for the engine notices.
-export const steamEngineNoticeStore = new CacheStore<unknown>(
-  'steam_engine_notices',
-  null
-)
 
 export {
   configStore,

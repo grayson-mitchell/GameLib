@@ -496,6 +496,8 @@ export async function selectLaunchEngine(
     await import('backend/engine/engineRegistry')
   const { prepareBottleForEngine } = await import('backend/engine/engineSwitch')
   const { recordLaunchDecision } = await import('backend/engine/engineState')
+  const { STEAM_ENGINE_RUNNER, steamEngineStateDeps } =
+    await import('./engine/steamEngineDeps')
   const { isNonCrossover } = await import('backend/engine/engineTypes')
   const title = steamGame.getGameInfo().title
 
@@ -697,7 +699,12 @@ export async function selectLaunchEngine(
   for (const line of decision.logLines) {
     logInfo(`SteamGame: appId ${steamGame.appId} ${line}`, LogPrefix.Steam)
   }
-  recordLaunchDecision(steamGame.appId, decision, bottleName)
+  recordLaunchDecision(
+    { runner: STEAM_ENGINE_RUNNER, appName: steamGame.appId },
+    decision,
+    bottleName,
+    steamEngineStateDeps(steamGame.appId)
+  )
 
   if (isNonCrossover(sel) && decision.override === 'automatic') {
     const body =

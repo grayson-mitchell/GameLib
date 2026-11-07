@@ -679,6 +679,8 @@ jest.mock('backend/engine/engineDecision', () => ({
 // store-agnostic decision and switch.
 jest.mock('../engine/steamEngineDeps', () => ({
   readSteamEngineOverride: jest.fn(),
+  STEAM_ENGINE_RUNNER: 'steam',
+  steamEngineStateDeps: jest.fn(() => ({})),
   steamDecisionDeps: jest.fn(() => ({})),
   steamSwitchDeps: jest.fn(() => ({ crossoverSettings: jest.fn() }))
 }))
@@ -14117,7 +14119,10 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         ).toHaveLength(2)
         // G4/D-09: one in-app push per launch; D-08: never a dialog.
         expect(publishOverlayNotice).toHaveBeenCalledTimes(2)
-        expect(publishOverlayNotice).toHaveBeenCalledWith(id, 'shim')
+        expect(publishOverlayNotice).toHaveBeenCalledWith(
+          { runner: 'steam', appName: id },
+          'shim'
+        )
         expect(
           jest.requireMock('backend/dialog/dialog').showDialogBoxModalAuto
         ).not.toHaveBeenCalled()
@@ -15151,7 +15156,10 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         await flush()
         expect(exitNotices(id)).toHaveLength(1)
         expect(publishOverlayExitNotice).toHaveBeenCalledTimes(1)
-        expect(publishOverlayExitNotice).toHaveBeenCalledWith(id)
+        expect(publishOverlayExitNotice).toHaveBeenCalledWith({
+          runner: 'steam',
+          appName: id
+        })
         expect(showDialogBoxModalAuto).not.toHaveBeenCalled()
         expect(runWineCommand).toHaveBeenCalledTimes(1)
       })

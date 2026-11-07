@@ -1,41 +1,82 @@
 import {
   ENGINE_PREFLIGHT_UNHEALTHY_TTL_MS,
-  isDrmModeFromVerdict,
   TRIAL_NOTICE_DAYS,
   __resetEngineStateForTests,
-  dismissSteamEngineNotice,
-  getSteamEngineState,
-  publishOverlayExitNotice,
-  publishOverlayNotice,
-  recordLaunchDecision,
+  dismissEngineNotice,
+  getEngineState,
+  publishOverlayExitNotice as publishExit,
+  publishOverlayNotice as publishNotice,
+  recordLaunchDecision as recordDecision,
   setEngineStatePublisher
 } from '../engineState'
 import type { EngineStateDeps } from '../engineState'
 import type { CrossoverPreflight, LaunchDecision } from '../engineDecision'
-import type { OverlayStep } from 'backend/storeManagers/steam/bridge/overlay/overlayNotice'
 import type { EngineState } from 'common/types/engine'
 
-// G4: the common/ literal union and backend OverlayStep stay assignable both ways.
 type OverlayNoticeStep = NonNullable<EngineState['overlayNotice']>['step']
-const _a: (s: OverlayStep) => OverlayNoticeStep = (s) => s
-const _b: (s: OverlayNoticeStep) => OverlayStep = (s) => s
-void _a
-void _b
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),
   logError: jest.fn(),
-  LogPrefix: { Steam: 'Steam' }
+  LogPrefix: { Backend: 'Backend' }
 }))
 
-const mockMeta = new Map<string, unknown>()
-jest.mock('backend/storeManagers/steam/stores', () => ({
-  steamMetadataStore: {
-    get: (id: string) => mockMeta.get(id),
-    set: (id: string, v: unknown) => void mockMeta.set(id, v)
+/**
+ * Steam-shaped overrides, adapted to the generic deps by the wrappers below. The Steam wiring
+ * itself is covered in steamEngineDeps.test.ts; this file never imports a store manager.
+ */
+type SteamStyle = Partial<EngineStateDeps> & {
+  bridgeInstallBottleFor?: (appId: string) => string | null
+  ownBottleNameFor?: (appId: string) => string
+  isDrmModeTitle?: (appId: string) => boolean
+  isBridgeBottleReady?: (bottle: string) => boolean
+}
+
+function toDeps(appId: string, o: SteamStyle): EngineStateDeps {
+  const own = (o.ownBottleNameFor ?? ((id) => `GameLibSteamBridge-${id}`))(
+    appId
+  )
+  return {
+    ...o,
+    bottleFor: () =>
+      (o.bridgeInstallBottleFor ?? ((id) => `GameLibSteamBridge-${id}`))(appId),
+    overrideEligible: (_i, bottle) =>
+      bottle === own && !(o.isDrmModeTitle ?? (() => false))(appId),
+    overlayEligible: true,
+    effective: () => {
+      const raw = o.readOverride?.('x')
+      return {
+        kind: 'override',
+        id:
+          raw === 'crossover' ||
+          (typeof raw === 'string' &&
+            (raw.startsWith('pinned:') || raw.startsWith('wine-manager:')))
+            ? (raw as 'crossover')
+            : 'automatic',
+        source: 'stored'
+      }
+    },
+    isBottleReady: o.isBridgeBottleReady
   }
-}))
+}
+
+const idOf = (appName: string) => ({ runner: 'steam', appName })
+const getSteamEngineState = (appId: unknown, o: SteamStyle) =>
+  getEngineState(
+    typeof appId === 'string' ? idOf(appId) : appId,
+    toDeps(String(appId), o)
+  )
+const recordLaunchDecision = (
+  appId: string,
+  d: LaunchDecision,
+  bottle: string,
+  o: SteamStyle
+) => recordDecision(idOf(appId), d, bottle, toDeps(appId, o))
+const publishOverlayNotice = (appId: string, step: OverlayNoticeStep) =>
+  publishNotice(idOf(appId), step)
+const publishOverlayExitNotice = (appId: string) => publishExit(idOf(appId))
+const dismissSteamEngineNotice = dismissEngineNotice
 
 const TESTED = '26.3.0.39832'
 const UNTESTED = '99.0.0.1'
@@ -61,13 +102,13 @@ const healthy = (
 
 function mk(
   preflight: CrossoverPreflight | (() => Promise<CrossoverPreflight>),
-  over: Partial<EngineStateDeps> = {}
+  over: SteamStyle = {}
 ) {
   const store = memStore()
   const probe = jest.fn(async () =>
     typeof preflight === 'function' ? preflight() : preflight
   )
-  const deps: Partial<EngineStateDeps> = {
+  const deps: SteamStyle = {
     isMac: true,
     store,
     bridgeInstallBottleFor: (id) => `GameLibSteamBridge-${id}`,
@@ -144,7 +185,12 @@ describe('getSteamEngineState', () => {
       overrideWarning: null,
       launchNotice: null,
       overlayNotice: null,
-      exitNotice: null
+      exitNotice: null,
+      effectiveEngineId: 'automatic',
+      engineSource: 'stored',
+      prefixKind: null,
+      perGameBottleName: null,
+      legacyLabel: null
     })
     expect(probe).not.toHaveBeenCalled()
     ready = true
@@ -254,7 +300,7 @@ describe('getSteamEngineState', () => {
       elapsedMs: 1
     }))
     const { deps } = mk(healthy(null))
-    const real: Partial<EngineStateDeps> = {
+    const real: SteamStyle = {
       ...deps,
       preflight: undefined,
       probe,
@@ -270,29 +316,6 @@ describe('getSteamEngineState', () => {
     await getSteamEngineState('1', real)
     expect(kill).not.toHaveBeenCalled()
     expect(probe).toHaveBeenCalledTimes(2)
-  })
-  it('default isDrmModeTitle reads the persisted bridge mode', async () => {
-    const { deps } = mk(healthy(null))
-    const real: Partial<EngineStateDeps> = { ...deps }
-    delete real.isDrmModeTitle
-    mockMeta.set('1', {
-      art_cover: '',
-      art_square: '',
-      extra: { reqs: [] },
-      bridge: { mode: 'steamclient-layer' }
-    })
-    expect((await getSteamEngineState('1', real))?.overrideEligible).toBe(false)
-    mockMeta.set('1', {
-      art_cover: '',
-      art_square: '',
-      extra: { reqs: [] },
-      bridge: { mode: 'tcp' }
-    })
-    __resetEngineStateForTests()
-    expect((await getSteamEngineState('1', real))?.overrideEligible).toBe(true)
-    mockMeta.clear()
-    __resetEngineStateForTests()
-    expect((await getSteamEngineState('1', real))?.overrideEligible).toBe(true)
   })
   it('a non-healthy cached preflight expires after 60 s; healthy stays', async () => {
     let t = 0
@@ -425,26 +448,6 @@ describe('truthful engine state (WR-02, WR-06, WR-07)', () => {
   it('automatic override never carries a warning', async () => {
     const { deps } = mk(expiredPf)
     expect((await getSteamEngineState('1', deps))?.overrideWarning).toBeNull()
-  })
-  it('verdict without mode: steamstub scan is not override-eligible', () => {
-    expect(isDrmModeFromVerdict({ mode: 'steamclient-layer' })).toBe(true)
-    expect(isDrmModeFromVerdict({ mode: 'tcp', drm: 'ceg' })).toBe(true)
-    expect(isDrmModeFromVerdict({ scan: { drmWrapper: 'steamstub' } })).toBe(
-      true
-    )
-    expect(isDrmModeFromVerdict({ drm: 'ceg' })).toBe(true)
-    expect(isDrmModeFromVerdict({ scan: {} })).toBe(false)
-    expect(isDrmModeFromVerdict(undefined)).toBe(false)
-  })
-  it('WR-01: a CEG verdict with persisted mode tcp is not offered the override', () => {
-    expect(
-      isDrmModeFromVerdict({
-        mode: 'tcp',
-        drm: 'ceg',
-        scan: { drmWrapper: 'none' }
-      })
-    ).toBe(true)
-    expect(isDrmModeFromVerdict({ mode: 'tcp', drm: 'none' })).toBe(false)
   })
 })
 
@@ -647,9 +650,6 @@ describe('recordLaunchDecision and publisher', () => {
       )
       pub.mockClear()
       expect(publishOverlayNotice('abc', 'shim')).toBe(false)
-      expect(publishOverlayNotice('3205720', 'bogus' as OverlayStep)).toBe(
-        false
-      )
       expect(pub).not.toHaveBeenCalled()
     })
   })
@@ -680,5 +680,75 @@ describe('recordLaunchDecision and publisher', () => {
         deps
       )
     ).not.toThrow()
+  })
+})
+
+describe('generic identities (phase 61 D-12, D-15)', () => {
+  const generic = (over: Partial<EngineStateDeps> = {}): EngineStateDeps => ({
+    isMac: true,
+    store: memStore(),
+    bottleFor: () => 'GameLibBottle-Fortnite',
+    overrideEligible: () => true,
+    overlayEligible: false,
+    effective: () => ({ kind: 'override', id: 'automatic', source: 'derived' }),
+    isBottleReady: () => true,
+    resolveCrossoverBinDir: () => Promise.resolve('/cx/bin'),
+    preflight: () => Promise.resolve(healthy(null)),
+    ...over
+  })
+  it('a non-Steam identity carries its runner and appName', async () => {
+    const s = await getEngineState(
+      { runner: 'legendary', appName: 'Fortnite' },
+      generic({
+        prefixKind: 'bottle',
+        perGameBottleName: 'GameLibBottle-Fortnite'
+      })
+    )
+    expect(s).toMatchObject({
+      runner: 'legendary',
+      appName: 'Fortnite',
+      engine: 'crossover',
+      effectiveEngineId: 'automatic',
+      engineSource: 'derived',
+      prefixKind: 'bottle',
+      perGameBottleName: 'GameLibBottle-Fortnite',
+      overlayEligible: false
+    })
+  })
+  it('a Legacy effective engine is unsupported and never preflights', async () => {
+    const preflight = jest.fn(() => Promise.resolve(healthy(null)))
+    const s = await getEngineState(
+      { runner: 'legendary', appName: 'Fortnite' },
+      generic({
+        preflight,
+        effective: () => ({ kind: 'legacy', label: 'Wine 9.0' })
+      })
+    )
+    expect(preflight).not.toHaveBeenCalled()
+    expect(s).toMatchObject({
+      engine: 'unsupported',
+      reason: 'override',
+      engineLabel: 'Legacy: Wine 9.0',
+      effectiveEngineId: 'legacy:Wine 9.0',
+      legacyLabel: 'Wine 9.0'
+    })
+  })
+  it('stateWithoutBottle yields state with no preflight', async () => {
+    const preflight = jest.fn(() => Promise.resolve(healthy(null)))
+    const s = await getEngineState(
+      { runner: 'gog', appName: '1207658924' },
+      generic({ bottleFor: () => null, stateWithoutBottle: true, preflight })
+    )
+    expect(preflight).not.toHaveBeenCalled()
+    expect(s).toMatchObject({ runner: 'gog', crossoverInstalled: true })
+  })
+  it.each([
+    [null],
+    ['x'],
+    [{ runner: 'nope', appName: 'a' }],
+    [{ runner: 'legendary', appName: '../x' }],
+    [{ runner: 'steam', appName: 'abc' }]
+  ])('an invalid identity %j gives null', async (id) => {
+    expect(await getEngineState(id, generic())).toBeNull()
   })
 })

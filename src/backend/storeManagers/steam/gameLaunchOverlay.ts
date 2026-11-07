@@ -35,9 +35,11 @@ import { buildOverlayPaths } from './bridge/overlay/overlayPaths'
 import {
   formatOverlayNoticeLine,
   OVERLAY_STEP_TEXT,
+  OVERLAY_STEPS,
   type OverlayStep
 } from './bridge/overlay/overlayNotice'
 import { publishOverlayNotice } from 'backend/engine/engineState'
+import { STEAM_ENGINE_RUNNER } from './engine/steamEngineDeps'
 import { readKnownFixes } from 'backend/knownFixes'
 import type { OverlayRunnerReady } from './bridge/overlay/overlayRunnerClone'
 import { DRM_END_SESSION_TIMEOUT_MS } from './bridge/drm/drmLaunchSetup'
@@ -103,7 +105,12 @@ export function notifyOverlaySetupFailed(
     formatOverlayNoticeLine(steamGame.appId, step, cause),
     LogPrefix.Steam
   )
-  const pushed = publishOverlayNotice(steamGame.appId, step)
+  const pushed = (OVERLAY_STEPS as readonly string[]).includes(step)
+    ? publishOverlayNotice(
+        { runner: STEAM_ENGINE_RUNNER, appName: steamGame.appId },
+        step
+      )
+    : false
   logInfo(
     `SteamGame: appId ${steamGame.appId} overlay notice surface=in-app pushed=${pushed}`,
     LogPrefix.Steam

@@ -28,7 +28,10 @@ jest.mock('backend/storeManagers/steam/bottleProcessMonitor', () => ({
   getBottleProcessMonitorPhase: jest.fn()
 }))
 
-import { readSteamEngineOverride as readStoredEngineOverride } from '../engine/steamEngineDeps'
+import {
+  isDrmModeFromVerdict,
+  readSteamEngineOverride as readStoredEngineOverride
+} from '../engine/steamEngineDeps'
 
 afterAll(() => rmSync(mockDir, { recursive: true, force: true }))
 
@@ -70,5 +73,19 @@ describe('readStoredEngineOverride (59-UAT G11, D-08)', () => {
 
   it('a non-numeric appId never touches the filesystem', () => {
     expect(readStoredEngineOverride('../evil')).toBeUndefined()
+  })
+})
+
+describe('isDrmModeFromVerdict (WR-01, WR-07)', () => {
+  it('maps persisted mode, CEG and steamstub scan to DRM mode', () => {
+    expect(isDrmModeFromVerdict({ mode: 'steamclient-layer' })).toBe(true)
+    expect(isDrmModeFromVerdict({ mode: 'tcp', drm: 'ceg' })).toBe(true)
+    expect(isDrmModeFromVerdict({ scan: { drmWrapper: 'steamstub' } })).toBe(
+      true
+    )
+    expect(isDrmModeFromVerdict({ drm: 'ceg' })).toBe(true)
+    expect(isDrmModeFromVerdict({ scan: {} })).toBe(false)
+    expect(isDrmModeFromVerdict(undefined)).toBe(false)
+    expect(isDrmModeFromVerdict({ mode: 'tcp', drm: 'none' })).toBe(false)
   })
 })

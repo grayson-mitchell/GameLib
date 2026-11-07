@@ -60,9 +60,9 @@
  *   - `getSteamBridgeRoute` -> `getBridgeRouteVerdict(appId)` (`games.ts`),
  *     Phase 51 Plan 09/13, D-51-09: the composed bridge-vs-bottle route
  *     verdict for a single game (SteamBridgeRouteVerdict, common/types/steam.ts).
- *   - `getSteamEngineState` -> `getSteamEngineState(args[0])`,
+ *   - `getSteamEngineState` -> the Steam adapter's `getSteamEngineState(args[0])`,
  *     `listSteamEngineOptions` -> `listEngineOverrideOptions()` and
- *     `dismissSteamEngineNotice` -> `dismissSteamEngineNotice(args[0])`
+ *     `dismissSteamEngineNotice` -> `dismissEngineNotice(args[0])`
  *     (`backend/engine/`), Phase 59 Plan 08, D-04/D-06/D-13/D-14/D-15: the
  *     renderer's engine badge/notice/override reads. Plus the one-way push
  *     `steamEngineStateChanged`, wired via `setEngineStatePublisher`.
@@ -158,8 +158,7 @@ import {
   handleSetSteamBridgeUserRoute
 } from '../storeManagers/steam/installFormIpc'
 import {
-  getSteamEngineState,
-  dismissSteamEngineNotice,
+  dismissEngineNotice,
   setEngineStatePublisher
 } from 'backend/engine/engineState'
 import { listEngineOverrideOptions } from 'backend/engine/engineDecision'
@@ -373,11 +372,13 @@ export function registerSteamAuthFlows(): void {
   )
 
   // Phase 59 Plan 08 (D-04/D-06/D-13/D-14/D-15): engine state reads. args[0]
-  // is passed UNCAST -- engineState.ts's own guards (numeric appId, closed
+  // is passed UNCAST -- steamEngineDeps.ts / engineState.ts's own guards (numeric appId, closed
   // notice-kind set, build regex) are the validators (T-59-35).
   ipcMain.handle(
     'getSteamEngineState',
     async (_event: unknown, ...args: unknown[]) => {
+      const { getSteamEngineState } =
+        await import('backend/storeManagers/steam/engine/steamEngineDeps')
       return getSteamEngineState(args[0])
     }
   )
@@ -392,7 +393,7 @@ export function registerSteamAuthFlows(): void {
   ipcMain.handle(
     'dismissSteamEngineNotice',
     async (_event: unknown, ...args: unknown[]) => {
-      return dismissSteamEngineNotice(args[0])
+      return dismissEngineNotice(args[0])
     }
   )
 

@@ -42,6 +42,7 @@ import {
 import { buildOverlayPaths } from './bridge/overlay/overlayPaths'
 import { formatOverlayExitNoticeLine } from './bridge/overlay/overlayNotice'
 import { publishOverlayExitNotice } from 'backend/engine/engineState'
+import { STEAM_ENGINE_RUNNER } from './engine/steamEngineDeps'
 import type { LaunchDeadline } from 'backend/engine/launchDeadline'
 import { placeShimForGame } from './bridge/shimGenerate'
 import { detectLaunchDrmWrapper } from './bridge/drm/drmScanExe'
@@ -980,7 +981,10 @@ export async function fireBridgeWineLaunch(
         return
       }
       logWarning(formatOverlayExitNoticeLine(steamGame.appId), LogPrefix.Steam)
-      const pushed = publishOverlayExitNotice(steamGame.appId)
+      const pushed = publishOverlayExitNotice({
+        runner: STEAM_ENGINE_RUNNER,
+        appName: steamGame.appId
+      })
       logInfo(
         `SteamGame: appId ${steamGame.appId} overlay exit notice surface=in-app pushed=${pushed}`,
         LogPrefix.Steam

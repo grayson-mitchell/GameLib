@@ -35,8 +35,7 @@ const getState = jest.fn()
 const dismiss = jest.fn()
 const setPublisher = jest.fn()
 jest.mock('backend/engine/engineState', () => ({
-  getSteamEngineState: (...a: unknown[]) => getState(...a),
-  dismissSteamEngineNotice: (...a: unknown[]) => dismiss(...a),
+  dismissEngineNotice: (...a: unknown[]) => dismiss(...a),
   setEngineStatePublisher: (...a: unknown[]) => setPublisher(...a)
 }))
 const listOptions = jest.fn()
@@ -44,7 +43,8 @@ jest.mock('backend/engine/engineDecision', () => ({
   listEngineOverrideOptions: (...a: unknown[]) => listOptions(...a)
 }))
 jest.mock('backend/storeManagers/steam/engine/steamEngineDeps', () => ({
-  steamDecisionDeps: () => ({ tag: 'steam-deps' })
+  steamDecisionDeps: () => ({ tag: 'steam-deps' }),
+  getSteamEngineState: (...a: unknown[]) => getState(...a)
 }))
 const send = jest.fn()
 jest.mock('../../ipc', () => ({

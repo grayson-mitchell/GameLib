@@ -10,11 +10,19 @@ import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
 import type { EngineDecisionDeps } from 'backend/engine/engineDecision'
 import type { EngineSwitchDeps } from 'backend/engine/engineSwitch'
 import { readStoredGameConfig } from 'backend/engine/engineConfig'
+import type { EffectiveEngine } from 'backend/engine/engineConfig'
+import { parseEngineOverride } from 'backend/engine/engineIds'
+import { getEngineState } from 'backend/engine/engineState'
+import type { EngineStateDeps } from 'backend/engine/engineState'
+import type { EngineState } from 'common/types/engine'
 import {
   bridgeBottleNameFor,
+  findBridgeInstallBottle,
   getBridgeBottleSettings,
+  isBridgeBottleReady,
   persistedWineBins
 } from '../bottle'
+import { readBridgeVerdict } from '../bridge/bridgeVerdict'
 import { getBottleProcessMonitorPhase } from '../bottleProcessMonitor'
 import { readStoredTitleConfig } from '../titleSettings'
 
@@ -49,4 +57,69 @@ export function steamSwitchDeps(): Partial<EngineSwitchDeps> &
     crossoverSettings: getBridgeBottleSettings,
     resolveCrossoverBinDir: hintedBinDir
   }
+}
+
+/** The Steam runner id the shared engine state is keyed by. */
+export const STEAM_ENGINE_RUNNER = 'steam'
+
+/**
+ * WR-07: whether a persisted verdict means the engine override has no effect.
+ * WR-01: a CEG verdict wins regardless of the persisted mode. The install
+ * prefetch persists `tcp` for CEG titles (resolveBridgeMode), but a CEG launch
+ * is refused, so the override has no effect there. Otherwise a persisted
+ * `mode` decides; a title installed before the mode was persisted is resolved
+ * from a steamstub scan. Read-only: a page view must not write the verdict
+ * store.
+ */
+export function isDrmModeFromVerdict(
+  verdict:
+    | { mode?: string; drm?: string; scan?: { drmWrapper?: string } }
+    | undefined
+): boolean {
+  if (!verdict) return false
+  if (verdict.drm === 'ceg') return true
+  if (verdict.mode !== undefined) return verdict.mode === 'steamclient-layer'
+  return verdict.scan?.drmWrapper === 'steamstub'
+}
+
+/**
+ * The Steam side of the shared engine state: a title has state only with a bridge install, an
+ * override only applies in its own per-game bottle outside DRM mode, and the overlay toggle
+ * applies to every bridge title (Phase 60 D-02).
+ */
+export function steamEngineStateDeps(
+  appId: string,
+  over: Partial<EngineStateDeps> = {}
+): EngineStateDeps {
+  const own = bridgeBottleNameFor(appId)
+  return {
+    ...steamDecisionDeps(),
+    bottleFor: () => findBridgeInstallBottle(appId),
+    overrideEligible: (_id, bottle) =>
+      bottle === own && !isDrmModeFromVerdict(readBridgeVerdict(appId)),
+    overlayEligible: true,
+    effective: (): EffectiveEngine => {
+      const raw = readSteamEngineOverride(appId)
+      return {
+        kind: 'override',
+        id: parseEngineOverride(raw),
+        source: typeof raw === 'string' ? 'stored' : 'derived'
+      }
+    },
+    prefixKind: 'bottle',
+    perGameBottleName: own,
+    isBottleReady: isBridgeBottleReady,
+    ...over
+  }
+}
+
+export async function getSteamEngineState(
+  appId: unknown,
+  over?: Partial<EngineStateDeps>
+): Promise<EngineState | null> {
+  if (typeof appId !== 'string' || !/^\d+$/.test(appId)) return null
+  return getEngineState(
+    { runner: STEAM_ENGINE_RUNNER, appName: appId },
+    steamEngineStateDeps(appId, over)
+  )
 }
