@@ -55,7 +55,8 @@ async function fetchReleases({
           const release_data = {} as VersionInfo
           release_data.version = getVersionName(type, release.tag_name)
           release_data.type = type
-          release_data.date = release.published_at.split('T')[0]
+          const [publishedDate = ''] = release.published_at.split('T')
+          release_data.date = publishedDate
           release_data.disksize = 0
           release_data.release_notes_link = release.html_url
 
@@ -121,16 +122,18 @@ async function fetchReleases({
           releases.find((release) => /\d+-\d+$/.test(release.version)) ??
           releases[0]
         // add latest to list
-        releases.unshift({
-          version: `${latest.type}-latest`,
-          type: latest.type,
-          date: latest.date,
-          download: latest.download,
-          downsize: latest.downsize,
-          disksize: latest.disksize,
-          checksum: latest.checksum,
-          release_notes_link: latest.release_notes_link
-        })
+        if (latest !== undefined) {
+          releases.unshift({
+            version: `${latest.type}-latest`,
+            type: latest.type,
+            date: latest.date,
+            download: latest.download,
+            downsize: latest.downsize,
+            disksize: latest.disksize,
+            checksum: latest.checksum,
+            release_notes_link: latest.release_notes_link
+          })
+        }
 
         resolve(releases)
       })

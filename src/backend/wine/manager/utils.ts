@@ -183,12 +183,13 @@ async function updateWineVersionInfos(
         })
 
         if (old.installDir !== undefined && existsSync(old?.installDir)) {
-          if (index !== -1) {
-            releases[index].installDir = old.installDir
-            releases[index].isInstalled = old.isInstalled
-            releases[index].disksize = old.disksize
-            if (releases[index].checksum !== old.checksum || old.hasUpdate) {
-              releases[index].hasUpdate = true
+          const match = releases[index]
+          if (match !== undefined) {
+            match.installDir = old.installDir
+            match.isInstalled = old.isInstalled
+            match.disksize = old.disksize
+            if (match.checksum !== old.checksum || old.hasUpdate) {
+              match.hasUpdate = true
             }
           } else {
             releases.push(old)
@@ -363,7 +364,8 @@ async function removeWineVersion(release: WineVersionInfo): Promise<boolean> {
     return release.version === storedRelease.version
   })
 
-  if (index === -1) {
+  const stored = releases[index]
+  if (index === -1 || stored === undefined) {
     logError(
       `Can't find ${release.version} in electron-store -> wine-downloader-info.json!`,
       LogPrefix.WineDownloader
@@ -373,14 +375,14 @@ async function removeWineVersion(release: WineVersionInfo): Promise<boolean> {
 
   // `release` arrives from the renderer over IPC, so its `installDir` is untrusted: only ever
   // remove the directory this backend itself recorded for the version when it installed it.
-  const installDir = releases[index].installDir
+  const installDir = stored.installDir
 
   // remove folder if exist
   if (installDir && existsSync(installDir)) {
     try {
       rmSync(installDir, { recursive: true })
       // A copy: the stored entry's installDir is cleared below, and the DXMT listener reads it.
-      backendEvents.emit('wineVersionUninstalled', { ...releases[index] })
+      backendEvents.emit('wineVersionUninstalled', { ...stored })
     } catch (error) {
       logError(error, LogPrefix.WineDownloader)
       logWarning(
@@ -391,10 +393,10 @@ async function removeWineVersion(release: WineVersionInfo): Promise<boolean> {
   }
 
   // update tool information
-  releases[index].isInstalled = false
-  releases[index].installDir = ''
-  releases[index].disksize = 0
-  releases[index].hasUpdate = false
+  stored.isInstalled = false
+  stored.installDir = ''
+  stored.disksize = 0
+  stored.hasUpdate = false
 
   wineDownloaderInfoStore.set('wine-releases', releases)
 

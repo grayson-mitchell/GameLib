@@ -8,6 +8,7 @@ import { mkdtempSync, mkdirSync, existsSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import type { WineVersionInfo } from 'common/types'
+import { defined } from 'backend/testUtils/indexed'
 
 jest.mock('backend/logger')
 jest.mock('../../../ipc', () => ({
@@ -94,7 +95,8 @@ describe('removeWineVersion — deletes only the stored installDir, never a rend
 
     expect(result).toBe(true)
     expect(existsSync(storedDir)).toBe(false)
-    const [stored] = wineDownloaderInfoStore.get('wine-releases', [])
+    const [first] = wineDownloaderInfoStore.get('wine-releases', [])
+    const stored = defined(first, 'stored wine release')
     expect(stored.isInstalled).toBe(false)
     expect(stored.installDir).toBe('')
   })

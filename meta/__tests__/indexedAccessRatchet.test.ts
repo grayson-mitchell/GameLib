@@ -46,7 +46,8 @@ describe('indexedAccessRatchet bucketOf', () => {
       'src/backend/humble',
       `${STEAM} (tests)`,
       'src/backend/engine',
-      'src/backend/__tests__'
+      'src/backend/__tests__',
+      'src/backend/wine'
     ])
   })
 })

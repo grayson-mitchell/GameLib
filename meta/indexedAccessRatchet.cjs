@@ -43,7 +43,8 @@ const ADOPTED_BUCKETS = [
   'src/backend/humble',
   'src/backend/storeManagers/steam (tests)',
   'src/backend/engine',
-  'src/backend/__tests__'
+  'src/backend/__tests__',
+  'src/backend/wine'
 ]
 
 /**

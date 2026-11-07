@@ -3,6 +3,7 @@ import { getAvailableVersions } from '../../main'
 import { test_data_release_list } from '../test_data/github-api-test-data.json'
 import { axiosClient } from 'backend/utils'
 import { logError } from 'backend/logger'
+import { defined } from 'backend/testUtils/indexed'
 
 jest.mock('backend/logger')
 
@@ -13,7 +14,9 @@ describe('Main - GetAvailableVersions', () => {
     await getAvailableVersions({}).then((releases: VersionInfo[]) => {
       expect(releases).not.toBe([])
       expect(releases.length).toBeGreaterThan(0)
-      expect(releases[3].version).toContain('6.16-GE-1')
+      expect(defined(releases[3], 'fourth release').version).toContain(
+        '6.16-GE-1'
+      )
     })
 
     expect(axiosClient.get).toBeCalledWith(
@@ -31,7 +34,9 @@ describe('Main - GetAvailableVersions', () => {
       }).then((releases: VersionInfo[]) => {
         expect(releases).not.toBe([])
         expect(releases.length).toBeGreaterThan(0)
-        expect(releases[3].version).toContain('6.16-GE-1')
+        expect(defined(releases[3], 'fourth release').version).toContain(
+          '6.16-GE-1'
+        )
       })
 
       expect(axiosClient.get).toBeCalledWith(
