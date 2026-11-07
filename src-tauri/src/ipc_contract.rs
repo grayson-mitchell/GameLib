@@ -476,7 +476,7 @@ pub(crate) struct KeyringGetArgs {
 
 impl KeyringGetArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let slot = args.get(0).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
+        let slot = args.get(0).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
         Ok(Self { slot })
     }
 }
@@ -490,7 +490,7 @@ pub(crate) struct KeyringSetArgs {
 impl KeyringSetArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let secret = serde_json::from_value(args.get(0).ok_or_else(|| "keyring:bad-args".to_string())?.clone()).map_err(|_| "keyring:bad-args".to_string())?;
-        let slot = args.get(1).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
+        let slot = args.get(1).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
         Ok(Self { secret, slot })
     }
 }
@@ -502,7 +502,7 @@ pub(crate) struct KeyringDeleteArgs {
 
 impl KeyringDeleteArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let slot = args.get(0).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
+        let slot = args.get(0).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
         Ok(Self { slot })
     }
 }
@@ -514,7 +514,7 @@ pub(crate) struct KeyringAvailableArgs {
 
 impl KeyringAvailableArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let slot = args.get(0).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
+        let slot = args.get(0).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| "keyring:bad-args".to_string())?;
         Ok(Self { slot })
     }
 }

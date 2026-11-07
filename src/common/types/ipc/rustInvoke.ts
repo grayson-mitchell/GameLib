@@ -56,11 +56,13 @@ import {
  *
  * Written against what the Rust arms in `src-tauri/src/store_embed.rs` actually read. Plain
  * `z.object` (not strict): args are sidecar-produced and Electron option objects carry extra keys
- * Rust ignores. `.optional()` maps to serde `Option` (absent and null both read as None).
+ * Rust ignores. An optional trailing positional maps to serde `Option` and the generated `from_args` reads absent
+ * AND JSON null as None (JSON turns a positional `undefined` into null), so schemas for those
+ * positionals use `.nullish()` to say so.
  */
 
-/** The keyring slot is optional on the wire: Rust defaults an ABSENT slot to the Steam token. */
-const slot = z.string().meta({ title: 'slot' })
+/** The keyring slot is optional on the wire: Rust defaults an absent or null slot to the Steam token. */
+const slot = z.string().nullish().meta({ title: 'slot' })
 const label = z.string().meta({ title: 'label' })
 const names = z.array(z.string()).meta({ title: 'names' })
 const dialogFilters = z.array(
@@ -80,16 +82,16 @@ const empty = z.tuple([])
 
 export const rustInvokeArgs = {
   // ---- Keychain
-  [RUST_KEYRING_GET]: z.tuple([slot.optional()]).meta({
+  [RUST_KEYRING_GET]: z.tuple([slot]).meta({
     'x-error-prefix': 'keyring'
   }),
   [RUST_KEYRING_SET]: z
-    .tuple([z.string().meta({ title: 'secret' }), slot.optional()])
+    .tuple([z.string().meta({ title: 'secret' }), slot])
     .meta({ 'x-error-prefix': 'keyring' }),
-  [RUST_KEYRING_DELETE]: z.tuple([slot.optional()]).meta({
+  [RUST_KEYRING_DELETE]: z.tuple([slot]).meta({
     'x-error-prefix': 'keyring'
   }),
-  [RUST_KEYRING_AVAILABLE]: z.tuple([slot.optional()]).meta({
+  [RUST_KEYRING_AVAILABLE]: z.tuple([slot]).meta({
     'x-error-prefix': 'keyring'
   }),
   // ---- Dialogs, notification, shell

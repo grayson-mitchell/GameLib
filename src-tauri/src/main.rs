@@ -4559,13 +4559,26 @@ mod tests {
 
     #[test]
     fn keyring_slot_defaults_to_steam_refresh_token_when_absent() {
-        // Absent is the shipping shape. A literal `null` slot is not (the TS schema forbids it)
-        // and is now `keyring:bad-args` rather than silently defaulting.
+        // Absent is the shipping shape.
         let a = KeyringGetArgs::from_args(&[]).unwrap();
         assert_eq!(
             a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT),
             "steam-refresh-token"
         );
+    }
+
+    #[test]
+    fn keyring_slot_null_reads_as_the_default_slot() {
+        // JSON turns a positional `undefined` into `null`; it must read as absent, not
+        // `keyring:bad-args` (67 review WR-05).
+        let a = KeyringGetArgs::from_args(&[json!(null)]).unwrap();
+        assert_eq!(a.slot, None);
+        assert_eq!(
+            a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT),
+            "steam-refresh-token"
+        );
+        let set = KeyringSetArgs::from_args(&[json!("a-secret"), json!(null)]).unwrap();
+        assert_eq!(set.slot, None);
     }
 
     #[test]

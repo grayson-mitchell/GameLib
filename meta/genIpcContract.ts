@@ -399,7 +399,7 @@ export function renderArgsStruct(
       names.push(ident)
       if (i >= minItems) {
         lets.push(
-          `        let ${ident} = args.get(${i}).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| ${rustStr(err)}.to_string())?;`
+          `        let ${ident} = args.get(${i}).filter(|v| !v.is_null()).map(|v| serde_json::from_value(v.clone())).transpose().map_err(|_| ${rustStr(err)}.to_string())?;`
         )
       } else {
         lets.push(

@@ -97,6 +97,18 @@ describe('renderArgsStruct', () => {
     expect(r.text).toContain('pub(crate) note: Option<String>,')
     expect(r.text).toContain('"keyring:bad-args"')
   })
+  it('optional positionals read JSON null as None (67 review WR-05)', () => {
+    const r = renderArgsStruct(
+      'keyring_get',
+      js(
+        z
+          .tuple([z.string().nullish().meta({ title: 'slot' })])
+          .meta({ 'x-error-prefix': 'keyring' })
+      )
+    )
+    expect(r.text).toContain('args.get(0).filter(|v| !v.is_null()).map(')
+    expect(r.text).toContain('pub(crate) slot: Option<String>,')
+  })
   it('throws on an untitled positional item', () => {
     expect(() =>
       renderArgsStruct('c', js(z.tuple([z.string(), z.string()])))
