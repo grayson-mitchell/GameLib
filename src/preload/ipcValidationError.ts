@@ -1,4 +1,4 @@
-import { IPC_INVALID_ARGS, parseIpcInvalidArgsError } from 'common/types/sidecarTransport'
+import { IPC_INVALID_ARGS, IPC_INVALID_ARGS_MARKER, parseIpcInvalidArgsError } from 'common/types/sidecarTransport'
 
 /**
  * Typed renderer-side form of a sidecar schema rejection (D-08). Carries only the channel,
@@ -12,7 +12,10 @@ export class IpcValidationError extends Error {
   readonly codes: string[]
 
   constructor(channel: string, paths: string[], codes: string[]) {
-    super(`Invalid arguments for IPC channel '${channel}' at ${paths.join(', ')}`)
+    // Leading marker: bootErrorSurface classifies unhandled rejections by message text alone
+    // (it cannot import this class), and the preload invoker converts the wire string into
+    // this class before any renderer handler sees it.
+    super(`${IPC_INVALID_ARGS_MARKER} Invalid arguments for IPC channel '${channel}' at ${paths.join(', ')}`)
     this.name = 'IpcValidationError'
     this.channel = channel
     this.paths = paths

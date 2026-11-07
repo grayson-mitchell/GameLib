@@ -34,6 +34,26 @@
  */
 const UNPORTED_CHANNEL_MARKER = '[GAMELIB_UNPORTED_CHANNEL]'
 
+/**
+ * Mirrors `IPC_INVALID_ARGS_MARKER` in `common/types/sidecarTransport.ts`.
+ *
+ * Duplicated as a literal for the same zero-import reason as the marker above. If the
+ * constant ever changes, this must change with it.
+ */
+const IPC_INVALID_ARGS_MARKER = '[GAMELIB_IPC_INVALID_ARGS]'
+
+/**
+ * Classifies a boot-time error message. An unported channel and a sidecar schema rejection
+ * are both contract rejections, not bootstrap failures, so neither may paint over the app.
+ */
+export function classifyBootError(
+  message: string
+): 'unported' | 'invalid-args' | 'fatal' {
+  if (message.includes(UNPORTED_CHANNEL_MARKER)) return 'unported'
+  if (message.includes(IPC_INVALID_ARGS_MARKER)) return 'invalid-args'
+  return 'fatal'
+}
+
 function renderBootError(context: string, error: unknown): void {
   try {
     const message =
@@ -46,7 +66,15 @@ function renderBootError(context: string, error: unknown): void {
     // Electron (every handler exists), an unhandled rejection against the skeleton sidecar.
     // Hijacking the page for those would make the walking skeleton unusable until all ~217
     // endpoints are ported, which is precisely what this phase defers. Log and move on.
-    if (message.includes(UNPORTED_CHANNEL_MARKER)) {
+    const kind = classifyBootError(message)
+    if (kind === 'invalid-args') {
+      console.warn(
+        `[GameLib] IPC argument validation rejected a call during ${context} — continuing:`,
+        message
+      )
+      return
+    }
+    if (kind === 'unported') {
       console.warn(
         `[GameLib] unported channel called during ${context} — expected seam gap ` +
           `(see SEAM.md § Deferred), continuing:`,

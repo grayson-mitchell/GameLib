@@ -25,6 +25,11 @@ describe('IpcValidationError.fromRejection', () => {
     expect(e?.codes).toEqual(['invalid_type'])
   })
 
+  test('message keeps the marker so the boot-error surface can classify it', () => {
+    const e = IpcValidationError.fromRejection(MARKER)
+    expect(e?.message).toContain('[GAMELIB_IPC_INVALID_ARGS]')
+  })
+
   test('parses a plain string rejection', () => {
     const e = IpcValidationError.fromRejection(MARKER)
     expect(e?.channel).toBe('pathExists')
