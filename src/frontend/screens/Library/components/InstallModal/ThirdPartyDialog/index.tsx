@@ -25,6 +25,10 @@ import React, { useCallback, useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import AllowedIcon from 'frontend/assets/rounded_checkmark_icon.svg?react'
 import { AvailablePlatforms } from '..'
+import {
+  engineInstallConfig,
+  installsViaCrossoverForEngine
+} from '../WineSelector/engineInstallChoice'
 import './index.css'
 import { isRunsForMeOn, runsForMeKey } from 'common/runsForMe'
 
@@ -37,6 +41,8 @@ interface Props {
   winePrefix: string
   crossoverBottle: string
   wineVersion: WineInstallation | undefined
+  /** Phase 61 D-17: engine id chosen on macOS; replaces the Wine picker. */
+  engineOverride?: string
   children: React.ReactNode
   gameInfo: GameInfo
 }
@@ -51,7 +57,8 @@ export default function ThirdPartyDialog({
   children,
   crossoverBottle,
   winePrefix,
-  platformToInstall
+  platformToInstall,
+  engineOverride
 }: Props) {
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
@@ -70,7 +77,20 @@ export default function ThirdPartyDialog({
     if (!isWin) {
       const gameSettings = await window.api.requestGameSettings(appName)
 
-      if (wineVersion) {
+      if (engineOverride) {
+        await writeConfig({
+          appName,
+          config: {
+            ...gameSettings,
+            ...(await engineInstallConfig({
+              runner,
+              appName,
+              engineOverride,
+              getBottleName: (a) => window.api.getPerGameBottleName(a)
+            }))
+          }
+        })
+      } else if (wineVersion) {
         writeConfig({
           appName,
           config: {
@@ -95,14 +115,26 @@ export default function ThirdPartyDialog({
       platformToInstall,
       showDialogModal: () => backdropClick()
     })
-  }, [appName, t, winePrefix, wineVersion, crossoverBottle, platformToInstall])
+  }, [
+    appName,
+    runner,
+    t,
+    winePrefix,
+    wineVersion,
+    crossoverBottle,
+    platformToInstall,
+    engineOverride
+  ])
 
   // Quick 261024-ho4: confirm before a CrossOver install rated below 4 of 5.
   const handleInstall = useCallback(async () => {
     const risk = resolveCrossoverInstallRisk({
       platform,
       installsViaCrossover:
-        platformToInstall === 'Windows' && wineVersion?.type === 'crossover',
+        platformToInstall === 'Windows' &&
+        (engineOverride
+          ? installsViaCrossoverForEngine(engineOverride)
+          : wineVersion?.type === 'crossover'),
       rating: crossoverRatings[appName],
       runsForMe: isRunsForMeOn(runsForMe[runsForMeKey(appName, runner)])
     })
@@ -123,6 +155,7 @@ export default function ThirdPartyDialog({
     platform,
     platformToInstall,
     wineVersion,
+    engineOverride,
     crossoverRatings,
     runsForMe,
     runner,

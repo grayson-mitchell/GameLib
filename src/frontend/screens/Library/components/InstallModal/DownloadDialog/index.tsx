@@ -60,6 +60,10 @@ import { hasAnticheatInfo } from 'frontend/hooks/hasAnticheatInfo'
 import BranchSelector from './BranchSelector'
 import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { isRunsForMeOn, runsForMeKey } from 'common/runsForMe'
+import {
+  engineInstallConfig,
+  installsViaCrossoverForEngine
+} from '../WineSelector/engineInstallChoice'
 
 interface Props {
   backdropClick: () => void
@@ -70,6 +74,8 @@ interface Props {
   winePrefix: string
   crossoverBottle: string
   wineVersion: WineInstallation | undefined
+  /** Phase 61 D-17: engine id chosen on macOS; replaces the Wine picker. */
+  engineOverride?: string
   children: React.ReactNode
   gameInfo: GameInfo
 }
@@ -111,7 +117,8 @@ export default function DownloadDialog({
   wineVersion,
   children,
   gameInfo,
-  crossoverBottle
+  crossoverBottle,
+  engineOverride
 }: Props) {
   const previousProgress = JSON.parse(
     storage.getItem(appName) || '{}'
@@ -299,7 +306,10 @@ export default function DownloadDialog({
       const risk = resolveCrossoverInstallRisk({
         platform,
         installsViaCrossover:
-          platformToInstall === 'Windows' && wineVersion?.type === 'crossover',
+          platformToInstall === 'Windows' &&
+          (engineOverride
+            ? installsViaCrossoverForEngine(engineOverride)
+            : wineVersion?.type === 'crossover'),
         rating: crossoverRatings[appName],
         runsForMe: isRunsForMeOn(runsForMe[runsForMeKey(appName, runner)])
       })
@@ -323,7 +333,20 @@ export default function DownloadDialog({
     if (!isWin) {
       const gameSettings = await window.api.requestGameSettings(appName)
 
-      if (wineVersion) {
+      if (engineOverride) {
+        await writeConfig({
+          appName,
+          config: {
+            ...gameSettings,
+            ...(await engineInstallConfig({
+              runner,
+              appName,
+              engineOverride,
+              getBottleName: (a) => window.api.getPerGameBottleName(a)
+            }))
+          }
+        })
+      } else if (wineVersion) {
         writeConfig({
           appName,
           config: {

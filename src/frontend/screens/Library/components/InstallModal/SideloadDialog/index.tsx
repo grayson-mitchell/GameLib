@@ -23,6 +23,7 @@ import {
 import React, { useContext, useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { AvailablePlatforms } from '..'
+import { engineInstallConfig } from '../WineSelector/engineInstallChoice'
 import fallbackImage from 'frontend/assets/gamelib_card.svg?url'
 import ContextProvider from 'frontend/state/ContextProvider'
 import useOpenDialog from 'frontend/hooks/useOpenDialog'
@@ -47,6 +48,8 @@ type Props = {
   platformToInstall: InstallPlatform
   backdropClick: () => void
   appName?: string
+  /** Phase 61 D-17: engine id chosen on macOS; replaces the Wine picker. */
+  engineOverride?: string
   title: string
   setTitle: (title: string) => void
 }
@@ -59,6 +62,7 @@ export default function SideloadDialog({
   platformToInstall,
   children,
   appName,
+  engineOverride,
   title,
   setTitle
 }: Props) {
@@ -224,6 +228,24 @@ export default function SideloadDialog({
       checkForUpdates: true,
       origin: 'sideload-add-app'
     })
+
+    if (engineOverride) {
+      const gameSettings = await getGameSettings(app_name, 'sideload')
+      if (gameSettings) {
+        await writeConfig({
+          appName: app_name,
+          config: {
+            ...gameSettings,
+            ...(await engineInstallConfig({
+              runner: 'sideload',
+              appName: app_name,
+              engineOverride,
+              getBottleName: (a) => window.api.getPerGameBottleName(a)
+            }))
+          }
+        })
+      }
+    }
     setAddingApp(false)
     return backdropClick()
   }
@@ -244,19 +266,31 @@ export default function SideloadDialog({
         if (!gameSettings) {
           return
         }
+        const engineConfig = engineOverride
+          ? await engineInstallConfig({
+              runner: 'sideload',
+              appName: app_name,
+              engineOverride,
+              getBottleName: (a) => window.api.getPerGameBottleName(a)
+            })
+          : null
         await writeConfig({
           appName: app_name,
-          config: { ...gameSettings, winePrefix, wineVersion }
+          config: engineConfig
+            ? { ...gameSettings, ...engineConfig }
+            : { ...gameSettings, winePrefix, wineVersion }
         })
         await window.api.runWineCommand({
           commandParts: [exeToRun],
           wait: true,
           protonVerb: 'runinprefix',
-          gameSettings: {
-            ...gameSettings,
-            winePrefix,
-            wineVersion: wineVersion || gameSettings.wineVersion
-          }
+          gameSettings: engineConfig
+            ? { ...gameSettings, ...engineConfig }
+            : {
+                ...gameSettings,
+                winePrefix,
+                wineVersion: wineVersion || gameSettings.wineVersion
+              }
         })
       } catch (error) {
         window.api.logError(

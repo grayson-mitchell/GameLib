@@ -24,6 +24,8 @@ import ImportDialog from './ImportDialog'
 import SideloadDialog from './SideloadDialog'
 import SteamDialog from './SteamDialog'
 import WineSelector from './WineSelector'
+import EngineSelector from './EngineSelector'
+import { usesEngineChoiceForInstall } from './WineSelector/engineInstallChoice'
 import { SelectField } from 'frontend/components/UI'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 import { useTranslation } from 'react-i18next'
@@ -144,6 +146,7 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   const [wineVersion, setWineVersion] = useState<WineInstallation>()
   const [wineVersionList, setWineVersionList] = useState<WineInstallation[]>([])
   const [crossoverBottle, setCrossoverBottle] = useState('')
+  const [engineChoice, setEngineChoice] = useState<string>()
   const [sideloadTitle, setSideloadTitle] = useState(
     t('sideload.field.title', 'Title')
   )
@@ -366,6 +369,12 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
   }, [depotSignalResolved, macNativeOffered, isMac])
 
   const hasWine = platformToInstall === 'Windows' && !isWin
+  // Phase 61 D-17: non-Steam Windows installs on macOS pick an engine, not a Wine build.
+  const useEngineChoice = usesEngineChoiceForInstall({
+    platform,
+    runner,
+    platformToInstall
+  })
 
   // D2 (34.13-12): the single Steam-library-targets IPC read in this file,
   // used TWICE -- as the gating resolver's `libraryCount`/`nativeInstallOn`
@@ -763,9 +772,16 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
             platformToInstall={platformToInstall}
             gameInfo={gameInfo}
             crossoverBottle={crossoverBottle}
+            engineOverride={useEngineChoice ? engineChoice : undefined}
           >
             {platformSelection()}
-            {showWineSelector ? (
+            {useEngineChoice ? (
+              <EngineSelector
+                runner={runner}
+                appName={appName}
+                onChange={setEngineChoice}
+              />
+            ) : showWineSelector ? (
               <WineSelector
                 appName={appName}
                 winePrefix={winePrefix}
@@ -791,9 +807,16 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
             platformToInstall={platformToInstall}
             gameInfo={gameInfo}
             crossoverBottle={crossoverBottle}
+            engineOverride={useEngineChoice ? engineChoice : undefined}
           >
             {platformSelection()}
-            {showWineSelector ? (
+            {useEngineChoice ? (
+              <EngineSelector
+                runner={runner}
+                appName={appName}
+                onChange={setEngineChoice}
+              />
+            ) : showWineSelector ? (
               <WineSelector
                 appName={appName}
                 winePrefix={winePrefix}
@@ -818,9 +841,16 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
             platformToInstall={platformToInstall}
             gameInfo={gameInfo}
             crossoverBottle={crossoverBottle}
+            engineOverride={useEngineChoice ? engineChoice : undefined}
           >
             {platformSelection()}
-            {showWineSelector ? (
+            {useEngineChoice ? (
+              <EngineSelector
+                runner={runner}
+                appName={appName}
+                onChange={setEngineChoice}
+              />
+            ) : showWineSelector ? (
               <WineSelector
                 appName={appName}
                 winePrefix={winePrefix}
@@ -844,9 +874,16 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
             backdropClick={closeModal}
             platformToInstall={platformToInstall}
             appName={appName}
+            engineOverride={useEngineChoice ? engineChoice : undefined}
           >
             {platformSelection()}
-            {showWineSelector ? (
+            {useEngineChoice ? (
+              <EngineSelector
+                runner={runner}
+                appName={appName}
+                onChange={setEngineChoice}
+              />
+            ) : showWineSelector ? (
               <WineSelector
                 appName={appName}
                 winePrefix={winePrefix}

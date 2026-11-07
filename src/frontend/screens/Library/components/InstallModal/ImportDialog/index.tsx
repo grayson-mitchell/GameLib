@@ -28,6 +28,8 @@ interface Props {
   winePrefix: string
   crossoverBottle: string
   wineVersion: WineInstallation | undefined
+  /** Phase 61 D-17: engine id chosen on macOS; replaces the Wine picker. */
+  engineOverride?: string
   children: React.ReactNode
   gameInfo: GameInfo
 }
@@ -50,6 +52,7 @@ export default function ImportDialog({
   winePrefix,
   wineVersion,
   crossoverBottle,
+  engineOverride,
   children,
   gameInfo
 }: Props) {
@@ -76,9 +79,13 @@ export default function ImportDialog({
       path: importPath,
       runner,
       platform: platformToInstall,
-      winePrefix,
-      wineVersion,
-      wineCrossoverBottle: crossoverBottle
+      ...(engineOverride
+        ? { engineOverride }
+        : {
+            winePrefix,
+            wineVersion,
+            wineCrossoverBottle: crossoverBottle
+          })
     })
   }
 
