@@ -128,6 +128,22 @@ Phase 66.
 
   A green suite alone does not prove this phase.
 
+### Added after research (2026-11-07)
+- **D-15: `user.ts` splits into free functions, not delegating statics.** Extract `userTypes`,
+  `userSignInState` (state leaf), `userSignIn` and `userRedeem` as free functions. Repoint the
+  single non-test caller (`sidecar/steamAuthFlowRegistration.ts`) and keep no delegating statics
+  on the class. Exporting the currently-private `acquireAuthenticatedWithToken` is accepted.
+  Because the class statics become module state, this is a mechanical lift with its own commit,
+  not a pure move.
+- **D-16: A documented D-10 exception for the library install poller.** `activePolls` and the
+  install-poll tick constants go in a handle-free state leaf, `library/pollState.ts`, which
+  breaks the `pollInstallOnce` ↔ hold-helpers ↔ `startInstallPolling` cycle. The timer creation
+  and its `unref()` stay in `installPolling.ts`. Name the exception in a code comment and in the
+  plan. Every other piece of state follows D-10 strictly.
+- **Lift-stub todo, corrected scope:** of the 25 delegating members on `SteamGame`, 9 implement
+  the `Game` interface and stay as thin methods. Only the 16 non-interface stubs and their 15
+  internal call sites are removed.
+
 ### Carried forward from Phase 62 (still binding)
 - No façade and no re-exports from the old path. Every importer and `jest.mock` targets the
   owning module (62 D-05).
