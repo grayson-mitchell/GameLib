@@ -85,20 +85,20 @@ result: skipped. Linux/Windows paths are not reachable on a Mac.
 ### 13. Deadline notice does not stop a running game
 
 expected: (D-18, D-16, CR-02) Launch a non-Steam Windows game whose process GameLib cannot match (for example a launcher stub that execs from outside its install dir); after 180 s the "Couldn't confirm the game started" notice appears, the game keeps running, the launch log shows `launch deadline fired` and no `wineserver -k`; a second game in the same bottle keeps running.
-result: pending — optional live check; covered by launchEngine.deadline.test.ts (61-21)
+result: skipped — waived by operator 2026-11-07 (61-HUMAN-UAT item 3); optional live check; covered by launchEngine.deadline.test.ts (61-21)
 
 ### 14. Sideload Run installer uses the game's bottle
 
 expected: (D-01, D-17, CR-04) In Add Game (sideload) on macOS with Engine Automatic, Run installer creates `~/Library/Application Support/CrossOver/Bottles/GameLib-sideload-<id>` and the installer runs in it (its files appear under that bottle's drive_c), not in the shared prefix.
-result: pending — optional live check; covered by runWineCommandForPendingInstall.test.ts and wineToolsFlows.test.ts (61-24)
+result: skipped — waived by operator 2026-11-07 (61-HUMAN-UAT item 3); optional live check; covered by runWineCommandForPendingInstall.test.ts and wineToolsFlows.test.ts (61-24)
 
 ## Summary
 
 total: 14
 passed: 8
 issues: 1
-pending: 2
-skipped: 3
+pending: 0
+skipped: 5
 
 Licence mtime `com.codeweavers.CrossOver.license`: Oct 22 19:57 before and after, unchanged. The throwaway bottle's InstallTime was restored to its original value after the tests.
 
