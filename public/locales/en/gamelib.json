@@ -112,7 +112,16 @@
     "engine": {
         "bottleBusy": "Another game is running in this game's bottle, so GameLib can't switch its engine now. Quit the other game, then try again.",
         "bottleCreateFailed": "GameLib couldn't set up this game's bottle ({{reason}}), so it did not start. Check the launch log (Settings > Logs).",
-        "legacyLabel": "Legacy: {{name}}"
+        "legacyLabel": "Legacy: {{name}}",
+        "override": {
+            "freshBottle": {
+                "body": "GameLib will create a new bottle for {{title}}. Saves and settings in its current Wine prefix stay there and are not copied.",
+                "cancel": "Cancel",
+                "confirm": "Move",
+                "title": "Move this game to its own bottle?"
+            }
+        },
+        "wineTabHint": "GameLib chooses the Wine engine and bottle for this game."
     },
     "gamepage": {
         "appleRatingUnrated": "Unrated",

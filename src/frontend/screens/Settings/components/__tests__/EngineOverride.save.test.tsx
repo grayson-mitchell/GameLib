@@ -44,7 +44,7 @@ jest.mock('frontend/state/ContextProvider', () => ({
   default: {}
 }))
 
-import SteamEngineOverride from '../SteamEngineOverride'
+import EngineOverride from '../EngineOverride'
 import { createSettingSetter } from '../../../../hooks/useSettingsContext'
 import { gamelibT } from '../../../Game/GamePage/components/__tests__/gamelibT'
 
@@ -74,7 +74,7 @@ const setSetting = jest.fn()
 
 /** Mount the override over a settings context built from the real setter. */
 function mount(stored: string) {
-  let config: Record<string, unknown> = { steamEngineOverride: stored }
+  let config: Record<string, unknown> = { engineOverride: stored }
   mockContext = {
     appName: APP,
     getSetting: (k: string, fb: unknown) => config[k] ?? fb,
@@ -87,16 +87,18 @@ function mount(stored: string) {
       send: (p) => window.api.setSetting(p as never)
     })
   }
-  mockStore = { [`steam:${APP}`]: { overrideEligible: true } }
+  mockStore = {
+    [`steam:${APP}`]: { overrideEligible: true, effectiveEngineId: 'x' }
+  }
   // useState is a fixed pair, so the stubbed component sees loaded=false and
   // no options; render the view directly with the loaded option list but the
   // real useSetting-derived onChange the component produced.
-  const el = SteamEngineOverride() as El
+  const el = EngineOverride() as El
   const onChange = el.props.onChange as (id: string) => void
   return { onChange, el }
 }
 
-describe('SteamEngineOverride save chain (G17)', () => {
+describe('EngineOverride save chain (G17)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     ;(global as unknown as { window: unknown }).window = {
@@ -115,7 +117,7 @@ describe('SteamEngineOverride save chain (G17)', () => {
     expect(setSetting).toHaveBeenCalledTimes(1)
     expect(setSetting).toHaveBeenCalledWith({
       appName: APP,
-      key: 'steamEngineOverride',
+      key: 'engineOverride',
       value: 'automatic'
     })
   })
@@ -126,7 +128,7 @@ describe('SteamEngineOverride save chain (G17)', () => {
     expect(setSetting).toHaveBeenCalledTimes(1)
     expect(setSetting).toHaveBeenCalledWith({
       appName: APP,
-      key: 'steamEngineOverride',
+      key: 'engineOverride',
       value: 'crossover'
     })
   })
@@ -136,7 +138,7 @@ describe('SteamEngineOverride save chain (G17)', () => {
     onChange('pinned:wine-staging-11.10')
     expect(setSetting).toHaveBeenCalledWith({
       appName: APP,
-      key: 'steamEngineOverride',
+      key: 'engineOverride',
       value: 'pinned:wine-staging-11.10'
     })
   })
@@ -148,11 +150,11 @@ describe('SteamEngineOverride save chain (G17)', () => {
   })
 
   it('stored wine-manager:0.0-missing renders the disabled extra, and Automatic saves', async () => {
-    const { SteamEngineOverrideView } = await import('../SteamEngineOverride')
+    const { EngineOverrideView } = await import('../EngineOverride')
     const { onChange } = mount('wine-manager:0.0-missing')
-    const view = SteamEngineOverrideView({
+    const view = EngineOverrideView({
       options: opts,
-      stored: 'wine-manager:0.0-missing',
+      value: 'wine-manager:0.0-missing',
       loaded: true,
       onChange,
       t: gamelibT
@@ -170,7 +172,7 @@ describe('SteamEngineOverride save chain (G17)', () => {
     })
     expect(setSetting).toHaveBeenCalledWith({
       appName: APP,
-      key: 'steamEngineOverride',
+      key: 'engineOverride',
       value: 'automatic'
     })
   })

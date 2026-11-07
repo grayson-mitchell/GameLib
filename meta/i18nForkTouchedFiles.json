@@ -255,7 +255,7 @@
     "src/frontend/screens/Settings/components/ShareDetectedFixes.tsx",
     "src/frontend/screens/Settings/components/Shortcuts.tsx",
     "src/frontend/screens/Settings/components/ShowValveProton.tsx",
-    "src/frontend/screens/Settings/components/SteamEngineOverride.tsx",
+    "src/frontend/screens/Settings/components/EngineOverride.tsx",
     "src/frontend/screens/Settings/components/SteamGridDbApiKey.tsx",
     "src/frontend/screens/Settings/components/SteamOverlayOverride.tsx",
     "src/frontend/screens/Settings/components/Tools/index.tsx",

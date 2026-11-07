@@ -415,7 +415,7 @@ const FIXTURE_DIFF_LINES = [
  * measured violations and are declared as debt instead (fixing the strings is
  * out of scope here): `components/UI/WindowControls/CaptionGlyphs.tsx` (3),
  * `helpers/connectivitySync.ts` (5), `helpers/reportProblem.ts` (2),
- * `screens/Settings/components/SteamEngineOverride.tsx` (3),
+ * `screens/Settings/components/EngineOverride.tsx` (3),
  * `screens/Settings/components/WinePrefix.tsx` (1).
  * `meta/i18nForkTouchedFiles.json` regenerated with
  * `pnpm gen-i18n-gate-scope`, `generatedAt` restored.
@@ -455,7 +455,7 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/Settings/components/EgsSettings.tsx',
   'src/frontend/screens/Settings/components/GamePadDelayRepeat.tsx',
   'src/frontend/screens/Settings/components/LauncherArgs.tsx',
-  'src/frontend/screens/Settings/components/SteamEngineOverride.tsx',
+  'src/frontend/screens/Settings/components/EngineOverride.tsx',
   'src/frontend/screens/Settings/components/SteamGridDbApiKey.tsx',
   'src/frontend/screens/Settings/components/Tools/index.tsx',
   'src/frontend/screens/Settings/components/UseDarkTrayIcon.tsx',

@@ -85,7 +85,7 @@ exports	src/frontend/helpers/library.ts	epicCategories
 exports	src/frontend/helpers/library.ts	gogCategories
 exports	src/frontend/helpers/library.ts	sideloadedCategories
 exports	src/frontend/helpers/library.ts	steamCategories
-exports	src/frontend/screens/Settings/components/SteamEngineOverride.tsx	storedExtraOption
+exports	src/frontend/screens/Settings/components/EngineOverride.tsx	storedExtraOption
 exports	src/preload/api/downloadmanager.ts	DownloadManager.cancelDownload
 exports	src/preload/api/downloadmanager.ts	DownloadManager.getDMQueueInformation
 exports	src/preload/api/downloadmanager.ts	DownloadManager.handleDMQueueInformation

@@ -5,8 +5,15 @@ import SelectField from 'frontend/components/UI/SelectField'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from 'frontend/screens/Settings/SettingsContext'
+import ContextProvider from 'frontend/state/ContextProvider'
 import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
 import type { EngineOption } from 'common/types/engine'
+import {
+  effectiveSelectValue,
+  isUnsupportedEngineId,
+  needsFreshBottleConfirm,
+  visibleOptions
+} from './engineOverrideLogic'
 
 type T = (
   key: string,
@@ -15,7 +22,9 @@ type T = (
 ) => string
 
 /**
- * D-14: the per-game engine override. On the Wine tab (quick 261104-tm6;
+ * Phase 61 D-10, D-11: the one Engine control for every store and the macOS
+ * defaults page.
+ * Originally D-14: the per-game engine override. On the Wine tab (quick 261104-tm6;
  * D-14 placed it under Advanced), collapsed, defaults to
  * Automatic, and loudly unsupported when used. D-08: this select is the only
  * route to the previous pinned build -- there is no separate rollback toggle.
@@ -30,6 +39,7 @@ export function optionLabel(o: EngineOption, t: T): string {
     )
   if (o.kind === 'crossover')
     return t('steam.engine.override.crossover', 'CrossOver')
+  if (o.kind === 'legacy') return idLabel(o.id, t)
   let label = o.label
   if (o.kind === 'pinned') {
     if (o.isPreviousPin)
@@ -50,16 +60,15 @@ export function optionLabel(o: EngineOption, t: T): string {
   return label
 }
 
-/** The select always shows what is stored (59-UAT WR-05, G12b). */
-export function selectValue(stored: string | undefined): string {
-  return stored || 'automatic'
-}
-
 function idLabel(id: string, t: T): string {
   if (id === 'crossover')
     return t('steam.engine.override.crossover', 'CrossOver')
   if (id.startsWith('wine-manager:'))
     return `Wine Manager: ${id.slice('wine-manager:'.length)}`
+  if (id.startsWith('legacy:'))
+    return t('engine.legacyLabel', 'Legacy: {{name}}', {
+      name: id.slice('legacy:'.length)
+    })
   if (id.startsWith('pinned:')) return id.slice('pinned:'.length)
   return id
 }
@@ -72,12 +81,11 @@ function idLabel(id: string, t: T): string {
  * label is derived from the id only -- never a filesystem path (T-59-70).
  */
 export function storedExtraOption(
-  stored: string | undefined,
+  value: string,
   options: EngineOption[],
   loaded: boolean,
   t: T
 ): { id: string; label: string } | null {
-  const value = selectValue(stored)
   if (!loaded) {
     return {
       id: value,
@@ -91,6 +99,8 @@ export function storedExtraOption(
     }
   }
   if (value === 'automatic' || options.some((o) => o.id === value)) return null
+  if (value.startsWith('legacy:'))
+    return { id: value, label: idLabel(value, t) }
   return {
     id: value,
     label: t(
@@ -103,29 +113,31 @@ export function storedExtraOption(
 
 interface ViewProps {
   options: EngineOption[]
-  stored: string | undefined
+  /** The value the select shows (stored pick, else the derived engine). */
+  value: string
   loaded: boolean
   onChange: (id: string) => void
   t: T
 }
 
-export function SteamEngineOverrideView({
+export function EngineOverrideView({
   options,
-  stored,
+  value,
   loaded,
   onChange,
   t
 }: ViewProps) {
-  const value = selectValue(stored)
-  const extra = storedExtraOption(stored, options, loaded, t)
-  // G9: CrossOver is the supported engine; only built-in and Wine Manager
-  // choices are flagged.
-  const unsupported =
-    value.startsWith('pinned:') || value.startsWith('wine-manager:')
+  const shown = visibleOptions(options, value)
+  const extra = storedExtraOption(value, shown, loaded, t)
+  const unsupported = isUnsupportedEngineId(value)
   const items = [
     ...(loaded
-      ? options.map((o) => (
-          <MenuItem key={o.id} value={o.id} disabled={!o.available}>
+      ? shown.map((o) => (
+          <MenuItem
+            key={o.id}
+            value={o.id}
+            disabled={!o.available || o.kind === 'legacy'}
+          >
             {optionLabel(o, t)}
           </MenuItem>
         ))
@@ -139,12 +151,12 @@ export function SteamEngineOverrideView({
       : [])
   ]
   return (
-    <details className="steamEngineOverride">
+    <details className="engineOverride">
       <summary>
         {t('steam.engine.override.summary', 'Engine (advanced)')}
       </summary>
       <SelectField
-        htmlId="steamEngineOverride"
+        htmlId="engineOverride"
         value={value}
         disabled={!loaded}
         label={t('steam.engine.override.label', 'Engine')}
@@ -174,22 +186,33 @@ export function SteamEngineOverrideView({
   )
 }
 
-const SteamEngineOverride = () => {
+const EngineOverride = () => {
   const { t } = useTranslation('gamelib')
-  const { appName, runner: contextRunner } = useContext(SettingsContext)
-  // The global-settings context carries no runner; this section is the Steam one.
+  const {
+    appName,
+    runner: contextRunner,
+    isDefault,
+    gameInfo
+  } = useContext(SettingsContext)
+  const { showDialogModal } = useContext(ContextProvider)
+  // The global-settings context carries no runner; the global variant never
+  // reads it.
   const runner = contextRunner ?? 'steam'
-  const [override, setOverride] = useSetting('steamEngineOverride', 'automatic')
+  const [stored, setOverride] = useSetting('engineOverride', '')
+  const [, setBottle] = useSetting('wineCrossoverBottle', '')
   const [options, setOptions] = useState<EngineOption[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [defaultEngine, setDefaultEngine] = useState<string | undefined>(
+    undefined
+  )
   const state = useEngineState((s) => s.byGame[engineStateKey(runner, appName)])
   const hasState = state !== undefined
-  // WR-04: eligibility is computed by the backend from the title's own
-  // per-game bridge install and DRM mode; the renderer never derives it.
-  const eligible = state?.overrideEligible === true
+  // WR-04: eligibility is computed by the backend; the renderer never derives
+  // it. The global variant is always eligible.
+  const eligible = isDefault === true || state?.overrideEligible === true
 
   useEffect(() => {
-    if (hasState) return
+    if (isDefault || hasState) return
     let cancelled = false
     void window.api
       .getEngineState({ runner, appName })
@@ -200,13 +223,30 @@ const SteamEngineOverride = () => {
     return () => {
       cancelled = true
     }
-  }, [appName, runner, hasState])
+  }, [appName, runner, hasState, isDefault])
+
+  useEffect(() => {
+    if (!isDefault) return
+    let cancelled = false
+    void window.api
+      .getDefaultEngine()
+      .then((d) => {
+        if (!cancelled) setDefaultEngine(d.effectiveEngineId)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [isDefault])
 
   useEffect(() => {
     if (!eligible) return
     let cancelled = false
+    const args = isDefault
+      ? ({ appName: 'default' } as const)
+      : { runner, appName }
     void window.api
-      .listEngineOptions({ runner, appName })
+      .listEngineOptions(args)
       .then((o) => {
         if (cancelled) return
         setOptions(o)
@@ -216,19 +256,61 @@ const SteamEngineOverride = () => {
     return () => {
       cancelled = true
     }
-  }, [eligible, appName, runner])
+  }, [eligible, appName, runner, isDefault])
 
   if (!eligible) return null
 
+  const tt = t as unknown as T
+  const derived = isDefault ? defaultEngine : state?.effectiveEngineId
+  const value = effectiveSelectValue(stored || undefined, derived)
+
+  const onChange = (next: string) => {
+    if (next === value) return
+    // The Legacy item is disabled and the backend guard drops it; never send it.
+    if (next.startsWith('legacy:')) return
+    if (
+      !isDefault &&
+      needsFreshBottleConfirm(state?.prefixKind, next) &&
+      typeof state?.perGameBottleName === 'string'
+    ) {
+      const bottle = state.perGameBottleName
+      showDialogModal({
+        title: tt(
+          'engine.override.freshBottle.title',
+          'Move this game to its own bottle?'
+        ),
+        message: tt(
+          'engine.override.freshBottle.body',
+          'GameLib will create a new bottle for {{title}}. Saves and settings in its current Wine prefix stay there and are not copied.',
+          { title: gameInfo?.title ?? appName }
+        ),
+        buttons: [
+          {
+            text: tt('engine.override.freshBottle.confirm', 'Move'),
+            onClick: () => {
+              setOverride(next)
+              setBottle(bottle)
+            }
+          },
+          {
+            text: tt('engine.override.freshBottle.cancel', 'Cancel')
+          }
+        ]
+      })
+      return
+    }
+    setOverride(next)
+  }
+
   return (
-    <SteamEngineOverrideView
+    <EngineOverrideView
       options={options}
-      stored={override}
+      value={value}
       loaded={loaded}
-      onChange={setOverride}
-      t={t as unknown as T}
+      onChange={onChange}
+      t={tt}
     />
   )
 }
 
-export default SteamEngineOverride
+export default EngineOverride

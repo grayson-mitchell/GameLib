@@ -28,35 +28,35 @@ describe('createSettingSetter (G17)', () => {
   }
 
   it('sends a real change and updates the config', () => {
-    const { set, send, get } = make({ steamEngineOverride: 'pinned:a' })
-    set('steamEngineOverride', 'automatic')
+    const { set, send, get } = make({ engineOverride: 'pinned:a' })
+    set('engineOverride', 'automatic')
     expect(send).toHaveBeenCalledWith({
       appName: '1284190',
-      key: 'steamEngineOverride',
+      key: 'engineOverride',
       value: 'automatic'
     })
-    expect(get().steamEngineOverride).toBe('automatic')
+    expect(get().engineOverride).toBe('automatic')
   })
 
   it('does not send a no-change', () => {
-    const { set, send } = make({ steamEngineOverride: 'crossover' })
-    set('steamEngineOverride', 'crossover')
+    const { set, send } = make({ engineOverride: 'crossover' })
+    set('engineOverride', 'crossover')
     expect(send).not.toHaveBeenCalled()
   })
 
   it('sends when the key is unset or null', () => {
     const a = make({})
-    a.set('steamEngineOverride', 'automatic')
+    a.set('engineOverride', 'automatic')
     expect(a.send).toHaveBeenCalledTimes(1)
-    const b = make({ steamEngineOverride: null })
-    b.set('steamEngineOverride', 'automatic')
+    const b = make({ engineOverride: null })
+    b.set('engineOverride', 'automatic')
     expect(b.send).toHaveBeenCalledTimes(1)
   })
 
   it('compares against the latest config, never a stale snapshot', () => {
-    const { set, send } = make({ steamEngineOverride: 'pinned:a' })
-    set('steamEngineOverride', 'automatic')
-    set('steamEngineOverride', 'pinned:a')
+    const { set, send } = make({ engineOverride: 'pinned:a' })
+    set('engineOverride', 'automatic')
+    set('engineOverride', 'pinned:a')
     expect(send).toHaveBeenCalledTimes(2)
   })
 })
@@ -66,7 +66,7 @@ describe('shouldRefetchOnWriteFailure (WR-04)', () => {
     expect(
       shouldRefetchOnWriteFailure('1284190', {
         appName: '1284190',
-        key: 'steamEngineOverride'
+        key: 'engineOverride'
       })
     ).toBe(true)
   })

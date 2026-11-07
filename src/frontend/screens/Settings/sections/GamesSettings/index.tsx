@@ -36,7 +36,7 @@ import {
   BeforeLaunchScriptPath,
   AfterLaunchScriptPath,
   NvidiaPrime,
-  SteamEngineOverride,
+  EngineOverride,
   SteamOverlayOverride
 } from '../../components'
 import { TabPanel } from 'frontend/components/UI'
@@ -56,6 +56,7 @@ import VerboseLogs from '../../components/VerboseLogs'
 import WinetricksSettings from '../WinetricksSettings'
 import { shouldShowWinetricksTab } from '../WinetricksSettings/visibility'
 import { hasCapability, isStore } from 'common/storeCapabilities'
+import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
 
 const windowsPlatforms = ['Win32', 'Windows', 'windows']
 function getStartingTab(platform: string, gameInfo?: GameInfo | null): string {
@@ -83,7 +84,6 @@ export default function GamesSettings() {
   const isLinux = platform === 'linux'
   const isWin = platform === 'win32'
   const isMac = platform === 'darwin'
-  const isCrossover = wineVersion?.type === 'crossover'
   const showCloudSavesTab = hasCapability(
     gameInfo?.runner,
     'supportsCloudSaves'
@@ -94,6 +94,25 @@ export default function GamesSettings() {
   const isMacSteamTitle =
     !isDefault && isMac && hasCapability(gameInfo?.runner, 'usesBottleRuntime')
   const showWineTab = !(isWin || isNative || isBrowserGame)
+  // Phase 61 D-10: on macOS every Windows game (any store) picks its engine
+  // through one Engine control instead of the which-Wine selectors.
+  const isMacEngineGame = !isDefault && isMac && showWineTab
+  const engineState = useEngineState((s) =>
+    gameInfo
+      ? s.byGame[engineStateKey(gameInfo.runner, gameInfo.app_name)]
+      : undefined
+  )
+  // Non-Steam macOS games derive "CrossOver-like" from the effective engine
+  // (D-08); Steam keeps today's wineVersion rule. An unknown engine counts as
+  // CrossOver-like so the toggles do not flash before the state arrives.
+  const effectiveEngineId = engineState?.effectiveEngineId
+  const isCrossover =
+    isMacEngineGame && !isMacSteamTitle
+      ? effectiveEngineId === undefined ||
+        effectiveEngineId === 'automatic' ||
+        effectiveEngineId === 'crossover'
+      : wineVersion?.type === 'crossover'
+  const isBottleBacked = engineState?.prefixKind === 'bottle'
   // Native Linux games and native macOS Steam games (steam://rungameid cannot take env vars) are excluded; nile is listed but inert because isNative is Windows-only for it. Browser games are not launched via setupEnvVars.
   const showStatsOverlay =
     !isWin &&
@@ -208,16 +227,24 @@ export default function GamesSettings() {
             wineCrossoverBottle are not read by the bridge launch
             (titleSettings.ts LD-2; bottle.ts getBridgeBottleSettings), so they
             are hidden for these titles to leave one which-Wine control. */}
-        {isMacSteamTitle ? (
+        {isMacEngineGame ? (
           <>
             <span className="defaults-hint">
               <FontAwesomeIcon icon={faInfoCircle} />
               {t(
-                'gamelib:steam.engine.wineTabHint',
-                'GameLib chooses the Wine engine and bottle for Steam games.'
+                'gamelib:engine.wineTabHint',
+                'GameLib chooses the Wine engine and bottle for this game.'
               )}
             </span>
-            <SteamEngineOverride />
+            <EngineOverride />
+            {!isMacSteamTitle &&
+              (engineState?.prefixKind === 'plain' ||
+                engineState?.prefixKind === 'legacy') && <WinePrefix />}
+          </>
+        ) : isDefault && isMac ? (
+          <>
+            <EngineOverride />
+            <WinePrefix />
           </>
         ) : (
           <>
@@ -235,7 +262,7 @@ export default function GamesSettings() {
           <>
             {!isMacSteamTitle && (
               <>
-                <AutoDXVK />
+                {!isBottleBacked && <AutoDXVK />}
                 {isLinux && (
                   <>
                     {!window.isSteamDeck && <AutoDXVKNVAPI />}
