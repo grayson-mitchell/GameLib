@@ -55,7 +55,7 @@ Raw edge count: 425 now vs 321 baseline. All 19 modules newly in cycles are spli
 2. Bridged title launch and running indicator: pass
 3. Grim Dawn 219990 DRM mode: done (reached the menu and quit)
 4. Small install (install polling / restart hold): pass
-5. Uninstall polling: not individually reported; covered by the operator's overall "approved"; re-check in 65-20 smoke run 2.
+5. Uninstall polling: pass (reported by the operator after the overall "approved").
 
 ## Deviations from Plan
 

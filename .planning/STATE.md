@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 71 context gathered
-last_updated: "2026-11-07T18:08:19.344Z"
+last_updated: "2026-11-07T18:36:06.447Z"
 last_activity: 2026-11-07
 progress:
   total_phases: 13
   completed_phases: 3
   total_plans: 104
-  completed_plans: 75
+  completed_plans: 76
   percent: 23
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 65 (steam-store-manager-decomposition-continued) — EXECUTING
-Plan: 11 of 20
+Plan: 12 of 20
 Status: Ready to execute
 Last activity: 2026-11-07
 
-Progress: [███████░░░] 72%
+Progress: [███████░░░] 73%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -230,6 +230,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 61 P05 | 20m | 2 tasks | 10 files |
 | Phase 61 P08 | 30m | 2 tasks | 18 files |
 | Phase 61 P11 | 15m | 2 tasks | 2 files |
+| Phase 65 P10 | n/a | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -345,6 +346,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 62]: 62-06: async lift stubs return the free function's promise (no async) to preserve microtask timing
 - [Phase 62]: 62-13: 15 capability flags; narrowing sites classed identity; switches become Record lookups
 - [Phase 61]: 61-05: EngineKey = bare appId for Steam, runner:appName otherwise; per-bottle ledger fed by Steam bridge launches
+- [Phase 65]: [65-10] D-19 cycle census measure: no module outside the pre-phase cycle set (65-baseline-steam-cycle-modules.txt) may join a cycle, except modules split out of files already in it. Raw counts 321 -> 425 recorded for reference.
 
 ### Pending Todos
 
@@ -590,7 +592,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-07T18:08:19.337Z
+Last session: 2026-11-07T18:36:02.969Z
 Stopped at: Phase 71 context gathered
 Resume file: None
 
