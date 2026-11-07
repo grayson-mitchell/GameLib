@@ -5,14 +5,12 @@
 // (gameEligibility/gameLaunchOverlay -> gameInstall -> gameLaunch ->
 // gameBridgeLaunch). A call a test spies on stays a `steamGame.X()` call
 // (quick-261107-an2).
-import i18next from 'i18next'
 import { shell } from 'backend/platform'
 import { rmSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { ExecResult } from 'common/types'
 import { RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { notify } from 'backend/dialog/dialog'
 import { isMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
 import { library } from './state'
@@ -22,7 +20,8 @@ import {
   pollUninstallOnce,
   resolveInstallRoot,
   findOtherManifestsWithInstalldir,
-  removeSteamInstallCopy
+  removeSteamInstallCopy,
+  nextSteamRequestNoticeSeq
 } from './library'
 import {
   probeMacSteamPid,
@@ -79,7 +78,7 @@ export async function uninstall(
     sendFrontendMessage('steamBottleSetupRequired', {
       appName: steamGame.appId
     })
-    return { stdout: '', stderr: '' }
+    return { stdout: '', stderr: '', refused: true }
   }
 
   // Reads the raw `library` Map entry directly rather than
@@ -125,7 +124,11 @@ export async function uninstall(
   if (root === 'native') {
     const url = buildSteamProtocolUrl('uninstall', steamGame.appId)
     if (!url) {
-      return { stdout: '', stderr: `Invalid appId: ${steamGame.appId}` }
+      return {
+        stdout: '',
+        stderr: `Invalid appId: ${steamGame.appId}`,
+        refused: true
+      }
     }
 
     // quick 261106-s3n: "Delete Steam games directly in GameLib" ON. OFF
@@ -164,7 +167,8 @@ export async function uninstall(
   )
   return {
     stdout: '',
-    stderr: `Refused to uninstall: install_path does not resolve inside any known root for appId ${steamGame.appId}`
+    stderr: `Refused to uninstall: install_path does not resolve inside any known root for appId ${steamGame.appId}`,
+    refused: true
   }
 }
 
@@ -229,7 +233,8 @@ export async function uninstallBridgeGame(
     )
     return {
       stdout: '',
-      stderr: `Refused to uninstall: unsafe path for appId ${steamGame.appId}`
+      stderr: `Refused to uninstall: unsafe path for appId ${steamGame.appId}`,
+      refused: true
     }
   }
 
@@ -278,15 +283,30 @@ export async function uninstallBridgeGame(
 export async function uninstallNativeInGameLib(
   steamGame: SteamGame
 ): Promise<ExecResult> {
-  const decision = await decideSteamNativeDelete(steamGame.appId)
+  const installPath = library.get(steamGame.appId)?.install?.install_path
+  const decision = await decideSteamNativeDelete(steamGame.appId, installPath)
   const game = steamGame.getGameInfo().title
+  const pushNotice = (
+    kind:
+      | 'uninstall-refused-running'
+      | 'uninstall-steam-error'
+      | 'uninstall-check-failed',
+    code?: number
+  ) =>
+    sendFrontendMessage('steamRequestNotice', {
+      appId: steamGame.appId,
+      title: game ?? '',
+      kind,
+      ...(code !== undefined ? { code } : {}),
+      seq: nextSteamRequestNoticeSeq()
+    })
   const refuse = (stderr: string): ExecResult => {
     sendFrontendMessage('gameStatusUpdate', {
       appName: steamGame.appId,
       runner: 'steam',
       status: 'done'
     })
-    return { stdout: '', stderr }
+    return { stdout: '', stderr, refused: true }
   }
 
   switch (decision.route) {
@@ -301,28 +321,15 @@ export async function uninstallNativeInGameLib(
       )
       return removeNativeInstallDirectly(steamGame)
     case 'refused-running':
-      notify({
-        title: game,
-        body: i18next.t(
-          'gamelib:steam.uninstall.gameRunning',
-          '{{game}} is running. Quit it, then uninstall again.',
-          { game }
-        )
-      })
+      pushNotice('uninstall-refused-running')
       return refuse(`Refused to uninstall: ${steamGame.appId} is running`)
     case 'steam-error':
-      notify({
-        title: game,
-        body: i18next.t(
-          'gamelib:steam.uninstall.steamError',
-          "Steam couldn't uninstall {{game}} (error {{code}}).",
-          { game, code: decision.code }
-        )
-      })
+      pushNotice('uninstall-steam-error', decision.code)
       return refuse(
         `Steam refused to uninstall ${steamGame.appId} (error ${decision.code})`
       )
     case 'refused':
+      pushNotice('uninstall-check-failed')
       return refuse(
         `Refused to uninstall: ${decision.reason} for appId ${steamGame.appId}`
       )
@@ -396,6 +403,7 @@ export async function removeNativeInstallDirectly(
   steamGame: SteamGame
 ): Promise<ExecResult> {
   let failure: string
+  let refused = false
   try {
     const result = await removeSteamInstallCopy(steamGame.appId, 'native')
     if (result.status !== 'refused') {
@@ -403,6 +411,7 @@ export async function removeNativeInstallDirectly(
       await pollUninstallOnce(steamGame.appId, 'native')
       return { stdout: '', stderr: '' }
     }
+    refused = true
     failure = `Refused to uninstall: ${result.reason} for appId ${steamGame.appId}`
   } catch (error) {
     failure = `Failed to remove native install: ${String(error)}`
@@ -417,7 +426,8 @@ export async function removeNativeInstallDirectly(
     runner: 'steam',
     status: 'done'
   })
-  return { stdout: '', stderr: failure }
+  // `Failed to remove ...` (caught rm error) may be a partial delete: no flag.
+  return { stdout: '', stderr: failure, ...(refused ? { refused } : {}) }
 }
 
 /**
@@ -529,7 +539,11 @@ export async function uninstallBottleGameDirectly(
       `SteamGame: uninstallBottleGameDirectly rejected a non-numeric appId`,
       LogPrefix.Steam
     )
-    return { stdout: '', stderr: 'Refused to uninstall: invalid appId' }
+    return {
+      stdout: '',
+      stderr: 'Refused to uninstall: invalid appId',
+      refused: true
+    }
   }
 
   // Reads the raw `library` Map entry directly rather than
@@ -555,7 +569,8 @@ export async function uninstallBottleGameDirectly(
     )
     return {
       stdout: '',
-      stderr: `Refused to uninstall: install_path does not resolve inside the bottle for appId ${steamGame.appId}`
+      stderr: `Refused to uninstall: install_path does not resolve inside the bottle for appId ${steamGame.appId}`,
+      refused: true
     }
   }
 
@@ -589,7 +604,8 @@ export async function uninstallBottleGameDirectly(
     })
     return {
       stdout: '',
-      stderr: `Refused to uninstall: the install for appId ${steamGame.appId} is still in progress — cancel it before uninstalling`
+      stderr: `Refused to uninstall: the install for appId ${steamGame.appId} is still in progress — cancel it before uninstalling`,
+      refused: true
     }
   }
 
@@ -620,7 +636,8 @@ export async function uninstallBottleGameDirectly(
     )
     return {
       stdout: '',
-      stderr: `Refused to uninstall: unsafe path for appId ${steamGame.appId}`
+      stderr: `Refused to uninstall: unsafe path for appId ${steamGame.appId}`,
+      refused: true
     }
   }
 

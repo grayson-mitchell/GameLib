@@ -10061,7 +10061,10 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
 
     const result = await new SteamGame(APP_ID).uninstall({} as any)
 
-    expect(decideSteamNativeDelete).toHaveBeenCalledWith(APP_ID)
+    expect(decideSteamNativeDelete).toHaveBeenCalledWith(
+      APP_ID,
+      NATIVE_INSTALL_PATH
+    )
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(startPollingSpy).toHaveBeenCalledWith(APP_ID)
     expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
@@ -10104,6 +10107,7 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', done)
     expect(result.stderr).toContain('Refused')
+    expect(result.refused).toBe(true)
   })
 
   it.each([
@@ -10123,21 +10127,32 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
       expect(shellOpenExternal).not.toHaveBeenCalled()
       expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', done)
       expect(result.stderr).toContain(text)
+      expect(result.refused).toBe(true)
+      expect(notify).not.toHaveBeenCalled()
     }
   )
 
-  it('a running-game refusal notifies the user under the game title', async () => {
-    ;(decideSteamNativeDelete as jest.Mock).mockResolvedValue({
-      route: 'refused-running'
-    })
-    await new SteamGame(APP_ID).uninstall({} as any)
-    expect(notify).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'Dota 2',
-        body: expect.stringContaining('gameRunning')
-      })
-    )
-  })
+  it.each([
+    [{ route: 'refused-running' }, { kind: 'uninstall-refused-running' }],
+    [
+      { route: 'steam-error', code: 2 },
+      { kind: 'uninstall-steam-error', code: 2 }
+    ],
+    [
+      { route: 'refused', reason: 'running-check-failed' },
+      { kind: 'uninstall-check-failed' }
+    ]
+  ])(
+    '%j pushes an in-app steamRequestNotice under the game title',
+    async (decision, expected) => {
+      ;(decideSteamNativeDelete as jest.Mock).mockResolvedValue(decision)
+      await new SteamGame(APP_ID).uninstall({} as any)
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'steamRequestNotice',
+        expect.objectContaining({ appId: APP_ID, title: 'Dota 2', ...expected })
+      )
+    }
+  )
 
   it('OFF: the decision is never consulted and steam://uninstall is used', async () => {
     ;(isSteamNativeDeleteEnabled as jest.Mock).mockReturnValue(false)

@@ -31,8 +31,15 @@ jest.mock('backend/logger', () => ({
 }))
 jest.mock('i18next', () => ({ t: jest.fn((_k: string, d: string) => d) }))
 
-import { removeFixFile } from '../uninstaller'
-import { fixesPath, localFixesPath } from 'backend/constants/paths'
+import { removeFixFile, uninstallGameCallback } from '../uninstaller'
+import { notify } from 'backend/dialog/dialog'
+import { libraryManagerMap } from 'backend/storeManagers'
+import { sendGameStatusUpdate } from 'backend/utils'
+import {
+  fixesPath,
+  gamesConfigPath,
+  localFixesPath
+} from 'backend/constants/paths'
 
 beforeEach(() => {
   rmSync(join(fixesPath, '..'), { recursive: true, force: true })
@@ -71,5 +78,64 @@ describe('removeFixFile', () => {
 
   it('a missing file does not throw', () => {
     expect(() => removeFixFile('nope', 'steam')).not.toThrow()
+  })
+})
+
+describe('uninstallGameCallback refusal (quick 261107-td5)', () => {
+  const APP = '264160'
+  const getSettings = jest.fn()
+  const uninstall = jest.fn()
+
+  const setup = () => {
+    mkdirSync(gamesConfigPath, { recursive: true })
+    const settings = join(gamesConfigPath, `${APP}.json`)
+    const fix = join(fixesPath, `${APP}-steam.json`)
+    writeFileSync(settings, '{}')
+    writeFileSync(fix, '{}')
+    return { settings, fix }
+  }
+  const statuses = () =>
+    (sendGameStatusUpdate as jest.Mock).mock.calls.map((c) => c[0].status)
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(libraryManagerMap as any).steam = {
+      getGame: () => ({ uninstall, getSettings })
+    }
+  })
+
+  it('a refused uninstall keeps settings, prefix and fix file, sends done, no notify', async () => {
+    const { settings, fix } = setup()
+    uninstall.mockResolvedValue({ stdout: '', stderr: 'x', refused: true })
+
+    await uninstallGameCallback({} as any, APP, 'steam', true, true)
+
+    expect(existsSync(settings)).toBe(true)
+    expect(existsSync(fix)).toBe(true)
+    expect(getSettings).not.toHaveBeenCalled()
+    expect(notify).not.toHaveBeenCalled()
+    expect(statuses()).toEqual(['uninstalling', 'done'])
+  })
+
+  it('an unflagged success still cleans up and sends no done for steam', async () => {
+    const { settings, fix } = setup()
+    uninstall.mockResolvedValue({ stdout: '', stderr: '' })
+    getSettings.mockResolvedValue({ winePrefix: join(gamesConfigPath, 'nope') })
+
+    await uninstallGameCallback({} as any, APP, 'steam', false, true)
+
+    expect(existsSync(settings)).toBe(false)
+    expect(existsSync(fix)).toBe(false)
+    expect(statuses()).toEqual(['uninstalling'])
+  })
+
+  it('a throwing uninstall still raises the generic error notify', async () => {
+    const { settings } = setup()
+    uninstall.mockRejectedValue(new Error('boom'))
+
+    await uninstallGameCallback({} as any, APP, 'steam', false, true)
+
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(existsSync(settings)).toBe(true)
   })
 })

@@ -255,6 +255,13 @@ export type BridgeListFriendsResult =
 export interface SteamRequestNoticePayload {
   appId: string
   title: string
-  kind: 'install-not-started' | 'uninstall-not-started'
+  kind:
+    | 'install-not-started'
+    | 'uninstall-not-started'
+    | 'uninstall-refused-running'
+    | 'uninstall-steam-error'
+    | 'uninstall-check-failed'
+  /** only for uninstall-steam-error */
+  code?: number
   seq: number
 }

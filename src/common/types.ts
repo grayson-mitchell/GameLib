@@ -198,6 +198,12 @@ export type ExecResult = {
   fullCommand?: string
   error?: string
   abort?: boolean
+  /**
+   * Set by an uninstall that declined and changed nothing.
+   * uninstallGameCallback then skips all post-uninstall cleanup
+   * (quick 261107-td5).
+   */
+  refused?: boolean
 }
 
 export interface ExtraInfo {

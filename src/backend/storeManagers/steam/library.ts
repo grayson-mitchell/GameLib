@@ -3657,7 +3657,7 @@ export function startInstallPolling(
           appId,
           title: library.get(appId)?.title ?? '',
           kind: 'install-not-started',
-          seq: ++steamRequestNoticeSeq
+          seq: nextSteamRequestNoticeSeq()
         })
         stopInstallPolling(appId)
         return
@@ -3769,6 +3769,9 @@ export function stopInstallPolling(appId: string): void {
 
 // quick 261106-pvk: monotonic id so the renderer shows each give-up notice once.
 let steamRequestNoticeSeq = 0
+export function nextSteamRequestNoticeSeq(): number {
+  return ++steamRequestNoticeSeq
+}
 
 /**
  * True while a Steam-owned (delegated) install poll is active for `appId`.
@@ -4124,7 +4127,7 @@ export function startUninstallPolling(
         appId,
         title: library.get(appId)?.title ?? '',
         kind: 'uninstall-not-started',
-        seq: ++steamRequestNoticeSeq
+        seq: nextSteamRequestNoticeSeq()
       })
       stopUninstallPolling(appId)
     }

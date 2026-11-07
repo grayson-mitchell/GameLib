@@ -122,7 +122,18 @@ export const uninstallGameCallback = async (
   let uninstalled = false
 
   try {
-    await game.uninstall({ shouldRemovePrefix })
+    const result = await game.uninstall({ shouldRemovePrefix })
+    if (result?.refused) {
+      // quick 261107-td5: the uninstall declined and changed nothing. The
+      // refusing route owns the user-facing message; keep settings/logs/
+      // prefix/fix file and clear the "uninstalling" status.
+      logInfo(
+        `Uninstall refused; keeping settings (${result.stderr})`,
+        LogPrefix.Backend
+      )
+      sendGameStatusUpdate({ appName, runner, status: 'done' })
+      return
+    }
     uninstalled = true
   } catch (error) {
     notify({
