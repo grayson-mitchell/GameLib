@@ -1,22 +1,45 @@
-import type { Runner } from '../../types'
+import { z } from 'zod'
 
-export interface ShortcutsSync {
-  processShortcut: (combination: string) => void
+import {
+  nonEmptyString,
+  optionalArg,
+  runnerArg,
+  type InvokeFns,
+  type SendFns
+} from './schemaTypes'
+
+export const shortcutsSyncArgs = {
+  processShortcut: z.tuple([nonEmptyString(1024)])
 }
 
-export interface ShortcutsAsync {
-  shortcutsExists: (appName: string, runner: Runner) => boolean
+export const shortcutsAsyncArgs = {
+  shortcutsExists: z.tuple([nonEmptyString(), runnerArg()]),
+  addShortcut: z.tuple([
+    nonEmptyString(),
+    runnerArg(),
+    optionalArg(z.boolean())
+  ]),
+  removeShortcut: z.tuple([nonEmptyString(), runnerArg()]),
+  addToSteam: z.tuple([nonEmptyString(), runnerArg()]),
+  removeFromSteam: z.tuple([nonEmptyString(), runnerArg()]),
+  isAddedToSteam: z.tuple([nonEmptyString(), runnerArg()])
+}
+
+interface ShortcutsAsyncReturns {
+  shortcutsExists: boolean
   // Resolves whether shortcuts exist on disk once the add has settled (the `shortcutsExists`
   // predicate), never before.
-  addShortcut: (
-    appName: string,
-    runner: Runner,
-    fromMenu: boolean
-  ) => Promise<boolean>
+  addShortcut: Promise<boolean>
   // Resolves whether shortcuts exist on disk once the removal has settled (the `shortcutsExists`
   // predicate), never before.
-  removeShortcut: (appName: string, runner: Runner) => Promise<boolean>
-  addToSteam: (appName: string, runner: Runner) => Promise<boolean>
-  removeFromSteam: (appName: string, runner: Runner) => Promise<void>
-  isAddedToSteam: (appName: string, runner: Runner) => Promise<boolean>
+  removeShortcut: Promise<boolean>
+  addToSteam: Promise<boolean>
+  removeFromSteam: Promise<void>
+  isAddedToSteam: Promise<boolean>
 }
+
+export type ShortcutsSync = SendFns<typeof shortcutsSyncArgs>
+export type ShortcutsAsync = InvokeFns<
+  typeof shortcutsAsyncArgs,
+  ShortcutsAsyncReturns
+>

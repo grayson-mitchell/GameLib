@@ -120,7 +120,7 @@ export function registerEosOverlayFlows(): void {
   ipcMain.handle(
     'isEosOverlayEnabled',
     async (_event: unknown, ...args: unknown[]) => {
-      const appName = args[0] as string | undefined
+      const appName = (args[0] ?? undefined) as string | undefined
       return isEnabled(appName)
     }
   )

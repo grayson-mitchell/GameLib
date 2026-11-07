@@ -205,7 +205,7 @@ export function registerShortcutsFlows(): void {
   ipcMain.handle('addShortcut', async (_event: unknown, ...args: unknown[]) => {
     const appName = args[0] as string
     const runner = args[1] as Runner
-    const fromMenu = args[2] as boolean | undefined
+    const fromMenu = (args[2] ?? undefined) as boolean | undefined
 
     try {
       await getGame(appName, runner).addShortcuts(fromMenu)

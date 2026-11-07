@@ -14,6 +14,8 @@ import { wineToolsAsyncArgs, wineToolsFrontendMessagesArgs } from './wineTools'
 import { defineChannelEntries, type ChannelEntry } from './schemaTypes'
 import { gameDetailsAsyncArgs, gameDetailsSyncArgs } from './gameDetails'
 import { settingsAsyncArgs, settingsSyncArgs } from './settings'
+import { eosOverlayAsyncArgs } from './eosOverlay'
+import { shortcutsAsyncArgs, shortcutsSyncArgs } from './shortcuts'
 import { shellFilesAsyncArgs, shellFilesSyncArgs } from './shellFiles'
 
 export function mergeChannelEntries(
@@ -53,5 +55,8 @@ export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
     defineChannelEntries('send', settingsSyncArgs),
     defineChannelEntries('invoke', settingsAsyncArgs),
     defineChannelEntries('send', gameDetailsSyncArgs),
-    defineChannelEntries('invoke', gameDetailsAsyncArgs)
+    defineChannelEntries('invoke', gameDetailsAsyncArgs),
+    defineChannelEntries('invoke', eosOverlayAsyncArgs),
+    defineChannelEntries('send', shortcutsSyncArgs),
+    defineChannelEntries('invoke', shortcutsAsyncArgs)
   )

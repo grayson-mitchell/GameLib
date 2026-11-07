@@ -50,7 +50,7 @@ function shortcutsExistOnDisk(appName: string, runner: Runner): boolean {
 
 addHandler('addShortcut', async (event, appName, runner, fromMenu) => {
   try {
-    await getGame(appName, runner).addShortcuts(fromMenu)
+    await getGame(appName, runner).addShortcuts(fromMenu ?? undefined)
   } catch (error) {
     logWarning(
       ['Could not add shortcuts for', appName, error],

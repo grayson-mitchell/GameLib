@@ -17,4 +17,6 @@ addHandler('installEosOverlay', install)
 addHandler('removeEosOverlay', async (e, confirmed) => remove(confirmed))
 addHandler('enableEosOverlay', async (e, appName) => enable(appName))
 addHandler('disableEosOverlay', async (e, appName) => disable(appName))
-addHandler('isEosOverlayEnabled', async (e, appName?) => isEnabled(appName))
+addHandler('isEosOverlayEnabled', async (e, appName?) =>
+  isEnabled(appName ?? undefined)
+)
