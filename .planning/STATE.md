@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 71 context gathered
-last_updated: "2026-11-07T18:32:32.561Z"
+last_updated: "2026-11-07T18:39:13.220Z"
 last_activity: 2026-11-07
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 104
-  completed_plans: 82
+  completed_plans: 83
   percent: 25
 ---
 
@@ -233,6 +233,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 67 P05 | 15m | 2 tasks | 8 files |
 | Phase 67 P07 | 40m | 2 tasks | 10 files |
 | Phase 67 P13 | 35m | 2 tasks | 9 files |
+| Phase 67 P14 | 20min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -356,6 +357,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase ?]: 67-11: dispatch_rust_channel matches exhaustively on RustInvokeChannel; humble arms on generated Args; transportParity.test.ts retired
 - [Phase ?]: 67-12: steamAuth credentials bounded strings only (username key, not accountName); appId digit-only strings; boundary rejection supersedes handler invalid-request results
 - [Phase ?]: 67-13: wineVersion strictness needs no loosening; settings config/value are passthrough/unknown, so persisted wineVersion with extra keys is accepted
+- [Phase 67]: 67-14: callTool tool enum from handler switch; save paths NUL-free bounded strings; engine push typed via z.custom
 
 ### Pending Todos
 
