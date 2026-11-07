@@ -16,6 +16,8 @@ import { gameDetailsAsyncArgs, gameDetailsSyncArgs } from './gameDetails'
 import { settingsAsyncArgs, settingsSyncArgs } from './settings'
 import { eosOverlayAsyncArgs } from './eosOverlay'
 import { shortcutsAsyncArgs, shortcutsSyncArgs } from './shortcuts'
+import { runnerMiscAsyncArgs } from './runnerMisc'
+import { engineAsyncArgs, engineFrontendMessagesArgs } from './engine'
 import { shellFilesAsyncArgs, shellFilesSyncArgs } from './shellFiles'
 
 export function mergeChannelEntries(
@@ -58,5 +60,8 @@ export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
     defineChannelEntries('invoke', gameDetailsAsyncArgs),
     defineChannelEntries('invoke', eosOverlayAsyncArgs),
     defineChannelEntries('send', shortcutsSyncArgs),
-    defineChannelEntries('invoke', shortcutsAsyncArgs)
+    defineChannelEntries('invoke', shortcutsAsyncArgs),
+    defineChannelEntries('invoke', runnerMiscAsyncArgs),
+    defineChannelEntries('invoke', engineAsyncArgs),
+    defineChannelEntries('push', engineFrontendMessagesArgs)
   )
