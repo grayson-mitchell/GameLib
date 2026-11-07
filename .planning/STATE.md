@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 61 (unified-macos-engine-for-all-stores) — EXECUTING
 Plan: 3 of 27
 Status: Ready to execute
-Last activity: 2026-11-07
+Last activity: 2026-11-07 - Completed quick task 261107-v6q: inconclusive pre-flight keeps wine-manager / retired-pin bottle engine (61 re-review WR-01)
 
 Progress: [██████████] 100%
 
@@ -489,6 +489,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261107-a1j | Electron-era store modules renamed (`electronStore(s).ts` -> `stores.ts`, `electron_store.ts` -> `typed_store.ts`, `electronStub` -> `platformApi`; on-disk cwd/name literals diff-empty); zero runtime `electron` callers, so `installElectronHook.ts` deleted (deletion landed in concurrent 82b153915) and `bootstrap.ts` imports `../platform` first. Todo closed. | 2026-11-07 | 86451c8da | codecheck, boundaries, deadcode, smoke:sidecar, planning-gates green; jest 17938 pass / 6 suites fail (4 reproduce at pre-change HEAD or read missing 56-01 files; x86 Wine harness flaky); lint 1 error in untouched games.test.ts:25; live tauri:dev check pending | [261107-a1j-rename-electron-era-store-modules-to-neu](./quick/261107-a1j-rename-electron-era-store-modules-to-neu/) |
 | 261107-aru | Downloads cancel "x" no longer goes transparent on hover under Dracula: `--danger-hover` was set by only 3 of 10 themes; base `body` now defaults it to `var(--status-danger-hover)`, `body.dracula` gets `#ff6e6e`, and both `.cancelIcon:hover circle` rules fall back to `--status-danger-hover`. | 2026-11-07 | 783a48dc1 | jest 3 suites 300/300 pass; prettier clean; live Dracula hover check passed (operator, 2026-11-07) | [261107-aru-fix-dracula-theme-on-the-downloads-page-](./quick/261107-aru-fix-dracula-theme-on-the-downloads-page-/) |
 | 261107-brs | ts-prune replaced by knip 6.42.1: `find-deadcode` now pipes `knip --reporter json --no-exit-code` into an identity ratchet (`meta/knipRatchet.cjs`, 404 baselined findings); ts-prune, its ledgers and all 416 directives removed (391 deleted, 7 -> `@public` with reason, 18 left as baselined debt); ts-morph made a direct devDep. | 2026-11-07 | 2dbc96252 | find-deadcode PASS, planted line fails it; codecheck, lint, planning-gates green; gate suites pass (250 tests) | [261107-brs-replace-ts-prune-with-knip-for-unused-ex](./quick/261107-brs-replace-ts-prune-with-knip-for-unused-ex/) |
+| 261107-v6q | Phase 61 re-review WR-01 closed: under an inconclusive CrossOver pre-flight a wine-manager or retired-pin bottle now keeps its recorded engine (no wineserver kill, no marker rewrite); an unresolvable engine takes the CrossOver branch, never pins.current. Reverses 61-26's wine-manager -> pins.current choice; 61-HUMAN-UAT item 4 pass. | 2026-11-07 | 88c8296b7 | 4 engine jest suites 204/204, codecheck clean, scoped prettier clean | [261107-v6q-inconclusive-pre-flight-leaves-wine-mana](./quick/261107-v6q-inconclusive-pre-flight-leaves-wine-mana/) |
 
 ## Deferred Items
 
