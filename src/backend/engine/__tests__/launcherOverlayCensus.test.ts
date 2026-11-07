@@ -88,3 +88,40 @@ describe('launcher.ts overlay census', () => {
     expect(launcher).not.toMatch(/from '\.\/storeManagers\/(?!index)/)
   })
 })
+
+describe('tools/index.ts overlay census (T-61-63)', () => {
+  const tools = read('tools/index.ts')
+  const bodies: Array<[string, string]> = [
+    ['Winetricks.runWithArgs', 'runWithArgs: async ('],
+    ['Winetricks.listInstalled', 'listInstalled: async (game: Game)'],
+    ['runWineCommandOnGame', 'export async function runWineCommandOnGame(']
+  ]
+
+  it.each(bodies)(
+    '%s routes every game.getSettings() read through resolveToolSettings(',
+    (_n, marker) => {
+      const start = tools.indexOf(marker)
+      expect(start).toBeGreaterThan(-1)
+      // up to the next member / function: the bodies are long, so bound by the next marker at
+      // the same indentation (member) or column 0 (function)
+      const rest = tools.slice(start + marker.length)
+      const indent = marker.startsWith('export') ? '\n}\n' : '\n  },\n'
+      const body = tools
+        .slice(start, start + marker.length + rest.indexOf(indent))
+        .replace(/^\s*\/\/.*$/gm, '')
+      const reads = body.match(/\.getSettings\(\)/g) ?? []
+      expect(reads.length).toBeGreaterThan(0)
+      const guarded =
+        body.match(
+          /resolveToolSettings\(\s*\w+,\s*await \w+\.getSettings\(\)/g
+        ) ?? []
+      expect(guarded).toHaveLength(reads.length)
+    }
+  )
+
+  it('runWithArgs keeps the Steam bridge override outside the resolver', () => {
+    expect(tools).toMatch(
+      /if \(gameSettingsOverride\) \{\s*gameSettings = gameSettingsOverride\s*\} else \{/
+    )
+  })
+})

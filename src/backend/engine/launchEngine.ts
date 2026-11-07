@@ -19,7 +19,6 @@
 import { t } from 'i18next'
 import type { GameSettings, Runner } from 'common/types'
 import type { Game } from 'common/types/game_manager'
-import { hasCapability } from 'common/storeCapabilities'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type LogWriter from 'backend/logger/log_writer'
 import { sendGameStatusUpdate } from 'backend/utils'
@@ -44,7 +43,7 @@ import { engineLogLabel, isNonCrossover } from './engineTypes'
 import type { EngineSelection } from './engineTypes'
 import { ENGINE_PINS } from './enginePins'
 import { isPinnedEngineInstalled } from './fallbackEngine'
-import { engineKeyFor } from './gameKey'
+import { engineKeyIfEligible } from './engineEligibility'
 import type { EngineKey } from './gameKey'
 import { resolveGamePrefix } from './gamePrefix'
 import type { GamePrefix } from './gamePrefix'
@@ -149,13 +148,9 @@ export async function selectEngineForLaunch(
   overrides: Partial<LaunchEngineDeps> = {}
 ): Promise<LaunchEngineStep> {
   const d: LaunchEngineDeps = { ...defaultDeps, ...overrides }
-  if (!d.isMac() || game.isNative()) return { kind: 'skip' }
-  const info = game.getGameInfo()
-  if (info.install?.platform === 'Browser') return { kind: 'skip' }
-  const { runner, app_name: appName, title } = info
-  if (hasCapability(runner, 'usesBottleRuntime')) return { kind: 'skip' }
-  const key = engineKeyFor(runner, appName)
+  const key = engineKeyIfEligible(game, d.isMac())
   if (key === null) return { kind: 'skip' }
+  const { runner, app_name: appName, title } = game.getGameInfo()
   const id = { runner, appName }
 
   const effective = d.readEffective(id)

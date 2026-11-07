@@ -13,6 +13,7 @@ import { buildFallbackGameSettings } from './bottlePrimitives'
 import { getEngineSelection } from './engineRegistry'
 import { isNonCrossover } from './engineTypes'
 import type { EngineKey } from './gameKey'
+import type { NonCrossoverEngine } from './engineTypes'
 
 export type LaunchOverlayContext = {
   prefix: { kind: 'bottle'; bottleName: string } | { kind: 'plain' }
@@ -80,14 +81,24 @@ export function getLaunchSettings(
       ...buildFallbackGameSettings(ctx.prefix.bottleName, sel, stored)
     }
   }
-  // D-04, D-06: a plain prefix keeps its prefix and DXVK settings; only the Wine changes.
+  return buildPlainPrefixSettings(stored, sel)
+}
+
+/**
+ * D-04, D-06: a plain prefix keeps its prefix and DXVK settings; only the Wine changes. Shared
+ * by the launch overlay and the Wine tools resolver (toolSettings.ts).
+ */
+export function buildPlainPrefixSettings(
+  stored: GameSettings,
+  engine: Pick<NonCrossoverEngine, 'wineBin' | 'wineserverBin' | 'label'>
+): GameSettings {
   return {
     ...stored,
     wineVersion: {
       type: 'wine',
-      bin: sel.wineBin,
-      name: sel.label,
-      wineserver: sel.wineserverBin
+      bin: engine.wineBin,
+      name: engine.label,
+      wineserver: engine.wineserverBin
     }
   }
 }

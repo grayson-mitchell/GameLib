@@ -48,6 +48,7 @@ import {
   setupWineEnvVars,
   validWine
 } from '../launcher'
+import { resolveToolSettings } from '../engine/toolSettings'
 import { chmod, readFile, stat } from 'fs/promises'
 import {
   any_gpu_supports_version,
@@ -866,9 +867,22 @@ export const Winetricks = {
       // storeManagers/index.ts) — see the load-bearing comment in
       // storeManagers/gog/user.ts.
       const { libraryManagerMap } = await import('../storeManagers')
-      gameSettings = await libraryManagerMap[runner]
-        .getGame(appName)
-        .getSettings()
+      const game = libraryManagerMap[runner].getGame(appName)
+      // Phase 61: act on the game's real bottle and engine (a verb is a need that creates it).
+      const resolved = await resolveToolSettings(
+        game,
+        await game.getSettings(),
+        { ensureBottle: true }
+      )
+      if (resolved.kind === 'unavailable') {
+        logError(
+          `Winetricks not run for ${appName}: no usable Wine environment (${resolved.reason})`,
+          LogPrefix.WineTricks
+        )
+        onDone?.(true)
+        return
+      }
+      gameSettings = resolved.settings
     }
 
     const { wineVersion } = gameSettings
@@ -1259,8 +1273,12 @@ export const Winetricks = {
     return Winetricks.listAvailable(runner, appName)
   },
   listInstalled: async (game: Game) => {
-    const gameSettings = await game.getSettings()
-    const { winePrefix } = await getWineFromProton(gameSettings)
+    // Phase 61: read the log from the bottle the game really runs in; a read never creates one.
+    const resolved = await resolveToolSettings(game, await game.getSettings(), {
+      ensureBottle: false
+    })
+    if (resolved.kind === 'unavailable') return []
+    const { winePrefix } = await getWineFromProton(resolved.settings)
     const winetricksLogPath = join(winePrefix, 'winetricks.log')
     try {
       const winetricksLog = await readFile(winetricksLogPath, 'utf8')
@@ -1528,7 +1546,18 @@ export async function runWineCommandOnGame(
     )
     return { stdout: '', stderr: '' }
   }
-  const gameSettings = await game.getSettings()
+  // Phase 61: run in the game's real bottle on its current engine (running creates the bottle).
+  const resolved = await resolveToolSettings(game, await game.getSettings(), {
+    ensureBottle: true
+  })
+  if (resolved.kind === 'unavailable') {
+    logError(
+      `runWineCommand not run for ${appName}: no usable Wine environment (${resolved.reason})`,
+      LogPrefix.Gog
+    )
+    return { stdout: '', stderr: '' }
+  }
+  const gameSettings = resolved.settings
 
   return runWineCommand({
     gameSettings,

@@ -289,7 +289,7 @@ describe('plain prefix', () => {
     mkdirSync(prefix, { recursive: true })
     populate(prefix, 'plain', false)
     settings = plainSettings(prefix)
-    effective = { kind: 'override', id: 'p1', source: 'derived' }
+    effective = { kind: 'override', id: 'pinned:p1', source: 'derived' }
     // setEngineSelection requires the pinned binaries to exist; keep them outside the prefix.
     const engineDir = join(profile.root, 'engine')
     mkdirSync(engineDir, { recursive: true })
@@ -302,7 +302,7 @@ describe('plain prefix', () => {
           wineBin: join(engineDir, 'wine'),
           wineserverBin: join(engineDir, 'wineserver')
         } as EngineSelection,
-        'p1'
+        'pinned:p1'
       )
     )
 

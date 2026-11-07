@@ -36,6 +36,9 @@ jest.mock('../../storeManagers', () => ({
   libraryManagerMap: {
     gog: {
       getGame: () => ({
+        // 61-14: resolveToolSettings skips the engine layer for a native game, so these
+        // tests keep exercising the stored settings.
+        isNative: () => true,
         getSettings: () => Promise.resolve({ wineVersion: {} })
       })
     }
