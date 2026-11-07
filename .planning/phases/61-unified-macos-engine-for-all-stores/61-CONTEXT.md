@@ -104,6 +104,26 @@ notice shows once and never blocks (D-15); the fallback toast and "Built-in engi
   update.** The Engine control shows "Legacy: \<name\>" with the warning beneath it, so the
   user can see why and switch.
 
+### Decided at plan-phase (after research, 2026-11-07)
+- **D-16: Shared-bottle fallback proceeds unless another game is running in that bottle.**
+  A per-bottle running-games ledger (keyed by bottle, covering every store) lets the engine
+  step see concurrent games. When the bottle is idle, fallback behaves as it does for Steam.
+  When another game is running in it, GameLib refuses with a message instead of killing that
+  game's wineserver or flipping the bottle underneath it.
+- **D-17: The Install, Import and ThirdParty dialogs on macOS use the Engine control** for
+  non-Steam Windows installs. It replaces the Wine selector and bottle picker, defaults to
+  Automatic, and writes the per-game bottle name (D-01). Linux and Windows dialogs are
+  unchanged.
+- **D-18: A short spike comes first and settles the non-Steam "game process exists" signal.**
+  Capture `ps` output for a CrossOver-launched game at a macOS (`Z:`) install path, then
+  generalise the first-match matcher. Arming the launch deadline for non-Steam games depends
+  on the spike's result.
+- **D-19: Extract only the `bottle.ts` primitives this phase needs** (`getBottleDir`,
+  `sanitizeBottleName`, `killBottleWineServerWith`, `buildFallbackGameSettings`,
+  `createFallbackBottle`, `isBottleProvisioned`) into `src/backend/engine/` as a pure move,
+  and repoint importers with no re-exports. Do not wait for Phase 65. Phase 65's scope
+  shrinks accordingly.
+
 ### Claude's Discretion
 - Where the engine decision code lives once it leaves `steam/engine/`, and its API. It must
   satisfy Phase 62's dependency-cruiser rules (no cross-manager imports; `launcher.ts` reaches
