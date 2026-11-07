@@ -27,3 +27,7 @@ and a cross-target run is not proven to match a native Windows run.
 4. Delete caveat (f) from the workflow header.
 
 `ready: human` because the measurement needs a Windows host or an operator-approved branch push.
+
+## Resolution
+
+The Windows ceilings were measured natively on the operator's Windows box (rustc 1.99.1, x86_64-pc-windows-msvc, at 4422ba2f3), a `win32` map was added to `CLIPPY_CEILINGS`, both `rust-test.yml` clippy steps lost their `if: runner.os == 'macOS'` gate, and caveat (f) was deleted from the workflow header. A prerequisite fix came first: the macOS leg was already red on main from 17 `clippy::get_first` warnings in the generated `ipc_contract.rs` (fixed at the generator, which now emits `args.first()` for index 0) plus a stale `needless_borrow` ceiling (deleted). macOS green is inferred from CI run 42417450472, not measured, until the next CI run. See quick task 261107-uh4.

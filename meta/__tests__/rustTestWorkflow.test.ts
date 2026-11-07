@@ -1,7 +1,8 @@
 /**
  * Text gate: the Tauri-free scanner crates stay tested and linted in CI. Default workspace
  * members hide them from `cargo test --bin gamelib-shell`, so the explicit `-p` step and the
- * `--workspace` clippy run are load-bearing.
+ * `--workspace` clippy run are load-bearing. The clippy toolchain and ratchet steps are
+ * unconditional because the ratchet holds a per-platform baseline on both matrix legs.
  */
 
 import { readFileSync } from 'fs'
@@ -26,6 +27,15 @@ function hasScanCrateStep(text: string): boolean {
   )
 }
 
+function hasUngatedClippy(text: string): boolean {
+  const ratchet = steps(text).find((s) =>
+    s.includes('node ../meta/clippyRatchet.cjs')
+  )
+  const toolchain = steps(text).find((s) => s.includes('toolchain: 1.99.1'))
+  if (!ratchet || !toolchain) return false
+  return !/^\s*if:/m.test(ratchet) && !/^\s*if:/m.test(toolchain)
+}
+
 function hasWorkspaceClippy(text: string): boolean {
   return text.includes('clippy --workspace --all-targets')
 }
@@ -41,6 +51,10 @@ describe('rust-test.yml covers the gamelib-scan crates', () => {
 
   test('clippy ratchet lints the whole workspace', () => {
     expect(hasWorkspaceClippy(workflow)).toBe(true)
+  })
+
+  test('clippy toolchain and ratchet run on every matrix leg (no if:)', () => {
+    expect(hasUngatedClippy(workflow)).toBe(true)
   })
 
   test('still tests the shell crate', () => {
@@ -68,5 +82,17 @@ describe('anti-vacuity: the predicates reject mutated workflows', () => {
     expect(
       hasWorkspaceClippy(workflow.replace('clippy --workspace', 'clippy'))
     ).toBe(false)
+  })
+
+  test.each([
+    '- name: Install pinned clippy toolchain\n',
+    '- name: cargo clippy ratchet (shrink-only, per-platform baseline)\n'
+  ])('rejects a workflow whose clippy step is conditional: %s', (anchor) => {
+    const mutated = workflow.replace(
+      anchor,
+      `${anchor}        if: runner.os == 'macOS'\n`
+    )
+    expect(mutated).not.toBe(workflow)
+    expect(hasUngatedClippy(mutated)).toBe(false)
   })
 })
