@@ -336,6 +336,8 @@ export interface GameSettings {
   wineCrossoverBottle: string
   // Phase 59 (D-14): per-game Steam bridge engine override id; parsed by backend/engine/engineIds.ts, never a path.
   steamEngineOverride?: string
+  // Phase 61 (D-08): per-game engine override id for every store; parsed by backend/engine/engineIds.ts, never a path. Absent means derived from wineVersion at read time.
+  engineOverride?: string
   /**
    * Phase 60 D-02: per-game Steam overlay toggle. Undefined means automatic.
    * The user's on/off beats a known fix in both directions (D-03).
