@@ -63,6 +63,16 @@ under `state/` (gitignored). The real licence and the real bottles are only ever
    (rc 142, alarm); the probe never started (`probe.txt` absent). After the kill, `wineserver
    crashed` was logged (consequence of the kill). No processes were left behind.
 
+### Addendum 2026-11-07: the `InstallTime` encoding (Phase 61 UAT)
+
+CrossOver's bottle `InstallTime` dword is the first-unlicensed-run Unix time XOR a constant:
+`K = stored ^ install_unix`. To set N days remaining, write
+`((install_unix - (15-N)*86400 - 3600) ^ K)`. Measured on `GameLib-legendary-54f7…`: stored
+`0x61431346` at install `1794034026` (the registry key's mtime). `0x614c5676` gave "5 days
+remaining" and `0x6145f9f6` gave "10 days remaining". The `sub:` arithmetic in `backdate.py` is
+non-monotonic for this reason. A licensed CrossOver writes no `InstallTime` until the bottle first
+runs unlicensed.
+
 ## Results
 
 **PARTIAL.**
