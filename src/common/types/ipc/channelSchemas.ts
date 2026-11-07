@@ -35,6 +35,11 @@ import {
   downloadQueueSyncArgs
 } from './downloadQueue'
 import { steamAsyncArgs, steamFrontendMessagesArgs } from './steam'
+import {
+  appShellAsyncArgs,
+  appShellFrontendMessagesArgs,
+  appShellSyncArgs
+} from './appShell'
 import { gogFrontendMessagesArgs } from './gog'
 import { shellFilesAsyncArgs, shellFilesSyncArgs } from './shellFiles'
 
@@ -97,5 +102,7 @@ export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
     // legendary's `refreshLibrary` push shares its name with steam's `refreshLibrary` invoke.
     // The map is keyed by name alone and pushes are never validated at runtime (D-12), so the
     // push stays typing-only in ./legendary and is deliberately not registered here.
-    defineChannelEntries('push', gogFrontendMessagesArgs)
+    defineChannelEntries('push', gogFrontendMessagesArgs),
+    defineChannelEntries('send', appShellSyncArgs),
+    defineChannelEntries('invoke', appShellAsyncArgs)
   )
