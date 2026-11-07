@@ -129,6 +129,7 @@ import { downloadFile } from '../../utils'
 import type { InstallParams, GameStatus, GameInfo } from 'common/types'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { defined } from 'backend/testUtils/indexed'
 
 /**
  * 37-05 (REQ-37-04, Wave 4 Task 1): the pre-existing `aborthandler` mock
@@ -985,7 +986,7 @@ describe('installQueueElement — REQ-37-04: no spurious abort-controller-miss E
     )
     expect(fnMatch).not.toBeNull()
 
-    const body = fnMatch![1]
+    const body = defined(fnMatch?.[1], 'stopCurrentDownload body')
     expect(body).not.toMatch(/await/)
     const abortIdx = body.indexOf('callAbortController(appName)')
     const stopIdx = body.indexOf('.stop(false)')

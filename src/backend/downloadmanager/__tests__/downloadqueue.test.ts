@@ -76,7 +76,9 @@ const resolveGameTitleMock = jest.fn(
     appName: string,
     fallback?: { title?: string }
   ): string => {
-    const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
+    const { title } = defined(libraryManagerMap[runner], 'library manager')
+      .getGame(appName)
+      .getGameInfo()
     return title || fallback?.title || appName
   }
 )
@@ -167,6 +169,7 @@ jest.mock('backend/online_monitor', () => ({
 
 import type { DMQueueElement } from 'common/types'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
+import { defined } from 'backend/testUtils/indexed'
 
 function makeQueueElement(appName: string): DMQueueElement {
   return {
@@ -255,7 +258,7 @@ describe('downloadqueue.ts — D-UAT-05 restart-wedge regression', () => {
 
     const remaining = getQueueInformation().elements
     expect(remaining).toHaveLength(1)
-    expect(remaining[0].params.appName).toBe('1295660')
+    expect(defined(remaining[0], 'queue head').params.appName).toBe('1295660')
   })
 })
 
@@ -300,7 +303,7 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
     // test; processNotification calls it via the mocked '../utils' module.
     resolveGameTitleMock.mockImplementation(
       (libraryManagerMap, runner, appName, fallback) => {
-        const { title } = libraryManagerMap[runner]
+        const { title } = defined(libraryManagerMap[runner], 'library manager')
           .getGame(appName)
           .getGameInfo()
         return title || fallback?.title || appName
@@ -320,7 +323,9 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
     expect(installQueueElement).not.toHaveBeenCalled()
     // Deferred, not removed — still there for the user to explicitly resume.
     expect(getQueueInformation().elements).toHaveLength(1)
-    expect(getQueueInformation().elements[0].params.appName).toBe('1091500')
+    expect(
+      defined(getQueueInformation().elements[0], 'queue head').params.appName
+    ).toBe('1091500')
   })
 
   it('initQueue(true) leaves queueState idle/paused for a deferred Steam item — frontend renders this identically to "Resume download"', async () => {
@@ -468,7 +473,7 @@ describe('downloadqueue.ts — 260905-luf: processNotification title fallback on
     gameGetGameInfoMock.mockReturnValue({ folder_name: undefined })
     resolveGameTitleMock.mockImplementation(
       (libraryManagerMap, runner, appName, fallback) => {
-        const { title } = libraryManagerMap[runner]
+        const { title } = defined(libraryManagerMap[runner], 'library manager')
           .getGame(appName)
           .getGameInfo()
         return title || fallback?.title || appName
@@ -683,7 +688,7 @@ describe('downloadqueue.ts — quick 261024-cjq: deferred-to-setup installs are 
     gameGetGameInfoMock.mockReturnValue({ title: 'Some Game' })
     resolveGameTitleMock.mockImplementation(
       (libraryManagerMap, runner, appName, fallback) => {
-        const { title } = libraryManagerMap[runner]
+        const { title } = defined(libraryManagerMap[runner], 'library manager')
           .getGame(appName)
           .getGameInfo()
         return title || fallback?.title || appName

@@ -47,7 +47,8 @@ const ADOPTED_BUCKETS = [
   'src/backend/wine',
   'src/backend/utils',
   'src/backend/utils.ts',
-  'src/backend/testUtils'
+  'src/backend/testUtils',
+  'src/backend/downloadmanager'
 ]
 
 /**

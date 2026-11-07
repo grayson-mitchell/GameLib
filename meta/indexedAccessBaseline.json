@@ -1,7 +1,6 @@
 {
   "meta": 342,
   "src/backend/appshell": 1,
-  "src/backend/downloadmanager": 8,
   "src/backend/knownFixOverlayArchive.ts": 2,
   "src/backend/knownFixesRegistry.ts": 7,
   "src/backend/launcher.ts": 6,
