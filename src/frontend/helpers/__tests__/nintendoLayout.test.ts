@@ -23,6 +23,8 @@
  * See the header of `gamepadRepeatTiming.test.ts` for the shared harness
  * conventions (node env, globals stubbed on `globalThis`, priming frame).
  */
+import { defined } from './defined'
+
 jest.mock('../virtualKeyboard', () => ({
   VirtualKeyboardController: {
     isButtonFocused: () => false,
@@ -275,7 +277,7 @@ function pressButton(
   // frame; see the gamepadRepeatTiming.test.ts header note.
   harness.runFrame()
 
-  pad.buttons[buttonIndex].pressed = true
+  defined(pad.buttons[buttonIndex], `button ${buttonIndex}`).pressed = true
   harness.runFrame()
 
   return harness.actions()

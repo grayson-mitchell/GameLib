@@ -28,16 +28,16 @@ export function checkStandard(
     left = buttons[14],
     right = buttons[15],
     guideButton = buttons[16], // Xbox "Guide" / PS button
-    leftAxisX = axes[0],
-    leftAxisY = axes[1],
-    rightAxisX = axes[2],
-    rightAxisY = axes[3]
+    leftAxisX = axes[0] ?? NaN,
+    leftAxisY = axes[1] ?? NaN,
+    rightAxisX = axes[2] ?? NaN,
+    rightAxisY = axes[3] ?? NaN
 
   // use the `?` operator here since this layout is used as fallback
   // and mapping can be incorrect
-  checkAction('mainAction', mainButton?.pressed, controllerIndex)
-  checkAction('back', backButton?.pressed, controllerIndex)
-  checkAction('altAction', altButton?.pressed, controllerIndex)
+  checkAction('mainAction', mainButton?.pressed ?? false, controllerIndex)
+  checkAction('back', backButton?.pressed ?? false, controllerIndex)
+  checkAction('altAction', altButton?.pressed ?? false, controllerIndex)
   checkAction('leftStickLeft', leftAxisX < -0.5, controllerIndex)
   checkAction('leftStickRight', leftAxisX > 0.5, controllerIndex)
   checkAction('leftStickUp', leftAxisY < -0.5, controllerIndex)
@@ -46,10 +46,14 @@ export function checkStandard(
   checkAction('rightStickRight', rightAxisX > 0.5, controllerIndex)
   checkAction('rightStickUp', rightAxisY < -0.5, controllerIndex)
   checkAction('rightStickDown', rightAxisY > 0.5, controllerIndex)
-  checkAction('padUp', up?.pressed, controllerIndex)
-  checkAction('padDown', down?.pressed, controllerIndex)
-  checkAction('padLeft', left?.pressed, controllerIndex)
-  checkAction('padRight', right?.pressed, controllerIndex)
-  checkAction('rightClick', contextMenuButton?.pressed, controllerIndex)
-  checkAction('guide', guideButton?.pressed, controllerIndex)
+  checkAction('padUp', up?.pressed ?? false, controllerIndex)
+  checkAction('padDown', down?.pressed ?? false, controllerIndex)
+  checkAction('padLeft', left?.pressed ?? false, controllerIndex)
+  checkAction('padRight', right?.pressed ?? false, controllerIndex)
+  checkAction(
+    'rightClick',
+    contextMenuButton?.pressed ?? false,
+    controllerIndex
+  )
+  checkAction('guide', guideButton?.pressed ?? false, controllerIndex)
 }

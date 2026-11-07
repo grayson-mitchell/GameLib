@@ -24,15 +24,15 @@ export function checkGameCube(
     down = buttons[9],
     left = buttons[10],
     right = buttons[11],
-    leftAxisX = axes[0],
-    leftAxisY = axes[1],
-    rightAxisX = axes[3],
-    rightAxisY = axes[4]
+    leftAxisX = axes[0] ?? NaN,
+    leftAxisY = axes[1] ?? NaN,
+    rightAxisX = axes[3] ?? NaN,
+    rightAxisY = axes[4] ?? NaN
 
-  checkAction('padUp', up.pressed, controllerIndex)
-  checkAction('padDown', down.pressed, controllerIndex)
-  checkAction('padLeft', left.pressed, controllerIndex)
-  checkAction('padRight', right.pressed, controllerIndex)
+  checkAction('padUp', up?.pressed ?? false, controllerIndex)
+  checkAction('padDown', down?.pressed ?? false, controllerIndex)
+  checkAction('padLeft', left?.pressed ?? false, controllerIndex)
+  checkAction('padRight', right?.pressed ?? false, controllerIndex)
   checkAction('leftStickLeft', leftAxisX < -0.5, controllerIndex)
   checkAction('leftStickRight', leftAxisX > 0.5, controllerIndex)
   checkAction('leftStickUp', leftAxisY < -0.5, controllerIndex)
@@ -41,10 +41,10 @@ export function checkGameCube(
   checkAction('rightStickRight', rightAxisX > 0.5, controllerIndex)
   checkAction('rightStickUp', rightAxisY < -0.5, controllerIndex)
   checkAction('rightStickDown', rightAxisY > 0.5, controllerIndex)
-  checkAction('mainAction', A.pressed, controllerIndex)
-  checkAction('back', B.pressed, controllerIndex)
-  checkAction('altAction', Y.pressed, controllerIndex)
-  checkAction('rightClick', X.pressed, controllerIndex)
+  checkAction('mainAction', A?.pressed ?? false, controllerIndex)
+  checkAction('back', B?.pressed ?? false, controllerIndex)
+  checkAction('altAction', Y?.pressed ?? false, controllerIndex)
+  checkAction('rightClick', X?.pressed ?? false, controllerIndex)
 }
 
 // Vendor 057e is Nintendo. The id strings also cover Joy-Cons and the
@@ -254,15 +254,15 @@ export function checkNintendo(
     X = buttons[faceIndices.menu]
 
   const stickAxes = nintendoStickAxes(mapping)
-  const leftAxisX = axes[stickAxes.leftX],
-    leftAxisY = axes[stickAxes.leftY],
-    rightAxisX = axes[stickAxes.rightX],
-    rightAxisY = axes[stickAxes.rightY]
+  const leftAxisX = axes[stickAxes.leftX] ?? NaN,
+    leftAxisY = axes[stickAxes.leftY] ?? NaN,
+    rightAxisX = axes[stickAxes.rightX] ?? NaN,
+    rightAxisY = axes[stickAxes.rightY] ?? NaN
 
-  checkAction('mainAction', A?.pressed, controllerIndex)
-  checkAction('back', B?.pressed, controllerIndex)
-  checkAction('altAction', Y?.pressed, controllerIndex)
-  checkAction('rightClick', X?.pressed, controllerIndex)
+  checkAction('mainAction', A?.pressed ?? false, controllerIndex)
+  checkAction('back', B?.pressed ?? false, controllerIndex)
+  checkAction('altAction', Y?.pressed ?? false, controllerIndex)
+  checkAction('rightClick', X?.pressed ?? false, controllerIndex)
   checkAction('leftStickLeft', leftAxisX < -0.5, controllerIndex)
   checkAction('leftStickRight', leftAxisX > 0.5, controllerIndex)
   checkAction('leftStickUp', leftAxisY < -0.5, controllerIndex)
@@ -274,11 +274,11 @@ export function checkNintendo(
 
   if (mapping === 'standard') {
     // Standard mapping's d-pad is four discrete buttons at fixed positions.
-    checkAction('padUp', buttons[12]?.pressed, controllerIndex)
-    checkAction('padDown', buttons[13]?.pressed, controllerIndex)
-    checkAction('padLeft', buttons[14]?.pressed, controllerIndex)
-    checkAction('padRight', buttons[15]?.pressed, controllerIndex)
-    checkAction('guide', buttons[16]?.pressed, controllerIndex)
+    checkAction('padUp', buttons[12]?.pressed ?? false, controllerIndex)
+    checkAction('padDown', buttons[13]?.pressed ?? false, controllerIndex)
+    checkAction('padLeft', buttons[14]?.pressed ?? false, controllerIndex)
+    checkAction('padRight', buttons[15]?.pressed ?? false, controllerIndex)
+    checkAction('guide', buttons[16]?.pressed ?? false, controllerIndex)
   } else {
     // Raw HID: the d-pad is a single hat axis, NOT buttons[12-15]. Reading
     // buttons[12]/[13] as a d-pad would make Home/Capture dispatch
@@ -294,7 +294,9 @@ export function checkNintendo(
     // confirmed BEFORE either was pressed: buttons[12] = Home, buttons[13] =
     // Capture. buttons[14] and buttons[15] remain UNMEASURED -- do not
     // assume they continue the pattern.
-    const hatDirection = nintendoHatDirection(axes[NON_STANDARD_HAT_AXIS])
+    const hatDirection = nintendoHatDirection(
+      axes[NON_STANDARD_HAT_AXIS] ?? NaN
+    )
     checkAction('padUp', hatDirection === 'up', controllerIndex)
     checkAction('padDown', hatDirection === 'down', controllerIndex)
     checkAction('padLeft', hatDirection === 'left', controllerIndex)
@@ -311,7 +313,7 @@ export function checkNintendo(
     // recorded but deliberately NOT bound: `guide` means the system/home
     // button, and binding Capture to it would be a design decision nobody
     // has made.
-    checkAction('guide', buttons[12]?.pressed, controllerIndex)
+    checkAction('guide', buttons[12]?.pressed ?? false, controllerIndex)
 
     // Stick clicks (L3/R3, buttons[10]/[11]): MEASURED at 10 and 11
     // respectively, on the same pad, in the same sitting as the Home/Capture
@@ -351,9 +353,9 @@ export function checkN64Clone1(
     Z = buttons[7],
     B = buttons[8],
     // Start = buttons[9],
-    axisX = axes[0],
-    axisY = axes[1],
-    dPadAxis = axes[9]
+    axisX = axes[0] ?? NaN,
+    axisY = axes[1] ?? NaN,
+    dPadAxis = axes[9] ?? NaN
 
   // dPad values are mapped to AXIS 9 as:
   // up: -1
@@ -398,8 +400,8 @@ export function checkN64Clone1(
   checkAction('leftStickRight', axisX > 0.5, controllerIndex)
   checkAction('leftStickUp', axisY < -0.5, controllerIndex)
   checkAction('leftStickDown', axisY > 0.5, controllerIndex)
-  checkAction('mainAction', A.pressed, controllerIndex)
-  checkAction('back', B.pressed, controllerIndex)
-  checkAction('altAction', CDown.pressed, controllerIndex)
-  checkAction('rightClick', Z.pressed, controllerIndex)
+  checkAction('mainAction', A?.pressed ?? false, controllerIndex)
+  checkAction('back', B?.pressed ?? false, controllerIndex)
+  checkAction('altAction', CDown?.pressed ?? false, controllerIndex)
+  checkAction('rightClick', Z?.pressed ?? false, controllerIndex)
 }

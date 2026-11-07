@@ -26,12 +26,12 @@ export function checkGenius1(
     // start = buttons[9],
     // L3 = buttons[10], // press left stick
     // R3 = buttons[11], // press right stick
-    leftAxisX = axes[0],
-    leftAxisY = axes[1],
-    rightAxisX = axes[2],
-    rightAxisY = axes[3],
-    dPadX = axes[4],
-    dPadY = axes[5]
+    leftAxisX = axes[0] ?? NaN,
+    leftAxisY = axes[1] ?? NaN,
+    rightAxisX = axes[2] ?? NaN,
+    rightAxisY = axes[3] ?? NaN,
+    dPadX = axes[4] ?? NaN,
+    dPadY = axes[5] ?? NaN
 
   checkAction('padUp', dPadY === -1, controllerIndex)
   checkAction('padDown', dPadY === 1, controllerIndex)
@@ -45,8 +45,8 @@ export function checkGenius1(
   checkAction('rightStickRight', rightAxisX > 0.5, controllerIndex)
   checkAction('rightStickUp', rightAxisY < -0.5, controllerIndex)
   checkAction('rightStickDown', rightAxisY > 0.5, controllerIndex)
-  checkAction('mainAction', one.pressed, controllerIndex)
-  checkAction('back', two.pressed, controllerIndex)
-  checkAction('altAction', four.pressed, controllerIndex)
-  checkAction('rightClick', three.pressed, controllerIndex)
+  checkAction('mainAction', one?.pressed ?? false, controllerIndex)
+  checkAction('back', two?.pressed ?? false, controllerIndex)
+  checkAction('altAction', four?.pressed ?? false, controllerIndex)
+  checkAction('rightClick', three?.pressed ?? false, controllerIndex)
 }

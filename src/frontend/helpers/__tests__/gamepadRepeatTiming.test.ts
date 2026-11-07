@@ -29,6 +29,8 @@
  * rAF loop always observes a released frame first -- the priming frame
  * reproduces real conditions rather than papering over a defect.
  */
+import { defined } from './defined'
+
 jest.mock('../virtualKeyboard', () => ({
   VirtualKeyboardController: {
     isButtonFocused: () => false,
@@ -188,7 +190,7 @@ describe('helpers/gamepad: key-repeat timing', () => {
     // `triggeredAt` never even reaches 0.
     harness.runFrame()
 
-    pad.buttons[DPAD_DOWN].pressed = true
+    defined(pad.buttons[DPAD_DOWN], `button ${DPAD_DOWN}`).pressed = true
     harness.runFrame()
 
     expect(harness.padDownCalls()).toBe(1)
@@ -225,7 +227,7 @@ describe('helpers/gamepad: key-repeat timing', () => {
     // priming frame -- see the header note
     harness.runFrame()
 
-    pad.buttons[DPAD_DOWN].pressed = true
+    defined(pad.buttons[DPAD_DOWN], `button ${DPAD_DOWN}`).pressed = true
 
     // initial press fires immediately
     harness.runFrame()

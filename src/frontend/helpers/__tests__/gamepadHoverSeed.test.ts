@@ -20,6 +20,8 @@
  *   from a real controller press, not merely that the resolver works in
  *   isolation.
  */
+import { defined } from './defined'
+
 jest.mock('../virtualKeyboard', () => ({
   VirtualKeyboardController: {
     isButtonFocused: () => false,
@@ -452,7 +454,7 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     // priming frame -- see gamepadRepeatTiming.test.ts's header note
     harness.runFrame()
 
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
 
     expect(link?.focus).toHaveBeenCalledTimes(1)
@@ -461,11 +463,11 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     expect(harness.getFocused()).toBe(link)
 
     // release frame
-    pad.buttons[PAD_LEFT].pressed = false
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = false
     harness.runFrame()
 
     // second press -- the card is now focused, so this one navigates from it
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
 
     expect(harness.gamepadAction).toHaveBeenCalledTimes(1)
@@ -488,7 +490,7 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
 
     harness.runFrame()
 
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
 
     expect(harness.gamepadAction).toHaveBeenCalledTimes(1)
@@ -540,17 +542,17 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     harness.fire('gamepadconnected', asGamepad(pad))
     harness.runFrame()
 
-    pad.buttons[PAD_DOWN].pressed = true
+    defined(pad.buttons[PAD_DOWN], `button ${PAD_DOWN}`).pressed = true
     harness.runFrame()
 
     expect(link?.focus).toHaveBeenCalledTimes(1)
     expect(harness.gamepadAction).not.toHaveBeenCalled()
     expect(harness.getFocused()).toBe(link)
 
-    pad.buttons[PAD_DOWN].pressed = false
+    defined(pad.buttons[PAD_DOWN], `button ${PAD_DOWN}`).pressed = false
     harness.runFrame()
 
-    pad.buttons[PAD_DOWN].pressed = true
+    defined(pad.buttons[PAD_DOWN], `button ${PAD_DOWN}`).pressed = true
     harness.runFrame()
 
     expect(harness.gamepadAction).toHaveBeenCalledWith({ action: 'padDown' })
@@ -575,7 +577,7 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     harness.fire('gamepadconnected', asGamepad(pad))
     harness.runFrame()
 
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
 
     expect(linkA?.focus).toHaveBeenCalledTimes(1)
@@ -600,7 +602,7 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     harness.fire('gamepadconnected', asGamepad(pad))
     harness.runFrame()
 
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
 
     expect(link?.focus).not.toHaveBeenCalled()
@@ -625,7 +627,7 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     harness.fire('gamepadconnected', asGamepad(pad))
     harness.runFrame()
 
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
 
     expect(link?.focus).not.toHaveBeenCalled()
@@ -648,11 +650,11 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     harness.runFrame()
 
     // handoff press seeds the card
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
     expect(link?.focus).toHaveBeenCalledTimes(1)
 
-    pad.buttons[PAD_LEFT].pressed = false
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = false
     harness.runFrame()
 
     // focus moves to some unrelated element, with NO mousemove -- the
@@ -660,7 +662,7 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     const elementC = harness.createElement('DIV', ['somethingElse'])
     harness.setFocused(elementC)
 
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
 
     // mid-session: this controller is already current, so it is not a
@@ -668,13 +670,13 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     expect(link?.focus).toHaveBeenCalledTimes(1)
     expect(harness.gamepadAction).toHaveBeenCalledWith({ action: 'padLeft' })
 
-    pad.buttons[PAD_LEFT].pressed = false
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = false
     harness.runFrame()
 
     // the mouse actually moves now -- re-arms the handoff
     harness.fireMouseMove()
 
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
 
     expect(link?.focus).toHaveBeenCalledTimes(2)
@@ -698,10 +700,10 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     harness.fire('gamepadconnected', asGamepad(pad))
     harness.runFrame()
 
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
     expect(link?.focus).toHaveBeenCalledTimes(1)
-    pad.buttons[PAD_LEFT].pressed = false
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = false
     harness.runFrame()
 
     const elementC = harness.createElement('DIV', ['somethingElse'])
@@ -711,7 +713,7 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     // same screen position
     harness.fireMouseMove({ screenX: 5, screenY: 5 })
 
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
 
     expect(link?.focus).toHaveBeenCalledTimes(1)
@@ -734,7 +736,7 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     harness.fire('gamepadconnected', asGamepad(pad))
     harness.runFrame()
 
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
 
     expect(link?.focus).not.toHaveBeenCalled()
@@ -761,7 +763,7 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     harness.fire('gamepadconnected', asGamepad(pad))
     harness.runFrame()
 
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
 
     expect(link?.focus).not.toHaveBeenCalled()
@@ -788,7 +790,7 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     harness.fire('gamepadconnected', asGamepad(pad))
     harness.runFrame()
 
-    pad.buttons[PAD_LEFT].pressed = true
+    defined(pad.buttons[PAD_LEFT], `button ${PAD_LEFT}`).pressed = true
     harness.runFrame()
 
     expect(link?.focus).not.toHaveBeenCalled()
@@ -810,16 +812,16 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
     harness.fire('gamepadconnected', asGamepad(pad))
     harness.runFrame()
 
-    pad.buttons[MAIN_ACTION].pressed = true
+    defined(pad.buttons[MAIN_ACTION], `button ${MAIN_ACTION}`).pressed = true
     harness.runFrame()
 
     expect(link?.focus).not.toHaveBeenCalled()
     expect(link?.click).not.toHaveBeenCalled()
 
-    pad.buttons[MAIN_ACTION].pressed = false
+    defined(pad.buttons[MAIN_ACTION], `button ${MAIN_ACTION}`).pressed = false
     harness.runFrame()
 
-    pad.buttons[ALT_ACTION].pressed = true
+    defined(pad.buttons[ALT_ACTION], `button ${ALT_ACTION}`).pressed = true
     harness.runFrame()
 
     expect(link?.focus).not.toHaveBeenCalled()

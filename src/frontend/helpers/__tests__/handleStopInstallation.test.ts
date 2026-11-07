@@ -1,5 +1,6 @@
 import type { DialogModalOptions } from 'frontend/types'
 import type { InstallProgress, Runner } from 'common/types'
+import { defined } from './defined'
 
 jest.mock('../index', () => ({ getGameInfo: jest.fn() }))
 
@@ -27,6 +28,10 @@ const t = ((_key: string, def: string, opts?: { title?: string }) =>
 
 const progress = { percent: '10%' } as unknown as InstallProgress
 
+function button(o: DialogModalOptions, i: number) {
+  return defined(o.buttons?.[i], `button ${i}`)
+}
+
 function open(runner: Runner) {
   const show = jest.fn<void, [DialogModalOptions]>()
   handleStopInstallation(
@@ -39,7 +44,7 @@ function open(runner: Runner) {
     'Cool Game'
   )
   expect(show).toHaveBeenCalledTimes(1)
-  return show.mock.calls[0][0]
+  return defined(show.mock.calls[0], 'first show call')[0]
 }
 
 describe('handleStopInstallation', () => {
@@ -57,18 +62,18 @@ describe('handleStopInstallation', () => {
       undefined,
       'primary'
     ])
-    expect(o.buttons?.[1].onClick).toBeUndefined()
+    expect(button(o, 1).onClick).toBeUndefined()
   })
 
   test('Delete Files cancels with removal and clears progress', () => {
-    open('gog').buttons?.[0].onClick?.()
+    button(open('gog'), 0).onClick?.()
     expect(cancelDownload).toHaveBeenCalledWith(true)
     expect(removeItem).toHaveBeenCalledWith('app1')
     expect(setItem).not.toHaveBeenCalled()
   })
 
   test('Stop & Keep Files saves progress and cancels without removal', () => {
-    open('gog').buttons?.[2].onClick?.()
+    button(open('gog'), 2).onClick?.()
     expect(setItem).toHaveBeenCalledWith(
       'app1',
       JSON.stringify({ ...progress, folder: '/games' })
@@ -90,7 +95,7 @@ describe('handleStopInstallation', () => {
       'primary'
     ])
     expect(o.message as string).toContain('delete them')
-    o.buttons?.[0].onClick?.()
+    button(o, 0).onClick?.()
     expect(cancelDownload).toHaveBeenCalledWith(true)
     expect(removeItem).toHaveBeenCalledWith('app1')
   })

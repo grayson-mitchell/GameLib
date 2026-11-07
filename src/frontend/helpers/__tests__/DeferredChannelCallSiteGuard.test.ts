@@ -39,6 +39,7 @@
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { defined } from './defined'
 import {
   STEAMGRIDDB_CHANNELS,
   WINETRICKS_API_METHODS
@@ -129,7 +130,10 @@ function findDeferredCallSites(collapsed: string): CallSite[] {
   for (const pattern of patterns) {
     let match: RegExpExecArray | null
     while ((match = pattern.exec(collapsed)) !== null) {
-      sites.push({ index: match.index, name: match[1] })
+      sites.push({
+        index: match.index,
+        name: defined(match[1], 'capture group 1')
+      })
     }
   }
   return sites.sort((a, b) => a.index - b.index)
@@ -146,7 +150,9 @@ describe('SteamGridDB/winetricks decline call-site gate', () => {
     for (const [path, expected] of Object.entries(
       EXPECTED_DEFERRED_CALL_SITES
     )) {
-      const count = findDeferredCallSites(collapsedByFile[path]).length
+      const count = findDeferredCallSites(
+        defined(collapsedByFile[path], path)
+      ).length
       expect(count).toBeGreaterThan(0)
       expect(count).toBe(expected)
       total += count
@@ -158,7 +164,7 @@ describe('SteamGridDB/winetricks decline call-site gate', () => {
 
   it('every invoke-kind call site is the call thunk of a callOrDeclare(...) invocation', () => {
     for (const path of Object.keys(EXPECTED_DEFERRED_CALL_SITES)) {
-      const collapsed = collapsedByFile[path]
+      const collapsed = defined(collapsedByFile[path], path)
       const sites = findDeferredCallSites(collapsed)
       expect(sites.length).toBeGreaterThan(0)
       for (const site of sites) {
@@ -203,7 +209,7 @@ describe('SteamGridDB/winetricks decline call-site gate', () => {
       )
       const indices = findDeferredCallSites(injected)
       expect(indices.length).toBeGreaterThan(0)
-      const [site] = indices
+      const site = defined(indices[0], 'first call site')
       const preceding = injected.slice(
         Math.max(0, site.index - CALL_SITE_WINDOW),
         site.index
@@ -212,7 +218,10 @@ describe('SteamGridDB/winetricks decline call-site gate', () => {
     })
 
     it('the exemption assertion fires when the guard token is absent', () => {
-      const withoutGuard = collapsedByFile[FILES.winetricks].replace(
+      const withoutGuard = defined(
+        collapsedByFile[FILES.winetricks],
+        'winetricks file'
+      ).replace(
         new RegExp(WINETRICKS_DECLINED_GUARD_TOKEN, 'g'),
         'REMOVED_FOR_SELF_TEST'
       )

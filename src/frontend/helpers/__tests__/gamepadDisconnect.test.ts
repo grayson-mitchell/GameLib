@@ -20,6 +20,8 @@
  * and post-fix behaviour are identical for that path. A test asserting on it
  * would pass both before and after the fix and would guard nothing.
  */
+import { defined } from './defined'
+
 jest.mock('../virtualKeyboard', () => ({
   VirtualKeyboardController: {
     isButtonFocused: () => false,
@@ -178,17 +180,21 @@ describe('helpers/gamepad: removegamepad index-vs-position', () => {
     // swallowed by checkAction's "first press" guard
     harness.runFrame()
 
-    pad3.buttons[0].pressed = true
+    defined(pad3.buttons[0], 'button 0').pressed = true
     harness.runFrame()
 
     expect(harness.emitted).toHaveLength(1)
-    expect(harness.emitted[0].detail.controllerId).toBe(pad3.id)
+    expect(
+      defined(harness.emitted[0], 'emitted entry').detail.controllerId
+    ).toBe(pad3.id)
 
     harness.pads[3] = null
     harness.fire('gamepaddisconnected', asGamepad(pad3))
 
     expect(harness.emitted).toHaveLength(2)
-    expect(harness.emitted[1].detail.controllerId).toBe('')
+    expect(
+      defined(harness.emitted[1], 'emitted entry').detail.controllerId
+    ).toBe('')
   })
 
   it('CASE 2 -- disconnecting a NON-active pad whose array position equals currentController emits nothing further', () => {
@@ -209,11 +215,13 @@ describe('helpers/gamepad: removegamepad index-vs-position', () => {
     // idle frame
     harness.runFrame()
 
-    pad0.buttons[0].pressed = true
+    defined(pad0.buttons[0], 'button 0').pressed = true
     harness.runFrame()
 
     expect(harness.emitted).toHaveLength(1)
-    expect(harness.emitted[0].detail.controllerId).toBe(pad0.id)
+    expect(
+      defined(harness.emitted[0], 'emitted entry').detail.controllerId
+    ).toBe(pad0.id)
 
     harness.pads[5] = null
     harness.fire('gamepaddisconnected', asGamepad(pad5))

@@ -145,7 +145,7 @@ export const initGamepad = () => {
       if (!data.hasRepeated) totalDelay += data.activationDelay || 0
 
       // it it was active, check if the action should be repeated
-      if (now - triggeredAt > totalDelay) {
+      if (triggeredAt !== undefined && now - triggeredAt > totalDelay) {
         shouldRepeat = true
         // should no longer consider activation delay
         data.hasRepeated = true

@@ -76,7 +76,8 @@ describe('indexedAccessRatchet bucketOf', () => {
       'src/preload/__tests__',
       'src/preload/api',
       'src/backend/shortcuts',
-      'src/backend/tools'
+      'src/backend/tools',
+      'src/frontend/helpers'
     ])
   })
 })

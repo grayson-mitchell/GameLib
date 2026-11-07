@@ -23,12 +23,12 @@ export function checkPS3Clone1(
     // RT = buttons[7],
     // Select = buttons[8],
     // Start = buttons[9],
-    dPadX = axes[4],
-    dPadY = axes[5],
-    leftAxisX = axes[0],
-    leftAxisY = axes[1],
-    rightAxisX = axes[2],
-    rightAxisY = axes[3]
+    dPadX = axes[4] ?? NaN,
+    dPadY = axes[5] ?? NaN,
+    leftAxisX = axes[0] ?? NaN,
+    leftAxisY = axes[1] ?? NaN,
+    rightAxisX = axes[2] ?? NaN,
+    rightAxisY = axes[3] ?? NaN
 
   checkAction('padUp', dPadY === -1, controllerIndex)
   checkAction('padDown', dPadY === 1, controllerIndex)
@@ -42,8 +42,8 @@ export function checkPS3Clone1(
   checkAction('rightStickRight', rightAxisX > 0.5, controllerIndex)
   checkAction('rightStickUp', rightAxisY < -0.5, controllerIndex)
   checkAction('rightStickDown', rightAxisY > 0.5, controllerIndex)
-  checkAction('mainAction', X.pressed, controllerIndex)
-  checkAction('back', Circle.pressed, controllerIndex)
-  checkAction('altAction', Triangle.pressed, controllerIndex)
-  checkAction('rightClick', Square.pressed, controllerIndex)
+  checkAction('mainAction', X?.pressed ?? false, controllerIndex)
+  checkAction('back', Circle?.pressed ?? false, controllerIndex)
+  checkAction('altAction', Triangle?.pressed ?? false, controllerIndex)
+  checkAction('rightClick', Square?.pressed ?? false, controllerIndex)
 }
