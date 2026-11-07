@@ -688,11 +688,22 @@ Plans:
 **Goal:** Close the concerns from the 2026-11-07 concerns map (`.planning/codebase/CONCERNS.md`) that no other phase owns, in three groups. (1) **Renderer trust boundary**: the `openExternalUrl`/`openFolder` channels route every non-http(s) value to `shell.openPath`, and the Rust `shell_open_path` arm (`store_embed.rs:2255`) opens it unchecked, so `file://`, `smb://`, `.app` bundles and executables all pass — add a scheme/path allow-list enforced in the shell, not only the sidecar; `removeFolder` (`utils.ts:1490`) deletes recursively under any renderer-supplied parent, and its 5 s timer is not `unref()`-ed (sidecar exit contract); trim `capabilities/default.json` to what the renderer uses (`shell:allow-execute`, `opener:default`, `updater:default`) and decide `withGlobalTauri`; delete the 13 dead `*/ipc_handler.ts` modules, including the `execAsync(commandParts.join(' '))` path in `tools/ipc_handler.ts`; make the Steam token store's plaintext fallback (`tokenStore.ts:198`) impossible rather than relying on `bootstrap.ts` swapping it out first. (2) **Process lifecycle**: the shell spawns the sidecar once (`main.rs:829`) and only fails pending invokes at stdout EOF (`sidecar.rs:565`) — add restart-or-surface so the user is told; the log-only `uncaughtException` handler (`processGuards.ts:259`) leaves a broken sidecar running; quit-time `pkill -f` pattern kills (`utils.ts:972`, sideload `stop()` by basename) can hit unrelated processes — kill by tracked PID/process group, building on Phase 66's process runner if it has landed; on Windows `shutdown_child` (`shell_state.rs:109`) kills only the sidecar PID, so store CLIs outlive the app — use a Job Object or equivalent (needs a Windows check). (3) **Supply chain and CI**: `pnpm audit --prod` reported 22 advisories (6 high) on 2026-11-07, including undici TLS validation (the `undici@^6: ^6.28.1` override is below the fix) and zod (which Phase 67 builds on) — bump, then add an audit step or Dependabot/Renovate to CI; add a Linux compile leg to `rust-test.yml` (31 `cfg(target_os = "linux")` sites are never compiled before a tag), ideally before Phase 71 starts. Groups are independent and can ship as separate plans. Open questions for discuss-phase: restart vs surface-and-quit for a dead sidecar, and whether the open-path allow-list lives in Rust only or both layers. Came from `/gsd-map-codebase --concerns` on 2026-11-07.
 **Requirements**: TBD
 **Depends on:** None
-**Plans:** 0 plans
+**Plans:** 12 plans in 5 waves
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 72 to break down)
+- [ ] 72-01-PLAN.md — Linux compile leg in rust-test.yml, proven on a pushed run; Phase 71 handoff notes (D-14, D-16)
+- [ ] 72-02-PLAN.md — Advisory bumps: undici/follow-redirects/source-map-js, react-router-dom 7, i18next-http-backend 4, dead plugin npm packages, rustls trio (D-19, D-18, D-10)
+- [ ] 72-03-PLAN.md — Supply-chain gates: deny.toml with reasoned zip ignores, audit.yml, security-only Dependabot (D-17, D-18)
+- [ ] 72-04-PLAN.md — Rust shell_open.rs: authoritative open-path/reveal policy and shared parity fixtures (D-06, D-07, D-08, D-15)
+- [ ] 72-05-PLAN.md — Delete the 14 dead ipc_handler.ts modules; fail-closed Steam token store (D-11, D-12)
+- [ ] 72-06-PLAN.md — Sidecar openPolicy.ts, strict openExternalUrl/openFolder split, openUrlOrFile removed (D-06, D-07, D-08)
+- [ ] 72-07-PLAN.md — Capability trim, withGlobalTauri false, opener link handler replacement, live boot check (D-10, D-19)
+- [ ] 72-08-PLAN.md — Fatal uncaughtException with bounded unref'd flush; unhandledRejection stays log-only (D-04)
+- [ ] 72-09-PLAN.md — Delete the renderer removeFolder channel; async timer-free helper (D-09)
+- [ ] 72-10-PLAN.md — Dead-sidecar Restart/Quit dialog with shutdown flag; live macOS check (D-01, D-02, D-03, D-05)
+- [ ] 72-11-PLAN.md — Tracked-children registry replacing pkill -f kills (D-13)
+- [ ] 72-12-PLAN.md — Windows kill-on-close Job Object; 72-UAT.md (D-20)
 
 ### Phase 73: Steam depot download pipeline in Rust
 
