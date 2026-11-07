@@ -133,7 +133,8 @@ import {
 import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { knownFixSaysCeg } from '../drmKnownFix'
-import { placeShimForGame, detectDrmWrapper } from '../bridge/shimGenerate'
+import { placeShimForGame } from '../bridge/shimGenerate'
+import { detectDrmWrapper } from '../bridge/shimDrmWrapper'
 import { detectSteamDrmInPe } from '../bridge/peScan'
 import { restoreBridgeSteamApiOriginals } from '../bridge/originalRestore'
 import {
@@ -529,7 +530,9 @@ jest.mock('../drmKnownFix', () => ({ knownFixSaysCeg: jest.fn() }))
 // ── bridge/shimGenerate.ts mock (24-05) — installBridgeGame()'s post-download
 // shim-placement hook.
 jest.mock('../bridge/shimGenerate', () => ({
-  placeShimForGame: jest.fn(),
+  placeShimForGame: jest.fn()
+}))
+jest.mock('../bridge/shimDrmWrapper', () => ({
   // Phase 56 (56-12): undefined under resetMocks, which keeps every existing
   // test on the TCP path.
   detectDrmWrapper: jest.fn()
@@ -545,7 +548,7 @@ jest.mock('../bridge/drm/drmScanExe', () => {
     detectLaunchDrmWrapper: async (_bottle: string, exe: string) => {
       if (override.fn) return override.fn(exe)
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const shim = require('../bridge/shimGenerate')
+      const shim = require('../bridge/shimDrmWrapper')
       return { drmWrapper: await shim.detectDrmWrapper(exe), drmExe: exe }
     }
   }

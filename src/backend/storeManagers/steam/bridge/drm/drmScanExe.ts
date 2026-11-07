@@ -32,7 +32,7 @@ import { invokeScan } from 'backend/scanners/rustScan'
 import { RUST_SCAN_CONTAINED_REAL } from 'common/types/sidecarTransport'
 import type { ContainedRealResult } from 'backend/scanners/scanTypes'
 import { findUnrealLayout } from '../bridgeScan'
-import { detectDrmWrapper } from '../shimGenerate'
+import { detectDrmWrapper } from '../shimDrmWrapper'
 
 export interface LaunchDrmWrapper {
   drmWrapper: 'steamstub' | 'none' | undefined

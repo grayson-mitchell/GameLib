@@ -52,7 +52,8 @@ import { join, resolve } from 'node:path'
 // to shimCoverage.ts / shimCoverage.test.ts -- this file no longer imports
 // it, since every remaining test here exercises placeShimForGame's own
 // behavior (via readDefExports() below), not the constant itself.
-import { detectDrmWrapper, placeShimForGame } from '../shimGenerate'
+import { placeShimForGame } from '../shimGenerate'
+import { detectDrmWrapper } from '../shimDrmWrapper'
 import * as drmScanExe from '../drm/drmScanExe'
 import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
 import { stubRustScan } from './fixtures/stubRustScan'
