@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 71 context gathered
-last_updated: "2026-11-07T18:07:01.234Z"
+last_updated: "2026-11-07T18:10:26.575Z"
 last_activity: 2026-11-07
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 104
-  completed_plans: 78
+  completed_plans: 79
   percent: 25
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 65 (steam-store-manager-decomposition-continued) — EXECUTING
-Plan: 14 of 20
+Plan: 15 of 20
 Status: Ready to execute
 Last activity: 2026-11-07
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 76%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -351,6 +351,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase ?]: 67-06: rustInvoke schemas non-strict z.object; keyring arms x-error-prefix 'keyring'; dialog open/save absent options sent as {}
 - [Phase ?]: 67-07: GameInfo/GameSettings passthroughs cast to ZodType<T,T>; move/import path left to assertPlausibleAbsolutePath so dialog+done survive
 - [Phase ?]: 67-08: scan arms validate via generated Args then forward to gamelib_scan::dispatch; tray_set_icon keeps lenient Auto fallback
+- [Phase ?]: 67-10: x-field-errors generator meta for field-suffixed bad-args strings; store_embed helpers kept as thin from_args wrappers
 
 ### Pending Todos
 
@@ -596,7 +597,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-07T18:07:01.226Z
+Last session: 2026-11-07T18:10:26.568Z
 Stopped at: Phase 71 context gathered
 Resume file: None
 
