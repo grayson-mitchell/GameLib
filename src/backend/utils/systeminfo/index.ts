@@ -112,9 +112,14 @@ async function fetchSystemInfo(): Promise<SystemInformation> {
       getNileVersion()
     ])
 
+  const firstCpu = cpus[0]
+  if (firstCpu === undefined) {
+    throw new Error('os.cpus() returned no CPUs')
+  }
+
   const sysinfo: SystemInformation = {
     CPU: {
-      model: cpus[0].model,
+      model: firstCpu.model,
       // FIXME: Technically the user could be on a server with more than one
       //        physical CPU installed, but I'd say that's rather unlikely
       cores: cpus.length

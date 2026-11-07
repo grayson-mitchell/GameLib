@@ -46,7 +46,7 @@ export async function openDialogCallback(
     options
   )
   if (!canceled) {
-    return filePaths[0]
+    return filePaths[0] ?? false
   }
   return false
 }

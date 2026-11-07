@@ -117,7 +117,7 @@ function bundleExecutableName(appBundlePath: string): string | null {
     const m = /<key>CFBundleExecutable<\/key>\s*<string>([^<]+)<\/string>/.exec(
       xml
     )
-    const name = m?.[1].trim()
+    const name = m?.[1]?.trim()
     return name && name === basename(name) && name !== '..' ? name : null
   } catch {
     return null
@@ -135,7 +135,8 @@ function firstBundleBinary(appBundlePath: string): string | null {
     return join(macOsDir, declared)
   }
   const bins = readdirSync(macOsDir)
-  return bins.length ? join(macOsDir, bins[0]) : null
+  const firstBin = bins[0]
+  return firstBin !== undefined ? join(macOsDir, firstBin) : null
 }
 
 /**

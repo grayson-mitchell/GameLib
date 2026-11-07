@@ -33,11 +33,12 @@ export function getDefaultWine(): WineInstallation {
 
   try {
     let stdout = execSync(`which wine`).toString()
-    const wineBin = stdout.split('\n')[0]
+    const [wineBin = ''] = stdout.split('\n')
     defaultWine.bin = wineBin
 
     stdout = execSync(`wine --version`).toString()
-    defaultWine.name = stdout.split('\n')[0]
+    const [wineName = ''] = stdout.split('\n')
+    defaultWine.name = wineName
 
     return {
       ...defaultWine,
@@ -410,14 +411,14 @@ export async function getSystemGamePortingToolkitWine(): Promise<
     return p.match(/^(?!.*heroic\/tools).*game-porting-toolkit.*\/wine64$/)
   })[0]
 
-  if (existsSync(wineBin)) {
+  if (wineBin !== undefined && existsSync(wineBin)) {
     logInfo(
       `Found Game Porting Toolkit Wine at ${dirname(wineBin)}`,
       LogPrefix.GlobalConfig
     )
     try {
       const { stdout: out } = await execAsync(`'${wineBin}' --version`)
-      const version = out.split('\n')[0]
+      const [version = ''] = out.split('\n')
       const GPTKDIR = join(dirname(wineBin), '..')
       systemGPTK.add({
         ...getWineExecs(wineBin),

@@ -9,7 +9,11 @@ async function getDiskInfo_unix(path: Path): Promise<DiskInfo> {
   const rootPath = await findFirstExistingPath(path)
 
   const { stdout } = await genericSpawnWrapper('df', ['-P', '-k', rootPath])
-  const lineSplit = stdout.split('\n')[1].split(/\s+/)
+  const dataLine = stdout.split('\n')[1]
+  if (dataLine === undefined) {
+    throw new Error(`df output for ${rootPath} has no data line`)
+  }
+  const lineSplit = dataLine.split(/\s+/)
   const [, totalSpaceKiBStr, , freeSpaceKiBStr] = lineSplit
   return {
     totalSpace: Number(totalSpaceKiBStr ?? 0) * 1024,

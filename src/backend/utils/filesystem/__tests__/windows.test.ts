@@ -5,6 +5,7 @@ import type { FileHandle } from 'fs/promises'
 import * as util_os_processes from '../../os/processes'
 import { getDiskInfo_windows, isWritable_windows } from '../windows'
 import type { Path } from 'backend/schemas'
+import { defined } from 'backend/testUtils/indexed'
 
 describe('getDiskInfo_windows', () => {
   it('Works with root path', async () => {
@@ -216,8 +217,14 @@ describe('isWritable_windows', () => {
       await isWritable_windows(targetDir)
 
       expect(unlinkSpy).toHaveBeenCalledTimes(1)
-      const writePath = writeSpy.mock.calls[0][0] as string
-      const unlinkPath = unlinkSpy.mock.calls[0][0] as string
+      const writePath = defined(
+        writeSpy.mock.calls[0],
+        'writeFile call'
+      )[0] as string
+      const unlinkPath = defined(
+        unlinkSpy.mock.calls[0],
+        'unlink call'
+      )[0] as string
       expect(unlinkPath).toBe(writePath)
       // `path.join` normalizes separators (backslash on win32), so compare
       // via `path.dirname` rather than a raw string prefix against the

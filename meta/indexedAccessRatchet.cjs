@@ -44,7 +44,8 @@ const ADOPTED_BUCKETS = [
   'src/backend/storeManagers/steam (tests)',
   'src/backend/engine',
   'src/backend/__tests__',
-  'src/backend/wine'
+  'src/backend/wine',
+  'src/backend/utils'
 ]
 
 /**

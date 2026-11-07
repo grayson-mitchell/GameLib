@@ -47,7 +47,8 @@ describe('indexedAccessRatchet bucketOf', () => {
       `${STEAM} (tests)`,
       'src/backend/engine',
       'src/backend/__tests__',
-      'src/backend/wine'
+      'src/backend/wine',
+      'src/backend/utils'
     ])
   })
 })
