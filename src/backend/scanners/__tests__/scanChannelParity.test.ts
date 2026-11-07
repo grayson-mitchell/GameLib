@@ -5,6 +5,7 @@
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { defined } from 'backend/testUtils/indexed'
 import {
   RUST_INVOKE_CHANNELS,
   RUST_SCAN_CHANNELS
@@ -26,7 +27,9 @@ function extractConst(source: string, name: string): string[] {
     source
   )
   if (!m) throw new Error(`${name} not found`)
-  return [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1])
+  return [...defined(m[1], `${name} body`).matchAll(/"([^"]+)"/g)].map((x) =>
+    defined(x[1], `${name} entry`)
+  )
 }
 
 const OPS = extractConst(libRs, 'OPS')
@@ -57,18 +60,17 @@ describe('scan channel parity (D-03)', () => {
       )
       if (!arm) return
       // Arms match the generated enum (67-11): ScanSteamDrm -> scan_steam_drm.
-      const m = [
-        arm[0],
-        arm[1].replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
-      ]
-      arms.push(m[1])
+      const snakeArm = defined(arm[1], 'scan arm name')
+        .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+        .toLowerCase()
+      arms.push(snakeArm)
       // Phase 67 (D-13): the first line validates through the generated Args struct, the
       // second passes straight to the library, which stays the stricter authority.
       const [first, second] = lines.slice(i + 1).filter((l) => l.trim() !== '')
       expect(first).toMatch(
         new RegExp(`^\\s*[A-Za-z]+Args::from_args\\(args\\)\\?;$`)
       )
-      expect(second).toContain(`gamelib_scan::dispatch("${m[1]}", args)`)
+      expect(second).toContain(`gamelib_scan::dispatch("${snakeArm}", args)`)
     })
     expect(arms.sort()).toEqual([...RUST_SCAN_CHANNELS].sort())
   })

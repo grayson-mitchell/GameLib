@@ -58,7 +58,8 @@ describe('indexedAccessRatchet bucketOf', () => {
       'src/backend/save_sync.ts',
       'src/backend/storeSearch',
       'src/backend/wiki_game_info',
-      'src/backend/signInProbe'
+      'src/backend/signInProbe',
+      'src/backend/scanners'
     ])
   })
 })
