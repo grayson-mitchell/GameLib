@@ -47,6 +47,7 @@ import {
 } from '../pass'
 import type { SignInProbePassDeps, SignInProbeRegistration } from '../pass'
 import type { FakeFlagStore } from './fakeFlagStore'
+import { defined } from 'backend/testUtils/indexed'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -298,7 +299,10 @@ describe('runSignInProbePass: parallel, once each (D-02, P3)', () => {
     const overrides: Overrides = {}
     SIGN_IN_STORES.forEach((store, index) => {
       overrides[store] = {
-        probe: recordingProbe(store, () => gates[index].promise)
+        probe: recordingProbe(
+          store,
+          () => defined(gates[index], 'gate for store').promise
+        )
       }
     })
 
@@ -490,7 +494,9 @@ describe('exit contract: no referenced handle survives a pass (T-49-22)', () => 
     })
     const immediates = handles.filter((h) => h.name === 'setImmediate')
     expect(immediates).toHaveLength(1)
-    expect(immediates[0].unref).toHaveBeenCalled()
+    expect(
+      defined(immediates[0], 'setImmediate handle').unref
+    ).toHaveBeenCalled()
 
     await jest.advanceTimersByTimeAsync(0)
     expect(probeCalls).toEqual(['gog'])
@@ -522,12 +528,12 @@ describe('single-flight (D-03, RESEARCH Pitfall 7)', () => {
     requestSignInProbePass(deps)
     expect(probeCalls).toEqual(['gog'])
 
-    gates[0].resolve('healthy')
+    defined(gates[0], 'first gate').resolve('healthy')
     await new Promise((resolve) => setImmediate(resolve))
     // The coalesced re-run started once the first pass settled.
     expect(probeCalls).toEqual(['gog', 'gog'])
 
-    gates[1].resolve('healthy')
+    defined(gates[1], 'second gate').resolve('healthy')
     await new Promise((resolve) => setImmediate(resolve))
     expect(probeCalls).toEqual(['gog', 'gog'])
     expect(maxConcurrent).toBe(1)

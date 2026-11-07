@@ -246,8 +246,10 @@ export function classifyNileOutput(input: ClassifierInput): SignInProbeOutcome {
   if (statuses.length > 0) {
     // One non-auth status among the lines (a 5xx, 429, 408) means the failure
     // may have been transient, so it is not a proven authentication failure.
-    return statuses.every((status) =>
-      NILE_AUTH_FAILURE_STATUSES.includes(status)
+    // An absent status is never proof of an auth failure.
+    return statuses.every(
+      (status) =>
+        status !== undefined && NILE_AUTH_FAILURE_STATUSES.includes(status)
     )
       ? 'expired'
       : 'unknown'
