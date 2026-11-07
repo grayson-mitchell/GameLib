@@ -37,6 +37,12 @@ import { TITLE_AUTHORITATIVE_KEYS } from '../titleSettings'
 import SteamGame from '../games'
 import * as gameMetadata from '../gameMetadata'
 import * as gameInstallDepot from '../gameInstallDepot'
+import * as gameLaunchModule from '../gameLaunch'
+import * as gameBridgeLaunchModule from '../gameBridgeLaunch'
+import * as gameBridgeLaunchGateModule from '../gameBridgeLaunchGate'
+import { launchBridgeGame } from '../gameBridgeLaunchGate'
+import { fireBridgeWineLaunch } from '../gameBridgeWineLaunch'
+import { prepareTcpOverlay } from '../gameLaunchOverlay'
 import * as gameInstallBridgeModule from '../gameInstallBridge'
 import { checkBottleEligibility } from '../gameEligibility'
 import {
@@ -8856,10 +8862,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     // pin and observing this spec fail.
     const launchGame = new SteamGame(APP_ID)
 
-    const launchBridgeSpy = jest
-      .spyOn(launchGame as any, 'launchBridgeGame')
-
-      .mockResolvedValue(true as any)
+    const launchBridgeSpy = trackSpy(
+      jest.spyOn(gameBridgeLaunchGateModule, 'launchBridgeGame')
+    ).mockResolvedValue(true as any)
     await launchGame.launch({} as any)
     expect(launchBridgeSpy).not.toHaveBeenCalled()
   })
@@ -8872,9 +8877,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
 
     const launchGame = new SteamGame(APP_ID)
-    const launchBridgeSpy = jest
-      .spyOn(launchGame as any, 'launchBridgeGame')
-      .mockResolvedValue(true as any)
+    const launchBridgeSpy = trackSpy(
+      jest.spyOn(gameBridgeLaunchGateModule, 'launchBridgeGame')
+    ).mockResolvedValue(true as any)
     await launchGame.launch({} as any)
 
     expect(launchBridgeSpy).toHaveBeenCalledTimes(1)
@@ -13863,7 +13868,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         ;(sendGameStatusUpdate as jest.Mock).mockClear()
         useDrmOk(id)
         const spy = jest
-          .spyOn(SteamGame.prototype as any, 'launchDrmModeGame')
+          .spyOn(gameLaunchModule, 'launchDrmModeGame')
           .mockImplementation(() => {
             sendGameStatusUpdate({
               appName: id,
@@ -13891,7 +13896,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         useDrmOk(id)
         const err = new Error('boom')
         const spy = jest
-          .spyOn(SteamGame.prototype as any, 'launchDrmModeGame')
+          .spyOn(gameLaunchModule, 'launchDrmModeGame')
           .mockRejectedValue(err)
         try {
           await expect(new SteamGame(id).launch({} as never)).rejects.toBe(err)
@@ -13911,7 +13916,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         ;(sendGameStatusUpdate as jest.Mock).mockClear()
         useDrmOk(id)
         const spy = jest
-          .spyOn(SteamGame.prototype as any, 'launchDrmModeGame')
+          .spyOn(gameLaunchModule, 'launchDrmModeGame')
           .mockResolvedValue(true)
         try {
           expect(await new SteamGame(id).launch({} as never)).toBe(true)
@@ -13980,19 +13985,14 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           code: 1,
           stderr: 'denied'
         })
-        const game = new SteamGame(id) as unknown as {
-          fireBridgeWineLaunch: (
-            e: string,
-            s: unknown,
-            d: unknown
-          ) => Promise<boolean>
-        }
+        const game = new SteamGame(id)
         const ready = readyFor(id)
-        const ok = await game.fireBridgeWineLaunch(
+        const ok = await fireBridgeWineLaunch(
+          game,
           exePath,
-          ready.bottleSettings,
+          ready.bottleSettings as never,
           {
-            ready,
+            ready: ready as never,
             gameWinPath: 'C:\\g.exe',
             traceFile: `${tmp}/t.log`,
             anchorLine: '[bridge-drm] x',
@@ -14470,14 +14470,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         })
       }
       const callPrepare = async (id: string, settings: unknown) => {
-        const game = new SteamGame(id) as unknown as {
-          prepareTcpOverlay: (
-            s: unknown,
-            p: unknown
-          ) => Promise<{ settings: unknown; overlayLaunch?: unknown }>
-        }
+        const game = new SteamGame(id)
         try {
-          return await game.prepareTcpOverlay(settings, undefined)
+          return await prepareTcpOverlay(game, settings as never, undefined)
         } finally {
           clearEngineSelection(id)
         }
@@ -14892,15 +14887,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
               wineVersion: { bin: '/swapped/wine', name: 's', type: 'wine' }
             })
         )
-        const game = new SteamGame(id) as unknown as {
-          fireBridgeWineLaunch: (
-            e: string,
-            s: unknown,
-            d: unknown,
-            o: unknown
-          ) => Promise<boolean>
-        }
-        const launched = await game.fireBridgeWineLaunch(
+        const game = new SteamGame(id)
+        const launched = await fireBridgeWineLaunch(
+          game,
           '/g/game.exe',
           (getBridgeBottleSettings as jest.Mock)(id),
           undefined,
@@ -14936,15 +14925,14 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           version: '11.20',
           dxvk: null
         })
-        const game = new SteamGame(id) as unknown as {
-          prepareTcpOverlay: (s: unknown, p: unknown) => Promise<unknown>
-        }
-        await game.prepareTcpOverlay(
+        const game = new SteamGame(id)
+        await prepareTcpOverlay(
+          game,
           {
             wineCrossoverBottle: bottleFor(id),
             wineVersion: { bin: '/e/wine', name: 'e', type: 'wine' }
-          },
-          { kind: 'overlay', runner: overlayRunner }
+          } as never,
+          { kind: 'overlay', runner: overlayRunner } as never
         )
         clearEngineSelection(id)
         expect(
@@ -16261,15 +16249,17 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         })
         return { promise, resolve, reject }
       }
-      const bodySpy = (game: SteamGame) =>
-        jest.spyOn(game as any, 'launchBridgeGameBody')
+      // One module spy serves every game in the test (the body is a free
+      // function now); per-appId behaviour is expressed on the spy itself.
+      const bodySpy = () =>
+        trackSpy(jest.spyOn(gameBridgeLaunchModule, 'launchBridgeGameBody'))
 
       it('G26: a second concurrent launch runs the body once and both resolve to its value', async () => {
         const game = new SteamGame(ID)
         const d = deferred()
-        const spy = bodySpy(game).mockReturnValue(d.promise)
-        const a = (game as any).launchBridgeGame() as Promise<boolean>
-        const b = (game as any).launchBridgeGame() as Promise<boolean>
+        const spy = bodySpy().mockReturnValue(d.promise)
+        const a = launchBridgeGame(game)
+        const b = launchBridgeGame(game)
         d.resolve(true)
         expect(await a).toBe(true)
         expect(await b).toBe(true)
@@ -16279,13 +16269,13 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       it('G26: the joiner logs, notifies once, and never shows a modal', async () => {
         const game = new SteamGame(ID)
         const d = deferred()
-        bodySpy(game).mockReturnValue(d.promise)
+        bodySpy().mockReturnValue(d.promise)
         const { logInfo } = jest.requireMock('backend/logger')
         ;(notify as jest.Mock).mockClear()
         engineDialog().mockClear()
-        const a = (game as any).launchBridgeGame() as Promise<boolean>
+        const a = launchBridgeGame(game)
         expect(notify).not.toHaveBeenCalled()
-        const b = (game as any).launchBridgeGame() as Promise<boolean>
+        const b = launchBridgeGame(game)
         d.resolve(true)
         await Promise.all([a, b])
         expect(notify).toHaveBeenCalledTimes(1)
@@ -16306,39 +16296,39 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       it('G26: the guard is released when the launch resolves', async () => {
         const game = new SteamGame(ID)
         const d = deferred()
-        const spy = bodySpy(game).mockReturnValueOnce(d.promise)
-        const a = (game as any).launchBridgeGame() as Promise<boolean>
+        const spy = bodySpy().mockReturnValueOnce(d.promise)
+        const a = launchBridgeGame(game)
         d.resolve(true)
         await a
         spy.mockResolvedValue(true)
-        await (game as any).launchBridgeGame()
+        await launchBridgeGame(game)
         expect(spy).toHaveBeenCalledTimes(2)
       })
 
       it('G26: a rejecting body rejects both callers and releases the guard', async () => {
         const game = new SteamGame(ID)
         const d = deferred()
-        const spy = bodySpy(game).mockReturnValueOnce(d.promise)
-        const a = (game as any).launchBridgeGame() as Promise<boolean>
-        const b = (game as any).launchBridgeGame() as Promise<boolean>
+        const spy = bodySpy().mockReturnValueOnce(d.promise)
+        const a = launchBridgeGame(game)
+        const b = launchBridgeGame(game)
         const settled = Promise.allSettled([a, b])
         d.reject(new Error('boom'))
         const res = await settled
         expect(res.map((r) => r.status)).toEqual(['rejected', 'rejected'])
         spy.mockResolvedValue(true)
-        await (game as any).launchBridgeGame()
+        await launchBridgeGame(game)
         expect(spy).toHaveBeenCalledTimes(2)
       })
 
       it('G26: a body resolving false clears the engine selection once (owner only)', async () => {
         const game = new SteamGame(ID)
         const d = deferred()
-        bodySpy(game).mockReturnValue(d.promise)
+        bodySpy().mockReturnValue(d.promise)
         const reg = await import('backend/engine/engineRegistry')
         const clearSpy = jest.spyOn(reg, 'clearEngineSelection')
         clearSpy.mockClear()
-        const a = (game as any).launchBridgeGame() as Promise<boolean>
-        const b = (game as any).launchBridgeGame() as Promise<boolean>
+        const a = launchBridgeGame(game)
+        const b = launchBridgeGame(game)
         d.resolve(false)
         expect(await a).toBe(false)
         expect(await b).toBe(false)
@@ -16352,21 +16342,24 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         const g2 = new SteamGame('571')
         const d1 = deferred()
         const d2 = deferred()
-        const s1 = bodySpy(g1).mockReturnValue(d1.promise)
-        const s2 = bodySpy(g2).mockReturnValue(d2.promise)
-        const a = (g1 as any).launchBridgeGame() as Promise<boolean>
-        const b = (g2 as any).launchBridgeGame() as Promise<boolean>
+        const spy = bodySpy().mockImplementation((g: SteamGame) =>
+          g.appId === ID ? d1.promise : d2.promise
+        )
+        const a = launchBridgeGame(g1)
+        const b = launchBridgeGame(g2)
         d1.resolve(true)
         d2.resolve(true)
         await Promise.all([a, b])
-        expect(s1).toHaveBeenCalledTimes(1)
-        expect(s2).toHaveBeenCalledTimes(1)
+        const callsFor = (id: string) =>
+          spy.mock.calls.filter(([g]) => g.appId === id).length
+        expect(callsFor(ID)).toBe(1)
+        expect(callsFor('571')).toBe(1)
       })
 
       it('IN-04: two concurrent launch() calls run the bridge body once and notify once', async () => {
         const d = deferred()
         const spy = jest
-          .spyOn(SteamGame.prototype as any, 'launchBridgeGameBody')
+          .spyOn(gameBridgeLaunchModule, 'launchBridgeGameBody')
           .mockReturnValue(d.promise)
         ;(notify as jest.Mock).mockClear()
         try {

@@ -19,3 +19,7 @@ The roughly 40 class stubs in `games.ts` (install, installNative, installBottleN
 Suggested approach: do it one cluster at a time (install, launch, eligibility, ...), converting call sites and swapping that cluster's spies together, with the suite green after each.
 
 Split off from the closed `2026-11-06-games-split-cleanup-candidates-62.md` (bullet 8).
+
+## Resolved
+
+Done in quick 261108-ca6. The todo's scope was stale: ten non-interface stubs were removed (installNative, installBottleNative, ensureBuiltInEngineForInstall, installBridgeGame, prefetchBridgeDrmDownloads, launchDrmModeGame, prepareTcpOverlay, launchBridgeGame, launchBridgeGameBody, fireBridgeWineLaunch), not about 40. The Game-interface forwarders (install, isNative, launch, moveInstall, repair, syncSaves, uninstall), restorePinEngine and fetchMetadataIfNeeded stay. 19 test spies moved onto module exports (not 6); installNative/installBottleNative moved to gameInstallDepot and launchBridgeGame/runBridgeLaunch to gameBridgeLaunchGate so the spied calls cross a module boundary. Plain static imports now form real cycles between lifted modules; the audit found no top-level cross-cycle reads, and gamesModuleSurface.test.ts names the allowed edges.

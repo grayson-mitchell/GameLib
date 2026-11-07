@@ -7,8 +7,10 @@
  * targets the owning module, so games.ts must not re-export any of them. A
  * re-export would hide a stale import path and fork jest.mock targets.
  *
- * It also pins the sibling import order of the lifted modules: forward only
- * (quick-261107-an2), so direct calls between them can never form a cycle.
+ * It also pins the sibling import order of the lifted modules: forward only,
+ * except for the named cycle edges below (quick-261108-ca6). Those exist
+ * because the SteamGame forwarding stubs that used to dodge them are gone; they
+ * are safe because no module reads a cycle partner's export at top level.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -43,6 +45,7 @@ const LIFTED_OWNERS = [
   'gameInstallBridge.ts',
   'gameLaunchOverlay.ts',
   'gameBridgeLaunch.ts',
+  'gameBridgeLaunchGate.ts',
   'gameBridgeWineLaunch.ts',
   'gameLaunch.ts',
   'gameMaintenance.ts',
@@ -106,7 +109,7 @@ describe('steam/games.ts module surface (D-05)', () => {
     }
   })
 
-  it('lifted modules import siblings forward only (no cycle)', () => {
+  it('lifted modules import siblings forward only, bar the named cycle edges', () => {
     // gameEligibility/gameLaunchOverlay -> gameInstall -> gameLaunch ->
     // gameBridgeLaunch; gameUninstall and gameMaintenance sit beside them
     // and nothing imports those two.
@@ -121,10 +124,21 @@ describe('steam/games.ts module surface (D-05)', () => {
       gameInstallBridge: 2,
       gameLaunch: 2,
       gameBridgeLaunch: 3,
+      gameBridgeLaunchGate: 3,
       gameBridgeWineLaunch: 4,
       gameUninstall: 4,
       gameMaintenance: 4
     }
+    // Edges that point against the order above. Every use is inside a function
+    // body, so the CJS cycle resolves by call time (checked in quick-261108-ca6).
+    const CYCLE_EDGES = new Set<string>([
+      'gameInstall->gameInstallBridge',
+      'gameInstallBridge->gameLaunch',
+      'gameLaunch->gameBridgeLaunchGate',
+      'gameLaunch->gameBridgeWineLaunch',
+      'gameBridgeLaunch->gameBridgeWineLaunch',
+      'gameBridgeLaunchGate->gameBridgeLaunch'
+    ])
     for (const owner of LIFTED_OWNERS) {
       const ownerName = owner.replace(/\.ts$/, '')
       expect(FORWARD[ownerName]).toBeDefined()
@@ -133,6 +147,7 @@ describe('steam/games.ts module surface (D-05)', () => {
         .map((m) => m[1])
         .filter((name) => `${name}.ts` !== owner && name in FORWARD)
       for (const target of targets) {
+        if (CYCLE_EDGES.has(`${ownerName}->${target}`)) continue
         expect(FORWARD[target]).toBeLessThan(FORWARD[ownerName])
       }
     }

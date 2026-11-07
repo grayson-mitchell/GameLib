@@ -27,7 +27,6 @@ import { getSteamBottleSettings } from './bottle'
 import { stopPerGameBridgeBottle } from './bridgeBottleLifecycle'
 import * as bridgeBottle from './bridgeBottle'
 // Phase 60: Steam overlay in bridged games (macOS).
-import { type OverlayLaunchPayload } from './bridge/overlay/overlayLaunch'
 import {
   readStoredOverlayOverride,
   parseOverlayOverride
@@ -35,7 +34,6 @@ import {
 import { readStoredTitleConfig, pickTitleSettings } from './titleSettings'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
 import { noteSteamAuthTrigger } from './authTrigger'
-import { type DrmLaunchReady } from './bridge/drm/drmLaunchSetup'
 import { stopBridgeHelper } from './bridge/helperRegistry'
 import type { EnginePin } from 'backend/engine/enginePins'
 import {
@@ -43,13 +41,9 @@ import {
   bridgeLaunchBottles,
   loggedEmptyGameInfoMisses
 } from './gameSessionState'
-import { type DrmWineLaunch } from './gameDrmLaunch'
 import { isNative, isBottleEligible } from './gameEligibility'
 import { install, ensureBuiltInEngineForInstall } from './gameInstall'
-import { prepareTcpOverlay } from './gameLaunchOverlay'
-import { launchBridgeGame, launchBridgeGameBody } from './gameBridgeLaunch'
-import { fireBridgeWineLaunch } from './gameBridgeWineLaunch'
-import { launch, launchDrmModeGame } from './gameLaunch'
+import { launch } from './gameLaunch'
 import { moveInstall, repair, syncSaves } from './gameMaintenance'
 import { uninstall } from './gameUninstall'
 
@@ -368,114 +362,6 @@ export default class SteamGame implements Game {
     _skipVersionCheck?: boolean
   ): Promise<boolean> {
     return launch(this, _logWriter, _launchArguments, _args, _skipVersionCheck)
-  }
-
-  /**
-   * Phase 56 (D-11/D-12/D-13/D-15): launches a DRM-mode title as the helper
-   * `steam.exe <game exe>` under the clone runner. The Phase 52 forwarder is
-   * never reached in this mode. Every failure is a D-13 notice with no
-   * session mark.
-   *
-   * @internal Public only so lifted modules reach it via
-   * steamGame.launchDrmModeGame() (test spy: games.test.ts:13580); do not call
-   * from outside steam/.
-   */
-  launchDrmModeGame(
-    exePath: string,
-    installRoot: string,
-    ready: DrmLaunchReady
-  ): Promise<boolean> {
-    return launchDrmModeGame(this, exePath, installRoot, ready)
-  }
-
-  /**
-   * Phase 60 (D-01/D-04/D-07/D-08): the TCP-route overlay decision. Returns the
-   * settings to launch with and, when the overlay is injecting, its tokens and
-   * runner. On the fallback engine (Wine-Staging + DXVK) the overlay is plain
-   * env vars (kind 'env', D-07): no clone, no re-sign, no runner change. Ends the bottle's wineserver with the PREVIOUS runner's own
-   * wineserver whenever the runner changes (stock/overlay/DRM never share one).
-   * Never throws and never blocks the launch.
-   */
-  private prepareTcpOverlay(
-    settings: GameSettings,
-    previousRunner: ReturnType<typeof bridgeBottle.getDrmBridgeRunner>
-  ): Promise<{
-    settings: GameSettings
-    overlayLaunch?: OverlayLaunchPayload
-  }> {
-    return prepareTcpOverlay(this, settings, previousRunner)
-  }
-
-  /**
-   * Phase 59: the engine registered for this launch (launchBridgeGameBody)
-   * must not outlive a launch that did not start. A started launch keeps it
-   * until the process monitor's onStopped clears it.
-   */
-  /**
-   * Phase 24 Plan 08 (R4/R6/R7), reordered by Phase 51 Plan 01 (D-51-01):
-   * allowlisted-title bridge launch path. Runs the game's OWN resolved
-   * Windows `.exe` (resolveBridgeLaunchExe, Task 1) directly via
-   * `runWineCommand` against THIS game's own bridge bottle
-   * (getBridgeBottleSettings(appId), quick/261016-u1w D-B) — NEVER `tellBottledSteamToLaunch` /
-   * `dispatchToBottledSteam`, since the bridge bottle has no bottled Steam
-   * client to `-applaunch` through (RESEARCH Pattern 4's single largest
-   * routing-shape delta).
-   *
-   * D-51-01 reorders the readiness gate to AFTER the exe/bottle existence
-   * gate: `placeShimForGame()` (byte-identity no-op, refreshes a stale
-   * pre-phase shim after an upgrade) and `ensureBridgeHelperReady()` both
-   * now run only once we already know there is a real exe to launch, then
-   * `writeBridgeConfig()` hands the per-appId helper's real, OS-assigned
-   * port to the game's own regenerated shim via `gamelib_bridge.cfg`
-   * beside the exe — there is no fixed port left for the shim to guess.
-   * On ANY of these steps failing, this marks the appId
-   * bridge-failed-this-session (finding #3) and fires
-   * `steamBridgeSetupRequired` itself (defensive — never assumes the
-   * signal was already fired upstream) before returning `false` — never
-   * optimistically flips any running state.
-   *
-   * @internal Public only so lifted modules reach it via
-   * steamGame.launchBridgeGame() (test spy: games.test.ts:8734); do not call
-   * from outside steam/.
-   */
-  launchBridgeGame(): Promise<boolean> {
-    return launchBridgeGame(this)
-  }
-
-  /**
-   * @internal Public only so lifted modules reach it via
-   * steamGame.launchBridgeGameBody() (test spies: games.test.ts:15945, 16049);
-   * do not call from outside steam/.
-   */
-  launchBridgeGameBody(): Promise<boolean> {
-    return launchBridgeGameBody(this)
-  }
-
-  /**
-   * D-51-09 (Task 2): the actual `runWineCommand` + process-monitor firing,
-   * split out of `launchBridgeGame` so the no-steam-api branch (no helper,
-   * no `writeBridgeConfig`) and the normal helper-backed branch share the
-   * exact same wine-invocation and teardown-wiring code — duplicating this
-   * would risk the two paths drifting (e.g. one forgetting the monitor's
-   * `onStopped` -> `stopBridgeHelper` wiring).
-   *
-   * @internal Public only so lifted modules reach it via
-   * steamGame.fireBridgeWineLaunch() (gameLaunch -> gameBridgeLaunch would be
-   * an import cycle); do not call from outside steam/.
-   */
-  fireBridgeWineLaunch(
-    exePath: string,
-    bridgeBottleSettings: GameSettings,
-    drm?: DrmWineLaunch,
-    overlay?: OverlayLaunchPayload
-  ): Promise<boolean> {
-    return fireBridgeWineLaunch(
-      this,
-      exePath,
-      bridgeBottleSettings,
-      drm,
-      overlay
-    )
   }
 
   moveInstall(_newInstallPath: string): Promise<InstallResult> {
