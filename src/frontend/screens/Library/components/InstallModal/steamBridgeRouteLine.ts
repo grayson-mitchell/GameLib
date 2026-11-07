@@ -153,3 +153,19 @@ export function resolveForceBottleWrite(
   }
   return pendingChecked ? 'bottle' : null
 }
+
+/**
+ * Quick 261107-li0: true when the install goes to the native bridge, so the
+ * shared bottled-client Wine choice is a no-op. On the native-bridge route the
+ * game runs in its own `GameLibSteamBridge-<appId>` bottle with the engine
+ * picked at launch (`decideLaunchEngine`: per-game `steamEngineOverride`, else
+ * Automatic). The route line must be visible, native, and the force-bottle
+ * toggle (as displayed, including a pending flip) OFF. Unknown, loading and
+ * not-eligible verdicts return false, keeping today's behaviour.
+ */
+export function resolveBridgeOwnsEngine(
+  line: Pick<SteamBridgeRouteLine, 'visible' | 'routeKey'>,
+  forceBottleDisplayed: boolean
+): boolean {
+  return line.visible && line.routeKey === 'native' && !forceBottleDisplayed
+}

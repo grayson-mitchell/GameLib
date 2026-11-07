@@ -3,6 +3,7 @@ import { join } from 'path'
 
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import {
+  resolveBridgeOwnsEngine,
   resolveBridgeRouteLine,
   resolveForceBottleDisplayed,
   resolveForceBottleWrite
@@ -199,5 +200,76 @@ describe('resolveForceBottleWrite / resolveForceBottleDisplayed (WR-11)', () => 
     )
     expect(hidden.showForceBottleToggle).toBe(false)
     expect(resolveForceBottleWrite(hidden, true)).toBe('unchanged')
+  })
+})
+
+describe('resolveBridgeOwnsEngine (quick 261107-li0)', () => {
+  const owns = (
+    v: SteamBridgeRouteVerdict | undefined,
+    wineSection: boolean,
+    toggleDisplayed: boolean
+  ) =>
+    resolveBridgeOwnsEngine(
+      resolveBridgeRouteLine(v, wineSection),
+      toggleDisplayed
+    )
+
+  test('verdict undefined (loading or failed) -> false', () => {
+    expect(owns(undefined, true, false)).toBe(false)
+  })
+
+  test('not-eligible -> false', () => {
+    expect(owns(makeVerdict({ route: 'not-eligible' }), true, false)).toBe(
+      false
+    )
+  })
+
+  test('bridge, toggle OFF -> true', () => {
+    expect(
+      owns(makeVerdict({ route: 'bridge', reason: 'seed' }), true, false)
+    ).toBe(true)
+  })
+
+  test('bridge, toggle displayed ON -> false', () => {
+    expect(
+      owns(makeVerdict({ route: 'bridge', reason: 'seed' }), true, true)
+    ).toBe(false)
+  })
+
+  test('bridge with known-bad (no toggle), toggle OFF -> true', () => {
+    expect(
+      owns(
+        makeVerdict({
+          route: 'bridge',
+          reason: 'known-bad',
+          knownBadReason: 'does-not-run'
+        }),
+        true,
+        false
+      )
+    ).toBe(true)
+  })
+
+  test('bottle route, toggle OFF -> false (incl. user-forced-bottle unchecked)', () => {
+    expect(
+      owns(makeVerdict({ route: 'bottle', reason: 'scan-miss' }), true, false)
+    ).toBe(false)
+    expect(
+      owns(
+        makeVerdict({
+          route: 'bottle',
+          reason: 'user-forced-bottle',
+          userRoute: 'bottle'
+        }),
+        true,
+        false
+      )
+    ).toBe(false)
+  })
+
+  test('bridge but wineSection false -> false', () => {
+    expect(
+      owns(makeVerdict({ route: 'bridge', reason: 'seed' }), false, false)
+    ).toBe(false)
   })
 })
