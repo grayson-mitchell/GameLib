@@ -87,13 +87,15 @@ import * as gamesModule from '../gameSessionState'
 import {
   isBottleReady,
   getSteamBottleSettings,
-  getBottleSteamappsDir,
+  getBottleSteamappsDir
+} from '../bottle'
+import {
   provisionBridgeBottle,
   discardNewBridgeBottle,
   removePerGameBridgeBottle,
   stopPerGameBridgeBottle,
   killBridgeBottleWineServer
-} from '../bottle'
+} from '../bridgeBottleLifecycle'
 import {
   isBridgeBottleReady,
   getBridgeBottleSettings,
@@ -402,20 +404,22 @@ jest.mock('../bottle', () => {
     CROSSOVER_CREATE_TIMEOUT: 'crossover-create-timeout',
     CROSSOVER_CREATE_FAILED: 'crossover-create-failed',
     PROVISION_ABORTED: 'provision-aborted',
-    discardNewBridgeBottle: jest.fn(),
     isBottleReady: jest.fn(),
     getSteamBottleSettings: jest.fn(),
     // Phase 21 Plan 11 (D-15/SNI-08): bottle depot-download write target.
-    getBottleSteamappsDir: jest.fn(),
-    endPerGameBridgeBottleSessionWith: jest.fn(),
-    killBridgeBottleWineServer: jest.fn(),
-    provisionBridgeBottle: jest.fn(),
-    // quick/261016-u1w (D-D): per-game bridge bottle removal on uninstall.
-    removePerGameBridgeBottle: jest.fn(),
-    // quick 261024-urq: Stop-button counterpart (per-game wineserver -k).
-    stopPerGameBridgeBottle: jest.fn()
+    getBottleSteamappsDir: jest.fn()
   }
 })
+jest.mock('../bridgeBottleLifecycle', () => ({
+  discardNewBridgeBottle: jest.fn(),
+  endPerGameBridgeBottleSessionWith: jest.fn(),
+  killBridgeBottleWineServer: jest.fn(),
+  provisionBridgeBottle: jest.fn(),
+  // quick/261016-u1w (D-D): per-game bridge bottle removal on uninstall.
+  removePerGameBridgeBottle: jest.fn(),
+  // quick 261024-urq: Stop-button counterpart (per-game wineserver -k).
+  stopPerGameBridgeBottle: jest.fn()
+}))
 jest.mock('../bridgeBottle', () => {
   // Phase 24 Plan 08 (R4): dedicated bridge bottle readiness/provisioning
   // surface — installBridgeGame()'s BLOCKER-1 inline provisioning call.
@@ -14212,7 +14216,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         }>('../bridge/overlay/overlayLaunch')
       const bottleMod = jest.requireMock<{
         endPerGameBridgeBottleSessionWith: jest.Mock
-      }>('../bottle')
+      }>('../bridgeBottleLifecycle')
       const bridgeBottleMod = jest.requireMock<{
         setOverlayBridgeRunner: jest.Mock
       }>('../bridgeBottle')
@@ -14937,7 +14941,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       }>('../bridge/overlay/overlayWineLog')
       const bottleMod = jest.requireMock<{
         endPerGameBridgeBottleSessionWith: jest.Mock
-      }>('../bottle')
+      }>('../bridgeBottleLifecycle')
       const bridgeBottleMod = jest.requireMock<{
         setOverlayBridgeRunner: jest.Mock
       }>('../bridgeBottle')

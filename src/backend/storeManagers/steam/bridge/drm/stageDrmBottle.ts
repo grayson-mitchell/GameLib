@@ -45,7 +45,7 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { runWineCommand } from 'backend/launcher'
 import { isPackagedSidecar } from 'backend/sidecar/isPackagedSidecar'
 import type { GameSettings } from 'common/types'
-import { endPerGameBridgeBottleSession } from '../../bottle'
+import { endPerGameBridgeBottleSession } from '../../bridgeBottleLifecycle'
 import {
   getBottleDir,
   sanitizeBottleName

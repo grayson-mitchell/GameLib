@@ -27,12 +27,12 @@ import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
 import { runWineCommand } from 'backend/launcher'
 import { steamBottleConfigStore } from '../stores'
+import { DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
 import {
-  DEFAULT_BRIDGE_BOTTLE_NAME,
   stopPerGameBridgeBottle,
   endPerGameBridgeBottleSession,
   endPerGameBridgeBottleSessionWith
-} from '../bottle'
+} from '../bridgeBottleLifecycle'
 import {
   isBridgeBottleReady,
   getBridgeBottleSettings,

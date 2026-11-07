@@ -35,9 +35,9 @@ import {
 import {
   isBottleReady,
   getSteamBottleSettings,
-  getBottleSteamappsDir,
-  removePerGameBridgeBottle
+  getBottleSteamappsDir
 } from './bottle'
+import { removePerGameBridgeBottle } from './bridgeBottleLifecycle'
 import {
   getBridgeBottleSettings,
   bridgeBottleNameFor,

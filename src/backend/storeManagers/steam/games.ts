@@ -32,12 +32,9 @@ import {
   METADATA_FETCH_TIMEOUT_MS
 } from './state'
 import { cancelDelegatedInstall } from './library/installPolling'
-import { getSteamBottleSettings, stopPerGameBridgeBottle } from './bottle'
-import {
-  bridgeBottleNameFor,
-  findBridgeInstallBottle,
-  getDrmBridgeRunner
-} from './bridgeBottle'
+import { getSteamBottleSettings } from './bottle'
+import { stopPerGameBridgeBottle } from './bridgeBottleLifecycle'
+import * as bridgeBottle from './bridgeBottle'
 // Phase 60: Steam overlay in bridged games (macOS).
 import { type OverlayLaunchPayload } from './bridge/overlay/overlayLaunch'
 import {
@@ -904,7 +901,7 @@ export default class SteamGame implements Game {
    */
   private prepareTcpOverlay(
     settings: GameSettings,
-    previousRunner: ReturnType<typeof getDrmBridgeRunner>
+    previousRunner: ReturnType<typeof bridgeBottle.getDrmBridgeRunner>
   ): Promise<{
     settings: GameSettings
     overlayLaunch?: OverlayLaunchPayload
@@ -1198,7 +1195,9 @@ export default class SteamGame implements Game {
     const bridgeRecord = bridgeLaunchBottles.get(this.appId)
     if (bridgeRecord) {
       bridgeLaunchBottles.delete(this.appId)
-      if (bridgeRecord.bottle === bridgeBottleNameFor(this.appId)) {
+      if (
+        bridgeRecord.bottle === bridgeBottle.bridgeBottleNameFor(this.appId)
+      ) {
         logInfo(
           `SteamGame.stop: stopping bridge-launched appId ${this.appId} — wineserver -k in its per-game bottle ${bridgeRecord.bottle}`,
           LogPrefix.Steam
@@ -1324,7 +1323,7 @@ export async function getBridgeRouteVerdict(
   const locationChoice =
     windowsBuildChosen === undefined &&
     isForcedWindowsViaBottle(game) &&
-    findBridgeInstallBottle(appId) !== null
+    bridgeBottle.findBridgeInstallBottle(appId) !== null
   const verdict = await game.checkBridgeRoute({
     windowsBuildChosen: explicitChoice || locationChoice
   })
@@ -1337,7 +1336,7 @@ export async function getBridgeRouteVerdict(
   // GameLibSteam install the widened eligibility must never claim to have
   // moved.
   let installedIn: SteamBridgeRouteVerdict['installedIn'] = null
-  if (findBridgeInstallBottle(appId) !== null) {
+  if (bridgeBottle.findBridgeInstallBottle(appId) !== null) {
     installedIn = 'bridge'
   } else if (
     library.get(appId)?.is_installed === true &&

@@ -284,7 +284,7 @@ async function runSetup(
   deps: DrmLaunchSetupDeps
 ): Promise<DrmLaunchSetupResult> {
   const { appId, appFolder } = input
-  const bottle = await import('../../bottle')
+  const bottleLifecycle = await import('../../bridgeBottleLifecycle')
   const bridgeBottle = await import('../../bridgeBottle')
   const clearRunner = deps.clearRunner ?? bridgeBottle.clearDrmBridgeRunner
   const getRunner = deps.getRunner ?? bridgeBottle.getDrmBridgeRunner
@@ -292,7 +292,7 @@ async function runSetup(
   const buildBottleSettings =
     deps.buildBottleSettings ?? bridgeBottle.getDrmBridgeBottleSettings
   const endBottleSession =
-    deps.endBottleSession ?? bottle.endPerGameBridgeBottleSession
+    deps.endBottleSession ?? bottleLifecycle.endPerGameBridgeBottleSession
   const sendStatus =
     deps.sendStatus ??
     ((await import('backend/utils')).sendGameStatusUpdate as (

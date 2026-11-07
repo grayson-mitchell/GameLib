@@ -34,19 +34,8 @@ import { stopInstallPolling } from './library/installStop'
 import * as resumeBreadcrumbs from './library/resumeBreadcrumbs'
 import * as pollState from './library/pollState'
 import * as adoption from './macSteamAdoption'
-import {
-  isBottleReady,
-  getSteamBottleSettings,
-  getBottleSteamappsDir,
-  provisionBridgeBottle,
-  removePerGameBridgeBottle,
-  isCrossoverInstalled,
-  CROSSOVER_MISSING,
-  CROSSOVER_CREATE_TIMEOUT,
-  CROSSOVER_CREATE_FAILED,
-  PROVISION_ABORTED,
-  discardNewBridgeBottle
-} from './bottle'
+import * as bottle from './bottle'
+import * as bbLifecycle from './bridgeBottleLifecycle'
 import * as bridgeBottle from './bridgeBottle'
 import { buildFallbackGameSettings } from 'backend/engine/bottlePrimitives'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
@@ -203,7 +192,7 @@ export async function install(
     // Phase 59 (D-04): a missing CrossOver blocks only the bottled-Steam
     // route. The bridge route installs on the built-in engine, so the gate
     // is applied once the final route is known (below).
-    const crossoverMissing = isMac && !(await isCrossoverInstalled())
+    const crossoverMissing = isMac && !(await bottle.isCrossoverInstalled())
 
     // quick-260821-le0: remove a leftover unrunnable native i386 install
     // BEFORE anything else in this branch runs — HOARD proved a demoted
@@ -285,7 +274,7 @@ export async function install(
       try {
         const prescreenResult = await prescreenBridgeDepots(steamGame.appId, {
           targetSteamappsDir: bridgeBottleName
-            ? getBottleSteamappsDir(bridgeBottleName)
+            ? bottle.getBottleSteamappsDir(bridgeBottleName)
             : '',
           installdir: steamGame.appId,
           os: 'windows'
@@ -357,7 +346,7 @@ export async function install(
       return bridgeResult
     }
 
-    if (!isBottleReady()) {
+    if (!bottle.isBottleReady()) {
       logInfo(
         `SteamGame: appId ${steamGame.appId} is bottle-eligible but the bottle is not yet provisioned — requesting guided setup instead of installing`,
         LogPrefix.Steam
@@ -592,8 +581,8 @@ export function hasBottledSteamCopy(steamGame: SteamGame): boolean {
   if (typeof breadcrumb !== 'string' || breadcrumb === '') {
     return false
   }
-  const steamappsDir = getBottleSteamappsDir(
-    getSteamBottleSettings().wineCrossoverBottle
+  const steamappsDir = bottle.getBottleSteamappsDir(
+    bottle.getSteamBottleSettings().wineCrossoverBottle
   )
   return resolve(breadcrumb) === resolve(steamappsDir)
 }
@@ -602,8 +591,8 @@ export async function installBottleNative(
   steamGame: SteamGame,
   args: InstallArgs
 ): Promise<InstallResult> {
-  const targetSteamappsDir = getBottleSteamappsDir(
-    getSteamBottleSettings().wineCrossoverBottle
+  const targetSteamappsDir = bottle.getBottleSteamappsDir(
+    bottle.getSteamBottleSettings().wineCrossoverBottle
   )
   return installDepotDownload(steamGame, args, {
     targetSteamappsDirOverride: targetSteamappsDir,
@@ -731,7 +720,7 @@ export async function installBridgeGame(
         installEngine = provisioned.engine
         if (signal?.aborted) {
           if (provisioned.createdHere) {
-            discardNewBridgeBottle(bridgeBottleName)
+            bbLifecycle.discardNewBridgeBottle(bridgeBottleName)
           }
           return stop()
         }
@@ -808,7 +797,9 @@ export async function provisionBridgeBottleForInstall(
     LogPrefix.Steam
   )
   if (signal?.aborted) return abortResult()
-  let provisionResult: Awaited<ReturnType<typeof provisionBridgeBottle>>
+  let provisionResult: Awaited<
+    ReturnType<typeof bbLifecycle.provisionBridgeBottle>
+  >
   let engineUsed: NonCrossoverEngine | 'crossover' = 'crossover'
   if (creation.kind === 'pinned') {
     const engine = await ensureBuiltInEngineForInstall(
@@ -822,26 +813,26 @@ export async function provisionBridgeBottleForInstall(
     engineUsed = engine
     if (signal?.aborted) return abortResult()
     sendCreatingBottle()
-    provisionResult = await provisionBridgeBottle({
+    provisionResult = await bbLifecycle.provisionBridgeBottle({
       bottleName: bridgeBottleName,
       fallbackEngine: engine,
       signal
     })
   } else {
     sendCreatingBottle()
-    provisionResult = await provisionBridgeBottle({
+    provisionResult = await bbLifecycle.provisionBridgeBottle({
       bottleName: bridgeBottleName,
       createTimeoutMs: creation.createTimeoutMs,
       signal
     })
-    if (provisionResult.errorCode === PROVISION_ABORTED) {
+    if (provisionResult.errorCode === bottle.PROVISION_ABORTED) {
       return abortResult()
     }
     if (
-      provisionResult.errorCode === CROSSOVER_CREATE_TIMEOUT ||
-      provisionResult.errorCode === CROSSOVER_MISSING ||
+      provisionResult.errorCode === bottle.CROSSOVER_CREATE_TIMEOUT ||
+      provisionResult.errorCode === bottle.CROSSOVER_MISSING ||
       // 59-REVIEW WR-02 / D-09: a failed create is a broken CrossOver too.
-      provisionResult.errorCode === CROSSOVER_CREATE_FAILED
+      provisionResult.errorCode === bottle.CROSSOVER_CREATE_FAILED
     ) {
       // D-12 (59-01 create_under_expiry): cxbottle --create can hang or
       // fail under an expired/broken CrossOver, and CrossOver can vanish
@@ -861,14 +852,15 @@ export async function provisionBridgeBottleForInstall(
       engineUsed = engine
       if (signal?.aborted) return abortResult()
       sendCreatingBottle()
-      provisionResult = await provisionBridgeBottle({
+      provisionResult = await bbLifecycle.provisionBridgeBottle({
         bottleName: bridgeBottleName,
         fallbackEngine: engine,
         signal
       })
     }
   }
-  if (provisionResult.errorCode === PROVISION_ABORTED) return abortResult()
+  if (provisionResult.errorCode === bottle.PROVISION_ABORTED)
+    return abortResult()
   if (provisionResult.status !== 'done') {
     logWarning(
       `SteamGame: bridge bottle provisioning failed for appId ${steamGame.appId}: ${provisionResult.error}`,
@@ -983,7 +975,7 @@ export async function installBridgeGameLeased(
   }
   // a new install must show finishing again (quick 261031-ihs)
   pollState.clearBridgeInstallFinalized(steamGame.appId)
-  const targetSteamappsDir = getBottleSteamappsDir(bridgeBottleName)
+  const targetSteamappsDir = bottle.getBottleSteamappsDir(bridgeBottleName)
   const downloadResult = await installDepotDownload(steamGame, args, {
     targetSteamappsDirOverride: targetSteamappsDir,
     os: 'windows',
@@ -1081,7 +1073,9 @@ export async function installBridgeGameLeased(
       // build that bundles steam_api64.dll is not held back by this.
       setBridgeSteamApiPrescreen(steamGame.appId, 'x64')
       stopInstallPolling(steamGame.appId)
-      const removeResult = await removePerGameBridgeBottle(steamGame.appId)
+      const removeResult = await bbLifecycle.removePerGameBridgeBottle(
+        steamGame.appId
+      )
       if (removeResult.status === 'error') {
         logWarning(
           `SteamGame: installBridgeGame could not remove the per-game bridge bottle for appId ${steamGame.appId} after a win64-no-shim: ${removeResult.error}`,
@@ -1138,7 +1132,9 @@ export async function installBridgeGameLeased(
       LogPrefix.Steam
     )
     stopInstallPolling(steamGame.appId)
-    const removeResult = await removePerGameBridgeBottle(steamGame.appId)
+    const removeResult = await bbLifecycle.removePerGameBridgeBottle(
+      steamGame.appId
+    )
     if (removeResult.status === 'error') {
       logWarning(
         `SteamGame: installBridgeGame could not remove the per-game bridge bottle for appId ${steamGame.appId} after detecting Steam CEG DRM: ${removeResult.error}`,
@@ -1363,7 +1359,7 @@ export function resolveBridgeGameInstallRoot(
   const bottleName =
     bottleNameOverride ??
     bridgeBottle.getBridgeBottleSettings(steamGame.appId).wineCrossoverBottle
-  const commonRoot = resolve(getBottleSteamappsDir(bottleName), 'common')
+  const commonRoot = resolve(bottle.getBottleSteamappsDir(bottleName), 'common')
   const resolvedExePath = resolve(exePath)
   const relFromCommon = relative(commonRoot, resolvedExePath)
   const installdirSegment = relFromCommon.split(sep)[0]

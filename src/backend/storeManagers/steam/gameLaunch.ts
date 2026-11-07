@@ -28,11 +28,8 @@ import {
   decidePlayAdoption,
   restartMacSteamForAdoption
 } from './macSteamAdoption'
-import {
-  isBottleReady,
-  getSteamBottleSettings,
-  killBridgeBottleWineServer
-} from './bottle'
+import { isBottleReady, getSteamBottleSettings } from './bottle'
+import { killBridgeBottleWineServer } from './bridgeBottleLifecycle'
 import {
   getBridgeBottleSettings,
   findBridgeInstallBottle

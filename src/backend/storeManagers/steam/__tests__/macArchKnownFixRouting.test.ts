@@ -124,10 +124,12 @@ jest.mock('../bottle', () => ({
   isBottleReady: jest.fn(),
   getSteamBottleSettings: jest.fn(),
   getBottleSteamappsDir: jest.fn(),
-  provisionBridgeBottle: jest.fn(),
   isSteamBottleProvisioned: jest.fn(),
-  removePerGameBridgeBottle: jest.fn(),
   DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge'
+}))
+jest.mock('../bridgeBottleLifecycle', () => ({
+  provisionBridgeBottle: jest.fn(),
+  removePerGameBridgeBottle: jest.fn()
 }))
 jest.mock('../bridgeBottle', () => ({
   isBridgeBottleReady: jest.fn(),

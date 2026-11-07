@@ -34,7 +34,7 @@ import { downloadSharedRedistDepots } from '../../depot'
 import { readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning } from 'backend/logger'
-import { endPerGameBridgeBottleSession } from '../../bottle'
+import { endPerGameBridgeBottleSession } from '../../bridgeBottleLifecycle'
 import { bridgeBottleNameFor } from '../../bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 
@@ -51,7 +51,7 @@ jest.mock('backend/knownFixes', () => ({ readKnownFixProfile: jest.fn() }))
 jest.mock('backend/engine/bottlePrimitives', () => ({
   getBottleDir: jest.fn()
 }))
-jest.mock('../../bottle', () => ({
+jest.mock('../../bridgeBottleLifecycle', () => ({
   endPerGameBridgeBottleSession: jest.fn()
 }))
 jest.mock('../../bridgeBottle', () => ({

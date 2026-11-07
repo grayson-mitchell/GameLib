@@ -41,6 +41,9 @@ jest.mock('backend/engine/bottlePrimitives', () => ({
 jest.mock('../../../bottle', () => ({
   DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge'
 }))
+jest.mock('../../../bridgeBottleLifecycle', () => ({
+  endPerGameBridgeBottleSession: jest.fn()
+}))
 jest.mock('../../../bridgeBottle', () => ({
   resolveBridgeBottleName: (a: string) => `GameLibSteamBridge-${a}`
 }))

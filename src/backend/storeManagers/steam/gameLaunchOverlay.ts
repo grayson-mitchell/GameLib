@@ -13,7 +13,7 @@ import { join } from 'node:path'
 import { GameSettings } from 'common/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { notify } from 'backend/dialog/dialog'
-import { endPerGameBridgeBottleSessionWith } from './bottle'
+import { endPerGameBridgeBottleSessionWith } from './bridgeBottleLifecycle'
 import {
   getBridgeBottleSettings,
   getDrmBridgeRunner,

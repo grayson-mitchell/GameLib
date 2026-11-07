@@ -20,7 +20,7 @@ import {
   type DrmLaunchSetupInput
 } from '../drmLaunchSetup'
 
-jest.mock('../../../bottle', () => ({
+jest.mock('../../../bridgeBottleLifecycle', () => ({
   endPerGameBridgeBottleSession: jest.fn(() => Promise.resolve(true))
 }))
 jest.mock('../../../bridgeBottle', () => ({
