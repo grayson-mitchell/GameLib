@@ -216,7 +216,7 @@ Phases 61–64 are not assigned to a milestone yet. Phase details for 51–60 (v
 **Goal:** Every Windows game GameLib runs under Wine on macOS, from any store (Epic/legendary, GOG, Amazon/nile, sideload, Steam), gets one per-game **Engine** control: Automatic (CrossOver first, then GameLib's pinned Wine-Staging + DXVK build), CrossOver, the pinned builds, or a Wine Manager build. For non-Steam games it replaces the Wine Version selector, which today is their only engine choice. Behind it, the Phase 59 engine decision moves out of `src/backend/storeManagers/steam/engine/` so non-Steam launches get the same protection: a trial-expiry check before each launch plus the "N days remaining" notice, a timeout on every CrossOver launch, broken-CrossOver detection, and creation of a fallback bottle for non-Steam CrossOver bottles and prefixes. Open questions for discuss-phase: (1) how the "Unsupported — known fixes and compatibility ratings don't apply" warning reads for stores that have no Steam-keyed fixes or ratings; (2) how existing per-game `wineVersion` choices migrate into the new control. Extends Phase 59, whose `59-CONTEXT.md` scoped this to Steam bridge titles; the Steam-side UI is now on the Wine tab (quick 261104-tm6).
 **Requirements**: CONTEXT decisions D-01..D-20 (no REQUIREMENTS.md IDs)
 **Depends on:** Phase 59
-**Plans:** 11/20 plans executed
+**Plans:** 12/20 plans executed
 
 Plans:
 
@@ -251,7 +251,7 @@ Plans:
 **Wave 7** *(blocked on Wave 6 completion)*
 
 - [x] 61-11-PLAN.md — Non-Steam engine state, option list with Legacy, global default, bottle names
-- [ ] 61-12-PLAN.md — Non-Steam launch engine step and per-launch settings overlay
+- [x] 61-12-PLAN.md — Non-Steam launch engine step and per-launch settings overlay
 
 **Wave 8** *(blocked on Wave 7 completion)*
 
