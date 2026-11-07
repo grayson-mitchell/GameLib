@@ -78,14 +78,16 @@ function evaluate(baseline, current, ceiling = CEILING) {
   for (const file of Object.keys(current).sort()) {
     const n = current[file]
     const allowed = baseline[file]
-    if (allowed === undefined) {
+    // A missing entry and an invalid (at/under-ceiling) entry both leave the
+    // file held to the plain ceiling. The invalid entry itself is reported in
+    // the baseline loop below, whatever the file's size.
+    if (allowed === undefined || allowed <= ceiling) {
       if (n > ceiling)
         failures.push(
           `over ceiling: ${file} has ${n} lines (max ${ceiling}); split it, do not allowlist it`
         )
       continue
     }
-    if (allowed <= ceiling) continue // reported below as an at/under-ceiling entry
     if (n > allowed) failures.push(`grew: ${file} ${n} > baseline ${allowed}`)
     else if (n < allowed && n > ceiling)
       failures.push(
@@ -96,6 +98,10 @@ function evaluate(baseline, current, ceiling = CEILING) {
     if (current[file] === undefined) {
       failures.push(
         `stale baseline entry: ${file} (file is gone; remove the entry in this commit)`
+      )
+    } else if (baseline[file] <= ceiling) {
+      failures.push(
+        `at or under ceiling: remove ${file} from the baseline in this commit (entry ${baseline[file]} is not above the ceiling of ${ceiling}; an entry cannot cap a file)`
       )
     } else if (current[file] <= ceiling) {
       failures.push(

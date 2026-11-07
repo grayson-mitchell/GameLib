@@ -53,6 +53,19 @@ describe('steamLineCeiling evaluate', () => {
       expect.stringContaining('remove a from the baseline in this commit')
     ])
   })
+  it('rejects an at/under-ceiling entry and still holds the file to the ceiling', () => {
+    expect(evaluate({ a: 1000 }, { a: 1001 })).toEqual([
+      expect.stringContaining('over ceiling: a has 1001 lines (max 1000)'),
+      expect.stringContaining('remove a from the baseline in this commit')
+    ])
+    expect(evaluate({ a: 500 }, { a: 5000 })).toEqual([
+      expect.stringContaining('over ceiling: a has 5000 lines (max 1000)'),
+      expect.stringContaining('remove a from the baseline in this commit')
+    ])
+    expect(evaluate({ a: 1000 }, { a: 1000 })).toEqual([
+      expect.stringContaining('remove a from the baseline in this commit')
+    ])
+  })
   it('flags an entry naming a missing file', () => {
     expect(evaluate({ a: 1200 }, {})).toEqual([
       expect.stringContaining('stale baseline entry: a')
