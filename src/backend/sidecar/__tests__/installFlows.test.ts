@@ -436,13 +436,20 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
     })
 
-    it.each([[123], [''], ['12; rm -rf /'], ['abc'], [null]])(
+    it.each([[''], ['12; rm -rf /'], ['abc'], [null]])(
       'a malformed appName (%p) gets [] without asking the verdict',
       async (bad) => {
         expect(await invokeTargets([bad])).toEqual([])
         expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
       }
     )
+
+    // Phase 67: a non-string appName never reaches the handler; the sidecar's schema check
+    // answers with an error frame (no result) before the verdict is consulted.
+    it('a non-string appName (123) is rejected at the IPC boundary', async () => {
+      expect(await invokeTargets([123])).toBeUndefined()
+      expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
+    })
 
     it('a throwing verdict fails to []', async () => {
       jest
@@ -514,12 +521,17 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: false })
     })
 
-    it.each([[['abc']], [[570]], [[]], [['5;70']]])(
+    it.each([[['abc']], [[]], [['5;70']]])(
       'bad appName %j -> false',
       async (args) => {
         expect(await invokeRoute(args)).toEqual({ gamelibDelete: false })
       }
     )
+
+    // Phase 67: a non-string appName is rejected by the schema check before the handler runs.
+    it('a non-string appName ([570]) is rejected at the IPC boundary', async () => {
+      expect(await invokeRoute([570])).toBeUndefined()
+    })
 
     it('never rejects: a throwing resolver is a closed reply', async () => {
       jest.mocked(resolveInstallRoot).mockRejectedValue(new Error('boom'))
@@ -594,13 +606,19 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
     })
 
-    it.each([[123], [''], ['12; rm -rf /'], ['abc'], [null]])(
+    it.each([[''], ['12; rm -rf /'], ['abc'], [null]])(
       'a malformed appName (%p) -> closed without asking the verdict',
       async (bad) => {
         expect(await invokeInstallApp([bad])).toEqual(closed)
         expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
       }
     )
+
+    // Phase 67: a non-string appName is rejected by the schema check before the handler runs.
+    it('a non-string appName (123) is rejected at the IPC boundary', async () => {
+      expect(await invokeInstallApp([123])).toBeUndefined()
+      expect(getSteamBottleEligibilityVerdict).not.toHaveBeenCalled()
+    })
 
     it('no registered libraries -> InstallApp route with empty libraries', async () => {
       jest.mocked(getSteamLibraries).mockResolvedValue([])

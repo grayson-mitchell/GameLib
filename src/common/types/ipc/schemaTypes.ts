@@ -12,6 +12,8 @@
  */
 import { z } from 'zod'
 
+import type { Runner } from '../../types'
+
 /**
  * A positional optional argument. JSON turns a positional `undefined` into `null` on the
  * wire, so the schema must accept both.
@@ -39,6 +41,21 @@ export function absolutePathArg() {
         p.startsWith('/') || /^[A-Za-z]:[\\/]/.test(p) || p.startsWith('\\\\'),
       'not absolute'
     )
+}
+
+const RUNNERS = ['legendary', 'gog', 'sideload', 'nile', 'steam'] as const
+// Drift guard both ways: a Runner added to or removed from the union fails tsc here.
+type RunnerListMatchesUnion = Runner extends (typeof RUNNERS)[number]
+  ? (typeof RUNNERS)[number] extends Runner
+    ? true
+    : never
+  : never
+const runnerListMatchesUnion: RunnerListMatchesUnion = true
+void runnerListMatchesUnion
+
+/** A store runner id; the enum is derived from the Runner union so drift fails tsc. */
+export function runnerArg() {
+  return z.enum(RUNNERS)
 }
 
 /** Any-scheme URL. Scheme allow-lists are Phase 72. */
