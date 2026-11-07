@@ -19,9 +19,9 @@ import {
   readAcfState,
   pollUninstallOnce,
   findOtherManifestsWithInstalldir,
-  removeSteamInstallCopy,
-  nextSteamRequestNoticeSeq
+  removeSteamInstallCopy
 } from './library'
+import { nextSteamRequestNoticeSeq } from './library/pollState'
 import { resolveInstallRoot } from './library/installRoot'
 import {
   probeMacSteamPid,

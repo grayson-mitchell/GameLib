@@ -22,9 +22,6 @@ import SteamLibraryManager, {
   cancelDelegatedInstall,
   isDelegatedInstallPolling,
   pollInstallOnce,
-  markBridgeInstallFinalized,
-  clearBridgeInstallFinalized,
-  isBridgeInstallFinalized,
   pollUninstallOnce,
   startUninstallPolling,
   stopUninstallPolling,
@@ -42,6 +39,11 @@ import SteamLibraryManager, {
   markSteamInstallIncomplete,
   buildIncompleteInstallSet
 } from '../library'
+import {
+  markBridgeInstallFinalized,
+  clearBridgeInstallFinalized,
+  isBridgeInstallFinalized
+} from '../library/pollState'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import {
   mkdirSync as realMkdirSync,
