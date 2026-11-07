@@ -7,6 +7,7 @@ import {
   optionalArg,
   phase70Passthrough,
   runnerArg,
+  wineInstallationArg,
   type InvokeFns
 } from './schemaTypes'
 
@@ -23,15 +24,6 @@ const installPlatform = z.enum([
   'linux',
   'Browser'
 ])
-
-const wineInstallation = z.strictObject({
-  bin: nonEmptyString(),
-  name: z.string().max(1024),
-  type: z.enum(['wine', 'proton', 'crossover', 'toolkit']),
-  lib: z.string().max(4096).optional(),
-  lib32: z.string().max(4096).optional(),
-  wineserver: z.string().max(4096).optional()
-})
 
 // D-07: the GameInfo nested in install/update args is a PHASE70-PASSTHROUGH. Declared keys are
 // only the ones the sidecar handlers read directly (`updateGame` destructures
@@ -97,7 +89,7 @@ export const installAsyncArgs = {
       runner: runnerArg(),
       platform: installPlatform,
       winePrefix: z.string().max(4096).optional(),
-      wineVersion: wineInstallation.optional(),
+      wineVersion: wineInstallationArg().optional(),
       wineCrossoverBottle: z.string().max(1024).optional(),
       engineOverride: z.string().max(256).optional()
     })

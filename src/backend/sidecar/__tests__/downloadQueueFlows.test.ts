@@ -435,7 +435,12 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
         platformToInstall: 'Windows',
         installDlcs: [],
         sdlList: [],
-        gameInfo: { app_name: '999010', runner: 'steam', title: 'Test Game' }
+        gameInfo: {
+          app_name: '999010',
+          runner: 'steam',
+          title: 'Test Game',
+          install: {}
+        }
       }
     ])
     await flush()

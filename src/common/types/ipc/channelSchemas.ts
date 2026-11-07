@@ -5,6 +5,7 @@
 import { clipboardAsyncArgs, clipboardSyncArgs } from './clipboard'
 import { dialogAsyncArgs } from './dialog'
 import { installAsyncArgs } from './install'
+import { wineToolsAsyncArgs, wineToolsFrontendMessagesArgs } from './wineTools'
 import { defineChannelEntries, type ChannelEntry } from './schemaTypes'
 import { shellFilesAsyncArgs, shellFilesSyncArgs } from './shellFiles'
 
@@ -30,5 +31,7 @@ export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
     defineChannelEntries('invoke', dialogAsyncArgs),
     defineChannelEntries('send', clipboardSyncArgs),
     defineChannelEntries('invoke', clipboardAsyncArgs),
-    defineChannelEntries('invoke', installAsyncArgs)
+    defineChannelEntries('invoke', installAsyncArgs),
+    defineChannelEntries('invoke', wineToolsAsyncArgs),
+    defineChannelEntries('push', wineToolsFrontendMessagesArgs)
   )

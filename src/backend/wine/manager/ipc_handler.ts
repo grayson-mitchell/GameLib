@@ -45,7 +45,7 @@ addHandler('installWineVersion', async (e, release) => {
 
 addHandler('refreshWineVersionInfo', async (e, fetch?) => {
   try {
-    await updateWineVersionInfos(fetch)
+    await updateWineVersionInfos(fetch ?? undefined)
     return
   } catch (error) {
     logError(error, LogPrefix.WineDownloader)

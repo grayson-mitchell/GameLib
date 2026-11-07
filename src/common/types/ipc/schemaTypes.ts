@@ -58,6 +58,18 @@ export function runnerArg() {
   return z.enum(RUNNERS)
 }
 
+/** WineInstallation, every key declared (D-06). */
+export function wineInstallationArg() {
+  return z.strictObject({
+    bin: nonEmptyString(),
+    name: z.string().max(1024),
+    type: z.enum(['wine', 'proton', 'crossover', 'toolkit']),
+    lib: z.string().max(4096).optional(),
+    lib32: z.string().max(4096).optional(),
+    wineserver: z.string().max(4096).optional()
+  })
+}
+
 /** Any-scheme URL. Scheme allow-lists are Phase 72. */
 export function urlArg() {
   return z
