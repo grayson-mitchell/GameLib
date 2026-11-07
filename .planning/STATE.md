@@ -398,6 +398,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [2026-10-31] [feedback] In-app "Report a problem" form for non-technical users — no account, auto-attached redacted diagnostics — [todo file](.planning/todos/pending/2026-10-31-in-app-report-a-problem-form-for-non-technical-users.md)
 - [2026-11-05] [steam-install] "Discuss a more robust way to manage the 'restart Steam to finish' hold — it releases only on Steam pid exit, but sign-in rescans manifests in the same process (261105-ord gate item 6), leaving the user stuck" — [todo file](.planning/todos/pending/2026-11-05-steam-restart-hold-brittle-discuss.md)
 - [2026-11-05] [steam-install] "Add GameLib-side delete for Steam games (uninstall without handing off to Steam)" — [todo file](.planning/todos/pending/2026-11-05-gamelib-native-steam-game-delete.md)
+- [2026-11-07] [launch] "Stop button should end Steam-launched games by PID (SteamGame.stop() is a no-op for them)" — [todo file](.planning/todos/pending/2026-11-07-stop-steam-launched-games-by-pid.md)
 - [2026-11-05] [steam-depot-download] "Depot decode-worker pool holds ~2.5 GB RSS before any work: slim the worker bundle and shrink the pool" — [todo file](.planning/todos/pending/2026-11-05-slim-the-depot-decode-worker-and-shrink-its-pool.md)
 - [2026-11-06] [ui-theme] "themeTokens is-text render-site census is red (29 vs 27) since the Downloads Managed-by-Steam row added two `button is-text` sites" — [todo file](.planning/todos/pending/2026-11-06-themetokens-is-text-census-red-after-steam-managed-row.md)
 
