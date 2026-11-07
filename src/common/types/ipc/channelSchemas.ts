@@ -104,5 +104,6 @@ export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
     // push stays typing-only in ./legendary and is deliberately not registered here.
     defineChannelEntries('push', gogFrontendMessagesArgs),
     defineChannelEntries('send', appShellSyncArgs),
-    defineChannelEntries('invoke', appShellAsyncArgs)
+    defineChannelEntries('invoke', appShellAsyncArgs),
+    defineChannelEntries('push', appShellFrontendMessagesArgs)
   )

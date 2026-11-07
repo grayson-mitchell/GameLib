@@ -36,7 +36,7 @@ const CEILING: Record<Bucket, number> = {
   invoke: 8,
   send: 6,
   testOnly: 6,
-  push: 17,
+  push: 1,
   local: 14
 }
 

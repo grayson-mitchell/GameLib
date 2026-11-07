@@ -1,4 +1,8 @@
-import { appShellAsyncArgs, appShellSyncArgs } from 'common/types/ipc/appShell'
+import {
+  appShellAsyncArgs,
+  appShellFrontendMessagesArgs,
+  appShellSyncArgs
+} from 'common/types/ipc/appShell'
 import { channelSchemas } from 'common/types/ipc/channelSchemas'
 import {
   expectFixtureCoverage,
@@ -56,16 +60,75 @@ const asyncTable: FixtureTable<typeof appShellAsyncArgs> = {
   getLoginBackground: noArgs
 }
 
+// `message` is variadic and accepts any argument list, so it has no invalid fixture; it is
+// covered by its own case below.
+const { message: messageSchema, ...pushArgs } = appShellFrontendMessagesArgs
+const pushTable: FixtureTable<typeof pushArgs> = {
+  gameStatusUpdate: {
+    valid: [[{ appName: 'a', status: 'done' }]],
+    invalid: [[]]
+  },
+  showDialog: {
+    valid: [
+      ['t', 'm', 'ERROR'],
+      ['t', 'm', 'MESSAGE', [{ text: 'ok' }], 'ack-1']
+    ],
+    invalid: [[], ['t']]
+  },
+  maximized: noArgs,
+  unmaximized: noArgs,
+  fullscreen: { valid: [[true]], invalid: [[], ['x']] },
+  'connectivity-changed': {
+    valid: [[{ status: 'online', retryIn: 0 }]],
+    invalid: [[]]
+  },
+  launchGame: {
+    valid: [['a', 'gog', ['-x']]],
+    invalid: [[], ['a', 'epic', []]]
+  },
+  installGame: { valid: [['a', 'steam']], invalid: [[], ['a']] },
+  recentGamesChanged: {
+    valid: [[[{ appName: 'a', title: 't' }]]],
+    invalid: [[]]
+  },
+  gameSettingWriteFailed: {
+    valid: [[{ appName: 'a', key: 'k' }]],
+    invalid: [[], [{ appName: 'a' }]]
+  },
+  progressOfWineManager: {
+    valid: [['Wine-1', { state: 'downloading' }]],
+    invalid: [[], ['v']]
+  },
+  metadataChanged: {
+    valid: [[{ a: { title: 'T' } }]],
+    invalid: [[]]
+  },
+  crossoverIndexChanged: { valid: [[{ a: 1, b: null }]], invalid: [[]] },
+  runsForMeChanged: { valid: [[{ 'gog:a': { on: true } }]], invalid: [[]] },
+  signInProbeOutcomes: {
+    valid: [[{ outcomes: { gog: 'connected' } }]],
+    invalid: [[], [{}]]
+  }
+}
+
 describe('appShell schemas', () => {
   expectFixtureCoverage(appShellSyncArgs, syncTable)
   expectFixtureCoverage(appShellAsyncArgs, asyncTable)
+  expectFixtureCoverage(pushArgs, pushTable)
   runFixtureTable(appShellSyncArgs, syncTable)
   runFixtureTable(appShellAsyncArgs, asyncTable)
+  runFixtureTable(pushArgs, pushTable)
+
+  it('message accepts any argument list', () => {
+    expect(messageSchema.safeParse([]).success).toBe(true)
+    expect(messageSchema.safeParse(['a', 1, null]).success).toBe(true)
+  })
 
   it('registers every channel in channelSchemas', () => {
     for (const k of [
       ...Object.keys(appShellSyncArgs),
-      ...Object.keys(appShellAsyncArgs)
+      ...Object.keys(appShellAsyncArgs),
+      ...Object.keys(appShellFrontendMessagesArgs)
     ]) {
       expect(channelSchemas[k]).toBeDefined()
     }
