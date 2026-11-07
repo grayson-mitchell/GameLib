@@ -12,7 +12,7 @@ import {
 } from '../engineState'
 import type { EngineStateDeps } from '../engineState'
 import type { CrossoverPreflight, LaunchDecision } from '../engineDecision'
-import type { OverlayStep } from '../../bridge/overlay/overlayNotice'
+import type { OverlayStep } from 'backend/storeManagers/steam/bridge/overlay/overlayNotice'
 import type { SteamEngineState } from 'common/types/steam'
 
 // G4: the common/ literal union and backend OverlayStep stay assignable both ways.
@@ -30,7 +30,7 @@ jest.mock('backend/logger', () => ({
 }))
 
 const mockMeta = new Map<string, unknown>()
-jest.mock('../../stores', () => ({
+jest.mock('backend/storeManagers/steam/stores', () => ({
   steamMetadataStore: {
     get: (id: string) => mockMeta.get(id),
     set: (id: string, v: unknown) => void mockMeta.set(id, v)

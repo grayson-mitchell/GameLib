@@ -15,7 +15,7 @@ import { dirname, isAbsolute, join, relative } from 'path'
 import { toolsPath } from 'backend/constants/paths'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { SteamEngineOption } from 'common/types/steam'
-import { readStoredTitleConfig } from '../titleSettings'
+import { readStoredTitleConfig } from 'backend/storeManagers/steam/titleSettings'
 import { probeDemoStatus } from './demoStatus'
 import type { DemoStatusProbe } from './demoStatus'
 import { ENGINE_PINS } from './enginePins'
@@ -127,8 +127,9 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
   return {
     async resolveCrossoverBinDir() {
       const { resolveCrossoverBinDirAsync } =
-        await import('../crossoverLocation')
-      const { persistedWineBins } = await import('../bottle')
+        await import('backend/storeManagers/steam/crossoverLocation')
+      const { persistedWineBins } =
+        await import('backend/storeManagers/steam/bottle')
       return resolveCrossoverBinDirAsync({ hintWineBins: persistedWineBins() })
     },
     isExecutable(path) {
@@ -142,7 +143,8 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
     probe: probeDemoStatus,
     readBuild: (binDir) => readCrossoverBuild(binDir),
     async killCrossoverWineserver(bottleName, binDir) {
-      const { killBottleWineServerWith } = await import('../bottle')
+      const { killBottleWineServerWith } =
+        await import('backend/storeManagers/steam/bottle')
       await killBottleWineServerWith(
         bottleName,
         join(binDir, 'wineserver'),
@@ -154,7 +156,7 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
     monitorPhase(appId) {
       const { getBottleProcessMonitorPhase } =
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('../bottleProcessMonitor') as typeof import('../bottleProcessMonitor')
+        require('backend/storeManagers/steam/bottleProcessMonitor') as typeof import('backend/storeManagers/steam/bottleProcessMonitor')
       return getBottleProcessMonitorPhase(appId)
     },
     wineManagerReleases() {

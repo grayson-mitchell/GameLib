@@ -20,8 +20,8 @@ import type {
   EngineDecisionDeps,
   LaunchDecision
 } from './engineDecision'
-import { OVERLAY_STEPS } from '../bridge/overlay/overlayNotice'
-import type { OverlayStep } from '../bridge/overlay/overlayNotice'
+import { OVERLAY_STEPS } from 'backend/storeManagers/steam/bridge/overlay/overlayNotice'
+import type { OverlayStep } from 'backend/storeManagers/steam/bridge/overlay/overlayNotice'
 import { parseEngineOverride } from './engineIds'
 import type { EngineOverrideId } from './engineIds'
 import { isNonCrossover } from './engineTypes'
@@ -89,11 +89,11 @@ export interface EngineStateDeps extends Partial<EngineDecisionDeps> {
 
 const lazyBottle = () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('../bottle') as typeof import('../bottle')
+  require('backend/storeManagers/steam/bottle') as typeof import('backend/storeManagers/steam/bottle')
 
 const lazyBridgeVerdict = () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('../bridge/bridgeVerdict') as typeof import('../bridge/bridgeVerdict')
+  require('backend/storeManagers/steam/bridge/bridgeVerdict') as typeof import('backend/storeManagers/steam/bridge/bridgeVerdict')
 
 function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
   return {
@@ -103,10 +103,11 @@ function stateDeps(deps?: Partial<EngineStateDeps>): EngineStateDeps {
       (require('backend/constants/environment') as { isMac: boolean }).isMac,
     store:
       deps?.store ??
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      (require('../stores') as typeof import('../stores'))
-        .steamEngineNoticeStore,
-    bridgeInstallBottleFor:
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      (
+        require('backend/storeManagers/steam/stores') as typeof import('backend/storeManagers/steam/stores')
+      ).steamEngineNoticeStore,
+    /* eslint-enable @typescript-eslint/no-require-imports */ bridgeInstallBottleFor:
       deps?.bridgeInstallBottleFor ??
       ((id) => lazyBottle().findBridgeInstallBottle(id)),
     ownBottleNameFor:
@@ -429,8 +430,11 @@ export async function dismissSteamEngineNotice(
 ): Promise<{ ok: boolean }> {
   const s =
     store ??
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    (require('../stores') as typeof import('../stores')).steamEngineNoticeStore
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    (
+      require('backend/storeManagers/steam/stores') as typeof import('backend/storeManagers/steam/stores')
+    ).steamEngineNoticeStore
+  /* eslint-enable @typescript-eslint/no-require-imports */
   if (typeof args !== 'object' || args === null) return { ok: false }
   const a = args as { kind?: unknown; build?: unknown }
   if (a.kind === 'no-crossover') {

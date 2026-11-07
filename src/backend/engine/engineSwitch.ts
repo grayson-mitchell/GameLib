@@ -22,9 +22,9 @@ import {
   killBottleWineServerWith,
   persistedWineBins,
   sanitizeBottleName
-} from '../bottle'
-import { getBottleProcessMonitorPhase } from '../bottleProcessMonitor'
-import { resolveCrossoverBinDirAsync } from '../crossoverLocation'
+} from 'backend/storeManagers/steam/bottle'
+import { getBottleProcessMonitorPhase } from 'backend/storeManagers/steam/bottleProcessMonitor'
+import { resolveCrossoverBinDirAsync } from 'backend/storeManagers/steam/crossoverLocation'
 import { ENGINE_PINS, pinById } from './enginePins'
 import type { EnginePin } from './enginePins'
 import {

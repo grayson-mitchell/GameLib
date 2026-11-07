@@ -19,7 +19,7 @@ jest.mock('backend/logger', () => ({
 }))
 jest.mock('backend/constants/paths', () => ({ toolsPath: '/tools' }))
 jest.mock('backend/tools', () => ({ DXVK: { installRemove: jest.fn() } }))
-jest.mock('../../bottle', () => ({
+jest.mock('backend/storeManagers/steam/bottle', () => ({
   getBottleDir: (name: string) => `${mockState.root}/${name}`,
   sanitizeBottleName: (name: string) =>
     /^[A-Za-z0-9_-]+$/.test(name) ? name : '',
@@ -29,10 +29,10 @@ jest.mock('../../bottle', () => ({
   buildFallbackGameSettings: jest.fn(),
   killBottleWineServerWith: jest.fn()
 }))
-jest.mock('../../bottleProcessMonitor', () => ({
+jest.mock('backend/storeManagers/steam/bottleProcessMonitor', () => ({
   getBottleProcessMonitorPhase: jest.fn()
 }))
-jest.mock('../../crossoverLocation', () => ({
+jest.mock('backend/storeManagers/steam/crossoverLocation', () => ({
   resolveCrossoverBinDirAsync: jest.fn()
 }))
 jest.mock('../fallbackEngine', () => ({
