@@ -254,6 +254,8 @@ beforeEach(() => {
   jest.mocked(backfillBridgeLaunchTargets).mockResolvedValue(0)
 })
 
+// ── D-UAT-09 (21-17): markSteamInstallIncomplete() — same-session cancel ─────
+
 describe('markSteamInstallIncomplete()', () => {
   beforeEach(() => {
     library.clear()
