@@ -17,7 +17,7 @@
   "src/backend/steamgrid": 1,
   "src/backend/storeManagers/nile": 1,
   "src/backend/storeManagers/sideload": 2,
-  "src/backend/storeManagers/steam (tests)": 423,
+  "src/backend/storeManagers/steam (tests)": 253,
   "src/backend/storeSearch": 6,
   "src/backend/testUtils": 11,
   "src/backend/tools": 120,

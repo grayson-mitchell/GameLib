@@ -86,6 +86,7 @@ import {
   CContentServerDirectory_GetCDNAuthToken_Response
 } from 'steam-user/protobufs/generated/_load.js'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { at } from './fixtures/indexed'
 
 // ── Logger mock (factory form) ────────────────────────────────────────────────
 jest.mock('backend/logger', () => ({
@@ -503,12 +504,12 @@ describe('buildDepotPlan', () => {
       const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
 
       expect(plan.depots).toHaveLength(2)
-      expect(plan.depots[0].depotId).toBe('111')
-      expect(plan.depots[0].gid).toBe('9007199254740993')
-      expect(typeof plan.depots[0].gid).toBe('string')
-      expect(typeof plan.depots[1].gid).toBe('string')
-      expect(plan.depots[0].files[0].filename).toBe('decrypted-enc-a')
-      expect(plan.depots[1].files.map((f) => f.filename)).toEqual([
+      expect(at(plan.depots, 0).depotId).toBe('111')
+      expect(at(plan.depots, 0).gid).toBe('9007199254740993')
+      expect(typeof at(plan.depots, 0).gid).toBe('string')
+      expect(typeof at(plan.depots, 1).gid).toBe('string')
+      expect(at(at(plan.depots, 0).files, 0).filename).toBe('decrypted-enc-a')
+      expect(at(plan.depots, 1).files.map((f) => f.filename)).toEqual([
         'decrypted-enc-b1',
         'decrypted-enc-b2'
       ])
@@ -616,14 +617,14 @@ describe('buildDepotPlan', () => {
       const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
 
       // The directory marker is gone from depot 38414 …
-      expect(plan.depots[0].files.map((f) => f.filename)).toEqual(['sound'])
+      expect(at(plan.depots, 0).files.map((f) => f.filename)).toEqual(['sound'])
       // … the real 333MB file survives in 38415 …
-      expect(plan.depots[1].files.map((f) => f.filename)).toEqual([
+      expect(at(plan.depots, 1).files.map((f) => f.filename)).toEqual([
         'master.dat'
       ])
-      expect(plan.depots[1].files[0].size).toBe(333177805)
+      expect(at(at(plan.depots, 1).files, 0).size).toBe(333177805)
       // … and `sound`, a legitimate non-colliding directory entry, is untouched.
-      expect(plan.depots[0].files[0].flags).toBe(64)
+      expect(at(at(plan.depots, 0).files, 0).flags).toBe(64)
 
       // totalBytes needs no compensating arithmetic: every dropped entry is
       // size 0, so the sum taken before resolution is still correct.
@@ -685,9 +686,11 @@ describe('buildDepotPlan', () => {
       const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
 
       expect(plan.depots).toHaveLength(1)
-      expect(plan.depots[0].depotId).toBe('333')
-      expect(plan.depots[0].gid).toBe('18446744073709551615')
-      expect(plan.depots[0].files[0].filename).toBe('decrypted-enc-solo')
+      expect(at(plan.depots, 0).depotId).toBe('333')
+      expect(at(plan.depots, 0).gid).toBe('18446744073709551615')
+      expect(at(at(plan.depots, 0).files, 0).filename).toBe(
+        'decrypted-enc-solo'
+      )
       expect(plan.totalBytes).toBe(42)
     })
 
@@ -837,7 +840,7 @@ describe('buildDepotPlan', () => {
       const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
 
       expect(plan.depots).toHaveLength(1)
-      expect(plan.depots[0].depotId).toBe('111')
+      expect(at(plan.depots, 0).depotId).toBe('111')
       expect(keyCalls).toBe(2)
       // Initial connect (1, top of buildDepotPlan) + one mid-loop reconnect
       // triggered by the retry wrapper after the drop (1) = 2.
@@ -1804,13 +1807,13 @@ describe('23.2-03 (G-23-01): skip-and-warn EResult 40 Blocked depots', () => {
         /canWriteFullOwnership\(opts: \{([\s\S]*?)\}\): boolean \{/
       )
       if (!match) return []
-      return match[1]
+      return at(match, 1)
         .split('\n')
         .map((l) => l.trim())
         .filter(Boolean)
         .map((l) => l.match(/^(\w+)\??:/))
         .filter((m): m is RegExpMatchArray => m !== null)
-        .map((m) => m[1])
+        .map((m) => at(m, 1))
     }
 
     it("D-04: canWriteFullOwnership's parameter object declares EXACTLY the five Phase 23 fields — outcome, failures, buildid, allFilesVerified, allModesApplied — and nothing resembling a skip/bypass/override parameter", () => {
@@ -2611,8 +2614,8 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     // 10); hostMeta (cycle 7) is the 12th; signal (debug/steam-cancel-abort-
     // thread-a) is the 13th; workerSlot (Phase 25 multi-host fan-out) is the
     // 14th; limiter (debug/humankind-depot-full-stall) is now the 15th/last.
-    const callArgs = jest.mocked(fetchChunk).mock.calls[0]
-    const cdnAuth = callArgs[callArgs.length - 5]
+    const callArgs = at(jest.mocked(fetchChunk).mock.calls, 0)
+    const cdnAuth = at(callArgs, callArgs.length - 5)
     expect(cdnAuth).toBeInstanceOf(CdnAuthTokenCache)
 
     // Prove it's bound to the REAL client + the numeric form of the appId
@@ -2649,7 +2652,7 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     // defaults to false (fetchChunk must never call getCDNAuthToken for this
     // host on its own; the call above proves the CACHE itself still works
     // when a caller explicitly invokes getToken directly).
-    const hostMeta = callArgs[callArgs.length - 4] as Map<
+    const hostMeta = at(callArgs, callArgs.length - 4) as Map<
       string,
       { httpsSupport?: string; usetokenauth?: boolean; type?: string }
     >
@@ -4237,7 +4240,7 @@ describe('downloadDepotFiles', () => {
       .mocked(logInfo)
       .mock.calls.map((c) => String(c[0]))
       .filter((m) => m.includes('chunk-stream stats'))
-    const line = lines[lines.length - 1]
+    const line = at(lines, lines.length - 1, 'chunk-stream stats line')
     expect(line).toBeDefined()
     expect(line).toContain('totalAttempts=3 rotations=1 timeouts=1')
     expect(line.indexOf('worstHosts=[')).toBeLessThan(line.indexOf(' depots=['))
@@ -4356,7 +4359,7 @@ describe('downloadDepotFiles', () => {
     })
 
     expect(result.failures).toHaveLength(1)
-    expect(result.failures[0].error).toMatch(/traversal/i)
+    expect(at(result.failures, 0).error).toMatch(/traversal/i)
     expect(existsSync(join(dir, 'evil.txt'))).toBe(false)
   })
 
@@ -4382,8 +4385,8 @@ describe('downloadDepotFiles', () => {
     })
 
     expect(result.failures).toHaveLength(1)
-    expect(result.failures[0].file).toBe('bad-hash.bin')
-    expect(result.failures[0].error).toMatch(/sha1 mismatch/i)
+    expect(at(result.failures, 0).file).toBe('bad-hash.bin')
+    expect(at(result.failures, 0).error).toMatch(/sha1 mismatch/i)
   })
 
   // debug/depot-stall-bound-did-not-fire (2026-09-25). On 2026-08-27
@@ -4689,7 +4692,7 @@ describe('downloadDepotFiles', () => {
       // Honest, not silent: exactly one failure, naming the whole plan as
       // unattempted, and the run is never mistaken for complete.
       expect(result.failures).toHaveLength(1)
-      expect(result.failures[0].error).toMatch(
+      expect(at(result.failures, 0).error).toMatch(
         new RegExp(`${FILE_COUNT} file\\(s\\) unattempted`)
       )
       expect(result.allFilesVerifiedThisRun).toBe(false)
@@ -4952,7 +4955,7 @@ describe('downloadDepotFiles', () => {
       })
 
       expect(result.failures).toHaveLength(1)
-      expect(result.failures[0].error).toMatch(/NON-EMPTY directory/i)
+      expect(at(result.failures, 0).error).toMatch(/NON-EMPTY directory/i)
       // The user's file is untouched.
       expect(readFileSync(join(stale, 'precious.txt'), 'utf8')).toBe(
         'do not delete me'
@@ -5390,7 +5393,7 @@ describe('downloadDepotFiles', () => {
     })
 
     expect(result.failures).toHaveLength(1)
-    expect(result.failures[0].error).toMatch(/traversal|escapes/i)
+    expect(at(result.failures, 0).error).toMatch(/traversal|escapes/i)
     expect(existsSync(join(dir, 'common', 'SomeGame', 'game.lnkname'))).toBe(
       false
     )
@@ -5434,7 +5437,7 @@ describe('downloadDepotFiles', () => {
     })
 
     expect(result.failures).toHaveLength(1)
-    expect(result.failures[0].error).toMatch(/traversal|escapes/i)
+    expect(at(result.failures, 0).error).toMatch(/traversal|escapes/i)
     expect(
       existsSync(join(dir, 'common', 'SomeGame', 'sub', 'game.lnkname'))
     ).toBe(false)
@@ -5466,7 +5469,7 @@ describe('downloadDepotFiles', () => {
     })
 
     expect(result.failures).toHaveLength(1)
-    expect(result.failures[0].file).toBe('corrupt.bin')
+    expect(at(result.failures, 0).file).toBe('corrupt.bin')
     const destPath = join(dir, 'common', 'SomeGame', 'corrupt.bin')
     // No silently-completed empty file left behind at the destination.
     expect(existsSync(destPath) && lstatSync(destPath).size === 0).toBe(false)
@@ -5610,8 +5613,8 @@ describe('downloadDepotFiles', () => {
       })
 
       expect(result.failures).toHaveLength(1)
-      expect(result.failures[0].file).toBe('mode-fail.bin')
-      expect(result.failures[0].error).toMatch(
+      expect(at(result.failures, 0).file).toBe('mode-fail.bin')
+      expect(at(result.failures, 0).error).toMatch(
         /mode-application failure|simulated mode-application failure/i
       )
     })
@@ -5755,7 +5758,7 @@ describe('downloadDepotFiles', () => {
     // skip already.bin, this fails and the percent assertion below would be
     // vacuously satisfiable by a fresh-install path.
     expect(fetchChunk).toHaveBeenCalledTimes(1)
-    expect(jest.mocked(fetchChunk).mock.calls[0][2].sha).not.toBe('s-skip')
+    expect(at(jest.mocked(fetchChunk).mock.calls, 0)[2].sha).not.toBe('s-skip')
 
     const mockedSend = sendFrontendMessage as jest.Mock
     const calls = mockedSend.mock.calls.filter(
@@ -6044,7 +6047,7 @@ describe('downloadDepotFiles', () => {
       }
 
       expect(setIntervalSpy).toHaveBeenCalledTimes(1)
-      const [heartbeatFn, heartbeatMs] = setIntervalSpy.mock.calls[0]
+      const [heartbeatFn, heartbeatMs] = at(setIntervalSpy.mock.calls, 0)
       expect(heartbeatMs).toBe(1000)
 
       const mockedSend = sendFrontendMessage as jest.Mock
@@ -6084,7 +6087,7 @@ describe('downloadDepotFiles', () => {
       // errors are caught inside the loop and a signal-abort also resolves
       // normally, so both paths exercise this exact finally).
       expect(clearIntervalSpy).toHaveBeenCalledWith(
-        setIntervalSpy.mock.results[0].value
+        at(setIntervalSpy.mock.results, 0).value
       )
       expect(clearIntervalSpy).toHaveBeenCalledTimes(1)
 
