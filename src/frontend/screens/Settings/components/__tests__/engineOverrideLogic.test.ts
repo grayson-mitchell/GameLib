@@ -64,6 +64,14 @@ describe('needsFreshBottleConfirm (D-04)', () => {
     expect(needsFreshBottleConfirm('plain', 'automatic')).toBe(true)
     expect(needsFreshBottleConfirm('plain', 'crossover')).toBe(true)
   })
+  it('G-1: asks for a legacy game to automatic or crossover', () => {
+    expect(needsFreshBottleConfirm('legacy', 'automatic')).toBe(true)
+    expect(needsFreshBottleConfirm('legacy', 'crossover')).toBe(true)
+  })
+  it('does not ask for a legacy game moving to pinned or wine-manager', () => {
+    expect(needsFreshBottleConfirm('legacy', 'pinned:x')).toBe(false)
+    expect(needsFreshBottleConfirm('legacy', 'wine-manager:y')).toBe(false)
+  })
   it('does not ask for pinned, bottle or unknown', () => {
     expect(needsFreshBottleConfirm('plain', 'pinned:x')).toBe(false)
     expect(needsFreshBottleConfirm('bottle', 'crossover')).toBe(false)

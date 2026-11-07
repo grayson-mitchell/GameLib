@@ -42,14 +42,17 @@ export function visibleOptions(
 
 /**
  * D-04: moving a plain-prefix game onto a managed bottle leaves its saves in
- * the old prefix, so Automatic and CrossOver ask first. Pinned and Wine
- * Manager builds keep the plain prefix.
+ * the old prefix, so Automatic and CrossOver ask first. A Legacy game runs on
+ * a winePrefix (on macOS its own or the shared default) and switching it to
+ * Automatic or CrossOver lands on a fresh per-game bottle, so it gets the same
+ * confirm (UAT G-1). Pinned and Wine Manager builds keep the prefix.
  */
 export function needsFreshBottleConfirm(
   prefixKind: 'bottle' | 'plain' | 'legacy' | null | undefined,
   next: string
 ): boolean {
   return (
-    prefixKind === 'plain' && (next === 'automatic' || next === 'crossover')
+    (prefixKind === 'plain' || prefixKind === 'legacy') &&
+    (next === 'automatic' || next === 'crossover')
   )
 }
