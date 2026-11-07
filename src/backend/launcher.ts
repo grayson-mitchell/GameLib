@@ -100,6 +100,9 @@ import {
 } from './constants/environment'
 import { formatSystemInfo, getSystemInfo } from './utils/systeminfo'
 import { gameAnticheatInfo } from './anticheat/utils'
+import { endEngineLaunch, selectEngineForLaunch } from './engine/launchEngine'
+import { getLaunchSettings } from './engine/launchSettings'
+import { engineKeyFor } from './engine/gameKey'
 
 import { singleFlightLaunch } from './launchSingleFlight'
 import type { PartialDeep } from 'type-fest'
@@ -137,7 +140,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
     return { status: 'abort' }
   }
 
-  const gameSettings = await game.getSettings()
+  let gameSettings = await game.getSettings()
   const { autoSyncSaves, savesPath, gogSaves = [] } = gameSettings
 
   if (!launchArguments && gameSettings.lastUsedLaunchOption) {
@@ -205,8 +208,37 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
 
   const isNative = game.isNative()
 
-  // check if isNative, if not, check if wine is valid
-  if (!isNative) {
+  // Phase 61 (D-05, D-13): on macOS every non-Steam Windows launch runs the engine step before
+  // any Wine check. It returns the engine this launch uses; nothing is persisted (D-08).
+  const engineStep = await selectEngineForLaunch(game, {
+    offline: !isOnline(),
+    logWriter
+  })
+  if (engineStep.kind === 'refused') {
+    sendGameStatusUpdate({
+      appName,
+      runner,
+      status: 'done'
+    })
+
+    await logWriter.close()
+
+    return { status: 'abort' }
+  }
+  const engineControlled = engineStep.kind === 'use'
+  const engineKey = engineStep.kind === 'use' ? engineStep.key : null
+  const releaseEngine = () => {
+    if (engineKey !== null) endEngineLaunch(engineKey)
+  }
+  if (engineControlled) {
+    // Everything that follows sees the overlay, never the stored settings.
+    gameSettings = getLaunchSettings(engineKey, gameSettings)
+  }
+
+  // check if isNative, if not, check if wine is valid. An engine-controlled launch skips this:
+  // the engine step already validated its Wine, and checkWineBeforeLaunch's self-heal would
+  // persist a derived or fallback engine into wineVersion (D-08).
+  if (!isNative && !engineControlled) {
     const isWineOkToLaunch = await checkWineBeforeLaunch(
       gameInfo,
       gameSettings,
@@ -251,25 +283,28 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
     )
   }
 
-  await runBeforeLaunchScript(gameInfo, gameSettings, logWriter)
+  let launchedAt: number
+  let command: Promise<boolean>
+  try {
+    await runBeforeLaunchScript(gameInfo, gameSettings, logWriter)
 
-  sendGameStatusUpdate({
-    appName,
-    runner,
-    status: 'launching'
-  })
+    sendGameStatusUpdate({
+      appName,
+      runner,
+      status: 'launching'
+    })
 
-  // Quick 261029-mkz: taken right at launch, NOT startPlayingDate (which
-  // precedes pre-launch work) -- the play signal is time the game ran.
-  const launchedAt = Date.now()
-  const command = game.launch(
-    logWriter,
-    launchArguments,
-    args,
-    skipVersionCheck
-  )
+    // Quick 261029-mkz: taken right at launch, NOT startPlayingDate (which
+    // precedes pre-launch work) -- the play signal is time the game ran.
+    launchedAt = Date.now()
+    command = game.launch(logWriter, launchArguments, args, skipVersionCheck)
 
-  await storeLaunchHooks[runner].setPresence?.(appName)
+    await storeLaunchHooks[runner].setPresence?.(appName)
+  } catch (error) {
+    // The engine selection must not outlive a launch that never got going.
+    releaseEngine()
+    throw error
+  }
 
   const launchResult = await command
     .catch(async (exception) => {
@@ -282,8 +317,12 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
       return false
     })
     .finally(async () => {
-      await runAfterLaunchScript(gameInfo, gameSettings, logWriter)
-      await logWriter.close()
+      try {
+        await runAfterLaunchScript(gameInfo, gameSettings, logWriter)
+        await logWriter.close()
+      } finally {
+        releaseEngine()
+      }
     })
 
   // Quick 261029-mkz (U-2): `await command` resolves when the game process
@@ -826,7 +865,10 @@ async function prepareWineLaunch(
 }> {
   const gameInfo = game.getGameInfo()
 
-  const gameSettings = await game.getSettings()
+  const gameSettings = getLaunchSettings(
+    engineKeyFor(gameInfo.runner, gameInfo.app_name),
+    await game.getSettings()
+  )
 
   if (!(await validWine(gameSettings.wineVersion))) {
     const defaultWine = GlobalConfig.get().getSettings().wineVersion
