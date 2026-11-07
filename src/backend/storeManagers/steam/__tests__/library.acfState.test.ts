@@ -1,0 +1,861 @@
+/**
+ * Unit tests for steam/library/acfState.ts (ACF reads, install-copy
+ * enumeration/removal, downloading scan). Moved out of library.test.ts by
+ * Phase 65 plan 03 (D-03); mock preamble copied.
+ */
+
+// ── Imports ───────────────────────────────────────────────────────────────────
+import {
+  findOtherManifestsWithInstalldir,
+  readAcfState,
+  scanDownloadingAppIds
+} from '../library/acfState'
+import { library } from '../state'
+import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
+import * as vdf from '@node-steam/vdf'
+import { getSteamLibraries } from 'backend/utils'
+import { t as i18nextT } from 'i18next'
+import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
+import {
+  getBottleSteamappsDir,
+  getBridgeBottleSettings,
+  getSteamBottleSettings,
+  listReadyBridgeBottleNames
+} from '../bottle'
+import { join } from 'path'
+
+// ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
+// steam/games.ts imports the shared shortcuts module, whose import graph does not load under
+// this file's mocks (quick 261026-c7r).
+jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
+  addShortcuts: jest.fn(),
+  removeShortcuts: jest.fn(),
+  shortcutFiles: jest.fn()
+}))
+
+jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
+
+jest.mock('backend/logger', () => ({
+  logInfo: jest.fn(),
+  logError: jest.fn(),
+  logWarning: jest.fn(),
+  LogPrefix: {
+    Steam: 'Steam',
+    Backend: 'Backend'
+  }
+}))
+
+// ── backend/utils mock — provides getSteamLibraries() and getFileSize() ─────
+// Note: resetMocks:true wipes any factory-provided implementation before each
+// test, so getFileSize's return value must be re-established per-describe
+// (see beforeEach blocks below) — same pattern as games.test.ts.
+jest.mock('backend/utils', () => ({
+  getSteamLibraries: jest.fn(),
+  getFileSize: jest.fn()
+}))
+
+// ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
+jest.mock('graceful-fs')
+
+// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
+jest.mock('@node-steam/vdf')
+
+// ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
+jest.mock('../../../ipc', () => ({
+  sendFrontendMessage: jest.fn()
+}))
+
+// ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
+jest.mock('../../../dialog/dialog', () => ({
+  notify: jest.fn()
+}))
+
+// ── i18next mock — returns the fallback string for body assertions ────────────
+// 23.2-04: t is a jest.fn (not a plain function) so its call args are
+// inspectable — the fallback-string return value is unchanged, so every
+// pre-existing body-text assertion in this file keeps passing byte-for-byte.
+// This is what makes the interpolation options object provable: the fallback
+// alone can only ever show the raw {{depots}} placeholder, never the actual
+// depot id.
+// The named `t` is the same jest.fn as `default.t`, so a test can reference it
+// without a default-import member access (import-x/no-named-as-default-member).
+jest.mock('i18next', () => {
+  const t = jest.fn((_key: string, fallback = '') => fallback)
+  return { __esModule: true, t, default: { t } }
+})
+
+// ── SteamUser mock — controls getClient() / isLoggedIn() return values ───────
+jest.mock('../user')
+
+// ── online_monitor mock — prevents electron/net import at module load time ───
+jest.mock('backend/online_monitor', () => ({
+  runOnceWhenOnline: jest.fn(),
+  isOnline: jest.fn().mockReturnValue(false)
+}))
+
+// ── child_process mock — spawnSync (Windows reg.exe) + execFileSync (Linux ps,
+// MAC32-03 lipo/file) ─────────────────────────────────────────────────────────
+jest.mock('child_process', () => ({
+  spawnSync: jest.fn(),
+  execFileSync: jest.fn()
+}))
+
+// ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
+// app.getPath (backend/constants/paths reads this at module load time) ───────
+// library.ts's only electron usage is `dialog`; games.ts's `shell` import
+// (pulled in transitively via `import SteamGame from './games'`) resolves to
+// undefined here, which is fine — SteamGame.install()/forceUninstall() are
+// only reached via a CONFIRMED promptI386Recovery, and this file's tests
+// keep the dialog mocked to a cancel response unless a test explicitly opts
+// into the confirm path.
+jest.mock('backend/platform', () => ({
+  dialog: { showMessageBox: jest.fn() },
+  app: {
+    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
+    // Plain method (survives resetMocks) -- publicDir resolves it at module load.
+    getAppPath: () => '/tmp/mock-path'
+  },
+  shell: { openExternal: jest.fn() }
+}))
+
+// ── backend/constants/environment mock — platform-switching for reader tests ──
+jest.mock('backend/constants/environment', () => ({
+  isWindows: false,
+  isMac: false,
+  isLinux: true
+}))
+
+// ── stores mock — steamLibraryStore, steamMetadataStore, etc. ────────
+jest.mock('../stores', () => ({
+  configStore: {
+    get: jest.fn(),
+    get_nodefault: jest.fn(),
+    set: jest.fn(),
+    clear: jest.fn()
+  },
+  steamLibraryStore: {
+    get: jest.fn(),
+    set: jest.fn()
+  },
+  steamMetadataStore: {
+    get: jest.fn(),
+    set: jest.fn(),
+    entries: jest.fn()
+  },
+  steamSyncStore: {
+    get: jest.fn(),
+    set: jest.fn()
+  },
+  // quick 261029-pkp: persisted restart-hold records. Map-backed in the
+  // pkp describe; bare jest.fns elsewhere (entries() -> undefined is caught
+  // by listSteamRestartHolds and reads as an empty store).
+  steamRestartHoldStore: {
+    get: jest.fn(),
+    set: jest.fn(),
+    delete: jest.fn(),
+    entries: jest.fn()
+  }
+}))
+
+// ── bottle mock — getBottleSteamappsDir/getSteamBottleSettings/isBottleProvisioned ─
+jest.mock('../bottle', () => ({
+  getBottleSteamappsDir: jest.fn(),
+  getSteamBottleSettings: jest.fn(),
+  getBridgeBottleSettings: jest.fn(),
+  isSteamBottleProvisioned: jest.fn(),
+  listReadyBridgeBottleNames: jest.fn(),
+  resolveBridgeBottleName: jest.fn()
+}))
+
+// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
+// (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) /
+// buildDepotPlan (Phase 23, 23-03, D-04 — startup resume rebuilds a real plan) ─
+// healReconciledFileModes included so buildResumeFinalizeOpts (CR-01 gap
+// closure, 23-code-review) can be exercised — defaulted to a successful heal
+// in the shared beforeEach below so pre-existing resume tests that don't care
+// about mode-healing still earn StateFlags=4 as before.
+// formatEta/rollingRateMiBs (T-AOG, quick/260719-aog) are pure/deterministic
+// helpers pollInstallOnce reuses for its speed/ETA derivation — pulled from
+// the REAL module rather than re-implemented as jest.fn() stubs so this
+// suite exercises the actual formatting/smoothing behavior.
+jest.mock('../depot', () => ({
+  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
+  downloadSteamDepots: jest.fn(),
+  buildDepotPlan: jest.fn(),
+  healReconciledFileModes: jest.fn(),
+  formatEta:
+    jest.requireActual<typeof import('../depot')>('../depot').formatEta,
+  rollingRateMiBs:
+    jest.requireActual<typeof import('../depot')>('../depot').rollingRateMiBs
+}))
+
+// ── depot/reconcile mock — reconcilePartialState (Phase 23, 23-03, D-04) ────
+jest.mock('../depot/reconcile', () => ({
+  reconcilePartialState: jest.fn()
+}))
+
+// ── backend/launcher mock — runWineCommand (D-05 no-auto-drive regression) ────
+jest.mock('backend/launcher', () => ({
+  runWineCommand: jest.fn()
+}))
+
+// ── bridge/allowlist mock — bridgeAllowlist.has (D-UAT-24-02, 24-17) ────────
+// Defaulted to false in the shared beforeEach below so EVERY pre-existing
+// test is unaffected — non-eligible by default means the existing
+// native ?? bottle ?? bridge precedence holds unless a test explicitly
+// opts a game into bridge eligibility.
+jest.mock('../bridge/allowlist', () => ({
+  bridgeAllowlist: { has: jest.fn(), knownBadReason: jest.fn() }
+}))
+
+// ── platformCapture mock — captureOwnedAppPlatforms (34.15 D-03/D-04) ──────
+// This module is unit-tested in isolation (Plan 01's own suite). Mocking it
+// here isolates refresh()'s own wiring/instrumentation from the real bulk
+// PICS scoping and merge logic — the shared beforeEach below defaults it to
+// a no-op success so every pre-existing refresh() test is unaffected; the
+// 'D-03 fail-soft' describe block below overrides this default per-test.
+jest.mock('../anonymousClient', () => ({
+  getAnonymousPicsClient: jest.fn()
+}))
+jest.mock('../bridge/launchTarget', () => ({
+  backfillBridgeLaunchTargets: jest.fn()
+}))
+jest.mock('../platformCapture', () => ({
+  captureOwnedAppPlatforms: jest.fn()
+}))
+jest.mock('../metacriticCapture', () => ({
+  captureOwnedAppMetacritic: jest.fn()
+}))
+// D-UAT-13: the install poller asks which Steam client PIDs are alive when a
+// native handoff finalizes. A bare jest.fn() resolves undefined = "inconclusive"
+// = fail open (no hold), so every pre-existing test keeps its old behaviour;
+// the D-UAT-13 describe below drives it explicitly. Never a real child spawn.
+// quick 261029-sex: bare jest.fn = undefined = no live signal = ACF behaviour.
+jest.mock('../steamDownloadMonitor', () => ({
+  startSteamDownloadMonitor: jest.fn(),
+  readSteamDownloadMonitor: jest.fn(),
+  stopSteamDownloadMonitor: jest.fn()
+}))
+jest.mock('../steamClientProcess', () => ({
+  listSteamClientPids: jest.fn(),
+  // quick 261029-pkp: start-time identity probe (bare jest.fn = undefined =
+  // "unknown": no record is persisted, so pre-existing tests are unaffected).
+  readSteamProcessStartTokens: jest.fn()
+}))
+
+/** Bottle steamapps root used consistently across the bottle-path tests below. */
+const BOTTLE_STEAMAPPS_ROOT = join(
+  '/Users/tester/Library/Application Support/CrossOver/Bottles',
+  'GameLibSteam',
+  'drive_c/Program Files (x86)/Steam/steamapps'
+)
+
+/**
+ * GAP-17-PFX86-PATH regression fixture: the same bottle steamapps root but
+ * under a win32-prefix layout (no "(x86)" segment — 32-bit Steam installs
+ * directly under `Program Files`). getBottleSteamappsDir is mocked in this
+ * file, so this fixture proves the bottle-source ACF scan resolves manifests
+ * identically regardless of which root the (real, unmocked) resolver in
+ * bottle.ts returns.
+ */
+const WIN32_BOTTLE_STEAMAPPS_ROOT = join(
+  '/Users/tester/Library/Application Support/CrossOver/Bottles',
+  'GameLibSteam',
+  'drive_c/Program Files/Steam/steamapps'
+)
+
+/**
+ * Bridge bottle steamapps root used across the 'bridge' source tests
+ * (D-UAT-24-05). Distinct bottle name (GameLibSteamBridge) from the Phase 17
+ * bottle (GameLibSteam) — proves the two bottle roots are never conflated.
+ */
+const BRIDGE_BOTTLE_STEAMAPPS_ROOT = join(
+  '/Users/tester/Library/Application Support/CrossOver/Bottles',
+  'GameLibSteamBridge',
+  'drive_c/Program Files (x86)/Steam/steamapps'
+)
+
+// ── Shared fixtures ───────────────────────────────────────────────────────────
+
+// 23.2-04: this project's jest config sets `resetMocks: true`, which strips
+// jest.fn() implementations (not just call history) before EVERY test — so
+// the i18nextT mock's fallback-returning implementation (set once at
+// jest.mock() factory time, above) must be re-established file-wide, or any
+// test anywhere in this file that asserts on a notify() body derived from
+// i18nextT would see `undefined` instead of the fallback string. A plain
+// (non-jest.fn) function is immune to resetMocks, which is why this was not
+// needed before this key was added to observe the call args.
+beforeEach(() => {
+  ;(i18nextT as jest.Mock).mockImplementation(
+    (_key: string, fallback = '') => fallback
+  )
+  // quick/261016-u1w (D-C): default to "no ready bridge bottle" so every
+  // describe block that doesn't care about the bridge path (and therefore
+  // never arms this mock) gets the same falsy short-circuit the old
+  // isBridgeBottleReady()-returns-undefined default gave it, rather than a
+  // TypeError from calling .length on an un-mocked return value.
+  jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
+  jest.mocked(backfillBridgeLaunchTargets).mockResolvedValue(0)
+})
+
+// ── D-07: readAcfState() ─────────────────────────────────────────────────────
+
+describe('readAcfState()', () => {
+  beforeEach(() => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+  })
+
+  it('returns state:"installed" with installPath/sizeOnDisk when StateFlags bit 4 is set', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+    const result = await readAcfState('730')
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join('/steam', 'steamapps', 'common', 'csgo')
+    )
+    expect(result.sizeOnDisk).toBe('9000')
+  })
+
+  it('returns state:"downloading" when manifest exists but StateFlags bit 4 is unset', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    const result = await readAcfState('730')
+    expect(result.state).toBe('downloading')
+    expect(result.installPath).toBeUndefined()
+  })
+
+  // ── GAP-17-BOTTLE-PROGRESS: readAcfState surfaces ACF byte counts ─────────
+  it('a downloading ACF with BytesDownloaded/BytesToDownload returns those numbers on the result', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0',
+        BytesDownloaded: '5',
+        BytesToDownload: '10',
+        BytesStaged: '3',
+        BytesToStage: '6'
+      }
+    })
+    const result = await readAcfState('730')
+    expect(result.state).toBe('downloading')
+    expect(result.bytesDownloaded).toBe(5)
+    expect(result.bytesToDownload).toBe(10)
+    expect(result.bytesStaged).toBe(3)
+    expect(result.bytesToStage).toBe(6)
+  })
+
+  it('defaults missing/non-numeric ACF byte fields to 0', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    const result = await readAcfState('730')
+    expect(result.bytesDownloaded).toBe(0)
+    expect(result.bytesToDownload).toBe(0)
+    expect(result.bytesStaged).toBe(0)
+    expect(result.bytesToStage).toBe(0)
+  })
+
+  it('returns state:"absent" when no manifest file is found for the appId', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    const result = await readAcfState('730')
+    expect(result.state).toBe('absent')
+  })
+
+  it('skips a corrupt ACF and returns state:"absent" (T-2-01)', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockImplementation(() => {
+      throw new Error('corrupt file')
+    })
+    const result = await readAcfState('730')
+    expect(result.state).toBe('absent')
+  })
+})
+
+// ── D-05/D-15: regression-guard the "poller unchanged" claim ──────────────────
+// Locks in RESEARCH Pattern 4/Pitfall 4's "already works unmodified" finding —
+// readAcfState/pollInstallOnce/startInstallPolling are NEVER touched by this
+// plan; these tests feed a GameLib-shaped manifest (exactly writeAppManifest's
+// field set — depot/manifest.ts) through the UNCHANGED read side and lock the
+// round-trip so a future change can't silently break D-05/D-15 reuse.
+
+describe('readAcfState() — D-05/D-15 regression: GameLib-written manifest round-trip', () => {
+  beforeEach(() => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+  })
+
+  it('a GameLib-written 1026 manifest (writeAppManifest field set) reads as state:"downloading"', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        Universe: '1',
+        StateFlags: '1026',
+        installdir: 'csgo',
+        name: 'CS:GO',
+        LastUpdated: '1700000000',
+        SizeOnDisk: '123',
+        buildid: '0',
+        LastOwner: '76561197960287930',
+        BytesToDownload: '0',
+        BytesDownloaded: '0',
+        AutoUpdateBehavior: '0',
+        InstalledDepots: {},
+        UserConfig: {},
+        MountedDepots: {}
+      }
+    })
+    const result = await readAcfState('730')
+    expect(result.state).toBe('downloading')
+  })
+
+  it('the SAME manifest with Steam-flipped StateFlags "4" reads as state:"installed"', async () => {
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        Universe: '1',
+        StateFlags: '4',
+        installdir: 'csgo',
+        name: 'CS:GO',
+        LastUpdated: '1700000000',
+        SizeOnDisk: '123',
+        buildid: '0',
+        LastOwner: '76561197960287930',
+        BytesToDownload: '0',
+        BytesDownloaded: '0',
+        AutoUpdateBehavior: '0',
+        InstalledDepots: {},
+        UserConfig: {},
+        MountedDepots: {}
+      }
+    })
+    const result = await readAcfState('730')
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join('/steam', 'steamapps', 'common', 'csgo')
+    )
+  })
+})
+
+// ── 17-03: readAcfState('bottle') — bottle-scoped ACF scan, never conflated ───
+
+describe('readAcfState(appId, "bottle") — bottle-scoped ACF root', () => {
+  beforeEach(() => {
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    jest.mocked(getBottleSteamappsDir).mockReturnValue(BOTTLE_STEAMAPPS_ROOT)
+  })
+
+  it('reads a manifest placed under the mocked bottle steamapps root and returns state:"installed" (bit 4 set)', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730', 'bottle')
+
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join(BOTTLE_STEAMAPPS_ROOT, 'common', 'csgo')
+    )
+    // Bottle scan must never consult getSteamLibraries() (the native root)
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  it('returns state:"absent" when the bottle root has no manifest, even though the native root is separately mocked as installed (proves no conflation)', async () => {
+    // Simulate a native library ALSO configured with an installed manifest for
+    // the same appId — if the bottle scan ever fell back to or merged with the
+    // native root, this would incorrectly report 'installed'.
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockImplementation(
+      (path: string) =>
+        path === '/steam' || path === join('/steam', 'steamapps')
+    )
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730', 'bottle')
+
+    expect(result.state).toBe('absent')
+    // The bottle scan must never even consult the native library-path resolver
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  // ── GAP-17-PFX86-PATH: win32-layout bottle (no "(x86)" root) ──────────────
+  it('resolves an installed manifest identically under a win32-layout bottle steamapps root (Program Files, no x86)', async () => {
+    jest
+      .mocked(getBottleSteamappsDir)
+      .mockReturnValue(WIN32_BOTTLE_STEAMAPPS_ROOT)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730', 'bottle')
+
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join(WIN32_BOTTLE_STEAMAPPS_ROOT, 'common', 'csgo')
+    )
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  it('existing native readAcfState(appId) behavior is unchanged when no source arg is passed (same fixture, same result)', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730')
+
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join('/steam', 'steamapps', 'common', 'csgo')
+    )
+    // Native scan must never consult the bottle path resolver
+    expect(getBottleSteamappsDir).not.toHaveBeenCalled()
+  })
+})
+
+// ── D-UAT-24-05 (24-12): readAcfState('bridge') — bridge-bottle-scoped ACF
+// root, distinct from both 'native' and the Phase 17 'bottle' root ─────────
+
+describe('readAcfState(appId, "bridge") — bridge-bottle-scoped ACF root', () => {
+  beforeEach(() => {
+    jest
+      .mocked(getBridgeBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
+    // Distinguish by bottle name so a test can mock BOTH getSteamBottleSettings
+    // (Phase 17 'bottle') and getBridgeBottleSettings ('bridge') at once
+    // without one root's mocked value clobbering the other's.
+    jest
+      .mocked(getBottleSteamappsDir)
+      .mockImplementation((bottleName: string) =>
+        bottleName === 'GameLibSteamBridge'
+          ? BRIDGE_BOTTLE_STEAMAPPS_ROOT
+          : BOTTLE_STEAMAPPS_ROOT
+      )
+  })
+
+  it('reads a StateFlags=4 manifest placed under the mocked bridge bottle steamapps root and returns state:"installed"', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '206040',
+        StateFlags: '4',
+        installdir: 'Avernum 5',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('206040', 'bridge')
+
+    expect(result.state).toBe('installed')
+    expect(result.installPath).toBe(
+      join(BRIDGE_BOTTLE_STEAMAPPS_ROOT, 'common', 'Avernum 5')
+    )
+    // Bridge scan must never consult the native library-path resolver
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+    // quick/261016-u1w (D-B threading): the bridge root resolver now threads
+    // the appId through to getBridgeBottleSettings, so a per-game bridge
+    // bottle can be resolved instead of always the shared legacy name.
+    expect(getBridgeBottleSettings).toHaveBeenCalledWith('206040')
+  })
+
+  it('returns state:"absent" when the bridge bottle steamapps dir does not exist (no throw)', async () => {
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+
+    const result = await readAcfState('206040', 'bridge')
+
+    expect(result.state).toBe('absent')
+  })
+
+  it('returns state:"absent" for an ACF present only in the native root — proves no conflation with "native"', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockImplementation(
+      (path: string) =>
+        path === '/steam' || path === join('/steam', 'steamapps')
+    )
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    const result = await readAcfState('730', 'bridge')
+
+    expect(result.state).toBe('absent')
+    expect(getSteamLibraries).not.toHaveBeenCalled()
+  })
+
+  it('returns state:"absent" for an ACF present only in the bridge root when read under "native" or "bottle" — proves no reverse conflation', async () => {
+    // Bridge root has the manifest, but the native/bottle scans must not see it.
+    ;(existsSync as jest.Mock).mockImplementation(
+      (path: string) => path === BRIDGE_BOTTLE_STEAMAPPS_ROOT
+    )
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '206040',
+        StateFlags: '4',
+        installdir: 'Avernum 5',
+        SizeOnDisk: '9000'
+      }
+    })
+
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    const nativeResult = await readAcfState('206040', 'native')
+    expect(nativeResult.state).toBe('absent')
+
+    jest
+      .mocked(getSteamBottleSettings)
+      .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as any)
+    const bottleResult = await readAcfState('206040', 'bottle')
+    expect(bottleResult.state).toBe('absent')
+  })
+})
+
+// ── 34.13 review A-13: findOtherManifestsWithInstalldir() ────────────────────
+//
+// uninstallBottleGameDirectly's JSDoc used to call over-deleting
+// "structurally impossible rather than runtime-checked". True for the
+// SharedDepots shape its real-filesystem test proves; false for the shape the
+// argument assumed away — two installed appIds declaring the SAME installdir.
+// This is the runtime check that makes the (now narrowed) claim true.
+
+describe('findOtherManifestsWithInstalldir() (34.13 review A-13)', () => {
+  const STEAMAPPS = '/bottle/steamapps'
+
+  it('returns [] when the steamapps dir does not exist', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    expect(
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).toEqual([])
+  })
+
+  it('finds another appId declaring the SAME installdir', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([
+      'appmanifest_63000.acf',
+      'appmanifest_228980.acf'
+    ])
+    ;(readFileSync as jest.Mock).mockImplementation((path: string) =>
+      String(path).includes('228980') ? 'other' : 'self'
+    )
+    ;(vdf.parse as jest.Mock).mockImplementation((content: string) =>
+      content === 'other'
+        ? { AppState: { appid: '228980', installdir: 'Hoard' } }
+        : { AppState: { appid: '63000', installdir: 'Hoard' } }
+    )
+
+    expect(
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).toEqual(['228980'])
+  })
+
+  it('DISCRIMINATOR: a SIBLING installdir (the SharedDepots shape) is not a conflict', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([
+      'appmanifest_63000.acf',
+      'appmanifest_228980.acf'
+    ])
+    ;(readFileSync as jest.Mock).mockReturnValue('x')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '228980',
+        installdir: 'Steamworks Common Redistributables'
+      }
+    })
+
+    expect(
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).toEqual([])
+  })
+
+  it('never reports THIS appId as its own conflict', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_63000.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('x')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '63000', installdir: 'Hoard' }
+    })
+
+    expect(
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).toEqual([])
+  })
+
+  it('skips a corrupt ACF without throwing (T-2-01/T-17-05)', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_228980.acf'])
+    ;(readFileSync as jest.Mock).mockImplementation(() => {
+      throw new Error('corrupt file')
+    })
+
+    expect(() =>
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).not.toThrow()
+    expect(
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).toEqual([])
+  })
+
+  it('ignores non-manifest files in the directory', () => {
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([
+      'common',
+      'downloading',
+      'libraryfolders.vdf'
+    ])
+    ;(readFileSync as jest.Mock).mockReturnValue('x')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: { appid: '228980', installdir: 'Hoard' }
+    })
+
+    expect(
+      findOtherManifestsWithInstalldir(STEAMAPPS, 'Hoard', '63000')
+    ).toEqual([])
+    expect(readFileSync).not.toHaveBeenCalled()
+  })
+})
+
+// ── D-07: scanDownloadingAppIds() ────────────────────────────────────────────
+
+describe('scanDownloadingAppIds()', () => {
+  beforeEach(() => {
+    library.clear()
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(readdirSync as jest.Mock).mockReturnValue([])
+  })
+
+  it('returns appIds whose manifest has bit 4 unset AND the appId is in the library', async () => {
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    const result = await scanDownloadingAppIds()
+    expect(result).toContain('730')
+  })
+
+  it('does NOT return appIds whose manifest has bit 4 set (fully installed)', async () => {
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: true,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    const result = await scanDownloadingAppIds()
+    expect(result).not.toContain('730')
+  })
+
+  it('does NOT return appIds not present in the in-memory library Map', async () => {
+    // library is empty — no '730' entry
+    ;(readdirSync as jest.Mock).mockReturnValue(['appmanifest_730.acf'])
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '2',
+        installdir: 'csgo',
+        SizeOnDisk: '0'
+      }
+    })
+    const result = await scanDownloadingAppIds()
+    expect(result).not.toContain('730')
+  })
+})

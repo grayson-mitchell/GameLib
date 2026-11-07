@@ -28,6 +28,7 @@ import { join } from 'path'
 import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
 import * as libraryModule from '../library'
+import * as acfState from '../library/acfState'
 import type { AcfSource } from '../library/installRoot'
 import { library } from '../state'
 import { steamMetadataStore } from '../stores'
@@ -538,7 +539,7 @@ describe('enumerateSteamInstallCopies', () => {
       name === 'B' ? '/bottle/steamapps' : '/bridge/steamapps'
     )
 
-    const copies = await libraryModule.enumerateSteamInstallCopies('63000')
+    const copies = await acfState.enumerateSteamInstallCopies('63000')
 
     expect(copies).toEqual([
       {
@@ -556,7 +557,7 @@ describe('enumerateSteamInstallCopies', () => {
       installdir: 'HOARD'
     })
 
-    const copies = await libraryModule.enumerateSteamInstallCopies('63000')
+    const copies = await acfState.enumerateSteamInstallCopies('63000')
 
     expect(copies).toEqual([])
   })
@@ -596,7 +597,7 @@ describe('enumerateSteamInstallCopies', () => {
       'backend/logger'
     )
 
-    const copies = await libraryModule.enumerateSteamInstallCopies('63000')
+    const copies = await acfState.enumerateSteamInstallCopies('63000')
 
     expect(order).toEqual(['native', 'bottle', 'bridge'])
     // native: absent (no manifest fixture added); bottle: threw, skipped;
@@ -611,10 +612,7 @@ describe('enumerateSteamInstallCopies', () => {
 // ── Task 1: removeSteamInstallCopy ───────────────────────────────────────────
 describe('removeSteamInstallCopy', () => {
   it('non-numeric appId -> refused, nothing deleted', async () => {
-    const result = await libraryModule.removeSteamInstallCopy(
-      '../evil',
-      'native'
-    )
+    const result = await acfState.removeSteamInstallCopy('../evil', 'native')
 
     expect(result).toEqual({
       status: 'refused',
@@ -625,7 +623,7 @@ describe('removeSteamInstallCopy', () => {
   })
 
   it("state 'absent' -> absent, nothing deleted", async () => {
-    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toEqual({ status: 'absent', source: 'native' })
     expect(rmSync).not.toHaveBeenCalled()
@@ -638,7 +636,7 @@ describe('removeSteamInstallCopy', () => {
       installdir: 'HOARD'
     })
 
-    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toEqual({
       status: 'refused',
@@ -655,7 +653,7 @@ describe('removeSteamInstallCopy', () => {
       installdir: '../../etc/evil'
     })
 
-    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toEqual({
       status: 'refused',
@@ -672,7 +670,7 @@ describe('removeSteamInstallCopy', () => {
       installdir: ''
     })
 
-    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toEqual({
       status: 'refused',
@@ -690,7 +688,7 @@ describe('removeSteamInstallCopy', () => {
       SizeOnDisk: '999'
     })
 
-    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toEqual({
       status: 'removed',
@@ -719,7 +717,7 @@ describe('removeSteamInstallCopy', () => {
       installdir: 'SharedGame'
     })
 
-    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toEqual({
       status: 'removed',
@@ -751,7 +749,7 @@ describe('removeSteamInstallCopy — delete-in-GameLib containment (quick 261106
       lib2Steamapps
     )
 
-    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toEqual({
       status: 'removed',
@@ -782,7 +780,7 @@ describe('removeSteamInstallCopy — delete-in-GameLib containment (quick 261106
       installdir: '../../..'
     })
 
-    const result = await libraryModule.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy('63000', 'native')
 
     expect(result).toMatchObject({ status: 'refused' })
     expect(rmSync).not.toHaveBeenCalled()
@@ -795,7 +793,7 @@ describe('removeSteamInstallCopy — delete-in-GameLib containment (quick 261106
       installdir: '/etc'
     })
 
-    await libraryModule.removeSteamInstallCopy('63000', 'native')
+    await acfState.removeSteamInstallCopy('63000', 'native')
 
     expect(rmSync).not.toHaveBeenCalledWith('/etc', expect.anything())
     for (const [target] of (rmSync as jest.Mock).mock.calls) {
@@ -823,7 +821,7 @@ describe('removeSteamInstallCopy — delete-in-GameLib containment (quick 261106
       )
       ;(rmSync as jest.Mock).mockImplementation(real.rmSync)
 
-      await libraryModule.removeSteamInstallCopy('63000', 'native')
+      await acfState.removeSteamInstallCopy('63000', 'native')
 
       expect(real.existsSync(join(outside, 'precious.txt'))).toBe(true)
       expect(real.existsSync(link)).toBe(false)
@@ -879,7 +877,7 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       BRIDGE_STEAMAPPS
     )
 
-    const result = await libraryModule.removeSteamInstallCopy(APP_ID, 'bridge')
+    const result = await acfState.removeSteamInstallCopy(APP_ID, 'bridge')
 
     expect(result).toEqual({
       status: 'removed',
@@ -900,7 +898,7 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       BRIDGE_STEAMAPPS
     )
 
-    const result = await libraryModule.removeSteamInstallCopy(APP_ID, 'bridge')
+    const result = await acfState.removeSteamInstallCopy(APP_ID, 'bridge')
 
     expect(result).toEqual({
       status: 'removed',
@@ -933,7 +931,7 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       BRIDGE_STEAMAPPS
     )
 
-    const result = await libraryModule.removeSteamInstallCopy(APP_ID, 'bridge')
+    const result = await acfState.removeSteamInstallCopy(APP_ID, 'bridge')
 
     expect(result).toEqual({
       status: 'removed',
@@ -959,7 +957,7 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       'backend/logger'
     )
 
-    const result = await libraryModule.removeSteamInstallCopy(APP_ID, 'bridge')
+    const result = await acfState.removeSteamInstallCopy(APP_ID, 'bridge')
 
     expect(result).toEqual({
       status: 'removed',
@@ -982,7 +980,7 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       installdir: 'HOARD'
     })
 
-    const result = await libraryModule.removeSteamInstallCopy(APP_ID, 'native')
+    const result = await acfState.removeSteamInstallCopy(APP_ID, 'native')
 
     expect(result).toEqual({
       status: 'removed',
@@ -1002,7 +1000,7 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       BOTTLE_STEAMAPPS
     )
 
-    const result = await libraryModule.removeSteamInstallCopy(APP_ID, 'bottle')
+    const result = await acfState.removeSteamInstallCopy(APP_ID, 'bottle')
 
     expect(result).toEqual({
       status: 'removed',
@@ -1068,7 +1066,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
       StateFlags: INSTALLED_FLAGS,
       installdir: 'HOARD'
     })
-    const removeSpy = jest.spyOn(libraryModule, 'removeSteamInstallCopy')
+    const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
     const result = await new SteamGame(APP_ID).install({} as any)
 
@@ -1092,7 +1090,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
       StateFlags: INSTALLED_FLAGS,
       installdir: 'HOARD'
     })
-    const removeSpy = jest.spyOn(libraryModule, 'removeSteamInstallCopy')
+    const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
     // Flip the mutable environment double for this one test only.
     jest.requireMock<{ isAppleSiliconMac: boolean }>(
@@ -1124,7 +1122,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
       StateFlags: INSTALLED_FLAGS,
       installdir: 'HOARD'
     })
-    const removeSpy = jest.spyOn(libraryModule, 'removeSteamInstallCopy')
+    const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
     await new SteamGame(APP_ID).install({} as any)
 
@@ -1134,7 +1132,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
 
   it('no native copy on disk -> no call, no error', async () => {
     // No addManifest() call -> readAcfState('native') resolves 'absent'.
-    const removeSpy = jest.spyOn(libraryModule, 'removeSteamInstallCopy')
+    const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
     const result = await new SteamGame(APP_ID).install({} as any)
 
@@ -1150,7 +1148,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
       installdir: 'HOARD'
     })
     const removeSpy = jest
-      .spyOn(libraryModule, 'removeSteamInstallCopy')
+      .spyOn(acfState, 'removeSteamInstallCopy')
       .mockRejectedValue(new Error('disk error'))
     const { logWarning } = jest.requireMock<{ logWarning: jest.Mock }>(
       'backend/logger'
@@ -1190,7 +1188,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
 describe('removeAllSteamInstallCopies (Task 3)', () => {
   const APP_ID = '63000'
 
-  function mockCopy(source: AcfSource): libraryModule.SteamInstallCopy {
+  function mockCopy(source: AcfSource): acfState.SteamInstallCopy {
     return {
       source,
       installPath: `/${source}/steamapps/common/HOARD`,
@@ -1199,11 +1197,8 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
   }
 
   it('non-numeric-string appName -> {removed:0, refused:0, error} without enumerating or removing anything', async () => {
-    const enumerateSpy = jest.spyOn(
-      libraryModule,
-      'enumerateSteamInstallCopies'
-    )
-    const removeSpy = jest.spyOn(libraryModule, 'removeSteamInstallCopy')
+    const enumerateSpy = jest.spyOn(acfState, 'enumerateSteamInstallCopies')
+    const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
     const result = await removeAllSteamInstallCopies('../evil')
 
@@ -1231,14 +1226,14 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
 
   it('three installed roots -> removeSteamInstallCopy called once per root in enumerate order, {removed:3, refused:0}', async () => {
     const enumerateSpy = jest
-      .spyOn(libraryModule, 'enumerateSteamInstallCopies')
+      .spyOn(acfState, 'enumerateSteamInstallCopies')
       .mockResolvedValue([
         mockCopy('native'),
         mockCopy('bottle'),
         mockCopy('bridge')
       ])
     const removeSpy = jest
-      .spyOn(libraryModule, 'removeSteamInstallCopy')
+      .spyOn(acfState, 'removeSteamInstallCopy')
       .mockImplementation((appId, source) =>
         Promise.resolve({
           status: 'removed',
@@ -1265,14 +1260,14 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
 
   it('one root refuses (mid-download) + two remove -> {removed:2, refused:1}, the refusal does not abort the sweep', async () => {
     const enumerateSpy = jest
-      .spyOn(libraryModule, 'enumerateSteamInstallCopies')
+      .spyOn(acfState, 'enumerateSteamInstallCopies')
       .mockResolvedValue([
         mockCopy('native'),
         mockCopy('bottle'),
         mockCopy('bridge')
       ])
     const removeSpy = jest
-      .spyOn(libraryModule, 'removeSteamInstallCopy')
+      .spyOn(acfState, 'removeSteamInstallCopy')
       .mockImplementation((appId, source) => {
         if (source === 'bottle') {
           return Promise.resolve({
@@ -1303,10 +1298,10 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
 
   it('a root throwing mid-sweep is tallied as refused and does not abort the remaining roots (T-LE0-06)', async () => {
     const enumerateSpy = jest
-      .spyOn(libraryModule, 'enumerateSteamInstallCopies')
+      .spyOn(acfState, 'enumerateSteamInstallCopies')
       .mockResolvedValue([mockCopy('native'), mockCopy('bridge')])
     const removeSpy = jest
-      .spyOn(libraryModule, 'removeSteamInstallCopy')
+      .spyOn(acfState, 'removeSteamInstallCopy')
       .mockImplementation((appId, source) => {
         if (source === 'native') return Promise.reject(new Error('disk error'))
         return Promise.resolve({
@@ -1334,9 +1329,9 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
 
   it('zero copies -> {removed:0, refused:0}, no throw, removeSteamInstallCopy never called', async () => {
     const enumerateSpy = jest
-      .spyOn(libraryModule, 'enumerateSteamInstallCopies')
+      .spyOn(acfState, 'enumerateSteamInstallCopies')
       .mockResolvedValue([])
-    const removeSpy = jest.spyOn(libraryModule, 'removeSteamInstallCopy')
+    const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
     const pollSpy = jest
       .spyOn(libraryModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
@@ -1353,10 +1348,10 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
 
   it("finishes with exactly one pollUninstallOnce(appId, 'native') call AFTER the sweep, never per-root", async () => {
     const enumerateSpy = jest
-      .spyOn(libraryModule, 'enumerateSteamInstallCopies')
+      .spyOn(acfState, 'enumerateSteamInstallCopies')
       .mockResolvedValue([mockCopy('native'), mockCopy('bottle')])
     const removeSpy = jest
-      .spyOn(libraryModule, 'removeSteamInstallCopy')
+      .spyOn(acfState, 'removeSteamInstallCopy')
       .mockImplementation((appId, source) =>
         Promise.resolve({
           status: 'removed',
@@ -1380,7 +1375,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
 
   it('enumerateSteamInstallCopies itself throwing -> swallowed, {removed:0, refused:0, error}, pollUninstallOnce never reached', async () => {
     const enumerateSpy = jest
-      .spyOn(libraryModule, 'enumerateSteamInstallCopies')
+      .spyOn(acfState, 'enumerateSteamInstallCopies')
       .mockRejectedValue(new Error('fs error'))
     const pollSpy = jest
       .spyOn(libraryModule, 'pollUninstallOnce')

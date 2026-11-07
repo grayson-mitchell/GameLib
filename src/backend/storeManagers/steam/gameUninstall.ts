@@ -14,13 +14,12 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
 import { library } from './state'
+import { startUninstallPolling, pollUninstallOnce } from './library'
 import {
-  startUninstallPolling,
   readAcfState,
-  pollUninstallOnce,
   findOtherManifestsWithInstalldir,
   removeSteamInstallCopy
-} from './library'
+} from './library/acfState'
 import { nextSteamRequestNoticeSeq } from './library/pollState'
 import { resolveInstallRoot } from './library/installRoot'
 import {

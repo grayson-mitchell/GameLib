@@ -33,10 +33,9 @@ import {
   markSteamInstallIncomplete,
   markSteamNativeInstallStarted,
   clearSteamResumeBreadcrumb,
-  readAcfState,
-  pollUninstallOnce,
-  removeSteamInstallCopy
+  pollUninstallOnce
 } from './library'
+import { readAcfState, removeSteamInstallCopy } from './library/acfState'
 import * as pollState from './library/pollState'
 import {
   probeMacSteamPid,

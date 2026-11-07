@@ -30,10 +30,8 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getSteamLibraries, sendProgressUpdate } from 'backend/utils'
 import { library } from './state'
 import { isNativeInstallInFlight } from './gameSessionState'
-import {
-  clearSteamResumeBreadcrumb,
-  findOtherManifestsWithInstalldir
-} from './library'
+import { clearSteamResumeBreadcrumb } from './library'
+import { findOtherManifestsWithInstalldir } from './library/acfState'
 import { getBridgeBottleSteamappsRoot } from './library/installRoot'
 import { getBottleSteamappsDir, getSteamBottleSettings } from './bottle'
 import { sanitizeInstalldir } from './installLocation'

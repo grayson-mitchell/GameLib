@@ -10,10 +10,8 @@ import { join } from 'node:path'
 import { getSteamLibraries, sendProgressUpdate } from 'backend/utils'
 import { library } from '../state'
 import { isNativeInstallInFlight } from '../gameSessionState'
-import {
-  clearSteamResumeBreadcrumb,
-  findOtherManifestsWithInstalldir
-} from '../library'
+import { clearSteamResumeBreadcrumb } from '../library'
+import { findOtherManifestsWithInstalldir } from '../library/acfState'
 import { getBridgeBottleSteamappsRoot } from '../library/installRoot'
 import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
 import { deleteCancelledSteamInstall } from '../cancelDelete'
@@ -33,7 +31,9 @@ jest.mock('../gameSessionState', () => ({
   isNativeInstallInFlight: jest.fn()
 }))
 jest.mock('../library', () => ({
-  clearSteamResumeBreadcrumb: jest.fn(),
+  clearSteamResumeBreadcrumb: jest.fn()
+}))
+jest.mock('../library/acfState', () => ({
   findOtherManifestsWithInstalldir: jest.fn()
 }))
 jest.mock('../library/installRoot', () => ({

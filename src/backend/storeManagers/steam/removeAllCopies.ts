@@ -11,11 +11,11 @@
  * import the SAME function and are physically incapable of drifting.
  */
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { pollUninstallOnce } from './library'
 import {
   enumerateSteamInstallCopies,
-  removeSteamInstallCopy,
-  pollUninstallOnce
-} from './library'
+  removeSteamInstallCopy
+} from './library/acfState'
 import { NUMERIC_APP_ID } from './gameConstants'
 
 // NUMERIC_APP_ID is the shared appId guard from gameConstants.ts (34.13

@@ -67,6 +67,7 @@ import {
 } from '../gameSessionState'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
+import * as acfState from '../library/acfState'
 import * as pollStateModule from '../library/pollState'
 // Phase 51 Plan 09 Task 3: namespace import so setBridgeUserRoute (real,
 // unmocked module — bridgeVerdict.ts is never jest.mock'd in this file) can
@@ -4868,7 +4869,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
 
       // Load-bearing precondition: an empty ACF scan is what makes this a
       // breadcrumb-only surfacing, not an ACF-derived one.
-      const scanResult = await libraryModule.scanDownloadingAppIds()
+      const scanResult = await acfState.scanDownloadingAppIds()
       expect(scanResult).toEqual([])
 
       await new SteamLibraryManager().init()
@@ -4992,7 +4993,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
       .spyOn(gamesModule, 'isNativeInstallInFlight')
       .mockReturnValue(false)
 
-    const scanResult = await libraryModule.scanDownloadingAppIds()
+    const scanResult = await acfState.scanDownloadingAppIds()
     expect(scanResult).toEqual([])
 
     await new SteamLibraryManager().init()
@@ -8804,7 +8805,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       })
     )
     const readAcfStateSpy = jest
-      .spyOn(libraryModule, 'readAcfState')
+      .spyOn(acfState, 'readAcfState')
       .mockResolvedValue({
         state: 'installed',
         installPath: '/mock/bottle/steamapps/common/Dota 2'
@@ -9821,15 +9822,13 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     startPollingSpy = jest
       .spyOn(libraryModule, 'startUninstallPolling')
       .mockImplementation(() => {})
-    readAcfStateSpy = jest
-      .spyOn(libraryModule, 'readAcfState')
-      .mockResolvedValue({
-        state: 'installed',
-        installPath: NATIVE_INSTALL_PATH,
-        stateFlags: 4
-      } as any)
+    readAcfStateSpy = jest.spyOn(acfState, 'readAcfState').mockResolvedValue({
+      state: 'installed',
+      installPath: NATIVE_INSTALL_PATH,
+      stateFlags: 4
+    } as any)
     removeCopySpy = jest
-      .spyOn(libraryModule, 'removeSteamInstallCopy')
+      .spyOn(acfState, 'removeSteamInstallCopy')
       .mockResolvedValue({
         status: 'removed',
         source: 'native',
@@ -10031,7 +10030,7 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
       .spyOn(libraryModule, 'startUninstallPolling')
       .mockImplementation(() => {})
     removeCopySpy = jest
-      .spyOn(libraryModule, 'removeSteamInstallCopy')
+      .spyOn(acfState, 'removeSteamInstallCopy')
       .mockResolvedValue({
         status: 'removed',
         source: 'native',
@@ -10340,7 +10339,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     startUninstallPollingSpy = jest
       .spyOn(libraryModule, 'startUninstallPolling')
       .mockImplementation(() => {})
-    readAcfStateSpy = jest.spyOn(libraryModule, 'readAcfState')
+    readAcfStateSpy = jest.spyOn(acfState, 'readAcfState')
     pollUninstallOnceSpy = jest
       .spyOn(libraryModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
@@ -10676,7 +10675,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
         installPath: hoardInstallDir
       })
       const conflictSpy = jest
-        .spyOn(libraryModule, 'findOtherManifestsWithInstalldir')
+        .spyOn(acfState, 'findOtherManifestsWithInstalldir')
         .mockReturnValue(['228980'])
 
       const result = await new SteamGame(APP_ID).uninstall({} as any)
@@ -10705,7 +10704,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
         installPath: hoardInstallDir
       })
       const conflictSpy = jest
-        .spyOn(libraryModule, 'findOtherManifestsWithInstalldir')
+        .spyOn(acfState, 'findOtherManifestsWithInstalldir')
         .mockReturnValue([])
 
       await new SteamGame(APP_ID).uninstall({} as any)
@@ -10726,7 +10725,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
         installPath: hoardInstallDir
       })
       const conflictSpy = jest
-        .spyOn(libraryModule, 'findOtherManifestsWithInstalldir')
+        .spyOn(acfState, 'findOtherManifestsWithInstalldir')
         .mockReturnValue([])
 
       await new SteamGame(APP_ID).uninstall({} as any)
@@ -10826,7 +10825,7 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
       })
     )
     ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIBRARY_ROOT])
-    const readAcfStateSpy = jest.spyOn(libraryModule, 'readAcfState')
+    const readAcfStateSpy = jest.spyOn(acfState, 'readAcfState')
 
     const game = new SteamGame(APP_ID)
     const result = await game.uninstall({} as any)
@@ -10860,7 +10859,7 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
       })
     )
     const readAcfStateSpy = jest
-      .spyOn(libraryModule, 'readAcfState')
+      .spyOn(acfState, 'readAcfState')
       .mockResolvedValue({
         state: 'installed',
         installPath: BOTTLE_INSTALL_PATH
@@ -10897,7 +10896,7 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
       })
     )
     const readAcfStateSpy = jest
-      .spyOn(libraryModule, 'readAcfState')
+      .spyOn(acfState, 'readAcfState')
       .mockResolvedValue({
         state: 'installed',
         installPath: BOTTLE_INSTALL_PATH
@@ -10943,7 +10942,7 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     // bottle-pointed install_path.
     ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIBRARY_ROOT])
     const readAcfStateSpy = jest
-      .spyOn(libraryModule, 'readAcfState')
+      .spyOn(acfState, 'readAcfState')
       .mockResolvedValue({
         state: 'installed',
         installPath: BOTTLE_INSTALL_PATH
@@ -10971,7 +10970,7 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     })
     // makeEntry()'s default install:{} has no install_path.
     library.set(APP_ID, makeEntry({ title: 'Dota 2', is_installed: true }))
-    const readAcfStateSpy = jest.spyOn(libraryModule, 'readAcfState')
+    const readAcfStateSpy = jest.spyOn(acfState, 'readAcfState')
 
     const game = new SteamGame(APP_ID)
     const result = await game.uninstall({} as any)
@@ -11001,7 +11000,7 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     // A real native library IS registered, but does not contain this path —
     // proves the containment check, not just an empty-libraries fallback.
     ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIBRARY_ROOT])
-    const readAcfStateSpy = jest.spyOn(libraryModule, 'readAcfState')
+    const readAcfStateSpy = jest.spyOn(acfState, 'readAcfState')
 
     const game = new SteamGame(APP_ID)
     const result = await game.uninstall({} as any)
@@ -11268,7 +11267,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
       })
     )
     const readAcfStateSpy = jest
-      .spyOn(libraryModule, 'readAcfState')
+      .spyOn(acfState, 'readAcfState')
       .mockResolvedValue({
         state: 'installed',
         installPath: '/mock/bottle/steamapps/common/Hoard'
