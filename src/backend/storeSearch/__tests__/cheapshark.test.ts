@@ -8,6 +8,7 @@
  */
 
 import axios from 'axios'
+import { defined } from 'backend/testUtils/indexed'
 import {
   buildRedirectUrl,
   mapSearchResults,
@@ -161,8 +162,8 @@ describe('mapGameDeals', () => {
       {}
     )
 
-    expect(deals[0].storeName).toBe('999')
-    expect(deals[0].runner).toBeUndefined()
+    expect(defined(deals[0], 'first deal').storeName).toBe('999')
+    expect(defined(deals[0], 'first deal').runner).toBeUndefined()
   })
 })
 
@@ -190,12 +191,15 @@ describe('searchGames', () => {
         params: { title: 'portal', limit: 60 }
       })
     )
-    const callArgs = mockedAxios.get.mock.calls[0][1] as {
+    const callArgs = defined(
+      mockedAxios.get.mock.calls[0],
+      'first axios call'
+    )[1] as {
       params: Record<string, unknown>
     }
     expect(callArgs.params).not.toHaveProperty('exact')
     expect(results).toHaveLength(1)
-    expect(results[0].currencyCode).toBe('USD')
+    expect(defined(results[0], 'first result').currencyCode).toBe('USD')
   })
 
   it('logs and re-throws on failure (does not swallow)', async () => {
@@ -253,8 +257,8 @@ describe('getStoreMap + getGameDeals (session-cached /stores)', () => {
     // A second, independent getStoreMap() call must reuse the memoized
     // map — no third axios call.
     const storeMap = await getStoreMap()
-    expect(storeMap['1'].storeName).toBe('Steam')
-    expect(storeMap['4'].isActive).toBe(false)
+    expect(defined(storeMap['1'], 'store 1').storeName).toBe('Steam')
+    expect(defined(storeMap['4'], 'store 4').isActive).toBe(false)
     expect(mockedAxios.get).toHaveBeenCalledTimes(2)
   })
 })

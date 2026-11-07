@@ -10,7 +10,6 @@
   "src/backend/steamgrid": 1,
   "src/backend/storeManagers/nile": 1,
   "src/backend/storeManagers/sideload": 2,
-  "src/backend/storeSearch": 6,
   "src/backend/tools": 120,
   "src/backend/wiki_game_info": 6,
   "src/common/knownFixOverlayCatalogue.ts": 1,
