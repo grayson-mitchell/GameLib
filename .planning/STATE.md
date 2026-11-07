@@ -5,7 +5,7 @@ milestone_name: Steam Bridge & Engine
 status: planning
 stopped_at: Phase 72 context gathered
 last_updated: "2026-11-07T21:23:01.588Z"
-last_activity: 2026-11-08 - Phase 65 complete (20/20, verification passed, smoke runs 1+2 passed)
+last_activity: 2026-11-08 - Completed quick task 261108-eps: pre-push gate green
 progress:
   total_phases: 13
   completed_phases: 5
@@ -523,6 +523,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261108-ekv | noUncheckedIndexedAccess adopted for backend/engine (45 sites: 2 in perGameBottle.ts via `bytes.entries()`, 43 tests via local `__tests__/defined.ts`; no `!`/casts); first re-reconciled baseline drift from phases 67/72 (meta 342, scanners 4, sidecar 165, testUtils 15) in d04cc89f4. Todo remaining 1682. | 2026-11-08 | 7023bdcd5 | ratchet exit 0; codecheck; engine + ratchet jest pass (549); boundaries; planning-gates; scoped prettier; find-deadcode red only on pre-existing phase-65 exports | [261108-ekv-adopt-nouncheckedindexedaccess-for-backe](./quick/261108-ekv-adopt-nouncheckedindexedaccess-for-backe/) |
 | 261108-e35 | Settings left panel: GameLib Version pinned to the panel bottom (tier-2 column made a flex column so the slot's existing margin-top:auto works) with tier-2 row inline padding (~12px) instead of 0px. | 2026-11-08 | 7cbdedc6b | Jest pass (NavShell, 686 tests); scoped prettier; live check pending | [261108-e35-settings-version-to-panel-bottom](./quick/261108-e35-settings-version-to-panel-bottom/) |
 | fast | Cleared the 2 no-unused-vars lint errors from 67-16 that blocked pre-push (unused `Runner` import; type-only `steamLibraryTarget` zod object → interface). | 2026-11-08 | d75cc6f54 | codecheck + eslint + prettier pass; 5 failing jest suites pre-exist on baseline | — |
+| 261108-eps | Pre-push gate green again: 31 new knip findings resolved at source (deleted, export dropped, re-export removed, or `@public` with reason) and 10 stale baseline lines removed; no gate widened, no ipc_handler touched. | 2026-11-08 | 9509a10c9 | line-2 chain exit 0; 5 pre-existing jest failures recorded, not fixed | [261108-eps-make-the-pre-push-gate-pass-so-main-can-](./quick/261108-eps-make-the-pre-push-gate-pass-so-main-can-/) |
 
 ## Deferred Items
 
