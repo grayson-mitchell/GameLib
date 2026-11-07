@@ -603,8 +603,15 @@ pub(crate) struct StoreEmbedOpenArgs {
 
 impl StoreEmbedOpenArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let first = args.first().ok_or_else(|| "store_embed_open:bad-args".to_string())?;
-        serde_json::from_value(first.clone()).map_err(|_| "store_embed_open:bad-args".to_string())
+        let obj = args.first().and_then(Value::as_object).ok_or_else(|| "store_embed_open:bad-args".to_string())?;
+        let url: String = serde_json::from_value(obj.get("url").cloned().unwrap_or(Value::Null)).map_err(|_| "store_embed_open:bad-args:url".to_string())?;
+        let x: f64 = serde_json::from_value(obj.get("x").cloned().unwrap_or(Value::Null)).map_err(|_| "store_embed_open:bad-args:x".to_string())?;
+        let y: f64 = serde_json::from_value(obj.get("y").cloned().unwrap_or(Value::Null)).map_err(|_| "store_embed_open:bad-args:y".to_string())?;
+        let w: f64 = serde_json::from_value(obj.get("w").cloned().unwrap_or(Value::Null)).map_err(|_| "store_embed_open:bad-args:w".to_string())?;
+        let h: f64 = serde_json::from_value(obj.get("h").cloned().unwrap_or(Value::Null)).map_err(|_| "store_embed_open:bad-args:h".to_string())?;
+        let store_key: String = serde_json::from_value(obj.get("storeKey").cloned().unwrap_or(Value::Null)).map_err(|_| "store_embed_open:bad-args:storeKey".to_string())?;
+        let home_url: Option<String> = serde_json::from_value(obj.get("homeUrl").cloned().unwrap_or(Value::Null)).map_err(|_| "store_embed_open:bad-args:homeUrl".to_string())?;
+        Ok(Self { url, x, y, w, h, store_key, home_url })
     }
 }
 
@@ -618,8 +625,12 @@ pub(crate) struct StoreEmbedSetBoundsArgs {
 
 impl StoreEmbedSetBoundsArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let first = args.first().ok_or_else(|| "store_embed_set_bounds:bad-args".to_string())?;
-        serde_json::from_value(first.clone()).map_err(|_| "store_embed_set_bounds:bad-args".to_string())
+        let obj = args.first().and_then(Value::as_object).ok_or_else(|| "store_embed_set_bounds:bad-args".to_string())?;
+        let x: f64 = serde_json::from_value(obj.get("x").cloned().unwrap_or(Value::Null)).map_err(|_| "store_embed_set_bounds:bad-args:x".to_string())?;
+        let y: f64 = serde_json::from_value(obj.get("y").cloned().unwrap_or(Value::Null)).map_err(|_| "store_embed_set_bounds:bad-args:y".to_string())?;
+        let w: f64 = serde_json::from_value(obj.get("w").cloned().unwrap_or(Value::Null)).map_err(|_| "store_embed_set_bounds:bad-args:w".to_string())?;
+        let h: f64 = serde_json::from_value(obj.get("h").cloned().unwrap_or(Value::Null)).map_err(|_| "store_embed_set_bounds:bad-args:h".to_string())?;
+        Ok(Self { x, y, w, h })
     }
 }
 
@@ -693,8 +704,9 @@ pub(crate) struct StoreEmbedNavigateArgs {
 
 impl StoreEmbedNavigateArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
-        let first = args.first().ok_or_else(|| "store_embed_navigate:bad-args".to_string())?;
-        serde_json::from_value(first.clone()).map_err(|_| "store_embed_navigate:bad-args".to_string())
+        let obj = args.first().and_then(Value::as_object).ok_or_else(|| "store_embed_navigate:bad-args".to_string())?;
+        let url: String = serde_json::from_value(obj.get("url").cloned().unwrap_or(Value::Null)).map_err(|_| "store_embed_navigate:bad-args:url".to_string())?;
+        Ok(Self { url })
     }
 }
 

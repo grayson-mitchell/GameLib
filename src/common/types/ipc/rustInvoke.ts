@@ -170,15 +170,19 @@ export const rustInvokeArgs = {
     z.string().meta({ title: 'user_agent' })
   ]),
   // ---- Store embed
-  [RUST_STORE_EMBED_OPEN]: z.tuple([
-    z.object({
-      url: z.string(),
-      ...bounds,
-      storeKey: z.string(),
-      homeUrl: z.string().nullish()
-    })
-  ]),
-  [RUST_STORE_EMBED_SET_BOUNDS]: z.tuple([z.object(bounds)]),
+  [RUST_STORE_EMBED_OPEN]: z
+    .tuple([
+      z.object({
+        url: z.string(),
+        ...bounds,
+        storeKey: z.string(),
+        homeUrl: z.string().nullish()
+      })
+    ])
+    .meta({ 'x-field-errors': true }),
+  [RUST_STORE_EMBED_SET_BOUNDS]: z
+    .tuple([z.object(bounds)])
+    .meta({ 'x-field-errors': true }),
   [RUST_STORE_EMBED_HIDE]: empty,
   [RUST_STORE_EMBED_SHOW]: empty,
   [RUST_STORE_EMBED_CLOSE]: empty,
@@ -186,7 +190,9 @@ export const rustInvokeArgs = {
   [RUST_STORE_EMBED_BACK]: empty,
   [RUST_STORE_EMBED_FORWARD]: empty,
   [RUST_STORE_EMBED_RELOAD]: empty,
-  [RUST_STORE_EMBED_NAVIGATE]: z.tuple([z.object({ url: z.string() })]),
+  [RUST_STORE_EMBED_NAVIGATE]: z
+    .tuple([z.object({ url: z.string() })])
+    .meta({ 'x-field-errors': true }),
   // ---- Wake lock
   [RUST_WAKE_LOCK_START]: z.tuple([z.string().meta({ title: 'kind' })]),
   [RUST_WAKE_LOCK_STOP]: z.tuple([

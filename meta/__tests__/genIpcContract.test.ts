@@ -125,6 +125,67 @@ describe('renderIpcContract', () => {
   })
 })
 
+describe('x-field-errors', () => {
+  const fe = (t: z.ZodType) => renderArgsStruct('p', js(t)).text
+  const tagged = z
+    .tuple([
+      z.object({
+        url: z.string(),
+        x: z.number(),
+        home: z.string().nullish(),
+        tags: z.array(z.string()).optional()
+      })
+    ])
+    .meta({ 'x-field-errors': true })
+
+  it('returns the bare error for a missing or non-object argument', () => {
+    const t = fe(tagged)
+    expect(t).toContain('args.first().and_then(Value::as_object)')
+    expect(t).toContain('.ok_or_else(|| "p:bad-args".to_string())?;')
+  })
+  it('suffixes each property in declared order', () => {
+    const t = fe(tagged)
+    const at = (k: string) => t.indexOf(`"p:bad-args:${k}"`)
+    expect(at('url')).toBeGreaterThan(-1)
+    expect(at('url')).toBeLessThan(at('x'))
+    expect(at('x')).toBeLessThan(at('home'))
+    expect(at('home')).toBeLessThan(at('tags'))
+  })
+  it('reads an absent property as null: required fails, optional is None', () => {
+    const t = fe(tagged)
+    expect(t).toContain(
+      'let url: String = serde_json::from_value(obj.get("url").cloned().unwrap_or(Value::Null))'
+    )
+    expect(t).toContain('let home: Option<String>')
+    expect(t).toContain('let tags: Option<Vec<String>>')
+  })
+  it('never emits deny_unknown_fields', () => {
+    expect(fe(tagged)).not.toContain('deny_unknown_fields')
+  })
+  it('leaves untagged tuples unchanged', () => {
+    const t = fe(z.tuple([z.object({ url: z.string() })]))
+    expect(t).not.toContain('bad-args:url')
+  })
+  it('throws when misused', () => {
+    expect(() =>
+      renderArgsStruct(
+        'bad_chan',
+        js(z.tuple([z.string()]).meta({ 'x-field-errors': true }))
+      )
+    ).toThrow(/bad_chan.*x-field-errors/)
+    expect(() =>
+      renderArgsStruct(
+        'bad_chan',
+        js(
+          z
+            .tuple([z.object({ a: z.string() }), z.object({ b: z.string() })])
+            .meta({ 'x-field-errors': true })
+        )
+      )
+    ).toThrow(/bad_chan.*x-field-errors/)
+  })
+})
+
 describe('parseCliFlags', () => {
   it('accepts --check and rejects typos', () => {
     expect(parseCliFlags(['--check'])).toEqual({ check: true })

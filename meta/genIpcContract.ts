@@ -11,6 +11,11 @@
  * optional/nullable, array and object. Anything else throws naming the channel and JSON pointer; the
  * one way to ask for `serde_json::Value` is the explicit `x-rust-value: true` meta key.
  *
+ * Tuple-level meta keys: `x-error-prefix` (error-string prefix, default the channel name) and
+ * `x-field-errors: true` (single-object tuples only: `from_args` reports `<prefix>:bad-args` when
+ * the object is missing, and `<prefix>:bad-args:<property>` naming the first property, in declared
+ * order, that fails to deserialize). Leaf meta: `x-rust-value`.
+ *
  * Run with `pnpm gen:ipc-contract`. The generated file is COMMITTED so `cargo build` needs no Node;
  * `pnpm check:ipc-contract` (CI + path-filtered pre-commit) regenerates in memory and fails on any
  * difference.
@@ -131,6 +136,7 @@ const ANNOTATION_KEYS = new Set([
   'description',
   'x-error-prefix',
   'x-rust-value',
+  'x-field-errors',
   '$schema',
   'minimum',
   'maximum'
@@ -318,6 +324,45 @@ export function renderArgsStruct(
   if (items.length === 0) {
     main = `#[derive(Debug, Clone, Copy)]\npub(crate) struct ${name};\n\nimpl ${name} {\n    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {\n        Ok(Self)\n    }\n}`
     ctx.usesValue = true
+  } else if (tuple['x-field-errors'] === true) {
+    if (items.length !== 1 || items[0].type !== 'object') {
+      fail(ctx, 'x-field-errors needs a tuple of exactly one object argument')
+    }
+    const sub: RenderCtx = {
+      ...ctx,
+      nameHint: name,
+      pointer: '#/prefixItems/0'
+    }
+    decls.push(renderStructInto(name, items[0], sub))
+    merge(ctx, sub)
+    decls.push(...sub.decls)
+    const props = (items[0].properties ?? {}) as Record<string, JsonNode>
+    const required = new Set((items[0].required ?? []) as string[])
+    const lets: string[] = []
+    const names: string[] = []
+    for (const key of Object.keys(props)) {
+      const scratch: RenderCtx = {
+        ...ctx,
+        nameHint: `${name}${pascal(key)}`,
+        pointer: `#/prefixItems/0/properties/${key}`,
+        decls: []
+      }
+      let ty = rustTypeFor(props[key], scratch)
+      if (scratch.decls.length > 0) {
+        fail(
+          scratch,
+          'x-field-errors supports scalar and array properties only'
+        )
+      }
+      if (!required.has(key) && !ty.startsWith('Option<')) ty = `Option<${ty}>`
+      const ident = fieldIdent(key)
+      names.push(ident)
+      lets.push(
+        `        let ${ident}: ${ty} = serde_json::from_value(obj.get(${rustStr(key)}).cloned().unwrap_or(Value::Null)).map_err(|_| ${rustStr(`${err}:${key}`)}.to_string())?;`
+      )
+    }
+    ctx.usesValue = true
+    main = `impl ${name} {\n    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {\n        let obj = args.first().and_then(Value::as_object).ok_or_else(|| ${rustStr(err)}.to_string())?;\n${lets.join('\n')}\n        Ok(Self { ${names.join(', ')} })\n    }\n}`
   } else if (items.length === 1 && items[0].type === 'object') {
     const sub: RenderCtx = {
       ...ctx,
