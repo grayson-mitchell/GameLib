@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: executing
+status: verifying
 stopped_at: Phase 71 context gathered
-last_updated: "2026-11-07T18:58:07.209Z"
+last_updated: "2026-11-07T19:06:13.241Z"
 last_activity: 2026-11-07
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 104
-  completed_plans: 85
+  completed_plans: 86
   percent: 25
 ---
 
@@ -74,10 +74,10 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 Phase: 65 (steam-store-manager-decomposition-continued) — EXECUTING
 Plan: 20 of 20
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-07
 
-Progress: [████████░░] 82%
+Progress: [████████░░] 83%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -362,6 +362,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 67]: 67-14: callTool tool enum from handler switch; save paths NUL-free bounded strings; engine push typed via z.custom
 - [Phase 67]: 67-15: logError/logInfo = bounded union (string<=64KiB | string[]<=256 | strict Error-like); deleteUploadedLogFile uses httpUrlArg; humble args are ids only
 - [Phase 67]: 67-16: setApiKey allows empty string (clear gesture); legendary refreshLibrary push typing-only (name collides with steam invoke)
+- [Phase 67]: 67-17: setTitleBarOverlay accepts string-or-number height (renderer passes CSS strings); push 'message' is a variadic rest tuple
 
 ### Pending Todos
 
