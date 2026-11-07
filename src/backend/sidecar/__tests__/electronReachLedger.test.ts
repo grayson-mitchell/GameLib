@@ -427,6 +427,7 @@ function collectModuleSpecifiers(sourceFile: ts.SourceFile): string[] {
       ts.isCallExpression(node) &&
       node.expression.kind === ts.SyntaxKind.ImportKeyword &&
       node.arguments.length > 0 &&
+      node.arguments[0] !== undefined &&
       ts.isStringLiteral(node.arguments[0])
     ) {
       // Dynamic `import('...')` -- TS parses the callee as a bare
@@ -438,6 +439,7 @@ function collectModuleSpecifiers(sourceFile: ts.SourceFile): string[] {
       ts.isIdentifier(node.expression) &&
       node.expression.text === 'require' &&
       node.arguments.length > 0 &&
+      node.arguments[0] !== undefined &&
       ts.isStringLiteral(node.arguments[0])
     ) {
       specifiers.push(node.arguments[0].text)

@@ -22,6 +22,7 @@
  * "electron" or a channel name cannot self-invalidate its own gate.
  */
 
+import { defined } from 'backend/testUtils/indexed'
 import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
@@ -224,7 +225,7 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
     const found = new Set<string>()
     let match: RegExpExecArray | null
     while ((match = channelPattern.exec(stripped)) !== null) {
-      found.add(match[1])
+      found.add(defined(match[1], 'channel name'))
     }
 
     // Failure here means the registered channel set changed -- if
@@ -322,8 +323,14 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // 5e8bbe4f27c24d29910a1aa63ecb99e577451da900a65515f5fbd52722d4871b
   // quick-261107-a1j: rename-only re-pin (electronStores -> stores path references).
   // Previous digest: 466327c30fca5097b24ec36fafadfe6b7d620175869c7e2e8bad5fa4ce7e874e
+  //
+  // Re-pinned 2026-11-08 by quick task 261108-et5, per this gate's own documented procedure.
+  // noUncheckedIndexedAccess adoption: type-narrowing only (`defined(...)` around regex-group
+  // reads in the binding-gate helpers). No assertion, fixture or proof was altered or
+  // weakened. Prior digest:
+  // da9dda5ab90b78820eed3bd11b3d7669245eaa8c7952e674949a6fc041653348
   const ELECTRON_UNTOUCHED_SHA256 =
-    'da9dda5ab90b78820eed3bd11b3d7669245eaa8c7952e674949a6fc041653348'
+    'f97f2b6ef9300c575bf0738ec33a76cf0e95a430bd299c81d6198c7effdc87aa'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

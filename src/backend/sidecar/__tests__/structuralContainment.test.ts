@@ -73,6 +73,7 @@
  * src/backend/jest.config.js` confirmed clean, no residue.
  */
 
+import { defined } from 'backend/testUtils/indexed'
 import { homedir, tmpdir, userInfo } from 'os'
 import { isAbsolute, join, relative, resolve } from 'path'
 
@@ -755,7 +756,7 @@ describe('WR-05: this file registers no mocks, transitively', () => {
     const code = stripSourceComments(source)
     return Array.from(
       code.matchAll(/^\s*import\s+(?:[\s\S]*?\s+from\s+)?['"]([^'"]+)['"]/gm)
-    ).map((m) => m[1])
+    ).map((m) => defined(m[1], 'import specifier'))
   }
 
   function collectGraph(entry: string): string[] {

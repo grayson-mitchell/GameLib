@@ -18,6 +18,7 @@
  * `config.json` and the `store/config.json` `settings` mirror the renderer seeds
  * from.
  */
+import { defined } from 'backend/testUtils/indexed'
 import {
   existsSync,
   mkdirSync,
@@ -91,11 +92,14 @@ function launch(): Launch {
     const handler = handlerRegistry.get('requestAppSettings') as (
       event: unknown
     ) => Promise<Record<string, unknown>>
-    const listener = (
-      listenerRegistry.get('setSetting') as Array<
-        (event: unknown, payload: unknown) => void
-      >
-    )[0]
+    const listener = defined(
+      (
+        listenerRegistry.get('setSetting') as Array<
+          (event: unknown, payload: unknown) => void
+        >
+      )[0],
+      'setSetting listener'
+    )
     const mirrorPath = (configStore as unknown as { store: { path: string } })
       .store.path
 

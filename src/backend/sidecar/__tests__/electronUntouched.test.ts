@@ -51,6 +51,7 @@
  * proof leaves a widening blind spot.
  */
 
+import { defined } from 'backend/testUtils/indexed'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import {
@@ -257,7 +258,7 @@ function extractBindings(clause: string): {
     return { wholeModule: true, names: [] }
   }
   const names: string[] = []
-  for (const rawSegment of braceMatch[1].split(',')) {
+  for (const rawSegment of defined(braceMatch[1], 'brace group').split(',')) {
     const segment = rawSegment
       .trim()
       .replace(/^type\s+/, '')
@@ -266,9 +267,9 @@ function extractBindings(clause: string): {
     const asMatch = segment.match(/^(\S+)\s+as\s+\S+$/)
     const colonMatch = segment.match(/^(\S+)\s*:\s*\S+$/)
     if (asMatch) {
-      names.push(asMatch[1])
+      names.push(defined(asMatch[1], 'as-binding name'))
     } else if (colonMatch) {
-      names.push(colonMatch[1])
+      names.push(defined(colonMatch[1], 'colon-binding name'))
     } else {
       names.push(segment)
     }
@@ -324,7 +325,8 @@ function findSteamTokenSurfaceViolations(
     re.lastIndex = 0
     let match: RegExpExecArray | null
     while ((match = re.exec(normalized)) !== null) {
-      const [, clause, specifier] = match
+      const clause = defined(match[1], 'import clause')
+      const specifier = defined(match[2], 'import specifier')
       if (!STEAM_TOKEN_SURFACE_SPECIFIER.test(specifier)) continue
       const { wholeModule, names } = extractBindings(clause)
       if (wholeModule) {

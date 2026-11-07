@@ -137,6 +137,7 @@ jest.mock('../../storeManagers/steam/user')
 jest.mock('../../storeManagers/steam/anonymousClient')
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { defined } from 'backend/testUtils/indexed'
 import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { getPath } from '../pathShim'
@@ -231,7 +232,9 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     )
     expect(pushes.length).toBeGreaterThanOrEqual(1)
 
-    const pushedGame = (pushes[0].args as unknown[])[0] as {
+    const pushedGame = (
+      defined(pushes[0], 'first push').args as unknown[]
+    )[0] as {
       app_name: string
       runner: string
     }

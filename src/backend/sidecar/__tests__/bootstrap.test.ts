@@ -73,6 +73,7 @@ jest.mock('../../storeManagers/steam/macSteamOffline', () => ({
     mockRestoreMacSteamOnlineIfOwed(...args)
 }))
 
+import { defined } from 'backend/testUtils/indexed'
 import { tmpdir } from 'os'
 import { isAbsolute, join, relative, resolve } from 'path'
 import { mkdtempSync } from 'node:fs'
@@ -448,7 +449,9 @@ describe('sidecar bootstrap (headless boot)', () => {
         const { defectCalls, lines } = runIsolatedInitAndCollectLogErrors()
 
         expect(defectCalls).toHaveLength(1)
-        expect(String(defectCalls[0][0])).toContain(emptyAppRoot)
+        expect(
+          String(defined(defectCalls[0], 'first defect call')[0])
+        ).toContain(emptyAppRoot)
         expect(lines).toContain(READY_SENTINEL)
       } finally {
         if (savedAppRoot === undefined) {

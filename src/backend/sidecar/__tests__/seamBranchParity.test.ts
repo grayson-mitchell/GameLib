@@ -43,6 +43,7 @@
  * violation of a standing contract rather than the point of this phase.
  */
 
+import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'fs'
 import { join, resolve } from 'path'
 
@@ -173,7 +174,7 @@ function extractWipeStepLabels(functionBody: string): string[] {
         const tupleEnd = matchDelims(arrayBody, tupleStart, '[', ']')
         const tupleText = arrayBody.slice(tupleStart, tupleEnd + 1)
         const labelMatch = /'([A-Za-z0-9_]+)'/.exec(tupleText)
-        if (labelMatch) labels.push(labelMatch[1])
+        if (labelMatch) labels.push(defined(labelMatch[1], 'label'))
         i = tupleEnd
         depth--
       }
@@ -518,7 +519,7 @@ describe('seamBranchParity — INVERTED by Phase 39 Plan 04 Task 2 (was Phase 34
       ]
       const stale = staleKnownGapEntries(original, current, declared)
       expect(stale).toHaveLength(1)
-      expect(stale[0].droppedCategory).toBe('storage')
+      expect(defined(stale[0], 'stale entry').droppedCategory).toBe('storage')
     })
 
     it('staleKnownGapEntries does NOT flag a KNOWN_GAP entry whose category is still genuinely dropped', () => {

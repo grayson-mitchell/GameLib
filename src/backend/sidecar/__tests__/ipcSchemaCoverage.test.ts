@@ -12,6 +12,7 @@
  *     handlers populates). `initOnlineMonitor()` is deliberately never called here: it pings
  *     sites and arms retries.
  */
+import { defined } from 'backend/testUtils/indexed'
 import { readdirSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
 
@@ -61,7 +62,7 @@ function staticScan(): Scanned {
   for (const file of sourceFiles(BACKEND_DIR)) {
     const src = readFileSync(file, 'utf-8')
     for (const m of src.matchAll(re)) {
-      const channel = m[2] ?? constants[m[3]]
+      const channel = m[2] ?? (m[3] === undefined ? undefined : constants[m[3]])
       if (!channel) continue
       if (m[1] === 'addTestOnlyListener') out.testOnly.add(channel)
       else if (m[1] === 'ipcMain.handle' || m[1] === 'addHandler')
@@ -143,7 +144,7 @@ describe('IPC schema coverage (D-15)', () => {
     for (const [name, entry] of Object.entries(collidingPushSchemas)) {
       expect(entry.kind).toBe('push')
       expect(channelSchemas[name]).toBeDefined()
-      expect(channelSchemas[name].kind).not.toBe('push')
+      expect(defined(channelSchemas[name], name).kind).not.toBe('push')
     }
     expect(Object.keys(collidingPushSchemas).sort()).toEqual([
       'connectivity-changed',

@@ -8,6 +8,7 @@
  * per-file profile; each "launch" is a fresh module graph. No child process
  * is spawned, so no fake-HOME profile is needed.
  */
+import { defined } from 'backend/testUtils/indexed'
 import {
   existsSync,
   mkdirSync,
@@ -81,11 +82,14 @@ function launch(): Launch {
     const handler = handlerRegistry.get('requestAppSettings') as (
       event: unknown
     ) => Promise<Record<string, unknown>>
-    const listener = (
-      listenerRegistry.get('setSetting') as Array<
-        (event: unknown, payload: unknown) => void
-      >
-    )[0]
+    const listener = defined(
+      (
+        listenerRegistry.get('setSetting') as Array<
+          (event: unknown, payload: unknown) => void
+        >
+      )[0],
+      'setSetting listener'
+    )
     const mirrorPath = (configStore as unknown as { store: { path: string } })
       .store.path
 

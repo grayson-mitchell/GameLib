@@ -32,6 +32,7 @@ jest.mock('../../logger/paths', () => ({ getLogFilePath: jest.fn() }))
 jest.mock('../../utils/systeminfo', () => ({ getSystemInfo: jest.fn() }))
 jest.mock('../../utils/os/path', () => ({ hasExecutable: jest.fn() }))
 
+import { defined } from 'backend/testUtils/indexed'
 import { ENGINE_PINS } from '../../engine/enginePins'
 import { registerSettingsFlows } from '../settingsFlowRegistration'
 
@@ -44,7 +45,10 @@ beforeEach(() => {
 afterEach(() => stderr.mockRestore())
 
 const set = (appName: string, value: unknown) =>
-  listeners['setSetting']({}, { appName, key: 'engineOverride', value })
+  defined(listeners['setSetting'], 'setSetting listener')(
+    {},
+    { appName, key: 'engineOverride', value }
+  )
 
 describe('setSetting engineOverride guard', () => {
   it.each(['legacy:Wine GPTK', '/usr/local/bin/wine', 'pinned:does-not-exist'])(
@@ -77,7 +81,7 @@ describe('setSetting engineOverride guard', () => {
 
 describe('writeConfig engineOverride guard', () => {
   it('removes an invalid engineOverride and keeps the rest', async () => {
-    await handlers['writeConfig'](
+    await defined(handlers['writeConfig'], 'writeConfig handler')(
       {},
       {
         appName: 'Fortnite',
@@ -89,7 +93,7 @@ describe('writeConfig engineOverride guard', () => {
     })
   })
   it('keeps a valid engineOverride', async () => {
-    await handlers['writeConfig'](
+    await defined(handlers['writeConfig'], 'writeConfig handler')(
       {},
       {
         appName: 'Fortnite',

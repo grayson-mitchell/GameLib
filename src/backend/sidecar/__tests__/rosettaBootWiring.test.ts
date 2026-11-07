@@ -117,6 +117,7 @@ jest.mock('child_process', () => ({
 // ── i18next — DEFEAT Jest's project-wide automatic manual mock (see header) ────────────────
 jest.unmock('i18next')
 
+import { defined } from 'backend/testUtils/indexed'
 import { PassThrough } from 'node:stream'
 import { exec } from 'child_process'
 import i18next from 'i18next'
@@ -199,7 +200,10 @@ describe('sidecar bootstrap runs the Rosetta probe (todo 2026-09-06, quick-26090
       true
     )
     expect(showMessageBoxSpy).toHaveBeenCalledTimes(1)
-    const dialogOptions = showMessageBoxSpy.mock.calls[0][0] as {
+    const dialogOptions = defined(
+      showMessageBoxSpy.mock.calls[0],
+      'first dialog call'
+    )[0] as {
       title?: string
     }
     expect(dialogOptions.title).toBe('Rosetta not found')

@@ -27,6 +27,7 @@
  * traversal conventions in this same directory rather than inventing new ones.
  */
 
+import { defined } from 'backend/testUtils/indexed'
 import * as ts from 'typescript'
 import { readFileSync, readdirSync, statSync } from 'fs'
 import { join, relative, resolve } from 'path'
@@ -74,6 +75,7 @@ function findForbiddenDynamicImports(
       ts.isCallExpression(node) &&
       node.expression.kind === ts.SyntaxKind.ImportKeyword &&
       node.arguments.length > 0 &&
+      node.arguments[0] !== undefined &&
       ts.isStringLiteral(node.arguments[0])
     ) {
       const specifier = node.arguments[0].text
@@ -189,7 +191,7 @@ describe('externalDynamicImportGate (quick/260815-vvz, defect 1 RED-prover)', ()
       )
       const hits = findForbiddenDynamicImports(sourceFile)
       expect(hits).toHaveLength(1)
-      expect(hits[0].specifier).toBe('electron')
+      expect(defined(hits[0], 'first hit').specifier).toBe('electron')
     })
 
     it('reports ZERO hits for the legal control: a static import plus a legal dynamic-internal import', () => {

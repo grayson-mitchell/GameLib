@@ -51,6 +51,7 @@ jest.mock('../../utils/systeminfo', () => ({
 }))
 
 // ── Imports (after mocks) ───────────────────────────────────────────────────────────────────
+import { defined } from 'backend/testUtils/indexed'
 import { registerClipboardFlows } from '../clipboardFlowRegistration'
 import { clipboard, listenerRegistry, handlerRegistry } from '../../platform'
 import { requestRustInvoke } from '../sidecarRpc'
@@ -83,7 +84,7 @@ async function flush(): Promise<void> {
 function invokeListener(channel: string, ...args: unknown[]): void {
   const listeners = listenerRegistry.get(channel) ?? []
   expect(listeners.length).toBeGreaterThan(0)
-  listeners[0](undefined, ...args)
+  defined(listeners[0], 'first listener')(undefined, ...args)
 }
 
 /** Invokes a registered `ipcMain.handle` handler directly, mirroring an `invoke` frame arriving. */
@@ -294,8 +295,12 @@ describe('sidecar clipboard flows (Phase 34.3 Plan 06 — REQ-34.3-03/REQ-34.3-0
     const after = snapshotForeignChannels()
     for (const channel of FOREIGN_CHANNELS) {
       expect(after[channel]).toEqual(foreignChannelsBefore[channel])
-      expect(after[channel].handler).toBe(false)
-      expect(after[channel].listeners).toBe(0)
+      expect(defined(after[channel], `snapshot for ${channel}`).handler).toBe(
+        false
+      )
+      expect(defined(after[channel], `snapshot for ${channel}`).listeners).toBe(
+        0
+      )
     }
   })
 })

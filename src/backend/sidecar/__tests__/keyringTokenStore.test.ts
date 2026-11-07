@@ -16,6 +16,7 @@
  * test can script a resolve/reject outcome and assert on exactly what was called.
  */
 
+import { defined } from 'backend/testUtils/indexed'
 import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -1618,7 +1619,7 @@ describe('SidecarKeyringTokenStore', () => {
       'userSignInState.ts',
       'userRedeem.ts'
     ].map((f) => join(__dirname, '..', '..', 'storeManagers', 'steam', f))
-    const USER_SRC_PATH = USER_SRC_PATHS[0]
+    const USER_SRC_PATH = defined(USER_SRC_PATHS[0], 'user.ts source path')
 
     it('comment-stripped keyringTokenStore.ts contains zero configStore, zero TOKEN_STORE_KEY, zero process.env', () => {
       const stripped = stripSourceComments(
@@ -1747,7 +1748,8 @@ describe('SidecarKeyringTokenStore', () => {
       const found = new Set<string>()
       const re = /requestRustInvoke\(\s*(RUST_KEYRING_[A-Z_]+)/g
       let m: RegExpExecArray | null
-      while ((m = re.exec(stripped)) !== null) found.add(m[1])
+      while ((m = re.exec(stripped)) !== null)
+        found.add(defined(m[1], 'channel name'))
       return [...found].sort()
     }
 
@@ -1848,7 +1850,7 @@ describe('KEYRING_FAILURE_MEMO_MS vs KEYRING_READ_TIMEOUT ordering invariant (Ro
         `KEYRING_FAILURE_MEMO_MS literal not found in ${KEYRING_TOKEN_STORE_PATH}`
       )
     }
-    return Number(match[1].replace(/_/g, ''))
+    return Number(defined(match[1], 'literal digits').replace(/_/g, ''))
   }
 
   test('KEYRING_FAILURE_MEMO_MS is at least 2x the KEYRING_READ_TIMEOUT parsed live from the Rust shell source', () => {

@@ -25,6 +25,7 @@
  * `console.warn`, so a call that now actually forwards would throw here).
  */
 
+import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
@@ -360,8 +361,9 @@ describe('platformApi dialog.showErrorBox (Phase 31 Plan 02, D-03/REQ-31-03)', (
 
     expect(result).toBeUndefined()
     expect(callLog).toHaveLength(1)
-    expect(callLog[0].channel).toBe(RUST_DIALOG_MESSAGE)
-    expect(callLog[0].args[0]).toMatchObject({ kind: 'error' })
+    const firstCall = defined(callLog[0], 'first dialog call')
+    expect(firstCall.channel).toBe(RUST_DIALOG_MESSAGE)
+    expect(firstCall.args[0]).toMatchObject({ kind: 'error' })
   })
 
   it('never throws and warns when requestRustInvoke rejects', async () => {

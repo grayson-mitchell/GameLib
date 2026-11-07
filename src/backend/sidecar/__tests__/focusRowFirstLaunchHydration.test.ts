@@ -41,6 +41,7 @@
  * Each "launch" is a fresh module graph (`jest.isolateModules`); the disk is
  * the only state carried between launches, which is what a real relaunch is.
  */
+import { defined } from 'backend/testUtils/indexed'
 import {
   existsSync,
   mkdirSync,
@@ -122,11 +123,14 @@ function launch(): Launch {
     const handler = handlerRegistry.get('requestAppSettings') as (
       event: unknown
     ) => Promise<unknown>
-    const listener = (
-      listenerRegistry.get('setSetting') as Array<
-        (event: unknown, payload: unknown) => void
-      >
-    )[0]
+    const listener = defined(
+      (
+        listenerRegistry.get('setSetting') as Array<
+          (event: unknown, payload: unknown) => void
+        >
+      )[0],
+      'setSetting listener'
+    )
     // The path comes off the live store instance (conf's own `path`), never
     // reconstructed by hand.
     const mirrorPath = (configStore as unknown as { store: { path: string } })

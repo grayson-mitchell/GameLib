@@ -36,6 +36,7 @@
  * generator rather than a gate. Gate 2 reads one specific position instead:
  * the token immediately after `Registers` in the `register*Flows()` docstring.
  */
+import { defined } from 'backend/testUtils/indexed'
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -237,7 +238,9 @@ function claimedTotal(docstring: string): number | null {
     /Registers\s+(?:the\s+|all\s+|this\s+(?:module|cluster|slice)'s\s+)?(\S+)/
   )
   if (!m) return null
-  const token = m[1].toLowerCase().replace(/[^a-z0-9]/g, '')
+  const token = defined(m[1], 'claim token')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
   if (/^\d+$/.test(token)) return Number(token)
   return NUMBER_WORDS[token] ?? null
 }
@@ -260,8 +263,14 @@ function callSiteComments(): { call: string; comment: string }[] {
   lines.forEach((line, i) => {
     if (!/^register\w+\(/.test(line.trim())) return
     const block: string[] = []
-    for (let j = i - 1; j >= 0 && lines[j].trimStart().startsWith('//'); j--) {
-      block.unshift(lines[j].trimStart().slice(2).trim())
+    for (
+      let j = i - 1;
+      j >= 0 && defined(lines[j], 'comment line').trimStart().startsWith('//');
+      j--
+    ) {
+      block.unshift(
+        defined(lines[j], 'comment line').trimStart().slice(2).trim()
+      )
     }
     out.push({ call: line.trim(), comment: block.join(' ') })
   })

@@ -123,6 +123,7 @@ jest.mock('../../storeManagers/steam/gameRequirements')
 jest.mock('../../storeManagers/steam/installFormIpc')
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
@@ -990,7 +991,9 @@ describe('A-05: the uncast-payload claim matches the real registrations', () => 
     }
     const blockEnd = raw.indexOf('The FIX for each is', blockStart)
     const block = raw.slice(blockStart, blockEnd === -1 ? undefined : blockEnd)
-    return [...block.matchAll(/^\s*\/\/\s{3}(\w+)\s+->/gm)].map((m) => m[1])
+    return [...block.matchAll(/^\s*\/\/\s{3}(\w+)\s+->/gm)].map((m) =>
+      defined(m[1], 'channel name')
+    )
   }
 
   const rawSource = readFileSync(

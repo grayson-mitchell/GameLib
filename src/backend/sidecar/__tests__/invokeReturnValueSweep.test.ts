@@ -18,6 +18,7 @@
  * classification this test mechanizes).
  */
 
+import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -121,7 +122,7 @@ function extractChannels(spec: ModuleSpec): ExtractedChannel[] {
   while ((m = HANDLE_PATTERN.exec(source))) {
     const openParenIndex = source.indexOf('(', m.index)
     channels.push({
-      channel: m[1],
+      channel: defined(m[1], 'channel name'),
       module: spec.name,
       callText: extractBalancedParens(source, openParenIndex)
     })
@@ -151,7 +152,11 @@ function handlerProvesItReturns(callText: string): boolean {
     // Find the first non-whitespace character after `=>`. If it's not `{`, this is an
     // implicit-return expression body -- the whole rest of the arrow IS the return value.
     let i = arrowIndex + 2
-    while (i < callText.length && /\s/.test(callText[i])) i++
+    while (
+      i < callText.length &&
+      /\s/.test(defined(callText[i], 'call text char'))
+    )
+      i++
     if (callText[i] !== '{') {
       return true
     }

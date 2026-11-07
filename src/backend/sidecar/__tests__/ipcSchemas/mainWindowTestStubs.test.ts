@@ -1,3 +1,4 @@
+import { defined } from 'backend/testUtils/indexed'
 import { channelSchemas } from 'common/types/ipc/channelSchemas'
 import {
   mainProcessAsyncArgs,
@@ -90,7 +91,7 @@ describe('mainProcess / window / testStubs schemas', () => {
 
   it('tags TestSync as testOnly and window / preload-served channels as local', () => {
     for (const k of Object.keys(testStubsTestSyncArgs)) {
-      expect(channelSchemas[k].testOnly).toBe(true)
+      expect(defined(channelSchemas[k], k).testOnly).toBe(true)
     }
     for (const k of [
       ...Object.keys(windowSyncArgs),
@@ -100,9 +101,17 @@ describe('mainProcess / window / testStubs schemas', () => {
       'updateAll',
       'gamepadAction'
     ]) {
-      expect(channelSchemas[k].caller).toBe('local')
+      expect(defined(channelSchemas[k], k).caller).toBe('local')
     }
-    expect(channelSchemas['connectivity-changed'].caller).toBe('renderer')
-    expect(channelSchemas['set-connectivity-online'].caller).toBe('renderer')
+    expect(
+      defined(channelSchemas['connectivity-changed'], 'connectivity-changed')
+        .caller
+    ).toBe('renderer')
+    expect(
+      defined(
+        channelSchemas['set-connectivity-online'],
+        'set-connectivity-online'
+      ).caller
+    ).toBe('renderer')
   })
 })

@@ -1,3 +1,4 @@
+import { defined } from 'backend/testUtils/indexed'
 import { channelSchemas } from 'common/types/ipc/channelSchemas'
 import {
   sidecarInternalInvokeArgs,
@@ -85,14 +86,14 @@ describe('sidecarInternal schemas', () => {
       'shellWindowFocused'
     ]
     for (const k of Object.keys(sidecarInternalInvokeArgs)) {
-      expect(channelSchemas[k].kind).toBe('invoke')
-      expect(channelSchemas[k].caller).toBe(
+      expect(defined(channelSchemas[k], k).kind).toBe('invoke')
+      expect(defined(channelSchemas[k], k).caller).toBe(
         shell.includes(k) ? 'shell' : 'renderer'
       )
     }
     for (const k of Object.keys(sidecarInternalSendArgs)) {
-      expect(channelSchemas[k].kind).toBe('send')
-      expect(channelSchemas[k].caller).toBe(
+      expect(defined(channelSchemas[k], k).kind).toBe('send')
+      expect(defined(channelSchemas[k], k).caller).toBe(
         shell.includes(k) ? 'shell' : 'renderer'
       )
     }

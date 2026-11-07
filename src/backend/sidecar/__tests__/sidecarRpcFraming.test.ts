@@ -9,6 +9,7 @@
  *
  * Drives `startRpcServer` with `PassThrough` streams only; no store, no child process.
  */
+import { defined } from 'backend/testUtils/indexed'
 import { PassThrough } from 'node:stream'
 
 const MAX_LINE_LENGTH = 10 * 1024 * 1024
@@ -128,9 +129,10 @@ describe('sidecarRpc inbound framing', () => {
     await settle()
     const answered = responses(output)
     expect(answered).toHaveLength(1)
-    expect(answered[0].id).toBe('42')
-    expect(answered[0].ok).toBe(false)
-    expect(answered[0].error).toMatch(/oversized/i)
+    const answer = defined(answered[0], 'oversized-frame answer')
+    expect(answer.id).toBe('42')
+    expect(answer.ok).toBe(false)
+    expect(answer.error).toMatch(/oversized/i)
   })
 
   it('discards the rest of an oversized frame and keeps serving the frames after it', async () => {

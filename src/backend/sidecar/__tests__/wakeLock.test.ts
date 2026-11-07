@@ -20,6 +20,7 @@ jest.mock('../sidecarRpc', () => ({
   requestRustInvoke: jest.fn()
 }))
 
+import { defined } from 'backend/testUtils/indexed'
 import { powerSaveBlocker } from '../../platform'
 import { requestRustInvoke } from '../sidecarRpc'
 import {
@@ -152,7 +153,9 @@ describe('powerSaveBlocker forwards to the Rust wake-lock channels (D-08, REQ-35
       { channel: RUST_WAKE_LOCK_START, args: ['prevent-display-sleep'] },
       { channel: RUST_WAKE_LOCK_START, args: ['prevent-app-suspension'] }
     ])
-    expect(callLog[0].args[0]).not.toEqual(callLog[1].args[0])
+    expect(defined(callLog[0], 'first call').args[0]).not.toEqual(
+      defined(callLog[1], 'second call').args[0]
+    )
   })
 
   it('two start calls return DIFFERENT ids', () => {

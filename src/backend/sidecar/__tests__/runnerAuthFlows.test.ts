@@ -128,6 +128,7 @@ jest.mock('../../storeManagers/nile/user', () => ({
 }))
 
 // ── Imports (after mocks) ───────────────────────────────────────────────────────────────────────
+import { defined } from 'backend/testUtils/indexed'
 import { registerRunnerAuthFlows } from '../runnerAuthFlowRegistration'
 import { handlerRegistry, listenerRegistry } from '../../platform'
 import { logWarning } from 'backend/logger'
@@ -365,7 +366,9 @@ describe('T-34.5-18 — logoutGOG never lets a synchronous GOGUser.logout() thro
     const listeners = listenerRegistry.get('logoutGOG') ?? []
     expect(listeners.length).toBe(1)
 
-    expect(() => listeners[0](undefined)).not.toThrow()
+    expect(() =>
+      defined(listeners[0], 'logoutGOG listener')(undefined)
+    ).not.toThrow()
     expect(mockGOGLogout).toHaveBeenCalled()
     expect(logWarning).toHaveBeenCalled()
   })
@@ -375,7 +378,9 @@ describe('T-34.5-18 — logoutGOG never lets a synchronous GOGUser.logout() thro
     ;(logWarning as jest.Mock).mockClear()
 
     const listeners = listenerRegistry.get('logoutGOG') ?? []
-    expect(() => listeners[0](undefined)).not.toThrow()
+    expect(() =>
+      defined(listeners[0], 'logoutGOG listener')(undefined)
+    ).not.toThrow()
     expect(mockGOGLogout).toHaveBeenCalled()
     expect(logWarning).not.toHaveBeenCalled()
   })

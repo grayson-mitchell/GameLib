@@ -77,6 +77,7 @@ jest.mock('../../humble/user')
 jest.mock('../../humble/library')
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -417,7 +418,12 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       ]
 
       channelInvocations.forEach(({ id, args }, index) => {
-        writeInvoke(input, id, channels[index], args)
+        writeInvoke(
+          input,
+          id,
+          defined(channels[index], 'channel for invocation'),
+          args
+        )
       })
       await flush()
 
@@ -675,10 +681,16 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         expect(response).toMatchObject({ id: 'set-override-2', ok: true })
         expect(HumbleLibrary.setOwnershipOverride).not.toHaveBeenCalled()
         expect(warnSpy).toHaveBeenCalledTimes(1)
-        const [message, loggedMachineName] = warnSpy.mock.calls[0]
+        const [message, loggedMachineName] = defined(
+          warnSpy.mock.calls[0],
+          'first warn call'
+        )
         expect(String(message)).toContain('humbleSetOwnershipOverride')
         expect(loggedMachineName).toBe('exact-mn')
-        const wholeCall = warnSpy.mock.calls[0].join(' ')
+        const wholeCall = defined(
+          warnSpy.mock.calls[0],
+          'first warn call'
+        ).join(' ')
         expect(wholeCall).not.toContain(FAKE_KEY_VALUE)
         expect(wholeCall).not.toContain(FAKE_GIFT_URL)
         warnSpy.mockRestore()
@@ -806,7 +818,10 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         expect(response).toMatchObject({ id: 'gift-link-2', ok: true })
         expect(HumbleLibrary.recordGiftLinkOpened).not.toHaveBeenCalled()
         expect(warnSpy).toHaveBeenCalledTimes(1)
-        const [message, loggedMachineName] = warnSpy.mock.calls[0]
+        const [message, loggedMachineName] = defined(
+          warnSpy.mock.calls[0],
+          'first warn call'
+        )
         expect(String(message)).toContain('humbleRecordGiftLinkOpened')
         expect(loggedMachineName).toBe('unknown-mn')
         warnSpy.mockRestore()

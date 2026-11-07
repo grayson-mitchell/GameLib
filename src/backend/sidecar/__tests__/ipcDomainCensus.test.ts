@@ -15,6 +15,7 @@
  *
  * Plain fs reads rooted at __dirname; no backend module is imported or executed.
  */
+import { defined } from 'backend/testUtils/indexed'
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import {
@@ -116,7 +117,7 @@ function registeredChannels(
   const out: string[] = []
   const re = /ipcMain\.(?:handle|on)\(\s*(?:'([^']+)'|([A-Z][A-Z0-9_]*)\s*,)/g
   for (const m of source.matchAll(re)) {
-    const ch = m[1] ?? constants[m[2]]
+    const ch = m[1] ?? (m[2] === undefined ? undefined : constants[m[2]])
     if (ch) out.push(ch)
   }
   return out
@@ -182,9 +183,11 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
       )
       const mustPair = registered.filter((c) => allDeclared.has(c))
       expect(
-        undeclaredChannels(source, domains[domain], constants).filter((c) =>
-          mustPair.includes(c)
-        )
+        undeclaredChannels(
+          source,
+          defined(domains[domain], 'domain'),
+          constants
+        ).filter((c) => mustPair.includes(c))
       ).toEqual([])
     }
   })

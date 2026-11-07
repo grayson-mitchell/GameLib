@@ -26,6 +26,7 @@ jest.mock('../../online_monitor', () => ({
   onConnectivityChange: jest.fn()
 }))
 
+import { defined } from 'backend/testUtils/indexed'
 import { PassThrough } from 'node:stream'
 import { init } from '../bootstrap'
 import { requestRustInvoke } from '../sidecarRpc'
@@ -76,7 +77,7 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
       line.includes('"kind":"rustInvoke"')
     )
     expect(rustInvokeLines).toHaveLength(1)
-    const parsed = JSON.parse(rustInvokeLines[0])
+    const parsed = JSON.parse(defined(rustInvokeLines[0], 'rustInvoke line'))
     expect(parsed.kind).toBe('rustInvoke')
     expect(parsed.channel).toBe('keyring_get')
     expect(Array.isArray(parsed.args)).toBe(true)

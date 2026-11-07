@@ -78,6 +78,7 @@
  * gate, diffed directly against `IPC-PORT-INVENTORY.md`.
  */
 
+import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -797,7 +798,9 @@ const CENSUS_SEND_CHANNELS = ['frontendReady']
  * `IPC-PORT-INVENTORY.md`'s own bucket lines without hand-retyping their contents (retyping is
  * exactly how a census silently drifts from the document that scoped it). */
 function extractBacktickedNames(line: string): string[] {
-  return [...line.matchAll(/`([a-zA-Z0-9_.]+)`/g)].map((match) => match[1])
+  return [...line.matchAll(/`([a-zA-Z0-9_.]+)`/g)].map((match) =>
+    defined(match[1], 'backticked name')
+  )
 }
 
 describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 02 retired winetricksInstall, 24 -> 23) — every in-scope, currently-live channel across the whole phase, registered with the correct kind', () => {
