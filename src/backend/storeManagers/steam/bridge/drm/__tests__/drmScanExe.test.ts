@@ -28,10 +28,12 @@ jest.mock('backend/constants/paths', () => ({
   builtBridgeShim64Path: '/nonexistent/steam_api64.dll'
 }))
 
-jest.mock('../../../bottle', () => ({
-  DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge',
+jest.mock('backend/engine/bottlePrimitives', () => ({
   sanitizeBottleName: (n: string | null) => n,
   getBottleDir: jest.fn()
+}))
+jest.mock('../../../bottle', () => ({
+  DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge'
 }))
 
 jest.mock('../../importScan', () => ({ scanSteamApiImports: jest.fn() }))

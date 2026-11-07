@@ -134,7 +134,7 @@ import { getTokenStore } from '../../storeManagers/steam/tokenStore'
 import { KEYRING_SLOT_STEAM_REFRESH_TOKEN } from '../keyringTokenStore'
 import {
   provisionBottle,
-  isBottleProvisioned
+  isSteamBottleProvisioned
 } from '../../storeManagers/steam/bottle'
 import {
   startGuidedClientInstall,
@@ -575,7 +575,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     })
 
     it("REQ-34.4-03 isSteamBottleProvisioned invoke round-trips isBottleProvisioned()'s boolean", async () => {
-      jest.mocked(isBottleProvisioned).mockReturnValue(true)
+      jest.mocked(isSteamBottleProvisioned).mockReturnValue(true)
 
       const { input, frames } = startSidecar()
       writeInvoke(input, 'is-provisioned-1', 'isSteamBottleProvisioned', [])
@@ -587,7 +587,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         ok: true,
         result: true
       })
-      expect(isBottleProvisioned).toHaveBeenCalledTimes(1)
+      expect(isSteamBottleProvisioned).toHaveBeenCalledTimes(1)
     })
 
     it('REQ-34.4-03 steamBottleStatus resolves the exact defaulted object when both store reads return undefined', async () => {

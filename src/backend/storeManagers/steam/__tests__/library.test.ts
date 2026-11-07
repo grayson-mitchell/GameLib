@@ -77,7 +77,7 @@ import {
   getBottleSteamappsDir,
   getSteamBottleSettings,
   getBridgeBottleSettings,
-  isBottleProvisioned,
+  isSteamBottleProvisioned,
   listReadyBridgeBottleNames,
   resolveBridgeBottleName
 } from '../bottle'
@@ -244,7 +244,7 @@ jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
   getSteamBottleSettings: jest.fn(),
   getBridgeBottleSettings: jest.fn(),
-  isBottleProvisioned: jest.fn(),
+  isSteamBottleProvisioned: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
   resolveBridgeBottleName: jest.fn()
 }))
@@ -1336,7 +1336,7 @@ describe('SteamLibraryManager', () => {
     })
 
     it('reports is_installed:true (platform Windows) for a game installed ONLY under the bottle root when isBottleProvisioned() is true', async () => {
-      jest.mocked(isBottleProvisioned).mockReturnValue(true)
+      jest.mocked(isSteamBottleProvisioned).mockReturnValue(true)
       ;(existsSync as jest.Mock).mockImplementation(
         (path: string) => path === BOTTLE_STEAMAPPS_ROOT
       )
@@ -1380,7 +1380,7 @@ describe('SteamLibraryManager', () => {
     })
 
     it('does NOT persist is_installed:false to steamLibraryStore for a bottle-only-installed game when refresh() runs mid-session', async () => {
-      jest.mocked(isBottleProvisioned).mockReturnValue(true)
+      jest.mocked(isSteamBottleProvisioned).mockReturnValue(true)
       ;(existsSync as jest.Mock).mockImplementation(
         (path: string) => path === BOTTLE_STEAMAPPS_ROOT
       )
@@ -1414,7 +1414,7 @@ describe('SteamLibraryManager', () => {
     })
 
     it('falls back to native install data when BOTH native and bottle report the same appId (native wins)', async () => {
-      jest.mocked(isBottleProvisioned).mockReturnValue(true)
+      jest.mocked(isSteamBottleProvisioned).mockReturnValue(true)
       const NATIVE_ROOT = join('/native/steam', 'steamapps')
       jest.mocked(getSteamLibraries).mockResolvedValue(['/native/steam'])
       ;(existsSync as jest.Mock).mockReturnValue(true)
@@ -1466,7 +1466,7 @@ describe('SteamLibraryManager', () => {
     })
 
     it('performs NO bottle reconciliation when isBottleProvisioned() returns false (byte-for-byte native-only behavior preserved)', async () => {
-      jest.mocked(isBottleProvisioned).mockReturnValue(false)
+      jest.mocked(isSteamBottleProvisioned).mockReturnValue(false)
       // If the bottle path were consulted, readdirSync would be called on the
       // bottle root too — assert it's never scanned (native-only).
       ;(existsSync as jest.Mock).mockReturnValue(false)
@@ -1502,7 +1502,7 @@ describe('SteamLibraryManager', () => {
     beforeEach(() => {
       envMock.isMac = true
       envMock.isLinux = false
-      jest.mocked(isBottleProvisioned).mockReturnValue(false)
+      jest.mocked(isSteamBottleProvisioned).mockReturnValue(false)
       jest
         .mocked(getBridgeBottleSettings)
         .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
@@ -1738,7 +1738,7 @@ describe('SteamLibraryManager', () => {
         platformsCaptured: true,
         is_mac_native: false
       })
-      jest.mocked(isBottleProvisioned).mockReturnValue(true)
+      jest.mocked(isSteamBottleProvisioned).mockReturnValue(true)
       jest
         .mocked(listReadyBridgeBottleNames)
         .mockReturnValue(['GameLibSteamBridge'])
@@ -1782,7 +1782,7 @@ describe('SteamLibraryManager', () => {
         platformsCaptured: true,
         is_mac_native: false
       })
-      jest.mocked(isBottleProvisioned).mockReturnValue(false)
+      jest.mocked(isSteamBottleProvisioned).mockReturnValue(false)
       jest
         .mocked(listReadyBridgeBottleNames)
         .mockReturnValue(['GameLibSteamBridge'])
@@ -1834,7 +1834,7 @@ describe('SteamLibraryManager', () => {
       jest.mocked(bridgeAllowlist.has).mockReturnValue(false)
       const NATIVE_ROOT = join('/native/steam', 'steamapps')
       jest.mocked(getSteamLibraries).mockResolvedValue(['/native/steam'])
-      jest.mocked(isBottleProvisioned).mockReturnValue(false)
+      jest.mocked(isSteamBottleProvisioned).mockReturnValue(false)
       jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
       ;(existsSync as jest.Mock).mockImplementation(
         (path: string) => path === NATIVE_ROOT
@@ -1885,7 +1885,7 @@ describe('SteamLibraryManager', () => {
     const NATIVE_ROOT = join('/native/steam', 'steamapps')
 
     beforeEach(() => {
-      jest.mocked(isBottleProvisioned).mockReturnValue(false)
+      jest.mocked(isSteamBottleProvisioned).mockReturnValue(false)
       jest
         .mocked(getFileSize)
         .mockImplementation((bytes: unknown) => `${String(bytes)} B`)
@@ -2365,7 +2365,7 @@ describe('SteamLibraryManager', () => {
       })
 
       it('flips a bottle-installed game to installed (platform Windows) via pushGameToLibrary when isBottleProvisioned() is true', async () => {
-        jest.mocked(isBottleProvisioned).mockReturnValue(true)
+        jest.mocked(isSteamBottleProvisioned).mockReturnValue(true)
         library.set('570', {
           runner: 'steam',
           app_name: '570',
@@ -2406,7 +2406,7 @@ describe('SteamLibraryManager', () => {
       })
 
       it('performs NO bottle reconciliation when isBottleProvisioned() returns false', async () => {
-        jest.mocked(isBottleProvisioned).mockReturnValue(false)
+        jest.mocked(isSteamBottleProvisioned).mockReturnValue(false)
         library.set('570', {
           runner: 'steam',
           app_name: '570',
@@ -2445,7 +2445,7 @@ describe('SteamLibraryManager', () => {
       // ── S1-S2: D-17 (34.13-14) install-state non-regression pin ──────────
 
       it('S1: a forced game reconciles as installed from the BOTTLE map (platform Windows)', async () => {
-        jest.mocked(isBottleProvisioned).mockReturnValue(true)
+        jest.mocked(isSteamBottleProvisioned).mockReturnValue(true)
         ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
           platformsCaptured: true,
           is_mac_native: true,
@@ -2491,7 +2491,7 @@ describe('SteamLibraryManager', () => {
       })
 
       it('S2: the Phase 24 bridge never becomes authoritative for a forced game, even when allowlisted', async () => {
-        jest.mocked(isBottleProvisioned).mockReturnValue(true)
+        jest.mocked(isSteamBottleProvisioned).mockReturnValue(true)
         jest.mocked(bridgeAllowlist.has).mockReturnValue(true)
         ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
           platformsCaptured: true,
@@ -2556,7 +2556,7 @@ describe('SteamLibraryManager', () => {
       beforeEach(() => {
         envMock.isMac = true
         envMock.isLinux = false
-        jest.mocked(isBottleProvisioned).mockReturnValue(false)
+        jest.mocked(isSteamBottleProvisioned).mockReturnValue(false)
         jest
           .mocked(getBridgeBottleSettings)
           .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge' } as any)
@@ -2693,7 +2693,7 @@ describe('SteamLibraryManager', () => {
           platformsCaptured: true,
           is_mac_native: false
         })
-        jest.mocked(isBottleProvisioned).mockReturnValue(true)
+        jest.mocked(isSteamBottleProvisioned).mockReturnValue(true)
         jest
           .mocked(listReadyBridgeBottleNames)
           .mockReturnValue(['GameLibSteamBridge'])
@@ -2744,7 +2744,7 @@ describe('SteamLibraryManager', () => {
 
       it('does NOT flip a NON-bridge-eligible game present in the native/bottle map (unaffected by the bridge-authoritative gate)', async () => {
         jest.mocked(bridgeAllowlist.has).mockReturnValue(false)
-        jest.mocked(isBottleProvisioned).mockReturnValue(true)
+        jest.mocked(isSteamBottleProvisioned).mockReturnValue(true)
         jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
         library.set('570', {
           runner: 'steam',
@@ -9164,7 +9164,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     seedGame()
     jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
     jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
-    jest.mocked(isBottleProvisioned).mockReturnValue(false)
+    jest.mocked(isSteamBottleProvisioned).mockReturnValue(false)
     jest
       .mocked(getFileSize)
       .mockImplementation((bytes: unknown) => `${String(bytes)} B`)

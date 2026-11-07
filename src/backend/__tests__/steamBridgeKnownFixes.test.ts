@@ -71,9 +71,10 @@ jest.mock('backend/knownFixOverlays', () => ({
   resolveKnownFixOverlayEnv: (...args: unknown[]) =>
     mockResolveOverlayEnv(...args)
 }))
-jest.mock('../storeManagers/steam/bottle', () => ({
+jest.mock('backend/engine/bottlePrimitives', () => ({
   getBottleDir: (name: string) => `${mockBottleRoot}/${name}`
 }))
+jest.mock('../storeManagers/steam/bottle', () => ({}))
 
 import type { GameSettings } from 'common/types'
 import { bundledFixesPath, fixesPath, localFixesPath } from '../constants/paths'

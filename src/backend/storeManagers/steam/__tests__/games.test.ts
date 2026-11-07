@@ -83,7 +83,6 @@ import {
   tellBottledSteamToUninstall,
   getSteamBottleSettings,
   getBottleSteamappsDir,
-  getBottleDir,
   isBridgeBottleReady,
   getBridgeBottleSettings,
   provisionBridgeBottle,
@@ -93,6 +92,7 @@ import {
   getDrmBridgeRunner,
   killBridgeBottleWineServer
 } from '../bottle'
+import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import type { DrmLaunchForm } from '../bottle'
 import type {
   DrmDllPathChannel,
@@ -170,7 +170,7 @@ import {
 } from 'backend/engine/fallbackEngine'
 import { checkConnectivityNow } from 'backend/connectivityNow'
 import { ENGINE_PINS } from 'backend/engine/enginePins'
-import { buildFallbackGameSettings } from '../bottle'
+import { buildFallbackGameSettings } from 'backend/engine/bottlePrimitives'
 import { existsSync } from 'graceful-fs'
 import { getSteamLibraries, sendGameStatusUpdate } from 'backend/utils'
 // 260821-rb5: only needed by this task's case-C self-heal test (2) —
@@ -364,6 +364,12 @@ jest.mock('backend/constants/environment', () => ({
 // tellBottledSteamTo*, getSteamBottleSettings). Fully replaced (not spied) —
 // bottle.ts pulls in backend/config's heavy transitive chain and lazily
 // imports backend/launcher, neither of which games.test.ts needs to exercise.
+jest.mock('backend/engine/bottlePrimitives', () => ({
+  buildFallbackGameSettings: jest.fn(),
+  // Phase 51 Plan 01 (D-51-01): launchBridgeGame()'s bottleProcessMonitor
+  // wiring resolves the bottle dir via this.
+  getBottleDir: jest.fn()
+}))
 jest.mock('../bottle', () => {
   // Phase 24 Plan 08 (R4): dedicated bridge bottle readiness/provisioning
   // surface — installBridgeGame()'s BLOCKER-1 inline provisioning call.
@@ -386,16 +392,12 @@ jest.mock('../bottle', () => {
     CROSSOVER_CREATE_FAILED: 'crossover-create-failed',
     PROVISION_ABORTED: 'provision-aborted',
     discardNewBridgeBottle: jest.fn(),
-    buildFallbackGameSettings: jest.fn(),
     isBottleReady: jest.fn(),
     tellBottledSteamToLaunch: jest.fn(),
     tellBottledSteamToUninstall: jest.fn(),
     getSteamBottleSettings: jest.fn(),
     // Phase 21 Plan 11 (D-15/SNI-08): bottle depot-download write target.
     getBottleSteamappsDir: jest.fn(),
-    // Phase 51 Plan 01 (D-51-01): launchBridgeGame()'s bottleProcessMonitor
-    // wiring resolves the bottle dir via this.
-    getBottleDir: jest.fn(),
     isBridgeBottleReady,
     getBridgeBottleSettings: jest.fn(),
     getDrmBridgeRunner: jest.fn(),

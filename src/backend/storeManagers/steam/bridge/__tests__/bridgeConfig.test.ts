@@ -26,7 +26,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { writeBridgeConfig, BRIDGE_CONFIG_FILENAME } from '../bridgeConfig'
-import { getBottleDir } from '../../bottle'
+import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { logError, logWarning } from 'backend/logger'
 
 jest.mock('backend/logger', () => ({
@@ -36,7 +36,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-jest.mock('../../bottle', () => ({
+jest.mock('backend/engine/bottlePrimitives', () => ({
   // Verbatim re-implementation of bottle.ts:170's T-17-01 guard -- kept
   // here (not imported) so this suite never loads bottle.ts's transitive
   // electron/electron-store dependency graph.
@@ -56,6 +56,7 @@ jest.mock('../../bottle', () => ({
   },
   getBottleDir: jest.fn()
 }))
+jest.mock('../../bottle', () => ({}))
 
 const mockedGetBottleDir = getBottleDir as jest.Mock
 

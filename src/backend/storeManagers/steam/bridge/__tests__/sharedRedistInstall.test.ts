@@ -36,9 +36,9 @@ import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning } from 'backend/logger'
 import {
   bridgeBottleNameFor,
-  endPerGameBridgeBottleSession,
-  getBottleDir
+  endPerGameBridgeBottleSession
 } from '../../bottle'
+import { getBottleDir } from 'backend/engine/bottlePrimitives'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -50,8 +50,10 @@ jest.mock('backend/launcher', () => ({ runWineCommand: jest.fn() }))
 jest.mock('../../depot', () => ({ downloadSharedRedistDepots: jest.fn() }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
 jest.mock('backend/knownFixes', () => ({ readKnownFixProfile: jest.fn() }))
+jest.mock('backend/engine/bottlePrimitives', () => ({
+  getBottleDir: jest.fn()
+}))
 jest.mock('../../bottle', () => ({
-  getBottleDir: jest.fn(),
   bridgeBottleNameFor: jest.fn(),
   endPerGameBridgeBottleSession: jest.fn()
 }))

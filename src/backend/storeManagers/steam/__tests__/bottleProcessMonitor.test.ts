@@ -16,7 +16,7 @@ import { spawnAsync } from 'backend/utils'
 import { logInfo, logWarning } from 'backend/logger'
 import { sendFrontendMessage } from '../../../ipc'
 import { recordPlaySession } from 'backend/runsForMe'
-import { getBottleDir } from '../bottle'
+import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import {
   readBoundedTail,

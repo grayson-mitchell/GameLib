@@ -64,7 +64,8 @@ import { scanSteamApiImports } from '../importScan'
 import { SHIM64_EXPORTED_SYMBOLS } from '../shimCoverage'
 import * as bridgeScan from '../bridgeScan'
 import { buildManagedPe } from './fixtures/managedPe'
-import { getBottleDir, resolveBridgeBottleName } from '../../bottle'
+import { resolveBridgeBottleName } from '../../bottle'
+import { getBottleDir } from 'backend/engine/bottlePrimitives'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -94,8 +95,7 @@ jest.mock('backend/sidecar/sidecarRpc', () => ({
   requestRustInvoke: jest.fn()
 }))
 
-jest.mock('../../bottle', () => ({
-  DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge',
+jest.mock('backend/engine/bottlePrimitives', () => ({
   // Verbatim re-implementation of bottle.ts:166's T-17-01 guard -- kept
   // here (not imported) so this test suite never has to load bottle.ts's
   // transitive electron/electron-store dependency graph.
@@ -113,7 +113,10 @@ jest.mock('../../bottle', () => ({
     }
     return trimmed
   },
-  getBottleDir: jest.fn(),
+  getBottleDir: jest.fn()
+}))
+jest.mock('../../bottle', () => ({
+  DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge',
   // quick/261016-u1w (D-B): plain arrow function, NOT jest.fn() -- resetMocks
   // wipes a jest.fn()'s implementation before every test, but shimGenerate.ts
   // calls this directly as a pure resolver, so the factory gives it a real

@@ -37,13 +37,11 @@ import {
   stopBottleProcessMonitor
 } from '../bottleProcessMonitor'
 import {
-  getBottleDir,
   getBottleSteamappsDir,
   getBottleSteamExePath,
-  isBottleProvisioned,
+  isSteamBottleProvisioned,
   isBottleReady,
   bottleWineArch,
-  sanitizeBottleName,
   getSteamBottleSettings,
   provisionBottle,
   tellBottledSteamToLaunch,
@@ -74,9 +72,14 @@ import {
   endPerGameBridgeBottleSessionWith,
   clearDrmBridgeRunner,
   getDrmBridgeRunner,
-  killBottleWineServerWith,
   killBridgeBottleWineServer
 } from '../bottle'
+import {
+  getBottleDir,
+  isBottleProvisioned,
+  sanitizeBottleName,
+  killBottleWineServerWith
+} from 'backend/engine/bottlePrimitives'
 import type { DrmBridgeRunner } from '../bottle'
 import {
   setEngineSelection,
@@ -323,7 +326,7 @@ describe('bottle.ts', () => {
     test('defaults to the stored bottle name when none is passed', () => {
       mockedGetNodefault.mockReturnValue('StoredBottle')
       mockedExistsSync.mockReturnValue(true)
-      isBottleProvisioned()
+      isSteamBottleProvisioned()
       expect(mockedExistsSync).toHaveBeenCalledWith(
         expect.stringContaining('StoredBottle')
       )
@@ -332,7 +335,7 @@ describe('bottle.ts', () => {
     test('defaults to DEFAULT_STEAM_BOTTLE_NAME when nothing is stored', () => {
       mockedGetNodefault.mockReturnValue(undefined)
       mockedExistsSync.mockReturnValue(false)
-      isBottleProvisioned()
+      isSteamBottleProvisioned()
       expect(mockedExistsSync).toHaveBeenCalledWith(
         expect.stringContaining(DEFAULT_STEAM_BOTTLE_NAME)
       )

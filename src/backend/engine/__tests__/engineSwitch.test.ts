@@ -19,15 +19,17 @@ jest.mock('backend/logger', () => ({
 }))
 jest.mock('backend/constants/paths', () => ({ toolsPath: '/tools' }))
 jest.mock('backend/tools', () => ({ DXVK: { installRemove: jest.fn() } }))
-jest.mock('backend/storeManagers/steam/bottle', () => ({
+jest.mock('backend/engine/bottlePrimitives', () => ({
   getBottleDir: (name: string) => `${mockState.root}/${name}`,
   sanitizeBottleName: (name: string) =>
     /^[A-Za-z0-9_-]+$/.test(name) ? name : '',
-  bridgeBottleNameFor: (id: string) => `GameLibSteamBridge-${id}`,
-  persistedWineBins: () => [],
-  getBridgeBottleSettings: jest.fn(),
   buildFallbackGameSettings: jest.fn(),
   killBottleWineServerWith: jest.fn()
+}))
+jest.mock('backend/storeManagers/steam/bottle', () => ({
+  bridgeBottleNameFor: (id: string) => `GameLibSteamBridge-${id}`,
+  persistedWineBins: () => [],
+  getBridgeBottleSettings: jest.fn()
 }))
 jest.mock('backend/storeManagers/steam/bottleProcessMonitor', () => ({
   getBottleProcessMonitorPhase: jest.fn()

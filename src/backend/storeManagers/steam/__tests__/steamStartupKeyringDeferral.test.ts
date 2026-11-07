@@ -159,7 +159,7 @@ jest.mock('../bottle', () => ({
   isBridgeBottleReady: jest.fn(),
   getBridgeBottleSettings: jest.fn(),
   provisionBridgeBottle: jest.fn(),
-  isBottleProvisioned: jest.fn()
+  isSteamBottleProvisioned: jest.fn()
 }))
 
 jest.mock('../bridge/allowlist', () => ({

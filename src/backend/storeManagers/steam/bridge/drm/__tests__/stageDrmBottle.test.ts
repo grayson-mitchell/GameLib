@@ -33,11 +33,13 @@ jest.mock('backend/constants/paths', () => ({
 
 jest.mock('../../importScan', () => ({ scanSteamApiImports: jest.fn() }))
 
-jest.mock('../../../bottle', () => ({
-  DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge',
+jest.mock('backend/engine/bottlePrimitives', () => ({
   sanitizeBottleName: (n: string | null) =>
     n && /^[A-Za-z0-9_-]+$/.test(n) ? n : null,
-  getBottleDir: jest.fn(),
+  getBottleDir: jest.fn()
+}))
+jest.mock('../../../bottle', () => ({
+  DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge',
   resolveBridgeBottleName: (a: string) => `GameLibSteamBridge-${a}`
 }))
 
