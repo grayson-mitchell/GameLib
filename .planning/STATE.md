@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: executing
-stopped_at: Phase 71 context gathered
-last_updated: "2026-11-07T09:19:00.618Z"
+status: ready_to_plan
+stopped_at: Phase 61 complete (27/27, UAT approved) — Phase 65 unblocked (D-11)
+last_updated: "2026-11-07T15:10:00.000Z"
 last_activity: 2026-11-07
 progress:
   total_phases: 13
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 61 — unified-macos-engine-for-all-stores
+**Current focus:** Phase 61 complete — next: Phase 65 (was waiting on Phase 61 close, D-11)
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,10 +72,10 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 61 (unified-macos-engine-for-all-stores) — EXECUTING
-Plan: 3 of 27
-Status: Ready to execute
-Last activity: 2026-11-07 - Completed quick task 261107-v6q: inconclusive pre-flight keeps wine-manager / retired-pin bottle engine (61 re-review WR-01)
+Phase: 61 (unified-macos-engine-for-all-stores) — COMPLETE
+Plan: 27 of 27
+Status: Phase complete; operator approved 2026-11-07 (HUMAN-UAT items 1, 2, 4 pass; item 3 waived)
+Last activity: 2026-11-07 - Phase 61 approved and marked complete
 
 Progress: [██████████] 100%
 

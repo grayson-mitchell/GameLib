@@ -147,11 +147,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Unassigned (next milestone not yet defined)**
 
-- [x] **Phase 61: Unified macOS engine for all stores** — 20/20 plans executed; verification gaps_found 2026-11-07 (see 61-VERIFICATION.md) (completed 2026-11-07)
+- [x] **Phase 61: Unified macOS engine for all stores** — 27/27 plans (20 + 7 gap closure); re-verified 22/22, operator approved 2026-11-07 (completed 2026-11-07)
 - [x] **Phase 62: Module boundaries and decomposition** — 23 plans (21 + 2 gap closure); complete (completed 2026-11-07)
 - [x] **Phase 63: Rust migration pattern and executable scanners** — 14 plans; planned (completed 2026-11-07)
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
-- [ ] **Phase 65: Steam store manager decomposition, continued** — 19 plans; planned, not started (waits on Phase 61 close, D-11)
+- [ ] **Phase 65: Steam store manager decomposition, continued** — 19 plans; planned, not started (Phase 61 closed 2026-11-07 — unblocked, D-11)
 - [ ] **Phase 66: Backend dependency injection replacing module-level singletons** — 0 plans; not started
 - [ ] **Phase 67: Schema validation at the sidecar IPC boundary** — 0 plans; not started
 - [ ] **Phase 68: Versioned persisted stores and migrations** — 0 plans; not started
