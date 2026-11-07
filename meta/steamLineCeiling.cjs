@@ -12,6 +12,9 @@
  *   - There is NO --update flag. Numbers move by hand, in the same commit as
  *     the move (D-13). The phase ends with the baseline `{}`.
  *   - Scope is steam/ only; a backend-wide ceiling is a deferred idea.
+ *   - Generated files are exempt only by explicit path (GENERATED_EXEMPT), not
+ *     by name: renaming a hand-written module to `*.generated.*` does not take
+ *     it out of the gate. A listed path that no longer exists fails.
  *
  * Counting is `wc -l` semantics (newline count).
  */
@@ -33,6 +36,8 @@ const DEFAULT_BASELINE = path.join(__dirname, 'steamLineCeilingBaseline.json')
 const DEFAULT_MIN_FILES = 100
 const CODE_EXT = new Set(['.ts', '.tsx', '.cjs', '.mjs', '.js'])
 const SKIP_DIRS = new Set(['__tests__', '__mocks__', 'node_modules'])
+// Paths relative to DEFAULT_ROOT (POSIX). Applies to the default scan only.
+const GENERATED_EXEMPT = new Set(['bridge/shimExports.generated.ts'])
 
 /** @param {string} text */
 function countLines(text) {
@@ -44,9 +49,10 @@ function countLines(text) {
 /**
  * @param {string} root directory to scan
  * @param {string} [base] paths are returned relative to this (POSIX)
+ * @param {Set<string>} [exempt] root-relative POSIX paths to skip
  * @returns {string[]}
  */
-function collectFiles(root, base = REPO_ROOT) {
+function collectFiles(root, base = REPO_ROOT, exempt = new Set()) {
   const out = []
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -58,7 +64,9 @@ function collectFiles(root, base = REPO_ROOT) {
       if (!entry.isFile()) continue
       const name = entry.name
       if (!CODE_EXT.has(path.extname(name))) continue
-      if (/\.(test|spec)\./.test(name) || name.includes('.generated.')) continue
+      if (/\.(test|spec)\./.test(name)) continue
+      if (exempt.has(path.relative(root, full).split(path.sep).join('/')))
+        continue
       out.push(path.relative(base, full).split(path.sep).join('/'))
     }
   }
@@ -112,6 +120,23 @@ function evaluate(baseline, current, ceiling = CEILING) {
   return failures
 }
 
+/**
+ * @param {string} root
+ * @param {Set<string>} exempt root-relative POSIX paths
+ * @returns {string[]} failure messages for listed paths that are not files
+ */
+function staleExemptions(root, exempt) {
+  const failures = []
+  for (const rel of [...exempt].sort()) {
+    const full = path.join(root, ...rel.split('/'))
+    if (!fs.existsSync(full) || !fs.statSync(full).isFile())
+      failures.push(
+        `stale generated exemption: ${rel} (file is gone; remove it from GENERATED_EXEMPT in this commit)`
+      )
+  }
+  return failures
+}
+
 function argValue(argv, flag) {
   const i = argv.indexOf(flag)
   return i === -1 ? undefined : argv[i + 1]
@@ -134,7 +159,8 @@ function main() {
     process.exit(1)
   }
 
-  const files = collectFiles(root, base)
+  const exempt = argValue(argv, '--root') ? new Set() : GENERATED_EXEMPT
+  const files = collectFiles(root, base, exempt)
   if (files.length < minFiles) {
     console.error(
       `FAIL: scanned only ${files.length} files, below the floor of ${minFiles}; the scan is broken`
@@ -145,7 +171,10 @@ function main() {
   for (const rel of files)
     current[rel] = countLines(fs.readFileSync(path.join(base, rel), 'utf8'))
 
-  const failures = evaluate(baseline, current)
+  const failures = [
+    ...staleExemptions(root, exempt),
+    ...evaluate(baseline, current)
+  ]
   if (failures.length === 0) {
     console.log(
       `PASS (${files.length} files scanned, ${Object.keys(baseline).length} allowlisted over ${CEILING})`
@@ -156,6 +185,12 @@ function main() {
   process.exit(1)
 }
 
-module.exports = { countLines, collectFiles, evaluate }
+module.exports = {
+  countLines,
+  collectFiles,
+  evaluate,
+  staleExemptions,
+  GENERATED_EXEMPT
+}
 
 if (require.main === module) main()

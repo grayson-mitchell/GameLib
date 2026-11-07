@@ -14,7 +14,9 @@ import { createFakeHomeProfile } from '../../src/backend/testUtils/fakeHomeProfi
 const {
   countLines,
   collectFiles,
-  evaluate
+  evaluate,
+  staleExemptions,
+  GENERATED_EXEMPT
 } = require('../steamLineCeiling.cjs')
 /* eslint-enable @typescript-eslint/no-require-imports */
 
@@ -87,7 +89,7 @@ function seed(files: Record<string, string>): string {
 }
 
 describe('steamLineCeiling collectFiles', () => {
-  it('excludes tests, mocks, generated files and non-code extensions', () => {
+  it('excludes tests, mocks, exempted files and non-code extensions', () => {
     const root = seed({
       'a.ts': 'x\n',
       'sub/b.cjs': 'x\n',
@@ -95,14 +97,58 @@ describe('steamLineCeiling collectFiles', () => {
       '__mocks__/d.ts': 'x\n',
       'e.test.ts': 'x\n',
       'f.spec.ts': 'x\n',
-      'g.generated.ts': 'x\n',
+      'gen/g.generated.ts': 'x\n',
       'h.json': '{}\n'
     })
     try {
-      expect(collectFiles(root, root).sort()).toEqual(['a.ts', 'sub/b.cjs'])
+      expect(
+        collectFiles(root, root, new Set(['gen/g.generated.ts'])).sort()
+      ).toEqual(['a.ts', 'sub/b.cjs'])
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
+  })
+  it('does not exempt a file just because it is named *.generated.*', () => {
+    const root = seed({ 'a.ts': 'x\n', 'renamed.generated.ts': 'x\n' })
+    try {
+      expect(collectFiles(root, root).sort()).toEqual([
+        'a.ts',
+        'renamed.generated.ts'
+      ])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('steamLineCeiling staleExemptions', () => {
+  it('passes when every exempted path exists', () => {
+    const root = seed({ 'gen/g.generated.ts': 'x\n' })
+    try {
+      expect(staleExemptions(root, new Set(['gen/g.generated.ts']))).toEqual([])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+  it('flags an exempted path that no longer exists', () => {
+    const root = seed({ 'a.ts': 'x\n' })
+    try {
+      expect(staleExemptions(root, new Set(['gone.generated.ts']))).toEqual([
+        expect.stringContaining('stale generated exemption: gone.generated.ts')
+      ])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+  it('the shipped exemption list matches the real tree', () => {
+    const steamRoot = join(
+      REPO_ROOT,
+      'src',
+      'backend',
+      'storeManagers',
+      'steam'
+    )
+    expect(staleExemptions(steamRoot, GENERATED_EXEMPT)).toEqual([])
   })
 })
 
