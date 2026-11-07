@@ -1205,3 +1205,61 @@ describe('en catalog (quick 261107-kn8)', () => {
     expect(catalog.consoleMode.steamInstallTargetDefault).toBe(match?.[1])
   })
 })
+
+describe('InstallOverlay/index.tsx never offers Windows or Wine for Steam (quick 261107-li0 finding: a forced-Windows dual-build install is not-eligible for the bridge, so it lands on the shared bottled client where a Wine choice applies; revisit only if the backend routes those installs to the bridge)', () => {
+  it('D13: no forceWindowsViaBottle, a bare two-argument installSteamGame, and showPlatform/hasWine keep !isSteam', () => {
+    expect(() =>
+      assertNoWindowsOfferForSteam(readStrippedOverlay())
+    ).not.toThrow()
+  })
+
+  it('D13-RED: an extra installSteamGame argument trips', () => {
+    const real = readStrippedOverlay()
+    const knownBad = real.replace(
+      'installSteamGame(game.app_name, game)',
+      "installSteamGame(game.app_name, game, '', true)"
+    )
+    expect(knownBad).not.toBe(real)
+    expect(() => assertNoWindowsOfferForSteam(knownBad)).toThrow(
+      /installSteamGame/
+    )
+  })
+
+  it('D13-RED-b: dropping !isSteam from showPlatform trips', () => {
+    const real = readStrippedOverlay()
+    const knownBad = real.replace(
+      '!isSteam && availablePlatforms',
+      'availablePlatforms'
+    )
+    expect(knownBad).not.toBe(real)
+    expect(() => assertNoWindowsOfferForSteam(knownBad)).toThrow(/showPlatform/)
+  })
+
+  it('D13-RED-c: a forceWindowsViaBottle token trips', () => {
+    const knownBad = readStrippedOverlay() + '\nconst f = forceWindowsViaBottle'
+    expect(() => assertNoWindowsOfferForSteam(knownBad)).toThrow(
+      /forceWindowsViaBottle/
+    )
+  })
+})
+
+function assertNoWindowsOfferForSteam(source: string) {
+  if (source.includes('forceWindowsViaBottle')) {
+    throw new Error('forceWindowsViaBottle appears in the Console overlay')
+  }
+  const calls = source.match(/installSteamGame\([^)]*\)/g) ?? []
+  if (
+    calls.length === 0 ||
+    calls.some((c) => c !== 'installSteamGame(game.app_name, game)')
+  ) {
+    throw new Error(
+      `installSteamGame calls must be exactly (game.app_name, game); found ${JSON.stringify(calls)}`
+    )
+  }
+  for (const name of ['showPlatform', 'hasWine']) {
+    const m = source.match(new RegExp(`const ${name} =[^\\n]*`))
+    if (!m || !m[0].includes('!isSteam')) {
+      throw new Error(`${name} declaration must contain !isSteam`)
+    }
+  }
+}
