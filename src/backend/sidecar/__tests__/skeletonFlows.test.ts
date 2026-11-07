@@ -736,7 +736,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       expect(response).toMatchObject({ id: 'null-refresh-1', ok: true })
     })
 
-    it('an unknown runner rejects with an error naming it, and calls no manager’s refresh()', async () => {
+    it('an unknown runner is rejected value-free at the schema boundary, and calls no manager’s refresh()', async () => {
       const spies = Object.values(libraryManagerMap).map((manager) =>
         jest
           .spyOn(manager, 'refresh')
@@ -755,9 +755,10 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
         (frame) => frame.id === 'unknown-refresh-1'
       ) as { id: string; ok: boolean; error?: string } | undefined
       expect(response?.ok).toBe(false)
-      expect(response?.error).toEqual(
-        expect.stringContaining('not-a-real-runner')
-      )
+      // Phase 67: the schema rejects it at the boundary, and a rejection is value-free
+      // (it never echoes the offending argument).
+      expect(response?.error).toEqual(expect.stringContaining('refreshLibrary'))
+      expect(response?.error).not.toContain('not-a-real-runner')
     })
 
     it('in the all-branch, one manager rejecting does not reject the handler and the other managers still ran', async () => {
