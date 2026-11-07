@@ -65,6 +65,17 @@ describe('dialog wiring (source gates)', () => {
     }
   )
 
+  it('SideloadDialog Run installer with an engine goes through the pending-install path, not renderer-built Wine settings (CR-04)', () => {
+    const src = read('SideloadDialog/index.tsx')
+    expect(src).toMatch(/runWineCommandForGame\(/)
+    expect(src).toMatch(/pendingInstall: true/)
+    const engineBranch = src.slice(
+      src.indexOf('runWineCommandForGame('),
+      src.indexOf('} catch (error)', src.indexOf('runWineCommandForGame('))
+    )
+    expect(engineBranch).not.toMatch(/\.\.\.engineConfig/)
+  })
+
   it('ImportDialog sends engineOverride and omits wine fields in that case', () => {
     const src = read('ImportDialog/index.tsx')
     expect(src).toMatch(/\{ engineOverride \}/)

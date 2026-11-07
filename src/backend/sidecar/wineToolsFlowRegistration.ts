@@ -73,7 +73,12 @@ import {
   updateWineVersionInfos,
   updateWineListsIfOutdated
 } from '../wine/manager/utils'
-import { DXVK, Winetricks, runWineCommandOnGame } from '../tools'
+import {
+  DXVK,
+  Winetricks,
+  runWineCommandOnGame,
+  runWineCommandForPendingInstall
+} from '../tools'
 import { WinetricksQueue } from '../tools/winetricksQueue'
 import { getGame, spawnAsync } from '../utils'
 import { isWindows } from '../constants/environment'
@@ -370,18 +375,30 @@ export function registerWineToolsFlows(): void {
   // through as an argv array exactly like the non-Windows `runWineCommandOnGame`/`launcher.ts`
   // `runWineCommand` path already does. T-34.6-34 (accepted residual): this Windows branch is
   // UNVERIFIED on real Windows hardware — every gate this project runs is macOS-only.
+  // CR-04: `pendingInstall` reaches a sideload-only path whose bottle name is computed server-side.
   ipcMain.handle(
     'runWineCommandForGame',
     async (_event: unknown, ...args: unknown[]) => {
-      const { appName, commandParts, runner } = args[0] as {
-        appName: string
-        commandParts: string[]
-        runner: Runner
-      }
+      const { appName, commandParts, runner, wait, pendingInstall } =
+        args[0] as {
+          appName: string
+          commandParts: string[]
+          runner: Runner
+          wait?: unknown
+          pendingInstall?: unknown
+        }
       assertCommandParts(commandParts)
       if (isWindows) {
         const [command, ...commandArgs] = commandParts
         return spawnAsync(command, commandArgs)
+      }
+      if (pendingInstall === true) {
+        return runWineCommandForPendingInstall({
+          runner,
+          appName,
+          commandParts,
+          wait: wait === true
+        })
       }
       return runWineCommandOnGame(runner, appName, {
         commandParts,

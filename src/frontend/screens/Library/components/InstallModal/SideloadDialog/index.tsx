@@ -280,18 +280,28 @@ export default function SideloadDialog({
             ? { ...gameSettings, ...engineConfig }
             : { ...gameSettings, winePrefix, wineVersion }
         })
-        await window.api.runWineCommand({
-          commandParts: [exeToRun],
-          wait: true,
-          protonVerb: 'runinprefix',
-          gameSettings: engineConfig
-            ? { ...gameSettings, ...engineConfig }
-            : {
-                ...gameSettings,
-                winePrefix,
-                wineVersion: wineVersion || gameSettings.wineVersion
-              }
-        })
+        if (engineConfig) {
+          // CR-04: the backend resolves the game's own bottle (creating it) from the config just
+          // written; the renderer must not build Wine settings for an engine choice.
+          await window.api.runWineCommandForGame({
+            appName: app_name,
+            runner: 'sideload',
+            commandParts: [exeToRun],
+            wait: true,
+            pendingInstall: true
+          })
+        } else {
+          await window.api.runWineCommand({
+            commandParts: [exeToRun],
+            wait: true,
+            protonVerb: 'runinprefix',
+            gameSettings: {
+              ...gameSettings,
+              winePrefix,
+              wineVersion: wineVersion || gameSettings.wineVersion
+            }
+          })
+        }
       } catch (error) {
         window.api.logError(
           `Sideload: running the installer failed: ${String(error)}`

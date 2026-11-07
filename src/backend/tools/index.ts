@@ -71,7 +71,7 @@ import { toolsPath, userHome } from 'backend/constants/paths'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import './dxmt'
 import { Game } from '../../common/types/game_manager'
-import { storeCapabilities } from 'common/storeCapabilities'
+import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import { parseWinetricksListAll } from './winetricksListParse'
 import {
   deriveNeedsGuiVerbs,
@@ -1587,7 +1587,7 @@ export async function runWineCommandForPendingInstall(args: {
   commandParts: string[]
   wait: boolean
 }): Promise<ExecResult> {
-  if (args.runner !== 'sideload') {
+  if (!isStore(args.runner, 'sideload')) {
     logError(
       `runWineCommandForPendingInstall refused runner ${args.runner}: sideload only`,
       LogPrefix.Backend

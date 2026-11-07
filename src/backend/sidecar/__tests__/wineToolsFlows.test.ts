@@ -84,7 +84,8 @@ jest.mock('../../tools', () => ({
     listInstalled: jest.fn(),
     install: jest.fn()
   },
-  runWineCommandOnGame: jest.fn()
+  runWineCommandOnGame: jest.fn(),
+  runWineCommandForPendingInstall: jest.fn()
 }))
 
 // Phase 45 Plan 01 (D-11): the three winetricks-queue channels delegate to
@@ -106,7 +107,11 @@ import { registerWineToolsFlows } from '../wineToolsFlowRegistration'
 import { handlerRegistry, listenerRegistry } from '../../platform'
 import { runWineCommand } from '../../launcher'
 import { GameConfig } from '../../game_config'
-import { DXVK, runWineCommandOnGame } from '../../tools'
+import {
+  DXVK,
+  runWineCommandOnGame,
+  runWineCommandForPendingInstall
+} from '../../tools'
 import { WinetricksQueue } from '../../tools/winetricksQueue'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import type { IpcHandler } from '../../platform'
@@ -475,6 +480,76 @@ describe('runWineCommandForGame hardening — shape guard + pass-through (T-34.5
     ).rejects.toThrow()
 
     expect(mockRunWineCommandOnGame).not.toHaveBeenCalled()
+  })
+
+  describe('pendingInstall (CR-04)', () => {
+    const mockPending = runWineCommandForPendingInstall as jest.MockedFunction<
+      typeof runWineCommandForPendingInstall
+    >
+    beforeEach(() => {
+      mockPending.mockClear()
+      mockPending.mockResolvedValue({ stdout: '', stderr: '' })
+    })
+
+    it('pendingInstall true routes to runWineCommandForPendingInstall with wait, not runWineCommandOnGame', async () => {
+      const handler = handlerRegistry.get('runWineCommandForGame') as IpcHandler
+      await handler({} as never, {
+        appName: 'abc',
+        runner: 'sideload',
+        commandParts: ['/x/setup.exe'],
+        wait: true,
+        pendingInstall: true
+      })
+      expect(mockPending).toHaveBeenCalledWith({
+        runner: 'sideload',
+        appName: 'abc',
+        commandParts: ['/x/setup.exe'],
+        wait: true
+      })
+      expect(mockRunWineCommandOnGame).not.toHaveBeenCalled()
+    })
+
+    it('without pendingInstall the existing path runs with wait false', async () => {
+      const handler = handlerRegistry.get('runWineCommandForGame') as IpcHandler
+      await handler({} as never, {
+        appName: 'abc',
+        runner: 'sideload',
+        commandParts: ['/x/setup.exe'],
+        wait: true
+      })
+      expect(mockPending).not.toHaveBeenCalled()
+      expect(mockRunWineCommandOnGame).toHaveBeenCalledWith('sideload', 'abc', {
+        commandParts: ['/x/setup.exe'],
+        wait: false,
+        protonVerb: 'runinprefix'
+      })
+    })
+
+    it('non-boolean pendingInstall and wait are treated as absent/false', async () => {
+      const handler = handlerRegistry.get('runWineCommandForGame') as IpcHandler
+      await handler({} as never, {
+        appName: 'abc',
+        runner: 'sideload',
+        commandParts: ['/x/setup.exe'],
+        wait: 'true',
+        pendingInstall: 'true'
+      })
+      expect(mockPending).not.toHaveBeenCalled()
+      expect(mockRunWineCommandOnGame).toHaveBeenCalledTimes(1)
+    })
+
+    it('malformed commandParts throw before any call', async () => {
+      const handler = handlerRegistry.get('runWineCommandForGame') as IpcHandler
+      await expect(
+        handler({} as never, {
+          appName: 'abc',
+          runner: 'sideload',
+          commandParts: 'x',
+          pendingInstall: true
+        })
+      ).rejects.toThrow()
+      expect(mockPending).not.toHaveBeenCalled()
+    })
   })
 
   it('ALLOW: a legitimate apostrophe-and-space-containing commandParts array reaches runWineCommandOnGame UNCHANGED (non-Windows branch, proves this is a shape check, not a content check)', async () => {

@@ -187,7 +187,7 @@ export async function resolveToolSettingsForId(
       key,
       bottleName,
       appName,
-      runner: runner as Runner
+      runner
     })
     if (made.status === 'error') {
       return { kind: 'unavailable', reason: 'bottle-not-created' }
