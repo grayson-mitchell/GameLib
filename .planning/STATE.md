@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 65 (steam-store-manager-decomposition-continued) — EXECUTING
 Plan: 19 of 20
 Status: Ready to execute
-Last activity: 2026-11-07
+Last activity: 2026-11-08 - Completed quick task 261108-ca6: Remove the SteamGame lift stubs
 
 Progress: [████████░░] 81%
 
@@ -593,6 +593,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261107-lum | Forced-Windows Steam install of a Mac-native game now resolves the bridge verdict (own `GameLibSteamBridge-<appId>` bottle) instead of always landing on bottled Steam: per-call `windowsBuildChosen` into `assembleBridgeRouteInput`; forced flag persisted only after a committed install and cleared on bridge uninstall; `getSteamBridgeRoute(appId, windowsBuildChosen?)`; dialog re-requests the verdict on Platform flip; notice/setup retries replay the Windows choice. Follow-ups: console Platform row, Cat Quest shim-withheld todo. | 2026-11-07 | 850819137 | jest Frontend 5139 pass, backend pass except 3 pre-existing; codecheck/smoke:sidecar/scoped prettier pass; LIVE: routing PASS on 391540 + 593280, strict bridge-verified NOT met on either (shim coverage, independent) | [261107-lum-route-forced-windows-steam-installs-of-m](./quick/261107-lum-route-forced-windows-steam-installs-of-m/) |
 | 261107-mr0 | Console Mode Platform row for dual-build Steam games on macOS: macOS default, Windows offered only when `getSteamBridgeRoute(appId, true)` is `bridge`; hidden until probe + verdict resolve; no Wine row; Windows passes `forceWindowsViaBottle`; Install-to "Its own Windows bottle"; D13 gate replaced by `assertConsoleSteamPlatformContract`. | 2026-11-07 | 25839cfe6 | jest Frontend 5163 pass, codecheck/eslint/i18n gates/planning-gates/scoped prettier pass; not live-checked in Console Mode | [261107-mr0-console-mode-steam-platform-row-for-dual](./quick/261107-mr0-console-mode-steam-platform-row-for-dual/) |
 | 261108-avs | overlayInputSmoke + overlayInputProbeSmoke (cursor warp to 10,10, real windows, beeps) now opt-in via `GAMELIB_DESKTOP_SMOKE=1`: whole suite `describe.skip` + one logged warn when unset, launchctl probe short-circuited; opt-in path unchanged. | 2026-11-08 | 7f8217cca | 16/16 skipped unset; tsc meta/eslint/scoped prettier pass; opt-in run not exercised (would warp cursor) | [261108-avs-gate-overlay-desktop-smoke-tests](./quick/261108-avs-gate-overlay-desktop-smoke-tests/) |
+| 261108-ca6 | Removed the 10 non-interface SteamGame lift stubs; callers use the free functions, installNative/installBottleNative moved to gameInstallDepot, launchBridgeGame+runBridgeLaunch to new gameBridgeLaunchGate; all 19 stub spies now module spies; 4 accepted import cycles allow-listed in gamesModuleSurface; todo closed. | 2026-11-08 | 0c242e0ce | games+surface 720/720 pass; build:sidecar OK; cycle audit clean | [261108-ca6-remove-the-steamgame-lift-stubs-and-spy-](./quick/261108-ca6-remove-the-steamgame-lift-stubs-and-spy-/) |
 
 ## Session Continuity
 
