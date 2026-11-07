@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 66
 Plan: 0 of 0
 Status: Ready to execute
-Last activity: 2026-11-08 - Completed quick task 261108-et5: adopt noUncheckedIndexedAccess for backend/sidecar
+Last activity: 2026-11-08 - Completed quick task 261108-et6: adopt noUncheckedIndexedAccess for frontend/components
 
 Progress: [██████████] 100%
 
@@ -536,6 +536,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261108-et1 | adopt noUncheckedIndexedAccess for backend/shortcuts and backend/tools (172 sites, 3 commits; shared testUtils/indexed helper) | 2026-11-08 | 702432bce | ratchet exit 0 per commit; codecheck; shortcuts+tools jest (249); boundaries; find-deadcode clean for touched; scoped prettier; planning-gates 11/12 (pre-existing) | [261108-et1-adopt-nuia-shortcuts-tools](./quick/261108-et1-adopt-nuia-shortcuts-tools/) |
 | 261108-et3 | adopt noUncheckedIndexedAccess for frontend/helpers (130 sites; gamepad layouts `?? NaN` axes / `?.pressed ?? false`; resumed after another session's rebase) | 2026-11-08 | 04932c253 | ratchet exit 0; codecheck; helpers jest (224); boundaries; find-deadcode clean; planning-gates 12/12; scoped prettier | [261108-et3-adopt-nuia-frontend-helpers](./quick/261108-et3-adopt-nuia-frontend-helpers/) |
 | 261108-et5 | adopt noUncheckedIndexedAccess for backend/sidecar (165 sites, 2 commits; assertCommandParts now asserts a non-empty tuple; electronUntouched.test.ts digest re-pinned per Gate 8) | 2026-11-08 | 3cf62fbec | ratchet exit 0; codecheck; sidecar jest 104 suites/2908; smoke:sidecar (T1); boundaries; find-deadcode clean; planning-gates 12/12; scoped prettier | [261108-et5-adopt-nuia-backend-sidecar](./quick/261108-et5-adopt-nuia-backend-sidecar/) |
+| 261108-et6 | adopt noUncheckedIndexedAccess for frontend/components (217 sites, 2 commits; 10 source files identical for valid data; local fixtures/indexed.ts) | 2026-11-08 | 9b5782c63 | ratchet exit 0; codecheck; components + screens/Library jest; boundaries; knip; planning-gates 12/12; scoped prettier | [261108-et6-adopt-nuia-frontend-components](./quick/261108-et6-adopt-nuia-frontend-components/) |
 
 ## Deferred Items
 
