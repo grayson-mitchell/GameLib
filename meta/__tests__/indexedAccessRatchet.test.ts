@@ -39,7 +39,11 @@ describe('indexedAccessRatchet bucketOf', () => {
     expect(bucketOf(p)).toBe(b)
   })
   test('adopted buckets are the steam and gog buckets', () => {
-    expect(ADOPTED_BUCKETS).toEqual([STEAM, 'src/backend/storeManagers/gog'])
+    expect(ADOPTED_BUCKETS).toEqual([
+      STEAM,
+      'src/backend/storeManagers/gog',
+      'src/backend/storeManagers/legendary'
+    ])
   })
 })
 

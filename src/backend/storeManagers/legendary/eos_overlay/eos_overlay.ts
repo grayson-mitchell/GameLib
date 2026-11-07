@@ -111,8 +111,9 @@ async function install() {
       logMessagePrefix: 'Getting EOS Overlay install size',
       onOutput: (output: string) => {
         const downloadMatch = output.match(/Download size: ([\d.]+) MiB/)
-        if (downloadMatch) {
-          downloadSize = parseFloat(downloadMatch[1])
+        const downloadSizeStr = downloadMatch?.[1]
+        if (downloadSizeStr) {
+          downloadSize = parseFloat(downloadSizeStr)
           // Output is in MiB, we want it in bytes
           downloadSize = downloadSize * 1024 ** 2
           callAbortController(eosOverlayAppName)

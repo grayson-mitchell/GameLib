@@ -68,12 +68,13 @@ export function applyLegendaryMacArch(appName: string, verdict: '32' | '64') {
 
   const stored = libraryStore.get('library', [])
   const idx = stored.findIndex((g) => g.app_name === appName)
-  if (idx > -1) {
-    stored[idx] = { ...stored[idx], mac_arch: verdict }
+  const entry = stored[idx]
+  if (entry) {
+    stored[idx] = { ...entry, mac_arch: verdict }
     libraryStore.set('library', stored)
   }
 
-  const updated = library.get(appName) ?? (idx > -1 ? stored[idx] : undefined)
+  const updated = library.get(appName) ?? entry
   if (updated) sendFrontendMessage('pushGameToLibrary', updated)
 }
 
@@ -626,17 +627,21 @@ export default class LegendaryLibraryManager implements LibraryManager {
 
     const convertedSize = install_size ? getFileSize(Number(install_size)) : '0'
 
-    if (releaseInfo && !releaseInfo[0].platform) {
+    const firstRelease = releaseInfo?.[0]
+    if (releaseInfo && !firstRelease?.platform) {
       logWarning(['No platforms info for', app_name], LogPrefix.Legendary)
     }
 
     let metadataPlatform: LegendaryInstallPlatform[] = []
     // some DLCs don't have a platform value
-    if (releaseInfo[0].platform) {
-      metadataPlatform = releaseInfo[0].platform
-    } else if (mainGameItem && mainGameItem.releaseInfo[0].platform) {
+    if (firstRelease?.platform) {
+      metadataPlatform = firstRelease.platform
+    } else {
       // when there's no platform, the DLC might reference the base game with the info
-      metadataPlatform = mainGameItem.releaseInfo[0].platform
+      const baseRelease = mainGameItem?.releaseInfo[0]
+      if (baseRelease?.platform) {
+        metadataPlatform = baseRelease.platform
+      }
     }
 
     library.set(app_name, {
@@ -785,11 +790,11 @@ export default class LegendaryLibraryManager implements LibraryManager {
         return []
       }
 
-      const list = Object.keys(response.data)
+      const list = Object.entries(response.data)
       const sdlList: SelectiveDownload[] = []
 
-      list.forEach((key) => {
-        const { name, description, tags } = response.data[key]
+      list.forEach(([key, entry]) => {
+        const { name, description, tags } = entry
         if (key === '__required') {
           sdlList.unshift({ name, description, tags, required: true })
         } else {
