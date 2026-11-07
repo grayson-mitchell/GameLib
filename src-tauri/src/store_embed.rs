@@ -513,53 +513,19 @@ fn store_embed_state() -> &'static Mutex<StoreEmbedState> {
 pub(crate) fn store_embed_open_args(
     args: &[Value],
 ) -> Result<(tauri::Url, f64, f64, f64, f64, String, Option<tauri::Url>), String> {
-    let obj = args
-        .first()
-        .and_then(|v| v.as_object())
-        .ok_or_else(|| "store_embed_open:bad-args".to_string())?;
-    let url_str = obj
-        .get("url")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "store_embed_open:bad-args:url".to_string())?;
+    let a = StoreEmbedOpenArgs::from_args(args)?;
     // Parsed with `tauri::Url`; a parse failure returns a prefixed `Err`, never a fallback URL
     // (T-40-02-01).
-    let url = tauri::Url::parse(url_str).map_err(|e| format!("store_embed_open:bad-url:{e}"))?;
-    let x = obj
-        .get("x")
-        .and_then(|v| v.as_f64())
-        .ok_or_else(|| "store_embed_open:bad-args:x".to_string())?;
-    let y = obj
-        .get("y")
-        .and_then(|v| v.as_f64())
-        .ok_or_else(|| "store_embed_open:bad-args:y".to_string())?;
-    let w = obj
-        .get("w")
-        .and_then(|v| v.as_f64())
-        .ok_or_else(|| "store_embed_open:bad-args:w".to_string())?;
-    let h = obj
-        .get("h")
-        .and_then(|v| v.as_f64())
-        .ok_or_else(|| "store_embed_open:bad-args:h".to_string())?;
-    let store_key = obj
-        .get("storeKey")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "store_embed_open:bad-args:storeKey".to_string())?
-        .to_string();
+    let url = tauri::Url::parse(&a.url).map_err(|e| format!("store_embed_open:bad-url:{e}"))?;
     // Optional (quick 261031): the store's home page, seeded beneath a first open at a remembered
     // page. Absent or null means no seed; present but unparseable is an error, never a fallback.
-    let home_url = match obj.get("homeUrl") {
-        None | Some(Value::Null) => None,
-        Some(v) => {
-            let home_str = v
-                .as_str()
-                .ok_or_else(|| "store_embed_open:bad-args:homeUrl".to_string())?;
-            Some(
-                tauri::Url::parse(home_str)
-                    .map_err(|e| format!("store_embed_open:bad-home-url:{e}"))?,
-            )
-        }
+    let home_url = match a.home_url.as_deref() {
+        None => None,
+        Some(home_str) => Some(
+            tauri::Url::parse(home_str).map_err(|e| format!("store_embed_open:bad-home-url:{e}"))?,
+        ),
     };
-    Ok((url, x, y, w, h, store_key, home_url))
+    Ok((url, a.x, a.y, a.w, a.h, a.store_key, home_url))
 }
 
 /// Disposition returned by `store_embed_navigation_policy` (D-29, T-40-04-02/03/09). Kept as an
@@ -1057,27 +1023,8 @@ pub(crate) fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value,
 /// Parse `store_embed_set_bounds`'s `{ x, y, w, h }` args, all logical px.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 pub(crate) fn store_embed_set_bounds_args(args: &[Value]) -> Result<(f64, f64, f64, f64), String> {
-    let obj = args
-        .first()
-        .and_then(|v| v.as_object())
-        .ok_or_else(|| "store_embed_set_bounds:bad-args".to_string())?;
-    let x = obj
-        .get("x")
-        .and_then(|v| v.as_f64())
-        .ok_or_else(|| "store_embed_set_bounds:bad-args:x".to_string())?;
-    let y = obj
-        .get("y")
-        .and_then(|v| v.as_f64())
-        .ok_or_else(|| "store_embed_set_bounds:bad-args:y".to_string())?;
-    let w = obj
-        .get("w")
-        .and_then(|v| v.as_f64())
-        .ok_or_else(|| "store_embed_set_bounds:bad-args:w".to_string())?;
-    let h = obj
-        .get("h")
-        .and_then(|v| v.as_f64())
-        .ok_or_else(|| "store_embed_set_bounds:bad-args:h".to_string())?;
-    Ok((x, y, w, h))
+    let a = StoreEmbedSetBoundsArgs::from_args(args)?;
+    Ok((a.x, a.y, a.w, a.h))
 }
 
 /// Convert the renderer's logical-px slot rect into the `i32` rect GTK's container API takes.
@@ -1635,16 +1582,9 @@ fn store_embed_take_nav_events(app: &AppHandle) -> Result<Value, String> {
 /// Parse `store_embed_navigate`'s `{ url }` arg.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 pub(crate) fn store_embed_navigate_args(args: &[Value]) -> Result<tauri::Url, String> {
-    let obj = args
-        .first()
-        .and_then(|v| v.as_object())
-        .ok_or_else(|| "store_embed_navigate:bad-args".to_string())?;
-    let url_str = obj
-        .get("url")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "store_embed_navigate:bad-args:url".to_string())?;
+    let a = StoreEmbedNavigateArgs::from_args(args)?;
     // No fallback URL on a parse failure (same discipline as `store_embed_open_args`).
-    tauri::Url::parse(url_str).map_err(|e| format!("store_embed_navigate:bad-url:{e}"))
+    tauri::Url::parse(&a.url).map_err(|e| format!("store_embed_navigate:bad-url:{e}"))
 }
 
 /// Phase 40 Plan 07 (D-22/D-25): moves the history cursor back one entry and navigates the
@@ -4515,6 +4455,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             }
         }
         "store_embed_hide" => {
+            StoreEmbedHideArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_hide(app)
@@ -4525,6 +4466,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             }
         }
         "store_embed_show" => {
+            StoreEmbedShowArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_show(app)
@@ -4535,6 +4477,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             }
         }
         "store_embed_close" => {
+            StoreEmbedCloseArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_close(app)
@@ -4550,6 +4493,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // embed moved this process's cursor while the renderer's `canGoBack` stayed false
         // forever. Drains, never peeks -- same contract as `humble_login_take_events` above.
         "store_embed_take_nav_events" => {
+            StoreEmbedTakeNavEventsArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_take_nav_events(app)
@@ -4564,6 +4508,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // no `canGoBack()`-style handle to query, so this pushed/returned state IS the read
         // (control inverts: Rust pushes, the frontend never polls).
         "store_embed_back" => {
+            StoreEmbedBackArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_back(app)
@@ -4574,6 +4519,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             }
         }
         "store_embed_forward" => {
+            StoreEmbedForwardArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_forward(app)
@@ -4584,6 +4530,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             }
         }
         "store_embed_reload" => {
+            StoreEmbedReloadArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_reload(app)

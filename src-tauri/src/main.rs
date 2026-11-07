@@ -2202,6 +2202,81 @@ mod tests {
         );
     }
 
+    // Per-suffix pins for the generated `x-field-errors` from_args: each bad field names itself
+    // and the first failing field in declared order wins (T-67-69).
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    fn open_obj_with(key: &str, bad: Value) -> Vec<Value> {
+        let mut obj = wire_args("store_embed_open")[0].as_object().unwrap().clone();
+        obj.insert(key.to_string(), bad);
+        vec![Value::Object(obj)]
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_open_field_errors_name_each_bad_field() {
+        for key in ["url", "x", "y", "w", "h", "storeKey", "homeUrl"] {
+            let bad = Value::Bool(true);
+            assert_eq!(
+                store_embed_open_args(&open_obj_with(key, bad)).unwrap_err(),
+                format!("store_embed_open:bad-args:{key}")
+            );
+        }
+        // Absent required field, not just a wrong type.
+        let mut obj = wire_args("store_embed_open")[0].as_object().unwrap().clone();
+        obj.remove("storeKey");
+        assert_eq!(
+            store_embed_open_args(&[Value::Object(obj)]).unwrap_err(),
+            "store_embed_open:bad-args:storeKey"
+        );
+        // Optional homeUrl: absent and null are fine.
+        let mut obj = wire_args("store_embed_open")[0].as_object().unwrap().clone();
+        obj.remove("homeUrl");
+        assert!(store_embed_open_args(&[Value::Object(obj.clone())]).unwrap().6.is_none());
+        obj.insert("homeUrl".into(), Value::Null);
+        assert!(store_embed_open_args(&[Value::Object(obj)]).unwrap().6.is_none());
+        // Missing / non-object argument is the bare string.
+        assert_eq!(store_embed_open_args(&[]).unwrap_err(), "store_embed_open:bad-args");
+        assert_eq!(
+            store_embed_open_args(&[Value::Null]).unwrap_err(),
+            "store_embed_open:bad-args"
+        );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_set_bounds_field_errors_name_each_bad_field() {
+        for key in ["x", "y", "w", "h"] {
+            let mut obj = wire_args("store_embed_set_bounds")[0].as_object().unwrap().clone();
+            obj.insert(key.to_string(), Value::String("nope".into()));
+            assert_eq!(
+                store_embed_set_bounds_args(&[Value::Object(obj)]).unwrap_err(),
+                format!("store_embed_set_bounds:bad-args:{key}")
+            );
+        }
+        assert_eq!(
+            store_embed_set_bounds_args(&[]).unwrap_err(),
+            "store_embed_set_bounds:bad-args"
+        );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_navigate_field_errors_name_the_url() {
+        let obj = serde_json::json!({ "url": 5 });
+        assert_eq!(
+            store_embed_navigate_args(&[obj]).unwrap_err(),
+            "store_embed_navigate:bad-args:url"
+        );
+        assert_eq!(
+            store_embed_navigate_args(&[serde_json::json!({})]).unwrap_err(),
+            "store_embed_navigate:bad-args:url"
+        );
+        assert_eq!(
+            store_embed_navigate_args(&[]).unwrap_err(),
+            "store_embed_navigate:bad-args"
+        );
+    }
+
     // ---- open_external scheme allow-list (35-21, CR-01) ----
     //
     // `open_external` itself needs a live `AppHandle` (`app.opener()`), so these tests drive
