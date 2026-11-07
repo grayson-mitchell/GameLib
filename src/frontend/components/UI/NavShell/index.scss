@@ -397,6 +397,12 @@
   // still finds it missing at 1px, revert to `4b446abd9`'s 2px border,
   // which IS proven.
   overflow: hidden;
+  // quick 261108-e35: flex column so `.NavShell__versionSlot`'s
+  // `margin-top: auto` (below) actually pins the version to the bottom of
+  // the column. Under the previous block layout that auto margin resolved
+  // to 0 and the version sat directly under the Settings rows.
+  display: flex;
+  flex-direction: column;
   // Replaces `--sidebar-horizontal-padding` (`Sidebar/index.scss:2`) for
   // the ported tier-2 row rules in `components/NavItem/index.scss`. Kept in
   // lockstep with that file's own declaration and with `.MuiTab-root`'s
@@ -544,6 +550,10 @@ body.dracula .NavShell__tier2::after {
 
 .NavShell__versionSlot {
   margin-top: auto;
+  // quick 261108-e35: was flush to the column's left edge (0px). Uses the
+  // tier-2 row token so the label lines up with the Settings rows above.
+  padding: 0 var(--tier2-row-padding-inline, 8px) var(--space-sm, 8px);
+  flex: none;
 
   &[hidden] {
     display: none;
