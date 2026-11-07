@@ -1,0 +1,23 @@
+2026-11-07T03:03:48.837Z [setup] fake HOME; cloned GameLibSteamBridge-206060 -> Spike068
+2026-11-07T03:03:48.895Z [shapes-S1] ps: 12589 /Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineloader /Applications/CrossOver.app/Contents/SharedSupport/CrossOver/lib/wine/x86_64-windows/winewrapper.exe --run -- ~/Projects/GameLib/.planning/spikes/068-nonsteam-first-match-signal/state/Games/Some Game/Game.exe
+2026-11-07T03:03:49.455Z [shapes-S1] ps: 12589 /var/folders/f7/stgr185j04g2hm431z971xl40000gn/T//winetemp-1152355-33568-1784049644-0/wineloader /Applications/CrossOver.app/Contents/SharedSupport/CrossOver/lib/wine/x86_64-windows/winewrapper.exe --run -- ~/Projects/GameLib/.planning/spikes/068-nonsteam-first-match-signal/state/Games/Some Game/Game.exe
+2026-11-07T03:03:50.013Z [shapes-S1] ps: 12589 /Applications/CrossOver.app/Contents/SharedSupport/CrossOver/lib/wine/x86_64-windows/winewrapper.exe --run -- ~/Projects/GameLib/.planning/spikes/068-nonsteam-first-match-signal/state/Games/Some Game/Game.exe 
+2026-11-07T03:03:50.025Z [shapes-S1] ps: 12628 Y:\Projects\GameLib\.planning\spikes\068-nonsteam-first-match-signal\state\Games\Some Game\Game.exe 
+2026-11-07T03:04:08.484Z [shapes-S1] sleeper.txt (Windows-side command line): NONE
+2026-11-07T03:04:10.628Z [shapes-S2] ps: 12871 /var/folders/f7/stgr185j04g2hm431z971xl40000gn/T//winetemp-1152355-33568-1784049644-0/wineloader /Applications/CrossOver.app/Contents/SharedSupport/CrossOver/lib/wine/x86_64-windows/winewrapper.exe --run -- Z:\Users\graysonmitchell\Projects\GameLib\.planning\spikes\068-nonsteam-first-match-signal\state\Games\Some Game\Game.exe
+2026-11-07T03:04:11.726Z [shapes-S2] ps: 12871 /Applications/CrossOver.app/Contents/SharedSupport/CrossOver/lib/wine/x86_64-windows/winewrapper.exe --run -- Z:\Users\graysonmitchell\Projects\GameLib\.planning\spikes\068-nonsteam-first-match-signal\state\Games\Some Game\Game.exe 
+2026-11-07T03:04:11.737Z [shapes-S2] ps: 12903 Z:\Users\graysonmitchell\Projects\GameLib\.planning\spikes\068-nonsteam-first-match-signal\state\Games\Some Game\Game.exe 
+2026-11-07T03:04:30.334Z [shapes-S2] sleeper.txt (Windows-side command line): NONE
+2026-11-07T03:04:32.489Z [shapes-S3] ps: 13152 /var/folders/f7/stgr185j04g2hm431z971xl40000gn/T//winetemp-1152355-33568-1784049644-0/wineloader /Applications/CrossOver.app/Contents/SharedSupport/CrossOver/lib/wine/x86_64-windows/winewrapper.exe --run -- start /unix ~/Projects/GameLib/.planning/spikes/068-nonsteam-first-match-signal/state/Games/Some Game/Game.exe
+2026-11-07T03:04:33.608Z [shapes-S3] ps: 13152 /Applications/CrossOver.app/Contents/SharedSupport/CrossOver/lib/wine/x86_64-windows/winewrapper.exe --run -- start /unix ~/Projects/GameLib/.planning/spikes/068-nonsteam-first-match-signal/state/Games/Some Game/Game.exe 
+2026-11-07T03:04:33.620Z [shapes-S3] ps: 13188 start /unix Y:\Projects\GameLib\.planning\spikes\068-nonsteam-first-match-signal\state\Games\Some Game\Game.exe 
+2026-11-07T03:04:34.181Z [shapes-S3] ps: 13196 Y:\Projects\GameLib\.planning\spikes\068-nonsteam-first-match-signal\state\Games\Some Game\Game.exe 
+2026-11-07T03:04:52.152Z [shapes-S3] sleeper.txt (Windows-side command line): "Y:\Projects\GameLib\.planning\spikes\068-nonsteam-first-match-signal\state\Games\Some Game\Game.exe" 
+2026-11-07T03:04:54.295Z [shapes-S4] ps: 13446 /Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wineloader /Applications/CrossOver.app/Contents/SharedSupport/CrossOver/lib/wine/x86_64-windows/winewrapper.exe --run -- Game.exe
+2026-11-07T03:04:54.857Z [shapes-S4] ps: 13446 /var/folders/f7/stgr185j04g2hm431z971xl40000gn/T//winetemp-1152355-33568-1784049644-0/wineloader /Applications/CrossOver.app/Contents/SharedSupport/CrossOver/lib/wine/x86_64-windows/winewrapper.exe --run -- Game.exe
+2026-11-07T03:05:14.502Z [shapes-S4] sleeper.txt (Windows-side command line): NONE
+2026-11-07T03:05:29.472Z [names] len=50 name=GameLib-legendary-0123456789abcdef0123456789abcdef rc=0 12.9s cxbottle.conf=yes | 
+2026-11-07T03:05:41.973Z [names] len=67 name=GameLib-nile-amzn1.adg.product.0b1c2d3e-4f50-6172-8394-a5b6c7d8e9f0 rc=0 12.4s cxbottle.conf=yes | 
+2026-11-07T03:05:54.115Z [names] len=29 name=GameLib-sideload-My_20Game_21 rc=0 12.0s cxbottle.conf=yes | 
+2026-11-07T03:06:06.359Z [names] len=64 name=GameLib-sideload-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa rc=0 12.1s cxbottle.conf=yes | 
+2026-11-07T03:06:18.448Z [names] len=120 name=GameLib-sideload-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb rc=0 11.9s cxbottle.conf=yes | 
