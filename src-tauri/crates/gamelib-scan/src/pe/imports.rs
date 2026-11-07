@@ -1,7 +1,7 @@
 //! Port of `readPeImportedDllNames` (peSteamDrm.ts). 63-05 adds symbol enumeration on top of
 //! `walk_import_descriptors`.
 
-use super::{rd_u32, read_asciiz, rva_to_offset, PeInfo, Section};
+use super::{rd_u32, read_asciiz, rva_to_offset_or_header, PeInfo, Section};
 use crate::reader::{FileReader, RangeRead};
 use serde::Serialize;
 use std::path::Path;
@@ -16,13 +16,27 @@ pub(crate) struct ImportDescriptor {
     pub first_thunk: u32,
 }
 
+/// How `walk_import_descriptors` treats a descriptor whose name cannot be read.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum NameFailure {
+    /// Fail the whole walk (`readPeImportedDllNames` parity).
+    Fail,
+    /// Skip that descriptor and keep walking, as objdump reports the readable descriptors of
+    /// a partly malformed table (63 WR-01: the paths that replaced objdump use this).
+    Skip,
+}
+
 /// Walk the import directory at file offset `table`: stops at the all-zero terminator or the
-/// 1024-descriptor cap, skips descriptors without a name. `None` on any short read or a
-/// name RVA outside every section.
+/// 1024-descriptor cap, skips descriptors without a name. `None` on any short descriptor
+/// read; a name RVA outside every section and the header region, or an over-long /
+/// unterminated name, is `None` under `NameFailure::Fail` and a skipped descriptor under
+/// `NameFailure::Skip`.
 pub(crate) fn walk_import_descriptors(
     r: &mut impl RangeRead,
     sections: &[Section],
+    size_of_headers: u32,
     table: u64,
+    on_name_failure: NameFailure,
 ) -> Option<Vec<ImportDescriptor>> {
     let mut out = Vec::new();
     for i in 0..MAX_IMPORT_DESCRIPTORS {
@@ -36,9 +50,15 @@ pub(crate) fn walk_import_descriptors(
         if name_rva == 0 {
             continue;
         }
-        let name_off = rva_to_offset(sections, i128::from(name_rva))?;
+        let dll_name = rva_to_offset_or_header(sections, size_of_headers, i128::from(name_rva))
+            .and_then(|off| read_asciiz(r, off));
+        let dll_name = match (dll_name, on_name_failure) {
+            (Some(n), _) => n,
+            (None, NameFailure::Skip) => continue,
+            (None, NameFailure::Fail) => return None,
+        };
         out.push(ImportDescriptor {
-            dll_name: read_asciiz(r, name_off)?,
+            dll_name,
             original_first_thunk,
             first_thunk,
         });
@@ -49,6 +69,13 @@ pub(crate) fn walk_import_descriptors(
 /// DLL names in file order, original spelling, duplicates kept. `Some([])` when the directory
 /// is absent; `None` when not a well-formed PE.
 pub(crate) fn imported_dll_names(r: &mut impl RangeRead) -> Option<Vec<String>> {
+    imported_dll_names_with(r, NameFailure::Fail)
+}
+
+fn imported_dll_names_with(
+    r: &mut impl RangeRead,
+    on_name_failure: NameFailure,
+) -> Option<Vec<String>> {
     let info = PeInfo::parse(r)?;
     if info.num_rva_and_sizes < 2 {
         return Some(Vec::new());
@@ -58,9 +85,9 @@ pub(crate) fn imported_dll_names(r: &mut impl RangeRead) -> Option<Vec<String>> 
         return Some(Vec::new());
     }
     let sections = info.read_sections(r)?;
-    let table = rva_to_offset(&sections, i128::from(import_rva))?;
+    let table = rva_to_offset_or_header(&sections, info.size_of_headers, i128::from(import_rva))?;
     Some(
-        walk_import_descriptors(r, &sections, table)?
+        walk_import_descriptors(r, &sections, info.size_of_headers, table, on_name_failure)?
             .into_iter()
             .map(|d| d.dll_name)
             .collect(),
@@ -98,6 +125,7 @@ impl ImportTable {
 fn thunk_symbols(
     r: &mut impl RangeRead,
     sections: &[Section],
+    size_of_headers: u32,
     plus: bool,
     d: &ImportDescriptor,
 ) -> Option<Vec<String>> {
@@ -106,7 +134,7 @@ fn thunk_symbols(
     } else {
         d.first_thunk
     };
-    let mut at = rva_to_offset(sections, i128::from(thunk_rva))?;
+    let mut at = rva_to_offset_or_header(sections, size_of_headers, i128::from(thunk_rva))?;
     let width: u64 = if plus { 8 } else { 4 };
     let mut out = Vec::new();
     for _ in 0..MAX_IMPORT_THUNKS {
@@ -125,14 +153,16 @@ fn thunk_symbols(
             continue;
         }
         let hint_name = low & 0x7fff_ffff;
-        let off = rva_to_offset(sections, i128::from(hint_name))?;
+        let off = rva_to_offset_or_header(sections, size_of_headers, i128::from(hint_name))?;
         out.push(read_asciiz(r, off.saturating_add(2))?);
     }
     Some(out)
 }
 
-/// `Some(empty)` when the directory is absent; `None` when not a well-formed PE (or any
-/// steam_api thunk array is unreadable: the native reader is all-or-nothing).
+/// `Some(empty)` when the directory is absent; `None` when not a well-formed PE or a
+/// steam_api descriptor's thunk array / hint-name entries are unreadable. A non-steam
+/// descriptor whose name cannot be read is skipped, as objdump reported the readable
+/// descriptors of a partly malformed table (63 WR-01).
 pub(crate) fn steam_api_import_table(r: &mut impl RangeRead) -> Option<ImportTable> {
     let info = PeInfo::parse(r)?;
     if info.num_rva_and_sizes < 2 {
@@ -143,9 +173,10 @@ pub(crate) fn steam_api_import_table(r: &mut impl RangeRead) -> Option<ImportTab
         return Some(ImportTable::empty());
     }
     let sections = info.read_sections(r)?;
-    let table = rva_to_offset(&sections, i128::from(import_rva))?;
+    let table = rva_to_offset_or_header(&sections, info.size_of_headers, i128::from(import_rva))?;
     let mut out = ImportTable::empty();
-    for d in walk_import_descriptors(r, &sections, table)? {
+    for d in walk_import_descriptors(r, &sections, info.size_of_headers, table, NameFailure::Skip)?
+    {
         let name = d.dll_name.to_lowercase();
         let (dll, arch) = match name.as_str() {
             "steam_api.dll" => ("steam_api.dll", "x86"),
@@ -157,18 +188,24 @@ pub(crate) fn steam_api_import_table(r: &mut impl RangeRead) -> Option<ImportTab
         }
         out.dll = Some(dll);
         out.arch = arch;
-        out.symbols
-            .extend(thunk_symbols(r, &sections, info.is_plus, &d)?);
+        out.symbols.extend(thunk_symbols(
+            r,
+            &sections,
+            info.size_of_headers,
+            info.is_plus,
+            &d,
+        )?);
     }
     Some(out)
 }
 
 /// Every descriptor DLL name in file order, deduped case-insensitively, first spelling kept
-/// (`parseImportedDllNames` parity).
+/// (`parseImportedDllNames` parity). Replaces objdump text, so an unreadable descriptor name
+/// is skipped rather than failing the list (63 WR-01).
 pub(crate) fn all_import_dll_names(r: &mut impl RangeRead) -> Option<Vec<String>> {
     let mut seen = std::collections::HashSet::new();
     Some(
-        imported_dll_names(r)?
+        imported_dll_names_with(r, NameFailure::Skip)?
             .into_iter()
             .filter(|n| seen.insert(n.to_lowercase()))
             .collect(),
@@ -403,6 +440,66 @@ pub(crate) mod tests {
         }
         b[0x3000 + 300] = 0;
         assert_eq!(imported_dll_names(&mut SliceReader::new(&b)), None);
+    }
+
+    /// 63 WR-01: an unreadable non-steam descriptor name (RVA outside every section, or an
+    /// over-long name) is skipped by the objdump-replacing readers; the strict
+    /// `imported_dll_names` still fails.
+    #[test]
+    fn unreadable_non_steam_name_is_skipped_by_lenient_readers() {
+        for plus in [false, true] {
+            let mut b = sym_pe(plus, &[("KERNEL32.dll", &["X"]), ("steam_api.dll", &["A"])]);
+            put32(&mut b, 0x1000 + 12, 0x00F0_0000);
+            let t = steam_api_import_table(&mut SliceReader::new(&b)).unwrap();
+            assert_eq!(t.dll, Some("steam_api.dll"));
+            assert_eq!(t.symbols, vec!["A"]);
+            assert_eq!(
+                all_import_dll_names(&mut SliceReader::new(&b)),
+                Some(vec!["steam_api.dll".to_string()])
+            );
+            assert_eq!(imported_dll_names(&mut SliceReader::new(&b)), None);
+        }
+        let mut b = sym_pe(
+            false,
+            &[("KERNEL32.dll", &["X"]), ("steam_api.dll", &["A"])],
+        );
+        // KERNEL32's name moved to an unterminated 300-byte run clear of the other names.
+        put32(&mut b, 0x1000 + 12, 0x4800);
+        for i in 0..300 {
+            b[0x4800 + i] = b'a';
+        }
+        let t = steam_api_import_table(&mut SliceReader::new(&b)).unwrap();
+        assert_eq!(t.symbols, vec!["A"]);
+    }
+
+    /// 63 WR-01: a steam_api descriptor whose hint/name RVA is unmapped still fails the table.
+    #[test]
+    fn unreadable_steam_api_thunk_still_fails() {
+        let mut b = sym_pe(false, &[("steam_api.dll", &["A"])]);
+        put32(&mut b, 0x2000, 0x00F0_0000);
+        assert_eq!(steam_api_import_table(&mut SliceReader::new(&b)), None);
+    }
+
+    /// 63 WR-01: a descriptor name placed in the header region (RVA < SizeOfHeaders, file
+    /// offset == RVA) resolves, as it does for the Windows loader and objdump.
+    #[test]
+    fn header_region_name_resolves() {
+        for plus in [false, true] {
+            let mut b = sym_pe(plus, &[("steam_api.dll", &["A"])]);
+            // SizeOfHeaders at optional header + 60.
+            put32(&mut b, 0x80 + 24 + 60, 0x400);
+            put_str(&mut b, 0x3a0, "steam_api.dll");
+            put32(&mut b, 0x1000 + 12, 0x3a0);
+            let t = steam_api_import_table(&mut SliceReader::new(&b)).unwrap();
+            assert_eq!(t.dll, Some("steam_api.dll"));
+            assert_eq!(t.symbols, vec!["A"]);
+            // Without SizeOfHeaders the same RVA is unmapped and the (only) name is skipped.
+            put32(&mut b, 0x80 + 24 + 60, 0);
+            assert_eq!(
+                steam_api_import_table(&mut SliceReader::new(&b)),
+                Some(ImportTable::empty())
+            );
+        }
     }
 
     #[test]

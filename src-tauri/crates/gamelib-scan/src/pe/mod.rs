@@ -67,6 +67,9 @@ pub(crate) struct PeInfo {
     pub opt: u64,
     pub is_plus: bool,
     pub num_rva_and_sizes: u32,
+    /// SizeOfHeaders (optional header +60 in both PE32 and PE32+): RVAs below it map to the
+    /// same file offset, which the Windows loader and objdump both accept.
+    pub size_of_headers: u32,
 }
 
 impl PeInfo {
@@ -88,12 +91,14 @@ impl PeInfo {
             _ => return None,
         };
         let num_rva_and_sizes = rd_u32(r, opt.saturating_add(if is_plus { 108 } else { 92 }))?;
+        let size_of_headers = rd_u32(r, opt.saturating_add(60))?;
         Some(PeInfo {
             number_of_sections,
             size_of_optional_header,
             opt,
             is_plus,
             num_rva_and_sizes,
+            size_of_headers,
         })
     }
 
@@ -151,6 +156,23 @@ pub(crate) fn rva_to_offset(sections: &[Section], rva: i128) -> Option<u64> {
     })?;
     let off = i128::from(s.raw_ptr) + (rva - i128::from(s.va));
     u64::try_from(off).ok()
+}
+
+/// `rva_to_offset`, falling back to the header region (RVA < SizeOfHeaders maps to file
+/// offset == RVA) when no section contains the RVA. The Windows loader and objdump both
+/// accept import tables and names placed there; used by the import-table readers (63 WR-01).
+pub(crate) fn rva_to_offset_or_header(
+    sections: &[Section],
+    size_of_headers: u32,
+    rva: i128,
+) -> Option<u64> {
+    rva_to_offset(sections, rva).or_else(|| {
+        if rva >= 0 && rva < i128::from(size_of_headers) {
+            u64::try_from(rva).ok()
+        } else {
+            None
+        }
+    })
 }
 
 #[cfg(test)]
@@ -265,6 +287,12 @@ mod tests {
         assert_eq!(rva_to_offset(&secs, 0x1010), Some(0x410));
         assert_eq!(rva_to_offset(&secs, 0x1100), None);
         assert_eq!(rva_to_offset(&secs, -5), None);
+        // Header region: only the `_or_header` variant maps it, and only below SizeOfHeaders.
+        assert_eq!(rva_to_offset(&secs, 0x200), None);
+        assert_eq!(rva_to_offset_or_header(&secs, 0x400, 0x200), Some(0x200));
+        assert_eq!(rva_to_offset_or_header(&secs, 0x400, 0x400), None);
+        assert_eq!(rva_to_offset_or_header(&secs, 0x400, -1), None);
+        assert_eq!(rva_to_offset_or_header(&secs, 0x400, 0x1010), Some(0x410));
         // VirtualSize == 0 falls back to SizeOfRawData
         let mut spec = Spec::new(false);
         spec.sections[0].vsize = 0;
