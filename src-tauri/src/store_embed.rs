@@ -2569,7 +2569,8 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // check still shows unreadable text, `prefers-color-scheme` was not the mechanism
         // and this fix must be recorded as NOT closing F-34.5-G6-05.
         "humble_login_open" => {
-            let url = login_window_url_arg(args)?;
+            let open_args = HumbleLoginOpenArgs::from_args(args)?;
+            let url = login_window_parse_url(&open_args.url)?;
             let origin = url.origin().ascii_serialization();
             // Epic-only scoping for the pristine-webview route below -- computed BEFORE `url`
             // moves into the builder below, since this is the only signal this runner-agnostic
@@ -2581,11 +2582,8 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             // (host-keyed only).
             #[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
             let is_gog_login = matches!(url.host_str(), Some(GOG_LOGIN_HOST));
-            let visible = args.get(1).and_then(|v| v.as_bool()).unwrap_or(false);
-            let user_agent = args
-                .get(2)
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| "humble_login_open:bad-args".to_string())?;
+            let visible = open_args.visible;
+            let user_agent = open_args.user_agent.as_str();
             let label = next_login_window_label();
             let event_label = label.clone();
             // Pristine-webview route (F-34.5-G6-01): Epic's and GOG's login windows use a
@@ -3245,19 +3243,10 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // Defect A) is deliberately UNCHANGED by this rewrite; `cookies_for_url()` still must
         // never appear anywhere in this file.
         "humble_login_cookies" => {
-            let label = args
-                .first()
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| "humble_login_cookies:bad-args".to_string())?;
-            let host = args
-                .get(1)
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| "humble_login_cookies:bad-args".to_string())?;
-            let names: Vec<&str> = args
-                .get(2)
-                .and_then(|v| v.as_array())
-                .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect())
-                .unwrap_or_default();
+            let a = HumbleLoginCookiesArgs::from_args(args)?;
+            let label = a.label.as_str();
+            let host = a.host.as_str();
+            let names: Vec<&str> = a.names.iter().map(String::as_str).collect();
             let window = app
                 .get_webview_window(label)
                 .ok_or_else(|| format!("humble_login:no-window:{label}"))?;
@@ -3374,10 +3363,8 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // 01, REQ-34.4.1-03's navigation relay contract). An absent/never-navigated label
         // resolves an empty array -- a healthy state, not an error.
         "humble_login_take_events" => {
-            let label = args
-                .first()
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| "humble_login_take_events:bad-args".to_string())?;
+            let a = HumbleLoginTakeEventsArgs::from_args(args)?;
+            let label = a.label.as_str();
             let mut guard = LOGIN_WINDOW_EVENTS
                 .lock()
                 .map_err(|_| "humble_login_take_events:lock-poisoned".to_string())?;
@@ -3392,10 +3379,8 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // than erroring, the same D-08 "no window is not a phase failure" shape as
         // `tray_set_icon`'s missing-tray branch above.
         "humble_login_close" => {
-            let label = args
-                .first()
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| "humble_login_close:bad-args".to_string())?;
+            let a = HumbleLoginCloseArgs::from_args(args)?;
+            let label = a.label.as_str();
             // The pristine Epic login window (`open_pristine_epic_login_window`) is a PLAIN
             // `tauri::Window` with a raw `WKWebView` attached, never a Tauri-managed
             // `WebviewWindow` -- so `get_webview_window(label)` can never find it, for ANY
@@ -3478,14 +3463,9 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // uses `WKWebsiteDataRecord.displayName()` filtering (domain-suffix, the same
         // discipline `cookie_domain_matches` uses) rather than a bulk API.
         "humble_login_clear_cookies" => {
-            let label = args
-                .first()
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| "humble_login_clear_cookies:bad-args".to_string())?;
-            let domain = args
-                .get(1)
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| "humble_login_clear_cookies:bad-args".to_string())?;
+            let a = HumbleLoginClearCookiesArgs::from_args(args)?;
+            let label = a.label.as_str();
+            let domain = a.domain.as_str();
             let existing_window = app.get_webview_window(label);
 
             // Epic pristine-window fallback (macOS only; see
@@ -4210,19 +4190,10 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // / never-`clear_all_browsing_data()` discipline, same never-logs-a-cookie-value
         // discipline (T-34.4.1-02, T-34.4.1-94) as `humble_login_cookies` above.
         "humble_login_cookies_for_domain" => {
-            let label = args
-                .first()
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;
-            let domain = args
-                .get(1)
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;
-            let names: Vec<&str> = args
-                .get(2)
-                .and_then(|v| v.as_array())
-                .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect())
-                .unwrap_or_default();
+            let a = HumbleLoginCookiesForDomainArgs::from_args(args)?;
+            let label = a.label.as_str();
+            let domain = a.domain.as_str();
+            let names: Vec<&str> = a.names.iter().map(String::as_str).collect();
             let existing_window = app.get_webview_window(label);
 
             // Epic pristine-window fallback (macOS only; D-35-29-01). Structurally identical

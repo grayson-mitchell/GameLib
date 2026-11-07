@@ -606,15 +606,12 @@ pub(crate) fn next_login_window_label() -> String {
     format!("loginwin-{n:x}-{nanos:x}-{entropy:08x}")
 }
 
-/// This arm's entire ASVS V5 input validation (threat T-34.4.1-08): `args[0]` must be
-/// present, a JSON string, and parse as an absolute URL whose scheme is exactly `https`.
-/// `http://`, `file://` and `javascript:` are all rejected HERE, before any real OS
-/// window is constructed -- this is the arm's only gate.
-pub(crate) fn login_window_url_arg(args: &[Value]) -> Result<tauri::Url, String> {
-    let raw = args
-        .first()
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "humble_login_open:bad-args".to_string())?;
+/// The semantic half of `humble_login_open`'s ASVS V5 input validation (threat T-34.4.1-08):
+/// the generated `HumbleLoginOpenArgs::from_args` has already proved `args[0]` is a string
+/// (`humble_login_open:bad-args` otherwise); this proves it parses as an absolute URL whose
+/// scheme is exactly `https`. `http://`, `file://` and `javascript:` are all rejected HERE,
+/// before any real OS window is constructed -- this is the arm's only gate.
+pub(crate) fn login_window_parse_url(raw: &str) -> Result<tauri::Url, String> {
     let url = tauri::Url::parse(raw).map_err(|_| "humble_login_open:bad-url".to_string())?;
     if url.scheme() != "https" {
         return Err("humble_login_open:bad-url".to_string());
@@ -624,10 +621,10 @@ pub(crate) fn login_window_url_arg(args: &[Value]) -> Result<tauri::Url, String>
 
 /// Composes the login window's OS title with the SHELL-RESOLVED origin FIRST, always
 /// (Phase 34.5 Plan 27, F-34.5-G6-04, T-34.5-G6-22/T-34.5-G6-23). `AppHandle`-free and
-/// `#[cfg(test)]`-covered, mirroring `clipboard_text_arg`/`login_window_url_arg`'s own
+/// `#[cfg(test)]`-covered, mirroring `clipboard_text_arg`/`login_window_parse_url`'s own
 /// pure-helper convention.
 ///
-/// `origin` MUST come from the URL the shell itself validated (`login_window_url_arg`'s
+/// `origin` MUST come from the URL the shell itself validated (`login_window_parse_url`'s
 /// return value, via `tauri::Url::origin().ascii_serialization()`) -- NEVER from page
 /// content. `document_title` is the page's own `document.title`, which is fully
 /// attacker-controlled: the loaded page can set it to anything, including a string
@@ -921,36 +918,18 @@ pub(crate) struct RevealPostArgs {
     pub(crate) user_agent: String,
 }
 
-/// This arm's entire ASVS V5 input validation (mirrors `login_window_url_arg`'s discipline for
+/// This arm's entire ASVS V5 input validation (mirrors `login_window_parse_url`'s discipline for
 /// `humble_login_open`, T-34.4.1-08): `args[0]` is re-validated https-only via
-/// `login_window_url_arg` itself (never re-derived), so a missing/wrong-typed arg AND a
+/// `login_window_parse_url` itself (never re-derived), so a missing/wrong-typed arg AND a
 /// non-https origin both collapse to the single `humble_reveal_post:bad-args` error the
 /// interface contract declares (no separate bad-url variant for this arm). `args[3]`
 /// (csrf_token) is the only optional value -- a missing arg or `Value::Null` both map to
 /// `None`, never the JS-string `"null"` (see `reveal_post_script` below).
 pub(crate) fn reveal_post_args(args: &[Value]) -> Result<RevealPostArgs, String> {
-    let origin_url =
-        login_window_url_arg(args).map_err(|_| "humble_reveal_post:bad-args".to_string())?;
-    let path = args
-        .get(1)
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "humble_reveal_post:bad-args".to_string())?
-        .to_string();
-    let body = args
-        .get(2)
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "humble_reveal_post:bad-args".to_string())?
-        .to_string();
-    let csrf_token = match args.get(3) {
-        None | Some(Value::Null) => None,
-        Some(Value::String(s)) => Some(s.clone()),
-        Some(_) => return Err("humble_reveal_post:bad-args".to_string()),
-    };
-    let user_agent = args
-        .get(4)
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "humble_reveal_post:bad-args".to_string())?
-        .to_string();
+    let a = HumbleRevealPostArgs::from_args(args)?;
+    let origin_url = login_window_parse_url(&a.origin_url)
+        .map_err(|_| "humble_reveal_post:bad-args".to_string())?;
+    let (path, body, csrf_token, user_agent) = (a.path, a.body, a.csrf_token, a.user_agent);
     Ok(RevealPostArgs {
         origin_url,
         path,
@@ -1041,7 +1020,7 @@ pub(crate) fn reveal_post_script(
 pub(crate) const CLEAR_STORAGE_TIMEOUT: Duration = Duration::from_secs(20);
 
 /// The two parsed, validated args `humble_login_clear_storage` needs. `origin_url` is
-/// re-validated https-only via `login_window_url_arg` itself (never re-derived, mirrors
+/// re-validated https-only via `login_window_parse_url` itself (never re-derived, mirrors
 /// `reveal_post_args`'s own discipline) -- a missing/wrong-typed arg AND a non-https origin both
 /// collapse to the single `humble_login_clear_storage:bad-args` error. Deliberately does NOT
 /// derive the standard formatting trait (REQ-34.1-07's file-wide text gate, same reasoning as
@@ -1052,16 +1031,13 @@ pub(crate) struct ClearStorageArgs {
     pub(crate) user_agent: String,
 }
 
-/// This arm's entire ASVS V5 input validation (mirrors `reveal_post_args`/`login_window_url_arg`,
+/// This arm's entire ASVS V5 input validation (mirrors `reveal_post_args`/`login_window_parse_url`,
 /// T-34.4.1-08).
 pub(crate) fn clear_storage_args(args: &[Value]) -> Result<ClearStorageArgs, String> {
-    let origin_url = login_window_url_arg(args)
+    let a = HumbleLoginClearStorageArgs::from_args(args)?;
+    let origin_url = login_window_parse_url(&a.origin_url)
         .map_err(|_| "humble_login_clear_storage:bad-args".to_string())?;
-    let user_agent = args
-        .get(1)
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| "humble_login_clear_storage:bad-args".to_string())?
-        .to_string();
+    let user_agent = a.user_agent;
     Ok(ClearStorageArgs {
         origin_url,
         user_agent,

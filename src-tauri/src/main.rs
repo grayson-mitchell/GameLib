@@ -3347,40 +3347,75 @@ mod tests {
         assert!(!label.contains("www"));
     }
 
-    // ---- login_window_url_arg (Phase 34.4.1 Plan 01, REQ-34.4.1-01, T-34.4.1-08) ----
+    // ---- humble_login_open args (Phase 34.4.1 Plan 01, REQ-34.4.1-01, T-34.4.1-08) ----
     //
-    // RED direction: an implementation using `unwrap_or("https://…")` or omitting the
-    // scheme check would flip the rejection cases below to `Ok`.
+    // Parsing is the generated `HumbleLoginOpenArgs::from_args`; `login_window_parse_url` is the
+    // semantic https gate. RED direction: an implementation using `unwrap_or("https://...")` or
+    // omitting the scheme check would flip the rejection cases below to `Ok`.
 
     #[test]
-    fn humble_login_window_url_arg_rejects_absent_and_non_string() {
+    fn humble_login_open_args_rejects_absent_and_non_string() {
         assert_eq!(
-            login_window_url_arg(&[]).unwrap_err(),
+            HumbleLoginOpenArgs::from_args(&[]).unwrap_err(),
             "humble_login_open:bad-args"
         );
         assert_eq!(
-            login_window_url_arg(&[json!(1)]).unwrap_err(),
+            HumbleLoginOpenArgs::from_args(&[json!(1), json!(true), json!("ua")]).unwrap_err(),
+            "humble_login_open:bad-args"
+        );
+        assert_eq!(
+            HumbleLoginOpenArgs::from_args(&[json!("https://x.test"), json!(true)]).unwrap_err(),
             "humble_login_open:bad-args"
         );
     }
 
     #[test]
-    fn humble_login_window_url_arg_rejects_non_https() {
+    fn humble_login_window_parse_url_rejects_non_https() {
         assert_eq!(
-            login_window_url_arg(&[json!("http://www.humblebundle.com/login")]).unwrap_err(),
+            login_window_parse_url("http://www.humblebundle.com/login").unwrap_err(),
             "humble_login_open:bad-url"
         );
         assert_eq!(
-            login_window_url_arg(&[json!("file:///etc/passwd")]).unwrap_err(),
+            login_window_parse_url("file:///etc/passwd").unwrap_err(),
             "humble_login_open:bad-url"
         );
         assert_eq!(
-            login_window_url_arg(&[json!("javascript:alert(1)")]).unwrap_err(),
+            login_window_parse_url("javascript:alert(1)").unwrap_err(),
             "humble_login_open:bad-url"
         );
-        let ok = login_window_url_arg(&[json!("https://www.humblebundle.com/login")]);
+        let ok = login_window_parse_url("https://www.humblebundle.com/login");
         assert!(ok.is_ok());
         assert_eq!(ok.unwrap().scheme(), "https");
+    }
+
+    // Pinned `bad-args` strings for the remaining humble arms (67-11): one malformed input each.
+    #[test]
+    fn humble_cookie_and_label_arms_pin_their_bad_args_strings() {
+        assert_eq!(
+            HumbleLoginCookiesArgs::from_args(&[json!("w"), json!(7), json!([])]).unwrap_err(),
+            "humble_login_cookies:bad-args"
+        );
+        assert_eq!(
+            HumbleLoginCookiesForDomainArgs::from_args(&[json!("w"), json!(7), json!([])])
+                .unwrap_err(),
+            "humble_login_cookies_for_domain:bad-args"
+        );
+        assert_eq!(
+            HumbleLoginCookiesForDomainArgs::from_args(&[]).unwrap_err(),
+            "humble_login_cookies_for_domain:bad-args"
+        );
+        assert_eq!(
+            HumbleLoginTakeEventsArgs::from_args(&[json!(1)]).unwrap_err(),
+            "humble_login_take_events:bad-args"
+        );
+        assert_eq!(
+            HumbleLoginCloseArgs::from_args(&[]).unwrap_err(),
+            "humble_login_close:bad-args"
+        );
+        assert_eq!(
+            HumbleLoginClearCookiesArgs::from_args(&[json!("w")]).unwrap_err(),
+            "humble_login_clear_cookies:bad-args"
+        );
     }
 
     // ---- login_window_title (Phase 34.5 Plan 27, F-34.5-G6-04, T-34.5-G6-22/23) ----
@@ -3450,7 +3485,7 @@ mod tests {
         // document title, is precisely what the arm's initial `window.set_title()` call
         // (right after `.build()`) composes. Proves the origin is present from the seed
         // alone, with no page-load event required.
-        let url = login_window_url_arg(&[json!("https://www.humblebundle.com/login?x=1")]).unwrap();
+        let url = login_window_parse_url("https://www.humblebundle.com/login?x=1").unwrap();
         let seeded_origin = url.origin().ascii_serialization();
         assert_eq!(seeded_origin, "https://www.humblebundle.com");
         assert_eq!(
