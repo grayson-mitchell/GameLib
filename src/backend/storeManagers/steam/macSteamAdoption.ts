@@ -255,7 +255,7 @@ function defaultRestartDeps(): RestartDeps {
     readRunningAppId: () => {
       /* eslint-disable @typescript-eslint/no-require-imports */
       const { readRunningAppId } =
-        require('./library') as typeof import('./library')
+        require('./library/runningPoll') as typeof import('./library/runningPoll')
       /* eslint-enable @typescript-eslint/no-require-imports */
       return readRunningAppId()
     },

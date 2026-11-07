@@ -8,7 +8,7 @@
  */
 import { LogPrefix, logInfo, logWarning } from 'backend/logger'
 
-import { readRunningAppId } from './library'
+import { readRunningAppId } from './library/runningPoll'
 import { isProcessRunningFromFolder } from './runningFromFolder'
 import { requestSteamUninstallApp } from './steamInstallApp'
 import type { SteamUninstallAppOutcome } from './steamInstallApp'

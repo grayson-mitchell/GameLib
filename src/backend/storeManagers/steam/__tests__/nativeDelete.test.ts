@@ -7,7 +7,7 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
-jest.mock('../library', () => ({ readRunningAppId: jest.fn() }))
+jest.mock('../library/runningPoll', () => ({ readRunningAppId: jest.fn() }))
 jest.mock('../steamInstallApp', () => ({
   requestSteamUninstallApp: jest.fn()
 }))

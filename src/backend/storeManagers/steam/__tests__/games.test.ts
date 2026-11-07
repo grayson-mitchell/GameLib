@@ -66,7 +66,7 @@ import {
   __resetLoggedEmptyGameInfoMissesForTests
 } from '../gameSessionState'
 import SteamLibraryManager from '../library'
-import * as libraryModule from '../library'
+import * as runningPollModule from '../library/runningPoll'
 import * as uninstallPollingModule from '../library/uninstallPolling'
 import * as installPollingModule from '../library/installPolling'
 import * as resumeModule from '../library/resume'
@@ -4810,7 +4810,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
 
   afterEach(() => {
     startInstallPollingSpy.mockRestore()
-    libraryModule.stopRunningPoll()
+    runningPollModule.stopRunningPoll()
   })
 
   it('a hard-killed native install (finalize never called) persists a breadcrumb, and a fresh init() surfaces it as resumable with an EMPTY ACF scan', async () => {

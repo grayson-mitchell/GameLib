@@ -5,7 +5,8 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import SteamLibraryManager, { stopRunningPoll } from '../library'
+import SteamLibraryManager from '../library'
+import { stopRunningPoll } from '../library/runningPoll'
 import { stopInstallPolling } from '../library/installStop'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
