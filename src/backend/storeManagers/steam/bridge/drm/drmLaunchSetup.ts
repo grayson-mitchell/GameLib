@@ -40,7 +40,8 @@ import {
   detectAllowedCrossover,
   type CrossoverAllowed
 } from './runnerCrossover'
-import { ensureRunnerClone, type RunnerReady } from './runnerClone'
+import { ensureRunnerClone } from './runnerClone'
+import type { RunnerReady } from './runnerVerify'
 import {
   ensureSteamclientLayerComponent,
   type SteamclientLayerReady

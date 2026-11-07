@@ -43,7 +43,8 @@ import {
   sha256File,
   statRegular
 } from '../drm/runnerCrossover'
-import { RUNNER_MARKER_FILE, cloneCrossoverTree } from '../drm/runnerClone'
+import { cloneCrossoverTree } from '../drm/runnerClone'
+import { RUNNER_MARKER_FILE } from '../drm/runnerVerify'
 import {
   DYLD_ENTITLEMENT,
   dumpLoaderEntitlements,

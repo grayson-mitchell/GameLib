@@ -50,11 +50,13 @@ jest.mock('backend/logger', () => ({
 import {
   CLONE_ARGV_FALLBACK,
   CLONE_ARGV_PRIMARY,
+  ensureRunnerClone
+} from '../runnerClone'
+import {
   RUNNER_MARKER_FILE,
   RunnerComponentInput,
-  ensureRunnerClone,
   verifyRunnerClone
-} from '../runnerClone'
+} from '../runnerVerify'
 import { detectAllowedCrossover, CrossoverAllowed } from '../runnerCrossover'
 import {
   DYLD_ENTITLEMENT,

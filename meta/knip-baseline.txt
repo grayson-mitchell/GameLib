@@ -37,7 +37,6 @@ exports	src/backend/constants/urls.ts	GITHUB_API
 exports	src/backend/humble/constants.ts	HUMBLE_FUZZY_MATCH_THRESHOLD
 exports	src/backend/humble/constants.ts	HUMBLE_LOGIN_PARTITION
 exports	src/backend/store/storeEmbedSeam.ts	getStoreEmbedSeam
-exports	src/backend/storeManagers/steam/bridge/drm/runnerClone.ts	MTIME_PINNED_PATHS
 exports	src/backend/storeManagers/steam/bridge/drm/runnerEntitlements.ts	parseEntitlementKeys
 exports	src/backend/storeManagers/steam/bridge/drm/stageDrmBottle.ts	DRM_COMPONENT_FILES
 exports	src/backend/storeManagers/steam/bridge/drm/stageDrmBottle.ts	DRM_REG_ADD_RETRIES

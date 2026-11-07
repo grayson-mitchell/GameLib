@@ -28,7 +28,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend', Steam: 'Steam' }
 }))
 
-import { RUNNER_MARKER_FILE } from '../../drm/runnerClone'
+import { RUNNER_MARKER_FILE } from '../../drm/runnerVerify'
 import {
   DYLD_ENTITLEMENT,
   STOCK_LOADER_ENTITLEMENTS
