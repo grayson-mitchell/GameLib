@@ -38,10 +38,7 @@ import {
   isBottleReady,
   getSteamBottleSettings,
   getBottleSteamappsDir,
-  isBridgeBottleReady,
-  getBridgeBottleSettings,
   provisionBridgeBottle,
-  bridgeBottleNameFor,
   removePerGameBridgeBottle,
   isCrossoverInstalled,
   CROSSOVER_MISSING,
@@ -50,6 +47,7 @@ import {
   PROVISION_ABORTED,
   discardNewBridgeBottle
 } from './bottle'
+import * as bridgeBottle from './bridgeBottle'
 import { buildFallbackGameSettings } from 'backend/engine/bottlePrimitives'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
@@ -271,7 +269,7 @@ export async function install(
       bridgeRoute.reason === 'pending-scan' &&
       readBridgeVerdict(steamGame.appId)?.steamApi === undefined
     ) {
-      const bridgeBottleName = bridgeBottleNameFor(steamGame.appId)
+      const bridgeBottleName = bridgeBottle.bridgeBottleNameFor(steamGame.appId)
       // Phase 54: a short lease for the screen alone, so a refusal here
       // stops before a second wrap attempt in installBridgeGame.
       const prescreenLease = await SteamUser.acquireAuthenticated({
@@ -657,7 +655,7 @@ export async function installBridgeGame(
   // per-game bridge bottle directly — never via resolveBridgeBottleName
   // (D-B), which would let an existing legacy-bottle manifest for this
   // appId redirect a fresh install back into the shared bottle.
-  const bridgeBottleName = bridgeBottleNameFor(steamGame.appId)
+  const bridgeBottleName = bridgeBottle.bridgeBottleNameFor(steamGame.appId)
   if (!bridgeBottleName) {
     logWarning(
       `SteamGame: installBridgeGame rejected non-numeric appId ${steamGame.appId} — no per-game bottle name`,
@@ -715,7 +713,7 @@ export async function installBridgeGame(
       return { status: 'abort' }
     }
     try {
-      if (!isBridgeBottleReady(bridgeBottleName)) {
+      if (!bridgeBottle.isBridgeBottleReady(bridgeBottleName)) {
         const reused =
           hasAbortController(steamGame.appId) &&
           getAbortSignal(steamGame.appId)?.aborted === false
@@ -917,7 +915,7 @@ export async function resolveInstallEngineSettings(
   installEngine: NonCrossoverEngine | 'crossover' | null
 ): Promise<{ settings: GameSettings } | { skipped: string }> {
   if (installEngine === 'crossover') {
-    return { settings: getBridgeBottleSettings(steamGame.appId) }
+    return { settings: bridgeBottle.getBridgeBottleSettings(steamGame.appId) }
   }
   if (installEngine !== null) {
     return {
@@ -962,7 +960,7 @@ export async function resolveInstallEngineSettings(
   if (isNonCrossover(sel)) {
     return { settings: buildFallbackGameSettings(bridgeBottleName, sel) }
   }
-  return { settings: getBridgeBottleSettings(steamGame.appId) }
+  return { settings: bridgeBottle.getBridgeBottleSettings(steamGame.appId) }
 }
 
 /** The lease-held part of installBridgeGame: download, shim, redists. */
@@ -1364,7 +1362,7 @@ export function resolveBridgeGameInstallRoot(
   // bottle if that's actually where its manifest lives).
   const bottleName =
     bottleNameOverride ??
-    getBridgeBottleSettings(steamGame.appId).wineCrossoverBottle
+    bridgeBottle.getBridgeBottleSettings(steamGame.appId).wineCrossoverBottle
   const commonRoot = resolve(getBottleSteamappsDir(bottleName), 'common')
   const resolvedExePath = resolve(exePath)
   const relFromCommon = relative(commonRoot, resolvedExePath)

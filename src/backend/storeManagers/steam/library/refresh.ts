@@ -15,7 +15,8 @@ import {
   steamSyncStore
 } from '../stores'
 import { library } from '../state'
-import { isSteamBottleProvisioned, listReadyBridgeBottleNames } from '../bottle'
+import { isSteamBottleProvisioned } from '../bottle'
+import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { depotSignalCaptured } from '../metadataCapture'
 import { captureOwnedAppMetacritic } from '../metacriticCapture'

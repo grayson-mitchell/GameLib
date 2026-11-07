@@ -12,11 +12,8 @@ import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { steamLibraryStore, steamMetadataStore } from '../stores'
-import {
-  getBottleSteamappsDir,
-  getSteamBottleSettings,
-  listReadyBridgeBottleNames
-} from '../bottle'
+import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
+import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { join } from 'path'
 import { library } from '../state'
 
@@ -157,8 +154,10 @@ jest.mock('../stores', () => ({
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
   getSteamBottleSettings: jest.fn(),
+  isSteamBottleProvisioned: jest.fn()
+}))
+jest.mock('../bridgeBottle', () => ({
   getBridgeBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
   resolveBridgeBottleName: jest.fn()
 }))

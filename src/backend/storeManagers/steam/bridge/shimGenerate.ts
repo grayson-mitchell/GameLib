@@ -86,7 +86,7 @@ import {
   builtBridgeShimPath
 } from 'backend/constants/paths'
 import type { SteamBridgeScanVerdict } from '../stores'
-import { resolveBridgeBottleName } from '../bottle'
+import { resolveBridgeBottleName } from '../bridgeBottle'
 import {
   getBottleDir,
   sanitizeBottleName

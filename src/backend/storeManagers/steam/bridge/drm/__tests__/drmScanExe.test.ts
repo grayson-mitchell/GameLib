@@ -35,6 +35,9 @@ jest.mock('backend/engine/bottlePrimitives', () => ({
 jest.mock('../../../bottle', () => ({
   DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge'
 }))
+jest.mock('../../../bridgeBottle', () => ({
+  resolveBridgeBottleName: jest.fn()
+}))
 
 jest.mock('../../importScan', () => ({ scanSteamApiImports: jest.fn() }))
 

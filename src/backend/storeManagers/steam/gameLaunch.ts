@@ -31,10 +31,12 @@ import {
 import {
   isBottleReady,
   getSteamBottleSettings,
-  getBridgeBottleSettings,
-  findBridgeInstallBottle,
   killBridgeBottleWineServer
 } from './bottle'
+import {
+  getBridgeBottleSettings,
+  findBridgeInstallBottle
+} from './bridgeBottle'
 import { tellBottledSteamToLaunch } from './bottledSteam'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 // Phase 60: Steam overlay in bridged games (macOS).

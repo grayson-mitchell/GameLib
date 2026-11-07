@@ -159,13 +159,15 @@ jest.mock('../bottle', () => ({
   isBottleReady: jest.fn(),
   getSteamBottleSettings: jest.fn(),
   getBottleSteamappsDir: jest.fn(),
-  isBridgeBottleReady: jest.fn(),
-  getBridgeBottleSettings: jest.fn(),
   provisionBridgeBottle: jest.fn(),
   isSteamBottleProvisioned: jest.fn(),
-  resolveBridgeBottleName: jest.fn(),
   removePerGameBridgeBottle: jest.fn(),
   DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge'
+}))
+jest.mock('../bridgeBottle', () => ({
+  isBridgeBottleReady: jest.fn(),
+  getBridgeBottleSettings: jest.fn(),
+  resolveBridgeBottleName: jest.fn()
 }))
 jest.mock('../bottledSteam', () => ({
   tellBottledSteamToLaunch: jest.fn(),
@@ -528,13 +530,15 @@ describe('enumerateSteamInstallCopies', () => {
     })
     const bottleMock = jest.requireMock<{
       getSteamBottleSettings: jest.Mock
-      getBridgeBottleSettings: jest.Mock
       getBottleSteamappsDir: jest.Mock
     }>('../bottle')
+    const bridgeBottleMock = jest.requireMock<{
+      getBridgeBottleSettings: jest.Mock
+    }>('../bridgeBottle')
     bottleMock.getSteamBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'B'
     })
-    bottleMock.getBridgeBottleSettings.mockReturnValue({
+    bridgeBottleMock.getBridgeBottleSettings.mockReturnValue({
       wineCrossoverBottle: 'BR'
     })
     bottleMock.getBottleSteamappsDir.mockImplementation((name: string) =>
@@ -582,14 +586,16 @@ describe('enumerateSteamInstallCopies', () => {
     })
     const bottleMock = jest.requireMock<{
       getSteamBottleSettings: jest.Mock
-      getBridgeBottleSettings: jest.Mock
       getBottleSteamappsDir: jest.Mock
     }>('../bottle')
+    const bridgeBottleMock = jest.requireMock<{
+      getBridgeBottleSettings: jest.Mock
+    }>('../bridgeBottle')
     bottleMock.getSteamBottleSettings.mockImplementation(() => {
       order.push('bottle')
       throw new Error('unprovisioned bridge bottle')
     })
-    bottleMock.getBridgeBottleSettings.mockImplementation(() => {
+    bridgeBottleMock.getBridgeBottleSettings.mockImplementation(() => {
       order.push('bridge')
       return { wineCrossoverBottle: 'BR' }
     })
@@ -847,13 +853,17 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
   const LEGACY_BOTTLE = 'GameLibSteamBridge'
 
   function bottleMock() {
-    return jest.requireMock<{
-      getSteamBottleSettings: jest.Mock
-      getBottleSteamappsDir: jest.Mock
-      getBridgeBottleSettings: jest.Mock
-      resolveBridgeBottleName: jest.Mock
-      removePerGameBridgeBottle: jest.Mock
-    }>('../bottle')
+    return {
+      ...jest.requireMock<{
+        getSteamBottleSettings: jest.Mock
+        getBottleSteamappsDir: jest.Mock
+        removePerGameBridgeBottle: jest.Mock
+      }>('../bottle'),
+      ...jest.requireMock<{
+        getBridgeBottleSettings: jest.Mock
+        resolveBridgeBottleName: jest.Mock
+      }>('../bridgeBottle')
+    }
   }
 
   beforeEach(() => {

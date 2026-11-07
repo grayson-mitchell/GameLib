@@ -37,7 +37,8 @@ import { SteamUser } from '../user'
 import { getAnonymousPicsClient, isPublicOnlyEntry } from '../anonymousClient'
 import { readBridgeVerdict, setBridgeLaunchTarget } from './bridgeVerdict'
 import { sanitizeInstalldir } from '../installLocation'
-import { getBridgeBottleSettings, getBottleSteamappsDir } from '../bottle'
+import { getBottleSteamappsDir } from '../bottle'
+import { getBridgeBottleSettings } from '../bridgeBottle'
 import {
   withTimeout,
   STEAM_PICS_TIMEOUT_MS,

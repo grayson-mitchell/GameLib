@@ -23,7 +23,8 @@ import {
 import { SteamUser } from '../../user'
 import { getAnonymousPicsClient } from '../../anonymousClient'
 import { readBridgeVerdict, setBridgeLaunchTarget } from '../bridgeVerdict'
-import { getBridgeBottleSettings, getBottleSteamappsDir } from '../../bottle'
+import { getBottleSteamappsDir } from '../../bottle'
+import { getBridgeBottleSettings } from '../../bridgeBottle'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -48,8 +49,10 @@ jest.mock('../bridgeVerdict', () => ({
 }))
 
 jest.mock('../../bottle', () => ({
-  getBridgeBottleSettings: jest.fn(),
   getBottleSteamappsDir: jest.fn()
+}))
+jest.mock('../../bridgeBottle', () => ({
+  getBridgeBottleSettings: jest.fn()
 }))
 
 const APP_ID = '206020' // Avernum 4 (24-03 SUMMARY)

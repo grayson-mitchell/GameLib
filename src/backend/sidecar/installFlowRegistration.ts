@@ -139,7 +139,7 @@ import {
   isSteamNativeDeleteEnabled,
   isSteamNativeInstallEnabled
 } from '../storeManagers/steam/nativeInstallSetting'
-import { findBridgeInstallBottle } from '../storeManagers/steam/bottle'
+import { findBridgeInstallBottle } from '../storeManagers/steam/bridgeBottle'
 import { resolveInstallRoot } from '../storeManagers/steam/library/installRoot'
 import { library as steamLibraryMap } from '../storeManagers/steam/state'
 import { getSteamBottleEligibilityVerdict } from '../storeManagers/steam/installFormIpc'

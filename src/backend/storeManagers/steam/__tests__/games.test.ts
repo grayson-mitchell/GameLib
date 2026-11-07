@@ -88,21 +88,23 @@ import {
   isBottleReady,
   getSteamBottleSettings,
   getBottleSteamappsDir,
-  isBridgeBottleReady,
-  getBridgeBottleSettings,
   provisionBridgeBottle,
   discardNewBridgeBottle,
   removePerGameBridgeBottle,
   stopPerGameBridgeBottle,
-  getDrmBridgeRunner,
   killBridgeBottleWineServer
 } from '../bottle'
+import {
+  isBridgeBottleReady,
+  getBridgeBottleSettings,
+  getDrmBridgeRunner
+} from '../bridgeBottle'
 import {
   tellBottledSteamToLaunch,
   tellBottledSteamToUninstall
 } from '../bottledSteam'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
-import type { DrmLaunchForm } from '../bottle'
+import type { DrmLaunchForm } from '../bridgeBottle'
 import type {
   DrmDllPathChannel,
   DrmDllOverridesChannel
@@ -389,15 +391,6 @@ jest.mock('backend/engine/bottlePrimitives', () => ({
       : null
 }))
 jest.mock('../bottle', () => {
-  // Phase 24 Plan 08 (R4): dedicated bridge bottle readiness/provisioning
-  // surface — installBridgeGame()'s BLOCKER-1 inline provisioning call.
-  // Declared as a local const (not inline in the returned object) so
-  // findBridgeInstallBottle below can close over the SAME jest.fn() object
-  // identity -- resetMocks only clears a mock's calls/implementation, it
-  // never replaces the object reference, so every existing test that
-  // already drives isBridgeBottleReady for its own purposes also drives
-  // findBridgeInstallBottle's real-shaped reimplementation for free.
-  const isBridgeBottleReady = jest.fn()
   // quick 261024-cjq: plain function over a jest.fn() (survives resetMocks).
   // After reset crossoverInstalled() is undefined, which reads as installed.
   const crossoverInstalled = jest.fn()
@@ -414,19 +407,32 @@ jest.mock('../bottle', () => {
     getSteamBottleSettings: jest.fn(),
     // Phase 21 Plan 11 (D-15/SNI-08): bottle depot-download write target.
     getBottleSteamappsDir: jest.fn(),
-    isBridgeBottleReady,
-    getBridgeBottleSettings: jest.fn(),
-    getDrmBridgeRunner: jest.fn(),
-    // Phase 60: overlay runner registry surface (plan 07).
-    clearDrmBridgeRunner: jest.fn(),
-    setOverlayBridgeRunner: jest.fn(),
     endPerGameBridgeBottleSessionWith: jest.fn(),
     killBridgeBottleWineServer: jest.fn(),
     provisionBridgeBottle: jest.fn(),
     // quick/261016-u1w (D-D): per-game bridge bottle removal on uninstall.
     removePerGameBridgeBottle: jest.fn(),
     // quick 261024-urq: Stop-button counterpart (per-game wineserver -k).
-    stopPerGameBridgeBottle: jest.fn(),
+    stopPerGameBridgeBottle: jest.fn()
+  }
+})
+jest.mock('../bridgeBottle', () => {
+  // Phase 24 Plan 08 (R4): dedicated bridge bottle readiness/provisioning
+  // surface — installBridgeGame()'s BLOCKER-1 inline provisioning call.
+  // Declared as a local const (not inline in the returned object) so
+  // findBridgeInstallBottle below can close over the SAME jest.fn() object
+  // identity -- resetMocks only clears a mock's calls/implementation, it
+  // never replaces the object reference, so every existing test that
+  // already drives isBridgeBottleReady for its own purposes also drives
+  // findBridgeInstallBottle's real-shaped reimplementation for free.
+  const isBridgeBottleReady = jest.fn()
+  return {
+    isBridgeBottleReady,
+    getBridgeBottleSettings: jest.fn(),
+    getDrmBridgeRunner: jest.fn(),
+    // Phase 60: overlay runner registry surface (plan 07).
+    clearDrmBridgeRunner: jest.fn(),
+    setOverlayBridgeRunner: jest.fn(),
     // quick/261016-u1w (D-A): plain arrow function, NOT jest.fn() -- resetMocks
     // wipes a jest.fn()'s implementation before every test, but games.ts calls
     // this directly as a pure, deterministic builder, so the factory gives it
@@ -14205,9 +14211,11 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           __prepareOverlayEnvMock: jest.Mock
         }>('../bridge/overlay/overlayLaunch')
       const bottleMod = jest.requireMock<{
-        setOverlayBridgeRunner: jest.Mock
         endPerGameBridgeBottleSessionWith: jest.Mock
       }>('../bottle')
+      const bridgeBottleMod = jest.requireMock<{
+        setOverlayBridgeRunner: jest.Mock
+      }>('../bridgeBottle')
       const runnerBin = '/ov/runner/CrossOver/bin/wine'
       const overlayRunner = {
         crossoverBuild: '26.3.0',
@@ -14231,7 +14239,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         __prepareOverlayLaunchMock.mockReset()
         __prepareOverlayEnvMock.mockReset()
         __prepareOverlayEnvMock.mockResolvedValue({ status: 'ok', vars: [] })
-        bottleMod.setOverlayBridgeRunner.mockImplementation(() => {
+        bridgeBottleMod.setOverlayBridgeRunner.mockImplementation(() => {
           registered.current = true
           return true
         })
@@ -14257,7 +14265,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         const id = freshId()
         __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
         expect(await new SteamGame(id).launch({} as never)).toBe(true)
-        expect(bottleMod.setOverlayBridgeRunner).toHaveBeenCalledWith(
+        expect(bridgeBottleMod.setOverlayBridgeRunner).toHaveBeenCalledWith(
           id,
           overlayRunner
         )
@@ -14277,7 +14285,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           bottleMod.endPerGameBridgeBottleSessionWith.mock
             .invocationCallOrder[0]
         ).toBeLessThan(
-          bottleMod.setOverlayBridgeRunner.mock.invocationCallOrder[0]
+          bridgeBottleMod.setOverlayBridgeRunner.mock.invocationCallOrder[0]
         )
       })
 
@@ -14327,7 +14335,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           cause: 'clone failed'
         })
         expect(await new SteamGame(id).launch({} as never)).toBe(true)
-        expect(bottleMod.setOverlayBridgeRunner).not.toHaveBeenCalled()
+        expect(bridgeBottleMod.setOverlayBridgeRunner).not.toHaveBeenCalled()
         expect(usedSettings().wineVersion.bin).toBe('/stock/bin/wine')
         expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
         expect(notify).toHaveBeenCalledTimes(1)
@@ -14341,7 +14349,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('a refused runner registration falls back to stock with a clone notice', async () => {
         const id = freshId()
         __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
-        bottleMod.setOverlayBridgeRunner.mockReturnValue(false)
+        bridgeBottleMod.setOverlayBridgeRunner.mockReturnValue(false)
         expect(await new SteamGame(id).launch({} as never)).toBe(true)
         expect(usedSettings().wineVersion.bin).toBe('/stock/bin/wine')
         expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
@@ -14410,7 +14418,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         expect(out.overlayLaunch).toEqual({ kind: 'env', vars: envVarsFor(id) })
         expect(out.settings).toBe(input)
         expect(__prepareOverlayLaunchMock).not.toHaveBeenCalled()
-        expect(bottleMod.setOverlayBridgeRunner).not.toHaveBeenCalled()
+        expect(bridgeBottleMod.setOverlayBridgeRunner).not.toHaveBeenCalled()
         expect(infoLines()).toContain(
           `SteamGame: appId ${id} overlay=env reason=fallback-engine (D-07)`
         )
@@ -14619,7 +14627,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         it('runner registration refused: applied=false reason=not-injected', async () => {
           const id = freshId()
           __prepareOverlayLaunchMock.mockImplementation(echoTokens(id))
-          bottleMod.setOverlayBridgeRunner.mockReturnValue(false)
+          bridgeBottleMod.setOverlayBridgeRunner.mockReturnValue(false)
           const out = await callPrepare(id, {
             wineCrossoverBottle: bottleFor(id),
             wineVersion: crossover
@@ -14928,9 +14936,11 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         __openOverlayWineLogMock: jest.Mock
       }>('../bridge/overlay/overlayWineLog')
       const bottleMod = jest.requireMock<{
-        setOverlayBridgeRunner: jest.Mock
         endPerGameBridgeBottleSessionWith: jest.Mock
       }>('../bottle')
+      const bridgeBottleMod = jest.requireMock<{
+        setOverlayBridgeRunner: jest.Mock
+      }>('../bridgeBottle')
       const { showDialogBoxModalAuto } = jest.requireMock<{
         showDialogBoxModalAuto: jest.Mock
       }>('backend/dialog/dialog')
@@ -14978,7 +14988,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         __watchOverlayAttachMock
           .mockReset()
           .mockReturnValue(new Promise(() => {}))
-        bottleMod.setOverlayBridgeRunner.mockImplementation(() => {
+        bridgeBottleMod.setOverlayBridgeRunner.mockImplementation(() => {
           registered.current = true
           return true
         })

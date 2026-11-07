@@ -64,7 +64,7 @@ import { scanSteamApiImports } from '../importScan'
 import { SHIM64_EXPORTED_SYMBOLS } from '../shimCoverage'
 import * as bridgeScan from '../bridgeScan'
 import { buildManagedPe } from './fixtures/managedPe'
-import { resolveBridgeBottleName } from '../../bottle'
+import { resolveBridgeBottleName } from '../../bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 
 jest.mock('backend/logger', () => ({
@@ -116,7 +116,9 @@ jest.mock('backend/engine/bottlePrimitives', () => ({
   getBottleDir: jest.fn()
 }))
 jest.mock('../../bottle', () => ({
-  DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge',
+  DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge'
+}))
+jest.mock('../../bridgeBottle', () => ({
   // quick/261016-u1w (D-B): plain arrow function, NOT jest.fn() -- resetMocks
   // wipes a jest.fn()'s implementation before every test, but shimGenerate.ts
   // calls this directly as a pure resolver, so the factory gives it a real
@@ -2978,7 +2980,10 @@ describe('shimGenerate', () => {
     // no-bottle fallback in placeShimForGame runs.
     const forceNoBottle = () =>
       jest
-        .spyOn(jest.requireMock('../../bottle'), 'resolveBridgeBottleName')
+        .spyOn(
+          jest.requireMock('../../bridgeBottle'),
+          'resolveBridgeBottleName'
+        )
         .mockReturnValueOnce('GameLibSteamBridge-1234')
         .mockReturnValueOnce(null)
     const warnCalls = (): string[] =>

@@ -52,7 +52,7 @@ import {
   type StageDrmBottleOk,
   type StageDrmBottleInput
 } from './stageDrmBottle'
-import { DRM_LAUNCH_FORM, type DrmLaunchForm } from '../../bottle'
+import { DRM_LAUNCH_FORM, type DrmLaunchForm } from '../../bridgeBottle'
 import { buildDrmPaths } from './drmPaths'
 
 /** Orchestrator stage names, used in logs; distinct from 56-04's DrmStep. */
@@ -285,11 +285,12 @@ async function runSetup(
 ): Promise<DrmLaunchSetupResult> {
   const { appId, appFolder } = input
   const bottle = await import('../../bottle')
-  const clearRunner = deps.clearRunner ?? bottle.clearDrmBridgeRunner
-  const getRunner = deps.getRunner ?? bottle.getDrmBridgeRunner
-  const registerRunner = deps.registerRunner ?? bottle.setDrmBridgeRunner
+  const bridgeBottle = await import('../../bridgeBottle')
+  const clearRunner = deps.clearRunner ?? bridgeBottle.clearDrmBridgeRunner
+  const getRunner = deps.getRunner ?? bridgeBottle.getDrmBridgeRunner
+  const registerRunner = deps.registerRunner ?? bridgeBottle.setDrmBridgeRunner
   const buildBottleSettings =
-    deps.buildBottleSettings ?? bottle.getDrmBridgeBottleSettings
+    deps.buildBottleSettings ?? bridgeBottle.getDrmBridgeBottleSettings
   const endBottleSession =
     deps.endBottleSession ?? bottle.endPerGameBridgeBottleSession
   const sendStatus =
@@ -486,7 +487,7 @@ export async function drmLaunchSetup(
         // A title whose exe lost `.bind` must not keep the clone.
         const clear =
           deps.clearRunner ??
-          (await import('../../bottle')).clearDrmBridgeRunner
+          (await import('../../bridgeBottle')).clearDrmBridgeRunner
         clear(input.appId)
       }
       return { status: 'not-applicable', mode: 'tcp' }

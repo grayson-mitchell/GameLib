@@ -13,7 +13,7 @@ import {
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { EnviromentVariable } from 'common/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { type DrmLaunchForm } from './bottle'
+import { type DrmLaunchForm } from './bridgeBottle'
 import { appendCxEnvTokens } from './bridge/overlay/overlayLaunch'
 import type { EngineSelection } from 'backend/engine/engineTypes'
 import { type DrmLaunchReady } from './bridge/drm/drmLaunchSetup'

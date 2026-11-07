@@ -16,11 +16,8 @@ import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import {
-  getBottleSteamappsDir,
-  getSteamBottleSettings,
-  listReadyBridgeBottleNames
-} from '../bottle'
+import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
+import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import {
   listSteamClientPids,
   readSteamProcessStartTokens
@@ -166,8 +163,10 @@ jest.mock('../stores', () => ({
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
   getSteamBottleSettings: jest.fn(),
+  isSteamBottleProvisioned: jest.fn()
+}))
+jest.mock('../bridgeBottle', () => ({
   getBridgeBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
   resolveBridgeBottleName: jest.fn()
 }))

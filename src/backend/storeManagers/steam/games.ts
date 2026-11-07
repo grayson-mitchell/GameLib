@@ -32,13 +32,12 @@ import {
   METADATA_FETCH_TIMEOUT_MS
 } from './state'
 import { cancelDelegatedInstall } from './library/installPolling'
+import { getSteamBottleSettings, stopPerGameBridgeBottle } from './bottle'
 import {
-  getSteamBottleSettings,
   bridgeBottleNameFor,
-  stopPerGameBridgeBottle,
   findBridgeInstallBottle,
   getDrmBridgeRunner
-} from './bottle'
+} from './bridgeBottle'
 // Phase 60: Steam overlay in bridged games (macOS).
 import { type OverlayLaunchPayload } from './bridge/overlay/overlayLaunch'
 import {

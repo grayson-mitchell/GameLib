@@ -33,7 +33,8 @@ import { SteamUser } from '../user'
 import { noteRefreshTrigger, resetSteamAuthTrigger } from '../authTrigger'
 import { getAnonymousPicsClient } from '../anonymousClient'
 import { steamLibraryStore, steamMetadataStore } from '../stores'
-import { getBottleSteamappsDir, listReadyBridgeBottleNames } from '../bottle'
+import { getBottleSteamappsDir } from '../bottle'
+import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import {
   finalizeToSteam,
   downloadSteamDepots,
@@ -186,8 +187,10 @@ jest.mock('../stores', () => ({
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
   getSteamBottleSettings: jest.fn(),
+  isSteamBottleProvisioned: jest.fn()
+}))
+jest.mock('../bridgeBottle', () => ({
   getBridgeBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
   resolveBridgeBottleName: jest.fn()
 }))

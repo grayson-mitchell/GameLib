@@ -10,53 +10,25 @@ import { stopRunningPoll } from '../library/runningPoll'
 import { stopInstallPolling } from '../library/installStop'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
-import { spawnSync, execFileSync } from 'child_process'
-import { shell } from 'backend/platform'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
-import { SteamUser } from '../user'
-import { getAnonymousPicsClient } from '../anonymousClient'
 import {
   steamLibraryStore,
   steamMetadataStore,
-  steamSyncStore,
   steamRestartHoldStore
 } from '../stores'
-import {
-  getBottleSteamappsDir,
-  getSteamBottleSettings,
-  getBridgeBottleSettings,
-  isSteamBottleProvisioned,
-  listReadyBridgeBottleNames,
-  resolveBridgeBottleName
-} from '../bottle'
-import {
-  finalizeToSteam,
-  downloadSteamDepots,
-  buildDepotPlan,
-  healReconciledFileModes
-} from '../depot'
-import { reconcilePartialState } from '../depot/reconcile'
-import { runWineCommand } from 'backend/launcher'
+import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { join } from 'path'
 import { library } from '../state'
 import * as gamesModule from '../gameSessionState'
-import { bridgeAllowlist } from '../bridge/allowlist'
-import { captureOwnedAppPlatforms } from '../platformCapture'
-import { captureOwnedAppMetacritic } from '../metacriticCapture'
 import {
   listSteamClientPids,
   readSteamProcessStartTokens
 } from '../steamClientProcess'
 import { logInfo } from 'backend/logger'
-import {
-  readSteamDownloadMonitor,
-  startSteamDownloadMonitor,
-  stopSteamDownloadMonitor
-} from '../steamDownloadMonitor'
 import { pollInstallOnce } from '../library/installPollOnce'
 import { startInstallPolling } from '../library/installPolling'
 
@@ -197,8 +169,10 @@ jest.mock('../stores', () => ({
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
   getSteamBottleSettings: jest.fn(),
+  isSteamBottleProvisioned: jest.fn()
+}))
+jest.mock('../bridgeBottle', () => ({
   getBridgeBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
   resolveBridgeBottleName: jest.fn()
 }))

@@ -20,7 +20,7 @@ import {
   isBridgeBottleReady,
   getBridgeBottleSettings,
   getDrmBridgeRunner
-} from './bottle'
+} from './bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { markGameRunning, markGameStopped } from 'backend/engine/bottleLedger'
 // Phase 60: Steam overlay in bridged games (macOS).

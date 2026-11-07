@@ -34,10 +34,8 @@ import { downloadSharedRedistDepots } from '../../depot'
 import { readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning } from 'backend/logger'
-import {
-  bridgeBottleNameFor,
-  endPerGameBridgeBottleSession
-} from '../../bottle'
+import { endPerGameBridgeBottleSession } from '../../bottle'
+import { bridgeBottleNameFor } from '../../bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 
 jest.mock('backend/logger', () => ({
@@ -54,8 +52,10 @@ jest.mock('backend/engine/bottlePrimitives', () => ({
   getBottleDir: jest.fn()
 }))
 jest.mock('../../bottle', () => ({
-  bridgeBottleNameFor: jest.fn(),
   endPerGameBridgeBottleSession: jest.fn()
+}))
+jest.mock('../../bridgeBottle', () => ({
+  bridgeBottleNameFor: jest.fn()
 }))
 // IN-05: a per-test mkdtemp dir, assigned in beforeEach before anything reads it.
 let mockSupportDir = ''

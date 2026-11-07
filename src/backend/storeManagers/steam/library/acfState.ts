@@ -7,10 +7,10 @@ import { getSteamLibraries } from 'backend/utils'
 import { library } from '../state'
 import { NUMERIC_APP_ID } from '../gameConstants'
 import {
-  resolveBridgeBottleName,
   removePerGameBridgeBottle,
   DEFAULT_BRIDGE_BOTTLE_NAME
 } from '../bottle'
+import { resolveBridgeBottleName } from '../bridgeBottle'
 import {
   type AcfSource,
   getBottleSteamappsRoot,

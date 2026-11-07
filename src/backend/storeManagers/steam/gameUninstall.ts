@@ -36,11 +36,13 @@ import {
   isBottleReady,
   getSteamBottleSettings,
   getBottleSteamappsDir,
+  removePerGameBridgeBottle
+} from './bottle'
+import {
   getBridgeBottleSettings,
   bridgeBottleNameFor,
-  removePerGameBridgeBottle,
   findBridgeInstallBottle
-} from './bottle'
+} from './bridgeBottle'
 import { isSteamNativeDeleteEnabled } from './nativeInstallSetting'
 import { decideSteamNativeDelete } from './nativeDelete'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'

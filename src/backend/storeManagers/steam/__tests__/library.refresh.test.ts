@@ -29,11 +29,13 @@ import {
 import {
   getBottleSteamappsDir,
   getSteamBottleSettings,
+  isSteamBottleProvisioned
+} from '../bottle'
+import {
   getBridgeBottleSettings,
-  isSteamBottleProvisioned,
   listReadyBridgeBottleNames,
   resolveBridgeBottleName
-} from '../bottle'
+} from '../bridgeBottle'
 import { healReconciledFileModes } from '../depot'
 import { join } from 'path'
 import { library } from '../state'
@@ -181,8 +183,10 @@ jest.mock('../stores', () => ({
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
   getSteamBottleSettings: jest.fn(),
+  isSteamBottleProvisioned: jest.fn()
+}))
+jest.mock('../bridgeBottle', () => ({
   getBridgeBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
   resolveBridgeBottleName: jest.fn()
 }))

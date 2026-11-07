@@ -16,12 +16,11 @@ import * as vdf from '@node-steam/vdf'
 import { getSteamLibraries } from 'backend/utils'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
+import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
 import {
-  getBottleSteamappsDir,
-  getSteamBottleSettings,
   listReadyBridgeBottleNames,
   resolveBridgeBottleName
-} from '../bottle'
+} from '../bridgeBottle'
 import { join } from 'path'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
@@ -161,8 +160,10 @@ jest.mock('../stores', () => ({
 jest.mock('../bottle', () => ({
   getBottleSteamappsDir: jest.fn(),
   getSteamBottleSettings: jest.fn(),
+  isSteamBottleProvisioned: jest.fn()
+}))
+jest.mock('../bridgeBottle', () => ({
   getBridgeBottleSettings: jest.fn(),
-  isSteamBottleProvisioned: jest.fn(),
   listReadyBridgeBottleNames: jest.fn(),
   resolveBridgeBottleName: jest.fn()
 }))
