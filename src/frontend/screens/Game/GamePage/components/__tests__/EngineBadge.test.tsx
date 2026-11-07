@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import type { SteamEngineState } from 'common/types/steam'
+import type { EngineState } from 'common/types/engine'
 
 jest.mock('react-i18next', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -9,8 +9,9 @@ jest.mock('react-i18next', () => {
 
 import EngineBadge from '../EngineBadge'
 
-const make = (over: Partial<SteamEngineState>): SteamEngineState => ({
-  appId: '730',
+const make = (over: Partial<EngineState>): EngineState => ({
+  runner: 'steam',
+  appName: '730',
   engine: 'builtin',
   reason: 'cx-expired',
   engineLabel: null,

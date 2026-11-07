@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import type { SteamEngineOption } from 'common/types/steam'
+import type { EngineOption } from 'common/types/engine'
 
 // G17 desk reproduction: drive the REAL useSetting -> setSetting chain with
 // hooks stubbed (no DOM renderer here). SelectField is a recorder, so MUI's own
@@ -49,9 +49,9 @@ import { gamelibT } from '../../../Game/GamePage/components/__tests__/gamelibT'
 
 const opt = (
   id: string,
-  kind: SteamEngineOption['kind'],
+  kind: EngineOption['kind'],
   available = true
-): SteamEngineOption => ({
+): EngineOption => ({
   id,
   kind,
   label: id,
@@ -59,7 +59,7 @@ const opt = (
   installed: true,
   isPreviousPin: false
 })
-const opts: SteamEngineOption[] = [
+const opts: EngineOption[] = [
   opt('automatic', 'automatic'),
   opt('crossover', 'crossover'),
   opt('pinned:wine-staging-11.20', 'pinned'),

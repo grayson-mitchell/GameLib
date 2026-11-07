@@ -6,7 +6,7 @@ import InfoIcon from 'frontend/components/UI/InfoIcon'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from 'frontend/screens/Settings/SettingsContext'
 import { useSteamEngineState } from 'frontend/state/SteamEngineState'
-import type { SteamEngineOption } from 'common/types/steam'
+import type { EngineOption } from 'common/types/engine'
 
 type T = (
   key: string,
@@ -22,7 +22,7 @@ type T = (
  * Only ids returned by listSteamEngineOptions are offered (T-59-52), and no
  * filesystem path is ever built or shown.
  */
-export function optionLabel(o: SteamEngineOption, t: T): string {
+export function optionLabel(o: EngineOption, t: T): string {
   if (o.kind === 'automatic')
     return t(
       'steam.engine.override.automatic',
@@ -73,7 +73,7 @@ function idLabel(id: string, t: T): string {
  */
 export function storedExtraOption(
   stored: string | undefined,
-  options: SteamEngineOption[],
+  options: EngineOption[],
   loaded: boolean,
   t: T
 ): { id: string; label: string } | null {
@@ -102,7 +102,7 @@ export function storedExtraOption(
 }
 
 interface ViewProps {
-  options: SteamEngineOption[]
+  options: EngineOption[]
   stored: string | undefined
   loaded: boolean
   onChange: (id: string) => void
@@ -178,7 +178,7 @@ const SteamEngineOverride = () => {
   const { t } = useTranslation('gamelib')
   const { appName } = useContext(SettingsContext)
   const [override, setOverride] = useSetting('steamEngineOverride', 'automatic')
-  const [options, setOptions] = useState<SteamEngineOption[]>([])
+  const [options, setOptions] = useState<EngineOption[]>([])
   const [loaded, setLoaded] = useState(false)
   const state = useSteamEngineState((s) => s.byAppId[appName])
   const hasState = state !== undefined

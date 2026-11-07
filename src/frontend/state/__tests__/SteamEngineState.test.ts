@@ -1,12 +1,13 @@
 import type { IpcRendererEvent } from 'backend/platform'
-import type { SteamEngineState } from 'common/types/steam'
+import type { EngineState } from 'common/types/engine'
 import {
   handleSteamEngineStateChangedSignal,
   useSteamEngineState
 } from '../SteamEngineState'
 
-const make = (over: Partial<SteamEngineState> = {}): SteamEngineState => ({
-  appId: '730',
+const make = (over: Partial<EngineState> = {}): EngineState => ({
+  runner: 'steam',
+  appName: '730',
   engine: 'builtin',
   reason: 'cx-missing',
   engineLabel: null,
@@ -30,7 +31,7 @@ describe('SteamEngineState store', () => {
   it.each(['', 'abc', '12 3', '../1', '123456789012'])(
     'ignores a payload whose appId is %p',
     (appId) => {
-      handleSteamEngineStateChangedSignal(evt, make({ appId }))
+      handleSteamEngineStateChangedSignal(evt, make({ appName: appId }))
       expect(useSteamEngineState.getState().byAppId).toEqual({})
     }
   )
@@ -48,7 +49,7 @@ describe('SteamEngineState store', () => {
   })
 
   it('remove deletes one appId and leaves others', () => {
-    handleSteamEngineStateChangedSignal(evt, make({ appId: '63000' }))
+    handleSteamEngineStateChangedSignal(evt, make({ appName: '63000' }))
     handleSteamEngineStateChangedSignal(evt, make())
     useSteamEngineState.getState().remove('63000')
     expect(Object.keys(useSteamEngineState.getState().byAppId)).toEqual(['730'])

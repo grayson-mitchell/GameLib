@@ -1,12 +1,12 @@
 import type { IpcRendererEvent } from 'backend/platform'
 import { create } from 'zustand'
-import type { SteamEngineState } from 'common/types/steam'
+import type { EngineState } from 'common/types/engine'
 
 type EngineNotice = 'no-crossover' | 'untested'
 
 interface SteamEngineStore {
-  byAppId: Record<string, SteamEngineState>
-  set: (state: SteamEngineState) => void
+  byAppId: Record<string, EngineState>
+  set: (state: EngineState) => void
   remove: (appId: string) => void
   hideNotice: (appId: string, notice: EngineNotice) => void
 }
@@ -17,7 +17,7 @@ interface SteamEngineStore {
 export const useSteamEngineState = create<SteamEngineStore>()((set) => ({
   byAppId: {},
   set: (state) =>
-    set((s) => ({ byAppId: { ...s.byAppId, [state.appId]: state } })),
+    set((s) => ({ byAppId: { ...s.byAppId, [state.appName]: state } })),
   remove: (appId) =>
     set((s) => {
       if (!(appId in s.byAppId)) return s
@@ -42,9 +42,9 @@ export const useSteamEngineState = create<SteamEngineStore>()((set) => ({
 // T-59-49: payloads without a numeric appId are ignored.
 export const handleSteamEngineStateChangedSignal = (
   _e: IpcRendererEvent,
-  state: SteamEngineState
+  state: EngineState
 ): void => {
-  if (!state || typeof state.appId !== 'string') return
-  if (!/^[0-9]{1,10}$/.test(state.appId)) return
+  if (!state || typeof state.appName !== 'string') return
+  if (!/^[0-9]{1,10}$/.test(state.appName)) return
   useSteamEngineState.getState().set(state)
 }

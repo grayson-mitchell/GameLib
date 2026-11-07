@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from 'react'
-import type { SteamEngineState } from 'common/types/steam'
+import type { EngineState } from 'common/types/engine'
 import { useSteamEngineState } from 'frontend/state/SteamEngineState'
 
 jest.mock('react-i18next', () => {
@@ -10,8 +10,9 @@ jest.mock('react-i18next', () => {
 
 import SteamEngineNotices from '../SteamEngineNotices'
 
-const make = (over: Partial<SteamEngineState>): SteamEngineState => ({
-  appId: '730',
+const make = (over: Partial<EngineState>): EngineState => ({
+  runner: 'steam',
+  appName: '730',
   engine: 'crossover',
   reason: 'cx-healthy',
   engineLabel: null,
@@ -44,7 +45,7 @@ const text = (n: ReactNode): string =>
       : n && typeof n === 'object'
         ? text((n as El).props.children)
         : ''
-const render = (s: SteamEngineState | undefined) =>
+const render = (s: EngineState | undefined) =>
   flat(SteamEngineNotices({ state: s }) as ReactNode).filter(
     (e) => typeof e.type === 'string'
   )

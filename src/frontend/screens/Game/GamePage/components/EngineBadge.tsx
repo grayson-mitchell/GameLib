@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import type { SteamEngineState } from 'common/types/steam'
+import type { EngineState } from 'common/types/engine'
 
 interface Props {
-  state: SteamEngineState | undefined
+  state: EngineState | undefined
 }
 
 /**

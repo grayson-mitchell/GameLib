@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import type { SteamEngineState } from 'common/types/steam'
+import type { EngineState } from 'common/types/engine'
 import { useSteamEngineState } from 'frontend/state/SteamEngineState'
 
 interface Props {
-  state: SteamEngineState | undefined
+  state: EngineState | undefined
 }
 
 // T-59-50: a constant, never taken from the backend payload.
@@ -80,7 +80,7 @@ const SteamEngineNotices = ({ state }: Props) => {
               })
               useSteamEngineState
                 .getState()
-                .hideNotice(state.appId, 'no-crossover')
+                .hideNotice(state.appName, 'no-crossover')
             }}
           >
             {dismissLabel}
@@ -128,7 +128,9 @@ const SteamEngineNotices = ({ state }: Props) => {
                 kind: 'untested-crossover',
                 build
               })
-              useSteamEngineState.getState().hideNotice(state.appId, 'untested')
+              useSteamEngineState
+                .getState()
+                .hideNotice(state.appName, 'untested')
             }}
           >
             {dismissLabel}

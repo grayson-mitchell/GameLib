@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import type { SteamEngineOption } from 'common/types/steam'
+import type { EngineOption } from 'common/types/engine'
 
 // No DOM renderer in this project: drive the component function directly with
 // hooks stubbed (effects run synchronously, state is a fixed pair).
@@ -47,7 +47,7 @@ import {
 } from '../SteamEngineOverride'
 import SteamEngineOverride from '../SteamEngineOverride'
 import { gamelibT } from '../../../Game/GamePage/components/__tests__/gamelibT'
-const opts: SteamEngineOption[] = [
+const opts: EngineOption[] = [
   {
     id: 'automatic',
     kind: 'automatic',

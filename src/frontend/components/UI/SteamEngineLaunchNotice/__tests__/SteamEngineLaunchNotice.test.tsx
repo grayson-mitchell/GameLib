@@ -158,7 +158,7 @@ const render = (): ReactNode => {
 const unmount = () => rt.cleanups.forEach((c) => typeof c === 'function' && c())
 
 const notice = (reason: string, seq: number) => ({
-  '63000': { appId: '63000', launchNotice: { reason, seq } }
+  '63000': { runner: 'steam', appName: '63000', launchNotice: { reason, seq } }
 })
 
 // No jsdom: stub the window/document focus surface the overlay timer reads.
@@ -166,7 +166,11 @@ const focusListeners: Record<string, (() => void)[]> = {}
 const env = { focused: true, visible: 'visible' }
 const fire = (type: string) => (focusListeners[type] ?? []).forEach((f) => f())
 const overlay = (step: string, seq: number) => ({
-  '3205720': { appId: '3205720', overlayNotice: { step, seq } }
+  '3205720': {
+    runner: 'steam',
+    appName: '3205720',
+    overlayNotice: { step, seq }
+  }
 })
 const cls = (e: El | undefined): string => e?.props.className ?? ''
 const toast = (out: ReactNode): El | undefined =>
@@ -236,7 +240,9 @@ afterEach(() => jest.useRealTimers())
 
 describe('SteamEngineLaunchNotice', () => {
   it('renders nothing when no state carries a launchNotice', () => {
-    storeState = { '63000': { appId: '63000', launchNotice: null } }
+    storeState = {
+      '63000': { runner: 'steam', appName: '63000', launchNotice: null }
+    }
     expect(render()).toBeNull()
   })
 
@@ -300,7 +306,9 @@ describe('SteamEngineLaunchNotice', () => {
     expect(jest.mocked(useSuppressStoreEmbedWhile).mock.calls.at(-1)).toEqual([
       false
     ])
-    storeState = { '63000': { appId: '63000', launchNotice: null } }
+    storeState = {
+      '63000': { runner: 'steam', appName: '63000', launchNotice: null }
+    }
     expect(render()).toBeNull()
     storeState = notice('cx-expired', 1)
     expect(render()).toBeNull()
@@ -412,7 +420,8 @@ describe('SteamEngineLaunchNotice', () => {
     it('stacks with an engine notice, each with its own dismiss', () => {
       storeState = {
         '3205720': {
-          appId: '3205720',
+          runner: 'steam',
+          appName: '3205720',
           launchNotice: { reason: 'cx-expired', seq: 1 },
           overlayNotice: { step: 'env', seq: 2 }
         }
@@ -467,7 +476,7 @@ describe('SteamEngineLaunchNotice', () => {
   })
   describe('overlay exit notice (261105-ast)', () => {
     const exitState = (seq: unknown) => ({
-      '3205720': { appId: '3205720', exitNotice: { seq } }
+      '3205720': { runner: 'steam', appName: '3205720', exitNotice: { seq } }
     })
     const BODY =
       "The game exited within 30 seconds with the Steam overlay on. If this is a crash and keeps happening, try turning the overlay off in this game's settings: Run > Steam overlay."
@@ -497,7 +506,8 @@ describe('SteamEngineLaunchNotice', () => {
     it('stacks with overlay and engine notices, three statuses', () => {
       storeState = {
         '3205720': {
-          appId: '3205720',
+          runner: 'steam',
+          appName: '3205720',
           launchNotice: { reason: 'cx-expired', seq: 1 },
           overlayNotice: { step: 'env', seq: 2 },
           exitNotice: { seq: 3 }
