@@ -53,7 +53,8 @@ describe('indexedAccessRatchet bucketOf', () => {
       'src/backend/testUtils',
       'src/backend/downloadmanager',
       'src/backend/knownFixesRegistry.ts',
-      'src/backend/launcher.ts'
+      'src/backend/launcher.ts',
+      'src/backend/knownFixOverlayArchive.ts'
     ])
   })
 })

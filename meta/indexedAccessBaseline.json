@@ -1,7 +1,6 @@
 {
   "meta": 342,
   "src/backend/appshell": 1,
-  "src/backend/knownFixOverlayArchive.ts": 2,
   "src/backend/logger": 1,
   "src/backend/platform": 1,
   "src/backend/save_sync.ts": 2,

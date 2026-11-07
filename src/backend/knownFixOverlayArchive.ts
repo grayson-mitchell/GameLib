@@ -43,7 +43,9 @@ function octal(value: number, digits: number): string {
 function headerChecksum(header: Buffer): number {
   let sum = 0
   for (let i = 0; i < BLOCK; i++) {
-    sum += i >= 148 && i < 156 ? 0x20 : header[i]
+    const byte = header[i]
+    if (byte === undefined) throw new Error('overlay archive: truncated header')
+    sum += i >= 148 && i < 156 ? 0x20 : byte
   }
   return sum
 }
@@ -143,7 +145,11 @@ export async function readOverlayTarGz(
     if (magic !== 'ustar\0' || version !== '00') {
       throw new Error('overlay archive: not a POSIX ustar entry')
     }
-    const typeflag = String.fromCharCode(header[156])
+    const typeflagByte = header[156]
+    if (typeflagByte === undefined) {
+      throw new Error('overlay archive: truncated header')
+    }
+    const typeflag = String.fromCharCode(typeflagByte)
     if (typeflag !== '0') {
       throw new Error(`overlay archive: unsupported entry type '${typeflag}'`)
     }
