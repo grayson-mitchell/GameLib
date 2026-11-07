@@ -88,7 +88,7 @@ function assertNoOptionsPath(source: string) {
 function assertNoFilesystemPathOnScreen(source: string) {
   if (source.includes('libraryPath')) {
     throw new Error(
-      'assertNoFilesystemPathOnScreen: libraryPath reaches the Console Mode overlay -- no filesystem path may render on a TV'
+      "assertNoFilesystemPathOnScreen: the D-29 degrade record's libraryPath reaches the Console Mode overlay -- the failure card must stay path-free"
     )
   }
 }
@@ -111,6 +111,31 @@ function destructuredIntentParams(source: string): string[] {
     .map((p) => p.split(':')[0].trim())
     .filter(Boolean)
     .sort()
+}
+
+function assertNoAutoInstallOnMount(source: string) {
+  if (source.includes('setTimeout(')) {
+    throw new Error(
+      'assertNoAutoInstallOnMount: the overlay arms a timer -- nothing may auto-dismiss'
+    )
+  }
+  const installIdx = source.indexOf('installSteamGame(')
+  const handlerIdx = source.indexOf('const installGame')
+  if (installIdx === -1 || handlerIdx === -1 || installIdx < handlerIdx) {
+    throw new Error(
+      'assertNoAutoInstallOnMount: installSteamGame( is called before installGame -- the Steam install must fire only from the Install handler'
+    )
+  }
+}
+
+function assertSteamNeverWritesWineConfig(source: string) {
+  const installIdx = source.indexOf('installSteamGame(')
+  const writeIdx = source.indexOf('writeConfig(')
+  if (installIdx === -1 || writeIdx === -1 || installIdx > writeIdx) {
+    throw new Error(
+      'assertSteamNeverWritesWineConfig: installSteamGame( must appear before writeConfig( so the Steam branch returns before any Wine write'
+    )
+  }
 }
 
 function assertCopyResolvedThroughTable(source: string) {
@@ -792,7 +817,7 @@ describe('InstallOverlay/index.tsx source gates (D-29, comment-stripped)', () =>
     )
   })
 
-  it('D3: no filesystem path may reach a TV screen -- zero occurrences of libraryPath', () => {
+  it("D3: the D-29 degrade record's libraryPath never reaches the overlay, so the failure card stays path-free", () => {
     expect(() =>
       assertNoFilesystemPathOnScreen(readStrippedOverlay())
     ).not.toThrow()
@@ -826,12 +851,46 @@ describe('InstallOverlay/index.tsx source gates (D-29, comment-stripped)', () =>
     expect(source).toContain('platformToInstall,')
   })
 
-  it('D5: the timer is armed inside the ok branch, not at effect top level -- setTimeout( comes after probeSteamQuickInstallTarget( textually', () => {
-    const source = readStrippedOverlay()
-    const probeIdx = source.indexOf('probeSteamQuickInstallTarget(')
-    const timerIdx = source.indexOf('setTimeout(')
-    expect(probeIdx).toBeGreaterThanOrEqual(0)
-    expect(timerIdx).toBeGreaterThan(probeIdx)
+  it('D5: nothing installs or auto-dismisses on mount -- no setTimeout(, and installSteamGame( appears only after the installGame handler begins', () => {
+    expect(() =>
+      assertNoAutoInstallOnMount(readStrippedOverlay())
+    ).not.toThrow()
+  })
+
+  it('D5-RED-a: an install fired from the mount probe is rejected, DERIVED FROM THE REAL SOURCE', () => {
+    const real = readStrippedOverlay()
+    const knownBad = real.replace(
+      'probeSteamQuickInstallTarget(',
+      'probeSteamQuickInstallTarget(installSteamGame(game.app_name, game).catch(x);'
+    )
+    expect(knownBad).not.toBe(real)
+    expect(() => assertNoAutoInstallOnMount(knownBad)).toThrow(
+      /before installGame/
+    )
+  })
+
+  it('D5-RED-b: a restored auto-dismiss timer is rejected, DERIVED FROM THE REAL SOURCE', () => {
+    const real = readStrippedOverlay()
+    const knownBad = `${real}\nsetTimeout(() => onDismiss(), 1500)`
+    expect(() => assertNoAutoInstallOnMount(knownBad)).toThrow(/timer/)
+  })
+
+  it('D12: Steam never writes a Wine config -- installSteamGame( precedes writeConfig(', () => {
+    expect(() =>
+      assertSteamNeverWritesWineConfig(readStrippedOverlay())
+    ).not.toThrow()
+  })
+
+  it('D12-RED: moving the Steam call after writeConfig( is rejected, DERIVED FROM THE REAL SOURCE', () => {
+    const real = readStrippedOverlay()
+    const knownBad = `${real.replace(
+      'installSteamGame(game.app_name, game)',
+      'noop(game.app_name, game)'
+    )}\ninstallSteamGame(game.app_name, game)`
+    expect(knownBad).not.toBe(real)
+    expect(() => assertSteamNeverWritesWineConfig(knownBad)).toThrow(
+      /before writeConfig/
+    )
   })
 
   // WR-01 (34.13 review): the exhaustive mapping is only worth anything if
@@ -1116,5 +1175,33 @@ describe('en catalog (quick 261102-pgy)', () => {
     )
     expect(match).not.toBeNull()
     expect(catalog.consoleMode.steamClientSetupHandOff).toBe(match?.[1])
+  })
+})
+
+describe('en catalog (quick 261107-kn8)', () => {
+  it('I2: consoleMode.steamInstallTargetDefault matches the overlay in-code default', () => {
+    const catalog = JSON.parse(
+      readFileSync(
+        join(
+          __dirname,
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          'public',
+          'locales',
+          'en',
+          'gamelib.json'
+        ),
+        'utf8'
+      )
+    ) as { consoleMode: Record<string, string> }
+    const match = readFileSync(OVERLAY_PATH, 'utf8').match(
+      /'gamelib:consoleMode\.steamInstallTargetDefault',\s*'([^']+)'/
+    )
+    expect(match).not.toBeNull()
+    expect(catalog.consoleMode.steamInstallTargetDefault).toBe(match?.[1])
   })
 })

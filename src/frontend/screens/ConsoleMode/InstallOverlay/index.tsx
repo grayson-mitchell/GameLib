@@ -81,7 +81,11 @@ export default function InstallOverlay({
   })
   const platformToInstall =
     availablePlatforms[platformIndex]?.value ?? 'Windows'
-  const hasWine = platformToInstall === 'Windows' && !isWin
+  const isSteam = hasCapability(game.runner, 'installHandOffToClient')
+  // Platform and Wine selection never applies to Steam: `installSteamGame`
+  // takes no platform or wine argument, and the Steam bottle's Wine is shared.
+  const showPlatform = !isSteam && availablePlatforms.length > 1
+  const hasWine = !isSteam && platformToInstall === 'Windows' && !isWin
 
   const [wineList, setWineList] = useState<WineInstallation[]>([])
   const [wineIndex, setWineIndex] = useState(0)
@@ -93,6 +97,8 @@ export default function InstallOverlay({
   const installButtonRef = useRef<HTMLButtonElement | null>(null)
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null)
   const setupSteamButtonRef = useRef<HTMLButtonElement | null>(null)
+  const [steamReady, setSteamReady] = useState(false)
+  const [steamTargetPath, setSteamTargetPath] = useState<string | undefined>()
   const [steamBlocked, setSteamBlocked] =
     useState<SteamQuickInstallDegrade | null>(null)
   const [clientSetupHandOff, setClientSetupHandOff] =
@@ -118,25 +124,19 @@ export default function InstallOverlay({
     return () => document.body.classList.remove('console-modal-open')
   }, [])
 
-  // Steam install handoff: D-29 runs D-24's local check FIRST, using the
-  // same pure decision functions the desktop quick-install path uses
-  // (composed by ./consoleSteamTarget.ts -- deliberately NOT the desktop
-  // quick-install door itself, whose degrade branch would open the desktop
-  // options dialog underneath this full-screen overlay, which D-29
-  // forbids). On a not-ok
-  // verdict, this shows the D-29 in-place failure card and returns WITHOUT
-  // calling install() and WITHOUT arming any timer -- an unconditionally
-  // armed timer would make the failure message vanish after 1.5s, a silent
-  // failure. Only on an ok verdict does the existing install() call fire
-  // (routing to the validated backend steam/games.ts -> the install
-  // protocol; no raw Steam protocol URL is constructed here), and only then
-  // is the 1500ms auto-dismiss timer armed. Escape/Backspace still dismiss
-  // immediately via the existing keydown handler on either path.
+  // Steam install probe: D-29 runs D-24's local check FIRST, using the same
+  // pure decision functions the desktop quick-install path uses (composed by
+  // ./consoleSteamTarget.ts -- deliberately NOT the desktop quick-install
+  // door itself, whose degrade branch would open the desktop options dialog
+  // underneath this full-screen overlay, which D-29 forbids). A not-ok
+  // verdict shows the D-29 terminal failure card. An ok verdict only enables
+  // Install: nothing installs until the user presses it, and nothing
+  // auto-dismisses. Escape/Backspace dismiss immediately via the keydown
+  // handler on every path.
   useEffect(() => {
     if (!hasCapability(game.runner, 'installManagedExternally')) return
     let cancelled = false
     let clientSetupSeen = false
-    let timer: ReturnType<typeof setTimeout> | undefined
     void probeSteamQuickInstallTarget(game.app_name).then((verdict) => {
       if (cancelled) {
         // Unmounted while the recheck was in flight: its push may already
@@ -156,31 +156,11 @@ export default function InstallOverlay({
         if (verdict.clientSetup) setFocused('setupSteam')
         return
       }
-      // D-23 / WR-01 (34.13 review WR-02): route through `installSteamGame`
-      // with NO path argument, exactly like the desktop quick-install path.
-      // The generic `install()` helper this replaces passed
-      // `installPath: 'default'`, which `helpers/library.ts` resolves to
-      // `AppSettings.defaultInstallPath` -- GameLib's generic install dir,
-      // NOT a Steam library. That made the free-space check above
-      // (`target.steamappsDir`) validate a directory the install would not
-      // write to, and produced a spurious `rejected install-path override`
-      // backend warning on EVERY Console Mode Steam install when
-      // `resolveOverride()` refused the unregistered path and fell back to
-      // primary. `installSteamGame` is D-23's stated sole marshalling site
-      // for `window.api.install` on the Steam path.
-      // 34.13 review B-WR-01: `installSteamGame` returns the dispatch promise
-      // now, so the fire-and-forget intent is stated with an explicit
-      // rejection handler rather than a bare `void` that attached none.
-      installSteamGame(game.app_name, game).catch(
-        logSteamInstallDispatchFailure(game.app_name)
-      )
-      timer = setTimeout(() => {
-        if (!cancelled) onDismiss()
-      }, 1500)
+      setSteamTargetPath(verdict.targetPath)
+      setSteamReady(true)
     })
     return () => {
       cancelled = true
-      if (timer) clearTimeout(timer)
       // Every exit path (B, Escape, Backspace, A or a click on Dismiss, the
       // global console toggle) unmounts the overlay, so one release here
       // covers them all. A hand-off sets the flag first and keeps the store.
@@ -205,21 +185,20 @@ export default function InstallOverlay({
   }, [hasWine])
 
   const visibleRows = useMemo<FocusKey[]>(() => {
-    const rows: FocusKey[] = []
-    if (availablePlatforms.length > 1) rows.push('platform')
-    if (hasWine) rows.push('wine')
-    if (
-      hasCapability(game.runner, 'installHandOffToClient') &&
-      clientSetupHandOff
-    ) {
-      return ['cancel', 'setupSteam']
+    if (isSteam && steamBlocked) {
+      return clientSetupHandOff ? ['cancel', 'setupSteam'] : ['cancel']
     }
+    const rows: FocusKey[] = []
+    if (showPlatform) rows.push('platform')
+    if (hasWine) rows.push('wine')
     rows.push('cancel', 'install')
     return rows
-  }, [availablePlatforms.length, hasWine, game.runner, clientSetupHandOff])
+  }, [showPlatform, hasWine, isSteam, steamBlocked, clientSetupHandOff])
 
   useEffect(() => {
-    if (!visibleRows.includes(focused)) setFocused('install')
+    if (!visibleRows.includes(focused)) {
+      setFocused(visibleRows[visibleRows.length - 1])
+    }
   }, [visibleRows, focused])
 
   useEffect(() => {
@@ -255,6 +234,27 @@ export default function InstallOverlay({
   const cycleWine = cycle(wineList.length, setWineIndex)
 
   const installGame = async () => {
+    if (isSteam) {
+      if (!steamReady) return
+      // D-23 / WR-01 (34.13 review WR-02): route through `installSteamGame`
+      // with NO path argument, exactly like the desktop quick-install path.
+      // The generic `install()` helper passed `installPath: 'default'`, which
+      // `helpers/library.ts` resolves to `AppSettings.defaultInstallPath` --
+      // GameLib's generic install dir, NOT a Steam library. That made the
+      // free-space check (`target.steamappsDir`) validate a directory the
+      // install would not write to, and produced a spurious `rejected
+      // install-path override` backend warning on EVERY Console Mode Steam
+      // install when `resolveOverride()` refused the unregistered path and
+      // fell back to primary. `installSteamGame` is D-23's stated sole
+      // marshalling site for `window.api.install` on the Steam path.
+      // 34.13 review B-WR-01: it returns the dispatch promise, so the
+      // fire-and-forget intent carries an explicit rejection handler.
+      installSteamGame(game.app_name, game).catch(
+        logSteamInstallDispatchFailure(game.app_name)
+      )
+      onDismiss()
+      return
+    }
     try {
       if (!isWin && wineVersion) {
         const gameSettings = await window.api.requestGameSettings(game.app_name)
@@ -389,7 +389,15 @@ export default function InstallOverlay({
   })
   useGamepadButtonPress(getBackButtonIndex(layout, mapping), onDismiss)
 
-  const showPlatform = availablePlatforms.length > 1
+  const installTargetLabel = !isSteam
+    ? installPath || '…'
+    : !steamReady
+      ? '…'
+      : (steamTargetPath ??
+        tGamelib(
+          'gamelib:consoleMode.steamInstallTargetDefault',
+          'Your Steam library'
+        ))
   const wineLabel =
     wineList.length > 0
       ? (wineVersion?.name ?? t('console.install.wineMissing', 'Not selected'))
@@ -406,74 +414,64 @@ export default function InstallOverlay({
   return (
     <div className="consoleInstallOverlay" role="dialog" aria-live="polite">
       <div className="consoleModal">
-        {hasCapability(game.runner, 'installHandOffToClient') ? (
-          steamBlocked ? (
-            // D-29's resolved open question: an in-place TERMINAL failure
-            // card, reusing classes already in this file. No platform row,
-            // no wine row, no path row, no install control -- this is
-            // provably not an options path, structurally rather than by
-            // promise. No filesystem path is interpolated into any string
-            // here (see consoleSteamTarget.ts's doc comment and this task's
-            // D3 source gate).
-            //
-            // Quick 261102-pgy: when the Steam CLIENT is the cause, the card
-            // adds only the `setupSteam` hand-off chip, whose sole effect is
-            // leaving for desktop setup (SteamClientSetup is not mounted
-            // under /console). There is still no platform, wine or path
-            // row, no install control, and no options door.
-            <>
-              <div className="consoleModalTitle blocked">
-                {tGamelib(
-                  'gamelib:consoleMode.steamInstallBlockedTitle',
-                  "Can't start this install"
-                )}
-              </div>
-              <div className="consoleModalGameTitle">{game.title}</div>
-              <p className="consoleModalReason">
-                {steamBlockedCopy &&
-                  tGamelib(
-                    `gamelib:${steamBlockedCopy[0]}`,
-                    steamBlockedCopy[1]
-                  )}
-              </p>
-              <div className="consoleInstallButtons">
+        {isSteam && steamBlocked ? (
+          // D-29's resolved open question: an in-place TERMINAL failure
+          // card, reusing classes already in this file. No platform row,
+          // no wine row, no path row, no install control -- this is
+          // provably not an options path, structurally rather than by
+          // promise. No filesystem path is interpolated into any string
+          // here (see consoleSteamTarget.ts's doc comment and this task's
+          // D3 source gate). The ok-state "Install to" row below may show
+          // the resolved library root, as the non-Steam row does; this card
+          // never does.
+          //
+          // Quick 261102-pgy: when the Steam CLIENT is the cause, the card
+          // adds only the `setupSteam` hand-off chip, whose sole effect is
+          // leaving for desktop setup (SteamClientSetup is not mounted
+          // under /console). There is still no platform, wine or path
+          // row, no install control, and no options door.
+          <>
+            <div className="consoleModalTitle blocked">
+              {tGamelib(
+                'gamelib:consoleMode.steamInstallBlockedTitle',
+                "Can't start this install"
+              )}
+            </div>
+            <div className="consoleModalGameTitle">{game.title}</div>
+            <p className="consoleModalReason">
+              {steamBlockedCopy &&
+                tGamelib(`gamelib:${steamBlockedCopy[0]}`, steamBlockedCopy[1])}
+            </p>
+            <div className="consoleInstallButtons">
+              <button
+                ref={cancelButtonRef}
+                className={classNames('consoleChip', {
+                  active: !clientSetupHandOff || focused === 'cancel'
+                })}
+                onClick={onDismiss}
+                onMouseEnter={() => setFocused('cancel')}
+                onFocus={() => setFocused('cancel')}
+              >
+                {t('button.dismiss', 'Dismiss')}
+              </button>
+              {clientSetupHandOff && (
                 <button
-                  ref={cancelButtonRef}
+                  ref={setupSteamButtonRef}
                   className={classNames('consoleChip', {
-                    active: !clientSetupHandOff || focused === 'cancel'
+                    active: focused === 'setupSteam'
                   })}
-                  onClick={onDismiss}
-                  onMouseEnter={() => setFocused('cancel')}
-                  onFocus={() => setFocused('cancel')}
+                  onClick={handOff}
+                  onMouseEnter={() => setFocused('setupSteam')}
+                  onFocus={() => setFocused('setupSteam')}
                 >
-                  {t('button.dismiss', 'Dismiss')}
+                  {tGamelib(
+                    'gamelib:consoleMode.steamClientSetupHandOff',
+                    'Set up Steam in desktop mode'
+                  )}
                 </button>
-                {clientSetupHandOff && (
-                  <button
-                    ref={setupSteamButtonRef}
-                    className={classNames('consoleChip', {
-                      active: focused === 'setupSteam'
-                    })}
-                    onClick={handOff}
-                    onMouseEnter={() => setFocused('setupSteam')}
-                    onFocus={() => setFocused('setupSteam')}
-                  >
-                    {tGamelib(
-                      'gamelib:consoleMode.steamClientSetupHandOff',
-                      'Set up Steam in desktop mode'
-                    )}
-                  </button>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="consoleModalTitle">
-                {t('console.steam.installing', 'Opening Steam to install…')}
-              </div>
-              <div className="consoleModalGameTitle">{game.title}</div>
-            </>
-          )
+              )}
+            </div>
+          </>
         ) : (
           <>
             <div className="consoleModalTitle">
@@ -507,8 +505,8 @@ export default function InstallOverlay({
                 <span className="consoleInstallLabel">
                   {t('console.install.path', 'Install to')}
                 </span>
-                <span className="consoleInstallPath" title={installPath}>
-                  {installPath || '…'}
+                <span className="consoleInstallPath" title={installTargetLabel}>
+                  {installTargetLabel}
                 </span>
               </div>
             </div>
@@ -533,7 +531,7 @@ export default function InstallOverlay({
                 onClick={() => void installGame()}
                 onMouseEnter={() => setFocused('install')}
                 onFocus={() => setFocused('install')}
-                disabled={hasWine && !wineVersion}
+                disabled={isSteam ? !steamReady : hasWine && !wineVersion}
               >
                 {t('generic.install', 'Install')}
               </button>
