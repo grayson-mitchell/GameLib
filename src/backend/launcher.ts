@@ -844,8 +844,8 @@ async function getCrossoverBottleFolder(gameSettings: GameSettings) {
   return command
     .then((result) => {
       // match the `WINEPREFIX = .....` line to extract the bottle folder
-      const match = result.stderr.match(/WINEPREFIX = "(.*)"\n/)
-      if (match) return match[1]
+      const bottleFolder = result.stderr.match(/WINEPREFIX = "(.*)"\n/)?.[1]
+      if (bottleFolder !== undefined) return bottleFolder
 
       return null
     })
@@ -1778,7 +1778,7 @@ const appNameIndexFinders: Record<Runner, (commandParts: string[]) => number> =
 
 function appNameFromCommandParts(commandParts: string[], runner: Runner) {
   const appNameIndex = appNameIndexFinders[runner](commandParts)
-  return appNameIndex > -1 ? commandParts[appNameIndex] : ''
+  return appNameIndex > -1 ? (commandParts[appNameIndex] ?? '') : ''
 }
 
 async function callRunner(
@@ -1857,7 +1857,7 @@ async function callRunner(
   const joinable = !options?.onOutput
   const currentPromise = commandsRunning[key]
 
-  if (joinable && key in commandsRunning) {
+  if (joinable && key in commandsRunning && currentPromise !== undefined) {
     return currentPromise
   }
 
@@ -2065,9 +2065,9 @@ function getRunnerCallWithoutCredentials(
       // original `--code`/`--token` were ever actually redacted on the
       // PowerShell branch -- proven RED against the real wrapped shape via
       // the production `callRunner` path (34.5-61-SUMMARY.md capture (c)).
-      modifiedCommand[argumentListIndex] = modifiedCommand[
-        argumentListIndex
-      ].replace(
+      const argumentList = modifiedCommand[argumentListIndex]
+      if (argumentList === undefined) continue
+      modifiedCommand[argumentListIndex] = argumentList.replace(
         new RegExp(`\`"${sensitiveArg}\`"","\`"(.*?)\`""`),
         `\`"${sensitiveArg}\`"","\`"<redacted>\`""`
       )
