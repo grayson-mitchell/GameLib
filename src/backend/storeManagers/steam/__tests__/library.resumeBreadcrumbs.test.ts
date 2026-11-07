@@ -1,0 +1,301 @@
+/**
+ * Unit tests for steam/library/resumeBreadcrumbs.ts. Moved out of
+ * library.test.ts by Phase 65 plan 03 (D-03); mock preamble copied.
+ */
+
+// ── Imports ───────────────────────────────────────────────────────────────────
+import { markSteamInstallIncomplete } from '../library/resumeBreadcrumbs'
+import { sendFrontendMessage } from '../../../ipc'
+import { t as i18nextT } from 'i18next'
+import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
+import { steamLibraryStore } from '../stores'
+import { listReadyBridgeBottleNames } from '../bottle'
+import { library } from '../state'
+
+// ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
+// steam/games.ts imports the shared shortcuts module, whose import graph does not load under
+// this file's mocks (quick 261026-c7r).
+jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
+  addShortcuts: jest.fn(),
+  removeShortcuts: jest.fn(),
+  shortcutFiles: jest.fn()
+}))
+
+jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
+
+jest.mock('backend/logger', () => ({
+  logInfo: jest.fn(),
+  logError: jest.fn(),
+  logWarning: jest.fn(),
+  LogPrefix: {
+    Steam: 'Steam',
+    Backend: 'Backend'
+  }
+}))
+
+// ── backend/utils mock — provides getSteamLibraries() and getFileSize() ─────
+// Note: resetMocks:true wipes any factory-provided implementation before each
+// test, so getFileSize's return value must be re-established per-describe
+// (see beforeEach blocks below) — same pattern as games.test.ts.
+jest.mock('backend/utils', () => ({
+  getSteamLibraries: jest.fn(),
+  getFileSize: jest.fn()
+}))
+
+// ── graceful-fs mock — readdirSync, readFileSync, existsSync ─────────────────
+jest.mock('graceful-fs')
+
+// ── @node-steam/vdf mock — parse() ───────────────────────────────────────────
+jest.mock('@node-steam/vdf')
+
+// ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
+jest.mock('../../../ipc', () => ({
+  sendFrontendMessage: jest.fn()
+}))
+
+// ── dialog/dialog mock — notify (GAME-02/03: poller fires confirmed toast) ───
+jest.mock('../../../dialog/dialog', () => ({
+  notify: jest.fn()
+}))
+
+// ── i18next mock — returns the fallback string for body assertions ────────────
+// 23.2-04: t is a jest.fn (not a plain function) so its call args are
+// inspectable — the fallback-string return value is unchanged, so every
+// pre-existing body-text assertion in this file keeps passing byte-for-byte.
+// This is what makes the interpolation options object provable: the fallback
+// alone can only ever show the raw {{depots}} placeholder, never the actual
+// depot id.
+// The named `t` is the same jest.fn as `default.t`, so a test can reference it
+// without a default-import member access (import-x/no-named-as-default-member).
+jest.mock('i18next', () => {
+  const t = jest.fn((_key: string, fallback = '') => fallback)
+  return { __esModule: true, t, default: { t } }
+})
+
+// ── SteamUser mock — controls getClient() / isLoggedIn() return values ───────
+jest.mock('../user')
+
+// ── online_monitor mock — prevents electron/net import at module load time ───
+jest.mock('backend/online_monitor', () => ({
+  runOnceWhenOnline: jest.fn(),
+  isOnline: jest.fn().mockReturnValue(false)
+}))
+
+// ── child_process mock — spawnSync (Windows reg.exe) + execFileSync (Linux ps,
+// MAC32-03 lipo/file) ─────────────────────────────────────────────────────────
+jest.mock('child_process', () => ({
+  spawnSync: jest.fn(),
+  execFileSync: jest.fn()
+}))
+
+// ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
+// app.getPath (backend/constants/paths reads this at module load time) ───────
+// library.ts's only electron usage is `dialog`; games.ts's `shell` import
+// (pulled in transitively via `import SteamGame from './games'`) resolves to
+// undefined here, which is fine — SteamGame.install()/forceUninstall() are
+// only reached via a CONFIRMED promptI386Recovery, and this file's tests
+// keep the dialog mocked to a cancel response unless a test explicitly opts
+// into the confirm path.
+jest.mock('backend/platform', () => ({
+  dialog: { showMessageBox: jest.fn() },
+  app: {
+    getPath: jest.fn().mockReturnValue('/tmp/mock-path'),
+    // Plain method (survives resetMocks) -- publicDir resolves it at module load.
+    getAppPath: () => '/tmp/mock-path'
+  },
+  shell: { openExternal: jest.fn() }
+}))
+
+// ── backend/constants/environment mock — platform-switching for reader tests ──
+jest.mock('backend/constants/environment', () => ({
+  isWindows: false,
+  isMac: false,
+  isLinux: true
+}))
+
+// ── stores mock — steamLibraryStore, steamMetadataStore, etc. ────────
+jest.mock('../stores', () => ({
+  configStore: {
+    get: jest.fn(),
+    get_nodefault: jest.fn(),
+    set: jest.fn(),
+    clear: jest.fn()
+  },
+  steamLibraryStore: {
+    get: jest.fn(),
+    set: jest.fn()
+  },
+  steamMetadataStore: {
+    get: jest.fn(),
+    set: jest.fn(),
+    entries: jest.fn()
+  },
+  steamSyncStore: {
+    get: jest.fn(),
+    set: jest.fn()
+  },
+  // quick 261029-pkp: persisted restart-hold records. Map-backed in the
+  // pkp describe; bare jest.fns elsewhere (entries() -> undefined is caught
+  // by listSteamRestartHolds and reads as an empty store).
+  steamRestartHoldStore: {
+    get: jest.fn(),
+    set: jest.fn(),
+    delete: jest.fn(),
+    entries: jest.fn()
+  }
+}))
+
+// ── bottle mock — getBottleSteamappsDir/getSteamBottleSettings/isBottleProvisioned ─
+jest.mock('../bottle', () => ({
+  getBottleSteamappsDir: jest.fn(),
+  getSteamBottleSettings: jest.fn(),
+  getBridgeBottleSettings: jest.fn(),
+  isSteamBottleProvisioned: jest.fn(),
+  listReadyBridgeBottleNames: jest.fn(),
+  resolveBridgeBottleName: jest.fn()
+}))
+
+// ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
+// (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) /
+// buildDepotPlan (Phase 23, 23-03, D-04 — startup resume rebuilds a real plan) ─
+// healReconciledFileModes included so buildResumeFinalizeOpts (CR-01 gap
+// closure, 23-code-review) can be exercised — defaulted to a successful heal
+// in the shared beforeEach below so pre-existing resume tests that don't care
+// about mode-healing still earn StateFlags=4 as before.
+// formatEta/rollingRateMiBs (T-AOG, quick/260719-aog) are pure/deterministic
+// helpers pollInstallOnce reuses for its speed/ETA derivation — pulled from
+// the REAL module rather than re-implemented as jest.fn() stubs so this
+// suite exercises the actual formatting/smoothing behavior.
+jest.mock('../depot', () => ({
+  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
+  downloadSteamDepots: jest.fn(),
+  buildDepotPlan: jest.fn(),
+  healReconciledFileModes: jest.fn(),
+  formatEta:
+    jest.requireActual<typeof import('../depot')>('../depot').formatEta,
+  rollingRateMiBs:
+    jest.requireActual<typeof import('../depot')>('../depot').rollingRateMiBs
+}))
+
+// ── depot/reconcile mock — reconcilePartialState (Phase 23, 23-03, D-04) ────
+jest.mock('../depot/reconcile', () => ({
+  reconcilePartialState: jest.fn()
+}))
+
+// ── backend/launcher mock — runWineCommand (D-05 no-auto-drive regression) ────
+jest.mock('backend/launcher', () => ({
+  runWineCommand: jest.fn()
+}))
+
+// ── bridge/allowlist mock — bridgeAllowlist.has (D-UAT-24-02, 24-17) ────────
+// Defaulted to false in the shared beforeEach below so EVERY pre-existing
+// test is unaffected — non-eligible by default means the existing
+// native ?? bottle ?? bridge precedence holds unless a test explicitly
+// opts a game into bridge eligibility.
+jest.mock('../bridge/allowlist', () => ({
+  bridgeAllowlist: { has: jest.fn(), knownBadReason: jest.fn() }
+}))
+
+// ── platformCapture mock — captureOwnedAppPlatforms (34.15 D-03/D-04) ──────
+// This module is unit-tested in isolation (Plan 01's own suite). Mocking it
+// here isolates refresh()'s own wiring/instrumentation from the real bulk
+// PICS scoping and merge logic — the shared beforeEach below defaults it to
+// a no-op success so every pre-existing refresh() test is unaffected; the
+// 'D-03 fail-soft' describe block below overrides this default per-test.
+jest.mock('../anonymousClient', () => ({
+  getAnonymousPicsClient: jest.fn()
+}))
+jest.mock('../bridge/launchTarget', () => ({
+  backfillBridgeLaunchTargets: jest.fn()
+}))
+jest.mock('../platformCapture', () => ({
+  captureOwnedAppPlatforms: jest.fn()
+}))
+jest.mock('../metacriticCapture', () => ({
+  captureOwnedAppMetacritic: jest.fn()
+}))
+// D-UAT-13: the install poller asks which Steam client PIDs are alive when a
+// native handoff finalizes. A bare jest.fn() resolves undefined = "inconclusive"
+// = fail open (no hold), so every pre-existing test keeps its old behaviour;
+// the D-UAT-13 describe below drives it explicitly. Never a real child spawn.
+// quick 261029-sex: bare jest.fn = undefined = no live signal = ACF behaviour.
+jest.mock('../steamDownloadMonitor', () => ({
+  startSteamDownloadMonitor: jest.fn(),
+  readSteamDownloadMonitor: jest.fn(),
+  stopSteamDownloadMonitor: jest.fn()
+}))
+jest.mock('../steamClientProcess', () => ({
+  listSteamClientPids: jest.fn(),
+  // quick 261029-pkp: start-time identity probe (bare jest.fn = undefined =
+  // "unknown": no record is persisted, so pre-existing tests are unaffected).
+  readSteamProcessStartTokens: jest.fn()
+}))
+
+// ── Shared fixtures ───────────────────────────────────────────────────────────
+
+// 23.2-04: this project's jest config sets `resetMocks: true`, which strips
+// jest.fn() implementations (not just call history) before EVERY test — so
+// the i18nextT mock's fallback-returning implementation (set once at
+// jest.mock() factory time, above) must be re-established file-wide, or any
+// test anywhere in this file that asserts on a notify() body derived from
+// i18nextT would see `undefined` instead of the fallback string. A plain
+// (non-jest.fn) function is immune to resetMocks, which is why this was not
+// needed before this key was added to observe the call args.
+beforeEach(() => {
+  ;(i18nextT as jest.Mock).mockImplementation(
+    (_key: string, fallback = '') => fallback
+  )
+  // quick/261016-u1w (D-C): default to "no ready bridge bottle" so every
+  // describe block that doesn't care about the bridge path (and therefore
+  // never arms this mock) gets the same falsy short-circuit the old
+  // isBridgeBottleReady()-returns-undefined default gave it, rather than a
+  // TypeError from calling .length on an un-mocked return value.
+  jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
+  jest.mocked(backfillBridgeLaunchTargets).mockResolvedValue(0)
+})
+
+describe('markSteamInstallIncomplete()', () => {
+  beforeEach(() => {
+    library.clear()
+    jest.mocked(sendFrontendMessage).mockClear()
+    ;(steamLibraryStore.set as jest.Mock).mockClear()
+  })
+
+  it('Test E: flips is_installed to false and steamResumePending to true, persists, and pushes to the frontend', () => {
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      title: 'CS:GO',
+      is_installed: true,
+      install: { install_path: '/steam/steamapps/common/csgo' },
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+    } as any)
+
+    markSteamInstallIncomplete('730')
+
+    expect(library.get('730')?.is_installed).toBe(false)
+    expect(library.get('730')?.install?.steamResumePending).toBe(true)
+    // Prior install fields must survive the merge, not be clobbered.
+    expect(library.get('730')?.install?.install_path).toBe(
+      '/steam/steamapps/common/csgo'
+    )
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({
+        app_name: '730',
+        is_installed: false,
+        install: expect.objectContaining({ steamResumePending: true })
+      })
+    )
+  })
+
+  it('Test E: is a no-op (never throws) when the appId has no in-memory library entry', () => {
+    library.clear()
+    expect(() => markSteamInstallIncomplete('nonexistent')).not.toThrow()
+    expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+})

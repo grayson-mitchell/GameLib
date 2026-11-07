@@ -24,8 +24,7 @@ import SteamLibraryManager, {
   readRunningAppId,
   pollRunningOnce,
   startRunningPoll,
-  stopRunningPoll,
-  markSteamInstallIncomplete
+  stopRunningPoll
 } from '../library'
 import {
   buildInstalledMap,
@@ -3435,53 +3434,6 @@ describe('SteamLibraryManager', () => {
 })
 
 // ── D-UAT-09 (21-17): markSteamInstallIncomplete() — same-session cancel ─────
-
-describe('markSteamInstallIncomplete()', () => {
-  beforeEach(() => {
-    library.clear()
-    jest.mocked(sendFrontendMessage).mockClear()
-    ;(steamLibraryStore.set as jest.Mock).mockClear()
-  })
-
-  it('Test E: flips is_installed to false and steamResumePending to true, persists, and pushes to the frontend', () => {
-    library.set('730', {
-      runner: 'steam',
-      app_name: '730',
-      title: 'CS:GO',
-      is_installed: true,
-      install: { install_path: '/steam/steamapps/common/csgo' },
-      art_cover: '',
-      art_square: '',
-      extra: { reqs: [] },
-      canRunOffline: true,
-      installable: true
-    } as any)
-
-    markSteamInstallIncomplete('730')
-
-    expect(library.get('730')?.is_installed).toBe(false)
-    expect(library.get('730')?.install?.steamResumePending).toBe(true)
-    // Prior install fields must survive the merge, not be clobbered.
-    expect(library.get('730')?.install?.install_path).toBe(
-      '/steam/steamapps/common/csgo'
-    )
-    expect(sendFrontendMessage).toHaveBeenCalledWith(
-      'pushGameToLibrary',
-      expect.objectContaining({
-        app_name: '730',
-        is_installed: false,
-        install: expect.objectContaining({ steamResumePending: true })
-      })
-    )
-  })
-
-  it('Test E: is a no-op (never throws) when the appId has no in-memory library entry', () => {
-    library.clear()
-    expect(() => markSteamInstallIncomplete('nonexistent')).not.toThrow()
-    expect(sendFrontendMessage).not.toHaveBeenCalled()
-  })
-})
-
 // ── D-07: pollInstallOnce() ──────────────────────────────────────────────────
 
 describe('pollInstallOnce()', () => {

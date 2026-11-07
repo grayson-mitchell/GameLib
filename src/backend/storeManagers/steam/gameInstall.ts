@@ -30,12 +30,10 @@ import {
   startInstallPolling,
   stopInstallPolling,
   resumeInterruptedSteamInstall,
-  markSteamInstallIncomplete,
-  markSteamNativeInstallStarted,
-  clearSteamResumeBreadcrumb,
   pollUninstallOnce
 } from './library'
 import { readAcfState, removeSteamInstallCopy } from './library/acfState'
+import * as resumeBreadcrumbs from './library/resumeBreadcrumbs'
 import * as pollState from './library/pollState'
 import {
   probeMacSteamPid,
@@ -1861,7 +1859,7 @@ export async function runNativeDepotDownloadLeased(
   // .planning/todos/pending/2026-08-16-aborted-depot-residue-has-no-acf.md);
   // this breadcrumb is the ONLY record of the residue that survives.
   // Must stay synchronous and above the await.
-  markSteamNativeInstallStarted(steamGame.appId, {
+  resumeBreadcrumbs.markSteamNativeInstallStarted(steamGame.appId, {
     targetSteamappsDir,
     installdir: resolved.installdir
   })
@@ -1885,7 +1883,7 @@ export async function runNativeDepotDownloadLeased(
     // library entry incomplete/resumable now so the frontend never
     // renders a stale is_installed:true/Play for the rest of THIS
     // session (Task 2 reads is_installed + steamResumePending).
-    markSteamInstallIncomplete(steamGame.appId)
+    resumeBreadcrumbs.markSteamInstallIncomplete(steamGame.appId)
     return { status: 'abort' }
   }
 
@@ -1913,7 +1911,7 @@ export async function runNativeDepotDownloadLeased(
   // deliberately do NOT clear it — a cancelled or errored run leaves
   // residue too (markSteamInstallIncomplete's 'cancelled' spread
   // already preserves the breadcrumb fields).
-  clearSteamResumeBreadcrumb(steamGame.appId)
+  resumeBreadcrumbs.clearSteamResumeBreadcrumb(steamGame.appId)
 
   // Start ACF polling so Steam's own verify/repair pass (which flips
   // StateFlags 1026 -> 4) is reflected in the UI, same as the legacy

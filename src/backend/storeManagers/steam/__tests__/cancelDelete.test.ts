@@ -10,7 +10,7 @@ import { join } from 'node:path'
 import { getSteamLibraries, sendProgressUpdate } from 'backend/utils'
 import { library } from '../state'
 import { isNativeInstallInFlight } from '../gameSessionState'
-import { clearSteamResumeBreadcrumb } from '../library'
+import { clearSteamResumeBreadcrumb } from '../library/resumeBreadcrumbs'
 import { findOtherManifestsWithInstalldir } from '../library/acfState'
 import { getBridgeBottleSteamappsRoot } from '../library/installRoot'
 import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
@@ -30,7 +30,7 @@ jest.mock('backend/utils', () => ({
 jest.mock('../gameSessionState', () => ({
   isNativeInstallInFlight: jest.fn()
 }))
-jest.mock('../library', () => ({
+jest.mock('../library/resumeBreadcrumbs', () => ({
   clearSteamResumeBreadcrumb: jest.fn()
 }))
 jest.mock('../library/acfState', () => ({
