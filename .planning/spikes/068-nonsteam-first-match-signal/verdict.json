@@ -1,0 +1,21 @@
+{
+  "verdict": "PARTIAL",
+  "matchShape": "z-path",
+  "prefixRule": "Match case-insensitively on the install dir with a trailing separator kept, in any of three forms: the unix path (persistent under GPTK, only the first 1-2 s under CrossOver), the Z: form ('Z:' + the absolute path with backslashes), and for installs under the home dir the Y: form ('Y:' + the path relative to home with backslashes); the trailing separator stops 'Avernum 4 Remaster' matching 'Avernum 4'.",
+  "matchingProcess": "CrossOver: the game exe process itself (Y:\\ or Z:\\ command line, persistent); the winewrapper/wineloader carries the unix path for 1-2 s only. GPTK (real gogdl launch): wine64-preloader carries the unix path to the exe for the whole run.",
+  "examples": [
+    "CrossOver S1 (exe, home install): Y:\\Projects\\GameLib\\...\\Some Game\\Game.exe",
+    "CrossOver S2 (explicit Z: arg): Z:\\Users\\<user>\\Projects\\GameLib\\...\\Some Game\\Game.exe",
+    "GPTK real gogdl launch: .../wine/bin/wine64-preloader .../wine/bin/wine64 ~/Games/GameLib/Bloody Hell/Bloody Hell.exe"
+  ],
+  "bottleName": {
+    "maxLengthAccepted": 120,
+    "dotsAccepted": true,
+    "escapesAccepted": true,
+    "rejected": []
+  },
+  "caveats": [
+    "The live Task 2 launch used the GPTK engine (wine64), not CrossOver, so CrossOver's real gogdl exec shape is unconfirmed; the CrossOver evidence is the synthetic S1-S3 shapes.",
+    "Bottle names were only tested up to 120 characters; no rejection was seen, so the true cap is not measured."
+  ]
+}
