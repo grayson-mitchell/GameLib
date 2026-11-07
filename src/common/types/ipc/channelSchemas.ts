@@ -41,6 +41,14 @@ import {
   appShellSyncArgs
 } from './appShell'
 import { gogFrontendMessagesArgs } from './gog'
+import { legendaryFrontendMessagesArgs } from './legendary'
+import { mainProcessAsyncArgs, mainProcessSyncArgs } from './mainProcess'
+import { windowAsyncArgs, windowSyncArgs } from './window'
+import {
+  testStubsAsyncArgs,
+  testStubsSyncArgs,
+  testStubsTestSyncArgs
+} from './testStubs'
 import { shellFilesAsyncArgs, shellFilesSyncArgs } from './shellFiles'
 import {
   sidecarInternalCallers,
@@ -63,58 +71,108 @@ export function mergeChannelEntries(
   return out
 }
 
+const inboundEntries = mergeChannelEntries(
+  defineChannelEntries('send', shellFilesSyncArgs),
+  defineChannelEntries('invoke', shellFilesAsyncArgs),
+  defineChannelEntries('invoke', dialogAsyncArgs),
+  defineChannelEntries('send', clipboardSyncArgs),
+  defineChannelEntries('invoke', clipboardAsyncArgs),
+  defineChannelEntries('invoke', installAsyncArgs),
+  defineChannelEntries('invoke', wineToolsAsyncArgs),
+  defineChannelEntries('send', runnerAuthSyncArgs),
+  defineChannelEntries('invoke', runnerAuthAsyncArgs),
+  defineChannelEntries('invoke', oauthLoginAsyncArgs),
+  defineChannelEntries('send', humbleLoginSyncArgs),
+  defineChannelEntries('invoke', humbleLoginAsyncArgs),
+  defineChannelEntries('send', storeEmbedSyncArgs),
+  defineChannelEntries('invoke', storeEmbedAsyncArgs),
+  defineChannelEntries('send', steamAuthSyncArgs),
+  defineChannelEntries('invoke', steamAuthAsyncArgs),
+  defineChannelEntries('send', settingsSyncArgs),
+  defineChannelEntries('invoke', settingsAsyncArgs),
+  defineChannelEntries('send', gameDetailsSyncArgs),
+  defineChannelEntries('invoke', gameDetailsAsyncArgs),
+  defineChannelEntries('invoke', eosOverlayAsyncArgs),
+  defineChannelEntries('send', shortcutsSyncArgs),
+  defineChannelEntries('invoke', shortcutsAsyncArgs),
+  defineChannelEntries('invoke', runnerMiscAsyncArgs),
+  defineChannelEntries('invoke', engineAsyncArgs),
+  defineChannelEntries('send', loggerSyncArgs),
+  defineChannelEntries('invoke', loggerAsyncArgs),
+  defineChannelEntries('send', humbleSyncArgs),
+  defineChannelEntries('invoke', humbleAsyncArgs),
+  defineChannelEntries('invoke', enrichmentAsyncArgs),
+  defineChannelEntries('send', downloadQueueSyncArgs),
+  defineChannelEntries('invoke', downloadQueueAsyncArgs),
+  defineChannelEntries('invoke', steamAsyncArgs),
+  defineChannelEntries('send', appShellSyncArgs),
+  defineChannelEntries('invoke', appShellAsyncArgs),
+  defineChannelEntries('invoke', sidecarInternalInvokeArgs, {
+    callers: sidecarInternalCallers
+  }),
+  defineChannelEntries('send', sidecarInternalSendArgs, {
+    callers: sidecarInternalCallers
+  }),
+  defineChannelEntries('send', mainProcessSyncArgs),
+  defineChannelEntries('invoke', mainProcessAsyncArgs),
+  // Window controls are served by the preload's Tauri window APIs; none reaches the sidecar.
+  defineChannelEntries('send', windowSyncArgs, { caller: 'local' }),
+  defineChannelEntries('invoke', windowAsyncArgs, { caller: 'local' }),
+  // `createNewWindow` -> Tauri WebviewWindow (preload/api/helpers.ts); `clearDMFinished` and
+  // `updateAll` have no call site outside tests; `gamepadAction` is preload-served
+  // (tauriGamepadInput.ts). `connectivity-changed` is a real renderer -> sidecar send.
+  defineChannelEntries('send', testStubsSyncArgs, {
+    caller: 'renderer',
+    callers: { createNewWindow: 'local', clearDMFinished: 'local' }
+  }),
+  defineChannelEntries('send', testStubsTestSyncArgs, { testOnly: true }),
+  defineChannelEntries('invoke', testStubsAsyncArgs, { caller: 'local' })
+)
+
+const pushEntries = mergeChannelEntries(
+  defineChannelEntries('push', wineToolsFrontendMessagesArgs),
+  defineChannelEntries('push', engineFrontendMessagesArgs),
+  defineChannelEntries('push', loggerFrontendMessagesArgs),
+  defineChannelEntries('push', humbleFrontendMessagesArgs),
+  defineChannelEntries('push', downloadQueueFrontendMessagesArgs),
+  defineChannelEntries('push', steamFrontendMessagesArgs),
+  defineChannelEntries('push', gogFrontendMessagesArgs),
+  defineChannelEntries('push', appShellFrontendMessagesArgs),
+  defineChannelEntries('push', legendaryFrontendMessagesArgs)
+)
+
+/**
+ * Direction-aware keying (67-18). The runtime validates inbound frames by channel name, so the
+ * invoke/send namespace must be unique. A push may share a name with an inbound channel
+ * (`refreshLibrary`: legendary push vs steam invoke; `connectivity-changed`: appShell push vs
+ * renderer send). Those pushes live in `collidingPushSchemas` instead, so neither direction
+ * shadows the other. Pushes are typing-only (D-12) and never parsed at runtime.
+ */
+export const collidingPushSchemas: Readonly<Record<string, ChannelEntry>> =
+  Object.fromEntries(
+    Object.entries(pushEntries).filter(([name]) =>
+      Object.prototype.hasOwnProperty.call(inboundEntries, name)
+    )
+  )
+
 export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
   mergeChannelEntries(
-    defineChannelEntries('send', shellFilesSyncArgs),
-    defineChannelEntries('invoke', shellFilesAsyncArgs),
-    defineChannelEntries('invoke', dialogAsyncArgs),
-    defineChannelEntries('send', clipboardSyncArgs),
-    defineChannelEntries('invoke', clipboardAsyncArgs),
-    defineChannelEntries('invoke', installAsyncArgs),
-    defineChannelEntries('invoke', wineToolsAsyncArgs),
-    defineChannelEntries('push', wineToolsFrontendMessagesArgs),
-    defineChannelEntries('send', runnerAuthSyncArgs),
-    defineChannelEntries('invoke', runnerAuthAsyncArgs),
-    defineChannelEntries('invoke', oauthLoginAsyncArgs),
-    defineChannelEntries('send', humbleLoginSyncArgs),
-    defineChannelEntries('invoke', humbleLoginAsyncArgs),
-    defineChannelEntries('send', storeEmbedSyncArgs),
-    defineChannelEntries('invoke', storeEmbedAsyncArgs),
-    defineChannelEntries('send', steamAuthSyncArgs),
-    defineChannelEntries('invoke', steamAuthAsyncArgs),
-    defineChannelEntries('send', settingsSyncArgs),
-    defineChannelEntries('invoke', settingsAsyncArgs),
-    defineChannelEntries('send', gameDetailsSyncArgs),
-    defineChannelEntries('invoke', gameDetailsAsyncArgs),
-    defineChannelEntries('invoke', eosOverlayAsyncArgs),
-    defineChannelEntries('send', shortcutsSyncArgs),
-    defineChannelEntries('invoke', shortcutsAsyncArgs),
-    defineChannelEntries('invoke', runnerMiscAsyncArgs),
-    defineChannelEntries('invoke', engineAsyncArgs),
-    defineChannelEntries('push', engineFrontendMessagesArgs),
-    defineChannelEntries('send', loggerSyncArgs),
-    defineChannelEntries('invoke', loggerAsyncArgs),
-    defineChannelEntries('push', loggerFrontendMessagesArgs),
-    defineChannelEntries('send', humbleSyncArgs),
-    defineChannelEntries('invoke', humbleAsyncArgs),
-    defineChannelEntries('push', humbleFrontendMessagesArgs),
-    defineChannelEntries('invoke', enrichmentAsyncArgs),
-    defineChannelEntries('send', downloadQueueSyncArgs),
-    defineChannelEntries('invoke', downloadQueueAsyncArgs),
-    defineChannelEntries('push', downloadQueueFrontendMessagesArgs),
-    defineChannelEntries('invoke', steamAsyncArgs),
-    defineChannelEntries('push', steamFrontendMessagesArgs),
-    // legendary's `refreshLibrary` push shares its name with steam's `refreshLibrary` invoke.
-    // The map is keyed by name alone and pushes are never validated at runtime (D-12), so the
-    // push stays typing-only in ./legendary and is deliberately not registered here.
-    defineChannelEntries('push', gogFrontendMessagesArgs),
-    defineChannelEntries('send', appShellSyncArgs),
-    defineChannelEntries('invoke', appShellAsyncArgs),
-    defineChannelEntries('push', appShellFrontendMessagesArgs),
-    defineChannelEntries('invoke', sidecarInternalInvokeArgs, {
-      callers: sidecarInternalCallers
-    }),
-    defineChannelEntries('send', sidecarInternalSendArgs, {
-      callers: sidecarInternalCallers
-    })
+    inboundEntries,
+    Object.fromEntries(
+      Object.entries(pushEntries).filter(
+        ([name]) =>
+          !Object.prototype.hasOwnProperty.call(collidingPushSchemas, name)
+      )
+    )
   )
+
+/** The push schema for a channel name, whichever map holds it. */
+export function pushSchemaFor(name: string): ChannelEntry | undefined {
+  if (Object.prototype.hasOwnProperty.call(collidingPushSchemas, name)) {
+    return collidingPushSchemas[name]
+  }
+  const entry = Object.prototype.hasOwnProperty.call(channelSchemas, name)
+    ? channelSchemas[name]
+    : undefined
+  return entry?.kind === 'push' ? entry : undefined
+}

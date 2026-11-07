@@ -24,7 +24,11 @@ import {
   sharedConstants,
   type DomainPart
 } from 'backend/testUtils/ipcDomainParse'
-import { channelSchemas } from 'common/types/ipc/channelSchemas'
+import {
+  channelSchemas,
+  collidingPushSchemas,
+  pushSchemaFor
+} from 'common/types/ipc/channelSchemas'
 import { registerSignInProbeOutcomesHandler } from 'backend/signInProbe/outcomes'
 
 type Bucket = 'invoke' | 'send' | 'testOnly' | 'push' | 'local'
@@ -33,11 +37,11 @@ type Bucket = 'invoke' | 'send' | 'testOnly' | 'push' | 'local'
 // this table with an exemption-free `toEqual([])` (D-15, D-20).
 // Measured on first run, plan 67-02.
 const CEILING: Record<Bucket, number> = {
-  invoke: 2,
-  send: 2,
-  testOnly: 6,
-  push: 1,
-  local: 14
+  invoke: 0,
+  send: 0,
+  testOnly: 0,
+  push: 0,
+  local: 0
 }
 
 const BACKEND_DIR = join(__dirname, '..', '..')
@@ -128,7 +132,8 @@ describe('IPC schema coverage ratchet (D-20)', () => {
     async (bucket) => {
       const reg = await registered()
       const missing = [...reg[bucket]].filter((name) => {
-        const entry = channelSchemas[name]
+        const entry =
+          bucket === 'push' ? pushSchemaFor(name) : channelSchemas[name]
         return !entry || bucketOf(entry) !== bucket
       })
       expect(missing.length).toBe(CEILING[bucket])
@@ -145,6 +150,18 @@ describe('IPC schema coverage ratchet (D-20)', () => {
       ...reg.declared
     ])
     expect(Object.keys(channelSchemas).filter((k) => !known.has(k))).toEqual([])
+  })
+
+  it('collidingPushSchemas holds only pushes that share a name with an inbound channel', () => {
+    for (const [name, entry] of Object.entries(collidingPushSchemas)) {
+      expect(entry.kind).toBe('push')
+      expect(channelSchemas[name]).toBeDefined()
+      expect(channelSchemas[name].kind).not.toBe('push')
+    }
+    expect(Object.keys(collidingPushSchemas).sort()).toEqual([
+      'connectivity-changed',
+      'refreshLibrary'
+    ])
   })
 
   it('testOnly and push entries carry the matching flags', async () => {

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-// Typing-only: NOT registered in channelSchemas (name collides with steam's refreshLibrary invoke).
+// Registered in `collidingPushSchemas` (channelSchemas.ts): the name collides with steam's refreshLibrary invoke.
 import { runnerArg, type PushFns } from './schemaTypes'
 
 // D-12: typing only, never parsed at runtime.
