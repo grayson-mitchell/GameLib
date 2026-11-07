@@ -389,7 +389,9 @@ describe('D-35-19-16 -- changeGameInstallPath does not double the macOS bundle n
     )
 
     expect(recordedPath()).toBe('/Users/u/Dest/Endless Sky.app')
-    expect(installedArray[0].install_path).toBe('/Users/u/Dest/Endless Sky.app')
+    expect(installedArray[0]?.install_path).toBe(
+      '/Users/u/Dest/Endless Sky.app'
+    )
   })
 
   it('the change-install-path caller (parent directory) still gets folder_name appended', async () => {
@@ -400,7 +402,9 @@ describe('D-35-19-16 -- changeGameInstallPath does not double the macOS bundle n
     await manager.changeGameInstallPath(APP_NAME, '/Users/u/Dest')
 
     expect(recordedPath()).toBe('/Users/u/Dest/Endless Sky.app')
-    expect(installedArray[0].install_path).toBe('/Users/u/Dest/Endless Sky.app')
+    expect(installedArray[0]?.install_path).toBe(
+      '/Users/u/Dest/Endless Sky.app'
+    )
   })
 
   it('non-osx installs are recorded verbatim, with no append at all', async () => {

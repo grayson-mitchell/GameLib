@@ -44,6 +44,9 @@ async function runSetupCommand(wineArgs: WineCommandArgs) {
   if (isWindows) {
     // Run shell
     const [exe, ...args] = wineArgs.commandParts
+    if (exe === undefined) {
+      throw Error('Setup command is empty')
+    }
     return spawnAsync(
       'powershell',
       [

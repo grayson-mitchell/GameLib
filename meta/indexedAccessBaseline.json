@@ -16,7 +16,6 @@
   "src/backend/sidecar": 155,
   "src/backend/signInProbe": 5,
   "src/backend/steamgrid": 1,
-  "src/backend/storeManagers/gog": 34,
   "src/backend/storeManagers/legendary": 15,
   "src/backend/storeManagers/nile": 1,
   "src/backend/storeManagers/sideload": 2,

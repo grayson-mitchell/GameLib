@@ -80,12 +80,13 @@ export function applyGogMacArch(appName: string, verdict: '32' | '64') {
 
   const stored = libraryStore.get('games', [])
   const idx = stored.findIndex((g) => g.app_name === appName)
-  if (idx > -1) {
-    stored[idx] = { ...stored[idx], mac_arch: verdict }
+  const entry = stored[idx]
+  if (entry) {
+    stored[idx] = { ...entry, mac_arch: verdict }
     libraryStore.set('games', stored)
   }
 
-  const base = library.get(appName) ?? (idx > -1 ? stored[idx] : undefined)
+  const base = library.get(appName) ?? (entry ? stored[idx] : undefined)
   if (!base) return
   const installed = installedGames.get(appName)
   const updated: GameInfo = installed
@@ -183,6 +184,12 @@ export default class GOGLibraryManager implements LibraryManager {
 
       // Get meta
       const url = currentBuild.urls[0]
+      if (!url) {
+        logError(`Unable to get current build of ${appName}`, {
+          prefix: LogPrefix.Gog
+        })
+        return
+      }
 
       const response = await axiosClient.get(url.url, {
         responseType: 'arraybuffer'
@@ -828,8 +835,17 @@ export default class GOGLibraryManager implements LibraryManager {
       }
     }
 
+    const libraryEntry = libraryArray[gameObjectIndex]
+    if (!libraryEntry) {
+      logWarning(
+        ['getInstallInfo:', appName, 'not found in libraryStore'],
+        LogPrefix.Gog
+      )
+      return
+    }
+
     if (
-      !libraryArray[gameObjectIndex]?.gog_save_location &&
+      !libraryEntry.gog_save_location &&
       installedGames.get(appName) &&
       installedGames.get(appName)?.platform !== 'linux'
     ) {
@@ -839,9 +855,8 @@ export default class GOGLibraryManager implements LibraryManager {
       )
     }
 
-    libraryArray[gameObjectIndex].folder_name = gogInfo.folder_name
-    libraryArray[gameObjectIndex].gog_save_location =
-      gameData?.gog_save_location
+    libraryEntry.folder_name = gogInfo.folder_name
+    libraryEntry.gog_save_location = gameData?.gog_save_location
     gameData.folder_name = gogInfo.folder_name
     libraryStore.set('games', libraryArray)
     library.set(appName, gameData)
@@ -863,23 +878,27 @@ export default class GOGLibraryManager implements LibraryManager {
     const download_size = gogInfo.download_size
       ? gogInfo.download_size
       : (gogInfo.size['*']?.download_size || 0) + // Universal depot
-        (gogInfo.size[language]?.download_size || 0) + // Language depot
+        (language !== undefined
+          ? gogInfo.size[language]?.download_size || 0
+          : 0) + // Language depot
         gogInfo.dlcs.reduce(
           (acc, dlc) =>
             acc +
             (dlc.size['*']?.download_size || 0) + // Universal
-            (dlc.size[language]?.download_size || 0), // Lanuage
+            (language !== undefined
+              ? dlc.size[language]?.download_size || 0
+              : 0), // Lanuage
           0
         )
     const disk_size = gogInfo.disk_size
       ? gogInfo.disk_size
       : (gogInfo.size['*']?.disk_size || 0) +
-        (gogInfo.size[language]?.disk_size || 0) +
+        (language !== undefined ? gogInfo.size[language]?.disk_size || 0 : 0) +
         gogInfo.dlcs.reduce(
           (acc, dlc) =>
             acc +
             (dlc.size['*']?.disk_size || 0) +
-            (dlc.size[language]?.disk_size || 0),
+            (language !== undefined ? dlc.size[language]?.disk_size || 0 : 0),
           0
         )
 
@@ -947,6 +966,19 @@ export default class GOGLibraryManager implements LibraryManager {
       (value) => value.appName === appName
     )
 
+    const installedEntry = installedArray[gameIndex]
+    if (!installedEntry) {
+      logError(
+        [
+          'Changing game install path failed:',
+          appName,
+          'not in installed store'
+        ],
+        LogPrefix.Gog
+      )
+      return
+    }
+
     // D-35-19-16: this append exists for the `changeInstallPath` caller
     // (`gamedetails/dispatch.ts:230`), which hands over the raw directory the user
     // picked in the dialog -- on macOS necessarily the PARENT, because a directory
@@ -968,7 +1000,7 @@ export default class GOGLibraryManager implements LibraryManager {
       newInstallPath = join(newInstallPath, cachedGameData.folder_name)
     }
 
-    installedArray[gameIndex].install_path = newInstallPath
+    installedEntry.install_path = newInstallPath
     cachedGameData.install.install_path = newInstallPath
     installedGamesStore.set('installed', installedArray)
   }
@@ -1302,8 +1334,9 @@ export default class GOGLibraryManager implements LibraryManager {
     const files = readdirSync(root)
     return files.reduce((acc, file) => {
       const matcher = file.match(/goggame-(\d+)\.info/)
-      if (matcher) {
-        acc.push(matcher[1])
+      const appId = matcher?.[1]
+      if (appId) {
+        acc.push(appId)
       }
       return acc
     }, [] as string[])

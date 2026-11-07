@@ -313,7 +313,7 @@ export default class GOGGame implements Game {
     // parse log for eta
     if (progress.eta === '') {
       const etaMatch = data.match(/ETA: (\d\d:\d\d:\d\d)/m)
-      progress.eta = etaMatch && etaMatch?.length >= 2 ? etaMatch[1] : ''
+      progress.eta = etaMatch?.[1] ?? ''
     }
 
     // parse log for game download progress
@@ -787,6 +787,9 @@ export default class GOGGame implements Game {
         }
         if (isWindows) {
           const [bin, ...args] = redModCommand
+          if (bin === undefined) {
+            throw Error('redMod command is empty')
+          }
           result = await spawnAsync(bin, args, { cwd: startFolder })
         } else {
           result = await runWineCommandUtil({
@@ -1037,6 +1040,9 @@ export default class GOGGame implements Game {
     }
 
     const [object] = array.splice(index, 1)
+    if (!object) {
+      throw Error("Game isn't installed")
+    }
     logInfo(['Removing', object.install_path], LogPrefix.Gog)
     // Run unins000.exe /verysilent /dir=Z:/path/to/game
     const uninstallerPath = join(object.install_path, 'unins000.exe')
@@ -1289,6 +1295,18 @@ export default class GOGGame implements Game {
       (value) => this.id === value.appName
     )
     const gameObject = installedArray[gameIndex]
+    if (!gameObject) {
+      logError(
+        ['Failed to update', `${this.id}:`, 'not found in installed store'],
+        LogPrefix.Gog
+      )
+      sendGameStatusUpdate({
+        appName: this.id,
+        runner: 'gog',
+        status: 'done'
+      })
+      return { status: 'error' }
+    }
 
     if (gameData.install.platform !== 'linux') {
       const installInfo = await libraryManagerMap['gog'].getInstallInfo(
