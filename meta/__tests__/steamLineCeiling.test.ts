@@ -15,6 +15,7 @@ const {
   countLines,
   collectFiles,
   evaluate,
+  parseArgs,
   staleExemptions,
   GENERATED_EXEMPT
 } = require('../steamLineCeiling.cjs')
@@ -152,6 +153,37 @@ describe('steamLineCeiling staleExemptions', () => {
   })
 })
 
+describe('steamLineCeiling parseArgs', () => {
+  it('defaults the floor and accepts valid flags', () => {
+    expect(parseArgs([])).toEqual({
+      root: undefined,
+      baseline: undefined,
+      minFiles: 100
+    })
+    expect(
+      parseArgs(['--root', 'r', '--baseline', 'b.json', '--min-files', '3'])
+    ).toEqual({ root: 'r', baseline: 'b.json', minFiles: 3 })
+  })
+  it.each([['x'], ['0'], ['-1'], ['1.5'], ['NaN']])(
+    'rejects --min-files %s',
+    (v) => {
+      expect(parseArgs(['--min-files', v])).toEqual({
+        error: expect.stringContaining('invalid --min-files')
+      })
+    }
+  )
+  it.each([
+    [['--root']],
+    [['--baseline']],
+    [['--min-files']],
+    [['--root', '--baseline', 'b.json']]
+  ])('rejects a flag with no value: %j', (argv) => {
+    expect(parseArgs(argv)).toEqual({
+      error: expect.stringContaining('needs a value')
+    })
+  })
+})
+
 describe('steamLineCeiling CLI', () => {
   function run(args: string[]) {
     const profile = createFakeHomeProfile({ prefix: 'gamelib-linecap-' })
@@ -201,6 +233,12 @@ describe('steamLineCeiling CLI', () => {
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
+  })
+
+  it('exits non-zero on a non-numeric --min-files', () => {
+    const r = run(['--min-files', 'x'])
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/invalid --min-files/)
   })
 
   it('exits non-zero when the baseline cannot be read', () => {

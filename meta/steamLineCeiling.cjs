@@ -137,19 +137,44 @@ function staleExemptions(root, exempt) {
   return failures
 }
 
-function argValue(argv, flag) {
-  const i = argv.indexOf(flag)
-  return i === -1 ? undefined : argv[i + 1]
+/**
+ * Pure. Parses `--root`, `--baseline` and `--min-files`. A flag given without
+ * a value, or a `--min-files` that is not a positive integer, is an error,
+ * never a silent fallback to the default (that would disable the floor).
+ * @param {string[]} argv
+ * @returns {{ root?: string, baseline?: string, minFiles: number } | { error: string }}
+ */
+function parseArgs(argv) {
+  const values = {}
+  for (const flag of ['--root', '--baseline', '--min-files']) {
+    const i = argv.indexOf(flag)
+    if (i === -1) continue
+    const v = argv[i + 1]
+    if (v === undefined || v === '' || v.startsWith('--'))
+      return { error: `${flag} needs a value` }
+    values[flag] = v
+  }
+  let minFiles = DEFAULT_MIN_FILES
+  if (values['--min-files'] !== undefined) {
+    minFiles = Number(values['--min-files'])
+    if (!Number.isInteger(minFiles) || minFiles < 1)
+      return {
+        error: `invalid --min-files: ${values['--min-files']} (need a positive integer)`
+      }
+  }
+  return { root: values['--root'], baseline: values['--baseline'], minFiles }
 }
 
 function main() {
-  const argv = process.argv.slice(2)
-  const root = argValue(argv, '--root')
-    ? path.resolve(argValue(argv, '--root'))
-    : DEFAULT_ROOT
-  const base = argValue(argv, '--root') ? root : REPO_ROOT
-  const baselinePath = argValue(argv, '--baseline') || DEFAULT_BASELINE
-  const minFiles = Number(argValue(argv, '--min-files') || DEFAULT_MIN_FILES)
+  const args = parseArgs(process.argv.slice(2))
+  if ('error' in args) {
+    console.error(`FAIL: ${args.error}`)
+    process.exit(1)
+  }
+  const root = args.root ? path.resolve(args.root) : DEFAULT_ROOT
+  const base = args.root ? root : REPO_ROOT
+  const baselinePath = args.baseline || DEFAULT_BASELINE
+  const minFiles = args.minFiles
 
   let baseline
   try {
@@ -159,7 +184,7 @@ function main() {
     process.exit(1)
   }
 
-  const exempt = argValue(argv, '--root') ? new Set() : GENERATED_EXEMPT
+  const exempt = args.root ? new Set() : GENERATED_EXEMPT
   const files = collectFiles(root, base, exempt)
   if (files.length < minFiles) {
     console.error(
@@ -189,6 +214,7 @@ module.exports = {
   countLines,
   collectFiles,
   evaluate,
+  parseArgs,
   staleExemptions,
   GENERATED_EXEMPT
 }
