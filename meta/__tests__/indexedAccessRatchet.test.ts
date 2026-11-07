@@ -63,7 +63,8 @@ describe('indexedAccessRatchet bucketOf', () => {
       'src/backend/storeManagers/sideload',
       'src/backend/appshell',
       'src/backend/logger',
-      'src/backend/platform'
+      'src/backend/platform',
+      'src/backend/steamgrid'
     ])
   })
 })

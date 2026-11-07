@@ -69,6 +69,7 @@ import {
   setSteamGridDbSecretStore,
   getSteamGridDbSecretStore
 } from '../secretStore'
+import { defined } from 'backend/testUtils/indexed'
 
 describe('steamgrid/secretStore', () => {
   beforeEach(() => {
@@ -115,7 +116,10 @@ describe('steamgrid/secretStore', () => {
         'steamGridDbApiKey',
         expect.stringMatching(/^sgdb:v1:/)
       )
-      const [, persisted] = mockSetSetting.mock.calls[0]
+      const [, persisted] = defined(
+        mockSetSetting.mock.calls[0],
+        'setSetting call'
+      )
       expect(persisted).not.toBe('abc123')
 
       const value = await store.getApiKey()
