@@ -185,7 +185,7 @@ export default class NileGameManager implements Game {
     // parse log for eta
     if (progress.eta === '') {
       const etaMatch = data.match(/ETA: (\d\d:\d\d:\d\d)/m)
-      progress.eta = etaMatch && etaMatch?.length >= 2 ? etaMatch[1] : ''
+      progress.eta = etaMatch?.[1] ?? ''
     }
 
     // parse log for game download progress

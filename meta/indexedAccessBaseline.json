@@ -2,7 +2,6 @@
   "meta": 342,
   "src/backend/shortcuts": 52,
   "src/backend/sidecar": 165,
-  "src/backend/storeManagers/nile": 1,
   "src/backend/tools": 120,
   "src/common/knownFixOverlayCatalogue.ts": 1,
   "src/common/reportProblem.ts": 4,
