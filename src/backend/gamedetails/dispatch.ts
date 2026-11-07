@@ -54,7 +54,7 @@ import { isStore, storeCapabilities } from 'common/storeCapabilities'
 
 import { libraryManagerMap } from '../storeManagers'
 import { attachOverrides } from '../game_overrides'
-import { isDelegatedInstallPolling } from '../storeManagers/steam/library'
+import { isDelegatedInstallPolling } from '../storeManagers/steam/library/installPolling'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
 import { isOnline } from '../online_monitor'
 import { sendGameStatusUpdate } from '../utils'

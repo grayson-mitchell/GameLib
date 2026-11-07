@@ -6,7 +6,7 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import { startInstallPolling } from '../library'
+import { startInstallPolling } from '../library/installPolling'
 import { pollInstallOnce } from '../library/installPollOnce'
 import { stopInstallPolling } from '../library/installStop'
 import { existsSync, readFileSync } from 'graceful-fs'

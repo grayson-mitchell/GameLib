@@ -122,9 +122,9 @@ jest.mock('backend/utils/aborthandler/aborthandler', () => ({
   callAbortController: (...args: [string]) => callAbortControllerMock(...args)
 }))
 
-// ── backend/storeManagers/steam/library mock (quick 261106-pvk) ─────────
+// ── backend/storeManagers/steam/library/installPolling mock (quick 261106-pvk) ─────────
 const isDelegatedInstallPollingMock = jest.fn()
-jest.mock('backend/storeManagers/steam/library', () => ({
+jest.mock('backend/storeManagers/steam/library/installPolling', () => ({
   isDelegatedInstallPolling: (...args: [string]) =>
     isDelegatedInstallPollingMock(...args)
 }))

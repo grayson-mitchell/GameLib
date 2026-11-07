@@ -26,12 +26,9 @@ import {
 import { sendFrontendMessage } from '../../ipc'
 import { steamMetadataStore, steamLibraryStore } from './stores'
 import { library } from './state'
-import {
-  startInstallPolling,
-  resumeInterruptedSteamInstall,
-  pollUninstallOnce
-} from './library'
+import { resumeInterruptedSteamInstall, pollUninstallOnce } from './library'
 import { readAcfState, removeSteamInstallCopy } from './library/acfState'
+import { startInstallPolling } from './library/installPolling'
 import { stopInstallPolling } from './library/installStop'
 import * as resumeBreadcrumbs from './library/resumeBreadcrumbs'
 import * as pollState from './library/pollState'

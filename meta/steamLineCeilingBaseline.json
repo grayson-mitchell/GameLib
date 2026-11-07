@@ -5,8 +5,8 @@
   "src/backend/storeManagers/steam/bridge/helperProcess.ts": 1143,
   "src/backend/storeManagers/steam/bridge/shimGenerate.ts": 1479,
   "src/backend/storeManagers/steam/gameBridgeLaunch.ts": 1183,
-  "src/backend/storeManagers/steam/gameInstall.ts": 1966,
+  "src/backend/storeManagers/steam/gameInstall.ts": 1963,
   "src/backend/storeManagers/steam/games.ts": 1351,
-  "src/backend/storeManagers/steam/library.ts": 2341,
+  "src/backend/storeManagers/steam/library.ts": 1902,
   "src/backend/storeManagers/steam/user.ts": 1562
 }

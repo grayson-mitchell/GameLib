@@ -67,6 +67,7 @@ import {
 } from '../gameSessionState'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
+import * as installPollingModule from '../library/installPolling'
 import * as installStopModule from '../library/installStop'
 import * as acfState from '../library/acfState'
 import * as macArch from '../library/macArch'
@@ -4008,7 +4009,7 @@ describe('SteamGame.stop() — delegated install cancel (261105-vfq)', () => {
   it('cancels the delegated poll and skips the no-op path', async () => {
     ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
     const spy = jest
-      .spyOn(libraryModule, 'cancelDelegatedInstall')
+      .spyOn(installPollingModule, 'cancelDelegatedInstall')
       .mockReturnValue(true)
     await new SteamGame(APP_ID).stop()
     expect(spy).toHaveBeenCalledWith(APP_ID)
@@ -4018,7 +4019,7 @@ describe('SteamGame.stop() — delegated install cancel (261105-vfq)', () => {
   it('keeps the no-op warning when there is no delegated poll', async () => {
     ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
     const spy = jest
-      .spyOn(libraryModule, 'cancelDelegatedInstall')
+      .spyOn(installPollingModule, 'cancelDelegatedInstall')
       .mockReturnValue(false)
     await new SteamGame(APP_ID).stop()
     expect(spy).toHaveBeenCalledWith(APP_ID)
@@ -4040,7 +4041,7 @@ describe('SteamGame.stop() — D-02 native depot-download abort', () => {
     pendingFetches.clear()
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     jest
-      .spyOn(libraryModule, 'startInstallPolling')
+      .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
     ;(resolveSteamInstallTarget as jest.Mock).mockResolvedValue({
@@ -4134,7 +4135,7 @@ describe('SteamGame.install() — GAME-02', () => {
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     // Spy on startInstallPolling so install() can call it without running the real poller
     startInstallPollingSpy = jest
-      .spyOn(libraryModule, 'startInstallPolling')
+      .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
   })
 
@@ -4283,7 +4284,7 @@ describe('SteamGame.install() — steam-startup-resume-crash resume-on-click (D-
     shellOpenExternal = shell.openExternal as jest.Mock
     shellOpenExternal.mockResolvedValue(undefined)
     startInstallPollingSpy = jest
-      .spyOn(libraryModule, 'startInstallPolling')
+      .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
     resumeSpy = jest
       .spyOn(libraryModule, 'resumeInterruptedSteamInstall')
@@ -4371,7 +4372,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     startInstallPollingSpy = jest
-      .spyOn(libraryModule, 'startInstallPolling')
+      .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
     // Non-macOS host (envMock defaults isMac:false) — never bottle-eligible,
     // so every test here exercises the native/legacy branch, not Plan 11's
@@ -4801,7 +4802,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
     ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([])
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     startInstallPollingSpy = jest
-      .spyOn(libraryModule, 'startInstallPolling')
+      .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
   })
 
@@ -5030,7 +5031,7 @@ describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => 
       makeEntry({ app_name: OTHER_APP_ID, title: 'Hogwarts Legacy' })
     )
     jest
-      .spyOn(libraryModule, 'startInstallPolling')
+      .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
@@ -5191,7 +5192,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     startInstallPollingSpy = jest
-      .spyOn(libraryModule, 'startInstallPolling')
+      .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
     envMock = jest.requireMock('backend/constants/environment')
     envMock.isMac = true
@@ -5360,7 +5361,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     startInstallPollingSpy = jest
-      .spyOn(libraryModule, 'startInstallPolling')
+      .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
     envMock = jest.requireMock('backend/constants/environment')
     envMock.isMac = true
@@ -5528,7 +5529,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     pendingFetches.clear()
     library.set(APP_ID, makeEntry({ title: 'Avernum 4' }))
     startInstallPollingSpy = jest
-      .spyOn(libraryModule, 'startInstallPolling')
+      .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
     stopInstallPollingSpy = jest.spyOn(installStopModule, 'stopInstallPolling')
     setBridgeUserRouteSpy = jest.spyOn(
@@ -8069,7 +8070,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     startInstallPollingSpy = jest
-      .spyOn(libraryModule, 'startInstallPolling')
+      .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
     envMock = jest.requireMock('backend/constants/environment')
     envMock.isMac = true
@@ -9048,7 +9049,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
     beforeEach(() => {
       startInstallPollingSpy = jest
-        .spyOn(libraryModule, 'startInstallPolling')
+        .spyOn(installPollingModule, 'startInstallPolling')
         .mockImplementation(() => {})
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReset()
     })
@@ -11729,7 +11730,7 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
       makeEntry({ title: 'Old 32-bit Game', is_installed: true })
     )
     startInstallPollingSpy = jest
-      .spyOn(libraryModule, 'startInstallPolling')
+      .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
     ;(isBottleReady as jest.Mock).mockReset()
   })
@@ -15298,7 +15299,7 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
     notifyMock = jest.requireMock('backend/dialog/dialog').notify as jest.Mock
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     startInstallPollingSpy = jest
-      .spyOn(libraryModule, 'startInstallPolling')
+      .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
     envMock = jest.requireMock('backend/constants/environment')
     envMock.isMac = true
@@ -15483,7 +15484,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
     shellOpenExternal.mockResolvedValue(undefined)
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
     startInstallPollingSpy = jest
-      .spyOn(libraryModule, 'startInstallPolling')
+      .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
     envMock = jest.requireMock('backend/constants/environment')
     envMock.isMac = true

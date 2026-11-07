@@ -5,7 +5,7 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import { startInstallPolling } from '../library'
+import { startInstallPolling } from '../library/installPolling'
 import { stopInstallPolling } from '../library/installStop'
 import {
   markBridgeInstallFinalized,

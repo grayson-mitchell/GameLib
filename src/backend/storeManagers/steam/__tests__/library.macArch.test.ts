@@ -5,7 +5,8 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import SteamLibraryManager, { startInstallPolling } from '../library'
+import SteamLibraryManager from '../library'
+import { startInstallPolling } from '../library/installPolling'
 import { stopInstallPolling } from '../library/installStop'
 import { locateMachOBinary, verifyMacArchGroundTruth } from '../library/macArch'
 import { machOArchsOf, verdictFromArchs } from 'backend/utils/macArch'

@@ -31,7 +31,7 @@ import {
   releaseMetadataSlot,
   METADATA_FETCH_TIMEOUT_MS
 } from './state'
-import { cancelDelegatedInstall } from './library'
+import { cancelDelegatedInstall } from './library/installPolling'
 import {
   getSteamBottleSettings,
   bridgeBottleNameFor,
