@@ -15,7 +15,8 @@
  * Store-agnostic: every store input arrives through `Game` and `deps`. Sidecar exit contract:
  * nothing runs at import, no timers.
  */
-import type { GameSettings, Runner } from 'common/types'
+import type { GameSettings, InstallPlatform, Runner } from 'common/types'
+import { hasCapability } from 'common/storeCapabilities'
 import type { Game } from 'common/types/game_manager'
 import { isMac } from 'backend/constants/environment'
 import {
@@ -31,6 +32,7 @@ import { readBottleEngineMarkerKind } from './engineSwitch'
 import type { NonCrossoverEngine } from './engineTypes'
 import { ENGINE_PINS } from './enginePins'
 import { isPinnedEngineInstalled, pinnedEnginePaths } from './fallbackEngine'
+import { engineKeyFor } from './gameKey'
 import type { EngineKey } from './gameKey'
 import { resolveGamePrefix } from './gamePrefix'
 import {
@@ -104,7 +106,41 @@ export async function resolveToolSettings(
   overrides: Partial<ToolSettingsDeps> = {}
 ): Promise<ToolSettingsResult> {
   const d: ToolSettingsDeps = { ...defaultDeps, ...overrides }
-  const key = engineKeyIfEligible(game, d.isMac())
+  if (engineKeyIfEligible(game, d.isMac()) === null) {
+    return { kind: 'stored', settings: stored }
+  }
+  const info = game.getGameInfo()
+  return resolveToolSettingsForId(
+    {
+      runner: info.runner,
+      appName: info.app_name,
+      platform: info.install?.platform
+    },
+    stored,
+    opts,
+    overrides
+  )
+}
+
+/**
+ * The Game-free resolver (CR-04): the same answer as `resolveToolSettings` for a game that has no
+ * library entry yet (a sideload game whose installer is about to run). The native check stays in
+ * `resolveToolSettings`; here a game is eligible when it is on macOS, not a Browser install and
+ * not a bottle-runtime store.
+ */
+export async function resolveToolSettingsForId(
+  id: { runner: Runner; appName: string; platform?: InstallPlatform },
+  stored: GameSettings,
+  opts: { ensureBottle: boolean },
+  overrides: Partial<ToolSettingsDeps> = {}
+): Promise<ToolSettingsResult> {
+  const d: ToolSettingsDeps = { ...defaultDeps, ...overrides }
+  const key =
+    !d.isMac() ||
+    id.platform === 'Browser' ||
+    hasCapability(id.runner, 'usesBottleRuntime')
+      ? null
+      : engineKeyFor(id.runner, id.appName)
   if (key === null) return { kind: 'stored', settings: stored }
 
   // A game is running (or starting) on a chosen engine: a tool targets that engine.
@@ -112,7 +148,7 @@ export async function resolveToolSettings(
     return { kind: 'engine', key, settings: d.overlay(key, stored) }
   }
 
-  const { runner, app_name: appName } = game.getGameInfo()
+  const { runner, appName } = id
   const effective = d.readEffective({ runner, appName })
   // D-07: a legacy game keeps its stored settings.
   if (effective.kind === 'legacy') return { kind: 'stored', settings: stored }

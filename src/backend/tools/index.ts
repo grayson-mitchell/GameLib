@@ -48,7 +48,11 @@ import {
   setupWineEnvVars,
   validWine
 } from '../launcher'
-import { resolveToolSettings } from '../engine/toolSettings'
+import {
+  resolveToolSettings,
+  resolveToolSettingsForId
+} from '../engine/toolSettings'
+import { GameConfig } from '../game_config'
 import { chmod, readFile, stat } from 'fs/promises'
 import {
   any_gpu_supports_version,
@@ -1567,5 +1571,46 @@ export async function runWineCommandOnGame(
     wait,
     protonVerb,
     startFolder
+  })
+}
+
+/**
+ * CR-04 (D-01, D-17): Sideload "Run installer" runs before the game is added, so there is no
+ * library entry and `runWineCommandOnGame` cannot be used (`getGameInfo()` is `{}` and `isNative()`
+ * throws). This resolves the game's own bottle from the config the dialog just wrote, creating the
+ * bottle first, and runs the command there on the resolved engine. Sideload only; the bottle name
+ * is computed server-side (T-61-24-01, T-61-24-02).
+ */
+export async function runWineCommandForPendingInstall(args: {
+  runner: Runner
+  appName: string
+  commandParts: string[]
+  wait: boolean
+}): Promise<ExecResult> {
+  if (args.runner !== 'sideload') {
+    logError(
+      `runWineCommandForPendingInstall refused runner ${args.runner}: sideload only`,
+      LogPrefix.Backend
+    )
+    return { stdout: '', stderr: '' }
+  }
+  const stored = await GameConfig.get(args.appName).getSettings()
+  const resolved = await resolveToolSettingsForId(
+    { runner: 'sideload', appName: args.appName, platform: 'Windows' },
+    stored,
+    { ensureBottle: true }
+  )
+  if (resolved.kind === 'unavailable') {
+    logError(
+      `runWineCommand not run for pending install ${args.appName}: no usable Wine environment (${resolved.reason})`,
+      LogPrefix.Backend
+    )
+    return { stdout: '', stderr: '' }
+  }
+  return runWineCommand({
+    gameSettings: resolved.settings,
+    commandParts: args.commandParts,
+    wait: args.wait,
+    protonVerb: 'runinprefix'
   })
 }

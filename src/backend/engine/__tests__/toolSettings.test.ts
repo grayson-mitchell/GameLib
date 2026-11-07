@@ -18,7 +18,7 @@ jest.mock('backend/utils', () => ({
 }))
 jest.mock('backend/config', () => ({ GlobalConfig: { get: jest.fn() } }))
 
-import { resolveToolSettings } from '../toolSettings'
+import { resolveToolSettings, resolveToolSettingsForId } from '../toolSettings'
 import type { ToolSettingsDeps } from '../toolSettings'
 import type { EffectiveEngine } from '../engineConfig'
 import type { NonCrossoverEngine } from '../engineTypes'
@@ -311,5 +311,56 @@ describe('never mutates', () => {
     const copy = JSON.parse(JSON.stringify(s)) as GameSettings
     await resolve(game(), s, true, { markerKind: () => 'non-crossover' })
     expect(s).toEqual(copy)
+  })
+})
+
+describe('resolveToolSettingsForId (CR-04: no Game needed)', () => {
+  const sideloadId = {
+    runner: 'sideload' as const,
+    appName: 'abc',
+    platform: 'Windows' as const
+  }
+
+  it('unprovisioned per-game bottle + ensureBottle: creates it once and resolves to the engine', async () => {
+    let made = false
+    ensureGameBottle.mockImplementation(() => {
+      made = true
+      return Promise.resolve({
+        status: 'done',
+        createdHere: true,
+        engine: 'crossover'
+      })
+    })
+    const result = await resolveToolSettingsForId(
+      sideloadId,
+      stored(),
+      { ensureBottle: true },
+      deps({ isProvisioned: () => made })
+    )
+    expect(ensureGameBottle).toHaveBeenCalledTimes(1)
+    expect(ensureGameBottle.mock.calls[0][0]).toMatchObject({
+      bottleName: perGameBottleName('sideload', 'abc'),
+      appName: 'abc',
+      runner: 'sideload'
+    })
+    expect(result.kind).toBe('engine')
+    if (result.kind === 'engine') {
+      expect(result.settings.wineCrossoverBottle).toBe(
+        perGameBottleName('sideload', 'abc')
+      )
+    }
+  })
+
+  it('non-mac returns the stored settings by reference', async () => {
+    const s = stored()
+    const result = await resolveToolSettingsForId(
+      sideloadId,
+      s,
+      { ensureBottle: true },
+      deps({ isMac: () => false })
+    )
+    expect(result.kind).toBe('stored')
+    if (result.kind === 'stored') expect(result.settings).toBe(s)
+    expect(ensureGameBottle).not.toHaveBeenCalled()
   })
 })
