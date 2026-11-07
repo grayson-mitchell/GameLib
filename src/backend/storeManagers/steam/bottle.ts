@@ -65,7 +65,7 @@ import {
 import {
   resolveCrossoverBinDir,
   resolveCrossoverBinDirAsync
-} from './crossoverLocation'
+} from 'backend/engine/crossoverLocation'
 import { NUMERIC_APP_ID } from './gameConstants'
 
 // ── Phase 24 (24-04): dedicated bridge bottle (macOS native Steam bridge) ──

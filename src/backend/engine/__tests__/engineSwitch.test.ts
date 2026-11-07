@@ -34,7 +34,7 @@ jest.mock('backend/storeManagers/steam/bottle', () => ({
 jest.mock('backend/storeManagers/steam/bottleProcessMonitor', () => ({
   getBottleProcessMonitorPhase: jest.fn()
 }))
-jest.mock('backend/storeManagers/steam/crossoverLocation', () => ({
+jest.mock('backend/engine/crossoverLocation', () => ({
   resolveCrossoverBinDirAsync: jest.fn()
 }))
 jest.mock('../fallbackEngine', () => ({

@@ -181,7 +181,7 @@ jest.mock('backend/logger', () => ({
 const CX_BIN_DIR =
   '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
 const cxState: { binDir: string | undefined } = { binDir: CX_BIN_DIR }
-jest.mock('../crossoverLocation', () => ({
+jest.mock('backend/engine/crossoverLocation', () => ({
   resolveCrossoverBinDir: () => cxState.binDir,
   resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir),
   crossoverBinDirFromWineBin: (bin: string) => bin

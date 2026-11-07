@@ -5,7 +5,7 @@ jest.mock('../../logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Backend: 'Backend' }
 }))
-jest.mock('../../storeManagers/steam/crossoverLocation', () => ({
+jest.mock('backend/engine/crossoverLocation', () => ({
   resolveCrossoverBinDirAsync: jest.fn()
 }))
 

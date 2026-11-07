@@ -127,7 +127,7 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
   return {
     async resolveCrossoverBinDir() {
       const { resolveCrossoverBinDirAsync } =
-        await import('backend/storeManagers/steam/crossoverLocation')
+        await import('backend/engine/crossoverLocation')
       const { persistedWineBins } =
         await import('backend/storeManagers/steam/bottle')
       return resolveCrossoverBinDirAsync({ hintWineBins: persistedWineBins() })

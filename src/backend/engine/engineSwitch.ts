@@ -26,7 +26,7 @@ import {
   sanitizeBottleName
 } from './bottlePrimitives'
 import { getBottleProcessMonitorPhase } from 'backend/storeManagers/steam/bottleProcessMonitor'
-import { resolveCrossoverBinDirAsync } from 'backend/storeManagers/steam/crossoverLocation'
+import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
 import { ENGINE_PINS, pinById } from './enginePins'
 import type { EnginePin } from './enginePins'
 import {

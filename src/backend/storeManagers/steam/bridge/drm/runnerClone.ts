@@ -254,7 +254,7 @@ export const CX_ROOT_SUFFIX = `${sep}Contents${sep}SharedSupport${sep}CrossOver`
 
 export async function defaultResolveBinDir(): Promise<string | undefined> {
   try {
-    const mod = await import('backend/storeManagers/steam/crossoverLocation')
+    const mod = await import('backend/engine/crossoverLocation')
     return await mod.resolveCrossoverBinDirAsync()
   } catch {
     return undefined

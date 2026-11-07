@@ -26,7 +26,7 @@ import { join, resolve } from 'path'
 import { writeFile, unlink } from 'fs/promises'
 
 import type { AppManagementStatus } from '../../common/types'
-import { resolveCrossoverBinDirAsync } from '../storeManagers/steam/crossoverLocation'
+import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 
 export const APP_MANAGEMENT_SETTINGS_URL =
