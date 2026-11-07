@@ -663,6 +663,66 @@ export type RustInvokeChannel = (typeof RUST_INVOKE_CHANNELS)[number]
  */
 export const UNPORTED_CHANNEL_MARKER = '[GAMELIB_UNPORTED_CHANNEL]' as const
 
+/** Stable code carried in the JSON tail of an `IPC_INVALID_ARGS_MARKER` error. */
+export const IPC_INVALID_ARGS = 'IPC_INVALID_ARGS' as const
+
+/**
+ * Marker prefixed to the `error` of an invoke response rejected because its args failed the
+ * channel's schema at the sidecar boundary (Phase 67, D-08/D-11). The error stays a plain
+ * string because the Rust reader takes `error` with `as_str()`; the typed part is a JSON tail
+ * after the marker. The tail carries the channel, sanitised issue paths and issue codes ONLY,
+ * never argument values, issue messages or unrecognized key names (D-10).
+ *
+ * Pure and zod-free: the preload value-imports this file, and D-04 keeps zod out of the
+ * renderer.
+ */
+export const IPC_INVALID_ARGS_MARKER = '[GAMELIB_IPC_INVALID_ARGS]' as const
+
+export interface IpcInvalidArgsPayload {
+  code: typeof IPC_INVALID_ARGS
+  channel: string
+  paths: string[]
+  codes: string[]
+}
+
+/** Builds the wire `error` string for a rejected invoke. */
+export function formatIpcInvalidArgsError(p: IpcInvalidArgsPayload): string {
+  return `${IPC_INVALID_ARGS_MARKER} ${JSON.stringify(p)}`
+}
+
+/** Parses a wire `error` string back to its payload; null on any mismatch, never throws. */
+export function parseIpcInvalidArgsError(
+  message: string
+): IpcInvalidArgsPayload | null {
+  try {
+    const at = message.indexOf(IPC_INVALID_ARGS_MARKER)
+    if (at === -1) return null
+    const value: unknown = JSON.parse(
+      message.slice(at + IPC_INVALID_ARGS_MARKER.length).trim()
+    )
+    if (!value || typeof value !== 'object') return null
+    const v = value as Record<string, unknown>
+    const isStrings = (x: unknown): x is string[] =>
+      Array.isArray(x) && x.every((s) => typeof s === 'string')
+    if (
+      v.code !== IPC_INVALID_ARGS ||
+      typeof v.channel !== 'string' ||
+      !isStrings(v.paths) ||
+      !isStrings(v.codes)
+    ) {
+      return null
+    }
+    return {
+      code: IPC_INVALID_ARGS,
+      channel: v.channel,
+      paths: v.paths,
+      codes: v.codes
+    }
+  } catch {
+    return null
+  }
+}
+
 /**
  * Tauri event name the Rust shell emits to the webview for every SidecarNotification it reads
  * from the sidecar's stdout. The renderer bridge (27-03) subscribes via Tauri `listen` and
