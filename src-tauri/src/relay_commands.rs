@@ -2,6 +2,32 @@ use super::*;
 
 // ---- The four relay commands (names mirror the transport contract constants) ----
 
+/// Longest channel-name prefix echoed into a relay error or log line (T-67-61).
+const RELAY_CHANNEL_ECHO_MAX: usize = 64;
+
+/// A channel name made safe to echo: cut to 64 characters and anything that is not printable
+/// ASCII replaced by `?`, so a hostile name can neither flood nor forge a log line.
+fn echo_channel(channel: &str) -> String {
+    channel
+        .chars()
+        .take(RELAY_CHANNEL_ECHO_MAX)
+        .map(|c| if c.is_ascii_graphic() || c == ' ' { c } else { '?' })
+        .collect()
+}
+
+/// D-14: the renderer may name only channels on the generated allow-list. Checked before anything
+/// crosses the pipe; arguments are still validated only in the sidecar.
+pub(crate) fn relay_channel_verdict(channel: &str) -> Result<(), String> {
+    if is_renderer_channel(channel) {
+        Ok(())
+    } else {
+        Err(format!(
+            "{IPC_INVALID_CHANNEL_MARKER} channel not allowed: {}",
+            echo_channel(channel)
+        ))
+    }
+}
+
 /// ipcRenderer.invoke parity: req/resp round-trip to the sidecar.
 #[tauri::command]
 pub(crate) async fn sidecar_invoke(
@@ -9,6 +35,7 @@ pub(crate) async fn sidecar_invoke(
     args: Vec<Value>,
     state: State<'_, Arc<SidecarState>>,
 ) -> Result<Value, String> {
+    relay_channel_verdict(&channel)?;
     let state = state.inner().clone();
     // Run the blocking channel-write + recv off the async runtime's worker.
     tauri::async_runtime::spawn_blocking(move || state.invoke(channel, args))
@@ -98,6 +125,10 @@ pub(crate) fn sidecar_send(
     state: State<'_, Arc<SidecarState>>,
     queue: State<'_, SidecarSendQueue>,
 ) -> Result<(), String> {
+    if let Err(e) = relay_channel_verdict(&channel) {
+        shell_eprintln!("[shell] relay rejected send: {}", echo_channel(&channel));
+        return Err(e);
+    }
     let req = SidecarRpcRequest {
         id: state.next_id(),
         kind: "send",
@@ -212,3 +243,36 @@ pub(crate) async fn sidecar_store_snapshot(state: State<'_, Arc<SidecarState>>) 
     .map_err(|e| e.to_string())?
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ipc_contract_relay_allows_renderer_channel() {
+        assert!(relay_channel_verdict("pathExists").is_ok());
+    }
+
+    #[test]
+    fn ipc_contract_relay_rejects_shell_only_channel() {
+        let e = relay_channel_verdict("handleProtocolUrl").unwrap_err();
+        assert!(e.starts_with(IPC_INVALID_CHANNEL_MARKER));
+        assert!(e.contains("handleProtocolUrl"));
+    }
+
+    #[test]
+    fn ipc_contract_relay_rejects_unknown_channel() {
+        assert!(relay_channel_verdict("definitelyNotAChannel").is_err());
+        assert!(relay_channel_verdict("").is_err());
+        assert!(relay_channel_verdict(STORE_SNAPSHOT_CHANNEL).is_err());
+    }
+
+    #[test]
+    fn ipc_contract_relay_truncates_hostile_channel_name() {
+        let hostile = "\u{1b}[31m\n\u{e9}".repeat(2000) + &"x".repeat(10_240);
+        let e = relay_channel_verdict(&hostile).unwrap_err();
+        assert!(e.len() < 200, "error was {} bytes", e.len());
+        assert!(!e.contains('\n') && !e.contains('\u{1b}'));
+        assert!(echo_channel(&hostile).len() <= RELAY_CHANNEL_ECHO_MAX);
+    }
+}

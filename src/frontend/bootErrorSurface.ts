@@ -43,13 +43,21 @@ const UNPORTED_CHANNEL_MARKER = '[GAMELIB_UNPORTED_CHANNEL]'
 const IPC_INVALID_ARGS_MARKER = '[GAMELIB_IPC_INVALID_ARGS]'
 
 /**
+ * Mirrors `IPC_INVALID_CHANNEL_MARKER` in `common/types/sidecarTransport.ts` (the Rust relay's
+ * renderer channel allow-list rejection, 67-19). Duplicated as a literal for the same
+ * zero-import reason as the markers above.
+ */
+const IPC_INVALID_CHANNEL_MARKER = '[GAMELIB_IPC_INVALID_CHANNEL]'
+
+/**
  * Classifies a boot-time error message. An unported channel and a sidecar schema rejection
  * are both contract rejections, not bootstrap failures, so neither may paint over the app.
  */
 export function classifyBootError(
   message: string
-): 'unported' | 'invalid-args' | 'fatal' {
+): 'unported' | 'invalid-args' | 'invalid-channel' | 'fatal' {
   if (message.includes(UNPORTED_CHANNEL_MARKER)) return 'unported'
+  if (message.includes(IPC_INVALID_CHANNEL_MARKER)) return 'invalid-channel'
   if (message.includes(IPC_INVALID_ARGS_MARKER)) return 'invalid-args'
   return 'fatal'
 }
@@ -70,6 +78,13 @@ function renderBootError(context: string, error: unknown): void {
     if (kind === 'invalid-args') {
       console.warn(
         `[GameLib] IPC argument validation rejected a call during ${context} — continuing:`,
+        message
+      )
+      return
+    }
+    if (kind === 'invalid-channel') {
+      console.warn(
+        `[GameLib] relay rejected a channel name during ${context} — continuing:`,
         message
       )
       return

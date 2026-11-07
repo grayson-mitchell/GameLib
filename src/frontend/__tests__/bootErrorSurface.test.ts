@@ -7,7 +7,9 @@ const stubAddEventListener = (): void => undefined
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { classifyBootError } = require('../bootErrorSurface') as {
-  classifyBootError: (m: string) => 'unported' | 'invalid-args' | 'fatal'
+  classifyBootError: (
+    m: string
+  ) => 'unported' | 'invalid-args' | 'invalid-channel' | 'fatal'
 }
 
 describe('classifyBootError', () => {
@@ -22,6 +24,13 @@ describe('classifyBootError', () => {
         'IpcValidationError: [GAMELIB_IPC_INVALID_ARGS] {"code":"IPC_INVALID_ARGS"}'
       )
     ).toBe('invalid-args')
+  })
+  test('invalid-channel marker is warn-and-continue, not fatal', () => {
+    expect(
+      classifyBootError(
+        'Error: [GAMELIB_IPC_INVALID_CHANNEL] channel not allowed: nope'
+      )
+    ).toBe('invalid-channel')
   })
   test('anything else is fatal', () => {
     expect(classifyBootError('TypeError: x is undefined')).toBe('fatal')
