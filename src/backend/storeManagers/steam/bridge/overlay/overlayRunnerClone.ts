@@ -30,24 +30,26 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import {
   CROSSOVER_BUILD_RE,
   CX_ROOT_SUFFIX,
-  DYLD_ENTITLEMENT,
   LOADER_REL,
   MAX_LOADER_BYTES,
-  RUNNER_MARKER_FILE,
   RUNNER_TIMEOUTS,
   WINELOADER_REL,
-  cloneCrossoverTree,
   defaultResolveBinDir,
-  dumpLoaderEntitlements,
   isContained,
   isPathInUse,
   psListing,
   readCrossoverBundleVersion,
-  resignLoader,
   safeRemove,
-  scrubCloneXattrs,
   sha256File,
   statRegular
+} from '../drm/runnerCrossover'
+import {
+  DYLD_ENTITLEMENT,
+  RUNNER_MARKER_FILE,
+  cloneCrossoverTree,
+  dumpLoaderEntitlements,
+  resignLoader,
+  scrubCloneXattrs
 } from '../drm/runnerClone'
 import { defaultRunTool, type RunTool } from 'backend/engine/runTool'
 import {

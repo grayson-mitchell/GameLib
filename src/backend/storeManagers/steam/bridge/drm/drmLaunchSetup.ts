@@ -38,10 +38,9 @@ import {
 } from './steamclientLayerMode'
 import {
   detectAllowedCrossover,
-  ensureRunnerClone,
-  type CrossoverAllowed,
-  type RunnerReady
-} from './runnerClone'
+  type CrossoverAllowed
+} from './runnerCrossover'
+import { ensureRunnerClone, type RunnerReady } from './runnerClone'
 import {
   ensureSteamclientLayerComponent,
   type SteamclientLayerReady

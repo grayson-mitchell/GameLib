@@ -50,15 +50,14 @@ jest.mock('backend/logger', () => ({
 import {
   CLONE_ARGV_FALLBACK,
   CLONE_ARGV_PRIMARY,
-  CrossoverAllowed,
   DYLD_ENTITLEMENT,
   RUNNER_MARKER_FILE,
   RunnerComponentInput,
   STOCK_LOADER_ENTITLEMENTS,
-  detectAllowedCrossover,
   ensureRunnerClone,
   verifyRunnerClone
 } from '../runnerClone'
+import { detectAllowedCrossover, CrossoverAllowed } from '../runnerCrossover'
 import {
   defaultRunTool,
   type RunTool,
@@ -486,7 +485,17 @@ describe('detectAllowedCrossover', () => {
   })
 
   it('module source keeps its import discipline', () => {
-    const src = readFileSync(join(__dirname, '..', 'runnerClone.ts'), 'utf8')
+    // The module is split across sibling files (65-17); scan them all.
+    const files = ['runnerClone.ts', 'runnerCrossover.ts']
+    for (const f of files) {
+      const text = readFileSync(join(__dirname, '..', f), 'utf8')
+      expect(text.length).toBeGreaterThan(0)
+    }
+    const src = files
+      .map((f) => readFileSync(join(__dirname, '..', f), 'utf8'))
+      .join('\n')
+    expect(src).toMatch(/export async function detectAllowedCrossover/)
+    expect(src).toMatch(/export async function ensureRunnerClone/)
     expect(src).not.toMatch(/from 'backend\/launcher'/)
     expect(src).not.toMatch(/from 'backend\/utils'/)
     expect(src).not.toMatch(/constants\/paths/)
