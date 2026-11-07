@@ -38,8 +38,15 @@ const SteamBridgeSetup = () => {
   // component's existing `gamepage` strings above -- hence the second,
   // differently-named translator rather than reusing `t`.
   const { t: tGamelib } = useTranslation('gamelib')
-  const { isOpen, appName, reason, fallbackAvailable, missingSymbols, close } =
-    useSteamBridgeSetup()
+  const {
+    isOpen,
+    appName,
+    reason,
+    fallbackAvailable,
+    missingSymbols,
+    forceWindowsViaBottle,
+    close
+  } = useSteamBridgeSetup()
 
   const [fallingBack, setFallingBack] = useState(false)
   const [fallbackError, setFallbackError] = useState<string>()
@@ -98,7 +105,9 @@ const SteamBridgeSetup = () => {
         // — on the one surface whose entire job is recovering from a failure.
         // `installSteamGame` now returns the real dispatch promise, so this
         // `await` means what it reads as.
-        await installSteamGame(appName, gameInfo)
+        // quick 261107-lum: replay a forced-Windows request so the fallback
+        // never installs the Mac build.
+        await installSteamGame(appName, gameInfo, '', forceWindowsViaBottle)
       } else {
         // Same IPC channel the existing launch flow ultimately calls
         // (frontend/helpers/library.ts's checkLaunchOptionsAndLaunch) — the

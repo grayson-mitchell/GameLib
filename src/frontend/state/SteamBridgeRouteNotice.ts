@@ -19,6 +19,9 @@ export interface SteamBridgeRouteNoticePayload {
   route: 'bridge' | 'bottle'
   // Sent back unchanged on acknowledgement so an existing override survives.
   userRoute: 'bridge' | 'bottle' | null
+  // quick 261107-lum: the install was a forced-Windows request; the retry
+  // replays it (54-REVIEW CR-01 precedent) instead of installing the Mac build.
+  forceWindowsViaBottle?: true
 }
 
 interface SteamBridgeRouteNoticeState {
@@ -29,6 +32,7 @@ interface SteamBridgeRouteNoticeState {
   missingSymbols: string[]
   route?: 'bridge' | 'bottle'
   userRoute: 'bridge' | 'bottle' | null
+  forceWindowsViaBottle: boolean
   open: (payload: SteamBridgeRouteNoticePayload) => void
   close: () => void
 }
@@ -54,13 +58,15 @@ export const useSteamBridgeRouteNotice = create<SteamBridgeRouteNoticeState>()(
     missingSymbols: [],
     route: undefined,
     userRoute: null,
+    forceWindowsViaBottle: false,
     open: ({
       appName,
       reason,
       knownBadReason,
       missingSymbols,
       route,
-      userRoute
+      userRoute,
+      forceWindowsViaBottle
     }) =>
       set({
         isOpen: true,
@@ -69,7 +75,8 @@ export const useSteamBridgeRouteNotice = create<SteamBridgeRouteNoticeState>()(
         knownBadReason,
         missingSymbols,
         route,
-        userRoute
+        userRoute,
+        forceWindowsViaBottle: forceWindowsViaBottle === true
       }),
     close: () =>
       set({
@@ -79,7 +86,8 @@ export const useSteamBridgeRouteNotice = create<SteamBridgeRouteNoticeState>()(
         knownBadReason: null,
         missingSymbols: [],
         route: undefined,
-        userRoute: null
+        userRoute: null,
+        forceWindowsViaBottle: false
       })
   })
 )

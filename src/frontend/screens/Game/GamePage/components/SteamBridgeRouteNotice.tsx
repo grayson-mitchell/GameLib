@@ -45,6 +45,7 @@ const SteamBridgeRouteNotice = () => {
     missingSymbols,
     route,
     userRoute: storedUserRoute,
+    forceWindowsViaBottle,
     close
   } = useSteamBridgeRouteNotice()
 
@@ -97,8 +98,10 @@ const SteamBridgeRouteNotice = () => {
   // Shared by "Use bottled Steam", "Try the bridge anyway" and the
   // informational "Install anyway" -- the only difference between them is the
   // userRoute/acknowledgeReason pair persisted before the SAME
-  // installSteamGame(appName, gameInfo) retry (34.13-08 D-17 marshalling
-  // precedent, SteamBridgeSetup.tsx). 'acknowledge' persists the notice
+  // installSteamGame retry (34.13-08 D-17 marshalling precedent,
+  // SteamBridgeSetup.tsx). quick 261107-lum: a forced-Windows install replays
+  // its Windows-build choice on the retry (54-REVIEW CR-01 precedent,
+  // SteamGoOfflineNotice), so it never silently installs the Mac build. 'acknowledge' persists the notice
   // acknowledgement for the payload's reason and passes the stored userRoute back
   // unchanged.
   const chooseRoute = async (choice: 'bottle' | 'bridge' | 'acknowledge') => {
@@ -140,7 +143,7 @@ const SteamBridgeRouteNotice = () => {
         )
         return
       }
-      await installSteamGame(appName, info)
+      await installSteamGame(appName, info, '', forceWindowsViaBottle)
       close()
     } catch (err) {
       setError(

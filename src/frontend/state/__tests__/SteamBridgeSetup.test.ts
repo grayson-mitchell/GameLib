@@ -19,7 +19,8 @@ describe('useSteamBridgeSetup store', () => {
       appName: undefined,
       reason: undefined,
       fallbackAvailable: true,
-      missingSymbols: []
+      missingSymbols: [],
+      forceWindowsViaBottle: false
     })
   })
 
@@ -27,6 +28,17 @@ describe('useSteamBridgeSetup store', () => {
     expect(useSteamBridgeSetup.getState().isOpen).toBe(false)
     expect(useSteamBridgeSetup.getState().appName).toBeUndefined()
     expect(useSteamBridgeSetup.getState().missingSymbols).toEqual([])
+  })
+
+  it('quick 261107-lum: open with forceWindowsViaBottle carries true; close resets it; open without it is false', () => {
+    useSteamBridgeSetup
+      .getState()
+      .open('440', { reason: 'drm-wrapped', forceWindowsViaBottle: true })
+    expect(useSteamBridgeSetup.getState().forceWindowsViaBottle).toBe(true)
+    useSteamBridgeSetup.getState().close()
+    expect(useSteamBridgeSetup.getState().forceWindowsViaBottle).toBe(false)
+    useSteamBridgeSetup.getState().open('440', { reason: 'drm-wrapped' })
+    expect(useSteamBridgeSetup.getState().forceWindowsViaBottle).toBe(false)
   })
 
   it('open(appName, opts) sets isOpen + appName + reason + fallbackAvailable', () => {

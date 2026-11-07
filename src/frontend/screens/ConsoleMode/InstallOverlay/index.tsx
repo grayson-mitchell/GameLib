@@ -83,14 +83,14 @@ export default function InstallOverlay({
     availablePlatforms[platformIndex]?.value ?? 'Windows'
   const isSteam = hasCapability(game.runner, 'installHandOffToClient')
   // Platform and Wine selection never applies to Steam here, and Console never
-  // offers Windows for a dual-build Steam game (quick 261107-li0). Windows would
-  // mean `forceWindowsViaBottle`, but a forced-Windows install is `not-eligible`
-  // for the bridge (`assembleBridgeRouteInput` reads
-  // `isBottleEligibleFromPlatforms`, which is false for `is_mac_native === true`).
-  // It therefore lands on the bottled Windows Steam client in the shared
-  // `GameLibSteam` bottle, where a shared Wine choice applies. That choice
-  // belongs to the desktop install dialog, and Console never shows a Wine
-  // choice for Steam. A one-value Platform row would be a dead focus stop.
+  // offers Windows for a dual-build Steam game (quick 261107-li0). Since quick
+  // 261107-lum a forced-Windows install (`forceWindowsViaBottle`) resolves the
+  // normal bridge verdict (own `GameLibSteamBridge-<appId>` bottle), so the
+  // original premise (it always lands on the shared bottled client with a Wine
+  // choice) no longer holds. Console still offers no Platform row for Steam
+  // until the follow-up todo `2026-11-07-console-mode-steam-platform-row.md`
+  // builds one, and it never shows a Wine choice for Steam. A one-value
+  // Platform row would be a dead focus stop.
   const showPlatform = !isSteam && availablePlatforms.length > 1
   const hasWine = !isSteam && platformToInstall === 'Windows' && !isWin
 

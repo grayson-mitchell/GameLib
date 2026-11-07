@@ -11,12 +11,16 @@ interface SteamBridgeSetupState {
   // Always an array -- [] (never undefined) when the opening signal carries
   // none, so the component's `.length > 0` check needs no extra guard.
   missingSymbols: string[]
+  // quick 261107-lum: the failed install was a forced-Windows request; the
+  // not-installed fallback retry replays it.
+  forceWindowsViaBottle: boolean
   open: (
     appName: string,
     opts?: {
       reason?: string
       fallbackAvailable?: boolean
       missingSymbols?: string[]
+      forceWindowsViaBottle?: boolean
     }
   ) => void
   close: () => void
@@ -39,15 +43,23 @@ export const useSteamBridgeSetup = create<SteamBridgeSetupState>()((set) => ({
   reason: undefined,
   fallbackAvailable: true,
   missingSymbols: [],
+  forceWindowsViaBottle: false,
   open: (appName, opts = {}) =>
     set({
       isOpen: true,
       appName,
       reason: opts.reason,
       fallbackAvailable: opts.fallbackAvailable ?? true,
-      missingSymbols: opts.missingSymbols ?? []
+      missingSymbols: opts.missingSymbols ?? [],
+      forceWindowsViaBottle: opts.forceWindowsViaBottle === true
     }),
-  close: () => set({ isOpen: false, appName: undefined, missingSymbols: [] })
+  close: () =>
+    set({
+      isOpen: false,
+      appName: undefined,
+      missingSymbols: [],
+      forceWindowsViaBottle: false
+    })
 }))
 
 // Extracted as a standalone, directly-testable function (rather than an
@@ -62,15 +74,20 @@ export const handleSteamBridgeSetupRequiredSignal = (
     appName,
     reason,
     fallbackAvailable,
-    missingSymbols
+    missingSymbols,
+    forceWindowsViaBottle
   }: {
     appName: string
     reason?: string
     fallbackAvailable?: boolean
     missingSymbols?: string[]
+    forceWindowsViaBottle?: true
   }
 ): void => {
-  useSteamBridgeSetup
-    .getState()
-    .open(appName, { reason, fallbackAvailable, missingSymbols })
+  useSteamBridgeSetup.getState().open(appName, {
+    reason,
+    fallbackAvailable,
+    missingSymbols,
+    forceWindowsViaBottle
+  })
 }

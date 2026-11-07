@@ -20,7 +20,8 @@ const RESET_STATE = {
   knownBadReason: null,
   missingSymbols: [],
   route: undefined,
-  userRoute: null
+  userRoute: null,
+  forceWindowsViaBottle: false
 }
 
 describe('useSteamBridgeRouteNotice store', () => {
@@ -72,6 +73,31 @@ describe('useSteamBridgeRouteNotice store', () => {
     useSteamBridgeRouteNotice.getState().close()
     expect(useSteamBridgeRouteNotice.getState().route).toBeUndefined()
     expect(useSteamBridgeRouteNotice.getState().userRoute).toBeNull()
+  })
+
+  it('quick 261107-lum: open with forceWindowsViaBottle carries true; close resets it; open without it is false', () => {
+    const base = {
+      appName: '440',
+      reason: 'scan-miss' as const,
+      knownBadReason: null,
+      missingSymbols: [],
+      route: 'bridge' as const,
+      userRoute: null
+    }
+    useSteamBridgeRouteNotice
+      .getState()
+      .open({ ...base, forceWindowsViaBottle: true })
+    expect(useSteamBridgeRouteNotice.getState().forceWindowsViaBottle).toBe(
+      true
+    )
+    useSteamBridgeRouteNotice.getState().close()
+    expect(useSteamBridgeRouteNotice.getState().forceWindowsViaBottle).toBe(
+      false
+    )
+    useSteamBridgeRouteNotice.getState().open(base)
+    expect(useSteamBridgeRouteNotice.getState().forceWindowsViaBottle).toBe(
+      false
+    )
   })
 
   it('open(payload) carries missingSymbols verbatim for a scan-miss payload', () => {

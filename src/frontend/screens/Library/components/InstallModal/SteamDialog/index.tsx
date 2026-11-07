@@ -274,8 +274,14 @@ export default function SteamDialog({
     // the file, so a second occurrence ahead of it would silently relocate
     // that gate onto the wrong effect.
     let bridgeRouteCancelled = false
+    // quick 261107-lum (DC-4): with "Windows" chosen on a dual-build title the
+    // backend resolves the forced-Windows bridge verdict, so the route line
+    // and `resolveBridgeOwnsEngine` (which hides the shared Wine selector on a
+    // native bridge verdict) follow the platform choice. Clear the previous
+    // verdict first so a platform flip never briefly shows the old route.
+    setBridgeVerdict(undefined)
     window.api
-      .getSteamBridgeRoute(appName)
+      .getSteamBridgeRoute(appName, gating.forceWindowsViaBottle)
       .then((verdict) => {
         if (!bridgeRouteCancelled) setBridgeVerdict(verdict)
       })
@@ -288,7 +294,7 @@ export default function SteamDialog({
     return () => {
       bridgeRouteCancelled = true
     }
-  }, [appName])
+  }, [appName, gating.forceWindowsViaBottle])
 
   const bridgeLine = resolveBridgeRouteLine(bridgeVerdict, gating.wineSection)
 

@@ -1206,7 +1206,7 @@ describe('en catalog (quick 261107-kn8)', () => {
   })
 })
 
-describe('InstallOverlay/index.tsx never offers Windows or Wine for Steam (quick 261107-li0 finding: a forced-Windows dual-build install is not-eligible for the bridge, so it lands on the shared bottled client where a Wine choice applies; revisit only if the backend routes those installs to the bridge)', () => {
+describe('InstallOverlay/index.tsx never offers Windows or Wine for Steam (quick 261107-lum: a forced-Windows install now resolves the bridge verdict; Console still offers no Platform row until todo 2026-11-07-console-mode-steam-platform-row builds it)', () => {
   it('D13: no forceWindowsViaBottle, a bare two-argument installSteamGame, and showPlatform/hasWine keep !isSteam', () => {
     expect(() =>
       assertNoWindowsOfferForSteam(readStrippedOverlay())
