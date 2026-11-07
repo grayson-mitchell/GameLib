@@ -421,10 +421,13 @@ describe('logSecretGate', () => {
     // (powershell Start-Process -Verb RunAs / macOS open) in steam/clientSetup.ts.
     // Its only input is the downloaded installer path, and the stderr is the one
     // diagnostic for a cancelled UAC prompt.
-    it('carries exactly 14 exemptions — adding a 15th must be a conscious act', () => {
+    // 15th added by Phase 61 (61-07): stderr of `cxbottle --create` in
+    // engine/perGameBottle.ts, the store-agnostic twin of the bottle.ts:882
+    // exemption. Its only inputs are the bottle name and template.
+    it('carries exactly 15 exemptions — adding a 16th must be a conscious act', () => {
       const report = auditReport()
 
-      expect(report.exemptions).toHaveLength(14)
+      expect(report.exemptions).toHaveLength(15)
     })
 
     it('pins WHICH files hold them, so a silent swap at the same count still fails', () => {
@@ -432,6 +435,7 @@ describe('logSecretGate', () => {
       const files = [...new Set(report.exemptions.map((e) => e.file))].sort()
 
       expect(files).toEqual([
+        'src/backend/engine/perGameBottle.ts',
         'src/backend/launcher.ts',
         'src/backend/storeManagers/gog/games.ts',
         'src/backend/storeManagers/legendary/library.ts',
