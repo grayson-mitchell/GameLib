@@ -100,6 +100,7 @@ import {
   writeBridgeDrmVerdict
 } from './bridge/bridgeVerdict'
 import type { EnginePin } from 'backend/engine/enginePins'
+import { ensurePinnedEngineReportingStatus } from 'backend/engine/pinnedEngineProgress'
 import {
   nativeInstallsInFlight,
   markBridgeFailedThisSession,
@@ -640,87 +641,23 @@ export async function ensureBuiltInEngineForInstall(
   pin: EnginePin,
   signal?: AbortSignal
 ): Promise<NonCrossoverEngine | InstallResult> {
-  const { ensurePinnedEngine } = await import('backend/engine/fallbackEngine')
-  // G1 (59-22): one overall percent across both archives, so the label never
-  // resets when the Wine archive starts after the small DXVK one; verify and
-  // unpack are their own phases instead of a "0%" download.
-  const weights = { dxvk: pin.dxvk.size, wine: pin.wine.size }
-  const totalWeight = weights.dxvk + weights.wine
-  const finished = new Set<'dxvk' | 'wine'>()
-  let highest = 0
-  let lastContext = ''
-  let sentAny = false
-  const sendEngineContext = (context: string) => {
-    if (context === lastContext) return
-    lastContext = context
-    sentAny = true
-    sendGameStatusUpdate({
-      appName: steamGame.appId,
-      runner: 'steam',
-      status: 'engine-download',
-      context
-    })
-  }
-  const result = await ensurePinnedEngine(pin, {
-    signal,
-    onProgress: (p) => {
-      if (p.phase === 'downloading') {
-        let done = 0
-        for (const artifact of finished) done += weights[artifact]
-        const own = Math.min(Math.max(p.percentage ?? 0, 0), 100) / 100
-        const overall =
-          totalWeight > 0
-            ? Math.floor(
-                (100 * (done + own * weights[p.artifact])) / totalWeight
-              )
-            : Math.floor(own * 100)
-        highest = Math.max(highest, overall)
-        sendEngineContext(`downloading:${highest}`)
-        return
-      }
-      finished.add(p.artifact)
-      sendEngineContext(p.phase)
-    }
+  // Phase 61 (D-03): the progress wrapper is shared with the non-Steam stores.
+  const result = await ensurePinnedEngineReportingStatus({
+    pin,
+    appName: steamGame.appId,
+    runner: 'steam',
+    signal
   })
-  if (result.ok && sentAny) sendEngineContext('setting-up')
-  if (!result.ok && result.reason === 'aborted') {
-    // 59-REVIEW WR-01: a cancel or quit is not a download failure.
-    logInfo(
-      `SteamGame: built-in engine download aborted for appId ${steamGame.appId}`,
-      LogPrefix.Steam
-    )
-    sendGameStatusUpdate({
-      appName: steamGame.appId,
-      runner: 'steam',
-      status: 'done'
-    })
-    return { status: 'abort' }
-  }
-  if (!result.ok) {
-    logWarning(
-      `SteamGame: built-in engine unavailable for appId ${steamGame.appId}: ${result.reason} ${result.detail}`,
-      LogPrefix.Steam
-    )
-    sendGameStatusUpdate({
-      appName: steamGame.appId,
-      runner: 'steam',
-      status: 'done'
-    })
-    return {
-      status: 'error',
-      error: i18next.t(
-        'gamelib:steam.engine.downloadFailed',
-        "GameLib couldn't download its built-in engine ({{reason}}). Check your connection and try again.",
-        { reason: result.reason }
-      )
-    }
-  }
+  if (result.ok) return result.engine
+  // 59-REVIEW WR-01: a cancel or quit is not a download failure.
+  if (result.aborted) return { status: 'abort' }
   return {
-    wineBin: result.paths.wineBin,
-    wineserverBin: result.paths.wineserverBin,
-    label: pin.label,
-    version: pin.wine.version,
-    dxvk: { dir: result.paths.dxvkDir, version: pin.dxvk.version }
+    status: 'error',
+    error: i18next.t(
+      'gamelib:steam.engine.downloadFailed',
+      "GameLib couldn't download its built-in engine ({{reason}}). Check your connection and try again.",
+      { reason: result.reason }
+    )
   }
 }
 
