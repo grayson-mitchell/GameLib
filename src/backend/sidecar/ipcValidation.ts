@@ -94,12 +94,31 @@ export function setIpcRejectionLogSink(
   rejectionSink = sink
 }
 
-/** Writes the rejection line to stderr (forwarded by the shell) and the optional sink. */
-export function logRejection(
-  kind: 'invoke' | 'send',
-  verdict: Extract<InboundVerdict, { ok: false }>
-): void {
-  const line = formatRejectionLog(kind, verdict)
+// Per-channel rejection throttle (67 review WR-03). A hot channel (a per-frame send whose NaN
+// becomes null, a looping logError) must not write a stderr + gamelib.log line per frame.
+// Counter against Date.now(): NO timer, so it cannot hold the event loop open (sidecar exit
+// contract). The first LOG_BURST rejections per channel per window are logged; the rest are
+// counted, and one "suppressed N" line is emitted when the next window opens.
+const LOG_BURST = 5
+const LOG_WINDOW_MS = 60_000
+const MAX_TRACKED_CHANNELS = 256
+
+interface ThrottleState {
+  windowStart: number
+  logged: number
+  suppressed: number
+}
+
+const throttle = new Map<string, ThrottleState>()
+let nowFn: () => number = Date.now
+
+/** Test seam: inject a clock (pass nothing to restore Date.now) and clear throttle state. */
+export function resetIpcRejectionThrottle(clock?: () => number): void {
+  throttle.clear()
+  nowFn = clock ?? Date.now
+}
+
+function emit(line: string): void {
   process.stderr.write(`${line}\n`)
   if (rejectionSink) {
     try {
@@ -108,4 +127,39 @@ export function logRejection(
       // Fail-soft: a broken sink must not break dispatch.
     }
   }
+}
+
+/** Writes the rejection line to stderr (forwarded by the shell) and the optional sink. */
+export function logRejection(
+  kind: 'invoke' | 'send',
+  verdict: Extract<InboundVerdict, { ok: false }>
+): void {
+  const now = nowFn()
+  const key = `${kind}:${verdict.channel}`
+  let st = throttle.get(key)
+  if (st && now - st.windowStart >= LOG_WINDOW_MS) {
+    if (st.suppressed > 0) {
+      emit(
+        `[sidecarRpc] IPC_INVALID_ARGS kind=${kind} channel=${verdict.channel} suppressed=${st.suppressed} (last ${LOG_WINDOW_MS / 1000}s)`
+      )
+    }
+    st = undefined
+  }
+  if (!st) {
+    if (throttle.size >= MAX_TRACKED_CHANNELS) {
+      // Map iterates in insertion order: evict the oldest tracked channel.
+      const oldest = throttle.keys().next()
+      if (!oldest.done) throttle.delete(oldest.value)
+    }
+    st = { windowStart: now, logged: 0, suppressed: 0 }
+  }
+  // Re-insert so a re-opened window counts as the newest entry.
+  throttle.delete(key)
+  throttle.set(key, st)
+  if (st.logged >= LOG_BURST) {
+    st.suppressed += 1
+    return
+  }
+  st.logged += 1
+  emit(formatRejectionLog(kind, verdict))
 }

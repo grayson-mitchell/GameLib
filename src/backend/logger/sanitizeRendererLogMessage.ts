@@ -73,13 +73,37 @@ function escapeLineBreaks(value: string): string {
 }
 
 /**
+ * The IPC schema for logger channels no longer rejects on length (67 review WR-03): a rejected
+ * oversized message would replace the diagnostic with a one-line `too_big`. Length is bounded
+ * here instead, at the same trust boundary: text is cut to `LOG_TEXT_MAX` and arrays to
+ * `LOG_ARRAY_MAX` entries, each with a visible marker so the truncation is attributable.
+ */
+export const LOG_TEXT_MAX = 65536
+export const LOG_ARRAY_MAX = 256
+
+function truncateText(value: string): string {
+  if (value.length <= LOG_TEXT_MAX) return value
+  return `${value.slice(0, LOG_TEXT_MAX)}\u2026[truncated ${value.length - LOG_TEXT_MAX} bytes]`
+}
+
+function sanitizeText(value: string): string {
+  return escapeLineBreaks(truncateText(value))
+}
+
+/**
  * Sanitises one renderer-supplied log message. Shape-preserving: a string comes
- * back a string and an array comes back an array of the same length, so the
- * downstream `formatLogMessage` behaviour a caller sees is unchanged apart from
- * the escaping itself.
+ * back a string and an array comes back an array (capped at `LOG_ARRAY_MAX`
+ * entries plus one marker entry), so the downstream `formatLogMessage` behaviour
+ * a caller sees is unchanged apart from the escaping and truncation themselves.
  */
 export function sanitizeRendererLogMessage(message: unknown): unknown {
-  if (typeof message === 'string') return escapeLineBreaks(message)
-  if (Array.isArray(message)) return message.map(sanitizeRendererLogMessage)
+  if (typeof message === 'string') return sanitizeText(message)
+  if (Array.isArray(message)) {
+    const kept = message.slice(0, LOG_ARRAY_MAX).map(sanitizeRendererLogMessage)
+    if (message.length > LOG_ARRAY_MAX) {
+      kept.push(`\u2026[truncated ${message.length - LOG_ARRAY_MAX} entries]`)
+    }
+    return kept
+  }
   return message
 }

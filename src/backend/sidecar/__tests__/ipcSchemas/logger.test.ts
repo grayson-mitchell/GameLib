@@ -24,21 +24,16 @@ const syncTable: FixtureTable<typeof loggerSyncArgs> = {
       // what a bare Error serialises to across IPC
       [new Error('boom')],
       [{ message: 'boom', stack: 'Error: boom\n    at x' }],
-      [['a', 'b']]
-    ],
-    invalid: [
-      [],
-      [5],
-      [null],
+      [['a', 'b']],
+      // oversized text is valid: the handler truncates (67 review WR-03)
       ['x'.repeat(70000)],
-      [{ message: 'x', extra: 1 }],
-      ['a', 'b'],
       [Array.from({ length: 300 }, () => 'a')]
-    ]
+    ],
+    invalid: [[], [5], [null], [{ message: 'x', extra: 1 }], ['a', 'b']]
   },
   logInfo: {
-    valid: [['[BLANKPROBE] {"a":1}'], [['x']], ['']],
-    invalid: [[], [{ a: 1 }], [true], ['x'.repeat(70000)]]
+    valid: [['[BLANKPROBE] {"a":1}'], [['x']], [''], ['x'.repeat(70000)]],
+    invalid: [[], [{ a: 1 }], [true]]
   },
   showLogFileInFolder: {
     valid: [

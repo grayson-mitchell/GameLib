@@ -6,7 +6,11 @@
  * removed the call site while leaving this module intact -- lives in
  * `sidecar/__tests__/loggerFlows.test.ts`.
  */
-import { sanitizeRendererLogMessage } from '../sanitizeRendererLogMessage'
+import {
+  LOG_ARRAY_MAX,
+  LOG_TEXT_MAX,
+  sanitizeRendererLogMessage
+} from '../sanitizeRendererLogMessage'
 
 describe('sanitizeRendererLogMessage (IN-04)', () => {
   it('escapes a forged log line so it cannot occupy a line of its own', () => {
@@ -52,5 +56,22 @@ describe('sanitizeRendererLogMessage (IN-04)', () => {
     // breaks inside string values itself -- so this passes through untouched
     // BY DESIGN rather than by omission.
     expect(sanitizeRendererLogMessage(obj)).toBe(obj)
+  })
+
+  it('truncates oversized text with a marker instead of dropping it (WR-03)', () => {
+    const out = sanitizeRendererLogMessage(
+      'x'.repeat(LOG_TEXT_MAX + 10)
+    ) as string
+    expect(out.startsWith('x'.repeat(LOG_TEXT_MAX))).toBe(true)
+    expect(out).toContain('[truncated 10 bytes]')
+    expect(out.length).toBeLessThan(LOG_TEXT_MAX + 64)
+  })
+
+  it('caps array entry count with a marker entry (WR-03)', () => {
+    const out = sanitizeRendererLogMessage(
+      Array.from({ length: LOG_ARRAY_MAX + 5 }, () => 'a')
+    ) as string[]
+    expect(out).toHaveLength(LOG_ARRAY_MAX + 1)
+    expect(out[LOG_ARRAY_MAX]).toContain('[truncated 5 entries]')
   })
 })

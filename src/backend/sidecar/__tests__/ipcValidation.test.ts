@@ -7,7 +7,12 @@ import { z } from 'zod'
 
 import { handlerRegistry, listenerRegistry } from '../../platform'
 import { startRpcServer } from '../sidecarRpc'
-import { setIpcRejectionLogSink, validateInbound } from '../ipcValidation'
+import {
+  logRejection,
+  resetIpcRejectionThrottle,
+  setIpcRejectionLogSink,
+  validateInbound
+} from '../ipcValidation'
 import {
   UNPORTED_CHANNEL_MARKER,
   IPC_INVALID_ARGS_MARKER,
@@ -98,6 +103,7 @@ beforeEach(() => {
     return true
   }) as never)
   setIpcRejectionLogSink((l) => sinkLines.push(l))
+  resetIpcRejectionThrottle()
 })
 
 afterEach(() => {
@@ -292,5 +298,50 @@ describe('validateInbound: push entries are never inbound schemas (67 review WR-
     expect(validateInbound('inboundOk', 'invoke', [1, 'x'], schemas)).toEqual({
       ok: true
     })
+  })
+})
+
+describe('logRejection throttle (67 review WR-03)', () => {
+  const verdict = (channel: string) => ({
+    ok: false as const,
+    channel,
+    paths: ['0'],
+    codes: ['invalid_type']
+  })
+
+  afterEach(() => resetIpcRejectionThrottle())
+
+  it('logs the first 5 per channel per window, then one suppressed line on roll', () => {
+    let t = 1_000
+    resetIpcRejectionThrottle(() => t)
+    const lines: string[] = []
+    setIpcRejectionLogSink((l) => lines.push(l))
+    jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation((() => true) as never)
+    for (let i = 0; i < 100; i++) logRejection('send', verdict('hot'))
+    expect(lines).toHaveLength(5)
+    // an unrelated channel is unaffected
+    logRejection('send', verdict('cold'))
+    expect(lines).toHaveLength(6)
+    t += 60_000
+    logRejection('send', verdict('hot'))
+    expect(lines).toHaveLength(8)
+    expect(lines[6]).toContain('suppressed=95')
+    expect(lines[7]).toContain('IPC_INVALID_ARGS kind=send channel=hot paths=0')
+  })
+
+  it('bounds the number of tracked channels', () => {
+    resetIpcRejectionThrottle(() => 1)
+    const lines: string[] = []
+    setIpcRejectionLogSink((l) => lines.push(l))
+    jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation((() => true) as never)
+    for (let i = 0; i < 1000; i++) logRejection('send', verdict(`ch${i}`))
+    expect(lines).toHaveLength(1000)
+    // ch0 was evicted: its budget is fresh again rather than remembered forever
+    for (let i = 0; i < 5; i++) logRejection('send', verdict('ch0'))
+    expect(lines).toHaveLength(1005)
   })
 })

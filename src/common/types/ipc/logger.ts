@@ -12,17 +12,19 @@ import {
 
 const noArgs = z.tuple([])
 
-// D-09: renderer text is bounded, never z.any(). Observed shapes: a string (nearly every
+// D-09: renderer text is typed, never z.any(). Observed shapes: a string (nearly every
 // caller), a string array, and an Error-like object. A real Error JSON-serialises to `{}`
 // (message and stack are non-enumerable), so the object arm accepts that too; the global
 // error handler in frontend/index.tsx stringifies before sending so the text survives.
-const LOG_TEXT_MAX = 65536
-const logText = z.string().max(LOG_TEXT_MAX)
+// Length is deliberately NOT validated (67 review WR-03): rejecting would replace a long
+// diagnostic with a one-line `too_big`. The handler truncates instead
+// (backend/logger/sanitizeRendererLogMessage.ts); the 10 MiB frame limit is the hard bound.
+const logText = z.string()
 const logMessage = z.union([
   logText,
-  z.array(logText).max(256),
+  z.array(logText),
   z.strictObject({
-    name: z.string().max(1024).optional(),
+    name: z.string().optional(),
     message: logText.optional(),
     stack: logText.optional()
   })
