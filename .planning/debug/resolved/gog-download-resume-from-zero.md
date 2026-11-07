@@ -1,5 +1,5 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "GOG download resume restarts from 0% — todo .planning/todos/pending/2026-11-07-gog-download-resume-restarts-from-zero.md"
 created: 2026-11-07
 updated: 2026-11-07
@@ -29,5 +29,5 @@ updated: 2026-11-07
 
 - root_cause: gogdl resumes but reports Progress against remaining bytes, so GameLib UI shows 0%.
 - fix: remember max total per game, fold pre-pause bytes into percent (resumeProgress.ts, wired in GOGGame.onInstallOrUpdateOutput).
-- verification: unit test only; live pause/resume UAT pending
+- verification: unit tests pass; operator live pause/resume UAT passed 2026-11-07 (percent continues from pause point)
 - files_changed: src/backend/storeManagers/gog/resumeProgress.ts, games.ts, __tests__/resumeProgress.test.ts
