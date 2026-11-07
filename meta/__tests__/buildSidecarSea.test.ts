@@ -39,6 +39,7 @@ import {
   classifyNodeBase,
   formatPostjectFailure
 } from '../buildSidecarSea'
+import { at } from './fixtures/indexed'
 
 const SENTINEL_FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2'
 
@@ -256,7 +257,7 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
       'darwin'
     )
     expect(darwinArgv.args[0]).toMatch(/postject[\\/]dist[\\/]cli\.js$/)
-    expect(existsSync(darwinArgv.args[0])).toBe(true)
+    expect(existsSync(at(darwinArgv.args, 0, 'darwinArgv.args'))).toBe(true)
   })
 
   test('buildPostjectArgv(...).args carries the sentinel fuse + darwin NODE_SEA flag AFTER the CLI path', () => {
@@ -288,7 +289,7 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
       // through process.execPath exactly like postject's CLI.
       expect(esbuildArgv.command).toBe(process.execPath)
       expect(esbuildArgv.args[0]).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
-      expect(existsSync(esbuildArgv.args[0])).toBe(true)
+      expect(existsSync(at(esbuildArgv.args, 0, 'esbuildArgv.args'))).toBe(true)
     } else {
       // On macOS/Linux, esbuild's own installer replaces bin/esbuild with
       // the raw native binary -- it is directly spawnable and is NOT
@@ -307,7 +308,7 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
     const winArgv = buildEsbuildArgv('win32')
     expect(winArgv.command).toBe(process.execPath)
     expect(winArgv.args[0]).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
-    expect(existsSync(winArgv.args[0])).toBe(true)
+    expect(existsSync(at(winArgv.args, 0, 'winArgv.args'))).toBe(true)
   })
 
   test('WR-06: the non-win32 branches spawn the esbuild binary directly (asserted on every host)', () => {
@@ -396,7 +397,7 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
     // path itself.
     expect(postjectArgv.command).toBe(process.execPath)
     expect(existsSync(postjectArgv.command)).toBe(true)
-    expect(existsSync(postjectArgv.args[0])).toBe(true)
+    expect(existsSync(at(postjectArgv.args, 0, 'postjectArgv.args'))).toBe(true)
 
     expect(existsSync(esbuildArgv.command)).toBe(true)
     expect(existsSync(seaBlobArgv.command)).toBe(true)
@@ -543,7 +544,7 @@ describe('buildWorkerEsbuildArgv (decompress-worker SEA bundle)', () => {
     const argv = buildWorkerEsbuildArgv('win32')
     expect(argv.command).toBe(process.execPath)
     expect(argv.args[0]).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
-    expect(existsSync(argv.args[0])).toBe(true)
+    expect(existsSync(at(argv.args, 0, 'argv.args'))).toBe(true)
   })
 
   test('WR-06: the non-win32 branches spawn the worker esbuild binary directly', () => {

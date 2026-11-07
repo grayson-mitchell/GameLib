@@ -27,6 +27,7 @@ import {
   splitProtonParam,
   type WirePolicy
 } from '../extractProtonInventory'
+import { at, defined } from './fixtures/indexed'
 
 const FIXTURE_PATH = join(__dirname, 'fixtures', 'protonThunkExcerpt.txt')
 const fixtureText = readFileSync(FIXTURE_PATH, 'utf-8')
@@ -323,7 +324,7 @@ describe('53-12: struct-pointer returns never emit pointer + synthetic _ret', ()
     ].join('\n')
 
   it('a measured struct pointer return is class + structSize with `_ret` stripped', () => {
-    const [m] = parseProtonThunks(
+    const [maybeM] = parseProtonThunks(
       thunk(
         'InputAnalogActionData_t *',
         ', InputAnalogActionData_t *_ret, uint64_t h'
@@ -331,6 +332,7 @@ describe('53-12: struct-pointer returns never emit pointer + synthetic _ret', ()
       'AbiFamily',
       'AbiFamily003'
     )
+    const m = defined(maybeM, 'parsed thunk')
     expect(m.returnKind).toBe('class')
     expect(m.structSize).toBe(16)
     expect(m.params).toEqual([{ name: 'h', type: 'uint64' }])
@@ -356,11 +358,12 @@ describe('53-12: struct-pointer returns never emit pointer + synthetic _ret', ()
   })
 
   it('a genuine void * return keeps its params and stays pointer (51-14 regression)', () => {
-    const [m] = parseProtonThunks(
+    const [maybeM] = parseProtonThunks(
       thunk('void *', ', uint32_t a, uint32_t b'),
       'AbiFamily',
       'AbiFamily003'
     )
+    const m = defined(maybeM, 'parsed thunk')
     expect(m.returnKind).toBe('pointer')
     expect(m.params).toHaveLength(2)
   })
@@ -504,8 +507,8 @@ describe('demoteSignatureMismatches (58-18, T-58-56)', () => {
       'SteamNetworkingSockets',
       ref
     )
-    expect(out[0].mode).toBe('wire')
-    expect(out[1].mode).toBe('stub')
+    expect(at(out, 0, 'out').mode).toBe('wire')
+    expect(at(out, 1, 'out').mode).toBe('stub')
   })
 
   test('is a no-op for the newest version and for unchecked families', () => {

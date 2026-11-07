@@ -207,6 +207,7 @@ export function extractRecords(parsed: RawDump): DumpRecord[] {
       compareVersion(y['@_version'] ?? '0', x['@_version'] ?? '0')
     )
     const best = sorted[0]
+    if (best === undefined) continue // unreachable: macMedals is non-empty
 
     records.push({
       appid: String(app['@_appid']),
@@ -258,11 +259,15 @@ export function dedupRecords(records: DumpRecord[]): DedupResult {
   // order — so this is deterministic and never throws on ties (D-05).
   for (const [key, group] of groups) {
     const sortedGroup = [...group].sort(winner)
-    winners.push(sortedGroup[0])
+    const winnerRecord = sortedGroup[0]
+    if (winnerRecord === undefined) {
+      throw new Error(`buildCrossoverIndex: empty collision group for ${key}`)
+    }
+    winners.push(winnerRecord)
     if (sortedGroup.length > 1) {
       collisions.push({
         key,
-        winnerAppid: sortedGroup[0].appid,
+        winnerAppid: winnerRecord.appid,
         loserAppids: sortedGroup.slice(1).map((r) => r.appid)
       })
     }

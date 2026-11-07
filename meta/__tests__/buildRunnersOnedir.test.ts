@@ -21,6 +21,7 @@ import {
   type RunnerBuildResult
 } from '../buildRunnersOnedir'
 import { RELEASE_TAGS } from '../releaseTags'
+import { at } from './fixtures/indexed'
 
 // Structural source assertion -- proves the extraction refactor (Task 1)
 // changed no vendoring behaviour: every pre-existing win32/linux/darwin asset
@@ -754,7 +755,7 @@ describe('buildRunnersOnedir', () => {
         expect(lines).toHaveLength(3)
         lines.forEach((line, index) => {
           expect(line).toMatch(/^[0-9a-f]{64} {2}\S+$/)
-          const result = FIXTURE_RESULTS[index]
+          const result = at(FIXTURE_RESULTS, index, 'FIXTURE_RESULTS')
           expect(line).toBe(
             `${result.archiveSha256}  ${archiveName(result.runner, 'arm64')}`
           )
@@ -773,7 +774,11 @@ describe('buildRunnersOnedir', () => {
       it('vacuity guard: a different archiveSha256 produces different output', () => {
         const mutated = FIXTURE_RESULTS.map((r, index) =>
           index === 0
-            ? { ...r, archiveSha256: FIXTURE_RESULTS[1].archiveSha256 }
+            ? {
+                ...r,
+                archiveSha256: at(FIXTURE_RESULTS, 1, 'FIXTURE_RESULTS')
+                  .archiveSha256
+              }
             : r
         )
         const original = formatSha256Sums('arm64', FIXTURE_RESULTS)
@@ -785,21 +790,22 @@ describe('buildRunnersOnedir', () => {
     describe('buildManifestObject', () => {
       it('has exactly the three runner keys plus runId at the top level, with every per-runner field preserved (undefined workingDirectory collapsed to null)', () => {
         const manifest = buildManifestObject('arm64', FIXTURE_RESULTS)
+        const legendaryFixture = at(FIXTURE_RESULTS, 0, 'FIXTURE_RESULTS')
         expect(Object.keys(manifest).sort()).toEqual(
           ['gogdl', 'legendary', 'nile', 'runId'].sort()
         )
         expect(manifest.legendary).toEqual({
-          repo: FIXTURE_RESULTS[0].repo,
-          tag: FIXTURE_RESULTS[0].tag,
-          upstreamPyinstallerLine: FIXTURE_RESULTS[0].upstreamLine,
+          repo: legendaryFixture.repo,
+          tag: legendaryFixture.tag,
+          upstreamPyinstallerLine: legendaryFixture.upstreamLine,
           upstreamWorkingDirectory: null,
-          onedirCommand: FIXTURE_RESULTS[0].onedirCommand,
-          droppedExpressions: FIXTURE_RESULTS[0].droppedExpressions,
-          python3Version: FIXTURE_RESULTS[0].python3Version,
-          pyinstallerVersion: FIXTURE_RESULTS[0].pyinstallerVersion,
-          archiveSha256: FIXTURE_RESULTS[0].archiveSha256,
-          fileCount: FIXTURE_RESULTS[0].fileCount,
-          machoCount: FIXTURE_RESULTS[0].machoCount
+          onedirCommand: legendaryFixture.onedirCommand,
+          droppedExpressions: legendaryFixture.droppedExpressions,
+          python3Version: legendaryFixture.python3Version,
+          pyinstallerVersion: legendaryFixture.pyinstallerVersion,
+          archiveSha256: legendaryFixture.archiveSha256,
+          fileCount: legendaryFixture.fileCount,
+          machoCount: legendaryFixture.machoCount
         })
         expect(
           (manifest.gogdl as { upstreamWorkingDirectory: unknown })

@@ -4,6 +4,7 @@
  */
 import { ESLint } from 'eslint'
 import tseslint from 'typescript-eslint'
+import { defined } from './fixtures/indexed'
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { SELECTORS, STORE_LITERALS } = require('../runnerLiteralSelectors.cjs')
@@ -21,7 +22,9 @@ const eslint = new ESLint({
 
 async function hits(code: string): Promise<number> {
   const [res] = await eslint.lintText(code, { filePath: 'x.tsx' })
-  return res.messages.filter((m) => m.ruleId === 'no-restricted-syntax').length
+  return defined(res, 'lint result').messages.filter(
+    (m) => m.ruleId === 'no-restricted-syntax'
+  ).length
 }
 
 describe('runner literal selectors: HIT', () => {

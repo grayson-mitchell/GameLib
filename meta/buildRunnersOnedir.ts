@@ -189,7 +189,7 @@ export function archiveName(runner: string, arch: string): string {
 
 function indentOf(line: string): number {
   const match = line.match(/^( *)/)
-  return match ? match[1].length : 0
+  return (match?.[1] ?? '').length
 }
 
 interface RunValueMatch {
@@ -215,19 +215,20 @@ function findSiblingKey(
 ): string | undefined {
   for (let k = runLineIndex - 1; k >= 0; k--) {
     const line = lines[k]
+    if (line === undefined) continue
     if (line.trim() === '') continue
     const lineIndent = indentOf(line)
     if (lineIndent < keyIndent) break // left this step's key block entirely
 
     if (lineIndent === keyIndent) {
       const dashMatch = line.match(/^\s*-\s+(.*)$/)
-      const content = dashMatch ? dashMatch[1] : line.trim()
+      const content = dashMatch?.[1] ?? line.trim()
       const kv = content.match(
         new RegExp(
           `^${keyName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:\\s*(.*)$`
         )
       )
-      if (kv) return kv[1].trim()
+      if (kv) return (kv[1] ?? '').trim()
       if (dashMatch) break // "- name: ..." start-of-step line -- stop here
     }
     // lineIndent > keyIndent is a continuation of some other folded value;
@@ -241,16 +242,16 @@ function extractRunValues(text: string): RunValueMatch[] {
   const values: RunValueMatch[] = []
 
   for (let i = 0; i < lines.length; i++) {
-    const match = lines[i].match(/^(\s*)(?:-\s+)?run:\s?(.*)$/)
+    const match = (lines[i] ?? '').match(/^(\s*)(?:-\s+)?run:\s?(.*)$/)
     if (!match) continue
 
-    const [, keyIndentStr, remainder] = match
+    const [, keyIndentStr = '', remainder = ''] = match
     const keyIndent = keyIndentStr.length
     const parts = [remainder]
 
     let j = i + 1
     while (j < lines.length) {
-      const next = lines[j]
+      const next = lines[j] ?? ''
       if (next.trim() === '') break
       if (indentOf(next) <= keyIndent) break
       parts.push(next.trim())
@@ -427,11 +428,15 @@ export function extractUpstreamPyinstallerCommand(
     )
   }
 
+  const [first] = matches
+  if (first === undefined) {
+    throw new Error(`no pyinstaller invocation under ${workflowsDir}`)
+  }
   return {
-    command: matches[0].command,
-    workingDirectory: matches[0].workingDirectory,
-    form: matches[0].form,
-    pyinstallerArgs: matches[0].pyinstallerArgs
+    command: first.command,
+    workingDirectory: first.workingDirectory,
+    form: first.form,
+    pyinstallerArgs: first.pyinstallerArgs
   }
 }
 

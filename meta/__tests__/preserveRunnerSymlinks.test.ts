@@ -58,6 +58,7 @@ import {
   restoreSymlinks,
   symlinkTypeFor
 } from '../preserveRunnerSymlinks'
+import { at } from './fixtures/indexed'
 
 const GOGDL_INTERNAL = join('bin', 'arm64', 'darwin', 'gogdl', '_internal')
 
@@ -436,7 +437,7 @@ describe('preserveRunnerSymlinks', () => {
     const records = collectSymlinks(root)
 
     expect(records).toHaveLength(1)
-    expect(records[0].relPath).toBe('dir-link')
+    expect(at(records, 0, 'records').relPath).toBe('dir-link')
   })
 
   it('restoreSymlinks is idempotent: a second call over an already-restored tree yields identical link targets', () => {
@@ -461,7 +462,7 @@ describe('preserveRunnerSymlinks', () => {
 
   it('vacuity guard: buildOrphanDestFixture genuinely produces a skipped condition (no restore is possible)', () => {
     const { sourceRoot, destRoot, relPaths } = buildOrphanDestFixture()
-    const firstRelPath = relPaths[0]
+    const firstRelPath = at(relPaths, 0, 'relPaths')
     expect(existsSync(join(destRoot, ...firstRelPath.split('/')))).toBe(false)
 
     const { restored, skipped } = restoreSymlinks(sourceRoot, destRoot)

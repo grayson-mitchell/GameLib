@@ -96,8 +96,11 @@ function sha256Hex(bytes: Uint8Array): string {
 function compareSegments(a: string[], b: string[]): number {
   const n = Math.min(a.length, b.length)
   for (let i = 0; i < n; i++) {
-    if (a[i] < b[i]) return -1
-    if (a[i] > b[i]) return 1
+    const x = a[i]
+    const y = b[i]
+    if (x === undefined || y === undefined) continue // unreachable: i < n
+    if (x < y) return -1
+    if (x > y) return 1
   }
   return a.length - b.length
 }
@@ -173,7 +176,7 @@ export function unixSourcesFromMakefileIn(text: string): string[] {
   const out: string[] = []
   for (const line of text.split('\n')) {
     const m = /^\s*([A-Za-z0-9_]+\.cpp)\s*\\?\s*$/.exec(line)
-    if (m) out.push(m[1])
+    if (m?.[1] !== undefined) out.push(m[1])
   }
   return out
 }
@@ -273,17 +276,23 @@ export function buildConfigureArgv(opts: {
 /** PE machine field, or null on any bounds/magic failure. Never throws. */
 export function peMachine(bytes: Uint8Array): number | null {
   if (bytes.length < 0x40) return null
+  // Every read below is bounds-checked above (length >= 0x40, then
+  // lfanew + 6 <= length), so the `?? 0` is never a real default.
+  const byteAt = (k: number): number => bytes[k] ?? 0
   const lfanew =
-    bytes[0x3c] | (bytes[0x3d] << 8) | (bytes[0x3e] << 16) | (bytes[0x3f] << 24)
+    byteAt(0x3c) |
+    (byteAt(0x3d) << 8) |
+    (byteAt(0x3e) << 16) |
+    (byteAt(0x3f) << 24)
   if (lfanew < 0 || lfanew + 6 > bytes.length) return null
   if (
-    bytes[lfanew] !== 0x50 ||
-    bytes[lfanew + 1] !== 0x45 ||
-    bytes[lfanew + 2] !== 0 ||
-    bytes[lfanew + 3] !== 0
+    byteAt(lfanew) !== 0x50 ||
+    byteAt(lfanew + 1) !== 0x45 ||
+    byteAt(lfanew + 2) !== 0 ||
+    byteAt(lfanew + 3) !== 0
   )
     return null
-  return bytes[lfanew + 4] | (bytes[lfanew + 5] << 8)
+  return byteAt(lfanew + 4) | (byteAt(lfanew + 5) << 8)
 }
 
 export interface OutputFacts {
@@ -760,20 +769,25 @@ export async function main(): Promise<void> {
   const worker = async () => {
     while (next < sources.length) {
       const i = next++
-      const cpp = join(dllDir, sources[i])
+      const source = sources[i]
+      const objPath = objs[i]
+      if (source === undefined || objPath === undefined) {
+        throw new Error(`buildLsteamclient: no source/object at index ${i}`)
+      }
+      const cpp = join(dllDir, source)
       if (
-        existsSync(objs[i]) &&
-        statSync(objs[i]).mtimeMs > statSync(cpp).mtimeMs
+        existsSync(objPath) &&
+        statSync(objPath).mtimeMs > statSync(cpp).mtimeMs
       )
         continue
       const a = buildUnixCompileArgv({
         src: srcDir,
         build: buildDir,
         cpp,
-        obj: objs[i],
+        obj: objPath,
         prefixMap: workRoot
       })
-      await runStep(`unix-cc-${sources[i]}`, a.command, a.args, buildDir)
+      await runStep(`unix-cc-${source}`, a.command, a.args, buildDir)
     }
   }
   await Promise.all(Array.from({ length: Number(j) }, worker))

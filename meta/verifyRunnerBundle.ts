@@ -547,7 +547,7 @@ function getSignatureState(filePath: string): string {
   }
 
   const authorityMatch = stderr.match(/Authority=([^\r\n]+)/)
-  if (authorityMatch) {
+  if (authorityMatch?.[1] !== undefined) {
     return `signed:${authorityMatch[1].trim()}`
   }
 

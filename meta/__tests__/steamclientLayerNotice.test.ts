@@ -37,8 +37,12 @@ import {
   payloadFileName
 } from '../buildDrmNativeParts'
 import { LSTEAMCLIENT_PINS, lsteamclientOutputDir } from '../buildLsteamclient'
+import { defined } from './fixtures/indexed'
 
 const BUILD = '26.3.0.39832'
+const detourRow = () =>
+  defined(DETOUR_BUILD_ROWS[BUILD], `DETOUR_BUILD_ROWS[${BUILD}]`)
+
 const sha = (b: Buffer | string) => createHash('sha256').update(b).digest('hex')
 const noticeBytes = readFileSync(NOTICE_SOURCE_PATH)
 
@@ -177,9 +181,9 @@ describe('steamclientLayerCatalogue', () => {
     const e = lookupSteamclientLayer(BUILD)!
     const pin = (p: string) => e.files.find((f) => f.path === p)!
     const detour = pin(payloadFileName(BUILD))
-    expect(detour.sha256).toBe(DETOUR_BUILD_ROWS[BUILD].payloadSha256)
+    expect(detour.sha256).toBe(detourRow().payloadSha256)
     expect(detour.size).toBeGreaterThan(0)
-    expect(detour.size).toBeLessThanOrEqual(DETOUR_BUILD_ROWS[BUILD].caveSize)
+    expect(detour.size).toBeLessThanOrEqual(detourRow().caveSize)
     expect(pin('LICENSE.lsteamclient').sha256).toBe(STEAMWORKS_LICENSE_SHA256)
     expect(STEAMWORKS_LICENSE_SHA256).toBe(LSTEAMCLIENT_PINS.licenseSha256)
     expect(pin('NOTICE').sha256).toBe(sha(noticeBytes))
@@ -376,7 +380,7 @@ describe('real staging dir', () => {
           build: BUILD,
           files: real(),
           committedNotice: noticeBytes,
-          caveSize: DETOUR_BUILD_ROWS[BUILD].caveSize,
+          caveSize: detourRow().caveSize,
           homeDir: homedir()
         })
       ).toEqual({ ok: true })

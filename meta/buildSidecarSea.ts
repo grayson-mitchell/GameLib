@@ -1034,7 +1034,14 @@ async function obtainOfficialNodeBinary(triple: string): Promise<string> {
         `${archiveName} at ${shasumsUrl}`
     )
   }
-  const expectedHash = shasumsLine.trim().split(/\s+/)[0].toLowerCase()
+  const expectedHashField = shasumsLine.trim().split(/\s+/)[0]
+  if (expectedHashField === undefined) {
+    throw new Error(
+      `COMPILE GATE FAILED (D-06/T-34-15): empty SHASUMS256.txt entry for ` +
+        `${archiveName} at ${shasumsUrl}`
+    )
+  }
+  const expectedHash = expectedHashField.toLowerCase()
 
   const archiveBytes = await readFile(archivePath)
   const actualHash = createHash('sha256').update(archiveBytes).digest('hex')

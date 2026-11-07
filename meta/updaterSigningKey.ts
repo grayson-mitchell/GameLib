@@ -119,13 +119,18 @@ export function keyIdFromMinisignFile(base64FileContent: string): string {
     'utf-8'
   )
   const lines = decodedText.split('\n')
-  if (lines.length < 2 || lines[1].trim().length === 0) {
+  const bodyLine = lines[1]
+  if (
+    lines.length < 2 ||
+    bodyLine === undefined ||
+    bodyLine.trim().length === 0
+  ) {
     throw new Error(
       `keyIdFromMinisignFile: expected a two-line minisign file (comment + ` +
         `body), got ${lines.length} line(s) after decoding`
     )
   }
-  const bodyBytes = Buffer.from(lines[1].trim(), 'base64')
+  const bodyBytes = Buffer.from(bodyLine.trim(), 'base64')
   if (bodyBytes.length < 10) {
     throw new Error(
       `keyIdFromMinisignFile: decoded body is only ${bodyBytes.length} ` +

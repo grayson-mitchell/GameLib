@@ -99,7 +99,11 @@ export function parseSha256Sums(text: string, arch: Arch): ParsedSumLine[] {
           `"<64 lowercase hex><two spaces><filename>"`
       )
     }
-    return { digest: match[1], filename: match[2] }
+    const [, digest, filename] = match
+    if (digest === undefined || filename === undefined) {
+      throw new Error(`Malformed SHA256SUMS-${arch} line: "${line}"`)
+    }
+    return { digest, filename }
   })
 }
 

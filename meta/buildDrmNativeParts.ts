@@ -276,8 +276,13 @@ function parseArgs(argv: string[]): { build: string; out?: string } {
   let build = '26.3.0.39832'
   let out: string | undefined
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === '--build') build = argv[++i]
-    else if (argv[i] === '--out') out = argv[++i]
+    if (argv[i] === '--build') {
+      const value = argv[++i]
+      if (value === undefined) {
+        throw new Error('buildDrmNativeParts: --build requires a value')
+      }
+      build = value
+    } else if (argv[i] === '--out') out = argv[++i]
   }
   return { build, out }
 }

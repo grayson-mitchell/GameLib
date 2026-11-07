@@ -32,6 +32,7 @@ import {
   summarise,
   type TreeCensus
 } from '../verifyRunnerBundle'
+import { defined } from './fixtures/indexed'
 
 const ARCH = 'arm64'
 
@@ -249,7 +250,7 @@ describe('verifyRunnerBundle', () => {
   it('missing runner: deleting nile/nile fails and names nile + the absolute path', () => {
     root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-missing-'))
     const { binaryPaths } = buildPassCaseFixture(root)
-    rmSync(binaryPaths.nile)
+    rmSync(defined(binaryPaths.nile, 'binaryPaths.nile'))
 
     const results = inspectRunnerTree(root, ARCH)
     const summary = summarise(results)
@@ -263,7 +264,7 @@ describe('verifyRunnerBundle', () => {
   it('non-executable: chmod 0o644 on gogdl/gogdl fails and names the exec bit', () => {
     root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-noexec-'))
     const { binaryPaths } = buildPassCaseFixture(root)
-    chmodSync(binaryPaths.gogdl, 0o644)
+    chmodSync(defined(binaryPaths.gogdl, 'binaryPaths.gogdl'), 0o644)
 
     const results = inspectRunnerTree(root, ARCH)
     const summary = summarise(results)
@@ -277,8 +278,11 @@ describe('verifyRunnerBundle', () => {
   it('not Mach-O: legendary/legendary as plain text fails and says so', () => {
     root = mkdtempSync(join(tmpdir(), 'verify-runner-bundle-notmacho-'))
     const { binaryPaths } = buildPassCaseFixture(root)
-    writeFileSync(binaryPaths.legendary, 'this is not a mach-o binary')
-    chmodSync(binaryPaths.legendary, 0o755)
+    writeFileSync(
+      defined(binaryPaths.legendary, 'binaryPaths.legendary'),
+      'this is not a mach-o binary'
+    )
+    chmodSync(defined(binaryPaths.legendary, 'binaryPaths.legendary'), 0o755)
 
     const results = inspectRunnerTree(root, ARCH)
     const summary = summarise(results)

@@ -11,12 +11,17 @@ import {
   missingDrmNativeInputs,
   missingDrmNativeTools
 } from '../buildDrmNativeParts'
+import { at, defined } from './fixtures/indexed'
 
 const PIN = 'e35b834408599c45f30b23a6d2bf38acfa5c3df4d15206617c471e23a4a01bfb'
 const BUILD = '26.3.0.39832'
 const PATCH_DIR = 'native/steam-bridge/steamclient-layer/ntdll-patch'
 const HELPER_SRC = 'native/steam-bridge/steamclient-layer/helper/steam.c'
 
+const detourRow = defined(
+  DETOUR_BUILD_ROWS[BUILD],
+  `DETOUR_BUILD_ROWS[${BUILD}]`
+)
 const read = (p: string) => readFileSync(join(__dirname, '..', '..', p), 'utf8')
 
 describe('buildHelperExeCompileArgv', () => {
@@ -35,11 +40,7 @@ describe('buildHelperExeCompileArgv', () => {
 })
 
 describe('buildDetourPayloadSteps', () => {
-  const steps = buildDetourPayloadSteps(
-    DETOUR_BUILD_ROWS[BUILD],
-    '/tmp/w',
-    '/out'
-  )
+  const steps = buildDetourPayloadSteps(detourRow, '/tmp/w', '/out')
 
   it('returns the four mingw-w64 steps in order', () => {
     expect(steps.map((s) => s.command)).toEqual([
@@ -51,7 +52,7 @@ describe('buildDetourPayloadSteps', () => {
   })
 
   it('compiles detour.c freestanding', () => {
-    const a = steps[0].args
+    const a = at(steps, 0, 'steps').args
     for (const f of [
       '-Os',
       '-fno-asynchronous-unwind-tables',
@@ -64,7 +65,7 @@ describe('buildDetourPayloadSteps', () => {
   })
 
   it('assembles shim.S with the per-build macros', () => {
-    const a = steps[1].args
+    const a = at(steps, 1, 'steps').args
     expect(a).toContain('-DWM_REG=r14')
     expect(a).toContain('-DSCRATCH_REG=rbx')
     expect(a).toContain('-DLOAD_PATH_SLOT=0xd0')
@@ -74,18 +75,22 @@ describe('buildDetourPayloadSteps', () => {
   })
 
   it('links with the link script and every defsym', () => {
-    const a = steps[2].args
-    expect(a[a.indexOf('-T') + 1].endsWith('ntdll-patch/link.ld')).toBe(true)
+    const a = at(steps, 2, 'steps').args
+    expect(
+      at(a, a.indexOf('-T') + 1, 'link script arg').endsWith(
+        'ntdll-patch/link.ld'
+      )
+    ).toBe(true)
     expect(a).toContain('CAVE_VA=0x1700ae000')
     expect(a).toContain('BM_RESUME=0x17004497b')
     expect(a).toContain('LDR_GETDLLHANDLE=0x170014bc0')
     expect(a).toContain('LDR_LOADDLL=0x170015680')
     expect(a).toContain('NT_PROTECT=0x17000f380')
-    expect(steps[2].cwd).toBe('/tmp/w')
+    expect(at(steps, 2, 'steps').cwd).toBe('/tmp/w')
   })
 
   it('extracts .cave into the named bin', () => {
-    const a = steps[3].args
+    const a = at(steps, 3, 'steps').args
     expect(a.slice(0, 4)).toEqual(['-O', 'binary', '-j', '.cave'])
     expect(a[a.length - 1]).toBe(join('/out', `detour-cx${BUILD}.bin`))
   })
@@ -94,7 +99,7 @@ describe('buildDetourPayloadSteps', () => {
 describe('DETOUR_BUILD_ROWS', () => {
   it('holds exactly the one allowlisted build', () => {
     expect(Object.keys(DETOUR_BUILD_ROWS)).toEqual([BUILD])
-    const row = DETOUR_BUILD_ROWS[BUILD]
+    const row = detourRow
     expect(row.payloadSha256).toBe(PIN)
     expect(row.hookRva).toBe(0x44972)
     expect(row.resumeRva).toBe(0x4497b)
@@ -103,7 +108,7 @@ describe('DETOUR_BUILD_ROWS', () => {
 })
 
 describe('checkPayloadSha', () => {
-  const row = DETOUR_BUILD_ROWS[BUILD]
+  const row = detourRow
   it('accepts a buffer matching the pin', () => {
     const buf = Buffer.from('payload')
     const r = checkPayloadSha(buf, {

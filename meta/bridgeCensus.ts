@@ -148,6 +148,27 @@ import {
   type BridgeScanDeps
 } from '../src/backend/storeManagers/steam/bridge/bridgeScan'
 
+/** Capture group `n` of a regex match whose pattern makes the group
+ * mandatory. A missing group means the pattern and its caller disagree, so it
+ * throws rather than defaulting. */
+function capture(m: RegExpMatchArray, n: number): string {
+  const value = m[n]
+  if (value === undefined) {
+    throw new Error(`bridgeCensus: regex capture group ${String(n)} missing`)
+  }
+  return value
+}
+
+/** Element `i` of an array that is parallel to a sibling array of equal
+ * length; a short array fails loudly. */
+function parallelAt<T>(arr: readonly T[], i: number, what: string): T {
+  const value = arr[i]
+  if (value === undefined) {
+    throw new Error(`bridgeCensus: ${what}[${String(i)}] missing`)
+  }
+  return value
+}
+
 // ---------------------------------------------------------------------------
 // Pure classifier
 // ---------------------------------------------------------------------------
@@ -821,7 +842,7 @@ export function attributeHelperLines(appid: string, text: string): string[] {
   for (const line of text.split('\n')) {
     const m = HELPER_PREFIX.exec(line)
     if (m) {
-      current = m[1]
+      current = capture(m, 1)
       if (current === appid) out.push(line.slice(m.index + m[0].length))
       continue
     }
@@ -909,7 +930,7 @@ function findGameCalls(appid: string, appLogTexts: string[]): string[] {
     if (h < 0) continue
     for (const l of payloads.slice(h + 1)) {
       const m = call.exec(l)
-      if (m) found.add(m[1])
+      if (m) found.add(capture(m, 1))
     }
   }
   return [...found]
@@ -954,8 +975,10 @@ function findGameInit(
     for (const l of payloads.slice(h + 1)) {
       const m = ginit.exec(l)
       if (!m) continue
-      if (m[3] === '1' && m[4] === '1') return { fn: m[1], success: true }
-      failure ??= { fn: m[1], success: false }
+      if (m[3] === '1' && m[4] === '1') {
+        return { fn: capture(m, 1), success: true }
+      }
+      failure ??= { fn: capture(m, 1), success: false }
     }
   }
   return failure
@@ -967,7 +990,7 @@ function findNover(appid: string, appLogTexts: string[]): string | null {
   for (const text of appLogTexts) {
     for (const l of attributeHelperLines(appid, text)) {
       const m = /^\[[^\]]*\]\s+NOVER\s+flat lookup ver=([A-Za-z0-9_]+)/.exec(l)
-      if (m) return m[1]
+      if (m) return capture(m, 1)
     }
   }
   return null
@@ -1016,7 +1039,9 @@ function findDrmGameLogFailure(gameLogTexts: string[]): BridgeEvidence | null {
     const missing = text.match(
       /EntryPointNotFoundException:\s*((?:SteamAPI|SteamInternal)_\w+)/
     )
-    if (missing) return { status: 'init-failed', detail: missing[1] }
+    if (missing) {
+      return { status: 'init-failed', detail: capture(missing, 1) }
+    }
   }
   const initFail =
     /(SteamAPI[_.]Init(Ex)?)\s*(\(\))?[^\n]*?(failed|returned false)/i
@@ -1205,7 +1230,7 @@ export function classifyBridgeEvidence(input: {
       /EntryPointNotFoundException:\s*((?:SteamAPI|SteamInternal)_\w+)/
     )
     if (missing) {
-      return { status: 'init-failed', detail: missing[1] }
+      return { status: 'init-failed', detail: capture(missing, 1) }
     }
   }
   const initFail =
@@ -1369,7 +1394,7 @@ function readManifests(
         continue
       }
       out.push({
-        appid: match[1],
+        appid: capture(match, 1),
         name,
         installdir,
         installPath: join(steamappsDir, 'common', installdir),
@@ -1896,6 +1921,7 @@ export function selectCensusExe(
 ): { chosen: ChosenExe; archNote: string } | null {
   if (candidates.length === 0) return null
   const first = candidates[0]
+  if (first === undefined) return null
   const hasBoth =
     candidates.some((c) => c.table.arch === 'x86') &&
     candidates.some((c) => c.table.arch === 'x64')
@@ -2246,8 +2272,8 @@ export async function runCensus(): Promise<CensusRow[]> {
   const metadataText = loadSteamMetadataText()
   const appLogs = findAppLogs()
   const appLogTexts: AppLogFile[] = appLogs.texts.map((text, i) => ({
-    name: appLogs.names[i],
-    mtimeMs: appLogs.mtimes[i],
+    name: parallelAt(appLogs.names, i, 'appLogs.names'),
+    mtimeMs: parallelAt(appLogs.mtimes, i, 'appLogs.mtimes'),
     text
   }))
   lastLogsRead = appLogs.names
@@ -2459,7 +2485,9 @@ export function classifyMultiplayerEvidence(input: {
   for (const payload of attributeHelperLines(input.appid, segment)) {
     const dir = NET_DIRECTION_CALL_RE.exec(payload)
     if (dir) {
-      if (/\.(AcceptConnection|AcceptP2PSessionWithUser)$/.test(dir[1])) {
+      if (
+        /\.(AcceptConnection|AcceptP2PSessionWithUser)$/.test(capture(dir, 1))
+      ) {
         host = true
       } else client = true
       continue
@@ -2564,8 +2592,8 @@ async function main(): Promise<void> {
       appid: args.appid,
       drmMode: args.drm,
       appLogTexts: logs.texts.map((text, i) => ({
-        name: logs.names[i],
-        mtimeMs: logs.mtimes[i],
+        name: parallelAt(logs.names, i, 'logs.names'),
+        mtimeMs: parallelAt(logs.mtimes, i, 'logs.mtimes'),
         text
       }))
     })

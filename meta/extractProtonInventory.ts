@@ -234,17 +234,30 @@ export function mapProtonCType(rawType: string): string {
  * generic `void*` -- their inner argument list is never marshaled
  * (always stub mode in this plan's scope: a callback registration method
  * has no sensible wire representation). */
+/** Capture group `n` of a match whose pattern makes the group mandatory; a
+ * missing group means pattern and caller disagree, so it throws. */
+function capture(m: RegExpMatchArray, n: number): string {
+  const value = m[n]
+  if (value === undefined) {
+    throw new Error(`extractProtonInventory: regex capture group ${n} missing`)
+  }
+  return value
+}
+
 export function splitProtonParam(raw: string): ParamSignature {
   const trimmed = raw.trim()
   const fnPtrMatch = trimmed.match(/\(\*(?:\s*\w+\s+)?(\w+)\)/)
   if (fnPtrMatch) {
-    return { name: fnPtrMatch[1], type: 'void*' }
+    return { name: capture(fnPtrMatch, 1), type: 'void*' }
   }
   const match = trimmed.match(/^(.*[*\s])(\w+)$/)
   if (!match) {
     return { name: 'arg', type: mapProtonCType(trimmed) }
   }
-  return { name: match[2], type: mapProtonCType(match[1]) }
+  return {
+    name: capture(match, 2),
+    type: mapProtonCType(capture(match, 1))
+  }
 }
 
 interface ReturnClassification {
@@ -417,7 +430,7 @@ function extractVtableOrder(
   const addFuncRe = new RegExp(`VTABLE_ADD_FUNC\\(${prefix}_(\\w+)\\)`, 'g')
   let match: RegExpExecArray | null
   while ((match = addFuncRe.exec(body)) !== null) {
-    methodNames.push(match[1])
+    methodNames.push(capture(match, 1))
   }
   if (methodNames.length === 0) {
     throw new Error(
@@ -696,7 +709,14 @@ export function demoteSignatureMismatches(
   return wired.map((method, i) => {
     if (method.mode !== 'wire') return method
     const ref = reference.find((m) => m.name === method.name)
-    return ref && paramListsEqual(method.params, ref.params) ? method : raw[i]
+    if (ref && paramListsEqual(method.params, ref.params)) return method
+    const rawMethod = raw[i]
+    if (rawMethod === undefined) {
+      throw new Error(
+        `extractProtonInventory: no raw signature at slot index ${i} for ${method.name}`
+      )
+    }
+    return rawMethod
   })
 }
 
@@ -850,10 +870,13 @@ export function buildNullSretInventory(
   const found: Record<string, NullSretVersionEntry> = {}
   for (const family of Object.keys(sources).sort()) {
     const text = sources[family]
+    if (text === undefined) {
+      throw new Error(`buildNullSretInventory: no source for family ${family}`)
+    }
     const headerRe = new RegExp(`__ASM_VTABLE\\(winI${family}_(\\w+),`, 'g')
     const versions = new Set<string>()
     let m: RegExpExecArray | null
-    while ((m = headerRe.exec(text)) !== null) versions.add(m[1])
+    while ((m = headerRe.exec(text)) !== null) versions.add(capture(m, 1))
     for (const version of versions) {
       const sretRe = new RegExp(
         `winI${family}_${version}_\\w+\\(struct w_steam_iface \\*_this, [^,)]*\\*_ret[,)]`
@@ -876,7 +899,13 @@ export function buildNullSretInventory(
     }
   }
   const versions: Record<string, NullSretVersionEntry> = {}
-  for (const key of Object.keys(found).sort()) versions[key] = found[key]
+  for (const key of Object.keys(found).sort()) {
+    const entry = found[key]
+    if (entry === undefined) {
+      throw new Error(`buildNullSretInventory: lost entry for ${key}`)
+    }
+    versions[key] = entry
+  }
   return {
     source: { kind: 'proton-lsteamclient', ref: PINNED_PROTON_SHA },
     versions

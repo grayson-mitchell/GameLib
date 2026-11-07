@@ -102,6 +102,7 @@ import {
 // digest-mismatch null-runId test below to drive that branch without
 // restructuring the file's static jest.mock factory.
 import runnersOnedirDigestsMockedRaw from '../runnersOnedirDigests.json'
+import { at } from './fixtures/indexed'
 const runnersOnedirDigestsMocked = runnersOnedirDigestsMockedRaw as {
   runId?: string | null
 }
@@ -367,13 +368,13 @@ describe('downloadOnedirAsset', () => {
         expect(isAbsolute(cwd as string)).toBe(true)
         // Behaviour preservation: cwd + basename must reconstruct the file
         // the download actually wrote.
-        expect(join(cwd as string, args[1])).toBe(writtenPath)
+        expect(join(String(cwd), at(args, 1, 'tar args'))).toBe(writtenPath)
       }
 
       const [, extractArgs] = mockedSpawn.mock.calls[1] as [string, string[]]
       const dashCIndex = extractArgs.indexOf('-C')
       expect(dashCIndex).toBeGreaterThan(-1)
-      const destOperand = extractArgs[dashCIndex + 1]
+      const destOperand = at(extractArgs, dashCIndex + 1, 'extract args')
       // `-C` is a chdir target, NOT remote-parsed (that is exactly what
       // --force-local overrides, and it overrides the archive name only), so
       // it stays ABSOLUTE deliberately: cwd now points at tmpdir(), and a

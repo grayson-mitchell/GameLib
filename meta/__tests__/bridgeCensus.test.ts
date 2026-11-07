@@ -25,6 +25,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { at } from './fixtures/indexed'
 
 import {
   drmAppLogSegmentFor,
@@ -594,14 +595,14 @@ describe('quick 261024-f0w: dual-arch exe selection', () => {
   })
 
   it('a persisted arch absent from the scanned exes falls back with a note', () => {
-    const sel = selectCensusExe([aod[0]], 'x64')
+    const sel = selectCensusExe([at(aod, 0, 'aod')], 'x64')
     expect(sel?.chosen.table.arch).toBe('x86')
     expect(sel?.archNote).toMatch(/not among the scanned exes/)
   })
 
   it('single-arch and empty candidate lists behave as before', () => {
-    expect(selectCensusExe([aod[1]], undefined)?.archNote).toBe('')
-    expect(selectCensusExe([aod[1]], 'x64')?.archNote).toBe('')
+    expect(selectCensusExe([at(aod, 1, 'aod')], undefined)?.archNote).toBe('')
+    expect(selectCensusExe([at(aod, 1, 'aod')], 'x64')?.archNote).toBe('')
     expect(selectCensusExe([], 'x64')).toBeNull()
   })
 
@@ -1377,7 +1378,7 @@ describe('53-11: honest per-launch evidence', () => {
       writeFileSync(join(dir, 'Player-prev.log'), 'SteamAPI_Init() failed.')
       const found = findUnityPlayerLogs(bottle)
       expect(found).toHaveLength(1)
-      expect(found[0].endsWith('Player.log')).toBe(true)
+      expect(at(found, 0, 'found').endsWith('Player.log')).toBe(true)
     } finally {
       rmSync(bottle, { recursive: true, force: true })
     }
@@ -2011,7 +2012,7 @@ describe('58-05: multiplayer evidence (D-08)', () => {
 
   it('TCP ignores NET lines attributed to another appid', () => {
     const other = full.map((_, i) =>
-      net(['join', 'send', 'recv'][i], { id: '1' })
+      net(at(['join', 'send', 'recv'], i, 'net call'), { id: '1' })
     )
     expect(tcp([hello(), ...other]).status).toBe('unverified')
   })

@@ -442,6 +442,11 @@ async function signOne(args: string[], file: string): Promise<void> {
     }
 
     const wait = TIMESTAMP_RETRY_DELAYS_MS[attempt]
+    if (wait === undefined) {
+      throw new Error(
+        `signMachOResources: no retry delay for attempt ${String(attempt)}`
+      )
+    }
     console.log(
       `signMachOResources: timestamp service failure on ${file}; ` +
         `retrying in ${String(wait)}ms (attempt ${String(attempt + 2)} of ` +
@@ -541,7 +546,7 @@ export function parseArgs(
 
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i]
-    if (token === '--' || !token.startsWith('--')) {
+    if (token === undefined || token === '--' || !token.startsWith('--')) {
       continue
     }
     if (token === '--dry-run') {
