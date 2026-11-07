@@ -504,20 +504,18 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       ).toBe(1)
     })
 
-    it('REQ-34.4.1-04 SEAM.md Invariant B, UPDATED (Plan 02): humbleRevealKey is now a real registered channel — it resolves non-fatally (never rejects) even with malformed/missing args, and the RPC loop keeps serving', async () => {
+    it('REQ-34.4.1-04 SEAM.md Invariant B, UPDATED (Plan 02): humbleRevealKey is a real registered channel — malformed/missing args are rejected at the IPC boundary (Phase 67) without reaching the handler, and the RPC loop keeps serving', async () => {
       const { input, frames } = startSidecar()
-      // Deliberately malformed (empty args, so `params.gamekey` would throw inside the
-      // handler) — proves the D-07 fail-safe catch resolves a typed failure outcome
-      // rather than ever rejecting the frame.
+      // Deliberately malformed (empty args): the boundary schema rejects the frame before the
+      // handler runs, as a value-free IPC_INVALID_ARGS error rather than a crash.
       writeInvoke(input, 'reveal-1', 'humbleRevealKey', [])
       await flush()
 
       const revealResponse = frames.find((frame) => frame.id === 'reveal-1') as
-        | { ok: boolean; result?: unknown; error?: string }
+        | { ok: boolean; result?: unknown; error?: unknown }
         | undefined
-      expect(revealResponse?.ok).toBe(true)
-      expect(revealResponse?.result).toEqual({ status: 'failed' })
-      expect(revealResponse?.error).toBeUndefined()
+      expect(revealResponse?.ok).toBe(false)
+      expect(revealResponse?.result).toBeUndefined()
 
       writeInvoke(input, 'health-after-reveal', 'health', [])
       await flush()
