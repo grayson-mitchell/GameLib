@@ -52,12 +52,14 @@ export default class SideloadLibraryManager implements LibraryManager {
       const macAppExecutable = readdirSync(
         join(executable, 'Contents', 'MacOS')
       )[0]
-      game.install.executable = join(
-        executable,
-        'Contents',
-        'MacOS',
-        macAppExecutable
-      )
+      if (macAppExecutable !== undefined) {
+        game.install.executable = join(
+          executable,
+          'Contents',
+          'MacOS',
+          macAppExecutable
+        )
+      }
     }
 
     const current = libraryStore.get('games', [])

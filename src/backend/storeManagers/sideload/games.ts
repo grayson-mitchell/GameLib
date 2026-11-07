@@ -90,7 +90,7 @@ export default class SideloadGame implements Game {
     if (executable) {
       const split = executable.split('/')
       const exe = split[split.length - 1]
-      killPattern(exe)
+      if (exe !== undefined) killPattern(exe)
 
       if (!this.isNative()) {
         const gameSettings = getLaunchSettings(
