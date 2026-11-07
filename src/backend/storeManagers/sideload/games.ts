@@ -25,6 +25,8 @@ import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import { removeNonSteamGame } from 'backend/shortcuts/nonesteamgame/nonesteamgame'
 
 import type LogWriter from 'backend/logger/log_writer'
+import { getLaunchSettings } from 'backend/engine/launchSettings'
+import { engineKeyFor } from 'backend/engine/gameKey'
 
 export default class SideloadGame implements Game {
   private readonly id: string
@@ -91,7 +93,10 @@ export default class SideloadGame implements Game {
       killPattern(exe)
 
       if (!this.isNative()) {
-        const gameSettings = await this.getSettings()
+        const gameSettings = getLaunchSettings(
+          engineKeyFor(this.getGameInfo().runner, this.id),
+          await this.getSettings()
+        )
         shutdownWine(gameSettings)
       }
     }

@@ -31,6 +31,8 @@ import { raiseWineGameWindow } from 'backend/utils/wineWindowRaise'
 
 import type LogWriter from 'backend/logger/log_writer'
 import { Game } from '../../../common/types/game_manager'
+import { getLaunchSettings } from 'backend/engine/launchSettings'
+import { engineKeyFor } from 'backend/engine/gameKey'
 
 async function getAppSettings(appName: string): Promise<GameSettings> {
   return (
@@ -179,7 +181,10 @@ export async function launchGame(
     })
   }
 
-  const gameSettings = await getAppSettings(appName)
+  const gameSettings = getLaunchSettings(
+    engineKeyFor(runner, appName),
+    await getAppSettings(appName)
+  )
   const { launcherArgs } = gameSettings
   const extraArgs = [...shlex.split(launcherArgs ?? ''), ...args]
   const extraArgsJoined = extraArgs.join(' ')
