@@ -12,7 +12,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import type { IconDefinition } from '@fortawesome/free-solid-svg-icons'
 
-import { useSteamEngineState } from 'frontend/state/SteamEngineState'
+import { useEngineState } from 'frontend/state/EngineState'
 import { useSteamRequestNotice } from 'frontend/state/SteamRequestNotice'
 import { useSuppressStoreEmbedWhile } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 import {
@@ -132,7 +132,7 @@ const isReason = (r: unknown): r is Reason =>
 // embed stays suppressed until the notice is actually removed (L3).
 export default function SteamEngineLaunchNotice() {
   const { t } = useTranslation('gamelib')
-  const byAppId = useSteamEngineState((s) => s.byAppId)
+  const byGame = useEngineState((s) => s.byGame)
   const lastSeq = useRef(0)
   const lastOverlaySeq = useRef(0)
   const lastExitSeq = useRef(0)
@@ -219,7 +219,7 @@ export default function SteamEngineLaunchNotice() {
 
   useEffect(() => {
     let newest: Shown | null = null
-    for (const state of Object.values(byAppId)) {
+    for (const state of Object.values(byGame)) {
       const n = state.launchNotice
       if (!n || !isReason(n.reason) || typeof n.seq !== 'number') continue
       if (n.seq > lastSeq.current && (!newest || n.seq > newest.seq)) {
@@ -237,12 +237,12 @@ export default function SteamEngineLaunchNotice() {
       pending.current = newest
       if (cur.phase === 'in') setShown({ ...cur, phase: 'leaving' })
     }
-  }, [byAppId])
+  }, [byGame])
 
   // Phase 60 G4: overlay failures. A separate seq stream, same push.
   useEffect(() => {
     let newest: ShownOverlay | null = null
-    for (const state of Object.values(byAppId)) {
+    for (const state of Object.values(byGame)) {
       const n = state.overlayNotice
       if (!n || !isOverlayStep(n.step) || typeof n.seq !== 'number') continue
       if (n.seq > lastOverlaySeq.current && (!newest || n.seq > newest.seq)) {
@@ -261,12 +261,12 @@ export default function SteamEngineLaunchNotice() {
       pendingOverlay.current = newest
       if (cur.phase === 'in') setShownOverlay({ ...cur, phase: 'leaving' })
     }
-  }, [byAppId])
+  }, [byGame])
 
   // Quick 261105-ast: overlay early exit. A third seq stream, same push.
   useEffect(() => {
     let newest: ShownExit | null = null
-    for (const state of Object.values(byAppId)) {
+    for (const state of Object.values(byGame)) {
       const n = state.exitNotice
       if (!n || typeof n.seq !== 'number') continue
       if (n.seq > lastExitSeq.current && (!newest || n.seq > newest.seq)) {
@@ -285,7 +285,7 @@ export default function SteamEngineLaunchNotice() {
       pendingExit.current = newest
       if (cur.phase === 'in') setShownExit({ ...cur, phase: 'leaving' })
     }
-  }, [byAppId])
+  }, [byGame])
 
   // Quick 261106-pvk: Steam never picked up a delegated request. A fourth seq
   // stream, fed by its own push rather than the engine state.

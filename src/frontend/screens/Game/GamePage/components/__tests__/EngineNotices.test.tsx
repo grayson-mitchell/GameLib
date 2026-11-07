@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from 'react'
 import type { EngineState } from 'common/types/engine'
-import { useSteamEngineState } from 'frontend/state/SteamEngineState'
+import { useEngineState } from 'frontend/state/EngineState'
 
 jest.mock('react-i18next', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -8,7 +8,7 @@ jest.mock('react-i18next', () => {
   return { useTranslation: () => ({ t: gamelibT }) }
 })
 
-import SteamEngineNotices from '../SteamEngineNotices'
+import EngineNotices from '../EngineNotices'
 
 const make = (over: Partial<EngineState>): EngineState => ({
   runner: 'steam',
@@ -46,7 +46,7 @@ const text = (n: ReactNode): string =>
         ? text((n as El).props.children)
         : ''
 const render = (s: EngineState | undefined) =>
-  flat(SteamEngineNotices({ state: s }) as ReactNode).filter(
+  flat(EngineNotices({ state: s }) as ReactNode).filter(
     (e) => typeof e.type === 'string'
   )
 const button = (els: El[], label: string) =>
@@ -60,10 +60,10 @@ beforeEach(() => {
   ;(globalThis as unknown as { window: unknown }).window = {
     api: { openExternalUrl, dismissEngineNotice: dismiss }
   }
-  useSteamEngineState.setState({ byAppId: {} })
+  useEngineState.setState({ byGame: {} })
 })
 
-describe('SteamEngineNotices', () => {
+describe('EngineNotices', () => {
   it('renders nothing when no notice applies', () => {
     expect(render(make({ trialDaysRemaining: 20 }))).toEqual([])
     expect(render(undefined)).toEqual([])
@@ -86,17 +86,17 @@ describe('SteamEngineNotices', () => {
   })
 
   it('no-CrossOver note dismiss persists and hides immediately', async () => {
-    useSteamEngineState.getState().set(make({ showNoCrossoverNote: true }))
+    useEngineState.getState().set(make({ showNoCrossoverNote: true }))
     const els = render(make({ showNoCrossoverNote: true }))
     await button(els, 'Dismiss')?.props.onClick?.()
     expect(dismiss).toHaveBeenCalledWith({ kind: 'no-crossover' })
     expect(
-      useSteamEngineState.getState().byAppId['730'].showNoCrossoverNote
+      useEngineState.getState().byGame['steam:730'].showNoCrossoverNote
     ).toBe(false)
   })
 
   it('untested-build notice names the build; dismiss persists and hides', async () => {
-    useSteamEngineState.getState().set(make({ untestedCrossoverBuild: '26.1' }))
+    useEngineState.getState().set(make({ untestedCrossoverBuild: '26.1' }))
     const els = render(make({ untestedCrossoverBuild: '26.1' }))
     expect(els.map((e) => text(e)).join('|')).toContain(
       'CrossOver 26.1 is untested'
@@ -107,7 +107,7 @@ describe('SteamEngineNotices', () => {
       build: '26.1'
     })
     expect(
-      useSteamEngineState.getState().byAppId['730'].untestedCrossoverBuild
+      useEngineState.getState().byGame['steam:730'].untestedCrossoverBuild
     ).toBeNull()
   })
 
@@ -139,5 +139,38 @@ describe('SteamEngineNotices', () => {
       els.some((e) => e.props.className?.includes('steamEngineNotice'))
     ).toBe(true)
     expect(els.every((e) => typeof e.type === 'string')).toBe(true)
+  })
+
+  it('renders the same notices for a legendary game as for a Steam title', () => {
+    const over = {
+      showTrialNotice: true,
+      trialDaysRemaining: 7,
+      showNoCrossoverNote: true
+    }
+    const steam = render(make(over)).map((e) => text(e))
+    const epic = render(
+      make({ ...over, runner: 'legendary', appName: 'Fortnite' })
+    ).map((e) => text(e))
+    expect(epic).toEqual(steam)
+    expect(epic.join('|')).toContain('7 days remaining')
+    expect(
+      render(make({ showTrialNotice: false, trialDaysRemaining: 8 }))
+    ).toEqual([])
+  })
+
+  it('dismiss on a legendary game hides only that game', async () => {
+    const epic = make({
+      runner: 'legendary',
+      appName: 'Fortnite',
+      showNoCrossoverNote: true
+    })
+    useEngineState.getState().set(epic)
+    useEngineState.getState().set(make({ showNoCrossoverNote: true }))
+    button(render(epic), 'Dismiss')?.props.onClick?.()
+    await Promise.resolve()
+    await Promise.resolve()
+    const { byGame } = useEngineState.getState()
+    expect(byGame['legendary:Fortnite'].showNoCrossoverNote).toBe(false)
+    expect(byGame['steam:730'].showNoCrossoverNote).toBe(true)
   })
 })

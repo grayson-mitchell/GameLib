@@ -27,9 +27,9 @@ jest.mock(
 )
 
 let storeState: Record<string, unknown> = {}
-jest.mock('frontend/state/SteamEngineState', () => ({
-  useSteamEngineState: (sel: (s: { byAppId: unknown }) => unknown) =>
-    sel({ byAppId: storeState })
+jest.mock('frontend/state/EngineState', () => ({
+  useEngineState: (sel: (s: { byGame: unknown }) => unknown) =>
+    sel({ byGame: storeState })
 }))
 
 let requestState: unknown = null

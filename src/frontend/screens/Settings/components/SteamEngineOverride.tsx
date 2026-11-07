@@ -5,7 +5,7 @@ import SelectField from 'frontend/components/UI/SelectField'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from 'frontend/screens/Settings/SettingsContext'
-import { useSteamEngineState } from 'frontend/state/SteamEngineState'
+import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
 import type { EngineOption } from 'common/types/engine'
 
 type T = (
@@ -182,7 +182,7 @@ const SteamEngineOverride = () => {
   const [override, setOverride] = useSetting('steamEngineOverride', 'automatic')
   const [options, setOptions] = useState<EngineOption[]>([])
   const [loaded, setLoaded] = useState(false)
-  const state = useSteamEngineState((s) => s.byAppId[appName])
+  const state = useEngineState((s) => s.byGame[engineStateKey(runner, appName)])
   const hasState = state !== undefined
   // WR-04: eligibility is computed by the backend from the title's own
   // per-game bridge install and DRM mode; the renderer never derives it.
@@ -194,7 +194,7 @@ const SteamEngineOverride = () => {
     void window.api
       .getEngineState({ runner, appName })
       .then((result) => {
-        if (!cancelled && result) useSteamEngineState.getState().set(result)
+        if (!cancelled && result) useEngineState.getState().set(result)
       })
       .catch(() => undefined)
     return () => {

@@ -71,4 +71,32 @@ describe('EngineBadge', () => {
     expect(el?.props.className).toContain('engineBadge--unsupported')
     expect(el?.props.title).toContain('Wine 9')
   })
+
+  it('labels a Legacy engine and uses identical text for every store', () => {
+    const steam = EngineBadge({
+      state: make({ engine: 'unsupported', legacyLabel: 'Wine GPTK 2.0' })
+    }) as R
+    const gog = EngineBadge({
+      state: make({
+        runner: 'gog',
+        engine: 'unsupported',
+        legacyLabel: 'Wine GPTK 2.0'
+      })
+    }) as R
+    expect(steam?.props.children).toBe('Unsupported engine')
+    expect(steam?.props.title).toContain('Legacy: Wine GPTK 2.0')
+    expect(gog?.props.title).toBe(steam?.props.title)
+    expect(gog?.props.children).toBe(steam?.props.children)
+  })
+
+  it('shows the engine label for a Wine Manager engine', () => {
+    const el = EngineBadge({
+      state: make({
+        engine: 'unsupported',
+        engineLabel: 'Wine Manager: X',
+        runner: 'legendary'
+      })
+    }) as R
+    expect(el?.props.title).toContain('Wine Manager: X')
+  })
 })

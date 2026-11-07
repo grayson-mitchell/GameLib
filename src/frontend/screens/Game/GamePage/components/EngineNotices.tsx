@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { EngineState } from 'common/types/engine'
-import { useSteamEngineState } from 'frontend/state/SteamEngineState'
+import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
 
 interface Props {
   state: EngineState | undefined
@@ -14,7 +14,7 @@ const CROSSOVER_URL = 'https://www.codeweavers.com/crossover'
  * page -- CrossOver trial countdown (last 7 days), the dismissible
  * no-CrossOver recommendation, and the one-time untested-build note.
  */
-const SteamEngineNotices = ({ state }: Props) => {
+const EngineNotices = ({ state }: Props) => {
   const { t } = useTranslation('gamelib')
 
   if (!state) return null
@@ -78,9 +78,12 @@ const SteamEngineNotices = ({ state }: Props) => {
               await window.api.dismissEngineNotice({
                 kind: 'no-crossover'
               })
-              useSteamEngineState
+              useEngineState
                 .getState()
-                .hideNotice(state.appName, 'no-crossover')
+                .hideNotice(
+                  engineStateKey(state.runner, state.appName),
+                  'no-crossover'
+                )
             }}
           >
             {dismissLabel}
@@ -128,9 +131,12 @@ const SteamEngineNotices = ({ state }: Props) => {
                 kind: 'untested-crossover',
                 build
               })
-              useSteamEngineState
+              useEngineState
                 .getState()
-                .hideNotice(state.appName, 'untested')
+                .hideNotice(
+                  engineStateKey(state.runner, state.appName),
+                  'untested'
+                )
             }}
           >
             {dismissLabel}
@@ -141,4 +147,4 @@ const SteamEngineNotices = ({ state }: Props) => {
   )
 }
 
-export default SteamEngineNotices
+export default EngineNotices

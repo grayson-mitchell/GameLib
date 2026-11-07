@@ -70,7 +70,7 @@ import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
 import { handleSteamBridgeRouteNoticeSignal } from './SteamBridgeRouteNotice'
 import { handleSteamGoOfflineRequiredSignal } from './SteamGoOfflineNotice'
-import { handleEngineStateChangedSignal } from './SteamEngineState'
+import { handleEngineStateChangedSignal } from './EngineState'
 import { handleSteamRequestNoticeSignal } from './SteamRequestNotice'
 import {
   handleSteamBottleLaunchWaitingSignal,

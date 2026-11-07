@@ -13,10 +13,11 @@ jest.mock('react', () => ({
     fn()
   }
 }))
-jest.mock('frontend/state/SteamEngineState', () => ({
-  useSteamEngineState: Object.assign(
-    (sel: (s: { byAppId: Record<string, unknown> }) => unknown) =>
-      sel({ byAppId: mockStore }),
+jest.mock('frontend/state/EngineState', () => ({
+  engineStateKey: (r: string, a: string) => `${r}:${a}`,
+  useEngineState: Object.assign(
+    (sel: (s: { byGame: Record<string, unknown> }) => unknown) =>
+      sel({ byGame: mockStore }),
     { getState: () => ({ set: mockSet }) }
   )
 }))
@@ -56,7 +57,7 @@ const select = (el: ReactElement): ReactElement => {
 }
 
 beforeEach(() => {
-  mockStore = { '1': { overlayEligible: true } }
+  mockStore = { 'steam:1': { overlayEligible: true } }
   mockStored = 'automatic'
   mockSetter.mockClear()
   mockSet.mockClear()
@@ -86,9 +87,9 @@ describe('SteamOverlayOverride', () => {
   })
 
   it('renders null when not eligible or eligibility is unset', () => {
-    mockStore = { '1': { overlayEligible: false } }
+    mockStore = { 'steam:1': { overlayEligible: false } }
     expect(render()).toBeNull()
-    mockStore = { '1': {} }
+    mockStore = { 'steam:1': {} }
     expect(render()).toBeNull()
   })
 

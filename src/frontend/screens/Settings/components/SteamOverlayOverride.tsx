@@ -5,7 +5,7 @@ import SelectField from 'frontend/components/UI/SelectField'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from 'frontend/screens/Settings/SettingsContext'
-import { useSteamEngineState } from 'frontend/state/SteamEngineState'
+import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
 
 type OverlayValue = 'automatic' | 'on' | 'off'
 
@@ -27,7 +27,7 @@ const SteamOverlayOverride = () => {
     'steamOverlayOverride',
     'automatic'
   )
-  const state = useSteamEngineState((s) => s.byAppId[appName])
+  const state = useEngineState((s) => s.byGame[engineStateKey(runner, appName)])
   const hasState = state !== undefined
   // Eligibility is computed by the backend (bridge install on macOS, DRM-mode
   // titles included); the renderer never derives it.
@@ -39,7 +39,7 @@ const SteamOverlayOverride = () => {
     void window.api
       .getEngineState({ runner, appName })
       .then((result) => {
-        if (!cancelled && result) useSteamEngineState.getState().set(result)
+        if (!cancelled && result) useEngineState.getState().set(result)
       })
       .catch(() => undefined)
     return () => {

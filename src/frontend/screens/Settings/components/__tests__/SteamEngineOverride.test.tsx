@@ -13,10 +13,11 @@ jest.mock('react', () => ({
     fn()
   }
 }))
-jest.mock('frontend/state/SteamEngineState', () => ({
-  useSteamEngineState: Object.assign(
-    (sel: (s: { byAppId: Record<string, unknown> }) => unknown) =>
-      sel({ byAppId: mockStore }),
+jest.mock('frontend/state/EngineState', () => ({
+  engineStateKey: (r: string, a: string) => `${r}:${a}`,
+  useEngineState: Object.assign(
+    (sel: (s: { byGame: Record<string, unknown> }) => unknown) =>
+      sel({ byGame: mockStore }),
     { getState: () => ({ set: mockSet }) }
   )
 }))
@@ -202,7 +203,7 @@ describe('SteamEngineOverride eligibility gate (WR-04)', () => {
   })
 
   it('renders the section when overrideEligible is true and loads options once on mount', () => {
-    mockStore = { default: { overrideEligible: true } }
+    mockStore = { 'steam:default': { overrideEligible: true } }
     const el = SteamEngineOverride() as El | null
     expect(el).not.toBeNull()
     expect(api.listEngineOptions).toHaveBeenCalledTimes(1)
@@ -212,7 +213,7 @@ describe('SteamEngineOverride eligibility gate (WR-04)', () => {
   it.each([false, undefined])(
     'renders nothing when overrideEligible is %p',
     (v) => {
-      mockStore = { default: { overrideEligible: v } }
+      mockStore = { 'steam:default': { overrideEligible: v } }
       expect(SteamEngineOverride()).toBeNull()
       expect(api.listEngineOptions).not.toHaveBeenCalled()
     }

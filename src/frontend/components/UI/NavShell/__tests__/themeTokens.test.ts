@@ -2794,7 +2794,7 @@ const STEAM_MANAGED_ITEM_VIEW_TSX = join(
 // hover fix the DownloadManager site does, so they join the census here.
 const STEAM_ENGINE_NOTICES_TSX = join(
   REPO_ROOT,
-  'src/frontend/screens/Game/GamePage/components/SteamEngineNotices.tsx'
+  'src/frontend/screens/Game/GamePage/components/EngineNotices.tsx'
 )
 const FRONTEND_DIR = join(REPO_ROOT, 'src/frontend')
 
@@ -3029,7 +3029,7 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
     return resolved
   }
 
-  it('render-site census: re-derived F1 counts match exactly (29 total, 22 is-link, 21 GameSubMenu, 1 MainButton, 1 pure DownloadManager, 2 pure SteamManagedItemView, 4 pure SteamEngineNotices)', () => {
+  it('render-site census: re-derived F1 counts match exactly (29 total, 22 is-link, 21 GameSubMenu, 1 MainButton, 1 pure DownloadManager, 2 pure SteamManagedItemView, 4 pure EngineNotices)', () => {
     const allFiles = walkTsxFiles(FRONTEND_DIR)
     expect(allFiles.length).toBeGreaterThan(100) // walk sanity, same floor as navTourAnchorCensus
 

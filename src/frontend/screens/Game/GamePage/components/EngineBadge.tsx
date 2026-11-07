@@ -6,8 +6,8 @@ interface Props {
 }
 
 /**
- * Phase 59 (D-06, D-14): persistent engine badge on a Steam title's game
- * page. 'builtin' = CrossOver unavailable, running on the built-in engine;
+ * Phase 59 (D-06, D-14) / Phase 61 (D-12, D-15): persistent engine badge on
+ * the game page of any store's macOS Windows game. 'builtin' = CrossOver unavailable, running on the built-in engine;
  * 'unsupported' = a non-automatic per-game override. Pure presentational:
  * the state comes from the backend.
  */
@@ -55,7 +55,13 @@ const EngineBadge = ({ state }: Props) => {
   const title = t(
     'steam.engine.badge.unsupportedTitle',
     "This game uses an engine chosen in its Wine settings ({{engine}}). Known fixes and compatibility ratings don't apply.",
-    { engine: state.engineLabel ?? '' }
+    {
+      engine: state.legacyLabel
+        ? t('engine.legacyLabel', 'Legacy: {{name}}', {
+            name: state.legacyLabel
+          })
+        : (state.engineLabel ?? '')
+    }
   )
   return (
     <div

@@ -14,10 +14,11 @@ jest.mock('react', () => ({
     fn()
   }
 }))
-jest.mock('frontend/state/SteamEngineState', () => ({
-  useSteamEngineState: Object.assign(
-    (sel: (s: { byAppId: Record<string, unknown> }) => unknown) =>
-      sel({ byAppId: mockStore }),
+jest.mock('frontend/state/EngineState', () => ({
+  engineStateKey: (r: string, a: string) => `${r}:${a}`,
+  useEngineState: Object.assign(
+    (sel: (s: { byGame: Record<string, unknown> }) => unknown) =>
+      sel({ byGame: mockStore }),
     { getState: () => ({ set: jest.fn() }) }
   )
 }))
@@ -86,7 +87,7 @@ function mount(stored: string) {
       send: (p) => window.api.setSetting(p as never)
     })
   }
-  mockStore = { [APP]: { overrideEligible: true } }
+  mockStore = { [`steam:${APP}`]: { overrideEligible: true } }
   // useState is a fixed pair, so the stubbed component sees loaded=false and
   // no options; render the view directly with the loaded option list but the
   // real useSetting-derived onChange the component produced.

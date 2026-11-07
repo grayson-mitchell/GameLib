@@ -78,8 +78,8 @@ import {
   WikiInfoEmptyState
 } from './components'
 import EngineBadge from './components/EngineBadge'
-import SteamEngineNotices from './components/SteamEngineNotices'
-import { useSteamEngineState } from 'frontend/state/SteamEngineState'
+import EngineNotices from './components/EngineNotices'
+import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
 import { hasAnticheatInfo } from 'frontend/hooks/hasAnticheatInfo'
 import { hasHelp } from 'frontend/hooks/hasHelp'
 import Genres from './components/Genres'
@@ -222,25 +222,34 @@ export default React.memo(function GamePage(): JSX.Element | null {
   // Phase 59 (D-04/D-06/D-13/D-14/D-15): the engine state is computed by the
   // backend; fetch it once per title, once when a launch ends, and when the
   // settings modal opens or closes (59-UAT G11: an override change) -- no polling.
-  const engineState = useSteamEngineState((s) => s.byAppId[appName])
+  const engineState = useEngineState(
+    (s) => s.byGame[engineStateKey(runner, appName)]
+  )
   const wasLaunchingOrPlaying = useRef(false)
   const launchEnded =
     wasLaunchingOrPlaying.current && !isLaunching && !isPlaying
   wasLaunchingOrPlaying.current = isLaunching || isPlaying
   useEffect(() => {
-    if (!hasCapability(runner, 'usesBottleRuntime') || !isMac) return
+    if (!isMac || gameInfo.install?.platform === 'Browser') return
     let cancelled = false
     void window.api.getEngineState({ runner, appName }).then((result) => {
       if (cancelled) return
       // 59-REVIEW WR-04: a null state drops the cached entry so a stale badge
       // or note cannot linger.
-      if (result) useSteamEngineState.getState().set(result)
-      else useSteamEngineState.getState().remove(appName)
+      if (result) useEngineState.getState().set(result)
+      else useEngineState.getState().remove(engineStateKey(runner, appName))
     })
     return () => {
       cancelled = true
     }
-  }, [appName, runner, isMac, launchEnded, settingsModalProps.isOpen])
+  }, [
+    appName,
+    runner,
+    isMac,
+    gameInfo.install?.platform,
+    launchEnded,
+    settingsModalProps.isOpen
+  ])
 
   const previousIsPlaying = useRef<boolean>(isPlaying)
   useEffect(() => {
@@ -566,7 +575,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
                         }
                       />
                       <Developer gameInfo={gameInfo} />
-                      <SteamEngineNotices state={engineState} />
+                      <EngineNotices state={engineState} />
                       <ReleaseDate
                         runnerDate={extraInfo?.releaseDate}
                         date={wikiInfo?.pcgamingwiki?.releaseDate}
