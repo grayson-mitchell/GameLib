@@ -5,8 +5,8 @@
  *
  * Nothing runs at import.
  */
-import { defaultRunTool } from 'backend/storeManagers/steam/bridge/drm/runnerClone'
-import type { RunTool } from 'backend/storeManagers/steam/bridge/drm/runnerClone'
+import { defaultRunTool } from './runTool'
+import type { RunTool } from './runTool'
 
 type TestedCrossoverRow = { build: string; testedIn: string }
 

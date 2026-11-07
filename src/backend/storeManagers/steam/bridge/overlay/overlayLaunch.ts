@@ -18,7 +18,7 @@ import {
   ensureOverlayRunnerClone,
   type OverlayRunnerReady
 } from './overlayRunnerClone'
-import type { RunTool } from '../drm/runnerClone'
+import type { RunTool } from 'backend/engine/runTool'
 
 export type EnvVar = { key: string; value: string }
 

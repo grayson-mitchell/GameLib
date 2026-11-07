@@ -33,14 +33,13 @@
  * modification of the clone after the copy: ntdll, builtins and the loader
  * re-sign.
  */
-import { spawn } from 'child_process'
 import { createHash } from 'crypto'
 import { createReadStream, constants as fsConstants, promises as fsp } from 'fs'
 import type { Stats } from 'fs'
 import { basename, dirname, isAbsolute, join, relative, sep } from 'path'
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
+import { defaultRunTool, type RunTool } from 'backend/engine/runTool'
 import {
   createAbortController,
   deleteAbortController
@@ -58,37 +57,6 @@ import {
   type DrmStepResult
 } from './steamclientLayerMode'
 
-export type RunnerTool =
-  | '/bin/cp'
-  | '/usr/bin/xattr'
-  | '/usr/bin/codesign'
-  | '/usr/bin/plutil'
-  | '/bin/ps'
-
-const RUNNER_TOOLS: readonly RunnerTool[] = [
-  '/bin/cp',
-  '/usr/bin/xattr',
-  '/usr/bin/codesign',
-  '/usr/bin/plutil',
-  '/bin/ps'
-]
-
-export type RunToolResult = {
-  code: number | null
-  stdout: string
-  stderr: string
-  timedOut: boolean
-  aborted: boolean
-}
-
-export type RunTool = (
-  tool: RunnerTool,
-  args: readonly string[],
-  opts: { timeoutMs: number; signal?: AbortSignal }
-) => Promise<RunToolResult>
-
-const OUTPUT_CAP = 1024 * 1024
-
 // cp gets 900 s because the `cp -R` fallback copies about 1 GB.
 export const RUNNER_TIMEOUTS = {
   cp: 900_000,
@@ -96,87 +64,6 @@ export const RUNNER_TIMEOUTS = {
   codesign: 60_000,
   plutil: 15_000,
   ps: 15_000
-}
-
-function unrefHandle(handle: unknown): void {
-  ;(handle as { unref?: () => void } | null | undefined)?.unref?.()
-}
-
-/**
- * Never rejects. Only the five allowlisted absolute tool paths can be run.
- */
-export const defaultRunTool: RunTool = async (tool, args, opts) => {
-  const result: RunToolResult = {
-    code: null,
-    stdout: '',
-    stderr: '',
-    timedOut: false,
-    aborted: false
-  }
-  if (!RUNNER_TOOLS.includes(tool)) {
-    return { ...result, stderr: `tool not allowed: ${String(tool)}` }
-  }
-  if (opts.signal?.aborted) return { ...result, aborted: true }
-
-  // These tools need no user profile, so they get the isolated half of the
-  // two-profile rule. The env comes from createFakeHomeProfile().childEnv()
-  // and is never a hand-rolled literal.
-  const profile = createFakeHomeProfile({ prefix: 'gamelib-runner-' })
-  let timer: NodeJS.Timeout | undefined
-  let onAbort: (() => void) | undefined
-  try {
-    return await new Promise<RunToolResult>((resolve) => {
-      let settled = false
-      const done = (code: number | null) => {
-        if (settled) return
-        settled = true
-        resolve({ ...result, code })
-      }
-      let child: ReturnType<typeof spawn>
-      try {
-        child = spawn(tool, [...args], {
-          env: profile.childEnv(),
-          stdio: ['ignore', 'pipe', 'pipe'],
-          windowsHide: true
-        })
-      } catch (e) {
-        result.stderr = e instanceof Error ? e.message : String(e)
-        done(null)
-        return
-      }
-      unrefHandle(child)
-      unrefHandle(child.stdout)
-      unrefHandle(child.stderr)
-      child.stdout?.on('data', (d: Buffer) => {
-        if (result.stdout.length < OUTPUT_CAP)
-          result.stdout += d.toString('utf8')
-      })
-      child.stderr?.on('data', (d: Buffer) => {
-        if (result.stderr.length < OUTPUT_CAP)
-          result.stderr += d.toString('utf8')
-      })
-      timer = setTimeout(() => {
-        result.timedOut = true
-        child.kill('SIGKILL')
-        done(null)
-      }, opts.timeoutMs)
-      timer.unref?.()
-      if (opts.signal) {
-        onAbort = () => {
-          result.aborted = true
-          child.kill('SIGKILL')
-          done(null)
-        }
-        opts.signal.addEventListener('abort', onAbort, { once: true })
-      }
-      child.on('error', () => done(null))
-      child.on('close', (code) => done(code))
-    })
-  } finally {
-    if (timer) clearTimeout(timer)
-    if (onAbort) opts.signal?.removeEventListener('abort', onAbort)
-    profile.dispose()
-  }
 }
 
 export const CROSSOVER_BUILD_RE = /^[0-9]{1,4}(\.[0-9]{1,6}){2,4}$/

@@ -54,14 +54,16 @@ import {
   DYLD_ENTITLEMENT,
   RUNNER_MARKER_FILE,
   RunnerComponentInput,
-  RunTool,
-  RunToolResult,
   STOCK_LOADER_ENTITLEMENTS,
-  defaultRunTool,
   detectAllowedCrossover,
   ensureRunnerClone,
   verifyRunnerClone
 } from '../runnerClone'
+import {
+  defaultRunTool,
+  type RunTool,
+  type RunToolResult
+} from 'backend/engine/runTool'
 import { buildDrmPaths } from '../drmPaths'
 import type { NtdllPatchRow } from '../ntdllPatchTable'
 

@@ -38,7 +38,6 @@ import {
   WINELOADER_REL,
   cloneCrossoverTree,
   defaultResolveBinDir,
-  defaultRunTool,
   dumpLoaderEntitlements,
   isContained,
   isPathInUse,
@@ -48,9 +47,9 @@ import {
   safeRemove,
   scrubCloneXattrs,
   sha256File,
-  statRegular,
-  type RunTool
+  statRegular
 } from '../drm/runnerClone'
+import { defaultRunTool, type RunTool } from 'backend/engine/runTool'
 import {
   overlayStepError,
   type OverlayStepError,

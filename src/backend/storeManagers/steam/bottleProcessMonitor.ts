@@ -42,7 +42,7 @@
  * comes to the front instead of opening behind GameLib.
  */
 import { relative, sep } from 'node:path'
-import { spawnAsync } from 'backend/utils'
+import { parsePsLine, processListing } from 'backend/engine/processListing'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import {
@@ -181,43 +181,6 @@ function deriveWindowsPrefix(
 
   const windowsRel = rel.split(sep).join('\\')
   return `C:\\${windowsRel}\\`
-}
-
-/**
- * Parse one `ps -axo pid=,command=` line into its pid and command, or
- * `null` if the line does not match the expected shape. Windows command
- * lines contain spaces, so everything after the pid is taken as-is — never
- * split further on whitespace.
- */
-function parsePsLine(line: string): { pid: string; command: string } | null {
-  const match = /^\s*(\d+)\s(.*)$/.exec(line)
-  if (!match) return null
-  const pid = match[1]
-  const rawCommand = match[2]
-  if (pid === undefined || rawCommand === undefined) return null
-  let command = rawCommand.trim()
-  if (command.startsWith('"')) {
-    command = command.slice(1)
-  }
-  return { pid, command }
-}
-
-/**
- * Phase 59 UAT (G4): `ps` is setuid root, and a sandboxed process cannot exec
- * a setuid binary (`spawn EPERM`, seen under the UAT sandbox profiles).
- * `pgrep -lf .` is not setuid and prints the same `pid command` lines, so it
- * stands in when `ps` cannot spawn. The `ps` error is rethrown if both fail.
- */
-async function processListing(): Promise<string> {
-  try {
-    return (await spawnAsync('ps', ['-axo', 'pid=,command='])).stdout
-  } catch (psError) {
-    try {
-      return (await spawnAsync('pgrep', ['-lf', '.'])).stdout
-    } catch {
-      throw psError
-    }
-  }
 }
 
 /**

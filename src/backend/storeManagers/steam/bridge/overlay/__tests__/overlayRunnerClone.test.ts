@@ -31,10 +31,9 @@ jest.mock('backend/logger', () => ({
 import {
   DYLD_ENTITLEMENT,
   RUNNER_MARKER_FILE,
-  STOCK_LOADER_ENTITLEMENTS,
-  type RunTool,
-  type RunToolResult
+  STOCK_LOADER_ENTITLEMENTS
 } from '../../drm/runnerClone'
+import type { RunTool, RunToolResult } from 'backend/engine/runTool'
 import {
   OVERLAY_MARKER_SCHEMA,
   detectCrossoverForOverlay,

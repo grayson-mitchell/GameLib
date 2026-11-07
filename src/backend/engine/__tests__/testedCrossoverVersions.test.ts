@@ -6,7 +6,7 @@ import {
   untestedCrossoverLogLine
 } from '../testedCrossoverVersions'
 
-jest.mock('backend/storeManagers/steam/bridge/drm/runnerClone', () => ({
+jest.mock('backend/engine/runTool', () => ({
   defaultRunTool: jest.fn()
 }))
 
