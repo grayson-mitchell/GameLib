@@ -69,7 +69,7 @@ export async function resolveCrossoverBinDirAsync(opts?: {
   } catch (error) {
     logWarning(
       ['resolveCrossoverBinDirAsync: getCrossover failed', error],
-      LogPrefix.Steam
+      LogPrefix.Backend
     )
   }
   return undefined

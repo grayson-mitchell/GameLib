@@ -11,6 +11,17 @@ const DEPOT_SUBTREE = `${STEAM}depot(\\.ts$|/)`
 module.exports = {
   forbidden: [
     {
+      // Phase 61 plan 10 (D-12): the engine layer serves every store, so it never imports a
+      // store manager. Store-specific inputs reach it through injected deps (the adapters in
+      // storeManagers/<store>/engine/). Static, dynamic and type-only imports all count.
+      name: 'engine-is-store-agnostic',
+      severity: 'error',
+      comment:
+        'src/backend/engine must not import from src/backend/storeManagers.',
+      from: { path: '^src/backend/engine/' },
+      to: { path: '^src/backend/storeManagers/' }
+    },
+    {
       // A store manager never reaches into a sibling manager. Tests are exempt: they may
       // exercise cross-store interplay without being production coupling.
       name: 'no-cross-store-manager',

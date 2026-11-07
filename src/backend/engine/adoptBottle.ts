@@ -37,14 +37,14 @@ export function writeCxbottleConf(
   if (!existsSync(join(bottleDir, 'system.reg'))) {
     logWarning(
       `cxbottle.conf not written: ${bottleDir} has no system.reg`,
-      LogPrefix.Steam
+      LogPrefix.Backend
     )
     return false
   }
   if (existsSync(confPath)) {
     logInfo(
       `cxbottle.conf already exists in ${bottleDir}; left untouched`,
-      LogPrefix.Steam
+      LogPrefix.Backend
     )
     return false
   }
@@ -55,9 +55,9 @@ export function writeCxbottleConf(
     renameSync(tmp, confPath)
   } catch (err) {
     rmSync(tmp, { force: true })
-    logWarning(['cxbottle.conf write failed', err], LogPrefix.Steam)
+    logWarning(['cxbottle.conf write failed', err], LogPrefix.Backend)
     return false
   }
-  logInfo(`Wrote cxbottle.conf (${id}) in ${bottleDir}`, LogPrefix.Steam)
+  logInfo(`Wrote cxbottle.conf (${id}) in ${bottleDir}`, LogPrefix.Backend)
   return true
 }

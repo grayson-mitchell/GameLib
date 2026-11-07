@@ -70,8 +70,8 @@ export async function probeDemoStatus(args: {
   const started = Date.now()
   const log = (outcome: string, extra = '') =>
     logInfo(
-      `SteamEngine: demo-status probe bottle=${bottleName.slice(0, 64)} outcome=${outcome}${extra ? ` ${extra.slice(0, 700)}` : ''} elapsedMs=${Date.now() - started}`,
-      LogPrefix.Steam
+      `Engine: demo-status probe bottle=${bottleName.slice(0, 64)} outcome=${outcome}${extra ? ` ${extra.slice(0, 700)}` : ''} elapsedMs=${Date.now() - started}`,
+      LogPrefix.Backend
     )
   const fail = (
     reason: Extract<DemoStatusProbe, { kind: 'failed' }>['reason'],

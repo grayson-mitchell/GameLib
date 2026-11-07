@@ -28,7 +28,7 @@ export function setEngineSelection(key: string, sel: EngineSelection): boolean {
     copy = { ...sel }
   }
   engineSelections.set(key, copy)
-  logInfo(`SteamEngine: ${key} uses ${engineLogLabel(copy)}`, LogPrefix.Steam)
+  logInfo(`Engine: ${key} uses ${engineLogLabel(copy)}`, LogPrefix.Backend)
   return true
 }
 

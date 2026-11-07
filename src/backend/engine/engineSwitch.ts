@@ -222,7 +222,7 @@ function writeMarker(bottleDir: string, marker: EngineMarker): void {
     renameSync(tmp, join(bottleDir, ENGINE_MARKER_FILE))
   } catch (err) {
     rmSync(tmp, { force: true })
-    logWarning(['engine marker write failed', err], LogPrefix.Steam)
+    logWarning(['engine marker write failed', err], LogPrefix.Backend)
   }
 }
 
@@ -277,7 +277,7 @@ async function killPrevious(
     if (!binDir) {
       logWarning(
         `engine switch: no CrossOver found to stop its wineserver for "${bottleName}"`,
-        LogPrefix.Steam
+        LogPrefix.Backend
       )
       return
     }
@@ -293,7 +293,7 @@ async function killPrevious(
   if (bin && !existsSync(bin)) {
     logInfo(
       `engine switch: no wineserver at ${basename(bin)} for "${bottleName}", nothing to stop`,
-      LogPrefix.Steam
+      LogPrefix.Backend
     )
     return
   }
@@ -305,7 +305,7 @@ async function killPrevious(
   if (!allowed) {
     logWarning(
       `engine switch: ignoring marker wineserver outside the engine roots for "${bottleName}"`,
-      LogPrefix.Steam
+      LogPrefix.Backend
     )
     return
   }
@@ -370,7 +370,7 @@ export function prepareBottleForEngine(
   if (tail) {
     logInfo(
       `engine switch for "${args.bottleName}" waits for an in-flight switch (WR-02)`,
-      LogPrefix.Steam
+      LogPrefix.Backend
     )
   }
   const mine: Promise<PrepareResult> = (async () => {
@@ -513,7 +513,7 @@ async function prepareBottleForEngineBody(
   args.onSwitching?.()
   logInfo(
     `engine switch for "${bottleName}": ${identityOf(prev)} -> ${identityOf(nextMarker)}`,
-    LogPrefix.Steam
+    LogPrefix.Backend
   )
   await killPrevious(bottleName, prev, deps)
 
@@ -558,12 +558,12 @@ async function prepareBottleForEngineBody(
         )
         logInfo(
           `engine switch: stopped the restore's CrossOver wineserver for "${bottleName}"`,
-          LogPrefix.Steam
+          LogPrefix.Backend
         )
       } else {
         logWarning(
           `engine switch: no CrossOver found to stop the restore's wineserver for "${bottleName}"`,
-          LogPrefix.Steam
+          LogPrefix.Backend
         )
       }
     } else {

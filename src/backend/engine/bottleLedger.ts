@@ -28,7 +28,7 @@ export function markGameRunning(bottleName: string, key: EngineKey): boolean {
     ledger.set(bottleName, set)
   }
   set.add(key)
-  logInfo(`BottleLedger: ${key} running in ${bottleName}`, LogPrefix.Steam)
+  logInfo(`BottleLedger: ${key} running in ${bottleName}`, LogPrefix.Backend)
   return true
 }
 

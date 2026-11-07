@@ -33,10 +33,10 @@ export function testedCrossoverBuilds(): string[] {
 
 export function untestedCrossoverLogLine(build: string | null): string | null {
   if (build === null) {
-    return 'SteamEngine: CrossOver build could not be read; treating it as untested'
+    return 'Engine: CrossOver build could not be read; treating it as untested'
   }
   if (isTestedCrossover(build)) return null
-  return `SteamEngine: CrossOver build ${build} is untested with GameLib; please report issues`
+  return `Engine: CrossOver build ${build} is untested with GameLib; please report issues`
 }
 
 export type EngineNoticeStore = {

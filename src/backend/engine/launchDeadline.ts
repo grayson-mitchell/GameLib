@@ -74,8 +74,8 @@ export function armLaunchDeadline(args: {
       clearTimer(handle)
       if (active.get(key) === deadline) active.delete(key)
       logInfo(
-        `SteamEngine: launch deadline for key ${key} cancelled (${reason})`,
-        LogPrefix.Steam
+        `Engine: launch deadline for key ${key} cancelled (${reason})`,
+        LogPrefix.Backend
       )
     }
   }
@@ -85,13 +85,13 @@ export function armLaunchDeadline(args: {
     state = 'fired'
     if (active.get(key) === deadline) active.delete(key)
     logWarning(
-      `SteamEngine: launch deadline fired for key ${key} after ${Date.now() - startedAt} ms (no game process seen)`,
-      LogPrefix.Steam
+      `Engine: launch deadline fired for key ${key} after ${Date.now() - startedAt} ms (no game process seen)`,
+      LogPrefix.Backend
     )
     const logFailure = (error: unknown) =>
       logWarning(
-        [`SteamEngine: onDeadline for key ${key} failed`, error],
-        LogPrefix.Steam
+        [`Engine: onDeadline for key ${key} failed`, error],
+        LogPrefix.Backend
       )
     try {
       const result = onDeadline()

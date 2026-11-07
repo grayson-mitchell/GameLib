@@ -97,7 +97,7 @@ export async function killBottleWineServerWith(
   ) {
     logWarning(
       `killBottleWineServerWith: refusing unsafe bottle "${bottleName}"`,
-      LogPrefix.Steam
+      LogPrefix.Backend
     )
     return false
   }
@@ -113,7 +113,7 @@ export async function killBottleWineServerWith(
     if (result?.code === null) {
       logWarning(
         `killBottleWineServerWith: wineserver -k for bottle "${bottleName}" was killed by its timeout`,
-        LogPrefix.Steam
+        LogPrefix.Backend
       )
       return false
     }
@@ -124,7 +124,7 @@ export async function killBottleWineServerWith(
         `killBottleWineServerWith: wineserver -k for bottle "${bottleName}" failed`,
         error
       ],
-      LogPrefix.Steam
+      LogPrefix.Backend
     )
     return false
   }
@@ -191,7 +191,7 @@ export function removeCreatedBottleDir(bottleName: string): void {
   ) {
     logWarning(
       `provisionBridgeBottle: not removing partial bottle outside the Bottles root: ${dir}`,
-      LogPrefix.Steam
+      LogPrefix.Backend
     )
     return
   }
@@ -200,7 +200,7 @@ export function removeCreatedBottleDir(bottleName: string): void {
   } catch (error) {
     logWarning(
       ['provisionBridgeBottle: could not remove partial bottle', error],
-      LogPrefix.Steam
+      LogPrefix.Backend
     )
   }
 }
@@ -232,7 +232,7 @@ export async function createFallbackBottle(
     MVK_CONFIG_LOG_LEVEL: '0'
   }
   const fail = async (error: string): Promise<FallbackBottleResult> => {
-    logError(`provisionBridgeBottle: ${error}`, LogPrefix.Steam)
+    logError(`provisionBridgeBottle: ${error}`, LogPrefix.Backend)
     await killBottleWineServerWith(
       bottleName,
       engine.wineserverBin,
@@ -245,7 +245,7 @@ export async function createFallbackBottle(
   const aborted = async (): Promise<FallbackBottleResult> => {
     logInfo(
       `provisionBridgeBottle: bottle creation cancelled for "${bottleName}"`,
-      LogPrefix.Steam
+      LogPrefix.Backend
     )
     await killBottleWineServerWith(
       bottleName,
@@ -313,7 +313,7 @@ export async function createFallbackBottle(
   )
   logInfo(
     `provisionBridgeBottle: bridge bottle "${bottleName}" created by ${engine.label}`,
-    LogPrefix.Steam
+    LogPrefix.Backend
   )
   return { status: 'done', createdHere }
 }

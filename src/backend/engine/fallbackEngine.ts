@@ -196,8 +196,8 @@ async function installArtifact(
     const archive = join(dl, artifact.archiveName)
 
     logInfo(
-      `Steam engine: downloading ${kind} ${artifact.version}`,
-      LogPrefix.Steam
+      `Engine: downloading ${kind} ${artifact.version}`,
+      LogPrefix.Backend
     )
     emit({ phase: 'downloading', percentage: 0 })
     try {
@@ -223,7 +223,7 @@ async function installArtifact(
     if (!existsSync(archive) || statSync(archive).size !== artifact.size) {
       throw new StageError('hash-mismatch', `${kind}: unexpected archive size`)
     }
-    logInfo(`Steam engine: verifying ${kind}`, LogPrefix.Steam)
+    logInfo(`Engine: verifying ${kind}`, LogPrefix.Backend)
     emit({ phase: 'verifying' })
     const digest = await sha256OfFile(archive)
     if (opts.signal?.aborted)
@@ -233,7 +233,7 @@ async function installArtifact(
       throw new StageError('hash-mismatch', `${kind}: sha256 mismatch`)
     }
 
-    logInfo(`Steam engine: extracting ${kind}`, LogPrefix.Steam)
+    logInfo(`Engine: extracting ${kind}`, LogPrefix.Backend)
     emit({ phase: 'extracting' })
     const res = await extractFiles({
       path: archive,
@@ -409,7 +409,7 @@ export function pruneUnpinnedEngines(): void {
       rmSync(full, { recursive: true, force: true })
     }
   } catch (err) {
-    logWarning(`Steam engine: prune failed: ${String(err)}`, LogPrefix.Steam)
+    logWarning(`Engine: prune failed: ${String(err)}`, LogPrefix.Backend)
   }
 }
 
@@ -440,21 +440,18 @@ export function sweepStaleEngineTemps(): void {
         removed++
       } catch (err) {
         logWarning(
-          `Steam engine: could not remove stale temp ${name}: ${String(err)}`,
-          LogPrefix.Steam
+          `Engine: could not remove stale temp ${name}: ${String(err)}`,
+          LogPrefix.Backend
         )
       }
     }
     if (removed > 0) {
       logInfo(
-        `Steam engine: removed ${removed} stale engine temp dir(s) at boot`,
-        LogPrefix.Steam
+        `Engine: removed ${removed} stale engine temp dir(s) at boot`,
+        LogPrefix.Backend
       )
     }
   } catch (err) {
-    logWarning(
-      `Steam engine: temp sweep failed: ${String(err)}`,
-      LogPrefix.Steam
-    )
+    logWarning(`Engine: temp sweep failed: ${String(err)}`, LogPrefix.Backend)
   }
 }

@@ -237,8 +237,8 @@ export async function preflightCrossover(
       await d.killCrossoverWineserver(bottleName, binDir)
     } catch (e) {
       logWarning(
-        `SteamEngine: could not stop wineserver after a failed probe: ${String(e)}`,
-        LogPrefix.Steam
+        `Engine: could not stop wineserver after a failed probe: ${String(e)}`,
+        LogPrefix.Backend
       )
     }
   }
@@ -300,8 +300,8 @@ export async function preflightCrossover(
       }
     }
     logWarning(
-      `SteamEngine: --demo-status ${probe.reason} for bottle ${bottleName.slice(0, 64)} (attempt ${attempt}/${PROBE_ATTEMPTS}); inconclusive, retrying once`,
-      LogPrefix.Steam
+      `Engine: --demo-status ${probe.reason} for bottle ${bottleName.slice(0, 64)} (attempt ${attempt}/${PROBE_ATTEMPTS}); inconclusive, retrying once`,
+      LogPrefix.Backend
     )
     await settle(settleMs)
     probe = await runProbe()
@@ -453,7 +453,7 @@ export async function decideLaunchEngine(
       }
     } else {
       logLines.push(
-        'SteamEngine: built-in DXVK is not installed; running the Wine Manager build without DXVK'
+        'Engine: built-in DXVK is not installed; running the Wine Manager build without DXVK'
       )
     }
     return finish(
@@ -550,8 +550,8 @@ export async function decideCreationEngine(
   }
   const decision = await decide()
   logInfo(
-    `SteamEngine: key ${args.key} bottle creation engine ${decision.kind} (presence check only; a CrossOver create failure falls back, 59-REVIEW WR-02/WR-03)`,
-    LogPrefix.Steam
+    `Engine: key ${args.key} bottle creation engine ${decision.kind} (presence check only; a CrossOver create failure falls back, 59-REVIEW WR-02/WR-03)`,
+    LogPrefix.Backend
   )
   return decision
 }
