@@ -96,13 +96,13 @@ describe('observeCardVisibility', () => {
     ).IntersectionObserver = FakeIntersectionObserver
   })
 
-  it('creates the observer with EXACTLY rootMargin 500px and threshold 0 -- the values current preload behaviour is tuned to', () => {
+  it('creates the observer with EXACTLY rootMargin 1500px and threshold 0 -- the values current preload behaviour is tuned to', () => {
     const { observeCardVisibility } = loadModule()
     observeCardVisibility({} as Element, () => {})
 
     expect(FakeIntersectionObserver.calls).toBe(1)
     expect(FakeIntersectionObserver.instances[0].options).toEqual({
-      rootMargin: '500px',
+      rootMargin: '1500px',
       threshold: 0
     })
   })

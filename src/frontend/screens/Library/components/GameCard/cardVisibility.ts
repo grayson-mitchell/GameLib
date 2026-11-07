@@ -46,7 +46,10 @@ function getObserver(): IntersectionObserver {
           }
         })
       },
-      { rootMargin: '500px', threshold: 0 }
+      // 1500px mounts cards a few rows ahead so fast scrolling rarely reaches
+      // unmounted cards. Cost is only extra card DOM: hooks already run before
+      // the `if (!visible)` early return in GameCard/index.tsx (quick 261107-k2l).
+      { rootMargin: '1500px', threshold: 0 }
     )
   }
   return observer
