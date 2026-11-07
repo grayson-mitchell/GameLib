@@ -402,6 +402,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [2026-11-07] [launch] "Launch without Steam: run Steam games that don't use the Steam API directly, like Epic's offline launch" — [todo file](.planning/todos/pending/2026-11-07-launch-steam-games-without-steam.md)
 - [2026-11-07] [steam-install] "Implement Steam game updates (SteamGame.update() is a stub; bridge games have no updater at all)" — [todo file](.planning/todos/pending/2026-11-07-implement-steam-game-updates.md)
 - [2026-11-07] [steam-install] "Implement Verify and Move install for Steam games (repair is bridge-DLL-only; moveInstall is a stub)" — [todo file](.planning/todos/pending/2026-11-07-implement-steam-verify-and-move-install.md)
+- [2026-11-07] [steam] "Spike: Refresh the Steam library through the running Mac Steam client (no GameLib CM logon, so no Friends drop)" — [todo file](.planning/todos/pending/2026-11-07-spike-refresh-via-running-steam-client.md)
 - [2026-11-05] [steam-depot-download] "Depot decode-worker pool holds ~2.5 GB RSS before any work: slim the worker bundle and shrink the pool" — [todo file](.planning/todos/pending/2026-11-05-slim-the-depot-decode-worker-and-shrink-its-pool.md)
 - [2026-11-06] [ui-theme] "themeTokens is-text render-site census is red (29 vs 27) since the Downloads Managed-by-Steam row added two `button is-text` sites" — [todo file](.planning/todos/pending/2026-11-06-themetokens-is-text-census-red-after-steam-managed-row.md)
 
