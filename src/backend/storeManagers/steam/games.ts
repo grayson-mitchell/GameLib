@@ -70,9 +70,9 @@ import {
   install,
   installNative,
   installBottleNative,
-  ensureBuiltInEngineForInstall,
-  installBridgeGame
+  ensureBuiltInEngineForInstall
 } from './gameInstall'
+import { installBridgeGame } from './gameInstallBridge'
 import { prepareTcpOverlay } from './gameLaunchOverlay'
 import {
   launchBridgeGame,

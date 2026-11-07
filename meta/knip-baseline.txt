@@ -60,10 +60,10 @@ exports	src/backend/storeManagers/steam/gameEligibility.ts	isBottleEligibleFromP
 exports	src/backend/storeManagers/steam/gameEligibility.ts	isForcedWindowsViaBottle
 exports	src/backend/storeManagers/steam/gameInstall.ts	crossoverRequiredError
 exports	src/backend/storeManagers/steam/gameInstall.ts	hasBottledSteamCopy
-exports	src/backend/storeManagers/steam/gameInstall.ts	installBridgeGameLeased
-exports	src/backend/storeManagers/steam/gameInstall.ts	provisionBridgeBottleForInstall
 exports	src/backend/storeManagers/steam/gameInstall.ts	removeDemotedNativeOrphan
-exports	src/backend/storeManagers/steam/gameInstall.ts	resolveInstallEngineSettings
+exports	src/backend/storeManagers/steam/gameInstallBridge.ts	installBridgeGameLeased
+exports	src/backend/storeManagers/steam/gameInstallBridge.ts	provisionBridgeBottleForInstall
+exports	src/backend/storeManagers/steam/gameInstallBridge.ts	resolveInstallEngineSettings
 exports	src/backend/storeManagers/steam/gameInstallDepot.ts	runNativeDepotDownload
 exports	src/backend/storeManagers/steam/gameInstallDepot.ts	runNativeDepotDownloadLeased
 exports	src/backend/storeManagers/steam/gameLaunch.ts	showEngineDialog

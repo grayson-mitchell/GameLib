@@ -52,6 +52,7 @@ const GAMES = `${S}games.ts`
 const INSTALL = `${S}gameInstall.ts`
 // 65-11: gameInstall was split; the depot engine holds an acquireAuthenticated( call.
 const INSTALL_DEPOT = `${S}gameInstallDepot.ts`
+const INSTALL_BRIDGE = `${S}gameInstallBridge.ts`
 
 // Every game*.ts module (the 62 split lifted games.ts into these), discovered
 // from the directory so a module dropping out of the walk fails must-scan.
@@ -66,7 +67,8 @@ const ACQUIRE_AUTH_ALLOW = [
   `${S}depot/outcome.ts`,
   `${S}depot/sharedRedist.ts`,
   INSTALL,
-  INSTALL_DEPOT
+  INSTALL_DEPOT,
+  INSTALL_BRIDGE
 ]
 const ACQUIRE_OPEN_ALLOW = [
   USER,
@@ -238,9 +240,9 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
     expect(offenders).toEqual([])
   })
 
-  it('Rule I: allowLogon: true occurs exactly once, in gameInstall.ts', () => {
+  it('Rule I: allowLogon: true occurs exactly once, in gameInstallBridge.ts', () => {
     const hits = filesMatching(/allowLogon\s*:\s*true/)
-    expect([...hits.entries()]).toEqual([[INSTALL, 1]])
+    expect([...hits.entries()]).toEqual([[INSTALL_BRIDGE, 1]])
   })
 
   it('Rule J: getExtraInfo in games.ts calls nothing on SteamUser', () => {
