@@ -161,9 +161,12 @@ export function joinContinuedLogicalLines(
   while (cursor < lines.length) {
     const index = cursor
     let line = lines[cursor]
+    if (line === undefined) break
     cursor++
     while (line.endsWith('\\') && cursor < lines.length) {
-      line = line.slice(0, -1) + lines[cursor]
+      const next = lines[cursor]
+      if (next === undefined) break
+      line = line.slice(0, -1) + next
       cursor++
     }
     logicalLines.push({ index, line })

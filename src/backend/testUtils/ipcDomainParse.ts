@@ -44,11 +44,20 @@ const TRANSPORT = join(
   'sidecarTransport.ts'
 )
 
+/** A capture group that the pattern guarantees on every match; throws if the pattern ever stops doing so. */
+function group(m: RegExpExecArray | RegExpMatchArray, i: number): string {
+  const g = m[i]
+  if (g === undefined) {
+    throw new Error(`regex capture group ${i} missing in match of ${m[0]}`)
+  }
+  return g
+}
+
 function memberKeys(body: string): string[] {
   const keys: string[] = []
   for (const line of body.split('\n')) {
     const k = /^ {2}('[^']+'|[A-Za-z_]\w*)\??:/.exec(line)
-    if (k) keys.push(k[1].replace(/'/g, ''))
+    if (k) keys.push(group(k, 1).replace(/'/g, ''))
   }
   return keys
 }
@@ -59,17 +68,18 @@ export function parseDomainFile(source: string): DomainPart[] {
   const iface = /^export interface (\w+) \{\n([\s\S]*?)^\}/gm
   let m: RegExpExecArray | null
   while ((m = iface.exec(source))) {
-    const name = m[1]
+    const name = group(m, 1)
     const kind = DETECT_ORDER.find((k) => name.endsWith(k))
     if (!kind) continue
-    parts.push({ name, kind, keys: memberKeys(m[2]) })
+    parts.push({ name, kind, keys: memberKeys(group(m, 2)) })
   }
   const konst = /^export const (\w+)Args = \{\n([\s\S]*?)^\}/gm
   while ((m = konst.exec(source))) {
-    const name = m[1].charAt(0).toUpperCase() + m[1].slice(1)
+    const base = group(m, 1)
+    const name = base.charAt(0).toUpperCase() + base.slice(1)
     const kind = DETECT_ORDER.find((k) => name.endsWith(k))
     if (!kind) continue
-    parts.push({ name, kind, keys: memberKeys(m[2]) })
+    parts.push({ name, kind, keys: memberKeys(group(m, 2)) })
   }
   return parts
 }
@@ -78,7 +88,7 @@ export function sharedConstants(): Record<string, string> {
   const out: Record<string, string> = {}
   const src = readFileSync(TRANSPORT, 'utf-8')
   for (const m of src.matchAll(/export const ([A-Z][A-Z0-9_]*) = '([^']+)'/g)) {
-    out[m[1]] = m[2]
+    out[group(m, 1)] = group(m, 2)
   }
   return out
 }

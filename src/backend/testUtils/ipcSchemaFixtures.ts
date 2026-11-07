@@ -28,6 +28,7 @@ export function expectFixtureCoverage<A extends ArgsMap>(
   expect(tableKeys.filter((k) => !keys.includes(k))).toEqual([])
   for (const key of keys) {
     const fixtures = (table as Record<string, Fixtures>)[key]
+    if (!fixtures) throw new Error(`no fixtures for schema key ${key}`)
     expect(fixtures.valid.length).toBeGreaterThanOrEqual(1)
     expect(fixtures.invalid.length).toBeGreaterThanOrEqual(1)
   }
@@ -41,15 +42,17 @@ export function runFixtureTable<A extends ArgsMap>(
   for (const key of Object.keys(argsMap)) {
     const fixtures = (table as Record<string, Fixtures>)[key]
     if (!fixtures) continue
+    const schema = argsMap[key]
+    if (!schema) throw new Error(`no schema for key ${key}`)
     fixtures.valid.forEach((args, i) => {
       it(`${key}: valid fixture ${i} parses`, () => {
-        const result = argsMap[key].safeParse(roundTrip(args))
+        const result = schema.safeParse(roundTrip(args))
         expect(result.success).toBe(true)
       })
     })
     fixtures.invalid.forEach((args, i) => {
       it(`${key}: invalid fixture ${i} is rejected`, () => {
-        const result = argsMap[key].safeParse(roundTrip(args))
+        const result = schema.safeParse(roundTrip(args))
         expect(result.success).toBe(false)
       })
     })
