@@ -27,6 +27,7 @@ import { join } from 'path'
 import { z } from 'zod'
 import {
   FRONTEND_MESSAGE_EVENT,
+  IPC_INVALID_CHANNEL_MARKER,
   READY_SENTINEL,
   RUST_INVOKE_CHANNELS,
   RUST_INVOKE_KIND,
@@ -34,6 +35,7 @@ import {
   STORE_SNAPSHOT_CHANNEL
 } from '../src/common/types/sidecarTransport'
 import { rustInvokeArgs } from '../src/common/types/ipc/rustInvoke'
+import { channelSchemas } from '../src/common/types/ipc/channelSchemas'
 
 const OUTPUT_REL = 'src-tauri/src/ipc_contract.rs'
 const GENERATOR = 'meta/genIpcContract.ts'
@@ -442,6 +444,25 @@ export interface ContractInput {
   channels: readonly string[]
   /** channel -> JSON Schema (input mode) of its positional-args tuple */
   schemas: Record<string, JsonNode>
+  /**
+   * name -> caller/kind of the inbound-keyed channel map. Drives RENDERER_CHANNELS: caller
+   * 'renderer' and kind invoke|send only. Omitted = no allow-list is emitted.
+   */
+  entries?: Record<string, { caller: string; kind: string }>
+}
+
+/** Sorted names the renderer may invoke or send (D-14). Shell, local and push are excluded. */
+export function rendererChannelNames(
+  entries: Record<string, { caller: string; kind: string }>
+): string[] {
+  return Object.keys(entries)
+    .filter((n) => {
+      const e = entries[n]
+      return (
+        e.caller === 'renderer' && (e.kind === 'invoke' || e.kind === 'send')
+      )
+    })
+    .sort()
 }
 
 export function renderIpcContract(input: ContractInput): string {
@@ -473,6 +494,12 @@ export function renderIpcContract(input: ContractInput): string {
     .map((c) => `            RustInvokeChannel::${pascal(c)} => ${rustStr(c)},`)
     .join('\n')
 
+  let allowList = ''
+  if (input.entries) {
+    const names = rendererChannelNames(input.entries)
+    allowList = `/// Channel names the renderer may name through \`sidecar_invoke\` / \`sidecar_send\` (D-14): every\n/// schema entry with caller 'renderer' and kind invoke or send, sorted. Shell-only, local and push\n/// channels are absent. Arguments are validated only in the sidecar.\npub(crate) const RENDERER_CHANNELS: &[&str] = &[\n${names.map((n) => `    ${rustStr(n)},`).join('\n')}\n];\n\npub(crate) fn is_renderer_channel(name: &str) -> bool {\n    RENDERER_CHANNELS.binary_search(&name).is_ok()\n}`
+  }
+
   const uses: string[] = []
   if (usesDeserialize) uses.push('use serde::Deserialize;')
   if (usesValue) uses.push('use serde_json::Value;')
@@ -482,6 +509,7 @@ export function renderIpcContract(input: ContractInput): string {
     uses.join('\n'),
     consts,
     `#[derive(Debug, Clone, Copy, PartialEq, Eq)]\npub(crate) enum RustInvokeChannel {\n${variants}\n}\n\nimpl RustInvokeChannel {\n    pub(crate) const ALL: &'static [RustInvokeChannel] = &[\n${all}\n    ];\n\n    pub(crate) fn from_name(name: &str) -> Option<Self> {\n        match name {\n${fromName}\n            _ => None,\n        }\n    }\n\n    pub(crate) fn as_str(self) -> &'static str {\n        match self {\n${asStr}\n        }\n    }\n}`,
+    allowList,
     ...structBlocks
   ].filter((p) => p.length > 0)
   return `${parts.join('\n\n')}\n`
@@ -520,10 +548,15 @@ export function buildContract(): string {
       FRONTEND_MESSAGE_EVENT,
       SHELL_WINDOW_FOCUSED,
       STORE_SNAPSHOT_CHANNEL,
-      RUST_INVOKE_KIND
+      RUST_INVOKE_KIND,
+      IPC_INVALID_CHANNEL_MARKER
     },
     channels: RUST_INVOKE_CHANNELS,
-    schemas
+    schemas,
+    // channelSchemas is inbound-keyed: pushes whose names collide with an inbound channel live
+    // in collidingPushSchemas and are NOT here, so a push name never opens (or shadows) the
+    // renderer invoke/send direction.
+    entries: channelSchemas
   })
 }
 

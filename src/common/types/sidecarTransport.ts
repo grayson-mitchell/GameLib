@@ -678,6 +678,14 @@ export const IPC_INVALID_ARGS = 'IPC_INVALID_ARGS' as const
  */
 export const IPC_INVALID_ARGS_MARKER = '[GAMELIB_IPC_INVALID_ARGS]' as const
 
+/**
+ * Marker prefixed to the error the Rust relay returns when the renderer names a channel that is
+ * not on the generated renderer allow-list (Phase 67, D-14). Rejected before anything crosses
+ * the pipe. Mirrored as a literal in `src/frontend/bootErrorSurface.ts` (zero-import module).
+ */
+export const IPC_INVALID_CHANNEL_MARKER =
+  '[GAMELIB_IPC_INVALID_CHANNEL]' as const
+
 export interface IpcInvalidArgsPayload {
   code: typeof IPC_INVALID_ARGS
   channel: string

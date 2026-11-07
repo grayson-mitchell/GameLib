@@ -1021,6 +1021,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'pathShim.test.ts',
   'playtimeLockBootClear.test.ts',
   'playtimeQueueBootDrain.test.ts',
+  'rendererAllowList.test.ts',
   'rendererPathGuard.test.ts',
   'rosettaBootWiring.test.ts',
   'rosettaPlatformGate.test.ts',

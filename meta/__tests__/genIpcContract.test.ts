@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { IPC_INVALID_CHANNEL_MARKER } from '../../src/common/types/sidecarTransport'
 import {
   newCtx,
   parseCliFlags,
@@ -122,6 +123,37 @@ describe('renderIpcContract', () => {
   })
   it('is deterministic', () => {
     expect(renderIpcContract(input)).toBe(renderIpcContract(input))
+  })
+  it('emits a sorted renderer invoke/send allow-list only', () => {
+    const out = renderIpcContract({
+      ...input,
+      entries: {
+        d: { caller: 'renderer', kind: 'send' },
+        c: { caller: 'local', kind: 'send' },
+        b: { caller: 'shell', kind: 'invoke' },
+        a: { caller: 'renderer', kind: 'invoke' },
+        e: { caller: 'renderer', kind: 'push' }
+      }
+    })
+    expect(out).toContain(
+      'pub(crate) const RENDERER_CHANNELS: &[&str] = &[\n    "a",\n    "d",\n];'
+    )
+    expect(out).toContain(
+      'pub(crate) fn is_renderer_channel(name: &str) -> bool'
+    )
+    expect(out).toContain('binary_search')
+  })
+  it('emits no allow-list without entries', () => {
+    expect(renderIpcContract(input)).not.toContain('RENDERER_CHANNELS')
+  })
+  it('emits the invalid-channel marker equal to the TS export', () => {
+    const out = renderIpcContract({
+      ...input,
+      constants: { IPC_INVALID_CHANNEL_MARKER }
+    })
+    expect(out).toContain(
+      `pub(crate) const IPC_INVALID_CHANNEL_MARKER: &str = "${IPC_INVALID_CHANNEL_MARKER}";`
+    )
   })
 })
 
