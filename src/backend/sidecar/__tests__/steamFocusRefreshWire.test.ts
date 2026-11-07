@@ -25,7 +25,10 @@
  *   T-D — fail-soft consumer: same transport, `refreshInstallState` mocked to REJECT; no
  *         unhandled rejection, and a subsequent frame is still processed afterward.
  */
-import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import {
+  readTauriShellFile,
+  readTauriShellSource
+} from 'backend/testUtils/tauriShellSource'
 import { PassThrough } from 'node:stream'
 
 import {
@@ -58,12 +61,16 @@ describe('loadMainRsCode comment-stripping self-test', () => {
   })
 })
 
-describe('T-A: cross-side name pin (main.rs const <-> SHELL_WINDOW_FOCUSED)', () => {
-  test('the stripped source declares the const with the exact TS constant value', () => {
-    // Templated FROM the TS constant, not hand-typed twice -- renaming either side alone
-    // breaks this string and reds the test.
+describe('T-A: cross-side name pin (ipc_contract.rs const <-> SHELL_WINDOW_FOCUSED)', () => {
+  test('the generated contract declares the const with the exact TS constant value', () => {
+    // Phase 67-03 moved the Rust const out of main.rs into the generated ipc_contract.rs,
+    // which readTauriShellSource() deliberately excludes (GENERATED_MODULES). Read the
+    // generated module directly. Templated FROM the TS constant, so renaming either side
+    // alone still reds this test.
     const expectedDecl = `const SHELL_WINDOW_FOCUSED: &str = "${SHELL_WINDOW_FOCUSED}";`
-    expect(loadMainRsCode()).toContain(expectedDecl)
+    expect(loadMainRsCode(readTauriShellFile('ipc_contract.rs'))).toContain(
+      expectedDecl
+    )
   })
 })
 

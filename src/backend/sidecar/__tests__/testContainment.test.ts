@@ -1009,6 +1009,8 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'installedJsonWatcher.test.ts',
   'invokeReturnValueSweep.test.ts',
   'ipcDomainCensus.test.ts',
+  'ipcSchemaCoverage.test.ts',
+  'ipcValidation.test.ts',
   'isPackagedSidecar.test.ts',
   'keyringTokenStore.test.ts',
   'knownFolders.test.ts',
