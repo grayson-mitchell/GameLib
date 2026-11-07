@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: planning
+status: executing
 stopped_at: Phase 61 context gathered
-last_updated: "2026-11-07T01:39:42.284Z"
-last_activity: "2026-11-07 - Completed quick task 261107-li0: Steam install dialog hides the shared Wine choice on the native-bridge route"
+last_updated: "2026-11-07T02:54:20.010Z"
+last_activity: 2026-11-07 -- Phase 61 planning complete
 progress:
   total_phases: 12
   completed_phases: 2
-  total_plans: 37
+  total_plans: 57
   completed_plans: 37
   percent: 17
 ---
@@ -74,8 +74,8 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 Phase: 64
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-11-07 - Completed quick task 261107-li0: Steam install dialog hides the shared Wine choice on the native-bridge route
+Status: Ready to execute
+Last activity: 2026-11-07 -- Phase 61 planning complete
 
 Progress: [██████████] 100%
 

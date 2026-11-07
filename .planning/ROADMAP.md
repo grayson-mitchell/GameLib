@@ -220,25 +220,60 @@ Phases 61–64 are not assigned to a milestone yet. Phase details for 51–60 (v
 
 Plans:
 
+**Wave 1**
+
 - [ ] 61-01-PLAN.md — Spike 068: non-Steam first-match `ps` signal and per-game bottle-name limits (checkpoint)
 - [ ] 61-02-PLAN.md — Pure move: steam/engine/ to src/backend/engine/, importers and mocks repointed
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 61-03-PLAN.md — D-19: extract the six bottle.ts primitives into engine/bottlePrimitives.ts
+- [ ] 61-06-PLAN.md — engineOverride key, read-time migration (D-05..D-09), backend write guard
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 61-04-PLAN.md — Pure moves: crossoverLocation, runTool, processListing into the engine
 - [ ] 61-05-PLAN.md — Game keys for the registry/deadline, and the per-bottle running-games ledger (D-16)
-- [ ] 61-06-PLAN.md — engineOverride key, read-time migration (D-05..D-09), backend write guard
-- [ ] 61-07-PLAN.md — Per-game bottle name/creation (D-01, D-03) and the bottle-or-prefix rule (D-02, D-04)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 61-08-PLAN.md — Store-agnostic engineDecision/engineSwitch, Steam adapter, bottle-busy refusal
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 61-07-PLAN.md — Per-game bottle name/creation (D-01, D-03) and the bottle-or-prefix rule (D-02, D-04)
 - [ ] 61-09-PLAN.md — Shared EngineState/EngineOption types; backend and frontend importers repointed
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 61-10-PLAN.md — Store-agnostic engine state, notice store, Steam adapter wrapper; engine-is-store-agnostic rule
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
 - [ ] 61-11-PLAN.md — Non-Steam engine state, option list with Legacy, global default, bottle names
 - [ ] 61-12-PLAN.md — Non-Steam launch engine step and per-launch settings overlay
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
 - [ ] 61-13-PLAN.md — `engine` IPC domain replacing the Steam engine channels
 - [ ] 61-14-PLAN.md — Launcher wiring, overlay census, legacy-bottle snapshot test, bottle-aware Wine tools (Winetricks, Run EXE)
 - [ ] 61-15-PLAN.md — Store-manager overlay reads and engine-aware GOG/Amazon setup
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
 - [ ] 61-16-PLAN.md — Non-Steam first-match watcher and launch deadline (per spike 068)
 - [ ] 61-17-PLAN.md — Frontend engine store, badge and notices keyed by game
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
 - [ ] 61-18-PLAN.md — Engine control for every store, Wine tab gating, global default (D-09, D-10)
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
 - [ ] 61-19-PLAN.md — Install/Import/ThirdParty/Sideload dialogs use the Engine control (D-17)
+
+**Wave 12** *(blocked on Wave 11 completion)*
+
 - [ ] 61-20-PLAN.md — Phase gates and live UAT (checkpoint)
 
 ### Phase 62: Module boundaries and decomposition
