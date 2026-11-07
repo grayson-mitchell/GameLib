@@ -45,21 +45,11 @@ import {
 } from './gameSessionState'
 import { type DrmWineLaunch } from './gameDrmLaunch'
 import { isNative, isBottleEligible } from './gameEligibility'
-import {
-  install,
-  installNative,
-  installBottleNative,
-  ensureBuiltInEngineForInstall
-} from './gameInstall'
-import { installBridgeGame } from './gameInstallBridge'
+import { install, ensureBuiltInEngineForInstall } from './gameInstall'
 import { prepareTcpOverlay } from './gameLaunchOverlay'
 import { launchBridgeGame, launchBridgeGameBody } from './gameBridgeLaunch'
 import { fireBridgeWineLaunch } from './gameBridgeWineLaunch'
-import {
-  launch,
-  prefetchBridgeDrmDownloads,
-  launchDrmModeGame
-} from './gameLaunch'
+import { launch, launchDrmModeGame } from './gameLaunch'
 import { moveInstall, repair, syncSaves } from './gameMaintenance'
 import { uninstall } from './gameUninstall'
 
@@ -308,108 +298,6 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * SNI-07 (D-13 opt-in ON, non-bottle-eligible) native depot-download install
-   * path. Calls the Plan 10 (ensureSteamClientReady) and Plan 09
-   * (resolveSteamInstallTarget) seams so those plans can implement the real
-   * logic without re-touching this file, then hands off to depot.ts's
-   * downloadSteamDepots orchestrator (Plan 04-06). Maps its NEVER-throwing
-   * { status, error? } outcome onto InstallResult using the SAME conventions
-   * gog/legendary's own install() functions already use — 'done' -> success,
-   * 'error' -> the outcome's already-classified (Plan 06 classifyDepotError)
-   * message so the DownloadManager queue's EXISTING generic error+Retry
-   * surface renders it (D-06/D-07 reuse, no steam-specific UI,
-   * downloadqueue.ts untouched), 'cancelled' -> the abort-shaped result other
-   * runners return on user cancel (not an error).
-   *
-   * Delegates to installDepotDownload() using the resolved native library
-   * target + host os (unchanged behavior/call signature from Plan 07).
-   *
-   * @internal Public only so lifted modules reach it via
-   * steamGame.installNative() (test spy: games.test.ts:8003); do not call from
-   * outside steam/.
-   */
-  installNative(args: InstallArgs): Promise<InstallResult> {
-    return installNative(this, args)
-  }
-
-  /**
-   * D-15/SNI-08 (opt-in ON, bottle-eligible + isBottleReady) bottle
-   * depot-download install path — unifies the install mechanism across
-   * native and bottle: the SAME depot.ts orchestrator as installNative()
-   * above, with the write target swapped to the CrossOver bottle's OWN
-   * steamapps/ (getBottleSteamappsDir — plain Node fs, no Wine dispatch) and
-   * os hard-coded 'windows' (the bottled client is a Windows Steam client,
-   * never the host's macOS depot — RESEARCH Pattern 4). The bottle-scoped ACF
-   * poller (startInstallPolling(appId,{source:'bottle'}), Plan 08) is reused
-   * unchanged so the bottled Windows Steam client's own verify pass
-   * (StateFlags 1026 -> 4) is reflected in the UI.
-   *
-   * @internal Public only so lifted modules reach it via
-   * steamGame.installBottleNative() (test spies: games.test.ts:5234, 7999,
-   * 9004); do not call from outside steam/.
-   */
-  installBottleNative(args: InstallArgs): Promise<InstallResult> {
-    return installBottleNative(this, args)
-  }
-
-  /**
-   * Phase 59 (D-05): download the pinned built-in engine on first need, with
-   * `engine-download` progress. A failure is a PRECONDITION failure, like a
-   * missing CrossOver: it never marks the bridge failed, so it can never
-   * reroute the title to bottled Steam.
-   */
-  private ensureBuiltInEngineForInstall(
-    pin: EnginePin,
-    signal?: AbortSignal
-  ): Promise<NonCrossoverEngine | InstallResult> {
-    return ensureBuiltInEngineForInstall(this, pin, signal)
-  }
-
-  /**
-   * Phase 24 Plan 08 (R3/R4/R7, D-01): allowlisted-title bridge install
-   * path — a sibling of installBottleNative() above, but targeting this
-   * game's OWN per-game bridge bottle (quick/261016-u1w D-A,
-   * `GameLibSteamBridge-<appId>`) instead of the Phase 17 `GameLibSteam`
-   * bottle. Reuses the SAME installDepotDownload()
-   * engine both installNative()/installBottleNative() already share, with
-   * the write target swapped to the bridge bottle's OWN steamapps/ dir and
-   * os hard-coded 'windows', then places the generated shim as a
-   * post-download hook (shimGenerate's placeShimForGame(), 24-05) — no
-   * manual copy step (R3).
-   *
-   * BLOCKER 1: the SOLE caller of provisionBridgeBottle() (24-04). When the
-   * bridge bottle has not been created yet, provisioning happens INLINE,
-   * here, as part of the ordinary Install click — a fast `cxbottle
-   * --create` with no SteamSetup.exe/download/login, so no consent dialog
-   * is needed. Only a provisioning FAILURE defers to
-   * steamBridgeSetupRequired — so the bridge bottle is always reachable
-   * through the normal Install flow, never left permanently unreachable
-   * waiting on a setup step that never fires.
-   *
-   * Finding #10 (accepted divergence): the reused depot engine writes an
-   * appmanifest.acf for a Steam client to adopt — the bridge bottle has no
-   * Steam client to adopt it, so that ACF is harmless dead weight on this
-   * path (the files-on-disk + direct-launch model is what the bridge
-   * relies on, with per-chunk sha1 already making the files
-   * self-sufficient). Reusing the engine unchanged is the correct
-   * low-risk choice this phase — not forked here.
-   *
-   * Any terminal failure (provisioning, depot download, unresolved launch
-   * exe, or shim placement) EXCEPT a missing CrossOver (a precondition, not a
-   * bridge failure — quick 261024-cjq) marks this appId bridge-failed-this-session
-   * (finding #3, markBridgeFailedThisSession above) so a later D-05
-   * fallback re-invocation of install() reaches the existing bottled path
-   * instead of looping back into the same failing bridge (T-24-17).
-   *
-   * @internal Public only so lifted modules reach it via
-   * steamGame.installBridgeGame() (test spy: games.test.ts:7995); do not call
-   * from outside steam/.
-   */
-  installBridgeGame(args: InstallArgs): Promise<InstallResult> {
-    return installBridgeGame(this, args)
-  }
-
-  /**
    * engineSwitch's pin source: downloads with the same engine-download statuses as a launch.
    *
    * @internal Public only so lifted modules reach it via
@@ -419,7 +307,7 @@ export default class SteamGame implements Game {
   restorePinEngine = async (
     pin: EnginePin
   ): Promise<NonCrossoverEngine | null> => {
-    const result = await this.ensureBuiltInEngineForInstall(pin)
+    const result = await ensureBuiltInEngineForInstall(this, pin)
     return 'status' in result ? null : result
   }
 
@@ -480,22 +368,6 @@ export default class SteamGame implements Game {
     _skipVersionCheck?: boolean
   ): Promise<boolean> {
     return launch(this, _logWriter, _launchArguments, _args, _skipVersionCheck)
-  }
-
-  /**
-   * Quick 261029-e2t: the install-time half of DRM mode. Resolves the mode the
-   * same way launchBridgeGame does (UE-aware `.bind` detection, CEG markers
-   * from the `.bind` exe) and prefetches only when it is steamclient-layer.
-   *
-   * @internal Public only so lifted modules reach it via
-   * steamGame.prefetchBridgeDrmDownloads() (gameInstall -> gameLaunch would be
-   * an import cycle); do not call from outside steam/.
-   */
-  prefetchBridgeDrmDownloads(
-    exePath: string,
-    bridgeBottleName: string
-  ): Promise<void> {
-    return prefetchBridgeDrmDownloads(this, exePath, bridgeBottleName)
   }
 
   /**

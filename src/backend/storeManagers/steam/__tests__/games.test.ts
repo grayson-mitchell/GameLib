@@ -36,6 +36,8 @@ import { steamMetadataStore, steamLibraryStore } from '../stores'
 import { TITLE_AUTHORITATIVE_KEYS } from '../titleSettings'
 import SteamGame from '../games'
 import * as gameMetadata from '../gameMetadata'
+import * as gameInstallDepot from '../gameInstallDepot'
+import * as gameInstallBridgeModule from '../gameInstallBridge'
 import { checkBottleEligibility } from '../gameEligibility'
 import {
   buildDrmLaunchEnvironment,
@@ -2248,6 +2250,17 @@ const ENGINE_OK = {
     dxvkDir: '/engine/dxvk'
   }
 }
+// Module-export spies outlive their test (the backend jest project sets
+// resetMocks, not restoreMocks), so every one is registered here and restored.
+const trackedSpies: jest.SpyInstance[] = []
+function trackSpy<T extends jest.SpyInstance>(spy: T): T {
+  trackedSpies.push(spy)
+  return spy
+}
+afterEach(() => {
+  for (const spy of trackedSpies.splice(0)) spy.mockRestore()
+})
+
 beforeEach(() => {
   leaseRelease = jest.fn()
   ;(SteamUser.acquireAuthenticated as jest.Mock).mockResolvedValue({
@@ -5238,9 +5251,9 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
     const game = new SteamGame(APP_ID)
-    const installBottleNative = jest
-      .spyOn(game as any, 'installBottleNative')
-      .mockResolvedValue({ status: 'done' } as any)
+    const installBottleNative = trackSpy(
+      jest.spyOn(gameInstallDepot, 'installBottleNative')
+    ).mockResolvedValue({ status: 'done' } as any)
     const result = await game.install({} as any)
 
     expect(installBottleNative).toHaveBeenCalledTimes(1)
@@ -5256,9 +5269,9 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
     const game = new SteamGame(APP_ID)
-    jest
-      .spyOn(game as any, 'installBottleNative')
-      .mockResolvedValue({ status: 'error', error: 'boom' } as any)
+    trackSpy(
+      jest.spyOn(gameInstallDepot, 'installBottleNative')
+    ).mockResolvedValue({ status: 'error', error: 'boom' } as any)
     const result = await game.install({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -7993,24 +8006,25 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
   /** Spies on all three private-method terminals install() can reach, each
    * resolving { status: 'done' } like a real success — so a spec only has
    * to name the ONE terminal it expects, via assertExactlyOneRoute(). */
-  function spyOnAllTerminals(game: SteamGame): {
+  function spyOnAllTerminals(_game: SteamGame): {
     installBridgeGame: jest.SpyInstance
     installBottleNative: jest.SpyInstance
     installNative: jest.SpyInstance
   } {
-    const gameAny = game as any
-    const installBridgeGame = jest
-      .spyOn(gameAny, 'installBridgeGame')
-
-      .mockResolvedValue({ status: 'done' } as any)
-    const installBottleNative = jest
-      .spyOn(gameAny, 'installBottleNative')
-
-      .mockResolvedValue({ status: 'done' } as any)
-    const installNative = jest
-      .spyOn(gameAny, 'installNative')
-
-      .mockResolvedValue({ status: 'done' } as any)
+    const installBridgeGame = trackSpy(
+      jest.spyOn(gameInstallBridgeModule, 'installBridgeGame')
+    ).mockResolvedValue({ status: 'done' } as any)
+    const installBottleNative = trackSpy(
+      jest.spyOn(gameInstallDepot, 'installBottleNative')
+    ).mockResolvedValue({ status: 'done' } as any)
+    const installNative = trackSpy(
+      jest.spyOn(gameInstallDepot, 'installNative')
+    ).mockResolvedValue({ status: 'done' } as any)
+    // Module spies are shared across calls within a test (instance spies were
+    // fresh per game), so start every call from a clean count.
+    installBridgeGame.mockClear()
+    installBottleNative.mockClear()
+    installNative.mockClear()
     return { installBridgeGame, installBottleNative, installNative }
   }
 
@@ -9138,9 +9152,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
       const game = new SteamGame(APP_ID)
-      jest
-        .spyOn(game as any, 'installBottleNative')
-        .mockResolvedValue({ status: 'done' } as any)
+      trackSpy(
+        jest.spyOn(gameInstallDepot, 'installBottleNative')
+      ).mockResolvedValue({ status: 'done' } as any)
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
       const stored = steamMetadataStore.get(APP_ID) as unknown as Record<
@@ -9169,10 +9183,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
       const game = new SteamGame(APP_ID)
 
-      jest
-        .spyOn(game as any, 'installBottleNative')
-
-        .mockResolvedValue({ status: 'done' } as any)
+      trackSpy(
+        jest.spyOn(gameInstallDepot, 'installBottleNative')
+      ).mockResolvedValue({ status: 'done' } as any)
 
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
@@ -9199,10 +9212,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
       const game = new SteamGame(APP_ID)
 
-      jest
-        .spyOn(game as any, 'installBottleNative')
-
-        .mockResolvedValue({ status: 'error', error: 'boom' } as any)
+      trackSpy(
+        jest.spyOn(gameInstallDepot, 'installBottleNative')
+      ).mockResolvedValue({ status: 'error', error: 'boom' } as any)
 
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
@@ -9255,9 +9267,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
       const game = new SteamGame(APP_ID)
-      jest
-        .spyOn(game as any, 'installBottleNative')
-        .mockResolvedValue({ status: 'error', error: 'nope' } as any)
+      trackSpy(
+        jest.spyOn(gameInstallDepot, 'installBottleNative')
+      ).mockResolvedValue({ status: 'error', error: 'nope' } as any)
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
       expect(
@@ -9285,9 +9297,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
       const game = new SteamGame(APP_ID)
-      const installBottleNative = jest
-        .spyOn(game as any, 'installBottleNative')
-        .mockResolvedValue({ status: 'done' } as any)
+      const installBottleNative = trackSpy(
+        jest.spyOn(gameInstallDepot, 'installBottleNative')
+      ).mockResolvedValue({ status: 'done' } as any)
       await game.install(PRODUCTION_ARGS)
 
       expect(installBottleNative).toHaveBeenCalledTimes(1)
@@ -9358,10 +9370,9 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
       const game = new SteamGame(APP_ID)
 
-      jest
-        .spyOn(game as any, 'installBottleNative')
-
-        .mockResolvedValue({ status: 'done' } as any)
+      trackSpy(
+        jest.spyOn(gameInstallDepot, 'installBottleNative')
+      ).mockResolvedValue({ status: 'done' } as any)
 
       await game.install(PRODUCTION_ARGS)
 
@@ -11844,9 +11855,9 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
     })
     dialogShowMessageBox.mockResolvedValue({ response: 0 })
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    const installBottleNative = jest
-      .spyOn(SteamGame.prototype as any, 'installBottleNative')
-      .mockResolvedValue({ status: 'done' } as any)
+    const installBottleNative = trackSpy(
+      jest.spyOn(gameInstallDepot, 'installBottleNative')
+    ).mockResolvedValue({ status: 'done' } as any)
 
     await macArch.promptI386Recovery(APP_ID)
 

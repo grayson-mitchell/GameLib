@@ -37,6 +37,7 @@ import {
 } from './gameSessionState'
 import type SteamGame from './games'
 import { ensureBuiltInEngineForInstall } from './gameInstall'
+import { prefetchBridgeDrmDownloads } from './gameLaunch'
 import {
   persistBridgeDrmSignal,
   reconcileBridgePrescreen,
@@ -651,14 +652,16 @@ export async function installBridgeGameLeased(
     // Quick 261029-e2t: fetch DRM mode's runner and Valve client now, so
     // the first Play only stages the bottle. Never fails the install.
     sendFinishing()
-    await steamGame
-      .prefetchBridgeDrmDownloads(exePath, bridgeBottleName)
-      .catch((error: unknown) => {
-        logWarning(
-          `SteamGame: install-time DRM prefetch failed for appId ${steamGame.appId}: ${String(error)}`,
-          LogPrefix.Steam
-        )
-      })
+    await prefetchBridgeDrmDownloads(
+      steamGame,
+      exePath,
+      bridgeBottleName
+    ).catch((error: unknown) => {
+      logWarning(
+        `SteamGame: install-time DRM prefetch failed for appId ${steamGame.appId}: ${String(error)}`,
+        LogPrefix.Steam
+      )
+    })
   } finally {
     pollState.markBridgeInstallFinalized(steamGame.appId)
     sendGameStatusUpdate({

@@ -1,11 +1,11 @@
 /**
  * Install cluster lifted out of SteamGame (62-06, D-06 mechanical lift:
  * this -> steamGame).
- * Public SteamGame entry points keep a delegating stub on the class;
- * internal helpers are called directly by sibling lifted modules, importing
- * forward only (gameEligibility/gameLaunchOverlay -> gameInstall ->
- * gameLaunch -> gameBridgeLaunch). A call a test spies on stays a
- * `steamGame.X()` call (quick-261107-an2).
+ * Only the Game-interface entry points keep a delegating method on the class;
+ * everything else is a free function called directly across modules (the
+ * install terminals are installNative/installBottleNative in gameInstallDepot
+ * and installBridgeGame in gameInstallBridge), so a test spies on the module
+ * export (quick-261108-ca6).
  */
 
 import i18next from 'i18next'
@@ -44,7 +44,6 @@ import {
   isNativeInstallInFlight,
   markForcedWindowsViaBottle
 } from './gameSessionState'
-import { hostSteamDepotOs } from './gameRequirements'
 import { buildSteamProtocolUrl } from './gameProtocolUrl'
 import type SteamGame from './games'
 import {
@@ -54,9 +53,11 @@ import {
   isBottleEligible
 } from './gameEligibility'
 import {
-  installDepotDownload,
+  installBottleNative,
+  installNative,
   installResultForRefusal
 } from './gameInstallDepot'
+import { installBridgeGame } from './gameInstallBridge'
 
 export async function install(
   steamGame: SteamGame,
@@ -298,7 +299,7 @@ export async function install(
           LogPrefix.Steam
         )
       }
-      const bridgeResult = await steamGame.installBridgeGame(args)
+      const bridgeResult = await installBridgeGame(steamGame, args)
       // quick 261107-lum (DC-2): persist the forced verdict only when THIS
       // install was forced and completed, so launch()/isNative() follow it.
       if (
@@ -343,7 +344,7 @@ export async function install(
     // D-17 (34.13-14): persist the forced verdict ONLY when this specific
     // install was forced (never for a game that was already ordinarily
     // bottle-eligible) AND the depot download actually completed.
-    const bottleNativeResult = await steamGame.installBottleNative(args)
+    const bottleNativeResult = await installBottleNative(steamGame, args)
     if (
       bottleNativeResult.status === 'done' &&
       !bottleNativeResult.deferredToSetup
@@ -362,7 +363,7 @@ export async function install(
   // a Steam client being there to handle it. The D-15
   // bottle branch above is Plan 11's scope, not this one.
   if (isSteamNativeInstallEnabled()) {
-    return steamGame.installNative(args)
+    return installNative(steamGame, args)
   }
 
   const url = buildSteamProtocolUrl('install', steamGame.appId)
@@ -523,13 +524,6 @@ export async function removeDemotedNativeOrphan(
   }
 }
 
-export async function installNative(
-  steamGame: SteamGame,
-  args: InstallArgs
-): Promise<InstallResult> {
-  return installDepotDownload(steamGame, args, { os: hostSteamDepotOs() })
-}
-
 /**
  * 51-REVIEW WR-08: true when an interrupted native download for this appId
  * targeted the Phase 17 GameLibSteam bottle -- the install-start breadcrumb
@@ -550,20 +544,6 @@ export function hasBottledSteamCopy(steamGame: SteamGame): boolean {
     bottle.getSteamBottleSettings().wineCrossoverBottle
   )
   return resolve(breadcrumb) === resolve(steamappsDir)
-}
-
-export async function installBottleNative(
-  steamGame: SteamGame,
-  args: InstallArgs
-): Promise<InstallResult> {
-  const targetSteamappsDir = bottle.getBottleSteamappsDir(
-    bottle.getSteamBottleSettings().wineCrossoverBottle
-  )
-  return installDepotDownload(steamGame, args, {
-    targetSteamappsDirOverride: targetSteamappsDir,
-    os: 'windows',
-    pollerSource: 'bottle'
-  })
 }
 
 export function crossoverRequiredError(_steamGame: SteamGame): InstallResult {

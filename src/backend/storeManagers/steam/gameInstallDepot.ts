@@ -29,6 +29,8 @@ import { requestSteamInstallApp } from './steamInstallApp'
 import { classifyDepotError } from './depotErrors'
 import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
 import { nativeInstallsInFlight } from './gameSessionState'
+import { hostSteamDepotOs } from './gameRequirements'
+import * as bottle from './bottle'
 import type SteamGame from './games'
 
 /**
@@ -118,6 +120,27 @@ export async function installDepotDownload(
     aborted: false
   })
   return runPromise
+}
+
+export async function installNative(
+  steamGame: SteamGame,
+  args: InstallArgs
+): Promise<InstallResult> {
+  return installDepotDownload(steamGame, args, { os: hostSteamDepotOs() })
+}
+
+export async function installBottleNative(
+  steamGame: SteamGame,
+  args: InstallArgs
+): Promise<InstallResult> {
+  const targetSteamappsDir = bottle.getBottleSteamappsDir(
+    bottle.getSteamBottleSettings().wineCrossoverBottle
+  )
+  return installDepotDownload(steamGame, args, {
+    targetSteamappsDirOverride: targetSteamappsDir,
+    os: 'windows',
+    pollerSource: 'bottle'
+  })
 }
 
 /**
