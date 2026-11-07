@@ -121,6 +121,10 @@ export interface EngineDecisionDeps {
   /** D-16: true when another game (any store) is running in this bottle. */
   bottleBusy(bottleName: string, key: string): boolean
   wineManagerReleases(): WineManagerRelease[]
+  /** WR-01: read-only bottle engine marker (kind plus pin id); null when absent/unreadable. */
+  markerSummary?(
+    bottleName: string
+  ): { kind: 'crossover' | 'non-crossover'; pinId: string | null } | null
   isPinInstalled(pin: EnginePin): boolean
   pins: Readonly<{ current: EnginePin; previous: EnginePin | null }>
   fileExists(path: string): boolean
@@ -165,6 +169,12 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
         'wine-releases',
         []
       ) as unknown as WineManagerRelease[]
+    },
+    markerSummary(bottleName) {
+      const { readBottleEngineMarkerSummary } =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('./engineSwitch') as typeof import('./engineSwitch')
+      return readBottleEngineMarkerSummary(bottleName)
     },
     isPinInstalled: isPinnedEngineInstalled,
     pins: ENGINE_PINS,
@@ -379,7 +389,7 @@ export function resolveWineManagerStaging(
 
 function pinnedSelection(
   pin: EnginePin,
-  reason: FallbackReason | 'override'
+  reason: FallbackReason | 'cx-inconclusive' | 'override'
 ): EngineSelection {
   const p = pinnedEnginePaths(pin)
   return {
@@ -484,21 +494,37 @@ export async function decideLaunchEngine(
     key: args.key
   })
 
-  // An inconclusive pre-flight is no evidence of breakage (59 D-09/G29): with
-  // a located CrossOver it is used, never replaced (and its bottle never
-  // rewritten) by the fallback.
+  // An inconclusive pre-flight is no evidence of breakage (59 D-09/G29, WR-01):
+  // the bottle stays on the engine its marker records and the fallback never
+  // runs.
   if (
     preflight.kind === 'broken' &&
     preflight.inconclusive === true &&
     preflight.binDir !== null
   ) {
+    const marker = d.markerSummary?.(args.bottleName) ?? null
+    if (marker?.kind === 'non-crossover' && override !== 'crossover') {
+      const pin =
+        d.pins.previous !== null && marker.pinId === d.pins.previous.id
+          ? d.pins.previous
+          : d.pins.current
+      logLines.push(
+        `Engine: CrossOver pre-flight inconclusive (${preflight.detail}); keeping the bottle's built-in engine`
+      )
+      return finish(
+        pinnedSelection(pin, 'cx-inconclusive'),
+        preflight,
+        pin,
+        !d.isPinInstalled(pin)
+      )
+    }
     logLines.push(
       `Engine: CrossOver pre-flight inconclusive (${preflight.detail}); launching on CrossOver`
     )
     return finish(
       {
         kind: 'crossover',
-        reason: override === 'crossover' ? 'override' : 'cx-healthy',
+        reason: override === 'crossover' ? 'override' : 'cx-inconclusive',
         crossoverBuild: preflight.build,
         binDir: preflight.binDir
       },

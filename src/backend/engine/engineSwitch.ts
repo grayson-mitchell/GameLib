@@ -143,6 +143,26 @@ export function readBottleEngineMarkerKind(
 }
 
 /**
+ * WR-01: read-only marker kind plus the pin id (null unless a pinned marker). Same contract as
+ * readBottleEngineMarkerKind: never infers or writes a marker.
+ */
+export function readBottleEngineMarkerSummary(
+  bottleName: string
+): { kind: 'crossover' | 'non-crossover'; pinId: string | null } | null {
+  try {
+    if (sanitizeBottleName(bottleName) !== bottleName) return null
+    const marker = readMarker(getBottleDir(bottleName))
+    if (!marker) return null
+    return {
+      kind: marker.kind === 'crossover' ? 'crossover' : 'non-crossover',
+      pinId: marker.kind === 'pinned' ? marker.id : null
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
  * G22 (59-38): true when switching this bottle back to a HEALTHY CrossOver would have to
  * download a pin that is not installed (the same conditions resolveRestoreSource and
  * prepareBottleForEngine use, read-only). False whenever the restore needs no pin download,

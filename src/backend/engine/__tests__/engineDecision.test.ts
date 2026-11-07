@@ -53,6 +53,7 @@ function mkDeps(
     readOverride: () => undefined,
     monitorPhase: () => null,
     bottleBusy: () => false,
+    markerSummary: () => null,
     wineManagerReleases: () => [],
     isPinInstalled: () => true,
     pins: ENGINE_PINS,
@@ -706,13 +707,15 @@ describe('inconclusive pre-flight never falls back (CR-01, D-05)', () => {
     )
     expect(r).toMatchObject({
       kind: 'use',
-      selection: { kind: 'crossover', reason: 'cx-healthy' },
+      selection: { kind: 'crossover', reason: 'cx-inconclusive' },
       needsDownload: false
     })
     if (r.kind !== 'use') throw new Error('expected use')
     if (r.selection.kind !== 'crossover') throw new Error('expected crossover')
     expect(r.selection.binDir).toBeTruthy()
     expect(r.logLines.join('\n')).toContain('inconclusive')
+    expect(r.logLines.join('\n')).toContain('reason=cx-inconclusive')
+    expect(r.logLines.join('\n')).not.toContain('reason=cx-healthy')
   })
   it('forced CrossOver + invalid-bottle is usable, reason override', async () => {
     const r = await decideLaunchEngine(
@@ -734,7 +737,124 @@ describe('inconclusive pre-flight never falls back (CR-01, D-05)', () => {
     )
     expect(r).toMatchObject({
       kind: 'use',
-      selection: { kind: 'crossover', reason: 'cx-healthy' }
+      selection: { kind: 'crossover', reason: 'cx-inconclusive' }
+    })
+  })
+  const busyNonCx = (
+    a: { key: string; bottleName: string },
+    pinId: string | null,
+    over: Partial<EngineDecisionDeps> = {}
+  ) =>
+    decideLaunchEngine(
+      a,
+      mkDeps({
+        probe: seq(failed('timeout')),
+        bottleBusy: () => true,
+        markerSummary: () => ({ kind: 'non-crossover', pinId }),
+        ...over
+      })
+    )
+  it('Automatic + invalid-bottle + crossover marker stays on CrossOver, cx-inconclusive', async () => {
+    const r = await decideLaunchEngine(
+      args,
+      mkDeps({
+        probe: seq(failed('invalid-bottle')),
+        markerSummary: () => ({ kind: 'crossover', pinId: null })
+      })
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'crossover', reason: 'cx-inconclusive' }
+    })
+  })
+  it('forced CrossOver + invalid-bottle ignores a non-crossover marker', async () => {
+    const r = await decideLaunchEngine(
+      args,
+      mkDeps({
+        readOverride: () => 'crossover',
+        probe: seq(failed('invalid-bottle')),
+        markerSummary: () => ({ kind: 'non-crossover', pinId: 'x' })
+      })
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'crossover', reason: 'override' }
+    })
+  })
+  it('Automatic + busy-bottle timeout + crossover marker stays on CrossOver', async () => {
+    const r = await decideLaunchEngine(
+      args,
+      mkDeps({
+        probe: seq(failed('timeout')),
+        bottleBusy: () => true,
+        markerSummary: () => ({ kind: 'crossover', pinId: null })
+      })
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'crossover', reason: 'cx-inconclusive' }
+    })
+  })
+  it('WR-01 Steam: busy bottle with a non-crossover marker is not forced onto CrossOver', async () => {
+    const kill = jest.fn(() => Promise.resolve(undefined))
+    const r = await busyNonCx(
+      { key: '1', bottleName: 'GameLibSteamBridge-1' },
+      ENGINE_PINS.current.id,
+      { killCrossoverWineserver: kill }
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: {
+        kind: 'pinned',
+        pinId: ENGINE_PINS.current.id,
+        reason: 'cx-inconclusive'
+      },
+      needsDownload: false
+    })
+    expect(kill).not.toHaveBeenCalled()
+    if (r.kind !== 'use') throw new Error('expected use')
+    expect(r.logLines.join('\n')).toContain('reason=cx-inconclusive')
+    expect(r.logLines.join('\n')).not.toContain('reason=cx-healthy')
+  })
+  it('WR-01 non-Steam: busy bottle with a non-crossover marker is not forced onto CrossOver', async () => {
+    const r = await busyNonCx(
+      { key: 'legendary:Quail', bottleName: 'GameLib-legendary-Quail' },
+      ENGINE_PINS.current.id
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: {
+        kind: 'pinned',
+        pinId: ENGINE_PINS.current.id,
+        reason: 'cx-inconclusive'
+      }
+    })
+  })
+  it('a marker on the previous pin keeps the previous pin', async () => {
+    const prev = { ...ENGINE_PINS.current, id: 'prev-pin-test' }
+    const r = await busyNonCx(args, 'prev-pin-test', {
+      pins: { current: ENGINE_PINS.current, previous: prev }
+    })
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'pinned', pinId: 'prev-pin-test' }
+    })
+  })
+  it('a wine-manager marker (null pin id) gets pins.current', async () => {
+    const r = await busyNonCx(args, null)
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'pinned', pinId: ENGINE_PINS.current.id }
+    })
+  })
+  it('pinned-inconclusive with the pin not installed needs a download', async () => {
+    const r = await busyNonCx(args, ENGINE_PINS.current.id, {
+      isPinInstalled: () => false
+    })
+    expect(r).toMatchObject({
+      kind: 'use',
+      needsDownload: true,
+      pin: { id: ENGINE_PINS.current.id }
     })
   })
   it('regression: nonzero-exit twice still falls back as cx-broken', async () => {

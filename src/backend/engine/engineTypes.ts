@@ -8,6 +8,8 @@ export type EngineReason =
   | 'cx-missing'
   | 'cx-expired'
   | 'cx-broken'
+  /** An inconclusive pre-flight kept the bottle's current engine (59 D-09); never a fallback. */
+  | 'cx-inconclusive'
   | 'override'
 
 export type FallbackReason = 'cx-missing' | 'cx-expired' | 'cx-broken'
@@ -23,14 +25,14 @@ export interface NonCrossoverEngine {
 export type EngineSelection =
   | {
       kind: 'crossover'
-      reason: 'cx-healthy' | 'override'
+      reason: 'cx-healthy' | 'cx-inconclusive' | 'override'
       crossoverBuild: string | null
       binDir: string
     }
   | ({
       kind: 'pinned'
       pinId: string
-      reason: FallbackReason | 'override'
+      reason: FallbackReason | 'cx-inconclusive' | 'override'
     } & NonCrossoverEngine)
   | ({
       kind: 'wine-manager'
