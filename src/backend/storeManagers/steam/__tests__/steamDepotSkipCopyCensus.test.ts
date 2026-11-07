@@ -99,7 +99,7 @@ describe('steamDepotSkipCopyCensus (23.2-04, D-06/D-07): the depot-skip notice c
     })
   })
 
-  describe('3. library.ts references the new key literally', () => {
+  describe('3. library/installPollOnce.ts references the new key literally', () => {
     const librarySource = stripSourceComments(
       readFileSync(LIBRARY_TS_PATH, 'utf-8')
     )

@@ -7,29 +7,29 @@ import {
 } from 'common/types'
 import { LibraryManager } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { sendFrontendMessage } from '../../ipc'
-import { notify } from '../../dialog/dialog'
+import { sendFrontendMessage } from '../../../ipc'
+import { notify } from '../../../dialog/dialog'
 import i18next from 'i18next'
-import { SteamUser } from './user'
-import { noteSteamAuthTrigger } from './authTrigger'
-import { steamLibraryStore, steamMetadataStore } from './stores'
+import { SteamUser } from '../user'
+import { noteSteamAuthTrigger } from '../authTrigger'
+import { steamLibraryStore, steamMetadataStore } from '../stores'
 import { runOnceWhenOnline } from 'backend/online_monitor'
-import { library } from './state'
-import SteamGame from './games'
-import { isNativeInstallInFlight } from './gameSessionState'
-import { scanDownloadingAppIds } from './library/acfState'
+import { library } from '../state'
+import SteamGame from '../games'
+import { isNativeInstallInFlight } from '../gameSessionState'
+import { scanDownloadingAppIds } from './acfState'
 import {
   getReconcileRanDuringRearm,
   setReconcileRanDuringRearm
-} from './library/restartHold'
+} from './restartHold'
 import {
   clearSteamResumeBreadcrumb,
   getSteamResumeBreadcrumbAppIds,
   breadcrumbAppIsFullyInstalledOnDisk
-} from './library/resumeBreadcrumbs'
-import { rearmPersistedSteamRestartHolds } from './library/resume'
-import { startRunningPoll } from './library/runningPoll'
-import { refresh, refreshInstallState } from './library/refresh'
+} from './resumeBreadcrumbs'
+import { rearmPersistedSteamRestartHolds } from './resume'
+import { startRunningPoll } from './runningPoll'
+import { refresh, refreshInstallState } from './refresh'
 
 export default class SteamLibraryManager implements LibraryManager {
   /**

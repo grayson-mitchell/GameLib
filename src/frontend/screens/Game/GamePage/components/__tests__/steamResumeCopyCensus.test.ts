@@ -147,7 +147,7 @@ describe('steamResumeCopyCensus (quick-260819-ch5): zero residual "Finish in Ste
     // though they mention "Resume Install"/history of the retired string in
     // comments elsewhere in the repo.
     const libraryTs = scanned.find((f) =>
-      f.path.endsWith(join('storeManagers', 'steam', 'library.ts'))
+      f.path.endsWith(join('storeManagers', 'steam', 'library', 'index.ts'))
     )
     expect(libraryTs).toBeDefined()
     expect(libraryTs?.stripped.includes('Finish in Steam')).toBe(false)

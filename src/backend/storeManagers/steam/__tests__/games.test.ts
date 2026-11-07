@@ -9402,10 +9402,18 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     it('A-19: the source carries no writer, eraser or store declaration for it', () => {
       // A census, so the deletion cannot be half-undone in one file. The 62
       // split moved code out of games.ts, so it now covers every game*.ts
-      // module plus library.ts and stores.ts.
+      // module plus every library/*.ts module and stores.ts.
+      const libraryModules = jest
+        .requireActual<typeof import('node:fs')>('node:fs')
+        .readdirSync(join(__dirname, '..', 'library'))
+        .filter((f) => f.endsWith('.ts'))
+        .map((f) => `library/${f}`)
+      // anti-vacuity: the census must actually see the library modules
+      expect(libraryModules).toContain('library/index.ts')
+      expect(libraryModules).toContain('library/refresh.ts')
       for (const relative of [
         ...gameModuleFiles(),
-        'library.ts',
+        ...libraryModules,
         'stores.ts'
       ]) {
         const source = stripSourceComments(
