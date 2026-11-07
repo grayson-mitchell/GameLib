@@ -23,6 +23,11 @@ import {
   loggerFrontendMessagesArgs,
   loggerSyncArgs
 } from './logger'
+import {
+  humbleAsyncArgs,
+  humbleFrontendMessagesArgs,
+  humbleSyncArgs
+} from './humble'
 import { shellFilesAsyncArgs, shellFilesSyncArgs } from './shellFiles'
 
 export function mergeChannelEntries(
@@ -71,5 +76,8 @@ export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
     defineChannelEntries('push', engineFrontendMessagesArgs),
     defineChannelEntries('send', loggerSyncArgs),
     defineChannelEntries('invoke', loggerAsyncArgs),
-    defineChannelEntries('push', loggerFrontendMessagesArgs)
+    defineChannelEntries('push', loggerFrontendMessagesArgs),
+    defineChannelEntries('send', humbleSyncArgs),
+    defineChannelEntries('invoke', humbleAsyncArgs),
+    defineChannelEntries('push', humbleFrontendMessagesArgs)
   )
