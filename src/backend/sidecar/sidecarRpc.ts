@@ -42,12 +42,15 @@ import {
   RUST_DIALOG_SAVE,
   RUST_INVOKE_CHANNELS,
   UNPORTED_CHANNEL_MARKER,
+  IPC_INVALID_ARGS,
+  formatIpcInvalidArgsError,
   type RustInvokeChannel,
   type SidecarRpcRequest,
   type SidecarRpcResponse,
   type SidecarNotification
 } from 'common/types/sidecarTransport'
 import { handlerRegistry, listenerRegistry } from '../platform'
+import { validateInbound, logRejection } from './ipcValidation'
 
 /** Guardrail against an unterminated line growing the input buffer unbounded. */
 const MAX_LINE_LENGTH = 10 * 1024 * 1024 // 10 MiB
@@ -198,6 +201,23 @@ async function dispatchInvoke(request: SidecarRpcRequest): Promise<void> {
     writeLine(response)
     return
   }
+  // Phase 67 D-08/D-11: validate before the handler runs; failure travels the ordinary
+  // {id, ok:false, error} path with a typed marker.
+  const verdict = validateInbound(request.channel, 'invoke', request.args)
+  if (!verdict.ok) {
+    logRejection('invoke', verdict)
+    writeLine({
+      id: request.id,
+      ok: false,
+      error: formatIpcInvalidArgsError({
+        code: IPC_INVALID_ARGS,
+        channel: verdict.channel,
+        paths: verdict.paths,
+        codes: verdict.codes
+      })
+    })
+    return
+  }
   try {
     const result = await handler(undefined, ...request.args)
     const response: SidecarRpcResponse = { id: request.id, ok: true, result }
@@ -213,6 +233,12 @@ async function dispatchInvoke(request: SidecarRpcRequest): Promise<void> {
 }
 
 function dispatchSend(request: SidecarRpcRequest): void {
+  // Phase 67 D-09: one check before the listener loop; failure is logged and dropped.
+  const verdict = validateInbound(request.channel, 'send', request.args)
+  if (!verdict.ok) {
+    logRejection('send', verdict)
+    return
+  }
   const listeners = listenerRegistry.get(request.channel) ?? []
   for (const listener of listeners) {
     try {

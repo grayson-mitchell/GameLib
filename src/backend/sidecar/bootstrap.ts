@@ -148,6 +148,7 @@ import {
   LogPrefix
 } from '../logger'
 import { GlobalConfig } from '../config'
+import { setIpcRejectionLogSink } from './ipcValidation'
 import { publicDir } from '../constants/paths'
 import { backendEvents } from '../backend_events'
 import { fetchLastestReleases } from '../utils/releases'
@@ -1087,6 +1088,8 @@ export function init(
     }
   }
   startRpcServer(input, output)
+  // Phase 67 D-09: boundary rejections reach gamelib.log (ipcValidation avoids importing the logger).
+  setIpcRejectionLogSink((line) => logWarning(line, LogPrefix.Backend))
   releaseOnStdinEof(input)
   // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): registered immediately after
   // startRpcServer() and BEFORE the READY_SENTINEL write below, so the shell can never send a

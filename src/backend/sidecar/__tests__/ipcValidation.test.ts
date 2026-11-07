@@ -1,0 +1,205 @@
+/**
+ * Boundary validation in the sidecar dispatch funnel (Phase 67 Plan 02, D-08..D-11).
+ * Drives the REAL `startRpcServer` over PassThrough streams with a mocked `channelSchemas` map.
+ */
+import { PassThrough } from 'node:stream'
+
+import { handlerRegistry, listenerRegistry } from '../../platform'
+import { startRpcServer } from '../sidecarRpc'
+import { setIpcRejectionLogSink } from '../ipcValidation'
+import {
+  UNPORTED_CHANNEL_MARKER,
+  IPC_INVALID_ARGS_MARKER,
+  parseIpcInvalidArgsError
+} from 'common/types/sidecarTransport'
+
+jest.mock('common/types/ipc/channelSchemas', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { z } = require('zod')
+  return {
+    channelSchemas: {
+      testInvoke: {
+        kind: 'invoke',
+        caller: 'renderer',
+        testOnly: false,
+        args: z.tuple([z.string().min(1), z.boolean().nullish()])
+      },
+      testSend: {
+        kind: 'send',
+        caller: 'renderer',
+        testOnly: false,
+        args: z.tuple([z.strictObject({ token: z.string() })])
+      }
+    }
+  }
+})
+
+type Frame = Record<string, unknown>
+
+function collectFrames(stream: PassThrough): Frame[] {
+  const frames: Frame[] = []
+  let buffer = ''
+  stream.on('data', (chunk: Buffer | string) => {
+    buffer += chunk.toString()
+    let i = buffer.indexOf('\n')
+    while (i !== -1) {
+      const line = buffer.slice(0, i)
+      buffer = buffer.slice(i + 1)
+      if (line.trim().length > 0) {
+        try {
+          frames.push(JSON.parse(line) as Frame)
+        } catch {
+          // ignore
+        }
+      }
+      i = buffer.indexOf('\n')
+    }
+  })
+  return frames
+}
+
+async function flush(): Promise<void> {
+  await new Promise((r) => setImmediate(r))
+  await new Promise((r) => setImmediate(r))
+}
+
+const input = new PassThrough()
+const output = new PassThrough()
+const frames = collectFrames(output)
+// Plain functions record calls: the Jest config resets jest.fn() implementations per test.
+const invokeCalls: unknown[][] = []
+const sendCalls: unknown[][] = []
+const invokeHandler = async (...a: unknown[]) => {
+  invokeCalls.push(a)
+  return 'handled'
+}
+const sendListener = (...a: unknown[]) => {
+  sendCalls.push(a)
+}
+let stderrWrites: string[] = []
+const sinkLines: string[] = []
+
+beforeAll(() => {
+  startRpcServer(input, output)
+  handlerRegistry.set('testInvoke', invokeHandler as never)
+  handlerRegistry.set('noSchemaInvoke', (async () => 'free') as never)
+  listenerRegistry.set('testSend', [sendListener as never])
+})
+
+beforeEach(() => {
+  frames.length = 0
+  sinkLines.length = 0
+  stderrWrites = []
+  invokeCalls.length = 0
+  sendCalls.length = 0
+  jest.spyOn(process.stderr, 'write').mockImplementation(((s: string) => {
+    stderrWrites.push(String(s))
+    return true
+  }) as never)
+  setIpcRejectionLogSink((l) => sinkLines.push(l))
+})
+
+afterEach(() => {
+  jest.restoreAllMocks()
+  setIpcRejectionLogSink(null)
+})
+
+function send(frame: Frame) {
+  input.write(`${JSON.stringify(frame)}\n`)
+}
+
+describe('validateInbound in the dispatch funnel', () => {
+  it('(1) a valid invoke reaches the handler', async () => {
+    send({ id: '1', kind: 'invoke', channel: 'testInvoke', args: ['a', true] })
+    await flush()
+    expect(invokeCalls).toHaveLength(1)
+    expect(frames[0]).toMatchObject({ id: '1', ok: true, result: 'handled' })
+  })
+
+  it('(2) an invalid invoke is rejected with the typed marker and the handler never runs', async () => {
+    send({ id: '2', kind: 'invoke', channel: 'testInvoke', args: [5] })
+    await flush()
+    expect(invokeCalls).toHaveLength(0)
+    const f = frames[0]
+    expect(f.ok).toBe(false)
+    expect(String(f.error).startsWith(IPC_INVALID_ARGS_MARKER)).toBe(true)
+    const p = parseIpcInvalidArgsError(String(f.error))
+    expect(p?.channel).toBe('testInvoke')
+    expect(p?.paths).toContain('0')
+    expect(p?.codes).toContain('invalid_type')
+  })
+
+  it('(3) a positional undefined survives the JSON round-trip as null', async () => {
+    const args = JSON.parse(JSON.stringify(['a', undefined])) as unknown[]
+    expect(args).toEqual(['a', null])
+    send({ id: '3', kind: 'invoke', channel: 'testInvoke', args })
+    await flush()
+    expect(invokeCalls).toHaveLength(1)
+    expect(frames[0].ok).toBe(true)
+  })
+
+  it('(4) an extra positional arg is rejected (strict tuple arity)', async () => {
+    send({
+      id: '4',
+      kind: 'invoke',
+      channel: 'testInvoke',
+      args: ['a', true, 'extra']
+    })
+    await flush()
+    expect(invokeCalls).toHaveLength(0)
+    expect(frames[0].ok).toBe(false)
+  })
+
+  it('(5) an invalid send is dropped, logged once to stderr and the sink', async () => {
+    send({ id: '5', kind: 'send', channel: 'testSend', args: ['nope'] })
+    await flush()
+    expect(sendCalls).toHaveLength(0)
+    expect(
+      stderrWrites.filter((l) => l.includes('IPC_INVALID_ARGS'))
+    ).toHaveLength(1)
+    expect(sinkLines).toHaveLength(1)
+    send({
+      id: '5b',
+      kind: 'send',
+      channel: 'testSend',
+      args: [{ token: 'x' }]
+    })
+    await flush()
+    expect(sendCalls).toHaveLength(1)
+  })
+
+  it('(6) neither argument values nor unrecognized key names reach logs or the wire', async () => {
+    send({
+      id: '6',
+      kind: 'send',
+      channel: 'testSend',
+      args: [{ token: 'x', SECRET_KEY_NAME_123: 'SECRET-VALUE-abc' }]
+    })
+    send({
+      id: '6b',
+      kind: 'invoke',
+      channel: 'testInvoke',
+      args: [{ SECRET_KEY_NAME_123: 'SECRET-VALUE-abc' }]
+    })
+    await flush()
+    expect(sendCalls).toHaveLength(0)
+    const all = JSON.stringify([stderrWrites, sinkLines, frames])
+    expect(all).not.toContain('SECRET-VALUE-abc')
+    expect(all).not.toContain('SECRET_KEY_NAME_123')
+    expect(stderrWrites.some((l) => l.includes('IPC_INVALID_ARGS'))).toBe(true)
+  })
+
+  it('(7) a channel with no schema passes through (ratchet era; plan 67-18 fails closed)', async () => {
+    send({ id: '7', kind: 'invoke', channel: 'noSchemaInvoke', args: [1, 2] })
+    await flush()
+    expect(frames[0]).toMatchObject({ ok: true, result: 'free' })
+  })
+
+  it('(8) an unregistered channel still gets the unported marker', async () => {
+    send({ id: '8', kind: 'invoke', channel: 'nothingHere', args: [] })
+    await flush()
+    const err = String(frames[0].error)
+    expect(err.startsWith(UNPORTED_CHANNEL_MARKER)).toBe(true)
+    expect(err).not.toContain(IPC_INVALID_ARGS_MARKER)
+  })
+})
