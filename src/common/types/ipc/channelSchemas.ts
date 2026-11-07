@@ -4,7 +4,10 @@
  */
 import { clipboardAsyncArgs, clipboardSyncArgs } from './clipboard'
 import { dialogAsyncArgs } from './dialog'
+import { humbleLoginAsyncArgs, humbleLoginSyncArgs } from './humbleLogin'
 import { installAsyncArgs } from './install'
+import { oauthLoginAsyncArgs } from './oauthLogin'
+import { runnerAuthAsyncArgs, runnerAuthSyncArgs } from './runnerAuth'
 import { wineToolsAsyncArgs, wineToolsFrontendMessagesArgs } from './wineTools'
 import { defineChannelEntries, type ChannelEntry } from './schemaTypes'
 import { shellFilesAsyncArgs, shellFilesSyncArgs } from './shellFiles'
@@ -33,5 +36,10 @@ export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
     defineChannelEntries('invoke', clipboardAsyncArgs),
     defineChannelEntries('invoke', installAsyncArgs),
     defineChannelEntries('invoke', wineToolsAsyncArgs),
-    defineChannelEntries('push', wineToolsFrontendMessagesArgs)
+    defineChannelEntries('push', wineToolsFrontendMessagesArgs),
+    defineChannelEntries('send', runnerAuthSyncArgs),
+    defineChannelEntries('invoke', runnerAuthAsyncArgs),
+    defineChannelEntries('invoke', oauthLoginAsyncArgs),
+    defineChannelEntries('send', humbleLoginSyncArgs),
+    defineChannelEntries('invoke', humbleLoginAsyncArgs)
   )
