@@ -148,7 +148,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Unassigned (next milestone not yet defined)**
 
 - [ ] **Phase 61: Unified macOS engine for all stores** — 0 plans; not started
-- [x] **Phase 62: Module boundaries and decomposition** — 21 plans; planned (completed 2026-11-06)
+- [x] **Phase 62: Module boundaries and decomposition** — 23 plans (21 + 2 gap closure); complete (completed 2026-11-07)
 - [x] **Phase 63: Rust migration pattern and executable scanners** — 14 plans; planned (completed 2026-11-07)
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
 - [ ] **Phase 65: Steam store manager decomposition, continued** — 0 plans; not started
