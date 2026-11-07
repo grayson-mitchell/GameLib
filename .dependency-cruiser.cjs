@@ -60,6 +60,16 @@ module.exports = {
       to: { path: `${STEAM}depot(\\.ts|/index\\.ts)$` }
     },
     {
+      // Phase 65 D-05: steam/library/ holds SteamLibraryManager in index.ts; its sibling
+      // modules must never import it back.
+      name: 'no-library-index-back-edge',
+      severity: 'error',
+      comment:
+        'steam/library/*.ts siblings must not import steam/library/index.ts (or steam/library).',
+      from: { path: `${STEAM}library/(?!index\\.ts$)[^/]+\\.ts$` },
+      to: { path: `${STEAM}library/index\\.ts$` }
+    },
+    {
       // Scoped to the depot subtree on purpose: games.ts <-> library.ts is an existing cycle
       // the games.ts split cannot remove.
       name: 'no-circular-depot',
