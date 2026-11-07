@@ -1,5 +1,5 @@
 ---
-status: gaps
+status: complete
 phase: 63-rust-migration-pattern-and-executable-scanners
 source: [63-11-PLAN.md]
 ---
@@ -108,7 +108,7 @@ result: pass. Launch 2, gamelib-launch-2.log:110 'scanner drmScanExe op=scan_con
 
 ### 3. GameMaker detection on Mining Mechs (1603180)
 expected: launch 3 only; launch Mining Mechs with the CrossOver engine selected. gamelib-launch-3.log contains `scanner peSteamDrm op=scan_pe_imported_dlls caller=gameMakerRunner: impl=rust` plus the CX_GRAPHICS_BACKEND dxvk default source line `GameMaker D3D11 runner default: data.win + d3d11.dll import + CheckMultisampleQualityLevels probe`. Launch ordinal 3. If the title is not on a crossover engine the line cannot appear (bridgeKnownFixes.ts gate on `wineVersion.type !== 'crossover'`): record BLOCKED, not pass.
-result: blocked. Launch 3 (gamelib-launch-3.log): engine confirmed at :117 'SteamEngine: appId 1603180 uses engine=crossover build=26.3.0.39832', but there is no 'caller=gameMakerRunner' scanner line and no 'GameMaker D3D11 runner default' line. Cause: :146 'known-fix env applied: CX_GRAPHICS_BACKEND=dxvk (tier-1)' from public/fixes/1603180-steam.json; bridgeKnownFixes.ts:154 returns null before detectGameMakerD3d11Runner when CX_GRAPHICS_BACKEND is already set. The contract's chosen title can never emit this evidence (UAT design defect, not a Rust regression). A missing positive line is not a pass, so the item is not scored pass. Other scanner lines in launch 3 (:114,:115,:122,:124,:127) are rust.
+result: pass. Retest in launch 7 (gamelib-launch-7.log), CrossOver confirmed at :115 'SteamEngine: appId 1603180 uses engine=crossover build=26.3.0.39832'; :141 'scanner peSteamDrm op=scan_pe_imported_dlls caller=gameMakerRunner: impl=rust'; :142 'known-fix env applied: CX_GRAPHICS_BACKEND=dxvk (GameMaker D3D11 runner default: data.win + d3d11.dll import + CheckMultisampleQualityLevels probe)'. Retest setup (user-chosen, 2026-11-07): a temporary local-layer fixes file 1603180-steam.json with empty envVariables shadowed the bundled tier-1 file (local > bundled, whole-file), so CX_GRAPHICS_BACKEND was unset and bridgeKnownFixes.ts:154 did not short-circuit; the override was deleted after the launch and no repo file was edited. Launch 3 itself could not emit the line (gamelib-launch-3.log:146 tier-1 CX_GRAPHICS_BACKEND=dxvk), a title-choice defect in the contract, not a Rust regression. Shell PID 31464, one per launch. No 'rust scan failed' in launch 7.
 
 ### 4. DRM-mode launch of Grim Dawn (219990)
 expected: launch 4 only; launch Grim Dawn. gamelib-launch-4.log contains `scanner peSteamDrm op=scan_steam_drm caller=launchBridgeGameBody: impl=rust`, `scanner peSections op=scan_steamstub_section caller=detectLaunchDrmWrapper: impl=rust`, `scanner drmScanExe op=scan_contained_real caller=detectLaunchDrmWrapper: impl=rust`, plus the steamclient-layer / DRM mode routing line and the lsteamclient game-process trace. `caller=prefetchBridgeDrmDownloads` is install-time only (`gameInstall.ts:1273`), so it is not required on a launch; record it as not reached. Launch ordinal 4.
@@ -120,7 +120,7 @@ result: pass. Launch 5, gamelib-launch-5.log:90 'scanner drmScanExe op=scan_cont
 
 ### 6. DXMT boot check on a -DXMT copy
 expected: launch 1 only. gamelib-launch-1.log contains `scanner machoExports op=scan_winemac_metal_exports caller=dxmtBootUpdate: impl=rust`, emitted when `releasesInfoReady` fires and a `<install>-DXMT` directory exists (`dxmt.ts:219-226`), plus either the `Not updating DXMT copy of` skip line or a DXMT update. CONDITIONAL: no `-DXMT` directory is installed today, so the line cannot appear; create a DXMT copy first (Wine Manager install of Wine-Staging-macOS whose winemac.so passes the export check, via item 7) and relaunch, or record BLOCKED. Launch ordinal 1 (or a later launch 7 if the copy is created during launch 1).
-result: blocked. Launch 1: no 'caller=dxmtBootUpdate' line. Only a Wine-Staging-macOS install (Wine-11.21) was available, and gamelib-launch-1.log:103 WARNING 'Not creating DXMT copy of Wine-11.21: ... winemac.so lacks the macdrv metal-view exports'. With no -DXMT directory, dxmt.ts:219-226 never fires the boot check. The contract marks this CONDITIONAL on a -DXMT copy existing; launch 7 was not run since no copy was created.
+result: blocked. Accepted as blocked by the user on 2026-11-07. Launch 1: no 'caller=dxmtBootUpdate' line. Only a Wine-Staging-macOS install (Wine-11.21) was available, and gamelib-launch-1.log:103 WARNING 'Not creating DXMT copy of Wine-11.21: ... winemac.so lacks the macdrv metal-view exports'. With no -DXMT directory, dxmt.ts:219-226 never fires the boot check. The contract marks this CONDITIONAL on a -DXMT copy existing; launch 7 was not run since no copy was created. The same Rust op ran live via item 7 (gamelib-launch-1.log:102, caller=wineVersionInstalled, impl=rust); only the dxmtBootUpdate caller is unexercised live (covered by dxmtBootFetch tests).
 
 ### 7. wineVersionInstalled check on a Wine-Staging-macOS install
 expected: launch 1 only; in Settings, Wine Manager, install a Wine-Staging-macOS release that is not yet installed (WineItem install button). gamelib-launch-1.log contains `scanner machoExports op=scan_winemac_metal_exports caller=wineVersionInstalled: impl=rust` (`dxmt.ts:150-155`, emitted on the `wineVersionInstalled` event from `downloader/main.ts:359`). Launch ordinal 1. This downloads a large archive; the operator chooses whether to proceed.
@@ -177,7 +177,7 @@ share a launch but not a triple. No pair left unresolved.
 
 ## Session inventory (item 8 closing record)
 
-`ls -la /tmp/gamelib-gate-63-20261106T230010Z/`: gamelib-launch-1..6.log (17786, 29565, 39191, 34435, 29820, 36701 bytes), gamelib-pre-session.log (14398), gamelib-pre-session.old.log (13392), pids.txt (402), terminal.log (25957).
+`ls -la /tmp/gamelib-gate-63-20261106T230010Z/`: gamelib-launch-7.log (37580 bytes, item 3 retest, PID 31464) added after the inventory below; gamelib-launch-1..6.log (17786, 29565, 39191, 34435, 29820, 36701 bytes), gamelib-pre-session.log (14398), gamelib-pre-session.old.log (13392), pids.txt (402), terminal.log (25957).
 
 `wc -l`: launch-1 107, launch-2 195, launch-3 254, launch-4 213, launch-5 196, launch-6 230, pre-session 114, pre-session.old 92, pids.txt 6, terminal.log 444, total 1851.
 
@@ -187,7 +187,7 @@ PIDs (one per launch): 19207, 20347, 21845, 24542, 26063, 27720. Prior instance 
 
 ## Gaps
 
-- Item 3 (blocked): GameMaker evidence unreachable on Mining Mechs. Tier-1 fix public/fixes/1603180-steam.json sets CX_GRAPHICS_BACKEND=dxvk, and bridgeKnownFixes.ts:154 short-circuits before detectGameMakerD3d11Runner, so no `caller=gameMakerRunner` line is emitted. Evidence: gamelib-launch-3.log:146 vs. absence of the line. Closing options: re-drive on a GameMaker title with a data.win and no tier-1 CX_GRAPHICS_BACKEND fix, or temporarily run Mining Mechs with that tier-1 entry unset.
-- Item 6 (blocked): `caller=dxmtBootUpdate` needs a `<install>-DXMT` copy, which is only created for a Wine build whose winemac.so has the macdrv metal-view exports; Wine-11.21 lacks them (gamelib-launch-1.log:103). Closing option: install a Wine-Staging-macOS build with those exports, then relaunch (launch 7).
+- Item 3: CLOSED. Blocked in launch 3 (tier-1 CX_GRAPHICS_BACKEND short-circuit, gamelib-launch-3.log:146); passed in retest launch 7 (gamelib-launch-7.log:141-142) with a temporary local fixes override, since deleted.
+- Item 6: ACCEPTED as blocked by the user (2026-11-07). No -DXMT copy can be created from Wine-11.21 (winemac.so lacks the metal-view exports, gamelib-launch-1.log:103). Not a scanner regression; the op itself ran live on Rust in item 7.
 
-Gate verdict: D-13 live condition NOT fully met (6 of 8 items pass; items 3 and 6 blocked, no scanner regression observed). Plans 63-13 and 63-14 must not run until these are closed or the user explicitly accepts them.
+Gate verdict: D-13 live condition met. 7 of 8 items pass, and item 6 is blocked with explicit user acceptance. No 'rust scan failed' or 'containment check failed' in any of launches 1-7. Plans 63-13 and 63-14 may run.
