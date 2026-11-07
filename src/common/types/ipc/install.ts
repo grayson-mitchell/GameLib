@@ -13,7 +13,7 @@ import {
 
 // Every InstallPlatform member (LegendaryInstallPlatform | GogInstallPlatform |
 // NileInstallPlatform | 'Browser'); the call-site type check against InstallPlatform catches drift.
-const installPlatform = z.enum([
+export const installPlatform = z.enum([
   'Windows',
   'Win32',
   'Mac',

@@ -865,7 +865,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     ).resolves.toMatchObject({ ok: true, result: null })
   })
 
-  it('REQ-34.5-13 getInstallInfo resolves null (never rejects) for a runner string absent from libraryManagerMap', async () => {
+  it('REQ-34.5-13 getInstallInfo rejects a runner string outside the Runner enum at the boundary (67-13), never reaching libraryManagerMap', async () => {
     const { input, frames } = startSidecar()
     writeInvoke(input, 'gii-5', 'getInstallInfo', [
       'appName',
@@ -875,8 +875,8 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     await flush()
 
     const response = findResponse(frames, 'gii-5')
-    expect(response?.ok).toBe(true)
-    expect(response?.result).toBeNull()
+    expect(response?.ok).toBe(false)
+    expect(gogManager.getInstallInfo).not.toHaveBeenCalled()
   })
 
   it('REQ-34.5-11 getInstallInfo is registered as INVOKE only (handlerRegistry has it, listenerRegistry does not), and its resolved value is never UNPORTED_CHANNEL_MARKER', async () => {
