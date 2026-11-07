@@ -68,6 +68,7 @@ import {
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
 import * as installPollingModule from '../library/installPolling'
+import * as resumeModule from '../library/resume'
 import * as installStopModule from '../library/installStop'
 import * as acfState from '../library/acfState'
 import * as macArch from '../library/macArch'
@@ -4287,7 +4288,7 @@ describe('SteamGame.install() — steam-startup-resume-crash resume-on-click (D-
       .spyOn(installPollingModule, 'startInstallPolling')
       .mockImplementation(() => {})
     resumeSpy = jest
-      .spyOn(libraryModule, 'resumeInterruptedSteamInstall')
+      .spyOn(resumeModule, 'resumeInterruptedSteamInstall')
       .mockResolvedValue(undefined)
   })
 

@@ -5,7 +5,7 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import { resumeInterruptedSteamInstall } from '../library'
+import { resumeInterruptedSteamInstall } from '../library/resume'
 import { stopInstallPolling } from '../library/installStop'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'

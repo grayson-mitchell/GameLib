@@ -26,18 +26,14 @@ import {
 import { sendFrontendMessage } from '../../ipc'
 import { steamMetadataStore, steamLibraryStore } from './stores'
 import { library } from './state'
-import { resumeInterruptedSteamInstall, pollUninstallOnce } from './library'
+import { pollUninstallOnce } from './library'
+import * as resume from './library/resume'
 import { readAcfState, removeSteamInstallCopy } from './library/acfState'
 import { startInstallPolling } from './library/installPolling'
 import { stopInstallPolling } from './library/installStop'
 import * as resumeBreadcrumbs from './library/resumeBreadcrumbs'
 import * as pollState from './library/pollState'
-import {
-  probeMacSteamPid,
-  readAcfSnapshot,
-  recordPendingAdoption,
-  clearPendingAdoption
-} from './macSteamAdoption'
+import * as adoption from './macSteamAdoption'
 import {
   isBottleReady,
   getSteamBottleSettings,
@@ -148,7 +144,7 @@ export async function install(
     library.get(steamGame.appId)?.install?.steamResumePending &&
     !isNativeInstallInFlight(steamGame.appId)
   ) {
-    await resumeInterruptedSteamInstall(steamGame.appId).catch((err) => {
+    await resume.resumeInterruptedSteamInstall(steamGame.appId).catch((err) => {
       logWarning(
         [
           `SteamGame: resume-surface finalize failed for appId ${steamGame.appId}, continuing to normal install:`,
@@ -1652,7 +1648,7 @@ export async function runNativeDepotDownload(
     // so no D-UAT-13 restart hold arms (quick 261105-sqe).
     if (deferredPoll.handoff && leasedResult.status === 'done') {
       const handoff = deferredPoll.handoff
-      const pid = await probeMacSteamPid().catch(() => null)
+      const pid = await adoption.probeMacSteamPid().catch(() => null)
       let adoptedByInstallApp = false
       if (pid !== null && isSteamExperimentalInstallAppEnabled()) {
         const outcome = await requestSteamInstallApp(steamGame.appId, {
@@ -1660,7 +1656,7 @@ export async function runNativeDepotDownload(
         })
         if (outcome.kind === 'ok') {
           adoptedByInstallApp = true
-          clearPendingAdoption(steamGame.appId)
+          adoption.clearPendingAdoption(steamGame.appId)
           logInfo(
             `SteamGame: Steam adopted appId ${steamGame.appId} via InstallApp without a restart`,
             LogPrefix.Steam
@@ -1679,9 +1675,9 @@ export async function runNativeDepotDownload(
       if (adoptedByInstallApp) {
         // Steam already knows the install; nothing to record.
       } else if (pid !== null) {
-        const baseline = readAcfSnapshot(handoff.manifestPath)
+        const baseline = adoption.readAcfSnapshot(handoff.manifestPath)
         if (baseline) {
-          recordPendingAdoption(steamGame.appId, {
+          adoption.recordPendingAdoption(steamGame.appId, {
             steamPid: pid,
             manifestPath: handoff.manifestPath,
             baseline,
@@ -1698,7 +1694,7 @@ export async function runNativeDepotDownload(
           )
         }
       } else {
-        clearPendingAdoption(steamGame.appId)
+        adoption.clearPendingAdoption(steamGame.appId)
       }
       startInstallPolling(steamGame.appId, {
         isNativeHandoff: true,
