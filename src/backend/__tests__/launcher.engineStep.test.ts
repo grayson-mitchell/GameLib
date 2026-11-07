@@ -55,6 +55,7 @@ jest.mock('backend/runsForMe', () => ({ recordPlaySession: jest.fn() }))
 const selectMock = jest.fn()
 const endMock = jest.fn()
 jest.mock('backend/engine/launchEngine', () => ({
+  armEngineLaunchDeadline: jest.fn(),
   selectEngineForLaunch: (...a: unknown[]) => selectMock(...a),
   endEngineLaunch: (...a: unknown[]) => endMock(...a)
 }))
@@ -64,6 +65,8 @@ jest.mock('backend/engine/launchSettings', () => ({
   getLaunchSettings: (...a: unknown[]) => overlayMock(...a)
 }))
 
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { launchEventCallback } from 'backend/launcher'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { createGameLogWriter } from 'backend/logger'
@@ -203,5 +206,18 @@ describe('launcher engine step (61-14)', () => {
       runner: 'legendary',
       status: 'done'
     })
+  })
+})
+
+describe('launcher deadline arming position (61-16)', () => {
+  it('arms once in prepareWineLaunch, after installFixes and the known-fix env, before success', () => {
+    const src = readFileSync(join(__dirname, '..', 'launcher.ts'), 'utf-8')
+    const start = src.indexOf('async function prepareWineLaunch(')
+    const body = src.slice(start, src.indexOf('async function installFixes('))
+    const arm = body.indexOf('armEngineLaunchDeadline(')
+    expect(src.split('armEngineLaunchDeadline(').length - 1).toBe(1)
+    expect(arm).toBeGreaterThan(body.indexOf('await installFixes('))
+    expect(arm).toBeGreaterThan(body.indexOf('knownFixProfileOverlayEnv('))
+    expect(arm).toBeLessThan(body.lastIndexOf('success: true'))
   })
 })

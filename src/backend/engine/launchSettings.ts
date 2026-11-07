@@ -30,6 +30,12 @@ export function setLaunchOverlayContext(
   contexts.set(key, ctx)
 }
 
+export function getLaunchOverlayContext(
+  key: EngineKey
+): LaunchOverlayContext | undefined {
+  return contexts.get(key)
+}
+
 export function clearLaunchOverlayContext(key: EngineKey): void {
   contexts.delete(key)
 }

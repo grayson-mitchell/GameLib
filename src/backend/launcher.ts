@@ -100,7 +100,11 @@ import {
 } from './constants/environment'
 import { formatSystemInfo, getSystemInfo } from './utils/systeminfo'
 import { gameAnticheatInfo } from './anticheat/utils'
-import { endEngineLaunch, selectEngineForLaunch } from './engine/launchEngine'
+import {
+  armEngineLaunchDeadline,
+  endEngineLaunch,
+  selectEngineForLaunch
+} from './engine/launchEngine'
 import { getLaunchSettings } from './engine/launchSettings'
 import { engineKeyFor } from './engine/gameKey'
 
@@ -1081,6 +1085,13 @@ async function prepareWineLaunch(
   }
 
   const envVars = setupWineEnvVars(gameSettings, gameInfo.folder_name)
+
+  // Phase 61-16 (D-18): after installFixes and the known-fix overlay env, so prerequisite
+  // installers never count against the deadline (RESEARCH Pitfall 3).
+  armEngineLaunchDeadline(
+    game,
+    engineKeyFor(gameInfo.runner, gameInfo.app_name)
+  )
 
   return {
     success: true,

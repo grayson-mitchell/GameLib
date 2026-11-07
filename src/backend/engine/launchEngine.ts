@@ -10,11 +10,11 @@
  * The chosen engine reaches the store launch only through `getLaunchSettings` (launchSettings.ts);
  * nothing here writes the game's config (59 D-07, D-08).
  *
- * Deliberately NOT here: bridge failure marking, any reroute to bottled Steam (memory: bottled
- * Steam is a narrow fallback) and the launch deadline, which plan 61-16 arms once the first-match
- * signal exists.
+ * Deliberately NOT here: bridge failure marking and any reroute to bottled Steam (memory: bottled
+ * Steam is a narrow fallback). A fired deadline stops the bottle and says so; it never retries.
  *
- * Sidecar exit contract: module state is two empty maps; no timers, nothing runs at import.
+ * Sidecar exit contract: module state is empty maps; the only timers are the deadline's and the
+ * watcher's, both unref'd and bounded; nothing runs at import.
  */
 import { t } from 'i18next'
 import type { GameSettings, Runner } from 'common/types'
@@ -23,15 +23,29 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type LogWriter from 'backend/logger/log_writer'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { isMac } from 'backend/constants/environment'
-import { isBottleProvisioned } from './bottlePrimitives'
+import {
+  isBottleProvisioned,
+  killBottleWineServerWith
+} from './bottlePrimitives'
+import { dirname, join } from 'path'
 import { markGameRunning, markGameStopped } from './bottleLedger'
-import { cancelLaunchDeadline } from './launchDeadline'
+import {
+  LAUNCH_DEADLINE_MS,
+  armLaunchDeadline,
+  bindDeadlineToMonitor,
+  cancelLaunchDeadline
+} from './launchDeadline'
+import { watchForGameProcess } from './gameProcessWatch'
+import {
+  clearEngineSelection,
+  getEngineSelection,
+  setEngineSelection
+} from './engineRegistry'
 import { decideLaunchEngine, isCrossoverMissing } from './engineDecision'
 import type { EngineDecisionDeps, LaunchDecision } from './engineDecision'
 import { readEngineForGame } from './engineConfig'
 import type { EffectiveEngine } from './engineConfig'
 import { notifyEngineFallback, showEngineDialog } from './engineDialogs'
-import { clearEngineSelection, setEngineSelection } from './engineRegistry'
 import { recordLaunchDecision } from './engineState'
 import {
   prepareBottleForEngine,
@@ -50,6 +64,7 @@ import type { GamePrefix } from './gamePrefix'
 import {
   buildCrossoverGameSettings,
   clearLaunchOverlayContext,
+  getLaunchOverlayContext,
   setLaunchOverlayContext
 } from './launchSettings'
 import { offlineLaunchCertainlyBlocked } from './offlineRefusal'
@@ -426,8 +441,123 @@ export async function selectEngineForLaunch(
   return { kind: 'use', key, selection: sel, prefix }
 }
 
+/** The first-match watcher of each armed launch, so endEngineLaunch can stop it. */
+const deadlineWatchers = new Map<EngineKey, { stop(): void }>()
+
+export interface DeadlineDeps {
+  watch: typeof watchForGameProcess
+  killWineserver: typeof killBottleWineServerWith
+  showDialog: typeof showEngineDialog
+}
+
+const defaultDeadlineDeps: DeadlineDeps = {
+  watch: watchForGameProcess,
+  killWineserver: killBottleWineServerWith,
+  showDialog: showEngineDialog
+}
+
+function stopDeadlineWatcher(key: EngineKey): void {
+  deadlineWatchers.get(key)?.stop()
+  deadlineWatchers.delete(key)
+}
+
+/**
+ * Plan 61-16 (D-18, 59 D-10/D-11): the launch deadline fired with no game process seen. Stops
+ * this launch's bottle with the running engine's own wineserver (before the registry entry that
+ * names it is cleared), aborts the store runner, releases the engine and tells the user. No
+ * fallback retry and no reroute: a game that never appeared is not evidence the engine is
+ * broken, and a retry would hide the problem the user needs to see.
+ */
+async function onEngineLaunchDeadline(
+  game: Game,
+  key: EngineKey,
+  bottleName: string,
+  armedSelection: EngineSelection | undefined,
+  d: DeadlineDeps
+): Promise<void> {
+  // G5: the registry entry can be gone by now, so fall back to the selection seen at arm time.
+  const sel = getEngineSelection(key) ?? armedSelection
+  logWarning(
+    `Engine: ${key} launch deadline fired (${sel ? engineLogLabel(sel) : 'engine unknown'}); stopping the bottle`,
+    LogPrefix.Backend
+  )
+  stopDeadlineWatcher(key)
+  if (sel !== undefined) {
+    const crossover = sel.kind === 'crossover'
+    await d.killWineserver(
+      bottleName,
+      crossover ? join(sel.binDir, 'wineserver') : sel.wineserverBin,
+      crossover ? { CX_ROOT: dirname(sel.binDir) } : {},
+      15_000
+    )
+  }
+  try {
+    await game.stop(false)
+  } catch (error) {
+    logWarning(
+      [`Engine: ${key} stopping the runner after the deadline failed`, error],
+      LogPrefix.Backend
+    )
+  }
+  endEngineLaunch(key)
+  d.showDialog({
+    key,
+    title: t('gamelib:steam.engine.didntStart.title', "Game didn't start"),
+    body: t(
+      'gamelib:steam.engine.didntStart.body',
+      "{{title}} did not start within {{seconds}} seconds, so GameLib stopped it. Check the launch log (Settings > Logs) and this game's known fixes.",
+      {
+        title: game.getGameInfo().title,
+        seconds: LAUNCH_DEADLINE_MS / 1000
+      }
+    ),
+    ackId: 'launch-deadline'
+  })
+}
+
+/**
+ * Plan 61-16 (D-18): arm the launch deadline for a bottle-backed launch, after prerequisite
+ * installers (called at the end of prepareWineLaunch). Plain-prefix launches are not armed.
+ * The deadline is bound to the first-match watcher; with no derivable signal (a watcher of
+ * `null`) it is stood down at once so a running game is never killed (59-REVIEW CR-01).
+ */
+export function armEngineLaunchDeadline(
+  game: Game,
+  key: EngineKey | null,
+  overrides: Partial<DeadlineDeps> = {}
+): void {
+  if (key === null) return
+  const d: DeadlineDeps = { ...defaultDeadlineDeps, ...overrides }
+  const ctx = getLaunchOverlayContext(key)
+  if (ctx === undefined || ctx.prefix.kind !== 'bottle') return
+  const armedSelection = getEngineSelection(key)
+  if (armedSelection === undefined) return
+  const bottleName = ctx.prefix.bottleName
+  const installPath = game.getGameInfo().install?.install_path ?? ''
+
+  const deadline = armLaunchDeadline({
+    key,
+    onDeadline: () =>
+      onEngineLaunchDeadline(game, key, bottleName, armedSelection, d)
+  })
+  stopDeadlineWatcher(key)
+  const watcher = d.watch({
+    installPath,
+    onFirstMatch: () => {
+      deadlineWatchers.delete(key)
+      cancelLaunchDeadline(key, 'first-match')
+    },
+    onGiveUp: () => deadlineWatchers.delete(key)
+  })
+  if (watcher !== null) deadlineWatchers.set(key, watcher)
+  bindDeadlineToMonitor(deadline, watcher, (msg) =>
+    logInfo(`Engine: ${key} ${msg}`, LogPrefix.Backend)
+  )
+}
+
 /** Release everything a launch held: registry, overlay context, ledger entry and deadline. */
 export function endEngineLaunch(key: EngineKey): void {
+  stopDeadlineWatcher(key)
   clearEngineSelection(key)
   clearLaunchOverlayContext(key)
   const bottle = ledgerBottles.get(key)
@@ -440,6 +570,7 @@ export function endEngineLaunch(key: EngineKey): void {
 
 export function __resetLaunchEngineForTests(): void {
   ledgerBottles.clear()
+  deadlineWatchers.clear()
 }
 
 /** Re-exported for the store launch paths (61-13) so they import one module. */
