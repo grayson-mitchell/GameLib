@@ -1,27 +1,53 @@
+import { z } from 'zod'
+
 import type { DiskSpaceData } from '../../types'
+import {
+  absolutePathArg,
+  nonEmptyString,
+  optionalArg,
+  urlArg,
+  type InvokeFns,
+  type SendFns
+} from './schemaTypes'
 
-export interface ShellFilesSync {
-  openExternalUrl: (url: string) => void
-  openFolder: (folder: string) => void
-  openSupportPage: () => void
-  openWeblate: () => void
-  openLoginPage: () => void
-  openDiscordLink: () => void
-  openKofiPage: () => void
-  openGithubSponsorsPage: () => void
-  openWinePrefixFAQ: () => void
-  openWikiLink: () => void
-  openSidInfoPage: () => void
-  showConfigFileInFolder: (appName: string) => void
-  removeFolder: ([path, folderName]: [string, string]) => void
-  clearCache: (showDialog?: boolean, fromVersionChange?: boolean) => void
-  clearAchievementCache: (appName: string) => void
-  resetHeroic: () => void
-  showItemInFolder: (item: string) => void
+const noArgs = z.tuple([])
+
+export const shellFilesSyncArgs = {
+  openExternalUrl: z.tuple([urlArg()]),
+  openFolder: z.tuple([nonEmptyString()]),
+  openSupportPage: noArgs,
+  openWeblate: noArgs,
+  openLoginPage: noArgs,
+  openDiscordLink: noArgs,
+  openKofiPage: noArgs,
+  openGithubSponsorsPage: noArgs,
+  openWinePrefixFAQ: noArgs,
+  openWikiLink: noArgs,
+  openSidInfoPage: noArgs,
+  showConfigFileInFolder: z.tuple([nonEmptyString()]),
+  // One argument that is itself [path, folderName]. Shape only; containment is Phase 72.
+  removeFolder: z.tuple([z.tuple([absolutePathArg(), nonEmptyString(255)])]),
+  clearCache: z.tuple([optionalArg(z.boolean()), optionalArg(z.boolean())]),
+  clearAchievementCache: z.tuple([nonEmptyString()]),
+  resetHeroic: noArgs,
+  showItemInFolder: z.tuple([nonEmptyString()])
 }
 
-export interface ShellFilesAsync {
-  checkDiskSpace: (folder: string) => Promise<DiskSpaceData>
-  getShellPath: (path: string) => Promise<string>
-  pathExists: (path: string) => Promise<boolean>
+export const shellFilesAsyncArgs = {
+  // Empty strings are left to the handler's Path.parse / existsSync (D-05).
+  checkDiskSpace: z.tuple([z.string().max(4096)]),
+  getShellPath: z.tuple([nonEmptyString()]),
+  pathExists: z.tuple([z.string().max(4096)])
 }
+
+interface ShellFilesAsyncReturns {
+  checkDiskSpace: Promise<DiskSpaceData>
+  getShellPath: Promise<string>
+  pathExists: Promise<boolean>
+}
+
+export type ShellFilesSync = SendFns<typeof shellFilesSyncArgs>
+export type ShellFilesAsync = InvokeFns<
+  typeof shellFilesAsyncArgs,
+  ShellFilesAsyncReturns
+>

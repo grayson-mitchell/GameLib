@@ -2,7 +2,8 @@
  * The channel -> schema map the sidecar validates against (Phase 67). Each conversion plan adds
  * its domain's `defineChannelEntries(...)` part to the `mergeChannelEntries` call below.
  */
-import type { ChannelEntry } from './schemaTypes'
+import { defineChannelEntries, type ChannelEntry } from './schemaTypes'
+import { shellFilesAsyncArgs, shellFilesSyncArgs } from './shellFiles'
 
 export function mergeChannelEntries(
   ...parts: Record<string, ChannelEntry>[]
@@ -20,4 +21,7 @@ export function mergeChannelEntries(
 }
 
 export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
-  mergeChannelEntries()
+  mergeChannelEntries(
+    defineChannelEntries('send', shellFilesSyncArgs),
+    defineChannelEntries('invoke', shellFilesAsyncArgs)
+  )
