@@ -121,10 +121,17 @@ export interface EngineDecisionDeps {
   /** D-16: true when another game (any store) is running in this bottle. */
   bottleBusy(bottleName: string, key: string): boolean
   wineManagerReleases(): WineManagerRelease[]
-  /** WR-01: read-only bottle engine marker (kind plus pin id); null when absent/unreadable. */
-  markerSummary?(
-    bottleName: string
-  ): { kind: 'crossover' | 'non-crossover'; pinId: string | null } | null
+  /**
+   * WR-01: read-only bottle engine marker (kind, pin id, recorded Wine Manager version and
+   * contained pin wineserver); null when absent/unreadable. The last two are optional so
+   * old-shape mocks type-check; undefined means null.
+   */
+  markerSummary?(bottleName: string): {
+    kind: 'crossover' | 'non-crossover'
+    pinId: string | null
+    wineManagerVersion?: string | null
+    pinWineserverBin?: string | null
+  } | null
   isPinInstalled(pin: EnginePin): boolean
   pins: Readonly<{ current: EnginePin; previous: EnginePin | null }>
   fileExists(path: string): boolean
@@ -356,6 +363,21 @@ export async function preflightCrossover(
   }
 }
 
+/** DXVK for a Wine Manager build: the current pin's when installed, else none (logged). */
+function wineManagerDxvk(
+  d: EngineDecisionDeps,
+  logLines: string[]
+): NonCrossoverEngine['dxvk'] {
+  const cur = d.pins.current
+  if (d.isPinInstalled(cur)) {
+    return { dir: pinnedEnginePaths(cur).dxvkDir, version: cur.dxvk.version }
+  }
+  logLines.push(
+    'Engine: built-in DXVK is not installed; running the Wine Manager build without DXVK'
+  )
+  return null
+}
+
 export function resolveWineManagerStaging(
   version: string,
   deps?: Partial<EngineDecisionDeps>
@@ -463,18 +485,7 @@ export async function decideLaunchEngine(
         detail: `Wine Manager build ${version} is not installed`
       }
     }
-    const cur = d.pins.current
-    let dxvk: NonCrossoverEngine['dxvk'] = null
-    if (d.isPinInstalled(cur)) {
-      dxvk = {
-        dir: pinnedEnginePaths(cur).dxvkDir,
-        version: cur.dxvk.version
-      }
-    } else {
-      logLines.push(
-        'Engine: built-in DXVK is not installed; running the Wine Manager build without DXVK'
-      )
-    }
+    const dxvk = wineManagerDxvk(d, logLines)
     return finish(
       {
         kind: 'wine-manager',
@@ -495,8 +506,12 @@ export async function decideLaunchEngine(
   })
 
   // An inconclusive pre-flight is no evidence of breakage (59 D-09/G29, WR-01):
-  // the bottle stays on the engine its marker records and the fallback never
-  // runs.
+  // the bottle stays on the engine its marker records (known pin, Wine Manager
+  // build or retired pin) so prepareBottleForEngine sees the same identity and
+  // is a no-op. A recorded engine that cannot be resolved takes CrossOver per
+  // 59 D-09 and never pins.current; prepare's busyRefusal still guards that
+  // switch (D-16). No toast, notice or badge (D-05); the label stays
+  // cx-inconclusive (D-13).
   if (
     preflight.kind === 'broken' &&
     preflight.inconclusive === true &&
@@ -504,18 +519,66 @@ export async function decideLaunchEngine(
   ) {
     const marker = d.markerSummary?.(args.bottleName) ?? null
     if (marker?.kind === 'non-crossover' && override !== 'crossover') {
-      const pin =
-        d.pins.previous !== null && marker.pinId === d.pins.previous.id
-          ? d.pins.previous
-          : d.pins.current
-      logLines.push(
-        `Engine: CrossOver pre-flight inconclusive (${preflight.detail}); keeping the bottle's built-in engine`
+      const knownPin = [d.pins.current, d.pins.previous].find(
+        (p) => p !== null && marker.pinId !== null && p.id === marker.pinId
       )
-      return finish(
-        pinnedSelection(pin, 'cx-inconclusive'),
-        preflight,
-        pin,
-        !d.isPinInstalled(pin)
+      if (knownPin) {
+        logLines.push(
+          `Engine: CrossOver pre-flight inconclusive (${preflight.detail}); keeping the bottle's built-in engine`
+        )
+        return finish(
+          pinnedSelection(knownPin, 'cx-inconclusive'),
+          preflight,
+          knownPin,
+          !d.isPinInstalled(knownPin)
+        )
+      }
+      const wmVersion = marker.wineManagerVersion ?? null
+      const wm = wmVersion ? resolveWineManagerStaging(wmVersion, d) : null
+      if (wmVersion && wm) {
+        logLines.push(
+          `Engine: CrossOver pre-flight inconclusive (${preflight.detail}); keeping the bottle's Wine Manager build ${wmVersion}`
+        )
+        return finish(
+          {
+            kind: 'wine-manager',
+            managerVersion: wmVersion,
+            reason: 'cx-inconclusive',
+            ...wm,
+            dxvk: wineManagerDxvk(d, logLines)
+          },
+          preflight,
+          null,
+          false
+        )
+      }
+      const retiredId = marker.pinId
+      const retiredServer = marker.pinWineserverBin ?? null
+      if (retiredId && retiredServer) {
+        const retiredWine = join(dirname(retiredServer), 'wine')
+        if (d.fileExists(retiredServer) && d.fileExists(retiredWine)) {
+          logLines.push(
+            `Engine: CrossOver pre-flight inconclusive (${preflight.detail}); keeping the bottle's retired built-in engine ${retiredId}`
+          )
+          return finish(
+            {
+              kind: 'pinned',
+              pinId: retiredId,
+              reason: 'cx-inconclusive',
+              wineBin: retiredWine,
+              wineserverBin: retiredServer,
+              label: `Built-in engine ${retiredId} (retired pin)`,
+              version: retiredId,
+              dxvk: null
+            },
+            preflight,
+            null,
+            false
+          )
+        }
+      }
+      logLines.push(
+        "Engine: the bottle's recorded engine is not available; launching on CrossOver"
       )
     }
     logLines.push(

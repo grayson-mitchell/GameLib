@@ -146,16 +146,33 @@ export function readBottleEngineMarkerKind(
  * WR-01: read-only marker kind plus the pin id (null unless a pinned marker). Same contract as
  * readBottleEngineMarkerKind: never infers or writes a marker.
  */
-export function readBottleEngineMarkerSummary(
-  bottleName: string
-): { kind: 'crossover' | 'non-crossover'; pinId: string | null } | null {
+export function readBottleEngineMarkerSummary(bottleName: string): {
+  kind: 'crossover' | 'non-crossover'
+  pinId: string | null
+  /** The recorded Wine Manager version (id already regex-validated), else null. */
+  wineManagerVersion: string | null
+  /**
+   * A pinned marker's recorded wineserver, only when it is inside the pinned-engine
+   * root and named `wineserver` (T-59-60 pattern); else null.
+   */
+  pinWineserverBin: string | null
+} | null {
   try {
     if (sanitizeBottleName(bottleName) !== bottleName) return null
     const marker = readMarker(getBottleDir(bottleName))
     if (!marker) return null
+    const pinWineserverBin =
+      marker.kind === 'pinned' &&
+      typeof marker.wineserverBin === 'string' &&
+      isInside(pinnedEngineRoot(), marker.wineserverBin) &&
+      basename(marker.wineserverBin) === 'wineserver'
+        ? marker.wineserverBin
+        : null
     return {
       kind: marker.kind === 'crossover' ? 'crossover' : 'non-crossover',
-      pinId: marker.kind === 'pinned' ? marker.id : null
+      pinId: marker.kind === 'pinned' ? marker.id : null,
+      wineManagerVersion: marker.kind === 'wine-manager' ? marker.id : null,
+      pinWineserverBin
     }
   } catch {
     return null

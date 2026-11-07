@@ -40,6 +40,7 @@ import {
   ENGINE_MARKER_FILE,
   prepareBottleForEngine,
   readBottleEngineMarkerKind,
+  readBottleEngineMarkerSummary,
   restoreNeedsAbsentPin
 } from '../engineSwitch'
 import type { EngineSwitchDeps } from '../engineSwitch'
@@ -145,6 +146,54 @@ describe('prepareBottleForEngine', () => {
       wineserverBin: PIN_WS,
       dxvk: { dir: '/tools/steam-engines/dxvk', version: 'v1' }
     })
+  })
+
+  test('WR-01 re-review: wine-manager marker + same wine-manager selection is a no-op', async () => {
+    seedMarker({
+      kind: 'wine-manager',
+      id: 'Wine-Staging-macOS-11.18',
+      wineserverBin: '/tools/wine/Wine-Staging-macOS-11.18/bin/wineserver'
+    })
+    const before = readFileSync(join(dir, ENGINE_MARKER_FILE), 'utf8')
+    const res = await run({
+      kind: 'wine-manager',
+      managerVersion: 'Wine-Staging-macOS-11.18',
+      reason: 'cx-inconclusive',
+      wineBin: '/tools/wine/Wine-Staging-macOS-11.18/bin/wine',
+      wineserverBin: '/tools/wine/Wine-Staging-macOS-11.18/bin/wineserver',
+      label: 'Wine Manager',
+      version: '11.18',
+      dxvk: null
+    })
+    expect(res).toEqual({ ok: true, changed: false })
+    expect(deps.killWith).not.toHaveBeenCalled()
+    expect(deps.installRemove).not.toHaveBeenCalled()
+    expect(readFileSync(join(dir, ENGINE_MARKER_FILE), 'utf8')).toBe(before)
+  })
+
+  test('WR-01 re-review: retired-pin marker + same pinned selection is a no-op', async () => {
+    const ws =
+      '/tools/steam-engines/wine-staging-retired/Contents/Resources/wine/bin/wineserver'
+    seedMarker({
+      kind: 'pinned',
+      id: 'wine-staging-retired',
+      wineserverBin: ws
+    })
+    const before = readFileSync(join(dir, ENGINE_MARKER_FILE), 'utf8')
+    const res = await run({
+      kind: 'pinned',
+      pinId: 'wine-staging-retired',
+      reason: 'cx-inconclusive',
+      wineBin: ws.replace(/wineserver$/, 'wine'),
+      wineserverBin: ws,
+      label: 'Built-in engine wine-staging-retired (retired pin)',
+      version: 'wine-staging-retired',
+      dxvk: null
+    })
+    expect(res).toEqual({ ok: true, changed: false })
+    expect(deps.killWith).not.toHaveBeenCalled()
+    expect(deps.installRemove).not.toHaveBeenCalled()
+    expect(readFileSync(join(dir, ENGINE_MARKER_FILE), 'utf8')).toBe(before)
   })
 
   test('pinned -> crossover with DXVK present: kills the pin wineserver and restores via CrossOver', async () => {
@@ -654,6 +703,50 @@ describe('G22: read-only marker accessors', () => {
     expect(readBottleEngineMarkerKind('../escape')).toBeNull()
     writeFileSync(join(dir, ENGINE_MARKER_FILE), '{not json')
     expect(readBottleEngineMarkerKind(NAME)).toBeNull()
+  })
+
+  test('WR-01 re-review: readBottleEngineMarkerSummary exposes wine-manager version and a contained pin wineserver', () => {
+    const retired =
+      '/tools/steam-engines/wine-staging-retired/Contents/Resources/wine/bin/wineserver'
+    seed({
+      kind: 'wine-manager',
+      id: 'Wine-Staging-macOS-11.18',
+      wineserverBin: '/x/wineserver'
+    })
+    expect(readBottleEngineMarkerSummary(NAME)).toEqual({
+      kind: 'non-crossover',
+      pinId: null,
+      wineManagerVersion: 'Wine-Staging-macOS-11.18',
+      pinWineserverBin: null
+    })
+    seed({ kind: 'pinned', id: 'wine-staging-retired', wineserverBin: retired })
+    expect(readBottleEngineMarkerSummary(NAME)).toEqual({
+      kind: 'non-crossover',
+      pinId: 'wine-staging-retired',
+      wineManagerVersion: null,
+      pinWineserverBin: retired
+    })
+    seed({
+      kind: 'pinned',
+      id: 'wine-staging-retired',
+      wineserverBin: '/elsewhere/bin/wineserver'
+    })
+    expect(readBottleEngineMarkerSummary(NAME)?.pinWineserverBin).toBeNull()
+    seed({
+      kind: 'pinned',
+      id: 'wine-staging-retired',
+      wineserverBin: '/tools/steam-engines/wine-staging-retired/bin/wine'
+    })
+    expect(readBottleEngineMarkerSummary(NAME)?.pinWineserverBin).toBeNull()
+    seed({ kind: 'crossover', id: 'cx', wineserverBin: 'x' })
+    expect(readBottleEngineMarkerSummary(NAME)).toMatchObject({
+      kind: 'crossover',
+      wineManagerVersion: null,
+      pinWineserverBin: null
+    })
+    const bytes = readFileSync(join(dir, ENGINE_MARKER_FILE), 'utf8')
+    readBottleEngineMarkerSummary(NAME)
+    expect(readFileSync(join(dir, ENGINE_MARKER_FILE), 'utf8')).toBe(bytes)
   })
 
   test('G22: restoreNeedsAbsentPin is true only when a restore must fetch the absent pin', () => {

@@ -39,6 +39,13 @@ const seq = (...results: DemoStatusProbe[]) => {
   )
 }
 
+const rel = (v: string, installed = true) => ({
+  version: v,
+  type: 'Wine-Staging-macOS',
+  isInstalled: installed,
+  installDir: `${WM_ROOT}/${v}`
+})
+
 function mkDeps(
   over: Partial<EngineDecisionDeps> = {}
 ): Partial<EngineDecisionDeps> {
@@ -459,12 +466,6 @@ describe('decideLaunchEngine', () => {
     }
   )
   describe('wine-manager override', () => {
-    const rel = (v: string, installed = true) => ({
-      version: v,
-      type: 'Wine-Staging-macOS',
-      isInstalled: installed,
-      installDir: `${WM_ROOT}/${v}`
-    })
     it('installed build is used', async () => {
       const r = await decideLaunchEngine(
         args,
@@ -742,7 +743,7 @@ describe('inconclusive pre-flight never falls back (CR-01, D-05)', () => {
   })
   const busyNonCx = (
     a: { key: string; bottleName: string },
-    pinId: string | null,
+    pinId: string | null | Record<string, unknown>,
     over: Partial<EngineDecisionDeps> = {}
   ) =>
     decideLaunchEngine(
@@ -750,7 +751,12 @@ describe('inconclusive pre-flight never falls back (CR-01, D-05)', () => {
       mkDeps({
         probe: seq(failed('timeout')),
         bottleBusy: () => true,
-        markerSummary: () => ({ kind: 'non-crossover', pinId }),
+        markerSummary: () =>
+          typeof pinId === 'object' && pinId !== null
+            ? ({ kind: 'non-crossover', ...pinId } as ReturnType<
+                NonNullable<EngineDecisionDeps['markerSummary']>
+              >)
+            : { kind: 'non-crossover', pinId },
         ...over
       })
     )
@@ -840,11 +846,120 @@ describe('inconclusive pre-flight never falls back (CR-01, D-05)', () => {
       selection: { kind: 'pinned', pinId: 'prev-pin-test' }
     })
   })
-  it('a wine-manager marker (null pin id) gets pins.current', async () => {
+  it('a non-crossover marker with no resolvable engine takes the CrossOver branch (WR-01 re-review)', async () => {
     const r = await busyNonCx(args, null)
     expect(r).toMatchObject({
       kind: 'use',
-      selection: { kind: 'pinned', pinId: ENGINE_PINS.current.id }
+      selection: { kind: 'crossover', reason: 'cx-inconclusive' }
+    })
+  })
+  const WM = 'Wine-Staging-macOS-11.18'
+  const RETIRED_WS =
+    '/tools/steam-engines/wine-staging-retired/Contents/Resources/wine/bin/wineserver'
+  const wmSummary = {
+    pinId: null,
+    wineManagerVersion: WM,
+    pinWineserverBin: null
+  }
+  const retiredSummary = {
+    pinId: 'wine-staging-retired',
+    wineManagerVersion: null,
+    pinWineserverBin: RETIRED_WS
+  }
+  it('WR-01 re-review Steam: wine-manager marker keeps its Wine Manager build', async () => {
+    const kill = jest.fn(() => Promise.resolve(undefined))
+    const r = await busyNonCx(
+      { key: '1', bottleName: 'GameLibSteamBridge-1' },
+      wmSummary,
+      { wineManagerReleases: () => [rel(WM)], killCrossoverWineserver: kill }
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: {
+        kind: 'wine-manager',
+        managerVersion: WM,
+        reason: 'cx-inconclusive'
+      },
+      needsDownload: false
+    })
+    expect(kill).not.toHaveBeenCalled()
+    if (r.kind !== 'use') throw new Error('expected use')
+    expect(r.logLines.join('\n')).toContain('reason=cx-inconclusive')
+    expect(r.logLines.join('\n')).not.toContain('reason=cx-healthy')
+  })
+  it('WR-01 re-review non-Steam: wine-manager marker keeps its Wine Manager build', async () => {
+    const r = await decideLaunchEngine(
+      { key: 'legendary:Quail', bottleName: 'GameLib-legendary-Quail' },
+      mkDeps({
+        probe: seq(failed('invalid-bottle')),
+        markerSummary: () => ({ kind: 'non-crossover', ...wmSummary }),
+        wineManagerReleases: () => [rel(WM)]
+      })
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: {
+        kind: 'wine-manager',
+        managerVersion: WM,
+        reason: 'cx-inconclusive'
+      },
+      needsDownload: false
+    })
+  })
+  it('WR-01 re-review: retired pin id keeps its recorded engine', async () => {
+    const kill = jest.fn(() => Promise.resolve(undefined))
+    const r = await busyNonCx(
+      { key: '1', bottleName: 'GameLibSteamBridge-1' },
+      retiredSummary,
+      { killCrossoverWineserver: kill }
+    )
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: {
+        kind: 'pinned',
+        pinId: 'wine-staging-retired',
+        reason: 'cx-inconclusive',
+        wineserverBin: RETIRED_WS,
+        wineBin: RETIRED_WS.replace(/wineserver$/, 'wine')
+      },
+      needsDownload: false
+    })
+    expect(kill).not.toHaveBeenCalled()
+    const r2 = await busyNonCx(
+      { key: 'legendary:Quail', bottleName: 'GameLib-legendary-Quail' },
+      retiredSummary
+    )
+    expect(r2).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'pinned', pinId: 'wine-staging-retired' }
+    })
+  })
+  it('WR-01 re-review: uninstalled wine-manager build takes the CrossOver branch, not pins.current', async () => {
+    const r = await busyNonCx(args, wmSummary, {
+      wineManagerReleases: () => [rel(WM, false)]
+    })
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'crossover', reason: 'cx-inconclusive' }
+    })
+  })
+  it('WR-01 re-review: pruned retired pin takes the CrossOver branch', async () => {
+    const r = await busyNonCx(args, retiredSummary, {
+      fileExists: (p) => !p.startsWith('/tools/steam-engines/')
+    })
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'crossover', reason: 'cx-inconclusive' }
+    })
+  })
+  it('WR-01 re-review: forced CrossOver ignores a wine-manager marker', async () => {
+    const r = await busyNonCx(args, wmSummary, {
+      readOverride: () => 'crossover',
+      wineManagerReleases: () => [rel(WM)]
+    })
+    expect(r).toMatchObject({
+      kind: 'use',
+      selection: { kind: 'crossover', reason: 'override' }
     })
   })
   it('pinned-inconclusive with the pin not installed needs a download', async () => {

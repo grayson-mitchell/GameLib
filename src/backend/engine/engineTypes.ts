@@ -37,7 +37,7 @@ export type EngineSelection =
   | ({
       kind: 'wine-manager'
       managerVersion: string
-      reason: 'override'
+      reason: 'override' | 'cx-inconclusive'
     } & NonCrossoverEngine)
 
 export type NonCrossoverSelection = Extract<
