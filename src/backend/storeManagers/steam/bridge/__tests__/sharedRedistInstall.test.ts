@@ -5,6 +5,7 @@
  * directory in os.tmpdir(), and steamSupportPath points at a second per-test mkdtemp directory
  * (these two are the only paths this file ever removes).
  */
+import { at } from '../../__tests__/fixtures/indexed'
 import {
   mkdtempSync,
   readdirSync,
@@ -330,7 +331,7 @@ describe('installSteamBridgeSharedRedists', () => {
         .map((p) =>
           p[0] === 'msiexec'
             ? 'msi'
-            : p[0].endsWith('DXSETUP.exe')
+            : at(p, 0).endsWith('DXSETUP.exe')
               ? 'dx'
               : p[0]
         )
@@ -576,12 +577,12 @@ describe('installSteamBridgeSharedRedists', () => {
   it('runs x86 and x64 vcredist 2010, counts 3010 as done', async () => {
     mockedDownload.mockResolvedValue(ok([vc2010()]))
     defaultWine((p) =>
-      p[0].endsWith('vcredist_x86.exe')
+      at(p, 0).endsWith('vcredist_x86.exe')
         ? { code: 3010, stdout: '', stderr: '' }
         : undefined
     )
     await installSteamBridgeSharedRedists(APP, SETTINGS)
-    expect(installerCalls().map((p) => p[0].split('\\').pop())).toEqual([
+    expect(installerCalls().map((p) => at(p, 0).split('\\').pop())).toEqual([
       'vcredist_x86.exe',
       'vcredist_x64.exe'
     ])
@@ -591,7 +592,7 @@ describe('installSteamBridgeSharedRedists', () => {
   it('does not mark a non-success exit, does not settle, and still runs the next entry', async () => {
     mockedDownload.mockResolvedValue(ok([vc2010()]))
     defaultWine((p) =>
-      p[0].endsWith('vcredist_x86.exe')
+      at(p, 0).endsWith('vcredist_x86.exe')
         ? { code: 1, stdout: '', stderr: '' }
         : undefined
     )
@@ -614,7 +615,7 @@ describe('installSteamBridgeSharedRedists', () => {
     mockedDownload.mockResolvedValue(ok([net452()]))
     await installSteamBridgeSharedRedists(APP, SETTINGS)
     expect(installerCalls()).toHaveLength(1)
-    expect(installerCalls()[0][2]).toContain(
+    expect(at(at(installerCalls(), 0), 2)).toContain(
       'Microsoft .NET Framework 4.5.2.cmd'
     )
   })
@@ -624,12 +625,12 @@ describe('installSteamBridgeSharedRedists', () => {
       'hkey_local_machine\\software\\valve\\steam\\apps\\commonredist\\directx\\jun2010|dxsetup'
     const failDx = () =>
       defaultWine((p) =>
-        p[0].endsWith('DXSETUP.exe')
+        at(p, 0).endsWith('DXSETUP.exe')
           ? { code: 1, stdout: '', stderr: '' }
           : undefined
       )
     const dxInstallerCalls = () =>
-      installerCalls().filter((p) => p[0].endsWith('DXSETUP.exe'))
+      installerCalls().filter((p) => at(p, 0).endsWith('DXSETUP.exe'))
 
     let now: jest.SpyInstance<number, []> | undefined
     afterEach(() => {
@@ -858,11 +859,11 @@ describe('installSteamBridgeSharedRedists', () => {
       const ctl = new AbortController()
       mockedDownload.mockResolvedValue(ok([vc2010(), dx()]))
       defaultWine((p) => {
-        if (p[0].endsWith('vcredist_x86.exe')) ctl.abort()
+        if (at(p, 0).endsWith('vcredist_x86.exe')) ctl.abort()
         return undefined
       })
       await installSteamBridgeSharedRedists(APP, SETTINGS, ctl.signal)
-      expect(installerCalls().map((p) => p[0].split('\\').pop())).toEqual([
+      expect(installerCalls().map((p) => at(p, 0).split('\\').pop())).toEqual([
         'vcredist_x86.exe'
       ])
       expect(Object.keys(ledger().done)).toHaveLength(1)
@@ -994,7 +995,7 @@ describe('installSteamBridgeSharedRedists', () => {
           const h = hooks(p)
           if (h !== undefined) return h
           if (isGfx(p)) {
-            if (p[1] === 'add') value = p[8]
+            if (p[1] === 'add') value = at(p, 8)
             if (p[1] === 'delete') value = null
             if (p[1] === 'query')
               return value === null
@@ -1014,7 +1015,8 @@ describe('installSteamBridgeSharedRedists', () => {
       return () => value
     }
     const mutations = () => graphicsCalls().filter((p) => p[1] !== 'query')
-    const order = (fn: jest.Mock, i: number) => fn.mock.invocationCallOrder[i]
+    const order = (fn: jest.Mock, i: number) =>
+      at(fn.mock.invocationCallOrder, i)
 
     it('orders session ends around the installer', async () => {
       mockedDownload.mockResolvedValue(ok([dx()]))
@@ -1023,15 +1025,15 @@ describe('installSteamBridgeSharedRedists', () => {
       const calls = mockedRun.mock.calls.map(
         ([a]) => a.commandParts as string[]
       )
-      const at = (pred: (p: string[]) => boolean) => calls.findIndex(pred)
-      const addIdx = at((p) => isGfx(p) && p[1] === 'add')
-      const instIdx = at((p) => p[0] !== 'reg')
-      const delIdx = at((p) => isGfx(p) && p[1] === 'delete')
+      const findIdx = (pred: (p: string[]) => boolean) => calls.findIndex(pred)
+      const addIdx = findIdx((p) => isGfx(p) && p[1] === 'add')
+      const instIdx = findIdx((p) => p[0] !== 'reg')
+      const delIdx = findIdx((p) => isGfx(p) && p[1] === 'delete')
       const o = mockedRun.mock.invocationCallOrder
       expect(mockedEnd).toHaveBeenCalledTimes(2)
-      expect(order(mockedEnd, 0)).toBeGreaterThan(o[addIdx])
-      expect(order(mockedEnd, 0)).toBeLessThan(o[instIdx])
-      expect(order(mockedEnd, 1)).toBeGreaterThan(o[delIdx + 1])
+      expect(order(mockedEnd, 0)).toBeGreaterThan(at(o, addIdx))
+      expect(order(mockedEnd, 0)).toBeLessThan(at(o, instIdx))
+      expect(order(mockedEnd, 1)).toBeGreaterThan(at(o, delIdx + 1))
       expect(ledger().displayDriver).toBeUndefined()
       expect(ledger().settled).toBeDefined()
     })
@@ -1060,14 +1062,14 @@ describe('installSteamBridgeSharedRedists', () => {
       [
         'non-success exit',
         (p: string[]) =>
-          p[0].endsWith('DXSETUP.exe')
+          at(p, 0).endsWith('DXSETUP.exe')
             ? { code: 5, stdout: '', stderr: '' }
             : undefined
       ],
       [
         'throw',
         (p: string[]) => {
-          if (p[0].endsWith('DXSETUP.exe')) throw new Error('boom')
+          if (at(p, 0).endsWith('DXSETUP.exe')) throw new Error('boom')
           return undefined
         }
       ]
@@ -1087,7 +1089,7 @@ describe('installSteamBridgeSharedRedists', () => {
       const ctl = new AbortController()
       mockedDownload.mockResolvedValue(ok([vc2010(), dx()]))
       const get = gfxWine(null, (p) => {
-        if (p[0].endsWith('vcredist_x86.exe')) ctl.abort()
+        if (at(p, 0).endsWith('vcredist_x86.exe')) ctl.abort()
         return undefined
       })
       await installSteamBridgeSharedRedists(APP, SETTINGS, ctl.signal)

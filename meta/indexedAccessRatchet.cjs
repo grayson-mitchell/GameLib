@@ -40,7 +40,8 @@ const ADOPTED_BUCKETS = [
   'src/backend/storeManagers/steam',
   'src/backend/storeManagers/gog',
   'src/backend/storeManagers/legendary',
-  'src/backend/humble'
+  'src/backend/humble',
+  'src/backend/storeManagers/steam (tests)'
 ]
 
 /**

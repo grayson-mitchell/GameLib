@@ -1,3 +1,4 @@
+import { defined } from '../../../__tests__/fixtures/indexed'
 import { readFile, realpath } from 'fs/promises'
 import { isContainedWithin } from '../../bridgeScan'
 
@@ -33,13 +34,13 @@ export async function stubRustScan(
     case 'scan_contained_real': {
       let rootReal: string
       try {
-        rootReal = await realpath(args.rootDir)
+        rootReal = await realpath(defined(args.rootDir, 'rootDir arg'))
       } catch {
         return { real: null, reason: 'root-unresolvable' }
       }
       let real: string
       try {
-        real = await realpath(args.path)
+        real = await realpath(defined(args.path, 'path arg'))
       } catch {
         return { real: null, reason: 'realpath-failed' }
       }
@@ -48,7 +49,7 @@ export async function stubRustScan(
         : { real: null, reason: 'escapes' }
     }
     case 'scan_steamstub_section': {
-      const f = await readText(args.exePath)
+      const f = await readText(defined(args.exePath, 'exePath arg'))
       if ('error' in f) return { drmWrapper: null, readError: f.error }
       return {
         drmWrapper: f.text.includes('.bind') ? 'steamstub' : 'none',
@@ -56,7 +57,7 @@ export async function stubRustScan(
       }
     }
     case 'scan_steam_drm': {
-      const f = await readText(args.exePath)
+      const f = await readText(defined(args.exePath, 'exePath arg'))
       if ('error' in f) {
         return {
           parsed: false,

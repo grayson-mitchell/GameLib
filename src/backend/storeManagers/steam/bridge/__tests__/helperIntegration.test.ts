@@ -50,6 +50,7 @@
  * `__setBridgeHelperPathForTests()`'s existing shape) -- real isolation,
  * not ambient propagation that never happens.
  */
+import { at } from '../../__tests__/fixtures/indexed'
 import { execFileSync, spawn } from 'node:child_process'
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs'
 import { Socket } from 'node:net'
@@ -2116,15 +2117,15 @@ describeDarwinOnly(
       const socks: Socket[] = []
       try {
         for (let i = 0; i < 16; i++) socks.push(await h.connect())
-        await authenticate(socks[0], 1)
-        const evicted = waitClose(socks[1])
+        await authenticate(at(socks, 0), 1)
+        const evicted = waitClose(at(socks, 1))
         const extra = await h.connect()
         socks.push(extra)
         expect(await evicted).toBeLessThan(1000)
         await authenticate(extra, 3)
-        expect((await sendFrameOnSocket(socks[0], drainFrame(2))).status).toBe(
-          STATUS_OK
-        )
+        expect(
+          (await sendFrameOnSocket(at(socks, 0), drainFrame(2))).status
+        ).toBe(STATUS_OK)
         expect(h.getStderr()).not.toMatch(/connection table full/)
       } finally {
         socks.forEach((s) => s.destroy())
@@ -2145,9 +2146,9 @@ describeDarwinOnly(
         socks.push(extra)
         const ms = await waitClose(extra)
         expect(ms).toBeLessThan(1000)
-        expect((await sendFrameOnSocket(socks[0], drainFrame(2))).status).toBe(
-          STATUS_OK
-        )
+        expect(
+          (await sendFrameOnSocket(at(socks, 0), drainFrame(2))).status
+        ).toBe(STATUS_OK)
         expect(h.getStderr().match(/connection table full/g)).toHaveLength(1)
       } finally {
         socks.forEach((s) => s.destroy())

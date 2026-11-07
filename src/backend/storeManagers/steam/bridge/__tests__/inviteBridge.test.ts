@@ -2,6 +2,7 @@
  * Phase 58 Plan 31: inviteBridge control client against an in-test TCP server
  * speaking the real frame protocol.
  */
+import { at } from '../../__tests__/fixtures/indexed'
 import { createServer, Server, Socket } from 'node:net'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -75,7 +76,7 @@ beforeEach(async () => {
       if (silent) return
       const req = decodeRequest(chunk)
       if (req.slot === CONTROL_SLOT.hello) {
-        seen.helloRole = req.argBlob.length === 65 ? req.argBlob[64] : null
+        seen.helloRole = req.argBlob.length === 65 ? at(req.argBlob, 64) : null
         sock.write(encodeResponse(req.requestId, helloStatus, Buffer.alloc(0)))
         return
       }
@@ -174,7 +175,7 @@ describe('listBridgeFriends', () => {
     spy.mockRestore()
     expect(unref).toHaveBeenCalled()
     expect(fired).toHaveLength(1)
-    fired[0]()
+    at(fired, 0)()
     expect(await p).toEqual({ ok: false, reason: 'error' })
     await waitClosed()
     expect(seen.closed).toBe(true)

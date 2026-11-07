@@ -1,3 +1,4 @@
+import { at } from '../../__tests__/fixtures/indexed'
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -174,11 +175,9 @@ describe('header defines cross-pin to CALLBACK_LAYOUTS (58-02)', () => {
     expect(l.mac.size).toBe(l.x64.size)
     const block = /gl_mms_gsi_map\[\] = \{([\s\S]*?)\n\};/.exec(cr)
     if (!block) throw new Error('gl_mms_gsi_map missing')
-    const rows = [...block[1].matchAll(/\{(\d+), (\d+), (\d+)\}/g)].map((m) => [
-      Number(m[1]),
-      Number(m[2]),
-      Number(m[3])
-    ])
+    const rows = [...at(block, 1).matchAll(/\{(\d+), (\d+), (\d+)\}/g)].map(
+      (m) => [Number(m[1]), Number(m[2]), Number(m[3])]
+    )
     const names = Object.keys(l.x64.fields)
     expect(rows.map((r) => [r[0], r[1]])).toEqual(
       names.map((n) => [
@@ -188,9 +187,9 @@ describe('header defines cross-pin to CALLBACK_LAYOUTS (58-02)', () => {
     )
     // Rows are contiguous-or-padded: no row overlaps the next, none passes the end.
     for (let i = 0; i < rows.length; i++) {
-      const end = rows[i][1] + rows[i][2]
+      const end = at(at(rows, i), 1) + at(at(rows, i), 2)
       expect(end).toBeLessThanOrEqual(
-        i + 1 < rows.length ? rows[i + 1][1] : l.x64.size
+        i + 1 < rows.length ? at(at(rows, i + 1), 1) : l.x64.size
       )
     }
   })

@@ -32,6 +32,7 @@
 // below is used both for real-tmpdir fixture assertions AND, in the
 // BLOCKER 2 test, to grep shimGenerate.ts's own source text (24-04
 // precedent: a real source-slice test, not a runtime mock assertion).
+import { at, defined } from '../../__tests__/fixtures/indexed'
 import {
   chmodSync,
   existsSync,
@@ -154,8 +155,12 @@ function readDef(): { header: string; hasExports: boolean; symbols: string[] } {
       : lines
           .slice(exportsIdx + 1)
           .filter((l) => l !== '' && !l.startsWith(';'))
-          .map((l) => l.split(/\s+/)[0])
-  return { header: lines[0], hasExports: exportsIdx !== -1, symbols }
+          .map((l) => defined(l.split(/\s+/)[0], 'def symbol'))
+  return {
+    header: at(lines, 0, 'def header'),
+    hasExports: exportsIdx !== -1,
+    symbols
+  }
 }
 
 const readDefExports = (): string[] => readDef().symbols

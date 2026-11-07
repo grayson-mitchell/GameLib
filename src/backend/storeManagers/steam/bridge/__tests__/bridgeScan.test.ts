@@ -1,3 +1,4 @@
+import { defined } from '../../__tests__/fixtures/indexed'
 import {
   mkdirSync,
   mkdtempSync,
@@ -59,7 +60,9 @@ describe('D-53-12 import boundary', () => {
   it('imports only node: and relative modules', () => {
     const src = readFileSync(join(__dirname, '..', 'bridgeScan.ts'), 'utf8')
     expect(src).not.toMatch(/from 'backend\//)
-    const specs = [...src.matchAll(/from '([^']+)'/g)].map((m) => m[1])
+    const specs = [...src.matchAll(/from '([^']+)'/g)].map((m) =>
+      defined(m[1], 'import specifier')
+    )
     expect(specs.length).toBeGreaterThan(0)
     for (const spec of specs) {
       expect(spec.startsWith('node:') || spec.startsWith('./')).toBe(true)

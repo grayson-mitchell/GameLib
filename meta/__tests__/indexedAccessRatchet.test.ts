@@ -43,7 +43,8 @@ describe('indexedAccessRatchet bucketOf', () => {
       STEAM,
       'src/backend/storeManagers/gog',
       'src/backend/storeManagers/legendary',
-      'src/backend/humble'
+      'src/backend/humble',
+      `${STEAM} (tests)`
     ])
   })
 })

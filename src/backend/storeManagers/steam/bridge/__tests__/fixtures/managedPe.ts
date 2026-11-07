@@ -5,6 +5,8 @@
  * tables only) and a `#Strings` heap. No game binaries are used or checked in.
  */
 
+import { at as elementAt } from '../../../__tests__/fixtures/indexed'
+
 type ManagedPeOptions = {
   machine?: number
   /** false builds a native PE (no CLR data directory) */
@@ -96,13 +98,13 @@ export function buildManagedPe(opts: ManagedPeOptions = {}): Buffer {
   present.forEach(([, n], i) => tilde.writeUInt32LE(n, 24 + 4 * i))
   let at = tildeHeader + methodDefRows * mdRowSize
   moduleRefs.forEach((_, i) => {
-    writeIdx(tilde, at, mrIdx[i], strW)
+    writeIdx(tilde, at, elementAt(mrIdx, i), strW)
     at += mrRowSize
   })
   implMaps.forEach((m, i) => {
     tilde.writeUInt16LE(0x0100, at) // MappingFlags
     writeIdx(tilde, at + 2, ((i + 1) << 1) | 1, mfW) // MethodDef row i+1
-    writeIdx(tilde, at + 2 + mfW, imIdx[i], strW)
+    writeIdx(tilde, at + 2 + mfW, elementAt(imIdx, i), strW)
     tilde.writeUInt16LE(m.module, at + 2 + mfW + strW)
     at += imRowSize
   })
@@ -142,8 +144,8 @@ export function buildManagedPe(opts: ManagedPeOptions = {}): Buffer {
     }
     root.writeUInt32LE(off, hc)
     root.writeUInt32LE(size, hc + 4)
-    nameBufs[i].copy(root, hc + 8)
-    hc += 8 + nameBufs[i].length
+    elementAt(nameBufs, i).copy(root, hc + 8)
+    hc += 8 + elementAt(nameBufs, i).length
   })
   const metadata = Buffer.concat([root, tilde, heap])
 

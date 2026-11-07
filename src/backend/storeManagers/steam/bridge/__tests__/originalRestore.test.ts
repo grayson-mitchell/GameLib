@@ -2,6 +2,7 @@
  * Quick 261026-lif: restoreBridgeSteamApiOriginals. Real fs under
  * mkdtempSync(tmpdir()), an injected `downloadSelected`, no network, no spawn.
  */
+import { at } from '../../__tests__/fixtures/indexed'
 import {
   existsSync,
   mkdirSync,
@@ -172,7 +173,7 @@ describe('restoreBridgeSteamApiOriginals', () => {
   it('refuses downloaded bytes that carry shim markers', async () => {
     const shim = put('bin/steam_api64.dll', SHIM)
     const r = await run(fakeDownload({ 'bin/steam_api64.dll': SHIM }))
-    expect(r.outcomes[0].outcome).toBe('refused')
+    expect(at(r.outcomes, 0).outcome).toBe('refused')
     expect(r.status).toBe('partial')
     expect(existsSync(shim + '.gamelib-orig')).toBe(false)
   })
@@ -182,7 +183,7 @@ describe('restoreBridgeSteamApiOriginals', () => {
     const r = await run(
       fakeDownload({ 'bin/steam_api64.dll': ORIG }, { sha1Override: 'ab' })
     )
-    expect(r.outcomes[0].outcome).toBe('refused')
+    expect(at(r.outcomes, 0).outcome).toBe('refused')
     expect(existsSync(shim + '.gamelib-orig')).toBe(false)
   })
 
@@ -193,7 +194,7 @@ describe('restoreBridgeSteamApiOriginals', () => {
     symlinkSync(victim, shim + '.gamelib-orig')
     const dl = fakeDownload({ 'bin/steam_api64.dll': ORIG })
     const r = await run(dl)
-    expect(r.outcomes[0].outcome).toBe('backup-refused')
+    expect(at(r.outcomes, 0).outcome).toBe('backup-refused')
     expect(readFileSync(victim, 'utf8')).toBe('keep')
     expect(dl).not.toHaveBeenCalled()
   })

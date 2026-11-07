@@ -13,6 +13,7 @@
  * original pin did.
  */
 
+import { defined } from '../../__tests__/fixtures/indexed'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -73,7 +74,7 @@ function readDefExports(defPath: string = STEAM_API_DEF_PATH): string[] {
   return lines
     .slice(exportsIdx + 1)
     .filter((l) => l !== '' && !l.startsWith(';'))
-    .map((l) => l.split(/\s+/)[0])
+    .map((l) => defined(l.split(/\s+/)[0], 'def symbol'))
 }
 
 describe('SHIM_EXPORTED_SYMBOLS (24-CR-02 pin, moved from shimGenerate.test.ts)', () => {
@@ -115,7 +116,7 @@ describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-
     const misses = FLAT_NAMES_FIXTURE.names.filter(
       (n) =>
         isInterfaceMethodName(n) &&
-        served.has(n.split('_')[1]) &&
+        served.has(defined(n.split('_')[1], 'flat-name family')) &&
         !SHIM64_EXPORTED_SYMBOLS.has(n)
     )
     expect(misses).toEqual([])
@@ -145,7 +146,7 @@ describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-
     const byFamily: Record<string, number> = {}
     for (const n of unexported) {
       if (isInterfaceMethodName(n)) {
-        const family = n.split('_')[1]
+        const family = defined(n.split('_')[1], 'flat-name family')
         expect(served.has(family)).toBe(false)
         byFamily[family] = (byFamily[family] ?? 0) + 1
       } else {
@@ -1131,8 +1132,8 @@ describe('Phase 53 sampled titles: no half-served family (Pitfall 4)', () => {
           arch: 'x64',
           symbols: IMPORTS,
           requiredInterfaceVersions: required([
-            ...SAMPLES[appId],
-            ...UTILS_STATS[appId],
+            ...defined(SAMPLES[appId], `SAMPLES[${appId}]`),
+            ...defined(UTILS_STATS[appId], `UTILS_STATS[${appId}]`),
             ...COMMON
           ])
         })
@@ -1147,7 +1148,9 @@ describe('Phase 53 sampled titles: no half-served family (Pitfall 4)', () => {
         findUnservableInterfaceVersions({
           arch: 'x64',
           symbols: IMPORTS,
-          requiredInterfaceVersions: required(UE_MEASURED[appId])
+          requiredInterfaceVersions: required(
+            defined(UE_MEASURED[appId], `UE_MEASURED[${appId}]`)
+          )
         })
       ).toEqual([])
     }
