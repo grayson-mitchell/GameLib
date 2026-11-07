@@ -21,6 +21,7 @@ export function appendLogLine(
   if (line.kind === 'progress') {
     for (let i = buffer.length - 1; i >= 0; i--) {
       const candidate = buffer[i]
+      if (candidate === undefined) continue
       if (candidate.kind === 'progress') {
         const percent = line.percent ?? candidate.percent
         buffer[i] =

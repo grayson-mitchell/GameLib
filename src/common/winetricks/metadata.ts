@@ -47,8 +47,8 @@ export function parseWinetricksMetadata(
   for (const line of lines) {
     if (inBlock && current) {
       const fieldMatch = FIELD_RE.exec(line)
-      if (fieldMatch) {
-        const [, field, value] = fieldMatch
+      const [, field, value] = fieldMatch ?? []
+      if (field !== undefined && value !== undefined) {
         switch (field) {
           case 'conflicts':
             current.conflicts = value.split(/\s+/).filter(Boolean)
@@ -78,8 +78,8 @@ export function parseWinetricksMetadata(
     }
 
     const headerMatch = METADATA_HEADER_RE.exec(line)
-    if (headerMatch) {
-      const [, verb, category] = headerMatch
+    const [, verb, category] = headerMatch ?? []
+    if (verb !== undefined && category !== undefined) {
       current = { verb, category }
       result.set(verb, current)
       inBlock = line.endsWith('\\')
@@ -107,7 +107,7 @@ export function deriveNeedsGuiVerbs(scriptText: string): ReadonlySet<string> {
   for (const line of lines) {
     const funcMatch = LOAD_FUNCTION_RE.exec(line)
     if (funcMatch) {
-      currentFunction = funcMatch[1]
+      currentFunction = funcMatch[1] ?? null
       continue
     }
 

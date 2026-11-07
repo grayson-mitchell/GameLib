@@ -68,7 +68,8 @@ describe('indexedAccessRatchet bucketOf', () => {
       'src/backend/storeManagers/nile',
       'src/frontend/state',
       'src/frontend/hooks',
-      'src/frontend/styles'
+      'src/frontend/styles',
+      'src/common/winetricks'
     ])
   })
 })

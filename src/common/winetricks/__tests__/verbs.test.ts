@@ -56,7 +56,11 @@ function membershipProblems(
 ): string[] {
   const problems: string[] = []
   for (const group of TASK_GROUP_IDS) {
-    for (const verb of members[group]) {
+    const groupMembers = members[group]
+    if (groupMembers === undefined) {
+      throw new Error(`membership map is missing group ${group}`)
+    }
+    for (const verb of groupMembers) {
       const meta = FIXTURE_METADATA.get(verb)
       if (!meta) {
         problems.push(`${group}/${verb}: absent from the fixture`)
