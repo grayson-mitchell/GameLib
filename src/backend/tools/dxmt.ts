@@ -75,7 +75,8 @@ const DXMT = {
   getCurrentDXMTVersion: () => {
     const versionFilePath = join(toolsPath, 'dxmt', 'latest_dxmt')
     if (existsSync(versionFilePath)) {
-      return readFileSync(versionFilePath).toString().split('\n')[0]
+      // split() always yields at least one element
+      return readFileSync(versionFilePath).toString().split('\n')[0] ?? ''
     } else {
       return ''
     }

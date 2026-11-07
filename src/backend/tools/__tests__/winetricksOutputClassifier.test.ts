@@ -11,6 +11,7 @@
  * Aborting.`
  */
 import type { WinetricksLogLine } from 'common/types'
+import { defined } from 'backend/testUtils/indexed'
 import {
   appendLogLine,
   classifyWinetricksLine,
@@ -324,6 +325,6 @@ describe('appendLogLine', () => {
       appendLogLine(buffer, info(`line ${i}`))
     }
     expect(buffer).toHaveLength(200)
-    expect(buffer[0].text).toBe('line 50')
+    expect(defined(buffer[0], 'first buffer line').text).toBe('line 50')
   })
 })

@@ -106,6 +106,13 @@ export async function installOrUpdateTool(tool: Tool) {
   } = await axiosClient.get<ReleasesResponse>(tool.url)
 
   let asset = assets[0]
+  if (asset === undefined) {
+    logError(
+      `No release assets found for ${tool.name}`,
+      LogPrefix.ToolInstaller
+    )
+    return
+  }
   if (tool.name === 'dxvk-macOS' && asset.name.includes('-builtin')) {
     // Do not use -builtin asset for dxvk macos
     // TODO: implement proper use of the -builtin using the WINEDLLPATH_PREPEND
@@ -121,9 +128,11 @@ export async function installOrUpdateTool(tool: Tool) {
   const installedVersionStorage = `${toolsPath}/${tool.name}/latest_${tool.name}`
   let installedVersion = ''
   if (existsSync(installedVersionStorage)) {
-    installedVersion = readFileSync(installedVersionStorage)
-      .toString()
-      .split('\n')[0]
+    installedVersion =
+      readFileSync(installedVersionStorage)
+        .toString()
+        // split() always yields at least one element
+        .split('\n')[0] ?? ''
   }
 
   const alreadyUpToDate =
@@ -293,9 +302,10 @@ export const DXVK = {
 
     const globalVersion = source
       ? source.version
-      : readFileSync(`${toolsPath}/${tool}/latest_${tool}`)
+      : (readFileSync(`${toolsPath}/${tool}/latest_${tool}`)
           .toString()
-          .split('\n')[0]
+          // split() always yields at least one element
+          .split('\n')[0] ?? '')
 
     const toolPathx32 = source
       ? join(source.dir, 'x32')
@@ -314,9 +324,11 @@ export const DXVK = {
     let currentVersion = ''
 
     if (existsSync(currentVersionCheck)) {
-      currentVersion = readFileSync(currentVersionCheck)
-        .toString()
-        .split('\n')[0]
+      currentVersion =
+        readFileSync(currentVersionCheck)
+          .toString()
+          // split() always yields at least one element
+          .split('\n')[0] ?? ''
     }
 
     if (action === 'restore') {

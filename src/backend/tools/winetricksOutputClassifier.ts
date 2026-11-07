@@ -45,7 +45,7 @@ const MAX_LINE_CHARS = 2000
 
 export function parseUnsupportedWineVersion(line: string): string | null {
   const match = UNSUPPORTED_WINE_RE.exec(line)
-  return match ? match[1] : null
+  return match?.[1] ?? null
 }
 
 // Reproduces winetricks' own derivation of `_wine_version_stripped` (script
@@ -66,6 +66,9 @@ export function parseWineVersionOutput(raw: string): string | null {
   const afterSed = line.replace(/.*wine/, 'wine')
   // cut -d ' ' -f1
   const firstField = afterSed.split(' ')[0]
+  if (firstField === undefined) {
+    return null
+  }
   // sed -e 's/wine-//' -e 's/-rc.*//'
   const stripped = firstField.replace('wine-', '').replace(/-rc.*/, '')
   return /^\d/.test(stripped) ? stripped : null
@@ -76,15 +79,18 @@ export function parseWineVersionOutput(raw: string): string | null {
 // string comparison -- so '10.0' sorts above '7.99', not below it.
 export function isUnsupportedWineVersion(version: string): boolean {
   const fields = version.split('.').slice(0, 3)
-  const [major, minor, patch] = [0, 1, 2].map((i) => {
+  const fieldNumber = (i: number): number => {
     const parsed = parseInt(fields[i] ?? '0', 10)
     return Number.isNaN(parsed) ? 0 : parsed
-  })
-  const threshold = [7, 99, 0]
-  const actual = [major, minor, patch]
-  for (let i = 0; i < 3; i++) {
-    if (actual[i] !== threshold[i]) {
-      return actual[i] < threshold[i]
+  }
+  const pairs: [number, number][] = [
+    [fieldNumber(0), 7],
+    [fieldNumber(1), 99],
+    [fieldNumber(2), 0]
+  ]
+  for (const [actual, threshold] of pairs) {
+    if (actual !== threshold) {
+      return actual < threshold
     }
   }
   return true

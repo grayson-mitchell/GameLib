@@ -90,6 +90,7 @@ import {
   onEnvironmentChanged
 } from '../winetricksEnvironment'
 import { Winetricks } from '../index'
+import { defined } from 'backend/testUtils/indexed'
 
 const FIXTURE_SCRIPT = readFileSync(
   join(
@@ -187,7 +188,7 @@ async function flushMicrotasks(times = 20): Promise<void> {
 async function listAvailableWith(stdout: string, appName = 'game') {
   const list = Winetricks.listAvailable('gog', appName)
   await flushMicrotasks()
-  const child = children[children.length - 1]
+  const child = defined(children[children.length - 1], 'spawned child')
   child.stdout.emit('data', stdout)
   child.emit('exit', 0)
   child.emit('close', 0)
@@ -208,7 +209,7 @@ describe('Winetricks.listAvailable metadata merge and visibility filter (D-09/D-
       'fontsmooth=rgb'
     ])
 
-    const vcrun = result[0]
+    const vcrun = defined(result[0], 'vcrun2019 component')
     expect(vcrun.publisher).toBe('Microsoft')
     expect(vcrun.year).toBe('2019')
     expect(vcrun.media).toBe('download')
@@ -222,8 +223,9 @@ describe('Winetricks.listAvailable metadata merge and visibility filter (D-09/D-
     expect(vcrun.category).toBe('dlls')
     expect(vcrun.cached).toBe(true)
 
-    expect(result[1].needsGui).toBe(false)
-    expect(result[1].publisher).toBe('Microsoft')
+    const gdiplus = defined(result[1], 'gdiplus_winxp component')
+    expect(gdiplus.needsGui).toBe(false)
+    expect(gdiplus.publisher).toBe('Microsoft')
   })
 
   it('does not return apps, benchmarks or needs-GUI verbs', async () => {
@@ -281,11 +283,10 @@ describe('Winetricks.listAvailable metadata merge and visibility filter (D-09/D-
       'gdiplus_winxp',
       'fontsmooth=rgb'
     ])
-    expect(result[0].publisher).toBeUndefined()
-    expect(result[0].needsGui).toBeUndefined()
-    expect(result[0].title).toBe(
-      'Visual C++ 2015-2019 libraries (Microsoft, 2019)'
-    )
+    const first = defined(result[0], 'first component')
+    expect(first.publisher).toBeUndefined()
+    expect(first.needsGui).toBeUndefined()
+    expect(first.title).toBe('Visual C++ 2015-2019 libraries (Microsoft, 2019)')
     expect(logWarning).toHaveBeenCalledTimes(1)
   })
 

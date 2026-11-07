@@ -21,6 +21,7 @@ import {
 } from 'fs'
 import { join } from 'path'
 import type { GameSettings } from 'common/types'
+import { defined } from 'backend/testUtils/indexed'
 
 const mockRunWineCommand = jest.fn()
 
@@ -283,10 +284,16 @@ describe('DXVK.installRemove strict restore with a pinned source', () => {
       values: Record<string, unknown> = {}
     ) =>
     ({ commandParts }: { commandParts: string[] }) => {
-      const verb = commandParts[0] === 'reg' ? commandParts[1] : commandParts[0]
+      const verb = defined(
+        commandParts[0] === 'reg' ? commandParts[1] : commandParts[0],
+        'wine verb'
+      )
       if (verb === 'import') onImport?.()
       if (verb === 'query') {
-        const name = commandParts[commandParts.indexOf('/v') + 1]
+        const name = defined(
+          commandParts[commandParts.indexOf('/v') + 1],
+          'registry value name'
+        )
         return Promise.resolve(values[name] ?? absent)
       }
       if (verb in overrides) return Promise.resolve(overrides[verb])
@@ -318,7 +325,8 @@ describe('DXVK.installRemove strict restore with a pinned source', () => {
     const inner = wine()
     mockRunWineCommand.mockImplementation(
       async (args: { commandParts: string[] }) => {
-        const [cmd, verb] = args.commandParts
+        const [firstPart, verb] = args.commandParts
+        const cmd = defined(firstPart, 'wine command')
         order.push(cmd === 'reg' ? `reg ${verb}` : cmd)
         order.push(`ver:${versionFile()}`)
         return inner(args)
@@ -396,7 +404,8 @@ describe('DXVK.installRemove strict restore with a pinned source', () => {
 
   it('G30: runs wineboot -u when a stock DLL is still missing after the import', async () => {
     // only one of the four comes back, as on a same-engine restore with no prefix update
-    const partial = () => writeFileSync(stockDlls()[0], 'builtin')
+    const partial = () =>
+      writeFileSync(defined(stockDlls()[0], 'stock dll'), 'builtin')
     mockRunWineCommand.mockImplementation(wine({}, partial))
     expect(await restore()).toBe(true)
     const verbs = mockRunWineCommand.mock.calls.map((c) => c[0].commandParts[0])

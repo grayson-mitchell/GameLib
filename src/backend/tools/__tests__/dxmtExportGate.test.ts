@@ -67,6 +67,7 @@ import {
 import { installOrUpdateTool } from '../index'
 import { checkWinemacMetalViewExports } from '../machoExports'
 import type { ReleasesInfo, WineVersionInfo } from 'common/types'
+import { defined } from 'backend/testUtils/indexed'
 
 import '../dxmt'
 
@@ -151,8 +152,10 @@ describe('wineVersionInstalled gate', () => {
     expect(cpSyncMock).toHaveBeenCalledTimes(1)
     expect(cpSyncMock.mock.calls[0][0]).toBe(`${WINES}/wine-staging-ok`)
     expect(cpSyncMock.mock.calls[0][1]).toBe(`${WINES}/wine-staging-ok-DXMT`)
-    expect(checkMock.mock.invocationCallOrder[0]).toBeLessThan(
-      installMock.mock.invocationCallOrder[0]
+    expect(
+      defined(checkMock.mock.invocationCallOrder[0], 'check call order')
+    ).toBeLessThan(
+      defined(installMock.mock.invocationCallOrder[0], 'install call order')
     )
   })
 
@@ -216,7 +219,11 @@ describe('releasesInfoReady gate', () => {
     expect(checkMock.mock.calls[0][0]).toBe(`${wine.installDir}-DXMT`)
     expect(copyFileSyncMock).toHaveBeenCalledTimes(11)
     for (const call of copyFileSyncMock.mock.calls as string[][]) {
-      expect(call[1].startsWith(`${wine.installDir}-DXMT/`)).toBe(true)
+      expect(
+        defined(call[1], 'copy destination').startsWith(
+          `${wine.installDir}-DXMT/`
+        )
+      ).toBe(true)
     }
   })
 
@@ -251,7 +258,11 @@ describe('releasesInfoReady gate', () => {
     expect(installMock).toHaveBeenCalledTimes(1)
     expect(copyFileSyncMock).toHaveBeenCalledTimes(11)
     for (const call of copyFileSyncMock.mock.calls as string[][]) {
-      expect(call[1].startsWith(`${good.installDir}-DXMT/`)).toBe(true)
+      expect(
+        defined(call[1], 'copy destination').startsWith(
+          `${good.installDir}-DXMT/`
+        )
+      ).toBe(true)
     }
     expect(logWarningMock).toHaveBeenCalledTimes(1)
   })

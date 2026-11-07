@@ -59,7 +59,9 @@ export function parseWinetricksListAll(
     // header line as a candidate verb line.
     const headerMatch = HEADER_RE.exec(rawLine)
     if (headerMatch) {
-      currentCategory = headerMatch[1]
+      // The pattern has one required group, so it is always present; a
+      // malformed header leaves the category unset and its block skipped.
+      currentCategory = headerMatch[1] ?? null
       continue
     }
 
@@ -74,6 +76,9 @@ export function parseWinetricksListAll(
 
     const verb = tokenMatch[1]
     let remainder = tokenMatch[2]
+    if (verb === undefined || remainder === undefined) {
+      continue
+    }
 
     if (!VERB_SHAPE_RE.test(verb)) {
       continue
@@ -83,7 +88,7 @@ export function parseWinetricksListAll(
     const flagsMatch = FLAGS_RE.exec(remainder)
     if (flagsMatch) {
       remainder = remainder.slice(0, flagsMatch.index)
-      const flags = flagsMatch[1]
+      const flags = (flagsMatch[1] ?? '')
         .split(',')
         .map((flag) => flag.trim())
         .filter(Boolean)

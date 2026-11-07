@@ -11,6 +11,7 @@
  */
 import { parseWinetricksListAll } from '../winetricksListParse'
 import { CURATED_WINETRICKS_VERBS } from 'common/winetricks/verbs'
+import { defined } from 'backend/testUtils/indexed'
 
 // D-03 / 44-VALIDATION.md Wave 0 / 44-RESEARCH.md Open Question 4: no
 // committed fixture covered all 8 curated verbs, so D-03's "a unit test
@@ -104,7 +105,7 @@ describe('parseWinetricksListAll', () => {
     expect(result).toEqual([
       { verb: 'noflags', title: 'A Component', category: 'dlls', cached: false }
     ])
-    expect(result[0].title).not.toMatch(/\s$/)
+    expect(defined(result[0], 'component').title).not.toMatch(/\s$/)
   })
 
   describe('chunk coalescing (F-9)', () => {
@@ -228,10 +229,12 @@ describe('parseWinetricksListAll', () => {
       const chunks = ['===== dlls =====\n' + line + '\n']
       const result = parseWinetricksListAll(chunks)
       expect(result).toHaveLength(1)
-      expect(result[0].verb).toBe('allcodecs')
-      expect(result[0].cached).toBe(false)
-      expect(result[0].title.includes('except wmp')).toBe(true)
-      expect(result[0].title).toBe(
+      expect(defined(result[0], 'component').verb).toBe('allcodecs')
+      expect(defined(result[0], 'component').cached).toBe(false)
+      expect(defined(result[0], 'component').title.includes('except wmp')).toBe(
+        true
+      )
+      expect(defined(result[0], 'component').title).toBe(
         'All codecs (dirac, ffdshow, icodecs, cinepak, l3codecx, xvid) except wmp (various, 1995-2009)'
       )
     })
@@ -340,8 +343,12 @@ describe('parseWinetricksListAll', () => {
       // follows it in the fixture.
       const corefontsEntries = result.filter((c) => c.verb === 'corefonts')
       expect(corefontsEntries).toHaveLength(1)
-      expect(corefontsEntries[0].title).toBe('MS Core Fonts')
-      expect(corefontsEntries[0].category).toBe('fonts')
+      expect(defined(corefontsEntries[0], 'corefonts entry').title).toBe(
+        'MS Core Fonts'
+      )
+      expect(defined(corefontsEntries[0], 'corefonts entry').category).toBe(
+        'fonts'
+      )
     })
 
     it('D-03: every curated verb resolves against the committed parse fixture', () => {
