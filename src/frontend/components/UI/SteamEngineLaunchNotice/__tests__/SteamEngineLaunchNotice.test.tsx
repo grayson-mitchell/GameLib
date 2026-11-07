@@ -564,6 +564,67 @@ describe('SteamEngineLaunchNotice', () => {
   })
 })
 
+describe('launch deadline notice (61-27, WR-02)', () => {
+  const deadlineState = (
+    seq: unknown,
+    extra: Record<string, unknown> = {}
+  ) => ({
+    legendary_Quail: {
+      runner: 'legendary',
+      appName: 'Quail',
+      deadlineNotice: { title: 'Quail', seconds: 180, seq, ...extra }
+    }
+  })
+  const BODY =
+    "GameLib couldn't confirm that Quail started within 180 seconds. It has not been stopped. If it is stuck, stop it from its game page and check the launch log (Settings > Logs)."
+
+  it('shows the title and body in a status toast with its own dismiss', () => {
+    storeState = deadlineState(4)
+    const out = render()
+    expect(statuses(out)).toHaveLength(1)
+    expect(text(out)).toBe(`Couldn't confirm the game started ${BODY}`)
+    expect(
+      find(out, (e) => e.props.icon === faTriangleExclamation)
+    ).toBeDefined()
+    expect(
+      find(out, (e) => typeof e.props.onClick === 'function')
+    ).toBeDefined()
+  })
+
+  it('same seq does not re-show after dismissal; a higher seq does', () => {
+    storeState = deadlineState(4)
+    expect(exit(dismiss(render()))).toBeNull()
+    storeState = deadlineState(4)
+    expect(render()).toBeNull()
+    storeState = deadlineState(5)
+    expect(render()).not.toBeNull()
+  })
+
+  it('renders nothing for a malformed notice', () => {
+    storeState = deadlineState('4')
+    expect(render()).toBeNull()
+    storeState = deadlineState(6, { title: 7 })
+    expect(render()).toBeNull()
+    storeState = deadlineState(7, { seconds: '180' })
+    expect(render()).toBeNull()
+  })
+
+  it('waits while GameLib is not in front, then auto-hides', () => {
+    env.focused = false
+    storeState = deadlineState(4)
+    render()
+    jest.advanceTimersByTime(20000)
+    const waiting = render()
+    expect(cls(toast(waiting))).toContain('steamEngineLaunchNotice--waiting')
+    expect(cls(toast(waiting))).not.toContain('--leaving')
+    env.focused = true
+    fire('focus')
+    expect(cls(toast(render()))).not.toContain('--waiting')
+    jest.advanceTimersByTime(8000)
+    expect(cls(toast(render()))).toContain('--leaving')
+  })
+})
+
 describe('SteamEngineLaunchNotice request slot (quick 261106-pvk)', () => {
   const req = (over: Record<string, unknown> = {}) => ({
     appId: '203160',

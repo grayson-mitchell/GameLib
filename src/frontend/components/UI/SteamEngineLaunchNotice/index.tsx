@@ -47,6 +47,13 @@ interface ShownExit {
   phase: NoticePhase
 }
 
+interface ShownDeadline {
+  title: string
+  seconds: number
+  seq: number
+  phase: NoticePhase
+}
+
 type RequestKind =
   | 'install-not-started'
   | 'uninstall-not-started'
@@ -141,6 +148,10 @@ const isReason = (r: unknown): r is Reason =>
 // which used to be a system notification that could land on another monitor.
 // Same rules: once per seq, frozen until GameLib is in front, catalogue
 // strings chosen by the closed `kind` only (T-pvk-01).
+// 61-27 (WR-02): a fifth stream shows the launch-deadline notice ("couldn't
+// confirm the game started"), which used to raise the main window with a modal
+// over a running game. Same rules: once per seq, frozen until GameLib is in
+// front, catalogue strings only, the title rendered as React text.
 // Sketch 006 variant A. Every exit goes through a leaving phase so the store
 // embed stays suppressed until the notice is actually removed (L3).
 export default function SteamEngineLaunchNotice() {
@@ -149,6 +160,7 @@ export default function SteamEngineLaunchNotice() {
   const lastSeq = useRef(0)
   const lastOverlaySeq = useRef(0)
   const lastExitSeq = useRef(0)
+  const lastDeadlineSeq = useRef(0)
   const latestRequest = useSteamRequestNotice((s) => s.latest)
   const lastRequestSeq = useRef(0)
   const [shownRequest, setShownRequest] = useState<ShownRequest | null>(null)
@@ -167,6 +179,13 @@ export default function SteamEngineLaunchNotice() {
   const pendingExit = useRef<ShownExit | null>(null)
   const shownExitRef = useRef<ShownExit | null>(null)
   shownExitRef.current = shownExit
+  const [shownDeadline, setShownDeadline] = useState<ShownDeadline | null>(null)
+  const [hoveredDeadline, setHoveredDeadline] = useState(false)
+  const [waitingDeadline, setWaitingDeadline] = useState(false)
+  const remainingDeadline = useRef(AUTO_HIDE_MS)
+  const pendingDeadline = useRef<ShownDeadline | null>(null)
+  const shownDeadlineRef = useRef<ShownDeadline | null>(null)
+  shownDeadlineRef.current = shownDeadline
   const [hovered, setHovered] = useState(false)
   const [hoveredOverlay, setHoveredOverlay] = useState(false)
   const [waiting, setWaiting] = useState(false)
@@ -214,6 +233,19 @@ export default function SteamEngineLaunchNotice() {
       setShownExit({ ...p, phase: 'in' })
     } else {
       setShownExit(null)
+    }
+  }
+
+  const finishDeadline = () => {
+    const p = pendingDeadline.current
+    pendingDeadline.current = null
+    if (p) {
+      remainingDeadline.current = AUTO_HIDE_MS
+      setHoveredDeadline(false)
+      setWaitingDeadline(!gameLibInFront())
+      setShownDeadline({ ...p, phase: 'in' })
+    } else {
+      setShownDeadline(null)
     }
   }
 
@@ -300,6 +332,37 @@ export default function SteamEngineLaunchNotice() {
     }
   }, [byGame])
 
+  // 61-27 (WR-02): launch deadline. A fifth seq stream, same push.
+  useEffect(() => {
+    let newest: ShownDeadline | null = null
+    for (const state of Object.values(byGame)) {
+      const n = state.deadlineNotice
+      if (
+        !n ||
+        typeof n.seq !== 'number' ||
+        typeof n.title !== 'string' ||
+        typeof n.seconds !== 'number'
+      ) {
+        continue
+      }
+      if (n.seq > lastDeadlineSeq.current && (!newest || n.seq > newest.seq)) {
+        newest = { title: n.title, seconds: n.seconds, seq: n.seq, phase: 'in' }
+      }
+    }
+    if (!newest) return
+    lastDeadlineSeq.current = newest.seq
+    const cur = shownDeadlineRef.current
+    if (!cur) {
+      remainingDeadline.current = AUTO_HIDE_MS
+      setHoveredDeadline(false)
+      setWaitingDeadline(!gameLibInFront())
+      setShownDeadline(newest)
+    } else {
+      pendingDeadline.current = newest
+      if (cur.phase === 'in') setShownDeadline({ ...cur, phase: 'leaving' })
+    }
+  }, [byGame])
+
   // Quick 261106-pvk: Steam never picked up a delegated request. A fourth seq
   // stream, fed by its own push rather than the engine state. Also carries
   // quick 261107-td5's uninstall refusals (running / Steam error / check failed).
@@ -362,6 +425,22 @@ export default function SteamEngineLaunchNotice() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on seq/phase like the sibling streams
   }, [shownExit?.seq, waitingExit])
+
+  // The deadline notice never raises the window: freeze until GameLib is in front.
+  useEffect(() => {
+    if (!shownDeadline || !waitingDeadline) return
+    const check = () => {
+      if (gameLibInFront()) setWaitingDeadline(false)
+    }
+    window.addEventListener('focus', check)
+    document.addEventListener('visibilitychange', check)
+    check()
+    return () => {
+      window.removeEventListener('focus', check)
+      document.removeEventListener('visibilitychange', check)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on seq/phase like the sibling streams
+  }, [shownDeadline?.seq, waitingDeadline])
 
   // The overlay notice fires as the game comes to the front, so its countdown
   // starts only once GameLib is visible and focused. One-way latch per notice.
@@ -438,6 +517,26 @@ export default function SteamEngineLaunchNotice() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on seq/phase like the sibling streams
   }, [exitSeq, exitPhase, hoveredExit, waitingExit])
 
+  const deadlineSeq = shownDeadline?.seq
+  const deadlinePhase = shownDeadline?.phase
+  useEffect(() => {
+    if (!shownDeadline || shownDeadline.phase !== 'in') return
+    if (hoveredDeadline || waitingDeadline) return
+    const startedAt = Date.now()
+    const id = setTimeout(
+      () => setShownDeadline({ ...shownDeadline, phase: 'leaving' }),
+      remainingDeadline.current
+    )
+    return () => {
+      clearTimeout(id)
+      remainingDeadline.current = Math.max(
+        0,
+        remainingDeadline.current - (Date.now() - startedAt)
+      )
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on seq/phase like the sibling streams
+  }, [deadlineSeq, deadlinePhase, hoveredDeadline, waitingDeadline])
+
   const requestSeq = shownRequest?.seq
   const requestPhase = shownRequest?.phase
   useEffect(() => {
@@ -479,6 +578,14 @@ export default function SteamEngineLaunchNotice() {
     finishExit
   )
   useNoticePhaseFallback(
+    shownDeadline?.phase ?? null,
+    deadlineSeq,
+    () =>
+      shownDeadline &&
+      setShownDeadline({ ...shownDeadline, phase: 'collapsing' }),
+    finishDeadline
+  )
+  useNoticePhaseFallback(
     shownRequest?.phase ?? null,
     requestSeq,
     () =>
@@ -491,10 +598,12 @@ export default function SteamEngineLaunchNotice() {
     shown !== null ||
       shownOverlay !== null ||
       shownExit !== null ||
+      shownDeadline !== null ||
       shownRequest !== null
   )
 
-  if (!shown && !shownOverlay && !shownExit && !shownRequest) return null
+  if (!shown && !shownOverlay && !shownExit && !shownDeadline && !shownRequest)
+    return null
 
   // A plain (non-hook) helper: one slot + toast.
   const renderSlot = (o: {
@@ -635,6 +744,33 @@ export default function SteamEngineLaunchNotice() {
       })
     : null
 
+  const deadlineNode = shownDeadline
+    ? renderSlot({
+        slotKey: 'deadline',
+        seq: shownDeadline.seq,
+        phase: shownDeadline.phase,
+        overlay: false,
+        paused: hoveredDeadline,
+        waiting: waitingDeadline,
+        icon: faTriangleExclamation,
+        title: t(
+          'steam.engine.notDetected.title',
+          "Couldn't confirm the game started"
+        ),
+        body: t(
+          'steam.engine.notDetected.body',
+          "GameLib couldn't confirm that {{title}} started within {{seconds}} seconds. It has not been stopped. If it is stuck, stop it from its game page and check the launch log (Settings > Logs).",
+          { title: shownDeadline.title, seconds: shownDeadline.seconds }
+        ),
+        setHover: setHoveredDeadline,
+        beginLeave: () =>
+          setShownDeadline({ ...shownDeadline, phase: 'leaving' }),
+        toCollapsing: () =>
+          setShownDeadline({ ...shownDeadline, phase: 'collapsing' }),
+        remove: finishDeadline
+      })
+    : null
+
   const overlayNode = shownOverlay
     ? renderSlot({
         slotKey: 'overlay',
@@ -697,6 +833,7 @@ export default function SteamEngineLaunchNotice() {
     <>
       {requestNode}
       {exitNode}
+      {deadlineNode}
       {overlayNode}
       {engineNode}
     </>
