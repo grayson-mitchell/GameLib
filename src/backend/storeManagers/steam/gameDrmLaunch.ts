@@ -15,7 +15,7 @@ import { EnviromentVariable } from 'common/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { type DrmLaunchForm } from './bottle'
 import { appendCxEnvTokens } from './bridge/overlay/overlayLaunch'
-import type { EngineSelection } from './engine/engineTypes'
+import type { EngineSelection } from 'backend/engine/engineTypes'
 import { type DrmLaunchReady } from './bridge/drm/drmLaunchSetup'
 import { type DrmStep } from './bridge/drm/steamclientLayerMode'
 import {

@@ -40,8 +40,8 @@ import {
 } from './bridge/overlay/overlayWineLog'
 import { buildOverlayPaths } from './bridge/overlay/overlayPaths'
 import { formatOverlayExitNoticeLine } from './bridge/overlay/overlayNotice'
-import { publishOverlayExitNotice } from './engine/engineState'
-import type { LaunchDeadline } from './engine/launchDeadline'
+import { publishOverlayExitNotice } from 'backend/engine/engineState'
+import type { LaunchDeadline } from 'backend/engine/launchDeadline'
 import { placeShimForGame } from './bridge/shimGenerate'
 import { detectLaunchDrmWrapper } from './bridge/drm/drmScanExe'
 import { drmLaunchSetup } from './bridge/drm/drmLaunchSetup'
@@ -143,7 +143,8 @@ export async function runBridgeLaunch(steamGame: SteamGame): Promise<boolean> {
     return started
   } finally {
     if (!started) {
-      const { clearEngineSelection } = await import('./engine/engineRegistry')
+      const { clearEngineSelection } =
+        await import('backend/engine/engineRegistry')
       clearEngineSelection(steamGame.appId)
     }
   }
@@ -256,7 +257,7 @@ export async function launchBridgeGameBody(
   if (wantsDrm) {
     // DRM mode stays CrossOver-only (phase 59 out of scope): a clear message
     // instead of a hang, never the built-in engine, never decideLaunchEngine.
-    const { preflightCrossover } = await import('./engine/engineDecision')
+    const { preflightCrossover } = await import('backend/engine/engineDecision')
     const pre = await preflightCrossover(
       bridgeBottleSettings.wineCrossoverBottle
     )
@@ -670,9 +671,9 @@ export async function fireBridgeWineLaunch(
     const { startBottleProcessMonitor, getBottleProcessMonitorPhase } =
       await import('./bottleProcessMonitor')
     const { armLaunchDeadline, bindDeadlineToMonitor } =
-      await import('./engine/launchDeadline')
+      await import('backend/engine/launchDeadline')
     const { getEngineSelection, clearEngineSelection } =
-      await import('./engine/engineRegistry')
+      await import('backend/engine/engineRegistry')
     const { applySteamBridgeKnownFixes, steamBridgeLaunchCommandParts } =
       await import('./bridgeKnownFixes')
     const { applyBridgeBottleDllOverrides } =
@@ -1159,7 +1160,7 @@ export async function fireBridgeWineLaunch(
     return true
   } catch (error) {
     deadline?.cancel('launch-error')
-    void import('./engine/engineRegistry').then((m) =>
+    void import('backend/engine/engineRegistry').then((m) =>
       m.clearEngineSelection(steamGame.appId)
     )
     clearLaunchRecord()

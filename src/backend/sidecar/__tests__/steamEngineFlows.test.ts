@@ -34,13 +34,13 @@ jest.mock('../../storeManagers/steam/macSteamOffline', () => ({}))
 const getState = jest.fn()
 const dismiss = jest.fn()
 const setPublisher = jest.fn()
-jest.mock('../../storeManagers/steam/engine/engineState', () => ({
+jest.mock('backend/engine/engineState', () => ({
   getSteamEngineState: (...a: unknown[]) => getState(...a),
   dismissSteamEngineNotice: (...a: unknown[]) => dismiss(...a),
   setEngineStatePublisher: (...a: unknown[]) => setPublisher(...a)
 }))
 const listOptions = jest.fn()
-jest.mock('../../storeManagers/steam/engine/engineDecision', () => ({
+jest.mock('backend/engine/engineDecision', () => ({
   listEngineOverrideOptions: (...a: unknown[]) => listOptions(...a)
 }))
 const send = jest.fn()

@@ -40,8 +40,8 @@ import {
 // Phase 60: Steam overlay in bridged games (macOS).
 import { prepareOverlayTokens } from './bridge/overlay/overlayLaunch'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
-import type { CrossoverPreflight } from './engine/engineDecision'
-import type { EngineSelection } from './engine/engineTypes'
+import type { CrossoverPreflight } from 'backend/engine/engineDecision'
+import type { EngineSelection } from 'backend/engine/engineTypes'
 import { noteSteamAuthTrigger } from './authTrigger'
 import { detectLaunchDrmWrapper } from './bridge/drm/drmScanExe'
 import { detectSteamDrmInPe } from './bridge/peScan'
@@ -161,7 +161,7 @@ export async function launch(
     )
     // Phase 59: bottled Steam stays CrossOver-only (no built-in engine).
     // A clear message beats a hang behind CrossOver's own dialog.
-    const { preflightCrossover } = await import('./engine/engineDecision')
+    const { preflightCrossover } = await import('backend/engine/engineDecision')
     const pre = await preflightCrossover(
       getSteamBottleSettings()?.wineCrossoverBottle ?? DEFAULT_STEAM_BOTTLE_NAME
     )
@@ -488,12 +488,12 @@ export async function selectLaunchEngine(
   connectivity: { offline: boolean }
 ): Promise<{ ok: true; settings: GameSettings } | { ok: false }> {
   const bottleName = current.wineCrossoverBottle
-  const { decideLaunchEngine } = await import('./engine/engineDecision')
+  const { decideLaunchEngine } = await import('backend/engine/engineDecision')
   const { setEngineSelection, clearEngineSelection } =
-    await import('./engine/engineRegistry')
-  const { prepareBottleForEngine } = await import('./engine/engineSwitch')
-  const { recordLaunchDecision } = await import('./engine/engineState')
-  const { isNonCrossover } = await import('./engine/engineTypes')
+    await import('backend/engine/engineRegistry')
+  const { prepareBottleForEngine } = await import('backend/engine/engineSwitch')
+  const { recordLaunchDecision } = await import('backend/engine/engineState')
+  const { isNonCrossover } = await import('backend/engine/engineTypes')
   const title = steamGame.getGameInfo().title
 
   // G22/G25: offline, some launches cannot start on any branch: CrossOver missing needs the
@@ -504,8 +504,8 @@ export async function selectLaunchEngine(
   // selected and nothing is routed or launched, so D-07/D-09 hold, and every launch that can
   // start still probes below.
   const { readStoredEngineOverride, isCrossoverMissing } =
-    await import('./engine/engineDecision')
-  const { parseEngineOverride } = await import('./engine/engineIds')
+    await import('backend/engine/engineDecision')
+  const { parseEngineOverride } = await import('backend/engine/engineIds')
   const earlyOverride = parseEngineOverride(
     readStoredEngineOverride(steamGame.appId)
   )
@@ -514,11 +514,12 @@ export async function selectLaunchEngine(
     (earlyOverride === 'automatic' || earlyOverride === 'crossover')
   ) {
     const { readBottleEngineMarkerKind, restoreNeedsAbsentPin } =
-      await import('./engine/engineSwitch')
-    const { isPinnedEngineInstalled } = await import('./engine/fallbackEngine')
-    const { ENGINE_PINS } = await import('./engine/enginePins')
+      await import('backend/engine/engineSwitch')
+    const { isPinnedEngineInstalled } =
+      await import('backend/engine/fallbackEngine')
+    const { ENGINE_PINS } = await import('backend/engine/enginePins')
     const { offlineLaunchCertainlyBlocked } =
-      await import('./engine/offlineRefusal')
+      await import('backend/engine/offlineRefusal')
     const refusal = offlineLaunchCertainlyBlocked({
       offline: connectivity.offline,
       override: earlyOverride,
@@ -731,9 +732,9 @@ export async function onBridgeLaunchDeadline(
 ): Promise<void> {
   const { stopBottleProcessMonitor } = await import('./bottleProcessMonitor')
   const { clearEngineSelection, getEngineSelection } =
-    await import('./engine/engineRegistry')
-  const { engineLogLabel } = await import('./engine/engineTypes')
-  const { LAUNCH_DEADLINE_MS } = await import('./engine/launchDeadline')
+    await import('backend/engine/engineRegistry')
+  const { engineLogLabel } = await import('backend/engine/engineTypes')
+  const { LAUNCH_DEADLINE_MS } = await import('backend/engine/launchDeadline')
   // Phase 59 UAT (G5): the monitor's onStopped can clear the registry entry
   // before the deadline fires, so fall back to the selection seen at arm time.
   const sel = getEngineSelection(steamGame.appId) ?? armedSelection

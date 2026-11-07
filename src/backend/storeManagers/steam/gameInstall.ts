@@ -64,7 +64,7 @@ import {
   buildFallbackGameSettings
 } from './bottle'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
-import type { NonCrossoverEngine } from './engine/engineTypes'
+import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
 import { noteSteamAuthTrigger } from './authTrigger'
 // quick-260817-d61: verified during planning that user.ts imports nothing
 // from games.ts (no import of './games' anywhere in user.ts), so this
@@ -99,7 +99,7 @@ import {
   setBridgeUserRoute,
   writeBridgeDrmVerdict
 } from './bridge/bridgeVerdict'
-import type { EnginePin } from './engine/enginePins'
+import type { EnginePin } from 'backend/engine/enginePins'
 import {
   nativeInstallsInFlight,
   markBridgeFailedThisSession,
@@ -640,7 +640,7 @@ export async function ensureBuiltInEngineForInstall(
   pin: EnginePin,
   signal?: AbortSignal
 ): Promise<NonCrossoverEngine | InstallResult> {
-  const { ensurePinnedEngine } = await import('./engine/fallbackEngine')
+  const { ensurePinnedEngine } = await import('backend/engine/fallbackEngine')
   // G1 (59-22): one overall percent across both archives, so the label never
   // resets when the Wine archive starts after the small DXVK one; verify and
   // unpack are their own phases instead of a "0%" download.
@@ -874,7 +874,7 @@ export async function provisionBridgeBottleForInstall(
     `SteamGame: bridge bottle "${bridgeBottleName}" not yet provisioned for appId ${steamGame.appId} — provisioning inline (BLOCKER 1, no consent dialog needed)`,
     LogPrefix.Steam
   )
-  const { decideCreationEngine } = await import('./engine/engineDecision')
+  const { decideCreationEngine } = await import('backend/engine/engineDecision')
   const creation = await decideCreationEngine({ appId: steamGame.appId })
   logInfo(
     `SteamGame: bridge bottle creation engine for appId ${steamGame.appId}: ${creation.kind}${creation.kind === 'pinned' ? ` (${creation.reason})` : ''}`,
@@ -923,7 +923,7 @@ export async function provisionBridgeBottleForInstall(
         `SteamGame: CrossOver bottle creation for appId ${steamGame.appId} returned ${provisionResult.errorCode} — creating with the built-in engine`,
         LogPrefix.Steam
       )
-      const { ENGINE_PINS } = await import('./engine/enginePins')
+      const { ENGINE_PINS } = await import('backend/engine/enginePins')
       const engine = await ensureBuiltInEngineForInstall(
         steamGame,
         ENGINE_PINS.current,
@@ -996,9 +996,9 @@ export async function resolveInstallEngineSettings(
     }
   }
   // Bottle already existed: the same decision + preparation as a launch.
-  const { decideLaunchEngine } = await import('./engine/engineDecision')
-  const { prepareBottleForEngine } = await import('./engine/engineSwitch')
-  const { isNonCrossover } = await import('./engine/engineTypes')
+  const { decideLaunchEngine } = await import('backend/engine/engineDecision')
+  const { prepareBottleForEngine } = await import('backend/engine/engineSwitch')
+  const { isNonCrossover } = await import('backend/engine/engineTypes')
   const decision = await decideLaunchEngine({
     appId: steamGame.appId,
     bottleName: bridgeBottleName

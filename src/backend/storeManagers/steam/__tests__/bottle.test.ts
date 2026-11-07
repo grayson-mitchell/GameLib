@@ -29,7 +29,7 @@ import { logWarning } from 'backend/logger'
 import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
 import { runWineCommand } from 'backend/launcher'
 import { DXVK } from 'backend/tools'
-import { writeCxbottleConf } from '../engine/adoptBottle'
+import { writeCxbottleConf } from 'backend/engine/adoptBottle'
 import { steamBottleConfigStore } from '../stores'
 import { library } from '../state'
 import {
@@ -81,8 +81,8 @@ import type { DrmBridgeRunner } from '../bottle'
 import {
   setEngineSelection,
   clearEngineSelection
-} from '../engine/engineRegistry'
-import type { NonCrossoverSelection } from '../engine/engineTypes'
+} from 'backend/engine/engineRegistry'
+import type { NonCrossoverSelection } from 'backend/engine/engineTypes'
 import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
 
@@ -133,7 +133,7 @@ jest.mock('backend/launcher', () => ({
 jest.mock('backend/tools', () => ({
   DXVK: { installRemove: jest.fn() }
 }))
-jest.mock('../engine/adoptBottle', () => ({
+jest.mock('backend/engine/adoptBottle', () => ({
   writeCxbottleConf: jest.fn()
 }))
 

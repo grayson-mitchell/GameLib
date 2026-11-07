@@ -138,7 +138,7 @@ export interface StartBottleProcessMonitorArgs {
    * launcherExited()). Never called after the monitor is cancelled. Wrapped
    * in try/catch so a throwing callback cannot break the monitor. The monitor
    * itself still has no deadline (LD-4); the launch deadline that uses this
-   * signal lives in engine/launchDeadline.ts.
+   * signal lives in backend/engine/launchDeadline.ts.
    */
   onFirstMatch?: () => void
   /**

@@ -46,12 +46,12 @@ import {
   parseOverlayOverride
 } from './bridge/overlay/overlayPolicy'
 import { readStoredTitleConfig, pickTitleSettings } from './titleSettings'
-import type { NonCrossoverEngine } from './engine/engineTypes'
+import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
 import { noteSteamAuthTrigger } from './authTrigger'
 import { type DrmLaunchReady } from './bridge/drm/drmLaunchSetup'
 import { stopBridgeHelper } from './bridge/helperProcess'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
-import type { EnginePin } from './engine/enginePins'
+import type { EnginePin } from 'backend/engine/enginePins'
 import { isMac } from 'backend/constants/environment'
 import { STEAM_STORE_API, NUMERIC_APP_ID } from './gameConstants'
 import {
@@ -120,7 +120,7 @@ export default class SteamGame implements Game {
       const settings = getSteamBottleSettings()
       const title = pickTitleSettings(readStoredTitleConfig(this.appId))
       const { readStoredEngineOverride } =
-        await import('./engine/engineDecision')
+        await import('backend/engine/engineDecision')
       const override = readStoredEngineOverride(this.appId)
       // 60-UAT G3, same split as 59-UAT G11: the overlay override is also
       // written to the title's GameConfig, so merge it back ('on'/'off' only;

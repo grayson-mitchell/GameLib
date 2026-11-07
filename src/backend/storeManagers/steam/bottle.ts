@@ -47,14 +47,14 @@ import {
   steamSupportPath
 } from './constants'
 import { steamBottleConfigStore } from './stores'
-import { getEngineSelection } from './engine/engineRegistry'
-import { isNonCrossover } from './engine/engineTypes'
+import { getEngineSelection } from 'backend/engine/engineRegistry'
+import { isNonCrossover } from 'backend/engine/engineTypes'
 import type {
   NonCrossoverEngine,
   NonCrossoverSelection
-} from './engine/engineTypes'
+} from 'backend/engine/engineTypes'
 import { library } from './state'
-import { writeCxbottleConf } from './engine/adoptBottle'
+import { writeCxbottleConf } from 'backend/engine/adoptBottle'
 import {
   resolveCrossoverBinDir,
   resolveCrossoverBinDirAsync

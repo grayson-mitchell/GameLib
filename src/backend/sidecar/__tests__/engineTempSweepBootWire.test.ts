@@ -19,7 +19,7 @@ jest.mock('axios', () => ({
 }))
 
 const mockSweep = jest.fn()
-jest.mock('../../storeManagers/steam/engine/fallbackEngine', () => ({
+jest.mock('backend/engine/fallbackEngine', () => ({
   __esModule: true,
   sweepStaleEngineTemps: () => mockSweep()
 }))

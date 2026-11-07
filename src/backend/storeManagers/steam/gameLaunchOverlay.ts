@@ -37,7 +37,7 @@ import {
   OVERLAY_STEP_TEXT,
   type OverlayStep
 } from './bridge/overlay/overlayNotice'
-import { publishOverlayNotice } from './engine/engineState'
+import { publishOverlayNotice } from 'backend/engine/engineState'
 import { readKnownFixes } from 'backend/knownFixes'
 import type { OverlayRunnerReady } from './bridge/overlay/overlayRunnerClone'
 import { DRM_END_SESSION_TIMEOUT_MS } from './bridge/drm/drmLaunchSetup'
@@ -290,8 +290,8 @@ export async function prepareTcpOverlay(
   let inputArg: { inputModulePath: string } | Record<string, never> | undefined
   let carried: readonly string[] = []
   try {
-    const { getEngineSelection } = await import('./engine/engineRegistry')
-    const { isNonCrossover } = await import('./engine/engineTypes')
+    const { getEngineSelection } = await import('backend/engine/engineRegistry')
+    const { isNonCrossover } = await import('backend/engine/engineTypes')
     const sel = getEngineSelection(steamGame.appId)
     const fallbackEngine = sel
       ? isNonCrossover(sel)

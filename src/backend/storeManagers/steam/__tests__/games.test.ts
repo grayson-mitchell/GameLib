@@ -145,31 +145,31 @@ import {
   decideCreationEngine,
   decideLaunchEngine,
   preflightCrossover
-} from '../engine/engineDecision'
+} from 'backend/engine/engineDecision'
 import {
   prepareBottleForEngine,
   readBottleEngineMarkerKind,
   restoreNeedsAbsentPin
-} from '../engine/engineSwitch'
+} from 'backend/engine/engineSwitch'
 import {
   publishOverlayExitNotice,
   publishOverlayNotice,
   recordLaunchDecision
-} from '../engine/engineState'
+} from 'backend/engine/engineState'
 import {
   clearEngineSelection,
   getEngineSelection
-} from '../engine/engineRegistry'
+} from 'backend/engine/engineRegistry'
 import {
   __activeLaunchDeadlineCount,
   cancelLaunchDeadline
-} from '../engine/launchDeadline'
+} from 'backend/engine/launchDeadline'
 import {
   ensurePinnedEngine,
   isPinnedEngineInstalled
-} from '../engine/fallbackEngine'
+} from 'backend/engine/fallbackEngine'
 import { checkConnectivityNow } from 'backend/connectivityNow'
-import { ENGINE_PINS } from '../engine/enginePins'
+import { ENGINE_PINS } from 'backend/engine/enginePins'
 import { buildFallbackGameSettings } from '../bottle'
 import { existsSync } from 'graceful-fs'
 import { getSteamLibraries, sendGameStatusUpdate } from 'backend/utils'
@@ -658,7 +658,7 @@ jest.mock('../bridge/sharedRedistInstall', () => ({
 
 // Phase 59 (59-09): engine decision + on-demand download, lazily imported by
 // installBridgeGame. Defaults are set in the file-level beforeEach below.
-jest.mock('../engine/engineDecision', () => ({
+jest.mock('backend/engine/engineDecision', () => ({
   decideCreationEngine: jest.fn(),
   decideLaunchEngine: jest.fn(),
   preflightCrossover: jest.fn(),
@@ -666,17 +666,17 @@ jest.mock('../engine/engineDecision', () => ({
   isCrossoverMissing: jest.fn()
 }))
 // Phase 59 (59-10): per-launch bottle preparation and state publishing.
-jest.mock('../engine/engineSwitch', () => ({
+jest.mock('backend/engine/engineSwitch', () => ({
   prepareBottleForEngine: jest.fn(),
   readBottleEngineMarkerKind: jest.fn(),
   restoreNeedsAbsentPin: jest.fn()
 }))
-jest.mock('../engine/engineState', () => ({
+jest.mock('backend/engine/engineState', () => ({
   recordLaunchDecision: jest.fn(),
   publishOverlayNotice: jest.fn(),
   publishOverlayExitNotice: jest.fn()
 }))
-jest.mock('../engine/fallbackEngine', () => ({
+jest.mock('backend/engine/fallbackEngine', () => ({
   ensurePinnedEngine: jest.fn(),
   isPinnedEngineInstalled: jest.fn()
 }))
@@ -2207,7 +2207,8 @@ beforeEach(() => {
     elapsedMs: 0
   })
   ;(
-    jest.requireMock('../engine/engineDecision').isCrossoverMissing as jest.Mock
+    jest.requireMock('backend/engine/engineDecision')
+      .isCrossoverMissing as jest.Mock
   ).mockResolvedValue(false)
   ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
     ok: true,
@@ -8581,7 +8582,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
     })
-    const readStored = jest.requireMock('../engine/engineDecision')
+    const readStored = jest.requireMock('backend/engine/engineDecision')
       .readStoredEngineOverride as jest.Mock
     readStored.mockReturnValueOnce('pinned:wine-staging-11.20')
 
@@ -8598,7 +8599,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       jest.requireMock('../bridge/overlay/overlayPolicy')
         .__readStoredOverlayOverrideMock as jest.Mock
     const storedEngine = () =>
-      jest.requireMock('../engine/engineDecision')
+      jest.requireMock('backend/engine/engineDecision')
         .readStoredEngineOverride as jest.Mock
     beforeEach(() => {
       ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
@@ -8645,7 +8646,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       jest.requireMock('../bridge/overlay/overlayPolicy')
         .__readStoredOverlayOverrideMock as jest.Mock
     const storedEngine = () =>
-      jest.requireMock('../engine/engineDecision')
+      jest.requireMock('backend/engine/engineDecision')
         .readStoredEngineOverride as jest.Mock
     beforeEach(() => {
       ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
@@ -14310,7 +14311,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       ]
       const pinStaging = (id: string) => {
         const { setEngineSelection } = jest.requireActual(
-          '../engine/engineRegistry'
+          'backend/engine/engineRegistry'
         )
         setEngineSelection(id, {
           kind: 'pinned',
@@ -14778,7 +14779,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('fallback engine after an overlay launch ends the clone wineserver', async () => {
         const id = freshId()
         const { setEngineSelection } = jest.requireActual(
-          '../engine/engineRegistry'
+          'backend/engine/engineRegistry'
         )
         setEngineSelection(id, {
           kind: 'pinned',
@@ -15908,7 +15909,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     })
 
     it('a rejected setEngineSelection shows the selectionRejected dialog (WR-08)', async () => {
-      const registry = jest.requireActual('../engine/engineRegistry')
+      const registry = jest.requireActual('backend/engine/engineRegistry')
       const spy = jest
         .spyOn(registry, 'setEngineSelection')
         .mockReturnValue(false)
@@ -15962,11 +15963,11 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           elapsedMs: 0
         })
         ;(
-          jest.requireMock('../engine/engineDecision')
+          jest.requireMock('backend/engine/engineDecision')
             .isCrossoverMissing as jest.Mock
         ).mockResolvedValue(o.cxMissing)
         ;(
-          jest.requireMock('../engine/engineDecision')
+          jest.requireMock('backend/engine/engineDecision')
             .readStoredEngineOverride as jest.Mock
         ).mockReturnValue(o.override)
         ;(readBottleEngineMarkerKind as jest.Mock).mockReturnValue(o.kind)
@@ -16057,7 +16058,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         blocked({ online: true, cxMissing: true })
         await new SteamGame(ID).launch({} as any)
         expect(
-          jest.requireMock('../engine/engineDecision').isCrossoverMissing
+          jest.requireMock('backend/engine/engineDecision').isCrossoverMissing
         ).not.toHaveBeenCalled()
         expect(decideLaunchEngine).toHaveBeenCalledTimes(1)
       })
@@ -16159,7 +16160,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         const game = new SteamGame(ID)
         const d = deferred()
         bodySpy(game).mockReturnValue(d.promise)
-        const reg = await import('../engine/engineRegistry')
+        const reg = await import('backend/engine/engineRegistry')
         const clearSpy = jest.spyOn(reg, 'clearEngineSelection')
         clearSpy.mockClear()
         const a = (game as any).launchBridgeGame() as Promise<boolean>

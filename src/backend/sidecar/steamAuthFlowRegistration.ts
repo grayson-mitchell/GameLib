@@ -63,7 +63,7 @@
  *   - `getSteamEngineState` -> `getSteamEngineState(args[0])`,
  *     `listSteamEngineOptions` -> `listEngineOverrideOptions()` and
  *     `dismissSteamEngineNotice` -> `dismissSteamEngineNotice(args[0])`
- *     (`steam/engine/`), Phase 59 Plan 08, D-04/D-06/D-13/D-14/D-15: the
+ *     (`backend/engine/`), Phase 59 Plan 08, D-04/D-06/D-13/D-14/D-15: the
  *     renderer's engine badge/notice/override reads. Plus the one-way push
  *     `steamEngineStateChanged`, wired via `setEngineStatePublisher`.
  *   - `setSteamBridgeUserRoute` -> `handleSetSteamBridgeUserRoute(args[0])`
@@ -161,8 +161,8 @@ import {
   getSteamEngineState,
   dismissSteamEngineNotice,
   setEngineStatePublisher
-} from '../storeManagers/steam/engine/engineState'
-import { listEngineOverrideOptions } from '../storeManagers/steam/engine/engineDecision'
+} from 'backend/engine/engineState'
+import { listEngineOverrideOptions } from 'backend/engine/engineDecision'
 import { sendFrontendMessage } from '../ipc'
 import {
   listBridgeFriends,
