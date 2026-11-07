@@ -109,6 +109,7 @@ jest.mock('../../storeManagers/steam/user')
 // storeManagers/steam/__tests__/). This suite proves registration and
 // transport, not bottle or client-setup logic ────────────────────────────────
 jest.mock('../../storeManagers/steam/bottle')
+jest.mock('../../storeManagers/steam/provisionBottle')
 jest.mock('../../storeManagers/steam/clientSetup')
 jest.mock('../../storeManagers/steam/games')
 jest.mock('../../storeManagers/steam/gameRequirements')
@@ -132,10 +133,8 @@ import {
 } from '../../storeManagers/steam/stores'
 import { getTokenStore } from '../../storeManagers/steam/tokenStore'
 import { KEYRING_SLOT_STEAM_REFRESH_TOKEN } from '../keyringTokenStore'
-import {
-  provisionBottle,
-  isSteamBottleProvisioned
-} from '../../storeManagers/steam/bottle'
+import { isSteamBottleProvisioned } from '../../storeManagers/steam/bottle'
+import { provisionBottle } from '../../storeManagers/steam/provisionBottle'
 import {
   startGuidedClientInstall,
   ensureSteamClientReady

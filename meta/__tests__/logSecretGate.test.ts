@@ -442,6 +442,7 @@ describe('logSecretGate', () => {
         'src/backend/storeManagers/steam/bottle.ts',
         'src/backend/storeManagers/steam/bridge/bottleDllOverrides.ts',
         'src/backend/storeManagers/steam/clientSetup.ts',
+        'src/backend/storeManagers/steam/provisionBottle.ts',
         'src/backend/tools/index.ts',
         'src/backend/utils.ts'
       ])

@@ -137,10 +137,8 @@ import {
   steamSyncStore,
   steamBottleConfigStore
 } from '../storeManagers/steam/stores'
-import {
-  provisionBottle,
-  isSteamBottleProvisioned
-} from '../storeManagers/steam/bottle'
+import { isSteamBottleProvisioned } from '../storeManagers/steam/bottle'
+import { provisionBottle } from '../storeManagers/steam/provisionBottle'
 import {
   startGuidedClientInstall,
   ensureSteamClientReady
