@@ -261,6 +261,7 @@ export interface SteamRequestNoticePayload {
     | 'uninstall-refused-running'
     | 'uninstall-steam-error'
     | 'uninstall-check-failed'
+    | 'uninstall-failed'
   /** only for uninstall-steam-error */
   code?: number
   seq: number

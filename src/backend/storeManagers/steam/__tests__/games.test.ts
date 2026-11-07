@@ -211,6 +211,33 @@ import {
 } from 'node:fs'
 import { join as realJoin } from 'node:path'
 import { tmpdir } from 'node:os'
+
+/**
+ * quick 261108-anw: make the NEXT node:fs rmSync throw EACCES (gameUninstall
+ * reaches rmSync via a CJS property access, so a spy intercepts it). The
+ * caller must mockRestore() before any real-fs cleanup.
+ */
+function failNextRmSync(): jest.SpyInstance {
+  return jest.spyOn(require('node:fs'), 'rmSync').mockImplementationOnce(() => {
+    throw Object.assign(new Error('EACCES'), { code: 'EACCES' })
+  })
+}
+
+/** The single uninstall-failed notice pushed, for the given title. */
+function expectOneFailedNotice(title: string): void {
+  const calls = (sendFrontendMessage as jest.Mock).mock.calls.filter(
+    (c) => c[0] === 'steamRequestNotice'
+  )
+  expect(calls).toHaveLength(1)
+  expect(calls[0][1]).toEqual(
+    expect.objectContaining({
+      appId: APP_ID,
+      title,
+      kind: 'uninstall-failed',
+      seq: expect.any(Number)
+    })
+  )
+}
 import { reportDetectedFix } from 'backend/knownFixReport'
 import {
   createAbortController,
@@ -10001,7 +10028,7 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     expect(result.stderr).toContain('Refused')
   })
 
-  it('throw arm: never throws out of uninstall(); same containment as refusal', async () => {
+  it('throw arm: never throws out of uninstall(); returns failed (quick 261108-anw: the callback owns done)', async () => {
     removeCopySpy.mockRejectedValue(new Error('EACCES'))
 
     const result = await new SteamGame(APP_ID).uninstall({} as any)
@@ -10010,11 +10037,11 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     expect(startPollingSpy).not.toHaveBeenCalled()
     expect(adoption().clearPendingAdoption).not.toHaveBeenCalled()
     expect(pollOnceSpy).not.toHaveBeenCalled()
-    expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
-      appName: APP_ID,
-      runner: 'steam',
-      status: 'done'
-    })
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      expect.anything()
+    )
+    expect(result.failed).toBe(true)
     expect(result.stderr).toContain('EACCES')
   })
 })
@@ -10135,6 +10162,27 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
     expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', done)
     expect(result.stderr).toContain('Refused')
     expect(result.refused).toBe(true)
+  })
+
+  it('quick 261108-anw: fallback with a caught rm error returns failed, notices once, sends no route-level done', async () => {
+    ;(decideSteamNativeDelete as jest.Mock).mockResolvedValue({
+      route: 'fallback',
+      why: 'signed-out'
+    })
+    removeCopySpy.mockRejectedValue(new Error('EACCES'))
+
+    const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+    expect(pollOnceSpy).not.toHaveBeenCalled()
+    expect(result.failed).toBe(true)
+    expect(result.refused).toBeUndefined()
+    expect(result.stderr).toContain('Failed to remove native install')
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'gameStatusUpdate',
+      done
+    )
+    expect(notify).not.toHaveBeenCalled()
+    expectOneFailedNotice('Dota 2')
   })
 
   it.each([
@@ -10454,6 +10502,28 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     expect(result).toEqual({ stdout: '', stderr: '' })
   })
 
+  it('quick 261108-anw: an rm error on the bottle install returns failed, notices once, polls nothing', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    readAcfStateSpy.mockResolvedValue({
+      state: 'installed',
+      installPath: INSTALL_PATH
+    })
+    const rmSpy = failNextRmSync()
+
+    const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+    expect(rmSpy).toHaveBeenCalled()
+    rmSpy.mockRestore()
+    expect(result.failed).toBe(true)
+    expect(result.refused).toBeUndefined()
+    expect(result.stderr).toContain('Failed to remove bottle install')
+    expect(pollUninstallOnceSpy).not.toHaveBeenCalled()
+    expectOneFailedNotice('Hoard')
+  })
+
   it('containment: rejects an installPath outside the bottle common/ dir instead of deleting it', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
@@ -10719,6 +10789,32 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
 
       conflictSpy.mockRestore()
+    })
+
+    it('quick 261108-anw: an rm error on the shared-installdir manifest returns failed, notices once, polls nothing', async () => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      readAcfStateSpy.mockResolvedValue({
+        state: 'installed',
+        installPath: hoardInstallDir
+      })
+      const conflictSpy = jest
+        .spyOn(acfState, 'findOtherManifestsWithInstalldir')
+        .mockReturnValue(['228980'])
+      const rmSpy = failNextRmSync()
+
+      const result = await new SteamGame(APP_ID).uninstall({} as any)
+      conflictSpy.mockRestore()
+
+      expect(rmSpy).toHaveBeenCalled()
+      rmSpy.mockRestore()
+      expect(result.failed).toBe(true)
+      expect(result.refused).toBeUndefined()
+      expect(result.stderr).toContain('Failed to remove bottle install')
+      expect(pollUninstallOnceSpy).not.toHaveBeenCalled()
+      expectOneFailedNotice('Hoard')
     })
 
     it('A-13 DISCRIMINATOR: with NO conflicting manifest the directory IS deleted (the check cannot pass by refusing everything)', async () => {
@@ -11158,6 +11254,9 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
         status: 'error',
         error: 'cxbottle delete failed'
       })
+      const pollSpy = jest
+        .spyOn(uninstallPollingModule, 'pollUninstallOnce')
+        .mockResolvedValue(undefined)
 
       const game = new SteamGame(APP_ID)
       const result = await game.uninstall({} as any)
@@ -11165,6 +11264,12 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
       expect(result.stdout).toBe('')
       expect(result.stderr).toContain('cxbottle delete failed')
       expect(library.get(APP_ID)?.is_installed).toBe(true)
+      expect(result.failed).toBe(true)
+      expect(result.refused).toBeUndefined()
+      expect(result.stderr).toContain('Failed to remove bridge bottle')
+      expect(pollSpy).not.toHaveBeenCalled()
+      pollSpy.mockRestore()
+      expectOneFailedNotice('Avernum 4')
     })
   })
 
@@ -11254,6 +11359,24 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
       ).toBe(true)
       expect(library.get(APP_ID)?.is_installed).toBe(false)
       expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
+    })
+
+    it('quick 261108-anw: an rm error on the install root returns failed, notices once, polls nothing', async () => {
+      const pollSpy = jest
+        .spyOn(uninstallPollingModule, 'pollUninstallOnce')
+        .mockResolvedValue(undefined)
+      const rmSpy = failNextRmSync()
+
+      const result = await new SteamGame(APP_ID).uninstall({} as any)
+
+      expect(rmSpy).toHaveBeenCalled()
+      rmSpy.mockRestore()
+      expect(result.failed).toBe(true)
+      expect(result.refused).toBeUndefined()
+      expect(result.stderr).toContain('Failed to remove bridge install')
+      expect(pollSpy).not.toHaveBeenCalled()
+      expectOneFailedNotice('Avernum 4')
+      pollSpy.mockRestore()
     })
 
     it('a manifest already missing before uninstall still completes with empty stderr (force:true, not an error)', async () => {

@@ -134,6 +134,17 @@ export const uninstallGameCallback = async (
       sendGameStatusUpdate({ appName, runner, status: 'done' })
       return
     }
+    if (result?.failed) {
+      // quick 261108-anw: the delete errored, possibly partially. Keep
+      // GameLib state so a retry is possible; the failing route sends no
+      // done, so this is the single done. The route owns the in-app notice.
+      logInfo(
+        `Uninstall failed; keeping settings (${result.stderr})`,
+        LogPrefix.Backend
+      )
+      sendGameStatusUpdate({ appName, runner, status: 'done' })
+      return
+    }
     uninstalled = true
   } catch (error) {
     notify({

@@ -176,6 +176,22 @@ export async function uninstall(
   }
 }
 
+/**
+ * quick 261108-anw: a delete errored (possibly partially). Push the in-app
+ * retry notice and return `failed` so uninstallGameCallback keeps GameLib's
+ * state and sends the single done. Title comes from the raw library Map, not
+ * getGameInfo() (its fire-and-forget side effect is forbidden on this path).
+ */
+function failUninstall(steamGame: SteamGame, stderr: string): ExecResult {
+  sendFrontendMessage('steamRequestNotice', {
+    appId: steamGame.appId,
+    title: library.get(steamGame.appId)?.title ?? '',
+    kind: 'uninstall-failed',
+    seq: nextSteamRequestNoticeSeq()
+  })
+  return { stdout: '', stderr, failed: true }
+}
+
 export async function uninstallBridgeGame(
   steamGame: SteamGame
 ): Promise<ExecResult> {
@@ -189,10 +205,10 @@ export async function uninstallBridgeGame(
         `SteamGame: uninstallBridgeGame failed to remove per-game bottle "${bottleName}" for appId ${steamGame.appId}: ${result.error}`,
         LogPrefix.Steam
       )
-      return {
-        stdout: '',
-        stderr: `Failed to remove bridge bottle: ${result.error}`
-      }
+      return failUninstall(
+        steamGame,
+        `Failed to remove bridge bottle: ${result.error}`
+      )
     }
     logInfo(
       `SteamGame: removed per-game bridge bottle "${bottleName}" for appId ${steamGame.appId} (${result.status})`,
@@ -265,10 +281,10 @@ export async function uninstallBridgeGame(
       ],
       LogPrefix.Steam
     )
-    return {
-      stdout: '',
-      stderr: `Failed to remove bridge install: ${String(error)}`
-    }
+    return failUninstall(
+      steamGame,
+      `Failed to remove bridge install: ${String(error)}`
+    )
   }
 
   logInfo(
@@ -407,7 +423,6 @@ export async function removeNativeInstallDirectly(
   steamGame: SteamGame
 ): Promise<ExecResult> {
   let failure: string
-  let refused = false
   try {
     const result = await removeSteamInstallCopy(steamGame.appId, 'native')
     if (result.status !== 'refused') {
@@ -415,23 +430,24 @@ export async function removeNativeInstallDirectly(
       await pollUninstallOnce(steamGame.appId, 'native')
       return { stdout: '', stderr: '' }
     }
-    refused = true
     failure = `Refused to uninstall: ${result.reason} for appId ${steamGame.appId}`
+    logWarning(`SteamGame: ${failure}`, LogPrefix.Steam)
+    // uninstallGameCallback set "Uninstalling" and suppresses done for steam;
+    // clear it (same reason as the A-10 refusal in uninstallBottleGameDirectly).
+    // The record is kept, and no steam://uninstall fallback: Steam ignores it.
+    sendFrontendMessage('gameStatusUpdate', {
+      appName: steamGame.appId,
+      runner: 'steam',
+      status: 'done'
+    })
+    return { stdout: '', stderr: failure, refused: true }
   } catch (error) {
     failure = `Failed to remove native install: ${String(error)}`
+    logWarning(`SteamGame: ${failure}`, LogPrefix.Steam)
+    // quick 261108-anw: a caught rm error may be a partial delete, so it
+    // returns `failed` and uninstallGameCallback sends the one done.
+    return failUninstall(steamGame, failure)
   }
-
-  logWarning(`SteamGame: ${failure}`, LogPrefix.Steam)
-  // uninstallGameCallback set "Uninstalling" and suppresses done for steam;
-  // clear it (same reason as the A-10 refusal in uninstallBottleGameDirectly).
-  // The record is kept, and no steam://uninstall fallback: Steam ignores it.
-  sendFrontendMessage('gameStatusUpdate', {
-    appName: steamGame.appId,
-    runner: 'steam',
-    status: 'done'
-  })
-  // `Failed to remove ...` (caught rm error) may be a partial delete: no flag.
-  return { stdout: '', stderr: failure, ...(refused ? { refused } : {}) }
 }
 
 /**
@@ -689,10 +705,10 @@ export async function uninstallBottleGameDirectly(
         ],
         LogPrefix.Steam
       )
-      return {
-        stdout: '',
-        stderr: `Failed to remove bottle install: ${String(error)}`
-      }
+      return failUninstall(
+        steamGame,
+        `Failed to remove bottle install: ${String(error)}`
+      )
     }
     await pollUninstallOnce(steamGame.appId, 'bottle')
     return { stdout: '', stderr: '' }
@@ -709,10 +725,10 @@ export async function uninstallBottleGameDirectly(
       ],
       LogPrefix.Steam
     )
-    return {
-      stdout: '',
-      stderr: `Failed to remove bottle install: ${String(error)}`
-    }
+    return failUninstall(
+      steamGame,
+      `Failed to remove bottle install: ${String(error)}`
+    )
   }
 
   logInfo(

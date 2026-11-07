@@ -139,3 +139,48 @@ describe('uninstallGameCallback refusal (quick 261107-td5)', () => {
     expect(existsSync(settings)).toBe(true)
   })
 })
+
+describe('uninstallGameCallback failure (quick 261108-anw)', () => {
+  const APP = '264160'
+  const getSettings = jest.fn()
+  const uninstall = jest.fn()
+  const statuses = () =>
+    (sendGameStatusUpdate as jest.Mock).mock.calls.map((c) => c[0].status)
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(libraryManagerMap as any).steam = {
+      getGame: () => ({ uninstall, getSettings })
+    }
+    ;(libraryManagerMap as any).legendary = {
+      getGame: () => ({ uninstall, getSettings })
+    }
+  })
+
+  it.each(['steam', 'legendary'] as const)(
+    'a failed %s uninstall keeps settings and fix file, one done, no notify',
+    async (runner) => {
+      mkdirSync(gamesConfigPath, { recursive: true })
+      const settings = join(gamesConfigPath, `${APP}.json`)
+      const fix = join(
+        fixesPath,
+        `${APP}-${runner === 'steam' ? 'steam' : 'epic'}.json`
+      )
+      writeFileSync(settings, '{}')
+      writeFileSync(fix, '{}')
+      uninstall.mockResolvedValue({
+        stdout: '',
+        stderr: 'Failed to remove x',
+        failed: true
+      })
+
+      await uninstallGameCallback({} as any, APP, runner, true, true)
+
+      expect(existsSync(settings)).toBe(true)
+      expect(existsSync(fix)).toBe(true)
+      expect(getSettings).not.toHaveBeenCalled()
+      expect(notify).not.toHaveBeenCalled()
+      expect(statuses()).toEqual(['uninstalling', 'done'])
+    }
+  )
+})
