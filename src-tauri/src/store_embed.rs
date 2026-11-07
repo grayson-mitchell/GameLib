@@ -1748,7 +1748,12 @@ pub(crate) fn two_button_choice(result: &rfd::MessageDialogResult, label0: &str,
 /// the folder picker is reached via the AppHandle, not via `args` — the picked path comes
 /// FROM the OS dialog, never INTO it from the renderer/sidecar (T-30-11/T-30-12).
 pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Result<Value, String> {
-    match channel {
+    // Exhaustive over the generated enum (67-11, D-13): a channel in `RUST_INVOKE_CHANNELS` with no
+    // arm below is a compile error, and an unknown wire name never reaches the match.
+    let Some(ch) = RustInvokeChannel::from_name(channel) else {
+        return Err(format!("rustInvoke:unknown-channel:{channel}"));
+    };
+    match ch {
         // OBSERVABILITY, not a root-cause fix (34.4.1 gap cycle 2 plan 26, F-9). F-9's cause is
         // NOT established by this plan -- the missing-entry hypothesis's harness verdict is
         // recorded in `keyring_read_timing_hypothesis_absent_vs_present_entry`'s doc comment and
@@ -1773,7 +1778,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // left unwrapped: it exists as a read-adjacent probe and would be a natural Task-scope
         // candidate for a later plan, but this plan's own harness and fix are scoped to the
         // exact `keyring_get` signature F-9 was observed on.
-        "keyring_get" => {
+        RustInvokeChannel::KeyringGet => {
             let a = KeyringGetArgs::from_args(args)?;
             let account = keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
             let result = bounded_keyring_read(KEYRING_READ_TIMEOUT, move || {
@@ -1811,7 +1816,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             }
             result
         }
-        "keyring_set" => {
+        RustInvokeChannel::KeyringSet => {
             let a = KeyringSetArgs::from_args(args)?;
             let account = keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
             match Entry::new(KEYRING_SERVICE, account) {
@@ -1839,7 +1844,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
                 }
             }
         }
-        "keyring_delete" => {
+        RustInvokeChannel::KeyringDelete => {
             let a = KeyringDeleteArgs::from_args(args)?;
             let account = keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
             match Entry::new(KEYRING_SERVICE, account) {
@@ -1892,7 +1897,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // to one item does not make the backend unavailable. The one affected caller is
         // `humble/user.ts`'s `encryptionDegraded` flag; a failed write is reported by
         // `setSecret()`'s own error handling, not by this probe.
-        "keyring_available" => {
+        RustInvokeChannel::KeyringAvailable => {
             // Conversion-only (quick 261001-p0s), deliberately: a capability probe against a
             // never-written account has no slot-scoped outcome worth a `KeyringOutcome`
             // token, unlike the three arms above. Its `Ok(_)` branch already emits a loud
@@ -1964,7 +1969,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // set_can_create_directories and NO confirm-button-label setter. Recorded here so the
         // next reader does not re-derive it -- the callers that send it (PathSelectionBox,
         // SideloadDialog, Tools, GameSubMenu) get the OS default label.
-        "dialog_open" => {
+        RustInvokeChannel::DialogOpen => {
             let options = DialogOpenArgs::from_args(args)?;
             let wants_file = options
                 .properties
@@ -2047,7 +2052,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // shows it: built and `show()`n on the main thread, awaited on a spawned thread, with
         // the plugin's default title (the package name). Single-button / no-`buttons` calls
         // keep the plugin's OK-only dialog.
-        "dialog_message" => {
+        RustInvokeChannel::DialogMessage => {
             let opts = DialogMessageArgs::from_args(args)?;
             let message = opts.message.clone().unwrap_or_default();
             let kind = opts
@@ -2107,7 +2112,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // waits at most two `NOTIFICATION_COMPLETION_TIMEOUT`s on this worker thread. Dev and
         // non-bundled runs, and Windows/Linux, use `tauri-plugin-notification` below, whose
         // `show()` dispatches its work onto `tauri::async_runtime::spawn` and returns promptly.
-        "notification_show" => {
+        RustInvokeChannel::NotificationShow => {
             let opts = NotificationShowArgs::from_args(args)?;
             let title = opts.title.as_deref();
             let body = opts.body.as_deref();
@@ -2149,7 +2154,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // time, but its selection step is a SEPARATE, systemic macOS/AppKit defect -- see
         // `macos_finder_reselect_workaround` below for the mechanism and evidence. The
         // follow-up call is a no-op on other platforms.
-        "shell_show_item_in_folder" => {
+        RustInvokeChannel::ShellShowItemInFolder => {
             let a = ShellShowItemInFolderArgs::from_args(args)?;
             let path = a.path.as_str();
             app.opener()
@@ -2162,7 +2167,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // Open a path with the default program (Phase 33 Plan 04, D-05) via
         // `tauri-plugin-opener`'s `open_path`. Backs `platform/index.ts`'s `shell.openPath()`.
         // Same path-provenance note as `shell_show_item_in_folder` above (T-33-11).
-        "shell_open_path" => {
+        RustInvokeChannel::ShellOpenPath => {
             let a = ShellOpenPathArgs::from_args(args)?;
             let path = a.path.as_str();
             app.opener()
@@ -2176,7 +2181,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // below are the ONLY two new `dispatch_rust_channel` arms the entire 34.3 slice adds
         // -- D-02's zero-renderer-capability-grant stance holds (capabilities/default.json is
         // untouched; the plugin has no `js_init_script`, confirmed by 34.3-RESEARCH.md Q2).
-        "clipboard_write_text" => {
+        RustInvokeChannel::ClipboardWriteText => {
             let a = ClipboardWriteTextArgs::from_args(args)?;
             app.clipboard()
                 .write_text(a.text)
@@ -2193,14 +2198,14 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // -- the plugin's own `desktop.rs` docstring warns `read_text()` must not be called on
         // the main thread (Linux deadlock risk). A future refactor that moves dispatch onto
         // the reader thread must not silently reintroduce that deadlock.
-        "clipboard_read_text" => {
+        RustInvokeChannel::ClipboardReadText => {
             clipboard_read_value(app.clipboard().read_text().map_err(|e| e.to_string()))
         }
         // Exit the real Tauri process (Phase 33 Plan 04, D-05 app lifecycle essentials) via
         // `AppHandle::exit()`. Backs `platform/index.ts`'s `app.exit()`/`app.quit()`. Only two
         // sidecar-reachable call sites invoke this (`resetHeroic()`, the uninstall/quit exit
         // path) -- both deliberate user/exit actions (T-33-12, accepted DoS disposition).
-        "app_exit" => {
+        RustInvokeChannel::AppExit => {
             app.exit(0);
             Ok(Value::Null)
         }
@@ -2230,7 +2235,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // guarantee of runtime_handle.request_exit(...) inside tauri-runtime-wry -- the same mechanism
         // every existing app.exit() call in this codebase already depends on; the live-gate item above
         // is where that residual closes empirically.
-        "app_relaunch" => {
+        RustInvokeChannel::AppRelaunch => {
             app.restart();
         }
         // Hide the real Tauri application (quick/260815-vvz) via `AppHandle::hide()`. Backs
@@ -2253,7 +2258,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // `RuntimeOrDispatch::RuntimeHandle(h) => h.hide()?` branch, which posts to the real
         // event loop rather than calling the runtime directly. Same mechanism the already-
         // shipped `app_exit`/`app_relaunch` arms above rely on.
-        "app_hide" => {
+        RustInvokeChannel::AppHide => {
             #[cfg(target_os = "macos")]
             {
                 app.hide().map_err(|e| e.to_string())?;
@@ -2272,7 +2277,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // the tray About arm (`open_about_window_from_tray`); takes no args, so there is no
         // injection surface. A missing window is reported, not fatal. The invite
         // picker no longer uses this (quick 261101-llf); bridge-notice dialogs still do.
-        "main_window_raise" => {
+        RustInvokeChannel::MainWindowRaise => {
             let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {
                 return Err("main_window_raise:no-main-window".to_string());
             };
@@ -2289,7 +2294,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // the whole GameLib window over the game. `args[0]` is `{ appId, ackId }`; both are
         // re-validated by `bridge_invite_picker_path` because they land in a URL. The main window
         // is touched only to re-hide it after a Cmd+H-hidden GameLib was unhidden by activation.
-        "bridge_invite_picker_open" => {
+        RustInvokeChannel::BridgeInvitePickerOpen => {
             let a = BridgeInvitePickerOpenArgs::from_args(args)?;
             let (appid, ack) = (a.app_id.as_str(), a.ack_id.as_str());
             let path = bridge_invite_picker_path(appid, ack)?;
@@ -2405,7 +2410,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // light / dark; pinned by `meta/fixtures/tray-set-icon-wire-args.json`). Still the
         // ONLY tray-icon `dispatch_rust_channel` arm -- D-01 keeps window chrome renderer-side
         // with zero new Rust arms.
-        "tray_set_icon" => {
+        RustInvokeChannel::TraySetIcon => {
             // Wire-compat (kept deliberately, not tidied into a hard error): the generated
             // `TraySetIconArgs` accepts exactly the three shipped variants, but an unrecognised
             // variant or the retired `{ dark }` shape has always resolved to Auto here (pinned by
@@ -2461,7 +2466,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // shape as `dialog_open`'s pick_folder/pick_file arm -- `Some(path)` is the chosen path,
         // `None` is a healthy user cancel (never an error). Runs on the same spawned worker
         // thread.
-        "dialog_save" => {
+        RustInvokeChannel::DialogSave => {
             let opts = DialogSaveArgs::from_args(args)?;
             let mut builder = app.dialog().file();
             if let Some(file_name) = opts.default_path.as_deref() {
@@ -2568,7 +2573,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // user-visible rendering. FALSIFIABLE, not assumed closed: if plan 34.5-28's live
         // check still shows unreadable text, `prefers-color-scheme` was not the mechanism
         // and this fix must be recorded as NOT closing F-34.5-G6-05.
-        "humble_login_open" => {
+        RustInvokeChannel::HumbleLoginOpen => {
             let open_args = HumbleLoginOpenArgs::from_args(args)?;
             let url = login_window_parse_url(&open_args.url)?;
             let origin = url.origin().ascii_serialization();
@@ -3242,7 +3247,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // (caller-supplied host FIRST, the cookie's own domain second -- 34.4.1 Plan 22, F-6
         // Defect A) is deliberately UNCHANGED by this rewrite; `cookies_for_url()` still must
         // never appear anywhere in this file.
-        "humble_login_cookies" => {
+        RustInvokeChannel::HumbleLoginCookies => {
             let a = HumbleLoginCookiesArgs::from_args(args)?;
             let label = a.label.as_str();
             let host = a.host.as_str();
@@ -3362,7 +3367,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // Drain (not merely read) `label`'s queued navigation events (Phase 34.4.1 Plan
         // 01, REQ-34.4.1-03's navigation relay contract). An absent/never-navigated label
         // resolves an empty array -- a healthy state, not an error.
-        "humble_login_take_events" => {
+        RustInvokeChannel::HumbleLoginTakeEvents => {
             let a = HumbleLoginTakeEventsArgs::from_args(args)?;
             let label = a.label.as_str();
             let mut guard = LOGIN_WINDOW_EVENTS
@@ -3378,7 +3383,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // healthy "already closed" state, not an error -- resolves `Bool(false)` rather
         // than erroring, the same D-08 "no window is not a phase failure" shape as
         // `tray_set_icon`'s missing-tray branch above.
-        "humble_login_close" => {
+        RustInvokeChannel::HumbleLoginClose => {
             let a = HumbleLoginCloseArgs::from_args(args)?;
             let label = a.label.as_str();
             // The pristine Epic login window (`open_pristine_epic_login_window`) is a PLAIN
@@ -3462,7 +3467,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // will hold Epic/GOG/Amazon cookies once Phase 34.5 lands. The macOS branch below
         // uses `WKWebsiteDataRecord.displayName()` filtering (domain-suffix, the same
         // discipline `cookie_domain_matches` uses) rather than a bulk API.
-        "humble_login_clear_cookies" => {
+        RustInvokeChannel::HumbleLoginClearCookies => {
             let a = HumbleLoginClearCookiesArgs::from_args(args)?;
             let label = a.label.as_str();
             let domain = a.domain.as_str();
@@ -4050,7 +4055,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         //   - script injection failure: closed immediately below, then returns the error.
         //   - success / script-parse-failure / timeout (after `rx.recv_timeout`): the single
         //     close call right after the recv covers all three of these outcomes at once.
-        "humble_reveal_post" => {
+        RustInvokeChannel::HumbleRevealPost => {
             let parsed = reveal_post_args(args)?;
             let label = next_login_window_label();
             let (tx, rx) = mpsc_channel::<String>();
@@ -4117,7 +4122,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         //   - script injection failure: closed immediately below, then returns the error.
         //   - success / script-parse-failure / timeout (after `rx.recv_timeout`): the single
         //     close call right after the recv covers all three of these outcomes at once.
-        "humble_login_clear_storage" => {
+        RustInvokeChannel::HumbleLoginClearStorage => {
             let parsed = clear_storage_args(args)?;
             let label = next_login_window_label();
             let (tx, rx) = mpsc_channel::<String>();
@@ -4189,7 +4194,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // the census. Same `total`-is-the-liveness-proof contract, same never-`cookies_for_url()`
         // / never-`clear_all_browsing_data()` discipline, same never-logs-a-cookie-value
         // discipline (T-34.4.1-02, T-34.4.1-94) as `humble_login_cookies` above.
-        "humble_login_cookies_for_domain" => {
+        RustInvokeChannel::HumbleLoginCookiesForDomain => {
             let a = HumbleLoginCookiesForDomainArgs::from_args(args)?;
             let label = a.label.as_str();
             let domain = a.domain.as_str();
@@ -4358,7 +4363,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // `generate_handler!` is the renderer's surface. Registering it there would be dead
         // code that also handed the webview a power-management capability it has no use for,
         // against D-02's zero-renderer-capability-grant stance.
-        "wake_lock_start" => {
+        RustInvokeChannel::WakeLockStart => {
             let a = WakeLockStartArgs::from_args(args)?;
             let id = wake_lock_start(&a.kind)?;
             Ok(Value::from(id))
@@ -4366,7 +4371,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // Release exactly the assertion `args[0]` names (Phase 35 Plan 08, D-08, REQ-35-06).
         // An id outside u32 range cannot name a live assertion, so it is rejected as bad args
         // rather than truncated into one that could name somebody else's lock.
-        "wake_lock_stop" => {
+        RustInvokeChannel::WakeLockStop => {
             let a = WakeLockStopArgs::from_args(args)?;
             let id = u32::try_from(a.id).map_err(|_| "wake_lock_stop:bad-args".to_string())?;
             wake_lock_stop(id)?;
@@ -4376,27 +4381,27 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // Tauri-free gamelib-scan crate, the same dispatch the headless gamelib-scan-cli uses.
         // dispatch_rust_channel arms, not generate_handler! commands: the caller is the sidecar
         // over `requestRustInvoke`, and the renderer gets no scanner capability.
-        "scan_steam_api_imports" => {
+        RustInvokeChannel::ScanSteamApiImports => {
             ScanSteamApiImportsArgs::from_args(args)?;
             gamelib_scan::dispatch("scan_steam_api_imports", args)
         }
-        "scan_steam_drm" => {
+        RustInvokeChannel::ScanSteamDrm => {
             ScanSteamDrmArgs::from_args(args)?;
             gamelib_scan::dispatch("scan_steam_drm", args)
         }
-        "scan_steamstub_section" => {
+        RustInvokeChannel::ScanSteamstubSection => {
             ScanSteamstubSectionArgs::from_args(args)?;
             gamelib_scan::dispatch("scan_steamstub_section", args)
         }
-        "scan_pe_imported_dlls" => {
+        RustInvokeChannel::ScanPeImportedDlls => {
             ScanPeImportedDllsArgs::from_args(args)?;
             gamelib_scan::dispatch("scan_pe_imported_dlls", args)
         }
-        "scan_contained_real" => {
+        RustInvokeChannel::ScanContainedReal => {
             ScanContainedRealArgs::from_args(args)?;
             gamelib_scan::dispatch("scan_contained_real", args)
         }
-        "scan_winemac_metal_exports" => {
+        RustInvokeChannel::ScanWinemacMetalExports => {
             ScanWinemacMetalExportsArgs::from_args(args)?;
             gamelib_scan::dispatch("scan_winemac_metal_exports", args)
         }
@@ -4405,7 +4410,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // feature; a target outside those three returns a legible error rather than silently
         // compiling this section out (see the section doc comment above `STORE_EMBED_LABEL` for
         // the full rationale). No shipped target compiles that branch. ----
-        "store_embed_open" => {
+        RustInvokeChannel::StoreEmbedOpen => {
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_open(app, args)
@@ -4415,7 +4420,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
                 Err("store_embed_open:unsupported-platform".to_string())
             }
         }
-        "store_embed_set_bounds" => {
+        RustInvokeChannel::StoreEmbedSetBounds => {
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_set_bounds(app, args)
@@ -4425,7 +4430,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
                 Err("store_embed_set_bounds:unsupported-platform".to_string())
             }
         }
-        "store_embed_hide" => {
+        RustInvokeChannel::StoreEmbedHide => {
             StoreEmbedHideArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
@@ -4436,7 +4441,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
                 Err("store_embed_hide:unsupported-platform".to_string())
             }
         }
-        "store_embed_show" => {
+        RustInvokeChannel::StoreEmbedShow => {
             StoreEmbedShowArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
@@ -4447,7 +4452,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
                 Err("store_embed_show:unsupported-platform".to_string())
             }
         }
-        "store_embed_close" => {
+        RustInvokeChannel::StoreEmbedClose => {
             StoreEmbedCloseArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
@@ -4463,7 +4468,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // state for navigations the USER's own chrome initiated, so clicking a link inside the
         // embed moved this process's cursor while the renderer's `canGoBack` stayed false
         // forever. Drains, never peeks -- same contract as `humble_login_take_events` above.
-        "store_embed_take_nav_events" => {
+        RustInvokeChannel::StoreEmbedTakeNavEvents => {
             StoreEmbedTakeNavEventsArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
@@ -4478,7 +4483,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // state (`store_embed_nav_state_json`) derived from the Rust-owned cursor -- there is
         // no `canGoBack()`-style handle to query, so this pushed/returned state IS the read
         // (control inverts: Rust pushes, the frontend never polls).
-        "store_embed_back" => {
+        RustInvokeChannel::StoreEmbedBack => {
             StoreEmbedBackArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
@@ -4489,7 +4494,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
                 Err("store_embed_back:unsupported-platform".to_string())
             }
         }
-        "store_embed_forward" => {
+        RustInvokeChannel::StoreEmbedForward => {
             StoreEmbedForwardArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
@@ -4500,7 +4505,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
                 Err("store_embed_forward:unsupported-platform".to_string())
             }
         }
-        "store_embed_reload" => {
+        RustInvokeChannel::StoreEmbedReload => {
             StoreEmbedReloadArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
@@ -4511,7 +4516,7 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
                 Err("store_embed_reload:unsupported-platform".to_string())
             }
         }
-        "store_embed_navigate" => {
+        RustInvokeChannel::StoreEmbedNavigate => {
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_navigate(app, args)
@@ -4521,7 +4526,6 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
                 Err("store_embed_navigate:unsupported-platform".to_string())
             }
         }
-        _ => Err(format!("rustInvoke:unknown-channel:{channel}")),
     }
 }
 

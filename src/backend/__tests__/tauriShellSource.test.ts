@@ -212,8 +212,8 @@ describe('REQ-34.1-07 macOS tray template wiring (gap G3 redirect, 34.1-13)', ()
     // Same arm-boundary technique as the "ONLY new dispatch arm" test below: outer match
     // arms are indented exactly 8 spaces, so the next such line after tray_set_icon's own
     // marks the end of its arm body.
-    const armStartPattern = /^ {8}"[a-z_]+"\s*=>/gm
-    const armIdx = code.indexOf('"tray_set_icon" =>')
+    const armStartPattern = /^ {8}RustInvokeChannel::[A-Za-z0-9]+\s*=>/gm
+    const armIdx = code.indexOf('RustInvokeChannel::TraySetIcon =>')
     expect(armIdx).toBeGreaterThan(-1)
     armStartPattern.lastIndex = armIdx + 1
     const nextArmMatch = armStartPattern.exec(code)
@@ -303,23 +303,30 @@ describe('REQ-34.1-07 macOS tray template wiring (gap G3 redirect, 34.1-13)', ()
  * resets `lastIndex` before iterating. Do not switch a consumer to `.exec()` without making
  * these factories instead.
  */
-const DISPATCH_ARM_LINE_RE = /^ {8}"[a-z0-9_]+"\s*=>/gm
-const DISPATCH_ARM_NAME_RE = /"([a-z0-9_]+)"/
+const DISPATCH_ARM_LINE_RE = /^ {8}RustInvokeChannel::[A-Za-z0-9]+\s*=>/gm
+const DISPATCH_ARM_NAME_RE = /RustInvokeChannel::([A-Za-z0-9]+)/
+/** `RustInvokeChannel::Oauth2Begin` arm line -> the wire name `oauth2_begin` (67-11: arms match the generated enum). */
+function dispatchArmName(line: string): string | undefined {
+  return line
+    .match(DISPATCH_ARM_NAME_RE)?.[1]
+    ?.replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .toLowerCase()
+}
 
 describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-11)', () => {
   test('REQ-34.1-07 dispatch_rust_channel has exactly one "tray_set_icon" arm', () => {
     const code = loadMainRsCode()
-    const matches = code.match(/"tray_set_icon"\s*=>/g) ?? []
+    const matches = code.match(/RustInvokeChannel::TraySetIcon\s*=>/g) ?? []
     expect(matches.length).toBe(1)
   })
 
-  test('REQ-34.1-07 the tray_set_icon arm appears before the rustInvoke:unknown-channel catch-all', () => {
+  test('REQ-34.1-07 the tray_set_icon arm appears after the rustInvoke:unknown-channel guard (arms are only reachable through RustInvokeChannel::from_name)', () => {
     const code = loadMainRsCode()
-    const armIdx = code.indexOf('"tray_set_icon" =>')
+    const armIdx = code.indexOf('RustInvokeChannel::TraySetIcon =>')
     const catchAllIdx = code.indexOf('rustInvoke:unknown-channel')
     expect(armIdx).toBeGreaterThan(-1)
     expect(catchAllIdx).toBeGreaterThan(-1)
-    expect(armIdx).toBeLessThan(catchAllIdx)
+    expect(catchAllIdx).toBeLessThan(armIdx)
   })
 
   test('REQ-34.1-07 this is the ONLY new dispatch arm across the phase -- no other new match arm exists beyond the pre-34.1-06 set', () => {
@@ -330,9 +337,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // unrelated `"show"`/`"quit"` MenuId matches inside the tray's own on_menu_event
     // closure (a different match statement entirely, at a different indent depth).
     const armMatches = code.match(DISPATCH_ARM_LINE_RE) ?? []
-    const armNames = armMatches.map(
-      (line) => line.match(DISPATCH_ARM_NAME_RE)?.[1]
-    )
+    const armNames = armMatches.map((line) => dispatchArmName(line))
     const preExistingArms = [
       'keyring_get',
       'keyring_set',
@@ -880,12 +885,12 @@ describe('loadMainRsCode comment-stripping self-test (REQ-34.1-07)', () => {
     // matched by either character class; `oauth2_begin` only by the widened one, so it is the
     // discriminating case.
     const synthetic = [
-      '        "plain_arm" => {',
-      '        "oauth2_begin" => {'
+      '        RustInvokeChannel::PlainArm => {',
+      '        RustInvokeChannel::Oauth2Begin => {'
     ].join('\n')
 
-    const scraped = (synthetic.match(DISPATCH_ARM_LINE_RE) ?? []).map(
-      (line) => line.match(DISPATCH_ARM_NAME_RE)?.[1]
+    const scraped = (synthetic.match(DISPATCH_ARM_LINE_RE) ?? []).map((line) =>
+      dispatchArmName(line)
     )
 
     // Narrowing the shared binding back to `[a-z_]+` drops the second entry and fails here.
@@ -917,11 +922,15 @@ describe('loadMainRsCode comment-stripping self-test (REQ-34.1-07)', () => {
  */
 describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07)', () => {
   test('REQ-34.3-08 the clipboard_write_text dispatch arm exists', () => {
-    expect(loadMainRsCode()).toContain('"clipboard_write_text" =>')
+    expect(loadMainRsCode()).toContain(
+      'RustInvokeChannel::ClipboardWriteText =>'
+    )
   })
 
   test('REQ-34.3-08 the clipboard_read_text dispatch arm exists', () => {
-    expect(loadMainRsCode()).toContain('"clipboard_read_text" =>')
+    expect(loadMainRsCode()).toContain(
+      'RustInvokeChannel::ClipboardReadText =>'
+    )
   })
 
   test('REQ-34.3-08 the clipboard_text_arg pure helper exists', () => {
@@ -972,7 +981,7 @@ describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07
     // comment above this arm (see Task 1's docstring citation) records that RunEvent::Exit
     // already fires and already kills the sidecar before the process re-execs.
     const code = loadMainRsCode()
-    const armStart = code.indexOf('"app_relaunch" => {')
+    const armStart = code.indexOf('RustInvokeChannel::AppRelaunch => {')
     expect(armStart).toBeGreaterThan(-1)
     const armBodyEnd = code.indexOf('\n        }', armStart)
     expect(armBodyEnd).toBeGreaterThan(armStart)
@@ -1025,16 +1034,18 @@ describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-corre
 
   test('both arms exist in source', () => {
     const code = loadMainRsCode()
-    expect(code).toContain('"humble_login_cookies" => {')
-    expect(code).toContain('"humble_login_cookies_for_domain" => {')
+    expect(code).toContain('RustInvokeChannel::HumbleLoginCookies => {')
+    expect(code).toContain(
+      'RustInvokeChannel::HumbleLoginCookiesForDomain => {'
+    )
   })
 
   test('humble_login_cookies (the poll arm) still calls cookie_domain_matches with the caller-supplied host FIRST', () => {
     const code = loadMainRsCode()
     const armBody = extractArmBody(
       code,
-      '"humble_login_cookies" => {',
-      '"humble_login_take_events" => {'
+      'RustInvokeChannel::HumbleLoginCookies => {',
+      'RustInvokeChannel::HumbleLoginTakeEvents => {'
     )
     // The poll's direction, unedited by Plan 22: host (caller-supplied) first, the cookie's
     // own domain second.
@@ -1047,8 +1058,8 @@ describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-corre
     const code = loadMainRsCode()
     const armBody = extractArmBody(
       code,
-      '"humble_login_cookies_for_domain" => {',
-      '_ => Err(format!("rustInvoke:unknown-channel'
+      'RustInvokeChannel::HumbleLoginCookiesForDomain => {',
+      'RustInvokeChannel::WakeLockStart =>'
     )
     // The census's direction: the cookie's own domain (from the match on c.domain()) first,
     // the fixed target `domain` second -- mirrors humble_login_clear_cookies's own filter.
@@ -1072,8 +1083,8 @@ describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-corre
 // (this quick task's Task 3), and the identical gates were green throughout the entire
 // period the probe returned nothing.
 describe('D-35-29-01 (quick q93) the census arm falls back to the label-independent default-store read for Epic domains', () => {
-  const CENSUS_ARM_START = '"humble_login_cookies_for_domain" => {'
-  const CENSUS_ARM_END = '_ => Err(format!("rustInvoke:unknown-channel'
+  const CENSUS_ARM_START = 'RustInvokeChannel::HumbleLoginCookiesForDomain => {'
+  const CENSUS_ARM_END = 'RustInvokeChannel::WakeLockStart =>'
 
   /**
    * Same "slice the arm body out of comment-stripped source" extraction shape as
@@ -1171,7 +1182,7 @@ describe('D-35-29-01 (quick q93) the census arm falls back to the label-independ
     // `humble_login_cookies_for_domain:no-window:{label}` on all five Epic hosts of every
     // live logout while this suite stayed green.
     const regressedArm = [
-      '        "humble_login_cookies_for_domain" => {',
+      '        RustInvokeChannel::HumbleLoginCookiesForDomain => {',
       '            let label = args',
       '                .first()',
       '                .and_then(|v| v.as_str())',
@@ -1186,7 +1197,7 @@ describe('D-35-29-01 (quick q93) the census arm falls back to the label-independ
       '            let all = window.cookies().map_err(|e| e.to_string())?;',
       '            Ok(serde_json::json!({ "total": all.len(), "matched": [] }))',
       '        }',
-      '        _ => Err(format!("rustInvoke:unknown-channel:{channel}")),'
+      '        RustInvokeChannel::WakeLockStart => {}'
     ].join('\n')
 
     const violations = censusFallbackViolations(loadMainRsCode(regressedArm))
@@ -1305,7 +1316,7 @@ describe('REQ-34.4.1-06 (Plan 23, F-6 Defect B) humble_login_clear_cookies never
     // Simulates exactly the regression the first test above guards against: an arm body
     // that reverts to the pre-removal attempted-count shape.
     const regressed = `
-        "humble_login_clear_cookies" => {
+        RustInvokeChannel::HumbleLoginClearCookies => {
             let matching: Vec<_> = window.cookies().unwrap();
             let deleted = matching.len();
             Ok(Value::Number(deleted.into()))
@@ -1468,7 +1479,7 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
   // observation owned by the gap-cycle-3 live gate (plan 35).
   test("D-29-05: humble_login_open's visible block builds an ORIGIN-DERIVED provisional title, so the window never presents as the framework default", () => {
     const code = loadMainRsCode()
-    const armStart = code.indexOf('"humble_login_open" => {')
+    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
     expect(armStart).toBeGreaterThan(-1)
     const arm = code.slice(armStart, armStart + 20000)
     const visibleIdx = arm.indexOf('if visible {')
@@ -1482,9 +1493,12 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 
   test(".inner_size(/.center()/.focused(true)/on_document_title_changed appear ONLY inside humble_login_open's if-visible block -- the adjacent-already-present gating Plan 18 introduced and nothing had ever tested; proves source placement only, never that the operator actually saw the window raised (plan 29 item 1)", () => {
     const code = loadMainRsCode()
-    const armStart = code.indexOf('"humble_login_open" => {')
+    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
     expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    const armEnd = code.indexOf(
+      'RustInvokeChannel::HumbleLoginCookies => {',
+      armStart
+    )
     expect(armEnd).toBeGreaterThan(armStart)
     const armBody = code.slice(armStart, armEnd)
 
@@ -1512,15 +1526,15 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 
   test('the hidden reveal-post and storage-clear WebviewWindowBuilder chains gained neither the title hook nor the F-4 presentation calls', () => {
     const code = loadMainRsCode()
-    const revealStart = code.indexOf('"humble_reveal_post" => {')
+    const revealStart = code.indexOf('RustInvokeChannel::HumbleRevealPost => {')
     expect(revealStart).toBeGreaterThan(-1)
     const revealEnd = code.indexOf(
-      '"humble_login_clear_storage" => {',
+      'RustInvokeChannel::HumbleLoginClearStorage => {',
       revealStart
     )
     expect(revealEnd).toBeGreaterThan(revealStart)
     const clearStorageEnd = code.indexOf(
-      '"humble_login_cookies_for_domain" => {',
+      'RustInvokeChannel::HumbleLoginCookiesForDomain => {',
       revealEnd
     )
     expect(clearStorageEnd).toBeGreaterThan(revealEnd)
@@ -1546,9 +1560,12 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
   // helpers mirroring the file's existing find-start-then-find-end slicing idiom (identical
   // in shape to the sibling copies already defined in other describe blocks in this file).
   function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('"humble_login_open" => {')
+    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
     expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    const armEnd = code.indexOf(
+      'RustInvokeChannel::HumbleLoginCookies => {',
+      armStart
+    )
     expect(armEnd).toBeGreaterThan(armStart)
     return code.slice(armStart, armEnd)
   }
@@ -1573,12 +1590,12 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 
   test("Guard 1 self-test (RED proof): a synthetic visible block still carrying the pre-fix 900-wide call fails this guard's positive clause", () => {
     const synthetic = [
-      '"humble_login_open" => {',
+      'RustInvokeChannel::HumbleLoginOpen => {',
       '  if visible {',
       '    builder = builder.inner_size(900.0, 700.0);',
       '  }',
       '}',
-      '"humble_login_cookies" => {}'
+      'RustInvokeChannel::HumbleLoginCookies => {}'
     ].join('\n')
     const code = loadMainRsCode(synthetic)
     const armBody = extractHumbleLoginOpenArmBody(code)
@@ -1615,9 +1632,12 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 // be satisfied by the prose alone even if the real arm still used it.
 describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_load, never on_navigation', () => {
   function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('"humble_login_open" => {')
+    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
     expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    const armEnd = code.indexOf(
+      'RustInvokeChannel::HumbleLoginCookies => {',
+      armStart
+    )
     expect(armEnd).toBeGreaterThan(armStart)
     return code.slice(armStart, armEnd)
   }
@@ -1735,9 +1755,12 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
 describe('F-34.5-G6-05 (Plan 27) login window requests a light interface style', () => {
   test('the humble_login_open arm requests .theme(Some(tauri::Theme::Light)) on the visible builder', () => {
     const code = loadMainRsCode()
-    const armStart = code.indexOf('"humble_login_open" => {')
+    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
     expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    const armEnd = code.indexOf(
+      'RustInvokeChannel::HumbleLoginCookies => {',
+      armStart
+    )
     expect(armEnd).toBeGreaterThan(armStart)
     const armBody = code.slice(armStart, armEnd)
     expect(armBody).toContain('.theme(Some(tauri::Theme::Light))')
@@ -1951,9 +1974,12 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
   }
 
   function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('"humble_login_open" => {')
+    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
     expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    const armEnd = code.indexOf(
+      'RustInvokeChannel::HumbleLoginCookies => {',
+      armStart
+    )
     expect(armEnd).toBeGreaterThan(armStart)
     return code.slice(armStart, armEnd)
   }
@@ -2175,9 +2201,12 @@ describe('Phase 34.4.2 Plan 13 — the in-field autofill mechanism is DELETED (o
 // Test 7 precedent).
 describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc backstop)', () => {
   function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('"humble_login_open" => {')
+    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
     expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    const armEnd = code.indexOf(
+      'RustInvokeChannel::HumbleLoginCookies => {',
+      armStart
+    )
     expect(armEnd).toBeGreaterThan(armStart)
     return code.slice(armStart, armEnd)
   }
@@ -2407,9 +2436,12 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
 // visible-only scoping, three-way clearing and a bounded (not unbounded) expiry.
 describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows (T-34.4.2-39)', () => {
   function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('"humble_login_open" => {')
+    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
     expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    const armEnd = code.indexOf(
+      'RustInvokeChannel::HumbleLoginCookies => {',
+      armStart
+    )
     expect(armEnd).toBeGreaterThan(armStart)
     return code.slice(armStart, armEnd)
   }
@@ -3900,9 +3932,11 @@ describe('REQ-34.3-11 item 2 (debug session finder-reveal-no-selection) macOS Fi
 
   test('the shell_show_item_in_folder arm calls the workaround, macOS-gated, AFTER reveal_item_in_dir', () => {
     const code = loadMainRsCode()
-    const armStart = code.indexOf('"shell_show_item_in_folder" => {')
+    const armStart = code.indexOf(
+      'RustInvokeChannel::ShellShowItemInFolder => {'
+    )
     expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf('"shell_open_path" =>', armStart)
+    const armEnd = code.indexOf('RustInvokeChannel::ShellOpenPath =>', armStart)
     expect(armEnd).toBeGreaterThan(armStart)
     const armBody = code.slice(armStart, armEnd)
 

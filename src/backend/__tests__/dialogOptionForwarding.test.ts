@@ -33,12 +33,17 @@ const SIDECAR_RPC_PATH = join(
 const FRONTEND_ROOT = join(REPO_ROOT, 'src', 'frontend')
 
 /**
- * Returns the body of the `"<channel>" => { ... }` match arm from `source`, by brace balance
+ * Returns the body of the `RustInvokeChannel::<Channel> => { ... }` match arm from `source`, by brace balance
  * rather than a lazy regex — the arm contains nested blocks (`if let`, `for`, closures), so a
  * `[\s\S]*?\}` match would stop at the first inner brace and silently under-read.
  */
 function extractMatchArm(source: string, channel: string): string {
-  const header = `"${channel}" => {`
+  // Arms match the generated enum (67-11): `dialog_open` -> `RustInvokeChannel::DialogOpen`.
+  const variant = channel
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join('')
+  const header = `RustInvokeChannel::${variant} => {`
   const start = source.indexOf(header)
   if (start === -1) {
     throw new Error(`match arm for "${channel}" not found`)

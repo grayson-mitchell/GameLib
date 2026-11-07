@@ -1850,6 +1850,26 @@ fn main() {
 /// into the two disconnect paths.
 #[cfg(test)]
 mod tests {
+    /// Maps a trimmed `dispatch_rust_channel` arm opener (`RustInvokeChannel::HumbleLoginOpen => {`)
+    /// to its wire name (`humble_login_open`); `None` for any other line. The arms match the
+    /// generated enum since 67-11, so source-text pins locate arms through this one helper.
+    fn dispatch_arm_opener_name(trimmed: &str) -> Option<String> {
+        let variant = trimmed
+            .strip_prefix("RustInvokeChannel::")?
+            .strip_suffix(" => {")?;
+        if variant.is_empty() || !variant.chars().all(|c| c.is_ascii_alphanumeric()) {
+            return None;
+        }
+        let mut out = String::new();
+        for (i, c) in variant.chars().enumerate() {
+            if c.is_ascii_uppercase() && i > 0 {
+                out.push('_');
+            }
+            out.push(c.to_ascii_lowercase());
+        }
+        Some(out)
+    }
+
     use super::*;
 
     /// Every shell source file EXCEPT the pre-existing sibling modules, so the source-text tests
@@ -4846,7 +4866,7 @@ mod tests {
         // this very test) would produce a pass or a failure for the wrong reason.
         let source = SHELL_SOURCE;
         let arm_start = source
-            .find("\"keyring_available\" => {")
+            .find(concat!("RustInvokeChannel::KeyringAvailable", " => {"))
             .expect("keyring_available arm not found in main.rs");
         let after = &source[arm_start..];
         let arm_end = after
@@ -5206,12 +5226,7 @@ mod tests {
 
             // Track which `dispatch_rust_channel` match arm this line is inside. Every arm in
             // that match is a single line of the shape `"channel_name" => {`.
-            if trimmed.starts_with('"') && trimmed.ends_with("\" => {") {
-                let name = trimmed
-                    .trim_start_matches('"')
-                    .split('"')
-                    .next()
-                    .unwrap_or("");
+            if let Some(name) = dispatch_arm_opener_name(trimmed) {
                 current_arm = target_arms.iter().find(|a| **a == name).copied();
                 continue;
             }
@@ -5252,7 +5267,7 @@ mod tests {
                     guard = Some(prior_trimmed.to_string());
                     break;
                 }
-                if prior_trimmed.starts_with("fn ") || prior_trimmed.ends_with("\" => {") {
+                if prior_trimmed.starts_with("fn ") || dispatch_arm_opener_name(prior_trimmed).is_some() {
                     break;
                 }
             }
@@ -5545,14 +5560,14 @@ mod tests {
         // double-quote and ends with the arrow-and-open-brace arm terminator.
         let is_arm_boundary = |l: &str| {
             let t = l.trim();
-            t.starts_with('"') && t.ends_with("\" => {")
+            dispatch_arm_opener_name(t).is_some()
         };
 
         let start = lines
             .iter()
-            .position(|l| l.trim() == "\"humble_login_clear_cookies\" => {")
+            .position(|l| l.trim() == "RustInvokeChannel::HumbleLoginClearCookies => {")
             .expect(concat!(
-                "260928-qvr regression: the `\"humble_login_clear_cookies\" => {` arm opener ",
+                "260928-qvr regression: the `RustInvokeChannel::HumbleLoginClearCookies => {` arm opener ",
                 "was not found by exact match in this file -- it was renamed, reformatted, or ",
                 "removed; re-derive this pin's scan boundary from a fresh measurement rather ",
                 "than loosening the match string."

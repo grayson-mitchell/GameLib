@@ -52,8 +52,15 @@ describe('scan channel parity (D-03)', () => {
     const lines = storeEmbed.split('\n')
     const arms: string[] = []
     lines.forEach((line, i) => {
-      const m = /^\s*"(scan_[a-z_]+)" => \{\s*$/.exec(line)
-      if (!m) return
+      const arm = /^\s*RustInvokeChannel::(Scan[A-Za-z0-9]+) => \{\s*$/.exec(
+        line
+      )
+      if (!arm) return
+      // Arms match the generated enum (67-11): ScanSteamDrm -> scan_steam_drm.
+      const m = [
+        arm[0],
+        arm[1].replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
+      ]
       arms.push(m[1])
       // Phase 67 (D-13): the first line validates through the generated Args struct, the
       // second passes straight to the library, which stays the stricter authority.

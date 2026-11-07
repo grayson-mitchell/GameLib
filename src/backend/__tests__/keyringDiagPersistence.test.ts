@@ -38,15 +38,15 @@ function loadMainRsCode(source?: string): string {
 }
 
 /**
- * Slices the comment-stripped source from the `"keyring_get" => {` arm head through (but not
- * including) the next `"dialog_open" => {` arm head — the four keyring arms sit contiguously in
+ * Slices the comment-stripped source from the `RustInvokeChannel::KeyringGet => {` arm head through (but not
+ * including) the next `RustInvokeChannel::DialogOpen => {` arm head — the four keyring arms sit contiguously in
  * that span, with `dialog_open` as the first unrelated arm immediately after. Asserts both
  * markers occur exactly once first: a region extractor built on a marker that could occur twice
  * would silently slice the wrong span the moment either text shifted.
  */
 function extractKeyringArmRegion(code: string): string {
-  const startMarker = '"keyring_get" => {'
-  const endMarker = '"dialog_open" => {'
+  const startMarker = 'RustInvokeChannel::KeyringGet => {'
+  const endMarker = 'RustInvokeChannel::DialogOpen => {'
 
   const startOccurrences = code.split(startMarker).length - 1
   const endOccurrences = code.split(endMarker).length - 1
@@ -98,17 +98,19 @@ describe('keyring arm region: zero bare eprintln!, 14 shell_diag(, 5 keyring_out
   test('all four arm labels are present in the region', () => {
     const region = extractKeyringArmRegion(loadMainRsCode())
 
-    expect(region).toContain('"keyring_get" => {')
-    expect(region).toContain('"keyring_set" => {')
-    expect(region).toContain('"keyring_delete" => {')
-    expect(region).toContain('"keyring_available" => {')
+    expect(region).toContain('RustInvokeChannel::KeyringGet => {')
+    expect(region).toContain('RustInvokeChannel::KeyringSet => {')
+    expect(region).toContain('RustInvokeChannel::KeyringDelete => {')
+    expect(region).toContain('RustInvokeChannel::KeyringAvailable => {')
   })
 })
 
 describe('keyring_available gets conversion only — never a success-token emission', () => {
   test('the keyring_available sub-slice carries zero keyring_outcome_message( calls', () => {
     const region = extractKeyringArmRegion(loadMainRsCode())
-    const availableIdx = region.indexOf('"keyring_available" => {')
+    const availableIdx = region.indexOf(
+      'RustInvokeChannel::KeyringAvailable => {'
+    )
     expect(availableIdx).toBeGreaterThanOrEqual(0)
 
     const availableSubSlice = region.slice(availableIdx)
@@ -121,7 +123,9 @@ describe('keyring_available gets conversion only — never a success-token emiss
     // returned an empty string would also report zero keyring_outcome_message( calls, for the
     // wrong reason entirely.
     const region = extractKeyringArmRegion(loadMainRsCode())
-    const availableIdx = region.indexOf('"keyring_available" => {')
+    const availableIdx = region.indexOf(
+      'RustInvokeChannel::KeyringAvailable => {'
+    )
     const availableSubSlice = region.slice(availableIdx)
 
     const occurrences = availableSubSlice.match(/shell_diag\(/g)
@@ -264,7 +268,7 @@ describe('RED-proof: this gate fails against pre-Task-1 source', () => {
     // the originating todo measured (`src-tauri/src/main.rs:6471-6488` at `5485e0200`) — not a
     // live git-stash round-trip, since this file did not exist before Task 1 to stash against.
     const preTask1Region = `
-        "keyring_get" => {
+        RustInvokeChannel::KeyringGet => {
             let account = keyring_account(keyring_slot_arg(args, 0))?;
             let result = bounded_keyring_read(KEYRING_READ_TIMEOUT, move || {
                 let outcome =
@@ -282,7 +286,7 @@ describe('RED-proof: this gate fails against pre-Task-1 source', () => {
             }
             result
         }
-        "dialog_open" => {`
+        RustInvokeChannel::DialogOpen => {`
 
     const eprintlnOccurrences = preTask1Region.match(/eprintln!/g)
     const shellDiagOccurrences = preTask1Region.match(/shell_diag\(/g)

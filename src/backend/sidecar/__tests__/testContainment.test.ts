@@ -961,11 +961,6 @@ const IN_SCOPE_SUITES = [
  * the filesystem, and the real `bootstrap.init()` over `PassThrough` streams. Its landing commit did
  * not classify it; the T-34.2-83 tripwire caught it (59 gap round 3 post-wave gate).
  *
- * `transportParity.test.ts` (Phase 62 Plan 04, D-12) is structurally contained: it imports only
- * the pure `common/types/sidecarTransport` constants and reads `src-tauri/src/*.rs` source text
- * with `readFileSync`; no path module, `homedir()`, filesystem write or child process is reached.
- * Its landing commit did not classify it; the T-34.2-83 tripwire caught it (62-06 full-suite run).
- *
  * `engineOverrideWriteGuard.test.ts` (Phase 61 Plan 06, T-61-13) is structurally contained: it
  * replaces `../../platform`, `../../config`, `../../game_config`, `../../utils`, the store modules
  * and `../../constants/paths` with `jest.mock` factories and drives the registered handlers
@@ -1054,7 +1049,6 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'storeLayer.test.ts',
   'structuralContainment.test.ts',
   'testContainment.test.ts',
-  'transportParity.test.ts',
   'wakeLock.test.ts',
   'wineToolsFlows.test.ts'
 ]

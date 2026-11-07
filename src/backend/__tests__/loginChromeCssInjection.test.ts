@@ -68,15 +68,18 @@ function extractBracedBlock(code: string, openMarker: string): string {
 }
 
 /**
- * Locates the `"humble_login_open" => {` arm's body. `code.indexOf('humble_login_open')`
+ * Locates the `RustInvokeChannel::HumbleLoginOpen => {` arm's body. `code.indexOf('humble_login_open')`
  * still resolves to the intended block even though the arm above's single-flight guard
  * deliberately uses `if visible == true {` (main.rs's own comment explains why) -- do not
  * "fix" that condition; this extractor does not depend on it.
  */
 function extractHumbleLoginOpenArmBody(code: string): string {
-  const armStart = code.indexOf('"humble_login_open" => {')
+  const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
   expect(armStart).toBeGreaterThan(-1)
-  const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+  const armEnd = code.indexOf(
+    'RustInvokeChannel::HumbleLoginCookies => {',
+    armStart
+  )
   expect(armEnd).toBeGreaterThan(armStart)
   return code.slice(armStart, armEnd)
 }
@@ -158,7 +161,7 @@ describe('D-2 gate: the login_chrome_css_script( call site is provably OUTSIDE a
 
   test('RED proof: a synthetic source where the CSS call is nested INSIDE a macOS block fails the "depth 1" half', () => {
     const synthetic = [
-      '"humble_login_open" => {',
+      'RustInvokeChannel::HumbleLoginOpen => {',
       '    if visible {',
       '        #[cfg(target_os = "macos")]',
       '        {',
@@ -166,7 +169,7 @@ describe('D-2 gate: the login_chrome_css_script( call site is provably OUTSIDE a
       '        }',
       '    }',
       '}',
-      '"humble_login_cookies" => {}',
+      'RustInvokeChannel::HumbleLoginCookies => {}',
       'mod tests {'
     ].join('\n')
     const code = productionCode(loadMainRsCode(synthetic))
@@ -178,13 +181,13 @@ describe('D-2 gate: the login_chrome_css_script( call site is provably OUTSIDE a
 
   test('RED proof: a synthetic source where the CSS call gained its OWN cfg attribute fails the "no cfg above" half', () => {
     const synthetic = [
-      '"humble_login_open" => {',
+      'RustInvokeChannel::HumbleLoginOpen => {',
       '    if visible {',
       '        #[cfg(target_os = "macos")]',
       '        builder = builder.initialization_script(&login_chrome_css_script());',
       '    }',
       '}',
-      '"humble_login_cookies" => {}',
+      'RustInvokeChannel::HumbleLoginCookies => {}',
       'mod tests {'
     ].join('\n')
     const code = productionCode(loadMainRsCode(synthetic))
