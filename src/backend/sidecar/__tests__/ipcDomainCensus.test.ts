@@ -17,40 +17,23 @@
  */
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
+import {
+  IPC_DIR,
+  KINDS,
+  parseDomainFile,
+  sharedConstants,
+  domainSources,
+  type DomainPart,
+  type Kind
+} from 'backend/testUtils/ipcDomainParse'
 
 const SIDECAR_DIR = join(__dirname, '..')
-const IPC_DIR = join(__dirname, '..', '..', '..', 'common', 'types', 'ipc')
-const TRANSPORT = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'common',
-  'types',
-  'sidecarTransport.ts'
-)
 
-const KINDS = ['Sync', 'TestSync', 'Async', 'FrontendMessages'] as const
-type Kind = (typeof KINDS)[number]
 const UMBRELLA: Record<Kind, string> = {
   Sync: 'SyncIPCFunctions',
   TestSync: 'TestSyncIPCFunctions',
   Async: 'AsyncIPCFunctions',
   FrontendMessages: 'FrontendMessages'
-}
-
-// TestSync must be tested before Sync: `FooTestSync` also ends in `Sync`.
-const DETECT_ORDER: readonly Kind[] = [
-  'TestSync',
-  'FrontendMessages',
-  'Async',
-  'Sync'
-]
-
-interface DomainPart {
-  name: string
-  kind: Kind
-  keys: string[]
 }
 
 // Phase 62 Plan 11 (2026-11-06): initial census, 65 channels. Key is `<Kind>:<channel>`, value is
@@ -125,34 +108,6 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   'FrontendMessages:message': 'appShell'
 }
 
-/** Interface blocks named `<Domain><Kind>` in a domain file, with their top-level member keys. */
-function parseDomainFile(source: string): DomainPart[] {
-  const parts: DomainPart[] = []
-  const re = /^export interface (\w+) \{\n([\s\S]*?)^\}/gm
-  let m: RegExpExecArray | null
-  while ((m = re.exec(source))) {
-    const name = m[1]
-    const kind = DETECT_ORDER.find((k) => name.endsWith(k))
-    if (!kind) continue
-    const keys: string[] = []
-    for (const line of m[2].split('\n')) {
-      const k = /^ {2}('[^']+'|[A-Za-z_]\w*)\??:/.exec(line)
-      if (k) keys.push(k[1].replace(/'/g, ''))
-    }
-    parts.push({ name, kind, keys })
-  }
-  return parts
-}
-
-function sharedConstants(): Record<string, string> {
-  const out: Record<string, string> = {}
-  const src = readFileSync(TRANSPORT, 'utf-8')
-  for (const m of src.matchAll(/export const ([A-Z][A-Z0-9_]*) = '([^']+)'/g)) {
-    out[m[1]] = m[2]
-  }
-  return out
-}
-
 /** Channels registered through ipcMain.handle / ipcMain.on (literal or shared constant). */
 function registeredChannels(
   source: string,
@@ -193,16 +148,6 @@ function duplicateDeclarations(
     }
   }
   return [...seen].filter(([, d]) => d.length > 1).map(([id]) => id)
-}
-
-function domainSources(): Record<string, string> {
-  const out: Record<string, string> = {}
-  for (const f of readdirSync(IPC_DIR).filter(
-    (f) => f.endsWith('.ts') && f !== 'index.ts'
-  )) {
-    out[f.replace(/\.ts$/, '')] = readFileSync(join(IPC_DIR, f), 'utf-8')
-  }
-  return out
 }
 
 function parsedDomains(): Record<string, DomainPart[]> {
@@ -283,6 +228,10 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // 60 Sync + 6 TestSync + 186 Async + 42 FrontendMessages, as at the Plan 11 split; +1 Async (EngineAsync) and +1 FrontendMessages
     // (EngineFrontendMessages) in Phase 61 Plan 13.
     expect(total).toBe(296)
+    // Floor (Phase 67): measured 296 at planning (Sync 60 + Async 188 + TestSync 6 + Frontend
+    // Messages 42); floor = measured - 6. A parse miss in either declaration form (interface or
+    // const-args) turns this red instead of silently shrinking the census.
+    expect(total).toBeGreaterThanOrEqual(290)
   })
 
   it('(d) the owner-less channel allowlist equals the computed set', () => {
@@ -305,6 +254,21 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     }
     expect(computed).toEqual(NO_REGISTRATION_OWNER)
     expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(65)
+  })
+
+  it('parseDomainFile reads the const-args conversion form', () => {
+    const parts = parseDomainFile(
+      "export const fooSyncArgs = {\n  bar: z.tuple([]),\n  'baz-q': z.tuple([])\n}\n"
+    )
+    expect(parts).toEqual([
+      { name: 'FooSync', kind: 'Sync', keys: ['bar', 'baz-q'] }
+    ])
+    const sat = parseDomainFile(
+      'export const fooTestSyncArgs = {\n  a: z.tuple([])\n} satisfies ArgsMap\n'
+    )
+    expect(sat).toEqual([
+      { name: 'FooTestSync', kind: 'TestSync', keys: ['a'] }
+    ])
   })
 
   it('near-miss: (a) fails for a registration of an undeclared channel', () => {
