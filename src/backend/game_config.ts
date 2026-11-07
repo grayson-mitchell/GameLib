@@ -6,7 +6,6 @@ import { logError, logInfo, LogPrefix } from 'backend/logger'
 import { join } from 'path'
 import { currentGameConfigVersion } from 'backend/constants/others'
 import { isMac, isWindows } from './constants/environment'
-import { isWritableEngineOverride } from 'backend/engine/engineConfig'
 import {
   configPath,
   sharedWinePrefix,
@@ -252,8 +251,7 @@ class GameConfigV0 extends GameConfig {
       afterLaunchScriptPath,
       gamescope,
       verboseLogs,
-      advertiseAvxForRosetta,
-      engineOverride: globalEngineOverride
+      advertiseAvxForRosetta
     } = GlobalConfig.get().getSettings()
 
     // initialize generic defaults
@@ -305,11 +303,9 @@ class GameConfigV0 extends GameConfig {
       // only set the `disableUMU` default value when getting settings for a new game
       // we want it to be `undefined` for games that were installed already
       defaultSettings.disableUMU = false
-      // Phase 61 (D-02, D-08): a brand-new game inherits the global engine key
-      // when one is set; existing game files are never given one.
-      if (isMac && isWritableEngineOverride(globalEngineOverride)) {
-        defaultSettings.engineOverride = globalEngineOverride
-      }
+      // CR-05: the engine key is never a game default. readEngineForGame derives a
+      // config-less game's engine and the install dialogs write it explicitly for
+      // new installs, so flushing defaults can never persist an engine.
     }
 
     if (!isWindows) {

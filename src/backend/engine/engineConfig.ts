@@ -180,6 +180,13 @@ export function resolveEffectiveEngine(
   return AUTOMATIC
 }
 
+/**
+ * CR-05: the single source of truth for a game's engine. The launch and the
+ * settings page's derived value (getGameEngineState.effectiveEngineId) both
+ * call this. A global Engine pick reaches games only through new installs
+ * (D-09, written explicitly by the install dialogs); an existing game with no
+ * engine key derives from its own or the inherited global wineVersion.
+ */
 export function readEngineForGame(
   args: { runner: string; appName: string },
   deps?: Partial<EngineConfigDeps>

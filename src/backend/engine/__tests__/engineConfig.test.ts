@@ -205,6 +205,30 @@ describe('readEngineForGame', () => {
       )
     ).toEqual({ kind: 'legacy', label: 'Custom' })
   })
+  it('CR-05: an existing config-less game does not inherit the global engine pick', () => {
+    put('G4', {})
+    expect(
+      readEngineForGame(
+        { runner: 'legendary', appName: 'G4' },
+        deps([release()], {
+          engineOverride: 'crossover',
+          wineVersion: wine({ type: 'toolkit' as never, name: 'GPTK' })
+        })
+      )
+    ).toMatchObject({ kind: 'legacy' })
+  })
+  it('CR-05: a config-less game on a CrossOver global wineVersion derives automatic', () => {
+    put('G5', {})
+    expect(
+      readEngineForGame(
+        { runner: 'legendary', appName: 'G5' },
+        deps([release()], {
+          engineOverride: 'crossover',
+          wineVersion: wine({ type: 'crossover' as never, name: 'CrossOver' })
+        })
+      )
+    ).toMatchObject({ id: 'automatic', source: 'derived' })
+  })
   it('never writes: bytes and mtime unchanged, missing file not created', () => {
     put('G3', { wineVersion: wine({ bin: currentBin }) })
     const p = join(dir, 'G3.json')

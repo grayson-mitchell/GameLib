@@ -145,20 +145,37 @@ describe('GameConfig first write (G17)', () => {
     })
   })
 
-  describe('Phase 61: engineOverride new-game default (D-02, D-08)', () => {
+  describe('Phase 61: engineOverride is never a game default (CR-05, D-08)', () => {
     afterEach(() => delete globalExtra.engineOverride)
 
-    it('a new game inherits the global key; an existing game does not', () => {
+    it('a config-less game has no engineOverride even with a global pick', async () => {
       writeFileSync(join(dir, 'config.json'), '{}')
       globalExtra.engineOverride = 'pinned:wine-staging-11.20'
-      expect(GameConfig.get('p61new').config.engineOverride).toBe(
-        'pinned:wine-staging-11.20'
-      )
-      writeFileSync(
-        join(dir, 'p61old.json'),
-        JSON.stringify({ p61old: {}, version: 'v0', explicit: true })
-      )
-      expect(GameConfig.get('p61old').config.engineOverride).toBeUndefined()
+      expect(GameConfig.get('p61new').config.engineOverride).toBeUndefined()
+      expect(
+        (await GameConfig.get('p61new').getSettings()).engineOverride
+      ).toBeUndefined()
+    })
+
+    it('an unrelated setSetting on a config-less game never writes engineOverride', () => {
+      writeFileSync(join(dir, 'config.json'), '{}')
+      globalExtra.engineOverride = 'pinned:wine-staging-11.20'
+      GameConfig.get('p61unrelated').setSetting('showFps', true)
+      const written = JSON.parse(
+        readFileSync(join(dir, 'p61unrelated.json'), 'utf-8')
+      )['p61unrelated']
+      expect(written.showFps).toBe(true)
+      expect('engineOverride' in written).toBe(false)
+    })
+
+    it('an Engine edit still writes engineOverride (D-08)', () => {
+      writeFileSync(join(dir, 'config.json'), '{}')
+      globalExtra.engineOverride = 'pinned:wine-staging-11.20'
+      GameConfig.get('p61edit').setSetting('engineOverride', 'crossover')
+      const written = JSON.parse(
+        readFileSync(join(dir, 'p61edit.json'), 'utf-8')
+      )['p61edit']
+      expect(written.engineOverride).toBe('crossover')
     })
 
     it('no global key leaves a new game without one', () => {
