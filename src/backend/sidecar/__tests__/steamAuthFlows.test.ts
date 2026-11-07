@@ -727,7 +727,8 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       expect(eligibleResponse?.error ?? '').not.toContain(
         UNPORTED_CHANNEL_MARKER
       )
-      expect(persistResponse?.ok).toBe(true)
+      // Phase 67: the empty payload is rejected at the boundary (ok:false), not by the seam.
+      expect(persistResponse?.ok).toBe(false)
       expect(persistResponse?.error ?? '').not.toContain(
         UNPORTED_CHANNEL_MARKER
       )
@@ -833,12 +834,8 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       const response = frames.find((frame) => frame.id === 'redeem-bad-store-1')
       expect(response).toMatchObject({
         id: 'redeem-bad-store-1',
-        ok: true,
-        result: {
-          store: 'steam',
-          outcome: 'error',
-          message: 'invalid-request'
-        }
+        ok: false,
+        error: expect.stringContaining('IPC_INVALID_ARGS')
       })
       expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
     })
@@ -855,12 +852,8 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       )
       expect(response).toMatchObject({
         id: 'redeem-bad-key-type-1',
-        ok: true,
-        result: {
-          store: 'steam',
-          outcome: 'error',
-          message: 'invalid-request'
-        }
+        ok: false,
+        error: expect.stringContaining('IPC_INVALID_ARGS')
       })
       expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
     })
@@ -875,12 +868,8 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       const response = frames.find((frame) => frame.id === 'redeem-empty-key-1')
       expect(response).toMatchObject({
         id: 'redeem-empty-key-1',
-        ok: true,
-        result: {
-          store: 'steam',
-          outcome: 'error',
-          message: 'invalid-request'
-        }
+        ok: false,
+        error: expect.stringContaining('IPC_INVALID_ARGS')
       })
       expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
     })
@@ -895,12 +884,8 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       )
       expect(response).toMatchObject({
         id: 'redeem-null-payload-1',
-        ok: true,
-        result: {
-          store: 'steam',
-          outcome: 'error',
-          message: 'invalid-request'
-        }
+        ok: false,
+        error: expect.stringContaining('IPC_INVALID_ARGS')
       })
       expect(jest.spyOn(SteamUser, 'redeemKey')).not.toHaveBeenCalled()
     })

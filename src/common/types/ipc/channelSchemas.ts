@@ -8,6 +8,7 @@ import { humbleLoginAsyncArgs, humbleLoginSyncArgs } from './humbleLogin'
 import { installAsyncArgs } from './install'
 import { oauthLoginAsyncArgs } from './oauthLogin'
 import { storeEmbedAsyncArgs, storeEmbedSyncArgs } from './storeEmbed'
+import { steamAuthAsyncArgs, steamAuthSyncArgs } from './steamAuth'
 import { runnerAuthAsyncArgs, runnerAuthSyncArgs } from './runnerAuth'
 import { wineToolsAsyncArgs, wineToolsFrontendMessagesArgs } from './wineTools'
 import { defineChannelEntries, type ChannelEntry } from './schemaTypes'
@@ -44,5 +45,7 @@ export const channelSchemas: Readonly<Record<string, ChannelEntry>> =
     defineChannelEntries('send', humbleLoginSyncArgs),
     defineChannelEntries('invoke', humbleLoginAsyncArgs),
     defineChannelEntries('send', storeEmbedSyncArgs),
-    defineChannelEntries('invoke', storeEmbedAsyncArgs)
+    defineChannelEntries('invoke', storeEmbedAsyncArgs),
+    defineChannelEntries('send', steamAuthSyncArgs),
+    defineChannelEntries('invoke', steamAuthAsyncArgs)
   )

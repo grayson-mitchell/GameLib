@@ -1,4 +1,5 @@
-import type { WineInstallation } from '../../types'
+import { z } from 'zod'
+
 import type {
   RedeemKeyResult,
   SteamBottleConfig,
@@ -11,128 +12,173 @@ import type {
   SteamUserData
 } from '../steam'
 
-export interface SteamAuthSync {
-  logoutSteam: () => void
+import {
+  nonEmptyString,
+  optionalArg,
+  wineInstallationArg,
+  type InvokeFns,
+  type SendFns
+} from './schemaTypes'
+
+const noArgs = z.tuple([])
+
+/** A Steam appId in the string form callers send (digits only, bounded). */
+function steamAppIdArg() {
+  return z.string().regex(/^\d{1,10}$/)
 }
 
-export interface SteamAuthAsync {
-  steamStartQR: () => Promise<{
+// SteamBridgeRouteReason, listed so a rename fails the drift guard below.
+const BRIDGE_ROUTE_REASONS = [
+  'seed',
+  'scan-clean',
+  'pending-scan',
+  'no-steam-api',
+  'user-forced-bridge',
+  'scan-miss',
+  'known-bad',
+  'win64-no-shim',
+  'user-forced-bottle',
+  'failed-this-session'
+] as const
+// Drift guard both ways: a reason added to or removed from the union fails tsc here.
+type ReasonListMatchesUnion =
+  SteamBridgeRouteReason extends (typeof BRIDGE_ROUTE_REASONS)[number]
+    ? (typeof BRIDGE_ROUTE_REASONS)[number] extends SteamBridgeRouteReason
+      ? true
+      : never
+    : never
+const reasonListMatchesUnion: ReasonListMatchesUnion = true
+void reasonListMatchesUnion
+
+export const steamAuthSyncArgs = {
+  logoutSteam: noArgs
+}
+
+export const steamAuthAsyncArgs = {
+  steamStartQR: noArgs,
+  steamPollQR: noArgs,
+  steamPollCredential: noArgs,
+  // Credentials are bounded only; their values never reach a log or a wire error (D-10).
+  steamStartCredentials: z.tuple([
+    z.strictObject({
+      username: nonEmptyString(64),
+      password: nonEmptyString(1024)
+    })
+  ]),
+  steamSubmitGuard: z.tuple([nonEmptyString(16)]),
+  redeemSteamKey: z.tuple([
+    z.strictObject({
+      store: z.literal('steam'),
+      key: nonEmptyString(64)
+    })
+  ]),
+  getSteamUserInfo: noArgs,
+  checkSteamInstalled: noArgs,
+  getSteamSyncedAt: noArgs,
+  getSteamInstallSize: z.tuple([steamAppIdArg()]),
+  // Phase 17 (17-04): provisions the dedicated Steam CrossOver bottle. Bottled-Steam auth
+  // stays opaque (D-04).
+  steamBottleProvision: z.tuple([
+    optionalArg(
+      z.strictObject({
+        bottleName: nonEmptyString(256).optional(),
+        wineVersion: wineInstallationArg().optional()
+      })
+    )
+  ]),
+  isSteamBottleProvisioned: noArgs,
+  steamBottleStatus: noArgs,
+  // Phase 34.13 (34.13-07): backend-authoritative bottle-eligibility verdict.
+  isSteamBottleEligible: z.tuple([nonEmptyString(64)]),
+  // Phase 51 Plan 03: composed bridge-vs-bottle route verdict for one game.
+  getSteamBridgeRoute: z.tuple([steamAppIdArg(), optionalArg(z.boolean())]),
+  // Phase 51 Plan 03: persists the user's own bridge/bottle override.
+  setSteamBridgeUserRoute: z.tuple([
+    z.strictObject({
+      appId: steamAppIdArg(),
+      userRoute: z.enum(['bottle', 'bridge']).nullable(),
+      acknowledgeReason: z.enum(BRIDGE_ROUTE_REASONS).optional()
+    })
+  ]),
+  // quick-260821-le0: sweeps every recorded install root for a Steam title.
+  steamRemoveAllCopies: z.tuple([nonEmptyString(64)]),
+  // Phase 54: sidecar-only guided Go Offline step.
+  steamGoOfflineRetry: noArgs,
+  steamGoOfflineCancel: noArgs,
+  // Phase 58 Plan 31: sidecar-only friend picker channels.
+  steamBridgeListFriends: z.tuple([steamAppIdArg()]),
+  steamBridgeInviteFriend: z.tuple([
+    steamAppIdArg(),
+    z.number().int().nonnegative()
+  ]),
+  // Phase 34.13 (34.13-07), D-14: persists the install form's chosen wine engine.
+  persistBottleWineVersion: z.tuple([wineInstallationArg()]),
+  // Phase 21 (21-10), D-10: guided native Steam client install.
+  steamClientSetupStart: noArgs,
+  // Phase 21 (21-10), D-10/D-11: re-checks ensureSteamClientReady(appId).
+  steamClientSetupRecheck: z.tuple([nonEmptyString(64)])
+}
+
+interface SteamAuthAsyncReturns {
+  steamStartQR: Promise<{
     status: 'done' | 'error'
     challengeUrl?: string
   }>
-  steamPollQR: () => Promise<{
+  steamPollQR: Promise<{
     status: 'done' | 'waiting' | 'error'
     username?: string
   }>
-  steamPollCredential: () => Promise<{
+  steamPollCredential: Promise<{
     status: 'done' | 'waiting' | 'error'
     username?: string
   }>
-  steamStartCredentials: (credentials: {
-    username: string
-    password: string
-  }) => Promise<{ status: 'done' | 'guard_required' | 'error' }>
-  steamSubmitGuard: (code: string) => Promise<{ status: 'done' | 'error' }>
-  redeemSteamKey: (payload: {
-    store: 'steam'
-    key: string
-  }) => Promise<RedeemKeyResult>
-  getSteamUserInfo: () => Promise<SteamUserData | undefined>
-  checkSteamInstalled: () => Promise<boolean>
-  getSteamSyncedAt: () => Promise<number | null>
-  getSteamInstallSize: (appId: string) => Promise<string>
-  // Phase 17 (17-04): provisions the dedicated Steam CrossOver bottle
-  // (create via the locked cxbottle mechanism, fetch + non-silently run
-  // SteamSetup.exe, D-02). Bottled-Steam auth stays opaque (D-04) — this
-  // never inspects loginusers.vdf/sentry.
-  steamBottleProvision: (args?: {
-    bottleName?: string
-    wineVersion?: WineInstallation
-  }) => Promise<{
+  steamStartCredentials: Promise<{
+    status: 'done' | 'guard_required' | 'error'
+  }>
+  steamSubmitGuard: Promise<{ status: 'done' | 'error' }>
+  redeemSteamKey: Promise<RedeemKeyResult>
+  getSteamUserInfo: Promise<SteamUserData | undefined>
+  checkSteamInstalled: Promise<boolean>
+  getSteamSyncedAt: Promise<number | null>
+  getSteamInstallSize: Promise<string>
+  steamBottleProvision: Promise<{
     status: 'done' | 'error'
     error?: string
     errorCode?: 'crossover-missing'
   }>
-  isSteamBottleProvisioned: () => Promise<boolean>
-  steamBottleStatus: () => Promise<
+  isSteamBottleProvisioned: Promise<boolean>
+  steamBottleStatus: Promise<
     Pick<SteamBottleConfig, 'provisioned' | 'bottleName'>
   >
-  // Phase 34.13 (34.13-07), D-09/D-15 (exposure half): backend-authoritative
-  // bottle-eligibility verdict for the install-form's wine section, carrying
-  // the PERSISTED wineVersion/bottleName (undefined when nothing was ever
-  // persisted — see installFormIpc.ts's own doc comment for why this never
-  // delegates to getSteamBottleSettings()). Registered on BOTH runtimes.
-  isSteamBottleEligible: (
-    appName: string
-  ) => Promise<SteamBottleEligibilityVerdict>
-  // Phase 51 Plan 03 (D-51-07/08/09/10/11): the composed bridge-vs-bottle
-  // route verdict for a single game, resolved by 51-07's pure resolver and
-  // read here by 51-09's backend. See SteamBridgeRouteVerdict's own doc
-  // comment (common/types/steam.ts) for the full field contract.
-  getSteamBridgeRoute: (
-    appId: string,
-    windowsBuildChosen?: boolean
-  ) => Promise<SteamBridgeRouteVerdict>
-  // Phase 51 Plan 03 (D-51-10/11): persists the user's own bridge/bottle
-  // override (D-51-10's install-dialog toggle, D-51-11's "Try the bridge
-  // anyway" button) beside the scan verdict, via 51-09's bridgeVerdict.ts
-  // writer. `acknowledgeReason` is set when the override is a response to a
-  // specific dialog (e.g. a known-bad acknowledgement) so the backend can
-  // record which notice/dialog state the user was shown; omitted for a
-  // plain toggle flip.
-  setSteamBridgeUserRoute: (args: {
-    appId: string
-    userRoute: 'bottle' | 'bridge' | null
-    acknowledgeReason?: SteamBridgeRouteReason
-  }) => Promise<{ ok: boolean; error?: string }>
-  // quick-260821-le0 (Task 3): sweeps EVERY recorded install root for a
-  // Steam title in one action — see removeAllCopies.ts's own doc comment.
-  // Registered on BOTH runtimes.
-  steamRemoveAllCopies: (appName: string) => Promise<{
+  isSteamBottleEligible: Promise<SteamBottleEligibilityVerdict>
+  getSteamBridgeRoute: Promise<SteamBridgeRouteVerdict>
+  setSteamBridgeUserRoute: Promise<{ ok: boolean; error?: string }>
+  steamRemoveAllCopies: Promise<{
     removed: number
     refused: number
     error?: string
   }>
-  // Phase 54: sidecar-only, registered by plan 07. The renderer's Continue
-  // button on the guided Go Offline step; arms the one-shot guided restore.
-  steamGoOfflineRetry: () => Promise<SteamGoOfflineRetryResult>
-  // 54-REVIEW WR-05: sidecar-only. The guided Go Offline step's Cancel/close;
-  // pays the goonline a ready-but-abandoned guided step owes.
-  steamGoOfflineCancel: () => Promise<void>
-  // Phase 58 Plan 31 (M-01 Direction A): sidecar-only friend picker channels.
-  steamBridgeListFriends: (appId: string) => Promise<BridgeListFriendsResult>
-  steamBridgeInviteFriend: (
-    appId: string,
-    ordinal: number
-  ) => Promise<BridgeInviteResult>
-  // Phase 34.13 (34.13-07), D-14: persists the install form's chosen wine
-  // engine into steamBottleConfigStore via bottle.ts's own
-  // persistBottleWineVersion() primitive, after validating the untrusted
-  // renderer payload. Return shape reused verbatim from steamBottleProvision.
-  // Registered on BOTH runtimes.
-  persistBottleWineVersion: (
-    wineVersion: WineInstallation
-  ) => Promise<{ status: 'done' | 'error'; error?: string }>
-  // Phase 21 (21-10), D-10: on user consent, downloads + non-silently runs
-  // (Win/macOS) or link-opens (Linux) the official native Steam client
-  // installer. See clientSetup.ts's startGuidedClientInstall.
-  steamClientSetupStart: () => Promise<{
+  steamGoOfflineRetry: Promise<SteamGoOfflineRetryResult>
+  steamGoOfflineCancel: Promise<void>
+  steamBridgeListFriends: Promise<BridgeListFriendsResult>
+  steamBridgeInviteFriend: Promise<BridgeInviteResult>
+  persistBottleWineVersion: Promise<{
+    status: 'done' | 'error'
+    error?: string
+  }>
+  steamClientSetupStart: Promise<{
     status: 'started' | 'link-opened' | 'error'
     error?: string
   }>
-  // Phase 21 (21-10), D-10/D-11: re-checks ensureSteamClientReady(appId)
-  // after the user has acted (finished the guided install, or launched
-  // Steam once) — the frontend polls/re-checks this to know when to retry
-  // the install. appId is guarded server-side (T-21-05) inside
-  // ensureSteamClientReady itself, the single seam both this handler and
-  // SteamGame.install() go through. Also called once by
-  // startSteamQuickInstall on a library-missing verdict (D-UAT-15), so the
-  // backend push opens client setup before any library notice. Console
-  // Mode's probeSteamQuickInstallTarget calls it once on the same verdict
-  // (quick 261102-pgy); its card hands setup off to desktop mode.
-  steamClientSetupRecheck: (appId: string) => Promise<{
+  steamClientSetupRecheck: Promise<{
     status: 'ready' | 'needs-install' | 'needs-launch'
     ready: boolean
     error?: string
   }>
 }
+
+export type SteamAuthSync = SendFns<typeof steamAuthSyncArgs>
+export type SteamAuthAsync = InvokeFns<
+  typeof steamAuthAsyncArgs,
+  SteamAuthAsyncReturns
+>
