@@ -108,6 +108,7 @@ jest.mock('../../NavItem', () => ({
 import FilterFacetGroup, { FilterFacetRow } from '../../FilterFacetGroup'
 import NavItem from '../../NavItem'
 import FilterFocusRow from '../index'
+import { at } from '../../../../../__tests__/fixtures/indexed'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -266,7 +267,7 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
     const rows = collectElements(render()).filter(isRow)
     const active = rows.filter((el) => el.props.active === true)
     expect(active).toHaveLength(1)
-    expect(active[0].props.label).toBe('GOG')
+    expect(at(active, 0).props.label).toBe('GOG')
     expect(rowByLabel(render(), 'All games').props.active).toBe(false)
   })
 

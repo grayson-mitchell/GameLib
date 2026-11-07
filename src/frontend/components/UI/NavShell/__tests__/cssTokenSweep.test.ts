@@ -84,6 +84,7 @@ import { execFileSync } from 'child_process'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { defined } from '../../../__tests__/fixtures/indexed'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..')
 
@@ -135,8 +136,10 @@ const declaredNames = (): Set<string> => {
     DECL_EXTENSIONS.includes(ext(f))
   )) {
     const source = read(file)
-    for (const [, name] of source.matchAll(DECLARATION)) declared.add(name)
-    for (const [, name] of source.matchAll(SET_PROPERTY)) declared.add(name)
+    for (const [, name] of source.matchAll(DECLARATION))
+      declared.add(defined(name))
+    for (const [, name] of source.matchAll(SET_PROPERTY))
+      declared.add(defined(name))
   }
   return declared
 }
@@ -157,7 +160,8 @@ const undefinedReferences = (): Map<string, string[]> => {
 
   for (const file of tracked().filter((f) => REF_EXTENSIONS.includes(ext(f)))) {
     const names = new Set<string>()
-    for (const [, name] of read(file).matchAll(REFERENCE)) {
+    for (const [, rawName] of read(file).matchAll(REFERENCE)) {
+      const name = defined(rawName)
       if (!declared.has(name)) names.add(name)
     }
     if (names.size === 0) continue

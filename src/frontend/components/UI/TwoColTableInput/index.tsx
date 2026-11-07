@@ -75,7 +75,7 @@ export function TableInput({
       newVarName.includes(connector) &&
       !newVarValue
     ) {
-      const [key, value] = newVarName.split(connector)
+      const [key = '', value = ''] = newVarName.split(connector)
       setNewVarName(key)
       setNewVarValue(value)
     } else {
@@ -103,11 +103,9 @@ export function TableInput({
     }
 
     // update already added envs
-    const index = rowData.findIndex(
-      (entry: ColumnProps) => entry.key === row.key
-    )
-    if (index >= 0) {
-      rowData[index].value = row.value
+    const existing = rowData.find((entry: ColumnProps) => entry.key === row.key)
+    if (existing) {
+      existing.value = row.value
     } else {
       rowData.push(row)
     }

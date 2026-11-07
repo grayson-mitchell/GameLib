@@ -20,6 +20,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { ReactElement, ReactNode } from 'react'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 // Hoisted so each real source-gate prohibition below and its SANITY
 // counter-check consume the exact same detector -- a counter-check with its
@@ -265,7 +266,7 @@ describe('NavTabs', () => {
     })
 
     const tabs = tabsOf(callNavTabs())
-    const gamesTab = tabs[1]
+    const gamesTab = at(tabs, 1)
     await (gamesTab.props.onClick as () => Promise<void>)()
 
     expect(refreshLibrary).toHaveBeenCalledWith({
@@ -282,7 +283,7 @@ describe('NavTabs', () => {
     })
 
     const tabs = tabsOf(callNavTabs())
-    const gamesTab = tabs[1]
+    const gamesTab = at(tabs, 1)
     await (gamesTab.props.onClick as () => Promise<void>)()
 
     expect(refreshLibrary).not.toHaveBeenCalled()
@@ -293,7 +294,7 @@ describe('NavTabs', () => {
     contextValue = makeContextValue({ refreshLibrary })
 
     const tabs = tabsOf(callNavTabs())
-    const gamesTab = tabs[1]
+    const gamesTab = at(tabs, 1)
     await (gamesTab.props.onClick as () => Promise<void>)()
 
     expect(refreshLibrary).not.toHaveBeenCalled()
@@ -481,7 +482,7 @@ describe('NavTabs session tab memory', () => {
     const state = { gameInfo: { app_name: '620' } }
     rememberTabLocation({ pathname: '/gamepage/steam/620', search: '', state })
     pathname = '/store/epic'
-    const games = tabsOf(callNavTabs())[1]
+    const games = at(tabsOf(callNavTabs()), 1)
     expect(games.props.to).toBe('/gamepage/steam/620')
     expect(games.props.state).toBe(state)
   })
@@ -492,7 +493,7 @@ describe('NavTabs session tab memory', () => {
       state: { gameInfo: {} }
     })
     pathname = '/gamepage/steam/620'
-    const games = tabsOf(callNavTabs())[1]
+    const games = at(tabsOf(callNavTabs()), 1)
     expect(games.props.to).toBe('/')
     expect(games.props.state).toBeUndefined()
   })

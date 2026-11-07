@@ -105,7 +105,10 @@ export default function Header({ list, totalGames }: Props) {
   // Quick 261029-riq item 4: the sort field picker is a themed Dropdown, not a
   // native <select> (whose popup is OS-drawn). Rows are literal t() call sites
   // in LIBRARY_SORT_FIELDS order (name, lastPlayed, installSize, metacritic).
-  const sortRows: Array<{ value: LibrarySortField; label: string }> = [
+  const sortRows: [
+    { value: LibrarySortField; label: string },
+    ...Array<{ value: LibrarySortField; label: string }>
+  ] = [
     {
       value: 'name',
       label: tGamelib('gamelib:library.sort.field.name', 'Name')
@@ -127,7 +130,10 @@ export default function Header({ list, totalGames }: Props) {
     sortRows.find((row) => row.value === sortField) ?? sortRows[0]
   // Quick 261029-uas: Group by is back, as the same themed Dropdown as Sort by.
   // Literal t() call sites in LIBRARY_GROUP_BYS order.
-  const groupByRows: Array<{ value: LibraryGroupBy; label: string }> = [
+  const groupByRows: [
+    { value: LibraryGroupBy; label: string },
+    ...Array<{ value: LibraryGroupBy; label: string }>
+  ] = [
     {
       value: 'none',
       label: tGamelib('gamelib:library.groupBy.none', 'None')

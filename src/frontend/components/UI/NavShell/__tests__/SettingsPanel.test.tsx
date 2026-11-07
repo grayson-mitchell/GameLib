@@ -146,6 +146,7 @@ jest.mock('../components/QuitButton', () => ({
 import NavItem from '../components/NavItem'
 import QuitButton from '../components/QuitButton'
 import SettingsPanel from '../components/SettingsPanel'
+import { at } from '../../../__tests__/fixtures/indexed'
 import {
   faBookOpen,
   faBug,
@@ -252,7 +253,7 @@ describe('SettingsPanel', () => {
     expect(labels).not.toContain('Console Mode')
 
     const children = topLevelChildren(tree)
-    expect(children[children.length - 1].type).toBe(QuitButton)
+    expect(at(children, -1).type).toBe(QuitButton)
   })
 
   function separatorChecks(children: AnyElement[]) {
@@ -263,13 +264,14 @@ describe('SettingsPanel', () => {
         c.props.className === 'NavShell__tier2Divider'
     )
     expect(seps).toHaveLength(1)
-    const i = children.indexOf(seps[0])
-    expect(children[i - 1].type).toBe(NavItem)
-    expect(children[i - 1].props.label).toBe('System Information')
-    expect(children[i + 1].type).toBe(NavItem)
-    expect(children[i + 1].props.label).toBe('Report a problem')
-    expect(seps[0].props).not.toHaveProperty('tabIndex')
-    expect(seps[0].props).not.toHaveProperty('onClick')
+    const sep = at(seps, 0)
+    const i = children.indexOf(sep)
+    expect(at(children, i - 1).type).toBe(NavItem)
+    expect(at(children, i - 1).props.label).toBe('System Information')
+    expect(at(children, i + 1).type).toBe(NavItem)
+    expect(at(children, i + 1).props.label).toBe('Report a problem')
+    expect(sep.props).not.toHaveProperty('tabIndex')
+    expect(sep.props).not.toHaveProperty('onClick')
   }
 
   it('places a separator between System Information and Report a problem', () => {
@@ -401,7 +403,7 @@ describe('SettingsPanel', () => {
     const tree = SettingsPanel() as unknown as ReactElement
     const children = topLevelChildren(tree)
 
-    expect(children[children.length - 1].type).toBe(QuitButton)
+    expect(at(children, -1).type).toBe(QuitButton)
   })
 
   describe('D-05 tour anchors', () => {
@@ -481,8 +483,8 @@ describe('SettingsPanel', () => {
       expect(startTourMock).toHaveBeenCalledTimes(1)
       expect(startTourMock).toHaveBeenCalledWith('nav-tour')
 
-      const resetOrder = resetTourMock.mock.invocationCallOrder[0]
-      const startOrder = startTourMock.mock.invocationCallOrder[0]
+      const resetOrder = at(resetTourMock.mock.invocationCallOrder, 0)
+      const startOrder = at(startTourMock.mock.invocationCallOrder, 0)
       expect(resetOrder).toBeLessThan(startOrder)
     })
   })

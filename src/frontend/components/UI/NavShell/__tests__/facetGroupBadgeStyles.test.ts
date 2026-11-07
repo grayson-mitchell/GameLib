@@ -37,6 +37,7 @@
  */
 import { join } from 'path'
 import * as sass from 'sass'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 const STYLESHEET_PATH = join(
   __dirname,
@@ -97,7 +98,7 @@ function ruleFor(rules: EmittedRule[], className: string): EmittedRule {
   // Bare-modifier / pseudo-class variants would also match; take the base
   // rule, i.e. the one with no pseudo-class in its prelude.
   const base = matches.find((rule) => !rule.selector.includes(':'))
-  return base ?? matches[0]
+  return base ?? at(matches, 0)
 }
 
 // The highest class count Dropdown/index.scss can bring to bear on an

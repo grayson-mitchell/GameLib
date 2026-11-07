@@ -62,6 +62,7 @@ import {
   useSuppressStoreEmbed,
   type StoreEmbedSuppressionValue
 } from '../StoreEmbedSuppressionContext'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 type Harness = {
   __setContextValue: (value: StoreEmbedSuppressionValue) => void
@@ -191,7 +192,7 @@ describe('defaultSuppressionValue (T-40-06-03: consumer outside the provider)', 
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
     defaultSuppressionValue.acquire()
     expect(warnSpy).toHaveBeenCalledTimes(1)
-    expect(warnSpy.mock.calls[0][0]).toEqual(
+    expect(at(at(warnSpy.mock.calls, 0), 0)).toEqual(
       expect.stringContaining('outside <StoreEmbedSuppressionProvider>')
     )
   })

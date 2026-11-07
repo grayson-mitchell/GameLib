@@ -34,7 +34,7 @@ export default function Anticheat({ anticheatInfo }: Props) {
 
   const onLastReferenceClick = (event: MouseEvent) => {
     event.preventDefault()
-    createNewWindow(latestUpdate)
+    if (latestUpdate) createNewWindow(latestUpdate)
   }
 
   const onAWACYClick = (event: MouseEvent) => {

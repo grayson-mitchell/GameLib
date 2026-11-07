@@ -35,6 +35,7 @@ jest.mock('frontend/state/SteamBridgeInvite', () => ({
 }))
 
 import SteamBridgeInviteDialog from '../index'
+import { at, defined } from '../../../__tests__/fixtures/indexed'
 
 type El = ReactElement<{ children?: ReactNode; [k: string]: unknown }>
 
@@ -121,7 +122,7 @@ describe('SteamBridgeInviteDialog', () => {
       (e) => text(e.props.children) === 'Invite'
     )
     expect(b.map((e) => e.props.disabled)).toEqual([false, true])
-    ;(b[0].props.onClick as () => void)()
+    ;(at(b, 0).props.onClick as () => void)()
     expect(s.invite).toHaveBeenCalledWith(1)
   })
 
@@ -132,7 +133,7 @@ describe('SteamBridgeInviteDialog', () => {
     const b = buttons(SteamBridgeInviteDialog()).filter(
       (e) => text(e.props.children) === 'Invite'
     )
-    expect(b[0].props.disabled).toBe(true)
+    expect(at(b, 0).props.disabled).toBe(true)
     mockStore.mockReturnValue(state({ rows: { 1: 'expired' } }))
     out = text(SteamBridgeInviteDialog())
     expect(out).toContain("Press the game's invite button again, then retry")
@@ -166,7 +167,7 @@ describe('SteamBridgeInviteDialog', () => {
       effects.length = 0
       mockStore.mockReturnValue(state(over))
       SteamBridgeInviteDialog()
-      return effects[0]
+      return at(effects, 0)
     }
 
     it('acks once when visible', () => {
@@ -186,7 +187,7 @@ describe('SteamBridgeInviteDialog', () => {
       render({ ackId: 'a1' }).fn()
       expect(dialogDisplayed).not.toHaveBeenCalled()
       fakeDoc.visibilityState = 'visible'
-      docListeners.visibilitychange()
+      defined(docListeners.visibilitychange)()
       expect(dialogDisplayed).toHaveBeenCalledTimes(1)
       expect(dialogDisplayed).toHaveBeenCalledWith('a1')
     })

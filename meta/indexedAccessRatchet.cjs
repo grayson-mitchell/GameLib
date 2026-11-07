@@ -75,7 +75,8 @@ const ADOPTED_BUCKETS = [
   'src/backend/shortcuts',
   'src/backend/tools',
   'src/frontend/helpers',
-  'src/backend/sidecar'
+  'src/backend/sidecar',
+  'src/frontend/components'
 ]
 
 /**

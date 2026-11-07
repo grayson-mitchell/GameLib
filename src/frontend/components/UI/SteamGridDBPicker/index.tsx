@@ -121,8 +121,9 @@ export default function SteamGridDBPicker({
       }
       const results = result.value
       setGames(results)
-      if (results.length === 1) {
-        void handleSelectGame(results[0].id)
+      const [only] = results
+      if (results.length === 1 && only) {
+        void handleSelectGame(only.id)
       } else if (results.length === 0) {
         setError(t('steamgriddb.error.no-games', 'No games found.'))
       }

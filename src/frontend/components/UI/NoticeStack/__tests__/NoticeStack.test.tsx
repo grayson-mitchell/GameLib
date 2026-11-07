@@ -18,6 +18,7 @@ jest.mock('frontend/components/UI/HumbleExpiryToast', () => ({
 import SteamEngineLaunchNotice from 'frontend/components/UI/SteamEngineLaunchNotice'
 import HumbleExpiryToast from 'frontend/components/UI/HumbleExpiryToast'
 import NoticeStack, { AppNoticeStack } from '../index'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 describe('NoticeStack', () => {
   it('AppNoticeStack renders Steam first and Humble last inside one region', () => {
@@ -25,8 +26,8 @@ describe('NoticeStack', () => {
     expect(root.type).toBe(NoticeStack)
     const kids = root.props.children
     expect(kids).toHaveLength(2)
-    expect(kids[0].type).toBe(SteamEngineLaunchNotice)
-    expect(kids[1].type).toBe(HumbleExpiryToast)
+    expect(at(kids, 0).type).toBe(SteamEngineLaunchNotice)
+    expect(at(kids, 1).type).toBe(HumbleExpiryToast)
   })
 
   it('NoticeStack renders its children in a single .noticeStack div', () => {

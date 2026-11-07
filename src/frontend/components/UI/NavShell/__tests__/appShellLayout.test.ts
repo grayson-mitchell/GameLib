@@ -30,6 +30,7 @@
 import { readFileSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { defined } from '../../../__tests__/fixtures/indexed'
 
 const FRONTEND_ROOT = join(__dirname, '..', '..', '..', '..')
 
@@ -567,7 +568,7 @@ describe('App.tsx D-06 reversal: the two macOS booleans are pinned distinct (34.
     const negatedMacIdentifiers = [
       ...showOverlayControlsExpr.matchAll(/!([A-Za-z_$][\w$]*)/g)
     ]
-      .map((m) => m[1])
+      .map((m) => defined(m[1]))
       .filter((id) => /mac/i.test(id))
     expect(negatedMacIdentifiers.length).toBeGreaterThan(0)
 
@@ -611,7 +612,7 @@ describe('App.tsx D-06 reversal: the two macOS booleans are pinned distinct (34.
     const negatedMacIdentifiers = [
       ...(showOverlayControlsMatch?.[1] ?? '').matchAll(/!([A-Za-z_$][\w$]*)/g)
     ]
-      .map((m) => m[1])
+      .map((m) => defined(m[1]))
       .filter((id) => /mac/i.test(id))
     // In the collapsed fixture the two ARE the same identifier -- the real
     // gate above must reject this shape, and here it does.

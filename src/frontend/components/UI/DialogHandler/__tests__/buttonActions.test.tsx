@@ -132,6 +132,7 @@ jest.mock('react', () => {
 // Imported after the mocks above (textual order, not hoisting -- ts-jest does not
 // hoist jest.mock; see removeEosOverlayConfirmation.test.tsx for the same convention).
 import DialogHandler from '../index'
+import { at, defined } from '../../../__tests__/fixtures/indexed'
 
 function mount(): void {
   capturedOnMessage = undefined
@@ -157,8 +158,8 @@ describe('DialogHandler: resolveButtonAction (260919-sch)', () => {
     mount()
     emit([{ text: 'skip', action: 'vcRuntimeSkip' }])
 
-    const options = mockShowDialogModal.mock.calls[0][0]
-    options.buttons[0].onClick!()
+    const options = at(at(mockShowDialogModal.mock.calls, 0), 0)
+    defined(at(options.buttons, 0).onClick)()
 
     expect(mockConfigStoreSet).toHaveBeenCalledTimes(1)
     expect(mockConfigStoreSet).toHaveBeenCalledWith('skipVcRuntime', true)
@@ -168,8 +169,8 @@ describe('DialogHandler: resolveButtonAction (260919-sch)', () => {
     mount()
     emit([{ text: 'suppress', action: 'snapWarningSuppress' }])
 
-    const options = mockShowDialogModal.mock.calls[0][0]
-    options.buttons[0].onClick!()
+    const options = at(at(mockShowDialogModal.mock.calls, 0), 0)
+    defined(at(options.buttons, 0).onClick)()
 
     expect(mockConfigStoreSet).toHaveBeenCalledTimes(1)
     expect(mockConfigStoreSet).toHaveBeenCalledWith('showSnapWarning', false)
@@ -179,8 +180,8 @@ describe('DialogHandler: resolveButtonAction (260919-sch)', () => {
     mount()
     emit([{ text: 'download', action: 'vcRuntimeDownload' }])
 
-    const firstCallOptions = mockShowDialogModal.mock.calls[0][0]
-    firstCallOptions.buttons[0].onClick!()
+    const firstCallOptions = at(at(mockShowDialogModal.mock.calls, 0), 0)
+    defined(at(firstCallOptions.buttons, 0).onClick)()
 
     expect(mockOpenExternalUrl).toHaveBeenCalledTimes(2)
     expect(mockOpenExternalUrl).toHaveBeenNthCalledWith(
@@ -195,7 +196,7 @@ describe('DialogHandler: resolveButtonAction (260919-sch)', () => {
     // showDialogModal's first call rendered the original dialog carrying this
     // button; the second is the follow-up info box the onClick handler raises.
     expect(mockShowDialogModal).toHaveBeenCalledTimes(2)
-    const followUp = mockShowDialogModal.mock.calls[1][0]
+    const followUp = at(at(mockShowDialogModal.mock.calls, 1), 0)
     expect(followUp.type).toBe('MESSAGE')
     expect(followUp.buttons).toHaveLength(1)
   })
@@ -204,9 +205,9 @@ describe('DialogHandler: resolveButtonAction (260919-sch)', () => {
     mount()
     emit([{ text: 'sign in', action: 'steamSignIn' }])
 
-    const options = mockShowDialogModal.mock.calls[0][0]
-    expect(options.buttons[0].onClick).toBeDefined()
-    options.buttons[0].onClick!()
+    const options = at(at(mockShowDialogModal.mock.calls, 0), 0)
+    expect(at(options.buttons, 0).onClick).toBeDefined()
+    defined(at(options.buttons, 0).onClick)()
 
     expect(mockNavigate).toHaveBeenCalledWith('/login')
   })
@@ -215,7 +216,7 @@ describe('DialogHandler: resolveButtonAction (260919-sch)', () => {
     mount()
     emit([{ text: 'plain' }])
 
-    const options = mockShowDialogModal.mock.calls[0][0]
-    expect(options.buttons[0].onClick).toBeUndefined()
+    const options = at(at(mockShowDialogModal.mock.calls, 0), 0)
+    expect(at(options.buttons, 0).onClick).toBeUndefined()
   })
 })

@@ -72,7 +72,7 @@ export default function FilterStoreFacet() {
           label={
             isStore(value, 'sideload')
               ? tGamelib('gamelib:library.storeOther', 'Other')
-              : RunnerToStore[value]
+              : (RunnerToStore[value] ?? value)
           }
           count={countForStore(value)}
           checked={storeFacet.includes(value)}

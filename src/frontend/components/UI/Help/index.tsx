@@ -39,10 +39,10 @@ export default function Help({ items }: Props) {
         // @ts-ignore, this feature is new and not yet typed
         popover="manual"
       >
-        {Object.keys(items).map((key) => (
+        {Object.entries(items).map(([key, item]) => (
           <details key={key}>
-            <summary>{items[key]['title']}</summary>
-            {items[key]['content']}
+            <summary>{item['title']}</summary>
+            {item['content']}
           </details>
         ))}
       </div>

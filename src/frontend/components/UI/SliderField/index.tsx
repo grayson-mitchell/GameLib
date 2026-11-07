@@ -80,7 +80,8 @@ export default function SliderField({
         onChange={(_event, value) => {
           if (!onChange) return
 
-          onChange(Array.isArray(value) ? value[0] : value)
+          const next = Array.isArray(value) ? value[0] : value
+          if (next !== undefined) onChange(next)
         }}
         disabled={disabled}
       />

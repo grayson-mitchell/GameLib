@@ -115,6 +115,7 @@ const gamepadAction = jest.fn()
 // Imported after the mocks above (textual order -- this project's ts-jest
 // setup does not hoist jest.mock like babel-jest).
 import Dropdown from '../index'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 type HookHarness = {
   __beginRender: () => void
@@ -152,11 +153,11 @@ function reinvoke(): AnyElement {
 }
 
 function button(tree: AnyElement): AnyElement {
-  return (tree.props.children as AnyElement[])[0]
+  return at(tree.props.children as AnyElement[], 0)
 }
 
 function panel(tree: AnyElement): AnyElement {
-  return (tree.props.children as AnyElement[])[1]
+  return at(tree.props.children as AnyElement[], 1)
 }
 
 describe('Dropdown disclosure behaviour', () => {

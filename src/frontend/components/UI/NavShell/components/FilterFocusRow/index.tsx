@@ -135,7 +135,7 @@ export default function FilterFocusRow() {
   const storeLabel = (value: StoreFacetValue) =>
     isStore(value, 'sideload')
       ? tGamelib('gamelib:library.storeOther', 'Other')
-      : RunnerToStore[value]
+      : (RunnerToStore[value] ?? value)
 
   const row = (kind: FocusRowKind, value: string, label: string) => (
     <NavItem

@@ -44,6 +44,7 @@
 import { readFileSync, readdirSync, statSync } from 'fs'
 import { join, relative } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { defined } from '../../../__tests__/fixtures/indexed'
 
 const FRONTEND_ROOT = join(__dirname, '..', '..', '..', '..')
 
@@ -123,7 +124,7 @@ function gridAreaMatrix(): string[][] {
     )
   }
 
-  const rows = declaration[1].match(/'([^']*)'/g)
+  const rows = defined(declaration[1]).match(/'([^']*)'/g)
   if (!rows || rows.length === 0) {
     throw new Error(
       '.App grid-template-areas value could not be parsed into rows -- ' +
@@ -160,7 +161,7 @@ function declaredGridArea(path: string, selectorPattern: RegExp): string {
       `${path}: block matching ${selectorPattern} has no grid-area declaration`
     )
   }
-  return match[1]
+  return defined(match[1])
 }
 
 /** Every real (non-prose) `grid-area: content;` consumer under src/frontend, as a repo-relative path. */

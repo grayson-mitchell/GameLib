@@ -13,6 +13,7 @@ import type { ReactElement, ReactNode } from 'react'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 jest.mock('../components/FilterViewList/index.scss', () => ({}))
 
@@ -108,7 +109,7 @@ describe('FilterViewList (quick 261029-riq)', () => {
       'button',
       'button'
     ])
-    expect(kids[1].props['aria-hidden']).toBe('true')
+    expect(at(kids, 1).props['aria-hidden']).toBe('true')
     expect(chipsOf(tree).map(labelOf)).toEqual(['Installed', 'All', 'Native'])
     expect(
       chipsOf(tree).every(
@@ -127,7 +128,7 @@ describe('FilterViewList (quick 261029-riq)', () => {
       setInstalledOnly,
       setNativeOnly
     })
-    const [installed] = chipsOf(render())
+    const installed = at(chipsOf(render()), 0)
 
     expect(installed.props['aria-pressed']).toBe(true)
     expect(String(installed.props.className)).toContain('active')
@@ -137,12 +138,16 @@ describe('FilterViewList (quick 261029-riq)', () => {
   })
 
   it('with nativeOnly false All is pressed and Native is not; with true the reverse', () => {
-    let [, all, native] = chipsOf(render())
+    let chips = chipsOf(render())
+    let all = at(chips, 1)
+    let native = at(chips, 2)
     expect(all.props['aria-pressed']).toBe(true)
     expect(native.props['aria-pressed']).toBe(false)
 
     contextValue = makeContext({ nativeOnly: true })
-    ;[, all, native] = chipsOf(render())
+    chips = chipsOf(render())
+    all = at(chips, 1)
+    native = at(chips, 2)
     expect(all.props['aria-pressed']).toBe(false)
     expect(native.props['aria-pressed']).toBe(true)
     expect(String(native.props.className)).toContain('active')
@@ -152,7 +157,9 @@ describe('FilterViewList (quick 261029-riq)', () => {
     const setNativeOnly = jest.fn()
     const setInstalledOnly = jest.fn()
     contextValue = makeContext({ setNativeOnly, setInstalledOnly })
-    const [, all, native] = chipsOf(render())
+    const chips = chipsOf(render())
+    const all = at(chips, 1)
+    const native = at(chips, 2)
     ;(all.props.onClick as () => void)()
     expect(setNativeOnly).toHaveBeenLastCalledWith(false)
     ;(native.props.onClick as () => void)()

@@ -44,17 +44,17 @@ const MessageBoxModal: React.FC<MessageBoxModalProps> = function (props) {
 
   const getButtons = function () {
     const allButtons = []
-    for (let i = 0; i < props.buttons.length; ++i) {
+    for (const [i, button] of props.buttons.entries()) {
       allButtons.push(
         <button
           onClick={() => {
             props.onClose()
-            props.buttons[i].onClick?.()
+            button.onClick?.()
           }}
-          className={messageBoxButtonClassName(props.buttons[i].variant)}
+          className={messageBoxButtonClassName(button.variant)}
           key={'messageBoxModalButton_' + i.toString()}
         >
-          {props.buttons[i].text}
+          {button.text}
         </button>
       )
     }

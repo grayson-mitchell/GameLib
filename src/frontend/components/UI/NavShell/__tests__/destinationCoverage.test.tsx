@@ -196,6 +196,7 @@ import NavTabs from '../components/NavTabs'
 import StoresPanel from '../components/StoresPanel'
 import SettingsPanel from '../components/SettingsPanel'
 import NavShell from '../index'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -357,7 +358,7 @@ describe('Version mount (re-homed from the deleted suite)', () => {
 
       const tree = NavShell() as unknown as AnyElement
       const kids = tree.props.children as AnyElement[]
-      const tier2 = kids[1]
+      const tier2 = at(kids, 1)
 
       expect(
         collectElements(tier2.props.children).some(
