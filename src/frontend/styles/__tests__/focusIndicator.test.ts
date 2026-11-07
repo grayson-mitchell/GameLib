@@ -243,7 +243,11 @@ describe('No prefix-form controllerLayout selector leaked into the NavShell file
 
 describe('No targeted focus block reintroduces the undefined --text-hover token (assertion f)', () => {
   it('.NavItem focus rule does not consume var(--text-hover)', () => {
-    const rule = ruleBody(navItemCss, TARGETED_RULES['.NavItem'])
+    const navItemPattern = TARGETED_RULES['.NavItem']
+    if (navItemPattern === undefined) {
+      throw new Error('TARGETED_RULES is missing the .NavItem entry')
+    }
+    const rule = ruleBody(navItemCss, navItemPattern)
 
     expect(rule).not.toMatch(/var\(--text-hover\)/)
   })

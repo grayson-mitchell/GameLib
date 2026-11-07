@@ -4,7 +4,10 @@ import { useInstallProgress } from 'frontend/state/InstallProgress'
 
 const storage: Storage = window.localStorage
 
-export const hasProgress = (appName: string, runner: Runner) => {
+export const hasProgress = (
+  appName: string,
+  runner: Runner
+): [InstallProgress, InstallProgress] => {
   const [previousProgress] = useState<InstallProgress>(
     JSON.parse(
       storage.getItem(`${appName}_${runner}_progress`) || '{}'
