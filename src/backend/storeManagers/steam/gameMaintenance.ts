@@ -16,7 +16,7 @@ import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { restoreBridgeSteamApiOriginals } from './bridge/originalRestore'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
 import type SteamGame from './games'
-import { resolveBridgeGameInstallRoot } from './gameInstall'
+import { resolveBridgeGameInstallRoot } from './bridgeInstallState'
 
 export async function moveInstall(
   steamGame: SteamGame,

@@ -53,7 +53,7 @@ import { ensurePlatformsCaptured, isBottleEligible } from './gameEligibility'
 import {
   markBridgeGameUninstalled,
   resolveBridgeGameInstallRoot
-} from './gameInstall'
+} from './bridgeInstallState'
 
 export async function uninstall(
   steamGame: SteamGame,

@@ -38,6 +38,7 @@ const MOVED_OWNERS = [
 const LIFTED_OWNERS = [
   'gameEligibility.ts',
   'gameInstall.ts',
+  'bridgeInstallState.ts',
   'gameLaunchOverlay.ts',
   'gameBridgeLaunch.ts',
   'gameLaunch.ts',
@@ -108,6 +109,7 @@ describe('steam/games.ts module surface (D-05)', () => {
     const FORWARD: Record<string, number> = {
       gameEligibility: 0,
       gameLaunchOverlay: 0,
+      bridgeInstallState: 0,
       gameInstall: 1,
       gameLaunch: 2,
       gameBridgeLaunch: 3,

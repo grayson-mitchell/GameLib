@@ -87,7 +87,7 @@ import {
   persistBridgeDrmSignal,
   reconcileBridgePrescreen,
   resolveBridgeGameInstallRoot
-} from './gameInstall'
+} from './bridgeInstallState'
 import {
   maybeNotifyBridgeLimited,
   maybeNotifyDrmModeFailed,

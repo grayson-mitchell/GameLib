@@ -63,7 +63,6 @@ exports	src/backend/storeManagers/steam/gameInstall.ts	hasBottledSteamCopy
 exports	src/backend/storeManagers/steam/gameInstall.ts	installBridgeGameLeased
 exports	src/backend/storeManagers/steam/gameInstall.ts	installDepotDownload
 exports	src/backend/storeManagers/steam/gameInstall.ts	installResultForRefusal
-exports	src/backend/storeManagers/steam/gameInstall.ts	markBridgeGameInstalled
 exports	src/backend/storeManagers/steam/gameInstall.ts	provisionBridgeBottleForInstall
 exports	src/backend/storeManagers/steam/gameInstall.ts	removeDemotedNativeOrphan
 exports	src/backend/storeManagers/steam/gameInstall.ts	resolveInstallEngineSettings
