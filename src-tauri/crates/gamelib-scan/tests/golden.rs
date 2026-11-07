@@ -2,6 +2,8 @@
 //! `tests/fixtures/expected.json`, or the case's explicit `rustOverride` (which must carry a
 //! `divergenceNote`, D-07). The normaliser is a port of src/backend/scanners/scanNormalize.ts;
 //! the six rules there are the only things parity ignores.
+//! The TS oracle that produced expected.json was deleted in 63-13/63-14; new cases are added by hand with a
+//! Rust-verified expected value and a note naming the source of truth.
 
 use serde_json::{json, Map, Value};
 use std::collections::BTreeSet;

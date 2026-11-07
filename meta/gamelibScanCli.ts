@@ -6,14 +6,14 @@
  *
  * Fake-HOME convention (gamelib-conventions two-profile rule, isolated half): every
  * `runScanCliSync` call gets a FRESH `createFakeHomeProfile({ prefix: 'gamelib-scan-' })`
- * because the CLI reads no profile. `runScanCliBatch` is one `--ndjson` process with one fresh
- * profile for the whole batch: a single-process batch, not a reused profile.
+ * because the CLI reads no profile. The CLI also has a `--ndjson` batch mode; the TS helper for it
+ * was removed with the parity sweep (63-14), `parseNdjsonLines` remains for its output.
  *
  * `cargo build` is NOT run from here. A fake HOME hides ~/.cargo and ~/.rustup, so the build is
  * the package.json `scan-cli:build` prefix on the scripts that need the binary, run in the
  * operator's real environment. A missing binary fails with a message naming that command.
  */
-import { spawn, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -99,58 +99,4 @@ export function runScanCliSync<Op extends ScanOp>(
       /* best effort */
     }
   }
-}
-
-/** One `--ndjson` process, one fresh profile for the whole run (not a reused profile). */
-export function runScanCliBatch(
-  requests: Array<{ op: ScanOp; args: object }>
-): Promise<NdjsonLine[]> {
-  const cli = resolveScanCliPath()
-  if (!existsSync(cli)) return Promise.reject(missingBinaryError(cli))
-  const profile = createFakeHomeProfile({ prefix: 'gamelib-scan-' })
-  const done = () => {
-    try {
-      profile.dispose()
-    } catch {
-      /* best effort */
-    }
-  }
-  return new Promise((resolve, reject) => {
-    const child = spawn(cli, ['--ndjson'], {
-      env: profile.childEnv(process.env),
-      stdio: ['pipe', 'pipe', 'pipe']
-    })
-    let stdout = ''
-    let stderr = ''
-    child.stdout?.on('data', (d) => (stdout += d.toString()))
-    child.stderr?.on('data', (d) => (stderr += d.toString()))
-    child.on('error', (e) => {
-      done()
-      reject(e)
-    })
-    child.on('close', (code) => {
-      done()
-      if (code !== 0) {
-        reject(
-          new Error(
-            `gamelib-scan-cli --ndjson exited with status ${code}: ${stderr.trim()}`
-          )
-        )
-        return
-      }
-      try {
-        resolve(parseNdjsonLines(stdout))
-      } catch (e) {
-        reject(e instanceof Error ? e : new Error(String(e)))
-      }
-    })
-    child.stdin?.on('error', () => {
-      /* surfaced via close status */
-    })
-    child.stdin?.end(
-      requests
-        .map((r) => JSON.stringify({ op: r.op, args: r.args }))
-        .join('\n') + '\n'
-    )
-  })
 }

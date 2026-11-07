@@ -1259,7 +1259,7 @@ export function formatCensusMarkdown(rows: CensusRow[]): string {
 // Impure I/O driver (operator-run, never unit-tested with a real filesystem)
 // ---------------------------------------------------------------------------
 
-export const BOTTLES_DIR = join(
+const BOTTLES_DIR = join(
   homedir(),
   'Library/Application Support/CrossOver/Bottles'
 )
@@ -1305,7 +1305,7 @@ function isGameLibShimBytes(buf: Buffer): boolean {
 const REDIST_EXE_NAME = /^(vcredist|dxsetup|unitycrashhandler).*\.exe$/i
 const UNINSTALLER_EXE_NAME = /unins.*\.exe$/i
 
-export function isExcludedExeName(name: string): boolean {
+function isExcludedExeName(name: string): boolean {
   return REDIST_EXE_NAME.test(name) || UNINSTALLER_EXE_NAME.test(name)
 }
 
@@ -1346,7 +1346,7 @@ interface AcfAppState {
  * throws -- a missing dir, unreadable file, or corrupt/incomplete ACF is a
  * normal "nothing to report for this entry" outcome, the same discipline
  * `acfInstalldir.ts`'s `readAcfInstalldir` already follows. */
-export function readManifests(
+function readManifests(
   steamappsDir: string,
   bottleName: string
 ): ManifestEntry[] {
@@ -1384,7 +1384,7 @@ export function readManifests(
 
 /** Collects every `*.exe` under `dir`, depth-bounded, excluding known
  * redistributable/uninstaller names. */
-export function walkExes(dir: string, depth: number, out: string[]): void {
+function walkExes(dir: string, depth: number, out: string[]): void {
   if (depth > MAX_EXE_DEPTH || !existsSync(dir)) {
     return
   }
@@ -2573,10 +2573,8 @@ async function main(): Promise<void> {
 // a private tmpdir (same reasoning as `extractProtonInventory.ts`'s own
 // bottom guard) -- but this module is also imported directly by its jest
 // suite, so `JEST_WORKER_ID` still reliably distinguishes "imported under
-// test" from "run as the CLI entrypoint". `meta/scannerParitySweep.ts` also imports this
-// module's enumeration helpers; its package.json script compiles with
-// `--define:process.env.GAMELIB_SWEEP_BUNDLE=true` so the census does not run inside the sweep.
-if (!process.env.JEST_WORKER_ID && !process.env.GAMELIB_SWEEP_BUNDLE) {
+// test" from "run as the CLI entrypoint".
+if (!process.env.JEST_WORKER_ID) {
   main().catch((error: unknown) => {
     console.error(error)
     process.exit(1)

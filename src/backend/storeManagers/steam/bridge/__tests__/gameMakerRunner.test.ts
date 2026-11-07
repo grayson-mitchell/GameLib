@@ -31,7 +31,6 @@ jest.mock('node:fs/promises', () => {
 })
 
 import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
-import { runLegacyOp } from 'backend/scanners/legacyTsScanners'
 import {
   detectGameMakerD3d11Runner,
   GAMEMAKER_MSAA_PROBE
@@ -41,13 +40,14 @@ import { buildImportPe } from './fixtures/importPe'
 describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
   let dir: string
   let exe: string
+  let scanned: { names: string[] | null; readError: string | null }
 
   beforeEach(() => {
-    // The TS oracle stands in for the Rust leaf on the real fixture files.
+    // Stand-in for the Rust leaf (parsing is covered by gamelib-scan's tests).
+    scanned = { names: [], readError: null }
     jest
       .mocked(requestRustInvoke)
-      .mockImplementation(((channel: string, [args]: [never]) =>
-        runLegacyOp(channel as never, args)) as never)
+      .mockImplementation((() => Promise.resolve(scanned)) as never)
     mockLogWarning.mockClear()
     mockReadFile.mockClear()
     dir = mkdtempSync(join(tmpdir(), 'gamelib-gm-runner-'))
@@ -58,7 +58,8 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
     rmSync(dir, { recursive: true, force: true })
   })
 
-  const writeExe = (dlls: string[], probe = true) =>
+  const writeExe = (dlls: string[], probe = true) => {
+    scanned = { names: dlls, readError: null }
     writeFileSync(
       exe,
       buildImportPe({
@@ -67,6 +68,7 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
         trailingAscii: probe ? GAMEMAKER_MSAA_PROBE : 'nothing here'
       })
     )
+  }
 
   it('matches when all three signals hold', async () => {
     writeExe(['KERNEL32.dll', 'd3d11.dll'])
@@ -126,6 +128,7 @@ describe('detectGameMakerD3d11Runner (quick 261028-k7l)', () => {
   })
 
   it('does not match a non-PE exe and does not throw', async () => {
+    scanned = { names: null, readError: null }
     writeFileSync(exe, `not a pe ${GAMEMAKER_MSAA_PROBE}`)
     writeFileSync(join(dir, 'data.win'), 'FORM')
     const r = await detectGameMakerD3d11Runner(exe)

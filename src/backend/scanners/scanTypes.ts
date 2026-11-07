@@ -34,19 +34,19 @@ export const SCAN_OPS: readonly ScanOp[] = [
  */
 export const CLI_ONLY_SCAN_OPS: readonly ScanOp[] = ['scan_pe_delay_imports']
 
-export type ScanDiagnostic = { level: 'info' | 'warn'; message: string }
+type ScanDiagnostic = { level: 'info' | 'warn'; message: string }
 
-export type ExePathArgs = { exePath: string }
-export type ContainedRealArgs = { path: string; rootDir: string }
-export type SteamApiImportsArgs = { exePath: string; appId: string }
-export type WinemacArgs = { wineBundlePath: string }
+type ExePathArgs = { exePath: string }
+type ContainedRealArgs = { path: string; rootDir: string }
+type SteamApiImportsArgs = { exePath: string; appId: string }
+type WinemacArgs = { wineBundlePath: string }
 
 export type ContainedRealResult = {
   real: string | null
   reason: 'root-unresolvable' | 'realpath-failed' | 'escapes' | null
 }
 
-export type SteamstubSectionResult = {
+type SteamstubSectionResult = {
   drmWrapper: 'steamstub' | 'none' | null
   readError: string | null
 }
@@ -58,7 +58,7 @@ export type SteamDrmScanResult = {
   readError: string | null
 }
 
-export type PeImportedDllsResult = {
+type PeImportedDllsResult = {
   names: string[] | null
   readError: string | null
 }
@@ -87,7 +87,7 @@ export type ImportScanResult =
     }
   | { status: 'error'; error: string }
 
-export type SteamApiImportScanResult = ImportScanResult & {
+type SteamApiImportScanResult = ImportScanResult & {
   diagnostics: ScanDiagnostic[]
 }
 

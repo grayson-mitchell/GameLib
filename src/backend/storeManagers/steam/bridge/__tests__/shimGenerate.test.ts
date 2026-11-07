@@ -59,7 +59,7 @@ import {
 } from '../shimGenerate'
 import * as drmScanExe from '../drm/drmScanExe'
 import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
-import { runLegacyOp } from 'backend/scanners/legacyTsScanners'
+import { stubRustScan } from './fixtures/stubRustScan'
 import { scanSteamApiImports } from '../importScan'
 import { SHIM64_EXPORTED_SYMBOLS } from '../shimCoverage'
 import * as bridgeScan from '../bridgeScan'
@@ -88,9 +88,8 @@ jest.mock('../importScan', () => ({
 }))
 
 // Phase 63 plan 07: the rustInvoke leaf. Caller logic is tested against this
-// boundary; by default it answers like the Rust op would, via the TS oracle on
-// the fixture files (scanner semantics themselves live in the Rust tests, the
-// goldens and legacyTsScanners.test.ts). Tests override it with canned results.
+// boundary; by default it answers via stubRustScan (real containment on temp
+// files, "nothing found" for the byte parsers; those live in the Rust tests and goldens). Tests override it with canned results.
 jest.mock('backend/sidecar/sidecarRpc', () => ({
   requestRustInvoke: jest.fn()
 }))
@@ -231,7 +230,7 @@ describe('shimGenerate', () => {
     jest
       .mocked(requestRustInvoke)
       .mockImplementation(((channel: string, [args]: [never]) =>
-        runLegacyOp(channel as never, args)) as never)
+        stubRustScan(channel as never, args)) as never)
   })
   let root: string
   let bottleDir: string
