@@ -296,6 +296,7 @@ jest.mock('../expirationAlerts', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────
 
+import { defined } from './defined'
 import { HumbleLibrary } from '../library'
 import { invalidateSyncGeneration } from '../syncFence'
 import {
@@ -1373,7 +1374,7 @@ describe('HumbleLibrary', () => {
 
       const keys = HumbleLibrary.getKeys()
       expect(keys).toHaveLength(1)
-      expect(keys[0].machineName).toBe('actualgame_steam')
+      expect(defined(keys[0], 'keys[0]').machineName).toBe('actualgame_steam')
       const skipDiag = mockLogInfo.mock.calls.find((call) =>
         JSON.stringify(call).includes('skippedNoKeyType')
       )
@@ -1471,7 +1472,7 @@ describe('HumbleLibrary', () => {
 
       const keys = HumbleLibrary.getKeys()
       expect(keys).toHaveLength(1)
-      expect(keys[0].machineName).toBe('actualgame2_steam')
+      expect(defined(keys[0], 'keys[0]').machineName).toBe('actualgame2_steam')
       const skipDiag = mockLogInfo.mock.calls.find((call) =>
         JSON.stringify(call).includes('skippedDirectRedeem')
       )
@@ -1511,7 +1512,7 @@ describe('HumbleLibrary', () => {
       expect(keys).toHaveLength(1)
       // 14-07 gap closure: redeemed_key_val presence means REVEALED, not
       // REDEEMED (REDEEMED is local-only, via markRedeemed).
-      expect(keys[0].state).toBe('REVEALED')
+      expect(defined(keys[0], 'keys[0]').state).toBe('REVEALED')
       const summary = mockLogInfo.mock.calls.find((call) =>
         JSON.stringify(call).includes('Humble sync finished')
       )
@@ -1645,7 +1646,12 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.sync()
 
       expect(mockGetOrderDetail).toHaveBeenCalledTimes(1)
-      expect(libraryData.get('frozen-gk')?.keys[0].state).toBe('UNREDEEMABLE')
+      expect(
+        defined(
+          libraryData.get('frozen-gk')?.keys[0],
+          "libraryData.get('frozen-gk')?.keys[0]"
+        ).state
+      ).toBe('UNREDEEMABLE')
       expect(syncData.get('state')?.classifierVersion).toBe(
         HUMBLE_CLASSIFIER_VERSION
       )
@@ -1686,7 +1692,12 @@ describe('HumbleLibrary', () => {
       })
 
       await HumbleLibrary.sync()
-      expect(libraryData.get('frozen-gk')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('frozen-gk')?.keys[0],
+          "libraryData.get('frozen-gk')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
       expect(libraryData.get('frozen-gk')?.allTerminal).toBe(false)
       expect(libraryData.get('frozen-gk')?.freezeEligible).toBe(true)
 
@@ -1717,7 +1728,12 @@ describe('HumbleLibrary', () => {
       })
 
       await HumbleLibrary.sync()
-      expect(libraryData.get('expiring-gk')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('expiring-gk')?.keys[0],
+          "libraryData.get('expiring-gk')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
       expect(libraryData.get('expiring-gk')?.freezeEligible).toBe(false)
 
       mockGetOrderDetail.mockClear()
@@ -1757,7 +1773,12 @@ describe('HumbleLibrary', () => {
         data: makeRawOrder('gk1')
       })
       await expect(HumbleLibrary.sync()).resolves.toEqual({ status: 'ok' })
-      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
       expect(libraryData.get('gk1')?.freezeEligible).toBe(false)
       expect(HumbleLibrary.getRevealedKeyValue('gk1', 'gk1_key')).toBe(null)
 
@@ -1928,7 +1949,7 @@ describe('HumbleLibrary', () => {
 
       const keys = HumbleLibrary.getKeys()
       expect(keys).toHaveLength(1)
-      expect(keys[0].expiration).toBe(null)
+      expect(defined(keys[0], 'keys[0]').expiration).toBe(null)
       // The undatable active key still surfaces in the round-4 discovery
       // diagnostic instead of crashing it.
       const diag = mockLogInfo.mock.calls.find((call) =>
@@ -1962,7 +1983,9 @@ describe('HumbleLibrary', () => {
 
       const keys = HumbleLibrary.getKeys()
       expect(keys).toHaveLength(1)
-      expect(keys[0].expiration).toBe('2026-08-03T00:00:00.000Z')
+      expect(defined(keys[0], 'keys[0]').expiration).toBe(
+        '2026-08-03T00:00:00.000Z'
+      )
       const diag = mockLogInfo.mock.calls.find((call) =>
         JSON.stringify(call).includes('no extractable expiration')
       )
@@ -2286,7 +2309,12 @@ describe('HumbleLibrary', () => {
       HumbleLibrary.recomputeOwnership()
 
       expect(mockLibraryStore.set).not.toHaveBeenCalled()
-      expect(libraryData.get('gk1')?.keys[0].ownedElsewhere).toBe(true)
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).ownedElsewhere
+      ).toBe(true)
     })
 
     test('no-ops (no store write) when Steam is connected but the owned-games array is empty', () => {
@@ -2298,7 +2326,12 @@ describe('HumbleLibrary', () => {
       HumbleLibrary.recomputeOwnership()
 
       expect(mockLibraryStore.set).not.toHaveBeenCalled()
-      expect(libraryData.get('gk1')?.keys[0].ownedElsewhere).toBe(true)
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).ownedElsewhere
+      ).toBe(true)
     })
 
     test('recomputes normally once Steam is connected with a non-empty library', () => {
@@ -2311,8 +2344,18 @@ describe('HumbleLibrary', () => {
       HumbleLibrary.recomputeOwnership()
 
       expect(mockLibraryStore.set).toHaveBeenCalled()
-      expect(libraryData.get('gk1')?.keys[0].ownedElsewhere).toBe(true)
-      expect(libraryData.get('gk1')?.keys[0].matchConfidence).toBe('exact')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).ownedElsewhere
+      ).toBe(true)
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).matchConfidence
+      ).toBe('exact')
     })
   })
 
@@ -2326,17 +2369,50 @@ describe('HumbleLibrary', () => {
       ])
 
       HumbleLibrary.recomputeOwnership()
-      expect(libraryData.get('gk1')?.keys[0].matchConfidence).toBe('fuzzy')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).matchConfidence
+      ).toBe('fuzzy')
 
-      HumbleLibrary.setOwnershipOverride(entry.keys[0].machineName)
-      expect(overrideData.has(entry.keys[0].machineName)).toBe(true)
-      expect(libraryData.get('gk1')?.keys[0].ownedElsewhere).toBe(false)
-      expect(libraryData.get('gk1')?.keys[0].matchConfidence).toBe('none')
+      HumbleLibrary.setOwnershipOverride(
+        defined(entry.keys[0], 'entry.keys[0]').machineName
+      )
+      expect(
+        overrideData.has(defined(entry.keys[0], 'entry.keys[0]').machineName)
+      ).toBe(true)
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).ownedElsewhere
+      ).toBe(false)
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).matchConfidence
+      ).toBe('none')
 
-      HumbleLibrary.clearOwnershipOverride(entry.keys[0].machineName)
-      expect(overrideData.has(entry.keys[0].machineName)).toBe(false)
-      expect(libraryData.get('gk1')?.keys[0].matchConfidence).toBe('fuzzy')
-      expect(libraryData.get('gk1')?.keys[0].ownedElsewhere).toBe(true)
+      HumbleLibrary.clearOwnershipOverride(
+        defined(entry.keys[0], 'entry.keys[0]').machineName
+      )
+      expect(
+        overrideData.has(defined(entry.keys[0], 'entry.keys[0]').machineName)
+      ).toBe(false)
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).matchConfidence
+      ).toBe('fuzzy')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).ownedElsewhere
+      ).toBe(true)
     })
 
     // WR-04 (14-REVIEW): the undo affordance must key off "an override
@@ -2352,13 +2428,21 @@ describe('HumbleLibrary', () => {
         makeSteamGame('440', 'Team Fortress 2')
       ])
       HumbleLibrary.recomputeOwnership()
-      HumbleLibrary.setOwnershipOverride(entry.keys[0].machineName)
+      HumbleLibrary.setOwnershipOverride(
+        defined(entry.keys[0], 'entry.keys[0]').machineName
+      )
 
       const overrides = HumbleLibrary.getAllOwnershipOverrides()
-      expect(Object.keys(overrides)).toEqual([entry.keys[0].machineName])
-      expect(overrides[entry.keys[0].machineName]).toEqual(expect.any(Number))
+      expect(Object.keys(overrides)).toEqual([
+        defined(entry.keys[0], 'entry.keys[0]').machineName
+      ])
+      expect(
+        overrides[defined(entry.keys[0], 'entry.keys[0]').machineName]
+      ).toEqual(expect.any(Number))
 
-      HumbleLibrary.clearOwnershipOverride(entry.keys[0].machineName)
+      HumbleLibrary.clearOwnershipOverride(
+        defined(entry.keys[0], 'entry.keys[0]').machineName
+      )
       expect(HumbleLibrary.getAllOwnershipOverrides()).toEqual({})
     })
   })
@@ -2435,18 +2519,24 @@ describe('HumbleLibrary', () => {
 
       const audit = auditData.get('gk-settle:gk-settle_key')
       expect(audit?.map((a) => a.event)).toEqual(['ownership_settled'])
-      expect(audit?.[0].title).toBeDefined()
-      expect(audit?.[0].platform).toBe('steam')
+      expect(defined(audit?.[0], 'audit?.[0]').title).toBeDefined()
+      expect(defined(audit?.[0], 'audit?.[0]').platform).toBe('steam')
       expect(audit?.[0]).not.toHaveProperty('keyValue')
       expect(audit?.[0]).not.toHaveProperty('key')
 
       const annotations = HumbleLibrary.getClaimAnnotations()
-      expect(annotations['gk-settle:gk-settle_key'].redeemedSource).toBe(
-        'ownership-exact'
-      )
-      expect(annotations['gk-settle:gk-settle_key'].redeemedAt).toEqual(
-        expect.any(Number)
-      )
+      expect(
+        defined(
+          annotations['gk-settle:gk-settle_key'],
+          "annotations['gk-settle:gk-settle_key']"
+        ).redeemedSource
+      ).toBe('ownership-exact')
+      expect(
+        defined(
+          annotations['gk-settle:gk-settle_key'],
+          "annotations['gk-settle:gk-settle_key']"
+        ).redeemedAt
+      ).toEqual(expect.any(Number))
     })
 
     // Table-driven so a future relaxation of any single guard cannot pass by
@@ -2530,7 +2620,7 @@ describe('HumbleLibrary', () => {
         HumbleLibrary.recomputeOwnership()
 
         const key = libraryData.get(seeded.gamekey)?.keys[0]
-        expect(key?.state).toBe(seeded.keys[0].state)
+        expect(key?.state).toBe(defined(seeded.keys[0], 'seeded.keys[0]').state)
         expect(localRedeemedData.size).toBe(0)
       }
     )
@@ -2554,7 +2644,12 @@ describe('HumbleLibrary', () => {
 
       expect(mockLibraryStore.set).not.toHaveBeenCalled()
       expect(mockSendFrontendMessage).not.toHaveBeenCalled()
-      expect(libraryData.get('gk-closed')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('gk-closed')?.keys[0],
+          "libraryData.get('gk-closed')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
       expect(localRedeemedData.size).toBe(0)
     })
 
@@ -2593,15 +2688,30 @@ describe('HumbleLibrary', () => {
       seedSteamOwning440()
 
       HumbleLibrary.recomputeOwnership()
-      expect(libraryData.get('gk-undo')?.keys[0].state).toBe('REDEEMED')
+      expect(
+        defined(
+          libraryData.get('gk-undo')?.keys[0],
+          "libraryData.get('gk-undo')?.keys[0]"
+        ).state
+      ).toBe('REDEEMED')
 
       await HumbleLibrary.undoRedeemed('gk-undo', 'gk-undo_key')
-      expect(libraryData.get('gk-undo')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('gk-undo')?.keys[0],
+          "libraryData.get('gk-undo')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
       expect(localRedeemedData.has('gk-undo:gk-undo_key')).toBe(false)
 
       HumbleLibrary.recomputeOwnership()
 
-      expect(libraryData.get('gk-undo')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('gk-undo')?.keys[0],
+          "libraryData.get('gk-undo')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
       expect(localRedeemedData.has('gk-undo:gk-undo_key')).toBe(false)
     })
 
@@ -2711,7 +2821,7 @@ describe('HumbleLibrary', () => {
       expect(revealedData.has('gk1_key')).toBe(false)
       const audit = auditData.get('gk1:gk1_key')
       expect(audit).toHaveLength(1)
-      expect(audit?.[0].event).toBe('c2_block')
+      expect(defined(audit?.[0], 'audit?.[0]').event).toBe('c2_block')
     })
 
     test('C2 (D-70): a FUZZY ownedElsewhere match blocks exactly like an exact match', async () => {
@@ -2799,7 +2909,12 @@ describe('HumbleLibrary', () => {
         machineName: 'gk1_key',
         keyindex: 'idx-1'
       })
-      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
       expect(HumbleLibrary.getRevealedKeyValue('gk1', 'gk1_key')).toBe(
         'REAL-KEY-VALUE'
       )
@@ -2828,7 +2943,12 @@ describe('HumbleLibrary', () => {
 
       expect(outcome).toEqual({ status: 'failed' })
       expect(revealedData.has('gk1_key')).toBe(false)
-      expect(libraryData.get('gk1')?.keys[0].state).toBe('UNREVEALED')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).state
+      ).toBe('UNREVEALED')
       const audit = auditData.get('gk1:gk1_key')
       expect(audit?.map((a) => a.event)).toEqual([
         'reveal_attempt',
@@ -2873,7 +2993,9 @@ describe('HumbleLibrary', () => {
         'reveal_attempt',
         'reveal_rejected'
       ])
-      expect(audit?.[1].outcome).toBe('rejected_by_server')
+      expect(defined(audit?.[1], 'audit?.[1]').outcome).toBe(
+        'rejected_by_server'
+      )
       // Not an access_denied — the shared D-33 cooldown must NOT engage.
       expect(HumbleLibrary.getSyncState().cooldownUntil).toBeUndefined()
     })
@@ -3305,7 +3427,12 @@ describe('HumbleLibrary', () => {
 
       expect(outcome).toEqual({ status: 'ok' })
       expect(localRedeemedData.has('gk1:gk1_key')).toBe(true)
-      expect(libraryData.get('gk1')?.keys[0].state).toBe('REDEEMED')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).state
+      ).toBe('REDEEMED')
       const audit = auditData.get('gk1:gk1_key')
       expect(audit?.map((a) => a.event)).toEqual(['mark_redeemed'])
     })
@@ -3355,7 +3482,12 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
 
       expect(localRedeemedData.has('gk1:gk1_key')).toBe(false)
-      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
       const audit = auditData.get('gk1:gk1_key')
       expect(audit?.map((a) => a.event)).toEqual(['undo_redeemed'])
     })
@@ -3371,7 +3503,12 @@ describe('HumbleLibrary', () => {
 
       await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
 
-      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
       expect(auditData.get('gk1:gk1_key')).toBeUndefined()
     })
 
@@ -3410,7 +3547,12 @@ describe('HumbleLibrary', () => {
       ).resolves.not.toThrow()
 
       expect(localRedeemedData.has('gk1:gk1_key')).toBe(false)
-      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
     })
 
     // D-42-01: undoRedeemed must delete a source: 'user' record and revert
@@ -3432,7 +3574,12 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
 
       expect(localRedeemedData.has('gk1:gk1_key')).toBe(false)
-      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
       const audit = auditData.get('gk1:gk1_key')
       expect(audit?.map((a) => a.event)).toEqual(['undo_redeemed'])
     })
@@ -3452,8 +3599,14 @@ describe('HumbleLibrary', () => {
 
       const annotations = HumbleLibrary.getClaimAnnotations()
 
-      expect(annotations['gk1:gk1_key'].redeemedSource).toBe('user')
-      expect(annotations['gk1:gk1_key'].redeemedAt).toEqual(expect.any(Number))
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .redeemedSource
+      ).toBe('user')
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .redeemedAt
+      ).toEqual(expect.any(Number))
     })
 
     test("emits redeemedSource: 'user' for a legacy record with no source field (missing-field default)", () => {
@@ -3465,8 +3618,14 @@ describe('HumbleLibrary', () => {
 
       const annotations = HumbleLibrary.getClaimAnnotations()
 
-      expect(annotations['gk1:gk1_key'].redeemedSource).toBe('user')
-      expect(annotations['gk1:gk1_key'].redeemedAt).toBe(123)
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .redeemedSource
+      ).toBe('user')
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .redeemedAt
+      ).toBe(123)
     })
 
     test("emits redeemedSource: 'ownership-exact' for a record seeded with that source", () => {
@@ -3481,8 +3640,14 @@ describe('HumbleLibrary', () => {
 
       const annotations = HumbleLibrary.getClaimAnnotations()
 
-      expect(annotations['gk1:gk1_key'].redeemedSource).toBe('ownership-exact')
-      expect(annotations['gk1:gk1_key'].redeemedAt).toBe(456)
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .redeemedSource
+      ).toBe('ownership-exact')
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .redeemedAt
+      ).toBe(456)
     })
 
     test('emits redeemedSource: undefined and redeemedAt: undefined when there is no local-redeemed record', () => {
@@ -3493,8 +3658,14 @@ describe('HumbleLibrary', () => {
 
       const annotations = HumbleLibrary.getClaimAnnotations()
 
-      expect(annotations['gk1:gk1_key'].redeemedSource).toBeUndefined()
-      expect(annotations['gk1:gk1_key'].redeemedAt).toBeUndefined()
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .redeemedSource
+      ).toBeUndefined()
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .redeemedAt
+      ).toBeUndefined()
     })
 
     // REGRESSION PIN: redeemedAt must be identical regardless of provenance,
@@ -3518,10 +3689,20 @@ describe('HumbleLibrary', () => {
 
       const annotations = HumbleLibrary.getClaimAnnotations()
 
-      expect(annotations['gk1:gk1_key'].redeemedAt).toBe(789)
-      expect(annotations['gk2:gk2_key'].redeemedAt).toBe(789)
-      expect(annotations['gk1:gk1_key'].redeemedAt).toBe(
-        annotations['gk2:gk2_key'].redeemedAt
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .redeemedAt
+      ).toBe(789)
+      expect(
+        defined(annotations['gk2:gk2_key'], "annotations['gk2:gk2_key']")
+          .redeemedAt
+      ).toBe(789)
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .redeemedAt
+      ).toBe(
+        defined(annotations['gk2:gk2_key'], "annotations['gk2:gk2_key']")
+          .redeemedAt
       )
     })
 
@@ -3538,7 +3719,11 @@ describe('HumbleLibrary', () => {
 
       const annotations = HumbleLibrary.getClaimAnnotations()
 
-      expect(Object.keys(annotations['gk1:gk1_key']).sort()).toEqual(
+      expect(
+        Object.keys(
+          defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+        ).sort()
+      ).toEqual(
         [
           'keyindexResolved',
           'redeemedAt',
@@ -3567,8 +3752,14 @@ describe('HumbleLibrary', () => {
 
       const annotations = HumbleLibrary.getClaimAnnotations()
 
-      expect(annotations['gk1:gk1_key'].revealRefusedAt).toBe(rejectedAt)
-      expect(annotations['gk1:gk1_key'].revealedAt).toBeUndefined()
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .revealRefusedAt
+      ).toBe(rejectedAt)
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .revealedAt
+      ).toBeUndefined()
     })
 
     test('a later reveal_success supersedes a prior reveal_rejected: revealRefusedAt is undefined', () => {
@@ -3597,7 +3788,10 @@ describe('HumbleLibrary', () => {
 
       const annotations = HumbleLibrary.getClaimAnnotations()
 
-      expect(annotations['gk1:gk1_key'].revealRefusedAt).toBeUndefined()
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .revealRefusedAt
+      ).toBeUndefined()
     })
 
     test('a later reveal_failed or reveal_ambiguous also supersedes a prior reveal_rejected', () => {
@@ -3632,8 +3826,14 @@ describe('HumbleLibrary', () => {
 
       const annotations = HumbleLibrary.getClaimAnnotations()
 
-      expect(annotations['gk1:gk1_key'].revealRefusedAt).toBeUndefined()
-      expect(annotations['gk2:gk2_key'].revealRefusedAt).toBeUndefined()
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .revealRefusedAt
+      ).toBeUndefined()
+      expect(
+        defined(annotations['gk2:gk2_key'], "annotations['gk2:gk2_key']")
+          .revealRefusedAt
+      ).toBeUndefined()
     })
 
     test('an audit trail containing ONLY reveal_attempt (write-ahead marker, no outcome yet) yields revealRefusedAt undefined', () => {
@@ -3644,7 +3844,10 @@ describe('HumbleLibrary', () => {
 
       const annotations = HumbleLibrary.getClaimAnnotations()
 
-      expect(annotations['gk1:gk1_key'].revealRefusedAt).toBeUndefined()
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .revealRefusedAt
+      ).toBeUndefined()
     })
 
     test('a key with no audit records at all (D-66 website-revealed shape) yields revealRefusedAt undefined', () => {
@@ -3653,7 +3856,10 @@ describe('HumbleLibrary', () => {
 
       const annotations = HumbleLibrary.getClaimAnnotations()
 
-      expect(annotations['gk1:gk1_key'].revealRefusedAt).toBeUndefined()
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .revealRefusedAt
+      ).toBeUndefined()
     })
 
     test('a non-reveal record appended AFTER the refusal (e.g. mark_redeemed) does NOT clear it — only reveal-outcome events count', () => {
@@ -3672,7 +3878,10 @@ describe('HumbleLibrary', () => {
 
       const annotations = HumbleLibrary.getClaimAnnotations()
 
-      expect(annotations['gk1:gk1_key'].revealRefusedAt).toBe(1)
+      expect(
+        defined(annotations['gk1:gk1_key'], "annotations['gk1:gk1_key']")
+          .revealRefusedAt
+      ).toBe(1)
     })
   })
 
@@ -3708,7 +3917,12 @@ describe('HumbleLibrary', () => {
       // The D-77 Undo path is still reachable AFTER the sync.
       await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
       expect(localRedeemedData.has('gk1:gk1_key')).toBe(false)
-      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
     })
 
     test('re-syncing a locally-marked order that ALSO now shows a server redeemed value still keeps REDEEMED (local mark wins)', async () => {
@@ -3733,7 +3947,12 @@ describe('HumbleLibrary', () => {
 
       // Undo remains reachable — every REDEEMED key is local-only now.
       await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
-      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
     })
 
     test('a sync that finds a server redeemed value with NO local mark classifies REVEALED, not REDEEMED', async () => {
@@ -3758,7 +3977,12 @@ describe('HumbleLibrary', () => {
       // markRedeemed is now reachable from this REVEALED state.
       const outcome = await HumbleLibrary.markRedeemed('gk1', 'gk1_key')
       expect(outcome).toEqual({ status: 'ok' })
-      expect(libraryData.get('gk1')?.keys[0].state).toBe('REDEEMED')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).state
+      ).toBe('REDEEMED')
     })
 
     // CR-01 (14-REVIEW re-review): the website-revealed key path. A key the
@@ -3842,7 +4066,12 @@ describe('HumbleLibrary', () => {
       // value-backed, no pending expiration) via the exact same
       // isFreezeEligible helper partitionGamekeys reads.
       await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
-      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
       expect(libraryData.get('gk1')?.allTerminal).toBe(false)
       expect(libraryData.get('gk1')?.freezeEligible).toBe(true)
 
@@ -3886,7 +4115,12 @@ describe('HumbleLibrary', () => {
       // PRIOR key's fields (including `expiration`), so freezeEligible
       // recomputes to false: the order genuinely UNFREEZES.
       await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
-      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      expect(
+        defined(
+          libraryData.get('gk1')?.keys[0],
+          "libraryData.get('gk1')?.keys[0]"
+        ).state
+      ).toBe('REVEALED')
       expect(libraryData.get('gk1')?.allTerminal).toBe(false)
       expect(libraryData.get('gk1')?.freezeEligible).toBe(false)
 

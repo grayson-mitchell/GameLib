@@ -59,6 +59,7 @@ jest.mock('../expirationAlerts', () => ({
 
 // ── Imports (after mocks) — REAL stores/CacheStore ──────────────
 
+import { defined } from './defined'
 import { HumbleLibrary } from '../library'
 import { humbleLibraryStore, humbleSyncStore } from '../stores'
 
@@ -100,11 +101,17 @@ describe('HumbleLibrary against the real CacheStore (electron-store backed)', ()
     const progressIndexes = calls
       .map((c, i) => (c[0] === 'humbleSyncProgress' ? i : -1))
       .filter((i) => i >= 0)
-    const lastProgressIndex = progressIndexes[progressIndexes.length - 1]
+    const lastProgressIndex = defined(
+      progressIndexes[progressIndexes.length - 1],
+      'last humbleSyncProgress index'
+    )
 
     // The terminal progress event must reach done === total — the renderer
     // computes `syncing = done < total` from exactly this payload.
-    expect(calls[lastProgressIndex][1]).toEqual({ done: 2, total: 2 })
+    expect(defined(calls[lastProgressIndex], 'last progress call')[1]).toEqual({
+      done: 2,
+      total: 2
+    })
 
     // …and a humbleKeysUpdated (which also clears `syncing`) must follow it.
     const keysUpdatedAfterLastProgress = calls

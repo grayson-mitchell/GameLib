@@ -42,7 +42,8 @@ describe('indexedAccessRatchet bucketOf', () => {
     expect(ADOPTED_BUCKETS).toEqual([
       STEAM,
       'src/backend/storeManagers/gog',
-      'src/backend/storeManagers/legendary'
+      'src/backend/storeManagers/legendary',
+      'src/backend/humble'
     ])
   })
 })

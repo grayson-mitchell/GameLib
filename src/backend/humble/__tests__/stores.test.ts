@@ -278,7 +278,7 @@ describe('humbleLibraryStore — D-74 internal cache-record typing', () => {
 
     const stored = humbleLibraryStore.get(gamekey)
     expect(stored).toEqual(entry)
-    expect(stored?.keys[0].keyindex).toBe(3)
-    expect(stored?.keys[0].revealedKeyValue).toBe('ABCD1-EFGH2-IJKL3')
+    expect(stored?.keys[0]?.keyindex).toBe(3)
+    expect(stored?.keys[0]?.revealedKeyValue).toBe('ABCD1-EFGH2-IJKL3')
   })
 })
