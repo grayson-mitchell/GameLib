@@ -39,11 +39,12 @@ export async function getUmuId(
   if (!response || response.status !== 200) {
     return null
   }
-  if (response.data.length === 0) {
+  const [firstMatch] = response.data
+  if (firstMatch === undefined) {
     umuStore.set(key, null)
     return null
   }
-  const umuId = response.data[0].umu_id
+  const umuId = firstMatch.umu_id
   umuStore.set(key, umuId)
   return umuId
 }

@@ -11,7 +11,6 @@
   "src/backend/storeManagers/nile": 1,
   "src/backend/storeManagers/sideload": 2,
   "src/backend/tools": 120,
-  "src/backend/wiki_game_info": 6,
   "src/common/knownFixOverlayCatalogue.ts": 1,
   "src/common/reportProblem.ts": 4,
   "src/common/types": 1,

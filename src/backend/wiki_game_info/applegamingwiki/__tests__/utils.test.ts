@@ -2,6 +2,7 @@ import { logError } from 'backend/logger'
 import { getInfoFromAppleGamingWiki } from '../utils'
 import { axiosClient } from 'backend/utils'
 import { AppleGamingWikiInfo } from 'common/types'
+import { defined } from 'backend/testUtils/indexed'
 
 jest.mock('backend/logger')
 jest.mock('backend/store_backend')
@@ -122,7 +123,10 @@ describe('getInfoFromAppleGamingWiki', () => {
 
     // First call is getPageID — URL must be encodeURIComponent-encoded and
     // the config object must carry a Mozilla-like User-Agent (not the axios default).
-    const [searchUrl, searchConfig] = axiosGetSpy.mock.calls[0]
+    const [searchUrl, searchConfig] = defined(
+      axiosGetSpy.mock.calls[0],
+      'first axios call'
+    )
     expect(searchUrl).toContain(encodeURIComponent('Half-Life 2'))
     expect(searchConfig?.headers?.['User-Agent']).toMatch(/Mozilla/)
   })
@@ -144,7 +148,10 @@ describe('getInfoFromAppleGamingWiki', () => {
     await getInfoFromAppleGamingWiki("Baldur's Gate 3")
 
     // Second call is getWikiText — must also carry Mozilla UA
-    const [, wikiConfig] = axiosGetSpy.mock.calls[1]
+    const [, wikiConfig] = defined(
+      axiosGetSpy.mock.calls[1],
+      'second axios call'
+    )
     expect(wikiConfig?.headers?.['User-Agent']).toMatch(/Mozilla/)
   })
 })

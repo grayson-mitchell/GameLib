@@ -106,6 +106,15 @@ async function getGameDataById(
   }
 }
 
+/** First capture group of `pattern` in `html`; throws (callers catch, log and fail soft) when the page no longer matches. */
+function captureGroup(html: string, pattern: RegExp): string {
+  const group = html.match(pattern)?.[1]
+  if (group === undefined) {
+    throw new Error(`HLTB page did not match ${pattern}`)
+  }
+  return group
+}
+
 async function getGogHLTBGameData(
   game: Game
 ): Promise<HeroicHowLongToBeatEntry | null> {
@@ -127,30 +136,34 @@ async function getGogHLTBGameData(
     const html = response.data as string
     const mainStory = Math.round(
       parseFloat(
-        html.match(
+        captureGroup(
+          html,
           /<span class="howlongtobeat-box__time"> ?([\d.]+) h ?<\/span><span class="howlongtobeat-box__name">Main<\/span>/
-        )![1]
+        )
       )
     )
     const mainExtra = Math.round(
       parseFloat(
-        html.match(
+        captureGroup(
+          html,
           /<span class="howlongtobeat-box__time"> ?([\d.]+) h ?<\/span><span class="howlongtobeat-box__name">Main \+ Sides<\/span>/
-        )![1]
+        )
       )
     )
     const completionist = Math.round(
       parseFloat(
-        html.match(
+        captureGroup(
+          html,
           /<span class="howlongtobeat-box__time"> ?([\d.]+) h ?<\/span><span class="howlongtobeat-box__name">Completionist<\/span>/
-        )![1]
+        )
       )
     )
 
     const hltbId = parseInt(
-      html.match(
+      captureGroup(
+        html,
         /<a target="_blank" href="https:\/\/howlongtobeat.com\/game\/(\d+)">HowLongToBeat<\/a>/
-      )![1]
+      )
     )
 
     return {
