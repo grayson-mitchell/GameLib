@@ -174,6 +174,12 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
     phase: 'pending'
   })
   const steamLibrariesSettled = libraryFetch.phase !== 'pending'
+  // Quick 261107-li0: reported up by SteamDialog (it owns the bridge verdict
+  // fetch). While true the Steam-arm WineSelector is hidden.
+  const [steamBridgeOwnsEngine, setSteamBridgeOwnsEngine] = useState(false)
+  useEffect(() => {
+    setSteamBridgeOwnsEngine(false)
+  }, [appName])
   // The array every downstream consumer wants. Kept as ONE derivation so no
   // call site re-invents `?? []`, and memoised so a re-render does not hand a
   // fresh `[]` identity to the gating memo.
@@ -697,6 +703,7 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
             nativeInstallOn={steamNativeInstallOn}
             eligibilityPending={eligibility.pending}
             depotSignalResolved={depotSignalResolved}
+            onBridgeOwnsEngineChange={setSteamBridgeOwnsEngine}
           >
             {platformSelection()}
             {/* Plan 11, D-25: the wine region's FIRST arm is the pending
@@ -707,7 +714,7 @@ function InstallModal({ appName, runner, gameInfo = null }: Props) {
                 (belt-and-braces, deliberately). */}
             {eligibility.pending ? (
               <EligibilityLoadingRow />
-            ) : showWineSelector ? (
+            ) : showWineSelector && !steamBridgeOwnsEngine ? (
               <WineSelector
                 appName={appName}
                 winePrefix={winePrefix}

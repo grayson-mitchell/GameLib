@@ -68,6 +68,7 @@ import {
 import { AvailablePlatforms } from '..'
 import type { SteamSectionGatingVerdict } from '../steamSectionGating'
 import {
+  resolveBridgeOwnsEngine,
   resolveBridgeRouteLine,
   resolveForceBottleDisplayed,
   resolveForceBottleWrite
@@ -128,6 +129,11 @@ interface Props {
    * picks between the two sentences without adding a verdict field (the
    * resolver's 8-row/96-combination contract is untouched). */
   nativeInstallOn: boolean
+  /** Quick 261107-li0: the parent cannot see the bridge verdict, which this
+   * dialog fetches itself (Plan 16 scope), so whether the native bridge owns
+   * the engine is reported up. The parent hides the `WineSelector` it passes
+   * as children while this is true. */
+  onBridgeOwnsEngineChange?: (owns: boolean) => void
   /** Plan 11, D-25: true while `useSteamBottleEligibility`'s IPC round trip
    * is in flight. The ONE surviving piece of the retired D-12 busy
    * contract, relocated from the origin control to THIS dialog's own
@@ -204,7 +210,8 @@ export default function SteamDialog({
   nativeInstallOn,
   eligibilityPending,
   depotSignalResolved,
-  headerPlatforms
+  headerPlatforms,
+  onBridgeOwnsEngineChange
 }: Props) {
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
@@ -304,6 +311,19 @@ export default function SteamDialog({
     bridgeLine,
     forceBottlePending
   )
+
+  // Quick 261107-li0: on the native-bridge route the game gets its own bottle
+  // and the shared bottled-client Wine choice is a no-op, so hide it and skip
+  // persisting it.
+  const bridgeOwnsEngine = resolveBridgeOwnsEngine(
+    bridgeLine,
+    forceBottleDisplayed
+  )
+  const wineSectionEffective = gating.wineSection && !bridgeOwnsEngine
+
+  useEffect(() => {
+    onBridgeOwnsEngineChange?.(bridgeOwnsEngine)
+  }, [bridgeOwnsEngine, onBridgeOwnsEngineChange])
 
   const handleForceBottleToggle = useCallback(() => {
     setForceBottlePending(!forceBottleDisplayed)
@@ -437,14 +457,14 @@ export default function SteamDialog({
       // makes the guided bottle setup derive an engine when nothing was
       // persisted.
       if (
-        gating.wineSection &&
+        wineSectionEffective &&
         wineVersion &&
         !isBottleCapableEngine(wineVersion)
       ) {
         window.api.logError(
           '34.13 SteamDialog: refused to persist a non-CrossOver engine for the Steam bottle (D-16; the bottle is created with cxbottle and nothing else)'
         )
-      } else if (gating.wineSection && wineVersion) {
+      } else if (wineSectionEffective && wineVersion) {
         // B-CR-01: a REJECTED persist is the same class of outcome as a
         // resolved `{ status: 'error' }` -- the guided bottle setup still
         // derives an engine when nothing was persisted (D-15), so neither
@@ -559,7 +579,8 @@ export default function SteamDialog({
     submitting,
     bridgeLine,
     forceBottlePending,
-    signInRequired
+    signInRequired,
+    wineSectionEffective
   ])
 
   // Quick 261024-ho4: a CrossOver rating below 4 of 5 asks before the install
@@ -695,13 +716,15 @@ export default function SteamDialog({
         {children}
         {gating.wineSection && (
           <>
-            <div className="infoBox">
-              <FontAwesomeIcon icon={faWarning} />
-              {tGamelib(
-                'gamelib:steam.install.sharedBottleNotice',
-                'The wine version you choose here is used for every Steam game that needs a bottle — not just this one. Changing it later will change how those games run too.'
-              )}
-            </div>
+            {wineSectionEffective && (
+              <div className="infoBox">
+                <FontAwesomeIcon icon={faWarning} />
+                {tGamelib(
+                  'gamelib:steam.install.sharedBottleNotice',
+                  'The wine version you choose here is used for every Steam game that needs a bottle — not just this one. Changing it later will change how those games run too.'
+                )}
+              </div>
+            )}
             {bridgeLine.visible && (
               <div className="infoBox steamBridgeRouteLine">
                 <p>
@@ -733,6 +756,14 @@ export default function SteamDialog({
                     </>
                   )}
                 </p>
+                {bridgeOwnsEngine && (
+                  <p>
+                    {tGamelib(
+                      'gamelib:steam.install.bridgeEngineNotice',
+                      "This game gets its own bottle. To change the engine it runs on, use Engine (advanced) in the game's settings."
+                    )}
+                  </p>
+                )}
                 {bridgeLine.missingSymbols.length > 0 && (
                   <p>
                     {tGamelib(

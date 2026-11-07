@@ -680,6 +680,7 @@
         },
         "install": {
             "bottleNameReadonlyHelper": "GameLib manages one shared CrossOver bottle for Steam. Naming a separate bottle per game isn't supported yet.",
+            "bridgeEngineNotice": "This game gets its own bottle. To change the engine it runs on, use Engine (advanced) in the game's settings.",
             "contentLightNotice": "This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib.",
             "contentLightSingleLibraryNotice": "There's only one Steam library on this system, so there's nothing to choose here — GameLib will install this game into it.",
             "crossoverRequired": "CrossOver is required to install Windows games on macOS. Install it from codeweavers.com, then try again.",

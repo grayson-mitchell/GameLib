@@ -1148,6 +1148,90 @@ describe('261029-s5l sign-in gate', () => {
   })
 })
 
+describe('261107-li0: the shared Wine section is hidden on the native-bridge route', () => {
+  const stripped = readDialogStripped()
+
+  // The persist guards: both branches around `persistBottleWineVersion(`
+  // must read `wineSectionEffective && wineVersion`, never the bare verdict.
+  function assertPersistGuardedByEffective(source: string) {
+    const guards = source.match(/\b[\w.]+\s*&&\s*wineVersion\b(?!\?)/g) ?? []
+    const effective = guards.filter((g) => g.startsWith('wineSectionEffective'))
+    if (effective.length < 2) {
+      throw new Error(
+        `assertPersistGuardedByEffective: expected both persist branches guarded by wineSectionEffective, found ${effective.length}`
+      )
+    }
+    if (guards.some((g) => g.startsWith('gating.wineSection'))) {
+      throw new Error(
+        'assertPersistGuardedByEffective: a persist branch is still guarded by the bare gating.wineSection'
+      )
+    }
+  }
+
+  function assertSharedNoticeGuarded(source: string) {
+    const keyIndex = source.indexOf('gamelib:steam.install.sharedBottleNotice')
+    if (keyIndex === -1) {
+      throw new Error('assertSharedNoticeGuarded: the notice key is gone')
+    }
+    const before = source.slice(0, keyIndex)
+    const guardIndex = before.lastIndexOf('wineSectionEffective &&')
+    if (guardIndex === -1) {
+      throw new Error(
+        'assertSharedNoticeGuarded: no wineSectionEffective && guard precedes the shared-bottle notice'
+      )
+    }
+    const between = before.slice(guardIndex)
+    if (between.includes('</div>')) {
+      throw new Error(
+        'assertSharedNoticeGuarded: the guard closes before the notice -- the notice is unguarded'
+      )
+    }
+  }
+
+  it('consumes resolveBridgeOwnsEngine and reports it up', () => {
+    expect(stripped).toContain('resolveBridgeOwnsEngine(')
+    expect(stripped).toContain('onBridgeOwnsEngineChange')
+  })
+
+  it('both persist branches are guarded by wineSectionEffective', () => {
+    expect(() => assertPersistGuardedByEffective(stripped)).not.toThrow()
+  })
+
+  it('RED: swapping a persist guard back to gating.wineSection trips', () => {
+    const knownBad = stripped.replace(
+      /wineSectionEffective(\s*&&\s*wineVersion)/,
+      'gating.wineSection$1'
+    )
+    expect(knownBad).not.toBe(stripped)
+    expect(() => assertPersistGuardedByEffective(knownBad)).toThrow(
+      /wineSectionEffective|bare/
+    )
+  })
+
+  it('the shared-bottle notice sits inside a wineSectionEffective guard', () => {
+    expect(() => assertSharedNoticeGuarded(stripped)).not.toThrow()
+  })
+
+  it('RED: removing the notice guard trips', () => {
+    const idx = stripped.indexOf('gamelib:steam.install.sharedBottleNotice')
+    const guardIdx = stripped
+      .slice(0, idx)
+      .lastIndexOf('wineSectionEffective &&')
+    const knownBad =
+      stripped.slice(0, guardIdx) +
+      'true &&' +
+      stripped.slice(guardIdx + 'wineSectionEffective &&'.length)
+    expect(knownBad).not.toBe(stripped)
+    expect(() => assertSharedNoticeGuarded(knownBad)).toThrow()
+  })
+
+  it('the footer Install button is still disabled only by eligibilityPending / submitting / signInRequired', () => {
+    expect(stripped).toContain(
+      'disabled={eligibilityPending || submitting || signInRequired}'
+    )
+  })
+})
+
 // Finish with a full-suite run in Task 3's own <verify> command
 // (`pnpm test:ci`) -- this plan adds files only, so any suite that flips
 // red is a real regression, not an expected update.

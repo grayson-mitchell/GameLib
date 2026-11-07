@@ -236,6 +236,38 @@ describe('Group B: the loading row is mounted, in the right slot, behind the rig
     )
   })
 
+  function assertBridgeOwnsEngineHidesSteamSelector(source: string) {
+    const arm = source.slice(
+      source.indexOf('<SteamDialog'),
+      source.indexOf('</SteamDialog>')
+    )
+    const rowIndex = arm.indexOf('<EligibilityLoadingRow')
+    const guardIndex = arm.indexOf('!steamBridgeOwnsEngine')
+    const selectorIndex = arm.indexOf('<WineSelector')
+    if (
+      rowIndex === -1 ||
+      guardIndex === -1 ||
+      selectorIndex === -1 ||
+      !(rowIndex < guardIndex && guardIndex < selectorIndex)
+    ) {
+      throw new Error(
+        'assertBridgeOwnsEngineHidesSteamSelector: !steamBridgeOwnsEngine is not between the loading row and the Steam <WineSelector'
+      )
+    }
+  }
+
+  it('B3-li0: the Steam-arm WineSelector is hidden while the bridge owns the engine', () => {
+    expect(() => assertBridgeOwnsEngineHidesSteamSelector(source)).not.toThrow()
+  })
+
+  it('B3-li0-RED: removing the guard trips', () => {
+    const knownBad = source.replace('!steamBridgeOwnsEngine', 'true')
+    expect(knownBad).not.toBe(source)
+    expect(() => assertBridgeOwnsEngineHidesSteamSelector(knownBad)).toThrow(
+      /not between/
+    )
+  })
+
   it('B4: useSteamBottleEligibility( appears exactly once and applyEligibilityPending( appears exactly once -- one hook call, one wrap, no second re-derivation', () => {
     expect(countOccurrences(source, 'useSteamBottleEligibility(')).toBe(1)
     expect(countOccurrences(source, 'applyEligibilityPending(')).toBe(1)
