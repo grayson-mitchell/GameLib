@@ -151,7 +151,7 @@ export function assertPlausibleAbsolutePath(
  */
 export function assertCommandParts(
   commandParts: unknown
-): asserts commandParts is string[] {
+): asserts commandParts is [string, ...string[]] {
   if (!Array.isArray(commandParts)) {
     throw new CommandShapeError(
       `runWineCommandForGame: commandParts must be an array, got ${typeof commandParts}`

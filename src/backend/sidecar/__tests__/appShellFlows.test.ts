@@ -67,6 +67,7 @@
  * tests that would otherwise depend on execution order.
  */
 
+import { defined } from 'backend/testUtils/indexed'
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -458,7 +459,12 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     expect(exitOrder).toBeGreaterThanOrEqual(0)
     expect(
       mockRestoreMacSteamOnlineIfOwed.mock.invocationCallOrder[0]
-    ).toBeLessThan(mockRequestRustInvoke.mock.invocationCallOrder[exitOrder])
+    ).toBeLessThan(
+      defined(
+        mockRequestRustInvoke.mock.invocationCallOrder[exitOrder],
+        'exit invocation order'
+      )
+    )
   })
 
   it("quit (send) logs the '[GAMELIB_SIDECAR_SEND_HANDLER] quit' marker, the live gate's sidecar-side proof that the shell's frame landed (todo 2026-10-05 cmd-q-and-red-x)", async () => {
@@ -505,8 +511,10 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       ([channel]) => channel === RUST_APP_EXIT
     )
     expect(exitCallIndex).toBeGreaterThanOrEqual(0)
-    const exitOrder =
-      mockRequestRustInvoke.mock.invocationCallOrder[exitCallIndex]
+    const exitOrder = defined(
+      mockRequestRustInvoke.mock.invocationCallOrder[exitCallIndex],
+      'exit invocation order'
+    )
     expect(registryOrder).toBeLessThan(exitOrder)
   })
 
@@ -543,7 +551,10 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         ([channel]) => channel === RUST_DIALOG_MESSAGE
       )
       expect(dialogCall).toBeDefined()
-      const options = (dialogCall?.[1] as Record<string, unknown>[])[0]
+      const options = defined(
+        (dialogCall?.[1] as Record<string, unknown>[])[0],
+        'dialog options'
+      )
 
       // This suite's `i18next` mock exposes ONLY `changeLanguage` -- calling `t()` on it
       // throws, which is a faithful stand-in for the real uninitialized instance (whose
@@ -1503,7 +1514,10 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     function fireChangeTrayColor(): void {
       const listeners = listenerRegistry.get('changeTrayColor') ?? []
       expect(listeners.length).toBeGreaterThan(0)
-      listeners[listeners.length - 1](undefined)
+      defined(
+        listeners[listeners.length - 1],
+        'last changeTrayColor listener'
+      )(undefined)
     }
 
     beforeEach(() => {

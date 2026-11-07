@@ -47,6 +47,7 @@ jest.mock('../sidecarRpc', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { defined } from 'backend/testUtils/indexed'
 import {
   BrowserWindow,
   Notification,
@@ -645,11 +646,12 @@ describe('platformApi fakeWindow.reload / fakeWebContents.openDevTools (Phase 34
   // `processShortcut` was ported under the sidecar.
 
   it('BrowserWindow.getAllWindows()[0].reload() returns undefined without throwing, and logs exactly once', () => {
-    const [win] = BrowserWindow.getAllWindows()
+    const win = defined(BrowserWindow.getAllWindows()[0], 'first window')
 
+    const reload = defined(win.reload, 'win.reload')
     let result: unknown
     expect(() => {
-      result = win.reload()
+      result = reload()
     }).not.toThrow()
 
     expect(result).toBeUndefined()
@@ -658,11 +660,15 @@ describe('platformApi fakeWindow.reload / fakeWebContents.openDevTools (Phase 34
   })
 
   it('BrowserWindow.getAllWindows()[0].webContents.openDevTools() returns undefined without throwing, and logs exactly once', () => {
-    const [win] = BrowserWindow.getAllWindows()
+    const win = defined(BrowserWindow.getAllWindows()[0], 'first window')
 
+    const openDevTools = defined(
+      win.webContents.openDevTools,
+      'win.webContents.openDevTools'
+    )
     let result: unknown
     expect(() => {
-      result = win.webContents.openDevTools()
+      result = openDevTools()
     }).not.toThrow()
 
     expect(result).toBeUndefined()
@@ -671,19 +677,25 @@ describe('platformApi fakeWindow.reload / fakeWebContents.openDevTools (Phase 34
   })
 
   it('both are declared as callable, void-returning functions on the stub surface', () => {
-    const [win] = BrowserWindow.getAllWindows()
+    const win = defined(BrowserWindow.getAllWindows()[0], 'first window')
     expect(typeof win.reload).toBe('function')
     expect(typeof win.webContents.openDevTools).toBe('function')
   })
 
   it('reload() and openDevTools() each log a DECLARED DEGRADED (T-34.5-27) message naming their own member', () => {
-    const [win] = BrowserWindow.getAllWindows()
+    const win = defined(BrowserWindow.getAllWindows()[0], 'first window')
 
-    win.reload()
+    const reload = defined(win.reload, 'win.reload')
+    const openDevTools = defined(
+      win.webContents.openDevTools,
+      'win.webContents.openDevTools'
+    )
+
+    reload()
     expect(String(warnSpy.mock.calls[0][0])).toContain('T-34.5-27')
 
     warnSpy.mockClear()
-    win.webContents.openDevTools()
+    openDevTools()
     expect(String(warnSpy.mock.calls[0][0])).toContain('T-34.5-27')
   })
 })

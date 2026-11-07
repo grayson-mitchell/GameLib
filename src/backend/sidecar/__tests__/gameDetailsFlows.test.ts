@@ -349,6 +349,7 @@ import { readFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
 import { getLogFilePath } from 'backend/logger/paths'
+import { defined } from 'backend/testUtils/indexed'
 
 // ── CR-03 / WR-01 containment guard — MUST run before either describe
 // block's first beforeEach (both end in a destructive
@@ -389,19 +390,27 @@ const mockedSendGameStatusUpdate = sendGameStatusUpdate as jest.Mock
 const mockedGetUserInfo = LegendaryUser.getUserInfo as jest.Mock
 const mockedCallAbortController = callAbortController as jest.Mock
 
-const legendaryManager = libraryManagerMap.legendary as unknown as Record<
-  string,
+type ManagerMock = Record<
+  | 'addNewApp'
+  | 'changeGameInstallPath'
+  | 'changeVersionPinnedStatus'
+  | 'getCyberpunkMods'
+  | 'getGame'
+  | 'getGameOverride'
+  | 'getGameSdl'
+  | 'getInstallInfo'
+  | 'getLaunchOptions'
+  | 'getListOfGames'
+  | 'hasGame'
+  | 'refresh'
+  | 'setCyberpunkModConfig',
   jest.Mock
 >
-const gogManager = libraryManagerMap.gog as unknown as Record<string, jest.Mock>
-const steamManager = libraryManagerMap.steam as unknown as Record<
-  string,
-  jest.Mock
->
-const sideloadManager = libraryManagerMap.sideload as unknown as Record<
-  string,
-  jest.Mock
->
+
+const legendaryManager = libraryManagerMap.legendary as unknown as ManagerMock
+const gogManager = libraryManagerMap.gog as unknown as ManagerMock
+const steamManager = libraryManagerMap.steam as unknown as ManagerMock
+const sideloadManager = libraryManagerMap.sideload as unknown as ManagerMock
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
@@ -477,8 +486,8 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       steamManager,
       sideloadManager
     ]) {
-      for (const key of Object.keys(manager)) {
-        manager[key].mockReset()
+      for (const mock of Object.values(manager)) {
+        mock.mockReset()
       }
     }
     legendaryManager.hasGame.mockReturnValue(true)
@@ -1010,7 +1019,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     await flush()
 
     for (let index = 0; index < ALL_15_CHANNELS.length; index++) {
-      const [channel] = ALL_15_CHANNELS[index]
+      const [channel] = defined(ALL_15_CHANNELS[index], 'ALL_15_CHANNELS entry')
       const response = findResponse(frames, `all15-${index}`)
       expect(response).toBeDefined()
       expect(String(response?.error ?? '')).not.toContain(
@@ -1059,8 +1068,8 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
       steamManager,
       sideloadManager
     ]) {
-      for (const key of Object.keys(manager)) {
-        manager[key].mockReset()
+      for (const mock of Object.values(manager)) {
+        mock.mockReset()
       }
     }
     gameOverridesStore.set('overrides', {})

@@ -135,6 +135,7 @@ jest.mock('backend/store_backend', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import { defined } from 'backend/testUtils/indexed'
 import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
 import {
   existsSync,
@@ -376,7 +377,7 @@ describe("shortcutsExists' fallback on an empty getGameInfo() (260905-mv5, site 
     // lookup resolves `getPath('desktop')` outside the containment home.
     const originalPlatform = overrideProcessPlatform('darwin')
     try {
-      const [desktopFile] = shortcutFiles(title)
+      const desktopFile = defined(shortcutFiles(title)[0], 'desktop file')
       expect(desktopFile.startsWith(homedir())).toBe(true)
       mkdirSync(desktopFile, { recursive: true })
 
@@ -459,7 +460,7 @@ describe('261012-ca6 add/remove resolve whether shortcuts exist once the work ha
 
   /** The contained `.app` path for `title`, asserted to sit under the jest containment home. */
   function containedApp(title: string): string {
-    const [menuFile] = shortcutFiles(title)
+    const menuFile = defined(shortcutFiles(title)[0], 'menu file')
     expect(menuFile.startsWith(homedir())).toBe(true)
     created.push(menuFile)
     return menuFile
@@ -633,7 +634,9 @@ describe('261027-c4g mac toast names the Desktop', () => {
   }
 
   function contained(title: string): { desktop: string; menu: string } {
-    const [desktop, menu] = shortcutFiles(title)
+    const files = shortcutFiles(title)
+    const desktop = defined(files[0], 'desktop file')
+    const menu = defined(files[1], 'menu file')
     expect(desktop.startsWith(homedir())).toBe(true)
     expect(menu.startsWith(homedir())).toBe(true)
     created.push(desktop, menu)
@@ -850,7 +853,7 @@ describeOnDarwin(
         undefined
       )
 
-      const [, menuFile] = shortcutFiles(title)
+      const menuFile = defined(shortcutFiles(title)[1], 'menu file')
       const runShPath = `${menuFile}/Contents/MacOS/run.sh`
       const icnsPath = `${menuFile}/Contents/Resources/shortcut.icns`
 
@@ -902,14 +905,16 @@ describeOnDarwin(
         undefined
       )
 
-      const [, menuFile] = shortcutFiles(title)
+      const menuFile = defined(shortcutFiles(title)[1], 'menu file')
       const runShPath = `${menuFile}/Contents/MacOS/run.sh`
       expect(existsSync(runShPath)).toBe(true)
       const contents = readFileSync(runShPath, 'utf-8')
 
       const urlMatch = /'(gamelib:\/\/[^']*)'/.exec(contents)
       expect(urlMatch).not.toBeNull()
-      const parsedAppName = new URL(urlMatch![1]).searchParams.get('appName')
+      const parsedAppName = new URL(
+        defined(urlMatch?.[1], 'gamelib url capture')
+      ).searchParams.get('appName')
       expect(parsedAppName).toBe(maliciousAppName)
 
       // No bare `;` or `&` outside the single-quoted URL region -- strip that region and assert
@@ -924,7 +929,7 @@ describeOnDarwin(
     it('UNSET: deleting GAMELIB_SHELL_EXE writes no run.sh, does not reject the listener, and logs the failure', async () => {
       delete process.env.GAMELIB_SHELL_EXE
       const title = 'Exe Pin Unset Game'
-      const [, menuFile] = shortcutFiles(title)
+      const menuFile = defined(shortcutFiles(title)[1], 'menu file')
       const runShPath = `${menuFile}/Contents/MacOS/run.sh`
 
       await handlerRegistry.get('addShortcut')?.(
@@ -953,7 +958,7 @@ describeOnDarwin(
     it('EMPTY: an empty-string GAMELIB_SHELL_EXE behaves identically to unset — no run.sh, no reject, logged failure', async () => {
       process.env.GAMELIB_SHELL_EXE = ''
       const title = 'Exe Pin Empty Game'
-      const [, menuFile] = shortcutFiles(title)
+      const menuFile = defined(shortcutFiles(title)[1], 'menu file')
       const runShPath = `${menuFile}/Contents/MacOS/run.sh`
 
       await handlerRegistry.get('addShortcut')?.(

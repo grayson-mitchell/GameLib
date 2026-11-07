@@ -394,23 +394,13 @@ beforeAll(() => {
 
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 
-const legendaryManager = libraryManagerMap.legendary as unknown as Record<
-  string,
-  jest.Mock
->
-const gogManager = libraryManagerMap.gog as unknown as Record<string, jest.Mock>
-const steamManager = libraryManagerMap.steam as unknown as Record<
-  string,
-  jest.Mock
->
-const nileManager = libraryManagerMap.nile as unknown as Record<
-  string,
-  jest.Mock
->
-const sideloadManager = libraryManagerMap.sideload as unknown as Record<
-  string,
-  jest.Mock
->
+type ManagerMock = Record<'getGame' | 'getListOfGames', jest.Mock>
+
+const legendaryManager = libraryManagerMap.legendary as unknown as ManagerMock
+const gogManager = libraryManagerMap.gog as unknown as ManagerMock
+const steamManager = libraryManagerMap.steam as unknown as ManagerMock
+const nileManager = libraryManagerMap.nile as unknown as ManagerMock
+const sideloadManager = libraryManagerMap.sideload as unknown as ManagerMock
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
@@ -549,8 +539,8 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       nileManager,
       sideloadManager
     ]) {
-      for (const key of Object.keys(manager)) {
-        manager[key].mockReset()
+      for (const mock of Object.values(manager)) {
+        mock.mockReset()
       }
       manager.getListOfGames.mockReturnValue([])
     }

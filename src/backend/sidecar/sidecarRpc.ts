@@ -331,9 +331,10 @@ const OVERSIZED_INVOKE_HEAD = /^\s*\{"id":"([^"\\]{1,64})","kind":"invoke"/
  */
 function answerOversizedFrame(head: string): void {
   const match = OVERSIZED_INVOKE_HEAD.exec(head.slice(0, 256))
-  if (!match) return
+  const id = match?.[1]
+  if (id === undefined) return
   const response: SidecarRpcResponse = {
-    id: match[1],
+    id,
     ok: false,
     error: `oversized frame dropped: over ${MAX_LINE_LENGTH} characters`
   }

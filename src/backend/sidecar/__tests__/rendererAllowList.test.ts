@@ -4,6 +4,7 @@
  * silently blocks (T-67-62). Also guards the generator's filter against the same computation
  * done here (T-67-63).
  */
+import { defined } from 'backend/testUtils/indexed'
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -40,7 +41,7 @@ function preloadChannels(): Map<string, string> {
     const src = stripComments(readFileSync(file, 'utf8'))
     for (const m of src.matchAll(BIND)) {
       if (m[1] === 'frontendListenerSlot') continue // push: not an allow-list member
-      bound.set(m[3], `${file}`)
+      bound.set(defined(m[3], 'BIND channel capture'), `${file}`)
     }
   }
   // tauriTransport sends/invokes: literal channels and the STORE_*_CHANNEL constants
@@ -48,12 +49,14 @@ function preloadChannels(): Map<string, string> {
     readFileSync(join(PRELOAD, 'tauriTransport.ts'), 'utf8')
   )
   for (const m of tt.matchAll(/(?<![\w.])send\(\s*(['"])([^'"]+)\1/g)) {
-    bound.set(m[2], 'tauriTransport.ts')
+    bound.set(defined(m[2], 'send channel capture'), 'tauriTransport.ts')
   }
   for (const m of tt.matchAll(
     /(?<![\w.])(?:send|invoke)(?:<[^>]*>)?\(\s*([A-Z_]+_CHANNEL)\b/g
   )) {
-    const v = (transport as Record<string, unknown>)[m[1]]
+    const v = (transport as Record<string, unknown>)[
+      defined(m[1], 'channel constant capture')
+    ]
     if (typeof v !== 'string') throw new Error(`unknown constant ${m[1]}`)
     bound.set(v, 'tauriTransport.ts')
   }
@@ -63,7 +66,7 @@ function preloadChannels(): Map<string, string> {
 function computedRendererSet(): string[] {
   return Object.keys(channelSchemas)
     .filter((n) => {
-      const e = channelSchemas[n]
+      const e = defined(channelSchemas[n], `channel schema ${n}`)
       return (
         e.caller === 'renderer' && (e.kind === 'invoke' || e.kind === 'send')
       )
@@ -75,7 +78,9 @@ function rustList(): string[] {
   const rs = readFileSync(join(ROOT, 'src-tauri/src/ipc_contract.rs'), 'utf8')
   const body = /RENDERER_CHANNELS: &\[&str\] = &\[([\s\S]*?)\];/.exec(rs)?.[1]
   if (body === undefined) throw new Error('RENDERER_CHANNELS not found')
-  return [...body.matchAll(/"([^"]+)"/g)].map((m) => m[1])
+  return [...body.matchAll(/"([^"]+)"/g)].map((m) =>
+    defined(m[1], 'RENDERER_CHANNELS entry')
+  )
 }
 
 describe('renderer channel allow-list', () => {

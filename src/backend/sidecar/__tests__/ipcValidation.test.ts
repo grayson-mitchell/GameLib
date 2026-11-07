@@ -2,6 +2,7 @@
  * Boundary validation in the sidecar dispatch funnel (Phase 67 Plan 02, D-08..D-11).
  * Drives the REAL `startRpcServer` over PassThrough streams with a mocked `channelSchemas` map.
  */
+import { defined } from 'backend/testUtils/indexed'
 import { PassThrough } from 'node:stream'
 import { z } from 'zod'
 
@@ -127,7 +128,7 @@ describe('validateInbound in the dispatch funnel', () => {
     send({ id: '2', kind: 'invoke', channel: 'testInvoke', args: [5] })
     await flush()
     expect(invokeCalls).toHaveLength(0)
-    const f = frames[0]
+    const f = defined(frames[0], 'first frame')
     expect(f.ok).toBe(false)
     expect(String(f.error).startsWith(IPC_INVALID_ARGS_MARKER)).toBe(true)
     const p = parseIpcInvalidArgsError(String(f.error))
@@ -142,7 +143,7 @@ describe('validateInbound in the dispatch funnel', () => {
     send({ id: '3', kind: 'invoke', channel: 'testInvoke', args })
     await flush()
     expect(invokeCalls).toHaveLength(1)
-    expect(frames[0].ok).toBe(true)
+    expect(defined(frames[0], 'frame 0').ok).toBe(true)
   })
 
   it('(4) an extra positional arg is rejected (strict tuple arity)', async () => {
@@ -154,7 +155,7 @@ describe('validateInbound in the dispatch funnel', () => {
     })
     await flush()
     expect(invokeCalls).toHaveLength(0)
-    expect(frames[0].ok).toBe(false)
+    expect(defined(frames[0], 'frame 0').ok).toBe(false)
   })
 
   it('(5) an invalid send is dropped, logged once to stderr and the sink', async () => {
@@ -199,7 +200,7 @@ describe('validateInbound in the dispatch funnel', () => {
   it('(7) a registered channel with no schema fails closed', async () => {
     send({ id: '7', kind: 'invoke', channel: 'noSchemaInvoke', args: [1, 2] })
     await flush()
-    const f = frames[0]
+    const f = defined(frames[0], 'first frame')
     expect(f.ok).toBe(false)
     const p = parseIpcInvalidArgsError(String(f.error))
     expect(p?.channel).toBe('noSchemaInvoke')
@@ -227,7 +228,7 @@ describe('validateInbound in the dispatch funnel', () => {
   it('(8) an unregistered channel still gets the unported marker', async () => {
     send({ id: '8', kind: 'invoke', channel: 'nothingHere', args: [] })
     await flush()
-    const err = String(frames[0].error)
+    const err = String(defined(frames[0], 'frame 0').error)
     expect(err.startsWith(UNPORTED_CHANNEL_MARKER)).toBe(true)
     expect(err).not.toContain(IPC_INVALID_ARGS_MARKER)
   })
@@ -259,9 +260,10 @@ describe('validateInbound in the dispatch funnel', () => {
       expect(String(f.error).length).toBeLessThan(400)
       expect(String(f.error)).not.toContain('\n')
     }
-    expect(parseIpcInvalidArgsError(String(frames[1].error))?.channel).toBe(
-      'c'.repeat(64)
-    )
+    expect(
+      parseIpcInvalidArgsError(String(defined(frames[1], 'frame 1').error))
+        ?.channel
+    ).toBe('c'.repeat(64))
   })
 })
 

@@ -33,6 +33,7 @@ export function parseUserDirs(
     const match = /^\s*(XDG_[A-Z]+_DIR)\s*=\s*"(.*)"\s*$/.exec(rawLine)
     if (!match) continue
     const [, key, quoted] = match
+    if (key === undefined || quoted === undefined) continue
     const value = quoted.replace(/\\(.)/g, '$1')
     let resolved: string
     if (value === '$HOME' || value.startsWith('$HOME/')) {
@@ -78,8 +79,11 @@ export function parseRegQueryValue(
     const match = /^\s+(.+?)\s{2,}(REG_EXPAND_SZ|REG_SZ)\s{2,}(.*?)\s*$/.exec(
       line
     )
-    if (match && match[1].toLowerCase() === valueName.toLowerCase()) {
-      return match[3]
+    if (!match) continue
+    const [, name, , data] = match
+    if (name === undefined || data === undefined) continue
+    if (name.toLowerCase() === valueName.toLowerCase()) {
+      return data
     }
   }
   return undefined

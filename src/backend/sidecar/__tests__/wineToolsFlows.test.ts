@@ -100,6 +100,7 @@ jest.mock('../../tools/winetricksQueue', () => ({
   }
 }))
 
+import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -221,7 +222,9 @@ describe('pass-through proof — runWineCommand forwards args[0] unchanged, not 
     expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
     // Identity, not just deep-equality -- proves the handler forwards the SAME object rather
     // than cloning/reshaping it before delegating.
-    expect(mockRunWineCommand.mock.calls[0][0]).toBe(commandArgs)
+    expect(defined(mockRunWineCommand.mock.calls[0], 'first call')[0]).toBe(
+      commandArgs
+    )
   })
 })
 
@@ -346,8 +349,10 @@ describe("tool-literal proof — toggleVKD3D forwards the literal 'vkd3d', not '
     expect(mockGetSettings).toHaveBeenCalledTimes(1)
     expect(mockInstallRemove).toHaveBeenCalledTimes(1)
 
-    const [forwardedSettings, forwardedTool, forwardedAction] =
-      mockInstallRemove.mock.calls[0]
+    const [forwardedSettings, forwardedTool, forwardedAction] = defined(
+      mockInstallRemove.mock.calls[0],
+      'first call'
+    )
     // Identity, not just deep-equality -- proves the handler forwards the resolved settings
     // object rather than reshaping it.
     expect(forwardedSettings).toBe(fakeGameSettings)
@@ -566,8 +571,10 @@ describe('runWineCommandForGame hardening — shape guard + pass-through (T-34.5
     })
 
     expect(mockRunWineCommandOnGame).toHaveBeenCalledTimes(1)
-    const [forwardedRunner, forwardedAppName, forwardedOptions] =
-      mockRunWineCommandOnGame.mock.calls[0]
+    const [forwardedRunner, forwardedAppName, forwardedOptions] = defined(
+      mockRunWineCommandOnGame.mock.calls[0],
+      'first call'
+    )
     expect(forwardedRunner).toBe('legendary')
     expect(forwardedAppName).toBe('test-app')
     // Identity, not just deep-equality -- proves the handler forwards the SAME array rather
@@ -746,8 +753,10 @@ describe('winetricks-queue channels — present, invoke-kind, forward args by id
     const result = await handler({} as never, 'gog', 'test-app', verbs)
 
     expect(mockApply).toHaveBeenCalledTimes(1)
-    const [forwardedRunner, forwardedAppName, forwardedVerbs] =
-      mockApply.mock.calls[0]
+    const [forwardedRunner, forwardedAppName, forwardedVerbs] = defined(
+      mockApply.mock.calls[0],
+      'first call'
+    )
     expect(forwardedRunner).toBe('gog')
     expect(forwardedAppName).toBe('test-app')
     // Identity, not just deep-equality -- proves the handler forwards the SAME array rather
@@ -766,8 +775,10 @@ describe('winetricks-queue channels — present, invoke-kind, forward args by id
     const result = await handler({} as never, 'gog', 'test-app')
 
     expect(mockGetState).toHaveBeenCalledTimes(1)
-    expect(mockGetState.mock.calls[0][0]).toBe('gog')
-    expect(mockGetState.mock.calls[0][1]).toBe('test-app')
+    expect(defined(mockGetState.mock.calls[0], 'first call')[0]).toBe('gog')
+    expect(defined(mockGetState.mock.calls[0], 'first call')[1]).toBe(
+      'test-app'
+    )
     expect(result).toBe(fakeState)
   })
 
@@ -783,8 +794,12 @@ describe('winetricks-queue channels — present, invoke-kind, forward args by id
     const result = await handler({} as never, 'gog', 'test-app')
 
     expect(mockCancelRemaining).toHaveBeenCalledTimes(1)
-    expect(mockCancelRemaining.mock.calls[0][0]).toBe('gog')
-    expect(mockCancelRemaining.mock.calls[0][1]).toBe('test-app')
+    expect(defined(mockCancelRemaining.mock.calls[0], 'first call')[0]).toBe(
+      'gog'
+    )
+    expect(defined(mockCancelRemaining.mock.calls[0], 'first call')[1]).toBe(
+      'test-app'
+    )
     expect(result).toBe(fakeState)
   })
 })

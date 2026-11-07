@@ -284,9 +284,10 @@ function createFromPath(path: string): ShimNativeImage {
 function createFromDataURL(dataUrl: string): ShimNativeImage {
   return makeImage(() => {
     const match = dataUrl.match(/^data:[^;]+;base64,([\s\S]*)$/)
-    if (!match) return Buffer.alloc(0)
+    const payload = match?.[1]
+    if (payload === undefined) return Buffer.alloc(0)
     try {
-      return Buffer.from(match[1], 'base64')
+      return Buffer.from(payload, 'base64')
     } catch {
       return Buffer.alloc(0)
     }

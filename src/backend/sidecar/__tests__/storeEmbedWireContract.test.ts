@@ -24,6 +24,7 @@
  * Both sides were covered in isolation; the contract between them was not. Coverage of each
  * end is not coverage of the boundary.
  */
+import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
@@ -146,7 +147,10 @@ function fireWithNoRustPeer(pending: unknown, channel: string): void {
 describe('store-embed wire contract — the sidecar emits exactly what the Rust parsers accept', () => {
   it('store_embed_open emits the fixture payload verbatim (object, not positional)', async () => {
     const { frames } = startTransport()
-    const [expected] = wireFixture.store_embed_open
+    const expected = defined(
+      wireFixture.store_embed_open[0],
+      'store_embed_open fixture'
+    )
     fireWithNoRustPeer(
       createRustStoreEmbedSeam().open(
         expected.url,
@@ -169,7 +173,10 @@ describe('store-embed wire contract — the sidecar emits exactly what the Rust 
 
   it('store_embed_set_bounds emits the fixture payload verbatim (object, not positional)', async () => {
     const { frames } = startTransport()
-    const [expected] = wireFixture.store_embed_set_bounds
+    const expected = defined(
+      wireFixture.store_embed_set_bounds[0],
+      'store_embed_set_bounds fixture'
+    )
     fireWithNoRustPeer(
       createRustStoreEmbedSeam().setBounds({
         x: expected.x,
@@ -190,7 +197,10 @@ describe('store-embed wire contract — the sidecar emits exactly what the Rust 
 
   it('store_embed_navigate emits the fixture payload verbatim (object, not positional)', async () => {
     const { frames } = startTransport()
-    const [expected] = wireFixture.store_embed_navigate
+    const expected = defined(
+      wireFixture.store_embed_navigate[0],
+      'store_embed_navigate fixture'
+    )
     fireWithNoRustPeer(
       createRustStoreEmbedSeam().navigate(expected.url),
       RUST_STORE_EMBED_NAVIGATE
@@ -257,7 +267,10 @@ describe('regression gate: the leaked store_embed rustInvoke rejection now has a
     // stronger than an absence claim.
     jest.useFakeTimers()
     startTransport()
-    const [expected] = wireFixture.store_embed_open
+    const expected = defined(
+      wireFixture.store_embed_open[0],
+      'store_embed_open fixture'
+    )
 
     fireWithNoRustPeer(
       createRustStoreEmbedSeam().open(
