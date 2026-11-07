@@ -99,6 +99,7 @@ jest.mock('backend/ipc', () => ({
 }))
 
 import { SteamUser } from '../user'
+import { finishAuth, startQRLogin } from '../userSignIn'
 
 const CREDENTIALS_MISSING = 'credentialsMissing'
 
@@ -183,7 +184,6 @@ describe('credentialsMissing latch', () => {
   // before a sign-in must not re-latch afterwards (R2 concurrency edge).
   describe('sign-in epoch hooks', () => {
     type Internals = {
-      finishAuth: (session: unknown) => Promise<string>
       acquireAuthenticatedWithToken: (
         opts: unknown,
         token: string
@@ -200,10 +200,10 @@ describe('credentialsMissing latch', () => {
       const internals = SteamUser as unknown as Internals
       refuseLease(internals)
 
-      await internals.finishAuth({
+      await finishAuth({
         refreshToken: 'refresh-token',
         accountName: 'Persona'
-      })
+      } as never)
 
       expect(mockConfigStore.delete).toHaveBeenCalledWith(CREDENTIALS_MISSING)
       expect(mockNoteSignInSucceeded).toHaveBeenCalledTimes(1)
@@ -229,7 +229,7 @@ describe('credentialsMissing latch', () => {
       )
       LoginSession.mockImplementation(() => fakeSession)
 
-      await SteamUser.startQRLogin()
+      await startQRLogin()
       await handlers['authenticated']()
 
       expect(mockConfigStore.delete).toHaveBeenCalledWith(CREDENTIALS_MISSING)

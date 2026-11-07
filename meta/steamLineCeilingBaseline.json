@@ -5,5 +5,5 @@
   "src/backend/storeManagers/steam/bridge/shimGenerate.ts": 1479,
   "src/backend/storeManagers/steam/gameBridgeLaunch.ts": 1183,
   "src/backend/storeManagers/steam/games.ts": 1349,
-  "src/backend/storeManagers/steam/user.ts": 1472
+  "src/backend/storeManagers/steam/user.ts": 1030
 }

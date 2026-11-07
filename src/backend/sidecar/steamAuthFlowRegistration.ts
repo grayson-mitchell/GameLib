@@ -134,6 +134,13 @@ import { ipcMain } from '../platform'
 import '../storeManagers'
 import { SteamUser } from '../storeManagers/steam/user'
 import {
+  pollCredentialLogin,
+  pollQRLogin,
+  startCredentialLogin,
+  startQRLogin,
+  submitSteamGuardCode
+} from '../storeManagers/steam/userSignIn'
+import {
   steamSyncStore,
   steamBottleConfigStore
 } from '../storeManagers/steam/stores'
@@ -173,16 +180,16 @@ export function registerSteamAuthFlows(): void {
   })
 
   ipcMain.handle('steamStartQR', async () => {
-    return SteamUser.startQRLogin()
+    return startQRLogin()
   })
 
   ipcMain.handle('steamPollQR', async () => {
-    return SteamUser.pollQRLogin()
+    return pollQRLogin()
   })
 
   // Source: main.ts:899 — credential/SteamGuard/TOTP login trio (REQ-34.4-01).
   ipcMain.handle('steamPollCredential', async () => {
-    return SteamUser.pollCredentialLogin()
+    return pollCredentialLogin()
   })
 
   ipcMain.handle(
@@ -192,14 +199,14 @@ export function registerSteamAuthFlows(): void {
         username: string
         password: string
       }
-      return SteamUser.startCredentialLogin(username, password)
+      return startCredentialLogin(username, password)
     }
   )
 
   ipcMain.handle(
     'steamSubmitGuard',
     async (_event: unknown, ...args: unknown[]) => {
-      return SteamUser.submitSteamGuardCode(args[0] as string)
+      return submitSteamGuardCode(args[0] as string)
     }
   )
 

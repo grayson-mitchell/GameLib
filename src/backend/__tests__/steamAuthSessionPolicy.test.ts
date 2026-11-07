@@ -46,6 +46,11 @@ const MIN_FILES_SCANNED = 420
 
 const S = 'src/backend/storeManagers/steam/'
 const USER = `${S}user.ts`
+// 65-12: the sign-in flows were lifted out of user.ts into free functions; they
+// are the only other caller of acquireAuthenticatedWithToken (D-15).
+const USER_SIGN_IN = `${S}userSignIn.ts`
+const USER_SIGN_IN_STATE = `${S}userSignInState.ts`
+const ACQUIRE_WITH_TOKEN_ALLOW = [USER, USER_SIGN_IN]
 const ANON = `${S}anonymousClient.ts`
 const GAMES = `${S}games.ts`
 // 62-06: the install cluster (acquireAuthenticated, allowLogon: true) was lifted out of games.ts.
@@ -164,6 +169,8 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
   it('must-scan: every allow-listed and launch-path file is in the scanned set', () => {
     const must = new Set([
       USER,
+      USER_SIGN_IN,
+      USER_SIGN_IN_STATE,
       ANON,
       GAMES,
       ...GAME_MODULES,
@@ -212,6 +219,14 @@ describe('Steam authenticated-session policy (Phase 54 ROADMAP SC3)', () => {
       expect({ f, n: countIn(f, re) > 0 }).toEqual({ f, n: true })
     }
     expect(offendersOutside(re, ACQUIRE_OPEN_ALLOW, 'F')).toEqual([])
+  })
+
+  it('Rule L: acquireAuthenticatedWithToken( appears only in user.ts and userSignIn.ts', () => {
+    const re = /\bacquireAuthenticatedWithToken\(/
+    for (const f of ACQUIRE_WITH_TOKEN_ALLOW) {
+      expect({ f, n: countIn(f, re) > 0 }).toEqual({ f, n: true })
+    }
+    expect(offendersOutside(re, ACQUIRE_WITH_TOKEN_ALLOW, 'L')).toEqual([])
   })
 
   it('Rule G: launch-path files call neither acquireAuthenticated( nor ensureConnected(', () => {

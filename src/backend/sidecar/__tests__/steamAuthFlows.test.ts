@@ -103,6 +103,7 @@ jest.mock('backend/constants/environment', () => ({
 // not re-tests); automocked, no factory, mirrors skeletonFlows.test.ts's own
 // LIB-01 convention for this exact module ────────────────────────────────────
 jest.mock('../../storeManagers/steam/user')
+jest.mock('../../storeManagers/steam/userSignIn')
 
 // ── Plan 34.4-02 additions — bottle/clientSetup/games mocked at the module
 // boundary (their own logic is already covered by
@@ -126,6 +127,13 @@ import { join } from 'node:path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import { SteamUser } from '../../storeManagers/steam/user'
+import {
+  pollCredentialLogin,
+  pollQRLogin,
+  startCredentialLogin,
+  startQRLogin,
+  submitSteamGuardCode
+} from '../../storeManagers/steam/userSignIn'
 import { getSteamLibraries } from 'backend/utils'
 import {
   configStore as steamConfigStore,
@@ -189,7 +197,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   // Test 2: steamStartQR resolves the declared shape and delegates to
   // SteamUser.startQRLogin exactly once.
   it('Test 2: steamStartQR invoke resolves the declared shape and delegates to SteamUser.startQRLogin exactly once', async () => {
-    jest.spyOn(SteamUser, 'startQRLogin').mockResolvedValue({
+    jest.mocked(startQRLogin).mockResolvedValue({
       status: 'done',
       challengeUrl: 'https://s.team/q/1/999001'
     })
@@ -204,15 +212,13 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       ok: true,
       result: { status: 'done', challengeUrl: 'https://s.team/q/1/999001' }
     })
-    expect(jest.spyOn(SteamUser, 'startQRLogin')).toHaveBeenCalledTimes(1)
+    expect(jest.mocked(startQRLogin)).toHaveBeenCalledTimes(1)
   })
 
   // Test 3: steamPollQR resolves the declared shape and delegates to
   // SteamUser.pollQRLogin.
   it('Test 3: steamPollQR invoke resolves the declared shape and delegates to SteamUser.pollQRLogin', async () => {
-    jest
-      .spyOn(SteamUser, 'pollQRLogin')
-      .mockResolvedValue({ status: 'waiting' })
+    jest.mocked(pollQRLogin).mockResolvedValue({ status: 'waiting' })
 
     const { input, frames } = startSidecar()
     writeInvoke(input, 'poll-1', 'steamPollQR', [])
@@ -224,7 +230,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       ok: true,
       result: { status: 'waiting' }
     })
-    expect(jest.spyOn(SteamUser, 'pollQRLogin')).toHaveBeenCalledTimes(1)
+    expect(jest.mocked(pollQRLogin)).toHaveBeenCalledTimes(1)
   })
 
   // Test 4 (token seam + Phase 28 D-04 regression, extended to this channel
@@ -236,7 +242,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   // field for steamConfigStore.
   it('Test 4 (token seam): a successful QR poll writes the token through the TokenStore seam via rustInvoke, and it never surfaces in a store snapshot', async () => {
     jest
-      .spyOn(SteamUser, 'pollQRLogin')
+      .mocked(pollQRLogin)
       .mockResolvedValue({ status: 'done', username: 'gsd-tester' })
 
     const { input, frames } = startSidecar()
@@ -348,9 +354,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   // ── Credential/SteamGuard/TOTP login trio (Phase 34.4 Plan 01, REQ-34.4-01) ──
   describe('credential/SteamGuard/TOTP login trio', () => {
     it('REQ-34.4-01 steamStartCredentials invoke resolves a real value (not the unported marker) and delegates the destructured username/password, not the raw payload object', async () => {
-      jest
-        .spyOn(SteamUser, 'startCredentialLogin')
-        .mockResolvedValue({ status: 'done' })
+      jest.mocked(startCredentialLogin).mockResolvedValue({ status: 'done' })
 
       const { input, frames } = startSidecar()
       writeInvoke(input, 'start-cred-1', 'steamStartCredentials', [
@@ -365,17 +369,16 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         result: { status: 'done' }
       })
       expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
-      expect(
-        jest.spyOn(SteamUser, 'startCredentialLogin')
-      ).toHaveBeenCalledTimes(1)
-      expect(
-        jest.spyOn(SteamUser, 'startCredentialLogin')
-      ).toHaveBeenCalledWith('gsd-tester', 'super-secret')
+      expect(jest.mocked(startCredentialLogin)).toHaveBeenCalledTimes(1)
+      expect(jest.mocked(startCredentialLogin)).toHaveBeenCalledWith(
+        'gsd-tester',
+        'super-secret'
+      )
     })
 
     it('REQ-34.4-01 steamStartCredentials round-trips a guard_required-shaped value unchanged (the frontend contract, steam/user.ts:49-51)', async () => {
       jest
-        .spyOn(SteamUser, 'startCredentialLogin')
+        .mocked(startCredentialLogin)
         .mockResolvedValue({ status: 'guard_required' })
 
       const { input, frames } = startSidecar()
@@ -393,9 +396,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     })
 
     it('REQ-34.4-01 steamSubmitGuard invoke resolves a real value and delegates the bare code string to submitSteamGuardCode', async () => {
-      jest
-        .spyOn(SteamUser, 'submitSteamGuardCode')
-        .mockResolvedValue({ status: 'done' })
+      jest.mocked(submitSteamGuardCode).mockResolvedValue({ status: 'done' })
 
       const { input, frames } = startSidecar()
       writeInvoke(input, 'submit-guard-1', 'steamSubmitGuard', ['ABCDE'])
@@ -408,18 +409,12 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         result: { status: 'done' }
       })
       expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
-      expect(
-        jest.spyOn(SteamUser, 'submitSteamGuardCode')
-      ).toHaveBeenCalledTimes(1)
-      expect(
-        jest.spyOn(SteamUser, 'submitSteamGuardCode')
-      ).toHaveBeenCalledWith('ABCDE')
+      expect(jest.mocked(submitSteamGuardCode)).toHaveBeenCalledTimes(1)
+      expect(jest.mocked(submitSteamGuardCode)).toHaveBeenCalledWith('ABCDE')
     })
 
     it('REQ-34.4-01 steamPollCredential invoke resolves a real value and delegates with no arguments', async () => {
-      jest
-        .spyOn(SteamUser, 'pollCredentialLogin')
-        .mockResolvedValue({ status: 'waiting' })
+      jest.mocked(pollCredentialLogin).mockResolvedValue({ status: 'waiting' })
 
       const { input, frames } = startSidecar()
       writeInvoke(input, 'poll-cred-1', 'steamPollCredential', [])
@@ -432,12 +427,8 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         result: { status: 'waiting' }
       })
       expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
-      expect(
-        jest.spyOn(SteamUser, 'pollCredentialLogin')
-      ).toHaveBeenCalledTimes(1)
-      expect(
-        jest.spyOn(SteamUser, 'pollCredentialLogin')
-      ).toHaveBeenCalledWith()
+      expect(jest.mocked(pollCredentialLogin)).toHaveBeenCalledTimes(1)
+      expect(jest.mocked(pollCredentialLogin)).toHaveBeenCalledWith()
     })
   })
 
