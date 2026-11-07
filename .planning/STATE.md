@@ -4,14 +4,14 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: verifying
 stopped_at: Completed 67-19-PLAN.md
-last_updated: "2026-11-07T19:24:57.417Z"
+last_updated: "2026-11-07T19:47:48.402Z"
 last_activity: 2026-11-07
 progress:
   total_phases: 12
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 104
-  completed_plans: 88
-  percent: 25
+  completed_plans: 89
+  percent: 33
 ---
 
 # Project State
@@ -365,6 +365,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 67]: 67-17: setTitleBarOverlay accepts string-or-number height (renderer passes CSS strings); push 'message' is a variadic rest tuple
 - [Phase 67]: 67-18: direction-aware keying -- pushes sharing a name with an inbound channel live in collidingPushSchemas (pushSchemaFor); validateInbound fails closed (no_schema)
 - [Phase 67]: 67-19: renderer allow-list built from inbound-keyed channelSchemas only (renderer + invoke|send); colliding pushes never open the invoke/send direction
+- [Phase 67]: 67-20: phase 67 gate passes; 8 pre-existing test failures, none phase 67; operator approved
 
 ### Pending Todos
 
