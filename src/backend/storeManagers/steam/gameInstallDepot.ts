@@ -16,7 +16,6 @@ import {
 import { startInstallPolling } from './library/installPolling'
 import * as resumeBreadcrumbs from './library/resumeBreadcrumbs'
 import * as adoption from './macSteamAdoption'
-import * as bottle from './bottle'
 import { SteamUser, type AuthSessionRefusal } from './user'
 import { downloadSteamDepots } from './depot'
 import { ensureSteamClientReady } from './clientSetup'

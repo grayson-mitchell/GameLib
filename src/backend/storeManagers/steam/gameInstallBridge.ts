@@ -4,7 +4,6 @@
  * references SteamGame only via `import type`.
  */
 import i18next from 'i18next'
-import { resolve } from 'node:path'
 import { GameSettings, InstallArgs } from 'common/types'
 import { InstallResult } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
