@@ -123,6 +123,7 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
    * value the sidecar has not persisted.
    */
   public set(key: KeyType, value: ValueType) {
+    if (this.refusesDiskWrite()) return
     const timestamp = Date() as ValueType
     this.current_store.set(key, value)
     this.current_store.set(`__timestamp.${key}`, timestamp)
@@ -137,6 +138,7 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
   }
 
   public delete(key: KeyType) {
+    if (this.refusesDiskWrite()) return
     this.current_store.delete(key)
     this.current_store.delete(`__timestamp.${key}`)
     if (!this.using_in_memory) {
@@ -150,10 +152,24 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
   }
 
   public clear = () => {
+    if (this.refusesDiskWrite()) return
     this.current_store.clear()
     if (!this.using_in_memory) {
       notifyStoreInvalidated(this.filename)
     }
+  }
+
+  /**
+   * Phase 68 D-03/D-06: true for a read-only store (newer-than-supported or failed
+   * migration). `=== true` so suites mocking `store_backend` stay writable.
+   */
+  public get readOnly(): boolean {
+    return (this.store as { readOnly?: boolean }).readOnly === true
+  }
+
+  /** A read-only store accepts no disk write and announces nothing; the in-memory map keeps working. */
+  private refusesDiskWrite(): boolean {
+    return this.readOnly && !this.using_in_memory
   }
 
   public has(key: string) {
@@ -162,7 +178,7 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
 
   /**
    * Returns all cached entries as [key, value] pairs, excluding internal
-   * `__timestamp.*` bookkeeping keys. Useful for one-off cache migrations.
+   * `__timestamp.*` bookkeeping keys and the engine's `__internal__` version key. Useful for one-off cache migrations.
    *
    * The bookkeeping exclusion must cover BOTH on-disk shapes:
    * - The file-backed path: electron-store (conf) defaults
@@ -190,6 +206,12 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
   }
 
   public commit() {
+    if (this.using_in_memory && this.readOnly) {
+      // D-03: the batched session writes are lost; nothing is written or announced.
+      this.using_in_memory = false
+      this.current_store = this.store
+      return
+    }
     if (this.using_in_memory) {
       this.store.store = Object.fromEntries(this.in_memory_store)
       this.using_in_memory = false

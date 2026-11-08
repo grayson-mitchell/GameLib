@@ -44,6 +44,8 @@ interface RegisteredStore {
   options: StoreOptions<StoreStructure[ValidStoreName]>
 }
 
+const RESERVED_KEY = '__internal__'
+
 const storeRegistry = new Map<string, RegisteredStore>()
 
 export function getRegisteredStore(
@@ -132,20 +134,47 @@ export class TypeCheckedStoreBackend<
   // A write that throws must NOT notify — the renderer would then cache a value that is
   // not on disk, which is the exact divergence this mechanism exists to prevent.
 
+  /**
+   * Phase 68 D-03/D-06: a read-only store (newer-than-supported or failed
+   * migration) refuses every write at the `GameLibStore` setter. These early
+   * returns make the refusal silent to the renderer too: notifying after a
+   * refused write would make the renderer cache a value that is not on disk.
+   * `=== true` so suites that mock `store_backend` (no `readOnly`) stay writable.
+   */
+  public get readOnly(): boolean {
+    return (this.store as { readOnly?: boolean }).readOnly === true
+  }
+
+  /**
+   * `__internal__` is the engine's store-version namespace. conf's own
+   * reserved-key check misses the bare key and is skipped entirely on
+   * `accessPropertiesByDotNotation: false` stores, so refuse it here.
+   */
+  private refuseReservedKey(key: string): boolean {
+    if (key.split('.')[0] !== RESERVED_KEY) return false
+    process.stderr.write(
+      `[typed_store] refusing reserved key on ${this.storeName}\n`
+    )
+    return true
+  }
+
   public set<KeyType extends string>(
     key: KeyType,
     value: UnknownGuard<Get<StoreStructure[Name], KeyType>>
   ) {
+    if (this.readOnly || this.refuseReservedKey(key)) return
     this.store.set(key, value)
     notifyStoreChanged({ store: this.storeName, key, value })
   }
 
   public delete<KeyType extends string>(key: KeyType) {
+    if (this.readOnly || this.refuseReservedKey(key)) return
     this.store.delete(key)
     notifyStoreChanged({ store: this.storeName, key, deleted: true })
   }
 
   public clear() {
+    if (this.readOnly) return
     this.store.clear()
     // Whole-store change: no single key describes it, and a per-key encoding could not
     // express the removals at all.
@@ -153,6 +182,12 @@ export class TypeCheckedStoreBackend<
   }
 
   public get raw_store() {
-    return this.store.store as StoreStructure[Name]
+    // The version envelope is not store data: `uploader.ts` iterates these keys as
+    // log URLs, and the sidecar snapshot path reads this too (Pitfall 5).
+    const { [RESERVED_KEY]: _internal, ...rest } = this.store.store as Record<
+      string,
+      unknown
+    >
+    return rest as StoreStructure[Name]
   }
 }
