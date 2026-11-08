@@ -264,13 +264,24 @@ export const RUST_APP_HIDE = 'app_hide' as const
  * (`unminimize()` + `show()` + `set_focus()`). Backs `platform/index.ts`'s
  * `app.raiseMainWindow()`, called before a bridge-notice dialog so a failure
  * that happens while a game is in front is not rendered into a hidden window.
- * Caller: the bridge notice only. The bridge invite picker moved to
+ * Callers: the bridge notice, and `app.raiseMainWindowIfHiddenByGameLib()` (quick
+ * 261108-kpc), which every dialog path runs first so a dialog is never rendered into a window
+ * GameLib itself hid for a launch. The bridge invite picker moved to
  * `RUST_BRIDGE_INVITE_PICKER_OPEN` (quick 261101-llf). On macOS the
  * arm also requests Critical user attention as a fallback (Dock bounce) when
  * activation is declined with a game frontmost.
  * Takes no args; resolves null. Never called for unrelated dialogs.
  */
 export const RUST_MAIN_WINDOW_RAISE = 'main_window_raise' as const
+
+/**
+ * Rust-side channel name: hide GameLib for a game launch (quick 261108-kpc). macOS uses
+ * `AppHandle::hide()` (Cmd+H semantics; a Dock click restores it), other platforms hide the
+ * main window (tray Show / relaunch restores it). Callers: the launch-time hide in
+ * `protocol.ts`, `launcher.ts` and `steamFlowRegistration.ts`, via `app.hideMainWindow()`.
+ * Takes no args; resolves null.
+ */
+export const RUST_MAIN_WINDOW_HIDE = 'main_window_hide' as const
 
 /**
  * Rust-side channel name: open or reuse the `bridge-invite` Tauri window that hosts the
@@ -598,6 +609,7 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_APP_RELAUNCH,
   RUST_APP_HIDE,
   RUST_MAIN_WINDOW_RAISE,
+  RUST_MAIN_WINDOW_HIDE,
   RUST_BRIDGE_INVITE_PICKER_OPEN,
   RUST_CLIPBOARD_WRITE_TEXT,
   RUST_CLIPBOARD_READ_TEXT,

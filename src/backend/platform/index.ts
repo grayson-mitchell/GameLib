@@ -85,6 +85,7 @@ import {
   RUST_APP_EXIT,
   RUST_APP_HIDE,
   RUST_MAIN_WINDOW_RAISE,
+  RUST_MAIN_WINDOW_HIDE,
   RUST_BRIDGE_INVITE_PICKER_OPEN,
   RUST_APP_RELAUNCH,
   RUST_CLIPBOARD_WRITE_TEXT,
@@ -247,6 +248,10 @@ function stubUserAgentFallback(): string {
 // the hot path for every single rustInvoke, not just these two rare lifecycle calls.
 let relaunchInFlight = false
 
+// True while GameLib's own launch-time hide (app.hideMainWindow) is in effect. The sidecar cannot
+// observe real window visibility (fakeWindow.isVisible is a stub), so this is the only record.
+let mainWindowHiddenByGameLib = false
+
 export const app = {
   getPath,
   getName: (): string => 'GameLib',
@@ -387,12 +392,31 @@ export const app = {
   // fakeWindow's show()/focus() stay no-ops because other callers use them; this is the one
   // explicit opt-in, used only before a bridge-notice dialog. Best-effort, never throws.
   raiseMainWindow: (): void => {
+    mainWindowHiddenByGameLib = false
     requestRustInvoke(RUST_MAIN_WINDOW_RAISE, []).catch((error) => {
       console.warn(
         `[platformApi] app.raiseMainWindow(): ${RUST_MAIN_WINDOW_RAISE} failed:`,
         error instanceof Error ? error.message : String(error)
       )
     })
+  },
+  // Hides GameLib for a game launch (quick 261108-kpc) and remembers that GameLib did it, so
+  // `raiseMainWindowIfHiddenByGameLib` can undo exactly that and nothing else. The fakeWindow's
+  // hide() stays a no-op (handleExit calls it on quit). Best-effort, never throws.
+  hideMainWindow: (): void => {
+    mainWindowHiddenByGameLib = true
+    requestRustInvoke(RUST_MAIN_WINDOW_HIDE, []).catch((error) => {
+      console.warn(
+        `[platformApi] app.hideMainWindow(): ${RUST_MAIN_WINDOW_HIDE} failed:`,
+        error instanceof Error ? error.message : String(error)
+      )
+    })
+  },
+  // Re-shows the window only if GameLib itself hid it for a launch; every dialog path calls
+  // this first. A second call is a no-op.
+  raiseMainWindowIfHiddenByGameLib: (): void => {
+    if (!mainWindowHiddenByGameLib) return
+    app.raiseMainWindow()
   },
   // Opens the dedicated `bridge-invite` window for the invite picker (quick 261101-llf) so the
   // main window is not raised over the game. Resolves true on success, false (after a warn) on
@@ -475,6 +499,7 @@ export const app = {
 
 export const dialog = {
   showErrorBox: async (title?: string, content?: string): Promise<void> => {
+    app.raiseMainWindowIfHiddenByGameLib()
     try {
       await requestRustInvoke(RUST_DIALOG_MESSAGE, [
         { message: content, title, kind: 'error' }
@@ -506,6 +531,7 @@ export const dialog = {
     // ANY transport error/timeout resolves `{ response: safeIndex }` -- never `-1`, never
     // reject/throw (total-method convention; an unguarded reject crashes the sidecar, see
     // memory: sidecar-dialog-reject-crashes).
+    app.raiseMainWindowIfHiddenByGameLib()
     const options = (maybeOptions ?? _windowOrOptions) as
       | {
           buttons?: string[]

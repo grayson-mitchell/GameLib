@@ -70,6 +70,8 @@ const app = {
   // from an undefined member.
   hide: jest.fn(),
   raiseMainWindow: jest.fn(),
+  hideMainWindow: jest.fn(),
+  raiseMainWindowIfHiddenByGameLib: jest.fn(),
   openBridgeInvitePicker: jest.fn().mockResolvedValue(true)
 }
 

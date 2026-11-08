@@ -2283,6 +2283,27 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             let _ = window.request_user_attention(Some(tauri::UserAttentionType::Critical));
             Ok(Value::Null)
         }
+        // Hide GameLib for a game launch (quick 261108-kpc). Takes no args, so there is no
+        // injection surface. On macOS this is `AppHandle::hide()` (Cmd+H semantics), NOT
+        // `window.hide()`: there is no `RunEvent::Reopen` handler, so a hidden NSWindow could not
+        // be restored from the Dock, whereas a hidden app is unhidden natively by a Dock click,
+        // activation or `set_focus`. Elsewhere the main window is hidden and restored by the tray
+        // Show item or by relaunching (the focus sentinel shows + focuses it). Same worker-thread
+        // reasoning as the `AppHide` arm above.
+        RustInvokeChannel::MainWindowHide => {
+            #[cfg(target_os = "macos")]
+            {
+                app.hide().map_err(|e| e.to_string())?;
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {
+                    return Err("main_window_hide:no-main-window".to_string());
+                };
+                let _ = window.hide();
+            }
+            Ok(Value::Null)
+        }
         // Open (or reuse) the dedicated `bridge-invite` window that hosts the Steam bridge invite
         // picker (quick 261101-llf). Replaces the 58-36 `main_window_raise` + push, which dragged
         // the whole GameLib window over the game. `args[0]` is `{ appId, ackId }`; both are

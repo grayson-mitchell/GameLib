@@ -1,5 +1,10 @@
 import { LogPrefix, logInfo, logWarning } from 'backend/logger'
-import { dialog, Notification, type IpcMainInvokeEvent } from 'backend/platform'
+import {
+  app,
+  dialog,
+  Notification,
+  type IpcMainInvokeEvent
+} from 'backend/platform'
 import { ButtonOptions, DialogType } from 'common/types'
 import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'
@@ -45,6 +50,13 @@ function showDialogBoxModalAuto(props: {
   /** Correlation id the renderer echoes back via `dialogDisplayed` (see displayAck.ts). */
   ackId?: string
 }): boolean {
+  // Re-show a window GameLib itself hid for a game launch (quick 261108-kpc) so the dialog is
+  // never rendered into a hidden window. Scope is deliberate: the sidecar cannot observe real
+  // window visibility (fakeWindow.isVisible is a stub), and an unconditional raise would steal
+  // focus from a running game and Dock-bounce (Critical attention) for every background dialog.
+  // A window the user hid (tray / startInTray) is out of scope and unchanged. notify() is
+  // untouched (OS notifications are visible regardless).
+  app.raiseMainWindowIfHiddenByGameLib()
   if (props.event) {
     props.event.sender.send(
       'showDialog',
