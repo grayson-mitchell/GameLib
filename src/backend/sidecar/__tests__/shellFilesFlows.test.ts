@@ -579,89 +579,18 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     expect((response?.result as string).length).toBeGreaterThan(0)
   })
 
-  // ── REQ-34.3-02: removeFolder — the [path, folderName] ARRAY shape, and
-  // the negative pin proving a mis-shaped (positional) call no-ops rather
-  // than silently deleting an unintended path ───────────────────────────────
-
-  describe('removeFolder (send) — real deletion behind a 2s setTimeout', () => {
-    beforeEach(() => {
-      jest.useFakeTimers({
-        doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask']
-      })
-    })
-
-    afterEach(() => {
-      jest.useRealTimers()
-    })
-
-    it('REQ-34.3-02 removeFolder deletes the folder from the [path, folderName] ARRAY shape', async () => {
-      const parentDir = mkdtempSync(
-        join(tmpdir(), 'gamelib-shellfilesflows-remove-')
-      )
-      const folderName = 'victim'
-      mkdirSync(join(parentDir, folderName))
-      expect(existsSync(join(parentDir, folderName))).toBe(true)
-
-      const { input } = startSidecar()
-      writeSend(input, 'remove-1', 'removeFolder', [[parentDir, folderName]])
-      await flush()
-      jest.advanceTimersByTime(2100)
-
-      expect(existsSync(join(parentDir, folderName))).toBe(false)
-      rmSync(parentDir, { recursive: true, force: true })
-    })
-
-    it('REQ-34.3-02 removeFolder with TWO POSITIONAL ARGS (not the array shape) deletes nothing', async () => {
-      const parentDir = mkdtempSync(
-        join(tmpdir(), 'gamelib-shellfilesflows-remove-negative-')
-      )
-      const folderName = 'victim2'
-      mkdirSync(join(parentDir, folderName))
-      expect(existsSync(join(parentDir, folderName))).toBe(true)
-
-      const { input } = startSidecar()
-      // Two POSITIONAL args instead of the required single-array element —
-      // pins the contract that a mis-shaped call no-ops rather than silently
-      // deleting an unintended path.
-      writeSend(input, 'remove-2', 'removeFolder', [parentDir, folderName])
-      await flush()
-      jest.advanceTimersByTime(2100)
-
-      expect(existsSync(join(parentDir, folderName))).toBe(true)
-      rmSync(parentDir, { recursive: true, force: true })
-    })
-
-    // Todo 2026-10-05-security-hardening-minors-from-trust-boundary-review
-    // (2): a folderName that is empty, `.` or climbs out of `path` must not
-    // turn into a recursive delete of the parent or of a sibling.
-    it.each([
-      ['../sibling', 'sibling'],
-      ['..', 'root'],
-      ['', 'root'],
-      ['.', 'root']
-    ])(
-      'removeFolder refuses folderName %p and leaves the %s directory in place',
-      async (folderName, survivor) => {
-        const outer = mkdtempSync(
-          join(tmpdir(), 'gamelib-shellfilesflows-remove-escape-')
-        )
-        const root = join(outer, 'root')
-        mkdirSync(join(root, 'game'), { recursive: true })
-        mkdirSync(join(outer, 'sibling'))
-        const survivorPath = survivor === 'root' ? root : join(outer, survivor)
-
-        const { input } = startSidecar()
-        writeSend(input, `remove-escape-${survivor}`, 'removeFolder', [
-          [root, folderName]
-        ])
-        await flush()
-        jest.advanceTimersByTime(2100)
-
-        expect(existsSync(survivorPath)).toBe(true)
-        expect(existsSync(outer)).toBe(true)
-        rmSync(outer, { recursive: true, force: true })
-      }
+  it('removeFolder is no longer a registered channel: a send deletes nothing (Phase 72 D-09)', async () => {
+    const parentDir = mkdtempSync(
+      join(tmpdir(), 'gamelib-shellfilesflows-remove-gone-')
     )
+    mkdirSync(join(parentDir, 'victim'))
+
+    const { input } = startSidecar()
+    writeSend(input, 'remove-gone', 'removeFolder', [[parentDir, 'victim']])
+    await flush()
+
+    expect(existsSync(join(parentDir, 'victim'))).toBe(true)
+    rmSync(parentDir, { recursive: true, force: true })
   })
 
   // ── REQ-34.3-05 / REQ-34.3-06 cache and reset channels (Phase 34.3 Plan 02) ─
@@ -838,7 +767,6 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     openWikiLink: 'send',
     openSidInfoPage: 'send',
     showConfigFileInFolder: 'send',
-    removeFolder: 'send',
     showItemInFolder: 'send',
     clearCache: 'send',
     clearAchievementCache: 'send',
@@ -848,10 +776,13 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     pathExists: 'invoke'
   }
 
-  it("REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06 send-vs-handle contract: every one of this module's 20 channels is registered with the kind that matches main.ts", () => {
+  it("REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06 send-vs-handle contract: every one of this module's 19 channels is registered with the kind that matches main.ts", () => {
     startSidecar()
 
-    expect(Object.keys(CHANNEL_KINDS)).toHaveLength(20)
+    // Phase 72 D-09: the renderer removeFolder channel is gone.
+    expect(listenerRegistry.get('removeFolder')?.length ?? 0).toBe(0)
+    expect(handlerRegistry.has('removeFolder')).toBe(false)
+    expect(Object.keys(CHANNEL_KINDS)).toHaveLength(19)
 
     for (const [channel, kind] of Object.entries(CHANNEL_KINDS)) {
       if (kind === 'send') {

@@ -35,15 +35,6 @@ const syncTable: FixtureTable<typeof shellFilesSyncArgs> = {
     valid: [['Fortnite']],
     invalid: [[''], [42]]
   },
-  removeFolder: {
-    valid: [[['/home/user/Games', 'Some Game']]],
-    invalid: [
-      ['/home/user/Games', 'Some Game'],
-      [['relative/path', 'Some Game']],
-      [['/home/user/Games', '']],
-      [['/home/user/Games', 'Some Game', 'extra']]
-    ]
-  },
   clearCache: {
     valid: [[true], [false, true], [], [null, null]],
     invalid: [['yes'], [true, true, true]]

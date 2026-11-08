@@ -152,7 +152,6 @@ exports	src/preload/api/library.ts	Library.importGame
 exports	src/preload/api/library.ts	Library.launch
 exports	src/preload/api/library.ts	Library.onProgressUpdate
 exports	src/preload/api/library.ts	Library.openDialog
-exports	src/preload/api/library.ts	Library.removeFolder
 exports	src/preload/api/library.ts	Library.removeRecentGame
 exports	src/preload/api/library.ts	Library.repair
 exports	src/preload/api/library.ts	Library.setGameMetadataOverride

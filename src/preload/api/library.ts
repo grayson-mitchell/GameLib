@@ -1,6 +1,5 @@
 import { makeListenerCaller, makeHandlerInvoker, frontendListenerSlot } from '../ipc'
 
-export const removeFolder = makeListenerCaller('removeFolder')
 export const openDialog = makeHandlerInvoker('openDialog')
 export const uninstall = makeHandlerInvoker('uninstall')
 export const repair = makeHandlerInvoker('repair')

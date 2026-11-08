@@ -21,9 +21,6 @@
  *     - `showConfigFileInFolder` -> inline two-branch body: `args[0] === 'default'`
  *       -> reveal `configPath`, else -> reveal the contained
  *       `gamesConfigPath/${appName}.json` (Phase 72 D-08; never opened)
- *     - `removeFolder` -> `utils.ts`'s `removeFolder(path, folderName)` — `args[0]`
- *       is a TWO-ELEMENT ARRAY `[path, folderName]`, not two positional args
- *       (`main.ts:762-764`)
  *     - `showItemInFolder` -> `utils.ts`'s `showItemInFolder(item)`, a
  *       SYNCHRONOUS function, not a promise (`main.ts:1106`)
  *     - `clearCache` -> `utils.ts`'s `clearCache(undefined, fromVersionChange)`
@@ -97,7 +94,6 @@ import { assertContainedPath } from './rendererPathGuard'
 import {
   showItemInFolder as showItemInFolderImpl,
   getShellPath,
-  removeFolder,
   getFileSize,
   clearCache,
   clearAchievementCache,
@@ -255,18 +251,6 @@ export function registerShellFilesFlows(): void {
       showItemInFolderImpl(args[0] as string)
     } catch (error) {
       logSendFailure('showItemInFolder', error)
-    }
-  })
-
-  // ── send (1): removeFolder — args[0] is a TWO-ELEMENT ARRAY, not two
-  // positional args (main.ts:762-764) ───────────────────────────────────────
-
-  ipcMain.on('removeFolder', (_event: unknown, ...args: unknown[]) => {
-    try {
-      const [folderPath, folderName] = args[0] as [string, string]
-      removeFolder(folderPath, folderName)
-    } catch (error) {
-      logSendFailure('removeFolder', error)
     }
   })
 

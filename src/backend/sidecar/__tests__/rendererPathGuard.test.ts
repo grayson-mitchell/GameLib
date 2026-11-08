@@ -8,8 +8,8 @@
  * `wineToolsFlowRegistration.ts` (`runWineCommandForGame`) calls
  * `assertCommandParts`; and `assertContainedPath`'s production call sites
  * are `protocol.ts`'s deep-link `altExe` check (its end-to-end cases live in
- * `__tests__/protocol.test.ts`) and `utils.ts`'s `removeFolder` (end-to-end
- * in `shellFilesFlows.test.ts`).
+ * `__tests__/protocol.test.ts`) and `utils.ts`'s internal `removeFolder` helper
+ * (end-to-end in `__tests__/utils.test.ts`).
  *
  * Every case below names, in its own title, the PROPERTY it measures (not
  * just "throws" / "does not throw") and is proven in BOTH directions per

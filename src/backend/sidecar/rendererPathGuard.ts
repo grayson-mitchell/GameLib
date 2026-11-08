@@ -32,8 +32,8 @@
  * correctly rejected by `relative()` diverging at the first path segment).
  * Its production call sites are `protocol.ts`'s deep-link launch, which
  * contains a link-supplied `altExe` to the game's own install path, and
- * `utils.ts`'s `removeFolder`, which contains the folder name it deletes to
- * its parent (`runWineCommandForGame` uses `assertCommandParts`, not this
+ * `utils.ts`'s internal `removeFolder` helper, which contains the folder
+ * name it deletes to its parent (`runWineCommandForGame` uses `assertCommandParts`, not this
  * primitive).
  * The design question that once named it as a
  * future consumer ("what containment root is correct for a Wine prefix")

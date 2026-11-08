@@ -380,7 +380,6 @@ pub(crate) const RENDERER_CHANNELS: &[&str] = &[
     "refreshWineVersionInfo",
     "relaunchApp",
     "removeEosOverlay",
-    "removeFolder",
     "removeFromDMQueue",
     "removeFromSteam",
     "removeRecent",

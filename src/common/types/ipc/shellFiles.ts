@@ -25,8 +25,6 @@ export const shellFilesSyncArgs = {
   openWikiLink: noArgs,
   openSidInfoPage: noArgs,
   showConfigFileInFolder: z.tuple([nonEmptyString()]),
-  // One argument that is itself [path, folderName]. Shape only; containment is Phase 72.
-  removeFolder: z.tuple([z.tuple([absolutePathArg(), nonEmptyString(255)])]),
   clearCache: z.tuple([optionalArg(z.boolean()), optionalArg(z.boolean())]),
   clearAchievementCache: z.tuple([nonEmptyString()]),
   resetHeroic: noArgs,
