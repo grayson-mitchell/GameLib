@@ -101,6 +101,20 @@ bottles), and actually migrating the other persisted files found by the inventor
   `steam/macSteamOffline.ts`, `knownFixOverlayInstall.ts`, `save_sync.ts`), and 9 renderer files
   use `localStorage`.
 
+### Decided after research (2026-11-08)
+
+- **D-13: Fix token-file modes in this phase.** Research found the live store (`GameLibStore`,
+  a `conf` subclass) writes with `conf`'s default `configFileMode` `0o666`; `fileStore.ts`'s WR-06
+  hardening is dead code, and live `steam_store/config.json` / `humble_store/config.json` are
+  `-rw-rw-rw-` with `steam_store/` at `0o755`. Set `configFileMode: 0o600` on `GameLibStore`,
+  create new store directories `0o700`, and tighten existing token-bearing files/directories
+  (`steam_store/`, `humble_store/`) to `0o600`/`0o700` when their store is loaded.
+- **D-14: Uncertain store kinds default to user-state.** `humble_library`,
+  `steam_known_fix_reports`, `runsForMeStore` and `macArchStore` are user-state (migrated, never
+  discarded) unless the planner shows from the writer that a store holds only recomputable data.
+- **D-15: The read-only notice (D-05/D-07) stays until dismissed,** rather than auto-hiding at
+  8 s like other stack notices. Still one notice per launch.
+
 ### Claude's Discretion
 
 - **Where and when migrations run.** Not asked; a technical choice for research and planning,
