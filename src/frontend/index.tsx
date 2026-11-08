@@ -199,8 +199,8 @@ const Backend = new HttpApi(null, {
   // quick-260925-bq4: a function rather than the '{{lng}}' string, because the
   // code i18next resolves is now the BCP-47 tag ('pt-BR') while the directory
   // on disk keeps its shipped name ('pt_BR'). `toShippedLanguage` maps back.
-  // NOTE the signature: i18next-http-backend 2.7.3 calls loadPath with ARRAYS
-  // (`loadPath(languages, namespaces)`, :89-90); i18next-fs-backend 2.6.0 calls
+  // NOTE the signature: i18next-http-backend 4.0.10 still calls loadPath with ARRAYS
+  // (`loadPath(languages, namespaces)`, esm/index.js:270); i18next-fs-backend 2.6.0 calls
   // it with SCALARS. The sidecar's copy of this is therefore NOT identical --
   // writing one shape for both silently yields '[object Array]' in a path.
   loadPath: (languages: string[], namespaces: string[]) =>

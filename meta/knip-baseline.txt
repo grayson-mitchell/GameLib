@@ -13,7 +13,6 @@ devDependencies	package.json	@testing-library/dom
 devDependencies	package.json	@testing-library/jest-dom
 devDependencies	package.json	@testing-library/react
 devDependencies	package.json	@testing-library/user-event
-devDependencies	package.json	@types/react-router-dom
 devDependencies	package.json	@types/source-map-support
 devDependencies	package.json	node-gyp
 devDependencies	package.json	unimported
