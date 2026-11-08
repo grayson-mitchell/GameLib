@@ -1156,3 +1156,533 @@ pub(crate) fn rpc_tray_set_icon(args: &[Value], app: &AppHandle) -> Result<Value
     }
     Ok(Value::Null)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    // ---- quick 260930-lyk: tri-state tray glyph (Auto / Light / Dark) ----
+
+    #[test]
+    fn tray_variant_parse_is_an_exact_allow_list() {
+        assert_eq!(parse_tray_icon_mode(Some("auto")), TrayIconMode::Auto);
+        assert_eq!(parse_tray_icon_mode(Some("light")), TrayIconMode::Light);
+        assert_eq!(parse_tray_icon_mode(Some("dark")), TrayIconMode::Dark);
+        // Wrong case and absent both fall to the documented default.
+        assert_eq!(parse_tray_icon_mode(Some("Dark")), TrayIconMode::Auto);
+        assert_eq!(parse_tray_icon_mode(Some("")), TrayIconMode::Auto);
+        assert_eq!(parse_tray_icon_mode(None), TrayIconMode::Auto);
+    }
+
+    #[test]
+    fn tray_variant_taskbar_value_maps_to_the_glyph() {
+        // 0 = dark taskbar -> white glyph; 1 = light taskbar -> black glyph; unreadable -> white.
+        assert!(!tray_glyph_dark_for_system_uses_light_theme(Some(0)));
+        assert!(tray_glyph_dark_for_system_uses_light_theme(Some(1)));
+        assert!(!tray_glyph_dark_for_system_uses_light_theme(None));
+    }
+
+    #[test]
+    fn tray_variant_resolve_honours_the_mode() {
+        // Light / Dark ignore the registry value entirely.
+        assert!(!resolve_tray_icon_dark(TrayIconMode::Light, Some(1)));
+        assert!(resolve_tray_icon_dark(TrayIconMode::Dark, Some(0)));
+        assert!(resolve_tray_icon_dark(TrayIconMode::Dark, None));
+        // Auto follows the taskbar value.
+        assert!(resolve_tray_icon_dark(TrayIconMode::Auto, Some(1)));
+        assert!(!resolve_tray_icon_dark(TrayIconMode::Auto, Some(0)));
+        assert!(!resolve_tray_icon_dark(TrayIconMode::Auto, None));
+    }
+
+    #[test]
+    fn tray_variant_mode_store_round_trips() {
+        // One test owns the process-wide static so parallel tests cannot interleave writes.
+        for mode in [TrayIconMode::Light, TrayIconMode::Dark, TrayIconMode::Auto] {
+            store_tray_icon_mode(mode);
+            assert_eq!(current_tray_icon_mode(), mode);
+        }
+        TRAY_ICON_MODE.store(200, Ordering::Relaxed);
+        assert_eq!(current_tray_icon_mode(), TrayIconMode::Auto);
+        store_tray_icon_mode(TrayIconMode::Auto);
+    }
+
+    const TRAY_SET_ICON_WIRE_FIXTURE: &str =
+        include_str!("../../meta/fixtures/tray-set-icon-wire-args.json");
+
+    #[test]
+    fn tray_variant_wire_contract_parses_every_shipped_payload() {
+        let doc: Value = serde_json::from_str(TRAY_SET_ICON_WIRE_FIXTURE)
+            .expect("tray_set_icon wire fixture must be valid JSON");
+        let arm = doc
+            .get("tray_set_icon")
+            .and_then(|v| v.as_object())
+            .expect("wire fixture missing the tray_set_icon object");
+        assert_eq!(arm.len(), 3, "exactly auto/light/dark");
+        for (key, args) in arm {
+            let args = args.as_array().expect("each entry is an args array");
+            assert_eq!(
+                tray_set_icon_mode_from_args(args),
+                parse_tray_icon_mode(Some(key)),
+                "fixture entry {key:?}"
+            );
+        }
+        // Non-vacuity: the keys really are the three known modes, not three Auto fall-throughs.
+        assert_eq!(
+            tray_set_icon_mode_from_args(arm["dark"].as_array().unwrap()),
+            TrayIconMode::Dark
+        );
+        assert_eq!(
+            tray_set_icon_mode_from_args(arm["light"].as_array().unwrap()),
+            TrayIconMode::Light
+        );
+    }
+
+    #[test]
+    fn tray_variant_wire_contract_retired_dark_bool_shape_is_auto_not_dark() {
+        // Regression lock: the pre-2026-09-30 payload `{ dark: true }` must NOT be read as Dark.
+        let retired = vec![json!({ "dark": true })];
+        assert_eq!(tray_set_icon_mode_from_args(&retired), TrayIconMode::Auto);
+        assert_eq!(tray_set_icon_mode_from_args(&[]), TrayIconMode::Auto);
+    }
+
+    /// Real-profile, READ-ONLY measurement: proves the `RegGetValueW` flags and buffer against
+    /// this machine's actual value by comparing with `reg.exe`. Ignored by default because a CI
+    /// runner's profile may lack the key. Writes nothing.
+    #[cfg(windows)]
+    #[test]
+    #[ignore]
+    fn tray_variant_system_uses_light_theme_read_matches_reg_exe() {
+        let out = std::process::Command::new("reg")
+            .args([
+                "query",
+                r"HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                "/v",
+                "SystemUsesLightTheme",
+            ])
+            .output()
+            .expect("reg.exe must be runnable");
+        let text = String::from_utf8_lossy(&out.stdout).to_string();
+        let expected = text
+            .lines()
+            .find(|l| l.contains("REG_DWORD"))
+            .and_then(|l| l.split_whitespace().last())
+            .and_then(|hex| hex.strip_prefix("0x"))
+            .and_then(|hex| u32::from_str_radix(hex, 16).ok());
+        println!("reg.exe SystemUsesLightTheme = {expected:?}");
+        assert_eq!(read_system_uses_light_theme(), expected);
+    }
+
+    // ---- Tray recent-games id parsing (Phase 35 Plan 06, T-35-20) ----
+    //
+    // The `recent:<appName>` menu id is the one string in the tray path that crosses from a
+    // menu event into a game launch. These tests cover BOTH directions of the round-trip and,
+    // per the threat register, an explicit malformed-id rejection set -- a parser that only
+    // ever saw well-formed input is not evidence of anything.
+
+    #[test]
+    fn recent_menu_id_round_trips_a_plain_app_name() {
+        for app_name in ["Iris", "1207658777", "620", "a-b_c.d", "0"] {
+            let id = tray_recent_menu_id(app_name);
+            assert_eq!(id.as_deref(), Some(format!("recent:{app_name}").as_str()));
+            let id = id.unwrap_or_default();
+            assert_eq!(tray_recent_app_name(&id), Some(app_name));
+        }
+    }
+
+    // ---- quick 261008-kvz: Cmd+Q and the red X route through the sidecar ----
+
+    #[test]
+    fn quit_routing_close_hides_only_when_a_tray_exists_and_the_setting_says_hide() {
+        assert_eq!(close_request_action(true, true), CloseRequestAction::Hide);
+        assert_eq!(
+            close_request_action(false, true),
+            CloseRequestAction::RouteQuit,
+            "no tray to restore from: hiding would trap the user"
+        );
+        assert_eq!(
+            close_request_action(true, false),
+            CloseRequestAction::RouteQuit,
+            "exitToTray off: the close is routed, not hidden"
+        );
+        assert_eq!(
+            close_request_action(false, false),
+            CloseRequestAction::RouteQuit
+        );
+    }
+
+    #[test]
+    fn quit_routing_a_failed_settings_read_routes_the_quit_never_hides() {
+        // `load_tray_settings()` degrades to `default()` on a read failure.
+        assert_eq!(
+            close_request_action(true, should_hide_on_close(TraySettingsSnapshot::default())),
+            CloseRequestAction::RouteQuit
+        );
+        for unreadable in [json!({}), json!(null), json!({ "defaultSettings": 3 })] {
+            assert_eq!(
+                close_request_action(
+                    true,
+                    should_hide_on_close(tray_settings_from_config(&unreadable))
+                ),
+                CloseRequestAction::RouteQuit,
+                "an unreadable config must never trap the user in an unclosable window"
+            );
+        }
+    }
+
+    #[test]
+    fn quit_routing_no_tray_icon_on_disk_routes_even_with_exit_to_tray_on() {
+        let on_disk = tray_settings_from_config(&json!({
+            "defaultSettings": { "exitToTray": true, "noTrayIcon": true }
+        }));
+        assert!(on_disk.exit_to_tray && on_disk.no_tray_icon);
+        // The tray existed at startup iff noTrayIcon was off.
+        let tray_exists = !on_disk.no_tray_icon;
+        assert_eq!(
+            close_request_action(tray_exists, should_hide_on_close(on_disk)),
+            CloseRequestAction::RouteQuit
+        );
+    }
+
+    #[test]
+    fn quit_routing_exit_to_tray_on_with_a_tray_still_hides() {
+        let on_disk = tray_settings_from_config(&json!({
+            "defaultSettings": { "exitToTray": true, "noTrayIcon": false }
+        }));
+        assert_eq!(
+            close_request_action(!on_disk.no_tray_icon, should_hide_on_close(on_disk)),
+            CloseRequestAction::Hide
+        );
+    }
+
+    #[test]
+    fn recent_menu_id_rejects_a_malformed_id() {
+        // Missing prefix -- the non-recent menu ids the same handler also sees.
+        assert_eq!(tray_recent_app_name("show"), None);
+        assert_eq!(tray_recent_app_name("about"), None);
+        assert_eq!(tray_recent_app_name("quit"), None);
+        assert_eq!(tray_recent_app_name(""), None);
+        assert_eq!(tray_recent_app_name("recent"), None);
+        // Prefix present, remainder not a plain appName.
+        assert_eq!(tray_recent_app_name("recent:"), None);
+        assert_eq!(tray_recent_app_name("recent:../../etc/passwd"), None);
+        assert_eq!(tray_recent_app_name("recent:.."), None);
+        assert_eq!(tray_recent_app_name("recent:."), None);
+        assert_eq!(tray_recent_app_name("recent:a/b"), None);
+        assert_eq!(tray_recent_app_name("recent:a\\b"), None);
+        assert_eq!(tray_recent_app_name("recent:a b"), None);
+        assert_eq!(tray_recent_app_name("recent:a;rm -rf /"), None);
+        assert_eq!(tray_recent_app_name("recent:a\nb"), None);
+        assert_eq!(tray_recent_app_name("recent:a\0b"), None);
+        assert_eq!(tray_recent_app_name("recent:$(id)"), None);
+        assert_eq!(tray_recent_app_name("recent:\u{e9}quipe"), None);
+        // Over the length bound.
+        let long = "a".repeat(129);
+        assert_eq!(tray_recent_app_name(&format!("recent:{long}")), None);
+        assert_eq!(tray_recent_menu_id(&long), None);
+    }
+
+    #[test]
+    fn a_rejected_app_name_never_becomes_a_menu_id() {
+        // The construction side uses the SAME predicate as the parse side, so an entry that
+        // could not survive the round-trip is never rendered at all.
+        for bad in ["", "..", "a/b", "a b", "a;b", "wine prefix"] {
+            assert_eq!(tray_recent_menu_id(bad), None, "expected {bad:?} rejected");
+        }
+    }
+
+    #[test]
+    fn recent_games_parse_drops_unusable_entries_and_respects_the_limit() {
+        let payload = json!([
+            { "appName": "Iris", "title": "Phoenix Point" },
+            { "appName": "620", "title": "Portal 2", "runner": "steam" },
+            { "appName": "../escape", "title": "rejected" },
+            { "appName": "Iris", "title": "duplicate" },
+            { "title": "no appName at all" },
+            { "appName": "1124300", "title": "HUMANKIND" }
+        ]);
+        let games = tray_recent_games_from_value(&payload, 5);
+        assert_eq!(
+            games,
+            vec![
+                TrayRecentGame {
+                    app_name: "Iris".into(),
+                    title: "Phoenix Point".into(),
+                    runner: None
+                },
+                TrayRecentGame {
+                    app_name: "620".into(),
+                    title: "Portal 2".into(),
+                    runner: Some("steam".into())
+                },
+                TrayRecentGame {
+                    app_name: "1124300".into(),
+                    title: "HUMANKIND".into(),
+                    runner: None
+                },
+            ]
+        );
+        // The limit truncates rather than erroring.
+        assert_eq!(tray_recent_games_from_value(&payload, 1).len(), 1);
+        assert_eq!(tray_recent_games_from_value(&payload, 0).len(), 0);
+    }
+
+    // ---- Persisted runner vs the legacy probe fallback (Phase 35 plan 06, operator-initiated) ----
+    //
+    // `RecentGame` used to be `{ appName, title }`, so the tray had to reconstruct the runner by
+    // probing up to six store managers via `trayResolveRunner` — for a value `addRecentGame`
+    // already held and discarded. The type now persists it. These tests cover BOTH arms of the
+    // resulting branch, because the fallback arm is what every pre-existing install runs on.
+
+    #[test]
+    fn a_persisted_runner_is_parsed_and_validated() {
+        let payload = json!([
+            { "appName": "620", "title": "Portal 2", "runner": "steam" },
+            { "appName": "Iris", "title": "Phoenix Point", "runner": "legendary" },
+            { "appName": "1207658777", "title": "Empire Earth", "runner": "gog" }
+        ]);
+        let games = tray_recent_games_from_value(&payload, 5);
+        assert_eq!(games[0].runner.as_deref(), Some("steam"));
+        assert_eq!(games[1].runner.as_deref(), Some("legendary"));
+        assert_eq!(games[2].runner.as_deref(), Some("gog"));
+    }
+
+    #[test]
+    fn every_member_of_the_typescript_runner_union_survives_the_parse() {
+        // Pins TRAY_RUNNERS against `common/types.ts:23`: every member of that union must
+        // survive the parse or this allow-list is a silently-diverging copy rather than a
+        // mirror.
+        for runner in TRAY_RUNNERS {
+            let payload = json!([{ "appName": "x1", "title": "T", "runner": runner }]);
+            let games = tray_recent_games_from_value(&payload, 5);
+            assert_eq!(
+                games.first().and_then(|g| g.runner.as_deref()),
+                Some(*runner),
+                "runner {runner:?} should survive the parse"
+            );
+        }
+    }
+
+    #[test]
+    fn legacy_zoom_runner_falls_back_to_probe() {
+        // A recent-games entry persisted by a build that still shipped the Zoom Platform store
+        // names `"zoom"`, which is no longer a `Runner`. The entry must be KEPT with
+        // `runner: None` so the `trayResolveRunner` probe resolves it, not dropped.
+        let payload = json!([{ "appName": "x1", "title": "T", "runner": "zoom" }]);
+        let games = tray_recent_games_from_value(&payload, 5);
+        assert_eq!(games.len(), 1);
+        assert_eq!(games[0].app_name, "x1");
+        assert_eq!(games[0].runner, None);
+    }
+
+    #[test]
+    fn a_legacy_entry_and_a_bogus_runner_both_degrade_to_none() {
+        // THE ARM EVERY EXISTING INSTALL IS ON. A pre-Phase-35 entry has no `runner` key at all;
+        // it must parse cleanly with `runner: None` so the launch path falls back to the probe.
+        // A recognised-shape-but-unknown runner degrades the SAME way rather than being dropped
+        // or forwarded — falling back is strictly better than rejecting a launchable entry.
+        let payload = json!([
+            { "appName": "legacy1", "title": "No runner key at all" },
+            { "appName": "bogus1", "title": "Unknown runner", "runner": "not-a-runner" },
+            { "appName": "bogus2", "title": "Wrong type", "runner": 7 },
+            { "appName": "bogus3", "title": "Null runner", "runner": null }
+        ]);
+        let games = tray_recent_games_from_value(&payload, 5);
+        assert_eq!(games.len(), 4, "no entry may be DROPPED for a bad runner");
+        for game in &games {
+            assert_eq!(
+                game.runner, None,
+                "{} should degrade to None",
+                game.app_name
+            );
+        }
+    }
+
+    #[test]
+    fn the_launch_branch_uses_a_persisted_runner_and_falls_back_without_one() {
+        let games = vec![
+            TrayRecentGame {
+                app_name: "620".into(),
+                title: "Portal 2".into(),
+                runner: Some("steam".into()),
+            },
+            TrayRecentGame {
+                app_name: "legacy1".into(),
+                title: "Written before this change".into(),
+                runner: None,
+            },
+        ];
+
+        // Persisted -> `dispatch_tray_launch` receives Some(..) and SKIPS the resolve invoke.
+        assert_eq!(
+            recent_runner_in(&games, "620"),
+            Some("steam".to_string()),
+            "a persisted runner must reach the launch call without a lookup"
+        );
+
+        // Legacy -> None, so the probe fallback runs. This must not regress.
+        assert_eq!(
+            recent_runner_in(&games, "legacy1"),
+            None,
+            "a legacy entry must fall back to the trayResolveRunner probe"
+        );
+
+        // An appName not in the cache at all also falls back rather than mis-resolving to a
+        // neighbouring entry's runner.
+        assert_eq!(recent_runner_in(&games, "not-in-cache"), None);
+        assert_eq!(recent_runner_in(&[], "620"), None);
+    }
+
+    #[test]
+    fn recent_games_parse_is_total_over_junk() {
+        // A malformed or absent recent-games file must degrade to "no recent games", never to
+        // a failed tray build.
+        assert!(tray_recent_games_from_value(&json!(null), 5).is_empty());
+        assert!(tray_recent_games_from_value(&json!({}), 5).is_empty());
+        assert!(tray_recent_games_from_value(&json!("nope"), 5).is_empty());
+        assert!(tray_recent_games_from_value(&json!([1, 2, 3]), 5).is_empty());
+    }
+
+    #[test]
+    fn recent_title_falls_back_to_app_name_and_is_bounded() {
+        let untitled = TrayRecentGame {
+            app_name: "620".into(),
+            title: "   ".into(),
+            runner: None,
+        };
+        assert_eq!(tray_recent_title(&untitled), "620");
+
+        let controls = TrayRecentGame {
+            app_name: "620".into(),
+            title: "a\nb\tc".into(),
+            runner: None,
+        };
+        assert_eq!(tray_recent_title(&controls), "a b c");
+
+        // Multi-byte title over the cap: truncation is on a CHARACTER boundary, so this can
+        // never panic the way a byte slice would.
+        let long = TrayRecentGame {
+            app_name: "620".into(),
+            title: "\u{e9}".repeat(200),
+            runner: None,
+        };
+        let rendered = tray_recent_title(&long);
+        assert_eq!(rendered.chars().count(), TRAY_RECENT_TITLE_MAX_CHARS + 1);
+        assert!(rendered.ends_with('\u{2026}'));
+    }
+
+    #[test]
+    fn recent_limit_mirrors_the_typescript_default_and_caps_pathological_values() {
+        // `recent_games.ts`: `maxRecentGames || 5`.
+        assert_eq!(tray_recent_limit(None), TRAY_RECENT_DEFAULT_LIMIT);
+        assert_eq!(tray_recent_limit(Some(0)), TRAY_RECENT_DEFAULT_LIMIT);
+        assert_eq!(tray_recent_limit(Some(3)), 3);
+        assert_eq!(tray_recent_limit(Some(1_000_000)), TRAY_RECENT_MAX_LIMIT);
+    }
+
+    // ---- exitToTray is decided at CLOSE time, not from the startup snapshot ----
+    //
+    // Plan 35-06 task 3's live gate: turning `Exit to System Tray` ON mid-session did nothing
+    // until relaunch, because the handler was attached only when the STARTUP snapshot already
+    // had it true. These tests cover the decision function; the source-level gate in
+    // `tauriShellSource.test.ts` pins that the close handler feeds it a FRESH read.
+
+    #[test]
+    fn close_hides_only_when_exit_to_tray_is_on_and_a_tray_exists() {
+        // Mirrors `src/backend/main.ts:288`'s `if (exitToTray && !noTrayIcon)` truth table.
+        let case = |exit_to_tray, no_tray_icon| {
+            should_hide_on_close(TraySettingsSnapshot {
+                exit_to_tray,
+                no_tray_icon,
+                start_in_tray: false,
+                max_recent_games: TRAY_RECENT_DEFAULT_LIMIT,
+            })
+        };
+        assert!(case(true, false), "exitToTray on with a tray -> hide");
+        assert!(!case(false, false), "exitToTray off -> close normally");
+        // No tray to restore the window from: hiding would strand a running app the user
+        // cannot reach, so the close must proceed even with exitToTray on.
+        assert!(!case(true, true), "noTrayIcon overrides exitToTray");
+        assert!(!case(false, true));
+    }
+
+    #[test]
+    fn a_setting_changed_after_startup_changes_the_close_decision() {
+        // THE DEFECT, expressed as a test. The startup snapshot on a fresh profile has
+        // exitToTray off, so the close decision is "quit". If the user then turns it on, the
+        // value the handler reads comes from the CONFIG, and the decision must flip. A handler
+        // bound to the startup snapshot cannot produce this transition at all.
+        let at_startup = TraySettingsSnapshot::default();
+        assert!(!should_hide_on_close(at_startup), "baseline: close quits");
+
+        let after_the_user_toggled_it = tray_settings_from_config(&json!({
+            "defaultSettings": { "exitToTray": true, "noTrayIcon": false }
+        }));
+        assert!(
+            should_hide_on_close(after_the_user_toggled_it),
+            "a mid-session toggle must change the close decision without a relaunch"
+        );
+        assert_ne!(
+            should_hide_on_close(at_startup),
+            should_hide_on_close(after_the_user_toggled_it)
+        );
+    }
+
+    #[test]
+    fn an_unreadable_config_lets_the_window_close_rather_than_trapping_the_user() {
+        // FAIL-SAFE DIRECTION. `load_tray_settings()` degrades to `default()` on any read
+        // failure; the decision that follows must be "close", never "hide". A user who can
+        // always close their window is the safe failure mode -- a user trapped in a window
+        // that refuses to close because a config read failed is not.
+        for unreadable in [
+            json!({}),
+            json!(null),
+            json!({ "defaultSettings": 3 }),
+            json!([]),
+        ] {
+            assert!(
+                !should_hide_on_close(tray_settings_from_config(&unreadable)),
+                "an unreadable config must never trap the user in an unclosable window"
+            );
+        }
+    }
+
+    #[test]
+    fn tray_settings_read_the_global_config_shape() {
+        let config = json!({
+            "defaultSettings": {
+                "noTrayIcon": true,
+                "exitToTray": true,
+                "startInTray": false,
+                "maxRecentGames": 8
+            },
+            "version": "v0"
+        });
+        assert_eq!(
+            tray_settings_from_config(&config),
+            TraySettingsSnapshot {
+                no_tray_icon: true,
+                exit_to_tray: true,
+                start_in_tray: false,
+                max_recent_games: 8,
+            }
+        );
+    }
+
+    #[test]
+    fn tray_settings_fail_open_to_a_working_tray() {
+        // An absent, empty, or wrong-typed config must yield a tray that EXISTS -- an
+        // unreadable config turning the tray off would be the worst possible failure mode.
+        for junk in [
+            json!({}),
+            json!(null),
+            json!({ "defaultSettings": 3 }),
+            json!([]),
+        ] {
+            let s = tray_settings_from_config(&junk);
+            assert_eq!(s, TraySettingsSnapshot::default());
+            assert!(!s.no_tray_icon);
+            assert_eq!(s.max_recent_games, TRAY_RECENT_DEFAULT_LIMIT);
+        }
+    }
+}
