@@ -97,6 +97,8 @@ import {
 } from 'backend/recent_games/recent_games'
 import { steamLibraryStore } from 'backend/storeManagers/steam/stores'
 import type { GameInfo } from 'common/types'
+import { GlobalConfig } from 'backend/config'
+import { RUST_MAIN_WINDOW_HIDE } from 'common/types/sidecarTransport'
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
@@ -278,4 +280,41 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
       runner: 'steam'
     })
   })
+
+  // quick 261108-kpc: "Hide GameLib for every launch" must also cover in-app Steam launches,
+  // which never pass through launcher.ts. isMac is mocked false here, so the tray gate applies.
+  it.each([
+    { minimizeOnLaunch: true, noTrayIcon: false, hides: true },
+    { minimizeOnLaunch: true, noTrayIcon: true, hides: false },
+    { minimizeOnLaunch: false, noTrayIcon: false, hides: false }
+  ])(
+    'in-app steam launch with $minimizeOnLaunch/$noTrayIcon hides=$hides',
+    async ({ minimizeOnLaunch, noTrayIcon, hides }) => {
+      const realGet = GlobalConfig.get.bind(GlobalConfig)
+      const getSpy = jest.spyOn(GlobalConfig, 'get').mockImplementation(() => {
+        const config = realGet()
+        return {
+          ...config,
+          getSettings: () => ({
+            ...config.getSettings(),
+            minimizeOnLaunch,
+            noTrayIcon
+          })
+        } as ReturnType<typeof GlobalConfig.get>
+      })
+
+      const { input, frames } = startSidecar()
+      writeInvoke(input, 'launch-steam-hide', 'launch', [
+        { appName: '999002', runner: 'steam' }
+      ])
+      await flush()
+
+      const hideFrames = frames.filter(
+        (frame) =>
+          frame.kind === 'rustInvoke' && frame.channel === RUST_MAIN_WINDOW_HIDE
+      )
+      getSpy.mockRestore()
+      expect(hideFrames).toHaveLength(hides ? 1 : 0)
+    }
+  )
 })

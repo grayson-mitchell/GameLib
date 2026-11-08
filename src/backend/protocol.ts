@@ -40,18 +40,22 @@ function urlRequestsNoGui(url: URL): boolean {
   return guiParam === 'false' || guiParam === '0' || guiParam === 'no'
 }
 
-// Returns true when a `gamelib://launch/...` URL in `args` should suppress
-// the main window: either the URL carries `gui=false` (or `0`/`no`), or the
-// user enabled the `hideWindowOnProtocolLaunch` setting.
-export function shouldHideWindowForProtocolArgs(args: string[]): boolean {
-  const url = parseHeroicUrl(args)
-  if (!url || url.hostname !== 'launch') return false
-  if (urlRequestsNoGui(url)) return true
-  try {
-    return GlobalConfig.get().getSettings().hideWindowOnProtocolLaunch === true
-  } catch {
-    return false
-  }
+// A link is a cold-start link when it (re)started GameLib. Two signals, both needed:
+// Linux/Windows cold links arrive via deliverStartupProtocolUrl before the renderer exists, and
+// macOS cold links arrive through on_open_url -> handleProtocolUrl, the SAME channel warm links
+// use, firing in the same second as setup (main.rs). So "renderer has not reported ready" is the
+// discriminator, and the uptime window guards the race where frontendReady wins against the link.
+// `hideWindowOnProtocolLaunch` applies to cold-start links only (quick 261108-kpc): a link that
+// reaches an already-running GameLib leaves its window alone unless it carries gui=false.
+const COLD_START_WINDOW_SECONDS = 15
+let frontendReadySeen = false
+
+export function markFrontendReady(): void {
+  frontendReadySeen = true
+}
+
+function isColdStartLink(): boolean {
+  return !frontendReadySeen || process.uptime() < COLD_START_WINDOW_SECONDS
 }
 
 export function handleProtocol(args: string[]) {
@@ -124,9 +128,11 @@ async function handleLaunch(url: URL) {
   const settings = await libraryManagerMap[gameInfo.runner]
     .getGame(appName)
     .getSettings()
+  const coldStart = isColdStartLink()
   const hideForThisLaunch =
     urlRequestsNoGui(url) ||
-    GlobalConfig.get().getSettings().hideWindowOnProtocolLaunch === true
+    (coldStart &&
+      GlobalConfig.get().getSettings().hideWindowOnProtocolLaunch === true)
 
   if (is_installed) {
     // URL-supplied `arg`/`altExe` are attacker-authored (any web page can emit this link).
@@ -191,14 +197,13 @@ async function handleLaunch(url: URL) {
       }
 
     if (hideForThisLaunch) {
-      const mainWindow = getMainWindow()
-      if (mainWindow?.isVisible()) {
-        logInfo(
-          'Hiding main window for protocol launch',
-          LogPrefix.ProtocolHandler
-        )
-        mainWindow.hide()
-      }
+      logInfo(
+        `Hiding main window for protocol launch (${
+          urlRequestsNoGui(url) ? 'gui=false' : 'cold start'
+        })`,
+        LogPrefix.ProtocolHandler
+      )
+      app.hideMainWindow()
     }
 
     // Steam is dispatched through the same shared helper the sidecar `launch` handler uses
@@ -247,7 +252,7 @@ async function handleLaunch(url: URL) {
         'Window was hidden but user wants to install, showing GUI',
         LogPrefix.ProtocolHandler
       )
-      mainWindow.show()
+      app.raiseMainWindow()
     }
     sendFrontendMessage('installGame', appName, gameInfo.runner)
   } else if (response === 1) {

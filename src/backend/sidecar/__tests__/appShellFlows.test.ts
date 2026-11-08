@@ -251,7 +251,8 @@ jest.mock('../../downloadmanager/downloadqueue', () => ({
 // it, so it clears the mock immediately before invoking frontendReady).
 jest.mock('../../protocol', () => ({
   ...jest.requireActual('../../protocol'),
-  handleProtocol: jest.fn()
+  handleProtocol: jest.fn(),
+  markFrontendReady: jest.fn()
 }))
 
 // ── dialog mock (260919-sch) — the Snap warning dialog now moves through
@@ -290,7 +291,7 @@ import { requestRustInvoke } from '../sidecarRpc'
 import { shutdownLongLivedChildren } from '../../longLivedChildren'
 import { listenerRegistry, handlerRegistry } from '../../platform'
 import * as loggerModule from '../../logger'
-import { handleProtocol } from '../../protocol'
+import { handleProtocol, markFrontendReady } from '../../protocol'
 import {
   RUST_APP_EXIT,
   RUST_DIALOG_MESSAGE,
@@ -970,6 +971,16 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       await flush()
 
       expect(mockedHandleProtocol).not.toHaveBeenCalled()
+    })
+
+    it('marks the frontend ready for the cold-start/warm gamelib:// link discriminator (quick 261108-kpc)', async () => {
+      ;(markFrontendReady as jest.Mock).mockClear()
+
+      const { input } = startSidecar()
+      writeSend(input, 'frontend-ready-3', 'frontendReady', [])
+      await flush()
+
+      expect(markFrontendReady).toHaveBeenCalled()
     })
 
     // ── Phase 35 plan 11: boot-time download-queue auto-resume (SEAM Phase 32

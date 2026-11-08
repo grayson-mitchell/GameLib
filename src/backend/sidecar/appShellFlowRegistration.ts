@@ -195,6 +195,7 @@ import {
   migrateTrayIconVariant,
   trayIconWireArgs
 } from '../../common/trayIconVariant'
+import { markFrontendReady } from '../protocol'
 import { logSendHandlerReached } from './sendChannelObservable'
 
 function logSendFailure(channel: string, error: unknown): void {
@@ -445,6 +446,8 @@ export function registerAppShellFlows(
     try {
       logSendHandlerReached('frontendReady')
       logInfo('Frontend Ready', LogPrefix.Backend)
+      // Cold-start vs warm discriminator for gamelib:// links (quick 261108-kpc).
+      markFrontendReady()
 
       if (isSnap) {
         const showSnapWarning = configStore.get('showSnapWarning', true)

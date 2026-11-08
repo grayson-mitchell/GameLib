@@ -70,7 +70,6 @@ import {
   deleteAbortController
 } from './utils/aborthandler/aborthandler'
 import { download, isInstalled } from './wine/runtimes/runtimes'
-import { getMainWindow } from './main_window'
 import { recordPlaySession } from './runsForMe'
 import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
 import { copyFile } from 'fs/promises'
@@ -188,9 +187,10 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
     status: 'launching'
   })
 
-  const mainWindow = getMainWindow()
-  if (minimizeOnLaunch && !noTrayIcon) {
-    mainWindow?.hide()
+  // "Hide GameLib for every launch" (quick 261108-kpc). macOS restores from the Dock, so it needs
+  // no tray icon; elsewhere the tray is the way back.
+  if (minimizeOnLaunch && (isMac || !noTrayIcon)) {
+    app.hideMainWindow()
   }
 
   // Prevent display from sleep

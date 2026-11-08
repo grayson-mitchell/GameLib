@@ -386,7 +386,7 @@ class GlobalConfigV0 extends GlobalConfig {
       gamepadInitialRepeatDelay: 300,
       battlEyeRuntime: isLinux,
       framelessWindow: false,
-      hideWindowOnProtocolLaunch: false,
+      hideWindowOnProtocolLaunch: true,
       beforeLaunchScriptPath: '',
       afterLaunchScriptPath: '',
       disableUMU: false,

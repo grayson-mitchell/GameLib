@@ -93,7 +93,9 @@ import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import { libraryManagerMap } from '../storeManagers'
 import { noteRefreshTrigger } from '../storeManagers/steam/authTrigger'
 
-import { ipcMain } from '../platform'
+import { app, ipcMain } from '../platform'
+import { GlobalConfig } from '../config'
+import { isMac } from '../constants/environment'
 // launchEventCallback: the real Wine/GameConfig/DownloadManager pipeline
 // every non-Steam runner's launch must go through (GAP CYCLE 6, 34.5-46).
 // Reasons this is safe to import here: (a) `launcher.ts` is ALREADY in this
@@ -360,6 +362,13 @@ async function handleLaunch(
   // shared with `protocol.ts`'s deep-link branch so the two paths cannot
   // drift again.
   if (storeCapabilities[runner].launchHandedToClient) {
+    // "Hide GameLib for every launch" (quick 261108-kpc). Done here, not inside
+    // dispatchSteamLaunch: protocol.ts also calls that and owns its own (shortcut) decision.
+    // macOS restores from the Dock, so it needs no tray icon; elsewhere the tray is the way back.
+    const { minimizeOnLaunch, noTrayIcon } = GlobalConfig.get().getSettings()
+    if (minimizeOnLaunch && (isMac || !noTrayIcon)) {
+      app.hideMainWindow()
+    }
     const launched = await dispatchSteamLaunch(appName)
     return { status: launched ? 'done' : 'error' }
   }

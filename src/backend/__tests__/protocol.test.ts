@@ -26,11 +26,7 @@ jest.mock('../config', () => ({
   }
 }))
 
-import {
-  handleProtocol,
-  shouldHideWindowForProtocolArgs,
-  RUNNERS
-} from '../protocol'
+import { handleProtocol, markFrontendReady, RUNNERS } from '../protocol'
 import { app, dialog } from 'backend/platform'
 import { libraryManagerMap } from '../storeManagers'
 import { getMainWindow } from '../main_window'
@@ -42,7 +38,9 @@ import { dispatchSteamLaunch } from '../storeManagers/steam/launchDispatch'
 // Mock electron modules
 jest.mock('backend/platform', () => ({
   app: {
-    quit: jest.fn()
+    quit: jest.fn(),
+    hideMainWindow: jest.fn(),
+    raiseMainWindow: jest.fn()
   },
   dialog: {
     showMessageBox: jest.fn()
@@ -190,7 +188,7 @@ describe('protocol.ts --no-gui behavior', () => {
 
         await handleProtocol(['gamelib://launch/test-game'])
 
-        expect(mockMainWindow.show).toHaveBeenCalled()
+        expect(app.raiseMainWindow).toHaveBeenCalled()
         expect(sendFrontendMessage).toHaveBeenCalledWith(
           'installGame',
           'test-game',
@@ -287,103 +285,122 @@ describe('protocol.ts --no-gui behavior', () => {
   })
 
   describe('hide window on protocol launch', () => {
+    let uptimeSpy: jest.SpyInstance
     beforeEach(() => {
       mockIsCLINoGui.mockReturnValue(false)
       mockGameInfo.is_installed = true
+      // Default: well past the cold-start window; individual tests override.
+      uptimeSpy = jest.spyOn(process, 'uptime').mockReturnValue(1000)
+    })
+    afterEach(() => uptimeSpy.mockRestore())
+
+    test('cold start (renderer never ready) + setting on hides once, before dispatch', async () => {
+      // Fresh module state: frontendReady has not been seen in this isolate.
+      let isolatedHandle!: typeof handleProtocol
+      let isolatedApp!: typeof app
+      await jest.isolateModulesAsync(async () => {
+        isolatedHandle = (await import('../protocol')).handleProtocol
+        isolatedApp = (await import('backend/platform')).app
+      })
+      mockHideWindowOnProtocolLaunch.mockReturnValue(true)
+
+      await isolatedHandle(['gamelib://launch/test-game'])
+
+      expect(isolatedApp.hideMainWindow).toHaveBeenCalledTimes(1)
     })
 
-    test('hides window when URL carries gui=false', async () => {
+    test('cold start hides on the Steam branch too, before dispatch', async () => {
+      uptimeSpy.mockReturnValue(1)
+      mockHideWindowOnProtocolLaunch.mockReturnValue(true)
+      ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+        getGameInfo: () => ({
+          app_name: 'steam-appid-123',
+          title: 'Steam Game',
+          runner: 'steam',
+          is_installed: true
+        }),
+        getSettings: () => mockGameSettings
+      })
+      ;(libraryManagerMap.legendary.getGame as jest.Mock).mockReturnValue(
+        emptyGameInfoMock
+      )
+      const order: string[] = []
+      ;(app.hideMainWindow as jest.Mock).mockImplementation(() =>
+        order.push('hide')
+      )
+      ;(dispatchSteamLaunch as jest.Mock).mockImplementation(async () => {
+        order.push('dispatch')
+        return true
+      })
+
+      await handleProtocol(['gamelib://launch/steam-appid-123'])
+
+      expect(order).toEqual(['hide', 'dispatch'])
+    })
+
+    test('cold start + gui=false + setting off hides', async () => {
+      uptimeSpy.mockReturnValue(1)
       await handleProtocol([
         'gamelib://launch?appName=test-game&runner=legendary&gui=false'
       ])
-
-      expect(mockMainWindow.hide).toHaveBeenCalled()
+      expect(app.hideMainWindow).toHaveBeenCalledTimes(1)
     })
 
-    test('hides window when hideWindowOnProtocolLaunch setting is enabled', async () => {
+    test('uptime inside the cold window still counts as cold after frontendReady', async () => {
+      markFrontendReady()
+      uptimeSpy.mockReturnValue(5)
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
-
       await handleProtocol(['gamelib://launch/test-game'])
-
-      expect(mockMainWindow.hide).toHaveBeenCalled()
+      expect(app.hideMainWindow).toHaveBeenCalledTimes(1)
     })
 
-    test('does not hide window when neither setting nor URL param is set', async () => {
-      await handleProtocol(['gamelib://launch/test-game'])
-
-      expect(mockMainWindow.hide).not.toHaveBeenCalled()
-    })
-
-    test('does not hide window that is not visible', async () => {
-      mockMainWindow.isVisible.mockReturnValue(false)
+    test('warm link + setting on + no gui param does NOT hide', async () => {
+      markFrontendReady()
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
-
       await handleProtocol(['gamelib://launch/test-game'])
-
-      expect(mockMainWindow.hide).not.toHaveBeenCalled()
+      expect(app.hideMainWindow).not.toHaveBeenCalled()
     })
 
-    test('shows window when not-installed game needs install dialog, regardless of hide setting', async () => {
+    test('warm link + gui=false still hides', async () => {
+      markFrontendReady()
+      await handleProtocol([
+        'gamelib://launch?appName=test-game&runner=legendary&gui=false'
+      ])
+      expect(app.hideMainWindow).toHaveBeenCalledTimes(1)
+    })
+
+    test('does not hide when neither setting nor URL param is set', async () => {
+      uptimeSpy.mockReturnValue(1)
+      await handleProtocol(['gamelib://launch/test-game'])
+      expect(app.hideMainWindow).not.toHaveBeenCalled()
+    })
+
+    test('declined URL-arg confirmation neither hides nor launches', async () => {
+      uptimeSpy.mockReturnValue(1)
+      mockHideWindowOnProtocolLaunch.mockReturnValue(true)
+      // response 0 = Decline in the URL-arg confirmation dialog.
+      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 0 })
+      await handleProtocol([
+        'gamelib://launch?appName=test-game&runner=legendary&arg=--foo'
+      ])
+      expect(app.hideMainWindow).not.toHaveBeenCalled()
+      expect(launchEventCallback).not.toHaveBeenCalled()
+    })
+
+    test('raises the window when a not-installed game needs the install dialog while hidden for this launch', async () => {
+      uptimeSpy.mockReturnValue(1)
       mockGameInfo.is_installed = false
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
       ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 0 })
 
       await handleProtocol(['gamelib://launch/test-game'])
 
-      expect(mockMainWindow.show).toHaveBeenCalled()
+      expect(app.raiseMainWindow).toHaveBeenCalled()
       expect(sendFrontendMessage).toHaveBeenCalledWith(
         'installGame',
         'test-game',
         'legendary'
       )
-    })
-  })
-
-  describe('shouldHideWindowForProtocolArgs', () => {
-    beforeEach(() => {
-      mockHideWindowOnProtocolLaunch.mockReturnValue(false)
-    })
-
-    test('returns true when URL has gui=false', () => {
-      expect(
-        shouldHideWindowForProtocolArgs([
-          'gamelib://launch?appName=foo&gui=false'
-        ])
-      ).toBe(true)
-    })
-
-    test('accepts gui=0 and gui=no as equivalent to false', () => {
-      expect(
-        shouldHideWindowForProtocolArgs(['gamelib://launch?appName=foo&gui=0'])
-      ).toBe(true)
-      expect(
-        shouldHideWindowForProtocolArgs(['gamelib://launch?appName=foo&gui=no'])
-      ).toBe(true)
-    })
-
-    test('returns true when setting is enabled', () => {
-      mockHideWindowOnProtocolLaunch.mockReturnValue(true)
-      expect(
-        shouldHideWindowForProtocolArgs(['gamelib://launch/test-game'])
-      ).toBe(true)
-    })
-
-    test('returns false when setting is off and URL has no gui param', () => {
-      expect(
-        shouldHideWindowForProtocolArgs(['gamelib://launch/test-game'])
-      ).toBe(false)
-    })
-
-    test('returns false for non-launch protocol URLs even with setting on', () => {
-      mockHideWindowOnProtocolLaunch.mockReturnValue(true)
-      expect(shouldHideWindowForProtocolArgs(['gamelib://ping'])).toBe(false)
-    })
-
-    test('returns false when no heroic URL is present', () => {
-      mockHideWindowOnProtocolLaunch.mockReturnValue(true)
-      expect(
-        shouldHideWindowForProtocolArgs(['/path/to/heroic', '--some-flag'])
-      ).toBe(false)
     })
   })
 
