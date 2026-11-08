@@ -21,26 +21,15 @@
  * comment discussing the swap (Task 1 added one) could otherwise satisfy a gate that merely
  * names the forbidden macro, without a single real occurrence in code.
  */
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readMacosEpicEmbedSource } from 'backend/testUtils/tauriShellSource'
 import {
   stripSourceComments,
   stripTrailingLineComment
 } from '../testUtils/stripSourceComments'
 
-const EPIC_RS_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'src-tauri',
-  'src',
-  'macos_epic_embed.rs'
-)
-
 /** Comment-stripped macos_epic_embed.rs, via the shared strippers — never a hand-rolled pass. */
 function loadCode(source?: string): string {
-  const raw = source ?? readFileSync(EPIC_RS_PATH, 'utf-8')
+  const raw = source ?? readMacosEpicEmbedSource()
   return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))

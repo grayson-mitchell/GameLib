@@ -15,25 +15,14 @@
  * plus the string-aware trailing-`//` pass `tauriShellSource.test.ts` uses), because the module's
  * own doc comments name most of the tokens asserted on here.
  */
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readMacosEpicEmbedSource } from 'backend/testUtils/tauriShellSource'
 import {
   stripSourceComments,
   stripTrailingLineComment
 } from '../testUtils/stripSourceComments'
 
-const EPIC_RS_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'src-tauri',
-  'src',
-  'macos_epic_embed.rs'
-)
-
 function loadCode(source?: string): string {
-  const raw = source ?? readFileSync(EPIC_RS_PATH, 'utf-8')
+  const raw = source ?? readMacosEpicEmbedSource()
   return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
