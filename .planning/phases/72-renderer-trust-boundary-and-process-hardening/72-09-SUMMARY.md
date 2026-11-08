@@ -30,7 +30,7 @@ completed: 2026-11-08
 The renderer `removeFolder` channel is deleted end to end, and the internal helper is now an async `fs/promises` `rm` with `maxRetries: 5, retryDelay: 200` and no timers.
 
 ## Commits
-- 04a5cd761 ... see `git log`: Task 1 `feat(72-09): remove the renderer removeFolder channel end to end`
+- Task 1 `feat(72-09): remove the renderer removeFolder channel end to end` (de5c77958)
 - Task 2 `feat(72-09): async timer-free retrying removeFolder helper` (04a5cd761)
 
 ## What changed
