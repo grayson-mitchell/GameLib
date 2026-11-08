@@ -15,6 +15,7 @@
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { defined } from '../../__tests__/fixtures/indexed'
 
 const css = readFileSync(join(__dirname, '..', 'index.css'), 'utf-8')
 const indexSource = readFileSync(join(__dirname, '..', 'index.tsx'), 'utf-8')
@@ -37,7 +38,7 @@ function declaration(
   const match = body.match(
     new RegExp(`(?:^|[;{\\s])${property}\\s*:\\s*([^;]+);`)
   )
-  return match ? match[1].trim() : null
+  return match ? defined(match[1], `${property} capture`).trim() : null
 }
 
 /** The component tags rendered as direct grid children BEFORE the slot, in JSX order. */
@@ -50,7 +51,9 @@ function chromeChildrenBeforeSlot(source: string): string[] {
     throw new Error('final-return container or slot marker not found')
   }
   const between = source.slice(rootIdx + 1, slotIdx)
-  return [...between.matchAll(/<([A-Z]\w*)/g)].map((m) => m[1])
+  return [...between.matchAll(/<([A-Z]\w*)/g)].map((m) =>
+    defined(m[1], 'component tag capture')
+  )
 }
 
 interface Placement {

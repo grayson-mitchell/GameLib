@@ -95,7 +95,7 @@ export function buildOwnedBadgeLabel(
     return {
       key: 'storeSearch.badge.ownedOn',
       defaultValue: 'Owned on {{store}}',
-      values: { store: names[0] }
+      values: { store: names[0] ?? '' }
     }
   }
 

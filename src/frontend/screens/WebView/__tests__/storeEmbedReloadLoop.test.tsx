@@ -113,9 +113,11 @@ jest.mock('react', () => {
       const idx = memoCursor++
       const slot = memoSlots[idx]
       if (slot === undefined || depsChanged(slot.deps, deps)) {
-        memoSlots[idx] = { deps, value: fn() }
+        const fresh = { deps, value: fn() }
+        memoSlots[idx] = fresh
+        return fresh.value
       }
-      return memoSlots[idx].value
+      return slot.value
     },
     useEffect: (effect: () => void | (() => void), deps?: unknown[]) => {
       const idx = effectCursor++
@@ -210,6 +212,7 @@ const fakeLocalStorage = {
 // jest.mock like babel-jest; see useStoreEmbedHost.test.tsx).
 import { useStoreEmbedHost } from '../useStoreEmbedHost'
 import { resolveStoreForUrl } from '../storeEmbedOrigins'
+import { defined } from '../../__tests__/fixtures/indexed'
 
 // ── The REAL restore statements, sliced out of `index.tsx` ─────────────────────────────────────
 // Same marker pair `WebViewDeepLinkAndRestore.test.ts` uses. Both markers exist in the pre-fix
@@ -410,7 +413,10 @@ const neverSettlingPage: PageModel = () => {
   const cycle = [TRACKER, HOP_B, HOP_A]
   const events: { delay: number; url: string }[] = []
   for (let i = 0; i < 40; i++) {
-    events.push({ delay: 1500 + 1600 * i, url: cycle[i % cycle.length] })
+    events.push({
+      delay: 1500 + 1600 * i,
+      url: defined(cycle[i % cycle.length], 'cycle url')
+    })
   }
   return events
 }
@@ -545,7 +551,7 @@ const realDerive = (store: string): string =>
 // during render. NOT a claim about production code -- it exists so the control arm can show that
 // the simulation does loop when the restore is per-render.
 const legacyPerRenderDerive = (store: string): string => {
-  let startUrl = ROUTE_URLS[`/store/${store}`]
+  let startUrl = defined(ROUTE_URLS[`/store/${store}`], 'route url')
   const lastUrl = localStorage.getItem(`last-url-${store}`)
   if (lastUrl) {
     const resolved = resolveStoreForUrl(lastUrl)

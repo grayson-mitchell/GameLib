@@ -142,6 +142,7 @@ const mockApi = {
 // HumbleOriginInfo.test.tsx for the same convention) so the component
 // transitively requires the mocked 'react'/'react-i18next'/'react-router-dom'.
 import HumbleClaimWizard from '../index'
+import { at } from '../../../../../__tests__/fixtures/indexed'
 
 type HookHarness = { __beginRender: () => void; __resetMount: () => void }
 
@@ -508,7 +509,7 @@ describe('HumbleClaimWizard', () => {
 
     // T-42-01: pinned directly on the recorded call argument, not on
     // rendered text — the secret must never reach the fallback URL.
-    const calledWith = mockApi.openExternalUrl.mock.calls[0][0]
+    const calledWith = at(at(mockApi.openExternalUrl.mock.calls, 0), 0)
     expect(calledWith).toBe('https://support.humblebundle.com/hc/en-us')
     expect(calledWith).not.toContain('UPLAY-SECRET')
   })
@@ -538,7 +539,7 @@ describe('HumbleClaimWizard', () => {
 
     // D-42-03: never a fabricated URL, never a fabricated name — the raw
     // unrecognised token must not leak into the resolved URL either.
-    const calledWith = mockApi.openExternalUrl.mock.calls[0][0]
+    const calledWith = at(at(mockApi.openExternalUrl.mock.calls, 0), 0)
     expect(calledWith).toBe('https://support.humblebundle.com/hc/en-us')
     expect(calledWith).not.toContain('X-SECRET')
     expect(calledWith).not.toContain('wibble')

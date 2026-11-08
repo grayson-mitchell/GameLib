@@ -24,6 +24,7 @@ import {
   SAMPLE_INTERVAL_MS,
   SpeedPoint
 } from '../speedSample'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
 // Regression (operator report after quick 261012-dhs): the chart kept
 // scrolling while paused. appendSample is owed a sample per CALL (pinned
@@ -194,7 +195,7 @@ describe('appendSample', () => {
     // practice the chart records one zero and then stands still.
     expect(paused[0]).toHaveLength(3)
     expect(paused[1]).toHaveLength(4)
-    expect(paused[0].at(-1)).toEqual({ download: 0, disk: 0 })
-    expect(paused[1].at(-1)).toEqual({ download: 0, disk: 0 })
+    expect(at(paused, 0).at(-1)).toEqual({ download: 0, disk: 0 })
+    expect(at(paused, 1).at(-1)).toEqual({ download: 0, disk: 0 })
   })
 })

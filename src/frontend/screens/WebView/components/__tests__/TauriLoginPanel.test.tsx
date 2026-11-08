@@ -45,6 +45,7 @@ const mockApi = {
 }
 
 import TauriLoginPanel from '../TauriLoginPanel'
+import { defined } from '../../../__tests__/fixtures/indexed'
 
 // IN-03: several tests replace `window.location` with a reload spy. Capture the
 // stub window's own descriptor now and put it back after every test, so no later
@@ -413,7 +414,9 @@ describe('TauriLoginPanel — WR-03: no dynamic value baked into a t() default',
   function bakedDefaults(source: string): string[] {
     const clean = stripSourceComments(source)
     const calls = clean.matchAll(/\bt\(\s*'[^']+'\s*,\s*(`(?:[^`\\]|\\.)*`)/g)
-    return [...calls].map((m) => m[1]).filter((arg) => arg.includes('${'))
+    return [...calls]
+      .map((m) => defined(m[1], 'default argument capture'))
+      .filter((arg) => arg.includes('${'))
   }
 
   it('the real component source bakes no dynamic value into any t() default', () => {

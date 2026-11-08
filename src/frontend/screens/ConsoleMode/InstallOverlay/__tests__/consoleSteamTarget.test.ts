@@ -39,6 +39,7 @@ import {
   resolveConsoleActionIntent,
   steamBlockedMessageKey
 } from '../consoleSteamTarget'
+import { at, defined } from '../../../__tests__/fixtures/indexed'
 
 // Quick 261029-s5l: InstallGameModal now imports the stores helper,
 // which opens a Tauri-backed store at import. Mocked here as in
@@ -117,7 +118,7 @@ function destructuredIntentParams(source: string): string[] {
   }
   return signature
     .split(',')
-    .map((p) => p.split(':')[0].trim())
+    .map((p) => defined(p.split(':')[0], 'param name').trim())
     .filter(Boolean)
     .sort()
 }
@@ -348,21 +349,21 @@ describe('probeSteamQuickInstallTarget (D-29 inheriting D-24)', () => {
       checkDiskSpace: jest.fn().mockResolvedValue(makeDisk({}))
     })
     const verdict = await probeSteamQuickInstallTarget()
-    expect(verdict).toEqual({ ok: true, targetPath: targets[0].path })
+    expect(verdict).toEqual({ ok: true, targetPath: at(targets, 0).path })
   })
 
   it('A14: two libraries, index 1 primary, disk ok -> targetPath is the primary library root, never its steamappsDir', async () => {
     const targets = makeTargets(2)
-    targets[0].isPrimary = false
-    targets[1].isPrimary = true
+    at(targets, 0).isPrimary = false
+    at(targets, 1).isPrimary = true
     stubWindowApi({
       listSteamLibraryTargets: jest.fn().mockResolvedValue(targets),
       checkDiskSpace: jest.fn().mockResolvedValue(makeDisk({}))
     })
     const verdict = await probeSteamQuickInstallTarget()
-    expect(verdict).toEqual({ ok: true, targetPath: targets[1].path })
+    expect(verdict).toEqual({ ok: true, targetPath: at(targets, 1).path })
     expect(verdict).not.toEqual(
-      expect.objectContaining({ targetPath: targets[1].steamappsDir })
+      expect.objectContaining({ targetPath: at(targets, 1).steamappsDir })
     )
   })
 
@@ -378,7 +379,7 @@ describe('probeSteamQuickInstallTarget (D-29 inheriting D-24)', () => {
     expect(verdict.ok).toBe(false)
     if (!verdict.ok) {
       expect(verdict.degrade.reason).toBe('library-missing')
-      expect(verdict.degrade.libraryPath).toBe(targets[0].path)
+      expect(verdict.degrade.libraryPath).toBe(at(targets, 0).path)
     }
   })
 
@@ -403,14 +404,14 @@ describe('probeSteamQuickInstallTarget (D-29 inheriting D-24)', () => {
         .mockResolvedValue(makeDisk({ free: LOW_SPACE_FLOOR_BYTES }))
     })
     const atFloor = await probeSteamQuickInstallTarget()
-    expect(atFloor).toEqual({ ok: true, targetPath: targets[0].path })
+    expect(atFloor).toEqual({ ok: true, targetPath: at(targets, 0).path })
   })
 
   it("A5: probes the RESOLVED primary's steamappsDir, never .path, exactly once", async () => {
     const targets = makeTargets(2)
-    // Make index 1 primary so a naive targets[0] read would be caught.
-    targets[0].isPrimary = false
-    targets[1].isPrimary = true
+    // Make index 1 primary so a naive at(targets, 0) read would be caught.
+    at(targets, 0).isPrimary = false
+    at(targets, 1).isPrimary = true
     const checkDiskSpace = jest.fn().mockResolvedValue(makeDisk({}))
     stubWindowApi({
       listSteamLibraryTargets: jest.fn().mockResolvedValue(targets),
@@ -418,8 +419,8 @@ describe('probeSteamQuickInstallTarget (D-29 inheriting D-24)', () => {
     })
     await probeSteamQuickInstallTarget()
     expect(checkDiskSpace).toHaveBeenCalledTimes(1)
-    expect(checkDiskSpace).toHaveBeenCalledWith(targets[1].steamappsDir)
-    expect(checkDiskSpace).not.toHaveBeenCalledWith(targets[1].path)
+    expect(checkDiskSpace).toHaveBeenCalledWith(at(targets, 1).steamappsDir)
+    expect(checkDiskSpace).not.toHaveBeenCalledWith(at(targets, 1).path)
   })
 
   // 34.13 review B-WR-01: this spec used to assert that `onlyLibrary` was
@@ -460,7 +461,7 @@ describe('probeSteamQuickInstallTarget (D-29 inheriting D-24)', () => {
       checkDiskSpace: jest.fn().mockRejectedValue(new Error('probe failed'))
     })
     const verdict = await probeSteamQuickInstallTarget()
-    expect(verdict).toEqual({ ok: true, targetPath: targets[0].path })
+    expect(verdict).toEqual({ ok: true, targetPath: at(targets, 0).path })
   })
 
   it('A8: a rejected listSteamLibraryTargets yields ok (the A1 shape, reached by failure)', async () => {
@@ -504,7 +505,7 @@ describe('probeSteamQuickInstallTarget client cause (quick 261102-pgy)', () => {
     const verdict = await probeSteamQuickInstallTarget('570')
     expect(verdict).toEqual({
       ok: false,
-      degrade: { reason: 'library-missing', libraryPath: targets[0].path },
+      degrade: { reason: 'library-missing', libraryPath: at(targets, 0).path },
       clientSetup: 'install'
     })
     expect(steamClientSetupRecheck).toHaveBeenCalledTimes(1)
@@ -523,7 +524,7 @@ describe('probeSteamQuickInstallTarget client cause (quick 261102-pgy)', () => {
     const verdict = await probeSteamQuickInstallTarget('570')
     expect(verdict).toEqual({
       ok: false,
-      degrade: { reason: 'library-missing', libraryPath: targets[0].path },
+      degrade: { reason: 'library-missing', libraryPath: at(targets, 0).path },
       clientSetup: 'launch-once'
     })
   })
@@ -1035,9 +1036,10 @@ describe('handOffSteamClientSetupToDesktop (quick 261102-pgy)', () => {
       expect(state.appName).toBe('570')
       expect(state.reason).toBe(clientSetup)
       expect(exitConsole).toHaveBeenCalledTimes(1)
-      expect(snapshots[0].isOpen).toBe(true)
-      expect(snapshots[0].appName).toBe('570')
-      expect(snapshots[0].reason).toBe(clientSetup)
+      const snapshot = at(snapshots, 0)
+      expect(snapshot.isOpen).toBe(true)
+      expect(snapshot.appName).toBe('570')
+      expect(snapshot.reason).toBe(clientSetup)
     }
   )
 })

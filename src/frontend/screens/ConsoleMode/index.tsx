@@ -234,7 +234,8 @@ export default function ConsoleMode() {
       const idx = enabledStoreKeys.indexOf(activeStore)
       const next =
         (idx + direction + enabledStoreKeys.length) % enabledStoreKeys.length
-      setActiveStore(enabledStoreKeys[next])
+      const nextStore = enabledStoreKeys[next]
+      if (nextStore) setActiveStore(nextStore)
     },
     [enabledStoreKeys, activeStore]
   )
@@ -345,7 +346,7 @@ export default function ConsoleMode() {
       e.stopPropagation()
       const delta = e.key === 'ArrowRight' ? 1 : -1
       const next = (idx + delta + btns.length) % btns.length
-      btns[next].focus()
+      btns[next]?.focus()
     }
   }
 

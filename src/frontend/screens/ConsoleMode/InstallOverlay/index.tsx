@@ -262,7 +262,8 @@ export default function InstallOverlay({
 
   useEffect(() => {
     if (!visibleRows.includes(focused)) {
-      setFocused(visibleRows[visibleRows.length - 1])
+      const lastRow = visibleRows[visibleRows.length - 1]
+      if (lastRow) setFocused(lastRow)
     }
   }, [visibleRows, focused])
 
@@ -402,7 +403,8 @@ export default function InstallOverlay({
         if (idx === -1) return
         const delta = e.key === 'ArrowDown' ? 1 : -1
         const next = (idx + delta + h.visibleRows.length) % h.visibleRows.length
-        setFocused(h.visibleRows[next])
+        const nextRow = h.visibleRows[next]
+        if (nextRow) setFocused(nextRow)
         return
       }
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -425,7 +427,9 @@ export default function InstallOverlay({
         if (buttonRow.includes(h.focused)) {
           e.preventDefault()
           e.stopPropagation()
-          setFocused(h.focused === buttonRow[1] ? buttonRow[0] : buttonRow[1])
+          const toggled =
+            h.focused === buttonRow[1] ? buttonRow[0] : buttonRow[1]
+          if (toggled) setFocused(toggled)
         }
         return
       }

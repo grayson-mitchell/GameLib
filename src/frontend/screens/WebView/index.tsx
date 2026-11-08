@@ -199,7 +199,7 @@ export default function WebView() {
     '/loginweb/nile': '',
     '/loginweb/humble': humbleLoginUrl
   }
-  let startUrl = urls[pathname]
+  let startUrl = urls[pathname] ?? ''
 
   // RESTORE (D-30, D-31, T-40-09-03). Re-derived, not ported: plan 40-08's `hide()`-on-leave
   // already keeps the embed and its page state alive across route changes WITHIN a session, so

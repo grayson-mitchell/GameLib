@@ -285,6 +285,7 @@ import {
 import SearchBarStub from 'frontend/components/UI/SearchBar'
 import SelectFieldStub from 'frontend/components/UI/SelectField'
 import ToggleSwitchStub from 'frontend/components/UI/ToggleSwitch'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 type HookHarness = { __beginRender: () => void; __resetMount: () => void }
 
@@ -499,7 +500,7 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
 
       props!.claimAction!.onClaim()
       expect(showDialogModal).toHaveBeenCalledTimes(1)
-      const dialogOptions = showDialogModal.mock.calls[0][0]
+      const dialogOptions = at(at(showDialogModal.mock.calls, 0), 0)
       const onDone = dialogOptions.message?.props.onDone
 
       mockApi.humbleGetClaimAnnotations.mockResolvedValue({
@@ -671,7 +672,7 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
         props!.claimAction!.onFinish()
 
         expect(showDialogModal).toHaveBeenCalledTimes(1)
-        const dialogOptions = showDialogModal.mock.calls[0][0]
+        const dialogOptions = at(at(showDialogModal.mock.calls, 0), 0)
         expect(dialogOptions.message?.props.entryMode).toBe('finish')
       })
     })

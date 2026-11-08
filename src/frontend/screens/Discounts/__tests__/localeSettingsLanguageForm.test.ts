@@ -19,6 +19,7 @@
 
 import { getLocaleSettings } from '../helpers'
 import { toI18nextCode, toShippedLanguage } from 'common/languages'
+import { defined } from '../../__tests__/fixtures/indexed'
 
 // The four whose shipped code is not a valid language tag, with the region and
 // currency each MUST keep.
@@ -38,7 +39,9 @@ describe('getLocaleSettings against the underscore-named locales (quick-260925-b
         toShippedLanguage(toI18nextCode(shipped))
       )
 
-      expect(viaTag).toMatchObject(EXPECTED[shipped])
+      expect(viaTag).toMatchObject(
+        defined(EXPECTED[shipped], `expected entry for ${shipped}`)
+      )
     }
   )
 
@@ -50,7 +53,9 @@ describe('getLocaleSettings against the underscore-named locales (quick-260925-b
     (shipped) => {
       const viaRawTag = getLocaleSettings(toI18nextCode(shipped))
 
-      expect(viaRawTag).not.toMatchObject(EXPECTED[shipped])
+      expect(viaRawTag).not.toMatchObject(
+        defined(EXPECTED[shipped], `expected entry for ${shipped}`)
+      )
     }
   )
 

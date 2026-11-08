@@ -179,7 +179,7 @@ export default React.memo(function NewLogin() {
   let oldMac = false
   let oldMacMessage = ''
   if (systemInfo?.OS.platform === 'darwin') {
-    const version = parseInt(systemInfo.OS.version.split('.')[0])
+    const version = parseInt(systemInfo.OS.version.split('.')[0] ?? '')
     if (version < 12) {
       oldMac = true
       oldMacMessage = t(

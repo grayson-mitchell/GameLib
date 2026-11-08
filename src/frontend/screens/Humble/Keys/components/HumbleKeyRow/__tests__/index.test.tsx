@@ -50,6 +50,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { HumbleKey } from 'common/types/humble'
 import HumbleKeyRow, { HumbleKeyScenarioId, resolveKeyScenario } from '../index'
 import UrgencyBadge from '../../UrgencyBadge'
+import { at } from '../../../../../__tests__/fixtures/indexed'
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -703,7 +704,7 @@ describe('HumbleKeyRow KEY-column scenario resolution (D-43-17, Phase 43 plan 06
         (el) => el.type === 'button'
       )
     ).toBe(true)
-    ;(buttons[0].props as { onClick?: () => void }).onClick?.()
+    ;(at(buttons, 0).props as { onClick?: () => void }).onClick?.()
     expect(onPickOnHumble).toHaveBeenCalledTimes(1)
   })
 
@@ -744,7 +745,7 @@ describe('HumbleKeyRow KEY-column scenario resolution (D-43-17, Phase 43 plan 06
     )
     expect(disconnectedButtons).toHaveLength(1)
     expect(textContent(disconnectedButtons[0])).toBe('Log into Steam and claim')
-    ;(disconnectedButtons[0].props as { onClick?: () => void }).onClick?.()
+    ;(at(disconnectedButtons, 0).props as { onClick?: () => void }).onClick?.()
     expect(onLoginAndClaim).toHaveBeenCalledTimes(1)
 
     const connectedTree = HumbleKeyRow({
@@ -1124,7 +1125,7 @@ describe('HumbleKeyRow settleAction (D-42-01 Exception 4, Phase 42 plan 06)', ()
 
     const undoButtons = findUndoButtons(tree)
     expect(undoButtons).toHaveLength(1)
-    undoButtons[0].props.onClick?.()
+    at(undoButtons, 0).props.onClick?.()
     expect(onUndoSettle).toHaveBeenCalledTimes(1)
   })
 
@@ -1176,7 +1177,7 @@ describe('HumbleKeyRow settleAction (D-42-01 Exception 4, Phase 42 plan 06)', ()
 
     const undoButtons = findUndoButtons(tree)
     expect(undoButtons).toHaveLength(1)
-    undoButtons[0].props.onClick?.()
+    at(undoButtons, 0).props.onClick?.()
     expect(onUndoRedeem).toHaveBeenCalledTimes(1)
     expect(onUndoSettle).not.toHaveBeenCalled()
   })
@@ -1610,7 +1611,7 @@ describe('owned rows show the ownership badge whatever action is offered (261030
     const all = buttons(tree)
 
     expect(all).toHaveLength(1)
-    expect(all[0].props.className).toBe('humbleKeyGiftButton')
+    expect(at(all, 0).props.className).toBe('humbleKeyGiftButton')
     expect(textContent(tree)).not.toContain('Activate')
     expect(textContent(tree)).not.toContain('Claim on')
   })

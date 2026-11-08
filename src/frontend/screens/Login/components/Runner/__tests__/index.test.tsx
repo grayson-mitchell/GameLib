@@ -71,6 +71,7 @@ jest.mock('react', () => {
 // convention) so the component transitively requires the mocked
 // 'react'/'react-i18next'/'react-router-dom'.
 import Runner from '../index'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
 type HookHarness = { __resetMount: () => void }
 
@@ -505,7 +506,7 @@ describe('Runner: busy prop (quick task 261003-u48, D-3/D-4)', () => {
 
   it('busy: true -- the spinner element carries aria-hidden set true and carries no aria-label and no title (D-5: zero new strings)', () => {
     const tree = mount(makeProps({ busy: true }))
-    const spinner = findBusySpinners(tree)[0]
+    const spinner = at(findBusySpinners(tree), 0)
     const spinnerProps = spinner.props as unknown as Record<string, unknown>
 
     expect(spinnerProps['aria-hidden']).toBe('true')
@@ -679,7 +680,7 @@ describe('Runner: tiles carry button semantics (quick task 261008-fjj)', () => {
 
   it('the spinner element itself stays aria-hidden: the declared state lives on the tile root, not on the decorative ring', () => {
     const tree = mount(makeProps({ busy: true }))
-    const spinner = findBusySpinners(tree)[0]
+    const spinner = at(findBusySpinners(tree), 0)
 
     expect(
       (spinner.props as unknown as Record<string, unknown>)['aria-hidden']

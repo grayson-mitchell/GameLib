@@ -80,7 +80,8 @@ describe('indexedAccessRatchet bucketOf', () => {
       'src/frontend/helpers',
       'src/backend/sidecar',
       'src/frontend/components',
-      'meta'
+      'meta',
+      'src/frontend/screens'
     ])
   })
 })

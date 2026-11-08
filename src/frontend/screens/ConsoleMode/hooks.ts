@@ -125,15 +125,16 @@ export function useColumnCount(
         (el): el is HTMLElement => !!el
       )
 
-      if (cards.length < 2) {
+      const [firstCard, ...restCards] = cards
+      if (!firstCard || restCards.length < 1) {
         setColumns(1)
         return
       }
-      const firstTop = cards[0].offsetTop
+      const firstTop = firstCard.offsetTop
 
       let count = 1
-      for (let i = 1; i < cards.length; i++) {
-        if (cards[i].offsetTop !== firstTop) break
+      for (const card of restCards) {
+        if (card.offsetTop !== firstTop) break
         count++
       }
       setColumns(Math.max(1, count))

@@ -57,9 +57,11 @@ export default function WineManager(): JSX.Element | null {
 
   const getDefaultRepository = (): WineManagerUISettings => {
     if (isLinux) {
-      return repositories[0]
+      return (
+        repositories[0] ?? { type: 'Proton-CachyOS', value: 'proton-cachyos' }
+      )
     } else {
-      return repositories[0]
+      return repositories[0] ?? { type: 'Game-Porting-Toolkit', value: 'gpt' }
     }
   }
 

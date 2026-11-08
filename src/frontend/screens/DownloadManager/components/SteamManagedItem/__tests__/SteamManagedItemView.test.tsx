@@ -4,6 +4,7 @@ import type { ReactElement } from 'react'
 jest.mock('react-router-dom', () => ({ Link: () => null }))
 
 import { SteamManagedItemView } from '../SteamManagedItemView'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
 type El = ReactElement<Record<string, unknown>>
 const t = (_k: string, fallback: string) => fallback
@@ -38,7 +39,7 @@ const buttons = (el: El) => findAll(el, (e) => e.type === 'button')
 describe('SteamManagedItemView', () => {
   test('Cancel is enabled, carries the hint, and calls onCancel once', () => {
     const onCancel = jest.fn()
-    const [, cancel] = buttons(render(onCancel))
+    const cancel = at(buttons(render(onCancel)), 1)
     expect(cancel.props.disabled).toBeFalsy()
     expect(cancel.props.title).toBe(CANCEL_HINT)
     ;(cancel.props.onClick as () => void)()
@@ -46,7 +47,7 @@ describe('SteamManagedItemView', () => {
   })
 
   test('Pause stays disabled with the new note as its title', () => {
-    const [pause] = buttons(render())
+    const pause = at(buttons(render()), 0)
     expect(pause.props.disabled).toBe(true)
     expect(pause.props.title).toBe(NOTE)
   })
@@ -57,7 +58,8 @@ describe('SteamManagedItemView', () => {
       (e) => e.props.className === 'steamManagedItem__note'
     )
     expect(notes).toHaveLength(1)
-    expect(notes[0].props.children).toBe(NOTE)
-    expect(notes[0].props.children).not.toMatch(/cancel it in Steam/)
+    const note = at(notes, 0)
+    expect(note.props.children).toBe(NOTE)
+    expect(note.props.children).not.toMatch(/cancel it in Steam/)
   })
 })

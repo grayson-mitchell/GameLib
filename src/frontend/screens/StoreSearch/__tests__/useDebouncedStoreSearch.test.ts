@@ -110,6 +110,7 @@ import { useDebouncedStoreSearch } from '../hooks/useDebouncedStoreSearch'
 import type { StoreSearchResult } from 'common/types/storeSearch'
 import fs from 'fs'
 import path from 'path'
+import { defined } from '../../__tests__/fixtures/indexed'
 
 const DEBOUNCE_WINDOW = 400
 
@@ -242,14 +243,17 @@ describe('useDebouncedStoreSearch', () => {
 
     // Newer (generation 2) resolves first with its real result.
     const newerResult = [makeResult({ gameId: 'portal-2', title: 'Portal 2' })]
-    resolvers[1](newerResult)
+    defined(resolvers[1], 'newer resolver')(newerResult)
     hook = await settle(hook)
     expect(hook.results).toEqual(newerResult)
     expect(hook.status).toBe('results')
 
     // Stale (generation 1) resolves AFTER the newer query already fired —
     // must be discarded, not overwrite the newer results.
-    resolvers[0]([makeResult({ gameId: 'portal-1', title: 'Portal' })])
+    defined(
+      resolvers[0],
+      'stale resolver'
+    )([makeResult({ gameId: 'portal-1', title: 'Portal' })])
     hook = await settle(hook)
     expect(hook.results).toEqual(newerResult)
     expect(hook.status).toBe('results')

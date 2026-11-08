@@ -8,6 +8,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { defined } from '../../__tests__/fixtures/indexed'
 
 // Hoisted so each prohibition and its SANITY counter-test consume the exact
 // same detector.
@@ -212,9 +213,11 @@ describe('cancel icon hover survives every theme (quick 261107-aru)', () => {
     const dracula = cssBlock(themes, 'body.dracula')
     const danger = /--danger\s*:\s*([^;]+);/.exec(dracula)
     const hover = /--danger-hover\s*:\s*([^;]+);/.exec(dracula)
-    expect(danger?.[1].trim()).toBe('#ff5555')
+    const dangerValue = defined(danger?.[1], '--danger capture').trim()
+    expect(dangerValue).toBe('#ff5555')
     expect(hover).not.toBeNull()
-    expect(hover?.[1].trim()).not.toBe(danger?.[1].trim())
+    const hoverValue = defined(hover?.[1], '--danger-hover capture').trim()
+    expect(hoverValue).not.toBe(dangerValue)
   })
 
   it.each(['body.midnightMirage', 'body.cyberSpaceOasis', 'body.gruvbox_dark'])(

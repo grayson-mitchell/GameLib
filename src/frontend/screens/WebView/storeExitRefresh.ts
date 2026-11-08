@@ -61,7 +61,8 @@ function httpsSegments(url: string, hosts: Set<string>): string[] | null {
 }
 
 function dropLocale(segments: string[]): string[] {
-  return segments.length > 0 && LOCALE_SEGMENT.test(segments[0])
+  const first = segments[0]
+  return first !== undefined && LOCALE_SEGMENT.test(first)
     ? segments.slice(1)
     : segments
 }
@@ -132,7 +133,7 @@ interface StoreExitTarget {
 
 interface StoreExitRow {
   /** First target is the store's own runner. */
-  targets: readonly StoreExitTarget[]
+  targets: readonly [StoreExitTarget, ...StoreExitTarget[]]
   origin: string
   isPurchaseIntentUrl: (url: string) => boolean
 }

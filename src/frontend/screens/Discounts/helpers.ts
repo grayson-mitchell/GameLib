@@ -157,7 +157,7 @@ export const getLocaleSettings = (
     }
   }
 
-  const baseLang = language.split(/[-_]/)[0]
+  const baseLang = language.split(/[-_]/)[0] ?? language
   const { countryCode, currencyCode } =
     COUNTRY_CURRENCY_MAP[language] ??
     COUNTRY_CURRENCY_MAP[baseLang] ??
@@ -183,7 +183,7 @@ export const withAffiliate = (storeLink: string): string => {
 
 export const parseDiscountPercent = (discount: string): number => {
   const match = /(\d+)/.exec(discount)
-  return match ? parseInt(match[1], 10) : 0
+  return match?.[1] ? parseInt(match[1], 10) : 0
 }
 
 export const parsePriceAmount = (amount?: string): number => {

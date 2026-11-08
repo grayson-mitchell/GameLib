@@ -81,7 +81,7 @@ export default function ConfirmDialog({
         const delta = e.key === 'ArrowRight' ? 1 : -1
         setFocused((f) => {
           const idx = buttons.indexOf(f)
-          return buttons[(idx + delta + buttons.length) % buttons.length]
+          return buttons[(idx + delta + buttons.length) % buttons.length] ?? f
         })
         return
       }

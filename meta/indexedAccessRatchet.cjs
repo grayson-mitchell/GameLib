@@ -77,7 +77,8 @@ const ADOPTED_BUCKETS = [
   'src/frontend/helpers',
   'src/backend/sidecar',
   'src/frontend/components',
-  'meta'
+  'meta',
+  'src/frontend/screens'
 ]
 
 /**

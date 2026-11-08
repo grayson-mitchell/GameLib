@@ -265,6 +265,7 @@ import {
   useStoreEmbedHost,
   type StoreEmbedHostState
 } from '../useStoreEmbedHost'
+import { at } from '../../__tests__/fixtures/indexed'
 
 type HookHarness = {
   __beginRender: () => void
@@ -463,7 +464,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     jest.advanceTimersByTime(40) // drains the initial open() call
 
     setRect({ x: 5, y: 15, width: 640, height: 480 })
-    MockResizeObserver.instances[0].trigger()
+    at(MockResizeObserver.instances, 0).trigger()
     jest.advanceTimersByTime(40)
 
     expect(mockApi.storeEmbedSetBounds).toHaveBeenCalledTimes(1)
@@ -491,7 +492,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     // Six ticks, 5ms apart -- all well inside one 40ms interval.
     for (let i = 1; i <= 6; i++) {
       setRect({ x: i, y: i, width: 100 + i, height: 100 + i })
-      MockResizeObserver.instances[0].trigger()
+      at(MockResizeObserver.instances, 0).trigger()
       jest.advanceTimersByTime(5)
     }
     jest.advanceTimersByTime(40)
@@ -529,7 +530,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     // ~200ms of continuous drag: a tick every 10ms, never pausing for a full 40ms interval.
     for (let i = 1; i <= 20; i++) {
       setRect({ x: i, y: i, width: 100 + i, height: 100 + i })
-      MockResizeObserver.instances[0].trigger()
+      at(MockResizeObserver.instances, 0).trigger()
       jest.advanceTimersByTime(10)
     }
 
@@ -1086,7 +1087,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     // Exactly one live observer, and it is bound to B (never to the detached A).
     const live = MockResizeObserver.instances.filter((o) => !o.disconnected)
     expect(live).toHaveLength(1)
-    expect(live[0].observed).toBe(b.ref.current)
+    expect(at(live, 0).observed).toBe(b.ref.current)
 
     // The window is resized: the bounds sent must be B's rect, not A's zero rect.
     b.setRect({ x: 204, y: 82, width: 896, height: 568 })
@@ -1102,7 +1103,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
 
     // ...and the observer path (not only the window listener) also reports B.
     b.setRect({ x: 204, y: 82, width: 796, height: 518 })
-    live[0].trigger()
+    at(live, 0).trigger()
     jest.advanceTimersByTime(40)
     expect(mockApi.storeEmbedSetBounds).toHaveBeenLastCalledWith({
       x: 204,
@@ -1517,9 +1518,9 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       'https://www.epicgames.com/store/en-US/'
     )
     expect(mockApi.storeEmbedShow).toHaveBeenCalled()
-    expect(mockApi.storeEmbedNavigate.mock.invocationCallOrder[0]).toBeLessThan(
-      mockApi.storeEmbedShow.mock.invocationCallOrder[0]
-    )
+    expect(
+      at(mockApi.storeEmbedNavigate.mock.invocationCallOrder, 0)
+    ).toBeLessThan(at(mockApi.storeEmbedShow.mock.invocationCallOrder, 0))
   })
 
   // ── AUTH-TRIGGERED RELOAD ON RETURN (Phase 50 Plan 05, D-04) ──────────────────────────────
@@ -1593,8 +1594,8 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     toggleSuppressionShow(changed)
 
     expect(mockApi.storeEmbedReload).toHaveBeenCalledTimes(1)
-    expect(mockApi.storeEmbedShow.mock.invocationCallOrder[0]).toBeLessThan(
-      mockApi.storeEmbedReload.mock.invocationCallOrder[0]
+    expect(at(mockApi.storeEmbedShow.mock.invocationCallOrder, 0)).toBeLessThan(
+      at(mockApi.storeEmbedReload.mock.invocationCallOrder, 0)
     )
   })
 
@@ -1812,7 +1813,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     mockApi.storeEmbedSetBounds.mockClear()
 
     setRect({ x: 0, y: 0, width: 640, height: 480 })
-    MockResizeObserver.instances[0].trigger()
+    at(MockResizeObserver.instances, 0).trigger()
     jest.advanceTimersByTime(40)
 
     expect(MockResizeObserver.instances).toHaveLength(1)
@@ -1860,8 +1861,8 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
 
     expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(2)
     expect(mockApi.storeEmbedReload).toHaveBeenCalledTimes(1)
-    expect(mockApi.storeEmbedOpen.mock.invocationCallOrder[1]).toBeLessThan(
-      mockApi.storeEmbedReload.mock.invocationCallOrder[0]
+    expect(at(mockApi.storeEmbedOpen.mock.invocationCallOrder, 1)).toBeLessThan(
+      at(mockApi.storeEmbedReload.mock.invocationCallOrder, 0)
     )
   })
 
@@ -2007,7 +2008,8 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       const calls = mockApi.storeEmbedSetBounds.mock.calls as unknown as [
         Sent
       ][]
-      return calls[calls.length - 1][0]
+      const [bounds] = at(calls, -1)
+      return bounds
     }
     const firstOpenBounds = (): Sent => {
       const calls = mockApi.storeEmbedOpen.mock.calls as unknown as [
@@ -2015,7 +2017,8 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
         Sent,
         string
       ][]
-      return calls[0][1]
+      const [, bounds] = at(calls, 0)
+      return bounds
     }
     const expectBounds = (got: Sent, want: Sent): void => {
       expect(got.x).toBeCloseTo(want.x)
@@ -2074,7 +2077,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       mockApi.storeEmbedSetBounds.mockClear()
 
       setRect({ x: 5, y: 15, width: 640, height: 480 })
-      MockResizeObserver.instances[0].trigger()
+      at(MockResizeObserver.instances, 0).trigger()
       jest.advanceTimersByTime(40)
 
       expect(mockApi.storeEmbedSetBounds).toHaveBeenCalledTimes(1)
@@ -2093,7 +2096,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       mockApi.storeEmbedSetBounds.mockClear()
 
       setRootZoom('1.2')
-      MockMutationObserver.instances[0].trigger()
+      at(MockMutationObserver.instances, 0).trigger()
       jest.advanceTimersByTime(40)
 
       expect(mockApi.storeEmbedSetBounds).toHaveBeenCalled()
@@ -2110,11 +2113,11 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       jest.advanceTimersByTime(40)
 
       setRect({ x: 5, y: 15, width: 640, height: 480 })
-      MockResizeObserver.instances[0].trigger() // still the stale factor 1
+      at(MockResizeObserver.instances, 0).trigger() // still the stale factor 1
       expectBounds(lastBounds(), { x: 5, y: 15, w: 640, h: 480 })
 
       setRootZoom('1.2')
-      MockMutationObserver.instances[0].trigger()
+      at(MockMutationObserver.instances, 0).trigger()
       jest.advanceTimersByTime(40)
 
       expectBounds(lastBounds(), { x: 6, y: 18, w: 768, h: 576 })
@@ -2130,7 +2133,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       jest.advanceTimersByTime(100)
       mockApi.storeEmbedSetBounds.mockClear()
 
-      MockMutationObserver.instances[0].trigger()
+      at(MockMutationObserver.instances, 0).trigger()
       jest.advanceTimersByTime(100)
 
       expect(mockApi.storeEmbedSetBounds).not.toHaveBeenCalled()
@@ -2144,7 +2147,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       mount(options)
 
       expect(MockMutationObserver.instances).toHaveLength(1)
-      const first = MockMutationObserver.instances[0]
+      const first = at(MockMutationObserver.instances, 0)
       expect(first.observed).toBe(rootStub)
       expect(first.options).toEqual({
         attributes: true,
@@ -2166,7 +2169,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       expect(live).toHaveLength(1)
 
       harness().__unmount()
-      expect(live[0].disconnected).toBe(true)
+      expect(at(live, 0).disconnected).toBe(true)
     })
 
     // Z6. On macOS/Windows the Rust existing-embed open arm shows and navigates but drops the

@@ -11,6 +11,7 @@ import {
   buildLoginOpenPath,
   resolveLoginOpenRequest
 } from '../loginOpenParam'
+import { at } from '../../__tests__/fixtures/indexed'
 
 /**
  * Phase 49 Plan 10 (R6, D-13, T-49-28): Sign in from a Library notice row
@@ -59,9 +60,10 @@ describe('R6: Sign in from a row opens that store (all five stores)', () => {
           dismissed: []
         })
         expect(rows).toHaveLength(1)
-        expect(rows[0].store).toBe(store)
+        const row = at(rows, 0)
+        expect(row.store).toBe(store)
 
-        const path = buildLoginOpenPath(rows[0].store)
+        const path = buildLoginOpenPath(row.store)
         expect(path.startsWith('/login?')).toBe(true)
         expect(
           resolveLoginOpenRequest({

@@ -18,6 +18,7 @@ jest.mock('react-i18next', () => ({
 }))
 
 import StoreEmbedTimeoutBanner from '../StoreEmbedTimeoutBanner'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 interface AnyProps {
   children?: ReactNode
@@ -129,7 +130,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
       'WebView__embedNoticeRow-action'
     )
     expect(buttons).toHaveLength(2)
-    buttons[0].props.onClick?.()
+    at(buttons, 0).props.onClick?.()
 
     expect(onReload).toHaveBeenCalledTimes(1)
     expect(onOpenInBrowser).not.toHaveBeenCalled()
@@ -148,7 +149,7 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
       element,
       'WebView__embedNoticeRow-action'
     )
-    buttons[1].props.onClick?.()
+    at(buttons, 1).props.onClick?.()
 
     expect(onOpenInBrowser).toHaveBeenCalledTimes(1)
     expect(onReload).not.toHaveBeenCalled()
@@ -177,8 +178,9 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
       element,
       'WebView__embedNoticeRow-action'
     )
-    expect(buttons[0].props.disabled).toBe(true)
-    expect(() => buttons[0].props.onClick?.()).not.toThrow()
+    const reloadButton = at(buttons, 0)
+    expect(reloadButton.props.disabled).toBe(true)
+    expect(() => reloadButton.props.onClick?.()).not.toThrow()
   })
 
   it('fail-soft: a missing onOpenInBrowser disables that affordance rather than throwing', () => {
@@ -192,8 +194,9 @@ describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
       element,
       'WebView__embedNoticeRow-action'
     )
-    expect(buttons[1].props.disabled).toBe(true)
-    expect(() => buttons[1].props.onClick?.()).not.toThrow()
+    const browserButton = at(buttons, 1)
+    expect(browserButton.props.disabled).toBe(true)
+    expect(() => browserButton.props.onClick?.()).not.toThrow()
   })
 
   it('reuses the existing open-in-browser key rather than minting a duplicate', () => {
