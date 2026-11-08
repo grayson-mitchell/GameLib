@@ -238,11 +238,11 @@ describe('SettingsPanel', () => {
     const labels = labelsOf(tree)
 
     expect(labels).toEqual([
+      'Appearance',
       'General',
       'Stores',
       'Game Defaults',
       'Advanced',
-      'Appearance',
       'Wine Manager',
       'Log',
       'System Information',
@@ -291,11 +291,11 @@ describe('SettingsPanel', () => {
     contextValue = makeContextValue({ platform: 'linux' })
     const tree = SettingsPanel() as unknown as ReactElement
     const expected: Array<[string, unknown]> = [
+      ['Appearance', faPalette],
       ['General', faGear],
       ['Stores', faShop],
       ['Game Defaults', faCompactDisc],
       ['Advanced', faScrewdriverWrench],
-      ['Appearance', faPalette],
       ['Wine Manager', faWineGlass],
       ['Log', faFileLines],
       ['System Information', faMicrochip],

@@ -139,6 +139,12 @@ export default function SettingsPanel() {
   return (
     <div className="NavShell__tier2List">
       <NavItem
+        url="/accessibility"
+        icon={faPalette}
+        label={t('accessibility.title', 'Appearance')}
+        data-tour="nav-accessibility"
+      />
+      <NavItem
         url="/settings/general"
         icon={faGear}
         label={t('settings.navbar.general', 'General')}
@@ -159,12 +165,6 @@ export default function SettingsPanel() {
         url="/settings/advanced"
         icon={faScrewdriverWrench}
         label={t('settings.navbar.advanced', 'Advanced')}
-      />
-      <NavItem
-        url="/accessibility"
-        icon={faPalette}
-        label={t('accessibility.title', 'Appearance')}
-        data-tour="nav-accessibility"
       />
       {!isWin && (
         <NavItem
