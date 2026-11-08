@@ -458,3 +458,30 @@ pub(crate) const DEV_LOGIN_DIAGNOSTIC_INIT_SCRIPT: &str = r#"
   }
 })();
 "#;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn devtools_auto_open_is_skipped_on_linux_only() {
+        assert!(!should_auto_open_devtools("linux"));
+        assert!(should_auto_open_devtools("macos"));
+        assert!(should_auto_open_devtools("windows"));
+    }
+
+    #[test]
+    fn devtools_auto_open_decision_matches_this_host() {
+        // Pins the spelling of `std::env::consts::OS` against the predicate's "linux"
+        // literal: a typo in either would pass the fixed-string test above and only show
+        // up on the one OS it matters on.
+        let host = std::env::consts::OS;
+        if cfg!(target_os = "linux") {
+            assert!(!should_auto_open_devtools(host));
+        } else if cfg!(target_os = "macos") {
+            assert!(should_auto_open_devtools(host));
+        } else if cfg!(target_os = "windows") {
+            assert!(should_auto_open_devtools(host));
+        }
+    }
+}
