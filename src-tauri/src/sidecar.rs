@@ -210,6 +210,77 @@ fn configure_sidecar_process_group(cmd: &mut Command) {
 #[cfg(not(unix))]
 fn configure_sidecar_process_group(_cmd: &mut Command) {}
 
+/// D-20: put the sidecar in a Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` so every
+/// Windows descendant (legendary/gogdl/nile, their powershell wrappers, sidecar-launched games)
+/// dies with the job -- the parity of the Unix process-group kill in `shutdown_child`. The
+/// kernel also closes the handle if the shell itself crashes, so this reaps on crash too.
+///
+/// No breakaway flag is set (neither `BREAKAWAY_OK` nor `SILENT_BREAKAWAY_OK`), so children
+/// cannot escape the job. Sidecar-launched games dying on quit is by design (parity with Unix).
+///
+/// Known limits: assignment happens after spawn, so a grandchild created before it would
+/// escape; the Node sidecar spawns nothing during boot. Nested jobs are supported on
+/// Windows 8+, so an already-jobbed shell is fine.
+///
+/// Never panics and never uses `?`: any failure is logged and `None` is returned, leaving
+/// today's `child.kill()` fallback in `shutdown_child`.
+#[cfg(windows)]
+pub(crate) fn create_kill_on_close_job(
+    child: &std::process::Child,
+) -> Option<std::os::windows::io::OwnedHandle> {
+    use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
+    use windows_sys::Win32::Foundation::{CloseHandle, GetLastError};
+    use windows_sys::Win32::System::JobObjects::{
+        AssignProcessToJobObject, CreateJobObjectW, JobObjectExtendedLimitInformation,
+        SetInformationJobObject, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
+        JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+    };
+
+    // SAFETY: CreateJobObjectW accepts null attributes and name; returns null on failure.
+    let job = unsafe { CreateJobObjectW(std::ptr::null(), std::ptr::null()) };
+    if job.is_null() {
+        // SAFETY: GetLastError has no preconditions.
+        let err = unsafe { GetLastError() };
+        shell_eprintln!("[shell] job object: CreateJobObjectW failed (error {err}); using child.kill() fallback");
+        return None;
+    }
+
+    // SAFETY: the struct is plain-old-data; all-zero is a valid value.
+    let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { std::mem::zeroed() };
+    info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+
+    // SAFETY: `job` is a valid job handle; the pointer/size describe `info`, which outlives the call.
+    let set_ok = unsafe {
+        SetInformationJobObject(
+            job,
+            JobObjectExtendedLimitInformation,
+            &info as *const _ as *const core::ffi::c_void,
+            std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+        )
+    };
+    if set_ok == 0 {
+        // SAFETY: GetLastError / CloseHandle on the handle we just created.
+        let err = unsafe { GetLastError() };
+        shell_eprintln!("[shell] job object: SetInformationJobObject failed (error {err}); using child.kill() fallback");
+        unsafe { CloseHandle(job) };
+        return None;
+    }
+
+    // SAFETY: both handles are valid; `child` owns its process handle for the duration of the call.
+    let assign_ok = unsafe { AssignProcessToJobObject(job, child.as_raw_handle() as _) };
+    if assign_ok == 0 {
+        // SAFETY: as above.
+        let err = unsafe { GetLastError() };
+        shell_eprintln!("[shell] job object: AssignProcessToJobObject failed (error {err}); using child.kill() fallback");
+        unsafe { CloseHandle(job) };
+        return None;
+    }
+
+    shell_eprintln!("[shell] sidecar assigned to kill-on-close job object");
+    // SAFETY: `job` is a valid, uniquely-owned handle; OwnedHandle closes it on drop.
+    Some(unsafe { OwnedHandle::from_raw_handle(job as _) })
+}
+
 fn spawn_sidecar_dev(shell_exe: &str, forward_args: &[String]) -> std::io::Result<Child> {
     let entry = resolve_sidecar_entry();
     let app_root = resolve_dev_app_root();

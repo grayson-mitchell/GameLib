@@ -848,6 +848,8 @@ fn main() {
                     std::process::exit(1);
                 }
             };
+            #[cfg(windows)]
+            let job = create_kill_on_close_job(&child);
             let stdin = child
                 .stdin
                 .take()
@@ -869,6 +871,8 @@ fn main() {
                 child: Mutex::new(child),
                 shutting_down: AtomicBool::new(false),
                 eof_surfaced: AtomicBool::new(false),
+                #[cfg(windows)]
+                job: Mutex::new(job),
             });
 
             start_reader(app.handle().clone(), state.clone(), stdout);

@@ -376,6 +376,9 @@ windows-sys = { version = "0.60", features = [
     "Win32_System_Registry",         # RegOpenKeyExW, RegQueryValueExW, RegCreateKeyExW,
                                      # RegSetValueExW, RegCloseKey, HKEY, HKEY_CURRENT_USER,
                                      # KEY_READ/KEY_SET_VALUE, REG_OPTION_NON_VOLATILE, REG_SZ
+    "Win32_System_JobObjects",       # CreateJobObjectW, SetInformationJobObject, AssignProcessToJobObject,
+                                     # JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+                                     # JobObjectExtendedLimitInformation (plan 72-12, D-20)
 ] }
 # RESEARCH's Standard Stack listed a 7th feature, `Win32_System_Memory`, for `LocalFree`. Grepping
 # the vendored `windows-sys-0.60.2` source directly (as this task's own read_first requires) shows

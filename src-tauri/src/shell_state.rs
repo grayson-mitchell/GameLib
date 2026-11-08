@@ -34,6 +34,10 @@ pub(crate) struct SidecarState {
     pub(crate) shutting_down: AtomicBool,
     /// Latches once the dead-sidecar dialog has been surfaced, so it shows at most once.
     pub(crate) eof_surfaced: AtomicBool,
+    /// Windows kill-on-close Job Object holding the sidecar tree (D-20). `None` if creation
+    /// failed (shell then falls back to `child.kill()`).
+    #[cfg(windows)]
+    pub(crate) job: Mutex<Option<std::os::windows::io::OwnedHandle>>,
 }
 
 impl SidecarState {
@@ -123,6 +127,16 @@ impl SidecarState {
         {
             if let Err(e) = child.kill() {
                 shell_eprintln!("[shell] sidecar kill() failed during exit shutdown (may have already exited): {e}");
+            }
+            // D-20: closing the last handle to the kill-on-close job kills every remaining
+            // member (store CLIs, powershell wrappers, games).
+            #[cfg(windows)]
+            {
+                let taken = match self.job.lock() {
+                    Ok(mut g) => g.take(),
+                    Err(p) => p.into_inner().take(),
+                };
+                drop(taken);
             }
         }
 
