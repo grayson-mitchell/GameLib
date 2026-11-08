@@ -1,7 +1,7 @@
 import { AppSettings, GameInfo, Runner } from 'common/types'
 import { SettingsContextType } from 'frontend/types'
 import { useTranslation } from 'react-i18next'
-import { useState, useEffect, useContext } from 'react'
+import { useState, useEffect, useContext, useRef } from 'react'
 import ContextProvider from 'frontend/state/ContextProvider'
 
 import useGlobalState from 'frontend/state/GlobalStateV2'
@@ -83,6 +83,12 @@ export function createSettingSetter({
 
 const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
   const [currentConfig, setCurrentConfig] = useState<Partial<AppSettings>>({})
+  // Latest config, updated synchronously on every write. Two setSetting calls in one event
+  // handler (the merged "When a game starts" select writes two keys) would otherwise both
+  // spread the render's stale `currentConfig`, and the second would erase the first from the
+  // local view until a reload (quick 261108-kpc).
+  const configRef = useRef(currentConfig)
+  configRef.current = currentConfig
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
   const [reloadToken, setReloadToken] = useState(0)
   const { i18n } = useTranslation()
@@ -150,8 +156,11 @@ const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
     getSetting: (key, fallback) => currentConfig[key] ?? fallback,
     setSetting: createSettingSetter({
       appName,
-      getConfig: () => currentConfig,
-      setConfig: setCurrentConfig,
+      getConfig: () => configRef.current,
+      setConfig: (config) => {
+        configRef.current = config
+        setCurrentConfig(config)
+      },
       send: (payload) => window.api.setSetting(payload)
     }),
     config: currentConfig,

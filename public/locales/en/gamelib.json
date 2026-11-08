@@ -453,6 +453,14 @@
         "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
         "gamescopeUpscaleMethod": "Upscale Method",
         "gamescopeWindowType": "Window Type",
+        "gameStartWindow": {
+            "every": "Hide GameLib for every launch",
+            "everyNeedsTray": "Hide GameLib for every launch (turn on the tray icon to use this)",
+            "help": "Shortcut launches are gamelib:// links, such as the ones 'Add games to Steam' creates, and desktop or Applications shortcuts. GameLib reappears whenever a launch needs your attention.",
+            "keep": "Keep GameLib open",
+            "label": "When a game starts",
+            "shortcut": "Hide GameLib for shortcut launches"
+        },
         "generalSettings": "General Settings",
         "loginBackground": "Manage Accounts background",
         "loginBackgroundDialogTitle": "Select a background image",

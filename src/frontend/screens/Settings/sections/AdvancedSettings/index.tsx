@@ -9,7 +9,6 @@ import {
   ShowValveProton,
   ClearCache,
   DisableLogs,
-  HideWindowOnProtocolLaunch,
   ResetHeroic,
   GamePadDelayRepeat,
   SteamGridDbApiKey
@@ -52,8 +51,6 @@ export default function AdvancedSetting() {
       <AllowInstallationBrokenAnticheat />
 
       <GamePadDelayRepeat />
-
-      <HideWindowOnProtocolLaunch />
 
       {isLinux && <ShowValveProton />}
 

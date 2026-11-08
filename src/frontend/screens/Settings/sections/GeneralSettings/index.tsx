@@ -6,10 +6,10 @@ import {
   DefaultInstallPath,
   DisableController,
   DiscordRPC,
+  GameStartWindow,
   ShareDetectedFixes,
   HideChangelogOnStartup,
   MaxWorkers,
-  MinimizeOnGameLaunch,
   Shortcuts,
   StartInConsoleMode,
   TraySettings,
@@ -45,7 +45,7 @@ export default function GeneralSettings() {
 
       <TraySettings />
 
-      <MinimizeOnGameLaunch />
+      <GameStartWindow />
 
       <UseDarkTrayIcon />
 
