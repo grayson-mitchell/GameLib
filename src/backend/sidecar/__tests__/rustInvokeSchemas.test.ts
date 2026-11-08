@@ -1,5 +1,5 @@
 /**
- * Phase 67 D-13: the 44 rustInvoke args schemas. Key-set equality is the runtime twin of the
+ * Phase 67 D-13: the 45 rustInvoke args schemas (44 + main_window_hide, quick 261108-kpc). Key-set equality is the runtime twin of the
  * `satisfies Record<RustInvokeChannel, ...>` compile-time check, the shared wire fixtures prove
  * the schemas accept exactly what the sidecar emits, and JSON Schema conversion proves each
  * schema stays inside what `meta/genIpcContract.ts` can consume.
@@ -20,7 +20,7 @@ describe('rustInvokeArgs', () => {
     expect(Object.keys(rustInvokeArgs).sort()).toEqual(
       [...RUST_INVOKE_CHANNELS].sort()
     )
-    expect(RUST_INVOKE_CHANNELS).toHaveLength(44)
+    expect(RUST_INVOKE_CHANNELS).toHaveLength(45)
   })
 
   it('parses the store-embed wire fixtures', () => {

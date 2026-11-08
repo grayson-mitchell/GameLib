@@ -668,6 +668,15 @@ impl MainWindowRaiseArgs {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct MainWindowHideArgs;
+
+impl MainWindowHideArgs {
+    pub(crate) fn from_args(_args: &[Value]) -> Result<Self, String> {
+        Ok(Self)
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct BridgeInvitePickerOpenArgs {
     #[serde(rename = "appId")]

@@ -22,6 +22,7 @@ import {
   RUST_KEYRING_GET,
   RUST_KEYRING_SET,
   RUST_MAIN_WINDOW_RAISE,
+  RUST_MAIN_WINDOW_HIDE,
   RUST_NOTIFICATION_SHOW,
   RUST_SCAN_CONTAINED_REAL,
   RUST_SCAN_PE_IMPORTED_DLLS,
@@ -129,6 +130,7 @@ export const rustInvokeArgs = {
   [RUST_APP_RELAUNCH]: empty,
   [RUST_APP_HIDE]: empty,
   [RUST_MAIN_WINDOW_RAISE]: empty,
+  [RUST_MAIN_WINDOW_HIDE]: empty,
   [RUST_BRIDGE_INVITE_PICKER_OPEN]: z.tuple([
     z.object({ appId: z.string(), ackId: z.string() })
   ]),
