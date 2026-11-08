@@ -2155,25 +2155,13 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // `macos_finder_reselect_workaround` below for the mechanism and evidence. The
         // follow-up call is a no-op on other platforms.
         RustInvokeChannel::ShellShowItemInFolder => {
-            let a = ShellShowItemInFolderArgs::from_args(args)?;
-            let path = a.path.as_str();
-            app.opener()
-                .reveal_item_in_dir(path)
-                .map_err(|e| e.to_string())?;
-            #[cfg(target_os = "macos")]
-            macos_finder_reselect_workaround(path);
-            Ok(Value::Null)
+            shell_open::shell_show_item_in_folder(app, args)
         }
         // Open a path with the default program (Phase 33 Plan 04, D-05) via
         // `tauri-plugin-opener`'s `open_path`. Backs `platform/index.ts`'s `shell.openPath()`.
         // Same path-provenance note as `shell_show_item_in_folder` above (T-33-11).
         RustInvokeChannel::ShellOpenPath => {
-            let a = ShellOpenPathArgs::from_args(args)?;
-            let path = a.path.as_str();
-            app.opener()
-                .open_path(path, None::<&str>)
-                .map_err(|e| e.to_string())?;
-            Ok(Value::Null)
+            shell_open::shell_open_path(app, args)
         }
         // Write text to the OS clipboard (Phase 34.3 Plan 03, D-01/D-02, REQ-34.3-03) via
         // `tauri-plugin-clipboard-manager`'s `app.clipboard().write_text()`. Backs

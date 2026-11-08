@@ -72,6 +72,30 @@ pub(crate) fn reveal_path_policy_check(raw: &str) -> Result<std::path::PathBuf, 
     Ok(p.to_path_buf())
 }
 
+/// `ShellShowItemInFolder` body: policy check first (Rust is authoritative, D-06), then reveal
+/// via the opener plugin and, on macOS, the Finder reselect follow-up.
+pub(crate) fn shell_show_item_in_folder(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
+    let a = ShellShowItemInFolderArgs::from_args(args)?;
+    reveal_path_policy_check(a.path.as_str())?;
+    let path = a.path.as_str();
+    app.opener()
+        .reveal_item_in_dir(path)
+        .map_err(|e| e.to_string())?;
+    #[cfg(target_os = "macos")]
+    macos_finder_reselect_workaround(path);
+    Ok(Value::Null)
+}
+
+/// `ShellOpenPath` body: only an existing non-bundle directory reaches the OS opener.
+pub(crate) fn shell_open_path(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
+    let a = ShellOpenPathArgs::from_args(args)?;
+    let path = open_path_policy_check(a.path.as_str())?;
+    app.opener()
+        .open_path(path.to_string_lossy(), None::<&str>)
+        .map_err(|e| e.to_string())?;
+    Ok(Value::Null)
+}
+
 #[cfg(test)]
 mod shell_open_tests {
     use super::*;
