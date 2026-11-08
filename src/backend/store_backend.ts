@@ -57,12 +57,27 @@
  * 10.2.0 is also the exact version already resolved and integrity-pinned in
  * `pnpm-lock.yaml` as `electron-store@8.2.0`'s own dependency, so the
  * supply-chain delta of this swap is zero.
+ *
+ * Phase 68: store versioning, the read-only refusal and the D-13 file modes
+ * live here because this is the one class every production store passes
+ * through; `sidecar/fileStore.ts` is not on the production path.
  */
 
 import Conf from 'conf'
-import { isAbsolute, join, relative, resolve } from 'path'
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import type { StoreOptions } from 'common/types/typed_store'
+import { chmodSync, existsSync, mkdirSync, statSync } from 'graceful-fs'
 import { getPath } from './sidecar/pathShim'
+import {
+  isReadOnlyPath,
+  noteRefusedWrite,
+  prepareStoreFile,
+  stampForWrite,
+  storeKeyOf,
+  viewOf
+} from './storeVersioning/engine'
+import { storeVersionCodec } from './storeMigrations'
+import type { StoreDeclaration } from './storeVersioning/types'
 
 /**
  * `conf`'s own option shape, after this module has translated `name` ->
@@ -159,6 +174,50 @@ export function translateStoreOptions<T extends Record<string, unknown>>(
   return { ...rest, configName, cwd: resolvedCwd }
 }
 
+/** D-13: tighten an existing group/other-accessible token file and directory. */
+function tightenTokenPaths(filePath: string): void {
+  if (process.platform === 'win32') return
+  const dir = dirname(filePath)
+  const targets: [string, number][] = [
+    [filePath, 0o600],
+    [dir, 0o700]
+  ]
+  for (const [target, mode] of targets) {
+    try {
+      if (!existsSync(target)) continue
+      if ((statSync(target).mode & 0o077) !== 0) chmodSync(target, mode)
+    } catch (err) {
+      process.stderr.write(
+        `[storeVersion] could not tighten permissions on ${basename(target)}: ${
+          err instanceof Error ? err.message : String(err)
+        }\n`
+      )
+    }
+  }
+}
+
+function prepareStore<T extends Record<string, unknown>>(
+  options: (StoreOptions<T> & { declaration?: StoreDeclaration }) | undefined
+): TranslatedOptions<T> & { configFileMode: number } {
+  const { declaration, ...rest } = options ?? {}
+  // The containment throw is preserved on purpose (WR-11).
+  const translated = translateStoreOptions(rest as StoreOptions<T>)
+  const filePath = resolve(
+    translated.cwd,
+    `${translated.configName}.${translated.fileExtension ?? 'json'}`
+  )
+  const dir = dirname(filePath)
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 })
+  if (declaration?.tokenBearing) tightenTokenPaths(filePath)
+  prepareStoreFile(
+    filePath,
+    storeKeyOf(filePath),
+    declaration,
+    storeVersionCodec
+  )
+  return { ...translated, configFileMode: 0o600 }
+}
+
 /**
  * Drop-in replacement for `electron-store`'s default export. Same constructor
  * surface (`{ cwd, name, clearInvalidConfig, ... }`), same on-disk JSON layout
@@ -167,20 +226,29 @@ export function translateStoreOptions<T extends Record<string, unknown>>(
 export default class GameLibStore<
   T extends Record<string, unknown> = Record<string, unknown>
 > extends Conf<T> {
-  constructor(options?: StoreOptions<T>) {
-    super(translateStoreOptions(options))
+  constructor(options?: StoreOptions<T> & { declaration?: StoreDeclaration }) {
+    super(prepareStore(options))
+  }
+
+  get readOnly(): boolean {
+    return isReadOnlyPath(this.path)
   }
 
   // The single read and write choke point every conf write funnels through
   // (`set`, `delete`, `clear`, `reset`, `x.store = obj` and conf's
   // constructor-time defaults merge all end in `this.store = ...`). Both
-  // accessors must be declared: declaring only one shadows the other. A later
-  // plan adds the version view and the read-only refusal here.
+  // accessors must be declared: declaring only one shadows the other. `this.path`
+  // is set by conf before its first `this.store` access, so the guard is live
+  // during `super()` (it stops conf's constructor defaults merge on a newer file).
   get store(): T {
-    return super.store
+    return viewOf(this.path, super.store)
   }
 
   set store(value: T) {
-    super.store = value
+    if (isReadOnlyPath(this.path)) {
+      noteRefusedWrite(this.path)
+      return
+    }
+    super.store = stampForWrite(this.path, value)
   }
 }
