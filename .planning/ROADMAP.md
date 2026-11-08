@@ -157,7 +157,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 68: Versioned persisted stores and migrations** — 0 plans; not started
 - [ ] **Phase 69: Consolidate frontend state onto GlobalStateV2** — 0 plans; not started
 - [ ] **Phase 70: Split GameInfo into shared and per-store shapes** — 0 plans; not started
-- [ ] **Phase 71: Rust shell module decomposition** — 0 plans; not started
+- [ ] **Phase 71: Rust shell module decomposition** — 18 plans; planned
 - [x] **Phase 72: Renderer trust boundary and process hardening** — 0 plans; not started (completed 2026-11-08)
 - [ ] **Phase 73: Steam depot download pipeline in Rust** — 0 plans; not started
 
@@ -689,13 +689,47 @@ Plans:
 ### Phase 71: Rust shell module decomposition
 
 **Goal:** The Rust shell has no multi-thousand-line modules: each window, embed and login surface is split along its seams, following the sibling-module layout quick task 261106-ab1 set when it split `main.rs` (20,324 → 7,886 lines, 11 modules plus `wake_lock/`). Targets, measured 2026-11-06: `store_embed.rs` (4,623 lines), `login_window.rs` (3,339), `macos_epic_embed.rs` (2,089), and what remains in `main.rs` (7,886). Method: a cluster map of each file first; mechanical moves with no behaviour change (anything else found becomes a todo); `pub(crate)` only where a move needs it; `cargo test` (442 tests) green after each move, and Windows and Linux compiles checked through CI because Linux-gated code isn't compiled on the Mac. These modules drive the embedded store pages, login windows and cookie reads on macOS, so each wave ends with a live check in `pnpm tauri:dev`: an embedded store page, a sign-in for each store that uses the login window, and the Epic embed, with the frameless title bar both off and on. Phase 62's transport-mirror marker comments in `sidecar.rs` and the `store_embed.rs` dispatch arms (62-04) must survive the moves, or be removed only once Phase 67's generated contract replaces them. Open questions for discuss-phase: the minimum module set per file, and whether shell source-text tests that read Rust files (`testUtils/tauriShellSource.ts`) need the same combined-source treatment 261106-ab1 gave `main.rs`. Came from the post-Phase-62 architecture review on 2026-11-06.
-**Requirements**: TBD
+**Requirements**: TBD (plans cite CONTEXT decisions D-01..D-15; D-01 satisfied by Phase 67, D-02 superseded by 72-01)
 **Depends on:** None
-**Plans:** 0 plans
+**Plans:** 18 plans
 
-Plans:
+Plans (strictly sequential; D-14 waves 0-5, each wave from 1 ends with three-leg CI and a live check):
 
-- [ ] TBD (run /gsd-plan-phase 71 to break down)
+**D-14 Wave 0 — proof tooling and production-source readers (no live check)**
+
+- [ ] 71-01-PLAN.md — Promote and extend moveproof/sizes/baseline/permove/jestpins tools; wave-0 baseline; confirm D-01/D-02
+- [ ] 71-02-PLAN.md — Jest D-10/D-11: readTauriShellProductionSource, readHandlerBody, prefix-aware exclusion, slicer migration, no-slicer guard
+- [ ] 71-03-PLAN.md — Rust D-10: shell_production_source(), SHELL_SOURCE users migrated, directory-aware guard; wave 0 close + CI
+
+**D-14 Wave 1 — dispatcher to rust_dispatch.rs, handlers to domain modules**
+
+- [ ] 71-04-PLAN.md — scan/wake_lock/clipboard/keyring/dialogs/notification arms to rpc_* handlers with pin repoints
+- [ ] 71-05-PLAN.md — app_lifecycle.rs, tray_set_icon, login_window/invite_picker.rs, shell arms router-direct
+- [ ] 71-06-PLAN.md — Humble handlers into login_window/humble_{open,cookies,reveal}.rs; D-06 todos; cookie-pin fn tracker
+- [ ] 71-07-PLAN.md — store_embed_* handlers; thin router moved to rust_dispatch.rs (45 arms, no `_ =>`)
+- [ ] 71-08-PLAN.md — Wave 1 gate: compare, moveproof --require-all, three-leg CI, live check (OFF/ON)
+
+**D-14 Wave 2 — login_window/ split**
+
+- [ ] 71-09-PLAN.md — Cross-platform children: invite_picker helpers, devtools, humble_helpers, humble_reveal support, windows_cdp
+- [ ] 71-10-PLAN.md — macOS children: pristine_epic, sheet, macos_cookies; parent finalized; keyring-helper todo
+- [ ] 71-11-PLAN.md — Wave 2 gate: compare, three-leg CI, live check (OFF/ON)
+
+**D-14 Wave 3 — store_embed/ split**
+
+- [ ] 71-12-PLAN.md — store_embed/{state,policy,open,layout,controls}.rs; include_str! readers repointed
+- [ ] 71-13-PLAN.md — Wave 3 gate: compare, three-leg CI, live check (OFF/ON)
+
+**D-14 Wave 4 — macos_epic_embed/ split**
+
+- [ ] 71-14-PLAN.md — macos_epic_embed/{surface,nav_delegate}.rs; D-11 exclusion held; readers repointed
+- [ ] 71-15-PLAN.md — Wave 4 gate: compare, three-leg CI, live check (OFF/ON)
+
+**D-14 Wave 5 — main.rs test co-location**
+
+- [ ] 71-16-PLAN.md — Co-locate tests into flat modules (sidecar, clipboard, wake_lock, keyring, relay, tray, terminate_veto, single_instance)
+- [ ] 71-17-PLAN.md — Co-locate tests into login_window/ and store_embed/ children; main.rs keeps D-09 tests only
+- [ ] 71-18-PLAN.md — Wave 5 + phase gate: sizes report, fn main todo, VALIDATION sign-off, three-leg CI, final live check
 
 ### Phase 72: Renderer trust boundary and process hardening
 
