@@ -1,6 +1,13 @@
 ---
 phase: 68-versioned-persisted-stores-and-migrations
 reviewed: 2026-11-08T17:58:52Z
+re_reviewed: 2026-11-08T18:42:36Z
+re_review_scope: 68-11 gap closure (diff 3faece3da..HEAD -- src)
+re_review_files:
+  - src/backend/storeVersioning/backup.ts
+  - src/backend/storeVersioning/__tests__/atomicWriteFailure.test.ts
+resolved:
+  - CR-01
 depth: standard
 files_reviewed: 46
 files_reviewed_list:
@@ -51,10 +58,10 @@ files_reviewed_list:
   - src/backend/wine/manager/stores.ts
   - src/backend/utils/systeminfo/gpu/pci_ids.ts
 findings:
-  critical: 1
-  warning: 4
-  info: 7
-  total: 12
+  critical: 0
+  warning: 5
+  info: 9
+  total: 14
 status: issues_found
 ---
 
@@ -64,6 +71,7 @@ status: issues_found
 **Depth:** standard
 **Files Reviewed:** 46
 **Status:** issues_found
+**Re-reviewed:** 2026-11-08T18:42:36Z (68-11 gap closure: CR-01 resolved; WR-05, IN-08, IN-09 added)
 
 ## Narrative Findings (AI reviewer)
 
@@ -95,6 +103,12 @@ classified as a cache. The `version: 'v1'` stamp crashes every pre-68 build.
 ## Critical Issues
 
 ### CR-01: `atomicWritePrivate` falls back to an in-place truncating write when the temp-file write itself fails
+
+> **RESOLVED by 68-11 (commit d252f83dd).** Re-review confirmed: the temp write now has its own
+> `try` that unlinks the temp file and rethrows, so no path opens the live file for writing after a
+> temp-write failure. The direct-write fallback runs only from the rename `catch`. Regression tests
+> are in `__tests__/atomicWriteFailure.test.ts`. A related residual in the rename-fallback branch is
+> tracked as WR-05 below.
 
 **File:** `src/backend/storeVersioning/backup.ts:41-54`
 **Issue:** One `try` block wraps both `writeFileSync(tmpPath, ...)` and `renameSync(...)`. If
@@ -269,8 +283,91 @@ the old shape before `GameConfig.get` has migrated the file.
 knip-ratchet candidates.
 **Fix:** Prefix them with `__` and add `ForTest`, matching `__kindMismatchesForTest`, or annotate them for knip.
 
+## Re-review: 68-11 gap closure
+
+**Scope:** `src/backend/storeVersioning/backup.ts` and
+`src/backend/storeVersioning/__tests__/atomicWriteFailure.test.ts` (diff `3faece3da..HEAD -- src`),
+standard depth. `engine.ts` was read as caller context only.
+
+**CR-01 is closed.** `writeFileSync(tmpPath, ...)` is now in its own `try`. Its `catch` only
+unlinks `tmpPath` (swallowing ENOENT/EISDIR) and rethrows, and it never touches `filePath`. The
+direct `writeFileSync(filePath, ...)` exists only in the rename `catch`, which can only be reached
+after the temp write succeeded. Callers keep their error contract: `runFileMigration`
+(`engine.ts:134-155`) catches and records `failed` with the `ENOSPC` detail. `settingsFiles.ts:42`
+threw before this change as well, because the old fallback re-hit the same error, so this is not
+a new throw site for `config.ts` / `game_config.ts`.
+
+**The tests are sound.** `jest.mock('graceful-fs')` is scoped to this file's module registry, so it
+does not leak into other suites. Only `backup.ts` and `engine.ts` in this module import from
+`graceful-fs`. The backend project sets `resetMocks: true` (`src/backend/jest.config.js:11`), so
+`delegate()` in `beforeEach` correctly re-installs the pass-through implementations. The
+temp-write test would catch a regression in three independent ways: `writeMock` is called with the
+live path, `failWritesTo` truncates the live file so the byte-identical check fails, and the
+`ENOSPC` rethrow is asserted. The migration test fails loudly rather than going green if the path
+strings ever stop matching (for example `/var` vs `/private/var` on macOS), because the expected
+`readOnly` status would not occur. Each test uses its own `mkdtemp` root, which is removed in
+`afterEach`. All 34 tests in `src/backend/storeVersioning` pass.
+
+### WR-05: Rename-fallback failure leaks the full-content temp file (token material) and can still truncate the live file
+
+**File:** `src/backend/storeVersioning/backup.ts:53-65`
+**Issue:** In the rename `catch`, `unlinkSync(tmpPath)` comes *after*
+`writeFileSync(filePath, text, ...)`. If that direct write throws, the exception skips the unlink.
+Two things can make it throw:
+- the same Windows sharing violation (EPERM/EBUSY) that failed the rename, which is the
+  documented reason this fallback exists and so a likely co-failure;
+- ENOSPC: the complete temp copy is still using disk space while the fallback rewrites the live
+  file.
+
+When the write throws, the complete new content stays on disk as `<file>.tmp-<pid>`. For
+`steam_store/`, `humble_store/` and `config.json` that content is token material, and nothing ever
+sweeps it (IN-03). In the ENOSPC case, the `O_TRUNC` open succeeds before the write fails, so the
+live file is truncated. That is the CR-01 outcome, reached through the rename branch instead. The
+rename branch is far less likely than the temp-write branch, so this is a WARNING, not a
+re-opened CR-01. No test covers a fallback write that fails.
+**Fix:** Always remove the temp file, and only fall back on the errors the fallback exists for:
+```ts
+try {
+  renameSync(tmpPath, filePath)
+} catch (err) {
+  const code = (err as NodeJS.ErrnoException).code
+  process.stderr.write(`[storeVersion] rename failed for ${basename(filePath)}: ${errMessage(err)}\n`)
+  try {
+    if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'EACCES') throw err
+    writeFileSync(filePath, text, { mode: 0o600 })
+  } finally {
+    try { unlinkSync(tmpPath) } catch { /* best effort */ }
+  }
+}
+```
+Add a test where `renameMock` throws EPERM and `writeMock` throws for the live path, and assert
+that no `.tmp-` entry remains.
+
+### IN-08: The rename fallback is unconditional, including on POSIX
+
+**File:** `src/backend/storeVersioning/backup.ts:55-59`
+**Issue:** The docstring says the fallback exists for Windows EPERM/EBUSY. However, any rename
+error, on any platform, triggers a non-atomic truncating write. On POSIX a rename in the same
+directory practically never fails except for EIO, EISDIR or a target swapped for a directory,
+and in none of those cases is an in-place `O_TRUNC` write the right recovery. The code is broader
+than its documented intent.
+**Fix:** Gate the fallback on `EPERM`/`EBUSY`/`EACCES` (see the WR-05 fix) and rethrow
+everything else.
+
+### IN-09: The rename-fallback test's mode assertion cannot fail
+
+**File:** `src/backend/storeVersioning/__tests__/atomicWriteFailure.test.ts:118-127`
+**Issue:** The test pre-creates the live file at `0o600` and then asserts `0o600` after the
+fallback. As the test's own comment notes, `writeFileSync` with `mode` does not chmod an existing
+file, so the assertion only re-checks the setup and would pass even if the fallback dropped
+`{ mode: 0o600 }`. The test also has no case for a fallback write that fails (WR-05).
+**Fix:** Either drop the mode assertion or make it meaningful: delete the live file before the
+call, so the fallback creates it, and assert `0o600` (masked by umask). Also add the
+failed-fallback case described under WR-05.
+
 ---
 
 _Reviewed: 2026-11-08T17:58:52Z_
+_Re-reviewed: 2026-11-08T18:42:36Z (68-11 gap closure)_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
