@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 72 (renderer-trust-boundary-and-process-hardening) — EXECUTING
 Plan: 2 of 12
 Status: Ready to execute
-Last activity: 2026-11-08
+Last activity: 2026-11-08 - Completed quick task 261108-ioc: Stores settings page with per-store tabs
 
 Progress: [█████████░] 91%
 
@@ -639,6 +639,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261107-mr0 | Console Mode Platform row for dual-build Steam games on macOS: macOS default, Windows offered only when `getSteamBridgeRoute(appId, true)` is `bridge`; hidden until probe + verdict resolve; no Wine row; Windows passes `forceWindowsViaBottle`; Install-to "Its own Windows bottle"; D13 gate replaced by `assertConsoleSteamPlatformContract`. | 2026-11-07 | 25839cfe6 | jest Frontend 5163 pass, codecheck/eslint/i18n gates/planning-gates/scoped prettier pass; not live-checked in Console Mode | [261107-mr0-console-mode-steam-platform-row-for-dual](./quick/261107-mr0-console-mode-steam-platform-row-for-dual/) |
 | 261108-avs | overlayInputSmoke + overlayInputProbeSmoke (cursor warp to 10,10, real windows, beeps) now opt-in via `GAMELIB_DESKTOP_SMOKE=1`: whole suite `describe.skip` + one logged warn when unset, launchctl probe short-circuited; opt-in path unchanged. | 2026-11-08 | 7f8217cca | 16/16 skipped unset; tsc meta/eslint/scoped prettier pass; opt-in run not exercised (would warp cursor) | [261108-avs-gate-overlay-desktop-smoke-tests](./quick/261108-avs-gate-overlay-desktop-smoke-tests/) |
 | 261108-ca6 | Removed the 10 non-interface SteamGame lift stubs; callers use the free functions, installNative/installBottleNative moved to gameInstallDepot, launchBridgeGame+runBridgeLaunch to new gameBridgeLaunchGate; all 19 stub spies now module spies; 4 accepted import cycles allow-listed in gamesModuleSurface; todo closed. | 2026-11-08 | 0c242e0ce | games+surface 720/720 pass; build:sidecar OK; cycle audit clean | [261108-ca6-remove-the-steamgame-lift-stubs-and-spy-](./quick/261108-ca6-remove-the-steamgame-lift-stubs-and-spy-/) |
+| 261108-ioc | New Settings → Stores page (`/settings/stores/:store`) with alphabetical tabs Amazon/Epic/GOG/Humble/Steam; store-specific rows moved out of General/Advanced (EOS Overlay extracted to `StoreSettings/EosOverlay.tsx`, PlaytimeSync→GOG); accounts and per-game settings untouched. | 2026-11-08 | 35525e0ee | Settings jest 444/444, codecheck clean; genI18nGateScope A-17 anti-rot fails (pre-existing drift, also fails at 5822563ba); not live-checked in tauri:dev | [261108-ioc-consolidate-store-specific-settings-into](./quick/261108-ioc-consolidate-store-specific-settings-into/) |
 
 ## Session Continuity
 
