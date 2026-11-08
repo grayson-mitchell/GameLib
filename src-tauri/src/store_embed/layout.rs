@@ -454,3 +454,138 @@ pub(crate) mod linux_store_embed_layout {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_rounds_fractional_px_half_away_from_zero() {
+        // Spike 026's fractional slot rect.
+        assert_eq!(
+            store_embed_linux_gtk_rect(290.5, 96.5, 760.25, 560.75),
+            Ok((291, 97, 760, 561))
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_accepts_a_zero_rect() {
+        assert_eq!(
+            store_embed_linux_gtk_rect(0.0, 0.0, 0.0, 0.0),
+            Ok((0, 0, 0, 0))
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_accepts_a_negative_position() {
+        // A slot partly scrolled off is legal; GtkFixed accepts a negative position.
+        assert_eq!(
+            store_embed_linux_gtk_rect(10.0, -40.0, 300.0, 200.0),
+            Ok((10, -40, 300, 200))
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_rejects_a_negative_size() {
+        // GTK reads -1 as "unset", so passing it through would silently change the meaning.
+        let e = store_embed_linux_gtk_rect(0.0, 0.0, -1.0, 10.0).unwrap_err();
+        assert!(e.contains("negative-size"), "{e}");
+        let e = store_embed_linux_gtk_rect(0.0, 0.0, 10.0, -0.6).unwrap_err();
+        assert!(e.contains("negative-size"), "{e}");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_rejects_non_finite_input() {
+        for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            for slot in 0..4 {
+                let mut v = [1.0_f64; 4];
+                v[slot] = bad;
+                let e = store_embed_linux_gtk_rect(v[0], v[1], v[2], v[3]).unwrap_err();
+                assert!(e.contains("non-finite"), "{e}");
+            }
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_rejects_out_of_range_input() {
+        // Never a saturating `as i32`.
+        let e = store_embed_linux_gtk_rect(3.0e10, 0.0, 1.0, 1.0).unwrap_err();
+        assert!(e.contains("out-of-range"), "{e}");
+        let e = store_embed_linux_gtk_rect(0.0, -3.0e10, 1.0, 1.0).unwrap_err();
+        assert!(e.contains("out-of-range"), "{e}");
+        let e = store_embed_linux_gtk_rect(0.0, 0.0, 1.0, 3.0e10).unwrap_err();
+        assert!(e.contains("out-of-range"), "{e}");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_errors_carry_the_op_prefix() {
+        let e = store_embed_linux_gtk_rect(f64::NAN, 0.0, 1.0, 1.0).unwrap_err();
+        assert!(e.starts_with("store_embed_set_bounds:"), "{e}");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_zero_area_rect_is_recognised() {
+        assert!(store_embed_linux_rect_is_zero_area((0, 0, 0, 0)));
+        assert!(store_embed_linux_rect_is_zero_area((204, 82, 0, 418)));
+        assert!(store_embed_linux_rect_is_zero_area((204, 82, 1076, 0)));
+        assert!(!store_embed_linux_rect_is_zero_area((0, 0, 1, 1)));
+        assert!(!store_embed_linux_rect_is_zero_area((-40, -40, 300, 200)));
+    }
+
+    /// macOS sibling of the test above (quick 261001-svm). The 0x0 case is the one actually
+    /// measured live -- the slot's final ResizeObserver report once the Epic panel has replaced
+    /// it -- and before this guard existed it was applied verbatim and left the embed invisible
+    /// at zero size until a genuine window resize. Since quick 261012-f25 this also guards the
+    /// WebView2 branch, which shares the same guard (wry's `SetWindowPos` would apply a 0x0 rect
+    /// verbatim); the test keeps its name to avoid churn.
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    #[test]
+    fn store_embed_macos_zero_area_rect_is_recognised() {
+        // The measured case: slot unmounted, every field zero.
+        assert!(store_embed_rect_is_zero_area(0.0, 0.0));
+        // One collapsed axis is still unusable.
+        assert!(store_embed_rect_is_zero_area(0.0, 418.0));
+        assert!(store_embed_rect_is_zero_area(1076.0, 0.0));
+        // Negative extents are not a geometry this can honour either; GTK's branch rejects them
+        // outright in conversion, and macOS has no conversion step to reject them in.
+        assert!(store_embed_rect_is_zero_area(-1.0, 200.0));
+        assert!(store_embed_rect_is_zero_area(300.0, -1.0));
+        // Non-finite input stops here rather than reaching `set_size`. A bare `w <= 0.0` test
+        // would let NaN THROUGH (every comparison with NaN is false), so these two cases are the
+        // ones that turn red if the `is_finite` half is ever dropped as redundant.
+        assert!(store_embed_rect_is_zero_area(f64::NAN, 200.0));
+        assert!(store_embed_rect_is_zero_area(300.0, f64::NAN));
+        assert!(store_embed_rect_is_zero_area(f64::INFINITY, 200.0));
+        assert!(store_embed_rect_is_zero_area(300.0, f64::NEG_INFINITY));
+        // Real geometry, including the fractional rects a logical-px slot rect actually carries,
+        // must pass through untouched -- D-18's verbatim rule still holds for every usable rect.
+        assert!(!store_embed_rect_is_zero_area(1076.0, 418.0));
+        assert!(!store_embed_rect_is_zero_area(760.25, 560.75));
+        assert!(!store_embed_rect_is_zero_area(0.5, 0.5));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_settled_line_has_the_pinned_format() {
+        assert_eq!(
+            store_embed_linux_settled_line(
+                (291, 97, 760, 561),
+                (291, 97, 760, 561),
+                (0, 0, 1280, 800),
+                (1280, 800)
+            ),
+            "[shell] store_embed(linux): settled requested=291,97,760x561 \
+             embed=291,97,760x561 main=0,0,1280x800 vbox=1280x800"
+        );
+    }
+}
