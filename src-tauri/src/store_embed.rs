@@ -2163,32 +2163,8 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         RustInvokeChannel::ShellOpenPath => {
             shell_open::shell_open_path(app, args)
         }
-        // Write text to the OS clipboard (Phase 34.3 Plan 03, D-01/D-02, REQ-34.3-03) via
-        // `tauri-plugin-clipboard-manager`'s `app.clipboard().write_text()`. Backs
-        // `platform/index.ts`'s `clipboard.writeText()`. This arm and `clipboard_read_text`
-        // below are the ONLY two new `dispatch_rust_channel` arms the entire 34.3 slice adds
-        // -- D-02's zero-renderer-capability-grant stance holds (capabilities/default.json is
-        // untouched; the plugin has no `js_init_script`, confirmed by 34.3-RESEARCH.md Q2).
-        RustInvokeChannel::ClipboardWriteText => {
-            let a = ClipboardWriteTextArgs::from_args(args)?;
-            app.clipboard()
-                .write_text(a.text)
-                .map_err(|e| e.to_string())?;
-            Ok(Value::Null)
-        }
-        // Read text from the OS clipboard (Phase 34.3 Plan 03, D-01/D-02, REQ-34.3-03) via
-        // `tauri-plugin-clipboard-manager`'s `app.clipboard().read_text()`. Backs the
-        // sidecar's `clipboardReadText` handler (D-04 -- the read path bypasses
-        // `platformApi`'s sync stub and awaits this rustInvoke directly, since a sync
-        // function structurally cannot await a Rust round-trip). Safe to call `read_text()`
-        // here specifically because `dispatch_rust_channel` always runs on a
-        // `thread::spawn`'d worker thread (see `start_reader`), never the main/reader thread
-        // -- the plugin's own `desktop.rs` docstring warns `read_text()` must not be called on
-        // the main thread (Linux deadlock risk). A future refactor that moves dispatch onto
-        // the reader thread must not silently reintroduce that deadlock.
-        RustInvokeChannel::ClipboardReadText => {
-            clipboard_read_value(app.clipboard().read_text().map_err(|e| e.to_string()))
-        }
+        RustInvokeChannel::ClipboardWriteText => rpc_clipboard_write_text(args, app),
+        RustInvokeChannel::ClipboardReadText => rpc_clipboard_read_text(app),
         // Exit the real Tauri process (Phase 33 Plan 04, D-05 app lifecycle essentials) via
         // `AppHandle::exit()`. Backs `platform/index.ts`'s `app.exit()`/`app.quit()`. Only two
         // sidecar-reachable call sites invoke this (`resetHeroic()`, the uninstall/quit exit

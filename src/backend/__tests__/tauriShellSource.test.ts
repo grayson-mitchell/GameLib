@@ -936,12 +936,28 @@ describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07
     expect(loadMainRsCode()).toContain(
       'RustInvokeChannel::ClipboardWriteText =>'
     )
+    // Phase 71 D-04: the arm is a one-line call; the plugin write lives in the handler.
+    const body = readHandlerBody(
+      readTauriShellProductionSource(),
+      'clipboard_write_text',
+      4
+    )
+    expect(body).toContain('ClipboardWriteTextArgs::from_args(args)?')
+    expect(body).toContain('app.clipboard()')
+    expect(body).toContain('.write_text(a.text)')
   })
 
   test('REQ-34.3-08 the clipboard_read_text dispatch arm exists', () => {
     expect(loadMainRsCode()).toContain(
       'RustInvokeChannel::ClipboardReadText =>'
     )
+    const body = readHandlerBody(
+      readTauriShellProductionSource(),
+      'clipboard_read_text',
+      1
+    )
+    expect(body).toContain('clipboard_read_value(')
+    expect(body).toContain('app.clipboard().read_text()')
   })
 
   test('REQ-34.3-08 the clipboard_text_arg pure helper exists', () => {
