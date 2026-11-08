@@ -4701,14 +4701,23 @@ describe('D-10 production reader proof (Phase 71 wave 0)', () => {
     expect(count(/(?<!fn )request_login_sheet_cancel\(/g)).toBe(2)
   })
 
-  test('readMacosEpicEmbedSource() is the parent file text (plus any macos_epic_embed/ split files)', () => {
-    const parent = readFileSync(join(SHELL_SRC, 'macos_epic_embed.rs'), 'utf-8')
-    const got = readMacosEpicEmbedSource()
-    if (existsSync(join(SHELL_SRC, 'macos_epic_embed'))) {
-      expect(got.startsWith(parent)).toBe(true)
-    } else {
-      expect(got).toBe(parent)
-    }
+  test('readMacosEpicEmbedSource() is the parent plus its macos_epic_embed/ children in sorted order', () => {
+    const rd = (f: string): string => readFileSync(join(SHELL_SRC, f), 'utf-8')
+    expect(readMacosEpicEmbedSource()).toBe(
+      [
+        rd('macos_epic_embed.rs'),
+        rd('macos_epic_embed/nav_delegate.rs'),
+        rd('macos_epic_embed/surface.rs')
+      ].join('\n')
+    )
+  })
+
+  test('listTauriShellSourceFiles() never lists a macos_epic_embed/ path (D-11)', () => {
+    expect(
+      listTauriShellSourceFiles().filter((f) =>
+        f.startsWith('macos_epic_embed/')
+      )
+    ).toEqual([])
   })
 })
 
