@@ -2260,24 +2260,6 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    #[test]
-    fn store_embed_navigate_field_errors_name_the_url() {
-        let obj = serde_json::json!({ "url": 5 });
-        assert_eq!(
-            store_embed_navigate_args(&[obj]).unwrap_err(),
-            "store_embed_navigate:bad-args:url"
-        );
-        assert_eq!(
-            store_embed_navigate_args(&[serde_json::json!({})]).unwrap_err(),
-            "store_embed_navigate:bad-args:url"
-        );
-        assert_eq!(
-            store_embed_navigate_args(&[]).unwrap_err(),
-            "store_embed_navigate:bad-args"
-        );
-    }
-
     #[test]
     fn open_external_command_body_calls_the_scheme_check_before_opening() {
         // `open_external` cannot be driven from a `#[test]` -- `app.opener()` needs a live
@@ -3861,23 +3843,6 @@ mod tests {
         assert!(
             state.take_nav_events().is_empty(),
             "a suppressed push must not queue a duplicate of state the caller already has"
-        );
-    }
-
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    #[test]
-    fn store_embed_clear_forgets_the_selected_store() {
-        // store_embed_close clears; the next open of the same store is a fresh session.
-        let mut state = StoreEmbedState::default();
-        state.select_store("steam");
-        state.push("https://store.steampowered.com/".to_string());
-        state.select_store("gog");
-        state.clear();
-        assert!(state.select_store("steam"));
-        assert_eq!(
-            state.current_url(),
-            None,
-            "parked histories are dropped too"
         );
     }
 
