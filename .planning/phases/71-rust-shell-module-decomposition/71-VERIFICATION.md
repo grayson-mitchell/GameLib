@@ -1,26 +1,23 @@
 ---
 phase: 71-rust-shell-module-decomposition
-verified: 2026-11-09T00:00:00Z
-status: gaps_found
-score: 6/7 must-haves verified
+verified: 2026-11-09T12:00:00Z
+status: passed
+score: 7/7 must-haves verified
 overrides_applied: 0
-gaps:
-  - truth: "D-10: no assertion loses coverage when tests are co-located; production-source readers never let a test-module call satisfy a production pin"
-    status: partial
-    reason: "WR-01 confirmed on the live tree. sidecarShutdownFlagSource.test.ts:85-91 reads code('sidecar.rs') (whole file) and asserts indexOf('on_sidecar_eof(', drain) > drain. sidecar.rs now has test-module calls at lines 698/707/716/717 (moved in 71-16), so deleting the production call at line 645 would still pass. The D-01 EOF-ordering regression pin is vacuous."
-    artifacts:
-      - path: "src/backend/__tests__/sidecarShutdownFlagSource.test.ts"
-        issue: "pin reads unstripped sidecar.rs; satisfied by co-located tests"
-    missing:
-      - "Read stripRustTestModules(sidecar.rs) and bound the search to the reader fn body (fix in 71-REVIEW WR-01)"
-      - "Audit other readTauriShellFile/include_str! callers whose target gained mod tests in 71-16/17 for indexOf(x, from) presence/order pins"
+re_verification:
+  previous_status: gaps_found
+  previous_score: 6/7
+  gaps_closed:
+    - "D-10: vacuous D-01 EOF pin (WR-01) closed by 71-19/71-20"
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 71: Rust shell module decomposition Verification Report
 
 **Phase Goal:** No multi-thousand-line Rust shell modules; windows, embeds and login surfaces split along seams, mechanical moves only.
-**Status:** gaps_found (one narrow, test-only gap; production goal achieved)
-**Re-verification:** No (initial)
+**Status:** passed (WR-01 gap closed; GC-WR-01..03 are follow-up hardening)
+**Re-verification:** Yes (after gap closure 71-19, 71-20; prior gaps_found 6/7)
 
 No REQUIREMENTS.md exists; decisions D-01..D-15 in 71-CONTEXT.md were used. PLAN `requirements:` IDs all resolve to CONTEXT decisions: D-01 (Phase 67, confirmed: 0 `transport-mirror:` markers in sidecar.rs or anywhere in src-tauri/src; ipc_contract.rs generated), D-02 (superseded by 72-01; ubuntu-latest leg present and green), D-03..D-15 each claimed by one or more plans. D-06 handled by two todos (humble_login_open / clear_cookies). No orphaned IDs.
 
@@ -34,9 +31,9 @@ No REQUIREMENTS.md exists; decisions D-01..D-15 in 71-CONTEXT.md were used. PLAN
 | 4 | Mechanical moves, no behaviour change | VERIFIED | Independent code review (71-REVIEW) byte-compared all 45 arm bodies and nested test fns: no production defect. `cargo test --bin gamelib-shell` re-run by me: 445 passed / 0 failed / 2 ignored, matching 71-18 and CONTEXT baseline direction (only 4 Wave-0 tests added) |
 | 5 | Windows/Linux compiles via CI | VERIFIED | `gh run view`: 42443435105 (W0), 42445589877 (W1), 42469036864 (W2+3, on 05bf973bf), 42507609410 (W4), 42511011506 (W5, on 3025f9240) all conclusion success with windows/macos/ubuntu legs green |
 | 6 | Phase 62 transport-mirror markers survive or removed only after Phase 67 contract | VERIFIED | 0 markers; ipc_contract.rs present (Phase 67 generated contract), `pnpm check:ipc-contract` up to date per 71-18 |
-| 7 | D-10: co-located tests do not erode source-text pins | PARTIAL (gap) | Production reader + guards exist and needle counts were recorded, but WR-01 shows one pin became vacuous (see gap). |
+| 7 | D-10: co-located tests do not erode source-text pins | VERIFIED (re-verified) | sidecarShutdownFlagSource.test.ts now reads `readTauriShellProductionFile` (test modules stripped); `eofAfterDrainInReader` bounds on/after the drain to the next `\n}\n`. Live sidecar.rs: drain at line 640, `on_sidecar_eof(` at 645, start_reader closes at 649. Two mutation self-tests (call removed; call moved out of start_reader) show the old whole-file pin stays true while the new one goes false; suite re-run by me: 10/10 pass. Other production readers migrated to the production reader with an allow-list guard (per review). |
 
-**Score:** 6/7
+**Score:** 7/7
 
 ## Deviations assessed
 
@@ -68,3 +65,9 @@ Production goal is achieved: all four oversized files are decomposed, behaviour-
 
 _Verified: 2026-11-09_
 _Verifier: Claude (gsd-verifier)_
+
+## Re-verification (gap closure 71-19, 71-20)
+
+- WR-01 closed: see truth 7. Test-only diff (cb69de3e4..HEAD touches only tests/helpers, main.rs hunks inside `mod tests`).
+- Orchestrator evidence accepted: full jest 7 failures, all pre-existing at cb69de3e4 and unrelated to changed files; cargo 448 pass/0 fail (not re-run by me).
+- GC-WR-01..03 (tautological cutter cross-check, raw-reader allow-list bypasses incl. unlisted `readMacosEpicEmbedSource`, Rust-side include_str! readers unguarded) are follow-up hardening, NOT must-have failures: the reviewer checked each and no current pin is vacuous; they only guard future test modules. Recommend a hardening todo/plan. They do not defeat D-10 as it stands today.

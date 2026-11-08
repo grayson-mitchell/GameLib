@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: verifying
-stopped_at: Phase 73 context gathered
-last_updated: "2026-11-08T19:22:44.911Z"
+stopped_at: Phase 71 complete (20/20, gaps closed) — Phase 72 awaiting Windows UAT; Phase 73 context gathered
+last_updated: 2026-11-08T19:32:23.820Z
 last_activity: 2026-11-08
 progress:
   total_phases: 14
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 71 — rust-shell-module-decomposition
+**Current focus:** Phase 72 — renderer trust boundary and process hardening
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,9 +72,9 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 71 (rust-shell-module-decomposition) — EXECUTING
-Plan: 18 of 18
-Status: Phase complete — ready for verification
+Phase: 72
+Plan: 12 of 12 (executed)
+Status: human_needed — Windows UAT 6-7, packaged-build Restart, WR-01 decision
 Last activity: 2026-11-08
 
 Progress: [██████████] 100%
