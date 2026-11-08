@@ -170,4 +170,17 @@ export default class GameLibStore<
   constructor(options?: StoreOptions<T>) {
     super(translateStoreOptions(options))
   }
+
+  // The single read and write choke point every conf write funnels through
+  // (`set`, `delete`, `clear`, `reset`, `x.store = obj` and conf's
+  // constructor-time defaults merge all end in `this.store = ...`). Both
+  // accessors must be declared: declaring only one shadows the other. A later
+  // plan adds the version view and the read-only refusal here.
+  get store(): T {
+    return super.store
+  }
+
+  set store(value: T) {
+    super.store = value
+  }
 }
