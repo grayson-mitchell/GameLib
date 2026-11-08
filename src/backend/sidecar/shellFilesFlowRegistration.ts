@@ -2,11 +2,11 @@
  * Curated shell/files/diagnostics channel registration (Phase 34.3 Plans 01
  * and 02, D-14, REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06/REQ-34.3-13).
  *
- * Registers 20 of this slice's 28 channels onto platformApi's `ipcMain`
+ * Registers 19 of this slice's 27 channels onto platformApi's `ipcMain`
  * recorder, importing the REAL `backend/utils.ts` / `backend/utils/filesystem`
  * functions UNCHANGED:
  *
- *   send (ipcMain.on, 17):
+ *   send (ipcMain.on, 16; `removeFolder` deleted in Phase 72 D-09):
  *     - `openExternalUrl` -> `assertOpenableExternalUrl` then `shell.openExternal` (Phase 72 D-07)
  *     - `openFolder` -> `classifyFolderTarget`: open a directory, reveal a file or bundle (Phase 72 D-07/D-08)
  *     - `openSupportPage` -> `shell.openExternal(supportURL)` (`main.ts:737`)
@@ -133,7 +133,7 @@ function logSendFailure(channel: string, error: unknown): void {
 }
 
 /**
- * Registers this module's 20 shell/files/diagnostics channels (17 from Plan
+ * Registers this module's 19 shell/files/diagnostics channels (16 from Plan
  * 01, plus Plan 02's `clearCache`/`clearAchievementCache`/`resetHeroic`).
  * Called once from `handlers.ts` — this module owns no side effects at
  * import time beyond the imports above; the caller decides when

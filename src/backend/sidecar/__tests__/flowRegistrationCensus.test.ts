@@ -97,7 +97,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // getPlaytimeFromRunner ported byte-equivalently from main.ts (D-14); send count unchanged.
   'runnerMiscFlowRegistration.ts': { invoke: 14, send: 0 },
   'settingsFlowRegistration.ts': { invoke: 11, send: 1 },
-  'shellFilesFlowRegistration.ts': { invoke: 3, send: 17 },
+  // Phase 72 Plan 09 (2026-11-08): send 17 -> 16 -- the renderer `removeFolder` channel deleted (D-09).
+  'shellFilesFlowRegistration.ts': { invoke: 3, send: 16 },
   // Quick 261012-ca6 (2026-10-12): invoke 4 -> 6, send 3 -> 1 -- `addShortcut` and
   // `removeShortcut` moved from send to invoke so the renderer can learn the write's outcome.
   'shortcutsFlowRegistration.ts': { invoke: 6, send: 1 },

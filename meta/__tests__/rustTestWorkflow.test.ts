@@ -2,7 +2,8 @@
  * Text gate: the Tauri-free scanner crates stay tested and linted in CI. Default workspace
  * members hide them from `cargo test --bin gamelib-shell`, so the explicit `-p` step and the
  * `--workspace` clippy run are load-bearing. The clippy toolchain and ratchet steps are
- * unconditional because the ratchet holds a per-platform baseline on both matrix legs.
+ * unconditional on the macOS and Windows legs (per-platform baseline); the Linux leg (Phase 72
+ * D-14) skips them via exactly `if: runner.os != 'Linux'`, since no Linux baseline exists.
  */
 
 import { readFileSync } from 'fs'
@@ -33,8 +34,13 @@ function hasUngatedClippy(text: string): boolean {
   )
   const toolchain = steps(text).find((s) => s.includes('toolchain: 1.99.1'))
   if (!ratchet || !toolchain) return false
-  return !/^\s*if:/m.test(ratchet) && !/^\s*if:/m.test(toolchain)
+  // Phase 72 Plan 01 (D-14): the Linux leg is compile+test only -- clippyRatchet.cjs holds no
+  // Linux baseline -- so exactly this one guard is allowed. Any other `if:` still fails.
+  const strip = (s: string) => s.replace(LINUX_SKIP, '')
+  return !/^\s*if:/m.test(strip(ratchet)) && !/^\s*if:/m.test(strip(toolchain))
 }
+
+const LINUX_SKIP = /^\s*if: runner\.os != 'Linux'\s*$/m
 
 function hasWorkspaceClippy(text: string): boolean {
   return text.includes('clippy --workspace --all-targets')
