@@ -160,6 +160,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 71: Rust shell module decomposition** — 18 plans; planned
 - [x] **Phase 72: Renderer trust boundary and process hardening** — 0 plans; not started (completed 2026-11-08)
 - [ ] **Phase 73: Steam depot download pipeline in Rust** — 0 plans; not started
+- [ ] **Phase 74: Steam game updates** — 0 plans; not started
 
 ## Phase Details
 
@@ -777,3 +778,14 @@ Plans:
 Plans:
 
 - [ ] TBD (run /gsd-plan-phase 73 to break down)
+
+### Phase 74: Steam game updates
+
+**Goal:** GameLib can tell when an installed Steam game has an update and can apply it. Today `SteamGame.update()` (`steam/games.ts` ~445) is a stub that returns an error, and update is one of the four actions GameLib can't start (found while building the Steam Lib Actions table, 2026-11-08). There are two cases. (1) **Steam-registered games** (Mac-native installs, whoever downloaded them): Steam updates these itself, but GameLib can't show "Update available" or start an update. (2) **Bridge games: nothing updates them, which is why this is `major`.** The bridge install writes into the bridge bottle's own `steamapps` (`gameInstallBridge.ts` ~582, `getBridgeBottleSteamappsRoot()`), which Mac Steam never reads, and no Windows Steam runs in that bottle. A bridge game stays on its install build until it is reinstalled, and multiplayer games break once the server moves on. Scope: **detection for both cases**, comparing the installed ACF `buildid` and per-depot manifest GIDs against the public branch in PICS appinfo (the anonymous client already fetches it), shown on the card and game page, checked on library refresh and before launch, and never as an unbounded boot task (sidecar exit contract). **Bridge games: GameLib updates them itself** with a delta download in the Rust depot pipeline Phase 73 builds. Diff the old manifest against the new one per depot, fetch only changed chunks, delete files that are gone, and keep user files the old manifest didn't own. Then rewrite the ACF (`buildid`, `InstalledDepots` GIDs) and redo the GID-keyed follow-ups: steam_api shim rescan and re-placement, the per-GID redist ledger (`bridge/sharedRedistInstall.ts`), and the DRM/known-fix verdicts. Refuse while the game is running, and resume through the download queue the way an install does. **Steam-registered games: ask Steam.** This depends on a spike: does `InstallApp` on an already-installed app start its update? Spike 065 tested only an uninstalled app. If it doesn't, look for an update or validate method next to InstallApp/UninstallApp in the helper's method map (spikes 065/067). Fallbacks are launching through Steam, which already applies required updates, and `steam://validate` (untested). Whether GameLib's own delta updater should also cover these is decided after the spike; Steam must not have the app loaded while it runs. Two things can run before Phase 73 lands because they don't touch the pipeline: that spike, and a **live confirmation of case 2** (install a bridge game, compare its ACF `buildid` with the current public build after an update ships, check nothing changes it). **Depends on Phase 73** so the delta download is written once, in Rust, not in the TypeScript `steam/depot/` that 73 deletes (operator's choice, 2026-11-08). Live gate: a bridge game with a pending update shows "Update available", updates, keeps saves and user files, and still launches through the bridge; a Mac-native game shows the state and the Update button gets Steam to update it. Came from todo `2026-11-07-implement-steam-game-updates.md` (now in `todos/completed/`).
+**Requirements**: TBD
+**Depends on:** Phase 73
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 74 to break down)

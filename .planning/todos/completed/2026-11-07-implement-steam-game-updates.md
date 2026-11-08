@@ -66,3 +66,12 @@ Respect the sidecar exit contract: no unbounded check at boot.
 Live gate: a bridge game with a pending update shows "Update available", updates, keeps saves
 and user files, and still launches through the bridge. A Mac-native game shows the state and
 the Update button gets Steam to update it.
+
+## Closure
+
+Promoted to **Phase 74: Steam game updates** on 2026-11-08, not fixed. The Problem and Solution
+above are carried into the phase goal in `.planning/ROADMAP.md`. Phase 74 depends on Phase 73 so
+the delta download is written once, in the Rust depot pipeline, not in the TypeScript
+`steam/depot/` that Phase 73 deletes. Two pieces don't touch the pipeline and can run before
+73 lands: the spike on `InstallApp` for an already-installed app, and the live check that a
+bridge game stays on its install build.
