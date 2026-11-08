@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 71 (rust-shell-module-decomposition) — EXECUTING
 Plan: 11 of 18
 Status: Ready to execute
-Last activity: 2026-11-08
+Last activity: 2026-11-08 - Completed quick task 261108-ved: Move the keyring helpers from login_window.rs to keyring_dispatch.rs
 
 Progress: [█████████░] 94%
 
@@ -542,6 +542,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261108-et8 | adopt noUncheckedIndexedAccess for frontend/screens (335 sites, 3 commits; baseline now empty; valid-data behaviour identical) | 2026-11-08 | 0006f38e8 | ratchet exit 0; codecheck; screens jest (Settings 393, Library+Game 1868, rest 1293); boundaries; find-deadcode; planning-gates; scoped prettier | [261108-et8-adopt-nuia-frontend-screens](./quick/261108-et8-adopt-nuia-frontend-screens/) |
 | 261108-et9 | enable noUncheckedIndexedAccess in tsconfig.json and retire the indexed-access ratchet (0 drift; script, baseline, test, CI step removed; todo completed) | 2026-11-08 | e1cafb3f5 | codecheck green per commit; knip; planning-gates 12/12; Meta jest only known pre-existing failures; codecheck.yml parses | [261108-et9-enable-nuia-retire-ratchet](./quick/261108-et9-enable-nuia-retire-ratchet/) |
 | 261108-lav | Phase 72 WR-01: dead-sidecar path now SIGKILLs the sidecar's process group before the Restart/Quit dialog even when the leader already exited (pgid<=1 refused; tree_reaped latch keeps shutdown_child off a recycled pgid); restart() from the reader thread already runs RunEvent::Exit, so no extra shutdown_child. | 2026-11-08 | e5c11ab25 | cargo 441 pass, clippy ratchet pass; Windows branch source-pinned only; live kill -9 check optional | [261108-lav-fix-phase-72-wr-01-reap-sidecar-group-on](./quick/261108-lav-fix-phase-72-wr-01-reap-sidecar-group-on/) |
+| 261108-ved | Six keyring helpers (7 items) moved byte-identical from login_window.rs to keyring_dispatch.rs; moveproof gains `--stem` for cross-module Layer 3; 71-16 keyring test routing re-pointed to keyring_dispatch.rs; todo closed. | 2026-11-08 | 339bdd386 | permove PASS (Layer 1 + Layer 3 0/0, cargo 445/445); no-stem control fails on exactly 7 items; planning-gates 12/12 | [261108-ved-move-the-keyring-helpers-from-login-wind](./quick/261108-ved-move-the-keyring-helpers-from-login-wind/) |
 
 ## Deferred Items
 
