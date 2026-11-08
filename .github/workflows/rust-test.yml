@@ -52,10 +52,10 @@ concurrency:
 #
 # What this does NOT catch, stated plainly per this repo's standing rule about gates that appear
 # to cover more than they do:
-#   (a) No Linux leg. `src-tauri` needs libwebkit2gtk-4.1-dev/libayatana-appindicator3-dev/
-#       librsvg2-dev to build at all (release-tauri.yml), and the only Linux-specific Rust code
-#       is the `cfg(unix)` `libc::kill` arm, which the macOS leg already compiles -- but a
-#       genuinely Linux-only break is invisible here.
+#   (a) The Linux leg (Phase 72 D-14) is compile-only plus provisional tests: `cargo check
+#       --all-targets` is a hard gate, `cargo test --bin gamelib-shell` is continue-on-error until
+#       72-01 Task 3 settles the first run, and clippy is NOT run on Linux (no measured ceiling map
+#       in meta/clippyRatchet.cjs), so Linux-only cfg code is compiled but never linted.
 #   (b) Compile and unit tests only -- no app launch, no webview, no IPC round trip. Anything
 #       runtime- or event-loop-ordering-dependent is out of scope here exactly as it is for jest
 #       (cf. the `smoke:sidecar` note in test.yml).
@@ -69,8 +69,8 @@ concurrency:
 #       release-tauri.yml.
 #   (g) The Tauri-free scanner crates (gamelib-scan, gamelib-scan-cli) are covered only by the
 #       explicit `-p` test step and the `--workspace` clippy run: `cargo test --bin gamelib-shell`
-#       alone selects only the root package. They have no Linux leg (a later, separate job could
-#       add one since they need no webkit deps).
+#       alone selects only the root package. They run on the Linux leg too (Phase 72 D-14), via
+#       the same `-p` test step.
 # And: passing here does not make this a "required check" on `main`. That is a GitHub
 # branch-protection/ruleset setting under Settings -> Branches, performed by a repo admin, and is
 # NOT established by this file.
@@ -80,9 +80,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v6
+      # Phase 72 D-14: webkit/appindicator/rsvg dev packages so src-tauri compiles on the Linux leg (same list as release-tauri.yml).
+      - name: Install Linux system dependencies (Linux leg only, Phase 72 D-14)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf xdg-utils
       - uses: ./.github/actions/install-deps
       - name: Build renderer web assets (vite)
         shell: bash
@@ -168,7 +175,15 @@ jobs:
               console.log("placeholder created: " + target);
             }
           ' "$triple"
+      # Phase 72 D-14: hard compile check of every target, so a Linux-only cfg break is reported apart from a test failure.
+      - name: cargo check (Tauri shell crate, Linux leg only)
+        if: runner.os == 'Linux'
+        shell: bash
+        working-directory: src-tauri
+        run: cargo check --all-targets
       - name: cargo test (Tauri shell crate)
+        # Phase 72 D-14: provisional on Linux until 72-01 Task 3 settles the first run.
+        continue-on-error: ${{ runner.os == 'Linux' }}
         shell: bash
         working-directory: src-tauri
         run: cargo test --bin gamelib-shell
@@ -190,11 +205,13 @@ jobs:
       #
       # The ratchet fails on a rise AND on a fall (lower the ceiling in the same commit).
       - name: Install pinned clippy toolchain
+        if: runner.os != 'Linux'
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.99.1
           components: clippy
       - name: cargo clippy ratchet (shrink-only, per-platform baseline)
+        if: runner.os != 'Linux'
         shell: bash
         working-directory: src-tauri
         run: |
