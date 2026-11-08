@@ -186,7 +186,7 @@ describe('NavTabs', () => {
     ])
   })
 
-  it('targets /login, /, /store/{default store}, /download-manager, /settings/general respectively', () => {
+  it('targets /login, /, /store/{default store}, /download-manager, /accessibility respectively', () => {
     contextValue = makeContextValue({
       gog: { username: 'TestUser', library: [] }
     })
@@ -196,7 +196,7 @@ describe('NavTabs', () => {
       '/',
       '/store/gog',
       '/download-manager',
-      '/settings/general'
+      '/accessibility'
     ])
   })
 
