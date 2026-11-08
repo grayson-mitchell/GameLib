@@ -2008,25 +2008,92 @@ mod tests {
         "wake_lock/windows.rs",
     ];
 
-    const SHELL_SOURCE: &str = concat!(
-        include_str!("main.rs"), "\n",
-        include_str!("clipboard.rs"), "\n",
-        include_str!("ipc_contract.rs"), "\n",
-        include_str!("keyring_dispatch.rs"), "\n",
-        include_str!("login_window.rs"), "\n",
-        include_str!("relay_commands.rs"), "\n",
-        include_str!("shell_state.rs"), "\n",
-        include_str!("shell_open.rs"), "\n",
-        include_str!("sidecar.rs"), "\n",
-        include_str!("single_instance.rs"), "\n",
-        include_str!("store_embed.rs"), "\n",
-        include_str!("terminate_veto.rs"), "\n",
-        include_str!("tray.rs"), "\n",
-        include_str!("wake_lock.rs"), "\n",
-        include_str!("wake_lock/linux.rs"), "\n",
-        include_str!("wake_lock/macos.rs"), "\n",
+    const SHELL_SOURCE_PARTS: &[&str] = &[
+        include_str!("main.rs"),
+        include_str!("clipboard.rs"),
+        include_str!("ipc_contract.rs"),
+        include_str!("keyring_dispatch.rs"),
+        include_str!("login_window.rs"),
+        include_str!("relay_commands.rs"),
+        include_str!("shell_state.rs"),
+        include_str!("shell_open.rs"),
+        include_str!("sidecar.rs"),
+        include_str!("single_instance.rs"),
+        include_str!("store_embed.rs"),
+        include_str!("terminate_veto.rs"),
+        include_str!("tray.rs"),
+        include_str!("wake_lock.rs"),
+        include_str!("wake_lock/linux.rs"),
+        include_str!("wake_lock/macos.rs"),
         include_str!("wake_lock/windows.rs"),
-    );
+    ];
+
+    /// Cuts every whole test-module block (column-0 `#[cfg(test)]` immediately followed by a
+    /// column-0 `mod <ident> {`, through the next line that is exactly `}`) and keeps the rest.
+    /// Same rule as the jest reader `stripRustTestModules`.
+    fn cut_test_modules(src: &str) -> String {
+        let lines: Vec<&str> = src.split('\n').collect();
+        let mut out: Vec<&str> = Vec::with_capacity(lines.len());
+        let mut i = 0;
+        while i < lines.len() {
+            let opens_test_mod = lines[i] == "#[cfg(test)]"
+                && lines.get(i + 1).is_some_and(|next| {
+                    next.strip_prefix("mod ").is_some_and(|rest| {
+                        rest.strip_suffix(" {").is_some_and(|ident| {
+                            !ident.is_empty()
+                                && ident.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+                        })
+                    })
+                });
+            if opens_test_mod {
+                i += 2;
+                while i < lines.len() && lines[i] != "}" {
+                    i += 1;
+                }
+                i += 1;
+                continue;
+            }
+            out.push(lines[i]);
+            i += 1;
+        }
+        out.join("\n")
+    }
+
+    /// The shell source with each file's own test modules cut, so a literal needle cannot
+    /// self-match in a co-located test.
+    fn shell_production_source() -> String {
+        SHELL_SOURCE_PARTS.iter().map(|p| cut_test_modules(p)).collect::<Vec<_>>().join("\n")
+    }
+
+    #[test]
+    fn shell_source_parts_align_with_file_names() {
+        assert_eq!(SHELL_SOURCE_PARTS.len(), SHELL_SOURCE_FILES.len());
+        for (i, name) in SHELL_SOURCE_FILES.iter().enumerate() {
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src").join(name);
+            let on_disk = std::fs::read_to_string(&path).expect("shell source file must be readable");
+            assert!(SHELL_SOURCE_PARTS[i] == on_disk, "part {i} is not {name}");
+        }
+    }
+
+    #[test]
+    fn cut_test_modules_cuts_whole_test_mod_blocks_only() {
+        let trailing = "fn a() {}\n#[cfg(test)]\nmod tests {\n    fn t() {}\n}\n";
+        assert_eq!(cut_test_modules(trailing), "fn a() {}\n");
+        let mid = "fn a() {}\n#[cfg(test)]\nmod shell_open_tests {\n    fn t() {}\n}\nfn b() {}\n";
+        assert_eq!(cut_test_modules(mid), "fn a() {}\nfn b() {}\n");
+        let kept = "// #[cfg(test)]\n// mod tests {\n    #[cfg(test)]\n    mod tests {\n    }\nfn c() {}\n";
+        assert_eq!(cut_test_modules(kept), kept);
+        let attr_only = "#[cfg(test)]\nfn helper() {}\n";
+        assert_eq!(cut_test_modules(attr_only), attr_only);
+    }
+
+    #[test]
+    fn shell_production_source_main_part_equals_pre_test_slice() {
+        let main = SHELL_SOURCE_PARTS[0];
+        let opener = concat!("#[cfg(test)]\n", "mod tests", " {");
+        let at = main.find(opener).expect("main.rs test module opener not found");
+        assert!(cut_test_modules(main) == main[..at], "main.rs production text differs from the pre-test slice");
+    }
 
     /// Guard: a new shell module file must be named in `SHELL_SOURCE_FILES`, or the source-text
     /// tests would silently stop covering it.
@@ -4992,7 +5059,7 @@ mod tests {
         // `open_external_command_body_calls_the_scheme_check_before_opening` above. Bounded to
         // the arm's own body: without the bound, a match anywhere later in the file (including
         // this very test) would produce a pass or a failure for the wrong reason.
-        let source = SHELL_SOURCE;
+        let source = shell_production_source();
         let arm_start = source
             .find(concat!("RustInvokeChannel::KeyringAvailable", " => {"))
             .expect("keyring_available arm not found in main.rs");
@@ -5238,7 +5305,7 @@ mod tests {
     // text; it does not need to compile the macOS-only code it is checking).
     #[test]
     fn f_34_4_2_12_wry_blocking_cookies_calls_are_macos_gated() {
-        let source = SHELL_SOURCE;
+        let source = shell_production_source();
         let lines: Vec<&str> = source.lines().collect();
 
         // All three cookie-reading dispatch arms are now in scope (D-F2): the login-poll read,
@@ -5540,7 +5607,7 @@ mod tests {
     // exercised by a failing run.
     #[test]
     fn epic_cold_jar_login_timeout_default_store_clear_evicts_disk_and_memory_cache() {
-        let source = SHELL_SOURCE;
+        let source = shell_production_source();
         let lines: Vec<&str> = source.lines().collect();
 
         let start = lines
@@ -5678,7 +5745,7 @@ mod tests {
     // pass for the wrong reason.
     #[test]
     fn epic_cold_jar_login_timeout_window_branch_clear_evicts_disk_and_memory_cache() {
-        let source = SHELL_SOURCE;
+        let source = shell_production_source();
         let lines: Vec<&str> = source.lines().collect();
 
         // This site is a `dispatch_rust_channel` MATCH ARM, not a top-level `fn` -- the
