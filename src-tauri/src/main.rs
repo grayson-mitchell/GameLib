@@ -2026,6 +2026,7 @@ mod tests {
         "sidecar.rs",
         "single_instance.rs",
         "store_embed.rs",
+        "store_embed/layout.rs",
         "store_embed/open.rs",
         "store_embed/policy.rs",
         "store_embed/state.rs",
@@ -2064,6 +2065,7 @@ mod tests {
         include_str!("sidecar.rs"),
         include_str!("single_instance.rs"),
         include_str!("store_embed.rs"),
+        include_str!("store_embed/layout.rs"),
         include_str!("store_embed/open.rs"),
         include_str!("store_embed/policy.rs"),
         include_str!("store_embed/state.rs"),
@@ -8102,7 +8104,7 @@ mod tests {
         // Bound the slice to JUST `apply_bounds`: from its signature to the first following line
         // that is exactly four spaces and a closing brace. The first match of the signature is
         // the real definition, because this test quotes it again later in the file.
-        let source = include_str!("store_embed.rs");
+        let source = include_str!("store_embed/layout.rs");
         let fn_start = source
             .find("pub fn apply_bounds(embed: &tauri::Webview, rect: Rect) -> Result<(), String> {")
             .expect("apply_bounds definition not found in main.rs");
