@@ -2,6 +2,7 @@ import { dialog, app } from 'backend/platform'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 import { logError, logInfo, LogPrefix } from './logger'
 import i18next from 'i18next'
+import { tOrFallback } from './i18nFallback'
 import { GameInfo, LaunchOption, Runner } from 'common/types'
 import { getMainWindow } from './main_window'
 import { sendFrontendMessage } from './ipc'
@@ -116,6 +117,10 @@ async function handleLaunch(url: URL) {
   if (runnerParse.success) {
     runner = runnerParse.data
   }
+  // A cold-start link is handled before any library refresh has populated the managers'
+  // installed maps (the renderer drives `refreshLibrary`, and `initStoreManagers` is dead under
+  // Tauri), so `is_installed` would read false for an installed game. Load it from disk first.
+  if (isColdStartLink()) await loadInstalledStateFromDisk(runner)
   const gameInfo = findGame(appName, runner)
   if (!gameInfo) {
     return logError(
@@ -237,7 +242,7 @@ async function handleLaunch(url: URL) {
   if (!mainWindow) return
 
   const { response } = await dialog.showMessageBox(mainWindow, {
-    buttons: [i18next.t('box.yes'), i18next.t('box.no')],
+    buttons: [tOrFallback('box.yes', 'Yes'), tOrFallback('box.no', 'No')],
     cancelId: 1,
     message: `${title} ${i18next.t(
       'box.protocol.install.not_installed',
@@ -326,6 +331,33 @@ async function confirmUrlLaunchParameters(
     ? await dialog.showMessageBox(mainWindow, options)
     : await dialog.showMessageBox(options)
   return response === 1
+}
+
+/**
+ * Populates the per-runner installed state from the persisted stores, the same local reads
+ * `init()`/`refresh()` do first, minus their network work. Synchronous and idempotent. Nile
+ * self-loads in `getGameInfo`; Steam falls back to its persisted cache; sideload has no
+ * library-manager lookup. So only gog and legendary need this.
+ */
+export async function loadInstalledStateFromDisk(
+  runner?: Runner
+): Promise<void> {
+  const targets = runner ? [runner] : RUNNERS.options
+  for (const target of targets) {
+    try {
+      if (target === 'gog') {
+        libraryManagerMap.gog.refreshInstalled()
+      } else if (target === 'legendary') {
+        libraryManagerMap.legendary.loadGamesInAccount()
+        libraryManagerMap.legendary.refreshInstalled()
+      }
+    } catch (error) {
+      logError(
+        [`Could not load installed state for ${target}:`, error],
+        LogPrefix.ProtocolHandler
+      )
+    }
+  }
 }
 
 function findGame(

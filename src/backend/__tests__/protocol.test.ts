@@ -27,6 +27,7 @@ jest.mock('../config', () => ({
 }))
 
 import { handleProtocol, markFrontendReady, RUNNERS } from '../protocol'
+import i18next from 'i18next'
 import { app, dialog } from 'backend/platform'
 import { libraryManagerMap } from '../storeManagers'
 import { getMainWindow } from '../main_window'
@@ -59,10 +60,13 @@ jest.mock('../ipc', () => ({
 jest.mock('../storeManagers', () => ({
   libraryManagerMap: {
     legendary: {
-      getGame: jest.fn()
+      getGame: jest.fn(),
+      refreshInstalled: jest.fn(),
+      loadGamesInAccount: jest.fn()
     },
     gog: {
-      getGame: jest.fn()
+      getGame: jest.fn(),
+      refreshInstalled: jest.fn()
     },
     nile: {
       getGame: jest.fn()
@@ -247,6 +251,69 @@ describe('protocol.ts --no-gui behavior', () => {
       // Should not show dialog for installed games
       expect(dialog.showMessageBox).not.toHaveBeenCalled()
       expect(app.quit).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('cold-start link waits for installed state (cold-start-link-not-installed)', () => {
+    const gogGame = {
+      app_name: '1542190742',
+      title: 'Bloody Hell',
+      runner: 'gog' as const,
+      is_installed: false
+    }
+
+    beforeEach(() => {
+      mockIsCLINoGui.mockReturnValue(true)
+      gogGame.is_installed = false
+      ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+        getGameInfo: () => gogGame,
+        getSettings: () => ({ ignoreGameUpdates: false })
+      })
+      // The manager only reports the game as installed once refreshInstalled() has run.
+      ;(libraryManagerMap.gog.refreshInstalled as jest.Mock).mockImplementation(
+        () => {
+          gogGame.is_installed = true
+        }
+      )
+    })
+
+    test('loads installed state before resolving the game, so an installed game launches', async () => {
+      await handleProtocol(['gamelib://launch?appName=1542190742&runner=gog'])
+
+      expect(libraryManagerMap.gog.refreshInstalled).toHaveBeenCalled()
+      expect(dialog.showMessageBox).not.toHaveBeenCalled()
+      expect(launchEventCallback).toHaveBeenCalledWith(
+        expect.objectContaining({ appName: '1542190742', runner: 'gog' })
+      )
+    })
+
+    test('legendary also loads its account games and installed state', async () => {
+      await handleProtocol([
+        'gamelib://launch?appName=test-game&runner=legendary'
+      ])
+
+      expect(libraryManagerMap.legendary.loadGamesInAccount).toHaveBeenCalled()
+      expect(libraryManagerMap.legendary.refreshInstalled).toHaveBeenCalled()
+    })
+  })
+
+  describe('dialog buttons fall back to English when i18next is uninitialized', () => {
+    test('not-installed dialog shows Yes/No, not raw keys or undefined', async () => {
+      mockIsCLINoGui.mockReturnValue(false)
+      mockGameInfo.is_installed = false
+      // Uninitialized i18next returns undefined even when given a default.
+      ;(i18next.t as unknown as jest.Mock).mockImplementation(() => undefined)
+      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+
+      await handleProtocol(['gamelib://launch/test-game'])
+
+      expect(dialog.showMessageBox).toHaveBeenCalledWith(
+        mockMainWindow,
+        expect.objectContaining({ buttons: ['Yes', 'No'] })
+      )
+      ;(i18next.t as unknown as jest.Mock).mockImplementation(
+        (key: string, fallback?: string) => fallback || key
+      )
     })
   })
 
