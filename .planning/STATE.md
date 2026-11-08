@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: ready_to_plan
-stopped_at: Phase 72 complete (12/12) — ready to discuss Phase 73
-last_updated: 2026-11-08T02:19:22.904Z
+status: planning
+stopped_at: Phase 68 context gathered
+last_updated: "2026-11-08T02:50:58.343Z"
 last_activity: 2026-11-08
 progress:
-  total_phases: 13
+  total_phases: 12
   completed_phases: 6
   total_plans: 116
   completed_plans: 116
-  percent: 46
+  percent: 50
 ---
 
 # Project State
@@ -647,9 +647,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-08T02:10:47.691Z
-Stopped at: Phase 72 context gathered
-Resume file: None
+Last session: 2026-11-08T02:50:58.336Z
+Stopped at: Phase 68 context gathered
+Resume file: .planning/phases/68-versioned-persisted-stores-and-migrations/68-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
