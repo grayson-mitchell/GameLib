@@ -33,6 +33,7 @@ import './index.scss'
 import './themes.scss'
 import GlobalState from './state/GlobalState'
 import { initShortcuts } from './helpers/shortcuts'
+import { installExternalLinkClickHandler } from './helpers/externalLinkClicks'
 import { configStore } from './helpers/stores'
 import { resolveBootLanguage } from './helpers/resolveBootLanguage'
 import { initOnlineMonitor } from './helpers/onlineMonitor'
@@ -210,6 +211,7 @@ const Backend = new HttpApi(null, {
 if (!pickerParams) {
   initGamepad()
   initShortcuts()
+  installExternalLinkClickHandler()
 }
 
 const storage: Storage = window.localStorage
