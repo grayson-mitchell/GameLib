@@ -2194,6 +2194,9 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // sidecar-reachable call sites invoke this (`resetHeroic()`, the uninstall/quit exit
         // path) -- both deliberate user/exit actions (T-33-12, accepted DoS disposition).
         RustInvokeChannel::AppExit => {
+            if let Some(state) = app.try_state::<Arc<SidecarState>>() {
+                state.begin_shutdown();
+            }
             app.exit(0);
             Ok(Value::Null)
         }
@@ -2224,6 +2227,9 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // every existing app.exit() call in this codebase already depends on; the live-gate item above
         // is where that residual closes empirically.
         RustInvokeChannel::AppRelaunch => {
+            if let Some(state) = app.try_state::<Arc<SidecarState>>() {
+                state.begin_shutdown();
+            }
             app.restart();
         }
         // Hide the real Tauri application (quick/260815-vvz) via `AppHandle::hide()`. Backs

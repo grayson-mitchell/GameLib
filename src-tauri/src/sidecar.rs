@@ -546,6 +546,76 @@ pub(crate) fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std
         for (id, channel) in drain_pending_invokes(&state.pending, &state.abandoned) {
             shell_diag(&invoke_abandoned_message("sidecar exited", &id, &channel));
         }
+
+        // D-01/D-02: an EOF outside an intentional shutdown means the sidecar died. Tell the user.
+        on_sidecar_eof(&state.shutting_down, &state.eof_surfaced, || {
+            surface_dead_sidecar(&app, &state);
+        });
     });
+}
+
+/// Decides whether a sidecar EOF is surfaced to the user (D-03). Pure and `AppHandle`-free so
+/// `#[cfg(test)] mod tests` can prove it: nothing when an intentional shutdown began first, and
+/// at most once otherwise.
+pub(crate) fn on_sidecar_eof<F: FnOnce()>(shutting_down: &AtomicBool, surfaced: &AtomicBool, surface: F) {
+    if shutting_down.load(Ordering::SeqCst) {
+        return;
+    }
+    if surfaced.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    surface();
+}
+
+/// Confirms the sidecar is really gone (killing it if a non-UTF-8 read error ended the loop
+/// while it still runs), then shows the generic Restart/Quit dialog on the reader thread (D-05).
+/// Restart is a full `app.restart()`, never an in-place respawn (D-01).
+fn surface_dead_sidecar(app: &AppHandle, state: &Arc<SidecarState>) {
+    {
+        let mut child = match state.child.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+        let mut gone = false;
+        for _ in 0..10 {
+            match child.try_wait() {
+                Ok(Some(_)) | Err(_) => {
+                    gone = true;
+                    break;
+                }
+                Ok(None) => thread::sleep(Duration::from_millis(100)),
+            }
+        }
+        if !gone {
+            #[cfg(unix)]
+            {
+                let pgid = child.id() as i32;
+                // SAFETY: signals only the sidecar's own process group (pgid == its pid, set at
+                // spawn); no pointers are dereferenced and the call can only fail.
+                unsafe {
+                    libc::kill(-pgid, libc::SIGKILL);
+                }
+            }
+            #[cfg(not(unix))]
+            {
+                let _ = child.kill();
+            }
+            let _ = child.wait();
+        }
+    }
+    shell_eprintln!("[shell] sidecar stdout closed outside shutdown; showing dead-sidecar dialog");
+    let restart = app
+        .dialog()
+        .message("GameLib's background service stopped unexpectedly. Restart GameLib to continue, or quit.")
+        .title("GameLib stopped working")
+        .kind(MessageDialogKind::Error)
+        .buttons(MessageDialogButtons::OkCancelCustom("Restart".into(), "Quit".into()))
+        .blocking_show();
+    state.begin_shutdown();
+    if restart {
+        app.restart();
+    } else {
+        app.exit(0);
+    }
 }
 

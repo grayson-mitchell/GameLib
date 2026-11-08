@@ -29,9 +29,20 @@ pub(crate) struct SidecarState {
     /// The shell owns the sidecar's lifetime: held alive so it is not reaped early, and
     /// explicitly killed by `shutdown_child()` on app exit (WR-03).
     pub(crate) child: Mutex<Child>,
+    /// Set by `begin_shutdown()` on every intentional exit, BEFORE the sidecar is closed, so the
+    /// reader thread's EOF handler can tell a normal quit from a dead sidecar (D-03).
+    pub(crate) shutting_down: AtomicBool,
+    /// Latches once the dead-sidecar dialog has been surfaced, so it shows at most once.
+    pub(crate) eof_surfaced: AtomicBool,
 }
 
 impl SidecarState {
+    /// Marks the coming sidecar EOF as intentional (D-03). Call before any exit/relaunch path
+    /// closes the sidecar.
+    pub(crate) fn begin_shutdown(&self) {
+        self.shutting_down.store(true, Ordering::SeqCst);
+    }
+
     pub(crate) fn next_id(&self) -> String {
         self.counter.fetch_add(1, Ordering::Relaxed).to_string()
     }
@@ -61,6 +72,7 @@ impl SidecarState {
     /// pre-existing sidecar-only `child.kill()` (`#[cfg(not(unix))]` below) -- a narrower
     /// fix than unix's group reap, not a regression of what existed before this quick task.
     pub(crate) fn shutdown_child(&self) {
+        self.begin_shutdown();
         let mut child = match self.child.lock() {
             Ok(guard) => guard,
             Err(poisoned) => {

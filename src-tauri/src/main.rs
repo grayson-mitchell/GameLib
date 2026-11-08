@@ -28,7 +28,7 @@ use std::collections::{HashMap, VecDeque};
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};
-use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering};
 use std::sync::mpsc::{channel as mpsc_channel, Sender};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
@@ -43,7 +43,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_deep_link::DeepLinkExt;
-use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_shell::{process::Command as ShellCommand, ShellExt};
@@ -867,6 +867,8 @@ fn main() {
                 abandoned: Mutex::new(VecDeque::new()),
                 counter: AtomicU64::new(1),
                 child: Mutex::new(child),
+                shutting_down: AtomicBool::new(false),
+                eof_surfaced: AtomicBool::new(false),
             });
 
             start_reader(app.handle().clone(), state.clone(), stdout);
@@ -1783,6 +1785,11 @@ fn main() {
             // `applicationWillTerminate:`; `macos_terminate_veto` vetoes it before that).
             tauri::RunEvent::ExitRequested { code, .. } => {
                 shell_diag(&format!("exit requested (code={code:?})"));
+                // D-03: this arm never calls `prevent_exit()` (a vetoed quit never reaches it),
+                // so every arrival is an intentional exit: flag it before the sidecar closes.
+                if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
+                    state.begin_shutdown();
+                }
                 // The shell's own exits carry `Some(_)`: from here a `terminate:` must not veto.
                 #[cfg(target_os = "macos")]
                 if code.is_some() {
@@ -1855,6 +1862,33 @@ fn main() {
 /// into the two disconnect paths.
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn on_sidecar_eof_is_silent_during_intentional_shutdown() {
+        let (down, shown) = (AtomicBool::new(true), AtomicBool::new(false));
+        let mut calls = 0;
+        on_sidecar_eof(&down, &shown, || calls += 1);
+        assert_eq!(calls, 0);
+        assert!(!shown.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn on_sidecar_eof_surfaces_when_not_shutting_down() {
+        let (down, shown) = (AtomicBool::new(false), AtomicBool::new(false));
+        let mut calls = 0;
+        on_sidecar_eof(&down, &shown, || calls += 1);
+        assert_eq!(calls, 1);
+        assert!(shown.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn on_sidecar_eof_surfaces_at_most_once() {
+        let (down, shown) = (AtomicBool::new(false), AtomicBool::new(false));
+        let mut calls = 0;
+        on_sidecar_eof(&down, &shown, || calls += 1);
+        on_sidecar_eof(&down, &shown, || calls += 1);
+        assert_eq!(calls, 1);
+    }
+
     /// Maps a trimmed `dispatch_rust_channel` arm opener (`RustInvokeChannel::HumbleLoginOpen => {`)
     /// to its wire name (`humble_login_open`); `None` for any other line. The arms match the
     /// generated enum since 67-11, so source-text pins locate arms through this one helper.
