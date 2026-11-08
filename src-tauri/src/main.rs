@@ -781,7 +781,11 @@ fn main() {
     let primary_listener: Option<()> = None;
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
+        .plugin(
+            tauri_plugin_opener::Builder::new()
+                .open_js_links_on_click(false)
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         // DIAGNOSTIC REVERTED (epic-login-non-interactive, F-34.5-G6-01, 2026-08-01):
         // this line was briefly commented out to test whether tauri-plugin-notification's

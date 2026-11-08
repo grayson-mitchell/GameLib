@@ -162,14 +162,14 @@ describe('tauri.conf.json updater plugin shape (D-07 / D-08)', () => {
 
 /**
  * Quick task 261008-gf1 (todo 2026-10-05 "Set a restrictive CSP on the Tauri
- * webview"): `app.security.csp` was `null` with `withGlobalTauri: true`, so any
+ * webview"): `app.security.csp` was `null` with `withGlobalTauri: true` (since set false, Phase 72 D-10), so any
  * XSS in the main renderer reached `sidecar_invoke` unhindered. The policy is
  * derived from a census of what the renderer ACTUALLY loads (2026-10-08):
  *
  *   - scripts: the Vite bundle only (`<script type="module" src=...>`), plus
  *     Tauri's own injected scripts, which Tauri nonces/hashes itself
  *     (`tauri-2.11.5/src/manager/mod.rs set_csp`) -- so NO 'unsafe-inline' and
- *     NO 'unsafe-eval' in script-src. `withGlobalTauri`'s `bundle.global.js` is a
+ *     NO 'unsafe-eval' in script-src. Tauri's `bundle.global.js` (emitted only while `withGlobalTauri` was true) was a
  *     webview initialization script, outside CSP entirely.
  *   - styles: the Vite CSS and MUI/emotion's runtime `<style>` injection, which
  *     is why style-src carries 'unsafe-inline'. (The census also counted the
@@ -219,6 +219,14 @@ describe('tauri.conf.json updater plugin shape (D-07 / D-08)', () => {
  * it is not set. The policy is live only in a bundled build
  * (`pnpm tauri:dev:packaged` / `tauri build`).
  */
+describe('tauri.conf.json withGlobalTauri (Phase 72 D-10, T-72-27)', () => {
+  test('withGlobalTauri is false so window.__TAURI__ is not injected', () => {
+    const conf = loadTauriConf()
+    const app = conf.app as Record<string, unknown>
+    expect(app.withGlobalTauri).toBe(false)
+  })
+})
+
 describe('tauri.conf.json content security policy (quick task 261008-gf1)', () => {
   function loadCsp(): Record<string, string> {
     const conf = loadTauriConf()

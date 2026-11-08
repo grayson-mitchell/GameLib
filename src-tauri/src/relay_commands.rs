@@ -221,7 +221,7 @@ pub(crate) fn open_external_scheme_check(url: &str) -> Result<(), String> {
 /// tauri-plugin-opener (/usr/bin/open → Steam.app, the registered steam:// handler).
 /// The URL is built upstream by the backend's numeric-appId-guarded buildSteamProtocolUrl
 /// (threat T-27-02), but that upstream guarantee does not reach this command -- the renderer
-/// invokes it directly (`withGlobalTauri: true`, `security.csp` is `null`), so `url` here is
+/// invokes it directly (the `__TAURI_INTERNALS__` invoke bridge is reachable from the page; `withGlobalTauri` is false since Phase 72 D-10), so `url` here is
 /// renderer-controlled and validated against `OPEN_EXTERNAL_ALLOWED_SCHEMES` before anything
 /// is opened (CR-01, `35-REVIEW.md`).
 #[tauri::command]

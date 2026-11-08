@@ -10,7 +10,7 @@
     "beforeDevCommand": "pnpm exec vite"
   },
   "app": {
-    "withGlobalTauri": true,
+    "withGlobalTauri": false,
     "windows": [
       {
         "label": "main",

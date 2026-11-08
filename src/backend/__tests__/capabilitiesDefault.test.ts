@@ -13,6 +13,8 @@
  */
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { readTauriShellSource } from '../testUtils/tauriShellSource'
+import { stripSourceComments } from '../testUtils/stripSourceComments'
 
 const CAPABILITIES_DEFAULT_PATH = join(
   __dirname,
@@ -125,24 +127,23 @@ describe('capabilities/default.json D-04 window/webview grants (REQ-34.1-02)', (
     expect(conf.windows).toEqual(['main'])
   })
 
-  test('REQ-34.1-02: pre-existing grants survive the D-04 addition', () => {
+  test('REQ-34.1-02: core and notification grants survive; Phase 72 D-10 grants are absent', () => {
     const conf = loadCapabilitiesDefault()
     const perms = stringPermissions(conf)
     expect(perms).toContain('core:default')
-    expect(perms).toContain('opener:default')
     expect(perms).toContain('notification:allow-is-permission-granted')
-    expect(perms).toContain('updater:default')
-
-    const shellAllowExecute = conf.permissions.find(
-      (p): p is ShellAllowExecutePermission =>
-        typeof p === 'object' && p.identifier === 'shell:allow-execute'
+    expect(perms).not.toContain('opener:default')
+    expect(perms).not.toContain('updater:default')
+    const shellExec = conf.permissions.find(
+      (p) => typeof p === 'object' && p.identifier === 'shell:allow-execute'
     )
-    expect(shellAllowExecute).toBeDefined()
-    expect(shellAllowExecute?.allow).toHaveLength(1)
-    expect(shellAllowExecute?.allow[0]).toEqual({
-      name: 'binaries/gamelib-sidecar',
-      sidecar: true
-    })
+    expect(shellExec).toBeUndefined()
+  })
+
+  test('Phase 72 D-10: opener JS link injection is disabled in the shell', () => {
+    const source = stripSourceComments(readTauriShellSource())
+    expect(source).toContain('open_js_links_on_click(false)')
+    expect(source).not.toContain('tauri_plugin_opener::init()')
   })
 
   test('REQ-34.1-02: description records the verified core:window:default composition (rationale gate)', () => {
