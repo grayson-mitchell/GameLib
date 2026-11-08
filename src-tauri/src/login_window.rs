@@ -1,5 +1,8 @@
 use super::*;
 
+mod invite_picker;
+pub(crate) use invite_picker::*;
+
 // ---- Login-window (child WebviewWindow) support (Phase 34.4.1 Plan 01, D-01/D-02) ----
 //
 // D-02's resolved shape: a runner-agnostic set of `dispatch_rust_channel` arms -- nothing
