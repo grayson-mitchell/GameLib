@@ -20,6 +20,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
     "baseUrl": "./src/"
   },
   "include": ["src"],
