@@ -1,0 +1,46 @@
+src-tauri/src/app_lifecycle.rs                          total=   125 nontest=   125
+src-tauri/src/clipboard.rs                              total=    51 nontest=    51
+src-tauri/src/dialogs.rs                                total=   214 nontest=   214
+src-tauri/src/epic_embed_js_dialog.rs                   total=   211 nontest=    98
+src-tauri/src/epic_embed_state.rs                       total=   423 nontest=   185
+src-tauri/src/keyring_dispatch.rs                       total=   413 nontest=   413
+src-tauri/src/login_window/devtools.rs                  total=   460 nontest=   460
+src-tauri/src/login_window/humble_cookies.rs            total=   935 nontest=   935
+src-tauri/src/login_window/humble_helpers.rs            total=   252 nontest=   252
+src-tauri/src/login_window/humble_open.rs               total=   810 nontest=   810
+src-tauri/src/login_window/humble_reveal.rs             total=   332 nontest=   332
+src-tauri/src/login_window/invite_picker.rs             total=   209 nontest=   209
+src-tauri/src/login_window/macos_cookies.rs             total=   434 nontest=   434
+src-tauri/src/login_window/pristine_epic.rs             total=   637 nontest=   637
+src-tauri/src/login_window/sheet.rs                     total=   958 nontest=   958
+src-tauri/src/login_window/windows_cdp.rs               total=   113 nontest=   113
+src-tauri/src/login_window.rs                           total=    79 nontest=    79
+src-tauri/src/macos_epic_embed/nav_delegate.rs          total=   739 nontest=   739
+src-tauri/src/macos_epic_embed/surface.rs               total=  1116 nontest=  1019 OVER
+src-tauri/src/macos_epic_embed.rs                       total=   249 nontest=   157
+src-tauri/src/macos_native_gamepad.rs                   total=   103 nontest=   103
+src-tauri/src/macos_notifications.rs                    total=   184 nontest=   184
+src-tauri/src/main.rs                                   total=  8333 nontest=  1877 OVER
+src-tauri/src/native_gamepad_shape.rs                   total=   475 nontest=   247
+src-tauri/src/notification_backend.rs                   total=   235 nontest=   133
+src-tauri/src/notification_show.rs                      total=    47 nontest=    47
+src-tauri/src/relay_commands.rs                         total=   278 nontest=   246
+src-tauri/src/rust_dispatch.rs                          total=    77 nontest=    77
+src-tauri/src/scan_dispatch.rs                          total=    38 nontest=    38
+src-tauri/src/shell_open.rs                             total=   185 nontest=    98
+src-tauri/src/shell_state.rs                            total=   281 nontest=   281
+src-tauri/src/sidecar.rs                                total=   689 nontest=   689
+src-tauri/src/single_instance.rs                        total=  1620 nontest=  1620 OVER
+src-tauri/src/store_embed/controls.rs                   total=   368 nontest=   368
+src-tauri/src/store_embed/layout.rs                     total=   456 nontest=   456
+src-tauri/src/store_embed/open.rs                       total=   333 nontest=   333
+src-tauri/src/store_embed/policy.rs                     total=   177 nontest=   177
+src-tauri/src/store_embed/state.rs                      total=   510 nontest=   510
+src-tauri/src/store_embed.rs                            total=    35 nontest=    35
+src-tauri/src/store_embed_handoff_policy.rs             total=   380 nontest=    99
+src-tauri/src/terminate_veto.rs                         total=   342 nontest=   342
+src-tauri/src/tray.rs                                   total=  1158 nontest=  1158 OVER
+src-tauri/src/wake_lock/linux.rs                        total=    30 nontest=    30
+src-tauri/src/wake_lock/macos.rs                        total=    56 nontest=    56
+src-tauri/src/wake_lock/windows.rs                      total=    40 nontest=    40
+src-tauri/src/wake_lock.rs                              total=   344 nontest=   344

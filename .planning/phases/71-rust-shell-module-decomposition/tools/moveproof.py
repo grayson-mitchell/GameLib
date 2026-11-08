@@ -156,6 +156,7 @@ ALLOW = {
         [r'^RustInvokeChannel::\w+ => [\w:]+\([\w, ]*\),$', r'^//!( .*)?$', r'^fn rpc_\w+\([^)]*\) -> Result<Value, String> \{$']),
     2: ([], [r'^//!( .*)?$', r'^#\[cfg\(target_os = "macos"\)\]$']),  # 71-10: cfg on mod/use decls and duplicated child imports; per-item cfgs stay proven by Layer 3
     4: ([], [r'^//!( .*)?$']),  # 71-14: child module `//!` headers only
+    5: ([], [r'^mod tests \{$']),  # 71-16: trailing co-located test module opener in each destination (`#[cfg(test)]` and `use` lines are already handled)
 }
 IMPORT_WAVES = {2, 4, 5}
 
