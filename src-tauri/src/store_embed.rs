@@ -1020,6 +1020,22 @@ pub(crate) fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value,
     }
 }
 
+// ---- In-app store/wiki embed (Phase 40 Plan 02, D-01/D-03). Every arm is macOS + Linux
+// (quick 260930-blh) + Windows (quick 261012-f25) per D-03's target-gated `unstable`
+// feature; a target outside those three returns a legible error rather than silently
+// compiling this section out (see the section doc comment above `STORE_EMBED_LABEL` for
+// the full rationale). No shipped target compiles that branch. ----
+pub(crate) fn rpc_store_embed_open(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    {
+        store_embed_open(app, args)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        Err("store_embed_open:unsupported-platform".to_string())
+    }
+}
+
 /// Parse `store_embed_set_bounds`'s `{ x, y, w, h }` args, all logical px.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 pub(crate) fn store_embed_set_bounds_args(args: &[Value]) -> Result<(f64, f64, f64, f64), String> {
@@ -1206,6 +1222,17 @@ pub(crate) fn store_embed_set_bounds(app: &AppHandle, args: &[Value]) -> Result<
         }
         store_embed_apply_rect(app, &webview, x, y, w, h)?;
         Ok(Value::Null)
+    }
+}
+
+pub(crate) fn rpc_store_embed_set_bounds(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    {
+        store_embed_set_bounds(app, args)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        Err("store_embed_set_bounds:unsupported-platform".to_string())
     }
 }
 
@@ -1786,31 +1813,8 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         RustInvokeChannel::ScanPeImportedDlls => rpc_scan_pe_imported_dlls(args),
         RustInvokeChannel::ScanContainedReal => rpc_scan_contained_real(args),
         RustInvokeChannel::ScanWinemacMetalExports => rpc_scan_winemac_metal_exports(args),
-        // ---- In-app store/wiki embed (Phase 40 Plan 02, D-01/D-03). Every arm is macOS + Linux
-        // (quick 260930-blh) + Windows (quick 261012-f25) per D-03's target-gated `unstable`
-        // feature; a target outside those three returns a legible error rather than silently
-        // compiling this section out (see the section doc comment above `STORE_EMBED_LABEL` for
-        // the full rationale). No shipped target compiles that branch. ----
-        RustInvokeChannel::StoreEmbedOpen => {
-            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-            {
-                store_embed_open(app, args)
-            }
-            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-            {
-                Err("store_embed_open:unsupported-platform".to_string())
-            }
-        }
-        RustInvokeChannel::StoreEmbedSetBounds => {
-            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-            {
-                store_embed_set_bounds(app, args)
-            }
-            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-            {
-                Err("store_embed_set_bounds:unsupported-platform".to_string())
-            }
-        }
+        RustInvokeChannel::StoreEmbedOpen => rpc_store_embed_open(args, app),
+        RustInvokeChannel::StoreEmbedSetBounds => rpc_store_embed_set_bounds(args, app),
         RustInvokeChannel::StoreEmbedHide => {
             StoreEmbedHideArgs::from_args(args)?;
             #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
