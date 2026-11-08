@@ -3944,7 +3944,16 @@ describe('REQ-34.3-11 item 2 (debug session finder-reveal-no-selection) macOS Fi
     expect(armStart).toBeGreaterThan(-1)
     const armEnd = code.indexOf('RustInvokeChannel::ShellOpenPath =>', armStart)
     expect(armEnd).toBeGreaterThan(armStart)
-    const armBody = code.slice(armStart, armEnd)
+    // Phase 72-04 (D-15) moved the arm's body into shell_open.rs; the arm now only delegates,
+    // so the reveal + workaround ordering is pinned on the delegate's own body.
+    expect(code.slice(armStart, armEnd)).toContain(
+      'shell_open::shell_show_item_in_folder('
+    )
+    const fnStart = code.indexOf('pub(crate) fn shell_show_item_in_folder(')
+    expect(fnStart).toBeGreaterThan(-1)
+    const fnEnd = code.indexOf('pub(crate) fn shell_open_path(', fnStart)
+    expect(fnEnd).toBeGreaterThan(fnStart)
+    const armBody = code.slice(fnStart, fnEnd)
 
     const revealIdx = armBody.indexOf('.reveal_item_in_dir(')
     const callIdx = armBody.indexOf('macos_finder_reselect_workaround(')
