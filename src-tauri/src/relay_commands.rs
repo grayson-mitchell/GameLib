@@ -276,3 +276,154 @@ mod relay_allow_list_tests {
         assert!(echo_channel(&hostile).len() <= RELAY_CHANNEL_ECHO_MAX);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ---- open_external scheme allow-list (35-21, CR-01) ----
+    //
+    // `open_external` itself needs a live `AppHandle` (`app.opener()`), so these tests drive
+    // `open_external_scheme_check` -- the pure half `open_external` calls before touching the
+    // plugin. RED direction: an implementation that used a substring/`.contains()` match
+    // instead of an exact allow-list comparison, or one that skipped `to_ascii_lowercase()`,
+    // would flip one or more of the rejection/case-insensitivity cases below to `Ok`.
+
+    #[test]
+    fn open_external_allowed_schemes_are_exactly_the_five_member_set() {
+        // Pins the const's membership so a future silent widening (e.g. adding `file` to
+        // "fix" an unrelated bug) fails THIS test rather than passing review unnoticed.
+        assert_eq!(
+            OPEN_EXTERNAL_ALLOWED_SCHEMES,
+            &["https", "http", "mailto", "tel", "steam"]
+        );
+    }
+
+    #[test]
+    fn open_external_scheme_check_rejects_file_scheme() {
+        assert!(open_external_scheme_check("file:///Applications/Some.app").is_err());
+    }
+
+    #[test]
+    fn open_external_scheme_check_rejects_smb_scheme() {
+        assert!(open_external_scheme_check("smb://evil.example/share").is_err());
+    }
+
+    #[test]
+    fn open_external_scheme_check_rejects_javascript_scheme() {
+        assert!(open_external_scheme_check("javascript:alert(1)").is_err());
+    }
+
+    #[test]
+    fn open_external_scheme_check_rejects_a_url_with_no_scheme() {
+        assert!(open_external_scheme_check("not-a-url-at-all").is_err());
+    }
+
+    #[test]
+    fn open_external_scheme_check_accepts_steam_rungameid() {
+        assert_eq!(open_external_scheme_check("steam://rungameid/440"), Ok(()));
+    }
+
+    #[test]
+    fn open_external_scheme_check_accepts_only_the_exact_app_management_url() {
+        assert_eq!(
+            open_external_scheme_check(
+                "x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles"
+            ),
+            Ok(())
+        );
+        assert!(open_external_scheme_check(
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
+        )
+        .is_err());
+        assert!(open_external_scheme_check("x-apple.systempreferences:").is_err());
+        assert!(open_external_scheme_check(
+            "X-APPLE.SYSTEMPREFERENCES:com.apple.preference.security?Privacy_AppBundles&x"
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn open_external_scheme_check_accepts_https() {
+        assert_eq!(open_external_scheme_check("https://example.com"), Ok(()));
+    }
+
+    #[test]
+    fn open_external_scheme_check_accepts_mailto() {
+        assert_eq!(open_external_scheme_check("mailto:a@b.c"), Ok(()));
+    }
+
+    #[test]
+    fn open_external_scheme_check_is_case_insensitive() {
+        assert_eq!(
+            open_external_scheme_check("STEAM://rungameid/440"),
+            Ok(()),
+            "uppercase scheme must be accepted exactly like lowercase"
+        );
+        assert!(
+            open_external_scheme_check("FILE:///etc/passwd").is_err(),
+            "uppercase rejected scheme must still be rejected"
+        );
+    }
+
+    fn send_frame(channel: &str) -> SidecarRpcRequest {
+        SidecarRpcRequest {
+            id: channel.to_string(),
+            kind: "send",
+            channel: channel.to_string(),
+            args: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn send_writer_enqueue_does_not_wait_for_a_blocked_write() {
+        // The defect: `sidecar_send` wrote on the main thread, so a write stuck on a full pipe
+        // froze the UI. Enqueueing must return while the writer is blocked.
+        let (release_tx, release_rx) = mpsc_channel::<()>();
+        let release_rx = Mutex::new(release_rx);
+        let (done_tx, done_rx) = mpsc_channel::<String>();
+        let queue = spawn_send_writer(move |req| {
+            let _ = release_rx.lock().unwrap().recv();
+            let _ = done_tx.send(req.channel.clone());
+            Ok(())
+        });
+        let started = std::time::Instant::now();
+        for channel in ["a", "b", "c"] {
+            queue.send(send_frame(channel)).unwrap();
+        }
+        assert!(
+            started.elapsed() < Duration::from_millis(500),
+            "enqueue must not block on the write"
+        );
+        for _ in 0..3 {
+            release_tx.send(()).unwrap();
+        }
+        let written: Vec<String> = (0..3)
+            .map(|_| done_rx.recv_timeout(Duration::from_secs(5)).unwrap())
+            .collect();
+        assert_eq!(written, ["a", "b", "c"], "frames are written in send order");
+    }
+
+    #[test]
+    fn send_writer_keeps_going_after_a_failed_write() {
+        let (done_tx, done_rx) = mpsc_channel::<String>();
+        let queue = spawn_send_writer(move |req| {
+            let _ = done_tx.send(req.channel.clone());
+            if req.channel == "broken" {
+                Err("broken pipe".into())
+            } else {
+                Ok(())
+            }
+        });
+        queue.send(send_frame("broken")).unwrap();
+        queue.send(send_frame("after")).unwrap();
+        assert_eq!(
+            done_rx.recv_timeout(Duration::from_secs(5)).unwrap(),
+            "broken"
+        );
+        assert_eq!(
+            done_rx.recv_timeout(Duration::from_secs(5)).unwrap(),
+            "after"
+        );
+    }
+}
