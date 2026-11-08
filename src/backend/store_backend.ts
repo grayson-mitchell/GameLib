@@ -66,7 +66,7 @@
 import Conf from 'conf'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import type { StoreOptions } from 'common/types/typed_store'
-import { chmodSync, existsSync, mkdirSync, statSync } from 'graceful-fs'
+import { chmodSync, existsSync, mkdirSync, statSync } from 'fs'
 import { getPath } from './sidecar/pathShim'
 import {
   isReadOnlyPath,
