@@ -81,6 +81,17 @@ describe('app main-window visibility helpers', () => {
     expect(channels()).toEqual([RUST_MAIN_WINDOW_RAISE])
   })
 
+  it('raiseMainWindowForInAppDialog counts only a raise of a GameLib-hidden window', async () => {
+    const before = app.inAppDialogRaiseCount()
+    app.raiseMainWindowForInAppDialog()
+    expect(app.inAppDialogRaiseCount()).toBe(before)
+    app.hideMainWindow()
+    app.raiseMainWindowForInAppDialog()
+    app.raiseMainWindowForInAppDialog()
+    await flush()
+    expect(app.inAppDialogRaiseCount()).toBe(before + 1)
+  })
+
   it('an explicit raiseMainWindow clears the flag', async () => {
     app.hideMainWindow()
     app.raiseMainWindow()

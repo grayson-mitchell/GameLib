@@ -56,7 +56,7 @@ function showDialogBoxModalAuto(props: {
   // focus from a running game and Dock-bounce (Critical attention) for every background dialog.
   // A window the user hid (tray / startInTray) is out of scope and unchanged. notify() is
   // untouched (OS notifications are visible regardless).
-  app.raiseMainWindowIfHiddenByGameLib()
+  app.raiseMainWindowForInAppDialog()
   if (props.event) {
     props.event.sender.send(
       'showDialog',

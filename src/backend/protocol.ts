@@ -69,7 +69,7 @@ export function handleProtocol(args: string[]) {
     case 'ping':
       return handlePing(url)
     case 'launch':
-      return handleLaunch(url)
+      return handleLaunchEndingNoGui(url)
     default:
       return
   }
@@ -77,6 +77,43 @@ export function handleProtocol(args: string[]) {
 
 function handlePing(url: URL) {
   logInfo(['Received ping! Args:', url.searchParams], LogPrefix.ProtocolHandler)
+}
+
+// A `--no-gui` link launch is a Steam shortcut: Steam shows "Stop" for as long as this process
+// lives. The normal path exits after the game closes (launcher.ts), but every early return skips
+// that, so a launch that ends with NO game session (aborted missing-folder prompt, declined
+// prompt, failed dispatch, thrown error) would leave GameLib running hidden and Steam stuck on
+// Stop. Exit after such a launch UNLESS an in-app dialog re-showed the hidden window during it:
+// that one is still on screen for the user to read, and closing GameLib then ends Steam's session.
+// Native awaited prompts (askForceUninstall, the not-installed and link-args confirmations) are
+// answered by now and do not count. A user who chose to install is staying on purpose.
+async function handleLaunchEndingNoGui(url: URL) {
+  if (!isCLINoGui) return handleLaunch(url)
+  const dialogsBefore = app.inAppDialogRaiseCount()
+  let result: Awaited<ReturnType<typeof handleLaunch>>
+  try {
+    result = await handleLaunch(url)
+  } catch (error) {
+    logError(['Protocol launch failed:', error], LogPrefix.ProtocolHandler)
+    result = { status: 'error' }
+  }
+  // 'done' ran the launcher's own exit; 'installing' is a user who chose to install and is
+  // staying on purpose. Everything else (including a bare early return) ended with no game.
+  if (result?.status === 'done' || result?.status === 'installing')
+    return result
+  if (app.inAppDialogRaiseCount() > dialogsBefore) {
+    logInfo(
+      '--no-gui launch ended with an in-app dialog on screen, staying open',
+      LogPrefix.ProtocolHandler
+    )
+    return result
+  }
+  logInfo(
+    '--no-gui launch ended without a game session, exiting app',
+    LogPrefix.ProtocolHandler
+  )
+  app.quit()
+  return result
 }
 
 async function handleLaunch(url: URL) {
@@ -189,7 +226,6 @@ async function handleLaunch(url: URL) {
           'User declined the link-supplied launch parameters, not launching',
           LogPrefix.ProtocolHandler
         )
-        if (isCLINoGui) app.quit()
         return
       }
     }
@@ -260,12 +296,9 @@ async function handleLaunch(url: URL) {
       app.raiseMainWindow()
     }
     sendFrontendMessage('installGame', appName, gameInfo.runner)
+    return { status: 'installing' as const }
   } else if (response === 1) {
     logInfo('Not installing game', LogPrefix.ProtocolHandler)
-    if (isCLINoGui) {
-      logInfo('--no-gui flag detected, exiting app', LogPrefix.ProtocolHandler)
-      app.quit()
-    }
   }
 }
 

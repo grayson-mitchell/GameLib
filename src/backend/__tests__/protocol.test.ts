@@ -41,7 +41,8 @@ jest.mock('backend/platform', () => ({
   app: {
     quit: jest.fn(),
     hideMainWindow: jest.fn(),
-    raiseMainWindow: jest.fn()
+    raiseMainWindow: jest.fn(),
+    inAppDialogRaiseCount: jest.fn(() => 0)
   },
   dialog: {
     showMessageBox: jest.fn()
@@ -245,11 +246,54 @@ describe('protocol.ts --no-gui behavior', () => {
       jest.doMock('../launcher', () => ({
         launchEventCallback: mockLaunchEventCallback
       }))
-
+      ;(launchEventCallback as jest.Mock).mockResolvedValue({ status: 'done' })
       await handleProtocol(['gamelib://launch/test-game'])
 
       // Should not show dialog for installed games
       expect(dialog.showMessageBox).not.toHaveBeenCalled()
+      expect(app.quit).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('--no-gui launch that ends without a game session exits (cold-start-link-not-installed #3)', () => {
+    const inAppDialogRaiseCount = app.inAppDialogRaiseCount as jest.Mock
+    beforeEach(() => {
+      mockGameInfo.is_installed = true
+      mockIsCLINoGui.mockReturnValue(true)
+      inAppDialogRaiseCount.mockReturnValue(0)
+    })
+
+    test('aborted launch with the window still hidden quits', async () => {
+      ;(launchEventCallback as jest.Mock).mockResolvedValue({ status: 'abort' })
+      await handleProtocol(['gamelib://launch/test-game'])
+      expect(app.quit).toHaveBeenCalledTimes(1)
+    })
+
+    test('a thrown launch error with the window still hidden quits', async () => {
+      ;(launchEventCallback as jest.Mock).mockRejectedValue(new Error('boom'))
+      await handleProtocol(['gamelib://launch/test-game'])
+      expect(app.quit).toHaveBeenCalledTimes(1)
+    })
+
+    test('an in-app dialog that raised the window keeps GameLib open', async () => {
+      ;(launchEventCallback as jest.Mock).mockImplementation(async () => {
+        inAppDialogRaiseCount.mockReturnValue(1)
+        return { status: 'error' }
+      })
+      await handleProtocol(['gamelib://launch/test-game'])
+      expect(app.quit).not.toHaveBeenCalled()
+    })
+
+    test('normal completion is left to the launcher (no second exit)', async () => {
+      ;(launchEventCallback as jest.Mock).mockResolvedValue({ status: 'done' })
+      await handleProtocol(['gamelib://launch/test-game'])
+      expect(app.quit).not.toHaveBeenCalled()
+    })
+
+    test('without --no-gui an abort does not quit', async () => {
+      mockIsCLINoGui.mockReturnValue(false)
+      ;(launchEventCallback as jest.Mock).mockResolvedValue({ status: 'abort' })
+      await handleProtocol(['gamelib://launch/test-game'])
       expect(app.quit).not.toHaveBeenCalled()
     })
   })
@@ -345,9 +389,10 @@ describe('protocol.ts --no-gui behavior', () => {
 
       await handleProtocol(['gamelib://launch/test-game'])
 
-      // Should return early if no main window available
+      // Should return early if no main window available; under --no-gui nothing is left to
+      // wait for, so the process exits (Steam's shortcut button must not stay on Stop)
       expect(dialog.showMessageBox).not.toHaveBeenCalled()
-      expect(app.quit).not.toHaveBeenCalled()
+      expect(app.quit).toHaveBeenCalledTimes(1)
     })
   })
 
