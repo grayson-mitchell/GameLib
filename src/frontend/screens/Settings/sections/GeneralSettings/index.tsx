@@ -23,7 +23,9 @@ export default function GeneralSettings() {
 
   return (
     <div>
-      <h3 className="settingSubheader">{t('settings.navbar.general')}</h3>
+      <h3 className="settingSubheader">
+        {t('gamelib:settings.generalSettings', 'General Settings')}
+      </h3>
 
       <LanguageSelector />
 

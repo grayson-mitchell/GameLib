@@ -445,6 +445,7 @@
         "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
         "gamescopeUpscaleMethod": "Upscale Method",
         "gamescopeWindowType": "Window Type",
+        "generalSettings": "General Settings",
         "loginBackground": "Manage Accounts background",
         "loginBackgroundDialogTitle": "Select a background image",
         "loginBackgroundFilterName": "Images",
