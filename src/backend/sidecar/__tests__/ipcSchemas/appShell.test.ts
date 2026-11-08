@@ -95,6 +95,17 @@ const pushTable: FixtureTable<typeof pushArgs> = {
     valid: [[{ appName: 'a', key: 'k' }]],
     invalid: [[], [{ appName: 'a' }]]
   },
+  readOnlyStoresNotice: {
+    valid: [
+      [{ entries: [] }],
+      [{ entries: [{ area: 'steam-library', reason: 'newer' }] }]
+    ],
+    invalid: [
+      [],
+      [{ entries: [{ area: 'bogus', reason: 'newer' }] }],
+      [{ entries: [], extra: 1 }]
+    ]
+  },
   progressOfWineManager: {
     valid: [['Wine-1', { state: 'downloading' }]],
     invalid: [[], ['v']]

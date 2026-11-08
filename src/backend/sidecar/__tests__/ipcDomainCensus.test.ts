@@ -86,6 +86,7 @@ const NO_REGISTRATION_OWNER: Record<string, string> = {
   'FrontendMessages:engineStateChanged': 'engine',
   'FrontendMessages:steamRequestNotice': 'steam',
   'FrontendMessages:gameSettingWriteFailed': 'appShell',
+  'FrontendMessages:readOnlyStoresNotice': 'appShell',
   'FrontendMessages:steamBridgeRouteNotice': 'steam',
   'FrontendMessages:steamBottleLaunchWaiting': 'steam',
   'FrontendMessages:steamClientSetupRequired': 'steam',
@@ -231,7 +232,8 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
     // 60 Sync + 6 TestSync + 186 Async + 42 FrontendMessages, as at the Plan 11 split; +1 Async (EngineAsync) and +1 FrontendMessages
     // (EngineFrontendMessages) in Phase 61 Plan 13.
     // Phase 72 Plan 09 (2026-11-08): -1 Sync (`removeFolder` deleted from shellFilesSyncArgs, D-09).
-    expect(total).toBe(295)
+    // Phase 68 Plan 06: +1 FrontendMessages (readOnlyStoresNotice); owner-less allowlist 65 -> 66.
+    expect(total).toBe(296)
     // Floor (Phase 67): measured 296 at planning (Sync 60 + Async 188 + TestSync 6 + Frontend
     // Messages 42); floor = measured - 6. A parse miss in either declaration form (interface or
     // const-args) turns this red instead of silently shrinking the census.
@@ -257,7 +259,7 @@ describe('ipc per-domain declarations (D-09/D-10/D-11)', () => {
       }
     }
     expect(computed).toEqual(NO_REGISTRATION_OWNER)
-    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(65)
+    expect(Object.keys(NO_REGISTRATION_OWNER)).toHaveLength(66)
   })
 
   it('parseDomainFile reads the const-args conversion form', () => {

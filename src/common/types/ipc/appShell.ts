@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { READ_ONLY_AREAS, READ_ONLY_REASONS } from '../readOnlyStores'
+
 import type {
   ButtonOptions,
   ConnectivitySnapshot,
@@ -95,6 +97,17 @@ export const appShellFrontendMessagesArgs = {
   // WR-04: a per-game setting write failed twice; the renderer re-reads the stored value
   gameSettingWriteFailed: z.tuple([
     z.strictObject({ appName: z.string(), key: z.string() })
+  ]),
+  // Phase 68 D-05/D-07: read-only stores notice; closed-set ids only, never contents
+  readOnlyStoresNotice: z.tuple([
+    z.strictObject({
+      entries: z.array(
+        z.strictObject({
+          area: z.enum(READ_ONLY_AREAS),
+          reason: z.enum(READ_ONLY_REASONS)
+        })
+      )
+    })
   ]),
   progressOfWineManager: z.tuple([z.string(), z.custom<WineManagerStatus>()]),
   metadataChanged: z.tuple([

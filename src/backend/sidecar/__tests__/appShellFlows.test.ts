@@ -1147,6 +1147,76 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       }
     })
 
+    // Phase 68 D-05: the read-only stores notice is sent once per launch from the one-shot
+    // boot block, ids only; nothing is sent when no store is read-only. ISOLATED like the
+    // CR-02 tests above so the module-scoped one-shot flag starts unflipped.
+    it('Phase 68 D-05: frontendReady x2 sends readOnlyStoresNotice exactly once (ids only); none when nothing is read-only', async () => {
+      const deliver = async (withEntry: boolean): Promise<jest.Mock> => {
+        const sendMock = jest.fn()
+        let frontendReadyListener!: () => void
+        jest.isolateModules(() => {
+          jest.doMock('../../ipc', () => ({
+            ...jest.requireActual('../../ipc'),
+            sendFrontendMessage: sendMock
+          }))
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          require('backend/config').GlobalConfig.get.mockReturnValue({
+            getSettings: () => ({ language: 'en' }),
+            setSetting: jest.fn(),
+            set: jest.fn(),
+            flush: jest.fn()
+          })
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          require('../sidecarRpc').requestRustInvoke.mockResolvedValue(
+            undefined
+          )
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          require('../../logger').initHeadless()
+          if (withEntry) {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            require('../../storeVersioning/readOnlyStores').recordReadOnly({
+              storeKey: 'store_cache/steam_library',
+              file: 'steam_library.json',
+              reason: 'newer',
+              detail: 'v9 > v1'
+            })
+          }
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          require('../appShellFlowRegistration').registerAppShellFlows()
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          ;[frontendReadyListener] =
+            require('../../platform').listenerRegistry.get('frontendReady')
+        })
+        jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+        try {
+          frontendReadyListener()
+          await flush()
+          frontendReadyListener()
+          await flush()
+        } finally {
+          jest.useRealTimers()
+          jest.dontMock('../../ipc')
+        }
+        return sendMock
+      }
+
+      const withEntry = await deliver(true)
+      const notices = withEntry.mock.calls.filter(
+        ([channel]) => channel === 'readOnlyStoresNotice'
+      )
+      expect(notices).toHaveLength(1)
+      expect(notices[0]?.[1]).toEqual({
+        entries: [{ area: 'steam-library', reason: 'newer' }]
+      })
+
+      const without = await deliver(false)
+      expect(
+        without.mock.calls.filter(
+          ([channel]) => channel === 'readOnlyStoresNotice'
+        )
+      ).toHaveLength(0)
+    })
+
     // T-35-107 (35-21 threat model): the Snap warning dialog is DELIBERATELY left outside
     // `frontendReadyBootWorkDone`'s guard -- a repeated informational dialog is a nuisance,
     // not the re-entrancy/data-corruption class of defect CR-02 exists to close. This test

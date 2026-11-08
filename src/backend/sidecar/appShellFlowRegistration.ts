@@ -184,7 +184,9 @@ import { callAbortController } from '../utils/aborthandler/aborthandler'
 import { GlobalConfig } from '../config'
 import { libraryManagerMap } from '../storeManagers'
 import { configStore } from '../constants/key_value_stores'
-import { logInfo, LogPrefix } from '../logger'
+import { logInfo, logWarning, LogPrefix } from '../logger'
+import { sendFrontendMessage } from '../ipc'
+import { flushReadOnlyStores } from '../storeVersioning/readOnlyStores'
 // Phase 35 plan 11: boot-time download-queue auto-resume, ported from
 // `main.ts:613` before that file is deleted at plan 35-14. See the
 // `frontendReady` handler below for the full contingency analysis.
@@ -579,6 +581,21 @@ export function registerAppShellFlows(
           detectVCRedist()
         } catch (error) {
           logSendFailure('frontendReady -> detectVCRedist', error)
+        }
+
+        // Phase 68 D-05: deliver the read-only stores notice. WHY HERE: stores are checked
+        // at module scope, long before a renderer listener exists, and `listen()` has no
+        // replay, so a push at detection time would be dropped. WHY ONE-SHOT: this block
+        // runs once per process, giving one notice per launch. Creates no timer or handle
+        // (sidecar exit contract); own try/catch so it can never skip the work above.
+        try {
+          flushReadOnlyStores({
+            send: (payload) =>
+              sendFrontendMessage('readOnlyStoresNotice', payload),
+            log: (line) => logWarning(line, LogPrefix.Backend)
+          })
+        } catch (error) {
+          logSendFailure('frontendReady -> readOnlyStoresNotice', error)
         }
       }
     } catch (error) {
