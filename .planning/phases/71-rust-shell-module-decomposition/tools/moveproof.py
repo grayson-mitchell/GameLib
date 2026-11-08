@@ -2,7 +2,7 @@
 """Move-proof for Phase 71 (stdlib only).
 
 usage:
-  moveproof.py --base REF --wave N [--include-tests] [--require-all]
+  moveproof.py --base REF --wave N [--include-tests] [--require-all] [--stem NAME ...]
   moveproof.py --self-test
 
 File set: every src-tauri/src/**/*.rs at REF (git) and in the working tree, minus ipc_contract.rs
@@ -17,7 +17,8 @@ non-mod item is not cut. By default production text only is compared; --include-
 Layer 1 (all waves): normalized line multiset diff (strip, pub(crate)/pub(super) removed, bare-punctuation
   lines dropped, comments kept) after a declaration filter; per-wave allow profile for what remains.
 Layer 2 (wave 1): every RustInvokeChannel arm body at REF equals the body of fn rpc_<snake(X)> now.
-Layer 3 (waves 2-4): per-item (kind, name, body-hash) multiset over the wave's target files.
+Layer 3 (waves 2-4): per-item (kind, name, body-hash) multiset over the wave's target files
+  (or over the files of every --stem NAME given, repeatable, for a move that crosses module stems).
 """
 import collections
 import hashlib
@@ -280,17 +281,19 @@ def split_items(text):
     return items
 
 
-def target_files(files, stem):
+def target_files(files, stems):
+    if isinstance(stems, str):
+        stems = [stems]
     out = {}
     for n, t in files.items():
         rel = n[len(SRC) + 1:] if n.startswith(SRC + '/') else n
-        if rel == stem + '.rs' or rel.startswith(stem + '/'):
+        if any(rel == stem + '.rs' or rel.startswith(stem + '/') for stem in stems):
             out[n] = t
     return out
 
 
-def layer3(b_files, n_files, wave):
-    stem = WAVE_STEM[wave]
+def layer3(b_files, n_files, wave, stems=None):
+    stem = stems or [WAVE_STEM[wave]]
 
     def ms(files):
         c = collections.Counter()
@@ -308,7 +311,7 @@ def layer3(b_files, n_files, wave):
 
 
 # ---------------------------------------------------------------- driver
-def run(base, now, wave, include_tests=False, require_all=False, out=print):
+def run(base, now, wave, include_tests=False, require_all=False, out=print, stems=None):
     b, n = select(base, include_tests), select(now, include_tests)
     fail = False
     rb, ab, imports = layer1(b, n, wave)
@@ -335,8 +338,8 @@ def run(base, now, wave, include_tests=False, require_all=False, out=print):
                 out(f'  {x}: still-inline (--require-all)')
                 fail = True
     if wave in WAVE_STEM:
-        rem, add, br, nr = layer3(b, n, wave)
-        out(f'LAYER 3 ({WAVE_STEM[wave]}): items removed/changed {sum(rem.values())}  added/changed {sum(add.values())}')
+        rem, add, br, nr = layer3(b, n, wave, stems)
+        out(f'LAYER 3 ({"+".join(stems or [WAVE_STEM[wave]])}): items removed/changed {sum(rem.values())}  added/changed {sum(add.values())}')
         for k, v in sorted(rem.items()):
             out(f'  - {v} {k[0]} {k[1]} #{k[2]}')
         for k, v in sorted(add.items()):
@@ -430,6 +433,12 @@ def self_test():
     n3bad = {'src-tauri/src/login_window.rs': 'mod parts;\n',
              'src-tauri/src/login_window/parts.rs': lw.replace('one();', 'two();')}
     assert go(b3, n3bad, 2) == 1, 'item body edit must fail'
+    kh = '/// doc\nfn kh() {\n    one();\n}\n'
+    b4 = {'src-tauri/src/login_window.rs': 'use super::*;\n' + kh}
+    n4 = {'src-tauri/src/login_window.rs': 'use super::*;\n',
+          'src-tauri/src/keyring_dispatch.rs': 'use super::*;\n' + kh}
+    assert go(b4, n4, 2) == 1, 'cross-stem move must fail without --stem'
+    assert run(b4, n4, 2, out=quiet, stems=['login_window', 'keyring_dispatch']) == 0, 'cross-stem move must pass with --stem'
     print('SELF-TEST PASS')
     return 0
 
@@ -444,11 +453,13 @@ def main(argv):
             args['base'] = next(it)
         elif a == '--wave':
             args['wave'] = int(next(it))
+        elif a == '--stem':
+            args.setdefault('stems', []).append(next(it))
     if args['base'] is None or args['wave'] is None:
         print(__doc__)
         return 2
     return run(base_files(args['base']), now_files(), args['wave'],
-               include_tests='--include-tests' in argv, require_all='--require-all' in argv)
+               include_tests='--include-tests' in argv, require_all='--require-all' in argv, stems=args.get('stems'))
 
 
 if __name__ == '__main__':
