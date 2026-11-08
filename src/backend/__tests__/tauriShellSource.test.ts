@@ -4891,3 +4891,99 @@ describe('no reader slices the combined shell source on mod tests (D-10)', () =>
     expect(offenders).toEqual([])
   })
 })
+
+describe('raw shell-source readers are allow-listed (D-10, 71-19 WR-01)', () => {
+  const REPO_ROOT = join(__dirname, '..', '..', '..')
+  const DEFINITIONS = 'src/backend/testUtils/tauriShellSource.ts'
+
+  /** Raw (unstripped) readTauriShellSource/readTauriShellFile calls, minus imports and wrapped ones. */
+  const countRawShellReads = (code: string): number => {
+    let n = 0
+    for (const line of stripSourceComments(code).split('\n')) {
+      if (/^\s*import\b/.test(line)) continue
+      const re = /\breadTauriShellSource\(|\breadTauriShellFile\(/g
+      for (const m of line.matchAll(re)) {
+        const before = line.slice(0, m.index)
+        if (/stripRustTestModules\(\s*$/.test(before)) continue
+        n++
+      }
+    }
+    return n
+  }
+
+  const RAW_SHELL_READ_ALLOWLIST: Record<
+    string,
+    { count: number; reason: string }
+  > = {
+    'src/backend/__tests__/tauriShellSource.test.ts': {
+      count: 4,
+      reason:
+        'strip proofs and cutter cross-check must see the Rust test text they cut'
+    },
+    'src/backend/__tests__/sidecarShutdownFlagSource.test.ts': {
+      count: 1,
+      reason: 'the mutation self-test needs the raw file as a vacuity witness'
+    },
+    'src/backend/__tests__/loginChromeCssInjection.test.ts': {
+      count: 1,
+      reason: 'pins the survival of cargo test fns, which are test text'
+    },
+    'src/backend/__tests__/longRunningChannels.test.ts': {
+      count: 1,
+      reason: "reads main.rs's own test module"
+    }
+  }
+
+  const scan = (): { counts: Record<string, number>; visited: number } => {
+    const counts: Record<string, number> = {}
+    let visited = 0
+    const visit = (dir: string): void => {
+      for (const e of readdirSync(join(REPO_ROOT, dir), {
+        withFileTypes: true
+      })) {
+        const rel = `${dir}/${e.name}`
+        if (e.isDirectory()) {
+          if (e.name !== 'node_modules') visit(rel)
+        } else if (/\.(c|m)?[jt]sx?$/.test(e.name) && rel !== DEFINITIONS) {
+          visited++
+          const n = countRawShellReads(
+            readFileSync(join(REPO_ROOT, rel), 'utf-8')
+          )
+          if (n > 0) counts[rel] = n
+        }
+      }
+    }
+    visit('src')
+    visit('meta')
+    return { counts, visited }
+  }
+
+  test('the raw readers in src/ and meta/ equal the allow-list exactly', () => {
+    const expected: Record<string, number> = {}
+    for (const [k, v] of Object.entries(RAW_SHELL_READ_ALLOWLIST))
+      expected[k] = v.count
+    // A new raw reader sees Rust test text as production. Use readTauriShellProductionSource() /
+    // readTauriShellProductionFile(), or add an entry to RAW_SHELL_READ_ALLOWLIST with a reason.
+    expect(scan().counts).toEqual(expected)
+  })
+
+  test('the scanner is not vacuous', () => {
+    const a = 'readTauri' + 'ShellSource()'
+    const b = 'readTauri' + 'ShellFile'
+    expect(countRawShellReads(`const x = ${a}`)).toBe(1)
+    expect(countRawShellReads(`${b}('sidecar.rs')`)).toBe(1)
+    expect(countRawShellReads(`stripRustTestModules(${b}('a.rs'))`)).toBe(0)
+    expect(countRawShellReads("readTauriShellProductionFile('a.rs')")).toBe(0)
+    expect(countRawShellReads(`// ${a}`)).toBe(0)
+    expect(scan().visited).toBeGreaterThanOrEqual(100)
+  })
+
+  test('every allow-listed file exists and labels each raw site `D-10 raw`', () => {
+    for (const [rel, { count }] of Object.entries(RAW_SHELL_READ_ALLOWLIST)) {
+      const full = join(REPO_ROOT, rel)
+      expect(existsSync(full)).toBe(true)
+      const labels = readFileSync(full, 'utf-8').split('D-10 raw').length - 1
+      expect({ rel, ok: labels >= count }).toEqual({ rel, ok: true })
+    }
+  })
+})
