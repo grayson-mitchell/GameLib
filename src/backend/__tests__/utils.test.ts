@@ -2,11 +2,16 @@ import * as utils from '../utils'
 import { readFileSync, existsSync } from 'graceful-fs'
 import { join } from 'path'
 import { GlobalConfig } from '../config'
+import { rm } from 'fs/promises'
 
 jest.mock('backend/platform')
 jest.mock('../logger')
 jest.mock('../dialog/dialog')
 jest.mock('../config')
+jest.mock('fs/promises', () => ({
+  ...jest.requireActual('fs/promises'),
+  rm: jest.fn()
+}))
 jest.mock('graceful-fs', () => ({
   ...jest.requireActual('graceful-fs'),
   readFileSync: jest.fn(),
@@ -14,6 +19,33 @@ jest.mock('graceful-fs', () => ({
 }))
 
 describe('backend/utils.ts', () => {
+  describe('removeFolder', () => {
+    it('removes the contained target once, with retries and no timer', async () => {
+      jest.mocked(rm).mockResolvedValue(undefined)
+      const timer = jest.spyOn(global, 'setTimeout')
+      await utils.removeFolder('/abs/root', 'Game')
+      expect(rm).toHaveBeenCalledTimes(1)
+      expect(rm).toHaveBeenCalledWith(join('/abs/root', 'Game'), {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 200
+      })
+      expect(timer).not.toHaveBeenCalled()
+      timer.mockRestore()
+    })
+
+    it('rejects a relative parent path', async () => {
+      await expect(utils.removeFolder('relative', 'Game')).rejects.toThrow()
+      expect(rm).not.toHaveBeenCalled()
+    })
+
+    it('refuses a folder name that escapes the root', async () => {
+      await utils.removeFolder('/abs/root', '../escape')
+      expect(rm).not.toHaveBeenCalled()
+    })
+  })
+
   test('quoteIfNeccessary', () => {
     const testCases = new Map<string, string>([
       ['path/without/spaces', 'path/without/spaces'],

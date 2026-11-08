@@ -768,6 +768,7 @@ describe('downloadqueue.ts — quick-261027-cux: Steam Delete Files routing', ()
     const { deleteCancelledSteamInstall } =
       await import('backend/storeManagers/steam/cancelDelete')
     const { removeFolder } = await import('../../utils')
+    jest.mocked(removeFolder).mockResolvedValue(undefined)
     const { cancelCurrentDownload } = await import('../downloadqueue')
 
     cancelCurrentDownload({ removeDownloaded: true })

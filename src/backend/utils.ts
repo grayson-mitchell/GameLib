@@ -30,7 +30,10 @@ import {
 } from 'backend/logger'
 import { basename, dirname, join, normalize, relative } from 'path'
 import { homedir } from 'os'
-import { assertContainedPath } from './sidecar/rendererPathGuard'
+import {
+  assertContainedPath,
+  assertPlausibleAbsolutePath
+} from './sidecar/rendererPathGuard'
 import {
   gameInfoStore,
   installStore,
@@ -64,7 +67,7 @@ import {
   updateWineVersionInfos,
   wineDownloaderInfoStore
 } from './wine/manager/utils'
-import { readdir, lstat } from 'fs/promises'
+import { readdir, lstat, rm } from 'fs/promises'
 import { backendEvents } from './backend_events'
 import { wikiGameInfoStore } from './wiki_game_info/stores'
 import EasyDl from 'easydl'
@@ -1472,7 +1475,7 @@ const memoryLog = (limit = 50) => {
  * undefined when `folderName` is empty, `.`, or escapes `root` (`..`, an
  * absolute path) — either would make the delete hit `root` itself or
  * something outside it. Both values can arrive from the renderer through
- * the `removeFolder` send channel.
+ * the internal `removeFolder` helper.
  */
 function resolveFolderToRemove(
   root: string,
@@ -1487,30 +1490,26 @@ function resolveFolderToRemove(
   }
 }
 
-function removeFolder(path: string, folderName: string) {
+/**
+ * Recursively deletes `${path}/${folderName}` (or the default install path
+ * when `path` is `'default'`). Internal helper — no renderer channel reaches
+ * it (Phase 72 D-09). `rm`'s own retries absorb an aborted runner still
+ * releasing files, so there is deliberately no timer here (sidecar exit
+ * contract: nothing may hold the event loop open at stdin EOF).
+ */
+async function removeFolder(path: string, folderName: string): Promise<void> {
+  let root: string
+  let name: string
   if (path === 'default') {
     const { defaultInstallPath } = GlobalConfig.get().getSettings()
-    const path = defaultInstallPath.replaceAll("'", '')
-    const folderToDelete = resolveFolderToRemove(path, folderName)
-    if (!folderToDelete) {
-      logWarning(
-        [`removeFolder: refusing folder name "${folderName}"`],
-        LogPrefix.Backend
-      )
-      return
-    }
-    if (existsSync(folderToDelete)) {
-      return setTimeout(() => {
-        rmSync(folderToDelete, { recursive: true })
-      }, 5000)
-    }
-    return
+    root = defaultInstallPath.replaceAll("'", '')
+    name = folderName
+  } else {
+    assertPlausibleAbsolutePath(path, 'removeFolder')
+    root = path.replaceAll("'", '')
+    name = folderName.replaceAll("'", '')
   }
-
-  const folderToDelete = resolveFolderToRemove(
-    path.replaceAll("'", ''),
-    folderName.replaceAll("'", '')
-  )
+  const folderToDelete = resolveFolderToRemove(root, name)
   if (!folderToDelete) {
     logWarning(
       [`removeFolder: refusing folder name "${folderName}"`],
@@ -1518,12 +1517,12 @@ function removeFolder(path: string, folderName: string) {
     )
     return
   }
-  if (existsSync(folderToDelete)) {
-    return setTimeout(() => {
-      rmSync(folderToDelete, { recursive: true })
-    }, 2000)
-  }
-  return
+  await rm(folderToDelete, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 200
+  })
 }
 
 async function getPathDiskSize(path: string): Promise<number> {

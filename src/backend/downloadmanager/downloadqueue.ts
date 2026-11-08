@@ -407,7 +407,13 @@ function cancelCurrentDownload({ removeDownloaded = false }) {
           .getGame(appName)
           .getGameInfo()
         if (folder_name) {
-          removeFolder(currentElement.params.path, folder_name)
+          void removeFolder(currentElement.params.path, folder_name).catch(
+            (error) =>
+              logError(
+                ['Could not remove cancelled download folder:', error],
+                LogPrefix.DownloadManager
+              )
+          )
         }
       }
     }
