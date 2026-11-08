@@ -1,10 +1,11 @@
 ---
 phase: 72
 slug: renderer-trust-boundary-and-process-hardening
-status: planned
+status: validated
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-11-08
+audited: 2026-11-09
 ---
 
 # Phase 72 — Validation Strategy
@@ -40,20 +41,20 @@ created: 2026-11-08
 
 | Decision | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |----------|-----------------|-----------|-------------------|-------------|--------|
-| D-14 | Linux leg compiles the 31+ `cfg(target_os="linux")` sites | CI | `gh run view` on the pushed `rust-test.yml` run | ❌ W0 (workflow edit) | ⬜ pending |
-| D-17/18 | audit clean of highs; cargo-deny advisories clean (zip ignores reasoned) | CLI | `pnpm audit --prod --audit-level high`; `cargo deny --manifest-path src-tauri/Cargo.toml check advisories` | ❌ W0 (`deny.toml`) | ⬜ pending |
-| D-19 | react-router 7 + i18next-http-backend 4 still route and load locales | jest + live | `pnpm exec jest src/frontend`; live boot | ✅ | ⬜ pending |
-| D-06/07/08 (TS) | URL scheme allow-list, folder = absolute existing dir, files revealed | jest | `pnpm exec jest src/backend/sidecar/__tests__/openPolicy.test.ts` | ❌ W0 | ⬜ pending |
-| D-06 (Rust) | Rust policy authoritative, rejects same inputs | cargo | `cargo test --bin gamelib-shell shell_open` | ❌ W0 | ⬜ pending |
-| D-06 parity | both layers read one fixture file | jest + cargo | both above read `openPolicyCases.json` | ❌ W0 | ⬜ pending |
-| D-09 (amended) | renderer `removeFolder` channel gone; helper async, no timer | jest + CLI | `pnpm exec jest downloadqueue shellFiles` + `pnpm check:ipc-contract` | ✅ update | ⬜ pending |
-| D-10 | capabilities pinned; opener JS-link injection off; renderer link handler | jest + live | `pnpm exec jest src/backend/__tests__/capabilitiesDefault.test.ts`; `pnpm tauri:dev` | ✅ update | ⬜ pending |
-| D-11 | 14 handlers deleted; shortcuts tests repointed | jest + knip | `pnpm exec jest src/backend/shortcuts`; `pnpm find-deadcode` | ✅ update | ⬜ pending |
-| D-12 | token store fail-closed before bootstrap | jest | `pnpm exec jest src/backend/storeManagers/steam/__tests__/tokenStore.test.ts` | ✅ rewrite | ⬜ pending |
-| D-13 | kills by tracked PID/group; `killPattern` gone | jest | `pnpm exec jest src/backend/__tests__/trackedChildren.test.ts` (fake HOME) | ❌ W0 | ⬜ pending |
-| D-04 | fatal `uncaughtException`, bounded unref'd flush | jest | `pnpm exec jest src/backend/sidecar/__tests__/sidecarRejectionGuard.test.ts` | ✅ extend | ⬜ pending |
-| D-01/03 | dialog on death; none on quit/relaunch | cargo + UAT | `cargo test --bin gamelib-shell on_sidecar_eof` | ❌ W0 | ⬜ pending |
-| D-20 | Job Object compiles on Windows | CI compile | windows leg of `rust-test.yml` | ✅ | ⬜ pending |
+| D-14 | Linux leg compiles the 31+ `cfg(target_os="linux")` sites | CI | `gh run view` on the pushed `rust-test.yml` run | ✅ | ✅ green |
+| D-17/18 | audit clean of highs; cargo-deny advisories clean (zip ignores reasoned) | CLI | `pnpm audit --prod --audit-level high`; `cargo deny --manifest-path src-tauri/Cargo.toml check advisories` | ✅ | ✅ green |
+| D-19 | react-router 7 + i18next-http-backend 4 still route and load locales | jest + live | `pnpm exec jest src/frontend`; live boot | ✅ | ✅ green |
+| D-06/07/08 (TS) | URL scheme allow-list, folder = absolute existing dir, files revealed | jest | `pnpm exec jest src/backend/sidecar/__tests__/openPolicy.test.ts` | ✅ | ✅ green |
+| D-06 (Rust) | Rust policy authoritative, rejects same inputs | cargo | `cargo test --bin gamelib-shell shell_open` | ✅ | ✅ green |
+| D-06 parity | both layers read one fixture file | jest + cargo | both above read `openPolicyCases.json` | ✅ | ✅ green |
+| D-09 (amended) | renderer `removeFolder` channel gone; helper async, no timer | jest + CLI | `pnpm exec jest downloadqueue shellFiles` + `pnpm check:ipc-contract` | ✅ | ✅ green |
+| D-10 | capabilities pinned; opener JS-link injection off; renderer link handler | jest + live | `pnpm exec jest src/backend/__tests__/capabilitiesDefault.test.ts`; `pnpm tauri:dev` | ✅ | ✅ green |
+| D-11 | 14 handlers deleted; shortcuts tests repointed | jest + knip | `pnpm exec jest src/backend/shortcuts`; `pnpm find-deadcode` | ✅ | ✅ green |
+| D-12 | token store fail-closed before bootstrap | jest | `pnpm exec jest src/backend/storeManagers/steam/__tests__/tokenStore.test.ts` | ✅ | ✅ green |
+| D-13 | kills by tracked PID/group; `killPattern` gone | jest | `pnpm exec jest src/backend/__tests__/trackedChildren.test.ts` (fake HOME) | ✅ | ✅ green |
+| D-04 | fatal `uncaughtException`, bounded unref'd flush | jest | `pnpm exec jest src/backend/sidecar/__tests__/sidecarRejectionGuard.test.ts` | ✅ | ✅ green |
+| D-01/03 | dialog on death; none on quit/relaunch | cargo + UAT | `cargo test --bin gamelib-shell on_sidecar_eof` | ✅ | ✅ green |
+| D-20 | Job Object compiles on Windows | CI compile | windows leg of `rust-test.yml` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -61,12 +62,12 @@ created: 2026-11-08
 
 ## Wave 0 Requirements
 
-- [ ] `src/common/__fixtures__/openPolicyCases.json` + `src/backend/sidecar/__tests__/openPolicy.test.ts`
-- [ ] `src-tauri/src/shell_open.rs` with `#[cfg(test)]` parity tests
-- [ ] `src/backend/__tests__/trackedChildren.test.ts` (fake-HOME isolation)
-- [ ] `on_sidecar_eof` / shutdown-flag Rust tests
-- [ ] `src-tauri/deny.toml`, `.github/dependabot.yml`, `72-UAT.md`
-- [ ] shared `setTokenStore(fakeStore)` test helper for Steam suites
+- [x] `src/common/__fixtures__/openPolicyCases.json` + `src/backend/sidecar/__tests__/openPolicy.test.ts`
+- [x] `src-tauri/src/shell_open.rs` with `#[cfg(test)]` parity tests
+- [x] `src/backend/__tests__/trackedChildren.test.ts` (fake-HOME isolation)
+- [x] `on_sidecar_eof` / shutdown-flag Rust tests
+- [x] `src-tauri/deny.toml`, `.github/dependabot.yml`, `72-UAT.md`
+- [x] shared `setTokenStore(fakeStore)` test helper for Steam suites
 
 ---
 
@@ -83,11 +84,39 @@ created: 2026-11-08
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 60s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 60s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-11-09
+
+---
+
+## Validation Audit 2026-11-09
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+Evidence (all run 2026-11-09 against `main` @ `d8786408e`):
+
+- jest, phase-72 suites (openPolicy, trackedChildren, capabilitiesDefault, tauriConf, tokenStore,
+  sidecarRejectionGuard, sidecarShutdownFlagSource, externalLinkClicks, shortcuts, downloadqueue,
+  shellFiles, rendererPathGuard): 19 suites / 408 tests passed.
+- jest Frontend project (D-19): 304 suites / 5260 tests passed.
+- `cargo test --bin gamelib-shell`: 445 passed, 0 failed, 2 ignored. Includes the `shell_open_*`
+  fixture-parity tests and the three `on_sidecar_eof_*` tests (`main.rs:1881-1903`).
+- `pnpm audit --prod --audit-level high`: exit 0 (3 low, 5 moderate). `cargo-deny` is not
+  installed locally; the CI `cargo-deny` job passed on `05bf973bf`.
+- `pnpm check:ipc-contract`: up to date. `pnpm find-deadcode`: PASS (ratchet).
+- CI on `05bf973bf` (includes all 72-* commits): `rust-test.yml` ubuntu/macos/windows legs and
+  `audit.yml` pnpm-audit + cargo-deny all succeeded. No `continue-on-error` remains in
+  `rust-test.yml`.
+
+The four Manual-Only rows still apply. Their runtime UAT status is tracked in `72-UAT.md` and
+`72-HUMAN-UAT.md` (Windows Job Object and packaged-build Restart are still open).
