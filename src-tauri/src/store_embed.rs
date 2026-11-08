@@ -1754,6 +1754,110 @@ pub(crate) fn store_embed_navigate(app: &AppHandle, args: &[Value]) -> Result<Va
     Ok(json)
 }
 
+pub(crate) fn rpc_store_embed_hide(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+    StoreEmbedHideArgs::from_args(args)?;
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    {
+        store_embed_hide(app)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        Err("store_embed_hide:unsupported-platform".to_string())
+    }
+}
+
+pub(crate) fn rpc_store_embed_show(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+    StoreEmbedShowArgs::from_args(args)?;
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    {
+        store_embed_show(app)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        Err("store_embed_show:unsupported-platform".to_string())
+    }
+}
+
+pub(crate) fn rpc_store_embed_close(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+    StoreEmbedCloseArgs::from_args(args)?;
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    {
+        store_embed_close(app)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        Err("store_embed_close:unsupported-platform".to_string())
+    }
+}
+
+// GAP-D (quick task `260905-e61`, D-22, REQ-40-06): the arm that carries an IN-EMBED
+// navigation back to the renderer. Without it the four arms below only ever reported
+// state for navigations the USER's own chrome initiated, so clicking a link inside the
+// embed moved this process's cursor while the renderer's `canGoBack` stayed false
+// forever. Drains, never peeks -- same contract as `humble_login_take_events` above.
+pub(crate) fn rpc_store_embed_take_nav_events(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+    StoreEmbedTakeNavEventsArgs::from_args(args)?;
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    {
+        store_embed_take_nav_events(app)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        Err("store_embed_take_nav_events:unsupported-platform".to_string())
+    }
+}
+
+// Phase 40 Plan 07 (D-22/D-25): the four navigation arms. Each returns the navigation
+// state (`store_embed_nav_state_json`) derived from the Rust-owned cursor -- there is
+// no `canGoBack()`-style handle to query, so this pushed/returned state IS the read
+// (control inverts: Rust pushes, the frontend never polls).
+pub(crate) fn rpc_store_embed_back(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+    StoreEmbedBackArgs::from_args(args)?;
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    {
+        store_embed_back(app)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        Err("store_embed_back:unsupported-platform".to_string())
+    }
+}
+
+pub(crate) fn rpc_store_embed_forward(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+    StoreEmbedForwardArgs::from_args(args)?;
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    {
+        store_embed_forward(app)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        Err("store_embed_forward:unsupported-platform".to_string())
+    }
+}
+
+pub(crate) fn rpc_store_embed_reload(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+    StoreEmbedReloadArgs::from_args(args)?;
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    {
+        store_embed_reload(app)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        Err("store_embed_reload:unsupported-platform".to_string())
+    }
+}
+
+pub(crate) fn rpc_store_embed_navigate(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    {
+        store_embed_navigate(app, args)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        Err("store_embed_navigate:unsupported-platform".to_string())
+    }
+}
+
 /// Also dispatches `dialog_open` (Phase 30 Plan 03). `app` is threaded through for that arm:
 /// the folder picker is reached via the AppHandle, not via `args` — the picked path comes
 /// FROM the OS dialog, never INTO it from the renderer/sidecar (T-30-11/T-30-12).
@@ -1815,102 +1919,14 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         RustInvokeChannel::ScanWinemacMetalExports => rpc_scan_winemac_metal_exports(args),
         RustInvokeChannel::StoreEmbedOpen => rpc_store_embed_open(args, app),
         RustInvokeChannel::StoreEmbedSetBounds => rpc_store_embed_set_bounds(args, app),
-        RustInvokeChannel::StoreEmbedHide => {
-            StoreEmbedHideArgs::from_args(args)?;
-            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-            {
-                store_embed_hide(app)
-            }
-            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-            {
-                Err("store_embed_hide:unsupported-platform".to_string())
-            }
-        }
-        RustInvokeChannel::StoreEmbedShow => {
-            StoreEmbedShowArgs::from_args(args)?;
-            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-            {
-                store_embed_show(app)
-            }
-            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-            {
-                Err("store_embed_show:unsupported-platform".to_string())
-            }
-        }
-        RustInvokeChannel::StoreEmbedClose => {
-            StoreEmbedCloseArgs::from_args(args)?;
-            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-            {
-                store_embed_close(app)
-            }
-            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-            {
-                Err("store_embed_close:unsupported-platform".to_string())
-            }
-        }
-        // GAP-D (quick task `260905-e61`, D-22, REQ-40-06): the arm that carries an IN-EMBED
-        // navigation back to the renderer. Without it the four arms below only ever reported
-        // state for navigations the USER's own chrome initiated, so clicking a link inside the
-        // embed moved this process's cursor while the renderer's `canGoBack` stayed false
-        // forever. Drains, never peeks -- same contract as `humble_login_take_events` above.
-        RustInvokeChannel::StoreEmbedTakeNavEvents => {
-            StoreEmbedTakeNavEventsArgs::from_args(args)?;
-            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-            {
-                store_embed_take_nav_events(app)
-            }
-            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-            {
-                Err("store_embed_take_nav_events:unsupported-platform".to_string())
-            }
-        }
-        // Phase 40 Plan 07 (D-22/D-25): the four navigation arms. Each returns the navigation
-        // state (`store_embed_nav_state_json`) derived from the Rust-owned cursor -- there is
-        // no `canGoBack()`-style handle to query, so this pushed/returned state IS the read
-        // (control inverts: Rust pushes, the frontend never polls).
-        RustInvokeChannel::StoreEmbedBack => {
-            StoreEmbedBackArgs::from_args(args)?;
-            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-            {
-                store_embed_back(app)
-            }
-            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-            {
-                Err("store_embed_back:unsupported-platform".to_string())
-            }
-        }
-        RustInvokeChannel::StoreEmbedForward => {
-            StoreEmbedForwardArgs::from_args(args)?;
-            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-            {
-                store_embed_forward(app)
-            }
-            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-            {
-                Err("store_embed_forward:unsupported-platform".to_string())
-            }
-        }
-        RustInvokeChannel::StoreEmbedReload => {
-            StoreEmbedReloadArgs::from_args(args)?;
-            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-            {
-                store_embed_reload(app)
-            }
-            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-            {
-                Err("store_embed_reload:unsupported-platform".to_string())
-            }
-        }
-        RustInvokeChannel::StoreEmbedNavigate => {
-            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-            {
-                store_embed_navigate(app, args)
-            }
-            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-            {
-                Err("store_embed_navigate:unsupported-platform".to_string())
-            }
-        }
+        RustInvokeChannel::StoreEmbedHide => rpc_store_embed_hide(args, app),
+        RustInvokeChannel::StoreEmbedShow => rpc_store_embed_show(args, app),
+        RustInvokeChannel::StoreEmbedClose => rpc_store_embed_close(args, app),
+        RustInvokeChannel::StoreEmbedTakeNavEvents => rpc_store_embed_take_nav_events(args, app),
+        RustInvokeChannel::StoreEmbedBack => rpc_store_embed_back(args, app),
+        RustInvokeChannel::StoreEmbedForward => rpc_store_embed_forward(args, app),
+        RustInvokeChannel::StoreEmbedReload => rpc_store_embed_reload(args, app),
+        RustInvokeChannel::StoreEmbedNavigate => rpc_store_embed_navigate(args, app),
     }
 }
 
