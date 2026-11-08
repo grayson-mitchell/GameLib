@@ -154,7 +154,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 65: Steam store manager decomposition, continued** — 20/20 plans complete; Phase 61 closed 2026-11-07 — unblocked, D-11 (completed 2026-11-08)
 - [ ] **Phase 66: Backend dependency injection replacing module-level singletons** — 0 plans; not started
 - [x] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07 (completed 2026-11-07)
-- [ ] **Phase 68: Versioned persisted stores and migrations** — 0 plans; not started
+- [ ] **Phase 68: Versioned persisted stores and migrations** — 10 plans; planned
 - [ ] **Phase 69: Consolidate frontend state onto GlobalStateV2** — 0 plans; not started
 - [ ] **Phase 70: Split GameInfo into shared and per-store shapes** — 0 plans; not started
 - [ ] **Phase 71: Rust shell module decomposition** — 0 plans; not started
@@ -658,11 +658,20 @@ Plans:
 **Goal:** Every persisted store has a schema version, and a change to its shape ships with an ordered migration, so an upgrade never silently resets a user's settings, library cache or Steam state to defaults. The 19 store modules (`*/electronStores.ts`, `constants/key_value_stores.ts`, the `TypeCheckedStoreBackend`, `GameLibStore`, `CacheStore` and sidecar `FileStore` classes) have no version field today. GameLib already has a migration runner inherited from Heroic: `src/backend/migration/` applies named one-off migrations in order and records them in `migrationsStore`, and holds one (`LegendaryGlobalConfigFolderMigration`). Settings also carry ad hoc fix-ups in `config.ts` (`migrateTrayIconVariant`, `migrateFocusRowSelection`). Build on that runner rather than replace it. Scope: a version per store; migrations keyed by store and version that run before first read; the existing `config.ts` fix-ups folded in; a backup of the pre-migration file and a logged, non-destructive fallback when a migration fails; and a test per migration from a fixture of the old shape. Phase 61 (existing per-game `wineVersion` choices moving into the Engine control) and Phase 64 (custom themes as token data) are the first known shape changes and should use this if it lands first. Open questions for discuss-phase: whether caches that can be refetched (store metadata, artwork, the CrossOver index) are simply discarded on a version mismatch instead of migrated; how a downgrade behaves when it meets a newer version; and the order relative to Phase 61. Came from the second architecture review on 2026-11-06.
 **Requirements**: TBD
 **Depends on:** None
-**Plans:** 0 plans
+**Plans:** 10 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 68 to break down)
+- [ ] 68-01-PLAN.md — Type contracts, A6 accessor-override proof on GameLibStore, private atomic write + D-08 backups
+- [ ] 68-02-PLAN.md — Versioning engine + registry wired into GameLibStore (migrate before first read, D-03 read-only, D-06 failure, D-13 file modes)
+- [ ] 68-03-PLAN.md — Declare cache/user-state kind at all 51 store constructions + D-01 ratchet (D-02, D-14)
+- [ ] 68-04-PLAN.md — Read-only early returns in store classes and applyStoreWrite; hide `__internal__` everywhere
+- [ ] 68-05-PLAN.md — config.ts / game_config.ts onto the engine; tray + focusRow fix-ups as settings/global v0->v1 (D-10, D-11)
+- [ ] 68-06-PLAN.md — Read-only aggregate, area mapping, once-per-launch `readOnlyStoresNotice` push + IPC gates
+- [ ] 68-07-PLAN.md — Renderer ReadOnlyStoresNotice toast (manual dismiss, D-15) + i18n
+- [ ] 68-08-PLAN.md — D-12 inventory of other persisted files / localStorage keys + triage todos
+- [ ] 68-09-PLAN.md — Full gate battery, profile snapshot, smoke, live `pnpm tauri:dev` check (checkpoint)
+- [ ] 68-10-PLAN.md — Live D-03 proof, restore + delete snapshot, validation sign-off
 
 ### Phase 69: Consolidate frontend state onto GlobalStateV2
 
