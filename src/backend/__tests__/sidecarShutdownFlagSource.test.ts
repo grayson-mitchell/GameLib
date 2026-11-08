@@ -86,3 +86,42 @@ describe('sidecar shutdown flag call sites (D-03)', () => {
     expect(src.match(/\bspawn_sidecar\(/g)?.length ?? 0).toBe(1)
   })
 })
+
+// WR-01 (quick 261108-lav): the dead-sidecar path must reap the whole tree before the dialog.
+// Pins the Windows/Linux arms that a local macOS `cargo test` cannot exercise.
+describe('dead-sidecar tree reap (WR-01)', () => {
+  it('surface_dead_sidecar reaps before the dialog, with no liveness gate', () => {
+    const body = slice(
+      code('sidecar.rs'),
+      'fn surface_dead_sidecar',
+      '.blocking_show()'
+    )
+    const reap = body.indexOf('reap_dead_sidecar_tree()')
+    expect(reap).toBeGreaterThanOrEqual(0)
+    expect(reap).toBeLessThan(body.indexOf('.dialog()'))
+    expect(body).not.toContain('!gone')
+    expect(body).not.toContain('try_wait')
+  })
+
+  it('reap_dead_sidecar_tree kills the group before reaping, drops the job and latches', () => {
+    const body = slice(
+      code('shell_state.rs'),
+      'fn reap_dead_sidecar_tree',
+      'fn shutdown_child'
+    )
+    const kill = body.indexOf('kill_process_group(')
+    expect(kill).toBeGreaterThanOrEqual(0)
+    expect(kill).toBeLessThan(body.indexOf('child.wait()'))
+    expect(body).toContain('job.lock()')
+    expect(body).toContain('tree_reaped.store(true')
+  })
+
+  it('shutdown_child skips the group signal once the tree is reaped', () => {
+    const body = slice(
+      code('shell_state.rs'),
+      'fn shutdown_child',
+      'fn write_raw'
+    )
+    expect(body).toContain('tree_reaped.load(')
+  })
+})

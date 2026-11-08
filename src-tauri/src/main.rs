@@ -871,6 +871,7 @@ fn main() {
                 child: Mutex::new(child),
                 shutting_down: AtomicBool::new(false),
                 eof_surfaced: AtomicBool::new(false),
+                tree_reaped: AtomicBool::new(false),
                 #[cfg(windows)]
                 job: Mutex::new(job),
             });
@@ -1891,6 +1892,75 @@ mod tests {
         on_sidecar_eof(&down, &shown, || calls += 1);
         on_sidecar_eof(&down, &shown, || calls += 1);
         assert_eq!(calls, 1);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn kill_process_group_rejects_non_positive_and_init_pgids() {
+        for bad in [0, 1, -5] {
+            let err = kill_process_group(bad).expect_err("pgid <= 1 must be refused");
+            assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput, "pgid {bad}");
+        }
+    }
+
+    /// Spawns `/bin/sh` in its own group, which backgrounds `sleep 30` and exits. Returns the
+    /// (already waited) leader pid, the surviving member pid, and the remaining stdout pipe.
+    /// Env is cleared for hygiene (no user profile is read; fake-HOME convention scans only TS/JS).
+    #[cfg(unix)]
+    fn spawn_orphaned_group() -> (i32, i32, std::process::ChildStdout) {
+        use std::os::unix::process::CommandExt;
+        let mut child = Command::new("/bin/sh")
+            .args(["-c", "sleep 30 & echo $!"])
+            .env_clear()
+            .env("PATH", "/bin:/usr/bin")
+            .process_group(0)
+            .stdin(Stdio::null())
+            .stderr(Stdio::null())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("spawn /bin/sh");
+        let mut reader = BufReader::new(child.stdout.take().expect("piped stdout"));
+        let mut line = String::new();
+        reader.read_line(&mut line).expect("read member pid");
+        let member: i32 = line.trim().parse().expect("member pid");
+        let leader = child.id() as i32;
+        child.wait().expect("wait leader");
+        (leader, member, reader.into_inner())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn kill_process_group_reaps_members_after_leader_exits() {
+        let (leader, member, mut rest) = spawn_orphaned_group();
+        // SAFETY: signal 0 only probes existence.
+        assert_eq!(unsafe { libc::kill(member, 0) }, 0, "member alive after leader exit");
+        kill_process_group(leader).expect("group outlives its leader");
+        let (tx, rx) = std::sync::mpsc::channel();
+        thread::spawn(move || {
+            let mut sink = Vec::new();
+            let _ = rest.read_to_end(&mut sink);
+            let _ = tx.send(());
+        });
+        rx.recv_timeout(Duration::from_secs(5)).expect("EOF once the member is killed");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn kill_process_group_on_empty_group_is_esrch() {
+        let (leader, _member, mut rest) = spawn_orphaned_group();
+        kill_process_group(leader).expect("first reap");
+        let mut sink = Vec::new();
+        let _ = rest.read_to_end(&mut sink); // EOF => member dead
+        // The killed member may linger as an unreaped zombie (macOS then reports EPERM, a
+        // reaper-less Linux container reports Ok); once reaped the group is empty -> ESRCH.
+        for _ in 0..50 {
+            match kill_process_group(leader) {
+                Err(e) if e.raw_os_error() == Some(libc::ESRCH) => return,
+                _ => thread::sleep(Duration::from_millis(100)),
+            }
+        }
+        let err = kill_process_group(leader).expect_err("empty group");
+        assert!(matches!(err.raw_os_error(), Some(libc::ESRCH) | Some(libc::EPERM)));
     }
 
     /// Maps a trimmed `dispatch_rust_channel` arm opener (`RustInvokeChannel::HumbleLoginOpen => {`)

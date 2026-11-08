@@ -34,6 +34,9 @@ pub(crate) struct SidecarState {
     pub(crate) shutting_down: AtomicBool,
     /// Latches once the dead-sidecar dialog has been surfaced, so it shows at most once.
     pub(crate) eof_surfaced: AtomicBool,
+    /// Latches once `reap_dead_sidecar_tree` has killed and waited the tree, telling
+    /// `shutdown_child` not to signal the (possibly recycled) pgid again.
+    pub(crate) tree_reaped: AtomicBool,
     /// Windows kill-on-close Job Object holding the sidecar tree (D-20). `None` if creation
     /// failed (shell then falls back to `child.kill()`).
     #[cfg(windows)]
@@ -49,6 +52,43 @@ impl SidecarState {
 
     pub(crate) fn next_id(&self) -> String {
         self.counter.fetch_add(1, Ordering::Relaxed).to_string()
+    }
+
+    /// WR-01: unconditionally reap the dead sidecar's whole tree before the dead-sidecar dialog.
+    /// The unix group SIGKILL happens BEFORE any wait/try_wait reaps the leader: an unreaped
+    /// zombie leader keeps its pid, and so the pgid, from being recycled, so the signal cannot
+    /// hit an unrelated group. Does not call `begin_shutdown()`; the dialog path does that.
+    pub(crate) fn reap_dead_sidecar_tree(&self) {
+        let mut child = match self.child.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+        #[cfg(unix)]
+        {
+            let pgid = child.id() as i32;
+            if let Err(e) = kill_process_group(pgid) {
+                if e.raw_os_error() != Some(libc::ESRCH) {
+                    shell_eprintln!("[shell] dead-sidecar group kill failed: {e}");
+                }
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = child.kill();
+            // 72-12 D-20: closing the last job handle kills every remaining member.
+            #[cfg(windows)]
+            {
+                let taken = match self.job.lock() {
+                    Ok(mut g) => g.take(),
+                    Err(p) => p.into_inner().take(),
+                };
+                drop(taken);
+            }
+        }
+        if let Err(e) = child.wait() {
+            shell_eprintln!("[shell] dead-sidecar wait() failed: {e}");
+        }
+        self.tree_reaped.store(true, Ordering::SeqCst);
     }
 
     /// WR-03: kill and reap the sidecar process. Called from the `RunEvent::Exit`
@@ -87,39 +127,44 @@ impl SidecarState {
 
         #[cfg(unix)]
         {
-            // `configure_sidecar_process_group` put the sidecar in its own process group at
-            // spawn time (`process_group(0)`), making its pgid equal to its own pid -- so
-            // this pid IS the group id to signal.
-            let pgid = child.id() as i32;
-            // SAFETY: `libc::kill` with a negative first argument signals every process in
-            // the group `-pgid`, never a single arbitrary pid this code does not own -- the
-            // sidecar created that group itself at spawn time. No pointers are dereferenced;
-            // the call can only fail (ESRCH/EPERM), never crash.
-            unsafe {
-                libc::kill(-pgid, libc::SIGTERM);
-            }
-            let grace_deadline = std::time::Instant::now() + Duration::from_millis(2000);
-            let mut exited = false;
-            while std::time::Instant::now() < grace_deadline {
-                match child.try_wait() {
-                    Ok(Some(_)) => {
-                        exited = true;
-                        break;
-                    }
-                    Ok(None) => thread::sleep(Duration::from_millis(50)),
-                    Err(e) => {
-                        shell_eprintln!(
-                            "[shell] sidecar try_wait() failed during exit shutdown grace period: {e}"
-                        );
-                        break;
-                    }
-                }
-            }
-            if !exited {
-                // SAFETY: same group-only guarantee as the SIGTERM call above.
+            // After a dead-sidecar reap the user may sit at the dialog for minutes, during which
+            // the old pgid can be recycled to an unrelated group, so do not signal it again.
+            if !self.tree_reaped.load(Ordering::SeqCst) {
+                // `configure_sidecar_process_group` put the sidecar in its own process group at
+                // spawn time (`process_group(0)`), making its pgid equal to its own pid -- so
+                // this pid IS the group id to signal.
+                let pgid = child.id() as i32;
+                // SAFETY: `libc::kill` with a negative first argument signals every process in
+                // the group `-pgid`, never a single arbitrary pid this code does not own -- the
+                // sidecar created that group itself at spawn time. No pointers are dereferenced;
+                // the call can only fail (ESRCH/EPERM), never crash.
                 unsafe {
-                    libc::kill(-pgid, libc::SIGKILL);
+                    libc::kill(-pgid, libc::SIGTERM);
                 }
+                let grace_deadline = std::time::Instant::now() + Duration::from_millis(2000);
+                let mut exited = false;
+                while std::time::Instant::now() < grace_deadline {
+                    match child.try_wait() {
+                        Ok(Some(_)) => {
+                            exited = true;
+                            break;
+                        }
+                        Ok(None) => thread::sleep(Duration::from_millis(50)),
+                        Err(e) => {
+                            shell_eprintln!(
+                                "[shell] sidecar try_wait() failed during exit shutdown grace period: {e}"
+                            );
+                            break;
+                        }
+                    }
+                }
+                if !exited {
+                    // SAFETY: same group-only guarantee as the SIGTERM call above.
+                    unsafe {
+                        libc::kill(-pgid, libc::SIGKILL);
+                    }
+                }
+        
             }
         }
 

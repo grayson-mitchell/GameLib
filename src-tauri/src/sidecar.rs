@@ -210,6 +210,29 @@ fn configure_sidecar_process_group(cmd: &mut Command) {
 #[cfg(not(unix))]
 fn configure_sidecar_process_group(_cmd: &mut Command) {}
 
+/// SIGKILLs every member of process group `pgid` (WR-01). A process group outlives its leader
+/// while any member remains, so this still reaches comet / the bridge helper / games after the
+/// sidecar's own `exit(1)`.
+///
+/// Refuses `pgid <= 1`: `kill(-pgid, ..)` with pgid 1 is `kill(-1)` (every process the user
+/// owns) and with 0 is `kill(0)` (the caller's own group, i.e. the shell itself).
+#[cfg(unix)]
+pub(crate) fn kill_process_group(pgid: i32) -> std::io::Result<()> {
+    if pgid <= 1 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("refusing to signal process group {pgid}"),
+        ));
+    }
+    // SAFETY: signals only the process group `-pgid` (> 1, validated above); no pointers are
+    // dereferenced and the call can only fail (ESRCH/EPERM).
+    if unsafe { libc::kill(-pgid, libc::SIGKILL) } == -1 {
+        Err(std::io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
 /// D-20: put the sidecar in a Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` so every
 /// Windows descendant (legendary/gogdl/nile, their powershell wrappers, sidecar-launched games)
 /// dies with the job -- the parity of the Unix process-group kill in `shutdown_child`. The
@@ -638,42 +661,12 @@ pub(crate) fn on_sidecar_eof<F: FnOnce()>(shutting_down: &AtomicBool, surfaced: 
     surface();
 }
 
-/// Confirms the sidecar is really gone (killing it if a non-UTF-8 read error ended the loop
-/// while it still runs), then shows the generic Restart/Quit dialog on the reader thread (D-05).
-/// Restart is a full `app.restart()`, never an in-place respawn (D-01).
+/// Reaps the sidecar's whole process tree unconditionally (WR-01), then shows the generic
+/// Restart/Quit dialog on the reader thread (D-05). The unix group SIGKILL works even after the
+/// leader's own `exit(1)` (a group outlives its leader); on Windows the kill-on-close job is
+/// dropped. Restart is a full `app.restart()`, never an in-place respawn (D-01).
 fn surface_dead_sidecar(app: &AppHandle, state: &Arc<SidecarState>) {
-    {
-        let mut child = match state.child.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        };
-        let mut gone = false;
-        for _ in 0..10 {
-            match child.try_wait() {
-                Ok(Some(_)) | Err(_) => {
-                    gone = true;
-                    break;
-                }
-                Ok(None) => thread::sleep(Duration::from_millis(100)),
-            }
-        }
-        if !gone {
-            #[cfg(unix)]
-            {
-                let pgid = child.id() as i32;
-                // SAFETY: signals only the sidecar's own process group (pgid == its pid, set at
-                // spawn); no pointers are dereferenced and the call can only fail.
-                unsafe {
-                    libc::kill(-pgid, libc::SIGKILL);
-                }
-            }
-            #[cfg(not(unix))]
-            {
-                let _ = child.kill();
-            }
-            let _ = child.wait();
-        }
-    }
+    state.reap_dead_sidecar_tree();
     shell_eprintln!("[shell] sidecar stdout closed outside shutdown; showing dead-sidecar dialog");
     let restart = app
         .dialog()
@@ -684,6 +677,10 @@ fn surface_dead_sidecar(app: &AppHandle, state: &Arc<SidecarState>) {
         .blocking_show();
     state.begin_shutdown();
     if restart {
+        // This fn runs on the reader thread, so tauri 2.11.5 `restart()` takes its background
+        // branch (request_exit with restart_on_exit), which fires RunEvent::Exit and the single
+        // shell-teardown call site before the process restarts (REQ-34.3-06 / D-05). The tree
+        // is already reaped above, so no extra teardown call belongs here.
         app.restart();
     } else {
         app.exit(0);
