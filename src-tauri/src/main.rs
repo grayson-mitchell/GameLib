@@ -2127,6 +2127,13 @@ mod tests {
         let missing: Vec<&String> = found
             .iter()
             .filter(|f| !PRE_EXISTING_SIBLINGS.contains(&f.as_str()))
+            // D-11: a pre-split sibling and its directory (`macos_epic_embed.rs` + `macos_epic_embed/`).
+            .filter(|f| {
+                !PRE_EXISTING_SIBLINGS.iter().any(|sib| {
+                    sib.strip_suffix(".rs")
+                        .is_some_and(|stem| f.starts_with(&format!("{stem}/")))
+                })
+            })
             .filter(|f| !SHELL_SOURCE_FILES.contains(&f.as_str()))
             .collect();
         assert!(
@@ -2134,6 +2141,29 @@ mod tests {
             "shell .rs files missing from SHELL_SOURCE_FILES/SHELL_SOURCE: {missing:?}"
         );
     }
+    /// D-10 (Rust half): no test slices shell source on the test-module opener; the cutter is the
+    /// only place that knows that boundary. Needles are built with `concat!` so this guard cannot
+    /// match itself.
+    #[test]
+    fn no_shell_source_test_slices_on_mod_tests() {
+        let opener = concat!("mod tests", " {");
+        let needles = [
+            concat!(".find(\"", "mod tests", " {\")"),
+            concat!(".split(\"", "mod tests", " {\")"),
+            concat!(".split_once(\"", "mod tests", " {\")"),
+        ];
+        assert!(!needles.is_empty());
+        let main = include_str!("main.rs");
+        let at = main.find(concat!("\n", "mod tests", " {")).expect("tests module opener");
+        let tests_text = &main[at..];
+        for needle in needles {
+            assert!(
+                !tests_text.contains(needle),
+                "a test slices shell source on `{opener}` (use shell_production_source): {needle}"
+            );
+        }
+    }
+
     use serde_json::json;
 
     // ---- quick 261101-llf: bridge invite picker window ----
