@@ -18,6 +18,21 @@
   width: 100%;
 }
 
+/*
+ * PathSelectionBox's commit-hint row is always rendered (so the layout never
+ * shifts when "Saved" / "Not saved yet" appears), but in these padded
+ * contexts that reserved row stacked on top of the field's bottom padding and
+ * left a visible blank line under every path field. Cancel its height with an
+ * equal negative margin so the hint draws inside the existing padding instead.
+ * The expression must match .pathSelectionBoxCommitHint's min-height.
+ */
+.Settings .Field .pathSelectionBoxCommitHint,
+.Accessibility .Field .pathSelectionBoxCommitHint,
+.InstallModal__dialog .Field .pathSelectionBoxCommitHint,
+.ModifyInstall__dialog .Field .pathSelectionBoxCommitHint {
+  margin-block-end: calc(-1 * (var(--text-sm) * 1.4 + var(--space-3xs)));
+}
+
 .Settings .Field label,
 .Accessibility .Field label,
 .InstallModal__dialog .Field label,
