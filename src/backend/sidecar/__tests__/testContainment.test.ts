@@ -1017,6 +1017,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'netStub.test.ts',
   'oauthLoginCapture.test.ts',
   'onlineMonitorWiring.test.ts',
+  'openPolicy.test.ts',
   'outputStreamBinding.test.ts',
   'pathShim.test.ts',
   'playtimeLockBootClear.test.ts',

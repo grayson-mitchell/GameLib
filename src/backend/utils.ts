@@ -442,15 +442,6 @@ function removeSpecialcharacters(text: string): string {
   return text.replaceAll(regexp, '')
 }
 
-async function openUrlOrFile(url: string): Promise<string | void> {
-  // A real http(s) scheme, not merely a leading "http" (`httpfoo:` used to
-  // reach the shell's `openExternal` frame arm).
-  if (/^https?:\/\//i.test(url)) {
-    return shell.openExternal(url)
-  }
-  return shell.openPath(url)
-}
-
 function clearCache(
   library?: 'gog' | 'legendary' | 'nile',
   fromVersionChange = false
@@ -1932,7 +1923,6 @@ export {
   getCurrentChangelog,
   handleExit,
   isEpicServiceOffline,
-  openUrlOrFile,
   showItemInFolder,
   removeSpecialcharacters,
   clearCache,

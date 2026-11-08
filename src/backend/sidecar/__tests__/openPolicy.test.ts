@@ -13,7 +13,8 @@ import {
   OPEN_PATH_BUNDLE_EXTENSIONS,
   OpenPolicyError,
   assertOpenableExternalUrl,
-  classifyFolderTarget
+  classifyFolderTarget,
+  isLaunchableBundle
 } from '../openPolicy'
 import { readTauriShellFile } from '../../testUtils/tauriShellSource'
 import { stripSourceComments } from '../../testUtils/stripSourceComments'
@@ -38,7 +39,7 @@ function rustStrList(source: string, constName: string): string[] {
     `${constName}\\s*:\\s*&\\[&str\\]\\s*=\\s*&\\[([\\s\\S]*?)\\];`
   ).exec(source)
   if (!m) throw new Error(`const ${constName} not found`)
-  return [...m[1].matchAll(/"([^"]*)"/g)].map((x) => x[1])
+  return [...(m[1] ?? '').matchAll(/"([^"]*)"/g)].map((x) => x[1] as string)
 }
 
 describe('openPolicy', () => {
@@ -69,6 +70,13 @@ describe('openPolicy', () => {
     expect(() =>
       assertOpenableExternalUrl('x-apple.systempreferences:other', 'x')
     ).toThrow(OpenPolicyError)
+  })
+
+  it('isLaunchableBundle matches by extension, case-insensitively', () => {
+    expect(isLaunchableBundle('/x/Game.app')).toBe(true)
+    expect(isLaunchableBundle('/x/GAME.APP/')).toBe(true)
+    expect(isLaunchableBundle('/x/game')).toBe(false)
+    expect(isLaunchableBundle('/x/.app')).toBe(false)
   })
 
   it('rejects non-strings', () => {

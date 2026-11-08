@@ -256,6 +256,11 @@ function mockAppSettings(partial: Record<string, unknown>) {
 }
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
+// openFolder awaits real fs calls (threadpool), which outlast three setImmediate turns.
+async function flushFs(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 150))
+}
+
 async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
   await new Promise((resolve) => setImmediate(resolve))
@@ -299,7 +304,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     warnSpy.mockRestore()
   })
 
-  // ── REQ-34.3-01: the 9 constant URL openers sharing openUrlOrFile's
+  // ── REQ-34.3-01: the 9 constant URL openers going straight to
   // shell.openExternal path (all pushed as an 'openExternal' frame, the
   // same parity path appShellFlows.test.ts's own openers assert against) ────
 
@@ -364,21 +369,53 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     expect((pushed?.args as unknown[])?.[0]).toBe(synthetic)
   })
 
-  it('REQ-34.3-01 openFolder (send) forwards args[0] verbatim to shell.openExternal', async () => {
-    const { input, frames } = startSidecar()
-    const synthetic = 'https://example.com/synthetic-open-folder-test'
-    writeSend(input, 'open-folder-1', 'openFolder', [synthetic])
-    await flush()
+  it('openFolder (send) opens an existing directory via shell.openPath', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gamelib-open-folder-'))
+    const { input } = startSidecar()
+    writeSend(input, 'open-folder-1', 'openFolder', [dir])
+    await flushFs()
+    expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_SHELL_OPEN_PATH, [
+      dir
+    ])
+    rmSync(dir, { recursive: true, force: true })
+  })
 
-    const pushed = frames.find((f) => f.kind === 'openExternal') as
-      | { args?: unknown[] }
-      | undefined
-    expect(pushed).toBeDefined()
-    expect((pushed?.args as unknown[])?.[0]).toBe(synthetic)
+  it('openFolder (send) reveals an existing file instead of opening it', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gamelib-open-folder-'))
+    const file = join(dir, 'a.txt')
+    writeFileSync(file, 'x')
+    const { input } = startSidecar()
+    writeSend(input, 'open-folder-2', 'openFolder', [file])
+    await flushFs()
+    expect(mockRequestRustInvoke).toHaveBeenCalledWith(
+      RUST_SHELL_SHOW_ITEM_IN_FOLDER,
+      [file]
+    )
+    expect(mockRequestRustInvoke).not.toHaveBeenCalledWith(
+      RUST_SHELL_OPEN_PATH,
+      expect.anything()
+    )
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('openFolder (send) rejects a relative path with no platform call', async () => {
+    const { input, frames } = startSidecar()
+    writeSend(input, 'open-folder-3', 'openFolder', ['relative/dir'])
+    await flushFs()
+    expect(mockRequestRustInvoke).not.toHaveBeenCalled()
+    expect(frames.find((f) => f.kind === 'openExternal')).toBeUndefined()
+  })
+
+  it('openExternalUrl (send) rejects a file:// URL with no platform call', async () => {
+    const { input, frames } = startSidecar()
+    writeSend(input, 'open-external-url-3', 'openExternalUrl', ['file:///x'])
+    await flush()
+    expect(frames.find((f) => f.kind === 'openExternal')).toBeUndefined()
+    expect(mockRequestRustInvoke).not.toHaveBeenCalled()
   })
 
   it('openExternalUrl (send) does not treat a non-http scheme that merely starts with "http" as a URL', async () => {
-    // Todo `sidecar-log-output-shares-the-rpc-stdout-pipe`: `openUrlOrFile`
+    // Todo `sidecar-log-output-shares-the-rpc-stdout-pipe`: the old helper
     // used `startsWith('http')`, so `httpfoo:` reached the shell's
     // `openExternal` frame arm.
     const { input, frames } = startSidecar()
@@ -392,28 +429,41 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
 
   // ── REQ-34.3-01: showConfigFileInFolder — the two-branch body, reaching
   // shell.openPath -> RUST_SHELL_OPEN_PATH (configPath/gamesConfigPath are
-  // filesystem paths, not http URLs, so openUrlOrFile takes its openPath
+  // filesystem paths, not http URLs,
   // branch, not openExternal) ───────────────────────────────────────────────
 
-  it("REQ-34.3-01 showConfigFileInFolder('default') reaches shell.openPath with configPath", async () => {
+  it("REQ-34.3-01 showConfigFileInFolder('default') reveals configPath", async () => {
     const { input } = startSidecar()
     writeSend(input, 'config-default-1', 'showConfigFileInFolder', ['default'])
     await flush()
 
-    expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_SHELL_OPEN_PATH, [
-      configPath
-    ])
+    expect(mockRequestRustInvoke).toHaveBeenCalledWith(
+      RUST_SHELL_SHOW_ITEM_IN_FOLDER,
+      [configPath]
+    )
   })
 
-  it('REQ-34.3-01 showConfigFileInFolder(appName) reaches shell.openPath with GamesConfig/<appName>.json', async () => {
+  it('REQ-34.3-01 showConfigFileInFolder(appName) reveals GamesConfig/<appName>.json', async () => {
     const { input } = startSidecar()
     writeSend(input, 'config-app-1', 'showConfigFileInFolder', ['my-test-app'])
     await flush()
 
     const expectedPath = join(gamesConfigPath, 'my-test-app.json')
-    expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_SHELL_OPEN_PATH, [
-      expectedPath
-    ])
+    expect(mockRequestRustInvoke).toHaveBeenCalledWith(
+      RUST_SHELL_SHOW_ITEM_IN_FOLDER,
+      [expectedPath]
+    )
+    expect(mockRequestRustInvoke).not.toHaveBeenCalledWith(
+      RUST_SHELL_OPEN_PATH,
+      expect.anything()
+    )
+  })
+
+  it('showConfigFileInFolder rejects a traversing appName', async () => {
+    const { input } = startSidecar()
+    writeSend(input, 'config-app-2', 'showConfigFileInFolder', ['../evil'])
+    await flush()
+    expect(mockRequestRustInvoke).not.toHaveBeenCalled()
   })
 
   // ── REQ-34.3-01: showItemInFolder — SYNCHRONOUS body, guarded by

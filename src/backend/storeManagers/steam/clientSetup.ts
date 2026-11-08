@@ -30,7 +30,8 @@ import { join } from 'path'
 import { existsSync, mkdirSync } from 'graceful-fs'
 import { GlobalConfig } from 'backend/config'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { openUrlOrFile, spawnAsync } from 'backend/utils'
+import { spawnAsync } from 'backend/utils'
+import { shell } from 'backend/platform'
 import { isMac, isLinux } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
 import { SteamUser } from './user'
@@ -201,7 +202,7 @@ interface StartGuidedInstallResult {
 export async function startGuidedClientInstall(): Promise<StartGuidedInstallResult> {
   if (isLinux) {
     try {
-      await openUrlOrFile(STEAM_DOWNLOAD_URL)
+      await shell.openExternal(STEAM_DOWNLOAD_URL)
       return { status: 'link-opened' }
     } catch (error) {
       logError(

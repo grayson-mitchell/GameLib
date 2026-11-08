@@ -44,9 +44,9 @@
  *     - `quit` -> `backend/utils`'s `handleExit()` (`main.ts:680`), reaching
  *       `platformApi.app.exit()` -> the existing `app_exit` rustInvoke arm
  *     - `openReleases`/`openWebviewPage` -> thin
- *       re-wirings of `backend/utils`'s `openUrlOrFile()` (`main.ts:716/727/
- *       730-732`), reaching `platformApi.shell.openExternal`/`openPath` ->
- *       the existing `open_external`/`shell_open_path` rustInvoke arms
+ *       `platformApi.shell.openExternal` wirings (`openWebviewPage` gated by
+ *       `assertOpenableExternalUrl`, Phase 72 D-07), reaching the existing
+ *       `open_external` rustInvoke arm
  *     - `abort` -> `callAbortController(id)`, imported directly from
  *       `utils/aborthandler/aborthandler.ts` (`main.ts:15` shape) — NOT via
  *       `utils/ipc_handler.ts` (D-09 below)
@@ -178,7 +178,8 @@ import {
 } from '../appshell/appManagement'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
 import { acknowledgeDialogDisplay } from '../dialog/displayAck'
-import { handleExit, openUrlOrFile, detectVCRedist } from '../utils'
+import { handleExit, detectVCRedist } from '../utils'
+import { assertOpenableExternalUrl } from './openPolicy'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
 import { GlobalConfig } from '../config'
 import { libraryManagerMap } from '../storeManagers'
@@ -353,15 +354,21 @@ export function registerAppShellFlows(
   })
 
   ipcMain.on('openReleases', () => {
-    openUrlOrFile(heroicGithubURL).catch((error) =>
+    void Promise.resolve(shell.openExternal(heroicGithubURL)).catch((error) =>
       logSendFailure('openReleases', error)
     )
   })
 
   ipcMain.on('openWebviewPage', (_event: unknown, ...args: unknown[]) => {
-    openUrlOrFile(args[0] as string).catch((error) =>
+    try {
+      void Promise.resolve(
+        shell.openExternal(
+          assertOpenableExternalUrl(args[0], 'openWebviewPage')
+        )
+      ).catch((error) => logSendFailure('openWebviewPage', error))
+    } catch (error) {
       logSendFailure('openWebviewPage', error)
-    )
+    }
   })
 
   ipcMain.on('abort', (_event: unknown, ...args: unknown[]) => {

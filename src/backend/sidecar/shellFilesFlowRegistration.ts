@@ -7,20 +7,20 @@
  * functions UNCHANGED:
  *
  *   send (ipcMain.on, 17):
- *     - `openExternalUrl` -> `utils.ts`'s `openUrlOrFile(args[0])` (`main.ts:735`)
- *     - `openFolder` -> `openUrlOrFile(args[0])` (`main.ts:736`)
- *     - `openSupportPage` -> `openUrlOrFile(supportURL)` (`main.ts:737`)
- *     - `openWeblate` -> `openUrlOrFile(weblateUrl)` (`main.ts:739`)
- *     - `openLoginPage` -> `openUrlOrFile(epicLoginUrl)` (`main.ts:741`)
- *     - `openDiscordLink` -> `openUrlOrFile(discordLink)` (`main.ts:742`)
- *     - `openKofiPage` -> `openUrlOrFile(kofiPage)` (`main.ts:744`)
- *     - `openGithubSponsorsPage` -> `openUrlOrFile(githubSponsorsPage)` (`main.ts:745`)
- *     - `openWinePrefixFAQ` -> `openUrlOrFile(wineprefixFAQ)` (`main.ts:748`)
- *     - `openWikiLink` -> `openUrlOrFile(wikiLink)` (`main.ts:750`)
- *     - `openSidInfoPage` -> `openUrlOrFile(sidInfoUrl)` (`main.ts:751`)
+ *     - `openExternalUrl` -> `assertOpenableExternalUrl` then `shell.openExternal` (Phase 72 D-07)
+ *     - `openFolder` -> `classifyFolderTarget`: open a directory, reveal a file or bundle (Phase 72 D-07/D-08)
+ *     - `openSupportPage` -> `shell.openExternal(supportURL)` (`main.ts:737`)
+ *     - `openWeblate` -> `shell.openExternal(weblateUrl)` (`main.ts:739`)
+ *     - `openLoginPage` -> `shell.openExternal(epicLoginUrl)` (`main.ts:741`)
+ *     - `openDiscordLink` -> `shell.openExternal(discordLink)` (`main.ts:742`)
+ *     - `openKofiPage` -> `shell.openExternal(kofiPage)` (`main.ts:744`)
+ *     - `openGithubSponsorsPage` -> `shell.openExternal(githubSponsorsPage)` (`main.ts:745`)
+ *     - `openWinePrefixFAQ` -> `shell.openExternal(wineprefixFAQ)` (`main.ts:748`)
+ *     - `openWikiLink` -> `shell.openExternal(wikiLink)` (`main.ts:750`)
+ *     - `openSidInfoPage` -> `shell.openExternal(sidInfoUrl)` (`main.ts:751`)
  *     - `showConfigFileInFolder` -> inline two-branch body: `args[0] === 'default'`
- *       -> `openUrlOrFile(configPath)`, else -> `openUrlOrFile(join(gamesConfigPath,
- *       '${appName}.json'))` (`main.ts:755-760`)
+ *       -> reveal `configPath`, else -> reveal the contained
+ *       `gamesConfigPath/${appName}.json` (Phase 72 D-08; never opened)
  *     - `removeFolder` -> `utils.ts`'s `removeFolder(path, folderName)` — `args[0]`
  *       is a TWO-ELEMENT ARRAY `[path, folderName]`, not two positional args
  *       (`main.ts:762-764`)
@@ -91,9 +91,10 @@
  *     plan 34.3-04 into `loggerFlowRegistration.ts`.
  */
 
-import { ipcMain } from '../platform'
+import { ipcMain, shell } from '../platform'
+import { assertOpenableExternalUrl, classifyFolderTarget } from './openPolicy'
+import { assertContainedPath } from './rendererPathGuard'
 import {
-  openUrlOrFile,
   showItemInFolder as showItemInFolderImpl,
   getShellPath,
   removeFolder,
@@ -143,70 +144,82 @@ function logSendFailure(channel: string, error: unknown): void {
  * registration onto the handler registry happens.
  */
 export function registerShellFilesFlows(): void {
-  // ── send (11): the 11 URL openers sharing the openUrlOrFile code path ────
+  // ── send (11): the URL openers (constant URLs go straight to shell.openExternal) ────
 
   ipcMain.on('openExternalUrl', (_event: unknown, ...args: unknown[]) => {
-    openUrlOrFile(args[0] as string).catch((error) =>
+    try {
+      void Promise.resolve(
+        shell.openExternal(
+          assertOpenableExternalUrl(args[0], 'openExternalUrl')
+        )
+      ).catch((error) => logSendFailure('openExternalUrl', error))
+    } catch (error) {
       logSendFailure('openExternalUrl', error)
-    )
+    }
   })
 
   ipcMain.on('openFolder', (_event: unknown, ...args: unknown[]) => {
-    openUrlOrFile(args[0] as string).catch((error) =>
-      logSendFailure('openFolder', error)
-    )
+    void (async () => {
+      const target = args[0] as string
+      const mode = await classifyFolderTarget(target, 'openFolder')
+      if (mode === 'open') {
+        await shell.openPath(target)
+      } else {
+        shell.showItemInFolder(target)
+      }
+    })().catch((error) => logSendFailure('openFolder', error))
   })
 
   ipcMain.on('openSupportPage', () => {
-    openUrlOrFile(supportURL).catch((error) =>
+    void Promise.resolve(shell.openExternal(supportURL)).catch((error) =>
       logSendFailure('openSupportPage', error)
     )
   })
 
   ipcMain.on('openWeblate', () => {
-    openUrlOrFile(weblateUrl).catch((error) =>
+    void Promise.resolve(shell.openExternal(weblateUrl)).catch((error) =>
       logSendFailure('openWeblate', error)
     )
   })
 
   ipcMain.on('openLoginPage', () => {
-    openUrlOrFile(epicLoginUrl).catch((error) =>
+    void Promise.resolve(shell.openExternal(epicLoginUrl)).catch((error) =>
       logSendFailure('openLoginPage', error)
     )
   })
 
   ipcMain.on('openDiscordLink', () => {
-    openUrlOrFile(discordLink).catch((error) =>
+    void Promise.resolve(shell.openExternal(discordLink)).catch((error) =>
       logSendFailure('openDiscordLink', error)
     )
   })
 
   ipcMain.on('openKofiPage', () => {
-    openUrlOrFile(kofiPage).catch((error) =>
+    void Promise.resolve(shell.openExternal(kofiPage)).catch((error) =>
       logSendFailure('openKofiPage', error)
     )
   })
 
   ipcMain.on('openGithubSponsorsPage', () => {
-    openUrlOrFile(githubSponsorsPage).catch((error) =>
-      logSendFailure('openGithubSponsorsPage', error)
+    void Promise.resolve(shell.openExternal(githubSponsorsPage)).catch(
+      (error) => logSendFailure('openGithubSponsorsPage', error)
     )
   })
 
   ipcMain.on('openWinePrefixFAQ', () => {
-    openUrlOrFile(wineprefixFAQ).catch((error) =>
+    void Promise.resolve(shell.openExternal(wineprefixFAQ)).catch((error) =>
       logSendFailure('openWinePrefixFAQ', error)
     )
   })
 
   ipcMain.on('openWikiLink', () => {
-    openUrlOrFile(wikiLink).catch((error) =>
+    void Promise.resolve(shell.openExternal(wikiLink)).catch((error) =>
       logSendFailure('openWikiLink', error)
     )
   })
 
   ipcMain.on('openSidInfoPage', () => {
-    openUrlOrFile(sidInfoUrl).catch((error) =>
+    void Promise.resolve(shell.openExternal(sidInfoUrl)).catch((error) =>
       logSendFailure('openSidInfoPage', error)
     )
   })
@@ -217,14 +230,20 @@ export function registerShellFilesFlows(): void {
   ipcMain.on(
     'showConfigFileInFolder',
     (_event: unknown, ...args: unknown[]) => {
-      const appName = args[0] as string
-      const target =
-        appName === 'default'
-          ? configPath
-          : join(gamesConfigPath, `${appName}.json`)
-      openUrlOrFile(target).catch((error) =>
+      try {
+        const appName = args[0]
+        const target =
+          appName === 'default'
+            ? configPath
+            : assertContainedPath(
+                gamesConfigPath,
+                `${String(appName)}.json`,
+                'showConfigFileInFolder'
+              )
+        shell.showItemInFolder(target)
+      } catch (error) {
         logSendFailure('showConfigFileInFolder', error)
-      )
+      }
     }
   )
 

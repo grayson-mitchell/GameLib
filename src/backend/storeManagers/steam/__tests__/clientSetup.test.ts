@@ -19,7 +19,8 @@
 import { existsSync, mkdirSync } from 'graceful-fs'
 import { join } from 'path'
 import { GlobalConfig } from 'backend/config'
-import { downloadFile, openUrlOrFile, spawnAsync } from 'backend/utils'
+import { downloadFile, spawnAsync } from 'backend/utils'
+import { shell } from 'backend/platform'
 import { logError, logInfo } from 'backend/logger'
 import { sendFrontendMessage } from '../../../ipc'
 import { SteamUser } from '../user'
@@ -44,9 +45,13 @@ jest.mock('backend/config', () => ({
   }
 }))
 
+jest.mock('backend/platform', () => ({
+  ...jest.requireActual('backend/platform'),
+  shell: { openExternal: jest.fn() }
+}))
+
 jest.mock('backend/utils', () => ({
   downloadFile: jest.fn(),
-  openUrlOrFile: jest.fn(),
   spawnAsync: jest.fn()
 }))
 
@@ -83,7 +88,7 @@ const mockedExistsSync = existsSync as jest.Mock
 const mockedMkdirSync = mkdirSync as jest.Mock
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockedDownloadFile = downloadFile as jest.Mock
-const mockedOpenUrlOrFile = openUrlOrFile as jest.Mock
+const mockedOpenExternal = shell.openExternal as jest.Mock
 const mockedSpawnAsync = spawnAsync as jest.Mock
 const mockedIsSteamClientInstalled =
   SteamUser.isSteamClientInstalled as jest.Mock
@@ -103,7 +108,7 @@ describe('clientSetup.ts', () => {
     mockedMkdirSync.mockReset()
     mockedGlobalConfigGet.mockReset()
     mockedDownloadFile.mockReset()
-    mockedOpenUrlOrFile.mockReset()
+    mockedOpenExternal.mockReset()
     mockedSpawnAsync.mockReset()
     mockedIsSteamClientInstalled.mockReset()
     mockedSendFrontendMessage.mockReset()
@@ -119,7 +124,7 @@ describe('clientSetup.ts', () => {
       getSettings: () => ({ defaultSteamPath: '/home/user/.steam/steam' })
     })
     mockedDownloadFile.mockResolvedValue(undefined)
-    mockedOpenUrlOrFile.mockResolvedValue(undefined)
+    mockedOpenExternal.mockResolvedValue(undefined)
     mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
   })
 
@@ -281,7 +286,7 @@ describe('clientSetup.ts', () => {
         'Steam'
       )
       expect(mockedLogError).not.toHaveBeenCalled()
-      expect(mockedOpenUrlOrFile).not.toHaveBeenCalled()
+      expect(mockedOpenExternal).not.toHaveBeenCalled()
     })
 
     it('D-UAT-17/T-0yc-01: the installer path reaches PowerShell as one single-quoted literal with apostrophes doubled', async () => {
@@ -385,7 +390,7 @@ describe('clientSetup.ts', () => {
       const [spawnedCommand, spawnedArgs] = mockedSpawnAsync.mock.calls[0]
       expect(spawnedCommand).toBe('open')
       expect(spawnedArgs[0]).toContain('.dmg')
-      expect(mockedOpenUrlOrFile).not.toHaveBeenCalled()
+      expect(mockedOpenExternal).not.toHaveBeenCalled()
     })
 
     it('D-UAT-17: macOS reports a failed `open` as status "error"', async () => {
@@ -413,7 +418,7 @@ describe('clientSetup.ts', () => {
       const result = await startGuidedClientInstall()
 
       expect(result).toEqual({ status: 'link-opened' })
-      expect(mockedOpenUrlOrFile).toHaveBeenCalledWith(STEAM_DOWNLOAD_URL)
+      expect(mockedOpenExternal).toHaveBeenCalledWith(STEAM_DOWNLOAD_URL)
       expect(mockedDownloadFile).not.toHaveBeenCalled()
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
     })
