@@ -11,10 +11,13 @@
  * All assertions run against COMMENT-STRIPPED main.rs (layering `stripSourceComments` then
  * `stripTrailingLineComment`, exactly as `tauriShellSource.test.ts` does -- never a hand-rolled
  * `/\/\/.*$/` replace, which is the WR-08 regression class `stripTrailingLineComment` exists to
- * avoid), and all production-code-scoped assertions are bounded to everything before
- * `mod tests {`.
+ * avoid), and all production-code-scoped assertions are bounded to production code
+ * (each file's own test modules cut).
  */
-import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import {
+  readTauriShellProductionSource,
+  readTauriShellSource
+} from 'backend/testUtils/tauriShellSource'
 import {
   stripSourceComments,
   stripTrailingLineComment
@@ -33,15 +36,13 @@ function loadMainRsCode(source?: string): string {
 }
 
 /**
- * Bounds the search to PRODUCTION code only -- everything before `mod tests {` -- mirroring
- * `tauriShellSource.test.ts`'s own identical helper and rationale: a whole-file count would
- * conflate "how many cargo tests exercise this helper" with "how many production call sites
- * exist", which is the thing the exactly-once acceptance criteria below actually police.
+ * Production code only: `readTauriShellProductionSource()` cuts each file's own `#[cfg(test)] mod`
+ * blocks (Phase 71 D-10), so a whole-file count never conflates "how many cargo tests exercise
+ * this helper" with "how many production call sites exist" -- and a module that gains co-located
+ * tests cannot cut off the files after it.
  */
-function productionCode(code: string): string {
-  const testModStart = code.indexOf('mod tests {')
-  expect(testModStart).toBeGreaterThan(-1)
-  return code.slice(0, testModStart)
+function productionCode(): string {
+  return loadMainRsCode(readTauriShellProductionSource())
 }
 
 /**
@@ -87,7 +88,7 @@ function extractHumbleLoginOpenArmBody(code: string): string {
 
 describe('fn login_chrome_css_script( exists exactly once in production code', () => {
   test('the real source defines it exactly once', () => {
-    const code = productionCode(loadMainRsCode())
+    const code = productionCode()
     const defs = code.match(/fn login_chrome_css_script\(/g) ?? []
     expect(defs.length).toBe(1)
   })
@@ -95,7 +96,7 @@ describe('fn login_chrome_css_script( exists exactly once in production code', (
 
 describe("login_chrome_css_script( is called exactly once in production code, inside humble_login_open's FIRST if-visible block", () => {
   test('exactly one non-definition call site exists, and it sits inside the if visible { block', () => {
-    const code = productionCode(loadMainRsCode())
+    const code = productionCode()
     // Negative lookbehind excludes the `fn login_chrome_css_script(` definition itself --
     // the usual definition-vs-call idiom.
     const callSites = code.match(/(?<!fn )login_chrome_css_script\(/g) ?? []
@@ -154,7 +155,7 @@ describe('D-2 gate: the login_chrome_css_script( call site is provably OUTSIDE a
   }
 
   test('the real source: the CSS call sits at brace depth 1 of the visible block (no enclosing cfg block) and has no cfg attribute on the line above', () => {
-    const code = productionCode(loadMainRsCode())
+    const code = productionCode()
     const armBody = extractHumbleLoginOpenArmBody(code)
     const prefix = prefixBeforeCssCall(armBody)
     expect(depthAtCall(prefix)).toBe(1)
@@ -174,7 +175,7 @@ describe('D-2 gate: the login_chrome_css_script( call site is provably OUTSIDE a
       'RustInvokeChannel::HumbleLoginCookies => {}',
       'mod tests {'
     ].join('\n')
-    const code = productionCode(loadMainRsCode(synthetic))
+    const code = loadMainRsCode(synthetic)
     const armBody = extractHumbleLoginOpenArmBody(code)
     // Depth 2 -- the real gate's `expect(depth).toBe(1)` would FAIL against this input,
     // proving that assertion is not vacuously true.
@@ -192,7 +193,7 @@ describe('D-2 gate: the login_chrome_css_script( call site is provably OUTSIDE a
       'RustInvokeChannel::HumbleLoginCookies => {}',
       'mod tests {'
     ].join('\n')
-    const code = productionCode(loadMainRsCode(synthetic))
+    const code = loadMainRsCode(synthetic)
     const armBody = extractHumbleLoginOpenArmBody(code)
     // The attribute line sits directly above the call -- the real gate's
     // `not.toContain('#[cfg(')` would FAIL against this input.

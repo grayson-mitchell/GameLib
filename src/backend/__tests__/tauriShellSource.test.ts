@@ -21,7 +21,9 @@ import {
   GENERATED_MODULES,
   PRE_SPLIT_SIBLING_MODULES,
   readHandlerBody,
+  readMacosEpicEmbedSource,
   readTauriShellFile,
+  readTauriShellProductionSource,
   readTauriShellSource,
   readTopLevelFnBody,
   stripRustTestModules
@@ -2241,18 +2243,9 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
     return code.slice(start, end)
   }
 
-  /**
-   * Bounds the search to PRODUCTION code only -- everything before `mod tests {` -- mirroring
-   * Plan 03's own identical helper and its rationale verbatim: `login_cancel_strip_script` is a
-   * pure, cargo-tested helper (Task 1) with multiple call sites inside `mod tests` by design; a
-   * whole-file count would conflate "how many cargo tests exercise this helper" with "how many
-   * production call sites exist", which is the thing this plan's own `exactly ONCE`
-   * acceptance criterion actually polices.
-   */
-  function productionCode(code: string): string {
-    const testModStart = code.indexOf('mod tests {')
-    expect(testModStart).toBeGreaterThan(-1)
-    return code.slice(0, testModStart)
+  /** Production code only: each file's own test modules cut (Phase 71 D-10). */
+  function productionCode(): string {
+    return loadMainRsCode(readTauriShellProductionSource())
   }
 
   // quick-261029-osq: REPLACES Plan 08's Test 1 (login_cancel_strip_script( called exactly
@@ -2263,7 +2256,7 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
   // bar install is unconfirmed is never presented (no sheet without a visible exit,
   // T-34.4.2-15 / T-osq-02).
   test("Test 1: install_native_login_bar( is called inside the humble_login_open arm's visible macOS path, before present_login_window_as_sheet(, and a sheet is presented only when the install was confirmed", () => {
-    const code = productionCode(loadMainRsCode())
+    const code = productionCode()
     const armBody = extractHumbleLoginOpenArmBody(code)
     const installIdx = armBody.indexOf('install_native_login_bar(')
     expect(installIdx).toBeGreaterThan(-1)
@@ -2282,7 +2275,7 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
   })
 
   test('Test 2: the humble_login_open arm has no .on_navigation( closure and no is_login_cancel_request -- the /login-cancel sentinel channel is deleted', () => {
-    const code = productionCode(loadMainRsCode())
+    const code = productionCode()
     const armBody = extractHumbleLoginOpenArmBody(code)
     expect(armBody).not.toContain('.on_navigation(')
     expect(code).not.toContain('is_login_cancel_request')
@@ -2364,14 +2357,9 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
 // must not advertise a keyboard affordance it cannot deliver). Live behaviour is NOT claimed
 // by any test below -- these are source guards only, per this plan's own acceptance criteria.
 describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes', () => {
-  /**
-   * Bounds the search to PRODUCTION code only -- everything before `mod tests {` -- mirroring
-   * Plan 08's own identical helper and its rationale verbatim.
-   */
-  function productionCode(code: string): string {
-    const testModStart = code.indexOf('mod tests {')
-    expect(testModStart).toBeGreaterThan(-1)
-    return code.slice(0, testModStart)
+  /** Production code only: each file's own test modules cut (Phase 71 D-10). */
+  function productionCode(): string {
+    return loadMainRsCode(readTauriShellProductionSource())
   }
 
   // CONVERTED TO A ZERO-OCCURRENCE NEGATIVE (Phase 34.4.2 Plan 13, operator decision D-A):
@@ -2382,7 +2370,7 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
   // so this is a real retightening, not housekeeping: it now asserts the call form is gone
   // entirely, which is what "the last call site left with the poster" actually means.
   test('Test 1: .makeKeyAndOrderFront(None) — the CALL form — appears 0 times in the comment-stripped PRODUCTION source; its sole call site left with the deleted synthesized-right-click poster (Plan 13, D-A)', () => {
-    const code = productionCode(loadMainRsCode())
+    const code = productionCode()
     const callMatches = code.match(/\.makeKeyAndOrderFront\(None\)/g) ?? []
     expect(callMatches.length).toBe(0)
   })
@@ -2408,7 +2396,7 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
   })
 
   test('Test 3 (WR-01, T-34.4.2-08 preserved): register_presented_login_sheet( appears exactly three times as a call site in production source -- the present-path registration plus the two dismiss failure arms', () => {
-    const code = productionCode(loadMainRsCode())
+    const code = productionCode()
     // Negative lookbehind excludes the `fn register_presented_login_sheet(` definition itself.
     const callSites =
       code.match(/(?<!fn )register_presented_login_sheet\(/g) ?? []
@@ -4744,5 +4732,102 @@ describe('production-source reader (Phase 71 D-10)', () => {
       'login_window.rs',
       'login_window/a.rs'
     ])
+  })
+})
+
+// Wave-0 baseline: .planning/phases/71-rust-shell-module-decomposition/baselines/wave-0-start.
+// Counts measured over the OLD slice (`readTauriShellSource()` cut at the first `mod tests {`) and
+// over the new production reader on the unmoved tree: identical for every needle.
+describe('D-10 production reader proof (Phase 71 wave 0)', () => {
+  const SHELL_SRC = join(__dirname, '..', '..', '..', 'src-tauri', 'src')
+
+  // Topic-named test mods living in the combined (non-main) files today. main.rs's own `mod tests`
+  // is handled separately below.
+  const EXPECTED_TEST_MOD_NAMES = ['relay_allow_list_tests', 'shell_open_tests']
+
+  test('per file: strip removes exactly the enumerated test-mod line ranges and nothing else', () => {
+    const names: string[] = []
+    for (const f of listTauriShellSourceFiles().filter(
+      (p) => p !== 'main.rs'
+    )) {
+      const src = readTauriShellFile(f)
+      const blocks = listRustTestModuleBlocks(src)
+      const lines = src.split('\n')
+      const expected = lines
+        .filter(
+          (_, i) => !blocks.some((b) => i >= b.startLine && i <= b.endLine)
+        )
+        .join('\n')
+      expect(stripRustTestModules(src)).toBe(expected)
+      names.push(...blocks.map((b) => b.name))
+    }
+    expect(names.sort()).toEqual(EXPECTED_TEST_MOD_NAMES)
+  })
+
+  test('main.rs: stripped text equals the old slice before `#[cfg(test)]` + its mod tests, modulo trailing newline', () => {
+    const main = readTauriShellFile('main.rs')
+    const oldSlice = main.slice(0, main.indexOf('#[cfg(test)]\nmod tests {'))
+    expect(main).toContain('#[cfg(test)]\nmod tests {')
+    expect(stripRustTestModules(main).trimEnd()).toBe(oldSlice.trimEnd())
+  })
+
+  test('pinned needle counts over the production source equal the wave-0 baseline', () => {
+    const code = loadMainRsCode(readTauriShellProductionSource())
+    const count = (re: RegExp): number => (code.match(re) ?? []).length
+    expect(count(/fn login_chrome_css_script\(/g)).toBe(1)
+    expect(count(/(?<!fn )login_chrome_css_script\(/g)).toBe(1)
+    // The plan quoted 1; the whole-source count is 2 (the arm body, which the pin scopes to, has 1).
+    expect(count(/(?<!fn )install_native_login_bar\(/g)).toBe(2)
+    expect(count(/\.makeKeyAndOrderFront\(None\)/g)).toBe(0)
+    expect(count(/(?<!fn )register_presented_login_sheet\(/g)).toBe(3)
+    expect(count(/(?<!fn )request_login_sheet_cancel\(/g)).toBe(2)
+  })
+
+  test('readMacosEpicEmbedSource() is the parent file text (plus any macos_epic_embed/ split files)', () => {
+    const parent = readFileSync(join(SHELL_SRC, 'macos_epic_embed.rs'), 'utf-8')
+    const got = readMacosEpicEmbedSource()
+    if (existsSync(join(SHELL_SRC, 'macos_epic_embed'))) {
+      expect(got.startsWith(parent)).toBe(true)
+    } else {
+      expect(got).toBe(parent)
+    }
+  })
+})
+
+describe('no reader slices the combined shell source on mod tests (D-10)', () => {
+  const REPO_ROOT = join(__dirname, '..', '..', '..')
+
+  it('no test or meta script slices on `mod tests {` via indexOf/split', () => {
+    const ALLOWED: Record<string, string> = {
+      'src/backend/testUtils/tauriShellSource.ts':
+        'the helper itself (documents the old idiom)',
+      'src/backend/__tests__/tauriShellSource.test.ts':
+        'this guard (its regex and fixtures name the idiom)'
+    }
+    const offenders: string[] = []
+    const visit = (dir: string): void => {
+      for (const e of readdirSync(join(REPO_ROOT, dir), {
+        withFileTypes: true
+      })) {
+        const rel = `${dir}/${e.name}`
+        if (e.isDirectory()) {
+          if (e.name !== 'node_modules') visit(rel)
+        } else if (/\.(ts|tsx)$/.test(e.name) && !(rel in ALLOWED)) {
+          const code = stripSourceComments(
+            readFileSync(join(REPO_ROOT, rel), 'utf-8')
+          )
+          if (
+            /indexOf\((['"\x60])mod tests \{\1\)|split\((['"\x60])mod tests \{\2\)/.test(
+              code
+            )
+          ) {
+            offenders.push(rel)
+          }
+        }
+      }
+    }
+    visit('src')
+    visit('meta')
+    expect(offenders).toEqual([])
   })
 })
