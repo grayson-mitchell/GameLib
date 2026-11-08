@@ -81,7 +81,6 @@ import EngineBadge from './components/EngineBadge'
 import EngineNotices from './components/EngineNotices'
 import { engineStateKey, useEngineState } from 'frontend/state/EngineState'
 import { hasAnticheatInfo } from 'frontend/hooks/hasAnticheatInfo'
-import { hasHelp } from 'frontend/hooks/hasHelp'
 import Genres from './components/Genres'
 import ReleaseDate from './components/ReleaseDate'
 import { hasKnownFixes } from 'frontend/hooks/hasKnownFixes'
@@ -124,17 +123,6 @@ export default React.memo(function GamePage(): JSX.Element | null {
   } = useContext(ContextProvider)
 
   const { settingsModalProps } = useGlobalState.keys('settingsModalProps')
-
-  hasHelp(
-    'gamePage',
-    t('help.title.gamePage', 'Game Page'),
-    <p>
-      {t(
-        'help.content.gamePage',
-        'Show all game details and actions. Use the 3 dots menu for more options.'
-      )}
-    </p>
-  )
 
   const [gameInfo, setGameInfo] = useState(locationGameInfo)
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null)

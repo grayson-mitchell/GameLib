@@ -6,16 +6,12 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import { ExperimentalFeatures as IExperimentalFeatures } from 'common/types'
 
 const ExperimentalFeatures = () => {
-  const FEATURES: (keyof IExperimentalFeatures)[] = [
-    'enableHelp',
-    'cometSupport'
-  ]
+  const FEATURES: (keyof IExperimentalFeatures)[] = ['cometSupport']
 
   const { t } = useTranslation()
   const [experimentalFeatures, setExperimentalFeatures] = useSetting(
     'experimentalFeatures',
     {
-      enableHelp: false,
       cometSupport: true
     }
   )
@@ -32,8 +28,6 @@ const ExperimentalFeatures = () => {
 
   /*
     Translations:
-    t('setting.experimental_features.enableNewDesign', 'New design')
-    t('setting.experimental_features.enableHelp', 'Help component')
     t('setting.experimental_features.cometSupport', 'Comet support')
   */
 

@@ -14,7 +14,6 @@ import SteamManagedItem from './components/SteamManagedItem'
 import { steamManagedRows } from './components/SteamManagedItem/steamManagedModel'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { useSteamSetupDownloads } from 'frontend/state/SteamSetupDownloads'
-import { hasHelp } from 'frontend/hooks/hasHelp'
 
 export default React.memo(function DownloadManager(): JSX.Element | null {
   const { t } = useTranslation()
@@ -27,14 +26,6 @@ export default React.memo(function DownloadManager(): JSX.Element | null {
   const [plannendElements, setPlannendElements] = useState<DMQueueElement[]>([])
   const [currentElement, setCurrentElement] = useState<DMQueueElement>()
   const [finishedElem, setFinishedElem] = useState<DMQueueElement[]>()
-
-  hasHelp(
-    'downloadManager',
-    t('help.title.downloadManager', 'Download Manager'),
-    <p>
-      {t('help.content.downloadManager', 'Shows current and past downloads.')}
-    </p>
-  )
 
   useEffect(() => {
     setRefreshing(true)

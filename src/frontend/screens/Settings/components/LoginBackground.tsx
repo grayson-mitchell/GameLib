@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { InfoBox, PathSelectionBox } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from '../SettingsContext'
-import { hasHelp } from 'frontend/hooks/hasHelp'
 
 /**
  * Picks the image used behind the Manage Accounts (Login) screen.
@@ -28,12 +27,6 @@ const LoginBackground = () => {
   const helpContent = t(
     'gamelib:settings.loginBackgroundHelp',
     'Image shown behind the Manage Accounts screen. Clear the field to go back to the bundled artwork. PNG, JPEG, WebP, AVIF and GIF are supported.'
-  )
-
-  hasHelp(
-    'loginBackgroundPath',
-    t('gamelib:settings.loginBackground', 'Manage Accounts background'),
-    <p>{helpContent}</p>
   )
 
   return (

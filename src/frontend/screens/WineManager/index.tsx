@@ -12,7 +12,6 @@ import { faCheck, faSyncAlt, faCog } from '@fortawesome/free-solid-svg-icons'
 import { WineVersionInfo, Type, WineManagerUISettings } from 'common/types'
 import SearchBar from 'frontend/components/UI/SearchBar'
 import WineManagerSettingsModal from './components/WineManagerSettingsModal'
-import { hasHelp } from 'frontend/hooks/hasHelp'
 import classNames from 'classnames'
 import useGlobalState from 'frontend/state/GlobalStateV2'
 
@@ -22,17 +21,6 @@ const WineItem = lazy(
 
 export default function WineManager(): JSX.Element | null {
   const { t } = useTranslation()
-
-  hasHelp(
-    'wineManager',
-    t('help.title.wineManager', 'Wine Manager'),
-    <p>
-      {t(
-        'help.content.wineManager',
-        'Install different versions of Wine, Proton, Crossover, etc.'
-      )}
-    </p>
-  )
 
   const { platform } = useContext(ContextProvider)
   const isLinux = platform === 'linux'

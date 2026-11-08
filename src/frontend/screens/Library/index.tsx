@@ -39,7 +39,6 @@ import {
   StoreFacetValue
 } from 'frontend/types'
 import useGlobalState from 'frontend/state/GlobalStateV2'
-import { hasHelp } from 'frontend/hooks/hasHelp'
 import { reconcileNonAvailableGames } from 'frontend/hooks/constants'
 import EmptyLibraryMessage from './components/EmptyLibrary'
 import CategoriesManager from './components/CategoriesManager'
@@ -117,12 +116,6 @@ export default React.memo(function Library(): JSX.Element {
     focusRow,
     libraryStatus
   } = useContext(ContextProvider)
-
-  hasHelp(
-    'library',
-    t('help.title.library', 'Library'),
-    <p>{t('help.content.library', 'Shows all owned games.')}</p>
-  )
 
   const [layout, setLayout] = useState(storage.getItem('layout') || 'grid')
   const handleLayout = (layout: string) => {

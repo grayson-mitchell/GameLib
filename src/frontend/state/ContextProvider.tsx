@@ -113,13 +113,7 @@ const initialContext: ContextType = {
   setHideChangelogsOnStartup: () => null,
   lastChangelogShown: null,
   setLastChangelogShown: () => null,
-  help: {
-    items: {},
-    addHelpItem: () => null,
-    removeHelpItem: () => null
-  },
   experimentalFeatures: {
-    enableHelp: false,
     cometSupport: true
   },
   handleExperimentalFeatures: () => null,

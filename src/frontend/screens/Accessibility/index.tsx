@@ -16,7 +16,6 @@ import ToggleSwitch from 'frontend/components/UI/ToggleSwitch'
 import SettingsContext from '../Settings/SettingsContext'
 import useSettingsContext from '../../hooks/useSettingsContext'
 import './index.css'
-import { hasHelp } from 'frontend/hooks/hasHelp'
 import { LoginBackground } from '../Settings/components'
 import { MenuItem, SelectChangeEvent } from '@mui/material'
 import { queryLocalFontsSafe } from './queryLocalFontsSafe'
@@ -42,17 +41,6 @@ const Accessibility = React.memo(function Accessibility() {
     disableAnimations,
     setDisableAnimations
   } = useContext(ContextProvider)
-
-  hasHelp(
-    'accessibility',
-    t('help.title.accessibility', 'Appearance'),
-    <p>
-      {t(
-        'help.content.accessibility',
-        'Shows appearance and accessibility settings.'
-      )}
-    </p>
-  )
 
   const [fonts, setFonts] = useState<string[]>([])
   const [contentFont, setContentFont] = useState('')

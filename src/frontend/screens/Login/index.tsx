@@ -23,7 +23,6 @@ import HumbleLogin from './components/HumbleLogin'
 import OAuthLogin, { type OAuthOverlayRunner } from './components/OAuthLogin'
 import ContextProvider from '../../state/ContextProvider'
 import { useAwaited } from '../../hooks/useAwaited'
-import { hasHelp } from 'frontend/hooks/hasHelp'
 import { collectSignInInputs } from 'frontend/helpers/signInInputs'
 import { resolveSignInStates } from 'common/signInState'
 import { resolveSignInTile } from './signInTileState'
@@ -77,12 +76,6 @@ export default React.memo(function NewLogin() {
   // Fork-owned strings live in gamelib.json — translation.json is upstream's
   // and meta/i18nCatalogChurnGuard.ts fails the build on any fork edit to it.
   const { t: tGamelib } = useTranslation('gamelib')
-
-  hasHelp(
-    'login',
-    t('help.title.login', 'Login'),
-    <p>{t('help.content.login', 'Log in into the different stores.')}</p>
-  )
 
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()

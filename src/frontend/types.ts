@@ -170,11 +170,6 @@ export interface ContextType {
   setHideChangelogsOnStartup: (value: boolean) => void
   lastChangelogShown: string | null
   setLastChangelogShown: (value: string) => void
-  help: {
-    items: { [key: string]: HelpItem }
-    addHelpItem: (helpItemId: string, helpItem: HelpItem) => void
-    removeHelpItem: (helpItemId: string) => void
-  }
   experimentalFeatures: ExperimentalFeatures
   handleExperimentalFeatures: (newSetting: ExperimentalFeatures) => void
   disableDialogBackdropClose: boolean
@@ -450,11 +445,6 @@ export type DMQueue = {
   elements: DMQueueElement[]
   finished: DMQueueElement[]
   state: DownloadManagerState
-}
-
-export interface HelpItem {
-  title: string
-  content: JSX.Element
 }
 
 // D-05: the Games tier-2 panel's single-select view set. 'all' is the

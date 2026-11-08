@@ -17,7 +17,7 @@ import NavShell from './components/UI/NavShell'
 import { Tier2PortalProvider } from './components/UI/NavShell/Tier2PortalContext'
 import { StoreEmbedSuppressionProvider } from './components/UI/NavShell/StoreEmbedSuppressionContext'
 import ContextProvider from './state/ContextProvider'
-import { ControllerHints, Help, OfflineMessage } from './components/UI'
+import { ControllerHints, OfflineMessage } from './components/UI'
 import DialogHandler from './components/UI/DialogHandler'
 import ExternalLinkDialog from './components/UI/ExternalLinkDialog'
 import AboutDialogHost from './components/UI/AboutDialog/AboutDialogHost'
@@ -39,15 +39,8 @@ import SteamGoOfflineNotice from './screens/Game/GamePage/components/SteamGoOffl
 import { buildMuiTheme } from './muiTheme'
 
 function Root() {
-  const {
-    isRTL,
-    isFullscreen,
-    isFrameless,
-    experimentalFeatures,
-    help,
-    disableAnimations,
-    platform
-  } = useContext(ContextProvider)
+  const { isRTL, isFullscreen, isFrameless, disableAnimations, platform } =
+    useContext(ContextProvider)
 
   const hasNativeOverlayControls = navigator['windowControlsOverlay']?.visible
 
@@ -148,7 +141,6 @@ function Root() {
                   </dialog>
                 </div>
                 {showOverlayControls && <WindowControls />}
-                {experimentalFeatures.enableHelp && <Help items={help.items} />}
               </Tier2PortalProvider>
             </TourProvider>
           )}

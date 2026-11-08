@@ -13,11 +13,7 @@ import {
   ExperimentalFeatures,
   Status
 } from 'common/types'
-import {
-  DialogModalOptions,
-  ExternalLinkDialogOptions,
-  HelpItem
-} from 'frontend/types'
+import { DialogModalOptions, ExternalLinkDialogOptions } from 'frontend/types'
 import { reduceDialogRequest } from './dialogQueue'
 import { withTranslation } from 'react-i18next'
 import { getGameInfo, getLegendaryConfig } from '../helpers'
@@ -214,7 +210,6 @@ interface StateProps {
     appName: string
     runner: Runner
   }
-  helpItems: { [key: string]: HelpItem }
   experimentalFeatures: ExperimentalFeatures
   disableDialogBackdropClose: boolean
   disableAnimations: boolean
@@ -566,9 +561,7 @@ class GlobalState extends PureComponent<Props> {
     showRedeemKeyDialog: false,
     hideChangelogsOnStartup: globalSettings?.hideChangelogsOnStartup || false,
     lastChangelogShown: JSON.parse(storage.getItem('last_changelog') || 'null'),
-    helpItems: {},
     experimentalFeatures: {
-      enableHelp: false,
       cometSupport: true,
       ...(globalSettings?.experimentalFeatures || {})
     },
@@ -2114,21 +2107,6 @@ class GlobalState extends PureComponent<Props> {
     this.sleepAssertionState = nextSleepAssertionState
   }
 
-  addHelpItem = (helpItemId: string, helpItem: HelpItem) => {
-    this.setState((previous: StateProps) => {
-      const newItems = { ...previous.helpItems }
-      newItems[helpItemId] = helpItem
-      return { helpItems: newItems }
-    })
-  }
-
-  removeHelpItem = (helpItemId: string) => {
-    this.setState((previous: StateProps) => {
-      delete previous.helpItems[helpItemId]
-      return { helpItems: { ...previous.helpItems } }
-    })
-  }
-
   render() {
     const {
       language,
@@ -2240,11 +2218,6 @@ class GlobalState extends PureComponent<Props> {
           lastChangelogShown: lastChangelogShown,
           setLastChangelogShown: this.setLastChangelogShown,
           setCurrentCustomCategories: this.setCurrentCustomCategories,
-          help: {
-            items: this.state.helpItems,
-            addHelpItem: this.addHelpItem,
-            removeHelpItem: this.removeHelpItem
-          },
           setDisableDialogBackdropClose: this.setDisableDialogBackdropClose,
           disableAnimations: this.state.disableAnimations,
           setDisableAnimations: this.setDisableAnimations

@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { InfoBox, PathSelectionBox } from 'frontend/components/UI'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from '../SettingsContext'
-import { hasHelp } from 'frontend/hooks/hasHelp'
 
 const DefaultSteamPath = () => {
   const { t } = useTranslation()
@@ -20,12 +19,6 @@ const DefaultSteamPath = () => {
   const helpContent = t(
     'help.steam_path.info',
     'The folder where Steam is installed. GameLib reads your Steam libraries, download progress and connection status from here, and uses it to add non-Steam games to Steam. On Linux, it is also where GameLib finds Proton versions.'
-  )
-
-  hasHelp(
-    'defaultSteamPath',
-    t('setting.default-steam-path', 'Default Steam path'),
-    <p>{helpContent}</p>
   )
 
   const steamPathInfo = (

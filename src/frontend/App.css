@@ -129,18 +129,11 @@ body:has(.disableAnimations) {
   }
 }
 
-.HelpButton {
-  position: fixed;
-  bottom: 0;
-  right: 0;
-}
-
 /* Disable content behind an opened dialog so it cannot be clicked */
 body:has(dialog[open]) {
   pointer-events: none;
 
-  /* Make sure content of the dialog and Help can be clicked */
-  .HelpButton,
+  /* Make sure content of the dialog can be clicked */
   dialog[open] {
     pointer-events: all;
   }
@@ -150,18 +143,6 @@ body:has(dialog[open]) {
 
 #root:focus-visible {
   outline: none;
-}
-
-/* disable links when the help is open, so users cannot navigate
-to another page but still use the elements of the current page */
-#root:has(.HelpContent.open) {
-  & a {
-    pointer-events: none;
-  }
-  /* Make sure links in Help work */
-  .HelpContent a {
-    pointer-events: all;
-  }
 }
 
 .danger {

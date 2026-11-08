@@ -104,7 +104,6 @@ export type Release = {
 }
 
 export type ExperimentalFeatures = {
-  enableHelp: boolean
   cometSupport: boolean
   umuSupport?: boolean
 }
