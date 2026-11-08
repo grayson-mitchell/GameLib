@@ -119,9 +119,6 @@ function Settings() {
             <NavLink to="/library" role="link" className="backButton">
               <ArrowCircleLeftIcon />
             </NavLink>
-            <h1 className="headerTitle" data-testid="headerTitle">
-              {title}
-            </h1>
 
             {isGeneralSettings && <GeneralSettings />}
             {isStoreSettings && <StoreSettings />}
