@@ -39,7 +39,6 @@
     "build:sidecar-sea": "pnpm build:sidecar && node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildSidecarSea.ts",
     "debug:react": "pnpm start & npx react-devtools",
     "codecheck": "tsc --noEmit && tsc -p tsconfig.meta.json --noEmit",
-    "typecheck:indexed-access": "node meta/indexedAccessRatchet.cjs",
     "planning-gates": "python3 meta/runPlanningGates.py",
     "find-deadcode": "knip --reporter json --no-exit-code | node meta/knipRatchet.cjs",
     "knip": "knip",

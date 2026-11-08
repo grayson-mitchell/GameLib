@@ -3,7 +3,7 @@
  * Phase 65 (65-01, D-01/D-02/D-13): shrink-only per-file line ceiling for
  * src/backend/storeManagers/steam/.
  *
- * Contract (same family as meta/indexedAccessRatchet.cjs):
+ * Contract (same family as meta/clippyRatchet.cjs):
  *   - No non-generated, non-test source file under steam/ may exceed 1,000
  *     lines unless it is allowlisted in meta/steamLineCeilingBaseline.json.
  *   - An allowlisted file must match its entry EXACTLY: growth fails, and a
