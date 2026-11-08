@@ -8,10 +8,6 @@ binaries	.github/workflows/release-tauri.yml	vite
 binaries	.github/workflows/rust-test.yml	vite
 binaries	package.json	esbuild
 binaries	package.json	vite
-dependencies	package.json	@tauri-apps/plugin-notification
-dependencies	package.json	@tauri-apps/plugin-opener
-dependencies	package.json	@tauri-apps/plugin-shell
-dependencies	package.json	@tauri-apps/plugin-updater
 dependencies	package.json	source-map-support
 devDependencies	package.json	@testing-library/dom
 devDependencies	package.json	@testing-library/jest-dom
