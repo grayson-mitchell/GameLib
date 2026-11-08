@@ -278,7 +278,7 @@ describe('renderer mirror parity (D-02)', () => {
     ...src.matchAll(
       /new\s+(?:CacheStore|TypeCheckedStoreFrontend)\s*(?:<[^()]*?>)?\s*\(\s*['"]([^'"]+)['"]/g
     )
-  ].map((m) => m[1])
+  ].map((m) => m[1] ?? '')
 
   test('anti-vacuity: mirrors were parsed', () => {
     expect(mirrors.length).toBeGreaterThanOrEqual(MIN_MIRRORS)
