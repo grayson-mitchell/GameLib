@@ -17,7 +17,10 @@
  * is not evidence, and this repo has repeatedly shipped ones that convict correct code or
  * acquit broken code.
  */
-import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import {
+  readHandlerBody,
+  readTauriShellSource
+} from 'backend/testUtils/tauriShellSource'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { stripSourceComments } from '../testUtils/stripSourceComments'
@@ -33,35 +36,33 @@ const SIDECAR_RPC_PATH = join(
 )
 const FRONTEND_ROOT = join(REPO_ROOT, 'src', 'frontend')
 
+/** Dispatcher variant -> `rpc_<wire>` handler for the three dialog channels (Phase 71 D-04). */
+const DIALOG_VARIANT_TO_WIRE = {
+  DialogOpen: 'dialog_open',
+  DialogMessage: 'dialog_message',
+  DialogSave: 'dialog_save'
+} as const
+
 /**
- * Returns the body of the `RustInvokeChannel::<Channel> => { ... }` match arm from `source`, by brace balance
- * rather than a lazy regex — the arm contains nested blocks (`if let`, `for`, closures), so a
- * `[\s\S]*?\}` match would stop at the first inner brace and silently under-read.
+ * Returns the body of the `rpc_<channel>` handler the dispatcher arm delegates to. The arm itself
+ * is a one-line call, so the router line must exist exactly once, and `readHandlerBody` throws on
+ * a missing, duplicated or empty handler, so this cannot pass on an empty body.
  */
 function extractMatchArm(source: string, channel: string): string {
-  // Arms match the generated enum (67-11): `dialog_open` -> `RustInvokeChannel::DialogOpen`.
-  const variant = channel
-    .split('_')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join('')
-  const header = `RustInvokeChannel::${variant} => {`
-  const start = source.indexOf(header)
-  if (start === -1) {
-    throw new Error(`match arm for "${channel}" not found`)
+  const entry = Object.entries(DIALOG_VARIANT_TO_WIRE).find(
+    ([, wire]) => wire === channel
+  )
+  if (!entry) throw new Error(`no dialog variant maps to "${channel}"`)
+  const router = source.match(
+    new RegExp(
+      `^ {8}RustInvokeChannel::${entry[0]} => rpc_${channel}\\(.*\\),$`,
+      'gm'
+    )
+  )
+  if (router?.length !== 1) {
+    throw new Error(`router line for "${channel}" not found exactly once`)
   }
-  let depth = 0
-  let i = start + header.length - 1
-  for (; i < source.length; i++) {
-    if (source[i] === '{') depth++
-    else if (source[i] === '}') {
-      depth--
-      if (depth === 0) break
-    }
-  }
-  if (depth !== 0) {
-    throw new Error(`unbalanced braces in the "${channel}" arm`)
-  }
-  return source.slice(start + header.length, i)
+  return readHandlerBody(source, channel)
 }
 
 describe('main.rs dialog_open arm forwards the caller options (quick task 260902-8wc)', () => {

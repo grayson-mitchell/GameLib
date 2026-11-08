@@ -128,6 +128,7 @@ mod single_instance;
 mod ipc_contract;
 mod sidecar;
 mod shell_state;
+mod dialogs;
 mod scan_dispatch;
 use clipboard::*;
 use keyring_dispatch::*;
@@ -141,6 +142,7 @@ use single_instance::*;
 use ipc_contract::*;
 use sidecar::*;
 use shell_state::*;
+use dialogs::*;
 use scan_dispatch::*;
 
 /// Invoke response timeout — a skeleton guardrail so a hung sidecar cannot wedge a command.
@@ -1993,6 +1995,7 @@ mod tests {
     const SHELL_SOURCE_FILES: &[&str] = &[
         "main.rs",
         "clipboard.rs",
+        "dialogs.rs",
         "ipc_contract.rs",
         "keyring_dispatch.rs",
         "login_window.rs",
@@ -2014,6 +2017,7 @@ mod tests {
     const SHELL_SOURCE_PARTS: &[&str] = &[
         include_str!("main.rs"),
         include_str!("clipboard.rs"),
+        include_str!("dialogs.rs"),
         include_str!("ipc_contract.rs"),
         include_str!("keyring_dispatch.rs"),
         include_str!("login_window.rs"),
