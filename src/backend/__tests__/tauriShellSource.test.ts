@@ -3940,9 +3940,7 @@ describe('REQ-34.3-11 item 2 (debug session finder-reveal-no-selection) macOS Fi
 
   test('the shell_show_item_in_folder arm calls the workaround, macOS-gated, AFTER reveal_item_in_dir', () => {
     const code = loadMainRsCode()
-    const armStart = code.indexOf(
-      'RustInvokeChannel::ShellShowItemInFolder => {'
-    )
+    const armStart = code.indexOf('RustInvokeChannel::ShellShowItemInFolder =>')
     expect(armStart).toBeGreaterThan(-1)
     const armEnd = code.indexOf('RustInvokeChannel::ShellOpenPath =>', armStart)
     expect(armEnd).toBeGreaterThan(armStart)

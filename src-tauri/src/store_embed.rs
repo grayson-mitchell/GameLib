@@ -1755,15 +1755,11 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
         // time, but its selection step is a SEPARATE, systemic macOS/AppKit defect -- see
         // `macos_finder_reselect_workaround` below for the mechanism and evidence. The
         // follow-up call is a no-op on other platforms.
-        RustInvokeChannel::ShellShowItemInFolder => {
-            shell_open::shell_show_item_in_folder(app, args)
-        }
+        RustInvokeChannel::ShellShowItemInFolder => shell_open::shell_show_item_in_folder(app, args),
         // Open a path with the default program (Phase 33 Plan 04, D-05) via
         // `tauri-plugin-opener`'s `open_path`. Backs `platform/index.ts`'s `shell.openPath()`.
         // Same path-provenance note as `shell_show_item_in_folder` above (T-33-11).
-        RustInvokeChannel::ShellOpenPath => {
-            shell_open::shell_open_path(app, args)
-        }
+        RustInvokeChannel::ShellOpenPath => shell_open::shell_open_path(app, args),
         RustInvokeChannel::ClipboardWriteText => rpc_clipboard_write_text(args, app),
         RustInvokeChannel::ClipboardReadText => rpc_clipboard_read_text(app),
         RustInvokeChannel::AppExit => rpc_app_exit(app),
