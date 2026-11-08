@@ -430,6 +430,8 @@
         }
     },
     "settings": {
+        "discordPresence": "Enable Discord presence",
+        "discordPresenceHelp": "While you play a game launched from GameLib, your Discord status shows the game, how long you have been playing, and \"via GameLib\". Requires the Discord desktop app to be running.",
         "eacRuntime": {
             "installFailed": "The EAC Runtime could not be installed."
         },
