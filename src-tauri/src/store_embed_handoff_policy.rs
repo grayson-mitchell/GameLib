@@ -221,7 +221,7 @@ mod navigation_response_is_download_tests {
     /// the WebContent-process-termination hook.
     #[test]
     fn the_epic_surface_routes_downloads_and_handles_content_process_termination() {
-        let source = include_str!("macos_epic_embed.rs");
+        let source = include_str!("macos_epic_embed/nav_delegate.rs");
         let start = source
             .find("fn decide_policy_for_navigation_response(")
             .expect("response hook");
@@ -337,7 +337,7 @@ mod store_embed_browser_handoff_policy_tests {
         }
         let main_rs = body_after(include_str!("store_embed/open.rs"), ".on_new_window({");
         let epic_rs = body_after(
-            include_str!("macos_epic_embed.rs"),
+            include_str!("macos_epic_embed/nav_delegate.rs"),
             "fn create_web_view_for_navigation_action(",
         );
         for (name, body) in [

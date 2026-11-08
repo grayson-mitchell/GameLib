@@ -189,7 +189,13 @@ mod js_dialog_gate_tests {
     /// hook goes through the gate and a sheet, never the app-modal `runModal()` helpers.
     #[test]
     fn the_epic_dialog_hooks_use_the_gate_and_a_sheet_not_run_modal() {
-        let source = include_str!("macos_epic_embed.rs");
+        let source = concat!(
+            include_str!("macos_epic_embed.rs"),
+            "\n",
+            include_str!("macos_epic_embed/surface.rs"),
+            "\n",
+            include_str!("macos_epic_embed/nav_delegate.rs")
+        );
         assert!(!source.contains("present_native_js_"));
         assert!(!source.contains(".runModal("));
         for kind in ["alert", "confirm", "prompt"] {
