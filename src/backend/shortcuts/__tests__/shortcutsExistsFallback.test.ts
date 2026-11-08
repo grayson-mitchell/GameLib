@@ -1,6 +1,6 @@
 /**
  * Quick task 260905-mv5 (site 3) — regression test for the Electron
- * `shortcutsExists` IPC handler (`backend/shortcuts/ipc_handler.ts`).
+ * `shortcutsExists` IPC handler (now `sidecar/shortcutsFlowRegistration.ts`, D-11: the Electron-era ipc_handler.ts was deleted).
  *
  * `shortcutsExists` re-reads `game.getGameInfo()` itself, exactly like the
  * install-failure surfaces 260905-luf already fixed. Steam's `getGameInfo()`
@@ -17,8 +17,7 @@
  * function does when handed an undefined title, per the plan's evidence
  * item 5 (re-verified below).
  *
- * `backend/ipc`'s own `addHandler` is left REAL too: it just delegates to
- * `backend/platform`'s `ipcMain.handle(...)`, which stores the registration
+ * `registerShortcutsFlows()` registers through `backend/platform`'s `ipcMain.handle(...)`, which stores the registration
  * in that module's `handlerRegistry` Map — the SAME plain-object registry
  * `shortcutsFlows.test.ts` (site 4) reads from. A jest.fn()-based capture of
  * `addHandler` was tried first and does NOT work here: this project's
@@ -29,13 +28,21 @@
  * a jest mock, so it is immune to that reset and survives across tests.
  */
 
-jest.mock('../../utils', () => ({
-  getGame: jest.fn()
+jest.mock('backend/utils', () => ({
+  getGame: jest.fn(),
+  handleExit: jest.fn()
+}))
+jest.mock('backend/ipc', () => ({
+  sendFrontendMessage: jest.fn()
+}))
+jest.mock('backend/storeManagers', () => ({
+  libraryManagerMap: {}
 }))
 jest.mock('backend/dialog/dialog', () => ({
   notify: jest.fn()
 }))
 jest.mock('backend/constants/environment', () => ({
+  ...jest.requireActual('backend/constants/environment'),
   isMac: false
 }))
 jest.mock('../nonesteamgame/nonesteamgame', () => ({
@@ -58,7 +65,7 @@ import { existsSync } from 'graceful-fs'
 import { mkdirSync, rmSync, symlinkSync } from 'fs'
 import { dirname, join } from 'path'
 import { homedir } from 'os'
-import { getGame } from '../../utils'
+import { getGame } from 'backend/utils'
 import { shortcutFiles } from '../shortcuts/shortcuts'
 import { addShortcuts } from '../shortcuts/shortcuts'
 import { handlerRegistry } from 'backend/platform'
@@ -73,7 +80,9 @@ const mockedExistsSync = existsSync as jest.Mock
 // Import for side effect only: this is what actually calls addHandler(...)
 // / addListener(...) at module-load time, registering the real handlers
 // against the real `backend/ipc` -> `backend/platform` chain.
-import '../ipc_handler'
+import { registerShortcutsFlows } from '../../sidecar/shortcutsFlowRegistration'
+
+registerShortcutsFlows()
 
 type ShortcutsExistsHandler = (
   event: unknown,
@@ -95,7 +104,7 @@ function makeStubGame(gameInfo: GameInfo): Game {
   } as unknown as Game
 }
 
-describe('backend/shortcuts/ipc_handler.ts: shortcutsExists (260905-mv5, site 3)', () => {
+describe('sidecar/shortcutsFlowRegistration.ts: shortcutsExists (260905-mv5, site 3)', () => {
   beforeEach(() => {
     mockedGetGame.mockReset()
     mockedExistsSync.mockReset()
