@@ -9,7 +9,6 @@ import {
   ShowValveProton,
   ClearCache,
   DisableLogs,
-  DownloadNoHTTPS,
   ExperimentalFeatures,
   HideWindowOnProtocolLaunch,
   ResetHeroic,
@@ -48,8 +47,6 @@ export default function AdvancedSetting() {
         <SteamGridDbApiKey />
         <hr />
       </div>
-
-      <DownloadNoHTTPS />
 
       <DisableLogs />
 

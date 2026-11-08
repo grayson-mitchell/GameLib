@@ -434,6 +434,8 @@
         "advancedSettings": "Advanced Settings",
         "discordPresence": "Enable Discord presence",
         "discordPresenceHelp": "While you play a game launched from GameLib, your Discord status shows the game, how long you have been playing, and \"via GameLib\". Requires the Discord desktop app to be running.",
+        "downloadNoHttps": "Download Epic games over HTTP (for LanCache)",
+        "downloadNoHttpsHelp": "Only useful if you run a LanCache server on your network. LanCache cannot cache HTTPS downloads, so this downloads Epic games over plain HTTP and lets other PCs on your network install them from the local cache. Each downloaded chunk is still checked against the game manifest. Leave off otherwise.",
         "eacRuntime": {
             "installFailed": "The EAC Runtime could not be installed."
         },

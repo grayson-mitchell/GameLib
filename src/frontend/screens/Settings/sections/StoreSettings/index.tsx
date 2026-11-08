@@ -11,6 +11,7 @@ import {
   AltLegendaryBin,
   AltNileBin,
   DefaultSteamPath,
+  DownloadNoHTTPS,
   EgsSettings,
   EnableSteamNativeDelete,
   EnableSteamNativeInstall,
@@ -87,6 +88,7 @@ export default function StoreSettings() {
         <EosOverlay />
         <StoreAdvanced>
           <AltLegendaryBin />
+          <DownloadNoHTTPS />
         </StoreAdvanced>
       </TabPanel>
 

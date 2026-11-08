@@ -46,6 +46,7 @@ jest.mock('../../../components', () => {
     AltLegendaryBin: stub('AltLegendaryBin'),
     AltNileBin: stub('AltNileBin'),
     DefaultSteamPath: stub('DefaultSteamPath'),
+    DownloadNoHTTPS: stub('DownloadNoHTTPS'),
     EgsSettings: stub('EgsSettings'),
     EnableSteamNativeDelete: stub('EnableSteamNativeDelete'),
     EnableSteamNativeInstall: stub('EnableSteamNativeInstall'),
@@ -177,7 +178,7 @@ describe('StoreSettings', () => {
     expect(panelContents(root, 'epic')).toEqual([
       'EgsSettings',
       'EosOverlay',
-      'details:AltLegendaryBin'
+      'details:AltLegendaryBin,DownloadNoHTTPS'
     ])
     expect(panelContents(root, 'gog')).toEqual([
       'PlaytimeSync',
