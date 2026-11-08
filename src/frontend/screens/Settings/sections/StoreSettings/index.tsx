@@ -48,7 +48,6 @@ function StoreAdvanced({ children }: { children: ReactNode }) {
 }
 
 export default function StoreSettings() {
-  const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
   const { store } = useParams()
   const navigate = useNavigate()
