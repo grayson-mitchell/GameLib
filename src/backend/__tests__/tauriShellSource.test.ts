@@ -216,19 +216,9 @@ describe('REQ-34.1-07 macOS tray template wiring (gap G3 redirect, 34.1-13)', ()
   })
 
   test('tray_set_icon uses the atomic set_icon_with_as_template setter, not a bare set_icon', () => {
-    const code = loadMainRsCode()
-    // Same arm-boundary technique as the "ONLY new dispatch arm" test below: outer match
-    // arms are indented exactly 8 spaces, so the next such line after tray_set_icon's own
-    // marks the end of its arm body.
-    const armStartPattern = /^ {8}RustInvokeChannel::[A-Za-z0-9]+\s*=>/gm
-    const armIdx = code.indexOf('RustInvokeChannel::TraySetIcon =>')
-    expect(armIdx).toBeGreaterThan(-1)
-    armStartPattern.lastIndex = armIdx + 1
-    const nextArmMatch = armStartPattern.exec(code)
-    expect(nextArmMatch).not.toBeNull()
-    const armBody = code.slice(
-      armIdx,
-      nextArmMatch ? nextArmMatch.index : undefined
+    const armBody = readHandlerBody(
+      loadMainRsCode(readTauriShellProductionSource()),
+      'tray_set_icon'
     )
     expect(armBody).toMatch(
       /set_icon_with_as_template\(Some\(tray_image\(dark\)\), tray_is_template\(\)\)/

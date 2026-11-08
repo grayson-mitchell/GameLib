@@ -1097,3 +1097,62 @@ pub(crate) fn dispatch_tray_launch(app: &AppHandle, app_name: String, known_runn
     });
 }
 
+
+// Swap the real Tauri tray's icon (Phase 34.1 Plan 06, D-11). Backs the sidecar's
+// `changeTrayColor` registration (`appShellFlowRegistration.ts`), which reads
+// `trayIconVariant` from `GlobalConfig` and forwards it here as `{ variant }` (auto /
+// light / dark; pinned by `meta/fixtures/tray-set-icon-wire-args.json`). Still the
+// ONLY tray-icon `dispatch_rust_channel` arm -- D-01 keeps window chrome renderer-side
+// with zero new Rust arms.
+pub(crate) fn rpc_tray_set_icon(args: &[Value], app: &AppHandle) -> Result<Value, String> {
+    // Wire-compat (kept deliberately, not tidied into a hard error): the generated
+    // `TraySetIconArgs` accepts exactly the three shipped variants, but an unrecognised
+    // variant or the retired `{ dark }` shape has always resolved to Auto here (pinned by
+    // `tray_variant_wire_contract_retired_dark_bool_shape_is_auto_not_dark`). So a
+    // `from_args` failure falls back to the lenient Auto mapping instead of erroring.
+    let mode = match TraySetIconArgs::from_args(args) {
+        Ok(a) => match a.variant {
+            TraySetIconArgsVariant::Auto => TrayIconMode::Auto,
+            TraySetIconArgsVariant::Light => TrayIconMode::Light,
+            TraySetIconArgsVariant::Dark => TrayIconMode::Dark,
+        },
+        Err(_) => {
+            if let Some(raw) = tray_set_icon_variant_str(args) {
+                // Length only, never the value (T-260930-lyk-01/05).
+                shell_eprintln!(
+                    "[shell] WARN: tray_set_icon: unrecognised variant ({} bytes) -- treating as auto",
+                    raw.len()
+                );
+            }
+            tray_set_icon_mode_from_args(args)
+        }
+    };
+    store_tray_icon_mode(mode);
+    let system_uses_light_theme = if mode == TrayIconMode::Auto {
+        read_system_uses_light_theme()
+    } else {
+        None
+    };
+    if mode == TrayIconMode::Auto && system_uses_light_theme.is_none() {
+        shell_eprintln!(
+            "[shell] tray_set_icon: SystemUsesLightTheme unreadable -- Auto falling back to the light glyph"
+        );
+    }
+    let dark = resolve_tray_icon_dark(mode, system_uses_light_theme);
+    match app.tray_by_id(TRAY_ICON_ID) {
+        Some(tray) => {
+            // Atomic icon+template-flag update (tauri 2.11.5, `tray/mod.rs:569-599`):
+            // calling `set_icon` followed by `set_icon_as_template` separately causes a
+            // visible flicker on macOS as the icon renders twice. Falls back to plain
+            // `set_icon` on Windows/Linux, where `is_template` is a documented no-op.
+            tray.set_icon_with_as_template(Some(tray_image(dark)), tray_is_template())
+                .map_err(|e| e.to_string())?;
+        }
+        // A missing tray is not an error condition -- it may have legitimately
+        // failed to build at startup (T-34.1-22); log and resolve successfully.
+        None => shell_eprintln!(
+            "[shell] tray_set_icon: no tray found with id {TRAY_ICON_ID:?}, skipping"
+        ),
+    }
+    Ok(Value::Null)
+}
