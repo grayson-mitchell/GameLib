@@ -1971,24 +1971,25 @@ mod tests {
         assert!(matches!(err.raw_os_error(), Some(libc::ESRCH) | Some(libc::EPERM)));
     }
 
-    /// Maps a trimmed `dispatch_rust_channel` arm opener (`RustInvokeChannel::HumbleLoginOpen => {`)
-    /// to its wire name (`humble_login_open`); `None` for any other line. The arms match the
-    /// generated enum since 67-11, so source-text pins locate arms through this one helper.
-    fn dispatch_arm_opener_name(trimmed: &str) -> Option<String> {
-        let variant = trimmed
-            .strip_prefix("RustInvokeChannel::")?
-            .strip_suffix(" => {")?;
-        if variant.is_empty() || !variant.chars().all(|c| c.is_ascii_alphanumeric()) {
+    /// Maps a trimmed handler definition line (`fn rpc_humble_login_open(` or
+    /// `pub(crate) fn rpc_humble_login_open(`) to its wire name (`humble_login_open`); `None` for
+    /// any other line. Since Phase 71 the dispatcher arms are one-line calls and the bodies live in
+    /// `rpc_*` handlers, so source-text pins locate a body through this one helper.
+    fn rpc_fn_name(trimmed: &str) -> Option<String> {
+        let rest = trimmed
+            .strip_prefix("pub(crate) fn rpc_")
+            .or_else(|| trimmed.strip_prefix("fn rpc_"))?;
+        let name = rest.split('(').next()?;
+        if name.is_empty() || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
             return None;
         }
-        let mut out = String::new();
-        for (i, c) in variant.chars().enumerate() {
-            if c.is_ascii_uppercase() && i > 0 {
-                out.push('_');
-            }
-            out.push(c.to_ascii_lowercase());
-        }
-        Some(out)
+        Some(name.to_string())
+    }
+
+    /// True for a column-0 `fn `/`pub(crate) fn ` line (any top-level fn, handler or not): the
+    /// boundary that ends the handler a scan is currently inside.
+    fn is_top_level_fn_line(line: &str) -> bool {
+        line.starts_with("fn ") || line.starts_with("pub(crate) fn ")
     }
 
     use super::*;
@@ -2004,6 +2005,7 @@ mod tests {
         "ipc_contract.rs",
         "keyring_dispatch.rs",
         "login_window.rs",
+        "login_window/humble_cookies.rs",
         "login_window/humble_open.rs",
         "login_window/invite_picker.rs",
         "notification_show.rs",
@@ -2030,6 +2032,7 @@ mod tests {
         include_str!("ipc_contract.rs"),
         include_str!("keyring_dispatch.rs"),
         include_str!("login_window.rs"),
+        include_str!("login_window/humble_cookies.rs"),
         include_str!("login_window/humble_open.rs"),
         include_str!("login_window/invite_picker.rs"),
         include_str!("notification_show.rs"),
@@ -5475,10 +5478,11 @@ mod tests {
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
-            // Track which `dispatch_rust_channel` match arm this line is inside. Every arm in
-            // that match is a single line of the shape `"channel_name" => {`.
-            if let Some(name) = dispatch_arm_opener_name(trimmed) {
-                current_arm = target_arms.iter().find(|a| **a == name).copied();
+            // Track which `rpc_*` handler this line is inside. The dispatcher arms are one-line
+            // calls since Phase 71; a column-0 `fn` line starts a handler (or ends the previous one).
+            if is_top_level_fn_line(line) {
+                current_arm = rpc_fn_name(trimmed)
+                    .and_then(|name| target_arms.iter().find(|a| **a == name).copied());
                 continue;
             }
 
@@ -5518,7 +5522,7 @@ mod tests {
                     guard = Some(prior_trimmed.to_string());
                     break;
                 }
-                if prior_trimmed.starts_with("fn ") || dispatch_arm_opener_name(prior_trimmed).is_some() {
+                if prior_trimmed.starts_with("fn ") || prior_trimmed.starts_with("pub(crate) fn ") {
                     break;
                 }
             }
@@ -5804,36 +5808,28 @@ mod tests {
         let source = shell_production_source();
         let lines: Vec<&str> = source.lines().collect();
 
-        // This site is a `dispatch_rust_channel` MATCH ARM, not a top-level `fn` -- the
-        // precedent test's column-0 `fn`-to-`fn` boundary does not apply here. Reuse the
-        // arm-boundary shape `f_34_4_2_12_wry_blocking_cookies_calls_are_macos_gated` above
-        // already proves works on this file: a line whose trimmed form starts with a
-        // double-quote and ends with the arrow-and-open-brace arm terminator.
-        let is_arm_boundary = |l: &str| {
-            let t = l.trim();
-            dispatch_arm_opener_name(t).is_some()
-        };
-
+        // Phase 71: the window-based branch lives in the `rpc_humble_login_clear_cookies`
+        // handler (a column-0 `fn` closed by a column-0 `}`), not in a dispatcher match arm.
         let start = lines
             .iter()
-            .position(|l| l.trim() == "RustInvokeChannel::HumbleLoginClearCookies => {")
+            .position(|l| l.contains(concat!("fn rpc_humble_login", "_clear_cookies(")))
             .expect(concat!(
-                "260928-qvr regression: the `RustInvokeChannel::HumbleLoginClearCookies => {` arm opener ",
-                "was not found by exact match in this file -- it was renamed, reformatted, or ",
+                "260928-qvr regression: the `rpc_humble_login_clear_cookies` handler definition ",
+                "was not found in this file -- it was renamed, reformatted, or ",
                 "removed; re-derive this pin's scan boundary from a fresh measurement rather ",
                 "than loosening the match string."
             ));
 
-        // End boundary: the next `dispatch_rust_channel` match arm opener after `start`. Scopes
-        // the scan to exactly this one arm (both its branches) so this pin can never
-        // accidentally measure a sibling arm.
+        // End boundary: the handler's own closing brace, the next line that is exactly `}`.
+        // Scopes the scan to exactly this one handler (both its branches) so this pin can never
+        // accidentally measure a sibling.
         let end = lines[start + 1..]
             .iter()
-            .position(|l| is_arm_boundary(l))
+            .position(|l| *l == "}")
             .map(|offset| start + 1 + offset)
             .expect(concat!(
-                "260928-qvr regression: could not find the next `dispatch_rust_channel` match ",
-                "arm opener after `humble_login_clear_cookies` -- re-derive this pin's scan ",
+                "260928-qvr regression: could not find the closing brace of ",
+                "`rpc_humble_login_clear_cookies` -- re-derive this pin's scan ",
                 "boundary from a fresh measurement rather than loosening the match string."
             ));
 

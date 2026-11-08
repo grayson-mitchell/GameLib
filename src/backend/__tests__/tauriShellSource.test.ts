@@ -1040,39 +1040,15 @@ describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07
 // the divergence is purely in argument ORDER inside a match arm body. This describe block
 // extracts each arm's body from the (comment-stripped) source and pins the exact call shape.
 describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-correct cookie_domain_matches direction (Plan 22, F-6 Defect A)', () => {
-  /**
-   * Slices `code` from `startMarker` (inclusive) up to (but not including) `endMarker`, the
-   * same "arm body" extraction shape the app_relaunch test above already uses. Throws loudly
-   * (via the `toBeGreaterThan(-1)` assertions below) rather than silently slicing an empty or
-   * wrong range if either marker has drifted.
-   */
-  function extractArmBody(
-    code: string,
-    startMarker: string,
-    endMarker: string
-  ): string {
-    const start = code.indexOf(startMarker)
-    expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf(endMarker, start)
-    expect(end).toBeGreaterThan(start)
-    return code.slice(start, end)
-  }
-
   test('both arms exist in source', () => {
     const code = loadMainRsCode()
-    expect(code).toContain('RustInvokeChannel::HumbleLoginCookies => {')
-    expect(code).toContain(
-      'RustInvokeChannel::HumbleLoginCookiesForDomain => {'
-    )
+    expect(code).toContain('fn rpc_humble_login_cookies(')
+    expect(code).toContain('fn rpc_humble_login_cookies_for_domain(')
   })
 
   test('humble_login_cookies (the poll arm) still calls cookie_domain_matches with the caller-supplied host FIRST', () => {
     const code = loadMainRsCode()
-    const armBody = extractArmBody(
-      code,
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      'RustInvokeChannel::HumbleLoginTakeEvents =>'
-    )
+    const armBody = readHandlerBody(code, 'humble_login_cookies')
     // The poll's direction, unedited by Plan 22: host (caller-supplied) first, the cookie's
     // own domain second.
     expect(armBody).toContain('cookie_domain_matches(host, c.domain())')
@@ -1082,11 +1058,7 @@ describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-corre
 
   test("humble_login_cookies_for_domain (the census arm) calls cookie_domain_matches with the cookie's OWN domain FIRST", () => {
     const code = loadMainRsCode()
-    const armBody = extractArmBody(
-      code,
-      'RustInvokeChannel::HumbleLoginCookiesForDomain => {',
-      'RustInvokeChannel::WakeLockStart =>'
-    )
+    const armBody = readHandlerBody(code, 'humble_login_cookies_for_domain')
     // The census's direction: the cookie's own domain (from the match on c.domain()) first,
     // the fixed target `domain` second -- mirrors humble_login_clear_cookies's own filter.
     expect(armBody).toContain('cookie_domain_matches(d, Some(domain))')
@@ -1109,24 +1081,15 @@ describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-corre
 // (this quick task's Task 3), and the identical gates were green throughout the entire
 // period the probe returned nothing.
 describe('D-35-29-01 (quick q93) the census arm falls back to the label-independent default-store read for Epic domains', () => {
-  const CENSUS_ARM_START = 'RustInvokeChannel::HumbleLoginCookiesForDomain => {'
-  const CENSUS_ARM_END = 'RustInvokeChannel::WakeLockStart =>'
-
   /**
-   * Same "slice the arm body out of comment-stripped source" extraction shape as
-   * `extractArmBody` in the REQ-34.4.1-GAP-07 block above; kept local because that one is
-   * describe-scoped, and hoisting it would edit a passing gate this task has no business
-   * touching. Throws a plain Error rather than calling `expect()` so it can be driven over
-   * a synthetic counterexample inside `censusFallbackViolations` below without the
-   * counterexample run polluting this test's own assertion count.
+   * The census handler's body, read through `readHandlerBody` (Phase 71 D-10): the dispatcher arm
+   * is a one-line call, the body lives in `login_window/humble_cookies.rs`. `readHandlerBody`
+   * throws (rather than calling `expect()`) when the fn is missing, duplicated or near-empty, so
+   * this can be driven over a synthetic counterexample inside `censusFallbackViolations` below
+   * without the counterexample run polluting this test's own assertion count.
    */
   function extractCensusArmBody(code: string): string {
-    const start = code.indexOf(CENSUS_ARM_START)
-    if (start < 0) throw new Error('census arm start marker not found')
-    const end = code.indexOf(CENSUS_ARM_END, start)
-    if (end <= start)
-      throw new Error('census arm end marker not found after start')
-    return code.slice(start, end)
+    return readHandlerBody(code, 'humble_login_cookies_for_domain')
   }
 
   /**
@@ -1213,22 +1176,21 @@ describe('D-35-29-01 (quick q93) the census arm falls back to the label-independ
     // `humble_login_cookies_for_domain:no-window:{label}` on all five Epic hosts of every
     // live logout while this suite stayed green.
     const regressedArm = [
-      '        RustInvokeChannel::HumbleLoginCookiesForDomain => {',
-      '            let label = args',
-      '                .first()',
-      '                .and_then(|v| v.as_str())',
-      '                .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;',
-      '            let domain = args',
-      '                .get(1)',
-      '                .and_then(|v| v.as_str())',
-      '                .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;',
-      '            let window = app',
-      '                .get_webview_window(label)',
-      '                .ok_or_else(|| format!("humble_login_cookies_for_domain:no-window:{label}"))?;',
-      '            let all = window.cookies().map_err(|e| e.to_string())?;',
-      '            Ok(serde_json::json!({ "total": all.len(), "matched": [] }))',
-      '        }',
-      '        RustInvokeChannel::WakeLockStart => {}'
+      'pub(crate) fn rpc_humble_login_cookies_for_domain(args: &[Value], app: &AppHandle) -> Result<Value, String> {',
+      '    let label = args',
+      '        .first()',
+      '        .and_then(|v| v.as_str())',
+      '        .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;',
+      '    let domain = args',
+      '        .get(1)',
+      '        .and_then(|v| v.as_str())',
+      '        .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;',
+      '    let window = app',
+      '        .get_webview_window(label)',
+      '        .ok_or_else(|| format!("humble_login_cookies_for_domain:no-window:{label}"))?;',
+      '    let all = window.cookies().map_err(|e| e.to_string())?;',
+      '    Ok(serde_json::json!({ "total": all.len(), "matched": [] }))',
+      '}'
     ].join('\n')
 
     const violations = censusFallbackViolations(loadMainRsCode(regressedArm))
@@ -1259,10 +1221,10 @@ describe('D-35-29-01 (quick q93) the census arm falls back to the label-independ
   // edit the first (clear-arm) occurrence, leave the census arm untouched, and the
   // assertion would fail for a reason unrelated to what it is testing.
   const CENSUS_GUARD = [
-    '                && (epic_cookie_domain_matches(domain)',
-    '                    || store_logout_cookie_domain_matches(domain))',
-    '            {',
-    '                return default_data_store_cookies_for_domain(app, domain, &names);'
+    '        && (epic_cookie_domain_matches(domain)',
+    '            || store_logout_cookie_domain_matches(domain))',
+    '    {',
+    '        return default_data_store_cookies_for_domain(app, domain, &names);'
   ].join('\n')
 
   test('NARROWNESS: the widened guard pin still REJECTS an arm that keeps the disjunction but drops the Epic term', () => {
@@ -1286,8 +1248,8 @@ describe('D-35-29-01 (quick q93) the census arm falls back to the label-independ
   test('NARROWNESS: the widened guard pin still REJECTS an arm whose Epic check is no longer conjoined with is_none()', () => {
     const code = loadMainRsCode()
     const conjunctionSevered = code.replace(
-      `            if existing_window.is_none()\n${CENSUS_GUARD}`,
-      `            if true\n${CENSUS_GUARD}`
+      `    if existing_window.is_none()\n${CENSUS_GUARD}`,
+      `    if true\n${CENSUS_GUARD}`
     )
     expect(conjunctionSevered).not.toEqual(code)
     expect(censusFallbackViolations(conjunctionSevered)).toEqual(
@@ -1556,7 +1518,7 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
     )
     expect(revealEnd).toBeGreaterThan(revealStart)
     const clearStorageEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookiesForDomain => {',
+      'RustInvokeChannel::HumbleLoginCookiesForDomain =>',
       revealEnd
     )
     expect(clearStorageEnd).toBeGreaterThan(revealEnd)
