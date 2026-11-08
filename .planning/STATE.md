@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 73
 Plan: Not started
 Status: Ready to execute
-Last activity: 2026-11-08 -- Phase 71 planning complete
+Last activity: 2026-11-08 -- Completed quick task 261108-mcc: close Phase 61 review leftovers
 
 Progress: [██████████] 100%
 
@@ -644,6 +644,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261108-fast | Settings follow-ups (fast): 'Add games to Steam automatically' → Stores › Steam (7766d8301); General heading → 'General Settings' (bcd25577d); autoUpdateGames factory default → true, existing configs keep saved value (b25d98ca4); path-field commit-hint row no longer adds a blank line in Settings (see HEAD). | 2026-11-08 | 35b43e465 | Settings/PathSelectionBox/installFlows jest pass; spacing not live-checked | — |
 | 261108-juw | Removed the experimental Help component: floating ? button/popover, hasHelp hook + 10 call sites, help state/types, `enableHelp` (Experimental Features keeps Comet support). Stale saved `enableHelp` keys are ignored (nothing validates experimentalFeatures). | 2026-11-08 | a75f152db | codecheck, lint, lint-translations, Settings+state jest pass; meta suites failing are unrelated (A-17 drift; sl parity, rust-test.yml, logSecretGate, x86 Wine harness — none touch frontend) | [261108-juw-remove-the-experimental-help-component-f](./quick/261108-juw-remove-the-experimental-help-component-f/) |
 | 261108-kpc | Merged 'Minimize after launch' + 'Hide window on gamelib:// launch' into one General select 'When a game starts' (Keep open / Hide for shortcut launches [default] / Hide for every launch), backed by the same two booleans. Both had been inert under Tauri (sidecar window was a no-op stub): new Rust `main_window_hide` channel (macOS app-hide, else window hide), cold-start link hide via frontendReady/15s rule, every-launch hide now also covers Steam, dialogs raise a window GameLib hid. | 2026-11-08 | e5c11ab25 | codecheck clean; cargo test ipc_contract 4/4; backend/common/Settings jest pass bar pre-existing tauriShellSource + macArchKnownFixRouting (reproduced at 4a435506e); live UAT 1-4 PASS 2026-11-08 (after cold-start fixes 146f608b1 + 401e1efaf, debug/resolved/cold-start-link-not-installed.md) | [261108-kpc-merge-game-start-window-settings-into-on](./quick/261108-kpc-merge-game-start-window-settings-into-on/) |
+| 261108-mcc | Closed Phase 61 REVIEW leftovers: IN-01 deadline test drops the vacuous `other` fixture and asserts the armed game's stop, both ledger keys, no wineserver kill and publishNotice once (b34955d6c); IN-02 pins the blank badge for a kept built-in engine under an inconclusive pre-flight per D-05/v6q (7a5e282f7); 61-REVIEW status clean, WR-01 → 88c8296b7 (df4dcec11). Test/docs only. | 2026-11-08 | df4dcec11 | engineState + deadline jest 62/62, codecheck clean, scoped prettier clean; no production diff | [261108-mcc-close-phase-61-review-leftovers](./quick/261108-mcc-close-phase-61-review-leftovers/) |
 
 ## Session Continuity
 
