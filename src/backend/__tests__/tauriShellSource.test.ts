@@ -1510,19 +1510,10 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 
   test('the hidden reveal-post and storage-clear WebviewWindowBuilder chains gained neither the title hook nor the F-4 presentation calls', () => {
     const code = loadMainRsCode()
-    const revealStart = code.indexOf('RustInvokeChannel::HumbleRevealPost => {')
-    expect(revealStart).toBeGreaterThan(-1)
-    const revealEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginClearStorage => {',
-      revealStart
-    )
-    expect(revealEnd).toBeGreaterThan(revealStart)
-    const clearStorageEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookiesForDomain =>',
-      revealEnd
-    )
-    expect(clearStorageEnd).toBeGreaterThan(revealEnd)
-    const hiddenWindowsBody = code.slice(revealStart, clearStorageEnd)
+    const hiddenWindowsBody = [
+      readHandlerBody(code, 'humble_reveal_post'),
+      readHandlerBody(code, 'humble_login_clear_storage')
+    ].join('\n')
 
     for (const token of [
       'on_document_title_changed',
