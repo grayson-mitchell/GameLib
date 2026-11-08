@@ -26,8 +26,10 @@ const errMessage = (err: unknown): string =>
 
 /**
  * Temp-then-rename write at mode 0o600. The parent directory is created 0o700
- * only when absent. Falls back to a direct write when the rename fails, then
- * best-effort removes the orphaned temp file.
+ * only when absent. A temp-write failure (ENOSPC, EDQUOT, EIO) removes the temp
+ * file and rethrows with the live file untouched (D-06). Only a rename failure
+ * (Windows EPERM/EBUSY while another process holds the file) falls back to a
+ * direct write, then best-effort removes the orphaned temp file.
  */
 export function atomicWritePrivate(
   filePath: string,
@@ -40,16 +42,25 @@ export function atomicWritePrivate(
   const tmpPath = `${filePath}.tmp-${process.pid}`
   try {
     writeFileSync(tmpPath, text, { mode: 0o600 })
+  } catch (err) {
+    try {
+      unlinkSync(tmpPath)
+    } catch {
+      /* may not exist */
+    }
+    throw err
+  }
+  try {
     renameSync(tmpPath, filePath)
   } catch (err) {
     process.stderr.write(
-      `[storeVersion] atomic write failed for ${basename(filePath)}: ${errMessage(err)}\n`
+      `[storeVersion] rename failed for ${basename(filePath)}: ${errMessage(err)}\n`
     )
     writeFileSync(filePath, text, { mode: 0o600 })
     try {
       unlinkSync(tmpPath)
     } catch {
-      /* best effort: the temp file may not exist */
+      /* best effort: the temp file may already be gone */
     }
   }
 }
