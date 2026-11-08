@@ -200,7 +200,8 @@ describe('REQ-34.1-07 main.rs tray construction (Phase 34.1 Plan 06, D-11)', () 
   })
 
   test('REQ-34.1-07 no unwrap() or expect( appears inside the tray-building block', () => {
-    const code = loadMainRsCode()
+    // Production text only (Phase 71 D-10): the tray tests now live in tray.rs's own `mod tests`.
+    const code = loadMainRsCode(readTauriShellProductionSource())
     const startMarker = 'MenuItemBuilder::with_id("show"'
     const startIdx = code.indexOf(startMarker)
     expect(startIdx).toBeGreaterThan(-1)

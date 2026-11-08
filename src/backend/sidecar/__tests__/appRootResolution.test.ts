@@ -31,7 +31,7 @@
  * (`backend/constants/paths.ts`) rather than restating it.
  */
 
-import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import {
@@ -42,7 +42,9 @@ import { app } from '../../platform'
 
 /** Mirrors tauriShellSource.test.ts's loadMainRsCode — comment-stripped source only. */
 function loadMainRsCode(): string {
-  const raw = readTauriShellSource()
+  // Production text only (Phase 71 D-10): a co-located `mod tests` must not sit between two
+  // production items this file slices between.
+  const raw = readTauriShellProductionSource()
   return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
