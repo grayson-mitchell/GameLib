@@ -124,6 +124,7 @@ mod relay_commands;
 mod shell_open;
 mod login_window;
 mod store_embed;
+mod rust_dispatch;
 mod single_instance;
 mod ipc_contract;
 mod sidecar;
@@ -140,6 +141,7 @@ use tray::*;
 use relay_commands::*;
 use login_window::*;
 use store_embed::*;
+use rust_dispatch::*;
 use single_instance::*;
 use ipc_contract::*;
 use sidecar::*;
@@ -2011,6 +2013,7 @@ mod tests {
         "login_window/invite_picker.rs",
         "notification_show.rs",
         "relay_commands.rs",
+        "rust_dispatch.rs",
         "scan_dispatch.rs",
         "shell_state.rs",
         "shell_open.rs",
@@ -2039,6 +2042,7 @@ mod tests {
         include_str!("login_window/invite_picker.rs"),
         include_str!("notification_show.rs"),
         include_str!("relay_commands.rs"),
+        include_str!("rust_dispatch.rs"),
         include_str!("scan_dispatch.rs"),
         include_str!("shell_state.rs"),
         include_str!("shell_open.rs"),
