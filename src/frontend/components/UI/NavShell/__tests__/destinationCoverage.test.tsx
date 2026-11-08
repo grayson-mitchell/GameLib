@@ -274,6 +274,7 @@ describe('Destination coverage -- the settled tree', () => {
       'Humble Keys',
       'Redeem a Steam key',
       'General',
+      'Stores',
       'Game Defaults',
       'Advanced',
       'Appearance',

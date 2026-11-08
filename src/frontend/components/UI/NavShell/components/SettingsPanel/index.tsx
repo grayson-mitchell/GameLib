@@ -12,6 +12,7 @@ import {
   faMicrochip,
   faPalette,
   faScrewdriverWrench,
+  faShop,
   faWineGlass
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -28,6 +29,9 @@ import { NAV_TOUR_ID } from '../NavShellTour'
  * action last. The list is two groups -- settings pages, then help and app
  * actions -- split by a separator, and every row carries an icon (sketch 007,
  * quick 261105-o65).
+ *
+ * The Stores row (quick 261108-ioc) opens the per-store settings tabs at
+ * /settings/stores; it uses faShop because faStore is the tier-1 Stores tab glyph.
  *
  * Two of these rows are reparented rather than relocated: Wine Manager and
  * Accessibility (now the Appearance row: icon faPalette, replacing
@@ -138,6 +142,11 @@ export default function SettingsPanel() {
         url="/settings/general"
         icon={faGear}
         label={t('settings.navbar.general', 'General')}
+      />
+      <NavItem
+        url="/settings/stores"
+        icon={faShop}
+        label={tGamelib('gamelib:settings.navbar.stores', 'Stores')}
       />
       {!isWin && (
         <NavItem

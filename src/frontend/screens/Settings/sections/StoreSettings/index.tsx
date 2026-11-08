@@ -66,7 +66,7 @@ export default function StoreSettings() {
         onChange={(_e, next: StoreTab) =>
           navigate(`/settings/stores/${next}`, { replace: true })
         }
-        aria-label="store settings tabs"
+        aria-label={tGamelib('gamelib:settings.navbar.stores', 'Stores')}
         variant="scrollable"
       >
         <Tab label="Amazon" value="amazon" />

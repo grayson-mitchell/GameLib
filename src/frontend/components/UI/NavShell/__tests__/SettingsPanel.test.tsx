@@ -159,6 +159,7 @@ import {
   faMicrochip,
   faPalette,
   faScrewdriverWrench,
+  faShop,
   faUniversalAccess,
   faWineGlass
 } from '@fortawesome/free-solid-svg-icons'
@@ -230,7 +231,7 @@ describe('SettingsPanel', () => {
     )
   })
 
-  it('renders all twelve entries in the settled order for a non-Windows context, and does not render Console Mode', () => {
+  it('renders all thirteen entries in the settled order for a non-Windows context, and does not render Console Mode', () => {
     contextValue = makeContextValue({ platform: 'linux' })
 
     const tree = SettingsPanel() as unknown as ReactElement
@@ -238,6 +239,7 @@ describe('SettingsPanel', () => {
 
     expect(labels).toEqual([
       'General',
+      'Stores',
       'Game Defaults',
       'Advanced',
       'Appearance',
@@ -290,6 +292,7 @@ describe('SettingsPanel', () => {
     const tree = SettingsPanel() as unknown as ReactElement
     const expected: Array<[string, unknown]> = [
       ['General', faGear],
+      ['Stores', faShop],
       ['Game Defaults', faCompactDisc],
       ['Advanced', faScrewdriverWrench],
       ['Appearance', faPalette],
