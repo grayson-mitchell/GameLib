@@ -1,27 +1,17 @@
 ---
 phase: 68-versioned-persisted-stores-and-migrations
-verified: 2026-11-08T18:06:48Z
-status: gaps_found
-score: 47/49 plan must-haves verified; 5/6 roadmap goal truths verified
+verified: 2026-11-09T00:00:00Z
+status: passed
+score: 49/49 plan must-haves verified; 6/6 roadmap goal truths verified
 overrides_applied: 0
-gaps:
-  - truth: "A failed migration has a logged, non-destructive fallback: the pre-migration file is left byte-identical and the store goes read-only (roadmap scope; D-06; 68-02 truth 5)"
-    status: failed
-    reason: "CR-01 confirmed. atomicWritePrivate (backup.ts:41-54) wraps the temp write AND the rename in one try. If the temp write fails (ENOSPC, EDQUOT, EIO), the catch runs writeFileSync(filePath, ...), which opens the LIVE file with O_TRUNC and then fails the same way. The engine (engine.ts:143) then marks the store 'failed', but the original is already truncated. The one live migration (settings/global v0->v1 on config.json) is exposed: a truncated config.json makes GlobalConfigV0.readSettings' JSON.parse (config.ts:228) throw. For a future conf-store chain, a store without clearInvalidConfig (configStore, steamConfigStore, humbleConfigStore, downloadManager) would throw from its module-scope constructor (conf get store rethrows non-ENOENT errors) and stop the sidecar booting. A store with clearInvalidConfig would come up empty, and on the next launch the retry finds unparseable JSON, returns 'ok' and the next write replaces the user-state with defaults: the silent reset the phase exists to prevent. The pre-migration backup is usually on disk, so a user could recover by hand, but nothing does it for them."
-    artifacts:
-      - path: "src/backend/storeVersioning/backup.ts"
-        issue: "lines 41-54: the fallback direct write runs on a temp-write failure, not only on a rename failure"
-    missing:
-      - "Split the try: if writeFileSync(tmpPath) throws, unlink the temp file and rethrow, leaving the live file untouched. Keep the direct-write fallback only for a renameSync failure (Windows EPERM/EBUSY)."
-      - "Add a backup.test.ts / engine.test.ts case that mocks the temp write to throw ENOSPC and asserts the live file is byte-identical and the store is read-only with reason 'failed'"
-  - truth: "atomicWritePrivate writes temp-then-rename with mode 0o600 and falls back to a direct write plus temp unlink on rename failure (68-01 truth 6)"
-    status: failed
-    reason: "Same root cause as the gap above. The fallback is not limited to a rename failure, so the write is not atomic when the temp write fails."
-    artifacts:
-      - path: "src/backend/storeVersioning/backup.ts"
-        issue: "catch block covers writeFileSync(tmpPath) as well as renameSync"
-    missing:
-      - "Same fix as the gap above (one change closes both)"
+re_verification:
+  previous_status: gaps_found
+  previous_score: 47/49
+  gaps_closed:
+    - "A failed migration has a logged, non-destructive fallback: pre-migration file byte-identical, store read-only (D-06; 68-02 truth 5; G4)"
+    - "atomicWritePrivate writes temp-then-rename and falls back to direct write only on rename failure (68-01 truth 6)"
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 68: Versioned persisted stores and migrations: Verification Report
@@ -29,9 +19,9 @@ gaps:
 **Phase Goal:** Every persisted store has a schema version, and a change to its shape ships with an
 ordered migration, so an upgrade never silently resets a user's settings, library cache or Steam
 state to defaults. Build on `src/backend/migration/` rather than replace it.
-**Verified:** 2026-11-08T18:06:48Z
-**Status:** gaps_found
-**Re-verification:** No. This is the initial verification.
+**Verified:** 2026-11-09T00:00:00Z
+**Status:** passed
+**Re-verification:** Yes, after gap closure 68-11 (commits 9f3822232 test, d252f83dd fix). Previous: gaps_found, 47/49.
 
 ## Goal Achievement
 
@@ -42,7 +32,7 @@ state to defaults. Build on `src/backend/migration/` rather than replace it.
 | G1 | Every store has a schema version | VERIFIED | `GameLibStore` (store_backend.ts) routes every conf write through `set store`, which calls `stampForWrite`. That stamp is `__internal__.gamelib.schemaVersion`. Settings files use `version: 'vN'` through `settingsVersionCodec`. Absent means v0, and the implicit `adopt-v1` step is identity. |
 | G2 | Migrations keyed by store and version run before first read | VERIFIED | `prepareStore()` runs `prepareStoreFile` inside the `super(...)` argument, before conf reads anything. It is keyed by resolved path and chain key `<dir>/<name>`. `GlobalConfig.get()` (config.ts:99), `GameConfig.get()` (game_config.ts:53) and `readStoredGameConfig` (engineConfig.ts:95) call `ensureSettingsMigrated` first. |
 | G3 | `migrateTrayIconVariant` / `migrateFocusRowSelection` folded in | VERIFIED | `storeMigrations/settingsGlobal.ts` v0->v1 calls both helpers, then deletes `darkTrayIcon` and `libraryTopSection` (D-04). The read-side normalisers stay at config.ts:257-258 and appShellFlowRegistration.ts:251. The plan documents this as its D-11 decision. |
-| G4 | A pre-migration backup and a logged, non-destructive fallback on failure | FAILED | The backup is written first (`writePreMigrationBackup`), failures are logged and the store goes read-only. The fallback is **not** non-destructive when the write itself fails: see CR-01 below and gap 1. |
+| G4 | A pre-migration backup and a logged, non-destructive fallback on failure | VERIFIED (was FAILED, closed by 68-11) | The backup is written first, failures are logged and the store goes read-only. backup.ts:43-52 now unlinks the temp and rethrows on a temp-write failure, so the live file is never opened; engine.ts catch (line ~143) marks the store read-only 'failed'. atomicWriteFailure.test.ts proves the live file stays byte-identical and the next launch recovers. |
 | G5 | A test per migration from an old-shape fixture | VERIFIED | `storeMigrations/__tests__/fixtures/settings-global-v0*.json` are used by `settingsGlobal.test.ts`. `settings-game-v0.json` is used by `settingsFiles.test.ts`. The only non-identity migration is settings/global v0->v1; the rest are identity adoption steps. |
 | G6 | Builds on `src/backend/migration/` rather than replacing it | VERIFIED | `MigrationSystem` and `LegendaryGlobalConfigFolderMigration` are unchanged and kept for one-off cross-file moves (CONTEXT discretion). `migrationsStore` now declares a kind. The per-store engine sits beside it in `storeVersioning/` and `storeMigrations/`. |
 
@@ -50,8 +40,8 @@ state to defaults. Build on `src/backend/migration/` rather than replace it.
 
 | Plan | Truths | Result | Notes |
 | ---- | ------ | ------ | ----- |
-| 68-01 | 6 | 5 VERIFIED, 1 FAILED | Truth 6 (the atomic-write fallback) FAILED: CR-01. Truth 4 (keep only the newest 3 backups) holds as written, but WR-01 applies (see below). The A6 accessor tests pass. |
-| 68-02 | 8 | 7 VERIFIED, 1 FAILED | Truth 5 ("a migration that throws leaves the original file byte-identical") fails for the write-failure class: CR-01. All the others hold in engine.ts and store_backend.ts: the newer-file view and refusal, cache discard, shared-path state with a logged kind mismatch, and 0o600/0o700 plus `tightenTokenPaths`. |
+| 68-01 | 6 | 6 VERIFIED | Truth 6 now holds: temp-write failure unlinks the temp and rethrows; direct-write fallback only on renameSync failure (backup.ts:53-65). Was FAILED (CR-01). Truth 4 (keep only the newest 3 backups) holds as written, but WR-01 applies (see below). The A6 accessor tests pass. |
+| 68-02 | 8 | 8 VERIFIED | Truth 5 now holds (was FAILED, CR-01). Prior note: Truth 5 ("a migration that throws leaves the original file byte-identical") fails for the write-failure class: CR-01. All the others hold in engine.ts and store_backend.ts: the newer-file view and refusal, cache discard, shared-path state with a logged kind mismatch, and 0o600/0o700 plus `tightenTokenPaths`. |
 | 68-03 | 5 | 5 VERIFIED | 55 `new TypeCheckedStoreBackend` / `new CacheStore` constructions, each with a kind. The `StoreDeclaration` third parameter is required, so omitting it is a compile error. The `storeKinds.test.ts` ratchet holds (MIN 51, exact EXPECTED_KINDS match, renderer mirrors). The library stores (steam/gog/legendary/nile/sideload) are user-state. humble_library, steam_known_fix_reports, runsForMe and macArch are user-state. Steam/bottle/humble config are `tokenBearing`. |
 | 68-04 | 4 | 4 VERIFIED | `readOnly` early-return happens before both the write and the notify (typed_store.ts:165-177, cache.ts:166-209). `applyStoreWrite` has the `target.readOnly` guard. `__internal__` is refused by `isAllowedStoreField` and `refuseReservedKey`, and stripped from `entries()` and `raw_store`. |
 | 68-05 | 7 | 7 VERIFIED | A single `GlobalConfigV0` loader replaces the per-version switch, so `v9` no longer crashes. Per-game migration is lazy. `libraryTopSection` is retired. Writes go through `writeSettingsFile` and are refused when read-only. Truth 7 holds literally, but its atomicity is undermined by CR-01. |
@@ -61,7 +51,7 @@ state to defaults. Build on `src/backend/migration/` rather than replace it.
 | 68-09 | 5 | 5 VERIFIED | Gate battery: phase-attributable gates are green (`pnpm codecheck` clean, re-run here). The remaining failures are pre-existing and recorded in deferred-items.md. Re-checked here: genI18nGateScope fails on the live git-derivation anti-rot check, and gamelibCatalogParity fails on `public/locales/sl/gamelib.json`, which this phase did not touch. Real-profile run approved by the operator; config v0->v1 with a backup, modes tightened, 28 store_cache files unchanged. |
 | 68-10 | 3 | 3 VERIFIED | The planted v99 `download-manager.json` hash was unchanged after the session, then restored. The snapshot was deleted. 68-VALIDATION.md has `nyquist_compliant: true`. |
 
-**Score:** 47/49 plan truths. Both failures share one root cause (CR-01).
+**Score:** 49/49 plan truths, plus the 68-11 must-haves. The two previous failures (one root cause, CR-01) are closed.
 
 ### Requirements coverage (D-01..D-15 from 68-CONTEXT.md; REQUIREMENTS.md does not exist)
 
@@ -72,7 +62,7 @@ state to defaults. Build on `src/backend/migration/` rather than replace it.
 | D-03 | 02, 04, 06, 09, 10 | SATISFIED | Newer files are never written (constructor merge, set/delete/clear, and renderer writes). Proven live with the v99 file. WR-03 concerns pre-68 builds, which D-03 explicitly does not cover. |
 | D-04 | 02, 05 | SATISFIED | The migration deletes the superseded fields. |
 | D-05 | 06, 07, 09 | SATISFIED (WR-04 warning) | One notice per launch. It is lost after a renderer reload. |
-| D-06 | 02, 04, 05 | **BLOCKED (partial)** | The read-only state, write refusal and retry are in place. "Pre-migration file untouched" fails when the write fails (CR-01). |
+| D-06 | 02, 04, 05, 11 | SATISFIED (WR-05 warning) | Read-only state, write refusal, retry, and now a byte-identical live file on temp-write failure (CR-01 closed). |
 | D-07 | 06, 07 | SATISFIED | The failed variant names areas and points to the log, and the flush writes one log line per store. |
 | D-08 | 01, 02, 05, 09 | SATISFIED (WR-01 warning) | Backups are 0o600, the 3 newest are kept, and dedupe works. Proven live. |
 | D-09 | 03, 05 | SATISFIED | All conf stores, the renderer mirrors, config.json and GamesConfig are covered. |
@@ -107,46 +97,37 @@ All PLAN key links resolve in the code:
 | Todo/planning gates | `pnpm planning-gates` | 12/12 | PASS |
 | `smoke:sidecar` | not re-run (needs a sidecar build); 68-10 records PASS | n/a | SKIP |
 
+### Re-verification of 68-11 (CR-01)
+
+- backup.ts read directly: `writeFileSync(tmpPath)` is in its own try; catch unlinks the temp (swallowing ENOENT) and rethrows, before any write to `filePath`. Rename is a separate try with the retained EPERM/EBUSY direct-write fallback and temp unlink (accepted per 68-01 truth 6 / T-68-11-04).
+- atomicWriteFailure.test.ts (3 tests): ENOSPC on temp leaves the live file byte-identical, rethrows ENOSPC, leaves no `.tmp-` file, and asserts no write to the live path or rename; rename EPERM fallback still writes content, 0o600, temp removed, one stderr line with no contents; end-to-end `runFileMigration` ENOSPC returns readOnly/'failed', file byte-identical and parseable, backup equals original, read-only record has ENOSPC detail, and a retry after recovery migrates to v2.
+- Spot-check: `npx jest src/backend/storeVersioning src/backend/storeMigrations --selectProjects Backend` -> 6 suites, 38 tests pass (re-run here). Full-project failures (quitTeardownWiring, macArchKnownFixRouting, tauriShellSource) are recorded pre-existing in deferred-items.md.
+- Regression: only backup.ts and the new test file changed in code since the first verification (git log); other items carried forward.
+
 ### Code review findings: effect on the goal
 
 | ID | Breaks a must-have / the goal? | Verdict |
 | -- | ------------------------------ | ------- |
-| CR-01 atomic-write fallback truncates the live file | **Yes.** It contradicts 68-02 truth 5, 68-01 truth 6, D-06 and the roadmap's "non-destructive fallback". The settings/global migration that runs on every v0 profile is exposed, and so is every future conf-store chain. The trigger is narrow (disk full, quota, I/O error, or an unwritable directory with a writable file), but this phase exists to prevent exactly this failure. Note that settings saves were already non-atomic `writeFileSync` before this phase, so ordinary saves did not regress. The new exposure is the migration rewrite path. | **BLOCKER**: small fix, see gaps |
-| WR-01 prune can delete the just-written backup on a backwards clock | No, under normal operation. It needs at least 3 existing backups stamped in the future. Then D-08's guarantee silently lapses for that migration. | WARNING: exclude `target` from the prune list (a 1-line fix) |
-| WR-02 `uploadedLogs` is `cache` | Not today: no chain ships for it. Its `token` is the hardcoded literal `'1'` (uploader.ts:77, dpaste has no delete), so the credential concern is weaker than the review says. The list of uploaded-log URLs is still not refetchable, and D-14's "default to user-state" points to `user-state`. A newer file would show `{}` in the older build. | WARNING: reclassify before the first `store/uploadedLogs` chain |
-| WR-03 the `'v1'` stamp crashes pre-68 builds | Not a must-have: the goal is about upgrades, and CONTEXT accepts that pre-68 builds have no version check. Confirmed at base `b74d85dee` config.ts:131-145: an unknown version leaves `globalInstance` undefined, then `.upgrade()` throws. The CONTEXT "accepted limitation" text ("read and write newer files freely") is therefore wrong for settings files. The per-game `'v1'` bump buys nothing, because that chain is identity-only. | WARNING: correct the CONTEXT text, and consider keeping GamesConfig at `'v0'` until a real shape change |
-| WR-04 notice lost on renderer reload | No: D-05 says one notice per launch, and it is delivered once. After a reload, writes stay refused with no visible notice. | WARNING |
+| CR-01 | Was a blocker | RESOLVED by 68-11 |
+| WR-05 rename-fallback: temp not unlinked if the fallback direct write throws; fallback write on disk-full could still truncate | No. It lives only in the rename-failure path (Windows EPERM/EBUSY), which 68-01 truth 6 and T-68-11-04 explicitly retain. It is not the temp-write failure path that D-06 and G4 name, and the migration still logs and goes read-only. Residual risk: a leaked token-bearing temp file and a possible truncation under a double fault (rename fail plus disk full). | WARNING: move unlink into a finally, and gate the fallback on EPERM/EBUSY/EACCES (review's fix) |
+| IN-08 / IN-09 | No (fallback not code-gated; mode assertion in test cannot fail) | Info |
+| WR-01..WR-04 | Unchanged from the first verification; none break a must-have | WARNING |
 
-Info items IN-01..IN-07 do not affect any must-have. IN-02 (an invalid stamp is treated as v0 and then overwritten) and IN-06 (`titleSettings.ts` reads GamesConfig without `ensureSettingsMigrated`) should be addressed before Phase 70 or the first per-game shape change.
+Info items IN-01..IN-07 unchanged.
 
 ### Anti-patterns
 
-| File | Line | Pattern | Severity | Impact |
-| ---- | ---- | ------- | -------- | ------ |
-| src/backend/config.ts | 265 | `FIXME` | Info | Pre-existing upstream marker (bc3c2ddee, 2023), not introduced by this phase |
-| src/backend/storeVersioning/backup.ts | 41-54 | Catch-all fallback in an "atomic" write | Blocker | CR-01 |
-
-No new TBD/FIXME/XXX/TODO in the lines this phase added.
+None blocking. backup.ts catch-all is fixed. config.ts:265 FIXME is pre-existing upstream.
 
 ### Human verification
 
-The operator already approved the real-profile check (68-09 Task 3) and D-03 was confirmed live (68-10). No new human items. Re-verifying the CR-01 fix needs only an automated test.
+None. Operator approvals from 68-09/68-10 stand.
 
 ### Gaps summary
 
-One root cause, two failed truths. `atomicWritePrivate`'s fallback can destroy the very file it was meant to replace atomically. That breaks the phase's "non-destructive fallback when a migration fails" guarantee (D-06) on a write error. Everything else holds in the code:
-- versioning
-- ordered migrations before first read
-- the fix-up fold-in
-- backups
-- downgrade refusal
-- the notice
-- the kind ratchet
-- the inventory
-
-Four review warnings (WR-01..WR-04) remain open but do not block the goal. The fix is the review's own patch: split the temp write and the rename into separate `try` blocks, plus one ENOSPC test. A gap-closure plan of one task would close it.
+No open gaps. Both previously failed truths (68-01 truth 6, 68-02 truth 5 / D-06 / roadmap G4) are closed. Open non-blocking warnings: WR-01..WR-05.
 
 ---
 
-_Verified: 2026-11-08T18:06:48Z_
+_Verified: 2026-11-09_
 _Verifier: Claude (gsd-verifier)_

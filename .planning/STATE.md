@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: executing
-stopped_at: Phase 68 context gathered
-last_updated: "2026-11-08T18:41:16.669Z"
+status: ready_to_plan
+stopped_at: Phase 68 complete (11/11) — ready to discuss Phase 69
+last_updated: 2026-11-08T18:45:36.722Z
 last_activity: 2026-11-08
 progress:
   total_phases: 12
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 68 — versioned-persisted-stores-and-migrations
+**Current focus:** Phase 69 — consolidate frontend state onto globalstatev2
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,9 +72,9 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 68 (versioned-persisted-stores-and-migrations) — EXECUTING
-Plan: 11 of 11
-Status: Ready to execute
+Phase: 69
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-11-08
 
 Progress: [██████████] 100%
