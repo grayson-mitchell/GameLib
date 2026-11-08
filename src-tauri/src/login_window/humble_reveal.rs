@@ -330,3 +330,344 @@ pub(crate) fn rpc_humble_login_clear_storage(args: &[Value], app: &AppHandle) ->
         Err(_) => Err("humble_login_clear_storage:timeout".to_string()),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    // ---- reveal_post_args (Phase 34.4.1 Plan 04, REQ-34.4.1-05) ----
+    //
+    // RED direction: an implementation using `unwrap_or(...)` anywhere in the required-field
+    // chain, or treating a missing csrf_token differently from an explicit `null`, would flip
+    // one of the cases below.
+
+    fn valid_reveal_args(csrf: Value) -> Vec<Value> {
+        vec![
+            json!("https://www.humblebundle.com"),
+            json!("/humbler/redeemkey"),
+            json!("keytype=steam&key=abc&keyindex=1"),
+            csrf,
+            json!("Mozilla/5.0 (Macintosh) Chrome/142.0 Safari/537.36"),
+        ]
+    }
+
+    /// Manual-match helper standing in for `.unwrap_err()` -- `RevealPostArgs` deliberately
+    /// implements no auto-formatting trait (see its own doc comment), so `.unwrap_err()`
+    /// cannot be called on a `Result<RevealPostArgs, String>` at all; this reads the error
+    /// string out by hand and panics with a plain message on the (unexpected) Ok case instead.
+    fn reveal_post_args_err(result: Result<RevealPostArgs, String>) -> String {
+        match result {
+            Err(e) => e,
+            Ok(_) => panic!("expected reveal_post_args to reject this input"),
+        }
+    }
+
+    #[test]
+    fn humble_reveal_post_args_accepts_a_full_valid_set_with_a_string_csrf_token() {
+        let parsed = reveal_post_args(&valid_reveal_args(json!("csrf-token-value"))).unwrap();
+        assert_eq!(parsed.origin_url.as_str(), "https://www.humblebundle.com/");
+        assert_eq!(parsed.path, "/humbler/redeemkey");
+        assert_eq!(parsed.body, "keytype=steam&key=abc&keyindex=1");
+        assert_eq!(parsed.csrf_token, Some("csrf-token-value".to_string()));
+        assert_eq!(
+            parsed.user_agent,
+            "Mozilla/5.0 (Macintosh) Chrome/142.0 Safari/537.36"
+        );
+    }
+
+    #[test]
+    fn humble_reveal_post_args_maps_a_null_csrf_token_to_none() {
+        let parsed = reveal_post_args(&valid_reveal_args(Value::Null)).unwrap();
+        assert_eq!(parsed.csrf_token, None);
+    }
+
+    #[test]
+    fn humble_reveal_post_args_treats_a_short_args_slice_as_missing_not_a_panic() {
+        // Positional args make "csrf missing but user_agent present" structurally
+        // unreachable (removing index 3 shifts index 4 into its place) -- what IS reachable,
+        // and must never panic, is a short slice that runs out of args entirely. args.get(3)
+        // reads None -> csrf_token=None internally, but the overall parse still rejects on
+        // the now-missing args[4] (user_agent), never panicking on an out-of-bounds index.
+        let short_args = vec![
+            json!("https://www.humblebundle.com"),
+            json!("/humbler/redeemkey"),
+            json!("keytype=steam&key=abc&keyindex=1"),
+        ];
+        assert_eq!(
+            reveal_post_args_err(reveal_post_args(&short_args)),
+            "humble_reveal_post:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_reveal_post_args_rejects_a_non_string_non_null_csrf_token() {
+        assert_eq!(
+            reveal_post_args_err(reveal_post_args(&valid_reveal_args(json!(12345)))),
+            "humble_reveal_post:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_reveal_post_args_rejects_missing_args_entirely() {
+        assert_eq!(
+            reveal_post_args_err(reveal_post_args(&[])),
+            "humble_reveal_post:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_reveal_post_args_rejects_a_non_https_origin() {
+        let mut args = valid_reveal_args(json!("csrf-token-value"));
+        args[0] = json!("http://www.humblebundle.com");
+        assert_eq!(
+            reveal_post_args_err(reveal_post_args(&args)),
+            "humble_reveal_post:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_reveal_post_args_rejects_a_non_string_path() {
+        let mut args = valid_reveal_args(json!("csrf-token-value"));
+        args[1] = json!(42);
+        assert_eq!(
+            reveal_post_args_err(reveal_post_args(&args)),
+            "humble_reveal_post:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_reveal_post_args_rejects_a_non_string_body() {
+        let mut args = valid_reveal_args(json!("csrf-token-value"));
+        args[2] = json!(null);
+        assert_eq!(
+            reveal_post_args_err(reveal_post_args(&args)),
+            "humble_reveal_post:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_reveal_post_args_rejects_a_missing_user_agent() {
+        let mut args = valid_reveal_args(json!("csrf-token-value"));
+        args.truncate(4); // drop user_agent (args[4]) entirely
+        assert_eq!(
+            reveal_post_args_err(reveal_post_args(&args)),
+            "humble_reveal_post:bad-args"
+        );
+    }
+
+    // ---- reveal_post_script (Phase 34.4.1 Plan 04, T-34.4.1-20/21) ----
+    //
+    // RED direction: an implementation using `format!("'{}'", value)` (naive quoting) instead
+    // of `serde_json::to_string` would let a tricky body value escape its string context; the
+    // round-trip assertion below fails against that implementation.
+
+    #[test]
+    fn humble_reveal_post_script_escapes_special_characters_and_round_trips_via_serde_json() {
+        // Deliberately includes a single quote, a double quote, a backslash, and a
+        // `</script>` sequence -- exactly the characters T-34.4.1-20 is about.
+        // Two embedded double-quote characters (not one) so this Rust source line itself keeps
+        // an EVEN raw `"`-count (open delim + 2 embedded `\"` + close delim = 4) -- satisfying
+        // `longRunningChannels.test.ts`'s unrelated WR-08 per-line quote-balance guard, which
+        // this line would otherwise trip on the surrounding file scan. Still exercises a
+        // double quote, a single quote, a backslash and a `</script>` sequence.
+        let tricky_body = "keytype=steam&key=a\"b\"c'd\\e</script>f";
+        let script = reveal_post_script(
+            "/humbler/redeemkey",
+            tricky_body,
+            Some("csrf-token-value"),
+            REVEAL_EXFIL_HOST,
+        );
+        let expected_literal = serde_json::to_string(tricky_body).unwrap();
+        assert!(
+            script.contains(&expected_literal),
+            "expected the properly-escaped JSON string literal to appear verbatim in the script"
+        );
+        let round_tripped: String = serde_json::from_str(&expected_literal).unwrap();
+        assert_eq!(round_tripped, tricky_body);
+        // The naive, UNESCAPED single-quote interpolation this function must never produce.
+        // Built via array-join rather than a literal `format!("'{}'", ..)` call so this
+        // regression-guard test itself does not trip the source-text gate
+        // (`tauriShellSource.test.ts`) that asserts NO such naive interpolation exists in the
+        // real arm code.
+        let naive_interpolation = ["'", tricky_body, "'"].concat();
+        assert!(!script.contains(&naive_interpolation));
+    }
+
+    #[test]
+    fn humble_reveal_post_script_embeds_a_null_csrf_token_as_a_js_null_not_the_string_null() {
+        let script = reveal_post_script("/humbler/redeemkey", "body", None, REVEAL_EXFIL_HOST);
+        assert!(script.contains("var csrf = null;"));
+        assert!(!script.contains("var csrf = \"null\""));
+    }
+
+    #[test]
+    fn humble_reveal_post_script_embeds_a_present_csrf_token_as_a_quoted_json_string() {
+        let script = reveal_post_script(
+            "/humbler/redeemkey",
+            "body",
+            Some("csrf-token-value"),
+            REVEAL_EXFIL_HOST,
+        );
+        assert!(script.contains("var csrf = \"csrf-token-value\";"));
+    }
+
+    #[test]
+    fn humble_reveal_post_script_embeds_the_exfil_host_used_by_the_navigation_intercept() {
+        let script = reveal_post_script("/humbler/redeemkey", "body", None, REVEAL_EXFIL_HOST);
+        assert!(script.contains(&serde_json::to_string(REVEAL_EXFIL_HOST).unwrap()));
+    }
+
+    // ---- clear_storage_args (34.4.1 gap cycle plan 15, F-6, REQ-34.4.1-06/REQ-34.4.1-GAP-03) ----
+    //
+    // RED direction: an implementation using `unwrap_or(...)` anywhere in the required-field
+    // chain would flip one of the cases below, mirroring `reveal_post_args`'s own RED-direction
+    // note.
+
+    fn valid_clear_storage_args() -> Vec<Value> {
+        vec![
+            json!("https://www.humblebundle.com"),
+            json!("Mozilla/5.0 (Macintosh) Chrome/142.0 Safari/537.36"),
+        ]
+    }
+
+    /// Manual-match helper standing in for `.unwrap_err()` -- `ClearStorageArgs` deliberately
+    /// implements no auto-formatting trait (mirrors `RevealPostArgs`'s own `reveal_post_args_err`
+    /// helper and its reasoning, REQ-34.1-07).
+    fn clear_storage_args_err(result: Result<ClearStorageArgs, String>) -> String {
+        match result {
+            Err(e) => e,
+            Ok(_) => panic!("expected clear_storage_args to reject this input"),
+        }
+    }
+
+    #[test]
+    fn humble_login_clear_storage_args_accepts_a_full_valid_set() {
+        let parsed = clear_storage_args(&valid_clear_storage_args()).unwrap();
+        assert_eq!(parsed.origin_url.as_str(), "https://www.humblebundle.com/");
+        assert_eq!(
+            parsed.user_agent,
+            "Mozilla/5.0 (Macintosh) Chrome/142.0 Safari/537.36"
+        );
+    }
+
+    #[test]
+    fn humble_login_clear_storage_args_rejects_missing_args_entirely() {
+        assert_eq!(
+            clear_storage_args_err(clear_storage_args(&[])),
+            "humble_login_clear_storage:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_login_clear_storage_args_rejects_a_non_https_origin() {
+        let mut args = valid_clear_storage_args();
+        args[0] = json!("http://www.humblebundle.com");
+        assert_eq!(
+            clear_storage_args_err(clear_storage_args(&args)),
+            "humble_login_clear_storage:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_login_clear_storage_args_rejects_a_non_string_origin() {
+        let mut args = valid_clear_storage_args();
+        args[0] = json!(42);
+        assert_eq!(
+            clear_storage_args_err(clear_storage_args(&args)),
+            "humble_login_clear_storage:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_login_clear_storage_args_rejects_a_missing_user_agent() {
+        let mut args = valid_clear_storage_args();
+        args.truncate(1); // drop user_agent (args[1]) entirely
+        assert_eq!(
+            clear_storage_args_err(clear_storage_args(&args)),
+            "humble_login_clear_storage:bad-args"
+        );
+    }
+
+    #[test]
+    fn humble_login_clear_storage_args_rejects_a_non_string_user_agent() {
+        let mut args = valid_clear_storage_args();
+        args[1] = json!(null);
+        assert_eq!(
+            clear_storage_args_err(clear_storage_args(&args)),
+            "humble_login_clear_storage:bad-args"
+        );
+    }
+
+    // ---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----
+    //
+    // RED direction: an implementation using naive `'{}'`-style interpolation for `exfil_host`
+    // would fail the escaping round-trip case below; one that skips `await` on an async category
+    // would fail the await-ordering case; one that coerces a missing API to a numeric 0 instead
+    // of the literal `'unsupported'` would fail the five-category case.
+
+    #[test]
+    fn humble_login_clear_storage_script_escapes_special_characters_and_round_trips_via_serde_json()
+    {
+        // Deliberately includes a single quote, a double quote, a backslash, and a `</script>`
+        // sequence -- the same character classes `reveal_post_script`'s own round-trip case
+        // covers (T-34.4.1-65/20). Two embedded double-quote characters (not one) so this Rust
+        // source line itself keeps an EVEN raw `"`-count (open delim + 2 embedded `\"` + close
+        // delim = 4) -- satisfying `longRunningChannels.test.ts`'s WR-08 per-line quote-balance
+        // guard, which this line would otherwise trip on the surrounding file scan. Still
+        // exercises a double quote, a single quote, a backslash and a `</script>` sequence.
+        let tricky_host = "gamelib.invalid\"a\"payload'x\\y</script>z";
+        let script = clear_storage_script(tricky_host);
+        let expected_literal = serde_json::to_string(tricky_host).unwrap();
+        assert!(
+            script.contains(&expected_literal),
+            "expected the properly-escaped JSON string literal to appear verbatim in the script"
+        );
+        let round_tripped: String = serde_json::from_str(&expected_literal).unwrap();
+        assert_eq!(round_tripped, tricky_host);
+        // The naive, UNESCAPED single-quote interpolation this function must never produce.
+        // Built via array-join (mirrors `reveal_post_script`'s own equivalent case) rather than a
+        // literal `format!("'{}'", ..)` call so this regression-guard test itself does not trip
+        // the source-text gate asserting no such naive interpolation exists in the real arm code.
+        let naive_interpolation = ["'", tricky_host, "'"].concat();
+        assert!(!script.contains(&naive_interpolation));
+    }
+
+    #[test]
+    fn humble_login_clear_storage_script_embeds_the_exfil_host_used_by_the_navigation_intercept() {
+        let script = clear_storage_script(REVEAL_EXFIL_HOST);
+        assert!(script.contains(&serde_json::to_string(REVEAL_EXFIL_HOST).unwrap()));
+    }
+
+    #[test]
+    fn humble_login_clear_storage_script_clears_all_five_categories_with_an_unsupported_fallback() {
+        let script = clear_storage_script(REVEAL_EXFIL_HOST);
+        assert!(script.contains("localStorage.clear()"));
+        assert!(script.contains("report.localStorage = 'unsupported'"));
+        assert!(script.contains("sessionStorage.clear()"));
+        assert!(script.contains("report.sessionStorage = 'unsupported'"));
+        assert!(script.contains("indexedDB.deleteDatabase"));
+        assert!(script.contains("report.indexedDB = 'unsupported'"));
+        assert!(script.contains("caches.delete"));
+        assert!(script.contains("report.caches = 'unsupported'"));
+        assert!(script.contains("serviceWorker.getRegistrations"));
+        assert!(script.contains("report.serviceWorkers = 'unsupported'"));
+    }
+
+    #[test]
+    fn humble_login_clear_storage_script_awaits_every_async_category_before_reporting() {
+        // If IndexedDB/caches/service-worker clearing fired without `await`, this arm would
+        // report success for work that has not happened yet (this plan's own explicit warning).
+        let script = clear_storage_script(REVEAL_EXFIL_HOST);
+        assert!(script.contains("await indexedDB.databases()"));
+        assert!(script.contains("await new Promise(function(resolve)"));
+        assert!(script.contains("await caches.keys()"));
+        assert!(script.contains("await caches.delete(keys[j])"));
+        assert!(script.contains("await navigator.serviceWorker.getRegistrations()"));
+        assert!(script.contains("await regs[k].unregister()"));
+        // exfil() must run AFTER every await in the template, never before.
+        let exfil_call_index = script.rfind("exfil(report)").unwrap();
+        let last_await_index = script.rfind("await ").unwrap();
+        assert!(exfil_call_index > last_await_index);
+    }
+}
