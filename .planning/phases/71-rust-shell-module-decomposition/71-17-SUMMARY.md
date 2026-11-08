@@ -35,16 +35,16 @@ completed: 2026-11-09
 ## Task Commits
 1. c3f2e6ddf - invite_picker.rs (3)
 2. f6fb134a8 - humble_helpers.rs (41; needs `use serde_json::json;`)
-3. (humble_reveal) - humble_reveal.rs (23 with `valid_reveal_args` etc.; needs `json`)
-4. (macos_cookies) - macos_cookies.rs (5, macOS-only child)
-5. (sheet) - sheet.rs (5, macOS-only child)
-6. (devtools) - login_window/devtools.rs (2)
-7. (policy) - store_embed/policy.rs (7)
-8. (state) - store_embed/state.rs (34)
-9. (layout) - store_embed/layout.rs (10, of which 9 keep `cfg(target_os = "linux")`: that cfg count in layout.rs went 7 -> 16)
-10. (controls) - store_embed/controls.rs (2)
-11. (stragglers) - 5 tests the 71-16 routing had wrongly marked stay: 2 `store_embed_navigation_policy_*` -> policy.rs, 2 StoreEmbedState tests -> state.rs, `login_window_title` impersonation test -> humble_helpers.rs
-12. docs - test-routing.tsv resolved
+3. f72ff55d5 - humble_reveal.rs (23 with `valid_reveal_args` etc.; needs `json`)
+4. c36d05dbf - macos_cookies.rs (5, macOS-only child)
+5. 7aa1776d4 - sheet.rs (5, macOS-only child)
+6. 1174e0c26 - login_window/devtools.rs (2)
+7. 193cf17cd - store_embed/policy.rs (7)
+8. 3d06bfe76 - store_embed/state.rs (34)
+9. 8bede8c05 - store_embed/layout.rs (10, of which 9 keep `cfg(target_os = "linux")`: that cfg count in layout.rs went 7 -> 16)
+10. 6e9c39489 - store_embed/controls.rs (2)
+11. 298968d80 - 5 tests the 71-16 routing had wrongly marked stay: 2 `store_embed_navigation_policy_*` -> policy.rs, 2 StoreEmbedState tests -> state.rs, `login_window_title` impersonation test -> humble_helpers.rs
+12. 07caa61cc docs - test-routing.tsv resolved
 
 Run `git log --oneline --grep='71-17'` for the hashes.
 

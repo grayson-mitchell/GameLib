@@ -1,8 +1,8 @@
 ---
 phase: 71
 slug: rust-shell-module-decomposition
-status: draft
-nyquist_compliant: false
+status: complete
+nyquist_compliant: true
 wave_0_complete: true
 created: 2026-11-08
 ---
@@ -39,17 +39,17 @@ created: 2026-11-08
 
 | Decision | Behavior | Test Type | Automated Command | File Exists | Status |
 |----------|----------|-----------|-------------------|-------------|--------|
-| D-04/D-05 | Router one-liners; handler bodies verbatim | script | `python3 moveproof.py <wave-base-ref>` | ❌ W0 (prototype in `research-tools/`) | ⬜ pending |
-| D-04 | Exhaustive match over `RustInvokeChannel`, no `_ =>` | cargo | `cargo test --bin gamelib-shell` + compile | ✅ | ⬜ pending |
-| D-05 | No lint count change | clippy | `cargo +1.99.1 clippy --workspace --all-targets --message-format=json` → `node ../meta/clippyRatchet.cjs <json> --list` | ✅ | ⬜ pending |
-| D-08/D-09 | No test lost or renamed | cargo list diff | `cargo test --bin gamelib-shell -- --list` names diffed against wave-0 `before.txt` | ❌ W0 | ⬜ pending |
-| D-10 | Production reader byte-identical to old slice on unmoved tree | jest | `tauriShellSource.test.ts` new assertion | ❌ W0 | ⬜ pending |
-| D-10 | No reader slices combined source on `mod tests {` | jest guard | `tauriShellSource.test.ts` new describe | ❌ W0 | ⬜ pending |
-| D-10 | Arm-body pins repointed via `readHandlerBody` keep needle counts | jest | the arm-pin suites in RESEARCH inventory | ✅ (rewritten W1) | ⬜ pending |
-| D-11 | `macos_epic_embed/` stays excluded; absence counts unchanged | jest | `tauriShellSource.test.ts` helper scope + `macosEpicEmbed*` suites | ✅ (extend W4) | ⬜ pending |
-| D-12/D-13 | Non-test line counts ≤ ~1,000 or justified | script | `wc -l` + awk non-test count | plan-defined | ⬜ pending |
-| D-15 | Call sites unchanged | compile + diff | `cargo check`; `git diff main.rs` only `mod`/`use` lines | ✅ | ⬜ pending |
-| cross-platform | cfg-gated code compiles/tests on Windows + Linux | CI | `gh run watch` on `rust-test.yml` | ✅ | ⬜ pending |
+| D-04/D-05 | Router one-liners; handler bodies verbatim | script | `python3 moveproof.py <wave-base-ref>` | ❌ W0 (prototype in `research-tools/`) | ✅ green |
+| D-04 | Exhaustive match over `RustInvokeChannel`, no `_ =>` | cargo | `cargo test --bin gamelib-shell` + compile | ✅ | ✅ green |
+| D-05 | No lint count change | clippy | `cargo +1.99.1 clippy --workspace --all-targets --message-format=json` → `node ../meta/clippyRatchet.cjs <json> --list` | ✅ | ✅ green |
+| D-08/D-09 | No test lost or renamed | cargo list diff | `cargo test --bin gamelib-shell -- --list` names diffed against wave-0 `before.txt` | ❌ W0 | ✅ green |
+| D-10 | Production reader byte-identical to old slice on unmoved tree | jest | `tauriShellSource.test.ts` new assertion | ❌ W0 | ✅ green |
+| D-10 | No reader slices combined source on `mod tests {` | jest guard | `tauriShellSource.test.ts` new describe | ❌ W0 | ✅ green |
+| D-10 | Arm-body pins repointed via `readHandlerBody` keep needle counts | jest | the arm-pin suites in RESEARCH inventory | ✅ (rewritten W1) | ✅ green |
+| D-11 | `macos_epic_embed/` stays excluded; absence counts unchanged | jest | `tauriShellSource.test.ts` helper scope + `macosEpicEmbed*` suites | ✅ (extend W4) | ✅ green |
+| D-12/D-13 | Non-test line counts ≤ ~1,000 or justified | script | `wc -l` + awk non-test count | plan-defined | ✅ green |
+| D-15 | Call sites unchanged | compile + diff | `cargo check`; `git diff main.rs` only `mod`/`use` lines | ✅ | ✅ green |
+| cross-platform | cfg-gated code compiles/tests on Windows + Linux | CI | `gh run watch` on `rust-test.yml` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -79,11 +79,11 @@ created: 2026-11-08
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 120s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-11-09 (live check pending operator, see 71-18)
