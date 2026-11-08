@@ -15,6 +15,7 @@
  * the real code never changed.
  */
 import {
+  classifyCfgTestAttr,
   isExcludedShellFile,
   listRustTestModuleBlocks,
   listTauriShellSourceFiles,
@@ -4613,6 +4614,67 @@ describe('production-source reader (Phase 71 D-10)', () => {
     expect(stripRustTestModules(onFn)).toBe(onFn)
   })
 
+  test('a cfg(all(test, ..)) test mod is cut', () => {
+    const src = rust(
+      'fn a() {}',
+      '#[cfg(all(test, target_os = "macos"))]',
+      'mod terminate_reply_tests {',
+      '    fn t() {}',
+      '}',
+      'fn after() {}',
+      ''
+    )
+    expect(stripRustTestModules(src)).toBe(
+      rust('fn a() {}', 'fn after() {}', '')
+    )
+    expect(listRustTestModuleBlocks(src).map((b) => b.name)).toEqual([
+      'terminate_reply_tests'
+    ])
+  })
+
+  test('stacked column-0 attributes: the cut starts at the first attribute of the run, any order', () => {
+    const a = rust(
+      'fn a() {}',
+      '#[cfg(test)]',
+      '#[cfg(windows)]',
+      'mod w_tests {',
+      '}',
+      'fn b() {}',
+      ''
+    )
+    expect(stripRustTestModules(a)).toBe(rust('fn a() {}', 'fn b() {}', ''))
+    expect(listRustTestModuleBlocks(a)[0]?.startLine).toBe(1)
+    const b = rust(
+      'fn a() {}',
+      '#[cfg(windows)]',
+      '#[allow(dead_code)]',
+      '#[cfg(test)]',
+      'mod w_tests {',
+      '}',
+      'fn b() {}',
+      ''
+    )
+    expect(stripRustTestModules(b)).toBe(rust('fn a() {}', 'fn b() {}', ''))
+    expect(listRustTestModuleBlocks(b)[0]?.startLine).toBe(1)
+  })
+
+  test('a non-test cfg mod is kept', () => {
+    const src = rust('#[cfg(windows)]', 'mod win {', '}', 'fn a() {}')
+    expect(stripRustTestModules(src)).toBe(src)
+  })
+
+  test('ambiguous test cfg shapes throw (fail closed)', () => {
+    for (const attr of [
+      '#[cfg(any(test, feature = "x"))]',
+      '#[cfg(not(test))]'
+    ]) {
+      const src = rust('fn a() {}', attr, 'mod m {', '}')
+      expect(() => listRustTestModuleBlocks(src)).toThrow(/ambiguous test cfg/)
+    }
+    expect(classifyCfgTestAttr('#[cfg(all(unix, test))]')).toBe('test')
+    expect(classifyCfgTestAttr('#[cfg(windows)]')).toBe('other')
+  })
+
   test('readTopLevelFnBody returns the body for pub(crate) and plain fns', () => {
     const src = rust(
       'pub(crate) fn rpc_x(a: u8) {',
@@ -4669,7 +4731,11 @@ describe('D-10 production reader proof (Phase 71 wave 0)', () => {
 
   // Topic-named test mods living in the combined (non-main) files today. main.rs's own `mod tests`
   // is handled separately below.
-  const EXPECTED_TEST_MOD_NAMES = ['relay_allow_list_tests', 'shell_open_tests']
+  const EXPECTED_TEST_MOD_NAMES = [
+    'relay_allow_list_tests',
+    'shell_open_tests',
+    'terminate_reply_tests'
+  ]
 
   test('per file: strip removes exactly the enumerated test-mod line ranges and nothing else', () => {
     const names: string[] = []
@@ -4698,6 +4764,54 @@ describe('D-10 production reader proof (Phase 71 wave 0)', () => {
       EXPECTED_TEST_MOD_NAMES
     )
     expect(Math.max(...colocatedTestsModsPerFile)).toBeLessThanOrEqual(1)
+  })
+
+  test('terminate_reply_tests is cut from production text; the production fn survives (WR-02)', () => {
+    expect(readTauriShellProductionSource()).not.toContain(
+      'mod terminate_reply_tests'
+    )
+    expect(readTauriShellProductionSource()).not.toContain(
+      'terminate_reply(false, false)'
+    )
+    // D-10 raw: targets Rust test text (proves the production fn survives the strip)
+    const raw = readTauriShellFile('terminate_veto.rs')
+    expect(
+      listRustTestModuleBlocks(raw)
+        .map((b) => b.name)
+        .sort()
+    ).toEqual(['terminate_reply_tests', 'tests'])
+    expect(stripRustTestModules(raw)).toContain('fn terminate_reply(')
+  })
+
+  test('every test-cfg-gated column-0 mod in every shell file falls inside a cut block', () => {
+    const files: string[] = listTauriShellSourceFiles().map((f) => f)
+    const embedDir = join(SHELL_SRC, 'macos_epic_embed')
+    for (const f of readdirSync(embedDir).sort())
+      if (f.endsWith('.rs')) files.push(`macos_epic_embed/${f}`)
+    files.push('macos_epic_embed.rs')
+    let visited = 0
+    for (const f of files) {
+      // D-10 raw: targets Rust test text (cross-check scans for test-gated mods)
+      const text = readFileSync(join(SHELL_SRC, f), 'utf-8')
+      const lines = text.split('\n')
+      const blocks = listRustTestModuleBlocks(text)
+      lines.forEach((line, i) => {
+        if (!/^mod [A-Za-z_][A-Za-z0-9_]* \{$/.test(line)) return
+        let start = i
+        while (start > 0 && (lines[start - 1] ?? '').startsWith('#[')) start--
+        const gated = lines
+          .slice(start, i)
+          .some((l) => l.startsWith('#[cfg(') && /\btest\b/.test(l))
+        if (!gated) return
+        visited++
+        expect({
+          f,
+          line: i,
+          cut: blocks.some((b) => i >= b.startLine && i <= b.endLine)
+        }).toEqual({ f, line: i, cut: true })
+      })
+    }
+    expect(visited).toBeGreaterThanOrEqual(20)
   })
 
   test('main.rs: stripped text equals the old slice before `#[cfg(test)]` + its mod tests, modulo trailing newline', () => {

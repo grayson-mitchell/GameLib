@@ -107,30 +107,80 @@ export function readTauriShellSource(
 
 const TEST_MOD_OPEN = /^mod [A-Za-z_][A-Za-z0-9_]* \{$/
 
+export type CfgTestClass = 'test' | 'other' | 'ambiguous'
+
 /**
- * Every whole `#[cfg(test)] mod <ident> { ... }` block in `src` (Phase 71 D-10 cut rule): a
- * column-0 `#[cfg(test)]` line immediately followed by a column-0 `mod <ident> {` line, through the
- * next line that is exactly `}`. Line numbers are 0-based and inclusive.
+ * Classify one column-0 attribute line. 'test' = exactly `#[cfg(test)]`, or `#[cfg(all(...))]` whose
+ * top-level comma-separated arguments include the bare token `test`. 'ambiguous' = a `#[cfg(` line that
+ * mentions the word `test` in any other shape (any/not/nested). 'other' = anything else.
+ * Must match Rust `classify_cfg_test_attr` in src-tauri/src/main.rs's test module.
+ */
+export function classifyCfgTestAttr(line: string): CfgTestClass {
+  if (!line.startsWith('#[cfg(')) return 'other'
+  if (line === '#[cfg(test)]') return 'test'
+  if (!/\btest\b/.test(line)) return 'other'
+  const m = /^#\[cfg\(all\((.*)\)\)\]$/.exec(line)
+  if (!m) return 'ambiguous'
+  const inner = m[1] ?? ''
+  const args: string[] = []
+  let depth = 0
+  let inStr = false
+  let cur = ''
+  for (const c of inner) {
+    if (c === '"') inStr = !inStr
+    if (!inStr) {
+      if (c === '(') depth++
+      else if (c === ')') depth--
+      else if (c === ',' && depth === 0) {
+        args.push(cur.trim())
+        cur = ''
+        continue
+      }
+    }
+    cur += c
+  }
+  args.push(cur.trim())
+  return args.includes('test') ? 'test' : 'ambiguous'
+}
+
+/**
+ * Every whole test-gated `mod <ident> { ... }` block in `src` (Phase 71 D-10 cut rule): a column-0
+ * `mod <ident> {` line preceded by a contiguous run of column-0 `#[...]` lines, at least one of which
+ * is a recognised test cfg ({@link classifyCfgTestAttr}), through the next line that is exactly `}`.
+ * The range starts at the FIRST attribute line of the run. A cfg attribute that mentions `test` in an
+ * unrecognised shape throws (fail closed). Line numbers are 0-based and inclusive. Must match Rust
+ * `cut_test_modules`.
  */
 export function listRustTestModuleBlocks(
   src: string
 ): { name: string; startLine: number; endLine: number }[] {
   const lines = src.split('\n')
   const out: { name: string; startLine: number; endLine: number }[] = []
-  for (let i = 0; i < lines.length - 1; i++) {
-    if (lines[i] !== '#[cfg(test)]') continue
-    const next = lines[i + 1] ?? ''
-    if (!TEST_MOD_OPEN.test(next)) continue
+  let skipUntil = -1
+  for (let i = 0; i < lines.length; i++) {
+    if (i <= skipUntil) continue
+    const line = lines[i] ?? ''
+    if (!TEST_MOD_OPEN.test(line)) continue
+    let start = i
+    while (start > 0 && (lines[start - 1] ?? '').startsWith('#[')) start--
+    let isTest = false
+    for (let k = start; k < i; k++) {
+      const cls = classifyCfgTestAttr(lines[k] ?? '')
+      if (cls === 'ambiguous')
+        throw new Error(`ambiguous test cfg at line ${k + 1}: ${lines[k]}`)
+      if (cls === 'test') isTest = true
+    }
+    if (!isTest) continue
     let end = -1
-    for (let j = i + 2; j < lines.length; j++) {
+    for (let j = i + 1; j < lines.length; j++) {
       if (lines[j] === '}') {
         end = j
         break
       }
     }
     if (end === -1) throw new Error(`unterminated test module at line ${i + 1}`)
-    out.push({ name: next.split(' ')[1] ?? '', startLine: i, endLine: end })
-    i = end
+    out.push({ name: line.split(' ')[1] ?? '', startLine: start, endLine: end })
+    skipUntil = end
   }
   return out
 }

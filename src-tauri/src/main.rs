@@ -1984,35 +1984,112 @@ mod tests {
         include_str!("wake_lock/windows.rs"),
     ];
 
-    /// Cuts every whole test-module block (column-0 `#[cfg(test)]` immediately followed by a
-    /// column-0 `mod <ident> {`, through the next line that is exactly `}`) and keeps the rest.
-    /// Same rule as the jest reader `stripRustTestModules`.
+    #[derive(PartialEq, Eq, Debug)]
+    enum CfgTest {
+        Test,
+        Other,
+        Ambiguous,
+    }
+
+    /// Same rule as the jest `classifyCfgTestAttr`: `Test` = exactly `#[cfg(test)]` or a
+    /// `#[cfg(all(..))]` whose top-level arguments include the bare token `test`; `Ambiguous` = any
+    /// other `#[cfg(` line mentioning the word `test`; `Other` = anything else.
+    fn classify_cfg_test_attr(line: &str) -> CfgTest {
+        if !line.starts_with("#[cfg(") {
+            return CfgTest::Other;
+        }
+        if line == "#[cfg(test)]" {
+            return CfgTest::Test;
+        }
+        let mentions_test = line
+            .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+            .any(|w| w == "test");
+        if !mentions_test {
+            return CfgTest::Other;
+        }
+        let Some(inner) = line.strip_prefix("#[cfg(all(").and_then(|r| r.strip_suffix("))]")) else {
+            return CfgTest::Ambiguous;
+        };
+        let mut args: Vec<String> = Vec::new();
+        let (mut depth, mut in_str, mut cur) = (0i32, false, String::new());
+        for c in inner.chars() {
+            if c == '"' {
+                in_str = !in_str;
+            }
+            if !in_str {
+                if c == '(' {
+                    depth += 1;
+                } else if c == ')' {
+                    depth -= 1;
+                } else if c == ',' && depth == 0 {
+                    args.push(cur.trim().to_string());
+                    cur.clear();
+                    continue;
+                }
+            }
+            cur.push(c);
+        }
+        args.push(cur.trim().to_string());
+        if args.iter().any(|a| a == "test") {
+            CfgTest::Test
+        } else {
+            CfgTest::Ambiguous
+        }
+    }
+
+    fn is_mod_open(line: &str) -> bool {
+        line.strip_prefix("mod ").is_some_and(|rest| {
+            rest.strip_suffix(" {").is_some_and(|ident| {
+                !ident.is_empty() && ident.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+            })
+        })
+    }
+
+    /// Cuts every whole test-gated module block (a column-0 `mod <ident> {` preceded by a contiguous
+    /// run of column-0 `#[..]` lines, at least one a recognised test cfg, through the next line that
+    /// is exactly `}`; the cut starts at the run's first attribute) and keeps the rest. An unrecognised
+    /// `cfg` mentioning `test` panics (fail closed). Same rule as the jest `stripRustTestModules`.
     fn cut_test_modules(src: &str) -> String {
         let lines: Vec<&str> = src.split('\n').collect();
-        let mut out: Vec<&str> = Vec::with_capacity(lines.len());
+        let mut drop = vec![false; lines.len()];
         let mut i = 0;
         while i < lines.len() {
-            let opens_test_mod = lines[i] == "#[cfg(test)]"
-                && lines.get(i + 1).is_some_and(|next| {
-                    next.strip_prefix("mod ").is_some_and(|rest| {
-                        rest.strip_suffix(" {").is_some_and(|ident| {
-                            !ident.is_empty()
-                                && ident.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
-                        })
-                    })
-                });
-            if opens_test_mod {
-                i += 2;
-                while i < lines.len() && lines[i] != "}" {
-                    i += 1;
-                }
+            if !is_mod_open(lines[i]) {
                 i += 1;
                 continue;
             }
-            out.push(lines[i]);
-            i += 1;
+            let mut start = i;
+            while start > 0 && lines[start - 1].starts_with("#[") {
+                start -= 1;
+            }
+            let mut is_test = false;
+            for k in start..i {
+                match classify_cfg_test_attr(lines[k]) {
+                    CfgTest::Ambiguous => panic!("ambiguous test cfg at line {}: {}", k + 1, lines[k]),
+                    CfgTest::Test => is_test = true,
+                    CfgTest::Other => {}
+                }
+            }
+            if !is_test {
+                i += 1;
+                continue;
+            }
+            let mut end = i + 1;
+            while end < lines.len() && lines[end] != "}" {
+                end += 1;
+            }
+            for d in drop.iter_mut().take((end + 1).min(lines.len())).skip(start) {
+                *d = true;
+            }
+            i = end + 1;
         }
-        out.join("\n")
+        lines
+            .iter()
+            .zip(drop.iter())
+            .filter(|(_, d)| !**d)
+            .map(|(l, _)| *l)
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     /// The shell source with each file's own test modules cut, so a literal needle cannot
@@ -2041,6 +2118,29 @@ mod tests {
         assert_eq!(cut_test_modules(kept), kept);
         let attr_only = "#[cfg(test)]\nfn helper() {}\n";
         assert_eq!(cut_test_modules(attr_only), attr_only);
+    }
+
+    #[test]
+    fn cut_test_modules_cuts_cfg_all_and_stacked_test_mods() {
+        let all = "fn a() {}\n#[cfg(all(test, target_os = \"macos\"))]\nmod terminate_reply_tests {\n    fn t() {}\n}\nfn b() {}\n";
+        assert_eq!(cut_test_modules(all), "fn a() {}\nfn b() {}\n");
+        let stacked = "fn a() {}\n#[cfg(windows)]\n#[allow(dead_code)]\n#[cfg(test)]\nmod w {\n}\nfn b() {}\n";
+        assert_eq!(cut_test_modules(stacked), "fn a() {}\nfn b() {}\n");
+        let non_test = "#[cfg(windows)]\nmod win {\n}\nfn a() {}\n";
+        assert_eq!(cut_test_modules(non_test), non_test);
+        assert!(!shell_production_source().contains("mod terminate_reply_tests"));
+    }
+
+    #[test]
+    #[should_panic(expected = "ambiguous test cfg")]
+    fn cut_test_modules_panics_on_cfg_any_test() {
+        cut_test_modules("#[cfg(any(test, feature = \"x\"))]\nmod m {\n}\n");
+    }
+
+    #[test]
+    #[should_panic(expected = "ambiguous test cfg")]
+    fn cut_test_modules_panics_on_cfg_not_test() {
+        cut_test_modules("#[cfg(not(test))]\nmod m {\n}\n");
     }
 
     #[test]
