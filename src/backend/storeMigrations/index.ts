@@ -8,9 +8,14 @@
  */
 
 import type { Migration, VersionCodec } from '../storeVersioning/types'
+import { settingsGameChain } from './settingsGame'
+import { settingsGlobalChain } from './settingsGlobal'
 
 export const STORE_MIGRATIONS: Readonly<Record<string, readonly Migration[]>> =
-  {}
+  {
+    'settings/global': settingsGlobalChain,
+    'settings/game': settingsGameChain
+  }
 
 const testOverrides = new Map<string, readonly Migration[] | undefined>()
 

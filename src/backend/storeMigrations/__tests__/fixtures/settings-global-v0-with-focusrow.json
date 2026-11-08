@@ -1,0 +1,10 @@
+{
+  "defaultSettings": {
+    "darkTrayIcon": false,
+    "trayIconVariant": "light",
+    "focusRow": { "kind": "view", "value": "favourites" },
+    "libraryTopSection": "disabled",
+    "language": "de"
+  },
+  "version": "v0"
+}
