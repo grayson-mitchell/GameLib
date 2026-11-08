@@ -4368,30 +4368,8 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
                 Ok(serde_json::json!({ "total": total, "matched": matched }))
             }
         }
-        // Take an OS power assertion (Phase 35 Plan 08, D-08, REQ-35-06). Backs
-        // `platform/index.ts`'s `powerSaveBlocker.start()`, which until this plan returned `-1`
-        // and held nothing. `args[0]` is one of exactly two Electron kind strings; anything
-        // else is REJECTED by `wake_lock_kind` rather than defaulted (threat T-35-32).
-        //
-        // Like the clipboard arms, this is a `dispatch_rust_channel` arm and NOT a
-        // `generate_handler!` command: the caller is the sidecar over `requestRustInvoke`, and
-        // `generate_handler!` is the renderer's surface. Registering it there would be dead
-        // code that also handed the webview a power-management capability it has no use for,
-        // against D-02's zero-renderer-capability-grant stance.
-        RustInvokeChannel::WakeLockStart => {
-            let a = WakeLockStartArgs::from_args(args)?;
-            let id = wake_lock_start(&a.kind)?;
-            Ok(Value::from(id))
-        }
-        // Release exactly the assertion `args[0]` names (Phase 35 Plan 08, D-08, REQ-35-06).
-        // An id outside u32 range cannot name a live assertion, so it is rejected as bad args
-        // rather than truncated into one that could name somebody else's lock.
-        RustInvokeChannel::WakeLockStop => {
-            let a = WakeLockStopArgs::from_args(args)?;
-            let id = u32::try_from(a.id).map_err(|_| "wake_lock_stop:bad-args".to_string())?;
-            wake_lock_stop(id)?;
-            Ok(Value::Null)
-        }
+        RustInvokeChannel::WakeLockStart => rpc_wake_lock_start(args),
+        RustInvokeChannel::WakeLockStop => rpc_wake_lock_stop(args),
         RustInvokeChannel::ScanSteamApiImports => rpc_scan_steam_api_imports(args),
         RustInvokeChannel::ScanSteamDrm => rpc_scan_steam_drm(args),
         RustInvokeChannel::ScanSteamstubSection => rpc_scan_steamstub_section(args),
