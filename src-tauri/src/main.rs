@@ -2026,6 +2026,7 @@ mod tests {
         "sidecar.rs",
         "single_instance.rs",
         "store_embed.rs",
+        "store_embed/open.rs",
         "store_embed/policy.rs",
         "store_embed/state.rs",
         "terminate_veto.rs",
@@ -2063,6 +2064,7 @@ mod tests {
         include_str!("sidecar.rs"),
         include_str!("single_instance.rs"),
         include_str!("store_embed.rs"),
+        include_str!("store_embed/open.rs"),
         include_str!("store_embed/policy.rs"),
         include_str!("store_embed/state.rs"),
         include_str!("terminate_veto.rs"),
@@ -8164,7 +8166,7 @@ mod tests {
         // quotes the literals being searched for) or a later unrelated mention, and produce a
         // false PASS or a false FAIL for the wrong reason instead of failing because the
         // structure actually moved.
-        let source = include_str!("store_embed.rs");
+        let source = include_str!("store_embed/open.rs");
         let fn_start = source
             .find("fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {")
             .expect("store_embed_open definition not found in main.rs");
@@ -8259,7 +8261,7 @@ mod tests {
     // webview visible alongside the raw Epic subview.
     #[test]
     fn store_embed_open_epic_arm_hides_the_tauri_embed_before_opening_epic() {
-        let source = include_str!("store_embed.rs");
+        let source = include_str!("store_embed/open.rs");
         let arm = store_embed_open_epic_arm(source);
         assert!(
             epic_arm_hides_tauri_embed_before_opening(arm),
