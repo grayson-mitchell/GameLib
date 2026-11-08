@@ -282,6 +282,11 @@ export const routes: RouteObject[] = [
         lazy: makeLazyFunc(import('./screens/Settings'))
       },
       {
+        // quick 261108-ioc: /settings/stores/:store deep-links a store tab.
+        path: 'settings/:type/:store',
+        lazy: makeLazyFunc(import('./screens/Settings'))
+      },
+      {
         path: 'wine-manager',
         lazy: makeLazyFunc(import('./screens/WineManager'))
       },

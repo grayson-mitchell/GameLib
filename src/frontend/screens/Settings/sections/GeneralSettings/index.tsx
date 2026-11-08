@@ -4,14 +4,9 @@ import {
   AutoUpdateGames,
   CheckUpdatesOnStartup,
   DefaultInstallPath,
-  DefaultSteamPath,
   DisableController,
   DiscordRPC,
-  EgsSettings,
-  EnableSteamNativeInstall,
-  EnableSteamNativeDelete,
   ShareDetectedFixes,
-  SteamExperimentalInstallApp,
   HideChangelogOnStartup,
   MaxWorkers,
   MinimizeOnGameLaunch,
@@ -20,9 +15,7 @@ import {
   TraySettings,
   UseDarkTrayIcon,
   UseFramelessWindow,
-  WinePrefixesBasePath,
-  PlaytimeSync,
-  NotifyHumbleExpirations
+  WinePrefixesBasePath
 } from '../../components'
 
 export default function GeneralSettings() {
@@ -38,14 +31,7 @@ export default function GeneralSettings() {
 
       <WinePrefixesBasePath />
 
-      <DefaultSteamPath />
-
-      <EnableSteamNativeInstall />
-      <EnableSteamNativeDelete />
-      <SteamExperimentalInstallApp />
       <ShareDetectedFixes />
-
-      <EgsSettings />
 
       <CheckUpdatesOnStartup />
 
@@ -65,11 +51,7 @@ export default function GeneralSettings() {
 
       <Shortcuts />
 
-      <PlaytimeSync />
-
       <DiscordRPC />
-
-      <NotifyHumbleExpirations />
 
       <DisableController />
 

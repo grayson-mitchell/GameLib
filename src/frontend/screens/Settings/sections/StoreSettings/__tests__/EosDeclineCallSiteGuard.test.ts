@@ -12,7 +12,7 @@
  * cannot see that. This gate reads the real component source and asserts on the CALL SITE
  * shape instead.
  *
- * `AdvancedSettings/index.tsx` cannot be imported under this project's `node`-environment
+ * `StoreSettings/EosOverlay.tsx` cannot be imported under this project's `node`-environment
  * Frontend jest project (no jsdom, no react-test-renderer -- see
  * `src/frontend/jest.config.js`'s header). Same documented constraint and same approach as
  * `GlobalStateRefreshCacheGuard.test.ts`: read the real source, collapse whitespace to a
@@ -30,7 +30,7 @@ import { join } from 'path'
 import { EOS_OVERLAY_CHANNELS } from 'frontend/helpers/declaredUnavailable'
 import { defined } from '../../../../__tests__/fixtures/indexed'
 
-const componentPath = join(__dirname, '..', 'index.tsx')
+const componentPath = join(__dirname, '..', 'EosOverlay.tsx')
 
 /** Collapses every run of whitespace to a single space -- a whitespace WINDOW, not a line. */
 function collapse(source: string): string {
@@ -68,7 +68,7 @@ function findEosCallSiteIndices(collapsed: string): number[] {
   return indices
 }
 
-describe('AdvancedSettings EOS decline call-site gate', () => {
+describe('StoreSettings EOS decline call-site gate', () => {
   const source = readFileSync(componentPath, 'utf-8')
   const collapsed = collapse(source)
 

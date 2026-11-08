@@ -15,9 +15,8 @@
  *       `setEosOverlayUnavailable(true)`, and does NOT flip `eosOverlayInstalled` to claim the
  *       overlay was removed when it wasn't.
  *
- * `AdvancedSettings/index.tsx` cannot be imported UNMODIFIED-BARREL under this project's
- * `node`-environment Frontend jest project: its `'../../components'` barrel import transitively
- * pulls in `.scss` files (no jsdom/react-test-renderer, no scss moduleNameMapper -- see
+ * `StoreSettings/EosOverlay.tsx` imports no component barrel, so it loads cleanly under this project's
+ * `node`-environment Frontend jest project; the historical note follows: a barrel import would pull in `.scss` files (no jsdom/react-test-renderer, no scss moduleNameMapper -- see
  * `src/frontend/jest.config.js`'s header, and `EosDeclineCallSiteGuard.test.ts`'s docstring, which
  * works around this by never importing the component at all). This file takes the OTHER
  * documented workaround instead: mock the two component-barrel imports (`../../../components`,
@@ -27,7 +26,7 @@
  *
  * `useState` is mocked with a slot/cursor harness (mirrors `logoutFailureSurface.test.tsx`), with
  * one addition this component needs that Runner did not: `__seedSlots()`, to force
- * `eosOverlayInstalled = true` (slot index 1) before mounting, since the Remove button only
+ * `eosOverlayInstalled = true` (slot index 0) before mounting, since the Remove button only
  * renders when the overlay is reported installed and this component's own probing `useEffect`s
  * are mocked to no-ops (nothing real reaches `window.api.getEosOverlayStatus()` here).
  */
@@ -61,39 +60,9 @@ jest.mock('react-i18next', () => ({
   })
 }))
 
-jest.mock('../../../SettingsContext', () => ({
-  __esModule: true,
-  default: { __name: 'SettingsContext' }
-}))
-
 jest.mock('frontend/state/ContextProvider', () => ({
   __esModule: true,
   default: { __name: 'ContextProvider' }
-}))
-
-// Inert stand-ins -- see the module header. None of these render in this test (they are
-// unrelated settings rows the component just happens to also mount), so a stub component
-// changes nothing this file asserts on; it exists purely to stop their real, scss-laden
-// subtrees from ever being resolved.
-jest.mock('../../../components', () => ({
-  AllowInstallationBrokenAnticheat: () => null,
-  ShowValveProton: () => null,
-  AltGOGdlBin: () => null,
-  AltLegendaryBin: () => null,
-  AltNileBin: () => null,
-  ClearCache: () => null,
-  DisableLogs: () => null,
-  DownloadNoHTTPS: () => null,
-  ExperimentalFeatures: () => null,
-  HideWindowOnProtocolLaunch: () => null,
-  ResetHeroic: () => null,
-  GamePadDelayRepeat: () => null,
-  SteamGridDbApiKey: () => null
-}))
-
-jest.mock('../../../components/DisableGOGPresence', () => ({
-  __esModule: true,
-  default: () => null
 }))
 
 jest.mock('react', () => {
@@ -124,7 +93,6 @@ jest.mock('react', () => {
       return [slots[idx], setState]
     },
     useContext: (ctx: { __name?: string }) => {
-      if (ctx?.__name === 'SettingsContext') return { config: {} }
       if (ctx?.__name === 'ContextProvider') {
         return {
           libraryStatus: [],
@@ -134,7 +102,7 @@ jest.mock('react', () => {
       }
       return undefined
     },
-    // All 5 of this component's useEffects are no-ops here -- none of them are under test in
+    // All 4 of this component's useEffects are no-ops here -- none of them are under test in
     // this file (they only populate state this file seeds directly via __seedSlots).
     useEffect: () => {},
     __resetMount: () => {
@@ -154,7 +122,7 @@ jest.mock('react', () => {
 
 // Imported after the mocks above (textual order, not hoisting -- ts-jest does not hoist
 // jest.mock; see logoutFailureSurface.test.tsx / index.test.tsx for the same convention).
-import AdvancedSetting from '../index'
+import EosOverlay from '../EosOverlay'
 
 type HookHarness = {
   __resetMount: () => void
@@ -166,17 +134,17 @@ function harness(): HookHarness {
   return jest.requireMock('react') as unknown as HookHarness
 }
 
-// Slot 1 is `eosOverlayInstalled` -- forced true so the Remove button (only rendered when the
+// Slot 0 is `eosOverlayInstalled` -- forced true so the Remove button (only rendered when the
 // overlay is reported installed) is reachable without needing the real (mocked-to-no-op)
 // fetch-driven useEffects to run.
-const EOS_OVERLAY_INSTALLED_SLOT = 1
-const EOS_OVERLAY_UNAVAILABLE_SLOT = 7
+const EOS_OVERLAY_INSTALLED_SLOT = 0
+const EOS_OVERLAY_UNAVAILABLE_SLOT = 6
 
 function mount(slotOverrides: Record<number, unknown> = {}): ReactElement {
   const h = harness()
   h.__resetMount()
   h.__seedSlots(slotOverrides)
-  return AdvancedSetting() as unknown as ReactElement
+  return EosOverlay() as unknown as ReactElement
 }
 
 function collectElements(
@@ -236,7 +204,7 @@ interface CapturedDialogOptions {
   type: string
 }
 
-describe('AdvancedSettings: EOS overlay Remove confirmation (Phase 35 plan 26, REQ-35-17)', () => {
+describe('StoreSettings/EosOverlay: EOS overlay Remove confirmation (Phase 35 plan 26, REQ-35-17)', () => {
   beforeEach(() => {
     mockShowDialogModal.mockClear()
     mockRemoveEosOverlay.mockClear()

@@ -12,6 +12,7 @@ import LogSettings from './sections/LogSettings'
 import FooterInfo from './sections/FooterInfo'
 import {
   GeneralSettings,
+  StoreSettings,
   GamesSettings,
   SyncSaves,
   AdvancedSettings,
@@ -49,6 +50,7 @@ function Settings() {
   const { type = 'general' } = useParams()
   const appName = 'default'
   const isGeneralSettings = type === 'general'
+  const isStoreSettings = type === 'stores'
   const isSyncSettings = type === 'sync'
   const isGamesSettings = type === 'games_settings'
   const isLogSettings = type === 'log'
@@ -139,6 +141,7 @@ function Settings() {
             </h1>
 
             {isGeneralSettings && <GeneralSettings />}
+            {isStoreSettings && <StoreSettings />}
             {isGamesSettings && <GamesSettings />}
             {isSyncSettings && <SyncSaves />}
             {isAdvancedSetting && <AdvancedSettings />}

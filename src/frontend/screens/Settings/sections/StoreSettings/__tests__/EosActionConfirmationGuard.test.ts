@@ -22,7 +22,7 @@
  * action named in `GUARDED_ACTIONS`, that its JSX `onClick` attribute is NEVER wired to the
  * bare action function -- it must be reached only through a `confirm<Name>` wrapper.
  *
- * Same documented constraint as the sibling guard: `AdvancedSettings/index.tsx` cannot be
+ * Same documented constraint as the sibling guard: `StoreSettings/EosOverlay.tsx` cannot be
  * imported under this project's `node`-environment Frontend jest project (no jsdom, no
  * react-test-renderer -- see `src/frontend/jest.config.js`'s header). Read the real source,
  * collapse whitespace to a single space (so Prettier line-wrapping cannot break a substring
@@ -31,7 +31,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-const componentPath = join(__dirname, '..', 'index.tsx')
+const componentPath = join(__dirname, '..', 'EosOverlay.tsx')
 
 /** Collapses every run of whitespace to a single space -- a whitespace WINDOW, not a line. */
 function collapse(source: string): string {
@@ -66,7 +66,7 @@ function countOccurrences(haystack: string, needle: string): number {
   return count
 }
 
-describe('AdvancedSettings EOS action confirmation gate', () => {
+describe('StoreSettings EOS action confirmation gate', () => {
   const source = readFileSync(componentPath, 'utf-8')
   const collapsed = collapse(source)
 
