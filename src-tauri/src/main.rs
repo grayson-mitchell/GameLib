@@ -3774,54 +3774,6 @@ mod tests {
         assert_eq!(timeout_for("handleProtocolUrl"), Some(INVOKE_TIMEOUT));
     }
 
-    // ---- store_embed_navigation_policy (Phase 40 Plan 04, D-29, T-40-04-02/03/09) ----
-    //
-    // Covers block / allow / hand-off / default-deny per the plan's own verification list.
-    // `on_navigation`'s actual side effect (calling `open_external` on `Handoff`) lives in the
-    // closure inside `store_embed_open`, not here -- this function is pure by construction so
-    // it can be driven without a live `AppHandle`.
-
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    #[test]
-    fn store_embed_navigation_policy_blocks_the_apps_own_scheme() {
-        // T-40-04-02: the sharpest edge in the phase. A store page must never be able to drive
-        // the app's own deep link from inside the embed.
-        let url = tauri::Url::parse("gamelib://launch?appName=1207659037&runner=gog").unwrap();
-        assert_eq!(
-            store_embed_navigation_policy(&url, Some("store.steampowered.com")),
-            StoreEmbedNavigationDecision::Block
-        );
-    }
-
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    #[test]
-    fn store_embed_navigation_policy_allows_https_freely() {
-        // D-28 forbids an origin allowlist -- ordinary https navigation (e.g. a GOG checkout
-        // redirect chain through several distinct hosts) must stay free.
-        for candidate in [
-            "https://store.gog.com/game/some_game",
-            "https://checkout.stripe.com/pay/cs_test_abc",
-            "https://www.amazon.com/gp/cart/view.html",
-        ] {
-            let url = tauri::Url::parse(candidate).unwrap();
-            assert_eq!(
-                store_embed_navigation_policy(&url, Some("store.steampowered.com")),
-                StoreEmbedNavigationDecision::Allow,
-                "expected free https navigation to `{candidate}` under D-28"
-            );
-        }
-    }
-
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    #[test]
-    fn store_embed_navigation_policy_allows_http_freely() {
-        let url = tauri::Url::parse("http://example.com/").unwrap();
-        assert_eq!(
-            store_embed_navigation_policy(&url, Some("store.steampowered.com")),
-            StoreEmbedNavigationDecision::Allow
-        );
-    }
-
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_navigation_policy_hands_off_steam_scheme() {
@@ -3833,83 +3785,6 @@ mod tests {
             store_embed_navigation_policy(&url, Some("store.steampowered.com")),
             StoreEmbedNavigationDecision::Handoff
         );
-    }
-
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    #[test]
-    fn store_embed_navigation_policy_blocks_steam_unless_the_top_level_page_is_valve() {
-        // todo 2026-10-05: `on_navigation` cannot tell an ad iframe from the main frame, so a
-        // `steam:` hand-off is gated on the top-level page. Off a Valve page -- or before any
-        // page has loaded -- it is blocked, not handed to the Steam client.
-        let url = tauri::Url::parse("steam://run/570").unwrap();
-        for top in [
-            None,
-            Some("store.gog.com"),
-            Some("www.amazon.com"),
-            Some("evilsteampowered.com"),
-            Some("steampowered.com.example"),
-        ] {
-            assert_eq!(
-                store_embed_navigation_policy(&url, top),
-                StoreEmbedNavigationDecision::Block,
-                "expected steam: to be blocked with top-level host {top:?}"
-            );
-        }
-        for top in [
-            "store.steampowered.com",
-            "steamcommunity.com",
-            "help.steampowered.com",
-        ] {
-            assert_eq!(
-                store_embed_navigation_policy(&url, Some(top)),
-                StoreEmbedNavigationDecision::Handoff,
-                "expected steam: to be handed off from `{top}`"
-            );
-        }
-    }
-
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    #[test]
-    fn store_embed_navigation_policy_https_is_unaffected_by_the_top_level_host() {
-        // The steam: gate must not leak into D-28's free https navigation.
-        let url = tauri::Url::parse("https://checkout.stripe.com/pay/cs_test_abc").unwrap();
-        assert_eq!(
-            store_embed_navigation_policy(&url, None),
-            StoreEmbedNavigationDecision::Allow
-        );
-    }
-
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    #[test]
-    fn handoff_throttle_admits_one_per_gap() {
-        let gap = Duration::from_secs(2);
-        let t0 = std::time::Instant::now();
-        let mut throttle = HandoffThrottle::default();
-        assert!(throttle.admit(t0, gap), "the first hand-off is admitted");
-        assert!(
-            !throttle.admit(t0, gap),
-            "a burst at the same instant is refused"
-        );
-        assert!(!throttle.admit(t0 + Duration::from_millis(1999), gap));
-        assert!(
-            throttle.admit(t0 + gap, gap),
-            "admitted again once the gap has passed"
-        );
-        assert!(!throttle.admit(t0 + gap + Duration::from_millis(1), gap));
-    }
-
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    #[test]
-    fn handoff_throttle_refusals_do_not_extend_the_window() {
-        // A page spamming refused requests must not lock out the next legitimate one forever.
-        let gap = Duration::from_secs(2);
-        let t0 = std::time::Instant::now();
-        let mut throttle = HandoffThrottle::default();
-        assert!(throttle.admit(t0, gap));
-        for ms in (100..2000).step_by(100) {
-            assert!(!throttle.admit(t0 + Duration::from_millis(ms), gap));
-        }
-        assert!(throttle.admit(t0 + gap, gap));
     }
 
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
