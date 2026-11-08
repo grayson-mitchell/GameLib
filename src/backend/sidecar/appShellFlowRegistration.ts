@@ -184,9 +184,8 @@ import { callAbortController } from '../utils/aborthandler/aborthandler'
 import { GlobalConfig } from '../config'
 import { libraryManagerMap } from '../storeManagers'
 import { configStore } from '../constants/key_value_stores'
-import { logInfo, logWarning, LogPrefix } from '../logger'
-import { sendFrontendMessage } from '../ipc'
-import { flushReadOnlyStores } from '../storeVersioning/readOnlyStores'
+import { logInfo, LogPrefix } from '../logger'
+import { pushReadOnlyStoresNotice } from './readOnlyStoresNotice'
 // Phase 35 plan 11: boot-time download-queue auto-resume, ported from
 // `main.ts:613` before that file is deleted at plan 35-14. See the
 // `frontendReady` handler below for the full contingency analysis.
@@ -589,11 +588,7 @@ export function registerAppShellFlows(
         // runs once per process, giving one notice per launch. Creates no timer or handle
         // (sidecar exit contract); own try/catch so it can never skip the work above.
         try {
-          flushReadOnlyStores({
-            send: (payload) =>
-              sendFrontendMessage('readOnlyStoresNotice', payload),
-            log: (line) => logWarning(line, LogPrefix.Backend)
-          })
+          pushReadOnlyStoresNotice()
         } catch (error) {
           logSendFailure('frontendReady -> readOnlyStoresNotice', error)
         }

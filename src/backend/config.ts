@@ -9,7 +9,6 @@ import { currentGlobalConfigVersion } from 'backend/constants/others'
 import { migrateFocusRowSelection } from 'common/focusRowMigration'
 import { migrateTrayIconVariant } from 'common/trayIconVariant'
 
-import { logError, LogPrefix } from './logger'
 import {
   ensureSettingsMigrated,
   writeSettingsFile

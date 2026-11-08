@@ -184,10 +184,7 @@ export class TypeCheckedStoreBackend<
   public get raw_store() {
     // The version envelope is not store data: `uploader.ts` iterates these keys as
     // log URLs, and the sidecar snapshot path reads this too (Pitfall 5).
-    const { [RESERVED_KEY]: _internal, ...rest } = this.store.store as Record<
-      string,
-      unknown
-    >
+    const { [RESERVED_KEY]: _internal, ...rest } = this.store.store
     return rest as StoreStructure[Name]
   }
 }

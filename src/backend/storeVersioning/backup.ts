@@ -19,7 +19,7 @@ import {
 } from 'graceful-fs'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 
-export const MAX_BACKUPS_PER_STORE = 3
+const MAX_BACKUPS_PER_STORE = 3
 
 const errMessage = (err: unknown): string =>
   err instanceof Error ? err.message : String(err)

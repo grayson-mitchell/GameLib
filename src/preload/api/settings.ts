@@ -7,6 +7,7 @@ export const requestGameSettings = makeHandlerInvoker('requestGameSettings')
 // WR-04: the sidecar pushes this when a per-game write failed both attempts.
 export const handleGameSettingWriteFailed = frontendListenerSlot('gameSettingWriteFailed')
 // Phase 68 D-05: one read-only stores notice per launch, pushed from frontendReady.
+// @public consumed through window.api (preload spread), not an import edge.
 export const handleReadOnlyStoresNotice = frontendListenerSlot('readOnlyStoresNotice')
 
 const setSettingIpc = makeListenerCaller('setSetting')

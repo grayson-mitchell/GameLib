@@ -1184,8 +1184,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           require('../appShellFlowRegistration').registerAppShellFlows()
           // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const platform = require('../../platform')
           ;[frontendReadyListener] =
-            require('../../platform').listenerRegistry.get('frontendReady')
+            platform.listenerRegistry.get('frontendReady')
         })
         jest.useFakeTimers({ doNotFake: ['setImmediate'] })
         try {

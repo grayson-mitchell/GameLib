@@ -25,7 +25,7 @@ export type ReadOnlyArea = (typeof READ_ONLY_AREAS)[number]
 
 export const READ_ONLY_REASONS = ['newer', 'failed'] as const
 
-export type ReadOnlyReason = (typeof READ_ONLY_REASONS)[number]
+type ReadOnlyReason = (typeof READ_ONLY_REASONS)[number]
 
 export type ReadOnlyStoresNoticePayload = {
   entries: Array<{ area: ReadOnlyArea; reason: ReadOnlyReason }>
