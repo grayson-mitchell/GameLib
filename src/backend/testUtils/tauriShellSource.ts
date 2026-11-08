@@ -149,6 +149,18 @@ export function stripRustTestModules(src: string): string {
 }
 
 /**
+ * One shell file's PRODUCTION text: {@link readTauriShellFile} with its co-located test modules cut
+ * (Phase 71 D-10). Any pin on a file that may carry a `#[cfg(test)] mod` (presence, order or count of a
+ * production construct) must read through this, or a needle in the test module can satisfy it.
+ */
+export function readTauriShellProductionFile(
+  relPath: string,
+  repoRoot: string = DEFAULT_REPO_ROOT
+): string {
+  return stripRustTestModules(readTauriShellFile(relPath, repoRoot))
+}
+
+/**
  * The combined shell source with each file's own test modules cut BEFORE concatenation, so a
  * module that gains co-located tests cannot cut off the files after it (Phase 71 D-10).
  */
