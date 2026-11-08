@@ -86,4 +86,4 @@ created: 2026-11-08
 - [x] Feedback latency < 120s
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** approved 2026-11-09 (live check pending operator, see 71-18)
+**Approval:** approved 2026-11-09 (live check approved by operator, 71-18)
