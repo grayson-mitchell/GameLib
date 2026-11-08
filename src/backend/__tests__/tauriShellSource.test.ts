@@ -86,6 +86,21 @@ function loadMainRsCode(source?: string): string {
 }
 
 /**
+ * End offset (exclusive, just past the closing `}`) of the column-0 fn starting at `start` in
+ * `code` (Phase 71 D-10): replaces the old "next `#[cfg(target_os = "macos")]`" bound, which
+ * ran into whatever item followed in the combined text and so depended on file order. Delegates
+ * to `readTopLevelFnBody` so a missing, duplicated or near-empty fn fails loudly.
+ */
+function fnEndAfter(code: string, start: number): number {
+  const name = /^(?:pub\(crate\) )?fn (\w+)/.exec(code.slice(start))
+  if (!name) throw new Error('fnEndAfter: start is not at a fn definition')
+  readTopLevelFnBody(code, name[1] ?? '', 1)
+  const close = code.indexOf('\n}\n', start)
+  if (close < 0) throw new Error(`fnEndAfter: ${name[1]} is unterminated`)
+  return close + 2
+}
+
+/**
  * Body of the `rpc_humble_login_open` handler (Phase 71 D-10): the dispatcher arm is a one-line
  * call, the body lives in `login_window/humble_open.rs`. `readHandlerBody` throws when the fn is
  * missing, duplicated or near-empty, so a pin over this body cannot pass on an empty slice.
@@ -1543,7 +1558,7 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
   function extractPristineLoginFnBody(code: string): string {
     const start = code.indexOf('fn open_pristine_epic_login_window(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     return code.slice(start, end)
   }
@@ -1795,7 +1810,7 @@ describe('Phase 34.4.2 Plan 01 — login-window handle resolvers and the Epic sc
   function extractPristineLoginFnBody(code: string): string {
     const start = code.indexOf('fn open_pristine_epic_login_window(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     return code.slice(start, end)
   }
@@ -1809,10 +1824,11 @@ describe('Phase 34.4.2 Plan 01 — login-window handle resolvers and the Epic sc
    * `open_pristine_epic_login_window` itself).
    */
   function extractEpicPristineNavDelegateBody(code: string): string {
-    const start = code.indexOf('define_class!(')
+    const end = code.indexOf('impl EpicPristineNavDelegate {')
+    expect(end).toBeGreaterThan(-1)
+    // The define_class! that immediately precedes the impl (Phase 71 D-10: not the first in the combined text).
+    const start = code.lastIndexOf('define_class!(', end)
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('impl EpicPristineNavDelegate {', start)
-    expect(end).toBeGreaterThan(start)
     return code.slice(start, end)
   }
 
@@ -2045,7 +2061,7 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
     const code = loadMainRsCode()
     const start = code.indexOf('fn open_pristine_epic_login_window(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     const pristineBody = code.slice(start, end)
     for (const symbol of [
@@ -2143,16 +2159,17 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
   function extractPristineLoginFnBody(code: string): string {
     const start = code.indexOf('fn open_pristine_epic_login_window(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     return code.slice(start, end)
   }
 
   function extractEpicPristineNavDelegateBody(code: string): string {
-    const start = code.indexOf('define_class!(')
+    const end = code.indexOf('impl EpicPristineNavDelegate {')
+    expect(end).toBeGreaterThan(-1)
+    // The define_class! that immediately precedes the impl (Phase 71 D-10: not the first in the combined text).
+    const start = code.lastIndexOf('define_class!(', end)
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('impl EpicPristineNavDelegate {', start)
-    expect(end).toBeGreaterThan(start)
     return code.slice(start, end)
   }
 
@@ -2320,15 +2337,16 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
     function extractPristineLoginFnBody(code: string): string {
       const start = code.indexOf('fn open_pristine_epic_login_window(')
       expect(start).toBeGreaterThan(-1)
-      const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+      const end = fnEndAfter(code, start)
       expect(end).toBeGreaterThan(start)
       return code.slice(start, end)
     }
     function extractEpicPristineNavDelegateBody(code: string): string {
-      const start = code.indexOf('define_class!(')
+      const end = code.indexOf('impl EpicPristineNavDelegate {')
+      expect(end).toBeGreaterThan(-1)
+      // The define_class! that immediately precedes the impl (Phase 71 D-10: not the first in the combined text).
+      const start = code.lastIndexOf('define_class!(', end)
       expect(start).toBeGreaterThan(-1)
-      const end = code.indexOf('impl EpicPristineNavDelegate {', start)
-      expect(end).toBeGreaterThan(start)
       return code.slice(start, end)
     }
     const code = loadMainRsCode()
@@ -4319,7 +4337,7 @@ describe('quick 260930-q11: both login-sheet paths resolve their NSWindow handle
     expect(code.match(/unsafe impl Send for SendPtr/g) ?? []).toHaveLength(1)
     const start = code.indexOf('fn open_pristine_epic_login_window(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     expect(code.slice(start, end)).toContain(SEND_PTR_SHIM_IMPL)
   })
