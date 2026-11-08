@@ -32,3 +32,7 @@ delete it from the baseline. Narrow each
 site with an explicit check, early return/throw or default. Never a non-null `!`. When the
 baseline is empty, move `noUncheckedIndexedAccess` into `tsconfig.json` and retire the ratchet,
 its baseline, its test and the CI step.
+
+## Resolution
+
+The final bucket was `src/frontend/screens` (quick 261108-et8). `noUncheckedIndexedAccess` is now on in `tsconfig.json` and inherited by `tsconfig.meta.json` and `tsconfig.eslint.json` through `extends`. The ratchet, its baseline, its test, the `typecheck:indexed-access` script and the CI step were removed in quick 261108-et9; `pnpm codecheck` is now the enforcement. Turning the flag on needed 0 drift fixes. `relay/tsconfig.json` is a standalone program not covered by this (16 sites with the flag forced on; not typechecked in CI).
