@@ -658,7 +658,7 @@ Plans:
 **Goal:** Every persisted store has a schema version, and a change to its shape ships with an ordered migration, so an upgrade never silently resets a user's settings, library cache or Steam state to defaults. The 19 store modules (`*/electronStores.ts`, `constants/key_value_stores.ts`, the `TypeCheckedStoreBackend`, `GameLibStore`, `CacheStore` and sidecar `FileStore` classes) have no version field today. GameLib already has a migration runner inherited from Heroic: `src/backend/migration/` applies named one-off migrations in order and records them in `migrationsStore`, and holds one (`LegendaryGlobalConfigFolderMigration`). Settings also carry ad hoc fix-ups in `config.ts` (`migrateTrayIconVariant`, `migrateFocusRowSelection`). Build on that runner rather than replace it. Scope: a version per store; migrations keyed by store and version that run before first read; the existing `config.ts` fix-ups folded in; a backup of the pre-migration file and a logged, non-destructive fallback when a migration fails; and a test per migration from a fixture of the old shape. Phase 61 (existing per-game `wineVersion` choices moving into the Engine control) and Phase 64 (custom themes as token data) are the first known shape changes and should use this if it lands first. Open questions for discuss-phase: whether caches that can be refetched (store metadata, artwork, the CrossOver index) are simply discarded on a version mismatch instead of migrated; how a downgrade behaves when it meets a newer version; and the order relative to Phase 61. Came from the second architecture review on 2026-11-06.
 **Requirements**: TBD
 **Depends on:** None
-**Plans:** 5/10 plans executed
+**Plans:** 6/10 plans executed
 
 Plans:
 
@@ -675,7 +675,7 @@ Plans:
 
 - [x] 68-03-PLAN.md — Declare cache/user-state kind at all 51 store constructions + D-01 ratchet (D-02, D-14)
 - [x] 68-05-PLAN.md — config.ts / game_config.ts onto the engine; tray + focusRow fix-ups as settings/global v0->v1 (D-10, D-11)
-- [ ] 68-06-PLAN.md — Read-only aggregate, area mapping, once-per-launch `readOnlyStoresNotice` push + IPC gates
+- [x] 68-06-PLAN.md — Read-only aggregate, area mapping, once-per-launch `readOnlyStoresNotice` push + IPC gates
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
