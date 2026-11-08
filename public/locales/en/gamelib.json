@@ -383,6 +383,34 @@
             "retry": "Retry"
         }
     },
+    "readOnlyStores": {
+        "area": {
+            "amazon-account": "Amazon account",
+            "amazon-library": "Amazon library",
+            "app-data": "App data",
+            "downloads": "Downloads",
+            "epic-account": "Epic account",
+            "epic-library": "Epic library",
+            "game-settings": "Game settings",
+            "gog-account": "GOG account",
+            "gog-library": "GOG library",
+            "humble": "Humble Bundle",
+            "play-history": "Play history",
+            "preferences": "Preferences",
+            "settings": "Settings",
+            "sideload-library": "Sideloaded games",
+            "steam-account": "Steam account",
+            "steam-library": "Steam library"
+        },
+        "dismiss": "Dismiss",
+        "failed": {
+            "body": "{{areas}} couldn't be updated, so changes won't be saved. See the log for details."
+        },
+        "newer": {
+            "body": "This data was saved by a newer GameLib, so changes won't be saved. Update GameLib to keep them."
+        },
+        "title": "Some data is read-only"
+    },
     "redeemKey": {
         "alreadyOwned": "This key has already been redeemed — you already own this on Steam.",
         "error": "Couldn't reach Steam to redeem this key. Check your connection and try again.",

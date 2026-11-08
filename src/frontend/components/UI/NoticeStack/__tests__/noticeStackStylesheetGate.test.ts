@@ -62,6 +62,12 @@ const SLOTS: SlotEntry[] = [
     tsx: `${UI}/HumbleExpiryToast/index.tsx`,
     scss: `${UI}/HumbleExpiryToast/index.scss`,
     rootBase: 'humbleExpiryToast'
+  },
+  {
+    name: 'ReadOnlyStoresNotice',
+    tsx: `${UI}/ReadOnlyStoresNotice/index.tsx`,
+    scss: `${UI}/ReadOnlyStoresNotice/index.scss`,
+    rootBase: 'readOnlyStoresNotice'
   }
 ]
 
