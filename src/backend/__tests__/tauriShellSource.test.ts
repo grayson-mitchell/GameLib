@@ -15,11 +15,16 @@
  * the real code never changed.
  */
 import {
+  isExcludedShellFile,
+  listRustTestModuleBlocks,
   listTauriShellSourceFiles,
   GENERATED_MODULES,
   PRE_SPLIT_SIBLING_MODULES,
+  readHandlerBody,
   readTauriShellFile,
-  readTauriShellSource
+  readTauriShellSource,
+  readTopLevelFnBody,
+  stripRustTestModules
 } from 'backend/testUtils/tauriShellSource'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -4586,6 +4591,12 @@ describe('tauriShellSource helper scope', () => {
     }
   })
 
+  it('listTauriShellSourceFiles() contains no path the exclusion predicate rejects', () => {
+    for (const f of listTauriShellSourceFiles()) {
+      expect(isExcludedShellFile(f)).toBe(false)
+    }
+  })
+
   it('every `mod x;` declared in main.rs resolves to a listed file (or a pre-split sibling)', () => {
     const code = stripSourceComments(readTauriShellFile('main.rs'))
     const listed = listTauriShellSourceFiles()
@@ -4638,5 +4649,100 @@ describe('tauriShellSource helper scope', () => {
     visit('src')
     visit('meta')
     expect(offenders).toEqual([])
+  })
+})
+
+describe('production-source reader (Phase 71 D-10)', () => {
+  const rust = (...lines: string[]): string => lines.join('\n')
+
+  test('a trailing test mod is cut', () => {
+    const src = rust(
+      'fn a() {}',
+      '#[cfg(test)]',
+      'mod tests {',
+      '    fn t() {}',
+      '}',
+      ''
+    )
+    expect(stripRustTestModules(src)).toBe(rust('fn a() {}', ''))
+  })
+
+  test('a mid-file topic-named test mod is cut while the fn after it is kept', () => {
+    const src = rust(
+      'fn a() {}',
+      '#[cfg(test)]',
+      'mod shell_open_tests {',
+      '    fn t() {}',
+      '}',
+      'fn after() {}',
+      ''
+    )
+    const out = stripRustTestModules(src)
+    expect(out).toContain('fn after() {}')
+    expect(out).not.toContain('shell_open_tests')
+    expect(listRustTestModuleBlocks(src).map((b) => b.name)).toEqual([
+      'shell_open_tests'
+    ])
+  })
+
+  test('commented, indented and non-mod cfg(test) lines are not cut', () => {
+    const commented = rust('// #[cfg(test)]', '// mod tests {', 'fn a() {}')
+    expect(stripRustTestModules(commented)).toBe(commented)
+    const indented = rust(
+      '    #[cfg(test)]',
+      '    mod tests {',
+      '    }',
+      'fn a() {}'
+    )
+    expect(stripRustTestModules(indented)).toBe(indented)
+    const onFn = rust('#[cfg(test)]', 'fn helper() {}', 'fn a() {}')
+    expect(stripRustTestModules(onFn)).toBe(onFn)
+  })
+
+  test('readTopLevelFnBody returns the body for pub(crate) and plain fns', () => {
+    const src = rust(
+      'pub(crate) fn rpc_x(a: u8) {',
+      '    one();',
+      '    two();',
+      '    three();',
+      '}',
+      'fn rpc_y() {',
+      '    a();',
+      '    b();',
+      '    c();',
+      '}'
+    )
+    expect(readTopLevelFnBody(src, 'rpc_x')).toContain('two();')
+    expect(readHandlerBody(src, 'y')).toContain('b();')
+  })
+
+  test('readTopLevelFnBody throws on missing, duplicate and short bodies', () => {
+    const dup = rust(
+      'fn rpc_x() {',
+      '    a();',
+      '    b();',
+      '    c();',
+      '}',
+      'fn rpc_x() {',
+      '    a();',
+      '    b();',
+      '    c();',
+      '}'
+    )
+    expect(() => readTopLevelFnBody(dup, 'rpc_x')).toThrow(/rpc_x/)
+    expect(() => readTopLevelFnBody('fn other() {}', 'rpc_x')).toThrow(/rpc_x/)
+    const short = rust('fn rpc_x() {', '    only();', '}')
+    expect(() => readTopLevelFnBody(short, 'rpc_x')).toThrow(/rpc_x/)
+    expect(readTopLevelFnBody(short, 'rpc_x', 1)).toContain('only();')
+  })
+
+  test('isExcludedShellFile is prefix-aware and parents sort before their directory', () => {
+    expect(isExcludedShellFile('macos_epic_embed/surface.rs')).toBe(true)
+    expect(isExcludedShellFile('macos_epic_embed.rs')).toBe(true)
+    expect(isExcludedShellFile('login_window/sheet.rs')).toBe(false)
+    expect(['login_window/a.rs', 'login_window.rs'].sort()).toEqual([
+      'login_window.rs',
+      'login_window/a.rs'
+    ])
   })
 })
