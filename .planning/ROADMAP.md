@@ -662,15 +662,32 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 68-01-PLAN.md — Type contracts, A6 accessor-override proof on GameLibStore, private atomic write + D-08 backups
+- [ ] 68-08-PLAN.md — D-12 inventory of other persisted files / localStorage keys + triage todos
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 68-02-PLAN.md — Versioning engine + registry wired into GameLibStore (migrate before first read, D-03 read-only, D-06 failure, D-13 file modes)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 68-03-PLAN.md — Declare cache/user-state kind at all 51 store constructions + D-01 ratchet (D-02, D-14)
-- [ ] 68-04-PLAN.md — Read-only early returns in store classes and applyStoreWrite; hide `__internal__` everywhere
 - [ ] 68-05-PLAN.md — config.ts / game_config.ts onto the engine; tray + focusRow fix-ups as settings/global v0->v1 (D-10, D-11)
 - [ ] 68-06-PLAN.md — Read-only aggregate, area mapping, once-per-launch `readOnlyStoresNotice` push + IPC gates
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 68-04-PLAN.md — Read-only early returns in store classes and applyStoreWrite; hide `__internal__` everywhere
 - [ ] 68-07-PLAN.md — Renderer ReadOnlyStoresNotice toast (manual dismiss, D-15) + i18n
-- [ ] 68-08-PLAN.md — D-12 inventory of other persisted files / localStorage keys + triage todos
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 68-09-PLAN.md — Full gate battery, profile snapshot, smoke, live `pnpm tauri:dev` check (checkpoint)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 68-10-PLAN.md — Live D-03 proof, restore + delete snapshot, validation sign-off
 
 ### Phase 69: Consolidate frontend state onto GlobalStateV2
