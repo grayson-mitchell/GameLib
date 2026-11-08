@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: verifying
-stopped_at: Phase 72 context gathered
-last_updated: "2026-11-08T19:17:19.659Z"
+stopped_at: Phase 73 context gathered
+last_updated: "2026-11-08T19:20:20.979Z"
 last_activity: 2026-11-08
 progress:
   total_phases: 14
@@ -658,9 +658,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-08T19:17:19.649Z
-Stopped at: Phase 72 context gathered
-Resume file: None
+Last session: 2026-11-08T19:20:20.972Z
+Stopped at: Phase 73 context gathered
+Resume file: .planning/phases/73-steam-depot-download-pipeline-in-rust/73-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
