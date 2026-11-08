@@ -2622,25 +2622,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn humble_login_window_title_a_url_shaped_document_title_cannot_precede_the_real_origin() {
-        // T-34.5-G6-23: a malicious or compromised page could set document.title to
-        // something that itself looks like an address bar, attempting to impersonate a
-        // DIFFERENT origin than the one the shell actually validated and opened.
-        let title = login_window_title(
-            "https://www.humblebundle.com",
-            Some("https://accounts.google.com/signin"),
-        );
-        assert!(title.starts_with("https://www.humblebundle.com"));
-        // The real, shell-resolved origin's end must land before the impersonating
-        // text's start -- the impersonating string is still present (never hidden or
-        // stripped, this helper does not sanitize page content), it just can never lead.
-        let real_origin_end = title.find("https://www.humblebundle.com").unwrap()
-            + "https://www.humblebundle.com".len();
-        let impersonation_start = title.find("https://accounts.google.com").unwrap();
-        assert!(real_origin_end <= impersonation_start);
-    }
-
     // ---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----
     //
     // Pure function, directly testable (a live Keychain call is not). RED direction: an
@@ -3754,96 +3735,6 @@ mod tests {
         // Pins Task 2's design constraint: handleProtocolUrl must answer immediately and must
         // never await the game launch, so it deliberately stays OFF LONG_RUNNING_CHANNELS.
         assert_eq!(timeout_for("handleProtocolUrl"), Some(INVOKE_TIMEOUT));
-    }
-
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    #[test]
-    fn store_embed_navigation_policy_hands_off_steam_scheme() {
-        // A store page's own "launch"/"install" button can produce a steam:// URL. It must
-        // never load inside the embed -- it is handed to the OS via the existing
-        // `open_external` path instead (D-28/D-29).
-        let url = tauri::Url::parse("steam://rungameid/440").unwrap();
-        assert_eq!(
-            store_embed_navigation_policy(&url, Some("store.steampowered.com")),
-            StoreEmbedNavigationDecision::Handoff
-        );
-    }
-
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    #[test]
-    fn store_embed_navigation_policy_default_denies_unknown_schemes() {
-        // T-40-04-03: default-deny on anything outside the enumerated set, not an allowlist of
-        // known-bad schemes.
-        for candidate in [
-            "ftp://example.com/",
-            "file:///etc/passwd",
-            "javascript:alert(1)",
-            "itms-apps://apps.apple.com/app/id123",
-        ] {
-            let url = tauri::Url::parse(candidate).unwrap();
-            assert_eq!(
-                store_embed_navigation_policy(&url, Some("store.steampowered.com")),
-                StoreEmbedNavigationDecision::Block,
-                "expected `{candidate}` to be default-denied"
-            );
-        }
-    }
-
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    #[test]
-    fn store_embed_state_push_from_middle_truncates_forward_entries() {
-        // T-40-07-05: a fresh user-initiated push from a back-ed-up position (not a
-        // history-driven move) must discard the entries ahead of the cursor -- exactly like a
-        // browser tab: going back then clicking a new link erases the old "forward" branch.
-        let mut state = StoreEmbedState::default();
-        state.push("https://a.example/".to_string());
-        state.push("https://b.example/".to_string());
-        state.push("https://c.example/".to_string());
-        let back_target = state.go_back().unwrap(); // cursor -> b, suppress_next_push armed
-
-        // Mirrors `on_page_load`'s Finished handler confirming the back-navigation landed --
-        // suppressed, so it must NOT push a duplicate "b" entry.
-        state.push(back_target);
-        assert_eq!(
-            state.history.len(),
-            3,
-            "the suppressed confirm-push must not grow history"
-        );
-
-        // The user's actual next navigation, made from the back-ed-up "b" position.
-        state.push("https://d.example/".to_string());
-        assert_eq!(state.current_url().as_deref(), Some("https://d.example/"));
-        assert!(
-            !state.can_go_forward(),
-            "c must be gone once d is pushed from the b position"
-        );
-        assert_eq!(
-            state.history,
-            vec![
-                "https://a.example/".to_string(),
-                "https://b.example/".to_string(),
-                "https://d.example/".to_string(),
-            ]
-        );
-    }
-
-    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-    #[test]
-    fn store_embed_suppressed_push_enqueues_nothing() {
-        // The confirming Finished event of a back/forward/reload this process itself issued.
-        // Its caller already received the identical state as that arm's return value.
-        let mut state = StoreEmbedState::default();
-        state.push("https://a.example/".to_string());
-        state.push("https://b.example/".to_string());
-        let _ = state.take_nav_events();
-
-        let back_target = state.go_back().unwrap();
-        state.push(back_target);
-
-        assert!(
-            state.take_nav_events().is_empty(),
-            "a suppressed push must not queue a duplicate of state the caller already has"
-        );
     }
 
     /// Pins STRUCTURE, not GTK behaviour: `linux_store_embed_layout::apply_bounds` must call

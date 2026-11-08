@@ -773,4 +773,23 @@ mod tests {
         let b = login_chrome_css_script();
         assert_eq!(a, b);
     }
+
+    #[test]
+    fn humble_login_window_title_a_url_shaped_document_title_cannot_precede_the_real_origin() {
+        // T-34.5-G6-23: a malicious or compromised page could set document.title to
+        // something that itself looks like an address bar, attempting to impersonate a
+        // DIFFERENT origin than the one the shell actually validated and opened.
+        let title = login_window_title(
+            "https://www.humblebundle.com",
+            Some("https://accounts.google.com/signin"),
+        );
+        assert!(title.starts_with("https://www.humblebundle.com"));
+        // The real, shell-resolved origin's end must land before the impersonating
+        // text's start -- the impersonating string is still present (never hidden or
+        // stripped, this helper does not sanitize page content), it just can never lead.
+        let real_origin_end = title.find("https://www.humblebundle.com").unwrap()
+            + "https://www.humblebundle.com".len();
+        let impersonation_start = title.find("https://accounts.google.com").unwrap();
+        assert!(real_origin_end <= impersonation_start);
+    }
 }

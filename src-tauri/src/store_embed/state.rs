@@ -1184,4 +1184,61 @@ mod tests {
         assert_eq!(state.go_back().as_deref(), Some("https://a.example/"));
         assert!(!state.can_go_back());
     }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_state_push_from_middle_truncates_forward_entries() {
+        // T-40-07-05: a fresh user-initiated push from a back-ed-up position (not a
+        // history-driven move) must discard the entries ahead of the cursor -- exactly like a
+        // browser tab: going back then clicking a new link erases the old "forward" branch.
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/".to_string());
+        state.push("https://b.example/".to_string());
+        state.push("https://c.example/".to_string());
+        let back_target = state.go_back().unwrap(); // cursor -> b, suppress_next_push armed
+
+        // Mirrors `on_page_load`'s Finished handler confirming the back-navigation landed --
+        // suppressed, so it must NOT push a duplicate "b" entry.
+        state.push(back_target);
+        assert_eq!(
+            state.history.len(),
+            3,
+            "the suppressed confirm-push must not grow history"
+        );
+
+        // The user's actual next navigation, made from the back-ed-up "b" position.
+        state.push("https://d.example/".to_string());
+        assert_eq!(state.current_url().as_deref(), Some("https://d.example/"));
+        assert!(
+            !state.can_go_forward(),
+            "c must be gone once d is pushed from the b position"
+        );
+        assert_eq!(
+            state.history,
+            vec![
+                "https://a.example/".to_string(),
+                "https://b.example/".to_string(),
+                "https://d.example/".to_string(),
+            ]
+        );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_suppressed_push_enqueues_nothing() {
+        // The confirming Finished event of a back/forward/reload this process itself issued.
+        // Its caller already received the identical state as that arm's return value.
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/".to_string());
+        state.push("https://b.example/".to_string());
+        let _ = state.take_nav_events();
+
+        let back_target = state.go_back().unwrap();
+        state.push(back_target);
+
+        assert!(
+            state.take_nav_events().is_empty(),
+            "a suppressed push must not queue a duplicate of state the caller already has"
+        );
+    }
 }

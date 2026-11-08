@@ -304,4 +304,37 @@ mod tests {
         }
         assert!(throttle.admit(t0 + gap, gap));
     }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_navigation_policy_hands_off_steam_scheme() {
+        // A store page's own "launch"/"install" button can produce a steam:// URL. It must
+        // never load inside the embed -- it is handed to the OS via the existing
+        // `open_external` path instead (D-28/D-29).
+        let url = tauri::Url::parse("steam://rungameid/440").unwrap();
+        assert_eq!(
+            store_embed_navigation_policy(&url, Some("store.steampowered.com")),
+            StoreEmbedNavigationDecision::Handoff
+        );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+    #[test]
+    fn store_embed_navigation_policy_default_denies_unknown_schemes() {
+        // T-40-04-03: default-deny on anything outside the enumerated set, not an allowlist of
+        // known-bad schemes.
+        for candidate in [
+            "ftp://example.com/",
+            "file:///etc/passwd",
+            "javascript:alert(1)",
+            "itms-apps://apps.apple.com/app/id123",
+        ] {
+            let url = tauri::Url::parse(candidate).unwrap();
+            assert_eq!(
+                store_embed_navigation_policy(&url, Some("store.steampowered.com")),
+                StoreEmbedNavigationDecision::Block,
+                "expected `{candidate}` to be default-denied"
+            );
+        }
+    }
 }
