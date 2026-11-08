@@ -1007,12 +1007,12 @@ describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07
     // blanket substring check would be wrong. REQ-34.3-06 resolved to NO FIX: main.rs's own
     // comment above this arm (see Task 1's docstring citation) records that RunEvent::Exit
     // already fires and already kills the sidecar before the process re-execs.
-    const code = loadMainRsCode()
-    const armStart = code.indexOf('RustInvokeChannel::AppRelaunch => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armBodyEnd = code.indexOf('\n        }', armStart)
-    expect(armBodyEnd).toBeGreaterThan(armStart)
-    const armBody = code.slice(armStart, armBodyEnd)
+    const armBody = readHandlerBody(
+      loadMainRsCode(readTauriShellProductionSource()),
+      'app_relaunch',
+      1
+    )
+    expect(armBody).toContain('app.restart()')
     expect(armBody).not.toContain('shutdown_child()')
   })
 

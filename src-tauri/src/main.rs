@@ -131,6 +131,7 @@ mod shell_state;
 mod notification_show;
 mod dialogs;
 mod scan_dispatch;
+mod app_lifecycle;
 use clipboard::*;
 use keyring_dispatch::*;
 use wake_lock::*;
@@ -146,6 +147,7 @@ use shell_state::*;
 use notification_show::*;
 use dialogs::*;
 use scan_dispatch::*;
+use app_lifecycle::*;
 
 /// Invoke response timeout — a skeleton guardrail so a hung sidecar cannot wedge a command.
 const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
@@ -1996,6 +1998,7 @@ mod tests {
     /// run against only one of these files would pass vacuously for a needle that moved.
     const SHELL_SOURCE_FILES: &[&str] = &[
         "main.rs",
+        "app_lifecycle.rs",
         "clipboard.rs",
         "dialogs.rs",
         "ipc_contract.rs",
@@ -2019,6 +2022,7 @@ mod tests {
 
     const SHELL_SOURCE_PARTS: &[&str] = &[
         include_str!("main.rs"),
+        include_str!("app_lifecycle.rs"),
         include_str!("clipboard.rs"),
         include_str!("dialogs.rs"),
         include_str!("ipc_contract.rs"),

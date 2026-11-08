@@ -5,7 +5,9 @@
  * satisfy them.
  */
 import {
+  readHandlerBody,
   readTauriShellFile,
+  readTauriShellProductionSource,
   readTauriShellSource
 } from 'backend/testUtils/tauriShellSource'
 import {
@@ -44,11 +46,12 @@ describe('sidecar shutdown flag call sites (D-03)', () => {
   })
 
   it('the AppExit arm sets the flag before app.exit', () => {
-    const src = code('store_embed.rs')
-    const arm = slice(
-      src,
-      'RustInvokeChannel::AppExit =>',
-      'RustInvokeChannel::AppRelaunch =>'
+    const arm = strip(
+      readHandlerBody(
+        stripSourceComments(readTauriShellProductionSource()),
+        'app_exit',
+        1
+      )
     )
     const flag = arm.indexOf('begin_shutdown()')
     expect(flag).toBeGreaterThanOrEqual(0)
@@ -56,11 +59,12 @@ describe('sidecar shutdown flag call sites (D-03)', () => {
   })
 
   it('the AppRelaunch arm sets the flag before app.restart', () => {
-    const src = code('store_embed.rs')
-    const arm = slice(
-      src,
-      'RustInvokeChannel::AppRelaunch =>',
-      'RustInvokeChannel::AppHide =>'
+    const arm = strip(
+      readHandlerBody(
+        stripSourceComments(readTauriShellProductionSource()),
+        'app_relaunch',
+        1
+      )
     )
     const flag = arm.indexOf('begin_shutdown()')
     expect(flag).toBeGreaterThanOrEqual(0)
