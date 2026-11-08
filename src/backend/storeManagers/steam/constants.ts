@@ -14,7 +14,6 @@ export const STEAM_INSTALL_PATHS: Record<string, string[]> = {
 export const STEAM_DOWNLOAD_URL = 'https://store.steampowered.com/about/'
 
 export const TOKEN_STORE_KEY = 'refreshToken'
-export const TOKEN_PREFIX = 'steam:v1:'
 
 // ── Phase 17 (17-02): dedicated Steam CrossOver bottle constants ────────────
 // D-01: Steam is NEVER installed into the shared 'GameLib' GOG/Epic bottle —

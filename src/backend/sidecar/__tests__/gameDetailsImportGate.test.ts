@@ -329,8 +329,11 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // reads in the binding-gate helpers). No assertion, fixture or proof was altered or
   // weakened. Prior digest:
   // da9dda5ab90b78820eed3bd11b3d7669245eaa8c7952e674949a6fc041653348
+  // Phase 72 plan 05 (D-12): ElectronTokenStore deleted; the seam test now restores the
+  // previously active store instead of constructing one. Prior digest:
+  // f97f2b6ef9300c575bf0738ec33a76cf0e95a430bd299c81d6198c7effdc87aa
   const ELECTRON_UNTOUCHED_SHA256 =
-    'f97f2b6ef9300c575bf0738ec33a76cf0e95a430bd299c81d6198c7effdc87aa'
+    '2b2ff1eb32a9ecfda83532fc1435bf1b4c91ed24accc2858b13fc78676265b24'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

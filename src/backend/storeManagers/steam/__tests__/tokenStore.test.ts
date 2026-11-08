@@ -2,45 +2,30 @@
  * Unit tests for the Steam TokenStore seam (D-09, REQ-28-02/REQ-28-03).
  *
  * Covers:
- *  - ElectronTokenStore behavioral parity with the pre-seam encryptToken/
- *    decryptToken/encryptionAvailable free functions — byte-identical
- *    Electron behavior is REQ-28-07's hard constraint.
- *  - The D-11 divergence: ElectronTokenStore intentionally keeps a plaintext
- *    fallback on both read (legacy, no-prefix) and write (encryption
- *    unavailable) — this is DELIBERATE, preserved shipped behavior, not a
- *    bug. Do not "fix" the plaintext-write assertion below by removing it.
+ *  - D-12 (Phase 72, 2026-11-08): the module default is a FAIL-CLOSED
+ *    `UnconfiguredTokenStore`. This REVERSES the earlier D-11 stance, under which
+ *    the Electron-era store "deliberately" kept a plaintext fallback ("DELIBERATE,
+ *    do not remove"). That store and its plaintext write path are deleted; the
+ *    assertions below now prove nothing is ever persisted before bootstrap
+ *    installs the keyring / dev-vault store.
  *  - The setTokenStore/getTokenStore registry swap point, proven by routing
  *    user.ts's SteamUser.getCredentials() through a fake implementation.
  *  - REQ-28-03 (no migration): tokenStore.ts contains no import of a
- *    keyring/sidecar transport module — a structural proof there is no code
- *    path that reads an Electron-stored token and forwards it elsewhere.
+ *    keyring/sidecar transport module.
  *
- * Mock boundaries mirror user.test.ts's existing convention in this
- * directory:
- *  - electron       → safeStorage (encrypt/decrypt/availability) + app.getPath
- *                      (constants.ts calls app.getPath('userData') at import time)
+ * Mock boundaries mirror user.test.ts's existing convention in this directory:
+ *  - backend/platform (app.getPath: constants.ts calls it at import time)
  *  - backend/logger
- *  - ../stores → configStore (in-memory map, not electron-store)
- *  - steam-session / steam-user / graceful-fs → minimal stubs so `../user`
- *    can be imported for the registry-swap proof without pulling in real
- *    network/OS dependencies.
+ *  - ../stores -> configStore (in-memory map, not electron-store)
+ *  - steam-session / steam-user / graceful-fs -> minimal stubs so `../user`
+ *    can be imported for the registry-swap proof.
  */
 
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-// ── Electron mock (must be first, jest.mock is hoisted) ──────────────────────
-const mockEncryptString = jest.fn((s: string) => Buffer.from(s))
-const mockDecryptString = jest.fn((b: Buffer) => b.toString())
-const mockIsEncryptionAvailable = jest.fn(() => true)
-
 jest.mock('backend/platform', () => ({
-  safeStorage: {
-    isEncryptionAvailable: mockIsEncryptionAvailable,
-    encryptString: mockEncryptString,
-    decryptString: mockDecryptString
-  },
-  app: { getPath: jest.fn(() => '/tmp/test') }
+  app: { getPath: () => '/tmp/test' }
 }))
 
 // ── Logger mock ────────────────────────────────────────────────────────────
@@ -90,22 +75,17 @@ jest.mock('steam-user', () => jest.fn())
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import {
   TokenStore,
-  ElectronTokenStore,
   setTokenStore,
   getTokenStore,
   readTokenOutcome,
   clearOrphanedElectronToken
 } from '../tokenStore'
 import { SteamUser } from '../user'
-import { at } from './fixtures/indexed'
 
 describe('tokenStore', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     backingStore = {}
-    mockIsEncryptionAvailable.mockReturnValue(true)
-    mockEncryptString.mockImplementation((s: string) => Buffer.from(s))
-    mockDecryptString.mockImplementation((b: Buffer) => b.toString())
     // resetMocks: true (jest.config.js) wipes even a jest.fn(impl) factory's
     // initial implementation before every test — re-establish the in-memory
     // configStore backing so get_nodefault/set/delete/clear are genuinely
@@ -123,104 +103,53 @@ describe('tokenStore', () => {
     mockConfigStore.clear.mockImplementation(() => {
       backingStore = {}
     })
-    // Reset the module-level registry to a fresh ElectronTokenStore between
-    // tests so registry-swap tests don't leak into unrelated tests.
-    setTokenStore(new ElectronTokenStore())
-    mockLogInfo.mockClear() // clear the setTokenStore-above's own info log
+    mockLogWarning.mockClear()
   })
 
-  describe('ElectronTokenStore', () => {
-    it('setToken writes a steam:v1:-prefixed ciphertext under refreshToken, not raw plaintext', async () => {
-      const store = new ElectronTokenStore()
-      await store.setToken('abc')
-
-      expect(mockConfigStore.set).toHaveBeenCalledWith(
-        'refreshToken',
-        expect.stringMatching(/^steam:v1:/)
-      )
-      const [, storedValue] = at(mockConfigStore.set.mock.calls, 0)
-      expect(storedValue).not.toBe('abc')
-    })
-
-    it('getToken round-trips a setToken value back to the original plaintext', async () => {
-      const store = new ElectronTokenStore()
-      await store.setToken('abc')
-
-      const token = await store.getToken()
-      expect(token).toBe('abc')
-    })
-
-    it('getToken returns a legacy (no steam:v1: prefix) stored value verbatim', async () => {
-      backingStore['refreshToken'] = 'legacy-plaintext-token'
-      const store = new ElectronTokenStore()
-
-      const token = await store.getToken()
-      expect(token).toBe('legacy-plaintext-token')
-      expect(mockDecryptString).not.toHaveBeenCalled()
-    })
-
-    it('getToken returns "" when the store holds nothing', async () => {
-      const store = new ElectronTokenStore()
-      const token = await store.getToken()
-      expect(token).toBe('')
-    })
-
-    it('getToken returns "" when the stored value is not a string', async () => {
-      backingStore['refreshToken'] = 42
-      const store = new ElectronTokenStore()
-      const token = await store.getToken()
-      expect(token).toBe('')
-    })
-
-    it('getToken returns "" when decryptString throws', async () => {
-      backingStore['refreshToken'] =
-        'steam:v1:' + Buffer.from('x').toString('base64')
-      mockDecryptString.mockImplementationOnce(() => {
-        throw new Error('corrupt ciphertext')
+  // Each test imports a fresh module so the default store is the untouched one.
+  describe('default store (UnconfiguredTokenStore, D-12)', () => {
+    function freshModule(): typeof import('../tokenStore') {
+      let mod: typeof import('../tokenStore') | undefined
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        mod = require('../tokenStore')
       })
-      const store = new ElectronTokenStore()
+      if (!mod) throw new Error('tokenStore failed to load')
+      return mod
+    }
 
-      const token = await store.getToken()
-      expect(token).toBe('')
-    })
-
-    it('D-11: setToken stores plaintext and logs the exact warning when encryption is unavailable', async () => {
-      mockIsEncryptionAvailable.mockReturnValue(false)
-      const store = new ElectronTokenStore()
-
-      await store.setToken('abc')
-
-      expect(mockConfigStore.set).toHaveBeenCalledWith('refreshToken', 'abc')
-      expect(mockLogWarning).toHaveBeenCalledWith(
-        'safeStorage unavailable — storing Steam refresh token in plaintext',
-        'Steam'
-      )
-    })
-
-    it('isAvailable() returns false when safeStorage.isEncryptionAvailable() throws', async () => {
-      mockIsEncryptionAvailable.mockImplementation(() => {
-        throw new Error('Keychain unavailable')
-      })
-      const store = new ElectronTokenStore()
-
+    it('isAvailable() is false', async () => {
+      const store = freshModule().getTokenStore()
       await expect(store.isAvailable()).resolves.toBe(false)
     })
 
-    it('clearToken leaves no readable token', async () => {
-      const store = new ElectronTokenStore()
-      await store.setToken('abc')
-      await store.clearToken()
+    it('getToken() returns "" and readToken() reports unreadable/unavailable', async () => {
+      const mod = freshModule()
+      const store = mod.getTokenStore()
+      await expect(store.getToken()).resolves.toBe('')
+      await expect(mod.readTokenOutcome(store)).resolves.toEqual({
+        status: 'unreadable',
+        reason: 'unavailable'
+      })
+    })
 
-      const token = await store.getToken()
-      expect(token).toBe('')
+    it('setToken() throws "Steam token store not installed" and never writes configStore (T-72-16)', async () => {
+      const store = freshModule().getTokenStore()
+      await expect(store.setToken('abc')).rejects.toThrow(
+        'Steam token store not installed'
+      )
+      expect(mockConfigStore.set).not.toHaveBeenCalled()
+      expect(backingStore['refreshToken']).toBeUndefined()
+    })
+
+    it('clearToken() resolves without throwing and logs a warning', async () => {
+      const store = freshModule().getTokenStore()
+      await expect(store.clearToken()).resolves.toBeUndefined()
+      expect(mockLogWarning).toHaveBeenCalledTimes(1)
     })
   })
 
   describe('registry (setTokenStore/getTokenStore)', () => {
-    it('getTokenStore() returns an ElectronTokenStore by default', () => {
-      expect(getTokenStore()).toBeInstanceOf(ElectronTokenStore)
-    })
-
     it('setTokenStore(fake) swaps the active store, and SteamUser.getCredentials() reads through it', async () => {
       const fake: TokenStore = {
         isAvailable: jest.fn().mockResolvedValue(true),
@@ -290,14 +219,6 @@ describe('tokenStore', () => {
       })
       expect(mockReadToken).toHaveBeenCalledTimes(1)
       expect(mockGetToken).not.toHaveBeenCalled()
-    })
-
-    it('ElectronTokenStore satisfies TokenStore with no readToken() member (compile-level, asserted by tsc)', () => {
-      // Assigning to the TokenStore-typed variable is itself the compile-level
-      // proof that ElectronTokenStore satisfies the (now-widened) interface
-      // with readToken? absent — tsc would fail this file if it did not.
-      const store: TokenStore = new ElectronTokenStore()
-      expect('readToken' in store).toBe(false)
     })
   })
 

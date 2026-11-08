@@ -103,8 +103,7 @@ import { SidecarKeyringTokenStore } from '../keyringTokenStore'
 import { configStore as steamConfigStore } from '../../storeManagers/steam/stores'
 import {
   setTokenStore,
-  getTokenStore,
-  ElectronTokenStore
+  getTokenStore
 } from '../../storeManagers/steam/tokenStore'
 // Real (unmocked) pathShim — same module platform/index.ts / fileStore.ts resolve
 // paths through in production, used here ONLY to compute the real store file's
@@ -211,11 +210,8 @@ const BANNED_STEAM_TOKEN_BINDINGS = [
   // a bare-anywhere ban on these two is exact, no binding-level reasoning needed.
   'TOKEN_STORE_KEY',
   'TOKEN_PREFIX',
-  // `ElectronTokenStore` is the ACTUAL WRITER of TOKEN_STORE_KEY --
-  // `storeManagers/steam/tokenStore.ts:188` does
-  // `configStore.set(TOKEN_STORE_KEY, this.encryptToken(token))` inside its
-  // `setToken()`. Installing this class inside the sidecar would violate D-04
-  // directly, so binding it from the Steam token surface is banned too.
+  // `ElectronTokenStore` was the ACTUAL WRITER of TOKEN_STORE_KEY and is deleted
+  // (D-12, Phase 72). The ban stays as a tripwire so it can never be re-bound.
   'ElectronTokenStore'
 ]
 
@@ -492,6 +488,7 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
     const before = currentRefreshToken()
     const beforeFull = fullSnapshot()
 
+    const previousStore = getTokenStore()
     try {
       setTokenStore(new SidecarKeyringTokenStore())
       // This is the exact call path user.ts's getCredentials()/finishAuth() use in
@@ -500,7 +497,7 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
       await getTokenStore().getToken()
       await getTokenStore().clearToken()
     } finally {
-      setTokenStore(new ElectronTokenStore())
+      setTokenStore(previousStore)
     }
 
     expect(currentRefreshToken()).toBe(before)

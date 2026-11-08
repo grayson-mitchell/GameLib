@@ -15,8 +15,8 @@
  *                    closed. Latching it here would reopen exactly that.
  *
  * A separate file from user.test.ts because that suite deliberately leaves
- * '../tokenStore' unmocked (it exercises the real ElectronTokenStore seam for
- * logout), and `ElectronTokenStore` has no `readToken` at all — so it can only
+ * '../tokenStore' unmocked (it exercises a config-backed test store for
+ * logout), which has no `readToken` at all — so it can only
  * ever produce `absent`, never `unreadable`. Driving both outcomes requires
  * mocking the seam, which would change the meaning of that suite's other tests.
  */

@@ -1105,7 +1105,7 @@ export function init(
   // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
   // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
   // only fire from the RPC loop below, never at module-import time) so no handler ever
-  // observes the default ElectronTokenStore in the sidecar build. This constraint is inherited
+  // observes the fail-closed default UnconfiguredTokenStore in the sidecar build (D-12). This constraint is inherited
   // UNCHANGED by both arms of the exclusive branch immediately below (34.5 gap cycle 4 plan 36):
   // installDevSecretVault() only performs local file I/O (no RPC), but the keyring arm it
   // replaces on the OTHER side of this branch needs the same live transport
@@ -1147,7 +1147,7 @@ export function init(
   }
   // Unconditional legacy-key cleanup (debug/steam-token-survives-keychain), OUTSIDE both arms
   // above on purpose: by the time either arm finishes, `activeTokenStore` has already been
-  // swapped away from `ElectronTokenStore` (T-28-10 ordering — the block above), so the
+  // swapped away from the unconfigured default (T-28-10 ordering — the block above), so the
   // orphaned pre-Tauri `refreshToken` key in `steam_store/config.json` is dead under either
   // arm, not just one. `clearOrphanedElectronToken()` itself lives in `tokenStore.ts`, not
   // here — `bootstrap.ts` is banned by `electronUntouched.test.ts`'s D-04 binding gate from

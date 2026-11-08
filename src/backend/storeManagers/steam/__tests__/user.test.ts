@@ -3,7 +3,7 @@
  * Covers AUTH-01 through AUTH-05.
  *
  * Mock boundaries:
- *  - electron   → safeStorage (encrypt/decrypt/availability)
+ *  - backend/platform → app.getPath
  *  - steam-session → LoginSession constructor + instance methods
  *  - steam-user    → SteamUser constructor + instance methods (aliased as SteamUserLib)
  *  - graceful-fs   → existsSync
@@ -13,16 +13,7 @@
  */
 
 // ── Electron mock (must be first, jest.mock is hoisted) ──────────────────────
-const mockEncryptString = jest.fn((s: string) => Buffer.from(s))
-const mockDecryptString = jest.fn((b: Buffer) => b.toString())
-const mockIsEncryptionAvailable = jest.fn(() => true)
-
 jest.mock('backend/platform', () => ({
-  safeStorage: {
-    isEncryptionAvailable: mockIsEncryptionAvailable,
-    encryptString: mockEncryptString,
-    decryptString: mockDecryptString
-  },
   app: { getPath: jest.fn(() => '/tmp/test') }
 }))
 
@@ -75,9 +66,10 @@ jest.mock('../stores', () => ({
 }))
 // NOTE: '../tokenStore' is intentionally NOT mocked here. logout() must
 // route the refresh token through the real TokenStore seam
-// (getTokenStore().clearToken() -> ElectronTokenStore.clearToken() ->
-// configStore.delete(TOKEN_STORE_KEY)), exercised against the mocked
-// configStore/safeStorage above — same approach the pre-existing
+// (getTokenStore().clearToken() -> configStore.delete(TOKEN_STORE_KEY)),
+// exercised against the mocked configStore through the config-backed test
+// store installed in beforeEach (the Electron-era production store is gone,
+// D-12; the module default now fails closed) — same approach the pre-existing
 // getCredentials()/finishAuth()/QR tests already use for setToken/getToken.
 
 // ── steam-session mock ────────────────────────────────────────────────────────
@@ -189,16 +181,10 @@ import {
   startQRLogin,
   submitSteamGuardCode
 } from '../userSignIn'
-import { safeStorage } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
 import { join } from 'path'
 import { logInfo, logWarning, logError } from 'backend/logger'
-import {
-  setTokenStore,
-  getTokenStore,
-  ElectronTokenStore,
-  TokenStore
-} from '../tokenStore'
+import { setTokenStore, getTokenStore, TokenStore } from '../tokenStore'
 import { sendFrontendMessage } from 'backend/ipc'
 import {
   __resetSignInEpochsForTests,
@@ -210,17 +196,32 @@ import { defined } from './fixtures/indexed'
 // Lets every pending microtask chain (wrap -> logon -> lease -> persona) settle.
 const flushAsync = () => new Promise<void>((resolve) => setImmediate(resolve))
 
+// Test-only TokenStore backed by the mocked configStore. Production installs the
+// keyring / dev-vault store at bootstrap; the module default fails closed (D-12),
+// so suites that drive user.ts install this in beforeEach. It stores the value as
+// given: encryption is not what these suites are about.
+function makeConfigBackedTokenStore(): TokenStore {
+  return {
+    isAvailable: async () => true,
+    getToken: async () => {
+      const stored = mockConfigStore.get_nodefault('refreshToken')
+      return typeof stored === 'string' ? stored : ''
+    },
+    setToken: async (token: string) => {
+      mockConfigStore.set('refreshToken', token)
+    },
+    clearToken: async () => {
+      mockConfigStore.delete('refreshToken')
+    }
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 describe('SteamUser', () => {
   beforeEach(() => {
     jest.clearAllMocks()
 
     // ── Re-establish mock implementations (resetMocks: true clears them) ──────
-
-    // safeStorage mocks
-    mockIsEncryptionAvailable.mockReturnValue(true)
-    mockEncryptString.mockImplementation((s: string) => Buffer.from(s))
-    mockDecryptString.mockImplementation((b: Buffer) => b.toString())
 
     // graceful-fs mocks
     mockExistsSync.mockReturnValue(false)
@@ -230,6 +231,7 @@ describe('SteamUser', () => {
     mockConfigStore.delete.mockImplementation(() => {})
     mockConfigStore.get_nodefault.mockReturnValue(undefined)
     mockConfigStore.set.mockImplementation(() => {})
+    setTokenStore(makeConfigBackedTokenStore())
 
     // Reset handler capture maps
     sessionOnHandlers = {}
@@ -413,9 +415,9 @@ describe('SteamUser', () => {
     })
   })
 
-  // ── Token encryption/decryption ────────────────────────────────────────────
+  // ── Token read ────────────────────────────────────────────
 
-  describe('getCredentials() — token decrypt', () => {
+  describe('getCredentials() — token read', () => {
     test('returns undefined when no token stored', async () => {
       mockConfigStore.get_nodefault.mockReturnValue(undefined)
       const result = await SteamUser.getCredentials()
@@ -426,38 +428,6 @@ describe('SteamUser', () => {
       mockConfigStore.get_nodefault.mockReturnValue(42)
       const result = await SteamUser.getCredentials()
       expect(result).toBeUndefined()
-    })
-
-    test('decrypts steam:v1: prefixed token and returns refreshToken', async () => {
-      const token = 'my-refresh-token'
-      const encoded = 'steam:v1:' + Buffer.from(token).toString('base64')
-      mockConfigStore.get_nodefault.mockReturnValue(encoded)
-      mockDecryptString.mockReturnValue(token)
-
-      const result = await SteamUser.getCredentials()
-      expect(result).toEqual({ refreshToken: token })
-      expect(safeStorage.decryptString).toHaveBeenCalled()
-    })
-
-    test('returns empty string token when encryption unavailable and prefix present', async () => {
-      const encoded = 'steam:v1:' + Buffer.from('token').toString('base64')
-      mockConfigStore.get_nodefault.mockReturnValue(encoded)
-      mockIsEncryptionAvailable.mockReturnValue(false)
-
-      const result = await SteamUser.getCredentials()
-      // When encryption unavailable and prefix present, decryptToken returns ''
-      expect(result).toBeUndefined()
-    })
-
-    test('handles legacy plaintext token (no prefix)', async () => {
-      // Legacy value stored without 'steam:v1:' prefix — returned as-is
-      const plainToken = 'legacy-plaintext-token'
-      mockConfigStore.get_nodefault.mockReturnValue(plainToken)
-
-      const result = await SteamUser.getCredentials()
-      expect(result).toEqual({ refreshToken: plainToken })
-      // decryptString should NOT be called for legacy plaintext
-      expect(safeStorage.decryptString).not.toHaveBeenCalled()
     })
   })
 
@@ -734,14 +704,13 @@ describe('SteamUser', () => {
       expect(result.username).toBeUndefined()
     })
 
-    test('after auth: encrypts and stores token (safeStorage.encryptString called)', async () => {
+    test('after auth: hands the refresh token to the TokenStore', async () => {
+      const setTokenSpy = jest.spyOn(getTokenStore(), 'setToken')
       await defined(
         sessionOnHandlers['authenticated'],
         'authenticated handler'
       )()
-      expect(safeStorage.encryptString).toHaveBeenCalledWith(
-        'mock-refresh-token'
-      )
+      expect(setTokenSpy).toHaveBeenCalledWith('mock-refresh-token')
     })
 
     test('after auth: isLoggedIn becomes true in configStore', async () => {
@@ -1816,13 +1785,13 @@ describe('SteamUser', () => {
   // production's adapter exactly: readToken() resolves the outcome under test,
   // getToken() resolves '' (the lossy adapter's collapse for both absent and
   // unreadable). setTokenStore() mutates module-global state, so every test in
-  // this describe restores the default ElectronTokenStore in afterEach --
+  // this describe restores the config-backed test store in afterEach --
   // leaving the fake installed would make the OTHER describe blocks in this
-  // file (which assume the real ElectronTokenStore routed through
+  // file (which assume the config-backed store routed through
   // mockConfigStore) order-dependent on whichever test ran last.
   describe('ensureConnected() — unreadable read is not logged-out (quick-260814-r2d)', () => {
     afterEach(() => {
-      setTokenStore(new ElectronTokenStore())
+      setTokenStore(makeConfigBackedTokenStore())
     })
 
     function installFakeStore(outcome: {

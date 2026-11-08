@@ -86,6 +86,10 @@ import * as loggerModule from '../../logger'
 import * as storeWriteHandlersModule from '../storeWriteHandlers'
 import { configStore as steamConfigStore } from '../../storeManagers/steam/stores'
 import {
+  getTokenStore,
+  setTokenStore
+} from '../../storeManagers/steam/tokenStore'
+import {
   READY_SENTINEL,
   UNPORTED_CHANNEL_MARKER
 } from 'common/types/sidecarTransport'
@@ -459,6 +463,29 @@ describe('sidecar bootstrap (headless boot)', () => {
         } else {
           process.env.GAMELIB_APP_ROOT = savedAppRoot
         }
+      }
+    })
+  })
+
+  // D-12 (Phase 72, T-72-18): the Steam token store module default fails closed, so init()
+  // MUST swap in the real store (keyring or dev-vault) before any handler can run.
+  describe('boot-time Steam token store install (D-12)', () => {
+    it('init() replaces whatever store was active with the real one', () => {
+      // Earlier tests in this file already ran init(), so seed a sentinel instead of
+      // relying on the module default being untouched.
+      const previous = getTokenStore()
+      const sentinel = { ...previous }
+      setTokenStore(sentinel)
+
+      const input = new PassThrough()
+      const output = new PassThrough()
+      collectLines(output)
+      try {
+        init(input, output)
+
+        expect(getTokenStore()).not.toBe(sentinel)
+      } finally {
+        setTokenStore(previous)
       }
     })
   })

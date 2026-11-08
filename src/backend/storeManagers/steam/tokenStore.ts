@@ -1,7 +1,6 @@
-import { safeStorage } from 'backend/platform'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { configStore } from './stores'
-import { TOKEN_PREFIX, TOKEN_STORE_KEY } from './constants'
+import { TOKEN_STORE_KEY } from './constants'
 
 /**
  * TokenStore — the Steam refresh token seam (D-09, REQ-28-02/REQ-28-03).
@@ -22,19 +21,15 @@ import { TOKEN_PREFIX, TOKEN_STORE_KEY } from './constants'
  *     the override is installed only by an explicit call from the sidecar's
  *     own bootstrap path.
  *
- * (c) D-11 divergence: `ElectronTokenStore` intentionally KEEPS a plaintext
- *     fallback (warn-then-store-plaintext on `setToken` when
- *     `safeStorage.isEncryptionAvailable()` is false, and a legacy
- *     non-prefixed plaintext read on `getToken`) — this is shipped Electron
- *     behavior, preserved byte-identical per REQ-28-07. It is a deliberate
- *     divergence from D-06's "sidecar must never persist a plaintext token"
- *     rule, not a bug: the sidecar's future implementation has no such
- *     fallback at all.
+ * (c) D-12 (Phase 72): the default store is `UnconfiguredTokenStore`, which
+ *     fails closed. There is NO plaintext fallback anywhere: the former
+ *     Electron-era store (safeStorage + plaintext-on-unavailable) is deleted.
+ *     Until bootstrap installs the keyring or dev-vault store, `setToken`
+ *     throws and reads report unreadable.
  *
  * No function in this module reads an Electron-stored token and hands it to
  * a keyring or any other store — there is no migration bridge here
- * (REQ-28-03/D-02). `ElectronTokenStore` only ever talks to `configStore`;
- * nothing here imports or references a keyring/sidecar transport.
+ * (REQ-28-03/D-02). nothing here imports or references a keyring/sidecar transport.
  */
 
 // ── The TokenStore contract ──────────────────────────────────────────────────
@@ -65,7 +60,7 @@ export interface TokenStore {
    * the sidecar's keyring-backed store this call is NOT free: it reaches
    * `entry.get_password()` and can raise a real Keychain prompt, so the prompt
    * needs to be attributable in the log the same way `readToken()`'s is. An
-   * implementer that cannot prompt (`ElectronTokenStore`, `DevVaultTokenStore`)
+   * implementer that cannot prompt (`DevVaultTokenStore`)
    * ignores it and keeps its zero-arg body -- an optional parameter widens the
    * signature without changing any implementer's arity. */
   isAvailable(context?: string): Promise<boolean>
@@ -83,8 +78,8 @@ export interface TokenStore {
   /** OPTIONAL, additive (quick-260814-r2d). Implemented only by stores whose
    *  read can FAIL as distinct from returning nothing — e.g. the Tauri
    *  sidecar's keyring-backed store, where a Keychain timeout or a Deny is a
-   *  real failure, not an empty slot. Absent on `ElectronTokenStore` and
-   *  `DevVaultTokenStore`, which keep their existing `''`-only semantics
+   *  real failure, not an empty slot. Absent on
+   *  `DevVaultTokenStore`, which keeps their existing `''`-only semantics
    *  untouched (REQ-28-07 — their bodies are not modified by this seam).
    *
    *  `context` (quick-260817-d61) is an OPTIONAL trigger label — what
@@ -102,18 +97,14 @@ export interface TokenStore {
  * path), so the outcome — including a genuine `unreadable` — is returned
  * verbatim and `store.getToken()` is not called at all in that case.
  *
- * For a store WITHOUT `readToken()` (`ElectronTokenStore`, `DevVaultTokenStore`),
+ * For a store WITHOUT `readToken()` (`DevVaultTokenStore`),
  * this falls back to `store.getToken()` and maps a non-empty string to
  * `present` and an empty string to `absent`. That fallback is deliberately
  * byte-equivalent to today's conflating behaviour — those stores cannot fail
  * this way, so there is nothing lost by collapsing their `''` to `absent`.
  *
- * Honest caveat: `ElectronTokenStore.getToken()` also returns `''` on a
- * decrypt failure, so under this fallback path that case still maps to
- * `absent`, not `unreadable`. That is unchanged, pre-existing behaviour,
- * deliberately left alone here — changing it would breach REQ-28-07's
- * byte-identical guarantee on `ElectronTokenStore`. The Tauri/keyring path is
- * the one with the observed 9:1 failure rate and is what this seam fixes.
+ * The Tauri/keyring path is the one with the observed 9:1 failure rate and is
+ * what this seam fixes.
  */
 export async function readTokenOutcome(
   store: TokenStore,
@@ -124,78 +115,45 @@ export async function readTokenOutcome(
   return token ? { status: 'present', token } : { status: 'absent' }
 }
 
-// ── Electron implementation — byte-identical to the pre-seam behavior ───────
+// ── Fail-closed default (D-12, Phase 72) ─────────────────────────────────────
 
 /**
- * The Electron build's TokenStore. Wraps `safeStorage` + `configStore`
- * exactly as `user.ts` did before this seam existed — the three private
- * methods below are the verbatim bodies of the former
- * `encryptionAvailable`/`encryptToken`/`decryptToken` free functions. A
- * behavior diff here is a REQ-28-07 failure.
+ * The module default until bootstrap installs the real store (keyring or
+ * dev-vault). It persists nothing: `setToken` throws, reads report an empty /
+ * unreadable store, and `clearToken` only warns. This replaces the Electron-era
+ * plaintext-capable store, whose plaintext fallback (store the refresh token
+ * unencrypted when `safeStorage` was unavailable) would have run in the sidecar
+ * if any handler fired before the bootstrap swap. In the sidecar `safeStorage`
+ * is a throwing stub, so that path was never legitimate here.
  */
-export class ElectronTokenStore implements TokenStore {
-  private encryptionAvailable(): boolean {
-    try {
-      return safeStorage.isEncryptionAvailable()
-    } catch {
-      return false
-    }
-  }
-
-  private encryptToken(plain: string): string {
-    if (!plain) return ''
-    if (!this.encryptionAvailable()) {
-      logWarning(
-        'safeStorage unavailable — storing Steam refresh token in plaintext',
-        LogPrefix.Steam
-      )
-      return plain
-    }
-    const ciphertext = safeStorage.encryptString(plain).toString('base64')
-    return `${TOKEN_PREFIX}${ciphertext}`
-  }
-
-  private decryptToken(stored: string): string {
-    if (!stored) return ''
-    if (!stored.startsWith(TOKEN_PREFIX)) {
-      // Legacy plaintext fallback
-      return stored
-    }
-    if (!this.encryptionAvailable()) return ''
-    try {
-      const buf = Buffer.from(stored.slice(TOKEN_PREFIX.length), 'base64')
-      return safeStorage.decryptString(buf)
-    } catch (err) {
-      logWarning(
-        ['Failed to decrypt Steam refresh token:', err],
-        LogPrefix.Steam
-      )
-      return ''
-    }
-  }
-
+class UnconfiguredTokenStore implements TokenStore {
   async isAvailable(): Promise<boolean> {
-    return Promise.resolve(this.encryptionAvailable())
+    return false
   }
 
   async getToken(): Promise<string> {
-    const stored = configStore.get_nodefault(TOKEN_STORE_KEY)
-    if (!stored || typeof stored !== 'string') return ''
-    return this.decryptToken(stored)
+    return ''
   }
 
-  async setToken(token: string): Promise<void> {
-    configStore.set(TOKEN_STORE_KEY, this.encryptToken(token))
+  async readToken(): Promise<TokenReadOutcome> {
+    return { status: 'unreadable', reason: 'unavailable' }
+  }
+
+  async setToken(): Promise<void> {
+    throw new Error('Steam token store not installed')
   }
 
   async clearToken(): Promise<void> {
-    configStore.delete(TOKEN_STORE_KEY)
+    logWarning(
+      'clearToken called before the Steam token store was installed; nothing to clear',
+      LogPrefix.Steam
+    )
   }
 }
 
 // ── Registry — swappable per build, no env-var escape hatch ─────────────────
 
-let activeTokenStore: TokenStore = new ElectronTokenStore()
+let activeTokenStore: TokenStore = new UnconfiguredTokenStore()
 
 /**
  * Installs a different TokenStore implementation. Only ever called
@@ -222,10 +180,9 @@ export function getTokenStore(): TokenStore {
  * (`steam_store/config.json`), if present. Called unconditionally from the
  * sidecar's `bootstrap.ts`, AFTER both arms of `init()`'s secret-store install
  * block (keyring or dev-vault) have already run — under either arm,
- * `activeTokenStore` has already been swapped away from `ElectronTokenStore`
- * (T-28-10 ordering), so this key is fully dead under the current sidecar:
- * `ElectronTokenStore.getToken()` is its only reader and is never the active
- * store, and `storeWriteHandlers.ts`'s D-04 guard rejects any renderer-driven
+ * `activeTokenStore` has already been swapped away from the unconfigured
+ * default (T-28-10 ordering), so this key is fully dead under the current
+ * sidecar: its only reader was the deleted Electron-era store, and `storeWriteHandlers.ts`'s D-04 guard rejects any renderer-driven
  * write to it.
  *
  * The value is a frozen artifact of the pre-rearchitecture Electron build's
@@ -259,8 +216,7 @@ export function getTokenStore(): TokenStore {
  * every write — including a delete — to this exact key, by design, for
  * renderer-initiated writes. This is a sidecar-initiated boot-time cleanup of
  * a dead key, not a write the guard was ever meant to arbitrate, so it calls
- * `configStore` directly, the same way `ElectronTokenStore` itself already
- * does for this store.
+ * `configStore` directly, the same way the deleted Electron-era store did.
  */
 export function clearOrphanedElectronToken(): boolean {
   if (!configStore.has(TOKEN_STORE_KEY)) return false

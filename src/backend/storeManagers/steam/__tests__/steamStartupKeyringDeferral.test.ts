@@ -87,10 +87,8 @@ jest.mock('../stores', () => ({
 
 // ── electron mock — shell.openExternal (games.ts), dialog.showMessageBox
 // (library.ts's promptI386Recovery), app.getPath/getAppPath (constants/paths
-// resolves these at module-load time), safeStorage (tokenStore.ts's
-// ElectronTokenStore — unused here since every test installs a spy store via
-// setTokenStore() before any read, but must exist so the module-level
-// `new ElectronTokenStore()` construction and the import itself never throw).
+// resolves these at module-load time). Every test installs a spy store via
+// setTokenStore() before any read; the module default fails closed.
 jest.mock('backend/platform', () => ({
   shell: { openExternal: jest.fn() },
   dialog: { showMessageBox: jest.fn() },
