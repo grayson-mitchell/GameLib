@@ -9,7 +9,6 @@ import {
   ShowValveProton,
   ClearCache,
   DisableLogs,
-  ExperimentalFeatures,
   HideWindowOnProtocolLaunch,
   ResetHeroic,
   GamePadDelayRepeat,
@@ -59,11 +58,6 @@ export default function AdvancedSetting() {
       {isLinux && <ShowValveProton />}
 
       <hr />
-
-      <div className="advancedSetting">
-        <ExperimentalFeatures />
-        <hr />
-      </div>
 
       <div className="advancedSetting">
         <ClearCache />

@@ -432,6 +432,8 @@
     "settings": {
         "addGamesToSteamHelp": "When you install an Epic, GOG, Amazon or sideloaded game, also add it to your Steam library as a non-Steam game, with artwork. Playing it from Steam opens GameLib to launch it. Restart Steam to see newly added games.",
         "advancedSettings": "Advanced Settings",
+        "cometSupport": "Enable GOG Galaxy features (Comet)",
+        "cometSupportHelp": "Many GOG games expect the GOG Galaxy client for achievements, stats, leaderboards and some multiplayer. When on, GameLib runs Comet, a small stand-in for Galaxy, while you play a GOG game. Turn off only if a game misbehaves with it.",
         "discordPresence": "Enable Discord presence",
         "discordPresenceHelp": "While you play a game launched from GameLib, your Discord status shows the game, how long you have been playing, and \"via GameLib\". Requires the Discord desktop app to be running.",
         "downloadNoHttps": "Download Epic games over HTTP (for LanCache)",

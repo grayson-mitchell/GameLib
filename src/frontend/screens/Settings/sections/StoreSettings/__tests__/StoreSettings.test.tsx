@@ -45,6 +45,7 @@ jest.mock('../../../components', () => {
     AltGOGdlBin: stub('AltGOGdlBin'),
     AltLegendaryBin: stub('AltLegendaryBin'),
     AltNileBin: stub('AltNileBin'),
+    CometSupport: stub('CometSupport'),
     DefaultSteamPath: stub('DefaultSteamPath'),
     DownloadNoHTTPS: stub('DownloadNoHTTPS'),
     EgsSettings: stub('EgsSettings'),
@@ -183,6 +184,7 @@ describe('StoreSettings', () => {
     expect(panelContents(root, 'gog')).toEqual([
       'PlaytimeSync',
       'DisableGOGPresence',
+      'CometSupport',
       'details:AltGOGdlBin'
     ])
     expect(panelContents(root, 'amazon')).toEqual(['details:AltNileBin'])

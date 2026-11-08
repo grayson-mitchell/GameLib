@@ -10,6 +10,7 @@ import {
   AltGOGdlBin,
   AltLegendaryBin,
   AltNileBin,
+  CometSupport,
   DefaultSteamPath,
   DownloadNoHTTPS,
   EgsSettings,
@@ -95,6 +96,7 @@ export default function StoreSettings() {
       <TabPanel value={value} index="gog">
         <PlaytimeSync />
         <DisableGOGPresence />
+        <CometSupport />
         <StoreAdvanced>
           <AltGOGdlBin />
         </StoreAdvanced>
