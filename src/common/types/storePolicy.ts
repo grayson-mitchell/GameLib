@@ -250,6 +250,12 @@ export function isAllowedStoreField(storeName: string, key: string): boolean {
     return false
   }
 
+  // Phase 68: `__internal__` is the store-version namespace; it must never reach or
+  // come from the renderer, on any store (including '*' and cache stores).
+  if (key.split('.')[0] === '__internal__') {
+    return false
+  }
+
   // CR-02 (Phase 29 code review): `STORE_ALLOWLIST` is a plain object literal, so a
   // bare `STORE_ALLOWLIST[storeName]` resolves through `Object.prototype`. For a
   // `storeName` of `constructor`/`toString`/`valueOf`/`hasOwnProperty`/... `policy`

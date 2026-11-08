@@ -317,3 +317,18 @@ describe('WR-04: write allow-list is strictly narrower than the read allow-list'
     )
   })
 })
+
+describe('Phase 68 store-version namespace', () => {
+  test.each(['timestampStore', 'steam_library', 'configStore'])(
+    '__internal__ is never allowed on %s and is dropped from snapshots',
+    (store) => {
+      expect(isAllowedStoreField(store, '__internal__')).toBe(false)
+      expect(isAllowedStoreField(store, '__internal__.gamelib')).toBe(false)
+      expect(
+        filterStoreSnapshot(store, {
+          __internal__: { gamelib: { schemaVersion: 1 } }
+        })
+      ).toEqual({})
+    }
+  )
+})

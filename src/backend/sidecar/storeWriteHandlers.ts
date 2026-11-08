@@ -54,6 +54,7 @@ import {
 interface WritableStoreBackend {
   set: (key: string, value: unknown) => void
   delete: (key: string) => void
+  readonly readOnly?: boolean
 }
 
 /**
@@ -184,6 +185,18 @@ export function applyStoreWrite(
   if (!target) {
     process.stderr.write(
       `[storeWriteHandlers] rejected write — no resolvable store instance for '${storeName}' key '${key}'\n`
+    )
+    return
+  }
+
+  // Guard (e): Phase 68 D-03 — a read-only store (newer-than-supported or failed
+  // migration) takes no renderer write, and a refused write must not be pushed (the
+  // renderer would cache a value that is not on disk). The `GameLibStore` setter is
+  // the backstop; this keeps the refusal from being announced. Reserved `__internal__`
+  // keys are refused earlier by guard (c) via `isAllowedStoreField`.
+  if (target.readOnly === true) {
+    process.stderr.write(
+      `[storeWriteHandlers] refusing write to read-only store '${storeName}' key '${key}'\n`
     )
     return
   }
