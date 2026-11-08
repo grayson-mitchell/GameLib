@@ -722,7 +722,7 @@ Plans:
 **Goal:** The Rust shell has no multi-thousand-line modules: each window, embed and login surface is split along its seams, following the sibling-module layout quick task 261106-ab1 set when it split `main.rs` (20,324 → 7,886 lines, 11 modules plus `wake_lock/`). Targets, measured 2026-11-06: `store_embed.rs` (4,623 lines), `login_window.rs` (3,339), `macos_epic_embed.rs` (2,089), and what remains in `main.rs` (7,886). Method: a cluster map of each file first; mechanical moves with no behaviour change (anything else found becomes a todo); `pub(crate)` only where a move needs it; `cargo test` (442 tests) green after each move, and Windows and Linux compiles checked through CI because Linux-gated code isn't compiled on the Mac. These modules drive the embedded store pages, login windows and cookie reads on macOS, so each wave ends with a live check in `pnpm tauri:dev`: an embedded store page, a sign-in for each store that uses the login window, and the Epic embed, with the frameless title bar both off and on. Phase 62's transport-mirror marker comments in `sidecar.rs` and the `store_embed.rs` dispatch arms (62-04) must survive the moves, or be removed only once Phase 67's generated contract replaces them. Open questions for discuss-phase: the minimum module set per file, and whether shell source-text tests that read Rust files (`testUtils/tauriShellSource.ts`) need the same combined-source treatment 261106-ab1 gave `main.rs`. Came from the post-Phase-62 architecture review on 2026-11-06.
 **Requirements**: TBD (plans cite CONTEXT decisions D-01..D-15; D-01 satisfied by Phase 67, D-02 superseded by 72-01)
 **Depends on:** None
-**Plans:** 18/18 plans complete
+**Plans:** 18/20 plans complete
 
 Plans (strictly sequential; D-14 waves 0-5, each wave from 1 ends with three-leg CI and a live check):
 
@@ -761,6 +761,11 @@ Plans (strictly sequential; D-14 waves 0-5, each wave from 1 ends with three-leg
 - [x] 71-16-PLAN.md — Co-locate tests into flat modules (sidecar, clipboard, wake_lock, keyring, relay, tray, terminate_veto, single_instance)
 - [x] 71-17-PLAN.md — Co-locate tests into login_window/ and store_embed/ children; main.rs keeps D-09 tests only
 - [x] 71-18-PLAN.md — Wave 5 + phase gate: sizes report, fn main todo, VALIDATION sign-off, three-leg CI, final live check
+
+**Gap closure (71-VERIFICATION WR-01, D-10)**
+
+- [ ] 71-19-PLAN.md — Fix vacuous sidecar D-01 EOF pin (production read + fn-body bound + mutation self-test); migrate raw shell-source readers to production text
+- [ ] 71-20-PLAN.md — Fail-closed test-module cutters in jest and Rust (WR-02, terminate_reply_tests); raw shell-reader allow-list guard
 
 ### Phase 72: Renderer trust boundary and process hardening
 
