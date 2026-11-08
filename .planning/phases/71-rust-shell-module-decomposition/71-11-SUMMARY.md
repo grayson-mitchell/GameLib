@@ -64,3 +64,6 @@ None.
 None.
 
 ## Self-Check: PASSED
+
+## CI update (2026-11-09)
+Wave 2's three-leg CI evidence is rust-test.yml run 42469036864 attempt 10, green on windows-latest, macos-latest and ubuntu-latest on 05bf973bf, which contains all Wave 2 commits, per the operator's decision. The PENDING status above is superseded; see 71-13-SUMMARY.md.
