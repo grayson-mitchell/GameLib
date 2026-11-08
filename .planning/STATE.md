@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: verifying
-stopped_at: Phase 71 complete (20/20, gaps closed) — Phase 72 awaiting Windows UAT; Phase 73 context gathered
-last_updated: 2026-11-08T19:32:23.820Z
-last_activity: 2026-11-08
+status: executing
+stopped_at: Phase 73 context gathered
+last_updated: "2026-11-08T20:08:36.643Z"
+last_activity: 2026-11-08 -- Phase 73 planning complete
 progress:
   total_phases: 14
   completed_phases: 8
-  total_plans: 147
+  total_plans: 168
   completed_plans: 147
   percent: 57
 ---
@@ -74,8 +74,8 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 Phase: 72
 Plan: 12 of 12 (executed)
-Status: human_needed — Windows UAT 6-7, packaged-build Restart, WR-01 decision
-Last activity: 2026-11-08
+Status: Ready to execute
+Last activity: 2026-11-08 -- Phase 73 planning complete
 
 Progress: [██████████] 100%
 
