@@ -128,6 +128,7 @@ mod single_instance;
 mod ipc_contract;
 mod sidecar;
 mod shell_state;
+mod notification_show;
 mod dialogs;
 mod scan_dispatch;
 use clipboard::*;
@@ -142,6 +143,7 @@ use single_instance::*;
 use ipc_contract::*;
 use sidecar::*;
 use shell_state::*;
+use notification_show::*;
 use dialogs::*;
 use scan_dispatch::*;
 
@@ -1999,6 +2001,7 @@ mod tests {
         "ipc_contract.rs",
         "keyring_dispatch.rs",
         "login_window.rs",
+        "notification_show.rs",
         "relay_commands.rs",
         "scan_dispatch.rs",
         "shell_state.rs",
@@ -2021,6 +2024,7 @@ mod tests {
         include_str!("ipc_contract.rs"),
         include_str!("keyring_dispatch.rs"),
         include_str!("login_window.rs"),
+        include_str!("notification_show.rs"),
         include_str!("relay_commands.rs"),
         include_str!("scan_dispatch.rs"),
         include_str!("shell_state.rs"),
