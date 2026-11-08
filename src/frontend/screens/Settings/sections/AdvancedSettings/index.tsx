@@ -40,7 +40,9 @@ export default function AdvancedSetting() {
 
   return (
     <div>
-      <h3 className="settingSubheader">{t('settings.navbar.advanced')}</h3>
+      <h3 className="settingSubheader">
+        {t('gamelib:settings.advancedSettings', 'Advanced Settings')}
+      </h3>
 
       <div className="advancedSetting">
         <SteamGridDbApiKey />
