@@ -1957,7 +1957,7 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
 
     const gogStart = code.indexOf('fn open_pristine_login_sheet(')
     expect(gogStart).toBeGreaterThan(-1)
-    const gogEnd = code.indexOf('#[cfg(target_os = "macos")]', gogStart)
+    const gogEnd = fnEndAfter(code, gogStart)
     expect(gogEnd).toBeGreaterThan(gogStart)
     expect(code.slice(gogStart, gogEnd)).toContain(
       'present_login_window_as_sheet('
@@ -1974,7 +1974,7 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
 
     const gogStart = code.indexOf('fn open_pristine_login_sheet(')
     expect(gogStart).toBeGreaterThan(-1)
-    const gogEnd = code.indexOf('#[cfg(target_os = "macos")]', gogStart)
+    const gogEnd = fnEndAfter(code, gogStart)
     expect(gogEnd).toBeGreaterThan(gogStart)
     expect(code.slice(gogStart, gogEnd)).toContain(
       'dismiss_login_window_sheet('
@@ -1989,7 +1989,7 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
 
     const cancelStart = code.indexOf('fn request_login_sheet_cancel(')
     expect(cancelStart).toBeGreaterThan(-1)
-    const cancelEnd = code.indexOf('#[cfg(target_os = "macos")]', cancelStart)
+    const cancelEnd = fnEndAfter(code, cancelStart)
     expect(cancelEnd).toBeGreaterThan(cancelStart)
     expect(code.slice(cancelStart, cancelEnd)).toContain(
       'dismiss_login_window_sheet('
@@ -2233,7 +2233,7 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
 
     const start = code.indexOf('fn request_login_sheet_cancel(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     const body = code.slice(start, end)
 
@@ -2309,7 +2309,7 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
     const code = loadMainRsCode()
     const start = code.indexOf('fn dismiss_login_window_sheet(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     const body = code.slice(start, end)
 
@@ -2441,7 +2441,7 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
 
     const gogStart = code.indexOf('fn open_pristine_login_sheet(')
     expect(gogStart).toBeGreaterThan(-1)
-    const gogEnd = code.indexOf('#[cfg(target_os = "macos")]', gogStart)
+    const gogEnd = fnEndAfter(code, gogStart)
     expect(gogEnd).toBeGreaterThan(gogStart)
     const gogCallSites =
       code
@@ -4128,7 +4128,7 @@ describe('quick 260930-q11: both login-sheet paths resolve their NSWindow handle
   function extractLoginSheetFnBody(code: string, fnName: string): string {
     const start = code.indexOf(`fn ${fnName}(`)
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     return code.slice(start, end)
   }
