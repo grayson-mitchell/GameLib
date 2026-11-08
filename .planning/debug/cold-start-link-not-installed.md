@@ -39,10 +39,27 @@ DATA_END
 - Regression tests required: startup link waits for installed state; dialog buttons fall back to English.
 - Known pre-existing test failures on main (not yours): genI18nGateScope A-17, gamelibCatalogParity (sl), rustTestWorkflow clippy-ratchet, logSecretGate, x86CallbackWineHarness, tauriShellSource (STORE_EMBED title gate), macArchKnownFixRouting (Intel).
 
+## Live re-test 2026-11-08 (operator, UAT test 4: install folder renamed, cold-start Steam shortcut)
+
+DATA_START
+- Native "Game folder appears to be deleted…" alert appeared while GameLib was hidden. Buttons read Yes/No → hypothesis 2 fix CONFIRMED live.
+- GameLib window did not come forward (a macOS keychain password prompt was also up — dev binary launched directly by Steam skips the dev-vault flag). The native alert itself was visible, so the user was not left blind.
+- Operator answered No. Alert closed, nothing else happened. Steam's button stayed on [Stop]: the GameLib process Steam launched kept running hidden.
+DATA_END
+
+### New defect (hypothesis 3)
+
+A `--no-gui` (shortcut) launch that ends WITHOUT the game running leaves GameLib alive, so Steam believes the "game" is still running. The normal path exits after the game closes (`launcher.ts:405` `if (isCLINoGui) app.exit()`), but early returns skip it: the missing-folder abort (`launcher.ts:~132-144`, returns `{status:'abort'}` after `askForceUninstall`), and any other abort/error return in `runLaunchEventCallback`, plus the Steam dispatch branch in `protocol.ts` handleLaunch. `app.quit()/exit()` DO forward to Rust (RUST_APP_EXIT, platform/index.ts:315-340) — verified real.
+
+Wanted rule (orchestrator-approved direction): for an `isCLINoGui` link launch that finishes without a game session —
+- if GameLib only showed native/awaited prompts (e.g. askForceUninstall, the not-installed prompt, the link-args confirmation) and the main window is still hidden-by-GameLib → exit after the prompt resolves, so Steam's button returns to Play;
+- if an in-app error dialog raised the window (raiseMainWindowIfHiddenByGameLib fired during this launch) → stay open so the user can read it; closing GameLib then ends Steam's session.
+Implement at the narrowest point covering ALL early returns (e.g. one wrapper around the link launch in protocol.ts handleLaunch, or a finally in runLaunchEventCallback), without double-exiting on the normal path. Regression tests: abort with --no-gui and window still hidden → exit called; error that raised the window → exit NOT called; normal completion unchanged.
+
 ## Current Focus
 
-- hypothesis: 1 (confirmed) and 2 (confirmed)
-- next_action: operator live re-test — restart `pnpm tauri:dev` (check sidecar.js mtime), quit GameLib, play the Bloody Hell Steam shortcut; expect the game to launch, GameLib hidden, no dialog
+- hypothesis: 3 (1 and 2 confirmed; 2 confirmed live)
+- next_action: fix hypothesis 3 per the rule above, then operator re-test (UAT 1 and 4)
 
 ## Evidence
 
@@ -55,3 +72,10 @@ DATA_END
 - verification: protocol.test.ts 41/41 (3 new tests fail against the old protocol.ts); protocol + bootstrapWirings 59/59 re-run by orchestrator; codecheck clean; scoped prettier clean; eslint 0 errors. Live re-test pending.
 - files_changed: src/backend/protocol.ts, src/backend/i18nFallback.ts, src/backend/utils.ts, src/backend/__tests__/protocol.test.ts
 - not_covered: sideload links through `findGame` (sideload has no `getGameInfo`) — separate gap, left alone.
+
+### Hypothesis 3 resolution
+
+- root_cause: A `--no-gui` link launch that ended without a game session never reached launcher.ts's `if (isCLINoGui) app.exit()` (aborted missing-folder prompt, declined prompts, Steam dispatch, no appName/game-not-found, thrown error), so GameLib stayed alive hidden and Steam stayed on Stop.
+- fix: 401e1efaf. `handleLaunchEndingNoGui` wraps handleLaunch in protocol.ts: for isCLINoGui, any result other than 'done' (launcher already exited) or 'installing' (user chose install) calls app.quit(), unless an in-app dialog re-showed the hidden window during the launch. That signal is new: `app.raiseMainWindowForInAppDialog()` / `app.inAppDialogRaiseCount()` in platform/index.ts, used by dialog.ts showDialogBoxModalAuto. Native awaited prompts (showMessageBox/showErrorBox) also raise the window but do not count. The two inline `if (isCLINoGui) app.quit()` calls were removed (wrapper covers them).
+- tests: protocol.test.ts 46/46 (5 new: abort+hidden quits, thrown error quits, in-app dialog stays, done not double-exited, non-no-gui abort stays; 2 old expectations updated to the new exit behavior); mainWindowVisibility counter test; platform+protocol+dialog 75/75; tsc clean; eslint 0 errors; prettier clean.
+- live re-test pending: restart pnpm tauri:dev, UAT 1 and 4.
