@@ -1,0 +1,26 @@
+{
+  "urlCases": [
+    { "input": "https://example.com/a", "expect": "allow" },
+    { "input": "http://example.com", "expect": "allow" },
+    { "input": "mailto:a@b.c", "expect": "allow" },
+    { "input": "tel:+15551234", "expect": "allow" },
+    { "input": "steam://rungameid/220", "expect": "allow" },
+    { "input": "file:///etc/passwd", "expect": "reject" },
+    { "input": "smb://host/share", "expect": "reject" },
+    { "input": "javascript:alert(1)", "expect": "reject" },
+    { "input": "ftp://x/y", "expect": "reject" },
+    { "input": "data:text/html,x", "expect": "reject" },
+    { "input": "no-scheme", "expect": "reject" }
+  ],
+  "folderShapeCases": [
+    { "input": "", "expect": "reject" },
+    { "input": "relative/path", "expect": "reject" },
+    { "input": "./x", "expect": "reject" },
+    { "input": "file:///tmp", "expect": "reject" },
+    { "input": "smb://h/s", "expect": "reject" },
+    { "input": "https://example.com", "expect": "reject" },
+    { "input": "\\\\srv\\share", "expect": "reject" },
+    { "input": "//srv/share", "expect": "reject" },
+    { "input": "/tmp/a\u0000b", "expect": "reject" }
+  ]
+}

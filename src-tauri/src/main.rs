@@ -121,6 +121,7 @@ mod wake_lock;
 mod terminate_veto;
 mod tray;
 mod relay_commands;
+mod shell_open;
 mod login_window;
 mod store_embed;
 mod single_instance;
