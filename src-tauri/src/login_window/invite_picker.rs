@@ -207,3 +207,84 @@ pub(crate) fn rpc_bridge_invite_picker_open(args: &[Value], app: &AppHandle) -> 
     }
     Ok(Value::Null)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ---- quick 261101-llf: bridge invite picker window ----
+
+    #[test]
+    fn bridge_invite_picker_path_builds_the_query() {
+        assert_eq!(
+            bridge_invite_picker_path("3205720", "a1b2-C3d4").unwrap(),
+            "index.html?window=bridge-invite&appId=3205720&ackId=a1b2-C3d4"
+        );
+        assert!(bridge_invite_picker_path("1234567890", "x").is_ok());
+    }
+
+    #[test]
+    fn bridge_invite_picker_path_rejects_bad_ids() {
+        for app_id in ["", "abc", "12a", "12345678901", "1 2", "1&2", "-1"] {
+            assert_eq!(
+                bridge_invite_picker_path(app_id, "ok-1").unwrap_err(),
+                "bridge_invite_picker_open:bad-app-id",
+                "{app_id:?}"
+            );
+        }
+        let long = "a".repeat(65);
+        for ack in [
+            "",
+            "a&b",
+            "a#b",
+            "a%20b",
+            "a/b",
+            "a b",
+            "a=b",
+            long.as_str(),
+        ] {
+            assert_eq!(
+                bridge_invite_picker_path("1", ack).unwrap_err(),
+                "bridge_invite_picker_open:bad-ack-id",
+                "{ack:?}"
+            );
+        }
+        assert!(bridge_invite_picker_path("1", &"a".repeat(64)).is_ok());
+    }
+
+    #[test]
+    fn bridge_invite_nav_allowed_accepts_only_app_origins() {
+        let u = |s: &str| tauri::Url::parse(s).unwrap();
+        let dev = u("http://localhost:5173");
+        let q = "index.html?window=bridge-invite&appId=1&ackId=a";
+        assert!(bridge_invite_nav_allowed(
+            &u(&format!("tauri://localhost/{q}")),
+            None
+        ));
+        assert!(bridge_invite_nav_allowed(
+            &u(&format!("http://tauri.localhost/{q}")),
+            None
+        ));
+        assert!(bridge_invite_nav_allowed(
+            &u(&format!("http://localhost:5173/{q}")),
+            Some(&dev)
+        ));
+        assert!(!bridge_invite_nav_allowed(
+            &u("https://example.com/"),
+            Some(&dev)
+        ));
+        assert!(!bridge_invite_nav_allowed(
+            &u("http://localhost:9999/"),
+            Some(&dev)
+        ));
+        assert!(!bridge_invite_nav_allowed(
+            &u("http://localhost:5173/"),
+            None
+        ));
+        assert!(!bridge_invite_nav_allowed(
+            &u("file:///etc/passwd"),
+            Some(&dev)
+        ));
+        assert!(!bridge_invite_nav_allowed(&u("about:blank"), Some(&dev)));
+    }
+}
