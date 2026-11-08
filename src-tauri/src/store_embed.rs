@@ -4392,34 +4392,12 @@ pub(crate) fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHand
             wake_lock_stop(id)?;
             Ok(Value::Null)
         }
-        // Phase 63 (D-03): executable scanners. Each arm is a one-line pass-through to the
-        // Tauri-free gamelib-scan crate, the same dispatch the headless gamelib-scan-cli uses.
-        // dispatch_rust_channel arms, not generate_handler! commands: the caller is the sidecar
-        // over `requestRustInvoke`, and the renderer gets no scanner capability.
-        RustInvokeChannel::ScanSteamApiImports => {
-            ScanSteamApiImportsArgs::from_args(args)?;
-            gamelib_scan::dispatch("scan_steam_api_imports", args)
-        }
-        RustInvokeChannel::ScanSteamDrm => {
-            ScanSteamDrmArgs::from_args(args)?;
-            gamelib_scan::dispatch("scan_steam_drm", args)
-        }
-        RustInvokeChannel::ScanSteamstubSection => {
-            ScanSteamstubSectionArgs::from_args(args)?;
-            gamelib_scan::dispatch("scan_steamstub_section", args)
-        }
-        RustInvokeChannel::ScanPeImportedDlls => {
-            ScanPeImportedDllsArgs::from_args(args)?;
-            gamelib_scan::dispatch("scan_pe_imported_dlls", args)
-        }
-        RustInvokeChannel::ScanContainedReal => {
-            ScanContainedRealArgs::from_args(args)?;
-            gamelib_scan::dispatch("scan_contained_real", args)
-        }
-        RustInvokeChannel::ScanWinemacMetalExports => {
-            ScanWinemacMetalExportsArgs::from_args(args)?;
-            gamelib_scan::dispatch("scan_winemac_metal_exports", args)
-        }
+        RustInvokeChannel::ScanSteamApiImports => rpc_scan_steam_api_imports(args),
+        RustInvokeChannel::ScanSteamDrm => rpc_scan_steam_drm(args),
+        RustInvokeChannel::ScanSteamstubSection => rpc_scan_steamstub_section(args),
+        RustInvokeChannel::ScanPeImportedDlls => rpc_scan_pe_imported_dlls(args),
+        RustInvokeChannel::ScanContainedReal => rpc_scan_contained_real(args),
+        RustInvokeChannel::ScanWinemacMetalExports => rpc_scan_winemac_metal_exports(args),
         // ---- In-app store/wiki embed (Phase 40 Plan 02, D-01/D-03). Every arm is macOS + Linux
         // (quick 260930-blh) + Windows (quick 261012-f25) per D-03's target-gated `unstable`
         // feature; a target outside those three returns a legible error rather than silently

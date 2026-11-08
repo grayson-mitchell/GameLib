@@ -128,6 +128,7 @@ mod single_instance;
 mod ipc_contract;
 mod sidecar;
 mod shell_state;
+mod scan_dispatch;
 use clipboard::*;
 use keyring_dispatch::*;
 use wake_lock::*;
@@ -140,6 +141,7 @@ use single_instance::*;
 use ipc_contract::*;
 use sidecar::*;
 use shell_state::*;
+use scan_dispatch::*;
 
 /// Invoke response timeout — a skeleton guardrail so a hung sidecar cannot wedge a command.
 const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
@@ -1995,6 +1997,7 @@ mod tests {
         "keyring_dispatch.rs",
         "login_window.rs",
         "relay_commands.rs",
+        "scan_dispatch.rs",
         "shell_state.rs",
         "shell_open.rs",
         "sidecar.rs",
@@ -2015,6 +2018,7 @@ mod tests {
         include_str!("keyring_dispatch.rs"),
         include_str!("login_window.rs"),
         include_str!("relay_commands.rs"),
+        include_str!("scan_dispatch.rs"),
         include_str!("shell_state.rs"),
         include_str!("shell_open.rs"),
         include_str!("sidecar.rs"),
