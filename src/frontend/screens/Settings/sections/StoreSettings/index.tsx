@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Tabs, Tab } from '@mui/material'
 import { TabPanel } from 'frontend/components/UI'
 import {
+  AddGamesToSteam,
   AltGOGdlBin,
   AltLegendaryBin,
   AltNileBin,
@@ -107,6 +108,7 @@ export default function StoreSettings() {
         <EnableSteamNativeInstall />
         <EnableSteamNativeDelete />
         <SteamExperimentalInstallApp />
+        <AddGamesToSteam />
       </TabPanel>
     </div>
   )

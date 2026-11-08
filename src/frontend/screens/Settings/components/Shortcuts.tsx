@@ -20,10 +20,6 @@ const Shortcuts = () => {
     'addStartMenuShortcuts',
     false
   )
-  const [addSteamShortcuts, setAddSteamShortcuts] = useSetting(
-    'addSteamShortcuts',
-    false
-  )
 
   if (!isDefault) {
     return <></>
@@ -58,14 +54,31 @@ const Shortcuts = () => {
         handleChange={() => setAddStartMenuShortcuts(!addStartMenuShortcuts)}
         title={menuShortcutsLabel}
       />
-
-      <ToggleSwitch
-        htmlId="shortcutsToSteam"
-        value={addSteamShortcuts}
-        handleChange={() => setAddSteamShortcuts(!addSteamShortcuts)}
-        title={t('setting.addgamestosteam', 'Add games to Steam automatically')}
-      />
     </>
+  )
+}
+
+// Lives in Settings → Stores → Steam (it writes Steam's shortcuts.vdf), not with the
+// desktop/Applications toggles above in General.
+export const AddGamesToSteam = () => {
+  const { t } = useTranslation()
+  const { isDefault } = useContext(SettingsContext)
+  const [addSteamShortcuts, setAddSteamShortcuts] = useSetting(
+    'addSteamShortcuts',
+    false
+  )
+
+  if (!isDefault) {
+    return <></>
+  }
+
+  return (
+    <ToggleSwitch
+      htmlId="shortcutsToSteam"
+      value={addSteamShortcuts}
+      handleChange={() => setAddSteamShortcuts(!addSteamShortcuts)}
+      title={t('setting.addgamestosteam', 'Add games to Steam automatically')}
+    />
   )
 }
 

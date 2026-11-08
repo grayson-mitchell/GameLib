@@ -51,7 +51,8 @@ jest.mock('../../../components', () => {
     EnableSteamNativeInstall: stub('EnableSteamNativeInstall'),
     NotifyHumbleExpirations: stub('NotifyHumbleExpirations'),
     PlaytimeSync: stub('PlaytimeSync'),
-    SteamExperimentalInstallApp: stub('SteamExperimentalInstallApp')
+    SteamExperimentalInstallApp: stub('SteamExperimentalInstallApp'),
+    AddGamesToSteam: stub('AddGamesToSteam')
   }
 })
 
@@ -170,7 +171,8 @@ describe('StoreSettings', () => {
       'DefaultSteamPath',
       'EnableSteamNativeInstall',
       'EnableSteamNativeDelete',
-      'SteamExperimentalInstallApp'
+      'SteamExperimentalInstallApp',
+      'AddGamesToSteam'
     ])
     expect(panelContents(root, 'epic')).toEqual([
       'EgsSettings',
