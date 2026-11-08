@@ -4,14 +4,14 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: verifying
 stopped_at: Phase 73 context gathered
-last_updated: "2026-11-08T19:20:20.979Z"
+last_updated: "2026-11-08T19:22:44.911Z"
 last_activity: 2026-11-08
 progress:
   total_phases: 14
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 147
-  completed_plans: 146
-  percent: 50
+  completed_plans: 147
+  percent: 57
 ---
 
 # Project State
@@ -77,7 +77,7 @@ Plan: 18 of 18
 Status: Phase complete — ready for verification
 Last activity: 2026-11-08
 
-Progress: [██████████] 99%
+Progress: [██████████] 100%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -658,9 +658,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-08T19:20:20.972Z
+Last session: 2026-11-08T19:22:44.902Z
 Stopped at: Phase 73 context gathered
-Resume file: .planning/phases/73-steam-depot-download-pipeline-in-rust/73-CONTEXT.md
+Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
