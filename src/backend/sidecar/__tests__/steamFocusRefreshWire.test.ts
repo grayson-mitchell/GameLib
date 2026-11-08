@@ -26,8 +26,8 @@
  *         unhandled rejection, and a subsequent frame is still processed afterward.
  */
 import {
-  readTauriShellFile,
-  readTauriShellSource
+  readTauriShellProductionFile,
+  readTauriShellProductionSource
 } from 'backend/testUtils/tauriShellSource'
 import { PassThrough } from 'node:stream'
 
@@ -44,7 +44,7 @@ import { SHELL_WINDOW_FOCUSED } from '../../../common/types/sidecarTransport'
  * strings under assertion below, so an unstripped match could pass on prose alone.
  */
 function loadMainRsCode(source?: string): string {
-  const raw = source ?? readTauriShellSource()
+  const raw = source ?? readTauriShellProductionSource()
   return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
@@ -64,13 +64,13 @@ describe('loadMainRsCode comment-stripping self-test', () => {
 describe('T-A: cross-side name pin (ipc_contract.rs const <-> SHELL_WINDOW_FOCUSED)', () => {
   test('the generated contract declares the const with the exact TS constant value', () => {
     // Phase 67-03 moved the Rust const out of main.rs into the generated ipc_contract.rs,
-    // which readTauriShellSource() deliberately excludes (GENERATED_MODULES). Read the
+    // which readTauriShellProductionSource() deliberately excludes (GENERATED_MODULES). Read the
     // generated module directly. Templated FROM the TS constant, so renaming either side
     // alone still reds this test.
     const expectedDecl = `const SHELL_WINDOW_FOCUSED: &str = "${SHELL_WINDOW_FOCUSED}";`
-    expect(loadMainRsCode(readTauriShellFile('ipc_contract.rs'))).toContain(
-      expectedDecl
-    )
+    expect(
+      loadMainRsCode(readTauriShellProductionFile('ipc_contract.rs'))
+    ).toContain(expectedDecl)
   })
 })
 

@@ -23,6 +23,7 @@ import {
   readHandlerBody,
   readMacosEpicEmbedSource,
   readTauriShellFile,
+  readTauriShellProductionFile,
   readTauriShellProductionSource,
   readTauriShellSource,
   readTopLevelFnBody,
@@ -77,7 +78,7 @@ const CAPABILITIES_PATH = join(
  * `stripTrailingLineComment`, which cuts only at a `//` found OUTSIDE a quoted string.
  */
 function loadMainRsCode(source?: string): string {
-  const raw = source ?? readTauriShellSource()
+  const raw = source ?? readTauriShellProductionSource()
   return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
@@ -344,7 +345,7 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
   })
 
   test('71-07 rust_dispatch.rs is a flat router: 45 one-line arms and no catch-all arm', () => {
-    const router = readTauriShellFile('rust_dispatch.rs')
+    const router = readTauriShellProductionFile('rust_dispatch.rs')
     expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(45)
     expect(router).not.toContain('_ =>')
   })
@@ -981,8 +982,11 @@ describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07
     expect(body).toContain('app.clipboard().read_text()')
   })
 
-  test('REQ-34.3-08 the clipboard_text_arg pure helper exists', () => {
-    expect(loadMainRsCode()).toContain('fn clipboard_text_arg')
+  // 71-19 vacuous pin found: `fn clipboard_text_arg` no longer exists in production (the hand
+  // helper was replaced by the generated `ClipboardWriteTextArgs`); the old needle was satisfied
+  // only by the `fn clipboard_text_arg_*` cargo test names. Re-pointed to the production construct.
+  test('REQ-34.3-08 the clipboard write-args parse (ClipboardWriteTextArgs::from_args) exists', () => {
+    expect(loadMainRsCode()).toContain('ClipboardWriteTextArgs::from_args')
   })
 
   test('REQ-34.3-08 the clipboard_read_value pure helper exists', () => {
@@ -1016,7 +1020,8 @@ describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07
   ]
 
   test('REQ-34.3-08 every clipboard #[cfg(test)] fn plan 34.3-03 added still exists', () => {
-    const code = loadMainRsCode()
+    // D-10 raw: targets Rust test text (the clipboard cargo test fn names)
+    const code = loadMainRsCode(readTauriShellSource())
     for (const fnName of EXPECTED_CLIPBOARD_TEST_FN_NAMES) {
       expect(code).toContain(`fn ${fnName}`)
     }
@@ -4093,7 +4098,7 @@ describe('quick 260930-lyk: tray Auto reads the TASKBAR theme, never the app the
   })
 
   test('NON-VACUITY: the RAW main.rs does carry AppsUseLightTheme (the rationale comment), so the negative gate above is comment-scoped rather than trivially true', () => {
-    const raw = readTauriShellSource()
+    const raw = readTauriShellProductionSource()
     expect(raw).toContain('AppsUseLightTheme')
     expect(loadMainRsCode(raw)).not.toContain('AppsUseLightTheme')
   })
@@ -4354,7 +4359,7 @@ describe('quick 260930-q11: both login-sheet paths resolve their NSWindow handle
   })
 
   test('NON-VACUITY arm 2: the RAW main.rs names the deleted `SendPtr` wrapper in the replacement prose, and stripping removes it -- so the negatives above are genuinely comment-scoped, not accidentally true because the phrase left the file', () => {
-    const raw = readTauriShellSource()
+    const raw = readTauriShellProductionSource()
     // This exact phrase occurs ONLY in the doc-comment prose this quick task wrote on both
     // login-sheet paths ("The `SendPtr` wrapper and the two raw-address ... casts this function
     // used to carry are gone"), never in code. NOTE for a future reader: because
@@ -4505,7 +4510,7 @@ describe('tauriShellSource helper scope', () => {
   })
 
   it('every `mod x;` declared in main.rs resolves to a listed file (or a pre-split sibling)', () => {
-    const code = stripSourceComments(readTauriShellFile('main.rs'))
+    const code = stripSourceComments(readTauriShellProductionFile('main.rs'))
     const listed = listTauriShellSourceFiles()
     const decl =
       /(?:#\[path\s*=\s*"([^"]+)"\]\s*)?^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;/gm
@@ -4527,6 +4532,8 @@ describe('tauriShellSource helper scope', () => {
       'src/backend/testUtils/tauriShellSource.ts': 'the helper itself',
       'src/backend/__tests__/tauriShellSource.test.ts':
         'this guard (names main.rs as the last listed file)',
+      'src/backend/__tests__/longRunningChannels.test.ts':
+        "reads main.rs's OWN test module (71-19 D-10/WR-03), not the combined source",
       'meta/captureShellScrollback.ts':
         'assertRepoRoot only checks main.rs EXISTS, it never reads it',
       'meta/__tests__/captureShellScrollback.test.ts':
@@ -4670,6 +4677,7 @@ describe('D-10 production reader proof (Phase 71 wave 0)', () => {
     for (const f of listTauriShellSourceFiles().filter(
       (p) => p !== 'main.rs'
     )) {
+      // D-10 raw: targets Rust test text (the per-file strip proof must see the test modules)
       const src = readTauriShellFile(f)
       const blocks = listRustTestModuleBlocks(src)
       const lines = src.split('\n')
@@ -4693,6 +4701,7 @@ describe('D-10 production reader proof (Phase 71 wave 0)', () => {
   })
 
   test('main.rs: stripped text equals the old slice before `#[cfg(test)]` + its mod tests, modulo trailing newline', () => {
+    // D-10 raw: targets Rust test text (main.rs strip proof must see its `mod tests`)
     const main = readTauriShellFile('main.rs')
     const oldSlice = main.slice(0, main.indexOf('#[cfg(test)]\nmod tests {'))
     expect(main).toContain('#[cfg(test)]\nmod tests {')

@@ -21,7 +21,11 @@
  * that decision so the reason is legible at the failure site if a future
  * change silently adds it to the exemption list.
  */
-import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import {
+  listRustTestModuleBlocks,
+  readTauriShellFile,
+  readTauriShellProductionSource
+} from 'backend/testUtils/tauriShellSource'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
@@ -95,7 +99,7 @@ const EXPECTED_LONG_RUNNING_CHANNELS = [
  * copy this exact stripper pattern, so a defect found here is worth guarding against once, here.
  */
 function loadMainRsCode(source?: string): string {
-  const raw = source ?? readTauriShellSource()
+  const raw = source ?? readTauriShellProductionSource()
   return stripRustLineComments(raw)
 }
 
@@ -142,7 +146,7 @@ describe('loadMainRsCode comment-stripping helper (self-test)', () => {
     //
     // `loadMainRsRaw` is declared below this block but is a hoisted function
     // declaration, so calling it here is fine -- no reordering needed.
-    expect(loadMainRsRaw()).toContain(COMMENT_ONLY_PHRASE)
+    expect(readTauriShellProductionSource()).toContain(COMMENT_ONLY_PHRASE)
 
     // Without correct stripping this phrase (from the D-10 doc-comment addition
     // this plan makes) would leak through and make the "array does not name an
@@ -152,14 +156,20 @@ describe('loadMainRsCode comment-stripping helper (self-test)', () => {
 })
 
 /**
- * Reads main.rs RAW (no comment-stripping) — `#[cfg(test)]` is an attribute, not a comment,
+ * main.rs's OWN test module text (71-19, D-10 / WR-03): the whole `#[cfg(test)] mod` blocks of
+ * main.rs only, so a `#[cfg(test)]` in another shell file cannot satisfy the region lookups.
+ * D-10 raw: targets Rust test text (the behavioral `timeout_for` test module).
+ * Reads RAW (no comment-stripping) — `#[cfg(test)]` is an attribute, not a comment,
  * and it sits directly adjacent to doc comments in main.rs's appended test module, so running
  * `loadMainRsCode()`'s stripper over it would be pointless at best and could interact with the
  * attribute-adjacent doc-comment lines at worst. This helper is scoped to this describe block
  * only — it does not replace `loadMainRsCode()` for the exemption-list assertions above.
  */
 function loadMainRsRaw(): string {
-  return readTauriShellSource()
+  const lines = readTauriShellFile('main.rs').split('\n')
+  return listRustTestModuleBlocks(lines.join('\n'))
+    .map((b) => lines.slice(b.startLine, b.endLine + 1).join('\n'))
+    .join('\n')
 }
 
 /**
