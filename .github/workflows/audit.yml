@@ -1,0 +1,48 @@
+name: Supply-chain audit
+permissions:
+  contents: read
+
+# What this gate does NOT catch: advisories not yet in the GitHub/RustSec databases, dev-only npm
+# dependencies (`--prod`), and licenses/bans/sources (deny.toml checks advisories only). Both jobs
+# can also go red with no change in this repo, because a newly published advisory flips them.
+#
+# No `paths:` filter, deliberately -- same reasoning as rust-test.yml: a required check must report
+# a status on every PR.
+on:
+  push:
+    branches: [main, stable]
+  pull_request:
+    branches: [main, stable]
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pnpm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+      # audit reads the lockfile, so no `pnpm install` is needed.
+      - name: Audit production dependencies (blocks on high/critical)
+        run: pnpm audit --prod --audit-level high
+      - name: Audit production dependencies (full list, warn only)
+        run: pnpm audit --prod
+        continue-on-error: true
+
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: src-tauri/Cargo.toml
+          command: check advisories
+          arguments: ''
