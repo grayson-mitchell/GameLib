@@ -604,6 +604,12 @@ export interface CallRunnerOptions {
   wrappers?: string[]
   onOutput?: (output: string, child: ChildProcess) => void
   abortId?: string
+  /**
+   * Phase 72 D-13: key the spawned child is recorded under in `trackedChildren`
+   * (what `killTracked({ runner, key })` matches). Defaults to the abort id for
+   * `callRunner`; callers whose command carries no app name (sideload) pass it.
+   */
+  trackKey?: string
   cwd?: string
   /**
    * For background probes that classify a runner's output themselves (via

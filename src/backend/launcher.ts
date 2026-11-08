@@ -1,3 +1,4 @@
+import { trackChild } from './trackedChildren'
 import {
   CallRunnerOptions,
   GameInfo,
@@ -1647,6 +1648,10 @@ async function runWineCommand({
       env: env_vars,
       cwd: startFolder
     })
+    trackChild(child, {
+      runner: 'wine',
+      key: options?.trackKey ?? installFolderName ?? winePrefix
+    })
     onSpawn?.(child)
     child.stdout.setEncoding('utf-8')
     child.stderr.setEncoding('utf-8')
@@ -1870,6 +1875,12 @@ async function callRunner(
       env: { ...process.env, ...options?.env },
       signal: abortController.signal
     })
+    // Phase 72 D-13: on Windows with PowerShell this PID is powershell's (hence
+    // the /T tree kill in trackedChildren).
+    trackChild(child, {
+      runner: runner.name,
+      key: options?.trackKey ?? abortId
+    })
 
     const stdout = memoryLog()
     const stderr = memoryLog()
@@ -1920,7 +1931,7 @@ async function callRunner(
 
       // debug/steam-install-slow-start (D-2): a process that exits with a
       // non-zero code but WITHOUT an OS-level signal (e.g. gogdl/legendary/
-      // nile catching SIGTERM from utils.ts's killPattern() and shutting down
+      // nile catching SIGTERM from utils.ts's killAllTracked() and shutting down
       // gracefully with a failure exit code, or any ordinary runner-internal
       // failure) previously fell through the `signal && !child.killed` check
       // above and was unconditionally treated as a SUCCESSFUL completion —
