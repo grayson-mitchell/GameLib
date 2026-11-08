@@ -1,0 +1,24 @@
+src-tauri/src/clipboard.rs                              total=    24 nontest=    24
+src-tauri/src/epic_embed_js_dialog.rs                   total=   205 nontest=    98
+src-tauri/src/epic_embed_state.rs                       total=   423 nontest=   185
+src-tauri/src/keyring_dispatch.rs                       total=    75 nontest=    75
+src-tauri/src/login_window.rs                           total=  3315 nontest=  3315 OVER
+src-tauri/src/macos_epic_embed.rs                       total=  2089 nontest=  1900 OVER
+src-tauri/src/macos_native_gamepad.rs                   total=   103 nontest=   103
+src-tauri/src/macos_notifications.rs                    total=   184 nontest=   184
+src-tauri/src/main.rs                                   total=  8186 nontest=  1867 OVER
+src-tauri/src/native_gamepad_shape.rs                   total=   475 nontest=   247
+src-tauri/src/notification_backend.rs                   total=   235 nontest=   133
+src-tauri/src/relay_commands.rs                         total=   278 nontest=   246
+src-tauri/src/shell_open.rs                             total=   185 nontest=    98
+src-tauri/src/shell_state.rs                            total=   281 nontest=   281
+src-tauri/src/sidecar.rs                                total=   689 nontest=   689
+src-tauri/src/single_instance.rs                        total=  1620 nontest=  1620 OVER
+src-tauri/src/store_embed.rs                            total=  4546 nontest=  4546 OVER
+src-tauri/src/store_embed_handoff_policy.rs             total=   380 nontest=    99
+src-tauri/src/terminate_veto.rs                         total=   342 nontest=   342
+src-tauri/src/tray.rs                                   total=  1099 nontest=  1099 OVER
+src-tauri/src/wake_lock/linux.rs                        total=    30 nontest=    30
+src-tauri/src/wake_lock/macos.rs                        total=    56 nontest=    56
+src-tauri/src/wake_lock/windows.rs                      total=    40 nontest=    40
+src-tauri/src/wake_lock.rs                              total=   319 nontest=   319

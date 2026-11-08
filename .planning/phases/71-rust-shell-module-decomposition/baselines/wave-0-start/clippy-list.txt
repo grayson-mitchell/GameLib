@@ -1,0 +1,36 @@
+clippy::bool_comparison: 1 (ceiling 1)
+clippy::cloned_ref_to_slice_refs: 2 (ceiling 2)
+clippy::doc_lazy_continuation: 5 (ceiling 5)
+clippy::if_same_then_else: 1 (ceiling 1)
+clippy::incompatible_msrv: 1 (ceiling 1)
+clippy::manual_hash_one: 1 (ceiling 1)
+clippy::match_like_matches_macro: 1 (ceiling 1)
+clippy::needless_borrows_for_generic_args: 1 (ceiling 1)
+clippy::type_complexity: 2 (ceiling 2)
+clippy::unnecessary_to_owned: 2 (ceiling 2)
+clippy::useless_conversion: 1 (ceiling 1)
+dead_code: 1 (ceiling 1)
+non_snake_case: 2 (ceiling 2)
+src/native_gamepad_shape.rs:176:18 clippy::incompatible_msrv current MSRV (Minimum Supported Rust Version) is `1.77.2` but this item is stable since `1.82.0`
+src/login_window.rs:71:18 clippy::match_like_matches_macro match expression looks like `matches!` macro
+src/login_window.rs:226:5 clippy::doc_lazy_continuation doc list item without indentation
+src/login_window.rs:227:5 clippy::doc_lazy_continuation doc list item without indentation
+src/login_window.rs:228:5 clippy::doc_lazy_continuation doc list item without indentation
+src/login_window.rs:229:5 clippy::doc_lazy_continuation doc list item without indentation
+src/login_window.rs:230:5 clippy::doc_lazy_continuation doc list item without indentation
+src/login_window.rs:605:20 clippy::manual_hash_one manual implementation of `BuildHasher::hash_one`
+src/store_embed.rs:515:6 clippy::type_complexity very complex type used. Consider factoring parts into `type` definitions
+src/store_embed.rs:2345:67 clippy::useless_conversion useless conversion to the same type: `url::parser::ParseError`
+src/store_embed.rs:2653:16 clippy::bool_comparison equality checks against true are unnecessary
+src/store_embed.rs:2861:57 clippy::needless_borrows_for_generic_args the borrowed expression implements the required traits
+src/shell_state.rs:12:25 clippy::type_complexity very complex type used. Consider factoring parts into `type` definitions
+src/main.rs:5911:34 clippy::unnecessary_to_owned unnecessary use of `to_string`
+src/main.rs:5928:34 clippy::unnecessary_to_owned unnecessary use of `to_string`
+src/main.rs:6039:41 clippy::cloned_ref_to_slice_refs unnecessary use of `clone` to create a slice from a reference
+src/main.rs:6222:44 clippy::cloned_ref_to_slice_refs unnecessary use of `clone` to create a slice from a reference
+src/main.rs:8161:45 clippy::if_same_then_else this `if` has identical blocks
+src/main.rs:4990:8 non_snake_case function `the_keyring_available_arm_only_ever_READS_the_probe_account` should have a snake case name
+src/main.rs:6764:8 non_snake_case function `wake_lock_kind_maps_the_two_kinds_to_DIFFERENT_assertions` should have a snake case name
+src/store_embed.rs:271:19 dead_code method `observe_live_url` is never used
+PASS (darwin, toolchain 1.99.1)
+exit=0
