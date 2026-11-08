@@ -1,0 +1,19 @@
+2026-11-08T09:00:35Z
+{"step":"SetAppAutoUpdateBehavior","appId":333300,"value":1,"ret":1}
+2026-11-08T09:00:54Z
+{"step":"SetActiveBeta","appId":333300,"beta":"release-101","ret":1}
+2026-11-08T09:18:34Z
+quit Steam
+2026-11-08T09:19:00Z
+relaunch Steam
+2026-11-08T09:22:26Z
+{"step":"InstallApp","appId":333300,"folder":0,"EAppUpdateError":0}
+2026-11-08T09:23:14Z
+edge: InstallApp on up-to-date
+{"step":"InstallApp","appId":333300,"folder":0,"EAppUpdateError":0}
+2026-11-08T09:23:31Z
+edge: StartValidatingApp
+{"step":"StartValidatingApp","appId":333300,"ret":1}
+2026-11-08T09:23:52Z
+restore
+{"step":"SetAppAutoUpdateBehavior","appId":333300,"value":0,"ret":1}

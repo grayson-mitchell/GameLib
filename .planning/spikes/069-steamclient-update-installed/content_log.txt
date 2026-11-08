@@ -1,0 +1,168 @@
+[2026-11-08 22:00:54] AppID 333300 state changed : Update Required,Fully Installed,
+[2026-11-08 22:00:54] AppID 333300 user config changed : updated depots 333302
+[2026-11-08 22:00:54] AppID 333300 scheduler update : Priority First, not played for 177317673 seconds, update disabled for 0 seconds
+[2026-11-08 22:00:54] AppID 333300 state changed : Update Required,Fully Installed,Update Queued,
+[2026-11-08 22:00:54] AppID 333300 beta changed: release-101
+[2026-11-08 22:00:54] AppID 333300 state changed : Update Required,Fully Installed,Update Queued,Update Running,
+[2026-11-08 22:00:54] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:00:54] AppID 333300 App update changed : Running Update,Reconfiguring,
+[2026-11-08 22:00:54] Got 6 download sources and 0 caching proxies via ContentServerDirectoryService::BYieldingGetServersForSteamPipe (CellID 22 / Launcher 0)
+[2026-11-08 22:00:54] Created peer download interface to host BigRazer (10.10.2.163)
+[2026-11-08 22:00:54] Moving to source priority class '8'
+[2026-11-08 22:00:54] Created download interface of type 'SteamCache' (7) to host cache1-akl-edgx.steamcontent.com (cache1-akl-edgx.steamcontent.com)
+[2026-11-08 22:00:54] HTTP/2 available
+[2026-11-08 22:00:54] Created ipv4-only http client
+[2026-11-08 22:00:55] Peer - BigRazer (10.10.2.163:27036): open connection to [U:1:35601368] failed (File Not Found)
+[2026-11-08 22:00:55] Created download interface of type 'SteamCache' (7) to host cache2-akl-tpwr.steamcontent.com (cache2-akl-tpwr.steamcontent.com)
+[2026-11-08 22:00:55] Created download interface of type 'SteamCache' (7) to host cache1-akl-tpwr.steamcontent.com (cache1-akl-tpwr.steamcontent.com)
+[2026-11-08 22:00:55] Moving to source priority class '4'
+[2026-11-08 22:00:55] Created download interface of type 'CDN' (2) to host alibaba.cdn.steampipe.steamcontent.com (alibaba.cdn.steampipe.steamcontent.com)
+[2026-11-08 22:00:55] Moving to source priority class '3'
+[2026-11-08 22:00:55] Created download interface of type 'CDN' (2) to host steampipe.akamaized.net (steampipe.akamaized.net)
+[2026-11-08 22:00:55] Created download interface of type 'CDN' (2) to host fastly.cdn.steampipe.steamcontent.com (fastly.cdn.steampipe.steamcontent.com)
+[2026-11-08 22:00:56] HTTPS (SteamCache,498) - cache1-akl-edgx.steamcontent.com (203.26.79.2:443 / 203.26.79.2:443, host: cache1-akl-edgx.steamcontent.com): cache1-akl-edgx.steamcontent.com/depot/333302/manifest/1547379086645511101/5/5550807082770329964 - manifest request received 200 (OK) HTTP response
+[2026-11-08 22:00:57] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:00:57] AppID 333300 App update changed : Running Update,Verifying Installed,
+[2026-11-08 22:00:57] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:00:57] AppID 333300 App update changed : Running Update,Preallocating,
+[2026-11-08 22:00:57] AppID 333300 preallocated 3 files (5 MB) 
+[2026-11-08 22:00:57] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:00:57] AppID 333300 update started : download 0/2047616, store 0/0, reuse 0/0, delta 0/0, stage 0/6287427 
+[2026-11-08 22:00:57] AppID 333300 state changed : Update Required,Fully Installed,Update Queued,Update Running,Update Started,
+[2026-11-08 22:00:57] AppID 333300 App update changed : Running Update,Downloading,Staging,
+[2026-11-08 22:00:57] Downloading 20 chunks for depot 333302 (1547379086645511101)
+[2026-11-08 22:00:57] HTTP (CDN,31) - fastly.cdn.steampipe.steamcontent.com (0.0.0.0:0 / 0.0.0.0:0, host: fastly.cdn.steampipe.steamcontent.com): AuthenticateDepotID (333302) - Success!
+[2026-11-08 22:00:57] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (0.0.0.0:0 / 0.0.0.0:0, host: alibaba.cdn.steampipe.steamcontent.com): AuthenticateDepotID (333302) - Success!
+[2026-11-08 22:00:57] HTTP (CDN,11) - steampipe.akamaized.net (0.0.0.0:0 / 0.0.0.0:0, host: steampipe.akamaized.net): AuthenticateDepotID (333302) - Success!
+[2026-11-08 22:01:58] IPv6 Connectivity state has changed, downgrading to ipv4-only
+[2026-11-08 22:02:03] HTTPS (CDN,11) - steampipe.akamaized.net (23.52.70.202:443 / 23.52.70.202:443, host: steampipe.akamaized.net): Connection has been idle for '64' seconds, closing
+[2026-11-08 22:02:03] HTTPS (CDN,11) - steampipe.akamaized.net (23.52.70.202:443 / 23.52.70.202:443, host: steampipe.akamaized.net): Closing connection
+[2026-11-08 22:02:03] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (65.8.136.33:80 / 65.8.136.33:80, host: alibaba.cdn.steampipe.steamcontent.com): Connection has been idle for '65' seconds, closing
+[2026-11-08 22:02:03] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (65.8.136.33:80 / 65.8.136.33:80, host: alibaba.cdn.steampipe.steamcontent.com): Closing connection
+[2026-11-08 22:02:03] HTTPS (SteamCache,349) - cache1-akl-tpwr.steamcontent.com (101.53.220.134:443 / 101.53.220.134:443, host: cache1-akl-tpwr.steamcontent.com): Connection has been idle for '65' seconds, closing
+[2026-11-08 22:02:03] HTTPS (SteamCache,349) - cache1-akl-tpwr.steamcontent.com (101.53.220.134:443 / 101.53.220.134:443, host: cache1-akl-tpwr.steamcontent.com): Closing connection
+[2026-11-08 22:02:03] HTTPS (CDN,31) - fastly.cdn.steampipe.steamcontent.com (199.232.215.82:443 / 199.232.215.82:443, host: fastly.cdn.steampipe.steamcontent.com): Connection has been idle for '65' seconds, closing
+[2026-11-08 22:02:03] HTTPS (CDN,31) - fastly.cdn.steampipe.steamcontent.com (199.232.215.82:443 / 199.232.215.82:443, host: fastly.cdn.steampipe.steamcontent.com): Closing connection
+[2026-11-08 22:02:03] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:02:03] AppID 333300 App update changed : Running Update,Committing,
+[2026-11-08 22:02:03] AppID 333300 starting commit from "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/downloading/333300" to "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/ADOM" : 17 updated, 0 moved, 0 deleted files
+[2026-11-08 22:02:03] AppID 333300 state changed : Fully Installed,Update Queued,Update Running,
+[2026-11-08 22:02:03] AppID 333300 finished update, 1 mounted depots (BuildID 3512046) : 333302 (1547379086645511101),
+[2026-11-08 22:02:03] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:02:03] AppID 333300 App update changed : None
+[2026-11-08 22:02:03] AppID 333300 state changed : Fully Installed,Update Queued,
+[2026-11-08 22:02:03] AppID 333300 state changed : Fully Installed,
+[2026-11-08 22:02:03] AppID 333300 scheduler finished : removed from schedule (result No Error, state 0xc) 
+[2026-11-08 22:02:07] Current download rate: 0.000 Mbps
+[2026-11-08 22:02:59] HTTPS (SteamCache,498) - cache1-akl-edgx.steamcontent.com (203.26.79.2:443 / 203.26.79.2:443, host: cache1-akl-edgx.steamcontent.com): Connection has been idle for '61' seconds, closing
+[2026-11-08 22:02:59] HTTPS (SteamCache,498) - cache1-akl-edgx.steamcontent.com (203.26.79.2:443 / 203.26.79.2:443, host: cache1-akl-edgx.steamcontent.com): Closing connection
+[2026-11-08 22:03:04] HTTPS (SteamCache,350) - cache2-akl-tpwr.steamcontent.com (101.53.220.135:443 / 101.53.220.135:443, host: cache2-akl-tpwr.steamcontent.com): Connection has been idle for '61' seconds, closing
+[2026-11-08 22:03:04] HTTPS (SteamCache,350) - cache2-akl-tpwr.steamcontent.com (101.53.220.135:443 / 101.53.220.135:443, host: cache2-akl-tpwr.steamcontent.com): Closing connection
+[2026-11-08 22:06:26] stats: (SteamCache, 498) cache1-akl-edgx.steamcontent.com: 2767972 Bytes, 3 sec (7.22 Mbps). 0 Hits / 3 Misses (0 %, 0 % bytes), score 0.8935
+[2026-11-08 22:06:26] stats: (Invalid, 0) : 4761076 Bytes, 9 sec (4.33 Mbps). 0 Hits / 9 Misses (0 %, 0 % bytes), score 0.0000
+[2026-11-08 22:06:26] stats: (SteamCache, 350) cache2-akl-tpwr.steamcontent.com: 540640 Bytes, 7 sec (0.64 Mbps). 0 Hits / 4 Misses (0 %, 0 % bytes), score 0.7254
+[2026-11-08 22:06:26] stats: (CDN, 31) fastly.cdn.steampipe.steamcontent.com: 384784 Bytes, 1 sec (2.54 Mbps). 0 Hits / 0 Misses (0 %, 0 % bytes), score 0.8131
+[2026-11-08 22:06:26] stats: (SteamCache, 349) cache1-akl-tpwr.steamcontent.com: 436352 Bytes, 1 sec (3.29 Mbps). 0 Hits / 2 Misses (0 %, 0 % bytes), score 0.6899
+[2026-11-08 22:06:26] stats: (CDN, 11) steampipe.akamaized.net: 443488 Bytes, 1 sec (3.34 Mbps). 0 Hits / 0 Misses (0 %, 0 % bytes), score 0.8655
+
+
+[2026-11-08 22:19:04] Client version: 1792618285
+[2026-11-08 22:19:04] Loaded Steam library folders configuration: /Users/graysonmitchell/Library/Application Support/Steam/steamapps/libraryfolders.vdf
+[2026-11-08 22:19:04] Loaded 13 apps from install folder "/Users/graysonmitchell/Library/Application Support/Steam/steamapps\appmanifest_*.acf".
+[2026-11-08 22:19:04] Loaded 0 apps from install folder "/Volumes/Untitled/SteamLibrary/steamapps\appmanifest_*.acf".
+[2026-11-08 22:19:04] Triggered async write of Steam library folders configuration (2 libraries).
+[2026-11-08 22:19:06] Adding peer server 'BigRazer' (10.10.2.163:27036)
+[2026-11-08 22:19:06] AppID 333300 state changed : Update Required,Fully Installed, (Update delayed for 28801 secs)
+[2026-11-08 22:19:06] AppID 333300 config changed : updated depots 333302
+[2026-11-08 22:19:31] AppID 333300 state changed : Update Required,Fully Installed,Prefetching Info, (Update delayed for 28776 secs)
+[2026-11-08 22:19:31] AppID 333300 state changed : Update Required,Fully Installed, (Update delayed for 28776 secs)
+[2026-11-08 22:19:31] AppID 333300 update prefetch finished : 1872128 bytes to download, 0 bytes to stage
+[2026-11-08 22:22:26] AppID 333300 scheduler update : Priority First, not played for 0 seconds, update disabled for 0 seconds
+[2026-11-08 22:22:26] AppID 333300 state changed : Update Required,Fully Installed,Update Queued, (Update delayed for 28601 secs)
+[2026-11-08 22:22:26] AppID 333300 state changed : Update Required,Fully Installed,Update Queued,Update Running,
+[2026-11-08 22:22:26] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:22:26] AppID 333300 App update changed : Running Update,Reconfiguring,
+[2026-11-08 22:22:26] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:22:26] AppID 333300 App update changed : Running Update,Verifying Installed,
+[2026-11-08 22:22:26] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:22:26] AppID 333300 App update changed : Running Update,Preallocating,
+[2026-11-08 22:22:26] AppID 333300 preallocated 3 files (5 MB) 
+[2026-11-08 22:22:26] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:22:26] AppID 333300 update started : download 0/1872128, store 0/0, reuse 0/0, delta 0/0, stage 0/5777353 
+[2026-11-08 22:22:26] AppID 333300 state changed : Update Required,Fully Installed,Update Queued,Update Running,Update Started,
+[2026-11-08 22:22:26] AppID 333300 App update changed : Running Update,Downloading,Staging,
+[2026-11-08 22:22:27] Got 6 download sources and 0 caching proxies via ContentServerDirectoryService::BYieldingGetServersForSteamPipe (CellID 22 / Launcher 0)
+[2026-11-08 22:22:27] Created peer download interface to host BigRazer (10.10.2.163)
+[2026-11-08 22:22:27] Moving to source priority class '8'
+[2026-11-08 22:22:27] Created download interface of type 'SteamCache' (7) to host cache1-akl-edgx.steamcontent.com (cache1-akl-edgx.steamcontent.com)
+[2026-11-08 22:22:27] Downloading 17 chunks for depot 333302 (1735692159990042256)
+[2026-11-08 22:22:27] Peer - BigRazer (10.10.2.163:27036): open connection to [U:1:35601368] failed (File Not Found)
+[2026-11-08 22:22:27] Created download interface of type 'SteamCache' (7) to host cache2-akl-tpwr.steamcontent.com (cache2-akl-tpwr.steamcontent.com)
+[2026-11-08 22:22:27] Created download interface of type 'SteamCache' (7) to host cache1-akl-tpwr.steamcontent.com (cache1-akl-tpwr.steamcontent.com)
+[2026-11-08 22:22:27] Moving to source priority class '4'
+[2026-11-08 22:22:27] Created download interface of type 'CDN' (2) to host steampipe.akamaized.net (steampipe.akamaized.net)
+[2026-11-08 22:22:27] Created download interface of type 'CDN' (2) to host fastly.cdn.steampipe.steamcontent.com (fastly.cdn.steampipe.steamcontent.com)
+[2026-11-08 22:22:27] Moving to source priority class '3'
+[2026-11-08 22:22:27] Created download interface of type 'CDN' (2) to host alibaba.cdn.steampipe.steamcontent.com (alibaba.cdn.steampipe.steamcontent.com)
+[2026-11-08 22:22:27] HTTP/2 available
+[2026-11-08 22:22:27] Created ipv4-only http client
+[2026-11-08 22:22:28] HTTP (CDN,11) - steampipe.akamaized.net (0.0.0.0:0 / 0.0.0.0:0, host: steampipe.akamaized.net): AuthenticateDepotID (333302) - Success!
+[2026-11-08 22:22:28] HTTP (CDN,31) - fastly.cdn.steampipe.steamcontent.com (0.0.0.0:0 / 0.0.0.0:0, host: fastly.cdn.steampipe.steamcontent.com): AuthenticateDepotID (333302) - Success!
+[2026-11-08 22:22:28] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (0.0.0.0:0 / 0.0.0.0:0, host: alibaba.cdn.steampipe.steamcontent.com): AuthenticateDepotID (333302) - Success!
+[2026-11-08 22:22:28] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:22:28] AppID 333300 App update changed : Running Update,Committing,
+[2026-11-08 22:22:28] AppID 333300 starting commit from "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/downloading/333300" to "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/ADOM" : 13 updated, 0 moved, 4 deleted files
+[2026-11-08 22:22:28] AppID 333300 state changed : Fully Installed,Update Queued,Update Running,
+[2026-11-08 22:22:28] AppID 333300 finished update, 1 mounted depots (BuildID 5820078) : 333302 (1735692159990042256),
+[2026-11-08 22:22:28] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:22:28] AppID 333300 App update changed : None
+[2026-11-08 22:22:28] AppID 333300 state changed : Fully Installed,Update Queued,
+[2026-11-08 22:22:28] AppID 333300 state changed : Fully Installed,
+[2026-11-08 22:22:28] AppID 333300 scheduler finished : removed from schedule (result No Error, state 0xc) 
+[2026-11-08 22:23:14] AppID 333300 state changed : Update Required,Fully Installed,
+[2026-11-08 22:23:14] AppID 333300 scheduler update : Priority First, not played for 0 seconds, update disabled for 0 seconds
+[2026-11-08 22:23:14] AppID 333300 state changed : Update Required,Fully Installed,Update Queued,
+[2026-11-08 22:23:14] AppID 333300 state changed : Update Required,Fully Installed,Update Queued,Update Running,
+[2026-11-08 22:23:14] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:23:14] AppID 333300 App update changed : Running Update,Reconfiguring,
+[2026-11-08 22:23:14] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:23:14] AppID 333300 App update changed : Running Update,Verifying Installed,
+[2026-11-08 22:23:14] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:23:14] AppID 333300 has no changes, 1 active: 333302 (1735692159990042256), 1 target: 333302 (1735692159990042256),
+[2026-11-08 22:23:14] AppID 333300 state changed : Update Required,Fully Installed,Update Queued,Update Running,Update Started,
+[2026-11-08 22:23:14] AppID 333300 App update changed : Running Update,Staging,
+[2026-11-08 22:23:14] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:23:14] AppID 333300 App update changed : Running Update,Committing,
+[2026-11-08 22:23:14] AppID 333300 starting commit from "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/downloading/333300" to "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/ADOM" : 0 updated, 0 moved, 0 deleted files
+[2026-11-08 22:23:14] AppID 333300 state changed : Fully Installed,Update Queued,Update Running,
+[2026-11-08 22:23:14] AppID 333300 finished update, 1 mounted depots (BuildID 5820078) : 333302 (1735692159990042256),
+[2026-11-08 22:23:14] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:23:14] AppID 333300 App update changed : None
+[2026-11-08 22:23:14] AppID 333300 state changed : Fully Installed,Update Queued,
+[2026-11-08 22:23:14] AppID 333300 state changed : Fully Installed,
+[2026-11-08 22:23:14] AppID 333300 scheduler finished : removed from schedule (result No Error, state 0xc) 
+[2026-11-08 22:23:29] HTTPS (SteamCache,349) - cache1-akl-tpwr.steamcontent.com (101.53.220.134:443 / 101.53.220.134:443, host: cache1-akl-tpwr.steamcontent.com): Connection has been idle for '61' seconds, closing
+[2026-11-08 22:23:29] HTTPS (SteamCache,349) - cache1-akl-tpwr.steamcontent.com (101.53.220.134:443 / 101.53.220.134:443, host: cache1-akl-tpwr.steamcontent.com): Closing connection
+[2026-11-08 22:23:29] HTTPS (SteamCache,350) - cache2-akl-tpwr.steamcontent.com (101.53.220.135:443 / 101.53.220.135:443, host: cache2-akl-tpwr.steamcontent.com): Connection has been idle for '61' seconds, closing
+[2026-11-08 22:23:29] HTTPS (SteamCache,350) - cache2-akl-tpwr.steamcontent.com (101.53.220.135:443 / 101.53.220.135:443, host: cache2-akl-tpwr.steamcontent.com): Closing connection
+[2026-11-08 22:23:29] HTTPS (SteamCache,498) - cache1-akl-edgx.steamcontent.com (203.26.79.2:443 / 203.26.79.2:443, host: cache1-akl-edgx.steamcontent.com): Connection has been idle for '61' seconds, closing
+[2026-11-08 22:23:29] HTTPS (SteamCache,498) - cache1-akl-edgx.steamcontent.com (203.26.79.2:443 / 203.26.79.2:443, host: cache1-akl-edgx.steamcontent.com): Closing connection
+[2026-11-08 22:23:29] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (65.8.136.213:80 / 65.8.136.213:80, host: alibaba.cdn.steampipe.steamcontent.com): Connection has been idle for '61' seconds, closing
+[2026-11-08 22:23:29] HTTP (CDN,33) - alibaba.cdn.steampipe.steamcontent.com (65.8.136.213:80 / 65.8.136.213:80, host: alibaba.cdn.steampipe.steamcontent.com): Closing connection
+[2026-11-08 22:23:29] HTTPS (CDN,11) - steampipe.akamaized.net (23.52.70.202:443 / 23.52.70.202:443, host: steampipe.akamaized.net): Connection has been idle for '61' seconds, closing
+[2026-11-08 22:23:29] HTTPS (CDN,11) - steampipe.akamaized.net (23.52.70.202:443 / 23.52.70.202:443, host: steampipe.akamaized.net): Closing connection
+[2026-11-08 22:23:29] HTTPS (CDN,31) - fastly.cdn.steampipe.steamcontent.com (199.232.215.82:443 / 199.232.215.82:443, host: fastly.cdn.steampipe.steamcontent.com): Connection has been idle for '61' seconds, closing
+[2026-11-08 22:23:29] HTTPS (CDN,31) - fastly.cdn.steampipe.steamcontent.com (199.232.215.82:443 / 199.232.215.82:443, host: fastly.cdn.steampipe.steamcontent.com): Closing connection
+[2026-11-08 22:23:31] Start validating appID 333300 on BuildID 5820078
+[2026-11-08 22:23:31] AppID 333300 scheduler update : Priority First, not played for 17 seconds, update disabled for 0 seconds
+[2026-11-08 22:23:31] AppID 333300 state changed : Fully Installed,Update Queued,
+[2026-11-08 22:23:31] AppID 333300 state changed : Fully Installed,Update Queued,Update Running,
+[2026-11-08 22:23:31] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:23:31] AppID 333300 App update changed : Running Update,Reconfiguring,
+[2026-11-08 22:23:31] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:23:31] AppID 333300 App update changed : Running Update,Verifying Installed,
+[2026-11-08 22:23:33] AppID 333300 App update changed : Running Update,
+[2026-11-08 22:23:33] AppID 333300 App update changed : None
+[2026-11-08 22:23:33] AppID 333300 state changed : Fully Installed,Update Queued,
+[2026-11-08 22:23:33] AppID 333300 state changed : Fully Installed,
+[2026-11-08 22:23:33] AppID 333300 scheduler finished : removed from schedule (result No Error, state 0xc) 
