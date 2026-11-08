@@ -122,10 +122,13 @@ EXPECTED_AXIS_A_SURVIVOR_SET = {
 # behind. user.ts itself no longer imports safeStorage from 'electron' at all — verified directly
 # (`grep -n "from 'electron'" src/backend/humble/user.ts` shows only `session`). This is an
 # IMPORTER-LOCATION update, not a re-litigation of F-1's classification.
+# Updated 2026-11-08 by Phase 72 plan 05 (D-12): ElectronTokenStore, its safeStorage import and
+# its plaintext-on-unavailable write path were DELETED from steam/tokenStore.ts (the default is now
+# a fail-closed UnconfiguredTokenStore; bootstrap installs the real keyring store). tokenStore.ts
+# mentions safeStorage only in comments now. Another IMPORTER-LOCATION update, not a loosening.
 EXPECTED_AXIS_B_SAFESTORAGE_IMPORTERS = [
     "src/backend/humble/secretStore.ts",
     "src/backend/steamgrid/secureKey.ts",
-    "src/backend/storeManagers/steam/tokenStore.ts",
 ]
 
 # The set of sites the sweep is ALLOWED to classify SILENTLY-DROPPED, pinned by quick task
