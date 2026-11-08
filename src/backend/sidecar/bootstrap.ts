@@ -145,6 +145,7 @@ import {
   logInfo,
   logWarning,
   logError,
+  logErrorSettled,
   LogPrefix
 } from '../logger'
 import { GlobalConfig } from '../config'
@@ -812,8 +813,10 @@ export function init(
     // severity of the Electron handler at `main.ts:618` that plan 35-14 deletes
     // (`logError(err, LogPrefix.Backend)`). A shared sink would have demoted every
     // uncaught exception to a warning. Before this line the guard writes to stderr.
+    // Phase 72 D-04: returns the write promise (`logErrorSettled`, same severity) so the
+    // now-fatal guard can await the flush before exiting.
     setUncaughtExceptionLogSink((message) =>
-      logError(message, LogPrefix.Backend)
+      logErrorSettled(message, LogPrefix.Backend)
     )
   }
 

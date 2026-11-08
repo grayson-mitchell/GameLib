@@ -408,6 +408,39 @@ function loadFreshProcessGuards(): {
   return harness
 }
 
+/** Phase 72 D-04: fresh raw module with a custom uncaught sink bound (raw, NOT mock-exit wrapped). */
+function loadRawWithSink(sink: (message: string) => void | Promise<void>): {
+  installUncaughtExceptionGuard: (
+    target: NodeJS.EventEmitter,
+    exit: (code: number) => void
+  ) => void
+} {
+  let mod!: ReturnType<typeof loadRawWithSink>
+  jest.isolateModules(() => {
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    mod = require('../processGuards')
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    ;(
+      mod as unknown as {
+        setUncaughtExceptionLogSink: typeof sink extends never
+          ? never
+          : (s: unknown) => void
+      }
+    ).setUncaughtExceptionLogSink(sink)
+  })
+  return mod
+}
+
+/**
+ * Phase 72 D-04: the uncaught guard is fatal, so every harness-installed guard gets an
+ * injected `exit` mock by default; a test that cares passes its own.
+ */
+function withMockExit(
+  install: (target?: NodeJS.EventEmitter, exit?: (code: number) => void) => void
+): (target?: NodeJS.EventEmitter, exit?: (code: number) => void) => void {
+  return (target, exit = jest.fn()) => install(target, exit)
+}
+
 /**
  * D-35-10-01 (Phase 35): the `uncaughtException` sibling of `loadFreshProcessGuards()`
  * above, and identical in shape and reasoning -- a fresh `jest.isolateModules()` registry
@@ -423,7 +456,10 @@ function loadFreshProcessGuards(): {
  * silently demoted every uncaught exception to a warning.
  */
 function loadFreshUncaughtExceptionGuard(): {
-  installUncaughtExceptionGuard: (target?: NodeJS.EventEmitter) => void
+  installUncaughtExceptionGuard: (
+    target?: NodeJS.EventEmitter,
+    exit?: (code: number) => void
+  ) => void
   logErrorMock: jest.SpyInstance
 } {
   let harness!: ReturnType<typeof loadFreshUncaughtExceptionGuard>
@@ -440,7 +476,9 @@ function loadFreshUncaughtExceptionGuard(): {
       loggerModule.logError(message, loggerModule.LogPrefix.Backend)
     })
     harness = {
-      installUncaughtExceptionGuard,
+      installUncaughtExceptionGuard: withMockExit(
+        installUncaughtExceptionGuard
+      ),
       logErrorMock: logErrorSpy
     }
   })
@@ -459,7 +497,10 @@ function loadFreshUncaughtExceptionGuard(): {
  */
 function loadRawProcessGuards(): {
   installStdioErrorGuards: (streams?: NodeJS.EventEmitter[]) => void
-  installUncaughtExceptionGuard: (target?: NodeJS.EventEmitter) => void
+  installUncaughtExceptionGuard: (
+    target?: NodeJS.EventEmitter,
+    exit?: (code: number) => void
+  ) => void
   installUnhandledRejectionGuard: (target?: NodeJS.EventEmitter) => void
 } {
   let harness!: ReturnType<typeof loadRawProcessGuards>
@@ -473,7 +514,9 @@ function loadRawProcessGuards(): {
     /* eslint-enable @typescript-eslint/no-require-imports */
     harness = {
       installStdioErrorGuards,
-      installUncaughtExceptionGuard,
+      installUncaughtExceptionGuard: withMockExit(
+        installUncaughtExceptionGuard
+      ),
       installUnhandledRejectionGuard
     }
   })
@@ -737,8 +780,11 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     // It also pins the SEVERITY, which no other test can: the message must reach
     // `logError`, not `logWarning`. That is the property that carries `main.ts:618`'s
     // `logError(err, LogPrefix.Backend)` forward, and the one a shared sink would lose.
-    it('D-35-10-01: an uncaught exception routes to stderr before init() and to logError (never logWarning) after it', () => {
-      let installGuard!: (target?: NodeJS.EventEmitter) => void
+    it('D-35-10-01: an uncaught exception routes to stderr before init() and to logError (never logWarning) after it', async () => {
+      let installGuard!: (
+        target?: NodeJS.EventEmitter,
+        exit?: (code: number) => void
+      ) => void
       let init!: (input: PassThrough, output: PassThrough) => void
       let logErrorSpy!: jest.SpyInstance
       let logWarningSpy!: jest.SpyInstance
@@ -757,23 +803,29 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
         installGuard = require('../processGuards').installUncaughtExceptionGuard
         init = require('../bootstrap').init
         const loggerModule = require('backend/logger')
-        logErrorSpy = jest.spyOn(loggerModule, 'logError')
+        logErrorSpy = jest.spyOn(loggerModule, 'logErrorSettled')
         logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
         /* eslint-enable @typescript-eslint/no-require-imports */
       })
 
       const stderrWriteSpy = jest
         .spyOn(process.stderr, 'write')
-        .mockImplementation(() => true)
+        .mockImplementation(((_m: unknown, cb?: () => void) => {
+          cb?.()
+          return true
+        }) as never)
 
       try {
         const target = new EventEmitter()
-        installGuard(target)
+        installGuard(target, jest.fn())
 
         // BEFORE init(): no sink bound.
         target.emit('uncaughtException', new Error('throw before init'))
+        // D-04: the guard is fatal; let the first handler finish before the second emit.
+        await new Promise((r) => setImmediate(r))
         expect(stderrWriteSpy).toHaveBeenCalledWith(
-          expect.stringContaining('throw before init')
+          expect.stringContaining('throw before init'),
+          expect.any(Function)
         )
         expect(logErrorSpy).not.toHaveBeenCalledWith(
           expect.stringContaining('throw before init'),
@@ -1027,38 +1079,150 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       )
     })
 
-    // The `sidecar-dialog-reject-crashes`-governed contract, stated as an assertion rather
-    // than only as a doc comment: LOG AND CONTINUE. Registering an `uncaughtException`
-    // listener at all is what suppresses Node's default print-and-exit, so a guard that
-    // then exits itself would be strictly worse than no guard -- it would take the process
-    // down AND swallow Node's own stderr trace.
-    it('D-35-10-01: log-and-continue -- never re-throws, never calls process.exit, never changes the exit code', () => {
-      const { installUncaughtExceptionGuard } =
-        loadFreshUncaughtExceptionGuard()
-      const target = new EventEmitter()
-      installUncaughtExceptionGuard(target)
+    // Phase 72 D-04: the guard is FATAL. Behaviour cases for the bounded flush.
+    describe('Phase 72 D-04 fatal behaviour', () => {
+      afterEach(() => {
+        jest.useRealTimers()
+      })
 
-      const exitSpy = jest
-        .spyOn(process, 'exit')
-        .mockImplementation((() => undefined) as never)
-      const killSpy = jest
-        .spyOn(process, 'kill')
-        .mockImplementation((() => true) as never)
-      const originalExitCode = process.exitCode
+      const stderrAcking = () =>
+        jest.spyOn(process.stderr, 'write').mockImplementation(((
+          _m: unknown,
+          cb?: () => void
+        ) => {
+          cb?.()
+          return true
+        }) as never)
 
-      try {
-        expect(() =>
-          target.emit('uncaughtException', new Error('fatal-looking'))
-        ).not.toThrow()
+      it('exits exactly once with 1, after the sink promise resolves, and the sink got the stack', async () => {
+        const { installUncaughtExceptionGuard } = loadRawProcessGuards()
+        const stderrSpy = stderrAcking()
+        try {
+          let resolveSink!: () => void
+          const sinkPromise = new Promise<void>((r) => (resolveSink = r))
+          const sink = jest.fn(() => sinkPromise)
+          jest.isolateModules(() => undefined)
+          const mod = loadRawWithSink(sink)
+          const exit = jest.fn()
+          const target = new EventEmitter()
+          mod.installUncaughtExceptionGuard(target, exit)
 
-        expect(exitSpy).not.toHaveBeenCalled()
-        expect(killSpy).not.toHaveBeenCalled()
-        expect(process.exitCode).toBe(originalExitCode)
-      } finally {
-        process.exitCode = originalExitCode
-        killSpy.mockRestore()
-        exitSpy.mockRestore()
-      }
+          target.emit('uncaughtException', new Error('boom-d04'))
+          await Promise.resolve()
+          await Promise.resolve()
+          expect(exit).not.toHaveBeenCalled()
+          expect(sink).toHaveBeenCalledWith(expect.stringContaining('boom-d04'))
+          expect(stderrSpy).toHaveBeenCalledWith(
+            expect.stringContaining('boom-d04'),
+            expect.any(Function)
+          )
+
+          resolveSink()
+          await new Promise((r) => setImmediate(r))
+          expect(exit).toHaveBeenCalledTimes(1)
+          expect(exit).toHaveBeenCalledWith(1)
+        } finally {
+          void installUncaughtExceptionGuard
+          stderrSpy.mockRestore()
+        }
+      })
+
+      it('a never-resolving sink still exits within the 1500 ms cap, and the cap timer is unref()-ed', async () => {
+        jest.useFakeTimers()
+        const stderrSpy = stderrAcking()
+        const unrefSpy = jest.fn()
+        const realSetTimeout = global.setTimeout
+        const timeoutSpy = jest
+          .spyOn(global, 'setTimeout')
+          .mockImplementation(((fn: () => void, ms?: number) => {
+            const t = realSetTimeout(fn, ms) as unknown as {
+              unref?: () => void
+            }
+            const orig = t.unref?.bind(t)
+            t.unref = () => {
+              unrefSpy()
+              return orig?.()
+            }
+            return t
+          }) as never)
+        try {
+          const mod = loadRawWithSink(() => new Promise<void>(() => undefined))
+          const exit = jest.fn()
+          const target = new EventEmitter()
+          mod.installUncaughtExceptionGuard(target, exit)
+
+          target.emit('uncaughtException', new Error('wedged'))
+          await jest.advanceTimersByTimeAsync(1400)
+          expect(exit).not.toHaveBeenCalled()
+          await jest.advanceTimersByTimeAsync(200)
+          expect(exit).toHaveBeenCalledWith(1)
+          expect(unrefSpy).toHaveBeenCalled()
+        } finally {
+          timeoutSpy.mockRestore()
+          stderrSpy.mockRestore()
+        }
+      })
+
+      it('a sink that throws synchronously still exits 1', async () => {
+        const stderrSpy = stderrAcking()
+        try {
+          const mod = loadRawWithSink(() => {
+            throw new Error('writer gone')
+          })
+          const exit = jest.fn()
+          const target = new EventEmitter()
+          mod.installUncaughtExceptionGuard(target, exit)
+          expect(() =>
+            target.emit('uncaughtException', new Error('x'))
+          ).not.toThrow()
+          await new Promise((r) => setImmediate(r))
+          expect(exit).toHaveBeenCalledWith(1)
+        } finally {
+          stderrSpy.mockRestore()
+        }
+      })
+
+      it('a second fault while the first is pending exits immediately', () => {
+        const stderrSpy = jest
+          .spyOn(process.stderr, 'write')
+          .mockImplementation(() => true)
+        try {
+          const mod = loadRawWithSink(() => new Promise<void>(() => undefined))
+          const exit = jest.fn()
+          const target = new EventEmitter()
+          mod.installUncaughtExceptionGuard(target, exit)
+
+          target.emit('uncaughtException', new Error('first'))
+          expect(exit).not.toHaveBeenCalled()
+          target.emit('uncaughtException', new Error('second'))
+          expect(exit).toHaveBeenCalledTimes(1)
+          expect(exit).toHaveBeenCalledWith(1)
+        } finally {
+          stderrSpy.mockRestore()
+        }
+      })
+
+      it('unhandledRejection stays log-only: logged, exit never called', () => {
+        const { installUnhandledRejectionGuard } = loadRawProcessGuards()
+        const exitSpy = jest
+          .spyOn(process, 'exit')
+          .mockImplementation((() => undefined) as never)
+        const stderrSpy = jest
+          .spyOn(process.stderr, 'write')
+          .mockImplementation(() => true)
+        try {
+          const target = new EventEmitter()
+          installUnhandledRejectionGuard(target)
+          target.emit('unhandledRejection', new Error('rejected'))
+          expect(stderrSpy).toHaveBeenCalledWith(
+            expect.stringContaining('unhandled promise rejection')
+          )
+          expect(exitSpy).not.toHaveBeenCalled()
+        } finally {
+          stderrSpy.mockRestore()
+          exitSpy.mockRestore()
+        }
+      })
     })
 
     it('D-35-10-01: with NO sink bound -- the real early-boot state before bootstrap.init() -- the message goes to stderr and never to stdout', () => {
@@ -1082,7 +1246,8 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
           target.emit('uncaughtException', new Error('early boot throw'))
         ).not.toThrow()
         expect(stderrWriteSpy).toHaveBeenCalledWith(
-          expect.stringContaining('[sidecar] uncaught exception:')
+          expect.stringContaining('[sidecar] uncaught exception:'),
+          expect.any(Function)
         )
         // stdout carries the newline-delimited JSON RPC frame stream. A diagnostic byte
         // written there corrupts the transport, which is a worse failure than the crash
@@ -1114,7 +1279,8 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
           target.emit('uncaughtException', new Error('EACCES'))
         ).not.toThrow()
         expect(stderrWriteSpy).toHaveBeenCalledWith(
-          expect.stringContaining('[sidecar] uncaught exception:')
+          expect.stringContaining('[sidecar] uncaught exception:'),
+          expect.any(Function)
         )
       } finally {
         stderrWriteSpy.mockRestore()
@@ -1321,7 +1487,10 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     // uncapped, recurses until the stack blows. Restoring the line made this test pass
     // again. The depth check is therefore proven load-bearing, not merely present.
     it('synchronous re-entrancy bound: a sink that re-emits uncaughtException is invoked exactly once', () => {
-      let installUncaughtExceptionGuard!: (target?: NodeJS.EventEmitter) => void
+      let installUncaughtExceptionGuard!: (
+        target?: NodeJS.EventEmitter,
+        exit?: (code: number) => void
+      ) => void
       let setUncaughtExceptionLogSink!: (
         sink: ((message: string) => void) | null
       ) => void
@@ -1349,11 +1518,18 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
         // above and the SUMMARY).
         target.emit('uncaughtException', new Error('synchronous re-entry'))
       })
-      installUncaughtExceptionGuard(target)
+      const exit = jest.fn()
+      installUncaughtExceptionGuard(target, exit)
+      const stderrSpy = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true)
 
       expect(() =>
         target.emit('uncaughtException', new Error('original'))
       ).not.toThrow()
+      stderrSpy.mockRestore()
+      // Phase 72 D-04: the re-entrant fault exits immediately.
+      expect(exit).toHaveBeenCalledWith(1)
       // Exactly once, not twice, not unbounded: the re-entrant emit's own listener
       // invocation is short-circuited by the depth check before it can reach the sink a
       // second time.

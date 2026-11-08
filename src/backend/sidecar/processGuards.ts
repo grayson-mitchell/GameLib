@@ -2,7 +2,7 @@
  * Sidecar process-level guards (Phase 34.2 Plan 09 — REQ-34.2-07 / CR-02 / T-34.2-39/40/41;
  * extended by Phase 35 D-35-10-01 with the `uncaughtException` sibling).
  *
- * This module owns BOTH of the sidecar's process-level, log-only guards. They are siblings,
+ * This module owns BOTH of the sidecar's process-level guards. They are siblings,
  * not duplicates: `unhandledRejection` fires for a rejected promise with no attached handler,
  * `uncaughtException` fires for a thrown SYNCHRONOUS exception that unwound to the top of the
  * stack. Neither catches the other's fault, so both are needed. See the second block comment
@@ -22,9 +22,19 @@
  *
  * CRITICAL — governed by this project's recorded `sidecar-dialog-reject-crashes` incident:
  * a "fix" that introduces a NEW throw/reject/exit path is worse than the bug it fixes,
- * because sidecar callers routinely `await`/fire-and-forget with no `try`/`catch` and (until
- * this module) no process-level guard existed at all. NEITHER guard here may EVER re-throw,
- * EVER terminate the process, or EVER change the exit code — each only logs and returns.
+ * because sidecar callers routinely `await`/fire-and-forget with no `try`/`catch`.
+ *
+ * Phase 72 D-04 split the doctrine in two:
+ *   - `unhandledRejection` STAYS LOG-ONLY and never terminates the process. Recorded
+ *     discretion, three reasons: (1) a rejection is the async failure of ONE promise chain,
+ *     not an unwound call stack, so process state is not in doubt the way it is after a
+ *     sync throw; (2) the codebase fire-and-forgets many `void` calls, so every missed
+ *     `.catch` would become a full backend death; (3) that death surfaces as the
+ *     dead-sidecar dialog, which is exactly the `sidecar-dialog-reject-crashes` incident.
+ *   - `uncaughtException` is now FATAL BY DESIGN: it logs, waits (bounded, `unref()`-ed
+ *     cap) for stderr and the log sink, then exits with code 1. It is the one sanctioned
+ *     explicit exit in the sidecar; the shell sees stdout EOF and shows the dead-sidecar
+ *     dialog. Node's own guidance is that state after an uncaught throw is unknown.
  *
  * BOTH halves of each listener body are individually wrapped in their own `try`/`catch`, not
  * just the logging call (Phase 34.2 gap cycle 2, CR-02 regression — gap cycle 1's own claim
@@ -158,13 +168,11 @@ function installUnhandledRejectionGuard(
  * `uncaughtException` fires when a synchronous `throw` unwinds past every `try`. A sidecar
  * with only the first is fully unguarded against the second.
  *
- * LOG AND CONTINUE — DELIBERATE, and a deviation from Node's default. Registering ANY
- * `uncaughtException` listener suppresses Node's default behaviour of printing the stack and
- * exiting non-zero, so this listener is what keeps the process alive. That is intentional and
- * matches the Electron handler it replaces (which also logged and returned). It is governed by
- * the `sidecar-dialog-reject-crashes` rule at the top of this file: a guard that introduces a
- * new exit path is worse than the bug it fixes. Like its sibling it is DEFENCE-IN-DEPTH, never
- * a licence to skip a call-site `try`/`catch`.
+ * LOG, FLUSH, THEN EXIT(1) — Phase 72 D-04 (this used to be log-and-continue, matching the
+ * Electron handler it replaced). Registering ANY `uncaughtException` listener suppresses
+ * Node's default print-and-exit, so this listener must restore the exit itself. A second
+ * fault while the first is being handled exits immediately. It remains DEFENCE-IN-DEPTH,
+ * never a licence to skip a call-site `try`/`catch`.
  *
  * SEVERITY. Routed through its OWN late-bound sink, which `bootstrap.init()` binds to
  * `logError` (not `logWarning`) — preserving the `logError(err, LogPrefix.Backend)` severity
@@ -200,7 +208,7 @@ function installUnhandledRejectionGuard(
  *      wanted later it belongs OUTSIDE this handler — e.g. a bounded, already-guarded
  *      notifier bound through its own sink — not inline here.
  */
-type UncaughtExceptionLogSink = (message: string) => void
+type UncaughtExceptionLogSink = (message: string) => void | Promise<void>
 
 let uncaughtExceptionLogSink: UncaughtExceptionLogSink | null = null
 
@@ -239,17 +247,21 @@ let uncaughtExceptionGuardInstalled = false
  */
 let uncaughtExceptionHandlerDepth = 0
 
+/** Upper bound on the fatal handler's wait for stderr + the log sink (Phase 72 D-04). */
+const UNCAUGHT_FLUSH_CAP_MS = 1500
+
 /**
- * Installs a log-only `uncaughtException` listener on `target` (defaults to the real
- * `process`). Idempotent — a second call is a no-op, so re-importing this module (or calling
- * it twice from a test) never registers a second listener. `target` is parameterized purely
- * so a unit test can drive a fake `EventEmitter` without attaching real listeners to the jest
- * worker's own `process`.
+ * Installs the FATAL `uncaughtException` listener on `target` (defaults to the real
+ * `process`). Idempotent — a second call is a no-op. `target` and `exit` are parameterized
+ * purely so a unit test can drive a fake `EventEmitter` and observe the exit.
  *
- * Never re-throws, never calls `process.exit`, never changes the exit code.
+ * Phase 72 D-04: writes the error to stderr and the log sink, waits for both under a
+ * bounded `unref()`-ed cap, then `exit(1)`. A second fault while handling the first exits
+ * immediately. Never re-throws.
  */
 function installUncaughtExceptionGuard(
-  target: NodeJS.EventEmitter = process
+  target: NodeJS.EventEmitter = process,
+  exit: (code: number) => void = (c) => process.exit(c)
 ): void {
   if (uncaughtExceptionGuardInstalled) {
     return
@@ -257,53 +269,66 @@ function installUncaughtExceptionGuard(
   uncaughtExceptionGuardInstalled = true
 
   target.on('uncaughtException', (error: unknown) => {
-    // quick-260912-e6k: synchronous re-entrancy bound -- see the doc comment on
-    // `uncaughtExceptionHandlerDepth` above for what this does and, more importantly, does
-    // not cover.
+    // Re-entry (sync, or a second fault while the flush is pending): exit now.
     if (uncaughtExceptionHandlerDepth > 0) {
+      exit(1)
       return
     }
     uncaughtExceptionHandlerDepth += 1
+
+    // Half 1 — message construction, inside its OWN try (CR-02 regression, gap cycle 2):
+    // `String(error)` throws for a null-prototype value or a throwing/absent
+    // `toString`/`Symbol.toPrimitive`, and `error.stack` can be a throwing getter.
+    let message = '[sidecar] uncaught exception: <unstringifiable error>'
     try {
-      // Half 1 — message construction, inside its OWN try (CR-02 regression, gap cycle 2):
-      // `String(error)` throws for a null-prototype value or a throwing/absent
-      // `toString`/`Symbol.toPrimitive`, and `error.stack` can be a throwing getter. A throw
-      // HERE would escape the listener and re-enter Node as a fresh uncaught exception, which
-      // Node terminates on unconditionally — the guard becoming the crash it exists to prevent.
-      // The initializer is a hardcoded, non-interpolated literal so there is still a signal.
-      let message = '[sidecar] uncaught exception: <unstringifiable error>'
-      try {
-        message = `[sidecar] uncaught exception: ${
-          error instanceof Error
-            ? (error.stack ?? error.message)
-            : String(error)
-        }`
-      } catch {
-        // keep the fallback message
-      }
-      // Half 2 — the logging call, inside a SECOND try.
-      try {
-        if (uncaughtExceptionLogSink === null) {
-          // Early boot: bootstrap.init() has not run initLogger() yet, so there is no
-          // logger to route through. stderr is the signal. Never stdout: that stream
-          // carries the RPC frame protocol and a non-frame byte corrupts it.
-          process.stderr.write(`${message}\n`)
-        } else {
-          uncaughtExceptionLogSink(message)
-        }
-      } catch {
-        // The sink itself threw (heroicLogWriter unset, a writer mid-rotation, ...).
-        // Falling back to a direct stderr write keeps this guard from ever becoming a
-        // new crash path.
-        try {
-          process.stderr.write(`${message}\n`)
-        } catch {
-          // Nothing further we can safely do -- swallow. Never re-throw, never exit.
-        }
-      }
-    } finally {
-      uncaughtExceptionHandlerDepth -= 1
+      message = `[sidecar] uncaught exception: ${
+        error instanceof Error ? (error.stack ?? error.message) : String(error)
+      }`
+    } catch {
+      // keep the fallback message
     }
+
+    const writes: Promise<unknown>[] = []
+
+    // stderr, never stdout: stdout carries the RPC frame protocol.
+    writes.push(
+      new Promise<void>((resolve) => {
+        try {
+          process.stderr.write(`${message}\n`, () => resolve())
+        } catch {
+          resolve()
+        }
+      })
+    )
+
+    // Half 2 — the log sink (null before bootstrap.init() binds it).
+    try {
+      if (uncaughtExceptionLogSink !== null) {
+        const pending = uncaughtExceptionLogSink(message)
+        if (pending !== undefined) {
+          writes.push(Promise.resolve(pending))
+        }
+      }
+    } catch {
+      // The sink threw (heroicLogWriter unset, mid-rotation, ...); stderr already has it.
+    }
+
+    let capTimer: ReturnType<typeof setTimeout> | undefined
+    const cap = new Promise<void>((resolve) => {
+      capTimer = setTimeout(resolve, UNCAUGHT_FLUSH_CAP_MS)
+      ;(capTimer as { unref?: () => void }).unref?.()
+    })
+
+    void Promise.race([Promise.allSettled(writes), cap]).finally(() => {
+      if (capTimer !== undefined) {
+        clearTimeout(capTimer)
+      }
+      try {
+        exit(1)
+      } finally {
+        uncaughtExceptionHandlerDepth -= 1
+      }
+    })
   })
 }
 
