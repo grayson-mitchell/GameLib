@@ -50,6 +50,8 @@ Scout findings that shape the phase (measured 2026-11-07):
   this lands. The aim: every later move is compile-checked on macOS, Windows and Linux, including
   `linux_store_embed_layout` and the other `cfg(target_os = "linux")` sites, none of which any job
   compiles today.
+  - **Superseded 2026-11-08 by Phase 72 D-14:** 72-01 landed the Linux leg in `rust-test.yml` (check and
+    shell tests both hard gates, green on run 42432244587); Phase 71 skips its copy.
 - **D-03: The CI gate runs once per wave.** Within a wave, each move is its own commit, and
   `cargo test --bin gamelib-shell` must be green on macOS before the next move. At the end of the
   wave, push and require the Windows and Linux CI legs to go green before the wave's live check and
@@ -132,7 +134,7 @@ Scout findings that shape the phase (measured 2026-11-07):
   `pnpm tauri:dev` (never `tauri:dev:run`). The live check covers an embedded store page, a sign-in
   for each store that uses the login window, and the Epic embed, each with the frameless title bar
   **off and on**.
-  - Wave 0: the Linux CI leg (D-02) and the production-source helper and its migration (D-10).
+  - Wave 0: ~~the Linux CI leg (D-02)~~ (landed by Phase 72 72-01, 2026-11-08; skip) and the production-source helper and its migration (D-10).
     These are test-and-CI only, so no live check is needed.
   - Wave 1: the dispatcher moves to `rust_dispatch.rs`, and the domain handlers go out to their
     modules (D-04 to D-07).
@@ -224,7 +226,7 @@ Scout findings that shape the phase (measured 2026-11-07):
   generated contract. Create todos as findings come up (D-05).
 - **Include the `macos_epic_embed` files and the other pre-split siblings in the combined
   source-text coverage**, re-baselining the counts. This is a later decision (D-11).
-- **Roadmap upkeep:** once D-02 lands, remove the Linux-leg item from Phase 72's goal.
+- **Roadmap upkeep:** done 2026-11-08 - Phase 72 D-14 landed the Linux leg in 72-01, so the Linux-leg item in Phase 72's goal is annotated as landed and Phase 71 owns no copy.
 
 ### Reviewed Todos (not folded)
 `todo.match-phase 71` returned 19 keyword matches. None is in scope: all 19 are UI, Steam,

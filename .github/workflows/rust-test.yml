@@ -53,8 +53,8 @@ concurrency:
 # What this does NOT catch, stated plainly per this repo's standing rule about gates that appear
 # to cover more than they do:
 #   (a) The Linux leg (Phase 72 D-14) is compile-only plus provisional tests: `cargo check
-#       --all-targets` is a hard gate, `cargo test --bin gamelib-shell` is continue-on-error until
-#       72-01 Task 3 settles the first run, and clippy is NOT run on Linux (no measured ceiling map
+#       --all-targets` is a hard gate, `cargo test --bin gamelib-shell` is also a hard gate (green on
+#       the first run, 72-01 Task 3), and clippy is NOT run on Linux (no measured ceiling map
 #       in meta/clippyRatchet.cjs), so Linux-only cfg code is compiled but never linted.
 #   (b) Compile and unit tests only -- no app launch, no webview, no IPC round trip. Anything
 #       runtime- or event-loop-ordering-dependent is out of scope here exactly as it is for jest
@@ -182,8 +182,6 @@ jobs:
         working-directory: src-tauri
         run: cargo check --all-targets
       - name: cargo test (Tauri shell crate)
-        # Phase 72 D-14: provisional on Linux until 72-01 Task 3 settles the first run.
-        continue-on-error: ${{ runner.os == 'Linux' }}
         shell: bash
         working-directory: src-tauri
         run: cargo test --bin gamelib-shell
