@@ -21,10 +21,15 @@ files_reviewed_list:
   - src/frontend/components/UI/SteamEngineLaunchNotice/__tests__/SteamEngineLaunchNotice.test.tsx
 findings:
   critical: 0
-  warning: 1
-  info: 2
-  total: 3
-status: issues_found
+  warning: 0
+  info: 0
+  total: 0
+  resolved: 3
+resolved_by:
+  - 'WR-01: 88c8296b7 (quick 261107-v6q)'
+  - 'IN-01: b34955d6c (quick 261108-mcc)'
+  - 'IN-02: 7a5e282f7 (quick 261108-mcc)'
+status: clean
 ---
 
 # Phase 61: Code Review Report (re-review after gap closure 61-26 and 61-27)
@@ -32,7 +37,7 @@ status: issues_found
 **Reviewed:** 2026-11-07
 **Depth:** standard (diff `2eb50b85a..HEAD`)
 **Files Reviewed:** 15
-**Status:** issues_found
+**Status:** clean (all findings resolved, see Resolution)
 
 ## Summary
 
@@ -71,6 +76,8 @@ if (known && override !== 'crossover') { /* keep known pin */ }
 
 Add a test with a `wine-manager` marker and an inconclusive pre-flight, and assert no engine switch.
 
+**Resolved:** 88c8296b7 (quick 261107-v6q).
+
 ## Info
 
 ### IN-01: The CR-03 deadline test no longer exercises the neighbour
@@ -79,11 +86,23 @@ Add a test with a `wine-manager` marker and an inconclusive pre-flight, and asse
 **Issue:** The `other` game is created via `makeGame()` but is never passed to anything, so `expect(other.stop).not.toHaveBeenCalled()` is vacuous. The ledger check (`gamesRunningIn('GameLib')` still contains `gog:A`) and the `killBottleWineServerWith` check carry the real assertion.
 **Fix:** Delete the `other` fixture or register it with the running-game ledger so the assertion can fail.
 
+**Resolved:** b34955d6c (quick 261108-mcc).
+
 ### IN-02: Badge state after a kept built-in engine depends on a cached pre-flight
 
 **File:** `src/backend/engine/engineState.ts:353-359`
 **Issue:** When the pre-flight is inconclusive and there is no cached pre-flight for the bottle, `preflight` is null and `compute` derives `engine: null`. The badge then shows nothing for the launch on the kept built-in engine, instead of the built-in label. This is cosmetic and no regression, but it is untested.
 **Fix:** Either derive the badge from the selection when the pre-flight is withheld, or add a test that pins the intended behaviour.
+
+**Resolved:** 7a5e282f7 (quick 261108-mcc).
+
+## Resolution
+
+- WR-01: fixed by quick 261107-v6q in 88c8296b7. A wine-manager or retired-pin marker keeps its recorded engine; an unresolvable one takes CrossOver, never pins.current.
+- IN-01: the vacuous `other` fixture was removed rather than registered, because the ledger holds keys only and has no route to a Game. The armed game's stop, both ledger keys, no kill and a fired-deadline (publishNotice) assertion now carry the contract.
+- IN-02: resolved by the reviewer's second option. The blank badge is intended per D-05 / 261107-v6q (no toast, notice or badge on an inconclusive pre-flight) and is now pinned by a test. No production change.
+
+Resolved 2026-11-08 by quick 261108-mcc
 
 ---
 
