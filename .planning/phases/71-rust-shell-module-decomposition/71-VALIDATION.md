@@ -3,7 +3,7 @@ phase: 71
 slug: rust-shell-module-decomposition
 status: draft
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-11-08
 ---
 
@@ -57,12 +57,12 @@ created: 2026-11-08
 
 ## Wave 0 Requirements
 
-- [ ] `src/backend/testUtils/tauriShellSource.ts` — `readTauriShellProductionSource`, `readHandlerBody`, prefix/directory-aware pre-split exclusion
-- [ ] `src/backend/__tests__/tauriShellSource.test.ts` — byte-identity assertion, no-`mod tests {`-slicing guard, directory-aware helper-scope guard
-- [ ] Migrate the three `mod tests {` slicers (loginChromeCssInjection, tauriShellSource ×2)
-- [ ] `src-tauri/src/main.rs` tests — runtime `shell_production_source()` builder; `SHELL_SOURCE_FILES` guard directory-aware
-- [ ] Promote `moveproof.py` / `vis.py` / `items.py` from `research-tools/`
-- [ ] Baselines re-taken: cargo `--list` names, passed/ignored, clippy `--list`, jest suite results, `module_path!`/`file!()`/`line!()` grep
+- [x] `src/backend/testUtils/tauriShellSource.ts` — `readTauriShellProductionSource`, `readHandlerBody`, prefix/directory-aware pre-split exclusion
+- [x] `src/backend/__tests__/tauriShellSource.test.ts` — byte-identity assertion, no-`mod tests {`-slicing guard, directory-aware helper-scope guard
+- [x] Migrate the three `mod tests {` slicers (loginChromeCssInjection, tauriShellSource ×2)
+- [x] `src-tauri/src/main.rs` tests — runtime `shell_production_source()` builder; `SHELL_SOURCE_FILES` guard directory-aware
+- [x] Promote `moveproof.py` / `vis.py` / `items.py` from `research-tools/`
+- [x] Baselines re-taken: cargo `--list` names, passed/ignored, clippy `--list`, jest suite results, `module_path!`/`file!()`/`line!()` grep
 
 ---
 

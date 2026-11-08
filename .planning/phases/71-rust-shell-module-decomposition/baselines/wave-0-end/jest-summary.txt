@@ -1,0 +1,3 @@
+suites=24 passed=713 failed=2
+FAIL src/backend/__tests__/quitTeardownWiring.test.ts :: Layer B -- Rust process-group spawn + group reap (quick 260907-juv) C3: the known .spawn() call-site count is pinned -- a THIRD SIDECAR spawn site must extend C2, not bump this number
+FAIL src/backend/__tests__/tauriShellSource.test.ts :: WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation gating -- static half only, live half owned by plan 29 item 1 no WebviewWindowBuilder chain passes a STRING LITERAL to .title( -- WR-07's negative half, amended: the prohibited thing is a hard-coded title, not the method
