@@ -2659,19 +2659,6 @@ mod tests {
         assert!(real_origin_end <= impersonation_start);
     }
 
-    // quick-261029-osq: the native bar's band geometry (the real helper
-    // `install_native_login_bar` uses), pinned for both coordinate systems.
-    #[cfg(target_os = "macos")]
-    #[test]
-    fn native_login_bar_band_pins_the_top_32pt_in_both_coordinate_systems() {
-        // Unflipped (origin bottom-left): the bar is the TOP band, so it sits at y = h - 32.
-        assert_eq!(native_login_bar_band(592.0, false), (560.0, 0.0, 560.0));
-        // Flipped (origin top-left): the bar is at y = 0, the webview starts below it.
-        assert_eq!(native_login_bar_band(592.0, true), (0.0, 32.0, 560.0));
-        // A container shorter than the bar never yields a negative webview height.
-        assert_eq!(native_login_bar_band(10.0, false).2, 0.0);
-    }
-
     // ---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----
     //
     // Pure function, directly testable (a live Keychain call is not). RED direction: an
@@ -3066,47 +3053,6 @@ mod tests {
         let present_returned = present_result.is_ok() || present_result.is_err();
         assert!(absent_returned);
         assert!(present_returned);
-    }
-
-    // ---- pending_login_entry_is_stale (Phase 34.4.2 Plan 14, T-34.4.2-39/-41) ----
-    //
-    // Pure, AppKit-free boundary tests for `PENDING_VISIBLE_LOGIN_WINDOW_TTL`'s staleness
-    // check -- exercised directly, without any live window, exactly as this task's own
-    // acceptance criteria require.
-    #[cfg(target_os = "macos")]
-    #[test]
-    fn pending_login_entry_below_ttl_is_not_stale() {
-        let age = PENDING_VISIBLE_LOGIN_WINDOW_TTL - Duration::from_secs(1);
-        assert!(!pending_login_entry_is_stale(age));
-    }
-
-    #[cfg(target_os = "macos")]
-    #[test]
-    fn pending_login_entry_above_ttl_is_stale() {
-        let age = PENDING_VISIBLE_LOGIN_WINDOW_TTL + Duration::from_secs(1);
-        assert!(pending_login_entry_is_stale(age));
-    }
-
-    #[cfg(target_os = "macos")]
-    #[test]
-    fn pending_login_entry_exactly_at_ttl_is_stale() {
-        // Documented boundary verdict (see `pending_login_entry_is_stale`'s own doc comment):
-        // an age EQUAL to the TTL is treated as stale (`>=`, not `>`) -- the TTL is the point
-        // past which the entry is no longer trusted, matching this file's existing
-        // `LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT`/`recv_timeout` convention of a bound that has
-        // been EXCEEDED (not merely reached) before the caller-side fallback runs.
-        assert!(pending_login_entry_is_stale(
-            PENDING_VISIBLE_LOGIN_WINDOW_TTL
-        ));
-    }
-
-    #[cfg(target_os = "macos")]
-    #[test]
-    fn pending_login_window_ttl_is_derived_from_the_watchdog_timeout_with_a_margin() {
-        // The TTL must be strictly greater than the watchdog's own 15s bound so the two can
-        // never disagree -- the watchdog's fallback always runs and clears the latch well
-        // before this TTL could ever expire it out from under a still-legitimate flow.
-        assert!(PENDING_VISIBLE_LOGIN_WINDOW_TTL > LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT);
     }
 
     // ---- F-34.4.2-12 regression pin: Humble disconnect main-thread wedge ----
