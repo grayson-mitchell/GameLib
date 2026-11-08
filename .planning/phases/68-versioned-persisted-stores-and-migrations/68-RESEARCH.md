@@ -651,16 +651,21 @@ Fixturing old shapes: write the old-shape JSON string literal into `join(userDat
 | A7 | D-12 provisional verdicts for the writers marked "confirm" | Finding 11 | Missed user-data todo |
 | A8 | Applying `0o600` to backups of all stores (not only steam/humble) is acceptable | Finding 7 | None practical; stricter than D-08 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should this phase also set `configFileMode: 0o600` on `GameLibStore` (and create new dirs `0o700`)?**
    - What we know: live `steam_store/config.json` and `humble_store/config.json` are `-rw-rw-rw-`; `steam_store/` is `0o755`. `fileStore.ts`'s WR-06 hardening never reaches production; `conf`'s default `configFileMode` is `0o666` and `atomically` chmods to it. [VERIFIED: `ls -l` on this machine and `atomically` source]
    - What's unclear: whether the operator wants a security fix folded into a versioning phase (existing files would keep their modes until rewritten, because `atomically` is called with an explicit mode).
    - Recommendation: surface to the operator now. Minimum for this phase: backups and migration rewrites are `0o600`. A one-line `configFileMode: 0o600` in `translateStoreOptions` is the fix; treat as a separate todo if declined.
+   - RESOLVED: D-13 (operator, 2026-11-08). Fixed in this phase by plan 68-02 Task 2 (`configFileMode: 0o600`, new dirs 0o700, existing token files/dirs tightened on load).
 2. **`humble_library`, `macArchStore`, `runsForMeStore`, `steam_known_fix_reports`: final kind?** Inspect writers before locking (A1-A3).
+   - RESOLVED: D-14. All four are user-state in plan 68-03; `humble_sync` is cache per its writer (`humble/library.ts` stores only `syncedAt`/`syncError`).
 3. **Notice persistence:** the stack auto-hides at 8 s. A data-integrity notice may deserve manual dismissal. UI decision for the operator/planner.
+   - RESOLVED: D-15. No auto-hide; the notice stays until dismissed (plan 68-07).
 4. **Does the operator want `fileStore.ts` deleted as dead code?** Out of scope here; mention in the plan so tests that `jest.mock` over it are not mistaken for coverage.
+   - RESOLVED: out of scope. Plan 68-02 leaves `src/backend/sidecar/fileStore.ts` untouched (asserted by `git diff --stat`).
 5. **`v0.1` removal from `GameConfigVersion`:** safe per grep, but confirm no persisted test fixture uses it.
+   - RESOLVED: plan 68-05 Task 2 greps `v0\.1` across `src` before dropping it from `GameConfigVersion`, and keeps it with a note if any use remains.
 
 ## Sources
 
