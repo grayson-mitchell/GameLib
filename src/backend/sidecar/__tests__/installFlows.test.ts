@@ -343,9 +343,9 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       importGame: steamGameMocks.importGame,
       getSettings: steamGameMocks.getSettings
     }))
-    // Opt-in setting defaults to false (D-13 safety valve) and autoUpdateGames
-    // defaults to false (D-12's checkGameUpdates only calls autoUpdate() when
-    // this is truthy). defaultInstallPath is set here purely as a realistic
+    // Opt-in setting defaults to false (D-13 safety valve). autoUpdateGames is
+    // pinned false here (its factory default is true) so D-12's checkGameUpdates,
+    // which only calls autoUpdate() when this is truthy, never queues downloads. defaultInstallPath is set here purely as a realistic
     // suite-wide settings default -- gap plan 34.6-18 (34.6-VERIFICATION.md
     // CR-01) removed it as a containment root for moveInstall/importGame;
     // these two handlers no longer validate any path against it.
