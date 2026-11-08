@@ -160,7 +160,6 @@ export interface AppSettings extends GameSettings {
   dismissedSignInNotices: SignInStore[]
   hideChangelogsOnStartup: boolean
   hideWindowOnProtocolLaunch: boolean
-  libraryTopSection: LibraryTopSectionOptions
   maxWorkers: number
   minimizeOnLaunch: boolean
   startInConsoleMode: boolean
@@ -171,16 +170,6 @@ export interface AppSettings extends GameSettings {
   showValveProton: boolean
   steamGridDbApiKey: string
 }
-
-// 48-05: retired setting, kept declared only so `AppSettings.libraryTopSection`
-// still types a legacy on-disk value for the one-time focus-row migration
-// (`common/focusRowMigration.ts`). Nothing imports it any more, so it is no
-// longer exported.
-type LibraryTopSectionOptions =
-  | 'disabled'
-  | 'recently_played'
-  | 'recently_played_installed'
-  | 'favourites'
 
 // 48-02: the persisted focus-row pick. `kind` scopes which facet the `value`
 // belongs to; `value` is validated at the selector boundary
@@ -225,7 +214,7 @@ export interface ExtraInfo {
   steamLastPlayed?: number
 }
 
-export type GameConfigVersion = 'auto' | 'v0' | 'v0.1'
+export type GameConfigVersion = 'auto' | 'v0' | 'v1'
 
 export type GOGAchievement = {
   achievement_id: string
@@ -406,7 +395,7 @@ export interface GameStatus {
   managedBySteam?: boolean
 }
 
-export type GlobalConfigVersion = 'auto' | 'v0'
+export type GlobalConfigVersion = 'auto' | 'v0' | 'v1'
 export interface InstallProgress {
   bytes: string
   eta: string

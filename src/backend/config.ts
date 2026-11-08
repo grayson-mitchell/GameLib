@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'graceful-fs'
+import { existsSync, mkdirSync, readFileSync } from 'graceful-fs'
 
 import {
   AppSettings,
@@ -9,7 +9,11 @@ import { currentGlobalConfigVersion } from 'backend/constants/others'
 import { migrateFocusRowSelection } from 'common/focusRowMigration'
 import { migrateTrayIconVariant } from 'common/trayIconVariant'
 
-import { logError, logInfo, LogPrefix } from './logger'
+import { logError, LogPrefix } from './logger'
+import {
+  ensureSettingsMigrated,
+  writeSettingsFile
+} from './storeVersioning/settingsFiles'
 import {
   getCrossover,
   getDefaultWine,
@@ -91,71 +95,17 @@ abstract class GlobalConfig {
    * @returns GlobalConfig instance.
    */
   public static get(): GlobalConfig {
-    let version: GlobalConfigVersion
-
-    // Config file doesn't already exist, make one with the current version.
-    if (!existsSync(configPath)) {
-      version = currentGlobalConfigVersion
-    }
-    // Config file exists, detect its version.
-    else {
-      // Check version field in the config.
-      try {
-        version = JSON.parse(readFileSync(configPath, 'utf-8'))['version']
-      } catch (error) {
-        logError(
-          [`Config file is corrupted, please check ${configPath}:`, error],
-          LogPrefix.Backend
-        )
-        version = 'v0'
-      }
-      // Legacy config file without a version field, it's a v0 config.
-      if (!version) {
-        version = 'v0'
-      }
-    }
+    // Migrate (or mark read-only) before anything reads the file. Memoised per
+    // path, never throws (Phase 68, D-10).
+    ensureSettingsMigrated(configPath, 'settings/global')
 
     if (!GlobalConfig.globalInstance) {
-      GlobalConfig.reload(version)
+      // A single loader for every version: a newer file loads what this build
+      // understands (D-03) instead of crashing on an unknown version.
+      GlobalConfig.globalInstance = new GlobalConfigV0()
     }
 
     return GlobalConfig.globalInstance
-  }
-
-  /**
-   * Recreate the global configuration handler.
-   *
-   * @param version Config version to load file using.
-   * @returns void
-   */
-  private static reload(version: GlobalConfigVersion): void {
-    // Select loader to use.
-    switch (version) {
-      case 'v0':
-        GlobalConfig.globalInstance = new GlobalConfigV0()
-        break
-      default:
-        logError(
-          `Invalid config version '${version}' requested.`,
-          LogPrefix.GlobalConfig
-        )
-        break
-    }
-    // Try to upgrade outdated config.
-    if (GlobalConfig.globalInstance.upgrade()) {
-      // Upgrade done, we need to fully reload config.
-      logInfo(
-        `Upgraded outdated ${version} config to ${currentGlobalConfigVersion}.`,
-        LogPrefix.GlobalConfig
-      )
-      return GlobalConfig.reload(currentGlobalConfigVersion)
-    } else if (version !== currentGlobalConfigVersion) {
-      // Upgrade failed.
-      logError(
-        `Failed to upgrade outdated ${version} config.`,
-        LogPrefix.GlobalConfig
-      )
-    }
   }
 
   /**
@@ -217,16 +167,6 @@ abstract class GlobalConfig {
   public abstract getSettings(): AppSettings
 
   /**
-   * Updates this.config, this.version to upgrade the current config file.
-   *
-   * Writes to file after that.
-   * DO NOT call `flush()` afterward.
-   *
-   * @returns true if upgrade successful if upgrade fails or no upgrade needed.
-   */
-  public abstract upgrade(): boolean
-
-  /**
    * Get default settings as if the user's config file doesn't exist.
    * Doesn't modify the parent object.
    * Doesn't access config files.
@@ -241,7 +181,7 @@ abstract class GlobalConfig {
   public abstract resetToDefaults(): void
 
   protected writeToFile(config: Record<string, unknown>) {
-    return writeFileSync(configPath, JSON.stringify(config, null, 2))
+    return writeSettingsFile(configPath, config)
   }
 
   /**
@@ -261,31 +201,16 @@ abstract class GlobalConfig {
     if (!existsSync(configPath)) {
       this.resetToDefaults()
     }
-    // Always upgrade before loading to avoid errors.
-    // `getSettings` doesn't return an `AppSettings` otherwise.
-    if (this.version !== currentGlobalConfigVersion) {
-      // Do not load the config.
-      // Wait for `upgrade` to be called by `reload`.
-    } else {
-      // No upgrades necessary, load config.
-      // `this.version` should be `currentGlobalConfigVersion` at this point.
-      this.config = this.getSettings()
-    }
+    this.config = this.getSettings()
   }
 }
 
 class GlobalConfigV0 extends GlobalConfig {
-  public version: GlobalConfigVersion = 'v0'
+  public version: GlobalConfigVersion = currentGlobalConfigVersion
 
   constructor() {
     super()
     this.load()
-  }
-
-  public upgrade() {
-    // Here we rewrite the config object to match the latest format and write to file.
-    // Not necessary as this is the current version.
-    return false
   }
 
   public getSettings(): AppSettings {
@@ -317,13 +242,15 @@ class GlobalConfigV0 extends GlobalConfig {
       ...this.getFactoryDefaults(),
       ...defaultSettings,
       winePrefix,
-      // Backwards-compat fix-ups, same pattern as `defaultWinePrefixDir` above. Two derived
+      // Read-side normalisers (D-11). The persisted `settings/global` v0->v1 migration already
+      // wrote both properties; these calls remain for an unmigrated file that stayed read-only
+      // (failed migration or a newer file), so the tray and focus row still resolve. Two derived
       // properties, one rule: each is derived from the RAW on-disk `defaultSettings`, must come
       // AFTER the merge spreads, and must never read the merge itself.
       // - `trayIconVariant`: legacy `darkTrayIcon` true -> 'dark', false -> 'light', neither ->
       //   'auto'. The factory default is 'auto', so migrating the merged object would always
       //   return that and discard a legacy `darkTrayIcon: true`.
-      // - `focusRow`: seeded once from legacy `libraryTopSection`, guarded by the PRESENCE of the
+      // - `focusRow`: seeded once (now in the v0->v1 migration) from legacy `libraryTopSection`, guarded by the PRESENCE of the
       //   `focusRow` key (a present `null` is a deliberate clear). The factory default is
       //   `focusRow: null`, which is indistinguishable from a deliberate clear, so migrating the
       //   merged object would always short-circuit on the presence guard and silently discard
@@ -357,7 +284,6 @@ class GlobalConfigV0 extends GlobalConfig {
       defaultInstallPath: heroicInstallPath,
       focusRow: null,
       dismissedSignInNotices: [],
-      libraryTopSection: 'disabled',
       trayIconVariant: 'auto',
       defaultSteamPath: getSteamCompatFolder(),
       loginBackgroundPath: '',
@@ -426,7 +352,7 @@ class GlobalConfigV0 extends GlobalConfig {
   public flush() {
     return this.writeToFile({
       defaultSettings: this.config,
-      version: 'v0'
+      version: currentGlobalConfigVersion
     })
   }
 }

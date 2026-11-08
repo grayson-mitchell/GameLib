@@ -86,8 +86,8 @@ function sameSignInStores(
   return a.length === b.length && a.every((store, i) => store === b[i])
 }
 const globalSettings = configStore.get_nodefault('settings')
-// CR-01: the mirror alone cannot see the backend's migrated `libraryTopSection`
-// seed, so first-launch hydration (componentDidMount) fills the gap once.
+// CR-01: the mirror alone cannot see the `focusRow` the backend now persists into
+// `config.json` via the `settings/global` migration (the mirror never receives it), so first-launch hydration (componentDidMount) fills the gap once.
 const focusRowMirrorSeed = seedFocusRowFromMirror(globalSettings)
 
 const RTL_LANGUAGES = ['fa', 'ar']

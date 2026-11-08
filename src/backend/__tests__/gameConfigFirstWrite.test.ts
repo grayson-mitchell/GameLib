@@ -1,4 +1,10 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -16,10 +22,10 @@ jest.mock('fs', () => {
   return {
     ...actual,
     writeFileSync: (...args: Parameters<typeof actual.writeFileSync>) => {
+      // Persistent until the test's afterEach clears it: the atomic writer
+      // retries once with a direct write, and a real ENOSPC fails both.
       if (failNextWrite.error) {
-        const error = failNextWrite.error
-        failNextWrite.error = null
-        throw error
+        throw failNextWrite.error
       }
       return actual.writeFileSync(...args)
     }
@@ -143,6 +149,12 @@ describe('GameConfig first write (G17)', () => {
       )['wr04c']
       expect(written.steamEngineOverride).toBe('automatic')
     })
+  })
+
+  it('GameConfig.get for a missing game config no longer creates a file as a side effect (68-05, RESEARCH A5)', () => {
+    writeFileSync(join(dir, 'config.json'), '{}')
+    GameConfig.get('p68missing')
+    expect(existsSync(join(dir, 'p68missing.json'))).toBe(false)
   })
 
   describe('Phase 61: engineOverride is never a game default (CR-05, D-08)', () => {

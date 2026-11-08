@@ -10,6 +10,7 @@
 import { existsSync, readFileSync } from 'fs'
 import { isAbsolute, join, relative, resolve } from 'path'
 import { gamesConfigPath as defaultGamesConfigPath } from 'backend/constants/paths'
+import { ensureSettingsMigrated } from 'backend/storeVersioning/settingsFiles'
 import { hasCapability } from 'common/storeCapabilities'
 import type { WineInstallation } from 'common/types'
 import { ENGINE_PINS } from './enginePins'
@@ -90,6 +91,8 @@ export function readStoredGameConfig(
   if (rel.startsWith('..') || isAbsolute(rel)) return undefined
   const path = join(root, `${appName}.json`)
   if (!existsSync(path)) return undefined
+  // Containment checks above passed (T-68-19); a supplied test root is left alone.
+  if (!deps?.gamesConfigPath) ensureSettingsMigrated(path, 'settings/game')
   try {
     const raw = JSON.parse(readFileSync(path, 'utf8')) as Record<
       string,

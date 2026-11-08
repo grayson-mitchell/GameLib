@@ -4,7 +4,8 @@
  *
  * What regressed: `GlobalState` seeded `focusRow` straight off the
  * `store/config.json` `settings` mirror (`globalSettings?.focusRow ?? null`),
- * which the backend's one-time `libraryTopSection` migration never writes. The
+ * which the backend's `settings/global` migration (which persists `focusRow` into
+ * `config.json`) never writes. The
  * behaviour itself is proven end to end (real config, real handler, real
  * setter) by `src/backend/sidecar/__tests__/focusRowFirstLaunchHydration.test.ts`;
  * this gate only pins the WIRING, because `GlobalState.tsx` cannot be imported

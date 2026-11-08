@@ -8,7 +8,9 @@
  * `GlobalConfigV0.getSettings()`, yet the live app never showed the strip.
  * The renderer seeds `focusRow` from the `store/config.json` `settings`
  * MIRROR (`configStore.get_nodefault('settings')`), which the migration never
- * wrote: two stores, one setting, and the renderer read the one the seed never
+ * wrote (the `settings/global` v0->v1 migration now persists the seed into
+ * `config.json` at the first `GlobalConfig.get()`, but still never into the
+ * mirror, which is why hydration remains necessary): two stores, one setting, and the renderer read the one the seed never
  * entered. Every existing suite mocks `backend/config`, so the gap was
  * invisible to all of them.
  *
@@ -279,10 +281,12 @@ describe('CR-01: legacy libraryTopSection reaches the renderer focusRow on first
       }
       expect(mirror.settings.focusRow).toEqual(expected)
       expect(config.defaultSettings.focusRow).toEqual(expected)
-      // The legacy field is left untouched, so deleting `focusRow` from both
-      // files restores the pre-upgrade state exactly.
+      // The mirror (`store/config.json`) is not touched by the `settings/global`
+      // chain, so it keeps the legacy field. In `config.json` the v0->v1
+      // migration removes it (D-04); the pre-upgrade file is recoverable from
+      // its `config.v0.<stamp>.bak.json`.
       expect(mirror.settings.libraryTopSection).toBe(libraryTopSection)
-      expect(config.defaultSettings.libraryTopSection).toBe(libraryTopSection)
+      expect(config.defaultSettings.libraryTopSection).toBeUndefined()
       // Prohibitions: hydration writes only `settings.focusRow`.
       expect(mirror.games.recent).toEqual(RECENT)
       expect(mirror.games.customCategories).toEqual(CATEGORIES)

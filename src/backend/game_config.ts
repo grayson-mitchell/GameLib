@@ -1,8 +1,12 @@
-import { existsSync, readFileSync, writeFileSync } from 'graceful-fs'
+import { existsSync, readFileSync } from 'graceful-fs'
 
 import { GameConfigVersion, GameSettings } from 'common/types'
 import { GlobalConfig } from './config'
-import { logError, logInfo, LogPrefix } from 'backend/logger'
+import { logInfo } from 'backend/logger'
+import {
+  ensureSettingsMigrated,
+  writeSettingsFile
+} from './storeVersioning/settingsFiles'
 import { join } from 'path'
 import { currentGameConfigVersion } from 'backend/constants/others'
 import { isMac, isWindows } from './constants/environment'
@@ -44,75 +48,18 @@ abstract class GameConfig {
    * @returns GameConfig instance.
    */
   public static get(appName: string): GameConfig {
-    let version: GameConfigVersion
-    const path = join(gamesConfigPath, appName + '.json')
-    // Config file doesn't already exist, make one with the current version.
-    if (!existsSync(path)) {
-      version = currentGameConfigVersion
-    }
-    // Config file exists, detect its version.
-    else {
-      // Check version field in the config.
-      try {
-        version = JSON.parse(readFileSync(path, 'utf-8'))['version']
-      } catch (error) {
-        logError(
-          [`Config file is corrupted, please check ${path}:`, error],
-          LogPrefix.Backend
-        )
-        version = 'v0'
-      }
-      // Legacy config file without a version field, it's a v0 config.
-      if (!version) {
-        version = 'v0'
-      }
-    }
+    // Lazy, per file, memoised: migrates this game's file on its first get and
+    // never sweeps GamesConfig/ at boot (sidecar exit contract).
+    ensureSettingsMigrated(
+      join(gamesConfigPath, appName + '.json'),
+      'settings/game'
+    )
 
     if (!GameConfig.instances.get(appName)) {
-      GameConfig.reload(appName, version)
+      GameConfig.instances.set(appName, new GameConfigV0(appName))
     }
 
     return GameConfig.instances.get(appName)!
-  }
-
-  /**
-   * Recreate the game's configuration handler.
-   *
-   * @param appName
-   * @param version Config version to load file using.
-   * @returns void
-   */
-  private static reload(appName: string, version: GameConfigVersion): void {
-    // Select loader to use.
-    switch (version) {
-      case 'v0':
-        GameConfig.instances.set(appName, new GameConfigV0(appName))
-        break
-      case 'v0.1':
-        GameConfig.instances.set(appName, new GameConfigV0_1(appName))
-        break
-      default:
-        logError(
-          `[${appName}]: Invalid config version '${version}' requested.`,
-          LogPrefix.GameConfig
-        )
-        break
-    }
-    // Try to upgrade outdated config.
-    if (GameConfig.instances.get(appName)!.upgrade()) {
-      // Upgrade done, we need to fully reload config.
-      logInfo(
-        `[${appName}]: Upgraded outdated ${version} config to ${currentGameConfigVersion}.`,
-        LogPrefix.GameConfig
-      )
-      return GameConfig.reload(appName, currentGameConfigVersion)
-    } else if (version !== currentGameConfigVersion) {
-      // Upgrade failed.
-      logError(
-        `[${appName}]: Failed to upgrade outdated ${version} config.`,
-        LogPrefix.GameConfig
-      )
-    }
   }
 
   /**
@@ -134,22 +81,12 @@ abstract class GameConfig {
   public abstract setSetting(key: string, value: unknown): void
 
   /**
-   * Updates this.config, this.version to upgrade the current config file.
-   *
-   * Writes to file after that.
-   * DO NOT call `flush()` afterward.
-   *
-   * @returns true if upgrade successful if upgrade fails or no upgrade needed.
-   */
-  public abstract upgrade(): boolean
-
-  /**
    * Reset `this.config` to global defaults and flush.
    */
   public abstract resetToDefaults(): void
 
   protected writeToFile(config: Record<string, unknown>) {
-    return writeFileSync(this.path, JSON.stringify(config, null, 2))
+    return writeSettingsFile(this.path, config)
   }
 
   /**
@@ -166,23 +103,14 @@ abstract class GameConfig {
     if (!existsSync(configPath)) {
       this.resetToDefaults()
     }
-    // Always upgrade before loading to avoid errors.
-    // `getSettings` doesn't return an `GameSettings` otherwise.
-    if (this.version !== currentGameConfigVersion) {
-      // Do not load the config.
-      // Wait for `upgrade` to be called by `reload`.
-    } else {
-      // No upgrades necessary, load config.
-      // `this.version` should be `currentGameConfigVersion` at this point.
-      // Synchronous: an async load left `this.config` undefined for a tick, so a
-      // `setSetting` that was a title's first `GameConfig.get` threw (G17).
-      this.config = this.readSettings()
-    }
+    // Synchronous: an async load left `this.config` undefined for a tick, so a
+    // `setSetting` that was a title's first `GameConfig.get` threw (G17).
+    this.config = this.readSettings()
   }
 }
 
 class GameConfigV0 extends GameConfig {
-  public version: GameConfigVersion = 'v0'
+  public version: GameConfigVersion = currentGameConfigVersion
 
   // True for v0 (legacy) configs.
   // Based on legacy behaviour.
@@ -191,21 +119,6 @@ class GameConfigV0 extends GameConfig {
   constructor(appName: string) {
     super(appName)
     this.load()
-  }
-
-  public upgrade() {
-    // Here we rewrite the config object to match the latest format and write to file.
-    // Not necessary as this version's config structure is identical.
-
-    // TODO(adityaruplaha): Continue treating legacy configs as fully explicit?
-    const settings = existsSync(this.path)
-      ? JSON.parse(readFileSync(this.path, 'utf-8'))
-      : {}
-    // settings['explicit'] = true    // Continue treating as explicit.
-    // settings['explicit'] = false   // No, convert to ovverides.
-    this.writeToFile(settings)
-    // Once we decide, change this to true to indicate upgrade successful.
-    return false
   }
 
   public async getSettings(): Promise<GameSettings> {
@@ -332,8 +245,7 @@ class GameConfigV0 extends GameConfig {
   }
 
   public setSetting(key: keyof GameSettings, value: unknown) {
-    // A config whose load was skipped (outdated version awaiting upgrade) has no
-    // `this.config` yet. Read it rather than flush a one-key object over the file.
+    // Defensive: read rather than flush a one-key object over the file.
     if (this.config === undefined) {
       this.config = this.readSettings()
     }
@@ -373,7 +285,7 @@ class GameConfigV0 extends GameConfig {
       return this.writeToFile(
         Object.fromEntries([
           [this.appName, this.config],
-          ['version', 'v0'],
+          ['version', currentGameConfigVersion],
           ['explicit', this.isExplicit]
         ])
       )
@@ -395,29 +307,10 @@ class GameConfigV0 extends GameConfig {
     return this.writeToFile(
       Object.fromEntries([
         [this.appName, Object.fromEntries(config)],
-        ['version', 'v0'],
+        ['version', currentGameConfigVersion],
         ['explicit', this.isExplicit]
       ])
     )
-  }
-}
-
-// Inheriting cuz almost everything stays the same.
-class GameConfigV0_1 extends GameConfigV0 {
-  public version: GameConfigVersion = 'v0.1'
-
-  // False for v0.1 configs.
-  // They are not explicit by default.
-  protected isExplicit = false
-
-  constructor(appName: string) {
-    super(appName)
-  }
-
-  public upgrade() {
-    // Here we rewrite the config object to match the latest format and write to file.
-    // Not necessary as this is the current version.
-    return false
   }
 }
 
