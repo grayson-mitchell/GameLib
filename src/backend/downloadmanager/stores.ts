@@ -5,7 +5,11 @@
 // 'backend/storeManagers'` (spike 009's import-time wall).
 import { TypeCheckedStoreBackend } from '../typed_store'
 
-export const downloadManager = new TypeCheckedStoreBackend('downloadManager', {
-  cwd: 'store',
-  name: 'download-manager'
-})
+export const downloadManager = new TypeCheckedStoreBackend(
+  'downloadManager',
+  {
+    cwd: 'store',
+    name: 'download-manager'
+  },
+  { kind: 'user-state' }
+)

@@ -9,8 +9,12 @@ import { userDataPath } from 'backend/constants/paths'
  * can contain dots. Backend-only: the frontend receives `mac_arch` through the
  * GOG/Epic library stores, so this is not registered in storeRegistration.
  */
-export const macArchStore = new TypeCheckedStoreBackend('macArchStore', {
-  cwd: join(userDataPath, 'store'),
-  name: 'mac-arch',
-  clearInvalidConfig: true
-})
+export const macArchStore = new TypeCheckedStoreBackend(
+  'macArchStore',
+  {
+    cwd: join(userDataPath, 'store'),
+    name: 'mac-arch',
+    clearInvalidConfig: true
+  },
+  { kind: 'user-state' }
+)

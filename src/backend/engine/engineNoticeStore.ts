@@ -10,5 +10,6 @@ import CacheStore from 'backend/cache'
 /** @public consumed through the lazy `require('./engineNoticeStore')` in engineState.ts default deps, which knip cannot trace */
 export const engineNoticeStore = new CacheStore<unknown>(
   'steam_engine_notices',
-  null
+  null,
+  { kind: 'user-state' }
 )

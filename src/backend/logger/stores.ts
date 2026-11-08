@@ -13,5 +13,6 @@ export const uploadedLogFileStore = new TypeCheckedStoreBackend(
     cwd: 'store',
     name: 'uploadedLogs',
     accessPropertiesByDotNotation: false
-  }
+  },
+  { kind: 'cache' }
 )

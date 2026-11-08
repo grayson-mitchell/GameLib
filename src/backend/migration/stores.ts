@@ -6,7 +6,11 @@
 // guaranteed by import time.
 import { TypeCheckedStoreBackend } from '../typed_store'
 
-export const migrationsStore = new TypeCheckedStoreBackend('migrationsStore', {
-  cwd: 'store',
-  name: 'migrations'
-})
+export const migrationsStore = new TypeCheckedStoreBackend(
+  'migrationsStore',
+  {
+    cwd: 'store',
+    name: 'migrations'
+  },
+  { kind: 'user-state' }
+)

@@ -3,12 +3,21 @@ import { TypeCheckedStoreBackend } from 'backend/typed_store'
 import { GameInfo } from 'common/types'
 import { NileInstallInfo } from 'common/types/nile'
 
-export const installStore = new CacheStore<NileInstallInfo>('nile_install_info')
+export const installStore = new CacheStore<NileInstallInfo>(
+  'nile_install_info',
+  undefined,
+  { kind: 'cache' }
+)
 export const libraryStore = new CacheStore<GameInfo[], 'library'>(
   'nile_library',
-  null
+  null,
+  { kind: 'user-state' }
 )
 
-export const configStore = new TypeCheckedStoreBackend('nileConfigStore', {
-  cwd: 'nile_store'
-})
+export const configStore = new TypeCheckedStoreBackend(
+  'nileConfigStore',
+  {
+    cwd: 'nile_store'
+  },
+  { kind: 'user-state' }
+)

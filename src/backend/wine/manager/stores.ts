@@ -10,5 +10,6 @@ export const wineDownloaderInfoStore = new TypeCheckedStoreBackend(
   {
     cwd: 'store',
     name: 'wine-downloader-info'
-  }
+  },
+  { kind: 'cache' }
 )

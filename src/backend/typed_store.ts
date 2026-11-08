@@ -14,6 +14,7 @@
 // `store_backend.ts`'s header for the measurements, and
 // `__tests__/cache.test.ts`'s "store path parity" block for the gate.
 import Store from './store_backend'
+import type { StoreDeclaration } from './storeVersioning/types'
 
 import {
   StoreOptions,
@@ -76,12 +77,16 @@ export class TypeCheckedStoreBackend<
    */
   private readonly storeName: Name
 
-  constructor(name: Name, options: StoreOptions<StoreStructure[Name]>) {
+  constructor(
+    name: Name,
+    options: StoreOptions<StoreStructure[Name]>,
+    declaration: StoreDeclaration
+  ) {
     this.storeName = name
     // @ts-expect-error Pre-existing generic variance between the per-store
     // `StoreStructure[Name]` shape and the store's own `Record<string, unknown>`
     // default. Carried over verbatim from the electron-store-backed version.
-    this.store = new Store(options)
+    this.store = new Store({ ...options, declaration })
     // WR-08 (Phase 29 code review): FIRST registration wins. This used to be an
     // unconditional `set`, so a second construction under the same `ValidStoreName`
     // silently re-pointed every name-keyed dispatch (`getRegisteredStore`, and

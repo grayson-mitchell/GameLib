@@ -287,7 +287,13 @@ describe('sidecar bootstrap (headless boot)', () => {
     expect(() => require('backend/typed_store')).not.toThrow()
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { TypeCheckedStoreBackend } = require('backend/typed_store')
-    const store = new TypeCheckedStoreBackend('configStore', { cwd: 'store' })
+    const store = new TypeCheckedStoreBackend(
+      'configStore',
+      { cwd: 'store' },
+      {
+        kind: 'user-state'
+      }
+    )
     expect(typeof store.get).toBe('function')
     expect(typeof store.set).toBe('function')
 

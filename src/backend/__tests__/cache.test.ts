@@ -7,7 +7,9 @@ import { join as joinPath } from 'path'
 jest.mock('backend/store_backend')
 
 describe('backend/cache.ts', () => {
-  const testStore = new CacheStore<string>('test_store')
+  const testStore = new CacheStore<string>('test_store', undefined, {
+    kind: 'cache'
+  })
   const internalStore = new Store({
     cwd: 'store_cache',
     name: 'test_store'
@@ -45,7 +47,9 @@ describe('backend/cache.ts', () => {
   })
 
   test('Custom lifetime works', () => {
-    const testStore2 = new CacheStore<string>('test_store_2', 60)
+    const testStore2 = new CacheStore<string>('test_store_2', 60, {
+      kind: 'cache'
+    })
     const three_hours_ago = new Date(now).setHours(now.getHours() - 3)
     jest.setSystemTime(three_hours_ago)
     testStore2.set('foo', 'bar')
@@ -54,7 +58,9 @@ describe('backend/cache.ts', () => {
   })
 
   test('Allows having no expiration time', () => {
-    const testStore2 = new CacheStore<string>('test_store_2', null)
+    const testStore2 = new CacheStore<string>('test_store_2', null, {
+      kind: 'cache'
+    })
     const three_hours_ago = new Date(now).setHours(now.getHours() - 3)
     jest.setSystemTime(three_hours_ago)
     testStore2.set('foo', 'bar')
@@ -81,7 +87,9 @@ describe('backend/cache.ts', () => {
   })
 
   test('entries() excludes timestamp bookkeeping on the in-memory store', () => {
-    const memStore = new CacheStore<string>('test_store_mem')
+    const memStore = new CacheStore<string>('test_store_mem', undefined, {
+      kind: 'cache'
+    })
     memStore.use_in_memory()
     memStore.set('foo', 'bar')
 

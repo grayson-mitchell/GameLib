@@ -3,9 +3,11 @@ import type { WikiInfo } from 'common/types'
 
 export const wikiGameInfoStore = new CacheStore<WikiInfo>(
   'wikigameinfo',
-  60 * 24 * 30
+  60 * 24 * 30,
+  { kind: 'cache' }
 )
 
 export const umuStore = new CacheStore<string | null>('umu', 60 * 6, {
+  kind: 'cache',
   invalidateCheck: (data) => !data
 })

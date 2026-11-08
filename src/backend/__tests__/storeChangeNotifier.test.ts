@@ -77,7 +77,9 @@ describe('backend/storeChangeNotifier.ts', () => {
       // Prevents the double-push `skeletonFlows.test.ts` caught: `applyStoreWrite`
       // performs its write THROUGH these store classes and then pushes a richer payload
       // itself, so the class-level notification must stay quiet for that one write.
-      const store = new CacheStore<string>('gog_library')
+      const store = new CacheStore<string>('gog_library', undefined, {
+        kind: 'user-state'
+      })
       pushed = []
 
       withStoreChangeSuppressed(() => store.set('games', 'inner'))
@@ -89,7 +91,9 @@ describe('backend/storeChangeNotifier.ts', () => {
 
     test('suppression nests without an inner scope re-enabling the outer', () => {
       // Why the flag is a counter and not a boolean.
-      const store = new CacheStore<string>('gog_library')
+      const store = new CacheStore<string>('gog_library', undefined, {
+        kind: 'user-state'
+      })
       pushed = []
 
       withStoreChangeSuppressed(() => {
@@ -120,7 +124,9 @@ describe('backend/storeChangeNotifier.ts', () => {
       // `CacheStore.get`) returns the caller fallback unless `storeHas(key)` AND
       // `storeGet('__timestamp.' + key)` BOTH resolve. Announce only the value and the
       // renderer still renders nothing.
-      const store = new CacheStore<string>('gog_library')
+      const store = new CacheStore<string>('gog_library', undefined, {
+        kind: 'user-state'
+      })
       pushed = []
 
       store.set('games', 'seven-titles')
@@ -139,7 +145,9 @@ describe('backend/storeChangeNotifier.ts', () => {
     })
 
     test('delete announces both keys as deleted', () => {
-      const store = new CacheStore<string>('gog_library')
+      const store = new CacheStore<string>('gog_library', undefined, {
+        kind: 'user-state'
+      })
       store.set('games', 'x')
       pushed = []
 
@@ -154,7 +162,9 @@ describe('backend/storeChangeNotifier.ts', () => {
     test('clear announces a whole-store invalidation, not per-key deletes', () => {
       // A per-key encoding cannot express the removals, so the renderer would keep every
       // stale key. Same failure WR-07 fixed for hydrateStore by replacing, not merging.
-      const store = new CacheStore<string>('nile_library')
+      const store = new CacheStore<string>('nile_library', undefined, {
+        kind: 'user-state'
+      })
       store.set('library', 'x')
       pushed = []
 
@@ -169,7 +179,9 @@ describe('backend/storeChangeNotifier.ts', () => {
       // use_in_memory() batches into a Map that has not reached disk. Announcing there
       // would make the renderer's snapshot claim a value the sidecar has not persisted —
       // divergence in the opposite direction.
-      const store = new CacheStore<string>('legendary_library')
+      const store = new CacheStore<string>('legendary_library', undefined, {
+        kind: 'user-state'
+      })
       store.use_in_memory()
       pushed = []
 
@@ -185,7 +197,9 @@ describe('backend/storeChangeNotifier.ts', () => {
     })
 
     test('commit on a store that never went in-memory announces nothing', () => {
-      const store = new CacheStore<string>('gog_library')
+      const store = new CacheStore<string>('gog_library', undefined, {
+        kind: 'user-state'
+      })
       pushed = []
       store.commit()
       expect(pushed).toHaveLength(0)
@@ -203,10 +217,14 @@ describe('backend/storeChangeNotifier.ts', () => {
       // below imports the PRODUCTION `installedGamesStore` singleton instead, and a second,
       // locally-constructed instance under the same `ValidStoreName` would trip
       // `TypeCheckedStoreBackend`'s own WR-08 duplicate-registration guard.
-      const store = new TypeCheckedStoreBackend('fontsStore', {
-        cwd: 'fonts_store',
-        name: 'fonts'
-      })
+      const store = new TypeCheckedStoreBackend(
+        'fontsStore',
+        {
+          cwd: 'fonts_store',
+          name: 'fonts'
+        },
+        { kind: 'user-state' }
+      )
       pushed = []
 
       store.set('fonts', [] as never)
@@ -219,9 +237,13 @@ describe('backend/storeChangeNotifier.ts', () => {
     })
 
     test('clear announces a whole-store invalidation', () => {
-      const store = new TypeCheckedStoreBackend('sideloadedStore', {
-        cwd: 'store'
-      })
+      const store = new TypeCheckedStoreBackend(
+        'sideloadedStore',
+        {
+          cwd: 'store'
+        },
+        { kind: 'user-state' }
+      )
       pushed = []
 
       store.clear()
@@ -238,7 +260,13 @@ describe('backend/storeChangeNotifier.ts', () => {
       // The electron-store mock (`src/backend/__mocks__/electron-store.ts`) is a real
       // subclass writing to a tmp dir, not a jest.fn, so the failure has to be injected
       // on the prototype the instance actually inherits `set` from.
-      const store = new TypeCheckedStoreBackend('configStore', { cwd: 'store' })
+      const store = new TypeCheckedStoreBackend(
+        'configStore',
+        { cwd: 'store' },
+        {
+          kind: 'user-state'
+        }
+      )
       const spy = jest
         .spyOn(Object.getPrototypeOf(Store.prototype), 'set')
         .mockImplementation(() => {

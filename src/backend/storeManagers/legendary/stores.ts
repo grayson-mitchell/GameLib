@@ -4,11 +4,14 @@ import { ExtraInfo, GameInfo } from 'common/types'
 import { GameOverride, LegendaryInstallInfo } from 'common/types/legendary'
 
 export const installStore = new CacheStore<LegendaryInstallInfo>(
-  'legendary_install_info'
+  'legendary_install_info',
+  undefined,
+  { kind: 'cache' }
 )
 export const libraryStore = new CacheStore<GameInfo[], 'library'>(
   'legendary_library',
-  null
+  null,
+  { kind: 'user-state' }
 )
 
 /**
@@ -22,10 +25,15 @@ export const libraryStore = new CacheStore<GameInfo[], 'library'>(
 export const gamesOverrideStore: CacheStore<GameOverride, 'gamesOverride'> =
   new CacheStore<GameOverride, 'gamesOverride'>(
     'legendary_games_override',
-    60 * 24 * 7
+    60 * 24 * 7,
+    { kind: 'cache' }
   )
 
-export const gameInfoStore = new CacheStore<ExtraInfo>('legendary_gameinfo')
+export const gameInfoStore = new CacheStore<ExtraInfo>(
+  'legendary_gameinfo',
+  undefined,
+  { kind: 'cache' }
+)
 
 /**
  * Epic's persisted sign-in verdict (`expired`) — Phase 49 D-05.
@@ -37,5 +45,6 @@ export const gameInfoStore = new CacheStore<ExtraInfo>('legendary_gameinfo')
  */
 export const legendaryConfigStore = new TypeCheckedStoreBackend(
   'legendaryConfigStore',
-  { cwd: 'legendary_store' }
+  { cwd: 'legendary_store' },
+  { kind: 'user-state' }
 )

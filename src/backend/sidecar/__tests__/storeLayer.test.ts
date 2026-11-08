@@ -227,7 +227,9 @@ describe('round-trip', () => {
       // identical underlying data as the instance storeRegistration.ts (or,
       // for wikigameinfo, wiki_game_info/stores.ts) already
       // constructed.
-      const cache = new CacheStore<string, '__gsdProbe'>(name, null)
+      const cache = new CacheStore<string, '__gsdProbe'>(name, null, {
+        kind: 'cache'
+      })
 
       const probeValue = `probe-${name}`
       cache.set('__gsdProbe', probeValue)
@@ -456,9 +458,13 @@ describe('WR-08: duplicate store registration', () => {
       .mockImplementation(() => true)
     let lines: string[] = []
     try {
-      const second = new TypeCheckedStoreBackend('configStore', {
-        cwd: 'store'
-      })
+      const second = new TypeCheckedStoreBackend(
+        'configStore',
+        {
+          cwd: 'store'
+        },
+        { kind: 'user-state' }
+      )
       lines = stderrSpy.mock.calls.map((call) => String(call[0]))
       expect(getRegisteredStore('configStore')).toBe(first)
       expect(getRegisteredStore('configStore')).not.toBe(second)

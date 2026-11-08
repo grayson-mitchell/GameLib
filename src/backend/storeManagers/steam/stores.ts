@@ -2,9 +2,13 @@ import { TypeCheckedStoreBackend } from '../../typed_store'
 import CacheStore from '../../cache'
 import { GameInfo, ExtraInfo } from 'common/types'
 
-const configStore = new TypeCheckedStoreBackend('steamConfigStore', {
-  cwd: 'steam_store'
-})
+const configStore = new TypeCheckedStoreBackend(
+  'steamConfigStore',
+  {
+    cwd: 'steam_store'
+  },
+  { kind: 'user-state', tokenBearing: true }
+)
 
 // ── Phase 17 (17-02): dedicated Steam CrossOver bottle settings store ───────
 // A DEDICATED store (not a phantom GameConfig entry — see RESEARCH.md
@@ -12,24 +16,29 @@ const configStore = new TypeCheckedStoreBackend('steamConfigStore', {
 // provisioned/login state, independent of configStore (auth-only).
 const steamBottleConfigStore = new TypeCheckedStoreBackend(
   'steamBottleConfigStore',
-  { cwd: 'steam_store' }
+  { cwd: 'steam_store' },
+  { kind: 'user-state', tokenBearing: true }
 )
 
 // ── LIB-01/02/03: Persistent library cache (indefinite lifespan per D-05) ──
 const steamLibraryStore = new CacheStore<GameInfo[], 'games'>(
   'steam_library',
-  null
+  null,
+  { kind: 'user-state' }
 )
 
 // ── LIB-04: Per-game metadata cache (indefinite lifespan per D-05) ──────────
 // Keyed by appId string; stores artwork URLs and extra info after lazy fetch
 const steamMetadataStore = new CacheStore<SteamMetadataCacheEntry>(
   'steam_metadata',
-  null
+  null,
+  { kind: 'cache' }
 )
 
 // ── Stale-indicator: last successful sync epoch millis (plan 05) ─────────────
-const steamSyncStore = new CacheStore<number, 'syncedAt'>('steam_sync', null)
+const steamSyncStore = new CacheStore<number, 'syncedAt'>('steam_sync', null, {
+  kind: 'cache'
+})
 
 // ── quick 261029-ji2: pending Mac Steam adoption records ────────────────────
 // One record per appId GameLib downloaded itself while Mac Steam was running.
@@ -42,7 +51,8 @@ const steamSyncStore = new CacheStore<number, 'syncedAt'>('steam_sync', null)
 /** @public consumed only through the lazy `require('./stores')` in macSteamAdoption.ts `defaultStore()`, which knip cannot trace; macSteamAdoption.test.ts also mocks it by name. */
 export const steamPendingAdoptionStore = new CacheStore<unknown>(
   'steam_pending_adoption',
-  null
+  null,
+  { kind: 'user-state' }
 )
 
 // ── quick 261029-pkp: persisted "Restart Steam to finish" hold records ──────
@@ -52,7 +62,8 @@ export const steamPendingAdoptionStore = new CacheStore<unknown>(
 // cannot trace. The export is deliberate.
 export const steamRestartHoldStore = new CacheStore<unknown>(
   'steam_restart_hold',
-  null
+  null,
+  { kind: 'user-state' }
 )
 
 // ── Phase 57: persisted "known-fix report sent" records (D-16/D-17) ─────────
@@ -61,7 +72,8 @@ export const steamRestartHoldStore = new CacheStore<unknown>(
 /** @public consumed only through the lazy `require` in backend/knownFixReport.ts, which knip cannot trace. */
 export const steamKnownFixReportStore = new CacheStore<unknown>(
   'steam_known_fix_reports',
-  null
+  null,
+  { kind: 'user-state' }
 )
 
 export interface SteamMetadataCacheEntry {

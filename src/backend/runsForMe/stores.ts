@@ -7,8 +7,12 @@ import { userDataPath } from 'backend/constants/paths'
  * `games` map keyed `${appName}_${runner}`; read and written as a unit because
  * electron-store treats dots as path separators and appNames contain dots.
  */
-export const runsForMeStore = new TypeCheckedStoreBackend('runsForMeStore', {
-  cwd: join(userDataPath, 'store'),
-  name: 'runs-for-me',
-  clearInvalidConfig: true
-})
+export const runsForMeStore = new TypeCheckedStoreBackend(
+  'runsForMeStore',
+  {
+    cwd: join(userDataPath, 'store'),
+    name: 'runs-for-me',
+    clearInvalidConfig: true
+  },
+  { kind: 'user-state' }
+)

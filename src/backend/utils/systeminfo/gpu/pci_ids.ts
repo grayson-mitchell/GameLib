@@ -16,11 +16,13 @@ type DeviceNameCacheKey =
   | `${string}_${string}` // DeviceID_VendorID
 export const deviceNameCache = new CacheStore<string, DeviceNameCacheKey>(
   'pci_ids_device',
-  60 * 24 * 7 // 7 days
-)
+  60 * 24 * 7,
+  { kind: 'cache' }
+) // 7 days
 export const vendorNameCache = new CacheStore<string, string>(
   'pci_ids_vendor',
-  60 * 24 * 7
+  60 * 24 * 7,
+  { kind: 'cache' }
 )
 
 async function pciIdDnsQuery(pre: string): Promise<string | false> {

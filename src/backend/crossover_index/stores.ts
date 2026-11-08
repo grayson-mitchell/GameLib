@@ -35,7 +35,5 @@ export interface CachedIndex<T> {
 export const crossoverIndexStore = new CacheStore<CachedIndex<unknown>>(
   'crossover_index',
   60 * 24,
-  {
-    invalidateCheck: () => false
-  }
+  { kind: 'cache', invalidateCheck: () => false }
 )

@@ -1,4 +1,5 @@
 import Store from './store_backend'
+import type { StoreKind } from './storeVersioning/types'
 
 import {
   notifyStoreChanged,
@@ -25,23 +26,35 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
    * @param filename
    * @param max_value_lifespan How long an individual entry in the store will
    *                           be cached (in minutes)
+   * @param options.kind D-01: 'cache' is discarded on a shape-changing version
+   *                     bump, 'user-state' is migrated and never discarded.
    */
   constructor(
     filename: string,
     max_value_lifespan: number | null = 60 * 6,
-    options?: { invalidateCheck?: (data: ValueType) => boolean }
+    options: {
+      kind: StoreKind
+      tokenBearing?: true
+      failedView?: 'as-is' | 'empty'
+      invalidateCheck?: (data: ValueType) => boolean
+    }
   ) {
     this.filename = filename
     this.store = new Store({
       cwd: 'store_cache',
       name: filename,
-      clearInvalidConfig: true
+      clearInvalidConfig: true,
+      declaration: {
+        kind: options.kind,
+        ...(options.tokenBearing ? { tokenBearing: options.tokenBearing } : {}),
+        ...(options.failedView ? { failedView: options.failedView } : {})
+      }
     })
     this.in_memory_store = new Map<string, ValueType>()
     this.using_in_memory = false
     this.current_store = this.store
     this.lifespan = max_value_lifespan
-    if (options && options.invalidateCheck) {
+    if (options.invalidateCheck) {
       this.invalidateCheck = options.invalidateCheck
     } else {
       this.invalidateCheck = () => true
@@ -55,7 +68,11 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
   public use_in_memory() {
     // Mirror store to memory map
     this.using_in_memory = true
-    this.in_memory_store = new Map(this.store) as Map<string, ValueType>
+    // The engine's `__internal__` version envelope is not a cache entry: keep it out
+    // of the working map (commit() re-stamps it on the way back to disk).
+    this.in_memory_store = new Map(
+      Object.entries(this.store.store).filter(([key]) => key !== '__internal__')
+    ) as Map<string, ValueType>
     this.current_store = this.in_memory_store
   }
 
@@ -164,7 +181,10 @@ export default class CacheStore<ValueType, KeyType extends string = string> {
         : this.store.store
     return Object.entries(source)
       .filter(
-        ([key]) => key !== '__timestamp' && !key.startsWith('__timestamp.')
+        ([key]) =>
+          key !== '__internal__' &&
+          key !== '__timestamp' &&
+          !key.startsWith('__timestamp.')
       )
       .map(([key, value]) => [key as KeyType, value as ValueType])
   }

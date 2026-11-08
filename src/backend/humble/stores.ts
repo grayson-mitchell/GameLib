@@ -6,9 +6,13 @@ import {
   HumbleSyncState
 } from 'common/types/humble'
 
-const configStore = new TypeCheckedStoreBackend('humbleConfigStore', {
-  cwd: 'humble_store'
-})
+const configStore = new TypeCheckedStoreBackend(
+  'humbleConfigStore',
+  {
+    cwd: 'humble_store'
+  },
+  { kind: 'user-state', tokenBearing: true }
+)
 
 /**
  * D-74 (locked: "no new secret-surface class"): the revealed key value and
@@ -45,7 +49,7 @@ type HumbleOrderCacheEntryInternal = Omit<HumbleOrderCacheEntry, 'keys'> & {
 const humbleLibraryStore = new CacheStore<
   HumbleOrderCacheEntryInternal,
   string
->('humble_library', null)
+>('humble_library', null, { kind: 'user-state' })
 
 // Last-synced timestamp / fail-soft state (D-31/D-32). Also wiped by
 // disconnect() alongside humbleLibraryStore. The whole HumbleSyncState is
@@ -55,7 +59,8 @@ const humbleLibraryStore = new CacheStore<
 // keys on one store instance.
 const humbleSyncStore = new CacheStore<HumbleSyncState, 'state'>(
   'humble_sync',
-  null
+  null,
+  { kind: 'cache' }
 )
 
 // D-04/D-30: this store is NEVER cleared by HumbleUser.disconnect() — it
@@ -65,7 +70,8 @@ const humbleSyncStore = new CacheStore<HumbleSyncState, 'state'>(
 // exactly that reason — do not merge this into humbleLibraryStore.
 const humbleRevealedStore = new CacheStore<{ revealedAt: number }, string>(
   'humble_revealed',
-  null
+  null,
+  { kind: 'user-state' }
 )
 
 // D-42/D-43: a user's "Not the same game" ownership-match correction, keyed
@@ -79,7 +85,7 @@ const humbleRevealedStore = new CacheStore<{ revealedAt: number }, string>(
 const humbleOwnershipOverrideStore = new CacheStore<
   { overriddenAt: number },
   string
->('humble_ownership_override', null)
+>('humble_ownership_override', null, { kind: 'user-state' })
 
 // D-59 (reinterpreted per D-57 research — the gift-link is a static
 // deep-link GameLib never possesses, so this store does NOT hold a URL):
@@ -94,7 +100,8 @@ const humbleOwnershipOverrideStore = new CacheStore<
 // humbleLibraryStore.
 const humbleGiftedAtStore = new CacheStore<{ giftedAt: number }, string>(
   'humble_gifted_at',
-  null
+  null,
+  { kind: 'user-state' }
 )
 
 // D-76: identity + outcome record for the guided claim flow's audit trail.
@@ -118,7 +125,8 @@ export interface AuditRecord {
 // as the stores above — do not merge this into humbleLibraryStore.
 const humbleAuditStore = new CacheStore<AuditRecord[], string>(
   'humble_audit',
-  null
+  null,
+  { kind: 'user-state' }
 )
 
 // D-42-01: provenance for a local-redeemed record. `source` distinguishes
@@ -150,7 +158,7 @@ interface HumbleLocalRedeemedRecord {
 const humbleLocalRedeemedStore = new CacheStore<
   HumbleLocalRedeemedRecord,
   string
->('humble_local_redeemed', null)
+>('humble_local_redeemed', null, { kind: 'user-state' })
 
 // Phase 15 (HSTORE-03, D-92): records the last-notified expiration date per
 // key, keyed by a composite `gamekey:machineName` string (matching
@@ -172,7 +180,7 @@ const humbleLocalRedeemedStore = new CacheStore<
 const humbleNotifiedExpirationStore = new CacheStore<
   { expiration: string },
   string
->('humble_notified_expiration', null)
+>('humble_notified_expiration', null, { kind: 'user-state' })
 
 // Plan 42-03 (D-42-01 durability): records that the user explicitly Undid an
 // auto-settle (a local-redeemed record with source: 'ownership-exact'),
@@ -194,7 +202,7 @@ const humbleNotifiedExpirationStore = new CacheStore<
 const humbleSettleDeclinedStore = new CacheStore<
   { declinedAt: number },
   string
->('humble_settle_declined', null)
+>('humble_settle_declined', null, { kind: 'user-state' })
 
 export {
   configStore,
