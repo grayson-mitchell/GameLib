@@ -153,6 +153,7 @@ def norm(files, wave):
 ALLOW = {
     1: ([r'^RustInvokeChannel::\w+ => \{$', r'^shell_open::shell_(open_path|show_item_in_folder)\(app, args\)$'],
         [r'^RustInvokeChannel::\w+ => [\w:]+\([\w, ]*\),$', r'^//!( .*)?$', r'^fn rpc_\w+\([^)]*\) -> Result<Value, String> \{$']),
+    2: ([], [r'^//!( .*)?$']),
 }
 IMPORT_WAVES = {2, 4, 5}
 
