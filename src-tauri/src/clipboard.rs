@@ -49,3 +49,98 @@ pub(crate) fn rpc_clipboard_write_text(args: &[Value], app: &AppHandle) -> Resul
 pub(crate) fn rpc_clipboard_read_text(app: &AppHandle) -> Result<Value, String> {
     clipboard_read_value(app.clipboard().read_text().map_err(|e| e.to_string()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    // ---- clipboard_write_text args (Phase 34.3 Plan 03, REQ-34.3-08; now the generated Args) ----
+    //
+    // RED direction: an implementation using `unwrap_or("")` instead of a hard parse would
+    // flip the four rejection cases below to `Ok`.
+
+    #[test]
+    fn clipboard_text_arg_rejects_absent_args() {
+        assert_eq!(
+            ClipboardWriteTextArgs::from_args(&[]).unwrap_err(),
+            "clipboard_write_text:bad-args"
+        );
+    }
+
+    #[test]
+    fn clipboard_text_arg_rejects_null() {
+        assert_eq!(
+            ClipboardWriteTextArgs::from_args(&[Value::Null]).unwrap_err(),
+            "clipboard_write_text:bad-args"
+        );
+    }
+
+    #[test]
+    fn clipboard_text_arg_rejects_number() {
+        assert!(ClipboardWriteTextArgs::from_args(&[json!(1)]).is_err());
+    }
+
+    #[test]
+    fn clipboard_text_arg_rejects_bool() {
+        assert!(ClipboardWriteTextArgs::from_args(&[Value::Bool(true)]).is_err());
+    }
+
+    #[test]
+    fn clipboard_text_arg_accepts_empty_string() {
+        // An empty string is a VALID clipboard write, not a missing argument.
+        assert_eq!(
+            ClipboardWriteTextArgs::from_args(&[json!("")]).unwrap().text,
+            ""
+        );
+    }
+
+    #[test]
+    fn clipboard_text_arg_accepts_nonempty_string() {
+        assert_eq!(
+            ClipboardWriteTextArgs::from_args(&[json!("hi")]).unwrap().text,
+            "hi"
+        );
+    }
+
+    #[test]
+    fn clipboard_text_arg_ignores_trailing_args() {
+        assert_eq!(
+            ClipboardWriteTextArgs::from_args(&[json!("hi"), json!("ignored")])
+                .unwrap()
+                .text,
+            "hi"
+        );
+    }
+
+    // ---- clipboard_read_value (Phase 34.3 Plan 03, REQ-34.3-08) ----
+    //
+    // RED direction: an implementation returning `Value::Null` for an empty clipboard would
+    // fail the first case below — the sidecar's `clipboardReadText` handler coerces a
+    // non-string result to `''`, which would mask that regression as an indistinguishable
+    // empty read.
+
+    #[test]
+    fn clipboard_read_value_empty_string_is_not_null() {
+        assert_eq!(
+            clipboard_read_value(Ok(String::new())),
+            Ok(Value::String(String::new()))
+        );
+    }
+
+    #[test]
+    fn clipboard_read_value_nonempty_string_round_trips() {
+        assert_eq!(
+            clipboard_read_value(Ok("hi".to_string())),
+            Ok(Value::String("hi".to_string()))
+        );
+    }
+
+    #[test]
+    fn clipboard_read_value_propagates_error() {
+        assert_eq!(
+            clipboard_read_value(Err("boom".to_string())),
+            Err("boom".to_string())
+        );
+    }
+}

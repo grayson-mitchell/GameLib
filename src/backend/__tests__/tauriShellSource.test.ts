@@ -4665,6 +4665,7 @@ describe('D-10 production reader proof (Phase 71 wave 0)', () => {
 
   test('per file: strip removes exactly the enumerated test-mod line ranges and nothing else', () => {
     const names: string[] = []
+    const colocatedTestsModsPerFile: number[] = []
     for (const f of listTauriShellSourceFiles().filter(
       (p) => p !== 'main.rs'
     )) {
@@ -4678,8 +4679,16 @@ describe('D-10 production reader proof (Phase 71 wave 0)', () => {
         .join('\n')
       expect(stripRustTestModules(src)).toBe(expected)
       names.push(...blocks.map((b) => b.name))
+      colocatedTestsModsPerFile.push(
+        blocks.filter((b) => b.name === 'tests').length
+      )
     }
-    expect(names.sort()).toEqual(EXPECTED_TEST_MOD_NAMES)
+    // Phase 71 wave 5 co-locates main.rs's tests into a trailing `mod tests` in the module they
+    // test (D-08): any number of files may carry one, never two in the same file.
+    expect(names.filter((n) => n !== 'tests').sort()).toEqual(
+      EXPECTED_TEST_MOD_NAMES
+    )
+    expect(Math.max(...colocatedTestsModsPerFile)).toBeLessThanOrEqual(1)
   })
 
   test('main.rs: stripped text equals the old slice before `#[cfg(test)]` + its mod tests, modulo trailing newline', () => {
