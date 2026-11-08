@@ -16,7 +16,6 @@ import { libraryManagerMap } from '..'
 import { checkInstalledMacArch } from 'backend/macArch/recovery'
 import {
   downloadFile,
-  killPattern,
   moveOnUnix,
   moveOnWindows,
   sendGameStatusUpdate,
@@ -76,6 +75,7 @@ import { mkdirSync } from 'fs'
 import { configStore } from 'backend/constants/key_value_stores'
 import { epicRedistPath, legendaryInstalled } from './constants'
 import { isCLINoGui, isMac, isWindows } from 'backend/constants/environment'
+import { killTracked } from 'backend/trackedChildren'
 import { fakeEpicExePath } from 'backend/constants/paths'
 
 import type LogWriter from 'backend/logger/log_writer'
@@ -1134,12 +1134,8 @@ export default class LegendaryGame implements Game {
   // Could be removed if legendary handles SIGKILL and SIGTERM for us
   // which is send via AbortController
   async stop(stopWine = true) {
-    // until the legendary bug gets fixed, kill legendary on mac
-    // not a perfect solution but it's the only choice for now
-
-    // @adityaruplaha: this is kinda arbitary and I don't understand it.
-    const pattern = isWindows ? 'legendary' : this.appName
-    killPattern(pattern)
+    // Phase 72 D-13: kill the tracked legendary child for this app, not a name pattern.
+    killTracked({ runner: 'legendary', key: this.appName })
 
     if (stopWine && !this.isNative()) {
       const gameSettings = getLaunchSettings(

@@ -37,7 +37,6 @@ import {
 import shlex from 'shlex'
 import { nileLaunchCommandParts } from '../runnerLaunchArgv'
 import {
-  killPattern,
   moveOnUnix,
   moveOnWindows,
   sendGameStatusUpdate,
@@ -53,7 +52,8 @@ import { removeNonSteamGame } from 'backend/shortcuts/nonesteamgame/nonesteamgam
 import { sendFrontendMessage } from '../../ipc'
 import setup from './setup'
 import { getUmuId } from 'backend/wiki_game_info/umu/utils'
-import { isLinux, isWindows } from 'backend/constants/environment'
+import { isWindows } from 'backend/constants/environment'
+import { killTracked } from 'backend/trackedChildren'
 
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import type LogWriter from 'backend/logger/log_writer'
@@ -592,8 +592,7 @@ export default class NileGameManager implements Game {
   }
 
   async stop(stopWine = true) {
-    const pattern = isLinux ? this.id : 'nile'
-    killPattern(pattern)
+    killTracked({ runner: 'nile', key: this.id })
 
     if (stopWine && !this.isNative()) {
       const gameSettings = getLaunchSettings(

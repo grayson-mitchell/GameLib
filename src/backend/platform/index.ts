@@ -452,7 +452,7 @@ export const app = {
 // `backend/utils` -- so `handleExit` IS sidecar-reachable, and with it the one caller in this
 // codebase whose SAFE index is 0 rather than the last index. The `safeIndex` fallback below
 // (`cancelId ?? buttons.length - 1`) would have resolved to 1 = "Yes" for its two-button
-// array, i.e. the DESTRUCTIVE branch (killPattern legendary/gogdl/nile +
+// array, i.e. the DESTRUCTIVE branch (killAllTracked +
 // callAllAbortControllers + app.exit) on any transport error or timeout -- fail-OPEN, the
 // exact opposite of this stub's documented property. `handleExit` now declares an explicit
 // `cancelId: 0` (see `backend/utils.ts`) so the first operand of that `??` is used and the

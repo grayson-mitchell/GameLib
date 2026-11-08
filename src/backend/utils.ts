@@ -81,6 +81,7 @@ import { isUmuSupported } from './utils/compatibility_layers'
 import { getSystemInfo } from './utils/systeminfo'
 import { configStore } from './constants/key_value_stores'
 import { isLinux, isMac, isWindows } from './constants/environment'
+import { killAllTracked } from './trackedChildren'
 import {
   configPath,
   fixAsarPath,
@@ -293,7 +294,7 @@ async function handleExit() {
       // CR-04: `cancelId` is LOAD-BEARING, not cosmetic. This dialog's sense is
       // INVERTED relative to every other `showMessageBox` caller in the codebase:
       // index 0 is the SAFE "No" and index 1 is the DESTRUCTIVE "Yes"
-      // (killPattern('legendary'|'gogdl'|'nile') + callAllAbortControllers() +
+      // (killAllTracked() + callAllAbortControllers() +
       // app.exit(), i.e. killing an in-flight install/download). The sidecar's
       // `platformApi.showMessageBox` fail-safe default is
       // `options?.cancelId ?? (buttons.length ?? 1) - 1`, which without an explicit
@@ -323,18 +324,9 @@ async function handleExit() {
       return
     }
 
-    // This is very hacky and can be removed if bineries handle SIGTERM and SIGKILL
-    // FIXME: we should keep track of what we are doing and kill just that
-    // this is really dangerous cause we can be killing other processes unrelated
-    // to what we are doing x_x
-    const possibleChildren = ['legendary', 'gogdl', 'nile']
-    possibleChildren.forEach((procName) => {
-      try {
-        killPattern(procName)
-      } catch (error) {
-        logInfo([`Unable to kill ${procName}, ignoring.`, error])
-      }
-    })
+    // Phase 72 D-13: kill only the children this sidecar spawned (tracked PIDs),
+    // never by name pattern. Includes tracked Wine children (games).
+    killAllTracked()
 
     // Kill all child processes
     callAllAbortControllers()
@@ -963,22 +955,6 @@ const getCurrentChangelog = async (): Promise<Release | null> => {
     )
     return null
   }
-}
-
-// can be removed if legendary and gogdl handle SIGTERM and SIGKILL
-// for us
-function killPattern(pattern: string) {
-  logInfo(['Trying to kill', pattern], LogPrefix.Backend)
-  let ret
-  if (isWindows) {
-    ret = spawnSync('Stop-Process', ['-name', pattern], {
-      shell: 'powershell.exe'
-    })
-  } else {
-    ret = spawnSync('pkill', ['-f', pattern])
-  }
-  logInfo(['Killed', pattern], LogPrefix.Backend)
-  return ret
 }
 
 async function shutdownWine(gameSettings: GameSettings) {
@@ -1939,7 +1915,6 @@ export {
   removeQuoteIfNecessary,
   detectVCRedist,
   VC_REDIST_PROBE_TIMEOUT_MS,
-  killPattern,
   shutdownWine,
   getShellPath,
   getLatestReleases,

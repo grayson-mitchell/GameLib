@@ -6,7 +6,7 @@
  * Root cause: the pre-fix `close` handler only rejected when the process was
  * terminated by an OS-level `signal` (and Node's own `child.killed` flag was
  * false). A process that exits with a NON-ZERO code but WITHOUT a signal —
- * e.g. gogdl catching SIGTERM (sent by utils.ts's killPattern() on app quit)
+ * e.g. gogdl catching SIGTERM (sent by utils.ts's killAllTracked() on app quit)
  * and shutting down gracefully with a failure exit code, or any ordinary
  * gogdl/legendary/nile internal failure — fell through untouched and was
  * unconditionally resolved as a SUCCESSFUL command, carrying no `.error`/

@@ -273,7 +273,8 @@ export async function launchGame(
           env,
           wrappers,
           logWriters: [logWriter],
-          logMessagePrefix: LogPrefix.Backend
+          logMessagePrefix: LogPrefix.Backend,
+          trackKey: appName
         }
       )
 
@@ -310,7 +311,8 @@ export async function launchGame(
       options: {
         wrappers,
         logWriters: [logWriter],
-        logMessagePrefix: LogPrefix.Backend
+        logMessagePrefix: LogPrefix.Backend,
+        trackKey: appName
       }
     })
 

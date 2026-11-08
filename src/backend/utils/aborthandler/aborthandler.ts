@@ -52,7 +52,7 @@ function callAllAbortControllers() {
   // handler), so every in-flight download's AbortController was left
   // un-aborted on quit: `abortController.signal.aborted` stayed `false`, so
   // `callRunner` (launcher.ts)'s `.catch` handler classified an
-  // externally-`killPattern`/`pkill`-terminated child process as a genuine
+  // externally-terminated (formerly name-pattern-killed) child process as a genuine
   // `res.error` instead of `res.abort` — a real, if narrow, quit-time status
   // misclassification for every runner (GOG/Legendary/Nile) that goes through
   // `runRunnerCommand`/`callRunner`, independent of the D-1 destroyed-window fix.

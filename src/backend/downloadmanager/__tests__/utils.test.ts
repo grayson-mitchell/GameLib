@@ -749,7 +749,7 @@ describe('resolveGameTitle — 260905-luf (D-01): the shared title fallback chai
  * DownloadManager failure path routes through the SAME `.stop(false)` call
  * (`libraryManagerMap.steam.getGame(appName).stop(false)`, steam runner
  * only — non-steam runners must NOT get an automatic `.stop()`, see spec 6's
- * `killPattern` blast-radius guard) the Cancel path
+ * former `killPattern` blast-radius guard) the Cancel path
  * (`downloadqueue.ts`'s `stopCurrentDownload`) already makes.
  *
  * REVISED by 37-05 (REQ-37-04): `callAbortController(appName)` does NOT fire

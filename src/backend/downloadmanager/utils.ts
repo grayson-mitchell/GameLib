@@ -339,9 +339,9 @@ async function installQueueElement(params: InstallParams): Promise<{
     // starting a fresh one (games.ts installDepotDownload, ~L1388-1400).
     //
     // `.stop()` is gated to `runner === 'steam'` only — legendary's stop()
-    // calls killPattern('legendary'), which kills EVERY legendary process on
-    // Windows, not just this install's. That blast radius is acceptable for
-    // a deliberate user Cancel but not as an automatic reaction to any
+    // used to call killPattern('legendary') (removed in Phase 72 D-13; it now
+    // kills only this app's tracked child). A stop() is still reserved for a
+    // deliberate user Cancel rather than an automatic reaction to any
     // install error. `callAbortController` alone is the correct, targeted
     // kill for non-steam (gogdl/legendary) child processes and stays
     // runner-agnostic.
