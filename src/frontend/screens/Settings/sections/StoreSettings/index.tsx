@@ -22,7 +22,7 @@ import DisableGOGPresence from '../../components/DisableGOGPresence'
 import EosOverlay from './EosOverlay'
 
 // Alphabetical per user decision (quick 261108-ioc). The first entry is the default tab.
-export const STORE_SETTINGS_TABS = [
+const STORE_SETTINGS_TABS = [
   'amazon',
   'epic',
   'gog',
