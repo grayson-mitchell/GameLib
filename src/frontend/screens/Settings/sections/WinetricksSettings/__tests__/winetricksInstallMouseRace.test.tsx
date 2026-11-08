@@ -39,6 +39,7 @@ jest.mock('@fortawesome/react-fontawesome', () =>
 )
 
 import WinetricksRow from '../Row/index'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
 type RowProps = Parameters<typeof WinetricksRow>[0]
 
@@ -82,7 +83,7 @@ function findButton(tree: ElementLike, className: string): ElementLike {
       `expected exactly one ${className}, saw ${found.length} -- this test proves nothing`
     )
   }
-  return found[0]
+  return at(found, 0)
 }
 
 function extractHandlers(button: ElementLike) {

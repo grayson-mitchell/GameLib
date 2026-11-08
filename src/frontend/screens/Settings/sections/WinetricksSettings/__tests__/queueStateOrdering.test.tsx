@@ -58,6 +58,7 @@ jest.mock('@fortawesome/react-fontawesome', () =>
 )
 
 import WinetricksSettings from '../index'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
 // Single-component catalog, same anchor rationale as applyTracer: vcrun2019
 // is both curated and a runtimes member, but the runtimes group is collapsed,
@@ -86,7 +87,7 @@ function checkboxFor(tree: ElementLike, verb: string): ElementLike {
       `expected exactly one checkbox row for ${verb}, saw ${found.length} -- this test proves nothing`
     )
   }
-  return found[0]
+  return at(found, 0)
 }
 
 function applyButton(tree: ElementLike): ElementLike {
@@ -110,7 +111,7 @@ function cancelButton(tree: ElementLike): ElementLike {
       `expected exactly one Cancel remaining button, saw ${found.length} -- this test proves nothing`
     )
   }
-  return found[0]
+  return at(found, 0)
 }
 
 // Lets a RED run (before `WinetricksQueueState` gains `revision`) and a GREEN

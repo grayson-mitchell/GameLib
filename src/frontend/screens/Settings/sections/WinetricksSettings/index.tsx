@@ -107,6 +107,7 @@ function percentSignal(
 ): number | null | undefined {
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i]
+    if (!line) continue
     if (line.kind === 'noise') continue
     if (line.kind === 'progress') return line.percent
     return null

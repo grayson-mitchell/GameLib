@@ -59,6 +59,7 @@ jest.mock('@fortawesome/react-fontawesome', () =>
 )
 
 import WinetricksSettings from '../index'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
 const CATALOG = buildCatalog()
 
@@ -83,7 +84,7 @@ function everything(tree: ElementLike): ElementLike {
   if (found.length !== 1) {
     throw new Error(`expected one Everything else group, saw ${found.length}`)
   }
-  return found[0]
+  return at(found, 0)
 }
 
 function disclosure(group: ElementLike): ElementLike {
@@ -94,7 +95,7 @@ function disclosure(group: ElementLike): ElementLike {
   if (found.length !== 1) {
     throw new Error(`expected one disclosure button, saw ${found.length}`)
   }
-  return found[0]
+  return at(found, 0)
 }
 
 function rowVerbs(node: unknown): string[] {
@@ -108,7 +109,7 @@ function searchInput(tree: ElementLike): ElementLike {
   if (found.length !== 1) {
     throw new Error(`expected one search input, saw ${found.length}`)
   }
-  return found[0]
+  return at(found, 0)
 }
 
 async function openEverything(): Promise<ElementLike> {
@@ -137,7 +138,7 @@ function row(scope: ElementLike, verb: string): ElementLike {
   if (found.length !== 1) {
     throw new Error(`expected one ${verb} row, saw ${found.length}`)
   }
-  return found[0]
+  return at(found, 0)
 }
 
 function checkbox(scope: ElementLike, verb: string): ElementLike | undefined {
@@ -298,7 +299,7 @@ describe('Everything else, expanded', () => {
         collectText(el.props.children) === 'Clear search'
     )
     expect(clear).toHaveLength(1)
-    ;(clear[0].props.onClick as () => void)()
+    ;(at(clear, 0).props.onClick as () => void)()
     const cleared = everything(again())
     expect(rowVerbs(cleared)).toEqual(UNGROUPED)
     expect(searchInput(again()).props.value).toBe('')
@@ -333,10 +334,10 @@ describe('Everything else, expanded', () => {
 describe('the search filters only Everything else (E5-partial, Interaction 3)', () => {
   it('leaves the Suggested and expanded task-group rows unchanged', async () => {
     const first = await mount()
-    const runtimesHeader = findAll(
-      taskGroup(first, 'runtimes'),
-      (el) => el.type === 'button'
-    )[0]
+    const runtimesHeader = at(
+      findAll(taskGroup(first, 'runtimes'), (el) => el.type === 'button'),
+      0
+    )
     ;(runtimesHeader.props.onClick as () => void)()
     ;(disclosure(everything(again())).props.onClick as () => void)()
 
@@ -374,18 +375,20 @@ describe('the search filters only Everything else (E5-partial, Interaction 3)', 
 
     const tree = again()
     expect(
-      checkbox(findByClass(tree, 'WinetricksSuggested')[0], 'vcrun2019')?.props[
-        'aria-checked'
-      ]
+      checkbox(at(findByClass(tree, 'WinetricksSuggested'), 0), 'vcrun2019')
+        ?.props['aria-checked']
     ).toBe(true)
 
-    const apply = findAll(
-      tree,
-      (el) =>
-        el.type === 'button' &&
-        el.props.onClick !== undefined &&
-        collectText(el.props.children) === 'Apply'
-    )[0]
+    const apply = at(
+      findAll(
+        tree,
+        (el) =>
+          el.type === 'button' &&
+          el.props.onClick !== undefined &&
+          collectText(el.props.children) === 'Apply'
+      ),
+      0
+    )
     ;(apply.props.onClick as () => void)()
     await flush()
     expect(api.winetricksApply).toHaveBeenCalledWith('legendary', 'fake-app', [

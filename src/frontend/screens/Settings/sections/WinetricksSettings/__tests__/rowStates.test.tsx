@@ -52,6 +52,7 @@ jest.mock('@fortawesome/react-fontawesome', () =>
 
 import WinetricksRow from '../Row/index'
 import { familySentence, taskGroupName } from '../labels'
+import { at, defined } from '../../../../__tests__/fixtures/indexed'
 
 type RowProps = Parameters<typeof WinetricksRow>[0]
 
@@ -118,8 +119,8 @@ describe('each derived state renders its slot (D-10)', () => {
     const tree = mount(baseProps('available'))
     const boxes = checkboxes(tree)
     expect(boxes).toHaveLength(1)
-    expect(boxes[0].props['aria-checked']).toBe(false)
-    expect(boxes[0].props.disabled).toBeFalsy()
+    expect(at(boxes, 0).props['aria-checked']).toBe(false)
+    expect(at(boxes, 0).props.disabled).toBeFalsy()
     expect(icons(tree)).toEqual([])
     expect(collectText(tree)).not.toContain('Installed')
   })
@@ -127,16 +128,16 @@ describe('each derived state renders its slot (D-10)', () => {
   it('selected: a checked, enabled checkbox', () => {
     const boxes = checkboxes(mount(baseProps('selected')))
     expect(boxes).toHaveLength(1)
-    expect(boxes[0].props['aria-checked']).toBe(true)
-    expect(boxes[0].props.disabled).toBeFalsy()
+    expect(at(boxes, 0).props['aria-checked']).toBe(true)
+    expect(at(boxes, 0).props.disabled).toBeFalsy()
   })
 
   it('queued: a checked, DISABLED checkbox that is not spinning', () => {
     const tree = mount(baseProps('queued'))
     const boxes = checkboxes(tree)
     expect(boxes).toHaveLength(1)
-    expect(boxes[0].props['aria-checked']).toBe(true)
-    expect(boxes[0].props.disabled).toBe(true)
+    expect(at(boxes, 0).props['aria-checked']).toBe(true)
+    expect(at(boxes, 0).props.disabled).toBe(true)
     expect(icons(tree)).not.toContain('spinner')
   })
 
@@ -176,12 +177,12 @@ describe('each derived state renders its slot (D-10)', () => {
     const tree = mount(baseProps('errored'))
     const boxes = checkboxes(tree)
     expect(boxes).toHaveLength(1)
-    expect(boxes[0].props['aria-checked']).toBe(false)
-    expect(boxes[0].props.disabled).toBeFalsy()
+    expect(at(boxes, 0).props['aria-checked']).toBe(false)
+    expect(at(boxes, 0).props.disabled).toBeFalsy()
     expect(icons(tree)).toContain('circle-exclamation')
     expect(collectText(tree)).toContain('Install failed')
     expect(findByClass(tree, 'WinetricksRow__retry')).toHaveLength(1)
-    expect(collectText(findByClass(tree, 'WinetricksRow__retry')[0])).toBe(
+    expect(collectText(at(findByClass(tree, 'WinetricksRow__retry'), 0))).toBe(
       'Retry'
     )
   })
@@ -210,25 +211,25 @@ describe('each derived state renders its slot (D-10)', () => {
 describe('locked (a run is in flight or the backend is busy)', () => {
   it('disables an available row checkbox', () => {
     const boxes = checkboxes(mount(baseProps('available', { locked: true })))
-    expect(boxes[0].props.disabled).toBe(true)
+    expect(at(boxes, 0).props.disabled).toBe(true)
   })
 
   it('disables the Retry button', () => {
     const tree = mount(baseProps('errored', { locked: true }))
-    expect(findByClass(tree, 'WinetricksRow__retry')[0].props.disabled).toBe(
-      true
-    )
+    expect(
+      at(findByClass(tree, 'WinetricksRow__retry'), 0).props.disabled
+    ).toBe(true)
   })
 
   it('disables an errored row checkbox (261011-txc)', () => {
     const boxes = checkboxes(mount(baseProps('errored', { locked: true })))
-    expect(boxes[0].props.disabled).toBe(true)
+    expect(at(boxes, 0).props.disabled).toBe(true)
   })
 
   it('leaves Retry enabled when not locked', () => {
     const tree = mount(baseProps('errored'))
     expect(
-      findByClass(tree, 'WinetricksRow__retry')[0].props.disabled
+      at(findByClass(tree, 'WinetricksRow__retry'), 0).props.disabled
     ).toBeFalsy()
   })
 })
@@ -257,7 +258,7 @@ describe('templates (E6 / E7)', () => {
 
   it('shows the cleaned title and keeps the full upstream title as the native tooltip', () => {
     const tree = mount(baseProps('available'))
-    const title = findByClass(tree, 'WinetricksRow__title')[0]
+    const title = at(findByClass(tree, 'WinetricksRow__title'), 0)
     expect(collectText(title)).toBe('Visual C++ 2019 libraries')
     expect(title.props.title).toBe(VCRUN.title)
   })
@@ -351,9 +352,9 @@ describe('cached is an orthogonal badge', () => {
         (el) => el.props.className === 'WinetricksRow__cached'
       )
       expect(spans).toHaveLength(1)
-      const text = collectText(spans[0])
+      const text = collectText(at(spans, 0))
       expect(text).toBe('Cached (installs offline)')
-      expect(spans[0].props.title).toBe(text)
+      expect(at(spans, 0).props.title).toBe(text)
     }
   })
 })
@@ -403,7 +404,7 @@ describe('compiled stylesheet (fixed metrics, scope)', () => {
 
   it('scopes every rule under the tab root so nothing leaks app-wide', () => {
     const selectors = [...compiled.matchAll(/(^|\})\s*([^{}@]+)\{/g)].map((m) =>
-      m[2].trim()
+      defined(m[2], 'selector capture').trim()
     )
     expect(selectors.length).toBeGreaterThan(5)
     for (const selector of selectors) {
@@ -413,7 +414,7 @@ describe('compiled stylesheet (fixed metrics, scope)', () => {
 
   it('theme-scoped rules are enumerated and the scope pattern can still fail', () => {
     const selectors = [...compiled.matchAll(/(^|\})\s*([^{}@]+)\{/g)].map((m) =>
-      m[2].trim()
+      defined(m[2], 'selector capture').trim()
     )
     const themeScoped = selectors.filter((selector) =>
       selector.startsWith('body.')

@@ -21,6 +21,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { defined } from '../../../__tests__/fixtures/indexed'
 
 const COMPONENT_PATH = join(__dirname, '..', 'EgsSettings.tsx')
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..')
@@ -70,8 +71,14 @@ describe('EGS sync / unsync dialog titles are distinguishable at a glance', () =
     '%s carries BOTH titles and they are not the same string',
     (locale) => {
       const settings = readCatalog(locale)
-      const enabled = settings.egsSyncEnabledTitle
-      const disabled = settings.egsSyncDisabledTitle
+      const enabled = defined(
+        settings.egsSyncEnabledTitle,
+        'egsSyncEnabledTitle'
+      )
+      const disabled = defined(
+        settings.egsSyncDisabledTitle,
+        'egsSyncDisabledTitle'
+      )
 
       // The whole point of the todo: an operator must be able to tell the two
       // outcomes apart from the title alone, in every shipped locale.
@@ -86,7 +93,10 @@ describe('EGS sync / unsync dialog titles are distinguishable at a glance', () =
       // the real predicate on both sides, which is exactly what the retired
       // `title: 'EGS Sync'` did. If this returned true, the specs above would
       // prove nothing.
-      const { egsSyncEnabledTitle } = readCatalog(locale)
+      const egsSyncEnabledTitle = defined(
+        readCatalog(locale).egsSyncEnabledTitle,
+        'egsSyncEnabledTitle'
+      )
 
       expect(egsSyncEnabledTitle).toEqual(expect.any(String))
       expect(

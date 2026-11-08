@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 // No DOM renderer in this project: drive the component function directly with
 // hooks stubbed (effects run synchronously).
@@ -53,7 +54,7 @@ const render = (): ReactElement | null =>
 
 const select = (el: ReactElement): ReactElement => {
   const kids = (el.props as { children: ReactElement[] }).children
-  return kids[1]
+  return at(kids, 1)
 }
 
 beforeEach(() => {
@@ -72,7 +73,9 @@ describe('SteamOverlayOverride', () => {
     const el = render()!
     expect(el.type).toBe('details')
     const kids = (el.props as { children: ReactElement[] }).children
-    expect((kids[0].props as Props).children).toBe('Steam overlay (advanced)')
+    expect((at(kids, 0).props as Props).children).toBe(
+      'Steam overlay (advanced)'
+    )
     expect((select(el).props as Props).value).toBe('automatic')
   })
 

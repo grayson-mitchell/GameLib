@@ -12,6 +12,7 @@ jest.mock('frontend/components/UI', () => ({
 }))
 
 import { ShareDetectedFixesView } from '../ShareDetectedFixes'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 type El = ReactElement<Record<string, unknown>>
 const t = (_k: string, fallback: string) => fallback
@@ -33,7 +34,9 @@ describe('ShareDetectedFixes', () => {
   test('on macOS renders a toggleRow with ToggleSwitch and InfoIcon', () => {
     const el = render(true, false)
     expect(el.props.className).toBe('toggleRow')
-    const [toggle, info] = childrenOf(el)
+    const kids = childrenOf(el)
+    const toggle = at(kids, 0)
+    const info = at(kids, 1)
     expect(toggle.props.htmlId).toBe('shareDetectedFixes')
     expect(toggle.props.value).toBe(false)
     expect(info.props.text).toEqual(expect.any(String))
@@ -41,13 +44,13 @@ describe('ShareDetectedFixes', () => {
 
   test('toggling calls onToggle(true) when off', () => {
     const onToggle = jest.fn()
-    const [toggle] = childrenOf(render(true, false, onToggle))
+    const toggle = at(childrenOf(render(true, false, onToggle)), 0)
     ;(toggle.props.handleChange as () => void)()
     expect(onToggle).toHaveBeenCalledWith(true)
   })
 
   test('help text states what is sent and never sent', () => {
-    const [, info] = childrenOf(render(true))
+    const info = at(childrenOf(render(true)), 1)
     const text = info.props.text as string
     for (const word of ['app id', 'GameLib version', 'never', 'title', 'IP']) {
       expect(text).toContain(word)
@@ -55,7 +58,7 @@ describe('ShareDetectedFixes', () => {
   })
 
   test('no consent dialog and no Help link text', () => {
-    const [, info] = childrenOf(render(true))
+    const info = at(childrenOf(render(true)), 1)
     expect(info.props.text).not.toMatch(/^Help$/)
   })
 })

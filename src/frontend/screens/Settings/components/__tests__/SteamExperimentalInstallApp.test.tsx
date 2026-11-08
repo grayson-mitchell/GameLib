@@ -12,6 +12,7 @@ jest.mock('frontend/components/UI', () => ({
 }))
 
 import { SteamExperimentalInstallAppView } from '../SteamExperimentalInstallApp'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 type El = ReactElement<Record<string, unknown>>
 const t = (_k: string, fallback: string) => fallback
@@ -32,7 +33,9 @@ describe('SteamExperimentalInstallApp', () => {
   test('on macOS renders a toggleRow with ToggleSwitch and icon-only InfoIcon', () => {
     const el = render(true, false)
     expect(el.props.className).toBe('toggleRow')
-    const [toggle, info] = childrenOf(el)
+    const kids = childrenOf(el)
+    const toggle = at(kids, 0)
+    const info = at(kids, 1)
     expect(toggle.props.htmlId).toBe('steamExperimentalInstallApp')
     expect(toggle.props.value).toBe(false)
     expect(toggle.props.title).toBe('Steam Experimental InstallApp Feature')
@@ -42,12 +45,12 @@ describe('SteamExperimentalInstallApp', () => {
 
   test('toggling calls onToggle(!value)', () => {
     const onToggle = jest.fn()
-    const [toggle] = childrenOf(render(true, false, onToggle))
+    const toggle = at(childrenOf(render(true, false, onToggle)), 0)
     ;(toggle.props.handleChange as () => void)()
     expect(onToggle).toHaveBeenCalledWith(true)
 
     const onToggleOn = jest.fn()
-    const [toggleOn] = childrenOf(render(true, true, onToggleOn))
+    const toggleOn = at(childrenOf(render(true, true, onToggleOn)), 0)
     ;(toggleOn.props.handleChange as () => void)()
     expect(onToggleOn).toHaveBeenCalledWith(false)
   })

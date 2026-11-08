@@ -32,6 +32,7 @@
  * are mocked to no-ops (nothing real reaches `window.api.getEosOverlayStatus()` here).
  */
 import type { ReactElement, ReactNode } from 'react'
+import { at, defined } from '../../../../__tests__/fixtures/indexed'
 
 const mockShowDialogModal = jest.fn()
 const mockRemoveEosOverlay = jest.fn()
@@ -276,7 +277,7 @@ describe('AdvancedSettings: EOS overlay Remove confirmation (Phase 35 plan 26, R
 
     const options = mockShowDialogModal.mock
       .calls[0][0] as CapturedDialogOptions
-    await options.buttons[0].onClick!()
+    await defined(at(options.buttons, 0).onClick, 'affirmative onClick')()
 
     expect(mockRemoveEosOverlay).toHaveBeenCalledTimes(1)
     expect(mockRemoveEosOverlay).toHaveBeenCalledWith(true)
@@ -292,8 +293,8 @@ describe('AdvancedSettings: EOS overlay Remove confirmation (Phase 35 plan 26, R
     // `t('box.no')` passes no default value in the real component, so this file's `t` mock
     // (`defaultValue ?? key`) resolves it to the raw key -- not asserting a display string here
     // on purpose, only that a SECOND, distinct button exists with no handler.
-    expect(options.buttons[1].text).toBe('box.no')
-    expect(options.buttons[1].onClick).toBeUndefined()
+    expect(at(options.buttons, 1).text).toBe('box.no')
+    expect(at(options.buttons, 1).onClick).toBeUndefined()
   })
 
   it('(d) a callOrDeclare decline resolves setEosOverlayUnavailable(true) and does not claim the overlay was removed', async () => {
@@ -306,7 +307,7 @@ describe('AdvancedSettings: EOS overlay Remove confirmation (Phase 35 plan 26, R
 
     const options = mockShowDialogModal.mock
       .calls[0][0] as CapturedDialogOptions
-    await options.buttons[0].onClick!()
+    await defined(at(options.buttons, 0).onClick, 'affirmative onClick')()
 
     const slots = harness().__getSlots()
     expect(slots[EOS_OVERLAY_UNAVAILABLE_SLOT]).toBe(true)

@@ -32,6 +32,7 @@
 import { readdirSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
 import * as sass from 'sass'
+import { at, defined } from '../../../../__tests__/fixtures/indexed'
 
 const TAB_DIR = join(__dirname, '..')
 
@@ -183,7 +184,7 @@ function specificity(selector: string): [number, number, number] {
   }
 
   while (i < s.length) {
-    const ch = s[i]
+    const ch = s.charAt(i)
 
     if (/\s/.test(ch)) {
       i++
@@ -198,7 +199,7 @@ function specificity(selector: string): [number, number, number] {
 
     if (ch === '.') {
       let j = i + 1
-      while (j < s.length && /[\w-]/.test(s[j])) j++
+      while (j < s.length && /[\w-]/.test(s.charAt(j))) j++
       b++
       i = j
       continue
@@ -206,7 +207,7 @@ function specificity(selector: string): [number, number, number] {
 
     if (ch === ':') {
       let j = i + 1
-      while (j < s.length && /[\w-]/.test(s[j])) j++
+      while (j < s.length && /[\w-]/.test(s.charAt(j))) j++
       const name = s.slice(i + 1, j)
       if (name === 'where' || name === 'has') fail()
 
@@ -241,7 +242,7 @@ function specificity(selector: string): [number, number, number] {
     }
 
     let j = i
-    while (j < s.length && /[\w-]/.test(s[j])) j++
+    while (j < s.length && /[\w-]/.test(s.charAt(j))) j++
     if (j === i) fail()
     c++
     i = j
@@ -257,7 +258,7 @@ function compareSpecificity(
   x: [number, number, number],
   y: [number, number, number]
 ): number {
-  for (let k = 0; k < 3; k++) {
+  for (const k of [0, 1, 2] as const) {
     if (x[k] !== y[k]) return x[k] - y[k]
   }
   return 0
@@ -276,11 +277,12 @@ function parseRules(
   const ruleRe = /([^{}]+)\{([^{}]*)\}/g
   let match: RegExpExecArray | null
   while ((match = ruleRe.exec(text)) !== null) {
-    const selectors = splitTopLevel(match[1], ',').map((sel) =>
-      sel.replace(/\s+/g, ' ').trim()
-    )
+    const selectors = splitTopLevel(
+      defined(match[1], 'selector group'),
+      ','
+    ).map((sel) => sel.replace(/\s+/g, ' ').trim())
     const decls: Record<string, string> = {}
-    for (const part of match[2].split(';')) {
+    for (const part of defined(match[2], 'declaration body').split(';')) {
       const trimmed = part.trim()
       if (!trimmed) continue
       const colon = trimmed.indexOf(':')
@@ -389,7 +391,7 @@ describe('checkStylesheet (the checker can fail)', () => {
   it('flags a bare var() nested in a fallback', () => {
     const violations = checkStylesheet('.a { color: var(--a, var(--b)); }')
     expect(violations).toHaveLength(1)
-    expect(violations[0].reason).toBe('var(--b) has no fallback')
+    expect(at(violations, 0).reason).toBe('var(--b) has no fallback')
   })
 
   it('accepts a var() whose fallback contains commas of its own', () => {
@@ -541,11 +543,11 @@ describe("GamesSettings section floor vs the tab's groups (261011-jj1)", () => {
 
   it('the floor rule is unchanged: one rule, both selectors, both decls, specificity 0,2,1', () => {
     expect(floorRules).toHaveLength(1)
-    expect(floorRules[0].selectors).toEqual([
+    expect(at(floorRules, 0).selectors).toEqual([
       '.settingsDialogContent section:not(:nth-of-type(0))',
       '.settingsWrapper section:not(:nth-of-type(0))'
     ])
-    expect(floorRules[0].decls).toEqual({
+    expect(at(floorRules, 0).decls).toEqual({
       'padding-top': 'var(--space-xl)',
       'min-width': '500px'
     })

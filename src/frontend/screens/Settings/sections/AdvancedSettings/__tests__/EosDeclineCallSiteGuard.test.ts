@@ -28,6 +28,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { EOS_OVERLAY_CHANNELS } from 'frontend/helpers/declaredUnavailable'
+import { defined } from '../../../../__tests__/fixtures/indexed'
 
 const componentPath = join(__dirname, '..', 'index.tsx')
 
@@ -128,7 +129,7 @@ describe('AdvancedSettings EOS decline call-site gate', () => {
     }
     expect(indices.length).toBe(1)
 
-    const [abortIndex] = indices
+    const abortIndex = defined(indices[0], 'abort index')
     const windowStart = Math.max(0, abortIndex - CALL_SITE_WINDOW)
     const preceding = collapsed.slice(windowStart, abortIndex)
     expect(preceding).toContain('eosOverlayUnavailable')
@@ -152,7 +153,7 @@ describe('AdvancedSettings EOS decline call-site gate', () => {
       )
       const indices = findEosCallSiteIndices(injected)
       expect(indices.length).toBeGreaterThan(0)
-      const [index] = indices
+      const index = defined(indices[0], 'call-site index')
       const preceding = injected.slice(
         Math.max(0, index - CALL_SITE_WINDOW),
         index

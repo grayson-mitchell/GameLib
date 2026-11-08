@@ -23,12 +23,12 @@ jest.mock('react', () => ({
       h.slots[i] = { value: typeof init === 'function' ? init() : init }
     }
     const set = (v: unknown) => {
+      const slot = h.slots[i]
+      if (!slot) throw new Error(`useState slot ${i} is missing`)
       const next =
-        typeof v === 'function'
-          ? (v as (p: unknown) => unknown)(h.slots[i].value)
-          : v
-      if (next !== h.slots[i].value) {
-        h.slots[i].value = next
+        typeof v === 'function' ? (v as (p: unknown) => unknown)(slot.value) : v
+      if (next !== slot.value) {
+        slot.value = next
         h.dirty = true
       }
     }

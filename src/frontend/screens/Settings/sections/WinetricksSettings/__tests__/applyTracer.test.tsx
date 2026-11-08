@@ -57,6 +57,7 @@ jest.mock('@fortawesome/react-fontawesome', () =>
 )
 
 import WinetricksSettings from '../index'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
 // A single-component catalog keeps the tracer's "exactly one checkbox" anchor
 // meaningful: vcrun2019 is both curated (Suggested) and a runtimes member, but
@@ -85,7 +86,7 @@ function checkboxFor(tree: ElementLike, verb: string): ElementLike {
       `expected exactly one checkbox row for ${verb}, saw ${found.length} -- this test proves nothing`
     )
   }
-  return found[0]
+  return at(found, 0)
 }
 
 function applyButton(tree: ElementLike): ElementLike {

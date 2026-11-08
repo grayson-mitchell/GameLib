@@ -67,6 +67,7 @@ jest.mock('@fortawesome/react-fontawesome', () =>
 )
 
 import WinetricksSettings from '../index'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
 let api: MockApi
 
@@ -119,10 +120,10 @@ function bodyOf(tree: ElementLike) {
 
 function openRuntimes(tree: ElementLike): ElementLike {
   const group = findAll(tree, (el) => el.props['data-group'] === 'runtimes')[0]
-  const header = findAll(
-    group,
-    (el) => el.type === 'button' && 'aria-expanded' in el.props
-  )[0]
+  const header = at(
+    findAll(group, (el) => el.type === 'button' && 'aria-expanded' in el.props),
+    0
+  )
   ;(header.props.onClick as () => void)()
   return rerender(WinetricksSettings)
 }
@@ -281,7 +282,10 @@ describe('a run outlives navigation (D-18, Interaction Contract 5)', () => {
     )
 
     const rowFor = (verb: string) =>
-      findAll(tree, (el) => el.props['data-verb'] === verb)[0]
+      at(
+        findAll(tree, (el) => el.props['data-verb'] === verb),
+        0
+      )
     expect(String(rowFor('vcrun2019').props.className)).toContain(
       'WinetricksRow--installing'
     )
@@ -292,7 +296,7 @@ describe('a run outlives navigation (D-18, Interaction Contract 5)', () => {
       'WinetricksRow--installed'
     )
 
-    const bar = findByClass(tree, 'WinetricksStickyBar')[0]
+    const bar = at(findByClass(tree, 'WinetricksStickyBar'), 0)
     expect(String(bar.props.className)).toContain(
       'WinetricksStickyBar--inFlight'
     )
@@ -301,10 +305,13 @@ describe('a run outlives navigation (D-18, Interaction Contract 5)', () => {
 
     // The log was seeded from run.log.
     const panel = findByClass(tree, 'WinetricksLogPanel')[0]
-    const toggle = findAll(
-      panel,
-      (el) => el.type === 'button' && 'aria-expanded' in el.props
-    )[0]
+    const toggle = at(
+      findAll(
+        panel,
+        (el) => el.type === 'button' && 'aria-expanded' in el.props
+      ),
+      0
+    )
     ;(toggle.props.onClick as () => void)()
     const opened = findByClass(
       findByClass(rerender(WinetricksSettings), 'WinetricksLogPanel')[0],

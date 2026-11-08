@@ -51,7 +51,7 @@ const GUARDED_ACTIONS = [
 ]
 
 function confirmWrapperName(actionName: string): string {
-  return `confirm${actionName[0].toUpperCase()}${actionName.slice(1)}`
+  return `confirm${actionName.charAt(0).toUpperCase()}${actionName.slice(1)}`
 }
 
 function countOccurrences(haystack: string, needle: string): number {

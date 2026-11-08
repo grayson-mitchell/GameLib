@@ -34,6 +34,7 @@ import { join } from 'path'
 import type { ReactElement, ReactNode } from 'react'
 
 import type { UploadedLogData } from 'common/types'
+import { defined } from '../../../../../../__tests__/fixtures/indexed'
 
 const mockUploadedLogFiles: Record<string, UploadedLogData> = {}
 
@@ -138,7 +139,7 @@ function renderTheRow(): ReactElement {
   })
 
   expect(rows).toHaveLength(1)
-  return rows[0]
+  return defined(rows[0], 'rendered row')
 }
 
 /** Every element in `tree` carrying an onClick handler, in document order. */

@@ -54,6 +54,7 @@ jest.mock('@fortawesome/react-fontawesome', () =>
 
 import LogPanel from '../LogPanel'
 import WinetricksSettings from '../index'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
 const PRIMARY = { button: 0, preventDefault: () => undefined }
 
@@ -84,7 +85,7 @@ describe('LogPanel (E9)', () => {
     if (found.length !== 1) {
       throw new Error(`expected one disclosure button, saw ${found.length}`)
     }
-    return found[0]
+    return at(found, 0)
   }
 
   function open(lines: WinetricksLogLine[]): ElementLike {
@@ -118,7 +119,7 @@ describe('LogPanel (E9)', () => {
       expect(typeof controls).toBe('string')
       const region = findAll(tree, (el) => el.props.id === controls)
       expect(region).toHaveLength(1)
-      expect(region[0].props.role).toBe('log')
+      expect(at(region, 0).props.role).toBe('log')
     }
   })
 
@@ -180,7 +181,7 @@ describe('LogPanel (E9)', () => {
 
   it('line text reaches the DOM as a plain text node (T-45-23)', () => {
     const tree = open([line('info', '<img src=x onerror=alert(1)>')])
-    const row = logLines(tree)[0]
+    const row = at(logLines(tree), 0)
     expect(row.props.children).toBe('<img src=x onerror=alert(1)>')
     expect(
       findAll(tree, (el) => 'dangerouslySetInnerHTML' in el.props)
@@ -259,10 +260,13 @@ describe('the tab and the live log (D-14, D-18, A-45-03)', () => {
 
   function expandPanel(tree: ElementLike): ElementLike {
     const panelEl = findByClass(tree, 'WinetricksLogPanel')[0]
-    const button = findAll(
-      panelEl,
-      (el) => el.type === 'button' && 'aria-expanded' in el.props
-    )[0]
+    const button = at(
+      findAll(
+        panelEl,
+        (el) => el.type === 'button' && 'aria-expanded' in el.props
+      ),
+      0
+    )
     ;(button.props.onClick as () => void)()
     return rerender(WinetricksSettings)
   }

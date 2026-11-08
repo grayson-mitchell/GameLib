@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import type { EngineOption } from 'common/types/engine'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 // No DOM renderer in this project: drive the component function directly with
 // hooks stubbed (effects run synchronously, state is a fixed pair).
@@ -133,22 +134,22 @@ describe('EngineOverride', () => {
     const el = render('automatic')
     expect(el.type).toBe('details')
     expect(el.props.open).toBeUndefined()
-    const summary = (el.props.children as El[])[0]
+    const summary = at(el.props.children as El[], 0)
     expect(summary.props.children).toBe('Engine (advanced)')
   })
 
   it('labels options and disables unavailable ones', () => {
-    expect(optionLabel(opts[0], gamelibT)).toBe(
+    expect(optionLabel(at(opts, 0), gamelibT)).toBe(
       'Automatic (CrossOver, then built-in)'
     )
-    expect(optionLabel(opts[2], gamelibT)).toBe('Wine Staging 11.20')
-    expect(optionLabel(opts[3], gamelibT)).toBe(
+    expect(optionLabel(at(opts, 2), gamelibT)).toBe('Wine Staging 11.20')
+    expect(optionLabel(at(opts, 3), gamelibT)).toBe(
       'Wine Staging 11.10 (previous build) (downloads on first launch)'
     )
     const items = select(render('automatic')).props.children as El[]
     expect(items).toHaveLength(4)
     expect(items.every((i) => i)).toBe(true)
-    expect(items[1].props.disabled).toBe(true)
+    expect(at(items, 1).props.disabled).toBe(true)
   })
 
   it('shows no warning for automatic or unset', () => {
@@ -183,8 +184,8 @@ describe('EngineOverride', () => {
     expect(sel.props.value).toBe('wine-manager:9.0-gone')
     const items = sel.props.children as El[]
     expect(items).toHaveLength(5)
-    expect(items[4].props.disabled).toBe(true)
-    expect(items[4].props.children).toBe(
+    expect(at(items, 4).props.disabled).toBe(true)
+    expect(at(items, 4).props.children).toBe(
       'Wine Manager: 9.0-gone (not installed)'
     )
     expect(sel.props.afterSelect).toBeTruthy()
@@ -196,8 +197,8 @@ describe('EngineOverride', () => {
 
   it('labels an uninstalled pinned value by its id', () => {
     const items = select(render('pinned:old-pin')).props.children as El[]
-    expect(items[4].props.children).toBe('old-pin (not installed)')
-    expect(items[4].props.disabled).toBe(true)
+    expect(at(items, 4).props.children).toBe('old-pin (not installed)')
+    expect(at(items, 4).props.disabled).toBe(true)
   })
 
   it('is disabled and shows the stored value until options load (G12b)', () => {
@@ -375,12 +376,12 @@ describe('EngineOverride derived value, Legacy, D-04 and the global variant', ()
     ;(el.props.onChange as (id: string) => void)('crossover')
     expect(mockSetSetting).not.toHaveBeenCalled()
     expect(mockShowDialog).toHaveBeenCalledTimes(1)
-    const dialog = mockShowDialog.mock.calls[0][0]
+    const dialog = at(at(mockShowDialog.mock.calls, 0), 0)
     expect(dialog.title).toBe('Move this game to its own bottle?')
     expect(dialog.message).toContain('Game One')
     expect(dialog.buttons.map((b) => b.text)).toEqual(['Move', 'Cancel'])
-    expect(dialog.buttons[1].onClick).toBeUndefined()
-    dialog.buttons[0].onClick?.()
+    expect(at(dialog.buttons, 1).onClick).toBeUndefined()
+    at(dialog.buttons, 0).onClick?.()
     expect(mockSetSetting).toHaveBeenCalledWith('engineOverride', 'crossover')
     expect(mockSetSetting).toHaveBeenCalledWith(
       'wineCrossoverBottle',

@@ -45,6 +45,7 @@ jest.mock('@fortawesome/react-fontawesome', () =>
 )
 
 import WinetricksSettings from '../index'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
 let api: MockApi
 
@@ -61,7 +62,7 @@ function push(state: ReturnType<typeof queueStateWith>): ElementLike {
 function rowFor(tree: ElementLike, verb: string): ElementLike {
   const rows = findAll(tree, (el) => el.props['data-verb'] === verb)
   if (rows.length === 0) throw new Error(`no row for ${verb}`)
-  return rows[0]
+  return at(rows, 0)
 }
 
 function checkboxOf(row: ElementLike): ElementLike | undefined {
@@ -81,7 +82,7 @@ function cancelButton(tree: ElementLike): ElementLike {
   if (found.length !== 1) {
     throw new Error(`expected one Cancel remaining button, saw ${found.length}`)
   }
-  return found[0]
+  return at(found, 0)
 }
 
 const RUNNING = queueStateWith({

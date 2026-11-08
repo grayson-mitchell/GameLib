@@ -17,6 +17,7 @@ import type {
 } from 'common/types'
 import { TASK_GROUP_IDS, TASK_GROUP_MEMBERS } from 'common/winetricks/verbs'
 import { flush, harness, render, type ElementLike } from './treeHarness'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
 const RUNNER = 'legendary' as Runner
 
@@ -152,7 +153,7 @@ export function capturedQueueChangedListener(
 ): QueueChangedListener {
   const calls = api.handleWinetricksQueueChanged.mock
     .calls as unknown as QueueChangedListener[][]
-  return calls[calls.length - 1][0]
+  return at(at(calls, calls.length - 1), 0)
 }
 
 interface ProgressPayload {
@@ -168,7 +169,7 @@ type ProgressListener = (event: unknown, payload: ProgressPayload) => void
 export function capturedProgressListener(api: MockApi): ProgressListener {
   const calls = api.handleProgressOfWinetricks.mock
     .calls as unknown as ProgressListener[][]
-  return calls[calls.length - 1][0]
+  return at(at(calls, calls.length - 1), 0)
 }
 
 type Tab = () => unknown

@@ -12,6 +12,7 @@ jest.mock('frontend/components/UI', () => ({
 }))
 
 import { EnableSteamNativeDeleteView } from '../EnableSteamNativeDelete'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 type El = ReactElement<Record<string, unknown>>
 const t = (_k: string, fallback: string) => fallback
@@ -28,7 +29,9 @@ describe('EnableSteamNativeDelete (quick 261106-s3n)', () => {
   test('renders the label with an icon-only (i) help on the same row', () => {
     const el = render(true)
     expect(el.props.className).toBe('toggleRow')
-    const [toggle, info] = childrenOf(el)
+    const kids = childrenOf(el)
+    const toggle = at(kids, 0)
+    const info = at(kids, 1)
     expect(toggle.props.htmlId).toBe('enable-steam-native-delete')
     expect(toggle.props.title).toBe('Delete Steam games directly in GameLib')
     expect(String(toggle.props.title)).not.toMatch(/experimental/i)
@@ -37,22 +40,28 @@ describe('EnableSteamNativeDelete (quick 261106-s3n)', () => {
   })
 
   test('shows the value it is given', () => {
-    expect(childrenOf(render(true, false))[0].props.value).toBe(false)
-    expect(childrenOf(render(true, true))[0].props.value).toBe(true)
+    expect(at(childrenOf(render(true, false)), 0).props.value).toBe(false)
+    expect(at(childrenOf(render(true, true)), 0).props.value).toBe(true)
   })
 
   test('toggling calls onToggle with the negation', () => {
     const off = jest.fn()
-    ;(childrenOf(render(true, true, off))[0].props.handleChange as () => void)()
+    ;(
+      at(childrenOf(render(true, true, off)), 0).props
+        .handleChange as () => void
+    )()
     expect(off).toHaveBeenCalledWith(false)
     const on = jest.fn()
-    ;(childrenOf(render(true, false, on))[0].props.handleChange as () => void)()
+    ;(
+      at(childrenOf(render(true, false, on)), 0).props
+        .handleChange as () => void
+    )()
     expect(on).toHaveBeenCalledWith(true)
   })
 
   test('macOS and non-mac help copy differ', () => {
-    const mac = childrenOf(render(true))[1].props.text
-    const other = childrenOf(render(false))[1].props.text
+    const mac = at(childrenOf(render(true)), 1).props.text
+    const other = at(childrenOf(render(false)), 1).props.text
     expect(mac).not.toBe(other)
     expect(mac).toMatch(/signed in/)
     expect(other).not.toMatch(/signed in/)

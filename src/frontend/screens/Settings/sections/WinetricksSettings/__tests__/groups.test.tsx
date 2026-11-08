@@ -54,6 +54,7 @@ jest.mock('@fortawesome/react-fontawesome', () =>
 )
 
 import WinetricksSettings from '../index'
+import { at, defined } from '../../../../__tests__/fixtures/indexed'
 
 const CURATED_ORDER = [
   'vcrun2019',
@@ -87,7 +88,7 @@ function suggested(tree: ElementLike): ElementLike {
   if (found.length !== 1) {
     throw new Error(`expected one Suggested group, saw ${found.length}`)
   }
-  return found[0]
+  return at(found, 0)
 }
 
 function taskGroups(tree: ElementLike): ElementLike[] {
@@ -108,7 +109,7 @@ function disclosure(group: ElementLike): ElementLike {
   if (found.length !== 1) {
     throw new Error(`expected one disclosure button, saw ${found.length}`)
   }
-  return found[0]
+  return at(found, 0)
 }
 
 function rowFor(scope: ElementLike, verb: string): ElementLike {
@@ -118,7 +119,7 @@ function rowFor(scope: ElementLike, verb: string): ElementLike {
   if (found.length !== 1) {
     throw new Error(`expected one ${verb} row, saw ${found.length}`)
   }
-  return found[0]
+  return at(found, 0)
 }
 
 function checkboxIn(row: ElementLike): ElementLike | undefined {
@@ -140,7 +141,7 @@ function applyButton(tree: ElementLike): ElementLike {
       collectText(el.props.children) === 'Apply'
   )
   if (found.length !== 1) throw new Error('expected one Apply button')
-  return found[0]
+  return at(found, 0)
 }
 
 describe('Suggested for this game (E3, D-06)', () => {
@@ -371,8 +372,10 @@ describe('Installed group (261011-txc)', () => {
           'WinetricksSuggested',
           'WinetricksInstalled',
           'WinetricksTaskGroup'
-        ].includes(el.props.className.split(/\s+/)[0])
-    ).map((el) => (el.props.className as string).split(/\s+/)[0])
+        ].includes(defined(el.props.className.split(/\s+/)[0], 'class token'))
+    ).map((el) =>
+      defined((el.props.className as string).split(/\s+/)[0], 'class token')
+    )
   }
 
   it('renders nothing when nothing is installed (A-45-01)', async () => {
@@ -392,7 +395,7 @@ describe('Installed group (261011-txc)', () => {
     expect(suggestedIndex).toBeLessThan(installedIndex)
     expect(installedIndex).toBeLessThan(firstTaskGroupIndex)
 
-    const group = findByClass(tree, 'WinetricksInstalled')[0]
+    const group = at(findByClass(tree, 'WinetricksInstalled'), 0)
     const header = disclosure(group)
     expect(header.props['aria-expanded']).toBe(false)
     expect(
@@ -594,7 +597,7 @@ describe('run state on the rows (D-10, D-12, D-13, D-18)', () => {
     expect(String(failed.props.className)).toContain('WinetricksRow--errored')
     expect(collectText(failed)).toContain('Install failed')
 
-    const retry = findByClass(failed, 'WinetricksRow__retry')[0]
+    const retry = at(findByClass(failed, 'WinetricksRow__retry'), 0)
     ;(retry.props.onClick as () => void)()
     await flush()
 
@@ -652,10 +655,13 @@ describe('run state on the rows (D-10, D-12, D-13, D-18)', () => {
         status: 'done'
       })
     )
-    const retry = findByClass(
-      rowFor(suggested(again()), 'vcrun2019'),
-      'WinetricksRow__retry'
-    )[0]
+    const retry = at(
+      findByClass(
+        rowFor(suggested(again()), 'vcrun2019'),
+        'WinetricksRow__retry'
+      ),
+      0
+    )
     ;(retry.props.onClick as () => void)()
     await flush()
 

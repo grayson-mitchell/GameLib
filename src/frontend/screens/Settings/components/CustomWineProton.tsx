@@ -24,7 +24,7 @@ export default function CustomWineProton() {
   const [selectedPath, setSelectedPath] = useState('')
 
   useEffect(() => {
-    setSelectedPath(customWinePaths.length ? customWinePaths[0] : '')
+    setSelectedPath(customWinePaths[0] ?? '')
   }, [customWinePaths])
 
   function selectCustomPath() {
@@ -44,7 +44,7 @@ export default function CustomWineProton() {
   function removeCustomPath() {
     const newPaths = customWinePaths.filter((path) => path !== selectedPath)
     setCustomWinePaths(newPaths)
-    return setSelectedPath(customWinePaths.length ? customWinePaths[0] : '')
+    return setSelectedPath(customWinePaths[0] ?? '')
   }
 
   if (!isDefault || isWin) {

@@ -35,7 +35,9 @@ const CategorySettings = () => {
     setAssignedCategories(
       customCategories
         .listCategories()
-        .filter((cat) => customCategories.list[cat].includes(appNameWithRunner))
+        .filter((cat) =>
+          customCategories.list[cat]?.includes(appNameWithRunner)
+        )
     )
   }
 

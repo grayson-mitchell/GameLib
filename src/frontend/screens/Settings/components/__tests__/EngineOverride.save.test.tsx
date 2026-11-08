@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import type { EngineOption } from 'common/types/engine'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 // G17 desk reproduction: drive the REAL useSetting -> setSetting chain with
 // hooks stubbed (no DOM renderer here). SelectField is a recorder, so MUI's own
@@ -162,7 +163,7 @@ describe('EngineOverride save chain (G17)', () => {
     const sel = (view.props.children as El[]).find((c) => c.props.htmlId) as El
     expect(sel.props.value).toBe('wine-manager:0.0-missing')
     const items = sel.props.children as El[]
-    const extra = items[items.length - 1]
+    const extra = at(items, items.length - 1)
     expect(extra.props.disabled).toBe(true)
     expect(extra.props.children).toBe(
       'Wine Manager: 0.0-missing (not installed)'

@@ -18,6 +18,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { defined } from '../../../__tests__/fixtures/indexed'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..')
 const COMPONENT_PATH = join(__dirname, '..', 'UseDarkTrayIcon.tsx')
@@ -57,7 +58,9 @@ describe('tray icon variant setting (quick 260930-lyk)', () => {
 
     // Non-vacuity: label + auto + light + dark.
     expect(matches).toHaveLength(4)
-    for (const [, key, fallback] of matches) {
+    for (const match of matches) {
+      const key = defined(match[1], 'key')
+      const fallback = defined(match[2], 'fallback')
       expect({ key, shipped: catalogValue(key) }).toEqual({
         key,
         shipped: fallback

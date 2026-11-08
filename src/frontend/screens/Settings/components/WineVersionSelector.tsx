@@ -108,8 +108,9 @@ export default function WineVersionSelector() {
 
       setAltWine(wineList)
       // Avoids not updating wine config when having one wine install only
-      if (wineList && wineList.length === 1) {
-        setWineVersion(wineList[0])
+      const onlyWine = wineList[0]
+      if (wineList && wineList.length === 1 && onlyWine) {
+        setWineVersion(onlyWine)
       }
       setRefreshing(false)
     }
@@ -146,11 +147,10 @@ export default function WineVersionSelector() {
           : t('setting.crossover-version', 'Crossover/Wine Version')
       }
       htmlId="setWineVersion"
-      onChange={(event) =>
-        setWineVersion(
-          altWine.filter(({ name }) => name === event.target.value)[0]
-        )
-      }
+      onChange={(event) => {
+        const selected = altWine.find(({ name }) => name === event.target.value)
+        if (selected) setWineVersion(selected)
+      }}
       value={wineVersion.name}
       labelHelp={
         isLinux ? (
