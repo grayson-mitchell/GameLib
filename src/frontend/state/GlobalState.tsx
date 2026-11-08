@@ -68,6 +68,7 @@ import { handleSteamBridgeRouteNoticeSignal } from './SteamBridgeRouteNotice'
 import { handleSteamGoOfflineRequiredSignal } from './SteamGoOfflineNotice'
 import { handleEngineStateChangedSignal } from './EngineState'
 import { handleSteamRequestNoticeSignal } from './SteamRequestNotice'
+import { handleReadOnlyStoresNoticeSignal } from './ReadOnlyStoresNotice'
 import {
   handleSteamBottleLaunchWaitingSignal,
   useBottleLaunchWaiting
@@ -1688,6 +1689,7 @@ class GlobalState extends PureComponent<Props> {
 
     // quick 261106-pvk: Steam never picked up a delegated install/uninstall.
     window.api.handleSteamRequestNotice(handleSteamRequestNoticeSignal)
+    window.api.handleReadOnlyStoresNotice(handleReadOnlyStoresNoticeSignal)
 
     // Phase 51 Plan 08 (D-51-16, folded todo): single global listener that
     // records a bottled-Steam launch's "waiting for Steam" classification --
