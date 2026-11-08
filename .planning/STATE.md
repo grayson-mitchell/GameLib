@@ -4,8 +4,8 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 72 context gathered
-last_updated: "2026-11-07T22:36:09.841Z"
-last_activity: 2026-11-07 -- Phase 72 planning complete
+last_updated: "2026-11-08T00:17:21.394Z"
+last_activity: 2026-11-08 -- Phase 72 execution started
 progress:
   total_phases: 13
   completed_phases: 5
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 66 — backend dependency injection replacing module level singleto
+**Current focus:** Phase 72 — renderer-trust-boundary-and-process-hardening
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,10 +72,10 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 66
-Plan: 0 of 0
-Status: Ready to execute
-Last activity: 2026-11-08 - Completed quick task 261108-et8: adopt noUncheckedIndexedAccess for frontend/screens
+Phase: 72 (renderer-trust-boundary-and-process-hardening) — EXECUTING
+Plan: 1 of 12
+Status: Executing Phase 72
+Last activity: 2026-11-08 - Completed quick task 261108-et9: enable noUncheckedIndexedAccess in tsconfig.json and retire the indexed-access ratchet
 
 Progress: [██████████] 100%
 
@@ -539,6 +539,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261108-et6 | adopt noUncheckedIndexedAccess for frontend/components (217 sites, 2 commits; 10 source files identical for valid data; local fixtures/indexed.ts) | 2026-11-08 | 9b5782c63 | ratchet exit 0; codecheck; components + screens/Library jest; boundaries; knip; planning-gates 12/12; scoped prettier | [261108-et6-adopt-nuia-frontend-components](./quick/261108-et6-adopt-nuia-frontend-components/) |
 | 261108-et7 | adopt noUncheckedIndexedAccess for meta (342 sites, 3 commits; generated outputs byte-identical; malformed argv/regex input now throws named errors) | 2026-11-08 | 02f24f136 | ratchet exit 0; codecheck; full Meta jest 69 pass (4 pre-existing failures: x86CallbackWineHarness, genI18nGateScope A-17, logSecretGate x2); fakeHomeIsolation; boundaries; find-deadcode; planning-gates; scoped prettier | [261108-et7-adopt-nuia-meta](./quick/261108-et7-adopt-nuia-meta/) |
 | 261108-et8 | adopt noUncheckedIndexedAccess for frontend/screens (335 sites, 3 commits; baseline now empty; valid-data behaviour identical) | 2026-11-08 | 0006f38e8 | ratchet exit 0; codecheck; screens jest (Settings 393, Library+Game 1868, rest 1293); boundaries; find-deadcode; planning-gates; scoped prettier | [261108-et8-adopt-nuia-frontend-screens](./quick/261108-et8-adopt-nuia-frontend-screens/) |
+| 261108-et9 | enable noUncheckedIndexedAccess in tsconfig.json and retire the indexed-access ratchet (0 drift; script, baseline, test, CI step removed; todo completed) | 2026-11-08 | e1cafb3f5 | codecheck green per commit; knip; planning-gates 12/12; Meta jest only known pre-existing failures; codecheck.yml parses | [261108-et9-enable-nuia-retire-ratchet](./quick/261108-et9-enable-nuia-retire-ratchet/) |
 
 ## Deferred Items
 
