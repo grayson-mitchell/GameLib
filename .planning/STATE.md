@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: ready_to_plan
-stopped_at: Phase 68 complete (11/11) — ready to discuss Phase 69
-last_updated: 2026-11-08T18:45:36.722Z
+status: verifying
+stopped_at: Phase 72 context gathered
+last_updated: "2026-11-08T18:53:44.081Z"
 last_activity: 2026-11-08
 progress:
-  total_phases: 12
-  completed_phases: 7
-  total_plans: 127
-  completed_plans: 127
-  percent: 58
+  total_phases: 13
+  completed_phases: 8
+  total_plans: 145
+  completed_plans: 145
+  percent: 62
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 69 — consolidate frontend state onto globalstatev2
+**Current focus:** Phase 71 — rust-shell-module-decomposition
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,9 +72,9 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 69
-Plan: Not started
-Status: Ready to plan
+Phase: 71 (rust-shell-module-decomposition) — EXECUTING
+Plan: 18 of 18
+Status: Phase complete — ready for verification
 Last activity: 2026-11-08
 
 Progress: [██████████] 100%
@@ -250,6 +250,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 
 Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archive (2026-10-15).
 
+- Phase 74 added 2026-11-08: **Steam game updates.** The operator ran `do todo` on `2026-11-07-implement-steam-game-updates.md` (major, macos, live-gate). It was too big for a quick task: two spikes, PICS buildid detection, and a delta updater in the depot pipeline. Phase 73 is about to port that pipeline to Rust and delete the TypeScript one, so the operator chose a new phase **after 73** over folding it into 73, shipping a full-re-download version before it, or running spikes only. The InstallApp-on-installed spike and the live stale-bridge check can run before 73 lands. The SDK set `Depends on` to Phase 73, which is correct this time. `**Goal:**` hand-written; the todo moved to `todos/completed/` with a Closure section pointing here.
 - Phase 73 added 2026-11-07: **Steam depot download pipeline in Rust.** The operator asked to look at moving the depot pipeline to Rust as a phase. Spikes 067a/067b had already shown it buys no speed (network-bound at ~18 MiB/s) and ~8% of one core, and the memory problem was fixed in Node; asked for the motivation, the operator chose **retiring the sidecar**, the revisit trigger 067c names. `Depends on` hand-corrected from Phase 72 (positional, unrelated) to Phase 63, whose migration pattern it reuses. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 72 added 2026-11-07: **Renderer trust boundary and process hardening.** From `/gsd-map-codebase --concerns` (`.planning/codebase/CONCERNS.md`, commit 5a038ddbd): the eight concerns no roadmap phase or todo owned — open-path allow-list, `removeFolder` scope, unused Tauri capabilities and dead `ipc_handler.ts` modules, token-store plaintext fallback, dead-sidecar restart/surfacing, `pkill -f` pattern kills, Windows child reaping, dependency advisories plus CI audit, and a Linux Rust compile leg. The operator chose to fold them into one phase rather than todos or Phase 67. `Depends on` hand-corrected from Phase 71 (positional) to None. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 71 added 2026-11-06: **Rust shell module decomposition.** From the first post-Phase-62 architecture review (Rust modules over 2,000 lines). The operator asked whether the four remaining review items should be one phase; the answer split them, and this one became its own phase because each move needs a live macOS check of embeds and login windows. Quick 261106-ab1 had already split `main.rs`, so the phase follows its layout and includes what remains in `main.rs`. `Depends on` hand-corrected from Phase 70 (positional, unrelated) to None. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
@@ -549,6 +550,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261108-et8 | adopt noUncheckedIndexedAccess for frontend/screens (335 sites, 3 commits; baseline now empty; valid-data behaviour identical) | 2026-11-08 | 0006f38e8 | ratchet exit 0; codecheck; screens jest (Settings 393, Library+Game 1868, rest 1293); boundaries; find-deadcode; planning-gates; scoped prettier | [261108-et8-adopt-nuia-frontend-screens](./quick/261108-et8-adopt-nuia-frontend-screens/) |
 | 261108-et9 | enable noUncheckedIndexedAccess in tsconfig.json and retire the indexed-access ratchet (0 drift; script, baseline, test, CI step removed; todo completed) | 2026-11-08 | e1cafb3f5 | codecheck green per commit; knip; planning-gates 12/12; Meta jest only known pre-existing failures; codecheck.yml parses | [261108-et9-enable-nuia-retire-ratchet](./quick/261108-et9-enable-nuia-retire-ratchet/) |
 | 261108-lav | Phase 72 WR-01: dead-sidecar path now SIGKILLs the sidecar's process group before the Restart/Quit dialog even when the leader already exited (pgid<=1 refused; tree_reaped latch keeps shutdown_child off a recycled pgid); restart() from the reader thread already runs RunEvent::Exit, so no extra shutdown_child. | 2026-11-08 | e5c11ab25 | cargo 441 pass, clippy ratchet pass; Windows branch source-pinned only; live kill -9 check optional | [261108-lav-fix-phase-72-wr-01-reap-sidecar-group-on](./quick/261108-lav-fix-phase-72-wr-01-reap-sidecar-group-on/) |
+| 261108-ved | Six keyring helpers (7 items) moved byte-identical from login_window.rs to keyring_dispatch.rs; moveproof gains `--stem` for cross-module Layer 3; 71-16 keyring test routing re-pointed to keyring_dispatch.rs; todo closed. | 2026-11-08 | 339bdd386 | permove PASS (Layer 1 + Layer 3 0/0, cargo 445/445); no-stem control fails on exactly 7 items; planning-gates 12/12 | [261108-ved-move-the-keyring-helpers-from-login-wind](./quick/261108-ved-move-the-keyring-helpers-from-login-wind/) |
 
 ## Deferred Items
 
@@ -651,12 +653,13 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261108-ioc | New Settings → Stores page (`/settings/stores/:store`) with alphabetical tabs Amazon/Epic/GOG/Humble/Steam; store-specific rows moved out of General/Advanced (EOS Overlay extracted to `StoreSettings/EosOverlay.tsx`, PlaytimeSync→GOG); accounts and per-game settings untouched. | 2026-11-08 | 35525e0ee | Settings jest 444/444, codecheck clean; genI18nGateScope A-17 anti-rot fails (pre-existing drift, also fails at 5822563ba); not live-checked in tauri:dev | [261108-ioc-consolidate-store-specific-settings-into](./quick/261108-ioc-consolidate-store-specific-settings-into/) |
 | 261108-fast | Settings follow-ups (fast): 'Add games to Steam automatically' → Stores › Steam (7766d8301); General heading → 'General Settings' (bcd25577d); autoUpdateGames factory default → true, existing configs keep saved value (b25d98ca4); path-field commit-hint row no longer adds a blank line in Settings (see HEAD). | 2026-11-08 | 35b43e465 | Settings/PathSelectionBox/installFlows jest pass; spacing not live-checked | — |
 | 261108-juw | Removed the experimental Help component: floating ? button/popover, hasHelp hook + 10 call sites, help state/types, `enableHelp` (Experimental Features keeps Comet support). Stale saved `enableHelp` keys are ignored (nothing validates experimentalFeatures). | 2026-11-08 | a75f152db | codecheck, lint, lint-translations, Settings+state jest pass; meta suites failing are unrelated (A-17 drift; sl parity, rust-test.yml, logSecretGate, x86 Wine harness — none touch frontend) | [261108-juw-remove-the-experimental-help-component-f](./quick/261108-juw-remove-the-experimental-help-component-f/) |
-| 261108-kpc | Merged 'Minimize after launch' + 'Hide window on gamelib:// launch' into one General select 'When a game starts' (Keep open / Hide for shortcut launches [default] / Hide for every launch), backed by the same two booleans. Both had been inert under Tauri (sidecar window was a no-op stub): new Rust `main_window_hide` channel (macOS app-hide, else window hide), cold-start link hide via frontendReady/15s rule, every-launch hide now also covers Steam, dialogs raise a window GameLib hid. | 2026-11-08 | e5c11ab25 | codecheck clean; cargo test ipc_contract 4/4; backend/common/Settings jest pass bar pre-existing tauriShellSource + macArchKnownFixRouting (reproduced at 4a435506e); NOT live-checked — needs tauri:dev restart + UAT 1-4 | [261108-kpc-merge-game-start-window-settings-into-on](./quick/261108-kpc-merge-game-start-window-settings-into-on/) |
+| 261108-kpc | Merged 'Minimize after launch' + 'Hide window on gamelib:// launch' into one General select 'When a game starts' (Keep open / Hide for shortcut launches [default] / Hide for every launch), backed by the same two booleans. Both had been inert under Tauri (sidecar window was a no-op stub): new Rust `main_window_hide` channel (macOS app-hide, else window hide), cold-start link hide via frontendReady/15s rule, every-launch hide now also covers Steam, dialogs raise a window GameLib hid. | 2026-11-08 | e5c11ab25 | codecheck clean; cargo test ipc_contract 4/4; backend/common/Settings jest pass bar pre-existing tauriShellSource + macArchKnownFixRouting (reproduced at 4a435506e); live UAT 1-4 PASS 2026-11-08 (after cold-start fixes 146f608b1 + 401e1efaf, debug/resolved/cold-start-link-not-installed.md) | [261108-kpc-merge-game-start-window-settings-into-on](./quick/261108-kpc-merge-game-start-window-settings-into-on/) |
+| 261108-mcc | Closed Phase 61 REVIEW leftovers: IN-01 deadline test drops the vacuous `other` fixture and asserts the armed game's stop, both ledger keys, no wineserver kill and publishNotice once (b34955d6c); IN-02 pins the blank badge for a kept built-in engine under an inconclusive pre-flight per D-05/v6q (7a5e282f7); 61-REVIEW status clean, WR-01 → 88c8296b7 (df4dcec11). Test/docs only. | 2026-11-08 | df4dcec11 | engineState + deadline jest 62/62, codecheck clean, scoped prettier clean; no production diff | [261108-mcc-close-phase-61-review-leftovers](./quick/261108-mcc-close-phase-61-review-leftovers/) |
 
 ## Session Continuity
 
-Last session: 2026-11-08T18:41:16.661Z
-Stopped at: Phase 68 context gathered
+Last session: 2026-11-08T18:48:42.562Z
+Stopped at: Phase 72 context gathered
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

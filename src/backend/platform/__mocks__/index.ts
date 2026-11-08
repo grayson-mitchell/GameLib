@@ -72,6 +72,8 @@ const app = {
   raiseMainWindow: jest.fn(),
   hideMainWindow: jest.fn(),
   raiseMainWindowIfHiddenByGameLib: jest.fn(),
+  raiseMainWindowForInAppDialog: jest.fn(),
+  inAppDialogRaiseCount: jest.fn(() => 0),
   openBridgeInvitePicker: jest.fn().mockResolvedValue(true)
 }
 

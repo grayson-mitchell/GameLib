@@ -2,7 +2,6 @@ import { z } from 'zod'
 
 import type { DiskSpaceData } from '../../types'
 import {
-  absolutePathArg,
   nonEmptyString,
   optionalArg,
   urlArg,

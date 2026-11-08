@@ -233,15 +233,18 @@ describe('armEngineLaunchDeadline', () => {
       prefix: { kind: 'bottle', bottleName: 'GameLib' }
     })
     markGameRunning('GameLib', 'gog:A')
-    const other = makeGame()
+    markGameRunning('GameLib', KEY)
+    const game = makeGame()
     const d = deps()
-    armEngineLaunchDeadline(makeGame(), KEY, d)
+    armEngineLaunchDeadline(game, KEY, d)
     await jest.advanceTimersByTimeAsync(180_000)
+    // The deadline actually fired, so the "untouched" assertions below are not vacuous.
+    expect(d.publishNotice).toHaveBeenCalledTimes(1)
     expect(killBottleWineServerWith).not.toHaveBeenCalled()
-    expect(other.stop).not.toHaveBeenCalled()
-    expect(gamesRunningIn('GameLib')).toContain('gog:A')
-    // The deadline fires here (it is a notice, not a kill): the neighbour is untouched and the
-    // window is not raised.
+    expect(game.stop).not.toHaveBeenCalled()
+    expect([...gamesRunningIn('GameLib')].sort()).toEqual(['gog:A', KEY].sort())
+    // The deadline is a notice, not a kill: the armed game is not stopped, the bottle's wineserver
+    // is not killed, the ledger keeps both keys and the window is not raised.
     expect(showEngineDialog).not.toHaveBeenCalled()
     expect(app.raiseMainWindow).not.toHaveBeenCalled()
   })

@@ -150,8 +150,11 @@ describe('openPolicy', () => {
     })
 
     it('ShellOpenPath arm delegates to the policy-checked function', () => {
-      const embed = stripSourceComments(readTauriShellFile('store_embed.rs'))
+      const embed = stripSourceComments(readTauriShellFile('rust_dispatch.rs'))
       expect(embed).toContain('shell_open::shell_open_path')
+      expect(embed).toMatch(
+        /^ {8}RustInvokeChannel::ShellOpenPath => shell_open::shell_open_path\(app, args\),$/m
+      )
       const policyIdx = shellOpen.indexOf('open_path_policy_check(')
       const openIdx = shellOpen.indexOf('.open_path(')
       expect(policyIdx).toBeGreaterThan(-1)

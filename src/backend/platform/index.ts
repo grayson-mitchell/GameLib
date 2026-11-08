@@ -252,6 +252,12 @@ let relaunchInFlight = false
 // observe real window visibility (fakeWindow.isVisible is a stub), so this is the only record.
 let mainWindowHiddenByGameLib = false
 
+// Number of times an in-app (renderer) dialog re-showed the window GameLib hid for a launch.
+// Native prompts (dialog.showMessageBox / showErrorBox) also raise the window but are awaited and
+// gone once answered; an in-app dialog stays on screen, so a `--no-gui` link launch that ended
+// with one must keep GameLib open for the user to read it (protocol.ts handleLaunch).
+let inAppDialogRaiseCount = 0
+
 export const app = {
   getPath,
   getName: (): string => 'GameLib',
@@ -418,6 +424,13 @@ export const app = {
     if (!mainWindowHiddenByGameLib) return
     app.raiseMainWindow()
   },
+  // Same as raiseMainWindowIfHiddenByGameLib, for the in-app (renderer) dialog path: also records
+  // that a dialog which outlives its caller is now on screen.
+  raiseMainWindowForInAppDialog: (): void => {
+    if (mainWindowHiddenByGameLib) inAppDialogRaiseCount++
+    app.raiseMainWindowIfHiddenByGameLib()
+  },
+  inAppDialogRaiseCount: (): number => inAppDialogRaiseCount,
   // Opens the dedicated `bridge-invite` window for the invite picker (quick 261101-llf) so the
   // main window is not raised over the game. Resolves true on success, false (after a warn) on
   // failure. Never throws.

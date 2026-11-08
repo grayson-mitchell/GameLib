@@ -27,6 +27,7 @@ jest.mock('../config', () => ({
 }))
 
 import { handleProtocol, markFrontendReady, RUNNERS } from '../protocol'
+import i18next from 'i18next'
 import { app, dialog } from 'backend/platform'
 import { libraryManagerMap } from '../storeManagers'
 import { getMainWindow } from '../main_window'
@@ -40,7 +41,8 @@ jest.mock('backend/platform', () => ({
   app: {
     quit: jest.fn(),
     hideMainWindow: jest.fn(),
-    raiseMainWindow: jest.fn()
+    raiseMainWindow: jest.fn(),
+    inAppDialogRaiseCount: jest.fn(() => 0)
   },
   dialog: {
     showMessageBox: jest.fn()
@@ -59,10 +61,13 @@ jest.mock('../ipc', () => ({
 jest.mock('../storeManagers', () => ({
   libraryManagerMap: {
     legendary: {
-      getGame: jest.fn()
+      getGame: jest.fn(),
+      refreshInstalled: jest.fn(),
+      loadGamesInAccount: jest.fn()
     },
     gog: {
-      getGame: jest.fn()
+      getGame: jest.fn(),
+      refreshInstalled: jest.fn()
     },
     nile: {
       getGame: jest.fn()
@@ -241,12 +246,118 @@ describe('protocol.ts --no-gui behavior', () => {
       jest.doMock('../launcher', () => ({
         launchEventCallback: mockLaunchEventCallback
       }))
-
+      ;(launchEventCallback as jest.Mock).mockResolvedValue({ status: 'done' })
       await handleProtocol(['gamelib://launch/test-game'])
 
       // Should not show dialog for installed games
       expect(dialog.showMessageBox).not.toHaveBeenCalled()
       expect(app.quit).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('--no-gui launch that ends without a game session exits (cold-start-link-not-installed #3)', () => {
+    const inAppDialogRaiseCount = app.inAppDialogRaiseCount as jest.Mock
+    beforeEach(() => {
+      mockGameInfo.is_installed = true
+      mockIsCLINoGui.mockReturnValue(true)
+      inAppDialogRaiseCount.mockReturnValue(0)
+    })
+
+    test('aborted launch with the window still hidden quits', async () => {
+      ;(launchEventCallback as jest.Mock).mockResolvedValue({ status: 'abort' })
+      await handleProtocol(['gamelib://launch/test-game'])
+      expect(app.quit).toHaveBeenCalledTimes(1)
+    })
+
+    test('a thrown launch error with the window still hidden quits', async () => {
+      ;(launchEventCallback as jest.Mock).mockRejectedValue(new Error('boom'))
+      await handleProtocol(['gamelib://launch/test-game'])
+      expect(app.quit).toHaveBeenCalledTimes(1)
+    })
+
+    test('an in-app dialog that raised the window keeps GameLib open', async () => {
+      ;(launchEventCallback as jest.Mock).mockImplementation(async () => {
+        inAppDialogRaiseCount.mockReturnValue(1)
+        return { status: 'error' }
+      })
+      await handleProtocol(['gamelib://launch/test-game'])
+      expect(app.quit).not.toHaveBeenCalled()
+    })
+
+    test('normal completion is left to the launcher (no second exit)', async () => {
+      ;(launchEventCallback as jest.Mock).mockResolvedValue({ status: 'done' })
+      await handleProtocol(['gamelib://launch/test-game'])
+      expect(app.quit).not.toHaveBeenCalled()
+    })
+
+    test('without --no-gui an abort does not quit', async () => {
+      mockIsCLINoGui.mockReturnValue(false)
+      ;(launchEventCallback as jest.Mock).mockResolvedValue({ status: 'abort' })
+      await handleProtocol(['gamelib://launch/test-game'])
+      expect(app.quit).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('cold-start link waits for installed state (cold-start-link-not-installed)', () => {
+    const gogGame = {
+      app_name: '1542190742',
+      title: 'Bloody Hell',
+      runner: 'gog' as const,
+      is_installed: false
+    }
+
+    beforeEach(() => {
+      mockIsCLINoGui.mockReturnValue(true)
+      gogGame.is_installed = false
+      ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+        getGameInfo: () => gogGame,
+        getSettings: () => ({ ignoreGameUpdates: false })
+      })
+      // The manager only reports the game as installed once refreshInstalled() has run.
+      ;(libraryManagerMap.gog.refreshInstalled as jest.Mock).mockImplementation(
+        () => {
+          gogGame.is_installed = true
+        }
+      )
+    })
+
+    test('loads installed state before resolving the game, so an installed game launches', async () => {
+      await handleProtocol(['gamelib://launch?appName=1542190742&runner=gog'])
+
+      expect(libraryManagerMap.gog.refreshInstalled).toHaveBeenCalled()
+      expect(dialog.showMessageBox).not.toHaveBeenCalled()
+      expect(launchEventCallback).toHaveBeenCalledWith(
+        expect.objectContaining({ appName: '1542190742', runner: 'gog' })
+      )
+    })
+
+    test('legendary also loads its account games and installed state', async () => {
+      await handleProtocol([
+        'gamelib://launch?appName=test-game&runner=legendary'
+      ])
+
+      expect(libraryManagerMap.legendary.loadGamesInAccount).toHaveBeenCalled()
+      expect(libraryManagerMap.legendary.refreshInstalled).toHaveBeenCalled()
+    })
+  })
+
+  describe('dialog buttons fall back to English when i18next is uninitialized', () => {
+    test('not-installed dialog shows Yes/No, not raw keys or undefined', async () => {
+      mockIsCLINoGui.mockReturnValue(false)
+      mockGameInfo.is_installed = false
+      // Uninitialized i18next returns undefined even when given a default.
+      ;(i18next.t as unknown as jest.Mock).mockImplementation(() => undefined)
+      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+
+      await handleProtocol(['gamelib://launch/test-game'])
+
+      expect(dialog.showMessageBox).toHaveBeenCalledWith(
+        mockMainWindow,
+        expect.objectContaining({ buttons: ['Yes', 'No'] })
+      )
+      ;(i18next.t as unknown as jest.Mock).mockImplementation(
+        (key: string, fallback?: string) => fallback || key
+      )
     })
   })
 
@@ -278,9 +389,10 @@ describe('protocol.ts --no-gui behavior', () => {
 
       await handleProtocol(['gamelib://launch/test-game'])
 
-      // Should return early if no main window available
+      // Should return early if no main window available; under --no-gui nothing is left to
+      // wait for, so the process exits (Steam's shortcut button must not stay on Stop)
       expect(dialog.showMessageBox).not.toHaveBeenCalled()
-      expect(app.quit).not.toHaveBeenCalled()
+      expect(app.quit).toHaveBeenCalledTimes(1)
     })
   })
 

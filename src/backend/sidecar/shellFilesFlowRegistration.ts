@@ -107,7 +107,6 @@ import {
 import { Path } from '../schemas'
 import { existsSync } from 'graceful-fs'
 import { configPath, gamesConfigPath } from '../constants/paths'
-import { join } from 'node:path'
 import {
   supportURL,
   weblateUrl,

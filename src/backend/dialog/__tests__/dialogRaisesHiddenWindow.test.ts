@@ -15,7 +15,7 @@ import { app } from 'backend/platform'
 import { sendFrontendMessage } from '../../ipc'
 import { showDialogBoxModalAuto } from '../dialog'
 
-const raise = app.raiseMainWindowIfHiddenByGameLib as unknown as jest.Mock
+const raise = app.raiseMainWindowForInAppDialog as unknown as jest.Mock
 
 describe('showDialogBoxModalAuto raises a GameLib-hidden window first', () => {
   it('sendFrontendMessage branch', () => {

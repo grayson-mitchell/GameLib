@@ -20,6 +20,7 @@ import { exec, spawn, SpawnOptions, spawnSync } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
 import { promisify } from 'util'
 import i18next, { t } from 'i18next'
+import { tOrFallback } from './i18nFallback'
 
 import {
   logError,
@@ -254,34 +255,6 @@ async function isEpicServiceOffline(
   }
 }
 
-/**
- * CR-04 (Phase 34.1 code review): a translation lookup that survives an UNINITIALIZED
- * i18next instance.
- *
- * `handleExit` became sidecar-reachable this slice (`appShellFlowRegistration.ts`
- * registers `ipcMain.on('quit', ...)`), and the headless sidecar never runs the
- * `i18next.use(Backend).init({...})` call that lives inside `main.ts`'s
- * `app.whenReady()` block. On an uninitialized instance `i18next.t(key, fallback)`
- * returns `undefined` -- the fallback argument does NOT save it (verified against the
- * installed i18next 22.5.1). Those `undefined`s crossed the wire as JSON `null` and
- * `main.rs`'s `dialog_message` arm renders them via `.unwrap_or("")`, so the user was
- * shown a BLANK message with TWO BLANK BUTTONS on the quit-confirm -- with no way to
- * tell which one cancels, on a dialog whose other branch kills in-flight downloads.
- *
- * Under Electron i18next IS initialized, so this returns the real translation and
- * behaviour is unchanged.
- */
-function tOrFallback(key: string, fallback: string): string {
-  try {
-    const translated: unknown = i18next.t(key, fallback)
-    return typeof translated === 'string' && translated.length > 0
-      ? translated
-      : fallback
-  } catch {
-    return fallback
-  }
-}
-
 async function handleExit() {
   const isLocked = existsSync(join(gamesConfigPath, 'lock'))
   const mainWindow = getMainWindow()
@@ -360,7 +333,7 @@ export async function askForceUninstall(game: Game, appName: string) {
       'box.error.folder-not-found.title',
       'Game folder appears to be deleted, do you want to remove the game from the installed list?'
     ),
-    buttons: [i18next.t('box.no'), i18next.t('box.yes')],
+    buttons: [tOrFallback('box.no', 'No'), tOrFallback('box.yes', 'Yes')],
     // D-07 fail-safe (Phase 33 Plan 03): buttons[1] ("yes") is the destructive branch
     // (forceUninstall) -- an explicit cancelId declares buttons[0] ("no") as the safe
     // decline so a degraded/timed-out dialog never auto-confirms the deletion.
@@ -1067,7 +1040,7 @@ async function ContinueWithFoundWine(
       selectedWine: selectedWine,
       foundWine: foundWine
     }),
-    buttons: [i18next.t('box.yes'), i18next.t('box.no')]
+    buttons: [tOrFallback('box.yes', 'Yes'), tOrFallback('box.no', 'No')]
   })
 
   return { response }

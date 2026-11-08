@@ -15,11 +15,18 @@
  * the real code never changed.
  */
 import {
+  isExcludedShellFile,
+  listRustTestModuleBlocks,
   listTauriShellSourceFiles,
   GENERATED_MODULES,
   PRE_SPLIT_SIBLING_MODULES,
+  readHandlerBody,
+  readMacosEpicEmbedSource,
   readTauriShellFile,
-  readTauriShellSource
+  readTauriShellProductionSource,
+  readTauriShellSource,
+  readTopLevelFnBody,
+  stripRustTestModules
 } from 'backend/testUtils/tauriShellSource'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -76,6 +83,30 @@ function loadMainRsCode(source?: string): string {
     .filter((line) => !line.trim().startsWith('//'))
     .map(stripTrailingLineComment)
     .join('\n')
+}
+
+/**
+ * End offset (exclusive, just past the closing `}`) of the column-0 fn starting at `start` in
+ * `code` (Phase 71 D-10): replaces the old "next `#[cfg(target_os = "macos")]`" bound, which
+ * ran into whatever item followed in the combined text and so depended on file order. Delegates
+ * to `readTopLevelFnBody` so a missing, duplicated or near-empty fn fails loudly.
+ */
+function fnEndAfter(code: string, start: number): number {
+  const name = /^(?:pub\(crate\) )?fn (\w+)/.exec(code.slice(start))
+  if (!name) throw new Error('fnEndAfter: start is not at a fn definition')
+  readTopLevelFnBody(code, name[1] ?? '', 1)
+  const close = code.indexOf('\n}\n', start)
+  if (close < 0) throw new Error(`fnEndAfter: ${name[1]} is unterminated`)
+  return close + 2
+}
+
+/**
+ * Body of the `rpc_humble_login_open` handler (Phase 71 D-10): the dispatcher arm is a one-line
+ * call, the body lives in `login_window/humble_open.rs`. `readHandlerBody` throws when the fn is
+ * missing, duplicated or near-empty, so a pin over this body cannot pass on an empty slice.
+ */
+function humbleLoginOpenHandlerBody(code: string): string {
+  return readHandlerBody(code, 'humble_login_open')
 }
 
 describe('loadMainRsCode comment-stripping helper (self-test)', () => {
@@ -169,7 +200,8 @@ describe('REQ-34.1-07 main.rs tray construction (Phase 34.1 Plan 06, D-11)', () 
   })
 
   test('REQ-34.1-07 no unwrap() or expect( appears inside the tray-building block', () => {
-    const code = loadMainRsCode()
+    // Production text only (Phase 71 D-10): the tray tests now live in tray.rs's own `mod tests`.
+    const code = loadMainRsCode(readTauriShellProductionSource())
     const startMarker = 'MenuItemBuilder::with_id("show"'
     const startIdx = code.indexOf(startMarker)
     expect(startIdx).toBeGreaterThan(-1)
@@ -209,19 +241,9 @@ describe('REQ-34.1-07 macOS tray template wiring (gap G3 redirect, 34.1-13)', ()
   })
 
   test('tray_set_icon uses the atomic set_icon_with_as_template setter, not a bare set_icon', () => {
-    const code = loadMainRsCode()
-    // Same arm-boundary technique as the "ONLY new dispatch arm" test below: outer match
-    // arms are indented exactly 8 spaces, so the next such line after tray_set_icon's own
-    // marks the end of its arm body.
-    const armStartPattern = /^ {8}RustInvokeChannel::[A-Za-z0-9]+\s*=>/gm
-    const armIdx = code.indexOf('RustInvokeChannel::TraySetIcon =>')
-    expect(armIdx).toBeGreaterThan(-1)
-    armStartPattern.lastIndex = armIdx + 1
-    const nextArmMatch = armStartPattern.exec(code)
-    expect(nextArmMatch).not.toBeNull()
-    const armBody = code.slice(
-      armIdx,
-      nextArmMatch ? nextArmMatch.index : undefined
+    const armBody = readHandlerBody(
+      loadMainRsCode(readTauriShellProductionSource()),
+      'tray_set_icon'
     )
     expect(armBody).toMatch(
       /set_icon_with_as_template\(Some\(tray_image\(dark\)\), tray_is_template\(\)\)/
@@ -319,6 +341,12 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     const code = loadMainRsCode()
     const matches = code.match(/RustInvokeChannel::TraySetIcon\s*=>/g) ?? []
     expect(matches.length).toBe(1)
+  })
+
+  test('71-07 rust_dispatch.rs is a flat router: 45 one-line arms and no catch-all arm', () => {
+    const router = readTauriShellFile('rust_dispatch.rs')
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(45)
+    expect(router).not.toContain('_ =>')
   })
 
   test('REQ-34.1-07 the tray_set_icon arm appears after the rustInvoke:unknown-channel guard (arms are only reachable through RustInvokeChannel::from_name)', () => {
@@ -929,12 +957,28 @@ describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07
     expect(loadMainRsCode()).toContain(
       'RustInvokeChannel::ClipboardWriteText =>'
     )
+    // Phase 71 D-04: the arm is a one-line call; the plugin write lives in the handler.
+    const body = readHandlerBody(
+      readTauriShellProductionSource(),
+      'clipboard_write_text',
+      4
+    )
+    expect(body).toContain('ClipboardWriteTextArgs::from_args(args)?')
+    expect(body).toContain('app.clipboard()')
+    expect(body).toContain('.write_text(a.text)')
   })
 
   test('REQ-34.3-08 the clipboard_read_text dispatch arm exists', () => {
     expect(loadMainRsCode()).toContain(
       'RustInvokeChannel::ClipboardReadText =>'
     )
+    const body = readHandlerBody(
+      readTauriShellProductionSource(),
+      'clipboard_read_text',
+      1
+    )
+    expect(body).toContain('clipboard_read_value(')
+    expect(body).toContain('app.clipboard().read_text()')
   })
 
   test('REQ-34.3-08 the clipboard_text_arg pure helper exists', () => {
@@ -984,12 +1028,12 @@ describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07
     // blanket substring check would be wrong. REQ-34.3-06 resolved to NO FIX: main.rs's own
     // comment above this arm (see Task 1's docstring citation) records that RunEvent::Exit
     // already fires and already kills the sidecar before the process re-execs.
-    const code = loadMainRsCode()
-    const armStart = code.indexOf('RustInvokeChannel::AppRelaunch => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armBodyEnd = code.indexOf('\n        }', armStart)
-    expect(armBodyEnd).toBeGreaterThan(armStart)
-    const armBody = code.slice(armStart, armBodyEnd)
+    const armBody = readHandlerBody(
+      loadMainRsCode(readTauriShellProductionSource()),
+      'app_relaunch',
+      1
+    )
+    expect(armBody).toContain('app.restart()')
     expect(armBody).not.toContain('shutdown_child()')
   })
 
@@ -1018,39 +1062,15 @@ describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07
 // the divergence is purely in argument ORDER inside a match arm body. This describe block
 // extracts each arm's body from the (comment-stripped) source and pins the exact call shape.
 describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-correct cookie_domain_matches direction (Plan 22, F-6 Defect A)', () => {
-  /**
-   * Slices `code` from `startMarker` (inclusive) up to (but not including) `endMarker`, the
-   * same "arm body" extraction shape the app_relaunch test above already uses. Throws loudly
-   * (via the `toBeGreaterThan(-1)` assertions below) rather than silently slicing an empty or
-   * wrong range if either marker has drifted.
-   */
-  function extractArmBody(
-    code: string,
-    startMarker: string,
-    endMarker: string
-  ): string {
-    const start = code.indexOf(startMarker)
-    expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf(endMarker, start)
-    expect(end).toBeGreaterThan(start)
-    return code.slice(start, end)
-  }
-
   test('both arms exist in source', () => {
     const code = loadMainRsCode()
-    expect(code).toContain('RustInvokeChannel::HumbleLoginCookies => {')
-    expect(code).toContain(
-      'RustInvokeChannel::HumbleLoginCookiesForDomain => {'
-    )
+    expect(code).toContain('fn rpc_humble_login_cookies(')
+    expect(code).toContain('fn rpc_humble_login_cookies_for_domain(')
   })
 
   test('humble_login_cookies (the poll arm) still calls cookie_domain_matches with the caller-supplied host FIRST', () => {
     const code = loadMainRsCode()
-    const armBody = extractArmBody(
-      code,
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      'RustInvokeChannel::HumbleLoginTakeEvents => {'
-    )
+    const armBody = readHandlerBody(code, 'humble_login_cookies')
     // The poll's direction, unedited by Plan 22: host (caller-supplied) first, the cookie's
     // own domain second.
     expect(armBody).toContain('cookie_domain_matches(host, c.domain())')
@@ -1060,11 +1080,7 @@ describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-corre
 
   test("humble_login_cookies_for_domain (the census arm) calls cookie_domain_matches with the cookie's OWN domain FIRST", () => {
     const code = loadMainRsCode()
-    const armBody = extractArmBody(
-      code,
-      'RustInvokeChannel::HumbleLoginCookiesForDomain => {',
-      'RustInvokeChannel::WakeLockStart =>'
-    )
+    const armBody = readHandlerBody(code, 'humble_login_cookies_for_domain')
     // The census's direction: the cookie's own domain (from the match on c.domain()) first,
     // the fixed target `domain` second -- mirrors humble_login_clear_cookies's own filter.
     expect(armBody).toContain('cookie_domain_matches(d, Some(domain))')
@@ -1087,24 +1103,15 @@ describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-corre
 // (this quick task's Task 3), and the identical gates were green throughout the entire
 // period the probe returned nothing.
 describe('D-35-29-01 (quick q93) the census arm falls back to the label-independent default-store read for Epic domains', () => {
-  const CENSUS_ARM_START = 'RustInvokeChannel::HumbleLoginCookiesForDomain => {'
-  const CENSUS_ARM_END = 'RustInvokeChannel::WakeLockStart =>'
-
   /**
-   * Same "slice the arm body out of comment-stripped source" extraction shape as
-   * `extractArmBody` in the REQ-34.4.1-GAP-07 block above; kept local because that one is
-   * describe-scoped, and hoisting it would edit a passing gate this task has no business
-   * touching. Throws a plain Error rather than calling `expect()` so it can be driven over
-   * a synthetic counterexample inside `censusFallbackViolations` below without the
-   * counterexample run polluting this test's own assertion count.
+   * The census handler's body, read through `readHandlerBody` (Phase 71 D-10): the dispatcher arm
+   * is a one-line call, the body lives in `login_window/humble_cookies.rs`. `readHandlerBody`
+   * throws (rather than calling `expect()`) when the fn is missing, duplicated or near-empty, so
+   * this can be driven over a synthetic counterexample inside `censusFallbackViolations` below
+   * without the counterexample run polluting this test's own assertion count.
    */
   function extractCensusArmBody(code: string): string {
-    const start = code.indexOf(CENSUS_ARM_START)
-    if (start < 0) throw new Error('census arm start marker not found')
-    const end = code.indexOf(CENSUS_ARM_END, start)
-    if (end <= start)
-      throw new Error('census arm end marker not found after start')
-    return code.slice(start, end)
+    return readHandlerBody(code, 'humble_login_cookies_for_domain')
   }
 
   /**
@@ -1191,22 +1198,21 @@ describe('D-35-29-01 (quick q93) the census arm falls back to the label-independ
     // `humble_login_cookies_for_domain:no-window:{label}` on all five Epic hosts of every
     // live logout while this suite stayed green.
     const regressedArm = [
-      '        RustInvokeChannel::HumbleLoginCookiesForDomain => {',
-      '            let label = args',
-      '                .first()',
-      '                .and_then(|v| v.as_str())',
-      '                .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;',
-      '            let domain = args',
-      '                .get(1)',
-      '                .and_then(|v| v.as_str())',
-      '                .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;',
-      '            let window = app',
-      '                .get_webview_window(label)',
-      '                .ok_or_else(|| format!("humble_login_cookies_for_domain:no-window:{label}"))?;',
-      '            let all = window.cookies().map_err(|e| e.to_string())?;',
-      '            Ok(serde_json::json!({ "total": all.len(), "matched": [] }))',
-      '        }',
-      '        RustInvokeChannel::WakeLockStart => {}'
+      'pub(crate) fn rpc_humble_login_cookies_for_domain(args: &[Value], app: &AppHandle) -> Result<Value, String> {',
+      '    let label = args',
+      '        .first()',
+      '        .and_then(|v| v.as_str())',
+      '        .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;',
+      '    let domain = args',
+      '        .get(1)',
+      '        .and_then(|v| v.as_str())',
+      '        .ok_or_else(|| "humble_login_cookies_for_domain:bad-args".to_string())?;',
+      '    let window = app',
+      '        .get_webview_window(label)',
+      '        .ok_or_else(|| format!("humble_login_cookies_for_domain:no-window:{label}"))?;',
+      '    let all = window.cookies().map_err(|e| e.to_string())?;',
+      '    Ok(serde_json::json!({ "total": all.len(), "matched": [] }))',
+      '}'
     ].join('\n')
 
     const violations = censusFallbackViolations(loadMainRsCode(regressedArm))
@@ -1237,10 +1243,10 @@ describe('D-35-29-01 (quick q93) the census arm falls back to the label-independ
   // edit the first (clear-arm) occurrence, leave the census arm untouched, and the
   // assertion would fail for a reason unrelated to what it is testing.
   const CENSUS_GUARD = [
-    '                && (epic_cookie_domain_matches(domain)',
-    '                    || store_logout_cookie_domain_matches(domain))',
-    '            {',
-    '                return default_data_store_cookies_for_domain(app, domain, &names);'
+    '        && (epic_cookie_domain_matches(domain)',
+    '            || store_logout_cookie_domain_matches(domain))',
+    '    {',
+    '        return default_data_store_cookies_for_domain(app, domain, &names);'
   ].join('\n')
 
   test('NARROWNESS: the widened guard pin still REJECTS an arm that keeps the disjunction but drops the Epic term', () => {
@@ -1264,8 +1270,8 @@ describe('D-35-29-01 (quick q93) the census arm falls back to the label-independ
   test('NARROWNESS: the widened guard pin still REJECTS an arm whose Epic check is no longer conjoined with is_none()', () => {
     const code = loadMainRsCode()
     const conjunctionSevered = code.replace(
-      `            if existing_window.is_none()\n${CENSUS_GUARD}`,
-      `            if true\n${CENSUS_GUARD}`
+      `    if existing_window.is_none()\n${CENSUS_GUARD}`,
+      `    if true\n${CENSUS_GUARD}`
     )
     expect(conjunctionSevered).not.toEqual(code)
     expect(censusFallbackViolations(conjunctionSevered)).toEqual(
@@ -1488,9 +1494,7 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
   // observation owned by the gap-cycle-3 live gate (plan 35).
   test("D-29-05: humble_login_open's visible block builds an ORIGIN-DERIVED provisional title, so the window never presents as the framework default", () => {
     const code = loadMainRsCode()
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const arm = code.slice(armStart, armStart + 20000)
+    const arm = humbleLoginOpenHandlerBody(code)
     const visibleIdx = arm.indexOf('if visible {')
     expect(visibleIdx).toBeGreaterThan(-1)
 
@@ -1502,14 +1506,7 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 
   test(".inner_size(/.center()/.focused(true)/on_document_title_changed appear ONLY inside humble_login_open's if-visible block -- the adjacent-already-present gating Plan 18 introduced and nothing had ever tested; proves source placement only, never that the operator actually saw the window raised (plan 29 item 1)", () => {
     const code = loadMainRsCode()
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    const armBody = code.slice(armStart, armEnd)
+    const armBody = humbleLoginOpenHandlerBody(code)
 
     const visibleBlock = extractBracedBlock(armBody, 'if visible {')
     const visibleStart = armBody.indexOf(visibleBlock)
@@ -1535,19 +1532,10 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 
   test('the hidden reveal-post and storage-clear WebviewWindowBuilder chains gained neither the title hook nor the F-4 presentation calls', () => {
     const code = loadMainRsCode()
-    const revealStart = code.indexOf('RustInvokeChannel::HumbleRevealPost => {')
-    expect(revealStart).toBeGreaterThan(-1)
-    const revealEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginClearStorage => {',
-      revealStart
-    )
-    expect(revealEnd).toBeGreaterThan(revealStart)
-    const clearStorageEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookiesForDomain => {',
-      revealEnd
-    )
-    expect(clearStorageEnd).toBeGreaterThan(revealEnd)
-    const hiddenWindowsBody = code.slice(revealStart, clearStorageEnd)
+    const hiddenWindowsBody = [
+      readHandlerBody(code, 'humble_reveal_post'),
+      readHandlerBody(code, 'humble_login_clear_storage')
+    ].join('\n')
 
     for (const token of [
       'on_document_title_changed',
@@ -1568,28 +1556,17 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
   // the pristine Epic window (a DIFFERENT form layout, out of scope by D-3) stays 900. Two
   // helpers mirroring the file's existing find-start-then-find-end slicing idiom (identical
   // in shape to the sibling copies already defined in other describe blocks in this file).
-  function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    return code.slice(armStart, armEnd)
-  }
-
   function extractPristineLoginFnBody(code: string): string {
     const start = code.indexOf('fn open_pristine_epic_login_window(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     return code.slice(start, end)
   }
 
   test("Guard 1 (D-3): humble_login_open's if-visible block carries the narrowed 464-wide sizing call and no longer carries the former 900-wide one", () => {
     const code = loadMainRsCode()
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     const visibleBlock = extractBracedBlock(armBody, 'if visible {')
     expect(visibleBlock).toContain('.inner_size(464.0, 592.0)')
     // Scoped to this block only -- a file-wide negative would red on Epic's own legitimate
@@ -1599,15 +1576,14 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 
   test("Guard 1 self-test (RED proof): a synthetic visible block still carrying the pre-fix 900-wide call fails this guard's positive clause", () => {
     const synthetic = [
-      'RustInvokeChannel::HumbleLoginOpen => {',
+      'pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<Value, String> {',
       '  if visible {',
       '    builder = builder.inner_size(900.0, 700.0);',
       '  }',
-      '}',
-      'RustInvokeChannel::HumbleLoginCookies => {}'
+      '}'
     ].join('\n')
     const code = loadMainRsCode(synthetic)
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     const visibleBlock = extractBracedBlock(armBody, 'if visible {')
     expect(visibleBlock).not.toContain('.inner_size(464.0, 592.0)')
   })
@@ -1640,17 +1616,6 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 // repeatedly (explaining why it must NOT be used here), so a naive unscoped count would
 // be satisfied by the prose alone even if the real arm still used it.
 describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_load, never on_navigation', () => {
-  function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    return code.slice(armStart, armEnd)
-  }
-
   // Quick 260927-o3h: finds the FIRST `{` at or after `headerIdx` and walks forward tracking
   // brace depth, returning the substring strictly between that `{` and its matching `}`.
   // Throws on unbalanced input rather than returning a partial slice, so a malformed source
@@ -1681,7 +1646,7 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
   }
 
   test("POSITIVE: the title-refresh call (set_title) lives inside the arm's .on_page_load( hook body", () => {
-    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    const armBody = humbleLoginOpenHandlerBody(loadMainRsCode())
     const pageLoadStart = armBody.indexOf('.on_page_load(')
     expect(pageLoadStart).toBeGreaterThan(-1)
     const pageLoadEnd = armBody.indexOf('.build()', pageLoadStart)
@@ -1711,7 +1676,7 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
   // the negatives -- the two control assertions fire. What it does NOT cover: this is a
   // source-shape gate, not a behavioural one -- it cannot observe a title bar.
   test('quick 260927-o3h REGRESSION: the on_page_load set_title refresh is guarded to PageLoadEvent::Started only, while the page_load_origin write and the macOS native-bar origin update keep running on both events', () => {
-    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    const armBody = humbleLoginOpenHandlerBody(loadMainRsCode())
     const pageLoadStart = armBody.indexOf('.on_page_load(')
     expect(pageLoadStart).toBeGreaterThan(-1)
     const buildStart = armBody.indexOf('.build()', pageLoadStart)
@@ -1739,7 +1704,7 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
   // driven only by .on_page_load( (spike 013: 5 of 8 on_navigation events were third-party
   // iframes).
   test('NEGATIVE/RETIGHTENED: the humble_login_open arm has no .on_navigation( call -- the login-watch relay is driven only by on_page_load', () => {
-    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    const armBody = humbleLoginOpenHandlerBody(loadMainRsCode())
     expect((armBody.match(/\.on_navigation\(/g) ?? []).length).toBe(0)
     expect(armBody).toContain('.on_page_load(')
   })
@@ -1749,7 +1714,7 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
   })
 
   test('the arm seeds its shared origin state from the validated open URL before .build()', () => {
-    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    const armBody = humbleLoginOpenHandlerBody(loadMainRsCode())
     const seedIdx = armBody.indexOf('Arc::new(Mutex::new(origin.clone()))')
     const buildIdx = armBody.indexOf('.build()')
     expect(seedIdx).toBeGreaterThan(-1)
@@ -1764,14 +1729,7 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
 describe('F-34.5-G6-05 (Plan 27) login window requests a light interface style', () => {
   test('the humble_login_open arm requests .theme(Some(tauri::Theme::Light)) on the visible builder', () => {
     const code = loadMainRsCode()
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    const armBody = code.slice(armStart, armEnd)
+    const armBody = humbleLoginOpenHandlerBody(code)
     expect(armBody).toContain('.theme(Some(tauri::Theme::Light))')
   })
 })
@@ -1853,7 +1811,7 @@ describe('Phase 34.4.2 Plan 01 — login-window handle resolvers and the Epic sc
   function extractPristineLoginFnBody(code: string): string {
     const start = code.indexOf('fn open_pristine_epic_login_window(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     return code.slice(start, end)
   }
@@ -1867,10 +1825,11 @@ describe('Phase 34.4.2 Plan 01 — login-window handle resolvers and the Epic sc
    * `open_pristine_epic_login_window` itself).
    */
   function extractEpicPristineNavDelegateBody(code: string): string {
-    const start = code.indexOf('define_class!(')
+    const end = code.indexOf('impl EpicPristineNavDelegate {')
+    expect(end).toBeGreaterThan(-1)
+    // The define_class! that immediately precedes the impl (Phase 71 D-10: not the first in the combined text).
+    const start = code.lastIndexOf('define_class!(', end)
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('impl EpicPristineNavDelegate {', start)
-    expect(end).toBeGreaterThan(start)
     return code.slice(start, end)
   }
 
@@ -1982,17 +1941,6 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
     return code.slice(markerIdx, i + 1)
   }
 
-  function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    return code.slice(armStart, armEnd)
-  }
-
   // quick-261029-o1w: DELIBERATELY UPDATED 1 -> 2 call sites. The second is GOG's sheet
   // (now `open_pristine_login_sheet`, renamed and shared with Epic by quick-261029-utr); the arm's own count stays 1.
   test('Test 1 (INVERTED 2026-08-04, updated quick-261029-o1w, updated quick-261029-utr): present_login_window_as_sheet( is CALLED exactly twice in the file -- once inside the humble_login_open arm, once inside open_pristine_login_sheet -- catches a future caller landing in (or being dropped from) the wrong place', () => {
@@ -2003,14 +1951,14 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
       code.match(/(?<!fn )present_login_window_as_sheet\(/g) ?? []
     expect(fileCallSites.length).toBe(2)
 
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     const armCallSites =
       armBody.match(/(?<!fn )present_login_window_as_sheet\(/g) ?? []
     expect(armCallSites.length).toBe(1)
 
     const gogStart = code.indexOf('fn open_pristine_login_sheet(')
     expect(gogStart).toBeGreaterThan(-1)
-    const gogEnd = code.indexOf('#[cfg(target_os = "macos")]', gogStart)
+    const gogEnd = fnEndAfter(code, gogStart)
     expect(gogEnd).toBeGreaterThan(gogStart)
     expect(code.slice(gogStart, gogEnd)).toContain(
       'present_login_window_as_sheet('
@@ -2027,13 +1975,13 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
 
     const gogStart = code.indexOf('fn open_pristine_login_sheet(')
     expect(gogStart).toBeGreaterThan(-1)
-    const gogEnd = code.indexOf('#[cfg(target_os = "macos")]', gogStart)
+    const gogEnd = fnEndAfter(code, gogStart)
     expect(gogEnd).toBeGreaterThan(gogStart)
     expect(code.slice(gogStart, gogEnd)).toContain(
       'dismiss_login_window_sheet('
     )
 
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     const destroyedBlock = extractBracedBlock(
       armBody,
       'if matches!(event, tauri::WindowEvent::Destroyed) {'
@@ -2042,7 +1990,7 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
 
     const cancelStart = code.indexOf('fn request_login_sheet_cancel(')
     expect(cancelStart).toBeGreaterThan(-1)
-    const cancelEnd = code.indexOf('#[cfg(target_os = "macos")]', cancelStart)
+    const cancelEnd = fnEndAfter(code, cancelStart)
     expect(cancelEnd).toBeGreaterThan(cancelStart)
     expect(code.slice(cancelStart, cancelEnd)).toContain(
       'dismiss_login_window_sheet('
@@ -2114,7 +2062,7 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
     const code = loadMainRsCode()
     const start = code.indexOf('fn open_pristine_epic_login_window(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     const pristineBody = code.slice(start, end)
     for (const symbol of [
@@ -2209,45 +2157,26 @@ describe('Phase 34.4.2 Plan 13 — the in-field autofill mechanism is DELETED (o
 // block still leaves a guard in place (mirrors Plan 02's Test 9 / Plan 03's Test 4 / Plan 04's
 // Test 7 precedent).
 describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc backstop)', () => {
-  function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    return code.slice(armStart, armEnd)
-  }
-
   function extractPristineLoginFnBody(code: string): string {
     const start = code.indexOf('fn open_pristine_epic_login_window(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     return code.slice(start, end)
   }
 
   function extractEpicPristineNavDelegateBody(code: string): string {
-    const start = code.indexOf('define_class!(')
+    const end = code.indexOf('impl EpicPristineNavDelegate {')
+    expect(end).toBeGreaterThan(-1)
+    // The define_class! that immediately precedes the impl (Phase 71 D-10: not the first in the combined text).
+    const start = code.lastIndexOf('define_class!(', end)
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('impl EpicPristineNavDelegate {', start)
-    expect(end).toBeGreaterThan(start)
     return code.slice(start, end)
   }
 
-  /**
-   * Bounds the search to PRODUCTION code only -- everything before `mod tests {` -- mirroring
-   * Plan 03's own identical helper and its rationale verbatim: `login_cancel_strip_script` is a
-   * pure, cargo-tested helper (Task 1) with multiple call sites inside `mod tests` by design; a
-   * whole-file count would conflate "how many cargo tests exercise this helper" with "how many
-   * production call sites exist", which is the thing this plan's own `exactly ONCE`
-   * acceptance criterion actually polices.
-   */
-  function productionCode(code: string): string {
-    const testModStart = code.indexOf('mod tests {')
-    expect(testModStart).toBeGreaterThan(-1)
-    return code.slice(0, testModStart)
+  /** Production code only: each file's own test modules cut (Phase 71 D-10). */
+  function productionCode(): string {
+    return loadMainRsCode(readTauriShellProductionSource())
   }
 
   // quick-261029-osq: REPLACES Plan 08's Test 1 (login_cancel_strip_script( called exactly
@@ -2258,8 +2187,8 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
   // bar install is unconfirmed is never presented (no sheet without a visible exit,
   // T-34.4.2-15 / T-osq-02).
   test("Test 1: install_native_login_bar( is called inside the humble_login_open arm's visible macOS path, before present_login_window_as_sheet(, and a sheet is presented only when the install was confirmed", () => {
-    const code = productionCode(loadMainRsCode())
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const code = productionCode()
+    const armBody = humbleLoginOpenHandlerBody(code)
     const installIdx = armBody.indexOf('install_native_login_bar(')
     expect(installIdx).toBeGreaterThan(-1)
     expect(
@@ -2277,8 +2206,8 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
   })
 
   test('Test 2: the humble_login_open arm has no .on_navigation( closure and no is_login_cancel_request -- the /login-cancel sentinel channel is deleted', () => {
-    const code = productionCode(loadMainRsCode())
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const code = productionCode()
+    const armBody = humbleLoginOpenHandlerBody(code)
     expect(armBody).not.toContain('.on_navigation(')
     expect(code).not.toContain('is_login_cancel_request')
     expect(code).not.toContain('LOGIN_CANCEL_EXFIL_PATH')
@@ -2305,7 +2234,7 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
 
     const start = code.indexOf('fn request_login_sheet_cancel(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     const body = code.slice(start, end)
 
@@ -2359,14 +2288,9 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
 // must not advertise a keyboard affordance it cannot deliver). Live behaviour is NOT claimed
 // by any test below -- these are source guards only, per this plan's own acceptance criteria.
 describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes', () => {
-  /**
-   * Bounds the search to PRODUCTION code only -- everything before `mod tests {` -- mirroring
-   * Plan 08's own identical helper and its rationale verbatim.
-   */
-  function productionCode(code: string): string {
-    const testModStart = code.indexOf('mod tests {')
-    expect(testModStart).toBeGreaterThan(-1)
-    return code.slice(0, testModStart)
+  /** Production code only: each file's own test modules cut (Phase 71 D-10). */
+  function productionCode(): string {
+    return loadMainRsCode(readTauriShellProductionSource())
   }
 
   // CONVERTED TO A ZERO-OCCURRENCE NEGATIVE (Phase 34.4.2 Plan 13, operator decision D-A):
@@ -2377,7 +2301,7 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
   // so this is a real retightening, not housekeeping: it now asserts the call form is gone
   // entirely, which is what "the last call site left with the poster" actually means.
   test('Test 1: .makeKeyAndOrderFront(None) — the CALL form — appears 0 times in the comment-stripped PRODUCTION source; its sole call site left with the deleted synthesized-right-click poster (Plan 13, D-A)', () => {
-    const code = productionCode(loadMainRsCode())
+    const code = productionCode()
     const callMatches = code.match(/\.makeKeyAndOrderFront\(None\)/g) ?? []
     expect(callMatches.length).toBe(0)
   })
@@ -2386,7 +2310,7 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
     const code = loadMainRsCode()
     const start = code.indexOf('fn dismiss_login_window_sheet(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     const body = code.slice(start, end)
 
@@ -2403,7 +2327,7 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
   })
 
   test('Test 3 (WR-01, T-34.4.2-08 preserved): register_presented_login_sheet( appears exactly three times as a call site in production source -- the present-path registration plus the two dismiss failure arms', () => {
-    const code = productionCode(loadMainRsCode())
+    const code = productionCode()
     // Negative lookbehind excludes the `fn register_presented_login_sheet(` definition itself.
     const callSites =
       code.match(/(?<!fn )register_presented_login_sheet\(/g) ?? []
@@ -2414,15 +2338,16 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
     function extractPristineLoginFnBody(code: string): string {
       const start = code.indexOf('fn open_pristine_epic_login_window(')
       expect(start).toBeGreaterThan(-1)
-      const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+      const end = fnEndAfter(code, start)
       expect(end).toBeGreaterThan(start)
       return code.slice(start, end)
     }
     function extractEpicPristineNavDelegateBody(code: string): string {
-      const start = code.indexOf('define_class!(')
+      const end = code.indexOf('impl EpicPristineNavDelegate {')
+      expect(end).toBeGreaterThan(-1)
+      // The define_class! that immediately precedes the impl (Phase 71 D-10: not the first in the combined text).
+      const start = code.lastIndexOf('define_class!(', end)
       expect(start).toBeGreaterThan(-1)
-      const end = code.indexOf('impl EpicPristineNavDelegate {', start)
-      expect(end).toBeGreaterThan(start)
       return code.slice(start, end)
     }
     const code = loadMainRsCode()
@@ -2444,17 +2369,6 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
 // source-level guard that makes that structurally impossible in place -- ordering,
 // visible-only scoping, three-way clearing and a bounded (not unbounded) expiry.
 describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows (T-34.4.2-39)', () => {
-  function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    return code.slice(armStart, armEnd)
-  }
-
   /**
    * Scans forward from `openMarker`'s FIRST `{` and returns the full brace-matched block
    * (inclusive of both braces), counting depth rather than relying on a second string marker
@@ -2487,7 +2401,7 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
   // See .planning/todos/pending/2026-10-29-epic-login-window-as-macos-sheet-like-gog.md.
   test('Test 1 (ORDERING, updated quick-261029-utr): the arm no longer calls open_pristine_epic_login_window( directly; PENDING_VISIBLE_LOGIN_WINDOW is referenced before open_pristine_login_sheet( which precedes tauri::WebviewWindowBuilder::new(', () => {
     const code = loadMainRsCode()
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     expect(armBody).not.toContain('open_pristine_epic_login_window(')
     const guardIdx = armBody.indexOf('PENDING_VISIBLE_LOGIN_WINDOW')
     const sheetIdx = armBody.indexOf('open_pristine_login_sheet(')
@@ -2507,7 +2421,7 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
   // bare condition here would silently redirect both to this new block instead).
   test('Test 2 (VISIBLE-ONLY SCOPING): the refuse-or-arm block is brace-matched from a condition referencing visible -- hidden reveal/clear windows never arm or are refused', () => {
     const code = loadMainRsCode()
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     const guardBlock = extractBracedBlock(armBody, 'if visible == true {')
     expect(guardBlock).toContain('PENDING_VISIBLE_LOGIN_WINDOW')
     expect(guardBlock).toContain('visible')
@@ -2528,7 +2442,7 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
 
     const gogStart = code.indexOf('fn open_pristine_login_sheet(')
     expect(gogStart).toBeGreaterThan(-1)
-    const gogEnd = code.indexOf('#[cfg(target_os = "macos")]', gogStart)
+    const gogEnd = fnEndAfter(code, gogStart)
     expect(gogEnd).toBeGreaterThan(gogStart)
     const gogCallSites =
       code
@@ -2541,7 +2455,7 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
   // builds a window and both arm the latch); Epic's pre-latch early return (D-D) is gone.
   test('Test 3b (quick-261029-o1w ORDERING, updated quick-261029-utr): Epic and GOG both route after the latch -- no `if is_epic_login {` exemption survives, and `if visible == true {` precedes `if is_epic_login || is_gog_login {`', () => {
     const code = loadMainRsCode()
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     // Line-anchored: the routing branch's own `let store = if is_epic_login { "epic" }` is fine.
     expect(armBody).not.toMatch(/^\s*if is_epic_login \{\s*$/m)
     const latchIdx = armBody.indexOf('if visible == true {')
@@ -2556,7 +2470,7 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
   // independently invented magic number, so the two can never disagree.
   test('Test 4 (BOUNDED, NOT UNBOUNDED, T-34.4.2-41): the refuse-or-arm region references pending_login_entry_is_stale, and PENDING_VISIBLE_LOGIN_WINDOW_TTL is defined in terms of LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT rather than an independent magic number', () => {
     const code = loadMainRsCode()
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     const guardBlock = extractBracedBlock(armBody, 'if visible == true {')
     expect(guardBlock).toContain('pending_login_entry_is_stale')
 
@@ -3941,9 +3855,7 @@ describe('REQ-34.3-11 item 2 (debug session finder-reveal-no-selection) macOS Fi
 
   test('the shell_show_item_in_folder arm calls the workaround, macOS-gated, AFTER reveal_item_in_dir', () => {
     const code = loadMainRsCode()
-    const armStart = code.indexOf(
-      'RustInvokeChannel::ShellShowItemInFolder => {'
-    )
+    const armStart = code.indexOf('RustInvokeChannel::ShellShowItemInFolder =>')
     expect(armStart).toBeGreaterThan(-1)
     const armEnd = code.indexOf('RustInvokeChannel::ShellOpenPath =>', armStart)
     expect(armEnd).toBeGreaterThan(armStart)
@@ -4217,7 +4129,7 @@ describe('quick 260930-q11: both login-sheet paths resolve their NSWindow handle
   function extractLoginSheetFnBody(code: string, fnName: string): string {
     const start = code.indexOf(`fn ${fnName}(`)
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     return code.slice(start, end)
   }
@@ -4426,7 +4338,7 @@ describe('quick 260930-q11: both login-sheet paths resolve their NSWindow handle
     expect(code.match(/unsafe impl Send for SendPtr/g) ?? []).toHaveLength(1)
     const start = code.indexOf('fn open_pristine_epic_login_window(')
     expect(start).toBeGreaterThan(-1)
-    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    const end = fnEndAfter(code, start)
     expect(end).toBeGreaterThan(start)
     expect(code.slice(start, end)).toContain(SEND_PTR_SHIM_IMPL)
   })
@@ -4586,6 +4498,12 @@ describe('tauriShellSource helper scope', () => {
     }
   })
 
+  it('listTauriShellSourceFiles() contains no path the exclusion predicate rejects', () => {
+    for (const f of listTauriShellSourceFiles()) {
+      expect(isExcludedShellFile(f)).toBe(false)
+    }
+  })
+
   it('every `mod x;` declared in main.rs resolves to a listed file (or a pre-split sibling)', () => {
     const code = stripSourceComments(readTauriShellFile('main.rs'))
     const listed = listTauriShellSourceFiles()
@@ -4629,6 +4547,216 @@ describe('tauriShellSource helper scope', () => {
           if (
             /(['"\x60])main\.rs\1/.test(code) ||
             /src-tauri\/src\/main\.rs['"\x60]/.test(code)
+          ) {
+            offenders.push(rel)
+          }
+        }
+      }
+    }
+    visit('src')
+    visit('meta')
+    expect(offenders).toEqual([])
+  })
+})
+
+describe('production-source reader (Phase 71 D-10)', () => {
+  const rust = (...lines: string[]): string => lines.join('\n')
+
+  test('a trailing test mod is cut', () => {
+    const src = rust(
+      'fn a() {}',
+      '#[cfg(test)]',
+      'mod tests {',
+      '    fn t() {}',
+      '}',
+      ''
+    )
+    expect(stripRustTestModules(src)).toBe(rust('fn a() {}', ''))
+  })
+
+  test('a mid-file topic-named test mod is cut while the fn after it is kept', () => {
+    const src = rust(
+      'fn a() {}',
+      '#[cfg(test)]',
+      'mod shell_open_tests {',
+      '    fn t() {}',
+      '}',
+      'fn after() {}',
+      ''
+    )
+    const out = stripRustTestModules(src)
+    expect(out).toContain('fn after() {}')
+    expect(out).not.toContain('shell_open_tests')
+    expect(listRustTestModuleBlocks(src).map((b) => b.name)).toEqual([
+      'shell_open_tests'
+    ])
+  })
+
+  test('commented, indented and non-mod cfg(test) lines are not cut', () => {
+    const commented = rust('// #[cfg(test)]', '// mod tests {', 'fn a() {}')
+    expect(stripRustTestModules(commented)).toBe(commented)
+    const indented = rust(
+      '    #[cfg(test)]',
+      '    mod tests {',
+      '    }',
+      'fn a() {}'
+    )
+    expect(stripRustTestModules(indented)).toBe(indented)
+    const onFn = rust('#[cfg(test)]', 'fn helper() {}', 'fn a() {}')
+    expect(stripRustTestModules(onFn)).toBe(onFn)
+  })
+
+  test('readTopLevelFnBody returns the body for pub(crate) and plain fns', () => {
+    const src = rust(
+      'pub(crate) fn rpc_x(a: u8) {',
+      '    one();',
+      '    two();',
+      '    three();',
+      '}',
+      'fn rpc_y() {',
+      '    a();',
+      '    b();',
+      '    c();',
+      '}'
+    )
+    expect(readTopLevelFnBody(src, 'rpc_x')).toContain('two();')
+    expect(readHandlerBody(src, 'y')).toContain('b();')
+  })
+
+  test('readTopLevelFnBody throws on missing, duplicate and short bodies', () => {
+    const dup = rust(
+      'fn rpc_x() {',
+      '    a();',
+      '    b();',
+      '    c();',
+      '}',
+      'fn rpc_x() {',
+      '    a();',
+      '    b();',
+      '    c();',
+      '}'
+    )
+    expect(() => readTopLevelFnBody(dup, 'rpc_x')).toThrow(/rpc_x/)
+    expect(() => readTopLevelFnBody('fn other() {}', 'rpc_x')).toThrow(/rpc_x/)
+    const short = rust('fn rpc_x() {', '    only();', '}')
+    expect(() => readTopLevelFnBody(short, 'rpc_x')).toThrow(/rpc_x/)
+    expect(readTopLevelFnBody(short, 'rpc_x', 1)).toContain('only();')
+  })
+
+  test('isExcludedShellFile is prefix-aware and parents sort before their directory', () => {
+    expect(isExcludedShellFile('macos_epic_embed/surface.rs')).toBe(true)
+    expect(isExcludedShellFile('macos_epic_embed.rs')).toBe(true)
+    expect(isExcludedShellFile('login_window/sheet.rs')).toBe(false)
+    expect(['login_window/a.rs', 'login_window.rs'].sort()).toEqual([
+      'login_window.rs',
+      'login_window/a.rs'
+    ])
+  })
+})
+
+// Wave-0 baseline: .planning/phases/71-rust-shell-module-decomposition/baselines/wave-0-start.
+// Counts measured over the OLD slice (`readTauriShellSource()` cut at the first `mod tests {`) and
+// over the new production reader on the unmoved tree: identical for every needle.
+describe('D-10 production reader proof (Phase 71 wave 0)', () => {
+  const SHELL_SRC = join(__dirname, '..', '..', '..', 'src-tauri', 'src')
+
+  // Topic-named test mods living in the combined (non-main) files today. main.rs's own `mod tests`
+  // is handled separately below.
+  const EXPECTED_TEST_MOD_NAMES = ['relay_allow_list_tests', 'shell_open_tests']
+
+  test('per file: strip removes exactly the enumerated test-mod line ranges and nothing else', () => {
+    const names: string[] = []
+    const colocatedTestsModsPerFile: number[] = []
+    for (const f of listTauriShellSourceFiles().filter(
+      (p) => p !== 'main.rs'
+    )) {
+      const src = readTauriShellFile(f)
+      const blocks = listRustTestModuleBlocks(src)
+      const lines = src.split('\n')
+      const expected = lines
+        .filter(
+          (_, i) => !blocks.some((b) => i >= b.startLine && i <= b.endLine)
+        )
+        .join('\n')
+      expect(stripRustTestModules(src)).toBe(expected)
+      names.push(...blocks.map((b) => b.name))
+      colocatedTestsModsPerFile.push(
+        blocks.filter((b) => b.name === 'tests').length
+      )
+    }
+    // Phase 71 wave 5 co-locates main.rs's tests into a trailing `mod tests` in the module they
+    // test (D-08): any number of files may carry one, never two in the same file.
+    expect(names.filter((n) => n !== 'tests').sort()).toEqual(
+      EXPECTED_TEST_MOD_NAMES
+    )
+    expect(Math.max(...colocatedTestsModsPerFile)).toBeLessThanOrEqual(1)
+  })
+
+  test('main.rs: stripped text equals the old slice before `#[cfg(test)]` + its mod tests, modulo trailing newline', () => {
+    const main = readTauriShellFile('main.rs')
+    const oldSlice = main.slice(0, main.indexOf('#[cfg(test)]\nmod tests {'))
+    expect(main).toContain('#[cfg(test)]\nmod tests {')
+    expect(stripRustTestModules(main).trimEnd()).toBe(oldSlice.trimEnd())
+  })
+
+  test('pinned needle counts over the production source equal the wave-0 baseline', () => {
+    const code = loadMainRsCode(readTauriShellProductionSource())
+    const count = (re: RegExp): number => (code.match(re) ?? []).length
+    expect(count(/fn login_chrome_css_script\(/g)).toBe(1)
+    expect(count(/(?<!fn )login_chrome_css_script\(/g)).toBe(1)
+    // The plan quoted 1; the whole-source count is 2 (the arm body, which the pin scopes to, has 1).
+    expect(count(/(?<!fn )install_native_login_bar\(/g)).toBe(2)
+    expect(count(/\.makeKeyAndOrderFront\(None\)/g)).toBe(0)
+    expect(count(/(?<!fn )register_presented_login_sheet\(/g)).toBe(3)
+    expect(count(/(?<!fn )request_login_sheet_cancel\(/g)).toBe(2)
+  })
+
+  test('readMacosEpicEmbedSource() is the parent plus its macos_epic_embed/ children in sorted order', () => {
+    const rd = (f: string): string => readFileSync(join(SHELL_SRC, f), 'utf-8')
+    expect(readMacosEpicEmbedSource()).toBe(
+      [
+        rd('macos_epic_embed.rs'),
+        rd('macos_epic_embed/nav_delegate.rs'),
+        rd('macos_epic_embed/surface.rs')
+      ].join('\n')
+    )
+  })
+
+  test('listTauriShellSourceFiles() never lists a macos_epic_embed/ path (D-11)', () => {
+    expect(
+      listTauriShellSourceFiles().filter((f) =>
+        f.startsWith('macos_epic_embed/')
+      )
+    ).toEqual([])
+  })
+})
+
+describe('no reader slices the combined shell source on mod tests (D-10)', () => {
+  const REPO_ROOT = join(__dirname, '..', '..', '..')
+
+  it('no test or meta script slices on `mod tests {` via indexOf/split', () => {
+    const ALLOWED: Record<string, string> = {
+      'src/backend/testUtils/tauriShellSource.ts':
+        'the helper itself (documents the old idiom)',
+      'src/backend/__tests__/tauriShellSource.test.ts':
+        'this guard (its regex and fixtures name the idiom)'
+    }
+    const offenders: string[] = []
+    const visit = (dir: string): void => {
+      for (const e of readdirSync(join(REPO_ROOT, dir), {
+        withFileTypes: true
+      })) {
+        const rel = `${dir}/${e.name}`
+        if (e.isDirectory()) {
+          if (e.name !== 'node_modules') visit(rel)
+        } else if (/\.(ts|tsx)$/.test(e.name) && !(rel in ALLOWED)) {
+          const code = stripSourceComments(
+            readFileSync(join(REPO_ROOT, rel), 'utf-8')
+          )
+          if (
+            /indexOf\((['"\x60])mod tests \{\1\)|split\((['"\x60])mod tests \{\2\)/.test(
+              code
+            )
           ) {
             offenders.push(rel)
           }

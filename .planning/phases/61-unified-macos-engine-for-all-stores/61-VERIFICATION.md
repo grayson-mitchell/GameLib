@@ -1,8 +1,9 @@
 ---
 phase: 61-unified-macos-engine-for-all-stores
 verified: 2026-11-07T10:00:00Z
-status: human_needed
-score: 22/22 must-haves verified (D-01..D-20 + 61-26/61-27); 1 residual warning and 1 pending live UAT need a human
+status: passed
+updated: 2026-11-08
+score: 22/22 must-haves verified (D-01..D-20 + 61-26/61-27); human verification resolved in 61-HUMAN-UAT.md (residual WR-01 fixed by quick 261107-v6q; live UAT 13/14 waived)
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
@@ -21,15 +22,17 @@ human_verification:
   - test: "Decide on new review WR-01 (residual): under an inconclusive pre-flight a wine-manager marker (pinId null) or an unknown legacy pin id falls back to pins.current (engineDecision.ts:503-508), and prepareBottleForEngine then performs a real engine switch (engineSwitch.ts:153-160)"
     expected: "Either accept (narrow: needs Automatic override on a bottle previously on a Wine Manager engine, or a retired pin id) or fix by keeping the bottle untouched / taking the CrossOver branch when the marker is not a known pin"
     why_human: "Policy call on a narrow edge. The main 61-26 contract (pinned-marker bottles keep their engine, cx-inconclusive label, no fallback toast) is verified"
+    resolution: "FIXED 2026-11-07 by quick 261107-v6q (88c8296b7): wine-manager and retired-pin markers keep their recorded engine under an inconclusive pre-flight; an unresolvable engine takes the CrossOver branch. 61-HUMAN-UAT item 4: pass"
   - test: "UAT 13 (deadline notice does not stop a running game) and UAT 14 (Sideload Run installer uses the game's bottle) are pending optional live checks (HUMAN-UAT item 3)"
     expected: "Game keeps running after 180 s with a notice only; installer runs in the GameLib-sideload bottle"
     why_human: "Live CrossOver needed. Both are covered by unit tests, and the operator may waive them"
+    resolution: "WAIVED 2026-11-07 by operator (61-HUMAN-UAT item 3, 375b04ec7); covered by launchEngine.deadline.test.ts and the sideload Run-installer bottle tests"
 ---
 
 # Phase 61: Unified macOS engine for all stores - Re-verification Report
 
 **Phase goal:** One per-game Engine control for every Windows game on macOS (all stores), with the Phase 59 engine decision moved out of `steam/engine/` so non-Steam launches get trial-expiry pre-flight, N-days notice, launch timeout, broken-CrossOver detection and a fallback bottle.
-**Status:** human_needed
+**Status:** passed (was `human_needed` until 2026-11-08; see "Human verification resolved" at the end)
 **Re-verification:** Yes, after gap closure plans 61-21..61-27
 
 ## Prior gaps, re-checked against the code
@@ -79,3 +82,16 @@ _Verifier: Claude (gsd-verifier)_
 **Judgement on new review WR-01:** confirmed real by reading `engineDecision.ts:503-508`: a `wine-manager` marker has `pinId: null`, so `pin = d.pins.current`, and an unknown pin id also resolves to current, which triggers a real switch. This does not defeat the 61-26 truth for the main case (pinned markers, the built-in engines GameLib manages), so it is scored as a warning, not a gap. It only violates "keeps the engine its marker records" for wine-manager markers under Automatic override and for retired pin ids. A developer decision is requested.
 
 Test status: 9 jest failures in 8 suites are pre-existing or environmental (two reproduce at pre-phase commit 2eb50b85a) and touch no 61-26/27 file; `pnpm codecheck` passes. HUMAN-UAT items 1 and 2 are recorded pass; item 3 is still pending.
+
+## Human verification resolved (2026-11-08)
+
+Status moved from `human_needed` to `passed`. Every human item is closed in `61-HUMAN-UAT.md` (`status: complete`, 3 pass, 1 skipped with a reason):
+
+| Item | Outcome |
+| --- | --- |
+| Review WR-01 (inconclusive pre-flight launches on CrossOver) | Fixed in 61-26 (HUMAN-UAT 1) |
+| Review WR-02 (deadline notice raises the main window) | Fixed in 61-27 (HUMAN-UAT 2) |
+| Re-review WR-01 residual (wine-manager / retired-pin marker switched) | Fixed by quick 261107-v6q, `88c8296b7` (HUMAN-UAT 4) |
+| Live UAT 13 and 14 | Waived by operator, unit-test coverage (HUMAN-UAT 3, `375b04ec7`) |
+
+`61-UAT.md` is `status: complete` (9 pass, 5 skipped with reasons, G-1 resolved). Review WR-03..WR-05 stay as listed robustness warnings in 61-REVIEW.md and were never must-haves. The sections above are kept as the record of the 2026-11-07 verification.

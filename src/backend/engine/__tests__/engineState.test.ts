@@ -595,6 +595,34 @@ describe('recordLaunchDecision and publisher', () => {
     )
     expect(pub.mock.calls[0][0].reason).not.toBe('cx-broken')
   })
+  it('IN-02 (D-05 / 261107-v6q): kept built-in engine under an inconclusive pre-flight with no cache shows no badge and no launchNotice', () => {
+    // The blank badge is intended: an inconclusive probe never yields a toast, notice or badge.
+    const { deps } = mk(healthy(null))
+    const pub = jest.fn()
+    setEngineStatePublisher(pub)
+    const d = fallback('cx-inconclusive')
+    if (d.kind !== 'use') throw new Error('expected use')
+    recordLaunchDecision(
+      '1',
+      {
+        ...d,
+        preflight: {
+          kind: 'broken',
+          binDir: '/cx/bin',
+          build: TESTED,
+          detail: 'timeout',
+          inconclusive: true
+        }
+      },
+      'GameLibSteamBridge-1',
+      deps
+    )
+    expect(pub).toHaveBeenCalledTimes(1)
+    const state = pub.mock.calls[0][0]
+    expect(state.engine).toBeNull()
+    expect(state.reason).toBeNull()
+    expect(state.launchNotice).toBeNull()
+  })
   it('publishes launchNotice null for an override or CrossOver launch; get returns null', async () => {
     const { deps } = mk(healthy(null))
     const pub = jest.fn()

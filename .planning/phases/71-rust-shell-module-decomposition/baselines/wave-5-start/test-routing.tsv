@@ -1,0 +1,359 @@
+test name	current banner	subject fn	defining file	destination
+on_sidecar_eof_is_silent_during_intentional_shutdown		on_sidecar_eof	sidecar.rs	sidecar.rs
+on_sidecar_eof_surfaces_when_not_shutting_down		on_sidecar_eof	sidecar.rs	sidecar.rs
+on_sidecar_eof_surfaces_at_most_once		on_sidecar_eof	sidecar.rs	sidecar.rs
+kill_process_group_rejects_non_positive_and_init_pgids		kill_process_group	sidecar.rs	sidecar.rs
+kill_process_group_reaps_members_after_leader_exits		spawn_orphaned_group	sidecar.rs	sidecar.rs
+kill_process_group_on_empty_group_is_esrch		spawn_orphaned_group	sidecar.rs	sidecar.rs
+shell_source_parts_align_with_file_names				stay:D-09 source-text/wiring reader
+cut_test_modules_cuts_whole_test_mod_blocks_only				stay:no flat-module subject (D-09)
+shell_production_source_main_part_equals_pre_test_slice				stay:D-09 source-text/wiring reader
+shell_source_files_names_every_shell_module_file				stay:D-09 source-text/wiring reader
+no_shell_source_test_slices_on_mod_tests				stay:D-09 source-text/wiring reader
+bridge_invite_picker_path_builds_the_query	---- quick 261101-llf: bridge invite picker window ----	bridge_invite_picker_path	login_window/invite_picker.rs	login_window/invite_picker.rs
+bridge_invite_picker_path_rejects_bad_ids	---- quick 261101-llf: bridge invite picker window ----	bridge_invite_picker_path	login_window/invite_picker.rs	login_window/invite_picker.rs
+bridge_invite_nav_allowed_accepts_only_app_origins	---- quick 261101-llf: bridge invite picker window ----	bridge_invite_nav_allowed	login_window/invite_picker.rs	login_window/invite_picker.rs
+tray_variant_parse_is_an_exact_allow_list	---- quick 260930-lyk: tri-state tray glyph (Auto / Light / Dark) ----	parse_tray_icon_mode	tray.rs	tray.rs
+tray_variant_taskbar_value_maps_to_the_glyph	---- quick 260930-lyk: tri-state tray glyph (Auto / Light / Dark) ----	tray_glyph_dark_for_system_uses_light_theme	tray.rs	tray.rs
+tray_variant_resolve_honours_the_mode	---- quick 260930-lyk: tri-state tray glyph (Auto / Light / Dark) ----	resolve_tray_icon_dark	tray.rs	tray.rs
+tray_variant_mode_store_round_trips	---- quick 260930-lyk: tri-state tray glyph (Auto / Light / Dark) ----	TrayIconMode	tray.rs	tray.rs
+tray_variant_wire_contract_parses_every_shipped_payload	---- quick 260930-lyk: tri-state tray glyph (Auto / Light / Dark) ----	fixture	shell_open.rs	tray.rs
+tray_variant_wire_contract_retired_dark_bool_shape_is_auto_not_dark	---- quick 260930-lyk: tri-state tray glyph (Auto / Light / Dark) ----	tray_set_icon_mode_from_args	tray.rs	tray.rs
+tray_variant_system_uses_light_theme_read_matches_reg_exe	---- quick 260930-lyk: tri-state tray glyph (Auto / Light / Dark) ----	read_system_uses_light_theme	tray.rs	tray.rs
+store_embed_wire_contract_open_parses_the_shipped_payload	---- Phase 40 store-embed WIRE CONTRACT (added 2026-09-05 after a live-gate failure) ----	store_embed_open_args	store_embed/state.rs	stay:D-09 store-embed wire contract (shared fixture helper wire_args)
+store_embed_wire_contract_set_bounds_parses_the_shipped_payload	---- Phase 40 store-embed WIRE CONTRACT (added 2026-09-05 after a live-gate failure) ----	store_embed_set_bounds_args	store_embed/layout.rs	stay:D-09 store-embed wire contract (shared fixture helper wire_args)
+store_embed_wire_contract_navigate_parses_the_shipped_payload	---- Phase 40 store-embed WIRE CONTRACT (added 2026-09-05 after a live-gate failure) ----	store_embed_navigate_args	store_embed/controls.rs	stay:D-09 store-embed wire contract (shared fixture helper wire_args)
+store_embed_wire_contract_rejects_the_positional_shape_that_shipped	---- Phase 40 store-embed WIRE CONTRACT (added 2026-09-05 after a live-gate failure) ----	store_embed_open_args	store_embed/state.rs	stay:D-09 store-embed wire contract (shared fixture helper wire_args)
+store_embed_open_field_errors_name_each_bad_field	---- Phase 40 store-embed WIRE CONTRACT (added 2026-09-05 after a live-gate failure) ----	store_embed_open_args	store_embed/state.rs	stay:D-09 store-embed wire contract (shared fixture helper wire_args)
+store_embed_set_bounds_field_errors_name_each_bad_field	---- Phase 40 store-embed WIRE CONTRACT (added 2026-09-05 after a live-gate failure) ----	store_embed_set_bounds	store_embed/layout.rs	stay:D-09 store-embed wire contract (shared fixture helper wire_args)
+store_embed_navigate_field_errors_name_the_url	---- Phase 40 store-embed WIRE CONTRACT (added 2026-09-05 after a live-gate failure) ----	store_embed_navigate_args	store_embed/controls.rs	store_embed/controls.rs
+open_external_allowed_schemes_are_exactly_the_five_member_set	---- open_external scheme allow-list (35-21, CR-01) ----	OPEN_EXTERNAL_ALLOWED_SCHEMES	relay_commands.rs	relay_commands.rs
+open_external_scheme_check_rejects_file_scheme	---- open_external scheme allow-list (35-21, CR-01) ----	open_external_scheme_check	relay_commands.rs	relay_commands.rs
+open_external_scheme_check_rejects_smb_scheme	---- open_external scheme allow-list (35-21, CR-01) ----	open_external_scheme_check	relay_commands.rs	relay_commands.rs
+open_external_scheme_check_rejects_javascript_scheme	---- open_external scheme allow-list (35-21, CR-01) ----	open_external_scheme_check	relay_commands.rs	relay_commands.rs
+open_external_scheme_check_rejects_a_url_with_no_scheme	---- open_external scheme allow-list (35-21, CR-01) ----	open_external_scheme_check	relay_commands.rs	relay_commands.rs
+open_external_scheme_check_accepts_steam_rungameid	---- open_external scheme allow-list (35-21, CR-01) ----	open_external_scheme_check	relay_commands.rs	relay_commands.rs
+open_external_scheme_check_accepts_only_the_exact_app_management_url	---- open_external scheme allow-list (35-21, CR-01) ----	open_external_scheme_check	relay_commands.rs	relay_commands.rs
+open_external_scheme_check_accepts_https	---- open_external scheme allow-list (35-21, CR-01) ----	open_external_scheme_check	relay_commands.rs	relay_commands.rs
+open_external_scheme_check_accepts_mailto	---- open_external scheme allow-list (35-21, CR-01) ----	open_external_scheme_check	relay_commands.rs	relay_commands.rs
+open_external_scheme_check_is_case_insensitive	---- open_external scheme allow-list (35-21, CR-01) ----	open_external_scheme_check	relay_commands.rs	relay_commands.rs
+open_external_command_body_calls_the_scheme_check_before_opening	---- open_external scheme allow-list (35-21, CR-01) ----	open_external	relay_commands.rs	stay:D-09 source-text/wiring reader
+recent_menu_id_round_trips_a_plain_app_name	---- Tray recent-games id parsing (Phase 35 Plan 06, T-35-20) ----	tray_recent_menu_id	tray.rs	tray.rs
+send_writer_enqueue_does_not_wait_for_a_blocked_write	---- Tray recent-games id parsing (Phase 35 Plan 06, T-35-20) ----	sidecar_send	relay_commands.rs	relay_commands.rs
+send_writer_keeps_going_after_a_failed_write	---- Tray recent-games id parsing (Phase 35 Plan 06, T-35-20) ----	spawn_send_writer	relay_commands.rs	relay_commands.rs
+tray_quit_hands_off_to_the_sidecar_when_the_probe_answers	---- Tray recent-games id parsing (Phase 35 Plan 06, T-35-20) ----	route_quit_via_sidecar	terminate_veto.rs	terminate_veto.rs
+tray_quit_falls_back_when_the_probe_fails_without_sending	---- Tray recent-games id parsing (Phase 35 Plan 06, T-35-20) ----	route_quit_via_sidecar	terminate_veto.rs	terminate_veto.rs
+tray_quit_falls_back_when_the_probe_does_not_answer_in_time	---- Tray recent-games id parsing (Phase 35 Plan 06, T-35-20) ----	route_quit_via_sidecar	terminate_veto.rs	terminate_veto.rs
+tray_quit_falls_back_when_the_quit_frame_cannot_be_written	---- Tray recent-games id parsing (Phase 35 Plan 06, T-35-20) ----	route_quit_via_sidecar	terminate_veto.rs	terminate_veto.rs
+quit_routing_close_hides_only_when_a_tray_exists_and_the_setting_says_hide	---- quick 261008-kvz: Cmd+Q and the red X route through the sidecar ----	close_request_action	tray.rs	tray.rs
+quit_routing_a_failed_settings_read_routes_the_quit_never_hides	---- quick 261008-kvz: Cmd+Q and the red X route through the sidecar ----	load_tray_settings	tray.rs	tray.rs
+quit_routing_no_tray_icon_on_disk_routes_even_with_exit_to_tray_on	---- quick 261008-kvz: Cmd+Q and the red X route through the sidecar ----	tray_settings_from_config	tray.rs	tray.rs
+quit_routing_exit_to_tray_on_with_a_tray_still_hides	---- quick 261008-kvz: Cmd+Q and the red X route through the sidecar ----	tray_settings_from_config	tray.rs	tray.rs
+quit_routing_the_app_menu_quit_id_cannot_collide_with_a_tray_arm	---- quick 261008-kvz: Cmd+Q and the red X route through the sidecar ----	APP_MENU_QUIT_ID	terminate_veto.rs	terminate_veto.rs
+recent_menu_id_rejects_a_malformed_id	---- quick 261008-kvz: Cmd+Q and the red X route through the sidecar ----	tray_recent_app_name	tray.rs	tray.rs
+a_rejected_app_name_never_becomes_a_menu_id	---- quick 261008-kvz: Cmd+Q and the red X route through the sidecar ----	tray_recent_menu_id	tray.rs	tray.rs
+recent_games_parse_drops_unusable_entries_and_respects_the_limit	---- quick 261008-kvz: Cmd+Q and the red X route through the sidecar ----	tray_recent_games_from_value	tray.rs	tray.rs
+a_persisted_runner_is_parsed_and_validated	---- Persisted runner vs the legacy probe fallback (Phase 35 plan 06, operator-initiated) ----	tray_recent_games_from_value	tray.rs	tray.rs
+every_member_of_the_typescript_runner_union_survives_the_parse	---- Persisted runner vs the legacy probe fallback (Phase 35 plan 06, operator-initiated) ----	TRAY_RUNNERS	tray.rs	tray.rs
+legacy_zoom_runner_falls_back_to_probe	---- Persisted runner vs the legacy probe fallback (Phase 35 plan 06, operator-initiated) ----	tray_recent_games_from_value	tray.rs	tray.rs
+a_legacy_entry_and_a_bogus_runner_both_degrade_to_none	---- Persisted runner vs the legacy probe fallback (Phase 35 plan 06, operator-initiated) ----	tray_recent_games_from_value	tray.rs	tray.rs
+the_launch_branch_uses_a_persisted_runner_and_falls_back_without_one	---- Persisted runner vs the legacy probe fallback (Phase 35 plan 06, operator-initiated) ----	TrayRecentGame	tray.rs	tray.rs
+recent_games_parse_is_total_over_junk	---- Persisted runner vs the legacy probe fallback (Phase 35 plan 06, operator-initiated) ----	tray_recent_games_from_value	tray.rs	tray.rs
+recent_title_falls_back_to_app_name_and_is_bounded	---- Persisted runner vs the legacy probe fallback (Phase 35 plan 06, operator-initiated) ----	TrayRecentGame	tray.rs	tray.rs
+recent_limit_mirrors_the_typescript_default_and_caps_pathological_values	---- Persisted runner vs the legacy probe fallback (Phase 35 plan 06, operator-initiated) ----	tray_recent_limit	tray.rs	tray.rs
+close_hides_only_when_exit_to_tray_is_on_and_a_tray_exists	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	backend	macos_notifications.rs	tray.rs
+a_setting_changed_after_startup_changes_the_close_decision	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	TraySettingsSnapshot	tray.rs	tray.rs
+an_unreadable_config_lets_the_window_close_rather_than_trapping_the_user	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	load_tray_settings	tray.rs	tray.rs
+tray_settings_read_the_global_config_shape	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	tray_settings_from_config	tray.rs	tray.rs
+tray_settings_fail_open_to_a_working_tray	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	tray_settings_from_config	tray.rs	tray.rs
+exempt_channel_waits_indefinitely	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	timeout_for	main.rs	stay:subject in main.rs (D-09)
+non_exempt_channel_is_bounded_at_invoke_timeout	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	timeout_for	main.rs	stay:subject in main.rs (D-09)
+repair_and_read_config_are_exempt	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	timeout_for	main.rs	stay:subject in main.rs (D-09)
+launch_is_exempt	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	timeout_for	main.rs	stay:subject in main.rs (D-09)
+get_crossover_index_is_exempt	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	timeout_for	main.rs	stay:subject in main.rs (D-09)
+oauth_capture_login_and_humble_login_channels_are_exempt	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	INVOKE_TIMEOUT	main.rs	stay:subject in main.rs (D-09)
+a_channel_not_on_the_list_is_still_bounded	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	LONG_RUNNING_CHANNELS	main.rs	stay:subject in main.rs (D-09)
+every_long_running_channel_is_exempt_and_a_non_member_is_bounded	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	LONG_RUNNING_CHANNELS	main.rs	stay:subject in main.rs (D-09)
+invoke_timeout_is_60_seconds	---- exitToTray is decided at CLOSE time, not from the startup snapshot ----	INVOKE_TIMEOUT	main.rs	stay:subject in main.rs (D-09)
+an_abandoned_id_is_attributed_to_the_channel_it_was_awaiting	---- Abandoned-invoke attribution (F-9, quick task `260905-omc`) ----	push_abandoned	main.rs	stay:subject in main.rs (D-09)
+an_unrecorded_id_renders_as_unrecorded_rather_than_guessing	---- Abandoned-invoke attribution (F-9, quick task `260905-omc`) ----	push_abandoned	main.rs	stay:subject in main.rs (D-09)
+an_empty_ring_attributes_nothing	---- Abandoned-invoke attribution (F-9, quick task `260905-omc`) ----	abandoned_channel_for	main.rs	stay:subject in main.rs (D-09)
+the_abandoned_ring_is_bounded_oldest_dropped	---- Abandoned-invoke attribution (F-9, quick task `260905-omc`) ----	ABANDONED_IDS_CAP	main.rs	stay:subject in main.rs (D-09)
+distinct_ids_keep_their_own_distinct_channels	---- Abandoned-invoke attribution (F-9, quick task `260905-omc`) ----	push_abandoned	main.rs	stay:subject in main.rs (D-09)
+sidecar_exit_fails_every_pending_invoke_at_once	---- Abandoned-invoke attribution (F-9, quick task `260905-omc`) ----	install	terminate_veto.rs	stay:no wave-5 destination for subject file terminate_veto.rs
+two_button_dialog_dismissal_is_not_a_button	---- Abandoned-invoke attribution (F-9, quick task `260905-omc`) ----	two_button_choice	dialogs.rs	stay:no wave-5 destination for subject file dialogs.rs
+draining_an_empty_pending_table_is_a_no_op	---- Abandoned-invoke attribution (F-9, quick task `260905-omc`) ----	drain_pending_invokes	main.rs	stay:subject in main.rs (D-09)
+the_invoke_timeout_error_names_the_channel	---- Abandoned-invoke attribution (F-9, quick task `260905-omc`) ----	invoke_timeout_message	main.rs	stay:subject in main.rs (D-09)
+the_invoke_timeout_error_keeps_its_original_prefix	---- Abandoned-invoke attribution (F-9, quick task `260905-omc`) ----	invoke	shell_state.rs	stay:no wave-5 destination for subject file shell_state.rs
+invoke_abandoned_message_renders_both_reasons	---- invoke_abandoned_message (quick task `260907-j8n`) ----	invoke_abandoned_message	main.rs	stay:subject in main.rs (D-09)
+invoke_abandoned_message_carries_no_shell_prefix	---- invoke_abandoned_message (quick task `260907-j8n`) ----	shell_diag	main.rs	stay:subject in main.rs (D-09)
+invoke_abandoned_message_does_not_collide_with_the_capture_harness	---- invoke_abandoned_message (quick task `260907-j8n`) ----	invoke_abandoned_message	main.rs	stay:subject in main.rs (D-09)
+clipboard_text_arg_rejects_absent_args	---- clipboard_write_text args (Phase 34.3 Plan 03, REQ-34.3-08; now the generated Args) ----	ClipboardWriteTextArgs	ipc_contract.rs	clipboard.rs
+clipboard_text_arg_rejects_null	---- clipboard_write_text args (Phase 34.3 Plan 03, REQ-34.3-08; now the generated Args) ----	ClipboardWriteTextArgs	ipc_contract.rs	clipboard.rs
+clipboard_text_arg_rejects_number	---- clipboard_write_text args (Phase 34.3 Plan 03, REQ-34.3-08; now the generated Args) ----	ClipboardWriteTextArgs	ipc_contract.rs	clipboard.rs
+clipboard_text_arg_rejects_bool	---- clipboard_write_text args (Phase 34.3 Plan 03, REQ-34.3-08; now the generated Args) ----	ClipboardWriteTextArgs	ipc_contract.rs	clipboard.rs
+clipboard_text_arg_accepts_empty_string	---- clipboard_write_text args (Phase 34.3 Plan 03, REQ-34.3-08; now the generated Args) ----	ClipboardWriteTextArgs	ipc_contract.rs	clipboard.rs
+clipboard_text_arg_accepts_nonempty_string	---- clipboard_write_text args (Phase 34.3 Plan 03, REQ-34.3-08; now the generated Args) ----	ClipboardWriteTextArgs	ipc_contract.rs	clipboard.rs
+clipboard_text_arg_ignores_trailing_args	---- clipboard_write_text args (Phase 34.3 Plan 03, REQ-34.3-08; now the generated Args) ----	ClipboardWriteTextArgs	ipc_contract.rs	clipboard.rs
+clipboard_read_value_empty_string_is_not_null	---- clipboard_read_value (Phase 34.3 Plan 03, REQ-34.3-08) ----	clipboard_read_value	clipboard.rs	clipboard.rs
+clipboard_read_value_nonempty_string_round_trips	---- clipboard_read_value (Phase 34.3 Plan 03, REQ-34.3-08) ----	clipboard_read_value	clipboard.rs	clipboard.rs
+clipboard_read_value_propagates_error	---- clipboard_read_value (Phase 34.3 Plan 03, REQ-34.3-08) ----	clipboard_read_value	clipboard.rs	clipboard.rs
+humble_login_window_label_is_never_reserved	---- next_login_window_label (Phase 34.4.1 Plan 01, REQ-34.4.1-09, T-34.1-27) ----	next_login_window_label	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_window_labels_differ_across_calls	---- next_login_window_label (Phase 34.4.1 Plan 01, REQ-34.4.1-09, T-34.1-27) ----	next_login_window_label	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_window_label_is_never_derived_from_url	---- next_login_window_label (Phase 34.4.1 Plan 01, REQ-34.4.1-09, T-34.1-27) ----	next_login_window_label	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_open_args_rejects_absent_and_non_string	---- humble_login_open args (Phase 34.4.1 Plan 01, REQ-34.4.1-01, T-34.4.1-08) ----	HumbleLoginOpenArgs	ipc_contract.rs	stay:no wave-5 destination for subject file ipc_contract.rs
+humble_login_window_parse_url_rejects_non_https	---- humble_login_open args (Phase 34.4.1 Plan 01, REQ-34.4.1-01, T-34.4.1-08) ----	login_window_parse_url	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_cookie_and_label_arms_pin_their_bad_args_strings	---- humble_login_open args (Phase 34.4.1 Plan 01, REQ-34.4.1-01, T-34.4.1-08) ----	HumbleLoginCookiesArgs	ipc_contract.rs	stay:no wave-5 destination for subject file ipc_contract.rs
+humble_login_window_title_puts_origin_before_document_title	---- login_window_title (Phase 34.5 Plan 27, F-34.5-G6-04, T-34.5-G6-22/23) ----	login_window_title	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_window_title_a_url_shaped_document_title_cannot_precede_the_real_origin	---- login_window_title (Phase 34.5 Plan 27, F-34.5-G6-04, T-34.5-G6-22/23) ----	opened	epic_embed_state.rs	login_window/humble_helpers.rs
+humble_login_window_title_no_document_title_returns_the_origin_alone	---- login_window_title (Phase 34.5 Plan 27, F-34.5-G6-04, T-34.5-G6-22/23) ----	login_window_title	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_window_title_empty_document_title_is_treated_as_absent	---- login_window_title (Phase 34.5 Plan 27, F-34.5-G6-04, T-34.5-G6-22/23) ----	login_window_title	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_window_open_seeds_the_shared_origin_from_the_validated_url_before_any_page_load	---- login_window_title (Phase 34.5 Plan 27, F-34.5-G6-04, T-34.5-G6-22/23) ----	login_window_title	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_cookie_domain_matches_the_www_regression_case	---- cookie_domain_matches (Phase 34.4.1 Plan 01, REQ-34.4.1-01, spike 014a) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_cookie_domain_matches_rejects_suffix_lookalikes	---- cookie_domain_matches (Phase 34.4.1 Plan 01, REQ-34.4.1-01, spike 014a) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_cookies_for_domain_matches_bare_apex_cookie	---- cookie_domain_matches (Phase 34.4.1 Plan 01, REQ-34.4.1-01, spike 014a) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_cookies_for_domain_matches_leading_dot_cookie	---- cookie_domain_matches (Phase 34.4.1 Plan 01, REQ-34.4.1-01, spike 014a) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_cookies_for_domain_matches_subdomain_cookie	---- cookie_domain_matches (Phase 34.4.1 Plan 01, REQ-34.4.1-01, spike 014a) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_cookies_for_domain_rejects_suffix_lookalikes	---- cookie_domain_matches (Phase 34.4.1 Plan 01, REQ-34.4.1-01, spike 014a) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_cookies_for_domain_direction_is_the_defect_a_fix	---- cookie_domain_matches (Phase 34.4.1 Plan 01, REQ-34.4.1-01, spike 014a) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+cookie_domain_matches_normalizes_leading_dot_domain_against_apex_host	---- cookie_domain_matches (Phase 34.4.1 Plan 01, REQ-34.4.1-01, spike 014a) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+cookie_domain_matches_normalizes_leading_dot_domain_against_subdomain_host	---- cookie_domain_matches (Phase 34.4.1 Plan 01, REQ-34.4.1-01, spike 014a) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+cookie_domain_matches_direction_still_discriminates_for_host_vs_subdomain_pairs	---- cookie_domain_matches (Phase 34.4.1 Plan 01, REQ-34.4.1-01, spike 014a) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_cookies_for_domain_does_not_disturb_the_poll_direction	---- cookie_domain_matches (Phase 34.4.1 Plan 01, REQ-34.4.1-01, spike 014a) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+epic_cookie_domain_matches_accepts_every_epic_owned_apex	---- epic_cookie_domain_matches (Phase 35 plan 09, D-09-CORRECTED, T-35-37/T-35-38) ----	epic_cookie_domain_matches	login_window/macos_cookies.rs	login_window/macos_cookies.rs
+epic_cookie_domain_matches_accepts_subdomains_of_each_apex	---- epic_cookie_domain_matches (Phase 35 plan 09, D-09-CORRECTED, T-35-37/T-35-38) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+epic_cookie_domain_matches_rejects_every_other_storefront	---- epic_cookie_domain_matches (Phase 35 plan 09, D-09-CORRECTED, T-35-37/T-35-38) ----	EPIC_COOKIE_DOMAINS	login_window/macos_cookies.rs	login_window/macos_cookies.rs
+epic_cookie_domain_matches_rejects_suffix_lookalikes	---- epic_cookie_domain_matches (Phase 35 plan 09, D-09-CORRECTED, T-35-37/T-35-38) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+store_logout_cookie_domain_matches_accepts_gog_and_amazon_apexes	---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----	store_logout_cookie_domain_matches	login_window/macos_cookies.rs	login_window/macos_cookies.rs
+store_logout_cookie_domain_matches_accepts_subdomains_of_each_apex	---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+store_logout_cookie_domain_matches_rejects_every_other_storefront	---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----	store_logout_cookie_domain_matches	login_window/macos_cookies.rs	login_window/macos_cookies.rs
+store_logout_cookie_domain_matches_rejects_suffix_lookalikes	---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----	cookie_domain_matches	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+epic_cookie_domains_is_exactly_the_operator_approved_set	---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----	EPIC_COOKIE_DOMAINS	login_window/macos_cookies.rs	login_window/macos_cookies.rs
+website_data_record_matches_domain_matches_bare_apex	---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----	website_data_record_matches_domain	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+website_data_record_matches_domain_matches_subdomain	---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----	website_data_record_matches_domain	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+website_data_record_matches_domain_matches_leading_dot	---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----	website_data_record_matches_domain	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+website_data_record_matches_domain_rejects_suffix_lookalike	---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----	website_data_record_matches_domain	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+website_data_record_matches_domain_rejects_empty_display_name	---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----	website_data_record_matches_domain	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+verified_delete_count_is_the_measured_delta	---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----	verified_delete_count	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+verified_delete_count_saturates_at_zero_when_the_jar_grew	---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----	verified_delete_count	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+verified_delete_count_is_zero_when_removal_changed_nothing	---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----	verified_delete_count	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_event_value_shape	---- login_event_value (Phase 34.4.1 Plan 01, REQ-34.4.1-03) ----	login_event_value	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_login_event_value_closed_shape_has_an_empty_url	---- login_event_value (Phase 34.4.1 Plan 01, REQ-34.4.1-03) ----	login_event_value	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+humble_reveal_post_args_accepts_a_full_valid_set_with_a_string_csrf_token	---- reveal_post_args (Phase 34.4.1 Plan 04, REQ-34.4.1-05) ----	reveal_post_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_reveal_post_args_maps_a_null_csrf_token_to_none	---- reveal_post_args (Phase 34.4.1 Plan 04, REQ-34.4.1-05) ----	reveal_post_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_reveal_post_args_treats_a_short_args_slice_as_missing_not_a_panic	---- reveal_post_args (Phase 34.4.1 Plan 04, REQ-34.4.1-05) ----	reveal_post_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_reveal_post_args_rejects_a_non_string_non_null_csrf_token	---- reveal_post_args (Phase 34.4.1 Plan 04, REQ-34.4.1-05) ----	reveal_post_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_reveal_post_args_rejects_missing_args_entirely	---- reveal_post_args (Phase 34.4.1 Plan 04, REQ-34.4.1-05) ----	reveal_post_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_reveal_post_args_rejects_a_non_https_origin	---- reveal_post_args (Phase 34.4.1 Plan 04, REQ-34.4.1-05) ----	reveal_post_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_reveal_post_args_rejects_a_non_string_path	---- reveal_post_args (Phase 34.4.1 Plan 04, REQ-34.4.1-05) ----	reveal_post_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_reveal_post_args_rejects_a_non_string_body	---- reveal_post_args (Phase 34.4.1 Plan 04, REQ-34.4.1-05) ----	reveal_post_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_reveal_post_args_rejects_a_missing_user_agent	---- reveal_post_args (Phase 34.4.1 Plan 04, REQ-34.4.1-05) ----	reveal_post_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_reveal_post_script_escapes_special_characters_and_round_trips_via_serde_json	---- reveal_post_script (Phase 34.4.1 Plan 04, T-34.4.1-20/21) ----	reveal_post_script	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_reveal_post_script_embeds_a_null_csrf_token_as_a_js_null_not_the_string_null	---- reveal_post_script (Phase 34.4.1 Plan 04, T-34.4.1-20/21) ----	reveal_post_script	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_reveal_post_script_embeds_a_present_csrf_token_as_a_quoted_json_string	---- reveal_post_script (Phase 34.4.1 Plan 04, T-34.4.1-20/21) ----	reveal_post_script	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_reveal_post_script_embeds_the_exfil_host_used_by_the_navigation_intercept	---- reveal_post_script (Phase 34.4.1 Plan 04, T-34.4.1-20/21) ----	reveal_post_script	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_login_clear_storage_args_accepts_a_full_valid_set	---- clear_storage_args (34.4.1 gap cycle plan 15, F-6, REQ-34.4.1-06/REQ-34.4.1-GAP-03) ----	clear_storage_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_login_clear_storage_args_rejects_missing_args_entirely	---- clear_storage_args (34.4.1 gap cycle plan 15, F-6, REQ-34.4.1-06/REQ-34.4.1-GAP-03) ----	clear_storage_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_login_clear_storage_args_rejects_a_non_https_origin	---- clear_storage_args (34.4.1 gap cycle plan 15, F-6, REQ-34.4.1-06/REQ-34.4.1-GAP-03) ----	clear_storage_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_login_clear_storage_args_rejects_a_non_string_origin	---- clear_storage_args (34.4.1 gap cycle plan 15, F-6, REQ-34.4.1-06/REQ-34.4.1-GAP-03) ----	clear_storage_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_login_clear_storage_args_rejects_a_missing_user_agent	---- clear_storage_args (34.4.1 gap cycle plan 15, F-6, REQ-34.4.1-06/REQ-34.4.1-GAP-03) ----	clear_storage_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_login_clear_storage_args_rejects_a_non_string_user_agent	---- clear_storage_args (34.4.1 gap cycle plan 15, F-6, REQ-34.4.1-06/REQ-34.4.1-GAP-03) ----	clear_storage_args	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_login_clear_storage_script_escapes_special_characters_and_round_trips_via_serde_json	---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----	reveal_post_script	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_login_clear_storage_script_embeds_the_exfil_host_used_by_the_navigation_intercept	---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----	clear_storage_script	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_login_clear_storage_script_clears_all_five_categories_with_an_unsupported_fallback	---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----	clear_storage_script	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+humble_login_clear_storage_script_awaits_every_async_category_before_reporting	---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----	clear_storage_script	login_window/humble_reveal.rs	login_window/humble_reveal.rs
+login_chrome_css_script_hides_the_footer_and_navbar_leaving_the_four_protected_selectors_untouched	---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----	login_chrome_css_script	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+native_login_bar_band_pins_the_top_32pt_in_both_coordinate_systems	---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----	native_login_bar_band	login_window/sheet.rs	login_window/sheet.rs
+login_chrome_css_script_is_scoped_to_humblebundle_by_suffix_not_substring	---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----	login_chrome_css_script	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+login_chrome_css_script_binds_no_keyboard_listener	---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----	login_chrome_css_script	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+login_chrome_css_script_never_uses_innerhtml	---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----	login_chrome_css_script	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+login_chrome_css_script_never_reads_field_value	---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----	login_chrome_css_script	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+login_chrome_css_script_top_frame_guard_precedes_the_host_gate_and_the_idempotence_flag	---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----	login_chrome_css_script	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+login_chrome_css_script_is_wrapped_in_a_single_top_level_try_catch	---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----	login_chrome_css_script	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+login_chrome_css_script_is_pure_same_output_every_call	---- clear_storage_script (34.4.1 gap cycle plan 15, T-34.4.1-65/-66/-67) ----	login_chrome_css_script	login_window/humble_helpers.rs	login_window/humble_helpers.rs
+shell_exe_env_value_ok_yields_the_paths_display_string	---- shell_exe_env_value (Phase 34.5 Plan 01, REQ-34.5-01, D-10) ----	shell_exe_env_value	sidecar.rs	sidecar.rs
+shell_exe_env_value_err_yields_empty_string_never_panics	---- shell_exe_env_value (Phase 34.5 Plan 01, REQ-34.5-01, D-10) ----	shell_exe_env_value	sidecar.rs	sidecar.rs
+shell_exe_env_value_path_with_space_survives_unquoted	---- shell_exe_env_value (Phase 34.5 Plan 01, REQ-34.5-01, D-10) ----	shell_exe_env_value	sidecar.rs	sidecar.rs
+app_root_env_value_ok_yields_the_paths_display_string_untrimmed	---- app_root_env_value (Phase 34.5 Plan 16, Task 2, G-1) ----	app_root_env_value	sidecar.rs	sidecar.rs
+app_root_env_value_err_yields_empty_string_never_panics	---- app_root_env_value (Phase 34.5 Plan 16, Task 2, G-1) ----	app_root_env_value	sidecar.rs	sidecar.rs
+app_root_env_value_path_with_space_survives_unquoted	---- app_root_env_value (Phase 34.5 Plan 16, Task 2, G-1) ----	shell_exe_env_value_path_with_space_survives_unquoted	sidecar.rs	sidecar.rs
+resolve_dev_app_root_resolves_to_the_parent_of_cargo_manifest_dir_when_unset	---- app_root_env_value (Phase 34.5 Plan 16, Task 2, G-1) ----	resolve_dev_app_root	single_instance.rs	single_instance.rs
+keyring_account_maps_steam_refresh_token_to_its_constant_account	---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----	keyring_account	main.rs	stay:subject in main.rs (D-09)
+keyring_account_maps_humble_session_to_its_own_distinct_account	---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----	keyring_account	main.rs	stay:subject in main.rs (D-09)
+keyring_account_maps_humble_csrf_to_its_own_distinct_account	---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----	keyring_account	main.rs	stay:subject in main.rs (D-09)
+keyring_account_humble_session_and_humble_csrf_never_collide	---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----	keyring_account	main.rs	stay:subject in main.rs (D-09)
+keyring_account_rejects_an_unknown_slot_with_no_fallback_to_a_real_account	---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----	keyring_account	main.rs	stay:subject in main.rs (D-09)
+keyring_account_rejects_the_empty_string_slot	---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----	keyring_account	main.rs	stay:subject in main.rs (D-09)
+keyring_account_rejects_a_plausible_looking_near_miss_slot	---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----	keyring_account	main.rs	stay:subject in main.rs (D-09)
+keyring_account_maps_steamgrid_api_key_to_its_own_distinct_account	---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----	keyring_account	main.rs	stay:subject in main.rs (D-09)
+keyring_account_steamgrid_api_key_never_collides_with_humble_or_steam_slots	---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----	keyring_account	main.rs	stay:subject in main.rs (D-09)
+keyring_account_rejects_steamgrid_near_miss_slots	---- keyring_account (34.4.1 gap cycle plan 11, D-GAP-01) ----	keyring_account	main.rs	stay:subject in main.rs (D-09)
+keyring_slot_defaults_to_steam_refresh_token_when_absent	---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----	KeyringGetArgs	ipc_contract.rs	stay:no wave-5 destination for subject file ipc_contract.rs
+keyring_slot_null_reads_as_the_default_slot	---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----	KeyringGetArgs	ipc_contract.rs	stay:no wave-5 destination for subject file ipc_contract.rs
+keyring_slot_non_string_is_bad_args_with_the_pinned_string	---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----	KeyringGetArgs	ipc_contract.rs	stay:no wave-5 destination for subject file ipc_contract.rs
+keyring_slot_reads_a_present_string_slot_at_the_given_position	---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----	KeyringGetArgs	ipc_contract.rs	stay:no wave-5 destination for subject file ipc_contract.rs
+keyring_get_result_maps_ok_to_a_string_value	---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----	keyring_get_result	keyring_dispatch.rs	keyring_dispatch.rs
+keyring_get_result_maps_no_entry_to_null_not_an_error	---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----	keyring_get_result	keyring_dispatch.rs	keyring_dispatch.rs
+keyring_get_result_maps_other_errors_to_a_classified_unavailable_string	---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----	keyring_get_result	keyring_dispatch.rs	keyring_dispatch.rs
+keyring_outcome_message_renders_channel_account_and_token_for_a_representative_arm	---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----	keyring_outcome_message	keyring_dispatch.rs	keyring_dispatch.rs
+keyring_outcome_message_renders_each_tokens_exact_literal	---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----	keyring_outcome_message	keyring_dispatch.rs	keyring_dispatch.rs
+keyring_outcome_tokens_are_pairwise_distinct	---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----	KeyringOutcome	keyring_dispatch.rs	keyring_dispatch.rs
+keyring_outcome_message_does_not_carry_the_shell_diag_prefix_itself	---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----	shell_diag	main.rs	keyring_dispatch.rs
+keyring_get_outcome_message_never_carries_the_retrieved_value	---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----	keyring_get_outcome	keyring_dispatch.rs	keyring_dispatch.rs
+keyring_get_outcome_maps_null_to_absent_and_non_null_to_found	---- keyring slot argument (34.4.1 gap cycle plan 11, D-GAP-01; now the generated Args) ----	keyring_get_outcome	keyring_dispatch.rs	keyring_dispatch.rs
+bounded_keyring_read_returns_the_inner_result_when_it_completes_within_the_bound	---- bounded_keyring_read (34.4.1 gap cycle 2 plan 26, T-34.4.1-114/T-34.4.1-115) ----	bounded_keyring_read	keyring_dispatch.rs	keyring_dispatch.rs
+bounded_keyring_read_propagates_an_inner_error_when_it_completes_within_the_bound	---- bounded_keyring_read (34.4.1 gap cycle 2 plan 26, T-34.4.1-114/T-34.4.1-115) ----	bounded_keyring_read	keyring_dispatch.rs	keyring_dispatch.rs
+bounded_keyring_read_times_out_as_keyring_timeout_on_a_never_returning_operation	---- bounded_keyring_read (34.4.1 gap cycle 2 plan 26, T-34.4.1-114/T-34.4.1-115) ----	bounded_keyring_read	keyring_dispatch.rs	keyring_dispatch.rs
+keyring_read_timeout_stays_strictly_under_the_sidecar_invoke_bound_with_round_trip_headroom	---- bounded_keyring_read (34.4.1 gap cycle 2 plan 26, T-34.4.1-114/T-34.4.1-115) ----	KEYRING_READ_TIMEOUT	keyring_dispatch.rs	stay:no wave-5 destination for subject file keyring_dispatch.rs
+keyring_probe_account_is_rejected_by_the_slot_allowlist_so_no_frame_can_select_it	---- keyring_available's non-prompting reachability probe (quick-260905-l8g) ----	keyring_account	main.rs	stay:subject in main.rs (D-09)
+keyring_no_allowlisted_slot_resolves_to_the_probe_account	---- keyring_available's non-prompting reachability probe (quick-260905-l8g) ----	keyring_account	main.rs	stay:subject in main.rs (D-09)
+the_keyring_available_arm_only_ever_READS_the_probe_account	---- keyring_available's non-prompting reachability probe (quick-260905-l8g) ----	rpc_keyring_available	keyring_dispatch.rs	stay:D-09 source-text/wiring reader
+keyring_reachability_probe_returns_without_raising_an_authorization_prompt	---- LIVE gate: the probe does not prompt (quick-260905-l8g) ----	KEYRING_SERVICE	main.rs	stay:subject in main.rs (D-09)
+keyring_read_timing_hypothesis_absent_vs_present_entry	---- F-9 root-cause timing harness (34.4.1 gap cycle 2 plan 26, Task 1) ----	KEYRING_SERVICE	main.rs	stay:subject in main.rs (D-09)
+pending_login_entry_below_ttl_is_not_stale	---- pending_login_entry_is_stale (Phase 34.4.2 Plan 14, T-34.4.2-39/-41) ----	PENDING_VISIBLE_LOGIN_WINDOW_TTL	login_window/sheet.rs	login_window/sheet.rs
+pending_login_entry_above_ttl_is_stale	---- pending_login_entry_is_stale (Phase 34.4.2 Plan 14, T-34.4.2-39/-41) ----	PENDING_VISIBLE_LOGIN_WINDOW_TTL	login_window/sheet.rs	login_window/sheet.rs
+pending_login_entry_exactly_at_ttl_is_stale	---- pending_login_entry_is_stale (Phase 34.4.2 Plan 14, T-34.4.2-39/-41) ----	pending_login_entry_is_stale	login_window/sheet.rs	login_window/sheet.rs
+pending_login_window_ttl_is_derived_from_the_watchdog_timeout_with_a_margin	---- pending_login_entry_is_stale (Phase 34.4.2 Plan 14, T-34.4.2-39/-41) ----	PENDING_VISIBLE_LOGIN_WINDOW_TTL	login_window/sheet.rs	login_window/sheet.rs
+f_34_4_2_12_wry_blocking_cookies_calls_are_macos_gated	---- F-34.4.2-12 regression pin: Humble disconnect main-thread wedge ----	fixture	shell_open.rs	stay:D-09 source-text/wiring reader
+epic_cold_jar_login_timeout_default_store_clear_evicts_disk_and_memory_cache	---- F-34.4.2-12 regression pin: Humble disconnect main-thread wedge ----	clear_default_data_store_cookies_for_domain	login_window/macos_cookies.rs	stay:D-09 source-text/wiring reader
+epic_cold_jar_login_timeout_window_branch_clear_evicts_disk_and_memory_cache	---- F-34.4.2-12 regression pin: Humble disconnect main-thread wedge ----	rpc_humble_login_clear_cookies	login_window/humble_cookies.rs	stay:D-09 source-text/wiring reader
+protocol_url_arg_finds_url_among_the_vdf_launch_options	---- F-34.4.2-12 regression pin: Humble disconnect main-thread wedge ----	protocol_url_arg	single_instance.rs	single_instance.rs
+protocol_url_arg_returns_none_when_absent	---- F-34.4.2-12 regression pin: Humble disconnect main-thread wedge ----	protocol_url_arg	single_instance.rs	single_instance.rs
+protocol_url_arg_rejects_foreign_schemes	---- F-34.4.2-12 regression pin: Humble disconnect main-thread wedge ----	protocol_url_arg	single_instance.rs	single_instance.rs
+protocol_url_arg_rejects_control_characters	---- F-34.4.2-12 regression pin: Humble disconnect main-thread wedge ----	invoke	shell_state.rs	single_instance.rs
+protocol_url_arg_rejects_oversized_url	---- F-34.4.2-12 regression pin: Humble disconnect main-thread wedge ----	protocol_url_arg	single_instance.rs	single_instance.rs
+protocol_url_arg_returns_the_first_match	---- F-34.4.2-12 regression pin: Humble disconnect main-thread wedge ----	protocol_url_arg	single_instance.rs	single_instance.rs
+protocol_url_arg_accepts_a_runnerless_url	---- F-34.4.2-12 regression pin: Humble disconnect main-thread wedge ----	protocol_url_arg	single_instance.rs	single_instance.rs
+deep_link_decision_dispatches_a_well_formed_gamelib_url	---- OS deep-link callback decision (Phase 35 plan 07, D-07, REQ-35-05/REQ-35-16) ----	protocol_url_arg	single_instance.rs	single_instance.rs
+deep_link_decision_dispatches_the_runnerless_url_too	---- OS deep-link callback decision (Phase 35 plan 07, D-07, REQ-35-05/REQ-35-16) ----	fixture	shell_open.rs	single_instance.rs
+deep_link_decision_rejects_the_same_foreign_schemes_argv_rejects	---- OS deep-link callback decision (Phase 35 plan 07, D-07, REQ-35-05/REQ-35-16) ----	fixture	shell_open.rs	single_instance.rs
+deep_link_decision_rejects_control_characters_and_oversized_urls	---- OS deep-link callback decision (Phase 35 plan 07, D-07, REQ-35-05/REQ-35-16) ----	deep_link_decision	single_instance.rs	single_instance.rs
+deep_link_decision_reject_carries_a_byte_count_and_nothing_else	---- OS deep-link callback decision (Phase 35 plan 07, D-07, REQ-35-05/REQ-35-16) ----	deep_link_decision	single_instance.rs	single_instance.rs
+cli_no_gui_requires_an_exact_flag_match	---- OS deep-link callback decision (Phase 35 plan 07, D-07, REQ-35-05/REQ-35-16) ----	cli_no_gui	single_instance.rs	single_instance.rs
+sidecar_forward_args_drops_no_sandbox	---- OS deep-link callback decision (Phase 35 plan 07, D-07, REQ-35-05/REQ-35-16) ----	sidecar_forward_args	single_instance.rs	single_instance.rs
+sidecar_forward_args_drops_unknown_flags	---- OS deep-link callback decision (Phase 35 plan 07, D-07, REQ-35-05/REQ-35-16) ----	sidecar_forward_args	single_instance.rs	single_instance.rs
+sidecar_forward_args_forwards_a_url_without_no_gui	---- OS deep-link callback decision (Phase 35 plan 07, D-07, REQ-35-05/REQ-35-16) ----	sidecar_forward_args	single_instance.rs	single_instance.rs
+sidecar_forward_args_forwards_no_gui_without_a_url	---- OS deep-link callback decision (Phase 35 plan 07, D-07, REQ-35-05/REQ-35-16) ----	sidecar_forward_args	single_instance.rs	single_instance.rs
+single_instance_socket_path_is_under_the_given_dir	---- OS deep-link callback decision (Phase 35 plan 07, D-07, REQ-35-05/REQ-35-16) ----	single_instance_socket_path	single_instance.rs	single_instance.rs
+single_instance_dir_returns_none_without_a_home	---- OS deep-link callback decision (Phase 35 plan 07, D-07, REQ-35-05/REQ-35-16) ----	single_instance_dir	single_instance.rs	single_instance.rs
+windows_single_instance_key_accepts_a_valid_sid_unchanged	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	windows_single_instance_key	single_instance.rs	single_instance.rs
+windows_single_instance_key_returns_none_without_a_sid	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	windows_single_instance_key	single_instance.rs	single_instance.rs
+windows_single_instance_key_rejects_malformed_or_injection_shaped_sids	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	windows_single_instance_key	single_instance.rs	single_instance.rs
+windows_mutex_name_formats_the_validated_key	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	windows_mutex_name	single_instance.rs	single_instance.rs
+windows_mutex_name_returns_none_for_an_invalid_sid	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	windows_mutex_name	single_instance.rs	single_instance.rs
+windows_pipe_name_formats_the_validated_key_and_session	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	windows_pipe_name	single_instance.rs	single_instance.rs
+windows_pipe_name_returns_none_for_an_invalid_sid	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	windows_pipe_name	single_instance.rs	single_instance.rs
+windows_pipe_sddl_formats_owner_and_ace_from_the_validated_key	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	windows_pipe_sddl	single_instance.rs	single_instance.rs
+windows_pipe_sddl_never_emits_a_well_known_sid_alias_as_the_trustee	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	windows_pipe_sddl	single_instance.rs	single_instance.rs
+windows_pipe_sddl_returns_none_for_an_invalid_sid	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	windows_pipe_sddl	single_instance.rs	single_instance.rs
+windows_pipe_sddl_req_46_03_decision_point_b_operator_overridable_dacl_is_per_user_token_sid	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	windows_pipe_sddl	single_instance.rs	single_instance.rs
+windows_pipe_connect_should_retry_only_for_file_not_found_and_pipe_busy	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	windows_pipe_connect_should_retry	single_instance.rs	single_instance.rs
+windows_pipe_owner_matches_requires_both_sids_to_be_valid_and_equal	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	windows_pipe_owner_matches	single_instance.rs	single_instance.rs
+single_instance_payload_returns_the_validated_url_for_a_deep_link_arg	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	single_instance_payload	single_instance.rs	single_instance.rs
+single_instance_payload_returns_the_focus_sentinel_for_empty_argv	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	single_instance_payload	single_instance.rs	single_instance.rs
+single_instance_payload_returns_the_focus_sentinel_for_non_deep_link_flags	---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) ----	single_instance_payload	single_instance.rs	single_instance.rs
+gamelib_protocol_command_exe_extracts_the_exe_from_every_shape_the_registry_can_hold	---- quick-260925-uok: the Windows `gamelib://` HKCU self-heal decision helpers ----	gamelib_protocol_command_exe	single_instance.rs	single_instance.rs
+gamelib_protocol_command_exe_returns_none_for_every_malformed_shape	---- quick-260925-uok: the Windows `gamelib://` HKCU self-heal decision helpers ----	gamelib_protocol_command_exe	single_instance.rs	single_instance.rs
+gamelib_protocol_paths_equivalent_compares_ordinal_ignore_case_without_touching_the_disk	---- quick-260925-uok: the Windows `gamelib://` HKCU self-heal decision helpers ----	gamelib_protocol_paths_equivalent	single_instance.rs	single_instance.rs
+gamelib_protocol_repair_needed_is_true_for_absent_empty_and_malformed_values	---- quick-260925-uok: the Windows `gamelib://` HKCU self-heal decision helpers ----	gamelib_protocol_repair_needed	single_instance.rs	single_instance.rs
+gamelib_protocol_repair_needed_is_false_when_the_value_already_points_at_us	---- quick-260925-uok: the Windows `gamelib://` HKCU self-heal decision helpers ----	gamelib_protocol_repair_needed	single_instance.rs	single_instance.rs
+gamelib_protocol_written_values_are_byte_identical_in_shape_to_the_nsis_installer	---- quick-260925-uok: the Windows `gamelib://` HKCU self-heal decision helpers ----	gamelib_protocol_open_command	single_instance.rs	single_instance.rs
+gamelib_protocol_repair_output_satisfies_its_own_detector	---- quick-260925-uok: the Windows `gamelib://` HKCU self-heal decision helpers ----	install	terminate_veto.rs	single_instance.rs
+gamelib_protocol_dev_build_dirs_bakes_the_manifest_dir_target	---- quick-260926-f3l: dev builds do not claim gamelib:// ----	gamelib_protocol_dev_build_dirs	single_instance.rs	single_instance.rs
+gamelib_protocol_dev_build_dirs_adds_an_absolute_cargo_target_dir	---- quick-260926-f3l: dev builds do not claim gamelib:// ----	gamelib_protocol_dev_build_dirs	single_instance.rs	single_instance.rs
+gamelib_protocol_dev_build_dirs_joins_a_relative_cargo_target_dir_to_the_manifest_dir	---- quick-260926-f3l: dev builds do not claim gamelib:// ----	gamelib_protocol_dev_build_dirs	single_instance.rs	single_instance.rs
+gamelib_protocol_dev_build_dirs_treats_blank_cargo_target_dir_as_none	---- quick-260926-f3l: dev builds do not claim gamelib:// ----	gamelib_protocol_dev_build_dirs	single_instance.rs	single_instance.rs
+gamelib_protocol_dev_build_dirs_yields_no_bare_target_entry_for_a_blank_manifest_dir	---- quick-260926-f3l: dev builds do not claim gamelib:// ----	gamelib_protocol_dev_build_dirs	single_instance.rs	single_instance.rs
+gamelib_protocol_exe_is_dev_build_matches_only_inside_the_cargo_target_dir	---- quick-260926-f3l: dev builds do not claim gamelib:// ----	gamelib_protocol_exe_is_dev_build	single_instance.rs	single_instance.rs
+gamelib_protocol_exe_is_dev_build_ignores_case_slash_style_and_extended_length_prefix	---- quick-260926-f3l: dev builds do not claim gamelib:// ----	gamelib_protocol_exe_is_dev_build	single_instance.rs	single_instance.rs
+gamelib_protocol_exe_is_dev_build_respects_the_separator_boundary	---- quick-260926-f3l: dev builds do not claim gamelib:// ----	gamelib_protocol_exe_is_dev_build	single_instance.rs	single_instance.rs
+gamelib_protocol_exe_is_dev_build_is_false_for_installed_paths	---- quick-260926-f3l: dev builds do not claim gamelib:// ----	gamelib_protocol_exe_is_dev_build	single_instance.rs	single_instance.rs
+gamelib_protocol_exe_is_dev_build_routes_every_doubt_to_repair	---- quick-260926-f3l: dev builds do not claim gamelib:// ----	gamelib_protocol_exe_is_dev_build	single_instance.rs	single_instance.rs
+shell_panic_log_path_returns_none_without_a_home	---- Panic reporting (debug session `deep-link-open-url-abort`) ----	shell_panic_log_path	main.rs	stay:subject in main.rs (D-09)
+find_on_path_var_returns_none_without_a_path	---- Panic reporting (debug session `deep-link-open-url-abort`) ----	find_on_path_var	sidecar.rs	sidecar.rs
+find_on_path_var_finds_a_real_executable_and_respects_order	---- Panic reporting (debug session `deep-link-open-url-abort`) ----	find_on_path_var	sidecar.rs	sidecar.rs
+find_on_path_var_does_not_find_node_on_the_launchservices_path	---- Panic reporting (debug session `deep-link-open-url-abort`) ----	find_on_path_var	sidecar.rs	sidecar.rs
+nvm_versions_are_ordered_numerically_newest_first	---- Panic reporting (debug session `deep-link-open-url-abort`) ----	nvm_versions_newest_first	sidecar.rs	sidecar.rs
+nvm_version_ordering_keeps_unparseable_names_last_rather_than_dropping_them	---- Panic reporting (debug session `deep-link-open-url-abort`) ----	nvm_versions_newest_first	sidecar.rs	sidecar.rs
+shell_diag_log_path_sits_next_to_the_panic_log	---- Panic reporting (debug session `deep-link-open-url-abort`) ----	shell_diag_log_path	main.rs	stay:subject in main.rs (D-09)
+shell_panic_log_path_sits_beside_the_sidecar_log_on_macos	---- Panic reporting (debug session `deep-link-open-url-abort`) ----	shell_panic_log_path	main.rs	stay:subject in main.rs (D-09)
+stderr_best_effort_broken_pipe_returns_err_without_panic	---- Panic reporting (debug session `deep-link-open-url-abort`) ----	write_line_best_effort	main.rs	stay:subject in main.rs (D-09)
+stderr_best_effort_vec_ends_with_exactly_one_newline	---- Panic reporting (debug session `deep-link-open-url-abort`) ----	write_line_best_effort	main.rs	stay:subject in main.rs (D-09)
+stderr_best_effort_macro_both_arms_compile_and_do_not_panic	---- Panic reporting (debug session `deep-link-open-url-abort`) ----			stay:no flat-module subject (D-09)
+panic_record_append_creates_dir_and_appends	---- Panic reporting (debug session `deep-link-open-url-abort`) ----	append_panic_record	main.rs	stay:subject in main.rs (D-09)
+panic_record_carries_everything_a_diagnosis_needs	---- Panic reporting (debug session `deep-link-open-url-abort`) ----	format_panic_record	main.rs	stay:subject in main.rs (D-09)
+handle_protocol_url_channel_is_bounded_at_invoke_timeout	---- Panic reporting (debug session `deep-link-open-url-abort`) ----	LONG_RUNNING_CHANNELS	main.rs	stay:subject in main.rs (D-09)
+wake_lock_kind_accepts_both_electron_kind_strings	---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----	wake_lock_kind	wake_lock.rs	wake_lock.rs
+wake_lock_kind_maps_the_two_kinds_to_DIFFERENT_assertions	---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----	WakeLockKind	wake_lock.rs	wake_lock.rs
+wake_lock_kind_rejects_anything_else_rather_than_defaulting	---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----	WakeLockKind	wake_lock.rs	wake_lock.rs
+wake_lock_kind_error_does_not_echo_the_rejected_value	---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----	wake_lock_kind	wake_lock.rs	wake_lock.rs
+wake_lock_registry_allocates_unique_ids	---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----	WakeLockRegistry	wake_lock.rs	wake_lock.rs
+wake_lock_registry_never_allocates_zero	---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----	WakeLockRegistry	wake_lock.rs	wake_lock.rs
+wake_lock_registry_forget_returns_the_kind_its_id_names	---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----	WakeLockRegistry	wake_lock.rs	wake_lock.rs
+wake_lock_registry_forget_on_an_unknown_id_errors_rather_than_panicking	---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----	WakeLockRegistry	wake_lock.rs	wake_lock.rs
+wake_lock_registry_holds_tracks_each_kind_independently	---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----	ES_DISPLAY_REQUIRED	wake_lock/windows.rs	wake_lock.rs
+wake_lock_start_rejects_an_unknown_kind_before_touching_the_os	---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----	wake_lock_start	wake_lock.rs	wake_lock.rs
+wake_lock_stop_on_an_unknown_id_errors_rather_than_panicking	---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----	wake_lock_stop	wake_lock.rs	wake_lock.rs
+wake_lock_release_all_is_safe_to_call_with_nothing_held	---- Wake lock (Phase 35 Plan 08, D-08, REQ-35-06) ----	wake_lock_release_all	wake_lock.rs	wake_lock.rs
+store_embed_navigation_policy_blocks_the_apps_own_scheme	---- store_embed_navigation_policy (Phase 40 Plan 04, D-29, T-40-04-02/03/09) ----	store_embed_navigation_policy	store_embed/policy.rs	store_embed/policy.rs
+store_embed_navigation_policy_allows_https_freely	---- store_embed_navigation_policy (Phase 40 Plan 04, D-29, T-40-04-02/03/09) ----	store_embed_navigation_policy	store_embed/policy.rs	store_embed/policy.rs
+store_embed_navigation_policy_allows_http_freely	---- store_embed_navigation_policy (Phase 40 Plan 04, D-29, T-40-04-02/03/09) ----	store_embed_navigation_policy	store_embed/policy.rs	store_embed/policy.rs
+store_embed_navigation_policy_hands_off_steam_scheme	---- store_embed_navigation_policy (Phase 40 Plan 04, D-29, T-40-04-02/03/09) ----	install	terminate_veto.rs	store_embed/policy.rs
+store_embed_navigation_policy_blocks_steam_unless_the_top_level_page_is_valve	---- store_embed_navigation_policy (Phase 40 Plan 04, D-29, T-40-04-02/03/09) ----	store_embed_navigation_policy	store_embed/policy.rs	store_embed/policy.rs
+store_embed_navigation_policy_https_is_unaffected_by_the_top_level_host	---- store_embed_navigation_policy (Phase 40 Plan 04, D-29, T-40-04-02/03/09) ----	store_embed_navigation_policy	store_embed/policy.rs	store_embed/policy.rs
+handoff_throttle_admits_one_per_gap	---- store_embed_navigation_policy (Phase 40 Plan 04, D-29, T-40-04-02/03/09) ----	HandoffThrottle	store_embed/policy.rs	store_embed/policy.rs
+handoff_throttle_refusals_do_not_extend_the_window	---- store_embed_navigation_policy (Phase 40 Plan 04, D-29, T-40-04-02/03/09) ----	HandoffThrottle	store_embed/policy.rs	store_embed/policy.rs
+store_embed_navigation_policy_default_denies_unknown_schemes	---- store_embed_navigation_policy (Phase 40 Plan 04, D-29, T-40-04-02/03/09) ----	default	tray.rs	store_embed/policy.rs
+store_embed_state_default_has_no_back_or_forward	---- StoreEmbedState (Phase 40 Plan 07, D-22/D-25) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_state_push_three_then_back_twice_lands_on_first	---- StoreEmbedState (Phase 40 Plan 07, D-22/D-25) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_state_forward_once_after_back_returns_to_the_skipped_entry	---- StoreEmbedState (Phase 40 Plan 07, D-22/D-25) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_state_push_from_middle_truncates_forward_entries	---- StoreEmbedState (Phase 40 Plan 07, D-22/D-25) ----	forward	macos_epic_embed/surface.rs	store_embed/state.rs
+store_embed_state_reload_does_not_push_a_duplicate_entry	---- StoreEmbedState (Phase 40 Plan 07, D-22/D-25) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_state_back_moves_the_cursor_it_does_not_append_a_new_entry	---- StoreEmbedState (Phase 40 Plan 07, D-22/D-25) ----	go_back	store_embed/state.rs	store_embed/state.rs
+store_embed_nav_state_json_reports_full_url_host_and_availability	---- StoreEmbedState (Phase 40 Plan 07, D-22/D-25) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_nav_state_json_on_empty_state_is_all_empty_never_panics	---- StoreEmbedState (Phase 40 Plan 07, D-22/D-25) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_push_enqueues_a_nav_event_carrying_the_post_push_cursor_state	---- GAP-D: the drain queue (quick task `260905-e61`, D-22, REQ-40-06) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_suppressed_push_enqueues_nothing	---- GAP-D: the drain queue (quick task `260905-e61`, D-22, REQ-40-06) ----	forward	macos_epic_embed/surface.rs	store_embed/state.rs
+store_embed_observe_spa_push_is_recorded	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_observe_equal_url_is_a_noop	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_observe_while_suppressed_is_a_noop	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_observe_while_page_loading_is_a_noop	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_observe_cross_origin_is_a_noop	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_observe_on_empty_history_is_a_noop	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_observe_with_stale_generation_is_a_noop	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_observe_query_only_change_replaces_in_place	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_observe_page_initiated_back_moves_the_cursor	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_back_after_observed_push_returns_previous	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_finished_after_observed_commit_does_not_double_push	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_settle_same_origin_rewrite_after_back_replaces_in_place	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_settle_rewrite_equal_to_next_entry_replaces_not_moves	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_settle_cross_origin_finished_push_replaces	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_settle_expired_rewrite_appends_as_before	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_settle_not_opened_by_a_plain_finished_push	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_settle_repeated_back_terminates_under_rewrite_on_every_load	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_take_nav_events_drains_rather_than_peeks	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_nav_event_queue_is_capped_oldest_dropped	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_clear_empties_the_nav_event_queue	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_select_store_drops_history_only_on_a_store_switch	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_select_store_restores_a_returning_stores_own_history	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_first_open_at_a_remembered_page_seeds_the_home_beneath_it	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_prepare_open_seeds_nothing_at_home_without_a_home_or_mid_history	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_reopen_on_the_current_entry_reports_state_before_the_load	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_push_of_the_current_url_does_not_add_an_entry	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	StoreEmbedState	store_embed/state.rs	store_embed/state.rs
+store_embed_clear_forgets_the_selected_store	---- StoreEmbedState::observe_live_url (quick 261102-sk8) ----	store_embed_close	store_embed/controls.rs	store_embed/controls.rs
+store_embed_linux_gtk_rect_rounds_fractional_px_half_away_from_zero	---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----	store_embed_linux_gtk_rect	store_embed/layout.rs	store_embed/layout.rs
+store_embed_linux_gtk_rect_accepts_a_zero_rect	---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----	store_embed_linux_gtk_rect	store_embed/layout.rs	store_embed/layout.rs
+store_embed_linux_gtk_rect_accepts_a_negative_position	---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----	store_embed_linux_gtk_rect	store_embed/layout.rs	store_embed/layout.rs
+store_embed_linux_gtk_rect_rejects_a_negative_size	---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----	store_embed_linux_gtk_rect	store_embed/layout.rs	store_embed/layout.rs
+store_embed_linux_gtk_rect_rejects_non_finite_input	---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----	store_embed_linux_gtk_rect	store_embed/layout.rs	store_embed/layout.rs
+store_embed_linux_gtk_rect_rejects_out_of_range_input	---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----	store_embed_linux_gtk_rect	store_embed/layout.rs	store_embed/layout.rs
+store_embed_linux_gtk_rect_errors_carry_the_op_prefix	---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----	store_embed_linux_gtk_rect	store_embed/layout.rs	store_embed/layout.rs
+store_embed_linux_zero_area_rect_is_recognised	---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----	store_embed_linux_rect_is_zero_area	store_embed/layout.rs	store_embed/layout.rs
+store_embed_macos_zero_area_rect_is_recognised	---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----	store_embed_rect_is_zero_area	store_embed/layout.rs	store_embed/layout.rs
+store_embed_linux_settled_line_has_the_pinned_format	---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----	store_embed_linux_settled_line	store_embed/layout.rs	store_embed/layout.rs
+store_embed_linux_apply_bounds_queues_a_resize_after_set_size_request	---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----	apply_bounds	store_embed/layout.rs	stay:D-09 source-text/wiring reader
+store_embed_open_shows_the_existing_webview_on_every_platform_before_navigating	---- macOS store-embed show-before-navigate convergence (quick 261001-svm) ----	store_embed_open	store_embed/open.rs	stay:D-09 source-text/wiring reader
+store_embed_open_epic_arm_hides_the_tauri_embed_before_opening_epic	---- Phase 50 review finding 1: opening Epic hides the Tauri embed (source-text only) ----	store_embed_open	store_embed/open.rs	stay:D-09 source-text/wiring reader
+devtools_auto_open_is_skipped_on_linux_only	---- Phase 50 review finding 1: opening Epic hides the Tauri embed (source-text only) ----	should_auto_open_devtools	login_window/devtools.rs	login_window/devtools.rs
+devtools_auto_open_decision_matches_this_host	---- Phase 50 review finding 1: opening Epic hides the Tauri embed (source-text only) ----	should_auto_open_devtools	login_window/devtools.rs	login_window/devtools.rs
+scan_channels_are_gamelib_scan_app_ops	---- Phase 50 review finding 1: opening Epic hides the Tauri embed (source-text only) ----			stay:no flat-module subject (D-09)

@@ -1,0 +1,36 @@
+clippy::bool_comparison: 1 (ceiling 1)
+clippy::cloned_ref_to_slice_refs: 2 (ceiling 2)
+clippy::doc_lazy_continuation: 5 (ceiling 5)
+clippy::if_same_then_else: 1 (ceiling 1)
+clippy::incompatible_msrv: 1 (ceiling 1)
+clippy::manual_hash_one: 1 (ceiling 1)
+clippy::match_like_matches_macro: 1 (ceiling 1)
+clippy::needless_borrows_for_generic_args: 1 (ceiling 1)
+clippy::type_complexity: 2 (ceiling 2)
+clippy::unnecessary_to_owned: 2 (ceiling 2)
+clippy::useless_conversion: 1 (ceiling 1)
+dead_code: 1 (ceiling 1)
+non_snake_case: 2 (ceiling 2)
+src/store_embed.rs:271:19 dead_code method `observe_live_url` is never used
+src/native_gamepad_shape.rs:176:18 clippy::incompatible_msrv current MSRV (Minimum Supported Rust Version) is `1.77.2` but this item is stable since `1.82.0`
+src/login_window/invite_picker.rs:38:18 clippy::match_like_matches_macro match expression looks like `matches!` macro
+src/login_window/invite_picker.rs:133:59 clippy::useless_conversion useless conversion to the same type: `url::parser::ParseError`
+src/login_window/humble_open.rs:152:8 clippy::bool_comparison equality checks against true are unnecessary
+src/login_window/humble_open.rs:360:49 clippy::needless_borrows_for_generic_args the borrowed expression implements the required traits
+src/login_window/devtools.rs:101:5 clippy::doc_lazy_continuation doc list item without indentation
+src/login_window/devtools.rs:102:5 clippy::doc_lazy_continuation doc list item without indentation
+src/login_window/devtools.rs:103:5 clippy::doc_lazy_continuation doc list item without indentation
+src/login_window/devtools.rs:104:5 clippy::doc_lazy_continuation doc list item without indentation
+src/login_window/devtools.rs:105:5 clippy::doc_lazy_continuation doc list item without indentation
+src/login_window/humble_helpers.rs:23:20 clippy::manual_hash_one manual implementation of `BuildHasher::hash_one`
+src/store_embed.rs:515:6 clippy::type_complexity very complex type used. Consider factoring parts into `type` definitions
+src/shell_state.rs:12:25 clippy::type_complexity very complex type used. Consider factoring parts into `type` definitions
+src/main.rs:6048:34 clippy::unnecessary_to_owned unnecessary use of `to_string`
+src/main.rs:6065:34 clippy::unnecessary_to_owned unnecessary use of `to_string`
+src/main.rs:6176:41 clippy::cloned_ref_to_slice_refs unnecessary use of `clone` to create a slice from a reference
+src/main.rs:6359:44 clippy::cloned_ref_to_slice_refs unnecessary use of `clone` to create a slice from a reference
+src/main.rs:8298:45 clippy::if_same_then_else this `if` has identical blocks
+src/main.rs:5128:8 non_snake_case function `the_keyring_available_arm_only_ever_READS_the_probe_account` should have a snake case name
+src/main.rs:6901:8 non_snake_case function `wake_lock_kind_maps_the_two_kinds_to_DIFFERENT_assertions` should have a snake case name
+PASS (darwin, toolchain 1.99.1)
+exit=0

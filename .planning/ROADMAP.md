@@ -157,9 +157,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 68: Versioned persisted stores and migrations** — 11 plans; planned (completed 2026-11-08)
 - [ ] **Phase 69: Consolidate frontend state onto GlobalStateV2** — 0 plans; not started
 - [ ] **Phase 70: Split GameInfo into shared and per-store shapes** — 0 plans; not started
-- [ ] **Phase 71: Rust shell module decomposition** — 0 plans; not started
+- [x] **Phase 71: Rust shell module decomposition** — 18 plans; planned (completed 2026-11-08)
 - [x] **Phase 72: Renderer trust boundary and process hardening** — 0 plans; not started (completed 2026-11-08)
 - [ ] **Phase 73: Steam depot download pipeline in Rust** — 0 plans; not started
+- [ ] **Phase 74: Steam game updates** — 0 plans; not started
 
 ## Phase Details
 
@@ -719,13 +720,47 @@ Plans:
 ### Phase 71: Rust shell module decomposition
 
 **Goal:** The Rust shell has no multi-thousand-line modules: each window, embed and login surface is split along its seams, following the sibling-module layout quick task 261106-ab1 set when it split `main.rs` (20,324 → 7,886 lines, 11 modules plus `wake_lock/`). Targets, measured 2026-11-06: `store_embed.rs` (4,623 lines), `login_window.rs` (3,339), `macos_epic_embed.rs` (2,089), and what remains in `main.rs` (7,886). Method: a cluster map of each file first; mechanical moves with no behaviour change (anything else found becomes a todo); `pub(crate)` only where a move needs it; `cargo test` (442 tests) green after each move, and Windows and Linux compiles checked through CI because Linux-gated code isn't compiled on the Mac. These modules drive the embedded store pages, login windows and cookie reads on macOS, so each wave ends with a live check in `pnpm tauri:dev`: an embedded store page, a sign-in for each store that uses the login window, and the Epic embed, with the frameless title bar both off and on. Phase 62's transport-mirror marker comments in `sidecar.rs` and the `store_embed.rs` dispatch arms (62-04) must survive the moves, or be removed only once Phase 67's generated contract replaces them. Open questions for discuss-phase: the minimum module set per file, and whether shell source-text tests that read Rust files (`testUtils/tauriShellSource.ts`) need the same combined-source treatment 261106-ab1 gave `main.rs`. Came from the post-Phase-62 architecture review on 2026-11-06.
-**Requirements**: TBD
+**Requirements**: TBD (plans cite CONTEXT decisions D-01..D-15; D-01 satisfied by Phase 67, D-02 superseded by 72-01)
 **Depends on:** None
-**Plans:** 0 plans
+**Plans:** 18/18 plans complete
 
-Plans:
+Plans (strictly sequential; D-14 waves 0-5, each wave from 1 ends with three-leg CI and a live check):
 
-- [ ] TBD (run /gsd-plan-phase 71 to break down)
+**D-14 Wave 0 — proof tooling and production-source readers (no live check)**
+
+- [x] 71-01-PLAN.md — Promote and extend moveproof/sizes/baseline/permove/jestpins tools; wave-0 baseline; confirm D-01/D-02
+- [x] 71-02-PLAN.md — Jest D-10/D-11: readTauriShellProductionSource, readHandlerBody, prefix-aware exclusion, slicer migration, no-slicer guard
+- [x] 71-03-PLAN.md — Rust D-10: shell_production_source(), SHELL_SOURCE users migrated, directory-aware guard; wave 0 close + CI
+
+**D-14 Wave 1 — dispatcher to rust_dispatch.rs, handlers to domain modules**
+
+- [x] 71-04-PLAN.md — scan/wake_lock/clipboard/keyring/dialogs/notification arms to rpc_* handlers with pin repoints
+- [x] 71-05-PLAN.md — app_lifecycle.rs, tray_set_icon, login_window/invite_picker.rs, shell arms router-direct
+- [x] 71-06-PLAN.md — Humble handlers into login_window/humble_{open,cookies,reveal}.rs; D-06 todos; cookie-pin fn tracker
+- [x] 71-07-PLAN.md — store_embed_* handlers; thin router moved to rust_dispatch.rs (45 arms, no `_ =>`)
+- [x] 71-08-PLAN.md — Wave 1 gate: compare, moveproof --require-all, three-leg CI, live check (OFF/ON)
+
+**D-14 Wave 2 — login_window/ split**
+
+- [x] 71-09-PLAN.md — Cross-platform children: invite_picker helpers, devtools, humble_helpers, humble_reveal support, windows_cdp
+- [x] 71-10-PLAN.md — macOS children: pristine_epic, sheet, macos_cookies; parent finalized; keyring-helper todo
+- [x] 71-11-PLAN.md — Wave 2 gate: compare, three-leg CI, live check (OFF/ON)
+
+**D-14 Wave 3 — store_embed/ split**
+
+- [x] 71-12-PLAN.md — store_embed/{state,policy,open,layout,controls}.rs; include_str! readers repointed
+- [x] 71-13-PLAN.md — Wave 3 gate: compare, three-leg CI, live check (OFF/ON)
+
+**D-14 Wave 4 — macos_epic_embed/ split**
+
+- [x] 71-14-PLAN.md — macos_epic_embed/{surface,nav_delegate}.rs; D-11 exclusion held; readers repointed
+- [x] 71-15-PLAN.md — Wave 4 gate: compare, three-leg CI, live check (OFF/ON)
+
+**D-14 Wave 5 — main.rs test co-location**
+
+- [x] 71-16-PLAN.md — Co-locate tests into flat modules (sidecar, clipboard, wake_lock, keyring, relay, tray, terminate_veto, single_instance)
+- [x] 71-17-PLAN.md — Co-locate tests into login_window/ and store_embed/ children; main.rs keeps D-09 tests only
+- [x] 71-18-PLAN.md — Wave 5 + phase gate: sizes report, fn main todo, VALIDATION sign-off, three-leg CI, final live check
 
 ### Phase 72: Renderer trust boundary and process hardening
 
@@ -773,3 +808,14 @@ Plans:
 Plans:
 
 - [ ] TBD (run /gsd-plan-phase 73 to break down)
+
+### Phase 74: Steam game updates
+
+**Goal:** GameLib can tell when an installed Steam game has an update and can apply it. Today `SteamGame.update()` (`steam/games.ts` ~445) is a stub that returns an error, and update is one of the four actions GameLib can't start (found while building the Steam Lib Actions table, 2026-11-08). There are two cases. (1) **Steam-registered games** (Mac-native installs, whoever downloaded them): Steam updates these itself, but GameLib can't show "Update available" or start an update. (2) **Bridge games: nothing updates them, which is why this is `major`.** The bridge install writes into the bridge bottle's own `steamapps` (`gameInstallBridge.ts` ~582, `getBridgeBottleSteamappsRoot()`), which Mac Steam never reads, and no Windows Steam runs in that bottle. A bridge game stays on its install build until it is reinstalled, and multiplayer games break once the server moves on. Scope: **detection for both cases**, comparing the installed ACF `buildid` and per-depot manifest GIDs against the public branch in PICS appinfo (the anonymous client already fetches it), shown on the card and game page, checked on library refresh and before launch, and never as an unbounded boot task (sidecar exit contract). **Bridge games: GameLib updates them itself** with a delta download in the Rust depot pipeline Phase 73 builds. Diff the old manifest against the new one per depot, fetch only changed chunks, delete files that are gone, and keep user files the old manifest didn't own. Then rewrite the ACF (`buildid`, `InstalledDepots` GIDs) and redo the GID-keyed follow-ups: steam_api shim rescan and re-placement, the per-GID redist ledger (`bridge/sharedRedistInstall.ts`), and the DRM/known-fix verdicts. Refuse while the game is running, and resume through the download queue the way an install does. **Steam-registered games: ask Steam.** Spike 069 (2026-11-08) answered this: `InstallApp(appId)` on an installed app with a deferred pending update starts it at once and overrides Steam's own delay. On an up-to-date app it is a sub-second no-op. So the Update button is the same helper call 065 uses to install, with the same runtime slot check and fallback. Detection needs no PICS for these games: use `BIsAppUpToDate` / install state 6 over IPC, or the ACF's `StateFlags` 6, `TargetBuildID` ≠ `buildid` and `ScheduledAutoUpdate`. `StartValidatingApp` is there too if a Verify action is wanted. Untested: the game running and signed-out Steam. Because Steam does these updates itself, GameLib's own delta updater is for bridge games only. Spike 070 (2026-11-08) confirmed case 2 live: of 28 existing bridge installs, the 6 whose developers shipped a public build after install (Manor Lords, Core Keeper, Abiotic Factor, Planet Crafter, Hell Clock, Mining Mechs) are all still on their install build. Their ACF, manifest GID and files are unchanged, apart from GameLib's shim files and runtime caches. Those six are ready live-gate fixtures. **Depends on Phase 73** so the delta download is written once, in Rust, not in the TypeScript `steam/depot/` that 73 deletes (operator's choice, 2026-11-08). Live gate: a bridge game with a pending update shows "Update available", updates, keeps saves and user files, and still launches through the bridge; a Mac-native game shows the state and the Update button gets Steam to update it. Came from todo `2026-11-07-implement-steam-game-updates.md` (now in `todos/completed/`).
+**Requirements**: TBD
+**Depends on:** Phase 73
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 74 to break down)

@@ -79,7 +79,7 @@ export default function NavTabs() {
   const gamesTarget = target('games', '/')
   const storesTarget = target('stores', `/store/${defaultStore}`)
   const downloadsTarget = target('downloads', '/download-manager')
-  const settingsTarget = target('settings', '/settings/general')
+  const settingsTarget = target('settings', '/accessibility')
 
   // Ported verbatim from the retired GameLib sidebar item's onClick
   // (`Sidebar/components/SidebarLinks/index.tsx:52-64`). Dropping this would

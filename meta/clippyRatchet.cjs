@@ -69,7 +69,9 @@ const CLIPPY_CEILINGS = {
   // box, rustc 1.99.1 / clippy 0.1.99, x86_64-pc-windows-msvc (the same triple
   // as GitHub windows-latest), `cargo +1.99.1 clippy --workspace
   // --all-targets`: 27 unique warnings after the generator fix, re-measured
-  // after regeneration. The 17 index-0 accessor (get_first) warnings were
+  // after regeneration. 2026-11-08 phase 71 wave 1: unused_imports fell 2 -> 0
+  // on the windows-latest leg (CI run 42445149648) after the dispatcher
+  // handlers moved to their domain modules; entry deleted. The 17 index-0 accessor (get_first) warnings were
   // removed at the generator, so they have no entry.
   win32: {
     'clippy::doc_lazy_continuation': 5,
@@ -78,7 +80,6 @@ const CLIPPY_CEILINGS = {
     'clippy::unnecessary_to_owned': 2,
     'clippy::cloned_ref_to_slice_refs': 2,
     non_snake_case: 2,
-    unused_imports: 2,
     'clippy::incompatible_msrv': 1,
     'clippy::match_like_matches_macro': 1,
     'clippy::manual_hash_one': 1,
