@@ -85,6 +85,15 @@ function loadMainRsCode(source?: string): string {
     .join('\n')
 }
 
+/**
+ * Body of the `rpc_humble_login_open` handler (Phase 71 D-10): the dispatcher arm is a one-line
+ * call, the body lives in `login_window/humble_open.rs`. `readHandlerBody` throws when the fn is
+ * missing, duplicated or near-empty, so a pin over this body cannot pass on an empty slice.
+ */
+function humbleLoginOpenHandlerBody(code: string): string {
+  return readHandlerBody(code, 'humble_login_open')
+}
+
 describe('loadMainRsCode comment-stripping helper (self-test)', () => {
   test('a comment-only phrase from main.rs is NOT present in the stripped output', () => {
     // Without correct stripping this phrase (from the pre-fix _child field doc comment)
@@ -1062,7 +1071,7 @@ describe('REQ-34.4.1-GAP-07 both humble cookie-read arms keep their proven-corre
     const armBody = extractArmBody(
       code,
       'RustInvokeChannel::HumbleLoginCookies => {',
-      'RustInvokeChannel::HumbleLoginTakeEvents => {'
+      'RustInvokeChannel::HumbleLoginTakeEvents =>'
     )
     // The poll's direction, unedited by Plan 22: host (caller-supplied) first, the cookie's
     // own domain second.
@@ -1501,9 +1510,7 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
   // observation owned by the gap-cycle-3 live gate (plan 35).
   test("D-29-05: humble_login_open's visible block builds an ORIGIN-DERIVED provisional title, so the window never presents as the framework default", () => {
     const code = loadMainRsCode()
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const arm = code.slice(armStart, armStart + 20000)
+    const arm = humbleLoginOpenHandlerBody(code)
     const visibleIdx = arm.indexOf('if visible {')
     expect(visibleIdx).toBeGreaterThan(-1)
 
@@ -1515,14 +1522,7 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 
   test(".inner_size(/.center()/.focused(true)/on_document_title_changed appear ONLY inside humble_login_open's if-visible block -- the adjacent-already-present gating Plan 18 introduced and nothing had ever tested; proves source placement only, never that the operator actually saw the window raised (plan 29 item 1)", () => {
     const code = loadMainRsCode()
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    const armBody = code.slice(armStart, armEnd)
+    const armBody = humbleLoginOpenHandlerBody(code)
 
     const visibleBlock = extractBracedBlock(armBody, 'if visible {')
     const visibleStart = armBody.indexOf(visibleBlock)
@@ -1581,17 +1581,6 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
   // the pristine Epic window (a DIFFERENT form layout, out of scope by D-3) stays 900. Two
   // helpers mirroring the file's existing find-start-then-find-end slicing idiom (identical
   // in shape to the sibling copies already defined in other describe blocks in this file).
-  function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    return code.slice(armStart, armEnd)
-  }
-
   function extractPristineLoginFnBody(code: string): string {
     const start = code.indexOf('fn open_pristine_epic_login_window(')
     expect(start).toBeGreaterThan(-1)
@@ -1602,7 +1591,7 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 
   test("Guard 1 (D-3): humble_login_open's if-visible block carries the narrowed 464-wide sizing call and no longer carries the former 900-wide one", () => {
     const code = loadMainRsCode()
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     const visibleBlock = extractBracedBlock(armBody, 'if visible {')
     expect(visibleBlock).toContain('.inner_size(464.0, 592.0)')
     // Scoped to this block only -- a file-wide negative would red on Epic's own legitimate
@@ -1612,15 +1601,14 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 
   test("Guard 1 self-test (RED proof): a synthetic visible block still carrying the pre-fix 900-wide call fails this guard's positive clause", () => {
     const synthetic = [
-      'RustInvokeChannel::HumbleLoginOpen => {',
+      'pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<Value, String> {',
       '  if visible {',
       '    builder = builder.inner_size(900.0, 700.0);',
       '  }',
-      '}',
-      'RustInvokeChannel::HumbleLoginCookies => {}'
+      '}'
     ].join('\n')
     const code = loadMainRsCode(synthetic)
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     const visibleBlock = extractBracedBlock(armBody, 'if visible {')
     expect(visibleBlock).not.toContain('.inner_size(464.0, 592.0)')
   })
@@ -1653,17 +1641,6 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
 // repeatedly (explaining why it must NOT be used here), so a naive unscoped count would
 // be satisfied by the prose alone even if the real arm still used it.
 describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_load, never on_navigation', () => {
-  function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    return code.slice(armStart, armEnd)
-  }
-
   // Quick 260927-o3h: finds the FIRST `{` at or after `headerIdx` and walks forward tracking
   // brace depth, returning the substring strictly between that `{` and its matching `}`.
   // Throws on unbalanced input rather than returning a partial slice, so a malformed source
@@ -1694,7 +1671,7 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
   }
 
   test("POSITIVE: the title-refresh call (set_title) lives inside the arm's .on_page_load( hook body", () => {
-    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    const armBody = humbleLoginOpenHandlerBody(loadMainRsCode())
     const pageLoadStart = armBody.indexOf('.on_page_load(')
     expect(pageLoadStart).toBeGreaterThan(-1)
     const pageLoadEnd = armBody.indexOf('.build()', pageLoadStart)
@@ -1724,7 +1701,7 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
   // the negatives -- the two control assertions fire. What it does NOT cover: this is a
   // source-shape gate, not a behavioural one -- it cannot observe a title bar.
   test('quick 260927-o3h REGRESSION: the on_page_load set_title refresh is guarded to PageLoadEvent::Started only, while the page_load_origin write and the macOS native-bar origin update keep running on both events', () => {
-    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    const armBody = humbleLoginOpenHandlerBody(loadMainRsCode())
     const pageLoadStart = armBody.indexOf('.on_page_load(')
     expect(pageLoadStart).toBeGreaterThan(-1)
     const buildStart = armBody.indexOf('.build()', pageLoadStart)
@@ -1752,7 +1729,7 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
   // driven only by .on_page_load( (spike 013: 5 of 8 on_navigation events were third-party
   // iframes).
   test('NEGATIVE/RETIGHTENED: the humble_login_open arm has no .on_navigation( call -- the login-watch relay is driven only by on_page_load', () => {
-    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    const armBody = humbleLoginOpenHandlerBody(loadMainRsCode())
     expect((armBody.match(/\.on_navigation\(/g) ?? []).length).toBe(0)
     expect(armBody).toContain('.on_page_load(')
   })
@@ -1762,7 +1739,7 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
   })
 
   test('the arm seeds its shared origin state from the validated open URL before .build()', () => {
-    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    const armBody = humbleLoginOpenHandlerBody(loadMainRsCode())
     const seedIdx = armBody.indexOf('Arc::new(Mutex::new(origin.clone()))')
     const buildIdx = armBody.indexOf('.build()')
     expect(seedIdx).toBeGreaterThan(-1)
@@ -1777,14 +1754,7 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
 describe('F-34.5-G6-05 (Plan 27) login window requests a light interface style', () => {
   test('the humble_login_open arm requests .theme(Some(tauri::Theme::Light)) on the visible builder', () => {
     const code = loadMainRsCode()
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    const armBody = code.slice(armStart, armEnd)
+    const armBody = humbleLoginOpenHandlerBody(code)
     expect(armBody).toContain('.theme(Some(tauri::Theme::Light))')
   })
 })
@@ -1995,17 +1965,6 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
     return code.slice(markerIdx, i + 1)
   }
 
-  function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    return code.slice(armStart, armEnd)
-  }
-
   // quick-261029-o1w: DELIBERATELY UPDATED 1 -> 2 call sites. The second is GOG's sheet
   // (now `open_pristine_login_sheet`, renamed and shared with Epic by quick-261029-utr); the arm's own count stays 1.
   test('Test 1 (INVERTED 2026-08-04, updated quick-261029-o1w, updated quick-261029-utr): present_login_window_as_sheet( is CALLED exactly twice in the file -- once inside the humble_login_open arm, once inside open_pristine_login_sheet -- catches a future caller landing in (or being dropped from) the wrong place', () => {
@@ -2016,7 +1975,7 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
       code.match(/(?<!fn )present_login_window_as_sheet\(/g) ?? []
     expect(fileCallSites.length).toBe(2)
 
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     const armCallSites =
       armBody.match(/(?<!fn )present_login_window_as_sheet\(/g) ?? []
     expect(armCallSites.length).toBe(1)
@@ -2046,7 +2005,7 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
       'dismiss_login_window_sheet('
     )
 
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     const destroyedBlock = extractBracedBlock(
       armBody,
       'if matches!(event, tauri::WindowEvent::Destroyed) {'
@@ -2222,17 +2181,6 @@ describe('Phase 34.4.2 Plan 13 — the in-field autofill mechanism is DELETED (o
 // block still leaves a guard in place (mirrors Plan 02's Test 9 / Plan 03's Test 4 / Plan 04's
 // Test 7 precedent).
 describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc backstop)', () => {
-  function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    return code.slice(armStart, armEnd)
-  }
-
   function extractPristineLoginFnBody(code: string): string {
     const start = code.indexOf('fn open_pristine_epic_login_window(')
     expect(start).toBeGreaterThan(-1)
@@ -2263,7 +2211,7 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
   // T-34.4.2-15 / T-osq-02).
   test("Test 1: install_native_login_bar( is called inside the humble_login_open arm's visible macOS path, before present_login_window_as_sheet(, and a sheet is presented only when the install was confirmed", () => {
     const code = productionCode()
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     const installIdx = armBody.indexOf('install_native_login_bar(')
     expect(installIdx).toBeGreaterThan(-1)
     expect(
@@ -2282,7 +2230,7 @@ describe('Phase 34.4.2 Plan 08 — mandated close affordance (cancel strip + Esc
 
   test('Test 2: the humble_login_open arm has no .on_navigation( closure and no is_login_cancel_request -- the /login-cancel sentinel channel is deleted', () => {
     const code = productionCode()
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     expect(armBody).not.toContain('.on_navigation(')
     expect(code).not.toContain('is_login_cancel_request')
     expect(code).not.toContain('LOGIN_CANCEL_EXFIL_PATH')
@@ -2443,17 +2391,6 @@ describe('Phase 34.4.2 Plan 11 — review-finding fixes on the item 2/3/5 routes
 // source-level guard that makes that structurally impossible in place -- ordering,
 // visible-only scoping, three-way clearing and a bounded (not unbounded) expiry.
 describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows (T-34.4.2-39)', () => {
-  function extractHumbleLoginOpenArmBody(code: string): string {
-    const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-    expect(armStart).toBeGreaterThan(-1)
-    const armEnd = code.indexOf(
-      'RustInvokeChannel::HumbleLoginCookies => {',
-      armStart
-    )
-    expect(armEnd).toBeGreaterThan(armStart)
-    return code.slice(armStart, armEnd)
-  }
-
   /**
    * Scans forward from `openMarker`'s FIRST `{` and returns the full brace-matched block
    * (inclusive of both braces), counting depth rather than relying on a second string marker
@@ -2486,7 +2423,7 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
   // See .planning/todos/pending/2026-10-29-epic-login-window-as-macos-sheet-like-gog.md.
   test('Test 1 (ORDERING, updated quick-261029-utr): the arm no longer calls open_pristine_epic_login_window( directly; PENDING_VISIBLE_LOGIN_WINDOW is referenced before open_pristine_login_sheet( which precedes tauri::WebviewWindowBuilder::new(', () => {
     const code = loadMainRsCode()
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     expect(armBody).not.toContain('open_pristine_epic_login_window(')
     const guardIdx = armBody.indexOf('PENDING_VISIBLE_LOGIN_WINDOW')
     const sheetIdx = armBody.indexOf('open_pristine_login_sheet(')
@@ -2506,7 +2443,7 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
   // bare condition here would silently redirect both to this new block instead).
   test('Test 2 (VISIBLE-ONLY SCOPING): the refuse-or-arm block is brace-matched from a condition referencing visible -- hidden reveal/clear windows never arm or are refused', () => {
     const code = loadMainRsCode()
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     const guardBlock = extractBracedBlock(armBody, 'if visible == true {')
     expect(guardBlock).toContain('PENDING_VISIBLE_LOGIN_WINDOW')
     expect(guardBlock).toContain('visible')
@@ -2540,7 +2477,7 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
   // builds a window and both arm the latch); Epic's pre-latch early return (D-D) is gone.
   test('Test 3b (quick-261029-o1w ORDERING, updated quick-261029-utr): Epic and GOG both route after the latch -- no `if is_epic_login {` exemption survives, and `if visible == true {` precedes `if is_epic_login || is_gog_login {`', () => {
     const code = loadMainRsCode()
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     // Line-anchored: the routing branch's own `let store = if is_epic_login { "epic" }` is fine.
     expect(armBody).not.toMatch(/^\s*if is_epic_login \{\s*$/m)
     const latchIdx = armBody.indexOf('if visible == true {')
@@ -2555,7 +2492,7 @@ describe('Phase 34.4.2 Plan 14 — single-flight guard on visible login windows 
   // independently invented magic number, so the two can never disagree.
   test('Test 4 (BOUNDED, NOT UNBOUNDED, T-34.4.2-41): the refuse-or-arm region references pending_login_entry_is_stale, and PENDING_VISIBLE_LOGIN_WINDOW_TTL is defined in terms of LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT rather than an independent magic number', () => {
     const code = loadMainRsCode()
-    const armBody = extractHumbleLoginOpenArmBody(code)
+    const armBody = humbleLoginOpenHandlerBody(code)
     const guardBlock = extractBracedBlock(armBody, 'if visible == true {')
     expect(guardBlock).toContain('pending_login_entry_is_stale')
 

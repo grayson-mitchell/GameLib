@@ -15,6 +15,7 @@
  * (each file's own test modules cut).
  */
 import {
+  readHandlerBody,
   readTauriShellProductionSource,
   readTauriShellSource
 } from 'backend/testUtils/tauriShellSource'
@@ -70,20 +71,14 @@ function extractBracedBlock(code: string, openMarker: string): string {
 }
 
 /**
- * Locates the `RustInvokeChannel::HumbleLoginOpen => {` arm's body. `code.indexOf('humble_login_open')`
- * still resolves to the intended block even though the arm above's single-flight guard
- * deliberately uses `if visible == true {` (main.rs's own comment explains why) -- do not
- * "fix" that condition; this extractor does not depend on it.
+ * Locates the `rpc_humble_login_open` handler's body (Phase 71: the dispatcher arm is a one-line
+ * call, the body lives in `login_window/humble_open.rs`). `readHandlerBody` throws when the fn is
+ * missing, duplicated or near-empty, so this extractor cannot pass vacuously. The arm above's
+ * single-flight guard deliberately uses `if visible == true {` -- do not "fix" that condition; this
+ * extractor does not depend on it.
  */
 function extractHumbleLoginOpenArmBody(code: string): string {
-  const armStart = code.indexOf('RustInvokeChannel::HumbleLoginOpen => {')
-  expect(armStart).toBeGreaterThan(-1)
-  const armEnd = code.indexOf(
-    'RustInvokeChannel::HumbleLoginCookies => {',
-    armStart
-  )
-  expect(armEnd).toBeGreaterThan(armStart)
-  return code.slice(armStart, armEnd)
+  return readHandlerBody(code, 'humble_login_open')
 }
 
 describe('fn login_chrome_css_script( exists exactly once in production code', () => {
@@ -164,16 +159,14 @@ describe('D-2 gate: the login_chrome_css_script( call site is provably OUTSIDE a
 
   test('RED proof: a synthetic source where the CSS call is nested INSIDE a macOS block fails the "depth 1" half', () => {
     const synthetic = [
-      'RustInvokeChannel::HumbleLoginOpen => {',
+      'pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<Value, String> {',
       '    if visible {',
       '        #[cfg(target_os = "macos")]',
       '        {',
       '            builder = builder.initialization_script(&login_chrome_css_script());',
       '        }',
       '    }',
-      '}',
-      'RustInvokeChannel::HumbleLoginCookies => {}',
-      'mod tests {'
+      '}'
     ].join('\n')
     const code = loadMainRsCode(synthetic)
     const armBody = extractHumbleLoginOpenArmBody(code)
@@ -184,14 +177,12 @@ describe('D-2 gate: the login_chrome_css_script( call site is provably OUTSIDE a
 
   test('RED proof: a synthetic source where the CSS call gained its OWN cfg attribute fails the "no cfg above" half', () => {
     const synthetic = [
-      'RustInvokeChannel::HumbleLoginOpen => {',
+      'pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<Value, String> {',
       '    if visible {',
       '        #[cfg(target_os = "macos")]',
       '        builder = builder.initialization_script(&login_chrome_css_script());',
       '    }',
-      '}',
-      'RustInvokeChannel::HumbleLoginCookies => {}',
-      'mod tests {'
+      '}'
     ].join('\n')
     const code = loadMainRsCode(synthetic)
     const armBody = extractHumbleLoginOpenArmBody(code)

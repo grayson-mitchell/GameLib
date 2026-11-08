@@ -2,6 +2,8 @@ use super::*;
 
 mod invite_picker;
 pub(crate) use invite_picker::*;
+mod humble_open;
+pub(crate) use humble_open::*;
 
 // ---- Login-window (child WebviewWindow) support (Phase 34.4.1 Plan 01, D-01/D-02) ----
 //
