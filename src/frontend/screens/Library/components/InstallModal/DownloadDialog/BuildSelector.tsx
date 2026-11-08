@@ -34,7 +34,8 @@ export default function BuildSelector({
             if (selectedBuild) {
               setSelectedBuild(undefined)
             } else {
-              setSelectedBuild(gameBuilds[0].build_id)
+              const firstBuild = gameBuilds[0]
+              if (firstBuild) setSelectedBuild(firstBuild.build_id)
             }
           }}
         />

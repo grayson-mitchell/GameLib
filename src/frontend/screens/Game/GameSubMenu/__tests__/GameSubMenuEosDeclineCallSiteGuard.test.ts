@@ -41,6 +41,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { EOS_OVERLAY_CHANNELS } from 'frontend/helpers/declaredUnavailable'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 const componentPath = join(__dirname, '..', 'index.tsx')
 
@@ -147,7 +148,7 @@ describe('GameSubMenu EOS decline call-site gate', () => {
       )
       const indices = findEosCallSiteIndices(injected)
       expect(indices.length).toBeGreaterThan(0)
-      const [index] = indices
+      const index = at(indices, 0)
       const preceding = injected.slice(
         Math.max(0, index - CALL_SITE_WINDOW),
         index

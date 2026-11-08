@@ -34,6 +34,7 @@
 
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { at } from '../../../../__tests__/fixtures/indexed'
 import {
   stripSourceComments,
   stripTrailingLineComment
@@ -101,7 +102,7 @@ describe('observeCardVisibility', () => {
     observeCardVisibility({} as Element, () => {})
 
     expect(FakeIntersectionObserver.calls).toBe(1)
-    expect(FakeIntersectionObserver.instances[0].options).toEqual({
+    expect(at(FakeIntersectionObserver.instances, 0).options).toEqual({
       rootMargin: '1500px',
       threshold: 0
     })
@@ -120,7 +121,7 @@ describe('observeCardVisibility', () => {
     const node = {} as Element
     observeCardVisibility(node, () => {})
 
-    expect(FakeIntersectionObserver.instances[0].observed).toContain(node)
+    expect(at(FakeIntersectionObserver.instances, 0).observed).toContain(node)
   })
 
   it('an entry with intersectionRatio > 0 fires that node onVisible exactly once AND unobserves it', () => {
@@ -128,7 +129,7 @@ describe('observeCardVisibility', () => {
     const node = {} as Element
     const onVisible = jest.fn()
     observeCardVisibility(node, onVisible)
-    const instance = FakeIntersectionObserver.instances[0]
+    const instance = at(FakeIntersectionObserver.instances, 0)
 
     instance.trigger([{ target: node, intersectionRatio: 1 }])
 
@@ -141,7 +142,7 @@ describe('observeCardVisibility', () => {
     const node = {} as Element
     const onVisible = jest.fn()
     observeCardVisibility(node, onVisible)
-    const instance = FakeIntersectionObserver.instances[0]
+    const instance = at(FakeIntersectionObserver.instances, 0)
 
     instance.trigger([{ target: node, intersectionRatio: 0 }])
 
@@ -157,7 +158,7 @@ describe('observeCardVisibility', () => {
     const onVisibleB = jest.fn()
     observeCardVisibility(nodeA, onVisibleA)
     observeCardVisibility(nodeB, onVisibleB)
-    const instance = FakeIntersectionObserver.instances[0]
+    const instance = at(FakeIntersectionObserver.instances, 0)
 
     instance.trigger([{ target: nodeA, intersectionRatio: 1 }])
 
@@ -170,7 +171,7 @@ describe('observeCardVisibility', () => {
     const node = {} as Element
     const onVisible = jest.fn()
     const unsubscribe = observeCardVisibility(node, onVisible)
-    const instance = FakeIntersectionObserver.instances[0]
+    const instance = at(FakeIntersectionObserver.instances, 0)
 
     unsubscribe()
     expect(instance.unobserved).toContain(node)
@@ -184,7 +185,7 @@ describe('observeCardVisibility', () => {
     const node = {} as Element
     const onVisible = jest.fn()
     observeCardVisibility(node, onVisible)
-    const instance = FakeIntersectionObserver.instances[0]
+    const instance = at(FakeIntersectionObserver.instances, 0)
 
     instance.trigger([{ target: node, intersectionRatio: 1 }])
     instance.trigger([{ target: node, intersectionRatio: 1 }])

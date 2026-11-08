@@ -69,6 +69,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createInstance, type i18n as I18nInstance } from 'i18next'
 import Backend from 'i18next-fs-backend'
 import { Trans } from 'react-i18next'
+import { defined } from '../../../__tests__/fixtures/indexed'
 
 // Six levels up from .../Game/GamePage/__tests__/ is the repository root
 // (__tests__ -> GamePage -> Game -> screens -> frontend -> src -> root) --
@@ -187,7 +188,7 @@ function extractTransAttributes(): ExtractedTransAttributes {
     )
   }
 
-  const tag = matching[0]
+  const tag = defined(matching[0], 'matching Trans tag')
   const i18nKeyMatch = /\bi18nKey="([^"]*)"/.exec(tag)
   const nsMatch = /\bns="([^"]*)"/.exec(tag)
   const shouldUnescape = /\bshouldUnescape\b/.test(tag)
@@ -208,7 +209,11 @@ function extractTransAttributes(): ExtractedTransAttributes {
     )
   }
 
-  return { i18nKey: i18nKeyMatch[1], ns: nsMatch[1], shouldUnescape }
+  return {
+    i18nKey: defined(i18nKeyMatch[1], 'i18nKey capture group'),
+    ns: defined(nsMatch[1], 'ns capture group'),
+    shouldUnescape
+  }
 }
 
 const EXTRACTED = extractTransAttributes()
@@ -324,7 +329,9 @@ describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)
     const fullValue = readGermanCatalogValue()
     // The leading segment up to the entity is free of both tags and
     // entities, which is why this split is used rather than a `<1>` split.
-    const leadingSegment = escapeLikeReact(fullValue.split('&nbsp;')[0].trim())
+    const leadingSegment = escapeLikeReact(
+      defined(fullValue.split('&nbsp;')[0], 'leading segment').trim()
+    )
 
     expect(markup).toContain(leadingSegment)
   })
@@ -342,7 +349,9 @@ describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)
           'the wrong entry.'
       )
     }
-    const germanLinkText = escapeLikeReact(linkTextMatch[1])
+    const germanLinkText = escapeLikeReact(
+      defined(linkTextMatch[1], '<1> capture group')
+    )
 
     expect(markup).toContain(germanLinkText)
   })
@@ -432,14 +441,15 @@ describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)
             'changed. This is a catalog failure, not an extractor failure.'
         )
       }
-      expect(linkTextMatch[1].trim()).not.toBe('')
-      expect(linkTextMatch[1]).not.toBe('Open page')
-      expect(linkTextMatch[1]).toBe(linkTextMatch[1].trim())
+      const linkText = defined(linkTextMatch[1], '<1> capture group')
+      expect(linkText.trim()).not.toBe('')
+      expect(linkText).not.toBe('Open page')
+      expect(linkText).toBe(linkText.trim())
 
       const instance = await createRealInstance(lng)
       const markup = renderReconstructed(instance)
 
-      expect(markup).toContain(escapeLikeReact(linkTextMatch[1]))
+      expect(markup).toContain(escapeLikeReact(linkText))
     }
   )
 

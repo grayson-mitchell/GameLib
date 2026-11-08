@@ -34,6 +34,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createInstance, type i18n as I18nInstance } from 'i18next'
 import Backend from 'i18next-fs-backend'
 import { Trans } from 'react-i18next'
+import { defined } from '../../../../../__tests__/fixtures/indexed'
 
 // Eight levels up from
 // .../InstallModal/DownloadDialog/__tests__/ is the repository root
@@ -109,7 +110,7 @@ function extractTransAttributes(): ExtractedTransAttributes {
     )
   }
 
-  const tag = matching[0]
+  const tag = defined(matching[0], 'matching Trans tag')
   const i18nKeyMatch = /\bi18nKey="([^"]*)"/.exec(tag)
   const nsMatch = /\bns="([^"]*)"/.exec(tag)
 
@@ -129,7 +130,10 @@ function extractTransAttributes(): ExtractedTransAttributes {
     )
   }
 
-  return { i18nKey: i18nKeyMatch[1], ns: nsMatch[1] }
+  return {
+    i18nKey: defined(i18nKeyMatch[1], 'i18nKey capture group'),
+    ns: defined(nsMatch[1], 'ns capture group')
+  }
 }
 
 const EXTRACTED = extractTransAttributes()
@@ -228,7 +232,9 @@ describe('DownloadDialog anticheat-warning <Trans> against a REAL i18next instan
       EXTRACTED.i18nKey,
       EXTRACTED.ns
     )
-    const firstSegment = escapeLikeReact(fullValue.split('<br />')[0].trim())
+    const firstSegment = escapeLikeReact(
+      defined(fullValue.split('<br />')[0], 'first segment').trim()
+    )
 
     expect(markup).toContain(firstSegment)
   })

@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
 import type { InstallPlatform } from 'common/types'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
@@ -395,7 +396,7 @@ function assertMatrix(
     const distinctRows = Array.from(
       new Set(failures.map((f) => `Row ${f.row}`))
     ).sort()
-    const sample = failures[0]
+    const sample = at(failures, 0)
     throw new Error(
       `Matrix harness found ${failures.length} mismatch(es) across ` +
         `${distinctRows.join(', ')}. Sample: Row ${sample.row}, field ` +

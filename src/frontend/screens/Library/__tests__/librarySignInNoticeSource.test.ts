@@ -42,6 +42,7 @@
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { at } from '../../__tests__/fixtures/indexed'
 import {
   stripSourceComments,
   stripTrailingLineComment
@@ -310,8 +311,9 @@ describe('LibrarySignInNotice -- structural gates (real source)', () => {
     expect(hits).toHaveLength(1)
     const expiredIdx = lines.findIndex((l) => l.includes('&__row--expired'))
     expect(expiredIdx).toBeGreaterThan(-1)
-    expect(hits[0].i).toBeGreaterThan(expiredIdx)
-    expect(hits[0].i - expiredIdx).toBeLessThan(3)
+    const hit = at(hits, 0)
+    expect(hit.i).toBeGreaterThan(expiredIdx)
+    expect(hit.i - expiredIdx).toBeLessThan(3)
   })
 
   it('G4: the notice mounts once, after FilterChipRow, above FocusRowStrip and the grid, away from ErrorComponent', () => {

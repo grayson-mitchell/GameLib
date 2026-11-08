@@ -172,10 +172,11 @@ export default function GOGModifyInstallModal({
       /*if (branch === gameInfo.install.branch) {
         setCurrentBuildNotAvailable(!currentBuildInList)
       }*/
-      if (newBuilds.length > 0) {
+      const firstBuild = newBuilds[0]
+      if (firstBuild) {
         const newBuild = currentBuildInList
           ? gameInfo.install.buildId
-          : newBuilds[0].build_id
+          : firstBuild.build_id
         setSelectedBuild(selectedBuild ? newBuild : undefined)
       }
       setBuilds(newBuilds)
@@ -191,7 +192,7 @@ export default function GOGModifyInstallModal({
             getPreferredInstallLanguage(
               gameInstallInfo.manifest.languages,
               i18n.languages
-            )
+            ) ?? installLanguage
           )
         }
       }

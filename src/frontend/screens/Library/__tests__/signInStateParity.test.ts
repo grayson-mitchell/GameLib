@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { at } from '../../__tests__/fixtures/indexed'
 
 /**
  * Phase 49 Plan 10 (R7, T-49-29): the Manage Accounts tiles and the Library
@@ -202,7 +203,7 @@ describe('Manage Accounts tiles and the Library notice share one selector (R7, T
     expect(SOURCE_FIELDS).toHaveLength(6)
     const noticeCalls = readSelectorCalls(notice)
     expect(noticeCalls).toHaveLength(1)
-    expect(noticeCalls[0].pairs).toHaveLength(6)
+    expect(at(noticeCalls, 0).pairs).toHaveLength(6)
     const loginCalls = readSelectorCalls(login)
     expect(loginCalls.length).toBeGreaterThanOrEqual(1)
     for (const call of loginCalls) {
@@ -239,7 +240,7 @@ describe('Manage Accounts tiles and the Library notice share one selector (R7, T
       )
       expect(specimen).not.toBe(notice)
       expect(wiringViolations(specimen)).not.toEqual([])
-      expect(readSelectorCalls(specimen)[0].pairs).toHaveLength(5)
+      expect(at(readSelectorCalls(specimen), 0).pairs).toHaveLength(5)
       expect(pairSets(specimen)).not.toEqual(pairSets(login))
     })
 

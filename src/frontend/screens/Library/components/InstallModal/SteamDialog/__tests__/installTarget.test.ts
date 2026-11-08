@@ -4,6 +4,7 @@ import {
   resolveFreeSpaceProbeSubject,
   resolveSteamInstallPath
 } from '../installTarget'
+import { at } from '../../../../../__tests__/fixtures/indexed'
 
 // --- Fixtures -------------------------------------------------------------
 //
@@ -212,9 +213,10 @@ describe('the containment gate is not vacuous', () => {
 // ---------------------------------------------------------------------------
 describe('resolveFreeSpaceProbeSubject (34.13 review B-WR-04)', () => {
   it('resolves a known library selection to its steamappsDir, not its root', () => {
-    const selected = threeLibraries[0].path
+    const library = at(threeLibraries, 0)
+    const selected = library.path
     expect(resolveFreeSpaceProbeSubject(selected, threeLibraries)).toBe(
-      threeLibraries[0].steamappsDir
+      library.steamappsDir
     )
     expect(resolveFreeSpaceProbeSubject(selected, threeLibraries)).not.toBe(
       selected

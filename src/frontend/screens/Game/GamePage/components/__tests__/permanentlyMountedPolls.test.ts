@@ -35,6 +35,7 @@
 import { readFileSync, existsSync } from 'fs'
 import { join, resolve as resolvePath } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { defined } from '../../../../__tests__/fixtures/indexed'
 
 // __tests__ -> components -> GamePage -> Game -> screens -> frontend
 const FRONTEND_ROOT = resolvePath(__dirname, '..', '..', '..', '..', '..')
@@ -73,7 +74,7 @@ function censusPermanentlyMountedComponents(): MountedComponent[] {
   const importRe = /import\s+(?:(\w+)|\{([^}]*)\})\s+from\s+'(\.[^']*)'/g
   let importMatch: RegExpExecArray | null
   while ((importMatch = importRe.exec(appStripped)) !== null) {
-    const specifier = importMatch[3]
+    const specifier = defined(importMatch[3], 'import specifier capture group')
     const names = importMatch[1]
       ? [importMatch[1]]
       : (importMatch[2] ?? '').split(',').map(
@@ -92,7 +93,7 @@ function censusPermanentlyMountedComponents(): MountedComponent[] {
   const tagRe = /<([A-Z]\w*)\s*\/>/g
   let tagMatch: RegExpExecArray | null
   while ((tagMatch = tagRe.exec(appStripped)) !== null) {
-    mounted.add(tagMatch[1])
+    mounted.add(defined(tagMatch[1], 'tag name capture group'))
   }
 
   const result: MountedComponent[] = []
@@ -146,7 +147,7 @@ function depsOf(effect: string): string {
   if (!match) {
     throw new Error(`depsOf: could not find a dependency array in: ${effect}`)
   }
-  return match[1]
+  return defined(match[1], 'dependency array capture group')
 }
 
 /**
@@ -243,8 +244,8 @@ function asyncHandlerWirings(
   source: string
 ): { name: string; wiredBare: boolean }[] {
   const flattened = source.replace(/\s+/g, ' ')
-  const names = [...flattened.matchAll(/const (\w+) = async /g)].map(
-    (m) => m[1]
+  const names = [...flattened.matchAll(/const (\w+) = async /g)].map((m) =>
+    defined(m[1], 'handler name capture group')
   )
   return names.map((name) => ({
     name,

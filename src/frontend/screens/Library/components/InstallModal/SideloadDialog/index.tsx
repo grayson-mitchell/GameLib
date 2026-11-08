@@ -324,9 +324,11 @@ export default function SideloadDialog({
   }
 
   function platformIcon() {
-    const platformIcon = availablePlatforms.filter(
+    const platformIcon = availablePlatforms.find(
       (p) => p.name === appPlatform.replace('Mac', 'macOS')
-    )[0]?.icon
+    )?.icon
+
+    if (!platformIcon) return null
 
     return (
       <FontAwesomeIcon

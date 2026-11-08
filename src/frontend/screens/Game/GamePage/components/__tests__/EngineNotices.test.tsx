@@ -9,6 +9,7 @@ jest.mock('react-i18next', () => {
 })
 
 import EngineNotices from '../EngineNotices'
+import { at } from '../../../../__tests__/fixtures/indexed'
 
 const make = (over: Partial<EngineState>): EngineState => ({
   runner: 'steam',
@@ -91,7 +92,7 @@ describe('EngineNotices', () => {
     await button(els, 'Dismiss')?.props.onClick?.()
     expect(dismiss).toHaveBeenCalledWith({ kind: 'no-crossover' })
     expect(
-      useEngineState.getState().byGame['steam:730'].showNoCrossoverNote
+      useEngineState.getState().byGame['steam:730']?.showNoCrossoverNote
     ).toBe(false)
   })
 
@@ -107,7 +108,7 @@ describe('EngineNotices', () => {
       build: '26.1'
     })
     expect(
-      useEngineState.getState().byGame['steam:730'].untestedCrossoverBuild
+      useEngineState.getState().byGame['steam:730']?.untestedCrossoverBuild
     ).toBeNull()
   })
 
@@ -117,7 +118,7 @@ describe('EngineNotices', () => {
       e.props.className?.includes('steamEngineNotice--overrideWarning')
     )
     expect(notices).toHaveLength(1)
-    expect(notices[0].props).toHaveProperty('role', 'status')
+    expect(at(notices, 0).props).toHaveProperty('role', 'status')
     expect(text(notices[0])).toContain('its CrossOver trial has expired')
   })
 
@@ -170,7 +171,7 @@ describe('EngineNotices', () => {
     await Promise.resolve()
     await Promise.resolve()
     const { byGame } = useEngineState.getState()
-    expect(byGame['legendary:Fortnite'].showNoCrossoverNote).toBe(false)
-    expect(byGame['steam:730'].showNoCrossoverNote).toBe(true)
+    expect(byGame['legendary:Fortnite']?.showNoCrossoverNote).toBe(false)
+    expect(byGame['steam:730']?.showNoCrossoverNote).toBe(true)
   })
 })

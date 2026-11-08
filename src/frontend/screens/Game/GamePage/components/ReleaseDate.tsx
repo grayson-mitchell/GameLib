@@ -12,7 +12,7 @@ function convertDate(date: string) {
   // Extract only the date part if the string contains extra information
   const match = date.match(/(\w+ \d{1,2}, \d{4})/)
   if (match) {
-    date = match[1]
+    date = match[1] ?? date
   }
 
   const options: Intl.DateTimeFormatOptions = {
@@ -44,8 +44,8 @@ const ReleaseDate: React.FC<ReleaseDateProps> = ({ date, runnerDate }) => {
     let windowsReleaseDate = runnerDate
 
     if (!windowsReleaseDate) {
-      for (let i = 0; i < date.length; i++) {
-        const [platformName, releaseDate] = date[i].split(': ')
+      for (const entry of date) {
+        const [platformName, releaseDate] = entry.split(': ')
 
         if (platformName === 'Windows') {
           windowsReleaseDate = releaseDate
@@ -55,7 +55,7 @@ const ReleaseDate: React.FC<ReleaseDateProps> = ({ date, runnerDate }) => {
           (platformName === 'Linux' && is.linuxNative && is.linux) ||
           (platformName === 'OS X' && is.macNative && is.mac)
         ) {
-          return convertDate(releaseDate)
+          return convertDate(releaseDate ?? '')
         }
       }
     }

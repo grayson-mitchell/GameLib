@@ -58,9 +58,11 @@ jest.mock('react', () => {
       const idx = memoCursor++
       const slot = memoSlots[idx]
       if (!slot || depsChanged(slot.deps, deps)) {
-        memoSlots[idx] = { deps, value: factory() }
+        const fresh = { deps, value: factory() }
+        memoSlots[idx] = fresh
+        return fresh.value
       }
-      return memoSlots[idx].value
+      return slot.value
     },
     useEffect: (effect: () => void | (() => void), deps?: unknown[]) => {
       const idx = effectCursor++
@@ -108,6 +110,7 @@ const mockApi = {
 
 import type { GameInfo } from 'common/types'
 import type * as HookModule from '../useNonSteamLastPlayed'
+import { at } from '../../__tests__/fixtures/indexed'
 
 type Harness = { __beginRender: () => void; __unmount: () => void }
 type Map_ = Readonly<Record<string, string | undefined>> | null
@@ -225,7 +228,7 @@ describe('useNonSteamLastPlayed', () => {
     render()
     await flush()
     expect(render()).toBeNull()
-    jest.advanceTimersByTime(hook.LAST_PLAYED_HYDRATE_RETRY_DELAYS_MS[0])
+    jest.advanceTimersByTime(at(hook.LAST_PLAYED_HYDRATE_RETRY_DELAYS_MS, 0))
     await flush()
     expect(render()).toEqual({
       epicA: '2026-10-01T00:00:00.000Z',

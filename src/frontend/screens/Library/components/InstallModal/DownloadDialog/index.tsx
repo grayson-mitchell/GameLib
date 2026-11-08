@@ -150,9 +150,9 @@ export default function DownloadDialog({
   const [installPath, setInstallPath] = useState(
     previousProgress.folder || getDefaultInstallPath()
   )
-  const gameStatus: GameStatus = libraryStatus.filter(
+  const gameStatus: GameStatus | undefined = libraryStatus.find(
     (game: GameStatus) => game.appName === appName
-  )[0]
+  )
 
   const [dlcsToInstall, setDlcsToInstall] = useState<string[]>([])
   const [sdls, setSdls] = useState<SelectiveDownload[]>([])
@@ -480,7 +480,7 @@ export default function DownloadDialog({
                 getPreferredInstallLanguage(
                   gameInstallInfo.manifest.languages,
                   i18n.languages
-                )
+                ) ?? installLanguage
               )
             }
           }

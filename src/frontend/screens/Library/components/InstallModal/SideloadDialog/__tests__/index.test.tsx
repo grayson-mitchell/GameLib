@@ -111,10 +111,10 @@ describe('fileFilters', () => {
         expect(filter.extensions).not.toContain('SENTINEL')
       }
     }
-    expect(fileFilters('linux', sentinelT)?.[0].extensions).toEqual([
+    expect(fileFilters('linux', sentinelT)?.[0]?.extensions).toEqual([
       'AppImage'
     ])
-    expect(fileFilters('osx', sentinelT)?.[0].extensions).toEqual(['App'])
+    expect(fileFilters('osx', sentinelT)?.[0]?.extensions).toEqual(['App'])
     for (const filter of localImageFilters(sentinelT)) {
       expect(filter.extensions).not.toContain('SENTINEL')
     }

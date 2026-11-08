@@ -178,7 +178,7 @@ function countDecl(css: string, name: string): number {
 function resolveBarHeight(rules: CssRule[]): number {
   const spacing = readSpacingScss()
   const unit = parsePx(
-    spacing.match(/--space-unit-fixed:\s*([^;]+);/)?.[1].trim() ?? '',
+    spacing.match(/--space-unit-fixed:\s*([^;]+);/)?.[1]?.trim() ?? '',
     '_spacing.scss --space-unit-fixed'
   )
   const factor = Number(

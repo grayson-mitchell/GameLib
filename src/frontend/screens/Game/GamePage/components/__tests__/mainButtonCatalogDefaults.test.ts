@@ -23,6 +23,7 @@ import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import gamepage from '../../../../../../../public/locales/en/gamepage.json'
 import gamelib from '../../../../../../../public/locales/en/gamelib.json'
+import { defined } from '../../../../__tests__/fixtures/indexed'
 
 const SOURCE = stripSourceComments(
   readFileSync(join(__dirname, '..', 'MainButton.tsx'), 'utf-8')
@@ -64,7 +65,10 @@ function collectTCalls(source: string): TCall[] {
   const calls: TCall[] = []
   let m: RegExpExecArray | null
   while ((m = re.exec(flattened)) !== null) {
-    calls.push({ key: m[1], defaultValue: m[2].replace(/\\'/g, "'") })
+    calls.push({
+      key: defined(m[1], 'key capture group'),
+      defaultValue: defined(m[2], 'default capture group').replace(/\\'/g, "'")
+    })
   }
   return calls
 }
@@ -76,7 +80,10 @@ function collectObjectFormTCalls(source: string): TCall[] {
   const calls: TCall[] = []
   let m: RegExpExecArray | null
   while ((m = re.exec(flattened)) !== null) {
-    calls.push({ key: m[1], defaultValue: m[2].replace(/\\'/g, "'") })
+    calls.push({
+      key: defined(m[1], 'key capture group'),
+      defaultValue: defined(m[2], 'default capture group').replace(/\\'/g, "'")
+    })
   }
   return calls
 }

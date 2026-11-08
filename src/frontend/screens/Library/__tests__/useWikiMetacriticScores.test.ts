@@ -52,9 +52,11 @@ jest.mock('react', () => {
       const idx = memoCursor++
       const slot = memoSlots[idx]
       if (!slot || depsChanged(slot.deps, deps)) {
-        memoSlots[idx] = { deps, value: factory() }
+        const fresh = { deps, value: factory() }
+        memoSlots[idx] = fresh
+        return fresh.value
       }
-      return memoSlots[idx].value
+      return slot.value
     },
     useEffect: (effect: () => void | (() => void), deps?: unknown[]) => {
       const idx = effectCursor++

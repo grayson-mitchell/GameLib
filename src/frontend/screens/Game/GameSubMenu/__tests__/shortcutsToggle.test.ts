@@ -14,6 +14,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { toggleShortcuts } from '../shortcutsToggle'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 const FRONTEND = join(__dirname, '..', '..', '..', '..')
 
@@ -147,11 +148,11 @@ describe('toggleShortcuts (261012-ca6)', () => {
 
     expect(setBusy.mock.calls[0]).toEqual([true])
     expect(setBusy.mock.invocationCallOrder[0]).toBeLessThan(
-      addShortcut.mock.invocationCallOrder[0]
+      at(addShortcut.mock.invocationCallOrder, 0)
     )
     expect(setBusy).toHaveBeenLastCalledWith(false)
     expect(setBusy.mock.invocationCallOrder.at(-1)).toBeGreaterThan(
-      setHasShortcuts.mock.invocationCallOrder[0]
+      at(setHasShortcuts.mock.invocationCallOrder, 0)
     )
   })
 

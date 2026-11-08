@@ -18,6 +18,7 @@
 import { FavouriteGame, GameInfo, HiddenGame } from 'common/types'
 import { FilterEngineDeps, FilterEngineState } from 'frontend/types'
 import { gameKey } from '../filterEngine'
+import { at } from '../../__tests__/fixtures/indexed'
 import {
   buildEngineDeps,
   buildFavouriteKeys,
@@ -139,7 +140,7 @@ describe('buildGridPipeline: counts are computed over the UNFILTERED union (CR-0
       makeState({ stores: ['gog'], collection: 'Backlog' }),
       makeDeps({
         customCategories: {
-          Backlog: [gameKey(libraryUnion[1]), gameKey(libraryUnion[2])]
+          Backlog: [gameKey(at(libraryUnion, 1)), gameKey(at(libraryUnion, 2))]
         }
       })
     )
@@ -164,9 +165,9 @@ describe('buildGridPipeline: counts are computed over the fuzzy-matched set (REQ
     // same union and puts it on `state`. `countFor` never skips 'search', so
     // this must reach the count.
     const searchMatchedKeys = new Set([
-      gameKey(libraryUnion[0]),
-      gameKey(libraryUnion[1]),
-      gameKey(libraryUnion[2])
+      gameKey(at(libraryUnion, 0)),
+      gameKey(at(libraryUnion, 1)),
+      gameKey(at(libraryUnion, 2))
     ])
 
     const pipeline = buildGridPipeline(

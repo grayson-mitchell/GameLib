@@ -20,6 +20,7 @@ import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { makeFaithfulT } from './faithfulTranslate'
+import { at } from '../../../../__tests__/fixtures/indexed'
 import gamelib from '../../../../../../../public/locales/en/gamelib.json'
 
 const SUITE_DIR = __dirname
@@ -83,7 +84,8 @@ describe('C-21: no label suite measures the inline t() default', () => {
   )
 
   it('RED: the real pre-fix mock shape DERIVED FROM THE CENSUS fails both obligations', () => {
-    const knownBad = i18nSuites[0].source.replace(
+    const knownSource = at(i18nSuites, 0).source
+    const knownBad = knownSource.replace(
       /jest\.mock\('react-i18next'[\s\S]*?\n\}\)/,
       `jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -91,7 +93,7 @@ describe('C-21: no label suite measures the inline t() default', () => {
   })
 }))`
     )
-    expect(knownBad).not.toBe(i18nSuites[0].source)
+    expect(knownBad).not.toBe(knownSource)
     expect(knownBad).not.toContain('faithfulReactI18next()')
     expect(knownBad.replace(/\s+/g, ' ')).toMatch(/=> defaultValue \?\? _?key/)
   })

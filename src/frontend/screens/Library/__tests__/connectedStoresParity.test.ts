@@ -1,5 +1,6 @@
 import { readFileSync } from 'graceful-fs'
 import { join } from 'path'
+import { defined } from '../../__tests__/fixtures/indexed'
 
 /**
  * Threat T-34.11-12 (Spoofing) / review WR-03.
@@ -67,7 +68,9 @@ function readConnectedStoreGates(source: string): Record<string, string> {
   const pattern = /if\s*\((.+?)\)\s*stores\.push\('([a-z]+)'\)/g
   let match = pattern.exec(source)
   while (match !== null) {
-    gates[match[2]] = normalise(match[1])
+    gates[defined(match[2], 'store capture group')] = normalise(
+      defined(match[1], 'gate capture group')
+    )
     match = pattern.exec(source)
   }
   return gates
@@ -79,9 +82,10 @@ function readMakeLibraryGates(source: string): Record<string, string> {
   const pattern = /const\s+show([A-Z][a-zA-Z]*)\s*=\s*(.+)/g
   let match = pattern.exec(source)
   while (match !== null) {
-    const store = SHOW_LOCAL_TO_STORE[match[1]]
+    const store =
+      SHOW_LOCAL_TO_STORE[defined(match[1], 'show-name capture group')]
     if (store !== undefined) {
-      gates[store] = normalise(match[2])
+      gates[store] = normalise(defined(match[2], 'gate capture group'))
     }
     match = pattern.exec(source)
   }

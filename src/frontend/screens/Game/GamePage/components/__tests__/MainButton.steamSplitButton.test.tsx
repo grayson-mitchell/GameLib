@@ -114,6 +114,7 @@ jest.mock('frontend/components/UI/Dropdown', () => ({
 jest.mock('frontend/state/InstallGameModal')
 
 import MainButton from '../MainButton'
+import { at } from '../../../../__tests__/fixtures/indexed'
 import Dropdown from 'frontend/components/UI/Dropdown'
 import {
   openInstallGameModal,
@@ -233,7 +234,10 @@ describe('MainButton — D-21 split button (steam)', () => {
     // disabled-looking-but-present caret would still sit in the focus ring.
     resetContext()
     const enabledTree = invoke(makeGameInfo())
-    const enabledCaret = findAll(enabledTree, (n) => n.type === Dropdown)[0]
+    const enabledCaret = at(
+      findAll(enabledTree, (n) => n.type === Dropdown),
+      0
+    )
     expect(
       (enabledCaret.props as { disabled?: unknown }).disabled
     ).toBeUndefined()
@@ -262,7 +266,10 @@ describe('MainButton — D-21 split button (steam)', () => {
   it('S6: the caret panel holds exactly one activatable item, wired to openSteamInstallOptions', () => {
     const gameInfo = makeGameInfo()
     const tree = invoke(gameInfo)
-    const caret = findAll(tree, (n) => n.type === Dropdown)[0]
+    const caret = at(
+      findAll(tree, (n) => n.type === Dropdown),
+      0
+    )
 
     const panelChild = (caret.props as { children: unknown }).children
     expect(isValidElement(panelChild)).toBe(true)
@@ -279,7 +286,10 @@ describe('MainButton — D-21 split button (steam)', () => {
 
   it('S7: the caret is not aria-hidden and carries an accessible name', () => {
     const tree = invoke(makeGameInfo())
-    const caret = findAll(tree, (n) => n.type === Dropdown)[0]
+    const caret = at(
+      findAll(tree, (n) => n.type === Dropdown),
+      0
+    )
     const titleNode = (caret.props as { title: unknown }).title
 
     const labeledNodes = findAll(titleNode, (n) =>
@@ -287,7 +297,7 @@ describe('MainButton — D-21 split button (steam)', () => {
     )
     expect(labeledNodes).toHaveLength(1)
     expect(
-      (labeledNodes[0].props as { 'aria-label': string })['aria-label']
+      (at(labeledNodes, 0).props as { 'aria-label': string })['aria-label']
     ).toBe('Install with options…')
 
     const hiddenInTitle = findAll(
@@ -380,7 +390,10 @@ describe('MainButton — D-21 split button (steam)', () => {
 
   it('S11 (34.13 review C-11): the caret panel item carries the same class vocabulary as its GameSubMenu sibling', () => {
     const tree = invoke(makeGameInfo())
-    const caret = findAll(tree, (n) => n.type === Dropdown)[0]
+    const caret = at(
+      findAll(tree, (n) => n.type === Dropdown),
+      0
+    )
     const button = (caret.props as { children: unknown })
       .children as ReactElement<{ className?: string }>
 

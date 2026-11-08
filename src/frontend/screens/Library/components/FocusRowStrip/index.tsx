@@ -227,7 +227,7 @@ function FocusRowStrip({
   } else if (focusRow?.kind === 'store') {
     label = isStore(focusRow.value, 'sideload')
       ? tGamelib('gamelib:library.storeOther', 'Other')
-      : RunnerToStore[focusRow.value]
+      : (RunnerToStore[focusRow.value] ?? '')
   } else if (focusRow?.kind === 'runnability') {
     label = runnabilityLabel(
       focusRow.value as Parameters<typeof runnabilityLabel>[0],

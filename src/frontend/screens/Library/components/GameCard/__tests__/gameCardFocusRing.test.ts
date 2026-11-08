@@ -45,6 +45,7 @@
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { defined } from '../../../../__tests__/fixtures/indexed'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { KEYBOARD_NAV_CLASS } from '../../../../../helpers/inputModality'
 
@@ -110,7 +111,9 @@ const GAME_CARD_KEYBOARD_PARKED_CURSOR_RULE = new RegExp(
 )
 
 function groupedRuleBodies(css: string): string[] {
-  return [...css.matchAll(GAME_CARD_GROUPED_RULES)].map((m) => m[1])
+  return [...css.matchAll(GAME_CARD_GROUPED_RULES)].map((m) =>
+    defined(m[1], 'rule body capture group')
+  )
 }
 
 describe('GameCard hover wears the console-style focus ring (source gate, G-48-8b)', () => {
@@ -153,7 +156,7 @@ describe('GameCard hover wears the console-style focus ring (source gate, G-48-8
   it('Test D: the resting .gameCard outline has the ring geometry, a transparent 3px at +2px, so only colour and shadow animate', () => {
     const css = readGameCardCss()
     const resting = [...css.matchAll(GAME_CARD_REST_RULES)]
-      .map((m) => m[1])
+      .map((m) => defined(m[1], 'rule body capture group'))
       .filter((b) => /(^|[\s;])outline:/.test(b))
 
     expect(resting).toHaveLength(1)

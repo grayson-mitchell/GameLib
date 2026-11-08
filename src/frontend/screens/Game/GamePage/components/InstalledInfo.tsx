@@ -89,7 +89,7 @@ const InstalledInfo = ({ gameInfo }: Props) => {
   if (!is.win) {
     let wine = wineVersion.name.replace('Wine - ', '').replace('Proton - ', '')
     if (wine.includes('Default')) {
-      wine = wine.split('-')[0]
+      wine = wine.split('-')[0] ?? wine
     }
     wineName = wine
     wineType = wineVersion.type

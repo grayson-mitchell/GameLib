@@ -37,7 +37,9 @@ const DLCDownloadListing: React.FC<Props> = ({
   }
 
   const handleDlcToggle = (index: number) => {
-    const { app_name } = DLCList[index]
+    const dlc = DLCList[index]
+    if (!dlc) return
+    const { app_name } = dlc
     const newDlcsToInstall = [...dlcsToInstall]
     if (newDlcsToInstall.includes(app_name)) {
       newDlcsToInstall.splice(newDlcsToInstall.indexOf(app_name), 1)

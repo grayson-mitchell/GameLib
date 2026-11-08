@@ -26,6 +26,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createInstance, type i18n as I18nInstance } from 'i18next'
 import Backend from 'i18next-fs-backend'
 import { Trans } from 'react-i18next'
+import { defined } from '../../../../../__tests__/fixtures/indexed'
 
 // __tests__ -> SideloadDialog -> InstallModal -> components -> Library ->
 // screens -> frontend -> src -> root: eight levels.
@@ -83,7 +84,7 @@ function extractTransAttributes(): {
         `"${TARGET_KEY}", found ${matching.length} -- the extractor is broken.`
     )
   }
-  const tag = matching[0]
+  const tag = defined(matching[0], 'matching Trans tag')
   const i18nKey = /\bi18nKey="([^"]*)"/.exec(tag)?.[1]
   const ns = /\bns="([^"]*)"/.exec(tag)?.[1]
   if (!i18nKey || !ns) {

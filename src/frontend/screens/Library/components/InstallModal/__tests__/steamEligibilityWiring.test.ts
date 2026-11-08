@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'fs'
 import { join, sep } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { defined } from '../../../../__tests__/fixtures/indexed'
 
 /**
  * Phase 34.13, Plan 11, Task 3 -- cross-file wiring gates for D-25.
@@ -451,10 +452,16 @@ describe('Group C: the origin controls are deliberately UNTOUCHED (the inversion
   it('C2: fa-spin counts in MainButton.tsx and GameCard/index.tsx are unchanged from their 34.15 values (3 and 1) -- 34.15 added no spinner to either', () => {
     // 3 not 2: 59-22 added the "Installing…" spinner to MainButton (engine setup).
     expect(
-      countOccurrences(stripped(ORIGIN_CONTROLS.MainButton), 'fa-spin')
+      countOccurrences(
+        stripped(defined(ORIGIN_CONTROLS.MainButton, 'MainButton path')),
+        'fa-spin'
+      )
     ).toBe(3)
     expect(
-      countOccurrences(stripped(ORIGIN_CONTROLS.GameCard), 'fa-spin')
+      countOccurrences(
+        stripped(defined(ORIGIN_CONTROLS.GameCard, 'GameCard path')),
+        'fa-spin'
+      )
     ).toBe(1)
   })
 })

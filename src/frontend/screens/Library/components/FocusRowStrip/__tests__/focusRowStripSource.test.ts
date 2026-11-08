@@ -10,6 +10,7 @@
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { defined } from '../../../../__tests__/fixtures/indexed'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import {
   LIBRARY_TILE_WIDTH_DEFAULT,
@@ -863,7 +864,9 @@ describe('FocusRowStrip/index.css -- track end clip is the grid whole-column ext
   // grid's whole-column extent; the track only adds its padding to that box.
   const centring = (prop: string) =>
     [...viewport.matchAll(new RegExp(`(?:^|[\\s;])${prop}:\\s*([^;]+);`, 'g'))]
-      .map((m) => m[1].replace(/\s+/g, ' ').replace(/\( /g, '('))
+      .map((m) =>
+        defined(m[1], 'capture group').replace(/\s+/g, ' ').replace(/\( /g, '(')
+      )
       .find((v) => v.includes('round(down,')) ?? ''
 
   it('declares an inline-size of the viewport box plus 15px, floored at one card', () => {
@@ -1008,7 +1011,7 @@ describe('FocusRowStrip/index.css -- heading aligned to first tile (quick 261029
     const norm = (v: string) => v.replace(/\s+/g, ' ').replace(/\( /g, '(')
     const centred = (block: string, prop: string) =>
       [...block.matchAll(new RegExp(`(?:^|[\\s;])${prop}:\\s*([^;]+);`, 'g'))]
-        .map((m) => norm(m[1]))
+        .map((m) => norm(defined(m[1], 'capture group')))
         .find((v) => v.includes('round(down,'))
     const header = centred(
       cssBlock(css, '.focusRowStrip .libraryHeader'),

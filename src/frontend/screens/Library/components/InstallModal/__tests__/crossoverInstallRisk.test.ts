@@ -1,3 +1,4 @@
+import { at, defined } from '../../../../__tests__/fixtures/indexed'
 import {
   crossoverRiskDialogOptions,
   resolveCrossoverInstallRisk
@@ -88,11 +89,12 @@ describe('crossoverRiskDialogOptions', () => {
     expect(String(opts.message)).toContain('"rating":2')
     expect(String(opts.message)).toContain('"title":"Hoard"')
     expect(opts.buttons).toHaveLength(2)
-    expect(opts.buttons?.[0].text).toContain('installAnyway')
-    expect(opts.buttons?.[1].text).toContain('cancel')
-    opts.buttons?.[1].onClick?.()
+    const buttons = defined(opts.buttons, 'dialog buttons')
+    expect(at(buttons, 0).text).toContain('installAnyway')
+    expect(at(buttons, 1).text).toContain('cancel')
+    at(buttons, 1).onClick?.()
     expect(onConfirm).not.toHaveBeenCalled()
-    opts.buttons?.[0].onClick?.()
+    at(buttons, 0).onClick?.()
     expect(onConfirm).toHaveBeenCalledTimes(1)
   })
 

@@ -11,6 +11,7 @@
  * not a component, so it is called directly with no rendering required.
  */
 import { reportRepairFailure } from '../repairFailure'
+import { at } from '../../../__tests__/fixtures/indexed'
 
 describe('reportRepairFailure (gap cycle 2, CR-01 renderer half)', () => {
   let logErrorMock: jest.Mock
@@ -211,7 +212,7 @@ describe('reportRepairFailure (gap cycle 2, CR-01 renderer half)', () => {
   )
 
   it('showDialogModal message is still the fixed translated string only, for a hostile reason (T-34.2-52 survives the hardening)', () => {
-    const [, hostileError] = hostileReasons[1]
+    const [, hostileError] = at(hostileReasons, 1)
 
     reportRepairFailure({
       appName: 'MyGame',

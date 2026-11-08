@@ -25,6 +25,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { defined } from '../../../../__tests__/fixtures/indexed'
 
 const sourcePath = join(__dirname, '..', 'SteamBottleSetup.tsx')
 const stripped = stripSourceComments(readFileSync(sourcePath, 'utf-8'))
@@ -168,8 +169,10 @@ describe('C-05: the provisioning poll cannot outlive the surface', () => {
    * the catalog), and an exact-list gate would have failed for a reason that
    * has nothing to do with the property C-05 measures. What must never
    * regress is that `isOpen` is present. */
-  const pollDeps = /\}, \[([^\]]*)\]$/
-    .exec(pollEffect)![1]
+  const pollDeps = defined(
+    /\}, \[([^\]]*)\]$/.exec(pollEffect)?.[1],
+    'poll effect dependency array'
+  )
     .split(',')
     .map((d) => d.trim())
     .filter(Boolean)
@@ -197,8 +200,10 @@ describe('C-05: the provisioning poll cannot outlive the surface', () => {
     )
     expect(knownBad).not.toBe(pollEffect)
     expect(
-      /\}, \[([^\]]*)\]$/
-        .exec(knownBad)![1]
+      defined(
+        /\}, \[([^\]]*)\]$/.exec(knownBad)?.[1],
+        'known-bad dependency array'
+      )
         .split(',')
         .map((d) => d.trim())
     ).not.toContain('isOpen')
