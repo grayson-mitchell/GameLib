@@ -1,4 +1,5 @@
 import re,sys
+# usage: items.py <file> <lo> <hi>   -- run from src-tauri/src (cwd). Phase 71 tool, promoted from research-tools/.
 f=sys.argv[1]; lo=int(sys.argv[2]); hi=int(sys.argv[3])
 L=open(f).read().split('\n')
 pat=re.compile(r'^(pub(\([a-z]+\))? )?(async )?(unsafe )?(extern "C" )?(fn|struct|enum|const|static|type|impl|mod|trait|macro_rules!|use)\b|^#\[(tauri::command|path|cfg)')

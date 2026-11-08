@@ -1,4 +1,5 @@
 import re,sys,glob,collections
+# usage: run from src-tauri/src (cwd). Phase 71 tool, promoted from research-tools/.
 # usage: vis.py <file> <cluster spec: name:start-end,...> [prodend]
 f=sys.argv[1]
 spec=[(c.split(':')[0],tuple(map(int,c.split(':')[1].split('-')))) for c in sys.argv[2].split(',')]
