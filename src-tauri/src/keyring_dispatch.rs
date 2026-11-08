@@ -73,3 +73,190 @@ pub(crate) fn macos_finder_reselect_workaround(path: &str) {
     });
 }
 
+// OBSERVABILITY, not a root-cause fix (34.4.1 gap cycle 2 plan 26, F-9). F-9's cause is
+// NOT established by this plan -- the missing-entry hypothesis's harness verdict is
+// recorded in `keyring_read_timing_hypothesis_absent_vs_present_entry`'s doc comment and
+// in `34.4.1-26-SUMMARY.md`. What this wrapper DOES do: bound the wait on
+// `entry.get_password()` at `KEYRING_READ_TIMEOUT`, well under the sidecar's own 60s
+// `RUST_INVOKE_TIMEOUT_MS` (`sidecarRpc.ts`), so a blocked read (e.g. an unanswered
+// Keychain prompt -- `phase-28-keyring-complete`'s Deny -> `PlatformFailure(-128)` is a
+// real, reachable state) fails fast as a NAMED `keyring:timeout` instead of silently
+// consuming the sidecar's whole RPC budget and surfacing as an unattributable generic
+// RPC timeout. It does NOT make a blocking Keychain call return faster -- the worker
+// thread is abandoned on timeout, not cancelled (`bounded_keyring_read`'s own doc
+// comment).
+//
+// Sibling arms deliberately NOT wrapped: `keyring_set` and `keyring_delete` below keep
+// their original unbounded synchronous shape. Reads (`keyring_get`) fire transparently
+// and repeatedly behind the scenes on every credential/csrf lookup (the read-count
+// defect this gap cycle's `deferred-items.md` traces as F-9's likely amplifier); writes
+// and deletes fire only on an explicit user action (sign-in, disconnect) the user is
+// already actively engaged with, at far lower frequency, so a modal prompt there is a
+// single expected step in a flow the user just started, not a silent stall behind an
+// unrelated background call. `keyring_available` (below `keyring_delete`) is likewise
+// left unwrapped: it exists as a read-adjacent probe and would be a natural Task-scope
+// candidate for a later plan, but this plan's own harness and fix are scoped to the
+// exact `keyring_get` signature F-9 was observed on.
+pub(crate) fn rpc_keyring_get(channel: &str, args: &[Value]) -> Result<Value, String> {
+    let a = KeyringGetArgs::from_args(args)?;
+    let account = keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
+    let result = bounded_keyring_read(KEYRING_READ_TIMEOUT, move || {
+        let outcome =
+            Entry::new(KEYRING_SERVICE, account).and_then(|entry| entry.get_password());
+        keyring_get_result(outcome)
+    });
+    // Four explicit branches, each emitting exactly one line: the Ok arm is split on
+    // `keyring_get_outcome()`'s own discriminant (Found vs. Absent) rather than folded
+    // into one dynamically-dispatched call, so the Found/Absent distinction is visible
+    // at this call site and not just inside the pure classifier it delegates to.
+    match &result {
+        Ok(v) if keyring_get_outcome(v) == KeyringOutcome::Found => {
+            shell_diag(&keyring_outcome_message(
+                channel,
+                account,
+                KeyringOutcome::Found,
+            ));
+        }
+        Ok(_) => {
+            shell_diag(&keyring_outcome_message(
+                channel,
+                account,
+                KeyringOutcome::Absent,
+            ));
+        }
+        Err(e) if e == "keyring:timeout" => {
+            shell_diag(&format!(
+                "keyring {channel} timed out after {KEYRING_READ_TIMEOUT:?} (worker thread abandoned, not cancelled -- see KEYRING_READ_TIMEOUT's doc comment)"
+            ));
+        }
+        Err(e) => {
+            shell_diag(&format!("keyring {channel} failed: {e}"));
+        }
+    }
+    result
+}
+
+pub(crate) fn rpc_keyring_set(channel: &str, args: &[Value]) -> Result<Value, String> {
+    let a = KeyringSetArgs::from_args(args)?;
+    let account = keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
+    match Entry::new(KEYRING_SERVICE, account) {
+        Ok(entry) => match entry.set_password(&a.secret) {
+            Ok(()) => {
+                shell_diag(&keyring_outcome_message(
+                    channel,
+                    account,
+                    KeyringOutcome::Stored,
+                ));
+                Ok(Value::Bool(true))
+            }
+            Err(e) => {
+                // The emitter has no parameter capable of carrying the secret
+                // (threat T-28-04): `keyring_outcome_message`'s types forbid it,
+                // and `secret` is never passed to it -- channel + error only,
+                // enforced by construction rather than by this comment alone.
+                shell_diag(&format!("keyring {channel} failed: {e:?}"));
+                Err(format!("keyring:unavailable:{e}"))
+            }
+        },
+        Err(e) => {
+            shell_diag(&format!("keyring {channel} failed: {e:?}"));
+            Err(format!("keyring:unavailable:{e}"))
+        }
+    }
+}
+
+pub(crate) fn rpc_keyring_delete(channel: &str, args: &[Value]) -> Result<Value, String> {
+    let a = KeyringDeleteArgs::from_args(args)?;
+    let account = keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
+    match Entry::new(KEYRING_SERVICE, account) {
+        Ok(entry) => match entry.delete_credential() {
+            // Deleting an already-absent entry is success, not an error -- and the
+            // two arms below now differ in their logged token while remaining
+            // identical in their returned result.
+            Ok(()) => {
+                shell_diag(&keyring_outcome_message(
+                    channel,
+                    account,
+                    KeyringOutcome::Deleted,
+                ));
+                Ok(Value::Bool(true))
+            }
+            Err(keyring::Error::NoEntry) => {
+                shell_diag(&keyring_outcome_message(
+                    channel,
+                    account,
+                    KeyringOutcome::Absent,
+                ));
+                Ok(Value::Bool(true))
+            }
+            Err(e) => {
+                shell_diag(&format!("keyring {channel} failed: {e:?}"));
+                Err(format!("keyring:unavailable:{e}"))
+            }
+        },
+        Err(e) => {
+            shell_diag(&format!("keyring {channel} failed: {e:?}"));
+            Err(format!("keyring:unavailable:{e}"))
+        }
+    }
+}
+
+// NON-PROMPTING since quick-260905-l8g. This arm used to call `entry.get_password()` on
+// the caller's REAL slot, which is a full secret read: it raised a macOS authorization
+// dialog exactly like `keyring_get`, while being documented as a cheap capability probe.
+// Logging that prompt (quick-260905-jx3) and teaching the startup gate to see it
+// (quick-260905-kd0) were mitigations; this removes the channel.
+//
+// The slot argument is still parsed and still validated, so `keyring:unknown-slot` remains
+// the contract for an unrecognised slot -- but it deliberately no longer selects the item
+// looked up. The question this arm answers is slot-INDEPENDENT, which is what its own
+// documentation always claimed ("Backend works, whether or not a token is currently
+// stored") and what `SidecarHumbleSecretStore.isAvailable()` already relies on ("a
+// Keychain that is reachable for one slot is reachable for the other").
+//
+// Accepted semantic narrowing, stated rather than buried: a user who DENIES the dialog for
+// a real item used to drive this to `false`. It now stays `true`, because denying access
+// to one item does not make the backend unavailable. The one affected caller is
+// `humble/user.ts`'s `encryptionDegraded` flag; a failed write is reported by
+// `setSecret()`'s own error handling, not by this probe.
+pub(crate) fn rpc_keyring_available(channel: &str, args: &[Value]) -> Result<Value, String> {
+    // Conversion-only (quick 261001-p0s), deliberately: a capability probe against a
+    // never-written account has no slot-scoped outcome worth a `KeyringOutcome`
+    // token, unlike the three arms above. Its `Ok(_)` branch already emits a loud
+    // WARNING, which is the one event here worth reading; this does not re-create
+    // the blind spot being closed elsewhere in this `match`, it just carries no
+    // success emission of its own.
+    //
+    // Validated for its rejection contract, intentionally unused for the lookup.
+    let a = KeyringAvailableArgs::from_args(args)?;
+    let _validated_slot =
+        keyring_account(a.slot.as_deref().unwrap_or(KEYRING_DEFAULT_SLOT))?;
+    match Entry::new(KEYRING_SERVICE, KEYRING_REACHABILITY_PROBE_ACCOUNT) {
+        Ok(entry) => match entry.get_password() {
+            // THE expected healthy answer. The backend answered, and answered that this
+            // deliberately-never-written account holds nothing -- which is exactly the
+            // fast, ACL-free path this probe is built on.
+            Err(keyring::Error::NoEntry) => Ok(Value::Bool(true)),
+            // Reachable, but something wrote to a reserved account. The backend is
+            // demonstrably up so the honest answer is still `true`, but this must be loud:
+            // an item here means the probe has re-acquired an ACL and may prompt again.
+            Ok(_) => {
+                shell_diag(&format!(
+                    "keyring {channel}: WARNING -- a value exists at the reserved probe account; the reachability probe may raise an authorization prompt again (see KEYRING_REACHABILITY_PROBE_ACCOUNT)"
+                ));
+                Ok(Value::Bool(true))
+            }
+            // A *successful* report of unavailability (D-06's honest-unavailable signal),
+            // not an error — the caller asked "is it available", and the honest answer
+            // here is "no".
+            Err(e) => {
+                shell_diag(&format!("keyring {channel} failed: {e:?}"));
+                Ok(Value::Bool(false))
+            }
+        },
+        Err(e) => {
+            shell_diag(&format!("keyring {channel} failed: {e:?}"));
+            Ok(Value::Bool(false))
+        }
+    }
+}

@@ -25,7 +25,10 @@
  * comments Task 1 added to `main.rs` quote the exact shapes this gate matches, so an unfiltered
  * match would pass on explanatory prose alone even if the real call sites were reverted.
  */
-import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import {
+  readHandlerBody,
+  readTauriShellSource
+} from 'backend/testUtils/tauriShellSource'
 import { stripSourceComments } from '../testUtils/stripSourceComments'
 
 function loadMainRsRaw(): string {
@@ -37,28 +40,35 @@ function loadMainRsCode(source?: string): string {
   return stripSourceComments(source ?? loadMainRsRaw())
 }
 
+const KEYRING_WIRES = [
+  'keyring_get',
+  'keyring_set',
+  'keyring_delete',
+  'keyring_available'
+] as const
+
 /**
- * Slices the comment-stripped source from the `RustInvokeChannel::KeyringGet => {` arm head through (but not
- * including) the next `RustInvokeChannel::DialogOpen => {` arm head — the four keyring arms sit contiguously in
- * that span, with `dialog_open` as the first unrelated arm immediately after. Asserts both
- * markers occur exactly once first: a region extractor built on a marker that could occur twice
- * would silently slice the wrong span the moment either text shifted.
+ * Phase 71 D-04: the four keyring dispatcher arms are one-line calls into `rpc_keyring_*`
+ * handlers. The region is the concatenation of the four handler bodies, in arm order, read from
+ * the comment-stripped source. Each router line must exist exactly once and every handler body
+ * is non-empty (readHandlerBody throws on a missing, duplicated or empty body), so a region
+ * built from a marker that could shift cannot silently slice the wrong span.
  */
 function extractKeyringArmRegion(code: string): string {
-  const startMarker = 'RustInvokeChannel::KeyringGet => {'
-  const endMarker = 'RustInvokeChannel::DialogOpen => {'
+  for (const w of KEYRING_WIRES) {
+    const router = code.match(
+      new RegExp(
+        `^ {8}RustInvokeChannel::\\w+ => rpc_${w}\\(channel, args\\),$`,
+        'gm'
+      )
+    )
+    expect(router).toHaveLength(1)
+  }
+  return KEYRING_WIRES.map((w) => readHandlerBody(code, w)).join('\n')
+}
 
-  const startOccurrences = code.split(startMarker).length - 1
-  const endOccurrences = code.split(endMarker).length - 1
-  expect(startOccurrences).toBe(1)
-  expect(endOccurrences).toBe(1)
-
-  const startIdx = code.indexOf(startMarker)
-  const endIdx = code.indexOf(endMarker)
-  expect(startIdx).toBeGreaterThanOrEqual(0)
-  expect(endIdx).toBeGreaterThan(startIdx)
-
-  return code.slice(startIdx, endIdx)
+function extractKeyringAvailableBody(code: string): string {
+  return readHandlerBody(code, 'keyring_available', 10)
 }
 
 describe('comment-stripping is real for this gate (self-test)', () => {
@@ -98,22 +108,26 @@ describe('keyring arm region: zero bare eprintln!, 14 shell_diag(, 5 keyring_out
   test('all four arm labels are present in the region', () => {
     const region = extractKeyringArmRegion(loadMainRsCode())
 
-    expect(region).toContain('RustInvokeChannel::KeyringGet => {')
-    expect(region).toContain('RustInvokeChannel::KeyringSet => {')
-    expect(region).toContain('RustInvokeChannel::KeyringDelete => {')
-    expect(region).toContain('RustInvokeChannel::KeyringAvailable => {')
+    const code = loadMainRsCode()
+    expect(code).toContain(
+      'RustInvokeChannel::KeyringGet => rpc_keyring_get(channel, args),'
+    )
+    expect(code).toContain(
+      'RustInvokeChannel::KeyringSet => rpc_keyring_set(channel, args),'
+    )
+    expect(code).toContain(
+      'RustInvokeChannel::KeyringDelete => rpc_keyring_delete(channel, args),'
+    )
+    expect(code).toContain(
+      'RustInvokeChannel::KeyringAvailable => rpc_keyring_available(channel, args),'
+    )
+    expect(region.length).toBeGreaterThan(0)
   })
 })
 
 describe('keyring_available gets conversion only — never a success-token emission', () => {
   test('the keyring_available sub-slice carries zero keyring_outcome_message( calls', () => {
-    const region = extractKeyringArmRegion(loadMainRsCode())
-    const availableIdx = region.indexOf(
-      'RustInvokeChannel::KeyringAvailable => {'
-    )
-    expect(availableIdx).toBeGreaterThanOrEqual(0)
-
-    const availableSubSlice = region.slice(availableIdx)
+    const availableSubSlice = extractKeyringAvailableBody(loadMainRsCode())
     const occurrences = availableSubSlice.match(/keyring_outcome_message\(/g)
     expect(occurrences).toBeNull()
   })
@@ -122,11 +136,7 @@ describe('keyring_available gets conversion only — never a success-token emiss
     // Non-vacuity control for the assertion above: a sub-slice extraction bug that silently
     // returned an empty string would also report zero keyring_outcome_message( calls, for the
     // wrong reason entirely.
-    const region = extractKeyringArmRegion(loadMainRsCode())
-    const availableIdx = region.indexOf(
-      'RustInvokeChannel::KeyringAvailable => {'
-    )
-    const availableSubSlice = region.slice(availableIdx)
+    const availableSubSlice = extractKeyringAvailableBody(loadMainRsCode())
 
     const occurrences = availableSubSlice.match(/shell_diag\(/g)
     expect(occurrences).not.toBeNull()

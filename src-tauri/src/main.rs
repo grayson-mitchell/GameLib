@@ -5095,13 +5095,19 @@ mod tests {
         // this very test) would produce a pass or a failure for the wrong reason.
         let source = shell_production_source();
         let arm_start = source
-            .find(concat!("RustInvokeChannel::KeyringAvailable", " => {"))
-            .expect("keyring_available arm not found in main.rs");
+            .find(concat!("fn rpc_keyring", "_available("))
+            .expect("rpc_keyring_available handler not found in the shell source");
         let after = &source[arm_start..];
+        // The handler is a top-level fn: its body ends at the first line that is exactly `}`.
         let arm_end = after
-            .find("// Native folder picker")
-            .expect("the marker that bounds the keyring_available arm has moved");
+            .find("\n}\n")
+            .expect("the rpc_keyring_available handler is unterminated");
         let arm = &after[..arm_end];
+        assert!(
+            arm.lines().count() >= 10,
+            "the extracted rpc_keyring_available body is implausibly short ({} lines): the pin would pass vacuously",
+            arm.lines().count()
+        );
 
         // It probes the reserved account, not the caller's slot.
         assert!(
