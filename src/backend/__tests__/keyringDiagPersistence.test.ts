@@ -27,12 +27,12 @@
  */
 import {
   readHandlerBody,
-  readTauriShellSource
+  readTauriShellProductionSource
 } from 'backend/testUtils/tauriShellSource'
 import { stripSourceComments } from '../testUtils/stripSourceComments'
 
 function loadMainRsRaw(): string {
-  return readTauriShellSource()
+  return readTauriShellProductionSource()
 }
 
 /** Comment-stripped main.rs, via the shared stripper — never a hand-rolled pass. */

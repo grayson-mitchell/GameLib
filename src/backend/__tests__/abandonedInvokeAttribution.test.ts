@@ -26,11 +26,11 @@
  * the prose that names its subject" failure this project has already paid for. Presence
  * assertions run against stripped code; the stripper itself is self-tested below.
  */
-import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import { stripSourceComments } from '../testUtils/stripSourceComments'
 
 function loadMainRsRaw(): string {
-  return readTauriShellSource()
+  return readTauriShellProductionSource()
 }
 
 /**

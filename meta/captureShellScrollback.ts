@@ -54,7 +54,7 @@
  * this file is a macOS/Linux operator tool -- which is true of the live gesture (a Humble
  * login window) regardless of that constraint.
  */
-import { readTauriShellSource } from '../src/backend/testUtils/tauriShellSource'
+import { readTauriShellProductionSource } from '../src/backend/testUtils/tauriShellSource'
 import {
   appendFileSync,
   copyFileSync,
@@ -133,7 +133,7 @@ export function assertRepoRoot(
  * body by a non-greedy bracket match, then pull every quoted literal out of it).
  */
 function readLongRunningChannels(): string[] {
-  const raw = readTauriShellSource(REPO_ROOT)
+  const raw = readTauriShellProductionSource(REPO_ROOT)
   const stripped = stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))

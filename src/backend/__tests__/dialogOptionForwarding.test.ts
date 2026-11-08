@@ -19,7 +19,7 @@
  */
 import {
   readHandlerBody,
-  readTauriShellSource
+  readTauriShellProductionSource
 } from 'backend/testUtils/tauriShellSource'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
@@ -67,7 +67,7 @@ function extractMatchArm(source: string, channel: string): string {
 
 describe('main.rs dialog_open arm forwards the caller options (quick task 260902-8wc)', () => {
   const arm = extractMatchArm(
-    stripSourceComments(readTauriShellSource()),
+    stripSourceComments(readTauriShellProductionSource()),
     'dialog_open'
   )
 
@@ -163,7 +163,7 @@ describe('main.rs dialog_open arm forwards the caller options (quick task 260902
   // third-party crate, which is not this gate's business -- but the arm must keep SAYING why,
   // so the next reader does not re-derive it or "fix" it with a method that does not exist.
   test('the arm documents why buttonLabel is not forwarded', () => {
-    const raw = readTauriShellSource()
+    const raw = readTauriShellProductionSource()
     expect(raw).toContain('buttonLabel')
     expect(raw).toMatch(/tauri-plugin-dialog 2\.7\.2/)
   })
