@@ -1,0 +1,17 @@
+# cargo-deny config -- advisories only.
+#
+# cargo-deny has no severity threshold, so `cargo deny check advisories` fails on EVERY RustSec
+# vulnerability, not just high/critical. The advisory DB is fetched at run time, so the CI job can
+# go red with no change in this repo. Licenses, bans and sources are deliberately not checked here.
+
+[advisories]
+yanked = "warn"
+unmaintained = "workspace"
+unsound = "workspace"
+unused-ignored-advisory = "warn"
+ignore = [
+  { id = "RUSTSEC-2026-0367", reason = "zip 4.x is reachable only through tauri-plugin-updater's extract path; nothing in GameLib invokes the updater (no JS importer, no UpdaterExt use, 72-RESEARCH Evidence 1). Revisit when tauri-plugin-updater adopts zip >= 9." },
+  { id = "RUSTSEC-2026-0368", reason = "zip 4.x is reachable only through tauri-plugin-updater's extract path; nothing in GameLib invokes the updater (no JS importer, no UpdaterExt use, 72-RESEARCH Evidence 1). Revisit when tauri-plugin-updater adopts zip >= 9." },
+  { id = "RUSTSEC-2026-0369", reason = "zip 4.x is reachable only through tauri-plugin-updater's extract path; nothing in GameLib invokes the updater (no JS importer, no UpdaterExt use, 72-RESEARCH Evidence 1). Revisit when tauri-plugin-updater adopts zip >= 9." },
+  { id = "RUSTSEC-2026-0429", reason = "zip 4.x is reachable only through tauri-plugin-updater's extract path; nothing in GameLib invokes the updater (no JS importer, no UpdaterExt use, 72-RESEARCH Evidence 1). Revisit when tauri-plugin-updater adopts zip >= 9." },
+]
