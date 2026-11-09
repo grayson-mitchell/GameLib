@@ -144,6 +144,10 @@ pub struct Outcome {
     pub all_files_verified: bool,
     pub all_modes_applied: bool,
     pub attempted_depots: Vec<PlannedDepot>,
+    /// Depots dropped because Steam refused their manifest with EResult 40 (Blocked). Mirrors
+    /// `DepotPlan.skippedDepots` for the manifest half; the job continues without them.
+    #[serde(default)]
+    pub skipped_depots: Vec<String>,
     pub acf: Option<AcfResult>,
     /// `verify_only`: files missing or mismatching.
     pub missing: Option<Vec<String>>,

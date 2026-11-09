@@ -2,7 +2,7 @@
 //! scripted queues (the last answer is sticky).
 
 use gamelib_depot::{JobEvent, JobHost, TokenRequest};
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::sync::Mutex;
 
 #[derive(Default)]
@@ -12,6 +12,8 @@ pub struct FakeHost {
     pub code_calls: Mutex<Vec<(String, String, String)>>,
     token_answers: Mutex<VecDeque<Result<Option<String>, String>>>,
     code_answers: Mutex<VecDeque<Result<Option<String>, String>>>,
+    /// Depot ids whose request code Steam refuses with EResult 40 (the shell's `eresult:40` reply).
+    blocked: Mutex<HashSet<String>>,
 }
 
 fn next<T: Clone>(q: &Mutex<VecDeque<T>>, empty: T) -> T {
@@ -35,6 +37,11 @@ impl FakeHost {
 
     pub fn with_codes(self, answers: Vec<Result<Option<String>, String>>) -> Self {
         *self.code_answers.lock().unwrap() = answers.into();
+        self
+    }
+
+    pub fn with_blocked(self, depot_ids: &[&str]) -> Self {
+        *self.blocked.lock().unwrap() = depot_ids.iter().map(|d| d.to_string()).collect();
         self
     }
 
@@ -68,6 +75,9 @@ impl JobHost for FakeHost {
             .lock()
             .unwrap()
             .push((app_id.into(), depot_id.into(), manifest_id.into()));
+        if self.blocked.lock().unwrap().contains(depot_id) {
+            return Err(gamelib_depot::fetch::BLOCKED_REPLY.to_string());
+        }
         next(&self.code_answers, Ok(None))
     }
 }

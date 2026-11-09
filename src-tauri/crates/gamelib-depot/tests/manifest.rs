@@ -294,3 +294,62 @@ async fn cache_path_rejects_non_numeric_ids() {
     assert!(cdn.hits().is_empty());
     assert!(std::fs::read_dir(dir.path()).unwrap().next().is_none());
 }
+
+fn summarize_req(depots: Vec<DepotRef>, cdn: &FakeCdn) -> gamelib_depot::job::SummarizeRequest {
+    gamelib_depot::job::SummarizeRequest {
+        app_id: "570".into(),
+        depots,
+        hosts: vec![host_ref(&cdn.host())],
+        patterns: vec![],
+    }
+}
+
+fn blocked_store(cdn: &FakeCdn, dir: &std::path::Path, blocked: &[&str]) -> ManifestStore {
+    let f = Fetcher::new(
+        Arc::new(FakeHost::new().with_blocked(blocked)),
+        "job",
+        "570",
+        vec![host_ref(&cdn.host())],
+        InflightLimiter::new(4).unwrap(),
+        Arc::new(StallTracker::default()),
+    )
+    .with_backoff(1, 3);
+    ManifestStore::new(dir.to_path_buf(), Arc::new(f))
+}
+
+#[tokio::test]
+async fn summarize_skips_a_blocked_depot_and_reports_it() {
+    let cdn = FakeCdn::start().await;
+    cdn.script(
+        "/depot/10/manifest/99/5/C",
+        vec![Reply::Status(
+            200,
+            build(vec![file(enc_name("k.bin"), 4, 9)], true, 99),
+        )],
+    );
+    let mut blocked = depot("98");
+    blocked.depot_id = "11".into();
+    blocked.request_code = None;
+    let dir = tempfile::tempdir().unwrap();
+    let s = blocked_store(&cdn, dir.path(), &["11"]);
+    let res = summarize(summarize_req(vec![depot("99"), blocked], &cdn), &s)
+        .await
+        .unwrap();
+    assert_eq!(res.depots.len(), 1);
+    assert_eq!(res.depots[0].depot_id, "10");
+    assert_eq!(res.skipped_depots, vec!["11".to_string()]);
+}
+
+#[tokio::test]
+async fn summarize_with_every_depot_blocked_fails_with_eresult_40() {
+    let cdn = FakeCdn::start().await;
+    let mut a = depot("98");
+    a.request_code = None;
+    let dir = tempfile::tempdir().unwrap();
+    let s = blocked_store(&cdn, dir.path(), &["10"]);
+    let err = summarize(summarize_req(vec![a], &cdn), &s)
+        .await
+        .unwrap_err();
+    assert_eq!(err.kind, ErrorKind::ManifestUnavailable);
+    assert_eq!(err.eresult, Some(40));
+}

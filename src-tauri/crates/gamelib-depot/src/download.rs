@@ -18,9 +18,9 @@
 use crate::acf::{self, AcfWritten, AttemptedDepot, RunOutcome, RunResult};
 use crate::container::{decode_chunk, ContainerKind};
 use crate::events::{ProgressEmitter, Snapshot};
-use crate::fetch::{FetchError, Fetcher};
+use crate::fetch::{FetchError, Fetcher, ERESULT_BLOCKED};
 use crate::inflight::{InflightLimiter, TARGET_INFLIGHT_CHUNKS};
-use crate::job::{DepotJob, JobMode, PlannedDepot};
+use crate::job::{DepotJob, DepotRef, JobMode, PlannedDepot};
 use crate::manifest::{normalize_depot_path, ManifestStore};
 use crate::model::{ChunkRef, DepotManifest, ManifestFile};
 use crate::outcome::{
@@ -765,6 +765,7 @@ fn outcome_shell(job_id: &str, status: Status, started: Instant) -> Outcome {
         all_files_verified: false,
         all_modes_applied: false,
         attempted_depots: Vec::new(),
+        skipped_depots: Vec::new(),
         acf: None,
         missing: None,
         files: None,
@@ -887,22 +888,50 @@ async fn run_install_inner(
         .buffered(4)
         .collect()
         .await;
+    // An EResult-40 (Blocked) refusal drops that depot and the job continues, like
+    // `skipBlockedDepot` in plan.ts; any other failure still ends the job.
+    let mut kept: Vec<&DepotRef> = Vec::with_capacity(loaded.len());
     let mut manifests = Vec::with_capacity(loaded.len());
-    for r in loaded {
+    let mut skipped_depots: Vec<String> = Vec::new();
+    for (d, r) in job.depots.iter().zip(loaded) {
         match r {
-            Ok(m) => manifests.push(m),
+            Ok(m) => {
+                kept.push(d);
+                manifests.push(m);
+            }
             Err(FetchError::Cancelled) => {
                 return outcome_shell(&job.job_id, Status::Cancelled, started)
             }
+            Err(FetchError::Failed(f))
+                if f.kind == ErrorKind::ManifestUnavailable
+                    && f.eresult == Some(ERESULT_BLOCKED) =>
+            {
+                skipped_depots.push(d.depot_id.clone());
+            }
             Err(FetchError::Failed(f)) => return error_outcome(&job.job_id, f),
         }
+    }
+    // `throwIfAllDepotsSkipped`: a plan reduced to zero depots must fail (eresult 40 so the TS
+    // map picks the depotBlocked copy), never report an empty success.
+    if kept.is_empty() && !skipped_depots.is_empty() {
+        let mut f = plain_failure(
+            ErrorKind::ManifestUnavailable,
+            format!(
+                "every selected depot for appId {} was blocked by Steam (eresult=40) and had to be skipped: {}",
+                job.app_id,
+                skipped_depots.join(", ")
+            ),
+        );
+        f.eresult = Some(ERESULT_BLOCKED);
+        let mut o = error_outcome(&job.job_id, f);
+        o.skipped_depots = skipped_depots;
+        return o;
     }
 
     // Cross-depot collisions (later appinfo rank wins); the caller applies `dropped`.
     let case_insensitive =
         probe_case_insensitive(&root).unwrap_or(cfg!(any(windows, target_os = "macos")));
-    let collision_depots: Vec<CollisionDepot<'_>> = job
-        .depots
+    let collision_depots: Vec<CollisionDepot<'_>> = kept
         .iter()
         .zip(&manifests)
         .enumerate()
@@ -921,7 +950,7 @@ async fn run_install_inner(
     let mut picked: Vec<SelectedFile> = Vec::new();
     let mut found: HashSet<String> = HashSet::new();
     let mut attempted: Vec<AttemptedDepot> = Vec::new();
-    for (di, (d, m)) in job.depots.iter().zip(&manifests).enumerate() {
+    for (di, (d, m)) in kept.iter().copied().zip(&manifests).enumerate() {
         let Some(key) = key_from_hex(&d.key) else {
             return error_outcome(
                 &job.job_id,
@@ -1100,6 +1129,7 @@ async fn run_install_inner(
     o.all_files_verified = result.all_files_verified;
     o.all_modes_applied = result.all_modes_applied;
     o.attempted_depots = attempted;
+    o.skipped_depots = skipped_depots;
     o.acf = acf_out;
     o.missing = missing;
     if selected.is_some() {

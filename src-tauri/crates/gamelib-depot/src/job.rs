@@ -116,6 +116,9 @@ pub struct DepotSummary {
 #[serde(rename_all = "camelCase")]
 pub struct SummarizeResult {
     pub depots: Vec<DepotSummary>,
+    /// Depots Steam refused with EResult 40 (Blocked); left out of `depots`.
+    #[serde(default)]
+    pub skipped_depots: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

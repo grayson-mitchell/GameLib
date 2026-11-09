@@ -9,7 +9,7 @@
 //! every load and never written.
 
 use crate::container::{decrypt_filename, unzip_manifest, DecodeError, MAX_MANIFEST_BYTES};
-use crate::fetch::{FetchError, Fetcher};
+use crate::fetch::{FetchError, Fetcher, ERESULT_BLOCKED};
 use crate::job::{DepotRef, DepotSummary, SummarizeRequest, SummarizeResult};
 use crate::model::{ChunkRef, DepotManifest, ManifestFile};
 use crate::outcome::{ErrorKind, Failure};
@@ -85,6 +85,7 @@ pub async fn summarize(
     let cancel = CancellationToken::new();
     let work = async {
         let mut depots = Vec::with_capacity(req.depots.len());
+        let mut skipped_depots: Vec<String> = Vec::new();
         for d in &req.depots {
             if d.from_manifest.is_some() {
                 return Err(failure(
@@ -94,13 +95,35 @@ pub async fn summarize(
             }
             match store.load(d, &cancel).await {
                 Ok(m) => depots.push(summarize_manifest(&d.depot_id, &m, &req.patterns)),
+                // EResult 40 (Blocked) skips the depot, like the TS plan builder.
+                Err(FetchError::Failed(f))
+                    if f.kind == ErrorKind::ManifestUnavailable
+                        && f.eresult == Some(ERESULT_BLOCKED) =>
+                {
+                    skipped_depots.push(d.depot_id.clone());
+                }
                 Err(FetchError::Failed(f)) => return Err(f),
                 Err(FetchError::Cancelled) => {
                     return Err(failure(ErrorKind::ManifestUnavailable, "cancelled"))
                 }
             }
         }
-        Ok(SummarizeResult { depots })
+        if depots.is_empty() && !skipped_depots.is_empty() {
+            let mut f = failure(
+                ErrorKind::ManifestUnavailable,
+                format!(
+                    "every selected depot for appId {} was blocked by Steam (eresult=40) and had to be skipped: {}",
+                    req.app_id,
+                    skipped_depots.join(", ")
+                ),
+            );
+            f.eresult = Some(ERESULT_BLOCKED);
+            return Err(f);
+        }
+        Ok(SummarizeResult {
+            depots,
+            skipped_depots,
+        })
     };
     match tokio::time::timeout(Duration::from_secs(45), work).await {
         Ok(r) => r,

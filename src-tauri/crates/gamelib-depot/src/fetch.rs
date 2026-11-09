@@ -43,6 +43,11 @@ pub const CHUNK_FETCH_BACKOFF_BASE_MS: u64 = 200;
 
 // TS origin: depot/decompress.ts CHUNK_FETCH_HEADERS
 pub const CHUNK_FETCH_USER_AGENT: &str = "Valve/Steam HTTP Client 1.0";
+/// Host reply meaning Steam refused the manifest request code with EResult 40 (Blocked). The Node
+/// `depotManifestRequestCode` handler sends `{eresult: 40}`; the shell turns that into this `Err`.
+pub const BLOCKED_REPLY: &str = "eresult:40";
+/// EResult 40: the only refusal the TS plan builder skips a depot for.
+pub const ERESULT_BLOCKED: i32 = 40;
 const CHUNK_FETCH_ACCEPT: &str = "text/html,*/*;q=0.9";
 const CHUNK_FETCH_ACCEPT_CHARSET: &str = "ISO-8859-1,utf-8,*;q=0.7";
 
@@ -324,6 +329,14 @@ impl Fetcher {
         };
         match res {
             Ok(Ok(code)) => Ok(code.filter(|c| !c.is_empty())),
+            // Steam refused the request with EResult 40 (Blocked): carried so the job can skip
+            // this depot, like `skipBlockedDepot` in plan.ts.
+            Ok(Err(e)) if e == BLOCKED_REPLY => Err(FetchError::Failed(Failure {
+                kind: ErrorKind::ManifestUnavailable,
+                message: format!("Steam refused the manifest for depot {depot_id} (eresult=40)"),
+                eresult: Some(ERESULT_BLOCKED),
+                ..base_failure()
+            })),
             // A failed Node call degrades to "no new code": the retry reports the HTTP error.
             Ok(Err(_)) | Err(_) => Ok(None),
         }

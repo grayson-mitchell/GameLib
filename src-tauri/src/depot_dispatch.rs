@@ -175,8 +175,17 @@ impl JobHost for ShellJobHost {
                 "manifestId": manifest_id,
             })],
         )?;
-        reply_to_option(reply)
+        reply_to_code(reply)
     }
+}
+
+/// A request-code reply: like [`reply_to_option`], plus `{eresult: 40}` (Steam refused the
+/// manifest, Blocked), which the crate turns into a skipped depot.
+fn reply_to_code(v: Value) -> Result<Option<String>, String> {
+    if v.get("eresult").and_then(Value::as_i64) == Some(40) {
+        return Err(gamelib_depot::fetch::BLOCKED_REPLY.to_string());
+    }
+    reply_to_option(v)
 }
 
 /// JSON null is "none"; a string (including `""`, meaning no token needed) passes through.
@@ -271,6 +280,24 @@ impl JobHost for NoEventsHost {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn request_code_reply_maps_blocked_to_the_skip_marker() {
+        assert_eq!(
+            reply_to_code(serde_json::json!({ "eresult": 40 })),
+            Err(gamelib_depot::fetch::BLOCKED_REPLY.to_string())
+        );
+        assert_eq!(reply_to_code(Value::Null), Ok(None));
+        assert_eq!(
+            reply_to_code(serde_json::json!("123")),
+            Ok(Some("123".to_string()))
+        );
+        // Any other EResult is not a skip.
+        assert_eq!(
+            reply_to_code(serde_json::json!({ "eresult": 15 })),
+            Err("depot:bad-reply".to_string())
+        );
+    }
 
     #[test]
     fn install_root_guard_rejects_relative_dotdot_and_non_steamapps() {

@@ -434,3 +434,77 @@ fn dispatch_runs_the_job_op() {
     )
     .is_err());
 }
+
+/// Blocked depots ask Node for their request code (`requestCode: null`); the rest keep "123".
+fn blocked_env(case: &FixtureCase, blocked: &[&str]) -> Env {
+    let mut env = setup(case);
+    env.host = Arc::new(
+        FakeHost::new()
+            .with_codes(vec![Ok(Some("123".into()))])
+            .with_blocked(blocked),
+    );
+    env
+}
+
+fn job_asking_node_for(env: &Env, job_id: &str, blocked: &[&str]) -> DepotJob {
+    let mut job = env.job(job_id, Value::Null);
+    for d in &mut job.depots {
+        if blocked.contains(&d.depot_id.as_str()) {
+            d.request_code = None;
+        }
+    }
+    job
+}
+
+#[test]
+fn blocked_manifest_skips_that_depot_and_installs_the_rest() {
+    let case = case_named("multi-depot-collision");
+    let blocked = ["900032"];
+    let env = blocked_env(&case, &blocked);
+    let out = env.run(job_asking_node_for(&env, "ji-blocked-one", &blocked));
+    assert_eq!(out.status, Status::Completed, "{:?}", out.failures);
+    assert_eq!(out.skipped_depots, vec!["900032".to_string()]);
+    assert_eq!(out.attempted_depots.len(), 1);
+    assert_eq!(out.attempted_depots[0].depot_id, "900031");
+    // The surviving depot's file is the one on disk, so nothing collided.
+    assert_eq!(
+        std::fs::read(env.root().join("data/a.txt")).unwrap(),
+        case.depots[0].files[1].content
+    );
+    assert_eq!(out.stats.path_collisions, 0);
+    assert_eq!(out.acf.as_ref().unwrap().state_flags, "4");
+    assert!(env.acf().contains("900031"));
+    assert!(!env.acf().contains("900032"));
+}
+
+#[test]
+fn blocked_every_depot_fails_with_eresult_40_and_downloads_nothing() {
+    let case = case_named("multi-depot-collision");
+    let blocked = ["900031", "900032"];
+    let env = blocked_env(&case, &blocked);
+    let out = env.run(job_asking_node_for(&env, "ji-blocked-all", &blocked));
+    assert_eq!(out.status, Status::Error);
+    assert_eq!(out.failures.len(), 1);
+    assert_eq!(out.failures[0].kind, ErrorKind::ManifestUnavailable);
+    assert_eq!(out.failures[0].eresult, Some(40));
+    assert_eq!(out.skipped_depots, vec!["900031", "900032"]);
+    assert!(out.attempted_depots.is_empty() && out.acf.is_none());
+    assert!(
+        !env.cdn.hits().iter().any(|h| h.target.contains("/chunk/")),
+        "no chunk fetched"
+    );
+    assert!(!env.steamapps().join("appmanifest_900030.acf").exists());
+}
+
+#[test]
+fn non_blocked_node_error_still_fails_the_job() {
+    // Only EResult 40 is a skip; a failed Node call degrades to "no code" and the job fails.
+    let case = case_named("multi-depot-collision");
+    let mut env = setup(&case);
+    env.host = Arc::new(FakeHost::new().with_codes(vec![Err("depot:bad-reply".into())]));
+    let out = env.run(job_asking_node_for(&env, "ji-node-err", &["900032"]));
+    assert_eq!(out.status, Status::Error);
+    assert_eq!(out.failures[0].kind, ErrorKind::ManifestUnavailable);
+    assert_eq!(out.failures[0].eresult, None);
+    assert!(out.skipped_depots.is_empty());
+}
