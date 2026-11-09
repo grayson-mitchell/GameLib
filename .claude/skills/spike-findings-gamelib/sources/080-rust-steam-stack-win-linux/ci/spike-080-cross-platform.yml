@@ -1,0 +1,81 @@
+# Spike 080 (throwaway branch, deleted after the run): does the Rust Steam stack -- steam-vent
+# (CM client) + gamelib-depot (Phase 73) -- build on production's Windows target (MSVC) and on
+# Linux, and does it run there? Anonymous logon only: no token or secret is used.
+# The question for MSVC: steam-vent brings aws-lc-sys into the tree, whose cc builder assembles
+# with NASM on x86_64-pc-windows-msvc unless AWS_LC_SYS_PREBUILT_NASM=1.
+name: spike-080 cross-platform Rust Steam stack
+
+on:
+  push:
+    branches: [spike/080-cross-platform]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stack:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, label: windows-msvc-default, prebuilt: '', hide_nasm: '' }
+          - { os: windows-latest, label: windows-msvc-no-nasm, prebuilt: '', hide_nasm: '1' }
+          - { os: windows-latest, label: windows-msvc-prebuilt-nasm, prebuilt: '1', hide_nasm: '1' }
+          - { os: ubuntu-24.04, label: linux-x64-ubuntu-24.04, prebuilt: '', hide_nasm: '' }
+          - { os: ubuntu-22.04, label: linux-x64-ubuntu-22.04, prebuilt: '', hide_nasm: '' }
+    defaults:
+      run:
+        shell: bash
+        working-directory: .planning/spikes/080-rust-steam-stack-win-linux
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - name: environment
+        run: |
+          mkdir -p logs
+          {
+            rustc -vV
+            echo "nasm: $(command -v nasm || echo absent)"; command -v nasm >/dev/null && nasm -v
+            echo "cmake: $(command -v cmake || echo absent)"
+            echo "clang-cl: $(command -v clang-cl || echo absent)"
+          } 2>&1 | tee logs/environment.txt
+      - name: vendor steam-vent (a9e8164 + anonymous-logon fix)
+        run: ./vendor.sh
+      - name: build
+        run: |
+          if [ -n "${{ matrix.hide_nasm }}" ]; then
+            # Take every nasm off PATH so the build cannot find one.
+            for d in $(echo "$PATH" | tr ':' '\n'); do [ -e "$d/nasm.exe" ] || [ -e "$d/nasm" ] && echo "hiding nasm in $d"; done
+            export PATH=$(echo "$PATH" | tr ':' '\n' | while read -r d; do [ -e "$d/nasm.exe" ] || [ -e "$d/nasm" ] || printf '%s:' "$d"; done)
+            echo "nasm after hiding: $(command -v nasm || echo absent)"
+          fi
+          if [ -n "${{ matrix.prebuilt }}" ]; then export AWS_LC_SYS_PREBUILT_NASM=1; fi
+          set -o pipefail
+          start=$(date +%s)
+          cargo build --release -vv 2>&1 | tee logs/build-full.log | grep -E "aws-lc|warning: aws|NASM|nasm|^error|Finished|Building with" | tee logs/build.log
+          echo "build seconds: $(( $(date +%s) - start ))" | tee -a logs/build.log
+      - name: binary facts
+        run: |
+          B=target/release/spike-080-stack; [ -e "$B.exe" ] && B="$B.exe"
+          ls -l "$B" | tee logs/binary.txt
+          case "$RUNNER_OS" in
+            Linux) ldd "$B" | tee -a logs/binary.txt; objdump -T "$B" | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -1 | tee -a logs/binary.txt ;;
+            Windows) (dumpbin //dependents "$B" 2>/dev/null || objdump -p "$B" | grep 'DLL Name') | tee -a logs/binary.txt ;;
+          esac
+      - name: run anonymous, TF2 Dedicated Server (232250)
+        run: |
+          set -o pipefail
+          ./target/release/spike-080-stack anon 232250 any cache 2>&1 | tee logs/run-232250.log
+      - name: run anonymous, Steamworks SDK Redist (1007)
+        if: always()
+        run: |
+          set -o pipefail
+          ./target/release/spike-080-stack anon 1007 any cache 2>&1 | tee logs/run-1007.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spike-080-${{ matrix.label }}
+          path: .planning/spikes/080-rust-steam-stack-win-linux/logs/

@@ -1,0 +1,10 @@
+[  0.000s] start    windows-x86_64, app 1062520 depot 1062521
+[  0.616s] discover CM server list ok
+[  1.523s] connect  websocket (TLS) connected
+[  2.206s] logon    refresh-token logon ok
+[  2.207s] license  Some(485)
+[  2.853s] pics     public gid 1849274456907275637
+[  3.224s] depotkey ok (not shown)
+[  3.546s] reqcode  ok
+[  3.898s] cdn      6 servers, 6 usable
+[  4.244s] summary  gamelib-depot dispatch in 337.8123ms

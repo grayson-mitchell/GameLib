@@ -1,6 +1,6 @@
 ---
 name: spike-findings-gamelib
-description: Implementation blueprint from GameLib spike experiments — verified patterns, requirements, and gotchas for (a) Steam native depot install + ACF adoption, (b) the macOS native Steam bridge, (c) the Rust/Tauri v2 rearchitecture (Node sidecar, Electron-API parity, preload seam, the login webview / cookie-read surface, and the embedded in-app store browser via the unstable multiwebview API), (d) login-window UX on macOS (modal child-window attachment, Keychain/password-manager autofill channels, and a local OAuth test store), and (e) the Steam overlay in bridged (bottled) games on macOS (dylib injection via CX_ENV on a re-signed CrossOver clone, Steam self-attaching gameoverlayui, and the 10-bit/Metal 4 overlay-shim fix), (f) the bridge's engines, per-game fixes and Steam DRM (CEG/SteamStub) boundary, (g) integrating with the running Mac Steam client (go-offline wrap, InstallApp adoption/update, download progress), (h) Steam library ownership sources, (i) macOS runtime signals (gamepad, CrossOver trial, non-Steam process match), (j) Tauri embeds on Linux/Windows and SEA native addons, and (k) the Rust migration of the Steam stack (depot pipeline numbers, choosing a Rust CM client, Web-API QR sign-in, owned-apps parity). Auto-loaded during Steam, macOS, Tauri, or login/auth implementation work.
+description: Implementation blueprint from GameLib spike experiments — verified patterns, requirements, and gotchas for (a) Steam native depot install + ACF adoption, (b) the macOS native Steam bridge, (c) the Rust/Tauri v2 rearchitecture (Node sidecar, Electron-API parity, preload seam, the login webview / cookie-read surface, and the embedded in-app store browser via the unstable multiwebview API), (d) login-window UX on macOS (modal child-window attachment, Keychain/password-manager autofill channels, and a local OAuth test store), and (e) the Steam overlay in bridged (bottled) games on macOS (dylib injection via CX_ENV on a re-signed CrossOver clone, Steam self-attaching gameoverlayui, and the 10-bit/Metal 4 overlay-shim fix), (f) the bridge's engines, per-game fixes and Steam DRM (CEG/SteamStub) boundary, (g) integrating with the running Mac Steam client (go-offline wrap, InstallApp adoption/update, download progress), (h) Steam library ownership sources, (i) macOS runtime signals (gamepad, CrossOver trial, non-Steam process match), (j) Tauri embeds on Linux/Windows and SEA native addons, and (k) the Rust migration of the Steam stack (depot pipeline numbers, choosing a Rust CM client, Web-API QR sign-in, owned-apps parity, running a Rust CM session beside steam-user without LogonSessionReplaced kicks, and the steam-vent + gamelib-depot stack on Windows MSVC/Linux). Auto-loaded during Steam, macOS, Tauri, or login/auth implementation work.
 ---
 
 <context>
@@ -21,7 +21,7 @@ Spike sessions wrapped: 2026-07-14 → 2026-07-18 (bridge line through 008), 202
 feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015), 2026-08-03
 (embedded in-app store browser 016–018), 2026-08-04 (login-window UX 019–022),
 2026-11-02 (Steam overlay in bridged games 061–064), 2026-11-09 (backlog 023–060 plus 065–070,
-and the Rust migration line 067a–c and 071–074 — Idea E, moving the Node sidecar to Rust piece by
+and the Rust migration line 067a–c, 071–074, 077 and 080 — Idea E, moving the Node sidecar to Rust piece by
 piece), 2026-11-09 second wrap-up (075 the Friends flip under GameLib's full Refresh, 076 the
 chunk-level delta update for bridge installs).
 </context>
@@ -207,7 +207,7 @@ chunk-level delta update for bridge installs).
 - Arm a non-Steam launch deadline only on an install-dir match (unix, `Z:` or `Y:` form, trailing
   separator); basename-only launches can't be matched. (068)
 
-### Rust migration of the Steam stack (067a–c, 071–074, 076)
+### Rust migration of the Steam stack (067a–c, 071–074, 076, 077, 080)
 
 - Justify Rust depot work on code removal or retiring the sidecar, not speed: the pipeline is
   network-bound (~18 MiB/s). Rust decode needs `--cfg aes_armv8` + `zlib-rs`; prefer `xz2`.
@@ -224,6 +224,15 @@ chunk-level delta update for bridge installs).
   reconcile barely beats a full download on Unreal titles (Manor Lords 6.7 vs 7.0 GB; chunk-level
   0.9 GB). Old manifests are still served, but cache the installed one. If the update changes a
   shimmed `steam_api*.dll`, move the new genuine DLL to `.gamelib-orig` and re-shim. (076)
+- **Before an authenticated Rust CM session runs beside the sidecar's, give steam-user a non-zero
+  per-install `logonID`.** Both clients send `obfuscated_private_ip` 0, so on one account they
+  kick each other with `LogonSessionReplaced` (34), the last logon winning. Subscribe to
+  `CMsgClientLoggedOff` for a Rust session's whole life; kicked calls only say "closed
+  connection". (077)
+- **steam-vent + `gamelib-depot` are cross-platform as-is** (Windows MSVC/GNU, Linux x64; no NASM,
+  cmake or OpenSSL). steam-vent adds aws-lc-sys to `src-tauri` and force-installs the aws-lc
+  rustls provider on every CM connect, so install one provider explicitly at shell start.
+  steam-vent main needs a one-line anonymous-logon fix (080 `vendor.sh`). (080)
 </requirements>
 
 <findings_index>
@@ -245,7 +254,7 @@ chunk-level delta update for bridge installs).
 | Running Mac Steam client integration | references/mac-steam-client-integration.md | A separate native process calling steamclient's `IClientAppManager::InstallApp` (slot verified at runtime) installs, adopts and updates with no window or dialog; `steam://install` needs a click. The go-offline wrap keeps Friends signed in; since 2026-11-09 neither a bare logon nor GameLib's full Refresh flips it unwrapped (074, 075), so keep it as insurance and fall through unwrapped |
 | Steam library ownership | references/steam-library-ownership.md | Demos never appear in `GetOwnedGames`, so the library unions owned games with PICS-resolved licensed apps; no web-token route exists for a SteamClient refresh token (053/053b INVALIDATED); both sources reproduce exactly from Rust (073) |
 | macOS runtime signals | references/macos-runtime-signals.md | WebKit hides the PowerA pad from the Gamepad API (use gilrs); CrossOver trials expire per bottle (`wine --demo-status`) and expired bottles hang launches; non-Steam processes match by install dir |
-| Rust migration of the Steam stack | references/rust-migration-steam.md | The depot pipeline is network-bound, so Rust is for retiring the sidecar, not speed; every CM input GameLib takes from steam-user (PICS, licenses, depot key, request code, CDN hosts, owned games, sign-in) is reproducible from Rust with exact parity, and steam-vent fits the CM half best. Bridge-game updates are a chunk-level delta, 4–8× under file-level on Unreal titles (076) |
+| Rust migration of the Steam stack | references/rust-migration-steam.md | The depot pipeline is network-bound, so Rust is for retiring the sidecar, not speed; every CM input GameLib takes from steam-user (PICS, licenses, depot key, request code, CDN hosts, owned games, sign-in) is reproducible from Rust with exact parity, and steam-vent fits the CM half best. Bridge-game updates are a chunk-level delta, 4–8× under file-level on Unreal titles (076). steam-user and a Rust session collide on `logonID` 0 (give steam-user a non-zero one, 077); the combined Rust stack builds and runs on Windows MSVC and Linux with no NASM (080) |
 
 ## Source Files
 
@@ -358,4 +367,6 @@ patch; 076 the Rust diff/apply bins on `gamelib-depot` with their Node CM driver
 - 074-rust-logon-friends-wrap
 - 075-friends-flip-full-refresh
 - 076-bridge-delta-update
+- 077-dual-cm-session-coexistence
+- 080-rust-steam-stack-win-linux
 </metadata>

@@ -1,0 +1,10 @@
+[  0.000s] start    macos-aarch64, app 1062520 depot 1062521
+[  0.353s] discover CM server list ok
+[  1.218s] connect  websocket (TLS) connected
+[  1.795s] logon    refresh-token logon ok
+[  1.795s] license  Some(485)
+[  2.423s] pics     public gid 1849274456907275637
+[  2.870s] depotkey ok (not shown)
+[  3.212s] reqcode  ok
+[  3.516s] cdn      6 servers, 6 usable
+[  3.649s] summary  gamelib-depot dispatch in 132.069458ms

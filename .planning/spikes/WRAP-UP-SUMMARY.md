@@ -1,7 +1,7 @@
 # Spike Wrap-Up Summary
 
-**Date:** 2026-11-09 (updated twice — backlog 023–060 and 065–070 plus the Rust migration line 067a–c and 071–074; then 075–076 in a second wrap-up the same day; every spike in `.planning/spikes/` is processed)
-**Spikes processed:** 87 (31 before, 54 in the first 2026-11-09 wrap-up, 2 in the second)
+**Date:** 2026-11-10 (third update — 077 and 080 folded into the Rust migration area; earlier: backlog 023–060 and 065–070 plus 067a–c and 071–074 on 2026-11-09, then 075–076 the same day; every spike in `.planning/spikes/` is processed)
+**Spikes processed:** 89 (31 before, 54 in the first 2026-11-09 wrap-up, 2 in the second, 2 on 2026-11-10)
 **Feature areas:** Steam native install; macOS native Steam bridge; Tauri/Rust rearchitecture; Tauri login webview + cookies; Tauri embedded store browser; login-window UX on macOS; OAuth login test harness; Steam overlay in bridged games; bridge engines & per-game fixes; Steam DRM in the bridge; Mac Steam client integration; Steam library ownership; macOS runtime signals; Rust migration of the Steam stack
 **Skill output:** `./.claude/skills/spike-findings-gamelib/`
 
@@ -96,6 +96,8 @@
 | 074 | rust-logon-friends-wrap | standard | VALIDATED | Rust migration of the Steam stack |
 | 075 | friends-flip-full-refresh | standard | VALIDATED | Mac Steam client integration |
 | 076 | bridge-delta-update | standard | VALIDATED | Rust migration of the Steam stack |
+| 077 | dual-cm-session-coexistence | standard | ✓ VALIDATED | Rust migration of the Steam stack |
+| 080 | rust-steam-stack-win-linux | standard | ✓ VALIDATED | Rust migration of the Steam stack |
 
 ## Key Findings
 
@@ -254,3 +256,16 @@ it. Overlay correctness is operator-verified: `screencapture -l` returns stale M
 Untested: HDR titles, DXMT, WineD3D-GL, non-CrossOver engines, fullscreen on the D3D11 paths, and
 the overlay's invite dialog vs GameLib's picker. Blueprint:
 `references/steam-overlay-in-bottles.md`. Spikes 023–060 remain unwrapped.
+
+## Third wrap-up (2026-11-10): 077, 080
+
+- **077:** the sidecar's steam-user (`logonID` 0) and a steam-vent session (`obfuscated_private_ip`
+  hard-coded 0) on one account kick each other with `LogonSessionReplaced` (34), the last logon
+  winning. A non-zero steam-user `logonID` lets both live. Anonymous sessions never collide, and
+  Mac Steam is unaffected. Inferred: two GameLib installs behind one NAT already kick each other.
+- **080:** steam-vent + `gamelib-depot` in one binary build and run on Windows x64 MSVC (CI, with NASM
+  present, hidden and prebuilt) and GNU (live under Wine), and Linux x64 (Ubuntu 22.04/24.04).
+  aws-lc-sys enters `src-tauri` but needs no NASM (aws-lc-rs defaults to `prebuilt-nasm`).
+  steam-vent force-installs the aws-lc rustls provider, so the shell should install one provider
+  explicitly. steam-vent main's anonymous logon needs a one-line fix.
+
