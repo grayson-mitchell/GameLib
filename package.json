@@ -58,6 +58,7 @@
     "prettier-fix": "prettier --write .",
     "download-helper-binaries": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/downloadHelperBinaries.ts",
     "pin:runner-digests": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/pinRunnerDigests.ts",
+    "gen:depot-goldens": "cross-env GAMELIB_WRITE_DEPOT_GOLDENS=1 jest src/backend/storeManagers/steam/__tests__/depotGolden.test.ts",
     "gen:ipc-contract": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/genIpcContract.ts",
     "check:ipc-contract": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/genIpcContract.ts --check",
     "check:build-bin-mirror": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/checkBuildBinMirror.ts",
