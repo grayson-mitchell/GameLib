@@ -67,3 +67,11 @@ Sources: `73-UAT.md` item 9 and its Gaps (phase 73).
 - **Still owed: the Ctrl-C gate.** Ctrl-C `pnpm tauri:dev` from a terminal (whole process
   group). `pgrep -fl sidecar.js` should print nothing within 10 s, and gamelib.log should have
   no `still alive` line. When it passes, move this todo to `completed/`.
+
+## Third path: an ordinary app Quit (phase 73 post-deletion smoke, 2026-11-10)
+
+The operator quit GameLib normally about 2 minutes after a `pnpm tauri:dev` launch (07:16). No
+game had been launched and no download was running. The shell (pid 18638) exited without logging
+anything after startup, and `tauri dev` exited 0. The sidecar (pid 18688) was reparented to ppid 1
+and was still alive 5 min later; the orchestrator killed it by hand. The orphan therefore needs
+neither Force Quit nor Ctrl-C nor a bridged-game launch, which widens the blast radius above.
