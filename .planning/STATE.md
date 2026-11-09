@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
 Plan: 21 of 21 complete (73-01..73-21); phase 73 ready for verification
 Status: Executing phase 73
-Last activity: 2026-11-10 - Completed 73-21: lzma-native retired, depot deletion gate, pattern README
+Last activity: 2026-11-10 - Completed quick task 261110-9w2: sidecar destroys in-flight outbound HTTP at stdin EOF
 
 Progress: [██████████] 96%
 
@@ -566,6 +566,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261108-ved | Six keyring helpers (7 items) moved byte-identical from login_window.rs to keyring_dispatch.rs; moveproof gains `--stem` for cross-module Layer 3; 71-16 keyring test routing re-pointed to keyring_dispatch.rs; todo closed. | 2026-11-08 | 339bdd386 | permove PASS (Layer 1 + Layer 3 0/0, cargo 445/445); no-stem control fails on exactly 7 items; planning-gates 12/12 | [261108-ved-move-the-keyring-helpers-from-login-wind](./quick/261108-ved-move-the-keyring-helpers-from-login-wind/) |
 | 261109-uv4 | Per-bottle gamelib-shared-redists.json ledger now versioned by the Phase 68 engine (chain steam_bridge/shared-redists; existing `version: 1` is the stamp, so v1 files adopt untouched); newer/failed-migration ledger skips the pass read-only, corrupt ledger backed up before starting empty; todo closed. | 2026-11-09 | 68619d4ad | 111 tests pass; tsc/eslint/prettier clean; planning-gates 12/12 | [261109-uv4-version-shared-redists-ledger-with-phase](./quick/261109-uv4-version-shared-redists-ledger-with-phase/) |
 | 261110-9db | Stale Steam queue head data loss fixed in 3 independent layers: initQueue drops a persisted head whose appmanifest is already fully installed (StateFlags 4, no update bit, buildid set); breadcrumb records installed-at-start so cancel-delete refuses; a cancelled 0-byte job (Rust `acf::preserve_installed_manifest`, TS `finalizeToSteam`) leaves a StateFlags-4 manifest untouched. Todo closed | 2026-11-10 | 9947c8360, 47e14e2c7, e4b0e5929 | Regression 3/3, layer jest suites + cargo test acf/job_install pass, tsc/clippy/fmt clean; planning-gates 11/12 (pre-existing 73-VERIFICATION.md frontmatter); live gate owed | [261110-9db-fix-stale-steam-queue-head-cancel-deleti](./quick/261110-9db-fix-stale-steam-queue-head-cancel-deleti/) |
+| 261110-9w2 | Sidecar orphan after tauri dev Force Quit/Ctrl-C: new outboundHttpRegistry tracks every in-flight http(s) ClientRequest via diagnostics_channel (any agent; WS upgrades excluded) and stdin-EOF release destroys them and refuses new ones; unref'd 15 s still-alive diagnostic logs getActiveResourcesInfo. No process.exit. Todo stays pending (live gate) | 2026-11-10 | 371298720, 85e025d58 | Jest 40 + 16 tests pass (new tests failed pre-fix), tsc/prettier clean, smoke:sidecar PASS; live Force Quit + Ctrl-C gate owed | [261110-9w2-sidecar-js-orphaned-after-tauri-dev-ctrl](./quick/261110-9w2-sidecar-js-orphaned-after-tauri-dev-ctrl/) |
 
 ## Deferred Items
 
