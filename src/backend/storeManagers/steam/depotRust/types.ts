@@ -139,3 +139,23 @@ export interface RustOutcome {
     elapsedMs: number
   }
 }
+
+/** `depot_manifest_summary` request (job.rs `SummarizeRequest`). */
+export interface RustSummarizeRequest {
+  appId: string
+  depots: RustDepotRef[]
+  hosts: RustHostRef[]
+  patterns: string[]
+}
+
+export interface RustDepotSummary {
+  depotId: string
+  fileCount: number
+  totalBytes: number
+  matches: string[]
+}
+
+/** Either the per-depot summaries or the failure that stopped them. */
+export type RustSummarizeResult =
+  | { depots: RustDepotSummary[] }
+  | { error: RustFailure }

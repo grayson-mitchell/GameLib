@@ -37,6 +37,7 @@ import type { Readable, Writable } from 'node:stream'
 import { randomUUID } from 'node:crypto'
 import {
   OPEN_EXTERNAL,
+  RUST_DEPOT_JOB_RUN,
   RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
   RUST_DIALOG_SAVE,
@@ -96,11 +97,18 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  * this list's rule is the one in the heading above — completion gated on a human rather than on
  * machine work. All three of these block on an OS panel that stays open exactly as long as the
  * person in front of it deliberates, so no wall-clock value is ever correct for them.
+ *
+ * Second membership rule (Phase 73, D-06/D-08): a long machine job whose completion is
+ * outcome-driven rather than clock-driven. `depot_job_run` streams a whole game install and
+ * resolves with its Outcome whenever the job ends, which can be hours. The shell cancels every
+ * depot job when the sidecar's stdout ends, so an unanswered entry cannot outlive its owner.
+ * The entry holds no timer, so it is not an event-loop handle and cannot delay sidecar exit.
  */
 const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
   RUST_DIALOG_OPEN,
   RUST_DIALOG_MESSAGE,
-  RUST_DIALOG_SAVE
+  RUST_DIALOG_SAVE,
+  RUST_DEPOT_JOB_RUN
 ]
 
 /**
