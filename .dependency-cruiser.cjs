@@ -92,6 +92,34 @@ module.exports = {
         path: `${STEAM}games\\.ts$`,
         dependencyTypesNot: ['type-only']
       }
+    },
+    {
+      // Phase 66 D-11 / RESEARCH Pitfall 1: the process runner is a leaf. Importing
+      // logger/config/utils would re-form the logger -> config -> spawn cycle.
+      name: 'runner-is-a-leaf',
+      severity: 'error',
+      comment:
+        'src/backend/process/ may import only files inside src/backend/process/.',
+      from: { path: '^src/backend/process/', pathNot: ['/__tests__/'] },
+      to: { path: '^src/', pathNot: '^src/backend/process/' }
+    },
+    {
+      // Phase 66 D-11 / RESEARCH Pitfall 1: no npm package either; Node builtins only.
+      name: 'runner-no-npm',
+      severity: 'error',
+      comment:
+        'src/backend/process/ imports Node builtins only, no npm package.',
+      from: { path: '^src/backend/process/', pathNot: ['/__tests__/'] },
+      to: {
+        dependencyTypes: [
+          'npm',
+          'npm-dev',
+          'npm-optional',
+          'npm-peer',
+          'npm-no-pkg',
+          'npm-unknown'
+        ]
+      }
     }
   ],
   options: {
