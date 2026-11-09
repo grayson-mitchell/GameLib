@@ -17,9 +17,7 @@ import {
   buildPostjectArgv,
   buildCodesignArgv,
   buildEsbuildArgv,
-  buildWorkerEsbuildArgv,
   buildSeaConfig,
-  SEA_WORKER_ASSET_KEY,
   LZMA_NATIVE_ASSET_KEY,
   LZMA_NATIVE_DLL_ASSET_KEY,
   NATIVE_LZMA_REQUIRED_TRIPLES,
@@ -340,7 +338,6 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
         '--target=node22',
         '--format=cjs',
         '--alias:i18next-fs-backend=i18next-fs-backend/cjs',
-        '--alias:node-gyp-build=./src/backend/storeManagers/steam/depot/lzmaNativeBinding.ts',
         '--inject:./meta/sidecarSeaFsShim.ts'
       ])
     )
@@ -362,17 +359,13 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
     )
   })
 
-  // Phase 23.1 Plan 03: lzma-native resolves its native binding through
-  // require('node-gyp-build')(__dirname), a runtime-computed
-  // prebuilds/${platform}-${arch}/*.node path esbuild cannot statically
-  // resolve or bundle. This alias statically rewrites that specifier at
-  // BUILD TIME to this project's own SEA-aware shim -- same mechanism class
-  // the former --alias:electron was.
-  test('buildEsbuildArgv(...).args carries the node-gyp-build alias to lzmaNativeBinding.ts', () => {
+  // Phase 23.1 Plan 03 added an --alias:node-gyp-build flag pointing at the
+  // lzmaNativeBinding.ts shim; both went with the decompress worker in 73-20.
+  test('buildEsbuildArgv(...).args no longer carries an --alias:node-gyp-build flag (73-20)', () => {
     const esbuildArgv = buildEsbuildArgv()
-    expect(esbuildArgv.args).toContain(
-      '--alias:node-gyp-build=./src/backend/storeManagers/steam/depot/lzmaNativeBinding.ts'
-    )
+    expect(
+      esbuildArgv.args.some((a) => a.startsWith('--alias:node-gyp-build'))
+    ).toBe(false)
   })
 
   // WR-05: the two tests that used to live here asserted
@@ -475,106 +468,10 @@ describe('the tested argv is the executed argv (WR-10 guard)', () => {
   })
 })
 
-// ── Quick task 260817-pkx: decompress-worker SEA asset embedding ──────────
-// (debug/humankind-depot-full-stall.md) ────────────────────────────────────
-
-describe('buildWorkerEsbuildArgv (decompress-worker SEA bundle)', () => {
-  test("flags equal buildEsbuildArgv()'s flags except --outfile= and the trailing entry (diffed, not re-listed)", () => {
-    for (const platform of ['darwin', 'linux', 'win32'] as const) {
-      const sidecarArgv = buildEsbuildArgv(platform)
-      const workerArgv = buildWorkerEsbuildArgv(platform)
-
-      const sidecarFlags = sidecarArgv.args
-      const workerFlags = workerArgv.args
-
-      expect(workerFlags.length).toBe(sidecarFlags.length)
-
-      workerFlags.forEach((flag, i) => {
-        const sidecarFlag = sidecarFlags[i]
-        if (flag.startsWith('--outfile=') || i === workerFlags.length - 1) {
-          // --outfile= and the trailing entry path are the ONLY two
-          // positions allowed to differ between the two bundles.
-          return
-        }
-        expect(flag).toBe(sidecarFlag)
-      })
-    }
-  })
-
-  test('the worker argv carries the node-gyp-build alias to lzmaNativeBinding.ts', () => {
-    const argv = buildWorkerEsbuildArgv('darwin')
-    expect(argv.args).toContain(
-      '--alias:node-gyp-build=./src/backend/storeManagers/steam/depot/lzmaNativeBinding.ts'
-    )
-  })
-
-  test('the worker argv outfile is build/main/decompressWorker-sea-bundle.js', () => {
-    const argv = buildWorkerEsbuildArgv('darwin')
-    const outfileFlag = argv.args.find((a) => a.startsWith('--outfile='))
-    expect(outfileFlag).toBe(
-      `--outfile=${join('build', 'main', 'decompressWorker-sea-bundle.js')}`
-    )
-  })
-
-  test('the worker argv entry is the decompressWorker.ts path', () => {
-    const argv = buildWorkerEsbuildArgv('darwin')
-    const entry = argv.args[argv.args.length - 1]
-    expect(entry).toBe(
-      join(
-        'src',
-        'backend',
-        'storeManagers',
-        'steam',
-        'depot',
-        'decompressWorker.ts'
-      )
-    )
-  })
-
-  test('contains no --packages=external (would crash the SEA runtime with ERR_UNKNOWN_BUILTIN_MODULE)', () => {
-    const argv = buildWorkerEsbuildArgv('darwin')
-    expect(argv.args).not.toEqual(
-      expect.arrayContaining(['--packages=external'])
-    )
-  })
-
-  // WR-06 rule: never gate a branch assertion on the host platform -- both
-  // branches asserted unconditionally on every host.
-  test('WR-06: the win32 branch runs the worker esbuild CLI through process.execPath', () => {
-    const argv = buildWorkerEsbuildArgv('win32')
-    expect(argv.command).toBe(process.execPath)
-    expect(argv.args[0]).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
-    expect(existsSync(at(argv.args, 0, 'argv.args'))).toBe(true)
-  })
-
-  test('WR-06: the non-win32 branches spawn the worker esbuild binary directly', () => {
-    for (const platform of ['darwin', 'linux'] as const) {
-      const argv = buildWorkerEsbuildArgv(platform)
-      expect(argv.command).toMatch(/esbuild[\\/]bin[\\/]esbuild$/)
-      expect(argv.command).not.toBe(process.execPath)
-      expect(existsSync(argv.command)).toBe(true)
-      expect(argv.args[0]).toBe('--bundle')
-    }
-  })
-
-  test('the default parameter follows the host platform', () => {
-    expect(buildWorkerEsbuildArgv()).toEqual(
-      buildWorkerEsbuildArgv(process.platform)
-    )
-  })
-})
-
-describe('buildSeaConfig (decompress-worker asset wiring)', () => {
-  test('called with no argument (the native-unavailable/degraded shape), assets maps exactly SEA_WORKER_ASSET_KEY -> the worker bundle output path', () => {
+describe('buildSeaConfig (asset wiring)', () => {
+  test('called with no argument (the native-unavailable/degraded shape), assets is empty: the decompress-worker asset went with the worker (73-20)', () => {
     const config = buildSeaConfig()
-    expect(Object.keys(config.assets)).toEqual([SEA_WORKER_ASSET_KEY])
-    expect(config.assets[SEA_WORKER_ASSET_KEY]).toBe(
-      join('build', 'main', 'decompressWorker-sea-bundle.js')
-    )
-  })
-
-  test('SEA_WORKER_ASSET_KEY is the literal "decompressWorker.js" (must agree with decompressPool.ts\'s runtime sea.getAsset() call)', () => {
-    expect(SEA_WORKER_ASSET_KEY).toBe('decompressWorker.js')
+    expect(config.assets).toEqual({})
   })
 
   test('main/output/disableExperimentalSEAWarning are unchanged by the asset addition', () => {
@@ -584,17 +481,10 @@ describe('buildSeaConfig (decompress-worker asset wiring)', () => {
     expect(config.disableExperimentalSEAWarning).toBe(true)
   })
 
-  test('called with a native lzma path, assets maps exactly two keys: SEA_WORKER_ASSET_KEY and LZMA_NATIVE_ASSET_KEY', () => {
+  test('called with a native lzma path, assets maps exactly LZMA_NATIVE_ASSET_KEY', () => {
     const config = buildSeaConfig('some/path.node')
-    const keys = Object.keys(config.assets)
-    expect(keys).toHaveLength(2)
-    expect(keys).toEqual(
-      expect.arrayContaining([SEA_WORKER_ASSET_KEY, LZMA_NATIVE_ASSET_KEY])
-    )
+    expect(Object.keys(config.assets)).toEqual([LZMA_NATIVE_ASSET_KEY])
     expect(config.assets[LZMA_NATIVE_ASSET_KEY]).toBe('some/path.node')
-    expect(config.assets[SEA_WORKER_ASSET_KEY]).toBe(
-      join('build', 'main', 'decompressWorker-sea-bundle.js')
-    )
   })
 
   test('LZMA_NATIVE_ASSET_KEY is the literal "lzma_native.node" recorded by 23.1-01-SUMMARY (must agree with plan 23.1-03\'s runtime sea.getRawAsset() call)', () => {
@@ -678,25 +568,21 @@ describe('buildSeaConfig with the win32 DLL companion (261011-wrx)', () => {
   test('B2: addon + dll => exactly three asset keys', () => {
     const config = buildSeaConfig('some/addon.node', 'some/liblzma.dll')
     expect(Object.keys(config.assets).sort()).toEqual(
-      [
-        SEA_WORKER_ASSET_KEY,
-        LZMA_NATIVE_ASSET_KEY,
-        LZMA_NATIVE_DLL_ASSET_KEY
-      ].sort()
+      [LZMA_NATIVE_ASSET_KEY, LZMA_NATIVE_DLL_ASSET_KEY].sort()
     )
     expect(config.assets[LZMA_NATIVE_ASSET_KEY]).toBe('some/addon.node')
     expect(config.assets[LZMA_NATIVE_DLL_ASSET_KEY]).toBe('some/liblzma.dll')
   })
 
-  test('B2: addon only => two keys, no DLL key', () => {
+  test('B2: addon only => one key, no DLL key', () => {
     const config = buildSeaConfig('some/addon.node')
-    expect(Object.keys(config.assets)).toHaveLength(2)
+    expect(Object.keys(config.assets)).toHaveLength(1)
     expect(config.assets).not.toHaveProperty(LZMA_NATIVE_DLL_ASSET_KEY)
   })
 
   test('B2: a DLL is never embedded without its addon', () => {
     const config = buildSeaConfig(undefined, 'some/liblzma.dll')
-    expect(Object.keys(config.assets)).toEqual([SEA_WORKER_ASSET_KEY])
+    expect(Object.keys(config.assets)).toEqual([])
   })
 })
 

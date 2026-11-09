@@ -1,8 +1,9 @@
 /**
  * Debug/dev-mode-decompress-worker-electron-hook: pure, side-effect-free
- * helpers shared between `meta/buildSidecarSea.ts` (the packaged SEA worker
- * bundle) and `meta/buildDecompressWorkerDev.ts` (the dev/Electron worker
- * bundle) -- both need IDENTICAL esbuild flags (originally including a shared
+ * helpers originally shared between `meta/buildSidecarSea.ts` and the
+ * dev/Electron decompress-worker bundle (`meta/buildDecompressWorkerDev.ts`,
+ * deleted with the worker in 73-20; `buildSidecarSea.ts` is the one consumer
+ * left) -- both needed IDENTICAL esbuild flags (originally including a shared
  * `--alias:electron` fix, quick-260817-pkx; that alias was removed by Phase
  * 35 Plan 18 once the `electron` devDependency itself was retired -- see this
  * module's `seaEsbuildFlags()` doc comment below), so the flags/entry-path/
@@ -25,17 +26,6 @@
 import { spawn } from 'node:child_process'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-
-/** `decompressWorker.ts`'s source entry -- both the SEA and dev worker
- *  bundles compile this exact file. */
-export const DECOMPRESS_WORKER_ENTRY_PATH = join(
-  'src',
-  'backend',
-  'storeManagers',
-  'steam',
-  'depot',
-  'decompressWorker.ts'
-)
 
 /**
  * Phase 23.1 plan 05 (coordinator-directed fix, live-hardware finding
@@ -269,30 +259,10 @@ export function resolveEsbuildCli(): string {
  * across both bundles rather than hand-trimmed per consumer, so neither can
  * regress independently.
  *
- * Phase 23.1 Plan 03: `--alias:node-gyp-build` is the SAME mechanism class
- * the former `--alias:electron` was -- a build-time specifier rewrite, NOT the
- * `pnpm.patchedDependencies` computed-require rewrite RESEARCH.md Pitfall 4
- * rules out for a native addon. `lzma-native` resolves its native binding
- * through `require('node-gyp-build')(__dirname)`, a runtime-computed
- * `prebuilds/${platform}-${arch}/*.node` path that esbuild can neither
- * statically resolve nor bundle (a `.node` binary is not JS). The specifier
- * is therefore statically replaced at BUILD TIME with this project's own
- * SEA-aware shim
- * (`src/backend/storeManagers/steam/depot/lzmaNativeBinding.ts`), which
- * resolves the binding via `sea.getRawAsset()` + `process.dlopen()` inside a
- * packaged SEA sidecar, or a direct `process.dlopen()` from
- * `node_modules/lzma-native/prebuilds/` everywhere else. This alias is
- * deliberately in THIS shared flag set (not hand-added per consumer) so the
- * SEA main bundle, the SEA worker bundle, and the dev worker bundle all get
- * it identically -- a per-consumer alias would let the three drift apart,
- * the exact failure mode this module was extracted to prevent in the first
- * place. `assertNodeGypBuildSingleConsumer()` above is the backstop for the
- * alias being global to each bundle -- a BUILD-TIME check now (Phase 23.1
- * plan 05), not a runtime one: `lzmaNativeBinding.ts`'s own `dir`-based
- * runtime identity guard turned out to be structurally incapable of
- * distinguishing callers once genuinely bundled (see this file's own
- * `LZMA_NATIVE_RESOLVED_PATHS_MODULE_PATH` doc comment above for the full
- * finding).
+ * Phase 23.1 Plan 03 added `--alias:node-gyp-build`, rewriting lzma-native's
+ * `require('node-gyp-build')(__dirname)` to the SEA-aware shim
+ * `depot/lzmaNativeBinding.ts`. The shim and the alias were removed in 73-20
+ * with the decompress worker, the only code that loaded lzma-native.
  */
 export function seaEsbuildFlags(outfile: string, entry: string): string[] {
   return [
@@ -301,7 +271,6 @@ export function seaEsbuildFlags(outfile: string, entry: string): string[] {
     '--target=node22',
     '--format=cjs',
     '--alias:i18next-fs-backend=i18next-fs-backend/cjs',
-    '--alias:node-gyp-build=./src/backend/storeManagers/steam/depot/lzmaNativeBinding.ts',
     '--inject:./meta/sidecarSeaFsShim.ts',
     `--outfile=${outfile}`,
     entry

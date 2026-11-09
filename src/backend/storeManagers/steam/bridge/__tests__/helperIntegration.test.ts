@@ -81,10 +81,10 @@ import {
   STATUS_OK
 } from '../protocol'
 
-// outside src/'s tsconfig `include`; other real-build suites (e.g.
-// lzmaNativeBinding.test.ts) already cross this same boundary with a
-// relative import, so this is the established, reviewed pattern -- not a
-// new exception.
+// outside src/'s tsconfig `include`; other real-build suites (e.g. the
+// former lzmaNativeBinding.test.ts, deleted in 73-20) crossed this same
+// boundary with a relative import, so this is the established, reviewed
+// pattern -- not a new exception.
 import { buildHelperCompileArgv } from '../../../../../../meta/buildSteamBridgeShims'
 
 jest.mock('backend/logger', () => ({

@@ -110,23 +110,9 @@
  *    explicitly rejected, GAP-D-02); `lipo -archs` then gates the
  *    resulting binary's real Mach-O architecture before it can ship.
  *
- * 6. Quick task 260817-pkx fix (debug/humankind-depot-full-stall.md): what
- *    used to be documented here as "Pitfall 1" -- decompressPool.ts's
- *    worker_threads pool never engaging inside the compiled SEA sidecar
- *    because it resolved `decompressWorker.js` relative to `__dirname`, a
- *    companion file the SEA executable never ships -- was NOT the accepted
- *    tradeoff it was recorded as. Five live HUMANKIND runs confirmed it was
- *    the CONFIRMED dominant throughput ceiling (~1.5h vs Steam's ~5min).
- *    Fixed by embedding a SECOND, fully self-contained esbuild bundle of
- *    `decompressWorker.ts` directly inside the SEA blob as a named
- *    `sea-config.json` asset (`bundleWorkerForSea()`, `buildSeaConfig()`
- *    below) -- read back at runtime via `require('node:sea').getAsset(...)`
- *    and spawned with `new Worker(source, { eval: true })`. This ships no
- *    companion file next to the binary, so there is nothing for Tauri
- *    `externalBin`/bundle-resources to carry, nothing to copy per matrix
- *    leg, and no `__dirname`/`process.execPath` path resolution to get
- *    wrong per OS -- see decompressPool.ts's `resolveWorkerSpec()` for the
- *    runtime consumer and the debug file for the full evidence trail.
+ * 6. The decompress worker that 260817-pkx embedded into the SEA blob as a
+ *    named `sea-config.json` asset was deleted with the TS depot pipeline in
+ *    73-20: every depot download now runs in Rust.
  */
 
 import {
@@ -140,40 +126,21 @@ import {
 import { existsSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
-// Debug/dev-mode-decompress-worker-electron-hook: these four were extracted
-// into a side-effect-free shared module so `meta/buildDecompressWorkerDev.ts`
-// can reuse them WITHOUT importing this file directly -- importing this file
-// runs the full SEA build as a module-scope side effect (see this module's
-// own bottom guard), which is safe only under jest (`JEST_WORKER_ID`), never
-// from another CLI script. Re-exported below so this file's own existing
-// imports/tests are unaffected.
+// seaEsbuildFlags and spawnArgv live in a side-effect-free shared module: importing this file
+// runs the full SEA build as a module-scope side effect (see the bottom guard), which is safe
+// only under jest (`JEST_WORKER_ID`).
 import {
-  DECOMPRESS_WORKER_ENTRY_PATH,
   resolveEsbuildCli,
   seaEsbuildFlags,
-  spawnArgv,
-  assertNodeGypBuildSingleConsumer,
-  writeLzmaNativeResolvedPaths
+  spawnArgv
 } from './esbuildWorkerBundleShared'
 
 export {
-  // Parked (260922-vzw decision): not a declaration -- a deliberate
-  // re-export of a symbol owned by meta/esbuildWorkerBundleShared.ts:31,
-  // used internally in this file (see the decompress-worker build path
-  // below).
-  DECOMPRESS_WORKER_ENTRY_PATH,
   // Consumed by meta/__tests__/buildSidecarSea.test.ts, which imports this
   // BY NAME from '../buildSidecarSea' (this re-export path itself) -- a
   // meta/__tests__ file, invisible to ts-prune.
   resolveEsbuildCli
 }
-// seaEsbuildFlags, spawnArgv, assertNodeGypBuildSingleConsumer and
-// writeLzmaNativeResolvedPaths were dropped from the re-export list above
-// (260922-vzw): nothing imports them FROM this module -- their real
-// consumers (meta/buildDecompressWorkerDev.ts, this file's own body below,
-// and meta/__tests__/esbuildWorkerBundleShared.test.ts) all go through
-// meta/esbuildWorkerBundleShared.ts directly. The import above is
-// unchanged; only the re-export was removed.
 
 // Official/fixed sentinel fuse string -- do not alter
 // (https://nodejs.org/api/single-executable-applications.html).
@@ -194,36 +161,14 @@ const SEA_BUNDLE_PATH = join('build', 'main', 'sidecar-sea-bundle.js')
 const SEA_CONFIG_PATH = join('build', 'sea-config.json')
 const SEA_BLOB_PATH = join('build', 'sidecar-prep.blob')
 
-// Debug/humankind-depot-full-stall (2026-08-17): a SECOND, fully
-// self-contained esbuild bundle of decompressPool.ts's worker script,
-// embedded into the SEA blob as a named `sea-config.json` asset (see
-// `buildSeaConfig()` below) rather than shipped as a companion file next to
-// the compiled binary -- SEA's runtime resolves worker/asset content via
-// `node:sea.getAsset()`, not the filesystem, so there is nothing for Tauri
-// `externalBin`/bundle-resources to carry and no `__dirname`/
-// `process.execPath` path resolution to get wrong per OS. See
-// decompressPool.ts's `resolveWorkerSpec()` for the runtime consumer.
-const SEA_WORKER_BUNDLE_PATH = join(
-  'build',
-  'main',
-  'decompressWorker-sea-bundle.js'
-)
-/** SEA asset key both this build script and decompressPool.ts's runtime
- *  `sea.getAsset()` call must agree on verbatim -- exported so a test can
- *  assert the two sides never drift apart. */
-// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
-// to ts-prune).
-export const SEA_WORKER_ASSET_KEY = 'decompressWorker.js'
-
 // 23.1-02 (spike 023 VALIDATED, 23.1-01-SUMMARY): the native lzma-native
-// addon, embedded as a SECOND named SEA asset alongside the decompress
-// worker. `LZMA_NATIVE_ASSET_KEY` is the arbitrary dictionary key the SEA
-// blob's `assets` map uses -- exported (like SEA_WORKER_ASSET_KEY above) so
-// a test can assert the two sides never drift apart. Plan 23.1-03's
+// addon, embedded as a named SEA asset (its decompress-worker consumer was
+// deleted in 73-20; 73-21 retires lzma-native). `LZMA_NATIVE_ASSET_KEY` is the
+// arbitrary dictionary key the SEA blob's `assets` map uses -- exported so a
+// test can assert the two sides never drift apart. Plan 23.1-03's
 // `lzmaNativeBinding.ts` passes this SAME literal to `sea.getRawAsset()` at
 // runtime; the runtime side duplicates the literal rather than importing it
-// because `src/` cannot import from `meta/` -- exactly the same arrangement
-// SEA_WORKER_ASSET_KEY and decompressPool.ts already have.
+// because `src/` cannot import from `meta/`.
 export const LZMA_NATIVE_ASSET_KEY = 'lzma_native.node'
 
 // 261011-wrx: the win32 prebuild `node.napi.node` is NOT self-contained. Its
@@ -416,21 +361,6 @@ export function buildPostjectArgv(
  * an unreachable-off-Windows branch reproduces that blind spot. Both
  * branches are now asserted unconditionally by the test suite.
  */
-/**
- * Debug/humankind-depot-full-stall (2026-08-17): factored out of
- * `buildEsbuildArgv()` so `buildWorkerEsbuildArgv()` below can produce the
- * IDENTICAL nine flags for the decompress-worker SEA bundle (parameterised
- * only by outfile/entry) instead of re-listing them and risking the two
- * bundles silently drifting apart. `buildEsbuildArgv()`'s own signature and
- * output stay verbatim unchanged -- its existing tests need no edits.
- *
- * Debug/dev-mode-decompress-worker-electron-hook: `seaEsbuildFlags()` itself
- * now lives in `esbuildWorkerBundleShared.ts` (imported/re-exported above),
- * so `meta/buildDecompressWorkerDev.ts` (the dev-mode worker bundle) can
- * reuse these EXACT flags without importing this file directly (which would
- * trigger the full SEA build as a module-scope side effect -- see this
- * module's own bottom guard).
- */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
 export function buildEsbuildArgv(
@@ -438,34 +368,6 @@ export function buildEsbuildArgv(
 ): { command: string; args: string[] } {
   const esbuildCli = resolveEsbuildCli()
   const flags = seaEsbuildFlags(SEA_BUNDLE_PATH, SIDECAR_ENTRY_PATH)
-  if (platform === 'win32') {
-    return { command: process.execPath, args: [esbuildCli, ...flags] }
-  }
-  return { command: esbuildCli, args: flags }
-}
-
-/**
- * Debug/humankind-depot-full-stall (2026-08-17): SEA-bundle argv for
- * decompressPool.ts's worker script, mirroring `buildEsbuildArgv()` exactly
- * (same nine flags via `seaEsbuildFlags()`, same win32-vs-other command
- * split) except for the outfile/entry pair. The worker bundle MUST carry
- * the identical `--alias:electron`/`--alias:i18next-fs-backend`/
- * `--inject:./meta/sidecarSeaFsShim.ts` flags: `decompressWorker.ts` imports
- * `./decompress`, which reaches `backend/logger`, which reaches the
- * electron stub -- omitting the alias here would reproduce Rule-1 fix 2
- * (file header) inside the worker isolate. `--packages=external` stays
- * ABSENT for the same reason it is absent from `buildEsbuildArgv()`.
- */
-// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
-// to ts-prune).
-export function buildWorkerEsbuildArgv(
-  platform: NodeJS.Platform = process.platform
-): { command: string; args: string[] } {
-  const esbuildCli = resolveEsbuildCli()
-  const flags = seaEsbuildFlags(
-    SEA_WORKER_BUNDLE_PATH,
-    DECOMPRESS_WORKER_ENTRY_PATH
-  )
   if (platform === 'win32') {
     return { command: process.execPath, args: [esbuildCli, ...flags] }
   }
@@ -673,7 +575,7 @@ export function lzmaNativeDllPath(triple: string): string | undefined {
  * expected prebuild path for `triple` and checks it on disk:
  *   - present -> returns the path, to be embedded as a second SEA asset;
  *   - absent AND `triple` is in `NATIVE_LZMA_REQUIRED_TRIPLES` -> throws a
- *     COMPILE GATE failure, mirroring `bundleWorkerForSea()`'s throw-loud
+ *     COMPILE GATE failure, mirroring `bundleForSea()`'s throw-loud
  *     discipline verbatim. This project has just spent an entire debug arc
  *     (see file header, fix note 6) discovering that a decode path was
  *     silently degraded in every shipped build -- a required triple losing
@@ -778,26 +680,19 @@ export function nodeDistUrls(
 }
 
 /**
- * Debug/humankind-depot-full-stall (2026-08-17): pure sea-config shape,
- * extracted so a test can assert the `decompressWorker.js` asset wiring
- * without running a real build. `assets` maps the SEA asset key
- * (`SEA_WORKER_ASSET_KEY`) to the worker bundle's build output path --
- * `node --experimental-sea-config` embeds the file at that path into the
- * blob under that key, and decompressPool.ts's `resolveWorkerSpec()` reads
- * it back at runtime via `sea.getAsset(SEA_WORKER_ASSET_KEY, 'utf8')`.
+ * Pure sea-config shape, extracted so a test can assert the asset wiring
+ * without running a real build. The decompress-worker asset was removed with
+ * the worker in 73-20.
  *
  * 261011-wrx: `nativeLzmaDllPath` is the win32 companion `liblzma.dll`. It
- * adds a third `LZMA_NATIVE_DLL_ASSET_KEY` entry, and only when BOTH it and
+ * adds a `LZMA_NATIVE_DLL_ASSET_KEY` entry, and only when BOTH it and
  * `nativeLzmaPath` are non-empty: a DLL is never embedded without its addon.
  *
  * 23.1-02: `nativeLzmaPath` is optional -- when provided (a resolved,
- * on-disk lzma-native prebuild path), a second `LZMA_NATIVE_ASSET_KEY`
- * entry is added to `assets`; when omitted, `assets` carries only the
- * worker entry (the degraded, native-unavailable shape). Stays pure --
- * no `existsSync()` here; the existence decision belongs to
- * `resolveNativeLzmaAssets()`, so this config shape stays unit-testable
- * without a filesystem, matching this file's established pure-argv-builder
- * discipline.
+ * on-disk lzma-native prebuild path), an `LZMA_NATIVE_ASSET_KEY` entry is
+ * added to `assets`; when omitted, `assets` is empty. Stays pure -- no
+ * `existsSync()` here; the existence decision belongs to
+ * `resolveNativeLzmaAssets()`.
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
@@ -810,9 +705,7 @@ export function buildSeaConfig(
   disableExperimentalSEAWarning: boolean
   assets: Record<string, string>
 } {
-  const assets: Record<string, string> = {
-    [SEA_WORKER_ASSET_KEY]: SEA_WORKER_BUNDLE_PATH
-  }
+  const assets: Record<string, string> = {}
   if (typeof nativeLzmaPath === 'string' && nativeLzmaPath.length > 0) {
     assets[LZMA_NATIVE_ASSET_KEY] = nativeLzmaPath
     if (typeof nativeLzmaDllPath === 'string' && nativeLzmaDllPath.length > 0) {
@@ -834,11 +727,6 @@ async function writeSeaConfig(
   if (!existsSync(SEA_BUNDLE_PATH)) {
     throw new Error(
       `Missing ${SEA_BUNDLE_PATH} -- bundleForSea() must run before writeSeaConfig()`
-    )
-  }
-  if (!existsSync(SEA_WORKER_BUNDLE_PATH)) {
-    throw new Error(
-      `Missing ${SEA_WORKER_BUNDLE_PATH} -- bundleWorkerForSea() must run before writeSeaConfig()`
     )
   }
   await mkdir(join('build'), { recursive: true })
@@ -877,49 +765,6 @@ async function bundleForSea(): Promise<void> {
   if (!existsSync(SEA_BUNDLE_PATH)) {
     throw new Error(
       `COMPILE GATE FAILED (D-06): esbuild exited 0 but no bundle was emitted at ${SEA_BUNDLE_PATH}`
-    )
-  }
-}
-
-/**
- * Debug/humankind-depot-full-stall (2026-08-17): mirrors `bundleForSea()`'s
- * COMPILE GATE discipline exactly (entry-point guard, non-zero exit throws,
- * "exit 0 but no file emitted" throws) for the SECOND, worker-only esbuild
- * bundle. Produces `SEA_WORKER_BUNDLE_PATH`, later embedded into the SEA
- * blob as the `decompressWorker.js` asset by `writeSeaConfig()`/
- * `buildSeaConfig()`.
- */
-async function bundleWorkerForSea(): Promise<void> {
-  if (!existsSync(DECOMPRESS_WORKER_ENTRY_PATH)) {
-    throw new Error(
-      `Missing decompress worker entry point at ${DECOMPRESS_WORKER_ENTRY_PATH}`
-    )
-  }
-  await mkdir(join('build', 'main'), { recursive: true })
-  // Phase 23.1 plan 05: MUST run before the esbuild invocation below --
-  // esbuild resolves lzmaNativeBinding.ts's relative
-  // `require('./lzmaNativeResolvedPaths.generated.cjs')` by reading the
-  // file's real on-disk content at BUILD TIME, so the generated file must
-  // already exist. assertNodeGypBuildSingleConsumer() is the T-23.1-03-02
-  // security check, relocated to build time -- see
-  // esbuildWorkerBundleShared.ts's own header comment for why the runtime
-  // `dir`-based version this replaces could never actually work once
-  // genuinely bundled.
-  assertNodeGypBuildSingleConsumer()
-  const lzmaNativePkgRoot = writeLzmaNativeResolvedPaths()
-  console.log(
-    `[build:sidecar-sea] lzma-native resolved paths baked for the worker bundle (root=${lzmaNativePkgRoot})`
-  )
-  const esbuildArgv = buildWorkerEsbuildArgv()
-  const result = await spawnArgv(esbuildArgv.command, esbuildArgv.args)
-  if (result.code !== 0) {
-    throw new Error(
-      `COMPILE GATE FAILED (D-06): esbuild decompress-worker SEA bundle exited ${result.code}:\n${result.stderr}`
-    )
-  }
-  if (!existsSync(SEA_WORKER_BUNDLE_PATH)) {
-    throw new Error(
-      `COMPILE GATE FAILED (D-06): esbuild exited 0 but no worker bundle was emitted at ${SEA_WORKER_BUNDLE_PATH}`
     )
   }
 }
@@ -1288,19 +1133,6 @@ async function verifyBinaryArch(
 // runs this script directly), which is why ts-prune reports it as
 // "used in module" rather than unreachable.
 async function main(): Promise<void> {
-  // Debug/humankind-depot-full-stall (2026-08-17): Pitfall 1 (34-RESEARCH.md)
-  // is no longer an accepted tradeoff -- it was the CONFIRMED dominant
-  // throughput ceiling behind HUMANKIND taking ~1.5h vs Steam's ~5min (see
-  // that debug file for the full evidence trail). decompressPool.ts's
-  // worker_threads spawn now resolves the worker from a SEA asset embedded
-  // in this blob (`resolveWorkerSpec()`), not a `build/main/`-adjacent
-  // companion file that a compiled SEA executable never shipped.
-  console.log(
-    '[build:sidecar-sea] decompress worker bundled and embedded as SEA ' +
-      `asset "${SEA_WORKER_ASSET_KEY}" -- consumed at runtime by ` +
-      'DecompressPool via node:sea.getAsset().'
-  )
-
   const triple = resolveTriple()
   const isCrossBuild = triple !== hostTriple()
   console.log(
@@ -1331,7 +1163,6 @@ async function main(): Promise<void> {
   }
 
   await bundleForSea()
-  await bundleWorkerForSea()
   await writeSeaConfig(nativeLzmaPath, nativeLzmaDllPath)
   await generateSeaBlob()
   const outputPath = await copyNodeBinary(triple)

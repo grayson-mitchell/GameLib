@@ -6,9 +6,6 @@
     // (src/frontend/index.tsx is the vite input via index.html and is found by the vite plugin.)
     // (src/sidecar/index.ts, the `build:sidecar` esbuild entry, is found from package.json scripts.
     // The .cjs meta runners are likewise found from package.json scripts, so they are not listed.)
-    // Worker thread entry, bundled by meta/buildDecompressWorkerDev.ts (DECOMPRESS_WORKER_ENTRY_PATH)
-    // and loaded at runtime via `new Worker`, so no import edge reaches it.
-    "src/backend/storeManagers/steam/depot/decompressWorker.ts",
     // src/preload is imported by src/frontend/index.tsx (tauriAttach, tauriTransport, api/*) and
     // tauri injects nothing separately; its own jest project covers __tests__. No extra entry needed.
 
@@ -19,7 +16,6 @@
     "meta/assembleRendererDist.ts",
     "meta/bridgeCensus.ts",
     "meta/buildCrossoverIndex.ts",
-    "meta/buildDecompressWorkerDev.ts",
     "meta/buildDrmNativeParts.ts",
     "meta/buildLsteamclient.ts",
     "meta/buildOverlayArchive.ts",
@@ -57,7 +53,13 @@
     // src/frontend/App.css pulls both in with CSS `@import '@fontsource/<font>/index.css'`, an edge
     // knip does not follow.
     "@fontsource/cabin",
-    "@fontsource/rubik"
+    "@fontsource/rubik",
+    // steam-user requires both at import (components/cdn_compression.js; patches/steam-user.patch
+    // pins the `lzma` require). First-party code stopped importing them when the TS depot pipeline
+    // was deleted (73-20), but they stay declared so patches/lzma.patch applies and the patched
+    // require resolves (73-21 keeps both and gates their presence).
+    "lzma",
+    "zstddec"
   ],
   "ignoreBinaries": [
     // Operating-system and external-toolchain commands spawned at runtime by the named files; none
@@ -74,8 +76,7 @@
     "lipo",
     // flatpak: host binary probed by src/backend/config.ts on Linux.
     "flatpak",
-    // reg / reg.exe / attrib: Windows system commands run by steam/library.ts, sidecar/knownFolders.ts
-    // and steam/depot/fileAttributes.ts.
+    // reg / reg.exe / attrib: Windows system commands run by steam/library.ts and sidecar/knownFolders.ts.
     "reg",
     "reg.exe",
     "attrib",

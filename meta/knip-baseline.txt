@@ -19,7 +19,6 @@ devDependencies	package.json	unimported
 devDependencies	package.json	xvfb-maybe
 duplicates	meta/gen_vtables.ts	WIRE_IN_BUFFER_MAX_BYTES,WIRE_LARGE_MAX_BYTES,WIRE_OUT_MESSAGES_MAX_BYTES
 duplicates	src/backend/crossover_index/normalize.ts	normalize,normalizePunctuationAndEditionStripped
-duplicates	src/backend/storeManagers/steam/depot/hostHealth.ts	MIN_SAMPLES_FOR_UNHEALTHY,PRIOR_HALFLIFE_SAMPLES
 duplicates	src/frontend/screens/WebView/storeExitRefresh.ts	resetSteamStoreExitRefreshState,resetStoreExitRefreshState
 exports	meta/hardcodedStringGate.ts	StaleExemptionError
 exports	meta/logSecretGate.ts	LOG_FUNCTION_RE
@@ -37,7 +36,6 @@ exports	src/backend/storeManagers/steam/bridge/overlay/overlayNotice.ts	OVERLAY_
 exports	src/backend/storeManagers/steam/bridge/overlay/overlayRunnerClone.ts	verifyOverlayRunnerClone
 exports	src/backend/storeManagers/steam/cancelDelete.ts	CANCEL_DELETE_POLL_MS
 exports	src/backend/storeManagers/steam/cancelDelete.ts	CANCEL_DELETE_TIMEOUT_MS
-exports	src/backend/storeManagers/steam/depot/flagsCensus.ts	FLAGS_CENSUS_LOG_PREFIX
 exports	src/backend/storeManagers/steam/gameDrmLaunch.ts	DRM_DLL_OVERRIDES
 exports	src/backend/storeManagers/steam/gameEligibility.ts	assembleBridgeRouteInput
 exports	src/backend/storeManagers/steam/gameEligibility.ts	isBottleEligibleFromPlatforms

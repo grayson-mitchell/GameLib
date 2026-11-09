@@ -1,10 +1,9 @@
 // Phase 23.1 plan 05 (coordinator-directed fix): unit coverage for
-// LogWriter's new `skipInitialArchive` constructor param, added so that
-// `decompressWorker.ts` can call `backend/logger`'s `initHeadless(true)`
-// from inside a spawned `worker_threads.Worker` without racing the sidecar
-// main thread's own writer to "rotate" (rename) the shared, live
-// `gamelib.log` on the worker's own first log write. See log_writer.ts's
-// own doc comment on the constructor for the full multi-writer rationale.
+// LogWriter's `skipInitialArchive` constructor param: a second writer on the
+// same live `gamelib.log` must not "rotate" (rename) it on its own first log
+// write. Its original caller, the depot decompress worker, was deleted in
+// 73-20; the constructor capability stays. See log_writer.ts's own doc
+// comment on the constructor for the full multi-writer rationale.
 //
 // Deliberately constructs LogWriter with an EXPLICIT, isolated temp-file
 // path (never `getLogFilePath({})` / `os.homedir()`), so this test never
@@ -29,8 +28,8 @@ import { join } from 'path'
 // `init()`/`initHeadless()`, to stay fully independent of
 // `getLogFilePath({})` / `os.homedir()` / the containment mechanism this
 // whole file avoids relying on). Mocked inertly here, same pattern this
-// codebase already uses for `backend/logger` elsewhere (e.g.
-// decompressPool.test.ts) -- unrelated to, and does not weaken, the
+// codebase already uses for `backend/logger` elsewhere -- unrelated to, and
+// does not weaken, the
 // `skipInitialArchive` behavior under test.
 jest.mock('../index', () => ({
   getLogFilePath: jest.fn(
@@ -116,8 +115,8 @@ describe('LogWriter skipInitialArchive (Phase 23.1 plan 05)', () => {
     await writer.logInfo('a worker-thread log line')
 
     // No rotation happened -- exactly the multi-writer race this flag exists
-    // to prevent (decompressWorker.ts's own writer must not clobber the
-    // main thread's still-live file).
+    // to prevent (a second writer must not clobber the main thread's
+    // still-live file).
     expect(existsSync(logPath + '.old')).toBe(false)
     const content = readFileSync(logPath, 'utf-8')
     expect(content).toContain(
