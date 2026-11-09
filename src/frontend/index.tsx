@@ -32,6 +32,7 @@ import { initGamepad } from './helpers/gamepad'
 import './index.scss'
 import './themes.scss'
 import GlobalState from './state/GlobalState'
+import { initStateSubscriptions } from './state/initStateSubscriptions'
 import { initShortcuts } from './helpers/shortcuts'
 import { installExternalLinkClickHandler } from './helpers/externalLinkClicks'
 import { configStore } from './helpers/stores'
@@ -255,6 +256,13 @@ i18next
       useSuspense: true
     }
   })
+
+// Phase 69 D-05: register the store listeners exactly once, AFTER hydration and
+// i18next.init and BEFORE root.render (Pitfall 1: readInitial() must see the
+// hydrated snapshot, and listeners must exist before any component mounts).
+// Outside the hydrate try/catch so a hydration failure still reaches here and
+// render. The picker window has no GlobalState, so it is skipped.
+if (!pickerParams) initStateSubscriptions()
 
 const container = document.getElementById('root')
 const root = createRoot(container!) // createRoot(container!) if you use TypeScript
