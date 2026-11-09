@@ -46,8 +46,21 @@ describe('tsconfig.meta.json cannot drift from tsconfig.json', () => {
     // The whole anti-drift property. With no compilerOptions block there is
     // no way to relax `strict`/`strictNullChecks`, and no way to bump
     // `target` to es2018 to silence a TS1501 instead of fixing the source.
-    expect(Object.keys(metaTsconfig).sort()).toEqual(['extends', 'include'])
+    expect(Object.keys(metaTsconfig).sort()).toEqual([
+      'exclude',
+      'extends',
+      'include'
+    ])
     expect(metaTsconfig).not.toHaveProperty('compilerOptions')
+  })
+
+  it('excludes EXACTLY `meta/rerender` and nothing else', () => {
+    // Phase 69-03: meta/rerender is the D-14 jsdom re-render harness. It
+    // imports frontend code (window.api typings live outside this program),
+    // so ts-jest type-checks it under the root tsconfig via
+    // `pnpm perf:rerender` instead. Pinned exactly so `exclude` cannot grow
+    // into a way to hide real meta/ type errors.
+    expect(metaTsconfig.exclude).toEqual(['meta/rerender'])
   })
 
   it('inherits from the app project', () => {
