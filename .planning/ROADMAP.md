@@ -578,13 +578,13 @@ Plans:
 **Split 2026-11-10.** At full planning depth the original scope came to about 50 plans, mostly because under D-01/D-03 every importer of a converted owner has to receive it as a dependency (`backend/utils` has 54 source importers, `platform` 45). It was split along D-15's order, and `66-CONTEXT.md` decisions D-01..D-17 apply to all four parts. **Phase 66 itself is now step 1 only:** `src/backend/process/` (clock, runner with its tracked and long-lived child registries and `openDetached`, `AppContext`), the depcruise `runner-is-a-leaf` rule, `meta/backendDiCeilings.cjs` with sharded shrink-only baselines for module state, `child_process` imports and `jest.mock(`, plus an exact-path exemption mechanism that starts empty; test fakes (`scriptedRunner`, `realRunner` on `createFakeHomeProfile()`, `fakeClock`, `createTestContext`); and `bootstrap.ts` as one ordered step list with the 17 once-guards and `i18nReady` deleted, where a second `init()` throws, together with moving the 37 sidecar tests that re-enter `init()` onto fresh contexts. About 7 plans.
 **Requirements**: TBD
 **Depends on:** Phase 62
-**Plans:** 9 plans
+**Plans:** 1/9 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 66-01-PLAN.md — `src/backend/process/` leaf: clock, runner (run/spawnLongLived/runSync/openDetached, tracked + teardown registries), AppContext; depcruise runner-is-a-leaf (wave 1)
+- [x] 66-01-PLAN.md — `src/backend/process/` leaf: clock, runner (run/spawnLongLived/runSync/openDetached, tracked + teardown registries), AppContext; depcruise runner-is-a-leaf (wave 1)
 - [ ] 66-02-PLAN.md — `meta/backendDiCeilings.cjs` AST census + sharded shrink-only baselines (module state, child_process, jest.mock), sanctioned/Rust-overlap table, CI/pre-push wiring (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*

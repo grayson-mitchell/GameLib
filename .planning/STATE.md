@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 66 context gathered
-last_updated: "2026-11-09T18:21:15.809Z"
-last_activity: 2026-11-09 -- Phase 66 planning complete
+last_updated: "2026-11-09T18:28:32.579Z"
+last_activity: 2026-11-09
 progress:
   total_phases: 18
   completed_phases: 9
   total_plans: 177
-  completed_plans: 168
+  completed_plans: 169
   percent: 50
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 73 — steam-depot-download-pipeline-in-rust
+**Current focus:** Phase 66 — backend-dependency-injection-replacing-module-level-singleto
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,12 +72,12 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
-Plan: 21 of 21 complete (73-01..73-21); phase 73 ready for verification
+Phase: 66 (backend-dependency-injection-replacing-module-level-singleto) — EXECUTING
+Plan: 2 of 9
 Status: Ready to execute
-Last activity: 2026-11-09 -- Phase 66 planning complete
+Last activity: 2026-11-09
 
-Progress: [██████████] 96%
+Progress: [██████████] 95%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -681,9 +681,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-09T10:07:00.853Z
+Last session: 2026-11-09T18:28:32.571Z
 Stopped at: Phase 66 context gathered
-Resume file: .planning/phases/66-backend-dependency-injection-replacing-module-level-singleto/66-CONTEXT.md
+Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
