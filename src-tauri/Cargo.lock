@@ -1392,9 +1392,16 @@ dependencies = [
 name = "gamelib-depot-cli"
 version = "0.1.0"
 dependencies = [
+ "aes",
+ "cbc",
+ "flate2",
  "gamelib-depot",
+ "prost",
  "serde_json",
+ "sha1",
  "tempfile",
+ "tokio",
+ "zstd",
 ]
 
 [[package]]

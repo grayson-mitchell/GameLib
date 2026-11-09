@@ -80,6 +80,7 @@
     "build:drm-native": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildDrmNativeParts.ts",
     "build:steamclient-layer-archive": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildSteamClientLayerArchive.ts",
     "scan-cli:build": "cargo build -p gamelib-scan-cli --manifest-path src-tauri/Cargo.toml",
+    "depot-cli:build": "cargo build -p gamelib-depot-cli --manifest-path src-tauri/Cargo.toml",
     "bridge-census": "pnpm scan-cli:build && node meta/runTs.cjs --bundle --platform=node --target=node21 meta/bridgeCensus.ts",
     "build-steam-bridge": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/buildSteamBridgeShims.ts",
     "build-runners-onedir": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/buildRunnersOnedir.ts",
