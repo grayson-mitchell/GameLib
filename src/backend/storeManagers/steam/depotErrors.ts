@@ -14,7 +14,7 @@
 // information from the original throw site is not reliably available.
 
 import i18next from 'i18next'
-import { isDecodeStageError } from './depot/decompress'
+import { isDecodeStageError } from './depotDecodeErrors'
 // debug/depot-stall-bound-did-not-fire, W-2: the `isStall`/`msSinceProgress`
 // marker contract is already owned by the DownloadManager's stall watchdog;
 // depot.ts stamps the SAME shape on its run-scoped give-up so both stall
