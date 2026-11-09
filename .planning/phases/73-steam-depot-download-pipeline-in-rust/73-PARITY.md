@@ -70,3 +70,11 @@ Schedule I settled with `optIn=[]` (no shared redists), so the shared-redist bul
 ### Follow-up items
 - Orphaned sidecar: after Ctrl-C of `tauri dev`, `sidecar.js` stayed alive with parent pid 1, in three successive rounds (still alive between rounds). The sidecar exit contract (exit by event-loop drain at stdin EOF) is not being met in this scenario; needs a todo.
 - Authenticated-session gotcha for live parity runs: the session closes 60 s after the last lease release (AUTH_SESSION_IDLE_GRACE_MS), so Play must follow Refresh within 60 s or the redist step is deferred.
+
+### TS Amnesia (57300) redist run, and set-aside before the Rust run
+- The TS redist download happened: depot 228983 plan built, chunks streamed, and a 18 MB `steam_store/sharedRedist` produced. The install step logged "vcredist 2010 (x86/x64) already marked in the bottle registry", so the installer was not re-run inside the bottle. That is fine for a download-tree comparison. The registry mark is left as is, so the Rust run starts from the same state.
+- Amnesia then exited abnormally after about 11 s (`overlay-exit-abnormal`, a fatal error seen by the operator). Unrelated to the depot pipeline; not investigated.
+- Renamed `sharedRedist` to `sharedRedist.ts-out`; the Amnesia ledger's `settled` and `done` were reset again (the backup is still `.parity-bak`).
+- The Schedule I bridge bottle's `Schedule I Demo` tree and its `appmanifest_3205720.acf` were renamed with a `.ts-parity` suffix (approved, rename only). Restore: delete the Rust-run tree and manifest, then rename the `.ts-parity` copies back.
+- Leftover sidecars: by the time "ok kill" was acted on, no `sidecar.js` or `gamelib-shell` remained, so nothing was killed. That was the third orphaned-sidecar occurrence (pids not recorded).
+- The sidecar was rebuilt after these renames.
