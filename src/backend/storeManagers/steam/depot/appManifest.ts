@@ -143,11 +143,10 @@ function buildInstalledDepotsBlock(depots: InstalledDepotEntry[]): string {
 
 /**
  * Builds the AppState VDF text by string concatenation — reproduces spike
- * 001's exact field set and mixed casing. Pure/testable independent of fs.
- * Exported for unit testing; `writeAppManifest` is the production entry
- * point Plan 06's finalize function should call.
+ * 001's exact field set and mixed casing. Pure, independent of fs;
+ * `writeAppManifest` is the entry point finalizeToSteam calls.
  */
-export function buildAppManifestText(params: AppManifestParams): string {
+function buildAppManifestText(params: AppManifestParams): string {
   assertNumericId(params.appId, 'appId')
 
   const lastUpdated = Math.floor(Date.now() / 1000).toString()

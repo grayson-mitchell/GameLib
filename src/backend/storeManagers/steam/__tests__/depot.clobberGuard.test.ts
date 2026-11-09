@@ -28,7 +28,6 @@ import { selectAllDepots } from '../depot/select'
 import { getBottleSteamappsDir } from '../bottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
-import { buildAppManifestText } from '../depot/manifest'
 import {
   createStubRustDepot,
   type StubRustDepot
@@ -210,33 +209,48 @@ describe('D-08: catch-path finalize must not clobber a complete install (bottle-
     // Seed a real, complete prior install's manifest — StateFlags 4,
     // real buildid, three installed depots — the exact shape a genuine
     // official-client KCD2 install leaves behind.
-    seededManifestText = buildAppManifestText({
-      appId: KCD2_APP_ID,
-      installdir: KCD2_INSTALLDIR,
-      name: 'Kingdom Come: Deliverance II',
-      sizeOnDisk: '96422090071',
-      buildid: '23914554',
-      lastOwner: '76561198012345678',
-      stateFlags: '4',
-      bytes: '96422090071',
-      installedDepots: [
-        {
-          depotId: '1771302',
-          manifest: '1111111111111111111',
-          size: 32000000000
-        },
-        {
-          depotId: '1771303',
-          manifest: '2222222222222222222',
-          size: 4000000000
-        },
-        {
-          depotId: '1771306',
-          manifest: '3333333333333333333',
-          size: 60422090071
-        }
-      ]
-    })
+    seededManifestText = [
+      '"AppState"',
+      '{',
+      `\t"appid"\t\t"${KCD2_APP_ID}"`,
+      '\t"Universe"\t\t"1"',
+      '\t"StateFlags"\t\t"4"',
+      `\t"installdir"\t\t"${KCD2_INSTALLDIR}"`,
+      '\t"name"\t\t"Kingdom Come: Deliverance II"',
+      '\t"LastUpdated"\t\t"1755600000"',
+      '\t"SizeOnDisk"\t\t"96422090071"',
+      '\t"buildid"\t\t"23914554"',
+      '\t"LastOwner"\t\t"76561198012345678"',
+      '\t"BytesToDownload"\t\t"96422090071"',
+      '\t"BytesDownloaded"\t\t"96422090071"',
+      '\t"AutoUpdateBehavior"\t\t"0"',
+      '\t"InstalledDepots"',
+      '\t{',
+      '\t\t"1771302"',
+      '\t\t{',
+      '\t\t\t"manifest"\t\t"1111111111111111111"',
+      '\t\t\t"size"\t\t"32000000000"',
+      '\t\t}',
+      '\t\t"1771303"',
+      '\t\t{',
+      '\t\t\t"manifest"\t\t"2222222222222222222"',
+      '\t\t\t"size"\t\t"4000000000"',
+      '\t\t}',
+      '\t\t"1771306"',
+      '\t\t{',
+      '\t\t\t"manifest"\t\t"3333333333333333333"',
+      '\t\t\t"size"\t\t"60422090071"',
+      '\t\t}',
+      '\t}',
+      '\t"UserConfig"',
+      '\t{',
+      '\t}',
+      '\t"MountedDepots"',
+      '\t{',
+      '\t}',
+      '}',
+      ''
+    ].join('\n')
     manifestPath = join(targetSteamappsDir, `appmanifest_${KCD2_APP_ID}.acf`)
     writeFileSync(manifestPath, seededManifestText, 'utf8')
   })

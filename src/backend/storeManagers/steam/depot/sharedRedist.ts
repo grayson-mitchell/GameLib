@@ -24,7 +24,7 @@ import {
   fetchDepotKey,
   type DepotRefEntry
 } from './plan'
-import { resolveContainedPath } from './download'
+import { resolveContainedPath } from '../depotPaths'
 import {
   downloadSharedRedistDepotsRust,
   sharedRedistInstallscriptsRust,

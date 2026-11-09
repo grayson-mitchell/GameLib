@@ -27,9 +27,9 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { writeAppManifest, type AppManifestParams } from '../depot/manifest'
+import { writeAppManifest, type AppManifestParams } from '../depot/appManifest'
 
-describe('depot/manifest', () => {
+describe('depot/appManifest', () => {
   let dir: string
 
   beforeEach(() => {
@@ -96,7 +96,10 @@ describe('depot/manifest', () => {
   })
 
   it('never touches the VDF parsing package and never writes StateFlags "4"', () => {
-    const source = readFileSync(join(__dirname, '../depot/manifest.ts'), 'utf8')
+    const source = readFileSync(
+      join(__dirname, '../depot/appManifest.ts'),
+      'utf8'
+    )
     expect(source).not.toContain('@node-steam/vdf')
     // A bare "4" must never appear as a quoted StateFlags value.
     expect(source).not.toMatch(/"StateFlags"[^\n]*"4"/)
@@ -154,7 +157,10 @@ describe('depot/manifest', () => {
   })
 
   it('implements the write via a same-directory .tmp file, fsync, then rename onto the final filename (structural proof)', () => {
-    const source = readFileSync(join(__dirname, '../depot/manifest.ts'), 'utf8')
+    const source = readFileSync(
+      join(__dirname, '../depot/appManifest.ts'),
+      'utf8'
+    )
     expect(source).toMatch(/\.acf\.tmp/)
     expect(source).toMatch(/\.sync\(\)/) // fsync before the rename
     expect(source).toMatch(/rename\(/)
@@ -204,7 +210,10 @@ describe('depot/manifest', () => {
   })
 
   it('WR-01: buildAppManifestText applies vdfEscape to both name and installdir interpolations', () => {
-    const source = readFileSync(join(__dirname, '../depot/manifest.ts'), 'utf8')
+    const source = readFileSync(
+      join(__dirname, '../depot/appManifest.ts'),
+      'utf8'
+    )
     expect((source.match(/vdfEscape\(/g) ?? []).length).toBeGreaterThanOrEqual(
       3
     )

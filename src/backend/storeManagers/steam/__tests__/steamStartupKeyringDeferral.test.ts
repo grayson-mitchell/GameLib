@@ -196,12 +196,7 @@ jest.mock('../nativeInstallSetting', () => ({
 
 jest.mock('../depot', () => ({
   downloadSteamDepots: jest.fn(),
-  finalizeToSteam: jest.fn().mockResolvedValue(undefined),
-  buildDepotPlan: jest.fn(),
-  healReconciledFileModes: jest.fn()
-}))
-jest.mock('../depot/reconcile', () => ({
-  reconcilePartialState: jest.fn()
+  finalizeToSteam: jest.fn().mockResolvedValue(undefined)
 }))
 
 jest.mock('../clientSetup', () => ({

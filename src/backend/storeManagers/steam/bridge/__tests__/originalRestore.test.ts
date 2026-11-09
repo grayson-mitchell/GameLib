@@ -43,25 +43,14 @@ jest.mock('../../bridgeBottle', () => ({
   resolveBridgeBottleName: (a: string) => `GameLibSteamBridge-${a}`
 }))
 
-// The real depot.ts pulls in the whole steam-user stack; the restore helper
-// only needs these three pure helpers from it.
-jest.mock('../../depot', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { createHash: ch } = require('node:crypto') as typeof import('crypto')
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { readFileSync: rf } = require('node:fs') as typeof import('fs')
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const path = require('node:path') as typeof import('path')
-  return {
-    downloadSelectedDepotFiles: jest.fn(),
-    normalizeDepotPath: (p: string) =>
-      p.replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase(),
-    resolveContainedPath: (root: string, f: string) =>
-      path.resolve(root, f.replace(/\\/g, '/')),
-    sha1File: (p: string) =>
-      Promise.resolve(ch('sha1').update(rf(p)).digest('hex'))
-  }
-})
+// The real depot barrel pulls in the whole steam-user stack; the restore helper only needs
+// these two from it. resolveContainedPath and sha1File come from the real, dependency-free
+// ../../depotPaths (73-20).
+jest.mock('../../depot', () => ({
+  downloadSelectedDepotFiles: jest.fn(),
+  normalizeDepotPath: (p: string) =>
+    p.replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase()
+}))
 
 const SHIM = Buffer.from('MZ....GameLibSteamBridgeShim....')
 const ORIG = Buffer.from('MZ-original-steam-api-bytes')

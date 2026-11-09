@@ -14,12 +14,8 @@ import { lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import {
-  downloadSelectedDepotFiles,
-  normalizeDepotPath,
-  resolveContainedPath,
-  sha1File
-} from '../depot'
+import { downloadSelectedDepotFiles, normalizeDepotPath } from '../depot'
+import { resolveContainedPath, sha1File } from '../depotPaths'
 import { findRuntimeLoadedSteamApiDlls, isContainedWithin } from './bridgeScan'
 import { isGameLibShimBytes, probeOriginalBackup } from './shimOriginals'
 

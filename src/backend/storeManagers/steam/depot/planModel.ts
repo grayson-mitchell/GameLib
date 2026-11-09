@@ -1,27 +1,12 @@
-// Depot plan model: flag constants, plan/option interfaces and steam-user client types (extracted from ../depot.ts, 62-09).
+// Depot plan model: option interfaces, failure records and steam-user client types (extracted from
+// ../depot.ts, 62-09). The EDepotFileFlag constants and the DepotPlan shape went with the TS
+// download pipeline in 73-20; the Rust crate owns both now.
 
 import type SteamUserLib from 'steam-user'
 import { type AuthSessionReason } from '../userTypes'
 
 /** Numeric-only guard for appId before any network/filesystem use (T-21-05). */
 export const NUMERIC_ID = /^\d+$/
-
-/** EDepotFileFlag bit values, per steam-user's own authoritative enum
- *  (node_modules/steam-user/enums/EDepotFileFlag.js) — Directory = 64,
- *  Symlink = 512. Hardcoded here rather than imported since steam-user does
- *  not export this enum from its public entrypoint (CR-01 gap closure, 21-13).
- *  Exported (23-06) so depot/flagsCensus.ts's census summarizer imports
- *  these rather than re-literalling the numeric bit values. */
-export const DIRECTORY_FLAG = 64
-export const SYMLINK_FLAG = 512
-
-/** debug/steam-depot-unclassified-generic-error (F2): how many individual
- *  per-file download failures downloadDepotFiles logs in full before
- *  suppressing the rest. A stalled 19k-file title can fail thousands of
- *  files; the aggregate logged at the throw site always reports the true
- *  total, so the cap costs no information about SCALE, only about which
- *  specific files beyond the first N. */
-export const FAILURE_LOG_CAP = 10
 
 /**
  * Render a thrown depot failure for the log with the fields that actually
@@ -63,43 +48,6 @@ export function describeDepotFailure(err: unknown): string {
 
   return parts.length ? parts.join(' ') : '[non-Error value thrown]'
 }
-// SPIKE 003 finding: EDepotFileFlag.Executable (32) / CustomExecutable (128).
-// Steam's 1026 verify pass sets the +x bit from these flags; the StateFlags=4
-// full-ownership path skips verify, so GameLib must apply them itself or the
-// game binary lands non-executable and launch fails with macOS `os error 256`.
-export const EXECUTABLE_FLAG = 32
-export const CUSTOM_EXECUTABLE_FLAG = 128
-// Phase 23 (23-01, D-06): ReadOnly/Hidden — the other half of the same gap.
-// Steam's 1026 verify pass would also set these; StateFlags=4 skips verify,
-// so GameLib must apply them itself via depot/fileAttributes.ts.
-export const READONLY_FLAG = 8
-export const HIDDEN_FLAG = 16
-
-/**
- * Per-`downloadDepotFiles`-invocation chmod/mode-application counters (23-06,
- * G-23-02 trace instrumentation). MUST be created fresh for every invocation
- * — NEVER module-level. `downloadDepotFiles` is single-flight PER APPID
- * (23-05), not globally single-flight, so two concurrent installs for
- * different appIds are supported, regression-tested product behavior; a
- * module-level counter would let one run's chmods silently corrupt another
- * run's count (the exact cross-run leak T-23-27 exists to prevent — 23-08
- * turns `chmodAttempts` into the fail-closed input for the StateFlags=4/1026
- * decision).
- */
-// Not exported (this and DownloadSteamDepotsOpts, DepotPlanChunk, DepotPlanEntry,
-// PLAN_BUILD_RETRY_DELAY_MS, TARGET_INFLIGHT_CHUNKS, DownloadDepotFilesOpts,
-// DepotDownloadResult, FinalizeDepotEntry and DepotDownloadOutcome elsewhere in this
-// file): verified to have no importer anywhere -- every cross-file mention is a prose
-// comment, not an import (`pnpm find-deadcode` / ts-prune flagged the previously-exported
-// forms as over-broad `export` keywords).
-export interface DepotModeCounters {
-  /** Incremented only on the branch that actually calls `chmod(dest, 0o755)`. */
-  chmodAttempts: number
-  /** Incremented on every entry to `applyEDepotFileModes`, regardless of
-   *  which branch (if any) fires. */
-  modeCallsites: number
-}
-
 /**
  * One failed file (or, with `scope: 'run'`, the whole run). Lives here rather than in the TS
  * download module so the Rust error map and `selectPrimaryDepotFailure` outlive it (73-19).
@@ -126,90 +74,6 @@ export interface DownloadSteamDepotsOpts {
    *  acquires. Defaults to 'user-install'; prescreenBridgeDepots passes
    *  'prescreen'. Never user-facing. */
   sessionReason?: AuthSessionReason
-}
-
-/** One chunk within a depot manifest file, exactly as steam-user's raw manifest
- *  parser returns it (offset/sha/cb_original — consumed unmodified by Plan 05's
- *  streaming download loop). */
-interface DepotPlanChunk {
-  sha: string | Buffer
-  cb_original: number | string
-  offset: number | string
-  [key: string]: unknown
-}
-
-/** One file within a depot manifest, with its filename DECRYPTED — steam-user's
- *  own filename field is truncated at block boundaries and must never be used
- *  directly (RESEARCH.md "Don't Hand-Roll" / spike 002 finding). */
-export interface DepotPlanFile {
-  filename: string
-  size: number
-  sha_content: string | Buffer
-  chunks: DepotPlanChunk[]
-  flags?: number
-  /** Symlink target, DECRYPTED here (37-09) exactly like `filename` above —
-   *  from the manifest's `linktarget` (protobuf field 7, content_manifest.proto)
-   *  — only meaningful when `flags & Symlink` (512). */
-  linktarget?: string
-}
-
-/** One resolved + manifest-fetched depot, ready for Plan 05's chunk download. */
-interface DepotPlanEntry {
-  /** Steam depot id. STRING — never coerced to Number (T-21-04). */
-  depotId: string
-  /** 64-bit manifest GID. STRING — never coerced to Number (T-21-04). */
-  gid: string
-  /** Per-depot decryption key from getDepotDecryptionKey. */
-  key: Buffer
-  files: DepotPlanFile[]
-  /** The app whose PICS appinfo this depot was enumerated from. */
-  ownerAppId?: string
-  /** Zero-based position of this depot in the RAW appinfo `depots` section of
-   *  `ownerAppId` (Steam's own order -- see depot/appinfoOrder.ts). Undefined
-   *  when that order could not be recovered. Only comparable between depots
-   *  with the same `ownerAppId`. */
-  appinfoRank?: number
-}
-
-/**
- * The full enqueue-time contract the DownloadManager needs before a single
- * chunk is fetched: every owned depot, resolved + manifest-fetched + filename-
- * and linktarget-decrypted (37-09), plus the REAL total byte count summed
- * across ALL depots (D-03).
- */
-export interface DepotPlan {
-  appId: string
-  depots: DepotPlanEntry[]
-  /** Real total bytes, summed across every depot's files (D-03). */
-  totalBytes: number
-  /** PICS appinfo.common.name — falls back to the caller's installdir when
-   *  PICS returns no display name. Used by finalizeToSteam's manifest `name`
-   *  field (Plan 06). */
-  name: string
-  /** Current `public` branch buildid from PICS appinfo
-   *  (appinfo.depots.branches.public.buildid), captured ONCE at plan-build
-   *  time (D-02). Threaded unconditionally to finalizeToSteam — required
-   *  (non-empty, non-"0") for canWriteFullOwnership to earn StateFlags=4; a
-   *  "0"/absent buildid makes Steam flag UpdateRequired and always fails the
-   *  gate. Never re-derived by a second PICS read (RESEARCH.md Pitfall 4). */
-  buildid?: string
-  /** 23.2-03 (G-23-01, D-01/D-02/D-03): depot ids that were selected and
-   *  owned, but dropped from this plan because Steam refused their
-   *  decryption key or manifest with `EResult 40 (Blocked)`. Required (not
-   *  optional) so every construction site must decide it explicitly — the
-   *  same discipline `canWriteFullOwnership`'s fail-closed shape uses.
-   *  STRINGS end-to-end, never coerced through `Number()` (T-21-04). Reported
-   *  downstream via `DepotDownloadOutcome.skippedDepots`; never used to drive
-   *  any retry/repair path (D-05 — no recovery). */
-  skippedDepots: string[]
-  /** quick 261026-nhy: whether buildDepotPlan judged the destination volume
-   *  case-insensitive. resolveDepotPathCollisions and
-   *  verifyStructuralIntegrity's collision fallback must key paths the same
-   *  way, so the decision rides on the plan. Optional (absent = case-sensitive)
-   *  so existing fixtures compile. Recomputed by every buildDepotPlan, so a
-   *  resume never carries a stale value; the plan is handed in-process to
-   *  downloadDepotFiles and crosses no serialization boundary. */
-  caseInsensitivePaths?: boolean
 }
 
 /** Narrow, ADDITIONAL view of PICS appinfo's `common.name` field — not part of

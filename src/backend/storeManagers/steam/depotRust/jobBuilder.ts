@@ -2,7 +2,7 @@
 // RustDepotJob wire shape. Never logs the job: it carries depot keys (T-73-51).
 
 import { randomUUID } from 'node:crypto'
-import type { ContentServerHostMeta } from '../depot/decompress'
+import type { ContentServerHostMeta } from '../depot/contentServers'
 import type { DepotRefEntry } from '../depot/plan'
 import type {
   RustDepotJob,

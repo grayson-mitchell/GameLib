@@ -90,19 +90,4 @@ describe('sidecar stdout carries RPC frames only', () => {
     expect(stderrText).toContain(FRAME)
     expect(stderrText).toContain('legendary said:')
   })
-
-  it('self-test mode leaves stdout alone (lzmaNativeSeaRealBuild reads SELFTEST lines from it)', async () => {
-    const previous = process.env.GAMELIB_SIDECAR_SELFTEST
-    process.env.GAMELIB_SIDECAR_SELFTEST = 'decompress-pool'
-    try {
-      await jest.isolateModulesAsync(async () => {
-        await import('../../../sidecar/installRejectionGuard')
-      })
-      console.log('SELFTEST pool={}')
-      expect(rpcPipe).toBe('SELFTEST pool={}\n')
-    } finally {
-      if (previous === undefined) delete process.env.GAMELIB_SIDECAR_SELFTEST
-      else process.env.GAMELIB_SIDECAR_SELFTEST = previous
-    }
-  })
 })

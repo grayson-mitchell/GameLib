@@ -1,6 +1,5 @@
-// Progress helpers shared by the legacy TS depot pipeline and the Rust-job listener.
-// Moved out of depot/download.ts (73-11) so deleting depot/ later is mechanical; pure, no
-// timers or handles.
+// Progress helpers for the Rust-job listener. Moved out of depot/download.ts (73-11), which
+// 73-20 deleted with the rest of the TS pipeline; pure, no timers or handles.
 
 /** Bytes per MiB — the DownloadManager UI renders `downSpeed` with a "MB/s" label
  *  and the gog/legendary runners emit MiB/s, so the native path must too (was
@@ -17,12 +16,6 @@ export function formatEta(totalSeconds: number): string {
 }
 export const PROGRESS_THROTTLE_MS = 500
 export const PROGRESS_THROTTLE_PERCENT = 1
-
-/** Forces a progressUpdate at least once per second, independent of chunk
- *  completion. Without this, the DownloadManager ProgressHeader graph freezes
- *  for however long chunk completions bunch up (warm-up, large files, decode-
- *  pool backlog under load) -- observed gaps of ~30s in practice. */
-export const PROGRESS_HEARTBEAT_MS = 1000
 
 /** Minimum window (seconds) for a meaningful rolling-rate sample. A forced
  *  emit right after a throttled one can have a sub-millisecond delta; dividing

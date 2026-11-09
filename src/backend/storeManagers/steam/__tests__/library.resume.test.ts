@@ -181,17 +181,9 @@ jest.mock('../bridgeBottle', () => ({
 // Since 73-19 the resume verify itself is one Rust verify_only job
 // (depotRust/secondary.ts resumeVerifyRust, covered in rustSecondary.test.ts);
 // nothing here rebuilds a TS plan.
-// formatEta/rollingRateMiBs (T-AOG, quick/260719-aog) are pure/deterministic
-// helpers pollInstallOnce reuses for its speed/ETA derivation — pulled from
-// the REAL module rather than re-implemented as jest.fn() stubs so this
-// suite exercises the actual formatting/smoothing behavior.
 jest.mock('../depot', () => ({
   finalizeToSteam: jest.fn().mockResolvedValue(undefined),
-  downloadSteamDepots: jest.fn(),
-  formatEta:
-    jest.requireActual<typeof import('../depot')>('../depot').formatEta,
-  rollingRateMiBs:
-    jest.requireActual<typeof import('../depot')>('../depot').rollingRateMiBs
+  downloadSteamDepots: jest.fn()
 }))
 
 // ── backend/launcher mock — runWineCommand (D-05 no-auto-drive regression) ────

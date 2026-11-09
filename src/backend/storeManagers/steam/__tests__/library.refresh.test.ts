@@ -37,7 +37,6 @@ import {
   listReadyBridgeBottleNames,
   resolveBridgeBottleName
 } from '../bridgeBottle'
-import { healReconciledFileModes } from '../depot'
 import { join } from 'path'
 import { library } from '../state'
 import { bridgeAllowlist } from '../bridge/allowlist'
@@ -194,30 +193,10 @@ jest.mock('../bridgeBottle', () => ({
 }))
 
 // ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
-// (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) /
-// buildDepotPlan (Phase 23, 23-03, D-04 — startup resume rebuilds a real plan) ─
-// healReconciledFileModes included so buildResumeFinalizeOpts (CR-01 gap
-// closure, 23-code-review) can be exercised — defaulted to a successful heal
-// in the shared beforeEach below so pre-existing resume tests that don't care
-// about mode-healing still earn StateFlags=4 as before.
-// formatEta/rollingRateMiBs (T-AOG, quick/260719-aog) are pure/deterministic
-// helpers pollInstallOnce reuses for its speed/ETA derivation — pulled from
-// the REAL module rather than re-implemented as jest.fn() stubs so this
-// suite exercises the actual formatting/smoothing behavior.
+// (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download) ─
 jest.mock('../depot', () => ({
   finalizeToSteam: jest.fn().mockResolvedValue(undefined),
-  downloadSteamDepots: jest.fn(),
-  buildDepotPlan: jest.fn(),
-  healReconciledFileModes: jest.fn(),
-  formatEta:
-    jest.requireActual<typeof import('../depot')>('../depot').formatEta,
-  rollingRateMiBs:
-    jest.requireActual<typeof import('../depot')>('../depot').rollingRateMiBs
-}))
-
-// ── depot/reconcile mock — reconcilePartialState (Phase 23, 23-03, D-04) ────
-jest.mock('../depot/reconcile', () => ({
-  reconcilePartialState: jest.fn()
+  downloadSteamDepots: jest.fn()
 }))
 
 // ── backend/launcher mock — runWineCommand (D-05 no-auto-drive regression) ────
@@ -364,11 +343,6 @@ describe('SteamLibraryManager', () => {
     // Defaults so init()/migrateStaleArtUrls have empty caches to scan
     ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([])
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
-    // Default: mode-healing succeeds (CR-01) — resume tests that don't
-    // specifically exercise the healing-failure path still earn StateFlags=4.
-    jest
-      .mocked(healReconciledFileModes)
-      .mockResolvedValue({ allModesHealed: true, failures: [] } as never)
     // Default: no game is bridge-eligible (D-UAT-24-02, 24-17) — every
     // pre-existing test keeps the native ?? bottle ?? bridge precedence.
     jest.mocked(bridgeAllowlist.has).mockReturnValue(false)

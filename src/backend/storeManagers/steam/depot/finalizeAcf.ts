@@ -1,12 +1,15 @@
-// finalizeToSteam: the single recovery/finalize mechanism (extracted from ../depot.ts, 62-10).
+// finalizeToSteam: the TS honest-empty ACF finalize (extracted from ../depot.ts, 62-10; moved
+// here with canWriteFullOwnership when the TS download pipeline was deleted, 73-20). Rust
+// finalizes every job that downloads; TS only finalizes a zero-depot install and a startup
+// resume whose Rust verify failed.
 
 import { logInfo, LogPrefix } from 'backend/logger'
 import { readdir, stat } from 'node:fs/promises'
 import { resolve, join } from 'path'
 import { SteamUser } from '../user'
-import { writeAppManifest } from './manifest'
+import { writeAppManifest } from './appManifest'
 import { assertNumericAppId } from './plan'
-import { type DepotDownloadFailure, canWriteFullOwnership } from './download'
+import { type DepotDownloadFailure } from './planModel'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Phase 21 (21-06)/Phase 23 (23-02): finalizeToSteam — the SINGLE recovery
@@ -24,6 +27,29 @@ import { type DepotDownloadFailure, canWriteFullOwnership } from './download'
 // a Retry (re-invoking downloadSteamDepots) never races a partially-written
 // .acf (D-07's non-conflicting-paths guarantee).
 // ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * The single completeness gate (Phase 23, D-01/D-02, spike-003 VALIDATED) deciding whether
+ * finalizeToSteam may write StateFlags "4" (full ownership, Steam runs no verify pass) instead
+ * of the safe "1026" verify-handoff. Fails CLOSED: every input must positively prove completion.
+ * Rust applies the same gate to its own jobs (gamelib-depot acf.rs).
+ */
+export function canWriteFullOwnership(opts: {
+  outcome: 'completed' | 'cancelled'
+  failures: DepotDownloadFailure[]
+  buildid?: string
+  allFilesVerified: boolean
+  allModesApplied: boolean
+}): boolean {
+  return (
+    opts.outcome === 'completed' &&
+    opts.failures.length === 0 &&
+    !!opts.buildid &&
+    opts.buildid !== '0' &&
+    opts.allFilesVerified === true &&
+    opts.allModesApplied === true
+  )
+}
 
 interface FinalizeDepotEntry {
   /** Steam depot id. STRING — never coerced to Number (T-21-04). */

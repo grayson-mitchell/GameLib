@@ -12,7 +12,7 @@ import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from '../user'
 import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { getContentServerHosts } from '../depot/contentServers'
-import { finalizeToSteam } from '../depot/finalize'
+import { finalizeToSteam } from '../depot/finalizeAcf'
 import { classifyDepotError } from '../depotErrors'
 import type { DownloadSteamDepotsOpts } from '../depot/planModel'
 import {

@@ -187,17 +187,9 @@ jest.mock('../bridgeBottle', () => ({
 
 // ── depot mock — finalizeToSteam (D-05 startup finalize) / downloadSteamDepots
 // (must NEVER be invoked from startup resume — Pitfall 4, no silent re-download).
-// formatEta/rollingRateMiBs (T-AOG, quick/260719-aog) are pure/deterministic
-// helpers pollInstallOnce reuses for its speed/ETA derivation — pulled from
-// the REAL module rather than re-implemented as jest.fn() stubs so this
-// suite exercises the actual formatting/smoothing behavior.
 jest.mock('../depot', () => ({
   finalizeToSteam: jest.fn().mockResolvedValue(undefined),
-  downloadSteamDepots: jest.fn(),
-  formatEta:
-    jest.requireActual<typeof import('../depot')>('../depot').formatEta,
-  rollingRateMiBs:
-    jest.requireActual<typeof import('../depot')>('../depot').rollingRateMiBs
+  downloadSteamDepots: jest.fn()
 }))
 
 // ── depotRust/secondary mock — resumeVerifyRust, the one Rust verify_only job

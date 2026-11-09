@@ -1,9 +1,17 @@
 // Content-server directory: reduceContentServers + getContentServerHosts (extracted from ../depot.ts, 62-10).
 
 import { logInfo, LogPrefix } from 'backend/logger'
-import { type ContentServerHostMeta } from './decompress'
 import { withTimeout, STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { type SteamUserDepotClient, type RawContentServer } from './planModel'
+
+/** Per-host content-server directory metadata, keyed by hostname and threaded to Rust's
+ *  RustHostRef (moved from decompress.ts, 73-20). `usetokenauth === true` or `type === 'CDN'`
+ *  means the host wants a CDN auth token; `type=SteamCache` hosts stay token-less. */
+export interface ContentServerHostMeta {
+  httpsSupport?: string
+  usetokenauth?: boolean
+  type?: string
+}
 
 /**
  * Debug/steam-install-slow-start (cycle 5): pure reduction of the raw

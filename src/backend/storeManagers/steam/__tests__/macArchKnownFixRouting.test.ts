@@ -144,15 +144,8 @@ jest.mock('../bottledSteam', () => ({
 // ── depot mock ─────────────────────────────────────────────────────────────────
 jest.mock('../depot', () => ({
   finalizeToSteam: jest.fn().mockResolvedValue(undefined),
-  downloadSteamDepots: jest.fn(),
-  buildDepotPlan: jest.fn(),
-  healReconciledFileModes: jest.fn(),
-  formatEta:
-    jest.requireActual<typeof import('../depot')>('../depot').formatEta,
-  rollingRateMiBs:
-    jest.requireActual<typeof import('../depot')>('../depot').rollingRateMiBs
+  downloadSteamDepots: jest.fn()
 }))
-jest.mock('../depot/reconcile', () => ({ reconcilePartialState: jest.fn() }))
 
 // ── backend/launcher mock ─────────────────────────────────────────────────────
 jest.mock('backend/launcher', () => ({ runWineCommand: jest.fn() }))
