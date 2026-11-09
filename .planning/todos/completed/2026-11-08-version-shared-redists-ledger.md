@@ -25,3 +25,7 @@ with a codec. The existing `version: 1` field is the starting point; the engine'
 replace it rather than live beside it.
 
 See `.planning/phases/68-versioned-persisted-stores-and-migrations/68-INVENTORY.md`.
+
+## Resolved by quick 261109-uv4
+
+The ledger is on the store engine: codec and helpers in `src/backend/storeVersioning/sharedRedistLedgerFile.ts`, chain key `steam_bridge/shared-redists` (registered in `STORE_MIGRATIONS`). The top-level `version` is the engine stamp; baseline v1 is the pre-engine `version: 1`.
