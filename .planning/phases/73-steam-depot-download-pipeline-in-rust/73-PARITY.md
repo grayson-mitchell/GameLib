@@ -51,6 +51,6 @@ The TS run's launch logged `shared redists already settled, nothing to do`, so t
 - GameLib's redist cache `steam_store/sharedRedist` (about 261 MB) renamed to `sharedRedist.ts-parity`.
 - Schedule I's game tree in the bridge bottle was not touched (not approved).
 
-Order: TS relaunch and one Schedule I launch (TS redist job) -> rename the new `sharedRedist` to `sharedRedist.ts-parity2`-style TS copy and re-cold the state -> Rust run and one Schedule I launch (Rust redist job).
+Order: TS relaunch and one Schedule I launch (TS redist job) -> rename the new `sharedRedist` to `sharedRedist.ts-out` and reset the bottle ledger's `settled` and `done` again -> Rust run and one Schedule I launch (Rust redist job).
 
-Restore after the plan: delete the Rust-run `sharedRedist`, rename the original `sharedRedist.ts-parity` back to `sharedRedist`, and copy `gamelib-shared-redists.json.parity-bak` back over the bottle ledger.
+Restore after the plan: delete the Rust-run `sharedRedist`, and `sharedRedist.ts-out` once compared, rename the original `sharedRedist.ts-parity` back to `sharedRedist`, and copy `gamelib-shared-redists.json.parity-bak` back over the bottle ledger.
