@@ -1,21 +1,11 @@
 // Steamworks Common Redistributables download (extracted from ../depot.ts, 62-10).
 
-import { downloadDepotFiles } from './downloadFiles'
 import { getContentServerHosts } from './contentServers'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import {
-  mkdir,
-  stat,
-  lstat,
-  rm,
-  readFile,
-  writeFile,
-  rename
-} from 'node:fs/promises'
+import { mkdir, stat, rm, readFile, writeFile, rename } from 'node:fs/promises'
 import { resolve, relative, isAbsolute, join } from 'path'
 import {
   STEAM_COMMON_REDIST_APP_ID,
-  INSTALLSCRIPT_FLAG,
   classifySharedRedist,
   declaredSharedRedistDepotIds,
   hasCmdMetachar,
@@ -25,26 +15,23 @@ import {
 } from '../bridge/sharedRedists'
 import { SteamUser } from '../user'
 import { sanitizeInstalldir } from '../installLocation'
-import { type ContentServerHostMeta } from './decompress'
 import { CdnAuthTokenCache } from './cdnAuth'
-import {
-  DIRECTORY_FLAG,
-  SYMLINK_FLAG,
-  type DepotPlanFile,
-  type DepotPlanEntry,
-  type DepotPlan
-} from './planModel'
 import {
   assertNumericAppId,
   getDepotClient,
   withPlanBuildRetry,
   fetchAppInfo,
-  loadContentManifestParser,
-  fetchDepotPlanEntry
+  fetchDepotKey,
+  type DepotRefEntry
 } from './plan'
-import { resolveContainedPath, sha1File } from './download'
-import { depotPipeline } from '../depotRust/pipelineFlag'
-import { downloadSharedRedistDepotsRust } from '../depotRust/install'
+import { resolveContainedPath } from './download'
+import {
+  downloadSharedRedistDepotsRust,
+  sharedRedistInstallscriptsRust,
+  verifySharedRedistDepotRust,
+  type SharedRedistHostInfo,
+  type SharedRedistJobArgs
+} from '../depotRust/install'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Quick 261025-rkj: Steamworks Common Redistributables (app 228980) for the
@@ -53,10 +40,11 @@ import { downloadSharedRedistDepotsRust } from '../depotRust/install'
 // A game's appinfo declares shared depots with `depotfromapp: 228980`;
 // depot/select.ts skips those (ownership gate + SharedDepots rule), so they
 // never reach a bridge bottle. This entry point builds the descriptors
-// directly from the game's appinfo, fetches key + manifest under the OWNER app
-// 228980 (a free-download app), and downloads each depot into ONE shared cache.
-// It deliberately does NOT use selectDepots / buildDepotPlan /
-// downloadSteamDepots / finalizeToSteam: no ACF is wanted for 228980.
+// directly from the game's appinfo, fetches each depot key under the OWNER app
+// 228980 (a free-download app), and runs each depot as a Rust job (D-12) into
+// ONE shared cache. Rust reads the manifests (D-01); TS only ever sees the
+// installscript filenames from a manifest summary (D-02). It deliberately
+// does NOT use selectDepots / downloadSteamDepots: no ACF is wanted for 228980.
 
 /** One downloaded shared redist depot, ready for the bottle runner. */
 export interface SharedRedistDepot {
@@ -78,8 +66,6 @@ export interface DownloadSharedRedistOpts {
   signal?: AbortSignal
   /** Called with the component label before a depot's full download starts. */
   onComponent?: (label: string) => void
-  /** Test seam: defaults to {@link downloadDepotFiles}. */
-  downloadFiles?: typeof downloadDepotFiles
   /** Phase 54: true only from the bridge install path, which may open the
    *  authenticated CM session. Play passes nothing, so a Play can reuse an
    *  already-open session but never open one. */
@@ -101,7 +87,7 @@ const SHARED_REDIST_DEFAULT_INSTALLDIR = 'Steamworks Shared'
 
 /**
  * In-process FIFO lock per key (WR-02). Unlike a single-flight join, every waiter runs its OWN
- * closure once the holder releases, so it uses its own `signal` and `downloadFiles` and re-reads
+ * closure once the holder releases, so it uses its own `signal` and re-reads
  * the index, instead of inheriting another launch's. Keys: `depot:<cache>|<id>` around a
  * depot's whole script-then-full sequence (its two downloads write the same files), and
  * `index:<cache>` around every index read-modify-write. The depot lock may take the index lock;
@@ -219,57 +205,6 @@ function publicManifestGid(entry: unknown): string | undefined {
   return undefined
 }
 
-/**
- * Why a GID-indexed depot's cached files cannot be trusted, or null when they can (WR-05). Every
- * regular manifest file must exist at its manifest size (symlinks must exist), and every file an
- * installscript process names directly must also match its manifest SHA1. Size over the whole set
- * catches a deleted or truncated file cheaply; the hash is spent only on the installer binaries.
- */
-async function sharedRedistCacheProblem(
-  installRoot: string,
-  files: DepotPlanFile[],
-  entries: InstallScriptEntry[]
-): Promise<string | null> {
-  const hashed = new Set<string>()
-  for (const e of entries)
-    for (const p of e.processes) {
-      const m = /^%INSTALLDIR%[\\/](.+)$/i.exec(p.process.trim())
-      const installRel = m?.[1]
-      if (installRel !== undefined) {
-        hashed.add(installRel.replace(/\//g, '\\').toLowerCase())
-      }
-    }
-  for (const f of files) {
-    const flags = f.flags ?? 0
-    if (flags & DIRECTORY_FLAG) continue
-    let path: string
-    try {
-      path = resolveContainedPath(installRoot, f.filename)
-    } catch {
-      return `unsafe path ${f.filename}`
-    }
-    try {
-      if (flags & SYMLINK_FLAG) {
-        await lstat(path)
-        continue
-      }
-      const st = await stat(path)
-      if (!st.isFile() || st.size !== Number(f.size))
-        return `${f.filename} is ${st.isFile() ? `${st.size} bytes, expected ${String(f.size)}` : 'not a file'}`
-    } catch {
-      return `${f.filename} is missing`
-    }
-    if (!hashed.has(f.filename.replace(/\//g, '\\').toLowerCase())) continue
-    const expected = Buffer.isBuffer(f.sha_content)
-      ? f.sha_content.toString('hex')
-      : String(f.sha_content ?? '')
-    if (!expected) continue
-    if ((await sha1File(path)).toLowerCase() !== expected.toLowerCase())
-      return `${f.filename} does not match its manifest SHA1`
-  }
-  return null
-}
-
 async function pathExists(p: string): Promise<boolean> {
   try {
     await stat(p)
@@ -324,11 +259,6 @@ async function downloadSharedRedistDepotsLeased(
   gameAppId: string,
   opts: DownloadSharedRedistOpts
 ): Promise<SharedRedistDownloadResult> {
-  const downloadFiles = opts.downloadFiles ?? downloadDepotFiles
-  // D-16: read once, inside the lease. The lease, index file, locks and ledger stay in TS; only
-  // the per-depot download step becomes a Rust job (D-12).
-  const useRust = depotPipeline() === 'rust'
-
   const gameInfo = await withPlanBuildRetry(
     opts.signal,
     (c) => fetchAppInfo(c, Number(gameAppId)),
@@ -355,18 +285,10 @@ async function downloadSharedRedistDepotsLeased(
     throw new Error(
       `shared redist install root escapes ${commonRoot}: ${installRoot}`
     )
-  const parser = await loadContentManifestParser()
   const optIn = new Set(opts.optInDepotIds)
 
-  let hostInfo:
-    | {
-        hosts: string[]
-        weightedLoads: Map<string, number>
-        hostMeta: Map<string, ContentServerHostMeta>
-        cdnAuth: CdnAuthTokenCache
-      }
-    | undefined
-  const getHostInfo = async () => {
+  let hostInfo: SharedRedistHostInfo | undefined
+  const getHostInfo = async (): Promise<SharedRedistHostInfo> => {
     if (!hostInfo) {
       const client = getDepotClient()
       const { hosts, weightedLoads, hostMeta } = await getContentServerHosts(
@@ -384,41 +306,6 @@ async function downloadSharedRedistDepotsLeased(
       }
     }
     return hostInfo
-  }
-
-  const download = async (
-    entry: DepotPlanEntry,
-    files: DepotPlanFile[]
-  ): Promise<boolean> => {
-    const h = await getHostInfo()
-    if (useRust) {
-      return downloadSharedRedistDepotsRust({
-        appId: STEAM_COMMON_REDIST_APP_ID,
-        entry,
-        files,
-        cacheSteamappsDir: opts.cacheSteamappsDir,
-        installdir,
-        host: h,
-        signal: opts.signal
-      })
-    }
-    const plan: DepotPlan = {
-      appId: STEAM_COMMON_REDIST_APP_ID,
-      depots: [{ ...entry, ownerAppId: STEAM_COMMON_REDIST_APP_ID, files }],
-      totalBytes: files.reduce((sum, f) => sum + Number(f.size), 0),
-      name: 'Steamworks Common Redistributables',
-      skippedDepots: []
-    }
-    const result = await downloadFiles(plan, {
-      targetSteamappsDir: opts.cacheSteamappsDir,
-      installdir,
-      hosts: h.hosts,
-      hostWeightedLoads: h.weightedLoads,
-      hostMeta: h.hostMeta,
-      cdnAuth: h.cdnAuth,
-      signal: opts.signal
-    })
-    return result.outcome === 'completed' && result.failures.length === 0
   }
 
   const depots: SharedRedistDepot[] = []
@@ -440,25 +327,33 @@ async function downloadSharedRedistDepotsLeased(
         continue
       }
 
-      const entry = await withPlanBuildRetry(
+      const key = await withPlanBuildRetry(
         opts.signal,
         (c) =>
-          fetchDepotPlanEntry(
-            c,
-            {
-              id,
-              manifest: gid,
-              size: 0,
-              ownerAppId: STEAM_COMMON_REDIST_APP_ID
-            },
-            parser
-          ),
+          fetchDepotKey(c, {
+            id,
+            manifest: gid,
+            size: 0,
+            ownerAppId: STEAM_COMMON_REDIST_APP_ID
+          }),
         `sharedRedist depot ${id}`
       )
+      const ref: DepotRefEntry = {
+        depotId: id,
+        gid,
+        key,
+        ownerAppId: STEAM_COMMON_REDIST_APP_ID
+      }
+      const job: SharedRedistJobArgs = {
+        appId: STEAM_COMMON_REDIST_APP_ID,
+        ref,
+        cacheSteamappsDir: opts.cacheSteamappsDir,
+        installdir,
+        host: await getHostInfo(),
+        signal: opts.signal
+      }
 
-      const scriptFiles = entry.files.filter(
-        (f) => ((f.flags ?? 0) & INSTALLSCRIPT_FLAG) !== 0
-      )
+      const scriptFiles = await sharedRedistInstallscriptsRust(job)
       const scriptFile = scriptFiles[0]
       if (scriptFiles.length !== 1 || scriptFile === undefined) {
         logInfo(
@@ -470,7 +365,7 @@ async function downloadSharedRedistDepotsLeased(
       }
       let scriptPath: string
       try {
-        scriptPath = resolveContainedPath(installRoot, scriptFile.filename)
+        scriptPath = resolveContainedPath(installRoot, scriptFile)
       } catch (err) {
         logWarning(
           `shared redists: skipping depot ${id}, unsafe installscript path: ${String(err)}`,
@@ -508,7 +403,10 @@ async function downloadSharedRedistDepotsLeased(
           let scriptFailed = false
           for (let attempt = 0; attempt < 2; attempt++) {
             if (!fromIndex) {
-              const ok = await download(entry, [scriptFile])
+              const ok = await downloadSharedRedistDepotsRust({
+                ...job,
+                selectPaths: [scriptFile]
+              })
               if (!ok) {
                 scriptFailed = true
                 break
@@ -543,28 +441,25 @@ async function downloadSharedRedistDepotsLeased(
             return { kind: 'skipped' }
           }
 
-          const { kind, label } = classifySharedRedist(
-            scriptFile.filename,
-            entries
-          )
+          const { kind, label } = classifySharedRedist(scriptFile, entries)
           if (kind === 'other' && !optIn.has(id)) {
             logInfo(
-              `shared redists: skipping depot ${id} (${label ?? scriptFile.filename}), not VC++/DirectX and not opted in`,
+              `shared redists: skipping depot ${id} (${label ?? scriptFile}), not VC++/DirectX and not opted in`,
               LogPrefix.Steam
             )
             return { kind: 'skipped' }
           }
           const displayLabel = label ?? `depot ${id}`
 
-          // The index only says the depot was complete once; check the files are still there
+          // The index only says the depot was complete once; verify the files are still there
           // before the runner relies on them, and repair the cache when they are not (WR-05).
           if (fromIndex) {
-            const problem = await sharedRedistCacheProblem(
-              installRoot,
-              entry.files,
-              entries
-            )
-            if (problem) {
+            const missing = await verifySharedRedistDepotRust(job)
+            if (missing === null || missing.length > 0) {
+              const problem =
+                missing === null
+                  ? 'verify did not complete'
+                  : `${missing.length} file(s) missing or mismatched, first ${missing[0]}`
               logWarning(
                 `shared redists: cached depot ${id} (${displayLabel}) is incomplete (${problem}), re-downloading`,
                 LogPrefix.Steam
@@ -578,7 +473,7 @@ async function downloadSharedRedistDepotsLeased(
 
           if (!fromIndex) {
             opts.onComponent?.(displayLabel)
-            const ok = await download(entry, entry.files)
+            const ok = await downloadSharedRedistDepotsRust(job)
             if (!ok) {
               logWarning(
                 `shared redists: download of depot ${id} (${displayLabel}) did not complete`,

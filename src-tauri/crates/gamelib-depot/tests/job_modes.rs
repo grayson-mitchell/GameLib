@@ -261,6 +261,24 @@ fn verify_only_reports_missing_and_writes_1026() {
 }
 
 #[test]
+fn verify_only_without_finalize_reports_missing_and_writes_no_acf() {
+    // 73-19: the shared-redist cache check runs verify_only with finalize null.
+    let (_case, env) = install_zip();
+    let acf_before = env.acf();
+    std::fs::remove_file(env.root().join("readme.txt")).unwrap();
+    let before = env.chunk_hits().len();
+    let out = env.run(env.job("jm-verify-nofin", "verify_only", None, false));
+    assert_eq!(out.missing, Some(vec!["readme.txt".to_string()]));
+    assert!(out.acf.is_none());
+    assert_eq!(env.chunk_hits().len(), before, "verify fetched a chunk");
+    assert_eq!(
+        env.acf(),
+        acf_before,
+        "verify without finalize rewrote the ACF"
+    );
+}
+
+#[test]
 fn cancel_resume_fetches_only_missing() {
     let a: Vec<u8> = (0..3_000).map(|i| (i * 11 % 241) as u8).collect();
     let b: Vec<u8> = (0..3_000).map(|i| (i * 13 % 239) as u8).collect();

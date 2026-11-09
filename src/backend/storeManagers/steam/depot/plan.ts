@@ -1,8 +1,7 @@
-// Depot plan building: appinfo/PICS fetch, per-depot plan entries, buildDepotPlan and the bridge prescreen (extracted from ../depot.ts, 62-09).
+// Depot planning, CM half only (73-19, D-01): appinfo/PICS fetch, ownership, depot selection, depot
+// keys and the bridge prescreen entry. No manifest is fetched or parsed here; Rust does that.
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { basename } from 'path'
-import { depotPipeline } from '../depotRust/pipelineFlag'
 import { prescreenBridgeDepotsRust } from '../depotRust/secondary'
 import { SteamUser } from '../user'
 import {
@@ -13,14 +12,8 @@ import {
   type DepotDescriptor,
   type DepotSelectOpts
 } from './select'
-import { decryptFilename } from './crypto'
-import {
-  probeCaseInsensitiveVolume,
-  resolveDepotPathCollisions
-} from './pathCollisions'
 import { getAppInfoDepotOrder, withAppInfoOrderCapture } from './appinfoOrder'
 import { isNonRetryableDepotError } from '../depotErrors'
-import { summarizeDepotFlags, formatDepotFlagsCensus } from './flagsCensus'
 import {
   withTimeout,
   isTimeoutError,
@@ -30,11 +23,7 @@ import {
 import {
   NUMERIC_ID,
   type DownloadSteamDepotsOpts,
-  type DepotPlanFile,
-  type DepotPlanEntry,
-  type DepotPlan,
   type AppCommonName,
-  type ContentManifestModule,
   type SteamUserDepotClient
 } from './planModel'
 
@@ -59,14 +48,11 @@ class DepotPlanAbortedError extends Error {
 }
 
 /**
- * D-UAT-05: buildDepotPlan's PICS/manifest network calls (acquireAuthenticated,
- * getProductInfo x3, getDepotDecryptionKey+getRawManifest PER OWNED DEPOT)
- * previously never consulted the AbortSignal at all — a stop()/cancel()
- * issued while the plan was still being built had NO effect until the whole
- * plan finished and downloadDepotFiles's own per-chunk signal checks took
- * over. For a many-depot game that phase can run long, so cancel appeared
- * "non-functional". Called between every major step below so an abort takes
- * effect within roughly one network round-trip instead of the whole plan.
+ * D-UAT-05: the CM calls of a depot plan (acquireAuthenticated, getProductInfo x3,
+ * getDepotDecryptionKey PER OWNED DEPOT) once never consulted the AbortSignal, so a cancel
+ * issued while they ran had no effect until they all finished. For a many-depot game that phase
+ * can run long. Called between every major step so an abort takes effect within roughly one
+ * network round-trip.
  */
 export function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) {
@@ -75,8 +61,8 @@ export function throwIfAborted(signal?: AbortSignal): void {
 }
 
 /** Never open a second logon (T-21-11). Phase 54: every caller holds an
- *  authenticated lease from SteamUser.acquireAuthenticated() (buildDepotPlan,
- *  downloadSelectedDepotFiles, downloadSharedRedistDepots), and the lease's
+ *  authenticated lease from SteamUser.acquireAuthenticated() (the depotRust entry points and
+ *  downloadSharedRedistDepots), and the lease's
  *  client is the one SteamUser.getClient() returns while it is held. */
 export function getDepotClient(): SteamUserDepotClient {
   const client = SteamUser.getClient()
@@ -88,9 +74,9 @@ export function getDepotClient(): SteamUserDepotClient {
   return client as unknown as SteamUserDepotClient
 }
 
-/** D-UAT-06: bounded reconnect+retry for buildDepotPlan's manifest/PICS phase.
+/** D-UAT-06: bounded reconnect+retry for the CM phase of a depot plan.
  *  Total attempts a single plan-build network step (fetchAppInfo,
- *  getOwnedSets, fetchDlcInfos, or a single depot's fetchDepotPlanEntry) gets
+ *  getOwnedSets, fetchDlcInfos, or a single depot's fetchDepotKey) gets
  *  before its failure is allowed to propagate. Bounded — never unbounded —
  *  so a GENUINE, non-recoverable failure still surfaces promptly as an
  *  honest error instead of hanging (fix goal #2). */
@@ -153,7 +139,7 @@ export async function withPlanBuildRetry<T>(
       const result = await step(getDepotClient())
       if (label) {
         logInfo(
-          `[Timing] buildDepotPlan/${label}: attempt ${attempt} succeeded in ${Date.now() - attemptStart}ms (total ${Date.now() - overallStart}ms)`,
+          `[Timing] buildDepotRefs/${label}: attempt ${attempt} succeeded in ${Date.now() - attemptStart}ms (total ${Date.now() - overallStart}ms)`,
           LogPrefix.Steam
         )
       }
@@ -162,12 +148,12 @@ export async function withPlanBuildRetry<T>(
       lastErr = err
       if (label) {
         logInfo(
-          `[Timing] buildDepotPlan/${label}: attempt ${attempt} FAILED after ${Date.now() - attemptStart}ms`,
+          `[Timing] buildDepotRefs/${label}: attempt ${attempt} FAILED after ${Date.now() - attemptStart}ms`,
           LogPrefix.Steam
         )
       }
       // D-UAT-08: a terminal EResult (FileNotFound/AccessDenied/...) from
-      // getDepotDecryptionKey/getRawManifest recurs byte-for-byte identically
+      // getDepotDecryptionKey recurs byte-for-byte identically
       // on every retry — it is never a transient CM drop. Fail fast instead
       // of burning all PLAN_BUILD_MAX_ATTEMPTS attempts (and the misleading
       // "connection dropped" copy classifyDepotError previously fell back to
@@ -190,7 +176,7 @@ export async function withPlanBuildRetry<T>(
         LogPrefix.Steam
       )
       // Phase 54: the reconnect is a wrapped cold connect owned by SteamUser;
-      // the outer lease (buildDepotPlan et al.) keeps the session alive, so
+      // the outer lease (buildDepotRefs' caller) keeps the session alive, so
       // this inner lease is released at once.
       const retryLease = await SteamUser.acquireAuthenticated({
         reason: 'plan-retry'
@@ -283,28 +269,7 @@ async function fetchDlcInfos(
 }
 
 /**
- * Dynamically loads steam-user's internal raw-manifest parser. The export path
- * is undocumented (Pitfall 5) — a loud throw here (not a silent failure) is
- * what surfaces a future steam-user version bump that moves/renames this file.
- */
-export async function loadContentManifestParser(): Promise<ContentManifestModule> {
-  const mod = await import('steam-user/components/content_manifest.js')
-  const candidate =
-    (mod as { default?: unknown }).default ??
-    (mod as unknown as ContentManifestModule)
-  if (typeof (candidate as ContentManifestModule)?.parse !== 'function') {
-    throw new Error(
-      'downloadSteamDepots: steam-user/components/content_manifest.js no longer exports a ' +
-        'parse(buffer) function — this internal path is undocumented (T-21-10) and may have ' +
-        'moved on a steam-user version bump. Pin the version and re-verify the export shape ' +
-        'before proceeding.'
-    )
-  }
-  return candidate as ContentManifestModule
-}
-
-/**
- * D-UAT-08: getDepotDecryptionKey/getRawManifest failures arrive as a bare
+ * D-UAT-08: getDepotDecryptionKey failures arrive as a bare
  * steam-user EResult name ("FileNotFound") with no depot/app context —
  * classifyDepotError's CDN/connection-drop pattern then swallowed them into
  * the misleading "Steam servers dropped the connection" copy. Wrap with the
@@ -337,19 +302,16 @@ function wrapDepotKeyError(
       ? ' — GameLib selected this depot via the package-ownership gate; owning a depot does not guarantee Steam will issue its key'
       : ''
   logWarning(
-    `fetchDepotPlanEntry: couldn't get ${what} for depot ${descriptor.id} (app ${descriptor.ownerAppId}): eresult=${eresult ?? 'unknown'}${ownershipNote}`,
+    `fetchDepotKey: couldn't get ${what} for depot ${descriptor.id} (app ${descriptor.ownerAppId}): eresult=${eresult ?? 'unknown'}${ownershipNote}`,
     LogPrefix.Steam
   )
   return wrapped
 }
 
 /**
- * Fetch, parse, and decrypt a single depot's manifest. Both `filename` and
- * `linktarget` (37-09) are decrypted OURSELVES (steam-user truncates them at
- * block boundaries — spike 002 finding); every file size is coerced through
- * Number() for the D-03 sum.
+ * One depot's decryption key. The manifest itself is fetched and parsed by Rust (D-01).
  *
- * D-UAT-08: getDepotDecryptionKey/getRawManifest are called with the depot's
+ * D-UAT-08: getDepotDecryptionKey is called with the depot's
  * OWNING appId (descriptor.ownerAppId — the base game for a base-app depot,
  * or the DLC/sub-app's own appId for a depot enumerated from that DLC's PICS
  * entry), never unconditionally the base game's appId. Steam authorizes some
@@ -358,7 +320,7 @@ function wrapDepotKeyError(
  * base game's install — requesting with the wrong appId fails with a
  * terminal FileNotFound/AccessDenied EResult (never a transient CM drop).
  */
-async function fetchDepotKey(
+export async function fetchDepotKey(
   client: SteamUserDepotClient,
   descriptor: DepotDescriptor
 ): Promise<Buffer> {
@@ -367,7 +329,7 @@ async function fetchDepotKey(
 
   // G-30-02 (30-07, checker finding #3 extension): these bare callback-Promise
   // CM round-trips are the SAME call-class as getProductInfo above — a socket
-  // going stale MID-buildDepotPlan (after the earlier getProductInfo calls
+  // going stale MID-buildDepotRefs (after the earlier getProductInfo calls
   // already succeeded) could otherwise hang here just as easily. Bounded so a
   // stale-but-present CM socket rejects within STEAM_PICS_TIMEOUT_MS instead
   // of parking this await forever.
@@ -383,117 +345,8 @@ async function fetchDepotKey(
       )
     }),
     STEAM_PICS_TIMEOUT_MS,
-    `fetchDepotPlanEntry:${descriptor.id} getDepotDecryptionKey`
+    `fetchDepotKey:${descriptor.id} getDepotDecryptionKey`
   )
-}
-
-export async function fetchDepotPlanEntry(
-  client: SteamUserDepotClient,
-  descriptor: DepotDescriptor,
-  parser: ContentManifestModule
-): Promise<DepotPlanEntry> {
-  const key = await fetchDepotKey(client, descriptor)
-  return fetchDepotManifestEntry(client, descriptor, key, parser)
-}
-
-/** The manifest half of {@link fetchDepotPlanEntry}, for a caller that already holds the key. */
-async function fetchDepotManifestEntry(
-  client: SteamUserDepotClient,
-  descriptor: DepotDescriptor,
-  key: Buffer,
-  parser: ContentManifestModule
-): Promise<DepotPlanEntry> {
-  const numericDepotId = Number(descriptor.id)
-  const numericOwnerAppId = Number(descriptor.ownerAppId)
-
-  const raw = await withTimeout(
-    new Promise<Buffer>((resolve, reject) => {
-      client.getRawManifest(
-        numericOwnerAppId,
-        numericDepotId,
-        descriptor.manifest,
-        'public',
-        (err, m) =>
-          err
-            ? reject(wrapDepotKeyError(err, descriptor, 'manifest'))
-            : resolve(m)
-      )
-    }),
-    STEAM_PICS_TIMEOUT_MS,
-    `fetchDepotPlanEntry:${descriptor.id} getRawManifest`
-  )
-
-  const parsed = parser.parse(raw)
-  const files: DepotPlanFile[] = (parsed.files ?? []).map((f) => ({
-    filename: decryptFilename(f.filename, key),
-    size: Number(f.size),
-    sha_content: f.sha_content,
-    flags: f.flags,
-    // 37-09: linktarget is encrypted with the depot key in EXACTLY the same
-    // format as filename (proto field 7, same message) and must be decrypted
-    // here, not passed through — the write site symlinks this value verbatim.
-    // Presence-conditional because decryptFilename('' | undefined) throws
-    // (ERR_CRYPTO_INVALID_IV / TypeError) and most files have no linktarget.
-    linktarget: f.linktarget
-      ? decryptFilename(f.linktarget, key)
-      : f.linktarget,
-    chunks: f.chunks ?? []
-  }))
-
-  return {
-    depotId: descriptor.id,
-    gid: descriptor.manifest,
-    key,
-    files
-  }
-}
-
-/**
- * Resolve every owned depot for `appId`, fetch + parse + decrypt each depot's
- * manifest, and return the enqueue-time DepotPlan (real summed totalBytes,
- * D-03). Gates on an authenticated Steam CM connection before any network work
- * (T-21-11) and validates appId as numeric before touching it at all (T-21-05).
- *
- * This is the PLAN-BUILDING half only — it never touches disk or the network
- * beyond PICS/manifest fetch. Exported (rather than kept private) so it stays
- * independently unit-testable, matching this module's own established
- * front-half/back-half split (21-04/21-05). `downloadSteamDepots` (Plan 06,
- * below downloadDepotFiles) is the public orchestrator that calls this, then
- * streams the files, then ALWAYS converges on finalizeToSteam — this function
- * itself still throws/rejects on a guard failure (non-numeric appId, no
- * authenticated connection), since it is an internal building block, not the
- * top-level entry point Plan 07's SteamGame.install() calls.
- */
-export async function buildDepotPlan(
-  appId: string,
-  opts: DownloadSteamDepotsOpts
-): Promise<DepotPlan> {
-  assertNumericAppId(appId)
-  throwIfAborted(opts.signal)
-
-  // Phase 54: the plan body holds an authenticated lease for its whole
-  // length (the gated, refcounted session in user.ts) and releases it on
-  // every exit, including a thrown step error and an abort.
-  const lease = await SteamUser.acquireAuthenticated({
-    reason: opts.sessionReason ?? 'user-install',
-    guidedAction: 'install',
-    appName: appId
-  })
-  try {
-    throwIfAborted(opts.signal)
-    if (!lease.ok) {
-      logWarning(
-        `downloadSteamDepots: no authenticated Steam CM connection for appId ${appId} (${lease.reason})`,
-        LogPrefix.Steam
-      )
-      throw new Error(
-        `downloadSteamDepots: no authenticated Steam CM connection available for appId ${appId} (${lease.reason})`
-      )
-    }
-    return await buildDepotPlanLeased(appId, opts)
-  } finally {
-    if (lease.ok) lease.release()
-  }
 }
 
 /** One selected depot with its decryption key and no manifest: what a Rust job needs from Node. */
@@ -518,10 +371,9 @@ export interface DepotRefsResult {
 }
 
 /**
- * The CM-only half of {@link buildDepotPlan} (73-13, D-04): appinfo, ownership, depot selection
- * (select.ts) and one decryption key per selected depot. It never fetches or parses a manifest.
- * Precondition: the caller holds an authenticated lease (buildDepotPlan and the Rust install
- * path both do). Throws exactly what buildDepotPlan throws for the same failures.
+ * The CM half of a depot job (73-13, D-04): appinfo, ownership, depot selection (select.ts) and
+ * one decryption key per selected depot. It never fetches or parses a manifest; Rust does (D-01).
+ * Precondition: the caller holds an authenticated lease (every depotRust entry point does).
  */
 export async function buildDepotRefs(
   appId: string,
@@ -626,7 +478,7 @@ function skipBlockedDepot(
   // continuing). Never logs the decryption key, the manifest GID payload,
   // or any account identifier (T-23-31).
   logInfo(
-    `buildDepotPlan: skipping depot ${descriptor.id} (app ${descriptor.ownerAppId}) for appId ${appId} — Steam refused the key/manifest with eresult=40 (Blocked); the install is continuing without it`,
+    `buildDepotRefs: skipping depot ${descriptor.id} (app ${descriptor.ownerAppId}) for appId ${appId} — Steam refused the key/manifest with eresult=40 (Blocked); the install is continuing without it`,
     LogPrefix.Steam
   )
   return true
@@ -646,209 +498,27 @@ function throwIfAllDepotsSkipped(
 ): void {
   if (keptCount || !skippedDepots.length) return
   const allSkippedErr = new Error(
-    `buildDepotPlan: every selected depot for appId ${appId} was blocked by Steam (eresult=40) and had to be skipped: ${skippedDepots.join(', ')}`
+    `buildDepotRefs: every selected depot for appId ${appId} was blocked by Steam (eresult=40) and had to be skipped: ${skippedDepots.join(', ')}`
   ) as Error & { eresult?: number }
   allSkippedErr.eresult = 40
   throw allSkippedErr
 }
 
-async function buildDepotPlanLeased(
-  appId: string,
-  opts: DownloadSteamDepotsOpts
-): Promise<DepotPlan> {
-  // [Timing] debug/steam-install-slow-start: total buildDepotPlan duration,
-  // reported at every return/throw path below. Temporary instrumentation.
-  const planStart = Date.now()
-
-  const refs = await buildDepotRefs(appId, opts)
-  const { name: displayName, buildid } = refs
-
-  if (!refs.depots.length) {
-    logInfo(
-      `[Timing] buildDepotPlan: total ${Date.now() - planStart}ms for appId ${appId} (0 depots)`,
-      LogPrefix.Steam
-    )
-    const emptyPlan: DepotPlan = {
-      appId,
-      depots: [],
-      totalBytes: 0,
-      name: displayName,
-      buildid,
-      // Nothing was ever selected here, so there is nothing to have skipped
-      // (buildDepotRefs throws when every selected depot was blocked).
-      skippedDepots: []
-    }
-    // 23-06: census logged on the returned plan before it leaves plan-build —
-    // paired with downloadDepotFiles' stage=download-entry census so a
-    // flags-dropping serialization boundary is directly observable (H5).
-    logInfo(
-      `steam-flags-census stage=plan-build appId=${appId} depots=0 ` +
-        formatDepotFlagsCensus(summarizeDepotFlags(emptyPlan)) +
-        ` skipped=${emptyPlan.skippedDepots.join(',')}`,
-      LogPrefix.Steam
-    )
-    return emptyPlan
-  }
-
-  const parser = await loadContentManifestParser()
-
-  const depots: DepotPlanEntry[] = []
-  const skippedDepots: string[] = [...refs.skippedDepots]
-  let totalBytes = 0
-  for (const ref of refs.depots) {
-    throwIfAborted(opts.signal)
-    const descriptor: DepotDescriptor = {
-      id: ref.depotId,
-      manifest: ref.gid,
-      size: 0,
-      ownerAppId: ref.ownerAppId
-    }
-    let entry: DepotPlanEntry
-    try {
-      entry = await withPlanBuildRetry(
-        opts.signal,
-        (client) =>
-          fetchDepotManifestEntry(client, descriptor, ref.key, parser),
-        `fetchDepotPlanEntry:${descriptor.id}`
-      )
-    } catch (err) {
-      // D-01: only the literal EResult 40 is skipped; every other
-      // non-retryable code rethrows and still aborts the whole install.
-      if (skipBlockedDepot(err, descriptor, appId)) {
-        skippedDepots.push(descriptor.id)
-        continue
-      }
-      throw err
-    }
-    entry.ownerAppId = ref.ownerAppId
-    if (ref.appinfoRank !== undefined) entry.appinfoRank = ref.appinfoRank
-    depots.push(entry)
-    // D-03: totalBytes is downstream of the `continue` above — a skipped
-    // depot's files never reach this accumulation.
-    totalBytes += entry.files.reduce((sum, f) => sum + Number(f.size), 0)
-  }
-
-  throwIfAllDepotsSkipped(appId, depots.length, skippedDepots)
-
-  // debug/steam-depot-unclassified-generic-error: two selected depots can
-  // claim the SAME path with incompatible types (Fallout 2 ships `master.dat`
-  // as a Directory marker in depot 38414 and as a 333MB file in 38415). Both
-  // depots are correctly selected, so this must be resolved on the plan before
-  // the write loop can race on it. Directory-marker drops are size 0; dropped
-  // real files (appinfo-rank rule) are subtracted from `totalBytes` below.
-  // quick 261026-nhy: on a case-insensitive destination volume, paths that
-  // differ only in letter case are ONE file, so collisions are bucketed on
-  // the case-folded path (probed once, read-only, and carried on the plan).
-  const caseInsensitivePaths = await probeCaseInsensitiveVolume(
-    opts.targetSteamappsDir
-  )
-  logInfo(
-    `buildDepotPlan: appId=${appId} destination volume case-insensitive=${caseInsensitivePaths} (probed ${opts.targetSteamappsDir})`,
-    LogPrefix.Steam
-  )
-  totalBytes -= resolveDepotPathCollisions(
-    { appId, depots },
-    { caseInsensitive: caseInsensitivePaths }
-  ).droppedBytes
-
-  logInfo(
-    `[Timing] buildDepotPlan: total ${Date.now() - planStart}ms for appId ${appId} (${depots.length} depot(s))`,
-    LogPrefix.Steam
-  )
-
-  const plan: DepotPlan = {
-    appId,
-    depots,
-    totalBytes,
-    name: displayName,
-    buildid,
-    skippedDepots,
-    caseInsensitivePaths
-  }
-  // 23-06: census logged on the returned plan before it leaves plan-build —
-  // paired with downloadDepotFiles' stage=download-entry census so a
-  // flags-dropping serialization boundary is directly observable (H5).
-  // 23.2-03: skipped-depot ids appended so a skip is observable before any
-  // bytes download, even on a subsequently cancelled install.
-  logInfo(
-    `steam-flags-census stage=plan-build appId=${appId} depots=${depots.length} ` +
-      formatDepotFlagsCensus(summarizeDepotFlags(plan)) +
-      ` skipped=${skippedDepots.join(',')}`,
-    LogPrefix.Steam
-  )
-
-  return plan
-}
-
 /**
- * D-51-06 (Phase 51 Plan 17): pure, side-effect-free classifier over an
- * already-built plan's file list -- never touches the network or disk.
- * Depot filenames use Windows separators (`system\steam_api64.dll`); they are
- * separator-normalised before the basename is taken.
- * Case-insensitive BASENAME match only (any directory), so
- * `backup/steam_api.dll.bak` is correctly NOT counted (its basename is
- * `steam_api.dll.bak`, not `steam_api.dll`).
- */
-export function screenDepotPlanForSteamApi(
-  plan: Pick<DepotPlan, 'depots'>
-): 'none' | 'x86' | 'x64' | 'both' {
-  let hasX86 = false
-  let hasX64 = false
-  for (const depot of plan.depots) {
-    for (const file of depot.files) {
-      // Depot manifest filenames use Windows separators; POSIX basename()
-      // would not split them (todo 2026-10-22-bridge-prescreen-always-returns-none).
-      const name = basename(file.filename.replace(/\\/g, '/')).toLowerCase()
-      if (name === 'steam_api.dll') {
-        hasX86 = true
-      } else if (name === 'steam_api64.dll') {
-        hasX64 = true
-      }
-    }
-  }
-  if (hasX86 && hasX64) return 'both'
-  if (hasX64) return 'x64'
-  if (hasX86) return 'x86'
-  return 'none'
-}
-
-/**
- * D-51-06: the cheap pre-install screen ROADMAP sub-decision 2 left open --
- * measured by research as NOT free (a second, separate buildDepotPlan call,
- * PICS + manifest only, never chunk bytes). games.ts (Plan 17's install()
- * wiring) calls this BEFORE routing a pending-scan bridge title, so a
- * 64-bit-only title with no 64-bit shim never downloads into a bridge
- * bottle it can never run in.
+ * D-51-06: the cheap pre-install screen, run before a pending-scan bridge title is routed so a
+ * 64-bit-only title with no 64-bit shim never downloads into a bridge bottle it can never run
+ * in. Rust answers it from a manifest summary (D-02); see prescreenBridgeDepotsRust.
  *
- * NEVER throws/rejects -- every failure mode (no CM connection, a PICS
- * error, an aborted signal) resolves 'unknown', which a caller must treat
- * exactly like "never screened" (T-51-37: a screen failure must never block
- * an install). `os` is always forced to 'windows' regardless of the
- * caller's own `opts.os` -- the bridge route is Windows-only, so screening
- * any other platform's depot selection would answer the wrong question.
+ * NEVER throws/rejects -- every failure mode (no CM connection, a PICS error, an aborted signal)
+ * resolves 'unknown', which a caller must treat exactly like "never screened" (T-51-37). `os` is
+ * always forced to 'windows': the bridge route is Windows-only.
  */
 export async function prescreenBridgeDepots(
   appId: string,
   opts: DownloadSteamDepotsOpts
 ): Promise<'none' | 'x86' | 'x64' | 'both' | 'unknown'> {
-  // D-16: the flag is read once, here; the whole answer comes from one pipeline.
-  if (depotPipeline() === 'rust') return prescreenBridgeDepotsRust(appId, opts)
   const prescreenStart = Date.now()
-  let result: 'none' | 'x86' | 'x64' | 'both' | 'unknown'
-  try {
-    const plan = await buildDepotPlan(appId, {
-      ...opts,
-      os: 'windows',
-      sessionReason: 'prescreen'
-    })
-    result = screenDepotPlanForSteamApi(plan)
-  } catch (err) {
-    logWarning(
-      `[Timing] prescreenBridgeDepots: appId ${appId} failed, treating as 'unknown' (install proceeds): ${String(err)}`,
-      LogPrefix.Steam
-    )
-    result = 'unknown'
-  }
+  const result = await prescreenBridgeDepotsRust(appId, opts)
   logInfo(
     `[Timing] prescreenBridgeDepots: appId ${appId} result=${result} in ${Date.now() - prescreenStart}ms`,
     LogPrefix.Steam

@@ -36,7 +36,8 @@ import {
   READONLY_FLAG,
   HIDDEN_FLAG,
   type DepotModeCounters,
-  type DepotPlanFile
+  type DepotPlanFile,
+  type DepotDownloadFailure
 } from './planModel'
 import { applyMachOExecutableFallback } from './machO'
 
@@ -279,35 +280,8 @@ export interface DownloadDepotFilesOpts {
   stallTracker?: StallTracker
 }
 
-export interface DepotDownloadFailure {
-  file: string
-  error: string
-  /** 37-02 (D-08 landmine fix): the ORIGINAL thrown value, retained so
-   *  classifyDepotError can read `.code`/`.eresult` off it directly instead
-   *  of the pre-flattened `error` string, which `errorText()` already
-   *  reduces an Error down to `.message` for — discarding those properties
-   *  before classification ever runs. `error` stays a plain `string` and is
-   *  untouched by this field: every existing consumer (canWriteFullOwnership,
-   *  finalizeToSteam, and this interface's other reader) keeps reading
-   *  `error` exactly as before. `cause` is optional because not every
-   *  producer of a DepotDownloadFailure (e.g. healReconciledFileModes' mode-
-   *  application failures) has an original thrown object to preserve. */
-  cause?: unknown
-  /** Quick 260927-tpm (D-A, correcting review finding I-1's residual): tags
-   *  a RUN-level give-up (the whole-run stall bound below) so it can be
-   *  told apart from a per-FILE failure without splitting this array in
-   *  two — the array shape and every existing reader
-   *  (canWriteFullOwnership, the post-loop verdicts, the error-path entry
-   *  gate below) stay byte-for-byte unchanged (D-B); only
-   *  formatDownloadFailureSummary partitions on this field, to correct the
-   *  aggregate log line's file count. Absent means file-level, the
-   *  overwhelmingly common case — so every existing producer of this
-   *  interface (the per-file catch below, healReconciledFileModes) needs
-   *  no change. A string union of one value, not a boolean, so a future
-   *  second run-level reason (if one is ever needed) is expressible
-   *  without a second boolean fighting this one. */
-  scope?: 'run'
-}
+// DepotDownloadFailure moved to planModel.ts (73-19) so it outlives this module (73-20).
+export type { DepotDownloadFailure }
 
 export interface DepotDownloadResult {
   outcome: 'completed' | 'cancelled'

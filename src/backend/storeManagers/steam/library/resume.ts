@@ -1,19 +1,12 @@
 import { GameInfo } from 'common/types'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
-import { join, resolve } from 'path'
+import { join } from 'path'
 import { isMac, isLinux } from 'backend/constants/environment'
 import { getSteamLibraries } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { library } from '../state'
 import { isNativeInstallInFlight } from '../gameSessionState'
-import {
-  buildDepotPlan,
-  finalizeToSteam,
-  healReconciledFileModes,
-  type FinalizeToSteamOpts
-} from '../depot'
-import { reconcilePartialState } from '../depot/reconcile'
-import { depotPipeline } from '../depotRust/pipelineFlag'
+import { finalizeToSteam, type FinalizeToSteamOpts } from '../depot'
 import { resumeVerifyRust } from '../depotRust/secondary'
 import {
   sanitizeInstalldir,
@@ -40,7 +33,7 @@ import { startInstallPolling } from './installPolling'
 
 /**
  * Maps the host OS to Steam's depot `oslist` vocabulary ('windows'|'macos'|
- * 'linux') for buildDepotPlan's `os` param — the SAME mapping games.ts's own
+ * 'linux') for the depot selection's `os` param — the SAME mapping games.ts's own
  * hostSteamDepotOs() uses for a fresh install. Kept as a small local
  * duplicate rather than exporting a new symbol from games.ts: this file's
  * startup-resume path (scanDownloadingAppIds, D-05) is confirmed
@@ -96,28 +89,16 @@ async function locateDownloadingTarget(appId: string): Promise<{
 }
 
 /**
- * Phase 23 (23-03, D-04): rebuilds a real DepotPlan for a startup-resumed
- * appId and reconciles it against on-disk state, returning the real
- * gate-input FinalizeToSteamOpts a trustworthy resume needs (real
- * depots/buildid/outcome/failures/allFilesVerified/allModesApplied) instead
- * of the honest-but-uninformative empty `depots: []` Wave 2 left behind.
- * A fully-reconciled-verified resume can earn StateFlags=4 via
- * finalizeToSteam's own canWriteFullOwnership gate; a resume where
- * reconciliation finds genuinely missing/mismatched files reports them as
- * failures, which fails that same gate CLOSED to the safe 1026 fallback
- * (T-23-09).
+ * Phase 23 (D-04) / 73 (D-13): verifies a startup-resumed appId against its on-disk state. One
+ * Rust verify_only job reconciles every file against the manifests, re-applies file modes and
+ * writes the honest ACF itself (StateFlags 4 only when everything verifies, otherwise 1026); it
+ * never fetches a chunk (Pitfall 4: startup resume never re-downloads). Returns null when that job
+ * wrote the ACF, so nothing is left for the caller to finalize.
  *
- * NEVER throws — buildDepotPlan/reconcilePartialState failing for ANY
- * reason (offline, a dropped CM connection, a corrupt PICS response) falls
- * back to the pre-23-03 honest-empty `depots: []` shape, which itself fails
- * CLOSED to 1026 via finalizeToSteam's own optional-field defaults. This is
- * the ONLY way startup resume can degrade — it never crashes init().
- *
- * PRESERVES the confirmed-safe invariant (RESEARCH Pitfall 5): buildDepotPlan
- * only reads PICS + fetches manifests over the already-authenticated CM
- * connection — the exact same network calls a fresh install already
- * performs. It never touches getBottleSteamappsDir()/dispatchToBottledSteam
- * — no silent Steam-in-CrossOver auto-open is introduced here.
+ * NEVER throws: a hostile installdir or a failed verify (offline, a dropped CM connection, a
+ * corrupt PICS response) degrades to the honest-empty `depots: []` finalize opts, which fail
+ * CLOSED to 1026 via finalizeToSteam's own defaults. It never touches the bottle steamapps or
+ * dispatchToBottledSteam, so no silent Steam-in-CrossOver auto-open is introduced here.
  */
 async function buildResumeFinalizeOpts(
   appId: string,
@@ -128,7 +109,7 @@ async function buildResumeFinalizeOpts(
   // sanitization of its own — route it through the same containment +
   // denylist guard (D-02/D-04) the fresh-install path (installLocation.ts's
   // resolveSteamInstallTarget) already enforces before it ever reaches
-  // buildDepotPlan/resolve() below. Defense-in-depth: an attacker would
+  // the verify job below. Defense-in-depth: an attacker would
   // already need local write access to steamapps/ to plant a hostile ACF,
   // but every filesystem-root-building value must be guarded the same way
   // regardless of caller.
@@ -138,8 +119,7 @@ async function buildResumeFinalizeOpts(
   // promises it NEVER throws — resumeInterruptedSteamInstall runs during
   // startup and a throw here would crash init(). A dedicated guard around
   // ONLY this call (not the wider try block below, which must keep
-  // swallowing exactly the buildDepotPlan/reconcile failures it already
-  // does) catches the rejection, logs it at ERROR naming the appId and the
+  // swallowing exactly the verify failures it already does) catches the rejection, logs it at ERROR naming the appId and the
   // rejected value, and degrades to the SAME honest-empty `depots: []`
   // shape the existing catch below already produces for a planning
   // failure — which fails CLOSED to the safe StateFlags=1026 verify-handoff.
@@ -171,105 +151,24 @@ async function buildResumeFinalizeOpts(
     }
   }
 
-  // D-13/D-16: with the flag on rust, one verify_only job reconciles, heals modes and writes the
-  // ACF itself. null tells the caller there is nothing left to finalize in TS.
-  if (depotPipeline() === 'rust') {
-    try {
-      const v = await resumeVerifyRust(appId, {
-        targetSteamappsDir: target.targetSteamappsDir,
-        installdir,
-        name: target.name,
-        os: hostSteamDepotOsForResume()
-      })
-      logInfo(
-        `Steam: rust resume verify for appId ${appId}: missing=${v.missing.length} verified=${v.allFilesVerified} modesHealed=${v.allModesHealed} StateFlags=${v.acf?.stateFlags ?? 'none'}`,
-        LogPrefix.Steam
-      )
-      return null
-    } catch (verifyErr) {
-      logWarning(
-        [
-          `Steam: startup resume verify failed for appId ${appId}, ` +
-            'falling back to the honest-empty 1026 finalize:',
-          verifyErr
-        ],
-        LogPrefix.Steam
-      )
-      return {
-        targetSteamappsDir: target.targetSteamappsDir,
-        installdir,
-        name: target.name,
-        depots: []
-      }
-    }
-  }
-
   try {
-    const plan = await buildDepotPlan(appId, {
-      targetSteamappsDir: target.targetSteamappsDir,
-      installdir,
-      os: hostSteamDepotOsForResume()
-    })
-
-    const installRoot = resolve(target.targetSteamappsDir, 'common', installdir)
-    const { jobs, allFilesVerified } = await reconcilePartialState(
-      plan,
-      installRoot
-    )
-
-    // CR-01 gap closure (23-code-review): allFilesVerified is a CONTENT-only
-    // (sha1) verdict from reconcilePartialState — it proves nothing about
-    // file mode bits. A crash exactly between an earlier session's
-    // downloadSingleFile whole-file sha1 check succeeding and its own
-    // mode-application call leaves a file that is byte-perfect (verifies)
-    // but was NEVER chmod'd. So this path must actually RE-RUN mode
-    // application/healing for every reconciler-trusted file — never infer
-    // "modes applied" from content verification alone. Reuses the exact same
-    // guarded heal step downloadDepotFiles' own fresh-install/live-resume
-    // path runs (healReconciledFileModes, shared in depot.ts) so this path
-    // can never silently diverge from that discipline.
-    const jobFiles = new Set(jobs.map((job) => job.file))
-    const { allModesHealed, failures: healFailures } =
-      await healReconciledFileModes(plan, installRoot, jobFiles)
-
-    return {
+    const v = await resumeVerifyRust(appId, {
       targetSteamappsDir: target.targetSteamappsDir,
       installdir,
       name: target.name,
-      depots: plan.depots.map((d) => ({
-        depotId: d.depotId,
-        gid: d.gid,
-        size: d.files.reduce((sum, f) => sum + Number(f.size), 0)
-      })),
-      buildid: plan.buildid,
-      // D-05: reconciliation fills first-install/resume gaps only — a job
-      // left over here means genuinely missing/mismatched content, reported
-      // as a failure (not silently dropped), never re-downloaded from this
-      // startup path (Pitfall 4).
-      outcome: jobs.length === 0 ? 'completed' : 'cancelled',
-      failures: [
-        ...jobs.map((job) => ({
-          file: job.file.filename,
-          error:
-            'missing or content-mismatched on startup resume (not re-downloaded — ' +
-            'startup resume never re-invokes the depot orchestrator, Pitfall 4)'
-        })),
-        ...healFailures
-      ],
-      allFilesVerified,
-      // CR-01: only true once modes were ACTUALLY re-applied/healed THIS run
-      // AND that healing succeeded for every file — a healing failure (or a
-      // healing step that never ran) forces this false, so
-      // canWriteFullOwnership falls back to the safe 1026 verify-handoff
-      // instead of a wrongful StateFlags=4.
-      allModesApplied: allFilesVerified && allModesHealed
-    }
-  } catch (planErr) {
+      os: hostSteamDepotOsForResume()
+    })
+    logInfo(
+      `Steam: rust resume verify for appId ${appId}: missing=${v.missing.length} verified=${v.allFilesVerified} modesHealed=${v.allModesHealed} StateFlags=${v.acf?.stateFlags ?? 'none'}`,
+      LogPrefix.Steam
+    )
+    return null
+  } catch (verifyErr) {
     logWarning(
       [
-        `Steam: startup resume plan rebuild/reconciliation failed for appId ${appId}, ` +
+        `Steam: startup resume verify failed for appId ${appId}, ` +
           'falling back to the honest-empty 1026 finalize:',
-        planErr
+        verifyErr
       ],
       LogPrefix.Steam
     )
@@ -285,10 +184,10 @@ async function buildResumeFinalizeOpts(
 /**
  * steam-startup-resume-crash (2026-07-18) / D-04 softened: user-initiated
  * counterpart to init()'s detect-only surfacing below. Performs the SAME
- * locate -> rebuild-plan -> reconcile -> finalize -> watch sequence init()
+ * locate -> verify -> finalize -> watch sequence init()
  * used to run UNATTENDED on every launch — now it only runs when the user
  * actually triggers a resume (SteamGame.install() calls this first when the
- * library entry is flagged steamResumePending). Moving buildDepotPlan's
+ * library entry is flagged steamResumePending). Moving the depot plan's
  * PICS/manifest network fetch (and everything chained after it) off the boot
  * path is the actual fix: a native fatal in that machinery running
  * unattended immediately after launch was the confirmed crash trigger.

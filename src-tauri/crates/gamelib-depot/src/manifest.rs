@@ -29,6 +29,8 @@ const STEAM3_MANIFEST_MAGIC: u32 = 0x1634_9781;
 
 const DIRECTORY_FLAG: u32 = 64;
 const SYMLINK_FLAG: u32 = 512;
+/// EDepotFileFlag InstallScript (`bridge/sharedRedists.ts` INSTALLSCRIPT_FLAG).
+const INSTALLSCRIPT_FLAG: u32 = 256;
 /// Matched paths returned per depot (T-73-36: a summary never carries the file list).
 const MATCH_CAP: usize = 1000;
 
@@ -37,21 +39,26 @@ pub fn normalize_depot_path(p: &str) -> String {
     p.replace('\\', "/").trim_start_matches('/').to_lowercase()
 }
 
-/// Summary of one manifest: non-directory entry count, their bytes, and the normalised paths a
-/// pattern list selects. A pattern with a `/` must equal the whole normalised path; one without
-/// matches the basename (the `screenDepotPlanForSteamApi` rule). Case-insensitive via
-/// normalisation. Directories and symlinks never match.
+/// Summary of one manifest: non-directory entry count, their bytes, the normalised paths a
+/// pattern list selects, and the InstallScript-flagged filenames as the manifest spells them. A
+/// pattern with a `/` must equal the whole normalised path; one without matches the basename
+/// (the `screenDepotPlanForSteamApi` rule). Case-insensitive via normalisation. Directories and
+/// symlinks never match.
 fn summarize_manifest(depot_id: &str, m: &DepotManifest, patterns: &[String]) -> DepotSummary {
     let pats: Vec<String> = patterns.iter().map(|p| normalize_depot_path(p)).collect();
     let mut file_count = 0u64;
     let mut total_bytes = 0u64;
     let mut matches: Vec<String> = Vec::new();
+    let mut installscripts: Vec<String> = Vec::new();
     for f in &m.files {
         if f.flags & DIRECTORY_FLAG != 0 {
             continue;
         }
         file_count += 1;
         total_bytes += f.size;
+        if f.flags & INSTALLSCRIPT_FLAG != 0 && installscripts.len() < MATCH_CAP {
+            installscripts.push(f.filename.clone());
+        }
         if f.flags & SYMLINK_FLAG != 0 || matches.len() >= MATCH_CAP {
             continue;
         }
@@ -73,6 +80,7 @@ fn summarize_manifest(depot_id: &str, m: &DepotManifest, patterns: &[String]) ->
         file_count,
         total_bytes,
         matches,
+        installscripts,
     }
 }
 

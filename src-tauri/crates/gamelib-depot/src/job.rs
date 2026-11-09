@@ -110,6 +110,9 @@ pub struct DepotSummary {
     pub file_count: u64,
     pub total_bytes: u64,
     pub matches: Vec<String>,
+    /// Filenames (manifest form, not normalised) of the files flagged InstallScript (256), so a
+    /// shared redist can find its installscript without the file list (73-19, D-02).
+    pub installscripts: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

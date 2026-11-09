@@ -1,10 +1,8 @@
 // Phase 21 depot-download orchestrator: public entry (62-10).
 //
-// depot.ts was folded into the sibling modules in this directory (planModel,
-// plan, machO, download, downloadFiles, finalize, contentServers, outcome,
-// sharedRedist). This barrel re-exports the exact name set the old depot.ts
-// exposed, so external `from './depot'` importers resolve here unchanged.
-// Sibling modules import each other directly and never import this file.
+// This barrel is what external `from './depot'` importers resolve. Sibling modules import each
+// other directly and never import this file. Since 73-19 every download runs in Rust; the TS
+// pipeline modules still re-exported below (download, downloadFiles, finalize) go in 73-20.
 
 export {
   CHUNK_CONCURRENCY,
@@ -18,7 +16,6 @@ export {
   shouldFinalizeAfterThrow,
   downloadFileChunks
 } from './download'
-export type { DepotDownloadFailure } from './download'
 export { reduceContentServers } from './contentServers'
 export {
   selectPrimaryDepotFailure,
@@ -34,12 +31,7 @@ export type {
 export { finalizeToSteam } from './finalize'
 export type { FinalizeToSteamOpts } from './finalize'
 export { healReconciledFileModes, downloadDepotFiles } from './downloadFiles'
-export {
-  PLAN_BUILD_MAX_ATTEMPTS,
-  buildDepotPlan,
-  screenDepotPlanForSteamApi,
-  prescreenBridgeDepots
-} from './plan'
+export { PLAN_BUILD_MAX_ATTEMPTS, prescreenBridgeDepots } from './plan'
 export {
   DIRECTORY_FLAG,
   SYMLINK_FLAG,
@@ -51,6 +43,7 @@ export {
   HIDDEN_FLAG
 } from './planModel'
 export type {
+  DepotDownloadFailure,
   DownloadSteamDepotsOpts,
   DepotPlanFile,
   DepotPlan,

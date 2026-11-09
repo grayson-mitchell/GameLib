@@ -353,3 +353,25 @@ async fn summarize_with_every_depot_blocked_fails_with_eresult_40() {
     assert_eq!(err.kind, ErrorKind::ManifestUnavailable);
     assert_eq!(err.eresult, Some(40));
 }
+
+#[tokio::test]
+async fn summarize_reports_installscript_flagged_files_in_manifest_form() {
+    let cdn = FakeCdn::start().await;
+    let script = "_CommonRedist\\DirectX\\Jun2010\\installscript.vdf";
+    let mut flagged = file(enc_name(script), 4, 7);
+    flagged.flags = Some(256 | 32);
+    cdn.script(
+        "/depot/10/manifest/99/5/C",
+        vec![Reply::Status(
+            200,
+            build(vec![file(enc_name("k.bin"), 4, 9), flagged], true, 99),
+        )],
+    );
+    let dir = tempfile::tempdir().unwrap();
+    let s = store(&cdn, dir.path());
+    let res = summarize(summarize_req(vec![depot("99")], &cdn), &s)
+        .await
+        .unwrap();
+    assert_eq!(res.depots[0].file_count, 2);
+    assert_eq!(res.depots[0].installscripts, vec![script.to_string()]);
+}

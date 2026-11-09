@@ -155,6 +155,8 @@ interface RustDepotSummary {
   fileCount: number
   totalBytes: number
   matches: string[]
+  /** InstallScript-flagged (256) filenames as the manifest spells them (73-19). */
+  installscripts: string[]
 }
 
 /** Either the per-depot summaries or the failure that stopped them. */

@@ -1,6 +1,6 @@
-// Rust paths for the three secondary depot consumers behind GAMELIB_DEPOT_PIPELINE=rust
-// (73-14, D-02, D-13, D-16): the steam_api prescreen, the selected-files fetch behind the
-// original-DLL restore, and the startup-resume verify.
+// Rust paths for the three secondary depot consumers (73-14, D-02, D-13): the steam_api
+// prescreen, the selected-files fetch behind the original-DLL restore, and the startup-resume
+// verify. The only pipeline since 73-19 removed the D-16 flag.
 //
 // Node does the CM half (appinfo, depot selection, keys, content servers, tokens); Rust reads
 // manifests. Nothing here fetches a manifest in TS. Exit contract: no timers or handles.
@@ -31,7 +31,7 @@ import type { RustFinalizeSpec } from './types'
 
 export type PrescreenResult = 'none' | 'x86' | 'x64' | 'both' | 'unknown'
 
-/** The same two basenames screenDepotPlanForSteamApi looks for. */
+/** The two steam_api basenames the bridge prescreen looks for (D-51-06). */
 const STEAM_API_PATTERNS = ['steam_api.dll', 'steam_api64.dll']
 
 type Lease = Awaited<ReturnType<typeof SteamUser.acquireAuthenticated>>
@@ -54,10 +54,9 @@ async function acquireOrThrow(
 }
 
 /**
- * D-02: the bridge prescreen from `depot_manifest_summary`. Same result type and same
- * never-throws contract as the TS prescreenBridgeDepots; any failure resolves 'unknown'.
- * A manifest-level EResult-40 (Blocked) refusal skips that depot, as on the TS path; when every
- * depot is blocked the summary fails and this resolves 'unknown', like the TS plan-build throw.
+ * D-02: the bridge prescreen from `depot_manifest_summary`. Never throws; any failure resolves
+ * 'unknown'. A manifest-level EResult-40 (Blocked) refusal skips that depot; when every depot is
+ * blocked the summary fails and this resolves 'unknown'.
  */
 export async function prescreenBridgeDepotsRust(
   appId: string,
@@ -135,7 +134,7 @@ export async function prescreenBridgeDepotsRust(
 
 /**
  * select_files job for the original-DLL restore. Never finalizes, so no ACF is written. Never
- * throws: every failure maps to a structured status, like the TS downloadSelectedDepotFiles.
+ * throws: every failure maps to a structured status.
  */
 export async function downloadSelectedDepotFilesRust(
   appId: string,
@@ -277,8 +276,8 @@ export async function resumeVerifyRust(
     if (outcome.status === 'cancelled') {
       throw new Error('resume verify job was cancelled')
     }
-    // The job failed before it could finalize (e.g. every depot blocked, EResult 40: the TS plan
-    // build throws there too), so no ACF exists. Reject so the caller writes the honest-empty one.
+    // The job failed before it could finalize (e.g. every depot blocked, EResult 40), so no ACF
+    // exists. Reject so the caller writes the honest-empty one.
     if (outcome.status === 'error' && !outcome.acf) {
       throw new Error(
         `resume verify job failed before finalize: ${outcome.failures[0]?.message ?? 'unknown'}`

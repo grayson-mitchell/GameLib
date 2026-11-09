@@ -23,7 +23,7 @@ import {
   selectPrimaryDepotFailure,
   type downloadSteamDepots
 } from '../depot/outcome'
-import type { DepotDownloadFailure } from '../depot/download'
+import type { DepotDownloadFailure } from '../depot/planModel'
 import type { RustFailure, RustOutcome } from './types'
 
 // The UI-facing outcome shape; derived so depot/outcome.ts need not export its interface.

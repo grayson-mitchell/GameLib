@@ -1,4 +1,4 @@
-// Rust install entry points behind GAMELIB_DEPOT_PIPELINE=rust (73-13, D-04, D-11, D-12).
+// Rust install entry points (73-13, D-04, D-11, D-12); the only depot pipeline since 73-19.
 //
 // Node does the CM work (appinfo, ownership, depot selection, keys, content servers, CDN auth
 // tokens and manifest request codes on demand); Rust does everything per file and chunk and
@@ -14,22 +14,31 @@ import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { getContentServerHosts } from '../depot/contentServers'
 import { finalizeToSteam } from '../depot/finalize'
 import { classifyDepotError } from '../depotErrors'
-import type {
-  DownloadSteamDepotsOpts,
-  DepotPlanEntry
-} from '../depot/planModel'
+import type { DownloadSteamDepotsOpts } from '../depot/planModel'
 import {
   assertNumericAppId,
   buildDepotRefs,
   getDepotClient,
-  throwIfAborted
+  throwIfAborted,
+  type DepotRefEntry
 } from '../depot/plan'
 import type { downloadSteamDepots } from '../depot/outcome'
-import { rustOutcomeToDepotOutcome } from './errorMap'
-import { buildDepotJob, type ContentServerHosts } from './jobBuilder'
+import { rustFailureToError, rustOutcomeToDepotOutcome } from './errorMap'
+import {
+  buildDepotJob,
+  toRustDepotRefs,
+  toRustHosts,
+  type ContentServerHosts
+} from './jobBuilder'
+import { registerActiveDepotJob } from './jobRegistry'
 import { createProgressBridge } from './progressBridge'
-import { runDepotJob } from './rustDepot'
-import type { RustDepotJob, RustFinalizeSpec, RustOutcome } from './types'
+import { runDepotJob, summarizeDepots } from './rustDepot'
+import type {
+  RustDepotJob,
+  RustFinalizeSpec,
+  RustJobMode,
+  RustOutcome
+} from './types'
 
 type DepotDownloadOutcome = Awaited<ReturnType<typeof downloadSteamDepots>>
 
@@ -79,7 +88,7 @@ export function requestCodeRefresher(
       const code = String((requestCode ?? '') as string | number | bigint)
       return /^\d+$/.test(code) && code !== '0' ? code : null
     } catch (err) {
-      // EResult 40 (Blocked) is the one refusal the TS plan builder skips a depot for; carry it
+      // EResult 40 (Blocked) is the one refusal buildDepotRefs skips a depot for; carry it
       // to the host handler so the crate does the same (every other failure is "no code").
       if ((err as { eresult?: unknown }).eresult === 40) throw err
       return null
@@ -119,7 +128,8 @@ export async function downloadSteamDepotsRust(
     skippedDepots = refs.skippedDepots
 
     if (!refs.depots.length) {
-      // Same honest empty finalize the TS path writes; no download stage exists to run in Rust.
+      // Honest empty finalize: a dangling prior partial is never left unresolved, and there is
+      // no download stage to run in Rust.
       await finalizeToSteam(appId, {
         targetSteamappsDir: opts.targetSteamappsDir,
         installdir: opts.installdir,
@@ -173,8 +183,9 @@ export async function downloadSteamDepotsRust(
       onEvent: (ev) => bridge.onEvent(ev)
     })
     logOutcome(job, outcome)
-    // Manifest-level EResult-40 refusals join the key-level ones, like plan.skippedDepots. When
-    // every depot was blocked the TS plan build throws, so no skipped list is reported then.
+    // Manifest-level EResult-40 refusals join the key-level ones. When every depot was blocked
+    // the job fails (as buildDepotRefs throws for all-blocked keys), so no skipped list is
+    // reported then.
     const manifestSkipped = outcome.skippedDepots ?? []
     skippedDepots =
       manifestSkipped.length > 0 &&
@@ -182,7 +193,7 @@ export async function downloadSteamDepotsRust(
         ? undefined
         : [...refs.skippedDepots, ...manifestSkipped]
     if (opts.signal?.aborted === true && outcome.status !== 'cancelled') {
-      // Mirrors the TS path: an abort that raced a finished job still reports cancelled.
+      // An abort that raced a finished job still reports cancelled (D-UAT-09).
       return { status: 'cancelled', skippedDepots }
     }
     return rustOutcomeToDepotOutcome(outcome, skippedDepots)
@@ -209,51 +220,112 @@ export interface SharedRedistHostInfo extends ContentServerHosts {
   cdnAuth: CdnAuthTokenCache
 }
 
-/**
- * The download step of downloadSharedRedistDepots on the Rust path (D-12): one ordinary Rust job
- * for a depot's files under the shared cache root, no finalize and so no ACF. The lease, index
- * file, locks and ledger stay in sharedRedist.ts. `files` being the entry's own file list means
- * the whole depot; any other list is fetched as a select_files job. Resolves true only when the
- * job completed.
- */
-export async function downloadSharedRedistDepotsRust(args: {
+/** One shared redist depot under the shared cache root (D-12). */
+export interface SharedRedistJobArgs {
   appId: string
-  entry: DepotPlanEntry
-  files: DepotPlanEntry['files']
+  ref: DepotRefEntry
   cacheSteamappsDir: string
   installdir: string
   host: SharedRedistHostInfo
   signal?: AbortSignal
-}): Promise<boolean> {
-  const client = getDepotClient()
-  const whole = args.files === args.entry.files
+}
+
+/** An ordinary Rust job with no finalize, so no ACF, under the shared cache root. */
+async function runSharedRedistJob(
+  args: SharedRedistJobArgs,
+  mode: RustJobMode,
+  selectPaths?: string[]
+): Promise<RustOutcome> {
   const job = buildDepotJob({
     appId: args.appId,
-    mode: whole ? 'install' : 'select_files',
+    mode,
     installRoot: join(args.cacheSteamappsDir, 'common', args.installdir),
-    refs: [
-      {
-        depotId: args.entry.depotId,
-        gid: args.entry.gid,
-        key: args.entry.key,
-        ownerAppId: args.appId
-      }
-    ],
+    refs: [args.ref],
     hosts: args.host,
     finalize: null,
-    selectPaths: whole ? undefined : args.files.map((f) => f.filename)
+    selectPaths
   })
-  const bridge = createProgressBridge(args.appId)
+  const bridge =
+    mode === 'verify_only' ? null : createProgressBridge(args.appId)
   const outcome = await runDepotJob(job, {
     signal: args.signal,
     tokenCache: args.host.cdnAuth,
     refreshRequestCode: requestCodeRefresher(
-      client,
-      new Map([[args.entry.depotId, args.appId]]),
+      getDepotClient(),
+      new Map([[args.ref.depotId, args.appId]]),
       args.appId
     ),
-    onEvent: (ev) => bridge.onEvent(ev)
+    onEvent: (ev) => bridge?.onEvent(ev)
   })
   logOutcome(job, outcome)
+  return outcome
+}
+
+/**
+ * The download step of downloadSharedRedistDepots (D-12): the whole depot, or only `selectPaths`
+ * as a select_files job (the installscript). The lease, index file, locks and ledger stay in
+ * sharedRedist.ts. Resolves true only when the job completed.
+ */
+export async function downloadSharedRedistDepotsRust(
+  args: SharedRedistJobArgs & { selectPaths?: string[] }
+): Promise<boolean> {
+  const outcome = await runSharedRedistJob(
+    args,
+    args.selectPaths ? 'select_files' : 'install',
+    args.selectPaths
+  )
   return outcome.status === 'completed'
+}
+
+/**
+ * The cached-depot check (WR-05): a verify_only job, so every file is sha1-checked against the
+ * manifest and nothing is fetched. Resolves the normalised paths that are missing or mismatched,
+ * or null when the job could not verify at all (the caller treats that as a damaged cache).
+ */
+export async function verifySharedRedistDepotRust(
+  args: SharedRedistJobArgs
+): Promise<string[] | null> {
+  const outcome = await runSharedRedistJob(args, 'verify_only')
+  if (outcome.status !== 'completed' || outcome.missing === null) return null
+  return outcome.missing
+}
+
+/**
+ * The installscript filenames of one shared redist depot, as the manifest spells them, from a
+ * Rust manifest summary (D-02): TS never sees the file list. Rejects when the summary fails or
+ * Steam refused the manifest (EResult 40), so the caller files the depot under `failed`.
+ */
+export async function sharedRedistInstallscriptsRust(
+  args: Pick<SharedRedistJobArgs, 'appId' | 'ref' | 'host'>
+): Promise<string[]> {
+  // The crate asks for CDN tokens under this host job id (73-12).
+  const dispose = registerActiveDepotJob(`summary-${args.appId}`, {
+    appId: args.appId,
+    tokenCache: args.host.cdnAuth,
+    refreshRequestCode: requestCodeRefresher(
+      getDepotClient(),
+      new Map([[args.ref.depotId, args.appId]]),
+      args.appId
+    ),
+    onEvent: () => {}
+  })
+  let res
+  try {
+    res = await summarizeDepots({
+      appId: args.appId,
+      depots: toRustDepotRefs([args.ref]),
+      hosts: toRustHosts(args.host),
+      patterns: []
+    })
+  } finally {
+    dispose()
+  }
+  if ('error' in res) throw rustFailureToError(res.error)
+  const summary = res.depots.find((d) => d.depotId === args.ref.depotId)
+  if (!summary) {
+    throw new Error(
+      `shared redist depot ${args.ref.depotId}: no manifest summary (skipped: ${res.skippedDepots.join(',') || 'none'})`
+    )
+  }
+  return summary.installscripts
 }

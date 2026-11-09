@@ -100,6 +100,21 @@ export interface DepotModeCounters {
   modeCallsites: number
 }
 
+/**
+ * One failed file (or, with `scope: 'run'`, the whole run). Lives here rather than in the TS
+ * download module so the Rust error map and `selectPrimaryDepotFailure` outlive it (73-19).
+ */
+export interface DepotDownloadFailure {
+  file: string
+  error: string
+  /** 37-02: the original thrown value, so classifyDepotError can read `.code`/`.eresult` off it
+   *  instead of the flattened `error` string. Optional: not every producer has one. */
+  cause?: unknown
+  /** Quick 260927-tpm: tags a run-level give-up (the stall bound) so it can be told apart from a
+   *  per-file failure. Absent means file-level. */
+  scope?: 'run'
+}
+
 export interface DownloadSteamDepotsOpts {
   targetSteamappsDir: string
   installdir: string
@@ -204,39 +219,15 @@ export interface AppCommonName {
   common?: { name?: string }
 }
 
-/** Minimal surface of the raw-manifest parser this module depends on. steam-user's
- *  export path (`steam-user/components/content_manifest.js`) is undocumented and
- *  could move on a version bump (Pitfall 5, T-21-10) — every access to it goes
- *  through this shape, with a loud throw if the shape is ever missing. */
-export interface ContentManifestModule {
-  parse(raw: Buffer): { files: RawManifestFile[] }
-}
-
-interface RawManifestFile {
-  filename: string
-  size: string | number
-  sha_content: string | Buffer
-  flags?: number
-  chunks?: DepotPlanChunk[]
-  linktarget?: string
-}
-
 /** steam-user client surface this module depends on that @types/steam-user does
- *  NOT declare — getDepotDecryptionKey/getRawManifest are undocumented callback
- *  APIs (Pitfall 5). Isolated here so every untyped call is visible in one place;
+ *  NOT declare — getDepotDecryptionKey is an undocumented callback API (Pitfall 5).
+ *  Manifests are fetched by Rust (D-01), so getRawManifest is gone from this view. Isolated here so every untyped call is visible in one place;
  *  everything else (getProductInfo, licenses) uses the real published types. */
 interface SteamUserDepotExtras {
   getDepotDecryptionKey(
     appId: number,
     depotId: number,
     callback: (err: Error | null, key: Buffer) => void
-  ): void
-  getRawManifest(
-    appId: number,
-    depotId: number,
-    gid: string,
-    branch: string,
-    callback: (err: Error | null, raw: Buffer) => void
   ): void
   /** Also undocumented in @types/steam-user (Pitfall 5) — resolves the CDN
    *  hostnames Plan 05's downloadDepotFiles needs to fetch chunks from.
