@@ -1,0 +1,1 @@
+- testContainment.test.ts T-34.2-83 fails: outboundHttpRegistry.test.ts (commit 371298720, quick-261110-9w2) is unclassified. Pre-existing, outside 66-04.
