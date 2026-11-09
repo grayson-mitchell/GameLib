@@ -1,0 +1,7 @@
+(version 1)
+(allow default)
+; Spike 060: make CrossOver behave as unlicensed WITHOUT touching the licence -- deny reads of the
+; licence files only (CXUtils.pm license_file_present: ~/Library/Preferences and /Library/Preferences
+; com.codeweavers.CrossOver.license*). Everything else is allowed. (The 'tie' dir is CrossTie
+; installer data, not the licence -- first attempt.)
+(deny file-read* (regex #"/Library/Preferences/com\.codeweavers\.CrossOver\.license"))

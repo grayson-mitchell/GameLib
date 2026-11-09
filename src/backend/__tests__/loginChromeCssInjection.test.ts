@@ -28,7 +28,7 @@ import { defined } from './helpers/defined'
 
 /** Identical two-stage stripping to `tauriShellSource.test.ts`'s own `loadMainRsCode`. */
 function loadMainRsCode(source?: string): string {
-  const raw = source ?? readTauriShellSource()
+  const raw = source ?? readTauriShellProductionSource()
   return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
@@ -246,6 +246,7 @@ describe('WR-08 local guard: every line of the login_chrome_css_script fn body k
 
 describe('Cargo-test survival pin (CI runs no cargo step)', () => {
   test('the RAW (unstripped) main.rs source still contains the try/catch and ordering cargo tests', () => {
+    // D-10 raw: targets Rust test text (the cargo test fns themselves)
     const raw = readTauriShellSource()
     expect(raw).toContain(
       'fn login_chrome_css_script_is_wrapped_in_a_single_top_level_try_catch'

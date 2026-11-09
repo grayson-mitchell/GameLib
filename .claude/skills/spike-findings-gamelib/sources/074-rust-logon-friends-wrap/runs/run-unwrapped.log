@@ -1,0 +1,6 @@
+[   0.00s unix 1794216058] start    mode unwrapped, hold 60s, steam-vent@a9e8164 (client_os_type 203, chat_mode 2)
+[   1.96s unix 1794216060] logon    Rust session logged on
+[  22.31s unix 1794216080] alive    session answers (PICS access token)
+[  42.60s unix 1794216100] alive    session answers (PICS access token)
+[  62.40s unix 1794216120] alive    session answers (PICS access token)
+[  62.40s unix 1794216120] end      hold over; Rust session alive at end: true. Now check Friends in Mac Steam.

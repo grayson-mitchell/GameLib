@@ -1,0 +1,28 @@
+{
+  "label": "node-run2",
+  "appId": "8930",
+  "outcome": {
+    "status": "error",
+    "errorAction": "retry"
+  },
+  "wallSeconds": 90,
+  "downloadedMiB": 0,
+  "writtenMiB": 0,
+  "avgNetMiBsWholeRun": 0,
+  "steadyNetMiBs": 0,
+  "steadyOutMiBs": 0,
+  "steadyCores": 0,
+  "peakRssMiB": 211,
+  "shareOfSecondsPoolSaturated": 0,
+  "avgPoolQueued": 0,
+  "avgFetchInflight": 0,
+  "avgFetchMsPerChunk": 0,
+  "avgDecodeMsPerChunk": 0,
+  "chunks": 0,
+  "fetchErrors": 0,
+  "corpus": {
+    "chunks": 0,
+    "MiB": 0,
+    "formats": {}
+  }
+}

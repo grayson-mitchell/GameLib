@@ -641,6 +641,10 @@ pub(crate) fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std
             shell_diag(&invoke_abandoned_message("sidecar exited", &id, &channel));
         }
 
+        // D-08: no consumer remains for any depot job's events or responses, so stop them all.
+        // Runs for an intentional shutdown too; the exit path then waits for finalize.
+        on_sidecar_eof_cancel_jobs();
+
         // D-01/D-02: an EOF outside an intentional shutdown means the sidecar died. Tell the user.
         on_sidecar_eof(&state.shutting_down, &state.eof_surfaced, || {
             surface_dead_sidecar(&app, &state);

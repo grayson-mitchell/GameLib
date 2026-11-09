@@ -20,7 +20,7 @@
  * (project memory `strip-source-comments-eats-rust-deref-lines`) -- no assertion target
  * line below begins with `*`.
  */
-import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -51,7 +51,7 @@ const BACKEND_SRC_DIR = join(__dirname, '..')
 
 /** Mirrors `tauriShellSource.test.ts`'s `loadMainRsCode` two-stage strip verbatim. */
 function loadMainRsCode(): string {
-  const raw = readTauriShellSource()
+  const raw = readTauriShellProductionSource()
   return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))

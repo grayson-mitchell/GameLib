@@ -1,0 +1,29 @@
+{
+  "name": "multi-depot-collision",
+  "appId": "900030",
+  "mode": "install",
+  "installRoot": "multi-depot-collision",
+  "depots": [
+    {
+      "depotId": "900031",
+      "manifestId": "7000000000000000004",
+      "keyHex": "53077edba7a6aa6dfd1a2cc56358807d606229cb3d489a460ff8b2371a6ed63b",
+      "manifestFile": "manifests/900031_7000000000000000004.bin"
+    },
+    {
+      "depotId": "900032",
+      "manifestId": "7000000000000000005",
+      "keyHex": "1d1256c53288911e80caa9de8bffbda8a3dafb29fc125a59e92ab13c2183689d",
+      "manifestFile": "manifests/900032_7000000000000000005.bin"
+    }
+  ],
+  "finalize": {
+    "steamappsDir": "steamapps",
+    "installdir": "multi-depot-collision",
+    "name": "Fixture multi-depot-collision",
+    "buildid": "1004",
+    "lastOwner": "76561197960265728",
+    "allowFullOwnership": true
+  },
+  "hostsHint": ["cdn.fixture.invalid"]
+}

@@ -1,0 +1,7 @@
+[package]
+name = "gilrs-probe"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gilrs = "0.11"

@@ -15,6 +15,7 @@
  * the real code never changed.
  */
 import {
+  classifyCfgTestAttr,
   isExcludedShellFile,
   listRustTestModuleBlocks,
   listTauriShellSourceFiles,
@@ -23,6 +24,7 @@ import {
   readHandlerBody,
   readMacosEpicEmbedSource,
   readTauriShellFile,
+  readTauriShellProductionFile,
   readTauriShellProductionSource,
   readTauriShellSource,
   readTopLevelFnBody,
@@ -77,7 +79,7 @@ const CAPABILITIES_PATH = join(
  * `stripTrailingLineComment`, which cuts only at a `//` found OUTSIDE a quoted string.
  */
 function loadMainRsCode(source?: string): string {
-  const raw = source ?? readTauriShellSource()
+  const raw = source ?? readTauriShellProductionSource()
   return stripSourceComments(raw)
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
@@ -343,9 +345,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 45 one-line arms and no catch-all arm', () => {
-    const router = readTauriShellFile('rust_dispatch.rs')
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(45)
+  test('71-07 rust_dispatch.rs is a flat router: 48 one-line arms and no catch-all arm', () => {
+    const router = readTauriShellProductionFile('rust_dispatch.rs')
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(48)
     expect(router).not.toContain('_ =>')
   })
 
@@ -578,7 +580,16 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'scan_steamstub_section',
       'scan_pe_imported_dlls',
       'scan_contained_real',
-      'scan_winemac_metal_exports'
+      'scan_winemac_metal_exports',
+
+      // Phase 73 plan 12 (D-03, D-06, D-08) -- three pass-through arms into the Tauri-free
+      // `gamelib-depot` crate, one per RUST_DEPOT_* channel. PROVEN: `depotChannelParity.test.ts`
+      // pins arms == crate OPS == RUST_DEPOT_CHANNELS, and the shell tests in depot_dispatch.rs
+      // cover the install-root guard and the sidecar-EOF cancel. NOT ATTEMPTED here: a live
+      // job round trip; that is the live gate in plans 17/18.
+      'depot_job_cancel',
+      'depot_job_run',
+      'depot_manifest_summary'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)
@@ -981,8 +992,11 @@ describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07
     expect(body).toContain('app.clipboard().read_text()')
   })
 
-  test('REQ-34.3-08 the clipboard_text_arg pure helper exists', () => {
-    expect(loadMainRsCode()).toContain('fn clipboard_text_arg')
+  // 71-19 vacuous pin found: `fn clipboard_text_arg` no longer exists in production (the hand
+  // helper was replaced by the generated `ClipboardWriteTextArgs`); the old needle was satisfied
+  // only by the `fn clipboard_text_arg_*` cargo test names. Re-pointed to the production construct.
+  test('REQ-34.3-08 the clipboard write-args parse (ClipboardWriteTextArgs::from_args) exists', () => {
+    expect(loadMainRsCode()).toContain('ClipboardWriteTextArgs::from_args')
   })
 
   test('REQ-34.3-08 the clipboard_read_value pure helper exists', () => {
@@ -1016,7 +1030,8 @@ describe('REQ-34.3-08 main.rs clipboard seam (Phase 34.3 Plan 03, D-01/D-02/D-07
   ]
 
   test('REQ-34.3-08 every clipboard #[cfg(test)] fn plan 34.3-03 added still exists', () => {
-    const code = loadMainRsCode()
+    // D-10 raw: targets Rust test text (the clipboard cargo test fn names)
+    const code = loadMainRsCode(readTauriShellSource())
     for (const fnName of EXPECTED_CLIPBOARD_TEST_FN_NAMES) {
       expect(code).toContain(`fn ${fnName}`)
     }
@@ -4093,7 +4108,7 @@ describe('quick 260930-lyk: tray Auto reads the TASKBAR theme, never the app the
   })
 
   test('NON-VACUITY: the RAW main.rs does carry AppsUseLightTheme (the rationale comment), so the negative gate above is comment-scoped rather than trivially true', () => {
-    const raw = readTauriShellSource()
+    const raw = readTauriShellProductionSource()
     expect(raw).toContain('AppsUseLightTheme')
     expect(loadMainRsCode(raw)).not.toContain('AppsUseLightTheme')
   })
@@ -4354,7 +4369,7 @@ describe('quick 260930-q11: both login-sheet paths resolve their NSWindow handle
   })
 
   test('NON-VACUITY arm 2: the RAW main.rs names the deleted `SendPtr` wrapper in the replacement prose, and stripping removes it -- so the negatives above are genuinely comment-scoped, not accidentally true because the phrase left the file', () => {
-    const raw = readTauriShellSource()
+    const raw = readTauriShellProductionSource()
     // This exact phrase occurs ONLY in the doc-comment prose this quick task wrote on both
     // login-sheet paths ("The `SendPtr` wrapper and the two raw-address ... casts this function
     // used to carry are gone"), never in code. NOTE for a future reader: because
@@ -4505,7 +4520,7 @@ describe('tauriShellSource helper scope', () => {
   })
 
   it('every `mod x;` declared in main.rs resolves to a listed file (or a pre-split sibling)', () => {
-    const code = stripSourceComments(readTauriShellFile('main.rs'))
+    const code = stripSourceComments(readTauriShellProductionFile('main.rs'))
     const listed = listTauriShellSourceFiles()
     const decl =
       /(?:#\[path\s*=\s*"([^"]+)"\]\s*)?^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;/gm
@@ -4527,6 +4542,8 @@ describe('tauriShellSource helper scope', () => {
       'src/backend/testUtils/tauriShellSource.ts': 'the helper itself',
       'src/backend/__tests__/tauriShellSource.test.ts':
         'this guard (names main.rs as the last listed file)',
+      'src/backend/__tests__/longRunningChannels.test.ts':
+        "reads main.rs's OWN test module (71-19 D-10/WR-03), not the combined source",
       'meta/captureShellScrollback.ts':
         'assertRepoRoot only checks main.rs EXISTS, it never reads it',
       'meta/__tests__/captureShellScrollback.test.ts':
@@ -4606,6 +4623,67 @@ describe('production-source reader (Phase 71 D-10)', () => {
     expect(stripRustTestModules(onFn)).toBe(onFn)
   })
 
+  test('a cfg(all(test, ..)) test mod is cut', () => {
+    const src = rust(
+      'fn a() {}',
+      '#[cfg(all(test, target_os = "macos"))]',
+      'mod terminate_reply_tests {',
+      '    fn t() {}',
+      '}',
+      'fn after() {}',
+      ''
+    )
+    expect(stripRustTestModules(src)).toBe(
+      rust('fn a() {}', 'fn after() {}', '')
+    )
+    expect(listRustTestModuleBlocks(src).map((b) => b.name)).toEqual([
+      'terminate_reply_tests'
+    ])
+  })
+
+  test('stacked column-0 attributes: the cut starts at the first attribute of the run, any order', () => {
+    const a = rust(
+      'fn a() {}',
+      '#[cfg(test)]',
+      '#[cfg(windows)]',
+      'mod w_tests {',
+      '}',
+      'fn b() {}',
+      ''
+    )
+    expect(stripRustTestModules(a)).toBe(rust('fn a() {}', 'fn b() {}', ''))
+    expect(listRustTestModuleBlocks(a)[0]?.startLine).toBe(1)
+    const b = rust(
+      'fn a() {}',
+      '#[cfg(windows)]',
+      '#[allow(dead_code)]',
+      '#[cfg(test)]',
+      'mod w_tests {',
+      '}',
+      'fn b() {}',
+      ''
+    )
+    expect(stripRustTestModules(b)).toBe(rust('fn a() {}', 'fn b() {}', ''))
+    expect(listRustTestModuleBlocks(b)[0]?.startLine).toBe(1)
+  })
+
+  test('a non-test cfg mod is kept', () => {
+    const src = rust('#[cfg(windows)]', 'mod win {', '}', 'fn a() {}')
+    expect(stripRustTestModules(src)).toBe(src)
+  })
+
+  test('ambiguous test cfg shapes throw (fail closed)', () => {
+    for (const attr of [
+      '#[cfg(any(test, feature = "x"))]',
+      '#[cfg(not(test))]'
+    ]) {
+      const src = rust('fn a() {}', attr, 'mod m {', '}')
+      expect(() => listRustTestModuleBlocks(src)).toThrow(/ambiguous test cfg/)
+    }
+    expect(classifyCfgTestAttr('#[cfg(all(unix, test))]')).toBe('test')
+    expect(classifyCfgTestAttr('#[cfg(windows)]')).toBe('other')
+  })
+
   test('readTopLevelFnBody returns the body for pub(crate) and plain fns', () => {
     const src = rust(
       'pub(crate) fn rpc_x(a: u8) {',
@@ -4662,7 +4740,11 @@ describe('D-10 production reader proof (Phase 71 wave 0)', () => {
 
   // Topic-named test mods living in the combined (non-main) files today. main.rs's own `mod tests`
   // is handled separately below.
-  const EXPECTED_TEST_MOD_NAMES = ['relay_allow_list_tests', 'shell_open_tests']
+  const EXPECTED_TEST_MOD_NAMES = [
+    'relay_allow_list_tests',
+    'shell_open_tests',
+    'terminate_reply_tests'
+  ]
 
   test('per file: strip removes exactly the enumerated test-mod line ranges and nothing else', () => {
     const names: string[] = []
@@ -4670,6 +4752,7 @@ describe('D-10 production reader proof (Phase 71 wave 0)', () => {
     for (const f of listTauriShellSourceFiles().filter(
       (p) => p !== 'main.rs'
     )) {
+      // D-10 raw: targets Rust test text (the per-file strip proof must see the test modules)
       const src = readTauriShellFile(f)
       const blocks = listRustTestModuleBlocks(src)
       const lines = src.split('\n')
@@ -4692,7 +4775,56 @@ describe('D-10 production reader proof (Phase 71 wave 0)', () => {
     expect(Math.max(...colocatedTestsModsPerFile)).toBeLessThanOrEqual(1)
   })
 
+  test('terminate_reply_tests is cut from production text; the production fn survives (WR-02)', () => {
+    expect(readTauriShellProductionSource()).not.toContain(
+      'mod terminate_reply_tests'
+    )
+    expect(readTauriShellProductionSource()).not.toContain(
+      'terminate_reply(false, false)'
+    )
+    // D-10 raw: targets Rust test text (proves the production fn survives the strip)
+    const raw = readTauriShellFile('terminate_veto.rs')
+    expect(
+      listRustTestModuleBlocks(raw)
+        .map((b) => b.name)
+        .sort()
+    ).toEqual(['terminate_reply_tests', 'tests'])
+    expect(stripRustTestModules(raw)).toContain('fn terminate_reply(')
+  })
+
+  test('every test-cfg-gated column-0 mod in every shell file falls inside a cut block', () => {
+    const files: string[] = listTauriShellSourceFiles().map((f) => f)
+    const embedDir = join(SHELL_SRC, 'macos_epic_embed')
+    for (const f of readdirSync(embedDir).sort())
+      if (f.endsWith('.rs')) files.push(`macos_epic_embed/${f}`)
+    files.push('macos_epic_embed.rs')
+    let visited = 0
+    for (const f of files) {
+      // D-10 raw: targets Rust test text (cross-check scans for test-gated mods)
+      const text = readFileSync(join(SHELL_SRC, f), 'utf-8')
+      const lines = text.split('\n')
+      const blocks = listRustTestModuleBlocks(text)
+      lines.forEach((line, i) => {
+        if (!/^mod [A-Za-z_][A-Za-z0-9_]* \{$/.test(line)) return
+        let start = i
+        while (start > 0 && (lines[start - 1] ?? '').startsWith('#[')) start--
+        const gated = lines
+          .slice(start, i)
+          .some((l) => l.startsWith('#[cfg(') && /\btest\b/.test(l))
+        if (!gated) return
+        visited++
+        expect({
+          f,
+          line: i,
+          cut: blocks.some((b) => i >= b.startLine && i <= b.endLine)
+        }).toEqual({ f, line: i, cut: true })
+      })
+    }
+    expect(visited).toBeGreaterThanOrEqual(20)
+  })
+
   test('main.rs: stripped text equals the old slice before `#[cfg(test)]` + its mod tests, modulo trailing newline', () => {
+    // D-10 raw: targets Rust test text (main.rs strip proof must see its `mod tests`)
     const main = readTauriShellFile('main.rs')
     const oldSlice = main.slice(0, main.indexOf('#[cfg(test)]\nmod tests {'))
     expect(main).toContain('#[cfg(test)]\nmod tests {')
@@ -4766,5 +4898,101 @@ describe('no reader slices the combined shell source on mod tests (D-10)', () =>
     visit('src')
     visit('meta')
     expect(offenders).toEqual([])
+  })
+})
+
+describe('raw shell-source readers are allow-listed (D-10, 71-19 WR-01)', () => {
+  const REPO_ROOT = join(__dirname, '..', '..', '..')
+  const DEFINITIONS = 'src/backend/testUtils/tauriShellSource.ts'
+
+  /** Raw (unstripped) readTauriShellSource/readTauriShellFile calls, minus imports and wrapped ones. */
+  const countRawShellReads = (code: string): number => {
+    let n = 0
+    for (const line of stripSourceComments(code).split('\n')) {
+      if (/^\s*import\b/.test(line)) continue
+      const re = /\breadTauriShellSource\(|\breadTauriShellFile\(/g
+      for (const m of line.matchAll(re)) {
+        const before = line.slice(0, m.index)
+        if (/stripRustTestModules\(\s*$/.test(before)) continue
+        n++
+      }
+    }
+    return n
+  }
+
+  const RAW_SHELL_READ_ALLOWLIST: Record<
+    string,
+    { count: number; reason: string }
+  > = {
+    'src/backend/__tests__/tauriShellSource.test.ts': {
+      count: 4,
+      reason:
+        'strip proofs and cutter cross-check must see the Rust test text they cut'
+    },
+    'src/backend/__tests__/sidecarShutdownFlagSource.test.ts': {
+      count: 1,
+      reason: 'the mutation self-test needs the raw file as a vacuity witness'
+    },
+    'src/backend/__tests__/loginChromeCssInjection.test.ts': {
+      count: 1,
+      reason: 'pins the survival of cargo test fns, which are test text'
+    },
+    'src/backend/__tests__/longRunningChannels.test.ts': {
+      count: 1,
+      reason: "reads main.rs's own test module"
+    }
+  }
+
+  const scan = (): { counts: Record<string, number>; visited: number } => {
+    const counts: Record<string, number> = {}
+    let visited = 0
+    const visit = (dir: string): void => {
+      for (const e of readdirSync(join(REPO_ROOT, dir), {
+        withFileTypes: true
+      })) {
+        const rel = `${dir}/${e.name}`
+        if (e.isDirectory()) {
+          if (e.name !== 'node_modules') visit(rel)
+        } else if (/\.(c|m)?[jt]sx?$/.test(e.name) && rel !== DEFINITIONS) {
+          visited++
+          const n = countRawShellReads(
+            readFileSync(join(REPO_ROOT, rel), 'utf-8')
+          )
+          if (n > 0) counts[rel] = n
+        }
+      }
+    }
+    visit('src')
+    visit('meta')
+    return { counts, visited }
+  }
+
+  test('the raw readers in src/ and meta/ equal the allow-list exactly', () => {
+    const expected: Record<string, number> = {}
+    for (const [k, v] of Object.entries(RAW_SHELL_READ_ALLOWLIST))
+      expected[k] = v.count
+    // A new raw reader sees Rust test text as production. Use readTauriShellProductionSource() /
+    // readTauriShellProductionFile(), or add an entry to RAW_SHELL_READ_ALLOWLIST with a reason.
+    expect(scan().counts).toEqual(expected)
+  })
+
+  test('the scanner is not vacuous', () => {
+    const a = 'readTauri' + 'ShellSource()'
+    const b = 'readTauri' + 'ShellFile'
+    expect(countRawShellReads(`const x = ${a}`)).toBe(1)
+    expect(countRawShellReads(`${b}('sidecar.rs')`)).toBe(1)
+    expect(countRawShellReads(`stripRustTestModules(${b}('a.rs'))`)).toBe(0)
+    expect(countRawShellReads("readTauriShellProductionFile('a.rs')")).toBe(0)
+    expect(countRawShellReads(`// ${a}`)).toBe(0)
+    expect(scan().visited).toBeGreaterThanOrEqual(100)
+  })
+
+  test('every allow-listed file exists and labels each raw site `D-10 raw`', () => {
+    for (const [rel, { count }] of Object.entries(RAW_SHELL_READ_ALLOWLIST)) {
+      const full = join(REPO_ROOT, rel)
+      expect(existsSync(full)).toBe(true)
+      const labels = readFileSync(full, 'utf-8').split('D-10 raw').length - 1
+      expect({ rel, ok: labels >= count }).toEqual({ rel, ok: true })
+    }
   })
 })

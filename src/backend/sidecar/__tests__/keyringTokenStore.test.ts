@@ -17,7 +17,7 @@
  */
 
 import { defined } from 'backend/testUtils/indexed'
-import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
@@ -1832,7 +1832,7 @@ describe('KEYRING_FAILURE_MEMO_MS vs KEYRING_READ_TIMEOUT ordering invariant (Ro
   const KEYRING_TOKEN_STORE_PATH = join(__dirname, '..', 'keyringTokenStore.ts')
 
   function extractKeyringReadTimeoutMs(): number {
-    const raw = readTauriShellSource()
+    const raw = readTauriShellProductionSource()
     const match = raw.match(
       /const KEYRING_READ_TIMEOUT: Duration = Duration::from_secs\((\d+)\);/
     )

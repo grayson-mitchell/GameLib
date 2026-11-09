@@ -26,6 +26,9 @@ import { mockLeaseOk, mockLeaseRefused, mockOpenLease } from './depotLeaseMocks'
 import { decryptFilename } from '../depot/crypto'
 import { at, defined } from './fixtures/indexed'
 
+// This suite exercises the TS depot pipeline. Pin it, because the default is 'rust' since 73-17.
+process.env.GAMELIB_DEPOT_PIPELINE = 'ts'
+
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),

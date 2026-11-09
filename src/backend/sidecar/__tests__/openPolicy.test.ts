@@ -16,7 +16,7 @@ import {
   classifyFolderTarget,
   isLaunchableBundle
 } from '../openPolicy'
-import { readTauriShellFile } from '../../testUtils/tauriShellSource'
+import { readTauriShellProductionFile } from '../../testUtils/tauriShellSource'
 import { stripSourceComments } from '../../testUtils/stripSourceComments'
 
 jest.mock('../../logger', () => ({
@@ -131,8 +131,12 @@ describe('openPolicy', () => {
   })
 
   describe('parity with the Rust shell', () => {
-    const relay = stripSourceComments(readTauriShellFile('relay_commands.rs'))
-    const shellOpen = stripSourceComments(readTauriShellFile('shell_open.rs'))
+    const relay = stripSourceComments(
+      readTauriShellProductionFile('relay_commands.rs')
+    )
+    const shellOpen = stripSourceComments(
+      readTauriShellProductionFile('shell_open.rs')
+    )
 
     it('url constants match relay_commands.rs', () => {
       expect([...OPEN_EXTERNAL_ALLOWED_SCHEMES]).toEqual(
@@ -150,7 +154,9 @@ describe('openPolicy', () => {
     })
 
     it('ShellOpenPath arm delegates to the policy-checked function', () => {
-      const embed = stripSourceComments(readTauriShellFile('rust_dispatch.rs'))
+      const embed = stripSourceComments(
+        readTauriShellProductionFile('rust_dispatch.rs')
+      )
       expect(embed).toContain('shell_open::shell_open_path')
       expect(embed).toMatch(
         /^ {8}RustInvokeChannel::ShellOpenPath => shell_open::shell_open_path\(app, args\),$/m

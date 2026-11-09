@@ -1,0 +1,15 @@
+# b1 (no client registered): SteamStub's decision path in x64\Grim Dawn.exe, main thread 00cc:00d0
+121882.736:00cc:00d0:trace:module:map_image_into_view mapping L"\\??\\C:\\Program Files (x86)\\Steam\\steamapps\\common\\Grim Dawn\\x64\\Grim Dawn.exe" section .bind at 0x140448000 off 43f600 size 392
+121883.928:00cc:00d0:trace:reg:NtOpenKeyEx (0x34,L"Software\\Valve\\Steam\\ActiveProcess",20019,0x10c4e8)
+121883.934:00cc:00d0:trace:reg:NtOpenKeyEx (0x34,L"Software\\Valve\\Steam\\ActiveProcess",20019,0x10be20)
+121883.934:00cc:00d0:trace:reg:NtOpenKeyEx (0x34,L"Software\\Valve\\Steam\\ActiveProcess",20019,0x10c508)
+121883.938:00cc:00d0:trace:reg:NtOpenKeyEx (0xa8,L"Valve",101,0x10d9f8)
+121883.938:00cc:00d0:trace:process:ExpandEnvironmentStringsW (L"steam://run/219990//" 0000000000000000 0)
+121883.938:00cc:00d0:trace:process:ExpandEnvironmentStringsW (L"steam://run/219990//" 00000000002B81F0 22)
+121883.938:00cc:00d0:trace:reg:NtOpenKeyEx (0x28,L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\steam://run/219990//",20019,0x10a9f0)
+121883.938:00cc:00d0:trace:reg:NtOpenKeyEx (0x28,L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\steam://run/219990//.exe",20019,0x10a9f0)
+# p1 (probe steamclient64.dll registered in ActiveProcess\SteamClientDll64):
+09:56:17.234 pid=232 tid=236 DllMain attach 
+09:56:17.236 pid=232 tid=236 CreateInterface("SteamClient017") -> NULL
+09:56:17.236 pid=232 tid=236 CreateInterface("SteamClient014") -> NULL
+2026-10-23T09:56:17.244Z +1314ms game exited code=53 (0x00000035)

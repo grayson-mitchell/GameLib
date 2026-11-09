@@ -14,6 +14,8 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 # Phase 63 (D-03): Tauri-free scanner library behind the scan_* rustInvoke arms.
 gamelib-scan = { path = "crates/gamelib-scan" }
+# Phase 73: Tauri-free Steam depot download pipeline.
+gamelib-depot = { path = "crates/gamelib-depot" }
 # "unstable" (epic-login-non-interactive, pristine-webview attempt, 2026-08-03): required for
 # `tauri::WindowBuilder`/`Window::build()` (a WEBVIEW-LESS window -- see
 # `tauri-2.11.5/src/window/mod.rs`'s `unstable_struct!` macro, which makes `WindowBuilder`
@@ -433,5 +435,10 @@ lto = true
 strip = true
 
 [workspace]
-members = ["crates/gamelib-scan", "crates/gamelib-scan-cli"]
+members = [
+  "crates/gamelib-scan",
+  "crates/gamelib-scan-cli",
+  "crates/gamelib-depot",
+  "crates/gamelib-depot-cli",
+]
 resolver = "2"

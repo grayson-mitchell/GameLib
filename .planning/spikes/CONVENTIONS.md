@@ -73,6 +73,21 @@ question requires otherwise.
   unless the spike set them itself (`spike_*`). Enough to prove identity and change across polls;
   never a real session token on disk. Mirrors `user.ts`'s existing secrecy discipline.
 
+- **Wrap-up `sources/` copies only git-tracked spike files** (`git ls-files .planning/spikes/<n>`).
+  A spike's working tree can hold an installed game, chunk corpora, run state and raw logs that its
+  `.gitignore` keeps out of the repo; the skill's `sources/` is committed, so a directory copy
+  republishes them (067a's first copy was 398 MB of Civ V). *(2026-11-09 wrap-up)*
+- **Signed-in Steam CM probes (Rust migration line, 071–074):** a plain `cargo` binary per
+  candidate crate, pinned to a git `rev`, with a Node `.mjs` beside it that makes the same calls
+  through `steam-user` as the parity reference. The binary reads the refresh token itself from
+  the dev vault (`$TMPDIR/gamelib-dev-secret-vault.json`, slot `steam-refresh-token`); tokens,
+  depot keys and request codes are never printed, and keys are compared by SHA-1 fingerprint.
+  Every signed-in logon on macOS goes through `071a/run-authed.sh` (or its Rust twin in 072/074),
+  which refuses to log on unless Mac Steam's user-initiated LogOff is seen within 5 s. Leave about
+  15 s between back-to-back wrapped runs, or the second wrap refuses while Steam reconnects.
+  Anything the operator types (password, Guard codes) goes through a local page served by the
+  harness, never a terminal. Commit source, README and redacted run logs; `out/` and `target/`
+  are gitignored.
 - **Live Steam-pipeline spikes that reuse production code (Idea E, 067a):** an esbuild bundle
   (`--packages=external`, the sidecar's flags) of a TypeScript harness that imports the real
   `src/backend` functions, next to the app's dev decode worker (`build/main/decompressWorker.js`,

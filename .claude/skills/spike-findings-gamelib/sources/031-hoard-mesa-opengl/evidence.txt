@@ -1,0 +1,34 @@
+031 evidence — UNPATCHED Hoard (sha 54be4b8c…) + mesa-dist-win 26.2.4 x86 (release-mingw.7z sha256 36a30a04d8cab6e2bea2d3c747c326d15024d9711dd80f45ef97ac6f2c3c5086)
+Bottle GameLibSteamBridge-63000, CrossOver 26.3, Apple M5 Ultra, 2026-10-23
+
+== WINEDLLOVERRIDES is dropped by CrossOver's wine wrapper (first llvmpipe attempt, log since overwritten):
+  WINEDLLOVERRIDES = <undefined>   -> OPENGL32.dll loaded 'builtin' -> same 0x004454B3 crash as 030
+  fix: HKCU\Software\Wine\AppDefaults\Reuben.exe\DllOverrides opengl32=native
+
+== softpipe: WORKS (logs/softpipe.*)
+  trace:loaddll:build_module Loaded L"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Hoard\\win32\\libgallium_wgl.dll" at 79AE0000: native
+  trace:loaddll:build_module Loaded L"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Hoard\\win32\\OPENGL32.dll" at 7B990000: native
+  page faults: 0
+  Fri 2026-Oct-23 19'39'58	GL_VENDOR					
+  Mesa	GL_RENDERER				
+  softpipe	GL_VERSION					
+  3.3 (Compatibility Profile) Mesa 26.2.4 (git-9a0169f2a7)	GL_SHADING_LANGUAGE_VERSION
+  3.30	Using Frame buffer/SSAO/deferredlighting: hardware does, client does (default) 
+  Using Vertex array objects/default vertex attributes: hardware does, client does (default) 	
+
+== llvmpipe: FAILS — game msgbox (logs/llvmpipe*-dbg / llvmpipe-lp_*)
+  llvmpipe-dbg.cxlog: MSGBOX_OnInit L"wglChoosePixelFormatARB failed.
+(Hardware 3D acceleration likely not working.)"
+  llvmpipe-lp_native_vector_width_128.cxlog: MSGBOX_OnInit L"wglChoosePixelFormatARB failed.
+(Hardware 3D acceleration likely not working.)"
+  llvmpipe-lp_native_vector_width_128_lp_num_threads_0.cxlog: MSGBOX_OnInit L"wglChoosePixelFormatARB failed.
+(Hardware 3D acceleration likely not working.)"
+  first run variant: msgbox L"ChoosePixelFormat failed"; LP_NATIVE_VECTOR_WIDTH=128 and LP_NUM_THREADS=0 do not help
+
+== zink (wine vulkan -> MoltenVK): FAILS — null call during init (logs/zink-dbg.cxlog)
+  trace:loaddll:build_module Loaded L"C:\\windows\\system32\\vulkan-1.dll" at 79490000: builtin
+  trace:loaddll:build_module Loaded L"C:\\windows\\system32\\winevulkan.dll" at 79440000: builtin
+  trace:vulkan:vkCreateInstance API version 0x402122.
+  wine: Unhandled page fault on read access to 00000000 at address 00000000 (thread 00f0), starting debugger...
+  trace:seh:dispatch_exception eip=00000000 esp=0022f1d4 ebp=0022f688 eflags=00000246
+  trace:vulkan:win32u_vkCreateInstance Instance proc vkEnumeratePhysicalDeviceGroups not found.

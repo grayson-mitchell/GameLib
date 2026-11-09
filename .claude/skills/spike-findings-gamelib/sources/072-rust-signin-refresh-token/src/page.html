@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spike 072 sign-in</title>
+<style>
+  :root { --bg:#f6f6f4; --card:#fff; --fg:#1d1d1b; --muted:#6b6b66; --line:#e2e2dd; --accent:#2f6fde; --ok:#1f8a4c; --bad:#c23b2e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#151514; --card:#1f1f1d; --fg:#ececea; --muted:#9a9a94; --line:#33332f; --accent:#6b9cff; --ok:#4cc27e; --bad:#ff7a6b; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.45 -apple-system, system-ui, sans-serif; }
+  main { max-width:980px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:20px; margin:0 0 4px; } p.sub { color:var(--muted); margin:0 0 20px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .card h2 { font-size:15px; margin:0 0 10px; }
+  label { display:block; font-size:13px; color:var(--muted); margin:8px 0 4px; }
+  input { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg); font:inherit; }
+  button { margin-top:12px; padding:8px 14px; border:0; border-radius:6px; background:var(--accent); color:#fff; font:inherit; cursor:pointer; }
+  button:disabled { opacity:.45; cursor:default; }
+  #qr svg { width:260px; height:260px; background:#fff; padding:8px; border-radius:8px; }
+  .code { border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  td { padding:4px 6px; border-top:1px solid var(--line); vertical-align:top; }
+  .PASS { color:var(--ok); font-weight:600; } .FAIL { color:var(--bad); font-weight:600; }
+  #log { font:12px/1.5 ui-monospace, Menlo, monospace; max-height:320px; overflow:auto; white-space:pre-wrap; }
+  .note { font-size:12px; color:var(--muted); margin-top:8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Spike 072: Steam sign-in from Rust</h1>
+  <p class="sub">Your password and codes go only to the local harness. The token never appears here. Each CM logon briefly takes Mac Steam offline (go-offline wrap), then back online.</p>
+  <div class="grid">
+    <section class="card">
+      <h2>1. QR code</h2>
+      <button id="qrbtn" onclick="post('/qr')">Show QR</button>
+      <div id="qr" style="margin-top:12px"></div>
+      <div class="note">Scan in the Steam mobile app, then approve.</div>
+    </section>
+    <section class="card">
+      <h2>2. Password + Steam Guard</h2>
+      <form id="cred" onsubmit="event.preventDefault(); postForm('/cred', this); this.password.value='';">
+        <label>Account name</label><input name="account" autocomplete="username" required>
+        <label>Password</label><input name="password" type="password" autocomplete="current-password" required>
+        <button id="credbtn">Sign in</button>
+      </form>
+      <form id="codeform" onsubmit="event.preventDefault(); postForm('/code', this); this.code.value='';" style="display:none">
+        <label id="codelabel">Steam Guard code</label><input name="code" class="code" autocomplete="one-time-code" required>
+        <button>Submit code</button>
+      </form>
+    </section>
+    <section class="card">
+      <h2>3. Verify the new token</h2>
+      <div id="tok" class="note">No token yet.</div>
+      <button id="verbtn" onclick="post('/verify')" disabled>Log on with it</button>
+    </section>
+  </div>
+  <section class="card" style="margin-top:16px"><h2>Results</h2><table id="res"></table></section>
+  <section class="card" style="margin-top:16px"><h2>Event log</h2><div id="log"></div><div class="note">Also written to out/events.json.</div></section>
+</main>
+<script>
+  async function post(u) { await fetch(u, { method:'POST' }); }
+  async function postForm(u, f) { await fetch(u, { method:'POST', body:new URLSearchParams(new FormData(f)) }); }
+  let lastLog = -1;
+  async function tick() {
+    try {
+      const s = await (await fetch('/state')).json();
+      document.getElementById('qr').innerHTML = s.qr_svg || '';
+      const cf = document.getElementById('codeform');
+      cf.style.display = s.waiting_for_code ? 'block' : 'none';
+      if (s.waiting_for_code) document.getElementById('codelabel').textContent = 'Steam Guard code (' + s.waiting_for_code + ')';
+      for (const id of ['qrbtn','credbtn']) document.getElementById(id).disabled = s.busy;
+      document.getElementById('verbtn').disabled = s.busy || !s.token;
+      document.getElementById('tok').textContent = s.token ? `From ${s.token.source}: ${s.token.info.len} chars, sub ${s.token.info.sub}, aud ${JSON.stringify(s.token.info.aud)}` : 'No token yet.';
+      document.getElementById('res').innerHTML = Object.entries(s.results).map(([k,v]) => `<tr><td>${k}</td><td class="${v.status||''}">${v.status||''}</td><td>${JSON.stringify(v)}</td></tr>`).join('');
+      if (s.events.length !== lastLog) {
+        lastLog = s.events.length;
+        const el = document.getElementById('log');
+        el.textContent = s.events.map(e => `[${e.t.toFixed(3).padStart(8)}s] ${e.cat.padEnd(8)} ${e.msg}`).join('\n');
+        el.scrollTop = el.scrollHeight;
+      }
+    } catch (e) {}
+    setTimeout(tick, 700);
+  }
+  tick();
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 # Moving sidecar code to Rust: the pattern
 
-Worked example: Phase 63, the executable scanners (`gamelib-scan`, `gamelib-scan-cli`). Next
-application: the Steam depot pipeline (`gamelib-depot`). History lives in
+Worked example: Phase 63, the executable scanners (`gamelib-scan`, `gamelib-scan-cli`). Second
+application: the Steam depot pipeline (`gamelib-depot`, Phase 73). History lives in
 `.planning/phases/63-rust-migration-pattern-and-executable-scanners/`; this file is the recipe, not
 the record.
 
@@ -15,7 +15,8 @@ The app crate (`src-tauri`) stays the workspace root. Each port adds:
 | `src-tauri/crates/<name>-cli` | Optional bin, only if `meta/` tools need the code headlessly. |
 
 Every crate sets `rust-version = "1.77.2"` and the two `[lints.clippy]` deny lines
-(`dbg_macro`, `todo`). Adding a crate or dependency changes `Cargo.lock`: update
+(`dbg_macro`, `todo`). Exception: `gamelib-depot` and `gamelib-depot-cli` set `rust-version = "1.89"`
+because their dependencies need it (aes 0.9: 1.89; cbc, sha1, prost: 1.85). Adding a crate or dependency changes `Cargo.lock`: update
 `EXPECTED_LOCKFILE_CRATE_NAMES` in the same commit (`cargoFeatures.test.ts` fails otherwise).
 
 ## 2. Library contract
@@ -88,7 +89,7 @@ persisted user setting would have needed UI, migration and a removal path.
 
 ## 8. CI
 
-`.github/workflows/rust-test.yml` runs an explicit `cargo test -p gamelib-scan -p gamelib-scan-cli`
+`.github/workflows/rust-test.yml` runs an explicit `cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli`
 and `clippy --workspace` on both legs. Workspace crates are not default members, so a plain
 `cargo test` in `src-tauri` silently skips them. A new crate needs its own `-p` entry.
 

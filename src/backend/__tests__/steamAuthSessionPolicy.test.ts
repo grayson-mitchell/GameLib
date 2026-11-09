@@ -74,6 +74,11 @@ const ACQUIRE_AUTH_ALLOW = [
   `${S}depot/plan.ts`,
   `${S}depot/outcome.ts`,
   `${S}depot/sharedRedist.ts`,
+  // Phase 73 plans 13/14: the Rust-pipeline entry points take the same authenticated lease
+  // depot/plan.ts does, for the CM half (appinfo, keys, request codes) before handing CDN work
+  // to Rust.
+  `${S}depotRust/install.ts`,
+  `${S}depotRust/secondary.ts`,
   INSTALL,
   INSTALL_DEPOT,
   INSTALL_BRIDGE

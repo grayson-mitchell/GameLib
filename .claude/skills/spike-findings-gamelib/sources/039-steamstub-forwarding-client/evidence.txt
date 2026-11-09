@@ -1,0 +1,15 @@
+# Spike 039 f1-x64 (2026-10-23 18:04Z), run via ../038-steamstub-grimdawn-probe/run.sh
+# WATCH=30 VIA=responder ENV_FILE=client.env CXLOG=+process,+loaddll ./run.sh f1-x64
+# with this spike's steamclient64.dll in 038's SteamClientDll64 slot.
+
+C:\steamclient039.log:
+  shim steam_api64.dll -> ok 00006FFFFDE40000
+  CreateInterface(SteamClient017) -> 00006FFFFDE74030     # shim's g_steamclient017_instance
+  CreateInterface(SteamClient014) -> 00006FFFFDE74008     # shim's x64 null object (014 not in table)
+
+responder (dipc036.log):
+  game started pid=236 ... x64\Grim Dawn.exe
+  game exited code=51 (0x00000033)                        # 038/p1 (both NULL) exited 53
+
+helper log: LISTEN + INIT only. No HELLO: the shim never opened its helper connection,
+so nothing the stub called after CreateInterface reached the native client.

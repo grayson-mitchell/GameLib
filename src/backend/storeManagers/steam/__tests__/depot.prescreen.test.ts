@@ -29,6 +29,9 @@ import { decryptFilename } from '../depot/crypto'
 import { fetchChunk } from '../depot/decompress'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
+// This suite exercises the TS depot pipeline. Pin it, because the default is 'rust' since 73-17.
+process.env.GAMELIB_DEPOT_PIPELINE = 'ts'
+
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),

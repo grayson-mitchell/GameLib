@@ -127,7 +127,7 @@ jest.mock('../../../humble/userAgent', () => ({
     'Mozilla/5.0 (Test) Chrome/100.0 Safari/537.36'
 }))
 
-import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { LegendaryUser } from '../user'
@@ -543,7 +543,7 @@ describe('the TS list and main.rs EPIC_COOKIE_DOMAINS are the SAME list (T-35-41
   }
 
   it('main.rs EPIC_COOKIE_DOMAINS is exactly the approved set', () => {
-    const raw = readTauriShellSource()
+    const raw = readTauriShellProductionSource()
     // Stripper-integrity guard: `stripSourceComments` drops every line starting
     // with `*`, so a source gate over Rust can go silently vacuous. Prove the
     // entries survive the strip by counting them in the RAW file first — a drop

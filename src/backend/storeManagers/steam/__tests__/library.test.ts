@@ -53,6 +53,9 @@ import { resumeInterruptedSteamInstall } from '../library/resume'
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
 // this file's mocks (quick 261026-c7r).
+// This suite exercises the TS depot pipeline. Pin it, because the default is 'rust' since 73-17.
+process.env.GAMELIB_DEPOT_PIPELINE = 'ts'
+
 jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
   addShortcuts: jest.fn(),
   removeShortcuts: jest.fn(),

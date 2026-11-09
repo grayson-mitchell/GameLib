@@ -1,0 +1,23 @@
+{
+  "name": "zip-deflate",
+  "appId": "900001",
+  "mode": "install",
+  "installRoot": "zip-deflate",
+  "depots": [
+    {
+      "depotId": "900002",
+      "manifestId": "7000000000000000001",
+      "keyHex": "d31c818f1588364605040a4326c3c39eeaac9e5c911a246dc9653624ea40cd4a",
+      "manifestFile": "manifests/900002_7000000000000000001.bin"
+    }
+  ],
+  "finalize": {
+    "steamappsDir": "steamapps",
+    "installdir": "zip-deflate",
+    "name": "Fixture zip-deflate",
+    "buildid": "1001",
+    "lastOwner": "76561197960265728",
+    "allowFullOwnership": true
+  },
+  "hostsHint": ["cdn.fixture.invalid"]
+}

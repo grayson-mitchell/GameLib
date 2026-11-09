@@ -157,10 +157,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 68: Versioned persisted stores and migrations** — 11 plans; planned (completed 2026-11-08)
 - [ ] **Phase 69: Consolidate frontend state onto GlobalStateV2** — 0 plans; not started
 - [ ] **Phase 70: Split GameInfo into shared and per-store shapes** — 0 plans; not started
-- [x] **Phase 71: Rust shell module decomposition** — 18 plans; planned (completed 2026-11-08)
+- [x] **Phase 71: Rust shell module decomposition** — 20 plans; complete (completed 2026-11-09, gaps closed by 71-19/71-20)
 - [x] **Phase 72: Renderer trust boundary and process hardening** — 0 plans; not started (completed 2026-11-08)
 - [ ] **Phase 73: Steam depot download pipeline in Rust** — 0 plans; not started
 - [ ] **Phase 74: Steam game updates** — 0 plans; not started
+- [ ] **Phase 75: Steam local file formats in Rust** — 0 plans; not started
 
 ## Phase Details
 
@@ -722,7 +723,7 @@ Plans:
 **Goal:** The Rust shell has no multi-thousand-line modules: each window, embed and login surface is split along its seams, following the sibling-module layout quick task 261106-ab1 set when it split `main.rs` (20,324 → 7,886 lines, 11 modules plus `wake_lock/`). Targets, measured 2026-11-06: `store_embed.rs` (4,623 lines), `login_window.rs` (3,339), `macos_epic_embed.rs` (2,089), and what remains in `main.rs` (7,886). Method: a cluster map of each file first; mechanical moves with no behaviour change (anything else found becomes a todo); `pub(crate)` only where a move needs it; `cargo test` (442 tests) green after each move, and Windows and Linux compiles checked through CI because Linux-gated code isn't compiled on the Mac. These modules drive the embedded store pages, login windows and cookie reads on macOS, so each wave ends with a live check in `pnpm tauri:dev`: an embedded store page, a sign-in for each store that uses the login window, and the Epic embed, with the frameless title bar both off and on. Phase 62's transport-mirror marker comments in `sidecar.rs` and the `store_embed.rs` dispatch arms (62-04) must survive the moves, or be removed only once Phase 67's generated contract replaces them. Open questions for discuss-phase: the minimum module set per file, and whether shell source-text tests that read Rust files (`testUtils/tauriShellSource.ts`) need the same combined-source treatment 261106-ab1 gave `main.rs`. Came from the post-Phase-62 architecture review on 2026-11-06.
 **Requirements**: TBD (plans cite CONTEXT decisions D-01..D-15; D-01 satisfied by Phase 67, D-02 superseded by 72-01)
 **Depends on:** None
-**Plans:** 18/18 plans complete
+**Plans:** 20/20 plans complete
 
 Plans (strictly sequential; D-14 waves 0-5, each wave from 1 ends with three-leg CI and a live check):
 
@@ -761,6 +762,11 @@ Plans (strictly sequential; D-14 waves 0-5, each wave from 1 ends with three-leg
 - [x] 71-16-PLAN.md — Co-locate tests into flat modules (sidecar, clipboard, wake_lock, keyring, relay, tray, terminate_veto, single_instance)
 - [x] 71-17-PLAN.md — Co-locate tests into login_window/ and store_embed/ children; main.rs keeps D-09 tests only
 - [x] 71-18-PLAN.md — Wave 5 + phase gate: sizes report, fn main todo, VALIDATION sign-off, three-leg CI, final live check
+
+**Gap closure (71-VERIFICATION WR-01, D-10)**
+
+- [x] 71-19-PLAN.md — Fix vacuous sidecar D-01 EOF pin (production read + fn-body bound + mutation self-test); migrate raw shell-source readers to production text
+- [x] 71-20-PLAN.md — Fail-closed test-module cutters in jest and Rust (WR-02, terminate_reply_tests); raw shell-reader allow-list guard
 
 ### Phase 72: Renderer trust boundary and process hardening
 
@@ -803,11 +809,75 @@ Plans:
 **Goal:** The Steam depot download pipeline (fetch → decrypt → decompress → write) runs in Rust, and the TypeScript pipeline and `lzma-native` are deleted. This is the second slice of the incremental Rust migration that Phase 63 started, and the reason is retiring the sidecar, **not speed or memory**. Spike 067a measured today's Node pipeline as network-bound: a Civ V install held ~18 MiB/s steady, and raising the in-flight budget from 32 to 96 chunks changed nothing. Spike 067b measured Rust decode at 5.8 vs Node's 9.3 cpu-s/GiB at the same 177 MiB/s, about 8% of one core across the whole pipeline. The 2.75 GB peak RSS was idle decode workers and was fixed in Node (`b8f015a08` slimmed the worker bundle from 14 MB to under 300 KB, `db95a4373` caps the pool at 4 when native). 067c's README names "the sidecar itself being retired" as the trigger to revisit, which is this phase. Reuse Phase 63's pattern: the code lives in the `src-tauri/` Cargo workspace; the sidecar calls it through `rustInvoke` with the TypeScript signature unchanged, and only a job description crosses the JSON-lines pipe, never chunk bytes; a parity harness runs both pipelines against the same jobs and requires byte-identical trees (SHA1 per file); a flag keeps the TypeScript path as the fallback until the Rust path is verified live; then the TypeScript path is deleted (`steam/depot/`, ~11.6k non-test lines measured 2026-11-07; the old `steam/depot.ts` became `depot/index.ts` in 62-10). Crate choices carried from 067b: `aes` + `cbc` built with `--cfg aes_armv8` (without it `aes` 0.8 falls back to software AES at 277 MiB/s), `flate2` on `zlib-rs`, `xz2` (static liblzma), `zstd`. Open questions for discuss-phase: **where the boundary sits** — `steam-user` owns CM auth, manifest request codes and depot keys in Node, so does Rust take manifest + depot key + CDN host list and own everything after, or also manifest fetch and parse; how progress, pause, cancel and per-chunk errors flow back to the UI over the pipe; whether reconcile/verify, ACF finalize and adoption (`depot/finalize.ts`, `depot/manifest.ts`) stay in TypeScript or move; how headless tools and tests reach it (Phase 63 answered this with a CLI binary); and Windows/Linux builds, including liblzma static linking that replaces the October `lzma-native` SEA packaging fixes. Came from the operator's request on 2026-11-07, after the 067 spikes.
 **Requirements**: TBD
 **Depends on:** Phase 63
-**Plans:** 0 plans
+**Plans:** 17/21 plans executed
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 73 to break down)
+**Wave 1**
+
+- [x] 73-01-PLAN.md — gamelib-depot + gamelib-depot-cli crates (legitimacy + MSRV checkpoints), lockfile pin, CI legs with static-codec linkage check, wire contracts, JobHost, cancel registry
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 73-02-PLAN.md — Steam AES (lenient PKCS7), VZ/VSZa/PK chunk containers, manifest wrapper unzip
+- [x] 73-03-PLAN.md — host health, stall, in-flight limiter, Fetcher with on-demand CDN tokens via JobHost; fake CDN + fake host
+- [x] 73-04-PLAN.md — modes/attributes, Mach-O +x fallback, path containment, collisions with case probe, flags census
+- [x] 73-11-PLAN.md — TS D-09 error map, progress helpers moved, shell-caller token/request-code/event channels and handlers
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 73-05-PLAN.md — reconcile walk and ACF finalize (atomic, measured size, fail-closed StateFlags gate)
+- [x] 73-06-PLAN.md — prost manifest parse, filename decrypt, on-disk manifest cache
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [x] 73-07-PLAN.md — deterministic synthetic CDN fixtures covering every codec and edge case
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [x] 73-08-PLAN.md — TS oracle over the fixtures, committed expected.json (before any deletion)
+- [x] 73-09-PLAN.md — per-file writer, install job orchestration, throttled events, depot_job_run
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [x] 73-10-PLAN.md — verify_only, select_files, shared-redist, depot_manifest_summary; Tier 1 golden Rust == TS
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [x] 73-12-PLAN.md — depot_* rustInvoke channels, shell arms + ShellJobHost, EOF cancel, unbounded run channel, rustDepot.ts
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [x] 73-13-PLAN.md — GAMELIB_DEPOT_PIPELINE flag, CM-only plan half, job builder, progress bridge, Rust install + shared-redist paths
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [x] 73-14-PLAN.md — prescreen via summaries, startup resume via verify_only, original-DLL restore via select_files
+- [x] 73-15-PLAN.md — CLI run/verify/summarize, fake-HOME helper, Tier 2 parity sweep with codec coverage and perf summary
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [x] 73-16-PLAN.md — Real-corpus parity run and D-17 comparison (checkpoints)
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [x] 73-17-PLAN.md — Flip default to rust, author live-gate UAT
+
+**Wave 12** *(blocked on Wave 11 completion)*
+
+- [ ] 73-18-PLAN.md — Live macOS UAT and three CI legs; record D-15 delete gate (checkpoints)
+
+**Wave 13** *(blocked on Wave 12 completion)*
+
+- [ ] 73-19-PLAN.md — Remove the flag and TS branches; caller tests on the Rust stub
+
+**Wave 14** *(blocked on Wave 13 completion)*
+
+- [ ] 73-20-PLAN.md — Delete TS pipeline modules, oracle, worker pool and dev bundle
+
+**Wave 15** *(blocked on Wave 14 completion)*
+
+- [ ] 73-21-PLAN.md — Remove lzma-native and SEA packaging; deletion gate; pattern README
 
 ### Phase 74: Steam game updates
 
@@ -819,3 +889,13 @@ Plans:
 Plans:
 
 - [ ] TBD (run /gsd-plan-phase 74 to break down)
+
+### Phase 75: Steam local file formats in Rust
+
+**Goal:** Steam's local files are read in Rust, so the ACF format has one implementation. Phase 73 moved the ACF *writer* to Rust while the TypeScript *reader* stays, which is two codecs for one format that can drift. Scope: (1) text VDF reading of `libraryfolders.vdf` and `appmanifest_*.acf`, replacing `@node-steam/vdf`; (2) binary `shortcuts.vdf` read and write, replacing `steam-shortcut-editor`; (3) the local library scan in `steam/library/` (~4.6k non-test lines across the directory, measured 2026-11-09). Reuse Phase 63's pattern unchanged: a Tauri-free crate in the `src-tauri/` Cargo workspace (or the Phase 73 crate's ACF module, extended), `rustInvoke` from the sidecar with the TypeScript signatures unchanged, a CLI binary for headless tools, a parity harness over fixtures (byte-identical round-trip for `shortcuts.vdf`), a dev-only fallback flag, then delete the TypeScript readers and both npm packages. This is the third slice of the incremental Node-to-Rust migration (63 scanners, 73 depot pipeline). Open questions for discuss-phase: whether the owned-apps fetch and metadata/artwork enrichment in `steam/library/` stay in TypeScript (they need `steam-user`/axios) so only the local scan moves; whether the shortcuts writer must preserve unknown fields byte-for-byte; and Steam path discovery on Windows and Linux. The CM-client replacement for `steam-user`/`steam-session`, which gates retiring the sidecar, is a separate spike (2026-11-09). Came from the post-73 migration planning discussion on 2026-11-09.
+**Requirements**: TBD
+**Depends on:** Phase 73
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 75 to break down)

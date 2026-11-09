@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "name": "spike-023-sea-native-addon-dlopen",
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "lzma-native": "8.0.6"
+  }
+}

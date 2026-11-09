@@ -1,0 +1,20 @@
+# o5 (human-in-loop oracle): genuine bottled Windows Steam, -applaunch 200510 -> XComGame.exe -> XCOMLauncher.exe -> operator clicks Enemy Within
+119805.751:0604:0608:trace:process:CreateProcessInternalW app L"C:\\Program Files (x86)\\Steam\\steamapps\\common\\XCom-Enemy-Unknown\\XEW\\Binaries\\Win32\\XComEW.exe" cmdline L"\"C:\\Program Files (x86)\\Steam\\steamapps\\common\\XCom-Enemy-Unknown\\XEW\\Bin
+119806.556:06b4:06b8:trace:sync:sysv_NtCreateSemaphore access 0x1f0003, name L"STEAM_DIPC_CONSUME", initial 0, max 512
+119806.558:06b4:06b8:trace:sync:sysv_NtCreateSemaphore access 0x1f0003, name L"SREAM_DIPC_PRODUCE", initial 1, max 512
+119806.558:06b4:06b8:trace:sync:sysv_NtCreateEvent access 0x1f0003, name L"STEAM_START_ACK_EVENT_1716_7498500", type 0, state 0
+119806.558:06b4:06b8:trace:sync:sysv_NtCreateEvent access 0x1f0003, name L"STEAM_TERM_EVENT_1716_7498500", type 0, state 0
+119806.579:06b4:06b8:trace:loaddll:build_module Loaded L"C:\\Program Files (x86)\\Steam\\steamclient.dll" at 78170000: native
+# steam.exe (00d4) servicing the request:
+119806.559:00d4:01d0:trace:sync:NtWaitForMultipleObjects -> 0
+119806.560:00d4:01d0:trace:sync:NtOpenEvent access 0x100002, name L"STEAM_START_ACK_EVENT_1716_7498500"
+119806.560:00d4:01d0:trace:sync:NtOpenEvent access 0x100002, name L"STEAM_TERM_EVENT_1716_7498500"
+119806.561:00d4:01d0:trace:sync:sysv_NtSetEvent handle 0x788, prev_state 0x0
+119806.561:00d4:01d0:trace:sync:sysv_NtReleaseSemaphore handle 0x404, count 1, prev_count 0xb5fff90
+119806.562:00d4:01d0:trace:sync:sysv_NtCreateSemaphore access 0x1f0003, name L"STEAM_DIPC_CONSUME", initial 0, max 512
+119806.562:00d4:01d0:trace:sync:sysv_NtCreateSemaphore access 0x1f0003, name L"SREAM_DIPC_PRODUCE", initial 1, max 512
+119806.562:00d4:01d0:trace:sync:NtWaitForMultipleObjects type 1, alertable 0, handles {0x3fc, 0x3f4, 0x790}, timeout -300.0000000
+# o4: Steam-launched XComGame.exe (base EU) -- its only Valve registry touch is the overlay's:
+118948.689:0610:0614:trace:reg:NtOpenKeyEx (0x30,L"Software\\Valve\\Steam\\ActiveProcess",2000000,0x1001ff498)
+118948.690:0610:0614:trace:reg:NtOpenKeyEx (0x30,L"Software\\Valve\\Steam\\ActiveProcess",20019,0x1001ff498)
+118948.691:0610:0614:trace:reg:RegQueryValueExW (000000D0,L"SteamClientDll",00000000,00000000,0252ED50,0252FD4C=2046)

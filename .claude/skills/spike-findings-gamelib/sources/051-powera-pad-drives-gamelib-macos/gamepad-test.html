@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Gamepad Probe</title>
+<style>
+  body { font: 14px ui-monospace, Menlo, monospace; background: #111; color: #ddd; margin: 16px; }
+  h1 { font-size: 16px; }
+  .pad { border: 1px solid #444; padding: 8px; margin: 8px 0; }
+  .btn { display: inline-block; width: 28px; text-align: center; margin: 2px; border: 1px solid #555; }
+  .on { background: #2a7; color: #000; }
+  #log { white-space: pre-wrap; color: #9a9; }
+</style>
+</head>
+<body>
+<h1>Spike 051 gamepad probe: click this page, then press buttons on the pad</h1>
+<div>secure context: <span id="secure"></span> · getGamepads: <span id="api"></span> · polls: <span id="polls">0</span></div>
+<div id="pads">no gamepads yet</div>
+<h2>events</h2>
+<div id="log"></div>
+<script>
+  const log = (m) => { document.getElementById('log').textContent += new Date().toISOString() + ' ' + m + '\n'; };
+  document.getElementById('secure').textContent = String(window.isSecureContext);
+  document.getElementById('api').textContent = typeof navigator.getGamepads;
+  addEventListener('gamepadconnected', (e) => log('connected: id=' + JSON.stringify(e.gamepad.id) + ' mapping=' + JSON.stringify(e.gamepad.mapping) + ' buttons=' + e.gamepad.buttons.length + ' axes=' + e.gamepad.axes.length));
+  addEventListener('gamepaddisconnected', (e) => log('disconnected: ' + e.gamepad.id));
+  let polls = 0;
+  function frame() {
+    polls++;
+    if (polls % 30 === 0) document.getElementById('polls').textContent = polls;
+    const pads = Array.from(navigator.getGamepads ? navigator.getGamepads() : []).filter(Boolean);
+    if (pads.length) {
+      document.getElementById('pads').innerHTML = pads.map((p) =>
+        '<div class="pad">#' + p.index + ' ' + p.id + ' mapping=' + JSON.stringify(p.mapping) + '<br>' +
+        p.buttons.map((b, i) => '<span class="btn' + (b.pressed ? ' on' : '') + '">' + i + '</span>').join('') +
+        '<br>axes: ' + p.axes.map((a, i) => i + ':' + a.toFixed(2)).join('  ') + '</div>').join('');
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+</script>
+</body>
+</html>

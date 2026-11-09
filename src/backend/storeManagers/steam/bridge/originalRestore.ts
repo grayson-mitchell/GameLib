@@ -129,7 +129,7 @@ export async function restoreBridgeSteamApiOriginals(
       installdir,
       os: 'windows',
       signal,
-      select: (p) => wanted.has(p)
+      selectPaths: [...wanted.keys()]
     })
 
     if (dl.status !== 'done') {

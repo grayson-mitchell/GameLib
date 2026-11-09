@@ -1,0 +1,31 @@
+{
+  "label": "node-run4-inflight96",
+  "appId": "8930",
+  "outcome": {
+    "status": "done",
+    "skippedDepots": []
+  },
+  "wallSeconds": 308,
+  "downloadedMiB": 5294,
+  "writtenMiB": 7359,
+  "avgNetMiBsWholeRun": 17.21,
+  "steadyNetMiBs": 18.38,
+  "steadyOutMiBs": 25.55,
+  "steadyCores": 1.08,
+  "peakRssMiB": 2791,
+  "poolSize": 16,
+  "nativeWorkers": 16,
+  "inlineFallback": false,
+  "shareOfSecondsPoolSaturated": 0,
+  "avgPoolQueued": 0,
+  "avgFetchInflight": 49.2,
+  "avgFetchMsPerChunk": 780,
+  "avgDecodeMsPerChunk": 3,
+  "chunks": 16960,
+  "fetchErrors": 57,
+  "corpus": {
+    "chunks": 0,
+    "MiB": 0,
+    "formats": {}
+  }
+}

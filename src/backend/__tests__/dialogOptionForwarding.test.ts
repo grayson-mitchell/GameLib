@@ -19,7 +19,7 @@
  */
 import {
   readHandlerBody,
-  readTauriShellSource
+  readTauriShellProductionSource
 } from 'backend/testUtils/tauriShellSource'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
@@ -67,7 +67,7 @@ function extractMatchArm(source: string, channel: string): string {
 
 describe('main.rs dialog_open arm forwards the caller options (quick task 260902-8wc)', () => {
   const arm = extractMatchArm(
-    stripSourceComments(readTauriShellSource()),
+    stripSourceComments(readTauriShellProductionSource()),
     'dialog_open'
   )
 
@@ -163,7 +163,7 @@ describe('main.rs dialog_open arm forwards the caller options (quick task 260902
   // third-party crate, which is not this gate's business -- but the arm must keep SAYING why,
   // so the next reader does not re-derive it or "fix" it with a method that does not exist.
   test('the arm documents why buttonLabel is not forwarded', () => {
-    const raw = readTauriShellSource()
+    const raw = readTauriShellProductionSource()
     expect(raw).toContain('buttonLabel')
     expect(raw).toMatch(/tauri-plugin-dialog 2\.7\.2/)
   })
@@ -185,10 +185,14 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
   const EXPECTED = [
     'RUST_DIALOG_OPEN',
     'RUST_DIALOG_MESSAGE',
-    'RUST_DIALOG_SAVE'
+    'RUST_DIALOG_SAVE',
+    // Phase 73 plan 12 (D-06): a depot download job runs for minutes to hours, so it is
+    // deliberately unbounded too. Not a dialog channel; listed here so EXTENSION stays a
+    // reviewed decision.
+    'RUST_DEPOT_JOB_RUN'
   ]
 
-  test('contains exactly the three dialog channels', () => {
+  test('contains exactly the three dialog channels plus the depot job channel', () => {
     // Set equality AND length, not `toContain`: `toContain` catches deletion but is blind to
     // EXTENSION, and an unrelated channel silently acquiring an unbounded timeout is exactly
     // as much of a defect as a dialog channel losing one.

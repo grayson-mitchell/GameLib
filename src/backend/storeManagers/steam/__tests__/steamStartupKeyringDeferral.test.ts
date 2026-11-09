@@ -285,7 +285,7 @@ jest.mock('../anonymousClient', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import { EventEmitter } from 'events'
 import { sendFrontendMessage } from '../../../ipc'
 import SteamLibraryManager from '../library'
@@ -689,13 +689,13 @@ describe('constraint 1 — KEYRING_READ_TIMEOUT stays at 45s', () => {
   const PIN = 'const KEYRING_READ_TIMEOUT: Duration = Duration::from_secs(45);'
 
   it('src-tauri/src/main.rs still declares KEYRING_READ_TIMEOUT as 45 seconds', () => {
-    expect(readTauriShellSource()).toContain(PIN)
+    expect(readTauriShellProductionSource()).toContain(PIN)
   })
 
   // Anti-vacuity: a `toContain` on a file that failed to load, or a pin whose
   // text no longer resembles the declaration, would pass silently forever.
   it('self-test: main.rs is really being read, and the pin is specific to 45s', () => {
-    const source = readTauriShellSource()
+    const source = readTauriShellProductionSource()
 
     expect(source.length).toBeGreaterThan(100_000)
     expect(source).toContain('const INVOKE_TIMEOUT: Duration')

@@ -136,7 +136,7 @@ jest.mock('backend/store_backend', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { defined } from 'backend/testUtils/indexed'
-import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import {
   existsSync,
   readFileSync,
@@ -1209,7 +1209,7 @@ describe('F-34.5-G6-08 discriminator — addToSteam over the REAL RPC frame path
   // `unwrap_or(Value::Null)`). A source-text assertion, so this floor cannot silently change
   // without this test noticing.
   it("main.rs's response branch still floors a missing result at Value::Null (source-text pin)", () => {
-    const source = readTauriShellSource()
+    const source = readTauriShellProductionSource()
     expect(source).toContain('unwrap_or(Value::Null)')
   })
 })

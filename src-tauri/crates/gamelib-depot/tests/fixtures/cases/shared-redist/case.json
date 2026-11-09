@@ -1,0 +1,16 @@
+{
+  "name": "shared-redist",
+  "appId": "228980",
+  "mode": "install",
+  "installRoot": "shared-redist",
+  "depots": [
+    {
+      "depotId": "228983",
+      "manifestId": "7000000000000000008",
+      "keyHex": "aba09043dbd7d38f38c785d9ea41e0efc56a920bc68c3fa56d1332b3e3eff194",
+      "manifestFile": "manifests/228983_7000000000000000008.bin"
+    }
+  ],
+  "finalize": null,
+  "hostsHint": ["cdn.fixture.invalid"]
+}

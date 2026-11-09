@@ -99,6 +99,7 @@ import { registerShortcutsFlows } from './shortcutsFlowRegistration'
 import { registerRunnerMiscFlows } from './runnerMiscFlowRegistration'
 import { registerEosOverlayFlows } from './eosOverlayFlowRegistration'
 import { registerStoreEmbedFlows } from './storeEmbedFlowRegistration'
+import { registerDepotHostFlows } from './depotHostRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../typed_store'
@@ -234,6 +235,11 @@ registerEosOverlayFlows()
 // the other calls above (own channel names, no cross-module runtime dependency at registration
 // time), placed alongside them, before `ensureStoresRegistered()`.
 registerStoreEmbedFlows()
+// Phase 73 Plan 11 (D-03, D-06): the shell-originated channels the Rust depot job uses for CDN
+// tokens, manifest request codes and progress events — no ordering constraint relative to the
+// other calls above (own channel names, backed by a Map in jobRegistry.ts), placed before
+// `ensureStoresRegistered()`.
+registerDepotHostFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown

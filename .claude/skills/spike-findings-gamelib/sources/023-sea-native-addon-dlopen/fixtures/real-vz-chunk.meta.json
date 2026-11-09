@@ -1,0 +1,9 @@
+{
+  "route": "local-real-bytes",
+  "sourceFile": "/Users/graysonmitchell/Library/Application Support/Steam/steamapps/common/Humankind/Humankind.app/Contents/PlugIns/libEOSSDK-Mac-Shipping.dylib",
+  "sliceOffset": 2097152,
+  "uncompressedSize": 1048576,
+  "compressedSize": 451554,
+  "vzContainerSize": 451563,
+  "sha1Uncompressed": "2e461366a896f36a8e47f583f2e79d96c676bb5b"
+}

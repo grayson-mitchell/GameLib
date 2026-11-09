@@ -43,6 +43,8 @@ import {
   fetchDepotPlanEntry
 } from './plan'
 import { resolveContainedPath, sha1File } from './download'
+import { depotPipeline } from '../depotRust/pipelineFlag'
+import { downloadSharedRedistDepotsRust } from '../depotRust/install'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Quick 261025-rkj: Steamworks Common Redistributables (app 228980) for the
@@ -323,6 +325,9 @@ async function downloadSharedRedistDepotsLeased(
   opts: DownloadSharedRedistOpts
 ): Promise<SharedRedistDownloadResult> {
   const downloadFiles = opts.downloadFiles ?? downloadDepotFiles
+  // D-16: read once, inside the lease. The lease, index file, locks and ledger stay in TS; only
+  // the per-depot download step becomes a Rust job (D-12).
+  const useRust = depotPipeline() === 'rust'
 
   const gameInfo = await withPlanBuildRetry(
     opts.signal,
@@ -386,6 +391,17 @@ async function downloadSharedRedistDepotsLeased(
     files: DepotPlanFile[]
   ): Promise<boolean> => {
     const h = await getHostInfo()
+    if (useRust) {
+      return downloadSharedRedistDepotsRust({
+        appId: STEAM_COMMON_REDIST_APP_ID,
+        entry,
+        files,
+        cacheSteamappsDir: opts.cacheSteamappsDir,
+        installdir,
+        host: h,
+        signal: opts.signal
+      })
+    }
     const plan: DepotPlan = {
       appId: STEAM_COMMON_REDIST_APP_ID,
       depots: [{ ...entry, ownerAppId: STEAM_COMMON_REDIST_APP_ID, files }],

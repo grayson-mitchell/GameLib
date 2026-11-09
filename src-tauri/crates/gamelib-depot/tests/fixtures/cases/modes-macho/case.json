@@ -1,0 +1,23 @@
+{
+  "name": "modes-macho",
+  "appId": "900040",
+  "mode": "install",
+  "installRoot": "modes-macho",
+  "depots": [
+    {
+      "depotId": "900041",
+      "manifestId": "7000000000000000006",
+      "keyHex": "5251429bbd825928485a4b4c1e14305b7edd2a4cae629385831b0e6b46862557",
+      "manifestFile": "manifests/900041_7000000000000000006.bin"
+    }
+  ],
+  "finalize": {
+    "steamappsDir": "steamapps",
+    "installdir": "modes-macho",
+    "name": "Fixture modes-macho",
+    "buildid": "1005",
+    "lastOwner": "76561197960265728",
+    "allowFullOwnership": true
+  },
+  "hostsHint": ["cdn.fixture.invalid"]
+}

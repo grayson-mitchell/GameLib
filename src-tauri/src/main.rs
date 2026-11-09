@@ -132,6 +132,7 @@ mod shell_state;
 mod notification_show;
 mod dialogs;
 mod scan_dispatch;
+mod depot_dispatch;
 mod app_lifecycle;
 use clipboard::*;
 use keyring_dispatch::*;
@@ -149,6 +150,7 @@ use shell_state::*;
 use notification_show::*;
 use dialogs::*;
 use scan_dispatch::*;
+use depot_dispatch::*;
 use app_lifecycle::*;
 
 /// Invoke response timeout — a skeleton guardrail so a hung sidecar cannot wedge a command.
@@ -659,6 +661,1020 @@ fn install_panic_hook() {
     }));
 }
 
+/// Creates the `0700` single-instance socket directory and returns the socket path inside it.
+/// Fails open (`None`) when the directory cannot be created.
+#[cfg(unix)]
+fn prepare_single_instance_socket_path() -> Option<std::path::PathBuf> {
+    use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+    single_instance_dir(std::env::var("HOME").ok().as_deref()).and_then(|dir| {
+        match std::fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(&dir)
+        {
+            Ok(()) => {
+                // Belt and braces (T-34.5-G6-20): `DirBuilderExt::mode` only governs the
+                // mode mkdir() is called with for a directory this call actually CREATES --
+                // if the directory already existed (e.g. from an older release, or from a
+                // stale run) `recursive(true)` succeeds without re-chmod'ing it. Explicitly
+                // enforce `0700` here regardless of which branch just ran.
+                if let Err(e) = std::fs::set_permissions(
+                    &dir,
+                    std::fs::Permissions::from_mode(0o700),
+                ) {
+                    shell_eprintln!(
+                        "[shell] WARN: failed to set single-instance socket directory permissions to 0700: {e}"
+                    );
+                }
+                Some(single_instance_socket_path(&dir))
+            }
+            Err(e) => {
+                shell_eprintln!(
+                    "[shell] WARN: failed to create single-instance socket directory {dir:?}: {e} -- continuing without the single-instance guard (fail-open, T-34.5-G6-24)"
+                );
+                None
+            }
+        }
+    })
+}
+
+/// A secondary instance's hand-off to the running primary over the Unix socket, then exit(0).
+#[cfg(unix)]
+fn hand_off_to_running_instance_unix(path: &std::path::Path, argv: &[String]) -> ! {
+    use std::io::Write as _;
+    use std::os::unix::net::UnixStream;
+    // A bare second launch with no deep link raises the existing window -- the
+    // sentinel below -- which is the correct UX and matches what a plugin-based
+    // guard would do. Never logs the URL itself here (T-34.5-G6-25): the running
+    // instance's own `handleProtocol` logs it authoritatively one line later.
+    let (payload, kind) = match protocol_url_arg(argv) {
+        Some(url) => (url, "deep-link"),
+        None => ("__GAMELIB_FOCUS__".to_string(), "focus sentinel"),
+    };
+    shell_eprintln!(
+        "[shell] another GameLib instance is already running -- sending {kind} to it and exiting"
+    );
+    match UnixStream::connect(path) {
+        Ok(mut stream) => {
+            let _ = writeln!(stream, "{payload}");
+            let _ = stream.flush();
+        }
+        Err(e) => shell_eprintln!(
+            "[shell] WARN: secondary instance failed to deliver {kind} to the running instance: {e}"
+        ),
+    }
+    std::process::exit(0);
+}
+
+/// What the single-instance guard hands the primary: the listener its accept loop will own.
+#[cfg(unix)]
+type PrimaryListener = std::os::unix::net::UnixListener;
+#[cfg(windows)]
+type PrimaryListener = WindowsPrimaryPipe;
+#[cfg(not(any(unix, windows)))]
+type PrimaryListener = ();
+
+/// `RunEvent::Exit`: cancel depot jobs, reap the sidecar, release power assertions, remove the socket.
+fn handle_exit(app_handle: &tauri::AppHandle, single_instance_socket_path: Option<&std::path::Path>) {
+    // D-08: cancel every depot job and give finalize (the 1026 record) up to 5 s to
+    // land BEFORE the sidecar is killed. Count only; no job detail is logged.
+    let still_running = gamelib_depot::registry::cancel_all_and_wait(EXIT_FINALIZE_WAIT);
+    if still_running > 0 {
+        shell_eprintln!("[shell] depot jobs still running at exit deadline: {still_running}");
+    }
+    if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
+        state.shutdown_child();
+    }
+    // Phase 35 Plan 08 (D-08, REQ-35-06, threat T-35-31): drop every OS power
+    // assertion still held. Same exit-path discipline as `shutdown_child()` above
+    // and the socket cleanup below -- a leaked assertion outlives the process and
+    // keeps the user's machine awake with no UI left to release it, which on a
+    // laptop means an unattended drain to zero.
+    wake_lock_release_all();
+    // Phase 34.5 gap cycle 6 plan 44 (D-44-A): best-effort socket cleanup on a
+    // clean quit, so a fresh start does not have to fall through
+    // `acquire_single_instance`'s stale-socket recovery path. Swallowed, like
+    // `shutdown_child()`'s own exit-path discipline -- an unwind here is worse
+    // than a leaked socket file.
+    #[cfg(unix)]
+    if let Some(path) = single_instance_socket_path {
+        let _ = std::fs::remove_file(path);
+    }
+    #[cfg(not(unix))]
+    let _ = single_instance_socket_path;
+}
+
+/// Spawns the sidecar, wires its reader and stderr forwarder, and returns the shared state.
+fn spawn_sidecar_state(app: &tauri::App) -> Result<Arc<SidecarState>, Box<dyn std::error::Error>> {
+    // A spawn failure used to propagate through this `?`. Tauri turns a setup error into
+    // a panic (`app.rs:1425`), and that panic unwinds out of `did_finish_launching` — an
+    // `extern "C"` ObjC callback — so it became `panic_cannot_unwind` -> `SIGABRT`. The
+    // user saw "GameLib quit unexpectedly" with no cause, and the crash report could only
+    // ever show the abort guard, never the origin. Nine such reports in one afternoon
+    // (2026-08-29), every one of them a `node` that was not on the LaunchServices PATH.
+    //
+    // The app genuinely cannot run without a sidecar, so this still ends the process.
+    // What changes is that it ends DELIBERATELY and says why, instead of aborting.
+    //
+    // `blocking_show()` is safe here: `.setup()` runs on the main thread from INSIDE the
+    // running event loop (`did_finish_launching` -> `AppState::launched` ->
+    // `make_run_event_loop_callback`, per the captured backtrace), so the modal has a
+    // run loop to spin. It is also on a path where the app is already dead either way.
+    let mut child = match spawn_sidecar(app.handle()) {
+        Ok(child) => child,
+        Err(e) => {
+            shell_diag(&format!("FATAL: sidecar spawn failed, exiting: {e}"));
+            let where_to_look = shell_diag_log_path(std::env::var("HOME").ok().as_deref())
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "the GameLib log directory".to_string());
+            app.dialog()
+                .message(format!(
+                    "GameLib could not start its backend process, so it cannot continue.\n\n\
+                     {e}\n\n\
+                     Details were written to:\n{where_to_look}"
+                ))
+                .kind(MessageDialogKind::Error)
+                .blocking_show();
+            // Exit, do NOT `?`. Propagating produces the abort described above.
+            std::process::exit(1);
+        }
+    };
+    #[cfg(windows)]
+    let job = create_kill_on_close_job(&child);
+    let stdin = child
+        .stdin
+        .take()
+        .ok_or("sidecar stdin unavailable")?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or("sidecar stdout unavailable")?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or("sidecar stderr unavailable")?;
+
+    let state = Arc::new(SidecarState {
+        stdin: Mutex::new(stdin),
+        pending: Mutex::new(HashMap::new()),
+        abandoned: Mutex::new(VecDeque::new()),
+        counter: AtomicU64::new(1),
+        child: Mutex::new(child),
+        shutting_down: AtomicBool::new(false),
+        eof_surfaced: AtomicBool::new(false),
+        tree_reaped: AtomicBool::new(false),
+        #[cfg(windows)]
+        job: Mutex::new(job),
+    });
+
+    start_reader(app.handle().clone(), state.clone(), stdout);
+    start_stderr_forwarder(stderr);
+    Ok(state)
+}
+
+/// Spawns the primary's deep-link accept loop on the single-instance listener.
+fn start_single_instance_accept_loop(
+    app: &tauri::App,
+    state: &Arc<SidecarState>,
+    primary_listener: Option<PrimaryListener>,
+) {
+    // Deep-link accept loop (Phase 34.5 gap cycle 6 plan 44, D-44-A): the primary's
+    // warm-delivery path for a launch received while this instance is already
+    // running. Spawned AFTER `app.manage(state)` below would be too late for the
+    // clone captured here -- clone first, manage the original.
+    #[cfg(unix)]
+    if let Some(listener) = primary_listener {
+        let accept_state = state.clone();
+        let accept_app_handle = app.handle().clone();
+        thread::spawn(move || {
+            for incoming in listener.incoming() {
+                let stream = match incoming {
+                    Ok(s) => s,
+                    Err(e) => {
+                        shell_eprintln!(
+                            "[shell] WARN: single-instance accept() failed: {e}"
+                        );
+                        continue;
+                    }
+                };
+                // T-34.5-G6-23: bound the read exactly like sidecarRpc's own
+                // MAX_LINE_LENGTH discipline -- a single read_line off a capped reader,
+                // never an unbounded buffer.
+                let mut reader = BufReader::new(stream.take(4096));
+                let mut line = String::new();
+                match reader.read_line(&mut line) {
+                    Ok(0) | Err(_) => continue,
+                    Ok(_) => {}
+                }
+                let trimmed = line.trim();
+
+                if trimmed == "__GAMELIB_FOCUS__" {
+                    // `unminimize()` is load-bearing here, not `show()` + `set_focus()`
+                    // alone -- measured live on Linux (GNOME Shell/mutter, GTK 3.24.33,
+                    // debug session `linux-focus-restore-minimize`, 2026-09-26). Per
+                    // tao-0.35.3 (`platform_impl/linux/window.rs:558-576` and
+                    // `platform_impl/linux/event_loop.rs:296-324`): `show()` sends
+                    // `WindowRequest::Visible(true)` -> GTK `show_all()`, which does not
+                    // clear WM-level iconic state (ICCCM); `set_focus()` is gated on
+                    // `!self.minimized.load(..) && self.window.get_visible()`, so it never
+                    // even sends `WindowRequest::Focus` (-> `present_with_time`, the call
+                    // that would deiconify) while minimized. Only `set_minimized(false)`
+                    // (`unminimize()`) sends `WindowRequest::Minimized(false)` ->
+                    // `window.deiconify()`, the only call in this sequence that clears
+                    // EWMH `_NET_WM_STATE_HIDDEN`. This is the same defect shape fixed on
+                    // Windows in `handle_windows_single_instance_connection` (plan 46-06);
+                    // this Unix arm was deliberately left unfixed there because it was
+                    // unmeasured on Linux -- now measured and fixed here. This is a
+                    // deliberate, on-purpose divergence of this `#[cfg(unix)]` region from
+                    // the phase-46 `46-unix-cfg-regions.awk` gate's baseline (`5bc4fa825`);
+                    // see `open_about_window_from_tray`'s comment above for the full
+                    // correction history.
+                    let focus_handle = accept_app_handle.clone();
+                    let _ = accept_app_handle.run_on_main_thread(move || {
+                        let render = |r: tauri::Result<()>| match r {
+                            Ok(()) => "ok".to_string(),
+                            Err(e) => format!("err={e}"),
+                        };
+                        match focus_handle.get_webview_window(MAIN_WINDOW_LABEL) {
+                            Some(window) => {
+                                let unminimize_result = render(window.unminimize());
+                                let show_result = render(window.show());
+                                let set_focus_result = render(window.set_focus());
+                                shell_eprintln!(
+                                    "[shell] focus sentinel raise: unminimize={}, show={}, set_focus={}",
+                                    unminimize_result, show_result, set_focus_result
+                                );
+                            }
+                            None => {
+                                shell_eprintln!(
+                                    "[shell] WARN: focus sentinel: no '{MAIN_WINDOW_LABEL}' window to raise"
+                                );
+                            }
+                        }
+                    });
+                    continue;
+                }
+
+                // Defence in depth (T-34.5-G6-20): re-validate through the SAME
+                // allow-list used for argv, never trusting the socket because it is
+                // "internal" -- the socket is a trust boundary even inside a `0700`
+                // directory.
+                match protocol_url_arg(&[trimmed.to_string()]) {
+                    Some(url) => {
+                        match accept_state
+                            .invoke("handleProtocolUrl".to_string(), vec![Value::String(url)])
+                        {
+                            Ok(_) => shell_eprintln!(
+                                "[shell] delivered single-instance deep link to sidecar: ok"
+                            ),
+                            Err(e) => shell_eprintln!(
+                                "[shell] delivered single-instance deep link to sidecar: err={e}"
+                            ),
+                        }
+                    }
+                    None => {
+                        // T-34.5-G6-25: the REASON and byte count only, never the
+                        // payload.
+                        shell_eprintln!(
+                            "[shell] rejected single-instance payload (failed protocol_url_arg validation), bytes={}",
+                            trimmed.len()
+                        );
+                    }
+                }
+            }
+        });
+    }
+    // Windows counterpart to the `#[cfg(unix)]` accept-loop thread above (Phase 46 plan
+    // 46-03, REQ-46-04). Spawned here for the identical reason: AFTER `app.manage(state)`
+    // below would be too late for the clone captured here -- clone first, manage the
+    // original. The thread is never joined, exactly like the Unix thread above.
+    #[cfg(windows)]
+    if let Some(primary) = primary_listener {
+        let accept_state = state.clone();
+        let accept_app_handle = app.handle().clone();
+        thread::spawn(move || run_windows_single_instance_accept_loop(primary, accept_state, accept_app_handle));
+    }
+
+    #[cfg(not(any(unix, windows)))]
+    let _ = (&primary_listener, app, state);
+}
+
+/// Per-platform `gamelib://` scheme registration (Linux `register_all`, Windows self-heal).
+fn register_os_deep_link_scheme(app: &tauri::App) {
+    // Runtime `register_all()` stays LINUX-ONLY, and each of the three platforms is a
+    // decision, not an accident:
+    //   - macOS registers `CFBundleURLTypes` at BUILD time from `plugins.deep-link` in
+    //     `tauri.conf.json`; the runtime call returns `Error::UnsupportedPlatform` there,
+    //     so calling it would only produce a misleading warning on every launch.
+    //   - Linux registers at runtime, via a generated `.desktop` file plus `xdg-mime` /
+    //     `update-desktop-database`. `register_all()`'s own documented purpose is to
+    //     cover installs that bypass a proper installer (e.g. an AppImage that was not
+    //     otherwise registered).
+    //   - Windows registers at INSTALL time via the NSIS template (phase 46,
+    //     REQ-46-05/REQ-46-06, decision point (a)) AND, since quick-260925-uok,
+    //     self-heals at RUNTIME via `repair_windows_gamelib_protocol_registration`
+    //     (called immediately below this block). The install-time half is unchanged:
+    //     the NSIS template writes HKCU `Software\Classes\gamelib` (the project's
+    //     default `installMode`, `NSISInstallerMode::CurrentUser`) from
+    //     `plugins.deep-link.desktop`, sourced from the base `tauri.conf.json` now that
+    //     `tauri.windows.conf.json` no longer overrides `schemes` to `[]` (that
+    //     quick-260922-nx4 override was removed -- see
+    //     `src/backend/__tests__/windowsDeepLinkSuppression.test.ts`). Re-running the
+    //     installer overwrites the stale 2026-07-20 Electron-era HKCU key
+    //     unconditionally (`WriteRegStr` is not a conditional write), self-healing it
+    //     with no extra code (RESEARCH.md Q7) -- but only for someone who re-runs the
+    //     installer, which is what the runtime half now removes the need for.
+    //   - The runtime self-heal is deliberately NARROWER than `register_all()`, and the
+    //     distinction is the whole reason decision point (a) did not move.
+    //     `register_all()` is the deep-link plugin's whole-scheme registration: EVERY
+    //     configured scheme, registered through whatever mechanism the platform itself
+    //     provides, with the plugin's own abstraction layer in between. The self-heal is
+    //     one HKCU subtree read, one comparison, and a conditional write of exactly the
+    //     four values the NSIS template already writes -- no plugin surface, no new
+    //     scheme, no platform-abstraction layer, and nothing at all on macOS or Linux.
+    //     Widening the `#[cfg]` on `register_all()` would have been the BROADER change,
+    //     and it was rejected in favour of this one. So runtime `register_all()` stays
+    //     `#[cfg(target_os = "linux")]`, by DECISION rather than by the D-05 hazard that
+    //     used to block Windows entirely: GameLib ships Windows exclusively via NSIS
+    //     (no portable/zip target), so `register_all()`'s AppImage-shaped justification
+    //     still has no Windows analogue here. That decision remains
+    //     operator-overridable -- the REQ-46-06 pin and its override recipe in
+    //     `src/backend/__tests__/tauriShellSource.test.ts` are unchanged and still
+    //     accurate; what changed is only WHY Windows does not need the widening.
+    //   - The evidence that the install-time half alone was insufficient: the
+    //     2026-09-25 live-gate hijack during plan 46-07
+    //     (`46-LIVE-GATE-RERUN.md`, Check 3b / Check 5). A leftover machine-wide
+    //     Electron-era `C:\Program Files\GameLib\GameLib.exe`, sharing this build's
+    //     Start-menu display name, was launched by mistake and re-registered the HKCU
+    //     key to ITSELF at its own runtime launch. The operator then uninstalled it,
+    //     which deleted the exe without restoring the prior value, leaving `gamelib://`
+    //     DANGLING rather than merely stale. Check 5's ping then failed with
+    //     `Start-Process : This command cannot be run due to the error: Application not
+    //     found.`, and a human had to restore the value by hand with `Set-ItemProperty`
+    //     before the re-gate could continue.
+    //   - LAST-LAUNCH-WINS, stated rather than left to be discovered empirically: two
+    //     GameLib installations on one machine will each repair the key to themselves on
+    //     launch, so the most recently launched build owns `gamelib://`. That is the
+    //     intended semantics of "point it at the CURRENT executable" and is strictly
+    //     better than the dangling state it replaces, but it is not a no-op on a
+    //     multiple-install machine.
+    //   - The `CI=e2e` guard is load-bearing on the Windows repair path in a way it is
+    //     not on the Linux arm below: the repair WRITES to the real user registry, so an
+    //     automated run that skipped the guard would rewrite the host's protocol
+    //     association as a side effect of merely starting the app (T-UOK-02).
+    //   - The guard that makes registering Windows at all SAFE is this file's own
+    //     phase-46 single-instance guard (`CreateMutexW` primary/secondary decision,
+    //     `run_windows_single_instance_accept_loop`'s named-pipe warm delivery, wired
+    //     into `main()` before `tauri::Builder::default()`): every external
+    //     `gamelib://` open now reaches the one running instance instead of starting a
+    //     SECOND app with a SECOND sidecar over one set of store files and one download
+    //     queue. `tauri-plugin-single-instance` is NOT the fix -- see D-44-A above.
+    //   - Timing note (RESEARCH.md Q6, pinned by the REQ-46-08 ordering gate below): now
+    //     that Windows `schemes` is non-empty, the plugin's own cold-start argv path
+    //     (`handle_cli_arguments`, run during `init_deep_link` at PLUGIN init) fires
+    //     BEFORE this `.setup()` closure registers `on_open_url` -- Tauri does not
+    //     replay past events to a listener registered after the fact, so that emission
+    //     has no listener and is dropped. Argv delivery therefore stays exclusively
+    //     `sidecar_forward_args` -> `protocol_url_arg`, with no double dispatch. This
+    //     holds for tauri 2.11.5 / tauri-plugin-deep-link 2.4.9 specifically (both
+    //     version-pinned in `Cargo.lock`); re-verify on upgrade.
+    //   - Ledger row `U-34.5-18` and the todo
+    //     `.planning/todos/pending/`
+    //     `2026-08-29-windows-single-instance-guard-and-deep-link-registration.md`
+    //     close on the phase 46 live gate (REQ-46-10, plan 46-05), which is the only
+    //     remaining proof that a real Windows process pair behaves correctly end-to-end.
+    #[cfg(target_os = "linux")]
+    {
+        // Carries `src/backend/main.ts:501`'s `process.env.CI !== 'e2e'` guard forward
+        // in intent: an automated test run must never rewrite the host's OS-level
+        // protocol association as a side effect of starting the app.
+        if std::env::var("CI").as_deref() == Ok("e2e") {
+            shell_eprintln!(
+                "[shell] CI=e2e -- skipping gamelib:// OS registration (carried forward from main.ts:501)"
+            );
+        } else if let Err(e) = app.deep_link().register_all() {
+            // Fail open (T-34.5-G6-24 discipline): a failed registration degrades deep
+            // links, it must never abort startup.
+            shell_eprintln!(
+                "[shell] WARN: failed to register the gamelib:// protocol handler: {e}"
+            );
+        }
+    }
+
+    // The Windows runtime self-heal (quick-260925-uok). Placement is three decisions,
+    // not an accident:
+    //   (i)   AFTER the `#[cfg(target_os = "linux")]` block above, never before it, so
+    //         the nearest `#[cfg(...)]` ABOVE the file's sole `register_all()`
+    //         occurrence is still the Linux one and `cfgGuardAboveRegisterAll()` in
+    //         `src/backend/__tests__/tauriShellSource.test.ts` keeps returning
+    //         `'#[cfg(target_os = "linux")]'` (REQ-46-06).
+    //   (ii)  in `.setup()` rather than in `main()`, because by this point the
+    //         single-instance decision has already run and every secondary has
+    //         `std::process::exit(0)`'d -- so only the ONE surviving instance ever
+    //         touches the registry.
+    //   (iii) SYNCHRONOUS, not spawned on a thread: four HKCU value writes on the
+    //         worst-case path is sub-millisecond, a thread would add a handle whose
+    //         termination then has to be reasoned about against this shell's exit
+    //         contract for no measurable gain, and a deep link arriving moments after
+    //         launch benefits from the repair having already finished rather than
+    //         racing it.
+    // `app.config().identifier` is read here rather than hardcoded so the written
+    // `URL:<id> protocol` value can never drift from `tauri.conf.json`.
+    #[cfg(windows)]
+    repair_windows_gamelib_protocol_registration(&app.config().identifier);
+
+    #[cfg(not(any(target_os = "linux", windows)))]
+    let _ = app;
+}
+
+/// Registers the sidecar send queue and the sidecar state itself as Tauri managed state.
+fn manage_sidecar_state(app: &tauri::App, state: Arc<SidecarState>) {
+    let send_state = state.clone();
+    app.manage(SidecarSendQueue(spawn_send_writer(move |req| {
+        send_state.write_frame(req)
+    })));
+    app.manage(state);
+}
+
+fn apply_start_in_tray(app: &tauri::App, tray_settings: &TraySettingsSnapshot) {
+    // `startInTray`. Hidden inside `.setup()`, before the event loop runs, so the
+    // window is never displayed rather than being shown and yanked away.
+    //
+    // Gated on `!noTrayIcon`, mirroring `src/backend/main.ts:523`'s own
+    // `settings.startInTray && !settings.noTrayIcon` EXACTLY. Without the gate the two
+    // settings combine into an unrecoverable state: an app that starts with no window
+    // and no tray icon to restore it from. That is not a hypothetical -- both are plain
+    // user-toggleable booleans with no cross-validation in the settings UI.
+    if tray_settings.start_in_tray && !tray_settings.no_tray_icon {
+        match app.get_webview_window(MAIN_WINDOW_LABEL) {
+            Some(window) => {
+                if let Err(e) = window.hide() {
+                    shell_eprintln!(
+                        "[shell] WARN: startInTray: could not hide the main window ({e}) -- starting visible"
+                    );
+                } else {
+                    shell_eprintln!("[shell] startInTray: main window starts hidden");
+                }
+            }
+            None => shell_eprintln!(
+                "[shell] WARN: startInTray: no '{MAIN_WINDOW_LABEL}' window to hide -- starting visible"
+            ),
+        }
+    }
+}
+
+fn attach_main_window_close_handler(app: &tauri::App, tray_exists: bool) {
+    // The main-window close (the red X, Cmd+W's `performClose:`, Alt+F4).
+    //
+    // Two decisions are taken HERE, at close time, from a FRESH read, and neither is
+    // taken from the `.setup()` startup snapshot:
+    //   1. hide-to-tray vs quit -- `should_hide_on_close(load_tray_settings())`, the
+    //      `exitToTray` half (`tray_icon.ts:38-46`'s click handler is the SHOW half;
+    //      `src/backend/main.ts:286-292` was the HIDE half). The first implementation
+    //      read `exit_to_tray` from `TRAY_SETTINGS` and attached the handler only when
+    //      it was already true, so turning the setting ON mid-session did nothing until
+    //      relaunch (plan 35-06 task 3, live gate). A window close is rare and
+    //      user-initiated, so a small synchronous config read costs nothing perceptible.
+    //   2. whether a tray EXISTS -- `!noTrayIcon`, legitimately startup-only since a tray
+    //      cannot appear later in the run -- folded in by `close_request_action`.
+    //
+    // THE HANDLER IS ATTACHED UNCONDITIONALLY (todo 2026-10-05 cmd-q-and-red-x-quit-
+    // bypass-the-pending-operations-confirm). It used to be gated on tray existence and
+    // returned without `prevent_close()` whenever the window was not hiding, so the
+    // red X fell through to `RunEvent::Exit` and `shutdown_child()` killed a running
+    // download with no confirm; with `noTrayIcon` on there was no handler at all.
+    //
+    // `prevent_close()` runs FIRST, before either branch: the "pending operations"
+    // confirm is an unparented native panel and a "No" answer must find the window
+    // still there, not a windowless running app. `RouteQuit` hands the decision to the
+    // sidecar's `handleExit()` (exits via `app_exit` when nothing is pending or the user
+    // answers Yes; `exit(0)` is the fallback when it cannot be asked), so the user can
+    // always close.
+    //
+    // FAIL-SAFE DIRECTION IS DELIBERATE: `load_tray_settings()` degrades to
+    // `TraySettingsSnapshot::default()` (all false) on any read failure, so the close
+    // is ROUTED, not hidden. A user trapped in a window that refuses to close because a
+    // config read failed is the unsafe failure.
+    match app.get_webview_window(MAIN_WINDOW_LABEL) {
+        Some(window) => {
+            let close_window = window.clone();
+            let close_app_handle = app.handle().clone();
+            window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    match close_request_action(
+                        tray_exists,
+                        should_hide_on_close(load_tray_settings()),
+                    ) {
+                        CloseRequestAction::Hide => {
+                            if let Err(e) = close_window.hide() {
+                                shell_eprintln!(
+                                    "[shell] WARN: exitToTray: hide on close failed ({e})"
+                                );
+                            }
+                        }
+                        CloseRequestAction::RouteQuit => {
+                            quit_via_sidecar(&close_app_handle, "window close");
+                        }
+                    }
+                }
+            });
+            shell_diag(&format!(
+                "close handler attached (tray={tray_exists}): hide-to-tray re-read on every close; otherwise the quit is routed to the sidecar"
+            ));
+        }
+        None => shell_eprintln!(
+            "[shell] WARN: close handler: no '{MAIN_WINDOW_LABEL}' window to attach a close handler to"
+        ),
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn route_macos_quit_paths(app: &tauri::App) {
+    // macOS Cmd+Q is not a window close and never reaches the handler above: route it
+    // through the same sidecar hand-off by replacing the app menu's predefined Quit.
+    #[cfg(target_os = "macos")]
+    route_app_menu_quit_through_sidecar(app.handle());
+
+    // Dock Quit sends `terminate:` straight to the app, not through the menu: veto it in
+    // `applicationShouldTerminate:` and route it the same way (a power-off still passes).
+    #[cfg(target_os = "macos")]
+    macos_terminate_veto::install(app.handle());
+}
+
+fn attach_main_window_focus_refresh(app: &tauri::App) {
+    // Restores the install-badge reconciliation trigger dropped in the Electron to
+    // Tauri cutover (D-01/D-02): Electron's `mainWindow.on('focus', ...)`
+    // (`src/backend/main.ts:272-274`, deleted in `5643c7583`) drove a store manager's
+    // install-state refresh so badges reconcile after the window regains focus following
+    // an install/uninstall performed outside this app.
+    //
+    // Attached as a SECOND `on_window_event` listener on the SAME window as the
+    // `exitToTray` handler above. That is safe because the runtime dispatcher's
+    // `on_window_event` is additive -- it dispatches an `AddEventListener` message and
+    // returns a fresh listener id per call, not a single-slot setter -- so this
+    // registration cannot silently replace or disturb the close handler.
+    //
+    // `Focused(true)` ONLY, never `Focused(false)`: `WindowEvent::Focused(bool)` fires
+    // on both the gain and the loss of focus, and matching only the `true` arm keeps
+    // this a read-triggering signal on refocus, never on blur (T-03-03: no action is
+    // taken from data the window itself does not control -- a blur carries nothing worth
+    // reacting to here).
+    //
+    // Fires unconditionally, with no `!tray_settings.no_tray_icon` gate unlike
+    // `exitToTray` above: refocusing the window is a normal interaction whether or not a
+    // tray exists, and gating this on tray presence would silently stop badge
+    // reconciliation for every user who has disabled the tray icon.
+    match app.get_webview_window(MAIN_WINDOW_LABEL) {
+        Some(focus_window) => {
+            let focus_app_handle = app.handle().clone();
+            focus_window.on_window_event(move |event| {
+                if let tauri::WindowEvent::Focused(true) = event {
+                    let Some(state) = focus_app_handle.try_state::<Arc<SidecarState>>()
+                    else {
+                        shell_eprintln!(
+                            "[shell] WARN: window focus refresh: no sidecar state -- skipping"
+                        );
+                        return;
+                    };
+                    let state = state.inner().clone();
+                    thread::spawn(move || {
+                        let req = SidecarRpcRequest {
+                            id: state.next_id(),
+                            kind: "send",
+                            channel: SHELL_WINDOW_FOCUSED.to_string(),
+                            args: Vec::new(),
+                        };
+                        if send_trace_enabled() {
+                            shell_eprintln!(
+                                "[shell] send-trace: window focus refresh entered for '{}'",
+                                req.channel
+                            );
+                        }
+                        if let Err(e) = state.write_frame(&req) {
+                            shell_eprintln!(
+                                "[shell] WARN: window focus refresh: write_frame failed: {e}"
+                            );
+                        }
+                    });
+                }
+            });
+            shell_eprintln!(
+                "[shell] window focus refresh: listener attached to '{MAIN_WINDOW_LABEL}'"
+            );
+        }
+        None => shell_eprintln!(
+            "[shell] WARN: window focus refresh: no '{MAIN_WINDOW_LABEL}' window to attach a focus listener to"
+        ),
+    }
+}
+
+fn seed_tray_recent_games(max_recent_games: usize) {
+    // Seed the recent-games cache before the menu is built, so the section is
+    // populated on a COLD start rather than only after the first launch of a session.
+    let seeded = load_recent_games_from_disk(max_recent_games);
+    shell_eprintln!(
+        "[shell] tray recent games: seeded {} entr{} from disk (limit {})",
+        seeded.len(),
+        if seeded.len() == 1 { "y" } else { "ies" },
+        max_recent_games
+    );
+    match tray_recent_games().lock() {
+        Ok(mut guard) => *guard = seeded,
+        Err(poisoned) => *poisoned.into_inner() = seeded,
+    }
+}
+
+fn build_tray_icon(app: &tauri::App, no_tray_icon: bool) {
+    // `noTrayIcon` (tray_icon.ts:20's `if (noTrayIcon) return null`). Decided BEFORE
+    // the tray is built, so the user never sees an icon they asked not to have.
+    if no_tray_icon {
+        shell_eprintln!(
+            "[shell] tray suppressed by the noTrayIcon setting -- not building a tray"
+        );
+    } else {
+        match build_tray_menu(app.handle()) {
+            Some(menu) => {
+                let tray = TrayIconBuilder::with_id(TRAY_ICON_ID)
+                    .icon(tray_image(resolve_current_tray_icon_dark()))
+                    .icon_as_template(tray_is_template())
+                    .tooltip("GameLib")
+                    .menu(&menu)
+                    .show_menu_on_left_click(false)
+                    .on_menu_event(|app_handle, event| {
+                        let id = event.id().as_ref();
+                        match id {
+                            "show" => {
+                                if let Some(window) =
+                                    app_handle.get_webview_window(MAIN_WINDOW_LABEL)
+                                {
+                                    let _ = window.unminimize();
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
+                                }
+                            }
+                            "about" => open_about_window_from_tray(app_handle),
+                            "quit" => quit_via_sidecar(app_handle, "tray Quit"),
+                            // T-35-20: the appName reaching a launch is PARSED back out
+                            // of the menu id through the same allow-list that built it,
+                            // never taken from the id verbatim. A malformed id is
+                            // dropped, not launched.
+                            _ => match tray_recent_app_name(id) {
+                                Some(app_name) => dispatch_tray_launch(
+                                    app_handle,
+                                    app_name.to_string(),
+                                    tray_recent_runner_for(app_name),
+                                ),
+                                None => {
+                                    if id.starts_with(TRAY_RECENT_ID_PREFIX) {
+                                        shell_eprintln!(
+                                            "[shell] WARN: tray menu event rejected a malformed recent-game id (bytes={}) -- not launching",
+                                            id.len()
+                                        );
+                                    }
+                                }
+                            },
+                        }
+                    })
+                    .on_tray_icon_event(|tray, event| {
+                        if let TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            ..
+                        } = event
+                        {
+                            let app_handle = tray.app_handle();
+                            if let Some(window) =
+                                app_handle.get_webview_window(MAIN_WINDOW_LABEL)
+                            {
+                                let _ = window.unminimize();
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                    })
+                    .build(app);
+                match tray {
+                    Ok(_) => {
+                        // Only when a tray exists: a `noTrayIcon` user gets no thread.
+                        #[cfg(windows)]
+                        spawn_taskbar_theme_watcher(app.handle().clone());
+                    }
+                    Err(e) => {
+                        shell_eprintln!(
+                            "[shell] WARN: tray icon failed to build ({e}) -- continuing without a tray"
+                        );
+                    }
+                }
+            }
+            None => shell_eprintln!(
+                "[shell] WARN: tray menu failed to build -- continuing without a tray"
+            ),
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn install_login_sheet_esc_monitor(app: &tauri::App) {
+    // Page-independent Esc backstop for presented login sheets (Phase 34.4.2 Plan 08,
+    // REQ-34.4.2-03/04/06/07/08/10, T-34.4.2-33/-35): installs ONE process-wide
+    // `NSEvent` local key-down monitor here -- the EXACT site the retirement comment,
+    // immediately above, names as where the deminiaturize re-raise observer used to
+    // live. A sheet renders no titlebar close button and, unlike the injected cancel
+    // strip (above), this route works even when the login page renders nothing at all
+    // -- a blank page, a network error page, or a bot-management interstitial, exactly
+    // the states a login window reaches most often when something is already wrong.
+    //
+    // Reimplemented here rather than refactored out of
+    // `open_pristine_epic_login_window`'s own local monitor (read-only reference,
+    // above): that region is byte-frozen by REQ-34.4.2-10, and its monitor
+    // legitimately reads `charactersIgnoringModifiers()` to route Cmd+V/C/X/A/Z, which
+    // this monitor must never do (T-34.4.2-35, immediately below).
+    //
+    // PRIVACY IS A HARD CONSTRAINT, NOT A STYLE PREFERENCE (T-34.4.2-35): this handler
+    // reads ONLY `keyCode()` and `modifierFlags()` -- never `characters()` or
+    // `charactersIgnoringModifiers()`, and never logs the event or any field derived
+    // from it. This monitor sees every keystroke the app receives, including the
+    // password being typed into the login sheet.
+    //
+    // Epic is no longer exempt (quick-261029-utr lifted the REQ-34.4.2-10 descope): its
+    // pristine sheet is registered in `PRESENTED_LOGIN_SHEETS` through
+    // `present_login_window_as_sheet` like every other store, so the window-membership
+    // check below matches it and Esc cancels it. No explicit label check is added.
+    //
+    // Leaked for the process lifetime via `std::mem::forget`, matching the retired
+    // deminiaturize observer's own precedent (and the pristine arm's own monitor-leak
+    // shape for its navigation delegate): this is ONE monitor, registered ONCE, here --
+    // not a per-open monitor that would need its own teardown.
+    //
+    // Failure to install is NON-FATAL (T-34.1-22 discipline, matching this closure's
+    // own tray-build convention immediately above): logs one
+    // `[shell] WARN: login-sheet esc monitor: ...` line and lets the app start. The
+    // cancel strip (above) remains the primary route.
+    let esc_app_handle = app.handle().clone();
+    let esc_monitor_handler = block2::RcBlock::new(
+        move |event: std::ptr::NonNull<objc2_app_kit::NSEvent>|
+              -> *mut objc2_app_kit::NSEvent {
+            // SAFETY: AppKit hands local monitor handlers a valid, live `NSEvent`
+            // for the duration of this call.
+            let event_ref = unsafe { event.as_ref() };
+
+            // 1. Cheapest possible check first (T-34.4.2-35's "does no work at
+            // all" guarantee): no presented sheet at all, return untouched with no
+            // window resolution and no further AppKit calls.
+            let presented: Vec<String> = match PRESENTED_LOGIN_SHEETS.lock() {
+                Ok(guard) => guard.as_ref().cloned().unwrap_or_default(),
+                Err(_) => Vec::new(),
+            };
+            if presented.is_empty() {
+                return event.as_ptr();
+            }
+
+            // 2. Bare Esc only -- macOS virtual keyCode 53 is Esc.
+            if event_ref.keyCode() != 53 {
+                return event.as_ptr();
+            }
+
+            // 3. Only a BARE Esc dismisses -- Command/Option/Control held means
+            // this is some other chord (e.g. a devtools shortcut); never consume
+            // those.
+            let flags = event_ref.modifierFlags();
+            if flags.intersects(
+                objc2_app_kit::NSEventModifierFlags::Command
+                    | objc2_app_kit::NSEventModifierFlags::Option
+                    | objc2_app_kit::NSEventModifierFlags::Control,
+            ) {
+                return event.as_ptr();
+            }
+
+            // 4. Resolve the event's own window and compare against every
+            // currently presented sheet's `NSWindow` address. No match -> return
+            // untouched.
+            let Some(mtm) = objc2::MainThreadMarker::new() else {
+                return event.as_ptr();
+            };
+            let Some(event_window) = event_ref.window(mtm) else {
+                return event.as_ptr();
+            };
+            let event_window_addr =
+                (&*event_window) as *const objc2_app_kit::NSWindow as usize;
+
+            for label in &presented {
+                if login_window_ns_window(&esc_app_handle, label)
+                    == Some(event_window_addr)
+                {
+                    // 5. Match: dismiss and consume -- the page never also sees
+                    // this Esc.
+                    request_login_sheet_cancel(&esc_app_handle, label, "esc");
+                    return std::ptr::null_mut();
+                }
+            }
+            event.as_ptr()
+        },
+    );
+    // SAFETY: `esc_monitor_handler` is a valid block; AppKit copies it internally
+    // when registering the monitor, so it outliving this call is not required --
+    // the SAME convention the pristine arm's own monitor registration (above,
+    // read-only reference) already documents.
+    let esc_monitor_token = unsafe {
+        objc2_app_kit::NSEvent::addLocalMonitorForEventsMatchingMask_handler(
+            objc2_app_kit::NSEventMask::KeyDown,
+            &esc_monitor_handler,
+        )
+    };
+    match esc_monitor_token {
+        Some(token) => {
+            // Intentional leak for the process lifetime -- see this block's own
+            // doc comment above.
+            std::mem::forget(token);
+        }
+        None => {
+            shell_eprintln!(
+                "[shell] WARN: login-sheet esc monitor: addLocalMonitorForEventsMatchingMask failed -- continuing without it"
+            );
+        }
+    }
+}
+
+fn hide_for_no_gui_or_open_devtools(app: &tauri::App, no_gui: bool) {
+    // `--no-gui` (Phase 34.5 gap cycle 6 plan 44, F-34.5-G6-09): gate 3 recorded that
+    // `--no-gui` was previously ignored entirely, including opening devtools. When
+    // set, the devtools-open block below is skipped ENTIRELY (never conditionally
+    // opened then hidden), and the main window is explicitly hidden once it exists.
+    // `tauri.conf.json`'s `main` window carries no explicit `"visible"` key, so Tauri's
+    // own default (visible on creation) applies -- a brief flash before this `.hide()`
+    // call is an expected observation for the live gate, not a failure.
+    if no_gui {
+        match app.get_webview_window(MAIN_WINDOW_LABEL) {
+            Some(window) => {
+                let _ = window.hide();
+                shell_eprintln!("[shell] --no-gui: main window hidden");
+            }
+            None => shell_eprintln!(
+                "[shell] WARN: --no-gui: no 'main' webview window found to hide"
+            ),
+        }
+    } else {
+        // Dev-only: force the webview devtools open (the dev webview exposes no
+        // right-click inspect on macOS) so renderer errors are inspectable, and
+        // confirm the webview window actually exists.
+        //
+        // GATED ON VISIBILITY, not just on `debug_assertions` (plan 35-06 task 3,
+        // live-gate defect 2). `open_devtools()` FORCES the window visible, so an
+        // ungated call here silently defeated `startInTray`: the setting's own hide ran
+        // first and logged success, then this line put the window straight back on
+        // screen. The operator's terminal showed both lines in sequence and scored
+        // `startInTray` a fail.
+        //
+        // This mirrors the gate the LOGIN window's devtools call already uses
+        // (`#[cfg(debug_assertions)]` AND `if visible`, documented at
+        // `MAIN_WINDOW_LABEL`'s doc comment above) -- the precedent was already in this
+        // file; this call site had the first half and not the second.
+        //
+        // Tested via `is_visible()` rather than by re-reading `startInTray`: visibility
+        // is the property that actually matters, and it also covers `--no-gui` and any
+        // future path that hides the window for a reason this code does not know about.
+        //
+        // It also makes the live gate's step 5c non-vacuous. 5c passes when "a visible
+        // window appears because noTrayIcon overrode startInTray" -- which, before this
+        // fix, was true whether or not the override worked. A test that cannot fail is
+        // not evidence.
+        //
+        // NOT on Linux (quick 260930-ea0): the docked inspector attached from here races
+        // the page's entry module and the page's WebKitWebProcess aborts, leaving a white
+        // window (`should_auto_open_devtools` documents the measurement; session
+        // `.planning/debug/resolved/linux-dev-app-blank-without-dmabuf-workaround.md`).
+        // The platform gate sits OUTSIDE the visibility match so that match is unchanged.
+        #[cfg(debug_assertions)]
+        if should_auto_open_devtools(std::env::consts::OS) {
+            match app.get_webview_window(MAIN_WINDOW_LABEL) {
+                Some(window) => match window.is_visible() {
+                    Ok(true) => {
+                        window.open_devtools();
+                        shell_eprintln!(
+                            "[shell] devtools opened for 'main' webview (debug build)"
+                        );
+                    }
+                    Ok(false) => shell_eprintln!(
+                        "[shell] devtools NOT opened: 'main' webview is hidden (startInTray or --no-gui) -- opening it would force the window visible and defeat that setting"
+                    ),
+                    // Erring toward NOT opening: a devtools window the developer can
+                    // open by hand is a smaller loss than silently defeating a setting
+                    // the user asked for.
+                    Err(e) => shell_eprintln!(
+                        "[shell] WARN: devtools NOT opened: could not read 'main' webview visibility ({e})"
+                    ),
+                },
+                None => shell_eprintln!(
+                    "[shell] WARN: no 'main' webview window found — devtools not opened"
+                ),
+            }
+        } else {
+            shell_eprintln!(
+                "[shell] devtools NOT auto-opened for 'main' webview on linux (debug build) -- the inspector attach races page boot; right-click > Inspect Element opens it"
+            );
+        }
+    }
+}
+
+/// The body of `.setup(..)`: each step is a named fn, called in the original order.
+fn run_setup(
+    app: &mut tauri::App,
+    primary_listener: Option<PrimaryListener>,
+    no_gui: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Quick task 261023-vkv: delegate + one-time authorization request for packaged
+    // macOS builds (no-op elsewhere); see `macos_notifications`' module doc. Non-blocking.
+    #[cfg(target_os = "macos")]
+    macos_notifications::init_at_startup();
+    // Quick task 261031-mj9: native gamepad reader thread. Non-blocking and infallible
+    // (failures are logged inside), since setup must not panic -- see the SIGABRT note below.
+    #[cfg(target_os = "macos")]
+    macos_native_gamepad::start(app.handle().clone());
+    let state = spawn_sidecar_state(app)?;
+    start_single_instance_accept_loop(app, &state, primary_listener);
+    install_os_deep_link_handler(app, &state);
+    register_os_deep_link_scheme(app);
+    manage_sidecar_state(app, state);
+
+    // Real Tauri tray (Phase 34.1 Plan 06, D-11; EXTENDED by Phase 35 Plan 06,
+    // D-05/D-06, REQ-35-04). 34.1's version was deliberately bounded -- tooltip,
+    // left-click show/focus, a two-item Show GameLib / Quit menu -- and named its own
+    // exclusions: the recent-games submenu, About, the macOS dock menu,
+    // language-driven rebuilds, and honouring `noTrayIcon`/`exitToTray`. This block
+    // closes that delta against `src/backend/tray_icon/tray_icon.ts` except where a
+    // reduction is recorded EXPLICITLY, immediately below.
+    //
+    // STILL NOT DONE, stated rather than silently dropped:
+    //   - macOS dock menu (`app.dock?.setMenu`, tray_icon.ts:32). Tauri 2.11.5 exposes
+    //     no dock-menu API; it would need an AppKit `NSApp.dockTile` bridge, which is
+    //     a separate piece of work from a menu extension.
+    //   - Reload / Debug items (tray_icon.ts:126-138). Both are developer affordances
+    //     reached by the webview's own keyboard shortcuts under Tauri; shipping a menu
+    //     item that opens devtools in a release build is a different decision from
+    //     this plan's.
+    //   - `languageChanged` menu rebuild (tray_icon.ts:47). The menu's own labels
+    //     ("Show GameLib", "About GameLib", "Quit") are Rust string literals here, not
+    //     i18next keys -- there is no translated source for the shell to rebuild
+    //     FROM, so a rebuild on `languageChanged` would re-render the identical
+    //     English text. Making these translatable means giving the shell a string
+    //     channel, which is its own plan. The recent-games ENTRIES are game titles and
+    //     are not translated in the Electron build either.
+    //
+    // Every step below is non-fatal: a menu-item, menu, or tray build failure is
+    // logged and the app continues without a tray, never `unwrap()`/`panic!` out of
+    // `.setup()` (T-34.1-22) -- a tray that fails to build is strictly better than a
+    // shell that fails to start.
+    //
+    // Settings are read HERE, synchronously, from GlobalConfig's on-disk config.json
+    // rather than over a sidecar invoke -- see `gamelib_app_folder`'s doc comment for
+    // why a round-trip is the wrong shape for two decisions that must be made before
+    // the tray exists and before the window is displayed.
+    // Goes through the SAME single accessor the reader thread uses -- see
+    // `tray_settings_lock`. `.setup()` no longer owns a private initialiser, which is
+    // what previously let a reader-thread frame latch the lock to all-false defaults
+    // before this line ever ran.
+    let tray_settings = tray_settings();
+    apply_start_in_tray(app, &tray_settings);
+
+    let tray_exists = !tray_settings.no_tray_icon;
+    attach_main_window_close_handler(app, tray_exists);
+
+    #[cfg(target_os = "macos")]
+    route_macos_quit_paths(app);
+
+    attach_main_window_focus_refresh(app);
+
+    seed_tray_recent_games(tray_settings.max_recent_games);
+
+    build_tray_icon(app, tray_settings.no_tray_icon);
+
+    // DELIBERATELY RETIRED (Phase 34.4.2 Plan 07, 2026-08-04): a deminiaturize
+    // re-raise observer used to be installed here (Phase 34.4.2 Plan 02,
+    // REQ-34.4.2-04/05). It existed SOLELY to re-raise AppKit CHILD windows after
+    // `main` restored from the Dock -- spike 021's measured "restore main" defect,
+    // where an attached child window returned BEHIND `main` unless explicitly
+    // brought forward again. The operator's binding design decision of 2026-08-04
+    // (`34.4.2-LIVE-GATE.md`'s "Binding Design Decision" section, responding to
+    // F-34.4.2-01/-02) replaced child-window attachment with AppKit SHEET
+    // presentation (`present_login_window_as_sheet`, above): a sheet is presented BY
+    // its parent window and moves with it, so there is no child list to re-raise and
+    // no z-order defect this observer was written to fix. Keeping the observer would
+    // (a) do nothing useful -- `PRESENTED_LOGIN_SHEETS` entries are sheets, not
+    // AppKit child windows, and bringing one forward is not the same operation the
+    // old child-attachment call needed -- and (b) emit a misleading log line naming a
+    // re-raise mechanism that no longer exists. No replacement observer and no
+    // window-focus-driven re-raise handler were added: whether the sheet survives the
+    // minimize/restore cycle INTERACTIVE is exactly what the rewritten live gate's
+    // item 1 must measure, not something to pre-emptively paper over here.
+
+    #[cfg(target_os = "macos")]
+    install_login_sheet_esc_monitor(app);
+
+    hide_for_no_gui_or_open_devtools(app, no_gui);
+    Ok(())
+}
+
 fn main() {
     // Installed FIRST, before any other statement, so it covers the single-instance guard and
     // every `.setup()` callback rather than only the code after `Builder::default()`.
@@ -679,73 +1695,18 @@ fn main() {
     let no_gui = cli_no_gui(&argv);
 
     #[cfg(unix)]
-    let single_instance_socket_path_var: Option<std::path::PathBuf> = {
-        use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
-        single_instance_dir(std::env::var("HOME").ok().as_deref()).and_then(|dir| {
-            match std::fs::DirBuilder::new()
-                .recursive(true)
-                .mode(0o700)
-                .create(&dir)
-            {
-                Ok(()) => {
-                    // Belt and braces (T-34.5-G6-20): `DirBuilderExt::mode` only governs the
-                    // mode mkdir() is called with for a directory this call actually CREATES --
-                    // if the directory already existed (e.g. from an older release, or from a
-                    // stale run) `recursive(true)` succeeds without re-chmod'ing it. Explicitly
-                    // enforce `0700` here regardless of which branch just ran.
-                    if let Err(e) = std::fs::set_permissions(
-                        &dir,
-                        std::fs::Permissions::from_mode(0o700),
-                    ) {
-                        shell_eprintln!(
-                            "[shell] WARN: failed to set single-instance socket directory permissions to 0700: {e}"
-                        );
-                    }
-                    Some(single_instance_socket_path(&dir))
-                }
-                Err(e) => {
-                    shell_eprintln!(
-                        "[shell] WARN: failed to create single-instance socket directory {dir:?}: {e} -- continuing without the single-instance guard (fail-open, T-34.5-G6-24)"
-                    );
-                    None
-                }
-            }
-        })
-    };
+    let single_instance_socket_path_var: Option<std::path::PathBuf> =
+        prepare_single_instance_socket_path();
     #[cfg(not(unix))]
     let single_instance_socket_path_var: Option<std::path::PathBuf> = None;
 
     // `primary_listener` is moved into the `.setup(move |app| ...)` closure below, where it
     // becomes the deep-link accept loop's listener once the sidecar state is live.
     #[cfg(unix)]
-    let primary_listener: Option<std::os::unix::net::UnixListener> = single_instance_socket_path_var
+    let primary_listener: Option<PrimaryListener> = single_instance_socket_path_var
         .as_deref()
         .and_then(|path| match acquire_single_instance(path) {
-            SingleInstanceRole::Secondary => {
-                use std::io::Write as _;
-                use std::os::unix::net::UnixStream;
-                // A bare second launch with no deep link raises the existing window -- the
-                // sentinel below -- which is the correct UX and matches what a plugin-based
-                // guard would do. Never logs the URL itself here (T-34.5-G6-25): the running
-                // instance's own `handleProtocol` logs it authoritatively one line later.
-                let (payload, kind) = match protocol_url_arg(&argv) {
-                    Some(url) => (url, "deep-link"),
-                    None => ("__GAMELIB_FOCUS__".to_string(), "focus sentinel"),
-                };
-                shell_eprintln!(
-                    "[shell] another GameLib instance is already running -- sending {kind} to it and exiting"
-                );
-                match UnixStream::connect(path) {
-                    Ok(mut stream) => {
-                        let _ = writeln!(stream, "{payload}");
-                        let _ = stream.flush();
-                    }
-                    Err(e) => shell_eprintln!(
-                        "[shell] WARN: secondary instance failed to deliver {kind} to the running instance: {e}"
-                    ),
-                }
-                std::process::exit(0);
-            }
+            SingleInstanceRole::Secondary => hand_off_to_running_instance_unix(path, &argv),
             SingleInstanceRole::Primary(listener) => Some(listener),
             SingleInstanceRole::PrimaryWithoutListener => None,
         });
@@ -758,7 +1719,7 @@ fn main() {
     // same unconditional `std::process::exit(0)` -- 46-RESEARCH.md Q5's own fail-open policy: a
     // second sidecar is strictly worse than an occasionally-lost deep link.
     #[cfg(windows)]
-    let primary_listener: Option<WindowsPrimaryPipe> = match current_user_identity() {
+    let primary_listener: Option<PrimaryListener> = match current_user_identity() {
         None => {
             shell_eprintln!(
                 "[shell] WARN: could not read the current user's SID/session -- continuing without the single-instance guard (fail-open, T-34.5-G6-24)"
@@ -788,7 +1749,7 @@ fn main() {
     };
 
     #[cfg(not(any(unix, windows)))]
-    let primary_listener: Option<()> = None;
+    let primary_listener: Option<PrimaryListener> = None;
 
     tauri::Builder::default()
         .plugin(
@@ -816,966 +1777,7 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_deep_link::init())
-        .setup(move |app| {
-            // Quick task 261023-vkv: delegate + one-time authorization request for packaged
-            // macOS builds (no-op elsewhere); see `macos_notifications`' module doc. Non-blocking.
-            #[cfg(target_os = "macos")]
-            macos_notifications::init_at_startup();
-            // Quick task 261031-mj9: native gamepad reader thread. Non-blocking and infallible
-            // (failures are logged inside), since setup must not panic -- see the SIGABRT note below.
-            #[cfg(target_os = "macos")]
-            macos_native_gamepad::start(app.handle().clone());
-            // A spawn failure used to propagate through this `?`. Tauri turns a setup error into
-            // a panic (`app.rs:1425`), and that panic unwinds out of `did_finish_launching` — an
-            // `extern "C"` ObjC callback — so it became `panic_cannot_unwind` -> `SIGABRT`. The
-            // user saw "GameLib quit unexpectedly" with no cause, and the crash report could only
-            // ever show the abort guard, never the origin. Nine such reports in one afternoon
-            // (2026-08-29), every one of them a `node` that was not on the LaunchServices PATH.
-            //
-            // The app genuinely cannot run without a sidecar, so this still ends the process.
-            // What changes is that it ends DELIBERATELY and says why, instead of aborting.
-            //
-            // `blocking_show()` is safe here: `.setup()` runs on the main thread from INSIDE the
-            // running event loop (`did_finish_launching` -> `AppState::launched` ->
-            // `make_run_event_loop_callback`, per the captured backtrace), so the modal has a
-            // run loop to spin. It is also on a path where the app is already dead either way.
-            let mut child = match spawn_sidecar(app.handle()) {
-                Ok(child) => child,
-                Err(e) => {
-                    shell_diag(&format!("FATAL: sidecar spawn failed, exiting: {e}"));
-                    let where_to_look = shell_diag_log_path(std::env::var("HOME").ok().as_deref())
-                        .map(|p| p.display().to_string())
-                        .unwrap_or_else(|| "the GameLib log directory".to_string());
-                    app.dialog()
-                        .message(format!(
-                            "GameLib could not start its backend process, so it cannot continue.\n\n\
-                             {e}\n\n\
-                             Details were written to:\n{where_to_look}"
-                        ))
-                        .kind(MessageDialogKind::Error)
-                        .blocking_show();
-                    // Exit, do NOT `?`. Propagating produces the abort described above.
-                    std::process::exit(1);
-                }
-            };
-            #[cfg(windows)]
-            let job = create_kill_on_close_job(&child);
-            let stdin = child
-                .stdin
-                .take()
-                .ok_or("sidecar stdin unavailable")?;
-            let stdout = child
-                .stdout
-                .take()
-                .ok_or("sidecar stdout unavailable")?;
-            let stderr = child
-                .stderr
-                .take()
-                .ok_or("sidecar stderr unavailable")?;
-
-            let state = Arc::new(SidecarState {
-                stdin: Mutex::new(stdin),
-                pending: Mutex::new(HashMap::new()),
-                abandoned: Mutex::new(VecDeque::new()),
-                counter: AtomicU64::new(1),
-                child: Mutex::new(child),
-                shutting_down: AtomicBool::new(false),
-                eof_surfaced: AtomicBool::new(false),
-                tree_reaped: AtomicBool::new(false),
-                #[cfg(windows)]
-                job: Mutex::new(job),
-            });
-
-            start_reader(app.handle().clone(), state.clone(), stdout);
-            start_stderr_forwarder(stderr);
-
-            // Deep-link accept loop (Phase 34.5 gap cycle 6 plan 44, D-44-A): the primary's
-            // warm-delivery path for a launch received while this instance is already
-            // running. Spawned AFTER `app.manage(state)` below would be too late for the
-            // clone captured here -- clone first, manage the original.
-            #[cfg(unix)]
-            if let Some(listener) = primary_listener {
-                let accept_state = state.clone();
-                let accept_app_handle = app.handle().clone();
-                thread::spawn(move || {
-                    for incoming in listener.incoming() {
-                        let stream = match incoming {
-                            Ok(s) => s,
-                            Err(e) => {
-                                shell_eprintln!(
-                                    "[shell] WARN: single-instance accept() failed: {e}"
-                                );
-                                continue;
-                            }
-                        };
-                        // T-34.5-G6-23: bound the read exactly like sidecarRpc's own
-                        // MAX_LINE_LENGTH discipline -- a single read_line off a capped reader,
-                        // never an unbounded buffer.
-                        let mut reader = BufReader::new(stream.take(4096));
-                        let mut line = String::new();
-                        match reader.read_line(&mut line) {
-                            Ok(0) | Err(_) => continue,
-                            Ok(_) => {}
-                        }
-                        let trimmed = line.trim();
-
-                        if trimmed == "__GAMELIB_FOCUS__" {
-                            // `unminimize()` is load-bearing here, not `show()` + `set_focus()`
-                            // alone -- measured live on Linux (GNOME Shell/mutter, GTK 3.24.33,
-                            // debug session `linux-focus-restore-minimize`, 2026-09-26). Per
-                            // tao-0.35.3 (`platform_impl/linux/window.rs:558-576` and
-                            // `platform_impl/linux/event_loop.rs:296-324`): `show()` sends
-                            // `WindowRequest::Visible(true)` -> GTK `show_all()`, which does not
-                            // clear WM-level iconic state (ICCCM); `set_focus()` is gated on
-                            // `!self.minimized.load(..) && self.window.get_visible()`, so it never
-                            // even sends `WindowRequest::Focus` (-> `present_with_time`, the call
-                            // that would deiconify) while minimized. Only `set_minimized(false)`
-                            // (`unminimize()`) sends `WindowRequest::Minimized(false)` ->
-                            // `window.deiconify()`, the only call in this sequence that clears
-                            // EWMH `_NET_WM_STATE_HIDDEN`. This is the same defect shape fixed on
-                            // Windows in `handle_windows_single_instance_connection` (plan 46-06);
-                            // this Unix arm was deliberately left unfixed there because it was
-                            // unmeasured on Linux -- now measured and fixed here. This is a
-                            // deliberate, on-purpose divergence of this `#[cfg(unix)]` region from
-                            // the phase-46 `46-unix-cfg-regions.awk` gate's baseline (`5bc4fa825`);
-                            // see `open_about_window_from_tray`'s comment above for the full
-                            // correction history.
-                            let focus_handle = accept_app_handle.clone();
-                            let _ = accept_app_handle.run_on_main_thread(move || {
-                                let render = |r: tauri::Result<()>| match r {
-                                    Ok(()) => "ok".to_string(),
-                                    Err(e) => format!("err={e}"),
-                                };
-                                match focus_handle.get_webview_window(MAIN_WINDOW_LABEL) {
-                                    Some(window) => {
-                                        let unminimize_result = render(window.unminimize());
-                                        let show_result = render(window.show());
-                                        let set_focus_result = render(window.set_focus());
-                                        shell_eprintln!(
-                                            "[shell] focus sentinel raise: unminimize={}, show={}, set_focus={}",
-                                            unminimize_result, show_result, set_focus_result
-                                        );
-                                    }
-                                    None => {
-                                        shell_eprintln!(
-                                            "[shell] WARN: focus sentinel: no '{MAIN_WINDOW_LABEL}' window to raise"
-                                        );
-                                    }
-                                }
-                            });
-                            continue;
-                        }
-
-                        // Defence in depth (T-34.5-G6-20): re-validate through the SAME
-                        // allow-list used for argv, never trusting the socket because it is
-                        // "internal" -- the socket is a trust boundary even inside a `0700`
-                        // directory.
-                        match protocol_url_arg(&[trimmed.to_string()]) {
-                            Some(url) => {
-                                match accept_state
-                                    .invoke("handleProtocolUrl".to_string(), vec![Value::String(url)])
-                                {
-                                    Ok(_) => shell_eprintln!(
-                                        "[shell] delivered single-instance deep link to sidecar: ok"
-                                    ),
-                                    Err(e) => shell_eprintln!(
-                                        "[shell] delivered single-instance deep link to sidecar: err={e}"
-                                    ),
-                                }
-                            }
-                            None => {
-                                // T-34.5-G6-25: the REASON and byte count only, never the
-                                // payload.
-                                shell_eprintln!(
-                                    "[shell] rejected single-instance payload (failed protocol_url_arg validation), bytes={}",
-                                    trimmed.len()
-                                );
-                            }
-                        }
-                    }
-                });
-            }
-            // Windows counterpart to the `#[cfg(unix)]` accept-loop thread above (Phase 46 plan
-            // 46-03, REQ-46-04). Spawned here for the identical reason: AFTER `app.manage(state)`
-            // below would be too late for the clone captured here -- clone first, manage the
-            // original. The thread is never joined, exactly like the Unix thread above.
-            #[cfg(windows)]
-            if let Some(primary) = primary_listener {
-                let accept_state = state.clone();
-                let accept_app_handle = app.handle().clone();
-                thread::spawn(move || run_windows_single_instance_accept_loop(primary, accept_state, accept_app_handle));
-            }
-
-            #[cfg(not(any(unix, windows)))]
-            let _ = &primary_listener;
-
-            // ---- OS deep-link delivery (Phase 35 plan 07, D-07/D-05, REQ-35-05/REQ-35-16) ----
-            // Replaces `src/backend/main.ts:501-507`'s `protocol.handle('gamelib', ...)` +
-            // `app.setAsDefaultProtocolClient('gamelib')`, which die with the Electron build.
-            //
-            // This callback is the FOURTH source of a `gamelib://` URL into this process, after
-            // argv (`sidecar_forward_args`), the Unix single-instance socket accept loop above,
-            // and the Windows single-instance pipe accept loop above (Phase 46,
-            // `run_windows_single_instance_accept_loop`). It is NOT an exception to the
-            // validation the other three perform: every URL goes through `deep_link_decision` ->
-            // `protocol_url_arg`, this file's single input-validation choke point (ASVS V5),
-            // before it can reach the sidecar. Defence in depth (T-34.5-G6-20) -- the socket
-            // path's own comment above establishes the rule this follows: never trust a source
-            // because it is "internal", and the OS is not even internal. Anyone adding a FIFTH
-            // source: put it through the same function, not through a new copy of the checks.
-            //
-            // Platform reality (the plugin's own README): the event fires on macOS only. On
-            // Linux and Windows the OS spawns a NEW process with the URL as a CLI argument
-            // instead, which is why the argv + single-instance-guard paths above are not
-            // redundant with this one -- it is the ONLY delivery path on Linux (via the Unix
-            // socket accept loop) and on Windows (via the named-pipe accept loop, phase 46's
-            // `run_windows_single_instance_accept_loop`) once a second launch's argv has been
-            // handed to the running instance.
-            // NOT `deep_link().get_current()`. That is the plugin's documented "was the app
-            // STARTED by a deep link" accessor, and it was measured here on 2026-08-29 and does
-            // NOT serve that purpose for this app: on three cold starts it reported `None` at
-            // setup time every time, because the plugin only populates `current` from its
-            // `RunEvent::Opened` handler, which fires AFTER setup. `on_open_url` below does
-            // receive the cold-start URL (measured: fires in the same second as setup). See
-            // `.planning/debug/deep-link-open-url-abort.md`.
-            // ---- The invoke runs OFF the main thread. ----
-            //
-            // `SidecarState::invoke` BLOCKS until the sidecar answers or `timeout_for` expires,
-            // and `handleProtocolUrl` is deliberately not on `LONG_RUNNING_CHANNELS`, so that
-            // bound is the full `INVOKE_TIMEOUT`. This callback runs on the macOS main thread
-            // inside AppKit's AppleEvent handler (`-[NSApplication _handleAEGetURLEvent:]` ->
-            // tao's `application_open_urls`), so calling `invoke` here directly froze the entire
-            // UI for as long as the sidecar took. Measured 2026-08-29: 671ms / 1010ms / 1191ms
-            // on a cold start, 1-2ms warm, worst case 60s.
-            //
-            // It was also the ONLY `invoke` call site that blocked the main thread — the
-            // renderer-facing `sidecar_invoke` command has always wrapped it in
-            // `tauri::async_runtime::spawn_blocking` for exactly this reason. Blocking here is
-            // additionally hazardous rather than merely slow: tao holds BOTH its
-            // `HANDLER.callback` `Mutex` (`app_state.rs:204`, a `.lock().unwrap()`) and the
-            // `RefCell` behind it (`app_state.rs:77`, `callback.borrow_mut()`) for the whole
-            // dispatch, and a panic on the main thread inside this `extern "C"` callback cannot
-            // unwind — it becomes an immediate `SIGABRT` via `panic_cannot_unwind`, taking the
-            // app down and orphaning the sidecar. One such abort was captured on 2026-08-29
-            // (`.planning/debug/deep-link-open-url-abort.md`); its cause was never proven
-            // because the panic message went to a stderr LaunchServices discards, which is what
-            // `install_panic_hook` now fixes. This change closes the window regardless.
-            //
-            // A SINGLE worker thread fed by a channel, not `thread::spawn` per URL:
-            //   - URLs stay FIFO, so two deep links cannot interleave their sidecar round-trips.
-            //   - Thread count is bounded at one. A page firing `gamelib://` in a loop is a
-            //     realistic input, and thread-per-URL would let it spawn without limit.
-            // Validation stays on the main thread: `deep_link_decision` is pure and fast, and
-            // keeping it here means an unvalidated URL is never enqueued at all.
-            let deep_link_state = state.clone();
-            let (deep_link_tx, deep_link_rx) = mpsc_channel::<String>();
-            thread::spawn(move || {
-                // Ends only when the sender is dropped, i.e. at process exit.
-                for url in deep_link_rx {
-                    let started = std::time::Instant::now();
-                    let outcome = deep_link_state
-                        .invoke("handleProtocolUrl".to_string(), vec![Value::String(url)]);
-                    let elapsed_ms = started.elapsed().as_millis();
-                    match outcome {
-                        Ok(_) => shell_diag(&format!(
-                            "delivered OS deep link to sidecar: ok ({elapsed_ms}ms)"
-                        )),
-                        Err(e) => shell_diag(&format!(
-                            "delivered OS deep link to sidecar: err={e} ({elapsed_ms}ms)"
-                        )),
-                    }
-                }
-            });
-
-            // `mpsc::Sender<T>` is `Sync` as of Rust 1.72 and this crate's MSRV is 1.77.2, so a
-            // plain sender satisfies `on_open_url`'s `Fn(..) + Send + Sync + 'static` bound
-            // without a `Mutex` wrapper.
-            app.deep_link().on_open_url(move |event| {
-                // `urls()` takes `self` by value, so bind once and reuse.
-                let urls = event.urls();
-                shell_diag(&format!("on_open_url fired with {} url(s)", urls.len()));
-                for url in urls {
-                    let candidate = url.to_string();
-                    match deep_link_decision(&candidate) {
-                        // Reached only after `protocol_url_arg` accepted the URL -- same
-                        // allow-list, same guarantees, as the argv and socket paths.
-                        DeepLinkDecision::Dispatch(url) => {
-                            // Hand off and return immediately; the worker does the blocking
-                            // round-trip and logs its own outcome. `SendError`'s Display is a
-                            // fixed string ("sending on a closed channel") and does NOT carry
-                            // the payload, but it is not formatted here at all so that no future
-                            // edit can turn this into a URL leak (T-34.5-G6-25 / T-35-26).
-                            if deep_link_tx.send(url).is_err() {
-                                shell_diag(
-                                    "deep-link dispatch worker is gone; dropping a validated URL",
-                                );
-                            }
-                        }
-                        DeepLinkDecision::Reject { bytes } => {
-                            // T-34.5-G6-25 / T-35-26: the REASON and byte count only, never
-                            // the payload. `DeepLinkDecision::Reject` does not even carry it.
-                            shell_diag(&format!(
-                                "rejected OS deep-link payload (failed protocol_url_arg validation), bytes={bytes}"
-                            ));
-                        }
-                    }
-                }
-            });
-
-            // Runtime `register_all()` stays LINUX-ONLY, and each of the three platforms is a
-            // decision, not an accident:
-            //   - macOS registers `CFBundleURLTypes` at BUILD time from `plugins.deep-link` in
-            //     `tauri.conf.json`; the runtime call returns `Error::UnsupportedPlatform` there,
-            //     so calling it would only produce a misleading warning on every launch.
-            //   - Linux registers at runtime, via a generated `.desktop` file plus `xdg-mime` /
-            //     `update-desktop-database`. `register_all()`'s own documented purpose is to
-            //     cover installs that bypass a proper installer (e.g. an AppImage that was not
-            //     otherwise registered).
-            //   - Windows registers at INSTALL time via the NSIS template (phase 46,
-            //     REQ-46-05/REQ-46-06, decision point (a)) AND, since quick-260925-uok,
-            //     self-heals at RUNTIME via `repair_windows_gamelib_protocol_registration`
-            //     (called immediately below this block). The install-time half is unchanged:
-            //     the NSIS template writes HKCU `Software\Classes\gamelib` (the project's
-            //     default `installMode`, `NSISInstallerMode::CurrentUser`) from
-            //     `plugins.deep-link.desktop`, sourced from the base `tauri.conf.json` now that
-            //     `tauri.windows.conf.json` no longer overrides `schemes` to `[]` (that
-            //     quick-260922-nx4 override was removed -- see
-            //     `src/backend/__tests__/windowsDeepLinkSuppression.test.ts`). Re-running the
-            //     installer overwrites the stale 2026-07-20 Electron-era HKCU key
-            //     unconditionally (`WriteRegStr` is not a conditional write), self-healing it
-            //     with no extra code (RESEARCH.md Q7) -- but only for someone who re-runs the
-            //     installer, which is what the runtime half now removes the need for.
-            //   - The runtime self-heal is deliberately NARROWER than `register_all()`, and the
-            //     distinction is the whole reason decision point (a) did not move.
-            //     `register_all()` is the deep-link plugin's whole-scheme registration: EVERY
-            //     configured scheme, registered through whatever mechanism the platform itself
-            //     provides, with the plugin's own abstraction layer in between. The self-heal is
-            //     one HKCU subtree read, one comparison, and a conditional write of exactly the
-            //     four values the NSIS template already writes -- no plugin surface, no new
-            //     scheme, no platform-abstraction layer, and nothing at all on macOS or Linux.
-            //     Widening the `#[cfg]` on `register_all()` would have been the BROADER change,
-            //     and it was rejected in favour of this one. So runtime `register_all()` stays
-            //     `#[cfg(target_os = "linux")]`, by DECISION rather than by the D-05 hazard that
-            //     used to block Windows entirely: GameLib ships Windows exclusively via NSIS
-            //     (no portable/zip target), so `register_all()`'s AppImage-shaped justification
-            //     still has no Windows analogue here. That decision remains
-            //     operator-overridable -- the REQ-46-06 pin and its override recipe in
-            //     `src/backend/__tests__/tauriShellSource.test.ts` are unchanged and still
-            //     accurate; what changed is only WHY Windows does not need the widening.
-            //   - The evidence that the install-time half alone was insufficient: the
-            //     2026-09-25 live-gate hijack during plan 46-07
-            //     (`46-LIVE-GATE-RERUN.md`, Check 3b / Check 5). A leftover machine-wide
-            //     Electron-era `C:\Program Files\GameLib\GameLib.exe`, sharing this build's
-            //     Start-menu display name, was launched by mistake and re-registered the HKCU
-            //     key to ITSELF at its own runtime launch. The operator then uninstalled it,
-            //     which deleted the exe without restoring the prior value, leaving `gamelib://`
-            //     DANGLING rather than merely stale. Check 5's ping then failed with
-            //     `Start-Process : This command cannot be run due to the error: Application not
-            //     found.`, and a human had to restore the value by hand with `Set-ItemProperty`
-            //     before the re-gate could continue.
-            //   - LAST-LAUNCH-WINS, stated rather than left to be discovered empirically: two
-            //     GameLib installations on one machine will each repair the key to themselves on
-            //     launch, so the most recently launched build owns `gamelib://`. That is the
-            //     intended semantics of "point it at the CURRENT executable" and is strictly
-            //     better than the dangling state it replaces, but it is not a no-op on a
-            //     multiple-install machine.
-            //   - The `CI=e2e` guard is load-bearing on the Windows repair path in a way it is
-            //     not on the Linux arm below: the repair WRITES to the real user registry, so an
-            //     automated run that skipped the guard would rewrite the host's protocol
-            //     association as a side effect of merely starting the app (T-UOK-02).
-            //   - The guard that makes registering Windows at all SAFE is this file's own
-            //     phase-46 single-instance guard (`CreateMutexW` primary/secondary decision,
-            //     `run_windows_single_instance_accept_loop`'s named-pipe warm delivery, wired
-            //     into `main()` before `tauri::Builder::default()`): every external
-            //     `gamelib://` open now reaches the one running instance instead of starting a
-            //     SECOND app with a SECOND sidecar over one set of store files and one download
-            //     queue. `tauri-plugin-single-instance` is NOT the fix -- see D-44-A above.
-            //   - Timing note (RESEARCH.md Q6, pinned by the REQ-46-08 ordering gate below): now
-            //     that Windows `schemes` is non-empty, the plugin's own cold-start argv path
-            //     (`handle_cli_arguments`, run during `init_deep_link` at PLUGIN init) fires
-            //     BEFORE this `.setup()` closure registers `on_open_url` -- Tauri does not
-            //     replay past events to a listener registered after the fact, so that emission
-            //     has no listener and is dropped. Argv delivery therefore stays exclusively
-            //     `sidecar_forward_args` -> `protocol_url_arg`, with no double dispatch. This
-            //     holds for tauri 2.11.5 / tauri-plugin-deep-link 2.4.9 specifically (both
-            //     version-pinned in `Cargo.lock`); re-verify on upgrade.
-            //   - Ledger row `U-34.5-18` and the todo
-            //     `.planning/todos/pending/`
-            //     `2026-08-29-windows-single-instance-guard-and-deep-link-registration.md`
-            //     close on the phase 46 live gate (REQ-46-10, plan 46-05), which is the only
-            //     remaining proof that a real Windows process pair behaves correctly end-to-end.
-            #[cfg(target_os = "linux")]
-            {
-                // Carries `src/backend/main.ts:501`'s `process.env.CI !== 'e2e'` guard forward
-                // in intent: an automated test run must never rewrite the host's OS-level
-                // protocol association as a side effect of starting the app.
-                if std::env::var("CI").as_deref() == Ok("e2e") {
-                    shell_eprintln!(
-                        "[shell] CI=e2e -- skipping gamelib:// OS registration (carried forward from main.ts:501)"
-                    );
-                } else if let Err(e) = app.deep_link().register_all() {
-                    // Fail open (T-34.5-G6-24 discipline): a failed registration degrades deep
-                    // links, it must never abort startup.
-                    shell_eprintln!(
-                        "[shell] WARN: failed to register the gamelib:// protocol handler: {e}"
-                    );
-                }
-            }
-
-            // The Windows runtime self-heal (quick-260925-uok). Placement is three decisions,
-            // not an accident:
-            //   (i)   AFTER the `#[cfg(target_os = "linux")]` block above, never before it, so
-            //         the nearest `#[cfg(...)]` ABOVE the file's sole `register_all()`
-            //         occurrence is still the Linux one and `cfgGuardAboveRegisterAll()` in
-            //         `src/backend/__tests__/tauriShellSource.test.ts` keeps returning
-            //         `'#[cfg(target_os = "linux")]'` (REQ-46-06).
-            //   (ii)  in `.setup()` rather than in `main()`, because by this point the
-            //         single-instance decision has already run and every secondary has
-            //         `std::process::exit(0)`'d -- so only the ONE surviving instance ever
-            //         touches the registry.
-            //   (iii) SYNCHRONOUS, not spawned on a thread: four HKCU value writes on the
-            //         worst-case path is sub-millisecond, a thread would add a handle whose
-            //         termination then has to be reasoned about against this shell's exit
-            //         contract for no measurable gain, and a deep link arriving moments after
-            //         launch benefits from the repair having already finished rather than
-            //         racing it.
-            // `app.config().identifier` is read here rather than hardcoded so the written
-            // `URL:<id> protocol` value can never drift from `tauri.conf.json`.
-            #[cfg(windows)]
-            repair_windows_gamelib_protocol_registration(&app.config().identifier);
-
-            let send_state = state.clone();
-            app.manage(SidecarSendQueue(spawn_send_writer(move |req| {
-                send_state.write_frame(req)
-            })));
-            app.manage(state);
-
-            // Real Tauri tray (Phase 34.1 Plan 06, D-11; EXTENDED by Phase 35 Plan 06,
-            // D-05/D-06, REQ-35-04). 34.1's version was deliberately bounded -- tooltip,
-            // left-click show/focus, a two-item Show GameLib / Quit menu -- and named its own
-            // exclusions: the recent-games submenu, About, the macOS dock menu,
-            // language-driven rebuilds, and honouring `noTrayIcon`/`exitToTray`. This block
-            // closes that delta against `src/backend/tray_icon/tray_icon.ts` except where a
-            // reduction is recorded EXPLICITLY, immediately below.
-            //
-            // STILL NOT DONE, stated rather than silently dropped:
-            //   - macOS dock menu (`app.dock?.setMenu`, tray_icon.ts:32). Tauri 2.11.5 exposes
-            //     no dock-menu API; it would need an AppKit `NSApp.dockTile` bridge, which is
-            //     a separate piece of work from a menu extension.
-            //   - Reload / Debug items (tray_icon.ts:126-138). Both are developer affordances
-            //     reached by the webview's own keyboard shortcuts under Tauri; shipping a menu
-            //     item that opens devtools in a release build is a different decision from
-            //     this plan's.
-            //   - `languageChanged` menu rebuild (tray_icon.ts:47). The menu's own labels
-            //     ("Show GameLib", "About GameLib", "Quit") are Rust string literals here, not
-            //     i18next keys -- there is no translated source for the shell to rebuild
-            //     FROM, so a rebuild on `languageChanged` would re-render the identical
-            //     English text. Making these translatable means giving the shell a string
-            //     channel, which is its own plan. The recent-games ENTRIES are game titles and
-            //     are not translated in the Electron build either.
-            //
-            // Every step below is non-fatal: a menu-item, menu, or tray build failure is
-            // logged and the app continues without a tray, never `unwrap()`/`panic!` out of
-            // `.setup()` (T-34.1-22) -- a tray that fails to build is strictly better than a
-            // shell that fails to start.
-            //
-            // Settings are read HERE, synchronously, from GlobalConfig's on-disk config.json
-            // rather than over a sidecar invoke -- see `gamelib_app_folder`'s doc comment for
-            // why a round-trip is the wrong shape for two decisions that must be made before
-            // the tray exists and before the window is displayed.
-            // Goes through the SAME single accessor the reader thread uses -- see
-            // `tray_settings_lock`. `.setup()` no longer owns a private initialiser, which is
-            // what previously let a reader-thread frame latch the lock to all-false defaults
-            // before this line ever ran.
-            let tray_settings = tray_settings();
-
-            // `startInTray`. Hidden inside `.setup()`, before the event loop runs, so the
-            // window is never displayed rather than being shown and yanked away.
-            //
-            // Gated on `!noTrayIcon`, mirroring `src/backend/main.ts:523`'s own
-            // `settings.startInTray && !settings.noTrayIcon` EXACTLY. Without the gate the two
-            // settings combine into an unrecoverable state: an app that starts with no window
-            // and no tray icon to restore it from. That is not a hypothetical -- both are plain
-            // user-toggleable booleans with no cross-validation in the settings UI.
-            if tray_settings.start_in_tray && !tray_settings.no_tray_icon {
-                match app.get_webview_window(MAIN_WINDOW_LABEL) {
-                    Some(window) => {
-                        if let Err(e) = window.hide() {
-                            shell_eprintln!(
-                                "[shell] WARN: startInTray: could not hide the main window ({e}) -- starting visible"
-                            );
-                        } else {
-                            shell_eprintln!("[shell] startInTray: main window starts hidden");
-                        }
-                    }
-                    None => shell_eprintln!(
-                        "[shell] WARN: startInTray: no '{MAIN_WINDOW_LABEL}' window to hide -- starting visible"
-                    ),
-                }
-            }
-
-            // The main-window close (the red X, Cmd+W's `performClose:`, Alt+F4).
-            //
-            // Two decisions are taken HERE, at close time, from a FRESH read, and neither is
-            // taken from the `.setup()` startup snapshot:
-            //   1. hide-to-tray vs quit -- `should_hide_on_close(load_tray_settings())`, the
-            //      `exitToTray` half (`tray_icon.ts:38-46`'s click handler is the SHOW half;
-            //      `src/backend/main.ts:286-292` was the HIDE half). The first implementation
-            //      read `exit_to_tray` from `TRAY_SETTINGS` and attached the handler only when
-            //      it was already true, so turning the setting ON mid-session did nothing until
-            //      relaunch (plan 35-06 task 3, live gate). A window close is rare and
-            //      user-initiated, so a small synchronous config read costs nothing perceptible.
-            //   2. whether a tray EXISTS -- `!noTrayIcon`, legitimately startup-only since a tray
-            //      cannot appear later in the run -- folded in by `close_request_action`.
-            //
-            // THE HANDLER IS ATTACHED UNCONDITIONALLY (todo 2026-10-05 cmd-q-and-red-x-quit-
-            // bypass-the-pending-operations-confirm). It used to be gated on tray existence and
-            // returned without `prevent_close()` whenever the window was not hiding, so the
-            // red X fell through to `RunEvent::Exit` and `shutdown_child()` killed a running
-            // download with no confirm; with `noTrayIcon` on there was no handler at all.
-            //
-            // `prevent_close()` runs FIRST, before either branch: the "pending operations"
-            // confirm is an unparented native panel and a "No" answer must find the window
-            // still there, not a windowless running app. `RouteQuit` hands the decision to the
-            // sidecar's `handleExit()` (exits via `app_exit` when nothing is pending or the user
-            // answers Yes; `exit(0)` is the fallback when it cannot be asked), so the user can
-            // always close.
-            //
-            // FAIL-SAFE DIRECTION IS DELIBERATE: `load_tray_settings()` degrades to
-            // `TraySettingsSnapshot::default()` (all false) on any read failure, so the close
-            // is ROUTED, not hidden. A user trapped in a window that refuses to close because a
-            // config read failed is the unsafe failure.
-            let tray_exists = !tray_settings.no_tray_icon;
-            match app.get_webview_window(MAIN_WINDOW_LABEL) {
-                Some(window) => {
-                    let close_window = window.clone();
-                    let close_app_handle = app.handle().clone();
-                    window.on_window_event(move |event| {
-                        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                            api.prevent_close();
-                            match close_request_action(
-                                tray_exists,
-                                should_hide_on_close(load_tray_settings()),
-                            ) {
-                                CloseRequestAction::Hide => {
-                                    if let Err(e) = close_window.hide() {
-                                        shell_eprintln!(
-                                            "[shell] WARN: exitToTray: hide on close failed ({e})"
-                                        );
-                                    }
-                                }
-                                CloseRequestAction::RouteQuit => {
-                                    quit_via_sidecar(&close_app_handle, "window close");
-                                }
-                            }
-                        }
-                    });
-                    shell_diag(&format!(
-                        "close handler attached (tray={tray_exists}): hide-to-tray re-read on every close; otherwise the quit is routed to the sidecar"
-                    ));
-                }
-                None => shell_eprintln!(
-                    "[shell] WARN: close handler: no '{MAIN_WINDOW_LABEL}' window to attach a close handler to"
-                ),
-            }
-
-            // macOS Cmd+Q is not a window close and never reaches the handler above: route it
-            // through the same sidecar hand-off by replacing the app menu's predefined Quit.
-            #[cfg(target_os = "macos")]
-            route_app_menu_quit_through_sidecar(app.handle());
-
-            // Dock Quit sends `terminate:` straight to the app, not through the menu: veto it in
-            // `applicationShouldTerminate:` and route it the same way (a power-off still passes).
-            #[cfg(target_os = "macos")]
-            macos_terminate_veto::install(app.handle());
-
-            // Restores the install-badge reconciliation trigger dropped in the Electron to
-            // Tauri cutover (D-01/D-02): Electron's `mainWindow.on('focus', ...)`
-            // (`src/backend/main.ts:272-274`, deleted in `5643c7583`) drove a store manager's
-            // install-state refresh so badges reconcile after the window regains focus following
-            // an install/uninstall performed outside this app.
-            //
-            // Attached as a SECOND `on_window_event` listener on the SAME window as the
-            // `exitToTray` handler above. That is safe because the runtime dispatcher's
-            // `on_window_event` is additive -- it dispatches an `AddEventListener` message and
-            // returns a fresh listener id per call, not a single-slot setter -- so this
-            // registration cannot silently replace or disturb the close handler.
-            //
-            // `Focused(true)` ONLY, never `Focused(false)`: `WindowEvent::Focused(bool)` fires
-            // on both the gain and the loss of focus, and matching only the `true` arm keeps
-            // this a read-triggering signal on refocus, never on blur (T-03-03: no action is
-            // taken from data the window itself does not control -- a blur carries nothing worth
-            // reacting to here).
-            //
-            // Fires unconditionally, with no `!tray_settings.no_tray_icon` gate unlike
-            // `exitToTray` above: refocusing the window is a normal interaction whether or not a
-            // tray exists, and gating this on tray presence would silently stop badge
-            // reconciliation for every user who has disabled the tray icon.
-            match app.get_webview_window(MAIN_WINDOW_LABEL) {
-                Some(focus_window) => {
-                    let focus_app_handle = app.handle().clone();
-                    focus_window.on_window_event(move |event| {
-                        if let tauri::WindowEvent::Focused(true) = event {
-                            let Some(state) = focus_app_handle.try_state::<Arc<SidecarState>>()
-                            else {
-                                shell_eprintln!(
-                                    "[shell] WARN: window focus refresh: no sidecar state -- skipping"
-                                );
-                                return;
-                            };
-                            let state = state.inner().clone();
-                            thread::spawn(move || {
-                                let req = SidecarRpcRequest {
-                                    id: state.next_id(),
-                                    kind: "send",
-                                    channel: SHELL_WINDOW_FOCUSED.to_string(),
-                                    args: Vec::new(),
-                                };
-                                if send_trace_enabled() {
-                                    shell_eprintln!(
-                                        "[shell] send-trace: window focus refresh entered for '{}'",
-                                        req.channel
-                                    );
-                                }
-                                if let Err(e) = state.write_frame(&req) {
-                                    shell_eprintln!(
-                                        "[shell] WARN: window focus refresh: write_frame failed: {e}"
-                                    );
-                                }
-                            });
-                        }
-                    });
-                    shell_eprintln!(
-                        "[shell] window focus refresh: listener attached to '{MAIN_WINDOW_LABEL}'"
-                    );
-                }
-                None => shell_eprintln!(
-                    "[shell] WARN: window focus refresh: no '{MAIN_WINDOW_LABEL}' window to attach a focus listener to"
-                ),
-            }
-
-            // Seed the recent-games cache before the menu is built, so the section is
-            // populated on a COLD start rather than only after the first launch of a session.
-            let seeded = load_recent_games_from_disk(tray_settings.max_recent_games);
-            shell_eprintln!(
-                "[shell] tray recent games: seeded {} entr{} from disk (limit {})",
-                seeded.len(),
-                if seeded.len() == 1 { "y" } else { "ies" },
-                tray_settings.max_recent_games
-            );
-            match tray_recent_games().lock() {
-                Ok(mut guard) => *guard = seeded,
-                Err(poisoned) => *poisoned.into_inner() = seeded,
-            }
-
-            // `noTrayIcon` (tray_icon.ts:20's `if (noTrayIcon) return null`). Decided BEFORE
-            // the tray is built, so the user never sees an icon they asked not to have.
-            if tray_settings.no_tray_icon {
-                shell_eprintln!(
-                    "[shell] tray suppressed by the noTrayIcon setting -- not building a tray"
-                );
-            } else {
-                match build_tray_menu(app.handle()) {
-                    Some(menu) => {
-                        let tray = TrayIconBuilder::with_id(TRAY_ICON_ID)
-                            .icon(tray_image(resolve_current_tray_icon_dark()))
-                            .icon_as_template(tray_is_template())
-                            .tooltip("GameLib")
-                            .menu(&menu)
-                            .show_menu_on_left_click(false)
-                            .on_menu_event(|app_handle, event| {
-                                let id = event.id().as_ref();
-                                match id {
-                                    "show" => {
-                                        if let Some(window) =
-                                            app_handle.get_webview_window(MAIN_WINDOW_LABEL)
-                                        {
-                                            let _ = window.unminimize();
-                                            let _ = window.show();
-                                            let _ = window.set_focus();
-                                        }
-                                    }
-                                    "about" => open_about_window_from_tray(app_handle),
-                                    "quit" => quit_via_sidecar(app_handle, "tray Quit"),
-                                    // T-35-20: the appName reaching a launch is PARSED back out
-                                    // of the menu id through the same allow-list that built it,
-                                    // never taken from the id verbatim. A malformed id is
-                                    // dropped, not launched.
-                                    _ => match tray_recent_app_name(id) {
-                                        Some(app_name) => dispatch_tray_launch(
-                                            app_handle,
-                                            app_name.to_string(),
-                                            tray_recent_runner_for(app_name),
-                                        ),
-                                        None => {
-                                            if id.starts_with(TRAY_RECENT_ID_PREFIX) {
-                                                shell_eprintln!(
-                                                    "[shell] WARN: tray menu event rejected a malformed recent-game id (bytes={}) -- not launching",
-                                                    id.len()
-                                                );
-                                            }
-                                        }
-                                    },
-                                }
-                            })
-                            .on_tray_icon_event(|tray, event| {
-                                if let TrayIconEvent::Click {
-                                    button: MouseButton::Left,
-                                    button_state: MouseButtonState::Up,
-                                    ..
-                                } = event
-                                {
-                                    let app_handle = tray.app_handle();
-                                    if let Some(window) =
-                                        app_handle.get_webview_window(MAIN_WINDOW_LABEL)
-                                    {
-                                        let _ = window.unminimize();
-                                        let _ = window.show();
-                                        let _ = window.set_focus();
-                                    }
-                                }
-                            })
-                            .build(app);
-                        match tray {
-                            Ok(_) => {
-                                // Only when a tray exists: a `noTrayIcon` user gets no thread.
-                                #[cfg(windows)]
-                                spawn_taskbar_theme_watcher(app.handle().clone());
-                            }
-                            Err(e) => {
-                                shell_eprintln!(
-                                    "[shell] WARN: tray icon failed to build ({e}) -- continuing without a tray"
-                                );
-                            }
-                        }
-                    }
-                    None => shell_eprintln!(
-                        "[shell] WARN: tray menu failed to build -- continuing without a tray"
-                    ),
-                }
-            }
-
-            // DELIBERATELY RETIRED (Phase 34.4.2 Plan 07, 2026-08-04): a deminiaturize
-            // re-raise observer used to be installed here (Phase 34.4.2 Plan 02,
-            // REQ-34.4.2-04/05). It existed SOLELY to re-raise AppKit CHILD windows after
-            // `main` restored from the Dock -- spike 021's measured "restore main" defect,
-            // where an attached child window returned BEHIND `main` unless explicitly
-            // brought forward again. The operator's binding design decision of 2026-08-04
-            // (`34.4.2-LIVE-GATE.md`'s "Binding Design Decision" section, responding to
-            // F-34.4.2-01/-02) replaced child-window attachment with AppKit SHEET
-            // presentation (`present_login_window_as_sheet`, above): a sheet is presented BY
-            // its parent window and moves with it, so there is no child list to re-raise and
-            // no z-order defect this observer was written to fix. Keeping the observer would
-            // (a) do nothing useful -- `PRESENTED_LOGIN_SHEETS` entries are sheets, not
-            // AppKit child windows, and bringing one forward is not the same operation the
-            // old child-attachment call needed -- and (b) emit a misleading log line naming a
-            // re-raise mechanism that no longer exists. No replacement observer and no
-            // window-focus-driven re-raise handler were added: whether the sheet survives the
-            // minimize/restore cycle INTERACTIVE is exactly what the rewritten live gate's
-            // item 1 must measure, not something to pre-emptively paper over here.
-
-            // Page-independent Esc backstop for presented login sheets (Phase 34.4.2 Plan 08,
-            // REQ-34.4.2-03/04/06/07/08/10, T-34.4.2-33/-35): installs ONE process-wide
-            // `NSEvent` local key-down monitor here -- the EXACT site the retirement comment,
-            // immediately above, names as where the deminiaturize re-raise observer used to
-            // live. A sheet renders no titlebar close button and, unlike the injected cancel
-            // strip (above), this route works even when the login page renders nothing at all
-            // -- a blank page, a network error page, or a bot-management interstitial, exactly
-            // the states a login window reaches most often when something is already wrong.
-            //
-            // Reimplemented here rather than refactored out of
-            // `open_pristine_epic_login_window`'s own local monitor (read-only reference,
-            // above): that region is byte-frozen by REQ-34.4.2-10, and its monitor
-            // legitimately reads `charactersIgnoringModifiers()` to route Cmd+V/C/X/A/Z, which
-            // this monitor must never do (T-34.4.2-35, immediately below).
-            //
-            // PRIVACY IS A HARD CONSTRAINT, NOT A STYLE PREFERENCE (T-34.4.2-35): this handler
-            // reads ONLY `keyCode()` and `modifierFlags()` -- never `characters()` or
-            // `charactersIgnoringModifiers()`, and never logs the event or any field derived
-            // from it. This monitor sees every keystroke the app receives, including the
-            // password being typed into the login sheet.
-            //
-            // Epic is no longer exempt (quick-261029-utr lifted the REQ-34.4.2-10 descope): its
-            // pristine sheet is registered in `PRESENTED_LOGIN_SHEETS` through
-            // `present_login_window_as_sheet` like every other store, so the window-membership
-            // check below matches it and Esc cancels it. No explicit label check is added.
-            //
-            // Leaked for the process lifetime via `std::mem::forget`, matching the retired
-            // deminiaturize observer's own precedent (and the pristine arm's own monitor-leak
-            // shape for its navigation delegate): this is ONE monitor, registered ONCE, here --
-            // not a per-open monitor that would need its own teardown.
-            //
-            // Failure to install is NON-FATAL (T-34.1-22 discipline, matching this closure's
-            // own tray-build convention immediately above): logs one
-            // `[shell] WARN: login-sheet esc monitor: ...` line and lets the app start. The
-            // cancel strip (above) remains the primary route.
-            #[cfg(target_os = "macos")]
-            {
-                let esc_app_handle = app.handle().clone();
-                let esc_monitor_handler = block2::RcBlock::new(
-                    move |event: std::ptr::NonNull<objc2_app_kit::NSEvent>|
-                          -> *mut objc2_app_kit::NSEvent {
-                        // SAFETY: AppKit hands local monitor handlers a valid, live `NSEvent`
-                        // for the duration of this call.
-                        let event_ref = unsafe { event.as_ref() };
-
-                        // 1. Cheapest possible check first (T-34.4.2-35's "does no work at
-                        // all" guarantee): no presented sheet at all, return untouched with no
-                        // window resolution and no further AppKit calls.
-                        let presented: Vec<String> = match PRESENTED_LOGIN_SHEETS.lock() {
-                            Ok(guard) => guard.as_ref().cloned().unwrap_or_default(),
-                            Err(_) => Vec::new(),
-                        };
-                        if presented.is_empty() {
-                            return event.as_ptr();
-                        }
-
-                        // 2. Bare Esc only -- macOS virtual keyCode 53 is Esc.
-                        if event_ref.keyCode() != 53 {
-                            return event.as_ptr();
-                        }
-
-                        // 3. Only a BARE Esc dismisses -- Command/Option/Control held means
-                        // this is some other chord (e.g. a devtools shortcut); never consume
-                        // those.
-                        let flags = event_ref.modifierFlags();
-                        if flags.intersects(
-                            objc2_app_kit::NSEventModifierFlags::Command
-                                | objc2_app_kit::NSEventModifierFlags::Option
-                                | objc2_app_kit::NSEventModifierFlags::Control,
-                        ) {
-                            return event.as_ptr();
-                        }
-
-                        // 4. Resolve the event's own window and compare against every
-                        // currently presented sheet's `NSWindow` address. No match -> return
-                        // untouched.
-                        let Some(mtm) = objc2::MainThreadMarker::new() else {
-                            return event.as_ptr();
-                        };
-                        let Some(event_window) = event_ref.window(mtm) else {
-                            return event.as_ptr();
-                        };
-                        let event_window_addr =
-                            (&*event_window) as *const objc2_app_kit::NSWindow as usize;
-
-                        for label in &presented {
-                            if login_window_ns_window(&esc_app_handle, label)
-                                == Some(event_window_addr)
-                            {
-                                // 5. Match: dismiss and consume -- the page never also sees
-                                // this Esc.
-                                request_login_sheet_cancel(&esc_app_handle, label, "esc");
-                                return std::ptr::null_mut();
-                            }
-                        }
-                        event.as_ptr()
-                    },
-                );
-                // SAFETY: `esc_monitor_handler` is a valid block; AppKit copies it internally
-                // when registering the monitor, so it outliving this call is not required --
-                // the SAME convention the pristine arm's own monitor registration (above,
-                // read-only reference) already documents.
-                let esc_monitor_token = unsafe {
-                    objc2_app_kit::NSEvent::addLocalMonitorForEventsMatchingMask_handler(
-                        objc2_app_kit::NSEventMask::KeyDown,
-                        &esc_monitor_handler,
-                    )
-                };
-                match esc_monitor_token {
-                    Some(token) => {
-                        // Intentional leak for the process lifetime -- see this block's own
-                        // doc comment above.
-                        std::mem::forget(token);
-                    }
-                    None => {
-                        shell_eprintln!(
-                            "[shell] WARN: login-sheet esc monitor: addLocalMonitorForEventsMatchingMask failed -- continuing without it"
-                        );
-                    }
-                }
-            }
-
-            // `--no-gui` (Phase 34.5 gap cycle 6 plan 44, F-34.5-G6-09): gate 3 recorded that
-            // `--no-gui` was previously ignored entirely, including opening devtools. When
-            // set, the devtools-open block below is skipped ENTIRELY (never conditionally
-            // opened then hidden), and the main window is explicitly hidden once it exists.
-            // `tauri.conf.json`'s `main` window carries no explicit `"visible"` key, so Tauri's
-            // own default (visible on creation) applies -- a brief flash before this `.hide()`
-            // call is an expected observation for the live gate, not a failure.
-            if no_gui {
-                match app.get_webview_window(MAIN_WINDOW_LABEL) {
-                    Some(window) => {
-                        let _ = window.hide();
-                        shell_eprintln!("[shell] --no-gui: main window hidden");
-                    }
-                    None => shell_eprintln!(
-                        "[shell] WARN: --no-gui: no 'main' webview window found to hide"
-                    ),
-                }
-            } else {
-                // Dev-only: force the webview devtools open (the dev webview exposes no
-                // right-click inspect on macOS) so renderer errors are inspectable, and
-                // confirm the webview window actually exists.
-                //
-                // GATED ON VISIBILITY, not just on `debug_assertions` (plan 35-06 task 3,
-                // live-gate defect 2). `open_devtools()` FORCES the window visible, so an
-                // ungated call here silently defeated `startInTray`: the setting's own hide ran
-                // first and logged success, then this line put the window straight back on
-                // screen. The operator's terminal showed both lines in sequence and scored
-                // `startInTray` a fail.
-                //
-                // This mirrors the gate the LOGIN window's devtools call already uses
-                // (`#[cfg(debug_assertions)]` AND `if visible`, documented at
-                // `MAIN_WINDOW_LABEL`'s doc comment above) -- the precedent was already in this
-                // file; this call site had the first half and not the second.
-                //
-                // Tested via `is_visible()` rather than by re-reading `startInTray`: visibility
-                // is the property that actually matters, and it also covers `--no-gui` and any
-                // future path that hides the window for a reason this code does not know about.
-                //
-                // It also makes the live gate's step 5c non-vacuous. 5c passes when "a visible
-                // window appears because noTrayIcon overrode startInTray" -- which, before this
-                // fix, was true whether or not the override worked. A test that cannot fail is
-                // not evidence.
-                //
-                // NOT on Linux (quick 260930-ea0): the docked inspector attached from here races
-                // the page's entry module and the page's WebKitWebProcess aborts, leaving a white
-                // window (`should_auto_open_devtools` documents the measurement; session
-                // `.planning/debug/resolved/linux-dev-app-blank-without-dmabuf-workaround.md`).
-                // The platform gate sits OUTSIDE the visibility match so that match is unchanged.
-                #[cfg(debug_assertions)]
-                if should_auto_open_devtools(std::env::consts::OS) {
-                    match app.get_webview_window(MAIN_WINDOW_LABEL) {
-                        Some(window) => match window.is_visible() {
-                            Ok(true) => {
-                                window.open_devtools();
-                                shell_eprintln!(
-                                    "[shell] devtools opened for 'main' webview (debug build)"
-                                );
-                            }
-                            Ok(false) => shell_eprintln!(
-                                "[shell] devtools NOT opened: 'main' webview is hidden (startInTray or --no-gui) -- opening it would force the window visible and defeat that setting"
-                            ),
-                            // Erring toward NOT opening: a devtools window the developer can
-                            // open by hand is a smaller loss than silently defeating a setting
-                            // the user asked for.
-                            Err(e) => shell_eprintln!(
-                                "[shell] WARN: devtools NOT opened: could not read 'main' webview visibility ({e})"
-                            ),
-                        },
-                        None => shell_eprintln!(
-                            "[shell] WARN: no 'main' webview window found — devtools not opened"
-                        ),
-                    }
-                } else {
-                    shell_eprintln!(
-                        "[shell] devtools NOT auto-opened for 'main' webview on linux (debug build) -- the inspector attach races page boot; right-click > Inspect Element opens it"
-                    );
-                }
-            }
-            Ok(())
-        })
+        .setup(move |app| run_setup(app, primary_listener, no_gui))
         .invoke_handler(tauri::generate_handler![
             sidecar_invoke,
             sidecar_send,
@@ -1811,28 +1813,127 @@ fn main() {
                     macos_terminate_veto::mark_exiting();
                 }
             }
-            tauri::RunEvent::Exit => {
-                if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
-                    state.shutdown_child();
-                }
-                // Phase 35 Plan 08 (D-08, REQ-35-06, threat T-35-31): drop every OS power
-                // assertion still held. Same exit-path discipline as `shutdown_child()` above
-                // and the socket cleanup below -- a leaked assertion outlives the process and
-                // keeps the user's machine awake with no UI left to release it, which on a
-                // laptop means an unattended drain to zero.
-                wake_lock_release_all();
-                // Phase 34.5 gap cycle 6 plan 44 (D-44-A): best-effort socket cleanup on a
-                // clean quit, so a fresh start does not have to fall through
-                // `acquire_single_instance`'s stale-socket recovery path. Swallowed, like
-                // `shutdown_child()`'s own exit-path discipline -- an unwind here is worse
-                // than a leaked socket file.
-                #[cfg(unix)]
-                if let Some(path) = &single_instance_socket_path_var {
-                    let _ = std::fs::remove_file(path);
-                }
-            }
+            tauri::RunEvent::Exit => handle_exit(app_handle, single_instance_socket_path_var.as_deref()),
             _ => {}
         });
+}
+
+/// OS deep-link delivery: validated URLs go through one worker thread to the sidecar.
+fn install_os_deep_link_handler(app: &tauri::App, state: &Arc<SidecarState>) {
+    // Stays BELOW `fn main`: the REQ-46-08 gate in tauriShellSource.test.ts pins `.setup(move |app|`
+    // before `on_open_url(` in source order.
+    // ---- OS deep-link delivery (Phase 35 plan 07, D-07/D-05, REQ-35-05/REQ-35-16) ----
+    // Replaces `src/backend/main.ts:501-507`'s `protocol.handle('gamelib', ...)` +
+    // `app.setAsDefaultProtocolClient('gamelib')`, which die with the Electron build.
+    //
+    // This callback is the FOURTH source of a `gamelib://` URL into this process, after
+    // argv (`sidecar_forward_args`), the Unix single-instance socket accept loop above,
+    // and the Windows single-instance pipe accept loop above (Phase 46,
+    // `run_windows_single_instance_accept_loop`). It is NOT an exception to the
+    // validation the other three perform: every URL goes through `deep_link_decision` ->
+    // `protocol_url_arg`, this file's single input-validation choke point (ASVS V5),
+    // before it can reach the sidecar. Defence in depth (T-34.5-G6-20) -- the socket
+    // path's own comment above establishes the rule this follows: never trust a source
+    // because it is "internal", and the OS is not even internal. Anyone adding a FIFTH
+    // source: put it through the same function, not through a new copy of the checks.
+    //
+    // Platform reality (the plugin's own README): the event fires on macOS only. On
+    // Linux and Windows the OS spawns a NEW process with the URL as a CLI argument
+    // instead, which is why the argv + single-instance-guard paths above are not
+    // redundant with this one -- it is the ONLY delivery path on Linux (via the Unix
+    // socket accept loop) and on Windows (via the named-pipe accept loop, phase 46's
+    // `run_windows_single_instance_accept_loop`) once a second launch's argv has been
+    // handed to the running instance.
+    // NOT `deep_link().get_current()`. That is the plugin's documented "was the app
+    // STARTED by a deep link" accessor, and it was measured here on 2026-08-29 and does
+    // NOT serve that purpose for this app: on three cold starts it reported `None` at
+    // setup time every time, because the plugin only populates `current` from its
+    // `RunEvent::Opened` handler, which fires AFTER setup. `on_open_url` below does
+    // receive the cold-start URL (measured: fires in the same second as setup). See
+    // `.planning/debug/deep-link-open-url-abort.md`.
+    // ---- The invoke runs OFF the main thread. ----
+    //
+    // `SidecarState::invoke` BLOCKS until the sidecar answers or `timeout_for` expires,
+    // and `handleProtocolUrl` is deliberately not on `LONG_RUNNING_CHANNELS`, so that
+    // bound is the full `INVOKE_TIMEOUT`. This callback runs on the macOS main thread
+    // inside AppKit's AppleEvent handler (`-[NSApplication _handleAEGetURLEvent:]` ->
+    // tao's `application_open_urls`), so calling `invoke` here directly froze the entire
+    // UI for as long as the sidecar took. Measured 2026-08-29: 671ms / 1010ms / 1191ms
+    // on a cold start, 1-2ms warm, worst case 60s.
+    //
+    // It was also the ONLY `invoke` call site that blocked the main thread — the
+    // renderer-facing `sidecar_invoke` command has always wrapped it in
+    // `tauri::async_runtime::spawn_blocking` for exactly this reason. Blocking here is
+    // additionally hazardous rather than merely slow: tao holds BOTH its
+    // `HANDLER.callback` `Mutex` (`app_state.rs:204`, a `.lock().unwrap()`) and the
+    // `RefCell` behind it (`app_state.rs:77`, `callback.borrow_mut()`) for the whole
+    // dispatch, and a panic on the main thread inside this `extern "C"` callback cannot
+    // unwind — it becomes an immediate `SIGABRT` via `panic_cannot_unwind`, taking the
+    // app down and orphaning the sidecar. One such abort was captured on 2026-08-29
+    // (`.planning/debug/deep-link-open-url-abort.md`); its cause was never proven
+    // because the panic message went to a stderr LaunchServices discards, which is what
+    // `install_panic_hook` now fixes. This change closes the window regardless.
+    //
+    // A SINGLE worker thread fed by a channel, not `thread::spawn` per URL:
+    //   - URLs stay FIFO, so two deep links cannot interleave their sidecar round-trips.
+    //   - Thread count is bounded at one. A page firing `gamelib://` in a loop is a
+    //     realistic input, and thread-per-URL would let it spawn without limit.
+    // Validation stays on the main thread: `deep_link_decision` is pure and fast, and
+    // keeping it here means an unvalidated URL is never enqueued at all.
+    let deep_link_state = state.clone();
+    let (deep_link_tx, deep_link_rx) = mpsc_channel::<String>();
+    thread::spawn(move || {
+        // Ends only when the sender is dropped, i.e. at process exit.
+        for url in deep_link_rx {
+            let started = std::time::Instant::now();
+            let outcome = deep_link_state
+                .invoke("handleProtocolUrl".to_string(), vec![Value::String(url)]);
+            let elapsed_ms = started.elapsed().as_millis();
+            match outcome {
+                Ok(_) => shell_diag(&format!(
+                    "delivered OS deep link to sidecar: ok ({elapsed_ms}ms)"
+                )),
+                Err(e) => shell_diag(&format!(
+                    "delivered OS deep link to sidecar: err={e} ({elapsed_ms}ms)"
+                )),
+            }
+        }
+    });
+
+    // `mpsc::Sender<T>` is `Sync` as of Rust 1.72 and this crate's MSRV is 1.77.2, so a
+    // plain sender satisfies `on_open_url`'s `Fn(..) + Send + Sync + 'static` bound
+    // without a `Mutex` wrapper.
+    app.deep_link().on_open_url(move |event| {
+        // `urls()` takes `self` by value, so bind once and reuse.
+        let urls = event.urls();
+        shell_diag(&format!("on_open_url fired with {} url(s)", urls.len()));
+        for url in urls {
+            let candidate = url.to_string();
+            match deep_link_decision(&candidate) {
+                // Reached only after `protocol_url_arg` accepted the URL -- same
+                // allow-list, same guarantees, as the argv and socket paths.
+                DeepLinkDecision::Dispatch(url) => {
+                    // Hand off and return immediately; the worker does the blocking
+                    // round-trip and logs its own outcome. `SendError`'s Display is a
+                    // fixed string ("sending on a closed channel") and does NOT carry
+                    // the payload, but it is not formatted here at all so that no future
+                    // edit can turn this into a URL leak (T-34.5-G6-25 / T-35-26).
+                    if deep_link_tx.send(url).is_err() {
+                        shell_diag(
+                            "deep-link dispatch worker is gone; dropping a validated URL",
+                        );
+                    }
+                }
+                DeepLinkDecision::Reject { bytes } => {
+                    // T-34.5-G6-25 / T-35-26: the REASON and byte count only, never
+                    // the payload. `DeepLinkDecision::Reject` does not even carry it.
+                    shell_diag(&format!(
+                        "rejected OS deep-link payload (failed protocol_url_arg validation), bytes={bytes}"
+                    ));
+                }
+            }
+        }
+    });
 }
 
 /// Behavioral tests over `timeout_for()` (Phase 34.2 gap cycle 3, plan 22) — closes the warning
@@ -1925,11 +2026,14 @@ mod tests {
         "notification_show.rs",
         "relay_commands.rs",
         "rust_dispatch.rs",
+        "depot_dispatch.rs",
         "scan_dispatch.rs",
         "shell_state.rs",
         "shell_open.rs",
         "sidecar.rs",
         "single_instance.rs",
+        "single_instance/windows_pipe.rs",
+        "single_instance/windows_protocol.rs",
         "store_embed.rs",
         "store_embed/controls.rs",
         "store_embed/layout.rs",
@@ -1938,6 +2042,8 @@ mod tests {
         "store_embed/state.rs",
         "terminate_veto.rs",
         "tray.rs",
+        "tray/icon.rs",
+        "tray/recent.rs",
         "wake_lock.rs",
         "wake_lock/linux.rs",
         "wake_lock/macos.rs",
@@ -1965,11 +2071,14 @@ mod tests {
         include_str!("notification_show.rs"),
         include_str!("relay_commands.rs"),
         include_str!("rust_dispatch.rs"),
+        include_str!("depot_dispatch.rs"),
         include_str!("scan_dispatch.rs"),
         include_str!("shell_state.rs"),
         include_str!("shell_open.rs"),
         include_str!("sidecar.rs"),
         include_str!("single_instance.rs"),
+        include_str!("single_instance/windows_pipe.rs"),
+        include_str!("single_instance/windows_protocol.rs"),
         include_str!("store_embed.rs"),
         include_str!("store_embed/controls.rs"),
         include_str!("store_embed/layout.rs"),
@@ -1978,41 +2087,120 @@ mod tests {
         include_str!("store_embed/state.rs"),
         include_str!("terminate_veto.rs"),
         include_str!("tray.rs"),
+        include_str!("tray/icon.rs"),
+        include_str!("tray/recent.rs"),
         include_str!("wake_lock.rs"),
         include_str!("wake_lock/linux.rs"),
         include_str!("wake_lock/macos.rs"),
         include_str!("wake_lock/windows.rs"),
     ];
 
-    /// Cuts every whole test-module block (column-0 `#[cfg(test)]` immediately followed by a
-    /// column-0 `mod <ident> {`, through the next line that is exactly `}`) and keeps the rest.
-    /// Same rule as the jest reader `stripRustTestModules`.
+    #[derive(PartialEq, Eq, Debug)]
+    enum CfgTest {
+        Test,
+        Other,
+        Ambiguous,
+    }
+
+    /// Same rule as the jest `classifyCfgTestAttr`: `Test` = exactly `#[cfg(test)]` or a
+    /// `#[cfg(all(..))]` whose top-level arguments include the bare token `test`; `Ambiguous` = any
+    /// other `#[cfg(` line mentioning the word `test`; `Other` = anything else.
+    fn classify_cfg_test_attr(line: &str) -> CfgTest {
+        if !line.starts_with("#[cfg(") {
+            return CfgTest::Other;
+        }
+        if line == "#[cfg(test)]" {
+            return CfgTest::Test;
+        }
+        let mentions_test = line
+            .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+            .any(|w| w == "test");
+        if !mentions_test {
+            return CfgTest::Other;
+        }
+        let Some(inner) = line.strip_prefix("#[cfg(all(").and_then(|r| r.strip_suffix("))]")) else {
+            return CfgTest::Ambiguous;
+        };
+        let mut args: Vec<String> = Vec::new();
+        let (mut depth, mut in_str, mut cur) = (0i32, false, String::new());
+        for c in inner.chars() {
+            if c == '"' {
+                in_str = !in_str;
+            }
+            if !in_str {
+                if c == '(' {
+                    depth += 1;
+                } else if c == ')' {
+                    depth -= 1;
+                } else if c == ',' && depth == 0 {
+                    args.push(cur.trim().to_string());
+                    cur.clear();
+                    continue;
+                }
+            }
+            cur.push(c);
+        }
+        args.push(cur.trim().to_string());
+        if args.iter().any(|a| a == "test") {
+            CfgTest::Test
+        } else {
+            CfgTest::Ambiguous
+        }
+    }
+
+    fn is_mod_open(line: &str) -> bool {
+        line.strip_prefix("mod ").is_some_and(|rest| {
+            rest.strip_suffix(" {").is_some_and(|ident| {
+                !ident.is_empty() && ident.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+            })
+        })
+    }
+
+    /// Cuts every whole test-gated module block (a column-0 `mod <ident> {` preceded by a contiguous
+    /// run of column-0 `#[..]` lines, at least one a recognised test cfg, through the next line that
+    /// is exactly `}`; the cut starts at the run's first attribute) and keeps the rest. An unrecognised
+    /// `cfg` mentioning `test` panics (fail closed). Same rule as the jest `stripRustTestModules`.
     fn cut_test_modules(src: &str) -> String {
         let lines: Vec<&str> = src.split('\n').collect();
-        let mut out: Vec<&str> = Vec::with_capacity(lines.len());
+        let mut drop = vec![false; lines.len()];
         let mut i = 0;
         while i < lines.len() {
-            let opens_test_mod = lines[i] == "#[cfg(test)]"
-                && lines.get(i + 1).is_some_and(|next| {
-                    next.strip_prefix("mod ").is_some_and(|rest| {
-                        rest.strip_suffix(" {").is_some_and(|ident| {
-                            !ident.is_empty()
-                                && ident.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
-                        })
-                    })
-                });
-            if opens_test_mod {
-                i += 2;
-                while i < lines.len() && lines[i] != "}" {
-                    i += 1;
-                }
+            if !is_mod_open(lines[i]) {
                 i += 1;
                 continue;
             }
-            out.push(lines[i]);
-            i += 1;
+            let mut start = i;
+            while start > 0 && lines[start - 1].starts_with("#[") {
+                start -= 1;
+            }
+            let mut is_test = false;
+            for k in start..i {
+                match classify_cfg_test_attr(lines[k]) {
+                    CfgTest::Ambiguous => panic!("ambiguous test cfg at line {}: {}", k + 1, lines[k]),
+                    CfgTest::Test => is_test = true,
+                    CfgTest::Other => {}
+                }
+            }
+            if !is_test {
+                i += 1;
+                continue;
+            }
+            let mut end = i + 1;
+            while end < lines.len() && lines[end] != "}" {
+                end += 1;
+            }
+            for d in drop.iter_mut().take((end + 1).min(lines.len())).skip(start) {
+                *d = true;
+            }
+            i = end + 1;
         }
-        out.join("\n")
+        lines
+            .iter()
+            .zip(drop.iter())
+            .filter(|(_, d)| !**d)
+            .map(|(l, _)| *l)
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     /// The shell source with each file's own test modules cut, so a literal needle cannot
@@ -2041,6 +2229,29 @@ mod tests {
         assert_eq!(cut_test_modules(kept), kept);
         let attr_only = "#[cfg(test)]\nfn helper() {}\n";
         assert_eq!(cut_test_modules(attr_only), attr_only);
+    }
+
+    #[test]
+    fn cut_test_modules_cuts_cfg_all_and_stacked_test_mods() {
+        let all = "fn a() {}\n#[cfg(all(test, target_os = \"macos\"))]\nmod terminate_reply_tests {\n    fn t() {}\n}\nfn b() {}\n";
+        assert_eq!(cut_test_modules(all), "fn a() {}\nfn b() {}\n");
+        let stacked = "fn a() {}\n#[cfg(windows)]\n#[allow(dead_code)]\n#[cfg(test)]\nmod w {\n}\nfn b() {}\n";
+        assert_eq!(cut_test_modules(stacked), "fn a() {}\nfn b() {}\n");
+        let non_test = "#[cfg(windows)]\nmod win {\n}\nfn a() {}\n";
+        assert_eq!(cut_test_modules(non_test), non_test);
+        assert!(!shell_production_source().contains("mod terminate_reply_tests"));
+    }
+
+    #[test]
+    #[should_panic(expected = "ambiguous test cfg")]
+    fn cut_test_modules_panics_on_cfg_any_test() {
+        cut_test_modules("#[cfg(any(test, feature = \"x\"))]\nmod m {\n}\n");
+    }
+
+    #[test]
+    #[should_panic(expected = "ambiguous test cfg")]
+    fn cut_test_modules_panics_on_cfg_not_test() {
+        cut_test_modules("#[cfg(not(test))]\nmod m {\n}\n");
     }
 
     #[test]

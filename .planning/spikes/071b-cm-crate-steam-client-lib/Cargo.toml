@@ -1,0 +1,17 @@
+[package]
+name = "spike-071b-steam-client-lib"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+steam-client-lib = { git = "https://github.com/saskenuba/SteamHelper-rs", rev = "f77c946d43e994a2bae7108ab02f5a2f7ba6825c" }
+steam-protobuf = { git = "https://github.com/saskenuba/SteamHelper-rs", rev = "f77c946d43e994a2bae7108ab02f5a2f7ba6825c" }
+steam-language-gen = { git = "https://github.com/saskenuba/SteamHelper-rs", rev = "f77c946d43e994a2bae7108ab02f5a2f7ba6825c" }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"
+sha1 = "0.10"
+hex = "0.4"
+keyvalues-parser = "0.2"

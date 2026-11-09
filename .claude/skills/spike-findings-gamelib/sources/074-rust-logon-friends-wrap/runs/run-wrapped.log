@@ -1,0 +1,49 @@
+[   0.00s unix 1794215896] start    mode wrapped, hold 120s, steam-vent@a9e8164 (client_os_type 203, chat_mode 2)
+[   0.16s unix 1794215896] macsteam [2026-11-09 22:18:16] [Logged On, 4, 7] [U:1:35601368] LogOff()
+[   0.16s unix 1794215896] macsteam [2026-11-09 22:18:16] [Logging Off, 4, 7] [U:1:35601368] AsyncDisconnect( bDontWaitOnTCPShutdown: false )
+[   0.26s unix 1794215896] macsteam [2026-11-09 22:18:16] [Logged Off, 0, 0] [U:1:35601368] ConnectionDisconnected('Disconnected By Remote Host') : 'OK' (103.10.125.22:443, WebSocket)
+[   0.26s unix 1794215896] macsteam [2026-11-09 22:18:16] [Logged Off, 0, 0] [U:1:35601368] ConnectionDisconnected() not auto reconnecting due to user initiated logoff
+[   0.26s unix 1794215896] macsteam [2026-11-09 22:18:16] [Logged Off, 0, 0] [U:1:35601368] Sending SteamServersDisconnected_t because we were logged on
+[   0.26s unix 1794215896] wrap     Mac Steam LogOff seen
+[   2.16s unix 1794215898] logon    Rust session logged on
+[   2.20s unix 1794215898] wrap     goonline sent
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Logged Off, 0, 0] [U:1:35601368] CCMInterface::SetSteamID( [U:1:35601368] )
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Logged Off, 4, 0] [U:1:35601368] LogOn() called; not connected yet, scheduling connection. Schedule init returned 1
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] CCMInterface::YieldingConnect -- calling ISteamDirectory/GetCMListForConnect/?cellid=22&qoslevel=1
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] GetCMListForConnect -- got 1 Netfilter CMs and 16 WebSocket CMs
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] GetCMListForConnect -- DC 'syd1' count: 4
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] GetCMListForConnect -- DC 'lax1' count: 5
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] GetCMListForConnect -- DC 'ord1' count: 4
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] GetCMListForConnect -- DC 'sea1' count: 4
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Connecting, 4, 0] [U:1:35601368] CM Directory list says 100% of connections should be websockets, we rolled 53 - using WebSockets as default.
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-syd1.steamserver.net:27018) starting...
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-syd1.steamserver.net:443) starting...
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-syd1.steamserver.net:27018) starting...
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-lax1.steamserver.net:27018) starting...
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-syd1.steamserver.net:27018) results: 49.8772ms + load 34.0000
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-syd1.steamserver.net:27018) results: 50.4990ms + load 34.0000
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-lax1.steamserver.net:443) starting...
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-lax1.steamserver.net:27018) starting...
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-syd1.steamserver.net:443) results: 46.3486ms + load 34.0000
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-ord1.steamserver.net:443) starting...
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-lax1.steamserver.net:27018) results: 199.0852ms + load 6.0000
+[   2.70s unix 1794215898] macsteam [2026-11-09 22:18:18] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-sea1.steamserver.net:27018) starting...
+[   3.20s unix 1794215899] macsteam [2026-11-09 22:18:19] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-lax1.steamserver.net:27018) results: 190.1665ms + load 7.0000
+[   3.20s unix 1794215899] macsteam [2026-11-09 22:18:19] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() stopping after 400.00ms timeout and using good enough host (cmp2-syd1.steamserver.net:443)
+[   3.20s unix 1794215899] macsteam [2026-11-09 22:18:19] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-lax1.steamserver.net:443) results: 193.1648ms + load 6.0000
+[   3.20s unix 1794215899] macsteam [2026-11-09 22:18:19] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp2-sea1.steamserver.net:27018) results: 193.8438ms + load 1.0000
+[   3.70s unix 1794215899] macsteam [2026-11-09 22:18:19] [Connecting, 4, 0] [U:1:35601368] PingWebSocketCM() (cmp1-ord1.steamserver.net:443) results: 239.7842ms + load 12.0000
+[   3.70s unix 1794215899] macsteam [2026-11-09 22:18:19] [Connecting, 4, 11] [U:1:35601368] Connect() starting connection (eNetQOSLevelLow, cmp2-syd1.steamserver.net:443, WebSocket)
+[   3.70s unix 1794215899] macsteam [2026-11-09 22:18:19] [Connecting, 4, 11] [U:1:35601368] ConnectionCompleted() (103.10.125.23:443, WebSocket) local address (10.10.1.36:64231)
+[   3.70s unix 1794215899] macsteam [2026-11-09 22:18:19] [Connecting, 4, 11] [U:1:35601368] Client thinks it can connect via: UDP - yes, TCP - yes, WebSocket:443 - yes, WebSocket:Non443 - yes
+[   3.70s unix 1794215899] macsteam [2026-11-09 22:18:19] [Connected, 4, 11] [U:1:35601368] Logging on [U:1:35601368]
+[   3.70s unix 1794215899] macsteam [2026-11-09 22:18:19] [Logging On, 4, 11] [U:1:35601368] Using JWT 4100464499883717, persistence: 1, steamid: [U:1:35601368], issued: Sat Nov  7 20:56:56 2026, expiry: Mon Jun  7 10:51:56 2027
+[   3.70s unix 1794215899] macsteam [2026-11-09 22:18:19] [Logging On, 4, 11] [U:1:35601368] RecvMsgClientLogOnResponse() : [U:1:35601368] 'OK'
+[   3.70s unix 1794215899] macsteam [2026-11-09 22:18:19] [Logged On, 4, 11] [U:1:35601368] RecvMsgClientLogOnResponse() : processing complete
+[  22.62s unix 1794215918] alive    session answers (PICS access token)
+[  42.59s unix 1794215938] alive    session answers (PICS access token)
+[  63.02s unix 1794215959] alive    session answers (PICS access token)
+[  82.97s unix 1794215979] alive    session answers (PICS access token)
+[ 102.92s unix 1794215999] alive    session answers (PICS access token)
+[ 122.87s unix 1794216019] alive    session answers (PICS access token)
+[ 122.87s unix 1794216019] end      hold over; Rust session alive at end: true. Now check Friends in Mac Steam.

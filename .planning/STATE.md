@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: verifying
-stopped_at: Phase 72 context gathered
-last_updated: "2026-11-08T18:53:44.081Z"
-last_activity: 2026-11-08
+status: Executing phase 73
+stopped_at: 73-18 Task 2 checkpoint (CI legs, awaiting operator push)
+last_updated: "2026-11-09T08:22:00.000Z"
+last_activity: 2026-11-09
 progress:
-  total_phases: 13
+  total_phases: 14
   completed_phases: 8
-  total_plans: 145
-  completed_plans: 145
-  percent: 62
+  total_plans: 168
+  completed_plans: 165
+  percent: 81
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 71 — rust-shell-module-decomposition
+**Current focus:** Phase 73 — steam-depot-download-pipeline-in-rust
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,12 +72,12 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 71 (rust-shell-module-decomposition) — EXECUTING
-Plan: 18 of 18
-Status: Phase complete — ready for verification
-Last activity: 2026-11-09 - Completed quick task 261109-uv4: Version shared-redists ledger with Phase 68 engine
+Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
+Plan: 17 of 21 complete (73-01..73-17); 73-18 in progress: live UAT done (8 pass, item 9 issue: sidecar orphan after Force Quit), CI legs await push
+Status: Executing phase 73
+Last activity: 2026-11-09 - Completed quick task 261109-vdw: split single_instance.rs and tray.rs below module size target
 
-Progress: [██████████] 100%
+Progress: [██████████] 96%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -243,6 +243,11 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 68 P05 | 45min | 2 tasks | 16 files |
 | Phase 68 P06 | 25min | 2 tasks | 9 files |
 | Phase 68 P04 | 25min | 2 tasks | 6 files |
+| Phase 73 P01 | 35min | 4 tasks | 24 files |
+| Phase 73 P02 | 25min | 2 tasks | 3 files |
+| Phase 73 P03 | 40min | 2 tasks | 9 files |
+| Phase 73 P04 | 25min | 2 tasks | 2 files |
+| Phase 73 P09 | 55min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -250,6 +255,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 
 Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archive (2026-10-15).
 
+- Phase 75 added 2026-11-09: **Steam local file formats in Rust.** The operator asked what comes after Phase 73 in the Node-to-Rust migration. No third slice was planned. Recommended order: finish 73, then 74; next, Steam's local file formats (this phase), because after 73 Rust writes ACFs but TypeScript still reads them; then a Rust-backed process runner folded into Phase 66 part 3; and a spike now on a Rust CM client to replace `steam-user`/`steam-session`, the critical path to retiring the sidecar. The operator agreed. `Depends on` hand-corrected from Phase 74 (positional) to Phase 73. `**Goal:**` hand-written, and the summary-list line was added by hand.
 - Phase 74 added 2026-11-08: **Steam game updates.** The operator ran `do todo` on `2026-11-07-implement-steam-game-updates.md` (major, macos, live-gate). It was too big for a quick task: two spikes, PICS buildid detection, and a delta updater in the depot pipeline. Phase 73 is about to port that pipeline to Rust and delete the TypeScript one, so the operator chose a new phase **after 73** over folding it into 73, shipping a full-re-download version before it, or running spikes only. The InstallApp-on-installed spike and the live stale-bridge check can run before 73 lands. The SDK set `Depends on` to Phase 73, which is correct this time. `**Goal:**` hand-written; the todo moved to `todos/completed/` with a Closure section pointing here.
 - Phase 73 added 2026-11-07: **Steam depot download pipeline in Rust.** The operator asked to look at moving the depot pipeline to Rust as a phase. Spikes 067a/067b had already shown it buys no speed (network-bound at ~18 MiB/s) and ~8% of one core, and the memory problem was fixed in Node; asked for the motivation, the operator chose **retiring the sidecar**, the revisit trigger 067c names. `Depends on` hand-corrected from Phase 72 (positional, unrelated) to Phase 63, whose migration pattern it reuses. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
 - Phase 72 added 2026-11-07: **Renderer trust boundary and process hardening.** From `/gsd-map-codebase --concerns` (`.planning/codebase/CONCERNS.md`, commit 5a038ddbd): the eight concerns no roadmap phase or todo owned — open-path allow-list, `removeFolder` scope, unused Tauri capabilities and dead `ipc_handler.ts` modules, token-store plaintext fallback, dead-sidecar restart/surfacing, `pkill -f` pattern kills, Windows child reaping, dependency advisories plus CI audit, and a Linux Rust compile leg. The operator chose to fold them into one phase rather than todos or Phase 67. `Depends on` hand-corrected from Phase 71 (positional) to None. `**Goal:**` hand-written. Applied by hand per the add-phase workflow.
@@ -378,6 +384,11 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 68]: 68-03: CacheStore excludes __internal__ envelope from entries()/in-memory map
 - [Phase 68]: 68-05: read-side tray/focusRow normalisers stay as degradation path for read-only settings (D-11); libraryTopSection retired from AppSettings
 - [Phase ?]: 68-06: readOnlyStoresNotice payload is ids-only, flushed once from frontendReady; late entries re-publish
+- [Phase 73]: 73-01: rust-version 1.89 for gamelib-depot crates (operator option-a); no aes_armv8 rustflags
+- [Phase 73]: 73-15: depot CLI stdin envelope is {job|request, tokens}; the Tier 2 sweep compares outcome/per-depot status as well as bytes so the EResult-40 divergence (TS skip vs Rust manifest_unavailable) cannot hide behind identical trees; a missing outcome log line or codec is a failure
+- [Phase 73]: EResult-40 parity fix (pre-73-16, operator "Fix to match TS"): a manifest-level Blocked refusal is now carried request-code callback -> `{eresult:40}` reply -> crate `BLOCKED_REPLY`; the crate drops the depot, records `Outcome.skippedDepots`, and fails all-blocked with the byte-identical plan.ts message (eresult 40). Native install, prescreen, resume and originalRestore match the TS path; see 73-EResult40-FIX.md
+- [Phase 73]: 73-09: failed/cancelled files drain in-flight chunk tasks (spawn_blocking is not abortable) so nothing writes after run_job returns; ChunkSource trait abstracts Fetcher for tests; non-install modes error until 73-10
+- [Phase 73]: 73-04: Mach-O probe ported from machO.ts (gamelib-scan not reused); containment lexical; case probe stat-based per TS
 
 ### Pending Todos
 
@@ -656,11 +667,12 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261108-juw | Removed the experimental Help component: floating ? button/popover, hasHelp hook + 10 call sites, help state/types, `enableHelp` (Experimental Features keeps Comet support). Stale saved `enableHelp` keys are ignored (nothing validates experimentalFeatures). | 2026-11-08 | a75f152db | codecheck, lint, lint-translations, Settings+state jest pass; meta suites failing are unrelated (A-17 drift; sl parity, rust-test.yml, logSecretGate, x86 Wine harness — none touch frontend) | [261108-juw-remove-the-experimental-help-component-f](./quick/261108-juw-remove-the-experimental-help-component-f/) |
 | 261108-kpc | Merged 'Minimize after launch' + 'Hide window on gamelib:// launch' into one General select 'When a game starts' (Keep open / Hide for shortcut launches [default] / Hide for every launch), backed by the same two booleans. Both had been inert under Tauri (sidecar window was a no-op stub): new Rust `main_window_hide` channel (macOS app-hide, else window hide), cold-start link hide via frontendReady/15s rule, every-launch hide now also covers Steam, dialogs raise a window GameLib hid. | 2026-11-08 | e5c11ab25 | codecheck clean; cargo test ipc_contract 4/4; backend/common/Settings jest pass bar pre-existing tauriShellSource + macArchKnownFixRouting (reproduced at 4a435506e); live UAT 1-4 PASS 2026-11-08 (after cold-start fixes 146f608b1 + 401e1efaf, debug/resolved/cold-start-link-not-installed.md) | [261108-kpc-merge-game-start-window-settings-into-on](./quick/261108-kpc-merge-game-start-window-settings-into-on/) |
 | 261108-mcc | Closed Phase 61 REVIEW leftovers: IN-01 deadline test drops the vacuous `other` fixture and asserts the armed game's stop, both ledger keys, no wineserver kill and publishNotice once (b34955d6c); IN-02 pins the blank badge for a kept built-in engine under an inconclusive pre-flight per D-05/v6q (7a5e282f7); 61-REVIEW status clean, WR-01 → 88c8296b7 (df4dcec11). Test/docs only. | 2026-11-08 | df4dcec11 | engineState + deadline jest 62/62, codecheck clean, scoped prettier clean; no production diff | [261108-mcc-close-phase-61-review-leftovers](./quick/261108-mcc-close-phase-61-review-leftovers/) |
+| 261109-vdw | Split single_instance.rs (→ windows_protocol + windows_pipe) and tray.rs (→ icon + recent) along their section seams; every file now under the Phase 71 D-13 ~1,000 non-test-line target (max 753). Verbatim moves, parent `pub(crate) use` re-exports, no call-site edits; todo closed. | 2026-11-09 | 5eb2d54f6 | cargo test 453/0 = baseline; fmt hunks 118 = baseline; clippy ratchet output identical (pre-existing main.rs needless_range_loop red); moveproof L3 flags 3 items from moved banners only; cfg(windows) not compiled locally | [261109-vdw-split-single-instance-rs-and-tray-rs-bel](./quick/261109-vdw-split-single-instance-rs-and-tray-rs-bel/) |
 
 ## Session Continuity
 
-Last session: 2026-11-08T18:48:42.562Z
-Stopped at: Phase 72 context gathered
+Last session: 2026-11-09T08:22:00.000Z
+Stopped at: Completed 73-17-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

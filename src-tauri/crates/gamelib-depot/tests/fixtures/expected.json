@@ -1,0 +1,468 @@
+{
+  "generator": "src/backend/storeManagers/steam/__tests__/depotGolden.test.ts (TS oracle, deleted after parity)",
+  "note": "Modes recorded on macOS (st_mode & 0o7777, files only); Windows compares the ReadOnly attribute instead of modes. Paths are relative to a temp root and /-joined. The ACF LastUpdated value is normalised.",
+  "cases": {
+    "encrypted-names": {
+      "result": {
+        "tree": [
+          {
+            "path": "steamapps",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/appmanifest_900050.acf",
+            "kind": "file",
+            "mode": 420
+          },
+          {
+            "path": "steamapps/common",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/encrypted-names",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/encrypted-names/plain",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/encrypted-names/plain/ascii.txt",
+            "kind": "file",
+            "size": 600,
+            "sha1": "73c5aaefd5f76cc4272d3bfddefab501226c292f",
+            "mode": 420
+          },
+          {
+            "path": "steamapps/common/encrypted-names/plän",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/encrypted-names/plän/日本語.txt",
+            "kind": "file",
+            "size": 700,
+            "sha1": "c154edc87f24e6db21498f20fda42685eef38d9b",
+            "mode": 420
+          }
+        ],
+        "acf": "\"AppState\"\n{\n\t\"appid\"\t\t\"900050\"\n\t\"Universe\"\t\t\"1\"\n\t\"StateFlags\"\t\t\"4\"\n\t\"installdir\"\t\t\"encrypted-names\"\n\t\"name\"\t\t\"Fixture encrypted-names\"\n\t\"LastUpdated\"\t\t\"<normalised>\"\n\t\"SizeOnDisk\"\t\t\"1300\"\n\t\"buildid\"\t\t\"1006\"\n\t\"LastOwner\"\t\t\"76561197960265728\"\n\t\"BytesToDownload\"\t\t\"1300\"\n\t\"BytesDownloaded\"\t\t\"1300\"\n\t\"AutoUpdateBehavior\"\t\t\"0\"\n\t\"InstalledDepots\"\n\t{\n\t\t\"900051\"\n\t\t{\n\t\t\t\"manifest\"\t\t\"7000000000000000007\"\n\t\t\t\"size\"\t\t\"1300\"\n\t\t}\n\t}\n\t\"UserConfig\"\n\t{\n\t}\n\t\"MountedDepots\"\n\t{\n\t}\n}\n",
+        "outcome": "completed",
+        "allFilesVerified": true,
+        "allModesApplied": true,
+        "failures": [],
+        "stateFlags": "4"
+      }
+    },
+    "lzma": {
+      "result": {
+        "tree": [
+          {
+            "path": "steamapps",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/appmanifest_900010.acf",
+            "kind": "file",
+            "mode": 420
+          },
+          {
+            "path": "steamapps/common",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/lzma",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/lzma/a",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/lzma/a/one.dat",
+            "kind": "file",
+            "size": 2600,
+            "sha1": "c4fcd995d13ee1c68114ec819dff8dee79cdd8bb",
+            "mode": 420
+          },
+          {
+            "path": "steamapps/common/lzma/a/two.dat",
+            "kind": "file",
+            "size": 700,
+            "sha1": "a7928b62aa355bf6897b2aa84c8ad8eccbfd77d4",
+            "mode": 420
+          }
+        ],
+        "acf": "\"AppState\"\n{\n\t\"appid\"\t\t\"900010\"\n\t\"Universe\"\t\t\"1\"\n\t\"StateFlags\"\t\t\"4\"\n\t\"installdir\"\t\t\"lzma\"\n\t\"name\"\t\t\"Fixture lzma\"\n\t\"LastUpdated\"\t\t\"<normalised>\"\n\t\"SizeOnDisk\"\t\t\"3300\"\n\t\"buildid\"\t\t\"1002\"\n\t\"LastOwner\"\t\t\"76561197960265728\"\n\t\"BytesToDownload\"\t\t\"3300\"\n\t\"BytesDownloaded\"\t\t\"3300\"\n\t\"AutoUpdateBehavior\"\t\t\"0\"\n\t\"InstalledDepots\"\n\t{\n\t\t\"900011\"\n\t\t{\n\t\t\t\"manifest\"\t\t\"7000000000000000002\"\n\t\t\t\"size\"\t\t\"3300\"\n\t\t}\n\t}\n\t\"UserConfig\"\n\t{\n\t}\n\t\"MountedDepots\"\n\t{\n\t}\n}\n",
+        "outcome": "completed",
+        "allFilesVerified": true,
+        "allModesApplied": true,
+        "failures": [],
+        "stateFlags": "4"
+      }
+    },
+    "modes-macho": {
+      "result": {
+        "tree": [
+          {
+            "path": "steamapps",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/appmanifest_900040.acf",
+            "kind": "file",
+            "mode": 420
+          },
+          {
+            "path": "steamapps/common",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/modes-macho",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/modes-macho/Contents",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/modes-macho/Contents/Frameworks",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/modes-macho/Contents/Frameworks/fat.dylib",
+            "kind": "file",
+            "size": 320,
+            "sha1": "8413df314b271e10139170ae7400c2c9c17952cc",
+            "mode": 493
+          },
+          {
+            "path": "steamapps/common/modes-macho/Contents/MacOS",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/modes-macho/Contents/MacOS/exec-flagged",
+            "kind": "file",
+            "size": 300,
+            "sha1": "7d3e8fe86c3c553248b06c1fc2bf0574a5706ff2",
+            "mode": 493
+          },
+          {
+            "path": "steamapps/common/modes-macho/Contents/MacOS/thin",
+            "kind": "file",
+            "size": 1500,
+            "sha1": "223aab4b19039bbd0a2300bf437d63077ecef471",
+            "mode": 493
+          },
+          {
+            "path": "steamapps/common/modes-macho/hidden.cfg",
+            "kind": "file",
+            "size": 200,
+            "sha1": "1a7d527687444bbe60a8bcc8c432c81eb375a1e6",
+            "mode": 420
+          },
+          {
+            "path": "steamapps/common/modes-macho/link-to-ro",
+            "kind": "symlink",
+            "target": "ro.txt"
+          },
+          {
+            "path": "steamapps/common/modes-macho/ro-exec.sh",
+            "kind": "file",
+            "size": 200,
+            "sha1": "fa35ed7704332f8a52531a3a0e2066cf057ac41e",
+            "mode": 365
+          },
+          {
+            "path": "steamapps/common/modes-macho/ro.txt",
+            "kind": "file",
+            "size": 200,
+            "sha1": "2908af42eaef62e4197b2feb9a4598e739f3248c",
+            "mode": 292
+          }
+        ],
+        "acf": "\"AppState\"\n{\n\t\"appid\"\t\t\"900040\"\n\t\"Universe\"\t\t\"1\"\n\t\"StateFlags\"\t\t\"4\"\n\t\"installdir\"\t\t\"modes-macho\"\n\t\"name\"\t\t\"Fixture modes-macho\"\n\t\"LastUpdated\"\t\t\"<normalised>\"\n\t\"SizeOnDisk\"\t\t\"2720\"\n\t\"buildid\"\t\t\"1005\"\n\t\"LastOwner\"\t\t\"76561197960265728\"\n\t\"BytesToDownload\"\t\t\"2720\"\n\t\"BytesDownloaded\"\t\t\"2720\"\n\t\"AutoUpdateBehavior\"\t\t\"0\"\n\t\"InstalledDepots\"\n\t{\n\t\t\"900041\"\n\t\t{\n\t\t\t\"manifest\"\t\t\"7000000000000000006\"\n\t\t\t\"size\"\t\t\"2720\"\n\t\t}\n\t}\n\t\"UserConfig\"\n\t{\n\t}\n\t\"MountedDepots\"\n\t{\n\t}\n}\n",
+        "outcome": "completed",
+        "allFilesVerified": true,
+        "allModesApplied": true,
+        "failures": [],
+        "stateFlags": "4"
+      }
+    },
+    "multi-depot-collision": {
+      "variants": {
+        "caseInsensitive": {
+          "tree": [
+            {
+              "path": "steamapps",
+              "kind": "dir"
+            },
+            {
+              "path": "steamapps/appmanifest_900030.acf",
+              "kind": "file",
+              "mode": 420
+            },
+            {
+              "path": "steamapps/common",
+              "kind": "dir"
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision",
+              "kind": "dir"
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision/bin",
+              "kind": "dir"
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision/bin/game.exe",
+              "kind": "file",
+              "size": 1500,
+              "sha1": "731fab9e8066befe41cd26f91f4991ff771028fc",
+              "mode": 420
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision/data",
+              "kind": "dir"
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision/data/a.txt",
+              "kind": "file",
+              "size": 900,
+              "sha1": "71b612705b82f6d1643b6258b3d5f535962b17e8",
+              "mode": 420
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision/data/readme.txt",
+              "kind": "file",
+              "size": 450,
+              "sha1": "e4452bf2551362fb8a8181f3d9ff6cd0d5892ea4",
+              "mode": 420
+            }
+          ],
+          "acf": "\"AppState\"\n{\n\t\"appid\"\t\t\"900030\"\n\t\"Universe\"\t\t\"1\"\n\t\"StateFlags\"\t\t\"4\"\n\t\"installdir\"\t\t\"multi-depot-collision\"\n\t\"name\"\t\t\"Fixture multi-depot-collision\"\n\t\"LastUpdated\"\t\t\"<normalised>\"\n\t\"SizeOnDisk\"\t\t\"2850\"\n\t\"buildid\"\t\t\"1004\"\n\t\"LastOwner\"\t\t\"76561197960265728\"\n\t\"BytesToDownload\"\t\t\"2850\"\n\t\"BytesDownloaded\"\t\t\"2850\"\n\t\"AutoUpdateBehavior\"\t\t\"0\"\n\t\"InstalledDepots\"\n\t{\n\t\t\"900031\"\n\t\t{\n\t\t\t\"manifest\"\t\t\"7000000000000000004\"\n\t\t\t\"size\"\t\t\"1500\"\n\t\t}\n\t\t\"900032\"\n\t\t{\n\t\t\t\"manifest\"\t\t\"7000000000000000005\"\n\t\t\t\"size\"\t\t\"1350\"\n\t\t}\n\t}\n\t\"UserConfig\"\n\t{\n\t}\n\t\"MountedDepots\"\n\t{\n\t}\n}\n",
+          "outcome": "completed",
+          "allFilesVerified": true,
+          "allModesApplied": true,
+          "failures": [],
+          "stateFlags": "4"
+        },
+        "caseSensitive": {
+          "tree": [
+            {
+              "path": "steamapps",
+              "kind": "dir"
+            },
+            {
+              "path": "steamapps/appmanifest_900030.acf",
+              "kind": "file",
+              "mode": 420
+            },
+            {
+              "path": "steamapps/common",
+              "kind": "dir"
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision",
+              "kind": "dir"
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision/Data",
+              "kind": "dir"
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision/Data/Readme.txt",
+              "kind": "file",
+              "size": 400,
+              "sha1": "d73a4f6d0f1081519884da293eb30439aca4e82c",
+              "mode": 420
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision/bin",
+              "kind": "dir"
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision/bin/game.exe",
+              "kind": "file",
+              "size": 1500,
+              "sha1": "731fab9e8066befe41cd26f91f4991ff771028fc",
+              "mode": 420
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision/data",
+              "kind": "dir"
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision/data/a.txt",
+              "kind": "file",
+              "size": 900,
+              "sha1": "71b612705b82f6d1643b6258b3d5f535962b17e8",
+              "mode": 420
+            },
+            {
+              "path": "steamapps/common/multi-depot-collision/data/readme.txt",
+              "kind": "file",
+              "size": 450,
+              "sha1": "e4452bf2551362fb8a8181f3d9ff6cd0d5892ea4",
+              "mode": 420
+            }
+          ],
+          "acf": "\"AppState\"\n{\n\t\"appid\"\t\t\"900030\"\n\t\"Universe\"\t\t\"1\"\n\t\"StateFlags\"\t\t\"4\"\n\t\"installdir\"\t\t\"multi-depot-collision\"\n\t\"name\"\t\t\"Fixture multi-depot-collision\"\n\t\"LastUpdated\"\t\t\"<normalised>\"\n\t\"SizeOnDisk\"\t\t\"3250\"\n\t\"buildid\"\t\t\"1004\"\n\t\"LastOwner\"\t\t\"76561197960265728\"\n\t\"BytesToDownload\"\t\t\"3250\"\n\t\"BytesDownloaded\"\t\t\"3250\"\n\t\"AutoUpdateBehavior\"\t\t\"0\"\n\t\"InstalledDepots\"\n\t{\n\t\t\"900031\"\n\t\t{\n\t\t\t\"manifest\"\t\t\"7000000000000000004\"\n\t\t\t\"size\"\t\t\"1900\"\n\t\t}\n\t\t\"900032\"\n\t\t{\n\t\t\t\"manifest\"\t\t\"7000000000000000005\"\n\t\t\t\"size\"\t\t\"1350\"\n\t\t}\n\t}\n\t\"UserConfig\"\n\t{\n\t}\n\t\"MountedDepots\"\n\t{\n\t}\n}\n",
+          "outcome": "completed",
+          "allFilesVerified": true,
+          "allModesApplied": true,
+          "failures": [],
+          "stateFlags": "4"
+        }
+      }
+    },
+    "shared-redist": {
+      "result": {
+        "tree": [
+          {
+            "path": "steamapps",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/shared-redist",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/shared-redist/redist",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/shared-redist/redist/notes.txt",
+            "kind": "file",
+            "size": 250,
+            "sha1": "3068d105fb154df2e377545338b787d38d2130a7",
+            "mode": 420
+          },
+          {
+            "path": "steamapps/common/shared-redist/redist/setup.dat",
+            "kind": "file",
+            "size": 1800,
+            "sha1": "afe0ba3dbba3bdad8ae054bff5b626c9bc5f9567",
+            "mode": 420
+          }
+        ],
+        "acf": null,
+        "outcome": "completed",
+        "allFilesVerified": true,
+        "allModesApplied": true,
+        "failures": []
+      }
+    },
+    "zip-deflate": {
+      "result": {
+        "tree": [
+          {
+            "path": "steamapps",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/appmanifest_900001.acf",
+            "kind": "file",
+            "mode": 420
+          },
+          {
+            "path": "steamapps/common",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/zip-deflate",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/zip-deflate/data",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/zip-deflate/data/empty.txt",
+            "kind": "file",
+            "size": 0,
+            "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            "mode": 420
+          },
+          {
+            "path": "steamapps/common/zip-deflate/data/multi.bin",
+            "kind": "file",
+            "size": 3500,
+            "sha1": "af7822096d2848545f792d2f7ce089b57b26ff5d",
+            "mode": 420
+          },
+          {
+            "path": "steamapps/common/zip-deflate/data/stored.bin",
+            "kind": "file",
+            "size": 900,
+            "sha1": "e1e462159cdd757504bb6b855769325904e9d4e3",
+            "mode": 420
+          },
+          {
+            "path": "steamapps/common/zip-deflate/readme.txt",
+            "kind": "file",
+            "size": 300,
+            "sha1": "f9c08bf5372087cc6c45e81759c2684295243a36",
+            "mode": 420
+          }
+        ],
+        "acf": "\"AppState\"\n{\n\t\"appid\"\t\t\"900001\"\n\t\"Universe\"\t\t\"1\"\n\t\"StateFlags\"\t\t\"4\"\n\t\"installdir\"\t\t\"zip-deflate\"\n\t\"name\"\t\t\"Fixture zip-deflate\"\n\t\"LastUpdated\"\t\t\"<normalised>\"\n\t\"SizeOnDisk\"\t\t\"4700\"\n\t\"buildid\"\t\t\"1001\"\n\t\"LastOwner\"\t\t\"76561197960265728\"\n\t\"BytesToDownload\"\t\t\"4700\"\n\t\"BytesDownloaded\"\t\t\"4700\"\n\t\"AutoUpdateBehavior\"\t\t\"0\"\n\t\"InstalledDepots\"\n\t{\n\t\t\"900002\"\n\t\t{\n\t\t\t\"manifest\"\t\t\"7000000000000000001\"\n\t\t\t\"size\"\t\t\"4700\"\n\t\t}\n\t}\n\t\"UserConfig\"\n\t{\n\t}\n\t\"MountedDepots\"\n\t{\n\t}\n}\n",
+        "outcome": "completed",
+        "allFilesVerified": true,
+        "allModesApplied": true,
+        "failures": [],
+        "stateFlags": "4"
+      }
+    },
+    "zstd": {
+      "result": {
+        "tree": [
+          {
+            "path": "steamapps",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/appmanifest_900020.acf",
+            "kind": "file",
+            "mode": 420
+          },
+          {
+            "path": "steamapps/common",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/zstd",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/zstd/z",
+            "kind": "dir"
+          },
+          {
+            "path": "steamapps/common/zstd/z/one.dat",
+            "kind": "file",
+            "size": 3100,
+            "sha1": "d1451535fa4ddfc265aff7d48ce0d2cb621a32c5",
+            "mode": 420
+          },
+          {
+            "path": "steamapps/common/zstd/z/two.dat",
+            "kind": "file",
+            "size": 512,
+            "sha1": "79f5648df4a8d51460635f01a8c661e433b27a79",
+            "mode": 420
+          }
+        ],
+        "acf": "\"AppState\"\n{\n\t\"appid\"\t\t\"900020\"\n\t\"Universe\"\t\t\"1\"\n\t\"StateFlags\"\t\t\"4\"\n\t\"installdir\"\t\t\"zstd\"\n\t\"name\"\t\t\"Fixture zstd\"\n\t\"LastUpdated\"\t\t\"<normalised>\"\n\t\"SizeOnDisk\"\t\t\"3612\"\n\t\"buildid\"\t\t\"1003\"\n\t\"LastOwner\"\t\t\"76561197960265728\"\n\t\"BytesToDownload\"\t\t\"3612\"\n\t\"BytesDownloaded\"\t\t\"3612\"\n\t\"AutoUpdateBehavior\"\t\t\"0\"\n\t\"InstalledDepots\"\n\t{\n\t\t\"900021\"\n\t\t{\n\t\t\t\"manifest\"\t\t\"7000000000000000003\"\n\t\t\t\"size\"\t\t\"3612\"\n\t\t}\n\t}\n\t\"UserConfig\"\n\t{\n\t}\n\t\"MountedDepots\"\n\t{\n\t}\n}\n",
+        "outcome": "completed",
+        "allFilesVerified": true,
+        "allModesApplied": true,
+        "failures": [],
+        "stateFlags": "4"
+      }
+    }
+  }
+}

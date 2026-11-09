@@ -1,6 +1,6 @@
 ---
 phase: 71-rust-shell-module-decomposition
-reviewed: 2026-11-09T00:00:00Z
+reviewed: 2026-11-08T19:29:57Z
 depth: standard
 files_reviewed: 50
 files_reviewed_list:
@@ -203,5 +203,186 @@ The doc comment claims "Same rule as the jest reader". The Rust behaviour would 
 ---
 
 _Reviewed: 2026-11-09_
+_Reviewer: Claude (gsd-code-reviewer)_
+_Depth: standard_
+
+## Gap-closure re-review (71-19, 71-20)
+
+**Reviewed:** 2026-11-08T19:29:57Z
+**Depth:** standard
+**Scope:** `git diff cb69de3e4..HEAD -- src src-tauri meta`, 20 files, all test-only. The `src-tauri/src/main.rs` hunks are all inside `#[cfg(test)] mod tests`.
+**Status:** issues_found
+
+### What I verified
+
+**Test runs.**
+- The 14 migrated jest suites: 527 of 528 tests pass. The one failure is the known WR-07 `.title(` string-literal test, which is out of scope.
+- `cargo test cut_test_modules`: 4 of 4 pass. The two build warnings (`non_snake_case` in `wake_lock.rs` and `main.rs`) are pre-existing.
+
+**Every migrated pin.**
+- `loadMainRsCode` defaults now read `readTauriShellProductionSource()`; `code()` and the router pins read `readTauriShellProductionFile()`.
+- No migrated presence, order or count pin can be satisfied by a test module any more.
+- The re-pointed clipboard pin `ClipboardWriteTextArgs::from_args` is satisfied by production `clipboard.rs:32`, and not only by the test calls at lines 66-109.
+- The two `NON-VACUITY` raw-witness tests (lines 4102 and 4363) and the `COMMENT_ONLY_PHRASE` precondition still find their phrases in production comments.
+
+**`D-10 raw` labels.** I checked all eight labels. None hides a production pin:
+- clipboard cargo-test names
+- the per-file strip proof
+- the `terminate_veto.rs` survival proof
+- the cutter cross-check
+- the `main.rs` strip proof
+- the sidecar mutation self-test
+- the `loginChromeCssInjection` cargo-test survival pin
+- `longRunningChannels`' own-test-module reader
+
+Each one targets Rust test text by intent.
+
+**`eofAfterDrainInReader` (sidecar.rs).**
+- `drain_pending_invokes(&state.pending` occurs exactly once in production, at line 640 inside `start_reader`.
+- `on_sidecar_eof(` follows it at line 645.
+- The first `\n}\n` after the drain is `start_reader`'s own closing brace at line 649. No column-0 `}` or raw string sits in between.
+- The fn definition `on_sidecar_eof<` cannot match the `on_sidecar_eof(` needle.
+- Both mutation tests genuinely flip the result.
+
+The bound is robust for today's file (see GC-IN-02 for a hardening).
+
+**Cutter parity.**
+- jest `classifyCfgTestAttr` and Rust `classify_cfg_test_attr` are token-for-token equivalent: the same `test` word-boundary rule, the same top-level `all(..)` argument split, and the same quote toggle.
+- `listRustTestModuleBlocks` and `cut_test_modules` use the same rule for the attribute run and the block end.
+- **No over-cut.** A cut can only start at a contiguous attribute run directly above a column-0 `mod <ident> {` that carries a recognised test cfg. Every attribute in that run belongs to that module.
+
+**Every column-0 test-cfg line in `src-tauri/src` today.** All are exactly `#[cfg(test)]` except `terminate_veto.rs:323`, and none is separated from its `mod` line. `login_window/devtools.rs:23`'s `#[cfg(any(debug_assertions, test))]` sits on a fn, so it is never classified. No nested, `pub` or out-of-line test module exists.
+
+### Status of the original warnings
+
+| ID | Status | Notes |
+|----|--------|-------|
+| WR-01 | **Resolved** | `sidecarShutdownFlagSource.test.ts:105-112` reads production text and bounds the search to the reader body. The mutation tests at lines 115-147 prove that the old pin was vacuous and the new one is not. The audit the review asked for was done: 12 combined-source readers and the per-file readers were migrated. The one reader the audit missed is `readMacosEpicEmbedSource` (GC-WR-02). |
+| WR-02 | **Resolved for the reported instance; fail-closed only partly delivered** | `terminate_reply_tests` is now cut on both sides, with fixtures and a real-tree assertion on each side. Two parts did not deliver what WR-02 asked for: the "cutter did not cut it" guard is tautological, and several legal Rust shapes still fail open silently (GC-WR-01). |
+| WR-03 | **Partially resolved** | `longRunningChannels` now reads only `main.rs`'s own test blocks: fixed. On the jest side the slicing guard itself was not widened (still `.ts`/`.tsx` only, exact `indexOf`/`split` forms). It is largely superseded by the new raw-reader allow-list, since slicing production text is harmless, but that allow-list has bypasses (GC-WR-02). The Rust half is **not addressed**: `no_shell_source_test_slices_on_mod_tests` (`main.rs:2204-2221`) is unchanged, and Rust has no raw-reader guard (GC-WR-03). |
+
+### Warnings
+
+#### GC-WR-01: The cutter cross-check guard is tautological, and several legal test-module shapes still fail open
+
+**File:** `src/backend/__tests__/tauriShellSource.test.ts:4786-4815`, `src/backend/testUtils/tauriShellSource.ts:108` (`TEST_MOD_OPEN`) and `:161-167`, `src-tauri/src/main.rs` (`is_mod_open` at 2040, `cut_test_modules` at 2052-2093)
+
+**Issue:** WR-02 asked for a guard that fails when a test-gated module is not cut. The guard that was added detects "gated" modules with exactly the cutter's own rule:
+- a `^mod X \{$` line
+- a contiguous column-0 `#[` run above it
+- a `#[cfg(` line in that run mentioning `\btest\b`
+
+That condition is precisely "the cutter classifies it `test` or `ambiguous`", so the cutter cuts it or throws by construction. The guard can never go red independently of `listRustTestModuleBlocks`. It also cannot see any module the cutter's pattern misses.
+
+Each of these legal shapes is silently kept as production text by both cutters and by the guard. All are invisible today, but they are exactly how the next co-located test module can re-open WR-01:
+
+- **Doc comment or blank line between the attribute and the module.** For example `#[cfg(test)]`, then `/// Fixture-backed tests.`, then `mod tests {`. The `///` line breaks the attribute run.
+- **rustfmt-wrapped cfg.** A long cfg such as `#[cfg(all(test, target_os = "macos", …))]` past `max_width` becomes `#[cfg(all(` / `    test,` / `))]`. The line directly above `mod` is `))]`, which does not start with `#[`, so the run is empty.
+- **Visibility.** `#[cfg(test)]` followed by `pub(crate) mod test_support {` fails `^mod `.
+- **Indentation.** An indented test module nested in a production `mod` is not matched.
+- **Out-of-line modules.**
+  - `#[cfg(test)] mod tests;` backed by a `tests.rs` file: `listTauriShellSourceFiles` walks every `.rs` file and concatenates `tests.rs` whole into "production".
+  - A file starting `#![cfg(test)]` is treated the same way.
+
+The plan's "Unchanged: commented, indented … are not cut" decision covers commented-out attributes. It does not cover the live shapes above.
+
+**Fix:** Make the guard independent of the cutter. Scan every shell file for any line matching `/^\s*#!?\[cfg\(.*\btest\b/`, any line `/^\s*test,?$/` inside a `#[cfg(all(` that spans several lines, and any `mod \w+;` whose attributes mention `test`. Require each hit to be either:
+- inside a block returned by `listRustTestModuleBlocks`, or
+- on an explicit, reasoned allow-list (e.g. `login_window/devtools.rs:23`, the `fn should_auto_open_devtools` item).
+
+Make both cutters throw/panic on a test-cfg attribute separated from its `mod` by comment or blank lines, and on a non-`^mod` module opener (`pub…mod`, indented). Add a Rust twin that scans `SHELL_SOURCE_PARTS`.
+
+#### GC-WR-02: The raw-reader allow-list is bypassed by helper-internal readers, direct `readFileSync`, and import aliasing; one live unlisted raw reader exists
+
+**File:** `src/backend/__tests__/tauriShellSource.test.ts:4895-4990`, `src/backend/testUtils/tauriShellSource.ts:313-325`, `src/backend/__tests__/macosEpicEmbedSource.test.ts:18-25`, `src/backend/__tests__/macosEpicEmbedDiagPersistence.test.ts:24-32`
+
+**Issue:** `countRawShellReads` only matches the literal tokens `readTauriShellSource(` and `readTauriShellFile(`, and it skips the definitions file outright. That misses three cases:
+
+1. **`readMacosEpicEmbedSource()` is a raw reader that is not on the list.** Its doc says "Full text (tests included)". It concatenates `macos_epic_embed.rs` (2 test modules, at lines 110 and 176) and `macos_epic_embed/surface.rs` (3 test modules, at lines 1006, 1058 and 1087). It is called from two suites that pin presence and counts (`fnBody(...).toContain`, `count(code, 'crate::shell_diag(')`). The call inside the helper is exempt because it lives in `DEFINITIONS`, and the callers use a name the regex does not know. This is the same class of reader as WR-01, and nothing flags it.
+   - I checked every literal needle in both suites against the test-module text. Today only `enqueue_nav_event(` occurs there, and it is scoped through `fnBody`, so **no current pin is vacuous**.
+   - However, a future `toContain` over `code`, or a test that calls `crate::shell_diag(`, would be silently satisfied or skewed.
+2. **Direct reads.** `readFileSync(join(SHELL_SRC, f))` of a shell `.rs` file is not counted. The guard's own cross-check, at line 4795, does exactly this unflagged.
+3. **Aliasing.** Both of these defeat the regex:
+   - `import { readTauriShellFile as rd }`
+   - `const { readTauriShellFile: rd } = require(...)`
+
+This means the plan's done criterion ("Any new unstripped shell-source read in src/ or meta/ turns jest red") is not met.
+
+**Fix:**
+- Split the helper into `readMacosEpicEmbedProductionSource()`, which strips each part with `stripRustTestModules`, and migrate both suites to it.
+- Add `readMacosEpicEmbedSource\(` to the scanner regex, and allow-list any remaining raw caller.
+- Count `readFileSync\([^)]*(SHELL_SRC|src-tauri\/src)` and any read whose argument ends in `.rs` as raw reads.
+- Fail on any `as`/`:` alias of the three reader names in import and destructure lines.
+- Scan the definitions file too, with an expected count, so a new helper-internal raw reader is a reviewed change.
+
+#### GC-WR-03: WR-03's Rust half is unaddressed: Rust source-text tests still have no production reader discipline outside `main.rs`
+
+**File:** `src-tauri/src/main.rs:2200-2221`, `src-tauri/src/store_embed_handoff_policy.rs:224,338-341,367`, `src-tauri/src/epic_embed_js_dialog.rs:192-198`
+
+**Issue:** Several things on the Rust side are unchanged:
+- `no_shell_source_test_slices_on_mod_tests` still scans only `main.rs`'s test text, and still uses the literal-array `assert!(!needles.is_empty())` "non-vacuity" check.
+- Co-located Rust source-text tests read sibling files raw through `include_str!`, and nothing in Rust inventories them. Those readers are:
+  - `store_embed_handoff_policy.rs`, which reads `macos_epic_embed/nav_delegate.rs` and `store_embed/open.rs`
+  - `epic_embed_js_dialog.rs`, which reads all three `macos_epic_embed` files, including `surface.rs` with its 3 test modules
+
+None of their positive targets carries a test module today, and the `epic_embed_js_dialog` pins are absence pins, which raw text only makes stricter. So nothing is vacuous now. But the moment `nav_delegate.rs` or `store_embed/open.rs` gains a co-located `mod tests` that names `store_embed_browser_handoff_policy(` or `.on_download({`, the `find(...)` ordering pins can resolve inside the test module. That is exactly the WR-01 failure mode, on the side where CI does not run (`cargo test` is manual).
+
+**Fix:**
+- Expose `cut_test_modules` as a crate-level `#[cfg(test)] pub(crate) fn` and route these `include_str!` reads through it.
+- Widen `no_shell_source_test_slices_on_mod_tests` to iterate every `SHELL_SOURCE_PARTS` entry plus the non-combined siblings.
+- Add a Rust inventory test: count `include_str!("*.rs")` sites per file against an expected map, mirroring `RAW_SHELL_READ_ALLOWLIST`.
+
+### Info
+
+#### GC-IN-01: The `D-10 raw` label check is file-wide and self-satisfying
+
+**File:** `src/backend/__tests__/tauriShellSource.test.ts:4981-4988`
+
+**Issue:** The check counts `D-10 raw` occurrences anywhere in the file and requires them to be at least the allow-list count. That is weak in two ways:
+- In `tauriShellSource.test.ts` there are 7 occurrences for 4 counted sites. Two are the guard's own test title and its `split('D-10 raw')`, and one (line 4794) labels an uncounted `readFileSync`.
+- A new unlabelled raw site in that file therefore passes once its count is bumped to 5.
+
+**Fix:** For each counted match, require `D-10 raw` on the same line or within the two preceding lines. Exclude the guard's own literal from the count.
+
+#### GC-IN-02: The D-01 bound is "next column-0 `}` after the drain", not "inside `start_reader`"
+
+**File:** `src/backend/__tests__/sidecarShutdownFlagSource.test.ts:34-40`
+
+**Issue:** The bound is correct today. Two future changes would loosen it:
+- If the drain moved into a helper fn, the pin would follow it.
+- If `start_reader` moved into an `impl` or `mod`, its closing `}` would be indented, and the bound would extend to the enclosing block's end.
+
+**Fix:** Use `readTopLevelFnBody(src, 'start_reader', 50)` and assert `drain >= 0 && eof > drain` within that body. The existing mutation tests keep their meaning.
+
+#### GC-IN-03: IN-05 is still open after the `cut_test_modules` rewrite
+
+**File:** `src-tauri/src/main.rs` (`cut_test_modules`, line 2078: the `while end < lines.len() && lines[end] != "}"` loop followed by `take((end + 1).min(lines.len()))`)
+
+**Issue:**
+- An unterminated test-gated module still silently drops every line to EOF in Rust, while jest throws `unterminated test module`.
+- The doc comment claims "Same rule as the jest `stripRustTestModules`".
+- The rewrite was the natural point to close this.
+
+**Fix:** `if end == lines.len() { panic!("unterminated test module at line {}", i + 1) }`. Add a `#[should_panic]` fixture.
+
+#### GC-IN-04: `cfg(not(test))` modules throw, although they are by definition production text
+
+**File:** `src/backend/testUtils/tauriShellSource.ts:118-145`, and the Rust `classify_cfg_test_attr`
+
+**Issue:** Failing closed on `any(test, …)` is right, because such a module is both test and production. A `#[cfg(not(test))] mod real_impl {` is never compiled under test, so it is unambiguously production. Today it throws `ambiguous test cfg` from `readTauriShellProductionSource()`, and that error surfaces in roughly 25 unrelated suites at once.
+
+**Fix:** Classify a top-level `not(test)` as `'other'`. Keep `any(..test..)` and nested shapes as `'ambiguous'`, and add the fixture on both sides.
+
+#### GC-IN-05: Minor redundancy in `loadMainRsRaw`
+
+**File:** `src/backend/__tests__/longRunningChannels.test.ts:168-173`
+
+**Issue:** `listRustTestModuleBlocks(lines.join('\n'))` rebuilds the string it just split.
+
+**Fix:** Read the file once into `raw`, then call `listRustTestModuleBlocks(raw)` and split `raw` for slicing.
+
+---
+
+_Gap-closure re-review: 2026-11-08T19:29:57Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_

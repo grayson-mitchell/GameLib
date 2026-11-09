@@ -13,7 +13,7 @@
  */
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { readTauriShellSource } from '../testUtils/tauriShellSource'
+import { readTauriShellProductionSource } from '../testUtils/tauriShellSource'
 import { stripSourceComments } from '../testUtils/stripSourceComments'
 
 const CAPABILITIES_DEFAULT_PATH = join(
@@ -141,7 +141,7 @@ describe('capabilities/default.json D-04 window/webview grants (REQ-34.1-02)', (
   })
 
   test('Phase 72 D-10: opener JS link injection is disabled in the shell', () => {
-    const source = stripSourceComments(readTauriShellSource())
+    const source = stripSourceComments(readTauriShellProductionSource())
     expect(source).toContain('open_js_links_on_click(false)')
     expect(source).not.toContain('tauri_plugin_opener::init()')
   })

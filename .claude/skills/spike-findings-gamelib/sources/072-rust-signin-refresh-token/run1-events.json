@@ -1,0 +1,198 @@
+{
+  "events": [
+    {
+      "at": "1794213736.332Z(unix)",
+      "cat": "start",
+      "msg": "spike 072 harness on http://127.0.0.1:7172",
+      "t": 0.0
+    },
+    {
+      "at": "1794213741.764Z(unix)",
+      "cat": "qr",
+      "msg": "session started (platform SteamClient over Web API), poll every 5s; scan with the Steam mobile app",
+      "t": 5.431596125
+    },
+    {
+      "at": "1794213763.454Z(unix)",
+      "cat": "qr",
+      "msg": "challenge rotated, QR updated",
+      "t": 27.121936625
+    },
+    {
+      "at": "1794213786.098Z(unix)",
+      "cat": "qr",
+      "msg": "challenge rotated, QR updated",
+      "t": 49.765716708
+    },
+    {
+      "at": "1794213808.138Z(unix)",
+      "cat": "qr",
+      "msg": "challenge rotated, QR updated",
+      "t": 71.805435583
+    },
+    {
+      "at": "1794213830.395Z(unix)",
+      "cat": "qr",
+      "msg": "challenge rotated, QR updated",
+      "t": 94.06221575
+    },
+    {
+      "at": "1794213852.612Z(unix)",
+      "cat": "qr",
+      "msg": "challenge rotated, QR updated",
+      "t": 116.279197
+    },
+    {
+      "at": "1794213874.699Z(unix)",
+      "cat": "qr",
+      "msg": "challenge rotated, QR updated",
+      "t": 138.36591275
+    },
+    {
+      "at": "1794213896.720Z(unix)",
+      "cat": "qr",
+      "msg": "challenge rotated, QR updated",
+      "t": 160.387232333
+    },
+    {
+      "at": "1794213918.840Z(unix)",
+      "cat": "qr",
+      "msg": "challenge rotated, QR updated",
+      "t": 182.50683925
+    },
+    {
+      "at": "1794213924.193Z(unix)",
+      "cat": "error",
+      "msg": "qr: QR not approved within 180 s",
+      "t": 187.859367792
+    },
+    {
+      "at": "1794215407.943Z(unix)",
+      "cat": "qr",
+      "msg": "session started (platform SteamClient over Web API), poll every 5s; scan with the Steam mobile app",
+      "t": 1671.601331167
+    },
+    {
+      "at": "1794215413.240Z(unix)",
+      "cat": "qr",
+      "msg": "scanned on the phone, waiting for approval",
+      "t": 1676.897669375
+    },
+    {
+      "at": "1794215418.543Z(unix)",
+      "cat": "qr",
+      "msg": "APPROVED: refresh token issued (494 chars), account name returned: true",
+      "t": 1682.201319917
+    },
+    {
+      "at": "1794215418.544Z(unix)",
+      "cat": "result",
+      "msg": "qr recorded",
+      "t": 1682.201510292
+    },
+    {
+      "at": "1794215459.838Z(unix)",
+      "cat": "wrap",
+      "msg": "Mac Steam LogOff seen after ~300 ms",
+      "t": 1723.496072792
+    },
+    {
+      "at": "1794215460.335Z(unix)",
+      "cat": "cred",
+      "msg": "CM connected; beginning password auth (platform SteamClient)",
+      "t": 1723.993216833
+    },
+    {
+      "at": "1794215461.005Z(unix)",
+      "cat": "guard",
+      "msg": "Steam offers: device code, device confirmation",
+      "t": 1724.66304425
+    },
+    {
+      "at": "1794215461.006Z(unix)",
+      "cat": "guard",
+      "msg": "waiting for a device code code from the page (approving in the app also works)",
+      "t": 1724.663261875
+    },
+    {
+      "at": "1794215477.365Z(unix)",
+      "cat": "cred",
+      "msg": "SIGNED IN and logged on: refresh token issued (494 chars), Some(485) licenses",
+      "t": 1741.022954583
+    },
+    {
+      "at": "1794215477.365Z(unix)",
+      "cat": "result",
+      "msg": "credentials_none recorded",
+      "t": 1741.023147833
+    },
+    {
+      "at": "1794215477.435Z(unix)",
+      "cat": "wrap",
+      "msg": "goonline sent",
+      "t": 1741.092456833
+    },
+    {
+      "at": "1794215496.515Z(unix)",
+      "cat": "wrap",
+      "msg": "Mac Steam LogOff seen after ~400 ms",
+      "t": 1760.172652708
+    },
+    {
+      "at": "1794215499.000Z(unix)",
+      "cat": "verify",
+      "msg": "logon with the credentials token (no account name): ok, Some(485) licenses",
+      "t": 1762.6571725
+    },
+    {
+      "at": "1794215499.000Z(unix)",
+      "cat": "result",
+      "msg": "verify_credentials_token recorded",
+      "t": 1762.657395667
+    },
+    {
+      "at": "1794215499.069Z(unix)",
+      "cat": "wrap",
+      "msg": "goonline sent",
+      "t": 1762.726958292
+    }
+  ],
+  "results": {
+    "credentials_none": {
+      "guard": null,
+      "licenses": 485,
+      "status": "PASS",
+      "token": {
+        "aud": [
+          "client",
+          "web",
+          "renew",
+          "derive"
+        ],
+        "exp": 1812387940,
+        "len": 494,
+        "sub": "76561197995867096"
+      }
+    },
+    "qr": {
+      "account_name_returned": true,
+      "status": "PASS",
+      "token": {
+        "aud": [
+          "client",
+          "web",
+          "renew",
+          "derive"
+        ],
+        "exp": 1812410374,
+        "len": 494,
+        "sub": "76561197995867096"
+      },
+      "via": "Web API, platform SteamClient"
+    },
+    "verify_credentials_token": {
+      "licenses": 485,
+      "status": "PASS"
+    }
+  }
+}

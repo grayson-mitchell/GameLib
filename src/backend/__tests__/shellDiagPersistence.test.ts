@@ -29,7 +29,7 @@
  * with `*`, which in Rust would eat a leading-deref line (`*foo = bar;`); none of the lines this
  * gate matches has that shape, so it is a known property of the shared util, not a defect here.
  */
-import { readTauriShellSource } from 'backend/testUtils/tauriShellSource'
+import { readTauriShellProductionSource } from 'backend/testUtils/tauriShellSource'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { stripSourceComments } from '../testUtils/stripSourceComments'
@@ -44,7 +44,7 @@ const CAPTURE_SCROLLBACK_PATH = join(
 )
 
 function loadMainRsRaw(): string {
-  return readTauriShellSource()
+  return readTauriShellProductionSource()
 }
 
 /** Comment-stripped main.rs, via the shared stripper — never a hand-rolled pass. */

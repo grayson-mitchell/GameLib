@@ -65,6 +65,9 @@ pub(crate) enum RustInvokeChannel {
     ScanPeImportedDlls,
     ScanContainedReal,
     ScanWinemacMetalExports,
+    DepotJobCancel,
+    DepotJobRun,
+    DepotManifestSummary,
 }
 
 impl RustInvokeChannel {
@@ -114,6 +117,9 @@ impl RustInvokeChannel {
         RustInvokeChannel::ScanPeImportedDlls,
         RustInvokeChannel::ScanContainedReal,
         RustInvokeChannel::ScanWinemacMetalExports,
+        RustInvokeChannel::DepotJobCancel,
+        RustInvokeChannel::DepotJobRun,
+        RustInvokeChannel::DepotManifestSummary,
     ];
 
     pub(crate) fn from_name(name: &str) -> Option<Self> {
@@ -163,6 +169,9 @@ impl RustInvokeChannel {
             "scan_pe_imported_dlls" => Some(RustInvokeChannel::ScanPeImportedDlls),
             "scan_contained_real" => Some(RustInvokeChannel::ScanContainedReal),
             "scan_winemac_metal_exports" => Some(RustInvokeChannel::ScanWinemacMetalExports),
+            "depot_job_cancel" => Some(RustInvokeChannel::DepotJobCancel),
+            "depot_job_run" => Some(RustInvokeChannel::DepotJobRun),
+            "depot_manifest_summary" => Some(RustInvokeChannel::DepotManifestSummary),
             _ => None,
         }
     }
@@ -214,6 +223,9 @@ impl RustInvokeChannel {
             RustInvokeChannel::ScanPeImportedDlls => "scan_pe_imported_dlls",
             RustInvokeChannel::ScanContainedReal => "scan_contained_real",
             RustInvokeChannel::ScanWinemacMetalExports => "scan_winemac_metal_exports",
+            RustInvokeChannel::DepotJobCancel => "depot_job_cancel",
+            RustInvokeChannel::DepotJobRun => "depot_job_run",
+            RustInvokeChannel::DepotManifestSummary => "depot_manifest_summary",
         }
     }
 }
@@ -1080,5 +1092,42 @@ impl ScanWinemacMetalExportsArgs {
     pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
         let first = args.first().ok_or_else(|| "scan_winemac_metal_exports:bad-args".to_string())?;
         serde_json::from_value(first.clone()).map_err(|_| "scan_winemac_metal_exports:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct DepotJobCancelArgs {
+    #[serde(rename = "jobId")]
+    pub(crate) job_id: String,
+}
+
+impl DepotJobCancelArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let first = args.first().ok_or_else(|| "depot_job_cancel:bad-args".to_string())?;
+        serde_json::from_value(first.clone()).map_err(|_| "depot_job_cancel:bad-args".to_string())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DepotJobRunArgs {
+    pub(crate) request: Value,
+}
+
+impl DepotJobRunArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "depot_job_run:bad-args".to_string())?.clone()).map_err(|_| "depot_job_run:bad-args".to_string())?;
+        Ok(Self { request })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DepotManifestSummaryArgs {
+    pub(crate) request: Value,
+}
+
+impl DepotManifestSummaryArgs {
+    pub(crate) fn from_args(args: &[Value]) -> Result<Self, String> {
+        let request = serde_json::from_value(args.first().ok_or_else(|| "depot_manifest_summary:bad-args".to_string())?.clone()).map_err(|_| "depot_manifest_summary:bad-args".to_string())?;
+        Ok(Self { request })
     }
 }
