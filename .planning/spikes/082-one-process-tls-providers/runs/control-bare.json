@@ -1,0 +1,16 @@
+{
+  "arm": "bare",
+  "build": "control (rustls: ring only)",
+  "provider_at_end": "none",
+  "provider_at_start": "none",
+  "steps": [
+    {
+      "provider_after": "none",
+      "result": {
+        "ok": false,
+        "panic": "No rustls crypto provider is configured. When using the `rustls-no-provider` feature you must install a crypto provider before building a Client. For example: `rustls::crypto::aws_lc_rs::default_provider().install_default().unwrap();` See https://docs.rs/rustls/latest/rustls/#cryptography-providers for details."
+      },
+      "step": "bare reqwest GET (no install)"
+    }
+  ]
+}

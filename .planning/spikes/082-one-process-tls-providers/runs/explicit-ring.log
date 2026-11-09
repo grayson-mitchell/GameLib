@@ -1,0 +1,10 @@
+[  0.000s] start      arm explicit-ring, with steam-vent (rustls: ring + aws_lc_rs)
+[  0.000s] step       install ring: {"ok":true,"value":"ok"}
+[  2.213s] cm         anonymous logon ok
+[  4.243s] step       CM anonymous connect + job inputs: {"ok":true,"value":"ok"}
+[  4.297s] step       depot summary plain: {"ok":true,"value":"fileCount 8, host httpsSupport [\"mandatory\", \"mandatory\", \"mandatory\", \"unavailable\", \"mandatory\", \"mandatory\"]"}
+[  4.316s] step       depot summary https: {"ok":true,"value":"fileCount 8, host httpsSupport [\"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\"]"}
+[  4.937s] step       CM job after depot: {"ok":true,"value":"1205 B appinfo"}
+[  7.289s] cm         anonymous logon ok
+[  7.289s] step       fresh CM connect after depot: {"ok":true,"value":"ok"}
+[  7.577s] step       bare reqwest GET at end: {"ok":true,"value":"HTTP 200"}

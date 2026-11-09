@@ -1,0 +1,10 @@
+[  0.000s] start      arm depot-then-vent, with steam-vent (rustls: ring + aws_lc_rs)
+[ 12.020s] step       prime gamelib-depot client first: {"ok":true,"value":"dead-host summary returned (expected error): {\"code\":\"connect\",\"eresult\":null,\"file\":null,\"httpStatus\":null,\"kind\":\"network\",\"message\":\"manifest 1 failed after 8 attempts: connect from 127.0.0.1:9\",\"msSinceProgress\":null,\"scope\":null}"}
+[ 14.373s] cm         anonymous logon ok
+[ 16.373s] step       CM anonymous connect + job inputs: {"ok":true,"value":"ok"}
+[ 16.426s] step       depot summary plain: {"ok":true,"value":"fileCount 8, host httpsSupport [\"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"unavailable\", \"mandatory\"]"}
+[ 16.443s] step       depot summary https: {"ok":true,"value":"fileCount 8, host httpsSupport [\"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\"]"}
+[ 16.974s] step       CM job after depot: {"ok":true,"value":"1205 B appinfo"}
+[ 19.340s] cm         anonymous logon ok
+[ 19.340s] step       fresh CM connect after depot: {"ok":true,"value":"ok"}
+[ 19.588s] step       bare reqwest GET at end: {"ok":true,"value":"HTTP 200"}

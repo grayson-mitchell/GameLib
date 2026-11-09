@@ -1,0 +1,11 @@
+[  0.000s] start      arm concurrent, with steam-vent (rustls: ring + aws_lc_rs)
+[  3.887s] cm         anonymous logon ok
+[  6.685s] step       CM anonymous connect + job inputs: {"ok":true,"value":"ok"}
+[  6.741s] step       depot summary plain (CM busy): {"ok":true,"value":"fileCount 8, host httpsSupport [\"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"unavailable\"]"}
+[  6.758s] step       depot summary https (CM busy): {"ok":true,"value":"fileCount 8, host httpsSupport [\"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\"]"}
+[ 41.648s] step       depot summary https x N while CM busy: {"ok":true,"value":"2227 summaries in 34.9s while CM looped"}
+[ 41.648s] step       CM PICS loop during depot: {"ok":true,"value":"40/40 PICS jobs ok"}
+[ 42.185s] step       CM job after depot: {"ok":true,"value":"1205 B appinfo"}
+[ 44.637s] cm         anonymous logon ok
+[ 44.638s] step       fresh CM connect after depot: {"ok":true,"value":"ok"}
+[ 44.950s] step       bare reqwest GET at end: {"ok":true,"value":"HTTP 200"}

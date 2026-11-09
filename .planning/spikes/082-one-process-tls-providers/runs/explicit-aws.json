@@ -1,0 +1,136 @@
+{
+  "arm": "explicit-aws",
+  "build": "with steam-vent (rustls: ring + aws_lc_rs)",
+  "provider_at_end": {
+    "kx": [
+      "X25519MLKEM768",
+      "X25519",
+      "secp256r1",
+      "secp384r1"
+    ],
+    "suites": 9,
+    "who": "aws-lc-rs"
+  },
+  "provider_at_start": "none",
+  "steps": [
+    {
+      "provider_after": {
+        "kx": [
+          "X25519MLKEM768",
+          "X25519",
+          "secp256r1",
+          "secp384r1"
+        ],
+        "suites": 9,
+        "who": "aws-lc-rs"
+      },
+      "result": {
+        "ok": true,
+        "value": "ok"
+      },
+      "step": "install aws-lc"
+    },
+    {
+      "provider_after": {
+        "kx": [
+          "X25519MLKEM768",
+          "X25519",
+          "secp256r1",
+          "secp384r1"
+        ],
+        "suites": 9,
+        "who": "aws-lc-rs"
+      },
+      "result": {
+        "ok": true,
+        "value": "ok"
+      },
+      "step": "CM anonymous connect + job inputs"
+    },
+    {
+      "provider_after": {
+        "kx": [
+          "X25519MLKEM768",
+          "X25519",
+          "secp256r1",
+          "secp384r1"
+        ],
+        "suites": 9,
+        "who": "aws-lc-rs"
+      },
+      "result": {
+        "ok": true,
+        "value": "fileCount 8, host httpsSupport [\"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"unavailable\"]"
+      },
+      "step": "depot summary plain"
+    },
+    {
+      "provider_after": {
+        "kx": [
+          "X25519MLKEM768",
+          "X25519",
+          "secp256r1",
+          "secp384r1"
+        ],
+        "suites": 9,
+        "who": "aws-lc-rs"
+      },
+      "result": {
+        "ok": true,
+        "value": "fileCount 8, host httpsSupport [\"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\", \"mandatory\"]"
+      },
+      "step": "depot summary https"
+    },
+    {
+      "provider_after": {
+        "kx": [
+          "X25519MLKEM768",
+          "X25519",
+          "secp256r1",
+          "secp384r1"
+        ],
+        "suites": 9,
+        "who": "aws-lc-rs"
+      },
+      "result": {
+        "ok": true,
+        "value": "1205 B appinfo"
+      },
+      "step": "CM job after depot"
+    },
+    {
+      "provider_after": {
+        "kx": [
+          "X25519MLKEM768",
+          "X25519",
+          "secp256r1",
+          "secp384r1"
+        ],
+        "suites": 9,
+        "who": "aws-lc-rs"
+      },
+      "result": {
+        "ok": true,
+        "value": "ok"
+      },
+      "step": "fresh CM connect after depot"
+    },
+    {
+      "provider_after": {
+        "kx": [
+          "X25519MLKEM768",
+          "X25519",
+          "secp256r1",
+          "secp384r1"
+        ],
+        "suites": 9,
+        "who": "aws-lc-rs"
+      },
+      "result": {
+        "ok": true,
+        "value": "HTTP 200"
+      },
+      "step": "bare reqwest GET at end"
+    }
+  ]
+}

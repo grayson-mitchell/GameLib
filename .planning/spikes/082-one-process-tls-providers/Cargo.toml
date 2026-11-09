@@ -1,0 +1,29 @@
+[package]
+name = "spike-082-tls"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[features]
+default = ["vent"]
+# Control build: `--no-default-features` drops steam-vent, so rustls has ring only (today's src-tauri).
+vent = ["dep:steam-vent", "dep:steam-vent-proto", "rustls/aws_lc_rs"]
+
+[dependencies]
+steam-vent = { git = "https://codeberg.org/steam-vent/steam-vent", rev = "a9e8164ccd8a7b537da59a652093b0318f416105", optional = true }
+steam-vent-proto = { version = "0.5.2", optional = true }
+gamelib-depot = { path = "../../../src-tauri/crates/gamelib-depot" }
+# Same reqwest/rustls shape as src-tauri today (tauri core + updater + gamelib-depot): no provider feature on reqwest.
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"
+keyvalues-parser = "0.2"
+hex = "0.4"
+futures-util = "0.3"
+
+# 080's vendor.sh: steam-vent a9e8164 + the one-line anonymous-logon fix.
+[patch."https://codeberg.org/steam-vent/steam-vent"]
+steam-vent = { path = "../080-rust-steam-stack-win-linux/vendor/steam-vent" }
