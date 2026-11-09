@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: Executing phase 73
-stopped_at: Completed 73-14-PLAN.md
-last_updated: "2026-11-09T01:22:28.493Z"
+stopped_at: Completed 73-15-PLAN.md
+last_updated: "2026-11-09T01:28:26.536Z"
 last_activity: 2026-11-09
 progress:
   total_phases: 14
   completed_phases: 8
   total_plans: 168
-  completed_plans: 162
-  percent: 67
+  completed_plans: 163
+  percent: 71
 ---
 
 # Project State
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
-Plan: 73-15 next (14 of 21 complete: 73-01..73-14)
+Plan: 73-16 next (15 of 21 complete: 73-01..73-15)
 Status: Executing phase 73
 Last activity: 2026-11-09
 
-Progress: [██████░░░░] 62%
+Progress: [██████████] 96%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -384,6 +384,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 68]: 68-05: read-side tray/focusRow normalisers stay as degradation path for read-only settings (D-11); libraryTopSection retired from AppSettings
 - [Phase ?]: 68-06: readOnlyStoresNotice payload is ids-only, flushed once from frontendReady; late entries re-publish
 - [Phase 73]: 73-01: rust-version 1.89 for gamelib-depot crates (operator option-a); no aes_armv8 rustflags
+- [Phase 73]: 73-15: depot CLI stdin envelope is {job|request, tokens}; the Tier 2 sweep compares outcome/per-depot status as well as bytes so the EResult-40 divergence (TS skip vs Rust manifest_unavailable) cannot hide behind identical trees; a missing outcome log line or codec is a failure
 - [Phase 73]: 73-09: failed/cancelled files drain in-flight chunk tasks (spawn_blocking is not abortable) so nothing writes after run_job returns; ChunkSource trait abstracts Fetcher for tests; non-install modes error until 73-10
 - [Phase 73]: 73-04: Mach-O probe ported from machO.ts (gamelib-scan not reused); containment lexical; case probe stat-based per TS
 
@@ -666,8 +667,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-09T01:17:03.196Z
-Stopped at: Completed 73-14-PLAN.md
+Last session: 2026-11-09T01:28:26.529Z
+Stopped at: Completed 73-15-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
