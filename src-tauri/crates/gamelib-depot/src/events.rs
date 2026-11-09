@@ -287,6 +287,29 @@ impl ProgressEmitter {
     }
 }
 
+/// Host double for tests elsewhere in the crate (keeps every `emit` definition in this file).
+#[cfg(test)]
+pub(crate) mod test_support {
+    use super::*;
+    use crate::TokenRequest;
+
+    pub struct NullHost;
+    impl JobHost for NullHost {
+        fn emit(&self, _ev: JobEvent) {}
+        fn cdn_token(&self, _r: TokenRequest) -> Result<Option<String>, String> {
+            Ok(None)
+        }
+        fn manifest_request_code(
+            &self,
+            _a: &str,
+            _d: &str,
+            _m: &str,
+        ) -> Result<Option<String>, String> {
+            Ok(None)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

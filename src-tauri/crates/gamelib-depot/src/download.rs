@@ -1061,9 +1061,7 @@ mod test_encode;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::job::JobEvent;
     use crate::model::ChunkRef;
-    use crate::TokenRequest;
     use sha1::{Digest, Sha1};
     use std::collections::HashMap;
     use std::time::Duration;
@@ -1071,22 +1069,6 @@ mod tests {
     use super::test_encode as encode;
 
     const KEY: [u8; 32] = [7u8; 32];
-
-    struct NullHost;
-    impl JobHost for NullHost {
-        fn emit(&self, _ev: JobEvent) {}
-        fn cdn_token(&self, _r: TokenRequest) -> Result<Option<String>, String> {
-            Ok(None)
-        }
-        fn manifest_request_code(
-            &self,
-            _a: &str,
-            _d: &str,
-            _m: &str,
-        ) -> Result<Option<String>, String> {
-            Ok(None)
-        }
-    }
 
     /// Serves chunks from memory; `delay_ms` per sha lets a test land chunks out of order.
     struct MemSource {
@@ -1171,7 +1153,7 @@ mod tests {
             decode_sem: Arc::new(Semaphore::new(2)),
             stall: Arc::new(StallTracker::default()),
             cancel: CancellationToken::new(),
-            emitter: ProgressEmitter::new(Arc::new(NullHost), "t"),
+            emitter: ProgressEmitter::new(Arc::new(crate::events::test_support::NullHost), "t"),
             counters: Arc::new(Counters::default()),
             total_bytes: 0,
             files_total: 1,

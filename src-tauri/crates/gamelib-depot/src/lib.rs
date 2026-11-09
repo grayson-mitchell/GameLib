@@ -24,13 +24,56 @@ pub mod stall;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
+use job::DepotJob;
 pub use job::JobEvent;
+use outcome::Outcome;
+
+/// Process-wide runtime for depot jobs: two async workers keep the UI process responsive; blocking
+/// work (decode, hashing, writes) runs on the bounded blocking pool.
+fn runtime() -> &'static tokio::runtime::Runtime {
+    static RT: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
+    RT.get_or_init(|| {
+        tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .max_blocking_threads(8)
+            .thread_name("gamelib-depot")
+            .enable_all()
+            .build()
+            .expect("depot runtime")
+    })
+}
+
+/// Runs a job to its `Outcome`, blocking the caller. The cancel registration lives exactly as long
+/// as the job, so `registry::cancel_all_and_wait` returns only after the job has really stopped.
+/// Must not be called from inside a tokio runtime.
+pub fn run_job(job: DepotJob, ctx: &JobContext, host: Arc<dyn JobHost>) -> Outcome {
+    if job.validate().is_err() {
+        return download::error_outcome(
+            &job.job_id,
+            outcome::Failure {
+                file: None,
+                kind: outcome::ErrorKind::Io,
+                message: "invalid job request".to_string(),
+                code: None,
+                eresult: None,
+                http_status: None,
+                scope: None,
+                ms_since_progress: None,
+            },
+        );
+    }
+    let guard = registry::register(&job.job_id);
+    let token = guard.token.clone();
+    let out = runtime().block_on(download::run_install(&job, ctx, host, token));
+    drop(guard);
+    out
+}
 
 /// Ops reachable from the shell. Keep sorted (the parity test reads this literal form).
-/// `depot_job_run` and `depot_manifest_summary` are added by later plans.
-pub const OPS: &[&str] = &["depot_job_cancel"];
+/// `depot_manifest_summary` is added by a later plan.
+pub const OPS: &[&str] = &["depot_job_cancel", "depot_job_run"];
 
 /// Supplied by the shell arm or the CLI `--cache-dir` flag; not on the wire from TS.
 #[derive(Debug, Clone)]
@@ -75,10 +118,16 @@ fn parse_args<T: for<'de> Deserialize<'de>>(op: &str, args: &Value) -> Result<T,
 fn run_op(
     op: &str,
     args: &Value,
-    _ctx: &JobContext,
-    _host: &Arc<dyn JobHost>,
+    ctx: &JobContext,
+    host: &Arc<dyn JobHost>,
 ) -> Result<Value, String> {
     match op {
+        "depot_job_run" => {
+            let job: DepotJob = parse_args(op, args)?;
+            job.validate()?;
+            serde_json::to_value(run_job(job, ctx, Arc::clone(host)))
+                .map_err(|_| format!("{op}:encode"))
+        }
         "depot_job_cancel" => {
             let a: CancelArgs = parse_args(op, args)?;
             Ok(json!({ "cancelled": registry::cancel(&a.job_id) }))
