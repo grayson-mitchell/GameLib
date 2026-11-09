@@ -77,7 +77,7 @@ jest.mock('backend/store_backend', () => ({
   default: jest.requireActual('../fileStore').default
 }))
 
-// ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init()` now wires
+// ── axios — fix/steam-native-install-stability (33-05 live-gate gap): the boot now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
 // platformApi's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real
 // `pingSites()`, a live `axios.head()` against github/epic/gog/cloudflare. Mocked so this suite
@@ -241,22 +241,70 @@ jest.mock('../../dialog/dialog', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { startSidecar, writeInvoke } from './helpers/sidecarHarness'
-import i18next from 'i18next'
-import { getSteamLibraries, writeConfig } from 'backend/utils'
-import { GlobalConfig } from 'backend/config'
-import { getSteamBottleEligibilityVerdict } from '../../storeManagers/steam/installFormIpc'
-import { isSteamExperimentalInstallAppEnabled } from '../../storeManagers/steam/experimentalInstallAppSetting'
-import { libraryManagerMap } from 'backend/storeManagers'
-import { findBridgeInstallBottle } from '../../storeManagers/steam/bridgeBottle'
-import { resolveInstallRoot } from '../../storeManagers/steam/library/installRoot'
-import { library as steamLibraryMap } from '../../storeManagers/steam/state'
-import SteamGame from '../../storeManagers/steam/games'
-import { handlerRegistry, listenerRegistry } from '../../platform'
-import { showDialogBoxModalAuto, notify } from '../../dialog/dialog'
+import { bootFresh, writeInvoke } from './helpers/sidecarHarness'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { AppSettings } from 'common/types'
-import * as loggerModule from '../../logger'
+
+// D-08: every case boots the sidecar once, in a fresh module registry. Module
+// handles the cases configure or inspect are rebound from that registry in
+// freshRegistry() (run before each case, ahead of any mock configuration), and
+// boot() then boots without a second reset.
+let i18next: typeof import('i18next').default
+let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
+let writeConfig: typeof import('backend/utils').writeConfig
+let GlobalConfig: typeof import('backend/config').GlobalConfig
+let getSteamBottleEligibilityVerdict: typeof import('../../storeManagers/steam/installFormIpc').getSteamBottleEligibilityVerdict
+let isSteamExperimentalInstallAppEnabled: typeof import('../../storeManagers/steam/experimentalInstallAppSetting').isSteamExperimentalInstallAppEnabled
+let libraryManagerMap: typeof import('backend/storeManagers').libraryManagerMap
+let findBridgeInstallBottle: typeof import('../../storeManagers/steam/bridgeBottle').findBridgeInstallBottle
+let resolveInstallRoot: typeof import('../../storeManagers/steam/library/installRoot').resolveInstallRoot
+let steamLibraryMap: typeof import('../../storeManagers/steam/state').library
+let SteamGame: typeof import('../../storeManagers/steam/games').default
+let handlerRegistry: typeof import('../../platform').handlerRegistry
+let listenerRegistry: typeof import('../../platform').listenerRegistry
+let showDialogBoxModalAuto: typeof import('../../dialog/dialog').showDialogBoxModalAuto
+let notify: typeof import('../../dialog/dialog').notify
+let loggerModule: typeof import('../../logger')
+let mockedGlobalConfigGet: jest.Mock
+let mockedWriteConfig: jest.Mock
+let mockedShowDialogBoxModalAuto: jest.Mock
+let mockedNotify: jest.Mock
+let steamGameMocks: MockedSteamGame['__mocks']
+
+function freshRegistry(): void {
+  jest.resetModules()
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  require('../bootstrap')
+  i18next = require('i18next').default ?? require('i18next')
+  ;({ getSteamLibraries, writeConfig } = require('backend/utils'))
+  ;({ GlobalConfig } = require('backend/config'))
+  ;({
+    getSteamBottleEligibilityVerdict
+  } = require('../../storeManagers/steam/installFormIpc'))
+  ;({
+    isSteamExperimentalInstallAppEnabled
+  } = require('../../storeManagers/steam/experimentalInstallAppSetting'))
+  ;({ libraryManagerMap } = require('backend/storeManagers'))
+  ;({
+    findBridgeInstallBottle
+  } = require('../../storeManagers/steam/bridgeBottle'))
+  ;({
+    resolveInstallRoot
+  } = require('../../storeManagers/steam/library/installRoot'))
+  ;({ library: steamLibraryMap } = require('../../storeManagers/steam/state'))
+  SteamGame = require('../../storeManagers/steam/games').default
+  ;({ handlerRegistry, listenerRegistry } = require('../../platform'))
+  ;({ showDialogBoxModalAuto, notify } = require('../../dialog/dialog'))
+  loggerModule = require('../../logger')
+  /* eslint-enable @typescript-eslint/no-require-imports */
+  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+  mockedWriteConfig = writeConfig as jest.Mock
+  mockedShowDialogBoxModalAuto = showDialogBoxModalAuto as jest.Mock
+  mockedNotify = notify as jest.Mock
+  steamGameMocks = (SteamGame as unknown as MockedSteamGame).__mocks
+}
+
+const boot = () => bootFresh({ reuseRegistry: true })
 
 // Plan 34.6-19 (REQ-34.6-05): the fork's own installFlows catalog strings,
 // read from the REAL public/locales/en/gamelib.json (four levels up from
@@ -270,11 +318,6 @@ const GAMELIB_CATALOG = JSON.parse(
     'utf-8'
   )
 ) as { installFlows: Record<string, string> }
-
-const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-const mockedWriteConfig = writeConfig as jest.Mock
-const mockedShowDialogBoxModalAuto = showDialogBoxModalAuto as jest.Mock
-const mockedNotify = notify as jest.Mock
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object (mirrors
  *  nativeInstallSetting.test.ts's own helper). */
@@ -295,7 +338,6 @@ type MockedSteamGame = {
     getSettings: jest.Mock
   }
 }
-const steamGameMocks = (SteamGame as unknown as MockedSteamGame).__mocks
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
@@ -306,6 +348,7 @@ async function flush(): Promise<void> {
 
 describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   beforeEach(() => {
+    freshRegistry()
     // resetMocks:true (shared root config) wipes automock implementations
     // before every test — re-establish the defaults every test relies on.
     jest.mocked(getSteamLibraries).mockResolvedValue([])
@@ -360,7 +403,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // marker), and mirrors Electron's own isSteamNativeInstallEnabled() gate —
   // [] with the opt-in OFF.
   it('Test 1: listSteamLibraryTargets resolves [] with the native-install opt-in OFF (mirrors Electron gate)', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'targets-off-1', 'listSteamLibraryTargets', [])
     await flush()
 
@@ -376,7 +419,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     mockSettings({ enableSteamNativeInstall: true, autoUpdateGames: false })
     jest.mocked(getSteamLibraries).mockResolvedValue(['/fake/steam/library'])
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'targets-on-1', 'listSteamLibraryTargets', [])
     await flush()
 
@@ -396,7 +439,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   describe('quick 261030-o77: listSteamLibraryTargets with the toggle OFF', () => {
     const invokeTargets = async (args: unknown[]) => {
       jest.mocked(getSteamLibraries).mockResolvedValue(['/fake/steam/library'])
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'targets-o77', 'listSteamLibraryTargets', args)
       await flush()
       return (
@@ -470,7 +513,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
 
   describe('quick 261106-s3n: getSteamDeleteRoute', () => {
     const invokeRoute = async (args: unknown[]) => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'route-s3n', 'getSteamDeleteRoute', args)
       await flush()
       return (
@@ -545,7 +588,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     const closed = { installAppRoute: false, libraries: [] }
     const invokeInstallApp = async (args: unknown[]) => {
       jest.mocked(getSteamLibraries).mockResolvedValue(['/fake/steam/library'])
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'targets-upw', 'getSteamInstallAppTargets', args)
       await flush()
       return (
@@ -624,7 +667,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
 
     it('no registered libraries -> InstallApp route with empty libraries', async () => {
       jest.mocked(getSteamLibraries).mockResolvedValue([])
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'targets-upw2', 'getSteamInstallAppTargets', ['570'])
       await flush()
       const reply = frames.find((f) => f.id === 'targets-upw2') as
@@ -634,7 +677,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     })
 
     it('listSteamLibraryTargets stays [] on the InstallApp route (sign-in signal unchanged)', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'targets-upw3', 'listSteamLibraryTargets', ['570'])
       await flush()
       const reply = frames.find((f) => f.id === 'targets-upw3') as
@@ -673,7 +716,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // Test 4: uninstall resolves and delegates to the runner-generic
   // uninstallGameCallback (registered UNCHANGED, D-05b).
   it('Test 4: uninstall resolves and delegates to the real uninstallGameCallback', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'uninstall-1', 'uninstall', [
       '999001',
       'steam',
@@ -710,7 +753,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     steamGameMocks.getGameInfo.mockReturnValue({})
     steamGameMocks.uninstall.mockRejectedValue(new Error('uninstall failed'))
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'uninstall-mv5-1', 'uninstall', [
       '999002',
       'steam',
@@ -740,7 +783,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     steamGameMocks.getGameInfo.mockReturnValue({ title: 'Real Live Title' })
     steamGameMocks.uninstall.mockRejectedValue(new Error('uninstall failed'))
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'uninstall-mv5-2', 'uninstall', [
       '999002',
       'steam',
@@ -762,7 +805,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // test immediately below, not here: nothing in this test's mocked
   // environment throws, so it would pass with or without that guard.
   it('Test 5: checkGameUpdates resolves a string[] without rejecting', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'updates-1', 'checkGameUpdates', [])
     await flush()
 
@@ -795,7 +838,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     )
 
     try {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'updates-isolation-1', 'checkGameUpdates', [])
       await flush()
 
@@ -841,7 +884,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // channel D-03 permanently DEFERS to Phase 34.6, so this test will not
   // need a further substitution once plan 34.5-12 lands.
   it('Test 6 (Invariant B guard): winetricksInstall (deliberately unported, deferred to Phase 34.6) still rejects non-fatally, and the RPC loop keeps serving', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'disk-space-1', 'winetricksInstall', [])
     await flush()
 
@@ -880,7 +923,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // of that.
 
   it('T-34.6 registration-kind: moveInstall and importGame are invoke-kind (handlerRegistry), never listener-kind (listenerRegistry)', () => {
-    startSidecar()
+    boot()
     expect(handlerRegistry.has('moveInstall')).toBe(true)
     expect(handlerRegistry.has('importGame')).toBe(true)
     expect(listenerRegistry.has('moveInstall')).toBe(false)
@@ -896,7 +939,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // space must still arrive at SteamGame.moveInstall() by STRICT EQUALITY,
   // unchanged -- the shape guard is a gate, not a rewrite.
   it('moveInstall forwards a legitimate apostrophe-and-space-containing absolute path to SteamGame.moveInstall() unchanged', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     const legitimatePath = "/home/deck/Games/Sid Meier's Civilization V/save"
     writeInvoke(input, 'move-passthrough-1', 'moveInstall', [
       { appName: '999001', path: legitimatePath, runner: 'steam' }
@@ -922,7 +965,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // assertContainedPath's containment against defaultInstallPath -- RED-proven
   // in evidence/34.6-18-RED-crossroot.txt.
   it('moveInstall forwards an absolute destination OUTSIDE the configured defaultInstallPath to SteamGame.moveInstall() unchanged (cross-drive move, CR-01)', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     const crossRootPath = '/Volumes/External SSD/GameLib Games/Civ V'
     writeInvoke(input, 'move-crossroot-1', 'moveInstall', [
       { appName: '999001', path: crossRootPath, runner: 'steam' }
@@ -941,7 +984,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // guard still rejects traversal even though containment against
   // defaultInstallPath is gone.
   it('moveInstall rejects an absolute path containing a ".." segment, and SteamGame.moveInstall is never reached', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'move-reject-traversal-1', 'moveInstall', [
       {
         appName: '999001',
@@ -970,7 +1013,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // REJECT coverage is RED-proven separately in
   // evidence/34.6-18-RED-crossroot.txt's sibling ACCEPT-direction proof.
   it('moveInstall rejects a relative (non-absolute) path, and SteamGame.moveInstall is never reached (T-34.5-C6-49-03)', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'move-reject-1', 'moveInstall', [
       { appName: '999001', path: '../../etc/passwd', runner: 'steam' }
     ])
@@ -989,7 +1032,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // since `assertPlausibleAbsolutePath` runs BEFORE the "moving" push,
   // "moving" itself must never be emitted for a rejected request.
   it('a rejected moveInstall still emits the terminal gameStatusUpdate "done" (never wedges in "moving")', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'move-reject-status-1', 'moveInstall', [
       { appName: '999001', path: '../../etc/passwd', runner: 'steam' }
     ])
@@ -1010,7 +1053,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     const logErrorSpy = jest.spyOn(loggerModule, 'logError')
     const escapingPath = '../../etc/shadow'
 
-    const { input } = startSidecar()
+    const { input } = boot()
     writeInvoke(input, 'move-reject-nolog-1', 'moveInstall', [
       { appName: '999001', path: escapingPath, runner: 'steam' }
     ])
@@ -1024,7 +1067,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   })
 
   it('moveInstall emits gameStatusUpdate "moving" before the move and "done" after, on the success branch', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'move-status-1', 'moveInstall', [
       { appName: '999001', path: '/home/deck/Games/dest', runner: 'steam' }
     ])
@@ -1044,7 +1087,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       error: 'disk full'
     })
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'move-error-1', 'moveInstall', [
       { appName: '999001', path: '/home/deck/Games/dest', runner: 'steam' }
     ])
@@ -1068,7 +1111,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       "/home/deck/Games/Sid Meier's Civilization V/save source"
     const wineVersionRef = { bin: '/wine', name: 'wine-ge', type: 'wine' }
 
-    const { input } = startSidecar()
+    const { input } = boot()
     writeInvoke(input, 'import-passthrough-1', 'importGame', [
       {
         appName: '999001',
@@ -1114,7 +1157,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   it('importGame forwards an absolute source OUTSIDE the configured defaultInstallPath to SteamGame.importGame() unchanged (out-of-tree import, CR-01)', async () => {
     const crossRootPath = '/Volumes/External SSD/Existing Installs/Civ V'
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'import-crossroot-1', 'importGame', [
       {
         appName: '999001',
@@ -1141,7 +1184,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // RED-proved by temporarily commenting out the containment call in
   // importGame's handler body).
   it('importGame rejects a relative (non-absolute) path, and SteamGame.importGame is never reached (T-34.5-C6-49-03)', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'import-reject-1', 'importGame', [
       {
         appName: '999001',
@@ -1188,7 +1231,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     // real, unmocked i18next instance -- this test proves the WIRING (right keys, right
     // defaults, right call shape), not resolution.
     const tSpy = jest.spyOn(i18next, 't')
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'move-reject-dialog-1', 'moveInstall', [
       { appName: '999001', path: escapingPath, runner: 'steam' }
     ])
@@ -1237,7 +1280,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   it('a rejected importGame shows a localisable dialog naming the rejection, without leaking the rejected path (Plan 34.6-19 DIALOG-IMPORT-01)', async () => {
     const escapingPath = '../../etc/shadow'
     const tSpy = jest.spyOn(i18next, 't')
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'import-reject-dialog-1', 'importGame', [
       {
         appName: '999001',

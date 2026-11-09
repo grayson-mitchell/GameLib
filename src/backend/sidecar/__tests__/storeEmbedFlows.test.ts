@@ -82,7 +82,7 @@ async function flush(): Promise<void> {
 
 /** Starts a fresh, lightweight sidecar RPC transport (mirrors `humbleLoginFlows.test.ts`'s
  * `startTransport` — `requestRustInvoke` only needs `startRpcServer`'s stream binding, not the
- * full `bootstrap.ts` init()). */
+ * full `bootstrap.ts` boot). */
 function startTransport(): { input: PassThrough; frames: Frame[] } {
   const input = new PassThrough()
   const output = new PassThrough()

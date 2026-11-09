@@ -64,7 +64,7 @@ jest.mock('backend/store_backend', () => ({
   default: jest.requireActual('../fileStore').default
 }))
 
-// ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init()` now wires
+// ── axios — fix/steam-native-install-stability (33-05 live-gate gap): the boot now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
 // platformApi's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real
 // `pingSites()`, a live `axios.head()` against github/epic/gog/cloudflare. Mocked so this suite
@@ -127,38 +127,73 @@ import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
-import { SteamUser } from '../../storeManagers/steam/user'
-import {
-  pollCredentialLogin,
-  pollQRLogin,
-  startCredentialLogin,
-  startQRLogin,
-  submitSteamGuardCode
-} from '../../storeManagers/steam/userSignIn'
-import { redeemKey } from '../../storeManagers/steam/userRedeem'
-import { getSteamLibraries } from 'backend/utils'
-import {
-  configStore as steamConfigStore,
-  steamBottleConfigStore
-} from '../../storeManagers/steam/stores'
-import { getTokenStore } from '../../storeManagers/steam/tokenStore'
-import { KEYRING_SLOT_STEAM_REFRESH_TOKEN } from '../keyringTokenStore'
-import { isSteamBottleProvisioned } from '../../storeManagers/steam/bottle'
-import { provisionBottle } from '../../storeManagers/steam/provisionBottle'
-import {
-  startGuidedClientInstall,
-  ensureSteamClientReady
-} from '../../storeManagers/steam/clientSetup'
-import { getSteamInstallSize } from '../../storeManagers/steam/gameRequirements'
-import {
-  getSteamBottleEligibilityVerdict,
-  persistInstallFormWineVersion
-} from '../../storeManagers/steam/installFormIpc'
+import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import {
   UNPORTED_CHANNEL_MARKER,
   RUST_KEYRING_SET
 } from 'common/types/sidecarTransport'
+
+// D-08: every case boots the sidecar once, in a fresh module registry. Module
+// handles the cases configure or inspect are rebound from that registry in
+// freshRegistry() (run before each case, ahead of any mock configuration), and
+// boot() then boots without a second reset.
+let SteamUser: typeof import('../../storeManagers/steam/user').SteamUser
+let pollCredentialLogin: typeof import('../../storeManagers/steam/userSignIn').pollCredentialLogin
+let pollQRLogin: typeof import('../../storeManagers/steam/userSignIn').pollQRLogin
+let startCredentialLogin: typeof import('../../storeManagers/steam/userSignIn').startCredentialLogin
+let startQRLogin: typeof import('../../storeManagers/steam/userSignIn').startQRLogin
+let submitSteamGuardCode: typeof import('../../storeManagers/steam/userSignIn').submitSteamGuardCode
+let redeemKey: typeof import('../../storeManagers/steam/userRedeem').redeemKey
+let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
+let steamConfigStore: typeof import('../../storeManagers/steam/stores').configStore
+let steamBottleConfigStore: typeof import('../../storeManagers/steam/stores').steamBottleConfigStore
+let getTokenStore: typeof import('../../storeManagers/steam/tokenStore').getTokenStore
+let KEYRING_SLOT_STEAM_REFRESH_TOKEN: typeof import('../keyringTokenStore').KEYRING_SLOT_STEAM_REFRESH_TOKEN
+let isSteamBottleProvisioned: typeof import('../../storeManagers/steam/bottle').isSteamBottleProvisioned
+let provisionBottle: typeof import('../../storeManagers/steam/provisionBottle').provisionBottle
+let startGuidedClientInstall: typeof import('../../storeManagers/steam/clientSetup').startGuidedClientInstall
+let ensureSteamClientReady: typeof import('../../storeManagers/steam/clientSetup').ensureSteamClientReady
+let getSteamInstallSize: typeof import('../../storeManagers/steam/gameRequirements').getSteamInstallSize
+let getSteamBottleEligibilityVerdict: typeof import('../../storeManagers/steam/installFormIpc').getSteamBottleEligibilityVerdict
+let persistInstallFormWineVersion: typeof import('../../storeManagers/steam/installFormIpc').persistInstallFormWineVersion
+
+function freshRegistry(): void {
+  jest.resetModules()
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  require('../bootstrap')
+  ;({ SteamUser } = require('../../storeManagers/steam/user'))
+  ;({
+    pollCredentialLogin,
+    pollQRLogin,
+    startCredentialLogin,
+    startQRLogin,
+    submitSteamGuardCode
+  } = require('../../storeManagers/steam/userSignIn'))
+  ;({ redeemKey } = require('../../storeManagers/steam/userRedeem'))
+  ;({ getSteamLibraries } = require('backend/utils'))
+  ;({
+    configStore: steamConfigStore,
+    steamBottleConfigStore
+  } = require('../../storeManagers/steam/stores'))
+  ;({ getTokenStore } = require('../../storeManagers/steam/tokenStore'))
+  ;({ KEYRING_SLOT_STEAM_REFRESH_TOKEN } = require('../keyringTokenStore'))
+  ;({ isSteamBottleProvisioned } = require('../../storeManagers/steam/bottle'))
+  ;({ provisionBottle } = require('../../storeManagers/steam/provisionBottle'))
+  ;({
+    startGuidedClientInstall,
+    ensureSteamClientReady
+  } = require('../../storeManagers/steam/clientSetup'))
+  ;({
+    getSteamInstallSize
+  } = require('../../storeManagers/steam/gameRequirements'))
+  ;({
+    getSteamBottleEligibilityVerdict,
+    persistInstallFormWineVersion
+  } = require('../../storeManagers/steam/installFormIpc'))
+  /* eslint-enable @typescript-eslint/no-require-imports */
+}
+
+const boot = () => bootFresh({ reuseRegistry: true })
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
@@ -169,6 +204,7 @@ async function flush(): Promise<void> {
 
 describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   beforeEach(() => {
+    freshRegistry()
     // resetMocks:true (shared root config) wipes automock implementations
     // before every test — re-establish the defaults every test relies on.
     jest.mocked(getSteamLibraries).mockResolvedValue([])
@@ -186,7 +222,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   it('Test 1: checkSteamInstalled invoke resolves a real boolean, not the unported marker', async () => {
     jest.spyOn(SteamUser, 'isSteamClientInstalled').mockReturnValue(true)
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'check-1', 'checkSteamInstalled', [])
     await flush()
 
@@ -205,7 +241,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       challengeUrl: 'https://s.team/q/1/999001'
     })
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'start-1', 'steamStartQR', [])
     await flush()
 
@@ -223,7 +259,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   it('Test 3: steamPollQR invoke resolves the declared shape and delegates to SteamUser.pollQRLogin', async () => {
     jest.mocked(pollQRLogin).mockResolvedValue({ status: 'waiting' })
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'poll-1', 'steamPollQR', [])
     await flush()
 
@@ -248,7 +284,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       .mocked(pollQRLogin)
       .mockResolvedValue({ status: 'done', username: 'gsd-tester' })
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
 
     // Simulates exactly what SteamUser's real 'authenticated' handler does on
     // a successful QR approval (user.ts's startQRLogin/finishAuth): write the
@@ -332,7 +368,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
   // instead, so this test can never again go stale as later plans legitimately port more real
   // channels.
   it('Test 5 (Invariant B guard): an unregistered channel rejects non-fatally, and the RPC loop keeps serving', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'unregistered-1', 'notARealChannel_34_4_1_02', [])
     await flush()
 
@@ -359,7 +395,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     it('REQ-34.4-01 steamStartCredentials invoke resolves a real value (not the unported marker) and delegates the destructured username/password, not the raw payload object', async () => {
       jest.mocked(startCredentialLogin).mockResolvedValue({ status: 'done' })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'start-cred-1', 'steamStartCredentials', [
         { username: 'gsd-tester', password: 'super-secret' }
       ])
@@ -384,7 +420,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         .mocked(startCredentialLogin)
         .mockResolvedValue({ status: 'guard_required' })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'start-cred-guard-1', 'steamStartCredentials', [
         { username: 'gsd-tester', password: 'super-secret' }
       ])
@@ -401,7 +437,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     it('REQ-34.4-01 steamSubmitGuard invoke resolves a real value and delegates the bare code string to submitSteamGuardCode', async () => {
       jest.mocked(submitSteamGuardCode).mockResolvedValue({ status: 'done' })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'submit-guard-1', 'steamSubmitGuard', ['ABCDE'])
       await flush()
 
@@ -419,7 +455,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     it('REQ-34.4-01 steamPollCredential invoke resolves a real value and delegates with no arguments', async () => {
       jest.mocked(pollCredentialLogin).mockResolvedValue({ status: 'waiting' })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'poll-cred-1', 'steamPollCredential', [])
       await flush()
 
@@ -443,7 +479,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         steamId: 'STEAMID_TEST'
       })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'user-info-1', 'getSteamUserInfo', [])
       await flush()
 
@@ -458,7 +494,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     })
 
     it('REQ-34.4-02 getSteamSyncedAt invoke resolves null when the store has no syncedAt (matching `?? null`)', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'synced-at-1', 'getSteamSyncedAt', [])
       await flush()
 
@@ -474,7 +510,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       it('REQ-34.4-02 kind proof, positive direction: a logoutSteam SEND frame causes SteamUser.logout to be called exactly once', async () => {
         jest.spyOn(SteamUser, 'logout').mockResolvedValue(undefined)
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeSend(input, 'logout-send-1', 'logoutSteam', [])
         await flush()
 
@@ -488,7 +524,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       it('REQ-34.4-02 kind proof, negative direction: logoutSteam must NOT be reachable as an invoke handler', async () => {
         jest.spyOn(SteamUser, 'logout').mockResolvedValue(undefined)
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeInvoke(input, 'logout-invoke-1', 'logoutSteam', [])
         await flush()
 
@@ -516,7 +552,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
             .spyOn(SteamUser, 'logout')
             .mockRejectedValue(new Error('logout transport failure'))
 
-          const { input, frames } = startSidecar()
+          const { input, frames } = boot()
           writeSend(input, 'logout-reject-1', 'logoutSteam', [])
           await flush()
 
@@ -550,7 +586,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     it('REQ-34.4-03 steamBottleProvision invoke delegates to provisionBottle exactly once with the transport arg passed through unchanged', async () => {
       jest.mocked(provisionBottle).mockResolvedValue({ status: 'done' })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       const transportArg = { bottleName: 'GameLibSteam' }
       writeInvoke(input, 'bottle-provision-1', 'steamBottleProvision', [
         transportArg
@@ -570,7 +606,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     it("REQ-34.4-03 isSteamBottleProvisioned invoke round-trips isBottleProvisioned()'s boolean", async () => {
       jest.mocked(isSteamBottleProvisioned).mockReturnValue(true)
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'is-provisioned-1', 'isSteamBottleProvisioned', [])
       await flush()
 
@@ -584,7 +620,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     })
 
     it('REQ-34.4-03 steamBottleStatus resolves the exact defaulted object when both store reads return undefined', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'bottle-status-default-1', 'steamBottleStatus', [])
       await flush()
 
@@ -602,7 +638,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       steamBottleConfigStore.set('provisioned', true)
       steamBottleConfigStore.set('bottleName', 'CustomBottle')
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'bottle-status-real-1', 'steamBottleStatus', [])
       await flush()
 
@@ -617,7 +653,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     })
 
     it('REQ-34.4-03 steamBottleStatus resolved object has no loggedIn property (17-17/WR-02 — the always-false auth signal was deliberately removed)', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'bottle-status-no-loggedin-1', 'steamBottleStatus', [])
       await flush()
 
@@ -639,7 +675,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         bottleName: 'GameLibSteam'
       })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'install-form-eligible-1', 'isSteamBottleEligible', [
         '570'
       ])
@@ -662,7 +698,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         .mocked(persistInstallFormWineVersion)
         .mockResolvedValue({ status: 'done' })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       const engine = {
         bin: '/opt/crossover/bin/wine',
         name: 'CrossOver 24',
@@ -696,7 +732,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         .mocked(persistInstallFormWineVersion)
         .mockResolvedValue({ status: 'error', error: 'invalid-payload' })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'install-form-marker-1', 'isSteamBottleEligible', [
         '570'
       ])
@@ -747,7 +783,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         .mocked(startGuidedClientInstall)
         .mockResolvedValue({ status: 'started' })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'client-setup-start-1', 'steamClientSetupStart', [])
       await flush()
 
@@ -767,7 +803,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         .mocked(ensureSteamClientReady)
         .mockResolvedValue({ status: 'ready', ready: true })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'client-setup-recheck-1', 'steamClientSetupRecheck', [
         '999001'
       ])
@@ -793,7 +829,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         .mocked(redeemKey)
         .mockResolvedValue({ store: 'steam', outcome: 'success' })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'redeem-valid-1', 'redeemSteamKey', [
         { store: 'steam', key: 'AAAAA-BBBBB-CCCCC' }
       ])
@@ -818,7 +854,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     // trust-boundary test rather than one that would still pass if the guard
     // were moved after the delegation.
     it('REQ-34.4-05 redeemSteamKey invoke rejects a non-"steam" store before reaching SteamUser.redeemKey', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'redeem-bad-store-1', 'redeemSteamKey', [
         { store: 'gog', key: 'AAAAA-BBBBB-CCCCC' }
       ])
@@ -834,7 +870,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     })
 
     it('REQ-34.4-05 redeemSteamKey invoke rejects a non-string key before reaching SteamUser.redeemKey', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'redeem-bad-key-type-1', 'redeemSteamKey', [
         { store: 'steam', key: 12345 }
       ])
@@ -852,7 +888,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     })
 
     it('REQ-34.4-05 redeemSteamKey invoke rejects an empty-string key before reaching SteamUser.redeemKey', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'redeem-empty-key-1', 'redeemSteamKey', [
         { store: 'steam', key: '' }
       ])
@@ -868,7 +904,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     })
 
     it('REQ-34.4-05 redeemSteamKey invoke rejects a missing/null payload before reaching SteamUser.redeemKey', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'redeem-null-payload-1', 'redeemSteamKey', [null])
       await flush()
 
@@ -890,7 +926,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       const SECRET_KEY = 'SUPER-SECRET-KEY-VALUE-DO-NOT-LEAK'
 
       try {
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeInvoke(input, 'redeem-no-leak-1', 'redeemSteamKey', [
           { store: 'not-steam', key: SECRET_KEY }
         ])
@@ -919,7 +955,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     it('REQ-34.4-05 getSteamInstallSize invoke round-trips and delegates to getSteamInstallSize exactly once with the appId', async () => {
       jest.mocked(getSteamInstallSize).mockResolvedValue('1.5 GB')
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'install-size-1', 'getSteamInstallSize', ['999001'])
       await flush()
 
