@@ -64,9 +64,10 @@ Sources: `73-UAT.md` item 9 and its Gaps (phase 73).
   ppid 1, and no `still alive` warning was logged. An earlier shutdown at 07:17:20 logged
   `destroyed 4 in-flight outbound HTTP request(s) (github.com, store.epicgames.com, gog.com,
   cloudflare-dns.com)`. That was the boot connectivity probe, cancelled as designed.
-- **Still owed: the Ctrl-C gate.** Ctrl-C `pnpm tauri:dev` from a terminal (whole process
-  group). `pgrep -fl sidecar.js` should print nothing within 10 s, and gamelib.log should have
-  no `still alive` line. When it passes, move this todo to `completed/`.
+- **Ctrl-C gate PASSED (operator, 2026-11-10 07:42).** The operator pressed Ctrl-C on
+  `pnpm tauri:dev` in a terminal. At 07:42:59 the sidecar logged the stdin-closed line and
+  `destroyed 0 in-flight outbound HTTP request(s)`. At 07:43:29 `pgrep -fl sidecar.js` printed
+  nothing, and gamelib.log had no `still alive` line. Todo closed.
 
 ## Second Force Quit repro, idle (phase 73 post-deletion smoke, 2026-11-10)
 
