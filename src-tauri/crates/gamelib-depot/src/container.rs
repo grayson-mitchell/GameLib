@@ -361,6 +361,98 @@ pub fn decode_chunk(
     Ok((data, kind))
 }
 
+/// Manifest wrapper, as `CdnCompression.unzip`: `VSZa`, `VZa` or a real zip (first entry, found
+/// via the central directory). Decoded size is capped at [`MAX_MANIFEST_BYTES`].
+pub fn unzip_manifest(buf: &[u8]) -> Result<Vec<u8>, DecodeError> {
+    if buf.starts_with(b"VSZa") {
+        let declared = u64::from(u32_at(buf, buf.len().saturating_sub(11))?);
+        let out = decode_vsza(buf, Some(declared), MAX_MANIFEST_BYTES)?;
+        check_declared(out, declared)
+    } else if buf.starts_with(b"VZa") {
+        let declared = u64::from(u32_at(buf, buf.len().saturating_sub(6))?);
+        let out = decode_vz(buf, Some(declared), MAX_MANIFEST_BYTES)?;
+        check_declared(out, declared)
+    } else if buf.starts_with(b"PK\x03\x04") {
+        unzip_first_entry(buf)
+    } else {
+        Err(DecodeError::new(
+            "unknown_container",
+            format!("unknown manifest compression; magic {}", hex_preview(buf)),
+        ))
+    }
+}
+
+fn check_declared(out: Vec<u8>, declared: u64) -> Result<Vec<u8>, DecodeError> {
+    if out.len() as u64 != declared {
+        return Err(DecodeError::new(
+            "size_mismatch",
+            format!("manifest size mismatch: {} != {declared}", out.len()),
+        ));
+    }
+    Ok(out)
+}
+
+/// End-of-central-directory scan window: 22-byte record plus a maximal 65535-byte comment.
+const EOCD_SCAN: usize = 65_557;
+
+fn unzip_first_entry(buf: &[u8]) -> Result<Vec<u8>, DecodeError> {
+    // Locate the EOCD record, scanning backwards.
+    let lo = buf.len().saturating_sub(EOCD_SCAN);
+    let eocd = (lo..buf.len().saturating_sub(21))
+        .rev()
+        .find(|&i| buf[i..i + 4] == *b"PK\x05\x06")
+        .ok_or_else(|| DecodeError::failed("zip: no end of central directory"))?;
+    if u16_at(buf, eocd + 10)? == 0 {
+        return Err(DecodeError::failed("zip: no entries"));
+    }
+    let cd = usize::try_from(u32_at(buf, eocd + 16)?)
+        .map_err(|_| DecodeError::failed("zip: bad central directory offset"))?;
+    if buf.get(cd..cd + 4) != Some(b"PK\x01\x02") {
+        return Err(DecodeError::failed("zip: bad central directory entry"));
+    }
+    let method = u16_at(buf, cd + 10)?;
+    let csize = u32_at(buf, cd + 20)?;
+    let usize_ = u32_at(buf, cd + 24)?;
+    let local = usize::try_from(u32_at(buf, cd + 42)?)
+        .map_err(|_| DecodeError::failed("zip: bad local header offset"))?;
+    if csize == u32::MAX || usize_ == u32::MAX {
+        return Err(DecodeError::failed("zip64 entries are not supported"));
+    }
+    if u64::from(usize_) > MAX_MANIFEST_BYTES {
+        return Err(DecodeError::new(
+            "size_mismatch",
+            format!("zip: declared size {usize_} exceeds {MAX_MANIFEST_BYTES}"),
+        ));
+    }
+    if buf.get(local..local + 4) != Some(b"PK\x03\x04") {
+        return Err(DecodeError::failed("zip: bad local header"));
+    }
+    let name_len = usize::from(u16_at(buf, local + 26)?);
+    let extra_len = usize::from(u16_at(buf, local + 28)?);
+    let start = local + 30 + name_len + extra_len;
+    let end = start
+        .checked_add(csize as usize)
+        .ok_or_else(|| DecodeError::failed("zip: entry overflows"))?;
+    let body = buf
+        .get(start..end)
+        .ok_or_else(|| DecodeError::failed("zip: entry data outside buffer"))?;
+    let out = match method {
+        0 => body.to_vec(),
+        8 => drain_capped(
+            flate2::read::DeflateDecoder::new(body),
+            u64::from(usize_),
+            "zip deflate",
+        )?,
+        m => {
+            return Err(DecodeError::new(
+                "unknown_container",
+                format!("zip: unsupported compression method {m}"),
+            ))
+        }
+    };
+    check_declared(out, u64::from(usize_))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

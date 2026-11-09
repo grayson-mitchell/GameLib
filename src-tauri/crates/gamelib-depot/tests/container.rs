@@ -215,3 +215,82 @@ fn truncated_containers_never_panic() {
         }
     }
 }
+
+// ---- unzip_manifest (Task 2) ----
+
+#[test]
+fn unzip_manifest_zip_stored_and_deflate() {
+    let d = sample(5000);
+    for method in [0u16, 8] {
+        assert_eq!(unzip_manifest(&encode::zip_wrap(&d, method)).unwrap(), d);
+    }
+}
+
+#[test]
+fn unzip_manifest_vz_and_vsza() {
+    let d = sample(3000);
+    assert_eq!(unzip_manifest(&encode::vz_wrap(&d)).unwrap(), d);
+    assert_eq!(unzip_manifest(&encode::vsza_wrap(&d)).unwrap(), d);
+}
+
+#[test]
+fn unzip_manifest_unknown_magic() {
+    assert_eq!(
+        unzip_manifest(b"nope nope").unwrap_err().code,
+        "unknown_container"
+    );
+    assert!(unzip_manifest(b"").is_err());
+}
+
+#[test]
+fn unzip_manifest_offset_outside_buffer_errors() {
+    let d = sample(200);
+    let mut z = encode::zip_wrap(&d, 0);
+    // Central directory entry local-header offset field is at cd + 42.
+    let eocd = z.len() - 22;
+    let cd = u32::from_le_bytes(z[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
+    z[cd + 42..cd + 46].copy_from_slice(&0x7fff_0000u32.to_le_bytes());
+    assert!(unzip_manifest(&z).is_err());
+    // Compressed size larger than the buffer.
+    let mut z = encode::zip_wrap(&d, 0);
+    z[cd + 20..cd + 24].copy_from_slice(&0x0fff_0000u32.to_le_bytes());
+    assert!(unzip_manifest(&z).is_err());
+}
+
+#[test]
+fn unzip_manifest_declared_size_above_cap_errors() {
+    let d = sample(200);
+    let mut z = encode::zip_wrap(&d, 8);
+    let eocd = z.len() - 22;
+    let cd = u32::from_le_bytes(z[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
+    let too_big = (MAX_MANIFEST_BYTES + 1) as u32;
+    z[cd + 24..cd + 28].copy_from_slice(&too_big.to_le_bytes());
+    assert_eq!(unzip_manifest(&z).unwrap_err().code, "size_mismatch");
+}
+
+#[test]
+fn unzip_manifest_vsza_footer_size_above_cap_errors() {
+    let d = sample(100);
+    let c = encode::vsza_wrap_with_footer_size(&d, u32::MAX);
+    assert!(unzip_manifest(&c).is_err());
+}
+
+#[test]
+fn unzip_manifest_truncations_never_panic() {
+    let d = sample(400);
+    for c in [
+        encode::zip_wrap(&d, 0),
+        encode::zip_wrap(&d, 8),
+        encode::vz_wrap(&d),
+        encode::vsza_wrap(&d),
+    ] {
+        // 256 truncations spread over the buffer, plus every cut of the last 256 bytes.
+        let step = (c.len() / 256).max(1);
+        for cut in (0..c.len()).step_by(step) {
+            let _ = unzip_manifest(&c[..cut]);
+        }
+        for cut in c.len().saturating_sub(256)..c.len() {
+            let _ = unzip_manifest(&c[..cut]);
+        }
+    }
+}
