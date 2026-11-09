@@ -73,6 +73,10 @@ question requires otherwise.
   unless the spike set them itself (`spike_*`). Enough to prove identity and change across polls;
   never a real session token on disk. Mirrors `user.ts`'s existing secrecy discipline.
 
+- **Wrap-up `sources/` copies only git-tracked spike files** (`git ls-files .planning/spikes/<n>`).
+  A spike's working tree can hold an installed game, chunk corpora, run state and raw logs that its
+  `.gitignore` keeps out of the repo; the skill's `sources/` is committed, so a directory copy
+  republishes them (067a's first copy was 398 MB of Civ V). *(2026-11-09 wrap-up)*
 - **Signed-in Steam CM probes (Rust migration line, 071–074):** a plain `cargo` binary per
   candidate crate, pinned to a git `rev`, with a Node `.mjs` beside it that makes the same calls
   through `steam-user` as the parity reference. The binary reads the refresh token itself from

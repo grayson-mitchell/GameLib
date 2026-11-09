@@ -1,0 +1,42 @@
+030 evidence — Hoard (63000) in GameLibSteamBridge-63000, CrossOver 26.3, Apple M5 Ultra, 2026-10-23
+
+== driver caps (trace-dll2.cxlog)
+trace:wgl:init_gl_info GL version   : 2.1 Metal - 91.7
+trace:wgl:init_gl_info GL renderer  : Apple M5 Ultra
+trace:wgl:init_gl_info Core context GL version: 4.1 Metal - 91.7
+
+== baseline: game's context request + failure (trace-dll2.cxlog)
+
+trace:seh:dispatch_exception code=c0000005 (EXCEPTION_ACCESS_VIOLATION) flags=0 addr=00000000004454B3
+trace:seh:dispatch_exception code=c0000005 (EXCEPTION_ACCESS_VIOLATION) flags=0 addr=004454B3
+trace:wgl:macdrv_context_create                            Attrib 0x2091: 3 / 0x0003
+trace:wgl:macdrv_context_create                            Attrib 0x2092: 3 / 0x0003
+trace:wgl:macdrv_context_create                            Attrib 0x2094: 1 / 0x0001
+trace:wgl:macdrv_context_create                            Attrib 0x9126: 2 / 0x0002
+trace:wgl:macdrv_context_create format 17, share_context 0x0, attrib_list 0x22f7d8
+trace:wgl:win32u_wglSwapBuffers context 0x0, hwnd 0x6005a, hdc 0x15010046, interval 1
+warn:wgl:macdrv_context_create OS X only supports forward-compatible 3.2+ contexts
+warn:wgl:macdrv_context_create WGL_CONTEXT_FLAGS_ARB attributes 0x1 ignored
+warn:wgl:win32u_wgl_context_reset Failed to create driver context for context 0x7fb39995b020
+
+== DisabledExtensions registry (disabled-ext.cxlog): no effect
+trace:wgl:macdrv_context_create                            Attrib 0x9126: 2 / 0x0002
+
+
+== CX_FWD_COMPAT_GL_CTX=1 (fwdcompat.cxlog): gets past fwd-compat check, hits compat-profile check
+warn:wgl:macdrv_context_create WGL_CONTEXT_FLAGS_ARB attributes 0x1 ignored
+warn:wgl:macdrv_context_create Compatibility profiles for GL version >= 3.2 not supported
+
+
+== patched je->jmp @0x43575e (patched.cxlog / patched.reubenGFX.log)
+page faults: 0
+trace:wgl:macdrv_context_create format 17, share_context 0x0, attrib_list 0x0
+trace:wgl:macdrv_context_create format 17, share_context 0x0, attrib_list 0x0
+Fri 2026-Oct-23 19'21'31	GL_VENDOR					
+Apple	GL_RENDERER				
+Apple M5 Ultra	GL_VERSION					
+2.1 Metal - 91.7	GL_SHADING_LANGUAGE_VERSION
+1.20	Not using Frame buffer/SSAO/deferredlighting: hardware does not, client does (default) 
+Not using Vertex array objects/default vertex attributes: hardware does not, client does (default) 	
+Not using Frame buffer/SSAO/deferredlighting: hardware does not, client does (default) 
+Not using Vertex array objects/default vertex attributes: hardware does not, client does (default) 

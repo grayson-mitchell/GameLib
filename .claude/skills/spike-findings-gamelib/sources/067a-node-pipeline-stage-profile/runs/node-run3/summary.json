@@ -1,0 +1,34 @@
+{
+  "label": "node-run3",
+  "appId": "8930",
+  "outcome": {
+    "status": "done",
+    "skippedDepots": []
+  },
+  "wallSeconds": 320,
+  "downloadedMiB": 5294,
+  "writtenMiB": 7359,
+  "avgNetMiBsWholeRun": 16.52,
+  "steadyNetMiBs": 18.32,
+  "steadyOutMiBs": 25.46,
+  "steadyCores": 1.09,
+  "peakRssMiB": 2749,
+  "poolSize": 16,
+  "nativeWorkers": 16,
+  "inlineFallback": false,
+  "shareOfSecondsPoolSaturated": 0,
+  "avgPoolQueued": 0,
+  "avgFetchInflight": 31.3,
+  "avgFetchMsPerChunk": 534,
+  "avgDecodeMsPerChunk": 3,
+  "chunks": 16960,
+  "fetchErrors": 0,
+  "corpus": {
+    "chunks": 978,
+    "MiB": 300,
+    "formats": {
+      "zip": 917,
+      "lzma": 61
+    }
+  }
+}

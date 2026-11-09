@@ -1,8 +1,8 @@
 # Spike Wrap-Up Summary
 
-**Date:** 2026-11-02 (updated — Steam overlay in bridged games 061–064 wrapped; 023–060 not yet wrapped)
-**Spikes processed:** 31
-**Feature areas:** Steam native install; macOS native Steam bridge; Tauri/Rust rearchitecture; Tauri login webview + cookies; Tauri embedded store browser; login-window UX on macOS; OAuth login test harness; Steam overlay in bridged games
+**Date:** 2026-11-09 (updated — backlog 023–060 and 065–070 wrapped, plus the Rust migration line 067a–c and 071–074; every spike in `.planning/spikes/` is now processed)
+**Spikes processed:** 85 (31 before, 54 on 2026-11-09)
+**Feature areas:** Steam native install; macOS native Steam bridge; Tauri/Rust rearchitecture; Tauri login webview + cookies; Tauri embedded store browser; login-window UX on macOS; OAuth login test harness; Steam overlay in bridged games; bridge engines & per-game fixes; Steam DRM in the bridge; Mac Steam client integration; Steam library ownership; macOS runtime signals; Rust migration of the Steam stack
 **Skill output:** `./.claude/skills/spike-findings-gamelib/`
 
 ## Processed Spikes
@@ -40,8 +40,82 @@
 | 062 | bridge-overlay-attach | standard | ✓ VALIDATED | Steam overlay in bridged games |
 | 063 | d3dmetal-overlay | standard | ✓ VALIDATED | Steam overlay in bridged games |
 | 064 | d3dmetal-d3d12-overlay | standard | ⚠ PARTIAL | Steam overlay in bridged games |
+| 023 | sea-native-addon-dlopen | standard | VALIDATED | Tauri rearchitecture (SEA addon) |
+| 024 | epic-store-in-embedded-child-webview | standard | RESOLVED | Tauri embedded store browser (off macOS) |
+| 025 | linux-add-child-compile | standard | VALIDATED | Tauri embedded store browser (off macOS) |
+| 026 | linux-add-child-runtime | standard | PARTIAL | Tauri embedded store browser (off macOS) |
+| 027 | windows-add-child-crosscheck | standard | PARTIAL | Tauri embedded store browser (off macOS) |
+| 028 | linux-add-child-gtkbox-packing-lever | standard | PARTIAL | Tauri embedded store browser (off macOS) |
+| 029 | linux-embed-allocation-reliability | standard | PARTIAL | Tauri embedded store browser (off macOS) |
+| 030 | hoard-macos-opengl | standard | PARTIAL | Bridge engines & per-game fixes |
+| 031 | hoard-mesa-opengl | standard | PARTIAL | Bridge engines & per-game fixes |
+| 032 | zink-moltenvk-64bit | standard | INVALIDATED | Bridge engines & per-game fixes |
+| 033 | shim-gamefixes-hoard | standard | PARTIAL | Bridge engines & per-game fixes |
+| 034 | known-fixes-v2-hoard | standard | VALIDATED | Bridge engines & per-game fixes |
+| 035 | xcom-ceg-handshake-trace | standard | VALIDATED | Steam DRM in the bridge |
+| 036 | proton-style-dipc-responder | standard | PARTIAL | Steam DRM in the bridge |
+| 037 | ceg-steamclient-probe | standard | INVALIDATED | Steam DRM in the bridge |
+| 038 | steamstub-grimdawn-probe | standard | PARTIAL | Steam DRM in the bridge |
+| 039 | steamstub-forwarding-client | standard | PARTIAL | Steam DRM in the bridge |
+| 040 | steamstub-launch-check-static | standard | INVALIDATED | Steam DRM in the bridge |
+| 041 | steamstub-genuine-steamclient | standard | INVALIDATED | Steam DRM in the bridge |
+| 042 | crossover-gst-libav-overlay | standard | VALIDATED | Bridge engines & per-game fixes |
+| 043 | notproton-steam-bridge-comparison | standard | PARTIAL | Steam DRM in the bridge |
+| 044 | notproton-drm-live | standard | PARTIAL | Steam DRM in the bridge |
+| 045 | ceg-census | standard | VALIDATED | Steam DRM in the bridge |
+| 046a | steam-url-offline-toggle | standard | VALIDATED | Mac Steam client integration |
+| 046b | wrap-around-logon | standard | VALIDATED | Mac Steam client integration |
+| 046c | reconnect-reflip | standard | PARTIAL | Mac Steam client integration |
+| 047 | running-steam-adoption | standard | VALIDATED | Mac Steam client integration |
+| 048 | running-steam-adoption-large | standard | VALIDATED | Mac Steam client integration |
+| 049 | adoption-corrupt-file | standard | VALIDATED | Mac Steam client integration |
+| 050 | steam-download-progress-sources | standard | VALIDATED | Mac Steam client integration |
+| 051 | powera-pad-drives-gamelib-macos | standard | VALIDATED | macOS runtime signals |
+| 052 | demo-licenses-vs-owned-apps | standard | VALIDATED | Steam library ownership |
+| 053 | web-api-library-no-cm | standard | INVALIDATED | Steam library ownership |
+| 053b | renewal-mint | standard | INVALIDATED | Steam library ownership |
+| 056 | plain-prefix-bridge-handshake | standard | VALIDATED | Bridge engines & per-game fixes |
+| 057 | wine-staging-real-title | standard | VALIDATED | Bridge engines & per-game fixes |
+| 058 | gptk-engine-bridge | standard | PARTIAL | Bridge engines & per-game fixes |
+| 059 | reuse-cx-bottle-vs-fresh-prefix | comparison | VALIDATED | Bridge engines & per-game fixes |
+| 060 | crossover-trial-expiry | standard | PARTIAL | macOS runtime signals |
+| 065 | steamclient-installapp | standard | VALIDATED | Mac Steam client integration |
+| 066 | steamclient-register-install | standard | VALIDATED | Mac Steam client integration |
+| 067 | steamclient-uninstallapp | standard | VALIDATED | Mac Steam client integration |
+| 067a | node-pipeline-stage-profile | standard | VALIDATED | Rust migration of the Steam stack |
+| 067b | chunk-decode-bench | comparison | ✓ WINNER Rust on decode CPU | Rust migration of the Steam stack |
+| 067c | rust-depot-job | standard | NOT RUN | Rust migration of the Steam stack |
+| 068 | nonsteam-first-match-signal | standard | PARTIAL | macOS runtime signals |
+| 069 | steamclient-update-installed | standard | VALIDATED | Mac Steam client integration |
+| 070 | bridge-games-stay-stale | standard | VALIDATED | Mac Steam client integration |
+| 071a | cm-crate-steamroom | comparison | VALIDATED | Rust migration of the Steam stack |
+| 071b | cm-crate-steam-client-lib | comparison | VALIDATED | Rust migration of the Steam stack |
+| 071c | cm-crate-steam-vent | comparison | WINNER | Rust migration of the Steam stack |
+| 072 | rust-signin-refresh-token | standard | PARTIAL | Rust migration of the Steam stack |
+| 073 | rust-owned-apps-parity | standard | VALIDATED | Rust migration of the Steam stack |
+| 074 | rust-logon-friends-wrap | standard | VALIDATED | Rust migration of the Steam stack |
 
 ## Key Findings
+
+### 2026-11-09 wrap-up (023–074)
+
+- **Reversed rules, marked in SKILL.md:** "keep `steam-user` as a Node sidecar" (010) is reversed by
+  071–073 (Rust CM crates reach parity; the depot pipeline is Phase 73 Rust); `data_store_identifier`
+  partitions cookie jars on macOS only (026, 027); 038/039's forwarding `steamclient64.dll` is
+  reversed by 040/041; 047–049's `steam://install` adoption needs a click (corrected by 066).
+- **Rust migration:** the depot pipeline is network-bound, so Rust is for retiring the sidecar;
+  every CM input from steam-user is reproducible from Rust with exact parity on the operator's
+  account (depot key SHA-1, 390 owned games, 1,144 license appids); steam-vent fits the CM half;
+  QR sign-in goes over the Web API.
+- **Open premise:** a bare authenticated logon no longer flips Mac Steam Friends (074, steam-user
+  and Rust alike). Keep the go-offline wrap until GameLib's full refresh sequence is retested.
+- **DRM boundary** is written into `bridge-steam-drm.md` as Requirements: genuine CDN-fetched Valve
+  client + trampoline only; no exe edits, payload decryption or protocol stand-ins; plan nothing on
+  `STEAMSTART` capture/replay.
+- **Sources hygiene:** `sources/` for 023–074 holds only files git tracks in each spike (the first
+  copy of 067a pulled 398 MB of an installed game and its chunk corpus; removed before commit).
+
+### Earlier wrap-ups
 
 **Steam native install (001–003):** GameLib can own the first install — download depots in-process
 via `steam-user` (`getRawManifest()` + own decrypt; byte-identical to Steam), write an

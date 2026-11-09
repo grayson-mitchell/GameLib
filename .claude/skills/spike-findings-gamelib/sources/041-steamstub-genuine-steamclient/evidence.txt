@@ -1,0 +1,33 @@
+# Spike 041 evidence (2026-10-26). Raw logs in logs/ are gitignored (contain account ids); excerpts redacted.
+
+## genuine client copied into the clone (from the user's own GameLibSteam bottle; nothing shipped)
+253e0a11a4415b38c78a42f7bdd6ecc426455f06c1ba6453a48090df3142dbbc  steamclient64.dll
+8559e6bd32eb3fddd95079633272866deb292211ec4f7e69aeb0ec48fdafef72  tier0_s64.dll
+f63f348bb18460b3046db5293a0646af593fc9a21e6a2b1743e7e5074722b564  vstdlib_s64.dll
+
+## a1-forwarder (control; registry value byte-identical to product)
+[2026-10-25T20:42:28Z] INIT   SteamAPI ready (single InitFlat call, real appid=219990)
+[2026-10-25T20:42:30Z] HELLO  shim attached appid=219990
+[2026-10-25T20:42:30Z] FWD    FWD CreateInterface ver=SteamClient017 native=present
+[2026-10-25T20:42:30Z] FWD    FWD CreateInterface ver=SteamClient014 native=present
+26799:333555.385:00d0:00d4:Call user32.MessageBoxA(00000000,0010fae0 "Application load error 3:0000065432",0010fb18 "Steam Error",00000010) ret=14044b8d4
+
+## b1-genuine (SteamClientDll64=C:\spike041\steamclient64.dll; no Windows Steam process)
+[2026-10-25T20:43:32Z] INIT   SteamAPI ready (single InitFlat call, real appid=219990)
+(no HELLO, no FWD lines)
+MessageBox calls: 0
+26903:333619.386:00d4:00d8:trace:loaddll:build_module Loaded L"C:\\spike041\\tier0_s64.dll" at 00006FFFFB3F0000: native
+26936:333619.387:00d4:00d8:trace:loaddll:build_module Loaded L"C:\\spike041\\vstdlib_s64.dll" at 00006FFFFB310000: native
+27017:333619.389:00d4:00d8:trace:loaddll:build_module Loaded L"C:\\spike041\\steamclient64.dll" at 00006FFFFB850000: native
+33258:333620.121:00d4:00d8:Call KERNEL32.OpenEventA(00100000,00000000,0010cf40 "Steam3Master_SharedMemLock") ret=6ffffc144586
+33259-333620.121:00d4:00d8:Ret  KERNEL32.OpenEventA() retval=00000000 ret=6ffffc144586
+33288:333620.124:00d4:00d8:trace:process:ExpandEnvironmentStringsW (L"steam://run/219990//" 0000000000000000 0)
+last game-process (00d4) line: 333620.125 s (steamclient64 loaded at 333619.389 s)
+
+## Mac Steam console_log (Game process lines = the helper's own SteamAPI session; no ExecuteSteamURL for steam://run)
+2021:[2026-10-26 09:41:26] Game process added : AppID 219990 "", ProcID 7238, IP 0.0.0.0:0
+2022:[2026-10-26 09:42:13] Game process removed: AppID 219990 "", ProcID 7238 
+2024:[2026-10-26 09:42:28] Game process added : AppID 219990 "", ProcID 7369, IP 0.0.0.0:0
+2025:[2026-10-26 09:43:15] Game process removed: AppID 219990 "", ProcID 7369 
+2027:[2026-10-26 09:43:32] Game process added : AppID 219990 "", ProcID 7499, IP 0.0.0.0:0
+2028:[2026-10-26 09:44:19] Game process removed: AppID 219990 "", ProcID 7499 

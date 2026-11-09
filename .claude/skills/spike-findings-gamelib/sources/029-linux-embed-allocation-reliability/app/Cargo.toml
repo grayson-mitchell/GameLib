@@ -1,0 +1,35 @@
+[package]
+name = "spike-029-linux-embed-allocation"
+version = "0.0.0"
+description = "Spike 029 (from 025/026/028) — spike 016's add_child harness, built and RUN natively on a real Linux (Pop!_OS, webkit2gtk) desktop."
+edition = "2021"
+rust-version = "1.77.2"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Features MATCH src-tauri/Cargo.toml PLUS `unstable`, which gates
+# Window::add_child / WindowBuilder (tauri-2.11.5/src/window/mod.rs:1126).
+# The shared CARGO_TARGET_DIR still reuses every crate BELOW tauri; the
+# `tauri` crate itself recompiles once for the changed feature set.
+tauri = { version = "2", features = ["tray-icon", "image-png", "unstable"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# macOS-only in spike 016 too, at the USE site (`ns_window_number`'s
+# `#[cfg(target_os = "macos")]` block) — gated here to match, so Linux never
+# has to resolve this Apple-runtime-only crate at all.
+objc2 = "0.6"
+
+[target.'cfg(any(target_os = "linux", target_os = "dragonfly", target_os = "freebsd", target_os = "netbsd", target_os = "openbsd"))'.dependencies]
+# Spike 028: `tauri::Window::default_vbox()` (tauri-2.12.0/src/window/mod.rs:1809,
+# gated on this exact target family) returns a real `gtk::Box` to APPLICATION
+# code -- no fork or patch of tauri-runtime-wry/wry needed. Calling any trait
+# method on that returned value (BoxExt, ContainerExt, WidgetExt) requires this
+# crate as a direct dependency; tauri does not re-export gtk-rs. Pinned to the
+# EXACT version wry 0.57.0 already resolves (`Cargo.lock`'s `gtk = "0.18.2"`) so
+# there is only one `gtk::Box` type in the dependency graph, not two competing
+# major-version copies whose trait impls wouldn't apply to each other's types.
+gtk = "0.18.2"
