@@ -162,7 +162,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 70: Split GameInfo into shared and per-store shapes** — 0 plans; not started
 - [x] **Phase 71: Rust shell module decomposition** — 20 plans; complete (completed 2026-11-09, gaps closed by 71-19/71-20)
 - [x] **Phase 72: Renderer trust boundary and process hardening** — 0 plans; not started (completed 2026-11-08)
-- [ ] **Phase 73: Steam depot download pipeline in Rust** — 0 plans; not started
+- [x] **Phase 73: Steam depot download pipeline in Rust** — 21 plans; complete (completed 2026-11-10)
 - [ ] **Phase 74: Steam game updates** — 0 plans; not started
 - [ ] **Phase 75: Steam local file formats in Rust** — 0 plans; not started
 

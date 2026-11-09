@@ -1,8 +1,8 @@
 ---
 phase: 73-steam-depot-download-pipeline-in-rust
 verified: 2026-11-09T12:01:10Z
-status: human_needed
-score: "11/12 must-haves verified (1 uncertain: CI legs for plans 73-19..21)"
+status: passed
+score: "12/12 must-haves verified (CI and live smoke confirmed by the operator run 2026-11-10)"
 overrides_applied: 0
 human_verification:
   - test: "Push the 13 unpushed phase-73 commits (8a89f8d04..9dc081218, plans 73-19..21) and confirm rust-test.yml is green on windows-latest, macos-latest and ubuntu-latest, and the pre-push hook passes"
@@ -17,8 +17,8 @@ human_verification:
 
 **Phase Goal:** The Steam depot download pipeline (fetch → decrypt → decompress → write) runs in Rust, and the TypeScript pipeline and `lzma-native` are deleted. The sidecar calls it through `rustInvoke` with the TS signatures unchanged, only job descriptions cross the pipe, a parity harness proves byte-identical trees, a flag keeps TS as fallback until verified live, then TS is deleted; Windows/Linux build with static liblzma.
 **Verified:** 2026-11-09T12:01:10Z
-**Status:** human_needed
-**Re-verification:** No (initial verification)
+**Status:** passed (was human_needed; both human items resolved 2026-11-10, see Re-verification)
+**Re-verification:** Yes, human items only
 
 ## Goal Achievement
 
@@ -149,3 +149,13 @@ Open items:
 
 _Verified: 2026-11-09T12:01:10Z_
 _Verifier: Claude (gsd-verifier)_
+
+## Re-verification: human items resolved (2026-11-10)
+
+1. **CI for plans 73-19..21: pass.** The 13 commits were pushed (origin `a1134fe42..379890eac`) through the pre-push hook. rust-test.yml run 42667400967 at `379890eac` is green on windows-latest, macos-latest and ubuntu-latest.
+2. **Post-deletion live smoke: pass.** Fresh `pnpm tauri:dev` (sidecar built 07:15, no `GAMELIB_DEPOT_PIPELINE` in the bundle):
+   - **ADOM (333300), native, 48 symlinks:** `[depot-rust] outcome appId=333300 mode=install status=completed acf=4 vz=15502 macho=19`; the game launched. All 48 symlink targets are identical to Steam's own earlier install (readable `Versions/Current/...` paths, not base64), so the 98a23ed8d linktarget decryption holds live.
+     - About 15 framework files differ from that earlier install. A debug pass traced it: the plan selected the public manifest 1735692159990042256 and Rust wrote it. Then the Steam client adopted the install and applied the user's saved per-app beta `release-101` (localconfig `UserAppConfig/333300`), fetched manifest 1547379086645511101, and rewrote the ACF (`UserConfig`/`MountedConfig BetaKey`, `TargetBuildID 3512046`).
+     - GameLib has always installed `public` (since phase 21). This is not a phase-73 regression; filed as todo `2026-11-10-depot-install-ignores-user-steam-beta-branch.md`.
+   - **Schedule I (3205720), bridge:** `outcome appId=3205720 mode=install status=completed acf=4 vz=2774`; it launched; redists already settled.
+   - **Ordinary Cmd-Q** afterwards exited cleanly with no orphaned sidecar. A Force Quit earlier in the same session did orphan an idle sidecar; this was added to the existing orphan todo.
