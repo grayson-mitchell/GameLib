@@ -5,12 +5,12 @@ milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 66 context gathered
 last_updated: "2026-11-09T10:07:00.861Z"
-last_activity: "2026-11-09 - Completed 73-19: D-16 flag and TS branches removed, caller tests on the Rust stub"
+last_activity: "2026-11-10 - Completed 73-20: TS depot pipeline, worker pool and dev bundle deleted"
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 168
-  completed_plans: 165
+  completed_plans: 166
   percent: 53
 ---
 
@@ -73,9 +73,9 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
-Plan: 19 of 21 complete (73-01..73-19); 73-20 next (flag and TS branches gone, every depot caller on Rust; read 73-19-SUMMARY "For plan 73-20" before deleting: survivors still import finalize/download/decompress/manifest)
+Plan: 20 of 21 complete (73-01..73-20); 73-21 next (TS pipeline, worker pool and dev bundle deleted; read 73-20-SUMMARY "For plan 73-21": the lzma loaders, node-gyp-build alias and SEA worker asset are already gone)
 Status: Executing phase 73
-Last activity: 2026-11-09 - Completed 73-19: D-16 flag and TS branches removed, caller tests on the Rust stub
+Last activity: 2026-11-10 - Completed 73-20: TS depot pipeline, worker pool and dev bundle deleted
 
 Progress: [██████████] 96%
 
@@ -387,6 +387,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 73]: 73-01: rust-version 1.89 for gamelib-depot crates (operator option-a); no aes_armv8 rustflags
 - [Phase 73]: 73-15: depot CLI stdin envelope is {job|request, tokens}; the Tier 2 sweep compares outcome/per-depot status as well as bytes so the EResult-40 divergence (TS skip vs Rust manifest_unavailable) cannot hide behind identical trees; a missing outcome log line or codec is a failure
 - [Phase 73]: 73-19: D-16 flag removed; shared redists moved off the TS manifest parse (Rust summary `installscripts` + select_files/install/verify_only jobs, verify_only cache check now sha1s every file); Rust parse_manifest now decrypts encrypted linktargets (latent port defect, 37-09 parity); failure-summary log line restored on the Rust path; TS golden oracle and depotLinktarget tests deleted early (uncompilable)
+- [Phase 73]: 73-20: TS depot pipeline deleted (D-15). finalizeToSteam/canWriteFullOwnership/ACF writer survive in depot/finalizeAcf.ts + appManifest.ts (TS honest-empty finalize); resolveContainedPath/sha1File in steam/depotPaths.ts. SEA worker bundle, node-gyp-build alias and the dead lzma loaders/binding removed early (entry gone / knip-dead); lzma-native package, typedef, native SEA asset left for 73-21; knip ignores lzma/zstddec (steam-user runtime requires)
 - [Phase 73]: EResult-40 parity fix (pre-73-16, operator "Fix to match TS"): a manifest-level Blocked refusal is now carried request-code callback -> `{eresult:40}` reply -> crate `BLOCKED_REPLY`; the crate drops the depot, records `Outcome.skippedDepots`, and fails all-blocked with the byte-identical plan.ts message (eresult 40). Native install, prescreen, resume and originalRestore match the TS path; see 73-EResult40-FIX.md
 - [Phase 73]: 73-09: failed/cancelled files drain in-flight chunk tasks (spawn_blocking is not abortable) so nothing writes after run_job returns; ChunkSource trait abstracts Fetcher for tests; non-install modes error until 73-10
 - [Phase 73]: 73-04: Mach-O probe ported from machO.ts (gamelib-scan not reused); containment lexical; case probe stat-based per TS

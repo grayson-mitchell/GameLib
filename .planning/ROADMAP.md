@@ -873,7 +873,7 @@ Plans:
 
 **Wave 14** *(blocked on Wave 13 completion)*
 
-- [ ] 73-20-PLAN.md — Delete TS pipeline modules, oracle, worker pool and dev bundle
+- [x] 73-20-PLAN.md — Delete TS pipeline modules, oracle, worker pool and dev bundle
 
 **Wave 15** *(blocked on Wave 14 completion)*
 
