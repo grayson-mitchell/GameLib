@@ -1,5 +1,5 @@
 import type { GameInfo } from 'common/types'
-import type { StoreHooks } from '../storeKit'
+import { resetAllStores, type StoreHooks } from '../storeKit'
 import type { UiState } from '../uiState'
 
 // The renderer env is `node` (no jsdom); uiState transitively imports
@@ -18,9 +18,6 @@ import type { UiState } from '../uiState'
 }
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const useUiState = require('../uiState').default as StoreHooks<UiState>
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { resetAllStores } =
-  require('../storeKit') as typeof import('../storeKit')
 
 const game = { app_name: 'a', title: 'A', runner: 'steam' } as GameInfo
 
