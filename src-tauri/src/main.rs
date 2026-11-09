@@ -3284,6 +3284,17 @@ mod tests {
             "humble_login_cookies_for_domain",
             "humble_login_clear_cookies",
         ];
+        // The named step fns `rpc_humble_login_clear_cookies` delegates to
+        // (`login_window/humble_cookies.rs`). They are column-0 fns that are NOT `rpc_*`, so
+        // without this list the scan would reset `current_arm` to `None` on them and silently
+        // stop reading their bodies. They are scanned as part of the `humble_login_clear_cookies`
+        // arm; the "every step seen" assertion after the loop fails if one is renamed or removed.
+        let clear_cookies_steps = [
+            "count_window_cookies_matching_macos",
+            "remove_window_cookies_macos",
+            "remove_window_cookies_windows",
+        ];
+        let mut steps_seen: Vec<&str> = Vec::new();
         let mut current_arm: Option<&str> = None;
         // (arm, guard) pairs for every matched call site, in scan order -- asserted as an EXACT
         // structural set below, not a floor. This also lets a site MIGRATE between arms or
@@ -3340,7 +3351,7 @@ mod tests {
                 "#[cfg(all(not(target_os = \"macos\"), not(windows)))]",
                 Some("#[cfg(all(not(target_os = \"macos\"), not(windows)))]"),
                 true,
-                "the live guard at main.rs:7692 since `1a8e1827b` -- strictly narrower, and the whole reason this pin was red",
+                "the live guard on `rpc_humble_login_clear_cookies`'s Linux block (`login_window/humble_cookies.rs`) since `1a8e1827b` -- strictly narrower, and the whole reason this pin was red",
             ),
             (
                 "None",
@@ -3391,6 +3402,17 @@ mod tests {
             // Track which `rpc_*` handler this line is inside. The dispatcher arms are one-line
             // calls since Phase 71; a column-0 `fn` line starts a handler (or ends the previous one).
             if is_top_level_fn_line(line) {
+                let fn_name = trimmed
+                    .strip_prefix("pub(crate) fn ")
+                    .or_else(|| trimmed.strip_prefix("fn "))
+                    .and_then(|rest| rest.split(['(', '<']).next());
+                if let Some(step) =
+                    fn_name.and_then(|n| clear_cookies_steps.iter().find(|s| **s == n).copied())
+                {
+                    steps_seen.push(step);
+                    current_arm = Some("humble_login_clear_cookies");
+                    continue;
+                }
                 current_arm = rpc_fn_name(trimmed)
                     .and_then(|name| target_arms.iter().find(|a| **a == name).copied());
                 continue;
@@ -3470,13 +3492,29 @@ mod tests {
             found_sites.push((arm, guard.unwrap_or_default()));
         }
 
+        // Every named step fn must have been reached by the scan above. `concat!`, not a
+        // `\`-continued literal -- see the comment above the first `assert!` in this test (WR-08).
+        for step in clear_cookies_steps {
+            assert!(
+                steps_seen.contains(&step),
+                concat!(
+                    "F-34.4.2-12 regression pin: the step fn `{}` was not found as a column-0 ",
+                    "fn in the production source -- it was renamed or removed. A renamed or ",
+                    "removed step fn silently drops its body from this scan's coverage; ",
+                    "re-derive `clear_cookies_steps` from a fresh measurement of ",
+                    "`rpc_humble_login_clear_cookies`'s callees rather than deleting the name."
+                ),
+                step
+            );
+        }
+
         // EXACT structural expectation, not a floor (D-F2). "Three arms" and "four sites" are
         // DIFFERENT numbers and neither is a typo: `humble_login_clear_cookies` alone carries
         // TWO separately-guarded sites (the `count_matching` read and the deletion branch's
         // split-line read), the other two arms carry one each. The four sites now carry TWO
         // distinct guard spellings, not one: three sites are gated by the broad
         // `#[cfg(not(target_os = "macos"))]`, and `humble_login_clear_cookies`'s deletion-
-        // branch site (main.rs:7705) alone is gated by the narrower
+        // branch site (the Linux block of `rpc_humble_login_clear_cookies`) alone is gated by the narrower
         // `#[cfg(all(not(target_os = "macos"), not(windows)))]` -- `1a8e1827b` (2026-09-26)
         // routed Windows through WebView2 directly instead of wry's broken `delete_cookie`
         // (cookie-0.18's `domain()` drops the leading dot). Re-deriving this expected set to
@@ -3496,7 +3534,7 @@ mod tests {
         // Diverges from the other three sites ON PURPOSE: named separately (never cloned from
         // `guard_ok_broad`) so a reader scanning the vec below can see at a glance that one
         // site is deliberately guarded differently, rather than hiding the difference behind
-        // a shared binding. See `main.rs:7692`'s own comment for the Windows rationale
+        // a shared binding. See that Linux block's own comment in `login_window/humble_cookies.rs` for the Windows rationale
         // (`1a8e1827b`).
         let guard_ok_not_windows =
             "#[cfg(all(not(target_os = \"macos\"), not(windows)))]".to_string();
@@ -3718,9 +3756,10 @@ mod tests {
         let source = shell_production_source();
         let lines: Vec<&str> = source.lines().collect();
 
-        // Phase 71: the window-based branch lives in the `rpc_humble_login_clear_cookies`
-        // handler (a column-0 `fn` closed by a column-0 `}`), not in a dispatcher match arm.
-        let start = lines
+        // Linkage: the `rpc_humble_login_clear_cookies` handler (a column-0 `fn` closed by a
+        // column-0 `}`) must still call the step fn this pin measures; otherwise the pin would
+        // be measuring an orphaned step.
+        let handler_start = lines
             .iter()
             .position(|l| l.contains(concat!("fn rpc_humble_login", "_clear_cookies(")))
             .expect(concat!(
@@ -3729,17 +3768,50 @@ mod tests {
                 "removed; re-derive this pin's scan boundary from a fresh measurement rather ",
                 "than loosening the match string."
             ));
+        let handler_end = lines[handler_start + 1..]
+            .iter()
+            .position(|l| *l == "}")
+            .map(|offset| handler_start + 1 + offset)
+            .expect(concat!(
+                "260928-qvr regression: could not find the closing brace of ",
+                "`rpc_humble_login_clear_cookies` -- re-derive this pin's scan ",
+                "boundary from a fresh measurement rather than loosening the match string."
+            ));
+        assert!(
+            lines[handler_start..handler_end].iter().any(|l| {
+                let t = l.trim();
+                !(t.starts_with("//") || t.starts_with('*'))
+                    && t.contains("remove_window_cookies_macos(")
+            }),
+            concat!(
+                "260928-qvr regression: `rpc_humble_login_clear_cookies` no longer calls ",
+                "`remove_window_cookies_macos(` in a non-comment line -- the pin below would ",
+                "be measuring an orphaned step, not the live disconnect path."
+            )
+        );
 
-        // End boundary: the handler's own closing brace, the next line that is exactly `}`.
-        // Scopes the scan to exactly this one handler (both its branches) so this pin can never
-        // accidentally measure a sibling.
+        // The window-based branch lives in the `remove_window_cookies_macos` step fn (a
+        // column-0 `fn` closed by a column-0 `}`), which the handler above delegates to.
+        let start = lines
+            .iter()
+            .position(|l| l.contains(concat!("fn remove_window_cookies", "_macos(")))
+            .expect(concat!(
+                "260928-qvr regression: the `remove_window_cookies_macos` step fn definition ",
+                "was not found in this file -- it was renamed, reformatted, or ",
+                "removed; re-derive this pin's scan boundary from a fresh measurement rather ",
+                "than loosening the match string."
+            ));
+
+        // End boundary: the step fn's own closing brace, the next line that is exactly `}`.
+        // Scopes the scan to exactly this one step fn so this pin can never accidentally
+        // measure a sibling.
         let end = lines[start + 1..]
             .iter()
             .position(|l| *l == "}")
             .map(|offset| start + 1 + offset)
             .expect(concat!(
                 "260928-qvr regression: could not find the closing brace of ",
-                "`rpc_humble_login_clear_cookies` -- re-derive this pin's scan ",
+                "`remove_window_cookies_macos` -- re-derive this pin's scan ",
                 "boundary from a fresh measurement rather than loosening the match string."
             ));
 

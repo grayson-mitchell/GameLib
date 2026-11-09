@@ -1,0 +1,4 @@
+rpc_humble_login_cookies	#[cfg(not(target_os = "macos"))]	let all = window.cookies().map_err(|e| e.to_string())?;
+rpc_humble_login_cookies_for_domain	#[cfg(not(target_os = "macos"))]	let all = window.cookies().map_err(|e| e.to_string())?;
+rpc_humble_login_clear_cookies	#[cfg(not(target_os = "macos"))]	Ok(w.cookies()
+rpc_humble_login_clear_cookies	#[cfg(all(not(target_os = "macos"), not(windows)))]	.cookies()
