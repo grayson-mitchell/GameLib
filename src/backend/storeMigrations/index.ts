@@ -17,7 +17,10 @@ export const STORE_MIGRATIONS: Readonly<Record<string, readonly Migration[]>> =
     'settings/game': settingsGameChain,
     // baseline v1 = the pre-engine hand-rolled `version: 1`; codec in
     // storeVersioning/sharedRedistLedgerFile.ts
-    'steam_bridge/shared-redists': []
+    'steam_bridge/shared-redists': [],
+    // baseline v1 = the pre-engine `{since, by, pid}`; codec in
+    // storeVersioning/macSteamOfflineOwedFile.ts
+    'steam/mac-steam-offline-owed': []
   }
 
 const testOverrides = new Map<string, readonly Migration[] | undefined>()
