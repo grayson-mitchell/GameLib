@@ -865,7 +865,7 @@ Plans:
 
 **Wave 12** *(blocked on Wave 11 completion)*
 
-- [ ] 73-18-PLAN.md — Live macOS UAT and three CI legs; record D-15 delete gate (checkpoints)
+- [x] 73-18-PLAN.md — Live macOS UAT and three CI legs; record D-15 delete gate (checkpoints)
 
 **Wave 13** *(blocked on Wave 12 completion)*
 

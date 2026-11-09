@@ -5,7 +5,7 @@ milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 66 context gathered
 last_updated: "2026-11-09T10:07:00.861Z"
-last_activity: "2026-11-09 - Completed quick task 261109-vdw: split single_instance.rs and tray.rs below module size target"
+last_activity: "2026-11-09 - Completed 73-18: live macOS UAT, three CI legs green, D-15 delete gate met"
 progress:
   total_phases: 15
   completed_phases: 8
@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
-Plan: 17 of 21 complete (73-01..73-17); 73-18 blocked: live UAT done (8 pass, item 9 accepted), CI run 42599306709 red on Windows clippy ratchet only (post.rs stat_identity dead on win32; unused_variables ceiling must drop 1->0); tests green on all three; delete gate not met
+Plan: 18 of 21 complete (73-01..73-18); 73-19 next (D-15 delete gate met: parity, live UAT 8 pass + item 9 accepted, CI run 42600886049 green on all three legs)
 Status: Executing phase 73
 Last activity: 2026-11-09 - Completed quick task 261109-w52: version the per-bottle .gamelib-engine.json marker with the Phase 68 engine
 

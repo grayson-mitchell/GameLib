@@ -1,5 +1,5 @@
 ---
-status: testing
+status: complete
 phase: 73-steam-depot-download-pipeline-in-rust
 source: [73-17-PLAN.md]
 started: 2026-11-09
@@ -88,7 +88,7 @@ precondition: a bridge-installed title with the Steam bridge shim in place (the 
 
 ### 9. Force Quit mid-download leaves no orphaned sidecar
 expected: Both `pgrep` commands print nothing within 10 s of the Force Quit, and no `gamelib-shell` remains. If a Rust job was running in the shell, its downloads stop with the shell (no file under the install dir is modified more than 2 s after the Force Quit). If an orphan survives, record it as `issue` and link it to todo `2026-11-09-sidecar-orphaned-after-tauri-dev-ctrl-c.md`, noting whether the parent pid is 1.
-result: issue — Force Quit at about 21:58:40 with Zomboid downloading. Downloads stopped with the shell: the newest mtime was 1794214720.6, with no writes after it. But the sidecar (pid 41538) was reparented to pid 1 and was still alive 3 min 41 s later, when the orchestrator killed it. It had logged `[sidecar] stdin closed: releasing Steam CM session ...` at 21:58:40, so stdin EOF did arrive, but the process did not drain. `lsof` showed 6 ESTABLISHED TCP sockets (fastly, akamai, cloudfront, github). The repro is recorded on todo `2026-11-09-sidecar-orphaned-after-tauri-dev-ctrl-c.md`. The persistent `gamelib-shell` entry 27833 in `monitor.log` is the `tail -F gamelib-shell.log` collector, not an app process.
+result: issue — Force Quit at about 21:58:40 with Zomboid downloading. Downloads stopped with the shell: the newest mtime was 1794214720.6, with no writes after it. But the sidecar (pid 41538) was reparented to pid 1 and was still alive 3 min 41 s later, when the orchestrator killed it. It had logged `[sidecar] stdin closed: releasing Steam CM session ...` at 21:58:40, so stdin EOF did arrive, but the process did not drain. `lsof` showed 6 ESTABLISHED TCP sockets (fastly, akamai, cloudfront, github). The repro is recorded on todo `2026-11-09-sidecar-orphaned-after-tauri-dev-ctrl-c.md`. The persistent `gamelib-shell` entry 27833 in `monitor.log` is the `tail -F gamelib-shell.log` collector, not an app process. The operator accepted this for the D-15 delete gate on 2026-11-09 as a pre-existing sidecar exit-contract defect: it does not block 73-20, because the Rust pipeline stopped all writes at the Force Quit.
 precondition: a native title mid-install on the Rust default. Action: Force Quit the app (Cmd-Opt-Esc, or `kill -9` the `gamelib-shell` pid), then within 10 s run `pgrep -fl sidecar.js` and `pgrep -f gamelib-sidecar`.
 
 ## Summary

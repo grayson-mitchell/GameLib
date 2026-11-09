@@ -251,3 +251,30 @@ The Windows ratchet output (`meta/clippyRatchet.cjs`, win32 ceilings) has two fi
 All other win32 lints are at their ceilings.
 
 **Delete gate (D-15) still not met: CI is red on Windows. Plan 73-19 must not run.**
+
+The third-run findings were fixed in `684d20424`: `stat_identity` is now `#[cfg(unix)]`, with its unused non-unix arm removed, and the win32 `unused_variables` key was dropped from the ceilings, since an absent key means ceiling 0 and `clippyRatchet.test.ts` requires every listed ceiling to be positive.
+
+### CI legs: GREEN (Task 2, fourth attempt)
+
+Run: https://github.com/grayson-mitchell/GameLib/actions/runs/42600886049. Head is `a1134fe42`, which contains every phase-73 fix (`14528f0a5`, `cf65f54db`, `684d20424`) plus later unrelated commits (quick-261109-w52 i18n key, spike-077 docs). There is no separate run for `1bb683146`.
+
+| Leg | Conclusion | `cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli` | static codec linkage | shell `cargo test` | clippy ratchet |
+| --- | ---------- | --- | --- | --- | --- |
+| windows-latest | success | success | success | success | success (first green Windows ratchet) |
+| macos-latest | success | success | success | success | success |
+| ubuntu-latest | success | success | success | success | n/a (not run on Linux) |
+
+The CI legs found three phase-73 defects, all fixed before this green run:
+- the Windows drive-prefix loss in `post.rs` `lexical_resolve`, a real defect that could write depot files outside the library;
+- POSIX-only `install_root_guard` test fixtures;
+- `stat_identity` dead on Windows.
+
+The macOS ratchet hit came from 71-20, not phase 73.
+
+## Delete gate (D-15)
+
+- [x] **Corpus parity, zero diffs.** See "Sweep result" and "Operator verdict: APPROVED" above (plan 73-16). The file trees are identical, and the operator accepted the ACF counter diffs as Steam's own rewrite after it adopted the installs.
+- [x] **Live macOS UAT passed.** See "Live macOS UAT (plan 73-18)" above and `73-UAT.md`: 8 of 9 items pass. Item 9 (sidecar orphaned after Force Quit) is accepted by the operator, who said: "accepted for the delete gate. Record it as a pre-existing sidecar exit-contract defect, tracked in todo 2026-11-09-sidecar-orphaned-after-tauri-dev-ctrl-c.md. It does not block 73-20: the Rust pipeline stopped all writes at Force Quit."
+- [x] **CI green on all three legs** for a commit containing every phase-73 change: https://github.com/grayson-mitchell/GameLib/actions/runs/42600886049 (`a1134fe42`). Windows, macOS and Ubuntu all succeeded, including the gamelib-depot crate tests, static codec linkage, and the clippy ratchet on macOS and Windows.
+
+All three D-15 conditions are met. Plan 73-19 may run.
