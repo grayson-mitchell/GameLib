@@ -96,8 +96,14 @@ export function bootFresh(opts?: {
   before?: () => void
   /** Inject the output stream (e.g. one that records the READY write). */
   output?: PassThrough
+  /**
+   * The caller already ran jest.resetModules() for this case and rebound its
+   * own module handles against that registry (so it could configure mocks
+   * BEFORE the boot). Skip the reset; the boot still happens exactly once.
+   */
+  reuseRegistry?: boolean
 }): FreshSidecar {
-  jest.resetModules()
+  if (!opts?.reuseRegistry) jest.resetModules()
   opts?.before?.()
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { init: freshInit } = require('../../bootstrap') as {

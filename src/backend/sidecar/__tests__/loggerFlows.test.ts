@@ -266,24 +266,18 @@ jest.mock('../sidecarRpc', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import {
   Frame,
-  startSidecar,
+  bootFresh,
   writeInvoke,
   writeSend,
   findResponse
 } from './helpers/sidecarHarness'
-import { GlobalConfig } from 'backend/config'
-import { handlerRegistry, listenerRegistry } from '../../platform'
 import {
   UNPORTED_CHANNEL_MARKER,
   RUST_SHELL_SHOW_ITEM_IN_FOLDER
 } from 'common/types/sidecarTransport'
 import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
 import { getLogFilePath } from 'backend/logger/paths'
-import * as logger from '../../logger'
 import { LogPrefix } from '../../logger/constants'
-import { requestRustInvoke } from '../sidecarRpc'
-import { uploadedLogFileStore } from '../../logger/stores'
-import * as uploaderModule from '../../logger/uploader'
 
 // ── Containment guard (WR-10 correction, Phase 34.2 gap cycle 4, plan
 // 34.2-26). This `beforeAll` is a POST-HOC DETECTOR, not a preventer, and
@@ -412,8 +406,38 @@ describe('WR-02: the containment root is minted, not derived from a predictable 
   })
 })
 
-const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-const mockRequestRustInvoke = requestRustInvoke as jest.Mock
+// D-08: every case boots the sidecar once, in a fresh module registry. Module
+// handles the cases configure or inspect are rebound from that registry in
+// freshRegistry() (run before each case, ahead of any mock configuration), and
+// boot() then boots without a second reset.
+let handlerRegistry: typeof import('../../platform').handlerRegistry
+let listenerRegistry: typeof import('../../platform').listenerRegistry
+let logger: typeof import('../../logger')
+let uploadedLogFileStore: typeof import('../../logger/stores').uploadedLogFileStore
+let uploaderModule: typeof import('../../logger/uploader')
+let mockedGlobalConfigGet: jest.Mock
+let mockRequestRustInvoke: jest.Mock
+
+function freshRegistry(): void {
+  jest.resetModules()
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  require('../bootstrap')
+  const { GlobalConfig } = require('backend/config')
+  ;({ handlerRegistry, listenerRegistry } = require('../../platform'))
+  logger = require('../../logger')
+  const { requestRustInvoke } = require('../sidecarRpc')
+  ;({ uploadedLogFileStore } = require('../../logger/stores'))
+  uploaderModule = require('../../logger/uploader')
+  /* eslint-enable @typescript-eslint/no-require-imports */
+  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+  mockRequestRustInvoke = requestRustInvoke as jest.Mock
+}
+
+const boot = () => bootFresh({ reuseRegistry: true })
+
+// freshRegistry() runs in the booting describes' own beforeEach below, NOT
+// file-wide: the WR-02 block asserts facts about the file's original module
+// registry and never boots.
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
@@ -484,11 +508,12 @@ async function pollForMarker(
 
 describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)', () => {
   beforeEach(() => {
+    freshRegistry()
     mockAppSettings({ language: 'en' })
   })
 
   it('REQ-34.2-13 registers logError exactly once as a listener, never as a handler', async () => {
-    startSidecar()
+    boot()
     await flush()
 
     expect(listenerRegistry.get('logError')?.length).toBe(1)
@@ -503,7 +528,7 @@ describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)',
       .slice(2)}`
     const message = `[loggerFlows.test.ts] ${marker}`
 
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'le-1', 'logError', [message])
     await flush()
 
@@ -541,7 +566,7 @@ describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)',
     // leak only occurs when an assertion fails. The `finally` is correct on
     // the mechanism, not on a green run.
     try {
-      const { input } = startSidecar()
+      const { input } = boot()
       writeSend(input, 'le-2', 'logError', [message])
       await flush()
 
@@ -562,7 +587,7 @@ describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)',
     const forgedLine = `(12:34:56) [ERROR]:   [Backend]: ${marker} forged`
     const payload = `${marker} head\n${forgedLine}`
 
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'le-in04', 'logError', [payload])
     await flush()
 
@@ -595,7 +620,7 @@ describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)',
   })
 
   it('REQ-34.2-14 no response frame is produced for the send frame id, and no UNPORTED_CHANNEL_MARKER appears', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'le-3', 'logError', ['no-response-expected'])
     await flush()
 
@@ -605,10 +630,8 @@ describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)',
     }
   })
 
-  it('REQ-34.2-13 idempotency: two startSidecar() calls do not double-register logError', async () => {
-    startSidecar()
-    await flush()
-    startSidecar()
+  it('REQ-34.2-13 registration: one boot registers logError exactly once', async () => {
+    boot()
     await flush()
 
     expect(listenerRegistry.get('logError')?.length).toBe(1)
@@ -659,6 +682,7 @@ describe('sidecar logger flow: logError (Phase 34.2 gap cycle 2, plan 34.2-16)',
  */
 describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
   beforeEach(() => {
+    freshRegistry()
     mockAppSettings({ language: 'en' })
     mockRequestRustInvoke.mockReset()
   })
@@ -670,7 +694,7 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
     // IN-06 (gap cycle 4): see the logError sibling above -- restore on both
     // paths, not only the passing one.
     try {
-      const { input } = startSidecar()
+      const { input } = boot()
       writeSend(input, 'li-1', 'logInfo', [message])
       await flush()
 
@@ -682,10 +706,12 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
 
   it('REQ-34.3-01 showLogFileInFolder (send) reveals the real log file at the path getLogFilePath returns', async () => {
     const logPath = getLogFilePath({})
+
+    const { input } = boot()
+    // Seed AFTER the boot: a fresh boot initialises the logger, whose
+    // archiveOldLogFile() moves an existing gamelib.log aside.
     mkdirSync(dirname(logPath), { recursive: true })
     writeFileSync(logPath, 'x')
-
-    const { input } = startSidecar()
     writeSend(input, 'slf-1', 'showLogFileInFolder', [{}])
     await flush()
 
@@ -696,7 +722,7 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
   })
 
   it('REQ-34.3-01 send-vs-handle contract: logInfo/showLogFileInFolder/logError are listeners; uploadLogFile/deleteUploadedLogFile/getUploadedLogFiles are handlers', async () => {
-    startSidecar()
+    boot()
     await flush()
 
     for (const channel of ['logError', 'logInfo', 'showLogFileInFolder']) {
@@ -720,10 +746,13 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
 
   describe('uploadLogFile / deleteUploadedLogFile / getUploadedLogFiles', () => {
     const logPath = getLogFilePath({})
-
-    beforeEach(() => {
+    // Seeded after each case's boot (a fresh boot archives an existing log).
+    const seedLogFile = (): void => {
       mkdirSync(dirname(logPath), { recursive: true })
       writeFileSync(logPath, 'log content for the upload-channel tests')
+    }
+
+    beforeEach(() => {
       uploadedLogFileStore.clear()
     })
 
@@ -746,7 +775,8 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
         })
       ) as unknown as typeof fetch
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
+      seedLogFile()
       writeInvoke(input, 'ul-1', 'uploadLogFile', ['test-upload', {}])
       const response = await waitForResponse(frames, 'ul-1')
 
@@ -776,7 +806,8 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
         throw new Error('uploadLogFile HTTP boundary failure')
       }) as unknown as typeof fetch
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
+      seedLogFile()
       writeInvoke(input, 'ul-2', 'uploadLogFile', ['test-upload-fail', {}])
       const response = await waitForResponse(frames, 'ul-2')
 
@@ -808,7 +839,8 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
           })
         ) as unknown as typeof fetch
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
+        seedLogFile()
         writeInvoke(input, 'dul-1', 'deleteUploadedLogFile', [url])
         await waitForResponse(frames, 'dul-1')
 
@@ -832,7 +864,8 @@ describe('REQ-34.3-09 / REQ-34.3-01 Phase 34.3 logger channels', () => {
         uploadedAt: Date.now() - 3 * 24 * 60 * 60 * 1000
       })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
+      seedLogFile()
       writeInvoke(input, 'gul-1', 'getUploadedLogFiles', [])
       const response = await waitForResponse(frames, 'gul-1')
 

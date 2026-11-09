@@ -81,17 +81,41 @@ import { defined } from 'backend/testUtils/indexed'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
-import { getSteamLibraries } from 'backend/utils'
-import { HumbleUser } from '../../humble/user'
-import { HumbleLibrary } from '../../humble/library'
-import {
-  ipcMain as isolationIpcMain,
-  handlerRegistry as isolationHandlerRegistry,
-  listenerRegistry as isolationListenerRegistry
-} from '../../platform'
+import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+
+// D-08: every case boots the sidecar once, in a fresh module registry. Module
+// handles the cases configure or inspect are rebound from that registry in
+// freshRegistry() (run before each case, ahead of any mock configuration), and
+// boot() then boots without a second reset.
+let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
+let HumbleUser: typeof import('../../humble/user').HumbleUser
+let HumbleLibrary: typeof import('../../humble/library').HumbleLibrary
+let isolationIpcMain: typeof import('../../platform').ipcMain
+let isolationHandlerRegistry: typeof import('../../platform').handlerRegistry
+let isolationListenerRegistry: typeof import('../../platform').listenerRegistry
+
+function freshRegistry(): void {
+  jest.resetModules()
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  require('../bootstrap')
+  ;({ getSteamLibraries } = require('backend/utils'))
+  ;({ HumbleUser } = require('../../humble/user'))
+  ;({ HumbleLibrary } = require('../../humble/library'))
+  ;({
+    ipcMain: isolationIpcMain,
+    handlerRegistry: isolationHandlerRegistry,
+    listenerRegistry: isolationListenerRegistry
+  } = require('../../platform'))
+  /* eslint-enable @typescript-eslint/no-require-imports */
+}
+
+const boot = () => bootFresh({ reuseRegistry: true })
+
+beforeEach(() => {
+  freshRegistry()
+})
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to
  * resolve (copied from steamAuthFlows.test.ts). */
@@ -136,7 +160,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         userId: 'humble-uid-1'
       } as ReturnType<typeof HumbleUser.getUserDetails>)
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'user-info-1', 'humbleGetUserInfo', [])
       await flush()
 
@@ -155,7 +179,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         .mocked(HumbleUser.checkHealthAndFlagExpiry)
         .mockResolvedValue('unknown')
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'check-health-1', 'humbleCheckHealth', [])
       await flush()
 
@@ -170,7 +194,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         status: 'ok'
       } as Awaited<ReturnType<typeof HumbleLibrary.sync>>)
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'sync-1', 'humbleSync', [])
       await flush()
 
@@ -190,7 +214,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         .mocked(HumbleLibrary.getKeys)
         .mockReturnValue(fakeKeys as ReturnType<typeof HumbleLibrary.getKeys>)
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'get-keys-1', 'humbleGetKeys', [])
       await flush()
 
@@ -211,7 +235,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       }
       jest.mocked(HumbleLibrary.getSyncState).mockReturnValue(fakeSyncState)
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'sync-state-1', 'humbleGetSyncState', [])
       await flush()
 
@@ -233,7 +257,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           fakeGiftedAt as ReturnType<typeof HumbleLibrary.getAllGiftedAt>
         )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gifted-at-1', 'humbleGetGiftedAt', [])
       await flush()
 
@@ -255,7 +279,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         .mocked(HumbleLibrary.getClaimAnnotations)
         .mockReturnValue(fakeAnnotations)
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'claim-annotations-1', 'humbleGetClaimAnnotations', [])
       await flush()
 
@@ -279,7 +303,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         .mocked(HumbleLibrary.markRedeemed)
         .mockResolvedValue({ status: 'ok' })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'mark-redeemed-1', 'humbleMarkRedeemed', [
         { gamekey: 'GAMEKEY-DISTINCT', machineName: 'MACHINENAME-DISTINCT' }
       ])
@@ -301,7 +325,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
     it('REQ-34.4-07 humbleUndoRedeemed passes gamekey first, machineName second, as separate positional arguments', async () => {
       jest.mocked(HumbleLibrary.undoRedeemed).mockResolvedValue(undefined)
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'undo-redeemed-1', 'humbleUndoRedeemed', [
         { gamekey: 'GAMEKEY-DISTINCT-2', machineName: 'MACHINENAME-DISTINCT-2' }
       ])
@@ -323,7 +347,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
         .mocked(HumbleLibrary.getRevealedKeyValue)
         .mockReturnValue('SECRET-KEY-VALUE-NEVER-LOGGED')
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'get-revealed-1', 'humbleGetRevealedKeyValue', [
         {
           gamekey: 'GAMEKEY-DISTINCT-3',
@@ -382,7 +406,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           {} as ReturnType<typeof HumbleLibrary.getClaimAnnotations>
         )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       const channelInvocations: Array<{ id: string; args: unknown[] }> = [
         { id: 'kind-1', args: [] }, // humbleGetUserInfo
         { id: 'kind-2', args: [] }, // humbleCheckHealth
@@ -511,7 +535,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
     })
 
     it('REQ-34.4.1-04 SEAM.md Invariant B, UPDATED (Plan 02): humbleRevealKey is a real registered channel — malformed/missing args are rejected at the IPC boundary (Phase 67) without reaching the handler, and the RPC loop keeps serving', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       // Deliberately malformed (empty args): the boundary schema rejects the frame before the
       // handler runs, as a value-free IPC_INVALID_ARGS error rather than a crash.
       writeInvoke(input, 'reveal-1', 'humbleRevealKey', [])
@@ -649,7 +673,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           .mocked(HumbleLibrary.setOwnershipOverride)
           .mockReturnValue(undefined)
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeInvoke(input, 'set-override-1', 'humbleSetOwnershipOverride', [
           'fuzzy-mn'
         ])
@@ -671,7 +695,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
             fakeKey({ machineName: 'exact-mn', matchConfidence: 'exact' })
           ] as ReturnType<typeof HumbleLibrary.getKeys>)
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeInvoke(input, 'set-override-2', 'humbleSetOwnershipOverride', [
           'exact-mn'
         ])
@@ -702,7 +726,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           .mocked(HumbleLibrary.getKeys)
           .mockReturnValue([] as ReturnType<typeof HumbleLibrary.getKeys>)
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeInvoke(input, 'set-override-3', 'humbleSetOwnershipOverride', [
           'unknown-mn'
         ])
@@ -722,7 +746,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           .mocked(HumbleLibrary.clearOwnershipOverride)
           .mockReturnValue(undefined)
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeInvoke(input, 'clear-override-1', 'humbleClearOwnershipOverride', [
           'mn-to-clear'
         ])
@@ -741,7 +765,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           .mocked(HumbleLibrary.getAllOwnershipOverrides)
           .mockReturnValue(fakeOverrides)
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeInvoke(input, 'get-overrides-1', 'humbleGetOwnershipOverrides', [])
         await flush()
 
@@ -768,7 +792,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           .mocked(HumbleLibrary.recordGiftLinkOpened)
           .mockReturnValue(undefined)
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeInvoke(input, 'gift-link-invoke-1', 'humbleRecordGiftLinkOpened', [
           'eligible-mn'
         ])
@@ -793,7 +817,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           })
         ] as ReturnType<typeof HumbleLibrary.getKeys>)
 
-        const { input } = startSidecar()
+        const { input } = boot()
         writeSend(input, 'gift-link-send-1', 'humbleRecordGiftLinkOpened', [
           'eligible-mn-2'
         ])
@@ -808,7 +832,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           .mocked(HumbleLibrary.getKeys)
           .mockReturnValue([] as ReturnType<typeof HumbleLibrary.getKeys>)
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeInvoke(input, 'gift-link-2', 'humbleRecordGiftLinkOpened', [
           'unknown-mn'
         ])
@@ -837,7 +861,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           })
         ] as ReturnType<typeof HumbleLibrary.getKeys>)
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeInvoke(input, 'gift-link-3', 'humbleRecordGiftLinkOpened', [
           'not-owned-mn'
         ])
@@ -860,7 +884,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           })
         ] as ReturnType<typeof HumbleLibrary.getKeys>)
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeInvoke(input, 'gift-link-4', 'humbleRecordGiftLinkOpened', [
           'already-revealed-mn'
         ])
@@ -881,7 +905,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
     it('REQ-34.4-09 kind proof, positive direction: a humbleDisconnect SEND frame causes HumbleUser.disconnect to be called exactly once, and produces no response frame', async () => {
       jest.mocked(HumbleUser.disconnect).mockResolvedValue(undefined)
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeSend(input, 'disconnect-send-1', 'humbleDisconnect', [])
       await flush()
 
@@ -894,7 +918,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
     it('REQ-34.4-09 kind proof, negative direction: humbleDisconnect must NOT be reachable as an invoke handler', async () => {
       jest.mocked(HumbleUser.disconnect).mockResolvedValue(undefined)
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'disconnect-invoke-1', 'humbleDisconnect', [])
       await flush()
 
@@ -919,7 +943,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
           .mocked(HumbleUser.disconnect)
           .mockRejectedValue(new Error('humble disconnect transport failure'))
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeSend(input, 'disconnect-reject-1', 'humbleDisconnect', [])
         await flush()
 
@@ -959,13 +983,14 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
   // before each dynamic require below. Each test gets its own fresh module
   // instance (and therefore its own fresh, empty `handlerRegistry`), so these do
   // not interact with -- or get polluted by -- the shared sidecar this file's
-  // other tests drive via `startSidecar()`.
+  // other tests drive via `boot()`.
   describe('humbleRunValidation — packaged-signal resolution', () => {
     afterEach(() => {
       jest.dontMock('node:sea')
     })
 
     it('REQ-34.4-08 registered when node:sea reports this is NOT a packaged SEA build (the dev signal)', () => {
+      // no boot: module-load isolation only
       jest.resetModules()
       jest.doMock('node:sea', () => ({ isSea: () => false }))
 
@@ -983,6 +1008,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
     })
 
     it('REQ-34.4-08 NOT registered when node:sea reports this IS a packaged SEA build', () => {
+      // no boot: module-load isolation only
       jest.resetModules()
       jest.doMock('node:sea', () => ({ isSea: () => true }))
 
@@ -1000,6 +1026,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
     })
 
     it('REQ-34.4-08 safe default: NOT registered when node:sea is undeterminable (throws), and the fallback is logged once', () => {
+      // no boot: module-load isolation only
       jest.resetModules()
       jest.doMock('node:sea', () => {
         throw new Error('node:sea unavailable on this runtime (simulated)')
@@ -1063,6 +1090,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
   // keeping it last avoids any risk of ordering interaction regardless.
   describe('humbleDisconnect — D-05 ordering proof (real disconnect(), not automocked)', () => {
     it('REQ-34.4-09 the three Humble store clears happen, and independently of every login-window-seam wipe step rejecting', async () => {
+      // no boot: module-load isolation only
       jest.resetModules()
 
       const warnSpy = jest.fn()

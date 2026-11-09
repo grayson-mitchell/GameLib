@@ -322,27 +322,18 @@ jest.mock('../../utils/aborthandler/aborthandler', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import {
-  startSidecar,
+  bootFresh,
   writeInvoke,
   writeSend,
   findResponse
 } from './helpers/sidecarHarness'
-import { GlobalConfig } from 'backend/config'
-import { libraryManagerMap } from 'backend/storeManagers'
-import { isOnline } from '../../online_monitor'
-import { notify } from '../../dialog/dialog'
-import { sendGameStatusUpdate } from '../../utils'
-import { LegendaryUser } from '../../storeManagers/legendary/user'
-import { callAbortController } from '../../utils/aborthandler/aborthandler'
-import { handlerRegistry, listenerRegistry } from '../../platform'
 // Namespace import (not a named import) so `jest.spyOn(sidecarRpc,
 // 'pushFrontendMessage')` (Test 7, crash containment) can override the
 // SAME shared module.exports property `gameDetailsFlowRegistration.ts`'s own
 // compiled `sidecarRpc_1.pushFrontendMessage(...)` call site reads at call
 // time — real, unmocked `sidecarRpc.ts`, per this suite's own module
 // docstring (every module in the transport/registration path runs for real).
-import * as sidecarRpc from '../sidecarRpc'
-import { gameOverridesStore } from '../../game_overrides/stores'
+// Rebound per case in freshRegistry() (below).
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import { relative, resolve, isAbsolute, join } from 'path'
 import { readFileSync } from 'fs'
@@ -383,12 +374,20 @@ beforeAll(() => {
   }
 })
 
-const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-const mockedIsOnline = isOnline as jest.Mock
-const mockedNotify = notify as jest.Mock
-const mockedSendGameStatusUpdate = sendGameStatusUpdate as jest.Mock
-const mockedGetUserInfo = LegendaryUser.getUserInfo as jest.Mock
-const mockedCallAbortController = callAbortController as jest.Mock
+// D-08: every case boots the sidecar once, in a fresh module registry. Module
+// handles the cases configure or inspect are rebound from that registry in
+// freshRegistry() (run before each case, ahead of any mock configuration), and
+// boot() then boots without a second reset.
+let sidecarRpc: typeof import('../sidecarRpc')
+let gameOverridesStore: typeof import('../../game_overrides/stores').gameOverridesStore
+let handlerRegistry: typeof import('../../platform').handlerRegistry
+let listenerRegistry: typeof import('../../platform').listenerRegistry
+let mockedGlobalConfigGet: jest.Mock
+let mockedIsOnline: jest.Mock
+let mockedNotify: jest.Mock
+let mockedSendGameStatusUpdate: jest.Mock
+let mockedGetUserInfo: jest.Mock
+let mockedCallAbortController: jest.Mock
 
 type ManagerMock = Record<
   | 'addNewApp'
@@ -407,10 +406,45 @@ type ManagerMock = Record<
   jest.Mock
 >
 
-const legendaryManager = libraryManagerMap.legendary as unknown as ManagerMock
-const gogManager = libraryManagerMap.gog as unknown as ManagerMock
-const steamManager = libraryManagerMap.steam as unknown as ManagerMock
-const sideloadManager = libraryManagerMap.sideload as unknown as ManagerMock
+let legendaryManager: ManagerMock
+let gogManager: ManagerMock
+let steamManager: ManagerMock
+let sideloadManager: ManagerMock
+
+function freshRegistry(): void {
+  jest.resetModules()
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  require('../bootstrap')
+  const { GlobalConfig } = require('backend/config')
+  const { libraryManagerMap } = require('backend/storeManagers')
+  const { isOnline } = require('../../online_monitor')
+  const { notify } = require('../../dialog/dialog')
+  const { sendGameStatusUpdate } = require('../../utils')
+  const { LegendaryUser } = require('../../storeManagers/legendary/user')
+  const {
+    callAbortController
+  } = require('../../utils/aborthandler/aborthandler')
+  ;({ handlerRegistry, listenerRegistry } = require('../../platform'))
+  sidecarRpc = require('../sidecarRpc')
+  ;({ gameOverridesStore } = require('../../game_overrides/stores'))
+  /* eslint-enable @typescript-eslint/no-require-imports */
+  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+  mockedIsOnline = isOnline as jest.Mock
+  mockedNotify = notify as jest.Mock
+  mockedSendGameStatusUpdate = sendGameStatusUpdate as jest.Mock
+  mockedGetUserInfo = LegendaryUser.getUserInfo as jest.Mock
+  mockedCallAbortController = callAbortController as jest.Mock
+  legendaryManager = libraryManagerMap.legendary as unknown as ManagerMock
+  gogManager = libraryManagerMap.gog as unknown as ManagerMock
+  steamManager = libraryManagerMap.steam as unknown as ManagerMock
+  sideloadManager = libraryManagerMap.sideload as unknown as ManagerMock
+}
+
+const boot = () => bootFresh({ reuseRegistry: true })
+
+beforeEach(() => {
+  freshRegistry()
+})
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
@@ -506,7 +540,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       makeGameHandle({ getGameInfo: jest.fn(() => gameInfo) })
     )
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'gi-1', 'getGameInfo', ['app-1', 'legendary'])
     await flush()
 
@@ -522,7 +556,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       makeGameHandle({ getGameInfo: jest.fn(() => gameInfo) })
     )
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'gi-2', 'getGameInfo', ['app-2', 'steam'])
     await flush()
 
@@ -541,7 +575,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       makeGameHandle({ getGameInfo: jest.fn(() => gameInfo) })
     )
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'gi-3', 'getGameInfo', ['app-3', 'gog'])
     await flush()
 
@@ -557,7 +591,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       makeGameHandle({ getExtraInfo: jest.fn(() => extraInfo) })
     )
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'ei-1', 'getExtraInfo', ['app-1', 'legendary'])
     await flush()
 
@@ -573,7 +607,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       makeGameHandle({ getSettings: jest.fn(() => Promise.resolve(settings)) })
     )
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'gs-1', 'getGameSettings', ['app-1', 'steam'])
     await flush()
 
@@ -587,7 +621,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       makeGameHandle({ isGameAvailable: jest.fn(() => Promise.resolve(true)) })
     )
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'ga-1', 'isGameAvailable', [
       { appName: 'app-object-arg', runner: 'steam' }
     ])
@@ -606,7 +640,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       { name: 'Custom', parameters: '-windowed', type: 'basic' }
     ])
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'lo-1', 'getLaunchOptions', ['app-1', 'legendary'])
     await flush()
 
@@ -632,7 +666,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       })
     )
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'kill-1', 'kill', ['app-1', 'steam'])
     await flush()
 
@@ -648,7 +682,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       })
     )
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'repair-1', 'repair', ['app-1', 'legendary'])
     await flush()
 
@@ -674,7 +708,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       })
     )
 
-    const { input } = startSidecar()
+    const { input } = boot()
     writeInvoke(input, 'repair-notify-1', 'repair', ['app-1', 'legendary'])
     await flush()
 
@@ -687,7 +721,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
   it('REQ-34.2-01 changeInstallPath (invoke) receives its single {appName, path, runner} OBJECT argument intact', async () => {
     steamManager.changeGameInstallPath.mockResolvedValue(undefined)
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'cip-1', 'changeInstallPath', [
       { appName: 'app-object-arg-2', path: '/new/path', runner: 'steam' }
     ])
@@ -707,7 +741,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     legendaryManager.refresh.mockResolvedValue(null)
     legendaryManager.getListOfGames.mockReturnValue(games)
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'rc-lib-1', 'readConfig', ['library'])
     await flush()
 
@@ -722,7 +756,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
   it("REQ-34.2-09 readConfig('user') dispatches to the pinned LegendaryUser.getUserInfo() only", async () => {
     mockedGetUserInfo.mockReturnValue({ displayName: 'Test User' })
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'rc-user-1', 'readConfig', ['user'])
     await flush()
 
@@ -736,7 +770,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     const override = { selectiveDownload: { sdl: [] } }
     legendaryManager.getGameOverride.mockResolvedValue(override)
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'go-1', 'getGameOverride', [])
     await flush()
 
@@ -751,7 +785,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
   it('REQ-34.2-09 getGameSdl dispatches to the pinned legendary manager only, forwarding appName', async () => {
     legendaryManager.getGameSdl.mockResolvedValue(['selective-download-1'])
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'sdl-1', 'getGameSdl', ['app-sdl'])
     await flush()
 
@@ -764,7 +798,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
   it('REQ-34.2-09 getAvailableCyberpunkMods dispatches to the pinned gog manager only', async () => {
     gogManager.getCyberpunkMods.mockResolvedValue(['mod-a', 'mod-b'])
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'cpm-1', 'getAvailableCyberpunkMods', [])
     await flush()
 
@@ -778,7 +812,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
   it('REQ-34.2-09 setCyberpunkModConfig dispatches to the pinned gog manager only, forwarding props intact', async () => {
     gogManager.setCyberpunkModConfig.mockResolvedValue(undefined)
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'scmc-1', 'setCyberpunkModConfig', [
       { enabled: true, modsToLoad: ['mod-a'] }
     ])
@@ -805,7 +839,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       game: { app_name: 'appName' }
     })
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'gii-1', 'getInstallInfo', [
       'appName',
       'gog',
@@ -829,7 +863,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       game: { app_name: 'appName' }
     })
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'gii-2', 'getInstallInfo', [
       'appName',
       'legendary',
@@ -851,7 +885,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
   it('REQ-34.5-13 getInstallInfo resolves null (never undefined) when the manager resolves undefined', async () => {
     gogManager.getInstallInfo.mockResolvedValue(undefined)
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'gii-3', 'getInstallInfo', ['appName', 'gog', 'windows'])
     await flush()
 
@@ -865,7 +899,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       new Error('boom-getInstallInfo')
     )
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'gii-4', 'getInstallInfo', ['appName', 'gog', 'windows'])
     await flush()
 
@@ -875,7 +909,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
   })
 
   it('REQ-34.5-13 getInstallInfo rejects a runner string outside the Runner enum at the boundary (67-13), never reaching libraryManagerMap', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'gii-5', 'getInstallInfo', [
       'appName',
       'not-a-real-runner',
@@ -893,7 +927,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       game: { app_name: 'appName' }
     })
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'gii-6', 'getInstallInfo', ['appName', 'gog', 'windows'])
     await flush()
 
@@ -959,7 +993,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       'override-app': { title: 'Custom Title' }
     })
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'gmo-1', 'getGameMetadataOverride', ['override-app'])
     await flush()
 
@@ -974,7 +1008,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
       'app-b': { title: 'B' }
     })
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'ago-1', 'getAllGameOverrides', [])
     await flush()
 
@@ -1002,7 +1036,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
   // channel D-03 permanently DEFERS to Phase 34.6, so this test will not
   // need a further substitution once plan 34.5-12 lands.
   it('REQ-34.2-14/SEAM Invariant B: an UNPORTED channel (winetricksInstall, deferred to Phase 34.6) still returns UNPORTED_CHANNEL_MARKER', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'unported-1', 'winetricksInstall', [])
     await flush()
 
@@ -1012,7 +1046,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
   })
 
   it('REQ-34.2-14 none of the 15 ported channels return UNPORTED_CHANNEL_MARKER', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     ALL_15_CHANNELS.forEach(([channel, args], index) => {
       writeInvoke(input, `all15-${index}`, channel, args)
     })
@@ -1034,7 +1068,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
   // ── REQ-34.2-10: requestGameSettings's own, untouched registration ─────────
 
   it('REQ-34.2-10/D-09 requestGameSettings resolves through its OWN registration, a distinct function from getGameSettings', async () => {
-    startSidecar()
+    boot()
     await flush()
 
     const getGameSettingsHandler = handlerRegistry.get('getGameSettings')
@@ -1078,7 +1112,7 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
   // ── REQ-34.2-08: setGameMetadataOverride round-trip, push, delete ────────
 
   it('REQ-34.2-08 setGameMetadataOverride (send) round-trip: a subsequent getAllGameOverrides invoke reads back the exact write', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'sgmo-rt-1', 'setGameMetadataOverride', [
       { appName: 'X', title: 'T', art_cover: 'C', art_square: 'S' }
     ])
@@ -1095,7 +1129,7 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
   })
 
   it('REQ-34.2-08 setGameMetadataOverride (send) pushes a metadataChanged frontendMessage frame whose payload equals the full overrides map', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'sgmo-push-1', 'setGameMetadataOverride', [
       { appName: 'Y', title: 'Pushed Title' }
     ])
@@ -1119,7 +1153,7 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
   it('REQ-34.2-08 setGameMetadataOverride (send) with every field empty deletes the entry — a subsequent getGameMetadataOverride invoke returns null', async () => {
     gameOverridesStore.set('overrides', { Z: { title: 'Stale' } })
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'sgmo-del-1', 'setGameMetadataOverride', [
       { appName: 'Z' }
     ])
@@ -1142,7 +1176,7 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
       runner: 'sideload'
     }
 
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'ana-1', 'addNewApp', [gameInfoFixture])
     await flush()
 
@@ -1155,7 +1189,7 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
   // ── REQ-34.2-01: changeGameVersionPinnedStatus's 3 positional args ───────
 
   it('REQ-34.2-01 changeGameVersionPinnedStatus (send) unwraps its 3 positional args in order — status=true', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'cgvps-true-1', 'changeGameVersionPinnedStatus', [
       'X',
       'gog',
@@ -1167,7 +1201,7 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
   })
 
   it('REQ-34.2-01 changeGameVersionPinnedStatus (send) unwraps its 3 positional args in order — status=false', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'cgvps-false-1', 'changeGameVersionPinnedStatus', [
       'X',
       'gog',
@@ -1184,7 +1218,7 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
   // ── Kind gate ──────────────────────────────────────────────────────────
 
   it('REQ-34.2-01/REQ-34.2-08/REQ-34.2-09 kind gate: all 3 send channels are registered exactly once as listeners, never as handlers', async () => {
-    startSidecar()
+    boot()
     await flush()
 
     for (const channel of [
@@ -1217,7 +1251,7 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
         throw new Error('boom-addNewApp')
       })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
 
       writeSend(input, 'ana-throw-1', 'addNewApp', [{ app_name: 'boom-app' }])
       await flush()
@@ -1241,10 +1275,8 @@ describe('send-kind channels (REQ-34.2-08/REQ-34.2-01/REQ-34.2-09)', () => {
 
   // ── Idempotency ────────────────────────────────────────────────────────
 
-  it('REQ-34.2-01/REQ-34.2-08/REQ-34.2-09 idempotency: two startSidecar() calls do not double-register any of the 3 send channels', async () => {
-    startSidecar()
-    await flush()
-    startSidecar()
+  it('REQ-34.2-01/REQ-34.2-08/REQ-34.2-09 registration: one boot registers each of the 3 send channels exactly once', async () => {
+    boot()
     await flush()
 
     for (const channel of [
