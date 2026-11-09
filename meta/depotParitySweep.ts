@@ -163,7 +163,8 @@ export async function walkTree(
     const flags = readFlags(root, rels)
     rels.forEach((rel, i) => {
       const e = map.get(rel)
-      if (e) e.flags = `0x${flags[i].toString(16)}`
+      const flag = flags[i]
+      if (e && flag !== undefined) e.flags = `0x${flag.toString(16)}`
     })
   }
   return map
@@ -246,7 +247,10 @@ export function parseOutcomeLines(log: string): OutcomeLine[] {
     const at = line.indexOf('[depot-rust] outcome ')
     if (at < 0) continue
     const kv = new Map<string, string>()
-    for (const m of line.slice(at).matchAll(/(\w+)=(\S+)/g)) kv.set(m[1], m[2])
+    for (const m of line.slice(at).matchAll(/(\w+)=(\S+)/g)) {
+      const [, k, v] = m
+      if (k !== undefined && v !== undefined) kv.set(k, v)
+    }
     const appId = kv.get('appId')
     const mode = kv.get('mode')
     const status = kv.get('status')
@@ -332,7 +336,7 @@ function compareStatus(
     diffs.push('no [depot-rust] outcome line for this title')
     return { diffs, missingOutcome: true }
   }
-  const rustStatus = installs[installs.length - 1].status
+  const rustStatus = installs[installs.length - 1]?.status
   const tsStatus = t.tsStatus ?? 'completed'
   if (rustStatus !== tsStatus) {
     diffs.push(`status ts=${tsStatus} rust=${rustStatus}`)
