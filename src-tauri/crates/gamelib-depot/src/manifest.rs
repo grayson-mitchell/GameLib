@@ -29,7 +29,7 @@ const STEAM3_MANIFEST_MAGIC: u32 = 0x1634_9781;
 
 const DIRECTORY_FLAG: u32 = 64;
 const SYMLINK_FLAG: u32 = 512;
-/// EDepotFileFlag InstallScript (`bridge/sharedRedists.ts` INSTALLSCRIPT_FLAG).
+/// EDepotFileFlag InstallScript: the flag on a depot's installscript.vdf.
 const INSTALLSCRIPT_FLAG: u32 = 256;
 /// Matched paths returned per depot (T-73-36: a summary never carries the file list).
 const MATCH_CAP: usize = 1000;
@@ -316,10 +316,16 @@ pub fn parse_manifest(
         } else {
             String::from_utf8_lossy(&name_bytes).into_owned()
         };
-        let linktarget = m
-            .linktarget
-            .filter(|b| !b.is_empty())
-            .map(|b| String::from_utf8_lossy(&b).into_owned());
+        // 37-09: an encrypted manifest encrypts `linktarget` exactly like `filename`, so it is
+        // decrypted with the same key; written verbatim it would be a symlink to base64 text.
+        let linktarget = match m.linktarget.filter(|b| !b.is_empty()) {
+            None => None,
+            Some(b) if encrypted => {
+                let key = depot_key.ok_or_else(|| bad("encrypted filenames but no depot key"))?;
+                Some(decrypt_filename(&String::from_utf8_lossy(&b), key)?)
+            }
+            Some(b) => Some(String::from_utf8_lossy(&b).into_owned()),
+        };
         let mut chunks = Vec::with_capacity(m.chunks.len());
         for c in &m.chunks {
             chunks.push(ChunkRef {

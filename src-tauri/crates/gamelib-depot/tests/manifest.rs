@@ -135,6 +135,32 @@ fn encrypted_names_decrypted_and_nul_truncated() {
 }
 
 #[test]
+fn encrypted_linktarget_decrypted_like_the_filename() {
+    // 37-09 / depotLinktarget.test.ts T-37-09-02 and -05, ported in 73-19.
+    let mut link = file(enc_name("Frameworks/Current"), 0, 4);
+    link.flags = Some(512);
+    link.linktarget = Some(enc_name("A"));
+    let plain = file(enc_name("Game/data.pak"), 1, 3);
+    let raw = build(vec![link, plain], true, 5);
+    let m = parse_manifest(&raw, Some(&KEY)).unwrap();
+    assert_eq!(m.files[0].linktarget.as_deref(), Some("A"));
+    // Absent or empty linktargets pass through and never reach the decrypt.
+    assert_eq!(m.files[1].linktarget, None);
+    let mut empty = file(enc_name("x"), 1, 3);
+    empty.linktarget = Some(Vec::new());
+    let m = parse_manifest(&build(vec![empty], true, 5), Some(&KEY)).unwrap();
+    assert_eq!(m.files[0].linktarget, None);
+}
+
+#[test]
+fn plain_manifest_linktarget_is_kept_verbatim() {
+    let mut link = file(b"Frameworks/Current".to_vec(), 0, 4);
+    link.linktarget = Some(b"A".to_vec());
+    let m = parse_manifest(&build(vec![link], false, 5), None).unwrap();
+    assert_eq!(m.files[0].linktarget.as_deref(), Some("A"));
+}
+
+#[test]
 fn invalid_utf8_name_is_lossy_not_fatal() {
     let raw = build(vec![file(vec![b'a', 0xFF, 0xFE, b'z'], 1, 3)], false, 5);
     let m = parse_manifest(&raw, None).unwrap();
