@@ -1,0 +1,8 @@
+owned games: rust 390 node 390 | same appid set: True
+  rust-only []  node-only []
+  field name: 0 differ []
+  field playtime_forever: 0 differ []
+  field rtime_last_played: 0 differ []
+license appids: rust 1144 node 1144 | identical: True
+  rust-only []  node-only []
+licensed-not-owned (demo candidates): 754
