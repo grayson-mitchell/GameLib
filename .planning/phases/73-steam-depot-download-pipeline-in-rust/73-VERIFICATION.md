@@ -2,7 +2,7 @@
 phase: 73-steam-depot-download-pipeline-in-rust
 verified: 2026-11-09T12:01:10Z
 status: human_needed
-score: 11/12 must-haves verified (1 uncertain: CI legs for plans 73-19..21)
+score: "11/12 must-haves verified (1 uncertain: CI legs for plans 73-19..21)"
 overrides_applied: 0
 human_verification:
   - test: "Push the 13 unpushed phase-73 commits (8a89f8d04..9dc081218, plans 73-19..21) and confirm rust-test.yml is green on windows-latest, macos-latest and ubuntu-latest, and the pre-push hook passes"
