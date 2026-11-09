@@ -215,3 +215,21 @@ Windows failures, both in the phase-73 crate's `download::tests`. This is the fi
 - `stale_dir_cleared`: `download.rs:1345` `write_file(...).unwrap()` got `Os { code: 5, PermissionDenied, "Access is denied." }` when a directory `pkg/file.bin` sits where the file belongs. The stale-dir replace path does not work on Windows.
 
 No code was changed in this plan. **Delete gate (D-15) is not met: CI is red on macOS and Windows. Plan 73-19 must not run.**
+
+### Found and fixed by the CI legs: Windows depot paths lost their drive
+
+The Windows failures above came from a real defect. In `gamelib-depot` `post.rs`, `lexical_resolve` cleared its parts on `RootDir`. For `C:\x` (Prefix, then RootDir) that dropped the drive, so on Windows every depot file was written relative to the *current* drive. A native Windows install could therefore have written files outside the Steam library. The two tests panicked in their `fs::read` asserts, not inside `write_file`. Fixed in `14528f0a5`, which also adds a `#[cfg(windows)]` regression test, `windows_drive_root_keeps_its_prefix` in `tests/post.rs`, verifiable only on CI. The same commit rewrote the 71-20 `needless_range_loop` at `main.rs:2177` to clear the macOS ratchet.
+
+### CI re-run (Task 2, second attempt): RED on Windows
+
+Run: https://github.com/grayson-mitchell/GameLib/actions/runs/42597998166 (head `66da27b35`, which contains `14528f0a5` plus a later quick-261109-vw2 commit).
+
+| Leg | Conclusion | Steps |
+| --- | ---------- | ----- |
+| ubuntu-latest | success | depot crate tests ok, static codec linkage ok, shell `cargo test` ok |
+| macos-latest | success | depot crate tests ok, static codec linkage ok, shell `cargo test` ok, clippy ratchet ok |
+| windows-latest | failure | depot crate tests **ok**, including the new drive-prefix regression; static codec linkage ok; `cargo test (Tauri shell crate)` FAILED, 415 passed, 1 failed; clippy skipped |
+
+Windows shell-crate failure (phase-73 code, 73-12): `depot_dispatch::tests::install_root_guard_accepts_library_bridge_and_redist_roots` panicked at `src\depot_dispatch.rs:331`: `should accept "/Users/me/Library/Application Support/Steam/steamapps/common/Game"`, got `Err("depot_job_run:bad-install-root")`. `guard_install_root` starts with `Path::new(root).is_absolute()`. On Windows a drive-less `/Users/...` path is not absolute, so the guard rejects all four POSIX fixture paths. The guard is right to reject them on Windows; the fixtures are POSIX-only. Windows needs drive-qualified fixtures (`C:\...`), or the test needs a per-OS set. This test had not run on Windows before: in the first run the depot crate step failed first and the shell tests were skipped.
+
+**Delete gate (D-15) still not met: CI is red on Windows. Plan 73-19 must not run.**
