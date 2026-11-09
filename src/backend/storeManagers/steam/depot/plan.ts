@@ -356,11 +356,10 @@ function wrapDepotKeyError(
  * base game's install — requesting with the wrong appId fails with a
  * terminal FileNotFound/AccessDenied EResult (never a transient CM drop).
  */
-export async function fetchDepotPlanEntry(
+export async function fetchDepotKey(
   client: SteamUserDepotClient,
-  descriptor: DepotDescriptor,
-  parser: ContentManifestModule
-): Promise<DepotPlanEntry> {
+  descriptor: DepotDescriptor
+): Promise<Buffer> {
   const numericDepotId = Number(descriptor.id)
   const numericOwnerAppId = Number(descriptor.ownerAppId)
 
@@ -370,7 +369,7 @@ export async function fetchDepotPlanEntry(
   // already succeeded) could otherwise hang here just as easily. Bounded so a
   // stale-but-present CM socket rejects within STEAM_PICS_TIMEOUT_MS instead
   // of parking this await forever.
-  const key = await withTimeout(
+  return withTimeout(
     new Promise<Buffer>((resolve, reject) => {
       client.getDepotDecryptionKey(
         numericOwnerAppId,
@@ -384,6 +383,26 @@ export async function fetchDepotPlanEntry(
     STEAM_PICS_TIMEOUT_MS,
     `fetchDepotPlanEntry:${descriptor.id} getDepotDecryptionKey`
   )
+}
+
+export async function fetchDepotPlanEntry(
+  client: SteamUserDepotClient,
+  descriptor: DepotDescriptor,
+  parser: ContentManifestModule
+): Promise<DepotPlanEntry> {
+  const key = await fetchDepotKey(client, descriptor)
+  return fetchDepotManifestEntry(client, descriptor, key, parser)
+}
+
+/** The manifest half of {@link fetchDepotPlanEntry}, for a caller that already holds the key. */
+async function fetchDepotManifestEntry(
+  client: SteamUserDepotClient,
+  descriptor: DepotDescriptor,
+  key: Buffer,
+  parser: ContentManifestModule
+): Promise<DepotPlanEntry> {
+  const numericDepotId = Number(descriptor.id)
+  const numericOwnerAppId = Number(descriptor.ownerAppId)
 
   const raw = await withTimeout(
     new Promise<Buffer>((resolve, reject) => {
@@ -475,14 +494,37 @@ export async function buildDepotPlan(
   }
 }
 
-async function buildDepotPlanLeased(
+/** One selected depot with its decryption key and no manifest: what a Rust job needs from Node. */
+export interface DepotRefEntry {
+  depotId: string
+  /** 64-bit manifest GID, a string end to end. */
+  gid: string
+  /** Never logged. */
+  key: Buffer
+  ownerAppId: string
+  /** Position in the owner app's raw appinfo `depots` section; see depot/appinfoOrder.ts. */
+  appinfoRank?: number
+}
+
+export interface DepotRefsResult {
+  appId: string
+  name: string
+  buildid: string
+  depots: DepotRefEntry[]
+  /** Depot ids Steam refused with EResult 40 (Blocked), dropped from the install. */
+  skippedDepots: string[]
+}
+
+/**
+ * The CM-only half of {@link buildDepotPlan} (73-13, D-04): appinfo, ownership, depot selection
+ * (select.ts) and one decryption key per selected depot. It never fetches or parses a manifest.
+ * Precondition: the caller holds an authenticated lease (buildDepotPlan and the Rust install
+ * path both do). Throws exactly what buildDepotPlan throws for the same failures.
+ */
+export async function buildDepotRefs(
   appId: string,
   opts: DownloadSteamDepotsOpts
-): Promise<DepotPlan> {
-  // [Timing] debug/steam-install-slow-start: total buildDepotPlan duration,
-  // reported at every return/throw path below. Temporary instrumentation.
-  const planStart = Date.now()
-
+): Promise<DepotRefsResult> {
   const numericAppId = Number(appId)
 
   // D-UAT-06: every PICS/manifest network step below runs through
@@ -531,7 +573,95 @@ async function buildDepotPlanLeased(
     appId
   )
 
-  if (!descriptors.length) {
+  const depots: DepotRefEntry[] = []
+  // G-23-01 (D-01/D-02/D-03): depot ids Steam refused with EResult 40
+  // (Blocked) — dropped from the plan, install continues without them.
+  const skippedDepots: string[] = []
+  for (const descriptor of descriptors) {
+    throwIfAborted(opts.signal)
+    let key: Buffer
+    try {
+      key = await withPlanBuildRetry(
+        opts.signal,
+        (client) => fetchDepotKey(client, descriptor),
+        `fetchDepotKey:${descriptor.id}`
+      )
+    } catch (err) {
+      // D-01: narrowed to the LITERAL 40, never isNonRetryableDepotError —
+      // that set also contains 8/9/15/17/42/43, and 15 (AccessDenied) / 17
+      // (Banned) plausibly signal a genuine account/ownership problem that
+      // must not be silently downgraded to "skipped a depot".
+      if (skipBlockedDepot(err, descriptor, appId)) {
+        skippedDepots.push(descriptor.id)
+        continue
+      }
+      throw err
+    }
+    const rawOrder = getAppInfoDepotOrder(descriptor.ownerAppId)
+    const rank = rawOrder ? rawOrder.indexOf(descriptor.id) : -1
+    depots.push({
+      depotId: descriptor.id,
+      gid: descriptor.manifest,
+      key,
+      ownerAppId: descriptor.ownerAppId ?? appId,
+      ...(rank >= 0 ? { appinfoRank: rank } : {})
+    })
+  }
+
+  throwIfAllDepotsSkipped(appId, depots.length, skippedDepots)
+  return { appId, name: displayName, buildid, depots, skippedDepots }
+}
+
+/** True (and logs) when `err` is Steam's EResult 40 (Blocked) for a depot: skip it, keep going. */
+function skipBlockedDepot(
+  err: unknown,
+  descriptor: DepotDescriptor,
+  appId: string
+): boolean {
+  const eresult = (err as Error & { eresult?: number }).eresult
+  if (eresult !== 40) return false
+  // logInfo, not logWarning — a skip is informational (the install is
+  // continuing). Never logs the decryption key, the manifest GID payload,
+  // or any account identifier (T-23-31).
+  logInfo(
+    `buildDepotPlan: skipping depot ${descriptor.id} (app ${descriptor.ownerAppId}) for appId ${appId} — Steam refused the key/manifest with eresult=40 (Blocked); the install is continuing without it`,
+    LogPrefix.Steam
+  )
+  return true
+}
+
+/**
+ * T-23.2-16: without this guard, a plan reduced to zero depots would fall
+ * through downloadSteamDepots' zero-depot early return and report
+ * { status: 'done' } — an install that downloaded NOTHING reported as a
+ * success. eresult is set to 40 so classifyDepotError still maps this to
+ * the existing steam.download.error.depotBlocked copy.
+ */
+function throwIfAllDepotsSkipped(
+  appId: string,
+  keptCount: number,
+  skippedDepots: string[]
+): void {
+  if (keptCount || !skippedDepots.length) return
+  const allSkippedErr = new Error(
+    `buildDepotPlan: every selected depot for appId ${appId} was blocked by Steam (eresult=40) and had to be skipped: ${skippedDepots.join(', ')}`
+  ) as Error & { eresult?: number }
+  allSkippedErr.eresult = 40
+  throw allSkippedErr
+}
+
+async function buildDepotPlanLeased(
+  appId: string,
+  opts: DownloadSteamDepotsOpts
+): Promise<DepotPlan> {
+  // [Timing] debug/steam-install-slow-start: total buildDepotPlan duration,
+  // reported at every return/throw path below. Temporary instrumentation.
+  const planStart = Date.now()
+
+  const refs = await buildDepotRefs(appId, opts)
+  const { name: displayName, buildid } = refs
+
+  if (!refs.depots.length) {
     logInfo(
       `[Timing] buildDepotPlan: total ${Date.now() - planStart}ms for appId ${appId} (0 depots)`,
       LogPrefix.Steam
@@ -542,10 +672,8 @@ async function buildDepotPlanLeased(
       totalBytes: 0,
       name: displayName,
       buildid,
-      // Nothing was ever selected here (descriptors.length === 0), so there
-      // is nothing to have skipped — distinct from the all-skipped guard
-      // below, which only fires when descriptors existed and every one of
-      // them was blocked.
+      // Nothing was ever selected here, so there is nothing to have skipped
+      // (buildDepotRefs throws when every selected depot was blocked).
       skippedDepots: []
     }
     // 23-06: census logged on the returned plan before it leaves plan-build —
@@ -563,73 +691,42 @@ async function buildDepotPlanLeased(
   const parser = await loadContentManifestParser()
 
   const depots: DepotPlanEntry[] = []
-  // G-23-01 (D-01/D-02/D-03): depot ids Steam refused with EResult 40
-  // (Blocked) — dropped from the plan, install continues without them.
-  const skippedDepots: string[] = []
+  const skippedDepots: string[] = [...refs.skippedDepots]
   let totalBytes = 0
-  for (const descriptor of descriptors) {
+  for (const ref of refs.depots) {
     throwIfAborted(opts.signal)
+    const descriptor: DepotDescriptor = {
+      id: ref.depotId,
+      manifest: ref.gid,
+      size: 0,
+      ownerAppId: ref.ownerAppId
+    }
     let entry: DepotPlanEntry
     try {
       entry = await withPlanBuildRetry(
         opts.signal,
-        (client) => fetchDepotPlanEntry(client, descriptor, parser),
+        (client) =>
+          fetchDepotManifestEntry(client, descriptor, ref.key, parser),
         `fetchDepotPlanEntry:${descriptor.id}`
       )
     } catch (err) {
-      // D-01: narrowed to the LITERAL 40, never isNonRetryableDepotError —
-      // that set also contains 8/9/15/17/42/43, and 15 (AccessDenied) / 17
-      // (Banned) plausibly signal a genuine account/ownership problem that
-      // must not be silently downgraded to "skipped a depot". Every other
-      // non-retryable code rethrows unchanged and still aborts the whole
-      // install, exactly as before this phase.
-      const eresult = (err as Error & { eresult?: number }).eresult
-      if (eresult === 40) {
-        // logInfo, not logWarning — a skip is informational (the install is
-        // continuing), unlike wrapDepotKeyError's own logWarning at the
-        // failure site moments ago. Never logs the decryption key, the
-        // manifest GID payload, or any account identifier (T-23-31) — only
-        // the same depot id / owning appId / eresult fields
-        // wrapDepotKeyError's failure-site log already composed. States what
-        // happened, not what Steam would have done for another client.
-        logInfo(
-          `buildDepotPlan: skipping depot ${descriptor.id} (app ${descriptor.ownerAppId}) for appId ${appId} — Steam refused the key/manifest with eresult=40 (Blocked); the install is continuing without it`,
-          LogPrefix.Steam
-        )
+      // D-01: only the literal EResult 40 is skipped; every other
+      // non-retryable code rethrows and still aborts the whole install.
+      if (skipBlockedDepot(err, descriptor, appId)) {
         skippedDepots.push(descriptor.id)
         continue
       }
       throw err
     }
-    entry.ownerAppId = descriptor.ownerAppId
-    const rawOrder = getAppInfoDepotOrder(descriptor.ownerAppId)
-    const rank = rawOrder ? rawOrder.indexOf(descriptor.id) : -1
-    if (rank >= 0) entry.appinfoRank = rank
+    entry.ownerAppId = ref.ownerAppId
+    if (ref.appinfoRank !== undefined) entry.appinfoRank = ref.appinfoRank
     depots.push(entry)
     // D-03: totalBytes is downstream of the `continue` above — a skipped
-    // depot's files never reach this accumulation, so the reduced plan's
-    // byte total is correct FOR FREE, no compensating arithmetic needed.
-    // SizeOnDisk is a separate, measured (not summed) number
-    // (measureInstalledBytes) and needs no change either.
+    // depot's files never reach this accumulation.
     totalBytes += entry.files.reduce((sum, f) => sum + Number(f.size), 0)
   }
 
-  // T-23.2-16: without this guard, a plan reduced to zero depots would fall
-  // through downloadSteamDepots' zero-depot early return and report
-  // { status: 'done' } — an install that downloaded NOTHING reported as a
-  // success. eresult is set to 40 so classifyDepotError still maps this to
-  // the existing steam.download.error.depotBlocked copy, which remains
-  // correct for this residual case. This throw lands in downloadSteamDepots'
-  // catch block with downloadAttempted === false, so 23.2-02's
-  // shouldFinalizeAfterThrow gate correctly leaves any existing manifest
-  // untouched (D-05: no recovery path either way).
-  if (!depots.length && skippedDepots.length) {
-    const allSkippedErr = new Error(
-      `buildDepotPlan: every selected depot for appId ${appId} was blocked by Steam (eresult=40) and had to be skipped: ${skippedDepots.join(', ')}`
-    ) as Error & { eresult?: number }
-    allSkippedErr.eresult = 40
-    throw allSkippedErr
-  }
+  throwIfAllDepotsSkipped(appId, depots.length, skippedDepots)
 
   // debug/steam-depot-unclassified-generic-error: two selected depots can
   // claim the SAME path with incompatible types (Fallout 2 ships `master.dat`
