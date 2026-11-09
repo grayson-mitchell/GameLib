@@ -125,7 +125,7 @@ export async function runDepotCli(
           const parsed = parseDepotCliOutput(Buffer.concat(chunks).toString())
           resolve({ ...parsed, status })
         } catch (e) {
-          reject(e)
+          reject(e instanceof Error ? e : new Error(String(e)))
         }
       })
       child.stdin.on('error', () => undefined)
