@@ -13,6 +13,7 @@ import i18next from 'i18next'
 import { createRedistDMQueueElement } from 'backend/storeManagers/gog/redist'
 import { getSteamInstallSize } from 'backend/storeManagers/steam/gameRequirements'
 import { deleteCancelledSteamInstall } from 'backend/storeManagers/steam/cancelDelete'
+import { steamQueueHeadAlreadyInstalled } from 'backend/storeManagers/steam/queueHeadRevalidation'
 import { existsSync } from 'fs'
 import { gogRedistPath } from 'backend/storeManagers/gog/constants'
 import { onConnectivityChange } from 'backend/online_monitor'
@@ -158,6 +159,28 @@ async function initQueue(isStartup = false) {
   let element = getFirstQueueElement()
 
   while (element) {
+    // Todo 2026-11-09: a persisted Steam install head whose exact target is
+    // already a current full install (Steam took over while it was queued) is
+    // dropped, not started or surfaced as resumable. Not finished either: it
+    // installed nothing. 'update' elements are not revalidated, an update job
+    // legitimately runs over a bit-4 manifest.
+    if (
+      element.type === 'install' &&
+      storeCapabilities[element.params.runner].installManagedExternally &&
+      (await steamQueueHeadAlreadyInstalled(
+        element.params.appName,
+        element.params
+      ))
+    ) {
+      const droppedName = element.params.appName
+      if (currentElement?.params.appName === droppedName) {
+        currentElement = null
+      }
+      removeFromQueue(droppedName, true)
+      element = getFirstQueueElement()
+      continue
+    }
+
     if (
       isStartup &&
       storeCapabilities[element.params.runner].installManagedExternally

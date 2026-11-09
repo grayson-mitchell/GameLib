@@ -155,6 +155,10 @@ jest.mock('backend/storeManagers/steam/cancelDelete', () => ({
   )
 }))
 
+jest.mock('backend/storeManagers/steam/queueHeadRevalidation', () => ({
+  steamQueueHeadAlreadyInstalled: jest.fn().mockResolvedValue(false)
+}))
+
 jest.mock('fs', () => ({
   existsSync: jest.fn().mockReturnValue(true)
 }))
@@ -775,5 +779,100 @@ describe('downloadqueue.ts — quick-261027-cux: Steam Delete Files routing', ()
 
     expect(removeFolder).toHaveBeenCalledWith('/mock/install/path', 'GogFolder')
     expect(deleteCancelledSteamInstall).not.toHaveBeenCalled()
+  })
+})
+
+describe('downloadqueue.ts — todo 2026-11-09: stale already-installed Steam head is dropped', () => {
+  beforeEach(() => {
+    jest.resetModules()
+    jest.clearAllMocks()
+    for (const key of Object.keys(__store)) delete __store[key]
+    gameGetGameInfoMock.mockReturnValue({ folder_name: undefined })
+    resolveGameTitleMock.mockImplementation(
+      (libraryManagerMap, runner, appName, fallback) => {
+        const { title } = defined(libraryManagerMap[runner], 'library manager')
+          .getGame(appName)
+          .getGameInfo()
+        return title || fallback?.title || appName
+      }
+    )
+  })
+
+  async function load(stale: string[]) {
+    const { installQueueElement, updateQueueElement } = await import('../utils')
+    const { steamQueueHeadAlreadyInstalled } =
+      await import('backend/storeManagers/steam/queueHeadRevalidation')
+    jest
+      .mocked(steamQueueHeadAlreadyInstalled)
+      .mockImplementation((appId) => Promise.resolve(stale.includes(appId)))
+    jest
+      .mocked(installQueueElement)
+      .mockResolvedValue({ status: 'done', deferredToSetup: false } as never)
+    jest
+      .mocked(updateQueueElement)
+      .mockResolvedValue({ status: 'done' } as never)
+    const queue = await import('../downloadqueue')
+    return {
+      installQueueElement,
+      updateQueueElement,
+      steamQueueHeadAlreadyInstalled,
+      ...queue
+    }
+  }
+
+  it('drops the stale head, starts the next element, and records nothing finished for the dropped head', async () => {
+    __store.queue = [makeQueueElement('108600'), makeQueueElement('DREDGE')]
+    __store.finished = []
+    const { initQueue, installQueueElement } = await load(['108600'])
+
+    await initQueue()
+
+    expect(installQueueElement).toHaveBeenCalledTimes(1)
+    expect(installQueueElement).toHaveBeenCalledWith(
+      expect.objectContaining({ appName: 'DREDGE' })
+    )
+    const finished = (__store.finished as DMQueueElement[]).map(
+      (e) => e.params.appName
+    )
+    expect(finished).not.toContain('108600')
+    expect(finished).toContain('DREDGE')
+    expect(__store.queue).toEqual([])
+  })
+
+  it('drops a lone stale head at startup instead of surfacing it as resumable', async () => {
+    __store.queue = [makeQueueElement('108600')]
+    __store.finished = []
+    const { initQueue, installQueueElement, getQueueInformation } = await load([
+      '108600'
+    ])
+
+    await initQueue(true)
+
+    expect(installQueueElement).not.toHaveBeenCalled()
+    expect(getQueueInformation().elements).toHaveLength(0)
+  })
+
+  it('helper false keeps the existing behaviour (starts the head)', async () => {
+    __store.queue = [makeQueueElement('108600')]
+    __store.finished = []
+    const { initQueue, installQueueElement } = await load([])
+
+    await initQueue()
+
+    expect(installQueueElement).toHaveBeenCalledTimes(1)
+  })
+
+  it('update elements and non-Steam runners never call the helper', async () => {
+    const update = makeQueueElement('108600')
+    update.type = 'update'
+    const gog = makeQueueElement('gog-game')
+    gog.params.runner = 'gog'
+    __store.queue = [update, gog]
+    __store.finished = []
+    const { initQueue, steamQueueHeadAlreadyInstalled } = await load(['108600'])
+
+    await initQueue()
+
+    expect(steamQueueHeadAlreadyInstalled).not.toHaveBeenCalled()
   })
 })
