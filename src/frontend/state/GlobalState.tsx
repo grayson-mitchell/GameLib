@@ -1,22 +1,18 @@
 import React, { PureComponent } from 'react'
 
 import {
-  ConnectivityStatus,
   FavouriteGame,
   GameInfo,
   GameStatus,
   HiddenGame,
   RefreshOptions,
   Runner,
-  WineVersionInfo,
   FocusRowSelection,
   ExperimentalFeatures,
   Status
 } from 'common/types'
-import { DialogModalOptions, ExternalLinkDialogOptions } from 'frontend/types'
-import { reduceDialogRequest } from './dialogQueue'
 import { withTranslation } from 'react-i18next'
-import { getGameInfo, getLegendaryConfig } from '../helpers'
+import { getLegendaryConfig } from '../helpers'
 import { i18n, t, TFunction } from 'i18next'
 
 import ContextProvider from './ContextProvider'
@@ -29,7 +25,6 @@ import {
   libraryStore,
   nileConfigStore,
   nileLibraryStore,
-  wineDownloaderInfoStore,
   sideloadLibrary,
   steamConfigStore,
   steamLibraryStore,
@@ -59,20 +54,14 @@ import {
 } from 'common/signInDismissal'
 import { collectSignInInputs } from '../helpers/signInInputs'
 import { resyncSignInIdentity } from '../helpers/signInIdentityResync'
-import { createConnectivitySync } from '../helpers/connectivitySync'
 import useUiState from './uiState'
-import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
-import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
-import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
-import { handleSteamBridgeRouteNoticeSignal } from './SteamBridgeRouteNotice'
-import { handleSteamGoOfflineRequiredSignal } from './SteamGoOfflineNotice'
-import { handleEngineStateChangedSignal } from './EngineState'
-import { handleSteamRequestNoticeSignal } from './SteamRequestNotice'
-import { handleReadOnlyStoresNoticeSignal } from './ReadOnlyStoresNotice'
+import { bridgedContextSlice, subscribeBridge } from './bridgeContextValue'
 import {
-  handleSteamBottleLaunchWaitingSignal,
-  useBottleLaunchWaiting
-} from './BottleLaunchWaiting'
+  followConnectivity,
+  registerControllerListener,
+  seedAndFollowWindowChrome
+} from './initStateSubscriptions'
+import { useBottleLaunchWaiting } from './BottleLaunchWaiting'
 import { performSteamLogout } from './SteamSignOut'
 import { createOAuthLoginCompletion } from '../screens/WebView/useTauriOAuthLogin'
 import { isStore } from 'common/storeCapabilities'
@@ -142,8 +131,6 @@ interface StateProps {
     syncError?: HumbleSyncState['syncError']
     syncing?: boolean
   }
-  wineVersions: WineVersionInfo[]
-  error: boolean
   focusRow: FocusRowSelection
   // 49-07 (D-08): this launch's sign-in probe outcomes, fed by the
   // `signInProbeOutcomes` push AND a one-time `getSignInProbeOutcomes()` pull on
@@ -156,7 +143,6 @@ interface StateProps {
   gameUpdates: string[]
   language: string
   libraryStatus: GameStatus[]
-  platform: NodeJS.Platform
   refreshing: boolean
   refreshingInTheBackground: boolean
   // debug/login-logout-wipes-library: per-runner scoped refresh tracking, kept
@@ -186,8 +172,6 @@ interface StateProps {
   customCategories: Record<string, string[]>
   currentCustomCategories: string[]
   theme: string
-  isFullscreen: boolean
-  isFrameless: boolean
   zoomPercent: number
   primaryFontFamily: string
   secondaryFontFamily: string
@@ -196,21 +180,9 @@ interface StateProps {
   hideTitles: boolean
   cleanTiles: boolean
   sidebarCollapsed: boolean
-  activeController: string
-  connectivity: { status: ConnectivityStatus; retryIn: number }
-  dialogModalOptions: DialogModalOptions
-  dialogQueue: DialogModalOptions[]
-  externalLinkDialogOptions: ExternalLinkDialogOptions
-  showRedeemKeyDialog: boolean
   sideloadedLibrary: GameInfo[]
   hideChangelogsOnStartup: boolean
   lastChangelogShown: string | null
-  showInstallModal: {
-    show: boolean
-    gameInfo: GameInfo | null
-    appName: string
-    runner: Runner
-  }
   experimentalFeatures: ExperimentalFeatures
   disableDialogBackdropClose: boolean
   disableAnimations: boolean
@@ -500,8 +472,6 @@ class GlobalState extends PureComponent<Props> {
       syncError: 'none',
       syncing: false
     },
-    wineVersions: wineDownloaderInfoStore.get('wine-releases', []),
-    error: false,
     gameUpdates: [],
     // Converted back OUT of i18next (quick-260925-bq4): `i18n.language` is now
     // the BCP-47 tag, but this value reaches `LanguageSelector`'s
@@ -516,7 +486,6 @@ class GlobalState extends PureComponent<Props> {
     ),
     language: toShippedLanguage(this.props.i18n.language),
     libraryStatus: [],
-    platform: window.platform,
     refreshing: false,
     refreshingInTheBackground: true,
     refreshingByRunner: {},
@@ -530,8 +499,6 @@ class GlobalState extends PureComponent<Props> {
     favouriteGames: configStore.get('games.favourites', []),
     customCategories: configStore.get('games.customCategories', {}),
     theme: configStore.get('theme', 'midnightMirage'),
-    isFullscreen: false,
-    isFrameless: false,
     zoomPercent: configStore.get('zoomPercent', 100),
     secondaryFontFamily:
       configStore.get_nodefault('contentFontFamily') ||
@@ -547,19 +514,7 @@ class GlobalState extends PureComponent<Props> {
     titlesAlwaysVisible: configStore.get('titlesAlwaysVisible', false),
     hideTitles: configStore.get('hideTitles', false),
     cleanTiles: configStore.get('cleanTiles', false),
-    activeController: '',
-    connectivity: { status: 'offline', retryIn: 0 },
-    showInstallModal: {
-      show: false,
-      appName: '',
-      runner: 'legendary',
-      gameInfo: null
-    },
     sideloadedLibrary: applyGameOverrides(sideloadLibrary.get('games', [])),
-    dialogModalOptions: { showDialog: false },
-    dialogQueue: [],
-    externalLinkDialogOptions: { showDialog: false },
-    showRedeemKeyDialog: false,
     hideChangelogsOnStartup: globalSettings?.hideChangelogsOnStartup || false,
     lastChangelogShown: JSON.parse(storage.getItem('last_changelog') || 'null'),
     experimentalFeatures: {
@@ -799,40 +754,6 @@ class GlobalState extends PureComponent<Props> {
       customCategories: newCustomCategories
     })
     configStore.set('games.customCategories', newCustomCategories)
-  }
-
-  handleShowDialogModal = (request: DialogModalOptions) => {
-    // Functional update: a button click closes then opens a follow-up in the
-    // same batch, and each call must see the previous one's result.
-    this.setState((prev: StateProps) => {
-      const next = reduceDialogRequest(
-        { current: prev.dialogModalOptions, queue: prev.dialogQueue },
-        request
-      )
-      return { dialogModalOptions: next.current, dialogQueue: next.queue }
-    })
-  }
-
-  showResetDialog = (() => {
-    this.handleShowDialogModal({
-      title: t('box.reset-heroic.question.title', 'Reset GameLib'),
-      message: t(
-        'box.reset-heroic.question.message',
-        "Are you sure you want to reset GameLib? This will remove all Settings and Caching but won't remove your Installed games or your Epic credentials. Portable versions (AppImage, WinPortable, ...) of GameLib needs to be restarted manually afterwards."
-      ),
-      buttons: [
-        { text: t('box.yes'), onClick: window.api.resetHeroic },
-        { text: t('box.no') }
-      ]
-    })
-  }).bind(this)
-
-  handleExternalLinkDialog = (value: ExternalLinkDialogOptions) => {
-    this.setState({ externalLinkDialogOptions: value })
-  }
-
-  handleRedeemKeyDialog = (show: boolean) => {
-    this.setState({ showRedeemKeyDialog: show })
   }
 
   // 48-02: this setter owns BOTH halves -- state and persistence. The
@@ -1132,7 +1053,7 @@ class GlobalState extends PureComponent<Props> {
             'within the poll window; leaving local state untouched rather ' +
             'than reloading into a possibly-still-signed-in session.'
         )
-        this.handleShowDialogModal({
+        useUiState.getState().showDialogModal({
           title: t(
             'gamelib:login.steam_logout_failed_title',
             'Sign-out failed'
@@ -1176,7 +1097,7 @@ class GlobalState extends PureComponent<Props> {
   // destructive action). The actual wipe (window.api.humbleDisconnect() +
   // clearing local state) only runs if the user confirms.
   humbleDisconnect = async (): Promise<void> => {
-    this.handleShowDialogModal({
+    useUiState.getState().showDialogModal({
       title: t('login.humble_disconnect_title', 'Disconnect Humble Bundle?'),
       message: t(
         'login.humble_disconnect_message',
@@ -1585,7 +1506,12 @@ class GlobalState extends PureComponent<Props> {
   }
 
   async componentDidMount() {
-    const { epic, gog, amazon, gameUpdates = [], libraryStatus } = this.state
+    // Phase 69 D-09 bridge: re-render when a store-owned context field changes.
+    subscribeBridge(() => this.forceUpdate())
+    // catches store changes between the first render and mount
+    this.forceUpdate()
+
+    const { epic, gog, amazon, gameUpdates = [] } = this.state
 
     // 261015-p3q: re-apply the saved Accessibility zoom once at boot, through
     // the same window.api.setZoomFactor chain setZoomPercent uses, so a saved
@@ -1617,89 +1543,9 @@ class GlobalState extends PureComponent<Props> {
       })
     }
 
-    window.api.handleInstallGame(async (e, appName, runner) => {
-      const currentApp = libraryStatus.filter(
-        (game) => game.appName === appName
-      )[0]
-      if (!currentApp || (currentApp && currentApp.status !== 'installing')) {
-        const gameInfo = await getGameInfo(appName, runner)
-        if (!gameInfo || isStore(gameInfo, 'sideload')) {
-          return
-        }
-        return this.setState({
-          showInstallModal: {
-            show: true,
-            appName,
-            runner,
-            gameInfo
-          }
-        })
-      }
-    })
-
     window.api.handleGameStatus((e, args) => {
       this.handleGameStatus({ ...args })
     })
-
-    // Phase 17 (17-06), D-07: single global listener that opens the guided
-    // bottle-setup flow whenever the backend emits `steamBottleSetupRequired`
-    // — fires from EVERY Install/Play entry point (game-details button,
-    // library grid, install modal) since they all funnel into
-    // window.api.install/launch, which is where the backend decision is
-    // made. No frontend eligibility check on gameInfo.is_mac_native is added
-    // here or anywhere else (D-11 stays backend-owned).
-    window.api.handleSteamBottleSetupRequired(
-      handleSteamBottleSetupRequiredSignal
-    )
-
-    // Phase 21 (21-10), D-10/D-11: single global listener that opens the
-    // native Steam-CLIENT guided-install/prompt-to-launch flow whenever the
-    // backend emits `steamClientSetupRequired` — distinct from the bottle
-    // listener above (macOS CrossOver bottle flow).
-    window.api.handleSteamClientSetupRequired(
-      handleSteamClientSetupRequiredSignal
-    )
-
-    // Phase 24 (24-09), R7/D-05: single global listener that opens the
-    // EXPLICIT bridge-failure dialog whenever the backend emits
-    // `steamBridgeSetupRequired` (24-06/24-08) — fires from the bridge
-    // install/launch routing branches (installBridgeGame/launchBridgeGame)
-    // in SteamGame. Distinct from both listeners above: this is the macOS
-    // native Steam-bridge failure surface, offering fall-back-to-bottled or
-    // cancel — never a silent auto-fallback, never a dead end.
-    window.api.handleSteamBridgeSetupRequired(
-      handleSteamBridgeSetupRequiredSignal
-    )
-
-    // Phase 51 Plan 13 (D-51-08/11): single global listener that opens the
-    // up-front bridge ROUTE notice whenever the backend emits
-    // `steamBridgeRouteNotice` (games.ts's install(), gated on
-    // `bridgeRoute.noticeRequired`) -- distinct from the bridge-FAILURE
-    // listener immediately above: this one fires BEFORE any install
-    // attempt for a known-bad / persisted-scan-miss / win64-no-shim route,
-    // offering "Use bottled Steam" / "Try the bridge anyway" / "Cancel".
-    window.api.handleSteamBridgeRouteNotice(handleSteamBridgeRouteNoticeSignal)
-
-    // Phase 54: opens the guided Go Offline step when the backend's go-offline
-    // wrap did not see Mac Steam log off; no logon happened.
-    window.api.handleSteamGoOfflineRequired(handleSteamGoOfflineRequiredSignal)
-
-    // Phase 59 Plan 11: backend-computed per-title engine state for the game page.
-    window.api.handleEngineStateChanged(handleEngineStateChangedSignal)
-
-    // quick 261106-pvk: Steam never picked up a delegated install/uninstall.
-    window.api.handleSteamRequestNotice(handleSteamRequestNoticeSignal)
-    window.api.handleReadOnlyStoresNotice(handleReadOnlyStoresNoticeSignal)
-
-    // Phase 51 Plan 08 (D-51-16, folded todo): single global listener that
-    // records a bottled-Steam launch's "waiting for Steam" classification --
-    // fires from bottleProcessMonitor.ts's waiting-state check once a
-    // launch has produced no game process within the grace window. The
-    // matching clear() call lives in handleGameStatus below, on the
-    // playing/done transitions that end the wait either way.
-    window.api.handleSteamBottleLaunchWaiting(
-      handleSteamBottleLaunchWaitingSignal
-    )
 
     window.api.handleSteamMetadataSyncing((e, { syncing }) => {
       this.setState({ steamMetadataSyncing: syncing })
@@ -1915,20 +1761,8 @@ class GlobalState extends PureComponent<Props> {
       }
     })
 
-    this.setState({
-      isFullscreen: await window.api.isFullscreen(),
-      isFrameless: await window.api.isFrameless()
-    })
-    window.api.handleFullscreen(
-      (e: IpcRendererEvent, isFullscreen: boolean) => {
-        this.setState({ isFullscreen })
-      }
-    )
-    // quick 261102-dma: follow the Use frameless window toggle after the seed above, so the
-    // WindowControls gate does not keep showing GameLib's buttons next to the native frame.
-    window.api.handleFramelessChanged((isFrameless: boolean) =>
-      this.setState({ isFrameless })
-    )
+    // R10: seed isFullscreen/isFrameless, then follow the pushes (initStateSubscriptions).
+    await seedAndFollowWindowChrome()
 
     const gogUser = gogConfigStore.has('userData')
     const amazonUser = nileConfigStore.has('userData')
@@ -1980,31 +1814,9 @@ class GlobalState extends PureComponent<Props> {
       })
     }
 
-    window.addEventListener(
-      'controller-changed',
-      (e: CustomEvent<{ controllerId: string }>) => {
-        document.body.classList.toggle(
-          'controllerLayout',
-          e.detail.controllerId !== ''
-        )
-        this.setState({ activeController: e.detail.controllerId })
-      }
-    )
+    registerControllerListener()
 
-    // Keep `connectivity` equal to the sidecar's. The pushes and the one pull below reach the
-    // webview by different routes, so which arrived last says nothing about which is newer:
-    // applying them blindly lets a stale pull reply land after the `online` push, and nothing
-    // would ever correct the "Retrying" banner it leaves behind. connectivitySync orders them
-    // by the sidecar's epoch/seq stamp, and re-pulls after a quiet spell while not online.
-    const connectivitySync = createConnectivitySync({
-      pull: () => window.api.getConnectivityStatus(),
-      onChange: (connectivity) => this.setState({ connectivity }),
-      log: (message) => window.api.logInfo(message)
-    })
-    window.api.onConnectivityChanged((_, snapshot) =>
-      connectivitySync.receive(snapshot)
-    )
-    void connectivitySync.pull()
+    followConnectivity()
 
     // 49-07 (D-08, Pitfall 11): pull once on mount, because the outcomes push
     // can precede the listener above. Read-only getter -- nothing here starts
@@ -2134,6 +1946,7 @@ class GlobalState extends PureComponent<Props> {
       <ContextProvider.Provider
         value={{
           ...this.state,
+          ...bridgedContextSlice(),
           completeOAuthLogin: this.completeOAuthLogin,
           epic: {
             library: epic.library,
@@ -2210,11 +2023,6 @@ class GlobalState extends PureComponent<Props> {
           setSideBarCollapsed: this.setSideBarCollapsed,
           setPrimaryFontFamily: this.setPrimaryFontFamily,
           setSecondaryFontFamily: this.setSecondaryFontFamily,
-          showDialogModal: this.handleShowDialogModal,
-          showResetDialog: this.showResetDialog,
-          handleExternalLinkDialog: this.handleExternalLinkDialog,
-          showRedeemKeyDialog: this.state.showRedeemKeyDialog,
-          handleRedeemKeyDialog: this.handleRedeemKeyDialog,
           hideChangelogsOnStartup: hideChangelogsOnStartup,
           setHideChangelogsOnStartup: this.setHideChangelogsOnStartup,
           lastChangelogShown: lastChangelogShown,

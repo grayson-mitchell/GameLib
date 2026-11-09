@@ -1,135 +1,113 @@
 /**
- * Source-text gate for the "Use frameless window" live refresh (quick 261102-dma, todo
+ * Gate for the "Use frameless window" live refresh (quick 261102-dma, todo
  * `2026-11-02-windows-controls-linger-after-frameless-off`).
  *
  * The bug: turning the setting OFF on Windows brought the native title bar back, but GameLib's
  * own WindowControls stayed on the tab bar too. `App.tsx` shows them while the context
- * `isFrameless` is true, and `GlobalState.tsx` seeded that value once at mount and never wrote it
+ * `isFrameless` is true, and the state owner seeded that value once at mount and never wrote it
  * again, so the toggle (which re-applies the native frame live through the preload `setSetting`)
  * never reached React.
  *
  * The real push is proven behaviourally by `src/preload/__tests__/framelessRuntime.test.ts`
- * F1-F7 (the real `setSetting` driving the real `handleFramelessChanged` subscribers). This file
- * pins the remaining two links of the chain: GlobalState writes `isFrameless` from the push, and
- * App.tsx's gate then hides WindowControls on win32 and linux and keeps them off on darwin.
- *
- * What it cannot see: it does not render anything, and it does not evaluate
- * `navigator.windowControlsOverlay`. Neither GlobalState.tsx nor App.tsx's `Root` can be imported
- * under this node-environment jest (no jsdom; GlobalState reads `window.localStorage` at module
- * scope; `Root` is not exported and needs a router), so the matchers run over the comment-stripped
- * source text, the same idiom as `GlobalStateSavedZoomWiring.test.ts`. The live Windows check is
- * recorded on the todo.
+ * F1-F7. Part A (Phase 69-06, R8) is now behavioural: it runs the real
+ * `seedAndFollowWindowChrome` against a fake `window.api` and the real uiState store, and proves
+ * the provider exposure through `bridgedContextSlice`. Part B pins App.tsx's gate; App.tsx cannot
+ * be imported under this node-environment jest (`Root` is not exported and needs a router), so it
+ * stays a source-text matcher until App converts (69-11). The live Windows check is recorded on
+ * the todo.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { defined } from './defined'
+import { resetAllStores, type StoreHooks } from '../storeKit'
+import type { UiState } from '../uiState'
 
-const globalStatePath = join(__dirname, '..', 'GlobalState.tsx')
-const appPath = join(__dirname, '..', '..', 'App.tsx')
-
-/** Balanced extractor for `open`/`close` starting at the first `open` after `marker`. */
-function extractBalanced(
-  source: string,
-  marker: string,
-  open: string,
-  close: string
-): string {
-  const markerIdx = source.indexOf(marker)
-  if (markerIdx === -1) {
-    throw new Error(`marker not found: ${marker}`)
-  }
-  // A marker that already ends in `open` (e.g. `foo(`) owns that bracket.
-  const from = marker.endsWith(open)
-    ? markerIdx + marker.length - 1
-    : markerIdx + marker.length
-  const start = source.indexOf(open, from)
-  let depth = 0
-  let i = start
-  for (; i < source.length; i++) {
-    if (source[i] === open) depth++
-    else if (source[i] === close) {
-      depth--
-      if (depth === 0) break
+// Node-env frontend project (no jsdom): give the modules a window first.
+;(globalThis as unknown as { window: object }).window = {
+  __TAURI_INTERNALS__: {
+    invoke: () => Promise.resolve(undefined),
+    transformCallback: () => 0,
+    unregisterCallback: () => undefined,
+    metadata: {
+      currentWindow: { label: 'main' },
+      currentWebview: { label: 'main' }
     }
   }
-  return source.slice(start, i + 1)
 }
 
-const SEED = 'isFrameless: await window.api.isFrameless()'
-const SUBSCRIBE = 'window.api.handleFramelessChanged('
+const appPath = join(__dirname, '..', '..', 'App.tsx')
 
-/** Describe A: the list of GlobalState wiring rules the source violates (empty = wired). */
-function globalStateWiringViolations(strippedSource: string): string[] {
+type ChromeImpl = () => Promise<void>
+
+interface FakeChrome {
+  order: string[]
+  fullscreenHandlers: Array<(e: unknown, v: boolean) => void>
+  framelessHandlers: Array<(v: boolean) => void>
+}
+
+function installFakeChromeApi(seed: {
+  isFullscreen: boolean
+  isFrameless: boolean
+}): FakeChrome {
+  const fake: FakeChrome = {
+    order: [],
+    fullscreenHandlers: [],
+    framelessHandlers: []
+  }
+  ;(window as unknown as { api: unknown }).api = {
+    isFullscreen: () => {
+      fake.order.push('seed')
+      return Promise.resolve(seed.isFullscreen)
+    },
+    isFrameless: () => {
+      fake.order.push('seed')
+      return Promise.resolve(seed.isFrameless)
+    },
+    handleFullscreen: (fn: (e: unknown, v: boolean) => void) => {
+      fake.order.push('subscribe')
+      fake.fullscreenHandlers.push(fn)
+    },
+    handleFramelessChanged: (fn: (v: boolean) => void) => {
+      fake.order.push('subscribe')
+      fake.framelessHandlers.push(fn)
+    }
+  }
+  return fake
+}
+
+/** Describe A: the wiring rules `impl` violates against the real store (empty = wired). */
+async function chromeViolations(
+  impl: ChromeImpl,
+  store: StoreHooks<UiState>
+): Promise<string[]> {
   const violations: string[] = []
+  resetAllStores()
+  const fake = installFakeChromeApi({ isFullscreen: false, isFrameless: true })
+  await impl()
 
-  let didMount: string
-  try {
-    didMount = extractBalanced(
-      strippedSource,
-      'async componentDidMount()',
-      '{',
-      '}'
-    )
-  } catch {
-    return ['componentDidMount block present']
+  if (store.getState().isFrameless !== true) {
+    violations.push('A1: the mount-time isFrameless seed is written')
   }
-
-  const seedIdx = didMount.indexOf(SEED)
-  if (seedIdx === -1) {
-    violations.push('A1: the mount-time isFrameless seed is still present')
+  const firstSubscribe = fake.order.indexOf('subscribe')
+  const lastSeed = fake.order.lastIndexOf('seed')
+  if (firstSubscribe === -1) {
+    violations.push('A2: it subscribes to handleFramelessChanged')
+  } else if (lastSeed === -1 || firstSubscribe < lastSeed) {
+    violations.push('A2: the subscription sits after the mount-time seed')
   }
-
-  const callIdx = didMount.indexOf(SUBSCRIBE)
-  if (callIdx === -1) {
-    violations.push(
-      'A2: componentDidMount subscribes to handleFramelessChanged'
-    )
-  } else {
-    if (seedIdx !== -1 && callIdx <= seedIdx) {
-      violations.push('A2: the subscription sits after the mount-time seed')
-    }
-
-    const call = extractBalanced(didMount, SUBSCRIBE, '(', ')')
-    const arrow = call.match(
-      /^\(\s*\(\s*([A-Za-z_$][\w$]*)\s*(?::\s*boolean)?\s*\)\s*=>([\s\S]*)\)$/
-    )
-    if (!arrow) {
+  const handler = fake.framelessHandlers[0]
+  if (handler) {
+    handler(false)
+    const afterOff = store.getState().isFrameless
+    handler(true)
+    const afterOn = store.getState().isFrameless
+    if (afterOff !== false || afterOn !== true) {
       violations.push(
-        'A3: the subscription argument is an arrow function with one parameter'
+        'A3: the handler writes the pushed value into isFrameless'
       )
-    } else {
-      const param = defined(arrow[1], 'arrow param')
-      const body = defined(arrow[2], 'arrow body')
-      const escaped = param.replace(/\$/g, '\\$')
-      const assigned = new RegExp(
-        `this\\.setState\\(\\s*\\{\\s*isFrameless\\s*:\\s*${escaped}\\s*\\}`
-      )
-      const shorthand = /this\.setState\(\s*\{\s*isFrameless\s*\}/
-      const writes =
-        assigned.test(body) || (param === 'isFrameless' && shorthand.test(body))
-      if (!writes) {
-        violations.push(
-          'A3: the handler writes the pushed value into state.isFrameless'
-        )
-      }
     }
   }
-
-  try {
-    const provider = extractBalanced(
-      strippedSource,
-      '<ContextProvider.Provider',
-      '{',
-      '}'
-    )
-    if (!/\.\.\.this\.state/.test(provider)) {
-      violations.push('A4: the Provider value spreads ...this.state')
-    }
-  } catch {
-    violations.push('A4: ContextProvider.Provider value present')
-  }
-
   return violations
 }
 
@@ -224,11 +202,31 @@ function gateShows(
   })
 }
 
-describe('GlobalState.tsx -- isFrameless follows the frameless push (261102-dma)', () => {
-  const stripped = stripSourceComments(readFileSync(globalStatePath, 'utf-8'))
+describe('seedAndFollowWindowChrome -- isFrameless follows the frameless push (261102-dma)', () => {
+  let useUiState: StoreHooks<UiState>
+  let seedAndFollowWindowChrome: ChromeImpl
+  let bridgedContextSlice: () => { isFrameless: boolean }
 
-  it('A: the real source seeds once, then subscribes and writes the pushed value into state', () => {
-    expect(globalStateWiringViolations(stripped)).toEqual([])
+  beforeAll(async () => {
+    useUiState = (await import('../uiState')).default
+    ;({ seedAndFollowWindowChrome } = await import('../initStateSubscriptions'))
+    ;({ bridgedContextSlice } = await import('../bridgeContextValue'))
+  })
+
+  afterEach(() => resetAllStores())
+
+  it('A: the real implementation seeds once, then subscribes and writes the pushed value', async () => {
+    expect(
+      await chromeViolations(seedAndFollowWindowChrome, useUiState)
+    ).toEqual([])
+  })
+
+  it('A4: the provider exposes the store value through the bridge', async () => {
+    installFakeChromeApi({ isFullscreen: false, isFrameless: true })
+    await seedAndFollowWindowChrome()
+    expect(bridgedContextSlice().isFrameless).toBe(true)
+    useUiState.setState({ isFrameless: false })
+    expect(bridgedContextSlice().isFrameless).toBe(false)
   })
 })
 
@@ -264,87 +262,89 @@ describe('App.tsx -- the WindowControls gate across the frameless flip (261102-d
 })
 
 describe('SELF-TEST (anti-vacuity, REQUIRED) -- the matchers can convict', () => {
-  const wiredDidMount = [
-    'class GlobalState {',
-    '  async componentDidMount() {',
-    '    this.setState({',
-    '      isFullscreen: await window.api.isFullscreen(),',
-    `      ${SEED}`,
-    '    })',
-    '    window.api.handleFullscreen((e, isFullscreen) => {',
-    '      this.setState({ isFullscreen })',
-    '    })',
-    '    window.api.handleFramelessChanged((isFrameless: boolean) =>',
-    '      this.setState({ isFrameless })',
-    '    )',
-    '  }',
-    '  render() {',
-    '    return (',
-    '      <ContextProvider.Provider value={{ ...this.state, other: 1 }}>',
-    '      </ContextProvider.Provider>',
-    '    )',
-    '  }',
-    '}'
-  ].join('\n')
+  let useUiState: StoreHooks<UiState>
+  let seedAndFollowWindowChrome: ChromeImpl
 
-  it('positive control: a correctly wired fixture has no violations', () => {
-    expect(globalStateWiringViolations(wiredDidMount)).toEqual([])
+  beforeAll(async () => {
+    useUiState = (await import('../uiState')).default
+    ;({ seedAndFollowWindowChrome } = await import('../initStateSubscriptions'))
   })
 
-  it('S1: the pre-fix componentDidMount (seed and handleFullscreen only) convicts A2', () => {
-    const preFix = wiredDidMount.replace(
-      /\n {4}window\.api\.handleFramelessChanged\([\s\S]*?\n {4}\)\n/,
-      '\n'
-    )
-    expect(preFix).not.toContain(SUBSCRIBE)
-    expect(globalStateWiringViolations(preFix)).toEqual(
-      expect.arrayContaining([
-        'A2: componentDidMount subscribes to handleFramelessChanged'
-      ])
+  afterEach(() => resetAllStores())
+
+  const api = () =>
+    (
+      window as unknown as {
+        api: {
+          isFullscreen: () => Promise<boolean>
+          isFrameless: () => Promise<boolean>
+          handleFullscreen: (fn: (e: unknown, v: boolean) => void) => void
+          handleFramelessChanged: (fn: (v: boolean) => void) => void
+        }
+      }
+    ).api
+
+  it('positive control: the real implementation has no violations', async () => {
+    expect(
+      await chromeViolations(seedAndFollowWindowChrome, useUiState)
+    ).toEqual([])
+  })
+
+  it('S1: an implementation that never subscribes convicts A2', async () => {
+    const noSubscribe: ChromeImpl = async () => {
+      useUiState.setState({
+        isFullscreen: await api().isFullscreen(),
+        isFrameless: await api().isFrameless()
+      })
+    }
+    expect(await chromeViolations(noSubscribe, useUiState)).toEqual(
+      expect.arrayContaining(['A2: it subscribes to handleFramelessChanged'])
     )
   })
 
-  it('S2: a subscription placed BEFORE the seed convicts A2', () => {
-    const before = [
-      'class GlobalState {',
-      '  async componentDidMount() {',
-      '    window.api.handleFramelessChanged((isFrameless: boolean) =>',
-      '      this.setState({ isFrameless })',
-      '    )',
-      '    this.setState({',
-      `      ${SEED}`,
-      '    })',
-      '  }',
-      '  render() {',
-      '    return <ContextProvider.Provider value={{ ...this.state }} />',
-      '  }',
-      '}'
-    ].join('\n')
-    expect(globalStateWiringViolations(before)).toEqual(
+  it('S2: a fake that subscribes BEFORE seeding convicts A2', async () => {
+    const subscribeFirst: ChromeImpl = async () => {
+      api().handleFramelessChanged((isFrameless) =>
+        useUiState.setState({ isFrameless })
+      )
+      useUiState.setState({
+        isFullscreen: await api().isFullscreen(),
+        isFrameless: await api().isFrameless()
+      })
+    }
+    expect(await chromeViolations(subscribeFirst, useUiState)).toEqual(
       expect.arrayContaining([
         'A2: the subscription sits after the mount-time seed'
       ])
     )
   })
 
-  it('S3: a handler that writes a constant instead of the pushed value convicts A3', () => {
-    const constant = wiredDidMount.replace(
-      'this.setState({ isFrameless })\n    )',
-      'this.setState({ isFrameless: true })\n    )'
-    )
-    expect(constant).not.toBe(wiredDidMount)
-    expect(globalStateWiringViolations(constant)).toEqual(
+  it('S3: a handler that writes a constant instead of the pushed value convicts A3', async () => {
+    const constant: ChromeImpl = async () => {
+      useUiState.setState({
+        isFullscreen: await api().isFullscreen(),
+        isFrameless: await api().isFrameless()
+      })
+      api().handleFramelessChanged(() =>
+        useUiState.setState({ isFrameless: true })
+      )
+    }
+    expect(await chromeViolations(constant, useUiState)).toEqual(
       expect.arrayContaining([
-        'A3: the handler writes the pushed value into state.isFrameless'
+        'A3: the handler writes the pushed value into isFrameless'
       ])
     )
   })
 
-  it('S4: a Provider value without ...this.state convicts A4', () => {
-    const noSpread = wiredDidMount.replace('...this.state, ', '')
-    expect(noSpread).not.toBe(wiredDidMount)
-    expect(globalStateWiringViolations(noSpread)).toEqual(
-      expect.arrayContaining(['A4: the Provider value spreads ...this.state'])
+  it('S4: an implementation that never seeds convicts A1', async () => {
+    const noSeed: ChromeImpl = () => {
+      api().handleFramelessChanged((isFrameless) =>
+        useUiState.setState({ isFrameless })
+      )
+      return Promise.resolve()
+    }
+    expect(await chromeViolations(noSeed, useUiState)).toEqual(
+      expect.arrayContaining(['A1: the mount-time isFrameless seed is written'])
     )
   })
 

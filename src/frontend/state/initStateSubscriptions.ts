@@ -10,11 +10,33 @@
  * The componentDidMount tail (awaited seeding, mount-time refreshLibrary,
  * frontendReady) is NOT moved here until plan 69-24 adds `runPostMountBoot()`.
  * frontendReady must keep its post-first-commit timing because the backend
- * treats it as "renderer listeners mounted".
+ * treats it as "renderer listeners mounted". Statements at or after the first
+ * `await` stay in componentDidMount as calls to the named exports below (R10).
  *
  * Never read `window.localStorage` at module scope: node-env tests must be
  * able to import this file.
  */
+import { getGameInfo } from '../helpers'
+import { createConnectivitySync } from '../helpers/connectivitySync'
+import { isStore } from 'common/storeCapabilities'
+import type { GameStatus } from 'common/types'
+import useUiState, { readInitialUi } from './uiState'
+import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
+import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
+import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
+import { handleSteamBridgeRouteNoticeSignal } from './SteamBridgeRouteNotice'
+import { handleSteamGoOfflineRequiredSignal } from './SteamGoOfflineNotice'
+import { handleEngineStateChangedSignal } from './EngineState'
+import { handleSteamRequestNoticeSignal } from './SteamRequestNotice'
+import { handleReadOnlyStoresNoticeSignal } from './ReadOnlyStoresNotice'
+import { handleSteamBottleLaunchWaitingSignal } from './BottleLaunchWaiting'
+
+// The class captured `libraryStatus` at componentDidMount, which is always the
+// initial `[]`, so the "already installing" guard below never fires. Preserved
+// as-is (Phase 69 no-behaviour-change); see
+// .planning/todos/pending/2026-11-10-install-game-push-stale-status-and-unread-modal-state.md
+const LIBRARY_STATUS_AT_REGISTRATION: GameStatus[] = []
+
 let initialised = false
 
 export function initStateSubscriptions(): void {
@@ -22,10 +44,110 @@ export function initStateSubscriptions(): void {
   initialised = true
 
   // (1) re-read persisted initial state into each store (readInitial)
+  useUiState.setState(readInitialUi())
 
   // (2) window.api.handle* listeners
 
+  window.api.handleInstallGame(async (e, appName, runner) => {
+    const currentApp = LIBRARY_STATUS_AT_REGISTRATION.filter(
+      (game) => game.appName === appName
+    )[0]
+    if (!currentApp || (currentApp && currentApp.status !== 'installing')) {
+      const gameInfo = await getGameInfo(appName, runner)
+      if (!gameInfo || isStore(gameInfo, 'sideload')) {
+        return
+      }
+      useUiState.setState({
+        showInstallModal: { show: true, appName, runner, gameInfo }
+      })
+    }
+  })
+
+  // Phase 17 (17-06), D-07: opens the guided bottle-setup flow whenever the
+  // backend emits `steamBottleSetupRequired` (every Install/Play entry point).
+  // No frontend eligibility check on gameInfo.is_mac_native (D-11 stays
+  // backend-owned).
+  window.api.handleSteamBottleSetupRequired(
+    handleSteamBottleSetupRequiredSignal
+  )
+  // Phase 21 (21-10), D-10/D-11: native Steam-CLIENT guided-install flow.
+  window.api.handleSteamClientSetupRequired(
+    handleSteamClientSetupRequiredSignal
+  )
+  // Phase 24 (24-09), R7/D-05: explicit bridge-failure dialog, never a silent
+  // auto-fallback, never a dead end.
+  window.api.handleSteamBridgeSetupRequired(
+    handleSteamBridgeSetupRequiredSignal
+  )
+  // Phase 51 Plan 13 (D-51-08/11): up-front bridge ROUTE notice, fired BEFORE
+  // any install attempt for a known-bad / scan-miss / win64-no-shim route.
+  window.api.handleSteamBridgeRouteNotice(handleSteamBridgeRouteNoticeSignal)
+  // Phase 54: guided Go Offline step when the go-offline wrap did not see Mac
+  // Steam log off; no logon happened.
+  window.api.handleSteamGoOfflineRequired(handleSteamGoOfflineRequiredSignal)
+  // Phase 59 Plan 11: backend-computed per-title engine state for the game page.
+  window.api.handleEngineStateChanged(handleEngineStateChangedSignal)
+  // quick 261106-pvk: Steam never picked up a delegated install/uninstall.
+  window.api.handleSteamRequestNotice(handleSteamRequestNoticeSignal)
+  window.api.handleReadOnlyStoresNotice(handleReadOnlyStoresNoticeSignal)
+  // Phase 51 Plan 08 (D-51-16): records a bottled-Steam launch's "waiting for
+  // Steam" classification; the matching clear() lives in handleGameStatus.
+  window.api.handleSteamBottleLaunchWaiting(
+    handleSteamBottleLaunchWaitingSignal
+  )
+
   // (3) store.subscribe side effects (D-08)
+}
+
+/**
+ * R10: the first awaited statement of componentDidMount. Seeds both flags,
+ * THEN follows the pushes (a push before the seed would be overwritten by it).
+ */
+export async function seedAndFollowWindowChrome(): Promise<void> {
+  useUiState.setState({
+    isFullscreen: await window.api.isFullscreen(),
+    isFrameless: await window.api.isFrameless()
+  })
+  window.api.handleFullscreen((_e, isFullscreen: boolean) => {
+    useUiState.setState({ isFullscreen })
+  })
+  // quick 261102-dma: follow the Use frameless window toggle after the seed
+  // above, so the WindowControls gate does not keep showing GameLib's buttons
+  // next to the native frame.
+  window.api.handleFramelessChanged((isFrameless: boolean) =>
+    useUiState.setState({ isFrameless })
+  )
+}
+
+export function registerControllerListener(): void {
+  window.addEventListener(
+    'controller-changed',
+    (e: CustomEvent<{ controllerId: string }>) => {
+      document.body.classList.toggle(
+        'controllerLayout',
+        e.detail.controllerId !== ''
+      )
+      useUiState.setState({ activeController: e.detail.controllerId })
+    }
+  )
+}
+
+/**
+ * Keep `connectivity` equal to the sidecar's. The pushes and the one pull reach
+ * the webview by different routes, so arrival order says nothing about which
+ * is newer; connectivitySync orders them by the sidecar's epoch/seq stamp and
+ * re-pulls after a quiet spell while not online.
+ */
+export function followConnectivity(): void {
+  const connectivitySync = createConnectivitySync({
+    pull: () => window.api.getConnectivityStatus(),
+    onChange: (connectivity) => useUiState.setState({ connectivity }),
+    log: (message) => window.api.logInfo(message)
+  })
+  window.api.onConnectivityChanged((_, snapshot) =>
+    connectivitySync.receive(snapshot)
+  )
+  void connectivitySync.pull()
 }
 
 /** @public Test-only: lets a test prove the once-guard. */

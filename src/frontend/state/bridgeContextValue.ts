@@ -7,13 +7,28 @@ import useUiState from './uiState'
 // Each later slice plan adds its store to both functions; 69-24 deletes this
 // file together with GlobalState.tsx.
 
+type BridgedKeys =
+  | 'platform'
+  | 'error'
+  | 'isFullscreen'
+  | 'isFrameless'
+  | 'activeController'
+  | 'connectivity'
+  | 'dialogModalOptions'
+  | 'externalLinkDialogOptions'
+  | 'showRedeemKeyDialog'
+  | 'showDialogModal'
+  | 'showResetDialog'
+  | 'handleExternalLinkDialog'
+  | 'handleRedeemKeyDialog'
+
 /** Subscribes `onChange` to every bridged store. Lasts for the app's life (D-07). */
 export function subscribeBridge(onChange: () => void): void {
   useUiState.subscribe(onChange)
 }
 
 /** The store-owned context fields, read at call time. */
-export function bridgedContextSlice(): Partial<ContextType> {
+export function bridgedContextSlice(): Pick<ContextType, BridgedKeys> {
   const ui = useUiState.getState()
   return {
     platform: ui.platform,
