@@ -32,7 +32,17 @@ Since 73-17 the pipeline defaults to `rust`, so no env var is needed. Every item
 
 ## Current Test
 
-[not started; plan 73-18 fills in the session dir and preflight here]
+Session dir: the 73-18 executor's scratchpad `uat73/` (not committed). It holds `prep.sh`, `restore.sh`, `start-monitors.sh` (a 1 s process and install-tree monitor plus cumulative `tail -F` copies of both logs, because every launch rotates `gamelib.log`), `kill-sidecar-at.sh` (item 4) and `evidence.sh`.
+
+Preflight, checked from local state on 2026-11-09 before handing the session to the operator:
+
+- `pnpm build:sidecar` exit 0 at 21:29; `build/main/sidecar.js` carries `DEPOT_PIPELINE_DEFAULT = "rust"`. `GAMELIB_DEPOT_PIPELINE` is unset in the shell and in launchctl.
+- No `sidecar.js`, `gamelib-shell` or `gamelib-sidecar` process running.
+- Native titles, both not installed in the real Steam library and absent from every known-fix table (`public/fixes`, the user `fixes` dir): Civilization V (8930, macOS depots, 64-bit, about 7.2 GiB) for items 1 and 2; Project Zomboid (108600, one macOS depot of 10.5 GB, 64-bit) for items 4, 7, 9 and 3, in that order, because each needs a mid-install and cancel ends the chain.
+- Bridge title for items 5 and 8: Schedule I: Free Sample (3205720), installed in its bridge bottle with the GameLib shim live and `steam_api64.dll.gamelib-orig` present (sha1 `20e68794`). Its only fix entry is a graphics-backend env var, not a routing fix. Item 8 runs first, on the current install: Verify and Repair only fetches originals when a shim has lost its `.gamelib-orig`, so `prep.sh` moves that file into the session dir. Pass means a `select_files` outcome line and a rewritten `.gamelib-orig` with the same sha1. The restore writes the backup only and never touches the live shim, so "original DLLs are back" is read as the backup being back. Item 5 then uninstalls (which removes the per-game bottle) and reinstalls.
+- Shared-redist title for item 6: Amnesia (57300), installed in its bridge bottle. It declares depot 228983 (vcredist 2010). Its ledger was settled (`settled.at` 2026-11-05, restored from the 73-16 backup) and the GameLib `sharedRedist` cache indexes 228983, so without a reset the launch would take the "already settled" fast path and no Rust job would run. `prep.sh` backs up the ledger (`.uat73-bak`), drops `settled`, empties `done`, and moves the cache aside (`sharedRedist.uat73-bak`). Amnesia reaches the bridge through the `macArch: "32"` known fix. That routing is not under test here: item 6 tests the redist job.
+- Item 4 uses the dead-sidecar dialog's **Quit**, not Restart: `app.restart()` under `tauri dev` has never been exercised, and the precondition allows either. The relaunch goes through `pnpm tauri:dev` and the startup breadcrumb resume.
+- Unrelated residue: the 73-16 parity folder is still registered in Steam's `libraryfolders.vdf`, and Steam rewrote a Stellaris `appmanifest_281990.acf` into it at 21:17.
 
 ## Tests
 
