@@ -734,27 +734,6 @@ type PrimaryListener = WindowsPrimaryPipe;
 #[cfg(not(any(unix, windows)))]
 type PrimaryListener = ();
 
-/// `RunEvent::ExitRequested`: observed, never prevented.
-fn handle_exit_requested(app_handle: &tauri::AppHandle, code: Option<i32>) {
-    // OBSERVED, NEVER PREVENTED. A routed quit arrives as `code: Some(0)` (`app.exit(0)`
-    // from the `app_exit` arm), which makes this line the live gate's proof that a quit
-    // took the sidecar route rather than `terminate:`. `code: None` is emitted only AFTER
-    // the last window is destroyed, so stopping it would strand a windowless app; and
-    // on macOS Cmd+Q / Dock Quit never arrive here at all (`terminate:` goes straight to
-    // `applicationWillTerminate:`; `macos_terminate_veto` vetoes it before that).
-    shell_diag(&format!("exit requested (code={code:?})"));
-    // D-03: this arm never calls `prevent_exit()` (a vetoed quit never reaches it),
-    // so every arrival is an intentional exit: flag it before the sidecar closes.
-    if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
-        state.begin_shutdown();
-    }
-    // The shell's own exits carry `Some(_)`: from here a `terminate:` must not veto.
-    #[cfg(target_os = "macos")]
-    if code.is_some() {
-        macos_terminate_veto::mark_exiting();
-    }
-}
-
 /// `RunEvent::Exit`: cancel depot jobs, reap the sidecar, release power assertions, remove the socket.
 fn handle_exit(app_handle: &tauri::AppHandle, single_instance_socket_path: Option<&std::path::Path>) {
     // D-08: cancel every depot job and give finalize (the 1026 record) up to 5 s to
@@ -1863,7 +1842,25 @@ fn main() {
         // The `RunEvent::Exit` reap remains the backstop for logout/shutdown (which must not be
         // blocked) and for the `exit(0)` fallbacks; Dock Quit is routed by `macos_terminate_veto`.
         .run(move |app_handle, event| match event {
-            tauri::RunEvent::ExitRequested { code, .. } => handle_exit_requested(app_handle, code),
+            // OBSERVED, NEVER PREVENTED. A routed quit arrives as `code: Some(0)` (`app.exit(0)`
+            // from the `app_exit` arm), which makes this line the live gate's proof that a quit
+            // took the sidecar route rather than `terminate:`. `code: None` is emitted only AFTER
+            // the last window is destroyed, so stopping it would strand a windowless app; and
+            // on macOS Cmd+Q / Dock Quit never arrive here at all (`terminate:` goes straight to
+            // `applicationWillTerminate:`; `macos_terminate_veto` vetoes it before that).
+            tauri::RunEvent::ExitRequested { code, .. } => {
+                shell_diag(&format!("exit requested (code={code:?})"));
+                // D-03: this arm never calls `prevent_exit()` (a vetoed quit never reaches it),
+                // so every arrival is an intentional exit: flag it before the sidecar closes.
+                if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
+                    state.begin_shutdown();
+                }
+                // The shell's own exits carry `Some(_)`: from here a `terminate:` must not veto.
+                #[cfg(target_os = "macos")]
+                if code.is_some() {
+                    macos_terminate_veto::mark_exiting();
+                }
+            }
             tauri::RunEvent::Exit => handle_exit(app_handle, single_instance_socket_path_var.as_deref()),
             _ => {}
         });
