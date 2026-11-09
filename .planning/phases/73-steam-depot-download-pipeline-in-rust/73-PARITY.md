@@ -54,3 +54,8 @@ The TS run's launch logged `shared redists already settled, nothing to do`, so t
 Order: TS relaunch and one Schedule I launch (TS redist job) -> rename the new `sharedRedist` to `sharedRedist.ts-out` and reset the bottle ledger's `settled` and `done` again -> Rust run and one Schedule I launch (Rust redist job).
 
 Restore after the plan: delete the Rust-run `sharedRedist`, and `sharedRedist.ts-out` once compared, rename the original `sharedRedist.ts-parity` back to `sharedRedist`, and copy `gamelib-shared-redists.json.parity-bak` back over the bottle ledger.
+
+### Redist bullet: Schedule I opts into no shared redists
+With an authenticated session (explicit Refresh, then Play within the 60 s idle grace) the TS redist step for Schedule I ran and settled with `optIn=[]`, `depotIds=[]`: the game opts into no shared redists, so there is nothing to download and no `Steamworks Shared` output to compare. Schedule I therefore cannot cover the shared-redist bullet. A replacement title that opts into shared redists is needed (operator decision). Nothing else was set aside this round; the Schedule I game tree in the bridge bottle was not renamed.
+
+Observation for a follow-up todo: after Ctrl-C of `tauri dev`, the sidecar (parent pid 1) was still running about 20 s after its stdin-closed log line, in two successive rounds.
