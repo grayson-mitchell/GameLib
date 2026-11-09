@@ -1,0 +1,46 @@
+{
+  "era": "baseline",
+  "runs": 5,
+  "steps": {
+    "toggleAppearance": {
+      "Library": {
+        "count": 1,
+        "actualDurationMs": 19.76
+      },
+      "GameCard": {
+        "count": 100,
+        "actualDurationMs": 18.4
+      }
+    },
+    "gameStatusPush": {
+      "Library": {
+        "count": 3,
+        "actualDurationMs": 37.73
+      },
+      "GameCard": {
+        "count": 200,
+        "actualDurationMs": 36.45
+      }
+    },
+    "dialogOpenClose": {
+      "Library": {
+        "count": 2,
+        "actualDurationMs": 38.24
+      },
+      "GameCard": {
+        "count": 200,
+        "actualDurationMs": 35.68
+      }
+    },
+    "libraryRefreshPush": {
+      "Library": {
+        "count": 3,
+        "actualDurationMs": 50.52
+      },
+      "GameCard": {
+        "count": 266,
+        "actualDurationMs": 47.84
+      }
+    }
+  }
+}
