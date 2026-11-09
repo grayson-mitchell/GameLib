@@ -856,7 +856,7 @@ Plans:
 
 **Wave 10** *(blocked on Wave 9 completion)*
 
-- [ ] 73-16-PLAN.md — Real-corpus parity run and D-17 comparison (checkpoints)
+- [x] 73-16-PLAN.md — Real-corpus parity run and D-17 comparison (checkpoints)
 
 **Wave 11** *(blocked on Wave 10 completion)*
 

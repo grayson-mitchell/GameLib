@@ -1,6 +1,6 @@
 # Phase 73 Parity Report (plan 73-16)
 
-Status: both runs done, sweep exit code 1 (ACF diffs, collision path not exercised), awaiting the operator.
+Status: APPROVED by the operator. Sweep exit code 1 is an explained deviation (ACF diffs are Steam's own rewrite after adoption).
 
 ## Corpus (Task 1, operator decision: option-a with edits)
 
@@ -166,3 +166,19 @@ The six Phase 74 stale bridge fixtures (Manor Lords, Core Keeper, Abiotic Factor
 2. Collision bullet not exercised (needs a replacement or an added title).
 3. Peak RSS not sampled.
 4. Cleanup and restore (see the restore notes above) are still to be done: the `.ts-parity` and `.ts-out` copies, both bottle ledgers, the real-library Civ V reinstall.
+
+## Operator verdict: APPROVED
+
+The operator approved the parity run and D-17 with these points:
+- (a) The ACF differences are Steam's own rewrite after adoption, not a pipeline defect. Neither writer emits `BytesToStage`, `DownloadType` or `TargetBuildID` (no hits in `src-tauri/crates/gamelib-depot/src` or `src/backend/storeManagers/steam`). Both writers use the same bytes rule (`acf.rs:289`, `bytes: if can4 { Some(size) }`, and `finalize.ts:147`). The TS counters (for example downloaded 5515564032 not equal to staged 7716100293) are Steam download-state values, not anything our code wrote. D-14 is met on file trees. ACF text equivalence at write time is covered by the Tier 1 goldens.
+- (b) The collision path is accepted as not exercised live. It is covered by the Tier 1 fixtures. XCOM: Enemy Unknown (200510) is the candidate for a future live check.
+- (c) Peak RSS is accepted as not sampled. This is a known evidence gap for D-17.
+- (d) D-15 first gate (zero parity diffs) is met: zero file-tree diffs, and the ACF diffs are explained by (a).
+
+Explained deviation: Task 3's automated verify (`exit code: 0`) cannot pass because the sweep exits 1 on the ACF fields. The sweep and the goldens were not edited.
+
+## Still to restore (left to the orchestrator and operator)
+- Delete the Rust-run installs and rename the `.ts-parity` copies back, or remove the parity library.
+- Delete `sharedRedist`, rename `sharedRedist.ts-out` away and `sharedRedist.ts-parity` back to `sharedRedist`.
+- Copy each bottle's `gamelib-shared-redists.json.parity-bak` (Schedule I and Amnesia bottles) back over its ledger.
+- Reinstall Civ V in the real library.
