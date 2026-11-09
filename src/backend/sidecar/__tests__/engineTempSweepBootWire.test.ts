@@ -1,8 +1,8 @@
 /**
  * Sidecar boot wiring for the stale engine temp sweep (G20, phase 59-33).
  *
- * Dedicated file for the same reason as playtimeLockBootClear.test.ts: init() sits behind
- * module-scope once-guards, and a virgin file gets a virgin module registry and guard flag.
+ * Dedicated file for the same reason as playtimeLockBootClear.test.ts: each case boots once via bootFresh()
+ * in a fresh module registry (D-08).
  */
 jest.mock('backend/store_backend', () => ({
   __esModule: true,
@@ -24,17 +24,14 @@ jest.mock('backend/engine/fallbackEngine', () => ({
   sweepStaleEngineTemps: () => mockSweep()
 }))
 
-import { PassThrough } from 'node:stream'
-import { init } from '../bootstrap'
+import { bootFresh } from './helpers/sidecarHarness'
 
 describe('G20: sidecar boot sweeps stale engine temp dirs', () => {
-  it('init() calls the sweep once after initLogger, survives a throwing sweep, and does not re-run it', () => {
+  it('one boot calls the sweep exactly once after initLogger and survives a throwing sweep', () => {
     mockSweep.mockImplementationOnce(() => {
       throw new Error('boom')
     })
-    expect(() => init(new PassThrough(), new PassThrough())).not.toThrow()
-    expect(mockSweep).toHaveBeenCalledTimes(1)
-    init(new PassThrough(), new PassThrough())
+    expect(() => bootFresh()).not.toThrow()
     expect(mockSweep).toHaveBeenCalledTimes(1)
   })
 })

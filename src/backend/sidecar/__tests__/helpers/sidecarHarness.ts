@@ -78,6 +78,34 @@ export function startSidecar(): { input: PassThrough; frames: Frame[] } {
   return { input, frames }
 }
 
+export interface FreshSidecar {
+  input: PassThrough
+  output: PassThrough
+  frames: Frame[]
+}
+
+/**
+ * D-08: one boot per test case in a fresh module registry. Read mocks and
+ * registries with require() after this call. 66-08 switches the boot to
+ * bootSidecar(createTestContext().ctx, ...).
+ *
+ * Order: jest.resetModules(), then `before` (configure mocks against the
+ * fresh registry), then require bootstrap fresh and boot exactly once.
+ */
+export function bootFresh(opts?: { before?: () => void }): FreshSidecar {
+  jest.resetModules()
+  opts?.before?.()
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { init: freshInit } = require('../../bootstrap') as {
+    init: (input: PassThrough, output: PassThrough) => void
+  }
+  const input = new PassThrough()
+  const output = new PassThrough()
+  const frames = collectFrames(output)
+  freshInit(input, output)
+  return { input, output, frames }
+}
+
 /** Writes an `invoke` request frame to the sidecar's input stream. */
 export function writeInvoke(
   input: PassThrough,

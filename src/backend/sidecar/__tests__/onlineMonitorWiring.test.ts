@@ -62,12 +62,30 @@ jest.mock('axios', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { PassThrough } from 'node:stream'
-import { init } from '../bootstrap'
-import { handlerRegistry, listenerRegistry } from '../../platform'
-import axios from 'axios'
+import { bootFresh } from './helpers/sidecarHarness'
 
-const mockedAxiosHead = axios.head as jest.Mock
+type Handler = (...args: unknown[]) => unknown
+// Re-read after every bootFresh(): jest.resetModules() makes each boot's registries and mocks
+// different objects from any top-level import.
+let handlerRegistry: Map<string, Handler>
+let listenerRegistry: Map<string, unknown[]>
+
+/** Boots once in a fresh registry and binds the registries that boot wired. */
+function boot(opts?: { before?: () => void }) {
+  const sidecar = bootFresh({
+    before: () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const axios = require('axios').default
+      axios.head.mockResolvedValue({ status: 200 })
+      opts?.before?.()
+    }
+  })
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const platform = require('../../platform')
+  handlerRegistry = platform.handlerRegistry
+  listenerRegistry = platform.listenerRegistry
+  return sidecar
+}
 
 /** Waits a couple of microtask/macrotask turns for the mocked-axios ping chain to settle. */
 async function flush(): Promise<void> {
@@ -75,47 +93,24 @@ async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
 }
 
-beforeEach(() => {
-  // resetMocks: true wipes any factory-supplied implementation before every test (same
-  // gotcha dialogStub.test.ts/lifecycleStub.test.ts document) -- default to a resolved ping
-  // (healthy/online) so tests that don't care about the exact outcome aren't left hanging.
-  mockedAxiosHead.mockResolvedValue({ status: 200 })
-})
-
 describe('sidecar bootstrap wires the online monitor for real (fix/steam-native-install-stability, 33-05 live-gate gap)', () => {
   it('registers the get-connectivity-status handler', () => {
-    init(new PassThrough(), new PassThrough())
+    boot()
 
     expect(handlerRegistry.has('get-connectivity-status')).toBe(true)
   })
 
-  it('is idempotent: calling init() again does not re-register connectivity-changed/set-connectivity-online listeners', () => {
-    init(new PassThrough(), new PassThrough())
-    const changedBefore = (listenerRegistry.get('connectivity-changed') ?? [])
-      .length
-    const setOnlineBefore = (
-      listenerRegistry.get('set-connectivity-online') ?? []
-    ).length
+  it('one boot registers exactly one connectivity-changed and one set-connectivity-online listener', () => {
+    boot()
 
-    // A second (and third) init() call -- production never does this, but every other test
-    // in this file (and bootstrap.test.ts/skeletonFlows.test.ts) call init() repeatedly
-    // against fresh streams, so this must hold regardless of how many times init() has
-    // already run in this process.
-    init(new PassThrough(), new PassThrough())
-    init(new PassThrough(), new PassThrough())
-
-    expect((listenerRegistry.get('connectivity-changed') ?? []).length).toBe(
-      changedBefore
-    )
+    expect((listenerRegistry.get('connectivity-changed') ?? []).length).toBe(1)
     expect((listenerRegistry.get('set-connectivity-online') ?? []).length).toBe(
-      setOnlineBefore
+      1
     )
   })
 
   it('regression guard: with net.isOnline() -> true and a healthy ping, the connectivity path reaches online, never gets stuck at offline', async () => {
-    mockedAxiosHead.mockResolvedValue({ status: 200 })
-
-    init(new PassThrough(), new PassThrough())
+    boot()
     await flush()
 
     const handler = handlerRegistry.get('get-connectivity-status')
@@ -130,5 +125,33 @@ describe('sidecar bootstrap wires the online monitor for real (fix/steam-native-
     // all under the sidecar. Post-fix, with net.isOnline() -> true (platformApi) and a
     // healthy ping (mocked axios.head), the status must reach 'online' -- never 'offline'.
     expect(result.status).toBe('online')
+  })
+})
+
+describe('bootFresh harness', () => {
+  it('gives each call a fresh module registry', () => {
+    bootFresh()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const first = require('../bootstrap')
+    bootFresh()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const second = require('../bootstrap')
+
+    expect(second).not.toBe(first)
+  })
+
+  it('runs before() ahead of requiring bootstrap', () => {
+    const order: string[] = []
+    bootFresh({ before: () => order.push('before') })
+    order.push('booted')
+
+    expect(order).toEqual(['before', 'booted'])
+  })
+
+  it('returns a live output stream whose frames are collected', async () => {
+    const { frames } = bootFresh()
+    await new Promise((resolve) => setImmediate(resolve))
+
+    expect(frames.length).toBeGreaterThan(0)
   })
 })
