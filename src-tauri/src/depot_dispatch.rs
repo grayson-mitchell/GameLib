@@ -328,8 +328,19 @@ mod tests {
             "/Users/me/bottle/drive_c/Program Files (x86)/Steam/steamapps/common/Game",
             "/Users/me/Library/Application Support/gamelib/sharedRedist/steamapps/common/Redist",
         ] {
-            assert_eq!(guard_install_root(ok), Ok(()), "should accept {ok:?}");
+            // A rootless `/x` is not absolute on Windows; drive-qualify it there.
+            let ok = if cfg!(windows) {
+                format!("C:{ok}")
+            } else {
+                ok.to_string()
+            };
+            assert_eq!(guard_install_root(&ok), Ok(()), "should accept {ok:?}");
         }
+        #[cfg(windows)]
+        assert_eq!(
+            guard_install_root(r"D:\SteamLibrary\steamapps\common\Game"),
+            Ok(())
+        );
     }
 
     #[test]
