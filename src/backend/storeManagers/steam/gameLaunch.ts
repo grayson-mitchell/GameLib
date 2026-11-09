@@ -685,6 +685,24 @@ export async function selectLaunchEngine(
         'engine-shared-bottle'
       )
       return { ok: false }
+    } else if (prep.reason === 'marker-newer') {
+      // Quick 261109-w52: the bottle's engine marker is from a newer GameLib build.
+      clearEngineSelection(steamGame.appId)
+      logWarning(
+        `SteamGame: appId ${steamGame.appId} cannot switch engine (${prep.reason}: ${prep.detail}); not launching`,
+        LogPrefix.Steam
+      )
+      showEngineDialog(
+        steamGame,
+        title,
+        i18next.t(
+          'gamelib:steam.engine.markerNewer',
+          "{{title}}'s game files were last set up by a newer version of GameLib, so this version won't change its engine. Launch it with the engine it already uses, or update GameLib.",
+          { title }
+        ),
+        'engine-marker-newer'
+      )
+      return { ok: false }
     } else {
       clearEngineSelection(steamGame.appId)
       logWarning(

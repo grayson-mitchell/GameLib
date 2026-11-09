@@ -16172,6 +16172,23 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       expect(runWineCommand).not.toHaveBeenCalled()
     })
 
+    it('marker-newer refusal: markerNewer dialog, selection cleared, nothing spawned (261109-w52)', async () => {
+      ;(prepareBottleForEngine as jest.Mock).mockResolvedValue({
+        ok: false,
+        reason: 'marker-newer',
+        detail: 'newer'
+      })
+      engineDialog().mockClear()
+      expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+      expect(engineDialog()).toHaveBeenCalledTimes(1)
+      expect(engineDialog().mock.calls[0][0].message).toContain('markerNewer')
+      expect(
+        infoMessages().some((m) => m.includes('tag=engine-marker-newer'))
+      ).toBe(true)
+      expect(getEngineSelection(ID)).toBeUndefined()
+      expect(runWineCommand).not.toHaveBeenCalled()
+    })
+
     describe('G22: offline refusal before the pre-flight probe', () => {
       const blocked = (over: Record<string, unknown> = {}) => {
         const o = {
