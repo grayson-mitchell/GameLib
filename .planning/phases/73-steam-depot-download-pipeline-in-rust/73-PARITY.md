@@ -182,3 +182,11 @@ Explained deviation: Task 3's automated verify (`exit code: 0`) cannot pass beca
 - Delete `sharedRedist`, rename `sharedRedist.ts-out` away and `sharedRedist.ts-parity` back to `sharedRedist`.
 - Copy each bottle's `gamelib-shared-redists.json.parity-bak` (Schedule I and Amnesia bottles) back over its ledger.
 - Reinstall Civ V in the real library.
+
+## Live macOS UAT (plan 73-18)
+
+`73-UAT.md` was run on 2026-11-09, 21:33–22:34, in four `pnpm tauri:dev` sessions on the Rust default: 8 pass, 1 issue.
+- Every depot path has a `[depot-rust] outcome` line: install (Civ V 8930, `acf=4 macho=14`), pause/resume (cancelled, verify_only, then completed), cancel (DREDGE, `acf=1026`), sidecar EOF (`depot jobs cancelled on sidecar EOF: 1`, no write after the kill), bridge install (Schedule I, `acf=4`, bridge HELLO and `GINIT ok=1`), shared redist (228980, `acf=none pk=19`), verify_only startup resume, and the select_files original-DLL restore (`acf=none`, sha1 unchanged).
+- Item 9 is an issue: after a Force Quit the sidecar logged stdin EOF but stayed alive with ppid 1 and open TCP sockets. The Rust downloads stopped with the shell, so depot correctness was unaffected. See todo `2026-11-09-sidecar-orphaned-after-tauri-dev-ctrl-c.md`.
+- New TS-layer defect found during the run: cancelling a stale persisted Steam queue head deleted a complete install. See todo `2026-11-09-stale-steam-queue-head-cancel-deletes-complete-install.md`.
+- Whether the gate accepts item 9 is the operator's decision, recorded with the delete gate below.
