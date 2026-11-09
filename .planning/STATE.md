@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 69 (consolidate-frontend-state-onto-globalstatev2) — EXECUTING
 Plan: 3 of 26
 Status: Ready to execute
-Last activity: 2026-11-09
+Last activity: 2026-11-10 - Completed quick task 261110-h8k: Split rpc_humble_login_clear_cookies into named steps
 
 Progress: [█████████░] 88%
 
@@ -680,6 +680,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261109-nq1 | Split `fn main` (1,181 lines → 142) into `run_setup` plus 15 named setup steps and pre-builder helpers, bodies moved verbatim; Windows Secondary arm and `ExitRequested` arm stay inline for source-text gates. Todo closed | 2026-11-10 | 82c85af81, a4dcbd428, 80b7450e6 | cargo test 453/0 = baseline; clippy ratchet identical; jest shell-source set = baseline; live gate 5/5 passed 2026-11-10 | [261109-nq1-split-fn-main-setup-in-main-rs-into-name](./quick/261109-nq1-split-fn-main-setup-in-main-rs-into-name/) |
 | 261109-vw2 | Versioned mac-steam-offline-owed.json (owed goonline record) on the Phase 68 engine: new `macSteamOfflineOwedFile.ts` adopter, chain `steam/mac-steam-offline-owed` at v1; writes stamp `version: 1` at 0o600; legacy unversioned markers adopt with no rewrite/backup and still drive boot restore; a newer-build marker still counts as owed. Todo closed. | 2026-11-09 | de634d3fb | steam+storeVersioning jest 4505 pass; 1 pre-existing red (macArchKnownFixRouting Intel case, fails at 14528f0a5 too); codecheck + planning-gates green | [261109-vw2-version-mac-steam-offline-owed-json-with](./quick/261109-vw2-version-mac-steam-offline-owed-json-with/) |
 | 261109-w52 | Versioned the per-bottle `.gamelib-engine.json` marker on the Phase 68 engine: new `engineMarkerFile.ts` adopter, chain `engine/gamelib-engine-marker` at v1; writes stamp `version: 1`; legacy markers adopt and still drive DXVK restore; a newer-build marker allows same-engine launches but refuses switches (`marker-newer`, launch dialog) so its DXVK record is never overwritten. Todo closed. | 2026-11-09 | 45376aec9 | engine+storeVersioning jest 148 pass, games.test 714 pass; codecheck + planning-gates green | [261109-w52-version-the-per-bottle-gamelib-engine-js](./quick/261109-w52-version-the-per-bottle-gamelib-engine-js/) |
+| 261110-h8k | Split `rpc_humble_login_clear_cookies` (575 lines → 151) into named steps: `count_window_cookies_matching_macos`, `remove_window_cookies_macos`, `remove_window_cookies_windows`; verbatim moves, both `.cookies()` sites stay in the handler; F-34.4.2-12 and window-branch pins repointed in the same commit, site set re-measured identical (4). Todo stays pending on live-gate. | 2026-11-10 | 56d8e4509 | Needs Review: cargo test 453/0 = baseline; clippy ratchet identical; fmt hunks unchanged; mutation made pin fail; cfg(windows)/linux not compiled locally; live macOS+Windows disconnect owed | [261110-h8k-split-rpc-humble-login-clear-cookies-int](./quick/261110-h8k-split-rpc-humble-login-clear-cookies-int/) |
 
 ## Session Continuity
 
