@@ -25,12 +25,22 @@ jest.mock('../../storeManagers/steam/user', () => ({
   SteamUser: { releaseForShutdown: () => release() }
 }))
 
-import { releaseOnStdinEof } from '../stdinEofRelease'
+const destroyHttp = jest.fn()
+jest.mock('../outboundHttpRegistry', () => ({
+  destroyOutboundHttp: () => destroyHttp()
+}))
+
+import { logInfo, logWarning } from '../../logger'
+import { RESIDUAL_HOLDER_DIAG_MS, releaseOnStdinEof } from '../stdinEofRelease'
 
 describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     release.mockImplementation(() => Promise.resolve('not-owed'))
+    destroyHttp.mockReturnValue({
+      destroyed: 2,
+      hosts: ['a.example', 'b.example']
+    })
   })
 
   it('does nothing while stdin is open', () => {
@@ -103,5 +113,74 @@ describe('releaseOnStdinEof (debug/sidecar-survives-force-quit)', () => {
       expect(stopMonitors).toHaveBeenCalledTimes(1)
       expect(release).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('destroys outbound HTTP once, after the CM release, and logs count and hosts', async () => {
+    const order: string[] = []
+    release.mockImplementationOnce(() => {
+      order.push('cm')
+      return Promise.resolve('not-owed')
+    })
+    destroyHttp.mockImplementationOnce(() => {
+      order.push('http')
+      return { destroyed: 2, hosts: ['a.example', 'b.example'] }
+    })
+    const input = new PassThrough()
+    releaseOnStdinEof(input)
+    input.resume()
+    input.end()
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    expect(destroyHttp).toHaveBeenCalledTimes(1)
+    expect(order).toEqual(['cm', 'http'])
+    const lines = (logInfo as jest.Mock).mock.calls.map((c) => String(c[0]))
+    const line = lines.find((l) =>
+      l.includes('destroyed 2 in-flight outbound HTTP')
+    )
+    expect(line).toContain('a.example')
+    expect(line).toContain('b.example')
+  })
+
+  it('still completes release if destroying outbound HTTP throws', async () => {
+    destroyHttp.mockImplementationOnce(() => {
+      throw new Error('boom')
+    })
+    const input = new PassThrough()
+    releaseOnStdinEof(input)
+    input.resume()
+    input.end()
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    expect(release).toHaveBeenCalledTimes(1)
+  })
+
+  it('arms an unref d residual-holder diagnostic that names active resources', () => {
+    jest.useFakeTimers()
+    const spy = jest
+      .spyOn(process, 'getActiveResourcesInfo')
+      .mockReturnValue(['TCPSocketWrap', 'Timeout'])
+    const unref = jest.fn()
+    const realSetTimeout = global.setTimeout
+    const stSpy = jest.spyOn(global, 'setTimeout').mockImplementation(((
+      fn: () => void,
+      ms?: number
+    ) => {
+      const h = realSetTimeout(fn, ms) as unknown as { unref?: () => void }
+      h.unref = unref
+      return h
+    }) as unknown as typeof setTimeout)
+    try {
+      const input = new PassThrough()
+      releaseOnStdinEof(input)
+      input.emit('end')
+      expect(unref).toHaveBeenCalled()
+      jest.advanceTimersByTime(RESIDUAL_HOLDER_DIAG_MS)
+      const warn = (logWarning as jest.Mock).mock.calls
+        .map((c) => String(c[0]))
+        .find((l) => l.includes('still alive'))
+      expect(warn).toContain('TCPSocketWrap, Timeout')
+    } finally {
+      stSpy.mockRestore()
+      spy.mockRestore()
+      jest.useRealTimers()
+    }
   })
 })

@@ -6,10 +6,14 @@ import {
 } from '../downloadmanager/downloadqueue'
 import { SteamUser } from '../storeManagers/steam/user'
 import { stopAllSteamDownloadMonitors } from '../storeManagers/steam/steamDownloadMonitor'
-import { LogPrefix, logInfo } from '../logger'
+import { LogPrefix, logInfo, logWarning } from '../logger'
+import { destroyOutboundHttp } from './outboundHttpRegistry'
+
+/** How long after EOF the sidecar waits before logging what is still holding the loop. */
+export const RESIDUAL_HOLDER_DIAG_MS = 15_000
 
 /**
- * Releases the two things that keep the sidecar's event loop referenced after the shell is
+ * Releases the three things that keep the sidecar's event loop referenced after the shell is
  * gone, so the exit contract ("exit by event-loop drain at stdin EOF") holds for a SIGNED-IN
  * sidecar and for one with a native download in flight.
  *
@@ -27,6 +31,11 @@ import { LogPrefix, logInfo } from '../logger'
  *      element in the persisted queue only when the queue is paused. A bare abort recorded
  *      the download as finished and dropped it from the queue (live gate 2026-10-26:
  *      Downloads showed it "Completed" and nothing was resumable on the next launch).
+ *   3. in-flight outbound HTTP (contract half 2, not unref-able: an in-flight or unread
+ *      response holds the loop). Destroyed agent-agnostically by `outboundHttpRegistry.ts`,
+ *      which also refuses any follow-up request. A post-EOF diagnostic then names whatever
+ *      still holds the loop. See todo 2026-11-09-sidecar-orphaned-after-tauri-dev-ctrl-c /
+ *      quick 261110-9w2.
  *
  * This is a deliberate AMENDMENT of "no 'end' handler by design": it does not tear the process
  * down (no process.exit) -- it only drops references to handles that cannot be unref'd, and the
@@ -58,6 +67,31 @@ export function releaseOnStdinEof(input: Readable): void {
       // best-effort: still release the CM socket below
     }
     void SteamUser.releaseForShutdown()
+    // After the CM release: its synchronous logOff has already started, and CM WebSocket
+    // upgrades are excluded from the registry anyway.
+    try {
+      const { destroyed, hosts } = destroyOutboundHttp()
+      logInfo(
+        `[sidecar] stdin closed: destroyed ${destroyed} in-flight outbound HTTP request(s)${
+          hosts.length ? ` (${hosts.join(', ')})` : ''
+        }`,
+        LogPrefix.Backend
+      )
+    } catch {
+      // best-effort
+    }
+    // Residual-holder diagnostic. unref'd, so it never holds the loop; it only fires when
+    // something else does -- the orphan case. The next live repro then names the holder in
+    // gamelib.log without needing --report-on-signal.
+    const t = setTimeout(() => {
+      logWarning(
+        `[sidecar] still alive ${RESIDUAL_HOLDER_DIAG_MS}ms after stdin EOF; active resources: ${process
+          .getActiveResourcesInfo()
+          .join(', ')}`,
+        LogPrefix.Backend
+      )
+    }, RESIDUAL_HOLDER_DIAG_MS)
+    t.unref?.()
   }
   input.once('end', release)
   input.once('close', release)
