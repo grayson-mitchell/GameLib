@@ -40,7 +40,7 @@ export function logOutcome(job: RustDepotJob, o: RustOutcome): void {
     `[depot-rust] outcome appId=${job.appId} jobId=${job.jobId} mode=${job.mode} ` +
       `status=${o.status} acf=${o.acf?.stateFlags ?? 'none'} vz=${s.containers.vz} ` +
       `vsza=${s.containers.vsza} pk=${s.containers.pk} macho=${s.machoExecApplied} ` +
-      `collisions=${s.pathCollisions} bytes=${s.bytesFetched} elapsedMs=${s.elapsedMs}`,
+      `collisions=${s.pathCollisions} skipped=${(o.skippedDepots ?? []).join(',')} bytes=${s.bytesFetched} elapsedMs=${s.elapsedMs}`,
     LogPrefix.Steam
   )
 }
@@ -54,7 +54,10 @@ type CodeClient = {
   ): Promise<{ requestCode: unknown }>
 }
 
-/** Fresh manifest request code for a depot under its owner app, or null when none is available. */
+/**
+ * Fresh manifest request code for a depot under its owner app, or null when none is available.
+ * Rejects only with an EResult-40 (Blocked) error, which the host handler turns into a skip.
+ */
 export function requestCodeRefresher(
   client: CodeClient,
   ownerByDepot: Map<string, string>,
@@ -75,7 +78,10 @@ export function requestCodeRefresher(
       // A uint64 arrives as a number, string or Long; String() renders all three.
       const code = String((requestCode ?? '') as string | number | bigint)
       return /^\d+$/.test(code) && code !== '0' ? code : null
-    } catch {
+    } catch (err) {
+      // EResult 40 (Blocked) is the one refusal the TS plan builder skips a depot for; carry it
+      // to the host handler so the crate does the same (every other failure is "no code").
+      if ((err as { eresult?: unknown }).eresult === 40) throw err
       return null
     }
   }
@@ -167,6 +173,14 @@ export async function downloadSteamDepotsRust(
       onEvent: (ev) => bridge.onEvent(ev)
     })
     logOutcome(job, outcome)
+    // Manifest-level EResult-40 refusals join the key-level ones, like plan.skippedDepots. When
+    // every depot was blocked the TS plan build throws, so no skipped list is reported then.
+    const manifestSkipped = outcome.skippedDepots ?? []
+    skippedDepots =
+      manifestSkipped.length > 0 &&
+      manifestSkipped.length === refs.depots.length
+        ? undefined
+        : [...refs.skippedDepots, ...manifestSkipped]
     if (opts.signal?.aborted === true && outcome.status !== 'cancelled') {
       // Mirrors the TS path: an abort that raced a finished job still reports cancelled.
       return { status: 'cancelled', skippedDepots }

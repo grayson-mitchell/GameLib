@@ -911,13 +911,13 @@ async fn run_install_inner(
             Err(FetchError::Failed(f)) => return error_outcome(&job.job_id, f),
         }
     }
-    // `throwIfAllDepotsSkipped`: a plan reduced to zero depots must fail (eresult 40 so the TS
+    // `throwIfAllDepotsSkipped` (message kept byte-identical for the UI copy): a plan reduced to zero depots must fail (eresult 40 so the TS
     // map picks the depotBlocked copy), never report an empty success.
     if kept.is_empty() && !skipped_depots.is_empty() {
         let mut f = plain_failure(
             ErrorKind::ManifestUnavailable,
             format!(
-                "every selected depot for appId {} was blocked by Steam (eresult=40) and had to be skipped: {}",
+                "buildDepotPlan: every selected depot for appId {} was blocked by Steam (eresult=40) and had to be skipped: {}",
                 job.app_id,
                 skipped_depots.join(", ")
             ),

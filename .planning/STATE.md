@@ -385,6 +385,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase ?]: 68-06: readOnlyStoresNotice payload is ids-only, flushed once from frontendReady; late entries re-publish
 - [Phase 73]: 73-01: rust-version 1.89 for gamelib-depot crates (operator option-a); no aes_armv8 rustflags
 - [Phase 73]: 73-15: depot CLI stdin envelope is {job|request, tokens}; the Tier 2 sweep compares outcome/per-depot status as well as bytes so the EResult-40 divergence (TS skip vs Rust manifest_unavailable) cannot hide behind identical trees; a missing outcome log line or codec is a failure
+- [Phase 73]: EResult-40 parity fix (pre-73-16, operator "Fix to match TS"): a manifest-level Blocked refusal is now carried request-code callback -> `{eresult:40}` reply -> crate `BLOCKED_REPLY`; the crate drops the depot, records `Outcome.skippedDepots`, and fails all-blocked with the byte-identical plan.ts message (eresult 40). Native install, prescreen, resume and originalRestore match the TS path; see 73-EResult40-FIX.md
 - [Phase 73]: 73-09: failed/cancelled files drain in-flight chunk tasks (spawn_blocking is not abortable) so nothing writes after run_job returns; ChunkSource trait abstracts Fetcher for tests; non-install modes error until 73-10
 - [Phase 73]: 73-04: Mach-O probe ported from machO.ts (gamelib-scan not reused); containment lexical; case probe stat-based per TS
 

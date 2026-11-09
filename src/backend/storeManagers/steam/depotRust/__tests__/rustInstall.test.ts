@@ -21,6 +21,7 @@ import { SteamUser } from '../../user'
 import { mockLeaseOk, mockOpenLease } from '../../__tests__/depotLeaseMocks'
 import { selectAllDepots } from '../../depot/select'
 import { decryptFilename } from '../../depot/crypto'
+import { requestCodeRefresher } from '../install'
 import { createStubRustDepot } from './fixtures/stubRustDepot'
 
 jest.mock('backend/logger', () => ({
@@ -112,6 +113,10 @@ function makeClient() {
   }
 }
 
+// plan.ts throwIfAllDepotsSkipped's message for depots 111 and 222.
+const ALL_BLOCKED_MSG =
+  'buildDepotPlan: every selected depot for appId 12345 was blocked by Steam (eresult=40) and had to be skipped: 111, 222'
+
 const OPTS = () => ({
   targetSteamappsDir: steamapps,
   installdir: 'SomeGame',
@@ -178,6 +183,67 @@ describe('downloadSteamDepots on the rust pipeline', () => {
       allowFullOwnership: true
     })
     expect(client.getRawManifest).not.toHaveBeenCalled()
+  })
+
+  it('EResult-40 manifest refusals skip the depot like the TS plan build and join the key-level skips', async () => {
+    jest.mocked(selectAllDepots).mockReturnValue([
+      { id: '111', manifest: '11111111111111111', size: 0, ownerAppId: APP_ID },
+      { id: '222', manifest: '22222222222222222', size: 0, ownerAppId: APP_ID },
+      { id: '333', manifest: '33333333333333333', size: 0, ownerAppId: APP_ID }
+    ])
+    client.getDepotDecryptionKey.mockImplementation(
+      (_a: number, d: number, cb: (e: Error | null, k: Buffer) => void) =>
+        d === 111
+          ? cb(
+              Object.assign(new Error('Blocked'), { eresult: 40 }),
+              Buffer.alloc(0)
+            )
+          : cb(null, Buffer.alloc(32, 7))
+    )
+    // Rust dropped depot 222 when Steam refused its manifest; the job carried on without it.
+    const stub = createStubRustDepot({ outcome: { skippedDepots: ['222'] } })
+    invokeMock.mockImplementation(stub.invoke)
+
+    const out = await downloadSteamDepots(APP_ID, OPTS())
+
+    expect(out).toEqual({ status: 'done', skippedDepots: ['111', '222'] })
+    expect(stub.jobs[0]?.depots.map((d) => d.depotId)).toEqual(['222', '333'])
+  })
+
+  it('every depot blocked at the manifest fails with the same depotBlocked classification as the TS all-blocked error', async () => {
+    const stub = createStubRustDepot({
+      outcome: {
+        status: 'error',
+        acf: null,
+        skippedDepots: ['111', '222'],
+        failures: [
+          {
+            file: null,
+            kind: 'manifest_unavailable' as const,
+            message: ALL_BLOCKED_MSG,
+            code: null,
+            eresult: 40,
+            httpStatus: null,
+            scope: 'run' as const,
+            msSinceProgress: null
+          }
+        ]
+      }
+    })
+    invokeMock.mockImplementation(stub.invoke)
+
+    const out = await downloadSteamDepots(APP_ID, OPTS())
+
+    // The TS buildDepotPlan throws an Error with eresult 40 here (throwIfAllDepotsSkipped).
+    const expected = classifyDepotError(
+      Object.assign(new Error(ALL_BLOCKED_MSG), {
+        eresult: 40
+      })
+    )
+    expect(out.status).toBe('error')
+    expect(out.error).toBe(expected.message)
+    expect(out.errorAction).toBe(expected.action)
+    expect(out.skippedDepots).toBeUndefined()
   })
 
   it('a plan-build failure runs no job, writes no ACF and classifies like the TS path', async () => {
@@ -312,5 +378,26 @@ describe('downloadSharedRedistDepots on the rust pipeline', () => {
     expect(
       existsSync(join(steamapps, 'gamelib-shared-redist-index.json'))
     ).toBe(true)
+  })
+})
+
+describe('requestCodeRefresher', () => {
+  const owners = new Map([['111', APP_ID]])
+  it('returns the code, null for ordinary failures, and rethrows EResult 40 so the crate can skip the depot', async () => {
+    const ok = requestCodeRefresher(client, owners, APP_ID)
+    expect(await ok('111', '7')).toBe('42')
+
+    client.getManifestRequestCode.mockRejectedValueOnce(new Error('timeout'))
+    expect(await ok('111', '7')).toBeNull()
+
+    const blocked = Object.assign(new Error('Blocked'), { eresult: 40 })
+    client.getManifestRequestCode.mockRejectedValueOnce(blocked)
+    await expect(ok('111', '7')).rejects.toBe(blocked)
+
+    // Only the literal 40: AccessDenied and friends stay "no code".
+    client.getManifestRequestCode.mockRejectedValueOnce(
+      Object.assign(new Error('AccessDenied'), { eresult: 15 })
+    )
+    expect(await ok('111', '7')).toBeNull()
   })
 })

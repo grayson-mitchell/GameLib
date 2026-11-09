@@ -487,6 +487,11 @@ fn blocked_every_depot_fails_with_eresult_40_and_downloads_nothing() {
     assert_eq!(out.failures.len(), 1);
     assert_eq!(out.failures[0].kind, ErrorKind::ManifestUnavailable);
     assert_eq!(out.failures[0].eresult, Some(40));
+    // Byte-identical to plan.ts throwIfAllDepotsSkipped: the UI copy embeds it.
+    assert_eq!(
+        out.failures[0].message,
+        "buildDepotPlan: every selected depot for appId 900030 was blocked by Steam (eresult=40) and had to be skipped: 900031, 900032"
+    );
     assert_eq!(out.skipped_depots, vec!["900031", "900032"]);
     assert!(out.attempted_depots.is_empty() && out.acf.is_none());
     assert!(

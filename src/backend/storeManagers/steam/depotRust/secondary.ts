@@ -6,7 +6,7 @@
 // manifests. Nothing here fetches a manifest in TS. Exit contract: no timers or handles.
 
 import { basename, resolve } from 'path'
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from '../user'
 import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { getContentServerHosts } from '../depot/contentServers'
@@ -56,8 +56,8 @@ async function acquireOrThrow(
 /**
  * D-02: the bridge prescreen from `depot_manifest_summary`. Same result type and same
  * never-throws contract as the TS prescreenBridgeDepots; any failure resolves 'unknown'.
- * Parity note: a manifest-level EResult-40 refusal skips that depot on the TS path but surfaces
- * as a summary error here, which resolves 'unknown' (install proceeds, as for any screen failure).
+ * A manifest-level EResult-40 (Blocked) refusal skips that depot, as on the TS path; when every
+ * depot is blocked the summary fails and this resolves 'unknown', like the TS plan-build throw.
  */
 export async function prescreenBridgeDepotsRust(
   appId: string,
@@ -102,6 +102,12 @@ export async function prescreenBridgeDepotsRust(
         LogPrefix.Steam
       )
       return 'unknown'
+    }
+    if (res.skippedDepots.length > 0) {
+      logInfo(
+        `prescreenBridgeDepots: appId ${appId} skipped depot(s) Steam blocked (eresult=40): ${res.skippedDepots.join(',')}`,
+        LogPrefix.Steam
+      )
     }
     let hasX86 = false
     let hasX64 = false
@@ -216,7 +222,7 @@ export interface ResumeVerifyResult {
 /**
  * D-13: one verify_only job. Rust reconciles every file against the manifests, heals modes and
  * writes the honest ACF (4 only when everything verifies, otherwise 1026); no chunk is fetched.
- * Rejects when no job could run (CM half failed, or the job itself errored), so the caller can
+ * Rejects when no job could run (CM half failed, or the job errored before writing an ACF), so the caller can
  * fall back to the honest-empty 1026 finalize.
  */
 export async function resumeVerifyRust(
@@ -270,6 +276,13 @@ export async function resumeVerifyRust(
     logOutcome(job, outcome)
     if (outcome.status === 'cancelled') {
       throw new Error('resume verify job was cancelled')
+    }
+    // The job failed before it could finalize (e.g. every depot blocked, EResult 40: the TS plan
+    // build throws there too), so no ACF exists. Reject so the caller writes the honest-empty one.
+    if (outcome.status === 'error' && !outcome.acf) {
+      throw new Error(
+        `resume verify job failed before finalize: ${outcome.failures[0]?.message ?? 'unknown'}`
+      )
     }
     return {
       missing: outcome.missing ?? [],

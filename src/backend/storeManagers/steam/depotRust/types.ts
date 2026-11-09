@@ -127,6 +127,8 @@ export interface RustOutcome {
   allFilesVerified: boolean
   allModesApplied: boolean
   attemptedDepots: RustPlannedDepot[]
+  /** Depots Steam refused with EResult 40 (Blocked); the job continued without them. */
+  skippedDepots: string[]
   acf: { stateFlags: string; sizeOnDisk: string } | null
   missing: string[] | null
   files: { filename: string; size: number; sha1: string }[] | null
@@ -157,5 +159,5 @@ export interface RustDepotSummary {
 
 /** Either the per-depot summaries or the failure that stopped them. */
 export type RustSummarizeResult =
-  | { depots: RustDepotSummary[] }
+  | { depots: RustDepotSummary[]; skippedDepots: string[] }
   | { error: RustFailure }

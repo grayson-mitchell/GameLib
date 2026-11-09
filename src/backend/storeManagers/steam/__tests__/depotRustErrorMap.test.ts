@@ -52,6 +52,7 @@ function outcome(
     allFilesVerified: false,
     allModesApplied: false,
     attemptedDepots: [],
+    skippedDepots: [],
     acf: null,
     missing: null,
     files: null,

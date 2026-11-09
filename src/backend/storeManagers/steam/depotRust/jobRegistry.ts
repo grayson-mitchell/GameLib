@@ -11,7 +11,10 @@ import type { RustJobEvent } from './types'
 export interface ActiveDepotJob {
   appId: string
   tokenCache: CdnAuthTokenCache
-  /** Fresh manifest request code for a depot/manifest, or null if none could be obtained. */
+  /**
+   * Fresh manifest request code for a depot/manifest, or null if none could be obtained.
+   * Rejects with an `eresult === 40` error when Steam refused it (Blocked).
+   */
   refreshRequestCode(
     depotId: string,
     manifestId: string

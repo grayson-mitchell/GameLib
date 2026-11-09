@@ -6,7 +6,8 @@
  *     - `depotCdnToken` -> the job's `CdnAuthTokenCache` (including its `_send` workaround) answers
  *       with the token string to append verbatim to a chunk URL, `''` when none is needed, or
  *       `null` for an unknown jobId.
- *     - `depotManifestRequestCode` -> a fresh request code as a decimal string, or `null`.
+ *     - `depotManifestRequestCode` -> a fresh request code as a decimal string, `null`, or
+ *       `{eresult: 40}` when Steam refused the manifest (Blocked; the crate skips that depot).
  *
  *   send (ipcMain.on, 1):
  *     - `depotJobEvent` -> routed to the registered job's listener by jobId.
@@ -80,6 +81,9 @@ export function registerDepotHostFlows(): void {
       try {
         return await job.refreshRequestCode(depotId, manifestId)
       } catch (err) {
+        // Steam refused the manifest (Blocked): tell the crate so it skips the depot.
+        if ((err as { eresult?: unknown }).eresult === 40)
+          return { eresult: 40 }
         logFailure('depotManifestRequestCode', jobId, err)
         return null
       }

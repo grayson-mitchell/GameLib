@@ -112,7 +112,7 @@ pub async fn summarize(
             let mut f = failure(
                 ErrorKind::ManifestUnavailable,
                 format!(
-                    "every selected depot for appId {} was blocked by Steam (eresult=40) and had to be skipped: {}",
+                    "buildDepotPlan: every selected depot for appId {} was blocked by Steam (eresult=40) and had to be skipped: {}",
                     req.app_id,
                     skipped_depots.join(", ")
                 ),

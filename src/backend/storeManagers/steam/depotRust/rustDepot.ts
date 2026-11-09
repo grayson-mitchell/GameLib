@@ -48,6 +48,7 @@ function cancelledOutcome(jobId: string): RustOutcome {
     allFilesVerified: false,
     allModesApplied: false,
     attemptedDepots: [],
+    skippedDepots: [],
     acf: null,
     missing: null,
     files: null,

@@ -16,6 +16,7 @@ import { getSteamLibraries } from 'backend/utils'
 import { resumeInterruptedSteamInstall } from '../../library/resume'
 import { startInstallPolling } from '../../library/installPolling'
 import { RUST_DEPOT_MANIFEST_SUMMARY } from 'common/types/sidecarTransport'
+import { classifyDepotError } from '../../depotErrors'
 import { createStubRustDepot } from './fixtures/stubRustDepot'
 
 jest.mock('backend/logger', () => ({
@@ -118,6 +119,9 @@ function makeClient() {
   }
 }
 
+const ALL_BLOCKED_MSG =
+  'buildDepotPlan: every selected depot for appId 12345 was blocked by Steam (eresult=40) and had to be skipped: 111'
+
 const OPTS = () => ({
   targetSteamappsDir: steamapps,
   installdir: 'SomeGame',
@@ -150,7 +154,8 @@ afterEach(() => {
 
 function summaryOf(matches: string[]) {
   return {
-    depots: [{ depotId: '111', fileCount: 3, totalBytes: 30, matches }]
+    depots: [{ depotId: '111', fileCount: 3, totalBytes: 30, matches }],
+    skippedDepots: [] as string[]
   }
 }
 
@@ -188,6 +193,36 @@ describe('prescreenBridgeDepots on the rust pipeline', () => {
           file: null,
           kind: 'manifest_unavailable',
           message: 'x',
+          code: null,
+          eresult: 40,
+          httpStatus: null,
+          scope: null,
+          msSinceProgress: null
+        }
+      }
+    })
+    invokeMock.mockImplementation(stub.invoke)
+    expect(await prescreenBridgeDepots(APP_ID, OPTS())).toBe('unknown')
+  })
+
+  it('screens the remaining depots when Rust skipped an EResult-40 depot, like the TS plan build', async () => {
+    const stub = createStubRustDepot({
+      summary: {
+        ...summaryOf(['x/steam_api64.dll']),
+        skippedDepots: ['222']
+      }
+    })
+    invokeMock.mockImplementation(stub.invoke)
+    expect(await prescreenBridgeDepots(APP_ID, OPTS())).toBe('x64')
+  })
+
+  it('resolves unknown when every depot is blocked (the TS plan build throws there)', async () => {
+    const stub = createStubRustDepot({
+      summary: {
+        error: {
+          file: null,
+          kind: 'manifest_unavailable',
+          message: 'every selected depot was blocked (eresult=40)',
           code: null,
           eresult: 40,
           httpStatus: null,
@@ -268,6 +303,54 @@ describe('downloadSelectedDepotFiles on the rust pipeline', () => {
     expect(c.status).toBe('cancelled')
   })
 
+  it('skipping a blocked depot leaves the rest of the job intact: nothing selected is still done with no files (TS not-in-depot)', async () => {
+    const stub = createStubRustDepot({
+      outcome: { files: [], acf: null, skippedDepots: ['111'] }
+    })
+    invokeMock.mockImplementation(stub.invoke)
+    const r = await downloadSelectedDepotFiles(APP_ID, {
+      ...OPTS(),
+      selectPaths: ['bin/steam_api64.dll']
+    })
+    expect(r).toEqual({ status: 'done', files: [] })
+  })
+
+  it('every depot blocked gives the TS all-blocked error, not a generic download failure', async () => {
+    const stub = createStubRustDepot({
+      outcome: {
+        status: 'error',
+        acf: null,
+        skippedDepots: ['111'],
+        failures: [
+          {
+            file: null,
+            kind: 'manifest_unavailable',
+            message: ALL_BLOCKED_MSG,
+            code: null,
+            eresult: 40,
+            httpStatus: null,
+            scope: 'run',
+            msSinceProgress: null
+          }
+        ]
+      }
+    })
+    invokeMock.mockImplementation(stub.invoke)
+    const r = await downloadSelectedDepotFiles(APP_ID, {
+      ...OPTS(),
+      selectPaths: ['a']
+    })
+    expect(r.status).toBe('error')
+    expect(r.files).toEqual([])
+    expect(r.error).toBe(
+      classifyDepotError(
+        Object.assign(new Error(ALL_BLOCKED_MSG), {
+          eresult: 40
+        })
+      ).message
+    )
+  })
+
   it('rejects a select predicate on the rust path', async () => {
     await expect(
       downloadSelectedDepotFiles(APP_ID, {
@@ -314,6 +397,67 @@ describe('startup resume on the rust pipeline', () => {
     expect(
       readFileSync(join(sa, `appmanifest_${APP_ID}.acf`), 'utf8')
     ).not.toContain('StateFlags')
+    rmSync(lib, { recursive: true, force: true })
+  })
+
+  it('a skipped (blocked) depot does not change the resume: Rust wrote the ACF, TS finalizes nothing', async () => {
+    const lib = mkdtempSync(join(tmpdir(), 'rustresume-'))
+    const sa = join(lib, 'steamapps')
+    mkdirSync(sa)
+    writeFileSync(
+      join(sa, `appmanifest_${APP_ID}.acf`),
+      `"AppState"\n{\n\t"appid"\t"${APP_ID}"\n\t"installdir"\t"SomeGame"\n}\n`
+    )
+    jest.mocked(getSteamLibraries).mockResolvedValue([lib])
+    const stub = createStubRustDepot({ outcome: { skippedDepots: ['222'] } })
+    invokeMock.mockImplementation(stub.invoke)
+
+    await resumeInterruptedSteamInstall(APP_ID)
+
+    expect(stub.jobs).toHaveLength(1)
+    expect(startInstallPolling).toHaveBeenCalledWith(APP_ID)
+    expect(
+      readFileSync(join(sa, `appmanifest_${APP_ID}.acf`), 'utf8')
+    ).not.toContain('StateFlags')
+    rmSync(lib, { recursive: true, force: true })
+  })
+
+  it('every depot blocked falls back to the honest-empty 1026 finalize, like the TS plan-build throw', async () => {
+    const lib = mkdtempSync(join(tmpdir(), 'rustresume-'))
+    const sa = join(lib, 'steamapps')
+    mkdirSync(sa)
+    writeFileSync(
+      join(sa, `appmanifest_${APP_ID}.acf`),
+      `"AppState"\n{\n\t"appid"\t"${APP_ID}"\n\t"installdir"\t"SomeGame"\n}\n`
+    )
+    jest.mocked(getSteamLibraries).mockResolvedValue([lib])
+    const stub = createStubRustDepot({
+      outcome: {
+        status: 'error',
+        acf: null,
+        skippedDepots: ['111'],
+        failures: [
+          {
+            file: null,
+            kind: 'manifest_unavailable',
+            message: ALL_BLOCKED_MSG,
+            code: null,
+            eresult: 40,
+            httpStatus: null,
+            scope: 'run',
+            msSinceProgress: null
+          }
+        ]
+      }
+    })
+    invokeMock.mockImplementation(stub.invoke)
+
+    await resumeInterruptedSteamInstall(APP_ID)
+
+    expect(startInstallPolling).toHaveBeenCalledWith(APP_ID)
+    expect(
+      readFileSync(join(sa, `appmanifest_${APP_ID}.acf`), 'utf8')
+    ).toContain('1026')
     rmSync(lib, { recursive: true, force: true })
   })
 

@@ -139,6 +139,35 @@ describe('depotManifestRequestCode', () => {
   })
 })
 
+describe('depotManifestRequestCode on an EResult-40 refusal', () => {
+  const p = { jobId: 'job9', appId: '480', depotId: '481', manifestId: '7' }
+  const register = (refresh: () => Promise<string | null>) =>
+    registerActiveDepotJob('job9', {
+      appId: '480',
+      tokenCache: fakeCache().cache,
+      refreshRequestCode: refresh,
+      onEvent: jest.fn()
+    })
+
+  it('answers {eresult: 40} so the crate skips the depot', async () => {
+    const dispose = register(() =>
+      Promise.reject(Object.assign(new Error('Blocked'), { eresult: 40 }))
+    )
+    expect(await invoke('depotManifestRequestCode', p)).toEqual({
+      eresult: 40
+    })
+    dispose()
+  })
+
+  it('any other rejection still answers null', async () => {
+    const dispose = register(() =>
+      Promise.reject(Object.assign(new Error('AccessDenied'), { eresult: 15 }))
+    )
+    expect(await invoke('depotManifestRequestCode', p)).toBeNull()
+    dispose()
+  })
+})
+
 describe('depotJobEvent', () => {
   const send = (ev: RustJobEvent) =>
     defined(listenerRegistry.get('depotJobEvent'), 'listeners').forEach((l) =>
