@@ -132,6 +132,7 @@ mod shell_state;
 mod notification_show;
 mod dialogs;
 mod scan_dispatch;
+mod depot_dispatch;
 mod app_lifecycle;
 use clipboard::*;
 use keyring_dispatch::*;
@@ -149,6 +150,7 @@ use shell_state::*;
 use notification_show::*;
 use dialogs::*;
 use scan_dispatch::*;
+use depot_dispatch::*;
 use app_lifecycle::*;
 
 /// Invoke response timeout — a skeleton guardrail so a hung sidecar cannot wedge a command.
@@ -1812,6 +1814,12 @@ fn main() {
                 }
             }
             tauri::RunEvent::Exit => {
+                // D-08: cancel every depot job and give finalize (the 1026 record) up to 5 s to
+                // land BEFORE the sidecar is killed. Count only; no job detail is logged.
+                let still_running = gamelib_depot::registry::cancel_all_and_wait(EXIT_FINALIZE_WAIT);
+                if still_running > 0 {
+                    shell_eprintln!("[shell] depot jobs still running at exit deadline: {still_running}");
+                }
                 if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
                     state.shutdown_child();
                 }
@@ -1925,6 +1933,7 @@ mod tests {
         "notification_show.rs",
         "relay_commands.rs",
         "rust_dispatch.rs",
+        "depot_dispatch.rs",
         "scan_dispatch.rs",
         "shell_state.rs",
         "shell_open.rs",
@@ -1965,6 +1974,7 @@ mod tests {
         include_str!("notification_show.rs"),
         include_str!("relay_commands.rs"),
         include_str!("rust_dispatch.rs"),
+        include_str!("depot_dispatch.rs"),
         include_str!("scan_dispatch.rs"),
         include_str!("shell_state.rs"),
         include_str!("shell_open.rs"),

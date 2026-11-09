@@ -411,6 +411,33 @@ export const RUST_SCAN_WINEMAC_METAL_EXPORTS =
   'scan_winemac_metal_exports' as const
 
 /**
+ * Rust-side channel name: Phase 73 (D-03) Steam depot job `depot_job_cancel`, a pass-through to
+ * the Tauri-free `gamelib-depot` crate. Takes ONE object arg (`{ jobId }`). Resolves
+ * `{ cancelled: boolean }` (false when the job is not registered). Bad args reject
+ * `depot_job_cancel:bad-args`.
+ */
+export const RUST_DEPOT_JOB_CANCEL = 'depot_job_cancel' as const
+
+/**
+ * Rust-side channel name: Phase 73 (D-03) Steam depot job `depot_job_run`. Takes ONE object arg,
+ * the `DepotJob` (validated in-crate with `deny_unknown_fields`); the shell adds the manifest
+ * cache dir and rejects an install root with no `steamapps` ancestor. Resolves an `Outcome`
+ * (a failed download is `status: 'error'`, not a rejection). Bad args reject
+ * `depot_job_run:bad-args`, a bad install root `depot_job_run:bad-install-root`.
+ *
+ * Long-running: listed in the sidecar's `UNBOUNDED_RUST_CHANNELS` (D-06). Progress arrives as
+ * `depotJobEvent` frames, not through this response.
+ */
+export const RUST_DEPOT_JOB_RUN = 'depot_job_run' as const
+
+/**
+ * Rust-side channel name: Phase 73 (D-02) Steam depot `depot_manifest_summary`. Takes ONE object
+ * arg (`SummarizeRequest`). Resolves `{ depots }` or `{ error: Failure }`. Bad args reject
+ * `depot_manifest_summary:bad-args`.
+ */
+export const RUST_DEPOT_MANIFEST_SUMMARY = 'depot_manifest_summary' as const
+
+/**
  * Rust-side channel name: open a fail-closed child `WebviewWindow` on any https URL
  * (Phase 34.4.1 Plan 01, D-01/D-02, REQ-34.4.1-01/REQ-34.4.1-09). Runner-agnostic by
  * design -- nothing in Rust knows what Humble is; this is the mechanism Phase 34.5
@@ -639,7 +666,10 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_SCAN_STEAMSTUB_SECTION,
   RUST_SCAN_PE_IMPORTED_DLLS,
   RUST_SCAN_CONTAINED_REAL,
-  RUST_SCAN_WINEMAC_METAL_EXPORTS
+  RUST_SCAN_WINEMAC_METAL_EXPORTS,
+  RUST_DEPOT_JOB_CANCEL,
+  RUST_DEPOT_JOB_RUN,
+  RUST_DEPOT_MANIFEST_SUMMARY
 ] as const
 
 /** Phase 63 (D-03): the scanner channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
@@ -653,6 +683,13 @@ export const RUST_SCAN_CHANNELS = [
 ] as const
 
 export type RustScanChannel = (typeof RUST_SCAN_CHANNELS)[number]
+
+/** Phase 73 (D-03): the depot channels, a subset of {@link RUST_INVOKE_CHANNELS}. */
+export const RUST_DEPOT_CHANNELS = [
+  RUST_DEPOT_JOB_CANCEL,
+  RUST_DEPOT_JOB_RUN,
+  RUST_DEPOT_MANIFEST_SUMMARY
+] as const
 
 /** The set of channel names `requestRustInvoke()` is allowed to target. */
 export type RustInvokeChannel = (typeof RUST_INVOKE_CHANNELS)[number]

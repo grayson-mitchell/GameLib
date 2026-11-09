@@ -345,9 +345,9 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     expect(matches.length).toBe(1)
   })
 
-  test('71-07 rust_dispatch.rs is a flat router: 45 one-line arms and no catch-all arm', () => {
+  test('71-07 rust_dispatch.rs is a flat router: 48 one-line arms and no catch-all arm', () => {
     const router = readTauriShellProductionFile('rust_dispatch.rs')
-    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(45)
+    expect((router.match(DISPATCH_ARM_LINE_RE) ?? []).length).toBe(48)
     expect(router).not.toContain('_ =>')
   })
 
@@ -580,7 +580,16 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       'scan_steamstub_section',
       'scan_pe_imported_dlls',
       'scan_contained_real',
-      'scan_winemac_metal_exports'
+      'scan_winemac_metal_exports',
+
+      // Phase 73 plan 12 (D-03, D-06, D-08) -- three pass-through arms into the Tauri-free
+      // `gamelib-depot` crate, one per RUST_DEPOT_* channel. PROVEN: `depotChannelParity.test.ts`
+      // pins arms == crate OPS == RUST_DEPOT_CHANNELS, and the shell tests in depot_dispatch.rs
+      // cover the install-root guard and the sidecar-EOF cancel. NOT ATTEMPTED here: a live
+      // job round trip; that is the live gate in plans 17/18.
+      'depot_job_cancel',
+      'depot_job_run',
+      'depot_manifest_summary'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)

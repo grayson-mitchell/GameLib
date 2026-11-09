@@ -24,6 +24,9 @@ import {
   RUST_MAIN_WINDOW_RAISE,
   RUST_MAIN_WINDOW_HIDE,
   RUST_NOTIFICATION_SHOW,
+  RUST_DEPOT_JOB_CANCEL,
+  RUST_DEPOT_JOB_RUN,
+  RUST_DEPOT_MANIFEST_SUMMARY,
   RUST_SCAN_CONTAINED_REAL,
   RUST_SCAN_PE_IMPORTED_DLLS,
   RUST_SCAN_STEAMSTUB_SECTION,
@@ -78,6 +81,11 @@ const bounds = {
   w: z.number(),
   h: z.number()
 }
+// Depot job / summary envelope: the nested body is validated in-crate (serde deny_unknown_fields),
+// so this stays an opaque value and the generated Args carries it as a `serde_json::Value`.
+const depotValueArg = z.tuple([
+  z.unknown().meta({ title: 'request', 'x-rust-value': true })
+])
 const exePath = z.tuple([z.object({ exePath: z.string() })])
 const empty = z.tuple([])
 
@@ -214,7 +222,12 @@ export const rustInvokeArgs = {
   ]),
   [RUST_SCAN_WINEMAC_METAL_EXPORTS]: z.tuple([
     z.object({ wineBundlePath: z.string() })
-  ])
+  ]),
+  // ---- Steam depot jobs (Phase 73). The job body is validated in-crate (deny_unknown_fields),
+  // so the envelope only names the identifying strings and the rest is an opaque Value.
+  [RUST_DEPOT_JOB_CANCEL]: z.tuple([z.object({ jobId: z.string() })]),
+  [RUST_DEPOT_JOB_RUN]: depotValueArg,
+  [RUST_DEPOT_MANIFEST_SUMMARY]: depotValueArg
 } satisfies Record<RustInvokeChannel, z.ZodTuple>
 
 /** The positional args a `rustInvoke` call for channel `C` sends (input side of the schema). */

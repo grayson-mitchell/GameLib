@@ -92,10 +92,13 @@ pub fn cancel(job_id: &str) -> bool {
     }
 }
 
-pub fn cancel_all() {
-    for (t, _) in map().lock().unwrap_or_else(|e| e.into_inner()).values() {
+/// Cancels every registered job and returns how many there were.
+pub fn cancel_all() -> usize {
+    let m = map().lock().unwrap_or_else(|e| e.into_inner());
+    for (t, _) in m.values() {
         t.cancel();
     }
+    m.len()
 }
 
 /// Cancel every job, then wait up to `timeout` for their guards to drop. Returns how many were
