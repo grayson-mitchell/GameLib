@@ -1,7 +1,5 @@
 {
   "extends": "./tsconfig.json",
   "include": ["meta", "src/common/typedefs/*.d.ts"],
-  // meta/rerender is the jsdom re-render harness: it imports frontend code and
-  // is type-checked by ts-jest (root tsconfig) under `pnpm perf:rerender`.
   "exclude": ["meta/rerender"]
 }
