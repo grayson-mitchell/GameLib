@@ -1,0 +1,316 @@
+/* eslint-disable @typescript-eslint/unbound-method */
+/**
+ * Phase 73 Plan 13 Task 2: downloadSteamDepots and downloadSharedRedistDepots behind
+ * GAMELIB_DEPOT_PIPELINE, over a stubbed rustInvoke leaf and a fake steam-user client.
+ */
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
+import { tmpdir } from 'os'
+import { dirname, join } from 'path'
+import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+import { downloadSharedRedistDepots, downloadSteamDepots } from '../../depot'
+import { classifyDepotError } from '../../depotErrors'
+import { SteamUser } from '../../user'
+import { mockLeaseOk, mockOpenLease } from '../../__tests__/depotLeaseMocks'
+import { selectAllDepots } from '../../depot/select'
+import { decryptFilename } from '../../depot/crypto'
+import { createStubRustDepot } from './fixtures/stubRustDepot'
+
+jest.mock('backend/logger', () => ({
+  logInfo: jest.fn(),
+  logError: jest.fn(),
+  logWarning: jest.fn(),
+  getRunnerLogWriter: jest.fn().mockReturnValue({}),
+  LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
+}))
+jest.mock('backend/utils', () => ({
+  getFileSize: jest.fn(),
+  sendProgressUpdate: jest.fn()
+}))
+jest.mock('backend/sidecar/sidecarRpc', () => ({
+  requestRustInvoke: jest.fn()
+}))
+jest.mock('../../user')
+jest.mock('../../depot/select', () => ({
+  ...jest.requireActual('../../depot/select'),
+  selectAllDepots: jest.fn()
+}))
+jest.mock('../../depot/crypto', () => ({ decryptFilename: jest.fn() }))
+jest.mock('../../depot/fileAttributes', () => ({
+  applyDepotFileFlags: jest.fn()
+}))
+jest.mock('steam-user/components/content_manifest.js', () => ({
+  parse: jest.fn()
+}))
+jest.mock('../../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
+jest.mock('i18next', () => ({
+  __esModule: true,
+  default: { t: (_key: string, fallback = '') => fallback }
+}))
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const parser = require('steam-user/components/content_manifest.js') as {
+  parse: jest.Mock
+}
+const invokeMock = requestRustInvoke as unknown as jest.Mock
+
+const APP_ID = '12345'
+let steamapps: string
+let client: ReturnType<typeof makeClient>
+
+function makeClient() {
+  return {
+    licenses: [] as Array<{ package_id: number }>,
+    steamID: { getSteamID64: jest.fn().mockReturnValue('76561198012345678') },
+    getProductInfo: jest.fn((ids: number[]) => {
+      const id = ids[0] ?? 0
+      const redist = id === 228980
+      return Promise.resolve({
+        apps: {
+          [id]: {
+            appinfo: {
+              common: { name: 'Some Game' },
+              depots: {
+                branches: { public: { buildid: 321 } },
+                '228990': redist
+                  ? { manifests: { public: { gid: '9000000000000000001' } } }
+                  : { depotfromapp: '228980', sharedinstall: '1' }
+              },
+              config: { installdir: 'Steamworks Shared' },
+              extended: {}
+            }
+          }
+        },
+        packages: {}
+      })
+    }),
+    getDepotDecryptionKey: jest.fn(
+      (_a: number, d: number, cb: (e: Error | null, k: Buffer) => void) =>
+        cb(null, Buffer.alloc(32, d % 250))
+    ),
+    getRawManifest: jest.fn(
+      (
+        _a: number,
+        _d: number,
+        _g: string,
+        _b: string,
+        cb: (e: Error | null, m: Buffer) => void
+      ) => cb(null, Buffer.from('raw'))
+    ),
+    getContentServers: jest.fn(
+      (_a: number, cb: (e: Error | null, s: unknown[]) => void) =>
+        cb(null, [{ Host: 'cdn1.example.com', type: 'CDN', weightedload: '5' }])
+    ),
+    getManifestRequestCode: jest.fn().mockResolvedValue({ requestCode: '42' })
+  }
+}
+
+const OPTS = () => ({
+  targetSteamappsDir: steamapps,
+  installdir: 'SomeGame',
+  os: 'macos'
+})
+
+beforeEach(() => {
+  jest.resetAllMocks()
+  steamapps = mkdtempSync(join(tmpdir(), 'rustinstall-'))
+  client = makeClient()
+  jest.mocked(SteamUser.getClient).mockReturnValue(client as never)
+  jest
+    .mocked(SteamUser.getPersistedSteamId64)
+    .mockReturnValue('76561198012345678')
+  mockLeaseOk()
+  mockOpenLease()
+  jest.mocked(selectAllDepots).mockReturnValue([
+    { id: '111', manifest: '11111111111111111', size: 0, ownerAppId: APP_ID },
+    { id: '222', manifest: '22222222222222222', size: 0, ownerAppId: APP_ID }
+  ])
+  jest.mocked(decryptFilename).mockImplementation((raw: unknown) => String(raw))
+  process.env.GAMELIB_DEPOT_PIPELINE = 'rust'
+})
+
+afterEach(() => {
+  delete process.env.GAMELIB_DEPOT_PIPELINE
+  if (steamapps.startsWith(tmpdir()))
+    rmSync(steamapps, { recursive: true, force: true })
+})
+
+describe('downloadSteamDepots on the rust pipeline', () => {
+  it('runs one install job carrying the finalize policy and returns the mapped outcome', async () => {
+    const stub = createStubRustDepot()
+    invokeMock.mockImplementation(stub.invoke)
+    client.getDepotDecryptionKey.mockImplementation(
+      (_a: number, d: number, cb: (e: Error | null, k: Buffer) => void) =>
+        d === 111
+          ? cb(
+              Object.assign(new Error('Blocked'), { eresult: 40 }),
+              Buffer.alloc(0)
+            )
+          : cb(null, Buffer.alloc(32, 7))
+    )
+
+    const out = await downloadSteamDepots(APP_ID, OPTS())
+
+    expect(out).toEqual({ status: 'done', skippedDepots: ['111'] })
+    expect(stub.jobs).toHaveLength(1)
+    const job = stub.jobs[0]
+    expect(job?.mode).toBe('install')
+    expect(job?.installRoot).toBe(join(steamapps, 'common', 'SomeGame'))
+    expect(job?.depots.map((d) => d.depotId)).toEqual(['222'])
+    expect(job?.depots[0]?.key).toBe('07'.repeat(32))
+    expect(job?.hosts[0]).toMatchObject({
+      host: 'cdn1.example.com',
+      useTokenAuth: true
+    })
+    expect(job?.finalize).toEqual({
+      steamappsDir: steamapps,
+      installdir: 'SomeGame',
+      name: 'Some Game',
+      buildid: '321',
+      lastOwner: '76561198012345678',
+      allowFullOwnership: true
+    })
+    expect(client.getRawManifest).not.toHaveBeenCalled()
+  })
+
+  it('a plan-build failure runs no job, writes no ACF and classifies like the TS path', async () => {
+    const stub = createStubRustDepot()
+    invokeMock.mockImplementation(stub.invoke)
+    const boom = Object.assign(new Error('AccessDenied'), { eresult: 15 })
+    client.getDepotDecryptionKey.mockImplementation(
+      (_a: number, _d: number, cb: (e: Error | null, k: Buffer) => void) =>
+        cb(boom, Buffer.alloc(0))
+    )
+
+    const out = await downloadSteamDepots(APP_ID, OPTS())
+
+    expect(stub.jobs).toHaveLength(0)
+    expect(readdirSync(steamapps)).toEqual([])
+    const expected = classifyDepotError(
+      Object.assign(new Error('x'), { eresult: 15 })
+    )
+    expect(out.status).toBe('error')
+    expect(out.errorAction).toBe(expected.action)
+  })
+
+  it('an abort mid-job fires cancel once and returns cancelled', async () => {
+    const stub = createStubRustDepot({ holdUntilCancel: true })
+    invokeMock.mockImplementation(stub.invoke)
+    const ac = new AbortController()
+
+    const pending = downloadSteamDepots(APP_ID, {
+      ...OPTS(),
+      signal: ac.signal
+    })
+    while (stub.jobs.length === 0) await new Promise((r) => setImmediate(r))
+    ac.abort()
+    const out = await pending
+
+    expect(stub.cancels).toEqual([stub.jobs[0]?.jobId])
+    expect(out.status).toBe('cancelled')
+  })
+
+  it('maps a Rust error outcome through the shared classifier', async () => {
+    const stub = createStubRustDepot({
+      outcome: {
+        status: 'error',
+        acf: { stateFlags: '1026', sizeOnDisk: '0' },
+        failures: [
+          {
+            file: 'a.bin',
+            kind: 'disk_full',
+            message: 'ENOSPC: no space left',
+            code: null,
+            eresult: null,
+            httpStatus: null,
+            scope: null,
+            msSinceProgress: null
+          }
+        ]
+      }
+    })
+    invokeMock.mockImplementation(stub.invoke)
+    const out = await downloadSteamDepots(APP_ID, OPTS())
+    expect(out.status).toBe('error')
+    expect(out.errorAction).toBe(classifyDepotError(new Error('ENOSPC')).action)
+  })
+})
+
+describe('flag ts', () => {
+  it('neither entry point touches rustDepot', async () => {
+    process.env.GAMELIB_DEPOT_PIPELINE = 'ts'
+    parser.parse.mockReturnValue({ files: [] })
+    const out = await downloadSteamDepots(APP_ID, OPTS())
+    expect(out.status).not.toBe('cancelled')
+    await downloadSharedRedistDepots(APP_ID, {
+      cacheSteamappsDir: steamapps,
+      optInDepotIds: []
+    }).catch(() => undefined)
+    expect(invokeMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('downloadSharedRedistDepots on the rust pipeline', () => {
+  const SCRIPT = '_CommonRedist\\DirectX\\Jun2010\\installscript.vdf'
+  const scriptText = readFileSync(
+    join(
+      __dirname,
+      '../../bridge/__tests__/fixtures/sharedRedists/228990-directx-jun2010.vdf'
+    ),
+    'utf8'
+  )
+
+  it('runs ordinary jobs with its own install root and no finalize, keeping index and onComponent', async () => {
+    const root = join(steamapps, 'common', 'Steamworks Shared')
+    const stub = createStubRustDepot({
+      outcome: { acf: null },
+      onRun: () => {
+        const target = join(root, SCRIPT.replace(/\\/g, '/'))
+        mkdirSync(dirname(target), { recursive: true })
+        writeFileSync(target, scriptText)
+      }
+    })
+    invokeMock.mockImplementation(stub.invoke)
+    parser.parse.mockReturnValue({
+      files: [
+        { filename: SCRIPT, size: scriptText.length, flags: 256, chunks: [] },
+        {
+          filename: '_CommonRedist\\DirectX\\Jun2010\\DXSETUP.exe',
+          size: 90,
+          flags: 0,
+          chunks: []
+        }
+      ]
+    })
+    const labels: string[] = []
+
+    const r = await downloadSharedRedistDepots(APP_ID, {
+      cacheSteamappsDir: steamapps,
+      optInDepotIds: [],
+      allowLogon: true,
+      onComponent: (l) => labels.push(l)
+    })
+
+    expect(r.status).toBe('ok')
+    expect(r.failed).toEqual([])
+    expect(r.depots).toHaveLength(1)
+    expect(labels).toHaveLength(1)
+    expect(stub.jobs.map((j) => j.mode)).toEqual(['select_files', 'install'])
+    for (const j of stub.jobs) {
+      expect(j.finalize).toBeNull()
+      expect(j.installRoot).toBe(root)
+      expect(j.appId).toBe('228980')
+    }
+    expect(stub.jobs[0]?.selectPaths).toEqual([SCRIPT])
+    expect(
+      existsSync(join(steamapps, 'gamelib-shared-redist-index.json'))
+    ).toBe(true)
+  })
+})

@@ -273,6 +273,15 @@ interface SteamUserDepotExtras {
     body: Buffer,
     callback: (body: unknown, hdr?: { proto?: { eresult?: number } }) => void
   ): void
+  /** 73-13: steam-user cdn.js getManifestRequestCode (promise form, 10 s built-in timeout).
+   *  Undocumented in @types/steam-user (Pitfall 5); the Rust job asks for a fresh code per
+   *  manifest through this. */
+  getManifestRequestCode(
+    appId: number,
+    depotId: number,
+    manifestId: string,
+    branch: string
+  ): Promise<{ requestCode: unknown }>
 }
 
 export type SteamUserDepotClient = InstanceType<typeof SteamUserLib> &

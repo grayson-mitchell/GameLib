@@ -16,6 +16,8 @@ import {
   type DepotPlan
 } from './planModel'
 import { throwIfAborted, getDepotClient, buildDepotPlan } from './plan'
+import { depotPipeline } from '../depotRust/pipelineFlag'
+import { downloadSteamDepotsRust } from '../depotRust/install'
 import {
   type DepotDownloadFailure,
   type DepotDownloadResult,
@@ -280,6 +282,8 @@ export async function downloadSteamDepots(
   appId: string,
   opts: DownloadSteamDepotsOpts
 ): Promise<DepotDownloadOutcome> {
+  // D-16: the flag is read once, here; a job never mixes TS and Rust stages.
+  if (depotPipeline() === 'rust') return downloadSteamDepotsRust(appId, opts)
   const attempted: FinalizeDepotEntry[] = []
   let displayName = opts.installdir
   // D-02: captured once from the DepotPlan (plan-time PICS read) so
