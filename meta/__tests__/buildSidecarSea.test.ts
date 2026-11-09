@@ -9,8 +9,8 @@
  * argv-builders and assert their output shape without invoking the real
  * node/postject toolchain.
  */
-import { readFileSync, existsSync, readdirSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { readFileSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
 import {
   buildSeaConfigPath,
   buildSeaBlobArgv,
@@ -18,13 +18,6 @@ import {
   buildCodesignArgv,
   buildEsbuildArgv,
   buildSeaConfig,
-  LZMA_NATIVE_ASSET_KEY,
-  LZMA_NATIVE_DLL_ASSET_KEY,
-  NATIVE_LZMA_REQUIRED_TRIPLES,
-  lzmaNativePrebuildDir,
-  lzmaNativePrebuildPath,
-  lzmaNativeDllPath,
-  resolveNativeLzmaAssets,
   sidecarOutputPath,
   hostTriple,
   resolveTriple,
@@ -406,16 +399,11 @@ describe('the tested argv is the executed argv (WR-10 guard)', () => {
     return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
   }
 
-  // 23.1-02: the second assertion here used to be a blanket
-  // `not.toMatch(/node_modules/)` -- banning the STRING "node_modules"
-  // anywhere in the file, not just the CR-02 `.bin` spawn-path construction
-  // this guard is named for and dated. That blanket ban would have wrongly
-  // failed on `LZMA_NATIVE_PREBUILDS_ROOT = join('node_modules',
-  // 'lzma-native', 'prebuilds')` -- a legitimate DATA-file path (locating
-  // lzma-native's own prebuilt addon on disk), unrelated to spawning a
-  // node_modules/.bin/<tool> CLI binary. Narrowed (Rule 1: the old matcher
-  // was overly broad for its own stated purpose) to the actual dangerous
-  // shape: `node_modules` immediately followed by a `.bin` path segment.
+  // 23.1-02 narrowed this from a blanket `not.toMatch(/node_modules/)` ban to
+  // the actual dangerous shape: `node_modules` immediately followed by a
+  // `.bin` path segment. The data-file path that forced the narrowing (the
+  // lzma-native prebuild root) went with lzma-native in 73-21; the narrow
+  // matcher stays because it is the precise CR-02 property.
   test('the source contains no node_modules/.bin path construction (comment-stripped)', () => {
     const stripped = loadStrippedBuildScript()
     expect(stripped).not.toMatch(/['"]\.bin['"]/)
@@ -468,210 +456,19 @@ describe('the tested argv is the executed argv (WR-10 guard)', () => {
   })
 })
 
-describe('buildSeaConfig (asset wiring)', () => {
-  test('called with no argument (the native-unavailable/degraded shape), assets is empty: the decompress-worker asset went with the worker (73-20)', () => {
-    const config = buildSeaConfig()
-    expect(config.assets).toEqual({})
-  })
-
-  test('main/output/disableExperimentalSEAWarning are unchanged by the asset addition', () => {
+describe('buildSeaConfig (shape)', () => {
+  test('main/output/disableExperimentalSEAWarning name the SEA bundle and blob', () => {
     const config = buildSeaConfig()
     expect(config.main).toBe(join('build', 'main', 'sidecar-sea-bundle.js'))
     expect(config.output).toBe(join('build', 'sidecar-prep.blob'))
     expect(config.disableExperimentalSEAWarning).toBe(true)
   })
 
-  test('called with a native lzma path, assets maps exactly LZMA_NATIVE_ASSET_KEY', () => {
-    const config = buildSeaConfig('some/path.node')
-    expect(Object.keys(config.assets)).toEqual([LZMA_NATIVE_ASSET_KEY])
-    expect(config.assets[LZMA_NATIVE_ASSET_KEY]).toBe('some/path.node')
-  })
-
-  test('LZMA_NATIVE_ASSET_KEY is the literal "lzma_native.node" recorded by 23.1-01-SUMMARY (must agree with plan 23.1-03\'s runtime sea.getRawAsset() call)', () => {
-    expect(LZMA_NATIVE_ASSET_KEY).toBe('lzma_native.node')
-  })
-})
-
-describe('lzmaNativePrebuildDir (target-triple -> node-gyp-build prebuild dir)', () => {
-  test("maps each of the five supported triples to node-gyp-build's own <platform>-<arch> naming", () => {
-    expect(lzmaNativePrebuildDir('aarch64-apple-darwin')).toBe('darwin-arm64')
-    expect(lzmaNativePrebuildDir('x86_64-apple-darwin')).toBe('darwin-x64')
-    expect(lzmaNativePrebuildDir('x86_64-unknown-linux-gnu')).toBe('linux-x64')
-    expect(lzmaNativePrebuildDir('aarch64-unknown-linux-gnu')).toBe(
-      'linux-arm64'
-    )
-    expect(lzmaNativePrebuildDir('x86_64-pc-windows-msvc')).toBe('win32-x64')
-  })
-
-  test('the Windows triple maps to "win32-x64", NOT "win-x64" -- regression guard against reusing nodeDistName()\'s Node-dist naming for a node-gyp-build path', () => {
-    expect(lzmaNativePrebuildDir('x86_64-pc-windows-msvc')).not.toBe(
-      nodeDistName('x86_64-pc-windows-msvc')
-    )
-  })
-
-  test('throws on an unsupported triple', () => {
-    expect(() => lzmaNativePrebuildDir('mips-unknown-none')).toThrow()
-  })
-})
-
-describe('lzmaNativePrebuildPath (pure, triple-driven, no process.platform/process.arch)', () => {
-  test('returns a path under node_modules/lzma-native/prebuilds/<dir>/ ending in the observed prebuild filename', () => {
-    const result = lzmaNativePrebuildPath('aarch64-apple-darwin')
-    expect(result).toBe(
-      join(
-        'node_modules',
-        'lzma-native',
-        'prebuilds',
-        'darwin-arm64',
-        'node.napi.node'
-      )
-    )
-  })
-
-  test('throws on an unsupported triple (delegates to lzmaNativePrebuildDir)', () => {
-    expect(() => lzmaNativePrebuildPath('mips-unknown-none')).toThrow()
-  })
-})
-
-const WIN32_TRIPLE = 'x86_64-pc-windows-msvc'
-
-describe('lzmaNativeDllPath (win32-only companion library, 261011-wrx)', () => {
-  test('B1: the win32 triple maps to the prebuild dir liblzma.dll', () => {
-    expect(lzmaNativeDllPath(WIN32_TRIPLE)).toBe(
-      join(
-        'node_modules',
-        'lzma-native',
-        'prebuilds',
-        'win32-x64',
-        'liblzma.dll'
-      )
-    )
-  })
-
-  test('B1: every other triple has no DLL', () => {
-    for (const triple of [
-      'aarch64-apple-darwin',
-      'x86_64-unknown-linux-gnu',
-      'x86_64-apple-darwin',
-      'aarch64-unknown-linux-gnu'
-    ]) {
-      expect(lzmaNativeDllPath(triple)).toBeUndefined()
-    }
-  })
-
-  test('B8: LZMA_NATIVE_DLL_ASSET_KEY is the literal "liblzma.dll"', () => {
-    expect(LZMA_NATIVE_DLL_ASSET_KEY).toBe('liblzma.dll')
-  })
-})
-
-describe('buildSeaConfig with the win32 DLL companion (261011-wrx)', () => {
-  test('B2: addon + dll => exactly three asset keys', () => {
-    const config = buildSeaConfig('some/addon.node', 'some/liblzma.dll')
-    expect(Object.keys(config.assets).sort()).toEqual(
-      [LZMA_NATIVE_ASSET_KEY, LZMA_NATIVE_DLL_ASSET_KEY].sort()
-    )
-    expect(config.assets[LZMA_NATIVE_ASSET_KEY]).toBe('some/addon.node')
-    expect(config.assets[LZMA_NATIVE_DLL_ASSET_KEY]).toBe('some/liblzma.dll')
-  })
-
-  test('B2: addon only => one key, no DLL key', () => {
-    const config = buildSeaConfig('some/addon.node')
-    expect(Object.keys(config.assets)).toHaveLength(1)
-    expect(config.assets).not.toHaveProperty(LZMA_NATIVE_DLL_ASSET_KEY)
-  })
-
-  test('B2: a DLL is never embedded without its addon', () => {
-    const config = buildSeaConfig(undefined, 'some/liblzma.dll')
-    expect(Object.keys(config.assets)).toEqual([])
-  })
-})
-
-describe('resolveNativeLzmaAssets (addon + win32 companion DLL gate, 261011-wrx)', () => {
-  test('B3: win32 with everything present returns addon and dll paths', async () => {
-    await expect(
-      resolveNativeLzmaAssets(WIN32_TRIPLE, () => true)
-    ).resolves.toEqual({
-      addonPath: lzmaNativePrebuildPath(WIN32_TRIPLE),
-      dllPath: lzmaNativeDllPath(WIN32_TRIPLE)
-    })
-  })
-
-  test('B4: win32 with the DLL missing fails the compile gate naming the DLL and the triple', async () => {
-    const error = await resolveNativeLzmaAssets(
-      WIN32_TRIPLE,
-      (p) => !p.endsWith('liblzma.dll')
-    ).then(
-      () => undefined,
-      (e: unknown) => e as Error
-    )
-    expect(error).toBeInstanceOf(Error)
-    expect(error?.message).toMatch(/COMPILE GATE FAILED/)
-    expect(error?.message).toContain('liblzma.dll')
-    expect(error?.message).toContain(WIN32_TRIPLE)
-  })
-
-  test.each(['aarch64-apple-darwin', 'x86_64-unknown-linux-gnu'])(
-    'B5: %s embeds no DLL and never even looks for one',
-    async (triple) => {
-      const exists = jest.fn((_p: string) => true)
-      const result = await resolveNativeLzmaAssets(triple, exists)
-      expect(result?.dllPath).toBeUndefined()
-      expect(result?.addonPath).toBe(lzmaNativePrebuildPath(triple))
-      for (const call of exists.mock.calls) {
-        expect(call[0].endsWith('liblzma.dll')).toBe(false)
-      }
-    }
-  )
-
-  test('B6: the existing addon gate is kept (everything missing still fails naming the addon prebuild)', async () => {
-    await expect(
-      resolveNativeLzmaAssets(WIN32_TRIPLE, () => false)
-    ).rejects.toThrow(/COMPILE GATE FAILED[\s\S]*node\.napi\.node/)
-  })
-
-  test('a non-required triple with nothing on disk warns and resolves undefined', async () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined)
-    try {
-      await expect(
-        resolveNativeLzmaAssets('x86_64-apple-darwin', () => false)
-      ).resolves.toBeUndefined()
-      expect(warn).toHaveBeenCalledTimes(1)
-    } finally {
-      warn.mockRestore()
-    }
-  })
-})
-
-describe('lzma-native prebuild tree drift guard (B7, real node_modules)', () => {
-  test.each([...NATIVE_LZMA_REQUIRED_TRIPLES])(
-    '%s: the only files beside the addons are exactly the DLL the build embeds (if any)',
-    (triple) => {
-      const addonAbs = join(
-        __dirname,
-        '..',
-        '..',
-        lzmaNativePrebuildPath(triple)
-      )
-      const siblings = readdirSync(dirname(addonAbs))
-        .filter((f) => f !== 'node.napi.node' && f !== 'electron.napi.node')
-        .sort()
-      expect(siblings).toEqual(
-        lzmaNativeDllPath(triple) !== undefined ? ['liblzma.dll'] : []
-      )
-    }
-  )
-})
-
-describe('NATIVE_LZMA_REQUIRED_TRIPLES (reconciled against the 23.1-01 prebuild inventory)', () => {
-  test('contains all three shipping sidecar triples -- every one has a reconciled prebuild', () => {
-    expect(NATIVE_LZMA_REQUIRED_TRIPLES).toEqual(
-      expect.arrayContaining([
-        'aarch64-apple-darwin',
-        'x86_64-unknown-linux-gnu',
-        'x86_64-pc-windows-msvc'
-      ])
-    )
-    expect(NATIVE_LZMA_REQUIRED_TRIPLES).toHaveLength(3)
+  // The decompress-worker asset went with the worker in 73-20; the
+  // lzma-native addon and its win32 liblzma.dll companion went with the
+  // lzma-native dependency in 73-21. The blob embeds nothing beside the bundle.
+  test('embeds no SEA assets (73-20 worker, 73-21 lzma-native)', () => {
+    expect(buildSeaConfig()).not.toHaveProperty('assets')
   })
 })
 
@@ -690,12 +487,9 @@ describe('WR-10-style source-scan guard: the inline-fallback warning cannot come
   // 23.1-02: this matcher was previously `not.toMatch(/console\.warn\(/)`,
   // banning EVERY console.warn(...) call in the file forever -- not just
   // the specific "inline single-thread" Pitfall-1 warning the describe
-  // block is named for. That blanket ban would have wrongly failed on
-  // resolveNativeLzmaAsset()'s unrelated "NATIVE LZMA UNAVAILABLE"
-  // console.warn (an intentional, loud, non-silent degrade-path signal
-  // added by this plan -- see the file header's fix note 6). Narrowed to
-  // the actual phrase this guard exists to catch, per Rule 1 (the old
-  // matcher was an in-scope bug: overly broad for its own stated purpose).
+  // block is named for. Narrowed to the actual phrase this guard exists to
+  // catch, per Rule 1 (the old matcher was overly broad for its own stated
+  // purpose).
   test('the current source contains no console.warn(...) mentioning "inline single-thread"', () => {
     const stripped = loadStrippedBuildScriptSource()
     expect(stripped).not.toMatch(/inline single-thread/)

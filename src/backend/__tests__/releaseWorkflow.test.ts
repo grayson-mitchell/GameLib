@@ -424,7 +424,6 @@ describeOnPosix(
       touch(root, join('build', 'main', 'sidecar.js'))
       touch(root, join('build', 'main', 'main.js'))
       touch(root, join('build', 'main', 'chunks', 'chunk-1.js'))
-      touch(root, join('build', 'main', 'decompressWorker.js'))
       touch(root, join('build', 'preload', 'index.js'))
       touch(root, join('build', 'sea-config.json'), '{}')
       touch(root, join('build', 'sidecar-prep.blob'))

@@ -129,14 +129,6 @@ describe('meta/runTs.cjs wrapper wiring pin (C3-01)', () => {
 // comment drifting away from meta/runTs.cjs -- goes red here first.
 // ---------------------------------------------------------------------------
 
-// Two path literals genuinely reference a generated .cjs file's name without
-// asserting anything about how a meta/*.ts script itself is compiled or run
-// -- they must never be flagged as a stale-runner-path mismatch by pin 2.
-const NON_EXECUTION_CJS_ALLOWLIST = [
-  'lzmaNativeResolvedPaths.generated.cjs',
-  'resolved-paths.generated.cjs'
-]
-
 function listMetaTsFiles(): string[] {
   return readdirSync(META_DIR)
     .filter((name) => name.endsWith('.ts'))
@@ -159,9 +151,9 @@ function extractRunnerCjsPaths(source: string): string[] {
   for (const m of source.matchAll(/node ([\w./-]+\.cjs)/g)) {
     found.add(at(m, 1, 'cjs path'))
   }
-  return [...found].filter(
-    (p) => !NON_EXECUTION_CJS_ALLOWLIST.some((allowed) => p.endsWith(allowed))
-  )
+  // A two-entry allowlist for generated-artifact `.cjs` names lived here until
+  // 73-21 removed the lzma-native resolved-paths generator, its only source.
+  return [...found]
 }
 
 const WRAPPER_SCRIPT_PATTERN =

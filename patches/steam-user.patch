@@ -1,8 +1,8 @@
 diff --git a/components/cdn_compression.js b/components/cdn_compression.js
-index 2ff72df14773b80014a1b677d861e9e2b6de32cd..d12a17ff4a906701a62901247208f97454311720 100644
+index 2ff72df14773b80014a1b677d861e9e2b6de32cd..fd8c009d616c32b59530b90e0213e435b0140a65 100644
 --- a/components/cdn_compression.js
 +++ b/components/cdn_compression.js
-@@ -1,8 +1,18 @@
+@@ -1,8 +1,20 @@
 -const {requireWithFallback} = require('./helpers.js');
 -
  const AdmZip = require('adm-zip');
@@ -15,11 +15,13 @@ index 2ff72df14773b80014a1b677d861e9e2b6de32cd..d12a17ff4a906701a62901247208f974
 +// built-in modules only (no node_modules resolution at all, per
 +// https://nodejs.org/api/single-executable-applications.html), so this
 +// call always threw at sidecar startup once compiled into a self-contained
-+// SEA binary. This project never installs the optional `lzma-native`
-+// native-addon package (confirmed absent from package.json/node_modules),
-+// so the fallback path was ALWAYS the one taken in every real environment
-+// (dev, Electron, and Tauri sidecar alike) -- switching to a plain static
-+// `require('lzma')` is behavior-identical, just resolvable at build time.
++// SEA binary. The fallback path is the one every real environment takes:
++// GameLib once depended on the `lzma-native` native addon for its TS depot
++// pipeline's decompress worker, but removed it in Phase 73 (plan 73-21) when
++// depot downloads moved to Rust, so a plain static `require('lzma')` is
++// behavior-identical, just resolvable at build time. steam-user's own
++// `lzma` and `zstddec` requires (here and below) stay: both packages remain
++// GameLib dependencies because steam-user loads them at import.
 +const LZMA = require('lzma');
  const StdLib = require('@doctormckay/stdlib');
  const {ZSTDDecoder} = require('zstddec');

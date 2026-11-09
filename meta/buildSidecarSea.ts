@@ -83,15 +83,14 @@
  *    `require(path.join(__dirname, 'src', 'lzma_worker.js'))`
  *    respectively) -- esbuild cannot bundle a computed require, and this
  *    ran unconditionally at module load (not lazily), crashing every
- *    startup. Neither call's actual resolved target ever varies in this
- *    project (`lzma-native` is never installed; `__dirname` is always the
- *    package's own directory), so both were fixed with a `pnpm patch`
- *    (`patches/steam-user.patch`, `patches/lzma.patch`) replacing each
- *    computed call with the literal, statically-bundleable target it
- *    always resolved to anyway -- a behavior-neutral simplification, not a
- *    functional change, applied via this repo's existing
- *    `pnpm.patchedDependencies` mechanism (already used for
- *    `@types/node`).
+ *    startup. Both were fixed with a `pnpm patch` (`patches/steam-user.patch`,
+ *    `patches/lzma.patch`) replacing each computed call with a literal,
+ *    statically-bundleable target, applied via this repo's existing
+ *    `pnpm.patchedDependencies` mechanism (already used for `@types/node`).
+ *    `lzma-native` itself was a GameLib dependency for the TS depot
+ *    pipeline's decompress worker and was removed in Phase 73 (73-21);
+ *    steam-user still requires `lzma` and `zstddec` at import, so both
+ *    packages and both patches stay.
  *
  * Verified end-to-end: the resulting bundle, run under a fully PATH- and
  * node_modules-scrubbed environment, starts, prints `READY_SENTINEL`, and
@@ -160,76 +159,6 @@ const SEA_BUNDLE_PATH = join('build', 'main', 'sidecar-sea-bundle.js')
 // directory -- no new .gitignore entries needed at the repo root.
 const SEA_CONFIG_PATH = join('build', 'sea-config.json')
 const SEA_BLOB_PATH = join('build', 'sidecar-prep.blob')
-
-// 23.1-02 (spike 023 VALIDATED, 23.1-01-SUMMARY): the native lzma-native
-// addon, embedded as a named SEA asset (its decompress-worker consumer was
-// deleted in 73-20; 73-21 retires lzma-native). `LZMA_NATIVE_ASSET_KEY` is the
-// arbitrary dictionary key the SEA blob's `assets` map uses -- exported so a
-// test can assert the two sides never drift apart. Plan 23.1-03's
-// `lzmaNativeBinding.ts` passes this SAME literal to `sea.getRawAsset()` at
-// runtime; the runtime side duplicates the literal rather than importing it
-// because `src/` cannot import from `meta/`.
-export const LZMA_NATIVE_ASSET_KEY = 'lzma_native.node'
-
-// 261011-wrx: the win32 prebuild `node.napi.node` is NOT self-contained. Its
-// import table names exactly `KERNEL32.dll` and `liblzma.dll` (measured by
-// 261011-mza), so Windows resolves `liblzma.dll` BY NAME, from the addon's
-// own directory first, at dlopen. Embedding the addon alone reproduces the
-// 261011-mza "The specified module could not be found." fallback (21 of 21
-// runs, nativeWorkers:0). The darwin and linux prebuilds link liblzma
-// statically and ship no sibling library.
-//
-// `LZMA_NATIVE_DLL_ASSET_KEY` is the SEA dictionary key for that companion
-// DLL, embedded for the win32 triple ONLY. The runtime side
-// (`lzmaNativeBinding.ts` `LZMA_NATIVE_DLL_SEA_ASSET_KEY`) duplicates this
-// literal because `src/` cannot import from `meta/`; a two-sided drift test
-// in lzmaNativeBinding.test.ts guards the pair.
-// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
-// to ts-prune).
-export const LZMA_NATIVE_DLL_ASSET_KEY = 'liblzma.dll'
-
-// 23.1-01-SUMMARY's spike OBSERVED this filename by listing
-// node_modules/lzma-native/prebuilds/ after a real install -- it is NOT the
-// `lzma_native.node` value PATTERNS.md originally assumed. The asset KEY
-// above and this on-disk FILENAME are deliberately independent values and
-// do not need to match; every triple also ships an `electron.napi.node`
-// sibling this project never touches (the sidecar is plain Node, not
-// Electron).
-const LZMA_NATIVE_ADDON_FILENAME = 'node.napi.node'
-
-// The on-disk filename of the win32 companion library. Load-bearing: it must
-// equal the name in `node.napi.node`'s import table (see above), because the
-// runtime extracts it under exactly this name beside the addon.
-const LZMA_NATIVE_WIN32_DLL_FILENAME = 'liblzma.dll'
-
-const LZMA_NATIVE_PREBUILDS_ROOT = join(
-  'node_modules',
-  'lzma-native',
-  'prebuilds'
-)
-
-/**
- * The shipping sidecar triples for which a MISSING lzma-native prebuild is
- * a hard build failure rather than a silent throughput degrade. Populated
- * from the intersection of the three shipping sidecar triples and 23.1-01's
- * reconciled prebuild inventory (Task 1 of this plan) -- every one of the
- * three has a reconciled prebuild, so none are excluded. If a future
- * shipping triple's prebuild ever went missing from that inventory, it
- * would be named here as excluded rather than added to this list.
- *
- * quick-260901-i8i: the Intel Mac triple was removed from this array --
- * GameLib no longer publishes that leg. This is a shipping-inventory
- * declaration, not build-time triple-handling capability; the capability
- * (sidecarOutputPath, nodeDistUrls, triplePlatform, expectedMachoArch, etc.)
- * still supports that triple for ad-hoc/local builds elsewhere in this file.
- */
-// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
-// to ts-prune).
-export const NATIVE_LZMA_REQUIRED_TRIPLES: readonly string[] = [
-  'aarch64-apple-darwin',
-  'x86_64-unknown-linux-gnu',
-  'x86_64-pc-windows-msvc'
-]
 
 const SIDECAR_BIN_DIR = join('src-tauri', 'binaries')
 
@@ -502,146 +431,6 @@ export function nodeDistName(triple: string): string {
 }
 
 /**
- * Maps a target triple to node-gyp-build's own `<platform>-<arch>` prebuild
- * directory naming -- deliberately a SEPARATE switch from `nodeDistName()`
- * above, not a delegation to it. `nodeDistName()` returns Node's own dist
- * naming (`win-x64`), while `node-gyp-build` computes
- * `${process.platform}-${process.arch}`, which on Windows is `win32-x64`.
- * Reusing `nodeDistName()` here would silently produce a path that never
- * exists and degrade every Windows release leg to pure-JS decode with no
- * build-time signal -- exactly the trap this function exists to avoid (see
- * the regression test asserting the two functions disagree on Windows).
- * Pure; never reads `process.platform`/`process.arch` (CR-01 host-vs-target
- * discipline -- driven only by the TARGET triple parameter).
- */
-// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
-// to ts-prune).
-export function lzmaNativePrebuildDir(triple: string): string {
-  switch (triple) {
-    case 'aarch64-apple-darwin':
-      return 'darwin-arm64'
-    case 'x86_64-apple-darwin':
-      return 'darwin-x64'
-    case 'x86_64-unknown-linux-gnu':
-      return 'linux-x64'
-    case 'aarch64-unknown-linux-gnu':
-      return 'linux-arm64'
-    case 'x86_64-pc-windows-msvc':
-      return 'win32-x64'
-    default:
-      throw new Error(`unsupported sidecar target triple: ${triple}`)
-  }
-}
-
-/**
- * The on-disk path to lzma-native's prebuilt native addon for a target
- * triple. Pure -- no filesystem access, no `process.platform`/
- * `process.arch` read anywhere (CR-01 discipline). Existence is checked
- * separately by `resolveNativeLzmaAssets()` below, keeping this function
- * usable in a plain unit test with no real `node_modules` tree required.
- */
-// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
-// to ts-prune).
-export function lzmaNativePrebuildPath(triple: string): string {
-  return join(
-    LZMA_NATIVE_PREBUILDS_ROOT,
-    lzmaNativePrebuildDir(triple),
-    LZMA_NATIVE_ADDON_FILENAME
-  )
-}
-
-/**
- * 261011-wrx: the on-disk path to the companion `liblzma.dll` that the win32
- * prebuild addon imports at dlopen, or `undefined` for every other triple
- * (the darwin and linux prebuilds link liblzma statically). Pure -- no
- * filesystem access and no `process.platform`/`process.arch` read (CR-01
- * host-vs-target discipline: driven only by the TARGET triple parameter).
- */
-// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
-// to ts-prune).
-export function lzmaNativeDllPath(triple: string): string | undefined {
-  if (triple !== 'x86_64-pc-windows-msvc') {
-    return undefined
-  }
-  return join(
-    LZMA_NATIVE_PREBUILDS_ROOT,
-    lzmaNativePrebuildDir(triple),
-    LZMA_NATIVE_WIN32_DLL_FILENAME
-  )
-}
-
-/**
- * The only impure piece of the native-LZMA asset resolution. Computes the
- * expected prebuild path for `triple` and checks it on disk:
- *   - present -> returns the path, to be embedded as a second SEA asset;
- *   - absent AND `triple` is in `NATIVE_LZMA_REQUIRED_TRIPLES` -> throws a
- *     COMPILE GATE failure, mirroring `bundleForSea()`'s throw-loud
- *     discipline verbatim. This project has just spent an entire debug arc
- *     (see file header, fix note 6) discovering that a decode path was
- *     silently degraded in every shipped build -- a required triple losing
- *     its prebuild must break the build, not the throughput;
- *   - absent AND `triple` is NOT required -> returns `undefined` after a
- *     single loud `console.warn`, so an unsupported triple's release leg
- *     degrades to the existing pure-JS `lzma` decode path instead of
- *     bricking entirely. Loud, not silent -- what the COMPILE GATE
- *     discipline actually requires.
- *
- * 261011-wrx: for a triple that also needs a companion library
- * (`lzmaNativeDllPath(triple)`, win32 only) the DLL is resolved the same
- * way and returned as `dllPath`. The addon alone cannot load there, so a
- * missing DLL is a COMPILE GATE failure for a required triple, and for a
- * non-required triple a loud warn + `undefined` (neither file embedded).
- * `exists` is injectable so the gate is unit-testable without a real tree.
- */
-// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
-// to ts-prune).
-export async function resolveNativeLzmaAssets(
-  triple: string,
-  exists: (p: string) => boolean = existsSync
-): Promise<{ addonPath: string; dllPath?: string } | undefined> {
-  const prebuildPath = lzmaNativePrebuildPath(triple)
-  if (exists(prebuildPath)) {
-    const dllPath = lzmaNativeDllPath(triple)
-    if (dllPath === undefined) {
-      return { addonPath: prebuildPath }
-    }
-    if (exists(dllPath)) {
-      return { addonPath: prebuildPath, dllPath }
-    }
-    if (NATIVE_LZMA_REQUIRED_TRIPLES.includes(triple)) {
-      throw new Error(
-        `COMPILE GATE FAILED (D-06): missing required lzma-native companion ` +
-          `library liblzma.dll for target triple ${triple} at ${dllPath} -- ` +
-          'the win32 addon imports it dynamically at dlopen, so embedding ' +
-          'the addon alone reproduces the 261011-mza "The specified module ' +
-          'could not be found." pure-JS fallback'
-      )
-    }
-    console.warn(
-      `[build:sidecar-sea] NATIVE LZMA UNAVAILABLE for ${triple} -- the ` +
-        `addon was found but its companion liblzma.dll is missing at ` +
-        `${dllPath}; the addon cannot load without it, so this release leg ` +
-        'will ship with pure-JS lzma decode only.'
-    )
-    return undefined
-  }
-  if (NATIVE_LZMA_REQUIRED_TRIPLES.includes(triple)) {
-    throw new Error(
-      `COMPILE GATE FAILED (D-06): missing required lzma-native prebuild ` +
-        `for target triple ${triple} at ${prebuildPath} -- this triple is ` +
-        `declared native-capable (NATIVE_LZMA_REQUIRED_TRIPLES) and must ` +
-        'not silently ship a pure-JS-only decode path'
-    )
-  }
-  console.warn(
-    `[build:sidecar-sea] NATIVE LZMA UNAVAILABLE for ${triple} -- no ` +
-      `prebuild found at ${prebuildPath}; this release leg will ship with ` +
-      'pure-JS lzma decode only.'
-  )
-  return undefined
-}
-
-/**
  * Resolves the official nodejs.org dist archive/checksum/inner-binary
  * locations for a target triple. `version` defaults to `process.version`
  * (already `v`-prefixed) -- the base binary MUST match the Node version
@@ -680,60 +469,34 @@ export function nodeDistUrls(
 }
 
 /**
- * Pure sea-config shape, extracted so a test can assert the asset wiring
- * without running a real build. The decompress-worker asset was removed with
- * the worker in 73-20.
- *
- * 261011-wrx: `nativeLzmaDllPath` is the win32 companion `liblzma.dll`. It
- * adds a `LZMA_NATIVE_DLL_ASSET_KEY` entry, and only when BOTH it and
- * `nativeLzmaPath` are non-empty: a DLL is never embedded without its addon.
- *
- * 23.1-02: `nativeLzmaPath` is optional -- when provided (a resolved,
- * on-disk lzma-native prebuild path), an `LZMA_NATIVE_ASSET_KEY` entry is
- * added to `assets`; when omitted, `assets` is empty. Stays pure -- no
- * `existsSync()` here; the existence decision belongs to
- * `resolveNativeLzmaAssets()`.
+ * Pure sea-config shape, extracted so a test can assert it without running a
+ * real build. The blob carries no `assets`: the decompress-worker asset went
+ * with the worker in 73-20, and the lzma-native addon and its win32
+ * `liblzma.dll` companion were retired with the `lzma-native` dependency in
+ * 73-21. Every depot download decodes in Rust now.
  */
 // Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
 // to ts-prune).
-export function buildSeaConfig(
-  nativeLzmaPath?: string,
-  nativeLzmaDllPath?: string
-): {
+export function buildSeaConfig(): {
   main: string
   output: string
   disableExperimentalSEAWarning: boolean
-  assets: Record<string, string>
 } {
-  const assets: Record<string, string> = {}
-  if (typeof nativeLzmaPath === 'string' && nativeLzmaPath.length > 0) {
-    assets[LZMA_NATIVE_ASSET_KEY] = nativeLzmaPath
-    if (typeof nativeLzmaDllPath === 'string' && nativeLzmaDllPath.length > 0) {
-      assets[LZMA_NATIVE_DLL_ASSET_KEY] = nativeLzmaDllPath
-    }
-  }
   return {
     main: SEA_BUNDLE_PATH,
     output: SEA_BLOB_PATH,
-    disableExperimentalSEAWarning: true,
-    assets
+    disableExperimentalSEAWarning: true
   }
 }
 
-async function writeSeaConfig(
-  nativeLzmaPath?: string,
-  nativeLzmaDllPath?: string
-): Promise<void> {
+async function writeSeaConfig(): Promise<void> {
   if (!existsSync(SEA_BUNDLE_PATH)) {
     throw new Error(
       `Missing ${SEA_BUNDLE_PATH} -- bundleForSea() must run before writeSeaConfig()`
     )
   }
   await mkdir(join('build'), { recursive: true })
-  await writeFile(
-    SEA_CONFIG_PATH,
-    JSON.stringify(buildSeaConfig(nativeLzmaPath, nativeLzmaDllPath), null, 2)
-  )
+  await writeFile(SEA_CONFIG_PATH, JSON.stringify(buildSeaConfig(), null, 2))
 }
 
 /**
@@ -1142,28 +905,8 @@ async function main(): Promise<void> {
         : ' (native build)')
   )
 
-  // 23.1-02 (spike 023 VALIDATED): resolve the native lzma-native asset by
-  // TARGET triple before any bundling starts, so a required-triple failure
-  // fails fast rather than after paying for two esbuild bundles.
-  const nativeLzmaAssets = await resolveNativeLzmaAssets(triple)
-  const nativeLzmaPath = nativeLzmaAssets?.addonPath
-  const nativeLzmaDllPath = nativeLzmaAssets?.dllPath
-  console.log(
-    nativeLzmaPath
-      ? `[build:sidecar-sea] native LZMA addon embedded as SEA asset ` +
-          `"${LZMA_NATIVE_ASSET_KEY}" from ${nativeLzmaPath}`
-      : `[build:sidecar-sea] native LZMA addon NOT embedded for ${triple} ` +
-          '-- this leg ships pure-JS lzma decode only.'
-  )
-  if (nativeLzmaDllPath) {
-    console.log(
-      `[build:sidecar-sea] liblzma.dll companion embedded as SEA asset ` +
-        `"${LZMA_NATIVE_DLL_ASSET_KEY}" from ${nativeLzmaDllPath}`
-    )
-  }
-
   await bundleForSea()
-  await writeSeaConfig(nativeLzmaPath, nativeLzmaDllPath)
+  await writeSeaConfig()
   await generateSeaBlob()
   const outputPath = await copyNodeBinary(triple)
   await injectBlob(outputPath, triple)
