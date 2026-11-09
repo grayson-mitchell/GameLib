@@ -2174,9 +2174,9 @@ mod tests {
                 start -= 1;
             }
             let mut is_test = false;
-            for k in start..i {
-                match classify_cfg_test_attr(lines[k]) {
-                    CfgTest::Ambiguous => panic!("ambiguous test cfg at line {}: {}", k + 1, lines[k]),
+            for (k, line) in lines.iter().enumerate().take(i).skip(start) {
+                match classify_cfg_test_attr(line) {
+                    CfgTest::Ambiguous => panic!("ambiguous test cfg at line {}: {}", k + 1, line),
                     CfgTest::Test => is_test = true,
                     CfgTest::Other => {}
                 }

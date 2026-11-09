@@ -50,8 +50,18 @@ fn lexical_resolve(base: &Path, rel: &Path) -> Vec<String> {
     let push_all = |p: &Path, parts: &mut Vec<String>| {
         for c in p.components() {
             match c {
-                Component::Prefix(_) | Component::RootDir => {
+                Component::Prefix(_) => {
                     parts.clear();
+                    parts.push(c.as_os_str().to_string_lossy().into_owned());
+                }
+                // On Windows `C:\x` is Prefix("C:") then RootDir: keep the drive prefix that
+                // was just pushed, or the path is re-rooted on the current drive.
+                Component::RootDir => {
+                    let after_prefix = parts.len() == 1
+                        && (parts[0].ends_with(':') || parts[0].starts_with("\\\\"));
+                    if !after_prefix {
+                        parts.clear();
+                    }
                     parts.push(c.as_os_str().to_string_lossy().into_owned());
                 }
                 Component::CurDir => {}

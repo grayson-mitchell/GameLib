@@ -741,3 +741,22 @@ mod census {
         }
     }
 }
+
+/// A drive-lettered root must keep its drive: `C:\x` is Prefix then RootDir, and clearing on
+/// RootDir re-rooted every file on the current drive (CI windows-latest, 73-18).
+#[cfg(windows)]
+#[test]
+fn windows_drive_root_keeps_its_prefix() {
+    use std::path::{Path, PathBuf};
+    let root = Path::new(r"C:\Temp\lib");
+    assert_eq!(
+        gamelib_depot::post::resolve_contained_path(root, "out/a.bin").unwrap(),
+        PathBuf::from(r"C:\Temp\lib\out\a.bin")
+    );
+    assert!(gamelib_depot::post::resolve_contained_path(root, "../escape.bin").is_err());
+    let unc = Path::new(r"\\?\C:\Temp\lib");
+    assert_eq!(
+        gamelib_depot::post::resolve_contained_path(unc, "a\\b.bin").unwrap(),
+        PathBuf::from(r"\\?\C:\Temp\lib\a\b.bin")
+    );
+}
