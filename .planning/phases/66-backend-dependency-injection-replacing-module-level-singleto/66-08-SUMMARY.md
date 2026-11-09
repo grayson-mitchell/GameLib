@@ -90,3 +90,12 @@ None. No new handles or in-flight work; step bodies moved verbatim (T-66-25); se
 
 - FOUND: src/backend/sidecar/__tests__/bootSourceShape.test.ts
 - FOUND commits: 5e12362bc, 012e7df47, e8bbeac5f
+
+## Post-execution gate fixes
+
+Phase 66 left `pnpm lint` (21 errors) and `pnpm find-deadcode` (2 findings) red; fixed in a `fix(66)` commit.
+
+- `runner.ts`: `kill: base.kill` replaced with `(signal) => base.kill(signal)` (unbound-method); no disable needed.
+- `bootstrapUserReconcile.test.ts`: the `*IsLoggedInSpy` bindings existed pre-phase only to `mockRestore()` them (checked against a247fdb7f); no assertions were dropped by the bootFresh migration, so none were restored. Bindings and unused destructures dropped, stub calls kept.
+- `bootstrapWirings.test.ts`: a 21st error (`prefer-const` on `deliverUrl`, from 66-04) removed by using the destructured handle directly.
+- knip `getRecentGames`/`testingExportsRecentGames`: not lost coverage. steamFlows.test.ts still exercises both; 66-07 moved the import to `require()` inside `freshRegistry()`, which knip cannot see. Added a type-only `import type * as RecentGamesModule` so the static edge is visible. No exports removed, baseline untouched.
