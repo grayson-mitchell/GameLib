@@ -14,7 +14,10 @@ import { settingsGlobalChain } from './settingsGlobal'
 export const STORE_MIGRATIONS: Readonly<Record<string, readonly Migration[]>> =
   {
     'settings/global': settingsGlobalChain,
-    'settings/game': settingsGameChain
+    'settings/game': settingsGameChain,
+    // baseline v1 = the pre-engine hand-rolled `version: 1`; codec in
+    // storeVersioning/sharedRedistLedgerFile.ts
+    'steam_bridge/shared-redists': []
   }
 
 const testOverrides = new Map<string, readonly Migration[] | undefined>()
