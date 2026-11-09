@@ -1,15 +1,12 @@
 /**
- * Phase 73 Plan 13 Task 1: the D-16 flag, the CM-only plan half, the job builder and the
- * progress bridge.
+ * Phase 73 Plan 13 Task 1 (renamed from depotPipelineFlag.test.ts in 73-19, when the D-16 flag
+ * was removed): the CM-only plan half, the job builder and the progress bridge.
  */
-import { buildDepotPlan, buildDepotRefs } from '../../depot/plan'
+import { buildDepotRefs } from '../../depot/plan'
 import { SteamUser } from '../../user'
 import { mockLeaseOk } from '../../__tests__/depotLeaseMocks'
 import { selectAllDepots } from '../../depot/select'
-import { decryptFilename } from '../../depot/crypto'
 import { getFileSize, sendProgressUpdate } from 'backend/utils'
-import { logWarning } from 'backend/logger'
-import { DEPOT_PIPELINE_DEFAULT, depotPipeline } from '../pipelineFlag'
 import { buildDepotJob, orderRefsForCollisions } from '../jobBuilder'
 import { createProgressBridge } from '../progressBridge'
 import type { RustJobEvent } from '../types'
@@ -30,23 +27,11 @@ jest.mock('../../depot/select', () => ({
   ...jest.requireActual('../../depot/select'),
   selectAllDepots: jest.fn()
 }))
-jest.mock('../../depot/crypto', () => ({ decryptFilename: jest.fn() }))
-jest.mock('../../depot/fileAttributes', () => ({
-  applyDepotFileFlags: jest.fn()
-}))
-jest.mock('steam-user/components/content_manifest.js', () => ({
-  parse: jest.fn().mockReturnValue({ files: [] })
-}))
 jest.mock('../../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 jest.mock('i18next', () => ({
   __esModule: true,
   default: { t: (_key: string, fallback = '') => fallback }
 }))
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const manifestParser = require('steam-user/components/content_manifest.js') as {
-  parse: jest.Mock
-}
 
 const APP_ID = '12345'
 const OPTS = {
@@ -80,15 +65,8 @@ function makeClient() {
         cb: (e: Error | null, k: Buffer) => void
       ) => cb(null, Buffer.alloc(32, depotId % 256))
     ),
-    getRawManifest: jest.fn(
-      (
-        _a: number,
-        _d: number,
-        _g: string,
-        _b: string,
-        cb: (e: Error | null, r: Buffer) => void
-      ) => cb(null, Buffer.from('raw'))
-    )
+    // Present so a stray TS manifest fetch would be counted (D-01: there must be none).
+    getRawManifest: jest.fn()
   }
 }
 
@@ -99,47 +77,11 @@ function wire(client: ReturnType<typeof makeClient>) {
     { id: '111', manifest: '11111111111111111', size: 0, ownerAppId: APP_ID },
     { id: '222', manifest: '22222222222222222', size: 0, ownerAppId: APP_ID }
   ])
-  jest.mocked(decryptFilename).mockImplementation((raw: unknown) => String(raw))
 }
-
-describe('depotPipeline flag', () => {
-  const saved = process.env.GAMELIB_DEPOT_PIPELINE
-  afterEach(() => {
-    if (saved === undefined) delete process.env.GAMELIB_DEPOT_PIPELINE
-    else process.env.GAMELIB_DEPOT_PIPELINE = saved
-  })
-
-  it('defaults to rust when unset (flipped by 73-17 after 73-PARITY)', () => {
-    delete process.env.GAMELIB_DEPOT_PIPELINE
-    expect(DEPOT_PIPELINE_DEFAULT).toBe('rust')
-    expect(depotPipeline()).toBe('rust')
-  })
-
-  it('treats an empty value as unset', () => {
-    process.env.GAMELIB_DEPOT_PIPELINE = ''
-    expect(depotPipeline()).toBe('rust')
-  })
-
-  it('honours rust and ts', () => {
-    process.env.GAMELIB_DEPOT_PIPELINE = 'rust'
-    expect(depotPipeline()).toBe('rust')
-    process.env.GAMELIB_DEPOT_PIPELINE = 'ts'
-    expect(depotPipeline()).toBe('ts')
-  })
-
-  it('falls back to the default on any other value and logs once', () => {
-    jest.mocked(logWarning).mockClear()
-    process.env.GAMELIB_DEPOT_PIPELINE = 'bogus'
-    expect(depotPipeline()).toBe('rust')
-    expect(depotPipeline()).toBe('rust')
-    expect(logWarning).toHaveBeenCalledTimes(1)
-  })
-})
 
 describe('buildDepotRefs', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    manifestParser.parse.mockReturnValue({ files: [] })
   })
 
   it('buildDepotRefs_never_fetches_manifests', async () => {
@@ -147,22 +89,20 @@ describe('buildDepotRefs', () => {
     wire(client)
     const refs = await buildDepotRefs(APP_ID, OPTS)
     expect(client.getRawManifest).toHaveBeenCalledTimes(0)
-    expect(manifestParser.parse).toHaveBeenCalledTimes(0)
     expect(client.getDepotDecryptionKey).toHaveBeenCalledTimes(2)
     expect(refs.depots.map((d) => d.depotId)).toEqual(['111', '222'])
   })
 
-  it('returns the same ids, manifests, buildid and skips as buildDepotPlan', async () => {
+  it('returns the selected ids, manifests, owner, display name and public buildid', async () => {
     const client = makeClient()
     wire(client)
     const refs = await buildDepotRefs(APP_ID, OPTS)
-    const plan = await buildDepotPlan(APP_ID, OPTS)
-    expect(refs.depots.map((d) => [d.depotId, d.gid, d.ownerAppId])).toEqual(
-      plan.depots.map((d) => [d.depotId, d.gid, d.ownerAppId])
-    )
-    expect(refs.buildid).toBe(plan.buildid)
-    expect(refs.name).toBe(plan.name)
-    expect(refs.skippedDepots).toEqual(plan.skippedDepots)
+    expect(refs.depots.map((d) => [d.depotId, d.gid, d.ownerAppId])).toEqual([
+      ['111', '11111111111111111', APP_ID],
+      ['222', '22222222222222222', APP_ID]
+    ])
+    expect(refs.name).toBe('Some Game')
+    expect(refs.skippedDepots).toEqual([])
     expect(refs.buildid).toBe('987')
   })
 

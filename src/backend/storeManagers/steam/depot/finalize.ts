@@ -25,7 +25,7 @@ import { type DepotDownloadFailure, canWriteFullOwnership } from './download'
 // .acf (D-07's non-conflicting-paths guarantee).
 // ─────────────────────────────────────────────────────────────────────────
 
-export interface FinalizeDepotEntry {
+interface FinalizeDepotEntry {
   /** Steam depot id. STRING — never coerced to Number (T-21-04). */
   depotId: string
   /** 64-bit manifest GID. STRING — never coerced to Number (T-21-04). */

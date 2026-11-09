@@ -1,22 +1,25 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 /**
- * Quick 261026-lif: downloadSelectedDepotFiles. No real network: a fake
- * steam-user client, a mocked raw-manifest parser and an injected
- * `downloadFiles` seam. Mock preamble copied from depot.prescreen.test.ts.
+ * Quick 261026-lif: downloadSelectedDepotFiles. No real network: a fake steam-user client for
+ * the CM half and, since 73-19, the stubbed rustInvoke leaf (stubRustDepot) for the one
+ * select_files job. Which manifest entries a path list selects (normalised paths, never a
+ * directory or symlink) is the crate's `select_files_writes_only_selected`; what stays here is
+ * the TS policy around the job.
  */
 import { existsSync, mkdtempSync, readdirSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
-import { join } from 'path'
+import { join, resolve } from 'path'
 
-import { downloadSelectedDepotFiles, type DepotPlan } from '../depot'
+import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+import { downloadSelectedDepotFiles } from '../depot'
 import { SteamUser } from '../user'
 import { mockLeaseOk, mockLeaseRefused } from './depotLeaseMocks'
 import { selectAllDepots } from '../depot/select'
-import { decryptFilename } from '../depot/crypto'
 import { at } from './fixtures/indexed'
-
-// This suite exercises the TS depot pipeline. Pin it, because the default is 'rust' since 73-17.
-process.env.GAMELIB_DEPOT_PIPELINE = 'ts'
+import {
+  createStubRustDepot,
+  type StubRustDepotOptions
+} from '../depotRust/__tests__/fixtures/stubRustDepot'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -29,19 +32,13 @@ jest.mock('backend/utils', () => ({
   getFileSize: jest.fn(),
   sendProgressUpdate: jest.fn()
 }))
+jest.mock('backend/sidecar/sidecarRpc', () => ({
+  requestRustInvoke: jest.fn()
+}))
 jest.mock('../user')
 jest.mock('../depot/select', () => ({
   ...jest.requireActual('../depot/select'),
   selectAllDepots: jest.fn()
-}))
-jest.mock('../depot/crypto', () => ({ decryptFilename: jest.fn() }))
-jest.mock('../depot/fileAttributes', () => ({ applyDepotFileFlags: jest.fn() }))
-jest.mock('steam-user/components/content_manifest.js', () => ({
-  parse: jest.fn()
-}))
-jest.mock('../depot/decompress', () => ({
-  fetchChunk: jest.fn(),
-  isDecodeStageError: () => false
 }))
 jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 jest.mock('i18next', () => ({
@@ -49,20 +46,11 @@ jest.mock('i18next', () => ({
   default: { t: (_key: string, fallback = '') => fallback }
 }))
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const parser = require('steam-user/components/content_manifest.js') as {
-  parse: jest.Mock
-}
-
 const APP_ID = '12345'
 const SHA = 'ab'.repeat(20)
-
-type DownloadFn = NonNullable<
-  Parameters<typeof downloadSelectedDepotFiles>[1]['downloadFiles']
->
+const PICKED = [{ filename: 'bin\\steam_api64.dll', size: 7, sha1: SHA }]
 
 let staging: string
-let files: unknown[]
 
 function makeClient() {
   return {
@@ -76,33 +64,28 @@ function makeClient() {
     }),
     getDepotDecryptionKey: jest.fn(
       (_a: number, d: number, cb: (e: Error | null, k: Buffer) => void) =>
-        cb(null, Buffer.from(`key-${d}`))
-    ),
-    getRawManifest: jest.fn(
-      (
-        _a: number,
-        d: number,
-        _g: string,
-        _b: string,
-        cb: (e: Error | null, r: Buffer) => void
-      ) => cb(null, Buffer.from(`raw-${d}`))
+        cb(null, Buffer.alloc(32, d % 250))
     ),
     getContentServers: jest.fn(
       (_a: number, cb: (e: Error | null, s: unknown[]) => void) =>
         cb(null, [{ Host: 'cdn1.example.com' }])
-    )
+    ),
+    getManifestRequestCode: jest.fn().mockResolvedValue({ requestCode: '42' })
   }
 }
 
-const ok = {
-  outcome: 'completed' as const,
-  failures: [],
-  allFilesVerifiedThisRun: true,
-  allModesApplied: true
+let client: ReturnType<typeof makeClient>
+
+function rust(options: StubRustDepotOptions = {}) {
+  const stub = createStubRustDepot({
+    outcome: { acf: null, files: PICKED },
+    ...options
+  })
+  jest.mocked(requestRustInvoke).mockImplementation(stub.invoke)
+  return stub
 }
 
 const call = (
-  downloadFiles: jest.Mock,
   over: Partial<Parameters<typeof downloadSelectedDepotFiles>[1]> = {}
 ) =>
   downloadSelectedDepotFiles(APP_ID, {
@@ -110,36 +93,13 @@ const call = (
     installdir: 'Game',
     os: 'windows',
     selectPaths: ['bin/steam_api64.dll'],
-    downloadFiles: downloadFiles as unknown as DownloadFn,
     ...over
   })
 
 beforeEach(() => {
+  jest.clearAllMocks()
   staging = mkdtempSync(join(tmpdir(), 'lif-sel-'))
-  files = [
-    {
-      filename: 'bin\\Game.exe',
-      size: 10,
-      sha_content: SHA,
-      flags: 0,
-      chunks: []
-    },
-    {
-      filename: 'bin\\steam_api64.dll',
-      size: 7,
-      sha_content: SHA.toUpperCase(),
-      flags: 0,
-      chunks: []
-    },
-    {
-      filename: 'bin\\sub\\steam_api.dll',
-      size: 5,
-      sha_content: SHA,
-      flags: 0,
-      chunks: []
-    }
-  ]
-  const client = makeClient()
+  client = makeClient()
   mockLeaseOk()
   jest.mocked(SteamUser.getClient).mockReturnValue(client as never)
   jest
@@ -147,8 +107,6 @@ beforeEach(() => {
     .mockReturnValue([
       { id: '111', manifest: '11111111111111111', size: 0, ownerAppId: APP_ID }
     ])
-  jest.mocked(decryptFilename).mockImplementation((raw: unknown) => String(raw))
-  parser.parse.mockImplementation(() => ({ files }))
 })
 
 afterEach(() => {
@@ -157,83 +115,101 @@ afterEach(() => {
 })
 
 describe('downloadSelectedDepotFiles', () => {
-  it('downloads only the selected file and sizes the plan to it', async () => {
-    const dl = jest.fn().mockResolvedValue(ok)
-    const r = await call(dl)
-    expect(dl).toHaveBeenCalledTimes(1)
-    const plan = dl.mock.calls[0][0] as DepotPlan
-    expect(plan.depots).toHaveLength(1)
-    expect(at(plan.depots, 0).files.map((f) => f.filename)).toEqual([
-      'bin\\steam_api64.dll'
-    ])
-    expect(plan.totalBytes).toBe(7)
-    expect(r).toEqual({
-      status: 'done',
-      files: [{ filename: 'bin\\steam_api64.dll', size: 7, sha1: SHA }]
-    })
+  it('runs one select_files job over the path list and returns the files Rust fetched', async () => {
+    const stub = rust()
+    const r = await call()
+    expect(stub.jobs).toHaveLength(1)
+    const job = at(stub.jobs, 0)
+    expect(job.mode).toBe('select_files')
+    expect(job.selectPaths).toEqual(['bin/steam_api64.dll'])
+    expect(job.installRoot).toBe(resolve(staging, 'common', 'Game'))
+    expect(job.depots.map((d) => d.depotId)).toEqual(['111'])
+    expect(r).toEqual({ status: 'done', files: PICKED })
   })
 
-  it('never selects directory or symlink entries and writes no ACF', async () => {
-    files = [
-      { filename: 'bin\\steam_api64.dll', size: 0, flags: 64, chunks: [] },
-      { filename: 'bin\\steam_api64.dll', size: 0, flags: 512, chunks: [] }
-    ]
-    const dl = jest.fn().mockResolvedValue(ok)
-    const r = await call(dl)
-    expect(r).toEqual({ status: 'done', files: [] })
-    expect(dl).not.toHaveBeenCalled()
+  it('never finalizes, so no ACF is written', async () => {
+    const stub = rust()
+    await call()
+    expect(at(stub.jobs, 0).finalize).toBeNull()
     expect(readdirSync(staging).filter((f) => f.endsWith('.acf'))).toEqual([])
     expect(existsSync(join(staging, 'appmanifest_12345.acf'))).toBe(false)
   })
 
-  it('returns done with no files and skips the seam on zero matches', async () => {
-    const dl = jest.fn()
-    const r = await call(dl, { selectPaths: [] })
+  it('returns done with no files and runs no job on an empty path list', async () => {
+    const stub = rust()
+    const r = await call({ selectPaths: [] })
     expect(r).toEqual({ status: 'done', files: [] })
-    expect(dl).not.toHaveBeenCalled()
+    expect(stub.jobs).toHaveLength(0)
   })
 
   it('resolves error (never throws) when the CM is not connected', async () => {
+    const stub = rust()
     mockLeaseRefused()
-    const r = await call(jest.fn())
+    const r = await call()
     expect(r.status).toBe('error')
     expect(r.error).toBeTruthy()
+    expect(stub.jobs).toHaveLength(0)
   })
 
-  it('Phase 54: holds an original-restore lease across the download and releases it once', async () => {
+  it('Phase 54: holds an original-restore lease across the job and releases it once', async () => {
     const release = mockLeaseOk()
-    const dl = jest.fn().mockImplementation(async () => {
-      expect(release).not.toHaveBeenCalled()
-      return ok
+    let releasedDuringJob: boolean | undefined
+    rust({
+      onRun: () => void (releasedDuringJob = release.mock.calls.length > 0)
     })
-    await call(dl)
+    const r = await call()
+    expect(r.status).toBe('done')
+    expect(releasedDuringJob).toBe(false)
     expect(jest.mocked(SteamUser.acquireAuthenticated)).toHaveBeenCalledWith({
       reason: 'original-restore',
       guidedAction: 'install',
       appName: '12345'
     })
-    expect(release).toHaveBeenCalledTimes(2) // outer restore lease + plan lease
+    expect(release).toHaveBeenCalledTimes(1)
   })
 
-  it('Phase 54: a thrown download still releases every lease', async () => {
+  it('Phase 54: a rejected job still releases the lease and resolves error', async () => {
     const release = mockLeaseOk()
-    const r = await call(jest.fn().mockRejectedValue(new Error('boom')))
+    jest
+      .mocked(requestRustInvoke)
+      .mockImplementation(() => Promise.reject(new Error('boom')))
+    const r = await call()
     expect(r.status).toBe('error')
-    expect(release).toHaveBeenCalledTimes(2)
+    expect(release).toHaveBeenCalledTimes(1)
   })
 
   it('resolves cancelled for an aborted signal', async () => {
+    const stub = rust()
     const c = new AbortController()
     c.abort()
-    const r = await call(jest.fn(), { signal: c.signal })
+    const r = await call({ signal: c.signal })
     expect(r.status).toBe('cancelled')
+    expect(stub.jobs).toHaveLength(0)
   })
 
-  it('resolves error with the failures listed when the seam reports failures', async () => {
-    const failures = [{ file: 'bin\\steam_api64.dll', error: 'sha mismatch' }]
-    const dl = jest.fn().mockResolvedValue({ ...ok, failures })
-    const r = await call(dl)
+  it('resolves error with the classified message when the job reports failures', async () => {
+    rust({
+      outcome: {
+        acf: null,
+        files: PICKED,
+        status: 'error',
+        failures: [
+          {
+            file: 'bin\\steam_api64.dll',
+            kind: 'sha1_mismatch',
+            message: 'sha1 mismatch',
+            code: null,
+            eresult: null,
+            httpStatus: null,
+            scope: null,
+            msSinceProgress: null
+          }
+        ]
+      }
+    })
+    const r = await call()
     expect(r.status).toBe('error')
-    expect(r.failures).toEqual(failures)
+    expect(r.error).toBeTruthy()
+    expect(r.files).toEqual(PICKED)
   })
 })

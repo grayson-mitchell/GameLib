@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/require-await */
+/* eslint-disable @typescript-eslint/unbound-method */
 /**
  * Quick 261025-rkj: downloadSharedRedistDepots -- the 228980 (Steamworks Common Redistributables)
- * download entry point. No real network: a fake steam-user client, a mocked raw-manifest parser and
- * an injected `downloadFiles` that writes Task 1's verbatim installscript fixtures into a per-test
- * mkdtemp directory under os.tmpdir() (the only path this file ever removes).
- *
- * Mock preamble copied from depot.prescreen.test.ts (proven to load the real depot.ts).
+ * download entry point. No real network: a fake steam-user client for the CM half and, since
+ * 73-19, the stubbed rustInvoke leaf (stubRustDepot) for everything Rust does: the manifest
+ * summary that names each depot's installscript, the select_files / install download jobs (which
+ * write Task 1's verbatim installscript fixtures into a per-test mkdtemp directory under
+ * os.tmpdir(), the only path this file ever removes) and the verify_only cache check.
  */
 import {
   existsSync,
@@ -17,17 +17,23 @@ import {
   writeFileSync
 } from 'fs'
 import { tmpdir } from 'os'
-import { createHash } from 'crypto'
 import { dirname, join, resolve } from 'path'
 
-import { downloadSharedRedistDepots, type DepotPlan } from '../depot'
+import { requestRustInvoke } from 'backend/sidecar/sidecarRpc'
+import { RUST_DEPOT_MANIFEST_SUMMARY } from 'common/types/sidecarTransport'
+import { downloadSharedRedistDepots } from '../depot'
 import { SteamUser } from '../user'
 import { mockLeaseOk, mockLeaseRefused, mockOpenLease } from './depotLeaseMocks'
-import { decryptFilename } from '../depot/crypto'
 import { at, defined } from './fixtures/indexed'
-
-// This suite exercises the TS depot pipeline. Pin it, because the default is 'rust' since 73-17.
-process.env.GAMELIB_DEPOT_PIPELINE = 'ts'
+import {
+  createStubRustDepot,
+  type StubRustDepot
+} from '../depotRust/__tests__/fixtures/stubRustDepot'
+import type {
+  RustDepotJob,
+  RustOutcome,
+  RustSummarizeRequest
+} from '../depotRust/types'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -45,29 +51,11 @@ jest.mock('backend/utils', () => ({
   sendProgressUpdate: jest.fn()
 }))
 
+jest.mock('backend/sidecar/sidecarRpc', () => ({
+  requestRustInvoke: jest.fn()
+}))
+
 jest.mock('../user')
-
-jest.mock('../depot/select', () => ({
-  ...jest.requireActual('../depot/select'),
-  selectAllDepots: jest.fn()
-}))
-
-jest.mock('../depot/crypto', () => ({
-  decryptFilename: jest.fn()
-}))
-
-jest.mock('../depot/fileAttributes', () => ({
-  applyDepotFileFlags: jest.fn()
-}))
-
-jest.mock('steam-user/components/content_manifest.js', () => ({
-  parse: jest.fn()
-}))
-
-jest.mock('../depot/decompress', () => ({
-  fetchChunk: jest.fn(),
-  isDecodeStageError: () => false
-}))
 
 jest.mock('../../../ipc', () => ({
   sendFrontendMessage: jest.fn()
@@ -79,11 +67,6 @@ jest.mock('i18next', () => ({
     t: (_key: string, fallback = '') => fallback
   }
 }))
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const parser = require('steam-user/components/content_manifest.js') as {
-  parse: jest.Mock
-}
 
 const fx = (name: string) =>
   readFileSync(
@@ -104,49 +87,33 @@ const GID: Record<string, string> = {
   '229007': '9000000000000000003'
 }
 
-/** Manifest files per depot id (what content_manifest.parse returns). */
-let manifestFiles: Record<string, unknown[]>
+interface FakeFile {
+  filename: string
+  size: number
+  flags: number
+}
+
+/** The manifest Rust would read, per depot id. */
+let manifestFiles: Record<string, FakeFile[]>
 
 const DX_EXE = '_CommonRedist\\DirectX\\Jun2010\\DXSETUP.exe'
-/** fakeDownloader writes `size` bytes of 'x' for every non-script file. */
-const sha1Of = (text: string) => createHash('sha1').update(text).digest('hex')
+const isScript = (f: FakeFile) => (f.flags & 256) !== 0
 const scriptSize = (id: string) =>
-  Buffer.byteLength(fx(defined(FIXTURE_FOR[id], `fixture for ${id}`)))
-const FIXTURE_FOR: Record<string, string> = {
-  '228990': '228990-directx-jun2010.vdf',
-  '229004': '229004-dotnet-4.5.2.vdf'
-}
+  Buffer.byteLength(defined(SCRIPT_TEXT[id], `script text for ${id}`))
 
 function resetManifests() {
   manifestFiles = {
     '228990': [
-      {
-        filename: DX_SCRIPT,
-        size: scriptSize('228990'),
-        flags: 256,
-        chunks: []
-      },
-      {
-        filename: DX_EXE,
-        size: 90,
-        sha_content: sha1Of('x'.repeat(90)),
-        flags: 0,
-        chunks: []
-      }
+      { filename: DX_SCRIPT, size: scriptSize('228990'), flags: 256 },
+      { filename: DX_EXE, size: 90, flags: 0 }
     ],
     '229004': [
-      {
-        filename: NET_SCRIPT,
-        size: scriptSize('229004'),
-        flags: 256,
-        chunks: []
-      },
+      { filename: NET_SCRIPT, size: scriptSize('229004'), flags: 256 },
       {
         filename:
           '_CommonRedist\\DotNet\\4.5.2\\Microsoft .NET Framework 4.5.2.cmd',
         size: 5,
-        flags: 0,
-        chunks: []
+        flags: 0
       }
     ]
   }
@@ -187,21 +154,13 @@ function makeClient() {
       ) =>
         keyErrors.has(String(depot))
           ? cb(new Error('AccessDenied'))
-          : cb(null, Buffer.from(`key-${depot}`))
-    ),
-    getRawManifest: jest.fn(
-      (
-        _app: number,
-        depot: number,
-        _gid: string,
-        _branch: string,
-        cb: (e: Error | null, m?: Buffer) => void
-      ) => cb(null, Buffer.from(String(depot)))
+          : cb(null, Buffer.alloc(32, depot % 250))
     ),
     getContentServers: jest.fn(
       (_app: number, cb: (e: Error | null, s: unknown[]) => void) =>
         cb(null, [{ Host: 'cdn1.example.com' }])
-    )
+    ),
+    getManifestRequestCode: jest.fn().mockResolvedValue({ requestCode: '42' })
   }
 }
 
@@ -209,37 +168,88 @@ type Client = ReturnType<typeof makeClient>
 let client: Client
 let cacheDir: string
 
-type DownloadFn = NonNullable<
-  Parameters<typeof downloadSharedRedistDepots>[1]['downloadFiles']
->
+// ── The Rust leaf ────────────────────────────────────────────────────────────
+let rust: StubRustDepot
+/** Per-test override of a job's outcome (a failed or cancelled download). */
+let failJob: ((job: RustDepotJob) => Partial<RustOutcome> | undefined) | null
+/** Runs inside a download job before it writes, e.g. a delay or an abort. */
+let beforeWrite: ((job: RustDepotJob) => Promise<void> | void) | null
+/** Concurrent download jobs per depot, and every count seen at a job's start. */
+let active: Map<string, number>
+let maxSeen: number[]
 
-/** Writes fixture text for script files and 'x' for others, like a successful download. */
-function fakeDownloader(): jest.MockedFunction<DownloadFn> {
-  return jest.fn(async (plan: DepotPlan, o) => {
-    for (const f of at(plan.depots, 0).files) {
-      const target = resolve(
-        o.targetSteamappsDir,
-        'common',
-        o.installdir,
-        f.filename.replace(/\\/g, '/')
-      )
-      mkdirSync(dirname(target), { recursive: true })
-      const isScript = ((f.flags ?? 0) & 256) !== 0
-      writeFileSync(
-        target,
-        isScript
-          ? defined(SCRIPT_TEXT[at(plan.depots, 0).depotId], 'script text')
-          : 'x'.repeat(f.size)
-      )
+const depotOf = (job: RustDepotJob) => at(job.depots, 0, 'job depot').depotId
+const filesOf = (depotId: string) => manifestFiles[depotId] ?? []
+const pathIn = (root: string, filename: string) =>
+  join(root, ...filename.split('\\'))
+const contentOf = (depotId: string, f: FakeFile) =>
+  isScript(f)
+    ? defined(SCRIPT_TEXT[depotId], `script text for ${depotId}`)
+    : 'x'.repeat(f.size)
+
+function makeRust(): StubRustDepot {
+  return createStubRustDepot({
+    outcome: { acf: null },
+    summaryFor: (req: RustSummarizeRequest) => ({
+      depots: req.depots.map((d) => ({
+        depotId: d.depotId,
+        fileCount: filesOf(d.depotId).length,
+        totalBytes: 0,
+        matches: [],
+        installscripts: filesOf(d.depotId)
+          .filter(isScript)
+          .map((f) => f.filename)
+      })),
+      skippedDepots: []
+    }),
+    onRun: async (job) => {
+      if (job.mode === 'verify_only') return
+      const id = depotOf(job)
+      active.set(id, (active.get(id) ?? 0) + 1)
+      maxSeen.push(defined(active.get(id), 'active count'))
+      try {
+        await beforeWrite?.(job)
+        if (failJob?.(job)) return
+        const wanted = job.selectPaths ? new Set(job.selectPaths) : null
+        for (const f of filesOf(id)) {
+          if (wanted && !wanted.has(f.filename)) continue
+          const target = pathIn(job.installRoot, f.filename)
+          mkdirSync(dirname(target), { recursive: true })
+          writeFileSync(target, contentOf(id, f))
+        }
+      } finally {
+        active.set(id, defined(active.get(id), 'active count') - 1)
+      }
+    },
+    outcomeFor: (job) => {
+      const failed = failJob?.(job)
+      if (failed) return failed
+      if (job.mode !== 'verify_only') return {}
+      // Rust's verify_only: every file sha1-checked, the bad ones reported, nothing written.
+      const id = depotOf(job)
+      return {
+        missing: filesOf(id)
+          .filter((f) => {
+            const p = pathIn(job.installRoot, f.filename)
+            return (
+              !existsSync(p) || readFileSync(p, 'utf8') !== contentOf(id, f)
+            )
+          })
+          .map((f) => f.filename.replace(/\\/g, '/').toLowerCase())
+      }
     }
-    return {
-      outcome: 'completed' as const,
-      failures: [],
-      allFilesVerifiedThisRun: true,
-      allModesApplied: true
-    }
-  }) as unknown as jest.MockedFunction<DownloadFn>
+  })
 }
+
+/** Download jobs (install or select_files) for one depot; verify_only is not a download. */
+const downloadsFor = (depotId: string) =>
+  rust.jobs.filter((j) => depotOf(j) === depotId && j.mode !== 'verify_only')
+const verifiesFor = (depotId: string) =>
+  rust.jobs.filter((j) => depotOf(j) === depotId && j.mode === 'verify_only')
+const summaryCalls = () =>
+  rust.calls
+    .filter((c) => c.channel === RUST_DEPOT_MANIFEST_SUMMARY)
+    .map((c) => at(c.args, 0) as RustSummarizeRequest)
 
 beforeEach(() => {
   resetManifests()
@@ -261,10 +271,12 @@ beforeEach(() => {
   jest.mocked(SteamUser.getClient).mockReturnValue(client as never)
   mockLeaseOk()
   mockOpenLease()
-  jest.mocked(decryptFilename).mockImplementation((raw: unknown) => String(raw))
-  parser.parse.mockImplementation((raw: Buffer) => ({
-    files: manifestFiles[raw.toString()] ?? []
-  }))
+  failJob = null
+  beforeWrite = null
+  active = new Map()
+  maxSeen = []
+  rust = makeRust()
+  jest.mocked(requestRustInvoke).mockImplementation(rust.invoke)
 })
 
 afterEach(() => {
@@ -273,10 +285,7 @@ afterEach(() => {
     rmSync(cacheDir, { recursive: true, force: true })
 })
 
-const callsFor = (dl: { mock: { calls: unknown[][] } }, depotId: string) =>
-  dl.mock.calls.filter(
-    ([plan]) => at((plan as DepotPlan).depots, 0).depotId === depotId
-  )
+const tick = () => new Promise<void>((r) => setTimeout(r, 5))
 
 describe('downloadSharedRedistDepots', () => {
   const OFFLINE = {
@@ -285,58 +294,51 @@ describe('downloadSharedRedistDepots', () => {
     failed: [],
     skipped: []
   }
+  const run = (
+    appId = GAME,
+    extra: Partial<Parameters<typeof downloadSharedRedistDepots>[1]> = {}
+  ) =>
+    downloadSharedRedistDepots(appId, {
+      cacheSteamappsDir: cacheDir,
+      optInDepotIds: [],
+      ...extra
+    })
+  const readIndex = () =>
+    JSON.parse(
+      readFileSync(join(cacheDir, 'gamelib-shared-redist-index.json'), 'utf8')
+    ) as Record<string, string>
 
   it('Play time (no allowLogon) with no open session resolves offline and never logs on', async () => {
     jest.mocked(SteamUser.acquireOpenAuthenticated).mockReturnValue(null)
     jest.mocked(SteamUser.getClient).mockClear()
-    const dl = fakeDownloader()
-    const r = await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: [],
-      downloadFiles: dl
-    })
+    const r = await run()
     expect(r).toEqual(OFFLINE)
     expect(SteamUser.acquireOpenAuthenticated).toHaveBeenCalledWith(
       'shared-redist'
     )
     expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
     expect(SteamUser.getClient).not.toHaveBeenCalled()
-    expect(dl).not.toHaveBeenCalled()
+    expect(requestRustInvoke).not.toHaveBeenCalled()
   })
 
   it('Play time with an open session runs on it and releases it once', async () => {
     const releaseOpen = mockOpenLease()
-    await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: [],
-      downloadFiles: fakeDownloader()
-    })
+    await run()
     expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
     expect(releaseOpen).toHaveBeenCalledTimes(1)
   })
 
   it('allowLogon: a refused acquire resolves offline', async () => {
     mockLeaseRefused('go-offline-required')
-    const dl = fakeDownloader()
-    const r = await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: [],
-      allowLogon: true,
-      downloadFiles: dl
-    })
+    const r = await run(GAME, { allowLogon: true })
     expect(r).toEqual(OFFLINE)
     expect(SteamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
-    expect(dl).not.toHaveBeenCalled()
+    expect(requestRustInvoke).not.toHaveBeenCalled()
   })
 
   it('allowLogon: acquires a shared-redist install lease and releases it once', async () => {
     const release = mockLeaseOk()
-    await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: [],
-      allowLogon: true,
-      downloadFiles: fakeDownloader()
-    })
+    await run(GAME, { allowLogon: true })
     expect(SteamUser.acquireAuthenticated).toHaveBeenCalledWith({
       reason: 'shared-redist',
       guidedAction: 'install',
@@ -350,14 +352,7 @@ describe('downloadSharedRedistDepots', () => {
     jest
       .mocked(client.getProductInfo)
       .mockRejectedValue(new Error('appinfo down'))
-    await expect(
-      downloadSharedRedistDepots(GAME, {
-        cacheSteamappsDir: cacheDir,
-        optInDepotIds: [],
-        allowLogon: true,
-        downloadFiles: fakeDownloader()
-      })
-    ).rejects.toThrow()
+    await expect(run(GAME, { allowLogon: true })).rejects.toThrow()
     // Every acquire (the outer lease and each plan-retry lease) is released.
     expect(release.mock.calls.length).toBe(
       jest.mocked(SteamUser.acquireAuthenticated).mock.calls.length
@@ -370,11 +365,7 @@ describe('downloadSharedRedistDepots', () => {
       '12346': { manifests: {} },
       '230000': { depotfromapp: '1007' }
     }
-    const r = await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: [],
-      downloadFiles: fakeDownloader()
-    })
+    const r = await run()
     expect(r).toEqual({ status: 'none', depots: [], failed: [], skipped: [] })
     expect(client.getProductInfo).toHaveBeenCalledTimes(1)
     expect(client.getProductInfo).not.toHaveBeenCalledWith(
@@ -387,24 +378,12 @@ describe('downloadSharedRedistDepots', () => {
 
   it('propagates a throw from the appinfo fetch', async () => {
     client.getProductInfo.mockRejectedValue(new Error('PICS down'))
-    await expect(
-      downloadSharedRedistDepots(GAME, {
-        cacheSteamappsDir: cacheDir,
-        optInDepotIds: [],
-        downloadFiles: fakeDownloader()
-      })
-    ).rejects.toThrow()
+    await expect(run()).rejects.toThrow()
   })
 
   it('downloads DirectX under owner app 228980 and skips .NET (not failed)', async () => {
-    const dl = fakeDownloader()
     const onComponent = jest.fn()
-    const r = await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: [],
-      downloadFiles: dl,
-      onComponent
-    })
+    const r = await run(GAME, { onComponent })
     expect(r.status).toBe('ok')
     expect(r.failed).toEqual([])
     expect(r.skipped).toEqual(['229004'])
@@ -418,26 +397,24 @@ describe('downloadSharedRedistDepots', () => {
     })
     expect(at(at(r.depots, 0).entries, 0).name).toBe('dxsetup')
 
-    // Key and manifest requested under the owner app, GID kept as a string.
+    // Key requested under the owner app; the manifest is Rust's (D-01), asked for under the
+    // owner app with the GID kept as a string.
     expect(client.getDepotDecryptionKey).toHaveBeenCalledWith(
       228980,
       228990,
       expect.any(Function)
     )
-    expect(client.getRawManifest).toHaveBeenCalledWith(
-      228980,
-      228990,
-      GID['228990'],
-      'public',
-      expect.any(Function)
-    )
-    expect(client.getRawManifest).toHaveBeenCalledWith(
-      228980,
-      229004,
-      GID['229004'],
-      'public',
-      expect.any(Function)
-    )
+    expect(
+      summaryCalls().map((req) => [
+        req.appId,
+        at(req.depots, 0).depotId,
+        at(req.depots, 0).manifestId,
+        at(req.depots, 0).ownerAppId
+      ])
+    ).toEqual([
+      ['228980', '228990', GID['228990'], '228980'],
+      ['228980', '229004', GID['229004'], '228980']
+    ])
     // Depots from other shared apps are never touched.
     expect(client.getDepotDecryptionKey).not.toHaveBeenCalledWith(
       expect.anything(),
@@ -445,68 +422,46 @@ describe('downloadSharedRedistDepots', () => {
       expect.anything()
     )
 
-    // 228990: script-only download, then the full download. 229004: script only.
-    const dx = callsFor(dl, '228990')
-    expect(dx).toHaveLength(2)
-    const [scriptPlan, scriptOpts] = dx[0] as [
-      DepotPlan,
-      { installdir: string }
-    ]
-    expect(scriptPlan.appId).toBe('228980')
-    expect(scriptOpts.installdir).toBe('Steamworks Shared')
-    expect(at(scriptPlan.depots, 0).files.map((f) => f.filename)).toEqual([
-      DX_SCRIPT
-    ])
-    expect(at((at(dx, 1)[0] as DepotPlan).depots, 0).files).toHaveLength(2)
-    expect(callsFor(dl, '229004')).toHaveLength(1)
+    // 228990: script-only select_files job, then the full install job. 229004: script only.
+    const dx = downloadsFor('228990')
+    expect(dx.map((j) => j.mode)).toEqual(['select_files', 'install'])
+    for (const j of rust.jobs) {
+      expect(j.appId).toBe('228980')
+      expect(j.finalize).toBeNull()
+      expect(j.installRoot).toBe(join(cacheDir, 'common', 'Steamworks Shared'))
+    }
+    expect(at(dx, 0).selectPaths).toEqual([DX_SCRIPT])
+    expect(at(dx, 1).selectPaths).toBeNull()
+    expect(downloadsFor('229004').map((j) => j.mode)).toEqual(['select_files'])
     expect(onComponent).toHaveBeenCalledTimes(1)
     expect(onComponent).toHaveBeenCalledWith('DirectX Jun2010')
     // Written to the shared cache index only after the full download.
-    expect(
-      JSON.parse(
-        readFileSync(join(cacheDir, 'gamelib-shared-redist-index.json'), 'utf8')
-      )
-    ).toEqual({ '228990': GID['228990'] })
+    expect(readIndex()).toEqual({ '228990': GID['228990'] })
   })
 
   it('calls onComponent before the full download starts', async () => {
-    const dl = fakeDownloader()
     const onComponent = jest.fn()
-    await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: [],
-      downloadFiles: dl,
-      onComponent
-    })
-    const fullIdx = dl.mock.calls.findIndex(
-      ([plan]) => at(plan.depots, 0).files.length === 2
-    )
-    expect(onComponent.mock.invocationCallOrder[0]).toBeLessThan(
-      at(dl.mock.invocationCallOrder, fullIdx)
-    )
+    let fullStartedAfterComponent: boolean | undefined
+    beforeWrite = (job) => {
+      if (job.mode === 'install')
+        fullStartedAfterComponent = onComponent.mock.calls.length === 1
+    }
+    await run(GAME, { onComponent })
+    expect(fullStartedAfterComponent).toBe(true)
   })
 
   it('downloads an opted-in declared depot with kind other', async () => {
-    const dl = fakeDownloader()
-    const r = await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: ['229004'],
-      downloadFiles: dl
-    })
+    const r = await run(GAME, { optInDepotIds: ['229004'] })
     expect(r.skipped).toEqual([])
     expect(r.depots.map((d) => [d.depotId, d.kind, d.label])).toEqual([
       ['228990', 'directx', 'DirectX Jun2010'],
       ['229004', 'other', 'DotNet 4.5.2']
     ])
-    expect(callsFor(dl, '229004')).toHaveLength(2)
+    expect(downloadsFor('229004')).toHaveLength(2)
   })
 
   it('never fetches an opted-in depot the game does not declare', async () => {
-    const r = await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: ['229007'],
-      downloadFiles: fakeDownloader()
-    })
+    const r = await run(GAME, { optInDepotIds: ['229007'] })
     expect(r.depots.map((d) => d.depotId)).toEqual(['228990'])
     expect(client.getDepotDecryptionKey).not.toHaveBeenCalledWith(
       228980,
@@ -517,79 +472,62 @@ describe('downloadSharedRedistDepots', () => {
 
   it('files a key failure under failed, continues, and retries cleanly next time', async () => {
     keyErrors.add('228990')
-    const first = await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: [],
-      downloadFiles: fakeDownloader()
-    })
+    const first = await run()
     expect(first.failed).toEqual(['228990'])
     expect(first.skipped).toEqual(['229004'])
     expect(first.depots).toEqual([])
 
     keyErrors.clear()
-    const second = await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: [],
-      downloadFiles: fakeDownloader()
-    })
+    const second = await run()
     expect(second.failed).toEqual([])
     expect(second.depots.map((d) => d.depotId)).toEqual(['228990'])
   })
 
+  it('files a depot under failed when its manifest summary fails (73-19)', async () => {
+    const base = makeRust()
+    jest.mocked(requestRustInvoke).mockImplementation((channel, args) =>
+      channel === RUST_DEPOT_MANIFEST_SUMMARY &&
+      at((at(args, 0) as RustSummarizeRequest).depots, 0).depotId === '228990'
+        ? Promise.resolve({
+            error: {
+              file: null,
+              kind: 'manifest_unavailable',
+              message: 'Blocked',
+              code: null,
+              eresult: 40,
+              httpStatus: null,
+              scope: null,
+              msSinceProgress: null
+            }
+          })
+        : base.invoke(channel, args)
+    )
+    rust = base
+    const r = await run()
+    expect(r.failed).toEqual(['228990'])
+    expect(r.skipped).toEqual(['229004'])
+    expect(downloadsFor('228990')).toHaveLength(0)
+  })
+
   it('files a failed installscript download under failed', async () => {
-    const ok = fakeDownloader()
-    const dl = jest.fn(async (plan: DepotPlan, o) => {
-      if (at(plan.depots, 0).depotId === '228990')
-        return {
-          outcome: 'completed' as const,
-          failures: [{ file: DX_SCRIPT, error: 'boom' }],
-          allFilesVerifiedThisRun: false,
-          allModesApplied: false
-        }
-      return ok(plan, o)
-    }) as unknown as DownloadFn
-    const r = await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: [],
-      downloadFiles: dl
-    })
+    failJob = (job) =>
+      depotOf(job) === '228990' ? { status: 'error' } : undefined
+    const r = await run()
     expect(r.failed).toEqual(['228990'])
     expect(r.skipped).toEqual(['229004'])
   })
 
   it('treats a cancelled script download as failed', async () => {
-    const dl = jest.fn(async () => ({
-      outcome: 'cancelled' as const,
-      failures: [],
-      allFilesVerifiedThisRun: false,
-      allModesApplied: false
-    })) as unknown as DownloadFn
-    const r = await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: [],
-      downloadFiles: dl
-    })
+    failJob = () => ({ status: 'cancelled' })
+    const r = await run()
     expect(r.failed.sort()).toEqual(['228990', '229004'])
     expect(r.depots).toEqual([])
   })
 
   it('files a failed full download under failed and writes no index', async () => {
-    const ok = fakeDownloader()
-    const dl = jest.fn(async (plan: DepotPlan, o) => {
-      if (at(plan.depots, 0).files.length > 1)
-        return {
-          outcome: 'completed' as const,
-          failures: [{ file: 'x', error: 'boom' }],
-          allFilesVerifiedThisRun: false,
-          allModesApplied: false
-        }
-      return ok(plan, o)
-    }) as unknown as DownloadFn
-    const r = await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: [],
-      downloadFiles: dl
-    })
+    failJob = (job) =>
+      job.mode === 'install' ? { status: 'error' } : undefined
+    const r = await run()
     expect(r.failed).toEqual(['228990'])
     expect(r.depots).toEqual([])
     expect(existsSync(join(cacheDir, 'gamelib-shared-redist-index.json'))).toBe(
@@ -602,11 +540,7 @@ describe('downloadSharedRedistDepots', () => {
       '228990': { manifests: { beta: 'abc' } },
       '229004': { manifests: { public: GID['229004'] } }
     }
-    const r = await downloadSharedRedistDepots(GAME, {
-      cacheSteamappsDir: cacheDir,
-      optInDepotIds: [],
-      downloadFiles: fakeDownloader()
-    })
+    const r = await run()
     expect(r.failed).toEqual(['228990'])
     expect(r.skipped).toEqual(['229004'])
   })
@@ -620,14 +554,9 @@ describe('downloadSharedRedistDepots', () => {
       manifestFiles['228990'] = Array.from({ length: count }, (_v, i) => ({
         filename: `_CommonRedist\\DirectX\\Jun2010\\s${i}.vdf`,
         size: 1,
-        flags: 256,
-        chunks: []
+        flags: 256
       }))
-      const r = await downloadSharedRedistDepots(GAME, {
-        cacheSteamappsDir: cacheDir,
-        optInDepotIds: [],
-        downloadFiles: fakeDownloader()
-      })
+      const r = await run()
       expect(r.skipped.sort()).toEqual(['228990', '229004'])
       expect(r.failed).toEqual([])
     }
@@ -636,11 +565,7 @@ describe('downloadSharedRedistDepots', () => {
   it('skips a depot whose installscript does not parse', async () => {
     SCRIPT_TEXT['229004'] = '"installscript" {'
     try {
-      const r = await downloadSharedRedistDepots(GAME, {
-        cacheSteamappsDir: cacheDir,
-        optInDepotIds: ['229004'],
-        downloadFiles: fakeDownloader()
-      })
+      const r = await run(GAME, { optInDepotIds: ['229004'] })
       expect(r.skipped).toEqual(['229004'])
       expect(r.depots.map((d) => d.depotId)).toEqual(['228990'])
     } finally {
@@ -660,27 +585,16 @@ describe('downloadSharedRedistDepots', () => {
       ['a non-string', 42]
     ])('falls back to Steamworks Shared for %s', async (_what, value) => {
       redistInstalldir = value
-      const dl = fakeDownloader()
-      const r = await downloadSharedRedistDepots(GAME, {
-        cacheSteamappsDir: cacheDir,
-        optInDepotIds: [],
-        downloadFiles: dl
-      })
+      const r = await run()
       const root = resolve(cacheDir, 'common', 'Steamworks Shared')
       expect(r.depots.map((d) => d.installDirHost)).toEqual([root])
-      for (const [, o] of dl.mock.calls)
-        expect((o as { installdir: string }).installdir).toBe(
-          'Steamworks Shared'
-        )
+      expect(rust.jobs.length).toBeGreaterThan(0)
+      for (const j of rust.jobs) expect(j.installRoot).toBe(root)
     })
 
     it('keeps a safe installdir from appinfo', async () => {
       redistInstalldir = 'Redist Cache'
-      const r = await downloadSharedRedistDepots(GAME, {
-        cacheSteamappsDir: cacheDir,
-        optInDepotIds: [],
-        downloadFiles: fakeDownloader()
-      })
+      const r = await run()
       expect(at(r.depots, 0).installDirHost).toBe(
         resolve(cacheDir, 'common', 'Redist Cache')
       )
@@ -688,72 +602,33 @@ describe('downloadSharedRedistDepots', () => {
   })
 
   describe('concurrent launches sharing the cache (WR-02)', () => {
-    /** fakeDownloader that yields mid-write and records per-depot overlap. */
-    function slowDownloader(active: Map<string, number>, maxSeen: number[]) {
-      const inner = fakeDownloader()
-      return jest.fn(async (plan: DepotPlan, o) => {
-        const id = at(plan.depots, 0).depotId
-        active.set(id, (active.get(id) ?? 0) + 1)
-        maxSeen.push(active.get(id)!)
-        await new Promise((r) => setTimeout(r, 5))
-        try {
-          return await inner(plan, o)
-        } finally {
-          active.set(id, active.get(id)! - 1)
-        }
-      }) as unknown as jest.MockedFunction<DownloadFn>
-    }
-
-    it('never runs two downloads of one depot at once, and the waiter takes the fast path with its own closure', async () => {
-      const active = new Map<string, number>()
-      const maxSeen: number[] = []
-      const dlA = slowDownloader(active, maxSeen)
-      const dlB = slowDownloader(active, maxSeen)
-      const [a, b] = await Promise.all([
-        downloadSharedRedistDepots(GAME, {
-          cacheSteamappsDir: cacheDir,
-          optInDepotIds: [],
-          downloadFiles: dlA
-        }),
-        downloadSharedRedistDepots('54321', {
-          cacheSteamappsDir: cacheDir,
-          optInDepotIds: [],
-          downloadFiles: dlB
-        })
-      ])
+    it('never runs two downloads of one depot at once, and the waiter takes the fast path', async () => {
+      beforeWrite = tick
+      const [a, b] = await Promise.all([run(GAME), run('54321')])
       expect(Math.max(...maxSeen)).toBe(1)
       expect(a.depots.map((d) => d.depotId)).toEqual(['228990'])
       expect(b.depots.map((d) => d.depotId)).toEqual(['228990'])
-      // A downloaded 228990 (script + full); B waited and then hit the index.
-      expect(callsFor(dlA, '228990')).toHaveLength(2)
-      expect(callsFor(dlB, '228990')).toHaveLength(0)
-      // B still ran its OWN closure for the unindexed .NET script.
-      expect(callsFor(dlB, '229004')).toHaveLength(1)
+      // One run downloaded 228990 (script + full); the other waited, then verified the indexed
+      // copy instead of downloading it.
+      expect(downloadsFor('228990').map((j) => j.mode)).toEqual([
+        'select_files',
+        'install'
+      ])
+      expect(verifiesFor('228990')).toHaveLength(1)
+      // Each run still ran its OWN closure for the unindexed .NET script.
+      expect(downloadsFor('229004')).toHaveLength(2)
     })
 
     it("uses its own abort signal, not the lock holder's", async () => {
-      const active = new Map<string, number>()
-      const maxSeen: number[] = []
       const ctlB = new AbortController()
-      const inner = slowDownloader(active, maxSeen)
       // B is aborted while A holds 228990's lock; A must finish unaffected.
-      const dlA = jest.fn(async (plan: DepotPlan, o) => {
-        if (at(plan.depots, 0).depotId === '228990') ctlB.abort()
-        return inner(plan, o)
-      }) as unknown as jest.MockedFunction<DownloadFn>
-      const dlB = slowDownloader(active, maxSeen)
+      beforeWrite = async (job) => {
+        if (depotOf(job) === '228990') ctlB.abort()
+        await tick()
+      }
       const [a, b] = await Promise.allSettled([
-        downloadSharedRedistDepots(GAME, {
-          cacheSteamappsDir: cacheDir,
-          optInDepotIds: [],
-          downloadFiles: dlA
-        }),
-        downloadSharedRedistDepots('54321', {
-          cacheSteamappsDir: cacheDir,
-          optInDepotIds: [],
-          downloadFiles: dlB,
-          signal: ctlB.signal
-        })
+        run(GAME),
+        run('54321', { signal: ctlB.signal })
       ])
       expect(a.status).toBe('fulfilled')
       if (a.status === 'fulfilled') {
@@ -762,7 +637,8 @@ describe('downloadSharedRedistDepots', () => {
       }
       // B either rejected in a plan-build step or filed 228990 as failed; never downloaded it.
       if (b.status === 'fulfilled') expect(b.value.failed).toContain('228990')
-      expect(callsFor(dlB, '228990')).toHaveLength(0)
+      expect(downloadsFor('228990')).toHaveLength(2)
+      expect(verifiesFor('228990')).toHaveLength(0)
     })
 
     it('keeps both entries when two runs write the index concurrently, atomically', async () => {
@@ -792,28 +668,15 @@ describe('downloadSharedRedistDepots', () => {
       client.getProductInfo.mockImplementation((ids: number[]) =>
         declaresOnly(ids[0] === 11111 ? '228990' : '229004')(ids)
       )
-      const active = new Map<string, number>()
-      const maxSeen: number[] = []
+      beforeWrite = tick
       await Promise.all([
-        downloadSharedRedistDepots('11111', {
-          cacheSteamappsDir: cacheDir,
-          optInDepotIds: [],
-          downloadFiles: slowDownloader(active, maxSeen)
-        }),
-        downloadSharedRedistDepots('22222', {
-          cacheSteamappsDir: cacheDir,
-          optInDepotIds: ['229004'],
-          downloadFiles: slowDownloader(active, maxSeen)
-        })
+        run('11111'),
+        run('22222', { optInDepotIds: ['229004'] })
       ])
-      expect(
-        JSON.parse(
-          readFileSync(
-            join(cacheDir, 'gamelib-shared-redist-index.json'),
-            'utf8'
-          )
-        )
-      ).toEqual({ '228990': GID['228990'], '229004': GID['229004'] })
+      expect(readIndex()).toEqual({
+        '228990': GID['228990'],
+        '229004': GID['229004']
+      })
       expect(readdirSync(cacheDir).filter((f) => f.endsWith('.tmp'))).toEqual(
         []
       )
@@ -822,44 +685,24 @@ describe('downloadSharedRedistDepots', () => {
 
   describe('cache index', () => {
     it('does not download again for the same GID, and re-downloads for a changed GID', async () => {
-      const opts = {
-        cacheSteamappsDir: cacheDir,
-        optInDepotIds: [] as string[]
-      }
-      await downloadSharedRedistDepots(GAME, {
-        ...opts,
-        downloadFiles: fakeDownloader()
-      })
+      await run()
 
-      const dl2 = fakeDownloader()
+      rust.jobs.length = 0
       const onComponent = jest.fn()
-      const r2 = await downloadSharedRedistDepots(GAME, {
-        ...opts,
-        downloadFiles: dl2,
-        onComponent
-      })
+      const r2 = await run(GAME, { onComponent })
       expect(r2.depots.map((d) => d.depotId)).toEqual(['228990'])
-      expect(callsFor(dl2, '228990')).toHaveLength(0)
+      expect(downloadsFor('228990')).toHaveLength(0)
+      expect(verifiesFor('228990')).toHaveLength(1)
       expect(onComponent).not.toHaveBeenCalled()
 
       redistDepots['228990'] = {
         manifests: { public: { gid: '9000000000000000099' } }
       }
-      const dl3 = fakeDownloader()
-      const r3 = await downloadSharedRedistDepots(GAME, {
-        ...opts,
-        downloadFiles: dl3
-      })
-      expect(callsFor(dl3, '228990')).toHaveLength(2)
+      rust.jobs.length = 0
+      const r3 = await run()
+      expect(downloadsFor('228990')).toHaveLength(2)
       expect(at(r3.depots, 0).gid).toBe('9000000000000000099')
-      expect(
-        JSON.parse(
-          readFileSync(
-            join(cacheDir, 'gamelib-shared-redist-index.json'),
-            'utf8'
-          )
-        )['228990']
-      ).toBe('9000000000000000099')
+      expect(readIndex()['228990']).toBe('9000000000000000099')
     })
 
     it.each([
@@ -872,151 +715,80 @@ describe('downloadSharedRedistDepots', () => {
     ])(
       'repairs the cache when an indexed installer file is %s (WR-05)',
       async (_what, damage) => {
-        const opts = {
-          cacheSteamappsDir: cacheDir,
-          optInDepotIds: [] as string[]
-        }
-        await downloadSharedRedistDepots(GAME, {
-          ...opts,
-          downloadFiles: fakeDownloader()
-        })
-        const exe = join(
-          cacheDir,
-          'common',
-          'Steamworks Shared',
-          ...DX_EXE.split('\\')
+        await run()
+        const exe = pathIn(
+          join(cacheDir, 'common', 'Steamworks Shared'),
+          DX_EXE
         )
         damage(exe)
 
-        const dl = fakeDownloader()
+        rust.jobs.length = 0
         const onComponent = jest.fn()
-        const r = await downloadSharedRedistDepots(GAME, {
-          ...opts,
-          downloadFiles: dl,
-          onComponent
-        })
+        const r = await run(GAME, { onComponent })
         expect(r.depots.map((d) => d.depotId)).toEqual(['228990'])
-        // The cached script is fine, so only the full download re-runs.
-        const dx = callsFor(dl, '228990')
-        expect(dx).toHaveLength(1)
-        expect(at((at(dx, 0)[0] as DepotPlan).depots, 0).files).toHaveLength(2)
+        // The cached script is fine, so after the verify only the full download re-runs.
+        expect(verifiesFor('228990')).toHaveLength(1)
+        expect(downloadsFor('228990').map((j) => j.mode)).toEqual(['install'])
         expect(onComponent).toHaveBeenCalledWith('DirectX Jun2010')
         expect(readFileSync(exe, 'utf8')).toBe('x'.repeat(90))
-        expect(
-          JSON.parse(
-            readFileSync(
-              join(cacheDir, 'gamelib-shared-redist-index.json'),
-              'utf8'
-            )
-          )['228990']
-        ).toBe(GID['228990'])
+        expect(readIndex()['228990']).toBe(GID['228990'])
       }
     )
 
+    it('repairs the cache when the verify job itself fails', async () => {
+      await run()
+      rust.jobs.length = 0
+      failJob = (job) =>
+        job.mode === 'verify_only' ? { status: 'error' } : undefined
+      const r = await run()
+      expect(r.depots.map((d) => d.depotId)).toEqual(['228990'])
+      expect(downloadsFor('228990').map((j) => j.mode)).toEqual(['install'])
+    })
+
     it('drops the index entry when the repair download fails, so the next run retries', async () => {
-      const opts = {
-        cacheSteamappsDir: cacheDir,
-        optInDepotIds: [] as string[]
-      }
-      await downloadSharedRedistDepots(GAME, {
-        ...opts,
-        downloadFiles: fakeDownloader()
-      })
-      rmSync(
-        join(cacheDir, 'common', 'Steamworks Shared', ...DX_EXE.split('\\'))
-      )
-      const failing = jest.fn(async () => ({
-        outcome: 'completed' as const,
-        failures: [{ file: 'x', error: 'boom' }],
-        allFilesVerifiedThisRun: false,
-        allModesApplied: false
-      })) as unknown as DownloadFn
-      const r = await downloadSharedRedistDepots(GAME, {
-        ...opts,
-        downloadFiles: failing
-      })
+      await run()
+      rmSync(pathIn(join(cacheDir, 'common', 'Steamworks Shared'), DX_EXE))
+      failJob = (job) =>
+        job.mode === 'install' ? { status: 'error' } : undefined
+      const r = await run()
       expect(r.failed).toContain('228990')
-      expect(
-        JSON.parse(
-          readFileSync(
-            join(cacheDir, 'gamelib-shared-redist-index.json'),
-            'utf8'
-          )
-        )['228990']
-      ).toBeUndefined()
+      expect(readIndex()['228990']).toBeUndefined()
     })
 
     it('re-downloads once when an indexed installscript no longer parses', async () => {
-      const opts = {
-        cacheSteamappsDir: cacheDir,
-        optInDepotIds: [] as string[]
-      }
-      await downloadSharedRedistDepots(GAME, {
-        ...opts,
-        downloadFiles: fakeDownloader()
-      })
-      const scriptPath = join(
-        cacheDir,
-        'common',
-        'Steamworks Shared',
-        '_CommonRedist',
-        'DirectX',
-        'Jun2010',
-        'installscript.vdf'
+      await run()
+      const scriptPath = pathIn(
+        join(cacheDir, 'common', 'Steamworks Shared'),
+        DX_SCRIPT
       )
       writeFileSync(scriptPath, 'garbage {')
 
-      const dl = fakeDownloader()
-      const r = await downloadSharedRedistDepots(GAME, {
-        ...opts,
-        downloadFiles: dl
-      })
+      rust.jobs.length = 0
+      const r = await run()
       expect(r.depots.map((d) => d.depotId)).toEqual(['228990'])
       expect(r.failed).toEqual([])
       // Script re-download (index entry dropped) then the full download.
-      expect(callsFor(dl, '228990')).toHaveLength(2)
+      expect(downloadsFor('228990').map((j) => j.mode)).toEqual([
+        'select_files',
+        'install'
+      ])
       expect(readFileSync(scriptPath, 'utf8')).toBe(SCRIPT_TEXT['228990'])
     })
 
     it('gives up on a depot whose re-downloaded script still does not parse', async () => {
-      const opts = {
-        cacheSteamappsDir: cacheDir,
-        optInDepotIds: [] as string[]
-      }
-      await downloadSharedRedistDepots(GAME, {
-        ...opts,
-        downloadFiles: fakeDownloader()
-      })
+      await run()
       SCRIPT_TEXT['228990'] = 'garbage {'
       try {
         writeFileSync(
-          join(
-            cacheDir,
-            'common',
-            'Steamworks Shared',
-            '_CommonRedist',
-            'DirectX',
-            'Jun2010',
-            'installscript.vdf'
-          ),
+          pathIn(join(cacheDir, 'common', 'Steamworks Shared'), DX_SCRIPT),
           'garbage {'
         )
-        const dl = fakeDownloader()
-        const r = await downloadSharedRedistDepots(GAME, {
-          ...opts,
-          downloadFiles: dl
-        })
-        expect(callsFor(dl, '228990')).toHaveLength(1)
+        rust.jobs.length = 0
+        const r = await run()
+        expect(downloadsFor('228990')).toHaveLength(1)
         expect(r.skipped).toContain('228990')
         expect(r.failed).toEqual([])
-        expect(
-          JSON.parse(
-            readFileSync(
-              join(cacheDir, 'gamelib-shared-redist-index.json'),
-              'utf8'
-            )
-          )
-        ).toEqual({})
+        expect(readIndex()).toEqual({})
       } finally {
         SCRIPT_TEXT['228990'] = fx('228990-directx-jun2010.vdf')
       }

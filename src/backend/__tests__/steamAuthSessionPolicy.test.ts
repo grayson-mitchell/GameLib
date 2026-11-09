@@ -71,8 +71,9 @@ const ACQUIRE_AUTH_ALLOW = [
   USER,
   USER_REDEEM,
   `${S}library/refresh.ts`,
+  // depot/plan.ts keeps only withPlanBuildRetry's reconnect lease. depot/outcome.ts left this
+  // list in 73-19: it delegates to depotRust/ and holds no lease of its own.
   `${S}depot/plan.ts`,
-  `${S}depot/outcome.ts`,
   `${S}depot/sharedRedist.ts`,
   // Phase 73 plans 13/14: the Rust-pipeline entry points take the same authenticated lease
   // depot/plan.ts does, for the CM half (appinfo, keys, request codes) before handing CDN work

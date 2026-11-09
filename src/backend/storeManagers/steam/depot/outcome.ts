@@ -85,7 +85,6 @@ export interface DownloadSelectedDepotFilesResult {
   /** The files fetched: manifest filename (Windows separators), size, lowercase hex sha1. */
   files: Array<{ filename: string; size: number; sha1: string }>
   error?: string
-  failures?: DepotDownloadFailure[]
 }
 
 /**

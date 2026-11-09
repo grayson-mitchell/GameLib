@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 /**
- * Phase 73 Plan 14: the prescreen, selected-files fetch and startup-resume verify behind
- * GAMELIB_DEPOT_PIPELINE, over a stubbed rustInvoke leaf and a fake steam-user client.
+ * Phase 73 Plan 14: the prescreen, selected-files fetch and startup-resume verify on the Rust
+ * pipeline (the only one since 73-19), over a stubbed rustInvoke leaf and a fake steam-user
+ * client.
  */
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
@@ -11,7 +12,6 @@ import { downloadSelectedDepotFiles, prescreenBridgeDepots } from '../../depot'
 import { SteamUser } from '../../user'
 import { mockLeaseOk } from '../../__tests__/depotLeaseMocks'
 import { selectAllDepots } from '../../depot/select'
-import { decryptFilename } from '../../depot/crypto'
 import { getSteamLibraries } from 'backend/utils'
 import { resumeInterruptedSteamInstall } from '../../library/resume'
 import { startInstallPolling } from '../../library/installPolling'
@@ -38,13 +38,6 @@ jest.mock('../../user')
 jest.mock('../../depot/select', () => ({
   ...jest.requireActual('../../depot/select'),
   selectAllDepots: jest.fn()
-}))
-jest.mock('../../depot/crypto', () => ({ decryptFilename: jest.fn() }))
-jest.mock('../../depot/fileAttributes', () => ({
-  applyDepotFileFlags: jest.fn()
-}))
-jest.mock('steam-user/components/content_manifest.js', () => ({
-  parse: jest.fn()
 }))
 jest.mock('../../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 jest.mock('../../library/installPolling', () => ({
@@ -110,6 +103,7 @@ function makeClient() {
       (_a: number, d: number, cb: (e: Error | null, k: Buffer) => void) =>
         cb(null, Buffer.alloc(32, d % 250))
     ),
+    // Present so a stray TS manifest fetch would be counted (D-01: there must be none).
     getRawManifest: jest.fn(),
     getContentServers: jest.fn(
       (_a: number, cb: (e: Error | null, s: unknown[]) => void) =>
@@ -119,6 +113,7 @@ function makeClient() {
   }
 }
 
+// The all-blocked message for depot 111, as the crate words it (manifest.rs).
 const ALL_BLOCKED_MSG =
   'buildDepotPlan: every selected depot for appId 12345 was blocked by Steam (eresult=40) and had to be skipped: 111'
 
@@ -142,19 +137,24 @@ beforeEach(() => {
     .mockReturnValue([
       { id: '111', manifest: '11111111111111111', size: 0, ownerAppId: APP_ID }
     ])
-  jest.mocked(decryptFilename).mockImplementation((raw: unknown) => String(raw))
-  process.env.GAMELIB_DEPOT_PIPELINE = 'rust'
 })
 
 afterEach(() => {
-  delete process.env.GAMELIB_DEPOT_PIPELINE
   if (steamapps.startsWith(tmpdir()))
     rmSync(steamapps, { recursive: true, force: true })
 })
 
 function summaryOf(matches: string[]) {
   return {
-    depots: [{ depotId: '111', fileCount: 3, totalBytes: 30, matches }],
+    depots: [
+      {
+        depotId: '111',
+        fileCount: 3,
+        totalBytes: 30,
+        matches,
+        installscripts: []
+      }
+    ],
     skippedDepots: [] as string[]
   }
 }
@@ -205,7 +205,7 @@ describe('prescreenBridgeDepots on the rust pipeline', () => {
     expect(await prescreenBridgeDepots(APP_ID, OPTS())).toBe('unknown')
   })
 
-  it('screens the remaining depots when Rust skipped an EResult-40 depot, like the TS plan build', async () => {
+  it('screens the remaining depots when Rust skipped an EResult-40 depot', async () => {
     const stub = createStubRustDepot({
       summary: {
         ...summaryOf(['x/steam_api64.dll']),
@@ -216,7 +216,7 @@ describe('prescreenBridgeDepots on the rust pipeline', () => {
     expect(await prescreenBridgeDepots(APP_ID, OPTS())).toBe('x64')
   })
 
-  it('resolves unknown when every depot is blocked (the TS plan build throws there)', async () => {
+  it('resolves unknown when every depot is blocked', async () => {
     const stub = createStubRustDepot({
       summary: {
         error: {
@@ -233,15 +233,6 @@ describe('prescreenBridgeDepots on the rust pipeline', () => {
     })
     invokeMock.mockImplementation(stub.invoke)
     expect(await prescreenBridgeDepots(APP_ID, OPTS())).toBe('unknown')
-  })
-
-  it('flag ts: never calls the summary channel', async () => {
-    process.env.GAMELIB_DEPOT_PIPELINE = 'ts'
-    jest.mocked(selectAllDepots).mockReturnValue([])
-    const stub = createStubRustDepot()
-    invokeMock.mockImplementation(stub.invoke)
-    expect(await prescreenBridgeDepots(APP_ID, OPTS())).toBe('none')
-    expect(stub.calls).toHaveLength(0)
   })
 })
 
@@ -303,7 +294,7 @@ describe('downloadSelectedDepotFiles on the rust pipeline', () => {
     expect(c.status).toBe('cancelled')
   })
 
-  it('skipping a blocked depot leaves the rest of the job intact: nothing selected is still done with no files (TS not-in-depot)', async () => {
+  it('skipping a blocked depot leaves the rest of the job intact: nothing selected is still done with no files', async () => {
     const stub = createStubRustDepot({
       outcome: { files: [], acf: null, skippedDepots: ['111'] }
     })
@@ -315,7 +306,7 @@ describe('downloadSelectedDepotFiles on the rust pipeline', () => {
     expect(r).toEqual({ status: 'done', files: [] })
   })
 
-  it('every depot blocked gives the TS all-blocked error, not a generic download failure', async () => {
+  it('every depot blocked gives the all-blocked (depotBlocked) error, not a generic download failure', async () => {
     const stub = createStubRustDepot({
       outcome: {
         status: 'error',
@@ -422,7 +413,7 @@ describe('startup resume on the rust pipeline', () => {
     rmSync(lib, { recursive: true, force: true })
   })
 
-  it('every depot blocked falls back to the honest-empty 1026 finalize, like the TS plan-build throw', async () => {
+  it('every depot blocked falls back to the honest-empty 1026 finalize', async () => {
     const lib = mkdtempSync(join(tmpdir(), 'rustresume-'))
     const sa = join(lib, 'steamapps')
     mkdirSync(sa)

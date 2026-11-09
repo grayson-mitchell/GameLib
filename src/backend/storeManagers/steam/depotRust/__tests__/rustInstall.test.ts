@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 /**
- * Phase 73 Plan 13 Task 2: downloadSteamDepots and downloadSharedRedistDepots behind
- * GAMELIB_DEPOT_PIPELINE, over a stubbed rustInvoke leaf and a fake steam-user client.
+ * Phase 73 Plan 13 Task 2: downloadSteamDepots and downloadSharedRedistDepots on the Rust
+ * pipeline (the only one since 73-19), over a stubbed rustInvoke leaf and a fake steam-user
+ * client.
  */
 import {
   existsSync,
@@ -20,7 +21,6 @@ import { classifyDepotError } from '../../depotErrors'
 import { SteamUser } from '../../user'
 import { mockLeaseOk, mockOpenLease } from '../../__tests__/depotLeaseMocks'
 import { selectAllDepots } from '../../depot/select'
-import { decryptFilename } from '../../depot/crypto'
 import { requestCodeRefresher } from '../install'
 import { createStubRustDepot } from './fixtures/stubRustDepot'
 
@@ -43,23 +43,12 @@ jest.mock('../../depot/select', () => ({
   ...jest.requireActual('../../depot/select'),
   selectAllDepots: jest.fn()
 }))
-jest.mock('../../depot/crypto', () => ({ decryptFilename: jest.fn() }))
-jest.mock('../../depot/fileAttributes', () => ({
-  applyDepotFileFlags: jest.fn()
-}))
-jest.mock('steam-user/components/content_manifest.js', () => ({
-  parse: jest.fn()
-}))
 jest.mock('../../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 jest.mock('i18next', () => ({
   __esModule: true,
   default: { t: (_key: string, fallback = '') => fallback }
 }))
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const parser = require('steam-user/components/content_manifest.js') as {
-  parse: jest.Mock
-}
 const invokeMock = requestRustInvoke as unknown as jest.Mock
 
 const APP_ID = '12345'
@@ -96,15 +85,8 @@ function makeClient() {
       (_a: number, d: number, cb: (e: Error | null, k: Buffer) => void) =>
         cb(null, Buffer.alloc(32, d % 250))
     ),
-    getRawManifest: jest.fn(
-      (
-        _a: number,
-        _d: number,
-        _g: string,
-        _b: string,
-        cb: (e: Error | null, m: Buffer) => void
-      ) => cb(null, Buffer.from('raw'))
-    ),
+    // Present so a stray TS manifest fetch would be counted (D-01: there must be none).
+    getRawManifest: jest.fn(),
     getContentServers: jest.fn(
       (_a: number, cb: (e: Error | null, s: unknown[]) => void) =>
         cb(null, [{ Host: 'cdn1.example.com', type: 'CDN', weightedload: '5' }])
@@ -113,7 +95,7 @@ function makeClient() {
   }
 }
 
-// plan.ts throwIfAllDepotsSkipped's message for depots 111 and 222.
+// The all-blocked message for depots 111 and 222, as the crate words it (manifest.rs).
 const ALL_BLOCKED_MSG =
   'buildDepotPlan: every selected depot for appId 12345 was blocked by Steam (eresult=40) and had to be skipped: 111, 222'
 
@@ -137,12 +119,9 @@ beforeEach(() => {
     { id: '111', manifest: '11111111111111111', size: 0, ownerAppId: APP_ID },
     { id: '222', manifest: '22222222222222222', size: 0, ownerAppId: APP_ID }
   ])
-  jest.mocked(decryptFilename).mockImplementation((raw: unknown) => String(raw))
-  process.env.GAMELIB_DEPOT_PIPELINE = 'rust'
 })
 
 afterEach(() => {
-  delete process.env.GAMELIB_DEPOT_PIPELINE
   if (steamapps.startsWith(tmpdir()))
     rmSync(steamapps, { recursive: true, force: true })
 })
@@ -185,7 +164,7 @@ describe('downloadSteamDepots on the rust pipeline', () => {
     expect(client.getRawManifest).not.toHaveBeenCalled()
   })
 
-  it('EResult-40 manifest refusals skip the depot like the TS plan build and join the key-level skips', async () => {
+  it('EResult-40 manifest refusals skip the depot and join the key-level skips', async () => {
     jest.mocked(selectAllDepots).mockReturnValue([
       { id: '111', manifest: '11111111111111111', size: 0, ownerAppId: APP_ID },
       { id: '222', manifest: '22222222222222222', size: 0, ownerAppId: APP_ID },
@@ -210,7 +189,7 @@ describe('downloadSteamDepots on the rust pipeline', () => {
     expect(stub.jobs[0]?.depots.map((d) => d.depotId)).toEqual(['222', '333'])
   })
 
-  it('every depot blocked at the manifest fails with the same depotBlocked classification as the TS all-blocked error', async () => {
+  it('every depot blocked at the manifest fails with the depotBlocked classification of the key-level all-blocked error', async () => {
     const stub = createStubRustDepot({
       outcome: {
         status: 'error',
@@ -234,7 +213,7 @@ describe('downloadSteamDepots on the rust pipeline', () => {
 
     const out = await downloadSteamDepots(APP_ID, OPTS())
 
-    // The TS buildDepotPlan throws an Error with eresult 40 here (throwIfAllDepotsSkipped).
+    // buildDepotRefs throws an Error with eresult 40 when every key is blocked (throwIfAllDepotsSkipped).
     const expected = classifyDepotError(
       Object.assign(new Error(ALL_BLOCKED_MSG), {
         eresult: 40
@@ -246,7 +225,7 @@ describe('downloadSteamDepots on the rust pipeline', () => {
     expect(out.skippedDepots).toBeUndefined()
   })
 
-  it('a plan-build failure runs no job, writes no ACF and classifies like the TS path', async () => {
+  it('a plan-build failure runs no job, writes no ACF and classifies the CM error', async () => {
     const stub = createStubRustDepot()
     invokeMock.mockImplementation(stub.invoke)
     const boom = Object.assign(new Error('AccessDenied'), { eresult: 15 })
@@ -309,20 +288,6 @@ describe('downloadSteamDepots on the rust pipeline', () => {
   })
 })
 
-describe('flag ts', () => {
-  it('neither entry point touches rustDepot', async () => {
-    process.env.GAMELIB_DEPOT_PIPELINE = 'ts'
-    parser.parse.mockReturnValue({ files: [] })
-    const out = await downloadSteamDepots(APP_ID, OPTS())
-    expect(out.status).not.toBe('cancelled')
-    await downloadSharedRedistDepots(APP_ID, {
-      cacheSteamappsDir: steamapps,
-      optInDepotIds: []
-    }).catch(() => undefined)
-    expect(invokeMock).not.toHaveBeenCalled()
-  })
-})
-
 describe('downloadSharedRedistDepots on the rust pipeline', () => {
   const SCRIPT = '_CommonRedist\\DirectX\\Jun2010\\installscript.vdf'
   const scriptText = readFileSync(
@@ -337,6 +302,18 @@ describe('downloadSharedRedistDepots on the rust pipeline', () => {
     const root = join(steamapps, 'common', 'Steamworks Shared')
     const stub = createStubRustDepot({
       outcome: { acf: null },
+      summary: {
+        depots: [
+          {
+            depotId: '228990',
+            fileCount: 2,
+            totalBytes: 90 + scriptText.length,
+            matches: [],
+            installscripts: [SCRIPT]
+          }
+        ],
+        skippedDepots: []
+      },
       onRun: () => {
         const target = join(root, SCRIPT.replace(/\\/g, '/'))
         mkdirSync(dirname(target), { recursive: true })
@@ -344,17 +321,6 @@ describe('downloadSharedRedistDepots on the rust pipeline', () => {
       }
     })
     invokeMock.mockImplementation(stub.invoke)
-    parser.parse.mockReturnValue({
-      files: [
-        { filename: SCRIPT, size: scriptText.length, flags: 256, chunks: [] },
-        {
-          filename: '_CommonRedist\\DirectX\\Jun2010\\DXSETUP.exe',
-          size: 90,
-          flags: 0,
-          chunks: []
-        }
-      ]
-    })
     const labels: string[] = []
 
     const r = await downloadSharedRedistDepots(APP_ID, {
@@ -375,6 +341,7 @@ describe('downloadSharedRedistDepots on the rust pipeline', () => {
       expect(j.appId).toBe('228980')
     }
     expect(stub.jobs[0]?.selectPaths).toEqual([SCRIPT])
+    expect(client.getRawManifest).not.toHaveBeenCalled()
     expect(
       existsSync(join(steamapps, 'gamelib-shared-redist-index.json'))
     ).toBe(true)

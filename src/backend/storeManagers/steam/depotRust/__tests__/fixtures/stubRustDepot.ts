@@ -9,7 +9,12 @@ import {
   RUST_DEPOT_MANIFEST_SUMMARY
 } from 'common/types/sidecarTransport'
 import { dispatchDepotJobEvent } from '../../jobRegistry'
-import type { RustDepotJob, RustJobEvent, RustOutcome } from '../../types'
+import type {
+  RustDepotJob,
+  RustJobEvent,
+  RustOutcome,
+  RustSummarizeRequest
+} from '../../types'
 
 type EventBody = RustJobEvent extends infer E
   ? E extends RustJobEvent
@@ -22,6 +27,12 @@ export interface StubRustDepotOptions {
   outcome?: Partial<RustOutcome>
   /** Answer for depot_manifest_summary; defaults to `{ depots: [], skippedDepots: [] }`. */
   summary?: unknown
+  /** Per-request answer for depot_manifest_summary; wins over `summary`. */
+  summaryFor?: (req: RustSummarizeRequest) => unknown
+  /** Per-job overrides, merged over `outcome`, e.g. a verify_only job's `missing` list. */
+  outcomeFor?: (
+    job: RustDepotJob
+  ) => Partial<RustOutcome> | Promise<Partial<RustOutcome>>
   events?: EventBody[]
   /** Runs before the outcome is returned, e.g. to write files the caller then reads. */
   onRun?: (job: RustDepotJob) => void | Promise<void>
@@ -84,6 +95,8 @@ export function createStubRustDepot(
         return {}
       }
       if (channel === RUST_DEPOT_MANIFEST_SUMMARY) {
+        if (options.summaryFor)
+          return options.summaryFor(args[0] as RustSummarizeRequest)
         return options.summary ?? { depots: [], skippedDepots: [] }
       }
       if (channel !== RUST_DEPOT_JOB_RUN) {
@@ -104,7 +117,10 @@ export function createStubRustDepot(
         await new Promise<void>((resolve) => waiting.set(job.jobId, resolve))
         return stubOutcome(job.jobId, { status: 'cancelled', acf: null })
       }
-      return stubOutcome(job.jobId, options.outcome)
+      return stubOutcome(job.jobId, {
+        ...options.outcome,
+        ...(await options.outcomeFor?.(job))
+      })
     }
   }
 }

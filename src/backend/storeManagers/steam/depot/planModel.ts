@@ -154,7 +154,7 @@ export interface DepotPlanFile {
 }
 
 /** One resolved + manifest-fetched depot, ready for Plan 05's chunk download. */
-export interface DepotPlanEntry {
+interface DepotPlanEntry {
   /** Steam depot id. STRING — never coerced to Number (T-21-04). */
   depotId: string
   /** 64-bit manifest GID. STRING — never coerced to Number (T-21-04). */

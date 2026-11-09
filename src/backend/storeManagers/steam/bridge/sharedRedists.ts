@@ -15,9 +15,6 @@
 /** The Steamworks Common Redistributables app that owns every shared redist depot. */
 export const STEAM_COMMON_REDIST_APP_ID = '228980'
 
-/** EDepotFileFlag InstallScript: the manifest flag on a depot's installscript.vdf. */
-export const INSTALLSCRIPT_FLAG = 256
-
 /**
  * The Windows version a bridge bottle reports, for `Requirement_OS { OSType }` checks
  * (RESEARCH A6, assumed). Only the opt-in .NET path ever meets an OSType requirement.
