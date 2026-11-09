@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
-Plan: 73-17 next (16 of 21 complete: 73-01..73-16)
+Plan: 16 of 21 complete (73-01..73-16); 73-17 next
 Status: Executing phase 73
 Last activity: 2026-11-09
 
