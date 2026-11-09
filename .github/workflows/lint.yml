@@ -41,3 +41,7 @@ jobs:
       # the matching meta/backendDiCeilings/*.json entry in the same commit as the removal.
       - name: Backend DI ceilings
         run: pnpm backend-di-ceilings
+      # Phase 69 D-12: shrink-only count of ContextProvider imports; remove the file's
+      # meta/frontendContextCeiling/*.json entry in the same commit as the import.
+      - name: Frontend context ceiling
+        run: pnpm frontend-context-ceiling
