@@ -185,10 +185,14 @@ describe('sidecarRpc UNBOUNDED_RUST_CHANNELS covers every human-gated dialog cha
   const EXPECTED = [
     'RUST_DIALOG_OPEN',
     'RUST_DIALOG_MESSAGE',
-    'RUST_DIALOG_SAVE'
+    'RUST_DIALOG_SAVE',
+    // Phase 73 plan 12 (D-06): a depot download job runs for minutes to hours, so it is
+    // deliberately unbounded too. Not a dialog channel; listed here so EXTENSION stays a
+    // reviewed decision.
+    'RUST_DEPOT_JOB_RUN'
   ]
 
-  test('contains exactly the three dialog channels', () => {
+  test('contains exactly the three dialog channels plus the depot job channel', () => {
     // Set equality AND length, not `toContain`: `toContain` catches deletion but is blind to
     // EXTENSION, and an unrelated channel silently acquiring an unbounded timeout is exactly
     // as much of a defect as a dialog channel losing one.
