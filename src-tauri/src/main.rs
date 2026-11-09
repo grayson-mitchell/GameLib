@@ -661,6 +661,130 @@ fn install_panic_hook() {
     }));
 }
 
+/// Creates the `0700` single-instance socket directory and returns the socket path inside it.
+/// Fails open (`None`) when the directory cannot be created.
+#[cfg(unix)]
+fn prepare_single_instance_socket_path() -> Option<std::path::PathBuf> {
+    use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+    single_instance_dir(std::env::var("HOME").ok().as_deref()).and_then(|dir| {
+        match std::fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(&dir)
+        {
+            Ok(()) => {
+                // Belt and braces (T-34.5-G6-20): `DirBuilderExt::mode` only governs the
+                // mode mkdir() is called with for a directory this call actually CREATES --
+                // if the directory already existed (e.g. from an older release, or from a
+                // stale run) `recursive(true)` succeeds without re-chmod'ing it. Explicitly
+                // enforce `0700` here regardless of which branch just ran.
+                if let Err(e) = std::fs::set_permissions(
+                    &dir,
+                    std::fs::Permissions::from_mode(0o700),
+                ) {
+                    shell_eprintln!(
+                        "[shell] WARN: failed to set single-instance socket directory permissions to 0700: {e}"
+                    );
+                }
+                Some(single_instance_socket_path(&dir))
+            }
+            Err(e) => {
+                shell_eprintln!(
+                    "[shell] WARN: failed to create single-instance socket directory {dir:?}: {e} -- continuing without the single-instance guard (fail-open, T-34.5-G6-24)"
+                );
+                None
+            }
+        }
+    })
+}
+
+/// A secondary instance's hand-off to the running primary over the Unix socket, then exit(0).
+#[cfg(unix)]
+fn hand_off_to_running_instance_unix(path: &std::path::Path, argv: &[String]) -> ! {
+    use std::io::Write as _;
+    use std::os::unix::net::UnixStream;
+    // A bare second launch with no deep link raises the existing window -- the
+    // sentinel below -- which is the correct UX and matches what a plugin-based
+    // guard would do. Never logs the URL itself here (T-34.5-G6-25): the running
+    // instance's own `handleProtocol` logs it authoritatively one line later.
+    let (payload, kind) = match protocol_url_arg(argv) {
+        Some(url) => (url, "deep-link"),
+        None => ("__GAMELIB_FOCUS__".to_string(), "focus sentinel"),
+    };
+    shell_eprintln!(
+        "[shell] another GameLib instance is already running -- sending {kind} to it and exiting"
+    );
+    match UnixStream::connect(path) {
+        Ok(mut stream) => {
+            let _ = writeln!(stream, "{payload}");
+            let _ = stream.flush();
+        }
+        Err(e) => shell_eprintln!(
+            "[shell] WARN: secondary instance failed to deliver {kind} to the running instance: {e}"
+        ),
+    }
+    std::process::exit(0);
+}
+
+/// What the single-instance guard hands the primary: the listener its accept loop will own.
+#[cfg(unix)]
+type PrimaryListener = std::os::unix::net::UnixListener;
+#[cfg(windows)]
+type PrimaryListener = WindowsPrimaryPipe;
+#[cfg(not(any(unix, windows)))]
+type PrimaryListener = ();
+
+/// `RunEvent::ExitRequested`: observed, never prevented.
+fn handle_exit_requested(app_handle: &tauri::AppHandle, code: Option<i32>) {
+    // OBSERVED, NEVER PREVENTED. A routed quit arrives as `code: Some(0)` (`app.exit(0)`
+    // from the `app_exit` arm), which makes this line the live gate's proof that a quit
+    // took the sidecar route rather than `terminate:`. `code: None` is emitted only AFTER
+    // the last window is destroyed, so stopping it would strand a windowless app; and
+    // on macOS Cmd+Q / Dock Quit never arrive here at all (`terminate:` goes straight to
+    // `applicationWillTerminate:`; `macos_terminate_veto` vetoes it before that).
+    shell_diag(&format!("exit requested (code={code:?})"));
+    // D-03: this arm never calls `prevent_exit()` (a vetoed quit never reaches it),
+    // so every arrival is an intentional exit: flag it before the sidecar closes.
+    if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
+        state.begin_shutdown();
+    }
+    // The shell's own exits carry `Some(_)`: from here a `terminate:` must not veto.
+    #[cfg(target_os = "macos")]
+    if code.is_some() {
+        macos_terminate_veto::mark_exiting();
+    }
+}
+
+/// `RunEvent::Exit`: cancel depot jobs, reap the sidecar, release power assertions, remove the socket.
+fn handle_exit(app_handle: &tauri::AppHandle, single_instance_socket_path: Option<&std::path::Path>) {
+    // D-08: cancel every depot job and give finalize (the 1026 record) up to 5 s to
+    // land BEFORE the sidecar is killed. Count only; no job detail is logged.
+    let still_running = gamelib_depot::registry::cancel_all_and_wait(EXIT_FINALIZE_WAIT);
+    if still_running > 0 {
+        shell_eprintln!("[shell] depot jobs still running at exit deadline: {still_running}");
+    }
+    if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
+        state.shutdown_child();
+    }
+    // Phase 35 Plan 08 (D-08, REQ-35-06, threat T-35-31): drop every OS power
+    // assertion still held. Same exit-path discipline as `shutdown_child()` above
+    // and the socket cleanup below -- a leaked assertion outlives the process and
+    // keeps the user's machine awake with no UI left to release it, which on a
+    // laptop means an unattended drain to zero.
+    wake_lock_release_all();
+    // Phase 34.5 gap cycle 6 plan 44 (D-44-A): best-effort socket cleanup on a
+    // clean quit, so a fresh start does not have to fall through
+    // `acquire_single_instance`'s stale-socket recovery path. Swallowed, like
+    // `shutdown_child()`'s own exit-path discipline -- an unwind here is worse
+    // than a leaked socket file.
+    #[cfg(unix)]
+    if let Some(path) = single_instance_socket_path {
+        let _ = std::fs::remove_file(path);
+    }
+    #[cfg(not(unix))]
+    let _ = single_instance_socket_path;
+}
+
 fn main() {
     // Installed FIRST, before any other statement, so it covers the single-instance guard and
     // every `.setup()` callback rather than only the code after `Builder::default()`.
@@ -681,73 +805,18 @@ fn main() {
     let no_gui = cli_no_gui(&argv);
 
     #[cfg(unix)]
-    let single_instance_socket_path_var: Option<std::path::PathBuf> = {
-        use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
-        single_instance_dir(std::env::var("HOME").ok().as_deref()).and_then(|dir| {
-            match std::fs::DirBuilder::new()
-                .recursive(true)
-                .mode(0o700)
-                .create(&dir)
-            {
-                Ok(()) => {
-                    // Belt and braces (T-34.5-G6-20): `DirBuilderExt::mode` only governs the
-                    // mode mkdir() is called with for a directory this call actually CREATES --
-                    // if the directory already existed (e.g. from an older release, or from a
-                    // stale run) `recursive(true)` succeeds without re-chmod'ing it. Explicitly
-                    // enforce `0700` here regardless of which branch just ran.
-                    if let Err(e) = std::fs::set_permissions(
-                        &dir,
-                        std::fs::Permissions::from_mode(0o700),
-                    ) {
-                        shell_eprintln!(
-                            "[shell] WARN: failed to set single-instance socket directory permissions to 0700: {e}"
-                        );
-                    }
-                    Some(single_instance_socket_path(&dir))
-                }
-                Err(e) => {
-                    shell_eprintln!(
-                        "[shell] WARN: failed to create single-instance socket directory {dir:?}: {e} -- continuing without the single-instance guard (fail-open, T-34.5-G6-24)"
-                    );
-                    None
-                }
-            }
-        })
-    };
+    let single_instance_socket_path_var: Option<std::path::PathBuf> =
+        prepare_single_instance_socket_path();
     #[cfg(not(unix))]
     let single_instance_socket_path_var: Option<std::path::PathBuf> = None;
 
     // `primary_listener` is moved into the `.setup(move |app| ...)` closure below, where it
     // becomes the deep-link accept loop's listener once the sidecar state is live.
     #[cfg(unix)]
-    let primary_listener: Option<std::os::unix::net::UnixListener> = single_instance_socket_path_var
+    let primary_listener: Option<PrimaryListener> = single_instance_socket_path_var
         .as_deref()
         .and_then(|path| match acquire_single_instance(path) {
-            SingleInstanceRole::Secondary => {
-                use std::io::Write as _;
-                use std::os::unix::net::UnixStream;
-                // A bare second launch with no deep link raises the existing window -- the
-                // sentinel below -- which is the correct UX and matches what a plugin-based
-                // guard would do. Never logs the URL itself here (T-34.5-G6-25): the running
-                // instance's own `handleProtocol` logs it authoritatively one line later.
-                let (payload, kind) = match protocol_url_arg(&argv) {
-                    Some(url) => (url, "deep-link"),
-                    None => ("__GAMELIB_FOCUS__".to_string(), "focus sentinel"),
-                };
-                shell_eprintln!(
-                    "[shell] another GameLib instance is already running -- sending {kind} to it and exiting"
-                );
-                match UnixStream::connect(path) {
-                    Ok(mut stream) => {
-                        let _ = writeln!(stream, "{payload}");
-                        let _ = stream.flush();
-                    }
-                    Err(e) => shell_eprintln!(
-                        "[shell] WARN: secondary instance failed to deliver {kind} to the running instance: {e}"
-                    ),
-                }
-                std::process::exit(0);
-            }
+            SingleInstanceRole::Secondary => hand_off_to_running_instance_unix(path, &argv),
             SingleInstanceRole::Primary(listener) => Some(listener),
             SingleInstanceRole::PrimaryWithoutListener => None,
         });
@@ -760,7 +829,7 @@ fn main() {
     // same unconditional `std::process::exit(0)` -- 46-RESEARCH.md Q5's own fail-open policy: a
     // second sidecar is strictly worse than an occasionally-lost deep link.
     #[cfg(windows)]
-    let primary_listener: Option<WindowsPrimaryPipe> = match current_user_identity() {
+    let primary_listener: Option<PrimaryListener> = match current_user_identity() {
         None => {
             shell_eprintln!(
                 "[shell] WARN: could not read the current user's SID/session -- continuing without the single-instance guard (fail-open, T-34.5-G6-24)"
@@ -790,7 +859,7 @@ fn main() {
     };
 
     #[cfg(not(any(unix, windows)))]
-    let primary_listener: Option<()> = None;
+    let primary_listener: Option<PrimaryListener> = None;
 
     tauri::Builder::default()
         .plugin(
@@ -1794,51 +1863,8 @@ fn main() {
         // The `RunEvent::Exit` reap remains the backstop for logout/shutdown (which must not be
         // blocked) and for the `exit(0)` fallbacks; Dock Quit is routed by `macos_terminate_veto`.
         .run(move |app_handle, event| match event {
-            // OBSERVED, NEVER PREVENTED. A routed quit arrives as `code: Some(0)` (`app.exit(0)`
-            // from the `app_exit` arm), which makes this line the live gate's proof that a quit
-            // took the sidecar route rather than `terminate:`. `code: None` is emitted only AFTER
-            // the last window is destroyed, so stopping it would strand a windowless app; and
-            // on macOS Cmd+Q / Dock Quit never arrive here at all (`terminate:` goes straight to
-            // `applicationWillTerminate:`; `macos_terminate_veto` vetoes it before that).
-            tauri::RunEvent::ExitRequested { code, .. } => {
-                shell_diag(&format!("exit requested (code={code:?})"));
-                // D-03: this arm never calls `prevent_exit()` (a vetoed quit never reaches it),
-                // so every arrival is an intentional exit: flag it before the sidecar closes.
-                if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
-                    state.begin_shutdown();
-                }
-                // The shell's own exits carry `Some(_)`: from here a `terminate:` must not veto.
-                #[cfg(target_os = "macos")]
-                if code.is_some() {
-                    macos_terminate_veto::mark_exiting();
-                }
-            }
-            tauri::RunEvent::Exit => {
-                // D-08: cancel every depot job and give finalize (the 1026 record) up to 5 s to
-                // land BEFORE the sidecar is killed. Count only; no job detail is logged.
-                let still_running = gamelib_depot::registry::cancel_all_and_wait(EXIT_FINALIZE_WAIT);
-                if still_running > 0 {
-                    shell_eprintln!("[shell] depot jobs still running at exit deadline: {still_running}");
-                }
-                if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
-                    state.shutdown_child();
-                }
-                // Phase 35 Plan 08 (D-08, REQ-35-06, threat T-35-31): drop every OS power
-                // assertion still held. Same exit-path discipline as `shutdown_child()` above
-                // and the socket cleanup below -- a leaked assertion outlives the process and
-                // keeps the user's machine awake with no UI left to release it, which on a
-                // laptop means an unattended drain to zero.
-                wake_lock_release_all();
-                // Phase 34.5 gap cycle 6 plan 44 (D-44-A): best-effort socket cleanup on a
-                // clean quit, so a fresh start does not have to fall through
-                // `acquire_single_instance`'s stale-socket recovery path. Swallowed, like
-                // `shutdown_child()`'s own exit-path discipline -- an unwind here is worse
-                // than a leaked socket file.
-                #[cfg(unix)]
-                if let Some(path) = &single_instance_socket_path_var {
-                    let _ = std::fs::remove_file(path);
-                }
-            }
+            tauri::RunEvent::ExitRequested { code, .. } => handle_exit_requested(app_handle, code),
+            tauri::RunEvent::Exit => handle_exit(app_handle, single_instance_socket_path_var.as_deref()),
             _ => {}
         });
 }
