@@ -1,0 +1,9 @@
+2026-11-09T10:17:31.968Z 1st-su     start   steam-user 5.3.0, logonID=0, hold 43s
+2026-11-09T10:17:33.091Z 1st-su     logon   logged on
+2026-11-09T10:17:35.309Z 1st-su     alive   PICS access token answered (#1)
+2026-11-09T10:17:45.559Z 1st-su     alive   PICS access token answered (#2)
+2026-11-09T10:17:55.826Z 1st-su     alive   PICS access token answered (#3)
+2026-11-09T10:18:06.057Z 1st-su     alive   PICS access token answered (#4)
+2026-11-09T10:18:16.091Z 1st-su     end     alive_at_end=true answered=4
+2026-11-09T10:18:16.308Z 1st-su     alive   PICS access token answered (#5)
+2026-11-09T10:18:16.375Z 1st-su     DISCON  disconnected eresult 3 (Logged off)

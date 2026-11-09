@@ -1,0 +1,21 @@
+# arm bprime-vent-zombie: first=vent second=su:0 gap=8s hold=40s exit first=1 second=0
+2026-11-09T10:22:05.083Z 1st-vent   start   steam-vent@a9e8164, obfuscated_private_ip=0 (hard-coded), hold 53s
+2026-11-09T10:22:05.893Z 1st-vent   logon   logged on
+2026-11-09T10:22:08.132Z 1st-vent   alive   PICS access token answered (#1)
+2026-11-09T10:22:13.372Z 2nd-su     start   steam-user 5.3.0, logonID=0, hold 40s
+2026-11-09T10:22:14.031Z 1st-vent   KICKED  ClientLoggedOff eresult 34
+2026-11-09T10:22:14.031Z 1st-vent   probe   SPIKE_KEEP_PINGING: continuing calls on the kicked connection
+2026-11-09T10:22:14.130Z 2nd-su     logon   logged on
+2026-11-09T10:22:16.371Z 2nd-su     alive   PICS access token answered (#1)
+2026-11-09T10:22:18.071Z 1st-vent   DEAD    call failed: Trying to work with closed connection
+2026-11-09T10:22:26.680Z 2nd-su     alive   PICS access token answered (#2)
+2026-11-09T10:22:27.921Z 1st-vent   DEAD    call failed: Trying to work with closed connection
+2026-11-09T10:22:37.005Z 2nd-su     alive   PICS access token answered (#3)
+2026-11-09T10:22:38.022Z 1st-vent   DEAD    call failed: Trying to work with closed connection
+2026-11-09T10:22:47.218Z 2nd-su     alive   PICS access token answered (#4)
+2026-11-09T10:22:48.113Z 1st-vent   DEAD    call failed: Trying to work with closed connection
+2026-11-09T10:22:54.132Z 2nd-su     end     alive_at_end=true answered=4
+2026-11-09T10:22:54.170Z 2nd-su     DISCON  disconnected eresult 3 (Logged off)
+2026-11-09T10:22:57.966Z 1st-vent   DEAD    call failed: Trying to work with closed connection
+2026-11-09T10:22:58.974Z 1st-vent   end     alive_at_end=false answered=1
+# Mac Steam connection_log (local time) during the arm:

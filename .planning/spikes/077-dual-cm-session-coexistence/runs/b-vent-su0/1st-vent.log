@@ -1,0 +1,5 @@
+2026-11-09T10:19:45.419Z 1st-vent   start   steam-vent@a9e8164, obfuscated_private_ip=0 (hard-coded), hold 43s
+2026-11-09T10:19:47.800Z 1st-vent   logon   logged on
+2026-11-09T10:19:50.518Z 1st-vent   alive   PICS access token answered (#1)
+2026-11-09T10:19:54.864Z 1st-vent   KICKED  ClientLoggedOff eresult 34
+2026-11-09T10:19:54.864Z 1st-vent   end     alive_at_end=false answered=1

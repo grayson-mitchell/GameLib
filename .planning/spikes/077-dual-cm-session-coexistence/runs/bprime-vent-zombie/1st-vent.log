@@ -1,0 +1,11 @@
+2026-11-09T10:22:05.083Z 1st-vent   start   steam-vent@a9e8164, obfuscated_private_ip=0 (hard-coded), hold 53s
+2026-11-09T10:22:05.893Z 1st-vent   logon   logged on
+2026-11-09T10:22:08.132Z 1st-vent   alive   PICS access token answered (#1)
+2026-11-09T10:22:14.031Z 1st-vent   KICKED  ClientLoggedOff eresult 34
+2026-11-09T10:22:14.031Z 1st-vent   probe   SPIKE_KEEP_PINGING: continuing calls on the kicked connection
+2026-11-09T10:22:18.071Z 1st-vent   DEAD    call failed: Trying to work with closed connection
+2026-11-09T10:22:27.921Z 1st-vent   DEAD    call failed: Trying to work with closed connection
+2026-11-09T10:22:38.022Z 1st-vent   DEAD    call failed: Trying to work with closed connection
+2026-11-09T10:22:48.113Z 1st-vent   DEAD    call failed: Trying to work with closed connection
+2026-11-09T10:22:57.966Z 1st-vent   DEAD    call failed: Trying to work with closed connection
+2026-11-09T10:22:58.974Z 1st-vent   end     alive_at_end=false answered=1

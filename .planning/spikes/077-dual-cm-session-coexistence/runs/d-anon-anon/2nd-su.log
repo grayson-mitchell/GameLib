@@ -1,0 +1,7 @@
+2026-11-09T10:23:32.142Z 2nd-su     start   steam-user 5.3.0, ANONYMOUS logonID=0, hold 30s
+2026-11-09T10:23:32.853Z 2nd-su     logon   logged on as [a:1:2602889490]
+2026-11-09T10:23:35.091Z 2nd-su     alive   PICS access token answered (#1)
+2026-11-09T10:23:45.329Z 2nd-su     alive   PICS access token answered (#2)
+2026-11-09T10:23:55.552Z 2nd-su     alive   PICS access token answered (#3)
+2026-11-09T10:24:02.854Z 2nd-su     end     alive_at_end=true answered=3
+2026-11-09T10:24:02.894Z 2nd-su     DISCON  disconnected eresult 3 (Logged off)

@@ -1,0 +1,6 @@
+2026-11-09T10:18:49.458Z 2nd-vent   start   steam-vent@a9e8164, obfuscated_private_ip=0 (hard-coded), hold 30s
+2026-11-09T10:18:51.059Z 2nd-vent   logon   logged on
+2026-11-09T10:18:53.378Z 2nd-vent   alive   PICS access token answered (#1)
+2026-11-09T10:19:03.477Z 2nd-vent   alive   PICS access token answered (#2)
+2026-11-09T10:19:13.378Z 2nd-vent   alive   PICS access token answered (#3)
+2026-11-09T10:19:21.210Z 2nd-vent   end     alive_at_end=true answered=3

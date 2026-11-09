@@ -1,0 +1,5 @@
+2026-11-09T10:16:26.787Z 1st-su     start   steam-user 5.3.0, logonID=0, hold 43s
+2026-11-09T10:16:27.458Z 1st-su     logon   logged on
+2026-11-09T10:16:29.658Z 1st-su     alive   PICS access token answered (#1)
+2026-11-09T10:16:35.436Z 1st-su     KICKED  error eresult 34 (LogonSessionReplaced)
+2026-11-09T10:16:35.436Z 1st-su     end     alive_at_end=false answered=1
