@@ -139,6 +139,12 @@ describe('deleteCancelledSteamInstall', () => {
     )
   })
 
+  it('still deletes when installedAtStart is false and the ACF reads 1026', async () => {
+    seed({ steamResumeInstalledAtStart: false })
+    const r = await deleteCancelledSteamInstall('123', OPTS)
+    expect(r.status).toBe('deleted')
+  })
+
   it('waits for the native run to settle before clearing', async () => {
     const inFlight = jest.mocked(isNativeInstallInFlight)
     inFlight
@@ -187,6 +193,15 @@ describe('deleteCancelledSteamInstall', () => {
       expect(allPresent()).toBe(true)
       expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
       expect(sendProgressUpdate).not.toHaveBeenCalled()
+    })
+
+    it('installed at job start, manifest already downgraded to 1026', async () => {
+      seed({ steamResumeInstalledAtStart: true })
+      const r = await deleteCancelledSteamInstall('123', OPTS)
+      expect(r.status).toBe('refused')
+      expect(r.reason).toMatch(/installed when the job started/)
+      expect(allPresent()).toBe(true)
+      expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
     })
 
     it('non-numeric appId', async () => {

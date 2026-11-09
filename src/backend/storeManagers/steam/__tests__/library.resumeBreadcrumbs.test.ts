@@ -4,7 +4,11 @@
  */
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import { markSteamInstallIncomplete } from '../library/resumeBreadcrumbs'
+import {
+  markSteamInstallIncomplete,
+  markSteamNativeInstallStarted,
+  clearSteamResumeBreadcrumb
+} from '../library/resumeBreadcrumbs'
 import { sendFrontendMessage } from '../../../ipc'
 import { t as i18nextT } from 'i18next'
 import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
@@ -281,5 +285,44 @@ describe('markSteamInstallIncomplete()', () => {
     library.clear()
     expect(() => markSteamInstallIncomplete('nonexistent')).not.toThrow()
     expect(sendFrontendMessage).not.toHaveBeenCalled()
+  })
+})
+
+describe('steamResumeInstalledAtStart breadcrumb field (todo 2026-11-09)', () => {
+  beforeEach(() => {
+    library.clear()
+    library.set('730', {
+      runner: 'steam',
+      app_name: '730',
+      is_installed: true,
+      install: {}
+    } as any)
+  })
+
+  it('persists installedAtStart true and clear deletes it', () => {
+    markSteamNativeInstallStarted('730', {
+      targetSteamappsDir: '/s/steamapps',
+      installdir: 'csgo',
+      installedAtStart: true
+    })
+    expect(library.get('730')?.install?.steamResumeInstalledAtStart).toBe(true)
+
+    clearSteamResumeBreadcrumb('730')
+    const install = library.get('730')?.install
+    expect(install?.steamResumeInstalledAtStart).toBeUndefined()
+    expect(install?.steamResumePending).toBe(false)
+  })
+
+  it('a fresh start without the flag overwrites a stale true', () => {
+    markSteamNativeInstallStarted('730', {
+      targetSteamappsDir: '/s/steamapps',
+      installdir: 'csgo',
+      installedAtStart: true
+    })
+    markSteamNativeInstallStarted('730', {
+      targetSteamappsDir: '/s/steamapps',
+      installdir: 'csgo'
+    })
+    expect(library.get('730')?.install?.steamResumeInstalledAtStart).toBe(false)
   })
 })

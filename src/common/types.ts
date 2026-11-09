@@ -475,6 +475,10 @@ export interface InstalledInfo {
   // run, because those leave residue too.
   steamResumeTargetSteamappsDir?: string
   steamResumeInstalldir?: string
+  // Captured at native job start (todo 2026-11-09): true means the title's
+  // appmanifest had StateFlags & 4 when this job began, so cancel-delete must
+  // never treat its tree as a partial, whatever finalize wrote afterwards.
+  steamResumeInstalledAtStart?: boolean
 }
 
 export interface Reqs {

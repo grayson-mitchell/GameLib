@@ -62,7 +62,11 @@ export function markSteamInstallIncomplete(appId: string): void {
  */
 export function markSteamNativeInstallStarted(
   appId: string,
-  breadcrumb: { targetSteamappsDir: string; installdir: string }
+  breadcrumb: {
+    targetSteamappsDir: string
+    installdir: string
+    installedAtStart?: boolean
+  }
 ): void {
   const existing = library.get(appId)
   if (!existing) return
@@ -73,7 +77,8 @@ export function markSteamNativeInstallStarted(
       ...existing.install,
       steamResumePending: true,
       steamResumeTargetSteamappsDir: breadcrumb.targetSteamappsDir,
-      steamResumeInstalldir: breadcrumb.installdir
+      steamResumeInstalldir: breadcrumb.installdir,
+      steamResumeInstalledAtStart: breadcrumb.installedAtStart === true
     }
   }
   library.set(appId, updated)
@@ -101,7 +106,8 @@ export function clearSteamResumeBreadcrumb(appId: string): void {
   if (
     !existing.install?.steamResumePending &&
     !existing.install?.steamResumeTargetSteamappsDir &&
-    !existing.install?.steamResumeInstalldir
+    !existing.install?.steamResumeInstalldir &&
+    !existing.install?.steamResumeInstalledAtStart
   ) {
     return
   }
@@ -109,6 +115,7 @@ export function clearSteamResumeBreadcrumb(appId: string): void {
   const install = { ...existing.install }
   delete install.steamResumeTargetSteamappsDir
   delete install.steamResumeInstalldir
+  delete install.steamResumeInstalledAtStart
 
   const updated: GameInfo = {
     ...existing,

@@ -15,6 +15,8 @@ import {
 } from 'backend/utils/aborthandler/aborthandler'
 import { startInstallPolling } from './library/installPolling'
 import * as resumeBreadcrumbs from './library/resumeBreadcrumbs'
+import { readAppManifestFlags } from './library/manifestFlags'
+import { isFullyInstalledStateFlags } from './library/installedMap'
 import * as adoption from './macSteamAdoption'
 import { SteamUser } from './user'
 import type { AuthSessionRefusal } from './userTypes'
@@ -460,9 +462,23 @@ export async function runNativeDepotDownloadLeased(
   // .planning/todos/pending/2026-08-16-aborted-depot-residue-has-no-acf.md);
   // this breadcrumb is the ONLY record of the residue that survives.
   // Must stay synchronous and above the await.
+  //
+  // Todo 2026-11-09: also capture whether the title was ALREADY installed
+  // (StateFlags & 4, any installed state) so cancel-delete can refuse after a
+  // cancelled finalize has downgraded the manifest to 1026.
+  const installedAtStart = isFullyInstalledStateFlags(
+    readAppManifestFlags(targetSteamappsDir, steamGame.appId)?.stateFlags ?? 0
+  )
+  if (installedAtStart) {
+    logInfo(
+      `SteamGame: appId ${steamGame.appId} was already installed when the job started; cancel-delete will refuse`,
+      LogPrefix.Steam
+    )
+  }
   resumeBreadcrumbs.markSteamNativeInstallStarted(steamGame.appId, {
     targetSteamappsDir,
-    installdir: resolved.installdir
+    installdir: resolved.installdir,
+    installedAtStart
   })
 
   const downloadStart = Date.now()

@@ -16,6 +16,11 @@
 // deleting. After that the late markSteamInstallIncomplete has already run and
 // cannot re-set the resume flag once we clear it.
 //
+// Two guards keep a pre-existing complete install safe (todo
+// 2026-11-09-stale-steam-queue-head-cancel-deletes-complete-install): the
+// breadcrumb's steamResumeInstalledAtStart (captured at job start, immune to
+// what finalize wrote since) and the current ACF StateFlags & 4.
+//
 // Targets come ONLY from the 260821-rb5 breadcrumb on the library entry
 // (steamResumeTargetSteamappsDir / steamResumeInstalldir), the values the run
 // actually resolved. Never re-derived.
@@ -114,6 +119,13 @@ export async function deleteCancelledSteamInstall(
     const entry = library.get(appId)
     if (!entry || entry.install?.steamResumePending !== true) {
       return refuse(appId, 'no resumable partial install recorded')
+    }
+
+    // Guard 1 (todo 2026-11-09): the title was already installed when the job
+    // started. A cancelled job's finalize may have downgraded the manifest to
+    // 1026 since, so the on-disk check below cannot be trusted alone.
+    if (entry.install.steamResumeInstalledAtStart === true) {
+      return refuse(appId, 'title was installed when the job started')
     }
 
     const targetSteamappsDir = entry.install.steamResumeTargetSteamappsDir
