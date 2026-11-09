@@ -66,7 +66,6 @@
  * reaching a real user config or log directory.
  */
 
-import { PassThrough } from 'node:stream'
 import EventEmitter from 'node:events'
 import { readFileSync, readdirSync } from 'fs'
 import { join, resolve, relative, isAbsolute } from 'path'
@@ -74,6 +73,7 @@ import { tmpdir } from 'os'
 import { getLogFilePath } from 'backend/logger/paths'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
+import { bootFresh } from './helpers/sidecarHarness'
 
 // ── i18next — defeat Jest's project-wide automatic manual mock (same load-bearing reasoning
 // as bootstrapWirings.test.ts's own header: without this, `require('i18next')` inside the
@@ -296,40 +296,41 @@ async function flush(times = 6): Promise<void> {
  * `import()` (mirrors bootstrapWirings.test.ts's own precedent).
  */
 function setupIsolatedBootstrapHarness(): {
-  init: (input: PassThrough, output: PassThrough) => void
-
   backendEvents: any
   downloadAntiCheatDataMock: jest.Mock
   logWarningMock: jest.SpyInstance
 } {
   let harness!: ReturnType<typeof setupIsolatedBootstrapHarness>
-  jest.isolateModules(() => {
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    const { GlobalConfig } = require('backend/config')
-    ;(GlobalConfig.get as jest.Mock).mockReturnValue({
-      getSettings: () => ({ language: 'en' }),
-      setSetting: jest.fn(),
-      set: jest.fn(),
-      flush: jest.fn()
-    })
+  // D-08: one boot per case through bootFresh(); the handles are read from the SAME fresh
+  // registry the boot runs in. Require order is unchanged (bootstrap before logger).
+  bootFresh({
+    before: () => {
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const { GlobalConfig } = require('backend/config')
+      ;(GlobalConfig.get as jest.Mock).mockReturnValue({
+        getSettings: () => ({ language: 'en' }),
+        setSetting: jest.fn(),
+        set: jest.fn(),
+        flush: jest.fn()
+      })
 
-    const { backendEvents } = require('../../backend_events')
-    const { init } = require('../bootstrap')
-    const { downloadAntiCheatData } = require('../../anticheat/utils')
-    const loggerModule = require('backend/logger')
-    /* eslint-enable @typescript-eslint/no-require-imports */
+      const { backendEvents } = require('../../backend_events')
+      require('../bootstrap')
+      const { downloadAntiCheatData } = require('../../anticheat/utils')
+      const loggerModule = require('backend/logger')
+      /* eslint-enable @typescript-eslint/no-require-imports */
 
-    // spyOn (not jest.mock) — wraps the real, already-loaded module object in place so
-    // logWarning's actual implementation still runs (observable call history) without
-    // disturbing backend/logger's own circular require graph. See the module-level comment
-    // above the `jest.mock('electron', ...)` block for why a factory-based mock breaks here.
-    const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
+      // spyOn (not jest.mock) — wraps the real, already-loaded module object in place so
+      // logWarning's actual implementation still runs (observable call history) without
+      // disturbing backend/logger's own circular require graph. See the module-level comment
+      // above the `jest.mock('electron', ...)` block for why a factory-based mock breaks here.
+      const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
 
-    harness = {
-      init,
-      backendEvents,
-      downloadAntiCheatDataMock: downloadAntiCheatData,
-      logWarningMock: logWarningSpy
+      harness = {
+        backendEvents,
+        downloadAntiCheatDataMock: downloadAntiCheatData,
+        logWarningMock: logWarningSpy
+      }
     }
   })
   return harness
@@ -353,6 +354,7 @@ function loadConstantsPaths(): {
   fixesPath: string
 } {
   let result!: ReturnType<typeof loadConstantsPaths>
+  // no boot: loads a module graph without calling bootstrap.init
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const {
@@ -379,6 +381,7 @@ function loadFreshProcessGuards(): {
   logWarningMock: jest.SpyInstance
 } {
   let harness!: ReturnType<typeof loadFreshProcessGuards>
+  // no boot: loads a module graph without calling bootstrap.init
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const loggerModule = require('backend/logger')
@@ -416,6 +419,7 @@ function loadRawWithSink(sink: (message: string) => void | Promise<void>): {
   ) => void
 } {
   let mod!: ReturnType<typeof loadRawWithSink>
+  // no boot: loads a module graph without calling bootstrap.init
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     mod = require('../processGuards')
@@ -463,6 +467,7 @@ function loadFreshUncaughtExceptionGuard(): {
   logErrorMock: jest.SpyInstance
 } {
   let harness!: ReturnType<typeof loadFreshUncaughtExceptionGuard>
+  // no boot: loads a module graph without calling bootstrap.init
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const loggerModule = require('backend/logger')
@@ -504,6 +509,7 @@ function loadRawProcessGuards(): {
   installUnhandledRejectionGuard: (target?: NodeJS.EventEmitter) => void
 } {
   let harness!: ReturnType<typeof loadRawProcessGuards>
+  // no boot: loads a module graph without calling bootstrap.init
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const {
@@ -645,15 +651,11 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     // task's execution (recorded in the plan SUMMARY's RED spot-check note) and restored
     // immediately afterwards.
     it('RED-PROOF REQ-34.2-07: no unhandledRejection fires when downloadAntiCheatData rejects', async () => {
-      const { init, backendEvents } = setupIsolatedBootstrapHarness()
+      const { backendEvents } = setupIsolatedBootstrapHarness()
 
       const unhandledRejectionSpy = jest.fn()
       process.on('unhandledRejection', unhandledRejectionSpy)
       try {
-        const input = new PassThrough()
-        const output = new PassThrough()
-        init(input, output)
-
         backendEvents.emit('releasesInfoReady', {
           anticheatFiles: { shaMac: 'mock-sha-mac', shaLinux: 'mock-sha-linux' }
         })
@@ -666,12 +668,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     })
 
     it('REQ-34.2-07/CR-02: logs a warning containing "[bootstrap] downloadAntiCheatData failed:"', async () => {
-      const { init, backendEvents, logWarningMock } =
-        setupIsolatedBootstrapHarness()
-
-      const input = new PassThrough()
-      const output = new PassThrough()
-      init(input, output)
+      const { backendEvents, logWarningMock } = setupIsolatedBootstrapHarness()
 
       backendEvents.emit('releasesInfoReady', {
         anticheatFiles: { shaMac: 'mock-sha-mac', shaLinux: 'mock-sha-linux' }
@@ -687,12 +684,8 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     })
 
     it('REQ-34.2-07: the listener still ran -- downloadAntiCheatData was called exactly once with the platform-selected hash', async () => {
-      const { init, backendEvents, downloadAntiCheatDataMock } =
+      const { backendEvents, downloadAntiCheatDataMock } =
         setupIsolatedBootstrapHarness()
-
-      const input = new PassThrough()
-      const output = new PassThrough()
-      init(input, output)
 
       backendEvents.emit('releasesInfoReady', {
         anticheatFiles: { shaMac: 'mock-sha-mac', shaLinux: 'mock-sha-linux' }
@@ -714,50 +707,48 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     // line for the life of the process, with all of Group 2 still green (its helper
     // binds the sink itself). This test drives the REAL `init()` and observes the
     // transition.
-    it('WR-04: a rejection routes to stderr before init() and to logWarning after it', () => {
-      let installGuard!: (target?: NodeJS.EventEmitter) => void
-      let init!: (input: PassThrough, output: PassThrough) => void
+    it('WR-04: a rejection routes to stderr before the boot and to logWarning after it', () => {
       let logWarningSpy!: jest.SpyInstance
-
-      jest.isolateModules(() => {
-        /* eslint-disable @typescript-eslint/no-require-imports */
-        const { GlobalConfig } = require('backend/config')
-        ;(GlobalConfig.get as jest.Mock).mockReturnValue({
-          getSettings: () => ({ language: 'en' }),
-          setSetting: jest.fn(),
-          set: jest.fn(),
-          flush: jest.fn()
-        })
-        // Same registry for both, or the module-scope `logSink` singleton `init()`
-        // writes would not be the one the guard reads.
-        installGuard =
-          require('../processGuards').installUnhandledRejectionGuard
-        init = require('../bootstrap').init
-        logWarningSpy = jest.spyOn(require('backend/logger'), 'logWarning')
-        /* eslint-enable @typescript-eslint/no-require-imports */
-      })
-
+      const target = new EventEmitter()
       const stderrWriteSpy = jest
         .spyOn(process.stderr, 'write')
         .mockImplementation(() => true)
 
       try {
-        const target = new EventEmitter()
-        installGuard(target)
+        // One boot. Everything BEFORE it runs in `before`, in the same fresh registry the
+        // boot then uses (same registry, or the module-scope `logSink` singleton the boot
+        // writes would not be the one the guard reads).
+        bootFresh({
+          before: () => {
+            /* eslint-disable @typescript-eslint/no-require-imports */
+            const { GlobalConfig } = require('backend/config')
+            ;(GlobalConfig.get as jest.Mock).mockReturnValue({
+              getSettings: () => ({ language: 'en' }),
+              setSetting: jest.fn(),
+              set: jest.fn(),
+              flush: jest.fn()
+            })
+            const installGuard =
+              require('../processGuards').installUnhandledRejectionGuard
+            require('../bootstrap')
+            logWarningSpy = jest.spyOn(require('backend/logger'), 'logWarning')
+            /* eslint-enable @typescript-eslint/no-require-imports */
 
-        // BEFORE init(): no sink bound.
-        target.emit('unhandledRejection', new Error('before init'))
-        expect(stderrWriteSpy).toHaveBeenCalledWith(
-          expect.stringContaining('before init')
-        )
-        expect(logWarningSpy).not.toHaveBeenCalledWith(
-          expect.stringContaining('before init'),
-          expect.anything()
-        )
+            installGuard(target)
 
-        init(new PassThrough(), new PassThrough())
+            // BEFORE the boot: no sink bound.
+            target.emit('unhandledRejection', new Error('before init'))
+            expect(stderrWriteSpy).toHaveBeenCalledWith(
+              expect.stringContaining('before init')
+            )
+            expect(logWarningSpy).not.toHaveBeenCalledWith(
+              expect.stringContaining('before init'),
+              expect.anything()
+            )
+          }
+        })
 
-        // AFTER init(): the sink is bound, so the same emit reaches the logger.
+        // AFTER the boot: the sink is bound, so the same emit reaches the logger.
         target.emit('unhandledRejection', new Error('after init'))
         expect(logWarningSpy).toHaveBeenCalledWith(
           expect.stringContaining('after init'),
@@ -780,33 +771,10 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     // It also pins the SEVERITY, which no other test can: the message must reach
     // `logError`, not `logWarning`. That is the property that carries `main.ts:618`'s
     // `logError(err, LogPrefix.Backend)` forward, and the one a shared sink would lose.
-    it('D-35-10-01: an uncaught exception routes to stderr before init() and to logError (never logWarning) after it', async () => {
-      let installGuard!: (
-        target?: NodeJS.EventEmitter,
-        exit?: (code: number) => void
-      ) => void
-      let init!: (input: PassThrough, output: PassThrough) => void
+    it('D-35-10-01: an uncaught exception routes to stderr before the boot and to logError (never logWarning) after it', async () => {
       let logErrorSpy!: jest.SpyInstance
       let logWarningSpy!: jest.SpyInstance
-
-      jest.isolateModules(() => {
-        /* eslint-disable @typescript-eslint/no-require-imports */
-        const { GlobalConfig } = require('backend/config')
-        ;(GlobalConfig.get as jest.Mock).mockReturnValue({
-          getSettings: () => ({ language: 'en' }),
-          setSetting: jest.fn(),
-          set: jest.fn(),
-          flush: jest.fn()
-        })
-        // Same registry for both, or the module-scope `uncaughtExceptionLogSink`
-        // singleton `init()` writes would not be the one the guard reads.
-        installGuard = require('../processGuards').installUncaughtExceptionGuard
-        init = require('../bootstrap').init
-        const loggerModule = require('backend/logger')
-        logErrorSpy = jest.spyOn(loggerModule, 'logErrorSettled')
-        logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
-        /* eslint-enable @typescript-eslint/no-require-imports */
-      })
+      const target = new EventEmitter()
 
       const stderrWriteSpy = jest
         .spyOn(process.stderr, 'write')
@@ -816,26 +784,50 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
         }) as never)
 
       try {
-        const target = new EventEmitter()
-        installGuard(target, jest.fn())
+        let installGuard!: (
+          target?: NodeJS.EventEmitter,
+          exit?: (code: number) => void
+        ) => void
+        // One boot; the pre-boot half runs in `before`, same registry (or the module-scope
+        // `uncaughtExceptionLogSink` singleton the boot writes would not be the one the
+        // guard reads).
+        bootFresh({
+          before: () => {
+            /* eslint-disable @typescript-eslint/no-require-imports */
+            const { GlobalConfig } = require('backend/config')
+            ;(GlobalConfig.get as jest.Mock).mockReturnValue({
+              getSettings: () => ({ language: 'en' }),
+              setSetting: jest.fn(),
+              set: jest.fn(),
+              flush: jest.fn()
+            })
+            installGuard =
+              require('../processGuards').installUncaughtExceptionGuard
+            require('../bootstrap')
+            const loggerModule = require('backend/logger')
+            logErrorSpy = jest.spyOn(loggerModule, 'logErrorSettled')
+            logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
+            /* eslint-enable @typescript-eslint/no-require-imports */
+            installGuard(target, jest.fn())
 
-        // BEFORE init(): no sink bound.
-        target.emit('uncaughtException', new Error('throw before init'))
+            // BEFORE the boot: no sink bound. The sink is read synchronously at emit
+            // time, so the pre-boot assertions hold inside the synchronous `before`.
+            target.emit('uncaughtException', new Error('throw before init'))
+            expect(stderrWriteSpy).toHaveBeenCalledWith(
+              expect.stringContaining('throw before init'),
+              expect.any(Function)
+            )
+            expect(logErrorSpy).not.toHaveBeenCalledWith(
+              expect.stringContaining('throw before init'),
+              expect.anything()
+            )
+          }
+        })
         // D-04: the guard is fatal; let the first handler finish before the second emit.
         await new Promise((r) => setImmediate(r))
-        expect(stderrWriteSpy).toHaveBeenCalledWith(
-          expect.stringContaining('throw before init'),
-          expect.any(Function)
-        )
-        expect(logErrorSpy).not.toHaveBeenCalledWith(
-          expect.stringContaining('throw before init'),
-          expect.anything()
-        )
 
-        init(new PassThrough(), new PassThrough())
-
-        // AFTER init(): the sink is bound, so the same emit reaches the logger --
-        // at ERROR severity.
+        // AFTER the boot: the sink is bound, so the emit reaches the logger -- at ERROR
+        // severity.
         target.emit('uncaughtException', new Error('throw after init'))
         expect(logErrorSpy).toHaveBeenCalledWith(
           expect.stringContaining('throw after init'),
@@ -892,6 +884,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       // (so Group 2's other tests can assert on logWarning), so this test loads the
       // module raw and leaves the sink at its module-scope default of null.
       let installGuard!: (target?: NodeJS.EventEmitter) => void
+      // no boot: loads a module graph without calling bootstrap.init
       jest.isolateModules(() => {
         /* A BLOCK disable, not disable-next-line: prettier reflowed this
          * assignment across two lines, which moved the `require` off the line
@@ -1101,6 +1094,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
           let resolveSink!: () => void
           const sinkPromise = new Promise<void>((r) => (resolveSink = r))
           const sink = jest.fn(() => sinkPromise)
+          // no boot: loads a module graph without calling bootstrap.init
           jest.isolateModules(() => undefined)
           const mod = loadRawWithSink(sink)
           const exit = jest.fn()
@@ -1494,6 +1488,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       let setUncaughtExceptionLogSink!: (
         sink: ((message: string) => void) | null
       ) => void
+      // no boot: loads a module graph without calling bootstrap.init
       jest.isolateModules(() => {
         /* eslint-disable @typescript-eslint/no-require-imports */
         const mod = require('../processGuards')
@@ -1711,6 +1706,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     let stashedLoggerModule: { logWarning: unknown } | null = null
 
     it('IN-03 (setup) a helper-created logWarning spy is installed during its own test', () => {
+      // no boot: loads a module graph without calling bootstrap.init
       jest.isolateModules(() => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const loggerModule = require('backend/logger')
