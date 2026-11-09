@@ -38,6 +38,15 @@ import { logWarning } from 'backend/logger'
 import { endPerGameBridgeBottleSession } from '../../bridgeBottleLifecycle'
 import { bridgeBottleNameFor } from '../../bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
+import * as backupModule from 'backend/storeVersioning/backup'
+import { listBackups } from 'backend/storeVersioning/backup'
+import { __resetStoreState } from 'backend/storeVersioning/engine'
+import { __resetReadOnlyForTest } from 'backend/storeVersioning/readOnlyStores'
+import { __setMigrationsForTest } from 'backend/storeMigrations'
+import {
+  SHARED_REDIST_LEDGER_CHAIN,
+  sharedRedistLedgerVersion
+} from 'backend/storeVersioning/sharedRedistLedgerFile'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -166,6 +175,8 @@ const installerCalls = () =>
 
 beforeEach(() => {
   jest.clearAllMocks()
+  __resetStoreState()
+  __resetReadOnlyForTest()
   bottleDir = mkdtempSync(join(tmpdir(), 'rkj-redist-bottle-'))
   mockSupportDir = mkdtempSync(join(tmpdir(), 'rkj-redist-support-'))
   mockedBottleDir.mockReturnValue(bottleDir)
@@ -179,6 +190,8 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers()
+  jest.restoreAllMocks()
+  __setMigrationsForTest(SHARED_REDIST_LEDGER_CHAIN, undefined)
   // Only ever remove the mkdtemp dir created above.
   if (bottleDir.startsWith(tmpdir()))
     rmSync(bottleDir, { recursive: true, force: true })
@@ -562,6 +575,10 @@ describe('installSteamBridgeSharedRedists', () => {
     ).resolves.toBeUndefined()
     expect(mockedWarn).toHaveBeenCalled()
     expect(installerCalls()).toHaveLength(1)
+    const backups = listBackups(ledgerPath())
+    expect(backups).toHaveLength(1)
+    expect(at(backups, 0)).toMatch(/gamelib-shared-redists\.v0\..*\.bak\.json$/)
+    expect(readFileSync(at(backups, 0), 'utf8')).toBe('{nope')
   })
 
   it('resolves void when runWineCommand throws, without settling', async () => {
@@ -1304,6 +1321,127 @@ describe('installSteamBridgeSharedRedists', () => {
   })
 })
 
+describe('ledger versioning (quick 261109-uv4)', () => {
+  const DX_KEY =
+    'hkey_local_machine\\software\\valve\\steam\\apps\\commonredist\\directx\\jun2010|dxsetup'
+  const pendingRestore = (version: number) =>
+    JSON.stringify({
+      version,
+      done: { [DX_KEY]: 'gid-228990' },
+      timedOut: {},
+      failures: {},
+      rejected: {},
+      markPending: {},
+      displayDriver: { prior: 'mac', at: '2026-01-01T00:00:00.000Z' }
+    })
+  /** Wine fake whose Graphics value starts as "null" (an interrupted null window). */
+  function nullGfxWine() {
+    let value: string | null = 'null'
+    mockedRun.mockImplementation(
+      async ({ commandParts: p }: { commandParts: string[] }) => {
+        if (isGfx(p)) {
+          if (p[1] === 'add') value = at(p, 8)
+          if (p[1] === 'delete') value = null
+          if (p[1] === 'query')
+            return value === null
+              ? { code: 1, stdout: '', stderr: '' }
+              : {
+                  code: 0,
+                  stdout: `${DRIVERS}\r\n    Graphics    REG_SZ    ${value}\r\n`,
+                  stderr: ''
+                }
+        }
+        if (p[0] === 'reg' && p[1] === 'query')
+          return { code: 1, stdout: '', stderr: '' }
+        return { code: 0, stdout: '', stderr: '' }
+      }
+    )
+  }
+  const restoredToMac = () =>
+    graphicsCalls().some((p) => p[1] === 'add' && p[8] === 'mac')
+
+  it('restores a legacy v1 pending displayDriver and keeps a single top-level stamp', async () => {
+    writeFileSync(ledgerPath(), pendingRestore(1))
+    mockedDownload.mockResolvedValue(ok([dx()]))
+    nullGfxWine()
+    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    expect(restoredToMac()).toBe(true)
+    expect(installerCalls()).toHaveLength(0)
+    expect(ledger().version).toBe(1)
+    expect(ledger()).not.toHaveProperty('__internal__')
+    expect(ledger().displayDriver).toBeUndefined()
+    expect(listBackups(ledgerPath())).toEqual([])
+  })
+
+  it('round trips: a fresh install is stamped and the second call is settled', async () => {
+    mockedDownload.mockResolvedValue(ok([dx()]))
+    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    expect(ledger().version).toBe(sharedRedistLedgerVersion())
+    jest.clearAllMocks()
+    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    expect(mockedDownload).not.toHaveBeenCalled()
+    expect(mockedRun).not.toHaveBeenCalled()
+  })
+
+  it('migrates a v1 ledger through a simulated v2 step, preserving the pending restore', async () => {
+    __setMigrationsForTest(SHARED_REDIST_LEDGER_CHAIN, [
+      { id: 'test-v2', to: 2, run: (d) => d }
+    ])
+    writeFileSync(ledgerPath(), pendingRestore(1))
+    mockedDownload.mockResolvedValue(ok([dx()]))
+    nullGfxWine()
+    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    expect(listBackups(ledgerPath())).toHaveLength(1)
+    expect(restoredToMac()).toBe(true)
+    expect(ledger().version).toBe(2)
+    expect(ledger()).not.toHaveProperty('__internal__')
+  })
+
+  it('leaves a newer ledger untouched and skips the pass', async () => {
+    writeFileSync(ledgerPath(), pendingRestore(99))
+    const before = readFileSync(ledgerPath())
+    mockedDownload.mockResolvedValue(ok([dx()]))
+    await expect(
+      installSteamBridgeSharedRedists(APP, SETTINGS)
+    ).resolves.toBeUndefined()
+    expect(mockedWarn).toHaveBeenCalled()
+    expect(mockedDownload).not.toHaveBeenCalled()
+    expect(mockedRun).not.toHaveBeenCalled()
+    expect(readFileSync(ledgerPath()).equals(before)).toBe(true)
+    expect(listBackups(ledgerPath())).toEqual([])
+  })
+
+  it('backs up a wrong-shape ledger with its version before starting empty', async () => {
+    writeFileSync(ledgerPath(), JSON.stringify({ version: 1, done: 'x' }))
+    mockedDownload.mockResolvedValue(ok([dx()]))
+    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    const backups = listBackups(ledgerPath())
+    expect(backups).toHaveLength(1)
+    expect(at(backups, 0)).toMatch(/\.v1\..*\.bak\.json$/)
+    expect(installerCalls()).toHaveLength(1)
+  })
+
+  it('skips the pass and does not clobber when the backup cannot be written', async () => {
+    writeFileSync(ledgerPath(), '{nope')
+    mockedDownload.mockResolvedValue(ok([dx()]))
+    jest
+      .spyOn(backupModule, 'writePreMigrationBackup')
+      .mockImplementation(() => {
+        throw new Error('disk full')
+      })
+    await expect(
+      installSteamBridgeSharedRedists(APP, SETTINGS)
+    ).resolves.toBeUndefined()
+    expect(mockedWarn).toHaveBeenCalledWith(
+      expect.stringContaining('could not back up'),
+      'Steam'
+    )
+    expect(mockedDownload).not.toHaveBeenCalled()
+    expect(readFileSync(ledgerPath(), 'utf8')).toBe('{nope')
+  })
+})
+
+// Kept before 'Phase 54': that block's last test leaves a never-settling in-flight run for APP.
 describe('Phase 54: allowLogon threading', () => {
   it('passes no allowLogon at Play time and allowLogon: true when the install asks', async () => {
     mockedDownload.mockResolvedValue({

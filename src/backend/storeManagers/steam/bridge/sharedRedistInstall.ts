@@ -7,6 +7,10 @@
  * the declared depots into one shared cache (`downloadSharedRedistDepots`), then run each
  * installscript `Run Process` entry inside the bottle under the `redist` Play-button status.
  *
+ * The ledger is versioned on the store engine (quick 261109-uv4): its top-level `version` is the
+ * engine stamp. A ledger from a newer build is left untouched and the whole pass is skipped; an
+ * unreadable one is backed up (engine backup helper) before the pass starts empty.
+ *
  * Idempotence has two layers. The HasRunKey registry value (lowercased entry name, REG_DWORD 1,
  * 32-bit view) is the authoritative mark, exactly as Steam writes it. A ledger file in the bottle
  * directory is the fast path: once every applicable entry is done and nothing failed, `settled`
@@ -75,6 +79,14 @@ import { bridgeBottleNameFor } from '../bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { steamSupportPath } from '../constants'
 import {
+  ensureSharedRedistLedgerMigrated,
+  isSharedRedistLedgerReadOnly,
+  sharedRedistLedgerCodec,
+  sharedRedistLedgerVersion
+} from 'backend/storeVersioning/sharedRedistLedgerFile'
+import { writePreMigrationBackup } from 'backend/storeVersioning/backup'
+import { noteRefusedWrite } from 'backend/storeVersioning/engine'
+import {
   buildHasRunKeyAddParts,
   buildHasRunKeyQueryParts,
   buildMonoSupportMsiParts,
@@ -114,7 +126,8 @@ interface FailureRecord {
 }
 
 interface Ledger {
-  version: 1
+  /** The engine stamp (top-level `version`), see storeVersioning/sharedRedistLedgerFile.ts. */
+  version: number
   /** ledgerKey -> manifest GID of the depot that was run. */
   done: Record<string, string>
   /** ledgerKey -> ISO time the entry's last failure was a timeout (not done). */
@@ -153,7 +166,7 @@ const inFlight = new Map<string, Promise<void>>()
 
 function emptyLedger(): Ledger {
   return {
-    version: 1,
+    version: sharedRedistLedgerVersion(),
     done: {},
     timedOut: {},
     failures: {},
@@ -192,23 +205,41 @@ function isStringRecord(v: unknown): v is Record<string, string> {
   )
 }
 
-async function readLedger(path: string, appId: string): Promise<Ledger> {
+/**
+ * Read the bottle's ledger through the store engine. Returns null when the ledger must not be
+ * touched this launch (newer build's file, failed migration, or an unreadable file whose backup
+ * could not be written): the caller skips the whole pass and nothing is written.
+ */
+async function readLedger(path: string, appId: string): Promise<Ledger | null> {
+  ensureSharedRedistLedgerMigrated(path)
+  if (isSharedRedistLedgerReadOnly(path)) {
+    logWarning(
+      `Steam ${appId}: shared redist ledger in this bottle is from a newer GameLib or failed to migrate; leaving it untouched and skipping shared redists this launch`,
+      LogPrefix.Steam
+    )
+    return null
+  }
   let raw: string
   try {
     raw = await readFile(path, 'utf8')
   } catch {
     return emptyLedger()
   }
+  let fromVersion = 0
   try {
     const parsed = JSON.parse(raw) as Partial<Ledger> | null
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+      fromVersion = sharedRedistLedgerCodec.read(
+        parsed as Record<string, unknown>
+      )
     if (
       parsed &&
-      parsed.version === 1 &&
+      parsed.version === sharedRedistLedgerVersion() &&
       isStringRecord(parsed.done) &&
       isStringRecord(parsed.timedOut)
     ) {
       const ledger: Ledger = {
-        version: 1,
+        version: parsed.version,
         done: parsed.done,
         timedOut: parsed.timedOut,
         failures: readFailures(parsed.failures),
@@ -239,8 +270,17 @@ async function readLedger(path: string, appId: string): Promise<Ledger> {
   } catch {
     // fall through
   }
+  try {
+    writePreMigrationBackup(path, fromVersion, Buffer.from(raw, 'utf8'))
+  } catch {
+    logWarning(
+      `Steam ${appId}: could not back up the unreadable shared redist ledger; leaving it untouched and skipping shared redists this launch`,
+      LogPrefix.Steam
+    )
+    return null
+  }
   logWarning(
-    `Steam ${appId}: shared redist ledger is unreadable, starting empty`,
+    `Steam ${appId}: shared redist ledger is unreadable, starting empty (a backup was kept)`,
     LogPrefix.Steam
   )
   return emptyLedger()
@@ -254,10 +294,24 @@ async function writeLedger(
   dir: string,
   ledger: Ledger
 ): Promise<void> {
+  if (isSharedRedistLedgerReadOnly(path)) {
+    noteRefusedWrite(path)
+    return
+  }
   await mkdir(dir, { recursive: true })
   const tmp = `${path}.${process.pid}.${++ledgerTmpSeq}.tmp`
   try {
-    await writeFile(tmp, JSON.stringify(ledger, null, 2))
+    await writeFile(
+      tmp,
+      JSON.stringify(
+        sharedRedistLedgerCodec.write(
+          ledger as unknown as Record<string, unknown>,
+          sharedRedistLedgerVersion()
+        ),
+        null,
+        2
+      )
+    )
     await rename(tmp, path)
   } catch (err) {
     await rm(tmp, { force: true }).catch(() => undefined)
@@ -465,6 +519,7 @@ async function run(
   const bottleDir = getBottleDir(bottleSettings.wineCrossoverBottle)
   const ledgerPath = join(bottleDir, LEDGER_FILE)
   const ledger = await readLedger(ledgerPath, appId)
+  if (!ledger) return
   const optIn = normaliseSharedRedistOptIn(
     readKnownFixProfile(appId, 'steam')?.steamSharedRedists
   ).sort()
