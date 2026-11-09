@@ -76,7 +76,7 @@ jest.mock('backend/constants/environment', () => ({
 }))
 
 // ── backend/logger — factory-mocked so validation-rejection / send-failure log calls never
-// touch the real, uninitialized heroicLogWriter (this suite never calls bootstrap's init()) ───
+// touch the real, uninitialized heroicLogWriter (this suite never calls the bootstrap boot) ───
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logWarning: jest.fn(),

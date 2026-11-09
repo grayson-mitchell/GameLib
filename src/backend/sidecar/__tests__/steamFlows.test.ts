@@ -41,7 +41,7 @@ jest.mock('backend/store_backend', () => ({
   default: jest.requireActual('../fileStore').default
 }))
 
-// ── axios — init() wires the real online monitor, which would otherwise make a live
+// ── axios — the boot wires the real online monitor, which would otherwise make a live
 // network call from this suite. Same stub as skeletonFlows.test.ts. ──────────────────────
 jest.mock('axios', () => {
   const mockInstance = {
@@ -89,16 +89,35 @@ jest.mock('../../launcher', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────────────────
-import { startSidecar, writeInvoke } from './helpers/sidecarHarness'
-import { getSteamLibraries } from 'backend/utils'
-import {
-  getRecentGames,
-  testingExportsRecentGames
-} from 'backend/recent_games/recent_games'
-import { steamLibraryStore } from 'backend/storeManagers/steam/stores'
+import { bootFresh, writeInvoke } from './helpers/sidecarHarness'
 import type { GameInfo } from 'common/types'
-import { GlobalConfig } from 'backend/config'
 import { RUST_MAIN_WINDOW_HIDE } from 'common/types/sidecarTransport'
+
+// D-08: every case boots the sidecar once, in a fresh module registry. Module
+// handles the cases configure or inspect are rebound from that registry in
+// freshRegistry() (run before each case, ahead of any mock configuration), and
+// boot() then boots without a second reset.
+let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
+let getRecentGames: typeof import('backend/recent_games/recent_games').getRecentGames
+let testingExportsRecentGames: typeof import('backend/recent_games/recent_games').testingExportsRecentGames
+let steamLibraryStore: typeof import('backend/storeManagers/steam/stores').steamLibraryStore
+let GlobalConfig: typeof import('backend/config').GlobalConfig
+
+function freshRegistry(): void {
+  jest.resetModules()
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  require('../bootstrap')
+  ;({ getSteamLibraries } = require('backend/utils'))
+  ;({
+    getRecentGames,
+    testingExportsRecentGames
+  } = require('backend/recent_games/recent_games'))
+  ;({ steamLibraryStore } = require('backend/storeManagers/steam/stores'))
+  ;({ GlobalConfig } = require('backend/config'))
+  /* eslint-enable @typescript-eslint/no-require-imports */
+}
+
+const boot = () => bootFresh({ reuseRegistry: true })
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
@@ -119,6 +138,7 @@ afterAll(() => {
 
 describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, plan 34.5-46)', () => {
   beforeEach(() => {
+    freshRegistry()
     jest.mocked(getSteamLibraries).mockResolvedValue([])
     launchEventCallbackMock.mockReset()
     launchEventCallbackMock.mockResolvedValue({ status: 'done' })
@@ -137,7 +157,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
   // steam://rungameid/... is emitted — that failure is the point of it; see the SUMMARY
   // for the verbatim RED output captured at authoring time.
   it("Test A: a launch invoke for runner='gog' dispatches to launchEventCallback with runner='gog' and emits no steam:// openExternal frame", async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'launch-gog-1', 'launch', [
       { appName: '1207659037', runner: 'gog' }
     ])
@@ -181,7 +201,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
     it.each(badRunners)(
       'runner=$label is rejected by the channel schema, emits no openExternal frame, and calls no manager',
       async ({ runner, label }) => {
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         const args: Record<string, unknown> = { appName: 'some-app-id' }
         if (runner !== undefined) {
           args.runner = runner
@@ -212,7 +232,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
   // skeletonFlows.test.ts Test 2 makes, restated here so THIS file alone can detect a
   // Steam regression from a change scoped to this test file's own mocks.
   it("Test C: a launch invoke for runner='steam' still emits steam://rungameid/<id> and responds done", async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'launch-steam-1', 'launch', [
       { appName: '999002', runner: 'steam' }
     ])
@@ -258,7 +278,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
       } as GameInfo
     ])
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'launch-steam-recent-1', 'launch', [
       { appName: '999003', runner: 'steam' }
     ])
@@ -303,7 +323,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
         } as ReturnType<typeof GlobalConfig.get>
       })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'launch-steam-hide', 'launch', [
         { appName: '999002', runner: 'steam' }
       ])

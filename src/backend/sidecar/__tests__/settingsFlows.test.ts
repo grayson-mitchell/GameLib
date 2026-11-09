@@ -66,7 +66,7 @@ jest.mock('backend/store_backend', () => ({
   default: jest.requireActual('../fileStore').default
 }))
 
-// ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init()` now wires
+// ── axios — fix/steam-native-install-stability (33-05 live-gate gap): the boot now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
 // platformApi's `net.isOnline()` returns `true` (mocked above) -- immediately calls the real
 // `pingSites()`, a live `axios.head()` against github/epic/gog/cloudflare. Mocked so this suite
@@ -162,20 +162,48 @@ jest.mock('backend/utils/os/path', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
-import { GlobalConfig } from 'backend/config'
-import { GameConfig } from 'backend/game_config'
-import { libraryManagerMap } from 'backend/storeManagers'
-import { library as steamLibrary } from '../../storeManagers/steam/state'
-import { getSystemInfo as mockedGetSystemInfo } from 'backend/utils/systeminfo'
-import { hasExecutable as mockedHasExecutable } from 'backend/utils/os/path'
+import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { AppSettings, GameSettings } from 'common/types'
 
-const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-const mockedGameConfigGet = GameConfig.get as jest.Mock
-const mockedSteamGetGame = libraryManagerMap.steam.getGame as jest.Mock
-const mockedGogGetGame = libraryManagerMap.gog.getGame as jest.Mock
+// D-08: every case boots the sidecar once, in a fresh module registry. Module
+// handles the cases configure or inspect are rebound from that registry in
+// freshRegistry() (run before each case, ahead of any mock configuration), and
+// boot() then boots without a second reset.
+let steamLibrary: typeof import('../../storeManagers/steam/state').library
+let mockedGetSystemInfo: typeof import('backend/utils/systeminfo').getSystemInfo
+let mockedHasExecutable: typeof import('backend/utils/os/path').hasExecutable
+let mockedGlobalConfigGet: jest.Mock
+let mockedGameConfigGet: jest.Mock
+let mockedSteamGetGame: jest.Mock
+let mockedGogGetGame: jest.Mock
+
+function freshRegistry(): void {
+  jest.resetModules()
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  require('../bootstrap')
+  ;({ library: steamLibrary } = require('../../storeManagers/steam/state'))
+  ;({
+    getSystemInfo: mockedGetSystemInfo
+  } = require('backend/utils/systeminfo'))
+  ;({ hasExecutable: mockedHasExecutable } = require('backend/utils/os/path'))
+  const { GlobalConfig } = require('backend/config')
+  const { GameConfig } = require('backend/game_config')
+  const { libraryManagerMap } = require('backend/storeManagers')
+  /* eslint-enable @typescript-eslint/no-require-imports */
+  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+  mockedGameConfigGet = GameConfig.get as jest.Mock
+  mockedSteamGetGame = libraryManagerMap.steam.getGame as jest.Mock
+  mockedGogGetGame = libraryManagerMap.gog.getGame as jest.Mock
+}
+
+const boot = () => bootFresh({ reuseRegistry: true })
+
+// Root-level hook: runs before every describe's own beforeEach, so the mock
+// configuration below always targets the case's fresh registry.
+beforeEach(() => {
+  freshRegistry()
+})
 
 /**
  * Points the mocked GlobalConfig.get() at a fresh settings object, carrying
@@ -218,7 +246,7 @@ describe('sidecar settings-read flows (Phase 30 Plan 06)', () => {
   // Must-have 1: requestAppSettings resolves real (stubbed) GlobalConfig
   // settings, NOT the UNPORTED_CHANNEL_MARKER.
   it('requestAppSettings resolves ok:true with the real GlobalConfig settings, not the unported marker', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'app-settings-1', 'requestAppSettings', [])
     await flush()
 
@@ -236,7 +264,7 @@ describe('sidecar settings-read flows (Phase 30 Plan 06)', () => {
   // Must-have 1b: requestGameSettings for a NON-steam appName reaches
   // GameConfig.get(appName).getSettings(), NOT the marker.
   it('requestGameSettings for a non-steam appName reaches GameConfig.get(appName).getSettings(), not the unported marker', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'game-settings-1', 'requestGameSettings', [
       'some-gog-app'
     ])
@@ -259,7 +287,7 @@ describe('sidecar settings-read flows (Phase 30 Plan 06)', () => {
   it('requestGameSettings for a steam-library appName routes through the steam manager, not GameConfig', async () => {
     steamLibrary.set('999001', { title: 'Steam Routed Game' } as never)
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'game-settings-2', 'requestGameSettings', ['999001'])
     await flush()
 
@@ -294,7 +322,7 @@ describe('sidecar settings-read flows (Phase 30 Plan 06)', () => {
   // invariant rather than asserting something Phase 34.5 deliberately made
   // false, and will not need a further substitution once plan 34.5-12 lands.
   it('Invariant B guard: winetricksInstall (deliberately unported, deferred to Phase 34.6) still rejects non-fatally, and the RPC loop keeps serving', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'disk-space-1', 'winetricksInstall', [])
     await flush()
 
@@ -338,7 +366,7 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
   // meaningful assertion is that the underlying GlobalConfig.setSetting mock
   // was actually invoked with the right arguments.
   it('setSetting (send) for appName "default" reaches GlobalConfig.get().setSetting with (key, value)', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'set-setting-global-1', 'setSetting', [
       { appName: 'default', key: 'maxWorkers', value: 2 }
     ])
@@ -360,7 +388,7 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
   // ordering precondition, even though this suite's GameConfig.get() is
   // fully mocked (no real gamesConfigPath filesystem dependency to warm).
   it('setSetting (send) for a non-default appName reaches GameConfig.get(appName).setSetting with (key, value)', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeInvoke(input, 'warm-app-settings-1', 'requestAppSettings', [])
     await flush()
 
@@ -382,7 +410,7 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
   // marker) AND that the real `writeConfig()` function (backend/utils.ts)
   // reached GlobalConfig.get().set()/flush() (the mocked target).
   it('writeConfig (invoke) for appName "default" resolves ok:true and reaches the real writeConfig() function', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'write-config-1', 'writeConfig', [
       { appName: 'default', config: { maxWorkers: 4 } }
     ])
@@ -411,7 +439,7 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
   // secrets audit already has to reason about, rather than the broader
   // config-replace surface writeConfig uses.
   it('T-31-01: setSetting routes exclusively through GlobalConfig.setSetting, never GlobalConfig.set()/flush()', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'set-setting-secret-guard', 'setSetting', [
       { appName: 'default', key: 'steamGridDbApiKey', value: 'not-a-token' }
     ])
@@ -436,7 +464,7 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
   // `setSetting` is a `send` channel (no response frame), so the only
   // meaningful assertion is that the underlying mock was never invoked.
   it('WR-01: setSetting (send) for a traversal appName is dropped — GameConfig.get(...).setSetting is never called', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'set-setting-traversal-1', 'setSetting', [
       { appName: '../../etc/passwd', key: 'language', value: 'fr' }
     ])
@@ -450,7 +478,7 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
   // gamesConfigPath, and the invoke still resolves without throwing (a
   // dropped frame is not an error).
   it('WR-01: writeConfig (invoke) for a traversal appName is dropped — resolves without throwing and never reaches GameConfig', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'write-config-traversal-1', 'writeConfig', [
       { appName: '../../etc/passwd', config: { language: 'fr' } }
     ])
@@ -489,7 +517,7 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
   })
 
   it('getMaxCpus resolves a real number, not the unported marker', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'max-cpus-1', 'getMaxCpus', [])
     await flush()
 
@@ -502,7 +530,7 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
   })
 
   it('showUpdateSetting resolves a real boolean, not the unported marker', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'show-update-setting-1', 'showUpdateSetting', [])
     await flush()
 
@@ -515,7 +543,7 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
   })
 
   it('getLogContent resolves without the unported marker (empty string for a nonexistent log)', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'log-content-1', 'getLogContent', [{}])
     await flush()
 
@@ -528,7 +556,7 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
   })
 
   it('getSystemInfo resolves without the unported marker and reaches the real (mocked) getSystemInfo(cache)', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'system-info-1', 'getSystemInfo', [false])
     await flush()
 
@@ -542,7 +570,7 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
   })
 
   it('hasExecutable resolves a real boolean, not the unported marker', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'has-executable-1', 'hasExecutable', ['node'])
     await flush()
 
@@ -555,7 +583,7 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
   })
 
   it('isNative routes through libraryManagerMap[runner].getGame(appName).isNative(), not the unported marker', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'is-native-1', 'isNative', [
       { appName: '999001', runner: 'steam' }
     ])
@@ -589,7 +617,7 @@ describe('sidecar settings generic reads (Phase 31 Plan 01)', () => {
   // the OPPOSITE of what it originally proved: the channel now routes through
   // the real function, not the unported marker.
   it('getUserInfo routes through the REAL LegendaryUser.getUserInfo(), not the unported marker (Phase 34.5 Plan 06)', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'user-info-1', 'getUserInfo', [])
     await flush()
 
@@ -632,7 +660,7 @@ describe('sidecar GOG private-branch password flows (Phase 34.4 Plan 03, REQ-34.
   // Must-have: getPrivateBranchPassword resolves the real (mocked) GOG
   // branch password, not the unported marker.
   it('getPrivateBranchPassword resolves ok:true with the GOG-routed branch password, not the unported marker', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'gpbp-1', 'getPrivateBranchPassword', ['gog-app-1'])
     await flush()
 
@@ -656,7 +684,7 @@ describe('sidecar GOG private-branch password flows (Phase 34.4 Plan 03, REQ-34.
     }
     mockedGogGetGame.mockReset().mockReturnValue(gogGameStub)
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'spbp-1', 'setPrivateBranchPassword', [
       'gog-app-2',
       'hunter2-branch-secret'
@@ -679,7 +707,7 @@ describe('sidecar GOG private-branch password flows (Phase 34.4 Plan 03, REQ-34.
   // corrected from CONTEXT.md's file-grouped domain table. This assertion is
   // what would catch the Steam misattribution being reintroduced.
   it('REQ-34.4-06: both channels reach libraryManagerMap.gog.getGame and NEVER libraryManagerMap.steam.getGame', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'gpbp-gog-not-steam', 'getPrivateBranchPassword', [
       'gog-app-3'
     ])
@@ -710,7 +738,7 @@ describe('sidecar GOG private-branch password flows (Phase 34.4 Plan 03, REQ-34.
       .mockImplementation(() => true)
     const secret = 'super-secret-branch-password-xyz'
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'spbp-secrecy-1', 'setPrivateBranchPassword', [
       'gog-app-4',
       secret

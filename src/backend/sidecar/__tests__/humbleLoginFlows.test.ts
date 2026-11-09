@@ -141,7 +141,7 @@ async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
 }
 
-/** Starts a fresh, lightweight sidecar RPC transport (NOT the full `bootstrap.ts` init() —
+/** Starts a fresh, lightweight sidecar RPC transport (NOT the full `bootstrap.ts` boot —
  * `requestRustInvoke` only needs `startRpcServer`'s stream binding, not GlobalConfig/i18next/etc). */
 function startTransport(): { input: PassThrough; frames: Frame[] } {
   const input = new PassThrough()
