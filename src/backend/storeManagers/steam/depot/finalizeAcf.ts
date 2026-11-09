@@ -9,6 +9,8 @@ import { resolve, join } from 'path'
 import { SteamUser } from '../user'
 import { writeAppManifest } from './appManifest'
 import { assertNumericAppId } from './plan'
+import { readAppManifestFlags } from '../library/manifestFlags'
+import { isFullyInstalledStateFlags } from '../library/installedMap'
 import { type DepotDownloadFailure } from './planModel'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -126,6 +128,20 @@ export async function finalizeToSteam(
   opts: FinalizeToSteamOpts
 ): Promise<void> {
   assertNumericAppId(appId)
+
+  // Todo 2026-11-09: a cancelled run must not downgrade a manifest that is
+  // already fully installed. TS finalize never downloads, so "nothing fetched"
+  // is inherent. outcome undefined (startup resume) is deliberately unaffected.
+  if (opts.outcome === 'cancelled') {
+    const existing = readAppManifestFlags(opts.targetSteamappsDir, appId)
+    if (existing && isFullyInstalledStateFlags(existing.stateFlags)) {
+      logInfo(
+        `finalizeToSteam: appId ${appId} cancelled over an installed manifest (StateFlags=${existing.stateFlags}); leaving it untouched`,
+        LogPrefix.Steam
+      )
+      return
+    }
+  }
 
   const installRoot = resolve(
     opts.targetSteamappsDir,

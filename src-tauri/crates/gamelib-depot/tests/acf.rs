@@ -471,3 +471,33 @@ async fn non_numeric_app_id_rejected() {
             .is_err()
     );
 }
+
+#[test]
+fn read_existing_state_flags_cases() {
+    let dir = std::env::temp_dir().join(format!("acf-flags-{}", std::process::id()));
+    fs::create_dir_all(&dir).unwrap();
+    let w = |id: &str, body: &str| {
+        fs::write(dir.join(format!("appmanifest_{id}.acf")), body).unwrap();
+    };
+    w("1", "\"AppState\"\n{\n\t\"StateFlags\"\t\t\"4\"\n}\n");
+    w("2", "\"AppState\"\n{\n\t\"StateFlags\"\t\t\"1026\"\n}\n");
+    w("3", "\"AppState\"\n{\n\t\"appid\"\t\t\"3\"\n}\n");
+    w("4", "\"AppState\"\n{\n\t\"StateFlags\"\t\t\"abc\"\n}\n");
+    assert_eq!(read_existing_state_flags(&dir, "1"), Some(4));
+    assert_eq!(read_existing_state_flags(&dir, "2"), Some(1026));
+    assert_eq!(read_existing_state_flags(&dir, "3"), None);
+    assert_eq!(read_existing_state_flags(&dir, "4"), None);
+    assert_eq!(read_existing_state_flags(&dir, "99"), None);
+    fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn preserve_installed_manifest_cases() {
+    assert!(preserve_installed_manifest(true, 0, 0, Some(4)));
+    assert!(preserve_installed_manifest(true, 0, 0, Some(6)));
+    assert!(!preserve_installed_manifest(false, 0, 0, Some(4)));
+    assert!(!preserve_installed_manifest(true, 1, 0, Some(4)));
+    assert!(!preserve_installed_manifest(true, 0, 1, Some(4)));
+    assert!(!preserve_installed_manifest(true, 0, 0, None));
+    assert!(!preserve_installed_manifest(true, 0, 0, Some(1026)));
+}

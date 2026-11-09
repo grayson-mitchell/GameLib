@@ -331,6 +331,36 @@ fn cancel_still_finalizes_1026() {
 }
 
 #[test]
+fn cancel_with_nothing_fetched_preserves_installed_acf() {
+    // Todo 2026-11-09: a no-op cancel over a StateFlags-4 manifest must not downgrade it.
+    let a: Vec<u8> = (0..3_000).map(|i| (i * 11 % 241) as u8).collect();
+    let case = custom_case(
+        "cancel-preserve",
+        910_040,
+        vec![FixtureFile::new("a.bin", a.clone(), 1000, Codec::Vz)],
+    );
+    let env = setup(&case);
+    for t in &env.chunk_targets {
+        env.cdn.script(t, vec![Reply::Hang]);
+    }
+    std::fs::create_dir_all(env.steamapps()).unwrap();
+    let existing = "\"AppState\"\n{\n\t\"appid\"\t\t\"910040\"\n\t\"StateFlags\"\t\t\"4\"\n}\n";
+    let acf_path = env.steamapps().join("appmanifest_910040.acf");
+    std::fs::write(&acf_path, existing).unwrap();
+    let job = env.job("ji-cancel-preserve", Value::Null);
+    let out = std::thread::scope(|s| {
+        let h = s.spawn(|| env.run(job));
+        wait_for("a.bin to be opened", || env.root().join("a.bin").exists());
+        std::thread::sleep(Duration::from_millis(100));
+        assert!(registry::cancel("ji-cancel-preserve"));
+        h.join().unwrap()
+    });
+    assert_eq!(out.status, Status::Cancelled);
+    assert!(out.acf.is_none(), "{:?}", out.acf);
+    assert_eq!(std::fs::read_to_string(&acf_path).unwrap(), existing);
+}
+
+#[test]
 fn no_writes_after_return() {
     let (env, _out) = run_cancel_scenario("cancel-quiet", 910_030);
     let before = tree(&env.steamapps());

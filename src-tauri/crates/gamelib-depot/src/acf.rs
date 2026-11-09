@@ -2,8 +2,9 @@
 //! `writeAppManifest`) and `depot/finalize.ts` (`finalizeToSteam`), plus the completeness gate
 //! `canWriteFullOwnership` / `shouldFinalizeAfterThrow` from `depot/download.ts`.
 //!
-//! `finalize` is the single convergence point: cancel, failure and success all call it, and the
-//! ACF rename is the last filesystem action it takes. StateFlags "4" needs BOTH the TS policy
+//! `finalize` is the single convergence point: cancel, failure and success all call it (one
+//! exception: `preserve_installed_manifest`, a user cancel that changed nothing over an already
+//! installed manifest), and the ACF rename is the last filesystem action it takes. StateFlags "4" needs BOTH the TS policy
 //! input (`FinalizeSpec::allow_full_ownership`) and `can_write_full_ownership`; anything absent or
 //! ambiguous writes the "1026" verify-handoff.
 
@@ -234,6 +235,32 @@ fn unix_now() -> u64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0)
+}
+
+/// Reads `StateFlags` from `appmanifest_<app_id>.acf` in `steamapps_dir`. `None` for a missing
+/// file, no `StateFlags` line, or a non-numeric value.
+pub fn read_existing_state_flags(steamapps_dir: &Path, app_id: &str) -> Option<u32> {
+    let text = fs::read_to_string(steamapps_dir.join(format!("appmanifest_{app_id}.acf"))).ok()?;
+    for line in text.lines() {
+        let mut quoted = line.split('"').skip(1).step_by(2);
+        let Some(key) = quoted.next() else { continue };
+        if !key.eq_ignore_ascii_case("StateFlags") {
+            continue;
+        }
+        return quoted.last().and_then(|v| v.trim().parse::<u32>().ok());
+    }
+    None
+}
+
+/// A user-cancelled job that fetched nothing and wrote no file must not downgrade a manifest that
+/// was already fully installed (todo 2026-11-09, 73-18 Zomboid data loss).
+pub fn preserve_installed_manifest(
+    cancelled: bool,
+    bytes_fetched: u64,
+    files_written: u64,
+    existing: Option<u32>,
+) -> bool {
+    cancelled && bytes_fetched == 0 && files_written == 0 && existing.is_some_and(|f| f & 4 != 0)
 }
 
 /// Single recovery function (cancel, failure and success). The ACF rename is the last

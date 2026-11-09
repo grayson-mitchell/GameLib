@@ -1049,6 +1049,7 @@ async fn run_install_inner(
         };
     drop(refs);
 
+    let skipped_count = skipped.len() as u64;
     let heal_failures = heal_reconciled_modes(&ctx, &root, skipped).await;
     let mut missing: Option<Vec<String>> = None;
     let result = if mode == JobMode::VerifyOnly {
@@ -1080,18 +1081,36 @@ async fn run_install_inner(
     let mut acf_out = None;
     let mut failures = result.failures.clone();
     if let Some(spec) = finalize {
-        match acf::finalize(spec, &job.app_id, &attempted, &result).await {
-            Ok(AcfWritten {
-                state_flags,
-                size_on_disk,
-                ..
-            }) => {
-                acf_out = Some(crate::outcome::AcfResult {
+        // Keyed on the user's cancel token, never `result.outcome`: VerifyOnly reports Cancelled
+        // for missing files without a cancel and must keep downgrading to 1026.
+        let files_written = counters
+            .files_done
+            .load(Ordering::Relaxed)
+            .saturating_sub(skipped_count);
+        let preserve = acf::preserve_installed_manifest(
+            cancel.is_cancelled(),
+            counters.net_bytes.load(Ordering::Relaxed),
+            files_written,
+            acf::read_existing_state_flags(Path::new(&spec.steamapps_dir), &job.app_id),
+        );
+        if preserve {
+            emitter.warn(
+                "cancelled with nothing fetched over an installed appmanifest; ACF left untouched",
+            );
+        } else {
+            match acf::finalize(spec, &job.app_id, &attempted, &result).await {
+                Ok(AcfWritten {
                     state_flags,
-                    size_on_disk: size_on_disk.to_string(),
-                });
+                    size_on_disk,
+                    ..
+                }) => {
+                    acf_out = Some(crate::outcome::AcfResult {
+                        state_flags,
+                        size_on_disk: size_on_disk.to_string(),
+                    });
+                }
+                Err(f) => failures.push(f),
             }
-            Err(f) => failures.push(f),
         }
     }
 
