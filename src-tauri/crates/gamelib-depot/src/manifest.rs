@@ -10,13 +10,14 @@
 
 use crate::container::{decrypt_filename, unzip_manifest, DecodeError, MAX_MANIFEST_BYTES};
 use crate::fetch::{FetchError, Fetcher};
-use crate::job::DepotRef;
+use crate::job::{DepotRef, DepotSummary, SummarizeRequest, SummarizeResult};
 use crate::model::{ChunkRef, DepotManifest, ManifestFile};
 use crate::outcome::{ErrorKind, Failure};
 use prost::Message;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
 // TS origin: content_manifest.js section magics.
@@ -25,6 +26,90 @@ const METADATA_MAGIC: u32 = 0x1F48_12BE;
 const SIGNATURE_MAGIC: u32 = 0x1B81_B817;
 const END_OF_MANIFEST_MAGIC: u32 = 0x32C4_15AB;
 const STEAM3_MANIFEST_MAGIC: u32 = 0x1634_9781;
+
+const DIRECTORY_FLAG: u32 = 64;
+const SYMLINK_FLAG: u32 = 512;
+/// Matched paths returned per depot (T-73-36: a summary never carries the file list).
+const MATCH_CAP: usize = 1000;
+
+/// Port of `normalizeDepotPath` (depot/outcome.ts): `\` to `/`, leading `/` stripped, lowercased.
+pub fn normalize_depot_path(p: &str) -> String {
+    p.replace('\\', "/").trim_start_matches('/').to_lowercase()
+}
+
+/// Summary of one manifest: non-directory entry count, their bytes, and the normalised paths a
+/// pattern list selects. A pattern with a `/` must equal the whole normalised path; one without
+/// matches the basename (the `screenDepotPlanForSteamApi` rule). Case-insensitive via
+/// normalisation. Directories and symlinks never match.
+fn summarize_manifest(depot_id: &str, m: &DepotManifest, patterns: &[String]) -> DepotSummary {
+    let pats: Vec<String> = patterns.iter().map(|p| normalize_depot_path(p)).collect();
+    let mut file_count = 0u64;
+    let mut total_bytes = 0u64;
+    let mut matches: Vec<String> = Vec::new();
+    for f in &m.files {
+        if f.flags & DIRECTORY_FLAG != 0 {
+            continue;
+        }
+        file_count += 1;
+        total_bytes += f.size;
+        if f.flags & SYMLINK_FLAG != 0 || matches.len() >= MATCH_CAP {
+            continue;
+        }
+        let norm = normalize_depot_path(&f.filename);
+        let base = norm.rsplit('/').next().unwrap_or("");
+        let hit = pats.iter().any(|p| {
+            if p.contains('/') {
+                *p == norm
+            } else {
+                p == base
+            }
+        });
+        if hit && !matches.contains(&norm) {
+            matches.push(norm);
+        }
+    }
+    DepotSummary {
+        depot_id: depot_id.to_string(),
+        file_count,
+        total_bytes,
+        matches,
+    }
+}
+
+/// D-02: per-depot counts and pattern matches without shipping the manifest. Bounded by a 45 s
+/// internal deadline (under the 60 s `rustInvoke` bound); expiry is `manifest_unavailable`.
+pub async fn summarize(
+    req: SummarizeRequest,
+    store: &ManifestStore,
+) -> Result<SummarizeResult, Failure> {
+    let cancel = CancellationToken::new();
+    let work = async {
+        let mut depots = Vec::with_capacity(req.depots.len());
+        for d in &req.depots {
+            if d.from_manifest.is_some() {
+                return Err(failure(
+                    ErrorKind::DeltaUnsupported,
+                    "fromManifest delta installs are not supported",
+                ));
+            }
+            match store.load(d, &cancel).await {
+                Ok(m) => depots.push(summarize_manifest(&d.depot_id, &m, &req.patterns)),
+                Err(FetchError::Failed(f)) => return Err(f),
+                Err(FetchError::Cancelled) => {
+                    return Err(failure(ErrorKind::ManifestUnavailable, "cancelled"))
+                }
+            }
+        }
+        Ok(SummarizeResult { depots })
+    };
+    match tokio::time::timeout(Duration::from_secs(45), work).await {
+        Ok(r) => r,
+        Err(_) => Err(failure(
+            ErrorKind::ManifestUnavailable,
+            "manifest summary timed out",
+        )),
+    }
+}
 
 /// Newest GIDs kept per depot by [`ManifestStore::prune`].
 const KEEP_GIDS: usize = 2;

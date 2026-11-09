@@ -72,8 +72,11 @@ pub fn run_job(job: DepotJob, ctx: &JobContext, host: Arc<dyn JobHost>) -> Outco
 }
 
 /// Ops reachable from the shell. Keep sorted (the parity test reads this literal form).
-/// `depot_manifest_summary` is added by a later plan.
-pub const OPS: &[&str] = &["depot_job_cancel", "depot_job_run"];
+pub const OPS: &[&str] = &[
+    "depot_job_cancel",
+    "depot_job_run",
+    "depot_manifest_summary",
+];
 
 /// Supplied by the shell arm or the CLI `--cache-dir` flag; not on the wire from TS.
 #[derive(Debug, Clone)]
@@ -105,6 +108,34 @@ pub trait JobHost: Send + Sync + 'static {
     ) -> Result<Option<String>, String>;
 }
 
+async fn run_summary(
+    req: job::SummarizeRequest,
+    ctx: &JobContext,
+    host: Arc<dyn JobHost>,
+) -> Result<job::SummarizeResult, outcome::Failure> {
+    let fail = |m: String| outcome::Failure {
+        file: None,
+        kind: outcome::ErrorKind::Io,
+        message: m,
+        code: None,
+        eresult: None,
+        http_status: None,
+        scope: None,
+        ms_since_progress: None,
+    };
+    let limiter = inflight::InflightLimiter::new(inflight::TARGET_INFLIGHT_CHUNKS).map_err(fail)?;
+    let fetcher = Arc::new(fetch::Fetcher::new(
+        host,
+        &format!("summary-{}", req.app_id),
+        &req.app_id,
+        req.hosts.clone(),
+        limiter,
+        Arc::new(stall::StallTracker::default()),
+    ));
+    let store = manifest::ManifestStore::new(ctx.cache_dir.clone(), fetcher);
+    manifest::summarize(req, &store).await
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct CancelArgs {
@@ -131,6 +162,27 @@ fn run_op(
         "depot_job_cancel" => {
             let a: CancelArgs = parse_args(op, args)?;
             Ok(json!({ "cancelled": registry::cancel(&a.job_id) }))
+        }
+        "depot_manifest_summary" => {
+            let req: job::SummarizeRequest = parse_args(op, args)?;
+            // Same shape rules as a job: numeric ids and a 64-hex key, nothing else reaches disk.
+            let probe = DepotJob {
+                job_id: "summary".into(),
+                mode: job::JobMode::Install,
+                app_id: req.app_id.clone(),
+                install_root: std::env::temp_dir().to_string_lossy().into_owned(),
+                depots: req.depots.clone(),
+                hosts: Vec::new(),
+                select_paths: None,
+                finalize: None,
+                limits: None,
+            };
+            probe.validate().map_err(|_| format!("{op}:bad-args"))?;
+            let r = runtime().block_on(run_summary(req, ctx, Arc::clone(host)));
+            Ok(match r {
+                Ok(v) => serde_json::to_value(v).map_err(|_| format!("{op}:encode"))?,
+                Err(f) => json!({ "error": f }),
+            })
         }
         #[cfg(test)]
         "__panic_probe" => panic!("probe"),

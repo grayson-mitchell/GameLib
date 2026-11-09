@@ -21,11 +21,11 @@ use crate::events::{ProgressEmitter, Snapshot};
 use crate::fetch::{FetchError, Fetcher};
 use crate::inflight::{InflightLimiter, TARGET_INFLIGHT_CHUNKS};
 use crate::job::{DepotJob, JobMode, PlannedDepot};
-use crate::manifest::ManifestStore;
+use crate::manifest::{normalize_depot_path, ManifestStore};
 use crate::model::{ChunkRef, DepotManifest, ManifestFile};
 use crate::outcome::{
-    select_primary_failure, Containers, ErrorKind, Failure, FailureScope, Outcome, Stats, Status,
-    FAILURE_LOG_CAP,
+    select_primary_failure, Containers, ErrorKind, Failure, FailureScope, Outcome, SelectedFile,
+    Stats, Status, FAILURE_LOG_CAP,
 };
 use crate::post::{
     apply_file_modes, apply_macho_fallback, check_symlink_target, detect_path_collisions,
@@ -826,12 +826,25 @@ async fn run_install_inner(
         ));
         return o;
     }
-    if job.mode != JobMode::Install {
-        return error_outcome(
-            &job.job_id,
-            plain_failure(ErrorKind::Io, "job mode not available in this build"),
-        );
-    }
+    let mode = job.mode;
+    // select_files is a partial staging fetch: it never finalizes (no ACF).
+    let finalize = if mode == JobMode::SelectFiles {
+        None
+    } else {
+        job.finalize.as_ref()
+    };
+    let selected: Option<HashSet<String>> = match (mode, &job.select_paths) {
+        (JobMode::SelectFiles, Some(p)) => {
+            Some(p.iter().map(|s| normalize_depot_path(s)).collect())
+        }
+        (JobMode::SelectFiles, None) => {
+            return error_outcome(
+                &job.job_id,
+                plain_failure(ErrorKind::Io, "select_files requires selectPaths"),
+            )
+        }
+        _ => None,
+    };
 
     let root = PathBuf::from(&job.install_root);
     if let Err(e) = tokio::fs::create_dir_all(&root).await {
@@ -905,6 +918,8 @@ async fn run_install_inner(
     let path_collisions = (collisions.resolved.len() + collisions.unresolved.len()) as u32;
 
     let mut all: Vec<FileJob> = Vec::new();
+    let mut picked: Vec<SelectedFile> = Vec::new();
+    let mut found: HashSet<String> = HashSet::new();
     let mut attempted: Vec<AttemptedDepot> = Vec::new();
     for (di, (d, m)) in job.depots.iter().zip(&manifests).enumerate() {
         let Some(key) = key_from_hex(&d.key) else {
@@ -919,6 +934,19 @@ async fn run_install_inner(
             if dropped.contains(&(di, fi)) {
                 continue;
             }
+            if let Some(sel) = &selected {
+                let f = &m.files[fi];
+                let norm = normalize_depot_path(&f.filename);
+                if f.flags & (DIRECTORY_FLAG | SYMLINK_FLAG) != 0 || !sel.contains(&norm) {
+                    continue;
+                }
+                found.insert(norm);
+                picked.push(SelectedFile {
+                    filename: f.filename.clone(),
+                    size: f.size,
+                    sha1: hex(&f.sha_content),
+                });
+            }
             size += m.files[fi].size;
             let seed = all.len();
             all.push(FileJob {
@@ -929,6 +957,9 @@ async fn run_install_inner(
                 seed,
             });
         }
+        if selected.is_some() && size == 0 && !all.iter().any(|j| *j.depot_id == *d.depot_id) {
+            continue;
+        }
         attempted.push(PlannedDepot {
             depot_id: d.depot_id.clone(),
             gid: m.gid.clone(),
@@ -937,6 +968,14 @@ async fn run_install_inner(
     }
     let total_bytes: u64 = attempted.iter().map(|d| d.size).sum();
 
+    if let Some(sel) = &selected {
+        let unknown = sel.iter().filter(|p| !found.contains(*p)).count();
+        if unknown > 0 {
+            emitter.warn(format!(
+                "{unknown} selected path(s) are not in any manifest and were skipped"
+            ));
+        }
+    }
     emitter.planned(total_bytes, all.len() as u64, attempted.clone());
     if path_collisions > 0 {
         emitter.warn(format!(
@@ -961,7 +1000,7 @@ async fn run_install_inner(
 
     // A reconcile error falls back to a full re-download, like the TS.
     let refs: Vec<&ManifestFile> = all.iter().map(|j| j.file()).collect();
-    let (queued, skipped): (Vec<FileJob>, Vec<FileJob>) =
+    let (queued, skipped, reconciled): (Vec<FileJob>, Vec<FileJob>, bool) =
         match reconcile_partial_state(&root, &refs, &cancel, decode_threads).await {
             Ok(r) => {
                 counters
@@ -970,23 +1009,48 @@ async fn run_install_inner(
                 counters
                     .files_done
                     .store(r.skipped.len() as u64, Ordering::Relaxed);
+                let complete = r.complete;
                 (
                     r.queued.iter().map(|&i| all[i].clone()).collect(),
                     r.skipped.iter().map(|&i| all[i].clone()).collect(),
+                    complete,
                 )
             }
-            Err(_) => (all.clone(), Vec::new()),
+            Err(_) => (all.clone(), Vec::new(), false),
         };
     drop(refs);
 
     let heal_failures = heal_reconciled_modes(&ctx, &root, skipped).await;
-    let result = run_files(&ctx, &root, queued, &all, case_insensitive, heal_failures).await;
+    let mut missing: Option<Vec<String>> = None;
+    let result = if mode == JobMode::VerifyOnly {
+        // No chunk is fetched: the reconcile walk is the whole job. Anything left in `queued` is
+        // missing or mismatched and keeps the ACF at the honest 1026.
+        missing = Some(
+            queued
+                .iter()
+                .map(|j| normalize_depot_path(&j.file().filename))
+                .collect(),
+        );
+        let verified = reconciled && queued.is_empty();
+        RunResult {
+            outcome: if queued.is_empty() && !cancel.is_cancelled() {
+                RunOutcome::Completed
+            } else {
+                RunOutcome::Cancelled
+            },
+            all_files_verified: verified,
+            all_modes_applied: verified && heal_failures.is_empty(),
+            failures: heal_failures,
+        }
+    } else {
+        run_files(&ctx, &root, queued, &all, case_insensitive, heal_failures).await
+    };
     heartbeat.abort();
     let _ = heartbeat.await;
 
     let mut acf_out = None;
     let mut failures = result.failures.clone();
-    if let Some(spec) = &job.finalize {
+    if let Some(spec) = finalize {
         match acf::finalize(spec, &job.app_id, &attempted, &result).await {
             Ok(AcfWritten {
                 state_flags,
@@ -1037,6 +1101,10 @@ async fn run_install_inner(
     o.all_modes_applied = result.all_modes_applied;
     o.attempted_depots = attempted;
     o.acf = acf_out;
+    o.missing = missing;
+    if selected.is_some() {
+        o.files = Some(picked);
+    }
     o.stats = Stats {
         bytes_fetched: c.net_bytes.load(Ordering::Relaxed),
         chunks_fetched: c.chunks.load(Ordering::Relaxed),
