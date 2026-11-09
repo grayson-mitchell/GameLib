@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: executing
-stopped_at: Completed 73-07-PLAN.md
-last_updated: "2026-11-09T00:40:49.664Z"
+status: Executing phase 73
+stopped_at: Completed 73-08-PLAN.md
+last_updated: "2026-11-09T00:46:12.744Z"
 last_activity: 2026-11-09
 progress:
   total_phases: 14
   completed_phases: 8
   total_plans: 168
-  completed_plans: 155
+  completed_plans: 156
   percent: 57
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
-Plan: 73-08 next (8 of 21 complete: 73-01..73-07, 73-11)
+Plan: 73-09 next (9 of 21 complete: 73-01..73-08, 73-11)
 Status: Executing phase 73
 Last activity: 2026-11-09
 
-Progress: [█████████░] 92%
+Progress: [█████████░] 93%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -664,7 +664,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-09T00:40:49.657Z
+Last session: 2026-11-09T00:46:12.737Z
 Stopped at: Completed 73-07-PLAN.md
 Resume file: None
 
