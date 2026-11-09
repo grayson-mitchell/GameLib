@@ -575,3 +575,91 @@ describe('sidecar bootstrap (headless boot)', () => {
     })
   })
 })
+
+describe('one-shot boot (D-08)', () => {
+  it('a second bootSidecar() or init() in the same process throws naming D-08', () => {
+    const { testContext } = bootFresh()
+    const bootstrap = fresh<typeof import('../bootstrap')>('../bootstrap')
+
+    expect(() =>
+      bootstrap.bootSidecar(
+        testContext.ctx,
+        new PassThrough(),
+        new PassThrough()
+      )
+    ).toThrow(/D-08/)
+    expect(() => bootstrap.init(new PassThrough(), new PassThrough())).toThrow(
+      /D-08/
+    )
+  })
+
+  it('each bootFresh() gets its own context with userData under that context fake HOME', () => {
+    const first = bootFresh().testContext
+    const second = bootFresh().testContext
+
+    expect(first.profile.root).not.toBe(second.profile.root)
+    expect(first.ctx.paths.userData.startsWith(first.profile.root)).toBe(true)
+    expect(second.ctx.paths.userData.startsWith(second.profile.root)).toBe(true)
+  })
+
+  it('one boot writes READY once and initialises the online monitor once', () => {
+    const { lines } = bootWithLines()
+
+    expect(lines.filter((line) => line === READY_SENTINEL)).toHaveLength(1)
+    expect(
+      fresh<typeof import('../../online_monitor')>('../../online_monitor')
+        .initOnlineMonitor
+    ).toHaveBeenCalledTimes(1)
+  })
+
+  describe('rosetta step on macOS', () => {
+    const bootAsMac = () => {
+      let checkRosettaInstall!: jest.SpyInstance
+      bootFresh({
+        before: () => {
+          jest.replaceProperty(
+            fresh<typeof import('../../constants/environment')>(
+              '../../constants/environment'
+            ),
+            'isMac',
+            true
+          )
+          checkRosettaInstall = jest
+            .spyOn(
+              fresh<typeof import('../../utils')>('../../utils'),
+              'checkRosettaInstall'
+            )
+            .mockResolvedValue(undefined)
+        }
+      })
+      return checkRosettaInstall
+    }
+
+    it('probes exactly once per boot', async () => {
+      const checkRosettaInstall = bootAsMac()
+      await flush()
+
+      expect(checkRosettaInstall).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not probe before the i18n promise it is given resolves', async () => {
+      const checkRosettaInstall = bootAsMac()
+      await flush()
+      checkRosettaInstall.mockClear()
+
+      let release!: () => void
+      const i18nReady = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      fresh<typeof import('../bootstrap')>('../bootstrap').checkRosettaWhenMac(
+        i18nReady
+      )
+      await flush()
+      expect(checkRosettaInstall).not.toHaveBeenCalled()
+
+      release()
+      await flush()
+      expect(checkRosettaInstall).toHaveBeenCalledTimes(1)
+    })
+  })
+})

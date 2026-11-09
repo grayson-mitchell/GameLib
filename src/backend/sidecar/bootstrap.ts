@@ -200,6 +200,9 @@ import {
  * startup protocol URL.
  *
  * Exit contract: no step may create an unref()-less handle or leave unbounded in-flight work.
+ *
+ * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
+ * which knip cannot see.
  */
 export const BOOT_STEP_NAMES = [
   'outbound-http-tracking',
@@ -376,6 +379,9 @@ function registerProtocolUrlHandler(): void {
  * previous sync died mid-flight, which is an anomaly worth surfacing, matching this file's
  * existing reservation of `logWarning` for its other abnormal boot paths. Wrapped in try/catch
  * per this file's standing rule that a boot-time block must never fail boot.
+ *
+ * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
+ * which knip cannot see.
  */
 export function clearStrandedPlaytimeSyncLock(): void {
   try {
@@ -442,6 +448,9 @@ export function clearStrandedPlaytimeSyncLock(): void {
  * greps for, and it is the receipt that proves this port shipped. Prefixing it would silently
  * invalidate that evidence. The two catch-arm diagnostics below are new lines, so they DO follow
  * the local `[bootstrap] ` convention.
+ *
+ * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
+ * which knip cannot see.
  */
 export function reconcileStoreUsersWhenOnline(): void {
   try {
@@ -551,6 +560,9 @@ export function reconcileStoreUsersWhenOnline(): void {
  * Block H's caller -- the two blocks are independent boot-time side effects with independent
  * call sites in `init()`, and neither reads or writes state the other depends on. Leaving the old
  * absolute wording here would make this comment invert its own file.
+ *
+ * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
+ * which knip cannot see.
  */
 export function syncQueuedPlaytimeWhenOnline(): void {
   try {
@@ -731,6 +743,9 @@ export function checkRosettaWhenMac(i18nReady: Promise<void>): void {
  * That is a REAL, SEPARATE defect, filed as
  * `2026-09-09-deletepresence-never-resets-interval-so-the-keepalive-cannot-re-arm.md` and
  * deliberately NOT fixed here to keep this task atomic. `presence.ts` is untouched by Block H.
+ *
+ * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
+ * which knip cannot see.
  */
 export function setGogPresenceWhenOnline(): void {
   try {
@@ -773,6 +788,9 @@ let booted = false
  * Runs the ordered boot steps over an `AppContext` built once by the caller (D-01). Streams are
  * injectable (`stream.PassThrough` pairs under test). A second call in one process throws:
  * tests boot once per fresh module registry via `bootFresh()`.
+ *
+ * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
+ * which knip cannot see.
  */
 export function bootSidecar(
   ctx: AppContext,
@@ -788,7 +806,12 @@ export function bootSidecar(
   runBootSteps(ctx, { input, output }, { i18nReady: Promise.resolve() })
 }
 
-/** The production path set, read from the platform layer and `backend/constants/paths`. */
+/**
+ * The production path set, read from the platform layer and `backend/constants/paths`.
+ *
+ * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
+ * which knip cannot see.
+ */
 export function resolveAppPaths(): AppPaths {
   return {
     appRoot: platformApi.app.getAppPath(),

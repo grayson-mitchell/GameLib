@@ -975,11 +975,15 @@ const IN_SCOPE_SUITES = [
  * `depotHostChannels.test.ts` (Phase 73 Plan 11, T-73-41) is structurally contained: it mocks
  * `backend/logger`, drives the registered depot-host handlers against a fake `CdnAuthTokenCache`
  * and the in-memory job registry, and reaches no filesystem, `homedir()` or child process.
+ *
+ * `bootSourceShape.test.ts` (Phase 66 Plan 08, D-08) is structurally contained: it only reads
+ * source text with `fs.readFileSync`/`readdirSync`, boots nothing and spawns nothing.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
   'appShellFlows.test.ts',
   'appShellImportGate.test.ts',
+  'bootSourceShape.test.ts',
   'bootstrap.test.ts',
   'bootstrapUserReconcile.test.ts',
   'bootstrapWirings.test.ts',

@@ -28,17 +28,26 @@
  * "the `jest.mock('os', ...)` block" into a shared helper is not achievable
  * as written -- this is a language/runner constraint, not a preference.
  *
- * ── Import placement matters ─────────────────────────────────────────────
+ * ── One boot per case, on a fresh test context (D-08) ────────────────────
  *
- * `startSidecar` calls `init` from `../../bootstrap`, so importing THIS
- * module is what first requires bootstrap. Suites deliberately place
- * `import { init } from '../bootstrap'` AFTER their mock-double declarations
- * so module-scope setup runs first. Import this module at that same point,
- * not at the top of the file.
+ * `bootFresh()` is the only way a sidecar test boots. It resets the module
+ * registry, requires bootstrap fresh and calls `bootSidecar()` exactly once
+ * with a `createTestContext()` built for that case (a second boot in one
+ * registry throws). The context's `appRoot` and `publicDir` come from the real
+ * resolution because they are read-only repo directories that locales and
+ * asset checks need; `userData` is NEVER taken from the real resolution, so
+ * it stays under the fake HOME in `testContext.profile.root` and the context
+ * is disposed after the test. Import this module after the suite's mock
+ * doubles are declared, as before.
  */
 import { PassThrough } from 'node:stream'
 
-import { init } from '../../bootstrap'
+import {
+  createTestContext,
+  type TestContext
+} from '../../../testUtils/testContext'
+import type { ScriptStep } from '../../../testUtils/scriptedRunner'
+import type { AppPaths } from '../../../process/context'
 
 /** A single newline-delimited JSON frame read off the sidecar's output. */
 export type Frame = Record<string, unknown>
@@ -69,24 +78,23 @@ function collectFrames(stream: PassThrough): Frame[] {
   return frames
 }
 
-/** Boots a real sidecar over in-memory streams and collects its output. */
-export function startSidecar(): { input: PassThrough; frames: Frame[] } {
-  const input = new PassThrough()
-  const output = new PassThrough()
-  const frames = collectFrames(output)
-  init(input, output)
-  return { input, frames }
-}
+// Each case's context, disposed after the test (T-66-29).
+const liveContexts: TestContext[] = []
+afterEach(() => {
+  for (const t of liveContexts.splice(0)) t.dispose()
+})
 
 export interface FreshSidecar {
   input: PassThrough
   output: PassThrough
   frames: Frame[]
+  /** The fresh context this boot ran on (fake HOME, scripted runner, capture log). */
+  testContext: TestContext
 }
 
 /**
  * D-08: one boot per test case in a fresh module registry. Read mocks and
- * registries with require() after this call. 66-08 switches the boot to
+ * registries with require() after this call. Boots via
  * bootSidecar(createTestContext().ctx, ...).
  *
  * Order: jest.resetModules(), then `before` (configure mocks against the
@@ -102,18 +110,39 @@ export function bootFresh(opts?: {
    * BEFORE the boot). Skip the reset; the boot still happens exactly once.
    */
   reuseRegistry?: boolean
+  /** Overrides for this case's createTestContext(); `userData` stays under the fake HOME. */
+  context?: {
+    script?: readonly ScriptStep[]
+    platform?: NodeJS.Platform
+    paths?: Partial<AppPaths>
+  }
 }): FreshSidecar {
   if (!opts?.reuseRegistry) jest.resetModules()
   opts?.before?.()
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { init: freshInit } = require('../../bootstrap') as {
-    init: (input: PassThrough, output: PassThrough) => void
+  const { bootSidecar, resolveAppPaths } = require('../../bootstrap') as {
+    bootSidecar: (
+      ctx: TestContext['ctx'],
+      input: PassThrough,
+      output: PassThrough
+    ) => void
+    resolveAppPaths: () => { appRoot: string; publicDir: string }
   }
+  const real = resolveAppPaths()
+  const testContext = createTestContext({
+    ...opts?.context,
+    paths: {
+      appRoot: real.appRoot,
+      publicDir: real.publicDir,
+      ...opts?.context?.paths
+    }
+  })
+  liveContexts.push(testContext)
   const input = new PassThrough()
   const output = opts?.output ?? new PassThrough()
   const frames = collectFrames(output)
-  freshInit(input, output)
-  return { input, output, frames }
+  bootSidecar(testContext.ctx, input, output)
+  return { input, output, frames, testContext }
 }
 
 /** Writes an `invoke` request frame to the sidecar's input stream. */
