@@ -233,3 +233,21 @@ Run: https://github.com/grayson-mitchell/GameLib/actions/runs/42597998166 (head 
 Windows shell-crate failure (phase-73 code, 73-12): `depot_dispatch::tests::install_root_guard_accepts_library_bridge_and_redist_roots` panicked at `src\depot_dispatch.rs:331`: `should accept "/Users/me/Library/Application Support/Steam/steamapps/common/Game"`, got `Err("depot_job_run:bad-install-root")`. `guard_install_root` starts with `Path::new(root).is_absolute()`. On Windows a drive-less `/Users/...` path is not absolute, so the guard rejects all four POSIX fixture paths. The guard is right to reject them on Windows; the fixtures are POSIX-only. Windows needs drive-qualified fixtures (`C:\...`), or the test needs a per-OS set. This test had not run on Windows before: in the first run the depot crate step failed first and the shell tests were skipped.
 
 **Delete gate (D-15) still not met: CI is red on Windows. Plan 73-19 must not run.**
+
+### CI re-run (Task 2, third attempt): RED on Windows clippy only
+
+Run: https://github.com/grayson-mitchell/GameLib/actions/runs/42599306709. Head is `6274f3a97`: `cf65f54db`, the drive-qualified `install_root_guard` fixtures, plus a later quick-261109-w52 commit. No run exists for `cf65f54db` alone.
+
+| Leg | Conclusion | Steps |
+| --- | ---------- | ----- |
+| ubuntu-latest | success | depot crate tests, static codec linkage, shell `cargo test` |
+| macos-latest | success | depot crate tests, static codec linkage, shell `cargo test`, clippy ratchet |
+| windows-latest | failure | depot crate tests ok, static codec linkage ok, shell `cargo test` **ok** (the guard fix holds); **clippy ratchet FAILED**. This is the first run in which Windows reached the ratchet. |
+
+The Windows ratchet output (`meta/clippyRatchet.cjs`, win32 ceilings) has two findings:
+1. `FAIL: 1 new warning(s) for dead_code: 6 found, ceiling is 5`. The new one is from phase 73 (73-04, `4d181591c`): `crates\gamelib-depot\src\post.rs:451:4 dead_code function 'stat_identity' is never used`. Its only caller is the `#[cfg(unix)]` arm of `probe_case_insensitive`, so on Windows the function is dead. The other five Windows dead_code hits are `wake_lock.rs:172` `wake_lock_reason`, `login_window\humble_helpers.rs:100` `website_data_record_matches_domain`, `store_embed\state.rs:252` `observe_live_url`, `single_instance.rs:142` `single_instance_socket_path` and `single_instance.rs:152` `single_instance_dir`.
+2. `FAIL: unused_variables has 0 warning(s), below its ceiling 1: lower unused_variables to 0 in this commit.` The ratchet fails on a fall as well as a rise, so the win32 `unused_variables` ceiling in `meta/clippyRatchet.cjs` must drop from 1 to 0. The log does not show which commit removed the warning: it lists only warnings that are present, and this is the first Windows ratchet run since `e78677442` (71-08).
+
+All other win32 lints are at their ceilings.
+
+**Delete gate (D-15) still not met: CI is red on Windows. Plan 73-19 must not run.**

@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
-Plan: 17 of 21 complete (73-01..73-17); 73-18 blocked: live UAT done (8 pass, item 9 accepted), CI run 42597998166 red on Windows only (depot_dispatch install_root_guard test uses POSIX fixtures); macOS and Linux green; delete gate not met
+Plan: 17 of 21 complete (73-01..73-17); 73-18 blocked: live UAT done (8 pass, item 9 accepted), CI run 42599306709 red on Windows clippy ratchet only (post.rs stat_identity dead on win32; unused_variables ceiling must drop 1->0); tests green on all three; delete gate not met
 Status: Executing phase 73
 Last activity: 2026-11-09 - Completed quick task 261109-w52: version the per-bottle .gamelib-engine.json marker with the Phase 68 engine
 
