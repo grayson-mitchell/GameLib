@@ -440,12 +440,16 @@ Not a rename/migration phase in the stored-data sense; this is a code refactor. 
 | A7 | Per-top-level-directory `jest.mock(` ceilings are preferable to a single number | Ratchet | planner may prefer a single global ceiling |
 | A8 | Sharded baselines (per area) are better than one JSON under parallel plans | Waves | merge conflicts if kept as one file |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does Phase 75 delete `steam/library/runningPoll.ts` and the small poll-state files?** Roadmap scope says "the local library scan in `steam/library/` (~4.6k lines)" without enumerating. Recommendation: convert these (runner + state owner); exempt only VDF/ACF-reading files by name.
+   **RESOLVED (user decision 2026-11-09):** convert `runningPoll.ts` and the small poll-state files; exempt only VDF/ACF/shortcuts readers by exact filename (at plan time none needs an entry: they carry no module state and no `child_process` import).
 2. **Where do `libraryManagerMap` consumers (~45 files) get managers in non-boot code paths (e.g. `protocol.ts`, `save_sync.ts`, `shortcuts/*`)?** Each needs a slice with `{managers}`; the plan must list the consumers explicitly (use `graphify query` / grep at plan time).
+   **RESOLVED:** manager-map consumers are deferred to Phase 66.1 by the 2026-11-10 roadmap split.
 3. **`init()` second call semantics** once guards are gone: throw vs return same context. Recommend throw in production, tests use `createTestContext()`.
+   **RESOLVED (user decision 2026-11-09):** a second `init()` throws in production; tests build a fresh boot per case (66-04..66-08).
 4. **Type-checker pass in the census** (call-returned containers): ship in Wave 1 or defer with a documented fixture? Recommend ship if runtime is acceptable.
+   **RESOLVED:** the type-checker pass is not shipped; 66-02 pins the call-returned-container residual with a fixture test and documents it in the gate header.
 
 ## Environment Availability
 
