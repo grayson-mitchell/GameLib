@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 73 context gathered
-last_updated: "2026-11-08T20:08:36.643Z"
-last_activity: 2026-11-08 -- Phase 73 planning complete
+last_updated: "2026-11-09T00:08:00.082Z"
+last_activity: 2026-11-09
 progress:
   total_phases: 14
   completed_phases: 8
   total_plans: 168
-  completed_plans: 147
+  completed_plans: 148
   percent: 57
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 72 — renderer trust boundary and process hardening
+**Current focus:** Phase 73 — steam-depot-download-pipeline-in-rust
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,12 +72,12 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 72
-Plan: 12 of 12 (executed)
+Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
+Plan: 2 of 21
 Status: Ready to execute
-Last activity: 2026-11-08 -- Phase 73 planning complete
+Last activity: 2026-11-09
 
-Progress: [██████████] 100%
+Progress: [█████████░] 88%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -243,6 +243,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 68 P05 | 45min | 2 tasks | 16 files |
 | Phase 68 P06 | 25min | 2 tasks | 9 files |
 | Phase 68 P04 | 25min | 2 tasks | 6 files |
+| Phase 73 P01 | 35min | 4 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -378,6 +379,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 68]: 68-03: CacheStore excludes __internal__ envelope from entries()/in-memory map
 - [Phase 68]: 68-05: read-side tray/focusRow normalisers stay as degradation path for read-only settings (D-11); libraryTopSection retired from AppSettings
 - [Phase ?]: 68-06: readOnlyStoresNotice payload is ids-only, flushed once from frontendReady; late entries re-publish
+- [Phase 73]: 73-01: rust-version 1.89 for gamelib-depot crates (operator option-a); no aes_armv8 rustflags
 
 ### Pending Todos
 
@@ -658,7 +660,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-08T19:22:44.902Z
+Last session: 2026-11-09T00:07:54.245Z
 Stopped at: Phase 73 context gathered
 Resume file: None
 
