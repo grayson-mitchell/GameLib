@@ -34,6 +34,46 @@ const invokeTable: FixtureTable<typeof sidecarInternalInvokeArgs> = {
   handleProtocolUrl: {
     valid: [['gamelib://launch/steam/220']],
     invalid: [[], [''], [1], ['gamelib://x'.padEnd(9000, 'x')]]
+  },
+  // 73-11: gamelib-depot callbacks, one strict object each
+  depotCdnToken: {
+    valid: [
+      [{ jobId: 'j1', appId: '480', depotId: '481', host: 'a.b', force: false }]
+    ],
+    invalid: [
+      [],
+      [
+        { jobId: 'j1', appId: '48x', depotId: '481', host: 'a.b', force: false }
+      ],
+      [{ jobId: 'j1', appId: '480', depotId: '481', host: 'a.b' }],
+      [
+        {
+          jobId: 'j1',
+          appId: '480',
+          depotId: '481',
+          host: 'x'.repeat(254),
+          force: true
+        }
+      ],
+      [
+        {
+          jobId: 'j1',
+          appId: '480',
+          depotId: '481',
+          host: 'a',
+          force: true,
+          x: 1
+        }
+      ]
+    ]
+  },
+  depotManifestRequestCode: {
+    valid: [[{ jobId: 'j1', appId: '480', depotId: '481', manifestId: '123' }]],
+    invalid: [
+      [],
+      [{ jobId: 'j1', appId: '480', depotId: '481', manifestId: 'abc' }],
+      [{ jobId: '', appId: '480', depotId: '481', manifestId: '1' }]
+    ]
   }
 }
 
@@ -68,6 +108,53 @@ const sendTable: FixtureTable<typeof sidecarInternalSendArgs> = {
       ['timestampStore']
     ],
     invalid: [[], [''], [1, {}], ['s', 'not-an-object']]
+  },
+  // 73-11: Rust depot job events (flattened kind tag)
+  depotJobEvent: {
+    valid: [
+      [{ jobId: 'j', seq: 1, kind: 'warning', message: 'm', count: 2 }],
+      [
+        {
+          jobId: 'j',
+          seq: 2,
+          kind: 'progress',
+          doneBytes: 1,
+          netBytes: 1,
+          totalBytes: 2,
+          filesDone: 0,
+          filesTotal: 1,
+          host: null,
+          elapsedMs: 5
+        }
+      ],
+      [{ jobId: 'j', seq: 3, kind: 'hostSummary', hosts: [] }],
+      [
+        {
+          jobId: 'j',
+          seq: 0,
+          kind: 'planned',
+          totalBytes: 1,
+          totalFiles: 1,
+          depots: [{ depotId: '1', gid: '2', size: 3 }]
+        }
+      ]
+    ],
+    invalid: [
+      [],
+      [{ jobId: 'j', seq: -1, kind: 'warning', message: 'm', count: 2 }],
+      [{ jobId: 'j', seq: 1, kind: 'warning', message: '', count: 2 }],
+      [{ jobId: 'j', seq: 1, kind: 'nope' }],
+      [
+        {
+          jobId: 'j',
+          seq: 1,
+          kind: 'planned',
+          totalBytes: 1,
+          totalFiles: 1,
+          depots: [{ depotId: 'x', gid: '2', size: 3 }]
+        }
+      ]
+    ]
   }
 }
 
@@ -77,13 +164,16 @@ describe('sidecarInternal schemas', () => {
   runFixtureTable(sidecarInternalInvokeArgs, invokeTable)
   runFixtureTable(sidecarInternalSendArgs, sendTable)
 
-  it('registers the ten channels with the right kind and caller', () => {
+  it('registers the thirteen channels with the right kind and caller', () => {
     const shell = [
       'health',
       'trayResolveRunner',
       'sidecar:store-snapshot',
       'handleProtocolUrl',
-      'shellWindowFocused'
+      'shellWindowFocused',
+      'depotCdnToken',
+      'depotManifestRequestCode',
+      'depotJobEvent'
     ]
     for (const k of Object.keys(sidecarInternalInvokeArgs)) {
       expect(defined(channelSchemas[k], k).kind).toBe('invoke')
@@ -100,6 +190,6 @@ describe('sidecarInternal schemas', () => {
     expect(
       Object.keys(sidecarInternalInvokeArgs).length +
         Object.keys(sidecarInternalSendArgs).length
-    ).toBe(10)
+    ).toBe(13)
   })
 })

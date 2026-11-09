@@ -969,6 +969,10 @@ const IN_SCOPE_SUITES = [
  * `importGameEngine.test.ts` (Phase 61 Plan 19, T-61-58/59) is structurally contained: it calls the
  * pure `importEngineSettings` (grammar guard plus bottle-name derivation), which reads no
  * filesystem, `homedir()` or child process. Its landing commit classified it here.
+ *
+ * `depotHostChannels.test.ts` (Phase 73 Plan 11, T-73-41) is structurally contained: it mocks
+ * `backend/logger`, drives the registered depot-host handlers against a fake `CdnAuthTokenCache`
+ * and the in-memory job registry, and reaches no filesystem, `homedir()` or child process.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -978,6 +982,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'bootstrapUserReconcile.test.ts',
   'bootstrapWirings.test.ts',
   'clipboardFlows.test.ts',
+  'depotHostChannels.test.ts',
   'devSecretVault.test.ts',
   'dialogStub.test.ts',
   'dismissedSignInNoticesSetting.test.ts',
