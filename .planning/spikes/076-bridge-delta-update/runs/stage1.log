@@ -1,0 +1,24 @@
+[1.1s] logged on; 1 stale installs
+[1.1s] 1603180 Mining Mechs: depot 1603181 8421958272431716564 -> 8469235016969406632
+[2.8s]   old: ok 10463 B; new: ok 10485 B
+[3.1s]   diff 337ms: files 47= 2~ 0+ 0-; full 110.1 MiB, file-level 18.8 MiB, chunk-level 5.7 MiB; local mismatch 1, missing 0, unowned 4
+[0.9s] logged on; 1 stale installs
+[0.9s] 1621690 Core Keeper: depot 1621691 8469686420040252635 -> 3570833277932407216
+[2.4s]   old: ok 307445 B; new: ok 307661 B
+[3.0s]   diff 652ms: files 1418= 54~ 0+ 0-; full 546.7 MiB, file-level 65.3 MiB, chunk-level 34.2 MiB; local mismatch 1, missing 0, unowned 1
+[0.8s] logged on; 1 stale installs
+[0.8s] 1782460 Hell Clock: depot 1782461 3885907546186943021 -> 1665941874418214720
+[2.6s]   old: ok 113702 B; new: ok 113624 B
+[3.4s]   diff 797ms: files 252= 58~ 0+ 0-; full 1467.8 MiB, file-level 496.1 MiB, chunk-level 434.7 MiB; local mismatch 1, missing 0, unowned 3
+[0.8s] logged on; 1 stale installs
+[0.8s] 1284190 The Planet Crafter: depot 1284192 7543045212191035237 -> 6367121478108035369
+[2.3s]   old: ok 343412 B; new: ok 344913 B
+[5.1s]   diff 2808ms: files 350= 508~ 2+ 0-; full 3580.7 MiB, file-level 514.3 MiB, chunk-level 96.7 MiB; local mismatch 1, missing 0, unowned 4
+[1.1s] logged on; 1 stale installs
+[1.1s] 427410 Abiotic Factor: depot 427413 4337479586021813883 -> 835924163821861725
+[2.9s]   old: ok 260815 B; new: ok 261823 B
+[5.7s]   diff 2830ms: files 29= 8~ 0+ 0-; full 2288.4 MiB, file-level 2220.3 MiB, chunk-level 444.4 MiB; local mismatch 1, missing 0, unowned 3
+[0.7s] logged on; 1 stale installs
+[0.7s] 1363080 Manor Lords: depot 1363081 7662659300316410169 -> 8288717246775224817
+[2.6s]   old: ok 544047 B; new: ok 550926 B
+[8.6s]   diff 6055ms: files 52= 57~ 3+ 0-; full 7011.1 MiB, file-level 6710.1 MiB, chunk-level 915.6 MiB; local mismatch 3, missing 0, unowned 3
