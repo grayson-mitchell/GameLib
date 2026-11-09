@@ -62,65 +62,83 @@ jest.mock('../../online_monitor', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { PassThrough } from 'node:stream'
-import { init, setGogPresenceWhenOnline } from '../bootstrap'
-import * as loggerModule from '../../logger'
-import gogPresence from '../../storeManagers/gog/presence'
-import { GlobalConfig } from '../../config'
-import { runOnceWhenOnline as mockedRunOnceWhenOnline } from '../../online_monitor'
+import { bootFresh } from './helpers/sidecarHarness'
 
-// `src/backend/jest.config.js` sets `resetMocks: true`, which strips the implementation off
-// EVERY `jest.fn(...)`-created mock -- including the one supplied at module-factory creation
-// time above -- before every single test, the very first one included. So the inline-invoke
-// behaviour has to be re-armed here, once per test, rather than relied upon from the factory
-// alone. Case 5 overrides it locally.
-beforeEach(() => {
-  ;(mockedRunOnceWhenOnline as jest.Mock).mockImplementation(
-    (cb: () => unknown) => cb()
-  )
-})
+/* eslint-disable @typescript-eslint/no-require-imports */
+/**
+ * Boots once (D-08) in a fresh module registry and returns THAT registry's modules: the mocks
+ * and the logger a top-level import would hold belong to the registry that was reset away.
+ *
+ * `src/backend/jest.config.js` sets `resetMocks: true`, which strips the implementation off
+ * EVERY `jest.fn(...)`, so the inline-invoke behaviour is re-armed in `before`, on the fresh
+ * registry's own mock, ahead of the boot. `setPresence` is spied for the boot itself (the boot's
+ * own inline call must not reach the network) and cleared afterwards so each case counts only
+ * its own calls.
+ */
+function bootedWorld() {
+  let gogPresence!: typeof import('../../storeManagers/gog/presence').default
+  let runOnce!: jest.Mock
+  let setPresenceSpy!: jest.SpyInstance
+  bootFresh({
+    before: () => {
+      // Load bootstrap first so the module graph resolves in its natural order (requiring the
+      // online_monitor mock first hits a circular import and drops its re-exports).
+      require('../bootstrap')
+      runOnce = require('../../online_monitor').runOnceWhenOnline as jest.Mock
+      runOnce.mockImplementation((cb: () => unknown) => cb())
+      gogPresence = require('../../storeManagers/gog/presence').default
+      setPresenceSpy = jest
+        .spyOn(gogPresence, 'setPresence')
+        .mockResolvedValue(undefined)
+    }
+  })
+  const bootCalls = setPresenceSpy.mock.calls.length
+  setPresenceSpy.mockClear()
+  return {
+    bootCalls,
+    runOnce,
+    setPresenceSpy,
+    loggerModule: require('../../logger') as typeof import('../../logger'),
+    GlobalConfig: (require('../../config') as typeof import('../../config'))
+      .GlobalConfig,
+    setGogPresenceWhenOnline: (
+      require('../bootstrap') as { setGogPresenceWhenOnline: () => void }
+    ).setGogPresenceWhenOnline
+  }
+}
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 describe('todo 2026-09-06 -- sidecar boot sets GOG presence once online (Block H)', () => {
-  // Case 1: FUSED WIRING PROOF, deliberately the FIRST test in this file that calls `init()`.
-  it('case 1 -- wiring proof: init() calls gogPresence.setPresence() exactly once', () => {
-    const setPresenceSpy = jest
-      .spyOn(gogPresence, 'setPresence')
-      .mockResolvedValue(undefined)
+  // Case 1: FUSED WIRING PROOF.
+  it('case 1 -- wiring proof: one boot calls gogPresence.setPresence() exactly once', () => {
+    const { bootCalls } = bootedWorld()
 
-    init(new PassThrough(), new PassThrough())
-
-    // WIRING: the helper is CALLED from init(), not merely exported. RED today: init() has no
-    // such call at all.
-    expect(setPresenceSpy).toHaveBeenCalledTimes(1)
-
-    setPresenceSpy.mockRestore()
+    // WIRING: the helper is CALLED from the boot, not merely exported.
+    expect(bootCalls).toBe(1)
   })
 
   describe('setGogPresenceWhenOnline() -- called directly', () => {
     it('case 2 -- direct, enabled: setGogPresenceWhenOnline() calls setPresence() exactly once', () => {
-      const setPresenceSpy = jest
-        .spyOn(gogPresence, 'setPresence')
-        .mockResolvedValue(undefined)
+      const { setPresenceSpy, setGogPresenceWhenOnline } = bootedWorld()
 
       setGogPresenceWhenOnline()
 
       expect(setPresenceSpy).toHaveBeenCalledTimes(1)
-
-      setPresenceSpy.mockRestore()
     })
 
     it('case 3 -- D-K5X-02 receipt: disableGOGPresence still calls setPresence(), no skip-log -- the gate is inside setPresence()', () => {
-      const globalConfigGetSpy = jest
-        .spyOn(GlobalConfig, 'get')
-        .mockReturnValue({
-          getSettings: () => ({
-            disableGOGPresence: true,
-            disablePlaytimeSync: true
-          })
-        } as unknown as GlobalConfig)
-      const setPresenceSpy = jest
-        .spyOn(gogPresence, 'setPresence')
-        .mockResolvedValue(undefined)
+      const {
+        setPresenceSpy,
+        GlobalConfig,
+        loggerModule,
+        setGogPresenceWhenOnline
+      } = bootedWorld()
+      jest.spyOn(GlobalConfig, 'get').mockReturnValue({
+        getSettings: () => ({
+          disableGOGPresence: true,
+          disablePlaytimeSync: true
+        })
+      } as unknown as import('../../config').GlobalConfig)
       const logDebugSpy = jest.spyOn(loggerModule, 'logDebug')
 
       setGogPresenceWhenOnline()
@@ -131,16 +149,14 @@ describe('todo 2026-09-06 -- sidecar boot sets GOG presence once online (Block H
       expect(setPresenceSpy).toHaveBeenCalledTimes(1)
       // There is no skip-log arm in Block H (D-K5X-02) -- the deleted source never had one.
       expect(logDebugSpy).not.toHaveBeenCalled()
-
-      logDebugSpy.mockRestore()
-      setPresenceSpy.mockRestore()
-      globalConfigGetSpy.mockRestore()
     })
 
     it('case 4 -- never-fails-boot (async arm): a rejected setPresence() is caught and warned', async () => {
-      const setPresenceSpy = jest
-        .spyOn(gogPresence, 'setPresence')
-        .mockRejectedValue(new Error('presence.gog.com unreachable'))
+      const { setPresenceSpy, loggerModule, setGogPresenceWhenOnline } =
+        bootedWorld()
+      setPresenceSpy.mockRejectedValue(
+        new Error('presence.gog.com unreachable')
+      )
       const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
 
       expect(() => setGogPresenceWhenOnline()).not.toThrow()
@@ -153,29 +169,28 @@ describe('todo 2026-09-06 -- sidecar boot sets GOG presence once online (Block H
           String(message).includes('setGogPresenceWhenOnline')
         )
       ).toBe(true)
-
-      logWarningSpy.mockRestore()
-      setPresenceSpy.mockRestore()
     })
 
     it('case 5 -- never-fails-boot (inner arm, deferred): a synchronously-throwing setPresence() is caught and warned', () => {
       // This is the ONLY shape that can prove the inner guard exists. Under the inline-invoke
-      // mock (the beforeEach default), a callback throw propagates back out through the mock
-      // into the OUTER try, so an inline-invoke test cannot distinguish inner from outer and
-      // would pass even with the inner guard deleted. This test instead captures the callback
-      // instead of invoking it, calls the helper (registration only), then invokes the
-      // captured callback from the test's OWN frame -- outside anything the helper wraps.
+      // mock (the default), a callback throw propagates back out through the mock into the
+      // OUTER try, so an inline-invoke test cannot distinguish inner from outer and would pass
+      // even with the inner guard deleted. This test instead captures the callback instead of
+      // invoking it, calls the helper (registration only), then invokes the captured callback
+      // from the test's OWN frame -- outside anything the helper wraps.
+      const {
+        runOnce,
+        setPresenceSpy,
+        loggerModule,
+        setGogPresenceWhenOnline
+      } = bootedWorld()
       let capturedCallback: (() => unknown) | undefined
-      ;(mockedRunOnceWhenOnline as jest.Mock).mockImplementation(
-        (cb: () => unknown) => {
-          capturedCallback = cb
-        }
-      )
-      const setPresenceSpy = jest
-        .spyOn(gogPresence, 'setPresence')
-        .mockImplementation(() => {
-          throw new Error('synchronous failure')
-        })
+      runOnce.mockImplementation((cb: () => unknown) => {
+        capturedCallback = cb
+      })
+      setPresenceSpy.mockImplementation(() => {
+        throw new Error('synchronous failure')
+      })
       const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
 
       expect(() => setGogPresenceWhenOnline()).not.toThrow()
@@ -188,9 +203,6 @@ describe('todo 2026-09-06 -- sidecar boot sets GOG presence once online (Block H
           String(message).includes('setGogPresenceWhenOnline')
         )
       ).toBe(true)
-
-      logWarningSpy.mockRestore()
-      setPresenceSpy.mockRestore()
     })
   })
 })

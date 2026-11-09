@@ -55,69 +55,107 @@ jest.mock('../../online_monitor', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { PassThrough } from 'node:stream'
-import { init, reconcileStoreUsersWhenOnline } from '../bootstrap'
-import * as loggerModule from '../../logger'
-import { LegendaryUser } from '../../storeManagers/legendary/user'
-import { GOGUser } from '../../storeManagers/gog/user'
-import { configStore } from '../../constants/key_value_stores'
-import { runOnceWhenOnline as mockedRunOnceWhenOnline } from '../../online_monitor'
+import { LogPrefix } from '../../logger'
+import { bootFresh } from './helpers/sidecarHarness'
 
 const EXPECTED_LOG_MESSAGE = 'User Not Found, removing it from Store'
 const EXPECTED_LOG_OPTIONS = {
-  prefix: loggerModule.LogPrefix.Backend,
+  prefix: LogPrefix.Backend,
   forceLog: true
 }
 
-// `src/backend/jest.config.js` sets `resetMocks: true`, which strips the implementation off
-// EVERY `jest.fn(...)`-created mock -- including the one supplied at module-factory creation
-// time above -- before every single test, the very first one included (verified empirically:
-// a bare `jest.mock(..., () => ({ fn: jest.fn(impl) }))` with no re-establishing `beforeEach`
-// calls `impl` zero times once resetMocks is active). So the inline-invoke behaviour has to be
-// re-armed here, once per test, rather than relied upon from the factory alone.
-beforeEach(() => {
-  ;(mockedRunOnceWhenOnline as jest.Mock).mockImplementation(
-    (cb: () => unknown) => cb()
-  )
-})
+type World = ReturnType<typeof bootedWorld>
+let lastWorld: World | undefined
+
+/* eslint-disable @typescript-eslint/no-require-imports */
+/**
+ * Boots once (D-08) in a fresh module registry and returns THAT registry's modules: the mocks,
+ * stores and logger a top-level import would hold belong to the registry that was reset away.
+ * `resetMocks: true` strips every `jest.fn` implementation, so the inline-invoke behaviour is
+ * re-armed in `before` on the fresh registry's own mock. `seed` runs in `before` as well, ahead
+ * of the boot's own reconciliation pass.
+ */
+function bootedWorld(opts?: {
+  epicLoggedIn?: boolean
+  seed?: (w: {
+    configStore: typeof import('../../constants/key_value_stores').configStore
+  }) => void
+}) {
+  let LegendaryUser!: typeof import('../../storeManagers/legendary/user').LegendaryUser
+  let GOGUser!: typeof import('../../storeManagers/gog/user').GOGUser
+  let configStore!: typeof import('../../constants/key_value_stores').configStore
+  let loggerModule!: typeof import('../../logger')
+  bootFresh({
+    before: () => {
+      // Load bootstrap first so the module graph resolves in its natural order (requiring the
+      // online_monitor mock first hits a circular import and drops its re-exports).
+      require('../bootstrap')
+      require('../../online_monitor').runOnceWhenOnline.mockImplementation(
+        (cb: () => unknown) => cb()
+      )
+      LegendaryUser =
+        require('../../storeManagers/legendary/user').LegendaryUser
+      GOGUser = require('../../storeManagers/gog/user').GOGUser
+      configStore = require('../../constants/key_value_stores').configStore
+      loggerModule = require('../../logger')
+      jest
+        .spyOn(LegendaryUser, 'isLoggedIn')
+        .mockReturnValue(opts?.epicLoggedIn ?? false)
+      jest.spyOn(GOGUser, 'isLoggedIn').mockReturnValue(false)
+      opts?.seed?.({ configStore })
+    }
+  })
+  lastWorld = {
+    LegendaryUser,
+    GOGUser,
+    configStore,
+    loggerModule,
+    reconcileStoreUsersWhenOnline: (
+      require('../bootstrap') as { reconcileStoreUsersWhenOnline: () => void }
+    ).reconcileStoreUsersWhenOnline
+  }
+  return lastWorld
+}
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation', () => {
   // WIRING PROOF, deliberately the FIRST test in this file that calls `init()`: this is the
   // test that proves `reconcileStoreUsersWhenOnline` is actually CALLED from `init()`, not
   // merely present as an exported, uncalled function.
-  it('wiring proof: init() reconciles a logged-out Epic user and logs it', () => {
-    const legendaryIsLoggedInSpy = jest
-      .spyOn(LegendaryUser, 'isLoggedIn')
-      .mockReturnValue(false)
-    const gogIsLoggedInSpy = jest
-      .spyOn(GOGUser, 'isLoggedIn')
-      .mockReturnValue(false)
-    configStore.set('userInfo', {
-      account_id: 'stale',
-      displayName: 'Stale',
-      user: 'stale-user'
+  it('wiring proof: one boot reconciles a logged-out Epic user and logs it', () => {
+    let logInfoSpy!: jest.SpyInstance
+    const { configStore } = bootedWorld({
+      seed: ({ configStore: store }) => {
+        store.set('userInfo', {
+          account_id: 'stale',
+          displayName: 'Stale',
+          user: 'stale-user'
+        })
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        logInfoSpy = jest.spyOn(require('../../logger'), 'logInfo')
+      }
     })
-    const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
-
-    init(new PassThrough(), new PassThrough())
 
     expect(configStore.has('userInfo')).toBe(false)
     expect(logInfoSpy).toHaveBeenCalledWith(
       EXPECTED_LOG_MESSAGE,
       EXPECTED_LOG_OPTIONS
     )
-
-    logInfoSpy.mockRestore()
-    legendaryIsLoggedInSpy.mockRestore()
-    gogIsLoggedInSpy.mockRestore()
   })
 
   describe('reconcileStoreUsersWhenOnline() -- called directly', () => {
     afterEach(() => {
-      configStore.delete('userInfo')
+      lastWorld?.configStore.delete('userInfo')
     })
 
     it('case 2 -- Epic logged OUT: seeded userInfo is deleted, exact log call made', () => {
+      const {
+        LegendaryUser,
+        GOGUser,
+        configStore,
+        loggerModule,
+        reconcileStoreUsersWhenOnline
+      } = bootedWorld()
       const legendaryIsLoggedInSpy = jest
         .spyOn(LegendaryUser, 'isLoggedIn')
         .mockReturnValue(false)
@@ -142,13 +180,16 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
           JSON.stringify(options) === JSON.stringify(EXPECTED_LOG_OPTIONS)
       )
       expect(matchingCalls).toHaveLength(1)
-
-      logInfoSpy.mockRestore()
-      legendaryIsLoggedInSpy.mockRestore()
-      gogIsLoggedInSpy.mockRestore()
     })
 
     it('case 3 -- Epic logged IN: seeded userInfo SURVIVES, no such log call made', () => {
+      const {
+        LegendaryUser,
+        GOGUser,
+        configStore,
+        loggerModule,
+        reconcileStoreUsersWhenOnline
+      } = bootedWorld()
       const legendaryIsLoggedInSpy = jest
         .spyOn(LegendaryUser, 'isLoggedIn')
         .mockReturnValue(true)
@@ -174,13 +215,16 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
           ([message]) => message === EXPECTED_LOG_MESSAGE
         )
       ).toBe(false)
-
-      logInfoSpy.mockRestore()
-      legendaryIsLoggedInSpy.mockRestore()
-      gogIsLoggedInSpy.mockRestore()
     })
 
     it('case 4 -- GOG logged IN: getUserDetails() called exactly once', async () => {
+      const {
+        LegendaryUser,
+        GOGUser,
+        configStore,
+        loggerModule,
+        reconcileStoreUsersWhenOnline
+      } = bootedWorld()
       const legendaryIsLoggedInSpy = jest
         .spyOn(LegendaryUser, 'isLoggedIn')
         .mockReturnValue(true)
@@ -197,13 +241,16 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
       await new Promise(setImmediate)
 
       expect(gogGetUserDetailsSpy).toHaveBeenCalledTimes(1)
-
-      gogGetUserDetailsSpy.mockRestore()
-      legendaryIsLoggedInSpy.mockRestore()
-      gogIsLoggedInSpy.mockRestore()
     })
 
     it('case 5 -- GOG logged OUT: getUserDetails() NOT called', () => {
+      const {
+        LegendaryUser,
+        GOGUser,
+        configStore,
+        loggerModule,
+        reconcileStoreUsersWhenOnline
+      } = bootedWorld()
       const legendaryIsLoggedInSpy = jest
         .spyOn(LegendaryUser, 'isLoggedIn')
         .mockReturnValue(true)
@@ -215,13 +262,16 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
       reconcileStoreUsersWhenOnline()
 
       expect(gogGetUserDetailsSpy).not.toHaveBeenCalled()
-
-      gogGetUserDetailsSpy.mockRestore()
-      legendaryIsLoggedInSpy.mockRestore()
-      gogIsLoggedInSpy.mockRestore()
     })
 
     it('case 6 -- never-fails-boot (async arm): a rejected getUserDetails() is caught and warned', async () => {
+      const {
+        LegendaryUser,
+        GOGUser,
+        configStore,
+        loggerModule,
+        reconcileStoreUsersWhenOnline
+      } = bootedWorld()
       const legendaryIsLoggedInSpy = jest
         .spyOn(LegendaryUser, 'isLoggedIn')
         .mockReturnValue(true)
@@ -243,14 +293,16 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
           String(message).includes('reconcileStoreUsersWhenOnline')
         )
       ).toBe(true)
-
-      logWarningSpy.mockRestore()
-      gogGetUserDetailsSpy.mockRestore()
-      legendaryIsLoggedInSpy.mockRestore()
-      gogIsLoggedInSpy.mockRestore()
     })
 
     it('case 7 -- never-fails-boot (sync arm): a throwing isLoggedIn() is caught and warned', () => {
+      const {
+        LegendaryUser,
+        GOGUser,
+        configStore,
+        loggerModule,
+        reconcileStoreUsersWhenOnline
+      } = bootedWorld()
       // With `runOnceWhenOnline` mocked to invoke its callback INLINE (the preamble above),
       // the outer try/catch around the `runOnceWhenOnline(...)` registration call ALSO covers
       // this synchronous throw -- so this test alone cannot distinguish the outer guard from
@@ -275,10 +327,6 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
           String(message).includes('reconcileStoreUsersWhenOnline')
         )
       ).toBe(true)
-
-      logWarningSpy.mockRestore()
-      legendaryIsLoggedInSpy.mockRestore()
-      gogIsLoggedInSpy.mockRestore()
     })
   })
 })

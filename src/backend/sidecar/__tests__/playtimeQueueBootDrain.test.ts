@@ -81,63 +81,98 @@ jest.mock('../../online_monitor', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { PassThrough } from 'node:stream'
-import { init, syncQueuedPlaytimeWhenOnline } from '../bootstrap'
-import * as loggerModule from '../../logger'
-import { libraryManagerMap } from '../../storeManagers'
-import { playtimeSyncQueue } from '../../storeManagers/gog/stores'
-import { GlobalConfig } from '../../config'
-import { runOnceWhenOnline as mockedRunOnceWhenOnline } from '../../online_monitor'
+import { LogPrefix } from '../../logger'
+import { bootFresh } from './helpers/sidecarHarness'
 
 const SKIP_LOG_MESSAGE =
   'Skipping playtime sync queue upload - playtime sync disabled'
-const SKIP_LOG_OPTIONS = { prefix: loggerModule.LogPrefix.Backend }
+const SKIP_LOG_OPTIONS = { prefix: LogPrefix.Backend }
 
-// `src/backend/jest.config.js` sets `resetMocks: true`, which strips the implementation off
-// EVERY `jest.fn(...)`-created mock -- including the one supplied at module-factory creation
-// time above -- before every single test, the very first one included. So the inline-invoke
-// behaviour has to be re-armed here, once per test, rather than relied upon from the factory
-// alone. Case 6 overrides it locally.
-beforeEach(() => {
-  ;(mockedRunOnceWhenOnline as jest.Mock).mockImplementation(
-    (cb: () => unknown) => cb()
-  )
-})
+/* eslint-disable @typescript-eslint/no-require-imports */
+/**
+ * Boots once (D-08) in a fresh module registry and returns THAT registry's modules: the mocks,
+ * the stores and the logger a top-level import would hold belong to the registry that was reset
+ * away. `resetMocks: true` strips every `jest.fn` implementation, so the inline-invoke behaviour
+ * is re-armed in `before` on the fresh registry's own mock, ahead of the boot. The drain is
+ * spied for the boot itself and cleared afterwards, so each case counts only its own calls.
+ * `seed` runs in `before` too, for state that must exist when the boot reads it.
+ */
+function bootedWorld(opts?: {
+  seed?: (queue: { set: (k: string, v: unknown) => void }) => void
+  drainImpl?: () => Promise<void>
+}) {
+  let runOnce!: jest.Mock
+  let syncQueuedPlaytimeSpy!: jest.SpyInstance
+  let playtimeSyncQueue!: typeof import('../../storeManagers/gog/stores').playtimeSyncQueue
+  bootFresh({
+    before: () => {
+      // Load bootstrap first so the module graph resolves in its natural order (requiring the
+      // online_monitor mock first hits a circular import and drops its re-exports).
+      require('../bootstrap')
+      runOnce = require('../../online_monitor').runOnceWhenOnline as jest.Mock
+      runOnce.mockImplementation((cb: () => unknown) => cb())
+      playtimeSyncQueue =
+        require('../../storeManagers/gog/stores').playtimeSyncQueue
+      opts?.seed?.(playtimeSyncQueue)
+      syncQueuedPlaytimeSpy = jest
+        .spyOn(
+          require('../../storeManagers').libraryManagerMap.gog,
+          'syncQueuedPlaytime'
+        )
+        .mockImplementation(opts?.drainImpl ?? (() => Promise.resolve()))
+    }
+  })
+  const bootCalls = syncQueuedPlaytimeSpy.mock.calls.length
+  if (!opts?.drainImpl) syncQueuedPlaytimeSpy.mockClear()
+  return {
+    bootCalls,
+    runOnce,
+    syncQueuedPlaytimeSpy,
+    playtimeSyncQueue,
+    loggerModule: require('../../logger') as typeof import('../../logger'),
+    GlobalConfig: (require('../../config') as typeof import('../../config'))
+      .GlobalConfig,
+    syncQueuedPlaytimeWhenOnline: (
+      require('../bootstrap') as { syncQueuedPlaytimeWhenOnline: () => void }
+    ).syncQueuedPlaytimeWhenOnline
+  }
+}
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 describe('todo 2026-09-06 -- sidecar boot drains queued GOG playtime once online', () => {
   // FUSED WIRING + ORDERING PROOF (D7), deliberately the FIRST test in this file that calls
   // `init()`.
-  it('wiring + ordering proof: init() drains the queue after the stranded lock is already cleared', () => {
-    playtimeSyncQueue.set('lock', [])
-    expect(playtimeSyncQueue.has('lock')).toBe(true)
-
+  it('wiring + ordering proof: one boot drains the queue after the stranded lock is already cleared', () => {
     const lockStateAtCallTime: boolean[] = []
-    const syncQueuedPlaytimeSpy = jest
-      .spyOn(libraryManagerMap.gog, 'syncQueuedPlaytime')
-      .mockImplementation(() => {
-        lockStateAtCallTime.push(playtimeSyncQueue.has('lock'))
+    let freshQueue!: { has: (k: string) => boolean }
+    const { bootCalls, playtimeSyncQueue } = bootedWorld({
+      seed: (queue) => {
+        freshQueue = queue as unknown as { has: (k: string) => boolean }
+        queue.set('lock', [])
+        expect(freshQueue.has('lock')).toBe(true)
+      },
+      drainImpl: () => {
+        lockStateAtCallTime.push(freshQueue.has('lock'))
         return Promise.resolve()
-      })
+      }
+    })
 
-    init(new PassThrough(), new PassThrough())
-
-    // (a) WIRING: the helper is CALLED from init(), not merely exported. RED today: init() has
-    // no such call at all.
-    expect(syncQueuedPlaytimeSpy).toHaveBeenCalledTimes(1)
+    // (a) WIRING: the helper is CALLED from the boot, exactly once, not merely exported.
+    expect(bootCalls).toBe(1)
     // (b) ORDERING (D8): Block D had already cleared the stranded lock by the time the drain
     // fired. This proves the PRECONDITION holds at call time, not that a real queue drained.
     expect(lockStateAtCallTime).toEqual([false])
     // (c) Block D's own effect, unchanged.
     expect(playtimeSyncQueue.has('lock')).toBe(false)
-
-    syncQueuedPlaytimeSpy.mockRestore()
   })
 
   describe('syncQueuedPlaytimeWhenOnline() -- called directly', () => {
     it('case 2 -- enabled arm: default settings drain the queue, no skip log', () => {
-      const syncQueuedPlaytimeSpy = jest
-        .spyOn(libraryManagerMap.gog, 'syncQueuedPlaytime')
-        .mockResolvedValue(undefined)
+      const {
+        syncQueuedPlaytimeSpy,
+        loggerModule,
+        syncQueuedPlaytimeWhenOnline
+      } = bootedWorld()
       const logDebugSpy = jest.spyOn(loggerModule, 'logDebug')
 
       syncQueuedPlaytimeWhenOnline()
@@ -146,21 +181,18 @@ describe('todo 2026-09-06 -- sidecar boot drains queued GOG playtime once online
       expect(
         logDebugSpy.mock.calls.some(([message]) => message === SKIP_LOG_MESSAGE)
       ).toBe(false)
-
-      logDebugSpy.mockRestore()
-      syncQueuedPlaytimeSpy.mockRestore()
     })
 
     it('case 3 -- disabled arm: disablePlaytimeSync skips the drain and logs the exact skip receipt', () => {
-      const globalConfigGetSpy = jest
-        .spyOn(GlobalConfig, 'get')
-        .mockReturnValue({
-          getSettings: () => ({ disablePlaytimeSync: true })
-        } as unknown as GlobalConfig)
-      const syncQueuedPlaytimeSpy = jest.spyOn(
-        libraryManagerMap.gog,
-        'syncQueuedPlaytime'
-      )
+      const {
+        syncQueuedPlaytimeSpy,
+        GlobalConfig,
+        loggerModule,
+        syncQueuedPlaytimeWhenOnline
+      } = bootedWorld()
+      jest.spyOn(GlobalConfig, 'get').mockReturnValue({
+        getSettings: () => ({ disablePlaytimeSync: true })
+      } as unknown as import('../../config').GlobalConfig)
       const logDebugSpy = jest.spyOn(loggerModule, 'logDebug')
 
       syncQueuedPlaytimeWhenOnline()
@@ -174,16 +206,17 @@ describe('todo 2026-09-06 -- sidecar boot drains queued GOG playtime once online
           JSON.stringify(options) === JSON.stringify(SKIP_LOG_OPTIONS)
       )
       expect(matchingCalls).toHaveLength(1)
-
-      logDebugSpy.mockRestore()
-      syncQueuedPlaytimeSpy.mockRestore()
-      globalConfigGetSpy.mockRestore()
     })
 
     it('case 4 -- never-fails-boot (async arm): a rejected syncQueuedPlaytime() is caught and warned', async () => {
-      const syncQueuedPlaytimeSpy = jest
-        .spyOn(libraryManagerMap.gog, 'syncQueuedPlaytime')
-        .mockRejectedValue(new Error('gameplay.gog.com unreachable'))
+      const {
+        syncQueuedPlaytimeSpy,
+        loggerModule,
+        syncQueuedPlaytimeWhenOnline
+      } = bootedWorld()
+      syncQueuedPlaytimeSpy.mockRejectedValue(
+        new Error('gameplay.gog.com unreachable')
+      )
       const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
 
       expect(() => syncQueuedPlaytimeWhenOnline()).not.toThrow()
@@ -196,17 +229,14 @@ describe('todo 2026-09-06 -- sidecar boot drains queued GOG playtime once online
           String(message).includes('syncQueuedPlaytimeWhenOnline')
         )
       ).toBe(true)
-
-      logWarningSpy.mockRestore()
-      syncQueuedPlaytimeSpy.mockRestore()
     })
 
     it('case 5 -- never-fails-boot (outer arm): a throwing GlobalConfig.get() is caught and warned', () => {
-      const globalConfigGetSpy = jest
-        .spyOn(GlobalConfig, 'get')
-        .mockImplementation(() => {
-          throw new Error('config read failed')
-        })
+      const { GlobalConfig, loggerModule, syncQueuedPlaytimeWhenOnline } =
+        bootedWorld()
+      jest.spyOn(GlobalConfig, 'get').mockImplementation(() => {
+        throw new Error('config read failed')
+      })
       const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
 
       expect(() => syncQueuedPlaytimeWhenOnline()).not.toThrow()
@@ -216,9 +246,6 @@ describe('todo 2026-09-06 -- sidecar boot drains queued GOG playtime once online
           String(message).includes('syncQueuedPlaytimeWhenOnline')
         )
       ).toBe(true)
-
-      logWarningSpy.mockRestore()
-      globalConfigGetSpy.mockRestore()
     })
 
     it('case 6 -- never-fails-boot (inner arm, deferred): a synchronously-throwing syncQueuedPlaytime() is caught and warned', () => {
@@ -228,17 +255,19 @@ describe('todo 2026-09-06 -- sidecar boot drains queued GOG playtime once online
       // from outer and would pass even with the inner guard deleted. This test instead captures
       // the callback instead of invoking it, calls the helper (registration only), then invokes
       // the captured callback from the test's OWN frame -- outside anything the helper wraps.
+      const {
+        runOnce,
+        syncQueuedPlaytimeSpy,
+        loggerModule,
+        syncQueuedPlaytimeWhenOnline
+      } = bootedWorld()
       let capturedCallback: (() => unknown) | undefined
-      ;(mockedRunOnceWhenOnline as jest.Mock).mockImplementation(
-        (cb: () => unknown) => {
-          capturedCallback = cb
-        }
-      )
-      const syncQueuedPlaytimeSpy = jest
-        .spyOn(libraryManagerMap.gog, 'syncQueuedPlaytime')
-        .mockImplementation(() => {
-          throw new Error('synchronous failure')
-        })
+      runOnce.mockImplementation((cb: () => unknown) => {
+        capturedCallback = cb
+      })
+      syncQueuedPlaytimeSpy.mockImplementation(() => {
+        throw new Error('synchronous failure')
+      })
       const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
 
       expect(() => syncQueuedPlaytimeWhenOnline()).not.toThrow()
@@ -251,9 +280,6 @@ describe('todo 2026-09-06 -- sidecar boot drains queued GOG playtime once online
           String(message).includes('syncQueuedPlaytimeWhenOnline')
         )
       ).toBe(true)
-
-      logWarningSpy.mockRestore()
-      syncQueuedPlaytimeSpy.mockRestore()
     })
   })
 })

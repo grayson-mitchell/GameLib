@@ -30,10 +30,8 @@
  * `axios` is mocked: `init()` reaches `initOnlineMonitor()`, whose real `pingSites()` would
  * otherwise make live network calls.
  *
- * ORDER-DEPENDENT BY NATURE. `bootstrap.ts`'s `migrationsInitialized` guard is module state and
- * `MigrationSystem` is a singleton over a persisted store, so these tests share real state on
- * purpose -- test 2 depends on test 1 having consumed the one-shot guard. Each test says which
- * prior state it relies on.
+ * ORDER-DEPENDENT BY NATURE. `MigrationSystem` is a singleton over a persisted store, so these tests share real state on
+ * purpose. Each test says which prior state it relies on.
  */
 
 // ── electron / electron-store — route Jest's resolution at the REAL sidecar shims ──────────
@@ -59,23 +57,20 @@ jest.mock('fs/promises', () => {
 })
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { PassThrough } from 'node:stream'
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'graceful-fs'
 import { join } from 'node:path'
 import { app } from 'backend/platform'
 import { cp } from 'fs/promises'
-import { init } from '../bootstrap'
-import MigrationSystem from '../../migration'
+import { bootFresh } from './helpers/sidecarHarness'
+import type MigrationSystem from '../../migration'
 import { migrationsStore } from '../../migration/stores'
 import { isLinux } from '../../constants/environment'
 import { userHome } from '../../constants/paths'
 import { legendaryConfigPath } from '../../storeManagers/legendary/constants'
-import axios from 'axios'
 
 const actualFsPromises =
   jest.requireActual<typeof import('fs/promises')>('fs/promises')
 const mockedCp = cp as jest.Mock
-const mockedAxiosHead = axios.head as jest.Mock
 
 const MIGRATION_ID = 'legendary-move-global-config-folder'
 const MARKER_FILE = 'user.json'
@@ -126,8 +121,36 @@ beforeEach(() => {
   mockedCp.mockImplementation((...args: unknown[]) =>
     (actualFsPromises.cp as (...a: unknown[]) => Promise<void>)(...args)
   )
-  mockedAxiosHead.mockResolvedValue({ status: 200 })
 })
+
+/**
+ * One boot (D-08) into a fresh registry. The fresh registry's `fs/promises` and `axios` mocks are
+ * different objects from the top-level ones, and `resetMocks` has wiped their factory
+ * implementations, so both are re-armed in `before` ahead of the boot. Returns that registry's
+ * `cp` mock and migrations store.
+ */
+function bootMigrations() {
+  let freshCp!: jest.Mock
+  bootFresh({
+    before: () => {
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      freshCp = require('fs/promises').cp as jest.Mock
+      freshCp.mockImplementation((...args: unknown[]) =>
+        (actualFsPromises.cp as (...a: unknown[]) => Promise<void>)(...args)
+      )
+      require('axios').default.head.mockResolvedValue({ status: 200 })
+      /* eslint-enable @typescript-eslint/no-require-imports */
+    }
+  })
+  return {
+    freshCp,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    freshStore: require('../../migration/stores')
+      .migrationsStore as typeof migrationsStore,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    freshSystem: require('../../migration').default as typeof MigrationSystem
+  }
+}
 
 describe('sidecar bootstrap runs data migrations (todo 2026-08-16)', () => {
   it('runs the Legendary global-config adoption for real on the sidecar boot path', async () => {
@@ -136,49 +159,52 @@ describe('sidecar bootstrap runs data migrations (todo 2026-08-16)', () => {
     seedGlobalConfig()
     expect(existsSync(migratedMarker())).toBe(false)
 
-    init(new PassThrough(), new PassThrough())
+    const { freshStore } = bootMigrations()
 
-    // Pre-fix this never became true no matter how long you waited: `init()` had no call to
+    // Pre-fix this never became true no matter how long you waited: the boot had no call to
     // `applyMigrations()` at all, so the adoption simply never happened under Tauri.
     expect(await waitFor(() => existsSync(migratedMarker()))).toBe(true)
     expect(
       await waitFor(() =>
-        migrationsStore.get('appliedMigrations', []).includes(MIGRATION_ID)
+        freshStore.get('appliedMigrations', []).includes(MIGRATION_ID)
       )
     ).toBe(true)
   })
 
-  it('is once-guarded: a second and third init() does not re-run the migration set', async () => {
-    // Depends on the test above having consumed `bootstrap.ts`'s one-shot `migrationsInitialized`
-    // guard. Re-seeding the source and clearing the destination means the migration WOULD have
-    // work to do if it ran again -- so a destination that stays absent is evidence of the guard,
-    // not evidence of an empty source.
-    //
-    // KNOWN VACUITY, recorded rather than hidden: this test also passes against a bootstrap.ts
-    // with NO migration wiring at all (confirmed by RED-proof 1 -- reverting the wiring failed
-    // ONLY the test above). It is meaningful solely in sequence with that test, which is what
-    // establishes that migrations run at all. Never read a green here as evidence of wiring.
+  it('one boot runs the migration set exactly once', async () => {
+    // A fresh registry boots exactly one migration pass: the single adoption copy happens once.
+    migrationsStore.set('appliedMigrations', [])
     clearDestination()
     seedGlobalConfig()
 
-    init(new PassThrough(), new PassThrough())
-    init(new PassThrough(), new PassThrough())
+    const { freshCp } = bootMigrations()
+    expect(await waitFor(() => existsSync(migratedMarker()))).toBe(true)
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    expect(existsSync(migratedMarker())).toBe(false)
+    expect(freshCp).toHaveBeenCalledTimes(1)
   })
 })
 
 describe('LegendaryGlobalConfigFolderMigration failure-lock (todo 2026-08-16 step 2)', () => {
+  // One boot for the pair (D-08): it initialises the logger the migration writes through, and
+  // both cases drive that same registry's MigrationSystem directly. Booted with no source
+  // seeded, so the boot's own migration pass is a no-op.
+  let world!: ReturnType<typeof bootMigrations>
+  beforeAll(async () => {
+    clearDestination()
+    world = bootMigrations()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  })
+
   it('a failed copy leaves NO destination and is NOT recorded as applied', async () => {
-    migrationsStore.set('appliedMigrations', [])
+    world.freshStore.set('appliedMigrations', [])
     clearDestination()
     seedGlobalConfig()
 
     // Models a PARTIAL copy, not a copy that never started: the old code's `mkdir` ran BEFORE
     // `cp`, so a failure here left a destination directory on disk. Creating the target before
     // throwing is what makes this test able to see that difference at all.
-    mockedCp.mockImplementation(async (_src: unknown, dest: unknown) => {
+    world.freshCp.mockImplementation(async (_src: unknown, dest: unknown) => {
       mkdirSync(String(dest), { recursive: true })
       writeFileSync(join(String(dest), 'partial.tmp'), 'half a config')
       throw Object.assign(new Error('simulated copy failure'), {
@@ -186,14 +212,14 @@ describe('LegendaryGlobalConfigFolderMigration failure-lock (todo 2026-08-16 ste
       })
     })
 
-    await MigrationSystem.get().applyMigrations()
+    await world.freshSystem.get().applyMigrations()
 
     // THE REGRESSION. Pre-fix, `legendaryConfigPath` existed after this point, so the next
     // launch's `hasHeroicSpecificConfig` check returned `true` on the first line of `run()` and
     // the migration recorded itself as applied over a half-copied config, forever.
     expect(existsSync(legendaryConfigPath)).toBe(false)
     expect(existsSync(stagingPath)).toBe(false)
-    expect(migrationsStore.get('appliedMigrations', [])).not.toContain(
+    expect(world.freshStore.get('appliedMigrations', [])).not.toContain(
       MIGRATION_ID
     )
   })
@@ -204,8 +230,11 @@ describe('LegendaryGlobalConfigFolderMigration failure-lock (todo 2026-08-16 ste
     // mechanism.
     expect(existsSync(legendaryConfigPath)).toBe(false)
     seedGlobalConfig()
+    world.freshCp.mockImplementation((...args: unknown[]) =>
+      (actualFsPromises.cp as (...a: unknown[]) => Promise<void>)(...args)
+    )
 
-    await MigrationSystem.get().applyMigrations()
+    await world.freshSystem.get().applyMigrations()
 
     expect(existsSync(migratedMarker())).toBe(true)
     // `await` is load-bearing: a bare `expect(promise).resolves.toBe(...)` returns a
@@ -213,6 +242,8 @@ describe('LegendaryGlobalConfigFolderMigration failure-lock (todo 2026-08-16 ste
     await expect(
       actualFsPromises.readFile(migratedMarker(), 'utf-8')
     ).resolves.toBe(MARKER_CONTENTS)
-    expect(migrationsStore.get('appliedMigrations', [])).toContain(MIGRATION_ID)
+    expect(world.freshStore.get('appliedMigrations', [])).toContain(
+      MIGRATION_ID
+    )
   })
 })

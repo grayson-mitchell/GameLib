@@ -92,7 +92,11 @@ export interface FreshSidecar {
  * Order: jest.resetModules(), then `before` (configure mocks against the
  * fresh registry), then require bootstrap fresh and boot exactly once.
  */
-export function bootFresh(opts?: { before?: () => void }): FreshSidecar {
+export function bootFresh(opts?: {
+  before?: () => void
+  /** Inject the output stream (e.g. one that records the READY write). */
+  output?: PassThrough
+}): FreshSidecar {
   jest.resetModules()
   opts?.before?.()
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -100,7 +104,7 @@ export function bootFresh(opts?: { before?: () => void }): FreshSidecar {
     init: (input: PassThrough, output: PassThrough) => void
   }
   const input = new PassThrough()
-  const output = new PassThrough()
+  const output = opts?.output ?? new PassThrough()
   const frames = collectFrames(output)
   freshInit(input, output)
   return { input, output, frames }

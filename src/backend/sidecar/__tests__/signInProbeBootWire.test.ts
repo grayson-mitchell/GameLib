@@ -8,12 +8,7 @@
  * connectivity listener and an `unref()`'d immediate). READY therefore never
  * waits on the pass.
  *
- * WHY A DEDICATED FILE, and not an addition to `bootstrap.test.ts` or
- * `bootstrapWirings.test.ts`: both call `init()` early in their own files, so the
- * module-scope `signInProbeInitialized` guard would already be consumed by the
- * time a new describe block appended to either ran. A virgin file gets a virgin
- * module registry and a virgin guard flag for free. This is the reasoning
- * `gogPresenceBootWire.test.ts` records, and this file follows its shape.
+ * Each case boots once via bootFresh() into a fresh module registry (D-08).
  *
  * NO `expect(...).toHaveBeenCalled()` on `runOnceWhenOnline` or
  * `onConnectivityChange` anywhere in this file -- the vacuous shape banned in
@@ -68,7 +63,7 @@ jest.mock('../../signInProbe/outcomes', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { PassThrough } from 'node:stream'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
-import { init } from '../bootstrap'
+import { bootFresh } from './helpers/sidecarHarness'
 
 /** An output stream that records the moment the READY sentinel is written. */
 function recordingOutput(): PassThrough {
@@ -84,35 +79,28 @@ function recordingOutput(): PassThrough {
   return output
 }
 
-// The FIRST init() in this virgin module registry is the one that can start the
-// pass, so its events are captured once and every case below reads the capture.
-let firstInitOrder: string[] = []
-let firstInitFullOrder: string[] = []
-
-beforeAll(() => {
-  init(new PassThrough(), recordingOutput())
-  firstInitOrder = [...mockOrder]
-  firstInitFullOrder = [...mockFullOrder]
-})
-
 beforeEach(() => {
   mockOrder.length = 0
   mockFullOrder.length = 0
 })
 
-describe('Phase 49-08 -- init() starts the sign-in probe pass after READY', () => {
+describe('Phase 49-08 -- the boot starts the sign-in probe pass after READY', () => {
   it('writes READY before the pass starts, and starts it exactly once', () => {
-    expect(firstInitOrder).toEqual(['ready', 'start'])
+    bootFresh({ output: recordingOutput() })
+
+    expect(mockOrder).toEqual(['ready', 'start'])
   })
 
   it('registers the outcomes pull handler before READY', () => {
-    expect(firstInitFullOrder).toEqual(['handler', 'ready', 'start'])
+    bootFresh({ output: recordingOutput() })
+
+    expect(mockFullOrder).toEqual(['handler', 'ready', 'start'])
   })
 
-  it('a second init() in the same module registry neither registers the handler nor starts the pass again', () => {
-    init(new PassThrough(), recordingOutput())
+  it('one boot registers the handler and starts the pass exactly once', () => {
+    bootFresh({ output: recordingOutput() })
 
-    expect(mockOrder).toEqual(['ready'])
-    expect(mockFullOrder).toEqual(['ready'])
+    expect(mockFullOrder.filter((e) => e === 'handler')).toHaveLength(1)
+    expect(mockFullOrder.filter((e) => e === 'start')).toHaveLength(1)
   })
 })

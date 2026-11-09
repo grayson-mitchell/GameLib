@@ -17,8 +17,7 @@
  * WHY A DEDICATED FILE, and not an addition to `bootstrap.test.ts`. Verified at planning time:
  * `bootstrap.test.ts` already calls `init()` at ~L138 ("reaches READY under bare node"), long
  * before any new describe block in that file would run. `clearStrandedPlaytimeSyncLock` must be
- * called from `init()` behind a module-scope once-guard flag (this file's own convention, shared
- * with `bootstrap.ts`'s other seven guards) -- placed anywhere in `bootstrap.test.ts` that guard
+ * called from `init()` once per boot (D-08: each case boots via bootFresh() in a fresh module registry) -- placed anywhere in `bootstrap.test.ts` that guard
  * would already be consumed by that first `init()` call, so a boot-clear test placed there could
  * only ever measure a no-op. The alternative, `jest.resetModules()` + a fresh
  * `require('../bootstrap')`, was rejected too: that re-evaluates the retired `installElectronHook`, which has
@@ -49,10 +48,27 @@ jest.mock('axios', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { PassThrough } from 'node:stream'
-import { init, clearStrandedPlaytimeSyncLock } from '../bootstrap'
-import * as loggerModule from '../../logger'
-import { playtimeSyncQueue } from '../../storeManagers/gog/stores'
+import { bootFresh } from './helpers/sidecarHarness'
+
+type FreshQueue =
+  typeof import('../../storeManagers/gog/stores').playtimeSyncQueue
+
+/**
+ * Boots once into a fresh registry (which initialises the logger and clears any lock), then
+ * hands back that registry's queue, logger and clear function for the direct-call arms.
+ */
+function bootedWorld() {
+  bootFresh()
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  const playtimeSyncQueue = require('../../storeManagers/gog/stores')
+    .playtimeSyncQueue as FreshQueue
+  const loggerModule = require('../../logger') as typeof import('../../logger')
+  const { clearStrandedPlaytimeSyncLock } = require('../bootstrap') as {
+    clearStrandedPlaytimeSyncLock: () => void
+  }
+  /* eslint-enable @typescript-eslint/no-require-imports */
+  return { playtimeSyncQueue, loggerModule, clearStrandedPlaytimeSyncLock }
+}
 
 const EXPECTED_LOG_MESSAGE =
   '[bootstrap] Cleared a stranded GOG playtime sync lock left by an interrupted sync'
@@ -62,14 +78,23 @@ describe('finding A1 LEG 2 -- sidecar boot clears a stranded GOG playtime sync l
   // test that proves `clearStrandedPlaytimeSyncLock` is actually CALLED from `init()`, not
   // merely present as an exported, uncalled function. RED today: `init()` has no such call at
   // all, so the seeded lock survives and nothing is logged.
-  it('wiring proof: init() clears a stranded lock and logs it', () => {
-    playtimeSyncQueue.set('lock', [])
-    expect(playtimeSyncQueue.has('lock')).toBe(true)
-    const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
+  it('wiring proof: one boot clears a stranded lock and logs it', () => {
+    // Everything is read from the FRESH registry bootFresh() boots into: the top-level
+    // imports above belong to the registry that was reset away.
+    let freshQueue!: FreshQueue
+    let logWarningSpy!: jest.SpyInstance
+    bootFresh({
+      before: () => {
+        /* eslint-disable @typescript-eslint/no-require-imports */
+        freshQueue = require('../../storeManagers/gog/stores').playtimeSyncQueue
+        logWarningSpy = jest.spyOn(require('../../logger'), 'logWarning')
+        /* eslint-enable @typescript-eslint/no-require-imports */
+        freshQueue.set('lock', [])
+        expect(freshQueue.has('lock')).toBe(true)
+      }
+    })
 
-    init(new PassThrough(), new PassThrough())
-
-    expect(playtimeSyncQueue.has('lock')).toBe(false)
+    expect(freshQueue.has('lock')).toBe(false)
     expect(
       logWarningSpy.mock.calls.some(
         ([message]) => message === EXPECTED_LOG_MESSAGE
@@ -81,6 +106,8 @@ describe('finding A1 LEG 2 -- sidecar boot clears a stranded GOG playtime sync l
 
   describe('clearStrandedPlaytimeSyncLock() -- the two arms, called directly', () => {
     it('stranded arm: a seeded lock is cleared, and the exact message is logged once', () => {
+      const { playtimeSyncQueue, loggerModule, clearStrandedPlaytimeSyncLock } =
+        bootedWorld()
       playtimeSyncQueue.set('lock', [])
       expect(playtimeSyncQueue.has('lock')).toBe(true)
       const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
@@ -97,6 +124,8 @@ describe('finding A1 LEG 2 -- sidecar boot clears a stranded GOG playtime sync l
     })
 
     it('clean arm: no lock seeded -- the store is untouched and nothing is logged', () => {
+      const { playtimeSyncQueue, loggerModule, clearStrandedPlaytimeSyncLock } =
+        bootedWorld()
       expect(playtimeSyncQueue.has('lock')).toBe(false)
       const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
 

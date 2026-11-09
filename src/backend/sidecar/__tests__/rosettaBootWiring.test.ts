@@ -30,10 +30,8 @@
  * bare `PassThrough` that answers nothing, which is the live `pnpm test:ci` red this repo has
  * already paid for once (`sidecarRpc.ts:339`).
  *
- * NO `jest.isolateModules()` here, deliberately -- the two tests below must share
- * `bootstrap.ts`'s module state (`rosettaCheckInitialized`), the same way
- * `migrationsWiring.test.ts`'s pair does, so Test 2 can prove idempotence against the guard
- * Test 1 already tripped.
+ * Each case boots once via bootFresh() in its own module registry (D-08), so Test 2 proves the
+ * boot probes exactly once rather than proving a once-guard against a prior test's state.
  *
  * NO per-suite `jest.mock('os', ...)` -- `src/backend/jest.setupContainment.ts` already
  * redirects `os.homedir()` project-wide for the backend jest project (gotcha 4).
@@ -118,15 +116,68 @@ jest.mock('child_process', () => ({
 jest.unmock('i18next')
 
 import { defined } from 'backend/testUtils/indexed'
-import { PassThrough } from 'node:stream'
-import { exec } from 'child_process'
-import i18next from 'i18next'
-import { GlobalConfig } from 'backend/config'
-import { dialog } from '../../platform'
-import { init } from '../bootstrap'
+import { bootFresh } from './helpers/sidecarHarness'
 
-const mockedExec = exec as unknown as jest.Mock
-const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+/* eslint-disable @typescript-eslint/no-require-imports */
+/**
+ * One boot (D-08) in a fresh module registry. `resetMocks: true` wipes every factory-supplied
+ * implementation, and the fresh registry's mocks are different objects from any top-level
+ * import, so `exec` (failing arch probe) and `GlobalConfig.get` (without it `init()`'s i18next
+ * block throws and `i18nReady` never moves off its initial resolved promise, racing the probe
+ * ahead of a real i18next load) are re-armed in `before`, ahead of the boot. `showMessageBox` is
+ * spied on that registry's platform so the real RUST_DIALOG_MESSAGE forward never arms a timer.
+ */
+function bootProbe(showMessageBox: (...args: unknown[]) => Promise<unknown>) {
+  let freshExec!: jest.Mock
+  let showMessageBoxSpy!: jest.SpyInstance
+  bootFresh({
+    before: () => {
+      // Load bootstrap (and with it every axios.create() instance) first, then wipe the
+      // instances' scripted implementations: `resetMocks: true` did that to the one shared
+      // registry before every test, and a fresh registry would otherwise answer the release
+      // lookups with this file's canned payload (no `dxmt` entry) and throw in an event handler.
+      require('../bootstrap')
+      const axios = require('axios').default as {
+        create: jest.Mock
+        head: jest.Mock
+      }
+      axios.head.mockReset()
+      axios.create.mock.results.forEach(
+        (r: { value?: Record<string, jest.Mock> }) => {
+          r.value?.get?.mockReset()
+          r.value?.head?.mockReset()
+        }
+      )
+      freshExec = require('child_process').exec as jest.Mock
+      freshExec.mockImplementation(
+        (_cmd: string, cb: (error: Error | null, result?: unknown) => void) => {
+          cb(
+            new Error(
+              'arch: posix_spawnp: /usr/sbin/sysctl: Bad CPU type in executable'
+            )
+          )
+        }
+      )
+      require('backend/config').GlobalConfig.get.mockReturnValue({
+        getSettings: () => ({ language: 'en' }),
+        setSetting: jest.fn(),
+        set: jest.fn(),
+        flush: jest.fn()
+      })
+      showMessageBoxSpy = jest
+        .spyOn(require('../../platform').dialog, 'showMessageBox')
+        .mockImplementation(showMessageBox as never)
+    }
+  })
+  return { freshExec, showMessageBoxSpy }
+}
+/* eslint-enable @typescript-eslint/no-require-imports */
+
+const probeCalls = (exec: jest.Mock) =>
+  exec.mock.calls.filter(
+    (call) =>
+      typeof call[0] === 'string' && call[0].includes('sysctl.proc_translated')
+  ).length
 
 /** Polls a predicate with real timers -- the probe and dialog are floated off `init()`. */
 async function waitFor(
@@ -142,51 +193,27 @@ async function waitFor(
 }
 
 describe('sidecar bootstrap runs the Rosetta probe (todo 2026-09-06, quick-260908-k3x)', () => {
-  beforeEach(() => {
-    // resetMocks: true wipes factory-supplied implementations before EVERY test (the same
-    // gotcha migrationsWiring.test.ts documents for its own `cp` mock).
-    mockedExec.mockImplementation(
-      (_cmd: string, cb: (error: Error | null, result?: unknown) => void) => {
-        cb(
-          new Error(
-            'arch: posix_spawnp: /usr/sbin/sysctl: Bad CPU type in executable'
-          )
-        )
-      }
-    )
-    // Same `resetMocks: true` gotcha applies to `backend/config`'s factory -- without this,
-    // `GlobalConfig.get()` returns `undefined` and `init()`'s i18next block throws inside its
-    // own try/catch before ever reassigning `i18nReady`.
-    mockedGlobalConfigGet.mockReturnValue({
-      getSettings: () => ({ language: 'en' }),
-      setSetting: jest.fn(),
-      set: jest.fn(),
-      flush: jest.fn()
-    })
-  })
-
-  it('THE POINT OF THIS FIX: a failed probe reaches dialog.showMessageBox with the loaded catalog title, from init() alone', async () => {
+  it('THE POINT OF THIS FIX: a failed probe reaches dialog.showMessageBox with the loaded catalog title, from the boot alone', async () => {
     let capturedTitleAtCallTime: string | undefined
-    const showMessageBoxSpy = jest
-      .spyOn(dialog, 'showMessageBox')
-      .mockImplementation(async () => {
-        // The ordering discriminator (same technique as gamelibNamespaceLoad.test.ts): a
-        // default-carrying t() call cannot distinguish "i18next chained correctly" from
-        // "statement order happened to work", because the en catalog string and
-        // checkRosettaInstall()'s inline default are byte-identical. Calling with NO
-        // default argument is what makes the two states observably different: loaded
-        // catalog -> "Rosetta not found"; unloaded -> the raw key echoed back.
-        capturedTitleAtCallTime = i18next.t('box.warning.rosetta.title')
-        return { response: 0, checkboxChecked: false }
-      })
-
-    init(new PassThrough(), new PassThrough())
+    const { freshExec, showMessageBoxSpy } = bootProbe(async () => {
+      // The ordering discriminator (same technique as gamelibNamespaceLoad.test.ts): a
+      // default-carrying t() call cannot distinguish "i18next chained correctly" from
+      // "statement order happened to work", because the en catalog string and
+      // checkRosettaInstall()'s inline default are byte-identical. Calling with NO
+      // default argument is what makes the two states observably different: loaded
+      // catalog -> "Rosetta not found"; unloaded -> the raw key echoed back.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      capturedTitleAtCallTime = require('i18next').t(
+        'box.warning.rosetta.title'
+      )
+      return { response: 0, checkboxChecked: false }
+    })
 
     // (a) the probe ran, from boot -- pre-fix this never became true no matter how long you
     // waited: init() had no call chain reaching checkRosettaInstall() at all.
     expect(
       await waitFor(() =>
-        mockedExec.mock.calls.some(
+        freshExec.mock.calls.some(
           (call) =>
             typeof call[0] === 'string' &&
             call[0].includes('arch -x86_64') &&
@@ -217,35 +244,17 @@ describe('sidecar bootstrap runs the Rosetta probe (todo 2026-09-06, quick-26090
   // ^ explicit per-test timeout, longer than waitFor()'s own 5000ms default: without this,
   // jest's default 5000ms test timeout races waitFor()'s internal timeout and can kill the
   // test with "Exceeded timeout of 5000 ms" before the `expect(await waitFor(...)).toBe(true)`
-  // assertion itself gets to run and fail cleanly -- confirmed against the pre-Block-F tree
-  // (quick-260908-k3x RED proof, recorded verbatim in that quick task's SUMMARY).
+  // assertion itself gets to run and fail cleanly.
 
-  // KNOWN VACUITY, recorded rather than hidden (same words migrationsWiring.test.ts uses for
-  // its own idempotence test): this test also passes against a bootstrap.ts with NO Rosetta
-  // wiring at all. It is meaningful solely in sequence with the test above, which is what
-  // establishes that the probe runs at all. Never read a green here as evidence of wiring.
-  it('is once-guarded: a second and third init() does not re-probe', async () => {
-    jest.spyOn(dialog, 'showMessageBox').mockResolvedValue({
-      response: 0,
-      checkboxChecked: false
-    })
-
-    const callsBeforeReinit = mockedExec.mock.calls.filter(
-      (call) =>
-        typeof call[0] === 'string' &&
-        call[0].includes('sysctl.proc_translated')
-    ).length
-
-    init(new PassThrough(), new PassThrough())
-    init(new PassThrough(), new PassThrough())
+  it('one boot probes exactly once', async () => {
+    const { freshExec, showMessageBoxSpy } = bootProbe(() =>
+      Promise.resolve({ response: 0, checkboxChecked: false })
+    )
+    expect(await waitFor(() => showMessageBoxSpy.mock.calls.length === 1)).toBe(
+      true
+    )
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    const callsAfterReinit = mockedExec.mock.calls.filter(
-      (call) =>
-        typeof call[0] === 'string' &&
-        call[0].includes('sysctl.proc_translated')
-    ).length
-
-    expect(callsAfterReinit).toBe(callsBeforeReinit)
+    expect(probeCalls(freshExec)).toBe(1)
   })
 })

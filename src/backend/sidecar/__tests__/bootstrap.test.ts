@@ -78,17 +78,8 @@ import { tmpdir } from 'os'
 import { isAbsolute, join, relative, resolve } from 'path'
 import { mkdtempSync } from 'node:fs'
 import { PassThrough } from 'node:stream'
-import { init } from '../bootstrap'
-import * as platformModule from '../../platform'
-import { handlerRegistry } from '../../platform'
+import { bootFresh } from './helpers/sidecarHarness'
 import { getLogFilePath } from '../../logger/paths'
-import * as loggerModule from '../../logger'
-import * as storeWriteHandlersModule from '../storeWriteHandlers'
-import { configStore as steamConfigStore } from '../../storeManagers/steam/stores'
-import {
-  getTokenStore,
-  setTokenStore
-} from '../../storeManagers/steam/tokenStore'
 import {
   READY_SENTINEL,
   UNPORTED_CHANNEL_MARKER
@@ -108,6 +99,24 @@ function collectLines(stream: PassThrough): string[] {
     }
   })
   return lines
+}
+
+/**
+ * Loads a module from the CURRENT registry (D-08). Every case boots once in a fresh registry via
+ * bootFresh(), so anything a case inspects after boot must be read with this, never through a
+ * top-level import captured before the reset.
+ */
+function fresh<T>(id: string): T {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require(id) as T
+}
+
+/** Boots once and returns the raw output lines (READY sentinel included). */
+function bootWithLines(opts?: { before?: () => void }) {
+  const output = new PassThrough()
+  const lines = collectLines(output)
+  const sidecar = bootFresh({ ...opts, output })
+  return { ...sidecar, lines }
 }
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
@@ -159,24 +168,25 @@ describe('sidecar bootstrap (headless boot)', () => {
       )
     })
 
-    it("init() pays a stale owed goonline once with the 'boot' trigger, after bindTransport", () => {
+    it("one boot pays a stale owed goonline once with the 'boot' trigger, after bindTransport", () => {
       const order: string[] = []
-      const realBind = platformModule.bindTransport
-      const bindSpy = jest
-        .spyOn(platformModule, 'bindTransport')
-        .mockImplementation((...args) => {
-          order.push('bindTransport')
-          return realBind(...args)
-        })
       mockRestoreMacSteamOnlineIfOwed.mockImplementation(async () => {
         order.push('restore')
         return 'not-owed'
       })
-      try {
-        init(new PassThrough(), new PassThrough())
-      } finally {
-        bindSpy.mockRestore()
-      }
+      bootFresh({
+        before: () => {
+          const platformModule =
+            fresh<typeof import('../../platform')>('../../platform')
+          const realBind = platformModule.bindTransport
+          jest
+            .spyOn(platformModule, 'bindTransport')
+            .mockImplementation((...args) => {
+              order.push('bindTransport')
+              return realBind(...args)
+            })
+        }
+      })
       expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledTimes(1)
       expect(mockRestoreMacSteamOnlineIfOwed).toHaveBeenCalledWith('boot')
       expect(order).toEqual(['bindTransport', 'restore'])
@@ -184,11 +194,10 @@ describe('sidecar bootstrap (headless boot)', () => {
   })
 
   it('reaches READY under bare node without an uncaught exception', () => {
-    const input = new PassThrough()
-    const output = new PassThrough()
-    const lines = collectLines(output)
-
-    expect(() => init(input, output)).not.toThrow()
+    let lines: string[] = []
+    expect(() => {
+      lines = bootWithLines().lines
+    }).not.toThrow()
 
     expect(lines).toContain(READY_SENTINEL)
   })
@@ -196,11 +205,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   // Behavior 2: a health/ping invoke frame written to the sidecar's stdin
   // yields a matching SidecarRpcResponse on stdout within a timeout.
   it('round-trips a health/ping invoke frame over stdio', async () => {
-    const input = new PassThrough()
-    const output = new PassThrough()
-    const lines = collectLines(output)
-
-    init(input, output)
+    const { input, lines } = bootWithLines()
     input.write(
       `${JSON.stringify({
         id: 'test-ping-1',
@@ -244,11 +249,7 @@ describe('sidecar bootstrap (headless boot)', () => {
   // channel D-03 permanently DEFERS to Phase 34.6, so this test will not
   // need a further substitution once plan 34.5-12 lands.
   it('tags an unported-channel invoke as an expected seam gap', async () => {
-    const input = new PassThrough()
-    const output = new PassThrough()
-    const lines = collectLines(output)
-
-    init(input, output)
+    const { input, lines } = bootWithLines()
     input.write(
       `${JSON.stringify({
         id: 'test-unported-1',
@@ -302,7 +303,12 @@ describe('sidecar bootstrap (headless boot)', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     expect(() => require('backend/storeManagers/steam/library')).not.toThrow()
 
-    expect(handlerRegistry.has('health')).toBe(true)
+    bootFresh()
+    expect(
+      fresh<typeof import('../../platform')>(
+        '../../platform'
+      ).handlerRegistry.has('health')
+    ).toBe(true)
   })
 
   // Phase 34.5 Plan 18, Task 1 (G-3, REQ-34.5-01). Asserts on the emitted log TEXT, not merely
@@ -328,16 +334,18 @@ describe('sidecar bootstrap (headless boot)', () => {
       }
     })
 
-    it('set arm: logs the value verbatim at info level, and init() still reaches READY_SENTINEL', () => {
+    it('set arm: logs the value verbatim at info level, and the boot still reaches READY_SENTINEL', () => {
       process.env.GAMELIB_SHELL_EXE =
         '/Users/dev/GameLib/src-tauri/target/debug/gamelib-shell'
-      const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
-
-      const input = new PassThrough()
-      const output = new PassThrough()
-      const lines = collectLines(output)
-
-      init(input, output)
+      let logInfoSpy!: jest.SpyInstance
+      const { lines } = bootWithLines({
+        before: () => {
+          logInfoSpy = jest.spyOn(
+            fresh<typeof import('../../logger')>('../../logger'),
+            'logInfo'
+          )
+        }
+      })
 
       expect(
         logInfoSpy.mock.calls.some(
@@ -347,19 +355,22 @@ describe('sidecar bootstrap (headless boot)', () => {
         )
       ).toBe(true)
       expect(lines).toContain(READY_SENTINEL)
-
-      logInfoSpy.mockRestore()
     })
 
-    it('unset arm: logs <UNSET> at warning level, does not throw, and init() still reaches READY_SENTINEL', () => {
+    it('unset arm: logs <UNSET> at warning level, does not throw, and the boot still reaches READY_SENTINEL', () => {
       delete process.env.GAMELIB_SHELL_EXE
-      const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
-
-      const input = new PassThrough()
-      const output = new PassThrough()
-      const lines = collectLines(output)
-
-      expect(() => init(input, output)).not.toThrow()
+      let logWarningSpy!: jest.SpyInstance
+      let lines: string[] = []
+      expect(() => {
+        lines = bootWithLines({
+          before: () => {
+            logWarningSpy = jest.spyOn(
+              fresh<typeof import('../../logger')>('../../logger'),
+              'logWarning'
+            )
+          }
+        }).lines
+      }).not.toThrow()
 
       expect(
         logWarningSpy.mock.calls.some(
@@ -368,34 +379,21 @@ describe('sidecar bootstrap (headless boot)', () => {
         )
       ).toBe(true)
       expect(lines).toContain(READY_SENTINEL)
-
-      logWarningSpy.mockRestore()
     })
   })
 
   // Phase 34.5 Plan 18, Task 2 (G-1/G-3, REQ-34.5-12). `publicDir` (`constants/paths.ts:73`) is
   // a MODULE-SCOPE constant computed once, at import time, from `platformApi.app.getAppPath()`
-  // -- so neither arm below can use this file's already-imported `init`/`publicDir`; both need
-  // a fresh module instance so `publicDir` gets recomputed against whatever `GAMELIB_APP_ROOT`
-  // each arm sets. `jest.isolateModules` + a fresh `require('../bootstrap')` gets that fresh
-  // instance, exactly the way `appRootResolution.test.ts`'s "real-filesystem sidecar-conditions"
-  // block already does. (Phase 35 Plan 18 update: this used to ALSO need
-  // `jest.doMock('electron', () => jest.requireActual('../../platform'))` inside the
-  // `isolateModules` callback, to swap away from this file's then-ambient default `electron`
-  // automock. That automock (`src/backend/__mocks__/electron.ts`) no longer exists -- Plan 18
-  // retired the `electron` devDependency, and its manual-mock replacement at
-  // `src/backend/platform/__mocks__/index.ts` is a first-party module mock, which Jest never
-  // auto-applies without an explicit per-suite `jest.mock()` call. This suite declares none, so
-  // both this file's top-level `init`/`publicDir` AND the isolated re-require below already
-  // resolve against the REAL `platformApi` by default -- the `doMock` swap became a no-op and
-  // was deleted.)
+  // -- so each arm needs a fresh module instance so `publicDir` gets recomputed against whatever
+  // `GAMELIB_APP_ROOT` the arm sets. `bootFresh()` (D-08) resets the module registry and boots
+  // once, against the REAL, unmocked `platformApi`.
   describe('boot-time asset-root self-check (Phase 34.5 G-1/G-3, plan 34.5-18)', () => {
     const REPO_ROOT = join(__dirname, '..', '..', '..', '..')
 
     /**
-     * Requires `../bootstrap` fresh inside an isolated module registry (so `publicDir` is
-     * recomputed against whatever `GAMELIB_APP_ROOT` the calling arm set, against the REAL,
-     * unmocked `platformApi`), calls its `init()`, and returns the isolated `logError` spy's
+     * Boots once via bootFresh() (so `publicDir` is recomputed in a fresh module registry
+     * against whatever `GAMELIB_APP_ROOT` the calling arm set, against the REAL,
+     * unmocked `platformApi`), and returns the isolated `logError` spy's
      * calls plus the transport output lines -- so each arm below only supplies the env var and
      * the assertions.
      */
@@ -403,34 +401,24 @@ describe('sidecar bootstrap (headless boot)', () => {
       defectCalls: unknown[][]
       lines: string[]
     } {
-      let result!: { defectCalls: unknown[][]; lines: string[] }
-      jest.isolateModules(() => {
-        /* eslint-disable @typescript-eslint/no-require-imports */
-        const isolatedLogger = require('../../logger')
-        const { init: isolatedInit } = require('../bootstrap')
-        /* eslint-enable @typescript-eslint/no-require-imports */
-
-        const logErrorSpy = jest.spyOn(isolatedLogger, 'logError')
-
-        const input = new PassThrough()
-        const output = new PassThrough()
-        const lines = collectLines(output)
-
-        isolatedInit(input, output)
-
-        result = {
-          defectCalls: logErrorSpy.mock.calls.filter(([message]) =>
-            String(message).includes('SIDECAR ASSET ROOT DEFECT')
-          ),
-          lines
+      let logErrorSpy!: jest.SpyInstance
+      const { lines } = bootWithLines({
+        before: () => {
+          logErrorSpy = jest.spyOn(
+            fresh<typeof import('../../logger')>('../../logger'),
+            'logError'
+          )
         }
-
-        logErrorSpy.mockRestore()
       })
-      return result
+      return {
+        defectCalls: logErrorSpy.mock.calls.filter(([message]) =>
+          String(message).includes('SIDECAR ASSET ROOT DEFECT')
+        ),
+        lines
+      }
     }
 
-    it('healthy arm: emits no SIDECAR ASSET ROOT DEFECT line when GAMELIB_APP_ROOT resolves the real repo assets, and init() still reaches READY_SENTINEL', () => {
+    it('healthy arm: emits no SIDECAR ASSET ROOT DEFECT line when GAMELIB_APP_ROOT resolves the real repo assets, and the boot still reaches READY_SENTINEL', () => {
       const savedAppRoot = process.env.GAMELIB_APP_ROOT
       process.env.GAMELIB_APP_ROOT = REPO_ROOT
 
@@ -448,7 +436,7 @@ describe('sidecar bootstrap (headless boot)', () => {
       }
     })
 
-    it('missing-asset arm: emits exactly ONE SIDECAR ASSET ROOT DEFECT line when GAMELIB_APP_ROOT points at an empty temp directory, and init() still reaches READY_SENTINEL', () => {
+    it('missing-asset arm: emits exactly ONE SIDECAR ASSET ROOT DEFECT line when GAMELIB_APP_ROOT points at an empty temp directory, and the boot still reaches READY_SENTINEL', () => {
       const savedAppRoot = process.env.GAMELIB_APP_ROOT
       const emptyAppRoot = mkdtempSync(
         join(tmpdir(), 'gamelib-bootstrap-assetroot-')
@@ -476,23 +464,19 @@ describe('sidecar bootstrap (headless boot)', () => {
   // D-12 (Phase 72, T-72-18): the Steam token store module default fails closed, so init()
   // MUST swap in the real store (keyring or dev-vault) before any handler can run.
   describe('boot-time Steam token store install (D-12)', () => {
-    it('init() replaces whatever store was active with the real one', () => {
-      // Earlier tests in this file already ran init(), so seed a sentinel instead of
-      // relying on the module default being untouched.
-      const previous = getTokenStore()
-      const sentinel = { ...previous }
-      setTokenStore(sentinel)
+    it('one boot replaces the fail-closed module default with the real store', () => {
+      // A fresh registry starts on the module default, so capture it pre-boot (setTokenStore
+      // logs, and the logger is not initialised until the boot runs).
+      let tokenStoreModule!: typeof import('../../storeManagers/steam/tokenStore')
+      let moduleDefault!: ReturnType<typeof tokenStoreModule.getTokenStore>
+      bootFresh({
+        before: () => {
+          tokenStoreModule = fresh('../../storeManagers/steam/tokenStore')
+          moduleDefault = tokenStoreModule.getTokenStore()
+        }
+      })
 
-      const input = new PassThrough()
-      const output = new PassThrough()
-      collectLines(output)
-      try {
-        init(input, output)
-
-        expect(getTokenStore()).not.toBe(sentinel)
-      } finally {
-        setTokenStore(previous)
-      }
+      expect(tokenStoreModule.getTokenStore()).not.toBe(moduleDefault)
     })
   })
 
@@ -505,44 +489,49 @@ describe('sidecar bootstrap (headless boot)', () => {
   // `skeletonFlows.test.ts`'s established precedent for touching this exact
   // store directly in a sidecar test.
   describe('boot-time orphaned Steam token cleanup (debug/steam-token-survives-keychain)', () => {
+    type SteamStore =
+      typeof import('../../storeManagers/steam/stores').configStore
+    let lastStore: SteamStore | undefined
+
+    const LEGACY_VALUE = 'steam:v1:some-ciphertext-or-legacy-plaintext'
+    const RECEIPT =
+      '[bootstrap] removed a legacy pre-Tauri `refreshToken` key from `steam_store/config.json`; the Keychain (`steam-refresh-token` slot) is the authoritative store'
+
+    /** One boot in a fresh registry, with the fresh steam store seeded (or not) ahead of it. */
+    function bootWithSteamStore(seed: boolean) {
+      let logInfoSpy!: jest.SpyInstance
+      let store!: SteamStore
+      bootFresh({
+        before: () => {
+          store = fresh<typeof import('../../storeManagers/steam/stores')>(
+            '../../storeManagers/steam/stores'
+          ).configStore
+          lastStore = store
+          if (seed) store.set('refreshToken', LEGACY_VALUE)
+          logInfoSpy = jest.spyOn(
+            fresh<typeof import('../../logger')>('../../logger'),
+            'logInfo'
+          )
+        }
+      })
+      return { store, logInfoSpy }
+    }
+
     afterEach(() => {
-      steamConfigStore.clear()
+      lastStore?.clear()
     })
 
     it('present: deletes the key and logs exactly the one receipt line, key name only, never the value', () => {
-      steamConfigStore.set(
-        'refreshToken',
-        'steam:v1:some-ciphertext-or-legacy-plaintext'
-      )
-      const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
+      const { store, logInfoSpy } = bootWithSteamStore(true)
 
-      const input = new PassThrough()
-      const output = new PassThrough()
-      collectLines(output)
-
-      init(input, output)
-
-      expect(steamConfigStore.get_nodefault('refreshToken')).toBeUndefined()
+      expect(store.get_nodefault('refreshToken')).toBeUndefined()
       expect(
-        logInfoSpy.mock.calls.some(
-          ([message]) =>
-            message ===
-            '[bootstrap] removed a legacy pre-Tauri `refreshToken` key from `steam_store/config.json`; the Keychain (`steam-refresh-token` slot) is the authoritative store'
-        )
+        logInfoSpy.mock.calls.some(([message]) => message === RECEIPT)
       ).toBe(true)
-
-      logInfoSpy.mockRestore()
     })
 
     it('absent: no-op, and the receipt line is never logged', () => {
-      // afterEach's steamConfigStore.clear() guarantees this arm starts absent.
-      const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
-
-      const input = new PassThrough()
-      const output = new PassThrough()
-      collectLines(output)
-
-      init(input, output)
+      const { logInfoSpy } = bootWithSteamStore(false)
 
       expect(
         logInfoSpy.mock.calls.some(([message]) =>
@@ -551,60 +540,38 @@ describe('sidecar bootstrap (headless boot)', () => {
           )
         )
       ).toBe(false)
-
-      logInfoSpy.mockRestore()
     })
 
-    it('idempotent: a second real boot after the key is already gone logs nothing further', () => {
-      steamConfigStore.set(
-        'refreshToken',
-        'steam:v1:some-ciphertext-or-legacy-plaintext'
-      )
+    it('one boot removes the key and logs the receipt exactly once', () => {
+      const { store, logInfoSpy } = bootWithSteamStore(true)
 
-      const firstInput = new PassThrough()
-      const firstOutput = new PassThrough()
-      collectLines(firstOutput)
-      init(firstInput, firstOutput)
-
-      expect(steamConfigStore.get_nodefault('refreshToken')).toBeUndefined()
-
-      const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
-      const secondInput = new PassThrough()
-      const secondOutput = new PassThrough()
-      collectLines(secondOutput)
-      init(secondInput, secondOutput)
-
+      expect(store.get_nodefault('refreshToken')).toBeUndefined()
       expect(
-        logInfoSpy.mock.calls.some(([message]) =>
-          String(message).includes(
-            'removed a legacy pre-Tauri `refreshToken` key'
-          )
-        )
-      ).toBe(false)
-
-      logInfoSpy.mockRestore()
+        logInfoSpy.mock.calls.filter(([message]) => message === RECEIPT)
+      ).toHaveLength(1)
     })
 
     it('does NOT route through applyStoreWrite -- the D-04 write guard is never invoked, yet the key is still gone', () => {
-      steamConfigStore.set(
-        'refreshToken',
-        'steam:v1:some-ciphertext-or-legacy-plaintext'
-      )
-      const applyStoreWriteSpy = jest.spyOn(
-        storeWriteHandlersModule,
-        'applyStoreWrite'
-      )
+      let applyStoreWriteSpy!: jest.SpyInstance
+      let store!: SteamStore
+      bootFresh({
+        before: () => {
+          store = fresh<typeof import('../../storeManagers/steam/stores')>(
+            '../../storeManagers/steam/stores'
+          ).configStore
+          lastStore = store
+          store.set('refreshToken', LEGACY_VALUE)
+          applyStoreWriteSpy = jest.spyOn(
+            fresh<typeof import('../storeWriteHandlers')>(
+              '../storeWriteHandlers'
+            ),
+            'applyStoreWrite'
+          )
+        }
+      })
 
-      const input = new PassThrough()
-      const output = new PassThrough()
-      collectLines(output)
-
-      init(input, output)
-
-      expect(steamConfigStore.get_nodefault('refreshToken')).toBeUndefined()
+      expect(store.get_nodefault('refreshToken')).toBeUndefined()
       expect(applyStoreWriteSpy).not.toHaveBeenCalled()
-
-      applyStoreWriteSpy.mockRestore()
     })
   })
 })
