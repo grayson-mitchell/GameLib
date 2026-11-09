@@ -59,3 +59,14 @@ Restore after the plan: delete the Rust-run `sharedRedist`, and `sharedRedist.ts
 With an authenticated session (explicit Refresh, then Play within the 60 s idle grace) the TS redist step for Schedule I ran and settled with `optIn=[]`, `depotIds=[]`: the game opts into no shared redists, so there is nothing to download and no `Steamworks Shared` output to compare. Schedule I therefore cannot cover the shared-redist bullet. A replacement title that opts into shared redists is needed (operator decision). Nothing else was set aside this round; the Schedule I game tree in the bridge bottle was not renamed.
 
 Observation for a follow-up todo: after Ctrl-C of `tauri dev`, the sidecar (parent pid 1) was still running about 20 s after its stdin-closed log line, in two successive rounds.
+
+### Redist title change: Amnesia: The Dark Descent (57300)
+Schedule I settled with `optIn=[]` (no shared redists), so the shared-redist bullet moves to Amnesia: The Dark Descent (operator decision, option a). Only the redist job is compared for Amnesia; its game tree is not reinstalled or renamed. Set aside for it:
+- Its bottle ledger `gamelib-shared-redists.json` backed up as `gamelib-shared-redists.json.parity-bak`, then `settled` removed and `done` emptied (it held two vcredist 2010 entries, x86 and x64, for depot 228983).
+- The GameLib `sharedRedist` cache stays set aside as `sharedRedist.ts-parity`; no new `sharedRedist` existed when this was done.
+- After the TS Amnesia run: rename the produced `sharedRedist` to `sharedRedist.ts-out`, reset the ledger's `settled` and `done` again.
+- Restore after the plan: copy each `.parity-bak` ledger (Schedule I bridge bottle and Amnesia bottle) back over its ledger, delete the Rust-run `sharedRedist`, and rename the originals back.
+
+### Follow-up items
+- Orphaned sidecar: after Ctrl-C of `tauri dev`, `sidecar.js` stayed alive with parent pid 1, in three successive rounds (still alive between rounds). The sidecar exit contract (exit by event-loop drain at stdin EOF) is not being met in this scenario; needs a todo.
+- Authenticated-session gotcha for live parity runs: the session closes 60 s after the last lease release (AUTH_SESSION_IDLE_GRACE_MS), so Play must follow Refresh within 60 s or the redist step is deferred.
