@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: Executing phase 73
-stopped_at: Completed 73-08-PLAN.md
-last_updated: "2026-11-09T00:46:12.744Z"
+stopped_at: Completed 73-09-PLAN.md
+last_updated: "2026-11-09T00:56:05.349Z"
 last_activity: 2026-11-09
 progress:
   total_phases: 14
   completed_phases: 8
   total_plans: 168
-  completed_plans: 156
+  completed_plans: 157
   percent: 57
 ---
 
@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
-Plan: 73-09 next (9 of 21 complete: 73-01..73-08, 73-11)
+Plan: 73-10 next (10 of 21 complete: 73-01..73-09, 73-11)
 Status: Executing phase 73
 Last activity: 2026-11-09
 
@@ -247,6 +247,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 73 P02 | 25min | 2 tasks | 3 files |
 | Phase 73 P03 | 40min | 2 tasks | 9 files |
 | Phase 73 P04 | 25min | 2 tasks | 2 files |
+| Phase 73 P09 | 55min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -383,6 +384,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 68]: 68-05: read-side tray/focusRow normalisers stay as degradation path for read-only settings (D-11); libraryTopSection retired from AppSettings
 - [Phase ?]: 68-06: readOnlyStoresNotice payload is ids-only, flushed once from frontendReady; late entries re-publish
 - [Phase 73]: 73-01: rust-version 1.89 for gamelib-depot crates (operator option-a); no aes_armv8 rustflags
+- [Phase 73]: 73-09: failed/cancelled files drain in-flight chunk tasks (spawn_blocking is not abortable) so nothing writes after run_job returns; ChunkSource trait abstracts Fetcher for tests; non-install modes error until 73-10
 - [Phase 73]: 73-04: Mach-O probe ported from machO.ts (gamelib-scan not reused); containment lexical; case probe stat-based per TS
 
 ### Pending Todos
@@ -664,8 +666,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-09T00:46:12.737Z
-Stopped at: Completed 73-07-PLAN.md
+Last session: 2026-11-09T00:56:00.770Z
+Stopped at: Completed 73-09-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
