@@ -2,12 +2,25 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 
 import type { GetLogFileArgs } from 'backend/logger/paths'
-import type { GameInfo } from 'common/types'
+import type {
+  ConnectivityStatus,
+  GameInfo,
+  Runner,
+  WineVersionInfo
+} from 'common/types'
+import type {
+  DialogModalOptions,
+  ExternalLinkDialogOptions
+} from 'frontend/types'
 import type { RunsForMeState } from 'common/runsForMe'
 import type { GameSettingsModalType } from '../screens/Settings/components/SettingsModal'
 import { notify } from 'frontend/helpers'
-import { gameOverridesStore } from 'frontend/helpers/stores'
+import {
+  gameOverridesStore,
+  wineDownloaderInfoStore
+} from 'frontend/helpers/stores'
 import { t } from 'i18next'
+import { reduceDialogRequest } from './dialogQueue'
 import { bindStoreHooks, registerStoreForReset } from './storeKit'
 
 // Phase 69 D-01: UI/dialog domain store (formerly UiState). gameOverrides,
@@ -16,6 +29,29 @@ import { bindStoreHooks, registerStoreForReset } from './storeKit'
 type GameOverride = NonNullable<GameInfo['overrides']>
 
 export interface UiState {
+  // Phase 69-06 (D-10 first domain): moved out of GlobalState's StateProps.
+  platform: NodeJS.Platform | 'unknown'
+  error: boolean
+  isFullscreen: boolean
+  isFrameless: boolean
+  activeController: string
+  connectivity: { status: ConnectivityStatus; retryIn: number }
+  dialogModalOptions: DialogModalOptions
+  dialogQueue: DialogModalOptions[]
+  externalLinkDialogOptions: ExternalLinkDialogOptions
+  showRedeemKeyDialog: boolean
+  showInstallModal: {
+    show: boolean
+    gameInfo: GameInfo | null
+    appName: string
+    runner: Runner
+  }
+  wineVersions: WineVersionInfo[]
+  showDialogModal: (request: DialogModalOptions) => void
+  showResetDialog: () => void
+  handleExternalLinkDialog: (value: ExternalLinkDialogOptions) => void
+  handleRedeemKeyDialog: (show: boolean) => void
+
   uploadLogFileProps:
     | false
     | {
@@ -58,7 +94,56 @@ export interface UiState {
 }
 
 const useUiStateRaw = create<UiState>()(
-  subscribeWithSelector((set) => ({
+  subscribeWithSelector((set, get) => ({
+    platform: 'unknown',
+    error: false,
+    isFullscreen: false,
+    isFrameless: false,
+    activeController: '',
+    connectivity: { status: 'offline', retryIn: 0 },
+    dialogModalOptions: { showDialog: false },
+    dialogQueue: [],
+    externalLinkDialogOptions: { showDialog: false },
+    showRedeemKeyDialog: false,
+    showInstallModal: {
+      show: false,
+      appName: '',
+      runner: 'legendary',
+      gameInfo: null
+    },
+    wineVersions: [],
+
+    showDialogModal: (request) => {
+      // Functional update: a button click closes then opens a follow-up in the
+      // same batch, and each call must see the previous one's result.
+      set((prev) => {
+        const next = reduceDialogRequest(
+          { current: prev.dialogModalOptions, queue: prev.dialogQueue },
+          request
+        )
+        return { dialogModalOptions: next.current, dialogQueue: next.queue }
+      })
+    },
+    showResetDialog: () => {
+      get().showDialogModal({
+        title: t('box.reset-heroic.question.title', 'Reset GameLib'),
+        message: t(
+          'box.reset-heroic.question.message',
+          "Are you sure you want to reset GameLib? This will remove all Settings and Caching but won't remove your Installed games or your Epic credentials. Portable versions (AppImage, WinPortable, ...) of GameLib needs to be restarted manually afterwards."
+        ),
+        buttons: [
+          { text: t('box.yes'), onClick: window.api.resetHeroic },
+          { text: t('box.no') }
+        ]
+      })
+    },
+    handleExternalLinkDialog: (externalLinkDialogOptions) => {
+      set({ externalLinkDialogOptions })
+    },
+    handleRedeemKeyDialog: (showRedeemKeyDialog) => {
+      set({ showRedeemKeyDialog })
+    },
+
     uploadLogFileProps: false,
     setUploadLogFileProps: (uploadLogFileProps) => {
       set({ uploadLogFileProps })
@@ -130,6 +215,17 @@ const useUiStateRaw = create<UiState>()(
     }
   }))
 )
+
+/**
+ * The values the GlobalState constructor read after hydration. Applied by
+ * initStateSubscriptions section (1); read at CALL time, never at module scope.
+ */
+export function readInitialUi(): Pick<UiState, 'platform' | 'wineVersions'> {
+  return {
+    platform: window.platform,
+    wineVersions: wineDownloaderInfoStore.get('wine-releases', [])
+  }
+}
 
 registerStoreForReset(useUiStateRaw)
 
