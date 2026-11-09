@@ -578,7 +578,7 @@ Plans:
 **Split 2026-11-10.** At full planning depth the original scope came to about 50 plans, mostly because under D-01/D-03 every importer of a converted owner has to receive it as a dependency (`backend/utils` has 54 source importers, `platform` 45). It was split along D-15's order, and `66-CONTEXT.md` decisions D-01..D-17 apply to all four parts. **Phase 66 itself is now step 1 only:** `src/backend/process/` (clock, runner with its tracked and long-lived child registries and `openDetached`, `AppContext`), the depcruise `runner-is-a-leaf` rule, `meta/backendDiCeilings.cjs` with sharded shrink-only baselines for module state, `child_process` imports and `jest.mock(`, plus an exact-path exemption mechanism that starts empty; test fakes (`scriptedRunner`, `realRunner` on `createFakeHomeProfile()`, `fakeClock`, `createTestContext`); and `bootstrap.ts` as one ordered step list with the 17 once-guards and `i18nReady` deleted, where a second `init()` throws, together with moving the 37 sidecar tests that re-enter `init()` onto fresh contexts. About 7 plans.
 **Requirements**: TBD
 **Depends on:** Phase 62
-**Plans:** 2/9 plans executed
+**Plans:** 3/9 plans executed
 
 Plans:
 
@@ -589,7 +589,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 66-03-PLAN.md — test fakes (scripted runner, real runner on fake HOME, fake clock, capture log), createTestContext, `process/README.md` (wave 2)
+- [x] 66-03-PLAN.md — test fakes (scripted runner, real runner on fake HOME, fake clock, capture log), createTestContext, `process/README.md` (wave 2)
 - [ ] 66-04-PLAN.md — harness `bootFresh()` + the 15 boot-wiring tests onto one boot per case (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
