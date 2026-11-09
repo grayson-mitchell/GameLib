@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 71 (rust-shell-module-decomposition) — EXECUTING
 Plan: 18 of 18
 Status: Phase complete — ready for verification
-Last activity: 2026-11-08
+Last activity: 2026-11-09 - Completed quick task 261109-uv4: Version shared-redists ledger with Phase 68 engine
 
 Progress: [██████████] 100%
 
@@ -551,6 +551,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261108-et9 | enable noUncheckedIndexedAccess in tsconfig.json and retire the indexed-access ratchet (0 drift; script, baseline, test, CI step removed; todo completed) | 2026-11-08 | e1cafb3f5 | codecheck green per commit; knip; planning-gates 12/12; Meta jest only known pre-existing failures; codecheck.yml parses | [261108-et9-enable-nuia-retire-ratchet](./quick/261108-et9-enable-nuia-retire-ratchet/) |
 | 261108-lav | Phase 72 WR-01: dead-sidecar path now SIGKILLs the sidecar's process group before the Restart/Quit dialog even when the leader already exited (pgid<=1 refused; tree_reaped latch keeps shutdown_child off a recycled pgid); restart() from the reader thread already runs RunEvent::Exit, so no extra shutdown_child. | 2026-11-08 | e5c11ab25 | cargo 441 pass, clippy ratchet pass; Windows branch source-pinned only; live kill -9 check optional | [261108-lav-fix-phase-72-wr-01-reap-sidecar-group-on](./quick/261108-lav-fix-phase-72-wr-01-reap-sidecar-group-on/) |
 | 261108-ved | Six keyring helpers (7 items) moved byte-identical from login_window.rs to keyring_dispatch.rs; moveproof gains `--stem` for cross-module Layer 3; 71-16 keyring test routing re-pointed to keyring_dispatch.rs; todo closed. | 2026-11-08 | 339bdd386 | permove PASS (Layer 1 + Layer 3 0/0, cargo 445/445); no-stem control fails on exactly 7 items; planning-gates 12/12 | [261108-ved-move-the-keyring-helpers-from-login-wind](./quick/261108-ved-move-the-keyring-helpers-from-login-wind/) |
+| 261109-uv4 | Per-bottle gamelib-shared-redists.json ledger now versioned by the Phase 68 engine (chain steam_bridge/shared-redists; existing `version: 1` is the stamp, so v1 files adopt untouched); newer/failed-migration ledger skips the pass read-only, corrupt ledger backed up before starting empty; todo closed. | 2026-11-09 | 68619d4ad | 111 tests pass; tsc/eslint/prettier clean; planning-gates 12/12 | [261109-uv4-version-shared-redists-ledger-with-phase](./quick/261109-uv4-version-shared-redists-ledger-with-phase/) |
 
 ## Deferred Items
 
