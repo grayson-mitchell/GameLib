@@ -13,7 +13,7 @@
  * mocking of `node:fs`/`electron`, `collectLines()`/`flush()` helpers copied verbatim.
  *
  * `backend/online_monitor` is mocked for the same reason `bootstrap.test.ts` mocks it
- * (fix/steam-native-install-stability, 33-05 live-gate gap): `init()` now calls the real
+ * (fix/steam-native-install-stability, 33-05 live-gate gap): `init` now calls the real
  * `initOnlineMonitor()`, which reads `net.isOnline()` from `electron` -- absent on this file's
  * default Jest automock (`src/backend/__mocks__/electron.ts`). See `bootstrap.test.ts`'s
  * header for the full rationale; `onlineMonitorWiring.test.ts` is the dedicated suite that
@@ -28,8 +28,7 @@ jest.mock('../../online_monitor', () => ({
 
 import { defined } from 'backend/testUtils/indexed'
 import { PassThrough } from 'node:stream'
-import { init } from '../bootstrap'
-import { requestRustInvoke } from '../sidecarRpc'
+import { bootFresh } from './helpers/sidecarHarness'
 import {
   RUST_KEYRING_GET,
   RUST_CLIPBOARD_READ_TEXT,
@@ -52,6 +51,12 @@ function collectLines(stream: PassThrough): string[] {
   return lines
 }
 
+/** sidecarRpc from the registry bootFresh() just built (the top-level import would be stale). */
+function freshRpc(): typeof import('../sidecarRpc') {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('../sidecarRpc')
+}
+
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))
@@ -65,10 +70,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
 
   // Behavior 1: requestRustInvoke() writes exactly one well-formed rustInvoke frame.
   it('writes a single well-formed rustInvoke frame for an allowlisted channel', async () => {
-    const input = new PassThrough()
-    const output = new PassThrough()
+    const { input, output } = bootFresh()
     const lines = collectLines(output)
-    init(input, output)
+    const { requestRustInvoke } = freshRpc()
 
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     await flush()
@@ -93,10 +97,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
 
   // Behavior 2: a synthetic {ok:true} response resolves the returned Promise.
   it('resolves the returned Promise when a matching {ok:true} response arrives', async () => {
-    const input = new PassThrough()
-    const output = new PassThrough()
+    const { input, output } = bootFresh()
     const lines = collectLines(output)
-    init(input, output)
+    const { requestRustInvoke } = freshRpc()
 
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     await flush()
@@ -113,10 +116,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
 
   // Behavior 3: a synthetic {ok:false} response rejects the returned Promise.
   it('rejects the returned Promise when a matching {ok:false} response arrives', async () => {
-    const input = new PassThrough()
-    const output = new PassThrough()
+    const { input, output } = bootFresh()
     const lines = collectLines(output)
-    init(input, output)
+    const { requestRustInvoke } = freshRpc()
 
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     await flush()
@@ -136,10 +138,8 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
   // Behavior 4: a response frame whose id matches nothing outstanding is dropped silently,
   // and is NOT routed to an invoke/send handler.
   it('drops an unmatched response id without throwing and without dispatching it', async () => {
-    const input = new PassThrough()
-    const output = new PassThrough()
+    const { input, output } = bootFresh()
     const lines = collectLines(output)
-    init(input, output)
 
     expect(() => {
       input.write(
@@ -157,10 +157,8 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
 
   // Behavior 5: normal inbound 'invoke' direction still round-trips after the rustInvoke changes.
   it('still round-trips an ordinary inbound invoke frame (no regression)', async () => {
-    const input = new PassThrough()
-    const output = new PassThrough()
+    const { input, output } = bootFresh()
     const lines = collectLines(output)
-    init(input, output)
 
     input.write(
       `${JSON.stringify({ id: 'health-check-1', kind: 'invoke', channel: 'health', args: [] })}\n`
@@ -181,10 +179,8 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
   // Behavior 6 (T-28-03b direction guard): an inbound frame with kind: 'rustInvoke' sent FROM
   // the shell INTO the sidecar must be rejected, not dispatched to any handler.
   it('rejects an inbound rustInvoke frame from the shell (direction guard)', async () => {
-    const input = new PassThrough()
-    const output = new PassThrough()
+    const { input, output } = bootFresh()
     const lines = collectLines(output)
-    init(input, output)
 
     input.write(
       `${JSON.stringify({
@@ -203,10 +199,9 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
   // Behavior 7 (T-28-03 allowlist): a channel not in RUST_INVOKE_CHANNELS rejects immediately
   // and writes NO frame to the output stream.
   it('rejects a non-allowlisted channel immediately without emitting a frame', async () => {
-    const input = new PassThrough()
-    const output = new PassThrough()
+    const { output } = bootFresh()
     const lines = collectLines(output)
-    init(input, output)
+    const { requestRustInvoke } = freshRpc()
 
     await expect(
       requestRustInvoke('rm -rf /' as RustInvokeChannel, [])
@@ -223,9 +218,8 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
   // Behavior 8: an unanswered requestRustInvoke rejects after the 60s timeout.
   it('rejects with a timeout message after 60s when unanswered', async () => {
     jest.useFakeTimers()
-    const input = new PassThrough()
-    const output = new PassThrough()
-    init(input, output)
+    bootFresh()
+    const { requestRustInvoke } = freshRpc()
 
     const promise = requestRustInvoke(RUST_KEYRING_GET, [])
     const assertion = expect(promise).rejects.toThrow('timed out')
@@ -242,9 +236,8 @@ describe('sidecar->Rust rustInvoke channel (transport shape, Rust side stubbed)'
   // text, or drops the interpolation entirely, is caught either way.
   it('names the timed-out channel in the rejection message, distinguishing keyring_get from another channel', async () => {
     jest.useFakeTimers()
-    const input = new PassThrough()
-    const output = new PassThrough()
-    init(input, output)
+    bootFresh()
+    const { requestRustInvoke } = freshRpc()
 
     const keyringPromise = requestRustInvoke(RUST_KEYRING_GET, [])
     const keyringAssertion = expect(keyringPromise).rejects.toThrow(

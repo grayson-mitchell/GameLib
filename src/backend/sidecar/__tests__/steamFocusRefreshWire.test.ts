@@ -107,7 +107,7 @@ describe('T-B: producer wiring pin (Focused(true) block references the channel +
 // ---- T-C / T-D: consumer over the REAL transport ----
 //
 // Hybrid pattern: the LIGHT direct-transport harness (`startRpcServer` + `PassThrough`,
-// `storeEmbedWireContract.test.ts`'s own pattern) avoids the heavy `init()`/`startSidecar()`
+// `storeEmbedWireContract.test.ts`'s own pattern) avoids the heavy `init`/`startSidecar`
 // bootstrap, combined with `steamFlows.test.ts`'s mock set -- needed because
 // `steamFlowRegistration.ts`'s import graph (via `launcher.ts`) is too heavy to import safely
 // under Jest without it, even though this file drives none of those flows.
@@ -161,7 +161,7 @@ import { startRpcServer } from '../sidecarRpc'
 import { listenerRegistry } from '../../platform'
 
 // `backend/logger`'s real `logWarning`/`logInfo` dereference a module-private
-// `heroicLogWriter` that only a full `init()`/`initHeadless()` call assigns -- neither of which
+// `heroicLogWriter` that only a full `init`/`initHeadless()` call assigns -- neither of which
 // this light transport harness runs. `jest.spyOn` on the REAL, already-loaded module object
 // (via `require`, matching `sidecarRejectionGuard.test.ts`'s own precedent and its documented
 // reason: a `jest.mock` factory calling `jest.requireActual('backend/logger')` re-enters the

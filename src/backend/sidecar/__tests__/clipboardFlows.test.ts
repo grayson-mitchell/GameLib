@@ -2,7 +2,7 @@
  * Round-trip test for the sidecar's curated clipboard channel registration (Phase 34.3 Plan 06
  * — REQ-34.3-03/REQ-34.3-04/REQ-34.3-13).
  *
- * Calls `registerClipboardFlows()` directly (never through `../bootstrap`'s full `init()`), so
+ * Calls `registerClipboardFlows()` directly (never through `../bootstrap`'s full `init`), so
  * this suite only ever loads `clipboardFlowRegistration.ts`'s own import graph
  * (`./platformApi`, `./sidecarRpc`, `../utils/systeminfo`, `common/types/sidecarTransport`) —
  * never the rest of `handlers.ts`'s side-effecting module-scope registrations, which this

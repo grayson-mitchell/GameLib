@@ -88,7 +88,7 @@ jest.mock('backend/logger/paths', () => {
 
 // ── electron — route Jest's own module resolution at the real sidecar shim
 // (mirrors loggerFlows.test.ts / sidecarRejectionGuard.test.ts). Never
-// `bootstrap.init()`'d — this suite does not need the RPC loop, only the
+// `bootstrap.init`'d — this suite does not need the RPC loop, only the
 // listener registration function and the registry it writes into. ─────────
 
 // ── backend/config — avoid constructing a real electron-store-backed
@@ -213,7 +213,7 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
       // line contains processGuards.ts's generic 'unhandled promise rejection'
       // text used to sit here, annotated "Load-bearing NEGATIVE assertion". It
       // could not fail. This suite calls only `initHeadless()` and
-      // `registerLoggerFlows()` -- it never calls `bootstrap.init()`, and
+      // `registerLoggerFlows()` -- it never calls `bootstrap.init`, and
       // `loggerFlowRegistration.ts` does not import `processGuards.ts`, so that
       // string is unreachable here under any circumstance. Deleted rather than
       // made real: installing the process-level guard to give it teeth would
@@ -240,6 +240,7 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
       .spyOn(process.stdout, 'write')
       .mockImplementation(() => true)
 
+    // no boot: loads two modules in an isolated registry, never calls init.
     jest.isolateModules(() => {
       /* eslint-disable @typescript-eslint/no-require-imports */
       const freshElectronStub =
@@ -248,7 +249,7 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
         require('../loggerFlowRegistration') as typeof import('../loggerFlowRegistration')
       /* eslint-enable @typescript-eslint/no-require-imports */
 
-      // No initHeadless()/init() call anywhere in this fresh, isolated
+      // No initHeadless()/init call anywhere in this fresh, isolated
       // module registry — heroicLogWriter is never assigned, reproducing
       // the recorded "heroicLogWriter unset until bootstrap init" gotcha.
       freshRegistration.registerLoggerFlows()
@@ -394,6 +395,7 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
       .spyOn(process.stdout, 'write')
       .mockImplementation(() => true)
 
+    // no boot: loads two modules in an isolated registry, never calls init.
     jest.isolateModules(() => {
       /* eslint-disable @typescript-eslint/no-require-imports */
       const freshElectronStub =
@@ -402,7 +404,7 @@ describe('loggerCallSiteGuard (Phase 34.2 gap cycle 4, plan 34.2-26 — CR-01 / 
         require('../loggerFlowRegistration') as typeof import('../loggerFlowRegistration')
       /* eslint-enable @typescript-eslint/no-require-imports */
 
-      // No initHeadless()/init() call anywhere in this fresh, isolated
+      // No initHeadless()/init call anywhere in this fresh, isolated
       // module registry -- heroicLogWriter is never assigned, reproducing
       // the recorded "heroicLogWriter unset until bootstrap init" gotcha.
       freshRegistration.registerLoggerFlows()

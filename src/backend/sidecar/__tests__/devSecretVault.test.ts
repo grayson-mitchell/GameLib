@@ -18,7 +18,7 @@
  * `../humbleFlowRegistration`, which now merely re-exports the symbol). The mock is a full
  * replacement, which is safe ONLY because that module has exactly one export. It was NOT safe
  * against `../humbleFlowRegistration`, and the reason is worth keeping: the second describe
- * block below (Task 2) drives the REAL `../bootstrap` `init()`, whose `./handlers` import graph
+ * block below (Task 2) drives the REAL `../bootstrap` `init`, whose `./handlers` import graph
  * calls the REAL `registerHumbleFlows()` at ITS OWN module scope (`handlers.ts:194`), so a
  * full-replacement mock of that module would leave the call undefined and throw the instant
  * `../bootstrap` — or anything importing it — is required. If this mock is ever pointed back at
@@ -41,7 +41,7 @@ import { join } from 'path'
 // `jest.spyOn(loggerModule, 'logInfo')` convention) sidesteps this: it mutates the ALREADY-real
 // module's exports object in place after normal evaluation completed, never re-entering the
 // cycle. `mockImplementation(() => {})` on top is required for TASK 1's tests specifically —
-// they call `installDevSecretVault()` directly without ever calling `../bootstrap`'s `init()`,
+// they call `installDevSecretVault()` directly without ever calling `../bootstrap`'s `init`,
 // so `heroicLogWriter` is never constructed and a REAL `logWarning`/`logError` call-through
 // would throw (`sidecar-console-and-logger-are-invisible`, this project's own recorded gotcha).
 // The real import lives in the "Imports (after mocks)" block below; only the spy handles are
@@ -101,7 +101,7 @@ jest.mock('graceful-fs', () => ({
 }))
 
 // ── online_monitor — full-surface mock, identical to `bootstrap.test.ts`'s own block (needed
-// ONLY by Task 2's bootstrap wiring describe block below, which drives the REAL `init()`; see
+// ONLY by Task 2's bootstrap wiring describe block below, which drives the REAL `init`; see
 // that file's header for why the real `initOnlineMonitor()` throws under the default 'electron'
 // automock this project applies to every backend test file). ─────────────────────────────────
 jest.mock('../../online_monitor', () => ({
@@ -112,7 +112,6 @@ jest.mock('../../online_monitor', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────────────────────
-import { PassThrough } from 'node:stream'
 import { statSync, readFileSync } from 'fs'
 import { chmodSync as mockedChmodSync } from 'graceful-fs'
 import * as loggerModule from 'backend/logger'
@@ -122,7 +121,7 @@ import * as tokenStoreModule from 'backend/storeManagers/steam/tokenStore'
 import * as secretStoreModule from 'backend/humble/secretStore'
 import * as humbleSecretStoreModule from '../humbleSecretStore'
 import * as steamGridDbSecretStoreModule from 'backend/steamgrid/secretStore'
-import { init } from '../bootstrap'
+import { bootFresh } from './helpers/sidecarHarness'
 
 const ENV_VAR = 'GAMELIB_DEV_SECRET_VAULT'
 
@@ -137,7 +136,7 @@ describe('devSecretVault', () => {
     vaultDir = mkdtempSync(join(tmpdir(), 'gamelib-dev-secret-vault-test-'))
     mockGetPath.mockImplementation((name: string) =>
       // 'temp' is the only name this suite ever redirects — every other name (Task 2's real
-      // bootstrap `init()` needs 'appData'/'userData'/etc. via platformApi's app.getPath) falls
+      // bootstrap `init` needs 'appData'/'userData'/etc. via platformApi's app.getPath) falls
       // through to the REAL pathShim, see the mock declaration's own comment above.
       name === 'temp' ? vaultDir : realPathShim.getPath(name)
     )
@@ -150,7 +149,7 @@ describe('devSecretVault', () => {
 
     // See the module-scope comment above `let mockLogInfo: jest.SpyInstance` for why this is a
     // real jest.spyOn(), not a jest.mock() factory. `mockImplementation(() => {})` suppresses
-    // the real write path (Task 1's tests never call `../bootstrap`'s `init()`, so
+    // the real write path (Task 1's tests never call `../bootstrap`'s `init`, so
     // `heroicLogWriter` is never constructed) while still recording every call for the leak-scan
     // and receipt-line assertions below.
     mockLogInfo = jest
@@ -454,29 +453,54 @@ describe('devSecretVault', () => {
     expect(() => readFileSync(vaultPath)).toThrow()
   })
 
-  // ── Task 2: the exclusive branch in bootstrap.ts's init() ─────────────────────────────────
+  // ── Task 2: the exclusive branch in bootstrap.ts's init ─────────────────────────────────
   //
-  // Drives the REAL `../bootstrap` `init()` (nested inside this describe block so it inherits
+  // Drives the REAL `../bootstrap` `init` (nested inside this describe block so it inherits
   // the outer `beforeEach`'s fresh `vaultDir`/`mockGetPath`/mock-reset setup, even though these
   // tests mock `installDevSecretVault` directly rather than driving it through a real env var).
   // `installDevSecretVault` itself is spied and forced to a fixed return value per test — Task 1
-  // above already proves its OWN real behavior; this block proves only which arm `init()` takes
+  // above already proves its OWN real behavior; this block proves only which arm `init` takes
   // given that return value, and that the branch is exclusive (never both, never neither).
   describe('bootstrap wiring — exclusive secret-store branch (Task 2)', () => {
+    // D-08: one boot per case in a fresh registry. The spied modules are required from THAT
+    // registry (a top-level import would be a stale instance after resetModules), the logger
+    // spies are re-pointed at the fresh logger, then the boot happens exactly once.
+    function freshRegistry() {
+      jest.resetModules()
+      /* eslint-disable @typescript-eslint/no-require-imports */
+      const freshLogger = require('backend/logger') as typeof loggerModule
+      const freshVault =
+        require('../devSecretVault') as typeof devSecretVaultModule
+      const freshTokenStore =
+        require('backend/storeManagers/steam/tokenStore') as typeof tokenStoreModule
+      const freshHumbleStore =
+        require('../humbleSecretStore') as typeof humbleSecretStoreModule
+      /* eslint-enable @typescript-eslint/no-require-imports */
+      mockLogInfo = jest
+        .spyOn(freshLogger, 'logInfo')
+        .mockImplementation(() => {})
+      mockLogWarning = jest
+        .spyOn(freshLogger, 'logWarning')
+        .mockImplementation(() => {})
+      mockLogError = jest
+        .spyOn(freshLogger, 'logError')
+        .mockImplementation(() => {})
+      return { freshVault, freshTokenStore, freshHumbleStore }
+    }
+
     it('vault disabled: installs the keyring stores exactly as today, and emits the keyring receipt line', () => {
+      const { freshVault, freshTokenStore, freshHumbleStore } = freshRegistry()
       const installDevSecretVaultSpy = jest
-        .spyOn(devSecretVaultModule, 'installDevSecretVault')
+        .spyOn(freshVault, 'installDevSecretVault')
         .mockReturnValue(false)
-      const setTokenStoreSpy = jest.spyOn(tokenStoreModule, 'setTokenStore')
+      const setTokenStoreSpy = jest.spyOn(freshTokenStore, 'setTokenStore')
       const installSidecarHumbleSecretStoreSpy = jest.spyOn(
-        humbleSecretStoreModule,
+        freshHumbleStore,
         'installSidecarHumbleSecretStore'
       )
 
       try {
-        const input = new PassThrough()
-        const output = new PassThrough()
-        init(input, output)
+        bootFresh({ reuseRegistry: true })
 
         expect(setTokenStoreSpy).toHaveBeenCalledTimes(1)
         expect(installSidecarHumbleSecretStoreSpy).toHaveBeenCalledTimes(1)
@@ -498,23 +522,22 @@ describe('devSecretVault', () => {
     })
 
     it('vault enabled: does not install the keyring stores or fire the Humble migration, and emits the dev-vault receipt line', () => {
+      const { freshVault, freshTokenStore, freshHumbleStore } = freshRegistry()
       const installDevSecretVaultSpy = jest
-        .spyOn(devSecretVaultModule, 'installDevSecretVault')
+        .spyOn(freshVault, 'installDevSecretVault')
         .mockReturnValue(true)
-      const setTokenStoreSpy = jest.spyOn(tokenStoreModule, 'setTokenStore')
+      const setTokenStoreSpy = jest.spyOn(freshTokenStore, 'setTokenStore')
       const installSidecarHumbleSecretStoreSpy = jest.spyOn(
-        humbleSecretStoreModule,
+        freshHumbleStore,
         'installSidecarHumbleSecretStore'
       )
       const migrateHumbleSecretsSpy = jest.spyOn(
-        humbleSecretStoreModule,
+        freshHumbleStore,
         'migrateHumbleSecrets'
       )
 
       try {
-        const input = new PassThrough()
-        const output = new PassThrough()
-        init(input, output)
+        bootFresh({ reuseRegistry: true })
 
         expect(setTokenStoreSpy).not.toHaveBeenCalled()
         expect(installSidecarHumbleSecretStoreSpy).not.toHaveBeenCalled()
