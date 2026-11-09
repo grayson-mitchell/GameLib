@@ -347,6 +347,7 @@ describe('Block A: env-simulating containment proof (34.2 gap cycle 2, plan 34.2
       let appFolder!: string
       let userDataPath!: string
       let fixesPath!: string
+      // no boot: loads one module fresh to read a path; never calls bootstrap.init
       jest.isolateModules(() => {
         /* eslint-disable @typescript-eslint/no-require-imports */
         const paths = require('../../constants/paths')
@@ -366,6 +367,7 @@ describe('Block A: env-simulating containment proof (34.2 gap cycle 2, plan 34.2
   it('REQ-34.2-07/-14: getLogFilePath({}) still resolves inside os.tmpdir()', () => {
     withAdversarialPlatformAndEnv(() => {
       let logPath!: string
+      // no boot: loads one module fresh to read a path; never calls bootstrap.init
       jest.isolateModules(() => {
         /* eslint-disable @typescript-eslint/no-require-imports */
         const { getLogFilePath } = require('backend/logger/paths')
