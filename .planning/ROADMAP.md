@@ -777,11 +777,83 @@ Plans:
 **Goal:** The frontend has one state system. The 2,259-line `GlobalState.tsx` class component (`extends PureComponent`, 78 `setState` calls), served through `ContextProvider`, is retired in favour of the zustand store in `src/frontend/state/GlobalStateV2.ts` (164 lines today), so a change in one domain no longer re-renders every context consumer. Measured 2026-11-06, excluding tests: 130 frontend files use `ContextProvider` and 20 use `GlobalStateV2`. Three parts: (1) **Slices.** Move state into V2 one domain at a time (library and game list, downloads and install queue, Steam / Epic / GOG / Amazon / Humble auth, settings and theme, UI and dialog state), each with selector hooks (`useShallow`) so components subscribe to what they read. (2) **Ratchet.** Track the remaining `ContextProvider` consumers with a shrink-only count like Phase 62's, ending at zero, then delete `GlobalState.tsx` and the context. (3) **Live checks.** State moves surface as stale-UI and re-render bugs that type checks and unit tests miss, so each wave ends with a smoke check in `pnpm tauri:dev` (Library, Game page, Downloads, sign-in and sign-out per store, ConsoleMode). Measure Library re-render cost on a large library before and after. No behaviour change: anything else found becomes a todo. Open questions for discuss-phase: whether V2 as it stands is the target or needs restructuring first (it already imports `frontend/helpers/electronStores`); where persisted frontend state lives relative to Phase 68's versioned stores; and the order relative to Phase 64, which adds custom-theme state. Depends on Phase 62 because plans 62-17 to 62-19 convert runner checks in the same Library, Game, ConsoleMode and DownloadManager files. Came from the post-Phase-62 architecture review on 2026-11-06.
 **Requirements**: TBD
 **Depends on:** Phase 62
-**Plans:** 0 plans
+**Plans:** 26 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 69 to break down)
+**Wave 1**
+
+- [ ] 69-01-PLAN.md — Store kit (subscribeWithSelector hooks, reset registry), node-env store-hook test helper, once-guarded boot module wired into index.tsx
+- [ ] 69-03-PLAN.md — D-14 re-render harness: route decision, package legitimacy checkpoint, jsdom Profiler scenario
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 69-02-PLAN.md — D-12 ContextProvider-import ratchet (AST, area shards, CI/pre-push wiring) + frontend jestMock re-shard
+- [ ] 69-04-PLAN.md — D-14 baseline captured before any slice moves
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 69-05-PLAN.md — GlobalStateV2 renamed to uiState on the store kit; importers repointed
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 69-06-PLAN.md — UI/dialog slice moved behind the bridge; listeners at boot
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 69-07-PLAN.md — Convert 35 Settings components to uiState
+- [ ] 69-08-PLAN.md — Convert UI-only screen consumers (sections, WineManager, Game, Console, Login Runner)
+- [ ] 69-09-PLAN.md — Convert shared UI components, DialogHandler and hooks to uiState
+- [ ] 69-10-PLAN.md — Settings/theme slice into settingsState (D-08 subscriptions, zoom/focusRow boot)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 69-11-PLAN.md — Convert settings-slice consumers incl. App.tsx
+- [ ] 69-12-PLAN.md — Downloads store + D-15 downloads-history fix (diagnose, then fix)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 69-13-PLAN.md — Auth state (identities, Humble, sign-in notices) into authState
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 69-14-PLAN.md — Auth login/logout actions into authState; libraryState skeleton with bridge slots
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 69-15-PLAN.md — Convert auth-only consumers
+- [ ] 69-16-PLAN.md — Library collections + per-game display data into libraryState
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 69-17-PLAN.md — Library arrays, loaders, game push and refresh() into libraryState
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 69-18-PLAN.md — refreshLibrary and Steam sync state into libraryState; slots retired
+
+**Wave 12** *(blocked on Wave 11 completion)*
+
+- [ ] 69-19-PLAN.md — libraryStatus/handleGameStatus + sleep-assertion subscriber; composite hooks; GlobalState becomes a pure bridge
+
+**Wave 13** *(blocked on Wave 12 completion)*
+
+- [ ] 69-20-PLAN.md — Convert Library screen consumers
+- [ ] 69-21-PLAN.md — Convert install/game/downloads/console consumers and hasStatus
+- [ ] 69-22-PLAN.md — Convert remaining shared UI and NavShell consumers
+- [ ] 69-23-PLAN.md — Convert Settings remainder, Login, WebView, Humble, StoreSearch, Discounts
+
+**Wave 14** *(blocked on Wave 13 completion)*
+
+- [ ] 69-24-PLAN.md — Delete GlobalState, ContextProvider, bridge and ratchet; runPostMountBoot via BootSequence; harness seam
+
+**Wave 15** *(blocked on Wave 14 completion)*
+
+- [ ] 69-25-PLAN.md — D-14 final measurement and comparison
+
+**Wave 16** *(blocked on Wave 15 completion)*
+
+- [ ] 69-26-PLAN.md — D-16 blocking live gate (69-UAT.md, frameless ON/OFF); close D-15 todo
 
 ### Phase 70: Split GameInfo into shared and per-store shapes
 
