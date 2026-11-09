@@ -5,8 +5,8 @@ import type { Mutate, StoreApi, UseBoundStore } from 'zustand'
  * Shared helper for the Phase 69 domain stores (D-01, D-08, D-11).
  *
  * Each store is built with `create<S>()(subscribeWithSelector(...))` and then
- * wrapped with {@link bindStoreHooks}, which generalises GlobalStateV2's
- * selector hook. Unlike GlobalStateV2's default export (an object spread, so
+ * wrapped with {@link bindStoreHooks}, which generalises the pre-Phase-69 UI store's
+ * selector hook. Unlike that store's default export (an object spread, so
  * not callable), the result here IS callable.
  *
  * Persistence middleware is not used anywhere (D-02).

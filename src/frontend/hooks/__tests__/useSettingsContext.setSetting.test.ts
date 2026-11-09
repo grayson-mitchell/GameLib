@@ -1,4 +1,4 @@
-jest.mock('frontend/state/GlobalStateV2', () => ({
+jest.mock('frontend/state/uiState', () => ({
   __esModule: true,
   default: { keys: () => ({ settingsModalProps: { isOpen: false } }) }
 }))

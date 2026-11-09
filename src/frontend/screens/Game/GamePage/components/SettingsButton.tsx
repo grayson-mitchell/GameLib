@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { GameInfo } from 'common/types'
 import { SvgButton } from 'frontend/components/UI'
 import SettingsIcoAlt from 'frontend/assets/settings_icon_alt.svg?react'
-import useGlobalState from 'frontend/state/GlobalStateV2'
+import useUiState from 'frontend/state/uiState'
 
 interface Props {
   gameInfo: GameInfo
@@ -12,7 +12,7 @@ interface Props {
 // Visibility mirrors the library card's showSettingsButton:
 // installed && !uninstalling && !Browser game (every runner, Steam included).
 const SettingsButton = ({ gameInfo, isUninstalling = false }: Props) => {
-  const { openGameSettingsModal } = useGlobalState.keys('openGameSettingsModal')
+  const { openGameSettingsModal } = useUiState.keys('openGameSettingsModal')
   const { t } = useTranslation()
 
   if (

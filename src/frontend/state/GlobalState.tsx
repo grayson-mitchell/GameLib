@@ -60,7 +60,7 @@ import {
 import { collectSignInInputs } from '../helpers/signInInputs'
 import { resyncSignInIdentity } from '../helpers/signInIdentityResync'
 import { createConnectivitySync } from '../helpers/connectivitySync'
-import useGlobalState from './GlobalStateV2'
+import useUiState from './uiState'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
@@ -235,7 +235,7 @@ import { attachGameOverrides } from '../helpers/gameOverrides'
 
 type GameOverride = NonNullable<GameInfo['overrides']>
 
-const currentOverrides = () => useGlobalState.getState().gameOverrides
+const currentOverrides = () => useUiState.getState().gameOverrides
 
 const applyGameOverrides = (
   lib: GameInfo[],
@@ -1209,7 +1209,7 @@ class GlobalState extends PureComponent<Props> {
   }
 
   updateGameOverrides = (overrides: Record<string, GameOverride>) => {
-    useGlobalState.getState().setGameOverrides(overrides)
+    useUiState.getState().setGameOverrides(overrides)
     this.setState({
       epic: {
         ...this.state.epic,
@@ -1738,14 +1738,14 @@ class GlobalState extends PureComponent<Props> {
     // manual "Refresh Library") gets a badge/filter signal without a
     // restart. This listener needed no change to pick that up.
     window.api.handleCrossoverIndexChanged((e, index) => {
-      useGlobalState.getState().setCrossoverRatings(index)
+      useUiState.getState().setCrossoverRatings(index)
     })
 
     // One-time pull on mount so the grid paints on first load without
     // waiting for the next background refresh's push.
     window.api
       .getCrossoverIndex()
-      .then((index) => useGlobalState.getState().setCrossoverRatings(index))
+      .then((index) => useUiState.getState().setCrossoverRatings(index))
       .catch((error) =>
         window.api.logError(`CrossOver index pull failed: ${String(error)}`)
       )
@@ -1753,11 +1753,11 @@ class GlobalState extends PureComponent<Props> {
     // Quick 261029-mkz: "Runs for me" override map -- push on every change,
     // plus a one-time pull so the first paint has it.
     window.api.handleRunsForMeChanged((e, map) => {
-      useGlobalState.getState().setRunsForMe(map)
+      useUiState.getState().setRunsForMe(map)
     })
     window.api
       .getRunsForMeMap()
-      .then((map) => useGlobalState.getState().setRunsForMe(map))
+      .then((map) => useUiState.getState().setRunsForMe(map))
       .catch((error) =>
         window.api.logError(`Runs-for-me pull failed: ${String(error)}`)
       )

@@ -18,7 +18,7 @@ import {
   openSteamInstallOptions
 } from 'frontend/state/InstallGameModal'
 import { showSteamSubMenuInstallOptions } from 'frontend/helpers/steamInstallOptionsEntry'
-import useGlobalState from 'frontend/state/GlobalStateV2'
+import useUiState from 'frontend/state/uiState'
 import EditGameDialog from 'frontend/components/UI/EditGameDialog'
 import { reportRepairFailure } from './repairFailure'
 import { toggleShortcuts } from './shortcutsToggle'
@@ -82,9 +82,7 @@ export default function GamesSubmenu({
   const { refresh, platform, libraryStatus, showDialogModal } =
     useContext(ContextProvider)
   const openDialog = useOpenDialog()
-  const { openGameCategoriesModal } = useGlobalState.keys(
-    'openGameCategoriesModal'
-  )
+  const { openGameCategoriesModal } = useUiState.keys('openGameCategoriesModal')
   const { is, gameSettings } = useContext(GameContext)
   const isWin = platform === 'win32'
   const isLinux = platform === 'linux'

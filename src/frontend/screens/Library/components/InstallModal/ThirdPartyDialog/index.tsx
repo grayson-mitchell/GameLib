@@ -15,7 +15,7 @@ import {
 import { install, writeConfig } from 'frontend/helpers'
 import { hasAnticheatInfo } from 'frontend/hooks/hasAnticheatInfo'
 import ContextProvider from 'frontend/state/ContextProvider'
-import useGlobalState from 'frontend/state/GlobalStateV2'
+import useUiState from 'frontend/state/uiState'
 import {
   crossoverRiskDialogOptions,
   resolveCrossoverInstallRisk
@@ -63,7 +63,7 @@ export default function ThirdPartyDialog({
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
   const { platform, showDialogModal } = useContext(ContextProvider)
-  const { crossoverRatings, runsForMe } = useGlobalState.keys(
+  const { crossoverRatings, runsForMe } = useUiState.keys(
     'crossoverRatings',
     'runsForMe'
   )

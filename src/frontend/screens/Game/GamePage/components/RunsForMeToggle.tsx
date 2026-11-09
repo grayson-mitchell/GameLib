@@ -1,7 +1,7 @@
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import ContextProvider from 'frontend/state/ContextProvider'
-import useGlobalState from 'frontend/state/GlobalStateV2'
+import useUiState from 'frontend/state/uiState'
 import ToggleSwitch from 'frontend/components/UI/ToggleSwitch'
 import { runsForMeKey, isRunsForMeOn } from 'common/runsForMe'
 import type { GameInfo } from 'common/types'
@@ -19,7 +19,7 @@ interface Props {
 const RunsForMeToggle = ({ gameInfo }: Props) => {
   const { t: tGamelib } = useTranslation('gamelib')
   const { platform } = useContext(ContextProvider)
-  const { runsForMe } = useGlobalState.keys('runsForMe')
+  const { runsForMe } = useUiState.keys('runsForMe')
 
   if (platform !== 'darwin' || gameInfo.is_mac_native === true) {
     return null
@@ -44,7 +44,7 @@ const RunsForMeToggle = ({ gameInfo }: Props) => {
               runner: gameInfo.runner,
               on: event.target.checked
             })
-            .then((map) => useGlobalState.getState().setRunsForMe(map))
+            .then((map) => useUiState.getState().setRunsForMe(map))
             .catch((error) =>
               window.api.logError(`setRunsForMe failed: ${String(error)}`)
             )

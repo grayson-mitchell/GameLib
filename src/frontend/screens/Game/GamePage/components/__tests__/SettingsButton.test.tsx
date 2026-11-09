@@ -8,7 +8,7 @@ import { GameInfo, Runner } from 'common/types'
 
 const mockOpen = jest.fn()
 
-jest.mock('frontend/state/GlobalStateV2', () => ({
+jest.mock('frontend/state/uiState', () => ({
   __esModule: true,
   default: { keys: () => ({ openGameSettingsModal: mockOpen }) }
 }))

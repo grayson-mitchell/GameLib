@@ -9,7 +9,7 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import { GameInfo } from 'common/types'
 import { openDiscordLink } from 'frontend/helpers'
 import { faDiscord } from '@fortawesome/free-brands-svg-icons'
-import useGlobalState from 'frontend/state/GlobalStateV2'
+import useUiState from 'frontend/state/uiState'
 import Upload from '@mui/icons-material/Upload'
 import Cloud from '@mui/icons-material/Cloud'
 import classNames from 'classnames'
@@ -71,7 +71,7 @@ const LogBox: React.FC<LogBoxProps> = ({ logFileContent }) => {
 export default function LogSettings() {
   const { t } = useTranslation()
   const { appName, runner } = useContext(SettingsContext)
-  const { setUploadLogFileProps } = useGlobalState.keys('setUploadLogFileProps')
+  const { setUploadLogFileProps } = useUiState.keys('setUploadLogFileProps')
   const isInSettingsMenu = appName === 'default'
 
   const [logFileContent, setLogFileContent] = useState<string>('')
@@ -274,7 +274,7 @@ export default function LogSettings() {
           <>
             <a
               onClick={() =>
-                useGlobalState.setState({ showUploadedLogFileList: true })
+                useUiState.setState({ showUploadedLogFileList: true })
               }
               title={t('setting.log.show-uploads', 'Show uploaded log files')}
               className="button is-footer"

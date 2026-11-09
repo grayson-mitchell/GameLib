@@ -262,7 +262,6 @@
     "src/frontend/state/ContextProvider.tsx",
     "src/frontend/state/EngineState.ts",
     "src/frontend/state/GlobalState.tsx",
-    "src/frontend/state/GlobalStateV2.ts",
     "src/frontend/state/InstallGameModal.ts",
     "src/frontend/state/SteamBottleSetup.ts",
     "src/frontend/state/SteamBridgeInvite.ts",
@@ -274,6 +273,7 @@
     "src/frontend/state/SteamSignOut.ts",
     "src/frontend/state/dialogQueue.ts",
     "src/frontend/state/savedZoomBoot.ts",
+    "src/frontend/state/uiState.ts",
     "src/frontend/types.ts"
   ],
   "excluded": {

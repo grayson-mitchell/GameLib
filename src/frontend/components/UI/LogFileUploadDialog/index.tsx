@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { CircularProgress } from '@mui/material'
 
 import { Dialog, DialogContent, DialogFooter, DialogHeader } from '../Dialog'
-import useGlobalState from 'frontend/state/GlobalStateV2'
+import useUiState from 'frontend/state/uiState'
 
 export default function LogUploadDialog() {
   const { t } = useTranslation()
-  const { uploadLogFileProps, setUploadLogFileProps } = useGlobalState.keys(
+  const { uploadLogFileProps, setUploadLogFileProps } = useUiState.keys(
     'uploadLogFileProps',
     'setUploadLogFileProps'
   )

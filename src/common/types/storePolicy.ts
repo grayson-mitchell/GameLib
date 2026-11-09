@@ -381,7 +381,7 @@ export function filterStoreSnapshot(
  * `storePolicy.test.ts`'s totality/disjointness assertions, NOT a runtime computation.
  *
  * D-13: the boot set includes the 11 typed stores that `GlobalState.tsx`'s constructor
- * / `GlobalStateV2.ts`'s zustand initializer read SYNCHRONOUSLY, BEFORE React mounts
+ * / `uiState.ts`'s zustand initializer read SYNCHRONOUSLY, BEFORE React mounts
  * (29-RESEARCH.md Finding 1), plus the four cache-store names that are also read
  * synchronously at that same boot point even though they are not `ValidStoreName`s.
  */

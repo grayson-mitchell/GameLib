@@ -214,7 +214,7 @@ function evaluate(merged, current) {
     const b = merged[file]
     if (b === undefined)
       failures.push(
-        `new violation: ${file} has ${n} ContextProvider import(s) and no baseline entry; use GlobalStateV2 instead`
+        `new violation: ${file} has ${n} ContextProvider import(s) and no baseline entry; use uiState (or another domain store) instead`
       )
     else if (n > b) failures.push(`grew: ${file} ${n} > baseline ${b}`)
     else if (n < b)

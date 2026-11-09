@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useState, useEffect, useContext, useRef } from 'react'
 import ContextProvider from 'frontend/state/ContextProvider'
 
-import useGlobalState from 'frontend/state/GlobalStateV2'
+import useUiState from 'frontend/state/uiState'
 
 type Props = {
   appName: string
@@ -93,7 +93,7 @@ const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
   const [reloadToken, setReloadToken] = useState(0)
   const { i18n } = useTranslation()
   const { platform } = useContext(ContextProvider)
-  const { settingsModalProps } = useGlobalState.keys('settingsModalProps')
+  const { settingsModalProps } = useUiState.keys('settingsModalProps')
 
   const isDefault = appName === 'default'
   const isLinux = platform === 'linux'

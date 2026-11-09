@@ -16,7 +16,7 @@ interface RedeemOutcomeCopy {
 }
 
 // Phase 34.8-07 (REQ-34.8-12/-13): routed through an injected TFunction
-// rather than GlobalStateV2.ts's module-scope-import idiom — this module is
+// rather than uiState.ts's module-scope-import idiom — this module is
 // called during render/event handling, so it needs the calling component's
 // Suspense-resolved `t`, not a module-scope binding that races i18next
 // initialisation. Mirrors repairFailure.ts's injected-TFunction idiom,

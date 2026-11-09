@@ -11,7 +11,7 @@ import SvgButton from 'frontend/components/UI/SvgButton'
 
 import useUploadedLogFiles from 'frontend/state/UploadedLogFiles'
 import type { UploadedLogData } from 'common/types'
-import useGlobalState from 'frontend/state/GlobalStateV2'
+import useUiState from 'frontend/state/uiState'
 
 import './index.css'
 
@@ -68,9 +68,7 @@ const UploadedLogFileItem = memo(function UploadedLogFileItem(
 })
 
 export default function UploadedLogFilesList() {
-  const { showUploadedLogFileList } = useGlobalState.keys(
-    'showUploadedLogFileList'
-  )
+  const { showUploadedLogFileList } = useUiState.keys('showUploadedLogFileList')
   const uploadedLogFiles = useUploadedLogFiles()
   const { t } = useTranslation()
 
@@ -87,9 +85,7 @@ export default function UploadedLogFilesList() {
 
   return (
     <Dialog
-      onClose={() =>
-        useGlobalState.setState({ showUploadedLogFileList: false })
-      }
+      onClose={() => useUiState.setState({ showUploadedLogFileList: false })}
       showCloseButton={true}
     >
       <DialogHeader>

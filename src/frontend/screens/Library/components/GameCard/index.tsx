@@ -39,7 +39,7 @@ import { hasStatus } from 'frontend/hooks/hasStatus'
 import fallBackImage from 'frontend/assets/gamelib_card.svg?url'
 import fallBackImageMissing from 'frontend/assets/gamelib_card_missing.svg?url'
 import LibraryContext from '../../LibraryContext'
-import useGlobalState from 'frontend/state/GlobalStateV2'
+import useUiState from 'frontend/state/uiState'
 import {
   Cancel,
   DeleteForever,
@@ -133,7 +133,7 @@ const GameCard = ({
     openGameCategoriesModal,
     crossoverRatings,
     runsForMe
-  } = useGlobalState.keys(
+  } = useUiState.keys(
     'openGameSettingsModal',
     'openGameLogsModal',
     'openGameCategoriesModal',

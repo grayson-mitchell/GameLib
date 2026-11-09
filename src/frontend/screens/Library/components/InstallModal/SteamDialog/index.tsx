@@ -88,7 +88,7 @@ import {
 } from '../crossoverInstallRisk'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { isRunsForMeOn, runsForMeKey } from 'common/runsForMe'
-import useGlobalState from 'frontend/state/GlobalStateV2'
+import useUiState from 'frontend/state/uiState'
 
 interface Props {
   backdropClick: () => void
@@ -232,7 +232,7 @@ export default function SteamDialog({
     backdropClick()
     navigate(buildLoginOpenPath('steam'))
   }, [backdropClick, navigate])
-  const { crossoverRatings, runsForMe } = useGlobalState.keys(
+  const { crossoverRatings, runsForMe } = useUiState.keys(
     'crossoverRatings',
     'runsForMe'
   )

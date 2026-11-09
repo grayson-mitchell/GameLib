@@ -24,14 +24,14 @@
  * attempted (success OR failure), an empty config no longer withholds
  * `contextValues` forever.
  */
-// `useSettingsContext.ts` transitively imports `frontend/state/GlobalStateV2`
+// `useSettingsContext.ts` transitively imports `frontend/state/uiState`
 // -> `frontend/helpers` -> `preload/tauriAttach`, which touches `window` at
 // MODULE LOAD time (`typeof window.api !== 'undefined'`) — not inside a hook
 // body. This jsdom-less env (see file docstring) has no `window` global, so
 // these two modules are stubbed purely to let `shouldWithholdContext` (a
 // side-effect-free, non-hook export) be imported and exercised directly,
 // mirroring `hasStatus.reconcile.test.ts`'s own pattern in this directory.
-jest.mock('frontend/state/GlobalStateV2', () => ({
+jest.mock('frontend/state/uiState', () => ({
   __esModule: true,
   default: { keys: () => ({ settingsModalProps: { isOpen: false } }) }
 }))

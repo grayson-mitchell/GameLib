@@ -13,7 +13,7 @@ import { WineVersionInfo, Type, WineManagerUISettings } from 'common/types'
 import SearchBar from 'frontend/components/UI/SearchBar'
 import WineManagerSettingsModal from './components/WineManagerSettingsModal'
 import classNames from 'classnames'
-import useGlobalState from 'frontend/state/GlobalStateV2'
+import useUiState from 'frontend/state/uiState'
 
 const WineItem = lazy(
   async () => import('frontend/screens/WineManager/components/WineItem')
@@ -24,7 +24,7 @@ export default function WineManager(): JSX.Element | null {
 
   const { platform } = useContext(ContextProvider)
   const isLinux = platform === 'linux'
-  const { refreshingWineVersions, refreshWineVersions } = useGlobalState.keys(
+  const { refreshingWineVersions, refreshWineVersions } = useUiState.keys(
     'refreshingWineVersions',
     'refreshWineVersions'
   )

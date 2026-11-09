@@ -90,7 +90,7 @@ import {
 } from 'frontend/state/InstallGameModal'
 import useSettingsContext from 'frontend/hooks/useSettingsContext'
 import SettingsContext from 'frontend/screens/Settings/SettingsContext'
-import useGlobalState from 'frontend/state/GlobalStateV2'
+import useUiState from 'frontend/state/uiState'
 import Achievements from './components/Achievements'
 import { LaunchOptionSelector } from 'frontend/screens/Settings/components'
 import {
@@ -122,7 +122,7 @@ export default React.memo(function GamePage(): JSX.Element | null {
     connectivity
   } = useContext(ContextProvider)
 
-  const { settingsModalProps } = useGlobalState.keys('settingsModalProps')
+  const { settingsModalProps } = useUiState.keys('settingsModalProps')
 
   const [gameInfo, setGameInfo] = useState(locationGameInfo)
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null)

@@ -99,7 +99,7 @@ describe('countContextImports', () => {
     ],
     [
       'other module',
-      "import C from 'frontend/state/GlobalStateV2'",
+      "import C from 'frontend/state/uiState'",
       'src/frontend/a.ts',
       0
     ],
