@@ -3,6 +3,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   writeFileSync
 } from 'fs'
@@ -47,6 +48,8 @@ import type { EngineSwitchDeps } from '../engineSwitch'
 import { __resetBottleLedgerForTests, markGameRunning } from '../bottleLedger'
 import type { EngineSelection } from '../engineTypes'
 import { defined } from './defined'
+import { __resetStoreState } from 'backend/storeVersioning/engine'
+import { __resetReadOnlyForTest } from 'backend/storeVersioning/readOnlyStores'
 
 const BIN_DIR =
   '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
@@ -87,6 +90,8 @@ const seedMarker = (m: object) =>
   writeFileSync(join(dir, ENGINE_MARKER_FILE), JSON.stringify(m))
 
 beforeEach(() => {
+  __resetStoreState()
+  __resetReadOnlyForTest()
   mockState.engines = '/tools/steam-engines'
   mockState.root = mkdtempSync(join(tmpdir(), 'gamelib-switch-'))
   dir = join(mockState.root, NAME)
@@ -145,7 +150,8 @@ describe('prepareBottleForEngine', () => {
       kind: 'pinned',
       id: 'wine-staging-11.20',
       wineserverBin: PIN_WS,
-      dxvk: { dir: '/tools/steam-engines/dxvk', version: 'v1' }
+      dxvk: { dir: '/tools/steam-engines/dxvk', version: 'v1' },
+      version: 1
     })
   })
 
@@ -658,7 +664,8 @@ describe('prepareBottleForEngine ordered restore (CR-03, WR-05)', () => {
       kind: 'pinned',
       id: 'wine-staging-11.20',
       wineserverBin: PIN_WS,
-      dxvk: 'failed'
+      dxvk: 'failed',
+      version: 1
     })
   })
 
@@ -991,5 +998,117 @@ describe('prepareBottleForEngine D-16 bottle-busy', () => {
         deps: {}
       })
     expect(typeof call).toBe('function')
+  })
+})
+
+describe('marker versioning (261109-w52)', () => {
+  const file = () => join(dir, ENGINE_MARKER_FILE)
+  const bytes = () => readFileSync(file())
+  const dxvkFile = () => join(dir, 'current_dxvk-macOS')
+  const legacyPinned = (extra: object = {}) => ({
+    kind: 'pinned',
+    id: 'wine-staging-11.20',
+    wineserverBin: PIN_WS,
+    ...extra
+  })
+  const newer = (extra: object = {}) => ({
+    version: 2,
+    ...legacyPinned({
+      dxvk: { dir: '/tools/steam-engines/dxvk', version: 'v1' }
+    }),
+    ...extra
+  })
+  let stderr: jest.SpyInstance
+  beforeEach(() => {
+    stderr = jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
+  })
+  afterEach(() => stderr.mockRestore())
+
+  const expectNoSideEffects = () => {
+    expect(deps.killWith).not.toHaveBeenCalled()
+    expect(deps.installRemove).not.toHaveBeenCalled()
+    expect(deps.ensurePinEngine).not.toHaveBeenCalled()
+  }
+
+  test('legacy pinned marker restores DXVK from the recorded dir and stamps version 1', async () => {
+    seedMarker(
+      legacyPinned({
+        dxvk: { dir: '/tools/steam-engines/dxvk', version: 'v1' }
+      })
+    )
+    writeFileSync(dxvkFile(), 'v1')
+    ;(deps.installRemove as jest.Mock).mockImplementation(async () => {
+      rmSync(dxvkFile(), { force: true })
+      return true
+    })
+    expect(await run(crossover)).toEqual({ ok: true, changed: true })
+    expect(deps.installRemove).toHaveBeenCalledWith(
+      expect.anything(),
+      'dxvk',
+      'restore',
+      expect.anything()
+    )
+    expect(marker()).toMatchObject({ kind: 'crossover', version: 1 })
+  })
+
+  test('legacy marker + same engine is a no-op: no restamp, no extra files', async () => {
+    seedMarker(legacyPinned())
+    const before = bytes()
+    expect(await run(pinned)).toEqual({ ok: true, changed: false })
+    expect(bytes().equals(before)).toBe(true)
+    expect(readdirSync(dir)).toEqual([ENGINE_MARKER_FILE])
+  })
+
+  test('legacy marker read-only accessors are unchanged', () => {
+    seedMarker(legacyPinned())
+    expect(readBottleEngineMarkerKind(NAME)).toBe('non-crossover')
+    expect(bytes().toString()).toBe(JSON.stringify(legacyPinned()))
+  })
+
+  test('newer marker + same engine proceeds with no write', async () => {
+    seedMarker(newer())
+    const before = bytes()
+    expect(await run(pinned)).toEqual({ ok: true, changed: false })
+    expect(bytes().equals(before)).toBe(true)
+    expectNoSideEffects()
+  })
+
+  test('newer marker + switch to crossover is refused before any kill or DXVK step', async () => {
+    seedMarker(newer())
+    const before = bytes()
+    const onSwitching = jest.fn()
+    const res = await prepareBottleForEngine({
+      key: '620',
+      bottleName: NAME,
+      next: crossover,
+      deps,
+      onSwitching
+    })
+    expect(res).toMatchObject({ ok: false, reason: 'marker-newer' })
+    expectNoSideEffects()
+    expect(onSwitching).not.toHaveBeenCalled()
+    expect(bytes().equals(before)).toBe(true)
+    expect(readdirSync(dir)).toEqual([ENGINE_MARKER_FILE])
+  })
+
+  test('newer marker with dxvk failed + same pinned selection is refused', async () => {
+    seedMarker(newer({ dxvk: 'failed' }))
+    const before = bytes()
+    expect(await run(pinned)).toMatchObject({
+      ok: false,
+      reason: 'marker-newer'
+    })
+    expect(deps.installRemove).not.toHaveBeenCalled()
+    expect(bytes().equals(before)).toBe(true)
+  })
+
+  test('newer marker in an unrecognised shape refuses every selection and is never inferred over', async () => {
+    seedMarker({ version: 2, engine: { name: 'x' } })
+    const before = bytes()
+    expect(await run(crossover)).toMatchObject({ reason: 'marker-newer' })
+    expect(await run(pinned)).toMatchObject({ reason: 'marker-newer' })
+    expectNoSideEffects()
+    expect(bytes().equals(before)).toBe(true)
+    expect(readBottleEngineMarkerKind(NAME)).toBeNull()
   })
 })

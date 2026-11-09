@@ -4,7 +4,8 @@
  * Two engines must never share a live wineserver for one prefix, and DXVK must match the engine
  * that is about to run: installed for a non-CrossOver engine, removed before CrossOver runs (a
  * CrossOver bottle carries its own graphics stack). The engine that last prepared a bottle is
- * recorded in `<bottle>/.gamelib-engine.json`.
+ * recorded in `<bottle>/.gamelib-engine.json`, versioned by the Phase 68 store engine (quick
+ * 261109-w52); a marker written by a newer build is never overwritten.
  *
  * Nothing runs at import and there are no timers (sidecar exit contract).
  */
@@ -31,8 +32,16 @@ import {
   pinnedEngineRoot
 } from './fallbackEngine'
 import type { EngineSelection, NonCrossoverEngine } from './engineTypes'
+import {
+  engineMarkerVersion,
+  ensureEngineMarkerMigrated,
+  isEngineMarkerReadOnly
+} from 'backend/storeVersioning/engineMarkerFile'
 
 export const ENGINE_MARKER_FILE = '.gamelib-engine.json'
+
+const markerPath = (bottleDir: string): string =>
+  join(bottleDir, ENGINE_MARKER_FILE)
 
 const DXVK_VERSION_FILE = 'current_dxvk-macOS'
 const KILL_TIMEOUT_MS = 15_000
@@ -78,6 +87,8 @@ export type PrepareResult =
         | 'invalid-bottle'
         | 'shared-bottle'
         | 'bottle-busy'
+        // the bottle's marker was written by a newer GameLib build (quick 261109-w52)
+        | 'marker-newer'
       detail: string
     }
 
@@ -213,8 +224,9 @@ export function restoreNeedsAbsentPin(bottleName: string): boolean {
 
 function readMarker(bottleDir: string): EngineMarker | null {
   try {
+    ensureEngineMarkerMigrated(markerPath(bottleDir))
     const raw = JSON.parse(
-      readFileSync(join(bottleDir, ENGINE_MARKER_FILE), 'utf8')
+      readFileSync(markerPath(bottleDir), 'utf8')
     ) as Partial<EngineMarker>
     const kinds: MarkerKind[] = ['crossover', 'pinned', 'wine-manager']
     if (
@@ -255,8 +267,20 @@ function readMarker(bottleDir: string): EngineMarker | null {
 function writeMarker(bottleDir: string, marker: EngineMarker): void {
   const tmp = join(bottleDir, `${ENGINE_MARKER_FILE}.tmp-${process.pid}`)
   try {
-    writeFileSync(tmp, JSON.stringify(marker), { mode: 0o644 })
-    renameSync(tmp, join(bottleDir, ENGINE_MARKER_FILE))
+    ensureEngineMarkerMigrated(markerPath(bottleDir))
+    if (isEngineMarkerReadOnly(markerPath(bottleDir))) {
+      logWarning(
+        'engine marker is from a newer GameLib build; not overwriting it',
+        LogPrefix.Backend
+      )
+      return
+    }
+    writeFileSync(
+      tmp,
+      JSON.stringify({ ...marker, version: engineMarkerVersion() }),
+      { mode: 0o644 }
+    )
+    renameSync(tmp, markerPath(bottleDir))
   } catch (err) {
     rmSync(tmp, { force: true })
     logWarning(['engine marker write failed', err], LogPrefix.Backend)
@@ -503,6 +527,27 @@ async function prepareBottleForEngineBody(
   }
 
   const marker = readMarker(bottleDir)
+  // Quick 261109-w52: a marker from a newer build is never inferred over or overwritten
+  // (inferMarker would guess prev without the recorded DXVK dir, and the final write would
+  // replace the only record). Same-engine launches proceed; every real change is refused.
+  if (isEngineMarkerReadOnly(markerPath(bottleDir))) {
+    if (
+      marker &&
+      identityOf(marker) === identityOf(markerFor(next)) &&
+      !(marker.dxvk === 'failed' && next.kind !== 'crossover' && next.dxvk)
+    ) {
+      return { ok: true, changed: false }
+    }
+    logWarning(
+      `engine marker for "${bottleName}" is from a newer GameLib build; refusing engine change`,
+      LogPrefix.Backend
+    )
+    return {
+      ok: false,
+      reason: 'marker-newer',
+      detail: `bottle "${bottleName}" engine marker was written by a newer GameLib build`
+    }
+  }
   const prev = marker ?? inferMarker(bottleDir, deps)
   const nextMarker = markerFor(next)
   if (identityOf(prev) === identityOf(nextMarker)) {
