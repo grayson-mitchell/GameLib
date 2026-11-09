@@ -13,6 +13,9 @@ files:
 
 Severity is `critical` because data was lost: under the triage vocabulary, data loss is critical.
 
+**Scheduled:** the operator has made this the next work item once phase 73 is done
+(decision of 2026-11-09). The severity stays `critical`.
+
 ## What happened (73-18 live gate, 2026-11-09, Rust pipeline default)
 
 1. Project Zomboid (108600) was mid-install in GameLib when GameLib was Force Quit (UAT item 9).

@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: Executing phase 73
-stopped_at: 73-18 Task 2 checkpoint (CI legs, awaiting operator push)
+stopped_at: 73-18 Task 2 blocked, rust-test.yml red on macOS (clippy) and Windows (gamelib-depot tests)
 last_updated: "2026-11-09T08:22:00.000Z"
 last_activity: 2026-11-09
 progress:
@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
-Plan: 17 of 21 complete (73-01..73-17); 73-18 in progress: live UAT done (8 pass, item 9 issue: sidecar orphan after Force Quit), CI legs await push
+Plan: 17 of 21 complete (73-01..73-17); 73-18 blocked: live UAT done (8 pass, item 9 accepted), CI run 42596120066 red (Windows gamelib-depot download tests, macOS clippy needless_range_loop from 71-20); delete gate not met
 Status: Executing phase 73
 Last activity: 2026-11-09 - Completed quick task 261109-vdw: split single_instance.rs and tray.rs below module size target
 

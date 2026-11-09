@@ -190,3 +190,28 @@ Explained deviation: Task 3's automated verify (`exit code: 0`) cannot pass beca
 - Item 9 is an issue: after a Force Quit the sidecar logged stdin EOF but stayed alive with ppid 1 and open TCP sockets. The Rust downloads stopped with the shell, so depot correctness was unaffected. See todo `2026-11-09-sidecar-orphaned-after-tauri-dev-ctrl-c.md`.
 - New TS-layer defect found during the run: cancelling a stale persisted Steam queue head deleted a complete install. See todo `2026-11-09-stale-steam-queue-head-cancel-deletes-complete-install.md`.
 - Whether the gate accepts item 9 is the operator's decision, recorded with the delete gate below.
+- Operator decision (2026-11-09): item 9 is **accepted** for the delete gate. It is a pre-existing sidecar exit-contract defect, tracked in todo `2026-11-09-sidecar-orphaned-after-tauri-dev-ctrl-c.md`, and it does not block 73-20 because the Rust pipeline stopped all writes at the Force Quit. The data-loss todo stays `critical` and is scheduled as the first work item after phase 73.
+
+## Pre-push gates left red by earlier phase-73 plans
+
+The first push of the phase-73 commits was blocked twice by the pre-push hook. The orchestrator cleared it in two commits:
+- `2bb87b6e4`: three `noUncheckedIndexedAccess` errors in `meta/depotParitySweep.ts` (73-15) failed the meta-scope codecheck.
+- `9c1b6773a`: knip find-deadcode reported 13 new dead exports: `depotParitySweep` internals, the depotRust types `RustDepotSummary`/`RustHostStat`/`RustJobLimits`/`RustPlannedDepot`, and `plan.ts` `fetchDepotKey`. These were un-exported. The same commit fixed a `no-unsafe-optional-chaining` error in `readOnlyStores.test.ts`, which came from 68-06 and is not phase-73 work.
+
+Earlier plans' `<verify>` steps never ran the meta-scope codecheck or find-deadcode, so both gates sat red until the push.
+
+## CI legs (plan 73-18 Task 2): RED
+
+Run: https://github.com/grayson-mitchell/GameLib/actions/runs/42596120066 (`rust-test.yml`, push to `main`, head `5eb2d54f6`). That head is `9c1b6773a` plus three later quick-261109-vdw refactor commits (tray.rs, single_instance.rs). The push landed together, so no run exists for `9c1b6773a` alone.
+
+| Leg | Conclusion | Depot steps | Failing step |
+| --- | ---------- | ----------- | ------------ |
+| ubuntu-latest | success | `cargo test` (gamelib-scan, gamelib-depot) ok; static codec linkage ok; shell `cargo test` ok | none |
+| macos-latest | failure | `cargo test` ok; static codec linkage ok; shell `cargo test` ok | clippy ratchet: `clippy::needless_range_loop: 1 (ceiling -)` at `src/main.rs:2177` (`for k in start..i`), added by `0c68109ab` (71-20), not phase 73 |
+| windows-latest | failure | `cargo test (gamelib-scan and gamelib-depot crates)` FAILED, 67 passed, 2 failed; later steps skipped | see below |
+
+Windows failures, both in the phase-73 crate's `download::tests`. This is the first CI run that includes `gamelib-depot`: the last green run, `3025f9240`, predates the crate.
+- `out_of_order_chunks_assemble`: `download.rs:1284` `write_file(...).unwrap()` got `Os { code: 3, NotFound, "The system cannot find the path specified." }` for depot path `out/a.bin`.
+- `stale_dir_cleared`: `download.rs:1345` `write_file(...).unwrap()` got `Os { code: 5, PermissionDenied, "Access is denied." }` when a directory `pkg/file.bin` sits where the file belongs. The stale-dir replace path does not work on Windows.
+
+No code was changed in this plan. **Delete gate (D-15) is not met: CI is red on macOS and Windows. Plan 73-19 must not run.**
