@@ -28,11 +28,11 @@ import type {
 export interface RunDepotJobHooks {
   signal?: AbortSignal
   tokenCache: CdnAuthTokenCache
-  refreshRequestCode(
+  refreshRequestCode: (
     depotId: string,
     manifestId: string
-  ): Promise<string | null>
-  onEvent(ev: RustJobEvent): void
+  ) => Promise<string | null>
+  onEvent: (ev: RustJobEvent) => void
 }
 
 /** Fire-and-forget: a rejected cancel is swallowed and the caller never waits on it. */
