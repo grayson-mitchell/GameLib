@@ -44,3 +44,13 @@ Not exercised. After the Schedule I install the log shows no redist download, an
 
 ### Between runs
 Within the parity library only, each TS ACF, game tree and the workshop folder were renamed with a `.ts-parity` suffix, so the library shows no installed titles and no appmanifest for the Rust run.
+
+### Redist bullet set-aside (operator approved, "ok redist")
+The TS run's launch logged `shared redists already settled, nothing to do`, so the redist job was a no-op. Both were GameLib-owned state, not the operator's real Steam library, which was not touched:
+- The per-bottle ledger `gamelib-shared-redists.json` of the Schedule I bridge bottle: backed up next to itself as `gamelib-shared-redists.json.parity-bak`, then only its `settled` key removed (its `done` map was already empty).
+- GameLib's redist cache `steam_store/sharedRedist` (about 261 MB) renamed to `sharedRedist.ts-parity`.
+- Schedule I's game tree in the bridge bottle was not touched (not approved).
+
+Order: TS relaunch and one Schedule I launch (TS redist job) -> rename the new `sharedRedist` to `sharedRedist.ts-parity2`-style TS copy and re-cold the state -> Rust run and one Schedule I launch (Rust redist job).
+
+Restore after the plan: delete the Rust-run `sharedRedist`, rename the original `sharedRedist.ts-parity` back to `sharedRedist`, and copy `gamelib-shared-redists.json.parity-bak` back over the bottle ledger.
