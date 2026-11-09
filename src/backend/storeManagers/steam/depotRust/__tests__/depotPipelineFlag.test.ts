@@ -109,10 +109,15 @@ describe('depotPipeline flag', () => {
     else process.env.GAMELIB_DEPOT_PIPELINE = saved
   })
 
-  it('defaults to ts when unset', () => {
+  it('defaults to rust when unset (flipped by 73-17 after 73-PARITY)', () => {
     delete process.env.GAMELIB_DEPOT_PIPELINE
-    expect(DEPOT_PIPELINE_DEFAULT).toBe('ts')
-    expect(depotPipeline()).toBe('ts')
+    expect(DEPOT_PIPELINE_DEFAULT).toBe('rust')
+    expect(depotPipeline()).toBe('rust')
+  })
+
+  it('treats an empty value as unset', () => {
+    process.env.GAMELIB_DEPOT_PIPELINE = ''
+    expect(depotPipeline()).toBe('rust')
   })
 
   it('honours rust and ts', () => {
@@ -125,8 +130,8 @@ describe('depotPipeline flag', () => {
   it('falls back to the default on any other value and logs once', () => {
     jest.mocked(logWarning).mockClear()
     process.env.GAMELIB_DEPOT_PIPELINE = 'bogus'
-    expect(depotPipeline()).toBe('ts')
-    expect(depotPipeline()).toBe('ts')
+    expect(depotPipeline()).toBe('rust')
+    expect(depotPipeline()).toBe('rust')
     expect(logWarning).toHaveBeenCalledTimes(1)
   })
 })
