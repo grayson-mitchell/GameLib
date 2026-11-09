@@ -89,6 +89,9 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { at } from './fixtures/indexed'
 
 // ── Logger mock (factory form) ────────────────────────────────────────────────
+// This suite exercises the TS depot pipeline. Pin it, because the default is 'rust' since 73-17.
+process.env.GAMELIB_DEPOT_PIPELINE = 'ts'
+
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),

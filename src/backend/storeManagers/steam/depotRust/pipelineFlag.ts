@@ -2,13 +2,15 @@
 // the GAMELIB_SCANNER_* precedent, no AppSettings and no UI. Read once at the entry of each
 // public depot function, so a job never mixes TS and Rust stages.
 //
-// The default stays 'ts' until plan 16's corpus parity passes and flips it.
+// Default flipped to 'rust' on 2026-11-09 (plan 73-17) after the corpus parity run in
+// .planning/phases/73-steam-depot-download-pipeline-in-rust/73-PARITY.md was approved by the
+// operator. GAMELIB_DEPOT_PIPELINE=ts still selects the TS fallback.
 
 import { logWarning, LogPrefix } from 'backend/logger'
 
 export type DepotPipeline = 'rust' | 'ts'
 
-export const DEPOT_PIPELINE_DEFAULT: 'rust' | 'ts' = 'ts'
+export const DEPOT_PIPELINE_DEFAULT: 'rust' | 'ts' = 'rust'
 
 let warnedBadValue = false
 
