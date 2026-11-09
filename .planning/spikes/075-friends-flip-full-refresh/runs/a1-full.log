@@ -1,0 +1,21 @@
+[0.00s 2026-11-09T09:47:41.831Z] run a1-full stopAfter=all steam-user 5.3.0 unwrapped; Mac Steam stays ONLINE
+[0.00s 2026-11-09T09:47:41.832Z] stage logon: start
+[1.13s 2026-11-09T09:47:42.959Z] stage logon: ok 1127ms steamID=7656119…
+[1.13s 2026-11-09T09:47:42.959Z] stage licenses: start
+[1.13s 2026-11-09T09:47:42.959Z] stage licenses: ok 0ms 485 licenses
+[1.13s 2026-11-09T09:47:42.959Z] stage canary: start
+[1.40s 2026-11-09T09:47:43.232Z] stage canary: ok 273ms appid 7
+[1.40s 2026-11-09T09:47:43.232Z] stage owned: start
+[1.40s 2026-11-09T09:47:43.233Z] event webSession (steam-user auto webLogOn)
+[1.71s 2026-11-09T09:47:43.543Z] stage owned: ok 311ms 390 owned
+[1.71s 2026-11-09T09:47:43.544Z] stage demos: start
+[8.54s 2026-11-09T09:47:50.373Z] stage demos: ok 6829ms 485 packages, 754 licensed-not-owned, 754 appinfo
+[8.54s 2026-11-09T09:47:50.374Z] stage capture: start
+[12.45s 2026-11-09T09:47:54.279Z] stage capture: ok 3905ms 390 owned appinfo (held-session platform pass, worst case: all apps)
+[12.45s 2026-11-09T09:47:54.279Z] holding 60 s (AUTH_SESSION_IDLE_GRACE_MS); operator: watch Friends now
+[32.70s 2026-11-09T09:48:14.527Z] alive 1/3
+[52.97s 2026-11-09T09:48:34.797Z] alive 2/3
+[73.20s 2026-11-09T09:48:55.026Z] alive 3/3
+[73.20s 2026-11-09T09:48:55.026Z] logOff; operator: check Friends signed in + change status, then report
+[73.43s 2026-11-09T09:48:55.258Z] disconnected 3 Logged off
+[operator 2026-11-09 22:49] Friends still signed in: yes; status changeable: yes; flicker during run: no
