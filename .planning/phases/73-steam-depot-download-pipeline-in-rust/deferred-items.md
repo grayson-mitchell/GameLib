@@ -1,0 +1,1 @@
+- macArchKnownFixRouting.test.ts 'Intel: never seeds...' fails on this host independent of 73-11 (verified with the import change reverted).

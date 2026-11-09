@@ -808,7 +808,7 @@ Plans:
 **Goal:** The Steam depot download pipeline (fetch → decrypt → decompress → write) runs in Rust, and the TypeScript pipeline and `lzma-native` are deleted. This is the second slice of the incremental Rust migration that Phase 63 started, and the reason is retiring the sidecar, **not speed or memory**. Spike 067a measured today's Node pipeline as network-bound: a Civ V install held ~18 MiB/s steady, and raising the in-flight budget from 32 to 96 chunks changed nothing. Spike 067b measured Rust decode at 5.8 vs Node's 9.3 cpu-s/GiB at the same 177 MiB/s, about 8% of one core across the whole pipeline. The 2.75 GB peak RSS was idle decode workers and was fixed in Node (`b8f015a08` slimmed the worker bundle from 14 MB to under 300 KB, `db95a4373` caps the pool at 4 when native). 067c's README names "the sidecar itself being retired" as the trigger to revisit, which is this phase. Reuse Phase 63's pattern: the code lives in the `src-tauri/` Cargo workspace; the sidecar calls it through `rustInvoke` with the TypeScript signature unchanged, and only a job description crosses the JSON-lines pipe, never chunk bytes; a parity harness runs both pipelines against the same jobs and requires byte-identical trees (SHA1 per file); a flag keeps the TypeScript path as the fallback until the Rust path is verified live; then the TypeScript path is deleted (`steam/depot/`, ~11.6k non-test lines measured 2026-11-07; the old `steam/depot.ts` became `depot/index.ts` in 62-10). Crate choices carried from 067b: `aes` + `cbc` built with `--cfg aes_armv8` (without it `aes` 0.8 falls back to software AES at 277 MiB/s), `flate2` on `zlib-rs`, `xz2` (static liblzma), `zstd`. Open questions for discuss-phase: **where the boundary sits** — `steam-user` owns CM auth, manifest request codes and depot keys in Node, so does Rust take manifest + depot key + CDN host list and own everything after, or also manifest fetch and parse; how progress, pause, cancel and per-chunk errors flow back to the UI over the pipe; whether reconcile/verify, ACF finalize and adoption (`depot/finalize.ts`, `depot/manifest.ts`) stay in TypeScript or move; how headless tools and tests reach it (Phase 63 answered this with a CLI binary); and Windows/Linux builds, including liblzma static linking that replaces the October `lzma-native` SEA packaging fixes. Came from the operator's request on 2026-11-07, after the 067 spikes.
 **Requirements**: TBD
 **Depends on:** Phase 63
-**Plans:** 4/21 plans executed
+**Plans:** 5/21 plans executed
 
 Plans:
 
@@ -821,7 +821,7 @@ Plans:
 - [x] 73-02-PLAN.md — Steam AES (lenient PKCS7), VZ/VSZa/PK chunk containers, manifest wrapper unzip
 - [x] 73-03-PLAN.md — host health, stall, in-flight limiter, Fetcher with on-demand CDN tokens via JobHost; fake CDN + fake host
 - [x] 73-04-PLAN.md — modes/attributes, Mach-O +x fallback, path containment, collisions with case probe, flags census
-- [ ] 73-11-PLAN.md — TS D-09 error map, progress helpers moved, shell-caller token/request-code/event channels and handlers
+- [x] 73-11-PLAN.md — TS D-09 error map, progress helpers moved, shell-caller token/request-code/event channels and handlers
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
