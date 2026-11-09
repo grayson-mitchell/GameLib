@@ -152,7 +152,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 63: Rust migration pattern and executable scanners** — 14 plans; planned (completed 2026-11-07)
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
 - [x] **Phase 65: Steam store manager decomposition, continued** — 20/20 plans complete; Phase 61 closed 2026-11-07 — unblocked, D-11 (completed 2026-11-08)
-- [ ] **Phase 66: Backend dependency injection replacing module-level singletons** — 0 plans; not started
+- [ ] **Phase 66: Backend dependency injection replacing module-level singletons** — 8 plans; planned; split 2026-11-10 into 66 (foundation) + 66.1–66.3
+- [ ] **Phase 66.1: Backend DI — stores, store managers, flow registrations and launcher** — 0 plans; not started
+- [ ] **Phase 66.2: Every backend spawn through the process runner, then the `child_process` ban** — 0 plans; not started
+- [ ] **Phase 66.3: Backend module state to zero, then the live macOS smoke** — 0 plans; not started
 - [x] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07 (completed 2026-11-07)
 - [x] **Phase 68: Versioned persisted stores and migrations** — 11 plans; planned (completed 2026-11-08)
 - [ ] **Phase 69: Consolidate frontend state onto GlobalStateV2** — 0 plans; not started
@@ -572,13 +575,67 @@ Plans:
 ### Phase 66: Backend dependency injection replacing module-level singletons
 
 **Goal:** Backend modules receive their dependencies instead of reaching for module-level state, so tests need far fewer module mocks and each long-lived handle has one owner. Measured 2026-11-06: 144 top-level `let` declarations in `src/backend` (outside tests) and 2,197 `jest.mock(` calls across 706 test files. Three parts: (1) **The pattern.** A small context object built once at sidecar boot (`sidecar/bootstrap.ts`) carrying paths, logger, config/stores, the child-process spawner (which must still go through `createFakeHomeProfile()` in tests) and the clock, passed down to store managers and `launcher.ts`, with a documented way to construct a test context. (2) **Migration.** Convert the store managers and `launcher.ts` first (Phase 62 narrows `launcher.ts` to `storeManagers/index` and `storeLaunchHooks`), then other backend modules by count. Track the remaining top-level `let` and `jest.mock(` counts with a shrink-only ratchet like Phase 62's. (3) **One process runner.** 32 backend files import `child_process` directly and 42 spawn something (measured 2026-11-06). Every spawn goes through one runner module, handed out by the context, that owns `unref()` and the exit contract, timeouts (Phase 61 adds one to every CrossOver launch), log capture and redaction, and the test environment, so tests pass a fake runner built on `createFakeHomeProfile()` instead of mocking `child_process`. Existing wrappers (the `utils.ts` and per-store command helpers) become thin callers of it. A lint rule bans `child_process` imports outside the runner, with a shrink-only ratchet like the others. Owning handles in the context should make the sidecar exit contract (every timer, watcher, socket and child `unref()`d, no unbounded in-flight boot work) easier to keep and to check. It also gives Phase 63's Rust ports one place to swap an implementation. Open questions for discuss-phase: plain constructor/parameter passing versus a container library (default: none), and whether module-level caches that are genuinely process-wide may stay as explicitly registered singletons. Came from the post-Phase-62 architecture review on 2026-11-06.
+**Split 2026-11-10.** At full planning depth the original scope came to about 50 plans, mostly because under D-01/D-03 every importer of a converted owner has to receive it as a dependency (`backend/utils` has 54 source importers, `platform` 45). It was split along D-15's order, and `66-CONTEXT.md` decisions D-01..D-17 apply to all four parts. **Phase 66 itself is now step 1 only:** `src/backend/process/` (clock, runner with its tracked and long-lived child registries and `openDetached`, `AppContext`), the depcruise `runner-is-a-leaf` rule, `meta/backendDiCeilings.cjs` with sharded shrink-only baselines for module state, `child_process` imports and `jest.mock(`, plus an exact-path exemption mechanism that starts empty; test fakes (`scriptedRunner`, `realRunner` on `createFakeHomeProfile()`, `fakeClock`, `createTestContext`); and `bootstrap.ts` as one ordered step list with the 17 once-guards and `i18nReady` deleted, where a second `init()` throws, together with moving the 37 sidecar tests that re-enter `init()` onto fresh contexts. About 7 plans.
 **Requirements**: TBD
 **Depends on:** Phase 62
+**Plans:** 8 plans
+
+Plans:
+
+- [ ] 66-01-PLAN.md — `src/backend/process/` leaf: clock, runner (run/spawnLongLived/runSync/openDetached, tracked + teardown registries), AppContext; depcruise runner-is-a-leaf (wave 1)
+- [ ] 66-02-PLAN.md — `meta/backendDiCeilings.cjs` AST census + sharded shrink-only baselines (module state, child_process, jest.mock), sanctioned/Rust-overlap table, CI/pre-push wiring (wave 1)
+- [ ] 66-03-PLAN.md — test fakes (scripted runner, real runner on fake HOME, fake clock, capture log), createTestContext, `process/README.md` (wave 2)
+- [ ] 66-04-PLAN.md — harness `bootFresh()` + the 15 boot-wiring tests onto one boot per case (wave 2)
+- [ ] 66-05-PLAN.md — flows tests group 1 (rejection guard, containment, appShell, +5) onto bootFresh (wave 3)
+- [ ] 66-06-PLAN.md — flows tests group 2 (humble, gameDetails, logger, shellFiles, skeleton, downloadQueue, enrichment) onto bootFresh (wave 3)
+- [ ] 66-07-PLAN.md — flows tests group 3 (install, steamAuth, storeEmbed, humbleLogin, runnerAuth, settings, steam) onto bootFresh (wave 3)
+- [ ] 66-08-PLAN.md — `bootstrap.ts` as one ordered step list on AppContext, once-guards + i18nReady deleted, second boot throws, harness on createTestContext (wave 4)
+
+### Phase 66.1: Backend DI — stores, store managers, flow registrations and launcher (INSERTED)
+
+**Goal:** D-15 step 2 of Phase 66 (decisions in `66-CONTEXT.md`). Nothing is constructed at import time. A stores factory replaces the 16 `*/stores.ts` modules and `key_value_stores.ts`. `createStoreManagers` builds the library and game manager classes (gog, legendary, nile, steam, sideload) with constructor deps at boot (D-02), and the 46 non-test consumers of `libraryManagerMap`/`gameManagerMap`/`storeLaunchHooks` receive them. The 25 `sidecar/*FlowRegistration.ts` files take narrow slices (D-01). In `launcher.ts`, `callRunner`, `runWineCommand`, the gamescope probe and script spawns become runner callers, pinned by characterization tests first. `utils.ts` `spawnAsync` becomes a thin runner caller and `handleExit` calls the runner's teardown. `trackedChildren.ts` and `longLivedChildren.ts` are deleted, with comet and the bridge `helperSpawn` moving to `spawnLongLived` (D-10, D-11). Ceilings drop in the same commits (D-16). About 16–18 plans.
+**Requirements**: TBD
+**Depends on:** Phase 66
 **Plans:** 0 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 66 to break down)
+- [ ] TBD (run /gsd-plan-phase 66.1 to break down)
+
+### Phase 66.2: Every backend spawn through the process runner, then the `child_process` ban (INSERTED)
+
+**Goal:** Every remaining `child_process` file in `src/backend` (about 27 after 66.1) moves onto the runner. Each file is converted completely in one plan, module state included, so no module is touched twice (D-15). The work covers:
+- The engine per-child caps (`engine/runTool.ts`, `demoStatus.ts`, `bottlePrimitives.ts`) become `run` timeouts. `LAUNCH_DEADLINE_MS` stays a pipeline deadline owned by the clock (RESEARCH A1, confirmed 2026-11-09).
+- The DRM spawners and `boundedListing`.
+- The Steam spawn sites, including `macSteamOffline`, which absorbs the second `openDetached`.
+- The bridge spawners.
+- The 10 shell-string calls become argv (`compatibility_layers` keeps the three-word `mdfind` split; `tools/index` `which`), and the `execAsync` export is removed.
+- Sync sites become async or go through a named `runSync` with a stated reason (D-09).
+- `os/*` and `windowsShortcut`.
+
+The last plan merges `no-restricted-imports` for `child_process` into the existing ESLint `paths` array at `error` and deletes that ceiling (D-13, D-16). About 9–10 plans.
+**Requirements**: TBD
+**Depends on:** Phase 66.1
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 66.2 to break down)
+
+### Phase 66.3: Backend module state to zero, then the live macOS smoke (INSERTED)
+
+**Goal:** D-15 step 3. The D-06 module-state count reaches zero outside the sanctioned list (runner, logger sink, boot entry), and the census becomes a test (D-13, D-16). It goes in this order:
+1. The D-05 process-wide owners, largest ripple first: `online_monitor`, `platform/index`, `anonymousClient`, `processGuards` (read its WR-04 header), `engineState`, `gameSessionState`/`userSignInState`/`authTrigger`/`steam/state`, `shimCoverage`, `winetricksQueue`, `signInProbe/*`, `humble/*`.
+2. The long tail of about 70 files with 1–2 sites each.
+
+The D-14 Rust-overlap exemption table stays empty unless Phase 75 is re-scoped. The phase ends with the D-17 live macOS smoke as a non-autonomous last plan. About 15–18 plans, and it can split again into steam/* and the rest if needed.
+**Requirements**: TBD
+**Depends on:** Phase 66.2
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 66.3 to break down)
 
 ### Phase 67: Schema validation at the sidecar IPC boundary
 
