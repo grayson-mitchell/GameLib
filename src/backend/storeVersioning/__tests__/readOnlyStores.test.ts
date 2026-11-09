@@ -83,7 +83,9 @@ describe('readOnlyStores', () => {
     const send = jest.fn()
     recordReadOnly(entry('settings/global'))
     flushReadOnlyStores({ send, log: jest.fn() })
-    for (const e of send.mock.calls[0]?.[0].entries) {
+    const entries = send.mock.calls[0]?.[0]?.entries
+    expect(entries).toEqual(expect.any(Array))
+    for (const e of entries ?? []) {
       expect(Object.keys(e).sort()).toEqual(['area', 'reason'])
     }
   })

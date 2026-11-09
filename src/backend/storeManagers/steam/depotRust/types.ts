@@ -33,7 +33,7 @@ export interface RustFinalizeSpec {
   allowFullOwnership: boolean
 }
 
-export interface RustJobLimits {
+interface RustJobLimits {
   fileConcurrency: number
   inflightChunks: number
   decodeThreads: number
@@ -51,13 +51,13 @@ export interface RustDepotJob {
   limits: RustJobLimits | null
 }
 
-export interface RustPlannedDepot {
+interface RustPlannedDepot {
   depotId: string
   gid: string
   size: number
 }
 
-export interface RustHostStat {
+interface RustHostStat {
   host: string
   bytes: number
   chunks: number
@@ -150,7 +150,7 @@ export interface RustSummarizeRequest {
   patterns: string[]
 }
 
-export interface RustDepotSummary {
+interface RustDepotSummary {
   depotId: string
   fileCount: number
   totalBytes: number

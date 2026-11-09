@@ -63,7 +63,7 @@ export interface SweepInput {
   logFile: string
 }
 
-export interface TreeEntry {
+interface TreeEntry {
   kind: 'file' | 'dir' | 'symlink' | 'other'
   size: number
   sha1: string
@@ -71,9 +71,9 @@ export interface TreeEntry {
   flags: string
 }
 
-export type TreeMap = Map<string, TreeEntry>
+type TreeMap = Map<string, TreeEntry>
 
-export const NON_DARWIN_FLAGS = 'n/a (non-darwin)'
+const NON_DARWIN_FLAGS = 'n/a (non-darwin)'
 const STAT_BATCH = 500
 
 export type FlagReader = (root: string, rels: string[]) => number[]
@@ -119,7 +119,7 @@ function sha1File(path: string): Promise<string> {
 }
 
 /** Walks `root` with lstat. Keys are `/`-joined relative paths. */
-export async function walkTree(
+async function walkTree(
   root: string,
   readFlags: FlagReader | null = process.platform === 'darwin'
     ? readBsdFlags
@@ -170,7 +170,7 @@ export async function walkTree(
   return map
 }
 
-export type DiffKind =
+type DiffKind =
   | 'missing-in-rust'
   | 'extra-in-rust'
   | 'type'
@@ -178,7 +178,7 @@ export type DiffKind =
   | 'mode'
   | 'flags'
 
-export interface TreeDiff {
+interface TreeDiff {
   kind: DiffKind
   /** sha1(relative path), first 12 hex. */
   key: string
@@ -189,7 +189,7 @@ function keyOf(rel: string): string {
   return createHash('sha1').update(rel).digest('hex').slice(0, 12)
 }
 
-export function diffTrees(ts: TreeMap, rust: TreeMap): TreeDiff[] {
+function diffTrees(ts: TreeMap, rust: TreeMap): TreeDiff[] {
   const out: TreeDiff[] = []
   const push = (kind: DiffKind, rel: string): void => {
     out.push({ kind, key: keyOf(rel), name: basename(rel) })
@@ -303,7 +303,7 @@ export function perfRow(t: SweepTitle): PerfRow {
   }
 }
 
-export interface TitleReport {
+interface TitleReport {
   label: string
   treeDiffs: TreeDiff[]
   acfKeys: string[]

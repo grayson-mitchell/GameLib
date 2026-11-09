@@ -358,7 +358,7 @@ function wrapDepotKeyError(
  * base game's install — requesting with the wrong appId fails with a
  * terminal FileNotFound/AccessDenied EResult (never a transient CM drop).
  */
-export async function fetchDepotKey(
+async function fetchDepotKey(
   client: SteamUserDepotClient,
   descriptor: DepotDescriptor
 ): Promise<Buffer> {
