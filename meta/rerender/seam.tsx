@@ -19,9 +19,9 @@ import { MemoryRouter } from 'react-router-dom'
 import i18next from 'i18next'
 import { I18nextProvider, initReactI18next } from 'react-i18next'
 
-import GlobalState from 'frontend/state/GlobalState'
-import ContextProvider from 'frontend/state/ContextProvider'
-import Library from 'frontend/screens/Library'
+import GlobalState from '../../src/frontend/state/GlobalState'
+import ContextProvider from '../../src/frontend/state/ContextProvider'
+import Library from '../../src/frontend/screens/Library'
 import { emit } from './fakeApi'
 
 type Ctx = React.ContextType<typeof ContextProvider>

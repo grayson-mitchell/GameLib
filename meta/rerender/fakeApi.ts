@@ -1,8 +1,8 @@
-import type { GameInfo, Runner } from 'common/types'
+import type { GameInfo, Runner } from '../../src/common/types'
 
 type Listener = (...args: unknown[]) => unknown
 
-export const listeners: Record<string, Listener[]> = {}
+const listeners: Record<string, Listener[]> = {}
 
 /** Fire every captured listener registered through `window.api[method]`. */
 export function emit(method: string, ...args: unknown[]): void {

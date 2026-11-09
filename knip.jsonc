@@ -3,6 +3,10 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
   "entry": [
+    // D-14 re-render harness (phase 69-03): run by `pnpm perf:rerender` through its own jest
+    // config, which knip's jest plugin does not read. seam.tsx is require()d lazily from it.
+    "meta/rerender/rerender.perf.tsx",
+    "meta/rerender/seam.tsx",
     // (src/frontend/index.tsx is the vite input via index.html and is found by the vite plugin.)
     // (src/sidecar/index.ts, the `build:sidecar` esbuild entry, is found from package.json scripts.
     // The .cjs meta runners are likewise found from package.json scripts, so they are not listed.)
@@ -89,7 +93,7 @@
   ],
   "project": [
     "src/**/*.{ts,tsx,scss,sass}",
-    "meta/**/*.{ts,cjs,mjs}",
+    "meta/**/*.{ts,tsx,cjs,mjs}",
     "scripts/**/*.cjs"
   ],
   "ignore": [

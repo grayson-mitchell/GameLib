@@ -10,6 +10,7 @@
     "playwright.config.ts",
     "electron.vite.config.ts",
     "meta/**/*.ts",
+    "meta/**/*.tsx",
     "relay/src/**/*.ts",
     "eslint.config.mjs"
   ],

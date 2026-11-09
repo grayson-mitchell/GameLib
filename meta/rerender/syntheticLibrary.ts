@@ -1,4 +1,4 @@
-import type { GameInfo, Runner } from 'common/types'
+import type { GameInfo, Runner } from '../../src/common/types'
 
 const SPLIT: Array<[Runner, number]> = [
   ['legendary', 600],

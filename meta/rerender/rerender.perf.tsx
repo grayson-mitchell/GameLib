@@ -4,7 +4,7 @@
  * Run with `pnpm perf:rerender` (never part of test:ci). PERF_ERA names the
  * output file (default 'baseline').
  */
-import React, { Profiler } from 'react'
+import { Profiler } from 'react'
 import fs from 'fs'
 import path from 'path'
 import { act } from 'react-dom/test-utils'
@@ -14,6 +14,7 @@ import { installFakeApi } from './fakeApi'
 
 jest.mock('../../src/preload/tauriAttach', () => ({}))
 
+type PerfGlobal = typeof globalThis & { __perfOnRender?: unknown }
 type Acc = { count: number; actualDuration: number }
 type Counters = Record<'Library' | 'GameCard', Acc>
 const fresh = (): Counters => ({
@@ -29,22 +30,25 @@ const onRender = (id: string, _phase: string, actualDuration: number): void => {
 }
 
 // Wrap every GameCard instance in a Profiler.
-jest.mock('frontend/screens/Library/components/GameCard', () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const R = require('react')
-  const actual = jest.requireActual(
-    'frontend/screens/Library/components/GameCard'
-  )
+jest.mock('../../src/frontend/screens/Library/components/GameCard', () => {
+  const R = jest.requireActual<typeof import('react')>('react')
+  const actual = jest.requireActual<{
+    default: React.ComponentType<object>
+  }>('../../src/frontend/screens/Library/components/GameCard')
   const Inner = actual.default
-  const Wrapped = (props: unknown) =>
+  const Wrapped = (props: object) =>
     R.createElement(
       R.Profiler,
-      { id: 'GameCard', onRender: (globalThis as any).__perfOnRender },
+      {
+        id: 'GameCard',
+        onRender: (globalThis as PerfGlobal)
+          .__perfOnRender as React.ProfilerOnRenderCallback
+      },
       R.createElement(Inner, props)
     )
   return { __esModule: true, ...actual, default: Wrapped }
 })
-;(globalThis as any).__perfOnRender = onRender
+;(globalThis as PerfGlobal).__perfOnRender = onRender
 
 const STEP_NAMES = [
   'toggleAppearance',
@@ -61,8 +65,8 @@ const median = (xs: number[]) => {
 test('D-14 re-render scenario', async () => {
   const fixture = generateSyntheticLibrary()
   installFakeApi(fixture)
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const seam = require('./seam') as typeof import('./seam')
+  // Loaded lazily so the fake api is installed before GlobalState's constructor runs.
+  const seam = await import('./seam')
   const firstEpic = fixture.legendary[0].app_name
 
   const RUNS = 5
