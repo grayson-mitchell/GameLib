@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 66 context gathered
-last_updated: "2026-11-09T18:28:32.579Z"
+last_updated: "2026-11-09T18:31:56.427Z"
 last_activity: 2026-11-09
 progress:
   total_phases: 18
   completed_phases: 9
   total_plans: 177
-  completed_plans: 169
+  completed_plans: 170
   percent: 50
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 66 (backend-dependency-injection-replacing-module-level-singleto) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 Status: Ready to execute
 Last activity: 2026-11-09
 
-Progress: [██████████] 95%
+Progress: [██████████] 96%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -248,6 +248,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 73 P03 | 40min | 2 tasks | 9 files |
 | Phase 73 P04 | 25min | 2 tasks | 2 files |
 | Phase 73 P09 | 55min | 2 tasks | 4 files |
+| Phase 66 P02 | 40min | 2 tasks | 50 files |
 
 ## Accumulated Context
 
@@ -394,6 +395,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 73]: EResult-40 parity fix (pre-73-16, operator "Fix to match TS"): a manifest-level Blocked refusal is now carried request-code callback -> `{eresult:40}` reply -> crate `BLOCKED_REPLY`; the crate drops the depot, records `Outcome.skippedDepots`, and fails all-blocked with the byte-identical plan.ts message (eresult 40). Native install, prescreen, resume and originalRestore match the TS path; see 73-EResult40-FIX.md
 - [Phase 73]: 73-09: failed/cancelled files drain in-flight chunk tasks (spawn_blocking is not abortable) so nothing writes after run_job returns; ChunkSource trait abstracts Fetcher for tests; non-install modes error until 73-10
 - [Phase 73]: 73-04: Mach-O probe ported from machO.ts (gamelib-scan not reused); containment lexical; case probe stat-based per TS
+- [Phase 66]: 66-02: logger/index.ts sanctioned as logger-sink (moduleState 2); rust-overlap table empty
 
 ### Pending Todos
 
@@ -681,7 +683,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-09T18:28:32.571Z
+Last session: 2026-11-09T18:31:52.990Z
 Stopped at: Phase 66 context gathered
 Resume file: None
 
