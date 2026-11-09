@@ -1,3 +1,4 @@
+#[cfg_attr(not(windows), allow(unused_imports))]
 use super::*;
 
 // ---- Windows `gamelib://` self-heal: the DECISION half (quick-260925-uok) -------------------
