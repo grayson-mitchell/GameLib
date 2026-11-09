@@ -25,7 +25,7 @@ export interface ScriptStep {
   error?: { code: string }
   repeat?: boolean
 }
-export interface ScriptedCall {
+interface ScriptedCall {
   method: 'run' | 'runSync' | 'spawnLongLived' | 'openDetached'
   cmd: string
   argv: readonly string[]
