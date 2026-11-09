@@ -578,7 +578,7 @@ Plans:
 **Split 2026-11-10.** At full planning depth the original scope came to about 50 plans, mostly because under D-01/D-03 every importer of a converted owner has to receive it as a dependency (`backend/utils` has 54 source importers, `platform` 45). It was split along D-15's order, and `66-CONTEXT.md` decisions D-01..D-17 apply to all four parts. **Phase 66 itself is now step 1 only:** `src/backend/process/` (clock, runner with its tracked and long-lived child registries and `openDetached`, `AppContext`), the depcruise `runner-is-a-leaf` rule, `meta/backendDiCeilings.cjs` with sharded shrink-only baselines for module state, `child_process` imports and `jest.mock(`, plus an exact-path exemption mechanism that starts empty; test fakes (`scriptedRunner`, `realRunner` on `createFakeHomeProfile()`, `fakeClock`, `createTestContext`); and `bootstrap.ts` as one ordered step list with the 17 once-guards and `i18nReady` deleted, where a second `init()` throws, together with moving the 37 sidecar tests that re-enter `init()` onto fresh contexts. About 7 plans.
 **Requirements**: TBD
 **Depends on:** Phase 62
-**Plans:** 6/9 plans executed
+**Plans:** 7/9 plans executed
 
 Plans:
 
@@ -596,7 +596,7 @@ Plans:
 
 - [x] 66-05-PLAN.md — guard suites (sidecarRejectionGuard, testContainment) onto bootFresh, one file per task (wave 3)
 - [x] 66-06-PLAN.md — flows tests group 2 (humble, gameDetails, logger, shellFiles, skeleton, downloadQueue, enrichment) onto bootFresh (wave 3)
-- [ ] 66-07-PLAN.md — flows tests group 3 (install, steamAuth, storeEmbed, humbleLogin, runnerAuth, settings, steam) onto bootFresh (wave 3)
+- [x] 66-07-PLAN.md — flows tests group 3 (install, steamAuth, storeEmbed, humbleLogin, runnerAuth, settings, steam) onto bootFresh (wave 3)
 - [ ] 66-09-PLAN.md — appShellFlows + 5 smaller flows tests onto bootFresh (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
