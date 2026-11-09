@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
-stopped_at: Phase 66 context gathered
-last_updated: "2026-11-09T19:00:20.889Z"
+stopped_at: Phase 69 context gathered
+last_updated: "2026-11-09T19:08:19.551Z"
 last_activity: 2026-11-09
 progress:
   total_phases: 18
@@ -683,9 +683,9 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-09T19:00:20.880Z
-Stopped at: Phase 66 context gathered
-Resume file: None
+Last session: 2026-11-09T19:08:19.540Z
+Stopped at: Phase 69 context gathered
+Resume file: .planning/phases/69-consolidate-frontend-state-onto-globalstatev2/69-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 
