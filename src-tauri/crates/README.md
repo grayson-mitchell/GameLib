@@ -113,3 +113,57 @@ and `clippy --workspace` on both legs. Workspace crates are not default members,
   exemption is real, not forgotten.
 - **Caller-test oracles.** Deleting the oracle broke tests that used it as a mock backend; replace
   with a small stub (`stubRustScan.ts`), not a parser.
+
+## 10. Second worked example: the depot pipeline (Phase 73)
+
+`gamelib-depot` and `gamelib-depot-cli` replaced about 21k lines of TypeScript (manifest fetch and
+parse, chunk download, decrypt and decompress, file post-processing, reconcile, ACF finalize) and a
+`worker_threads` decompress pool. History lives in
+`.planning/phases/73-steam-depot-download-pipeline-in-rust/`. What it added to the recipe above:
+
+- **The `JobHost` seam.** A long job needs to call back into Node (CDN auth tokens, request codes)
+  and push events (progress, warnings). The crate stays Tauri-free by taking a `JobHost` trait
+  (`emit`, token and request-code calls); `src-tauri/src/depot_dispatch.rs` implements it as
+  `ShellJobHost` over the two primitives the shell already had, `SidecarState::invoke` for
+  request/response and `write_frame` with `kind: "send"` for events. No new transport. The event
+  queue is bounded and non-blocking. `finish()` drops the sender and joins the writer, so every
+  queued event reaches the pipe before the outcome response. Tests use `events::test_support`'s
+  `NullHost`.
+- **One unbounded run channel, cancel on EOF (D-06, D-08).** `depot_job_run` is a single
+  rustInvoke on `UNBOUNDED_RUST_CHANNELS` whose response is the final outcome. There is no
+  start-then-poll, so a lost event cannot strand the caller, and the sidecar keeps
+  `await downloadSteamDepots(...)`. A pending Promise is not a handle, so the sidecar exit contract
+  still holds. The shell owns job lifetime. When its reader hits sidecar stdout EOF it calls
+  `cancel_all()` and logs `[shell] depot jobs cancelled on sidecar EOF: <n>`. At app exit it waits
+  at most 5 s for finalize. On the TS side, stdin-EOF abort fires the cancel and does not wait for it.
+- **Capture the TS oracle before you delete it.** 73-08 ran the real TS pipeline over the
+  synthetic corpus, serving chunks from a local HTTP server, and committed the result as
+  `gamelib-depot/tests/fixtures/expected.json`. The Rust golden test asserts against that file. The
+  oracle went in 73-19 and the golden file stays (asserted by the deletion gate). 73-10 met it with
+  no `rustOverride` and no `divergenceNote`.
+- **A codec-coverage corpus, not a title list (D-14).** Seven deterministic synthetic cases
+  (192 KiB, built by an in-repo Rust generator and pinned by a determinism test) cover every codec
+  and wrapper (VZ/LZMA, VSZa/zstd, PK zip), encrypted and plain manifests, filename collisions and
+  manifest gids above 2^53. Five live titles plus a shared-redist job (73-16) then had to give
+  identical file trees, SHA1s, modes and BSD flags under both pipelines.
+- **Measure the research before you pin it.** CONTEXT carried spike 067b's `--cfg aes_armv8`
+  rustflag, which was measured on aes 0.8.4. aes 0.9 turns on the ARMv8 backend by default, measured
+  at 15.3 GiB/s AES-256-CBC with no flag. So there is no `src-tauri/.cargo/config.toml` rustflag,
+  which would otherwise have leaked into the whole Tauri build.
+- **MSRV is per crate, decided up front (73-01).** aes 0.9 needs Rust 1.89, and cbc, sha1 and prost
+  need 1.85. The operator chose `rust-version = "1.89"` on the two depot crates only (section 1's
+  exception line) over pinning older crate versions or raising the whole workspace.
+- **The flag's life (D-16).** `GAMELIB_DEPOT_PIPELINE=rust|ts` was env-only, like section 5. It
+  arrived in 73-13 defaulting to `ts`, was honoured by every depot entry point in 73-14, flipped
+  to `rust` in 73-17 after the operator approved parity, and was deleted with every TS branch in
+  73-19 after the live gate. One flag for the whole pipeline rather than one per unit: the stages
+  share a job and cannot be mixed.
+- **CI finds what macOS cannot.** Four CI runs were needed. One caught a real Windows defect: the
+  lexical path resolver dropped the drive prefix, which could have written depot files outside the
+  library. Run the crate tests on all three legs before the delete gate.
+- **Retire the packaging too.** After the code went, `lzma-native` stayed behind with its SEA asset
+  embedding, win32 `liblzma.dll` side-load, prebuild gate and typedef. 73-21 removed those, but
+  kept `lzma`, `zstddec` and their patches, because steam-user requires both at import. Before
+  deleting a dependency, check what third-party code still loads, not only first-party imports.
+- **Deletion gate:** `src/backend/__tests__/depotPortComplete.test.ts`, modelled on the scanner
+  gate. It also asserts the packages and patches that must stay.
