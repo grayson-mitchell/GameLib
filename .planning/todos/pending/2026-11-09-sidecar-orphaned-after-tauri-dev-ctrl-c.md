@@ -52,3 +52,18 @@ was reparented to 1 together with its sidecar child, and a SIGTERM to the shell 
 within 4 s.
 
 Sources: `73-UAT.md` item 9 and its Gaps (phase 73).
+
+## Fix landed, Force Quit gate PASSED (quick 261110-9w2, 2026-11-10)
+
+- **Fix.** `371298720` and `85e025d58`. `src/backend/sidecar/outboundHttpRegistry.ts` tracks every
+  in-flight `http(s)` ClientRequest through `diagnostics_channel`, whatever agent sent it.
+  The stdin-EOF release destroys those requests and refuses new ones. An unref'd diagnostic
+  logs `still alive` 15 s after EOF if the process has not drained.
+- **Force Quit (operator, about 07:21).** A bridged game (3205720) was launched in the session.
+  At 07:21:02 the sidecar logged the stdin-closed line and exited. No sidecar was left with
+  ppid 1, and no `still alive` warning was logged. An earlier shutdown at 07:17:20 logged
+  `destroyed 4 in-flight outbound HTTP request(s) (github.com, store.epicgames.com, gog.com,
+  cloudflare-dns.com)`. That was the boot connectivity probe, cancelled as designed.
+- **Still owed: the Ctrl-C gate.** Ctrl-C `pnpm tauri:dev` from a terminal (whole process
+  group). `pgrep -fl sidecar.js` should print nothing within 10 s, and gamelib.log should have
+  no `still alive` line. When it passes, move this todo to `completed/`.
