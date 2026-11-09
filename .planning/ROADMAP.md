@@ -869,7 +869,7 @@ Plans:
 
 **Wave 13** *(blocked on Wave 12 completion)*
 
-- [ ] 73-19-PLAN.md — Remove the flag and TS branches; caller tests on the Rust stub
+- [x] 73-19-PLAN.md — Remove the flag and TS branches; caller tests on the Rust stub
 
 **Wave 14** *(blocked on Wave 13 completion)*
 
