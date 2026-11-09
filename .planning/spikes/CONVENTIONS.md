@@ -117,6 +117,19 @@ question requires otherwise.
   flush for 3 s before `process.exit`. Mac Steam must be quit (Phase 54 Friends sign-out). Keys
   never touch disk: chunks are saved post-decrypt, and benches re-encrypt with a throwaway key.
 
+- **Cross-platform Rust probes (080):** build locally first: `x86_64-pc-windows-gnu` with
+  `x86_64-w64-mingw32-gcc` (installed) and **run it under GameLib's pinned Wine-Staging**
+  (`.../steam-engines/wine-staging-<v>/Contents/Resources/wine/bin/wine`, never the `.app`'s
+  `Contents/MacOS/wine` stub) in a fresh `wineboot -i` prefix under `out/`; Linux with zig as
+  CC/linker through a wrapper that drops cc-rs's `--target=` flag. GNU proves nothing about MSVC
+  build scripts, so production's MSVC target and a live Linux run go to **CI on a throwaway branch
+  cut from `origin/main`** (never from a local `main` that is ahead: the push would publish those
+  commits), in a separate worktree, workflow on `push` to that branch only (no other workflow
+  triggers off `main`/`stable`), **anonymous logon only**, logs as artifacts, then delete the
+  branch and worktree. The pre-push hook Prettier-checks the workflow file. *(080)*
+- **Two signed-in sessions in one spike need distinct `logonID`s,** or the later logon kicks the
+  earlier with `LogonSessionReplaced` 34 (steam-user default 0; steam-vent hard-codes 0). *(077)*
+
 ## Structure
 
 - One directory per spike: `.planning/spikes/NNN-descriptive-name/`. Sub-probes of a single

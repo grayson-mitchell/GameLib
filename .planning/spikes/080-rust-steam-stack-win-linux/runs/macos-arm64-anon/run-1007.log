@@ -1,0 +1,9 @@
+[  0.000s] start    macos-aarch64, anonymous, app 1007 depot None
+[  0.291s] discover CM server list ok
+[  1.572s] logon    anonymous logon ok (117318669715923323)
+[  2.266s] pics     3 candidate depot(s) with a public manifest
+[  2.644s] depotkey depot 1004: eresult 1
+[  2.644s] pics     depot 1004 public gid 7604377918839582995
+[  3.041s] reqcode  ok
+[  3.443s] cdn      6 servers, 6 usable
+[  3.555s] summary  gamelib-depot dispatch in 111.1985ms

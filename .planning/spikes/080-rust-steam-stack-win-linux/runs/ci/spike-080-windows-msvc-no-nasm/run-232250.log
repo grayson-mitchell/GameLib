@@ -1,0 +1,35 @@
+[  0.000s] start    windows-x86_64, anonymous, app 232250 depot None
+[  0.280s] discover CM server list ok
+[  1.613s] logon    anonymous logon ok (117318671359107182)
+[  2.313s] pics     4 candidate depot(s) with a public manifest
+[  2.711s] depotkey depot 232250: eresult 1
+[  2.711s] pics     depot 232250 public gid 5757605357257765879
+[  3.112s] reqcode  ok
+[  3.513s] cdn      8 servers, 8 usable
+[  3.924s] summary  gamelib-depot dispatch in 410.5148ms
+{
+  "client": "steam-vent@a9e8164 + gamelib-depot (path)",
+  "cm": {
+    "cdn_hosts": 8,
+    "depot": 232250,
+    "depot_key": "ok",
+    "licenses": null,
+    "mode": "anonymous",
+    "public_gid": "5757605357257765879",
+    "request_code": "ok"
+  },
+  "depot_summary": {
+    "depots": [
+      {
+        "depotId": "232250",
+        "fileCount": 1019,
+        "matches": [],
+        "totalBytes": 15089400440
+      }
+    ],
+    "skippedDepots": []
+  },
+  "elapsed_s": 3.9238149,
+  "platform": "windows-x86_64",
+  "verdict": "PASS"
+}

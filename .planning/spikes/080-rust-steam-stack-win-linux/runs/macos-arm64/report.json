@@ -1,0 +1,24 @@
+{
+  "client": "steam-vent@a9e8164 + gamelib-depot (path)",
+  "cm": {
+    "cdn_hosts": 6,
+    "depot_key": "ok",
+    "licenses": 485,
+    "public_gid": "1849274456907275637",
+    "request_code": "ok"
+  },
+  "depot_summary": {
+    "depots": [
+      {
+        "depotId": "1062521",
+        "fileCount": 198,
+        "matches": [],
+        "totalBytes": 3201437562
+      }
+    ],
+    "skippedDepots": []
+  },
+  "elapsed_s": 3.649080041,
+  "platform": "macos-aarch64",
+  "verdict": "PASS"
+}

@@ -1,0 +1,35 @@
+[  0.000s] start    linux-x86_64, anonymous, app 1007 depot None
+[  0.251s] discover CM server list ok
+[  1.348s] logon    anonymous logon ok (117318672561934546)
+[  2.048s] pics     3 candidate depot(s) with a public manifest
+[  2.448s] depotkey depot 1004: eresult 1
+[  2.448s] pics     depot 1004 public gid 7604377918839582995
+[  2.798s] reqcode  ok
+[  3.148s] cdn      12 servers, 12 usable
+[  3.234s] summary  gamelib-depot dispatch in 86.13203ms
+{
+  "client": "steam-vent@a9e8164 + gamelib-depot (path)",
+  "cm": {
+    "cdn_hosts": 12,
+    "depot": 1004,
+    "depot_key": "ok",
+    "licenses": null,
+    "mode": "anonymous",
+    "public_gid": "7604377918839582995",
+    "request_code": "ok"
+  },
+  "depot_summary": {
+    "depots": [
+      {
+        "depotId": "1004",
+        "fileCount": 8,
+        "matches": [],
+        "totalBytes": 67863136
+      }
+    ],
+    "skippedDepots": []
+  },
+  "elapsed_s": 3.234228102,
+  "platform": "linux-x86_64",
+  "verdict": "PASS"
+}

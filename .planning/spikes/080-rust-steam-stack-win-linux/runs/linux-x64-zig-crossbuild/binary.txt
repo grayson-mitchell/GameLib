@@ -1,0 +1,8 @@
+target/x86_64-unknown-linux-gnu/release/spike-080-stack: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.0.0, stripped
+11861168 bytes
+  NEEDED               libm.so.6
+  NEEDED               libc.so.6
+  NEEDED               ld-linux-x86-64.so.2
+  NEEDED               libpthread.so.0
+  NEEDED               libdl.so.2
+GLIBC_2.30
