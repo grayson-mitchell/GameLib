@@ -20,6 +20,7 @@
 
 // ---- Step 1: load the platform layer FIRST, before `./handlers` (below) pulls
 //              in the backend module graph. --------------------------------
+import { installOutboundHttpTracking } from './outboundHttpRegistry'
 import '../platform'
 
 import type { Readable, Writable } from 'node:stream'
@@ -790,6 +791,10 @@ export function init(
   input: Readable = process.stdin,
   output: Writable = process.stdout
 ): void {
+  // Track outbound HTTP first, ahead of migrations/i18next/boot work, so boot-time requests
+  // are tracked too and destroyed at stdin EOF (quick 261110-9w2). Idempotent, because init()
+  // runs many times per test file.
+  installOutboundHttpTracking()
   // Idempotent — bootstrap.test.ts / skeletonFlows.test.ts each call this
   // function multiple times per file (fresh streams per test); production
   // calls it once per process, same as the Electron main process's own
