@@ -20,7 +20,7 @@
  *
  * `../sidecarRpc` is PARTIALLY mocked (`jest.requireActual` spread, only
  * `requestRustInvoke` overridden) — this suite is the first curated-module
- * suite that needs BOTH the real RPC dispatch loop (`init()`, for
+ * suite that needs BOTH the real RPC dispatch loop (`init`, for
  * `startRpcServer`/`pushFrontendMessage`/`requestOpenExternal`) AND a
  * scriptable `requestRustInvoke` (for `notify`/`quit`, which reach it via
  * `platformApi.Notification.show()`/`app.exit()`). A full `{
@@ -56,15 +56,13 @@
  * `initHeadless()` sets up real, tmp-dir-redirected file logging safely,
  * satisfying `changeLanguage`'s `logInfo()` call without the
  * `heroicLogWriter`-unset workaround `appshellModules.test.ts`'s DIRECT-call
- * unit test needed — this suite always goes through the real `init()`).
+ * unit test needed — this suite always goes through the real `init`).
  *
- * `powerId`/`displaySleepId` (the `lock`/`unlock` module-scope guards inside
- * `appShellFlowRegistration.ts`) persist across every `startSidecar()` call
- * in this file, because `registerAppShellFlows()` itself runs exactly ONCE,
- * at `handlers.ts`'s own module-scope import (not per `init()` call) — the
- * lock/unlock coverage below is therefore a single combined test exercising
- * both channels in one deterministic sequence, rather than two independent
- * tests that would otherwise depend on execution order.
+ * D-08 (66-09): every case boots the sidecar exactly once in a fresh module registry
+ * (`freshRegistry()` + `boot()`), so module-scope state (`powerId`/`displaySleepId`,
+ * `frontendReadyBootWorkDone`) starts clean per case and no case depends on order. The
+ * cases that drive the `frontendReady` listener directly never boot: they load a
+ * fresh registry with `inFreshRegistry()` and call `registerAppShellFlows()` themselves.
  */
 
 import { defined } from 'backend/testUtils/indexed'
@@ -112,7 +110,7 @@ jest.mock('../../storeManagers/steam/macSteamOffline', () => ({
     mockRestoreMacSteamOnlineIfOwed(...args)
 }))
 
-// ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init()` now wires
+// ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init` now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real
 // platformApi's `net.isOnline()` returns `true` -- immediately calls the real `pingSites()`,
 // a live `axios.head()` against github/epic/gog/cloudflare. Mocked so this suite (which drives
@@ -243,7 +241,7 @@ jest.mock('../../downloadmanager/downloadqueue', () => ({
 
 // ── protocol mock — Plan 05 (REQ-34.6-04/07/13): spreads the REAL module (already
 // transitively loaded today via `bootstrap.ts`'s own `import { handleProtocol } from
-// '../protocol'`, exercised by every `startSidecar()` call in this file — no new risk) and
+// '../protocol'`, exercised by every `boot()` call in this file — no new risk) and
 // overrides ONLY `handleProtocol` with a `jest.fn()` so the frontendReady exclusion test
 // below can assert it was never called from the ported listener body specifically (a
 // startup `deliverStartupProtocolUrl` call is a SEPARATE call site this mock does not
@@ -278,20 +276,17 @@ jest.mock('../../utils', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
-import { GlobalConfig } from 'backend/config'
-import i18next from 'i18next'
-import { gameInfoStore } from '../../storeManagers/legendary/stores'
-import { backendEvents } from '../../backend_events'
-import {
-  callAbortController,
-  callAllAbortControllers
-} from '../../utils/aborthandler/aborthandler'
-import { requestRustInvoke } from '../sidecarRpc'
-import { shutdownLongLivedChildren } from '../../longLivedChildren'
-import { listenerRegistry, handlerRegistry } from '../../platform'
-import * as loggerModule from '../../logger'
-import { handleProtocol, markFrontendReady } from '../../protocol'
+import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
+import type { GlobalConfig as GlobalConfigType } from 'backend/config'
+import type i18nextType from 'i18next'
+import type { gameInfoStore as gameInfoStoreType } from '../../storeManagers/legendary/stores'
+import type { backendEvents as backendEventsType } from '../../backend_events'
+import type * as aborthandlerModule from '../../utils/aborthandler/aborthandler'
+import type { requestRustInvoke as requestRustInvokeType } from '../sidecarRpc'
+import type { shutdownLongLivedChildren as shutdownLongLivedChildrenType } from '../../longLivedChildren'
+import type * as platformModule from '../../platform'
+import type * as loggerModuleType from '../../logger'
+import type * as protocolModule from '../../protocol'
 import {
   RUST_APP_EXIT,
   RUST_DIALOG_MESSAGE,
@@ -301,17 +296,85 @@ import {
   RUST_WAKE_LOCK_START,
   RUST_WAKE_LOCK_STOP
 } from 'common/types/sidecarTransport'
-import { gamesConfigPath } from '../../constants/paths'
 import pkgJson from '../../../../package.json'
 
-const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-const mockedI18nextChangeLanguage = i18next.changeLanguage as jest.Mock
-const mockedGameInfoStoreClear = gameInfoStore.clear as jest.Mock
-const mockedCallAbortController = callAbortController as jest.Mock
-const mockedCallAllAbortControllers = callAllAbortControllers as jest.Mock
-const mockRequestRustInvoke = requestRustInvoke as jest.Mock
-const mockedShutdownLongLivedChildren = shutdownLongLivedChildren as jest.Mock
-const mockedHandleProtocol = handleProtocol as jest.Mock
+// D-08: one boot per test case in a fresh module registry. A top-level import of a
+// mocked or registry module would go stale after jest.resetModules(), so every such
+// handle is a `let` rebound by freshRegistry() (bootstrap first, as in 66-04) before
+// each case, and boot() is bootFresh({ reuseRegistry: true }) so the reset is not
+// repeated after the mocks are configured.
+let GlobalConfig: typeof GlobalConfigType
+let i18next: typeof i18nextType
+let gameInfoStore: typeof gameInfoStoreType
+let backendEvents: typeof backendEventsType
+let callAbortController: typeof aborthandlerModule.callAbortController
+let callAllAbortControllers: typeof aborthandlerModule.callAllAbortControllers
+let requestRustInvoke: typeof requestRustInvokeType
+let shutdownLongLivedChildren: typeof shutdownLongLivedChildrenType
+let listenerRegistry: typeof platformModule.listenerRegistry
+let handlerRegistry: typeof platformModule.handlerRegistry
+let loggerModule: typeof loggerModuleType
+let gamesConfigPath: string
+let handleProtocol: typeof protocolModule.handleProtocol
+let markFrontendReady: typeof protocolModule.markFrontendReady
+
+let mockedGlobalConfigGet: jest.Mock
+let mockedI18nextChangeLanguage: jest.Mock
+let mockedGameInfoStoreClear: jest.Mock
+let mockedCallAbortController: jest.Mock
+let mockedCallAllAbortControllers: jest.Mock
+let mockRequestRustInvoke: jest.Mock
+let mockedShutdownLongLivedChildren: jest.Mock
+let mockedHandleProtocol: jest.Mock
+
+function freshRegistry(): void {
+  jest.resetModules()
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  require('../bootstrap')
+  GlobalConfig = require('backend/config').GlobalConfig
+  i18next = require('i18next').default
+  gameInfoStore = require('../../storeManagers/legendary/stores').gameInfoStore
+  backendEvents = require('../../backend_events').backendEvents
+  const aborthandler = require('../../utils/aborthandler/aborthandler')
+  callAbortController = aborthandler.callAbortController
+  callAllAbortControllers = aborthandler.callAllAbortControllers
+  requestRustInvoke = require('../sidecarRpc').requestRustInvoke
+  shutdownLongLivedChildren =
+    require('../../longLivedChildren').shutdownLongLivedChildren
+  const platform = require('../../platform')
+  listenerRegistry = platform.listenerRegistry
+  handlerRegistry = platform.handlerRegistry
+  loggerModule = require('../../logger')
+  const protocol = require('../../protocol')
+  handleProtocol = protocol.handleProtocol
+  markFrontendReady = protocol.markFrontendReady
+  gamesConfigPath = require('../../constants/paths').gamesConfigPath
+  /* eslint-enable @typescript-eslint/no-require-imports */
+
+  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+  mockedI18nextChangeLanguage = i18next.changeLanguage as jest.Mock
+  mockedGameInfoStoreClear = gameInfoStore.clear as jest.Mock
+  mockedCallAbortController = callAbortController as jest.Mock
+  mockedCallAllAbortControllers = callAllAbortControllers as jest.Mock
+  mockRequestRustInvoke = requestRustInvoke as jest.Mock
+  mockedShutdownLongLivedChildren = shutdownLongLivedChildren as jest.Mock
+  mockedHandleProtocol = handleProtocol as jest.Mock
+}
+
+/** The one boot for a test case, in the registry freshRegistry() just built. */
+function boot() {
+  return bootFresh({ reuseRegistry: true })
+}
+
+/**
+ * No boot: resets the registry and runs `fn`, which requires modules fresh and calls
+ * registerAppShellFlows() directly. Replaces the old isolate-modules scope for the cases that
+ * drive the frontendReady listener without the RPC loop.
+ */
+function inFreshRegistry(fn: () => void): void {
+  jest.resetModules()
+  fn()
+}
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
@@ -336,6 +399,7 @@ let warnSpy: jest.SpyInstance
 
 describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-09)', () => {
   beforeEach(() => {
+    freshRegistry()
     mockAppSettings({
       checkForUpdatesOnStartup: false,
       language: 'en'
@@ -359,7 +423,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   // ── invoke (8) ──────────────────────────────────────────────────────────
 
   it('REQ-34.1-05/T-34.1-17 getHeroicVersion (invoke) resolves a real, non-empty version, never the 0.0.0 fallback', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'version-1', 'getHeroicVersion', [])
     await flush()
 
@@ -375,7 +439,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   it('REQ-34.1-05 getLatestReleases (invoke) resolves [] when checkForUpdatesOnStartup is false', async () => {
     mockAppSettings({ checkForUpdatesOnStartup: false })
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'releases-1', 'getLatestReleases', [])
     await flush()
 
@@ -387,7 +451,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   })
 
   it('REQ-34.1-05 getCurrentChangelog (invoke) resolves without the unported marker', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'changelog-1', 'getCurrentChangelog', [])
     await flush()
 
@@ -399,7 +463,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   })
 
   it('REQ-34.1-05/D-12 getWebviewPreloadPath (invoke) resolves a declared-empty string', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'webview-preload-1', 'getWebviewPreloadPath', [])
     await flush()
 
@@ -416,7 +480,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     const { setSetting } = mockAppSettings({})
     const emitSpy = jest.spyOn(backendEvents, 'emit')
 
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'change-lang-1', 'changeLanguage', ['fr'])
     await flush()
 
@@ -429,7 +493,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   })
 
   it('REQ-34.1-05 notify (send) reaches Notification.show() -> the existing notification_show rustInvoke arm', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'notify-1', 'notify', [
       { title: 'GameLib', body: 'Install complete' }
     ])
@@ -441,7 +505,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   })
 
   it('REQ-34.1-05 quit (send) reaches handleExit() -> app.exit() -> the existing app_exit rustInvoke arm', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'quit-1', 'quit', [])
     await flush()
 
@@ -449,7 +513,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   })
 
   it("54-13 quit (send) pays the owed Mac Steam goonline ('shutdown') before app_exit", async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'quit-owed-1', 'quit', [])
     await flush()
 
@@ -471,7 +535,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   it("quit (send) logs the '[GAMELIB_SIDECAR_SEND_HANDLER] quit' marker, the live gate's sidecar-side proof that the shell's frame landed (todo 2026-10-05 cmd-q-and-red-x)", async () => {
     const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
     try {
-      const { input } = startSidecar()
+      const { input } = boot()
       writeSend(input, 'quit-marker-1', 'quit', [])
       await flush()
 
@@ -494,7 +558,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   // on CALL-SITE DELETION -- if `handleExit()` stops calling `shutdownLongLivedChildren()`,
   // these tests go RED with `Number of calls: 0`, not merely on misbehaviour.
   it('REQ-260907-juv A1: quit (send) calls shutdownLongLivedChildren exactly once', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'quit-1', 'quit', [])
     await flush()
 
@@ -502,7 +566,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   })
 
   it('REQ-260907-juv A2: shutdownLongLivedChildren runs BEFORE the RUST_APP_EXIT rustInvoke (ordering)', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'quit-2', 'quit', [])
     await flush()
 
@@ -527,9 +591,10 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   // (index 0 = safe "No", index 1 = destructive "Yes" -> kill legendary/gogdl/nile +
   // callAllAbortControllers + app.exit). These two tests pin the consequences.
   describe('CR-04 quit with pending operations', () => {
-    const lockFile = join(gamesConfigPath, 'lock')
+    let lockFile: string
 
     beforeEach(() => {
+      lockFile = join(gamesConfigPath, 'lock')
       mkdirSync(gamesConfigPath, { recursive: true })
       writeFileSync(lockFile, '')
     })
@@ -544,7 +609,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     // on the wire; the second test below asserts its BEHAVIOUR instead, which is the
     // property that actually matters.
     it("REQ-34.1-05/CR-04: the confirm dialog reaches Rust with NON-BLANK labels even though this suite's i18next has no t()", async () => {
-      const { input } = startSidecar()
+      const { input } = boot()
       writeSend(input, 'quit-pending-1', 'quit', [])
       await flush()
 
@@ -578,7 +643,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           : Promise.resolve(undefined)
       )
 
-      const { input } = startSidecar()
+      const { input } = boot()
       writeSend(input, 'quit-pending-2', 'quit', [])
       await flush()
 
@@ -606,7 +671,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     // `undefined` resolution, so the safe/"No"/cancelled `response: 0` path is taken and
     // `handleExit()` returns before reaching either the abort fan-out or the registry.
     it('REQ-260907-juv A3: a cancelled quit (response === 0) does NOT tear down long-lived children', async () => {
-      const { input } = startSidecar()
+      const { input } = boot()
       writeSend(input, 'quit-pending-3', 'quit', [])
       await flush()
 
@@ -624,7 +689,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   })
 
   it('REQ-34.1-05 openReleases (send) reaches shell.openExternal with heroicGithubURL over the openExternal parity path', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'open-releases-1', 'openReleases', [])
     await flush()
 
@@ -638,7 +703,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   })
 
   it('REQ-34.1-05 openWebviewPage (send) forwards its argument to shell.openExternal', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'open-webview-1', 'openWebviewPage', [
       'https://example.com/webview'
     ])
@@ -652,7 +717,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   })
 
   it('REQ-34.1-05 abort (send) reaches callAbortController with the passed id', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'abort-1', 'abort', ['download-999'])
     await flush()
 
@@ -669,7 +734,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   // calls previously passed no kind and no id at all, because the Phase 33 stub accepted neither.
   it('REQ-34.1-09/D-13/D-08 lock then unlock take and release REAL assertions of the right kinds, neither throws', async () => {
     mockRequestRustInvoke.mockReset().mockResolvedValue(4242)
-    const { input } = startSidecar()
+    const { input } = boot()
 
     // playing=false is the DOWNLOAD case -> system suspension, NOT display.
     writeSend(input, 'lock-1', 'lock', [false])
@@ -737,7 +802,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     }
 
     it('case (a) RED->GREEN: a solo game LAUNCH with no download must not take a download-labelled system assertion', async () => {
-      const { input } = startSidecar()
+      const { input } = boot()
       mockAscendingWakeLockIds(9000)
 
       // RED -- this is EXACTLY what the pre-27 `componentDidUpdate` sent for a solo 'launching'
@@ -773,7 +838,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     })
 
     it('case (b) RED->GREEN: the packaged 12:06/12:08/12:09 timeline -- download ends while the game keeps playing', async () => {
-      const { input } = startSidecar()
+      const { input } = boot()
       mockAscendingWakeLockIds(9100)
 
       // RED half -- the pre-27 sequence for this exact real-world timeline:
@@ -852,7 +917,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     })
 
     it("case (d) inverse over-correction: the game quitting must not permanently drop a concurrently-live download's assertion", async () => {
-      const { input } = startSidecar()
+      const { input } = boot()
       mockAscendingWakeLockIds(9200)
 
       // Set up: download active (system) + game playing (display), both locked.
@@ -901,7 +966,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   })
 
   it('REQ-34.1-09/D-13 setTitleBarOverlay (send) logs a D-13-tagged warning naming the channel, never throws', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'title-bar-overlay-1', 'setTitleBarOverlay', [
       { color: '#000000' }
     ])
@@ -920,7 +985,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
   describe('REQ-34.6-04/07/13 frontendReady (send, D-11)', () => {
     it('is registered send-kind (listenerRegistry), never handle-kind (handlerRegistry)', () => {
-      startSidecar()
+      boot()
 
       expect(listenerRegistry.get('frontendReady')?.length).toBe(1)
       expect(handlerRegistry.has('frontendReady')).toBe(false)
@@ -932,7 +997,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       // This is the FIRST frontendReady delivery into the shared registration, so it is
       // the one that arms the 5s `initQueue(true)` auto-resume `setTimeout`. Under REAL
       // timers that timer outlives this test and fires ~5s into the run against the ONE
-      // `initQueue` mock -- `jest.isolateModules` re-uses an already-instantiated mock
+      // `initQueue` mock -- `a fresh-registry scope` re-uses an already-instantiated mock
       // from the main registry rather than re-running the factory -- which is how the
       // `toHaveBeenCalledTimes(1)` assertions in the isolated initQueue tests below
       // intermittently saw 2 (todo 2026-10-05). Fake timers here mean it never arms; the
@@ -942,7 +1007,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         doNotFake: ['setImmediate', 'nextTick', 'queueMicrotask']
       })
       try {
-        const { input } = startSidecar()
+        const { input } = boot()
         writeSend(input, 'frontend-ready-1', 'frontendReady', [])
         await flush()
 
@@ -966,7 +1031,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     it('does NOT call handleProtocol -- the one remaining deliberate exclusion -- RED-proven by temporarily adding the call (see SUMMARY)', async () => {
       mockedHandleProtocol.mockClear()
 
-      const { input } = startSidecar()
+      const { input } = boot()
       writeSend(input, 'frontend-ready-2', 'frontendReady', [])
       await flush()
 
@@ -976,7 +1041,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     it('marks the frontend ready for the cold-start/warm gamelib:// link discriminator (quick 261108-kpc)', async () => {
       ;(markFrontendReady as jest.Mock).mockClear()
 
-      const { input } = startSidecar()
+      const { input } = boot()
       writeSend(input, 'frontend-ready-3', 'frontendReady', [])
       await flush()
 
@@ -990,7 +1055,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     // startup. Branch A was taken (port ENABLED) because both blockers named
     // by the original suppression measured CLOSED — see the plan summary.
     //
-    // ISOLATED (jest.isolateModules, CR-02 follow-up, 35-21): `frontendReadyBootWorkDone`
+    // ISOLATED (a fresh-registry scope, CR-02 follow-up, 35-21): `frontendReadyBootWorkDone`
     // is a module-scoped flag in `appShellFlowRegistration.ts` that -- correctly, matching
     // production, where the sidecar really is one process -- never resets between `it()`
     // blocks in the SHARED module registry. Two earlier tests in this same `describe`
@@ -1001,7 +1066,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     // own, never-yet-flipped `frontendReadyBootWorkDone` -- calling `registerAppShellFlows()`
     // directly (mirroring the REQ-34.1-07 precedent below) and invoking the registered
     // `frontendReady` listener directly, rather than round-tripping through
-    // `startSidecar()`/`writeSend()`, both of which are statically bound to the shared/
+    // `boot()`/`writeSend()`, both of which are statically bound to the shared/
     // outer module registry and cannot reach an isolated instance.
     //
     // `doNotFake: ['setImmediate']` because this suite's `flush()` helper is
@@ -1012,7 +1077,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       let frontendReadyListener!: () => void
 
       jest.useFakeTimers({ doNotFake: ['setImmediate'] })
-      jest.isolateModules(() => {
+      inFreshRegistry(() => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedConfigGet = require('backend/config').GlobalConfig
           .get as jest.Mock
@@ -1033,7 +1098,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // `frontendReady`'s handler calls `logInfo()` unconditionally near the top of its
         // body (before the guard under test is ever reached). `logInfo` reads a
         // module-scoped `heroicLogWriter` that is only assigned by `initHeadless()` --
-        // normally done once by `bootstrap.ts`'s `startSidecar()` path, which this
+        // normally done once by `bootstrap.ts`'s `boot()` path, which this
         // isolated instance never runs. Without this call, `logInfo` throws synchronously
         // ("Cannot read properties of undefined (reading 'logInfo')"), the handler's own
         // try/catch swallows it via `logSendFailure` (a console.warn, easy to miss), and
@@ -1090,12 +1155,12 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     // ISOLATED for the same reason as the test above: a fresh module registry gives this
     // test its own, never-yet-flipped `frontendReadyBootWorkDone`, and calling the two
     // deliveries against the SAME isolated instance (rather than two separate
-    // `isolateModules` calls) is exactly what proves the ONCE-per-process guarantee.
+    // fresh-registry scopes) is exactly what proves the ONCE-per-process guarantee.
     it('CR-02: TWO frontendReady deliveries into an ISOLATED registration start the download queue only ONCE', async () => {
       let isolatedInitQueue!: jest.Mock
       let frontendReadyListener!: () => void
 
-      jest.isolateModules(() => {
+      inFreshRegistry(() => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedConfigGet = require('backend/config').GlobalConfig
           .get as jest.Mock
@@ -1154,7 +1219,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       const deliver = async (withEntry: boolean): Promise<jest.Mock> => {
         const sendMock = jest.fn()
         let frontendReadyListener!: () => void
-        jest.isolateModules(() => {
+        inFreshRegistry(() => {
           jest.doMock('../../ipc', () => ({
             ...jest.requireActual('../../ipc'),
             sendFrontendMessage: sendMock
@@ -1231,7 +1296,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       let frontendReadyListener!: () => void
       // Captured so `isSnap` can be reset to `false` in `finally` below. `jest.mock`'s
       // manual-mock factory return value for `backend/constants/environment` was observed
-      // (empirically, not by design) to survive ACROSS separate `jest.isolateModules()`
+      // (empirically, not by design) to survive ACROSS separate `inFreshRegistry()`
       // calls in this file -- a later, unrelated isolate (`REQ-34.1-07 registerAppShellFlows()
       // performs exactly one initial sync invoke`) crashed on `constants/paths.ts`'s
       // `userHome` (which only reads `env.SNAP_REAL_HOME` when `isSnap` is true) after this
@@ -1246,13 +1311,13 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       // branch for `userHome` instead of `homedir()`. That env var is unset in this test
       // environment, so without this, `join(undefined, 'Games', 'GameLib')` throws
       // synchronously while `paths.ts` evaluates its top-level exports, which crashes
-      // this test's `isolateModules` callback before it ever gets to `frontendReady`.
+      // this test's fresh-registry scope before it ever gets to `frontendReady`.
       // Saved/restored around the isolated require so it never leaks into the real
       // process env for any other test in this file.
       const originalSnapRealHome = process.env.SNAP_REAL_HOME
       process.env.SNAP_REAL_HOME = tmpdir()
       try {
-        jest.isolateModules(() => {
+        inFreshRegistry(() => {
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           const isolatedEnv = require('backend/constants/environment')
           isolatedEnv.isSnap = true
@@ -1302,7 +1367,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         })
 
         // `isolatedEnv.isSnap = true` above was set on the module instance obtained
-        // INSIDE `jest.isolateModules` -- a fresh, throwaway copy -- so it never touches
+        // INSIDE `a fresh-registry scope` -- a fresh, throwaway copy -- so it never touches
         // the shared/outer `backend/constants/environment` mock every other test in this
         // file relies on being `isSnap: false`; no cleanup of that flag is needed here.
         //
@@ -1364,7 +1429,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           )(message, ...rest)
         })
 
-      const { input } = startSidecar()
+      const { input } = boot()
       expect(() => {
         writeSend(input, 'frontend-ready-3', 'frontendReady', [])
       }).not.toThrow()
@@ -1393,7 +1458,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       let isolatedDetectVCRedist!: jest.Mock
       let frontendReadyListener!: () => void
 
-      jest.isolateModules(() => {
+      inFreshRegistry(() => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedConfigGet = require('backend/config').GlobalConfig
           .get as jest.Mock
@@ -1441,7 +1506,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       let isolatedDetectVCRedist!: jest.Mock
       let frontendReadyListener!: () => void
 
-      jest.isolateModules(() => {
+      inFreshRegistry(() => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedConfigGet = require('backend/config').GlobalConfig
           .get as jest.Mock
@@ -1489,7 +1554,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       let isolatedInitQueue!: jest.Mock
       let frontendReadyListener!: () => void
 
-      jest.isolateModules(() => {
+      inFreshRegistry(() => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedConfigGet = require('backend/config').GlobalConfig
           .get as jest.Mock
@@ -1530,7 +1595,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         expect(() => frontendReadyListener()).not.toThrow()
         await flush()
 
-        // `isolatedInitQueue` is NOT isolated: `jest.isolateModules` hands back the
+        // `isolatedInitQueue` is NOT isolated: `a fresh-registry scope` hands back the
         // main registry's already-built mock, so any real 5s timer leaked by an earlier
         // frontendReady delivery in this file lands on it too (todo 2026-10-05: 1 fake +
         // 2 real = 3). The leaks are fixed at source (fake timers on both real-timer
@@ -1550,7 +1615,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   // ── set-connectivity-online: already live via bootstrap.ts (D-03/D-09) ────
 
   it('REQ-34.1-05/D-03 set-connectivity-online is reachable WITHOUT this plan registering it, and is registered exactly once', async () => {
-    startSidecar()
+    boot()
     await flush()
 
     expect(listenerRegistry.get('set-connectivity-online')?.length).toBe(1)
@@ -1559,7 +1624,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   // ── Zero-new-Rust-arms guard ───────────────────────────────────────────────
 
   it("REQ-34.1-05 zero new Rust arms: every requestRustInvoke channel used by this plan's flows is a member of the existing RUST_INVOKE_CHANNELS set", async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'notify-guard', 'notify', [
       { title: 'GameLib', body: 'test' }
     ])
@@ -1605,12 +1670,12 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     beforeEach(() => {
       // `logInfo()` (called synchronously by the changeTrayColor listener) needs
       // `heroicLogWriter` assigned, which only happens via bootstrap.ts's real
-      // `initHeadless()` -- i.e. via `startSidecar()`'s `init()` call, same as every
+      // `initHeadless()` -- i.e. via `boot()`'s `init` call, same as every
       // other test in this file. Calling it here (discarding the result) makes this
       // describe block self-sufficient regardless of test execution order or a
-      // `--testNamePattern` filter that skips the file's earlier `startSidecar()`
+      // `--testNamePattern` filter that skips the file's earlier `boot()`
       // calls this block would otherwise silently rely on.
-      startSidecar()
+      boot()
       jest.useFakeTimers()
     })
 
@@ -1712,12 +1777,12 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       // Isolated: re-calling the SHARED module's registerAppShellFlows() here would
       // double-register every OTHER channel's listener too (breaking the lock/unlock/
       // abort tests elsewhere in this file, whose bodies assume exactly one listener
-      // each). jest.isolateModules gives a fresh module registry -- a fresh
+      // each). a fresh-registry scope gives a fresh module registry -- a fresh
       // platformApi (own listenerRegistry), a fresh sidecarRpc mock instance, and a
       // fresh backend/config mock instance -- so this test's own registration can
       // never leak into the shared suite state.
-      jest.isolateModules(() => {
-        // Inside jest.isolateModules: a static import would resolve against the shared registry.
+      inFreshRegistry(() => {
+        // Inside a fresh-registry scope: a static import would resolve against the shared registry.
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedConfigGet = require('backend/config').GlobalConfig
           .get as jest.Mock
@@ -1727,13 +1792,13 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           set: jest.fn(),
           flush: jest.fn()
         })
-        // Inside jest.isolateModules: a static import would resolve against the shared registry.
+        // Inside a fresh-registry scope: a static import would resolve against the shared registry.
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedRequestRustInvoke = require('../sidecarRpc')
           .requestRustInvoke as jest.Mock
         isolatedRequestRustInvoke.mockResolvedValue(undefined)
 
-        // Inside jest.isolateModules: a static import would resolve against the shared registry.
+        // Inside a fresh-registry scope: a static import would resolve against the shared registry.
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { registerAppShellFlows } = require('../appShellFlowRegistration')
         registerAppShellFlows()
@@ -1756,7 +1821,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   // `[appShellFlowRegistration] changeLanguage failed:` console.warn -- i.e. it PINNED
   // the bug: the rejection escaped `appshell/language.ts` and aborted `gameInfoStore
   // .clear()` / `setSetting('language', ...)` / `emit('languageChanged')`, so under the
-  // sidecar (where i18next is NEVER init()'d -- see language.ts's own CR-01 comment) the
+  // sidecar (where i18next is NEVER init'd -- see language.ts's own CR-01 comment) the
   // user's language choice silently never persisted. The contract is now the opposite:
   // an i18next failure is CONTAINED inside `changeLanguage` and the persist path still
   // runs. The surviving requirement -- "a send-handler body must never crash the
@@ -1766,7 +1831,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     mockedI18nextChangeLanguage.mockRejectedValueOnce(new Error('boom'))
     const emitSpy = jest.spyOn(backendEvents, 'emit')
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'change-lang-fail-1', 'changeLanguage', ['de'])
     await flush()
 
@@ -1803,7 +1868,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     })
     const emitSpy = jest.spyOn(backendEvents, 'emit')
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'change-lang-throw-1', 'changeLanguage', ['pt'])
     await flush()
 
