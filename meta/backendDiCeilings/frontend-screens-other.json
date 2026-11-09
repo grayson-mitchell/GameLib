@@ -1,0 +1,10 @@
+{
+  "jestMock": {
+    "src/frontend/screens/Humble/Keys/__tests__/index.test.tsx": 10,
+    "src/frontend/screens/Humble/Keys/components/HumbleClaimWizard/__tests__/index.test.tsx": 4,
+    "src/frontend/screens/Humble/Keys/components/HumbleKeyRow/__tests__/index.test.tsx": 1,
+    "src/frontend/screens/StoreSearch/__tests__/StoreSearchRow.test.tsx": 6,
+    "src/frontend/screens/StoreSearch/__tests__/StoreSearchScreen.test.tsx": 7,
+    "src/frontend/screens/StoreSearch/__tests__/useDebouncedStoreSearch.test.ts": 1
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "jestMock": {
+    "src/frontend/components/UI/NavShell/__tests__/DownloadsTabIcon.test.tsx": 2,
+    "src/frontend/components/UI/NavShell/__tests__/FilterCollectionList.test.tsx": 7,
+    "src/frontend/components/UI/NavShell/__tests__/FilterFacetGroup.test.tsx": 3,
+    "src/frontend/components/UI/NavShell/__tests__/FilterMoreGroup.test.tsx": 6,
+    "src/frontend/components/UI/NavShell/__tests__/FilterRunnabilityFacet.test.tsx": 5,
+    "src/frontend/components/UI/NavShell/__tests__/FilterStoreFacet.test.tsx": 5,
+    "src/frontend/components/UI/NavShell/__tests__/FilterViewList.test.tsx": 3,
+    "src/frontend/components/UI/NavShell/__tests__/GamesPanel.test.tsx": 1,
+    "src/frontend/components/UI/NavShell/__tests__/HeroicVersion.test.tsx": 5,
+    "src/frontend/components/UI/NavShell/__tests__/NavItem.test.tsx": 3,
+    "src/frontend/components/UI/NavShell/__tests__/NavShell.test.tsx": 10,
+    "src/frontend/components/UI/NavShell/__tests__/NavShellTour.test.tsx": 5,
+    "src/frontend/components/UI/NavShell/__tests__/NavTabsComponent.test.tsx": 6,
+    "src/frontend/components/UI/NavShell/__tests__/QuitButton.test.tsx": 4,
+    "src/frontend/components/UI/NavShell/__tests__/SettingsPanel.test.tsx": 7,
+    "src/frontend/components/UI/NavShell/__tests__/StoreEmbedSuppressionContext.test.tsx": 1,
+    "src/frontend/components/UI/NavShell/__tests__/StoresPanel.test.tsx": 4,
+    "src/frontend/components/UI/NavShell/__tests__/destinationCoverage.test.tsx": 15,
+    "src/frontend/components/UI/NavShell/__tests__/useSuppressStoreEmbedWhile.test.tsx": 1,
+    "src/frontend/components/UI/NavShell/components/FilterFocusRow/__tests__/filterFocusRow.test.tsx": 5
+  }
+}

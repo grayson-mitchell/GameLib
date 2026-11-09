@@ -1,0 +1,5 @@
+{
+  "jestMock": {
+    "src/frontend/screens/Library/components/InstallModal/SteamDialog/__tests__/EligibilityLoadingRow.test.tsx": 1
+  }
+}

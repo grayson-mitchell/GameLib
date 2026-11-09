@@ -1,0 +1,6 @@
+{
+  "jestMock": {
+    "src/frontend/screens/ConsoleMode/InstallOverlay/__tests__/consoleSteamTarget.test.ts": 1,
+    "src/frontend/screens/DownloadManager/components/SteamManagedItem/__tests__/SteamManagedItemView.test.tsx": 1
+  }
+}

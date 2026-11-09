@@ -1,0 +1,20 @@
+{
+  "jestMock": {
+    "src/frontend/screens/Settings/sections/LogSettings/components/UploadedLogFilesList/__tests__/deleteButtonReachability.test.tsx": 7,
+    "src/frontend/screens/Settings/sections/ReportProblem/__tests__/ReportProblem.test.tsx": 5,
+    "src/frontend/screens/Settings/sections/StoreSettings/__tests__/StoreSettings.test.tsx": 8,
+    "src/frontend/screens/Settings/sections/StoreSettings/__tests__/removeEosOverlayConfirmation.test.tsx": 3,
+    "src/frontend/screens/Settings/sections/WinetricksSettings/__tests__/applyTracer.test.tsx": 10,
+    "src/frontend/screens/Settings/sections/WinetricksSettings/__tests__/environmentBanner.test.tsx": 10,
+    "src/frontend/screens/Settings/sections/WinetricksSettings/__tests__/everythingElse.test.tsx": 10,
+    "src/frontend/screens/Settings/sections/WinetricksSettings/__tests__/groups.test.tsx": 10,
+    "src/frontend/screens/Settings/sections/WinetricksSettings/__tests__/listStates.test.tsx": 10,
+    "src/frontend/screens/Settings/sections/WinetricksSettings/__tests__/logPanel.test.tsx": 10,
+    "src/frontend/screens/Settings/sections/WinetricksSettings/__tests__/queueStateOrdering.test.tsx": 10,
+    "src/frontend/screens/Settings/sections/WinetricksSettings/__tests__/remountSafety.test.tsx": 10,
+    "src/frontend/screens/Settings/sections/WinetricksSettings/__tests__/rowStates.test.tsx": 4,
+    "src/frontend/screens/Settings/sections/WinetricksSettings/__tests__/selectionLock.test.tsx": 10,
+    "src/frontend/screens/Settings/sections/WinetricksSettings/__tests__/stickyBar.test.tsx": 3,
+    "src/frontend/screens/Settings/sections/WinetricksSettings/__tests__/winetricksInstallMouseRace.test.tsx": 4
+  }
+}

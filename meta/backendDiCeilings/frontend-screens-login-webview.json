@@ -1,0 +1,17 @@
+{
+  "jestMock": {
+    "src/frontend/screens/Login/__tests__/signInTileState.test.ts": 1,
+    "src/frontend/screens/Login/components/Runner/__tests__/index.test.tsx": 4,
+    "src/frontend/screens/Login/components/Runner/__tests__/logoutFailureSurface.test.tsx": 5,
+    "src/frontend/screens/Login/components/SteamLogin/__tests__/steamCreateAccountLink.test.tsx": 2,
+    "src/frontend/screens/WebView/__tests__/HumbleLoginSurfaceWatchRejection.test.tsx": 2,
+    "src/frontend/screens/WebView/__tests__/storeEmbedReloadLoop.test.tsx": 1,
+    "src/frontend/screens/WebView/__tests__/useStoreEmbedHost.test.tsx": 1,
+    "src/frontend/screens/WebView/__tests__/useTauriOAuthLogin.test.tsx": 1,
+    "src/frontend/screens/WebView/components/__tests__/EpicLauncherBlockedNotice.test.tsx": 2,
+    "src/frontend/screens/WebView/components/__tests__/StoreEmbedPlaceholder.test.tsx": 1,
+    "src/frontend/screens/WebView/components/__tests__/StoreEmbedTimeoutBanner.test.tsx": 1,
+    "src/frontend/screens/WebView/components/__tests__/TauriLoginPanel.test.tsx": 1,
+    "src/frontend/screens/WebView/components/__tests__/WebviewUnavailablePanel.test.tsx": 1
+  }
+}

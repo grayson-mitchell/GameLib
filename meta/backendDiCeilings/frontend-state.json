@@ -1,0 +1,6 @@
+{
+  "jestMock": {
+    "src/frontend/state/__tests__/InstallGameModal.test.ts": 1,
+    "src/frontend/state/__tests__/tourContextSuppression.test.tsx": 1
+  }
+}
