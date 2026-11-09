@@ -5,12 +5,12 @@ milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 66 context gathered
 last_updated: "2026-11-09T10:07:00.861Z"
-last_activity: "2026-11-10 - Completed 73-20: TS depot pipeline, worker pool and dev bundle deleted"
+last_activity: "2026-11-10 - Completed 73-21: lzma-native retired, depot deletion gate, pattern README"
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 168
-  completed_plans: 166
+  completed_plans: 167
   percent: 53
 ---
 
@@ -73,9 +73,9 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
-Plan: 20 of 21 complete (73-01..73-20); 73-21 next (TS pipeline, worker pool and dev bundle deleted; read 73-20-SUMMARY "For plan 73-21": the lzma loaders, node-gyp-build alias and SEA worker asset are already gone)
+Plan: 21 of 21 complete (73-01..73-21); phase 73 ready for verification
 Status: Executing phase 73
-Last activity: 2026-11-10 - Completed 73-20: TS depot pipeline, worker pool and dev bundle deleted
+Last activity: 2026-11-10 - Completed 73-21: lzma-native retired, depot deletion gate, pattern README
 
 Progress: [██████████] 96%
 
