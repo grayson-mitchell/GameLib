@@ -5,6 +5,7 @@
 import * as fs from 'fs'
 import * as os from 'os'
 import { join } from 'path'
+import { __resetStoreState } from 'backend/storeVersioning/engine'
 
 // fs namespace properties are non-configurable, so wrap the two calls the
 // fd-leak assertions need in jest.fn passthroughs.
@@ -13,6 +14,10 @@ jest.mock('fs', () => ({
   openSync: jest.fn(),
   closeSync: jest.fn()
 }))
+
+// graceful-fs (pulled in by the store engine) would otherwise patch the
+// jest.fn passthroughs above and strip their mock API.
+jest.mock('graceful-fs', () => jest.requireActual('fs'))
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -32,6 +37,7 @@ jest.mock('backend/config', () => ({
 import {
   GuidedOfflineRequiredError,
   GUIDED_RESTORE_TTL_MS,
+  restoreMacSteamOnlineIfOwed,
   STEAM_GO_OFFLINE_URL,
   STEAM_GO_ONLINE_URL,
   __macSteamOnlineConfirmForTests,
@@ -98,6 +104,7 @@ beforeEach(() => {
   urls = []
   running = true
   __resetMacSteamOfflineForTests()
+  __resetStoreState()
 })
 
 afterEach(() => {
@@ -313,5 +320,81 @@ describe('watchConnectionLog', () => {
     ).toBe(true)
     expect(openSpy.mock.calls.length).toBeGreaterThan(2)
     expect(closeSpy.mock.calls.length).toBe(openSpy.mock.calls.length)
+  })
+})
+
+describe('owed record versioning (261109-vw2)', () => {
+  const owedPath = () => join(dir, 'owed.json')
+  const writeLegacy = (by: string, pid = 1111, extra = {}) =>
+    fs.writeFileSync(
+      owedPath(),
+      JSON.stringify({
+        since: new Date(0).toISOString(),
+        by,
+        pid,
+        ...extra
+      }),
+      { mode: 0o600 }
+    )
+  const confirmingDeps = (overrides: Partial<MacSteamOfflineDeps> = {}) =>
+    makeDeps({
+      openUrlDetached: (url) => {
+        urls.push(url)
+        fs.appendFileSync(logPath, ONLINE_LINE)
+      },
+      ...overrides
+    })
+
+  it('legacy unversioned marker still drives boot restore (goonline fired)', async () => {
+    fs.writeFileSync(logPath, OFFLINE_LINE)
+    writeLegacy('toggled')
+    const out = await restoreMacSteamOnlineIfOwed('boot', confirmingDeps())
+    expect(out).not.toBe('not-owed')
+    expect(urls).toEqual([STEAM_GO_ONLINE_URL])
+  })
+
+  it('legacy toggled-unconfirmed without a late LogOff is cleared', async () => {
+    fs.writeFileSync(logPath, ONLINE_LINE)
+    writeLegacy('toggled-unconfirmed')
+    const out = await restoreMacSteamOnlineIfOwed('boot', confirmingDeps())
+    expect(out).toBe('not-owed')
+    expect(fs.existsSync(owedPath())).toBe(false)
+    expect(urls).toEqual([])
+  })
+
+  it('legacy marker owned by a live other pid is kept', async () => {
+    fs.writeFileSync(logPath, OFFLINE_LINE)
+    writeLegacy('toggled', 9999)
+    const out = await restoreMacSteamOnlineIfOwed(
+      'boot',
+      confirmingDeps({ isPidAlive: () => true })
+    )
+    expect(out).toBe('kept-owner-alive')
+    expect(fs.existsSync(owedPath())).toBe(true)
+  })
+
+  it('a recorded debt carries version 1 at mode 0o600', async () => {
+    fs.writeFileSync(logPath, OFFLINE_LINE)
+    // guided check records an owed marker with no gooffline in flight
+    await checkGuidedOfflineReady(makeDeps())
+    const rec = JSON.parse(fs.readFileSync(owedPath(), 'utf8'))
+    expect(rec).toMatchObject({ version: 1, by: 'guided', pid: 4242 })
+    expect(typeof rec.since).toBe('string')
+    if (process.platform !== 'win32')
+      expect(fs.statSync(owedPath()).mode & 0o777).toBe(0o600)
+  })
+
+  it('a newer-build marker is still owed, then overwritable and clearable', async () => {
+    fs.writeFileSync(logPath, OFFLINE_LINE)
+    writeLegacy('toggled', 1111, { version: 2 })
+    const out = await restoreMacSteamOnlineIfOwed('boot', confirmingDeps())
+    expect(out).not.toBe('not-owed')
+    expect(urls).toEqual([STEAM_GO_ONLINE_URL])
+    // restore cleared it (confirmed online); a fresh record overwrites a v2 one
+    expect(fs.existsSync(owedPath())).toBe(false)
+    fs.writeFileSync(logPath, OFFLINE_LINE)
+    writeLegacy('toggled', 1111, { version: 2 })
+    await checkGuidedOfflineReady(makeDeps())
+    expect(JSON.parse(fs.readFileSync(owedPath(), 'utf8')).version).toBe(1)
   })
 })

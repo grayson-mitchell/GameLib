@@ -18,6 +18,8 @@
  * goonline (54-REVIEW WR-01). `restoreMacSteamOnlineIfOwed` is the
  * shutdown and boot cover for a wrap that never reached its goonline, and the
  * boot call is the only cover for a `kill -9` of the sidecar.
+ *
+ * The owed record is versioned by the Phase 68 store engine (quick 261109-vw2).
  */
 import { execFile } from 'child_process'
 import {
@@ -35,6 +37,10 @@ import {
 import { uptime } from 'os'
 import { dirname, join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import {
+  ensureMacSteamOfflineOwedMigrated,
+  macSteamOfflineOwedVersion
+} from 'backend/storeVersioning/macSteamOfflineOwedFile'
 import { shell } from 'backend/platform'
 import { spawnOpenDetached as spawnDetachedOpen } from 'backend/platform/openDetached'
 import type { SteamGoOfflineRetryResult } from 'common/types/steam'
@@ -265,6 +271,7 @@ function recordOnlineDebt(
     writeFileSync(
       p,
       JSON.stringify({
+        version: macSteamOfflineOwedVersion(),
         since: new Date(sinceMs).toISOString(),
         by,
         pid: deps.selfPid
@@ -307,6 +314,9 @@ interface OnlineDebt {
 
 function readOnlineDebt(deps: MacSteamOfflineDeps): OnlineDebt {
   try {
+    ensureMacSteamOfflineOwedMigrated(deps.onlineDebtPath())
+    // Deliberately not `{}` when read-only (newer build): presence is the debt,
+    // and the guarded reads below degrade unknown fields to the safe default.
     const parsed: unknown = JSON.parse(
       readFileSync(deps.onlineDebtPath(), 'utf8')
     )
