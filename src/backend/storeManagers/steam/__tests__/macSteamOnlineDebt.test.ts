@@ -125,7 +125,7 @@ afterEach(() => {
 })
 
 describe('marker lifecycle in the wrap', () => {
-  it('toggled: marker exists when gooffline fires, is gone once online is confirmed, keys are since/by/pid', async () => {
+  it('toggled: marker exists when gooffline fires, is gone once online is confirmed, keys are since/by/pid/version', async () => {
     fs.writeFileSync(logPath, onlineLine(BASE - 60000))
     let atFire: string | null = null
     const deps = makeDeps({
@@ -147,7 +147,13 @@ describe('marker lifecycle in the wrap', () => {
     await __macSteamOnlineConfirmForTests()
     expect(atFire).not.toBeNull()
     const parsed = JSON.parse(atFire as unknown as string)
-    expect(Object.keys(parsed).sort()).toEqual(['by', 'pid', 'since'])
+    expect(Object.keys(parsed).sort()).toEqual([
+      'by',
+      'pid',
+      'since',
+      'version'
+    ])
+    expect(parsed.version).toBe(1)
     expect(parsed.by).toBe('toggled')
     expect(parsed.pid).toBe(4242)
     expect(fs.existsSync(markerPath)).toBe(false)
