@@ -64,7 +64,13 @@ const EXPECTED_LOG_OPTIONS = {
   forceLog: true
 }
 
-type World = ReturnType<typeof bootedWorld>
+interface World {
+  LegendaryUser: typeof import('../../storeManagers/legendary/user').LegendaryUser
+  GOGUser: typeof import('../../storeManagers/gog/user').GOGUser
+  configStore: typeof import('../../constants/key_value_stores').configStore
+  loggerModule: typeof import('../../logger')
+  reconcileStoreUsersWhenOnline: () => void
+}
 let lastWorld: World | undefined
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -80,7 +86,7 @@ function bootedWorld(opts?: {
   seed?: (w: {
     configStore: typeof import('../../constants/key_value_stores').configStore
   }) => void
-}) {
+}): World {
   let LegendaryUser!: typeof import('../../storeManagers/legendary/user').LegendaryUser
   let GOGUser!: typeof import('../../storeManagers/gog/user').GOGUser
   let configStore!: typeof import('../../constants/key_value_stores').configStore

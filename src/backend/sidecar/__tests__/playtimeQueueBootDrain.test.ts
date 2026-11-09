@@ -98,7 +98,8 @@ const SKIP_LOG_OPTIONS = { prefix: LogPrefix.Backend }
  * `seed` runs in `before` too, for state that must exist when the boot reads it.
  */
 function bootedWorld(opts?: {
-  seed?: (queue: { set: (k: string, v: unknown) => void }) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  seed?: (queue: { set: (k: string, v: any) => void }) => void
   drainImpl?: () => Promise<void>
 }) {
   let runOnce!: jest.Mock

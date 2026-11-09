@@ -55,7 +55,7 @@ describe('checkRosettaWhenMac() platform gate (todo 2026-09-06, quick-260908-k3x
   })
 
   it('never shells the arch probe off macOS', async () => {
-    checkRosettaWhenMac()
+    checkRosettaWhenMac(Promise.resolve())
     await flush()
 
     expect(mockedExec).not.toHaveBeenCalled()

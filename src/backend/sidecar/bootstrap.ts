@@ -150,6 +150,9 @@ import {
   LogPrefix
 } from '../logger'
 import { GlobalConfig } from '../config'
+import { createAppContext } from '../process/context'
+import type { AppContext } from '../process/context'
+import type { LogSink } from '../process/types'
 import { setIpcRejectionLogSink } from './ipcValidation'
 import { publicDir } from '../constants/paths'
 import { backendEvents } from '../backend_events'
@@ -182,105 +185,77 @@ import {
 // ---- Step 3: start the RPC server, wire the transport, signal READY -------
 
 /**
- * Starts the sidecar: begins serving the stdio JSON-RPC loop, wires
- * platformApi's `shell.openExternal`/`sendFrontendMessage` push path onto
- * it, then prints `READY_SENTINEL`. Streams are injectable for testing
- * (`bootstrap.test.ts` drives this with `stream.PassThrough` pairs);
- * production use (`src/sidecar/index.ts`) relies on the
- * `process.stdin`/`process.stdout` defaults.
+ * Boot is ONE ordered list of named steps that runs once per process (Phase 66 D-08).
+ * `bootSidecar` runs the list over an `AppContext` built once at boot (D-01); there are no
+ * per-block once-guard booleans and no module-level `i18nReady` promise any more. The old
+ * guards existed only because tests called `init()` many times per module registry (a repeat
+ * would stack another `ipcMain` listener, another `runOnceWhenOnline` registration, another
+ * i18next init); a second boot now throws instead, and tests boot once per fresh registry.
+ *
+ * Ordering constraints each step records on itself, summarised: migrations come first after
+ * the logger (the migration system logs and `heroicLogWriter` is unset until `initLogger()`);
+ * the logger step binds the processGuards sinks once (WR-04); secret stores and the online
+ * monitor come after the RPC server and transport and before READY; rosetta comes after i18n
+ * (it awaits that boot's own `state.i18nReady`); READY precedes the sign-in probe and the
+ * startup protocol URL.
+ *
+ * Exit contract: no step may create an unref()-less handle or leave unbounded in-flight work.
  */
-let loggerInitialized = false
-// Guards initOnlineMonitor() (fix/steam-native-install-stability, 33-05 live-gate gap): unlike
-// loggerInitialized's target (initLogger() is naturally idempotent — it just reassigns a
-// singleton), initOnlineMonitor() calls `addListener`/`addHandler`, which push onto
-// platformApi's `ipcMain.on` listener arrays every call. Without this guard, each repeated
-// init() (bootstrap.test.ts / skeletonFlows.test.ts call it many times per file with fresh
-// streams; production calls it once) would register another `connectivity-changed`/
-// `set-connectivity-online` listener, firing `setStatus()` (and a fresh `pingSites()` ping) once
-// per accumulated registration on every subsequent event.
-let onlineMonitorInitialized = false
-// Guards the i18next initialization block below (D-02). Same reason
-// loggerInitialized/onlineMonitorInitialized exist: bootstrap.test.ts / *Flows.test.ts call
-// init() many times per file with fresh streams, and re-initializing i18next per call is
-// wasteful and can race its async resource load.
-let i18nInitialized = false
-// Guards the re-homed `releasesInfoReady` anticheat listener below (D-04). Same reason as
-// onlineMonitorInitialized: `backendEvents.on` accumulates a listener per call, so without
-// this guard repeated init() calls in tests would fire N downloads per event.
-let anticheatListenerRegistered = false
-// Guards the fetchLastestReleases() call below (D-07). Same reason as the other guards:
-// bootstrap.test.ts / *Flows.test.ts call init() many times per file, and a second fetch per
-// call is wasteful and would violate the "one fetch, one listener" idempotency contract.
-let releasesFetchInitialized = false
-// Guards applyMigrations() (todo 2026-08-16, quick task 260822-s8y). Same reason as
-// releasesFetchInitialized: bootstrap.test.ts / *Flows.test.ts call init() many times per file,
-// and re-running the migration set per call would re-issue its filesystem work. Production calls
-// init() once, exactly as the Electron main process calls applyMigrations() once.
-let migrationsInitialized = false
-// Guards registerProtocolUrlHandler()'s ipcMain.handle() registration below (Phase 34.5 gap
-// cycle 6 plan 44). Same reason as the guards above: bootstrap.test.ts / *Flows.test.ts call
-// init() many times per file, and platformApi's handlerRegistry is a plain module-scope Map
-// keyed by channel name — a second handle('handleProtocolUrl', ...) call would just silently
-// overwrite the first, which is harmless today but is exactly the kind of "works by accident"
-// idempotency this file's other five guards exist to make explicit instead.
-let protocolUrlHandlerRegistered = false
-// Guards clearStrandedPlaytimeSyncLock() below (Block D, finding A1, quick-260907-odi). Same
-// reason as the other guards: bootstrap.test.ts / *Flows.test.ts call init() many times per
-// file, production calls it once.
-let playtimeLockClearInitialized = false
-// Guards the legacy Zoom data removal below (quick-261029-toq); same once-per-process reason.
-let legacyZoomCleanupInitialized = false
-// Guards the stale engine temp sweep below (G20); same once-per-process reason.
-let engineTempSweepInitialized = false
-// Guards reconcileStoreUsersWhenOnline() below (Block E, todo 2026-09-06, quick-260908-fre).
-// Same reason as the other guards: bootstrap.test.ts / *Flows.test.ts call init() many times
-// per file, and without this guard each call would register another
-// runOnceWhenOnline(...) — either invoking the reconciliation body again immediately (if
-// already online) or stacking another 'online' listener on connectivityEmitter (if not).
-// Production calls init() once.
-let storeUserReconcileInitialized = false
-// Guards checkRosettaWhenMac()'s call site below (Block F, todo 2026-09-06, quick-260908-k3x).
-// Same reason as the other guards: bootstrap.test.ts / *Flows.test.ts call init() many times
-// per file, and without this guard each call would re-chain another `.then()` off `i18nReady`
-// and could paint a second Rosetta-warning dialog. Lives at the CALL SITE, not inside
-// `checkRosettaWhenMac()` itself, so `rosettaPlatformGate.test.ts` can call the function
-// directly without needing to reset a guard it doesn't own -- re-running the read-only probe
-// is harmless; the guard exists only to prevent a duplicate dialog.
-let rosettaCheckInitialized = false
-// Guards syncQueuedPlaytimeWhenOnline()'s call site below (Block G, todo 2026-09-06,
-// quick-260908-wk0). Same reason as storeUserReconcileInitialized above: bootstrap.test.ts /
-// *Flows.test.ts call init() many times per file, and without this guard each call would
-// register another runOnceWhenOnline(...) -- either invoking the drain body again immediately
-// (if already online) or stacking another 'online' listener on connectivityEmitter (if not).
-// Production calls init() once. Lives at the CALL SITE, not inside
-// syncQueuedPlaytimeWhenOnline() itself, matching Blocks A/B/E/F, so the new suite can call the
-// helper directly without owning a guard it cannot reset.
-let playtimeQueueDrainInitialized = false
-// Guards setGogPresenceWhenOnline()'s call site below (Block H, todo 2026-09-06,
-// quick-260909-k5x). Same reason as storeUserReconcileInitialized/playtimeQueueDrainInitialized
-// above: bootstrap.test.ts / *Flows.test.ts call init() many times per file, and without this
-// guard each call would register another runOnceWhenOnline(...) -- either invoking the presence
-// body again immediately (if already online) or stacking another 'online' listener on
-// connectivityEmitter (if not). Production calls init() once. Lives at the CALL SITE, not
-// inside setGogPresenceWhenOnline() itself, matching Blocks E/F/G, so the new suite can call the
-// helper directly without owning a guard it cannot reset.
-let gogPresenceInitialized = false
-// Guards the sign-in probe outcomes pull-handler registration (Phase 49 plan 08). Same reason as
-// the flags above: bootstrap.test.ts / *Flows.test.ts call init() many times per file, and
-// without this guard each call would register the handler again. Production calls init() once.
-let signInProbeOutcomesHandlerInitialized = false
-// Guards the sign-in probe pass start (Phase 49 plan 08). Same reason. The test-worker guard for
-// real probes lives inside the pass itself, so init()-calling suites never run real probes.
-let signInProbeInitialized = false
-// Holds the i18next init promise, chained so a caller can await CATALOG READINESS rather than
-// mere init()-was-called (D-02 area, Block F). Assigned the CAUGHT promise -- not the raw
-// `i18next.use(Backend).init(...)` one -- because a failed i18n init must still let the
-// Rosetta check run (falling back to i18next's own inline defaults), and must never leave a
-// second unhandled rejection sitting alongside the existing `.catch()` below. If the i18next
-// block's own outer `try` (around `GlobalConfig.get().getSettings()`) throws before ever
-// reaching `i18next.use(Backend).init(...)`, this stays at its initial `Promise.resolve()`
-// value, which is the correct degrade: the Rosetta check still runs, just without having
-// waited on anything.
+export const BOOT_STEP_NAMES = [
+  'outbound-http-tracking',
+  'logger',
+  'migrations',
+  'shell-exe-receipt',
+  'asset-root-check',
+  'i18n',
+  'rpc-server',
+  'protocol-url-handler',
+  'transport',
+  'mac-steam-online-restore',
+  'secret-stores',
+  'orphaned-token-cleanup',
+  'online-monitor',
+  'anticheat-listener',
+  'releases-fetch',
+  'installed-json-watcher',
+  'playtime-lock-clear',
+  'legacy-zoom-cleanup',
+  'engine-temp-sweep',
+  'store-user-reconcile',
+  'rosetta',
+  'playtime-queue-drain',
+  'gog-presence',
+  'sign-in-probe-outcomes',
+  'ready-sentinel',
+  'sign-in-probe',
+  'startup-protocol-url'
+] as const
+
+type BootStepName = (typeof BOOT_STEP_NAMES)[number]
+
+interface BootIo {
+  input: Readable
+  output: Writable
+}
+
+/** Values one boot produces for later steps; created inside `bootSidecar`, one per boot. */
+interface BootState {
+  /**
+   * The i18next init promise for this boot, chained so a step can await CATALOG READINESS
+   * rather than mere init()-was-called (D-02 area, Block F). Holds the CAUGHT promise, not the
+   * raw `i18next.use(Backend).init(...)` one, because a failed i18n init must still let the
+   * Rosetta check run (falling back to i18next's inline defaults). If the i18n step's own
+   * outer `try` throws before reaching `init(...)` this stays `Promise.resolve()`, which is
+   * the correct degrade.
+   */
+  i18nReady: Promise<void>
+}
+
+interface BootStep {
+  name: BootStepName
+  run(ctx: AppContext, io: BootIo, state: BootState): void
+}
+
 let i18nReady: Promise<void> = Promise.resolve()
 
 /**
@@ -340,8 +315,7 @@ export function deliverStartupProtocolUrl(
 /**
  * Registers the `handleProtocolUrl` invoke channel — the sidecar-side entry point the Rust
  * shell's single-instance accept loop calls to deliver a WARM (already-running) deep link
- * (Phase 34.5 gap cycle 6 plan 44, D-44-A). Guarded by `protocolUrlHandlerRegistered`,
- * mirroring this file's other five idempotency guards immediately above.
+ * (Phase 34.5 gap cycle 6 plan 44, D-44-A). Runs once, as a boot step (D-08).
  *
  * Rejects anything that is not a `string` beginning `gamelib://` by THROWING —
  * `new Error('handleProtocolUrl: rejected a non-gamelib argument')`, deliberately never
@@ -364,8 +338,6 @@ export function deliverStartupProtocolUrl(
 // string match indifferent to the `export` keyword. Called internally by
 // `init()` below.
 function registerProtocolUrlHandler(): void {
-  if (protocolUrlHandlerRegistered) return
-  protocolUrlHandlerRegistered = true
   platformApi.ipcMain.handle(
     'handleProtocolUrl',
     (_event: unknown, url?: unknown) => {
@@ -648,7 +620,7 @@ export function syncQueuedPlaytimeWhenOnline(): void {
  *    forward, which passes only `message`/`title`/`kind`/`buttons` -- named here so a reader
  *    does not go looking for a missing icon.
  */
-export function checkRosettaWhenMac(): void {
+export function checkRosettaWhenMac(i18nReady: Promise<void>): void {
   if (!isMac) return
   try {
     i18nReady
@@ -787,604 +759,727 @@ export function setGogPresenceWhenOnline(): void {
   }
 }
 
+function runBootSteps(ctx: AppContext, io: BootIo, state: BootState): void {
+  const steps = buildBootSteps()
+  const built = steps.map((step) => step.name).join(',')
+  if (built !== BOOT_STEP_NAMES.join(',')) {
+    throw new Error(`boot step list drifted from BOOT_STEP_NAMES: ${built}`)
+  }
+  for (const step of steps) step.run(ctx, io, state)
+}
+
 export function init(
   input: Readable = process.stdin,
   output: Writable = process.stdout
 ): void {
-  // Track outbound HTTP first, ahead of migrations/i18next/boot work, so boot-time requests
-  // are tracked too and destroyed at stdin EOF (quick 261110-9w2). Idempotent, because init()
-  // runs many times per test file.
-  installOutboundHttpTracking()
-  // Idempotent — bootstrap.test.ts / skeletonFlows.test.ts each call this
-  // function multiple times per file (fresh streams per test); production
-  // calls it once per process, same as the Electron main process's own
-  // single `init()`/`initHeadless()` startup call.
-  if (!loggerInitialized) {
-    initLogger()
-    loggerInitialized = true
-    // WR-04 (gap cycle 1): `processGuards.ts` has ZERO static imports so that
-    // `src/sidecar/index.ts` can install the unhandledRejection guard as its FIRST
-    // import, ahead of this module's own graph (and therefore ahead of
-    // `../platform`). The price of that is a logger it cannot import, so the
-    // sink is bound here instead -- the first moment `heroicLogWriter` exists. Before
-    // this line the guard writes to stderr, which is the only safe channel that early
-    // anyway. Adding an import of `logWarning` to `processGuards.ts` instead would
-    // reintroduce the boot failure recorded in `727be5dbb`.
-    setUnhandledRejectionLogSink((message) =>
-      logWarning(message, LogPrefix.Backend)
-    )
-    // D-35-10-01: the `uncaughtException` sibling guard, bound in the same window and
-    // for the same WR-04 reason. `logError`, NOT `logWarning` -- this preserves the
-    // severity of the Electron handler at `main.ts:618` that plan 35-14 deletes
-    // (`logError(err, LogPrefix.Backend)`). A shared sink would have demoted every
-    // uncaught exception to a warning. Before this line the guard writes to stderr.
-    // Phase 72 D-04: returns the write promise (`logErrorSettled`, same severity) so the
-    // now-fatal guard can await the flush before exiting.
-    setUncaughtExceptionLogSink((message) =>
-      logErrorSettled(message, LogPrefix.Backend)
-    )
+  const ctx = createAppContext({
+    platform: process.platform,
+    paths: {
+      appRoot: platformApi.app.getAppPath(),
+      publicDir,
+      userData: platformApi.app.getPath('userData')
+    },
+    log: createBackendLogSink(),
+    baseEnv: process.env
+  })
+  runBootSteps(ctx, { input, output }, { i18nReady: Promise.resolve() })
+}
+
+function createBackendLogSink(): LogSink {
+  return {
+    info: (message) => logInfo(message, LogPrefix.Backend),
+    warn: (message) => logWarning(message, LogPrefix.Backend),
+    error: (message) => logError(message, LogPrefix.Backend)
   }
+}
 
-  // ---- Data migrations (todo 2026-08-16, quick task 260822-s8y) -----------
-  // Mirrors `main.ts:412`'s `await MigrationSystem.get().applyMigrations()`, which the headless
-  // sidecar never runs -- the same class of gap as `initOnlineMonitor()` below.
-  //
-  // Placement: FIRST after `initLogger()`, matching Electron's ordering (migrations are the
-  // very next statement after its own `initLogger()`), and required to be after it because
-  // `applyMigration` calls `logInfo`/`logError` unconditionally and `heroicLogWriter` is unset
-  // until `initLogger()` runs (the standing sidecar-logger finding).
-  //
-  // WHAT THIS DELIBERATELY DOES NOT REPRODUCE, and why. Electron AWAITS migrations before
-  // `initStoreManagers()`. The sidecar cannot: `./handlers` (Step 2, above) is imported at
-  // MODULE SCOPE, long before `init()` is ever called, so every store manager already exists by
-  // the time this line runs -- and `initStoreManagers()` is itself dead under Tauri. `init()` is
-  // also synchronous by contract (`src/sidecar/index.ts` and ~10 test suites call it as such),
-  // so the promise is floated the way `fetchLastestReleases()` below is.
-  //
-  // The real constraint is narrower than Electron's: migrations must finish before the FIRST
-  // read of `legendaryConfigPath`, which arrives as an RPC call after the READY_SENTINEL write
-  // below. READY is deliberately NOT delayed on this promise. That is a known, bounded
-  // limitation rather than a proof of safety: `LegendaryGlobalConfigFolderMigration` only does
-  // any work when `legendaryConfigPath` is ABSENT -- i.e. the user has never logged into Epic in
-  // GameLib -- so a read that loses the race finds nothing, which is precisely today's
-  // behaviour, and the copy is local filesystem I/O begun milliseconds into boot. A migration
-  // that ever needs a hard happens-before guarantee against a handler will need `init()` to
-  // become async; do not assume this placement covers that case.
-  if (!migrationsInitialized) {
-    migrationsInitialized = true
-    try {
-      MigrationSystem.get()
-        .applyMigrations()
-        .catch((error: unknown) => {
-          logWarning(
-            `[bootstrap] applyMigrations() failed: ${String(error)}`,
-            LogPrefix.Backend
-          )
-        })
-    } catch (error) {
-      logWarning(
-        `[bootstrap] applyMigrations() could not be started: ${error}`,
-        LogPrefix.Backend
-      )
-    }
-  }
-
-  // ---- Boot-time receipt logging (Phase 34.5 G-3, plan 34.5-18) -----------
-  // Logs the GAMELIB_SHELL_EXE value the SIDECAR ACTUALLY RECEIVED, not what the Rust shell's
-  // own `eprintln!` at main.rs:1231 CLAIMS it sent (that line only ever reaches the shell
-  // process's own stderr -- the `pnpm tauri:dev` terminal -- never `gamelib.log`). The child's
-  // own observation is strictly stronger evidence: it proves what pathShim can actually see,
-  // not merely what the parent set on the spawn call. `34.5-LIVE-GATE.md` precondition 5 cites
-  // this exact prefix (`GAMELIB_SHELL_EXE received=`) as its evidence source -- the gate's
-  // re-run reads it from here, not the terminal.
-  //
-  // Reads `process.env.GAMELIB_SHELL_EXE` directly rather than `pathShim.getPath('exe')`,
-  // which THROWS on an unset/empty value (T-34.5-01) -- this diagnostic must report an unset
-  // value, never crash boot trying to report it. Placement (after `initLogger()` above, before
-  // `output.write(READY_SENTINEL)` below) is load-bearing per the standing
-  // `sidecar-console-and-logger-are-invisible` finding: anything logged before `initLogger()`
-  // throws into a swallowed rejection, and the sidecar's stdout IS the RPC pipe, so `console.*`
-  // is invisible too. Wrapped in try/catch -- a diagnostic must never fail boot (T-34.5-G3-02).
-  try {
-    const shellExeReceived = process.env.GAMELIB_SHELL_EXE
-    if (shellExeReceived) {
-      logInfo(
-        `[bootstrap] GAMELIB_SHELL_EXE received=${shellExeReceived}`,
-        LogPrefix.Backend
-      )
-    } else {
-      logWarning(
-        '[bootstrap] GAMELIB_SHELL_EXE received=<UNSET>',
-        LogPrefix.Backend
-      )
-    }
-  } catch (error) {
-    logWarning(
-      `[bootstrap] Failed to log GAMELIB_SHELL_EXE receipt: ${error}`,
-      LogPrefix.Backend
-    )
-  }
-
-  // ---- Boot-time asset-root self-check (Phase 34.5 G-1/G-3, plan 34.5-18) -------------------
-  // Makes plan 34.5-16's GAMELIB_APP_ROOT handoff observable at the exact boot moment, before
-  // any login can be attempted: on 2026-08-01 the `spawn ./{legendary,gogdl,nile} ENOENT` lines
-  // fired at 00:06:26, six seconds before the first login interaction at 00:06:32
-  // (`34.5-LIVE-GATE.md`'s "Root cause" section) -- this diagnosis must be present by then, so
-  // it runs directly after the receipt log above and before the i18next block below (the first
-  // other startup diagnostic, and cannot be outrun by a login attempt).
-  //
-  // This is the FOURTH recurrence of the `publicdir-getapppath-chunking` family. The `locales`
-  // existsSync warning immediately below (D-02) already half-knew this in 2026 -- it added a
-  // loud existsSync check for ONE publicDir-relative consumer and never generalised the
-  // implication to every other one (`bin/`, the most costly). This block is that
-  // generalisation, named here so a future reader sees the lesson at the exact site where it
-  // was previously missed.
-  //
-  // Deliberately does NOT import `archSpecificBinary` (private to `utils.ts`) -- widening that
-  // module's public surface just for a diagnostic costs more than duplicating its four-line
-  // join here, and `appRootResolution.test.ts`'s real-filesystem block is what keeps the two
-  // resolutions honest (it fails if they diverge). Under the packaged Tauri build this check is
-  // EXPECTED to report `exists=false` until residual R-34.5-G1-PKG (`34.5-16-SUMMARY.md`) is
-  // resolved -- that is the point of this check: loud, not silent. Wrapped in try/catch -- a
-  // diagnostic must never fail boot (T-34.5-G3-02).
-  try {
-    const appRootEnv = process.env.GAMELIB_APP_ROOT
-    const appRootSource = appRootEnv ? 'GAMELIB_APP_ROOT' : 'process.cwd'
-    logInfo(
-      `[bootstrap] appRoot resolved=${platformApi.app.getAppPath()} source=${appRootSource}`,
-      LogPrefix.Backend
-    )
-
-    const publicDirExists = existsSync(publicDir)
-    logInfo(
-      `[bootstrap] publicDir resolved=${publicDir} exists=${publicDirExists}`,
-      LogPrefix.Backend
-    )
-
-    let assetMissing = !publicDirExists
-    for (const runnerBinaryName of ['legendary', 'gogdl', 'nile', 'comet']) {
-      // Mirrors archSpecificBinary's own arch-native-first, x64-fallback resolution
-      // (utils.ts:517-527) without importing it -- see comment above.
-      const archNativePath = join(
-        publicDir,
-        'bin',
-        process.arch,
-        process.platform,
-        runnerBinaryName
-      )
-      const x64FallbackPath = join(
-        publicDir,
-        'bin',
-        'x64',
-        process.platform,
-        runnerBinaryName
-      )
-      const resolvedRunnerPath = existsSync(archNativePath)
-        ? archNativePath
-        : x64FallbackPath
-      const runnerExists = existsSync(resolvedRunnerPath)
-      if (!runnerExists) assetMissing = true
-      logInfo(
-        `[bootstrap] runner binary ${runnerBinaryName} path=${resolvedRunnerPath} exists=${runnerExists}`,
-        LogPrefix.Backend
-      )
-    }
-
-    if (assetMissing) {
-      logError(
-        `[bootstrap] SIDECAR ASSET ROOT DEFECT -- resolved publicDir "${publicDir}" is missing required assets; see 34.5-APP-ROOT-SWEEP.md for the full consumer sweep`,
-        LogPrefix.Backend
-      )
-    }
-  } catch (error) {
-    logWarning(
-      `[bootstrap] Asset-root self-check failed: ${error}`,
-      LogPrefix.Backend
-    )
-  }
-
-  // i18next initialization (D-02): mirrors main.ts:460-472's
-  // `i18next.use(Backend).init({...})` call -- the ONLY i18next.init() call site in the
-  // whole backend, which only ever runs inside Electron's `app.whenReady()` and therefore
-  // never executes under the headless sidecar. Without it, `i18next.t()` returns
-  // `undefined` for every one of the 103 backend `t()` call sites reachable from the
-  // sidecar (verified against installed i18next 22.5.1 -- it does not throw and there is
-  // no rescuing inline English default).
-  //
-  // Placement is load-bearing: must run AFTER `initLogger()` above -- `GlobalConfig.get()`
-  // below is this process's first-ever `GlobalConfig` read, and the config-version-upgrade
-  // path (config.ts:145/152) can itself call `logInfo`/`logError` synchronously, which
-  // throws while `heroicLogWriter` is unset (same ordering reason as
-  // `initOnlineMonitor()`'s and `installTokenStore()`'s placement comments below).
-  if (!i18nInitialized) {
-    i18nInitialized = true
-    try {
-      const settings = GlobalConfig.get().getSettings()
-      const localesDir = join(publicDir, 'locales')
-      // Loud-not-silent locale resolution (publicdir-getapppath-chunking gotcha family):
-      // under the sidecar, platformApi's `app.getAppPath()` resolves to `process.cwd()`,
-      // not a packaged asar root -- so the packaged-build half of this path cannot be
-      // proven by jest and is a named deferred-UAT item. If the resolved directory is
-      // absent, warn loudly naming the resolved path rather than silently falling back --
-      // i18next's own `fallbackLng`/key-return behavior below is still strictly better than
-      // the current permanent `undefined`.
-      //
-      // Phase 34.5 plan 34.5-18 (G-3): this check was, for a long time, the ONLY member of
-      // this family in the codebase -- and it stopped short. The implication ("publicDir can
-      // be wrong under the sidecar") was known here but never generalised past `locales/` to
-      // every other publicDir-relative consumer, most costly `bin/` (the runner binaries) --
-      // that gap cost live-gate items 1/2/3 (`spawn ./{legendary,gogdl,nile} ENOENT`,
-      // `34.5-LIVE-GATE.md`'s "Root cause" section, the fourth recurrence of this family). The
-      // boot-time asset-root self-check above generalises this exact pattern to `publicDir`
-      // itself and every bundled runner binary, run earlier in `init()` than this block so it
-      // cannot be outrun by a login attempt.
-      if (!existsSync(localesDir)) {
-        logWarning(
-          `[bootstrap] i18next locales directory not found at "${localesDir}" -- backend-side translated strings will fall back to their keys`,
-          LogPrefix.Backend
+// Kept LAST in the file: `bootstrapWirings.test.ts` slices from `export function init(` to EOF
+// to source-gate the call order of the steps below.
+function buildBootSteps(): BootStep[] {
+  return [
+    {
+      name: 'outbound-http-tracking',
+      run: () => {
+        // Track outbound HTTP first, ahead of migrations/i18next/boot work, so boot-time requests
+        // are tracked too and destroyed at stdin EOF (quick 261110-9w2). Idempotent, because init()
+        // runs many times per test file.
+        installOutboundHttpTracking()
+      }
+    },
+    {
+      name: 'logger',
+      run: () => {
+        initLogger()
+        // WR-04 (gap cycle 1): `processGuards.ts` has ZERO static imports so that
+        // `src/sidecar/index.ts` can install the unhandledRejection guard as its FIRST
+        // import, ahead of this module's own graph (and therefore ahead of
+        // `../platform`). The price of that is a logger it cannot import, so the
+        // sink is bound here instead -- the first moment `heroicLogWriter` exists. Before
+        // this line the guard writes to stderr, which is the only safe channel that early
+        // anyway. Adding an import of `logWarning` to `processGuards.ts` instead would
+        // reintroduce the boot failure recorded in `727be5dbb`.
+        setUnhandledRejectionLogSink((message) =>
+          logWarning(message, LogPrefix.Backend)
+        )
+        // D-35-10-01: the `uncaughtException` sibling guard, bound in the same window and
+        // for the same WR-04 reason. `logError`, NOT `logWarning` -- this preserves the
+        // severity of the Electron handler at `main.ts:618` that plan 35-14 deletes
+        // (`logError(err, LogPrefix.Backend)`). A shared sink would have demoted every
+        // uncaught exception to a warning. Before this line the guard writes to stderr.
+        // Phase 72 D-04: returns the write promise (`logErrorSettled`, same severity) so the
+        // now-fatal guard can await the flush before exiting.
+        setUncaughtExceptionLogSink((message) =>
+          logErrorSettled(message, LogPrefix.Backend)
         )
       }
-      // Assigned to `i18nReady` (Block F, quick-260908-k3x) -- see that variable's own
-      // declaration comment for why the CAUGHT promise, not the raw one, is what's held.
-      i18nReady = i18next
-        .use(Backend)
-        .init({
-          backend: {
-            // quick-260925-bq4: `addPath` used to sit here as
-            // join(publicDir,'locales','{{lng}}','{{ns}}'). Nothing in this init
-            // sets `saveMissing`, so it was never reached -- and once `{{lng}}`
-            // became a BCP-47 tag it would have pointed at a `pt-BR` directory
-            // that does not exist. Removed rather than "fixed", for the same
-            // reason quick task 260901-b8z removed the renderer's copy: a dead
-            // option pointing at a plausible-looking path is a trap.
-            allowMultiLoading: false,
-            // A function, not '{{lng}}': the resolved code is now the BCP-47 tag
-            // while the directory keeps its shipped name. NOTE the signature --
-            // i18next-fs-backend 2.6.0 calls loadPath with SCALARS
-            // (`loadPath(language, namespace)`, :52-53), whereas
-            // i18next-http-backend in the renderer passes ARRAYS. The two call
-            // sites are deliberately not identical.
-            loadPath: (language: string, namespace: string) =>
-              join(
-                publicDir,
-                'locales',
-                ...localeFileSegments(language, namespace)
+    },
+    {
+      name: 'migrations',
+      run: () => {
+        // ---- Data migrations (todo 2026-08-16, quick task 260822-s8y) -----------
+        // Mirrors `main.ts:412`'s `await MigrationSystem.get().applyMigrations()`, which the headless
+        // sidecar never runs -- the same class of gap as `initOnlineMonitor()` below.
+        //
+        // Placement: FIRST after `initLogger()`, matching Electron's ordering (migrations are the
+        // very next statement after its own `initLogger()`), and required to be after it because
+        // `applyMigration` calls `logInfo`/`logError` unconditionally and `heroicLogWriter` is unset
+        // until `initLogger()` runs (the standing sidecar-logger finding).
+        //
+        // WHAT THIS DELIBERATELY DOES NOT REPRODUCE, and why. Electron AWAITS migrations before
+        // `initStoreManagers()`. The sidecar cannot: `./handlers` (Step 2, above) is imported at
+        // MODULE SCOPE, long before `init()` is ever called, so every store manager already exists by
+        // the time this line runs -- and `initStoreManagers()` is itself dead under Tauri. `init()` is
+        // also synchronous by contract (`src/sidecar/index.ts` and ~10 test suites call it as such),
+        // so the promise is floated the way `fetchLastestReleases()` below is.
+        //
+        // The real constraint is narrower than Electron's: migrations must finish before the FIRST
+        // read of `legendaryConfigPath`, which arrives as an RPC call after the READY_SENTINEL write
+        // below. READY is deliberately NOT delayed on this promise. That is a known, bounded
+        // limitation rather than a proof of safety: `LegendaryGlobalConfigFolderMigration` only does
+        // any work when `legendaryConfigPath` is ABSENT -- i.e. the user has never logged into Epic in
+        // GameLib -- so a read that loses the race finds nothing, which is precisely today's
+        // behaviour, and the copy is local filesystem I/O begun milliseconds into boot. A migration
+        // that ever needs a hard happens-before guarantee against a handler will need `init()` to
+        // become async; do not assume this placement covers that case.
+        try {
+          MigrationSystem.get()
+            .applyMigrations()
+            .catch((error: unknown) => {
+              logWarning(
+                `[bootstrap] applyMigrations() failed: ${String(error)}`,
+                LogPrefix.Backend
               )
-          },
-          debug: false,
-          returnEmptyString: false,
-          returnNull: false,
-          fallbackLng: 'en',
-          // `lng` + `supportedLngs` as one unit (quick-260925-bq4) -- see
-          // i18nextLanguageOptions' header for why they must stay in step.
-          ...i18nextLanguageOptions(settings.language),
-          // Plan 34.6-19 (REQ-34.6-05, T-34.6-51): fork strings live in their
-          // own `gamelib` namespace (public/locales/{{lng}}/gamelib.json),
-          // upstream Heroic strings stay in `translation`.
-          //
-          // The `supportedLngs` list above is shared with the renderer's own
-          // i18next init (`src/frontend/index.tsx`) via `common/languages` --
-          // that divergence risk is closed structurally, not by convention.
-          // quick-260925-bq4 tightened this further: `lng` and `supportedLngs`
-          // now arrive together from `i18nextLanguageOptions()`, so the two
-          // inits cannot drift on either half independently, and
-          // `languages.realI18next.test.ts` exercises that same function rather
-          // than a hand-rolled copy of these options.
-          //
-          // The `ns`/`defaultNS` pair below is NOT mirrored in the renderer,
-          // and that is correct, not a gap: `src/frontend/index.tsx`'s init
-          // sets no `ns`/`defaultNS` at all, because the renderer loads the
-          // `gamelib` namespace lazily via `useTranslation('gamelib')`
-          // (react-i18next's `loadNamespaces`), used at `src/frontend/App.tsx:189`
-          // and ~30 further call sites. Do not "fix" this by copying `ns` into
-          // the renderer's init.
-          ns: ['translation', 'gamelib'],
-          defaultNS: 'translation'
-        })
-        .then(() => undefined)
-        .catch((error) => {
+            })
+        } catch (error) {
           logWarning(
-            `[bootstrap] i18next initialization failed: ${error}`,
+            `[bootstrap] applyMigrations() could not be started: ${error}`,
             LogPrefix.Backend
           )
-        })
-    } catch (error) {
-      logWarning(
-        `[bootstrap] Failed to read settings for i18next initialization: ${error}`,
-        LogPrefix.Backend
-      )
-    }
-  }
-  startRpcServer(input, output)
-  // Phase 67 D-09: boundary rejections reach gamelib.log (ipcValidation avoids importing the logger).
-  setIpcRejectionLogSink((line) => logWarning(line, LogPrefix.Backend))
-  releaseOnStdinEof(input)
-  // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): registered immediately after
-  // startRpcServer() and BEFORE the READY_SENTINEL write below, so the shell can never send a
-  // handleProtocolUrl frame for an unregistered channel.
-  registerProtocolUrlHandler()
-  platformApi.bindTransport({
-    openExternal: requestOpenExternal,
-    pushFrontendMessage
-  })
-  // Owed Mac Steam goonline, three layers: routed quit (handleExit), stdin EOF
-  // (releaseOnStdinEof), and this boot call. kill -9 of the sidecar is covered ONLY here.
-  void restoreMacSteamOnlineIfOwed('boot')
-  // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
-  // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
-  // only fire from the RPC loop below, never at module-import time) so no handler ever
-  // observes the fail-closed default UnconfiguredTokenStore in the sidecar build (D-12). This constraint is inherited
-  // UNCHANGED by both arms of the exclusive branch immediately below (34.5 gap cycle 4 plan 36):
-  // installDevSecretVault() only performs local file I/O (no RPC), but the keyring arm it
-  // replaces on the OTHER side of this branch needs the same live transport
-  // installSidecarHumbleSecretStore()'s migration logic does, so the branch as a whole stays
-  // below startRpcServer() regardless of which arm a given boot takes.
-  //
-  // Exclusive, not additive (34.5 gap cycle 4 plan 36, Routing's developer-scoped dev-vault
-  // item): calling installDevSecretVault() first and checking its return value BEFORE touching
-  // either keyring install is deliberate. Running the vault install alongside or after the
-  // keyring installs would leave installSidecarHumbleSecretStore()'s fire-and-forget
-  // migrateHumbleSecrets() already dispatched -- a migration that reads the keyring and writes
-  // configStore, i.e. precisely the Keychain interaction this branch exists to let a developer
-  // avoid -- and would mean a boot that both prompted for Keychain access AND then discarded the
-  // result underneath the vault. Exactly one arm below ever runs. The `[bootstrap] secret
-  // stores: ` line is the receipt: `34.5-UNTESTED-ITEMS.md`'s `U-34.5-01` row keys its
-  // retirement condition directly off this exact string, so a live `gamelib.log` can prove which
-  // arm a given gate run actually used. Phase 34.6 plan 02 (`34.6-CONTEXT.md` amendment A-03)
-  // extends this same keyring arm with an additional SteamGridDB secret-store install below:
-  // without it, the SteamGridDB port landing in plan 34.6-09 would persist the operator's API
-  // key in `config.json` in the clear via the sidecar's dead `safeStorage` stub.
-  const devSecretVaultInstalled = installDevSecretVault()
-  if (devSecretVaultInstalled) {
-    logInfo('[bootstrap] secret stores: dev-vault', LogPrefix.Backend)
-  } else {
-    installTokenStore(new SidecarKeyringTokenStore())
-    // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): install the keyring-backed Humble
-    // secret store the same way and at the same site as the Steam TokenStore just above. Must
-    // run AFTER startRpcServer() for the same reason installTokenStore() does (its migration
-    // logic calls requestRustInvoke, which needs a live transport), and harmless to call on
-    // every bootstrap.test.ts/*Flows.test.ts init() re-run -- setHumbleSecretStore() just
-    // reassigns a registry variable (no accumulating listener, unlike
-    // onlineMonitorInitialized's guard above).
-    installSidecarHumbleSecretStore()
-    // Phase 34.6 plan 02 (A-03): same placement reasoning as installSidecarHumbleSecretStore()
-    // just above -- its migration also calls requestRustInvoke, so it must run AFTER
-    // startRpcServer() and inside this same keyring arm.
-    installSidecarSteamGridDbSecretStore()
-    logInfo('[bootstrap] secret stores: keyring', LogPrefix.Backend)
-  }
-  // Unconditional legacy-key cleanup (debug/steam-token-survives-keychain), OUTSIDE both arms
-  // above on purpose: by the time either arm finishes, `activeTokenStore` has already been
-  // swapped away from the unconfigured default (T-28-10 ordering — the block above), so the
-  // orphaned pre-Tauri `refreshToken` key in `steam_store/config.json` is dead under either
-  // arm, not just one. `clearOrphanedElectronToken()` itself lives in `tokenStore.ts`, not
-  // here — `bootstrap.ts` is banned by `electronUntouched.test.ts`'s D-04 binding gate from
-  // importing `configStore`/`TOKEN_STORE_KEY` directly, and that module is already the one
-  // place in the codebase permitted to touch them. Presence-only: never reads, logs, or
-  // measures the value, and this log line fires ONLY when the key was actually present and
-  // deleted (an absent key produces zero output, and stays that way on every later boot).
-  if (clearOrphanedElectronToken()) {
-    logInfo(
-      '[bootstrap] removed a legacy pre-Tauri `refreshToken` key from `steam_store/config.json`; the Keychain (`steam-refresh-token` slot) is the authoritative store',
-      LogPrefix.Backend
-    )
-  }
-  // Placement is load-bearing (fix/steam-native-install-stability, 33-05 live-gate gap): must
-  // run AFTER startRpcServer()/bindTransport() so initOnlineMonitor()'s immediate
-  // `sendFrontendMessage('connectivity-changed', ...)` call (inside `setStatus()`) has a live
-  // transport to push through, and BEFORE the READY_SENTINEL write below so the frontend's
-  // `get-connectivity-status` handler is guaranteed registered before the renderer can possibly
-  // ask for it.
-  if (!onlineMonitorInitialized) {
-    initOnlineMonitor()
-    onlineMonitorInitialized = true
-  }
-  // Block A — re-homed `releasesInfoReady` anticheat listener (D-04). Reproduces
-  // `anticheat/ipc_handler.ts:12-19`'s body exactly, including its `logDebug` line.
-  // `anticheat/ipc_handler.ts` itself cannot be side-effect-imported from
-  // `src/backend/sidecar/`: its module scope calls `addHandler` from `backend/ipc`, which
-  // imports the real `electron` (D-04's curated-import discipline, carried from Phase 30
-  // D-08 / 34.1 D-09) — so this listener has no other home under the sidecar, and without it
-  // D-07's emit below would fire into a void and `getAnticheatInfo` would still structurally
-  // be unable to return data. Electron keeps using `anticheat/ipc_handler.ts`'s own copy via
-  // `main.ts`'s `import './anticheat/ipc_handler'` — this is an addition for the sidecar
-  // only, never a second registration in the same process.
-  //
-  // Must be registered before Block B's fetch, below, so the listener exists before the
-  // event it responds to can possibly fire.
-  //
-  // CR-02 (34.2-09): the outer `try`/`catch` below covers ONLY the synchronous
-  // `backendEvents.on(...)` registration call, which cannot itself throw — it gives ZERO
-  // coverage to the listener body, which runs later from the emitter, outside this stack
-  // frame. The `.catch()` attached directly to the `downloadAntiCheatData(...)` call is what
-  // covers that body: `createMD5`'s `await` inside `downloadAntiCheatData` sits outside its
-  // own internal try/catch, so an `EACCES`/`ENOENT`/TOCTOU/is-a-directory fault on the local
-  // anticheat cache file would otherwise reject an unguarded promise.
-  if (!anticheatListenerRegistered) {
-    anticheatListenerRegistered = true
-    try {
-      backendEvents.on('releasesInfoReady', (releasesInfo) => {
-        logDebug(
-          'Releases info ready, checking anticheat data',
-          LogPrefix.Backend
-        )
-        downloadAntiCheatData(
-          isMac
-            ? releasesInfo.anticheatFiles.shaMac
-            : releasesInfo.anticheatFiles.shaLinux
-        ).catch((error) => {
+        }
+      }
+    },
+    {
+      name: 'shell-exe-receipt',
+      run: () => {
+        // ---- Boot-time receipt logging (Phase 34.5 G-3, plan 34.5-18) -----------
+        // Logs the GAMELIB_SHELL_EXE value the SIDECAR ACTUALLY RECEIVED, not what the Rust shell's
+        // own `eprintln!` at main.rs:1231 CLAIMS it sent (that line only ever reaches the shell
+        // process's own stderr -- the `pnpm tauri:dev` terminal -- never `gamelib.log`). The child's
+        // own observation is strictly stronger evidence: it proves what pathShim can actually see,
+        // not merely what the parent set on the spawn call. `34.5-LIVE-GATE.md` precondition 5 cites
+        // this exact prefix (`GAMELIB_SHELL_EXE received=`) as its evidence source -- the gate's
+        // re-run reads it from here, not the terminal.
+        //
+        // Reads `process.env.GAMELIB_SHELL_EXE` directly rather than `pathShim.getPath('exe')`,
+        // which THROWS on an unset/empty value (T-34.5-01) -- this diagnostic must report an unset
+        // value, never crash boot trying to report it. Placement (after `initLogger()` above, before
+        // `output.write(READY_SENTINEL)` below) is load-bearing per the standing
+        // `sidecar-console-and-logger-are-invisible` finding: anything logged before `initLogger()`
+        // throws into a swallowed rejection, and the sidecar's stdout IS the RPC pipe, so `console.*`
+        // is invisible too. Wrapped in try/catch -- a diagnostic must never fail boot (T-34.5-G3-02).
+        try {
+          const shellExeReceived = process.env.GAMELIB_SHELL_EXE
+          if (shellExeReceived) {
+            logInfo(
+              `[bootstrap] GAMELIB_SHELL_EXE received=${shellExeReceived}`,
+              LogPrefix.Backend
+            )
+          } else {
+            logWarning(
+              '[bootstrap] GAMELIB_SHELL_EXE received=<UNSET>',
+              LogPrefix.Backend
+            )
+          }
+        } catch (error) {
           logWarning(
-            `[bootstrap] downloadAntiCheatData failed: ${String(error)}`,
+            `[bootstrap] Failed to log GAMELIB_SHELL_EXE receipt: ${error}`,
             LogPrefix.Backend
           )
+        }
+      }
+    },
+    {
+      name: 'asset-root-check',
+      run: () => {
+        // ---- Boot-time asset-root self-check (Phase 34.5 G-1/G-3, plan 34.5-18) -------------------
+        // Makes plan 34.5-16's GAMELIB_APP_ROOT handoff observable at the exact boot moment, before
+        // any login can be attempted: on 2026-08-01 the `spawn ./{legendary,gogdl,nile} ENOENT` lines
+        // fired at 00:06:26, six seconds before the first login interaction at 00:06:32
+        // (`34.5-LIVE-GATE.md`'s "Root cause" section) -- this diagnosis must be present by then, so
+        // it runs directly after the receipt log above and before the i18next block below (the first
+        // other startup diagnostic, and cannot be outrun by a login attempt).
+        //
+        // This is the FOURTH recurrence of the `publicdir-getapppath-chunking` family. The `locales`
+        // existsSync warning immediately below (D-02) already half-knew this in 2026 -- it added a
+        // loud existsSync check for ONE publicDir-relative consumer and never generalised the
+        // implication to every other one (`bin/`, the most costly). This block is that
+        // generalisation, named here so a future reader sees the lesson at the exact site where it
+        // was previously missed.
+        //
+        // Deliberately does NOT import `archSpecificBinary` (private to `utils.ts`) -- widening that
+        // module's public surface just for a diagnostic costs more than duplicating its four-line
+        // join here, and `appRootResolution.test.ts`'s real-filesystem block is what keeps the two
+        // resolutions honest (it fails if they diverge). Under the packaged Tauri build this check is
+        // EXPECTED to report `exists=false` until residual R-34.5-G1-PKG (`34.5-16-SUMMARY.md`) is
+        // resolved -- that is the point of this check: loud, not silent. Wrapped in try/catch -- a
+        // diagnostic must never fail boot (T-34.5-G3-02).
+        try {
+          const appRootEnv = process.env.GAMELIB_APP_ROOT
+          const appRootSource = appRootEnv ? 'GAMELIB_APP_ROOT' : 'process.cwd'
+          logInfo(
+            `[bootstrap] appRoot resolved=${platformApi.app.getAppPath()} source=${appRootSource}`,
+            LogPrefix.Backend
+          )
+
+          const publicDirExists = existsSync(publicDir)
+          logInfo(
+            `[bootstrap] publicDir resolved=${publicDir} exists=${publicDirExists}`,
+            LogPrefix.Backend
+          )
+
+          let assetMissing = !publicDirExists
+          for (const runnerBinaryName of [
+            'legendary',
+            'gogdl',
+            'nile',
+            'comet'
+          ]) {
+            // Mirrors archSpecificBinary's own arch-native-first, x64-fallback resolution
+            // (utils.ts:517-527) without importing it -- see comment above.
+            const archNativePath = join(
+              publicDir,
+              'bin',
+              process.arch,
+              process.platform,
+              runnerBinaryName
+            )
+            const x64FallbackPath = join(
+              publicDir,
+              'bin',
+              'x64',
+              process.platform,
+              runnerBinaryName
+            )
+            const resolvedRunnerPath = existsSync(archNativePath)
+              ? archNativePath
+              : x64FallbackPath
+            const runnerExists = existsSync(resolvedRunnerPath)
+            if (!runnerExists) assetMissing = true
+            logInfo(
+              `[bootstrap] runner binary ${runnerBinaryName} path=${resolvedRunnerPath} exists=${runnerExists}`,
+              LogPrefix.Backend
+            )
+          }
+
+          if (assetMissing) {
+            logError(
+              `[bootstrap] SIDECAR ASSET ROOT DEFECT -- resolved publicDir "${publicDir}" is missing required assets; see 34.5-APP-ROOT-SWEEP.md for the full consumer sweep`,
+              LogPrefix.Backend
+            )
+          }
+        } catch (error) {
+          logWarning(
+            `[bootstrap] Asset-root self-check failed: ${error}`,
+            LogPrefix.Backend
+          )
+        }
+
+        // i18next initialization (D-02): mirrors main.ts:460-472's
+        // `i18next.use(Backend).init({...})` call -- the ONLY i18next.init() call site in the
+        // whole backend, which only ever runs inside Electron's `app.whenReady()` and therefore
+        // never executes under the headless sidecar. Without it, `i18next.t()` returns
+        // `undefined` for every one of the 103 backend `t()` call sites reachable from the
+        // sidecar (verified against installed i18next 22.5.1 -- it does not throw and there is
+        // no rescuing inline English default).
+        //
+      }
+    },
+    {
+      name: 'i18n',
+      run: (_ctx, _io, state) => {
+        // Placement is load-bearing: must run AFTER `initLogger()` above -- `GlobalConfig.get()`
+        // below is this process's first-ever `GlobalConfig` read, and the config-version-upgrade
+        // path (config.ts:145/152) can itself call `logInfo`/`logError` synchronously, which
+        // throws while `heroicLogWriter` is unset (same ordering reason as
+        // `initOnlineMonitor()`'s and `installTokenStore()`'s placement comments below).
+        try {
+          const settings = GlobalConfig.get().getSettings()
+          const localesDir = join(publicDir, 'locales')
+          // Loud-not-silent locale resolution (publicdir-getapppath-chunking gotcha family):
+          // under the sidecar, platformApi's `app.getAppPath()` resolves to `process.cwd()`,
+          // not a packaged asar root -- so the packaged-build half of this path cannot be
+          // proven by jest and is a named deferred-UAT item. If the resolved directory is
+          // absent, warn loudly naming the resolved path rather than silently falling back --
+          // i18next's own `fallbackLng`/key-return behavior below is still strictly better than
+          // the current permanent `undefined`.
+          //
+          // Phase 34.5 plan 34.5-18 (G-3): this check was, for a long time, the ONLY member of
+          // this family in the codebase -- and it stopped short. The implication ("publicDir can
+          // be wrong under the sidecar") was known here but never generalised past `locales/` to
+          // every other publicDir-relative consumer, most costly `bin/` (the runner binaries) --
+          // that gap cost live-gate items 1/2/3 (`spawn ./{legendary,gogdl,nile} ENOENT`,
+          // `34.5-LIVE-GATE.md`'s "Root cause" section, the fourth recurrence of this family). The
+          // boot-time asset-root self-check above generalises this exact pattern to `publicDir`
+          // itself and every bundled runner binary, run earlier in `init()` than this block so it
+          // cannot be outrun by a login attempt.
+          if (!existsSync(localesDir)) {
+            logWarning(
+              `[bootstrap] i18next locales directory not found at "${localesDir}" -- backend-side translated strings will fall back to their keys`,
+              LogPrefix.Backend
+            )
+          }
+          // Assigned to `i18nReady` (Block F, quick-260908-k3x) -- see that variable's own
+          // declaration comment for why the CAUGHT promise, not the raw one, is what's held.
+          state.i18nReady = i18next
+            .use(Backend)
+            .init({
+              backend: {
+                // quick-260925-bq4: `addPath` used to sit here as
+                // join(publicDir,'locales','{{lng}}','{{ns}}'). Nothing in this init
+                // sets `saveMissing`, so it was never reached -- and once `{{lng}}`
+                // became a BCP-47 tag it would have pointed at a `pt-BR` directory
+                // that does not exist. Removed rather than "fixed", for the same
+                // reason quick task 260901-b8z removed the renderer's copy: a dead
+                // option pointing at a plausible-looking path is a trap.
+                allowMultiLoading: false,
+                // A function, not '{{lng}}': the resolved code is now the BCP-47 tag
+                // while the directory keeps its shipped name. NOTE the signature --
+                // i18next-fs-backend 2.6.0 calls loadPath with SCALARS
+                // (`loadPath(language, namespace)`, :52-53), whereas
+                // i18next-http-backend in the renderer passes ARRAYS. The two call
+                // sites are deliberately not identical.
+                loadPath: (language: string, namespace: string) =>
+                  join(
+                    publicDir,
+                    'locales',
+                    ...localeFileSegments(language, namespace)
+                  )
+              },
+              debug: false,
+              returnEmptyString: false,
+              returnNull: false,
+              fallbackLng: 'en',
+              // `lng` + `supportedLngs` as one unit (quick-260925-bq4) -- see
+              // i18nextLanguageOptions' header for why they must stay in step.
+              ...i18nextLanguageOptions(settings.language),
+              // Plan 34.6-19 (REQ-34.6-05, T-34.6-51): fork strings live in their
+              // own `gamelib` namespace (public/locales/{{lng}}/gamelib.json),
+              // upstream Heroic strings stay in `translation`.
+              //
+              // The `supportedLngs` list above is shared with the renderer's own
+              // i18next init (`src/frontend/index.tsx`) via `common/languages` --
+              // that divergence risk is closed structurally, not by convention.
+              // quick-260925-bq4 tightened this further: `lng` and `supportedLngs`
+              // now arrive together from `i18nextLanguageOptions()`, so the two
+              // inits cannot drift on either half independently, and
+              // `languages.realI18next.test.ts` exercises that same function rather
+              // than a hand-rolled copy of these options.
+              //
+              // The `ns`/`defaultNS` pair below is NOT mirrored in the renderer,
+              // and that is correct, not a gap: `src/frontend/index.tsx`'s init
+              // sets no `ns`/`defaultNS` at all, because the renderer loads the
+              // `gamelib` namespace lazily via `useTranslation('gamelib')`
+              // (react-i18next's `loadNamespaces`), used at `src/frontend/App.tsx:189`
+              // and ~30 further call sites. Do not "fix" this by copying `ns` into
+              // the renderer's init.
+              ns: ['translation', 'gamelib'],
+              defaultNS: 'translation'
+            })
+            .then(() => undefined)
+            .catch((error) => {
+              logWarning(
+                `[bootstrap] i18next initialization failed: ${error}`,
+                LogPrefix.Backend
+              )
+            })
+        } catch (error) {
+          logWarning(
+            `[bootstrap] Failed to read settings for i18next initialization: ${error}`,
+            LogPrefix.Backend
+          )
+        }
+      }
+    },
+    {
+      name: 'rpc-server',
+      run: (_ctx, { input, output }) => {
+        startRpcServer(input, output)
+        // Phase 67 D-09: boundary rejections reach gamelib.log (ipcValidation avoids importing the logger).
+        setIpcRejectionLogSink((line) => logWarning(line, LogPrefix.Backend))
+        releaseOnStdinEof(input)
+      }
+    },
+    {
+      name: 'protocol-url-handler',
+      run: () => {
+        // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): registered immediately after
+        // startRpcServer() and BEFORE the READY_SENTINEL write below, so the shell can never send a
+        // handleProtocolUrl frame for an unregistered channel.
+        registerProtocolUrlHandler()
+      }
+    },
+    {
+      name: 'transport',
+      run: () => {
+        platformApi.bindTransport({
+          openExternal: requestOpenExternal,
+          pushFrontendMessage
         })
-      })
-    } catch (error) {
-      logWarning(
-        `[bootstrap] Failed to register releasesInfoReady anticheat listener: ${error}`,
-        LogPrefix.Backend
-      )
+      }
+    },
+    {
+      name: 'mac-steam-online-restore',
+      run: () => {
+        // Owed Mac Steam goonline, three layers: routed quit (handleExit), stdin EOF
+        // (releaseOnStdinEof), and this boot call. kill -9 of the sidecar is covered ONLY here.
+        void restoreMacSteamOnlineIfOwed('boot')
+      }
+    },
+    {
+      name: 'secret-stores',
+      run: () => {
+        // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
+        // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
+        // only fire from the RPC loop below, never at module-import time) so no handler ever
+        // observes the fail-closed default UnconfiguredTokenStore in the sidecar build (D-12). This constraint is inherited
+        // UNCHANGED by both arms of the exclusive branch immediately below (34.5 gap cycle 4 plan 36):
+        // installDevSecretVault() only performs local file I/O (no RPC), but the keyring arm it
+        // replaces on the OTHER side of this branch needs the same live transport
+        // installSidecarHumbleSecretStore()'s migration logic does, so the branch as a whole stays
+        // below startRpcServer() regardless of which arm a given boot takes.
+        //
+        // Exclusive, not additive (34.5 gap cycle 4 plan 36, Routing's developer-scoped dev-vault
+        // item): calling installDevSecretVault() first and checking its return value BEFORE touching
+        // either keyring install is deliberate. Running the vault install alongside or after the
+        // keyring installs would leave installSidecarHumbleSecretStore()'s fire-and-forget
+        // migrateHumbleSecrets() already dispatched -- a migration that reads the keyring and writes
+        // configStore, i.e. precisely the Keychain interaction this branch exists to let a developer
+        // avoid -- and would mean a boot that both prompted for Keychain access AND then discarded the
+        // result underneath the vault. Exactly one arm below ever runs. The `[bootstrap] secret
+        // stores: ` line is the receipt: `34.5-UNTESTED-ITEMS.md`'s `U-34.5-01` row keys its
+        // retirement condition directly off this exact string, so a live `gamelib.log` can prove which
+        // arm a given gate run actually used. Phase 34.6 plan 02 (`34.6-CONTEXT.md` amendment A-03)
+        // extends this same keyring arm with an additional SteamGridDB secret-store install below:
+        // without it, the SteamGridDB port landing in plan 34.6-09 would persist the operator's API
+        // key in `config.json` in the clear via the sidecar's dead `safeStorage` stub.
+        const devSecretVaultInstalled = installDevSecretVault()
+        if (devSecretVaultInstalled) {
+          logInfo('[bootstrap] secret stores: dev-vault', LogPrefix.Backend)
+        } else {
+          installTokenStore(new SidecarKeyringTokenStore())
+          // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): install the keyring-backed Humble
+          // secret store the same way and at the same site as the Steam TokenStore just above. Must
+          // run AFTER startRpcServer() for the same reason installTokenStore() does (its migration
+          // logic calls requestRustInvoke, which needs a live transport), and harmless to call on
+          // every bootstrap.test.ts/*Flows.test.ts init() re-run -- setHumbleSecretStore() just
+          // reassigns a registry variable (no accumulating listener, unlike
+          // onlineMonitorInitialized's guard above).
+          installSidecarHumbleSecretStore()
+          // Phase 34.6 plan 02 (A-03): same placement reasoning as installSidecarHumbleSecretStore()
+          // just above -- its migration also calls requestRustInvoke, so it must run AFTER
+          // startRpcServer() and inside this same keyring arm.
+          installSidecarSteamGridDbSecretStore()
+          logInfo('[bootstrap] secret stores: keyring', LogPrefix.Backend)
+        }
+      }
+    },
+    {
+      name: 'orphaned-token-cleanup',
+      run: () => {
+        // Unconditional legacy-key cleanup (debug/steam-token-survives-keychain), OUTSIDE both arms
+        // above on purpose: by the time either arm finishes, `activeTokenStore` has already been
+        // swapped away from the unconfigured default (T-28-10 ordering — the block above), so the
+        // orphaned pre-Tauri `refreshToken` key in `steam_store/config.json` is dead under either
+        // arm, not just one. `clearOrphanedElectronToken()` itself lives in `tokenStore.ts`, not
+        // here — `bootstrap.ts` is banned by `electronUntouched.test.ts`'s D-04 binding gate from
+        // importing `configStore`/`TOKEN_STORE_KEY` directly, and that module is already the one
+        // place in the codebase permitted to touch them. Presence-only: never reads, logs, or
+        // measures the value, and this log line fires ONLY when the key was actually present and
+        // deleted (an absent key produces zero output, and stays that way on every later boot).
+        if (clearOrphanedElectronToken()) {
+          logInfo(
+            '[bootstrap] removed a legacy pre-Tauri `refreshToken` key from `steam_store/config.json`; the Keychain (`steam-refresh-token` slot) is the authoritative store',
+            LogPrefix.Backend
+          )
+        }
+      }
+    },
+    {
+      name: 'online-monitor',
+      run: () => {
+        // Placement is load-bearing (fix/steam-native-install-stability, 33-05 live-gate gap): must
+        // run AFTER startRpcServer()/bindTransport() so initOnlineMonitor()'s immediate
+        // `sendFrontendMessage('connectivity-changed', ...)` call (inside `setStatus()`) has a live
+        // transport to push through, and BEFORE the READY_SENTINEL write below so the frontend's
+        // `get-connectivity-status` handler is guaranteed registered before the renderer can possibly
+        // ask for it.
+        initOnlineMonitor()
+      }
+    },
+    {
+      name: 'anticheat-listener',
+      run: () => {
+        // Block A — re-homed `releasesInfoReady` anticheat listener (D-04). Reproduces
+        // `anticheat/ipc_handler.ts:12-19`'s body exactly, including its `logDebug` line.
+        // `anticheat/ipc_handler.ts` itself cannot be side-effect-imported from
+        // `src/backend/sidecar/`: its module scope calls `addHandler` from `backend/ipc`, which
+        // imports the real `electron` (D-04's curated-import discipline, carried from Phase 30
+        // D-08 / 34.1 D-09) — so this listener has no other home under the sidecar, and without it
+        // D-07's emit below would fire into a void and `getAnticheatInfo` would still structurally
+        // be unable to return data. Electron keeps using `anticheat/ipc_handler.ts`'s own copy via
+        // `main.ts`'s `import './anticheat/ipc_handler'` — this is an addition for the sidecar
+        // only, never a second registration in the same process.
+        //
+        // Must be registered before Block B's fetch, below, so the listener exists before the
+        // event it responds to can possibly fire.
+        //
+        // CR-02 (34.2-09): the outer `try`/`catch` below covers ONLY the synchronous
+        // `backendEvents.on(...)` registration call, which cannot itself throw — it gives ZERO
+        // coverage to the listener body, which runs later from the emitter, outside this stack
+        // frame. The `.catch()` attached directly to the `downloadAntiCheatData(...)` call is what
+        // covers that body: `createMD5`'s `await` inside `downloadAntiCheatData` sits outside its
+        // own internal try/catch, so an `EACCES`/`ENOENT`/TOCTOU/is-a-directory fault on the local
+        // anticheat cache file would otherwise reject an unguarded promise.
+        try {
+          backendEvents.on('releasesInfoReady', (releasesInfo) => {
+            logDebug(
+              'Releases info ready, checking anticheat data',
+              LogPrefix.Backend
+            )
+            downloadAntiCheatData(
+              isMac
+                ? releasesInfo.anticheatFiles.shaMac
+                : releasesInfo.anticheatFiles.shaLinux
+            ).catch((error) => {
+              logWarning(
+                `[bootstrap] downloadAntiCheatData failed: ${String(error)}`,
+                LogPrefix.Backend
+              )
+            })
+          })
+        } catch (error) {
+          logWarning(
+            `[bootstrap] Failed to register releasesInfoReady anticheat listener: ${error}`,
+            LogPrefix.Backend
+          )
+        }
+      }
+    },
+    {
+      name: 'releases-fetch',
+      run: () => {
+        // Block B — fetchLastestReleases() (D-07). Must run AFTER initOnlineMonitor() above,
+        // because fetchLastestReleases wraps its work in runOnceWhenOnline, and AFTER Block A so
+        // the releasesInfoReady listener exists before the event it responds to can fire. Its own
+        // `process.env.CI === 'e2e'` and `isWindows` early-returns are preserved unchanged by
+        // calling it as-is — not replicated or bypassed here.
+        try {
+          fetchLastestReleases()
+        } catch (error) {
+          logWarning(
+            `[bootstrap] fetchLastestReleases() failed: ${error}`,
+            LogPrefix.Backend
+          )
+        }
+      }
+    },
+    {
+      name: 'installed-json-watcher',
+      run: () => {
+        // Block C — the `installed.json` watcher (Phase 35 plan 35-10, REQ-35-16). Ports
+        // `main.ts:1036-1048`, an Electron-only module-scope side effect that the sidecar never
+        // inherited: plan 35-01's D-17 census found ZERO import edges from the sidecar into
+        // `main.ts`, so under Tauri nothing refreshed the in-memory `installedGames` map and
+        // `legendary sync-saves` computed save paths against a stale view. See
+        // `installedJsonWatcher.ts` for the full mechanism, the debounce rationale and teardown.
+        //
+        // Placement: after Block B and immediately before READY_SENTINEL, so the existence check runs
+        // once the app-data path shim is fully resolved rather than at module load — a fresh profile
+        // has no `installed.json` until legendary first writes one, which is exactly what `main.ts`'s
+        // own `existsSync` guard is for. Idempotence is owned by the watcher module itself (a second
+        // start returns `false`), so this call site deliberately carries no extra flag of its own.
+        //
+        // JEST GUARD, and it is load-bearing rather than cosmetic. `legendaryInstalled` resolves to
+        // the developer's REAL `~/Library/Application Support/gamelib/legendaryConfig/installed.json`
+        // in any suite that calls `init()` without a homedir override — and most do not. Opening a
+        // real `fs.watch` there leaks a libuv handle into the Jest worker, which then parks in
+        // `uv__io_poll` and never exits: measured directly during this plan's mutation testing, where
+        // an orphaned watch handle hung the run outright instead of failing it. `JEST_WORKER_ID` is
+        // Jest's own zero-config signal (always set in a worker, never set for the real Tauri sidecar
+        // process), mirroring `handlers.ts:145`'s existing use of it for the same class of problem —
+        // under real Tauri this is unconditionally false and the watcher always arms.
+        if (process.env.JEST_WORKER_ID === undefined) {
+          try {
+            startInstalledJsonWatcher()
+          } catch (error) {
+            logWarning(
+              `[bootstrap] startInstalledJsonWatcher() failed: ${error}`,
+              LogPrefix.Backend
+            )
+          }
+        }
+      }
+    },
+    {
+      name: 'playtime-lock-clear',
+      run: () => {
+        // Block D — boot-time stranded GOG playtime-sync lock clear (finding A1 LEG 2,
+        // quick-260907-odi). Placed after `initLogger()` (the helper logs, and `heroicLogWriter` is
+        // unset before that — see the standing `sidecar-console-and-logger-are-invisible` finding)
+        // and before READY so the lock is already clear by the time any RPC-driven playtime sync can
+        // arrive. Mirrors `main.ts`'s ordering intent, where the clear ran during app startup rather
+        // than lazily. `clearStrandedPlaytimeSyncLock()` itself never fails boot (see its own header),
+        // so no additional try/catch is needed at this call site — matches Blocks A/B's shape, which
+        // wrap their own bodies rather than duplicating that at the call site too.
+        clearStrandedPlaytimeSyncLock()
+      }
+    },
+    {
+      name: 'legacy-zoom-cleanup',
+      run: () => {
+        // Legacy Zoom Platform data removal (quick-261029-toq). After `initLogger()` (it logs).
+        // Fire-and-forget: never awaited before READY, never rejects, creates no handle (see the
+        // module header for the sidecar exit-contract reasoning).
+        void removeLegacyZoomData(platformApi.app.getPath('userData'))
+      }
+    },
+    {
+      name: 'engine-temp-sweep',
+      run: () => {
+        // Stale engine temp sweep (G20): removes steam-engines/.tmp-* left by an interrupted unpack.
+        // Placed after `initLogger()` (it logs) and before READY (no install can hold a temp dir yet).
+        // Exit contract: synchronous, creates no handle, nothing in flight once it returns.
+        try {
+          sweepStaleEngineTemps()
+        } catch {
+          /* never fails boot */
+        }
+      }
+    },
+    {
+      name: 'store-user-reconcile',
+      run: () => {
+        // Block E — boot-time Epic/GOG user reconciliation (todo 2026-09-06, quick-260908-fre).
+        // Placement (D2): must be after `initLogger()` above (the helper logs, and `heroicLogWriter`
+        // is unset before that — the standing `sidecar-console-and-logger-are-invisible` finding);
+        // must be after `initOnlineMonitor()` above (it calls `runOnceWhenOnline`, the same
+        // requirement Block B's `fetchLastestReleases()` comment already records); and runs before
+        // READY so the reconciliation is at least queued before the frontend can issue its first
+        // `getUserInfo`-shaped RPC. Appending after Block D satisfies all three while leaving the
+        // existing A→B→C→D sequence byte-identical. `reconcileStoreUsersWhenOnline()` itself never
+        // fails boot (see its own header), so no additional try/catch is needed at this call site —
+        // matches Block D's call site shape, which wraps its own body rather than duplicating that
+        // here too.
+        reconcileStoreUsersWhenOnline()
+      }
+    },
+    {
+      name: 'rosetta',
+      run: (_ctx, _io, state) => {
+        // Block F — boot-time Rosetta-availability probe (todo 2026-09-06, quick-260908-k3x).
+        // Placement is constrained from both sides:
+        //   - Must be AFTER the i18next block above so `i18nReady` holds the real init promise
+        //     rather than the `Promise.resolve()` initial value.
+        //   - Must be AFTER `startRpcServer(input, output)` and `platformApi.bindTransport(...)`
+        //     above, because the dialog reaches the shell via `requestRustInvoke`, which needs a
+        //     live write stream -- do not rely on the `i18nReady` await pushing this into a later
+        //     macrotask; the placement itself must carry it.
+        // Runs before READY_SENTINEL below, but deliberately does NOT delay it: boot is not
+        // blocked on a warning dialog (see `checkRosettaWhenMac(state.i18nReady)`'s own header for why it can
+        // never fail boot). The guard flag lives at this call site, matching Blocks A/B/E, not
+        // inside `checkRosettaWhenMac(state.i18nReady)` -- see `rosettaCheckInitialized`'s declaration comment.
+        checkRosettaWhenMac(state.i18nReady)
+      }
+    },
+    {
+      name: 'playtime-queue-drain',
+      run: () => {
+        // Block G — boot-time GOG queued-playtime drain (todo 2026-09-06, quick-260908-wk0).
+        // LOAD-BEARING PLACEMENT, stated first and in full: syncQueuedPlaytime()'s first statement is
+        // `if (playtimeSyncQueue.has('lock')) return`, so running this before Block D would let a lock
+        // stranded by process death silently no-op the very drain this block adds -- restoring the
+        // call site while leaving the bug unfixed for exactly the users whose previous sync died
+        // mid-flight. Appending here, after Block F, keeps this AFTER Block D's clear (the load-bearing
+        // constraint), AFTER `initLogger()` (the helper logs, and `heroicLogWriter` is unset before
+        // that -- the standing `sidecar-console-and-logger-are-invisible` finding), AFTER
+        // `initOnlineMonitor()` (it calls `runOnceWhenOnline`, the same requirement Blocks B/E already
+        // record), and BEFORE READY_SENTINEL below -- so the drain is at least queued before the
+        // frontend can drive any RPC, without delaying READY itself. `syncQueuedPlaytimeWhenOnline()`
+        // itself never fails boot (see its own header), so no additional try/catch is needed at this
+        // call site -- matches Blocks D/E/F's call site shape.
+        syncQueuedPlaytimeWhenOnline()
+      }
+    },
+    {
+      name: 'gog-presence',
+      run: () => {
+        // Block H — boot-time GOG presence call (todo 2026-09-06, quick-260909-k5x). Unlike Block G,
+        // this block has NO load-bearing ordering constraint of its own -- do not go hunting for one.
+        // Only the generic three apply (see `setGogPresenceWhenOnline()`'s own header for the full
+        // refutation of Blocks D/E/F/G as candidates): after `initLogger()`, after
+        // `initOnlineMonitor()`, and before READY_SENTINEL below. Appending here, after Block G,
+        // satisfies all three. `setGogPresenceWhenOnline()` itself never fails boot per its own
+        // header, so no additional try/catch is needed at this call site, matching Blocks D/E/F/G.
+        setGogPresenceWhenOnline()
+      }
+    },
+    {
+      name: 'sign-in-probe-outcomes',
+      run: () => {
+        // Phase 49 plan 08 (R3) -- the sign-in probe outcomes PULL handler. Registration only, and
+        // placed before the READY write so the renderer's mount-time pull is answerable the moment the
+        // shell sees READY. It reads an in-memory map and starts no probe.
+        registerSignInProbeOutcomesHandler()
+      }
+    },
+    {
+      name: 'ready-sentinel',
+      run: (_ctx, { output }) => {
+        output.write(`${READY_SENTINEL}\n`)
+      }
+    },
+    {
+      name: 'sign-in-probe',
+      run: () => {
+        // Phase 49 plan 08 (R3, SPEC "READY first"): the bounded boot sign-in probe pass starts HERE,
+        // after the READY write, so READY never waits on a probe. The call is registration only -- one
+        // connectivity listener and an unref()'d setImmediate -- so it cannot delay the protocol-URL
+        // delivery below. It creates no handle of its own beyond those the pass enumerates in its
+        // exit-contract header (every timer unref()'d, spawned children aborted at the bound).
+        startSignInProbePass()
+      }
+    },
+    {
+      name: 'startup-protocol-url',
+      run: () => {
+        // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): the LAST statement of init(), deliberately
+        // AFTER the READY_SENTINEL write above — so the shell knows the sidecar is up before any
+        // launch begins, and so every store manager imported by ./handlers (Step 2, above) is fully
+        // constructed before handleProtocol can possibly touch libraryManagerMap. The sign-in probe
+        // pass start above is registration only, so protocol-URL delivery is still the last statement
+        // that does any work.
+        deliverStartupProtocolUrl()
+      }
     }
-  }
-  // Block B — fetchLastestReleases() (D-07). Must run AFTER initOnlineMonitor() above,
-  // because fetchLastestReleases wraps its work in runOnceWhenOnline, and AFTER Block A so
-  // the releasesInfoReady listener exists before the event it responds to can fire. Its own
-  // `process.env.CI === 'e2e'` and `isWindows` early-returns are preserved unchanged by
-  // calling it as-is — not replicated or bypassed here.
-  if (!releasesFetchInitialized) {
-    releasesFetchInitialized = true
-    try {
-      fetchLastestReleases()
-    } catch (error) {
-      logWarning(
-        `[bootstrap] fetchLastestReleases() failed: ${error}`,
-        LogPrefix.Backend
-      )
-    }
-  }
-  // Block C — the `installed.json` watcher (Phase 35 plan 35-10, REQ-35-16). Ports
-  // `main.ts:1036-1048`, an Electron-only module-scope side effect that the sidecar never
-  // inherited: plan 35-01's D-17 census found ZERO import edges from the sidecar into
-  // `main.ts`, so under Tauri nothing refreshed the in-memory `installedGames` map and
-  // `legendary sync-saves` computed save paths against a stale view. See
-  // `installedJsonWatcher.ts` for the full mechanism, the debounce rationale and teardown.
-  //
-  // Placement: after Block B and immediately before READY_SENTINEL, so the existence check runs
-  // once the app-data path shim is fully resolved rather than at module load — a fresh profile
-  // has no `installed.json` until legendary first writes one, which is exactly what `main.ts`'s
-  // own `existsSync` guard is for. Idempotence is owned by the watcher module itself (a second
-  // start returns `false`), so this call site deliberately carries no extra flag of its own.
-  //
-  // JEST GUARD, and it is load-bearing rather than cosmetic. `legendaryInstalled` resolves to
-  // the developer's REAL `~/Library/Application Support/gamelib/legendaryConfig/installed.json`
-  // in any suite that calls `init()` without a homedir override — and most do not. Opening a
-  // real `fs.watch` there leaks a libuv handle into the Jest worker, which then parks in
-  // `uv__io_poll` and never exits: measured directly during this plan's mutation testing, where
-  // an orphaned watch handle hung the run outright instead of failing it. `JEST_WORKER_ID` is
-  // Jest's own zero-config signal (always set in a worker, never set for the real Tauri sidecar
-  // process), mirroring `handlers.ts:145`'s existing use of it for the same class of problem —
-  // under real Tauri this is unconditionally false and the watcher always arms.
-  if (process.env.JEST_WORKER_ID === undefined) {
-    try {
-      startInstalledJsonWatcher()
-    } catch (error) {
-      logWarning(
-        `[bootstrap] startInstalledJsonWatcher() failed: ${error}`,
-        LogPrefix.Backend
-      )
-    }
-  }
-  // Block D — boot-time stranded GOG playtime-sync lock clear (finding A1 LEG 2,
-  // quick-260907-odi). Placed after `initLogger()` (the helper logs, and `heroicLogWriter` is
-  // unset before that — see the standing `sidecar-console-and-logger-are-invisible` finding)
-  // and before READY so the lock is already clear by the time any RPC-driven playtime sync can
-  // arrive. Mirrors `main.ts`'s ordering intent, where the clear ran during app startup rather
-  // than lazily. `clearStrandedPlaytimeSyncLock()` itself never fails boot (see its own header),
-  // so no additional try/catch is needed at this call site — matches Blocks A/B's shape, which
-  // wrap their own bodies rather than duplicating that at the call site too.
-  if (!playtimeLockClearInitialized) {
-    playtimeLockClearInitialized = true
-    clearStrandedPlaytimeSyncLock()
-  }
-  // Legacy Zoom Platform data removal (quick-261029-toq). After `initLogger()` (it logs).
-  // Fire-and-forget: never awaited before READY, never rejects, creates no handle (see the
-  // module header for the sidecar exit-contract reasoning).
-  if (!legacyZoomCleanupInitialized) {
-    legacyZoomCleanupInitialized = true
-    void removeLegacyZoomData(platformApi.app.getPath('userData'))
-  }
-  // Stale engine temp sweep (G20): removes steam-engines/.tmp-* left by an interrupted unpack.
-  // Placed after `initLogger()` (it logs) and before READY (no install can hold a temp dir yet).
-  // Exit contract: synchronous, creates no handle, nothing in flight once it returns.
-  if (!engineTempSweepInitialized) {
-    engineTempSweepInitialized = true
-    try {
-      sweepStaleEngineTemps()
-    } catch {
-      /* never fails boot */
-    }
-  }
-  // Block E — boot-time Epic/GOG user reconciliation (todo 2026-09-06, quick-260908-fre).
-  // Placement (D2): must be after `initLogger()` above (the helper logs, and `heroicLogWriter`
-  // is unset before that — the standing `sidecar-console-and-logger-are-invisible` finding);
-  // must be after `initOnlineMonitor()` above (it calls `runOnceWhenOnline`, the same
-  // requirement Block B's `fetchLastestReleases()` comment already records); and runs before
-  // READY so the reconciliation is at least queued before the frontend can issue its first
-  // `getUserInfo`-shaped RPC. Appending after Block D satisfies all three while leaving the
-  // existing A→B→C→D sequence byte-identical. `reconcileStoreUsersWhenOnline()` itself never
-  // fails boot (see its own header), so no additional try/catch is needed at this call site —
-  // matches Block D's call site shape, which wraps its own body rather than duplicating that
-  // here too.
-  if (!storeUserReconcileInitialized) {
-    storeUserReconcileInitialized = true
-    reconcileStoreUsersWhenOnline()
-  }
-  // Block F — boot-time Rosetta-availability probe (todo 2026-09-06, quick-260908-k3x).
-  // Placement is constrained from both sides:
-  //   - Must be AFTER the i18next block above so `i18nReady` holds the real init promise
-  //     rather than the `Promise.resolve()` initial value.
-  //   - Must be AFTER `startRpcServer(input, output)` and `platformApi.bindTransport(...)`
-  //     above, because the dialog reaches the shell via `requestRustInvoke`, which needs a
-  //     live write stream -- do not rely on the `i18nReady` await pushing this into a later
-  //     macrotask; the placement itself must carry it.
-  // Runs before READY_SENTINEL below, but deliberately does NOT delay it: boot is not
-  // blocked on a warning dialog (see `checkRosettaWhenMac()`'s own header for why it can
-  // never fail boot). The guard flag lives at this call site, matching Blocks A/B/E, not
-  // inside `checkRosettaWhenMac()` -- see `rosettaCheckInitialized`'s declaration comment.
-  if (!rosettaCheckInitialized) {
-    rosettaCheckInitialized = true
-    checkRosettaWhenMac()
-  }
-  // Block G — boot-time GOG queued-playtime drain (todo 2026-09-06, quick-260908-wk0).
-  // LOAD-BEARING PLACEMENT, stated first and in full: syncQueuedPlaytime()'s first statement is
-  // `if (playtimeSyncQueue.has('lock')) return`, so running this before Block D would let a lock
-  // stranded by process death silently no-op the very drain this block adds -- restoring the
-  // call site while leaving the bug unfixed for exactly the users whose previous sync died
-  // mid-flight. Appending here, after Block F, keeps this AFTER Block D's clear (the load-bearing
-  // constraint), AFTER `initLogger()` (the helper logs, and `heroicLogWriter` is unset before
-  // that -- the standing `sidecar-console-and-logger-are-invisible` finding), AFTER
-  // `initOnlineMonitor()` (it calls `runOnceWhenOnline`, the same requirement Blocks B/E already
-  // record), and BEFORE READY_SENTINEL below -- so the drain is at least queued before the
-  // frontend can drive any RPC, without delaying READY itself. `syncQueuedPlaytimeWhenOnline()`
-  // itself never fails boot (see its own header), so no additional try/catch is needed at this
-  // call site -- matches Blocks D/E/F's call site shape.
-  if (!playtimeQueueDrainInitialized) {
-    playtimeQueueDrainInitialized = true
-    syncQueuedPlaytimeWhenOnline()
-  }
-  // Block H — boot-time GOG presence call (todo 2026-09-06, quick-260909-k5x). Unlike Block G,
-  // this block has NO load-bearing ordering constraint of its own -- do not go hunting for one.
-  // Only the generic three apply (see `setGogPresenceWhenOnline()`'s own header for the full
-  // refutation of Blocks D/E/F/G as candidates): after `initLogger()`, after
-  // `initOnlineMonitor()`, and before READY_SENTINEL below. Appending here, after Block G,
-  // satisfies all three. `setGogPresenceWhenOnline()` itself never fails boot per its own
-  // header, so no additional try/catch is needed at this call site, matching Blocks D/E/F/G.
-  if (!gogPresenceInitialized) {
-    gogPresenceInitialized = true
-    setGogPresenceWhenOnline()
-  }
-  // Phase 49 plan 08 (R3) -- the sign-in probe outcomes PULL handler. Registration only, and
-  // placed before the READY write so the renderer's mount-time pull is answerable the moment the
-  // shell sees READY. It reads an in-memory map and starts no probe.
-  if (!signInProbeOutcomesHandlerInitialized) {
-    signInProbeOutcomesHandlerInitialized = true
-    registerSignInProbeOutcomesHandler()
-  }
-  output.write(`${READY_SENTINEL}\n`)
-  // Phase 49 plan 08 (R3, SPEC "READY first"): the bounded boot sign-in probe pass starts HERE,
-  // after the READY write, so READY never waits on a probe. The call is registration only -- one
-  // connectivity listener and an unref()'d setImmediate -- so it cannot delay the protocol-URL
-  // delivery below. It creates no handle of its own beyond those the pass enumerates in its
-  // exit-contract header (every timer unref()'d, spawned children aborted at the bound).
-  if (!signInProbeInitialized) {
-    signInProbeInitialized = true
-    startSignInProbePass()
-  }
-  // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): the LAST statement of init(), deliberately
-  // AFTER the READY_SENTINEL write above — so the shell knows the sidecar is up before any
-  // launch begins, and so every store manager imported by ./handlers (Step 2, above) is fully
-  // constructed before handleProtocol can possibly touch libraryManagerMap. The sign-in probe
-  // pass start above is registration only, so protocol-URL delivery is still the last statement
-  // that does any work.
-  deliverStartupProtocolUrl()
+  ]
 }
