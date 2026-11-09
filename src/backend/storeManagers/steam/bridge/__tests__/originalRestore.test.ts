@@ -106,7 +106,7 @@ function fakeDownload(
     }
     const out: Array<{ filename: string; size: number; sha1: string }> = []
     for (const [rel, bytes] of Object.entries(files)) {
-      if (!o.select(rel.toLowerCase())) continue
+      if (!o.selectPaths.includes(rel.toLowerCase())) continue
       const target = join(o.targetSteamappsDir, 'common', o.installdir, rel)
       mkdirSync(dirname(target), { recursive: true })
       writeFileSync(target, bytes)

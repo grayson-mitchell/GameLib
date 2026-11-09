@@ -18,6 +18,7 @@ import {
 import { throwIfAborted, getDepotClient, buildDepotPlan } from './plan'
 import { depotPipeline } from '../depotRust/pipelineFlag'
 import { downloadSteamDepotsRust } from '../depotRust/install'
+import { downloadSelectedDepotFilesRust } from '../depotRust/secondary'
 import {
   type DepotDownloadFailure,
   type DepotDownloadResult,
@@ -156,8 +157,11 @@ export function normalizeDepotPath(p: string): string {
 }
 
 export interface DownloadSelectedDepotFilesOpts extends DownloadSteamDepotsOpts {
-  /** Receives the {@link normalizeDepotPath} form of each candidate file. */
-  select: (normalizedPath: string) => boolean
+  /**
+   * Files to fetch, in the {@link normalizeDepotPath} form. A list rather than a predicate so the
+   * Rust pipeline can take it over the wire (D-02); the TS path builds its predicate from it.
+   */
+  selectPaths: string[]
   /** Test seam: defaults to {@link downloadDepotFiles}. */
   downloadFiles?: typeof downloadDepotFiles
 }
@@ -181,6 +185,11 @@ export async function downloadSelectedDepotFiles(
   appId: string,
   opts: DownloadSelectedDepotFilesOpts
 ): Promise<DownloadSelectedDepotFilesResult> {
+  // D-16: the flag is read once, here.
+  if (depotPipeline() === 'rust') {
+    return downloadSelectedDepotFilesRust(appId, opts)
+  }
+  const wanted = new Set(opts.selectPaths.map(normalizeDepotPath))
   let lease: Awaited<ReturnType<typeof SteamUser.acquireAuthenticated>> | null =
     null
   try {
@@ -202,7 +211,7 @@ export async function downloadSelectedDepotFiles(
       const files = depot.files.filter((f) => {
         const flags = f.flags ?? 0
         if (flags & DIRECTORY_FLAG || flags & SYMLINK_FLAG) return false
-        return opts.select(normalizeDepotPath(f.filename))
+        return wanted.has(normalizeDepotPath(f.filename))
       })
       if (!files.length) continue
       for (const f of files) {

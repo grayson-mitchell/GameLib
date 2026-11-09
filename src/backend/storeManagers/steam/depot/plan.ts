@@ -2,6 +2,8 @@
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { basename } from 'path'
+import { depotPipeline } from '../depotRust/pipelineFlag'
+import { prescreenBridgeDepotsRust } from '../depotRust/secondary'
 import { SteamUser } from '../user'
 import {
   selectAllDepots,
@@ -829,6 +831,8 @@ export async function prescreenBridgeDepots(
   appId: string,
   opts: DownloadSteamDepotsOpts
 ): Promise<'none' | 'x86' | 'x64' | 'both' | 'unknown'> {
+  // D-16: the flag is read once, here; the whole answer comes from one pipeline.
+  if (depotPipeline() === 'rust') return prescreenBridgeDepotsRust(appId, opts)
   const prescreenStart = Date.now()
   let result: 'none' | 'x86' | 'x64' | 'both' | 'unknown'
   try {

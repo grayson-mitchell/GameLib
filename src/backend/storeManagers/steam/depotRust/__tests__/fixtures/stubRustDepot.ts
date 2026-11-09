@@ -20,6 +20,8 @@ type EventBody = RustJobEvent extends infer E
 export interface StubRustDepotOptions {
   /** Merged over a completed outcome that carries a StateFlags 4 ACF. */
   outcome?: Partial<RustOutcome>
+  /** Answer for depot_manifest_summary; defaults to `{ depots: [] }`. */
+  summary?: unknown
   events?: EventBody[]
   /** Runs before the outcome is returned, e.g. to write files the caller then reads. */
   onRun?: (job: RustDepotJob) => void | Promise<void>
@@ -80,7 +82,9 @@ export function createStubRustDepot(
         waiting.get(jobId)?.()
         return {}
       }
-      if (channel === RUST_DEPOT_MANIFEST_SUMMARY) return { depots: [] }
+      if (channel === RUST_DEPOT_MANIFEST_SUMMARY) {
+        return options.summary ?? { depots: [] }
+      }
       if (channel !== RUST_DEPOT_JOB_RUN) {
         throw new Error(`stubRustDepot: unexpected channel ${channel}`)
       }

@@ -106,7 +106,7 @@ const call = (
     targetSteamappsDir: staging,
     installdir: 'Game',
     os: 'windows',
-    select: (p) => p === 'bin/steam_api64.dll',
+    selectPaths: ['bin/steam_api64.dll'],
     downloadFiles: downloadFiles as unknown as DownloadFn,
     ...over
   })
@@ -185,7 +185,7 @@ describe('downloadSelectedDepotFiles', () => {
 
   it('returns done with no files and skips the seam on zero matches', async () => {
     const dl = jest.fn()
-    const r = await call(dl, { select: () => false })
+    const r = await call(dl, { selectPaths: [] })
     expect(r).toEqual({ status: 'done', files: [] })
     expect(dl).not.toHaveBeenCalled()
   })

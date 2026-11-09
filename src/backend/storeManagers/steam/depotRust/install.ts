@@ -34,7 +34,7 @@ import type { RustDepotJob, RustFinalizeSpec, RustOutcome } from './types'
 type DepotDownloadOutcome = Awaited<ReturnType<typeof downloadSteamDepots>>
 
 /** One line per job, all statuses. Parity sweeps and live UAT read it as proof the Rust path ran. */
-function logOutcome(job: RustDepotJob, o: RustOutcome): void {
+export function logOutcome(job: RustDepotJob, o: RustOutcome): void {
   const s = o.stats
   logInfo(
     `[depot-rust] outcome appId=${job.appId} jobId=${job.jobId} mode=${job.mode} ` +
@@ -55,7 +55,7 @@ type CodeClient = {
 }
 
 /** Fresh manifest request code for a depot under its owner app, or null when none is available. */
-function requestCodeRefresher(
+export function requestCodeRefresher(
   client: CodeClient,
   ownerByDepot: Map<string, string>,
   fallbackAppId: string
