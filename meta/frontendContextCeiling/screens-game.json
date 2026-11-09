@@ -1,0 +1,11 @@
+{
+  "contextImports": {
+    "src/frontend/screens/Game/GamePage/components/CloudSavesSync.tsx": 1,
+    "src/frontend/screens/Game/GamePage/components/DownloadSizeInfo.tsx": 1,
+    "src/frontend/screens/Game/GamePage/components/HumbleOriginInfo.tsx": 1,
+    "src/frontend/screens/Game/GamePage/components/RunsForMeToggle.tsx": 1,
+    "src/frontend/screens/Game/GamePage/components/SteamGoOfflineNotice.tsx": 1,
+    "src/frontend/screens/Game/GamePage/index.tsx": 1,
+    "src/frontend/screens/Game/GameSubMenu/index.tsx": 1
+  }
+}

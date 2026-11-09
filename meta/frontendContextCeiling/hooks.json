@@ -1,0 +1,7 @@
+{
+  "contextImports": {
+    "src/frontend/hooks/hasStatus.ts": 1,
+    "src/frontend/hooks/useOpenDialog.ts": 1,
+    "src/frontend/hooks/useSettingsContext.ts": 1
+  }
+}

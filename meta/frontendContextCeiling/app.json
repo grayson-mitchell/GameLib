@@ -1,0 +1,5 @@
+{
+  "contextImports": {
+    "src/frontend/App.tsx": 1
+  }
+}

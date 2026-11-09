@@ -1,0 +1,14 @@
+{
+  "contextImports": {
+    "src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx": 1,
+    "src/frontend/screens/Settings/sections/CategorySettings/index.tsx": 1,
+    "src/frontend/screens/Settings/sections/GamesSettings/index.tsx": 1,
+    "src/frontend/screens/Settings/sections/LogSettings/index.tsx": 1,
+    "src/frontend/screens/Settings/sections/ReportProblem/index.tsx": 1,
+    "src/frontend/screens/Settings/sections/StoreSettings/EosOverlay.tsx": 1,
+    "src/frontend/screens/Settings/sections/SyncSaves/gog.tsx": 1,
+    "src/frontend/screens/Settings/sections/SyncSaves/index.tsx": 1,
+    "src/frontend/screens/Settings/sections/SyncSaves/legendary.tsx": 1,
+    "src/frontend/screens/Settings/sections/WinetricksSettings/index.tsx": 1
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "contextImports": {
+    "src/frontend/state/GlobalState.tsx": 1
+  }
+}

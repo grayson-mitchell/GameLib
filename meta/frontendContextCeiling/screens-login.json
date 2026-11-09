@@ -1,0 +1,9 @@
+{
+  "contextImports": {
+    "src/frontend/screens/Login/components/OAuthLogin/index.tsx": 1,
+    "src/frontend/screens/Login/components/Runner/index.tsx": 1,
+    "src/frontend/screens/Login/components/SIDLogin/index.tsx": 1,
+    "src/frontend/screens/Login/components/SteamLogin/index.tsx": 1,
+    "src/frontend/screens/Login/index.tsx": 1
+  }
+}
