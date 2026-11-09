@@ -1,0 +1,16 @@
+[operator 2026-11-09 ~22:52] first arm-B launch closed by operator before Refresh (no logon, connection_log silent); Friends still signed in
+[2026-11-09T09:51:00Z] arm B watch start; gamelib log: /Users/graysonmitchell/Library/Logs/gamelib/gamelib-shell.log
+GAMELIB (22:51:39) [INFO]:    [Steam]:           [Steam] CM logon mode=authenticated reason=user-refresh wrap=not-darwin
+GAMELIB (22:51:40) [INFO]:    [Steam]:           [Timing] SteamUser.loggedOn: cellID=22 publicIP=<redacted>
+GAMELIB (22:51:40) [INFO]:    [Steam]:           Steam: fetched 390 owned games
+GAMELIB (22:51:44) [INFO]:    [Steam]:           Steam licensed demos: licenses=485 licensedNotOwned=754 demos=11
+GAMELIB (22:51:44) [INFO]:    [Steam]:           [Steam] CM logon mode=anonymous reason=platform-capture
+GAMELIB (22:51:45) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1
+GAMELIB (22:51:45) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1 failed=false
+GAMELIB (22:51:45) [INFO]:    [Steam]:           Steam bulk platform capture: anonymous pass left 1 uncaptured (public_only or failed), second pass on the held session
+GAMELIB (22:51:47) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1
+GAMELIB (22:51:47) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1 failed=false
+[operator 2026-11-09 after Refresh] Friends signed in: yes; status changeable: yes; flicker: no
+GAMELIB (22:52:45) [INFO]:    [Steam]:           [Steam] CM session closed mode=anonymous cause=idle
+GAMELIB (22:52:49) [INFO]:    [Steam]:           [Steam] CM session closed mode=authenticated cause=idle
+GAMELIB (22:52:58) [INFO]:    [Backend]:         [sidecar] stdin closed: releasing Steam CM session, paying any owed Mac Steam goonline, stopping nettop monitors and aborting in-flight downloads
