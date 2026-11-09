@@ -88,6 +88,23 @@ question requires otherwise.
   Anything the operator types (password, Guard codes) goes through a local page served by the
   harness, never a terminal. Commit source, README and redacted run logs; `out/` and `target/`
   are gitignored.
+- **The go-offline wrap is optional for signed-in probes since 075.** GameLib's full Refresh ran
+  unwrapped without flipping Friends on 2026-11-09, and 076's long unwrapped sessions (depot keys,
+  request codes) didn't either. Use the wrap for short probes, where it costs nothing. Skip it when
+  it would hold Mac Steam offline for minutes, and say so in the README. Either way, mirror
+  `connection_log.txt` into the run log as the oracle. *(075, 076)*
+- **Depot-data spikes: Node for the CM, a Rust bin on `gamelib-depot` for the bytes.** Use a
+  standalone cargo package (its own `[workspace]`) with a path dependency on
+  `src-tauri/crates/gamelib-depot`, so parsing and chunk decoding are production's own
+  (`parse_manifest`, `container::decode_chunk`). Node gets depot keys, request codes and CDN
+  hosts through steam-user and does the CDN fetches. The depot key reaches Rust **on stdin** and
+  is never printed or written. `parse_manifest` wants the raw CDN bytes; steam-user's
+  `getRawManifest` returns them already unzipped, so fetch the manifest URL yourself. *(076;
+  extends 071's convention.)*
+- **Spikes that write into a real install work on an APFS clone** (`cp -cR` into the gitignored
+  `out/`), never on the install itself. Delete the clone afterwards: blocks the run rewrote are
+  real disk (~13 GB for 076's Manor Lords). Hash a file in the real install afterwards to prove
+  it was untouched. *(035, 076)*
 - **Live Steam-pipeline spikes that reuse production code (Idea E, 067a):** an esbuild bundle
   (`--packages=external`, the sidecar's flags) of a TypeScript harness that imports the real
   `src/backend` functions, next to the app's dev decode worker (`build/main/decompressWorker.js`,
