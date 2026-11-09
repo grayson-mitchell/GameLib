@@ -543,9 +543,14 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       )
     })
 
-    it('setting unset follows enableSteamNativeInstall', async () => {
+    // One boot per case (D-08): the on/off halves of "follows enableSteamNativeInstall" are
+    // two cases, because a second boot in one registry throws.
+    it('setting unset follows enableSteamNativeInstall: on -> true', async () => {
       mockSettings({ enableSteamNativeInstall: true, autoUpdateGames: false })
       expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: true })
+    })
+
+    it('setting unset follows enableSteamNativeInstall: off -> false', async () => {
       mockSettings({ enableSteamNativeInstall: false, autoUpdateGames: false })
       expect(await invokeRoute(['570'])).toEqual({ gamelibDelete: false })
     })

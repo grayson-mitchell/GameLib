@@ -37,7 +37,6 @@
   },
   "moduleState": {
     "src/backend/sidecar/appShellFlowRegistration.ts": 5,
-    "src/backend/sidecar/bootstrap.ts": 17,
     "src/backend/sidecar/devEpicCookieSweepRegistration.ts": 1,
     "src/backend/sidecar/enrichmentFlowRegistration.ts": 1,
     "src/backend/sidecar/fileStore.ts": 1,
@@ -53,5 +52,13 @@
     "src/backend/sidecar/storeRegistration.ts": 1,
     "src/backend/sidecar/storeWriteHandlers.ts": 1,
     "src/backend/sidecar/wineToolsFlowRegistration.ts": 1
+  },
+  "sanctioned": {
+    "src/backend/sidecar/bootstrap.ts": {
+      "kind": "boot-entry",
+      "moduleState": 1,
+      "childProcess": 0,
+      "reason": "D-08/D-13: the boot entry's one-shot latch; a second boot in one process throws"
+    }
   }
 }

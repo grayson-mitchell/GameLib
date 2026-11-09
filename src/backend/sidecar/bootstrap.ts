@@ -151,7 +151,7 @@ import {
 } from '../logger'
 import { GlobalConfig } from '../config'
 import { createAppContext } from '../process/context'
-import type { AppContext } from '../process/context'
+import type { AppContext, AppPaths } from '../process/context'
 import type { LogSink } from '../process/types'
 import { setIpcRejectionLogSink } from './ipcValidation'
 import { publicDir } from '../constants/paths'
@@ -255,8 +255,6 @@ interface BootStep {
   name: BootStepName
   run(ctx: AppContext, io: BootIo, state: BootState): void
 }
-
-let i18nReady: Promise<void> = Promise.resolve()
 
 /**
  * Delivers a startup (cold-start) `gamelib://` deep link to `handleProtocol`, if `argv`
@@ -768,21 +766,51 @@ function runBootSteps(ctx: AppContext, io: BootIo, state: BootState): void {
   for (const step of steps) step.run(ctx, io, state)
 }
 
+// The one sanctioned top-level `let` (D-08/D-13): boot runs once per process, by construction.
+let booted = false
+
+/**
+ * Runs the ordered boot steps over an `AppContext` built once by the caller (D-01). Streams are
+ * injectable (`stream.PassThrough` pairs under test). A second call in one process throws:
+ * tests boot once per fresh module registry via `bootFresh()`.
+ */
+export function bootSidecar(
+  ctx: AppContext,
+  input: Readable,
+  output: Writable
+): void {
+  if (booted) {
+    throw new Error(
+      'sidecar boot already ran in this process (D-08): tests boot once per fresh module registry via bootFresh()'
+    )
+  }
+  booted = true
+  runBootSteps(ctx, { input, output }, { i18nReady: Promise.resolve() })
+}
+
+/** The production path set, read from the platform layer and `backend/constants/paths`. */
+export function resolveAppPaths(): AppPaths {
+  return {
+    appRoot: platformApi.app.getAppPath(),
+    publicDir,
+    userData: platformApi.app.getPath('userData')
+  }
+}
+
 export function init(
   input: Readable = process.stdin,
   output: Writable = process.stdout
 ): void {
-  const ctx = createAppContext({
-    platform: process.platform,
-    paths: {
-      appRoot: platformApi.app.getAppPath(),
-      publicDir,
-      userData: platformApi.app.getPath('userData')
-    },
-    log: createBackendLogSink(),
-    baseEnv: process.env
-  })
-  runBootSteps(ctx, { input, output }, { i18nReady: Promise.resolve() })
+  bootSidecar(
+    createAppContext({
+      platform: process.platform,
+      paths: resolveAppPaths(),
+      log: createBackendLogSink(),
+      baseEnv: process.env
+    }),
+    input,
+    output
+  )
 }
 
 function createBackendLogSink(): LogSink {
@@ -920,7 +948,7 @@ function buildBootSteps(): BootStep[] {
     },
     {
       name: 'asset-root-check',
-      run: () => {
+      run: (ctx) => {
         // ---- Boot-time asset-root self-check (Phase 34.5 G-1/G-3, plan 34.5-18) -------------------
         // Makes plan 34.5-16's GAMELIB_APP_ROOT handoff observable at the exact boot moment, before
         // any login can be attempted: on 2026-08-01 the `spawn ./{legendary,gogdl,nile} ENOENT` lines
@@ -947,13 +975,13 @@ function buildBootSteps(): BootStep[] {
           const appRootEnv = process.env.GAMELIB_APP_ROOT
           const appRootSource = appRootEnv ? 'GAMELIB_APP_ROOT' : 'process.cwd'
           logInfo(
-            `[bootstrap] appRoot resolved=${platformApi.app.getAppPath()} source=${appRootSource}`,
+            `[bootstrap] appRoot resolved=${ctx.paths.appRoot} source=${appRootSource}`,
             LogPrefix.Backend
           )
 
-          const publicDirExists = existsSync(publicDir)
+          const publicDirExists = existsSync(ctx.paths.publicDir)
           logInfo(
-            `[bootstrap] publicDir resolved=${publicDir} exists=${publicDirExists}`,
+            `[bootstrap] publicDir resolved=${ctx.paths.publicDir} exists=${publicDirExists}`,
             LogPrefix.Backend
           )
 
@@ -967,14 +995,14 @@ function buildBootSteps(): BootStep[] {
             // Mirrors archSpecificBinary's own arch-native-first, x64-fallback resolution
             // (utils.ts:517-527) without importing it -- see comment above.
             const archNativePath = join(
-              publicDir,
+              ctx.paths.publicDir,
               'bin',
               process.arch,
               process.platform,
               runnerBinaryName
             )
             const x64FallbackPath = join(
-              publicDir,
+              ctx.paths.publicDir,
               'bin',
               'x64',
               process.platform,
@@ -993,7 +1021,7 @@ function buildBootSteps(): BootStep[] {
 
           if (assetMissing) {
             logError(
-              `[bootstrap] SIDECAR ASSET ROOT DEFECT -- resolved publicDir "${publicDir}" is missing required assets; see 34.5-APP-ROOT-SWEEP.md for the full consumer sweep`,
+              `[bootstrap] SIDECAR ASSET ROOT DEFECT -- resolved publicDir "${ctx.paths.publicDir}" is missing required assets; see 34.5-APP-ROOT-SWEEP.md for the full consumer sweep`,
               LogPrefix.Backend
             )
           }
@@ -1016,7 +1044,7 @@ function buildBootSteps(): BootStep[] {
     },
     {
       name: 'i18n',
-      run: (_ctx, _io, state) => {
+      run: (ctx, _io, state) => {
         // Placement is load-bearing: must run AFTER `initLogger()` above -- `GlobalConfig.get()`
         // below is this process's first-ever `GlobalConfig` read, and the config-version-upgrade
         // path (config.ts:145/152) can itself call `logInfo`/`logError` synchronously, which
@@ -1024,7 +1052,7 @@ function buildBootSteps(): BootStep[] {
         // `initOnlineMonitor()`'s and `installTokenStore()`'s placement comments below).
         try {
           const settings = GlobalConfig.get().getSettings()
-          const localesDir = join(publicDir, 'locales')
+          const localesDir = join(ctx.paths.publicDir, 'locales')
           // Loud-not-silent locale resolution (publicdir-getapppath-chunking gotcha family):
           // under the sidecar, platformApi's `app.getAppPath()` resolves to `process.cwd()`,
           // not a packaged asar root -- so the packaged-build half of this path cannot be
@@ -1070,7 +1098,7 @@ function buildBootSteps(): BootStep[] {
                 // sites are deliberately not identical.
                 loadPath: (language: string, namespace: string) =>
                   join(
-                    publicDir,
+                    ctx.paths.publicDir,
                     'locales',
                     ...localeFileSegments(language, namespace)
                   )
