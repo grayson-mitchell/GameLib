@@ -582,15 +582,31 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 66-01-PLAN.md — `src/backend/process/` leaf: clock, runner (run/spawnLongLived/runSync/openDetached, tracked + teardown registries), AppContext; depcruise runner-is-a-leaf (wave 1)
 - [ ] 66-02-PLAN.md — `meta/backendDiCeilings.cjs` AST census + sharded shrink-only baselines (module state, child_process, jest.mock), sanctioned/Rust-overlap table, CI/pre-push wiring (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 66-03-PLAN.md — test fakes (scripted runner, real runner on fake HOME, fake clock, capture log), createTestContext, `process/README.md` (wave 2)
 - [ ] 66-04-PLAN.md — harness `bootFresh()` + the 15 boot-wiring tests onto one boot per case (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 66-05-PLAN.md — guard suites (sidecarRejectionGuard, testContainment) onto bootFresh, one file per task (wave 3)
 - [ ] 66-06-PLAN.md — flows tests group 2 (humble, gameDetails, logger, shellFiles, skeleton, downloadQueue, enrichment) onto bootFresh (wave 3)
 - [ ] 66-07-PLAN.md — flows tests group 3 (install, steamAuth, storeEmbed, humbleLogin, runnerAuth, settings, steam) onto bootFresh (wave 3)
 - [ ] 66-09-PLAN.md — appShellFlows + 5 smaller flows tests onto bootFresh (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 66-08-PLAN.md — `bootstrap.ts` as one ordered step list on AppContext, once-guards + i18nReady deleted, second boot throws, harness on createTestContext (wave 4)
+
+**Cross-cutting constraints:**
+
+- D-08 (test side): none of these seven files calls init( or startSidecar(; each test case boots at most once through bootFresh() in a fresh module registry
+- Every behavioural assertion survives; mocks the tests configure or inspect are obtained with require() after bootFresh(), not via stale top-level imports
 
 ### Phase 66.1: Backend DI — stores, store managers, flow registrations and launcher (INSERTED)
 
@@ -606,6 +622,7 @@ Plans:
 ### Phase 66.2: Every backend spawn through the process runner, then the `child_process` ban (INSERTED)
 
 **Goal:** Every remaining `child_process` file in `src/backend` (about 27 after 66.1) moves onto the runner. Each file is converted completely in one plan, module state included, so no module is touched twice (D-15). The work covers:
+
 - The engine per-child caps (`engine/runTool.ts`, `demoStatus.ts`, `bottlePrimitives.ts`) become `run` timeouts. `LAUNCH_DEADLINE_MS` stays a pipeline deadline owned by the clock (RESEARCH A1, confirmed 2026-11-09).
 - The DRM spawners and `boundedListing`.
 - The Steam spawn sites, including `macSteamOffline`, which absorbs the second `openDetached`.
@@ -626,6 +643,7 @@ Plans:
 ### Phase 66.3: Backend module state to zero, then the live macOS smoke (INSERTED)
 
 **Goal:** D-15 step 3. The D-06 module-state count reaches zero outside the sanctioned list (runner, logger sink, boot entry), and the census becomes a test (D-13, D-16). It goes in this order:
+
 1. The D-05 process-wide owners, largest ripple first: `online_monitor`, `platform/index`, `anonymousClient`, `processGuards` (read its WR-04 header), `engineState`, `gameSessionState`/`userSignInState`/`authTrigger`/`steam/state`, `shimCoverage`, `winetricksQueue`, `signInProbe/*`, `humble/*`.
 2. The long tail of about 70 files with 1–2 sites each.
 
@@ -956,4 +974,5 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 75 to break down)

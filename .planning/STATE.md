@@ -4,14 +4,14 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 66 context gathered
-last_updated: "2026-11-09T10:07:00.861Z"
-last_activity: "2026-11-10 - Completed 73-21: lzma-native retired, depot deletion gate, pattern README"
+last_updated: "2026-11-09T18:21:15.809Z"
+last_activity: 2026-11-09 -- Phase 66 planning complete
 progress:
-  total_phases: 15
-  completed_phases: 8
-  total_plans: 168
-  completed_plans: 167
-  percent: 53
+  total_phases: 18
+  completed_phases: 9
+  total_plans: 177
+  completed_plans: 168
+  percent: 50
 ---
 
 # Project State
@@ -74,8 +74,8 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
 Plan: 21 of 21 complete (73-01..73-21); phase 73 ready for verification
-Status: Executing phase 73
-Last activity: 2026-11-10 - Completed quick task 261110-9w2: sidecar destroys in-flight outbound HTTP at stdin EOF
+Status: Ready to execute
+Last activity: 2026-11-09 -- Phase 66 planning complete
 
 Progress: [██████████] 96%
 
@@ -289,6 +289,9 @@ Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archi
 - Phase 46 added 2026-09-22: **Windows single-instance guard and gamelib:// deep-link registration**. Promoted from todo `2026-08-29-windows-single-instance-guard-and-deep-link-registration.md` now that the operator has a working Windows 11 build machine (Developer Mode on, pre-push hook green via quick 260922-ok3). It is the unblock for quick 260922-nx4, which suppressed install-time `gamelib://` registration on Windows because there was no guard. The installer-level evidence (0 vs 6 `Classes\gamelib` lines) is in that SUMMARY.
 - Phase 54 edited: edited fields: title, goal, success_criteria — re-scoped to no authenticated logon at launch/browse/Play; Web API library path dropped (blocked for SteamClient tokens); go-offline trick and platform-routed installs are follow-up
 - Phase 59 added 2026-10-31: **Steam engine fallback when CrossOver is unavailable**. CrossOver stays first choice; a GameLib-managed, pinned Wine-Staging + DXVK runs the same bridge bottle (`USER=crossover`) when CrossOver is missing, trial-expired (per-bottle `wine --demo-status`) or broken; per-game override advanced/unsupported only. Evidence: spikes 056–060.
+- Phase 66.1 inserted after Phase 66: Split from Phase 66 at plan time (2026-11-10): ~50 plans at full depth; see ROADMAP § Phase 66
+- Phase 66.2 inserted after Phase 66: Split from Phase 66 at plan time (2026-11-10): ~50 plans at full depth; see ROADMAP § Phase 66
+- Phase 66.3 inserted after Phase 66: Split from Phase 66 at plan time (2026-11-10): ~50 plans at full depth; see ROADMAP § Phase 66
 
 ### Decisions
 
