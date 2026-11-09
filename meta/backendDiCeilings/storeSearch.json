@@ -1,0 +1,9 @@
+{
+  "jestMock": {
+    "src/backend/storeSearch/__tests__/cheapshark.test.ts": 2,
+    "src/backend/storeSearch/__tests__/handlers.test.ts": 2
+  },
+  "moduleState": {
+    "src/backend/storeSearch/cheapshark.ts": 1
+  }
+}

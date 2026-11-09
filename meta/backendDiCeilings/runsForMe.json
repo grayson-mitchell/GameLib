@@ -1,0 +1,9 @@
+{
+  "jestMock": {
+    "src/backend/runsForMe/__tests__/runsForMe.test.ts": 3
+  },
+  "moduleState": {
+    "src/backend/runsForMe/index.ts": 1,
+    "src/backend/runsForMe/stores.ts": 1
+  }
+}

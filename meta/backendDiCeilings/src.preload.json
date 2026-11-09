@@ -1,0 +1,15 @@
+{
+  "jestMock": {
+    "src/preload/__tests__/childWindows.test.ts": 2,
+    "src/preload/__tests__/framelessRuntime.test.ts": 3,
+    "src/preload/__tests__/gamepadActionRouting.test.ts": 2,
+    "src/preload/__tests__/ipcValidationError.test.ts": 1,
+    "src/preload/__tests__/showAboutWindow.test.ts": 2,
+    "src/preload/__tests__/steamInstallFormApi.test.ts": 1,
+    "src/preload/__tests__/storeApi.test.ts": 1,
+    "src/preload/__tests__/tauriAttach.test.ts": 3,
+    "src/preload/__tests__/tauriNativeGamepad.test.ts": 1,
+    "src/preload/__tests__/tauriTransport.test.ts": 2,
+    "src/preload/__tests__/windowChrome.test.ts": 3
+  }
+}

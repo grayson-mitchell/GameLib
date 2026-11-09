@@ -37,3 +37,7 @@ jobs:
       # meta/steamLineCeilingBaseline.json in the same commit as the move.
       - name: Steam file line ceiling
         run: pnpm steam-line-ceiling
+      # Phase 66 D-16: shrink-only module-state / child_process / jest.mock ceilings; lower
+      # the matching meta/backendDiCeilings/*.json entry in the same commit as the removal.
+      - name: Backend DI ceilings
+        run: pnpm backend-di-ceilings

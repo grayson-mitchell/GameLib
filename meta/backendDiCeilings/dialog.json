@@ -1,0 +1,9 @@
+{
+  "jestMock": {
+    "src/backend/dialog/__tests__/dialogRaisesHiddenWindow.test.ts": 4
+  },
+  "moduleState": {
+    "src/backend/dialog/dialog.ts": 1,
+    "src/backend/dialog/displayAck.ts": 1
+  }
+}

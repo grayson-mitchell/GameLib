@@ -1,0 +1,22 @@
+{
+  "childProcess": {
+    "src/backend/storeManagers/gog/games.ts": 1
+  },
+  "jestMock": {
+    "src/backend/storeManagers/gog/__tests__/expiryProbe.test.ts": 14,
+    "src/backend/storeManagers/gog/__tests__/gogImportGame.test.ts": 28,
+    "src/backend/storeManagers/gog/__tests__/gogPresenceKeepAlive.test.ts": 6,
+    "src/backend/storeManagers/gog/__tests__/library.test.ts": 16,
+    "src/backend/storeManagers/gog/__tests__/logoutCookies.test.ts": 10,
+    "src/backend/storeManagers/gog/__tests__/setup.engine.test.ts": 16,
+    "src/backend/storeManagers/gog/__tests__/user.test.ts": 9
+  },
+  "moduleState": {
+    "src/backend/storeManagers/gog/e2eMock.ts": 1,
+    "src/backend/storeManagers/gog/library.ts": 2,
+    "src/backend/storeManagers/gog/presence.ts": 2,
+    "src/backend/storeManagers/gog/resumeProgress.ts": 1,
+    "src/backend/storeManagers/gog/stores.ts": 9,
+    "src/backend/storeManagers/gog/user.ts": 3
+  }
+}

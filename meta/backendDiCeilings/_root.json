@@ -1,0 +1,26 @@
+{
+  "childProcess": {
+    "src/backend/config.ts": 1,
+    "src/backend/launcher.ts": 1,
+    "src/backend/trackedChildren.ts": 1,
+    "src/backend/utils.ts": 1
+  },
+  "jestMock": {
+    "src/backend/jest.setupContainment.ts": 2
+  },
+  "moduleState": {
+    "src/backend/backend_events.ts": 1,
+    "src/backend/images_cache.ts": 1,
+    "src/backend/knownFixOverlayInstall.ts": 1,
+    "src/backend/knownFixesFetcher.ts": 1,
+    "src/backend/launchSingleFlight.ts": 1,
+    "src/backend/launcher.ts": 3,
+    "src/backend/longLivedChildren.ts": 1,
+    "src/backend/online_monitor.ts": 7,
+    "src/backend/protocol.ts": 1,
+    "src/backend/storeChangeNotifier.ts": 2,
+    "src/backend/trackedChildren.ts": 1,
+    "src/backend/typed_store.ts": 1,
+    "src/backend/utils.ts": 4
+  }
+}

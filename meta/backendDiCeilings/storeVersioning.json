@@ -1,0 +1,9 @@
+{
+  "jestMock": {
+    "src/backend/storeVersioning/__tests__/atomicWriteFailure.test.ts": 1
+  },
+  "moduleState": {
+    "src/backend/storeVersioning/engine.ts": 2,
+    "src/backend/storeVersioning/readOnlyStores.ts": 2
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "jestMock": {
+    "src/backend/storeManagers/legendary/__tests__/epicCookieCensus.test.ts": 9,
+    "src/backend/storeManagers/legendary/__tests__/epicLogoutDomains.test.ts": 9,
+    "src/backend/storeManagers/legendary/__tests__/expiryProbe.test.ts": 12,
+    "src/backend/storeManagers/legendary/__tests__/getGameInfoForceReloadStaleness.test.ts": 8,
+    "src/backend/storeManagers/legendary/__tests__/user.test.ts": 7
+  },
+  "moduleState": {
+    "src/backend/storeManagers/legendary/e2eMock.ts": 1,
+    "src/backend/storeManagers/legendary/library.ts": 3,
+    "src/backend/storeManagers/legendary/stores.ts": 5
+  }
+}

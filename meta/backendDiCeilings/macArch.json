@@ -1,0 +1,9 @@
+{
+  "jestMock": {
+    "src/backend/macArch/__tests__/recovery.test.ts": 7
+  },
+  "moduleState": {
+    "src/backend/macArch/recovery.ts": 1,
+    "src/backend/macArch/stores.ts": 1
+  }
+}

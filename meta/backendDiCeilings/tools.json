@@ -1,0 +1,22 @@
+{
+  "childProcess": {
+    "src/backend/tools/index.ts": 1
+  },
+  "jestMock": {
+    "src/backend/tools/__tests__/dxmtBootFetch.test.ts": 8,
+    "src/backend/tools/__tests__/dxmtExportGate.test.ts": 8,
+    "src/backend/tools/__tests__/dxvkInstallRemove.test.ts": 5,
+    "src/backend/tools/__tests__/machoExports.test.ts": 2,
+    "src/backend/tools/__tests__/runWineCommandForPendingInstall.test.ts": 5,
+    "src/backend/tools/__tests__/runWineCommandOnGameGuard.test.ts": 3,
+    "src/backend/tools/__tests__/toolSettingsWiring.test.ts": 4,
+    "src/backend/tools/__tests__/winetricksInstallLifecycle.test.ts": 9,
+    "src/backend/tools/__tests__/winetricksListAvailable.test.ts": 9,
+    "src/backend/tools/__tests__/winetricksQueue.test.ts": 8
+  },
+  "moduleState": {
+    "src/backend/tools/index.ts": 3,
+    "src/backend/tools/winetricksEnvironment.ts": 2,
+    "src/backend/tools/winetricksQueue.ts": 4
+  }
+}

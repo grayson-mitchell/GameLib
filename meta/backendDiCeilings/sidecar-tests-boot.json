@@ -1,0 +1,17 @@
+{
+  "jestMock": {
+    "src/backend/sidecar/__tests__/bootstrap.test.ts": 2,
+    "src/backend/sidecar/__tests__/bootstrapUserReconcile.test.ts": 3,
+    "src/backend/sidecar/__tests__/bootstrapWirings.test.ts": 6,
+    "src/backend/sidecar/__tests__/engineTempSweepBootWire.test.ts": 3,
+    "src/backend/sidecar/__tests__/gogPresenceBootWire.test.ts": 3,
+    "src/backend/sidecar/__tests__/migrationsWiring.test.ts": 3,
+    "src/backend/sidecar/__tests__/onlineMonitorWiring.test.ts": 3,
+    "src/backend/sidecar/__tests__/playtimeLockBootClear.test.ts": 2,
+    "src/backend/sidecar/__tests__/playtimeQueueBootDrain.test.ts": 3,
+    "src/backend/sidecar/__tests__/rosettaBootWiring.test.ts": 5,
+    "src/backend/sidecar/__tests__/rosettaPlatformGate.test.ts": 2,
+    "src/backend/sidecar/__tests__/sidecarStdoutFramesOnly.test.ts": 2,
+    "src/backend/sidecar/__tests__/signInProbeBootWire.test.ts": 5
+  }
+}

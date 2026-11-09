@@ -48,6 +48,7 @@
     "lint": "node meta/lintScoped.cjs",
     "boundaries": "depcruise --config .dependency-cruiser.cjs --output-type err-long src/backend",
     "steam-line-ceiling": "node meta/steamLineCeiling.cjs",
+    "backend-di-ceilings": "node meta/backendDiCeilings.cjs",
     "lint:src": "node meta/lintScoped.cjs --src",
     "lint:tests": "node meta/lintScoped.cjs --tests",
     "lint-fix": "eslint --fix --ext .tsx,ts ./src",

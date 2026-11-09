@@ -1,0 +1,16 @@
+{
+  "childProcess": {
+    "src/backend/wine/manager/downloader/utilities.ts": 1
+  },
+  "jestMock": {
+    "src/backend/wine/manager/__tests__/removeWineVersion.test.ts": 4,
+    "src/backend/wine/manager/downloader/__tests__/main/getter.test.ts": 1,
+    "src/backend/wine/manager/downloader/__tests__/utilities/geProtonArch.test.ts": 1,
+    "src/backend/wine/manager/downloader/__tests__/utilities/rest.test.ts": 1,
+    "src/backend/wine/manager/downloader/__tests__/utilities/unzip.test.ts": 1,
+    "src/backend/wine/runtimes/__tests__/runtimes/utils.test.ts": 1
+  },
+  "moduleState": {
+    "src/backend/wine/manager/stores.ts": 1
+  }
+}

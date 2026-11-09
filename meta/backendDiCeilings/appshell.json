@@ -1,0 +1,6 @@
+{
+  "jestMock": {
+    "src/backend/appshell/__tests__/appManagement.test.ts": 2,
+    "src/backend/appshell/__tests__/appshellModules.test.ts": 6
+  }
+}

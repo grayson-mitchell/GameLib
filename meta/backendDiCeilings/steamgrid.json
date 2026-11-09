@@ -1,0 +1,9 @@
+{
+  "jestMock": {
+    "src/backend/steamgrid/__tests__/secretStore.test.ts": 3,
+    "src/backend/steamgrid/__tests__/utils.test.ts": 1
+  },
+  "moduleState": {
+    "src/backend/steamgrid/secretStore.ts": 1
+  }
+}

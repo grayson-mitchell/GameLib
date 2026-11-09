@@ -1,0 +1,45 @@
+{
+  "childProcess": {
+    "src/backend/engine/demoStatus.ts": 1,
+    "src/backend/engine/runTool.ts": 1
+  },
+  "jestMock": {
+    "src/backend/engine/__tests__/adoptBottle.test.ts": 1,
+    "src/backend/engine/__tests__/bottleLedger.test.ts": 1,
+    "src/backend/engine/__tests__/bottlePrimitives.test.ts": 4,
+    "src/backend/engine/__tests__/crossoverLocation.test.ts": 4,
+    "src/backend/engine/__tests__/demoStatus.test.ts": 1,
+    "src/backend/engine/__tests__/engineConfig.test.ts": 2,
+    "src/backend/engine/__tests__/engineDecision.test.ts": 1,
+    "src/backend/engine/__tests__/engineRegistry.test.ts": 1,
+    "src/backend/engine/__tests__/engineState.test.ts": 1,
+    "src/backend/engine/__tests__/engineSwitch.test.ts": 6,
+    "src/backend/engine/__tests__/fallbackEngine.test.ts": 4,
+    "src/backend/engine/__tests__/gameEngineState.test.ts": 1,
+    "src/backend/engine/__tests__/gameProcessWatch.test.ts": 2,
+    "src/backend/engine/__tests__/launchDeadline.test.ts": 1,
+    "src/backend/engine/__tests__/launchEngine.deadline.test.ts": 10,
+    "src/backend/engine/__tests__/launchEngine.test.ts": 12,
+    "src/backend/engine/__tests__/launchSettings.test.ts": 5,
+    "src/backend/engine/__tests__/legacyBottleUntouched.test.ts": 8,
+    "src/backend/engine/__tests__/perGameBottle.test.ts": 4,
+    "src/backend/engine/__tests__/pinnedEngineProgress.test.ts": 3,
+    "src/backend/engine/__tests__/processListing.test.ts": 1,
+    "src/backend/engine/__tests__/testedCrossoverVersions.test.ts": 1,
+    "src/backend/engine/__tests__/toolSettings.test.ts": 4
+  },
+  "moduleState": {
+    "src/backend/engine/bottleLedger.ts": 1,
+    "src/backend/engine/bottlePrimitives.ts": 1,
+    "src/backend/engine/crossoverLocation.ts": 1,
+    "src/backend/engine/engineNoticeStore.ts": 1,
+    "src/backend/engine/engineRegistry.ts": 1,
+    "src/backend/engine/engineState.ts": 7,
+    "src/backend/engine/engineSwitch.ts": 1,
+    "src/backend/engine/fallbackEngine.ts": 2,
+    "src/backend/engine/launchDeadline.ts": 1,
+    "src/backend/engine/launchEngine.ts": 2,
+    "src/backend/engine/launchSettings.ts": 1,
+    "src/backend/engine/perGameBottle.ts": 1
+  }
+}

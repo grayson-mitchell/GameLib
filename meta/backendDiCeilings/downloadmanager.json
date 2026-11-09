@@ -1,0 +1,11 @@
+{
+  "jestMock": {
+    "src/backend/downloadmanager/__tests__/downloadqueue.test.ts": 16,
+    "src/backend/downloadmanager/__tests__/installStallWatchdog.test.ts": 1,
+    "src/backend/downloadmanager/__tests__/utils.test.ts": 11
+  },
+  "moduleState": {
+    "src/backend/downloadmanager/downloadqueue.ts": 3,
+    "src/backend/downloadmanager/stores.ts": 1
+  }
+}
