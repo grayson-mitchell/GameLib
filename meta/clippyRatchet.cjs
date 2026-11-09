@@ -85,8 +85,7 @@ const CLIPPY_CEILINGS = {
     'clippy::manual_hash_one': 1,
     'clippy::useless_conversion': 1,
     'clippy::needless_borrows_for_generic_args': 1,
-    'clippy::if_same_then_else': 1,
-    unused_variables: 1
+    'clippy::if_same_then_else': 1
   }
 }
 

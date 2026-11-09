@@ -448,20 +448,11 @@ fn swap_case(s: &str) -> String {
 /// `(dev, ino)`-equivalent identity of a directory entry, or an io error.
 pub type StatIdentity = (u64, u64);
 
+#[cfg(unix)]
 fn stat_identity(p: &Path) -> io::Result<StatIdentity> {
+    use std::os::unix::fs::MetadataExt;
     let md = fs::metadata(p)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-        Ok((md.dev(), md.ino()))
-    }
-    #[cfg(not(unix))]
-    {
-        // No inode on Windows via std stable: creation+write time plus length is not an identity,
-        // so fall back to canonical-path equality in `probe_case_insensitive_with`.
-        let _ = md;
-        Err(io::Error::from(io::ErrorKind::Unsupported))
-    }
+    Ok((md.dev(), md.ino()))
 }
 
 /// Testable core of [`probe_case_insensitive`]: `stat` and `fallback` are injected.
