@@ -13,6 +13,8 @@ import {
   type FinalizeToSteamOpts
 } from '../depot'
 import { reconcilePartialState } from '../depot/reconcile'
+import { depotPipeline } from '../depotRust/pipelineFlag'
+import { resumeVerifyRust } from '../depotRust/secondary'
 import {
   sanitizeInstalldir,
   fallbackInstalldirFor,
@@ -120,7 +122,7 @@ async function locateDownloadingTarget(appId: string): Promise<{
 async function buildResumeFinalizeOpts(
   appId: string,
   target: { targetSteamappsDir: string; installdir: string; name: string }
-): Promise<FinalizeToSteamOpts> {
+): Promise<FinalizeToSteamOpts | null> {
   // WR-03 (23-code-review): target.installdir is read directly off the
   // on-disk ACF's AppState.installdir (locateDownloadingTarget) with no
   // sanitization of its own — route it through the same containment +
@@ -166,6 +168,39 @@ async function buildResumeFinalizeOpts(
       installdir: fallbackInstalldirFor(appId),
       name: target.name,
       depots: []
+    }
+  }
+
+  // D-13/D-16: with the flag on rust, one verify_only job reconciles, heals modes and writes the
+  // ACF itself. null tells the caller there is nothing left to finalize in TS.
+  if (depotPipeline() === 'rust') {
+    try {
+      const v = await resumeVerifyRust(appId, {
+        targetSteamappsDir: target.targetSteamappsDir,
+        installdir,
+        name: target.name,
+        os: hostSteamDepotOsForResume()
+      })
+      logInfo(
+        `Steam: rust resume verify for appId ${appId}: missing=${v.missing.length} verified=${v.allFilesVerified} modesHealed=${v.allModesHealed} StateFlags=${v.acf?.stateFlags ?? 'none'}`,
+        LogPrefix.Steam
+      )
+      return null
+    } catch (verifyErr) {
+      logWarning(
+        [
+          `Steam: startup resume verify failed for appId ${appId}, ` +
+            'falling back to the honest-empty 1026 finalize:',
+          verifyErr
+        ],
+        LogPrefix.Steam
+      )
+      return {
+        targetSteamappsDir: target.targetSteamappsDir,
+        installdir,
+        name: target.name,
+        depots: []
+      }
     }
   }
 
@@ -286,7 +321,8 @@ export async function resumeInterruptedSteamInstall(
       const target = await locateDownloadingTarget(appId)
       if (target) {
         const finalizeOpts = await buildResumeFinalizeOpts(appId, target)
-        await finalizeToSteam(appId, finalizeOpts)
+        // null: the Rust verify_only job already wrote the ACF.
+        if (finalizeOpts) await finalizeToSteam(appId, finalizeOpts)
       }
     } catch (finalizeErr) {
       logWarning(
