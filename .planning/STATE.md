@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
-stopped_at: Phase 73 context gathered
-last_updated: "2026-11-09T00:18:41.101Z"
+stopped_at: Completed 73-04-PLAN.md
+last_updated: "2026-11-09T00:22:53.760Z"
 last_activity: 2026-11-09
 progress:
   total_phases: 14
   completed_phases: 8
   total_plans: 168
-  completed_plans: 150
+  completed_plans: 151
   percent: 57
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 73 (steam-depot-download-pipeline-in-rust) — EXECUTING
-Plan: 3 of 21
+Plan: 5 of 21 (73-01..73-04 complete)
 Status: Ready to execute
 Last activity: 2026-11-09
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 90%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -246,6 +246,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 73 P01 | 35min | 4 tasks | 24 files |
 | Phase 73 P02 | 25min | 2 tasks | 3 files |
 | Phase 73 P03 | 40min | 2 tasks | 9 files |
+| Phase 73 P04 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -382,6 +383,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 68]: 68-05: read-side tray/focusRow normalisers stay as degradation path for read-only settings (D-11); libraryTopSection retired from AppSettings
 - [Phase ?]: 68-06: readOnlyStoresNotice payload is ids-only, flushed once from frontendReady; late entries re-publish
 - [Phase 73]: 73-01: rust-version 1.89 for gamelib-depot crates (operator option-a); no aes_armv8 rustflags
+- [Phase 73]: 73-04: Mach-O probe ported from machO.ts (gamelib-scan not reused); containment lexical; case probe stat-based per TS
 
 ### Pending Todos
 
@@ -662,8 +664,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-09T00:18:36.457Z
-Stopped at: Phase 73 context gathered
+Last session: 2026-11-09T00:22:53.752Z
+Stopped at: Completed 73-04-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
