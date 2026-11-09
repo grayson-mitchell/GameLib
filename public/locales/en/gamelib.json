@@ -669,6 +669,7 @@
                 "title": "Game didn't start"
             },
             "downloadFailed": "GameLib couldn't download its built-in engine ({{reason}}). Check your connection and try again.",
+            "markerNewer": "{{title}}'s game files were last set up by a newer version of GameLib, so this version won't change its engine. Launch it with the engine it already uses, or update GameLib.",
             "nagNotice": "CrossOver is showing a trial reminder. Close it to start {{title}}.",
             "noCrossover": {
                 "body": "CrossOver isn't installed. GameLib runs Windows games on its built-in engine; CrossOver gives better compatibility and performance.",
