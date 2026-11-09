@@ -140,15 +140,56 @@ jest.mock('../../storeManagers/steam/anonymousClient')
 import { defined } from 'backend/testUtils/indexed'
 import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
-import { getPath } from '../pathShim'
-import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
-import { SteamUser } from '../../storeManagers/steam/user'
-import { mockLeaseOk } from '../../storeManagers/steam/__tests__/depotLeaseMocks'
-import { getAnonymousPicsClient } from '../../storeManagers/steam/anonymousClient'
-import { getSteamLibraries } from 'backend/utils'
-import { configStore as steamConfigStore } from '../../storeManagers/steam/stores'
-import { configStore } from 'backend/constants/key_value_stores'
-import { libraryManagerMap } from '../../storeManagers'
+import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
+
+// D-08: every case boots the sidecar once, in a fresh module registry. Module
+// handles the cases configure or inspect are rebound from that registry in
+// freshRegistry() (run before each case, ahead of any mock configuration), and
+// boot() then boots without a second reset.
+let getPath: typeof import('../pathShim').getPath
+let SteamUser: typeof import('../../storeManagers/steam/user').SteamUser
+let mockLeaseOk: typeof import('../../storeManagers/steam/__tests__/depotLeaseMocks').mockLeaseOk
+let getAnonymousPicsClient: typeof import('../../storeManagers/steam/anonymousClient').getAnonymousPicsClient
+let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
+let steamConfigStore: typeof import('../../storeManagers/steam/stores').configStore
+let configStore: typeof import('backend/constants/key_value_stores').configStore
+let libraryManagerMap: typeof import('../../storeManagers').libraryManagerMap
+
+function freshRegistry(): void {
+  jest.resetModules()
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  require('../bootstrap')
+  ;({ getPath } = require('../pathShim'))
+  ;({ SteamUser } = require('../../storeManagers/steam/user'))
+  ;({
+    mockLeaseOk
+  } = require('../../storeManagers/steam/__tests__/depotLeaseMocks'))
+  ;({
+    getAnonymousPicsClient
+  } = require('../../storeManagers/steam/anonymousClient'))
+  ;({ getSteamLibraries } = require('backend/utils'))
+  ;({
+    configStore: steamConfigStore
+  } = require('../../storeManagers/steam/stores'))
+  ;({ configStore } = require('backend/constants/key_value_stores'))
+  ;({ libraryManagerMap } = require('../../storeManagers'))
+  /* eslint-enable @typescript-eslint/no-require-imports */
+}
+
+const boot = () => bootFresh({ reuseRegistry: true })
+
+/**
+ * One boot, then drop the frames the boot itself emitted. A fresh boot runs
+ * the one-shot migrations and legacy-key cleanups, which announce their own
+ * storeChanged frames; the store-write cases below assert on the frames their
+ * OWN frames cause, so those boot-time announcements are discarded first.
+ */
+async function bootQuiet(): Promise<ReturnType<typeof boot>> {
+  const sidecar = boot()
+  await flush()
+  sidecar.frames.length = 0
+  return sidecar
+}
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
@@ -169,6 +210,7 @@ afterAll(() => {
 
 describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
   beforeEach(() => {
+    freshRegistry()
     // resetMocks:true (shared root config) wipes automock/factory
     // implementations before every test — re-establish the defaults every
     // test relies on.
@@ -208,7 +250,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
 
     jest.mocked(SteamUser.getClient).mockReturnValue(fakeClient as any)
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     // quick-260817-d61: the Steam keyring deferral gate defers an automatic
     // ('startup'-shaped, no origin) refresh — this test proves the READ FLOW
     // mechanics (a refreshLibrary invoke reaches the real steam-user path and
@@ -249,7 +291,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
   // numeric-appId steam game produces an `openExternal` RPC frame whose URL
   // matches ^steam://rungameid/\d+$.
   it('Test 2 (action flow): launch invoke for a numeric appId emits a validated steam://rungameid/<id> openExternal frame', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'launch-1', 'launch', [
       { appName: '999002', runner: 'steam' }
     ])
@@ -272,7 +314,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
   // Test 3 (guard): a non-numeric appId does NOT emit an openExternal frame
   // (buildSteamProtocolUrl T-03-01 guard holds through the sidecar).
   it('Test 3 (guard): launch invoke for a non-numeric appId does not emit an openExternal frame', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'launch-2', 'launch', [
       { appName: '../../etc/passwd', runner: 'steam' }
     ])
@@ -307,7 +349,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     )
 
     try {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'snapshot-1', 'sidecar:store-snapshot', [])
       await flush()
 
@@ -356,7 +398,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // which is exactly the gap this plan closes (29-RESEARCH Pitfall 1). The same write
     // also announces itself as a storeChanged frontendMessage frame (D-06).
     it('a storeSet write persists and is visible in a fresh snapshot fetch, and announces a storeChanged event', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = await bootQuiet()
       writeSend(input, 'set-1', 'storeSet', [
         'configStore',
         'theme',
@@ -390,7 +432,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // A storeDelete for the same key removes it from a subsequent snapshot and emits a
     // storeChanged frame with deleted: true.
     it('a storeDelete removes the key from a subsequent snapshot and emits a change event with deleted: true', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = await bootQuiet()
       writeSend(input, 'set-2', 'storeSet', [
         'configStore',
         'theme',
@@ -429,11 +471,11 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // storeChanged frame may be emitted for it. A plaintext write here would be
     // Keychain-decrypt-failed by Electron and would silently sign the real user out.
     //
-    // Seed AFTER `startSidecar()`, not before (debug/steam-token-survives-keychain): `init()`
+    // Seed AFTER `boot()`, not before (debug/steam-token-survives-keychain): `init()`
     // now runs `clearOrphanedElectronToken()` unconditionally and SYNCHRONOUSLY (`init()` is
     // not `async`) as part of booting, deleting whatever legacy value sits in this exact key
     // at boot time — by design, that cleanup is what this fix authorizes. Seeding before
-    // `startSidecar()` would have the boot-time cleanup (not the attacker's `storeSet`) remove
+    // `boot()` would have the boot-time cleanup (not the attacker's `storeSet`) remove
     // the value, which would still make `after` undefined and pass, but for the wrong reason —
     // it would stop distinguishing "the guard rejected the attacker" from "cleanup already
     // deleted it before the attacker's frame ever arrived". Seeding after boot places a value
@@ -442,7 +484,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // test back to the one thing it exists to prove: `storeWriteHandlers.ts`'s guard, not the
     // cleanup, rejects the attacker's write.
     it('PHASE 28 D-04 regression: a storeSet into steamConfigStore.refreshToken is rejected and leaves the real token byte-identical', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = await bootQuiet()
       steamConfigStore.set('refreshToken', 'REAL-TOKEN-DO-NOT-OVERWRITE')
       const before = steamConfigStore.get_nodefault('refreshToken')
 
@@ -474,7 +516,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // Object.prototype. Two independent guards now stop it: guard (c′) in
     // `applyStoreWrite` and `isSafeKeyPath` in `fileStore.ts`'s path helpers.
     it('CR-01 regression: a `__proto__`/`constructor`/`prototype` key path is rejected and cannot pollute Object.prototype', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = await bootQuiet()
       writeSend(input, 'set-proto-1', 'storeSet', [
         'timestampStore',
         '__proto__.polluted',
@@ -515,7 +557,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // have added — had NO test coverage at all. The write suite covered guard (b)
     // (refreshToken) and malformed store names only.
     it('WR-12: guard (c) rejects a non-allow-listed field and emits no change event', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = await bootQuiet()
       writeSend(input, 'set-secret-1', 'storeSet', [
         'humbleConfigStore',
         'csrfToken',
@@ -560,7 +602,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // WR-12: a LEGITIMATE dynamic cache-store write must still persist — the guards
     // above must not have made the recognized cache stores collateral damage.
     it('WR-12: a legendary_library cache-store write persists and announces a change event', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = await bootQuiet()
       writeSend(input, 'set-cache-1', 'storeSet', [
         'legendary_library',
         'library',
@@ -611,7 +653,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
       const cacheDir = join(getPath('userData'), 'store_cache')
       const before = existsSync(cacheDir) ? readdirSync(cacheDir) : []
 
-      const { input } = startSidecar()
+      const { input } = boot()
       writeSend(input, 'new-junk-1', 'storeNew', [
         'attacker_junk_store',
         undefined
@@ -636,7 +678,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // and the RPC loop keeps serving — a subsequent health invoke still responds
     // ok: true.
     it('rejects an unknown store name and a traversal-shaped name — no change event, no crash, health still responds', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = await bootQuiet()
       writeSend(input, 'set-bad-1', 'storeSet', ['not_a_store', 'theme', 'x'])
       writeSend(input, 'set-bad-2', 'storeSet', ['../../evil', 'theme', 'x'])
       await flush()
@@ -684,7 +726,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
         .spyOn(libraryManagerMap.steam, 'refresh')
         .mockResolvedValue({ stdout: '', stderr: '' })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gog-refresh-1', 'refreshLibrary', ['gog'])
       await flush()
 
@@ -702,7 +744,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
           .mockResolvedValue({ stdout: '', stderr: '' })
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'all-refresh-1', 'refreshLibrary', ['all'])
       await flush()
 
@@ -729,7 +771,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
           .mockResolvedValue({ stdout: '', stderr: '' })
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'null-refresh-1', 'refreshLibrary', [null])
       await flush()
 
@@ -746,7 +788,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
           .mockResolvedValue({ stdout: '', stderr: '' })
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'unknown-refresh-1', 'refreshLibrary', [
         'not-a-real-runner'
       ])
@@ -776,7 +818,7 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
             .mockResolvedValue({ stdout: '', stderr: '' })
         )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'all-refresh-partial-fail-1', 'refreshLibrary', [
         'all'
       ])

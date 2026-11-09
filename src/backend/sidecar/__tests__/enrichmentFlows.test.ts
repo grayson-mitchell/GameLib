@@ -297,7 +297,7 @@ const mockGetSteamGridDbSecretStore = jest.fn(() => ({
 }))
 // `setSteamGridDbSecretStore` is a no-op jest.fn() here: the sidecar's REAL
 // (unmocked) bootstrap.ts calls installSidecarSteamGridDbSecretStore() at
-// startSidecar() time, which calls this — but getSteamGridDbSecretStore()
+// boot() time, which calls this — but getSteamGridDbSecretStore()
 // above always returns the SAME fixed test double regardless of what this
 // no-ops "install", so bootstrap's real install path cannot affect what
 // this suite's handlers actually resolve.
@@ -343,25 +343,15 @@ import { tmpdir } from 'os'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 import {
-  startSidecar,
+  bootFresh,
   writeInvoke,
   findResponse,
   Frame
 } from './helpers/sidecarHarness'
-import { GlobalConfig } from 'backend/config'
-import { libraryManagerMap } from 'backend/storeManagers'
-import { handlerRegistry } from '../../platform'
 import { fixesPath, appFolder, userDataPath } from '../../constants/paths'
 import { getLogFilePath } from 'backend/logger/paths'
-import { wikiGameInfoStore } from '../../wiki_game_info/stores'
-import { configStore } from '../../constants/key_value_stores'
-import { isOnline, runOnceWhenOnline } from '../../online_monitor'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
-import * as loggerModule from '../../logger'
 import type { GameInfo } from 'common/types'
-
-const mockedIsOnline = isOnline as jest.Mock
-const mockedRunOnceWhenOnline = runOnceWhenOnline as jest.Mock
 
 // ── CR-03 / WR-01 containment guard — MUST run before the first
 // beforeEach's destructive rmSync/configStore.set calls (jest runs
@@ -392,15 +382,50 @@ beforeAll(() => {
   }
 })
 
-const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-
 type ManagerMock = Record<'getGame' | 'getListOfGames', jest.Mock>
 
-const legendaryManager = libraryManagerMap.legendary as unknown as ManagerMock
-const gogManager = libraryManagerMap.gog as unknown as ManagerMock
-const steamManager = libraryManagerMap.steam as unknown as ManagerMock
-const nileManager = libraryManagerMap.nile as unknown as ManagerMock
-const sideloadManager = libraryManagerMap.sideload as unknown as ManagerMock
+// D-08: every case boots the sidecar once, in a fresh module registry. Module
+// handles the cases configure or inspect are rebound from that registry in
+// freshRegistry() (run before each case, ahead of any mock configuration), and
+// boot() then boots without a second reset. The SteamGridDB secret store the
+// boot reads is a file-level double (`mockGetSteamGridDbSecretStore`), so it
+// is configured in the beforeEach, which runs before the boot.
+let handlerRegistry: typeof import('../../platform').handlerRegistry
+let wikiGameInfoStore: typeof import('../../wiki_game_info/stores').wikiGameInfoStore
+let configStore: typeof import('../../constants/key_value_stores').configStore
+let loggerModule: typeof import('../../logger')
+let mockedGlobalConfigGet: jest.Mock
+let mockedIsOnline: jest.Mock
+let mockedRunOnceWhenOnline: jest.Mock
+let legendaryManager: ManagerMock
+let gogManager: ManagerMock
+let steamManager: ManagerMock
+let nileManager: ManagerMock
+let sideloadManager: ManagerMock
+
+function freshRegistry(): void {
+  jest.resetModules()
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  require('../bootstrap')
+  const { GlobalConfig } = require('backend/config')
+  const { libraryManagerMap } = require('backend/storeManagers')
+  const { isOnline, runOnceWhenOnline } = require('../../online_monitor')
+  ;({ handlerRegistry } = require('../../platform'))
+  ;({ wikiGameInfoStore } = require('../../wiki_game_info/stores'))
+  ;({ configStore } = require('../../constants/key_value_stores'))
+  loggerModule = require('../../logger')
+  /* eslint-enable @typescript-eslint/no-require-imports */
+  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+  mockedIsOnline = isOnline as jest.Mock
+  mockedRunOnceWhenOnline = runOnceWhenOnline as jest.Mock
+  legendaryManager = libraryManagerMap.legendary as unknown as ManagerMock
+  gogManager = libraryManagerMap.gog as unknown as ManagerMock
+  steamManager = libraryManagerMap.steam as unknown as ManagerMock
+  nileManager = libraryManagerMap.nile as unknown as ManagerMock
+  sideloadManager = libraryManagerMap.sideload as unknown as ManagerMock
+}
+
+const boot = () => bootFresh({ reuseRegistry: true })
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
@@ -488,6 +513,7 @@ const STORE_FIXTURE_RAW = [
 
 describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
   beforeEach(() => {
+    freshRegistry()
     mockAppSettings({ language: 'en' })
     mockCheapsharkGet.mockReset()
     mockIsCrossoverIndexEligible.mockReset()
@@ -570,7 +596,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         Promise.reject(new Error('cheapshark unreachable'))
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'ss-err-1', 'searchStores', ['some query'])
       await flush()
 
@@ -586,7 +612,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         Promise.reject(new Error('cheapshark unreachable'))
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gsd-err-1', 'getStoreSearchDeals', ['game-1'])
       await flush()
 
@@ -602,7 +628,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         Promise.reject(new Error('cheapshark unreachable'))
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gssm-err-1', 'getStoreSearchStoreMap', [])
       await flush()
 
@@ -626,7 +652,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         return Promise.reject(new Error(`unexpected axios.get(${url})`))
       })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gssm-1', 'getStoreSearchStoreMap', [])
       await flush()
 
@@ -670,7 +696,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         }
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'ss-1', 'searchStores', ['team fortress'])
       await flush()
 
@@ -714,7 +740,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         }
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gsd-1', 'getStoreSearchDeals', ['g1'])
       await flush()
 
@@ -741,7 +767,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         JSON.stringify(fixture)
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gkf-1', 'getKnownFixes', ['known-fixes-app', 'gog'])
       await flush()
 
@@ -751,7 +777,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     })
 
     it('REQ-34.2-11 returns null when no fix file exists for the appName/runner pair', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gkf-2', 'getKnownFixes', ['no-such-app', 'gog'])
       await flush()
 
@@ -768,7 +794,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         join(fixesPath, 'gfs-remote-app-gog.json'),
         JSON.stringify({ title: 'x', launchNotice: 'remote text' })
       )
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gfs-1', 'getGamelibFixStatus', [
         'gfs-remote-app',
         'gog'
@@ -786,7 +812,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         join(fixesPath, 'local', 'gfs-local-app-gog.json'),
         JSON.stringify({ title: 'x' })
       )
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gfs-2', 'getGamelibFixStatus', [
         'gfs-local-app',
         'gog'
@@ -802,7 +828,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
   // ── quick 261029-mkz: Runs for me override ─────────────────────────────────
   describe('quick 261029-mkz setRunsForMe / getRunsForMeMap (invoke)', () => {
     it('round-trips a user-on through the real fileStore', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'rfm-1', 'setRunsForMe', [
         { appName: 'rfm.game', runner: 'steam', on: true }
       ])
@@ -823,7 +849,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       ['non-boolean on', { appName: 'x.bad', runner: 'gog', on: 'yes' }],
       ['null payload', null]
     ])('writes nothing for a malformed payload: %s', async (_name, payload) => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'rfm-bad', 'setRunsForMe', [payload])
       await flush()
       writeInvoke(input, 'rfm-get', 'getRunsForMeMap', [])
@@ -841,8 +867,6 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
   // ── REQ-34.2-11/D-16: getCrossoverIndex three-state map ───────────────────
   describe('REQ-34.2-11/D-16 getCrossoverIndex (invoke)', () => {
     it('REQ-34.2-11/D-16 resolves the three-state map: ineligible key-absent, eligible-unmatched null, eligible-matched number', async () => {
-      envMock.isMac = true
-
       gogManager.getListOfGames.mockReturnValue([
         makeGameInfo({ app_name: 'ineligible-1', runner: 'gog' })
       ])
@@ -858,7 +882,12 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         gameInfo.app_name === 'matched-1' ? 5 : null
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
+      // Set AFTER the boot has settled: a macOS boot starts the dxmt release
+      // check, which is not what this case exercises; the handler reads isMac
+      // per call.
+      await flush()
+      envMock.isMac = true
       writeInvoke(input, 'gci-1', 'getCrossoverIndex', [])
       await flush()
 
@@ -888,7 +917,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       mockIsCrossoverIndexEligible.mockReturnValue(true)
       mockResolveRatingFor.mockReturnValue(5)
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gci-2', 'getCrossoverIndex', [])
       await flush()
 
@@ -911,7 +940,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         { appName: 'remove-me', title: 'Remove Me' }
       ])
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'rr-1', 'removeRecent', ['remove-me'])
       await flush()
 
@@ -966,7 +995,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         })
       })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gwgi-1', 'getWikiGameInfo', [
         'A Completely Wrong Title',
         'wiki-app-1',
@@ -1019,7 +1048,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         ])
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gai-1', 'getAnticheatInfo', ['epicnamespace1'])
 
       // waitForResponse(), not a fixed-delay flush: this test used to await
@@ -1048,7 +1077,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         ])
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gai-2', 'getAnticheatInfo', ['440'])
 
       // waitForResponse(), not a fixed-delay flush -- see gai-1's comment above.
@@ -1082,7 +1111,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         ])
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gai-3', 'getAnticheatInfo', ['windows-namespace'])
       await flush()
 
@@ -1092,7 +1121,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     })
 
     it('REQ-34.2-07 with no data file at all, returns null rather than throwing', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'gai-4', 'getAnticheatInfo', ['anything'])
       // waitForResponse(), not flush(): the missing-file path still goes
       // through `readFile()`'s libuv threadpool round-trip before rejecting
@@ -1113,22 +1142,27 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
   // echoes, or otherwise persists a raw API key value in this file — every
   // assertion below checks presence/absence and call arguments only.
   describe('REQ-34.6-02/04/08/13 steamgriddb.* + getGogDiscounts (invoke)', () => {
-    it('REQ-34.6-02 steamgriddb.hasApiKey reflects the secret store’s presence/absence, never GlobalConfig', async () => {
+    it('REQ-34.6-02 steamgriddb.hasApiKey is false when the secret store holds no key, and never reads GlobalConfig', async () => {
       mockSecretStoreGetApiKey.mockResolvedValueOnce(undefined)
-      let { input, frames } = startSidecar()
+      const { input, frames } = boot()
       // bootstrap.ts's REAL (unmocked) installSidecarSteamGridDbSecretStore()
       // fires a synchronous-start, fire-and-forget migrateSteamGridDbApiKey()
       // that reads GlobalConfig.get() on its very first line (Plan 34.6-02,
       // A-03) — unrelated to the handler under test here. Cleared AFTER
-      // startSidecar() but BEFORE the invoke below so the assertion below
+      // boot() but BEFORE the invoke below so the assertion below
       // is scoped to the hasApiKey handler's OWN behavior only.
       mockedGlobalConfigGet.mockClear()
       writeInvoke(input, 'sgdb-has-1', 'steamgriddb.hasApiKey', [])
       await flush()
       expect(findResponse(frames, 'sgdb-has-1')?.result).toBe(false)
 
+      expect(mockedGlobalConfigGet).not.toHaveBeenCalled()
+    })
+
+    it('REQ-34.6-02 steamgriddb.hasApiKey is true when the secret store holds a key, and never reads GlobalConfig', async () => {
       mockSecretStoreGetApiKey.mockResolvedValueOnce('a-seeded-test-value')
-      ;({ input, frames } = startSidecar())
+      const { input, frames } = boot()
+      // See the test above for why this mockClear() is required.
       mockedGlobalConfigGet.mockClear()
       writeInvoke(input, 'sgdb-has-2', 'steamgriddb.hasApiKey', [])
       await flush()
@@ -1138,7 +1172,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     })
 
     it('REQ-34.6-02 steamgriddb.setApiKey persists via the secret store’s setApiKey and never touches GlobalConfig', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       // See the hasApiKey test above for why this mockClear() is required
       // and load-bearing, not incidental cleanup.
       mockedGlobalConfigGet.mockClear()
@@ -1176,7 +1210,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     ])(
       'WR-01 steamgriddb.setApiKey REJECTS %s at the schema boundary and never reaches the secret store',
       async (_label, badKey) => {
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeInvoke(input, 'sgdb-bad-1', 'steamgriddb.setApiKey', [badKey])
         await flush()
 
@@ -1189,7 +1223,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     )
 
     it('WR-01 steamgriddb.setApiKey still accepts an EMPTY STRING (a valid clear gesture, not a malformed key)', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'sgdb-empty-1', 'steamgriddb.setApiKey', [''])
       await flush()
 
@@ -1201,7 +1235,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
 
     it('REQ-34.6-04 steamgriddb.searchGame returns [] and never calls SteamGridDB.searchGame when no key is stored', async () => {
       mockSecretStoreGetApiKey.mockResolvedValueOnce(undefined)
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'sgdb-search-nokey', 'steamgriddb.searchGame', [
         'some query'
       ])
@@ -1217,7 +1251,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         { id: 1, name: 'Game One', extraNoise: 'dropped-by-the-mapper' }
       ])
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'sgdb-search-1', 'steamgriddb.searchGame', [
         'game one'
       ])
@@ -1249,7 +1283,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         }
       ])
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'sgdb-grids-1', 'steamgriddb.getGrids', [
         { gameId: 123, styles: ['alternate'], dimensions: ['600x900'] }
       ])
@@ -1292,7 +1326,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         { id: 'prod-1', title: 'Discounted Game' }
       ])
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'discounts-1', 'getGogDiscounts', [
         locale,
         true,
@@ -1314,7 +1348,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
         new Error('SteamGridDB boundary rejection')
       )
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'sgdb-search-err', 'steamgriddb.searchGame', ['query'])
       await flush()
 
@@ -1348,7 +1382,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
           Promise.reject(new Error('boundary rejection, not a marker'))
         )
 
-        const { input, frames } = startSidecar()
+        const { input, frames } = boot()
         writeInvoke(input, `all8-${channel}`, channel, args)
         // waitForResponse(), not flush(): `getAnticheatInfo` (one of the 8
         // channels this same block dispatches) awaits a real
@@ -1393,7 +1427,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     // `UNPORTED_CHANNEL_MARKER` (it never consults a list of known names), so a name that
     // no slice will ever register is a stable exemplar that needs no further substitution.
     it('REQ-34.2-14 an UNPORTED channel (no handler registered) still returns UNPORTED_CHANNEL_MARKER', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeInvoke(input, 'unported-1', 'neverRegisteredChannel', [])
       await flush()
 

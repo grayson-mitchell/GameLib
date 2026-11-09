@@ -177,20 +177,40 @@ jest.mock('../../downloadmanager/utils', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
-import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
-import { libraryManagerMap } from 'backend/storeManagers'
-import {
-  installQueueElement,
-  updateQueueElement
-} from '../../downloadmanager/utils'
-import { downloadManager } from '../../downloadmanager/stores'
-import { sendFrontendMessage } from '../../ipc'
+import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import type { DMQueueElement } from 'common/types'
 
-const mockedSteamGetGame = libraryManagerMap.steam.getGame as jest.Mock
-const mockedSteamGetGameInfo = libraryManagerMap.steam.getGameInfo as jest.Mock
-const mockedInstallQueueElement = installQueueElement as jest.Mock
-const mockedUpdateQueueElement = updateQueueElement as jest.Mock
+// D-08: every case boots the sidecar once, in a fresh module registry. Module
+// handles the cases configure or inspect are rebound from that registry in
+// freshRegistry() (run before each case, ahead of any mock configuration), and
+// boot() then boots without a second reset. The download-queue handlers register
+// when bootstrap imports `./handlers`, so each fresh registry re-registers them.
+let downloadManager: typeof import('../../downloadmanager/stores').downloadManager
+let sendFrontendMessage: typeof import('../../ipc').sendFrontendMessage
+let mockedSteamGetGame: jest.Mock
+let mockedSteamGetGameInfo: jest.Mock
+let mockedInstallQueueElement: jest.Mock
+let mockedUpdateQueueElement: jest.Mock
+
+function freshRegistry(): void {
+  jest.resetModules()
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  require('../bootstrap')
+  const { libraryManagerMap } = require('backend/storeManagers')
+  const {
+    installQueueElement,
+    updateQueueElement
+  } = require('../../downloadmanager/utils')
+  ;({ downloadManager } = require('../../downloadmanager/stores'))
+  ;({ sendFrontendMessage } = require('../../ipc'))
+  /* eslint-enable @typescript-eslint/no-require-imports */
+  mockedSteamGetGame = libraryManagerMap.steam.getGame as jest.Mock
+  mockedSteamGetGameInfo = libraryManagerMap.steam.getGameInfo as jest.Mock
+  mockedInstallQueueElement = installQueueElement as jest.Mock
+  mockedUpdateQueueElement = updateQueueElement as jest.Mock
+}
+
+const boot = () => bootFresh({ reuseRegistry: true })
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
@@ -221,6 +241,7 @@ function makeQueueElement(appName: string): DMQueueElement {
 
 describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/08)', () => {
   beforeEach(() => {
+    freshRegistry()
     // Real, disk-backed store (32-PATTERNS.md's own note) — reset to an empty
     // queue/finished for every test so no test leaks state into the next.
     downloadManager.set('queue', [])
@@ -250,7 +271,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
     downloadManager.set('queue', [makeQueueElement('999001')])
     downloadManager.set('finished', [])
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'queue-info-1', 'getDMQueueInformation', [])
     await flush()
 
@@ -278,7 +299,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
   it('removeFromDMQueue (send) reaches the real removeFromQueue(appName) — item removed, changedDMQueueInformation pushed, no response frame', async () => {
     downloadManager.set('queue', [makeQueueElement('999002')])
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'remove-1', 'removeFromDMQueue', ['999002'])
     await flush()
 
@@ -296,7 +317,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
   // frame, but the real pauseCurrentDownload() runs: queueState flips to
   // 'paused' and changedDMQueueInformation carries it through the relay.
   it('pauseCurrentDownload (send) reaches the real pauseCurrentDownload() — queueState flips to paused, no response frame', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'pause-1', 'pauseCurrentDownload', [])
     await flush()
 
@@ -324,7 +345,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
     // mirroring downloadqueue.test.ts:317's own timing-control precedent.
     mockedInstallQueueElement.mockReturnValue(new Promise<never>(() => {}))
 
-    const { input } = startSidecar()
+    const { input } = boot()
 
     writeSend(input, 'resume-1', 'resumeCurrentDownload', [])
     await flush()
@@ -370,7 +391,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
   // throttle/coalesce logic added on top of depot.ts's own 500ms/1%/1000ms
   // throttle.
   it('progressUpdate relay-reach: a simulated depot emitProgress push reaches frontend_message with the exact depot.ts payload shape', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     void input // no RPC frame needed — this proves the PUSH path, not a channel handler
 
     sendFrontendMessage('progressUpdate', {
@@ -405,7 +426,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
   it('changedDMQueueInformation relay-reach: a real downloadqueue.ts push (removeFromQueue) reaches frontend_message', async () => {
     downloadManager.set('queue', [makeQueueElement('999005')])
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'remove-2', 'removeFromDMQueue', ['999005'])
     await flush()
 
@@ -426,7 +447,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
   // `undefined` (Promise<void>, Pitfall 3), not a reconstructed `{status}`
   // shape.
   it('install (invoke) enqueues via the real addToQueue() — resolves undefined and reaches installQueueElement (not the retired SteamGame bypass)', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'install-enqueue-1', 'install', [
       {
         appName: '999010',
@@ -479,7 +500,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
   // updateQueueElement (downloadmanager/utils), never the bypass's direct
   // SteamGame.update() call.
   it('updateGame (invoke) enqueues via the real addToQueue() — resolves undefined and reaches updateQueueElement with path/platformToInstall derived from gameInfo.install', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'update-enqueue-1', 'updateGame', [
       {
         appName: '999011',

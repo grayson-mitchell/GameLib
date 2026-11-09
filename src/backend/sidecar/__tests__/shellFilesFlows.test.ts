@@ -212,15 +212,10 @@ jest.mock('../../dialog/dialog', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import {
   Frame,
-  startSidecar,
+  bootFresh,
   writeInvoke,
   writeSend
 } from './helpers/sidecarHarness'
-import { GlobalConfig } from 'backend/config'
-import { requestRustInvoke } from '../sidecarRpc'
-import { listenerRegistry, handlerRegistry } from '../../platform'
-import { showDialogBoxModalAuto } from '../../dialog/dialog'
-import { achievementStore } from '../../storeManagers/gog/stores'
 import {
   RUST_SHELL_OPEN_PATH,
   RUST_SHELL_SHOW_ITEM_IN_FOLDER,
@@ -240,8 +235,32 @@ import {
   sidInfoUrl
 } from '../../constants/urls'
 
-const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-const mockRequestRustInvoke = requestRustInvoke as jest.Mock
+// D-08: every case boots the sidecar once, in a fresh module registry. Module
+// handles the cases configure or inspect are rebound from that registry in
+// freshRegistry() (run before each case, ahead of any mock configuration), and
+// boot() then boots without a second reset.
+let listenerRegistry: typeof import('../../platform').listenerRegistry
+let handlerRegistry: typeof import('../../platform').handlerRegistry
+let showDialogBoxModalAuto: typeof import('../../dialog/dialog').showDialogBoxModalAuto
+let achievementStore: typeof import('../../storeManagers/gog/stores').achievementStore
+let mockedGlobalConfigGet: jest.Mock
+let mockRequestRustInvoke: jest.Mock
+
+function freshRegistry(): void {
+  jest.resetModules()
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  require('../bootstrap')
+  const { GlobalConfig } = require('backend/config')
+  const { requestRustInvoke } = require('../sidecarRpc')
+  ;({ listenerRegistry, handlerRegistry } = require('../../platform'))
+  ;({ showDialogBoxModalAuto } = require('../../dialog/dialog'))
+  ;({ achievementStore } = require('../../storeManagers/gog/stores'))
+  /* eslint-enable @typescript-eslint/no-require-imports */
+  mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
+  mockRequestRustInvoke = requestRustInvoke as jest.Mock
+}
+
+const boot = () => bootFresh({ reuseRegistry: true })
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
@@ -295,6 +314,7 @@ let warnSpy: jest.SpyInstance
 
 describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3-01/REQ-34.3-02)', () => {
   beforeEach(() => {
+    freshRegistry()
     mockAppSettings({})
     mockRequestRustInvoke.mockReset().mockResolvedValue(undefined)
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
@@ -322,7 +342,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
 
   for (const [channel, fragment] of CONSTANT_OPENERS) {
     it(`REQ-34.3-01 ${channel} (send) reaches shell.openExternal with its constant URL`, async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeSend(input, `${channel}-1`, channel, [])
       await flush()
 
@@ -357,7 +377,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   // ── REQ-34.3-01: openExternalUrl / openFolder — forward args[0] verbatim ──
 
   it('REQ-34.3-01 openExternalUrl (send) forwards args[0] verbatim to shell.openExternal', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     const synthetic = 'https://example.com/synthetic-open-external-url-test'
     writeSend(input, 'open-external-url-1', 'openExternalUrl', [synthetic])
     await flush()
@@ -371,7 +391,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
 
   it('openFolder (send) opens an existing directory via shell.openPath', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'gamelib-open-folder-'))
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'open-folder-1', 'openFolder', [dir])
     await flushFs()
     expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_SHELL_OPEN_PATH, [
@@ -384,7 +404,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     const dir = mkdtempSync(join(tmpdir(), 'gamelib-open-folder-'))
     const file = join(dir, 'a.txt')
     writeFileSync(file, 'x')
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'open-folder-2', 'openFolder', [file])
     await flushFs()
     expect(mockRequestRustInvoke).toHaveBeenCalledWith(
@@ -399,7 +419,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   })
 
   it('openFolder (send) rejects a relative path with no platform call', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'open-folder-3', 'openFolder', ['relative/dir'])
     await flushFs()
     expect(mockRequestRustInvoke).not.toHaveBeenCalled()
@@ -407,7 +427,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   })
 
   it('openExternalUrl (send) rejects a file:// URL with no platform call', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'open-external-url-3', 'openExternalUrl', ['file:///x'])
     await flush()
     expect(frames.find((f) => f.kind === 'openExternal')).toBeUndefined()
@@ -418,7 +438,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     // Todo `sidecar-log-output-shares-the-rpc-stdout-pipe`: the old helper
     // used `startsWith('http')`, so `httpfoo:` reached the shell's
     // `openExternal` frame arm.
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeSend(input, 'open-external-url-2', 'openExternalUrl', [
       'httpfoo:synthetic'
     ])
@@ -433,7 +453,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   // branch, not openExternal) ───────────────────────────────────────────────
 
   it("REQ-34.3-01 showConfigFileInFolder('default') reveals configPath", async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'config-default-1', 'showConfigFileInFolder', ['default'])
     await flush()
 
@@ -444,7 +464,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   })
 
   it('REQ-34.3-01 showConfigFileInFolder(appName) reveals GamesConfig/<appName>.json', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'config-app-1', 'showConfigFileInFolder', ['my-test-app'])
     await flush()
 
@@ -460,7 +480,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   })
 
   it('showConfigFileInFolder rejects a traversing appName', async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'config-app-2', 'showConfigFileInFolder', ['../evil'])
     await flush()
     expect(mockRequestRustInvoke).not.toHaveBeenCalled()
@@ -477,7 +497,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     )
     writeFileSync(tempFile, 'x')
 
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'show-item-1', 'showItemInFolder', [tempFile])
     await flush()
 
@@ -492,7 +512,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   // ── REQ-34.3-02: checkDiskSpace ────────────────────────────────────────────
 
   it('REQ-34.3-02 checkDiskSpace (invoke) resolves real disk info for a valid path', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'disk-1', 'checkDiskSpace', [tmpdir()])
     await waitForResponse(frames, 'disk-1')
 
@@ -517,7 +537,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   })
 
   it('REQ-34.3-02 checkDiskSpace (invoke) rejects an invalid path, proving Path.parse validation still runs', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'disk-invalid-1', 'checkDiskSpace', [''])
     await flush()
 
@@ -537,7 +557,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     )
     writeFileSync(tempFile, 'x')
 
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'exists-1', 'pathExists', [tempFile])
     await flush()
 
@@ -551,7 +571,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   })
 
   it('REQ-34.3-02 pathExists (invoke) resolves false for a non-existent path', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'exists-2', 'pathExists', [
       join(tmpdir(), `gamelib-shellfilesflows-does-not-exist-${process.pid}`)
     ])
@@ -567,7 +587,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   // ── REQ-34.3-02: getShellPath ──────────────────────────────────────────────
 
   it('REQ-34.3-02 getShellPath (invoke) resolves a non-empty string', async () => {
-    const { input, frames } = startSidecar()
+    const { input, frames } = boot()
     writeInvoke(input, 'shellpath-1', 'getShellPath', ['hello'])
     await waitForResponse(frames, 'shellpath-1')
 
@@ -585,7 +605,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     )
     mkdirSync(join(parentDir, 'victim'))
 
-    const { input } = startSidecar()
+    const { input } = boot()
     writeSend(input, 'remove-gone', 'removeFolder', [[parentDir, 'victim']])
     await flush()
 
@@ -611,7 +631,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     })
 
     it('REQ-34.3-05 clearCache(showDialog=false) pushes refreshLibrary but NOT showDialog', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeSend(input, 'clear-cache-false-1', 'clearCache', [false])
       await flush()
 
@@ -627,7 +647,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     })
 
     it('REQ-34.3-06 clearCache(showDialog=true) pushes BOTH refreshLibrary and showDialog, with a RESOLVED title (not the raw i18next key)', async () => {
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeSend(input, 'clear-cache-true-1', 'clearCache', [true])
       await flush()
 
@@ -667,7 +687,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
         throw new Error('synthetic dialog failure')
       })
 
-      const { input, frames } = startSidecar()
+      const { input, frames } = boot()
       writeSend(input, 'clear-cache-throw-1', 'clearCache', [true])
       await flush()
 
@@ -691,7 +711,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
       achievementStore.set(appName, [])
       expect(achievementStore.has(appName)).toBe(true)
 
-      const { input } = startSidecar()
+      const { input } = boot()
       writeSend(input, 'clear-achv-1', 'clearAchievementCache', [appName])
       await flush()
 
@@ -724,7 +744,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
         expect(existsSync(configPath)).toBe(true)
         expect(existsSync(gamesConfigPath)).toBe(true)
 
-        const { input } = startSidecar()
+        const { input } = boot()
         writeSend(input, 'reset-heroic-1', 'resetHeroic', [])
         await flush()
 
@@ -777,7 +797,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   }
 
   it("REQ-34.3-01/REQ-34.3-02/REQ-34.3-05/REQ-34.3-06 send-vs-handle contract: every one of this module's 19 channels is registered with the kind that matches main.ts", () => {
-    startSidecar()
+    boot()
 
     // Phase 72 D-09: the renderer removeFolder channel is gone.
     expect(listenerRegistry.get('removeFolder')?.length ?? 0).toBe(0)
@@ -799,7 +819,7 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   // plan's flows use is a member of the existing RUST_INVOKE_CHANNELS set ────
 
   it("REQ-34.3-01 zero new Rust arms: showConfigFileInFolder's/showItemInFolder's requestRustInvoke channels are members of the existing RUST_INVOKE_CHANNELS set", async () => {
-    const { input } = startSidecar()
+    const { input } = boot()
     const tempFile = join(
       tmpdir(),
       `gamelib-shellfilesflows-test-zeronewarms-${process.pid}.txt`
