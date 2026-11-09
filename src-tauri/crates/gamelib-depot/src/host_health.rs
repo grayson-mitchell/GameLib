@@ -129,7 +129,10 @@ impl HostHealthTracker {
 
     fn composite(&self, host: &str) -> f64 {
         let default = HostStats::default();
-        score(self.stats.get(host).unwrap_or(&default), self.prior_for(host))
+        score(
+            self.stats.get(host).unwrap_or(&default),
+            self.prior_for(host),
+        )
     }
 
     fn unhealthy_now(&self, host: &str) -> bool {
@@ -190,7 +193,9 @@ impl HostHealthTracker {
             self.attempt_zero_counter += 1;
             if !unhealthy.is_empty()
                 && !healthy.is_empty()
-                && self.attempt_zero_counter.is_multiple_of(DEMOTED_PROBE_INTERVAL)
+                && self
+                    .attempt_zero_counter
+                    .is_multiple_of(DEMOTED_PROBE_INTERVAL)
             {
                 return Ok(unhealthy[0].clone());
             }
@@ -202,8 +207,11 @@ impl HostHealthTracker {
         }
         if attempt_index > 0 {
             if let Some(prev) = previous_host {
-                let others: Vec<&String> =
-                    ordered.iter().copied().filter(|h| h.as_str() != prev).collect();
+                let others: Vec<&String> = ordered
+                    .iter()
+                    .copied()
+                    .filter(|h| h.as_str() != prev)
+                    .collect();
                 if !others.is_empty() {
                     return Ok(others[(attempt_index - 1) % others.len()].clone());
                 }
@@ -282,7 +290,13 @@ mod tests {
         let mut t = HostHealthTracker::new();
         let hs = four();
         const { assert!(MAX_CONSECUTIVE_FAILURES <= MIN_SAMPLES_FOR_UNHEALTHY) };
-        rec(&mut t, "host-a", MAX_CONSECUTIVE_FAILURES as usize, Error, 100);
+        rec(
+            &mut t,
+            "host-a",
+            MAX_CONSECUTIVE_FAILURES as usize,
+            Error,
+            100,
+        );
         let first = pick(&mut t, &hs, 0, 0);
         assert!(["host-b", "host-c", "host-d"].contains(&first.as_str()));
         assert_eq!(pick(&mut t, &hs, 0, 3), "host-a");
@@ -292,7 +306,13 @@ mod tests {
     fn single_success_resets_consecutive_failures_half_open_circuit_breaker() {
         let mut t = HostHealthTracker::new();
         rec(&mut t, "host-a", 20, Success, 100);
-        rec(&mut t, "host-a", MAX_CONSECUTIVE_FAILURES as usize, Error, 100);
+        rec(
+            &mut t,
+            "host-a",
+            MAX_CONSECUTIVE_FAILURES as usize,
+            Error,
+            100,
+        );
         assert!(t.snapshot("host-a").unhealthy);
         t.record("host-a", Success, 50);
         assert!(!t.snapshot("host-a").unhealthy);
@@ -302,9 +322,7 @@ mod tests {
     #[test]
     fn low_success_rate_marks_unhealthy_without_a_consecutive_streak() {
         let mut t = HostHealthTracker::new();
-        for o in [
-            Success, Error, Error, Error, Success, Error, Error, Error,
-        ] {
+        for o in [Success, Error, Error, Error, Success, Error, Error, Error] {
             t.record("host-a", o, 100);
         }
         let s = t.snapshot("host-a");
@@ -388,7 +406,12 @@ mod tests {
     // weightedload-aware selection (cycle 5)
 
     fn auckland() -> Vec<String> {
-        v(&["cache1-akl-edgx", "cache1-akl-tpwr", "cache2-akl-tpwr", "alibaba-cdn"])
+        v(&[
+            "cache1-akl-edgx",
+            "cache1-akl-tpwr",
+            "cache2-akl-tpwr",
+            "alibaba-cdn",
+        ])
     }
     fn loads() -> HashMap<String, f64> {
         [
@@ -426,7 +449,13 @@ mod tests {
         let mut t = HostHealthTracker::with_weighted_loads(loads());
         let pool = v(&["cache1-akl-edgx", "cache1-akl-tpwr", "cache2-akl-tpwr"]);
         assert_eq!(pick(&mut t, &pool, 0, 0), "cache1-akl-edgx");
-        rec(&mut t, "cache1-akl-edgx", MAX_CONSECUTIVE_FAILURES as usize, Error, 60);
+        rec(
+            &mut t,
+            "cache1-akl-edgx",
+            MAX_CONSECUTIVE_FAILURES as usize,
+            Error,
+            60,
+        );
         assert!(t.snapshot("cache1-akl-edgx").unhealthy);
         for _ in 0..10 {
             t.record("cache1-akl-tpwr", Success, 285);
@@ -441,7 +470,13 @@ mod tests {
     #[test]
     fn prior_fades_toward_empirical_as_attempts_accumulate() {
         let mut t = HostHealthTracker::with_weighted_loads(loads());
-        rec(&mut t, "cache1-akl-tpwr", (PRIOR_HALFLIFE_SAMPLES * 4) as usize, Success, 100);
+        rec(
+            &mut t,
+            "cache1-akl-tpwr",
+            (PRIOR_HALFLIFE_SAMPLES * 4) as usize,
+            Success,
+            100,
+        );
         assert!(!t.snapshot("cache1-akl-edgx").unhealthy);
         let pool = v(&["cache1-akl-edgx", "cache1-akl-tpwr"]);
         assert_eq!(pick(&mut t, &pool, 0, 0), "cache1-akl-tpwr");
@@ -519,10 +554,19 @@ mod tests {
         assert_eq!(retries, v(&["host-a", "host-c", "host-d", "host-a"]));
 
         let pair = v(&["host-a", "host-b"]);
-        assert_eq!(t.pick_host(&pair, 0, 1, 1, Some("host-b")).unwrap(), "host-a");
-        assert_eq!(t.pick_host(&pair, 0, 2, 1, Some("host-a")).unwrap(), "host-b");
+        assert_eq!(
+            t.pick_host(&pair, 0, 1, 1, Some("host-b")).unwrap(),
+            "host-a"
+        );
+        assert_eq!(
+            t.pick_host(&pair, 0, 2, 1, Some("host-a")).unwrap(),
+            "host-b"
+        );
         let one = v(&["host-a"]);
-        assert_eq!(t.pick_host(&one, 0, 1, 0, Some("host-a")).unwrap(), "host-a");
+        assert_eq!(
+            t.pick_host(&one, 0, 1, 0, Some("host-a")).unwrap(),
+            "host-a"
+        );
     }
 
     // demoted-host probe recovery (IHR-01)
@@ -536,7 +580,13 @@ mod tests {
     fn demoted_host_gets_exactly_one_probe_within_the_interval() {
         let mut t = HostHealthTracker::new();
         let hs = four();
-        rec(&mut t, "host-a", MAX_CONSECUTIVE_FAILURES as usize, Error, 100);
+        rec(
+            &mut t,
+            "host-a",
+            MAX_CONSECUTIVE_FAILURES as usize,
+            Error,
+            100,
+        );
         assert!(t.snapshot("host-a").unhealthy);
         let mut probes = 0;
         for _ in 0..DEMOTED_PROBE_INTERVAL {
@@ -552,7 +602,13 @@ mod tests {
         let mut t = HostHealthTracker::new();
         let hs = v(&["host-a", "host-b", "host-c"]);
         rec(&mut t, "host-a", 20, Success, 100);
-        rec(&mut t, "host-a", MAX_CONSECUTIVE_FAILURES as usize, Error, 100);
+        rec(
+            &mut t,
+            "host-a",
+            MAX_CONSECUTIVE_FAILURES as usize,
+            Error,
+            100,
+        );
         rec(&mut t, "host-b", 6, Success, 150);
         rec(&mut t, "host-c", 6, Success, 200);
         assert!(t.snapshot("host-a").unhealthy);
@@ -586,7 +642,13 @@ mod tests {
     fn retry_selection_is_unaffected_by_probe_counter_or_demotion() {
         let mut t = HostHealthTracker::new();
         let hs = four();
-        rec(&mut t, "host-a", MAX_CONSECUTIVE_FAILURES as usize, Error, 100);
+        rec(
+            &mut t,
+            "host-a",
+            MAX_CONSECUTIVE_FAILURES as usize,
+            Error,
+            100,
+        );
         for _ in 0..DEMOTED_PROBE_INTERVAL + 3 {
             t.pick_host(&hs, 0, 0, 0, None).unwrap();
         }

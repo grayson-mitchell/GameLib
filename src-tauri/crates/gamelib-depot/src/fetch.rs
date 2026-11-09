@@ -199,7 +199,11 @@ fn scheme_for(h: &HostRef) -> &'static str {
 
 #[cfg(test)]
 fn backoff_ms(attempt: u32) -> u64 {
-    backoff_with(attempt, CHUNK_FETCH_BACKOFF_BASE_MS, CHUNK_FETCH_MAX_BACKOFF_MS)
+    backoff_with(
+        attempt,
+        CHUNK_FETCH_BACKOFF_BASE_MS,
+        CHUNK_FETCH_MAX_BACKOFF_MS,
+    )
 }
 
 fn backoff_with(attempt: u32, base: u64, cap: u64) -> u64 {
@@ -376,8 +380,10 @@ impl Fetcher {
                 Ok(t)
             }
             Ok(Ok(_)) => {
-                self.tokens
-                    .set(key, TokenEntry::NoToken(Instant::now() + TOKEN_NO_TOKEN_TTL));
+                self.tokens.set(
+                    key,
+                    TokenEntry::NoToken(Instant::now() + TOKEN_NO_TOKEN_TTL),
+                );
                 Ok(String::new())
             }
             Ok(Err(_)) | Err(_) => {
@@ -489,8 +495,10 @@ impl Fetcher {
                     }
                     let auth_rejected = matches!(e.status, Some(401) | Some(403));
                     if auth_rejected && wants_cdn_auth_token(meta) {
-                        self.tokens
-                            .invalidate_if_stale(&(depot_id.to_string(), host_name.clone()), &token);
+                        self.tokens.invalidate_if_stale(
+                            &(depot_id.to_string(), host_name.clone()),
+                            &token,
+                        );
                     }
                     if !code_refreshed && matches!(e.status, Some(401) | Some(403) | Some(404)) {
                         if let Target::Manifest { manifest_id, .. } = target {

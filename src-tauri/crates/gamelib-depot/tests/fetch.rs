@@ -52,12 +52,17 @@ fn failed(e: FetchError) -> Failure {
 #[tokio::test]
 async fn fetch_token_403_forces_one_refresh() {
     let cdn = FakeCdn::start().await;
-    cdn.script("/depot/10/chunk/abc?t=OLD", vec![Reply::Status(403, vec![])]);
-    cdn.script("/depot/10/chunk/abc?t=NEW", vec![Reply::Status(200, b"body".to_vec())]);
-    let host = Arc::new(FakeHost::new().with_tokens(vec![
-        Ok(Some("?t=OLD".into())),
-        Ok(Some("?t=NEW".into())),
-    ]));
+    cdn.script(
+        "/depot/10/chunk/abc?t=OLD",
+        vec![Reply::Status(403, vec![])],
+    );
+    cdn.script(
+        "/depot/10/chunk/abc?t=NEW",
+        vec![Reply::Status(200, b"body".to_vec())],
+    );
+    let host = Arc::new(
+        FakeHost::new().with_tokens(vec![Ok(Some("?t=OLD".into())), Ok(Some("?t=NEW".into()))]),
+    );
     let f = fetcher(host.clone(), vec![host_ref(&cdn.host(), "CDN", false)]);
     let (bytes, served_by) = f
         .fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
@@ -65,7 +70,11 @@ async fn fetch_token_403_forces_one_refresh() {
         .unwrap();
     assert_eq!(bytes, b"body");
     assert_eq!(served_by, cdn.host());
-    assert_eq!(host.forces(), vec![false, true], "exactly one forced refresh");
+    assert_eq!(
+        host.forces(),
+        vec![false, true],
+        "exactly one forced refresh"
+    );
     assert_eq!(cdn.hit_count("/depot/10/chunk/abc?t=OLD"), 1);
     assert_eq!(cdn.hit_count("/depot/10/chunk/abc?t=NEW"), 1);
 }
@@ -73,9 +82,15 @@ async fn fetch_token_403_forces_one_refresh() {
 #[tokio::test]
 async fn steamcache_host_never_requests_token() {
     let cdn = FakeCdn::start().await;
-    cdn.script("/depot/10/chunk/abc", vec![Reply::Status(200, b"x".to_vec())]);
+    cdn.script(
+        "/depot/10/chunk/abc",
+        vec![Reply::Status(200, b"x".to_vec())],
+    );
     let host = Arc::new(FakeHost::new().with_tokens(vec![Ok(Some("?t=NO".into()))]));
-    let f = fetcher(host.clone(), vec![host_ref(&cdn.host(), "SteamCache", false)]);
+    let f = fetcher(
+        host.clone(),
+        vec![host_ref(&cdn.host(), "SteamCache", false)],
+    );
     f.fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
         .await
         .unwrap();
@@ -86,9 +101,15 @@ async fn steamcache_host_never_requests_token() {
 #[tokio::test]
 async fn usetokenauth_on_a_non_cdn_host_requests_a_token() {
     let cdn = FakeCdn::start().await;
-    cdn.script("/depot/10/chunk/abc?t=T", vec![Reply::Status(200, b"x".to_vec())]);
+    cdn.script(
+        "/depot/10/chunk/abc?t=T",
+        vec![Reply::Status(200, b"x".to_vec())],
+    );
     let host = Arc::new(FakeHost::new().with_tokens(vec![Ok(Some("?t=T".into()))]));
-    let f = fetcher(host.clone(), vec![host_ref(&cdn.host(), "SteamCache", true)]);
+    let f = fetcher(
+        host.clone(),
+        vec![host_ref(&cdn.host(), "SteamCache", true)],
+    );
     f.fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
         .await
         .unwrap();
@@ -142,7 +163,10 @@ async fn attempt_timeout_15s() {
         Arc::new(FakeHost::new()),
         vec![host_ref(&cdn.host(), "SteamCache", false)],
     )
-    .with_budget(1, Duration::from_millis(gamelib_depot::fetch::CHUNK_FETCH_TIMEOUT_MS));
+    .with_budget(
+        1,
+        Duration::from_millis(gamelib_depot::fetch::CHUNK_FETCH_TIMEOUT_MS),
+    );
     let started = tokio::time::Instant::now();
     let fail = failed(
         f.fetch_chunk("10", "abc", 0, 0, &CancellationToken::new())
@@ -152,17 +176,26 @@ async fn attempt_timeout_15s() {
     assert_eq!(fail.kind, ErrorKind::Network);
     assert_eq!(fail.code.as_deref(), Some("timeout"));
     let el = started.elapsed();
-    assert!(el >= Duration::from_secs(15) && el < Duration::from_secs(16), "{el:?}");
+    assert!(
+        el >= Duration::from_secs(15) && el < Duration::from_secs(16),
+        "{el:?}"
+    );
 }
 
 #[tokio::test]
 async fn redirect_not_followed() {
     let other = FakeCdn::start().await;
-    other.script("/depot/10/chunk/abc", vec![Reply::Status(200, b"evil".to_vec())]);
+    other.script(
+        "/depot/10/chunk/abc",
+        vec![Reply::Status(200, b"evil".to_vec())],
+    );
     let cdn = FakeCdn::start().await;
     cdn.script(
         "/depot/10/chunk/abc",
-        vec![Reply::Redirect(format!("http://{}/depot/10/chunk/abc", other.host()))],
+        vec![Reply::Redirect(format!(
+            "http://{}/depot/10/chunk/abc",
+            other.host()
+        ))],
     );
     let f = fetcher(
         Arc::new(FakeHost::new()),
@@ -176,31 +209,52 @@ async fn redirect_not_followed() {
     );
     assert_eq!(fail.kind, ErrorKind::CdnHttp);
     assert_eq!(fail.http_status, Some(302));
-    assert!(other.hits().is_empty(), "redirect target must never be contacted");
+    assert!(
+        other.hits().is_empty(),
+        "redirect target must never be contacted"
+    );
 }
 
 #[tokio::test]
 async fn manifest_code_refreshed_on_403() {
     let cdn = FakeCdn::start().await;
-    cdn.script("/depot/10/manifest/99/5/OLD", vec![Reply::Status(403, vec![])]);
-    cdn.script("/depot/10/manifest/99/5/NEW", vec![Reply::Status(200, b"mf".to_vec())]);
+    cdn.script(
+        "/depot/10/manifest/99/5/OLD",
+        vec![Reply::Status(403, vec![])],
+    );
+    cdn.script(
+        "/depot/10/manifest/99/5/NEW",
+        vec![Reply::Status(200, b"mf".to_vec())],
+    );
     let host = Arc::new(FakeHost::new().with_codes(vec![Ok(Some("NEW".into()))]));
-    let f = fetcher(host.clone(), vec![host_ref(&cdn.host(), "SteamCache", false)]);
+    let f = fetcher(
+        host.clone(),
+        vec![host_ref(&cdn.host(), "SteamCache", false)],
+    );
     let bytes = f
         .fetch_manifest("10", "99", Some("OLD"), &CancellationToken::new())
         .await
         .unwrap();
     assert_eq!(bytes, b"mf");
     let calls = host.code_calls.lock().unwrap().clone();
-    assert_eq!(calls, vec![("570".to_string(), "10".to_string(), "99".to_string())]);
+    assert_eq!(
+        calls,
+        vec![("570".to_string(), "10".to_string(), "99".to_string())]
+    );
 }
 
 #[tokio::test]
 async fn manifest_without_a_code_asks_node_up_front() {
     let cdn = FakeCdn::start().await;
-    cdn.script("/depot/10/manifest/99/5/FRESH", vec![Reply::Status(200, b"mf".to_vec())]);
+    cdn.script(
+        "/depot/10/manifest/99/5/FRESH",
+        vec![Reply::Status(200, b"mf".to_vec())],
+    );
     let host = Arc::new(FakeHost::new().with_codes(vec![Ok(Some("FRESH".into()))]));
-    let f = fetcher(host.clone(), vec![host_ref(&cdn.host(), "SteamCache", false)]);
+    let f = fetcher(
+        host.clone(),
+        vec![host_ref(&cdn.host(), "SteamCache", false)],
+    );
     let bytes = f
         .fetch_manifest("10", "99", None, &CancellationToken::new())
         .await
@@ -280,13 +334,18 @@ async fn failure_messages_never_contain_token() {
             .await
             .unwrap_err(),
     );
-    assert!(!serde_json::to_string(&fail).unwrap().contains("TOKEN_FIXTURE"));
+    assert!(!serde_json::to_string(&fail)
+        .unwrap()
+        .contains("TOKEN_FIXTURE"));
 }
 
 #[tokio::test]
 async fn request_headers_match_the_real_client() {
     let cdn = FakeCdn::start().await;
-    cdn.script("/depot/10/chunk/abc", vec![Reply::Status(200, b"x".to_vec())]);
+    cdn.script(
+        "/depot/10/chunk/abc",
+        vec![Reply::Status(200, b"x".to_vec())],
+    );
     let f = fetcher(
         Arc::new(FakeHost::new()),
         vec![host_ref(&cdn.host(), "SteamCache", false)],
@@ -297,7 +356,10 @@ async fn request_headers_match_the_real_client() {
     let h = cdn.hits()[0].headers.clone();
     assert!(h.contains("user-agent: valve/steam http client 1.0"), "{h}");
     assert!(h.contains("accept: text/html,*/*;q=0.9"), "{h}");
-    assert!(h.contains("accept-charset: iso-8859-1,utf-8,*;q=0.7"), "{h}");
+    assert!(
+        h.contains("accept-charset: iso-8859-1,utf-8,*;q=0.7"),
+        "{h}"
+    );
 }
 
 #[tokio::test]
@@ -305,7 +367,10 @@ async fn failed_host_is_rotated_away_from_on_retry() {
     let bad = FakeCdn::start().await;
     bad.script("/depot/10/chunk/abc", vec![Reply::Status(500, vec![])]);
     let good = FakeCdn::start().await;
-    good.script("/depot/10/chunk/abc", vec![Reply::Status(200, b"ok".to_vec())]);
+    good.script(
+        "/depot/10/chunk/abc",
+        vec![Reply::Status(200, b"ok".to_vec())],
+    );
     let f = fetcher(
         Arc::new(FakeHost::new()),
         vec![

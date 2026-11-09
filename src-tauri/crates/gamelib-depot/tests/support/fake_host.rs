@@ -39,7 +39,12 @@ impl FakeHost {
     }
 
     pub fn forces(&self) -> Vec<bool> {
-        self.token_calls.lock().unwrap().iter().map(|r| r.force).collect()
+        self.token_calls
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|r| r.force)
+            .collect()
     }
 }
 
