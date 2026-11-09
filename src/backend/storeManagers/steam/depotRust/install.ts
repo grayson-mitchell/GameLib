@@ -8,7 +8,7 @@
 // Exit contract: no timers or handles are created here. Abort is forwarded by runDepotJob.
 
 import { join, resolve } from 'path'
-import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from '../user'
 import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { getContentServerHosts } from '../depot/contentServers'
@@ -22,8 +22,16 @@ import {
   throwIfAborted,
   type DepotRefEntry
 } from '../depot/plan'
-import type { downloadSteamDepots } from '../depot/outcome'
-import { rustFailureToError, rustOutcomeToDepotOutcome } from './errorMap'
+import {
+  formatDownloadFailureSummary,
+  selectPrimaryDepotFailure,
+  type downloadSteamDepots
+} from '../depot/outcome'
+import {
+  rustFailureToError,
+  rustFailuresToDepotFailures,
+  rustOutcomeToDepotOutcome
+} from './errorMap'
 import {
   buildDepotJob,
   toRustDepotRefs,
@@ -52,6 +60,20 @@ export function logOutcome(job: RustDepotJob, o: RustOutcome): void {
       `collisions=${s.pathCollisions} skipped=${(o.skippedDepots ?? []).join(',')} bytes=${s.bytesFetched} elapsedMs=${s.elapsedMs}`,
     LogPrefix.Steam
   )
+}
+
+/**
+ * Quick 260927-tpm / debug/steam-depot-unclassified-generic-error (F2): on a failed job, the
+ * aggregate line with the file-failure count, the classification key and the primary raw
+ * failure. The UI shows only the classified copy, so this is the one place a log says what the
+ * classifier was fed and whether it fell through to the generic bucket.
+ */
+function logFailureSummary(appId: string, o: RustOutcome): void {
+  if (o.status !== 'error' || o.failures.length === 0) return
+  const failures = rustFailuresToDepotFailures(o.failures)
+  const primary = selectPrimaryDepotFailure(failures)
+  const key = classifyDepotError(primary.cause ?? primary.error).key
+  logError(formatDownloadFailureSummary(appId, failures, key), LogPrefix.Steam)
 }
 
 type CodeClient = {
@@ -183,6 +205,7 @@ export async function downloadSteamDepotsRust(
       onEvent: (ev) => bridge.onEvent(ev)
     })
     logOutcome(job, outcome)
+    logFailureSummary(appId, outcome)
     // Manifest-level EResult-40 refusals join the key-level ones. When every depot was blocked
     // the job fails (as buildDepotRefs throws for all-blocked keys), so no skipped list is
     // reported then.

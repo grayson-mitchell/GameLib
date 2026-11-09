@@ -93,6 +93,13 @@ export function rustFailureToError(f: RustFailure): Error {
   }
 }
 
+/** Rust failure records as the DepotDownloadFailure shape the TS failure helpers read. */
+export function rustFailuresToDepotFailures(
+  fs: RustFailure[]
+): DepotDownloadFailure[] {
+  return fs.map(toDownloadFailure)
+}
+
 function toDownloadFailure(f: RustFailure): DepotDownloadFailure {
   const cause = rustFailureToError(f)
   return {
@@ -114,7 +121,7 @@ export function rustOutcomeToDepotOutcome(
 ): DepotDownloadOutcome {
   if (o.status === 'cancelled') return { status: 'cancelled', skippedDepots }
   if (o.status === 'completed') return { status: 'done', skippedDepots }
-  const failures = o.failures.map(toDownloadFailure)
+  const failures = rustFailuresToDepotFailures(o.failures)
   const primary =
     failures.length > 0 ? selectPrimaryDepotFailure(failures) : undefined
   const classified = classifyDepotError(
