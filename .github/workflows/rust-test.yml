@@ -67,7 +67,7 @@ concurrency:
 #       nothing about the real SEA sidecar or its externalBin naming/packaging -- a sidecar build
 #       that stopped emitting `gamelib-sidecar-<triple>` would still pass here and surface only in
 #       release-tauri.yml.
-#   (g) The Tauri-free scanner crates (gamelib-scan, gamelib-scan-cli) are covered only by the
+#   (g) The Tauri-free crates (gamelib-scan, gamelib-scan-cli, gamelib-depot, gamelib-depot-cli) are covered only by the
 #       explicit `-p` test step and the `--workspace` clippy run: `cargo test --bin gamelib-shell`
 #       alone selects only the root package. They run on the Linux leg too (Phase 72 D-14), via
 #       the same `-p` test step.
@@ -111,10 +111,30 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
-      - name: cargo test (gamelib-scan crates)
+      - name: cargo test (gamelib-scan and gamelib-depot crates)
         shell: bash
         working-directory: src-tauri
-        run: cargo test -p gamelib-scan -p gamelib-scan-cli
+        run: cargo test -p gamelib-scan -p gamelib-scan-cli -p gamelib-depot -p gamelib-depot-cli
+      # Phase 73 D-15: the depot codecs (xz2/lzma-sys, zstd, zlib-rs) must be statically linked so the
+      # shipped binary needs no system liblzma/zstd/zlib. Fails if the CLI links any of them dynamically.
+      - name: static codec linkage (gamelib-depot-cli)
+        shell: bash
+        working-directory: src-tauri
+        run: |
+          cargo build -p gamelib-depot-cli
+          case "$RUNNER_OS" in
+            macOS) LINKS=$(otool -L target/debug/gamelib-depot-cli) ;;
+            Linux) LINKS=$(ldd target/debug/gamelib-depot-cli) ;;
+            Windows)
+              cargo build -p gamelib-scan-cli
+              LINKS=$(target/debug/gamelib-scan-cli.exe scan_pe_imported_dlls "{\"exePath\":\"$(pwd -W)/target/debug/gamelib-depot-cli.exe\"}")
+              ;;
+          esac
+          echo "$LINKS"
+          if echo "$LINKS" | grep -Ei 'lzma|zstd|libz\.|zlib'; then
+            echo "gamelib-depot-cli links a codec library dynamically (D-15)" >&2
+            exit 1
+          fi
       # `tauri_build::build()` (tauri-build 2.6.3, src/lib.rs:545) copies every
       # `bundle.externalBin` entry UNCONDITIONALLY -- not gated on profile, feature, or whether
       # this is `tauri build` -- and aborts the build script when one is missing. This crate
