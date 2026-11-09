@@ -1,0 +1,13 @@
+[1603180 0.0s] cloned (APFS) Mining Mechs -> out/clone-1603180
+[1603180 1.3s] plan 8ms: 2 files, local reuse 13.1 MiB, rejected-by-sha 0, CDN 18 chunks / 5.7 MiB
+[1603180 1.9s] fetched 18/18 chunks, 5.7 MiB in 0.6 s
+[1603180 2.0s] apply: {"buildMs":54,"bytesFromCdn":17207936,"bytesFromLocal":13719036,"committed":true,"mode":"apply","removed":0,"totalMs":119,"verify":{"ok":48,"of":49,"bad":["steam_api64.dll"]},"workFiles":2}
+[1363080 0.0s] cloned (APFS) Manor Lords -> out/clone-1363080
+[1363080 9.2s] plan 8117ms: 60 files, local reuse 12367.3 MiB, rejected-by-sha 0, CDN 2178 chunks / 915.6 MiB
+[1363080 59.7s] fetched 2178/2178 chunks, 915.6 MiB in 50.5 s
+[1363080 83.3s] apply: {"buildMs":17747,"bytesFromCdn":2109090456,"bytesFromLocal":12968084237,"committed":true,"mode":"apply","removed":0,"totalMs":23625,"verify":{"ok":111,"of":112,"bad":["engine/config/stagedbuild_manorlords.ini"]},"workFiles":60}
+[1603180 0.0s] cloned (APFS) Mining Mechs -> out/clone-1603180
+[1603180 0.0s] CORRUPT data.win at 3026021,7565054,12104086
+[1603180 1.1s] plan 8ms: 2 files, local reuse 10.1 MiB, rejected-by-sha 3, CDN 21 chunks / 8.7 MiB
+[1603180 1.7s] fetched 21/21 chunks, 8.7 MiB in 0.7 s
+[1603180 1.9s] apply: {"buildMs":52,"bytesFromCdn":20353664,"bytesFromLocal":10573308,"committed":true,"mode":"apply","removed":0,"totalMs":115,"verify":{"ok":48,"of":49,"bad":["steam_api64.dll"]},"workFiles":2}

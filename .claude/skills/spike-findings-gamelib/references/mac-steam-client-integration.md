@@ -21,13 +21,18 @@ in-bottle `steam_api` proxy is covered in `macos-steam-bridge.md`. Production to
 - **Every authenticated CM logon on macOS goes through the go-offline wrap:**
   `steam://open/gooffline`, then wait for Mac Steam's `LogOff()`, then log on, settle, then
   `steam://open/goonline`. This includes reconnects. (046a, 046b, 046c)
-- **Keep the wrap, even though the original trigger has stopped reproducing.** On 2026-11-09,
-  spike 074 found that a _bare_ authenticated logon (logon, 60 s hold, logoff) no longer signs
-  Friends out, unwrapped, from either steam-user or a Rust steam-vent client. The wrap still
-  works and does no harm. Two explanations are still open: Steam changed, or the trigger is
-  GameLib's post-logon refresh work (`getUserOwnedApps`, PICS, persona fetches). Do not remove
-  the wrap, and do not revisit the anonymous-by-default design, until an **unwrapped run of
-  GameLib's full refresh sequence on a freshly restarted Mac Steam** has been retested. (074)
+- **The wrap is insurance now, not a gate.** On 2026-11-09 nothing GameLib does signs Friends
+  out unwrapped: a bare logon from steam-user or steam-vent (074), and GameLib's **full Refresh**
+  (logon, licenses, canary, `getUserOwnedApps`, licensed-demos package and app info, the
+  held-session PICS pass, 60 s idle, logOff), both as a staged harness and as the real app with
+  the wrap patched out (075). Mac Steam's `connection_log` stayed silent and Friends stayed
+  signed in and changeable. Mac Steam's `steamclient.dylib` is unchanged since 2026-10-22,
+  before the debug-era flips (10-24…27), so the cause changed server-side or lived in the old
+  refresh token (re-minted 2026-11-08). Either can come back. So: **keep the wrap**, but when Mac
+  Steam does not log off within 5 s, **log on unwrapped** instead of refusing with
+  `go-offline-required` and the guided Go-Offline step. Put "Refresh with Mac Steam online →
+  Friends still signed in" in every Steam-auth phase's live gate, since the flip leaves no
+  `connection_log` trace and only the operator can see it. (074, 075)
 - **Gate the wrap on evidence, not on the URL firing.** Proceed with the logon only after
   `connection_log.txt` shows `LogOff()` /
   `not auto reconnecting due to user initiated logoff`. If it doesn't appear (game running,
@@ -213,6 +218,11 @@ installs. Do not use `timeupdated`, which is missing for older apps. The delta u
 restore or keep `steam_api64.dll.gamelib-orig` / `gamelib_bridge.cfg` and re-place the shim.
 Rule: keep any file the old manifest didn't own (DXVK caches, logs, version stamps).
 
+The delta itself is proven (076): a chunk-level update built beside the old tree, then committed.
+The recipe, byte counts for all six stale installs and the shim handover (Manor Lords' update
+replaces `steam_api64.dll`) are in `rust-migration-steam.md` → "Delta updates for bridge
+installs".
+
 ## What to Avoid
 
 - **Don't treat `steam://install/<appId>` as unattended adoption.** It opens a dialog. If the
@@ -233,8 +243,11 @@ Rule: keep any file the old manifest didn't own (DXVK caches, logs, version stam
 - **Don't use CEF remote debugging, Accessibility menu clicks or `IClientUser::SetOfflineMode`
   for the offline toggle.** They need a restart, open a debug port, need TCC permission, or
   use a fragile ABI, and the URL makes them unnecessary. (046a)
-- **Don't assume the wrap is still load-bearing, or that it is dead.** See the 074 note under
-  Requirements: keep it until the full-refresh retest has been run.
+- **Don't delete the wrap on 075's evidence, and don't block the user on it either.** It is
+  cheap insurance against a flip that stopped for reasons nobody controls (075). Don't use
+  `connection_log` to detect a flip: the debug-era flips left no trace there.
+- **Don't expect a launch-time logon to reproduce the old flip.** Today's app defers the library
+  refresh at startup (`trigger=startup`, no CM logon); reproduce with an explicit Refresh. (075)
 
 ## Constraints
 
@@ -274,6 +287,8 @@ Rule: keep any file the old manifest didn't own (DXVK caches, logs, version stam
 | 069   | VALIDATED                       | `InstallApp` on a deferred update runs it now; no separate update method exists                                                                      |
 | 070   | VALIDATED                       | 6 of 28 bridge installs stale; nothing ever updates bridge bottles                                                                                   |
 | 074\* | VALIDATED wrapped + SURPRISE    | wrap works from Rust; a **bare** logon no longer flips Friends (2026-11-09); keep the wrap pending a full-refresh retest                             |
+| 075   | VALIDATED                       | GameLib's **full Refresh** unwrapped (harness and real app) doesn't flip Friends either; steamclient.dylib unchanged since before the flips → keep the wrap, fall through unwrapped |
 
 \*074 is packaged elsewhere (Rust migration). It is cited here because it qualifies 046's
-premise. Sources for 046a–070 are in `sources/<NNN-name>/`.
+premise. Sources for 046a–070 and 075 are in `sources/<NNN-name>/` (075 includes
+`arm-b-nowrap.patch`, the one-line real-app bypass, to re-run the check).

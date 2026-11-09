@@ -1,7 +1,7 @@
 # Spike Wrap-Up Summary
 
-**Date:** 2026-11-09 (updated — backlog 023–060 and 065–070 wrapped, plus the Rust migration line 067a–c and 071–074; every spike in `.planning/spikes/` is now processed)
-**Spikes processed:** 85 (31 before, 54 on 2026-11-09)
+**Date:** 2026-11-09 (updated twice — backlog 023–060 and 065–070 plus the Rust migration line 067a–c and 071–074; then 075–076 in a second wrap-up the same day; every spike in `.planning/spikes/` is processed)
+**Spikes processed:** 87 (31 before, 54 in the first 2026-11-09 wrap-up, 2 in the second)
 **Feature areas:** Steam native install; macOS native Steam bridge; Tauri/Rust rearchitecture; Tauri login webview + cookies; Tauri embedded store browser; login-window UX on macOS; OAuth login test harness; Steam overlay in bridged games; bridge engines & per-game fixes; Steam DRM in the bridge; Mac Steam client integration; Steam library ownership; macOS runtime signals; Rust migration of the Steam stack
 **Skill output:** `./.claude/skills/spike-findings-gamelib/`
 
@@ -94,8 +94,28 @@
 | 072 | rust-signin-refresh-token | standard | PARTIAL | Rust migration of the Steam stack |
 | 073 | rust-owned-apps-parity | standard | VALIDATED | Rust migration of the Steam stack |
 | 074 | rust-logon-friends-wrap | standard | VALIDATED | Rust migration of the Steam stack |
+| 075 | friends-flip-full-refresh | standard | VALIDATED | Mac Steam client integration |
+| 076 | bridge-delta-update | standard | VALIDATED | Rust migration of the Steam stack |
 
 ## Key Findings
+
+### 2026-11-09 second wrap-up (075–076)
+
+**075** — GameLib's full Refresh (logon, licenses, canary, `getUserOwnedApps`, licensed-demos
+package and app info, held-session PICS pass, 60 s idle, logOff) run **unwrapped** with Mac Steam
+online, as a staged harness and as the real app with the wrap patched out: Friends stayed signed
+in and changeable, and Mac Steam's `connection_log` recorded nothing. `steamclient.dylib` is
+unchanged since before the debug-era flips, so the cause changed server-side or lived in the old
+token. Keep the wrap as insurance, fall through unwrapped instead of the guided Go-Offline step,
+live-gate Friends in Steam-auth phases, and park spike 078 (owned apps via the running client).
+
+**076** — A chunk-level delta updates stale bridge installs correctly and cheaply. Request codes
+were still issued for all six install-time GIDs. Chunk-level downloads (5.7 MiB–916 MiB) were
+4–8× below file-level on the Unreal titles (Manor Lords 6.7 GB → 0.9 GB). Applied on APFS clones,
+Mining Mechs 48/49 and Manor Lords 111/112 matched the new manifest; the misses were an untouched
+shim and a game-modified ini. Reuse is mostly moved-in-file and up to 3.7 GB cross-file, so build
+temps and commit only after all verify. SHA-1 every reused chunk (forced corruption fell back to
+the CDN). Manor Lords' update replaces `steam_api64.dll`, so Phase 74 needs a shim handover.
 
 ### 2026-11-09 wrap-up (023–074)
 

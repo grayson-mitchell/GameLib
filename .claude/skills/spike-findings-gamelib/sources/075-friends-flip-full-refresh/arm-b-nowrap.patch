@@ -1,0 +1,21 @@
+diff --git a/src/backend/storeManagers/steam/user.ts b/src/backend/storeManagers/steam/user.ts
+index 6a9f9aaf9..75729ed00 100644
+--- a/src/backend/storeManagers/steam/user.ts
++++ b/src/backend/storeManagers/steam/user.ts
+@@ -565,9 +565,13 @@ export class SteamUser {
+   ): Promise<AuthSessionRefusal | null> {
+     if (generation !== this.sessionGeneration) return 'not-signed-in'
+     try {
+-      await withMacSteamOffline((wrap) =>
+-        this.connectSteamUserClient(token, { reason, wrap, generation })
+-      )
++      // SPIKE-075 TEMP: wrap bypassed (unwrapped real-app logon). REVERT.
++      await this.connectSteamUserClient(token, {
++        reason,
++        wrap: 'not-darwin',
++        generation
++      })
++      void withMacSteamOffline
+     } catch (err) {
+       if (err instanceof GuidedOfflineRequiredError) {
+         logWarning(

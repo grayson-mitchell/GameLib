@@ -1,4 +1,4 @@
-# Rust migration of the Steam stack (depot pipeline and CM client)
+# Rust migration of the Steam stack (depot pipeline, delta updates and CM client)
 
 The Node sidecar exists because the backend is Node and Tauri has no JavaScript runtime. The
 migration moves it to Rust piece by piece (Phase 63 scanners → Phase 73 depot pipeline → Phase 75
@@ -39,6 +39,18 @@ the two Steam-heavy slices: the **depot download pipeline** (067a–c, now Phase
   alike on current hosts, and Phase 73's pipeline runs without them. *(071a)*
 - **Keep the macOS go-offline wrap** around every authenticated CM logon; it works unchanged from
   Rust. Its premise needs re-testing: see Constraints. *(074)*
+- **Bridge-game updates are a chunk-level delta in `gamelib-depot` (`DepotRef.fromManifest`).**
+  File-level reconcile (today's SHA-1 gate pointed at the new manifest) barely beats a full
+  download on Unreal titles: Manor Lords 6.7 vs 7.0 GB, chunk-level **0.9 GB**; Abiotic Factor
+  2.2 vs 2.3 GB, chunk-level 0.44 GB. (076)
+- **Never overwrite or delete an old file before every new file is built.** Reuse is mostly
+  moved within a file and can be cross-file (3.7 GB on Manor Lords). Build temps, verify
+  `sha_content`, rename, then delete removed files. (076)
+- **SHA-1 every reused chunk from local bytes;** a rejected chunk becomes a CDN chunk. The shim
+  and game-written files drift from the manifest. (076)
+- **Hand the shim over when an update changes a shimmed `steam_api*.dll`:** new genuine DLL →
+  `.gamelib-orig`, then re-place the shim and rewrite `gamelib_bridge.cfg`. Otherwise leave it
+  alone. (076)
 
 ## How to Build It
 
@@ -112,6 +124,48 @@ and `HostRef[]` from `GetServersForSteamPipe`; pass `tokens: {}`. Proven end-to-
 steamroom-supplied inputs → `gamelib-depot-cli summarize` decrypted the real manifest (198
 files, 3.2 GB).
 
+### Delta updates for bridge installs (076)
+
+Fills the reserved `DepotRef.fromManifest` slot (`delta_unsupported` in Phase 73). Proven on APFS
+clones of Mining Mechs and Manor Lords with production's own `parse_manifest` and
+`container::decode_chunk` (`sources/076-bridge-delta-update/src/bin/apply.rs`):
+
+1. **Manifests.** Old = the install's GID from the ACF (`InstalledDepots`, read as a string);
+   new = PICS public branch. Request codes were still issued for all six install-time GIDs
+   (2–8 weeks old), but cache the installed manifest in `ManifestStore` at install time and
+   exempt it from `KEEP_GIDS` pruning while installed.
+2. **Work set** = new-manifest files (not dirs or symlinks) whose `sha_content` differs from the
+   old entry, or which are new. Unchanged files are never touched, so a shim on an unchanged DLL
+   survives. Match paths with `normalize_depot_path`.
+3. **Plan.** Index old-manifest chunks `sha → [(old file, offset, cb_original)]`. For each
+   work-set chunk, read the candidate bytes with `read_exact_at` and SHA-1 them; the first match
+   is a local source, otherwise the chunk goes on the CDN list. Manor Lords: 12.4 GB of
+   candidates read and hashed in 8.1 s.
+4. **Fetch** only the CDN list through the existing `Fetcher` (2,178 chunks / 915.6 MiB in 50 s).
+5. **Build** each work file as `<path>.<tmp>`: `set_len(size)`, write every chunk at its offset
+   (local bytes, or `decode_chunk` for CDN bodies), `sync_all`, verify `sha_content`. Any failure
+   deletes the temps and leaves the old tree intact.
+6. **Commit:** rename every temp over its target, then delete files the new manifest dropped
+   (old-manifest-owned paths only; GameLib's `.gamelib-orig`, `gamelib_bridge.cfg`, dxvk caches
+   and logs aren't owned, so they survive). Then apply file modes, rewrite the ACF (`buildid`,
+   `InstalledDepots` GIDs) and redo the GID-keyed follow-ups (shim, redist ledger, DRM verdicts).
+7. **Resume:** interrupted before commit means the old tree is intact. Interrupted during
+   commit means each file is whole-old or whole-new, and today's SHA-1 reconcile against the
+   new manifest finishes it.
+
+Results: Mining Mechs 48/49 and Manor Lords 111/112 match the new manifest (misses: an untouched
+shim, a game-modified `.ini` the update doesn't change, correctly left alone). Manor Lords ran
+about 83 s end to end against ~6.5 min for a full download.
+
+| Game (076) | full | file-level | chunk-level |
+|---|---|---|---|
+| Mining Mechs | 110 MiB | 18.8 MiB | 5.7 MiB |
+| Core Keeper | 547 MiB | 65 MiB | 34 MiB |
+| Hell Clock | 1,468 MiB | 496 MiB | 435 MiB |
+| The Planet Crafter | 3,581 MiB | 514 MiB | 97 MiB |
+| Abiotic Factor | 2,288 MiB | 2,220 MiB | 444 MiB |
+| Manor Lords | 7,011 MiB | 6,710 MiB | 916 MiB |
+
 ## What to Avoid
 
 - **steamroom's `login()` and the high-level `TokenLogin` as-is.** `login()` returns at the logon
@@ -127,6 +181,11 @@ files, 3.2 GB).
 - **Package info without access tokens** (939 vs 1,144 app IDs).
 - **Back-to-back wrapped logons without a gap:** the second wrap refuses (correctly) while Mac
   Steam is still reconnecting from the previous `goonline`; allow ~15 s or share one session.
+- **Patching files in place during a delta.** Moved and cross-file reuse means an in-place
+  write destroys chunks that later files still need. (076)
+- **Trusting a local file because the old manifest lists it.** Verify each reused chunk. (076)
+- **Budgeting disk by download size.** The temp-file build needs free space for the total size
+  of the changed files (~13 GB for Manor Lords), not the 0.9 GB download. (076)
 - **Re-running the depot speed question.** It is network-bound (067a); a Rust pipeline can't be
   faster on the operator's connection.
 
@@ -154,9 +213,10 @@ files, 3.2 GB).
 
 ## Origin
 
-Synthesized from spikes: 067a, 067b, 067c, 071a, 071b, 071c, 072, 073, 074 (with 010, 002 as
-prior art).
+Synthesized from spikes: 067a, 067b, 067c, 071a, 071b, 071c, 072, 073, 074, 076 (with 010, 002,
+070 as prior art).
 Source files available in: sources/067a-node-pipeline-stage-profile/, sources/067b-chunk-decode-bench/,
 sources/067c-rust-depot-job/, sources/071a-cm-crate-steamroom/, sources/071b-cm-crate-steam-client-lib/,
 sources/071c-cm-crate-steam-vent/, sources/072-rust-signin-refresh-token/,
-sources/073-rust-owned-apps-parity/, sources/074-rust-logon-friends-wrap/
+sources/073-rust-owned-apps-parity/, sources/074-rust-logon-friends-wrap/,
+sources/076-bridge-delta-update/
