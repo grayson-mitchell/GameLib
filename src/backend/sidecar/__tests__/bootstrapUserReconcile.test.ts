@@ -162,12 +162,8 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
         loggerModule,
         reconcileStoreUsersWhenOnline
       } = bootedWorld()
-      const legendaryIsLoggedInSpy = jest
-        .spyOn(LegendaryUser, 'isLoggedIn')
-        .mockReturnValue(false)
-      const gogIsLoggedInSpy = jest
-        .spyOn(GOGUser, 'isLoggedIn')
-        .mockReturnValue(false)
+      jest.spyOn(LegendaryUser, 'isLoggedIn').mockReturnValue(false)
+      jest.spyOn(GOGUser, 'isLoggedIn').mockReturnValue(false)
       configStore.set('userInfo', {
         account_id: 'stale',
         displayName: 'Stale',
@@ -196,12 +192,8 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
         loggerModule,
         reconcileStoreUsersWhenOnline
       } = bootedWorld()
-      const legendaryIsLoggedInSpy = jest
-        .spyOn(LegendaryUser, 'isLoggedIn')
-        .mockReturnValue(true)
-      const gogIsLoggedInSpy = jest
-        .spyOn(GOGUser, 'isLoggedIn')
-        .mockReturnValue(false)
+      jest.spyOn(LegendaryUser, 'isLoggedIn').mockReturnValue(true)
+      jest.spyOn(GOGUser, 'isLoggedIn').mockReturnValue(false)
       configStore.set('userInfo', {
         account_id: 'live',
         displayName: 'Live',
@@ -224,19 +216,10 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
     })
 
     it('case 4 -- GOG logged IN: getUserDetails() called exactly once', async () => {
-      const {
-        LegendaryUser,
-        GOGUser,
-        configStore,
-        loggerModule,
-        reconcileStoreUsersWhenOnline
-      } = bootedWorld()
-      const legendaryIsLoggedInSpy = jest
-        .spyOn(LegendaryUser, 'isLoggedIn')
-        .mockReturnValue(true)
-      const gogIsLoggedInSpy = jest
-        .spyOn(GOGUser, 'isLoggedIn')
-        .mockReturnValue(true)
+      const { LegendaryUser, GOGUser, reconcileStoreUsersWhenOnline } =
+        bootedWorld()
+      jest.spyOn(LegendaryUser, 'isLoggedIn').mockReturnValue(true)
+      jest.spyOn(GOGUser, 'isLoggedIn').mockReturnValue(true)
       const gogGetUserDetailsSpy = jest
         .spyOn(GOGUser, 'getUserDetails')
         .mockResolvedValue(undefined)
@@ -250,19 +233,10 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
     })
 
     it('case 5 -- GOG logged OUT: getUserDetails() NOT called', () => {
-      const {
-        LegendaryUser,
-        GOGUser,
-        configStore,
-        loggerModule,
-        reconcileStoreUsersWhenOnline
-      } = bootedWorld()
-      const legendaryIsLoggedInSpy = jest
-        .spyOn(LegendaryUser, 'isLoggedIn')
-        .mockReturnValue(true)
-      const gogIsLoggedInSpy = jest
-        .spyOn(GOGUser, 'isLoggedIn')
-        .mockReturnValue(false)
+      const { LegendaryUser, GOGUser, reconcileStoreUsersWhenOnline } =
+        bootedWorld()
+      jest.spyOn(LegendaryUser, 'isLoggedIn').mockReturnValue(true)
+      jest.spyOn(GOGUser, 'isLoggedIn').mockReturnValue(false)
       const gogGetUserDetailsSpy = jest.spyOn(GOGUser, 'getUserDetails')
 
       reconcileStoreUsersWhenOnline()
@@ -274,17 +248,12 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
       const {
         LegendaryUser,
         GOGUser,
-        configStore,
         loggerModule,
         reconcileStoreUsersWhenOnline
       } = bootedWorld()
-      const legendaryIsLoggedInSpy = jest
-        .spyOn(LegendaryUser, 'isLoggedIn')
-        .mockReturnValue(true)
-      const gogIsLoggedInSpy = jest
-        .spyOn(GOGUser, 'isLoggedIn')
-        .mockReturnValue(true)
-      const gogGetUserDetailsSpy = jest
+      jest.spyOn(LegendaryUser, 'isLoggedIn').mockReturnValue(true)
+      jest.spyOn(GOGUser, 'isLoggedIn').mockReturnValue(true)
+      jest
         .spyOn(GOGUser, 'getUserDetails')
         .mockRejectedValue(new Error('gogdl auth failed'))
       const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
@@ -305,7 +274,6 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
       const {
         LegendaryUser,
         GOGUser,
-        configStore,
         loggerModule,
         reconcileStoreUsersWhenOnline
       } = bootedWorld()
@@ -316,14 +284,10 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
       // never failed; case 6 above is what isolates the inner guard (a throw that occurs after
       // `runOnceWhenOnline` has already returned, on a later microtask turn, which the outer
       // try/catch's stack frame cannot reach).
-      const legendaryIsLoggedInSpy = jest
-        .spyOn(LegendaryUser, 'isLoggedIn')
-        .mockImplementation(() => {
-          throw new Error('existsSync EACCES')
-        })
-      const gogIsLoggedInSpy = jest
-        .spyOn(GOGUser, 'isLoggedIn')
-        .mockReturnValue(false)
+      jest.spyOn(LegendaryUser, 'isLoggedIn').mockImplementation(() => {
+        throw new Error('existsSync EACCES')
+      })
+      jest.spyOn(GOGUser, 'isLoggedIn').mockReturnValue(false)
       const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
 
       expect(() => reconcileStoreUsersWhenOnline()).not.toThrow()

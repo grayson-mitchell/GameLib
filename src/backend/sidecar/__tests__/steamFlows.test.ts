@@ -91,6 +91,9 @@ jest.mock('../../launcher', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────────────────
 import { bootFresh, writeInvoke } from './helpers/sidecarHarness'
 import type { GameInfo } from 'common/types'
+// Type-only namespace import: the runtime handles are rebound per case from the
+// fresh registry (freshRegistry), but this keeps the static import edge knip sees.
+import type * as RecentGamesModule from 'backend/recent_games/recent_games'
 import { RUST_MAIN_WINDOW_HIDE } from 'common/types/sidecarTransport'
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
@@ -98,8 +101,8 @@ import { RUST_MAIN_WINDOW_HIDE } from 'common/types/sidecarTransport'
 // freshRegistry() (run before each case, ahead of any mock configuration), and
 // boot() then boots without a second reset.
 let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
-let getRecentGames: typeof import('backend/recent_games/recent_games').getRecentGames
-let testingExportsRecentGames: typeof import('backend/recent_games/recent_games').testingExportsRecentGames
+let getRecentGames: typeof RecentGamesModule.getRecentGames
+let testingExportsRecentGames: typeof RecentGamesModule.testingExportsRecentGames
 let steamLibraryStore: typeof import('backend/storeManagers/steam/stores').steamLibraryStore
 let GlobalConfig: typeof import('backend/config').GlobalConfig
 

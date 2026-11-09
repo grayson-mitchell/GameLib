@@ -249,7 +249,7 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
       id: opts.id,
       pid: child.pid,
       exited,
-      kill: base.kill,
+      kill: (signal) => base.kill(signal),
       unregister: () => unregister()
     }
     const teardown = opts.teardown ?? ((h) => void h.kill('SIGTERM'))

@@ -469,7 +469,6 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
   })
 
   it('Test A (behaviour, real log file): deliverStartupProtocolUrl makes the real LogWriter write the [ProtocolHandler] Received line', async () => {
-    let deliverUrl!: WiringHandles['deliverStartupProtocolUrl']
     // Same precondition the pre-existing anticheat-data test (above) states explicitly: a
     // real Electron app guarantees `userData` exists before any file operation runs, via
     // `app.whenReady()`; the sidecar has no such hook. Belt-and-braces here even though the
@@ -479,7 +478,6 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
         mkdirSync(join(appFolder, 'GamesConfig'), { recursive: true })
       }
     )
-    deliverUrl = deliverStartupProtocolUrl
     await flush()
 
     // Deviation (Rule 1 -- bug, found live running this test): the plan's own draft used
@@ -499,7 +497,7 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
     // implementations report a falsy `app_name` for this appName, so `handleLaunch` logs
     // "Could not receive game data" and returns immediately after the `Received` line below.
     const testUrl = 'gamelib://launch?appName=__gamelib_test_missing__'
-    deliverUrl(['--no-gui', testUrl])
+    deliverStartupProtocolUrl(['--no-gui', testUrl])
 
     // Real, unmocked LogWriter queues its write fire-and-forget (no caller in this codebase
     // `await`s a `logXXX()` call) -- poll for the CONTENT, not merely the file's existence,
