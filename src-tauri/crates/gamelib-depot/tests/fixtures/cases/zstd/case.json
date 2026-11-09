@@ -1,0 +1,23 @@
+{
+  "name": "zstd",
+  "appId": "900020",
+  "mode": "install",
+  "installRoot": "zstd",
+  "depots": [
+    {
+      "depotId": "900021",
+      "manifestId": "7000000000000000003",
+      "keyHex": "81d062fffe2065635a4b50a612f5669f7ed9a6bd5105ce1f48ebb4214f79a39b",
+      "manifestFile": "manifests/900021_7000000000000000003.bin"
+    }
+  ],
+  "finalize": {
+    "steamappsDir": "steamapps",
+    "installdir": "zstd",
+    "name": "Fixture zstd",
+    "buildid": "1003",
+    "lastOwner": "76561197960265728",
+    "allowFullOwnership": true
+  },
+  "hostsHint": ["cdn.fixture.invalid"]
+}

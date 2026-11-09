@@ -1,0 +1,23 @@
+{
+  "name": "encrypted-names",
+  "appId": "900050",
+  "mode": "install",
+  "installRoot": "encrypted-names",
+  "depots": [
+    {
+      "depotId": "900051",
+      "manifestId": "7000000000000000007",
+      "keyHex": "f727d68e675f0f035bb36e8b7713a0d2ed8862f0a142d1599bf3f98b6d72487f",
+      "manifestFile": "manifests/900051_7000000000000000007.bin"
+    }
+  ],
+  "finalize": {
+    "steamappsDir": "steamapps",
+    "installdir": "encrypted-names",
+    "name": "Fixture encrypted-names",
+    "buildid": "1006",
+    "lastOwner": "76561197960265728",
+    "allowFullOwnership": true
+  },
+  "hostsHint": ["cdn.fixture.invalid"]
+}

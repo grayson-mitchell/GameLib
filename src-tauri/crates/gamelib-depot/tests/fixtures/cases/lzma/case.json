@@ -1,0 +1,23 @@
+{
+  "name": "lzma",
+  "appId": "900010",
+  "mode": "install",
+  "installRoot": "lzma",
+  "depots": [
+    {
+      "depotId": "900011",
+      "manifestId": "7000000000000000002",
+      "keyHex": "5665a1ef0e9d0a255f144be4e29a146795058ce725cf505c01129d1ef40be04b",
+      "manifestFile": "manifests/900011_7000000000000000002.bin"
+    }
+  ],
+  "finalize": {
+    "steamappsDir": "steamapps",
+    "installdir": "lzma",
+    "name": "Fixture lzma",
+    "buildid": "1002",
+    "lastOwner": "76561197960265728",
+    "allowFullOwnership": true
+  },
+  "hostsHint": ["cdn.fixture.invalid"]
+}
