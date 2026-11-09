@@ -152,7 +152,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 63: Rust migration pattern and executable scanners** — 14 plans; planned (completed 2026-11-07)
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
 - [x] **Phase 65: Steam store manager decomposition, continued** — 20/20 plans complete; Phase 61 closed 2026-11-07 — unblocked, D-11 (completed 2026-11-08)
-- [ ] **Phase 66: Backend dependency injection replacing module-level singletons** — 9 plans; planned; split 2026-11-10 into 66 (foundation) + 66.1–66.3
+- [x] **Phase 66: Backend dependency injection replacing module-level singletons** — 9 plans; planned; split 2026-11-10 into 66 (foundation) + 66.1–66.3 (completed 2026-11-09)
 - [ ] **Phase 66.1: Backend DI — stores, store managers, flow registrations and launcher** — 0 plans; not started
 - [ ] **Phase 66.2: Every backend spawn through the process runner, then the `child_process` ban** — 0 plans; not started
 - [ ] **Phase 66.3: Backend module state to zero, then the live macOS smoke** — 0 plans; not started
@@ -578,7 +578,7 @@ Plans:
 **Split 2026-11-10.** At full planning depth the original scope came to about 50 plans, mostly because under D-01/D-03 every importer of a converted owner has to receive it as a dependency (`backend/utils` has 54 source importers, `platform` 45). It was split along D-15's order, and `66-CONTEXT.md` decisions D-01..D-17 apply to all four parts. **Phase 66 itself is now step 1 only:** `src/backend/process/` (clock, runner with its tracked and long-lived child registries and `openDetached`, `AppContext`), the depcruise `runner-is-a-leaf` rule, `meta/backendDiCeilings.cjs` with sharded shrink-only baselines for module state, `child_process` imports and `jest.mock(`, plus an exact-path exemption mechanism that starts empty; test fakes (`scriptedRunner`, `realRunner` on `createFakeHomeProfile()`, `fakeClock`, `createTestContext`); and `bootstrap.ts` as one ordered step list with the 17 once-guards and `i18nReady` deleted, where a second `init()` throws, together with moving the 37 sidecar tests that re-enter `init()` onto fresh contexts. About 7 plans.
 **Requirements**: TBD
 **Depends on:** Phase 62
-**Plans:** 8/9 plans executed
+**Plans:** 9/9 plans complete
 
 Plans:
 
@@ -601,7 +601,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 66-08-PLAN.md — `bootstrap.ts` as one ordered step list on AppContext, once-guards + i18nReady deleted, second boot throws, harness on createTestContext (wave 4)
+- [x] 66-08-PLAN.md — `bootstrap.ts` as one ordered step list on AppContext, once-guards + i18nReady deleted, second boot throws, harness on createTestContext (wave 4)
 
 **Cross-cutting constraints:**
 
