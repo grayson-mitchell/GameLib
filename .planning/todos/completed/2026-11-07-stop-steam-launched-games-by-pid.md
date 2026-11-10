@@ -57,3 +57,19 @@ Find the game's process(es) and end them gracefully, then forcefully if needed.
 
 Live gate: launch a Mac-native title (e.g. WazHack 264160) through GameLib, press Stop, and check
 that the game exits, Steam shows it as no longer running, and GameLib's Play button comes back.
+
+## Resolution (2026-11-11, quick 261111-9b7 + 261111-9mj)
+
+Confirmed first: Stop was unreachable for Mac-native titles, not just a no-op. The card never entered
+Playing, because the only playing-state source for `rungameid` launches was the RunningAppID poller,
+which never starts under Tauri (`startRunningPoll()` lives in `SteamLibraryManager.init()`, and
+`initStoreManagers()` is dead), and `registry.vdf` had no `RunningAppID` while WazHack ran anyway.
+
+- 261111-9b7: `findPidsRunningFromFolder` + `stopSteamLaunchedGame` (SIGTERM, 5 s grace, SIGKILL only
+  PIDs still inside the ACF install folder; Steam helpers and own PIDs excluded); wired into
+  `SteamGame.stop()`.
+- 261111-9mj: per-launch `steamLaunchWatch` sends `playing` when the install-folder PIDs appear and
+  `done` when they exit; Stop cancels it with one `done`.
+
+Live gate passed 2026-11-11 (operator): WazHack 264160 launched from GameLib showed Playing, Stop quit
+the game. Windows still a no-op (out of scope). Reviving the dead RunningAppID poller is not done.
