@@ -16,15 +16,15 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
-jest.mock('backend/utils', () => ({ spawnAsync: jest.fn() }))
-
-import { spawnAsync } from 'backend/utils'
 import {
   getBottleDir,
   isBottleProvisioned,
   killBottleWineServerWith,
   sanitizeBottleName
 } from '../bottlePrimitives'
+
+const spawnAsync = jest.fn()
+const deps = { spawnAsync }
 
 afterAll(() => mockProfile.dispose())
 
@@ -70,16 +70,22 @@ describe('killBottleWineServerWith', () => {
     'refuses unsafe name %j without spawning',
     async (name) => {
       await expect(
-        killBottleWineServerWith(name, '/bin/wineserver', {}, 1000)
+        killBottleWineServerWith(deps, name, '/bin/wineserver', {}, 1000)
       ).resolves.toBe(false)
       expect(spawnAsync).not.toHaveBeenCalled()
     }
   )
 
   it('runs wineserver -k against the bottle prefix for a safe name', async () => {
-    jest.mocked(spawnAsync).mockResolvedValue({ code: 0 } as never)
+    spawnAsync.mockResolvedValue({ code: 0 } as never)
     await expect(
-      killBottleWineServerWith('Safe', '/bin/wineserver', { USER: 'u' }, 1000)
+      killBottleWineServerWith(
+        deps,
+        'Safe',
+        '/bin/wineserver',
+        { USER: 'u' },
+        1000
+      )
     ).resolves.toBe(true)
     expect(spawnAsync).toHaveBeenCalledWith(
       '/bin/wineserver',

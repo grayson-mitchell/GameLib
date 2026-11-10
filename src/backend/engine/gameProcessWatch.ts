@@ -23,6 +23,7 @@
  */
 import { homedir } from 'os'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { legacySpawnAsync } from 'backend/services/legacySpawnAsync'
 import { LAUNCH_DEADLINE_MS } from './launchDeadline'
 import { parsePsLine, processListing } from './processListing'
 
@@ -108,7 +109,7 @@ export function watchForGameProcess(args: {
   deps?: Partial<GameProcessWatchDeps>
 }): { stop(): void } | null {
   const deps: GameProcessWatchDeps = {
-    processListing,
+    processListing: () => processListing({ spawnAsync: legacySpawnAsync }),
     setTimer: (fn, ms) => setTimeout(fn, ms) as TimerHandle,
     clearTimer: (handle) => clearTimeout(handle as NodeJS.Timeout),
     homeDir: () => homedir(),

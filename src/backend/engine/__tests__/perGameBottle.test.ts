@@ -19,11 +19,25 @@ jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
-jest.mock('backend/utils', () => ({
-  sendGameStatusUpdate: jest.fn(),
-  // Real child process under the fake HOME; a timeout resolves code null like the real helper.
-  spawnAsync: (cmd: string, args: string[], opts: { timeout?: number } = {}) =>
-    new Promise((resolve) => {
+jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
+
+import {
+  createCrossoverBottle,
+  ensureGameBottle,
+  perGameBottleName,
+  PER_GAME_BOTTLE_NAME_MAX
+} from '../perGameBottle'
+import { getBottleDir, sanitizeBottleName } from '../bottlePrimitives'
+import type { PerGameBottleDeps } from '../perGameBottle'
+
+// Real child process under the fake HOME; a timeout resolves code null like the real helper.
+const spawnAsync = (
+  cmd: string,
+  args: string[],
+  opts: { timeout?: number } = {}
+) =>
+  new Promise<{ code: number | null; stdout: string; stderr: string }>(
+    (resolve) => {
       execFile(
         cmd,
         args,
@@ -37,17 +51,9 @@ jest.mock('backend/utils', () => ({
           })
         }
       )
-    })
-}))
-
-import {
-  createCrossoverBottle,
-  ensureGameBottle,
-  perGameBottleName,
-  PER_GAME_BOTTLE_NAME_MAX
-} from '../perGameBottle'
-import { getBottleDir, sanitizeBottleName } from '../bottlePrimitives'
-import type { PerGameBottleDeps } from '../perGameBottle'
+    }
+  )
+const deps = { spawnAsync }
 
 afterAll(() => mockProfile.dispose())
 
@@ -120,7 +126,7 @@ describe('createCrossoverBottle (stub cxbottle under a fake HOME)', () => {
   })
 
   it('succeeds when cxbottle.conf appears', async () => {
-    const r = await createCrossoverBottle('GameLib-gog-ok', binDir)
+    const r = await createCrossoverBottle(deps, 'GameLib-gog-ok', binDir)
     expect(r).toEqual({ status: 'done', createdHere: true })
     expect(
       existsSync(join(getBottleDir('GameLib-gog-ok'), 'cxbottle.conf'))
@@ -128,7 +134,7 @@ describe('createCrossoverBottle (stub cxbottle under a fake HOME)', () => {
   })
 
   it('removes a created dir when no cxbottle.conf is produced', async () => {
-    const r = await createCrossoverBottle('GameLib-gog-noconf', binDir)
+    const r = await createCrossoverBottle(deps, 'GameLib-gog-noconf', binDir)
     expect(r).toMatchObject({
       status: 'error',
       errorCode: 'crossover-create-failed'
@@ -137,7 +143,7 @@ describe('createCrossoverBottle (stub cxbottle under a fake HOME)', () => {
   })
 
   it('reports the cap and removes the created dir on a hang', async () => {
-    const r = await createCrossoverBottle('GameLib-gog-hang', binDir, {
+    const r = await createCrossoverBottle(deps, 'GameLib-gog-hang', binDir, {
       createTimeoutMs: 300
     })
     expect(r).toMatchObject({
@@ -150,13 +156,13 @@ describe('createCrossoverBottle (stub cxbottle under a fake HOME)', () => {
   it('never removes a pre-existing dir', async () => {
     const pre = getBottleDir('GameLib-gog-noconf')
     mkdirSync(pre, { recursive: true })
-    const r = await createCrossoverBottle('GameLib-gog-noconf', binDir)
+    const r = await createCrossoverBottle(deps, 'GameLib-gog-noconf', binDir)
     expect(r.status).toBe('error')
     expect(existsSync(pre)).toBe(true)
   })
 
   it('rejects an unsafe name before spawning', async () => {
-    const r = await createCrossoverBottle('../evil', binDir)
+    const r = await createCrossoverBottle(deps, '../evil', binDir)
     expect(r.status).toBe('error')
   })
 })

@@ -3,7 +3,7 @@
  * unchanged from steam/bottleProcessMonitor.ts (phase 61 plan 04) so the
  * non-Steam first-match watcher reuses it. Nothing runs at import.
  */
-import { spawnAsync } from 'backend/utils'
+import type { SpawnAsync } from 'backend/spawnAsync'
 
 /**
  * Parse one `ps -axo pid=,command=` line into its pid and command, or
@@ -32,7 +32,10 @@ export function parsePsLine(
  * `pgrep -lf .` is not setuid and prints the same `pid command` lines, so it
  * stands in when `ps` cannot spawn. The `ps` error is rethrown if both fail.
  */
-export async function processListing(): Promise<string> {
+export async function processListing(deps: {
+  spawnAsync: SpawnAsync
+}): Promise<string> {
+  const { spawnAsync } = deps
   try {
     return (await spawnAsync('ps', ['-axo', 'pid=,command='])).stdout
   } catch (psError) {

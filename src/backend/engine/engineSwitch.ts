@@ -13,6 +13,7 @@ import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import { toolsPath } from 'backend/constants/paths'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { legacySpawnAsync } from 'backend/services/legacySpawnAsync'
 import type { GameSettings } from 'common/types'
 import type { Tools } from 'backend/tools'
 import {
@@ -58,7 +59,14 @@ type EngineMarker = {
 
 export interface EngineSwitchDeps {
   getMonitorPhase: (key: string) => 'starting' | 'running' | null
-  killWith: typeof killBottleWineServerWith
+  killWith: (
+    ...args: Parameters<typeof killBottleWineServerWith> extends [
+      unknown,
+      ...infer R
+    ]
+      ? R
+      : never
+  ) => ReturnType<typeof killBottleWineServerWith>
   resolveCrossoverBinDir: () => Promise<string | undefined>
   installRemove: Tools['DXVK']['installRemove']
   /** Must be called while the CrossOver selection is the one registered for the game. */
@@ -122,7 +130,8 @@ async function defaultEnsurePinEngine(
 /** Everything except `crossoverSettings`, which the caller supplies (store-specific). */
 const defaultDeps: Omit<EngineSwitchDeps, 'crossoverSettings'> = {
   getMonitorPhase: () => null,
-  killWith: killBottleWineServerWith,
+  killWith: (...a) =>
+    killBottleWineServerWith({ spawnAsync: legacySpawnAsync }, ...a),
   resolveCrossoverBinDir: () => resolveCrossoverBinDirAsync({}),
   // Lazy: legacyFacades pulls in launcher and the store managers (import cycle).
   installRemove: async (...args) =>

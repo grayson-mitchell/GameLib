@@ -158,7 +158,10 @@ export function defaultEngineDecisionDeps(): EngineDecisionDeps {
     readBuild: (binDir) => readCrossoverBuild(binDir),
     async killCrossoverWineserver(bottleName, binDir) {
       const { killBottleWineServerWith } = await import('./bottlePrimitives')
+      const { legacySpawnAsync } =
+        await import('backend/services/legacySpawnAsync')
       await killBottleWineServerWith(
+        { spawnAsync: legacySpawnAsync },
         bottleName,
         join(binDir, 'wineserver'),
         { CX_ROOT: dirname(binDir) },

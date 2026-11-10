@@ -1046,6 +1046,7 @@ describe('Phase 59 engine registry', () => {
   describe('wineserver kill', () => {
     test('killBottleWineServerWith spawns the given wineserver', async () => {
       const ok = await killBottleWineServerWith(
+        { spawnAsync },
         bottle,
         '/pins/wineserver',
         { USER: 'crossover', WINEPREFIX: '/evil' },
@@ -1062,13 +1063,17 @@ describe('Phase 59 engine registry', () => {
 
     test('killBottleWineServerWith returns false on timeout', async () => {
       mockedSpawnAsync.mockResolvedValue({ code: null })
-      expect(await killBottleWineServerWith(bottle, '/w', {}, 1)).toBe(false)
+      expect(
+        await killBottleWineServerWith({ spawnAsync }, bottle, '/w', {}, 1)
+      ).toBe(false)
     })
 
     test.each(['../evil', 'a/b', ''])(
       'killBottleWineServerWith refuses unsafe bottle %j',
       async (name) => {
-        expect(await killBottleWineServerWith(name, '/w', {}, 1)).toBe(false)
+        expect(
+          await killBottleWineServerWith({ spawnAsync }, name, '/w', {}, 1)
+        ).toBe(false)
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
       }
     )

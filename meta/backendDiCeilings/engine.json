@@ -6,7 +6,7 @@
   "jestMock": {
     "src/backend/engine/__tests__/adoptBottle.test.ts": 1,
     "src/backend/engine/__tests__/bottleLedger.test.ts": 1,
-    "src/backend/engine/__tests__/bottlePrimitives.test.ts": 4,
+    "src/backend/engine/__tests__/bottlePrimitives.test.ts": 3,
     "src/backend/engine/__tests__/crossoverLocation.test.ts": 4,
     "src/backend/engine/__tests__/demoStatus.test.ts": 1,
     "src/backend/engine/__tests__/engineConfig.test.ts": 2,
@@ -24,7 +24,6 @@
     "src/backend/engine/__tests__/legacyBottleUntouched.test.ts": 8,
     "src/backend/engine/__tests__/perGameBottle.test.ts": 4,
     "src/backend/engine/__tests__/pinnedEngineProgress.test.ts": 3,
-    "src/backend/engine/__tests__/processListing.test.ts": 1,
     "src/backend/engine/__tests__/testedCrossoverVersions.test.ts": 1,
     "src/backend/engine/__tests__/toolSettings.test.ts": 4
   },

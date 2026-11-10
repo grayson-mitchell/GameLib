@@ -20,8 +20,9 @@ import { createHash } from 'crypto'
 import { dirname, join } from 'path'
 import { existsSync } from 'graceful-fs'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { spawnAsync } from 'backend/utils'
+import { legacySpawnAsync } from 'backend/services/legacySpawnAsync'
 import {
+  type BottleSpawnDeps,
   createFallbackBottle,
   getBottleDir,
   isBottleProvisioned,
@@ -94,6 +95,7 @@ export type CreateBottleResult = {
 
 /** CrossOver `cxbottle --create`, capped; on any failure removes what this call created. */
 export async function createCrossoverBottle(
+  deps: BottleSpawnDeps,
   bottleName: string,
   binDir: string,
   opts: { createTimeoutMs?: number; signal?: AbortSignal } = {}
@@ -110,6 +112,7 @@ export async function createCrossoverBottle(
   const createdHere = !existsSync(getBottleDir(bottleName))
   const cleanup = async () => {
     await killBottleWineServerWith(
+      deps,
       bottleName,
       join(binDir, 'wineserver'),
       { CX_ROOT: dirname(binDir) },
@@ -131,7 +134,7 @@ export async function createCrossoverBottle(
   }
   if (opts.signal?.aborted) return aborted()
   try {
-    const { code, stderr } = await spawnAsync(
+    const { code, stderr } = await deps.spawnAsync(
       join(binDir, 'cxbottle'),
       ['--create', '--bottle', bottleName, '--template', 'win10_64'],
       { timeout: createTimeoutMs, signal: opts.signal }
@@ -182,6 +185,7 @@ export async function createCrossoverBottle(
   }
   // Best effort: a fresh bottle must not leave a wedged wineserver behind.
   await killBottleWineServerWith(
+    deps,
     bottleName,
     join(binDir, 'wineserver'),
     { CX_ROOT: dirname(binDir) },
@@ -201,8 +205,22 @@ export type EnsureGameBottleResult =
 export interface PerGameBottleDeps {
   decide: typeof decideCreationEngine
   resolveBinDir: () => Promise<string | undefined>
-  createCrossover: typeof createCrossoverBottle
-  createFallback: typeof createFallbackBottle
+  createCrossover: (
+    ...args: Parameters<typeof createCrossoverBottle> extends [
+      unknown,
+      ...infer R
+    ]
+      ? R
+      : never
+  ) => ReturnType<typeof createCrossoverBottle>
+  createFallback: (
+    ...args: Parameters<typeof createFallbackBottle> extends [
+      unknown,
+      ...infer R
+    ]
+      ? R
+      : never
+  ) => ReturnType<typeof createFallbackBottle>
   ensurePin: (args: {
     pin: EnginePin
     appName: string
@@ -216,8 +234,10 @@ export interface PerGameBottleDeps {
 const defaultDeps: PerGameBottleDeps = {
   decide: decideCreationEngine,
   resolveBinDir: () => resolveCrossoverBinDirForEngine(),
-  createCrossover: createCrossoverBottle,
-  createFallback: createFallbackBottle,
+  createCrossover: (...a) =>
+    createCrossoverBottle({ spawnAsync: legacySpawnAsync }, ...a),
+  createFallback: (...a) =>
+    createFallbackBottle({ spawnAsync: legacySpawnAsync }, ...a),
   ensurePin: ensurePinnedEngineReportingStatus,
   currentPin: () => ENGINE_PINS.current,
   isProvisioned: isBottleProvisioned

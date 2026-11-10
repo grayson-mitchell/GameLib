@@ -254,6 +254,7 @@ async function killForRegisteredEngine(
   const engine = getEngineSelection(appId)
   if (engine && isNonCrossover(engine)) {
     return killBottleWineServerWith(
+      { spawnAsync },
       name,
       engine.wineserverBin,
       { USER: 'crossover' },
@@ -266,6 +267,7 @@ async function killForRegisteredEngine(
       existsSync(engineHint.wineserverBin)
     ) {
       return killBottleWineServerWith(
+        { spawnAsync },
         name,
         engineHint.wineserverBin,
         { USER: 'crossover' },
@@ -498,7 +500,12 @@ export async function provisionBridgeBottle(opts: {
 
   // Phase 59: an explicit fallback engine creates the bottle itself.
   if (opts.fallbackEngine) {
-    return createFallbackBottle(bottleName, opts.fallbackEngine, opts.signal)
+    return createFallbackBottle(
+      { spawnAsync },
+      bottleName,
+      opts.fallbackEngine,
+      opts.signal
+    )
   }
 
   // (3b) quick 261024-cjq: CrossOver precondition, after the ready

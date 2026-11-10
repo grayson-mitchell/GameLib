@@ -9,7 +9,7 @@ import type { GameSettings } from 'common/types'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { spawnAsync } from 'backend/utils'
+import type { SpawnAsync } from 'backend/spawnAsync'
 import { writeCxbottleConf } from './adoptBottle'
 import type { NonCrossoverEngine } from './engineTypes'
 
@@ -76,6 +76,11 @@ export function isBottleProvisioned(bottleName: string): boolean {
   return existsSync(join(getBottleDir(bottleName), 'cxbottle.conf'))
 }
 
+/** The one capability the bottle helpers need (66.1 R3). */
+export interface BottleSpawnDeps {
+  spawnAsync: SpawnAsync
+}
+
 /**
  * Phase 59: `wineserver -k` with an explicit (non-CrossOver) wineserver.
  * Same scope fence as killBottleWineServer (T-17-DoS): WINEPREFIX is always
@@ -85,6 +90,7 @@ export function isBottleProvisioned(bottleName: string): boolean {
  * explicit and wine needs nothing GameLib-private from HOME. Never throws.
  */
 export async function killBottleWineServerWith(
+  deps: BottleSpawnDeps,
   bottleName: string,
   wineserverBin: string,
   extraEnv: Record<string, string>,
@@ -102,7 +108,7 @@ export async function killBottleWineServerWith(
     return false
   }
   try {
-    const result = await spawnAsync(wineserverBin, ['-k'], {
+    const result = await deps.spawnAsync(wineserverBin, ['-k'], {
       env: {
         ...process.env,
         ...extraEnv,
@@ -218,6 +224,7 @@ export function removeCreatedBottleDir(bottleName: string): void {
  * are assigned here.
  */
 export async function createFallbackBottle(
+  deps: BottleSpawnDeps,
   bottleName: string,
   engine: NonCrossoverEngine,
   signal?: AbortSignal
@@ -237,6 +244,7 @@ export async function createFallbackBottle(
   const fail = async (error: string): Promise<FallbackBottleResult> => {
     logError(`provisionBridgeBottle: ${error}`, LogPrefix.Backend)
     await killBottleWineServerWith(
+      deps,
       bottleName,
       engine.wineserverBin,
       { USER: 'crossover' },
@@ -251,6 +259,7 @@ export async function createFallbackBottle(
       LogPrefix.Backend
     )
     await killBottleWineServerWith(
+      deps,
       bottleName,
       engine.wineserverBin,
       { USER: 'crossover' },
@@ -265,7 +274,7 @@ export async function createFallbackBottle(
   }
   try {
     mkdirSync(dirname(dir), { recursive: true })
-    const boot = await spawnAsync(engine.wineBin, ['wineboot', '-i'], {
+    const boot = await deps.spawnAsync(engine.wineBin, ['wineboot', '-i'], {
       env,
       timeout: 180_000,
       signal
@@ -278,7 +287,7 @@ export async function createFallbackBottle(
       )
     }
     // system.reg is flushed only once the wineserver exits.
-    const wait = await spawnAsync(engine.wineserverBin, ['-w'], {
+    const wait = await deps.spawnAsync(engine.wineserverBin, ['-w'], {
       env,
       timeout: 60_000,
       signal
@@ -311,6 +320,7 @@ export async function createFallbackBottle(
     return await fail(`fallback bottle creation threw: ${String(error)}`)
   }
   await killBottleWineServerWith(
+    deps,
     bottleName,
     engine.wineserverBin,
     { USER: 'crossover' },

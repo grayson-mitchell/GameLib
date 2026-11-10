@@ -192,7 +192,7 @@ function deriveWindowsPrefix(
 async function matchedProcesses(
   lowerPrefixes: string[]
 ): Promise<Array<{ pid: string; command: string }>> {
-  const stdout = await processListing()
+  const stdout = await processListing({ spawnAsync })
   const matches: Array<{ pid: string; command: string }> = []
   for (const line of stdout.split('\n')) {
     const parsed = parsePsLine(line)
