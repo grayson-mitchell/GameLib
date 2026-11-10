@@ -310,6 +310,7 @@ import * as steamStoresModule from '../stores'
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })
 })
+SteamUser.bindStores(steamTestDeps)
 
 const APP_ID = '570'
 

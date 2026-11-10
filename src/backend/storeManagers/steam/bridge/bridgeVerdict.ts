@@ -17,11 +17,11 @@
 
 import { z } from 'zod'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import {
-  steamMetadataStore,
-  type SteamBridgeScanVerdict,
-  type SteamBridgeVerdict,
-  type SteamMetadataCacheEntry
+import type { SteamStoresDeps } from '../library/installRoot'
+import type {
+  SteamBridgeScanVerdict,
+  SteamBridgeVerdict,
+  SteamMetadataCacheEntry
 } from '../stores'
 import { NUMERIC_APP_ID } from '../gameConstants'
 
@@ -105,13 +105,14 @@ const bridgeVerdictSchema = z.object({
  * it: `undefined` here is "never scanned", the safe default direction).
  */
 export function readBridgeVerdict(
+  deps: SteamStoresDeps,
   appId: string
 ): SteamBridgeVerdict | undefined {
   if (!NUMERIC_APP_ID.test(appId)) {
     return undefined
   }
 
-  const existing = steamMetadataStore.get(appId)
+  const existing = deps.stores.steam.steamMetadataStore.get(appId)
   if (!existing?.bridge) {
     return undefined
   }
@@ -137,8 +138,11 @@ export function readBridgeVerdict(
  * `library.ts:884`'s minimal-entry shape exactly, and logs once so a
  * fabricated entry is visible in the log, not just on disk.
  */
-function getOrCreateEntryForWrite(appId: string): SteamMetadataCacheEntry {
-  const existing = steamMetadataStore.get(appId)
+function getOrCreateEntryForWrite(
+  deps: SteamStoresDeps,
+  appId: string
+): SteamMetadataCacheEntry {
+  const existing = deps.stores.steam.steamMetadataStore.get(appId)
   if (existing) {
     return existing
   }
@@ -168,13 +172,14 @@ function rejectNonNumeric(fnName: string, appId: string): boolean {
  * literal.
  */
 export function writeBridgeScanVerdict(
+  deps: SteamStoresDeps,
   appId: string,
   scan: SteamBridgeScanVerdict
 ): void {
   if (rejectNonNumeric('writeBridgeScanVerdict', appId)) return
 
-  const existing = getOrCreateEntryForWrite(appId)
-  steamMetadataStore.set(appId, {
+  const existing = getOrCreateEntryForWrite(deps, appId)
+  deps.stores.steam.steamMetadataStore.set(appId, {
     ...existing,
     bridge: {
       ...existing.bridge,
@@ -203,10 +208,13 @@ export function writeBridgeScanVerdict(
  * cost one rescan and shim re-place per auto-clear (51-UAT item 21). An
  * empty or absent map leaves any previously retained one in place.
  */
-export function clearBridgeScanVerdict(appId: string): void {
+export function clearBridgeScanVerdict(
+  deps: SteamStoresDeps,
+  appId: string
+): void {
   if (rejectNonNumeric('clearBridgeScanVerdict', appId)) return
 
-  const existing = steamMetadataStore.get(appId)
+  const existing = deps.stores.steam.steamMetadataStore.get(appId)
   if (!existing?.bridge?.scan) return
 
   const { scan, ...restBridge } = existing.bridge
@@ -218,7 +226,7 @@ export function clearBridgeScanVerdict(appId: string): void {
       ? { originalFingerprints: scan.originalFingerprints }
       : {})
   }
-  steamMetadataStore.set(appId, {
+  deps.stores.steam.steamMetadataStore.set(appId, {
     ...existing,
     bridge: { ...restBridge, ...retained }
   })
@@ -229,13 +237,14 @@ export function clearBridgeScanVerdict(appId: string): void {
  * signal, independent of (and run before) any post-install `scan`.
  */
 export function setBridgeSteamApiPrescreen(
+  deps: SteamStoresDeps,
   appId: string,
   steamApi: NonNullable<SteamBridgeVerdict['steamApi']>
 ): void {
   if (rejectNonNumeric('setBridgeSteamApiPrescreen', appId)) return
 
-  const existing = getOrCreateEntryForWrite(appId)
-  steamMetadataStore.set(appId, {
+  const existing = getOrCreateEntryForWrite(deps, appId)
+  deps.stores.steam.steamMetadataStore.set(appId, {
     ...existing,
     bridge: {
       ...existing.bridge,
@@ -253,14 +262,15 @@ export function setBridgeSteamApiPrescreen(
  * `undefined` either way.
  */
 export function setBridgeUserRoute(
+  deps: SteamStoresDeps,
   appId: string,
   userRoute: SteamBridgeVerdict['userRoute'] | undefined
 ): void {
   if (rejectNonNumeric('setBridgeUserRoute', appId)) return
 
-  const existing = getOrCreateEntryForWrite(appId)
+  const existing = getOrCreateEntryForWrite(deps, appId)
   const { userRoute: _existingUserRoute, ...restBridge } = existing.bridge ?? {}
-  steamMetadataStore.set(appId, {
+  deps.stores.steam.steamMetadataStore.set(appId, {
     ...existing,
     bridge: userRoute === undefined ? restBridge : { ...restBridge, userRoute }
   })
@@ -274,19 +284,20 @@ export function setBridgeUserRoute(
  * no stored `drm` to remove.
  */
 export function writeBridgeDrmVerdict(
+  deps: SteamStoresDeps,
   appId: string,
   drm: SteamBridgeVerdict['drm'] | undefined
 ): void {
   if (rejectNonNumeric('writeBridgeDrmVerdict', appId)) return
 
   if (drm === undefined) {
-    const stored = steamMetadataStore.get(appId)
+    const stored = deps.stores.steam.steamMetadataStore.get(appId)
     if (stored?.bridge?.drm === undefined) return
   }
 
-  const existing = getOrCreateEntryForWrite(appId)
+  const existing = getOrCreateEntryForWrite(deps, appId)
   const { drm: _existingDrm, ...restBridge } = existing.bridge ?? {}
-  steamMetadataStore.set(appId, {
+  deps.stores.steam.steamMetadataStore.set(appId, {
     ...existing,
     bridge: drm === undefined ? restBridge : { ...restBridge, drm }
   })
@@ -298,15 +309,16 @@ export function writeBridgeDrmVerdict(
  * without an async exe scan. No store write when the value is unchanged.
  */
 export function writeBridgeModeVerdict(
+  deps: SteamStoresDeps,
   appId: string,
   mode: 'steamclient-layer' | 'tcp'
 ): void {
   if (rejectNonNumeric('writeBridgeModeVerdict', appId)) return
 
-  if (readBridgeVerdict(appId)?.mode === mode) return
+  if (readBridgeVerdict(deps, appId)?.mode === mode) return
 
-  const existing = getOrCreateEntryForWrite(appId)
-  steamMetadataStore.set(appId, {
+  const existing = getOrCreateEntryForWrite(deps, appId)
+  deps.stores.steam.steamMetadataStore.set(appId, {
     ...existing,
     bridge: { ...existing.bridge, mode }
   })
@@ -314,9 +326,10 @@ export function writeBridgeModeVerdict(
 
 /** The persisted bridge mode, or undefined when never recorded. */
 export function readBridgeModeVerdict(
+  deps: SteamStoresDeps,
   appId: string
 ): 'steamclient-layer' | 'tcp' | undefined {
-  return readBridgeVerdict(appId)?.mode
+  return readBridgeVerdict(deps, appId)?.mode
 }
 
 /**
@@ -324,13 +337,14 @@ export function readBridgeModeVerdict(
  * when they last dismissed/accepted a route-related dialog.
  */
 export function setBridgeNoticeAcknowledged(
+  deps: SteamStoresDeps,
   appId: string,
   reason: string
 ): void {
   if (rejectNonNumeric('setBridgeNoticeAcknowledged', appId)) return
 
-  const existing = getOrCreateEntryForWrite(appId)
-  steamMetadataStore.set(appId, {
+  const existing = getOrCreateEntryForWrite(deps, appId)
+  deps.stores.steam.steamMetadataStore.set(appId, {
     ...existing,
     bridge: {
       ...existing.bridge,
@@ -345,13 +359,16 @@ export function setBridgeNoticeAcknowledged(
  * the identity-guard discipline shimGenerate.ts's `placeShimForGame`
  * already uses for its own idempotent no-op case.
  */
-export function markBridgeLimitedNoticeShown(appId: string): void {
+export function markBridgeLimitedNoticeShown(
+  deps: SteamStoresDeps,
+  appId: string
+): void {
   if (rejectNonNumeric('markBridgeLimitedNoticeShown', appId)) return
 
-  const existing = getOrCreateEntryForWrite(appId)
+  const existing = getOrCreateEntryForWrite(deps, appId)
   if (existing.bridge?.limitedNoticeShown === true) return
 
-  steamMetadataStore.set(appId, {
+  deps.stores.steam.steamMetadataStore.set(appId, {
     ...existing,
     bridge: {
       ...existing.bridge,
@@ -365,13 +382,14 @@ export function markBridgeLimitedNoticeShown(appId: string): void {
  * 480 identity-only for this game.
  */
 export function setBridgeIdentityFallback(
+  deps: SteamStoresDeps,
   appId: string,
   identityFallback: boolean
 ): void {
   if (rejectNonNumeric('setBridgeIdentityFallback', appId)) return
 
-  const existing = getOrCreateEntryForWrite(appId)
-  steamMetadataStore.set(appId, {
+  const existing = getOrCreateEntryForWrite(deps, appId)
+  deps.stores.steam.steamMetadataStore.set(appId, {
     ...existing,
     bridge: {
       ...existing.bridge,
@@ -387,6 +405,7 @@ export function setBridgeIdentityFallback(
  * the path is rebuilt through sanitizeInstalldir on read.
  */
 export function setBridgeLaunchTarget(
+  deps: SteamStoresDeps,
   appId: string,
   target: { executable: string; installdir: string; workingdir?: string }
 ): void {
@@ -406,7 +425,7 @@ export function setBridgeLaunchTarget(
     return
   }
 
-  const existing = getOrCreateEntryForWrite(appId)
+  const existing = getOrCreateEntryForWrite(deps, appId)
   const current = existing.bridge?.launchTarget
   if (
     current?.executable === target.executable &&
@@ -415,7 +434,7 @@ export function setBridgeLaunchTarget(
   ) {
     return
   }
-  steamMetadataStore.set(appId, {
+  deps.stores.steam.steamMetadataStore.set(appId, {
     ...existing,
     bridge: {
       ...existing.bridge,

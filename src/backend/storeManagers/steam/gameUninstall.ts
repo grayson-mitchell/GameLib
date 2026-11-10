@@ -225,7 +225,7 @@ async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
     return { stdout: '', stderr: '' }
   }
 
-  const exePath = await resolveBridgeLaunchExe(steamGame.appId)
+  const exePath = await resolveBridgeLaunchExe(steamGame.deps, steamGame.appId)
   if (!exePath) {
     // 261017-bqw: this branch deliberately does NOT touch the manifest.
     // resolveBridgeLaunchExe returns undefined on no CM client, a PICS

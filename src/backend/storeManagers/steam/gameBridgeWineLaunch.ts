@@ -515,7 +515,7 @@ export async function fireBridgeWineLaunch(
     // CreateProcessW passes a NULL lpCurrentDirectory, so the game inherits
     // this cwd as its Windows current directory.
     const launchCwd =
-      resolveBridgeLaunchWorkingDir(steamGame.appId) ??
+      resolveBridgeLaunchWorkingDir(steamGame.deps, steamGame.appId) ??
       resolveBridgeGameInstallRoot(
         steamGame,
         exePath,

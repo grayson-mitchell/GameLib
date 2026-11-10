@@ -129,7 +129,7 @@ export function assembleBridgeRouteInput(
     knownBadReason: bridgeAllowlist.knownBadReason(steamGame.appId) ?? null,
     // quick 261027-gtd: curated known-fix drm "ceg" is a pre-download drm-wrapped signal.
     knownFixDrm: knownFixSaysCeg(steamGame.appId) ? 'ceg' : null,
-    verdict: readBridgeVerdict(steamGame.appId),
+    verdict: readBridgeVerdict(steamGame.deps, steamGame.appId),
     failedThisSession: bridgeFailedThisSession.has(steamGame.appId),
     win64ShimPresent: existsSync(builtBridgeShim64Path)
   }
@@ -166,10 +166,10 @@ export async function checkBridgeRoute(
  * metadata entry.
  */
 export function clearStaleBridgeVerdict(steamGame: SteamGame): void {
-  const verdict = readBridgeVerdict(steamGame.appId)
+  const verdict = readBridgeVerdict(steamGame.deps, steamGame.appId)
   const scan = verdict?.scan
   if (scan?.status === 'miss' && isScanVerdictNowCovered(scan)) {
-    clearBridgeScanVerdict(steamGame.appId)
+    clearBridgeScanVerdict(steamGame.deps, steamGame.appId)
     logInfo(
       `SteamGame: appId ${steamGame.appId} — bridge verdict auto-cleared (D-51-07), the current shim now covers: ${scan.missingSymbols.join(', ')}`,
       LogPrefix.Steam

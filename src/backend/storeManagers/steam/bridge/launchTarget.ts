@@ -36,6 +36,7 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from '../user'
 import { getAnonymousPicsClient, isPublicOnlyEntry } from '../anonymousClient'
 import { readBridgeVerdict, setBridgeLaunchTarget } from './bridgeVerdict'
+import type { SteamStoresDeps } from '../library/installRoot'
 import { sanitizeInstalldir } from '../installLocation'
 import { getBottleSteamappsDir } from '../bottle'
 import { getBridgeBottleSettings } from '../bridgeBottle'
@@ -167,6 +168,7 @@ async function readLaunch(
  * no CM connect, so the launch does not wait for DNS to fail.
  */
 export async function resolveBridgeLaunchExe(
+  deps: SteamStoresDeps,
   appId: string,
   opts?: { offline?: boolean }
 ): Promise<string | undefined> {
@@ -183,7 +185,7 @@ export async function resolveBridgeLaunchExe(
     let fromPics = false
 
     if (opts?.offline) {
-      const storedOffline = readBridgeVerdict(appId)?.launchTarget
+      const storedOffline = readBridgeVerdict(deps, appId)?.launchTarget
       if (storedOffline) {
         logInfo(
           `resolveBridgeLaunchExe: offline at launch for appId ${appId}, using the stored launch target without a CM logon`,
@@ -233,7 +235,7 @@ export async function resolveBridgeLaunchExe(
     }
 
     if (launch && fromPics && launch.installdir) {
-      setBridgeLaunchTarget(appId, {
+      setBridgeLaunchTarget(deps, appId, {
         executable: launch.executable,
         installdir: launch.installdir,
         ...(launch.workingdir ? { workingdir: launch.workingdir } : {})
@@ -241,7 +243,7 @@ export async function resolveBridgeLaunchExe(
     }
 
     if (!launch) {
-      const stored = readBridgeVerdict(appId)?.launchTarget
+      const stored = readBridgeVerdict(deps, appId)?.launchTarget
       if (stored) {
         logInfo(
           `resolveBridgeLaunchExe: PICS unavailable for appId ${appId}, using the stored launch target`,
@@ -327,11 +329,12 @@ export function containWorkingDir(
  * to the install root it can derive from the exe path.
  */
 export function resolveBridgeLaunchWorkingDir(
+  deps: SteamStoresDeps,
   appId: string
 ): string | undefined {
   if (!NUMERIC_APP_ID.test(appId)) return undefined
   try {
-    const stored = readBridgeVerdict(appId)?.launchTarget
+    const stored = readBridgeVerdict(deps, appId)?.launchTarget
     if (!stored) return undefined
     const bottleName = getBridgeBottleSettings(appId).wineCrossoverBottle
     const steamappsDir = getBottleSteamappsDir(bottleName)
@@ -366,11 +369,13 @@ export function resolveBridgeLaunchWorkingDir(
  * acquires a session itself and never throws. Returns the recorded count.
  */
 export async function backfillBridgeLaunchTargets(
+  deps: SteamStoresDeps,
   client: PicsReader,
   appIds: string[]
 ): Promise<number> {
   const missing = appIds.filter(
-    (id) => NUMERIC_APP_ID.test(id) && !readBridgeVerdict(id)?.launchTarget
+    (id) =>
+      NUMERIC_APP_ID.test(id) && !readBridgeVerdict(deps, id)?.launchTarget
   )
   if (missing.length === 0) return 0
 
@@ -385,7 +390,7 @@ export async function backfillBridgeLaunchTargets(
       const entry = apps?.[Number(id)] as { appinfo?: unknown } | undefined
       const launch = pickWindowsLaunch(entry?.appinfo)
       if (launch?.installdir) {
-        setBridgeLaunchTarget(id, {
+        setBridgeLaunchTarget(deps, id, {
           executable: launch.executable,
           installdir: launch.installdir,
           ...(launch.workingdir ? { workingdir: launch.workingdir } : {})

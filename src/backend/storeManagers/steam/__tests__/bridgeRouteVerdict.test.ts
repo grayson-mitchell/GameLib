@@ -9,16 +9,30 @@ import {
  */
 import { existsSync } from 'graceful-fs'
 import { getBridgeRouteVerdict } from '../bridgeRouteVerdict'
-import { steamMetadataStore } from '../stores'
 import { library, pendingFetches } from '../state'
 import { isBridgeBottleReady } from '../bridgeBottle'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import type { GameInfo } from 'common/types'
 
-import * as steamStoresModule from '../stores'
-
+const steamMetadataStore = {
+  get: jest.fn(),
+  set: jest.fn(),
+  entries: jest.fn().mockReturnValue([])
+}
 const steamTestDeps = createTestManagerDeps({
-  stores: createTestStores({ steam: steamStoresModule })
+  stores: createTestStores({
+    steam: {
+      configStore: {
+        get: jest.fn(),
+        get_nodefault: jest.fn(),
+        set: jest.fn(),
+        clear: jest.fn()
+      },
+      steamLibraryStore: { get: jest.fn(), set: jest.fn() },
+      steamMetadataStore,
+      steamSyncStore: { get: jest.fn(), set: jest.fn() }
+    } as never
+  })
 })
 
 jest.mock('backend/logger', () => ({
@@ -34,21 +48,6 @@ jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
   shortcutFiles: jest.fn()
 }))
 jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
-jest.mock('../stores', () => ({
-  configStore: {
-    get: jest.fn(),
-    get_nodefault: jest.fn(),
-    set: jest.fn(),
-    clear: jest.fn()
-  },
-  steamLibraryStore: { get: jest.fn(), set: jest.fn() },
-  steamMetadataStore: {
-    get: jest.fn(),
-    set: jest.fn(),
-    entries: jest.fn().mockReturnValue([])
-  },
-  steamSyncStore: { get: jest.fn(), set: jest.fn() }
-}))
 jest.mock('backend/platform', () => ({
   shell: { openExternal: jest.fn() },
   app: {
@@ -136,8 +135,6 @@ jest.mock('../bridge/allowlist', () => ({
   bridgeAllowlist: { has: jest.fn(), knownBadReason: jest.fn() }
 }))
 
-jest.mock('backend/launcher', () => ({ runWineCommand: jest.fn() }))
-
 const APP_ID = '570'
 
 function makeEntry(overrides: Partial<GameInfo> = {}): GameInfo {
@@ -168,7 +165,7 @@ describe('getBridgeRouteVerdict() — D-51-09 installedIn (LOCATION, not eligibi
     envMock.isMac = true
     envMock.isWindows = false
     envMock.isLinux = false
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+    steamMetadataStore.get.mockReturnValue({
       platformsCaptured: true,
       is_mac_native: false
     })

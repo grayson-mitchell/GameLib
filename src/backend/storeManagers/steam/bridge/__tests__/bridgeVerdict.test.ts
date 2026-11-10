@@ -2,9 +2,8 @@
  * Unit tests for the persisted bridge verdict field family (Phase 51 Plan
  * 03, D-51-07/D-51-10).
  *
- * `steamMetadataStore` is faked with a real, stateful in-memory Map defined
- * INSIDE the jest.mock factory (not a bare per-call jest.fn() mockReturnValue,
- * platformCapture.test.ts's precedent) -- the behavior under test IS a
+ * `steamMetadataStore` is a real, stateful in-memory Map passed through the
+ * deps slice (not a bare per-call jest.fn() mockReturnValue) -- the behavior under test IS a
  * read-modify-write round trip (writeBridgeScanVerdict then
  * readBridgeVerdict; two sequential writes preserving each other's
  * sibling fields), which a stateless mock cannot model.
@@ -16,21 +15,8 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
-jest.mock('../../stores', () => {
-  const backing = new Map<string, unknown>()
-  return {
-    steamMetadataStore: {
-      get: (appId: string) => backing.get(appId),
-      set: (appId: string, value: unknown) => {
-        backing.set(appId, value)
-      },
-      __resetForTests: () => backing.clear()
-    }
-  }
-})
-
 import { logInfo, logWarning } from 'backend/logger'
-import { steamMetadataStore } from '../../stores'
+import type { SteamStoresDeps } from '../../library/installRoot'
 import type { SteamBridgeScanVerdict } from '../../stores'
 import {
   readBridgeVerdict,
@@ -47,11 +33,18 @@ import {
   readBridgeModeVerdict
 } from '../bridgeVerdict'
 
-const mockedStore = steamMetadataStore as unknown as {
-  get: (appId: string) => Record<string, unknown> | undefined
-  set: (appId: string, value: unknown) => void
-  __resetForTests: () => void
+const backing = new Map<string, unknown>()
+const mockedStore = {
+  get: (appId: string) =>
+    backing.get(appId) as Record<string, unknown> | undefined,
+  set: (appId: string, value: unknown) => {
+    backing.set(appId, value)
+  },
+  __resetForTests: () => backing.clear()
 }
+const DEPS = {
+  stores: { steam: { steamMetadataStore: mockedStore } }
+} as unknown as SteamStoresDeps
 const mockedLogWarning = logWarning as jest.Mock
 const mockedLogInfo = logInfo as jest.Mock
 
@@ -87,7 +80,7 @@ describe('writeBridgeScanVerdict', () => {
       forcedWindowsViaBottle: true
     })
 
-    writeBridgeScanVerdict(APP_ID, makeScanVerdict())
+    writeBridgeScanVerdict(DEPS, APP_ID, makeScanVerdict())
 
     const stored = mockedStore.get(APP_ID) as Record<string, unknown>
     expect(stored.art_cover).toBe('cover.jpg')
@@ -97,22 +90,23 @@ describe('writeBridgeScanVerdict', () => {
   })
 
   it('a second write replaces bridge.scan but keeps bridge.userRoute', () => {
-    writeBridgeScanVerdict(APP_ID, makeScanVerdict())
-    setBridgeUserRoute(APP_ID, 'bottle')
+    writeBridgeScanVerdict(DEPS, APP_ID, makeScanVerdict())
+    setBridgeUserRoute(DEPS, APP_ID, 'bottle')
 
     writeBridgeScanVerdict(
+      DEPS,
       APP_ID,
       makeScanVerdict({ status: 'clean', missingSymbols: [] })
     )
 
-    const verdict = readBridgeVerdict(APP_ID)
+    const verdict = readBridgeVerdict(DEPS, APP_ID)
     expect(verdict?.scan?.status).toBe('clean')
     expect(verdict?.scan?.missingSymbols).toEqual([])
     expect(verdict?.userRoute).toBe('bottle')
   })
 
   it('rejects a non-numeric appId without touching the store', () => {
-    writeBridgeScanVerdict(NON_NUMERIC_APP_ID, makeScanVerdict())
+    writeBridgeScanVerdict(DEPS, NON_NUMERIC_APP_ID, makeScanVerdict())
 
     expect(mockedStore.get(NON_NUMERIC_APP_ID)).toBeUndefined()
     expect(mockedLogWarning).toHaveBeenCalled()
@@ -121,22 +115,22 @@ describe('writeBridgeScanVerdict', () => {
 
 describe('setBridgeUserRoute', () => {
   it('persists the user override; readBridgeVerdict reflects it', () => {
-    setBridgeUserRoute(APP_ID, 'bottle')
+    setBridgeUserRoute(DEPS, APP_ID, 'bottle')
 
-    expect(readBridgeVerdict(APP_ID)?.userRoute).toBe('bottle')
+    expect(readBridgeVerdict(DEPS, APP_ID)?.userRoute).toBe('bottle')
   })
 
   it('removes the key entirely when passed undefined', () => {
-    setBridgeUserRoute(APP_ID, 'bottle')
-    setBridgeUserRoute(APP_ID, undefined)
+    setBridgeUserRoute(DEPS, APP_ID, 'bottle')
+    setBridgeUserRoute(DEPS, APP_ID, undefined)
 
-    const verdict = readBridgeVerdict(APP_ID)
+    const verdict = readBridgeVerdict(DEPS, APP_ID)
     expect(verdict?.userRoute).toBeUndefined()
     expect(verdict ? 'userRoute' in verdict : false).toBe(false)
   })
 
   it('rejects a non-numeric appId without touching the store', () => {
-    setBridgeUserRoute(NON_NUMERIC_APP_ID, 'bridge')
+    setBridgeUserRoute(DEPS, NON_NUMERIC_APP_ID, 'bridge')
 
     expect(mockedStore.get(NON_NUMERIC_APP_ID)).toBeUndefined()
   })
@@ -144,7 +138,7 @@ describe('setBridgeUserRoute', () => {
 
 describe('writers on an appId with no prior entry', () => {
   it('create a minimal entry (library.ts:884 precedent) and log once', () => {
-    setBridgeIdentityFallback(APP_ID, true)
+    setBridgeIdentityFallback(DEPS, APP_ID, true)
 
     const stored = mockedStore.get(APP_ID) as Record<string, unknown>
     expect(stored.art_cover).toBe('')
@@ -171,17 +165,17 @@ describe('readBridgeVerdict: fail-safe on a malformed stored value', () => {
       }
     })
 
-    expect(readBridgeVerdict(APP_ID)).toBeUndefined()
+    expect(readBridgeVerdict(DEPS, APP_ID)).toBeUndefined()
     expect(mockedLogWarning).toHaveBeenCalled()
   })
 
   it('returns undefined for a non-numeric appId, never throws', () => {
-    expect(() => readBridgeVerdict(NON_NUMERIC_APP_ID)).not.toThrow()
-    expect(readBridgeVerdict(NON_NUMERIC_APP_ID)).toBeUndefined()
+    expect(() => readBridgeVerdict(DEPS, NON_NUMERIC_APP_ID)).not.toThrow()
+    expect(readBridgeVerdict(DEPS, NON_NUMERIC_APP_ID)).toBeUndefined()
   })
 
   it('returns undefined when no entry exists at all', () => {
-    expect(readBridgeVerdict('999999999')).toBeUndefined()
+    expect(readBridgeVerdict(DEPS, '999999999')).toBeUndefined()
   })
 
   it('returns undefined when an entry exists but has no bridge field', () => {
@@ -191,7 +185,7 @@ describe('readBridgeVerdict: fail-safe on a malformed stored value', () => {
       extra: { reqs: [] }
     })
 
-    expect(readBridgeVerdict(APP_ID)).toBeUndefined()
+    expect(readBridgeVerdict(DEPS, APP_ID)).toBeUndefined()
   })
 })
 
@@ -201,7 +195,7 @@ describe('readBridgeVerdict: a scan stamped with a pre-D-20 export-set version',
     const stale = makeScanVerdict({ shimExportSetVersion: '0e9480d1f340' })
     mockedStore.set(APP_ID, { bridge: { scan: stale } })
 
-    const read = readBridgeVerdict(APP_ID)
+    const read = readBridgeVerdict(DEPS, APP_ID)
 
     expect(read?.scan).toEqual(stale)
     expect(mockedLogWarning).not.toHaveBeenCalled()
@@ -210,34 +204,38 @@ describe('readBridgeVerdict: a scan stamped with a pre-D-20 export-set version',
 
 describe('clearBridgeScanVerdict', () => {
   it('removes scan but keeps the rest of the bridge verdict', () => {
-    writeBridgeScanVerdict(APP_ID, makeScanVerdict())
-    setBridgeUserRoute(APP_ID, 'bridge')
+    writeBridgeScanVerdict(DEPS, APP_ID, makeScanVerdict())
+    setBridgeUserRoute(DEPS, APP_ID, 'bridge')
 
-    clearBridgeScanVerdict(APP_ID)
+    clearBridgeScanVerdict(DEPS, APP_ID)
 
-    const verdict = readBridgeVerdict(APP_ID)
+    const verdict = readBridgeVerdict(DEPS, APP_ID)
     expect(verdict?.scan).toBeUndefined()
     expect(verdict?.userRoute).toBe('bridge')
   })
 
   it('51-REVIEW WR-01: retains the cleared scan interfaceVersions pool at the top level, and it survives a read', () => {
-    writeBridgeScanVerdict(APP_ID, makeScanVerdict())
+    writeBridgeScanVerdict(DEPS, APP_ID, makeScanVerdict())
 
-    clearBridgeScanVerdict(APP_ID)
+    clearBridgeScanVerdict(DEPS, APP_ID)
 
-    const verdict = readBridgeVerdict(APP_ID)
+    const verdict = readBridgeVerdict(DEPS, APP_ID)
     expect(verdict?.scan).toBeUndefined()
     expect(verdict?.interfaceVersions).toEqual({ SteamUtils: 'SteamUtils005' })
   })
 
   it('51-REVIEW WR-01: an empty cleared pool does not overwrite a previously retained one', () => {
-    writeBridgeScanVerdict(APP_ID, makeScanVerdict())
-    clearBridgeScanVerdict(APP_ID)
-    writeBridgeScanVerdict(APP_ID, makeScanVerdict({ interfaceVersions: {} }))
+    writeBridgeScanVerdict(DEPS, APP_ID, makeScanVerdict())
+    clearBridgeScanVerdict(DEPS, APP_ID)
+    writeBridgeScanVerdict(
+      DEPS,
+      APP_ID,
+      makeScanVerdict({ interfaceVersions: {} })
+    )
 
-    clearBridgeScanVerdict(APP_ID)
+    clearBridgeScanVerdict(DEPS, APP_ID)
 
-    expect(readBridgeVerdict(APP_ID)?.interfaceVersions).toEqual({
+    expect(readBridgeVerdict(DEPS, APP_ID)?.interfaceVersions).toEqual({
       SteamUtils: 'SteamUtils005'
     })
   })
@@ -245,13 +243,14 @@ describe('clearBridgeScanVerdict', () => {
   it('quick 261026-u1a: retains the cleared scan originalFingerprints (and interfaceVersions) at the top level', () => {
     const fps = { 'drive_c/game/steam_api64.dll': { size: 1, sha1: 'aa' } }
     writeBridgeScanVerdict(
+      DEPS,
       APP_ID,
       makeScanVerdict({ originalFingerprints: fps })
     )
 
-    clearBridgeScanVerdict(APP_ID)
+    clearBridgeScanVerdict(DEPS, APP_ID)
 
-    const verdict = readBridgeVerdict(APP_ID)
+    const verdict = readBridgeVerdict(DEPS, APP_ID)
     expect(verdict?.scan).toBeUndefined()
     expect(verdict?.originalFingerprints).toEqual(fps)
     expect(verdict?.interfaceVersions).toEqual({ SteamUtils: 'SteamUtils005' })
@@ -260,134 +259,143 @@ describe('clearBridgeScanVerdict', () => {
   it('quick 261026-u1a: scan.originalFingerprints survives a read (not stripped by the schema)', () => {
     const fps = { 'drive_c/game/steam_api64.dll': { size: 1, sha1: 'aa' } }
     writeBridgeScanVerdict(
+      DEPS,
       APP_ID,
       makeScanVerdict({ originalFingerprints: fps })
     )
 
-    expect(readBridgeVerdict(APP_ID)?.scan?.originalFingerprints).toEqual(fps)
+    expect(readBridgeVerdict(DEPS, APP_ID)?.scan?.originalFingerprints).toEqual(
+      fps
+    )
   })
 
   it('quick 261026-u1a: an absent or empty cleared fingerprint map does not overwrite a retained one', () => {
     const fps = { 'drive_c/game/steam_api64.dll': { size: 1, sha1: 'aa' } }
     writeBridgeScanVerdict(
+      DEPS,
       APP_ID,
       makeScanVerdict({ originalFingerprints: fps })
     )
-    clearBridgeScanVerdict(APP_ID)
-    writeBridgeScanVerdict(APP_ID, makeScanVerdict())
-    clearBridgeScanVerdict(APP_ID)
+    clearBridgeScanVerdict(DEPS, APP_ID)
+    writeBridgeScanVerdict(DEPS, APP_ID, makeScanVerdict())
+    clearBridgeScanVerdict(DEPS, APP_ID)
     writeBridgeScanVerdict(
+      DEPS,
       APP_ID,
       makeScanVerdict({ originalFingerprints: {} })
     )
 
-    clearBridgeScanVerdict(APP_ID)
+    clearBridgeScanVerdict(DEPS, APP_ID)
 
-    expect(readBridgeVerdict(APP_ID)?.originalFingerprints).toEqual(fps)
+    expect(readBridgeVerdict(DEPS, APP_ID)?.originalFingerprints).toEqual(fps)
   })
 
   it('quick 261026-u1a: clearing a scan with no fingerprints fabricates no originalFingerprints key', () => {
-    writeBridgeScanVerdict(APP_ID, makeScanVerdict())
+    writeBridgeScanVerdict(DEPS, APP_ID, makeScanVerdict())
 
-    clearBridgeScanVerdict(APP_ID)
+    clearBridgeScanVerdict(DEPS, APP_ID)
 
-    expect(readBridgeVerdict(APP_ID)).not.toHaveProperty('originalFingerprints')
+    expect(readBridgeVerdict(DEPS, APP_ID)).not.toHaveProperty(
+      'originalFingerprints'
+    )
   })
 
   it('is a no-op when no entry exists at all', () => {
-    clearBridgeScanVerdict(APP_ID)
+    clearBridgeScanVerdict(DEPS, APP_ID)
 
     expect(mockedStore.get(APP_ID)).toBeUndefined()
   })
 
   it('is a no-op when an entry exists but has no scan to clear', () => {
-    setBridgeUserRoute(APP_ID, 'bottle')
+    setBridgeUserRoute(DEPS, APP_ID, 'bottle')
 
-    clearBridgeScanVerdict(APP_ID)
+    clearBridgeScanVerdict(DEPS, APP_ID)
 
-    expect(readBridgeVerdict(APP_ID)?.userRoute).toBe('bottle')
+    expect(readBridgeVerdict(DEPS, APP_ID)?.userRoute).toBe('bottle')
   })
 })
 
 describe('setBridgeSteamApiPrescreen', () => {
   it('persists the pre-install prescreen signal', () => {
-    setBridgeSteamApiPrescreen(APP_ID, 'x64')
+    setBridgeSteamApiPrescreen(DEPS, APP_ID, 'x64')
 
-    expect(readBridgeVerdict(APP_ID)?.steamApi).toBe('x64')
+    expect(readBridgeVerdict(DEPS, APP_ID)?.steamApi).toBe('x64')
   })
 })
 
 describe('setBridgeNoticeAcknowledged', () => {
   it('persists the acknowledged reason', () => {
-    setBridgeNoticeAcknowledged(APP_ID, 'known-bad')
+    setBridgeNoticeAcknowledged(DEPS, APP_ID, 'known-bad')
 
-    expect(readBridgeVerdict(APP_ID)?.noticeAcknowledgedFor).toBe('known-bad')
+    expect(readBridgeVerdict(DEPS, APP_ID)?.noticeAcknowledgedFor).toBe(
+      'known-bad'
+    )
   })
 })
 
 describe('markBridgeLimitedNoticeShown', () => {
   it('sets limitedNoticeShown true', () => {
-    markBridgeLimitedNoticeShown(APP_ID)
+    markBridgeLimitedNoticeShown(DEPS, APP_ID)
 
-    expect(readBridgeVerdict(APP_ID)?.limitedNoticeShown).toBe(true)
+    expect(readBridgeVerdict(DEPS, APP_ID)?.limitedNoticeShown).toBe(true)
   })
 
   it('is idempotent -- a second call does not needlessly rewrite the store', () => {
-    markBridgeLimitedNoticeShown(APP_ID)
+    markBridgeLimitedNoticeShown(DEPS, APP_ID)
     mockedLogInfo.mockClear()
 
-    markBridgeLimitedNoticeShown(APP_ID)
+    markBridgeLimitedNoticeShown(DEPS, APP_ID)
 
     expect(mockedLogInfo).not.toHaveBeenCalled()
-    expect(readBridgeVerdict(APP_ID)?.limitedNoticeShown).toBe(true)
+    expect(readBridgeVerdict(DEPS, APP_ID)?.limitedNoticeShown).toBe(true)
   })
 })
 
 describe('setBridgeIdentityFallback', () => {
   it('persists the identity-fallback flag', () => {
-    setBridgeIdentityFallback(APP_ID, true)
+    setBridgeIdentityFallback(DEPS, APP_ID, true)
 
-    expect(readBridgeVerdict(APP_ID)?.identityFallback).toBe(true)
+    expect(readBridgeVerdict(DEPS, APP_ID)?.identityFallback).toBe(true)
   })
 })
 
 describe('setBridgeLaunchTarget', () => {
   it('round-trips the launch target through readBridgeVerdict', () => {
-    setBridgeLaunchTarget(APP_ID, {
+    setBridgeLaunchTarget(DEPS, APP_ID, {
       executable: 'Binaries\\Win32\\Game.exe',
       installdir: 'Game'
     })
 
-    expect(readBridgeVerdict(APP_ID)?.launchTarget).toEqual({
+    expect(readBridgeVerdict(DEPS, APP_ID)?.launchTarget).toEqual({
       executable: 'Binaries\\Win32\\Game.exe',
       installdir: 'Game'
     })
   })
 
   it('round-trips an optional workingdir and still reads a target stored without one', () => {
-    setBridgeLaunchTarget(APP_ID, {
+    setBridgeLaunchTarget(DEPS, APP_ID, {
       executable: 'x64\\Grim Dawn.exe',
       installdir: 'Grim Dawn',
       workingdir: 'x64'
     })
-    expect(readBridgeVerdict(APP_ID)?.launchTarget).toEqual({
+    expect(readBridgeVerdict(DEPS, APP_ID)?.launchTarget).toEqual({
       executable: 'x64\\Grim Dawn.exe',
       installdir: 'Grim Dawn',
       workingdir: 'x64'
     })
 
-    setBridgeLaunchTarget(APP_ID, {
+    setBridgeLaunchTarget(DEPS, APP_ID, {
       executable: 'x64\\Grim Dawn.exe',
       installdir: 'Grim Dawn'
     })
-    expect(readBridgeVerdict(APP_ID)?.launchTarget).toEqual({
+    expect(readBridgeVerdict(DEPS, APP_ID)?.launchTarget).toEqual({
       executable: 'x64\\Grim Dawn.exe',
       installdir: 'Grim Dawn'
     })
   })
 
   it('rejects a non-numeric appId without touching the store', () => {
-    setBridgeLaunchTarget(NON_NUMERIC_APP_ID, {
+    setBridgeLaunchTarget(DEPS, NON_NUMERIC_APP_ID, {
       executable: 'a.exe',
       installdir: 'a'
     })
@@ -404,9 +412,9 @@ describe('setBridgeLaunchTarget', () => {
       { executable: 'a.exe', installdir: 'x'.repeat(513) }
     ]
   ])('rejects %s', (_label, target) => {
-    setBridgeLaunchTarget(APP_ID, target)
+    setBridgeLaunchTarget(DEPS, APP_ID, target)
 
-    expect(readBridgeVerdict(APP_ID)?.launchTarget).toBeUndefined()
+    expect(readBridgeVerdict(DEPS, APP_ID)?.launchTarget).toBeUndefined()
   })
 })
 
@@ -414,35 +422,35 @@ describe('every writer rejects a non-numeric appId without touching the store', 
   it.each([
     [
       'writeBridgeScanVerdict',
-      () => writeBridgeScanVerdict(NON_NUMERIC_APP_ID, makeScanVerdict())
+      () => writeBridgeScanVerdict(DEPS, NON_NUMERIC_APP_ID, makeScanVerdict())
     ],
     [
       'clearBridgeScanVerdict',
-      () => clearBridgeScanVerdict(NON_NUMERIC_APP_ID)
+      () => clearBridgeScanVerdict(DEPS, NON_NUMERIC_APP_ID)
     ],
     [
       'setBridgeSteamApiPrescreen',
-      () => setBridgeSteamApiPrescreen(NON_NUMERIC_APP_ID, 'x86')
+      () => setBridgeSteamApiPrescreen(DEPS, NON_NUMERIC_APP_ID, 'x86')
     ],
     [
       'setBridgeUserRoute',
-      () => setBridgeUserRoute(NON_NUMERIC_APP_ID, 'bottle')
+      () => setBridgeUserRoute(DEPS, NON_NUMERIC_APP_ID, 'bottle')
     ],
     [
       'setBridgeNoticeAcknowledged',
-      () => setBridgeNoticeAcknowledged(NON_NUMERIC_APP_ID, 'known-bad')
+      () => setBridgeNoticeAcknowledged(DEPS, NON_NUMERIC_APP_ID, 'known-bad')
     ],
     [
       'markBridgeLimitedNoticeShown',
-      () => markBridgeLimitedNoticeShown(NON_NUMERIC_APP_ID)
+      () => markBridgeLimitedNoticeShown(DEPS, NON_NUMERIC_APP_ID)
     ],
     [
       'setBridgeIdentityFallback',
-      () => setBridgeIdentityFallback(NON_NUMERIC_APP_ID, true)
+      () => setBridgeIdentityFallback(DEPS, NON_NUMERIC_APP_ID, true)
     ],
     [
       'writeBridgeDrmVerdict',
-      () => writeBridgeDrmVerdict(NON_NUMERIC_APP_ID, 'ceg')
+      () => writeBridgeDrmVerdict(DEPS, NON_NUMERIC_APP_ID, 'ceg')
     ]
   ])('%s', (_name, fn) => {
     fn()
@@ -465,11 +473,11 @@ describe('writeBridgeDrmVerdict (quick 261024-br4)', () => {
       }
     })
 
-    writeBridgeDrmVerdict(APP_ID, 'ceg')
+    writeBridgeDrmVerdict(DEPS, APP_ID, 'ceg')
 
     const stored = mockedStore.get(APP_ID) as Record<string, unknown>
     expect(stored.art_cover).toBe('cover.jpg')
-    expect(readBridgeVerdict(APP_ID)).toEqual({
+    expect(readBridgeVerdict(DEPS, APP_ID)).toEqual({
       scan: makeScanVerdict(),
       userRoute: 'bottle',
       noticeAcknowledgedFor: 'known-bad',
@@ -479,20 +487,20 @@ describe('writeBridgeDrmVerdict (quick 261024-br4)', () => {
   })
 
   it('removes the key entirely when passed undefined', () => {
-    writeBridgeDrmVerdict(APP_ID, 'ceg')
-    setBridgeUserRoute(APP_ID, 'bridge')
+    writeBridgeDrmVerdict(DEPS, APP_ID, 'ceg')
+    setBridgeUserRoute(DEPS, APP_ID, 'bridge')
 
-    writeBridgeDrmVerdict(APP_ID, undefined)
+    writeBridgeDrmVerdict(DEPS, APP_ID, undefined)
 
     const stored = mockedStore.get(APP_ID) as {
       bridge: Record<string, unknown>
     }
     expect('drm' in stored.bridge).toBe(false)
-    expect(readBridgeVerdict(APP_ID)).toEqual({ userRoute: 'bridge' })
+    expect(readBridgeVerdict(DEPS, APP_ID)).toEqual({ userRoute: 'bridge' })
   })
 
   it('undefined is a no-op (no fabricated entry) when nothing is stored', () => {
-    writeBridgeDrmVerdict(APP_ID, undefined)
+    writeBridgeDrmVerdict(DEPS, APP_ID, undefined)
 
     expect(mockedStore.get(APP_ID)).toBeUndefined()
     expect(mockedLogInfo).not.toHaveBeenCalled()
@@ -506,28 +514,28 @@ describe('writeBridgeDrmVerdict (quick 261024-br4)', () => {
       bridge: { userRoute: 'bridge', drm: 'denuvo' }
     })
 
-    expect(readBridgeVerdict(APP_ID)).toBeUndefined()
+    expect(readBridgeVerdict(DEPS, APP_ID)).toBeUndefined()
     expect(mockedLogWarning).toHaveBeenCalled()
   })
 })
 
 describe('bridge mode verdict (59-15 WR-04)', () => {
   it('round-trips and survives strip-on-read', () => {
-    writeBridgeModeVerdict(APP_ID, 'steamclient-layer')
-    expect(readBridgeModeVerdict(APP_ID)).toBe('steamclient-layer')
-    expect(readBridgeVerdict(APP_ID)?.mode).toBe('steamclient-layer')
+    writeBridgeModeVerdict(DEPS, APP_ID, 'steamclient-layer')
+    expect(readBridgeModeVerdict(DEPS, APP_ID)).toBe('steamclient-layer')
+    expect(readBridgeVerdict(DEPS, APP_ID)?.mode).toBe('steamclient-layer')
   })
   it('leaves drm, steamApi and launchTarget unchanged', () => {
-    writeBridgeDrmVerdict(APP_ID, 'ceg')
-    setBridgeSteamApiPrescreen(APP_ID, 'x64')
+    writeBridgeDrmVerdict(DEPS, APP_ID, 'ceg')
+    setBridgeSteamApiPrescreen(DEPS, APP_ID, 'x64')
     const target = { executable: 'a.exe', installdir: 'A' }
-    setBridgeLaunchTarget(APP_ID, target)
-    const before = readBridgeVerdict(APP_ID)
-    writeBridgeModeVerdict(APP_ID, 'tcp')
-    expect(readBridgeVerdict(APP_ID)).toEqual({ ...before, mode: 'tcp' })
+    setBridgeLaunchTarget(DEPS, APP_ID, target)
+    const before = readBridgeVerdict(DEPS, APP_ID)
+    writeBridgeModeVerdict(DEPS, APP_ID, 'tcp')
+    expect(readBridgeVerdict(DEPS, APP_ID)).toEqual({ ...before, mode: 'tcp' })
   })
   it('rejects a non-numeric appId', () => {
-    writeBridgeModeVerdict(NON_NUMERIC_APP_ID, 'tcp')
+    writeBridgeModeVerdict(DEPS, NON_NUMERIC_APP_ID, 'tcp')
     expect(mockedStore.get(NON_NUMERIC_APP_ID)).toBeUndefined()
   })
   it('an invalid stored value reads as undefined', () => {
@@ -537,18 +545,22 @@ describe('bridge mode verdict (59-15 WR-04)', () => {
       extra: { reqs: [] },
       bridge: { mode: 'bogus' }
     })
-    expect(readBridgeModeVerdict(APP_ID)).toBeUndefined()
+    expect(readBridgeModeVerdict(DEPS, APP_ID)).toBeUndefined()
   })
 })
 
 describe('scan.drmWrapper round trip (Phase 52 Pitfall 2)', () => {
   it('reads back drmWrapper steamstub intact', () => {
-    writeBridgeScanVerdict(APP_ID, makeScanVerdict({ drmWrapper: 'steamstub' }))
-    expect(readBridgeVerdict(APP_ID)?.scan?.drmWrapper).toBe('steamstub')
+    writeBridgeScanVerdict(
+      DEPS,
+      APP_ID,
+      makeScanVerdict({ drmWrapper: 'steamstub' })
+    )
+    expect(readBridgeVerdict(DEPS, APP_ID)?.scan?.drmWrapper).toBe('steamstub')
   })
   it('leaves the key absent when not set', () => {
-    writeBridgeScanVerdict(APP_ID, makeScanVerdict())
-    const scan = readBridgeVerdict(APP_ID)?.scan
+    writeBridgeScanVerdict(DEPS, APP_ID, makeScanVerdict())
+    const scan = readBridgeVerdict(DEPS, APP_ID)?.scan
     expect(scan).toBeDefined()
     expect('drmWrapper' in (scan as object)).toBe(false)
   })
@@ -556,7 +568,7 @@ describe('scan.drmWrapper round trip (Phase 52 Pitfall 2)', () => {
     mockedStore.set(APP_ID, {
       bridge: { scan: { ...makeScanVerdict(), drmWrapper: 'ceg' } }
     })
-    expect(readBridgeVerdict(APP_ID)).toBeUndefined()
+    expect(readBridgeVerdict(DEPS, APP_ID)).toBeUndefined()
     expect(mockedLogWarning).toHaveBeenCalled()
   })
 })
@@ -568,8 +580,10 @@ describe('scan.managedScan round trip (Phase 53 D-53-04)', () => {
       assemblies: 3,
       unservedFamilyImports: 7
     }
-    writeBridgeScanVerdict(APP_ID, makeScanVerdict({ managedScan }))
-    expect(readBridgeVerdict(APP_ID)?.scan?.managedScan).toEqual(managedScan)
+    writeBridgeScanVerdict(DEPS, APP_ID, makeScanVerdict({ managedScan }))
+    expect(readBridgeVerdict(DEPS, APP_ID)?.scan?.managedScan).toEqual(
+      managedScan
+    )
   })
 
   it('reads back an il2cpp managedScan intact', () => {
@@ -577,8 +591,10 @@ describe('scan.managedScan round trip (Phase 53 D-53-04)', () => {
       kind: 'il2cpp' as const,
       reason: 'il2cpp: not scanned' as const
     }
-    writeBridgeScanVerdict(APP_ID, makeScanVerdict({ managedScan }))
-    expect(readBridgeVerdict(APP_ID)?.scan?.managedScan).toEqual(managedScan)
+    writeBridgeScanVerdict(DEPS, APP_ID, makeScanVerdict({ managedScan }))
+    expect(readBridgeVerdict(DEPS, APP_ID)?.scan?.managedScan).toEqual(
+      managedScan
+    )
   })
 
   it('rejects an unknown il2cpp reason (whole verdict undefined)', () => {
@@ -590,6 +606,6 @@ describe('scan.managedScan round trip (Phase 53 D-53-04)', () => {
         }
       }
     })
-    expect(readBridgeVerdict(APP_ID)).toBeUndefined()
+    expect(readBridgeVerdict(DEPS, APP_ID)).toBeUndefined()
   })
 })

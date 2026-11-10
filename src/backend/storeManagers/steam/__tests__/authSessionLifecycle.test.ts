@@ -36,7 +36,6 @@ const mockConfigStore = {
   delete: jest.fn(),
   clear: jest.fn()
 }
-jest.mock('../stores', () => ({ configStore: mockConfigStore }))
 
 const mockReadTokenOutcome = jest.fn()
 const mockTokenStore = {
@@ -142,6 +141,11 @@ jest.mock('../anonymousClient', () => ({
 }))
 
 import { SteamUser } from '../user'
+
+// SteamUser reads its config store through the bound slice (66.1-18).
+SteamUser.bindStores({
+  stores: { steam: { configStore: mockConfigStore } }
+} as never)
 import { logInfo, logWarning } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 import { at } from './fixtures/indexed'

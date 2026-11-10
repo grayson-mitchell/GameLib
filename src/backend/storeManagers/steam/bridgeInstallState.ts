@@ -32,7 +32,11 @@ export function persistBridgeDrmSignal(
   caller: 'installBridgeGame' | 'launchBridgeGame'
 ): string[] | null {
   if (drm === undefined) return null
-  writeBridgeDrmVerdict(steamGame.appId, drm ? 'ceg' : undefined)
+  writeBridgeDrmVerdict(
+    steamGame.deps,
+    steamGame.appId,
+    drm ? 'ceg' : undefined
+  )
   if (drm?.kind !== 'ceg') return null
   // Phase 57 detector 2: before the forced-bridge return so a forced title
   // still reports (Pitfall 6); covers installBridgeGame and launchBridgeGame;
@@ -44,7 +48,9 @@ export function persistBridgeDrmSignal(
     op: 'add',
     detector: 'ceg'
   })
-  if (readBridgeVerdict(steamGame.appId)?.userRoute === 'bridge') {
+  if (
+    readBridgeVerdict(steamGame.deps, steamGame.appId)?.userRoute === 'bridge'
+  ) {
     logWarning(
       `SteamGame: ${caller} found Steam CEG DRM for appId ${steamGame.appId} (${drm.markers.join(', ')}) but the user forced the bridge -- continuing`,
       LogPrefix.Steam
@@ -67,10 +73,10 @@ export function reconcileBridgePrescreen(
     verdict?: { arch: 'x86' | 'x64' }
   }
 ): void {
-  const current = readBridgeVerdict(steamGame.appId)?.steamApi
+  const current = readBridgeVerdict(steamGame.deps, steamGame.appId)?.steamApi
   if (shimResult.status === 'no-steam-api') {
     if (current === undefined || current === 'none' || current === 'unknown') {
-      setBridgeSteamApiPrescreen(steamGame.appId, 'none')
+      setBridgeSteamApiPrescreen(steamGame.deps, steamGame.appId, 'none')
     }
     return
   }
@@ -81,7 +87,11 @@ export function reconcileBridgePrescreen(
     shimResult.verdict &&
     current === 'none'
   ) {
-    setBridgeSteamApiPrescreen(steamGame.appId, shimResult.verdict.arch)
+    setBridgeSteamApiPrescreen(
+      steamGame.deps,
+      steamGame.appId,
+      shimResult.verdict.arch
+    )
   }
 }
 

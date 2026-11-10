@@ -287,7 +287,7 @@ export function maybeNotifyBridgeLimited(
   verdict: SteamBridgeVerdict | undefined,
   identityFallback: boolean
 ): void {
-  setBridgeIdentityFallback(steamGame.appId, identityFallback)
+  setBridgeIdentityFallback(steamGame.deps, steamGame.appId, identityFallback)
 
   const stubbedInterfaces = verdict?.scan?.stubbedInterfaces ?? []
   const isLimited = identityFallback || stubbedInterfaces.length > 0
@@ -329,7 +329,7 @@ export function maybeNotifyBridgeLimited(
     ),
     body: bodyParts.join(' ')
   })
-  markBridgeLimitedNoticeShown(steamGame.appId)
+  markBridgeLimitedNoticeShown(steamGame.deps, steamGame.appId)
 }
 
 /**
@@ -725,7 +725,7 @@ export async function selectLaunchEngine(
     { runner: STEAM_ENGINE_RUNNER, appName: steamGame.appId },
     decision,
     bottleName,
-    steamEngineStateDeps(steamGame.appId)
+    steamEngineStateDeps(steamGame.deps, steamGame.appId)
   )
 
   if (
@@ -827,6 +827,7 @@ export async function prefetchBridgeDrmDownloads(
   // 59-REVIEW WR-04 / 59-15: persist the mode this install resolves so a
   // fresh DRM-mode title is excluded from the override before first launch.
   writeBridgeModeVerdict(
+    steamGame.deps,
     steamGame.appId,
     resolveBridgeMode(drmWrapper, cegMarkers) === 'steamclient-layer'
       ? 'steamclient-layer'

@@ -62,9 +62,13 @@ export async function launchBridgeGameBody(
   // G25: one fresh connectivity check at Play (the monitor can be stale); the launch-target
   // read and the early offline refusal both use this result.
   const connectivity = await checkConnectivityNow(`launch ${steamGame.appId}`)
-  const exePath = await resolveBridgeLaunchExe(steamGame.appId, {
-    offline: connectivity.offline
-  })
+  const exePath = await resolveBridgeLaunchExe(
+    steamGame.deps,
+    steamGame.appId,
+    {
+      offline: connectivity.offline
+    }
+  )
   if (!exePath) {
     logWarning(
       `SteamGame: could not resolve a Windows launch executable for appId ${steamGame.appId} — not launching a bare/undefined path`,
@@ -142,6 +146,7 @@ export async function launchBridgeGameBody(
   // 59-REVIEW WR-04 / 59-15: persist what this launch routed on so the engine
   // state keeps the override off DRM-mode titles.
   writeBridgeModeVerdict(
+    steamGame.deps,
     steamGame.appId,
     wantsDrm ? 'steamclient-layer' : 'tcp'
   )
@@ -271,7 +276,7 @@ export async function launchBridgeGameBody(
   // 51-REVIEW WR-01: once an auto-clear has removed `scan`, the pool
   // `clearBridgeScanVerdict` retained at the top level is the fallback
   // (also used when the current scan's own pool is empty).
-  const persistedVerdict = readBridgeVerdict(steamGame.appId)
+  const persistedVerdict = readBridgeVerdict(steamGame.deps, steamGame.appId)
   const persistedScan = persistedVerdict?.scan
   const scanPool = persistedScan?.interfaceVersions
   const persistedInterfaceVersions =
@@ -334,7 +339,7 @@ export async function launchBridgeGameBody(
   // the caller keeps whatever it already persisted (shimGenerate.ts's own
   // header, D-UAT-24-04).
   if (shimResult.verdict) {
-    writeBridgeScanVerdict(steamGame.appId, shimResult.verdict)
+    writeBridgeScanVerdict(steamGame.deps, steamGame.appId, shimResult.verdict)
   }
 
   // shimGenerate stamps a fresh `drmWrapper` ('steamstub' | 'none') on most
@@ -349,9 +354,8 @@ export async function launchBridgeGameBody(
     !shimResult.verdict &&
     persistedScan?.drmWrapper === 'steamstub'
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { drmWrapper: _cleared, ...scanWithoutDrm } = persistedScan
-    writeBridgeScanVerdict(steamGame.appId, scanWithoutDrm)
+    writeBridgeScanVerdict(steamGame.deps, steamGame.appId, scanWithoutDrm)
     logInfo(
       `SteamGame: cleared stale persisted drmWrapper=steamstub for appId ${steamGame.appId} (fresh scan says none)`,
       LogPrefix.Steam
@@ -466,7 +470,7 @@ export async function launchBridgeGameBody(
   // ran) so a 'placed'/'no-steam-api' write above is reflected.
   maybeNotifyBridgeLimited(
     steamGame,
-    readBridgeVerdict(steamGame.appId),
+    readBridgeVerdict(steamGame.deps, steamGame.appId),
     helperReady.status === 'fallback-identity'
   )
 

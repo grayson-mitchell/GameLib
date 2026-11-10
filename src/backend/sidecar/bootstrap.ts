@@ -1007,6 +1007,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       // facade, so this constructs nothing and creates no handle.
       run: (_ctx, _io, state) => {
         state.services.stores = prebuilt.stores ?? buildStoresFacade()
+        // SteamUser is a static class with ~20 callers, so its store reads go through a bound
+        // slice; bound here, before any step or handler can reach it (66.1-16/18).
+        SteamUser.bindStores({ stores: state.services.stores })
       }
     },
     {

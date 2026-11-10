@@ -37,7 +37,7 @@ export async function repair(steamGame: SteamGame): Promise<ExecResult> {
     new Error(
       `Repair restores bridge steam_api originals; appId ${steamGame.appId} has no bridge install (a full depot verify is not supported)`
     )
-  const exePath = await resolveBridgeLaunchExe(steamGame.appId)
+  const exePath = await resolveBridgeLaunchExe(steamGame.deps, steamGame.appId)
   const bottle = getBridgeBottleSettings(steamGame.appId).wineCrossoverBottle
   if (!exePath || !isBridgeBottleReady(bottle) || !existsSync(exePath)) {
     throw scoped()

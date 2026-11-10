@@ -23,6 +23,7 @@ import {
   isBridgeBottleReady
 } from '../bridgeBottle'
 import { readBridgeVerdict } from '../bridge/bridgeVerdict'
+import type { SteamStoresDeps } from '../library/installRoot'
 import { getBottleProcessMonitorPhase } from '../bottleProcessMonitor'
 import { readStoredTitleConfig } from '../titleSettings'
 
@@ -88,6 +89,7 @@ export function isDrmModeFromVerdict(
  * applies to every bridge title (Phase 60 D-02).
  */
 export function steamEngineStateDeps(
+  deps: SteamStoresDeps,
   appId: string,
   over: Partial<EngineStateDeps> = {}
 ): EngineStateDeps {
@@ -96,7 +98,7 @@ export function steamEngineStateDeps(
     ...steamDecisionDeps(),
     bottleFor: () => findBridgeInstallBottle(appId),
     overrideEligible: (_id, bottle) =>
-      bottle === own && !isDrmModeFromVerdict(readBridgeVerdict(appId)),
+      bottle === own && !isDrmModeFromVerdict(readBridgeVerdict(deps, appId)),
     overlayEligible: true,
     effective: (): EffectiveEngine => {
       const raw = readSteamEngineOverride(appId)
@@ -114,12 +116,13 @@ export function steamEngineStateDeps(
 }
 
 export async function getSteamEngineState(
+  deps: SteamStoresDeps,
   appId: unknown,
   over?: Partial<EngineStateDeps>
 ): Promise<EngineState | null> {
   if (typeof appId !== 'string' || !/^\d+$/.test(appId)) return null
   return getEngineState(
     { runner: STEAM_ENGINE_RUNNER, appName: appId },
-    steamEngineStateDeps(appId, over)
+    steamEngineStateDeps(deps, appId, over)
   )
 }

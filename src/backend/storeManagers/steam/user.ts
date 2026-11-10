@@ -50,7 +50,7 @@ import {
 
 export class SteamUser {
   // 66.1-16: the steam stores slice this static class reads. Static because
-  // SteamUser has ~20 call sites (plans 17/18); plan 18 binds it at boot.
+  // SteamUser has ~20 call sites; the sidecar's 'stores' boot step binds it (66.1-18).
   private static boundStores: SteamStoresDeps | null = null
 
   /** Inject the steam stores slice (boot / tests). */
@@ -59,13 +59,12 @@ export class SteamUser {
   }
 
   private static storesDeps(): SteamStoresDeps {
-    if (this.boundStores) return this.boundStores
-    // Transitional (66.1-16): until plan 18 binds the slice at boot, resolve
-    // the steam stores module lazily (call time) so importing this module
-    // never loads the store backends.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const steam = require('./stores') as typeof import('./stores')
-    return { stores: { steam } }
+    if (!this.boundStores) {
+      throw new Error(
+        'SteamUser: stores read before bindStores (the sidecar binds it in the stores boot step)'
+      )
+    }
+    return this.boundStores
   }
 
   private static client: InstanceType<typeof SteamUserLib> | null = null
@@ -236,7 +235,6 @@ export class SteamUser {
     epochAtStart: number
   ): void {
     const result = applySignInVerdict(
-      // Transitional (66.1-13): SteamUser is a static class; plan 18 binds the family at boot.
       this.storesDeps(),
       'steam',
       outcome,

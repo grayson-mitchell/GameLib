@@ -63,24 +63,6 @@ jest.mock('../bridgeRouteVerdict', () => ({
   getBridgeRouteVerdict: jest.fn()
 }))
 
-jest.mock('../stores', () => ({
-  steamBottleConfigStore: {
-    get: jest.fn(),
-    get_nodefault: jest.fn(),
-    set: jest.fn()
-  },
-  steamMetadataStore: {
-    get: jest.fn(),
-    // Plan 13 (D-51-10/11): handleSetSteamBridgeUserRoute's own describe
-    // block below wires this to a backing Map so the REAL (unmocked)
-    // bridge/bridgeVerdict.ts writers can be exercised end-to-end, matching
-    // this plan's Behavior row ("readBridgeVerdict('63000').userRoute ===
-    // 'bottle'"). Every other describe block in this file only reads via
-    // `.mockReturnValue` and never calls `.set`.
-    set: jest.fn()
-  }
-}))
-
 jest.mock('../bottle', () => ({
   persistBottleWineVersion: jest.fn(),
   getSteamBottleSettings: jest.fn()
@@ -98,7 +80,6 @@ jest.mock('backend/config', () => ({
 
 import SteamGame from '../games'
 import { getBridgeRouteVerdict } from '../bridgeRouteVerdict'
-import { steamBottleConfigStore, steamMetadataStore } from '../stores'
 import { persistBottleWineVersion, getSteamBottleSettings } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 // Plan 13 (D-51-10/11): real (unmocked) readBridgeVerdict proves
@@ -116,10 +97,21 @@ import { join, relative } from 'node:path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { at } from './fixtures/indexed'
 
-import * as steamStoresModule from '../stores'
+// Plan 13 (D-51-10/11): handleSetSteamBridgeUserRoute's own describe block
+// wires `steamMetadataStore.get`/`.set` to a backing Map so the REAL (unmocked)
+// bridge/bridgeVerdict.ts writers run end-to-end. Every other describe block
+// only reads via `.mockReturnValue` and never calls `.set`.
+const steamBottleConfigStore = {
+  get: jest.fn(),
+  get_nodefault: jest.fn(),
+  set: jest.fn()
+}
+const steamMetadataStore = { get: jest.fn(), set: jest.fn() }
 
 const steamTestDeps = createTestManagerDeps({
-  stores: createTestStores({ steam: steamStoresModule })
+  stores: createTestStores({
+    steam: { steamBottleConfigStore, steamMetadataStore } as never
+  })
 })
 
 const wineDeps = {
@@ -129,8 +121,8 @@ const wineDeps = {
 }
 
 const mockedSteamGame = SteamGame as unknown as jest.Mock
-const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
-const mockedMetadataGet = steamMetadataStore.get as jest.Mock
+const mockedGetNodefault = steamBottleConfigStore.get_nodefault
+const mockedMetadataGet = steamMetadataStore.get
 const mockedPersistBottleWineVersion = persistBottleWineVersion as jest.Mock
 const mockedGetSteamBottleSettings = getSteamBottleSettings as jest.Mock
 const mockedGetBridgeRouteVerdict = getBridgeRouteVerdict as jest.Mock
@@ -654,7 +646,7 @@ describe('installFormIpc.ts', () => {
       mockedMetadataGet.mockImplementation((appId: string) =>
         backingStore.get(appId)
       )
-      ;(steamMetadataStore.set as jest.Mock).mockImplementation(
+      steamMetadataStore.set.mockImplementation(
         (appId: string, value: Record<string, unknown>) => {
           backingStore.set(appId, value)
         }
@@ -662,43 +654,51 @@ describe('installFormIpc.ts', () => {
     })
 
     it("persists userRoute 'bottle' and readBridgeVerdict reflects it", async () => {
-      const result = await handleSetSteamBridgeUserRoute({
+      const result = await handleSetSteamBridgeUserRoute(steamTestDeps, {
         appId: '63000',
         userRoute: 'bottle'
       })
 
       expect(result).toEqual({ ok: true })
-      expect(readBridgeVerdict('63000')?.userRoute).toBe('bottle')
+      expect(readBridgeVerdict(steamTestDeps, '63000')?.userRoute).toBe(
+        'bottle'
+      )
     })
 
     it('userRoute null REMOVES a previously persisted override', async () => {
-      await handleSetSteamBridgeUserRoute({
+      await handleSetSteamBridgeUserRoute(steamTestDeps, {
         appId: '63000',
         userRoute: 'bottle'
       })
-      expect(readBridgeVerdict('63000')?.userRoute).toBe('bottle')
+      expect(readBridgeVerdict(steamTestDeps, '63000')?.userRoute).toBe(
+        'bottle'
+      )
 
-      const result = await handleSetSteamBridgeUserRoute({
+      const result = await handleSetSteamBridgeUserRoute(steamTestDeps, {
         appId: '63000',
         userRoute: null
       })
 
       expect(result).toEqual({ ok: true })
-      expect(readBridgeVerdict('63000')?.userRoute).toBeUndefined()
+      expect(
+        readBridgeVerdict(steamTestDeps, '63000')?.userRoute
+      ).toBeUndefined()
     })
 
     it("{ appId: '63000', userRoute: null, acknowledgeReason: 'known-bad' } records noticeAcknowledgedFor 'known-bad'", async () => {
-      const result = await handleSetSteamBridgeUserRoute({
+      const result = await handleSetSteamBridgeUserRoute(steamTestDeps, {
         appId: '63000',
         userRoute: null,
         acknowledgeReason: 'known-bad'
       })
 
       expect(result).toEqual({ ok: true })
-      expect(readBridgeVerdict('63000')?.noticeAcknowledgedFor).toBe(
-        'known-bad'
-      )
-      expect(readBridgeVerdict('63000')?.userRoute).toBeUndefined()
+      expect(
+        readBridgeVerdict(steamTestDeps, '63000')?.noticeAcknowledgedFor
+      ).toBe('known-bad')
+      expect(
+        readBridgeVerdict(steamTestDeps, '63000')?.userRoute
+      ).toBeUndefined()
     })
 
     it.each([
@@ -714,7 +714,10 @@ describe('installFormIpc.ts', () => {
     ])(
       'T-51-30: an invalid payload %p is rejected with %p and writes NOTHING',
       async (payload, expectedError) => {
-        const result = await handleSetSteamBridgeUserRoute(payload)
+        const result = await handleSetSteamBridgeUserRoute(
+          steamTestDeps,
+          payload
+        )
 
         expect(result).toEqual({ ok: false, error: expectedError })
         expect(steamMetadataStore.set).not.toHaveBeenCalled()

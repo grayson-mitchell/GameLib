@@ -1454,11 +1454,12 @@ describe('SteamLibraryManager', () => {
 
       expect(backfillBridgeLaunchTargets).toHaveBeenCalledTimes(1)
       expect(backfillBridgeLaunchTargets).toHaveBeenCalledWith(
+        expect.anything(),
         fakeClient,
         expect.arrayContaining(['206040', '206041'])
       )
       expect(
-        at(jest.mocked(backfillBridgeLaunchTargets).mock.calls, 0)[1]
+        at(jest.mocked(backfillBridgeLaunchTargets).mock.calls, 0)[2]
       ).toHaveLength(2)
     })
 

@@ -299,7 +299,8 @@ async function syncOwnedLibrary(
     // of CM work. Fail-soft: a rejection must not change the sync outcome.
     if (bridgeInstalledMap && bridgeInstalledMap.size > 0) {
       await backfillBridgeLaunchTargets(
-        client as unknown as Parameters<typeof backfillBridgeLaunchTargets>[0],
+        deps,
+        client as unknown as Parameters<typeof backfillBridgeLaunchTargets>[1],
         [...bridgeInstalledMap.keys()].map(String)
       ).catch((err: unknown) => {
         logWarning(

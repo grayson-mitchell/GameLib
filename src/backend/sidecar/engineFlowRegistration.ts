@@ -17,7 +17,7 @@
  */
 import { hasCapability } from 'common/storeCapabilities'
 import { ipcMain } from '../platform'
-import type { StoreManagers } from 'backend/services/types'
+import type { StoreManagers, Stores } from 'backend/services/types'
 import { isMac } from '../constants/environment'
 import { sendFrontendMessage } from '../ipc'
 import {
@@ -35,6 +35,7 @@ import { engineKeyFor } from 'backend/engine/gameKey'
 /** Narrow slice (66.1 D-01): only the library managers are read. */
 export interface EngineFlowDeps {
   managers: Pick<StoreManagers, 'library'>
+  stores: Pick<Stores, 'steam'>
 }
 
 async function getEngineStateFor(
@@ -49,7 +50,7 @@ async function getEngineStateFor(
   if (hasCapability(runner, 'usesBottleRuntime')) {
     const { getSteamEngineState } =
       await import('backend/storeManagers/steam/engine/steamEngineDeps')
-    return getSteamEngineState(appName)
+    return getSteamEngineState(deps, appName)
   }
   if (!isMac) return null
   if (!Object.prototype.hasOwnProperty.call(libraryManagerMap, runner)) {

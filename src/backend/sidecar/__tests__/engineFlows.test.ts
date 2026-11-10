@@ -47,8 +47,12 @@ jest.mock('../../ipc', () => ({
 }))
 
 import { registerEngineFlows } from '../engineFlowRegistration'
-import { createTestManagers } from 'backend/testUtils/testServices'
+import {
+  createTestManagers,
+  createTestStores
+} from 'backend/testUtils/testServices'
 
+const stores = createTestStores()
 const managers = createTestManagers({
   library: {
     legendary: { getGame: (...a: [string]) => getGame(...a) },
@@ -65,7 +69,7 @@ function fakeGame(over: { native?: boolean; platform?: string } = {}) {
 }
 
 describe('engine flows', () => {
-  beforeAll(() => registerEngineFlows({ managers }))
+  beforeAll(() => registerEngineFlows({ managers, stores }))
   beforeEach(() => {
     jest.clearAllMocks()
     envState.isMac = true
@@ -89,7 +93,7 @@ describe('engine flows', () => {
         { runner: 'steam', appName: '220' }
       )
     ).toEqual({ kind: 's' })
-    expect(steamState).toHaveBeenCalledWith('220')
+    expect(steamState).toHaveBeenCalledWith({ managers, stores }, '220')
     expect(getGame).not.toHaveBeenCalled()
     expect(gameState).not.toHaveBeenCalled()
   })
@@ -172,7 +176,7 @@ describe('engine flows', () => {
   })
 
   it('wires the publisher to engineStateChanged', () => {
-    registerEngineFlows({ managers })
+    registerEngineFlows({ managers, stores })
     const publisher = setPublisher.mock.calls[0][0] as (s: unknown) => void
     const state = { appId: '1' }
     publisher(state)

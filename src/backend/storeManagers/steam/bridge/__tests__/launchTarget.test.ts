@@ -43,6 +43,9 @@ jest.mock('../../anonymousClient', () => ({
   getAnonymousPicsClient: jest.fn()
 }))
 
+// bridgeVerdict is mocked, so the store slice is never read.
+const DEPS = { stores: {} } as never
+
 jest.mock('../bridgeVerdict', () => ({
   readBridgeVerdict: jest.fn(),
   setBridgeLaunchTarget: jest.fn()
@@ -97,7 +100,7 @@ describe('resolveBridgeLaunchExe', () => {
       launchTarget: { executable: 'Avernum4.exe', installdir: 'Avernum 4' }
     } as any)
 
-    const result = await resolveBridgeLaunchExe(APP_ID, { offline: true })
+    const result = await resolveBridgeLaunchExe(DEPS, APP_ID, { offline: true })
 
     expect(result).toBe(
       join(BRIDGE_STEAMAPPS_DIR, 'common', 'Avernum 4', 'Avernum4.exe')
@@ -127,7 +130,7 @@ describe('resolveBridgeLaunchExe', () => {
       }) as any
     )
 
-    const result = await resolveBridgeLaunchExe(APP_ID, { offline: true })
+    const result = await resolveBridgeLaunchExe(DEPS, APP_ID, { offline: true })
 
     expect(getAnonymousPicsClient).toHaveBeenCalledTimes(1)
     expect(result).toBe(
@@ -140,7 +143,7 @@ describe('resolveBridgeLaunchExe', () => {
       launchTarget: { executable: 'x.exe', installdir: '../../etc' }
     } as any)
 
-    const result = await resolveBridgeLaunchExe(APP_ID, { offline: true })
+    const result = await resolveBridgeLaunchExe(DEPS, APP_ID, { offline: true })
 
     expect(result).toBeUndefined()
     expect(getAnonymousPicsClient).not.toHaveBeenCalled()
@@ -167,7 +170,7 @@ describe('resolveBridgeLaunchExe', () => {
       }) as any
     )
 
-    const result = await resolveBridgeLaunchExe(APP_ID)
+    const result = await resolveBridgeLaunchExe(DEPS, APP_ID)
 
     expect(result).toBe(
       join(BRIDGE_STEAMAPPS_DIR, 'common', 'Avernum 4', 'Avernum4.exe')
@@ -193,7 +196,7 @@ describe('resolveBridgeLaunchExe', () => {
       }) as any
     )
 
-    const result = await resolveBridgeLaunchExe('206040')
+    const result = await resolveBridgeLaunchExe(DEPS, '206040')
 
     expect(result).toBe(
       join(BRIDGE_STEAMAPPS_DIR, 'common', 'Avernum 5', 'Avernum 5.exe')
@@ -220,7 +223,7 @@ describe('resolveBridgeLaunchExe', () => {
       }) as never
     )
 
-    const result = await resolveBridgeLaunchExe('200510')
+    const result = await resolveBridgeLaunchExe(DEPS, '200510')
 
     expect(result).toBe(
       join(
@@ -249,7 +252,7 @@ describe('resolveBridgeLaunchExe', () => {
       }) as any
     )
 
-    const result = await resolveBridgeLaunchExe('206040')
+    const result = await resolveBridgeLaunchExe(DEPS, '206040')
 
     expect(result).toBe(
       join(BRIDGE_STEAMAPPS_DIR, 'common', 'Avernum 5', 'Avernum5.exe')
@@ -270,7 +273,7 @@ describe('resolveBridgeLaunchExe', () => {
       }) as any
     )
 
-    const result = await resolveBridgeLaunchExe('63000')
+    const result = await resolveBridgeLaunchExe(DEPS, '63000')
 
     expect(result).toBeUndefined()
   })
@@ -282,7 +285,7 @@ describe('resolveBridgeLaunchExe', () => {
       }) as any
     )
 
-    const result = await resolveBridgeLaunchExe('63000')
+    const result = await resolveBridgeLaunchExe(DEPS, '63000')
 
     expect(result).toBeUndefined()
   })
@@ -294,7 +297,7 @@ describe('resolveBridgeLaunchExe', () => {
 
       .mockResolvedValue(client as any)
 
-    const result = await resolveBridgeLaunchExe('not-a-number')
+    const result = await resolveBridgeLaunchExe(DEPS, 'not-a-number')
 
     expect(result).toBeUndefined()
     expect(client.getProductInfo).not.toHaveBeenCalled()
@@ -308,7 +311,7 @@ describe('resolveBridgeLaunchExe', () => {
       }) as any
     )
 
-    const result = await resolveBridgeLaunchExe(APP_ID)
+    const result = await resolveBridgeLaunchExe(DEPS, APP_ID)
 
     expect(result).toBeUndefined()
     expect(jest.mocked(logWarning)).toHaveBeenCalled()
@@ -367,8 +370,8 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
       }) as never
     )
 
-    expect(await resolveBridgeLaunchExe(String(GATED_ID))).toBe(gameExe)
-    expect(setBridgeLaunchTarget).toHaveBeenCalledWith(String(GATED_ID), {
+    expect(await resolveBridgeLaunchExe(DEPS, String(GATED_ID))).toBe(gameExe)
+    expect(setBridgeLaunchTarget).toHaveBeenCalledWith(DEPS, String(GATED_ID), {
       executable: 'Binaries\\Win32\\Game.exe',
       installdir: 'Game'
     })
@@ -388,7 +391,7 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
       release
     } as never)
 
-    expect(await resolveBridgeLaunchExe(String(GATED_ID))).toBe(gameExe)
+    expect(await resolveBridgeLaunchExe(DEPS, String(GATED_ID))).toBe(gameExe)
     expect(setBridgeLaunchTarget).toHaveBeenCalledTimes(1)
     expect(release).toHaveBeenCalledTimes(1)
   })
@@ -405,7 +408,7 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
       }
     })
 
-    expect(await resolveBridgeLaunchExe(String(GATED_ID))).toBe(gameExe)
+    expect(await resolveBridgeLaunchExe(DEPS, String(GATED_ID))).toBe(gameExe)
     expect(setBridgeLaunchTarget).not.toHaveBeenCalled()
     expect(jest.mocked(logInfo)).toHaveBeenCalledWith(
       expect.stringContaining('stored'),
@@ -421,7 +424,7 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
     })
 
     await expect(
-      resolveBridgeLaunchExe(String(GATED_ID))
+      resolveBridgeLaunchExe(DEPS, String(GATED_ID))
     ).resolves.toBeUndefined()
   })
 
@@ -431,7 +434,7 @@ describe('resolveBridgeLaunchExe — anonymous PICS, open session, stored record
     jest.mocked(readBridgeVerdict).mockReturnValue(undefined)
 
     await expect(
-      resolveBridgeLaunchExe(String(GATED_ID))
+      resolveBridgeLaunchExe(DEPS, String(GATED_ID))
     ).resolves.toBeUndefined()
     expect(SteamUser.ensureConnected).not.toHaveBeenCalled()
   })
@@ -461,7 +464,7 @@ describe('backfillBridgeLaunchTargets', () => {
       })
     }
 
-    const n = await backfillBridgeLaunchTargets(client, [
+    const n = await backfillBridgeLaunchTargets(DEPS, client, [
       '230070',
       '63000',
       'bad'
@@ -474,7 +477,7 @@ describe('backfillBridgeLaunchTargets', () => {
       [],
       true
     )
-    expect(setBridgeLaunchTarget).toHaveBeenCalledWith('63000', {
+    expect(setBridgeLaunchTarget).toHaveBeenCalledWith(DEPS, '63000', {
       executable: 'b\\b.exe',
       installdir: 'B'
     })
@@ -486,7 +489,7 @@ describe('backfillBridgeLaunchTargets', () => {
     })
     const client = { getProductInfo: jest.fn() }
 
-    expect(await backfillBridgeLaunchTargets(client, ['230070'])).toBe(0)
+    expect(await backfillBridgeLaunchTargets(DEPS, client, ['230070'])).toBe(0)
     expect(client.getProductInfo).not.toHaveBeenCalled()
   })
 
@@ -496,7 +499,7 @@ describe('backfillBridgeLaunchTargets', () => {
       getProductInfo: jest.fn().mockRejectedValue(new Error('down'))
     }
 
-    expect(await backfillBridgeLaunchTargets(client, ['230070'])).toBe(0)
+    expect(await backfillBridgeLaunchTargets(DEPS, client, ['230070'])).toBe(0)
     expect(logWarning).toHaveBeenCalled()
   })
 })
@@ -519,7 +522,7 @@ describe('resolveBridgeLaunchWorkingDir (Grim Dawn x64/ cwd regression)', () => 
       launchTarget: { executable: 'x64/Grim Dawn.exe', installdir: 'Grim Dawn' }
     })
 
-    expect(resolveBridgeLaunchWorkingDir(GD_ID)).toBe(GD_ROOT)
+    expect(resolveBridgeLaunchWorkingDir(DEPS, GD_ID)).toBe(GD_ROOT)
   })
 
   it('honours a workingdir relative to the install root', () => {
@@ -531,7 +534,9 @@ describe('resolveBridgeLaunchWorkingDir (Grim Dawn x64/ cwd regression)', () => 
       }
     })
 
-    expect(resolveBridgeLaunchWorkingDir(GD_ID)).toBe(join(GD_ROOT, 'x64'))
+    expect(resolveBridgeLaunchWorkingDir(DEPS, GD_ID)).toBe(
+      join(GD_ROOT, 'x64')
+    )
   })
 
   it('falls back to the install root for an escaping workingdir', () => {
@@ -543,15 +548,15 @@ describe('resolveBridgeLaunchWorkingDir (Grim Dawn x64/ cwd regression)', () => 
       }
     })
 
-    expect(resolveBridgeLaunchWorkingDir(GD_ID)).toBe(GD_ROOT)
+    expect(resolveBridgeLaunchWorkingDir(DEPS, GD_ID)).toBe(GD_ROOT)
     expect(logWarning).toHaveBeenCalled()
   })
 
   it('returns undefined with no stored target, or for a non-numeric appId', () => {
     jest.mocked(readBridgeVerdict).mockReturnValue(undefined)
 
-    expect(resolveBridgeLaunchWorkingDir(GD_ID)).toBeUndefined()
-    expect(resolveBridgeLaunchWorkingDir('../x')).toBeUndefined()
+    expect(resolveBridgeLaunchWorkingDir(DEPS, GD_ID)).toBeUndefined()
+    expect(resolveBridgeLaunchWorkingDir(DEPS, '../x')).toBeUndefined()
   })
 
   it('persists a PICS workingdir with the launch target', async () => {
@@ -577,9 +582,9 @@ describe('resolveBridgeLaunchWorkingDir (Grim Dawn x64/ cwd regression)', () => 
     } as never)
     jest.mocked(setBridgeLaunchTarget).mockReset()
 
-    await resolveBridgeLaunchExe(GD_ID)
+    await resolveBridgeLaunchExe(DEPS, GD_ID)
 
-    expect(setBridgeLaunchTarget).toHaveBeenCalledWith(GD_ID, {
+    expect(setBridgeLaunchTarget).toHaveBeenCalledWith(DEPS, GD_ID, {
       executable: 'x64/Grim Dawn.exe',
       installdir: 'Grim Dawn',
       workingdir: 'x64'

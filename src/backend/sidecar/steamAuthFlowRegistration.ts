@@ -389,7 +389,7 @@ export function registerSteamAuthFlows(): void {
   ipcMain.handle(
     'setSteamBridgeUserRoute',
     async (_event: unknown, ...args: unknown[]) => {
-      return handleSetSteamBridgeUserRoute(args[0])
+      return handleSetSteamBridgeUserRoute(await legacySteamStores(), args[0])
     }
   )
 

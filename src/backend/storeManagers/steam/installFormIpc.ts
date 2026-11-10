@@ -25,6 +25,7 @@ import SteamGame from './games'
 import { checkBottleEligibility } from './gameEligibility'
 import { getBridgeRouteVerdict } from './bridgeRouteVerdict'
 import type { ManagerDeps, Stores } from 'backend/services/types'
+import type { SteamStoresDeps } from './library/installRoot'
 import { persistBottleWineVersion } from './bottle'
 import { depotSignalCaptured } from './metadataCapture'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
@@ -342,6 +343,7 @@ export async function persistInstallFormWineVersion(
  * that was never displayed.
  */
 export async function handleSetSteamBridgeUserRoute(
+  deps: SteamStoresDeps,
   raw: unknown
 ): Promise<{ ok: boolean; error?: string }> {
   if (typeof raw !== 'object' || raw === null) {
@@ -384,9 +386,9 @@ export async function handleSetSteamBridgeUserRoute(
     }
   }
 
-  setBridgeUserRoute(appId, userRoute === null ? undefined : userRoute)
+  setBridgeUserRoute(deps, appId, userRoute === null ? undefined : userRoute)
   if (typeof acknowledgeReason === 'string') {
-    setBridgeNoticeAcknowledged(appId, acknowledgeReason)
+    setBridgeNoticeAcknowledged(deps, appId, acknowledgeReason)
   }
 
   return { ok: true }

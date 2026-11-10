@@ -417,7 +417,7 @@ export async function installBridgeGameLeased(
   // R3: place the shim automatically — no manual copy step. Resolves the
   // real installed exe path via resolveBridgeLaunchExe (finding #2)
   // rather than guessing/joining an unverified name.
-  const exePath = await resolveBridgeLaunchExe(steamGame.appId)
+  const exePath = await resolveBridgeLaunchExe(steamGame.deps, steamGame.appId)
   if (!exePath) {
     logWarning(
       `SteamGame: installBridgeGame could not resolve a Windows launch executable for appId ${steamGame.appId} — shim not placed`,
@@ -480,14 +480,14 @@ export async function installBridgeGameLeased(
       // clearing userRoute lets a later install() fall through to its
       // ordinary route instead of re-forcing the bridge into the same
       // dead end.
-      setBridgeUserRoute(steamGame.appId, undefined)
+      setBridgeUserRoute(steamGame.deps, steamGame.appId, undefined)
       // 51-REVIEW WR-07: persist the arch so the resolver's win64-no-shim
       // row short-circuits the next install(). Without it the session-only
       // circuit breaker is the sole memory of this dead end, and every new
       // session re-downloads the full game into a bridge bottle only to
       // delete it again. The row is gated on win64ShimPresent, so a later
       // build that bundles steam_api64.dll is not held back by this.
-      setBridgeSteamApiPrescreen(steamGame.appId, 'x64')
+      setBridgeSteamApiPrescreen(steamGame.deps, steamGame.appId, 'x64')
       stopInstallPolling(steamGame.appId)
       const removeResult = await bbLifecycle.removePerGameBridgeBottle(
         steamGame.deps,
@@ -527,7 +527,7 @@ export async function installBridgeGameLeased(
   // clear existed so a forced bridge would not be re-forced into a failing
   // miss, and a miss is no longer a failure.
   if (shimResult.verdict) {
-    writeBridgeScanVerdict(steamGame.appId, shimResult.verdict)
+    writeBridgeScanVerdict(steamGame.deps, steamGame.appId, shimResult.verdict)
   }
 
   // Quick 261024-br4: Steam CEG DRM (XCOM 200510's silent ~30s exit). A

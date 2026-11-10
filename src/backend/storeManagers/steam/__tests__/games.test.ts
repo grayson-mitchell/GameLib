@@ -2630,7 +2630,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
-    expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID, {
+    expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       offline: false
     })
     expect(placeShimForGame).toHaveBeenCalledWith(
@@ -5675,7 +5675,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       os: 'windows',
       signal: 'mock-signal'
     })
-    expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID)
+    expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     // quick/261016-u1w: placeShimForGame now receives the per-game bottle
     // name explicitly, rather than relying on shimGenerate's own default.
     expect(placeShimForGame).toHaveBeenCalledWith(
@@ -5907,7 +5907,11 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     expect(result).toEqual({ status: 'done' })
     expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
-    expect(setBridgeUserRouteSpy).not.toHaveBeenCalledWith(APP_ID, undefined)
+    expect(setBridgeUserRouteSpy).not.toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      undefined
+    )
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
       'steamBridgeSetupRequired',
       expect.anything()
@@ -5953,7 +5957,11 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       APP_ID
     )
     expect(stopInstallPollingSpy).toHaveBeenCalledWith(APP_ID)
-    expect(setBridgeUserRouteSpy).toHaveBeenCalledWith(APP_ID, undefined)
+    expect(setBridgeUserRouteSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      undefined
+    )
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'steamBridgeSetupRequired',
       {
@@ -6090,7 +6098,11 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         steamTestDeps,
         APP_ID
       )
-      expect(setBridgeUserRouteSpy).not.toHaveBeenCalledWith(APP_ID, undefined)
+      expect(setBridgeUserRouteSpy).not.toHaveBeenCalledWith(
+        steamTestDeps,
+        APP_ID,
+        undefined
+      )
       expect(sendFrontendMessage).toHaveBeenCalledWith(
         'steamBridgeSetupRequired',
         {
@@ -6855,7 +6867,11 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         APP_ID,
         expect.objectContaining({ os: 'windows' })
       )
-      expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(APP_ID, 'x64')
+      expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(
+        steamTestDeps,
+        APP_ID,
+        'x64'
+      )
       expect(downloadSteamDepots).not.toHaveBeenCalled()
       expect(sendFrontendMessage).toHaveBeenCalledWith(
         'steamBridgeRouteNotice',
@@ -6888,7 +6904,11 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
-      expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(APP_ID, 'x64')
+      expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(
+        steamTestDeps,
+        APP_ID,
+        'x64'
+      )
       expect(downloadSteamDepots).toHaveBeenCalled()
       expect(result).toEqual({ status: 'done' })
     })
@@ -6909,7 +6929,11 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
-      expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(APP_ID, 'none')
+      expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(
+        steamTestDeps,
+        APP_ID,
+        'none'
+      )
       expect(downloadSteamDepots).toHaveBeenCalled()
       expect(result).toEqual({ status: 'done' })
     })
@@ -6933,6 +6957,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         const result = await game.install({} as any)
 
         expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(
+          steamTestDeps,
           APP_ID,
           prescreenResult
         )
@@ -7900,7 +7925,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           const spy = jest.spyOn(bridgeVerdictModule, 'writeBridgeModeVerdict')
           try {
             await new SteamGame(APP_ID, steamTestDeps).install({} as any)
-            expect(spy).toHaveBeenCalledWith(APP_ID, mode)
+            expect(spy).toHaveBeenCalledWith(steamTestDeps, APP_ID, mode)
           } finally {
             override.fn = undefined
             spy.mockRestore()
@@ -11376,7 +11401,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     const result = await game.uninstall({} as any)
 
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
-    expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID)
+    expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     // quick/261016-u1w (D-B threading): resolves THIS game's own bridge
     // bottle rather than the shared zero-arg default.
     expect(getBridgeBottleSettings).toHaveBeenCalledWith(APP_ID)
@@ -12723,7 +12748,11 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
 
     expect(result).toBe(true)
     expect(runWineCommand).toHaveBeenCalledTimes(1)
-    expect(setBridgeIdentityFallbackSpy).toHaveBeenCalledWith(APP_ID, true)
+    expect(setBridgeIdentityFallbackSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      true
+    )
     expect(logInfo).toHaveBeenCalledWith(
       `[bridge-notice] appId=${APP_ID} reason=identity-fallback`,
       'Steam'
@@ -12741,7 +12770,10 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
         'gamelib:steam.bridge.limited.body ' +
         'gamelib:steam.bridge.limited.identityFallback'
     })
-    expect(markBridgeLimitedNoticeShownSpy).toHaveBeenCalledWith(APP_ID)
+    expect(markBridgeLimitedNoticeShownSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID
+    )
   })
 
   it('D-51-02: ready launch with stubbedInterfaces logs [bridge-notice] reason=stubbed:<list> on EVERY launch; notify() fires on the first launch only, then markBridgeLimitedNoticeShown persists so a later launch logs but never notifies again', async () => {
@@ -12777,8 +12809,15 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
       'Steam'
     )
     expect(notify).toHaveBeenCalledTimes(1)
-    expect(markBridgeLimitedNoticeShownSpy).toHaveBeenCalledWith(APP_ID)
-    expect(setBridgeIdentityFallbackSpy).toHaveBeenCalledWith(APP_ID, false)
+    expect(markBridgeLimitedNoticeShownSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID
+    )
+    expect(setBridgeIdentityFallbackSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      false
+    )
 
     // Second launch: the persisted verdict now carries limitedNoticeShown:
     // true -- logs again (every launch), but notify() never fires again.
@@ -12822,7 +12861,11 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
       expect.anything()
     )
     expect(notify).not.toHaveBeenCalled()
-    expect(setBridgeIdentityFallbackSpy).toHaveBeenCalledWith(APP_ID, false)
+    expect(setBridgeIdentityFallbackSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      false
+    )
   })
 })
 
@@ -13520,7 +13563,11 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         })
         try {
           await new SteamGame(id, steamTestDeps).launch({} as never)
-          expect(spy).toHaveBeenCalledWith(id, 'steamclient-layer')
+          expect(spy).toHaveBeenCalledWith(
+            steamTestDeps,
+            id,
+            'steamclient-layer'
+          )
         } finally {
           spy.mockRestore()
         }
@@ -16599,7 +16646,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         ).toBeLessThan(
           at((resolveBridgeLaunchExe as jest.Mock).mock.invocationCallOrder, 0)
         )
-        expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(ID, {
+        expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(steamTestDeps, ID, {
           offline: true
         })
       })
@@ -16831,7 +16878,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       const spy = jest.spyOn(bridgeVerdictModule, 'writeBridgeModeVerdict')
       try {
         await new SteamGame(ID, steamTestDeps).launch({} as any)
-        expect(spy).toHaveBeenCalledWith(ID, 'tcp')
+        expect(spy).toHaveBeenCalledWith(steamTestDeps, ID, 'tcp')
       } finally {
         spy.mockRestore()
       }

@@ -224,7 +224,7 @@ export async function install(
     if (
       bridgeRoute.route === 'bridge' &&
       bridgeRoute.reason === 'pending-scan' &&
-      readBridgeVerdict(steamGame.appId)?.steamApi === undefined
+      readBridgeVerdict(steamGame.deps, steamGame.appId)?.steamApi === undefined
     ) {
       const bridgeBottleName = bridgeBottle.bridgeBottleNameFor(steamGame.appId)
       // Phase 54: a short lease for the screen alone, so a refusal here
@@ -247,7 +247,11 @@ export async function install(
           installdir: steamGame.appId,
           os: 'windows'
         })
-        setBridgeSteamApiPrescreen(steamGame.appId, prescreenResult)
+        setBridgeSteamApiPrescreen(
+          steamGame.deps,
+          steamGame.appId,
+          prescreenResult
+        )
       } finally {
         prescreenLease.release()
       }
