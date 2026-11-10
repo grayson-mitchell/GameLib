@@ -1,5 +1,6 @@
 import { logInfo, logError, LogPrefix } from 'backend/logger'
-import { steamMetadataStore, SteamMetadataCacheEntry } from './stores'
+import type { SteamMetadataCacheEntry } from './stores'
+import type { SteamStoresDeps } from './library/installRoot'
 import { depotSignalCaptured } from './metadataCapture'
 import { withTimeout, STEAM_PICS_BULK_TIMEOUT_MS } from './withTimeout'
 import { resolvePlatformWrite } from './platformPrecedence'
@@ -171,9 +172,11 @@ export function parseOslistPlatforms(
  * declined-but-parsed entry must never be counted as "captured".
  */
 export function mergePlatformCapture(
+  deps: SteamStoresDeps,
   appId: string,
   platforms: CapturedPlatforms
 ): boolean {
+  const { steamMetadataStore } = deps.stores.steam
   const existing = steamMetadataStore.get(appId)
 
   const resolution = resolvePlatformWrite(
@@ -288,6 +291,7 @@ interface PlatformCaptureSummary {
  * later reviewer must not "fix" this back to fail-closed.
  */
 export async function captureOwnedAppPlatforms(
+  deps: SteamStoresDeps,
   client: PlatformCapturePicsClient,
   appIds: number[]
 ): Promise<PlatformCaptureSummary> {
@@ -327,7 +331,10 @@ export async function captureOwnedAppPlatforms(
       // logic. This is what makes "what the bulk job repairs" and "what the
       // install form calls unresolved" the same set BY CONSTRUCTION.
       const scoped = appIds.filter(
-        (id) => !depotSignalCaptured(steamMetadataStore.get(String(id)))
+        (id) =>
+          !depotSignalCaptured(
+            deps.stores.steam.steamMetadataStore.get(String(id))
+          )
       )
       scopedCount = scoped.length
 
@@ -392,7 +399,7 @@ export async function captureOwnedAppPlatforms(
         // future reader needs to distinguish "no signal" from "declined by
         // precedence", split this back out into its own counter rather than
         // silently re-widening `capturedCount`'s meaning.
-        const wasWritten = mergePlatformCapture(String(id), parsed)
+        const wasWritten = mergePlatformCapture(deps, String(id), parsed)
         if (wasWritten) {
           capturedCount += 1
         } else {

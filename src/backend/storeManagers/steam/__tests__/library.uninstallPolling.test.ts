@@ -434,7 +434,7 @@ describe('pollUninstallOnce()', () => {
     ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
     startUninstallPolling(steamTestDeps, '730', 60000)
     await pollUninstallOnce(steamTestDeps, '730', 'bottle')
-    expect(clearForcedSpy).toHaveBeenCalledWith('730')
+    expect(clearForcedSpy).toHaveBeenCalledWith(steamTestDeps, '730')
   })
 
   it('R1b: quick 261107-lum — a confirmed-absent BRIDGE uninstall clears the forced verdict', async () => {
@@ -444,7 +444,7 @@ describe('pollUninstallOnce()', () => {
       .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge-730' } as any)
     startUninstallPolling(steamTestDeps, '730', 60000)
     await pollUninstallOnce(steamTestDeps, '730', 'bridge')
-    expect(clearForcedSpy).toHaveBeenCalledWith('730')
+    expect(clearForcedSpy).toHaveBeenCalledWith(steamTestDeps, '730')
   })
 
   it('R2: a NATIVE uninstall confirmed-absent does NOT clear the forced verdict', async () => {
@@ -472,7 +472,7 @@ describe('pollUninstallOnce()', () => {
     ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
     library.clear() // library.get('730') is now undefined — the Map MISS
     await pollUninstallOnce(steamTestDeps, '730', 'bottle')
-    expect(clearForcedSpy).toHaveBeenCalledWith('730')
+    expect(clearForcedSpy).toHaveBeenCalledWith(steamTestDeps, '730')
   })
 
   // ── debug/steam-bottle-uninstall-reverts (OPERATOR PRODUCT DECISION,

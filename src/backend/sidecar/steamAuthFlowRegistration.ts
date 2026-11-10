@@ -175,13 +175,19 @@ import {
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
  */
+// Transitional (66.1-16): the call-time legacy stores slice for the sign-in
+// functions; plan 21/23 replaces it with the injected services.
+async function legacySteamStores() {
+  return (await import('../services/legacyFacades')).legacyManagerDeps()
+}
+
 export function registerSteamAuthFlows(): void {
   ipcMain.handle('checkSteamInstalled', async () => {
     return SteamUser.isSteamClientInstalled()
   })
 
   ipcMain.handle('steamStartQR', async () => {
-    return startQRLogin()
+    return startQRLogin(await legacySteamStores())
   })
 
   ipcMain.handle('steamPollQR', async () => {
@@ -200,7 +206,7 @@ export function registerSteamAuthFlows(): void {
         username: string
         password: string
       }
-      return startCredentialLogin(username, password)
+      return startCredentialLogin(await legacySteamStores(), username, password)
     }
   )
 

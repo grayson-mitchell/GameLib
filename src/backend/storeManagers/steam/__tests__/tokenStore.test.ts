@@ -60,9 +60,9 @@ const mockConfigStore = {
     backingStore = {}
   })
 }
-jest.mock('../stores', () => ({
-  configStore: mockConfigStore
-}))
+const deps = {
+  stores: { steam: { configStore: mockConfigStore } }
+} as unknown as SteamStoresDeps
 
 // ── Minimal stubs so ../user can be imported (registry-swap proof only) ─────
 jest.mock('graceful-fs', () => ({ existsSync: jest.fn(() => false) }))
@@ -81,6 +81,7 @@ import {
   clearOrphanedElectronToken
 } from '../tokenStore'
 import { SteamUser } from '../user'
+import type { SteamStoresDeps } from '../library/installRoot'
 
 describe('tokenStore', () => {
   beforeEach(() => {
@@ -234,7 +235,7 @@ describe('tokenStore', () => {
       backingStore['refreshToken'] =
         'steam:v1:some-ciphertext-or-legacy-plaintext'
 
-      const result = clearOrphanedElectronToken()
+      const result = clearOrphanedElectronToken(deps)
 
       expect(result).toBe(true)
       expect(mockConfigStore.delete).toHaveBeenCalledWith('refreshToken')
@@ -244,7 +245,7 @@ describe('tokenStore', () => {
     })
 
     it('absent: no-op, returns false, and delete() is never called', () => {
-      const result = clearOrphanedElectronToken()
+      const result = clearOrphanedElectronToken(deps)
 
       expect(result).toBe(false)
       expect(mockConfigStore.delete).not.toHaveBeenCalled()
@@ -254,10 +255,10 @@ describe('tokenStore', () => {
       backingStore['refreshToken'] =
         'steam:v1:some-ciphertext-or-legacy-plaintext'
 
-      expect(clearOrphanedElectronToken()).toBe(true)
+      expect(clearOrphanedElectronToken(deps)).toBe(true)
       expect(mockConfigStore.delete).toHaveBeenCalledTimes(1)
 
-      expect(clearOrphanedElectronToken()).toBe(false)
+      expect(clearOrphanedElectronToken(deps)).toBe(false)
       // Still exactly once — the second call never touches delete() at all.
       expect(mockConfigStore.delete).toHaveBeenCalledTimes(1)
     })

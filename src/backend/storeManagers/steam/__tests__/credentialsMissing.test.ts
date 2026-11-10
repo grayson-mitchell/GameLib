@@ -28,7 +28,6 @@ const mockConfigStore = {
   delete: jest.fn(),
   clear: jest.fn()
 }
-jest.mock('../stores', () => ({ configStore: mockConfigStore }))
 
 const mockReadTokenOutcome = jest.fn()
 const mockTokenStore = {
@@ -99,6 +98,14 @@ jest.mock('backend/ipc', () => ({
 }))
 
 import { SteamUser } from '../user'
+import type { SteamStoresDeps } from '../library/installRoot'
+
+const steamDeps = {
+  stores: { steam: { configStore: mockConfigStore } }
+} as unknown as SteamStoresDeps
+beforeEach(() => {
+  SteamUser.bindStores(steamDeps)
+})
 import { finishAuth, startQRLogin } from '../userSignIn'
 import { defined } from './fixtures/indexed'
 
@@ -201,7 +208,7 @@ describe('credentialsMissing latch', () => {
       const internals = SteamUser as unknown as Internals
       refuseLease(internals)
 
-      await finishAuth({
+      await finishAuth(steamDeps, {
         refreshToken: 'refresh-token',
         accountName: 'Persona'
       } as never)
@@ -230,7 +237,7 @@ describe('credentialsMissing latch', () => {
       )
       LoginSession.mockImplementation(() => fakeSession)
 
-      await startQRLogin()
+      await startQRLogin(steamDeps)
       await defined(handlers['authenticated'], 'authenticated handler')()
 
       expect(mockConfigStore.delete).toHaveBeenCalledWith(CREDENTIALS_MISSING)

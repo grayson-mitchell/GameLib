@@ -8391,7 +8391,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
     assertExactlyOneRoute('bottle-native', terminals)
-    expect(markSpy).toHaveBeenCalledWith(APP_ID)
+    expect(markSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     markSpy.mockRestore()
   })
 
@@ -8432,7 +8432,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
       expect(terminals.installBridgeGame).toHaveBeenCalledTimes(1)
       if (expectMarked) {
-        expect(markSpy).toHaveBeenCalledWith(APP_ID)
+        expect(markSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
       } else {
         expect(markSpy).not.toHaveBeenCalled()
       }
@@ -9194,7 +9194,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
       ;(steamMetadataStore.set as jest.Mock).mockClear()
 
-      markForcedWindowsViaBottle(APP_ID)
+      markForcedWindowsViaBottle(steamTestDeps, APP_ID)
 
       // The pre-fix shape wrote `{ art_cover:'', art_square:'', extra:{reqs:[]},
       // forcedWindowsViaBottle: true }` — an entry with NO platformsCaptured,
@@ -9209,7 +9209,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       })
       ;(steamMetadataStore.set as jest.Mock).mockClear()
 
-      markForcedWindowsViaBottle(APP_ID)
+      markForcedWindowsViaBottle(steamTestDeps, APP_ID)
 
       expect(steamMetadataStore.set as jest.Mock).toHaveBeenCalledTimes(1)
       expect(
@@ -9235,7 +9235,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       })
       ;(steamMetadataStore.set as jest.Mock).mockClear()
 
-      clearForcedWindowsViaBottle(APP_ID)
+      clearForcedWindowsViaBottle(steamTestDeps, APP_ID)
 
       // The pre-fix shape computed `wasForced` and used it ONLY to gate the
       // log line; the whole-entry rewrite ran regardless, on EVERY
@@ -9251,7 +9251,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       })
       ;(steamMetadataStore.set as jest.Mock).mockClear()
 
-      clearForcedWindowsViaBottle(APP_ID)
+      clearForcedWindowsViaBottle(steamTestDeps, APP_ID)
 
       expect(steamMetadataStore.set as jest.Mock).toHaveBeenCalledTimes(1)
       expect(

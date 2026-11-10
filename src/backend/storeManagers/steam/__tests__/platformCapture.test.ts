@@ -16,7 +16,7 @@ import {
   CapturedPlatforms,
   PlatformCapturePicsClient
 } from '../platformCapture'
-import { steamMetadataStore } from '../stores'
+import type { SteamStoresDeps } from '../library/installRoot'
 import { STEAM_PICS_BULK_TIMEOUT_MS } from '../withTimeout'
 
 jest.mock('backend/logger', () => ({
@@ -29,16 +29,17 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-jest.mock('../stores', () => ({
-  steamMetadataStore: {
-    get: jest.fn(),
-    set: jest.fn(),
-    entries: jest.fn()
-  }
-}))
+const steamMetadataStore = {
+  get: jest.fn(),
+  set: jest.fn(),
+  entries: jest.fn()
+}
+const deps = {
+  stores: { steam: { steamMetadataStore } }
+} as unknown as SteamStoresDeps
 
-const mockedGet = steamMetadataStore.get as jest.Mock
-const mockedSet = steamMetadataStore.set as jest.Mock
+const mockedGet = steamMetadataStore.get
+const mockedSet = steamMetadataStore.set
 
 // ── parseOslistPlatforms (Task 1) ────────────────────────────────────────────
 
@@ -175,7 +176,7 @@ describe('mergePlatformCapture (D-02)', () => {
       is_delisted: false
     })
 
-    mergePlatformCapture('123', {
+    mergePlatformCapture(deps, '123', {
       is_windows_native: true,
       is_mac_native: false,
       is_linux_native: true
@@ -205,7 +206,7 @@ describe('mergePlatformCapture (D-02)', () => {
   it('with NO existing entry, the write still succeeds with the three flags + platformsCaptured, and does not invent mac_arch', () => {
     mockedGet.mockReturnValue(undefined)
 
-    mergePlatformCapture('456', {
+    mergePlatformCapture(deps, '456', {
       is_windows_native: true,
       is_mac_native: true,
       is_linux_native: false
@@ -249,7 +250,7 @@ describe('mergePlatformCapture (D-02)', () => {
     mockedSet.mockReset()
     mockedGet.mockReturnValue(existing)
 
-    mergePlatformCapture('789', {
+    mergePlatformCapture(deps, '789', {
       is_windows_native: true,
       is_mac_native: false,
       is_linux_native: false
@@ -263,7 +264,7 @@ describe('mergePlatformCapture (D-02)', () => {
   it('QCN-01: an accepted merge stamps platformsSource "pics" and a numeric platformsCapturedAt', () => {
     mockedGet.mockReturnValue(undefined)
 
-    mergePlatformCapture('111', {
+    mergePlatformCapture(deps, '111', {
       is_windows_native: true,
       is_mac_native: true,
       is_linux_native: false
@@ -284,7 +285,7 @@ describe('mergePlatformCapture (D-02)', () => {
       platformsCapturedAt: Date.now() + 60_000
     })
 
-    mergePlatformCapture('222', {
+    mergePlatformCapture(deps, '222', {
       is_windows_native: false,
       is_mac_native: true,
       is_linux_native: false
@@ -310,7 +311,7 @@ describe('mergePlatformCapture (D-02)', () => {
       platformsCapturedAt: Date.now() - 60_000
     })
 
-    mergePlatformCapture('333', {
+    mergePlatformCapture(deps, '333', {
       is_windows_native: true,
       is_mac_native: true,
       is_linux_native: false
@@ -341,7 +342,7 @@ describe('mergePlatformCapture (D-02)', () => {
       is_windows_native: false
     })
 
-    mergePlatformCapture('444', {
+    mergePlatformCapture(deps, '444', {
       is_windows_native: true,
       is_mac_native: false,
       is_linux_native: false
@@ -355,7 +356,7 @@ describe('mergePlatformCapture (D-02)', () => {
   it('WR-01: returns true when the write is genuinely persisted', () => {
     mockedGet.mockReturnValue(undefined)
 
-    const result = mergePlatformCapture('555', {
+    const result = mergePlatformCapture(deps, '555', {
       is_windows_native: true,
       is_mac_native: false,
       is_linux_native: false
@@ -374,7 +375,7 @@ describe('mergePlatformCapture (D-02)', () => {
       platformsCapturedAt: Date.now() + 60_000
     })
 
-    const result = mergePlatformCapture('666', {
+    const result = mergePlatformCapture(deps, '666', {
       is_windows_native: false,
       is_mac_native: true,
       is_linux_native: false
@@ -407,7 +408,7 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
     const getProductInfo = jest.fn().mockResolvedValue({ apps: {} })
     const client: PlatformCapturePicsClient = { getProductInfo }
 
-    const result = await captureOwnedAppPlatforms(client, [1, 2, 3])
+    const result = await captureOwnedAppPlatforms(deps, client, [1, 2, 3])
 
     expect(getProductInfo).toHaveBeenCalledTimes(1)
     expect(getProductInfo).toHaveBeenCalledWith([2, 3], [], true)
@@ -420,7 +421,7 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
     const getProductInfo = jest.fn()
     const client: PlatformCapturePicsClient = { getProductInfo }
 
-    const result = await captureOwnedAppPlatforms(client, [1, 2])
+    const result = await captureOwnedAppPlatforms(deps, client, [1, 2])
 
     expect(getProductInfo).not.toHaveBeenCalled()
     expect(result).toEqual({
@@ -438,7 +439,7 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
     const getProductInfo = jest.fn().mockResolvedValue({ apps: {} })
     const client: PlatformCapturePicsClient = { getProductInfo }
 
-    const result = await captureOwnedAppPlatforms(client, ids)
+    const result = await captureOwnedAppPlatforms(deps, client, ids)
 
     expect(getProductInfo).toHaveBeenCalledTimes(1)
     expect(getProductInfo).toHaveBeenCalledWith(ids, [], true)
@@ -461,7 +462,7 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
     })
     const client: PlatformCapturePicsClient = { getProductInfo }
 
-    const result = await captureOwnedAppPlatforms(client, [1, 2, 3, 4, 5])
+    const result = await captureOwnedAppPlatforms(deps, client, [1, 2, 3, 4, 5])
 
     expect(mockedSet).not.toHaveBeenCalled()
     expect(result.skippedCount).toBe(5)
@@ -479,7 +480,7 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
     })
     const client: PlatformCapturePicsClient = { getProductInfo }
 
-    const result = await captureOwnedAppPlatforms(client, [7])
+    const result = await captureOwnedAppPlatforms(deps, client, [7])
 
     expect(mockedSet).toHaveBeenCalledTimes(1)
     const [key, written] = mockedSet.mock.calls[0]
@@ -521,7 +522,7 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
     })
     const client: PlatformCapturePicsClient = { getProductInfo }
 
-    const result = await captureOwnedAppPlatforms(client, [1])
+    const result = await captureOwnedAppPlatforms(deps, client, [1])
 
     // The declined merge must never call .set() and must never be counted
     // as "captured" -- pre-fix, capturedCount incremented unconditionally
@@ -540,7 +541,7 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
       .mockRejectedValue(new Error('CM socket dropped'))
     const client: PlatformCapturePicsClient = { getProductInfo }
 
-    const result = await captureOwnedAppPlatforms(client, [1])
+    const result = await captureOwnedAppPlatforms(deps, client, [1])
 
     expect(result.failed).toBe(true)
     expect(mockedSet).not.toHaveBeenCalled()
@@ -553,7 +554,7 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
     const getProductInfo = jest.fn().mockReturnValue(new Promise(() => {}))
     const client: PlatformCapturePicsClient = { getProductInfo }
 
-    const resultPromise = captureOwnedAppPlatforms(client, [1])
+    const resultPromise = captureOwnedAppPlatforms(deps, client, [1])
     await jest.advanceTimersByTimeAsync(STEAM_PICS_BULK_TIMEOUT_MS)
     const result = await resultPromise
 
@@ -574,7 +575,7 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
     // Must not reject -- a rejection here is exactly the unhandled-rejection
     // hole D-07 exists to close, since library.ts's call site has no
     // try/catch of its own around this call.
-    const result = await captureOwnedAppPlatforms(client, [1, 2])
+    const result = await captureOwnedAppPlatforms(deps, client, [1, 2])
 
     expect(result.failed).toBe(true)
     expect(result.capturedCount).toBe(0)
@@ -610,8 +611,8 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
     const getProductInfo = jest.fn().mockReturnValue(deferred)
     const client: PlatformCapturePicsClient = { getProductInfo }
 
-    const first = captureOwnedAppPlatforms(client, [1, 2])
-    const second = captureOwnedAppPlatforms(client, [1, 2])
+    const first = captureOwnedAppPlatforms(deps, client, [1, 2])
+    const second = captureOwnedAppPlatforms(deps, client, [1, 2])
 
     resolveDeferred({
       apps: {
@@ -650,8 +651,8 @@ describe('captureOwnedAppPlatforms (D-03/D-04)', () => {
       getProductInfo: jest.fn().mockResolvedValue({ apps: {} })
     }
 
-    const failing = captureOwnedAppPlatforms(failingClient, [1])
-    const healthy = captureOwnedAppPlatforms(healthyClient, [2])
+    const failing = captureOwnedAppPlatforms(deps, failingClient, [1])
+    const healthy = captureOwnedAppPlatforms(deps, healthyClient, [2])
 
     const [failingResult, healthyResult] = await Promise.all([failing, healthy])
 

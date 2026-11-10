@@ -309,7 +309,7 @@ export async function install(
         bridgeResult.status === 'done' &&
         !bridgeResult.deferredToSetup
       ) {
-        markForcedWindowsViaBottle(steamGame.appId)
+        markForcedWindowsViaBottle(steamGame.deps, steamGame.appId)
       }
       return bridgeResult
     }
@@ -352,7 +352,7 @@ export async function install(
       !bottleNativeResult.deferredToSetup
     ) {
       if (forceWindowsViaBottle) {
-        markForcedWindowsViaBottle(steamGame.appId)
+        markForcedWindowsViaBottle(steamGame.deps, steamGame.appId)
       }
     }
     return bottleNativeResult

@@ -5,7 +5,7 @@
  */
 import { captureOwnedAppMetacritic } from '../metacriticCapture'
 import { PlatformCapturePicsClient } from '../platformCapture'
-import { steamMetadataStore } from '../stores'
+import type { SteamStoresDeps } from '../library/installRoot'
 import { logInfo, logError } from 'backend/logger'
 import { STEAM_PICS_BULK_TIMEOUT_MS } from '../withTimeout'
 import appinfo64 from './fixtures/appinfo-64bit.json'
@@ -17,18 +17,27 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam', Backend: 'Backend' }
 }))
 
-jest.mock('../stores', () => ({
-  steamMetadataStore: { get: jest.fn(), set: jest.fn(), entries: jest.fn() }
-}))
+const steamMetadataStore = {
+  get: jest.fn(),
+  set: jest.fn(),
+  entries: jest.fn()
+}
+const deps = {
+  stores: { steam: { steamMetadataStore } }
+} as unknown as SteamStoresDeps
 
-const mockedGet = steamMetadataStore.get as jest.Mock
-const mockedSet = steamMetadataStore.set as jest.Mock
+const mockedGet = steamMetadataStore.get
+const mockedSet = steamMetadataStore.set
 
 describe('captureOwnedAppMetacritic', () => {
   it('makes no getProductInfo call when every id is already captured', async () => {
     mockedGet.mockReturnValue({ metacriticCaptured: true })
     const getProductInfo = jest.fn()
-    const result = await captureOwnedAppMetacritic({ getProductInfo }, [1, 2])
+    const result = await captureOwnedAppMetacritic(
+      deps,
+      { getProductInfo },
+      [1, 2]
+    )
     expect(getProductInfo).not.toHaveBeenCalled()
     expect(result).toEqual({
       scopedCount: 0,
@@ -57,7 +66,7 @@ describe('captureOwnedAppMetacritic', () => {
     })
     const client: PlatformCapturePicsClient = { getProductInfo }
 
-    const result = await captureOwnedAppMetacritic(client, [1, 570])
+    const result = await captureOwnedAppMetacritic(deps, client, [1, 570])
 
     expect(getProductInfo).toHaveBeenCalledTimes(1)
     expect(getProductInfo).toHaveBeenCalledWith([570], [], true)
@@ -80,7 +89,7 @@ describe('captureOwnedAppMetacritic', () => {
     const getProductInfo = jest.fn().mockResolvedValue({
       apps: { 7: { appinfo: { common: { name: 'No Score' } } } }
     })
-    await captureOwnedAppMetacritic({ getProductInfo }, [7])
+    await captureOwnedAppMetacritic(deps, { getProductInfo }, [7])
     const written = mockedSet.mock.calls[0][1]
     expect(written).toEqual({ art_cover: 'c', metacriticCaptured: true })
     expect('metacritic_score' in written).toBe(false)
@@ -93,6 +102,7 @@ describe('captureOwnedAppMetacritic', () => {
       unknownApps: [1]
     })
     const result = await captureOwnedAppMetacritic(
+      deps,
       { getProductInfo },
       [1, 2, 3, 4]
     )
@@ -104,7 +114,11 @@ describe('captureOwnedAppMetacritic', () => {
   it('fail-soft on rejection: logs and returns failed:true', async () => {
     mockedGet.mockReturnValue(undefined)
     const getProductInfo = jest.fn().mockRejectedValue(new Error('dropped'))
-    const result = await captureOwnedAppMetacritic({ getProductInfo }, [1])
+    const result = await captureOwnedAppMetacritic(
+      deps,
+      { getProductInfo },
+      [1]
+    )
     expect(result.failed).toBe(true)
     expect(logError).toHaveBeenCalled()
     expect(mockedSet).not.toHaveBeenCalled()
@@ -114,7 +128,7 @@ describe('captureOwnedAppMetacritic', () => {
     mockedGet.mockReturnValue(undefined)
     jest.useFakeTimers()
     const getProductInfo = jest.fn().mockReturnValue(new Promise(() => {}))
-    const p = captureOwnedAppMetacritic({ getProductInfo }, [1])
+    const p = captureOwnedAppMetacritic(deps, { getProductInfo }, [1])
     await jest.advanceTimersByTimeAsync(STEAM_PICS_BULK_TIMEOUT_MS)
     expect((await p).failed).toBe(true)
     jest.useRealTimers()

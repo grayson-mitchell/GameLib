@@ -410,6 +410,7 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
       expect(response?.result).not.toBe(UNPORTED_CHANNEL_MARKER)
       expect(jest.mocked(startCredentialLogin)).toHaveBeenCalledTimes(1)
       expect(jest.mocked(startCredentialLogin)).toHaveBeenCalledWith(
+        expect.anything(),
         'gsd-tester',
         'super-secret'
       )

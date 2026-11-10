@@ -8,7 +8,6 @@ import { GameInfo } from 'common/types'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { reportDetectedFix } from 'backend/knownFixReport'
 import { sendFrontendMessage } from '../../ipc'
-import { steamLibraryStore } from './stores'
 import { library } from './state'
 import * as bottle from './bottle'
 import * as bridgeBottle from './bridgeBottle'
@@ -154,7 +153,10 @@ export function markBridgeGameInstalled(
       }
     }
     library.set(steamGame.appId, updated)
-    steamLibraryStore.set('games', Array.from(library.values()))
+    steamGame.deps.stores.steam.steamLibraryStore.set(
+      'games',
+      Array.from(library.values())
+    )
     sendFrontendMessage('pushGameToLibrary', updated)
   }
   // Quick 261029-mbi: no 'done' here. The install keeps going (shared
@@ -185,7 +187,10 @@ export function markBridgeGameUninstalled(steamGame: SteamGame): void {
       install: {}
     }
     library.set(steamGame.appId, updated)
-    steamLibraryStore.set('games', Array.from(library.values()))
+    steamGame.deps.stores.steam.steamLibraryStore.set(
+      'games',
+      Array.from(library.values())
+    )
     sendFrontendMessage('pushGameToLibrary', updated)
   }
   sendFrontendMessage('gameStatusUpdate', {

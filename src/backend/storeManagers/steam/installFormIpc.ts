@@ -25,7 +25,6 @@ import SteamGame from './games'
 import { checkBottleEligibility } from './gameEligibility'
 import { getBridgeRouteVerdict } from './bridgeRouteVerdict'
 import type { ManagerDeps } from 'backend/services/types'
-import { steamBottleConfigStore, steamMetadataStore } from './stores'
 import { persistBottleWineVersion } from './bottle'
 import { depotSignalCaptured } from './metadataCapture'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
@@ -133,6 +132,7 @@ export async function getSteamBottleEligibilityVerdict(
   // absent — reporting that as captured is what suppresses Phase 34.14's D-04
   // fail-open and makes the install form withhold Windows with false
   // confidence. Reporting it as not-captured is what lets the fail-open engage.
+  const { steamBottleConfigStore, steamMetadataStore } = deps.stores.steam
   const cached = steamMetadataStore.get(appName)
   const hasWindowsDepot = cached?.is_windows_native === true
   // 34.15 D-12: the mac sibling of hasWindowsDepot, read from the SAME

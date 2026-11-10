@@ -3,7 +3,6 @@ import { ExtraInfo, GameInfo } from 'common/types'
 import { parseMetacriticScore } from 'common/metacriticScore'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from '../../ipc'
-import { steamMetadataStore } from './stores'
 import { knownFixSaysMac32 } from './macArchKnownFix'
 import { resolvePlatformWrite } from './platformPrecedence'
 import {
@@ -81,8 +80,10 @@ export async function fetchMetadataIfNeeded(
       // Persist the flag without wiping cached art/extra so the entry can be reverted
       // if Steam re-lists the app. Push the updated GameInfo so the frontend drops it live.
       const delistedInfo: GameInfo = { ...current, is_delisted: true }
-      const existing = steamMetadataStore.get(steamGame.appId)
-      steamMetadataStore.set(steamGame.appId, {
+      const existing = steamGame.deps.stores.steam.steamMetadataStore.get(
+        steamGame.appId
+      )
+      steamGame.deps.stores.steam.steamMetadataStore.set(steamGame.appId, {
         ...(existing ?? {
           art_cover: '',
           art_square: '',
@@ -148,7 +149,9 @@ export async function fetchMetadataIfNeeded(
     // which sync ran most recently; `platformsSource`/`platformsCapturedAt`
     // are what make that outcome inspectable after the fact. Do not
     // describe WR-02 as closed.
-    const existingMeta = steamMetadataStore.get(steamGame.appId)
+    const existingMeta = steamGame.deps.stores.steam.steamMetadataStore.get(
+      steamGame.appId
+    )
     const resolution = resolvePlatformWrite(
       existingMeta,
       { is_windows_native, is_mac_native, is_linux_native },
@@ -232,7 +235,7 @@ export async function fetchMetadataIfNeeded(
     // MUST be listed explicitly here or a declined write would erase the
     // stamp it is honouring — the exact T-18-02-04 trap this comment block
     // already documents at length for the fields above.
-    steamMetadataStore.set(steamGame.appId, {
+    steamGame.deps.stores.steam.steamMetadataStore.set(steamGame.appId, {
       art_cover,
       art_square,
       extra,

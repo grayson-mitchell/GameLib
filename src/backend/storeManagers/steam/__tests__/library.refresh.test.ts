@@ -974,7 +974,11 @@ describe('SteamLibraryManager', () => {
       await manager.refresh()
 
       expect(captureOwnedAppPlatforms).toHaveBeenCalledTimes(1)
-      expect(captureOwnedAppPlatforms).toHaveBeenCalledWith(anon, [570])
+      expect(captureOwnedAppPlatforms).toHaveBeenCalledWith(
+        steamTestDeps,
+        anon,
+        [570]
+      )
     })
 
     it('an incomplete anonymous pass gets a second pass on the held session', async () => {
@@ -991,9 +995,15 @@ describe('SteamLibraryManager', () => {
       await manager.refresh()
 
       expect(captureOwnedAppPlatforms).toHaveBeenCalledTimes(2)
-      expect(captureOwnedAppPlatforms).toHaveBeenNthCalledWith(1, anon, [570])
+      expect(captureOwnedAppPlatforms).toHaveBeenNthCalledWith(
+        1,
+        steamTestDeps,
+        anon,
+        [570]
+      )
       expect(captureOwnedAppPlatforms).toHaveBeenNthCalledWith(
         2,
+        steamTestDeps,
         fakeClient,
         [570]
       )
@@ -1028,7 +1038,11 @@ describe('SteamLibraryManager', () => {
 
       await manager.refresh()
 
-      expect(captureOwnedAppMetacritic).toHaveBeenCalledWith(anon, [570])
+      expect(captureOwnedAppMetacritic).toHaveBeenCalledWith(
+        steamTestDeps,
+        anon,
+        [570]
+      )
       const capOrder = at(
         jest.mocked(captureOwnedAppMetacritic).mock.invocationCallOrder,
         0
@@ -1048,7 +1062,11 @@ describe('SteamLibraryManager', () => {
 
       await manager.refresh()
 
-      expect(captureOwnedAppMetacritic).toHaveBeenCalledWith(fakeClient, [570])
+      expect(captureOwnedAppMetacritic).toHaveBeenCalledWith(
+        steamTestDeps,
+        fakeClient,
+        [570]
+      )
     })
 
     it('no anonymous client: one pass on the held session', async () => {
@@ -1058,7 +1076,11 @@ describe('SteamLibraryManager', () => {
       await manager.refresh()
 
       expect(captureOwnedAppPlatforms).toHaveBeenCalledTimes(1)
-      expect(captureOwnedAppPlatforms).toHaveBeenCalledWith(fakeClient, [570])
+      expect(captureOwnedAppPlatforms).toHaveBeenCalledWith(
+        steamTestDeps,
+        fakeClient,
+        [570]
+      )
     })
   })
 

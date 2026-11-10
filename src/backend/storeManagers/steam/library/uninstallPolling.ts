@@ -89,7 +89,7 @@ export async function pollUninstallOnce(
     // it as well. A stale flag would make the next install of a Mac-native
     // title go Windows silently.
     if (source === 'bottle' || source === 'bridge') {
-      clearForcedWindowsViaBottle(appId)
+      clearForcedWindowsViaBottle(deps, appId)
     }
     const existing = library.get(appId)
 

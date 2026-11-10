@@ -1,6 +1,6 @@
 import { InstallResult } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { steamMetadataStore } from './stores'
+import type { SteamStoresDeps } from './library/installRoot'
 
 /**
  * A single tracked native depot-download run for one appId — the value type
@@ -172,7 +172,11 @@ export function isNativeInstallInFlight(appId: string): boolean {
  * undo. Refusing loudly is the correct behaviour for a precondition that
  * cannot legitimately fail.
  */
-export function markForcedWindowsViaBottle(appId: string): void {
+export function markForcedWindowsViaBottle(
+  deps: SteamStoresDeps,
+  appId: string
+): void {
+  const { steamMetadataStore } = deps.stores.steam
   const existing = steamMetadataStore.get(appId)
   if (!existing) {
     logWarning(
@@ -207,7 +211,11 @@ export function markForcedWindowsViaBottle(appId: string): void {
  * already had. A-09 noted this was moot until A-01 landed, because nothing
  * ever set the flag; A-01 landed in 996c192d1, so it is live.
  */
-export function clearForcedWindowsViaBottle(appId: string): void {
+export function clearForcedWindowsViaBottle(
+  deps: SteamStoresDeps,
+  appId: string
+): void {
+  const { steamMetadataStore } = deps.stores.steam
   const existing = steamMetadataStore.get(appId)
   if (!existing || existing.forcedWindowsViaBottle !== true) return
   steamMetadataStore.set(appId, {

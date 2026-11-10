@@ -1,7 +1,7 @@
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { LoginSession, EAuthTokenPlatformType } from 'steam-session'
 import { noteSignInSucceeded } from 'backend/signInProbe/outcomes'
-import { configStore } from './stores'
+import type { SteamStoresDeps } from './library/installRoot'
 import { getTokenStore } from './tokenStore'
 import { withTimeout } from './withTimeout'
 import { SteamUser } from './user'
@@ -22,20 +22,21 @@ import {
 // ── Shared auth success path ───────────────────────────────────────────────
 
 export async function finishAuth(
+  deps: SteamStoresDeps,
   session: InstanceType<typeof LoginSession>
 ): Promise<string> {
   const refreshToken = session.refreshToken
   // Store credentials immediately — don't block on the steam-user CM connection.
   await getTokenStore().setToken(refreshToken)
-  configStore.set('isLoggedIn', true)
-  configStore.delete('credentialsMissing')
+  deps.stores.steam.configStore.set('isLoggedIn', true)
+  deps.stores.steam.configStore.delete('credentialsMissing')
   // Phase 49: a completed sign-in outranks any probe that began earlier.
   noteSignInSucceeded('steam')
 
   // Log on (through the wrapped entry point) only to read the persona name.
   // If this fails the user is still logged in (credentials already stored
   // above), so we fall back to a placeholder.
-  const personaName = await resolveSignInProfile(session)
+  const personaName = await resolveSignInProfile(deps, session)
 
   logInfo(`Steam auth complete — logged in as ${personaName}`, LogPrefix.Steam)
   return personaName
@@ -49,6 +50,7 @@ export async function finishAuth(
  * steam-session LoginSession, which needs no CM.
  */
 async function resolveSignInProfile(
+  deps: SteamStoresDeps,
   session: InstanceType<typeof LoginSession>
 ): Promise<string> {
   let personaName = session.accountName || 'Steam User'
@@ -85,15 +87,19 @@ async function resolveSignInProfile(
       lease.release()
     }
   }
-  configStore.set('userData', { username: personaName, steamId })
+  deps.stores.steam.configStore.set('userData', {
+    username: personaName,
+    steamId
+  })
   return personaName
 }
 
 async function completeQrProfile(
+  deps: SteamStoresDeps,
   session: InstanceType<typeof LoginSession>
 ): Promise<void> {
   try {
-    const username = await resolveSignInProfile(session)
+    const username = await resolveSignInProfile(deps, session)
     setQrSessionState({ status: 'done', username })
   } catch (err) {
     logWarning(['Steam QR background CM connect failed:', err], LogPrefix.Steam)
@@ -146,7 +152,7 @@ export async function pollCredentialLogin(): Promise<{
 
 // ── AUTH-01: QR Login ──────────────────────────────────────────────────────
 
-export async function startQRLogin(): Promise<{
+export async function startQRLogin(deps: SteamStoresDeps): Promise<{
   status: 'done' | 'error'
   challengeUrl?: string
 }> {
@@ -181,8 +187,8 @@ export async function startQRLogin(): Promise<{
           LogPrefix.Steam
         )
         await getTokenStore().setToken(session.refreshToken)
-        configStore.set('isLoggedIn', true)
-        configStore.delete('credentialsMissing')
+        deps.stores.steam.configStore.set('isLoggedIn', true)
+        deps.stores.steam.configStore.delete('credentialsMissing')
         // Phase 49: a completed sign-in outranks any probe that began earlier.
         noteSignInSucceeded('steam')
 
@@ -196,7 +202,7 @@ export async function startQRLogin(): Promise<{
         // (set synchronously below: the token is passed in memory), so a
         // concurrent ensureConnected() from the post-login refresh awaits it
         // instead of opening a second logon.
-        void completeQrProfile(session)
+        void completeQrProfile(deps, session)
       } catch (err) {
         logError(['Steam QR auth finalization failed:', err], LogPrefix.Steam)
         setQrSessionState({ status: 'error' })
@@ -253,6 +259,7 @@ export async function pollQRLogin(): Promise<{
 // ── AUTH-02: Credential Login ──────────────────────────────────────────────
 
 export async function startCredentialLogin(
+  deps: SteamStoresDeps,
   username: string,
   password: string
 ): Promise<{ status: 'done' | 'guard_required' | 'error' }> {
@@ -303,7 +310,7 @@ export async function startCredentialLogin(
       //      a second set of duplicate listeners on the same session object.
       session.once('authenticated', async () => {
         try {
-          const personaName = await finishAuth(session)
+          const personaName = await finishAuth(deps, session)
           _settleCredSession('done', personaName)
         } catch (err) {
           logError(
@@ -340,7 +347,7 @@ export async function startCredentialLogin(
     return new Promise<{ status: 'done' | 'error' }>((resolve) => {
       session.once('authenticated', async () => {
         try {
-          await finishAuth(session)
+          await finishAuth(deps, session)
           resolve({ status: 'done' })
         } catch (err) {
           logError(

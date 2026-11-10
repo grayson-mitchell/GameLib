@@ -18,11 +18,8 @@ import { isAppleSiliconMac } from 'backend/constants/environment'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { GameInfo } from 'common/types'
 
-import {
-  steamLibraryStore,
-  steamMetadataStore,
-  SteamMetadataCacheEntry
-} from './stores'
+import type { SteamMetadataCacheEntry } from './stores'
+import type { SteamStoresDeps } from './library/installRoot'
 import { library } from './state'
 import { sendFrontendMessage } from '../../ipc'
 
@@ -48,17 +45,25 @@ export function knownFixSaysMac32(
   }
 }
 
-function propagateToLibrary(appId: string, macArch: '32' | 'unknown'): void {
+function propagateToLibrary(
+  deps: SteamStoresDeps,
+  appId: string,
+  macArch: '32' | 'unknown'
+): void {
   const current = library.get(appId)
   if (!current) return
   const updated: GameInfo = { ...current, mac_arch: macArch }
   library.set(appId, updated)
-  steamLibraryStore.set('games', Array.from(library.values()))
+  deps.stores.steam.steamLibraryStore.set('games', Array.from(library.values()))
   sendFrontendMessage('pushGameToLibrary', updated)
 }
 
 /** Synchronous, idempotent, never throws. */
-export function seedMacArchFromKnownFix(appId: string): void {
+export function seedMacArchFromKnownFix(
+  deps: SteamStoresDeps,
+  appId: string
+): void {
+  const { steamMetadataStore } = deps.stores.steam
   try {
     const existing = steamMetadataStore.get(appId)
     const hint = knownFixSaysMac32(appId, existing)
@@ -79,7 +84,7 @@ export function seedMacArchFromKnownFix(appId: string): void {
         `Steam: appId ${appId} seeded mac_arch '32' from a curated known fix (known-fix source, unverified)`,
         LogPrefix.Steam
       )
-      propagateToLibrary(appId, '32')
+      propagateToLibrary(deps, appId, '32')
       return
     }
 
@@ -108,7 +113,7 @@ export function seedMacArchFromKnownFix(appId: string): void {
         `Steam: appId ${appId} known-fix macArch seed retracted (hint absent or host not Apple silicon)`,
         LogPrefix.Steam
       )
-      propagateToLibrary(appId, 'unknown')
+      propagateToLibrary(deps, appId, 'unknown')
     }
   } catch (error) {
     logWarning(

@@ -1485,7 +1485,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'orphaned-token-cleanup',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Unconditional legacy-key cleanup (debug/steam-token-survives-keychain), OUTSIDE both arms
         // above on purpose: by the time either arm finishes, `activeTokenStore` has already been
         // swapped away from the unconfigured default (T-28-10 ordering — the block above), so the
@@ -1496,7 +1496,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // place in the codebase permitted to touch them. Presence-only: never reads, logs, or
         // measures the value, and this log line fires ONLY when the key was actually present and
         // deleted (an absent key produces zero output, and stays that way on every later boot).
-        if (clearOrphanedElectronToken()) {
+        if (
+          clearOrphanedElectronToken({ stores: requireServices(state).stores })
+        ) {
           logInfo(
             '[bootstrap] removed a legacy pre-Tauri `refreshToken` key from `steam_store/config.json`; the Keychain (`steam-refresh-token` slot) is the authoritative store',
             LogPrefix.Backend

@@ -3,7 +3,6 @@ import { isMac } from 'backend/constants/environment'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import SteamGame from './games'
 import type { ManagerDeps } from 'backend/services/types'
-import { steamMetadataStore } from './stores'
 import { library } from './state'
 import * as bridgeBottle from './bridgeBottle'
 import { NUMERIC_APP_ID } from './gameConstants'
@@ -64,7 +63,9 @@ export async function getBridgeRouteVerdict(
   if (windowsBuildChosen === true && isMac) {
     // Capture first so is_windows_native is not read off a cold cache.
     await ensurePlatformsCaptured(game)
-    explicitChoice = steamMetadataStore.get(appId)?.is_windows_native === true
+    explicitChoice =
+      deps.stores.steam.steamMetadataStore.get(appId)?.is_windows_native ===
+      true
   }
   const locationChoice =
     windowsBuildChosen === undefined &&

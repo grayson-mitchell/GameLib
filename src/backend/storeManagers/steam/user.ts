@@ -1,8 +1,7 @@
 import { existsSync } from 'graceful-fs'
 import { join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { configStore } from './stores'
-import * as steamStores from './stores'
+import type { SteamStoresDeps } from './library/installRoot'
 import { STEAM_INSTALL_PATHS } from './constants'
 import { getTokenStore, readTokenOutcome } from './tokenStore'
 import { currentTriggerLabel, noteSteamAuthTrigger } from './authTrigger'
@@ -50,6 +49,25 @@ import {
 // ── SteamUser static class ────────────────────────────────────────────────────
 
 export class SteamUser {
+  // 66.1-16: the steam stores slice this static class reads. Static because
+  // SteamUser has ~20 call sites (plans 17/18); plan 18 binds it at boot.
+  private static boundStores: SteamStoresDeps | null = null
+
+  /** Inject the steam stores slice (boot / tests). */
+  static bindStores(deps: SteamStoresDeps | null): void {
+    this.boundStores = deps
+  }
+
+  private static storesDeps(): SteamStoresDeps {
+    if (this.boundStores) return this.boundStores
+    // Transitional (66.1-16): until plan 18 binds the slice at boot, resolve
+    // the steam stores module lazily (call time) so importing this module
+    // never loads the store backends.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const steam = require('./stores') as typeof import('./stores')
+    return { stores: { steam } }
+  }
+
   private static client: InstanceType<typeof SteamUserLib> | null = null
   // Single-flight for the wrapped cold connect; resolves null when connected,
   // otherwise the refusal every joiner reports.
@@ -125,7 +143,9 @@ export class SteamUser {
   // ── AUTH-03: Login state ───────────────────────────────────────────────────
 
   static isLoggedIn(): boolean {
-    return Boolean(configStore.get_nodefault('isLoggedIn'))
+    return Boolean(
+      this.storesDeps().stores.steam.configStore.get_nodefault('isLoggedIn')
+    )
   }
 
   /**
@@ -216,8 +236,8 @@ export class SteamUser {
     epochAtStart: number
   ): void {
     const result = applySignInVerdict(
-      // Transitional (66.1-13): SteamUser is a static class; plan 18 injects the family.
-      { stores: { steam: steamStores } },
+      // Transitional (66.1-13): SteamUser is a static class; plan 18 binds the family at boot.
+      this.storesDeps(),
       'steam',
       outcome,
       epochAtStart
@@ -340,7 +360,10 @@ export class SteamUser {
 
   /** configStore userData.steamId when it is a numeric SteamID64 string. */
   static getPersistedSteamId64(): string | undefined {
-    const steamId = configStore.get_nodefault('userData')?.steamId
+    const steamId =
+      this.storesDeps().stores.steam.configStore.get_nodefault(
+        'userData'
+      )?.steamId
     return typeof steamId === 'string' && /^\d+$/.test(steamId)
       ? steamId
       : undefined
@@ -403,7 +426,7 @@ export class SteamUser {
         // A live, canary-verified CM connection disproves any latched
         // credentialsMissing verdict — clear it so the tile recovers without
         // waiting for the next login.
-        configStore.delete('credentialsMissing')
+        this.storesDeps().stores.steam.configStore.delete('credentialsMissing')
         return null
       } catch (canaryErr) {
         logWarning(
@@ -476,7 +499,10 @@ export class SteamUser {
         // timed-out read must never be reported as signed-out. Latching it
         // here costs no extra keyring traffic: this branch only runs on reads
         // a deliberate user action already triggered.
-        configStore.set('credentialsMissing', true)
+        this.storesDeps().stores.steam.configStore.set(
+          'credentialsMissing',
+          true
+        )
         return 'token-absent'
       }
       token = outcome.token
@@ -663,11 +689,11 @@ export class SteamUser {
     // configStore.clear() used to wipe — see stores.ts's configStore
     // schema (isLoggedIn/userData are the only other keys ever written there).
     await getTokenStore().clearToken()
-    configStore.delete('isLoggedIn')
-    configStore.delete('userData')
+    this.storesDeps().stores.steam.configStore.delete('isLoggedIn')
+    this.storesDeps().stores.steam.configStore.delete('userData')
     // A signed-out session has no credential to be missing — leaving a stale
     // `true` here would mislabel the next login's tile before any read runs.
-    configStore.delete('credentialsMissing')
+    this.storesDeps().stores.steam.configStore.delete('credentialsMissing')
     // Phase 49: fence any boot probe that began before this sign-out.
     noteSignedOut('steam')
     logInfo('Logging user out from Steam', LogPrefix.Steam)
@@ -676,7 +702,8 @@ export class SteamUser {
   // ── User details ───────────────────────────────────────────────────────────
 
   static async getUserDetails(): Promise<SteamUserData | undefined> {
-    const userData = configStore.get_nodefault('userData')
+    const userData =
+      this.storesDeps().stores.steam.configStore.get_nodefault('userData')
     return userData
   }
 

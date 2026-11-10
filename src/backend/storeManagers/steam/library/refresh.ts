@@ -225,6 +225,7 @@ async function syncOwnedLibrary(
   const anonClient = await getAnonymousPicsClient('platform-capture')
   if (anonClient) {
     const anonSummary = await captureOwnedAppPlatforms(
+      deps,
       anonClient as unknown as PlatformCapturePicsClient,
       appIds
     )
@@ -237,10 +238,10 @@ async function syncOwnedLibrary(
         `Steam bulk platform capture: anonymous pass left ${anonSummary.scopedCount - anonSummary.capturedCount} uncaptured (public_only or failed), second pass on the held session`,
         LogPrefix.Steam
       )
-      logCapture(await captureOwnedAppPlatforms(heldClient, appIds))
+      logCapture(await captureOwnedAppPlatforms(deps, heldClient, appIds))
     }
   } else {
-    logCapture(await captureOwnedAppPlatforms(heldClient, appIds))
+    logCapture(await captureOwnedAppPlatforms(deps, heldClient, appIds))
   }
 
   // Quick 261029-sbi: bulk Metacritic score capture. Public appinfo, so the
@@ -249,6 +250,7 @@ async function syncOwnedLibrary(
   // held-session second pass: an app missed here stays uncaptured and is
   // retried on the next sync. Return value deliberately unread.
   await captureOwnedAppMetacritic(
+    deps,
     (anonClient ?? heldClient) as unknown as PlatformCapturePicsClient,
     appIds
   )

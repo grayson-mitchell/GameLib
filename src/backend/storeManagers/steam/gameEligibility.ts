@@ -10,7 +10,6 @@
 import { existsSync } from 'graceful-fs'
 import { logInfo, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
-import { steamMetadataStore } from './stores'
 import { seedMacArchFromKnownFix } from './macArchKnownFix'
 import { knownFixSaysCeg } from './drmKnownFix'
 import { pendingFetches, METADATA_FETCH_TIMEOUT_MS } from './state'
@@ -46,7 +45,9 @@ export function isNative(steamGame: SteamGame): boolean {
  */
 export function isBottleEligibleFromPlatforms(steamGame: SteamGame): boolean {
   if (!isMac) return false
-  const meta = steamMetadataStore.get(steamGame.appId)
+  const meta = steamGame.deps.stores.steam.steamMetadataStore.get(
+    steamGame.appId
+  )
   // MAC32-02: a confirmed-32-bit mac build is bottle-eligible independent of
   // is_mac_native/platformsCaptured — a confirmed-32 game reports
   // is_mac_native true (it DOES have a mac depot, just not a runnable one on
@@ -78,7 +79,8 @@ export function isBottleEligibleFromPlatforms(steamGame: SteamGame): boolean {
 export function isForcedWindowsViaBottle(steamGame: SteamGame): boolean {
   return (
     isMac &&
-    steamMetadataStore.get(steamGame.appId)?.forcedWindowsViaBottle === true
+    steamGame.deps.stores.steam.steamMetadataStore.get(steamGame.appId)
+      ?.forcedWindowsViaBottle === true
   )
 }
 
@@ -211,7 +213,7 @@ export async function ensurePlatformsCaptured(
 
   // quick 261027-bqe: seed a curated macArch "32" BEFORE any caller consults
   // isBottleEligible(), above the alreadyCaptured early return below.
-  seedMacArchFromKnownFix(steamGame.appId)
+  seedMacArchFromKnownFix(steamGame.deps, steamGame.appId)
 
   // Quick task 260816-hdg PIN — the FOURTH read site, and the one that stays
   // RAW. Three reasons, all load-bearing:
@@ -228,6 +230,7 @@ export async function ensurePlatformsCaptured(
   //     is exactly what lets Phase 34.14's D-04 fail-open offer Windows. The
   //     install form is correct DURING the window and correct after it.
   // A source assertion in metadataCapture.test.ts holds this line in place.
+  const { steamMetadataStore } = steamGame.deps.stores.steam
   const alreadyCaptured = (): boolean =>
     steamMetadataStore.get(steamGame.appId)?.platformsCaptured === true
 

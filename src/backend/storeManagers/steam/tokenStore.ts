@@ -1,5 +1,5 @@
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { configStore } from './stores'
+import type { SteamStoresDeps } from './library/installRoot'
 import { TOKEN_STORE_KEY } from './constants'
 
 /**
@@ -218,7 +218,8 @@ export function getTokenStore(): TokenStore {
  * a dead key, not a write the guard was ever meant to arbitrate, so it calls
  * `configStore` directly, the same way the deleted Electron-era store did.
  */
-export function clearOrphanedElectronToken(): boolean {
+export function clearOrphanedElectronToken(deps: SteamStoresDeps): boolean {
+  const { configStore } = deps.stores.steam
   if (!configStore.has(TOKEN_STORE_KEY)) return false
   configStore.delete(TOKEN_STORE_KEY)
   return true

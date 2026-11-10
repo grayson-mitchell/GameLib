@@ -61,9 +61,6 @@ const mockConfigStore = {
   delete: jest.fn(),
   clear: jest.fn()
 }
-jest.mock('../stores', () => ({
-  configStore: mockConfigStore
-}))
 // NOTE: '../tokenStore' is intentionally NOT mocked here. logout() must
 // route the refresh token through the real TokenStore seam
 // (getTokenStore().clearToken() -> configStore.delete(TOKEN_STORE_KEY)),
@@ -173,6 +170,14 @@ jest.mock('../anonymousClient', () => ({
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
 import { SteamUser } from '../user'
+import type { SteamStoresDeps } from '../library/installRoot'
+
+const steamDeps = {
+  stores: { steam: { configStore: mockConfigStore } }
+} as unknown as SteamStoresDeps
+beforeEach(() => {
+  SteamUser.bindStores(steamDeps)
+})
 import { redeemKey } from '../userRedeem'
 import {
   pollCredentialLogin,
@@ -543,14 +548,14 @@ describe('SteamUser', () => {
     })
 
     test('returns { status: "done", challengeUrl } on success', async () => {
-      const result = await startQRLogin()
+      const result = await startQRLogin(steamDeps)
       expect(result.status).toBe('done')
       expect(result.challengeUrl).toBe('steam://...qr_url_here')
     })
 
     test('creates a new LoginSession for each attempt', async () => {
       MockLoginSession.mockClear()
-      await startQRLogin()
+      await startQRLogin(steamDeps)
       expect(MockLoginSession).toHaveBeenCalledTimes(1)
     })
 
@@ -558,7 +563,7 @@ describe('SteamUser', () => {
       mockSessionInstance.startWithQR.mockRejectedValue(
         new Error('network error')
       )
-      const result = await startQRLogin()
+      const result = await startQRLogin(steamDeps)
       expect(result.status).toBe('error')
     })
 
@@ -566,7 +571,7 @@ describe('SteamUser', () => {
     // trace in gamelib.log) ────────────────────────────────────────────────
 
     test('emits a logInfo line when a login attempt starts', async () => {
-      await startQRLogin()
+      await startQRLogin(steamDeps)
 
       const lines = jest
         .mocked(logInfo)
@@ -582,8 +587,8 @@ describe('SteamUser', () => {
     })
 
     test('emits a logInfo line when cancelling a previous login session', async () => {
-      await startQRLogin()
-      await startQRLogin()
+      await startQRLogin(steamDeps)
+      await startQRLogin(steamDeps)
 
       const lines = jest
         .mocked(logInfo)
@@ -598,7 +603,7 @@ describe('SteamUser', () => {
     })
 
     test('emits a logInfo line naming the loginTimeout when the challenge is issued', async () => {
-      await startQRLogin()
+      await startQRLogin(steamDeps)
 
       expect(mockSessionInstance.loginTimeout).toBe(120000)
       const lines = jest
@@ -613,7 +618,7 @@ describe('SteamUser', () => {
     })
 
     test('emits a logInfo line when the authenticated event is received', async () => {
-      await startQRLogin()
+      await startQRLogin(steamDeps)
       await defined(
         sessionOnHandlers['authenticated'],
         'authenticated handler'
@@ -629,7 +634,7 @@ describe('SteamUser', () => {
     })
 
     test('never logs the QR challenge URL or the refresh token across the whole QR flow', async () => {
-      await startQRLogin()
+      await startQRLogin(steamDeps)
       await defined(
         sessionOnHandlers['authenticated'],
         'authenticated handler'
@@ -654,7 +659,7 @@ describe('SteamUser', () => {
     })
 
     test('still logs a warning when the session times out (regression, D-01)', async () => {
-      await startQRLogin()
+      await startQRLogin(steamDeps)
       sessionOnHandlers['timeout']?.()
 
       const lines = jest
@@ -681,7 +686,7 @@ describe('SteamUser', () => {
           steamUserOnHandlers['loggedOn']?.({}, {})
         })
       })
-      await startQRLogin()
+      await startQRLogin(steamDeps)
     })
 
     test('returns { status: "waiting" } before authenticated event fires', async () => {
@@ -803,7 +808,7 @@ describe('SteamUser', () => {
         qrChallengeUrl: 'steam://...qr_url_here',
         actionRequired: true
       })
-      await startQRLogin()
+      await startQRLogin(steamDeps)
       await pollQRLogin()
 
       const lines = pollLines()
@@ -829,7 +834,7 @@ describe('SteamUser', () => {
         qrChallengeUrl: 'steam://test',
         actionRequired: true
       })
-      await startQRLogin()
+      await startQRLogin(steamDeps)
 
       // Trigger authenticated — stores credentials and sets qrSessionState=done,
       // then fires background CM connect (which never resolves in this test)
@@ -853,7 +858,7 @@ describe('SteamUser', () => {
         qrChallengeUrl: 'steam://test',
         actionRequired: true
       })
-      await startQRLogin()
+      await startQRLogin(steamDeps)
 
       // Kick off the background CM connect
       void sessionOnHandlers['authenticated']?.()
@@ -889,7 +894,11 @@ describe('SteamUser', () => {
         validActions: [{ type: 2 }] // EmailCode = 2
       })
 
-      const result = await startCredentialLogin('testuser', 'password123')
+      const result = await startCredentialLogin(
+        steamDeps,
+        'testuser',
+        'password123'
+      )
       expect(result.status).toBe('guard_required')
     })
 
@@ -916,7 +925,11 @@ describe('SteamUser', () => {
         return { actionRequired: false }
       })
 
-      const result = await startCredentialLogin('testuser', 'password123')
+      const result = await startCredentialLogin(
+        steamDeps,
+        'testuser',
+        'password123'
+      )
       expect(result.status).toBe('done')
 
       // Restore
@@ -929,7 +942,11 @@ describe('SteamUser', () => {
       mockSessionInstance.startWithCredentials.mockRejectedValue(
         new Error('InvalidPassword')
       )
-      const result = await startCredentialLogin('testuser', 'wrongpass')
+      const result = await startCredentialLogin(
+        steamDeps,
+        'testuser',
+        'wrongpass'
+      )
       expect(result.status).toBe('error')
     })
 
@@ -937,7 +954,7 @@ describe('SteamUser', () => {
       mockSessionInstance.startWithCredentials.mockResolvedValue({
         actionRequired: true
       })
-      await startCredentialLogin('testuser', 'mysecretpassword')
+      await startCredentialLogin(steamDeps, 'testuser', 'mysecretpassword')
 
       for (const [key, value] of mockConfigStore.set.mock.calls) {
         expect(key).not.toBe('password')
@@ -968,7 +985,7 @@ describe('SteamUser', () => {
         return { actionRequired: true }
       })
 
-      await startCredentialLogin('testuser', 'password123')
+      await startCredentialLogin(steamDeps, 'testuser', 'password123')
 
       expect(loginTimeoutAtCallTime).toBeGreaterThanOrEqual(120000)
     })
@@ -988,7 +1005,7 @@ describe('SteamUser', () => {
         validActions: [{ type: 3 }, { type: 4 }] // DeviceCode + DeviceConfirmation
       })
 
-      await startCredentialLogin('testuser', 'password123')
+      await startCredentialLogin(steamDeps, 'testuser', 'password123')
 
       // All three listeners must be registered so the session is handled for
       // its full lifetime — DeviceConfirmation polling starts automatically
@@ -1011,7 +1028,11 @@ describe('SteamUser', () => {
       })
 
       // Start the credential login — returns guard_required
-      const result = await startCredentialLogin('testuser', 'password123')
+      const result = await startCredentialLogin(
+        steamDeps,
+        'testuser',
+        'password123'
+      )
       expect(result.status).toBe('guard_required')
 
       // Simulate DeviceConfirmation phone approval: 'authenticated' fires on
@@ -1043,7 +1064,7 @@ describe('SteamUser', () => {
       mockSessionInstance.startWithCredentials.mockResolvedValue({
         actionRequired: true
       })
-      await startCredentialLogin('testuser', 'pass')
+      await startCredentialLogin(steamDeps, 'testuser', 'pass')
     })
 
     test('returns { status: "done" } on successful code submission', async () => {
@@ -1159,7 +1180,7 @@ describe('SteamUser', () => {
       mockSteamUserInstance.logOn.mockImplementation(() => {
         // intentionally does nothing — loggedOn fires later in each test
       })
-      await startQRLogin()
+      await startQRLogin(steamDeps)
     })
 
     test('(a) username is undefined immediately after authenticated, then populated when CM loggedOn fires', async () => {
@@ -1289,7 +1310,7 @@ describe('SteamUser', () => {
         })
       })
 
-      await startQRLogin()
+      await startQRLogin(steamDeps)
       await sessionOnHandlers['authenticated']?.()
 
       // Now logout
@@ -1356,7 +1377,7 @@ describe('SteamUser', () => {
           steamUserOnHandlers['loggedOn']?.({}, {})
         })
       })
-      await startQRLogin()
+      await startQRLogin(steamDeps)
       await sessionOnHandlers['authenticated']?.()
       await new Promise((r) => process.nextTick(r)) // let background CM connect settle
       mockSteamUserInstance.logOn.mockClear()
@@ -1942,7 +1963,7 @@ describe('SteamUser', () => {
           steamUserOnHandlers['loggedOn']?.({}, {})
         })
       })
-      await startQRLogin()
+      await startQRLogin(steamDeps)
       await sessionOnHandlers['authenticated']?.()
       await new Promise((r) => process.nextTick(r)) // let background CM connect settle
       mockSteamUserInstance.logOn.mockClear()
@@ -2273,7 +2294,7 @@ describe('SteamUser', () => {
       mockSessionInstance.startWithCredentials.mockResolvedValue({
         actionRequired: false
       })
-      const pending = startCredentialLogin('testuser', 'pw')
+      const pending = startCredentialLogin(steamDeps, 'testuser', 'pw')
       await flushAsync()
       void sessionOnHandlers['authenticated']?.()
       return pending
@@ -2327,7 +2348,7 @@ describe('SteamUser', () => {
       mockSessionInstance.startWithCredentials.mockResolvedValue({
         actionRequired: false
       })
-      const pending = startCredentialLogin('testuser', 'pw')
+      const pending = startCredentialLogin(steamDeps, 'testuser', 'pw')
       await flushAsync()
       void sessionOnHandlers['authenticated']?.()
       await flushAsync()
@@ -2355,7 +2376,7 @@ describe('SteamUser', () => {
       mockSteamUserInstance.logOn.mockImplementation(() => {})
       const savedSteamID = mockSteamUserInstance.steamID
       mockSteamUserInstance.steamID = null
-      await startQRLogin()
+      await startQRLogin(steamDeps)
       await defined(
         sessionOnHandlers['authenticated'],
         'authenticated handler'

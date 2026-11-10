@@ -25,28 +25,30 @@ jest.mock('backend/constants/environment', () => ({
 jest.mock('../../../ipc', () => ({ sendFrontendMessage: jest.fn() }))
 
 const metaStore = new Map<string, Record<string, unknown>>()
-jest.mock('../stores', () => ({
-  steamMetadataStore: {
-    get: jest.fn(),
-    set: jest.fn()
-  },
-  steamLibraryStore: { get: jest.fn(), set: jest.fn() }
-}))
+const steamMetadataStore = { get: jest.fn(), set: jest.fn() }
+const deps = {
+  stores: {
+    steam: {
+      steamMetadataStore,
+      steamLibraryStore: { get: jest.fn(), set: jest.fn() }
+    }
+  }
+} as unknown as SteamStoresDeps
 
 import { readKnownFixes } from 'backend/knownFixes'
 import { logWarning, logInfo } from 'backend/logger'
 import { sendFrontendMessage } from '../../../ipc'
 import { library } from '../state'
+import type { SteamStoresDeps } from '../library/installRoot'
 import {
   formatMacArch32KnownFixEntry,
   knownFixSaysMac32,
   seedMacArchFromKnownFix
 } from '../macArchKnownFix'
-import { steamMetadataStore } from '../stores'
 
 const readFixes = readKnownFixes as jest.Mock
 // eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock handle, never invoked unbound
-const setMock = steamMetadataStore.set as jest.Mock
+const setMock = steamMetadataStore.set
 
 const baseEntry = () => ({
   platformsCaptured: true,
@@ -64,9 +66,7 @@ beforeEach(() => {
   env.isAppleSiliconMac = true
   readFixes.mockReset()
   setMock.mockReset()
-  ;(steamMetadataStore.get as jest.Mock).mockImplementation((id: string) =>
-    metaStore.get(id)
-  )
+  steamMetadataStore.get.mockImplementation((id: string) => metaStore.get(id))
   setMock.mockImplementation((id: string, v: Record<string, unknown>) => {
     metaStore.set(id, v)
   })
@@ -108,7 +108,7 @@ describe('seedMacArchFromKnownFix', () => {
     readFixes.mockReturnValue({ title: 'H', macArch: '32' })
     metaStore.set('63000', baseEntry())
     library.set('63000', { app_name: '63000', title: 'H' } as never)
-    seedMacArchFromKnownFix('63000')
+    seedMacArchFromKnownFix(deps, '63000')
     const stored = metaStore.get('63000') as Record<string, unknown>
     expect(stored).toEqual({
       ...baseEntry(),
@@ -119,7 +119,7 @@ describe('seedMacArchFromKnownFix', () => {
     expect(library.get('63000')?.mac_arch).toBe('32')
     expect(sendFrontendMessage).toHaveBeenCalledTimes(1)
 
-    seedMacArchFromKnownFix('63000')
+    seedMacArchFromKnownFix(deps, '63000')
     expect(setMock).toHaveBeenCalledTimes(1)
     expect(sendFrontendMessage).toHaveBeenCalledTimes(1)
   })
@@ -128,7 +128,7 @@ describe('seedMacArchFromKnownFix', () => {
     env.isAppleSiliconMac = false
     readFixes.mockReturnValue({ title: 'H', macArch: '32' })
     metaStore.set('63000', baseEntry())
-    seedMacArchFromKnownFix('63000')
+    seedMacArchFromKnownFix(deps, '63000')
     expect(setMock).not.toHaveBeenCalled()
   })
 
@@ -140,7 +140,7 @@ describe('seedMacArchFromKnownFix', () => {
       mac_arch_source: 'macho',
       mac_arch_verified: true
     })
-    seedMacArchFromKnownFix('63000')
+    seedMacArchFromKnownFix(deps, '63000')
     expect(setMock).not.toHaveBeenCalled()
     expect(String((logWarning as jest.Mock).mock.calls[0][0])).toContain(
       'Mach-O'
@@ -154,7 +154,7 @@ describe('seedMacArchFromKnownFix', () => {
       mac_arch: '32',
       mac_arch_source: 'known-fix'
     })
-    seedMacArchFromKnownFix('63000')
+    seedMacArchFromKnownFix(deps, '63000')
     const stored = metaStore.get('63000') as Record<string, unknown>
     expect(stored.mac_arch).toBe('unknown')
     expect('mac_arch_source' in stored).toBe(false)
@@ -168,7 +168,7 @@ describe('seedMacArchFromKnownFix', () => {
       mac_arch: '32',
       mac_arch_source: 'known-fix'
     })
-    seedMacArchFromKnownFix('63000')
+    seedMacArchFromKnownFix(deps, '63000')
     expect((metaStore.get('63000') as { mac_arch: string }).mac_arch).toBe(
       'unknown'
     )
@@ -182,7 +182,7 @@ describe('seedMacArchFromKnownFix', () => {
       mac_arch_source: 'macho',
       mac_arch_verified: true
     })
-    seedMacArchFromKnownFix('63000')
+    seedMacArchFromKnownFix(deps, '63000')
     expect(setMock).not.toHaveBeenCalled()
   })
 })

@@ -1,6 +1,7 @@
 import { logInfo, logError, LogPrefix } from 'backend/logger'
 import { parseMetacriticScore } from 'common/metacriticScore'
-import { steamMetadataStore, SteamMetadataCacheEntry } from './stores'
+import type { SteamMetadataCacheEntry } from './stores'
+import type { SteamStoresDeps } from './library/installRoot'
 import {
   withPlatformCaptureLock,
   PlatformCapturePicsClient
@@ -33,9 +34,11 @@ interface MetacriticCaptureSummary {
 }
 
 export async function captureOwnedAppMetacritic(
+  deps: SteamStoresDeps,
   client: PlatformCapturePicsClient,
   appIds: number[]
 ): Promise<MetacriticCaptureSummary> {
+  const { steamMetadataStore } = deps.stores.steam
   let scopedCount = appIds.length
   try {
     return await withPlatformCaptureLock(async () => {
