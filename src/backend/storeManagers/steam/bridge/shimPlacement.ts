@@ -78,6 +78,8 @@ type WithholdInput = {
   allMissing: string[]
   delayMissing: string[]
   unservable: string[]
+  /** SteamAPI_* exports the game's runner resolves by name that the x86 shim does not export. */
+  runnerMissing?: string[]
   scannedAt: string
   originalFingerprints?: OriginalFingerprints
 }
@@ -95,6 +97,19 @@ function logNonCorePlaced(appId: string, gaps: string[]): void {
  * steam_api to fall back to, so return null: the caller refreshes the shim
  * and reports placed-miss (a helper-less stale shim is the worse outcome).
  */
+function describeGaps(input: WithholdInput): string {
+  const parts = [
+    `delay-imported missing: ${input.delayMissing.join(', ') || 'none'}`,
+    `unservable interface versions: ${input.unservable.join(', ') || 'none'}`
+  ]
+  if (input.runnerMissing && input.runnerMissing.length > 0) {
+    parts.push(
+      `exports the runner needs that the shim lacks: ${input.runnerMissing.join(', ')}`
+    )
+  }
+  return parts.join('; ')
+}
+
 function withholdIfRestorable(
   input: WithholdInput
 ): PlaceShimResultBase | null {
@@ -103,7 +118,7 @@ function withholdIfRestorable(
   )
   if (probes.every((p) => p === 'restorable')) return withhold(input)
   logWarning(
-    `placeShimForGame: appId ${input.appId} cannot withhold the shim -- the original steam_api is gone (no ${ORIGINAL_BACKUP_SUFFIX} backup, or the backup was refused), so the game has no steam_api of its own; refreshing the GameLib shim to the current build and launching through the bridge despite the gaps (delay-imported missing: ${input.delayMissing.join(', ') || 'none'}; unservable interface versions: ${input.unservable.join(', ') || 'none'}). Use GameLib's "Verify and Repair" (game menu) to restore the original from the Steam depot`,
+    `placeShimForGame: appId ${input.appId} cannot withhold the shim -- the original steam_api is gone (no ${ORIGINAL_BACKUP_SUFFIX} backup, or the backup was refused), so the game has no steam_api of its own; refreshing the GameLib shim to the current build and launching through the bridge despite the gaps (${describeGaps(input)}). Use GameLib's "Verify and Repair" (game menu) to restore the original from the Steam depot`,
     LogPrefix.Steam
   )
   return null
@@ -131,7 +146,7 @@ function withhold(input: WithholdInput): PlaceShimResultBase {
     restored.push(resolved)
   }
   logWarning(
-    `placeShimForGame: appId ${input.appId} withheld the shim -- importer evidence names gaps the shim cannot serve (delay-imported missing: ${input.delayMissing.join(', ') || 'none'}; unservable interface versions: ${input.unservable.join(', ') || 'none'}); launching with the game's own steam_api, no helper${restored.length > 0 ? ` (restored: ${restored.map((r) => basename(r)).join(', ')})` : ''} (quick 261024-j4l)`,
+    `placeShimForGame: appId ${input.appId} withheld the shim -- importer evidence names gaps the shim cannot serve (${describeGaps(input)}); launching with the game's own steam_api, no helper${restored.length > 0 ? ` (restored: ${restored.map((r) => basename(r)).join(', ')})` : ''} (quick 261024-j4l)`,
     LogPrefix.Steam
   )
   return {
@@ -313,7 +328,8 @@ export async function placeShimForGameInner(
             stubbedInterfaces: [],
             allMissing: runnerGaps,
             delayMissing: [],
-            unservable: runnerGaps,
+            unservable: [],
+            runnerMissing: runnerGaps,
             scannedAt,
             originalFingerprints: collectOriginalFingerprints(
               bottleDir,
