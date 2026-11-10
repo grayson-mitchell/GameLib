@@ -613,7 +613,7 @@ Plans:
 **Goal:** D-15 step 2 of Phase 66 (decisions in `66-CONTEXT.md`). Nothing is constructed at import time. A stores factory replaces the 16 `*/stores.ts` modules and `key_value_stores.ts`. `createStoreManagers` builds the library and game manager classes (gog, legendary, nile, steam, sideload) with constructor deps at boot (D-02), and the 46 non-test consumers of `libraryManagerMap`/`gameManagerMap`/`storeLaunchHooks` receive them. The 25 `sidecar/*FlowRegistration.ts` files take narrow slices (D-01). In `launcher.ts`, `callRunner`, `runWineCommand`, the gamescope probe and script spawns become runner callers, pinned by characterization tests first. `utils.ts` `spawnAsync` becomes a thin runner caller and `handleExit` calls the runner's teardown. `trackedChildren.ts` and `longLivedChildren.ts` are deleted, with comet and the bridge `helperSpawn` moving to `spawnLongLived` (D-10, D-11). Ceilings drop in the same commits (D-16). About 16–18 plans.
 **Requirements**: TBD
 **Depends on:** Phase 66
-**Plans:** 7/28 plans executed
+**Plans:** 8/28 plans executed
 
 Plans:
 
@@ -638,7 +638,7 @@ Plans:
 **Wave 5**
 
 - [x] 66.1-07-PLAN.md — registrations group A onto slices (wineTools, shortcuts, enrichment, engine, eosOverlay, humble, downloadQueue, runnerAuth)
-- [ ] 66.1-08-PLAN.md — manager constructor deps (all five) + GOG tree
+- [x] 66.1-08-PLAN.md — manager constructor deps (all five) + GOG tree
 
 **Wave 6**
 
@@ -856,7 +856,7 @@ Plans:
 **Goal:** The frontend has one state system. The 2,259-line `GlobalState.tsx` class component (`extends PureComponent`, 78 `setState` calls), served through `ContextProvider`, is retired in favour of the zustand store in `src/frontend/state/GlobalStateV2.ts` (164 lines today), so a change in one domain no longer re-renders every context consumer. Measured 2026-11-06, excluding tests: 130 frontend files use `ContextProvider` and 20 use `GlobalStateV2`. Three parts: (1) **Slices.** Move state into V2 one domain at a time (library and game list, downloads and install queue, Steam / Epic / GOG / Amazon / Humble auth, settings and theme, UI and dialog state), each with selector hooks (`useShallow`) so components subscribe to what they read. (2) **Ratchet.** Track the remaining `ContextProvider` consumers with a shrink-only count like Phase 62's, ending at zero, then delete `GlobalState.tsx` and the context. (3) **Live checks.** State moves surface as stale-UI and re-render bugs that type checks and unit tests miss, so each wave ends with a smoke check in `pnpm tauri:dev` (Library, Game page, Downloads, sign-in and sign-out per store, ConsoleMode). Measure Library re-render cost on a large library before and after. No behaviour change: anything else found becomes a todo. Open questions for discuss-phase: whether V2 as it stands is the target or needs restructuring first (it already imports `frontend/helpers/electronStores`); where persisted frontend state lives relative to Phase 68's versioned stores; and the order relative to Phase 64, which adds custom-theme state. Depends on Phase 62 because plans 62-17 to 62-19 convert runner checks in the same Library, Game, ConsoleMode and DownloadManager files. Came from the post-Phase-62 architecture review on 2026-11-06.
 **Requirements**: TBD
 **Depends on:** Phase 62
-**Plans:** 16/26 plans executed
+**Plans:** 20/26 plans executed
 
 Plans:
 
@@ -905,19 +905,19 @@ Plans:
 
 **Wave 10** *(blocked on Wave 9 completion)*
 
-- [ ] 69-17-PLAN.md — Library arrays, loaders, game push and refresh() into libraryState
+- [x] 69-17-PLAN.md — Library arrays, loaders, game push and refresh() into libraryState
 
 **Wave 11** *(blocked on Wave 10 completion)*
 
-- [ ] 69-18-PLAN.md — refreshLibrary and Steam sync state into libraryState; slots retired
+- [x] 69-18-PLAN.md — refreshLibrary and Steam sync state into libraryState; slots retired
 
 **Wave 12** *(blocked on Wave 11 completion)*
 
-- [ ] 69-19-PLAN.md — libraryStatus/handleGameStatus + sleep-assertion subscriber; composite hooks; GlobalState becomes a pure bridge
+- [x] 69-19-PLAN.md — libraryStatus/handleGameStatus + sleep-assertion subscriber; composite hooks; GlobalState becomes a pure bridge
 
 **Wave 13** *(blocked on Wave 12 completion)*
 
-- [ ] 69-20-PLAN.md — Convert Library screen consumers
+- [x] 69-20-PLAN.md — Convert Library screen consumers
 - [ ] 69-21-PLAN.md — Convert install/game/downloads/console consumers and hasStatus
 - [ ] 69-22-PLAN.md — Convert remaining shared UI and NavShell consumers
 - [ ] 69-23-PLAN.md — Convert Settings remainder, Login, WebView, Humble, StoreSearch, Discounts
