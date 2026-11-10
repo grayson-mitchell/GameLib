@@ -153,7 +153,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 64: UI to edit themes** — 0 plans; not started
 - [x] **Phase 65: Steam store manager decomposition, continued** — 20/20 plans complete; Phase 61 closed 2026-11-07 — unblocked, D-11 (completed 2026-11-08)
 - [x] **Phase 66: Backend dependency injection replacing module-level singletons** — 9 plans; planned; split 2026-11-10 into 66 (foundation) + 66.1–66.3 (completed 2026-11-09)
-- [x] **Phase 66.1: Backend DI — stores, store managers, flow registrations and launcher** — 0 plans; not started (completed 2026-11-10)
+- [x] **Phase 66.1: Backend DI — stores, store managers, flow registrations and launcher** — 37 plans; complete (7/8 live UAT, item 5 blocked pre-existing) (completed 2026-11-10)
 - [ ] **Phase 66.2: Every backend spawn through the process runner, then the `child_process` ban** — 0 plans; not started
 - [ ] **Phase 66.3: Backend module state to zero, then the live macOS smoke** — 0 plans; not started
 - [x] **Phase 67: Schema validation at the sidecar IPC boundary** — 20 plans in 14 waves; planned 2026-11-07 (completed 2026-11-07)
@@ -732,7 +732,7 @@ Plans:
 
 **Goal:** D-15 step 3. The D-06 module-state count reaches zero outside the sanctioned list (runner, logger sink, boot entry), and the census becomes a test (D-13, D-16). It goes in this order:
 
-1. The D-05 process-wide owners, largest ripple first: `online_monitor`, `platform/index`, `anonymousClient`, `processGuards` (read its WR-04 header), `engineState`, `gameSessionState`/`userSignInState`/`authTrigger`/`steam/state`, `shimCoverage`, `winetricksQueue`, `signInProbe/*`, `humble/*`.
+1. The D-05 process-wide owners, largest ripple first: `online_monitor`, `platform/index`, `anonymousClient`, `processGuards` (read its WR-04 header), `engineState`, `gameSessionState`/`userSignInState`/`authTrigger`/`steam/state`, `shimCoverage`, `winetricksQueue`, `signInProbe/*`, `humble/*`. Also the boot-bound static holders the census started counting in 66.1 (C-WR-2): `SteamUser` static fields (`bindStores`), `bindBottleStores`, `bindHumbleStores`, `bindDxmtStores`, `bindSteamGridDbSecretDeps`, plus the static fields in humble user, config and game_config; and the `registerHumbleFlows`/`registerHumbleLoginFlows` MH-3 allowlist entries.
 2. The long tail of about 70 files with 1–2 sites each.
 
 The D-14 Rust-overlap exemption table stays empty unless Phase 75 is re-scoped. The phase ends with the D-17 live macOS smoke as a non-autonomous last plan. About 15–18 plans, and it can split again into steam/* and the rest if needed.

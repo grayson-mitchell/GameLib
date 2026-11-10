@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.9
 milestone_name: Steam Bridge & Engine
-status: executing
-stopped_at: Phase 69 context gathered
-last_updated: "2026-11-10T08:07:18.258Z"
+status: ready_to_plan
+stopped_at: Phase 66.1 complete (37/37) — ready to discuss Phase 66.2
+last_updated: 2026-11-10T09:18:48.376Z
 last_activity: 2026-11-10
 progress:
   total_phases: 18
   completed_phases: 11
   total_plans: 240
-  completed_plans: 239
+  completed_plans: 240
   percent: 61
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-06)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 66.1 — backend-di-stores-store-managers-flow-registrations-and-launcher
+**Current focus:** Phase 66.2 — every backend spawn through the process runner
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -72,10 +72,10 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 
 ## Current Position
 
-Phase: 66.1 (backend-di-stores-store-managers-flow-registrations-and-launcher) — EXECUTING
-Plan: 28 of 28
-Status: Ready to execute
-Last activity: 2026-11-10 - Completed quick task 261110-up7: depot installs honor the per-app Steam beta branch
+Phase: 66.2
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-11-10
 
 Progress: [██████████] 100%
 
