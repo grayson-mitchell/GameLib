@@ -104,11 +104,19 @@ jest.mock('../sidecarRpc', () => ({
 // ── macSteamOffline — PARTIAL mock (54-13): real module, scriptable restore, so a quit
 // reaches the owed-goonline restore without firing any steam:// URL ──────────
 const mockRestoreMacSteamOnlineIfOwed = jest.fn()
-jest.mock('../../storeManagers/steam/macSteamOffline', () => ({
-  ...jest.requireActual('../../storeManagers/steam/macSteamOffline'),
-  restoreMacSteamOnlineIfOwed: (...args: unknown[]) =>
-    mockRestoreMacSteamOnlineIfOwed(...args)
-}))
+jest.mock('../../storeManagers/steam/macSteamOffline', () => {
+  const actual = jest.requireActual('../../storeManagers/steam/macSteamOffline')
+  return {
+    ...actual,
+    // The boot-built instance is real except its restore, so a quit or boot reaches the
+    // scripted restore without firing any steam:// URL.
+    createMacSteamOffline: (deps: unknown) => ({
+      ...actual.createMacSteamOffline(deps),
+      restoreMacSteamOnlineIfOwed: (...args: unknown[]) =>
+        mockRestoreMacSteamOnlineIfOwed(...args)
+    })
+  }
+})
 
 // ── axios — fix/steam-native-install-stability (33-05 live-gate gap): `init` now wires
 // the REAL `initOnlineMonitor()` (backend/online_monitor.ts), which -- now that the real

@@ -19,9 +19,8 @@ import {
   releaseAnonymousForShutdown
 } from './anonymousClient'
 import {
-  withMacSteamOffline,
   GuidedOfflineRequiredError,
-  restoreMacSteamOnlineIfOwed,
+  type MacSteamOffline,
   type MacSteamRestoreOutcome,
   type MacSteamWrapKind
 } from './macSteamOffline'
@@ -46,16 +45,36 @@ import {
   type OpenAuthenticatedLease
 } from './userTypes'
 
+type SteamUserMacSteamOffline = Pick<
+  MacSteamOffline,
+  'withMacSteamOffline' | 'restoreMacSteamOnlineIfOwed'
+>
+export type SteamUserBoundDeps = SteamStoresDeps & {
+  macSteamOffline?: SteamUserMacSteamOffline
+}
+
 // ── SteamUser static class ────────────────────────────────────────────────────
 
 export class SteamUser {
   // 66.1-16: the steam stores slice this static class reads. Static because
   // SteamUser has ~20 call sites; the sidecar's 'stores' boot step binds it (66.1-18).
-  private static boundStores: SteamStoresDeps | null = null
+  // 66.2-09: the same slot also carries the boot-built Mac Steam go-offline instance
+  // (ten acquire sites would otherwise each have to thread it), so no second static exists.
+  private static boundStores: SteamUserBoundDeps | null = null
 
-  /** Inject the steam stores slice (boot / tests). */
-  static bindStores(deps: SteamStoresDeps | null): void {
+  /** Inject the steam stores slice and the Mac Steam instance (boot / tests). */
+  static bindStores(deps: SteamUserBoundDeps | null): void {
     this.boundStores = deps
+  }
+
+  private static macSteamOffline(): SteamUserMacSteamOffline {
+    const instance = this.boundStores?.macSteamOffline
+    if (!instance) {
+      throw new Error(
+        'SteamUser: Mac Steam offline instance read before bindStores supplied it (the sidecar binds it in the stores boot step)'
+      )
+    }
+    return instance
   }
 
   private static storesDeps(): SteamStoresDeps {
@@ -596,7 +615,7 @@ export class SteamUser {
   ): Promise<AuthSessionRefusal | null> {
     if (generation !== this.sessionGeneration) return 'not-signed-in'
     try {
-      await withMacSteamOffline((wrap) =>
+      await this.macSteamOffline().withMacSteamOffline((wrap) =>
         this.connectSteamUserClient(token, { reason, wrap, generation })
       )
     } catch (err) {
@@ -751,7 +770,7 @@ export class SteamUser {
         )
       }
     }
-    return restoreMacSteamOnlineIfOwed('shutdown')
+    return this.macSteamOffline().restoreMacSteamOnlineIfOwed('shutdown')
   }
 
   private static connectSteamUserClient(

@@ -293,7 +293,7 @@ import { EventEmitter } from 'events'
 import { sendFrontendMessage } from '../../../ipc'
 import SteamLibraryManager from '../library'
 import SteamGame from '../games'
-import { SteamUser } from '../user'
+import { SteamUser, type SteamUserBoundDeps } from '../user'
 import { setTokenStore, type TokenStore } from '../tokenStore'
 import { getSteamLibraries } from 'backend/utils'
 import { runOnceWhenOnline } from 'backend/online_monitor'
@@ -316,7 +316,13 @@ const steamTestDeps = createTestManagerDeps({
   steamProcesses: createInertSteamProcesses(),
   stores: createTestStores({ steam: steamStoresModule })
 })
-SteamUser.bindStores(steamTestDeps)
+SteamUser.bindStores({
+  ...steamTestDeps,
+  macSteamOffline:
+    jest.requireMock<NonNullable<SteamUserBoundDeps['macSteamOffline']>>(
+      '../macSteamOffline'
+    )
+})
 
 const APP_ID = '570'
 

@@ -30,7 +30,6 @@ import Backend from 'i18next-fs-backend'
 import i18next from 'i18next'
 import * as platformApi from '../platform'
 import { sweepStaleEngineTemps } from 'backend/engine/fallbackEngine'
-import { restoreMacSteamOnlineIfOwed } from '../storeManagers/steam/macSteamOffline'
 import { startInstalledJsonWatcher } from './installedJsonWatcher'
 import { removeLegacyZoomData } from './legacyZoomDataCleanup'
 import { releaseOnStdinEof } from './stdinEofRelease'
@@ -1138,6 +1137,14 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             clock: ctx.clock,
             platform: ctx.platform
           })
+        // The Mac Steam go-offline instance exists now; SteamUser's wrap and shutdown restore read
+        // it through the slot bindStores filled in the 'stores' step (no logon can run before here).
+        const { stores } = state.services
+        if (!stores) throw new Error('boot: stores step must run first')
+        SteamUser.bindStores({
+          stores,
+          macSteamOffline: state.services.steamProcesses.macSteamOffline
+        })
         state.services.commandRunner =
           prebuilt.commandRunner ??
           createCommandRunner({
@@ -1548,10 +1555,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'mac-steam-online-restore',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Owed Mac Steam goonline, three layers: routed quit (handleExit), stdin EOF
         // (releaseOnStdinEof), and this boot call. kill -9 of the sidecar is covered ONLY here.
-        void restoreMacSteamOnlineIfOwed('boot')
+        void requireSteamProcesses(
+          state
+        ).macSteamOffline.restoreMacSteamOnlineIfOwed('boot')
       }
     },
     {

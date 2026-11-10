@@ -68,7 +68,7 @@
  *   - `steamRemoveAllCopies` -> `removeAllSteamInstallCopies(appName)`,
  *     quick-260821-le0 Task 3 — sweeps every recorded install root for a
  *     Steam title in one action, same shared-seam pattern as the pair above.
- *   - `steamGoOfflineRetry` -> `checkGuidedOfflineReady()` (`macSteamOffline.ts`),
+ *   - `steamGoOfflineRetry` -> `checkGuidedOfflineReady()` (the boot-built `macSteamOffline` instance),
  *     Phase 54 Plan 07 — the guided Go Offline dialog's Continue.
  *   - `steamBridgeListFriends` -> `listBridgeFriends(appId)` and
  *     `steamBridgeInviteFriend` -> `sendBridgeInvite(appId, ordinal)`
@@ -152,10 +152,6 @@ import {
   sendBridgeInvite
 } from '../storeManagers/steam/bridge/inviteBridge'
 import { removeAllSteamInstallCopies } from '../storeManagers/steam/removeAllCopies'
-import {
-  checkGuidedOfflineReady,
-  payAbandonedGuidedOffline
-} from '../storeManagers/steam/macSteamOffline'
 
 /**
  * Registers the QR-login trio, the credential/SteamGuard/TOTP login trio,
@@ -381,7 +377,9 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   // Phase 54: sidecar-only. Takes no renderer arguments, so there is nothing to
   // validate; it only reads Mac Steam's state and arms the one-shot guided
   // restore. It never logs on.
-  ipcMain.handle('steamGoOfflineRetry', async () => checkGuidedOfflineReady())
+  ipcMain.handle('steamGoOfflineRetry', async () =>
+    deps.steamProcesses.macSteamOffline.checkGuidedOfflineReady()
+  )
 
   // Phase 58 Plan 31 (T-58-104): sidecar-only. Renderer input is untrusted, so
   // validate before any helper socket is opened.
@@ -416,7 +414,7 @@ export function registerSteamAuthFlows(deps: SteamAuthFlowDeps): void {
   // Cancel/close: pays the goonline a ready-but-abandoned guided step owes.
   // A no-op unless that step is still armed. It never logs on.
   ipcMain.handle('steamGoOfflineCancel', async () => {
-    payAbandonedGuidedOffline('cancel')
+    deps.steamProcesses.macSteamOffline.payAbandonedGuidedOffline('cancel')
   })
 
   // ── Guided Steam-client install pair (REQ-34.4-04, main.ts:958-961) ───────

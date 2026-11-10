@@ -1,7 +1,8 @@
 /**
  * The process-wide Steam instances built once at boot (66.2 D-05/D-15) and handed out through
- * `ManagerDeps.steamProcesses`: the running-game poller and the nettop download monitor.
- * Their former module state (a timer, a last-seen appId, the monitors Map) is closure state of
+ * `ManagerDeps.steamProcesses`: the running-game poller, the nettop download monitor and the Mac
+ * Steam go-offline instance. Their former module state (a timer, a last-seen appId, the monitors
+ * Map, the owed-goonline debt and guided arm) is closure state of
  * the instances built here, so a test builds its own and nothing leaks between boots.
  *
  * Sidecar exit contract: building the instances starts nothing (no timer, child or watcher);
@@ -11,6 +12,10 @@
 import { sendFrontendMessage } from '../../ipc'
 import type { Clock, ProcessRunner } from '../../process/types'
 import { createRunningPoll, readRunningAppId } from './library/runningPoll'
+import {
+  createMacSteamOffline,
+  createMacSteamOfflineEnvDeps
+} from './macSteamOffline'
 import { listSteamClientPids } from './steamClientProcess'
 import {
   createSteamDownloadMonitor,
@@ -18,12 +23,20 @@ import {
 } from './steamDownloadMonitor'
 
 export function createSteamProcesses(deps: {
-  runner: Pick<ProcessRunner, 'run' | 'spawnLongLived'>
+  runner: Pick<ProcessRunner, 'run' | 'spawnLongLived' | 'openDetached'>
   clock: Clock
   platform: NodeJS.Platform
 }) {
   const { runner, clock, platform } = deps
   return {
+    // Mac Steam's go-offline debt and shutdown signal: one instance per boot, handed to SteamUser
+    // (bindStores), the guided Go Offline flows and the boot/quit restore.
+    macSteamOffline: createMacSteamOffline({
+      ...createMacSteamOfflineEnvDeps(),
+      platform,
+      runner,
+      clock
+    }),
     runningPoll: createRunningPoll({
       clock,
       readRunningAppId: () => readRunningAppId({ runner }, platform),

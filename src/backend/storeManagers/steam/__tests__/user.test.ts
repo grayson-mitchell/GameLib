@@ -169,14 +169,20 @@ jest.mock('../anonymousClient', () => ({
 }))
 
 // ── Imports (after mocks) ─────────────────────────────────────────────────────
-import { SteamUser } from '../user'
+import { SteamUser, type SteamUserBoundDeps } from '../user'
 import type { SteamStoresDeps } from '../library/installRoot'
 
 const steamDeps = {
   stores: { steam: { configStore: mockConfigStore } }
 } as unknown as SteamStoresDeps
 beforeEach(() => {
-  SteamUser.bindStores(steamDeps)
+  SteamUser.bindStores({
+    ...steamDeps,
+    macSteamOffline:
+      jest.requireMock<NonNullable<SteamUserBoundDeps['macSteamOffline']>>(
+        '../macSteamOffline'
+      )
+  })
 })
 import { redeemKey } from '../userRedeem'
 import {

@@ -67,11 +67,19 @@ jest.mock('../../online_monitor', () => ({
 }))
 
 const mockRestoreMacSteamOnlineIfOwed = jest.fn()
-jest.mock('../../storeManagers/steam/macSteamOffline', () => ({
-  ...jest.requireActual('../../storeManagers/steam/macSteamOffline'),
-  restoreMacSteamOnlineIfOwed: (...args: unknown[]) =>
-    mockRestoreMacSteamOnlineIfOwed(...args)
-}))
+jest.mock('../../storeManagers/steam/macSteamOffline', () => {
+  const actual = jest.requireActual('../../storeManagers/steam/macSteamOffline')
+  return {
+    ...actual,
+    // The boot-built instance is real except its restore, so a quit or boot reaches the
+    // scripted restore without firing any steam:// URL.
+    createMacSteamOffline: (deps: unknown) => ({
+      ...actual.createMacSteamOffline(deps),
+      restoreMacSteamOnlineIfOwed: (...args: unknown[]) =>
+        mockRestoreMacSteamOnlineIfOwed(...args)
+    })
+  }
+})
 
 import { defined } from 'backend/testUtils/indexed'
 import { tmpdir } from 'os'
