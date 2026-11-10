@@ -56,7 +56,7 @@
  * Logging carries store ids, outcome labels and elapsed milliseconds only --
  * never a token, cookie, captured runner output or error text (T-49-24).
  */
-import { logInfo, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isOnline, onConnectivityChange } from 'backend/online_monitor'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { LegendaryUser } from 'backend/storeManagers/legendary/user'
@@ -286,8 +286,14 @@ let configuredDeps: SignInProbePassDeps | undefined
 export function requestSignInProbePass(
   deps: SignInProbePassDeps | undefined = configuredDeps
 ): void {
-  // Nothing is requested before `startSignInProbePass` has built the deps.
+  // Nothing can run before `startSignInProbePass` has built the deps. Callers can fire
+  // early (a sign-in event ahead of the boot step), so this stays a no-op, but a loud one:
+  // a silent drop made a lost request look like a pass that found nothing (C-WR-5).
   if (!deps) {
+    logWarning(
+      '[signInProbe] requestSignInProbePass() before the boot step started the pass; ignored',
+      LogPrefix.Backend
+    )
     return
   }
   if (passInFlight) {

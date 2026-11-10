@@ -511,6 +511,16 @@ describe('single-flight (D-03, RESEARCH Pitfall 7)', () => {
     expect(maxConcurrent).toBe(1)
   })
 
+  it('warns, and runs nothing, for a request made before the boot step started the pass (C-WR-5)', () => {
+    logWarningMock.mockClear()
+    requestSignInProbePass()
+    expect(logWarningMock).toHaveBeenCalledTimes(1)
+    expect(String(logWarningMock.mock.calls[0]?.[0])).toContain(
+      'before the boot step'
+    )
+    expect(probeCalls).toEqual([])
+  })
+
   it('runs a fresh pass for a request made after the previous pass settled', async () => {
     const deps = onlyStore(
       'gog',
