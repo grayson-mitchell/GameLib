@@ -42,7 +42,7 @@ async function getEngineStateFor(
   deps: EngineFlowDeps,
   arg: unknown
 ): Promise<unknown> {
-  const libraryManagerMap = deps.managers.library
+  const library = deps.managers.library
   if (typeof arg !== 'object' || arg === null) return null
   const { runner, appName } = arg as Record<string, unknown>
   if (typeof runner !== 'string') return null
@@ -53,13 +53,13 @@ async function getEngineStateFor(
     return getSteamEngineState(deps, appName)
   }
   if (!isMac) return null
-  if (!Object.prototype.hasOwnProperty.call(libraryManagerMap, runner)) {
+  if (!Object.prototype.hasOwnProperty.call(library, runner)) {
     return null
   }
   try {
-    const game = libraryManagerMap[
-      runner as keyof typeof libraryManagerMap
-    ].getGame(appName as string)
+    const game = library[runner as keyof typeof library].getGame(
+      appName as string
+    )
     if (game.getGameInfo().install?.platform === 'Browser') return null
     if (game.isNative()) return null
   } catch {

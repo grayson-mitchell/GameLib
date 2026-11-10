@@ -67,11 +67,11 @@ type LibraryManagerMap = StoreManagers['library']
  * `live.title || appName`, nothing more.
  */
 function resolveQueueElementTitle(
-  libraryManagerMap: LibraryManagerMap,
+  library: LibraryManagerMap,
   runner: Runner,
   appName: string
 ): string {
-  return resolveGameTitle(libraryManagerMap, runner, appName)
+  return resolveGameTitle(library, runner, appName)
 }
 
 /**
@@ -137,8 +137,8 @@ async function installQueueElement(
     // runner, exactly like `build`/`branch`) — non-Steam managers ignore it.
     steamForceWindowsViaBottle
   } = params
-  const libraryManagerMap = deps.managers.library
-  const title = resolveQueueElementTitle(libraryManagerMap, runner, appName)
+  const library = deps.managers.library
+  const title = resolveQueueElementTitle(library, runner, appName)
 
   if (!isOnline()) {
     logWarning(
@@ -236,7 +236,7 @@ async function installQueueElement(
     downloadFixesFor(appName, runner)
 
     const installResult: InstallResult = await withStallTimeout(
-      libraryManagerMap[runner].getGame(appName).install({
+      library[runner].getGame(appName).install({
         path: path.replaceAll("'", ''),
         installDlcs,
         sdlList: sdlList.filter((el) => el !== ''),
@@ -367,7 +367,7 @@ async function installQueueElement(
         )
       }
       if (storeCapabilities[runner].installManagedExternally) {
-        libraryManagerMap[runner]
+        library[runner]
           .getGame(appName)
           .stop(false)
           .catch((error: unknown) => {
@@ -436,8 +436,8 @@ async function updateQueueElement(
   error?: string | undefined
 }> {
   const { appName, runner } = params
-  const libraryManagerMap = deps.managers.library
-  const title = resolveQueueElementTitle(libraryManagerMap, runner, appName)
+  const library = deps.managers.library
+  const title = resolveQueueElementTitle(library, runner, appName)
 
   if (!isOnline()) {
     logWarning(
@@ -481,7 +481,7 @@ async function updateQueueElement(
   }
 
   try {
-    const { status } = await libraryManagerMap[runner].getGame(appName).update({
+    const { status } = await library[runner].getGame(appName).update({
       build: params.build,
       branch: params.branch,
       language: params.installLanguage,
