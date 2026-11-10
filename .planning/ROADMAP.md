@@ -777,7 +777,7 @@ Plans:
 **Goal:** The frontend has one state system. The 2,259-line `GlobalState.tsx` class component (`extends PureComponent`, 78 `setState` calls), served through `ContextProvider`, is retired in favour of the zustand store in `src/frontend/state/GlobalStateV2.ts` (164 lines today), so a change in one domain no longer re-renders every context consumer. Measured 2026-11-06, excluding tests: 130 frontend files use `ContextProvider` and 20 use `GlobalStateV2`. Three parts: (1) **Slices.** Move state into V2 one domain at a time (library and game list, downloads and install queue, Steam / Epic / GOG / Amazon / Humble auth, settings and theme, UI and dialog state), each with selector hooks (`useShallow`) so components subscribe to what they read. (2) **Ratchet.** Track the remaining `ContextProvider` consumers with a shrink-only count like Phase 62's, ending at zero, then delete `GlobalState.tsx` and the context. (3) **Live checks.** State moves surface as stale-UI and re-render bugs that type checks and unit tests miss, so each wave ends with a smoke check in `pnpm tauri:dev` (Library, Game page, Downloads, sign-in and sign-out per store, ConsoleMode). Measure Library re-render cost on a large library before and after. No behaviour change: anything else found becomes a todo. Open questions for discuss-phase: whether V2 as it stands is the target or needs restructuring first (it already imports `frontend/helpers/electronStores`); where persisted frontend state lives relative to Phase 68's versioned stores; and the order relative to Phase 64, which adds custom-theme state. Depends on Phase 62 because plans 62-17 to 62-19 convert runner checks in the same Library, Game, ConsoleMode and DownloadManager files. Came from the post-Phase-62 architecture review on 2026-11-06.
 **Requirements**: TBD
 **Depends on:** Phase 62
-**Plans:** 7/26 plans executed
+**Plans:** 8/26 plans executed
 
 Plans:
 
@@ -802,7 +802,7 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 69-07-PLAN.md — Convert 35 Settings components to uiState
-- [ ] 69-08-PLAN.md — Convert UI-only screen consumers (sections, WineManager, Game, Console, Login Runner)
+- [x] 69-08-PLAN.md — Convert UI-only screen consumers (sections, WineManager, Game, Console, Login Runner)
 - [ ] 69-09-PLAN.md — Convert shared UI components, DialogHandler and hooks to uiState
 - [ ] 69-10-PLAN.md — Settings/theme slice into settingsState (D-08 subscriptions, zoom/focusRow boot)
 
