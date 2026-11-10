@@ -36,7 +36,10 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   LogPrefix: { Legendary: 'Legendary', Backend: 'Backend' }
 }))
-jest.mock('../../../utils', () => ({ clearCache: jest.fn() }))
+jest.mock('../../../utils', () => ({
+  clearCache: jest.fn(),
+  startLegendaryCleanup: jest.fn()
+}))
 jest.mock('../../../humble/userAgent', () => ({
   standardBrowserUserAgent: () => 'Mozilla/5.0 (Test)'
 }))
