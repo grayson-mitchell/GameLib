@@ -96,7 +96,7 @@ Test split: the plan's 7 centering behaviours are 7 tests (the odd-size floor ca
 
 ## Owed / not verified here
 
-- **Windows live check (owed to the operator).** Not run by me. Run `pnpm tauri:dev` at main's normal size:
+- **Windows live check: PASSED (operator, 2026-11-11), all 7 items.** Run `pnpm tauri:dev` at main's normal size:
   1. Sign in to Humble, GOG, Amazon, Epic one at a time: each window opens centered over main, above it, no taskbar button.
   2. While a login is open, main ignores clicks. Clicking main's taskbar button brings the login forward.
   3. Close with the title-bar X: main is clickable again at once and comes to the front, not another app.
