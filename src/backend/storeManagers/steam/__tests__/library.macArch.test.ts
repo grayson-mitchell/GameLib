@@ -1,4 +1,7 @@
-import { createTestManagerDeps } from 'backend/testUtils/testServices'
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /**
  * Unit tests for steam/library/macArch.ts (Mach-O ground-truth check, i386
  * recovery). Moved out of library.test.ts by Phase 65 plan 03 (D-03); mock
@@ -29,6 +32,12 @@ import {
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { join } from 'path'
 import { library } from '../state'
+
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -442,7 +451,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
   })
 
   it("skips entirely (no subprocess, no cache write) when source==='bottle'", async () => {
-    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'bottle')
+    await verifyMacArchGroundTruth(
+      steamTestDeps,
+      APP_ID,
+      INSTALL_PATH,
+      'bottle'
+    )
 
     expect(execFileSync).not.toHaveBeenCalled()
     expect(readdirSync).not.toHaveBeenCalled()
@@ -452,7 +466,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
   it('skips when !isMac (non-macOS host)', async () => {
     envMock.isMac = false
 
-    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+    await verifyMacArchGroundTruth(
+      steamTestDeps,
+      APP_ID,
+      INSTALL_PATH,
+      'native'
+    )
 
     expect(execFileSync).not.toHaveBeenCalled()
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
@@ -461,7 +480,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
   it("skips when mac_arch is already '32' (nothing to correct)", async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({ mac_arch: '32' })
 
-    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+    await verifyMacArchGroundTruth(
+      steamTestDeps,
+      APP_ID,
+      INSTALL_PATH,
+      'native'
+    )
 
     expect(execFileSync).not.toHaveBeenCalled()
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
@@ -473,7 +497,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       mac_arch_verified: true
     })
 
-    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+    await verifyMacArchGroundTruth(
+      steamTestDeps,
+      APP_ID,
+      INSTALL_PATH,
+      'native'
+    )
 
     expect(execFileSync).not.toHaveBeenCalled()
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
@@ -483,7 +512,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     ;(readdirSync as jest.Mock).mockReturnValue(['readme.txt'])
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
 
-    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+    await verifyMacArchGroundTruth(
+      steamTestDeps,
+      APP_ID,
+      INSTALL_PATH,
+      'native'
+    )
 
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
   })
@@ -503,7 +537,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       mac_arch_source: 'minos'
     })
 
-    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+    await verifyMacArchGroundTruth(
+      steamTestDeps,
+      APP_ID,
+      INSTALL_PATH,
+      'native'
+    )
 
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
   })
@@ -527,7 +566,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       platformsCaptured: true
     })
 
-    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+    await verifyMacArchGroundTruth(
+      steamTestDeps,
+      APP_ID,
+      INSTALL_PATH,
+      'native'
+    )
 
     expect(steamMetadataStore.set).toHaveBeenCalledWith(
       APP_ID,
@@ -560,7 +604,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       extra: { reqs: [] }
     })
 
-    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+    await verifyMacArchGroundTruth(
+      steamTestDeps,
+      APP_ID,
+      INSTALL_PATH,
+      'native'
+    )
 
     expect(steamMetadataStore.set).toHaveBeenCalledWith(
       APP_ID,
@@ -593,7 +642,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
 
     it("reports a '32' verdict once as macArch add", async () => {
       arrange('i386\n', { art_cover: '', art_square: '', extra: { reqs: [] } })
-      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      await verifyMacArchGroundTruth(
+        steamTestDeps,
+        APP_ID,
+        INSTALL_PATH,
+        'native'
+      )
       expect(reportDetectedFix).toHaveBeenCalledTimes(1)
       expect(reportDetectedFix).toHaveBeenCalledWith({
         appId: APP_ID,
@@ -605,7 +659,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
 
     it("reports a curated '32' contradicted by '64' as macArch remove", async () => {
       arrange('x86_64\n', { mac_arch: '32', mac_arch_source: 'known-fix' })
-      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      await verifyMacArchGroundTruth(
+        steamTestDeps,
+        APP_ID,
+        INSTALL_PATH,
+        'native'
+      )
       expect(reportDetectedFix).toHaveBeenCalledTimes(1)
       expect(reportDetectedFix).toHaveBeenCalledWith({
         appId: APP_ID,
@@ -621,19 +680,39 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
         art_square: '',
         extra: { reqs: [] }
       })
-      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      await verifyMacArchGroundTruth(
+        steamTestDeps,
+        APP_ID,
+        INSTALL_PATH,
+        'native'
+      )
       expect(reportDetectedFix).not.toHaveBeenCalled()
     })
 
     it('reports nothing on the early-return paths', async () => {
-      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'bottle')
+      await verifyMacArchGroundTruth(
+        steamTestDeps,
+        APP_ID,
+        INSTALL_PATH,
+        'bottle'
+      )
       ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
         mac_arch: '64',
         mac_arch_verified: true
       })
-      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      await verifyMacArchGroundTruth(
+        steamTestDeps,
+        APP_ID,
+        INSTALL_PATH,
+        'native'
+      )
       envMock.isMac = false
-      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      await verifyMacArchGroundTruth(
+        steamTestDeps,
+        APP_ID,
+        INSTALL_PATH,
+        'native'
+      )
       expect(reportDetectedFix).not.toHaveBeenCalled()
     })
 
@@ -643,7 +722,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       )
       arrange('i386\n', { art_cover: '', art_square: '', extra: { reqs: [] } })
       await expect(
-        verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+        verifyMacArchGroundTruth(steamTestDeps, APP_ID, INSTALL_PATH, 'native')
       ).resolves.toBeUndefined()
     })
   })
@@ -669,7 +748,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
 
     it("a known-fix '32' seed does not skip: Mach-O '32' is persisted as macho/verified", async () => {
       arrange('i386\n', { mac_arch: '32', mac_arch_source: 'known-fix' })
-      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      await verifyMacArchGroundTruth(
+        steamTestDeps,
+        APP_ID,
+        INSTALL_PATH,
+        'native'
+      )
       // eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock handle, never invoked unbound
       expect(steamMetadataStore.set).toHaveBeenCalledWith(
         APP_ID,
@@ -683,7 +767,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
 
     it("a known-fix '32' seed contradicted by Mach-O '64' persists '64' and warns", async () => {
       arrange('x86_64\n', { mac_arch: '32', mac_arch_source: 'known-fix' })
-      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      await verifyMacArchGroundTruth(
+        steamTestDeps,
+        APP_ID,
+        INSTALL_PATH,
+        'native'
+      )
       // eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock handle, never invoked unbound
       expect(steamMetadataStore.set).toHaveBeenCalledWith(
         APP_ID,
@@ -702,7 +791,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
 
     it("any '32' verdict logs a paste-ready known-fixes entry", async () => {
       arrange('i386\n', { art_cover: '', art_square: '', extra: { reqs: [] } })
-      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      await verifyMacArchGroundTruth(
+        steamTestDeps,
+        APP_ID,
+        INSTALL_PATH,
+        'native'
+      )
       expect(
         logger().logInfo.mock.calls.some(
           (c: unknown[]) =>
@@ -714,7 +808,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
 
     it("a macho '32' entry still short-circuits", async () => {
       arrange('i386\n', { mac_arch: '32', mac_arch_source: 'macho' })
-      await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      await verifyMacArchGroundTruth(
+        steamTestDeps,
+        APP_ID,
+        INSTALL_PATH,
+        'native'
+      )
       expect(execFileSync).not.toHaveBeenCalled()
       // eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock handle, never invoked unbound
       expect(steamMetadataStore.set).not.toHaveBeenCalled()
@@ -739,7 +838,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     })
     ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
 
-    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+    await verifyMacArchGroundTruth(
+      steamTestDeps,
+      APP_ID,
+      INSTALL_PATH,
+      'native'
+    )
     // Fire-and-forget: the dialog call itself runs synchronously up to its
     // own first await when promptI386Recovery is invoked, so it has already
     // been recorded by the time verifyMacArchGroundTruth returns.
@@ -790,7 +894,12 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     // on the propagation fix rather than the recovery dialog flow.
     ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
 
-    await verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+    await verifyMacArchGroundTruth(
+      steamTestDeps,
+      APP_ID,
+      INSTALL_PATH,
+      'native'
+    )
 
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'pushGameToLibrary',
@@ -828,7 +937,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
 
     await expect(
-      verifyMacArchGroundTruth(APP_ID, INSTALL_PATH, 'native')
+      verifyMacArchGroundTruth(steamTestDeps, APP_ID, INSTALL_PATH, 'native')
     ).resolves.not.toThrow()
 
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
@@ -942,7 +1051,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
         .mocked(getSteamBottleSettings)
         .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as never)
     }
-    startInstallPolling(APP_ID, {
+    startInstallPolling(steamTestDeps, APP_ID, {
       intervalMs: 10,
       source,
       delegatedToSteamClient: true
@@ -986,7 +1095,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     manifestPresent = true
     ;(vdf.parse as jest.Mock).mockReturnValue(installedAcf)
 
-    await new SteamLibraryManager(createTestManagerDeps()).refreshInstallState()
+    await new SteamLibraryManager(steamTestDeps).refreshInstallState()
     await flushMicrotasks()
 
     expect(library.get(APP_ID)?.is_installed).toBe(true)
@@ -1001,12 +1110,12 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     manifestPresent = true
     ;(vdf.parse as jest.Mock).mockReturnValue(installedAcf)
     // Long interval: the poll is registered but never ticks during the test.
-    startInstallPolling(APP_ID, {
+    startInstallPolling(steamTestDeps, APP_ID, {
       intervalMs: 1_000_000,
       delegatedToSteamClient: true
     })
 
-    await new SteamLibraryManager(createTestManagerDeps()).refreshInstallState()
+    await new SteamLibraryManager(steamTestDeps).refreshInstallState()
     await flushMicrotasks()
 
     expect(library.get(APP_ID)?.is_installed).toBe(true)

@@ -2,6 +2,7 @@ import { logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import SteamGame from './games'
+import type { ManagerDeps } from 'backend/services/types'
 import { steamMetadataStore } from './stores'
 import { library } from './state'
 import * as bridgeBottle from './bridgeBottle'
@@ -36,6 +37,7 @@ import {
  * report-problem route display is honest for an installed forced game.
  */
 export async function getBridgeRouteVerdict(
+  deps: ManagerDeps,
   appId: unknown,
   windowsBuildChosen?: unknown
 ): Promise<SteamBridgeRouteVerdict> {
@@ -57,7 +59,7 @@ export async function getBridgeRouteVerdict(
     }
   }
 
-  const game = new SteamGame(appId)
+  const game = new SteamGame(appId, deps)
   let explicitChoice = false
   if (windowsBuildChosen === true && isMac) {
     // Capture first so is_windows_native is not read off a cold cache.

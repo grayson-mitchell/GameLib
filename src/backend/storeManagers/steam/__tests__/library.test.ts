@@ -1,4 +1,7 @@
-import { createTestManagerDeps } from 'backend/testUtils/testServices'
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /**
  * Unit tests for SteamLibraryManager — LIB-01, LIB-02, LIB-03.
  *
@@ -40,6 +43,12 @@ import * as gamesModule from '../gameSessionState'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { captureOwnedAppPlatforms } from '../platformCapture'
 import { resumeInterruptedSteamInstall } from '../library/resume'
+
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -281,7 +290,7 @@ describe('SteamLibraryManager', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    manager = new SteamLibraryManager(createTestManagerDeps())
+    manager = new SteamLibraryManager(steamTestDeps)
     // Phase 54: refresh() logs on only for a granted (explicit) Refresh. This
     // suite tests refresh()'s BEHAVIOR, so arm the one-shot grant the way the
     // IPC handler does; the grant is consumed by the first refresh() call, so
@@ -708,7 +717,7 @@ describe('SteamLibraryManager', () => {
       }
     })
 
-    await resumeInterruptedSteamInstall('730')
+    await resumeInterruptedSteamInstall(steamTestDeps, '730')
 
     expect(finalizeToSteam).toHaveBeenCalledWith(
       '730',
@@ -767,7 +776,7 @@ describe('SteamLibraryManager', () => {
         return { unref: () => undefined } as unknown as NodeJS.Timeout
       }) as unknown as typeof setInterval)
 
-    await resumeInterruptedSteamInstall('730')
+    await resumeInterruptedSteamInstall(steamTestDeps, '730')
 
     expect(order).toEqual(['finalize', 'watch'])
 
@@ -805,7 +814,7 @@ describe('SteamLibraryManager', () => {
       }
     })
 
-    await resumeInterruptedSteamInstall('730')
+    await resumeInterruptedSteamInstall(steamTestDeps, '730')
 
     expect(shell.openExternal).not.toHaveBeenCalled()
     expect(runWineCommand).not.toHaveBeenCalled()
@@ -866,7 +875,7 @@ describe('SteamLibraryManager', () => {
         acf: { stateFlags: '4' }
       })
 
-      await resumeInterruptedSteamInstall('730')
+      await resumeInterruptedSteamInstall(steamTestDeps, '730')
 
       expect(resumeVerifyRust).toHaveBeenCalledTimes(1)
       expect(resumeVerifyRust).toHaveBeenCalledWith('730', {
@@ -895,7 +904,7 @@ describe('SteamLibraryManager', () => {
       })
 
       await expect(
-        resumeInterruptedSteamInstall('730')
+        resumeInterruptedSteamInstall(steamTestDeps, '730')
       ).resolves.toBeUndefined()
 
       expect(finalizeToSteam).not.toHaveBeenCalled()
@@ -913,7 +922,7 @@ describe('SteamLibraryManager', () => {
       setupDownloadingFixture('730', '../evil')
 
       await expect(
-        resumeInterruptedSteamInstall('730')
+        resumeInterruptedSteamInstall(steamTestDeps, '730')
       ).resolves.toBeUndefined()
 
       // sanitizeInstalldir throws UnsafeInstalldirError before the verify job
@@ -942,7 +951,7 @@ describe('SteamLibraryManager', () => {
         .mockRejectedValue(new Error('no authenticated Steam CM connection'))
 
       await expect(
-        resumeInterruptedSteamInstall('730')
+        resumeInterruptedSteamInstall(steamTestDeps, '730')
       ).resolves.toBeUndefined()
 
       expect(finalizeToSteam).toHaveBeenCalledWith(

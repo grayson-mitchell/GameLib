@@ -24,6 +24,7 @@ import { GlobalConfig } from 'backend/config'
 import SteamGame from './games'
 import { checkBottleEligibility } from './gameEligibility'
 import { getBridgeRouteVerdict } from './bridgeRouteVerdict'
+import type { ManagerDeps } from 'backend/services/types'
 import { steamBottleConfigStore, steamMetadataStore } from './stores'
 import { persistBottleWineVersion } from './bottle'
 import { depotSignalCaptured } from './metadataCapture'
@@ -82,6 +83,7 @@ type WineInstallationType = (typeof WINE_INSTALLATION_TYPES)[number]
  * writes both to the same value) but are not interchangeable sources.
  */
 export async function getSteamBottleEligibilityVerdict(
+  deps: ManagerDeps,
   appName: unknown
 ): Promise<SteamBottleEligibilityVerdict> {
   // Takes `unknown`, not `string` (34.13 review WR-10) — the same reason
@@ -115,7 +117,7 @@ export async function getSteamBottleEligibilityVerdict(
     }
   }
 
-  const eligible = await checkBottleEligibility(new SteamGame(appName))
+  const eligible = await checkBottleEligibility(new SteamGame(appName, deps))
 
   // No new fetch and no new await occur here: the checkBottleEligibility()
   // call above has ALREADY driven ensurePlatformsCaptured() to completion or
@@ -154,7 +156,7 @@ export async function getSteamBottleEligibilityVerdict(
   // as this function), so this call is never reached on the rejected-request
   // path above.
   const bridgeRoute = eligible
-    ? await getBridgeRouteVerdict(appName)
+    ? await getBridgeRouteVerdict(deps, appName)
     : undefined
 
   return {

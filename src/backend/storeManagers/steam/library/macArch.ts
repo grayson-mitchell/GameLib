@@ -11,7 +11,7 @@ import { library } from '../state'
 import { formatMacArch32KnownFixEntry } from '../macArchKnownFix'
 import { reportDetectedFix } from 'backend/knownFixReport'
 import SteamGame from '../games'
-import { steamLibraryStore, steamMetadataStore } from '../stores'
+import type { ManagerDeps } from 'backend/services/types'
 import type { AcfSource } from './installRoot'
 import { sendFrontendMessage } from '../../../ipc'
 
@@ -64,6 +64,7 @@ export function locateMachOBinary(
  * Exported for unit testing.
  */
 export async function verifyMacArchGroundTruth(
+  deps: ManagerDeps,
   appId: string,
   installPath: string,
   source: AcfSource
@@ -71,6 +72,7 @@ export async function verifyMacArchGroundTruth(
   if (source !== 'native') return
   if (!isMac) return
 
+  const { steamLibraryStore, steamMetadataStore } = deps.stores.steam
   const existing = steamMetadataStore.get(appId)
   if (
     existing?.mac_arch_verified === true ||
@@ -159,7 +161,7 @@ export async function verifyMacArchGroundTruth(
     reportDetectedFix({ appId, key: 'macArch', op: 'add', detector: 'macho' })
     // MAC32-03/CONTEXT D-6: decoupled — never awaited here, so this check
     // never blocks the pollInstallOnce 'installed' badge-flip UX above.
-    void promptI386Recovery(appId)
+    void promptI386Recovery(deps, appId)
   }
 }
 
@@ -188,7 +190,10 @@ export async function verifyMacArchGroundTruth(
  *
  * Exported for unit testing.
  */
-export async function promptI386Recovery(appId: string): Promise<void> {
+export async function promptI386Recovery(
+  deps: ManagerDeps,
+  appId: string
+): Promise<void> {
   const confirmed = await promptMac32WindowsReinstall('steam')
 
   if (!confirmed) {
@@ -203,7 +208,7 @@ export async function promptI386Recovery(appId: string): Promise<void> {
     `Steam: user confirmed i386 recovery for appId ${appId} — force-uninstalling the native copy and reinstalling via the bottle`,
     LogPrefix.Steam
   )
-  const game = new SteamGame(appId)
+  const game = new SteamGame(appId, deps)
   await game.forceUninstall()
   await game.install({} as InstallArgs)
 }

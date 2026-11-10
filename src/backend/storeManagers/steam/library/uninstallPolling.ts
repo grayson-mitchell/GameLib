@@ -4,12 +4,12 @@ import { getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import i18next from 'i18next'
-import { steamLibraryStore } from '../stores'
 import { library } from '../state'
 import { clearForcedWindowsViaBottle } from '../gameSessionState'
 import {
   type AcfSource,
   type PollOptions,
+  type SteamStoresDeps,
   copySourceLabel,
   installPlatformForSource,
   isBridgeAuthoritativeForInstallState
@@ -64,6 +64,7 @@ const STATE_UNINSTALLING = 2048
  * for unit testing.
  */
 export async function pollUninstallOnce(
+  deps: SteamStoresDeps,
   appId: string,
   source: AcfSource = 'native'
 ): Promise<void> {
@@ -121,7 +122,10 @@ export async function pollUninstallOnce(
     // (isBridgeAuthoritativeForInstallState), so a native/bottle copy left
     // behind there is not a survivor — claiming "still installed" would be
     // undone by the next refresh.
-    const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(appId)
+    const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(
+      deps,
+      appId
+    )
     let survivorSource: AcfSource | null = null
     let survivor: Awaited<ReturnType<typeof readAcfState>> = { state: 'absent' }
     for (const candidate of (['native', 'bottle', 'bridge'] as const).filter(
@@ -160,7 +164,10 @@ export async function pollUninstallOnce(
         }
       }
       library.set(appId, updated)
-      steamLibraryStore.set('games', Array.from(library.values()))
+      deps.stores.steam.steamLibraryStore.set(
+        'games',
+        Array.from(library.values())
+      )
       sendFrontendMessage('pushGameToLibrary', updated)
       sendFrontendMessage('gameStatusUpdate', {
         appName: appId,
@@ -200,7 +207,10 @@ export async function pollUninstallOnce(
       library.set(appId, updated)
       // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately (see
       // refreshInstallState() for rationale).
-      steamLibraryStore.set('games', Array.from(library.values()))
+      deps.stores.steam.steamLibraryStore.set(
+        'games',
+        Array.from(library.values())
+      )
       sendFrontendMessage('pushGameToLibrary', updated)
     }
     sendFrontendMessage('gameStatusUpdate', {
@@ -257,6 +267,7 @@ export async function pollUninstallOnce(
  * Exported for unit testing.
  */
 export function startUninstallPolling(
+  deps: SteamStoresDeps,
   appId: string,
   intervalMsOrOptions: number | PollOptions = 3000
 ): void {
@@ -303,7 +314,7 @@ export function startUninstallPolling(
     // kill the whole Jest worker. Production never expects this branch — it's
     // a defensive, log-only catch; the next tick retries normally.
     try {
-      await pollUninstallOnce(appId, source)
+      await pollUninstallOnce(deps, appId, source)
     } catch (error) {
       logError(
         [`Steam: uninstall polling tick for appId ${appId} threw`, error],

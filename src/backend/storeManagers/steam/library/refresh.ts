@@ -9,11 +9,7 @@ import {
   currentTriggerLabel
 } from '../authTrigger'
 import { getAnonymousPicsClient } from '../anonymousClient'
-import {
-  steamLibraryStore,
-  steamMetadataStore,
-  steamSyncStore
-} from '../stores'
+import type { ManagerDeps } from 'backend/services/types'
 import { library } from '../state'
 import { isSteamBottleProvisioned } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
@@ -40,7 +36,7 @@ import {
   buildBridgeInstalledMap
 } from './installedMap'
 
-export async function refresh(): Promise<ExecResult | null> {
+export async function refresh(deps: ManagerDeps): Promise<ExecResult | null> {
   // Synchronous and before any await, so a grant armed by the dispatch that
   // triggered THIS call is consumed by this call (and by no other).
   const grant = consumeSteamRefreshLogonGrant()
@@ -54,7 +50,7 @@ export async function refresh(): Promise<ExecResult | null> {
       LogPrefix.Steam
     )
     try {
-      await refreshInstallState()
+      await refreshInstallState(deps)
     } catch (err) {
       logWarning(
         ['Steam: local install-state reconcile failed:', err],
@@ -128,15 +124,18 @@ export async function refresh(): Promise<ExecResult | null> {
     // which gives the Steam sync tri-state STRUCTURAL meaning ("a refresh is
     // currently running").
     sendFrontendMessage('steamSyncStatus', { status: 'syncing' })
-    return await syncOwnedLibrary(client)
+    return await syncOwnedLibrary(deps, client)
   } finally {
     release()
   }
 }
 
 async function syncOwnedLibrary(
+  deps: ManagerDeps,
   client: NonNullable<ReturnType<typeof SteamUser.getClient>>
 ): Promise<ExecResult | null> {
+  const { steamLibraryStore, steamMetadataStore, steamSyncStore } =
+    deps.stores.steam
   const steamID = client.steamID as NonNullable<typeof client.steamID>
   // ── Step 1: fetch owned games + playtime from Steam CM ────────────────
   let ownedApps: Array<{
@@ -358,7 +357,10 @@ async function syncOwnedLibrary(
       // three roots (mirrors refreshInstallState()'s reconciliation;
       // D-UAT-24-07 adds the bridge tier last so native/bottle behavior is
       // byte-for-byte unchanged when they match).
-      const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(appIdStr)
+      const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(
+        deps,
+        appIdStr
+      )
       const installedData = bridgeAuthoritative
         ? bridgeInstalledData
         : (nativeInstalledData ?? bottleInstalledData ?? bridgeInstalledData)
@@ -531,7 +533,8 @@ async function syncOwnedLibrary(
  *   install; host-OS-derived for a native install)
  * and is set to {} when not installed.
  */
-export async function refreshInstallState(): Promise<void> {
+export async function refreshInstallState(deps: ManagerDeps): Promise<void> {
+  const { steamLibraryStore } = deps.stores.steam
   // D-UAT-13: a window-focus reconcile (the user alt-tabbing to Steam to
   // restart it) must not flip a game that is holding for a Steam restart to
   // installed — see withoutSteamRestartHolds().
@@ -559,7 +562,10 @@ export async function refreshInstallState(): Promise<void> {
     // reconciliation. Precedence for non-eligible titles is unchanged:
     // native wins, then Phase 17 bottle, then bridge — never
     // double-count/conflate the three roots.
-    const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(appIdStr)
+    const bridgeAuthoritative = isBridgeAuthoritativeForInstallState(
+      deps,
+      appIdStr
+    )
     const installedData = bridgeAuthoritative
       ? bridgeInstalledData
       : (nativeInstalledData ?? bottleInstalledData ?? bridgeInstalledData)
@@ -608,6 +614,7 @@ export async function refreshInstallState(): Promise<void> {
         !activePolls.has(appIdStr)
       ) {
         void verifyMacArchGroundTruth(
+          deps,
           appIdStr,
           installedData.installPath,
           'native'

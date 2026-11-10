@@ -16,7 +16,6 @@ import { InstallResult } from 'common/types/game_manager'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac, isAppleSiliconMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
-import { steamMetadataStore } from './stores'
 import { library } from './state'
 import { pollUninstallOnce } from './library/uninstallPolling'
 import * as resume from './library/resume'
@@ -97,15 +96,17 @@ export async function install(
     library.get(steamGame.appId)?.install?.steamResumePending &&
     !isNativeInstallInFlight(steamGame.appId)
   ) {
-    await resume.resumeInterruptedSteamInstall(steamGame.appId).catch((err) => {
-      logWarning(
-        [
-          `SteamGame: resume-surface finalize failed for appId ${steamGame.appId}, continuing to normal install:`,
-          err
-        ],
-        LogPrefix.Steam
-      )
-    })
+    await resume
+      .resumeInterruptedSteamInstall(steamGame.deps, steamGame.appId)
+      .catch((err) => {
+        logWarning(
+          [
+            `SteamGame: resume-surface finalize failed for appId ${steamGame.appId}, continuing to normal install:`,
+            err
+          ],
+          LogPrefix.Steam
+        )
+      })
   }
 
   await ensurePlatformsCaptured(steamGame)
@@ -122,9 +123,10 @@ export async function install(
   // Read ONCE and reused by the rejection log below (34.13 review WR-07):
   // the log has to be able to name WHICH gate refused, and the most likely
   // one in practice is a cold/absent metadata cache, not the host check.
-  const windowsDepotVerdict = steamMetadataStore.get(
-    steamGame.appId
-  )?.is_windows_native
+  const windowsDepotVerdict =
+    steamGame.deps.stores.steam.steamMetadataStore.get(
+      steamGame.appId
+    )?.is_windows_native
 
   const forceWindowsViaBottle =
     overrideRequested && isMac && windowsDepotVerdict === true
@@ -417,7 +419,9 @@ export async function install(
         `SteamGame: Steam is installing appId ${steamGame.appId} via InstallApp (library folder index ${outcome.folderIndex})`,
         LogPrefix.Steam
       )
-      startInstallPolling(steamGame.appId, { delegatedToSteamClient: true })
+      startInstallPolling(steamGame.deps, steamGame.appId, {
+        delegatedToSteamClient: true
+      })
       return { status: 'done' }
     }
     if (outcome.kind === 'error') {
@@ -450,7 +454,9 @@ export async function install(
   // quick 261024-exo: delegatedToSteamClient keeps the poll alive through
   // Steam's startup/self-update and the user's install dialog (a failed
   // dispatch never reaches here, so no poller means no false installing).
-  startInstallPolling(steamGame.appId, { delegatedToSteamClient: true })
+  startInstallPolling(steamGame.deps, steamGame.appId, {
+    delegatedToSteamClient: true
+  })
 
   return { status: 'done' }
 }
@@ -468,7 +474,7 @@ export async function install(
  *     on an Intel Mac, so an Intel host must keep its native copy. Never
  *     widen this to a bare `isMac` or to a negated-Intel-probe equivalent
  *     (see environment.ts's own comment on the positive-probe requirement).
- *  2. `steamMetadataStore.get(appId)?.mac_arch === '32'` — the specific
+ *  2. `steamGame.deps.stores.steam.steamMetadataStore.get(appId)?.mac_arch === '32'` — the specific
  *     demotion signal, read directly rather than via `isBottleEligible()`,
  *     which is also true for a merely-not-mac-native title whose native
  *     install is a DIFFERENT case and out of scope here.
@@ -497,7 +503,10 @@ export async function removeDemotedNativeOrphan(
       return
     }
 
-    if (steamMetadataStore.get(steamGame.appId)?.mac_arch !== '32') {
+    if (
+      steamGame.deps.stores.steam.steamMetadataStore.get(steamGame.appId)
+        ?.mac_arch !== '32'
+    ) {
       return
     }
 
@@ -512,7 +521,7 @@ export async function removeDemotedNativeOrphan(
       LogPrefix.Steam
     )
 
-    await pollUninstallOnce(steamGame.appId, 'native')
+    await pollUninstallOnce(steamGame.deps, steamGame.appId, 'native')
   } catch (error) {
     logWarning(
       [

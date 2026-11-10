@@ -3,7 +3,7 @@ import { isMac, isLinux } from 'backend/constants/environment'
 import { getSteamLibraries } from 'backend/utils'
 import { resolve, relative, isAbsolute } from 'path'
 import i18next from 'i18next'
-import { steamMetadataStore } from '../stores'
+import type { Stores } from 'backend/services/types'
 import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
 import { getBridgeBottleSettings } from '../bridgeBottle'
 import { bridgeAllowlist } from '../bridge/allowlist'
@@ -17,6 +17,9 @@ import { bridgeAllowlist } from '../bridge/allowlist'
  * StateFlags=4 ACF there, not into the native or Phase 17 bottle root. All
  * three roots must never be conflated (RESEARCH.md Pitfall 2).
  */
+/** The stores slice the Steam library readers read (66.1 R3). */
+export type SteamStoresDeps = { stores: Pick<Stores, 'steam'> }
+
 export type AcfSource = 'native' | 'bottle' | 'bridge'
 
 const COPY_SOURCE_FALLBACK: Record<AcfSource, string> = {
@@ -221,11 +224,12 @@ export async function resolveInstallRoot(
  * returns false (falls through to the existing native/bottle precedence).
  */
 export function isBridgeAuthoritativeForInstallState(
+  deps: SteamStoresDeps,
   appIdStr: string
 ): boolean {
   if (!isMac) return false
   if (!bridgeAllowlist.has(appIdStr)) return false
-  const meta = steamMetadataStore.get(appIdStr)
+  const meta = deps.stores.steam.steamMetadataStore.get(appIdStr)
   if (meta?.mac_arch === '32') return true
   // Quick task 260816-hdg PIN — this gate deliberately keeps the raw read and
   // must NOT be routed through depotSignalCaptured. It asks the MAC question,

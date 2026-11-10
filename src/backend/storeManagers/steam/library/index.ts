@@ -13,7 +13,6 @@ import { notify } from '../../../dialog/dialog'
 import i18next from 'i18next'
 import { SteamUser } from '../user'
 import { noteSteamAuthTrigger } from '../authTrigger'
-import { steamLibraryStore, steamMetadataStore } from '../stores'
 import { runOnceWhenOnline } from 'backend/online_monitor'
 import { library } from '../state'
 import SteamGame from '../games'
@@ -50,7 +49,7 @@ export default class SteamLibraryManager implements LibraryManager {
     // existing libraries pick up the new art without a manual cache clear.
     this.migrateStaleArtUrls()
 
-    const cached = steamLibraryStore.get('games', [])
+    const cached = this.deps.stores.steam.steamLibraryStore.get('games', [])
     if (cached.length) {
       library.clear()
       cached.forEach((g) => {
@@ -65,7 +64,7 @@ export default class SteamLibraryManager implements LibraryManager {
 
     // quick 261029-pkp: re-arm persisted "Restart Steam to finish" holds
     // before anything can reconcile install state.
-    const { dropped } = await rearmPersistedSteamRestartHolds()
+    const { dropped } = await rearmPersistedSteamRestartHolds(this.deps)
     if (dropped > 0 && getReconcileRanDuringRearm()) {
       setReconcileRanDuringRearm(false)
       void this.refreshInstallState()
@@ -141,7 +140,7 @@ export default class SteamLibraryManager implements LibraryManager {
           breadcrumbSet.has(appId) &&
           breadcrumbAppIsFullyInstalledOnDisk(appId, existing?.install)
         ) {
-          clearSteamResumeBreadcrumb(appId)
+          clearSteamResumeBreadcrumb(this.deps, appId)
           logInfo(
             `Steam: appId ${appId} carried a 260821-rb5 install-start breadcrumb but its on-disk manifest is fully installed — clearing the breadcrumb instead of surfacing it`,
             LogPrefix.Steam
@@ -199,7 +198,7 @@ export default class SteamLibraryManager implements LibraryManager {
   }
 
   getGame(id: string): SteamGame {
-    return new SteamGame(id)
+    return new SteamGame(id, this.deps)
   }
 
   /**
@@ -215,9 +214,12 @@ export default class SteamLibraryManager implements LibraryManager {
 
     // Per-game metadata cache (refresh() rebuilds art_square from here, so this
     // must be fixed or the next sync would re-apply the old URL).
-    for (const [appId, meta] of steamMetadataStore.entries()) {
+    for (const [
+      appId,
+      meta
+    ] of this.deps.stores.steam.steamMetadataStore.entries()) {
       if (meta?.art_square?.includes(OLD_ART)) {
-        steamMetadataStore.set(appId, {
+        this.deps.stores.steam.steamMetadataStore.set(appId, {
           ...meta,
           art_square: meta.art_square.replace(OLD_ART, NEW_ART)
         })
@@ -225,7 +227,7 @@ export default class SteamLibraryManager implements LibraryManager {
     }
 
     // Persisted library list (what init() loads and pushes to the frontend).
-    const games = steamLibraryStore.get('games', [])
+    const games = this.deps.stores.steam.steamLibraryStore.get('games', [])
     let changed = false
     const migrated = games.map((game) => {
       if (game.art_square?.includes(OLD_ART)) {
@@ -238,7 +240,7 @@ export default class SteamLibraryManager implements LibraryManager {
       return game
     })
     if (changed) {
-      steamLibraryStore.set('games', migrated)
+      this.deps.stores.steam.steamLibraryStore.set('games', migrated)
       logInfo(
         `Steam: migrated ${migrated.filter((g) => g.art_square.includes(NEW_ART)).length} cached cover URLs to portrait art`,
         LogPrefix.Steam
@@ -247,7 +249,7 @@ export default class SteamLibraryManager implements LibraryManager {
   }
 
   async refresh(): Promise<ExecResult | null> {
-    return refresh()
+    return refresh(this.deps)
   }
 
   /**
@@ -260,16 +262,16 @@ export default class SteamLibraryManager implements LibraryManager {
   getGameInfo(appName: string, _forceReload?: boolean): GameInfo | undefined {
     // Delegate to SteamGame — reads shared library Map and fires lazy fetch
     // (fetchMetadataIfNeeded) when art_cover is empty (plan 02-03)
-    const fromGame = new SteamGame(appName).getGameInfo()
+    const fromGame = new SteamGame(appName, this.deps).getGameInfo()
     if (fromGame.app_name) return fromGame
 
     // Fallback: consult persistent cache (useful if init() hasn't fired yet)
-    const cached = steamLibraryStore.get('games', [])
+    const cached = this.deps.stores.steam.steamLibraryStore.get('games', [])
     return cached.find((g) => g.app_name === appName)
   }
 
   getListOfGames(): GameInfo[] {
-    return steamLibraryStore.get('games', [])
+    return this.deps.stores.steam.steamLibraryStore.get('games', [])
   }
 
   /**
@@ -325,7 +327,7 @@ export default class SteamLibraryManager implements LibraryManager {
   }
 
   async refreshInstallState(): Promise<void> {
-    return refreshInstallState()
+    return refreshInstallState(this.deps)
   }
 
   getLaunchOptions(_appName: string): LaunchOption[] {

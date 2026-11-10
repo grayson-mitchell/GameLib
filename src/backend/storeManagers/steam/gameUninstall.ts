@@ -101,7 +101,7 @@ export async function uninstall(
   // timing: `uninstaller.ts:118` is the SOLE caller of `game.uninstall(...)`
   // in the backend (sole IPC registration: installFlowRegistration.ts:216),
   // and five lines earlier `uninstaller.ts:113` calls
-  // `resolveGameTitle(libraryManagerMap, runner, appName)` ->
+  // `resolveGameTitle(libraryManagers, runner, appName)` ->
   // `utils/gameTitle.ts:58`'s `getGameInfo()` for THIS SAME appId. That call
   // already performed the store fallback and already wrote the entry back
   // into the Map. There is no `await` between those two calls, so nothing can
@@ -153,7 +153,7 @@ export async function uninstall(
     // Poll ACF so the badge flips to not-installed when Steam removes the
     // appmanifest, without requiring a focus round-trip (D-07). Symmetric to
     // install polling. State is never optimistically flipped here (D-02).
-    startUninstallPolling(steamGame.appId)
+    startUninstallPolling(steamGame.deps, steamGame.appId)
     // quick 261029-ji2: a removed install has nothing left to adopt.
     clearPendingAdoption(steamGame.appId)
 
@@ -218,7 +218,7 @@ async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
     // gets the "Game Uninstalled" toast. markBridgeGameUninstalled() did
     // neither (live 2026-10-27, Grim Dawn 219990: native copy survived, no
     // message, badge flipped back to Play on the next refresh).
-    await pollUninstallOnce(steamGame.appId, 'bridge')
+    await pollUninstallOnce(steamGame.deps, steamGame.appId, 'bridge')
     return { stdout: '', stderr: '' }
   }
 
@@ -290,7 +290,7 @@ async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
     LogPrefix.Steam
   )
   // Same completion as the per-game branch above.
-  await pollUninstallOnce(steamGame.appId, 'bridge')
+  await pollUninstallOnce(steamGame.deps, steamGame.appId, 'bridge')
   return { stdout: '', stderr: '' }
 }
 
@@ -329,7 +329,7 @@ export async function uninstallNativeInGameLib(
 
   switch (decision.route) {
     case 'steam-uninstalled':
-      startUninstallPolling(steamGame.appId)
+      startUninstallPolling(steamGame.deps, steamGame.appId)
       clearPendingAdoption(steamGame.appId)
       return { stdout: '', stderr: '' }
     case 'fallback':
@@ -425,7 +425,7 @@ export async function removeNativeInstallDirectly(
     const result = await removeSteamInstallCopy(steamGame.appId, 'native')
     if (result.status !== 'refused') {
       clearPendingAdoption(steamGame.appId)
-      await pollUninstallOnce(steamGame.appId, 'native')
+      await pollUninstallOnce(steamGame.deps, steamGame.appId, 'native')
       return { stdout: '', stderr: '' }
     }
     failure = `Refused to uninstall: ${result.reason} for appId ${steamGame.appId}`
@@ -632,7 +632,7 @@ export async function uninstallBottleGameDirectly(
       `SteamGame: uninstallBottleGameDirectly found no installed bottle manifest for appId ${steamGame.appId} — nothing to remove`,
       LogPrefix.Steam
     )
-    await pollUninstallOnce(steamGame.appId, 'bottle')
+    await pollUninstallOnce(steamGame.deps, steamGame.appId, 'bottle')
     return { stdout: '', stderr: '' }
   }
 
@@ -708,7 +708,7 @@ export async function uninstallBottleGameDirectly(
         `Failed to remove bottle install: ${String(error)}`
       )
     }
-    await pollUninstallOnce(steamGame.appId, 'bottle')
+    await pollUninstallOnce(steamGame.deps, steamGame.appId, 'bottle')
     return { stdout: '', stderr: '' }
   }
 
@@ -738,7 +738,7 @@ export async function uninstallBottleGameDirectly(
   // 'absent' branch to flip the badge, persist, notify, and clear the
   // forcedWindowsViaBottle flag (D-17 reversibility),
   // exactly as the delegated path's own poller does once it observes this.
-  await pollUninstallOnce(steamGame.appId, 'bottle')
+  await pollUninstallOnce(steamGame.deps, steamGame.appId, 'bottle')
 
   return { stdout: '', stderr: '' }
 }

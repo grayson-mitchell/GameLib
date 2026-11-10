@@ -8,6 +8,7 @@ import {
   stopSteamDownloadMonitor
 } from '../steamDownloadMonitor'
 import { type AcfSource, type PollOptions } from './installRoot'
+import type { ManagerDeps } from 'backend/services/types'
 import {
   activePolls,
   GRACE_TICKS,
@@ -56,6 +57,7 @@ import { pollInstallOnce } from './installPollOnce'
  * Exported for unit testing.
  */
 export function startInstallPolling(
+  deps: ManagerDeps,
   appId: string,
   intervalMsOrOptions: number | PollOptions = 3000
 ): void {
@@ -268,7 +270,7 @@ export function startInstallPolling(
     // expects this branch — it's a defensive, log-only catch; the next tick
     // retries normally.
     try {
-      await pollInstallOnce(appId, entry.source)
+      await pollInstallOnce(deps, appId, entry.source)
     } catch (error) {
       logError(
         [`Steam: install polling tick for appId ${appId} threw`, error],

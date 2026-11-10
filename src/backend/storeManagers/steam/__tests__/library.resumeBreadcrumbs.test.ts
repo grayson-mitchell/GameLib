@@ -1,3 +1,7 @@
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /**
  * Unit tests for steam/library/resumeBreadcrumbs.ts. Moved out of
  * library.test.ts by Phase 65 plan 03 (D-03); mock preamble copied.
@@ -15,6 +19,12 @@ import { backfillBridgeLaunchTargets } from '../bridge/launchTarget'
 import { steamLibraryStore } from '../stores'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { library } from '../state'
+
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -263,7 +273,7 @@ describe('markSteamInstallIncomplete()', () => {
       installable: true
     } as any)
 
-    markSteamInstallIncomplete('730')
+    markSteamInstallIncomplete(steamTestDeps, '730')
 
     expect(library.get('730')?.is_installed).toBe(false)
     expect(library.get('730')?.install?.steamResumePending).toBe(true)
@@ -283,7 +293,9 @@ describe('markSteamInstallIncomplete()', () => {
 
   it('Test E: is a no-op (never throws) when the appId has no in-memory library entry', () => {
     library.clear()
-    expect(() => markSteamInstallIncomplete('nonexistent')).not.toThrow()
+    expect(() =>
+      markSteamInstallIncomplete(steamTestDeps, 'nonexistent')
+    ).not.toThrow()
     expect(sendFrontendMessage).not.toHaveBeenCalled()
   })
 })
@@ -300,26 +312,26 @@ describe('steamResumeInstalledAtStart breadcrumb field (todo 2026-11-09)', () =>
   })
 
   it('persists installedAtStart true and clear deletes it', () => {
-    markSteamNativeInstallStarted('730', {
+    markSteamNativeInstallStarted(steamTestDeps, '730', {
       targetSteamappsDir: '/s/steamapps',
       installdir: 'csgo',
       installedAtStart: true
     })
     expect(library.get('730')?.install?.steamResumeInstalledAtStart).toBe(true)
 
-    clearSteamResumeBreadcrumb('730')
+    clearSteamResumeBreadcrumb(steamTestDeps, '730')
     const install = library.get('730')?.install
     expect(install?.steamResumeInstalledAtStart).toBeUndefined()
     expect(install?.steamResumePending).toBe(false)
   })
 
   it('a fresh start without the flag overwrites a stale true', () => {
-    markSteamNativeInstallStarted('730', {
+    markSteamNativeInstallStarted(steamTestDeps, '730', {
       targetSteamappsDir: '/s/steamapps',
       installdir: 'csgo',
       installedAtStart: true
     })
-    markSteamNativeInstallStarted('730', {
+    markSteamNativeInstallStarted(steamTestDeps, '730', {
       targetSteamappsDir: '/s/steamapps',
       installdir: 'csgo'
     })

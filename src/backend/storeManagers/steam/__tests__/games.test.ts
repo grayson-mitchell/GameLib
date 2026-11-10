@@ -1,4 +1,7 @@
-import { createTestManagerDeps } from 'backend/testUtils/testServices'
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /**
  * Unit tests for SteamGame — LIB-04 (lazy metadata), GAME-01 (launch), GAME-04 (no-Wine),
  * and supporting read methods (getSettings, getExtraInfo, isGameAvailable).
@@ -259,6 +262,12 @@ import {
   getAbortSignal
 } from 'backend/utils/aborthandler/aborthandler'
 import { at } from './fixtures/indexed'
+
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 jest.mock('backend/knownFixReport', () => ({ reportDetectedFix: jest.fn() }))
 
@@ -930,7 +939,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       is_windows_native: true
     })
 
-    const result = new SteamGame(APP_ID).getGameInfo()
+    const result = new SteamGame(APP_ID, steamTestDeps).getGameInfo()
 
     expect(result).toBe(entry)
     // Synchronous return — axios must NOT have been called yet
@@ -948,7 +957,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     })
     library.set(APP_ID, makeEntry({ art_cover: 'https://example.com/art.jpg' }))
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(axios.get).toHaveBeenCalledTimes(1)
@@ -965,7 +974,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     })
     library.set(APP_ID, makeEntry({ art_cover: 'https://example.com/art.jpg' }))
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(axios.get).toHaveBeenCalledTimes(1)
@@ -983,7 +992,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     })
     library.set(APP_ID, makeEntry({ art_cover: 'https://example.com/art.jpg' }))
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(axios.get).not.toHaveBeenCalled()
@@ -1000,7 +1009,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       makeEntry({ art_cover: 'https://example.com/art.jpg', is_delisted: true })
     )
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(axios.get).not.toHaveBeenCalled()
@@ -1022,7 +1031,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     })
     library.set(APP_ID, makeEntry({ art_cover: '', is_delisted: true }))
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(axios.get).not.toHaveBeenCalled()
@@ -1035,7 +1044,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     })
     library.set(APP_ID, makeEntry({ art_cover: '', is_delisted: true }))
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     game.getGameInfo()
     await flushAsync()
     game.getGameInfo()
@@ -1063,7 +1072,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     const badAppId = '../../etc/passwd'
     library.set(badAppId, makeEntry({ art_cover: '' }))
 
-    new SteamGame(badAppId).getGameInfo()
+    new SteamGame(badAppId, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(axios.get).not.toHaveBeenCalled()
@@ -1076,7 +1085,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     })
     library.set(APP_ID, makeEntry({ art_cover: '' }))
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(axios.get).toHaveBeenCalledTimes(1)
@@ -1088,7 +1097,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(axios.get).toHaveBeenCalledTimes(1)
@@ -1102,7 +1111,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     const updated = library.get(APP_ID)!
@@ -1125,7 +1134,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     const updated = library.get(APP_ID)!
@@ -1149,7 +1158,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       )
 
     library.set(APP_ID, makeEntry())
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
     // Give any (incorrectly) unhandled rejection a full microtask+macrotask
     // turn to actually surface before asserting it never did.
@@ -1173,7 +1182,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(steamMetadataStore.set).toHaveBeenCalledWith(
@@ -1191,7 +1200,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(library.get(APP_ID)!.is_windows_native).toBe(true)
@@ -1201,7 +1210,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(steamMetadataStore.set).toHaveBeenCalledWith(
@@ -1225,7 +1234,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(axios.get as jest.Mock).mockResolvedValue(withScore)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(library.get(APP_ID)!.metacritic_score).toBe(88)
@@ -1246,7 +1255,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     })
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
@@ -1259,7 +1268,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
@@ -1282,7 +1291,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(axios.get as jest.Mock).mockResolvedValue(fixtureWindowsFalse)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(library.get(APP_ID)!.is_windows_native).toBe(false)
@@ -1308,7 +1317,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(axios.get as jest.Mock).mockResolvedValue(fixtureNoPlatforms)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(library.get(APP_ID)!.is_windows_native).toBe(false)
@@ -1336,7 +1345,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       })
       library.set(APP_ID, makeEntry())
 
-      new SteamGame(APP_ID).getGameInfo()
+      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
       await flushAsync()
 
       const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
@@ -1382,7 +1391,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       })
       library.set(APP_ID, makeEntry())
 
-      new SteamGame(APP_ID).getGameInfo()
+      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
       await flushAsync()
 
       const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
@@ -1405,7 +1414,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       })
       library.set(APP_ID, makeEntry())
 
-      new SteamGame(APP_ID).getGameInfo()
+      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
       await flushAsync()
 
       const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
@@ -1428,7 +1437,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       })
       library.set(APP_ID, makeEntry())
 
-      new SteamGame(APP_ID).getGameInfo()
+      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
       await flushAsync()
 
       const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
@@ -1459,7 +1468,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
       })
       library.set(APP_ID, makeEntry())
 
-      new SteamGame(APP_ID).getGameInfo()
+      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
       await flushAsync()
 
       const [, written] = (steamMetadataStore.set as jest.Mock).mock.calls[0]
@@ -1501,7 +1510,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(steamMetadataStore.set).toHaveBeenCalledWith(
@@ -1527,7 +1536,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(steamMetadataStore.set).toHaveBeenCalledWith(
@@ -1543,7 +1552,9 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
     library.set(APP_ID, makeEntry())
 
-    expect(() => new SteamGame(APP_ID).getGameInfo()).not.toThrow()
+    expect(() =>
+      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
+    ).not.toThrow()
     await flushAsync()
 
     expect(steamMetadataStore.set).toHaveBeenCalledWith(
@@ -1574,7 +1585,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     })
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(steamMetadataStore.set).toHaveBeenCalledWith(
@@ -1603,7 +1614,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     })
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(steamMetadataStore.set).toHaveBeenCalledWith(
@@ -1622,7 +1633,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(steamMetadataStore.set).toHaveBeenCalledWith(
@@ -1640,7 +1651,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(axios.get as jest.Mock).mockResolvedValue(fixtureApiResponse)
     library.set(APP_ID, makeEntry())
 
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -1669,7 +1680,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     )
     library.set(APP_ID, makeEntry())
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     // Both calls happen synchronously before any awaited code runs
     game.getGameInfo()
     game.getGameInfo()
@@ -1688,7 +1699,7 @@ describe('SteamGame.getGameInfo lazy metadata', () => {
     ;(axios.get as jest.Mock).mockRejectedValue(new Error('Network error'))
     library.set(APP_ID, makeEntry())
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
 
     // Synchronous call must not throw
     expect(() => game.getGameInfo()).not.toThrow()
@@ -1722,7 +1733,7 @@ describe('SteamLibraryManager.getGameInfo integration — lazy fetch delegation'
     // Entry in shared Map with no artwork — should trigger fetchMetadataIfNeeded
     library.set(APP_ID, makeEntry())
 
-    const manager = new SteamLibraryManager(createTestManagerDeps())
+    const manager = new SteamLibraryManager(steamTestDeps)
     const result = manager.getGameInfo(APP_ID)
 
     // Synchronous return should be the in-Map entry
@@ -1791,7 +1802,7 @@ describe('SteamGame.launch() — GAME-01', () => {
   })
 
   it('GAME-01: launch() calls shell.openExternal with steam://rungameid/{appId} for numeric appId', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledTimes(1)
@@ -1804,21 +1815,21 @@ describe('SteamGame.launch() — GAME-01', () => {
   })
 
   it('GAME-01: launch() resolves true for a valid numeric appId', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(result).toBe(true)
   })
 
   it('launch() does NOT show a hand-off toast (toast feature removed — Steam opens fast enough)', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     expect(notifyMock).not.toHaveBeenCalled()
   })
 
   it('T-03-01: launch() does NOT call shell.openExternal when appId is non-numeric (injection guard)', async () => {
-    const badGame = new SteamGame('abc')
+    const badGame = new SteamGame('abc', steamTestDeps)
     library.set('abc', makeEntry({ app_name: 'abc', title: 'BadGame' }))
 
     const result = await badGame.launch({} as any)
@@ -1829,7 +1840,7 @@ describe('SteamGame.launch() — GAME-01', () => {
 
   it('T-03-01: launch() does NOT call shell.openExternal for appId with shell metacharacters', async () => {
     const badId = '12; rm -rf ~'
-    const badGame = new SteamGame(badId)
+    const badGame = new SteamGame(badId, steamTestDeps)
     library.set(badId, makeEntry({ app_name: badId, title: 'BadGame' }))
 
     const result = await badGame.launch({} as any)
@@ -1840,7 +1851,7 @@ describe('SteamGame.launch() — GAME-01', () => {
 
   it('T-03-01: launch() does NOT call shell.openExternal for appId with path traversal', async () => {
     const badId = '10/../uninstall/5'
-    const badGame = new SteamGame(badId)
+    const badGame = new SteamGame(badId, steamTestDeps)
     library.set(badId, makeEntry({ app_name: badId, title: 'BadGame' }))
 
     const result = await badGame.launch({} as any)
@@ -1850,7 +1861,7 @@ describe('SteamGame.launch() — GAME-01', () => {
   })
 
   it('T-03-01: launch() logs a warning when appId is invalid', async () => {
-    const badGame = new SteamGame('not-a-number')
+    const badGame = new SteamGame('not-a-number', steamTestDeps)
     library.set(
       'not-a-number',
       makeEntry({ app_name: 'not-a-number', title: 'BadGame' })
@@ -1863,7 +1874,7 @@ describe('SteamGame.launch() — GAME-01', () => {
 
   it('GAME-04/D-06: launch() does not invoke any Wine/Proton routine — only shell.openExternal is called as external exec', async () => {
     // Verify that the steam:// URL contains rungameid (not a Heroic runtime command)
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     // shell.openExternal must be called with a steam:// URL using rungameid — NOT a CLI/Wine command
@@ -1889,7 +1900,7 @@ describe('SteamGame.launch() — GAME-01', () => {
     })
 
     it('opens steam://launch/<appId>/Dialog with activate:false and resolves true', async () => {
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.launch({} as any)
 
       expect(result).toBe(true)
@@ -1901,7 +1912,7 @@ describe('SteamGame.launch() — GAME-01', () => {
     })
 
     it('never opens a rungameid URL', async () => {
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       await game.launch({} as any)
 
       for (const call of shellOpenExternal.mock.calls) {
@@ -1913,7 +1924,7 @@ describe('SteamGame.launch() — GAME-01', () => {
       'rejects non-numeric appId %j: no openExternal, resolves false, warns',
       async (badId) => {
         library.set(badId, makeEntry({ app_name: badId, title: 'BadGame' }))
-        const badGame = new SteamGame(badId)
+        const badGame = new SteamGame(badId, steamTestDeps)
 
         const result = await badGame.launch({} as any)
 
@@ -1947,7 +1958,7 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
       is_mac_native: false
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(true)
   })
 
@@ -1958,7 +1969,7 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
       is_mac_native: false
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(false)
   })
 
@@ -1977,7 +1988,7 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
     // so a false here IS the bottle-routing verdict. Asserted through the
     // wrapper rather than the private method, which `tsc --noEmit` rejects
     // (ts-jest is transpile-only in this repo and would not have caught it).
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(false)
   })
 
@@ -1988,7 +1999,7 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
       is_mac_native: false
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(true)
   })
 
@@ -1999,7 +2010,7 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
       is_mac_native: true
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(true)
   })
 
@@ -2007,7 +2018,7 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
     envMock.isMac = true
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(undefined)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(true)
   })
 
@@ -2023,7 +2034,7 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
       mac_arch_source: 'macho'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(false)
   })
 
@@ -2037,7 +2048,7 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
       mac_arch_source: 'macho'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(true)
   })
 
@@ -2051,7 +2062,7 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
       mac_arch_source: 'macho'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(true)
   })
 
@@ -2063,7 +2074,7 @@ describe('SteamGame.isNative() — D-11 per-OS confirmed-not-native', () => {
       mac_arch: 'unknown'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(false)
   })
 })
@@ -2097,7 +2108,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
     })
     ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -2119,7 +2130,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
       status: 'done'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -2138,7 +2149,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
       ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(phase)
       const { logInfo } = jest.requireMock('backend/logger')
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.launch({} as any)
 
       expect(result).toBe(true)
@@ -2163,7 +2174,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
       status: 'done'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(await game.launch({} as any)).toBe(true)
     expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(APP_ID)
   })
@@ -2174,7 +2185,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
       is_mac_native: true
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(
@@ -2191,7 +2202,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
       is_mac_native: false
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(
@@ -2212,7 +2223,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
       is_mac_native: false
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(
@@ -2419,7 +2430,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         status: 'stopped'
       })
       ;(runWineCommand as jest.Mock).mockReturnValue(new Promise(() => {}))
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       expect(await game.launch({} as any)).toBe(true)
       return game
     }
@@ -2485,7 +2496,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     it('bottled-Steam route (no bridge launch recorded, monitor running): monitor ended, no kill', async () => {
       ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue('running')
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
 
       await game.stop()
 
@@ -2509,7 +2520,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         ]
       })
 
-      const result = await new SteamGame(APP_ID).repair()
+      const result = await new SteamGame(APP_ID, steamTestDeps).repair()
 
       expect(restoreBridgeSteamApiOriginals).toHaveBeenCalledTimes(1)
       expect(restoreBridgeSteamApiOriginals).toHaveBeenCalledWith({
@@ -2540,9 +2551,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         ]
       })
 
-      await expect(new SteamGame(APP_ID).repair()).rejects.toThrow(
-        /bin\/steam_api64\.dll: download-failed \(cdn down\)/
-      )
+      await expect(
+        new SteamGame(APP_ID, steamTestDeps).repair()
+      ).rejects.toThrow(/bin\/steam_api64\.dll: download-failed \(cdn down\)/)
     })
 
     it.each([
@@ -2566,7 +2577,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         )
         arrange()
 
-        const err = await new SteamGame(APP_ID).repair().catch((e: Error) => e)
+        const err = await new SteamGame(APP_ID, steamTestDeps)
+          .repair()
+          .catch((e: Error) => e)
 
         expect(err).toBeInstanceOf(Error)
         expect((err as Error).message).toContain(
@@ -2588,7 +2601,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         spy.mockReturnValue({
           scan: { interfaceVersions: {}, originalFingerprints: fps }
         } as never)
-        await new SteamGame(APP_ID).launch({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
         expect(placeShimForGame).toHaveBeenLastCalledWith(
           APP_ID,
           RESOLVED_EXE_PATH,
@@ -2596,7 +2609,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         )
 
         spy.mockReturnValue({ scan: { interfaceVersions: {} } } as never)
-        await new SteamGame(APP_ID).launch({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
         const opts = (placeShimForGame as jest.Mock).mock.calls.at(-1)[2]
         expect(opts).not.toHaveProperty('persistedOriginalFingerprints')
       } finally {
@@ -2609,7 +2622,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID, {
@@ -2665,7 +2678,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     // quick 261028-k7l added exePath as the 4th arg.
@@ -2692,7 +2705,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
     ;(resolveBridgeLaunchWorkingDir as jest.Mock).mockReturnValue(undefined)
 
-    await new SteamGame(APP_ID).launch({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
     expect(runWineCommand).toHaveBeenLastCalledWith(
       expect.objectContaining({
         startFolder: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4`
@@ -2701,7 +2714,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(resolveBridgeLaunchWorkingDir as jest.Mock).mockReturnValue(
       `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/bin`
     )
-    await new SteamGame(APP_ID).launch({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
     expect(runWineCommand).toHaveBeenLastCalledWith(
       expect.objectContaining({
         startFolder: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/bin`
@@ -2718,7 +2731,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     }
     ;(applySteamBridgeKnownFixes as jest.Mock).mockResolvedValue(withEnv)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     expect((runWineCommand as jest.Mock).mock.calls[0][0].gameSettings).toBe(
@@ -2736,7 +2749,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       new Error('fix boom')
     )
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(result).toBe(true)
@@ -2760,7 +2773,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     expect(installSteamBridgeSharedRedists).toHaveBeenCalledWith(APP_ID, {
@@ -2785,7 +2798,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
 
-    await new SteamGame(APP_ID).launch({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
 
     expect(SteamUser.acquireAuthenticated).not.toHaveBeenCalled()
     expect(SteamUser.acquireOpenAuthenticated).not.toHaveBeenCalled()
@@ -2798,7 +2811,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
 
-    await new SteamGame(APP_ID).launch({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
 
     expect(installSteamBridgeSharedRedists).toHaveBeenCalledTimes(1)
   })
@@ -2810,7 +2823,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       new Error('redist boom')
     )
 
-    const result = await new SteamGame(APP_ID).launch({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
 
     expect(result).toBe(true)
     expect(runWineCommand).toHaveBeenCalled()
@@ -2838,7 +2851,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       status: 'shim-not-built'
     })
 
-    const game = new SteamGame(SHIM_FAIL_APP_ID)
+    const game = new SteamGame(SHIM_FAIL_APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
@@ -2869,7 +2882,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       arch: 'x64'
     })
 
-    const game = new SteamGame(WIN64_SHIM_APP_ID)
+    const game = new SteamGame(WIN64_SHIM_APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(result).toBe(false)
@@ -2904,7 +2917,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         drm: CEG_DRM
       })
 
-      const game = new SteamGame(CEG_APP_ID)
+      const game = new SteamGame(CEG_APP_ID, steamTestDeps)
       const result = await game.launch({} as any)
 
       expect(result).toBe(false)
@@ -2955,7 +2968,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         drm: CEG_DRM
       })
 
-      const game = new SteamGame(CEG_APP_ID)
+      const game = new SteamGame(CEG_APP_ID, steamTestDeps)
       const result = await game.launch({} as any)
 
       expect(result).toBe(true)
@@ -2984,7 +2997,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         drm: null
       })
 
-      await new SteamGame(CEG_APP_ID).launch({} as any)
+      await new SteamGame(CEG_APP_ID, steamTestDeps).launch({} as any)
 
       expect(reportDetectedFix).not.toHaveBeenCalled()
     })
@@ -2999,9 +3012,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         drm: CEG_DRM
       })
 
-      await expect(new SteamGame(CEG_APP_ID).launch({} as any)).resolves.toBe(
-        false
-      )
+      await expect(
+        new SteamGame(CEG_APP_ID, steamTestDeps).launch({} as any)
+      ).resolves.toBe(false)
     })
   })
 
@@ -3035,7 +3048,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         verdict: missVerdict(['SteamUtils005'])
       })
 
-      const result = await new SteamGame(MISS_APP_ID).launch({} as any)
+      const result = await new SteamGame(MISS_APP_ID, steamTestDeps).launch(
+        {} as any
+      )
 
       expect(result).toBe(true)
       expect(ensureBridgeHelperReady).toHaveBeenCalledWith(
@@ -3060,7 +3075,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       )
       expect(persistCall).toBeDefined()
       // Not poisoned: a later launch still goes through the bridge.
-      await new SteamGame(MISS_APP_ID).launch({} as any)
+      await new SteamGame(MISS_APP_ID, steamTestDeps).launch({} as any)
       expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
     })
 
@@ -3071,7 +3086,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         verdict: missVerdict(['steam_api64.dll@runtime-loaded'], 'x64')
       })
 
-      const result = await new SteamGame(MISS_APP_ID).launch({} as any)
+      const result = await new SteamGame(MISS_APP_ID, steamTestDeps).launch(
+        {} as any
+      )
 
       expect(result).toBe(true)
       expect(runWineCommand).toHaveBeenCalled()
@@ -3100,7 +3117,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         shimPath: RESOLVED_EXE_PATH
       })
 
-      const result = await new SteamGame(MISS_APP_ID).launch({} as any)
+      const result = await new SteamGame(MISS_APP_ID, steamTestDeps).launch(
+        {} as any
+      )
 
       expect(result).toBe(true)
       expect(ensureBridgeHelperReady).toHaveBeenCalled()
@@ -3123,7 +3142,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         ready: false
       })
 
-      const game = new SteamGame(MISS_APP_ID)
+      const game = new SteamGame(MISS_APP_ID, steamTestDeps)
       const result = await game.launch({} as any)
 
       expect(result).toBe(false)
@@ -3149,7 +3168,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
           ready: false
         })
 
-        const first = await new SteamGame(MISS_APP_ID).launch({} as any)
+        const first = await new SteamGame(MISS_APP_ID, steamTestDeps).launch(
+          {} as any
+        )
 
         expect(first).toBe(false)
         expect(runWineCommand).not.toHaveBeenCalled()
@@ -3169,7 +3190,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
           port: 55001,
           secret: 'a'.repeat(64)
         })
-        const second = await new SteamGame(MISS_APP_ID).launch({} as any)
+        const second = await new SteamGame(MISS_APP_ID, steamTestDeps).launch(
+          {} as any
+        )
         expect(second).toBe(true)
         expect(ensureBridgeHelperReady).toHaveBeenCalledTimes(2)
         expect(runWineCommand).toHaveBeenCalled()
@@ -3183,7 +3206,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       })
       ;(notify as jest.Mock).mockClear()
 
-      await new SteamGame(MISS_APP_ID).launch({} as any)
+      await new SteamGame(MISS_APP_ID, steamTestDeps).launch({} as any)
 
       const options = (ensureBridgeHelperReady as jest.Mock).mock.calls[0][1]
       expect(options.onWaitingForSteam).toEqual(expect.any(Function))
@@ -3219,7 +3242,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     const launchWith = async (shimResult: object) => {
       ;(placeShimForGame as jest.Mock).mockResolvedValue(shimResult)
-      return new SteamGame(UE0_APP_ID).launch({} as any)
+      return new SteamGame(UE0_APP_ID, steamTestDeps).launch({} as any)
     }
 
     it("'placed' passes [shimPath]", async () => {
@@ -3334,7 +3357,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       })
       let result: boolean
       try {
-        result = await new SteamGame(id).launch({} as any)
+        result = await new SteamGame(id, steamTestDeps).launch({} as any)
       } finally {
         jest.restoreAllMocks()
       }
@@ -3360,7 +3383,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
           missingSymbols: ['SteamAPI_X']
         }
       })
-      const result = await new SteamGame(id).launch({} as any)
+      const result = await new SteamGame(id, steamTestDeps).launch({} as any)
       expect(result).toBe(true)
       expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
       expect(runWineCommand).toHaveBeenCalledTimes(1)
@@ -3374,7 +3397,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         status: 'no-steam-api',
         verdict: { ...BASE_VERDICT, drmWrapper: 'steamstub' }
       })
-      const result = await new SteamGame(id).launch({} as any)
+      const result = await new SteamGame(id, steamTestDeps).launch({} as any)
       expect(result).toBe(true)
       expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
       expect(runWineCommand).toHaveBeenCalledTimes(1)
@@ -3397,7 +3420,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         exeArch: 'x64'
       })
       try {
-        await new SteamGame(id).launch({} as any)
+        await new SteamGame(id, steamTestDeps).launch({} as any)
         expect(writeSpy).toHaveBeenCalledTimes(1)
         expect(at(writeSpy.mock.calls, 0)[1]).not.toHaveProperty('drmWrapper')
       } finally {
@@ -3426,7 +3449,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       }
     })
 
-    const game = new SteamGame(NO_STEAM_API_APP_ID)
+    const game = new SteamGame(NO_STEAM_API_APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
@@ -3463,7 +3486,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       }
     })
 
-    const game = new SteamGame(WITHHELD_APP_ID)
+    const game = new SteamGame(WITHHELD_APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
@@ -3500,7 +3523,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       }
     })
 
-    const game = new SteamGame(PLACED_APP_ID)
+    const game = new SteamGame(PLACED_APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(result).toBe(true)
@@ -3543,7 +3566,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     })
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
 
-    const game = new SteamGame(PERSISTED_APP_ID)
+    const game = new SteamGame(PERSISTED_APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     expect(placeShimForGame).toHaveBeenCalledWith(
@@ -3575,7 +3598,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       shimPath: RESOLVED_EXE_PATH
     })
 
-    const game = new SteamGame(RETAINED_APP_ID)
+    const game = new SteamGame(RETAINED_APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     expect(placeShimForGame).toHaveBeenCalledWith(
@@ -3609,7 +3632,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       shimPath: RESOLVED_EXE_PATH
     })
 
-    const game = new SteamGame(FP_APP_ID)
+    const game = new SteamGame(FP_APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     expect(placeShimForGame).toHaveBeenCalledWith(
@@ -3647,7 +3670,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       shimPath: RESOLVED_EXE_PATH
     })
 
-    const game = new SteamGame(FP_APP_ID)
+    const game = new SteamGame(FP_APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     expect(placeShimForGame).toHaveBeenCalledWith(
@@ -3669,7 +3692,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       port: 55123
     })
 
-    const game = new SteamGame(NOSECRET_APP_ID)
+    const game = new SteamGame(NOSECRET_APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(result).toBe(false)
@@ -3693,7 +3716,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       status: 'done'
     })
 
-    const game = new SteamGame(FAILING_APP_ID)
+    const game = new SteamGame(FAILING_APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(runWineCommand).not.toHaveBeenCalled()
@@ -3733,7 +3756,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       error: 'boom'
     })
 
-    const game = new SteamGame(CONFIG_FAIL_APP_ID)
+    const game = new SteamGame(CONFIG_FAIL_APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(runWineCommand).not.toHaveBeenCalled()
@@ -3758,7 +3781,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(undefined)
 
-    const game = new SteamGame(NO_EXE_APP_ID)
+    const game = new SteamGame(NO_EXE_APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(runWineCommand).not.toHaveBeenCalled()
@@ -3785,7 +3808,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
     ;(existsSync as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(NOT_INSTALLED_APP_ID)
+    const game = new SteamGame(NOT_INSTALLED_APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(existsSync).toHaveBeenCalledWith(RESOLVED_EXE_PATH)
@@ -3819,7 +3842,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(runWineCommand).toHaveBeenCalledTimes(1)
@@ -3844,7 +3867,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(handle)
       ;(runWineCommand as jest.Mock).mockReturnValue(new Promise(() => {}))
 
-      const result = await new SteamGame(APP_ID).launch({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).launch(
+        {} as any
+      )
 
       expect(result).toBe(true)
       expect(startBottleProcessMonitor).toHaveBeenCalledTimes(1)
@@ -3871,7 +3896,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         })
       )
 
-      await new SteamGame(APP_ID).launch({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
       resolveWine({ stdout: '', stderr: '' })
       await flush()
 
@@ -3888,7 +3913,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         })
       )
 
-      await new SteamGame(APP_ID).launch({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
       rejectWine(new Error('spawn failed'))
       await flush()
 
@@ -3910,7 +3935,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       )
       ;(runWineCommand as jest.Mock).mockRejectedValue(new Error('boom'))
 
-      const result = await new SteamGame(APP_ID).launch({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).launch(
+        {} as any
+      )
       await flush()
 
       expect(result).toBe(true)
@@ -3943,7 +3970,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       status: 'done'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     expect(resolveBridgeLaunchExe).not.toHaveBeenCalled()
@@ -3958,7 +3985,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.launch({} as any)
 
     expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
@@ -3974,7 +4001,7 @@ describe('SteamGame.stop() — no-op', () => {
   })
 
   it('stop() resolves void without throwing (Steam owns process lifecycle)', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await expect(game.stop()).resolves.toBeUndefined()
   })
 })
@@ -3989,7 +4016,7 @@ describe('SteamGame.stop() — pending launch monitor (261024-gvu)', () => {
 
   it('ends a live monitor instead of the no-op warning', async () => {
     ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue('starting')
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.stop()
     expect(stopBottleProcessMonitor).toHaveBeenCalledWith(APP_ID)
     expect(stopPerGameBridgeBottle).not.toHaveBeenCalled()
@@ -3998,7 +4025,7 @@ describe('SteamGame.stop() — pending launch monitor (261024-gvu)', () => {
 
   it('phase null keeps the no-op warning and does not stop a monitor', async () => {
     ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.stop()
     expect(stopBottleProcessMonitor).not.toHaveBeenCalled()
     expect(stopPerGameBridgeBottle).not.toHaveBeenCalled()
@@ -4023,7 +4050,7 @@ describe('SteamGame.stop() — delegated install cancel (261105-vfq)', () => {
     const spy = jest
       .spyOn(installPollingModule, 'cancelDelegatedInstall')
       .mockReturnValue(true)
-    await new SteamGame(APP_ID).stop()
+    await new SteamGame(APP_ID, steamTestDeps).stop()
     expect(spy).toHaveBeenCalledWith(APP_ID)
     expect(warnedNoOp()).toBe(false)
   })
@@ -4033,7 +4060,7 @@ describe('SteamGame.stop() — delegated install cancel (261105-vfq)', () => {
     const spy = jest
       .spyOn(installPollingModule, 'cancelDelegatedInstall')
       .mockReturnValue(false)
-    await new SteamGame(APP_ID).stop()
+    await new SteamGame(APP_ID, steamTestDeps).stop()
     expect(spy).toHaveBeenCalledWith(APP_ID)
     expect(warnedNoOp()).toBe(true)
   })
@@ -4075,7 +4102,7 @@ describe('SteamGame.stop() — D-02 native depot-download abort', () => {
       })
     )
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const installPromise = game.install({} as any)
     // Let install() run all the way through ensurePlatformsCaptured() ->
     // ensureSteamClientReady -> resolveSteamInstallTarget -> createAbortController
@@ -4096,7 +4123,7 @@ describe('SteamGame.stop() — D-02 native depot-download abort', () => {
   })
 
   it('when no depot download is in flight (native steam:// path / bottle path), stop() remains a safe no-op and does not throw', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await expect(game.stop()).resolves.toBeUndefined()
     expect(callAbortController).not.toHaveBeenCalled()
   })
@@ -4111,7 +4138,7 @@ describe('SteamGame.stop() — D-02 native depot-download abort', () => {
     )
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const installPromise = game.install({} as any)
     // Let install() run through ensurePlatformsCaptured() into the
     // (still-pending) ensureSteamClientReady await — registration (D-UAT-05
@@ -4156,7 +4183,7 @@ describe('SteamGame.install() — GAME-02', () => {
   })
 
   it('GAME-02: install() calls shell.openExternal with steam://install/{appId} for numeric appId', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledTimes(1)
@@ -4164,7 +4191,7 @@ describe('SteamGame.install() — GAME-02', () => {
   })
 
   it("GAME-02/focus: native install HANDS FOCUS to Steam — openExternal is called WITHOUT { activate: false }, so the steam:// protocol handler foregrounds the native Steam client (OS-delegated parity with the CrossOver path's raiseInstallerWindow() System Events raise); contrast launch() which passes { activate: false } to avoid stealing foreground", async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledTimes(1)
@@ -4183,21 +4210,21 @@ describe('SteamGame.install() — GAME-02', () => {
   })
 
   it('GAME-02: install() resolves { status: "done" } for a valid numeric appId', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(result).toEqual({ status: 'done' })
   })
 
   it('install() does NOT show a hand-off toast (toast feature removed)', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     expect(notifyMock).not.toHaveBeenCalled()
   })
 
   it('T-03-01: install() does NOT call shell.openExternal when appId is non-numeric', async () => {
-    const badGame = new SteamGame('abc')
+    const badGame = new SteamGame('abc', steamTestDeps)
     library.set('abc', makeEntry({ app_name: 'abc', title: 'BadGame' }))
 
     const result = await badGame.install({} as any)
@@ -4207,7 +4234,7 @@ describe('SteamGame.install() — GAME-02', () => {
   })
 
   it('GAME-02: install() does NOT call sendFrontendMessage directly (no optimistic flip — D-02)', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     // Badge flipped by ACF poller (D-07) or focus re-read (D-01), never by click (D-02)
@@ -4215,15 +4242,15 @@ describe('SteamGame.install() — GAME-02', () => {
   })
 
   it('GAME-02/D-07: install() calls startInstallPolling with this.appId after successful openExternal', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
-    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       delegatedToSteamClient: true
     })
   })
 
   it('D-07: install() does NOT call startInstallPolling when appId is non-numeric (T-03-01 guard)', async () => {
-    const badGame = new SteamGame('abc')
+    const badGame = new SteamGame('abc', steamTestDeps)
     library.set('abc', makeEntry({ app_name: 'abc', title: 'BadGame' }))
     await badGame.install({} as any)
     expect(startInstallPollingSpy).not.toHaveBeenCalled()
@@ -4240,7 +4267,7 @@ describe('SteamGame.install() — GAME-02', () => {
         status,
         ready: false
       })
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(ensureSteamClientReady).toHaveBeenCalledWith(APP_ID)
@@ -4256,7 +4283,7 @@ describe('SteamGame.install() — GAME-02', () => {
       ready: false,
       error: 'boom'
     })
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(result).toEqual({ status: 'error', error: 'boom' })
@@ -4265,7 +4292,7 @@ describe('SteamGame.install() — GAME-02', () => {
   })
 
   it('D-UAT-19: a ready client still hands off — ensureSteamClientReady runs before openExternal', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     const readyOrder = at(
@@ -4318,11 +4345,11 @@ describe('SteamGame.install() — steam-startup-resume-crash resume-on-click (D-
         install: { steamResumePending: true } as any
       })
     )
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
 
     await game.install({} as any)
 
-    expect(resumeSpy).toHaveBeenCalledWith(APP_ID)
+    expect(resumeSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     // The normal install flow still runs afterward (D-04 softened resume is
     // additive, not a replacement for the real install/completion path).
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
@@ -4330,7 +4357,7 @@ describe('SteamGame.install() — steam-startup-resume-crash resume-on-click (D-
 
   it('does NOT call resumeInterruptedSteamInstall when steamResumePending is not set (no regression for a normal fresh install)', async () => {
     library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
 
     await game.install({} as any)
 
@@ -4347,11 +4374,11 @@ describe('SteamGame.install() — steam-startup-resume-crash resume-on-click (D-
         install: { steamResumePending: true } as any
       })
     )
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
 
     const result = await game.install({} as any)
 
-    expect(resumeSpy).toHaveBeenCalledWith(APP_ID)
+    expect(resumeSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     expect(result).toEqual({ status: 'done' })
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
   })
@@ -4405,7 +4432,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
   it('opt-in OFF: install() takes the legacy steam://install path and does NOT call downloadSteamDepots', async () => {
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
@@ -4421,7 +4448,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -4452,7 +4479,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     // debug/steam-1026-download-restart: this poll starts AFTER GameLib's own
     // depot.ts download finished — isNativeHandoff:true so StateFlags 1026 is
     // correctly read as "waiting for Steam restart", not an active download.
-    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       isNativeHandoff: true,
       skippedDepots: []
     })
@@ -4463,7 +4490,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    await new SteamGame(APP_ID).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(SteamUser.acquireAuthenticated).toHaveBeenCalledTimes(1)
     expect(SteamUser.acquireAuthenticated).toHaveBeenCalledWith({
@@ -4488,7 +4515,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    await new SteamGame(APP_ID).install({
+    await new SteamGame(APP_ID, steamTestDeps).install({
       path: '/Volumes/Games/SteamLibrary',
       steamForceWindowsViaBottle: false
     } as any)
@@ -4508,14 +4535,14 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       status: 'error',
       error: 'boom'
     })
-    await new SteamGame(APP_ID).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
     expect(leaseRelease).toHaveBeenCalledTimes(1)
 
     leaseRelease.mockClear()
     ;(resolveSteamInstallTarget as jest.Mock).mockRejectedValue(
       new Error('pics down')
     )
-    await new SteamGame(APP_ID).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
     expect(leaseRelease).toHaveBeenCalledTimes(1)
   })
 
@@ -4525,7 +4552,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       status: 'cancelled'
     })
 
-    const result = await new SteamGame(APP_ID).install({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(result).toEqual({ status: 'abort' })
     expect(leaseRelease).toHaveBeenCalledTimes(1)
@@ -4538,7 +4565,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       reason: 'go-offline-required'
     })
 
-    const result = await new SteamGame(APP_ID).install({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
     expect(resolveSteamInstallTarget).not.toHaveBeenCalled()
@@ -4553,7 +4580,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       reason: 'token-absent'
     })
 
-    const result = await new SteamGame(APP_ID).install({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(result.status).toBe('error')
     expect((result as { error?: string }).error).toEqual(
@@ -4572,7 +4599,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
         ready: false
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(result).toEqual({ status: 'done', deferredToSetup: true })
@@ -4589,7 +4616,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       error: 'Invalid appId: "../x"'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(result).toEqual({
@@ -4606,10 +4633,10 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       skippedDepots: ['1771304']
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
-    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       isNativeHandoff: true,
       skippedDepots: ['1771304']
     })
@@ -4620,17 +4647,17 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
-    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       isNativeHandoff: true,
       skippedDepots: []
     })
     const call = (startInstallPollingSpy as jest.Mock).mock.calls.find(
-      ([appId]) => appId === APP_ID
+      ([, appId]) => appId === APP_ID
     )
-    expect(call![1].skippedDepots).not.toBeUndefined()
+    expect(call![2].skippedDepots).not.toBeUndefined()
   })
 
   it('D-06/D-07 error surface reuse: a { status: "error", error } depot outcome maps to an InstallResult.error carrying the EXACT classified message — no steam-specific error/Retry UI, downloadqueue.ts uninvolved', async () => {
@@ -4641,7 +4668,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       error: classifiedMessage
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(result).toEqual({ status: 'error', error: classifiedMessage })
@@ -4655,7 +4682,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       status: 'cancelled'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(result).toEqual({ status: 'abort' })
@@ -4670,7 +4697,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       status: 'error',
       error: 'Invalid Steam appId'
     })
-    const badGame = new SteamGame('abc')
+    const badGame = new SteamGame('abc', steamTestDeps)
     library.set('abc', makeEntry({ app_name: 'abc', title: 'BadGame' }))
 
     const result = await badGame.install({} as any)
@@ -4687,7 +4714,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
     ;(createAbortController as jest.Mock).mockReturnValue(registered)
     ;(getAbortSignal as jest.Mock).mockReturnValue(registered.signal)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     expect(createAbortController).toHaveBeenCalledWith(APP_ID)
@@ -4714,7 +4741,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
         })
       )
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const resultPromise = game.install({} as any)
       const assertion = expect(resultPromise).resolves.toEqual({
         status: 'error',
@@ -4735,7 +4762,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
       ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(result).toEqual({ status: 'done' })
@@ -4749,7 +4776,7 @@ describe('SteamGame.install() — SNI-07 native depot-download opt-in (D-13)', (
         )
       )
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       // 37-REVIEW C-01: this assertion previously REQUIRED the raw candidate
@@ -4849,7 +4876,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
       })
     )
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const installPromise = game.install({} as any)
     // Flush the pre-download microtask hops until downloadSteamDepots has
     // been called (asserted below as the load-bearing precondition).
@@ -4897,7 +4924,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
       const scanResult = await acfState.scanDownloadingAppIds()
       expect(scanResult).toEqual([])
 
-      await new SteamLibraryManager(createTestManagerDeps()).init()
+      await new SteamLibraryManager(steamTestDeps).init()
 
       expect(library.get(APP_ID)?.install?.steamResumePending).toBe(true)
       expect(notify).toHaveBeenCalled()
@@ -4944,7 +4971,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
       .spyOn(gamesModule, 'isNativeInstallInFlight')
       .mockReturnValue(false)
 
-    await new SteamLibraryManager(createTestManagerDeps()).init()
+    await new SteamLibraryManager(steamTestDeps).init()
 
     expect(notify).not.toHaveBeenCalled()
     expect(library.get(APP_ID)?.install?.steamResumePending).toBeFalsy()
@@ -4967,7 +4994,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
   it('a successful native depot run clears the breadcrumb before the poller starts', async () => {
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     const finalPersisted = persisted()
@@ -5023,7 +5050,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
     const scanResult = await acfState.scanDownloadingAppIds()
     expect(scanResult).toEqual([])
 
-    await new SteamLibraryManager(createTestManagerDeps()).init()
+    await new SteamLibraryManager(steamTestDeps).init()
 
     expect(notify).not.toHaveBeenCalled()
     expect(library.get(APP_ID)?.install?.steamResumePending).toBeFalsy()
@@ -5076,7 +5103,7 @@ describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => 
       })
     )
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const first = game.install({} as any)
     await flushAsync()
     const second = game.install({} as any)
@@ -5091,7 +5118,7 @@ describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => 
   it('registry cleared on success — a subsequent FRESH installDepotDownload for the same appId calls downloadSteamDepots again (not permanently blocked)', async () => {
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
     await game.install({} as any)
 
@@ -5103,7 +5130,7 @@ describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => 
       .mockResolvedValueOnce({ status: 'error', error: 'boom' })
       .mockResolvedValueOnce({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const first = await game.install({} as any)
     const second = await game.install({} as any)
 
@@ -5117,7 +5144,7 @@ describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => 
       .mockResolvedValueOnce({ status: 'cancelled' })
       .mockResolvedValueOnce({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const first = await game.install({} as any)
     const second = await game.install({} as any)
 
@@ -5131,7 +5158,7 @@ describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => 
       .mockRejectedValueOnce(new Error('network error'))
       .mockResolvedValueOnce({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await expect(game.install({} as any)).rejects.toThrow('network error')
     const second = await game.install({} as any)
 
@@ -5142,8 +5169,8 @@ describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => 
   it('two overlapping installs for DIFFERENT appIds both proceed — guard is per-appId, not global', async () => {
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
-    const other = new SteamGame(OTHER_APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
+    const other = new SteamGame(OTHER_APP_ID, steamTestDeps)
 
     const results = await Promise.all([
       game.install({} as any),
@@ -5163,7 +5190,7 @@ describe('SteamGame.install() — single-flight guard (T-23-12/T-23-13)', () => 
       })
     )
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const firstInstall = game.install({} as any)
     // Let the first run reach the pending downloadSteamDepots call.
     await flushAsync()
@@ -5236,7 +5263,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     })
     ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -5261,7 +5288,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     // un-provisioned bottle from games.ts's perspective.
     ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -5278,7 +5305,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     })
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const installBottleNative = trackSpy(
       jest.spyOn(gameInstallDepot, 'installBottleNative')
     ).mockResolvedValue({ status: 'done' } as any)
@@ -5296,7 +5323,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     })
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     trackSpy(
       jest.spyOn(gameInstallDepot, 'installBottleNative')
     ).mockResolvedValue({ status: 'error', error: 'boom' } as any)
@@ -5313,7 +5340,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
       is_mac_native: false
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
@@ -5329,7 +5356,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
       is_mac_native: true
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
@@ -5342,7 +5369,7 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
       is_mac_native: false
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
@@ -5416,7 +5443,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(getBottleSteamappsDir).toHaveBeenCalledWith('GameLib')
@@ -5430,7 +5457,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     // depot.ts download finished (D-15/SNI-08 native-ON bottle path) —
     // isNativeHandoff:true so StateFlags 1026 is correctly read as "waiting
     // for Steam restart", not an active download.
-    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       source: 'bottle',
       isNativeHandoff: true,
       skippedDepots: []
@@ -5446,7 +5473,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
       ready: false
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
@@ -5459,7 +5486,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -5470,7 +5497,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -5480,7 +5507,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
       os: 'windows',
       signal: 'mock-signal'
     })
-    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       source: 'bottle',
       isNativeHandoff: true,
       skippedDepots: []
@@ -5495,11 +5522,11 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(`steam://install/${APP_ID}`)
-    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       delegatedToSteamClient: true
     })
     expect(downloadSteamDepots).not.toHaveBeenCalled()
@@ -5509,7 +5536,7 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     ;(isBottleReady as jest.Mock).mockReturnValue(false)
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(downloadSteamDepots).not.toHaveBeenCalled()
@@ -5619,7 +5646,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(provisionBridgeBottle).not.toHaveBeenCalled()
@@ -5656,7 +5683,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       return Promise.resolve({ status: 'done' })
     })
 
-    const result = await new SteamGame(APP_ID).install({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(result).toEqual({ status: 'done' })
     expect(provisionBridgeBottle).toHaveBeenCalled()
@@ -5691,7 +5718,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
     const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
 
-    await new SteamGame(APP_ID).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     const doneCalls = (sendGameStatusUpdate as jest.Mock).mock.calls
     const last = doneCalls[doneCalls.length - 1][0]
@@ -5712,7 +5739,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
     ;(sendFrontendMessage as jest.Mock).mockClear()
 
-    await new SteamGame(APP_ID).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'pushGameToLibrary',
@@ -5753,7 +5780,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     })
     ;(notify as jest.Mock).mockClear()
 
-    await new SteamGame(APP_ID).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(seen).toEqual([false])
     expect(pollStateModule.isBridgeInstallFinalized(APP_ID)).toBe(true)
@@ -5773,7 +5800,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     )
     const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
 
-    const result = await new SteamGame(APP_ID).install({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(result).toEqual({ status: 'done' })
     expect(sendGameStatusUpdate).toHaveBeenLastCalledWith({
@@ -5790,7 +5817,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       new Error('redist boom')
     )
 
-    const result = await new SteamGame(APP_ID).install({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(result).toEqual({ status: 'done' })
     const { logWarning } = jest.requireMock('backend/logger')
@@ -5808,7 +5835,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       reason: 'go-offline-required'
     })
 
-    const result = await new SteamGame(APP_ID).install({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
     expect(downloadSteamDepots).not.toHaveBeenCalled()
@@ -5824,7 +5851,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       ready: false
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
@@ -5837,7 +5864,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     )
     // not marked bridge-failed: a second install() still routes to the bridge
     ;(ensureSteamClientReady as jest.Mock).mockResolvedValue({ ready: true })
-    await new SteamGame(APP_ID).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
     expect(downloadSteamDepots).toHaveBeenCalledTimes(1)
   })
 
@@ -5860,7 +5887,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       verdict: missVerdict
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(result).toEqual({ status: 'done' })
@@ -5885,7 +5912,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       is_mac_native: false,
       bridge: { scan: missVerdict, noticeAcknowledgedFor: 'scan-miss' }
     })
-    await new SteamGame(APP_ID).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
   })
 
   it("D-51-09 (Task 3): placeShimForGame's shim-not-built with arch x64 at INSTALL time (win64-no-shim) deletes the per-game bottle, clears userRoute, and fires steamBridgeSetupRequired with reason win64-no-shim and the literal steam_api64.dll missing symbol", async () => {
@@ -5899,7 +5926,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       arch: 'x64'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(result).toEqual({
@@ -5952,7 +5979,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       }
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(result).toEqual({ status: 'done' })
@@ -5996,7 +6023,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       })
       const { sendGameStatusUpdate } = jest.requireMock('backend/utils')
 
-      const result = await new SteamGame(APP_ID).install({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
 
       expect(result.status).toBe('error')
       expect(pollStateModule.isBridgeInstallFinalized(APP_ID)).toBe(true)
@@ -6023,7 +6052,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         drm: CEG_DRM
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(result).toEqual({
@@ -6061,7 +6090,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       // away from the bridge (failed-this-session -> bottled Steam).
       ;(placeShimForGame as jest.Mock).mockClear()
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
       expect(placeShimForGame).not.toHaveBeenCalled()
     })
 
@@ -6077,7 +6106,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         drm: CEG_DRM
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(result).toEqual({ status: 'done' })
@@ -6110,7 +6139,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         drm: null
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(result).toEqual({ status: 'done' })
@@ -6144,7 +6173,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       }
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(result).toEqual({ status: 'done' })
@@ -6184,7 +6213,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       }
     })
 
-    await new SteamGame(APP_ID).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     const noneWrite = (steamMetadataStore.set as jest.Mock).mock.calls.find(
       ([id, value]) => id === APP_ID && value?.bridge?.steamApi === 'none'
@@ -6214,7 +6243,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       }
     })
 
-    await new SteamGame(APP_ID).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     const upgrade = (steamMetadataStore.set as jest.Mock).mock.calls.find(
       ([id, value]) => id === APP_ID && value?.bridge?.steamApi === 'x86'
@@ -6235,7 +6264,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       status: 'done'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(isBridgeBottleReady).toHaveBeenCalledWith(
@@ -6262,15 +6291,16 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
-    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, {
       source: 'bridge',
       isNativeHandoff: true,
       skippedDepots: []
     })
     expect(startInstallPollingSpy).not.toHaveBeenCalledWith(
+      steamTestDeps,
       APP_ID,
       expect.objectContaining({ source: 'bottle' })
     )
@@ -6280,7 +6310,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     const stored = library.get(APP_ID)
@@ -6302,7 +6332,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     markBridgeFailedThisSession(RETRY_APP_ID)
     clearBridgeFailedThisSession(RETRY_APP_ID)
 
-    const game = new SteamGame(RETRY_APP_ID)
+    const game = new SteamGame(RETRY_APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     // Reaching downloadSteamDepots (the bridge's own depot-download engine)
@@ -6321,7 +6351,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       error: 'depot download failed'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const firstResult = await game.install({} as any)
     expect(firstResult).toEqual({
       status: 'error',
@@ -6331,7 +6361,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     // A subsequent install() call for the SAME appId must stay routed to
     // the bottled fallback — the failure was never cleared.
-    const secondGame = new SteamGame(APP_ID)
+    const secondGame = new SteamGame(APP_ID, steamTestDeps)
     const secondResult = await secondGame.install({} as any)
     expect(downloadSteamDepots).toHaveBeenCalledWith(
       APP_ID,
@@ -6354,7 +6384,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     )
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(placeShimForGame).not.toHaveBeenCalled()
@@ -6378,7 +6408,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(knownFixSaysCeg as jest.Mock).mockReturnValue(true)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(knownFixSaysCeg).toHaveBeenCalledWith(APP_ID)
@@ -6407,7 +6437,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     })
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
@@ -6450,7 +6480,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it('unacknowledged: one scan-miss notice on route bridge, deferred, nothing installed', async () => {
       arrange()
-      const result = await new SteamGame(APP_ID).install({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
 
       expect(downloadSteamDepots).not.toHaveBeenCalled()
       expect(noticeCalls()).toEqual([
@@ -6471,7 +6503,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it('acknowledged for scan-miss: no notice, downloads through the bridge', async () => {
       arrange({ noticeAcknowledgedFor: 'scan-miss' })
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       expect(noticeCalls()).toEqual([])
       expect(downloadSteamDepots).toHaveBeenCalled()
@@ -6479,7 +6511,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it('quick 261029-avh: DRM-mode miss (steamstub), unacknowledged: no notice, downloads through the bridge', async () => {
       arrange({ scan: { ...missScan, drmWrapper: 'steamstub' } })
-      const result = await new SteamGame(APP_ID).install({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
 
       expect(noticeCalls()).toEqual([])
       expect(result).not.toEqual({ status: 'done', deferredToSetup: true })
@@ -6488,7 +6522,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it('quick 261029-avh: non-DRM miss, unacknowledged: exactly one scan-miss notice on route bridge', async () => {
       arrange({})
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       const calls = noticeCalls()
       expect(calls).toHaveLength(1)
@@ -6500,7 +6534,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it('does-not-run + miss: exactly one combined notice', async () => {
       arrange({}, 'does-not-run')
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       const calls = noticeCalls()
       expect(calls).toHaveLength(1)
@@ -6513,7 +6547,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it('drm-wrapped + miss: known-bad notice on route bottle', async () => {
       arrange({}, 'drm-wrapped')
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       const calls = noticeCalls()
       expect(calls).toHaveLength(1)
@@ -6525,7 +6559,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it("userRoute 'bottle' + miss: no notice, bottled path", async () => {
       arrange({ userRoute: 'bottle' })
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       expect(noticeCalls()).toEqual([])
       expect(downloadSteamDepots).toHaveBeenCalledWith(
@@ -6561,7 +6595,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
       it('unacknowledged: fires the informational known-bad notice on route bridge and defers', async () => {
         arrange()
-        const result = await new SteamGame(badAppId).install({} as any)
+        const result = await new SteamGame(badAppId, steamTestDeps).install(
+          {} as any
+        )
 
         expect(sendFrontendMessage).toHaveBeenCalledWith(
           'steamBridgeRouteNotice',
@@ -6580,7 +6616,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
       it('acknowledged: no notice, installs through the bridge, never the bottle', async () => {
         arrange({ noticeAcknowledgedFor: 'known-bad' })
-        await new SteamGame(badAppId).install({} as any)
+        await new SteamGame(badAppId, steamTestDeps).install({} as any)
 
         expect(sendFrontendMessage).not.toHaveBeenCalledWith(
           'steamBridgeRouteNotice',
@@ -6591,7 +6627,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
       it("userRoute 'bottle': no known-bad notice, takes the bottled path", async () => {
         arrange({ userRoute: 'bottle' })
-        await new SteamGame(badAppId).install({} as any)
+        await new SteamGame(badAppId, steamTestDeps).install({} as any)
 
         expect(sendFrontendMessage).not.toHaveBeenCalledWith(
           'steamBridgeRouteNotice',
@@ -6614,7 +6650,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
   })
 
@@ -6650,7 +6686,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     it('breadcrumb pointing at the GameLibSteam bottle: no bridge install, the bottled path runs instead', async () => {
       setBreadcrumb('/mock/bottle/steamapps')
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(provisionBridgeBottle).not.toHaveBeenCalled()
@@ -6667,7 +6703,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     it('breadcrumb pointing at the bridge bottle (an interrupted BRIDGE download) still routes to the bridge', async () => {
       setBreadcrumb(BRIDGE_STEAMAPPS_DIR)
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       await game.install({} as any)
 
       expect(sendFrontendMessage).not.toHaveBeenCalledWith(
@@ -6733,7 +6769,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         return Promise.resolve({ ok: true, client: {}, release })
       })
 
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       expect(SteamUser.acquireAuthenticated).toHaveBeenNthCalledWith(1, {
         reason: 'prescreen',
@@ -6769,7 +6805,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         reason: 'go-offline-required'
       })
 
-      const result = await new SteamGame(APP_ID).install({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
 
       expect(result).toEqual({ status: 'done', deferredToSetup: true })
       expect(prescreenBridgeDepots).not.toHaveBeenCalled()
@@ -6789,7 +6827,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       ;(prescreenBridgeDepots as jest.Mock).mockResolvedValue('x64')
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(prescreenBridgeDepots).toHaveBeenCalledWith(
@@ -6826,7 +6864,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         status: 'done'
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(APP_ID, 'x64')
@@ -6847,7 +6885,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         status: 'done'
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(APP_ID, 'none')
@@ -6870,7 +6908,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           status: 'done'
         })
 
-        const game = new SteamGame(APP_ID)
+        const game = new SteamGame(APP_ID, steamTestDeps)
         const result = await game.install({} as any)
 
         expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(
@@ -6893,7 +6931,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         status: 'done'
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       await game.install({} as any)
 
       expect(prescreenBridgeDepots).not.toHaveBeenCalled()
@@ -6922,7 +6960,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         status: 'done'
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       await game.install({} as any)
 
       expect(prescreenBridgeDepots).not.toHaveBeenCalled()
@@ -6942,7 +6980,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         status: 'done'
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(prescreenBridgeDepots).not.toHaveBeenCalled()
@@ -6958,7 +6996,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       status: 'done'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(provisionBridgeBottle).toHaveBeenCalledWith({
@@ -6982,7 +7020,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       error: 'cxbottle create failed'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(provisionBridgeBottle).toHaveBeenCalledWith({
@@ -7022,7 +7060,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         status: 'done'
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(result.error).toBeUndefined()
@@ -7048,7 +7086,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         status: 'done'
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(result.error).toBeUndefined()
@@ -7073,7 +7111,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       ;(isBottleReady as jest.Mock).mockReturnValue(false)
       crossoverInstalled().mockReturnValue(false)
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install({} as any)
 
       expect(result.status).toBe('error')
@@ -7129,7 +7167,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         return Promise.resolve(ENGINE_OK)
       })
 
-      const result = await new SteamGame(APP_ID).install({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
 
       expect(statuses()).toEqual([
         'downloading:0',
@@ -7167,7 +7207,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         return Promise.resolve(ENGINE_OK)
       })
 
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       const seen = statuses() as string[]
       const percents = seen
@@ -7204,7 +7244,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         return Promise.resolve({ status: 'done' })
       })
 
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       const depots = order.indexOf('depots')
       const lastEngine = order
@@ -7220,7 +7260,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     it('already-installed pin: no engine download status is sent, only the creating-bottle stage (G21)', async () => {
       ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
       expect(statuses()).toEqual(['creating-bottle'])
       expect(provisionBridgeBottle).toHaveBeenCalledWith(
         expect.objectContaining({ fallbackEngine: expect.anything() })
@@ -7228,7 +7268,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     })
 
     it('crossover decision: never downloads the engine (D-05) and passes the create cap', async () => {
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
       expect(ensurePinnedEngine).not.toHaveBeenCalled()
       expect(provisionBridgeBottle).toHaveBeenCalledWith({
         bottleName: `GameLibSteamBridge-${APP_ID}`,
@@ -7246,7 +7286,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         })
         .mockResolvedValueOnce({ status: 'done' })
 
-      const result = await new SteamGame(APP_ID).install({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
 
       expect(ensurePinnedEngine).toHaveBeenCalledTimes(1)
       expect(provisionBridgeBottle).toHaveBeenCalledTimes(2)
@@ -7264,7 +7306,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         detail: 'no network'
       })
 
-      const result = await new SteamGame(APP_ID).install({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
 
       expect(result.status).toBe('error')
       expect(result.error).toContain('downloadFailed')
@@ -7279,7 +7323,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       )
       // a later install still routes to the bridge (not marked failed)
       ;(ensurePinnedEngine as jest.Mock).mockResolvedValue(ENGINE_OK)
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
       expect(provisionBridgeBottle).toHaveBeenCalledTimes(1)
     })
 
@@ -7292,7 +7336,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           ok: false,
           reason: 'logon-rejected'
         })
-        const expected = await new SteamGame(APP_ID).install({} as any)
+        const expected = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(decideCreationEngine).not.toHaveBeenCalled()
         expect(ensurePinnedEngine).not.toHaveBeenCalled()
         expect(provisionBridgeBottle).not.toHaveBeenCalled()
@@ -7308,7 +7354,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
             error: 'cxbottle exited 1'
           })
           .mockResolvedValueOnce({ status: 'done' })
-        const result = await new SteamGame(APP_ID).install({} as any)
+        const result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(ensurePinnedEngine).toHaveBeenCalledTimes(1)
         expect(provisionBridgeBottle).toHaveBeenCalledTimes(2)
         expect(
@@ -7345,7 +7393,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           reason: 'aborted',
           detail: 'shutting down'
         })
-        const result = await new SteamGame(APP_ID).install({} as any)
+        const result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(result).toEqual({ status: 'abort' })
         expect(provisionBridgeBottle).not.toHaveBeenCalled()
         expect(downloadSteamDepots).not.toHaveBeenCalled()
@@ -7368,7 +7418,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
             )
           }
         )
-        const result = await new SteamGame(APP_ID).install({} as any)
+        const result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(result.status).toBe('abort')
         expect(provisionBridgeBottle).not.toHaveBeenCalled()
         expect(registry.has(APP_ID)).toBe(false)
@@ -7382,7 +7434,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           registry.get(APP_ID)!.abort()
           return Promise.resolve(pinnedDecision())
         })
-        const result = await new SteamGame(APP_ID).install({} as any)
+        const result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(result).toEqual({ status: 'abort' })
         expect(provisionBridgeBottle).not.toHaveBeenCalled()
         expect(downloadSteamDepots).not.toHaveBeenCalled()
@@ -7400,7 +7454,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           errorCode: 'provision-aborted',
           error: 'aborted'
         })
-        const result = await new SteamGame(APP_ID).install({} as any)
+        const result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(result).toEqual({ status: 'abort' })
         // no built-in-engine fallback, no setup dialog, no downloads
         expect(provisionBridgeBottle).toHaveBeenCalledTimes(1)
@@ -7414,7 +7470,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
           status: 'done'
         })
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(provisionBridgeBottle).toHaveBeenCalledTimes(2)
         expect(downloadSteamDepots).toHaveBeenCalled()
       })
@@ -7428,12 +7484,12 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
             error: 'x'
           })
           .mockResolvedValueOnce({ status: 'done' })
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
         ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
           status: 'done'
         })
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         const calls = (provisionBridgeBottle as jest.Mock).mock.calls
         expect(calls).toHaveLength(3)
         for (const [opts] of calls) {
@@ -7447,7 +7503,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           registry.get(APP_ID)!.abort()
           return Promise.resolve({ status: 'done', createdHere: true })
         })
-        const result = await new SteamGame(APP_ID).install({} as any)
+        const result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(result).toEqual({ status: 'abort' })
         expect(discardNewBridgeBottle).toHaveBeenCalledWith(
           `GameLibSteamBridge-${APP_ID}`
@@ -7461,7 +7519,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           registry.get(APP_ID)!.abort()
           return Promise.resolve({ status: 'done', createdHere: false })
         })
-        const result = await new SteamGame(APP_ID).install({} as any)
+        const result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(result).toEqual({ status: 'abort' })
         expect(discardNewBridgeBottle).not.toHaveBeenCalled()
         expect(downloadSteamDepots).not.toHaveBeenCalled()
@@ -7477,9 +7537,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         sendGameStatusUpdate.mockImplementation((u: { status: string }) => {
           if (u.status === 'installing') throw new Error('boom')
         })
-        await expect(new SteamGame(APP_ID).install({} as any)).rejects.toThrow(
-          'boom'
-        )
+        await expect(
+          new SteamGame(APP_ID, steamTestDeps).install({} as any)
+        ).rejects.toThrow('boom')
         expect(registry.has(APP_ID)).toBe(false)
         expect(leaseRelease).toHaveBeenCalledTimes(1)
       })
@@ -7491,7 +7551,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           seen = registry.has(APP_ID)
           return Promise.resolve({ status: 'done' })
         })
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(seen).toBe(true)
       })
 
@@ -7500,7 +7560,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         const stale = new AbortController()
         stale.abort()
         registry.set(APP_ID, stale)
-        const result = await new SteamGame(APP_ID).install({} as any)
+        const result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(createAbortController).toHaveBeenCalledWith(APP_ID)
         expect(result.status).toBe('done')
         expect(downloadSteamDepots).toHaveBeenCalled()
@@ -7521,7 +7583,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           seq.push('provision')
           return Promise.resolve({ status: 'done' })
         })
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         const create = seq.indexOf('engine-download:creating-bottle')
         expect(create).toBeGreaterThan(-1)
         expect(create).toBeLessThan(seq.indexOf('provision'))
@@ -7532,7 +7594,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
       it('G21: built-in path with the engine already installed sends creating-bottle then installing', async () => {
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         const seq = order()
         expect(seq.indexOf('engine-download:creating-bottle')).toBeGreaterThan(
           -1
@@ -7552,7 +7614,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           })
           return Promise.resolve(ENGINE_OK)
         })
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         const seq = order()
         const dl = seq.findIndex((o: string) =>
           o.startsWith('engine-download:downloading:')
@@ -7574,7 +7636,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
             error: 'x'
           })
           .mockResolvedValueOnce({ status: 'done' })
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(
           order().filter((o: string) => o === 'engine-download:creating-bottle')
         ).toHaveLength(2)
@@ -7586,7 +7648,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           errorCode: 'other',
           error: 'boom'
         })
-        const result = await new SteamGame(APP_ID).install({} as any)
+        const result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(result).toEqual({ status: 'done', deferredToSetup: true })
         const seq = order()
         const create = seq.indexOf('engine-download:creating-bottle')
@@ -7601,7 +7665,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           errorCode: 'provision-aborted',
           error: 'aborted'
         })
-        const result = await new SteamGame(APP_ID).install({} as any)
+        const result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(result).toEqual({ status: 'abort' })
         const seq = order()
         expect(seq).toContain('done')
@@ -7617,14 +7683,14 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           registry.set(APP_ID, newer)
           return Promise.resolve({ status: 'done' })
         })
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(registry.get(APP_ID)).toBe(newer)
         expect(newer!.signal.aborted).toBe(false)
       })
 
       it('WR-02: a run whose own controller is still registered removes it (no leak)', async () => {
         const registry = wireControllers()
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(downloadSteamDepots).toHaveBeenCalled()
         expect(registry.has(APP_ID)).toBe(false)
       })
@@ -7637,13 +7703,13 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
             resolveFirst = resolve
           })
         )
-        const game = new SteamGame(APP_ID)
+        const game = new SteamGame(APP_ID, steamTestDeps)
         const first = game.install({} as any)
         await flushAsync()
         expect(downloadSteamDepots).toHaveBeenCalledTimes(1)
         await game.stop()
 
-        const second = new SteamGame(APP_ID).install({} as any)
+        const second = new SteamGame(APP_ID, steamTestDeps).install({} as any)
         await flushAsync()
         // the cancel lands while the second install waits on the prior run
         registry.get(APP_ID)!.abort()
@@ -7667,7 +7733,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
             registry.get(APP_ID)!.abort()
           }
         })
-        const result = await new SteamGame(APP_ID).install({} as any)
+        const result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(result).toEqual({ status: 'abort' })
         expect(downloadSteamDepots).not.toHaveBeenCalled()
         expect(registry.has(APP_ID)).toBe(false)
@@ -7678,7 +7746,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         ;(hasAbortController as jest.Mock).mockReturnValue(true)
         ;(getAbortSignal as jest.Mock).mockReturnValue(controller.signal)
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect((ensurePinnedEngine as jest.Mock).mock.calls[0][1].signal).toBe(
           controller.signal
         )
@@ -7698,7 +7766,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         const fallback = { wineVersion: { bin: '/engine/wine/bin/wine' } }
         ;(buildFallbackGameSettings as jest.Mock).mockReturnValue(fallback)
         ;(decideCreationEngine as jest.Mock).mockResolvedValue(pinnedDecision())
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(buildFallbackGameSettings).toHaveBeenCalledWith(
           `GameLibSteamBridge-${APP_ID}`,
           expect.objectContaining({ wineBin: ENGINE_OK.paths.wineBin })
@@ -7707,7 +7775,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       })
 
       it('CR-02: a CrossOver-created bottle keeps the stock CrossOver settings for the redists', async () => {
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(buildFallbackGameSettings).not.toHaveBeenCalled()
         expect(redistSettings()).toEqual({
           wineCrossoverBottle: 'GameLibSteamBridge'
@@ -7724,7 +7792,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
             error: 'x'
           })
           .mockResolvedValueOnce({ status: 'done' })
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(redistSettings()).toBe(fallback)
       })
 
@@ -7746,7 +7814,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           selection: sel,
           preflight: { kind: 'expired' }
         })
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(prepareBottleForEngine).toHaveBeenCalledWith(
           expect.objectContaining({ next: sel, crossoverHealthy: false })
         )
@@ -7759,7 +7827,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
       it('CR-02: an existing bottle on healthy CrossOver gets stock settings', async () => {
         ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
-        await new SteamGame(APP_ID).install({} as any)
+        await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(prepareBottleForEngine).toHaveBeenCalledWith(
           expect.objectContaining({ crossoverHealthy: true })
         )
@@ -7775,7 +7843,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           override: 'pinned',
           detail: 'not installed'
         })
-        let result = await new SteamGame(APP_ID).install({} as any)
+        let result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(result.status).toBe('done')
         expect(installSteamBridgeSharedRedists).not.toHaveBeenCalled()
         ;(decideLaunchEngine as jest.Mock).mockResolvedValue(cxDecision())
@@ -7784,7 +7854,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           reason: 'shared-bottle',
           detail: 'shared'
         })
-        result = await new SteamGame(APP_ID).install({} as any)
+        result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
         expect(result.status).toBe('done')
         expect(installSteamBridgeSharedRedists).not.toHaveBeenCalled()
         const { logWarning } = jest.requireMock('backend/logger')
@@ -7807,7 +7877,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           override.fn = (exe: string) => ({ drmWrapper: wrapper, drmExe: exe })
           const spy = jest.spyOn(bridgeVerdictModule, 'writeBridgeModeVerdict')
           try {
-            await new SteamGame(APP_ID).install({} as any)
+            await new SteamGame(APP_ID, steamTestDeps).install({} as any)
             expect(spy).toHaveBeenCalledWith(APP_ID, mode)
           } finally {
             override.fn = undefined
@@ -7822,7 +7892,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         status: 'error',
         error: 'boom'
       })
-      const result = await new SteamGame(APP_ID).install({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
       expect(result).toEqual({ status: 'done', deferredToSetup: true })
       expect(sendFrontendMessage).toHaveBeenCalledWith(
         'steamBridgeSetupRequired',
@@ -7841,7 +7913,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
           status: 'cancelled'
         })
-        const result = await new SteamGame(CR02_APP_ID).install({} as any)
+        const result = await new SteamGame(CR02_APP_ID, steamTestDeps).install(
+          {} as any
+        )
         expect(result).toEqual({ status: 'abort' })
         expect(sendFrontendMessage).not.toHaveBeenCalledWith(
           'steamBridgeSetupRequired',
@@ -7855,12 +7929,12 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         ;(downloadSteamDepots as jest.Mock).mockResolvedValueOnce({
           status: 'cancelled'
         })
-        await new SteamGame(CR02_APP_ID).install({} as any)
+        await new SteamGame(CR02_APP_ID, steamTestDeps).install({} as any)
         ;(isBridgeBottleReady as jest.Mock).mockClear()
         ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
           status: 'done'
         })
-        await new SteamGame(CR02_APP_ID).install({} as any)
+        await new SteamGame(CR02_APP_ID, steamTestDeps).install({} as any)
         expect(isBridgeBottleReady).toHaveBeenCalled()
       })
 
@@ -7869,12 +7943,12 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           status: 'error',
           error: 'boom'
         })
-        await new SteamGame(CR02_APP_ID).install({} as any)
+        await new SteamGame(CR02_APP_ID, steamTestDeps).install({} as any)
         ;(isBridgeBottleReady as jest.Mock).mockClear()
         ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
           status: 'done'
         })
-        await new SteamGame(CR02_APP_ID).install({} as any)
+        await new SteamGame(CR02_APP_ID, steamTestDeps).install({} as any)
         expect(isBridgeBottleReady).not.toHaveBeenCalled()
       })
     })
@@ -7892,7 +7966,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     })
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     expect(isBridgeBottleReady).not.toHaveBeenCalled()
@@ -7921,7 +7995,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     markBridgeFailedThisSession(FALLBACK_TEST_APP_ID)
 
-    const game = new SteamGame(FALLBACK_TEST_APP_ID)
+    const game = new SteamGame(FALLBACK_TEST_APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(provisionBridgeBottle).not.toHaveBeenCalled()
@@ -7951,7 +8025,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     })
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(isBridgeBottleReady).not.toHaveBeenCalled()
@@ -7994,7 +8068,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
     ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     const clearCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
@@ -8140,7 +8214,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(PRODUCTION_ARGS)
 
@@ -8155,7 +8229,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(PRODUCTION_ARGS)
 
@@ -8178,7 +8252,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(PRODUCTION_ARGS)
 
@@ -8196,7 +8270,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     const result = await game.install(PRODUCTION_ARGS)
 
@@ -8213,7 +8287,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(PRODUCTION_ARGS)
 
@@ -8228,7 +8302,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(PRODUCTION_ARGS)
 
@@ -8244,7 +8318,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(PRODUCTION_ARGS)
 
@@ -8280,7 +8354,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
   it('F1: quick 261107-lum — mac-native + proven Windows depot + override routes through the bridge verdict (pending-scan prescreen, then installBridgeGame)', async () => {
     arrangeForcedBridge()
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
@@ -8296,7 +8370,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     arrangeForcedBridge()
     ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
@@ -8312,7 +8386,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     arrangeForcedBridge({ bridge: { userRoute: 'bottle' } })
     const markSpy = jest.spyOn(gamesModule, 'markForcedWindowsViaBottle')
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
@@ -8326,7 +8400,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
       { bridge: { noticeAcknowledgedFor: 'known-bad' } },
       'drm-wrapped'
     )
-    let game = new SteamGame(APP_ID)
+    let game = new SteamGame(APP_ID, steamTestDeps)
     let terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
     assertExactlyOneRoute('bottle-native', terminals)
@@ -8335,7 +8409,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
       { bridge: { noticeAcknowledgedFor: 'known-bad' } },
       'does-not-run'
     )
-    game = new SteamGame(APP_ID)
+    game = new SteamGame(APP_ID, steamTestDeps)
     terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
     expect(terminals.installBridgeGame).toHaveBeenCalledTimes(1)
@@ -8352,7 +8426,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     for (const [result, expectMarked] of cases) {
       markSpy.mockClear()
       arrangeForcedBridge()
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const terminals = spyOnAllTerminals(game)
       terminals.installBridgeGame.mockResolvedValue(result)
       await game.install(argsWith({ steamForceWindowsViaBottle: true }))
@@ -8369,7 +8443,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
   it('F13: a route notice raised during a forced install replays forceWindowsViaBottle; the same notice without the override has no such key', async () => {
     // unacknowledged does-not-run known-bad -> bridge route with a notice
     arrangeForcedBridge({}, 'does-not-run')
-    let game = new SteamGame(APP_ID)
+    let game = new SteamGame(APP_ID, steamTestDeps)
     let terminals = spyOnAllTerminals(game)
     const forced = await game.install(
       argsWith({ steamForceWindowsViaBottle: true })
@@ -8389,7 +8463,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     // needed), exact payload, no forceWindowsViaBottle key.
     ;(sendFrontendMessage as jest.Mock).mockClear()
     arrangeForcedBridge({ is_mac_native: false }, 'does-not-run')
-    game = new SteamGame(APP_ID)
+    game = new SteamGame(APP_ID, steamTestDeps)
     terminals = spyOnAllTerminals(game)
     await game.install(PRODUCTION_ARGS)
     const noticeCall = (sendFrontendMessage as jest.Mock).mock.calls.find(
@@ -8402,7 +8476,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
   it('F14: CrossOver missing does not block a bridge-routed forced install (the gate only stops non-bridge routes)', async () => {
     arrangeForcedBridge()
     jest.requireMock('../bottle').__crossoverInstalled.mockReturnValue(false)
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
     assertExactlyOneRoute('bridge', terminals)
@@ -8412,7 +8486,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     arrangeForcedBridge({ bridge: { userRoute: 'bottle' } })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
@@ -8430,7 +8504,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
@@ -8452,7 +8526,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
     const { logWarning } = jest.requireMock('backend/logger')
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
@@ -8472,7 +8546,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
@@ -8493,7 +8567,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     envMock.isMac = false
     envMock.isLinux = true
     envMock.isWindows = false
-    let game = new SteamGame(APP_ID)
+    let game = new SteamGame(APP_ID, steamTestDeps)
     let terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
     assertExactlyOneRoute('native-protocol', terminals)
@@ -8503,7 +8577,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     envMock.isMac = false
     envMock.isLinux = false
     envMock.isWindows = true
-    game = new SteamGame(APP_ID)
+    game = new SteamGame(APP_ID, steamTestDeps)
     terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
     assertExactlyOneRoute('native-protocol', terminals)
@@ -8519,7 +8593,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: false }))
 
@@ -8532,7 +8606,7 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     // input, so a seed title resolves the seed row and dispatches the bridge.
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const terminals = spyOnAllTerminals(game)
     await game.install(argsWith({ steamForceWindowsViaBottle: true }))
 
@@ -8635,7 +8709,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       .get as jest.Mock
     gameConfigGetMock.mockClear()
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const settings = await game.getSettings()
 
     expect(settings).toBe(bottleSettings)
@@ -8651,7 +8725,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       .readSteamEngineOverride as jest.Mock
     readStored.mockReturnValueOnce('pinned:wine-staging-11.20')
 
-    const settings = await new SteamGame(APP_ID).getSettings()
+    const settings = await new SteamGame(APP_ID, steamTestDeps).getSettings()
 
     expect(settings).toEqual({
       wineCrossoverBottle: 'GameLibSteam',
@@ -8676,7 +8750,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
     it('a bottle-eligible game carries its own overlay override', async () => {
       storedOverlay().mockReturnValueOnce('off')
-      const settings = await new SteamGame(APP_ID).getSettings()
+      const settings = await new SteamGame(APP_ID, steamTestDeps).getSettings()
       expect(settings).toEqual({
         wineCrossoverBottle: 'GameLibSteam',
         steamOverlayOverride: 'off'
@@ -8686,7 +8760,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     it('carries both overrides when both are stored', async () => {
       storedEngine().mockReturnValueOnce('pinned:wine-staging-11.20')
       storedOverlay().mockReturnValueOnce('on')
-      const settings = await new SteamGame(APP_ID).getSettings()
+      const settings = await new SteamGame(APP_ID, steamTestDeps).getSettings()
       expect(settings).toEqual({
         wineCrossoverBottle: 'GameLibSteam',
         engineOverride: 'pinned:wine-staging-11.20',
@@ -8699,7 +8773,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       'omits the key for a stored %p',
       async (value) => {
         storedOverlay().mockReturnValueOnce(value)
-        const settings = await new SteamGame(APP_ID).getSettings()
+        const settings = await new SteamGame(
+          APP_ID,
+          steamTestDeps
+        ).getSettings()
         expect(settings).not.toHaveProperty('steamOverlayOverride')
       }
     )
@@ -8740,7 +8817,10 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       'carries the stored %s',
       async (key) => {
         storedTitle().mockReturnValueOnce({ [key]: VALUES[key] })
-        const settings = await new SteamGame(APP_ID).getSettings()
+        const settings = await new SteamGame(
+          APP_ID,
+          steamTestDeps
+        ).getSettings()
         expect(settings).toEqual({
           wineCrossoverBottle: 'GameLibSteam',
           [key]: VALUES[key]
@@ -8760,7 +8840,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         wineCrossoverBottle: 'OldBottle',
         launcherArgs: '-a'
       })
-      const settings = await new SteamGame(APP_ID).getSettings()
+      const settings = await new SteamGame(APP_ID, steamTestDeps).getSettings()
       expect(settings).toEqual({
         wineCrossoverBottle: 'GameLibSteam',
         wineVersion: { name: 'bottle' },
@@ -8775,7 +8855,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         launcherArgs: '-global'
       })
       storedTitle().mockReturnValueOnce({ language: 'de' })
-      const settings = await new SteamGame(APP_ID).getSettings()
+      const settings = await new SteamGame(APP_ID, steamTestDeps).getSettings()
       expect(settings).toMatchObject({
         launcherArgs: '-global',
         language: 'de'
@@ -8788,7 +8868,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
         launcherArgs: '-global'
       })
       storedTitle().mockReturnValueOnce({ launcherArgs: '-title' })
-      const settings = await new SteamGame(APP_ID).getSettings()
+      const settings = await new SteamGame(APP_ID, steamTestDeps).getSettings()
       expect(settings).toMatchObject({ launcherArgs: '-title' })
     })
 
@@ -8796,7 +8876,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       storedEngine().mockReturnValueOnce('pinned:wine-staging-11.20')
       storedOverlay().mockReturnValueOnce('on')
       storedTitle().mockReturnValueOnce({ showFps: true })
-      const settings = await new SteamGame(APP_ID).getSettings()
+      const settings = await new SteamGame(APP_ID, steamTestDeps).getSettings()
       expect(settings).toEqual({
         wineCrossoverBottle: 'GameLibSteam',
         engineOverride: 'pinned:wine-staging-11.20',
@@ -8809,7 +8889,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
   it('D2: isNative() is false for a forced game — launcher.ts must run checkWineBeforeLaunch', () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(false)
   })
 
@@ -8820,7 +8900,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       status: 'done'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(APP_ID)
@@ -8858,13 +8938,17 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
-    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      'bottle'
+    )
     // The delegated path's own bottle-scoped poller is never started —
     // direct deletion completes synchronously via pollUninstallOnce above.
     expect(startUninstallPollingSpy).not.toHaveBeenCalled()
@@ -8898,7 +8982,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     // reason (nothing routes there at all, not because containment
     // engaged). Task 2 re-proves this non-vacuously by reverting the bridge
     // pin and observing this spec fail.
-    const launchGame = new SteamGame(APP_ID)
+    const launchGame = new SteamGame(APP_ID, steamTestDeps)
 
     const launchBridgeSpy = trackSpy(
       jest.spyOn(gameBridgeLaunchGateModule, 'launchBridgeGame')
@@ -8914,7 +8998,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     // findBridgeInstallBottle (test double) reports GameLibSteamBridge-<appId>.
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
 
-    const launchGame = new SteamGame(APP_ID)
+    const launchGame = new SteamGame(APP_ID, steamTestDeps)
     const launchBridgeSpy = trackSpy(
       jest.spyOn(gameBridgeLaunchGateModule, 'launchBridgeGame')
     ).mockResolvedValue(true as any)
@@ -8948,7 +9032,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
     // Same rationale as D5a, mirrored for the uninstall() bridge sub-check
     // — the bridge composition is consulted independently by each caller.
-    const uninstallGame = new SteamGame(APP_ID)
+    const uninstallGame = new SteamGame(APP_ID, steamTestDeps)
 
     // 65-13: uninstallBridgeGame is now a free function called from inside
     // gameUninstall.ts, so a method spy can no longer intercept it. Observe
@@ -8961,7 +9045,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
 
   it('D6: checkBottleEligibility() resolves true for a forced game', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await expect(checkBottleEligibility(game)).resolves.toBe(true)
   })
 
@@ -8976,7 +9060,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       getSettings: jest.fn().mockResolvedValue({ autoSyncSaves: false })
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(true)
     await game.getSettings()
     expect(gameConfigGetMock).toHaveBeenCalledWith(APP_ID)
@@ -9022,7 +9106,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
   it('N2: explicit false is byte-identical to N1 — only === true re-routes', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(explicitFalseMeta())
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(true)
 
     await game.launch({} as any)
@@ -9037,7 +9121,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     envMock.isMac = false
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue(forcedMeta())
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(game.isNative()).toBe(true)
 
     await game.launch({} as any)
@@ -9194,7 +9278,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       trackSpy(
         jest.spyOn(gameInstallDepot, 'installBottleNative')
       ).mockResolvedValue({ status: 'done' } as any)
@@ -9224,7 +9308,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
 
       trackSpy(
         jest.spyOn(gameInstallDepot, 'installBottleNative')
@@ -9253,7 +9337,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
 
       trackSpy(
         jest.spyOn(gameInstallDepot, 'installBottleNative')
@@ -9282,7 +9366,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
       ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.install(
         argsWith({ steamForceWindowsViaBottle: true })
       )
@@ -9309,7 +9393,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       trackSpy(
         jest.spyOn(gameInstallDepot, 'installBottleNative')
       ).mockResolvedValue({ status: 'error', error: 'nope' } as any)
@@ -9339,7 +9423,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const installBottleNative = trackSpy(
         jest.spyOn(gameInstallDepot, 'installBottleNative')
       ).mockResolvedValue({ status: 'done' } as any)
@@ -9371,7 +9455,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       // LIB-04's specs already exercise, not a synthetic direct call.
       library.set(APP_ID, makeEntry())
 
-      new SteamGame(APP_ID).getGameInfo()
+      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
       await flushAsync()
 
       expect(
@@ -9411,7 +9495,7 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
 
       trackSpy(
         jest.spyOn(gameInstallDepot, 'installBottleNative')
@@ -9563,7 +9647,7 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
     ;(axios.get as jest.Mock).mockResolvedValue(windowsOnlyFixture)
     ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(axios.get).toHaveBeenCalled()
@@ -9581,7 +9665,7 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
     mockStatefulMetadataStore({ platformsCaptured: undefined })
     ;(axios.get as jest.Mock).mockResolvedValue(macNativeFixture)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(axios.get).toHaveBeenCalled()
@@ -9593,7 +9677,7 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
     envMock.isMac = false
     mockStatefulMetadataStore({ platformsCaptured: undefined })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.install({} as any)
 
     expect(axios.get).not.toHaveBeenCalled()
@@ -9611,7 +9695,7 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
     })
     ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.install({} as any)
 
     expect(axios.get).not.toHaveBeenCalled()
@@ -9691,7 +9775,9 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
     mockStatefulMetadataStore({ platformsCaptured: undefined })
     ;(axios.get as jest.Mock).mockResolvedValue(windowsOnlyFixture)
 
-    const result = await checkBottleEligibility(new SteamGame(APP_ID))
+    const result = await checkBottleEligibility(
+      new SteamGame(APP_ID, steamTestDeps)
+    )
 
     expect(result).toBe(true)
     expect(axios.get).toHaveBeenCalled()
@@ -9701,7 +9787,9 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
     mockStatefulMetadataStore({ platformsCaptured: undefined })
     ;(axios.get as jest.Mock).mockResolvedValue(macNativeFixture)
 
-    const result = await checkBottleEligibility(new SteamGame(APP_ID))
+    const result = await checkBottleEligibility(
+      new SteamGame(APP_ID, steamTestDeps)
+    )
 
     expect(result).toBe(false)
   })
@@ -9709,7 +9797,9 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
   it('already-captured entry resolves true with no redundant network', async () => {
     mockStatefulMetadataStore({ platformsCaptured: true, is_mac_native: false })
 
-    const result = await checkBottleEligibility(new SteamGame(APP_ID))
+    const result = await checkBottleEligibility(
+      new SteamGame(APP_ID, steamTestDeps)
+    )
 
     expect(result).toBe(true)
     expect(axios.get).not.toHaveBeenCalled()
@@ -9719,7 +9809,9 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
     envMock.isMac = false
     mockStatefulMetadataStore({ platformsCaptured: undefined })
 
-    const result = await checkBottleEligibility(new SteamGame(APP_ID))
+    const result = await checkBottleEligibility(
+      new SteamGame(APP_ID, steamTestDeps)
+    )
 
     expect(result).toBe(false)
     expect(axios.get).not.toHaveBeenCalled()
@@ -9732,7 +9824,9 @@ describe('SteamGame.checkBottleEligibility() — D-09 backend-authoritative verd
       mac_arch: '32'
     })
 
-    const result = await checkBottleEligibility(new SteamGame(APP_ID))
+    const result = await checkBottleEligibility(
+      new SteamGame(APP_ID, steamTestDeps)
+    )
 
     expect(result).toBe(true)
   })
@@ -9775,7 +9869,7 @@ describe('SteamGame.uninstall() — GAME-03', () => {
   })
 
   it('GAME-03: uninstall() calls shell.openExternal with steam://uninstall/{appId}', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledTimes(1)
@@ -9785,20 +9879,20 @@ describe('SteamGame.uninstall() — GAME-03', () => {
   })
 
   it('GAME-03: uninstall() resolves an ExecResult { stdout, stderr }', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
     expect(result).toEqual(expect.objectContaining({ stdout: '', stderr: '' }))
   })
 
   it('D-07: uninstall() calls startUninstallPolling with this.appId after successful openExternal', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
-    expect(startUninstallPollingSpy).toHaveBeenCalledWith(APP_ID)
+    expect(startUninstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
   })
 
   it('D-07: uninstall() does NOT call startUninstallPolling when appId is non-numeric (T-03-01 guard)', async () => {
-    const badGame = new SteamGame('abc')
+    const badGame = new SteamGame('abc', steamTestDeps)
     library.set(
       'abc',
       makeEntry({ app_name: 'abc', title: 'BadGame', is_installed: true })
@@ -9808,14 +9902,14 @@ describe('SteamGame.uninstall() — GAME-03', () => {
   })
 
   it('uninstall() does NOT show a hand-off toast (toast feature removed)', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
     expect(notifyMock).not.toHaveBeenCalled()
   })
 
   it('D-05: uninstall() does NOT show a GamerLib confirmation dialog', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
     // Steam shows its own confirm dialog — GamerLib must not add a second one
@@ -9823,7 +9917,7 @@ describe('SteamGame.uninstall() — GAME-03', () => {
   })
 
   it('D-01/D-02: uninstall() does NOT call sendFrontendMessage (no optimistic flip, reconcile on focus)', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
     // Badge state is reconciled only after the focus ACF re-read, never assumed from click
@@ -9919,18 +10013,20 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
     expect(shellOpenExternal).toHaveBeenCalledWith(
       `steam://uninstall/${APP_ID}`
     )
-    expect(startPollingSpy).toHaveBeenCalledWith(APP_ID)
+    expect(startPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     expect(removeCopySpy).not.toHaveBeenCalled()
   }
 
   it('direct arm: removes via removeSteamInstallCopy then pollUninstallOnce, no steam://uninstall', async () => {
-    const result = await new SteamGame(APP_ID).uninstall({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+      {} as any
+    )
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(startPollingSpy).not.toHaveBeenCalled()
     expect(removeCopySpy).toHaveBeenCalledWith(APP_ID, 'native')
     expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
-    expect(pollOnceSpy).toHaveBeenCalledWith(APP_ID, 'native')
+    expect(pollOnceSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, 'native')
     expect(at(removeCopySpy.mock.invocationCallOrder, 0)).toBeLessThan(
       at(pollOnceSpy.mock.invocationCallOrder, 0)
     )
@@ -9940,34 +10036,34 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
   it('direct arm, absent race: still clears the record and completes via pollUninstallOnce', async () => {
     removeCopySpy.mockResolvedValue({ status: 'absent', source: 'native' })
 
-    await new SteamGame(APP_ID).uninstall({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
-    expect(pollOnceSpy).toHaveBeenCalledWith(APP_ID, 'native')
+    expect(pollOnceSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, 'native')
   })
 
   it('delegates when there is no pending-adoption record', async () => {
     adoption().readPendingAdoption.mockReturnValue(undefined)
-    await new SteamGame(APP_ID).uninstall({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
     expectDelegated()
   })
 
   it('delegates when the steam_osx PID differs', async () => {
     adoption().probeMacSteamPid.mockResolvedValue(99999)
-    await new SteamGame(APP_ID).uninstall({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
     expectDelegated()
   })
 
   it('delegates when Steam is not running', async () => {
     adoption().probeMacSteamPid.mockResolvedValue(null)
-    await new SteamGame(APP_ID).uninstall({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
     expectDelegated()
   })
 
   it('delegates when the PID probe rejects (treated as not running)', async () => {
     adoption().probeMacSteamPid.mockRejectedValue(new Error('pgrep failed'))
-    await new SteamGame(APP_ID).uninstall({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
     expectDelegated()
   })
 
@@ -9979,13 +10075,13 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
       mtimeMs: 2,
       content: 'steam-rewrote'
     })
-    await new SteamGame(APP_ID).uninstall({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
     expectDelegated()
   })
 
   it('delegates when the native ACF is not "installed" (downloading)', async () => {
     readAcfStateSpy.mockResolvedValue({ state: 'downloading' } as any)
-    await new SteamGame(APP_ID).uninstall({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
     expectDelegated()
   })
 
@@ -9994,13 +10090,13 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
       ...RECORD,
       manifestPath: `/other/lib/steamapps/appmanifest_${APP_ID}.acf`
     })
-    await new SteamGame(APP_ID).uninstall({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
     expectDelegated()
   })
 
   it('delegates on a non-Mac host without probing or reading the record', async () => {
     envMock.isMac = false
-    await new SteamGame(APP_ID).uninstall({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
     expectDelegated()
     expect(adoption().probeMacSteamPid).not.toHaveBeenCalled()
     expect(adoption().readPendingAdoption).not.toHaveBeenCalled()
@@ -10013,7 +10109,9 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
       reason: 'install path outside common/'
     })
 
-    const result = await new SteamGame(APP_ID).uninstall({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+      {} as any
+    )
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(startPollingSpy).not.toHaveBeenCalled()
@@ -10030,7 +10128,9 @@ describe('SteamGame.uninstall() — quick 261029-l9w: unadopted Mac native insta
   it('throw arm: never throws out of uninstall(); returns failed (quick 261108-anw: the callback owns done)', async () => {
     removeCopySpy.mockRejectedValue(new Error('EACCES'))
 
-    const result = await new SteamGame(APP_ID).uninstall({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+      {} as any
+    )
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(startPollingSpy).not.toHaveBeenCalled()
@@ -10116,14 +10216,16 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
       route: 'steam-uninstalled'
     })
 
-    const result = await new SteamGame(APP_ID).uninstall({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+      {} as any
+    )
 
     expect(decideSteamNativeDelete).toHaveBeenCalledWith(
       APP_ID,
       NATIVE_INSTALL_PATH
     )
     expect(shellOpenExternal).not.toHaveBeenCalled()
-    expect(startPollingSpy).toHaveBeenCalledWith(APP_ID)
+    expect(startPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
     expect(removeCopySpy).not.toHaveBeenCalled()
     expect(result).toEqual({ stdout: '', stderr: '' })
@@ -10135,12 +10237,14 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
       why: 'signed-out'
     })
 
-    const result = await new SteamGame(APP_ID).uninstall({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+      {} as any
+    )
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(startPollingSpy).not.toHaveBeenCalled()
     expect(removeCopySpy).toHaveBeenCalledWith(APP_ID, 'native')
-    expect(pollOnceSpy).toHaveBeenCalledWith(APP_ID, 'native')
+    expect(pollOnceSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, 'native')
     expect(at(removeCopySpy.mock.invocationCallOrder, 0)).toBeLessThan(
       at(pollOnceSpy.mock.invocationCallOrder, 0)
     )
@@ -10158,7 +10262,9 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
       reason: 'install path outside common/'
     })
 
-    const result = await new SteamGame(APP_ID).uninstall({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+      {} as any
+    )
 
     expect(pollOnceSpy).not.toHaveBeenCalled()
     expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -10174,7 +10280,9 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
     })
     removeCopySpy.mockRejectedValue(new Error('EACCES'))
 
-    const result = await new SteamGame(APP_ID).uninstall({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+      {} as any
+    )
 
     expect(pollOnceSpy).not.toHaveBeenCalled()
     expect(result.failed).toBe(true)
@@ -10197,7 +10305,9 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
     async (decision, text) => {
       ;(decideSteamNativeDelete as jest.Mock).mockResolvedValue(decision)
 
-      const result = await new SteamGame(APP_ID).uninstall({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+        {} as any
+      )
 
       expect(removeCopySpy).not.toHaveBeenCalled()
       expect(pollOnceSpy).not.toHaveBeenCalled()
@@ -10224,7 +10334,7 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
     '%j pushes an in-app steamRequestNotice under the game title',
     async (decision, expected) => {
       ;(decideSteamNativeDelete as jest.Mock).mockResolvedValue(decision)
-      await new SteamGame(APP_ID).uninstall({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
       expect(sendFrontendMessage).toHaveBeenCalledWith(
         'steamRequestNotice',
         expect.objectContaining({ appId: APP_ID, title: 'Dota 2', ...expected })
@@ -10235,7 +10345,7 @@ describe('SteamGame.uninstall() — quick 261106-s3n: delete in GameLib (ON)', (
   it('OFF: the decision is never consulted and steam://uninstall is used', async () => {
     ;(isSteamNativeDeleteEnabled as jest.Mock).mockReturnValue(false)
 
-    await new SteamGame(APP_ID).uninstall({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
 
     expect(decideSteamNativeDelete).not.toHaveBeenCalled()
     expect(shellOpenExternal).toHaveBeenCalledWith(
@@ -10310,7 +10420,7 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
     })
     ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -10327,7 +10437,7 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
       is_mac_native: true
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(
@@ -10342,7 +10452,7 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
       is_mac_native: false
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(
@@ -10358,7 +10468,7 @@ describe('SteamGame.uninstall() — Phase 17 bottle routing (D-10/D-11)', () => 
       is_mac_native: false
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(
@@ -10453,7 +10563,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       installPath: INSTALL_PATH
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
@@ -10462,7 +10572,11 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
     // Reuses the SAME confirmed-absent completion pipeline the delegated
     // path's own poller uses — badge flip/persist/notify/flag-clear.
-    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      'bottle'
+    )
     expect(result).toEqual({ stdout: '', stderr: '' })
   })
 
@@ -10477,12 +10591,16 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       installPath: INSTALL_PATH
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
     expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
-    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      'bottle'
+    )
     expect(result).toEqual({ stdout: '', stderr: '' })
   })
 
@@ -10496,12 +10614,16 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       installPath: INSTALL_PATH
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
     expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
-    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      'bottle'
+    )
     expect(result).toEqual({ stdout: '', stderr: '' })
   })
 
@@ -10516,7 +10638,9 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     })
     const rmSpy = failNextRmSync()
 
-    const result = await new SteamGame(APP_ID).uninstall({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+      {} as any
+    )
 
     expect(rmSpy).toHaveBeenCalled()
     rmSpy.mockRestore()
@@ -10537,7 +10661,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       installPath: '/etc/passwd'
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
     expect(result.stderr).toContain('unsafe path')
@@ -10555,11 +10679,15 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     })
     readAcfStateSpy.mockResolvedValue({ state: 'absent' })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
-    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      'bottle'
+    )
     expect(result).toEqual({ stdout: '', stderr: '' })
   })
 
@@ -10597,7 +10725,9 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
         installPath: INSTALL_PATH
       })
 
-      const result = await new SteamGame(badId).uninstall({} as any)
+      const result = await new SteamGame(badId, steamTestDeps).uninstall(
+        {} as any
+      )
 
       expect(result.stderr).toContain('invalid appId')
       // The refusal is BEFORE the ACF read, so no delete target is ever
@@ -10612,7 +10742,9 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
         installPath: INSTALL_PATH
       })
 
-      const result = await new SteamGame(APP_ID).uninstall({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+        {} as any
+      )
 
       expect(result.stderr).not.toContain('invalid appId')
       expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
@@ -10639,7 +10771,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     })
 
     it('A10a: never reaches pollUninstallOnce — the completion pipeline must not run for an install that is still in progress', async () => {
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       await game.uninstall({} as any)
 
       expect(pollUninstallOnceSpy).not.toHaveBeenCalled()
@@ -10647,7 +10779,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     })
 
     it('A10b: reports a real error rather than an empty-stderr success', async () => {
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.uninstall({} as any)
 
       expect(result.stderr).toContain('still in progress')
@@ -10657,7 +10789,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
     it('A10c: emits a TERMINAL status frame and never a terminal-less `uninstalling` one', async () => {
       ;(sendFrontendMessage as jest.Mock).mockClear()
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       await game.uninstall({} as any)
 
       const statusFrames = (sendFrontendMessage as jest.Mock).mock.calls
@@ -10739,7 +10871,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
         installPath: hoardInstallDir
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.uninstall({} as any)
 
       expect(result).toEqual({ stdout: '', stderr: '' })
@@ -10778,7 +10910,9 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
         .spyOn(acfState, 'findOtherManifestsWithInstalldir')
         .mockReturnValue(['228980'])
 
-      const result = await new SteamGame(APP_ID).uninstall({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+        {} as any
+      )
 
       expect(result).toEqual({ stdout: '', stderr: '' })
       // THIS title's manifest is gone...
@@ -10789,7 +10923,11 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
       expect(realExistsSync(realJoin(hoardInstallDir, 'Hoard.exe'))).toBe(true)
       expect(realExistsSync(siblingManifestPath)).toBe(true)
       // The completion pipeline still runs, so the badge reconciles.
-      expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+      expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
+        steamTestDeps,
+        APP_ID,
+        'bottle'
+      )
 
       conflictSpy.mockRestore()
     })
@@ -10808,7 +10946,9 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
         .mockReturnValue(['228980'])
       const rmSpy = failNextRmSync()
 
-      const result = await new SteamGame(APP_ID).uninstall({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+        {} as any
+      )
       conflictSpy.mockRestore()
 
       expect(rmSpy).toHaveBeenCalled()
@@ -10833,7 +10973,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
         .spyOn(acfState, 'findOtherManifestsWithInstalldir')
         .mockReturnValue([])
 
-      await new SteamGame(APP_ID).uninstall({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
 
       expect(realExistsSync(hoardInstallDir)).toBe(false)
       expect(realExistsSync(hoardManifestPath)).toBe(false)
@@ -10854,7 +10994,7 @@ describe('SteamGame.uninstall() — direct deletion for ALL bottle-eligible titl
         .spyOn(acfState, 'findOtherManifestsWithInstalldir')
         .mockReturnValue([])
 
-      await new SteamGame(APP_ID).uninstall({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
 
       expect(conflictSpy).toHaveBeenCalledWith(steamappsDir, 'Hoard', APP_ID)
 
@@ -10923,13 +11063,13 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     )
     ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIBRARY_ROOT])
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(
       `steam://uninstall/${APP_ID}`
     )
-    expect(startUninstallPollingSpy).toHaveBeenCalledWith(APP_ID)
+    expect(startUninstallPollingSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
     expect(result).toEqual({ stdout: '', stderr: '' })
   })
@@ -10953,7 +11093,7 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIBRARY_ROOT])
     const readAcfStateSpy = jest.spyOn(acfState, 'readAcfState')
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
     expect(shellOpenExternal).toHaveBeenCalledWith(
@@ -10994,14 +11134,18 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(startUninstallPollingSpy).not.toHaveBeenCalled()
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
     expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
-    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      'bottle'
+    )
     expect(result).toEqual({ stdout: '', stderr: '' })
 
     readAcfStateSpy.mockRestore()
@@ -11031,11 +11175,15 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
     expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
-    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      'bottle'
+    )
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(result).toEqual({ stdout: '', stderr: '' })
 
@@ -11077,12 +11225,16 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
     expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
     expect(readAcfStateSpy).not.toHaveBeenCalledWith(APP_ID, 'native')
-    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      'bottle'
+    )
     expect(shellOpenExternal).not.toHaveBeenCalled()
 
     readAcfStateSpy.mockRestore()
@@ -11098,7 +11250,7 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     library.set(APP_ID, makeEntry({ title: 'Dota 2', is_installed: true }))
     const readAcfStateSpy = jest.spyOn(acfState, 'readAcfState')
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -11128,7 +11280,7 @@ describe('SteamGame.uninstall() — install_path-driven routing (debug/steam-bot
     ;(getSteamLibraries as jest.Mock).mockResolvedValue([NATIVE_LIBRARY_ROOT])
     const readAcfStateSpy = jest.spyOn(acfState, 'readAcfState')
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
     expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -11198,7 +11350,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.uninstall({} as any)
 
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
@@ -11230,7 +11382,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
         status: 'removed'
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       await game.uninstall({} as any)
 
       expect(removePerGameBridgeBottle).toHaveBeenCalledWith(APP_ID)
@@ -11243,7 +11395,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
         ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
         ;(removePerGameBridgeBottle as jest.Mock).mockResolvedValue({ status })
 
-        const game = new SteamGame(APP_ID)
+        const game = new SteamGame(APP_ID, steamTestDeps)
         const result = await game.uninstall({} as any)
 
         expect(result).toEqual({ stdout: '', stderr: '' })
@@ -11261,7 +11413,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
         .spyOn(uninstallPollingModule, 'pollUninstallOnce')
         .mockResolvedValue(undefined)
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.uninstall({} as any)
 
       expect(result.stdout).toBe('')
@@ -11346,7 +11498,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     })
 
     it("removes the install root AND this appId's own appmanifest from the legacy bottle — the sibling legacy game and the Phase 17 bottle's own manifest for the same appId survive untouched", async () => {
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.uninstall({} as any)
 
       expect(result).toEqual({ stdout: '', stderr: '' })
@@ -11370,7 +11522,9 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
         .mockResolvedValue(undefined)
       const rmSpy = failNextRmSync()
 
-      const result = await new SteamGame(APP_ID).uninstall({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).uninstall(
+        {} as any
+      )
 
       expect(rmSpy).toHaveBeenCalled()
       rmSpy.mockRestore()
@@ -11385,7 +11539,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     it('a manifest already missing before uninstall still completes with empty stderr (force:true, not an error)', async () => {
       realRmSync(manifestPath, { force: true })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const result = await game.uninstall({} as any)
 
       expect(result).toEqual({ stdout: '', stderr: '' })
@@ -11429,13 +11583,17 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
     expect(resolveBridgeLaunchExe).not.toHaveBeenCalled()
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
     expect(readAcfStateSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
-    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(APP_ID, 'bottle')
+    expect(pollUninstallOnceSpy).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID,
+      'bottle'
+    )
 
     readAcfStateSpy.mockRestore()
     pollUninstallOnceSpy.mockRestore()
@@ -11450,7 +11608,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
     expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
@@ -11489,12 +11647,12 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
         .spyOn(uninstallPollingModule, 'pollUninstallOnce')
         .mockResolvedValue(undefined)
 
-      await new SteamGame(APP_ID).uninstall({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).uninstall({} as any)
 
       if (perGame) {
         expect(removePerGameBridgeBottle).toHaveBeenCalledWith(APP_ID)
       }
-      expect(pollSpy).toHaveBeenCalledWith(APP_ID, 'bridge')
+      expect(pollSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, 'bridge')
       pollSpy.mockRestore()
     }
   )
@@ -11504,7 +11662,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(undefined)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.uninstall({} as any)
 
     expect(sendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
@@ -11777,7 +11935,7 @@ describe('SteamGame.forceUninstall()', () => {
   it('forceUninstall() keeps the appId in the library marked is_installed:false', async () => {
     expect(library.has(APP_ID)).toBe(true)
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.forceUninstall()
 
     expect(library.has(APP_ID)).toBe(true)
@@ -11786,7 +11944,7 @@ describe('SteamGame.forceUninstall()', () => {
   })
 
   it('forceUninstall() calls sendFrontendMessage pushGameToLibrary with is_installed: false', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.forceUninstall()
 
     expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -11805,7 +11963,7 @@ describe('SteamGame.forceUninstall()', () => {
       })
     )
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.forceUninstall()
 
     // Badge data survives in the Map
@@ -11837,7 +11995,7 @@ describe('SteamGame.forceUninstall()', () => {
       forcedWindowsViaBottle: true
     })
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await game.forceUninstall()
 
     // forceUninstall() only touches the library Map/steamLibraryStore — it
@@ -11910,7 +12068,7 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
       jest.spyOn(gameInstallDepot, 'installBottleNative')
     ).mockResolvedValue({ status: 'done' } as any)
 
-    await macArch.promptI386Recovery(APP_ID)
+    await macArch.promptI386Recovery(steamTestDeps, APP_ID)
 
     expect(dialogShowMessageBox).toHaveBeenCalledTimes(1)
     // forceUninstall(): kept in the in-memory library, marked not-installed
@@ -11937,7 +12095,7 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
     })
     dialogShowMessageBox.mockResolvedValue({ response: 1 })
 
-    await macArch.promptI386Recovery(APP_ID)
+    await macArch.promptI386Recovery(steamTestDeps, APP_ID)
 
     expect(dialogShowMessageBox).toHaveBeenCalledTimes(1)
     expect(shellOpenExternal).not.toHaveBeenCalled()
@@ -12001,7 +12159,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
   // ── getSettings ────────────────────────────────────────────────────────────
 
   it('getSettings() resolves a GameSettings object with autoSyncSaves === false', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const settings = await game.getSettings()
 
     expect(settings).toBeDefined()
@@ -12009,7 +12167,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
   })
 
   it('getSettings() does not throw', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await expect(game.getSettings()).resolves.not.toThrow()
   })
 
@@ -12047,7 +12205,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
         .GameConfig.get as jest.Mock
       gameConfigGetMock.mockClear()
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const settings = await game.getSettings()
 
       expect(settings).toBe(bottleSettings)
@@ -12067,7 +12225,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
         getSettings: jest.fn().mockResolvedValue({ autoSyncSaves: false })
       })
 
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       const settings = await game.getSettings()
 
       expect(gameConfigGetMock).toHaveBeenCalledWith(APP_ID)
@@ -12085,7 +12243,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
     }
     library.set(APP_ID, makeEntry({ extra: extraData }))
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const extra = await game.getExtraInfo()
 
     expect(extra).toEqual(extraData)
@@ -12094,7 +12252,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
   it('getExtraInfo() resolves a safe default when extra is absent', async () => {
     library.set(APP_ID, makeEntry({ extra: undefined }))
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const extra = await game.getExtraInfo()
 
     expect(extra).toEqual(
@@ -12109,7 +12267,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
   })
 
   it('getExtraInfo() does not throw', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     await expect(game.getExtraInfo()).resolves.not.toThrow()
   })
 
@@ -12125,7 +12283,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       })
     )
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const available = await game.isGameAvailable()
 
     expect(available).toBe(true)
@@ -12135,7 +12293,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
   it('isGameAvailable() resolves false when game is not installed', async () => {
     library.set(APP_ID, makeEntry({ is_installed: false, install: {} }))
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const available = await game.isGameAvailable()
 
     expect(available).toBe(false)
@@ -12151,7 +12309,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       })
     )
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const available = await game.isGameAvailable()
 
     expect(available).toBe(false)
@@ -12168,7 +12326,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       })
     )
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const available = await game.isGameAvailable()
 
     expect(available).toBe(true)
@@ -12180,7 +12338,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       makeEntry({ is_installed: false, is_delisted: true, install: {} })
     )
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const available = await game.isGameAvailable()
 
     expect(available).toBe(false)
@@ -12208,7 +12366,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
     })
     ;(steamLibraryStore.get as jest.Mock).mockReturnValue([fixture])
 
-    const result = new SteamGame(APP_ID).getGameInfo()
+    const result = new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     expect(result.app_name).toBe(APP_ID)
     expect(result.is_installed).toBe(true)
   })
@@ -12222,7 +12380,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       })
     ])
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     game.getGameInfo()
 
     expect(library.get(APP_ID)?.app_name).toBe(APP_ID)
@@ -12238,7 +12396,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
     library.delete(APP_ID)
     ;(steamLibraryStore.get as jest.Mock).mockReturnValue([])
 
-    const result = new SteamGame(APP_ID).getGameInfo()
+    const result = new SteamGame(APP_ID, steamTestDeps).getGameInfo()
 
     expect(result).toEqual({})
   })
@@ -12254,7 +12412,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       library.delete(APP_ID)
       ;(steamLibraryStore.get as jest.Mock).mockReturnValue([])
 
-      const result = new SteamGame(APP_ID).getGameInfo()
+      const result = new SteamGame(APP_ID, steamTestDeps).getGameInfo()
 
       expect(result).toEqual({})
     })
@@ -12264,7 +12422,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       ;(steamLibraryStore.get as jest.Mock).mockReturnValue([])
       const { logWarning } = jest.requireMock('backend/logger')
 
-      new SteamGame(APP_ID).getGameInfo()
+      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
 
       expect(logWarning).toHaveBeenCalledWith(
         expect.arrayContaining([expect.stringContaining(APP_ID)]),
@@ -12277,12 +12435,12 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       ;(steamLibraryStore.get as jest.Mock).mockReturnValue([])
       const { logWarning } = jest.requireMock('backend/logger')
 
-      new SteamGame(APP_ID).getGameInfo()
+      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
       expect(logWarning).toHaveBeenCalledTimes(1)
 
       // Second double-miss lookup for the same appId, same process.
       library.delete(APP_ID)
-      new SteamGame(APP_ID).getGameInfo()
+      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
 
       expect(logWarning).toHaveBeenCalledTimes(1)
     })
@@ -12294,8 +12452,8 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       ;(steamLibraryStore.get as jest.Mock).mockReturnValue([])
       const { logWarning } = jest.requireMock('backend/logger')
 
-      new SteamGame(APP_ID).getGameInfo()
-      new SteamGame(OTHER_LUF_APP_ID).getGameInfo()
+      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
+      new SteamGame(OTHER_LUF_APP_ID, steamTestDeps).getGameInfo()
 
       expect(logWarning).toHaveBeenCalledTimes(2)
       expect(logWarning).toHaveBeenCalledWith(
@@ -12319,7 +12477,7 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
       })
     ])
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const available = await game.isGameAvailable()
 
     expect(available).toBe(true)
@@ -12356,7 +12514,7 @@ describe('SteamGame.fetchMetadataIfNeeded — is_delisted detection (CONSOLE-01 
     library.set(APP_ID, makeEntry())
 
     // Act: fire getGameInfo → triggers fetchMetadataIfNeeded as fire-and-forget.
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     // Assert 1: steamMetadataStore persists the delisted flag.
@@ -12379,7 +12537,7 @@ describe('SteamGame.fetchMetadataIfNeeded — is_delisted detection (CONSOLE-01 
     library.set(APP_ID, makeEntry())
 
     // Act
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     // Assert 1: steamMetadataStore carries is_delisted:false (stale flag cleared).
@@ -12405,7 +12563,7 @@ describe('SteamGame.fetchMetadataIfNeeded — is_delisted detection (CONSOLE-01 
     library.set(APP_ID, makeEntry())
 
     // Act
-    new SteamGame(APP_ID).getGameInfo()
+    new SteamGame(APP_ID, steamTestDeps).getGameInfo()
     await flushAsync()
 
     // Assert: no persistence write whatsoever — transient branch returns early.
@@ -12424,7 +12582,9 @@ describe('SteamGame.fetchMetadataIfNeeded — is_delisted detection (CONSOLE-01 
     library.set(APP_ID, makeEntry())
 
     // Act — must not throw synchronously or cause an unhandled rejection.
-    expect(() => new SteamGame(APP_ID).getGameInfo()).not.toThrow()
+    expect(() =>
+      new SteamGame(APP_ID, steamTestDeps).getGameInfo()
+    ).not.toThrow()
     await flushAsync()
 
     // Assert: catch block only logs; no store write, no game pushed (the
@@ -12531,7 +12691,7 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
     })
     const { logInfo } = jest.requireMock('backend/logger')
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(result).toBe(true)
@@ -12582,7 +12742,7 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
       bridge: { scan: stubbedScan }
     })
 
-    const firstGame = new SteamGame(APP_ID)
+    const firstGame = new SteamGame(APP_ID, steamTestDeps)
     await firstGame.launch({} as any)
 
     expect(logInfo).toHaveBeenCalledWith(
@@ -12603,7 +12763,7 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
       bridge: { scan: stubbedScan, limitedNoticeShown: true }
     })
 
-    const secondGame = new SteamGame(APP_ID)
+    const secondGame = new SteamGame(APP_ID, steamTestDeps)
     await secondGame.launch({} as any)
 
     expect(logInfo).toHaveBeenCalledWith(
@@ -12626,7 +12786,7 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
     })
     const { logInfo } = jest.requireMock('backend/logger')
 
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     const result = await game.launch({} as any)
 
     expect(result).toBe(true)
@@ -12643,7 +12803,7 @@ describe('SteamGame shortcuts delegate to the shared module (261026-c7r)', () =>
   it('addShortcuts calls the shared addShortcuts with (this, fromMenu)', async () => {
     const spy = shortcutsModule.addShortcuts as jest.Mock
     spy.mockResolvedValue(undefined)
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
 
     await game.addShortcuts(true)
 
@@ -12653,7 +12813,7 @@ describe('SteamGame shortcuts delegate to the shared module (261026-c7r)', () =>
   it('removeShortcuts calls the shared removeShortcuts with (this)', async () => {
     const spy = shortcutsModule.removeShortcuts as jest.Mock
     spy.mockResolvedValue(undefined)
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
 
     await game.removeShortcuts()
 
@@ -12665,9 +12825,9 @@ describe('SteamGame shortcuts delegate to the shared module (261026-c7r)', () =>
       new Error('Could not write shortcuts: boom')
     )
 
-    await expect(new SteamGame(APP_ID).addShortcuts(true)).rejects.toThrow(
-      'boom'
-    )
+    await expect(
+      new SteamGame(APP_ID, steamTestDeps).addShortcuts(true)
+    ).rejects.toThrow('boom')
   })
 })
 
@@ -13314,7 +13474,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             cause: 'c'
           })
         })
-        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          false
+        )
         expect(callOrder).toEqual(['detect', 'drm-setup'])
         for (const m of shimLike()) expect(m).not.toHaveBeenCalled()
         expect(runWineCommand).not.toHaveBeenCalled()
@@ -13329,7 +13491,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           cause: 'c'
         })
         try {
-          await new SteamGame(id).launch({} as never)
+          await new SteamGame(id, steamTestDeps).launch({} as never)
           expect(spy).toHaveBeenCalledWith(id, 'steamclient-layer')
         } finally {
           spy.mockRestore()
@@ -13343,7 +13505,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           step: 'runner-clone',
           cause: 'c'
         })
-        await new SteamGame(id).launch({} as never)
+        await new SteamGame(id, steamTestDeps).launch({} as never)
         expect(__drmLaunchSetupMock).toHaveBeenCalledWith({
           appId: id,
           appFolder: mockedAppFolder,
@@ -13383,7 +13545,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             step: 'runner-clone',
             cause: 'c'
           })
-          await new SteamGame(id).launch({} as never)
+          await new SteamGame(id, steamTestDeps).launch({} as never)
           expect(__drmLaunchSetupMock.mock.calls[0][0]).toMatchObject({
             exePath,
             drmExe: shipping,
@@ -13411,7 +13573,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             drmWrapper: 'steamstub',
             drm: { kind: 'ceg', markers: ['STEAM_GUIDD'] }
           })
-          await new SteamGame(id).launch({} as never)
+          await new SteamGame(id, steamTestDeps).launch({} as never)
           expect(detectSteamDrmInPe).toHaveBeenCalled()
           expect(__drmLaunchSetupMock.mock.calls[0][0].cegMarkers).toEqual([
             'STEAM_GUIDD'
@@ -13424,7 +13586,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         it('resolver none leaves the TCP path', async () => {
           const id = freshId()
           override().fn = () => ({ drmWrapper: 'none', drmExe: exePath })
-          await new SteamGame(id).launch({} as never)
+          await new SteamGame(id, steamTestDeps).launch({} as never)
           expect(__drmLaunchSetupMock.mock.calls[0][0]).toMatchObject({
             drmWrapper: 'none',
             drmExe: exePath
@@ -13447,7 +13609,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           drmWrapper: 'steamstub',
           drm: { kind: 'ceg', markers: ['STEAM_GUIDD'] }
         })
-        await new SteamGame(id).launch({} as never)
+        await new SteamGame(id, steamTestDeps).launch({} as never)
         expect(__drmLaunchSetupMock.mock.calls[0][0].cegMarkers).toEqual([
           'STEAM_GUIDD'
         ])
@@ -13462,7 +13624,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         async (wrapper) => {
           const id = freshId()
           ;(detectDrmWrapper as jest.Mock).mockResolvedValue(wrapper)
-          expect(await new SteamGame(id).launch({} as never)).toBe(true)
+          expect(
+            await new SteamGame(id, steamTestDeps).launch({} as never)
+          ).toBe(true)
           expect(__drmLaunchSetupMock.mock.calls[0][0]).toMatchObject({
             drmWrapper: wrapper,
             cegMarkers: []
@@ -13495,7 +13659,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             enviromentOptions: []
           }
         })
-        await new SteamGame(id).launch({} as never)
+        await new SteamGame(id, steamTestDeps).launch({} as never)
         const used = (runWineCommand as jest.Mock).mock.calls[0][0].gameSettings
         // Call 1 is the readiness gate, call 2 the 59-10 engine re-read, call 3
         // the re-read after the cleared clone runner.
@@ -13505,7 +13669,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('an unresolved install root is a bottle-stage notice with no setup call', async () => {
         const id = freshId()
         ;(getBottleSteamappsDir as jest.Mock).mockReturnValue('/somewhere/else')
-        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          false
+        )
         expect(
           jest.requireMock('../bridge/drm/drmLaunchSetup').__drmLaunchSetupMock
         ).not.toHaveBeenCalled()
@@ -13526,7 +13692,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             step,
             cause: 'cause text'
           })
-          const game = new SteamGame(id)
+          const game = new SteamGame(id, steamTestDeps)
           expect(await game.launch({} as never)).toBe(false)
           expect(infoLines()).toContain(
             formatDrmNoticeLine(id, step, 'cause text')
@@ -13588,7 +13754,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             step: 'runner-clone',
             cause: 'c'
           })
-          await new SteamGame(confirmedId).launch({} as never)
+          await new SteamGame(confirmedId, steamTestDeps).launch({} as never)
           expect(app.raiseMainWindow).toHaveBeenCalledTimes(1)
           expect(
             at(app.raiseMainWindow.mock.invocationCallOrder, 0)
@@ -13608,7 +13774,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           ).toBe(true)
 
           const timedOutId = freshId()
-          await new SteamGame(timedOutId).launch({} as never)
+          await new SteamGame(timedOutId, steamTestDeps).launch({} as never)
           jest.advanceTimersByTime(15_000)
           expect(infoLines()).toContain(
             `[bridge-notice] appId=${timedOutId} display=unconfirmed timeout=15000`
@@ -13620,7 +13786,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
 
       it('a different step for the same appId shows the dialog again', async () => {
         const id = freshId()
-        const game = new SteamGame(id)
+        const game = new SteamGame(id, steamTestDeps)
         __drmLaunchSetupMock.mockResolvedValue({
           status: 'error',
           step: 'runner-clone',
@@ -13646,7 +13812,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             step,
             cause: 'x'
           })
-          await new SteamGame(id).launch({} as never)
+          await new SteamGame(id, steamTestDeps).launch({} as never)
           for (const c of tSpy.mock.calls) {
             if (typeof c[1] === 'string') defaults.set(String(c[0]), c[1])
           }
@@ -13713,7 +13879,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('launches steam.exe with the game C: path under the clone with the measured env', async () => {
         const id = freshId()
         useDrmOk(id)
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         const call = runCall()
         expect(call.commandParts).toEqual(
           [
@@ -13774,7 +13942,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
               wineVersion: { bin: '/other/wine', name: 'o', type: 'crossover' }
             })
         )
-        await new SteamGame(id).launch({} as never)
+        await new SteamGame(id, steamTestDeps).launch({} as never)
         expect(
           (applySteamBridgeKnownFixes as jest.Mock).mock.calls[0][1]
         ).toEqual(readyFor(id).bottleSettings)
@@ -13794,7 +13962,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         ;(logInfo as jest.Mock).mockImplementation((line: string) => {
           if (String(line).startsWith('[bridge-drm] ')) callOrder.push('anchor')
         })
-        await new SteamGame(id).launch({} as never)
+        await new SteamGame(id, steamTestDeps).launch({} as never)
         const anchors = infoLines().filter((l) => l.startsWith('[bridge-drm] '))
         expect(anchors).toEqual([
           formatBridgeDrmAnchor({
@@ -13812,7 +13980,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('re-logs the trace once the monitor reports the game gone', async () => {
         const id = freshId()
         useDrmOk(id)
-        await new SteamGame(id).launch({} as never)
+        await new SteamGame(id, steamTestDeps).launch({} as never)
         const file = traceFileOf(runCall())
         writeFileSync(
           file,
@@ -13844,7 +14012,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
               release = () => r({ code: 0 })
             })
         )
-        await new SteamGame(id).launch({} as never)
+        await new SteamGame(id, steamTestDeps).launch({} as never)
         writeFileSync(traceFileOf(runCall()), traceLine(id) + '\n')
         release()
         await flushAsync()
@@ -13859,7 +14027,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         ;(existsSync as jest.Mock).mockImplementation(
           (p: string) => p !== dylib()
         )
-        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          false
+        )
         const line = infoLines().find((l) =>
           l.includes(`appId=${id} reason=drm-steam-not-running`)
         )
@@ -13879,7 +14049,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         ;(existsSync as jest.Mock).mockImplementation(
           (p: string) => p !== dylib()
         )
-        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          false
+        )
         expect(sendGameStatusUpdate).toHaveBeenCalledWith({
           appName: id,
           runner: 'steam',
@@ -13900,7 +14072,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         ;(existsSync as jest.Mock).mockImplementation(
           (p: string) => p !== dylib()
         )
-        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          false
+        )
         expect(sendGameStatusUpdate).toHaveBeenCalledWith({
           appName: id,
           runner: 'steam',
@@ -13924,7 +14098,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             return Promise.resolve(false)
           })
         try {
-          expect(await new SteamGame(id).launch({} as never)).toBe(false)
+          expect(
+            await new SteamGame(id, steamTestDeps).launch({} as never)
+          ).toBe(false)
         } finally {
           spy.mockRestore()
         }
@@ -13945,7 +14121,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           .spyOn(gameLaunchModule, 'launchDrmModeGame')
           .mockRejectedValue(err)
         try {
-          await expect(new SteamGame(id).launch({} as never)).rejects.toBe(err)
+          await expect(
+            new SteamGame(id, steamTestDeps).launch({} as never)
+          ).rejects.toBe(err)
         } finally {
           spy.mockRestore()
         }
@@ -13965,7 +14143,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           .spyOn(gameLaunchModule, 'launchDrmModeGame')
           .mockResolvedValue(true)
         try {
-          expect(await new SteamGame(id).launch({} as never)).toBe(true)
+          expect(
+            await new SteamGame(id, steamTestDeps).launch({} as never)
+          ).toBe(true)
         } finally {
           spy.mockRestore()
         }
@@ -13981,7 +14161,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           ...readyFor(id),
           anchor: { crossover: '26.3.0.39832', client: '17x' }
         })
-        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          false
+        )
         expect(
           infoLines().some((l) =>
             l.includes(`appId=${id} reason=drm-bottle-stage`)
@@ -13994,7 +14176,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         const id = freshId()
         useDrmOk(id)
         ;(getBottleDir as jest.Mock).mockReturnValue(realJoin(tmp, 'other'))
-        expect(await new SteamGame(id).launch({} as never)).toBe(false)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          false
+        )
         expect(
           infoLines().some((l) =>
             l.includes(`appId=${id} reason=drm-bottle-stage`)
@@ -14007,7 +14191,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         const id = freshId()
         useDrmOk(id)
         ;(runWineCommand as jest.Mock).mockRejectedValue(new Error('boom'))
-        const game = new SteamGame(id)
+        const game = new SteamGame(id, steamTestDeps)
         expect(await game.launch({} as never)).toBe(true)
         await flushAsync()
         const line = infoLines().find((l) =>
@@ -14031,7 +14215,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           code: 1,
           stderr: 'denied'
         })
-        const game = new SteamGame(id)
+        const game = new SteamGame(id, steamTestDeps)
         const ready = readyFor(id)
         const ok = await fireBridgeWineLaunch(
           game,
@@ -14157,7 +14341,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           status: 'ok',
           tokens: tokensFor(id)
         })
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(cxEnv()).toContain(`DYLD_INSERT_LIBRARIES='`)
         expect(cxEnv()).toContain(`SteamOverlayGameId=${id}`)
         expect(notify).not.toHaveBeenCalled()
@@ -14188,7 +14374,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             status: 'ok',
             tokens: tokensFor(id)
           })
-          expect(await new SteamGame(id).launch({} as never)).toBe(true)
+          expect(
+            await new SteamGame(id, steamTestDeps).launch({} as never)
+          ).toBe(true)
           expect(__prepareOverlayTokensMock).toHaveBeenCalledTimes(1)
           expect(
             __prepareOverlayTokensMock.mock.calls[0][0]
@@ -14224,7 +14412,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             tokens: tokensFor(id)
           })
           process.env.GAMELIB_OVERLAY_INPUT_PROBE = '1'
-          await new SteamGame(id).launch({} as never)
+          await new SteamGame(id, steamTestDeps).launch({} as never)
           expect(
             __prepareOverlayTokensMock.mock.calls[0][0].probe.dylibPath
           ).toBe(probePath)
@@ -14237,7 +14425,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
             tokens: tokensFor(id2)
           })
           ;(runWineCommand as jest.Mock).mockClear()
-          await new SteamGame(id2).launch({} as never)
+          await new SteamGame(id2, steamTestDeps).launch({} as never)
           expect(
             __prepareOverlayTokensMock.mock.calls[0][0]
           ).not.toHaveProperty('probe')
@@ -14251,7 +14439,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('unresigned clone: no tokens, one resign notice and log line, game still launches', async () => {
         const id = freshId()
         useResigned(id, false)
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(cxEnv() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
         expect(__prepareOverlayTokensMock).not.toHaveBeenCalled()
         expect(notify).toHaveBeenCalledTimes(1)
@@ -14272,8 +14462,12 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           step: 'shim',
           cause: 'missing shim'
         })
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(cxEnv() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
         expect(notify).toHaveBeenCalledTimes(2)
         expect(
@@ -14303,7 +14497,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           enabled: false,
           source: 'user'
         })
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(__prepareOverlayTokensMock).not.toHaveBeenCalled()
         expect(cxEnv() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
         expect(notify).not.toHaveBeenCalled()
@@ -14321,7 +14517,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         __resolveOverlayEnabledMock.mockImplementation(() => {
           throw new Error('boom')
         })
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(__prepareOverlayTokensMock).not.toHaveBeenCalled()
         expect(cxEnv() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
       })
@@ -14390,7 +14588,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('overlay on: registers the clone, launches on it with the tokens', async () => {
         const id = freshId()
         __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(bridgeBottleMod.setOverlayBridgeRunner).toHaveBeenCalledWith(
           id,
           overlayRunner
@@ -14403,7 +14603,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('no previous runner and overlay on: ends the stock wineserver session first', async () => {
         const id = freshId()
         __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
-        await new SteamGame(id).launch({} as never)
+        await new SteamGame(id, steamTestDeps).launch({} as never)
         expect(
           bottleMod.endPerGameBridgeBottleSessionWith
         ).toHaveBeenCalledWith(id, bottleFor(id), undefined, 15000)
@@ -14424,7 +14624,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           enabled: false,
           source: 'user'
         })
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(__prepareOverlayLaunchMock).not.toHaveBeenCalled()
         expect(usedSettings().wineVersion.bin).toBe('/stock/bin/wine')
         expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
@@ -14444,7 +14646,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           enabled: false,
           source: 'user'
         })
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(
           bottleMod.endPerGameBridgeBottleSessionWith
         ).toHaveBeenCalledWith(
@@ -14463,7 +14667,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           step: 'clone',
           cause: 'clone failed'
         })
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(bridgeBottleMod.setOverlayBridgeRunner).not.toHaveBeenCalled()
         expect(usedSettings().wineVersion.bin).toBe('/stock/bin/wine')
         expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
@@ -14479,7 +14685,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         const id = freshId()
         __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
         bridgeBottleMod.setOverlayBridgeRunner.mockReturnValue(false)
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(usedSettings().wineVersion.bin).toBe('/stock/bin/wine')
         expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
         expect(notify).toHaveBeenCalledTimes(1)
@@ -14488,7 +14696,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
       it('a throwing prepare launches on stock without blocking', async () => {
         const id = freshId()
         __prepareOverlayLaunchMock.mockRejectedValue(new Error('boom'))
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(usedSettings().wineVersion.bin).toBe('/stock/bin/wine')
         expect(cxEnvOf() ?? '').not.toContain('DYLD_INSERT_LIBRARIES')
       })
@@ -14519,7 +14729,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
         })
       }
       const callPrepare = async (id: string, settings: unknown) => {
-        const game = new SteamGame(id)
+        const game = new SteamGame(id, steamTestDeps)
         try {
           return await prepareTcpOverlay(game, settings as never, undefined)
         } finally {
@@ -14936,7 +15146,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
               wineVersion: { bin: '/swapped/wine', name: 's', type: 'wine' }
             })
         )
-        const game = new SteamGame(id)
+        const game = new SteamGame(id, steamTestDeps)
         const launched = await fireBridgeWineLaunch(
           game,
           '/g/game.exe',
@@ -14974,7 +15184,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           version: '11.20',
           dxvk: null
         })
-        const game = new SteamGame(id)
+        const game = new SteamGame(id, steamTestDeps)
         await prepareTcpOverlay(
           game,
           {
@@ -15001,7 +15211,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           runner: overlayRunner
         })
         __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
-        await new SteamGame(id).launch({} as never)
+        await new SteamGame(id, steamTestDeps).launch({} as never)
         expect(
           bottleMod.endPerGameBridgeBottleSessionWith
         ).not.toHaveBeenCalled()
@@ -15017,7 +15227,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
               wineVersion: { bin: '/other/wine', name: 'o', type: 'wine' }
             })
         )
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(usedSettings().wineVersion.bin).toBe(runnerBin)
         expect(
           (logWarning as jest.Mock).mock.calls.some((c) =>
@@ -15032,7 +15244,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           status: 'no-steam-api'
         })
         __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(cxEnvOf()).toContain(`SteamAppId=${id}`)
       })
     })
@@ -15146,7 +15360,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           | undefined
       const launchOn = async (id: string) => {
         __prepareOverlayLaunchMock.mockResolvedValue(okResult(id))
-        return new SteamGame(id).launch({} as never)
+        return new SteamGame(id, steamTestDeps).launch({} as never)
       }
       const flush = async () => {
         for (let i = 0; i < 5; i++) await Promise.resolve()
@@ -15208,7 +15422,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           enabled: false,
           source: 'user'
         })
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(__openOverlayWineLogMock).not.toHaveBeenCalled()
         expect(onOutput()).toBeUndefined()
         expect(monitor).toBeDefined()
@@ -15230,7 +15446,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           status: 'ok',
           tokens: [`DYLD_INSERT_LIBRARIES='/s/shim.dylib'`]
         })
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         expect(__openOverlayWineLogMock).not.toHaveBeenCalled()
         onOutput()?.(SHIM)
         expect(
@@ -15254,7 +15472,9 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           status: 'ok',
           tokens: [`DYLD_INSERT_LIBRARIES='/s/shim.dylib'`]
         })
-        expect(await new SteamGame(id).launch({} as never)).toBe(true)
+        expect(await new SteamGame(id, steamTestDeps).launch({} as never)).toBe(
+          true
+        )
         if (monitor) mon().onFirstMatch()
         expect(__watchOverlayAttachMock).toHaveBeenCalledTimes(1)
         expect(__watchOverlayAttachMock.mock.calls[0][0].timeoutMs).toBe(30_000)
@@ -15374,7 +15594,7 @@ describe('Phase 56: steamclient-layer DRM mode (56-12)', () => {
           enabled: false,
           source: 'user'
         })
-        await new SteamGame(id).launch({} as never)
+        await new SteamGame(id, steamTestDeps).launch({} as never)
         mon().onFirstMatch()
         jest.advanceTimersByTime(5_000)
         mon().onStopped()
@@ -15479,7 +15699,9 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
     it('Steam running: records the pending adoption once with its PID and baseline, polls with macNativeRoute, never fires steam://install', async () => {
       adoption().probeMacSteamPid.mockResolvedValue(123)
 
-      const result = await new SteamGame(APP_ID).install({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
 
       expect(result).toEqual({ status: 'done' })
       expect(adoption().recordPendingAdoption).toHaveBeenCalledTimes(1)
@@ -15491,22 +15713,27 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
           manifestPath: `/mock/steam/steamapps/appmanifest_${APP_ID}.acf`
         })
       )
-      expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-        isNativeHandoff: true,
-        skippedDepots: [],
-        macNativeRoute: true
-      })
+      expect(startInstallPollingSpy).toHaveBeenCalledWith(
+        steamTestDeps,
+        APP_ID,
+        {
+          isNativeHandoff: true,
+          skippedDepots: [],
+          macNativeRoute: true
+        }
+      )
       expect(shellOpenExternal).not.toHaveBeenCalled()
     })
 
     it('Steam not running: no record is written (a stale one is cleared), still polls with macNativeRoute', async () => {
       adoption().probeMacSteamPid.mockResolvedValue(null)
 
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
       expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
       expect(startInstallPollingSpy).toHaveBeenCalledWith(
+        steamTestDeps,
         APP_ID,
         expect.objectContaining({ macNativeRoute: true })
       )
@@ -15516,7 +15743,7 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
       adoption().probeMacSteamPid.mockResolvedValue(123)
 
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
       expect(adoption().probeMacSteamPid).not.toHaveBeenCalled()
@@ -15527,7 +15754,9 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
     it('no record + Steam running: plain rungameid, steam never restarted, no probe', async () => {
       adoption().probeMacSteamPid.mockResolvedValue(123)
 
-      const result = await new SteamGame(APP_ID).launch({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).launch(
+        {} as any
+      )
 
       expect(result).toBe(true)
       expect(shellOpenExternal).toHaveBeenCalledWith(
@@ -15546,7 +15775,9 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
         kind: 'relaunched'
       })
 
-      const result = await new SteamGame(APP_ID).launch({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).launch(
+        {} as any
+      )
 
       expect(result).toBe(true)
       expect(adoption().restartMacSteamForAdoption).toHaveBeenCalledWith(
@@ -15576,7 +15807,9 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
         adoption().decidePlayAdoption.mockReturnValue('restart')
         adoption().restartMacSteamForAdoption.mockResolvedValue(outcome)
 
-        const result = await new SteamGame(APP_ID).launch({} as any)
+        const result = await new SteamGame(APP_ID, steamTestDeps).launch(
+          {} as any
+        )
 
         expect(result).toBe(false)
         expect(notifyMock).toHaveBeenCalledTimes(1)
@@ -15590,7 +15823,9 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
       adoption().probeMacSteamPid.mockResolvedValue(999)
       adoption().decidePlayAdoption.mockReturnValue('clear-and-launch')
 
-      const result = await new SteamGame(APP_ID).launch({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).launch(
+        {} as any
+      )
 
       expect(result).toBe(true)
       expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
@@ -15605,7 +15840,9 @@ describe('SteamGame — quick 261029-ji2 pending Steam adoption', () => {
       envMock.isMac = false
       envMock.isLinux = true
 
-      const result = await new SteamGame(APP_ID).launch({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).launch(
+        {} as any
+      )
 
       expect(result).toBe(true)
       expect(adoption().readPendingAdoption).not.toHaveBeenCalled()
@@ -15673,7 +15910,7 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       settingOn()
       installApp().mockResolvedValue({ kind: 'ok', folderIndex: 0 })
 
-      const result = await new SteamGame(APP_ID).install({
+      const result = await new SteamGame(APP_ID, steamTestDeps).install({
         path: '/mock/steam'
       } as any)
 
@@ -15683,9 +15920,13 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
         libraryPath: '/mock/steam'
       })
       expect(shellOpenExternal).not.toHaveBeenCalled()
-      expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-        delegatedToSteamClient: true
-      })
+      expect(startInstallPollingSpy).toHaveBeenCalledWith(
+        steamTestDeps,
+        APP_ID,
+        {
+          delegatedToSteamClient: true
+        }
+      )
     })
 
     it('unavailable: falls back to steam://install with the same polling call', async () => {
@@ -15695,22 +15936,30 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
         reason: 'steam-not-running'
       })
 
-      const result = await new SteamGame(APP_ID).install({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
 
       expect(result).toEqual({ status: 'done' })
       expect(shellOpenExternal).toHaveBeenCalledWith(
         `steam://install/${APP_ID}`
       )
-      expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-        delegatedToSteamClient: true
-      })
+      expect(startInstallPollingSpy).toHaveBeenCalledWith(
+        steamTestDeps,
+        APP_ID,
+        {
+          delegatedToSteamClient: true
+        }
+      )
     })
 
     it('error code 2: returns an install error naming the code, no openExternal, no polling', async () => {
       settingOn()
       installApp().mockResolvedValue({ kind: 'error', code: 2 })
 
-      const result = await new SteamGame(APP_ID).install({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
 
       expect(result.status).toBe('error')
       expect((result as { error: string }).error).toContain('EAppUpdateError 2')
@@ -15725,14 +15974,16 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
         status: 'needs-install'
       })
 
-      const result = await new SteamGame(APP_ID).install({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
 
       expect(result).toEqual({ status: 'done', deferredToSetup: true })
       expect(installApp()).not.toHaveBeenCalled()
     })
 
     it('setting OFF: helper never called, steam://install as before', async () => {
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       expect(installApp()).not.toHaveBeenCalled()
       expect(shellOpenExternal).toHaveBeenCalledWith(
@@ -15756,7 +16007,9 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       adoption().probeMacSteamPid.mockResolvedValue(123)
       installApp().mockResolvedValue({ kind: 'ok', folderIndex: 0 })
 
-      const result = await new SteamGame(APP_ID).install({} as any)
+      const result = await new SteamGame(APP_ID, steamTestDeps).install(
+        {} as any
+      )
 
       expect(result).toEqual({ status: 'done' })
       expect(installApp()).toHaveBeenCalledWith(APP_ID, {
@@ -15764,12 +16017,16 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       })
       expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
       expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
-      expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-        isNativeHandoff: true,
-        skippedDepots: [],
-        macNativeRoute: true,
-        adoptedBySteamClient: true
-      })
+      expect(startInstallPollingSpy).toHaveBeenCalledWith(
+        steamTestDeps,
+        APP_ID,
+        {
+          isNativeHandoff: true,
+          skippedDepots: [],
+          macNativeRoute: true,
+          adoptedBySteamClient: true
+        }
+      )
     })
 
     it.each([
@@ -15782,7 +16039,9 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
         adoption().probeMacSteamPid.mockResolvedValue(123)
         installApp().mockResolvedValue(outcome)
 
-        const result = await new SteamGame(APP_ID).install({} as any)
+        const result = await new SteamGame(APP_ID, steamTestDeps).install(
+          {} as any
+        )
 
         expect(result).toEqual({ status: 'done' })
         expect(adoption().recordPendingAdoption).toHaveBeenCalledTimes(1)
@@ -15790,11 +16049,15 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
           APP_ID,
           expect.objectContaining({ steamPid: 123 })
         )
-        expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-          isNativeHandoff: true,
-          skippedDepots: [],
-          macNativeRoute: true
-        })
+        expect(startInstallPollingSpy).toHaveBeenCalledWith(
+          steamTestDeps,
+          APP_ID,
+          {
+            isNativeHandoff: true,
+            skippedDepots: [],
+            macNativeRoute: true
+          }
+        )
       }
     )
 
@@ -15802,30 +16065,38 @@ describe('SteamGame — quick 261105-ord experimental InstallApp', () => {
       settingOn()
       adoption().probeMacSteamPid.mockResolvedValue(null)
 
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       expect(installApp()).not.toHaveBeenCalled()
       expect(adoption().clearPendingAdoption).toHaveBeenCalledWith(APP_ID)
       expect(adoption().recordPendingAdoption).not.toHaveBeenCalled()
-      expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-        isNativeHandoff: true,
-        skippedDepots: [],
-        macNativeRoute: true
-      })
+      expect(startInstallPollingSpy).toHaveBeenCalledWith(
+        steamTestDeps,
+        APP_ID,
+        {
+          isNativeHandoff: true,
+          skippedDepots: [],
+          macNativeRoute: true
+        }
+      )
     })
 
     it('setting OFF: helper never called, pending adoption recorded as today', async () => {
       adoption().probeMacSteamPid.mockResolvedValue(123)
 
-      await new SteamGame(APP_ID).install({} as any)
+      await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
       expect(installApp()).not.toHaveBeenCalled()
       expect(adoption().recordPendingAdoption).toHaveBeenCalledTimes(1)
-      expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-        isNativeHandoff: true,
-        skippedDepots: [],
-        macNativeRoute: true
-      })
+      expect(startInstallPollingSpy).toHaveBeenCalledWith(
+        steamTestDeps,
+        APP_ID,
+        {
+          isNativeHandoff: true,
+          skippedDepots: [],
+          macNativeRoute: true
+        }
+      )
     })
   })
 })
@@ -15932,7 +16203,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
   describe('engine selection', () => {
     it('healthy CrossOver: registers the selection, prepares the bottle, logs the engine, no notification', async () => {
-      expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        true
+      )
       expect(getEngineSelection(ID)).toMatchObject({ kind: 'crossover' })
       expect(prepareBottleForEngine).toHaveBeenCalledWith(
         expect.objectContaining({ key: ID, bottleName: PER_GAME })
@@ -15953,7 +16226,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         registeredAtRead = getEngineSelection(ID)
         return { wineCrossoverBottle: PER_GAME }
       })
-      expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        true
+      )
       expect(ensurePinnedEngine).not.toHaveBeenCalled()
       expect(registeredAtRead).toMatchObject({ kind: 'pinned' })
       expect(notify).toHaveBeenCalledTimes(1)
@@ -15978,7 +16253,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           inconclusive: true
         }
       })
-      expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        true
+      )
       expect(
         (notify as jest.Mock).mock.calls.some((c) =>
           String(c[0]?.body).includes('steam.engine.toast')
@@ -16000,7 +16277,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           return Promise.resolve(ENGINE_OK)
         }
       )
-      expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        true
+      )
       expect(sendGameStatusUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'engine-download',
@@ -16017,7 +16296,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         args.onSwitching?.()
         return Promise.resolve({ ok: true })
       })
-      await new SteamGame(ID).launch({} as any)
+      await new SteamGame(ID, steamTestDeps).launch({} as any)
       expect(sendGameStatusUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'engine-download',
@@ -16035,7 +16314,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         reason: 'offline',
         detail: 'x'
       })
-      expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        false
+      )
       expect(notify).toHaveBeenCalledTimes(1)
       expect((notify as jest.Mock).mock.calls[0][0].body).toContain(
         'downloadFailed'
@@ -16057,7 +16338,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         override: 'pinned:old',
         detail: 'gone'
       })
-      expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        false
+      )
       const dialog = jest.requireMock('backend/dialog/dialog')
       expect(
         (dialog.showDialogBoxModalAuto as jest.Mock).mock.calls[0][0].message
@@ -16069,7 +16352,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         pinnedDecision('override', { override: 'pinned:staging-11' })
       )
-      expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        true
+      )
       expect(notify).not.toHaveBeenCalled()
       expect(infoMessages().some((m) => m.includes('engine=pinned'))).toBe(true)
     })
@@ -16079,7 +16364,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(decideLaunchEngine as jest.Mock).mockResolvedValue(
         cxDecision({ logLines: ['engine=crossover build=99', line] })
       )
-      const game = new SteamGame(ID)
+      const game = new SteamGame(ID, steamTestDeps)
       expect(await game.launch({} as any)).toBe(true)
       cancelLaunchDeadline(ID, 'superseded')
       clearEngineSelection(ID)
@@ -16091,7 +16376,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(decideLaunchEngine as jest.Mock)
         .mockResolvedValueOnce(pinnedDecision('cx-expired'))
         .mockResolvedValueOnce(cxDecision())
-      const game = new SteamGame(ID)
+      const game = new SteamGame(ID, steamTestDeps)
       await game.launch({} as any)
       expect(getEngineSelection(ID)).toMatchObject({ kind: 'pinned' })
       cancelLaunchDeadline(ID, 'superseded')
@@ -16106,7 +16391,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         reason: 'game-running',
         detail: 'running'
       })
-      expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        false
+      )
       expect(runWineCommand).not.toHaveBeenCalled()
       expect(getEngineSelection(ID)).toBeUndefined()
     })
@@ -16125,7 +16412,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         detail: 'x'
       })
       engineDialog().mockClear()
-      expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        false
+      )
       expect(engineDialog()).toHaveBeenCalledTimes(1)
       expect(engineDialog().mock.calls[0][0].message).toContain(
         'downloadFailed'
@@ -16142,7 +16431,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         .mockReturnValue(false)
       engineDialog().mockClear()
       try {
-        expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+        expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+          false
+        )
       } finally {
         spy.mockRestore()
       }
@@ -16163,7 +16454,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         detail: 'shared'
       })
       engineDialog().mockClear()
-      expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        false
+      )
       expect(engineDialog()).toHaveBeenCalledTimes(1)
       expect(engineDialog().mock.calls[0][0].message).toContain('sharedBottle')
       expect(
@@ -16180,7 +16473,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         detail: 'newer'
       })
       engineDialog().mockClear()
-      expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        false
+      )
       expect(engineDialog()).toHaveBeenCalledTimes(1)
       expect(engineDialog().mock.calls[0][0].message).toContain('markerNewer')
       expect(
@@ -16222,7 +16517,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
       it('G22: offline with the pin absent refuses without probing', async () => {
         blocked()
-        expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+        expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+          false
+        )
         expect(decideLaunchEngine).not.toHaveBeenCalled()
         expect(engineDialog()).toHaveBeenCalledTimes(1)
         expect(engineDialog().mock.calls[0][0].message).toContain(
@@ -16246,13 +16543,15 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
       it('G22: a CrossOver override is refused the same way', async () => {
         blocked({ override: 'crossover' })
-        expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+        expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+          false
+        )
         expect(decideLaunchEngine).not.toHaveBeenCalled()
       })
 
       it('G25: the bridge launch checks connectivity once, before resolveBridgeLaunchExe, and passes offline', async () => {
         blocked({ online: false, needsPin: false, kind: 'crossover' })
-        await new SteamGame(ID).launch({} as any)
+        await new SteamGame(ID, steamTestDeps).launch({} as any)
         expect(checkConnectivityNow).toHaveBeenCalledTimes(1)
         expect(checkConnectivityNow).toHaveBeenCalledWith(`launch ${ID}`)
         expect(
@@ -16267,7 +16566,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
       it('G25: UAT 34 run 1, CrossOver missing with the DXVK copy present, is refused before the probe', async () => {
         blocked({ cxMissing: true, needsPin: false })
-        expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+        expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+          false
+        )
         expect(decideLaunchEngine).not.toHaveBeenCalled()
         expect(engineDialog()).toHaveBeenCalledTimes(1)
         expect(engineDialog().mock.calls[0][0].message).toContain(
@@ -16288,19 +16589,19 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
       it('G25: CrossOver missing with a CrossOver override still reaches decideLaunchEngine', async () => {
         blocked({ cxMissing: true, needsPin: false, override: 'crossover' })
-        await new SteamGame(ID).launch({} as any)
+        await new SteamGame(ID, steamTestDeps).launch({} as any)
         expect(decideLaunchEngine).toHaveBeenCalledTimes(1)
       })
 
       it('G25: UAT 34 run 2, CrossOver present with the DXVK copy, still runs decideLaunchEngine once', async () => {
         blocked({ cxMissing: false, needsPin: false })
-        await new SteamGame(ID).launch({} as any)
+        await new SteamGame(ID, steamTestDeps).launch({} as any)
         expect(decideLaunchEngine).toHaveBeenCalledTimes(1)
       })
 
       it('G25: fresh online never calls isCrossoverMissing', async () => {
         blocked({ online: true, cxMissing: true })
-        await new SteamGame(ID).launch({} as any)
+        await new SteamGame(ID, steamTestDeps).launch({} as any)
         expect(
           jest.requireMock('backend/engine/engineDecision').isCrossoverMissing
         ).not.toHaveBeenCalled()
@@ -16316,7 +16617,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         ['pinned override', { override: 'pinned:wine-staging-11.20' }]
       ])('G22: %s still runs decideLaunchEngine', async (_n, over) => {
         blocked(over)
-        await new SteamGame(ID).launch({} as any)
+        await new SteamGame(ID, steamTestDeps).launch({} as any)
         expect(decideLaunchEngine).toHaveBeenCalledTimes(1)
       })
     })
@@ -16337,7 +16638,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         trackSpy(jest.spyOn(gameBridgeLaunchModule, 'launchBridgeGameBody'))
 
       it('G26: a second concurrent launch runs the body once and both resolve to its value', async () => {
-        const game = new SteamGame(ID)
+        const game = new SteamGame(ID, steamTestDeps)
         const d = deferred()
         const spy = bodySpy().mockReturnValue(d.promise)
         const a = launchBridgeGame(game)
@@ -16349,7 +16650,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       })
 
       it('G26: the joiner logs, notifies once, and never shows a modal', async () => {
-        const game = new SteamGame(ID)
+        const game = new SteamGame(ID, steamTestDeps)
         const d = deferred()
         bodySpy().mockReturnValue(d.promise)
         const { logInfo } = jest.requireMock('backend/logger')
@@ -16376,7 +16677,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       })
 
       it('G26: the guard is released when the launch resolves', async () => {
-        const game = new SteamGame(ID)
+        const game = new SteamGame(ID, steamTestDeps)
         const d = deferred()
         const spy = bodySpy().mockReturnValueOnce(d.promise)
         const a = launchBridgeGame(game)
@@ -16388,7 +16689,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       })
 
       it('G26: a rejecting body rejects both callers and releases the guard', async () => {
-        const game = new SteamGame(ID)
+        const game = new SteamGame(ID, steamTestDeps)
         const d = deferred()
         const spy = bodySpy().mockReturnValueOnce(d.promise)
         const a = launchBridgeGame(game)
@@ -16403,7 +16704,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       })
 
       it('G26: a body resolving false clears the engine selection once (owner only)', async () => {
-        const game = new SteamGame(ID)
+        const game = new SteamGame(ID, steamTestDeps)
         const d = deferred()
         bodySpy().mockReturnValue(d.promise)
         const reg = await import('backend/engine/engineRegistry')
@@ -16420,8 +16721,8 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
 
       it('G26: launches of different appIds each run their own body', async () => {
         library.set('571', makeEntry({ title: 'Other Game' }))
-        const g1 = new SteamGame(ID)
-        const g2 = new SteamGame('571')
+        const g1 = new SteamGame(ID, steamTestDeps)
+        const g2 = new SteamGame('571', steamTestDeps)
         const d1 = deferred()
         const d2 = deferred()
         const spy = bodySpy().mockImplementation((g: SteamGame) =>
@@ -16445,8 +16746,8 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           .mockReturnValue(d.promise)
         ;(notify as jest.Mock).mockClear()
         try {
-          const a = new SteamGame(ID).launch({} as any)
-          const b = new SteamGame(ID).launch({} as any)
+          const a = new SteamGame(ID, steamTestDeps).launch({} as any)
+          const b = new SteamGame(ID, steamTestDeps).launch({} as any)
           d.resolve(true)
           expect(await a).toBe(true)
           expect(await b).toBe(true)
@@ -16473,14 +16774,14 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           }
         })
       )
-      await new SteamGame(ID).launch({} as any)
+      await new SteamGame(ID, steamTestDeps).launch({} as any)
       expect(prepareBottleForEngine).toHaveBeenCalledWith(
         expect.objectContaining({ crossoverHealthy: false })
       )
     })
 
     it('a healthy CrossOver decision passes crossoverHealthy:true (G10)', async () => {
-      await new SteamGame(ID).launch({} as any)
+      await new SteamGame(ID, steamTestDeps).launch({} as any)
       expect(prepareBottleForEngine).toHaveBeenCalledWith(
         expect.objectContaining({ crossoverHealthy: true })
       )
@@ -16489,7 +16790,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
     it('a TCP bridge launch persists the bridge mode as tcp (WR-04 writer)', async () => {
       const spy = jest.spyOn(bridgeVerdictModule, 'writeBridgeModeVerdict')
       try {
-        await new SteamGame(ID).launch({} as any)
+        await new SteamGame(ID, steamTestDeps).launch({} as any)
         expect(spy).toHaveBeenCalledWith(ID, 'tcp')
       } finally {
         spy.mockRestore()
@@ -16503,7 +16804,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         detail: 'boom'
       })
       engineDialog().mockClear()
-      expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        false
+      )
       expect(engineDialog()).toHaveBeenCalledTimes(1)
       expect(engineDialog().mock.calls[0][0].message).toContain('restoreFailed')
       expect(
@@ -16526,14 +16829,16 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         reason: 'dxvk-failed',
         detail: 'boom'
       })
-      expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        true
+      )
       expect(engineDialog().mock.calls.map((c) => c[0].message)).not.toContain(
         'restoreFailed'
       )
     })
 
     it('prepareBottleForEngine gets an ensurePinEngine that reports engine-download progress', async () => {
-      await new SteamGame(ID).launch({} as any)
+      await new SteamGame(ID, steamTestDeps).launch({} as any)
       const args = (prepareBottleForEngine as jest.Mock).mock.calls[0][0]
       ;(ensurePinnedEngine as jest.Mock).mockImplementation(
         (_pin: unknown, opts: any) => {
@@ -16571,7 +16876,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           daysAgo: 3,
           detail: 'x'
         })
-        expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+        expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+          false
+        )
         const dialog = jest.requireMock('backend/dialog/dialog')
         expect(
           (dialog.showDialogBoxModalAuto as jest.Mock).mock.calls[0][0].message
@@ -16595,7 +16902,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         kind: 'missing',
         detail: 'x'
       })
-      expect(await new SteamGame(ID).launch({} as any)).toBe(false)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        false
+      )
       expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
       const dialog = jest.requireMock('backend/dialog/dialog')
       expect(
@@ -16628,7 +16937,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         onStopped = a.onStopped
         return { launcherExited: jest.fn() }
       })
-      expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        true
+      )
       expect(gamesRunningIn(PER_GAME)).toEqual([ID])
       onStopped?.()
       expect(gamesRunningIn(PER_GAME)).toEqual([])
@@ -16641,7 +16952,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         onFirstMatch = a.onFirstMatch
         return { launcherExited: jest.fn() }
       })
-      expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+      expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+        true
+      )
       expect(__activeLaunchDeadlineCount()).toBe(1)
       onFirstMatch?.()
       expect(__activeLaunchDeadlineCount()).toBe(0)
@@ -16662,7 +16975,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
           )
           return Promise.resolve(true)
         })
-        expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+        expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+          true
+        )
         ;(decideLaunchEngine as jest.Mock).mockClear()
         await jest.advanceTimersByTimeAsync(180_000)
         expect(stopBottleProcessMonitor).toHaveBeenCalledWith(ID)
@@ -16686,7 +17001,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         expect(ensurePinnedEngine).not.toHaveBeenCalled()
         // not marked failed this session: the next Play still takes the bridge
         ;(runWineCommand as jest.Mock).mockClear()
-        await new SteamGame(ID).launch({} as any)
+        await new SteamGame(ID, steamTestDeps).launch({} as any)
         expect(runWineCommand).toHaveBeenCalledTimes(1)
       })
     })
@@ -16699,7 +17014,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         ;(installSteamBridgeSharedRedists as jest.Mock).mockImplementation(
           () => new Promise((r) => setTimeout(r, 200_000))
         )
-        const p = new SteamGame(ID).launch({} as any)
+        const p = new SteamGame(ID, steamTestDeps).launch({} as any)
         await jest.advanceTimersByTimeAsync(200_000)
         expect(await p).toBe(false)
         expect(runWineCommand).not.toHaveBeenCalled()
@@ -16720,7 +17035,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(getBottleProcessMonitorPhase as jest.Mock)
         .mockReturnValueOnce(null)
         .mockReturnValue('starting')
-      await new SteamGame(ID).launch({} as any)
+      await new SteamGame(ID, steamTestDeps).launch({} as any)
       resolveWine()
       for (let i = 0; i < 10; i++) await Promise.resolve()
       expect(__activeLaunchDeadlineCount()).toBe(0)
@@ -16733,7 +17048,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(startBottleProcessMonitor as jest.Mock).mockReturnValue({
         launcherExited: jest.fn()
       })
-      await new SteamGame(ID).launch({} as any)
+      await new SteamGame(ID, steamTestDeps).launch({} as any)
       await Promise.resolve()
       await Promise.resolve()
       expect(__activeLaunchDeadlineCount()).toBe(0)
@@ -16746,7 +17061,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         onStopped = a.onStopped
         return { launcherExited: jest.fn() }
       })
-      await new SteamGame(ID).launch({} as any)
+      await new SteamGame(ID, steamTestDeps).launch({} as any)
       expect(getEngineSelection(ID)).toBeDefined()
       onStopped?.()
       expect(getEngineSelection(ID)).toBeUndefined()
@@ -16756,7 +17071,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
         '/elsewhere/Game.exe'
       )
-      await new SteamGame(ID).launch({} as any)
+      await new SteamGame(ID, steamTestDeps).launch({} as any)
       expect(__activeLaunchDeadlineCount()).toBe(0)
       expect(infoMessages().some((m) => m.includes('no launch deadline'))).toBe(
         true
@@ -16770,7 +17085,7 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
       ;(startBottleProcessMonitor as jest.Mock).mockReturnValue({
         launcherExited: jest.fn()
       })
-      await new SteamGame(ID).launch({} as any)
+      await new SteamGame(ID, steamTestDeps).launch({} as any)
       expect(__activeLaunchDeadlineCount()).toBe(1)
     })
 
@@ -16783,7 +17098,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
             return { launcherExited: jest.fn() }
           }
         )
-        expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+        expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+          true
+        )
         expect(__activeLaunchDeadlineCount()).toBe(1)
         onUnavailable?.()
         expect(__activeLaunchDeadlineCount()).toBe(0)
@@ -16800,7 +17117,9 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         ;(startBottleProcessMonitor as jest.Mock).mockReturnValue({
           launcherExited: jest.fn()
         })
-        expect(await new SteamGame(ID).launch({} as any)).toBe(true)
+        expect(await new SteamGame(ID, steamTestDeps).launch({} as any)).toBe(
+          true
+        )
         clearEngineSelection(ID)
         await jest.advanceTimersByTimeAsync(180_000)
         const warnings = (

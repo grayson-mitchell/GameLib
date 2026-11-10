@@ -1,4 +1,7 @@
-import { createTestManagerDeps } from 'backend/testUtils/testServices'
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /**
  * Structural proof for the Steam keyring deferral gate (quick task 260817-d61,
  * Task 3 — "Flip the gate: defer the startup refresh, activate on deliberate
@@ -302,6 +305,12 @@ import {
 import type { GameInfo, InstallArgs } from 'common/types'
 import { at } from './fixtures/indexed'
 
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
+
 const APP_ID = '570'
 
 /**
@@ -368,7 +377,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
       key === 'isLoggedIn' ? true : undefined
     )
 
-    const manager = new SteamLibraryManager(createTestManagerDeps())
+    const manager = new SteamLibraryManager(steamTestDeps)
     await manager.init()
     await flushAsync()
 
@@ -385,7 +394,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
     const { steamLibraryStore } = jest.requireMock('../stores')
     ;(steamLibraryStore.get as jest.Mock).mockReturnValue(cachedGames)
 
-    const manager = new SteamLibraryManager(createTestManagerDeps())
+    const manager = new SteamLibraryManager(steamTestDeps)
     await manager.init()
     await flushAsync()
 
@@ -397,7 +406,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
 
   it('refresh() while LOCKED returns null, emits steamSyncStatus idle, and NEVER emits syncing or failed', async () => {
     installSpyTokenStore({ status: 'absent' })
-    const manager = new SteamLibraryManager(createTestManagerDeps())
+    const manager = new SteamLibraryManager(steamTestDeps)
 
     const result = await manager.refresh()
 
@@ -421,7 +430,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
 
   it('refresh() while LOCKED never reads the token store (the deferral is real, not a coincidence of an unrelated early return)', async () => {
     const spy = installSpyTokenStore({ status: 'absent' })
-    const manager = new SteamLibraryManager(createTestManagerDeps())
+    const manager = new SteamLibraryManager(steamTestDeps)
 
     await manager.refresh()
 
@@ -437,7 +446,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
     noteRefreshTrigger('steam', 'action-icons-refresh-button')
     expect(isSteamAuthUnlocked()).toBe(true)
 
-    const manager = new SteamLibraryManager(createTestManagerDeps())
+    const manager = new SteamLibraryManager(steamTestDeps)
     await manager.refresh()
 
     expect(spy.readToken).toHaveBeenCalledTimes(1)
@@ -448,7 +457,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
     noteSteamAuthTrigger('user-install')
     noteSteamAuthTrigger('boot-probe')
 
-    const manager = new SteamLibraryManager(createTestManagerDeps())
+    const manager = new SteamLibraryManager(steamTestDeps)
     await manager.refresh()
 
     expect(spy.readToken).toHaveBeenCalledTimes(0)
@@ -456,7 +465,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
 
   it('the deferral log line names the reason and the current trigger, without ever containing a token value', async () => {
     installSpyTokenStore({ status: 'absent' })
-    const manager = new SteamLibraryManager(createTestManagerDeps())
+    const manager = new SteamLibraryManager(steamTestDeps)
     noteSteamAuthTrigger('startup')
 
     await manager.refresh()
@@ -534,7 +543,7 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
   }
 
   it('ordering A: boot probe first, then the mount refresh', async () => {
-    const manager = new SteamLibraryManager(createTestManagerDeps())
+    const manager = new SteamLibraryManager(steamTestDeps)
 
     await SteamUser.probeCredentialPresence()
     noteRefreshTrigger(null, 'mount')
@@ -545,7 +554,7 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
   })
 
   it('ordering B: mount refresh first, then the boot probe, then a second mount refresh', async () => {
-    const manager = new SteamLibraryManager(createTestManagerDeps())
+    const manager = new SteamLibraryManager(steamTestDeps)
 
     noteRefreshTrigger(null, 'mount')
     await manager.refresh()
@@ -558,7 +567,7 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
   })
 
   it('non-vacuity control: an explicit Refresh DOES log on, exactly once, with the refresh token', async () => {
-    const manager = new SteamLibraryManager(createTestManagerDeps())
+    const manager = new SteamLibraryManager(steamTestDeps)
 
     await SteamUser.probeCredentialPresence()
     noteRefreshTrigger('steam', 'action-icons-refresh-button')
@@ -578,7 +587,7 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
 
 describe('SteamGame keyring deferral unlock (quick-260817-d61)', () => {
   it('install() unlocks the gate before doing any other work', () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(isSteamAuthUnlocked()).toBe(false)
 
     void game.install({} as InstallArgs).catch(() => {})
@@ -587,7 +596,7 @@ describe('SteamGame keyring deferral unlock (quick-260817-d61)', () => {
   })
 
   it('update() unlocks the gate before doing any other work', async () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(isSteamAuthUnlocked()).toBe(false)
 
     await game.update()
@@ -596,7 +605,7 @@ describe('SteamGame keyring deferral unlock (quick-260817-d61)', () => {
   })
 
   it('launch() unlocks the gate before doing any other work', () => {
-    const game = new SteamGame(APP_ID)
+    const game = new SteamGame(APP_ID, steamTestDeps)
     expect(isSteamAuthUnlocked()).toBe(false)
 
     void game.launch({} as any).catch(() => {})
@@ -615,7 +624,7 @@ describe('SteamGame keyring deferral unlock (quick-260817-d61)', () => {
         .mockResolvedValue(true)
       const acquireSpy = jest.spyOn(SteamUser, 'acquireAuthenticated')
       const openSpy = jest.spyOn(SteamUser, 'acquireOpenAuthenticated')
-      const game = new SteamGame(APP_ID)
+      const game = new SteamGame(APP_ID, steamTestDeps)
       expect(isSteamAuthUnlocked()).toBe(false)
 
       await game.getExtraInfo()

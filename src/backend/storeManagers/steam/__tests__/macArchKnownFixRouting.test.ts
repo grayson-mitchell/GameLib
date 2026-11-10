@@ -1,3 +1,7 @@
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /**
  * quick 261027-bqe: install() routing for a curated known-fix macArch "32".
  * Apple silicon seeds mac_arch '32' (known-fix, unverified) and takes the
@@ -222,6 +226,12 @@ import SteamGame from '../games'
 import { checkBottleEligibility } from '../gameEligibility'
 import { SteamUser } from '../user'
 
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
+
 const APP_ID = '63000'
 const store = new Map<string, Record<string, unknown>>()
 
@@ -289,7 +299,9 @@ beforeEach(() => {
 
 describe('known-fix macArch 32 routing', () => {
   it('Apple silicon: seeds known-fix 32 (unverified) and takes the bottle branch with no native download', async () => {
-    const result = await new SteamGame(APP_ID).install({} as never)
+    const result = await new SteamGame(APP_ID, steamTestDeps).install(
+      {} as never
+    )
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
     const stored = store.get(APP_ID)
     expect(stored?.mac_arch).toBe('32')
@@ -306,7 +318,7 @@ describe('known-fix macArch 32 routing', () => {
     env().isAppleSiliconMac = false
     let result: unknown
     try {
-      result = await new SteamGame(APP_ID).install({} as never)
+      result = await new SteamGame(APP_ID, steamTestDeps).install({} as never)
     } catch (e) {
       result = e
     }
@@ -317,9 +329,13 @@ describe('known-fix macArch 32 routing', () => {
   })
 
   it('checkBottleEligibility: true on Apple silicon, false on Intel', async () => {
-    expect(await checkBottleEligibility(new SteamGame(APP_ID))).toBe(true)
+    expect(
+      await checkBottleEligibility(new SteamGame(APP_ID, steamTestDeps))
+    ).toBe(true)
     store.set(APP_ID, { ...store.get(APP_ID), mac_arch: 'unknown' })
     env().isAppleSiliconMac = false
-    expect(await checkBottleEligibility(new SteamGame(APP_ID))).toBe(false)
+    expect(
+      await checkBottleEligibility(new SteamGame(APP_ID, steamTestDeps))
+    ).toBe(false)
   })
 })

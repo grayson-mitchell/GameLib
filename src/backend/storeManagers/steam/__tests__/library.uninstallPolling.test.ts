@@ -1,3 +1,7 @@
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /**
  * Unit tests for the uninstall poller (pollUninstallOnce, start/stopUninstallPolling).
  * Moved out of library.test.ts by Phase 65 plan 04 (D-03); mock preamble
@@ -26,6 +30,12 @@ import {
   startUninstallPolling,
   stopUninstallPolling
 } from '../library/uninstallPolling'
+
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -303,8 +313,8 @@ describe('pollUninstallOnce()', () => {
 
   it('flips the badge to not-installed + sends done when the manifest is absent (uninstall complete)', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
-    startUninstallPolling('730', 60000) // register entry so stop has something to clear
-    await pollUninstallOnce('730')
+    startUninstallPolling(steamTestDeps, '730', 60000) // register entry so stop has something to clear
+    await pollUninstallOnce(steamTestDeps, '730')
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'pushGameToLibrary',
       expect.objectContaining({ app_name: '730', is_installed: false })
@@ -329,8 +339,8 @@ describe('pollUninstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startUninstallPolling('730', 60000)
-    await pollUninstallOnce('730')
+    startUninstallPolling(steamTestDeps, '730', 60000)
+    await pollUninstallOnce(steamTestDeps, '730')
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'gameStatusUpdate',
       expect.objectContaining({
@@ -361,8 +371,8 @@ describe('pollUninstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startUninstallPolling('730', 60000)
-    await pollUninstallOnce('730')
+    startUninstallPolling(steamTestDeps, '730', 60000)
+    await pollUninstallOnce(steamTestDeps, '730')
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'gameStatusUpdate',
       expect.objectContaining({
@@ -382,8 +392,8 @@ describe('pollUninstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startUninstallPolling('730', 60000)
-    await pollUninstallOnce('730')
+    startUninstallPolling(steamTestDeps, '730', 60000)
+    await pollUninstallOnce(steamTestDeps, '730')
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
       'pushGameToLibrary',
       expect.anything()
@@ -394,8 +404,8 @@ describe('pollUninstallOnce()', () => {
 
   it('GAME-03: fires notify with Game Uninstalled on the "absent" branch (confirmed ACF removal)', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone = uninstall complete
-    startUninstallPolling('730', 60000) // register entry so stop has something to clear
-    await pollUninstallOnce('730')
+    startUninstallPolling(steamTestDeps, '730', 60000) // register entry so stop has something to clear
+    await pollUninstallOnce(steamTestDeps, '730')
     expect(notify).toHaveBeenCalledTimes(1)
     expect(notify).toHaveBeenCalledWith({
       title: 'CS:GO',
@@ -413,8 +423,8 @@ describe('pollUninstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startUninstallPolling('730', 60000)
-    await pollUninstallOnce('730')
+    startUninstallPolling(steamTestDeps, '730', 60000)
+    await pollUninstallOnce(steamTestDeps, '730')
     expect(notify).not.toHaveBeenCalled()
   })
 
@@ -422,8 +432,8 @@ describe('pollUninstallOnce()', () => {
 
   it('R1: bottle uninstall confirmed-absent clears the forced verdict', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
-    startUninstallPolling('730', 60000)
-    await pollUninstallOnce('730', 'bottle')
+    startUninstallPolling(steamTestDeps, '730', 60000)
+    await pollUninstallOnce(steamTestDeps, '730', 'bottle')
     expect(clearForcedSpy).toHaveBeenCalledWith('730')
   })
 
@@ -432,15 +442,15 @@ describe('pollUninstallOnce()', () => {
     jest
       .mocked(getBridgeBottleSettings)
       .mockReturnValue({ wineCrossoverBottle: 'GameLibSteamBridge-730' } as any)
-    startUninstallPolling('730', 60000)
-    await pollUninstallOnce('730', 'bridge')
+    startUninstallPolling(steamTestDeps, '730', 60000)
+    await pollUninstallOnce(steamTestDeps, '730', 'bridge')
     expect(clearForcedSpy).toHaveBeenCalledWith('730')
   })
 
   it('R2: a NATIVE uninstall confirmed-absent does NOT clear the forced verdict', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
-    startUninstallPolling('730', 60000)
-    await pollUninstallOnce('730') // default source: 'native'
+    startUninstallPolling(steamTestDeps, '730', 60000)
+    await pollUninstallOnce(steamTestDeps, '730') // default source: 'native'
     expect(clearForcedSpy).not.toHaveBeenCalled()
   })
 
@@ -453,15 +463,15 @@ describe('pollUninstallOnce()', () => {
         SizeOnDisk: '50000'
       }
     })
-    startUninstallPolling('730', 60000)
-    await pollUninstallOnce('730', 'bottle')
+    startUninstallPolling(steamTestDeps, '730', 60000)
+    await pollUninstallOnce(steamTestDeps, '730', 'bottle')
     expect(clearForcedSpy).not.toHaveBeenCalled()
   })
 
   it('R4: the clear survives a library-Map MISS (fails if placed inside the `if (existing)` guard)', async () => {
     ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone
     library.clear() // library.get('730') is now undefined — the Map MISS
-    await pollUninstallOnce('730', 'bottle')
+    await pollUninstallOnce(steamTestDeps, '730', 'bottle')
     expect(clearForcedSpy).toHaveBeenCalledWith('730')
   })
 
@@ -497,8 +507,8 @@ describe('pollUninstallOnce()', () => {
         }
       })
 
-      startUninstallPolling('730', 60000)
-      await pollUninstallOnce('730', 'bottle')
+      startUninstallPolling(steamTestDeps, '730', 60000)
+      await pollUninstallOnce(steamTestDeps, '730', 'bottle')
 
       expect(sendFrontendMessage).toHaveBeenCalledWith(
         'pushGameToLibrary',
@@ -554,8 +564,8 @@ describe('pollUninstallOnce()', () => {
         }
       })
 
-      startUninstallPolling('730', 60000)
-      await pollUninstallOnce('730') // default source: 'native'
+      startUninstallPolling(steamTestDeps, '730', 60000)
+      await pollUninstallOnce(steamTestDeps, '730') // default source: 'native'
 
       expect(sendFrontendMessage).toHaveBeenCalledWith(
         'pushGameToLibrary',
@@ -630,8 +640,8 @@ describe('pollUninstallOnce()', () => {
         }
       })
 
-      startUninstallPolling('730', 60000)
-      await pollUninstallOnce('730') // default source: 'native'
+      startUninstallPolling(steamTestDeps, '730', 60000)
+      await pollUninstallOnce(steamTestDeps, '730') // default source: 'native'
 
       expect(sendFrontendMessage).toHaveBeenCalledWith(
         'pushGameToLibrary',
@@ -703,7 +713,7 @@ describe('pollUninstallOnce()', () => {
       })
 
       it('a NATIVE copy survives: badge stays installed on the native copy and the notice names both copies', async () => {
-        await pollUninstallOnce('730', 'bridge')
+        await pollUninstallOnce(steamTestDeps, '730', 'bridge')
 
         expect(sendFrontendMessage).toHaveBeenCalledWith(
           'pushGameToLibrary',
@@ -736,7 +746,7 @@ describe('pollUninstallOnce()', () => {
           is_mac_native: false
         })
 
-        await pollUninstallOnce('730', 'bridge')
+        await pollUninstallOnce(steamTestDeps, '730', 'bridge')
 
         expect(sendFrontendMessage).toHaveBeenCalledWith(
           'pushGameToLibrary',
@@ -756,8 +766,8 @@ describe('pollUninstallOnce()', () => {
 
     it('NEITHER root has a surviving copy: falls through to the original full-uninstall behaviour (badge flips false, "Game Uninstalled" toast fires) — regression guard', async () => {
       ;(existsSync as jest.Mock).mockReturnValue(false) // manifest gone everywhere
-      startUninstallPolling('730', 60000)
-      await pollUninstallOnce('730', 'bottle')
+      startUninstallPolling(steamTestDeps, '730', 60000)
+      await pollUninstallOnce(steamTestDeps, '730', 'bottle')
 
       expect(sendFrontendMessage).toHaveBeenCalledWith(
         'pushGameToLibrary',
@@ -790,17 +800,17 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
 
   it('calling startUninstallPolling twice for the same appId creates only one setInterval', () => {
     const setIntervalSpy = jest.spyOn(global, 'setInterval')
-    startUninstallPolling('730', 3000)
-    startUninstallPolling('730', 3000) // idempotent — second call is a no-op
+    startUninstallPolling(steamTestDeps, '730', 3000)
+    startUninstallPolling(steamTestDeps, '730', 3000) // idempotent — second call is a no-op
     expect(setIntervalSpy).toHaveBeenCalledTimes(1)
     setIntervalSpy.mockRestore()
   })
 
   it('stopUninstallPolling clears the entry so a new interval can register', () => {
     const setIntervalSpy = jest.spyOn(global, 'setInterval')
-    startUninstallPolling('730', 3000)
+    startUninstallPolling(steamTestDeps, '730', 3000)
     stopUninstallPolling('730')
-    startUninstallPolling('730', 3000) // new registration — entry was cleared by stop
+    startUninstallPolling(steamTestDeps, '730', 3000) // new registration — entry was cleared by stop
     expect(setIntervalSpy).toHaveBeenCalledTimes(2)
     setIntervalSpy.mockRestore()
   })
@@ -843,7 +853,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     ;(notify as jest.Mock).mockClear()
 
     const interval = 10
-    startUninstallPolling('730', interval)
+    startUninstallPolling(steamTestDeps, '730', interval)
     g9oLogger().logWarning.mockClear()
     // The old 60 s grace is gone: nothing at tick 21 or 39.
     const requestNotices = () =>
@@ -910,7 +920,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     ;(notify as jest.Mock).mockClear()
 
     const interval = 10
-    startUninstallPolling('730', interval)
+    startUninstallPolling(steamTestDeps, '730', interval)
     await jest.advanceTimersByTimeAsync(interval * 60)
     expect(notify).not.toHaveBeenCalled()
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
@@ -955,7 +965,7 @@ describe('startUninstallPolling() idempotency and stopUninstallPolling()', () =>
     ;(notify as jest.Mock).mockClear()
 
     const interval = 10
-    startUninstallPolling('730', interval)
+    startUninstallPolling(steamTestDeps, '730', interval)
     await jest.advanceTimersByTimeAsync(interval * 5)
     ;(existsSync as jest.Mock).mockReturnValue(false)
     await jest.advanceTimersByTimeAsync(interval * 3)

@@ -306,7 +306,7 @@ export async function runNativeDepotDownload(
       } else {
         adoption.clearPendingAdoption(steamGame.appId)
       }
-      startInstallPolling(steamGame.appId, {
+      startInstallPolling(steamGame.deps, steamGame.appId, {
         isNativeHandoff: true,
         skippedDepots: handoff.skippedDepots,
         macNativeRoute: true,
@@ -475,11 +475,15 @@ export async function runNativeDepotDownloadLeased(
       LogPrefix.Steam
     )
   }
-  resumeBreadcrumbs.markSteamNativeInstallStarted(steamGame.appId, {
-    targetSteamappsDir,
-    installdir: resolved.installdir,
-    installedAtStart
-  })
+  resumeBreadcrumbs.markSteamNativeInstallStarted(
+    steamGame.deps,
+    steamGame.appId,
+    {
+      targetSteamappsDir,
+      installdir: resolved.installdir,
+      installedAtStart
+    }
+  )
 
   const downloadStart = Date.now()
   const outcome = await downloadSteamDepots(steamGame.appId, {
@@ -500,7 +504,10 @@ export async function runNativeDepotDownloadLeased(
     // library entry incomplete/resumable now so the frontend never
     // renders a stale is_installed:true/Play for the rest of THIS
     // session (Task 2 reads is_installed + steamResumePending).
-    resumeBreadcrumbs.markSteamInstallIncomplete(steamGame.appId)
+    resumeBreadcrumbs.markSteamInstallIncomplete(
+      steamGame.deps,
+      steamGame.appId
+    )
     return { status: 'abort' }
   }
 
@@ -528,7 +535,7 @@ export async function runNativeDepotDownloadLeased(
   // deliberately do NOT clear it — a cancelled or errored run leaves
   // residue too (markSteamInstallIncomplete's 'cancelled' spread
   // already preserves the breadcrumb fields).
-  resumeBreadcrumbs.clearSteamResumeBreadcrumb(steamGame.appId)
+  resumeBreadcrumbs.clearSteamResumeBreadcrumb(steamGame.deps, steamGame.appId)
 
   // Start ACF polling so Steam's own verify/repair pass (which flips
   // StateFlags 1026 -> 4) is reflected in the UI, same as the legacy
@@ -552,7 +559,7 @@ export async function runNativeDepotDownloadLeased(
   // The OFF-path calls in install() have no skipped-depot knowledge
   // (Steam owns those downloads) and must NOT receive it.
   if (opts.pollerSource) {
-    startInstallPolling(steamGame.appId, {
+    startInstallPolling(steamGame.deps, steamGame.appId, {
       source: opts.pollerSource,
       isNativeHandoff: true,
       skippedDepots: outcome.skippedDepots ?? []
@@ -568,7 +575,7 @@ export async function runNativeDepotDownloadLeased(
       skippedDepots: outcome.skippedDepots ?? []
     }
   } else {
-    startInstallPolling(steamGame.appId, {
+    startInstallPolling(steamGame.deps, steamGame.appId, {
       isNativeHandoff: true,
       skippedDepots: outcome.skippedDepots ?? []
     })

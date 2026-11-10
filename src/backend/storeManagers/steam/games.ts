@@ -18,7 +18,7 @@ import {
   addShortcuts as addShortcutsUtil,
   removeShortcuts as removeShortcutsUtil
 } from '../../shortcuts/shortcuts/shortcuts'
-import { steamMetadataStore, steamLibraryStore } from './stores'
+import type { ManagerDeps } from 'backend/services/types'
 import { depotSignalCaptured } from './metadataCapture'
 import { fetchMetadataIfNeeded } from './gameMetadata'
 import { library } from './state'
@@ -49,9 +49,12 @@ import { uninstall } from './gameUninstall'
 
 export default class SteamGame implements Game {
   readonly appId: string
+  /** Read by the install/uninstall/launch entry modules (66.1 R3). */
+  readonly deps: ManagerDeps
 
-  constructor(appId: string) {
+  constructor(appId: string, deps: ManagerDeps) {
     this.appId = appId
+    this.deps = deps
   }
 
   /**
@@ -140,7 +143,7 @@ export default class SteamGame implements Game {
   getGameInfo(): GameInfo {
     let existing = library.get(this.appId)
     if (!existing) {
-      const cached = steamLibraryStore
+      const cached = this.deps.stores.steam.steamLibraryStore
         .get('games', [])
         .find((g) => g.app_name === this.appId)
       if (cached) {
@@ -171,7 +174,7 @@ export default class SteamGame implements Game {
     // true — excluding delisted games, whose terminal branch returns before
     // capturing platforms (avoids a re-fetch loop). fetchMetadataIfNeeded's
     // pendingFetches dedup (T-2-03) absorbs repeated calls while a fetch is in flight.
-    const cached = steamMetadataStore.get(this.appId)
+    const cached = this.deps.stores.steam.steamMetadataStore.get(this.appId)
     // Quick task 260816-hdg: resolved via depotSignalCaptured rather than the
     // bare flag, so a pre-D-17 residue entry (flagged complete, missing the
     // depot field the fetch was obliged to write) is recognised as NOT captured
@@ -487,7 +490,10 @@ export default class SteamGame implements Game {
       library.set(this.appId, updated)
       // GAP-17-BOTTLE-STORE-DIVERGENCE / GAP-18-06: persist immediately so the
       // not-installed (badge-preserving) state is not lost on the next persist.
-      steamLibraryStore.set('games', Array.from(library.values()))
+      this.deps.stores.steam.steamLibraryStore.set(
+        'games',
+        Array.from(library.values())
+      )
       sendFrontendMessage('pushGameToLibrary', updated)
     }
     logInfo(

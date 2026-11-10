@@ -1,3 +1,7 @@
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /**
  * Regression for the 73-18 incident chain (todo
  * 2026-11-09-stale-steam-queue-head-cancel-deletes-complete-install, quick
@@ -33,6 +37,12 @@ import { deleteCancelledSteamInstall } from '../cancelDelete'
 import { steamQueueHeadAlreadyInstalled } from '../queueHeadRevalidation'
 import type { GameInfo } from 'common/types'
 import type SteamGame from '../games'
+
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -145,7 +155,9 @@ describe('stale queue head cancel regression (73-18)', () => {
   })
 
   it('layer 1 would have dropped the flipped head', async () => {
-    expect(await steamQueueHeadAlreadyInstalled(APP_ID, {})).toBe(true)
+    expect(
+      await steamQueueHeadAlreadyInstalled(steamTestDeps, APP_ID, {})
+    ).toBe(true)
   })
 
   it('start then cancel with Delete Files leaves the tree and manifest in place (layer 2 alone)', async () => {
@@ -158,7 +170,7 @@ describe('stale queue head cancel regression (73-18)', () => {
     jest.mocked(createAbortController).mockReturnValue(controller)
 
     const result = await runNativeDepotDownloadLeased(
-      { appId: APP_ID } as unknown as SteamGame,
+      { appId: APP_ID, deps: steamTestDeps } as unknown as SteamGame,
       {} as never,
       { os: 'linux' },
       controller as never,
@@ -168,7 +180,9 @@ describe('stale queue head cancel regression (73-18)', () => {
     expect(result.status).toBe('abort')
     expect(library.get(APP_ID)?.install?.steamResumeInstalledAtStart).toBe(true)
 
-    const r = await deleteCancelledSteamInstall(APP_ID, { pollMs: 1 })
+    const r = await deleteCancelledSteamInstall(steamTestDeps, APP_ID, {
+      pollMs: 1
+    })
     expect(r.status).toBe('refused')
     expect(existsSync(treeFile())).toBe(true)
     expect(existsSync(acfPath())).toBe(true)
@@ -182,7 +196,7 @@ describe('stale queue head cancel regression (73-18)', () => {
     const controller = new AbortController()
 
     await runNativeDepotDownloadLeased(
-      { appId: APP_ID } as unknown as SteamGame,
+      { appId: APP_ID, deps: steamTestDeps } as unknown as SteamGame,
       {} as never,
       { os: 'linux' },
       controller as never,
@@ -192,7 +206,9 @@ describe('stale queue head cancel regression (73-18)', () => {
     expect(library.get(APP_ID)?.install?.steamResumeInstalledAtStart).toBe(
       false
     )
-    const r = await deleteCancelledSteamInstall(APP_ID, { pollMs: 1 })
+    const r = await deleteCancelledSteamInstall(steamTestDeps, APP_ID, {
+      pollMs: 1
+    })
     expect(r).toEqual({ status: 'deleted' })
     expect(existsSync(treeFile())).toBe(false)
   })

@@ -1,4 +1,7 @@
-import { createTestManagerDeps } from 'backend/testUtils/testServices'
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /* eslint-disable @typescript-eslint/unbound-method -- jest mock handles (SteamUser.acquire*), never invoked unbound; same reason as the line-level disables elsewhere in steam/__tests__ */
 /**
  * SteamLibraryManager.refresh() / refreshInstallState() behaviour (free functions in
@@ -47,6 +50,12 @@ import { listSteamClientPids } from '../steamClientProcess'
 import { pollInstallOnce } from '../library/installPollOnce'
 import { startInstallPolling } from '../library/installPolling'
 import { at } from './fixtures/indexed'
+
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -318,7 +327,7 @@ describe('SteamLibraryManager', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    manager = new SteamLibraryManager(createTestManagerDeps())
+    manager = new SteamLibraryManager(steamTestDeps)
     // Phase 54: refresh() logs on only for a granted (explicit) Refresh. This
     // suite tests refresh()'s BEHAVIOR, so arm the one-shot grant the way the
     // IPC handler does; the grant is consumed by the first refresh() call, so
@@ -2045,9 +2054,12 @@ describe('SteamLibraryManager', () => {
       jest.mocked(listSteamClientPids).mockResolvedValue([111])
       // GameLib's own finalize just wrote the StateFlags=4 manifest while the
       // Steam client (pid 111) was running: the poller enters the hold.
-      startInstallPolling('570', { intervalMs: 60000, isNativeHandoff: true })
+      startInstallPolling(steamTestDeps, '570', {
+        intervalMs: 60000,
+        isNativeHandoff: true
+      })
       try {
-        await pollInstallOnce('570')
+        await pollInstallOnce(steamTestDeps, '570')
         jest.mocked(sendFrontendMessage).mockClear()
 
         // The user alt-tabs back from Steam: the focus reconcile re-reads the

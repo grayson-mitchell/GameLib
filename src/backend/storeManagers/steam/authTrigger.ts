@@ -203,7 +203,7 @@ export function mapRefreshOriginToTrigger(
  * Notes a refresh trigger derived from a `refreshLibrary` dispatch, but ONLY
  * when the dispatch is Steam-inclusive: `runner === 'steam'`, or `runner` is
  * `undefined` / `null` / `'all'` (the three shapes that already include
- * Steam in `libraryManagerMap`'s fan-out — see `main.ts`/`steamFlowRegistration.ts`).
+ * Steam in the library managers' fan-out — see `main.ts`/`steamFlowRegistration.ts`).
  * A named NON-Steam runner (a GOG login, an Epic refresh) must NEVER unlock
  * the Steam keyring gate — that would be a privilege-escalation bug (T-d61-03):
  * a user acting on an unrelated store would silently arm a Steam Keychain

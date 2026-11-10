@@ -340,7 +340,10 @@ export function registerSteamAuthFlows(): void {
   ipcMain.handle(
     'isSteamBottleEligible',
     async (_event: unknown, ...args: unknown[]) => {
-      return getSteamBottleEligibilityVerdict(args[0])
+      return getSteamBottleEligibilityVerdict(
+        (await import('../services/legacyFacades')).legacyManagerDeps(),
+        args[0]
+      )
     }
   )
 
@@ -363,7 +366,11 @@ export function registerSteamAuthFlows(): void {
   ipcMain.handle(
     'getSteamBridgeRoute',
     async (_event: unknown, ...args: unknown[]) => {
-      return getBridgeRouteVerdict(args[0], args[1])
+      return getBridgeRouteVerdict(
+        (await import('../services/legacyFacades')).legacyManagerDeps(),
+        args[0],
+        args[1]
+      )
     }
   )
 
@@ -379,7 +386,10 @@ export function registerSteamAuthFlows(): void {
   ipcMain.handle(
     'steamRemoveAllCopies',
     async (_event: unknown, ...args: unknown[]) => {
-      return removeAllSteamInstallCopies(args[0])
+      return removeAllSteamInstallCopies(
+        (await import('../services/legacyFacades')).legacyManagerDeps(),
+        args[0]
+      )
     }
   )
 

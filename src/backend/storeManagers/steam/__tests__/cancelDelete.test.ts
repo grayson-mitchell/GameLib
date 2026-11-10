@@ -1,4 +1,8 @@
 import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
+import {
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -17,6 +21,12 @@ import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
 import { deleteCancelledSteamInstall } from '../cancelDelete'
 import type { GameInfo } from 'common/types'
 import { at } from './fixtures/indexed'
+
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -112,18 +122,21 @@ describe('deleteCancelledSteamInstall', () => {
   })
 
   it('deletes install dir, acf and tmp, then clears breadcrumb', async () => {
-    const r = await deleteCancelledSteamInstall('123', OPTS)
+    const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
     expect(r.status).toBe('deleted')
     expect(existsSync(join(steamapps, 'common', 'Cool Game'))).toBe(false)
     expect(existsSync(join(steamapps, 'appmanifest_123.acf'))).toBe(false)
     expect(existsSync(join(steamapps, 'appmanifest_123.acf.tmp'))).toBe(false)
     expect(existsSync(join(steamapps, 'common'))).toBe(true)
     expect(clearSteamResumeBreadcrumb).toHaveBeenCalledTimes(1)
-    expect(clearSteamResumeBreadcrumb).toHaveBeenCalledWith('123')
+    expect(clearSteamResumeBreadcrumb).toHaveBeenCalledWith(
+      steamTestDeps,
+      '123'
+    )
   })
 
   it('resets the frontend progress to 0 once the partial install is deleted (D-UAT-11)', async () => {
-    const r = await deleteCancelledSteamInstall('123', OPTS)
+    const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
     expect(r.status).toBe('deleted')
     expect(sendProgressUpdate).toHaveBeenCalledTimes(1)
     expect(sendProgressUpdate).toHaveBeenCalledWith({
@@ -141,7 +154,7 @@ describe('deleteCancelledSteamInstall', () => {
 
   it('still deletes when installedAtStart is false and the ACF reads 1026', async () => {
     seed({ steamResumeInstalledAtStart: false })
-    const r = await deleteCancelledSteamInstall('123', OPTS)
+    const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
     expect(r.status).toBe('deleted')
   })
 
@@ -152,7 +165,7 @@ describe('deleteCancelledSteamInstall', () => {
       .mockReturnValueOnce(true)
       .mockReturnValueOnce(true)
       .mockReturnValue(false)
-    const r = await deleteCancelledSteamInstall('123', OPTS)
+    const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
     expect(r.status).toBe('deleted')
     const lastTrue = Math.max(
       ...inFlight.mock.results.map((res, i) =>
@@ -166,7 +179,7 @@ describe('deleteCancelledSteamInstall', () => {
 
   it('refuses when the settle wait times out', async () => {
     jest.mocked(isNativeInstallInFlight).mockReturnValue(true)
-    const r = await deleteCancelledSteamInstall('123', {
+    const r = await deleteCancelledSteamInstall(steamTestDeps, '123', {
       pollMs: 1,
       timeoutMs: 20
     })
@@ -188,7 +201,7 @@ describe('deleteCancelledSteamInstall', () => {
     ]
     it.each(cases)('%s', async (_n, appId, install) => {
       seed(install)
-      const r = await deleteCancelledSteamInstall(appId, OPTS)
+      const r = await deleteCancelledSteamInstall(steamTestDeps, appId, OPTS)
       expect(r.status).toBe('refused')
       expect(allPresent()).toBe(true)
       expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
@@ -197,7 +210,7 @@ describe('deleteCancelledSteamInstall', () => {
 
     it('installed at job start, manifest already downgraded to 1026', async () => {
       seed({ steamResumeInstalledAtStart: true })
-      const r = await deleteCancelledSteamInstall('123', OPTS)
+      const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
       expect(r.status).toBe('refused')
       expect(r.reason).toMatch(/installed when the job started/)
       expect(allPresent()).toBe(true)
@@ -205,7 +218,7 @@ describe('deleteCancelledSteamInstall', () => {
     })
 
     it('non-numeric appId', async () => {
-      const r = await deleteCancelledSteamInstall('../1', OPTS)
+      const r = await deleteCancelledSteamInstall(steamTestDeps, '../1', OPTS)
       expect(r.status).toBe('refused')
       expect(allPresent()).toBe(true)
       expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
@@ -214,7 +227,7 @@ describe('deleteCancelledSteamInstall', () => {
 
     it('no library entry', async () => {
       library.clear()
-      const r = await deleteCancelledSteamInstall('123', OPTS)
+      const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
       expect(r.status).toBe('refused')
       expect(allPresent()).toBe(true)
       expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
@@ -225,7 +238,7 @@ describe('deleteCancelledSteamInstall', () => {
       const other = join(tmp, 'elsewhere', 'steamapps')
       build(other)
       seed({ steamResumeTargetSteamappsDir: other })
-      const r = await deleteCancelledSteamInstall('123', OPTS)
+      const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
       expect(r.status).toBe('refused')
       expect(existsSync(join(other, 'common', 'Cool Game', 'a.bin'))).toBe(true)
       expect(existsSync(join(other, 'appmanifest_123.acf'))).toBe(true)
@@ -235,7 +248,7 @@ describe('deleteCancelledSteamInstall', () => {
 
     it('ACF reports fully installed', async () => {
       build(steamapps, '4')
-      const r = await deleteCancelledSteamInstall('123', OPTS)
+      const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
       expect(r.status).toBe('refused')
       expect(allPresent()).toBe(true)
       expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
@@ -245,27 +258,30 @@ describe('deleteCancelledSteamInstall', () => {
 
   it('keeps a shared installdir but removes this appId manifests', async () => {
     jest.mocked(findOtherManifestsWithInstalldir).mockReturnValue(['456'])
-    const r = await deleteCancelledSteamInstall('123', OPTS)
+    const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
     expect(r.status).toBe('deleted')
     expect(existsSync(join(steamapps, 'common', 'Cool Game', 'a.bin'))).toBe(
       true
     )
     expect(existsSync(join(steamapps, 'appmanifest_123.acf'))).toBe(false)
     expect(existsSync(join(steamapps, 'appmanifest_123.acf.tmp'))).toBe(false)
-    expect(clearSteamResumeBreadcrumb).toHaveBeenCalledWith('123')
+    expect(clearSteamResumeBreadcrumb).toHaveBeenCalledWith(
+      steamTestDeps,
+      '123'
+    )
   })
 
   it('is fine with missing manifest files', async () => {
     rmSync(join(steamapps, 'appmanifest_123.acf'))
     rmSync(join(steamapps, 'appmanifest_123.acf.tmp'))
-    const r = await deleteCancelledSteamInstall('123', OPTS)
+    const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
     expect(r.status).toBe('deleted')
     expect(existsSync(join(steamapps, 'common', 'Cool Game'))).toBe(false)
   })
 
   it('never throws when getSteamLibraries rejects', async () => {
     jest.mocked(getSteamLibraries).mockRejectedValue(new Error('boom'))
-    const r = await deleteCancelledSteamInstall('123', OPTS)
+    const r = await deleteCancelledSteamInstall(steamTestDeps, '123', OPTS)
     expect(r.status).toBe('refused')
     expect(allPresent()).toBe(true)
   })

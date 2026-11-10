@@ -1,4 +1,5 @@
 import { GameInfo } from 'common/types'
+import type { ManagerDeps } from 'backend/services/types'
 import { logInfo, logError, logWarning, LogPrefix } from 'backend/logger'
 import { join } from 'path'
 import { isMac, isLinux } from 'backend/constants/environment'
@@ -200,6 +201,7 @@ async function buildResumeFinalizeOpts(
  * contract did.
  */
 export async function resumeInterruptedSteamInstall(
+  deps: ManagerDeps,
   appId: string
 ): Promise<void> {
   try {
@@ -233,7 +235,7 @@ export async function resumeInterruptedSteamInstall(
       )
     }
 
-    startInstallPolling(appId)
+    startInstallPolling(deps, appId)
   } catch (err) {
     // Per-appId hardening: a resume attempt failing for any reason must
     // never throw out to the caller (SteamGame.install() continues into its
@@ -251,7 +253,9 @@ export async function resumeInterruptedSteamInstall(
  * records it spawns nothing. An inconclusive probe arms nothing and keeps
  * the record (fail-open, as before D-UAT-13).
  */
-export async function rearmPersistedSteamRestartHolds(): Promise<{
+export async function rearmPersistedSteamRestartHolds(
+  deps: ManagerDeps
+): Promise<{
   dropped: number
 }> {
   let dropped = 0
@@ -317,7 +321,7 @@ export async function rearmPersistedSteamRestartHolds(): Promise<{
           )
           continue
         }
-        startInstallPolling(appId, {
+        startInstallPolling(deps, appId, {
           isNativeHandoff: true,
           source: 'native',
           macNativeRoute: record.macNativeRoute,

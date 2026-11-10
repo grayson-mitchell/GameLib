@@ -747,7 +747,10 @@ describe('downloadqueue.ts — quick-261027-cux: Steam Delete Files routing', ()
     cancelCurrentDownload({ removeDownloaded: true })
 
     expect(deleteCancelledSteamInstall).toHaveBeenCalledTimes(1)
-    expect(deleteCancelledSteamInstall).toHaveBeenCalledWith('1091500')
+    expect(deleteCancelledSteamInstall).toHaveBeenCalledWith(
+      expect.anything(),
+      '1091500'
+    )
     expect(removeFolder).not.toHaveBeenCalled()
   })
 
@@ -804,7 +807,9 @@ describe('downloadqueue.ts — todo 2026-11-09: stale already-installed Steam he
       await import('backend/storeManagers/steam/queueHeadRevalidation')
     jest
       .mocked(steamQueueHeadAlreadyInstalled)
-      .mockImplementation((appId) => Promise.resolve(stale.includes(appId)))
+      .mockImplementation((_deps, appId) =>
+        Promise.resolve(stale.includes(appId))
+      )
     jest
       .mocked(installQueueElement)
       .mockResolvedValue({ status: 'done', deferredToSetup: false } as never)

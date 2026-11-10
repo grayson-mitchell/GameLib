@@ -259,7 +259,11 @@ async function handleLaunch(url: URL) {
     if (storeCapabilities[gameInfo.runner].launchHandedToClient) {
       const { dispatchSteamLaunch } =
         await import('backend/storeManagers/steam/launchDispatch')
-      const launched = await dispatchSteamLaunch(appName)
+      const { libraryManagerMap } = await import('backend/storeManagers')
+      const launched = await dispatchSteamLaunch(
+        { libraryManagers: libraryManagerMap },
+        appName
+      )
       return { status: launched ? 'done' : 'error' }
     }
 

@@ -369,7 +369,10 @@ async function handleLaunch(
     if (minimizeOnLaunch && (isMac || !noTrayIcon)) {
       app.hideMainWindow()
     }
-    const launched = await dispatchSteamLaunch(appName)
+    const launched = await dispatchSteamLaunch(
+      { libraryManagers: libraryManagerMap },
+      appName
+    )
     return { status: launched ? 'done' : 'error' }
   }
 

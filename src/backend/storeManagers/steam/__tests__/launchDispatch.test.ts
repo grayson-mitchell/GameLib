@@ -13,16 +13,13 @@
  * wrong game.
  */
 
-// ── storeManagers — mocked so `dispatchSteamLaunch`'s lazy
-// `await import('backend/storeManagers')` resolves to a controllable Steam game mock. ────────
+// ── library managers — injected, so `dispatchSteamLaunch` resolves a controllable Steam game mock. ──
 const getGameMock = jest.fn()
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {
-    steam: {
-      getGame: (...args: unknown[]) => getGameMock(...args)
-    }
+const deps = {
+  libraryManagers: {
+    steam: { getGame: (...args: unknown[]) => getGameMock(...args) }
   }
-}))
+} as unknown as Parameters<typeof dispatchSteamLaunch>[0]
 
 // ── recent_games — the side effect under test. ────────────────────────────────────────────
 const addRecentGameMock = jest.fn()
@@ -79,7 +76,7 @@ describe('dispatchSteamLaunch', () => {
     launchMock.mockResolvedValue(true)
     addRecentGameMock.mockResolvedValue(undefined)
 
-    const result = await dispatchSteamLaunch(appId)
+    const result = await dispatchSteamLaunch(deps, appId)
 
     expect(result).toBe(true)
     expect(getGameMock).toHaveBeenCalledWith(appId)
@@ -93,7 +90,7 @@ describe('dispatchSteamLaunch', () => {
   it('calls addRecentGame ZERO times and returns false when launch() resolves false', async () => {
     launchMock.mockResolvedValue(false)
 
-    const result = await dispatchSteamLaunch(appId)
+    const result = await dispatchSteamLaunch(deps, appId)
 
     expect(result).toBe(false)
     expect(addRecentGameMock).not.toHaveBeenCalled()
@@ -106,7 +103,7 @@ describe('dispatchSteamLaunch', () => {
     launchMock.mockResolvedValue(true)
     addRecentGameMock.mockRejectedValue(new Error('store write failed'))
 
-    const result = await dispatchSteamLaunch(appId)
+    const result = await dispatchSteamLaunch(deps, appId)
 
     expect(result).toBe(true)
     expect(logWarningMock).toHaveBeenCalledTimes(1)
@@ -141,8 +138,8 @@ describe('WR-03: single-flight at the launch IPC entry', () => {
       })
     )
 
-    const a = dispatchSteamLaunch(appId)
-    const b = dispatchSteamLaunch(appId)
+    const a = dispatchSteamLaunch(deps, appId)
+    const b = dispatchSteamLaunch(deps, appId)
     await new Promise(setImmediate)
     resolveLaunch(true)
 
@@ -163,9 +160,9 @@ describe('WR-03: single-flight at the launch IPC entry', () => {
 
   it('releases after settle: a later dispatch launches again', async () => {
     launchMock.mockResolvedValue(true)
-    await dispatchSteamLaunch(appId)
+    await dispatchSteamLaunch(deps, appId)
     await new Promise(setImmediate)
-    await dispatchSteamLaunch(appId)
+    await dispatchSteamLaunch(deps, appId)
     expect(launchMock).toHaveBeenCalledTimes(2)
   })
 })

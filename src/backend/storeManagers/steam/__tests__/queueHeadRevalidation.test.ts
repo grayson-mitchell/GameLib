@@ -1,3 +1,7 @@
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -6,6 +10,12 @@ import { library } from '../state'
 import { clearSteamResumeBreadcrumb } from '../library/resumeBreadcrumbs'
 import { steamQueueHeadAlreadyInstalled } from '../queueHeadRevalidation'
 import type { GameInfo } from 'common/types'
+
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -49,8 +59,13 @@ describe('steamQueueHeadAlreadyInstalled', () => {
   it('true for a current full install at the breadcrumb target, and clears the breadcrumb', async () => {
     acf('4')
     seedBreadcrumb()
-    expect(await steamQueueHeadAlreadyInstalled('108600', {})).toBe(true)
-    expect(clearSteamResumeBreadcrumb).toHaveBeenCalledWith('108600')
+    expect(
+      await steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', {})
+    ).toBe(true)
+    expect(clearSteamResumeBreadcrumb).toHaveBeenCalledWith(
+      steamTestDeps,
+      '108600'
+    )
   })
 
   it.each([
@@ -59,25 +74,35 @@ describe('steamQueueHeadAlreadyInstalled', () => {
   ])('false for %s', async (_n, flags) => {
     acf(flags)
     seedBreadcrumb()
-    expect(await steamQueueHeadAlreadyInstalled('108600', {})).toBe(false)
+    expect(
+      await steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', {})
+    ).toBe(false)
     expect(clearSteamResumeBreadcrumb).not.toHaveBeenCalled()
   })
 
   it('false for a missing ACF, a non-numeric appId and no determinable target', async () => {
     seedBreadcrumb()
-    expect(await steamQueueHeadAlreadyInstalled('108600', {})).toBe(false)
-    expect(await steamQueueHeadAlreadyInstalled('../1', {})).toBe(false)
+    expect(
+      await steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', {})
+    ).toBe(false)
+    expect(
+      await steamQueueHeadAlreadyInstalled(steamTestDeps, '../1', {})
+    ).toBe(false)
     library.clear()
-    expect(await steamQueueHeadAlreadyInstalled('108600', {})).toBe(false)
+    expect(
+      await steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', {})
+    ).toBe(false)
   })
 
   it('without a breadcrumb falls back to params.path/steamapps only for a registered library', async () => {
     acf('4')
     expect(
-      await steamQueueHeadAlreadyInstalled('108600', { path: join(tmp, 'lib') })
+      await steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', {
+        path: join(tmp, 'lib')
+      })
     ).toBe(true)
     expect(
-      await steamQueueHeadAlreadyInstalled('108600', {
+      await steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', {
         path: join(tmp, 'other')
       })
     ).toBe(false)
@@ -86,7 +111,7 @@ describe('steamQueueHeadAlreadyInstalled', () => {
   it('never throws', async () => {
     jest.mocked(getSteamLibraries).mockRejectedValue(new Error('boom'))
     await expect(
-      steamQueueHeadAlreadyInstalled('108600', { path: '/x' })
+      steamQueueHeadAlreadyInstalled(steamTestDeps, '108600', { path: '/x' })
     ).resolves.toBe(false)
   })
 })

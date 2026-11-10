@@ -3,7 +3,7 @@ import { join } from 'path'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { parse } from '@node-steam/vdf'
 import { library } from '../state'
-import { steamLibraryStore } from '../stores'
+import type { SteamStoresDeps } from './installRoot'
 import { sendFrontendMessage } from '../../../ipc'
 import { isFullyInstalledStateFlags } from './installedMap'
 
@@ -21,7 +21,10 @@ import { isFullyInstalledStateFlags } from './installedMap'
  * appId has no in-memory library entry — matches every other per-appId
  * surfacing helper in this file.
  */
-export function markSteamInstallIncomplete(appId: string): void {
+export function markSteamInstallIncomplete(
+  deps: SteamStoresDeps,
+  appId: string
+): void {
   const existing = library.get(appId)
   if (!existing) return
 
@@ -31,7 +34,7 @@ export function markSteamInstallIncomplete(appId: string): void {
     install: { ...existing.install, steamResumePending: true }
   }
   library.set(appId, updated)
-  steamLibraryStore.set('games', Array.from(library.values()))
+  deps.stores.steam.steamLibraryStore.set('games', Array.from(library.values()))
   sendFrontendMessage('pushGameToLibrary', updated)
 }
 
@@ -61,6 +64,7 @@ export function markSteamInstallIncomplete(appId: string): void {
  * microseconds later already finds it on disk.
  */
 export function markSteamNativeInstallStarted(
+  deps: SteamStoresDeps,
   appId: string,
   breadcrumb: {
     targetSteamappsDir: string
@@ -82,7 +86,7 @@ export function markSteamNativeInstallStarted(
     }
   }
   library.set(appId, updated)
-  steamLibraryStore.set('games', Array.from(library.values()))
+  deps.stores.steam.steamLibraryStore.set('games', Array.from(library.values()))
   sendFrontendMessage('pushGameToLibrary', updated)
 }
 
@@ -100,7 +104,10 @@ export function markSteamNativeInstallStarted(
  * field nor steamResumePending, avoiding a pointless whole-library
  * re-persist on every success.
  */
-export function clearSteamResumeBreadcrumb(appId: string): void {
+export function clearSteamResumeBreadcrumb(
+  deps: SteamStoresDeps,
+  appId: string
+): void {
   const existing = library.get(appId)
   if (!existing) return
   if (
@@ -122,7 +129,7 @@ export function clearSteamResumeBreadcrumb(appId: string): void {
     install: { ...install, steamResumePending: false }
   }
   library.set(appId, updated)
-  steamLibraryStore.set('games', Array.from(library.values()))
+  deps.stores.steam.steamLibraryStore.set('games', Array.from(library.values()))
   sendFrontendMessage('pushGameToLibrary', updated)
 }
 

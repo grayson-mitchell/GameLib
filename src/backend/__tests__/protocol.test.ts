@@ -643,7 +643,10 @@ describe('protocol.ts --no-gui behavior', () => {
       )
       // Confirms findGame resolved the Steam title (not `undefined`) by observing the launch
       // dispatch that only runs once gameInfo.is_installed is truthy for a resolved game.
-      expect(dispatchSteamLaunch).toHaveBeenCalledWith('steam-appid-123')
+      expect(dispatchSteamLaunch).toHaveBeenCalledWith(
+        expect.anything(),
+        'steam-appid-123'
+      )
     })
   })
 
@@ -681,7 +684,10 @@ describe('protocol.ts --no-gui behavior', () => {
         'gamelib://launch?appName=steam-appid-999&runner=steam'
       ])
 
-      expect(dispatchSteamLaunch).toHaveBeenCalledWith('steam-appid-999')
+      expect(dispatchSteamLaunch).toHaveBeenCalledWith(
+        expect.anything(),
+        'steam-appid-999'
+      )
       expect(launchEventCallback).not.toHaveBeenCalled()
     })
 
@@ -734,7 +740,10 @@ describe('protocol.ts --no-gui behavior', () => {
 
       await handleProtocol(['gamelib://launch?appName=steam-2&runner=steam'])
 
-      expect(dispatchSteamLaunch).toHaveBeenCalledWith('steam-2')
+      expect(dispatchSteamLaunch).toHaveBeenCalledWith(
+        expect.anything(),
+        'steam-2'
+      )
       expect(logError).not.toHaveBeenCalledWith(
         'Could not receive game data for steam-2!',
         'ProtocolHandler'

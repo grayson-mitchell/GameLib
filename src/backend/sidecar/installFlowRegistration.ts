@@ -296,7 +296,10 @@ export function registerInstallFlows(): void {
       const appName = args[0]
       if (typeof appName !== 'string' || !/^\d+$/.test(appName)) return []
       try {
-        const verdict = await getSteamBottleEligibilityVerdict(appName)
+        const verdict = await getSteamBottleEligibilityVerdict(
+          (await import('../services/legacyFacades')).legacyManagerDeps(),
+          appName
+        )
         return verdict.eligible ? listSteamLibraryTargets() : []
       } catch {
         return []
@@ -329,7 +332,10 @@ export function registerInstallFlows(): void {
         return closedInstallAppReply()
       }
       try {
-        const verdict = await getSteamBottleEligibilityVerdict(appName)
+        const verdict = await getSteamBottleEligibilityVerdict(
+          (await import('../services/legacyFacades')).legacyManagerDeps(),
+          appName
+        )
         if (verdict.eligible) return closedInstallAppReply()
         return {
           installAppRoute: true,

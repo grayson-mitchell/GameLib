@@ -1,3 +1,7 @@
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /**
  * getBridgeRouteVerdict() -- D-51-09 Task 2's installedIn (LOCATION) wiring.
  * Moved out of games.test.ts with the function (65-13, D-03); the collaborator
@@ -10,6 +14,12 @@ import { library, pendingFetches } from '../state'
 import { isBridgeBottleReady } from '../bridgeBottle'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import type { GameInfo } from 'common/types'
+
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -177,7 +187,7 @@ describe('getBridgeRouteVerdict() — D-51-09 installedIn (LOCATION, not eligibi
   })
 
   it('rejects a non-numeric appId as not-eligible with installedIn null, never reaching checkBridgeRoute', async () => {
-    const result = await getBridgeRouteVerdict('not-numeric')
+    const result = await getBridgeRouteVerdict(steamTestDeps, 'not-numeric')
 
     expect(result.route).toBe('not-eligible')
     expect(result.installedIn).toBeNull()
@@ -189,7 +199,7 @@ describe('getBridgeRouteVerdict() — D-51-09 installedIn (LOCATION, not eligibi
     // result for ANY appId.
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
 
-    const result = await getBridgeRouteVerdict(APP_ID)
+    const result = await getBridgeRouteVerdict(steamTestDeps, APP_ID)
 
     expect(result.installedIn).toBe('bridge')
   })
@@ -197,7 +207,7 @@ describe('getBridgeRouteVerdict() — D-51-09 installedIn (LOCATION, not eligibi
   it("installedIn is 'bottle' when no bridge bottle holds this install but the title is installed AND bottle-eligible (existing GameLibSteam install, D-51-09's core distinction)", async () => {
     library.set(APP_ID, makeEntry({ title: 'Avernum 4', is_installed: true }))
 
-    const result = await getBridgeRouteVerdict(APP_ID)
+    const result = await getBridgeRouteVerdict(steamTestDeps, APP_ID)
 
     expect(result.installedIn).toBe('bottle')
   })
@@ -205,7 +215,7 @@ describe('getBridgeRouteVerdict() — D-51-09 installedIn (LOCATION, not eligibi
   it('installedIn stays null when the title is not installed anywhere and no bridge bottle holds it', async () => {
     library.set(APP_ID, makeEntry({ title: 'Avernum 4', is_installed: false }))
 
-    const result = await getBridgeRouteVerdict(APP_ID)
+    const result = await getBridgeRouteVerdict(steamTestDeps, APP_ID)
 
     expect(result.installedIn).toBeNull()
   })

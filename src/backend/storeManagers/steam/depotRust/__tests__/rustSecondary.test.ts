@@ -1,3 +1,7 @@
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /* eslint-disable @typescript-eslint/unbound-method */
 /**
  * Phase 73 Plan 14: the prescreen, selected-files fetch and startup-resume verify on the Rust
@@ -18,6 +22,12 @@ import { startInstallPolling } from '../../library/installPolling'
 import { RUST_DEPOT_MANIFEST_SUMMARY } from 'common/types/sidecarTransport'
 import { classifyDepotError } from '../../depotErrors'
 import { createStubRustDepot } from './fixtures/stubRustDepot'
+
+import * as steamStoresModule from '../../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -369,7 +379,7 @@ describe('startup resume on the rust pipeline', () => {
     })
     invokeMock.mockImplementation(stub.invoke)
 
-    await resumeInterruptedSteamInstall(APP_ID)
+    await resumeInterruptedSteamInstall(steamTestDeps, APP_ID)
 
     expect(stub.jobs).toHaveLength(1)
     const job = stub.jobs[0]
@@ -383,7 +393,7 @@ describe('startup resume on the rust pipeline', () => {
       allowFullOwnership: true
     })
     expect(client.getRawManifest).not.toHaveBeenCalled()
-    expect(startInstallPolling).toHaveBeenCalledWith(APP_ID)
+    expect(startInstallPolling).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     // The TS finalize does not run on top of the ACF Rust wrote (the stub wrote none).
     expect(
       readFileSync(join(sa, `appmanifest_${APP_ID}.acf`), 'utf8')
@@ -403,10 +413,10 @@ describe('startup resume on the rust pipeline', () => {
     const stub = createStubRustDepot({ outcome: { skippedDepots: ['222'] } })
     invokeMock.mockImplementation(stub.invoke)
 
-    await resumeInterruptedSteamInstall(APP_ID)
+    await resumeInterruptedSteamInstall(steamTestDeps, APP_ID)
 
     expect(stub.jobs).toHaveLength(1)
-    expect(startInstallPolling).toHaveBeenCalledWith(APP_ID)
+    expect(startInstallPolling).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     expect(
       readFileSync(join(sa, `appmanifest_${APP_ID}.acf`), 'utf8')
     ).not.toContain('StateFlags')
@@ -443,9 +453,9 @@ describe('startup resume on the rust pipeline', () => {
     })
     invokeMock.mockImplementation(stub.invoke)
 
-    await resumeInterruptedSteamInstall(APP_ID)
+    await resumeInterruptedSteamInstall(steamTestDeps, APP_ID)
 
-    expect(startInstallPolling).toHaveBeenCalledWith(APP_ID)
+    expect(startInstallPolling).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     expect(
       readFileSync(join(sa, `appmanifest_${APP_ID}.acf`), 'utf8')
     ).toContain('1026')
@@ -464,9 +474,9 @@ describe('startup resume on the rust pipeline', () => {
     const stub = createStubRustDepot({ outcome: { status: 'cancelled' } })
     invokeMock.mockImplementation(stub.invoke)
 
-    await resumeInterruptedSteamInstall(APP_ID)
+    await resumeInterruptedSteamInstall(steamTestDeps, APP_ID)
 
-    expect(startInstallPolling).toHaveBeenCalledWith(APP_ID)
+    expect(startInstallPolling).toHaveBeenCalledWith(steamTestDeps, APP_ID)
     expect(
       readFileSync(join(sa, `appmanifest_${APP_ID}.acf`), 'utf8')
     ).toContain('1026')

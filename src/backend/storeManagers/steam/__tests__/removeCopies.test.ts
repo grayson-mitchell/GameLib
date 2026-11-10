@@ -1,3 +1,7 @@
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /**
  * Unit tests for quick-260821-le0 — closes the 32-bit Mac Steam orphan
  * defect: the Apple Silicon host gate, the shared multi-root
@@ -35,6 +39,12 @@ import { steamMetadataStore } from '../stores'
 import SteamGame from '../games'
 import { SteamUser } from '../user'
 import { removeAllSteamInstallCopies } from '../removeAllCopies'
+
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -1080,7 +1090,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     })
     const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
-    const result = await new SteamGame(APP_ID).install({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(removeSpy).toHaveBeenCalledTimes(1)
     expect(removeSpy).toHaveBeenCalledWith(APP_ID, 'native')
@@ -1109,7 +1119,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
       'backend/constants/environment'
     ).isAppleSiliconMac = false
 
-    await new SteamGame(APP_ID).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(removeSpy).not.toHaveBeenCalled()
 
@@ -1136,7 +1146,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     })
     const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
-    await new SteamGame(APP_ID).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(removeSpy).not.toHaveBeenCalled()
     removeSpy.mockRestore()
@@ -1146,7 +1156,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     // No addManifest() call -> readAcfState('native') resolves 'absent'.
     const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
-    const result = await new SteamGame(APP_ID).install({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(removeSpy).not.toHaveBeenCalled()
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
@@ -1166,7 +1176,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
       'backend/logger'
     )
 
-    const result = await new SteamGame(APP_ID).install({} as any)
+    const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(logWarning).toHaveBeenCalled()
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
@@ -1182,7 +1192,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     })
     const librarySetSpy = jest.spyOn(library, 'set')
 
-    await new SteamGame(APP_ID).install({} as any)
+    await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     // No survivor on bottle/bridge in this fixture -> pollUninstallOnce's
     // own confirmed-absent branch calls library.set exactly once. If
@@ -1212,7 +1222,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
     const enumerateSpy = jest.spyOn(acfState, 'enumerateSteamInstallCopies')
     const removeSpy = jest.spyOn(acfState, 'removeSteamInstallCopy')
 
-    const result = await removeAllSteamInstallCopies('../evil')
+    const result = await removeAllSteamInstallCopies(steamTestDeps, '../evil')
 
     expect(result).toEqual({
       removed: 0,
@@ -1227,7 +1237,10 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
   })
 
   it('non-string appName (e.g. a raw number from a malformed IPC payload) -> rejected the same way', async () => {
-    const result = await removeAllSteamInstallCopies(63000 as unknown)
+    const result = await removeAllSteamInstallCopies(
+      steamTestDeps,
+      63000 as unknown
+    )
 
     expect(result).toEqual({
       removed: 0,
@@ -1257,7 +1270,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
-    const result = await removeAllSteamInstallCopies(APP_ID)
+    const result = await removeAllSteamInstallCopies(steamTestDeps, APP_ID)
 
     expect(removeSpy).toHaveBeenCalledTimes(3)
     expect(removeSpy).toHaveBeenNthCalledWith(1, APP_ID, 'native')
@@ -1298,7 +1311,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
-    const result = await removeAllSteamInstallCopies(APP_ID)
+    const result = await removeAllSteamInstallCopies(steamTestDeps, APP_ID)
 
     expect(removeSpy).toHaveBeenCalledTimes(3)
     expect(result).toEqual({ removed: 2, refused: 1 })
@@ -1329,7 +1342,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       'backend/logger'
     )
 
-    const result = await removeAllSteamInstallCopies(APP_ID)
+    const result = await removeAllSteamInstallCopies(steamTestDeps, APP_ID)
 
     expect(result).toEqual({ removed: 1, refused: 1 })
     expect(logWarning).toHaveBeenCalled()
@@ -1348,7 +1361,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
-    const result = await removeAllSteamInstallCopies(APP_ID)
+    const result = await removeAllSteamInstallCopies(steamTestDeps, APP_ID)
 
     expect(removeSpy).not.toHaveBeenCalled()
     expect(result).toEqual({ removed: 0, refused: 0 })
@@ -1375,10 +1388,10 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
-    await removeAllSteamInstallCopies(APP_ID)
+    await removeAllSteamInstallCopies(steamTestDeps, APP_ID)
 
     expect(pollSpy).toHaveBeenCalledTimes(1)
-    expect(pollSpy).toHaveBeenCalledWith(APP_ID, 'native')
+    expect(pollSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, 'native')
 
     enumerateSpy.mockRestore()
     removeSpy.mockRestore()
@@ -1393,7 +1406,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       .spyOn(uninstallPollingModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
 
-    const result = await removeAllSteamInstallCopies(APP_ID)
+    const result = await removeAllSteamInstallCopies(steamTestDeps, APP_ID)
 
     expect(result).toEqual({
       removed: 0,

@@ -41,6 +41,7 @@ import { getBridgeBottleSteamappsRoot } from './library/installRoot'
 import { getBottleSteamappsDir, getSteamBottleSettings } from './bottle'
 import { sanitizeInstalldir } from './installLocation'
 import { NUMERIC_APP_ID } from './gameConstants'
+import type { SteamStoresDeps } from './library/installRoot'
 
 /** Local copy by directory convention (see library.ts). */
 
@@ -88,6 +89,7 @@ async function collectAllowedRoots(appId: string): Promise<Set<string>> {
  * the resume breadcrumb. Never throws; every refusal keeps files and flag.
  */
 export async function deleteCancelledSteamInstall(
+  deps: SteamStoresDeps,
   appId: string,
   opts?: { pollMs?: number; timeoutMs?: number }
 ): Promise<CancelDeleteResult> {
@@ -207,7 +209,7 @@ export async function deleteCancelledSteamInstall(
       return { status: 'refused', reason: 'delete failed' }
     }
 
-    clearSteamResumeBreadcrumb(appId)
+    clearSteamResumeBreadcrumb(deps, appId)
     // D-UAT-11: the stale percent lives in the frontend store
     // useInstallProgressRaw[`${appId}_steam`], mirrored by every mounted
     // hasProgress. Emitting here is the last word: the in-flight settle wait

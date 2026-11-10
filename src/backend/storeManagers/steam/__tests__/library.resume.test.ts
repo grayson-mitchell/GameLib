@@ -1,4 +1,7 @@
-import { createTestManagerDeps } from 'backend/testUtils/testServices'
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /**
  * Unit tests for steam/library/resume.ts (rearmPersistedSteamRestartHolds and the persisted-hold round trip).
  * Moved out of library.test.ts by Phase 65 plan 04 (D-03); mock preamble
@@ -31,6 +34,12 @@ import {
 import { logInfo } from 'backend/logger'
 import { pollInstallOnce } from '../library/installPollOnce'
 import { startInstallPolling } from '../library/installPolling'
+
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -297,8 +306,11 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
     jest
       .mocked(readSteamProcessStartTokens)
       .mockResolvedValue(new Map([[111, 'T1']]))
-    startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
-    await pollInstallOnce('730')
+    startInstallPolling(steamTestDeps, '730', {
+      intervalMs: 60000,
+      isNativeHandoff: true
+    })
+    await pollInstallOnce(steamTestDeps, '730')
   }
 
   beforeEach(() => {
@@ -316,7 +328,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
     jest
       .mocked(steamRestartHoldStore.entries)
       .mockImplementation(() => [...store.entries()] as never)
-    manager = new SteamLibraryManager(createTestManagerDeps())
+    manager = new SteamLibraryManager(steamTestDeps)
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
     ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([])
     library.clear()
@@ -354,13 +366,13 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
       jest
         .mocked(readSteamProcessStartTokens)
         .mockResolvedValue(new Map([[111, 'T1']]))
-      startInstallPolling('730', {
+      startInstallPolling(steamTestDeps, '730', {
         intervalMs: 60000,
         isNativeHandoff: true,
         macNativeRoute: true,
         skippedDepots: ['5']
       })
-      await pollInstallOnce('730')
+      await pollInstallOnce(steamTestDeps, '730')
 
       expect(store.get('730')).toEqual({
         pids: [{ pid: 111, startToken: 'T1' }],
@@ -376,8 +388,11 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
     ])('%s still holds in memory but writes no record', async (_n, tokens) => {
       jest.mocked(listSteamClientPids).mockResolvedValue([111])
       jest.mocked(readSteamProcessStartTokens).mockResolvedValue(tokens)
-      startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
-      await pollInstallOnce('730')
+      startInstallPolling(steamTestDeps, '730', {
+        intervalMs: 60000,
+        isNativeHandoff: true
+      })
+      await pollInstallOnce(steamTestDeps, '730')
 
       expect(store.size).toBe(0)
       expect(statusPayloads()).toContainEqual(
@@ -390,7 +405,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
       expect(store.has('730')).toBe(true)
       jest.mocked(listSteamClientPids).mockResolvedValue([])
       jest.advanceTimersByTime(10_000)
-      await pollInstallOnce('730')
+      await pollInstallOnce(steamTestDeps, '730')
       expect(store.has('730')).toBe(false)
     })
 
@@ -399,7 +414,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
       ;(vdf.parse as jest.Mock).mockReturnValue({
         AppState: { ...ACF_4.AppState, StateFlags: '1042' }
       })
-      await pollInstallOnce('730')
+      await pollInstallOnce(steamTestDeps, '730')
       expect(store.has('730')).toBe(false)
     })
 
@@ -408,7 +423,10 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
       jest
         .mocked(readSteamProcessStartTokens)
         .mockResolvedValue(new Map([[111, 'T1']]))
-      startInstallPolling('730', { intervalMs: 1, isNativeHandoff: true })
+      startInstallPolling(steamTestDeps, '730', {
+        intervalMs: 1,
+        isNativeHandoff: true
+      })
       await jest.advanceTimersByTimeAsync(10)
       expect(store.has('730')).toBe(true)
       await jest.advanceTimersByTimeAsync(7300)
@@ -418,7 +436,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
     it('clears the record when the manifest vanishes', async () => {
       await arm()
       ;(existsSync as jest.Mock).mockReturnValue(false)
-      for (let i = 0; i < 10; i++) await pollInstallOnce('730')
+      for (let i = 0; i < 10; i++) await pollInstallOnce(steamTestDeps, '730')
       expect(store.has('730')).toBe(false)
     })
 
@@ -432,8 +450,11 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
     it('an unprobed -> released (no Steam running) deletes a stale record', async () => {
       store.set('730', record())
       jest.mocked(listSteamClientPids).mockResolvedValue([])
-      startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
-      await pollInstallOnce('730')
+      startInstallPolling(steamTestDeps, '730', {
+        intervalMs: 60000,
+        isNativeHandoff: true
+      })
+      await pollInstallOnce(steamTestDeps, '730')
       expect(store.has('730')).toBe(false)
     })
   })
@@ -453,7 +474,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
       expect(sentCalls('pushGameToLibrary')).toHaveLength(0)
 
       jest.mocked(sendFrontendMessage).mockClear()
-      await pollInstallOnce('730')
+      await pollInstallOnce(steamTestDeps, '730')
       expect(statusPayloads()).toEqual([
         {
           appName: '730',
@@ -467,7 +488,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
 
       jest.mocked(listSteamClientPids).mockResolvedValue([])
       jest.advanceTimersByTime(10_000)
-      await pollInstallOnce('730')
+      await pollInstallOnce(steamTestDeps, '730')
       expect(sentCalls('pushGameToLibrary')).toEqual([
         [
           'pushGameToLibrary',

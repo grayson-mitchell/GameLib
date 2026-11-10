@@ -54,6 +54,19 @@ let queueState: DownloadManagerState = 'idle'
 // window, so a fast click during it appeared completely non-functional and
 // the item stayed queued to auto-resume+re-wedge on the very next restart.
 let currentElement: DMQueueElement | null = getFirstQueueElement()
+// Transitional (66.1-10): the steam stores slice arrives from the composition root
+// (plan 22/23) once the download queue is a per-boot object. Resolved on first read so
+// loading this module does not pull the steam store backends in.
+const steamStoresDeps = {
+  get stores() {
+    return {
+      steam:
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('backend/storeManagers/steam/stores') as typeof import('backend/storeManagers/steam/stores')
+    }
+  }
+}
+
 let autoPaused = false
 
 onConnectivityChange((status) => {
@@ -160,6 +173,7 @@ async function initQueue(isStartup = false) {
       element.type === 'install' &&
       storeCapabilities[element.params.runner].installManagedExternally &&
       (await steamQueueHeadAlreadyInstalled(
+        steamStoresDeps,
         element.params.appName,
         element.params
       ))
@@ -420,7 +434,7 @@ function cancelCurrentDownload({ removeDownloaded = false }) {
         // native run to settle itself (this function is synchronous), never
         // throws and logs every outcome. See todo
         // 2026-10-26-steam-cancel-delete-files-is-a-backend-no-op.
-        void deleteCancelledSteamInstall(appName)
+        void deleteCancelledSteamInstall(steamStoresDeps, appName)
       } else {
         const { folder_name } = libraryManagerMap[runner]
           .getGame(appName)

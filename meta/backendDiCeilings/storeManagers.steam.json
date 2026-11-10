@@ -41,7 +41,7 @@
     "src/backend/storeManagers/steam/__tests__/games.test.ts": 57,
     "src/backend/storeManagers/steam/__tests__/installFormIpc.test.ts": 8,
     "src/backend/storeManagers/steam/__tests__/installLocation.test.ts": 6,
-    "src/backend/storeManagers/steam/__tests__/launchDispatch.test.ts": 5,
+    "src/backend/storeManagers/steam/__tests__/launchDispatch.test.ts": 4,
     "src/backend/storeManagers/steam/__tests__/library.acfState.test.ts": 26,
     "src/backend/storeManagers/steam/__tests__/library.installPollOnce.test.ts": 26,
     "src/backend/storeManagers/steam/__tests__/library.installPolling.test.ts": 26,

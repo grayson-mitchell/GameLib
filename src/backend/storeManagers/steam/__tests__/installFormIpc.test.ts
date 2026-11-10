@@ -1,3 +1,7 @@
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
 /**
  * Unit tests for installFormIpc.ts — the single shared handler body for the
  * phase's only new IPC surface, `isSteamBottleEligible` (D-09 + D-15
@@ -112,6 +116,12 @@ import { join, relative } from 'node:path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { at } from './fixtures/indexed'
 
+import * as steamStoresModule from '../stores'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
+
 const mockedSteamGame = SteamGame as unknown as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedMetadataGet = steamMetadataStore.get as jest.Mock
@@ -155,17 +165,23 @@ describe('installFormIpc.ts', () => {
     it('D-09: resolves the backend verdict for a numeric appName', async () => {
       mockCheckBottleEligibility.mockResolvedValue(true)
 
-      const verdict = await getSteamBottleEligibilityVerdict('570')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        '570'
+      )
 
       expect(verdict.eligible).toBe(true)
-      expect(mockedSteamGame).toHaveBeenCalledWith('570')
+      expect(mockedSteamGame).toHaveBeenCalledWith('570', expect.anything())
       expect(mockCheckBottleEligibility).toHaveBeenCalledTimes(1)
     })
 
     it('D-09: a false backend verdict round-trips as false', async () => {
       mockCheckBottleEligibility.mockResolvedValue(false)
 
-      const verdict = await getSteamBottleEligibilityVerdict('570')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        '570'
+      )
 
       expect(verdict.eligible).toBe(false)
     })
@@ -173,7 +189,10 @@ describe('installFormIpc.ts', () => {
     it.each(['abc', '', '570; rm -rf /', '../../etc/passwd', '57 0'])(
       'T-34.13-07-01: a non-numeric appName %p fails closed and never constructs a SteamGame',
       async (hostileAppName) => {
-        const result = await getSteamBottleEligibilityVerdict(hostileAppName)
+        const result = await getSteamBottleEligibilityVerdict(
+          steamTestDeps,
+          hostileAppName
+        )
 
         expect(result).toEqual({
           eligible: false,
@@ -195,7 +214,10 @@ describe('installFormIpc.ts', () => {
     it.each<unknown>([123, ['570'], null, undefined, {}])(
       'WR-10: a non-STRING appName %p fails closed and never constructs a SteamGame',
       async (hostileAppName: unknown) => {
-        const result = await getSteamBottleEligibilityVerdict(hostileAppName)
+        const result = await getSteamBottleEligibilityVerdict(
+          steamTestDeps,
+          hostileAppName
+        )
 
         expect(result).toEqual({
           eligible: false,
@@ -226,7 +248,10 @@ describe('installFormIpc.ts', () => {
         return undefined
       })
 
-      const verdict = await getSteamBottleEligibilityVerdict('570')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        '570'
+      )
 
       expect(verdict.wineVersion).toEqual(persistedEngine)
     })
@@ -239,7 +264,10 @@ describe('installFormIpc.ts', () => {
         wineCrossoverBottle: 'SentinelBottle'
       })
 
-      const verdict = await getSteamBottleEligibilityVerdict('570')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        '570'
+      )
 
       expect(verdict.wineVersion).toBeUndefined()
       expect(verdict.bottleName).toBe(DEFAULT_STEAM_BOTTLE_NAME)
@@ -254,7 +282,10 @@ describe('installFormIpc.ts', () => {
         return undefined
       })
 
-      const verdict = await getSteamBottleEligibilityVerdict('570')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        '570'
+      )
 
       expect(verdict.bottleName).toBe('FromWineCrossoverBottle')
     })
@@ -275,7 +306,10 @@ describe('installFormIpc.ts', () => {
         installedIn: null
       })
 
-      const verdict = await getSteamBottleEligibilityVerdict('206040')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        '206040'
+      )
 
       expect(verdict.bridgeRoute).toEqual({
         route: 'bridge',
@@ -288,20 +322,29 @@ describe('installFormIpc.ts', () => {
         userRoute: null,
         installedIn: null
       })
-      expect(mockedGetBridgeRouteVerdict).toHaveBeenCalledWith('206040')
+      expect(mockedGetBridgeRouteVerdict).toHaveBeenCalledWith(
+        expect.anything(),
+        '206040'
+      )
     })
 
     it('a non-eligible game never computes bridgeRoute at all', async () => {
       mockCheckBottleEligibility.mockResolvedValue(false)
 
-      const verdict = await getSteamBottleEligibilityVerdict('206040')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        '206040'
+      )
 
       expect(verdict.bridgeRoute).toBeUndefined()
       expect(mockedGetBridgeRouteVerdict).not.toHaveBeenCalled()
     })
 
     it('a rejected (non-numeric) appName never computes bridgeRoute either', async () => {
-      const verdict = await getSteamBottleEligibilityVerdict('not-numeric')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        'not-numeric'
+      )
 
       expect(verdict.bridgeRoute).toBeUndefined()
       expect(mockedGetBridgeRouteVerdict).not.toHaveBeenCalled()
@@ -316,7 +359,10 @@ describe('installFormIpc.ts', () => {
         platformsCaptured: true
       })
 
-      const verdict = await getSteamBottleEligibilityVerdict('570')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        '570'
+      )
 
       expect(verdict.hasWindowsDepot).toBe(true)
       expect(verdict.platformsCaptured).toBe(true)
@@ -329,7 +375,10 @@ describe('installFormIpc.ts', () => {
         platformsCaptured: true
       })
 
-      const verdict = await getSteamBottleEligibilityVerdict('570')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        '570'
+      )
 
       expect(verdict.hasWindowsDepot).toBe(false)
       expect(verdict.platformsCaptured).toBe(true)
@@ -346,7 +395,10 @@ describe('installFormIpc.ts', () => {
         platformsCaptured: true
       })
 
-      const verdict = await getSteamBottleEligibilityVerdict('570')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        '570'
+      )
 
       expect(verdict.hasWindowsDepot).toBe(false)
       expect(verdict.platformsCaptured).toBe(false)
@@ -356,7 +408,10 @@ describe('installFormIpc.ts', () => {
       mockCheckBottleEligibility.mockResolvedValue(true)
       mockedMetadataGet.mockReturnValue(undefined)
 
-      const verdict = await getSteamBottleEligibilityVerdict('570')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        '570'
+      )
 
       expect(verdict.hasWindowsDepot).toBe(false)
       expect(verdict.platformsCaptured).toBe(false)
@@ -371,7 +426,10 @@ describe('installFormIpc.ts', () => {
         platformsCaptured: true
       })
 
-      const verdict = await getSteamBottleEligibilityVerdict('570')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        '570'
+      )
 
       expect(verdict.hasMacDepot).toBe(true)
     })
@@ -382,14 +440,20 @@ describe('installFormIpc.ts', () => {
         is_mac_native: undefined
       })
 
-      const verdict = await getSteamBottleEligibilityVerdict('570')
+      const verdict = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        '570'
+      )
 
       expect(verdict.hasMacDepot).toBe(false)
       expect(verdict.platformsCaptured).toBe(false)
     })
 
     it('the eligible: false early return includes hasMacDepot: false', async () => {
-      const result = await getSteamBottleEligibilityVerdict('not-numeric')
+      const result = await getSteamBottleEligibilityVerdict(
+        steamTestDeps,
+        'not-numeric'
+      )
 
       expect(result).toMatchObject({ eligible: false, hasMacDepot: false })
     })

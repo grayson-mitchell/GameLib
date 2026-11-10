@@ -1,4 +1,8 @@
-import { createTestManagerDeps } from 'backend/testUtils/testServices'
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
+import * as steamStoresModule from '../stores'
 /**
  * Unit tests for steam/library/installRoot.ts (resolveInstallRoot, hostInstallPlatform).
  * Moved out of library.test.ts by Phase 65 plan 02 (D-03); mock preamble copied.
@@ -17,6 +21,10 @@ import { getBottleSteamappsDir, getSteamBottleSettings } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { join } from 'path'
 import { library } from '../state'
+
+const steamTestDeps = createTestManagerDeps({
+  stores: createTestStores({ steam: steamStoresModule })
+})
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 // steam/games.ts imports the shared shortcuts module, whose import graph does not load under
@@ -381,7 +389,7 @@ describe('hostInstallPlatform() via refreshInstallState() — install.platform r
   }
 
   beforeEach(() => {
-    manager = new SteamLibraryManager(createTestManagerDeps())
+    manager = new SteamLibraryManager(steamTestDeps)
     envMock = jest.requireMock('backend/constants/environment')
     // Default to Linux (matches the top-level module mock declaration at L99-104)
     envMock.isWindows = false

@@ -9,6 +9,7 @@ import { logInfo, LogPrefix } from 'backend/logger'
 import { getSteamLibraries } from 'backend/utils'
 import { library } from './state'
 import { NUMERIC_APP_ID } from './gameConstants'
+import type { SteamStoresDeps } from './library/installRoot'
 import { clearSteamResumeBreadcrumb } from './library/resumeBreadcrumbs'
 import {
   isCurrentFullInstall,
@@ -37,6 +38,7 @@ import {
  * buildid, so Steam's own UpdateRequired bit is the determinable proxy.
  */
 export async function steamQueueHeadAlreadyInstalled(
+  deps: SteamStoresDeps,
   appId: string,
   params: { path?: string }
 ): Promise<boolean> {
@@ -58,7 +60,7 @@ export async function steamQueueHeadAlreadyInstalled(
       return false
     }
 
-    clearSteamResumeBreadcrumb(appId)
+    clearSteamResumeBreadcrumb(deps, appId)
     logInfo(
       `${appId} is a queued Steam install but its appmanifest is already a current full install — dropping it from the queue (todo 2026-11-09)`,
       LogPrefix.Steam

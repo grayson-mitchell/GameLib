@@ -459,7 +459,10 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
         .mocked(getSteamBottleEligibilityVerdict)
         .mockResolvedValue({ eligible: true } as never)
       const result = await invokeTargets(['570'])
-      expect(getSteamBottleEligibilityVerdict).toHaveBeenCalledWith('570')
+      expect(getSteamBottleEligibilityVerdict).toHaveBeenCalledWith(
+        expect.anything(),
+        '570'
+      )
       expect(result).toEqual([
         {
           path: '/fake/steam/library',

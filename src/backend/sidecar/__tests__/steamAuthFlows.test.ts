@@ -690,7 +690,10 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         result: { eligible: true, bottleName: 'GameLibSteam' }
       })
       expect(getSteamBottleEligibilityVerdict).toHaveBeenCalledTimes(1)
-      expect(getSteamBottleEligibilityVerdict).toHaveBeenCalledWith('570')
+      expect(getSteamBottleEligibilityVerdict).toHaveBeenCalledWith(
+        expect.anything(),
+        '570'
+      )
     })
 
     it('persistBottleWineVersion invoke round-trips the status object and delegates the payload unchanged', async () => {

@@ -32,15 +32,16 @@ import { notify } from 'backend/dialog/dialog'
 import { singleFlightLaunch } from 'backend/launchSingleFlight'
 import { addRecentGame } from 'backend/recent_games/recent_games'
 import type LogWriter from 'backend/logger/log_writer'
+import type { ManagerDeps } from 'backend/services/types'
+
+type LaunchDispatchDeps = Pick<ManagerDeps, 'libraryManagers'>
 
 /**
  * Launches a Steam title and, on success, records it as a recent game.
  *
- * Resolves `libraryManagerMap` lazily (`await import('backend/storeManagers')`)
- * to avoid adding a new static edge into the `launcher.ts <->
- * storeManagers/index.ts` circular-import seam — the same reason
- * `launcher.ts`'s own `launchEventCallback` resolves it lazily (see the
- * comment at that call site).
+ * Reads the Steam library manager from the injected `deps.libraryManagers`
+ * (66.1), so this module holds no import edge into the
+ * `launcher.ts <-> storeManagers/index.ts` seam.
  *
  * A launch that never started is not a recent game: on a `false` result this
  * returns `false` immediately and writes NO `games.recent` entry.
@@ -50,23 +51,30 @@ import type LogWriter from 'backend/logger/log_writer'
  * successful launch into a reported failure — so a rejection here is logged
  * and swallowed, and `dispatchSteamLaunch` still resolves `true`.
  */
-export function dispatchSteamLaunch(appName: string): Promise<boolean> {
+export function dispatchSteamLaunch(
+  deps: LaunchDispatchDeps,
+  appName: string
+): Promise<boolean> {
   return singleFlightLaunch(
     'steam',
     appName,
-    () => notifyAlreadyLaunching(appName),
-    () => runDispatch(appName)
+    () => notifyAlreadyLaunching(deps, appName),
+    () => runDispatch(deps, appName)
   )
 }
 
-async function notifyAlreadyLaunching(appName: string): Promise<void> {
+function notifyAlreadyLaunching(
+  deps: LaunchDispatchDeps,
+  appName: string
+): void {
   try {
     logInfo(
       `dispatchSteamLaunch: appId ${appName} launch already in progress; joining it (WR-03)`,
       LogPrefix.Steam
     )
-    const { libraryManagerMap } = await import('backend/storeManagers')
-    const title = libraryManagerMap.steam.getGame(appName).getGameInfo().title
+    const title = deps.libraryManagers.steam
+      .getGame(appName)
+      .getGameInfo().title
     notify({
       title,
       // Same call shape as the file's other i18next.t uses; the lint ceiling counts warnings.
@@ -84,9 +92,11 @@ async function notifyAlreadyLaunching(appName: string): Promise<void> {
   }
 }
 
-async function runDispatch(appName: string): Promise<boolean> {
-  const { libraryManagerMap } = await import('backend/storeManagers')
-  const game = libraryManagerMap.steam.getGame(appName)
+async function runDispatch(
+  deps: LaunchDispatchDeps,
+  appName: string
+): Promise<boolean> {
+  const game = deps.libraryManagers.steam.getGame(appName)
   const launched = await game.launch(undefined as unknown as LogWriter)
 
   if (!launched) {

@@ -5,7 +5,7 @@ import { getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
 import i18next from 'i18next'
-import { steamLibraryStore } from '../stores'
+import type { ManagerDeps } from 'backend/services/types'
 import { library } from '../state'
 import { formatEta, rollingRateMiBs } from '../depotRust/progress'
 import { readSteamDownloadMonitor } from '../steamDownloadMonitor'
@@ -43,6 +43,7 @@ import { stopInstallPolling } from './installStop'
  * Exported for unit testing.
  */
 export async function pollInstallOnce(
+  deps: ManagerDeps,
   appId: string,
   source: AcfSource = 'native'
 ): Promise<void> {
@@ -136,7 +137,7 @@ export async function pollInstallOnce(
         LogPrefix.Steam
       )
       stopInstallPolling(appId)
-      markSteamInstallIncomplete(appId)
+      markSteamInstallIncomplete(deps, appId)
       sendFrontendMessage('gameStatusUpdate', {
         appName: appId,
         runner: 'steam',
@@ -343,7 +344,10 @@ export async function pollInstallOnce(
       // GAP-17-BOTTLE-STORE-DIVERGENCE: persist immediately (see
       // refreshInstallState() for rationale) so a restart mid-poll can't read
       // a stale not-installed state from steamLibraryStore.
-      steamLibraryStore.set('games', Array.from(library.values()))
+      deps.stores.steam.steamLibraryStore.set(
+        'games',
+        Array.from(library.values())
+      )
       sendFrontendMessage('pushGameToLibrary', updated)
     }
     // Quick 261029-exu: a bridge install keeps working after its manifest
@@ -443,7 +447,7 @@ export async function pollInstallOnce(
     // installs only (a bottle install is a Windows depot; no Mach-O binary
     // belongs to this game on that path) and macOS-only (host-gated).
     if (isMac && source === 'native') {
-      void verifyMacArchGroundTruth(appId, result.installPath!, source)
+      void verifyMacArchGroundTruth(deps, appId, result.installPath!, source)
     }
   }
   // 'absent': no message — grace/cap logic is in startInstallPolling's setInterval callback
