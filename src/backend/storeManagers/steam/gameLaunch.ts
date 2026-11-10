@@ -167,7 +167,7 @@ export async function launch(
     const pre = await preflightCrossover(
       getSteamBottleSettings()?.wineCrossoverBottle ??
         DEFAULT_STEAM_BOTTLE_NAME,
-      steamDecisionDeps()
+      steamDecisionDeps({ spawnAsync: steamGame.deps.spawnAsync })
     )
     if (pre.kind !== 'healthy') {
       notifyCrossoverRequired(steamGame, 'bottled', pre)
@@ -533,7 +533,9 @@ export async function selectLaunchEngine(
     const refusal = offlineLaunchCertainlyBlocked({
       offline: connectivity.offline,
       override: earlyOverride,
-      crossoverMissing: await isCrossoverMissing(steamDecisionDeps()),
+      crossoverMissing: await isCrossoverMissing(
+        steamDecisionDeps({ spawnAsync: steamGame.deps.spawnAsync })
+      ),
       markerKind: readBottleEngineMarkerKind(bottleName),
       currentPinInstalled: isPinnedEngineInstalled(ENGINE_PINS.current),
       restoreNeedsAbsentPin: restoreNeedsAbsentPin(bottleName)
@@ -563,7 +565,7 @@ export async function selectLaunchEngine(
 
   const decision = await decideLaunchEngine(
     { key: steamGame.appId, bottleName },
-    steamDecisionDeps()
+    steamDecisionDeps({ spawnAsync: steamGame.deps.spawnAsync })
   )
   if (decision.kind === 'unavailable') {
     logWarning(

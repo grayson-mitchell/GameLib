@@ -47,6 +47,7 @@ jest.mock('../../ipc', () => ({
 }))
 
 import { registerEngineFlows } from '../engineFlowRegistration'
+import { createTestServices } from 'backend/testUtils/testServices'
 import {
   createTestManagers,
   createTestStores
@@ -68,8 +69,10 @@ function fakeGame(over: { native?: boolean; platform?: string } = {}) {
   }
 }
 
+const spawnAsync = createTestServices().spawnAsync
+
 describe('engine flows', () => {
-  beforeAll(() => registerEngineFlows({ managers, stores }))
+  beforeAll(() => registerEngineFlows({ managers, stores, spawnAsync }))
   beforeEach(() => {
     jest.clearAllMocks()
     envState.isMac = true
@@ -93,7 +96,10 @@ describe('engine flows', () => {
         { runner: 'steam', appName: '220' }
       )
     ).toEqual({ kind: 's' })
-    expect(steamState).toHaveBeenCalledWith({ managers, stores }, '220')
+    expect(steamState).toHaveBeenCalledWith(
+      { managers, stores, spawnAsync },
+      '220'
+    )
     expect(getGame).not.toHaveBeenCalled()
     expect(gameState).not.toHaveBeenCalled()
   })
@@ -105,7 +111,7 @@ describe('engine flows', () => {
     expect(await handlers.get('getEngineState')!({}, arg)).toEqual({
       kind: 'n'
     })
-    expect(gameState).toHaveBeenCalledWith(arg)
+    expect(gameState).toHaveBeenCalledWith({ spawnAsync }, arg)
   })
 
   it('returns null for an invalid identity without any game lookup', async () => {
@@ -176,7 +182,7 @@ describe('engine flows', () => {
   })
 
   it('wires the publisher to engineStateChanged', () => {
-    registerEngineFlows({ managers, stores })
+    registerEngineFlows({ managers, stores, spawnAsync })
     const publisher = setPublisher.mock.calls[0][0] as (s: unknown) => void
     const state = { appId: '1' }
     publisher(state)

@@ -1044,6 +1044,7 @@ async function prepareWineLaunch(
   // Phase 61-16 (D-18): after installFixes and the known-fix overlay env, so prerequisite
   // installers never count against the deadline (RESEARCH Pitfall 3).
   armEngineLaunchDeadline(
+    legacyEngineServices(),
     game,
     engineKeyFor(gameInfo.runner, gameInfo.app_name)
   )

@@ -7,7 +7,9 @@
  * bottle and the bridge bottle's CrossOver settings.
  */
 import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
+import { killCrossoverWineserverWith } from 'backend/engine/engineDecision'
 import type { EngineDecisionDeps } from 'backend/engine/engineDecision'
+import type { EngineServices } from 'backend/engine/engineServices'
 import type { EngineSwitchDeps } from 'backend/engine/engineSwitch'
 import { readStoredGameConfig } from 'backend/engine/engineConfig'
 import type { EffectiveEngine } from 'backend/engine/engineConfig'
@@ -42,8 +44,12 @@ export function readSteamEngineOverride(appId: string): unknown {
 const hintedBinDir = () =>
   resolveCrossoverBinDirAsync({ hintWineBins: persistedWineBins() })
 
-export function steamDecisionDeps(): Partial<EngineDecisionDeps> {
+export function steamDecisionDeps(
+  services: Pick<EngineServices, 'spawnAsync'>
+): Partial<EngineDecisionDeps> &
+  Pick<EngineDecisionDeps, 'killCrossoverWineserver'> {
   return {
+    killCrossoverWineserver: killCrossoverWineserverWith(services),
     resolveCrossoverBinDir: hintedBinDir,
     readOverride: readSteamEngineOverride,
     monitorPhase: getBottleProcessMonitorPhase
@@ -89,13 +95,13 @@ export function isDrmModeFromVerdict(
  * applies to every bridge title (Phase 60 D-02).
  */
 export function steamEngineStateDeps(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & Pick<EngineServices, 'spawnAsync'>,
   appId: string,
   over: Partial<EngineStateDeps> = {}
 ): EngineStateDeps {
   const own = bridgeBottleNameFor(appId)
   return {
-    ...steamDecisionDeps(),
+    ...steamDecisionDeps({ spawnAsync: deps.spawnAsync }),
     bottleFor: () => findBridgeInstallBottle(appId),
     overrideEligible: (_id, bottle) =>
       bottle === own && !isDrmModeFromVerdict(readBridgeVerdict(deps, appId)),
@@ -116,7 +122,7 @@ export function steamEngineStateDeps(
 }
 
 export async function getSteamEngineState(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & Pick<EngineServices, 'spawnAsync'>,
   appId: unknown,
   over?: Partial<EngineStateDeps>
 ): Promise<EngineState | null> {

@@ -17,7 +17,11 @@
  */
 import { hasCapability } from 'common/storeCapabilities'
 import { ipcMain } from '../platform'
-import type { StoreManagers, Stores } from 'backend/services/types'
+import type {
+  BootServices,
+  StoreManagers,
+  Stores
+} from 'backend/services/types'
 import { isMac } from '../constants/environment'
 import { sendFrontendMessage } from '../ipc'
 import {
@@ -36,6 +40,7 @@ import { engineKeyFor } from 'backend/engine/gameKey'
 export interface EngineFlowDeps {
   managers: Pick<StoreManagers, 'library'>
   stores: Pick<Stores, 'steam'>
+  spawnAsync: BootServices['spawnAsync']
 }
 
 async function getEngineStateFor(
@@ -65,7 +70,7 @@ async function getEngineStateFor(
   } catch {
     return null
   }
-  return getGameEngineState(arg)
+  return getGameEngineState({ spawnAsync: deps.spawnAsync }, arg)
 }
 
 /**

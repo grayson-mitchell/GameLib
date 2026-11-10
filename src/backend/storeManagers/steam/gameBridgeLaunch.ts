@@ -172,7 +172,7 @@ export async function launchBridgeGameBody(
     const { steamDecisionDeps } = await import('./engine/steamEngineDeps')
     const pre = await preflightCrossover(
       bridgeBottleSettings.wineCrossoverBottle,
-      steamDecisionDeps()
+      steamDecisionDeps({ spawnAsync: steamGame.deps.spawnAsync })
     )
     if (pre.kind !== 'healthy') {
       notifyCrossoverRequired(steamGame, 'drm', pre)

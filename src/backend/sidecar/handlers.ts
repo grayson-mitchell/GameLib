@@ -144,7 +144,8 @@ export function registerHandlers(deps: {
   registerSteamAuthFlows(deps.services)
   registerEngineFlows({
     managers: deps.services.managers,
-    stores: deps.services.stores
+    stores: deps.services.stores,
+    spawnAsync: deps.services.spawnAsync
   })
   registerInstallFlows(deps.services)
   registerSettingsFlows({
