@@ -41,11 +41,8 @@ import { i18nextLanguageOptions, localeFileSegments } from 'common/languages'
 // Importing `./handlers` registers nothing (D-08); the 'register-handlers' boot step calls it.
 
 import { registerHandlers } from './handlers'
-import {
-  buildLauncherFacade,
-  buildManagersFacade,
-  buildStoresFacade
-} from '../services/legacyFacades'
+import { buildStoresFacade } from '../services/legacyFacades'
+import { createStoreManagers } from '../storeManagers'
 import type { BootServices, StoreManagers, Stores } from '../services/types'
 // Block D (finding A1, quick-260907-odi). Adds NO new module to the sidecar bundle:
 // `sidecar/storeRegistration.ts:61` already imports `playtimeSyncQueue` from this exact
@@ -177,16 +174,17 @@ import { isMac } from '../constants/environment'
 // edge back into `sidecar/` (`grep -n "from './sidecar\|from '\.\./sidecar" src/backend/
 // utils.ts` returns nothing), so this import introduces no cycle. `isMac` above is already
 // imported for other blocks -- not duplicated here.
-import { checkRosettaInstall, errorHandler } from '../utils'
+import {
+  checkRosettaInstall,
+  errorHandler,
+  type ErrorHandlerDeps
+} from '../utils'
 import { createCommandRunner } from '../commandRunner'
 import { createSpawnAsync } from '../spawnAsync'
 import { createQuitHandler } from '../quitHandler'
 import { tOrFallback } from '../i18nFallback'
 import { getMainWindow } from '../main_window'
-import {
-  bindLegacyBootQueue,
-  createDownloadQueue
-} from '../downloadmanager/downloadqueue'
+import { createDownloadQueue } from '../downloadmanager/downloadqueue'
 import { hasLiveBridgeHelper } from '../storeManagers/steam/bridge/helperRegistry'
 import { SteamUser } from '../storeManagers/steam/user'
 // Transitional (removed by plan 27): the legacy registries still hold children until plans
@@ -334,6 +332,7 @@ function requireServices(state: BootState): BootServices {
     managers,
     launcher,
     commandRunner,
+    runner,
     spawnAsync,
     quit,
     downloadQueue
@@ -343,6 +342,7 @@ function requireServices(state: BootState): BootServices {
     !managers ||
     !launcher ||
     !commandRunner ||
+    !runner ||
     !spawnAsync ||
     !quit ||
     !downloadQueue
@@ -353,6 +353,7 @@ function requireServices(state: BootState): BootServices {
         'managers',
         'launcher',
         'commandRunner',
+        'runner',
         'spawnAsync',
         'quit',
         'downloadQueue'
@@ -365,6 +366,7 @@ function requireServices(state: BootState): BootServices {
     managers,
     launcher,
     commandRunner,
+    runner,
     spawnAsync,
     quit,
     downloadQueue
@@ -1081,6 +1083,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'command-runner',
       run: (ctx, _io, state) => {
+        const errorHandlerDeps: ErrorHandlerDeps = {
+          get libraryManagers() {
+            return requireServices(state).managers.library
+          }
+        }
+        state.services.runner = prebuilt.runner ?? ctx.runner
         state.services.commandRunner =
           prebuilt.commandRunner ??
           createCommandRunner({
@@ -1098,7 +1106,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
               create: createAbortController,
               remove: deleteAbortController
             },
-            errorHandler,
+            // CommandRunnerDeps keeps its (error, appName, runner) shape; the manager table is
+            // read only in errorHandler's deleted-folder branch, after boot, like the
+            // commandToArgsArray closure below ('command-runner' runs before 'store-managers').
+            errorHandler: (error, appName, runner) =>
+              errorHandler(errorHandlerDeps, error, appName, runner),
             searchForExecutableOnPath,
             // Read lazily: 'command-runner' runs before 'store-managers', and the closure only
             // fires after boot has completed.
@@ -1108,7 +1120,12 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
               ).managers.library.legendary.commandToArgsArray(command),
             wine: {
               getDefaultSettings: () => GlobalConfig.get().getSettings(),
-              verifyWinePrefix,
+              // The runner built below: wineboot goes through it, not a legacy launcher function.
+              verifyWinePrefix: (settings) => {
+                const { commandRunner } = state.services
+                if (!commandRunner) throw new Error('command runner not built')
+                return verifyWinePrefix({ commandRunner }, settings)
+              },
               validWine,
               setupEnvVars,
               setupWineEnvVars,
@@ -1148,13 +1165,31 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'store-managers',
-      run: (_ctx, _io, state) => {
-        // The 'download-queue' step runs after this one, so auto-update reaches the queue through
-        // an accessor resolved when it enqueues.
-        state.services.managers =
-          prebuilt.managers ??
-          buildManagersFacade(() => requireServices(state).downloadQueue)
-        state.services.launcher = prebuilt.launcher ?? buildLauncherFacade()
+      run: (ctx, _io, state) => {
+        const { stores, commandRunner, spawnAsync, runner } = state.services
+        if (!stores || !commandRunner || !spawnAsync || !runner) {
+          throw new Error(
+            'store-managers step ran before stores/command-runner'
+          )
+        }
+        // The 'download-queue' step runs after this one, so the managers reach the queue through
+        // an accessor resolved when they enqueue; never read state.services.downloadQueue here.
+        // `runner: ctx.runner` is the runner commandRunner is built on: spawn and stop share one
+        // registry.
+        if (prebuilt.managers && prebuilt.launcher) {
+          state.services.managers = prebuilt.managers
+          state.services.launcher = prebuilt.launcher
+          return
+        }
+        const built = createStoreManagers({
+          stores,
+          commandRunner,
+          spawnAsync,
+          runner,
+          getDownloadQueue: () => requireServices(state).downloadQueue
+        })
+        state.services.managers = prebuilt.managers ?? built
+        state.services.launcher = prebuilt.launcher ?? built.launcher
       }
     },
     {
@@ -1176,7 +1211,6 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           queue.start()
         }
         state.services.downloadQueue = queue
-        bindLegacyBootQueue(queue)
         // The managers do not exist at the 'logger' step, so the System Information line is
         // logged here, the first point where they do. Fire-and-forget; managers resolved
         // through a getter inside the fetch, never at step time.

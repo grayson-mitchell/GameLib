@@ -255,7 +255,6 @@ let writeConfig: typeof import('backend/utils').writeConfig
 let GlobalConfig: typeof import('backend/config').GlobalConfig
 let getSteamBottleEligibilityVerdict: typeof import('../../storeManagers/steam/installFormIpc').getSteamBottleEligibilityVerdict
 let isSteamExperimentalInstallAppEnabled: typeof import('../../storeManagers/steam/experimentalInstallAppSetting').isSteamExperimentalInstallAppEnabled
-let libraryManagerMap: typeof import('backend/storeManagers').libraryManagerMap
 let findBridgeInstallBottle: typeof import('../../storeManagers/steam/bridgeBottle').findBridgeInstallBottle
 let resolveInstallRoot: typeof import('../../storeManagers/steam/library/installRoot').resolveInstallRoot
 let steamLibraryMap: typeof import('../../storeManagers/steam/state').library
@@ -284,7 +283,6 @@ function freshRegistry(): void {
   ;({
     isSteamExperimentalInstallAppEnabled
   } = require('../../storeManagers/steam/experimentalInstallAppSetting'))
-  ;({ libraryManagerMap } = require('backend/storeManagers'))
   ;({
     findBridgeInstallBottle
   } = require('../../storeManagers/steam/bridgeBottle'))
@@ -829,6 +827,9 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // way. This one actually makes one manager reject and asserts the other
   // runners' already-collected results still come back.
   it('WR-05: one runner rejecting must not discard the other runners’ update results', async () => {
+    // The managers are built by the boot now (66.1-23): boot first, then spy on its table.
+    const { input, frames, services } = boot()
+    const libraryManagerMap = services.managers.library
     const runners = Object.keys(
       libraryManagerMap
     ) as (keyof typeof libraryManagerMap)[]
@@ -846,7 +847,6 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     )
 
     try {
-      const { input, frames } = boot()
       writeInvoke(input, 'updates-isolation-1', 'checkGameUpdates', [])
       await flush()
 

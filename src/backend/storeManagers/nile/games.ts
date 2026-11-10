@@ -45,7 +45,6 @@ import { sendFrontendMessage } from '../../ipc'
 import setup from './setup'
 import { getUmuId } from 'backend/wiki_game_info/umu/utils'
 import { isWindows } from 'backend/constants/environment'
-import { killTracked } from 'backend/trackedChildren'
 
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import type LogWriter from 'backend/logger/log_writer'
@@ -60,7 +59,11 @@ export default class NileGameManager implements Game {
     private readonly deps: ShortcutsDeps &
       Pick<
         ManagerDeps,
-        'libraryManagers' | 'launcher' | 'commandRunner' | 'spawnAsync'
+        | 'libraryManagers'
+        | 'launcher'
+        | 'commandRunner'
+        | 'spawnAsync'
+        | 'runner'
       > & {
         stores: Pick<
           ManagerDeps['stores'],
@@ -619,7 +622,7 @@ export default class NileGameManager implements Game {
   }
 
   async stop(stopWine = true) {
-    killTracked({ runner: 'nile', key: this.id })
+    this.deps.runner.killTracked({ runner: 'nile', key: this.id })
 
     if (stopWine && !this.isNative()) {
       const gameSettings = getLaunchSettings(

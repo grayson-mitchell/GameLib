@@ -277,14 +277,24 @@ jest.mock('backend/storeManagers', () => {
     // F-34.5-G6-10 (34.5-43): getInstallInfo -- late-discovered channel.
     getInstallInfo: jest.fn()
   })
+  const libraryManagerMap = {
+    legendary: makeManager(),
+    gog: makeManager(),
+    steam: makeManager(),
+    nile: makeManager(),
+    sideload: makeManager()
+  }
   return {
-    libraryManagerMap: {
-      legendary: makeManager(),
-      gog: makeManager(),
-      steam: makeManager(),
-      nile: makeManager(),
-      sideload: makeManager()
-    }
+    libraryManagerMap,
+    // The boot builds its managers through this factory (66.1-23); here it hands back the
+    // scripted table so the suite keeps driving the same fakes.
+    createStoreManagers: () => ({
+      library: libraryManagerMap,
+      launchHooks: {},
+      autoUpdate: () => [],
+      initAll: async () => [],
+      launcher: {}
+    })
   }
 })
 

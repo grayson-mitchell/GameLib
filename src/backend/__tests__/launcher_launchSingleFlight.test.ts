@@ -3,15 +3,6 @@
  * the launcher body once (one log writer, one game.launch, one status set).
  */
 const getGameMock = jest.fn()
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {
-    legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
-  },
-  // 62-14: launcher.ts dispatches store-specific work through the hook table;
-  // legendary has none of the optional hooks under test here.
-  storeLaunchHooks: { legendary: {} }
-}))
-
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
@@ -48,7 +39,7 @@ jest.mock('backend/recent_games/recent_games', () => ({
 
 jest.mock('backend/runsForMe', () => ({ recordPlaySession: jest.fn() }))
 
-import { launchEventCallback } from 'backend/launcher'
+import { createLauncher } from 'backend/launcher'
 import { createGameLogWriter } from 'backend/logger'
 import { resetLaunchSingleFlightForTests } from 'backend/launchSingleFlight'
 import { defined } from './helpers/defined'
@@ -61,6 +52,23 @@ function makeLogWriter() {
     close: jest.fn().mockResolvedValue(undefined)
   }
 }
+
+// 66.1-23: the launcher is built from test deps. 62-14: launcher.ts dispatches store-specific work
+// through the hook table; legendary has none of the optional hooks under test here.
+const tsStore = {
+  has: () => true,
+  get: (_key: string, fallback: number) => fallback,
+  set: jest.fn()
+}
+const { launchEventCallback } = createLauncher({
+  libraryManagers: {
+    legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
+  } as never,
+  launchHooks: { legendary: {} } as never,
+  commandRunner: {} as never,
+  spawnAsync: (() => Promise.reject(new Error('unscripted spawn'))) as never,
+  stores: { kvs: { tsStore }, wineManager: {}, runsForMe: {} } as never
+})
 
 describe('launchEventCallback single-flight (WR-03)', () => {
   let resolvers: Array<(v: boolean) => void>

@@ -24,11 +24,6 @@ jest.mock('backend/storeManagers/nile/setup', () => ({
 jest.mock('backend/storeManagers/legendary/setup', () => ({
   legendarySetup: (...a: unknown[]) => legendarySetupMock(...a)
 }))
-jest.mock('backend/storeManagers/legendary/stores', () => ({
-  legendaryConfigStore: {
-    get_nodefault: (...a: unknown[]) => getNodefaultMock(...a)
-  }
-}))
 jest.mock('backend/storeManagers/legendary/epicOfflineMode', () => ({
   resolveEpicOfflineMode: (...a: unknown[]) => resolveEpicOfflineModeMock(...a)
 }))
@@ -46,25 +41,30 @@ jest.mock('backend/storeManagers/steam/bottle', () => ({
   persistBottleWineVersion: (...a: unknown[]) => persistMock(...a)
 }))
 jest.mock('backend/ipc', () => ({
+  ...jest.requireActual('backend/ipc'),
   sendFrontendMessage: (...a: unknown[]) => sendFrontendMessageMock(...a)
 }))
-jest.mock('backend/logger', () => ({
-  logInfo: jest.fn(),
-  RunnerToLogPrefixMap: {}
-}))
-jest.mock('backend/downloadmanager/downloadqueue', () => ({
-  addToQueue: jest.fn()
-}))
-for (const lib of ['sideload', 'gog', 'legendary', 'nile', 'steam']) {
-  jest.mock(`backend/storeManagers/${lib}/library`, () => ({
-    __esModule: true,
-    default: class {}
-  }))
-}
 
 import type LogWriter from 'backend/logger/log_writer'
 import type { WineInstallation } from 'common/types'
-import { storeLaunchHooks } from 'backend/storeManagers'
+import { buildLaunchHooks } from 'backend/storeManagers'
+import {
+  createTestManagerDeps,
+  createTestStores
+} from 'backend/testUtils/testServices'
+import type { Stores } from 'backend/services/types'
+
+// The hooks are built from deps (66.1-23); the legendary expired flag reads the injected store.
+const legendaryStores = {
+  legendaryConfigStore: {
+    get_nodefault: (...a: unknown[]) => getNodefaultMock(...a)
+  }
+} as unknown as Stores['legendary']
+const storeLaunchHooks = buildLaunchHooks(
+  createTestManagerDeps({
+    stores: createTestStores({ legendary: legendaryStores })
+  })
+)
 
 const logWriter = {} as LogWriter
 

@@ -152,17 +152,23 @@ jest.mock('../../launcher', () => ({
   launchEventCallback: (...args: unknown[]) => launchEventCallbackMock(...args)
 }))
 
-// `backend/storeManagers` is DELIBERATELY left unmocked -- `libraryManagerMap.steam` must be
-// the real singleton `steamFlowRegistration.ts` dispatches through, so `jest.spyOn` on its
-// `refreshInstallState` method observes the real production call path, not a stand-in.
-import { libraryManagerMap } from '../../storeManagers'
+// The steam manager is a REAL SteamLibraryManager (built from test deps, 66.1-23 -- there is no
+// import-time singleton any more) that `steamFlowRegistration.ts` dispatches through, so
+// `jest.spyOn` on its `refreshInstallState` method observes the real production call path, not
+// a stand-in.
+import SteamLibraryManager from '../../storeManagers/steam/library'
 import { registerSteamFlows } from '../steamFlowRegistration'
 import { startRpcServer } from '../sidecarRpc'
 import { listenerRegistry } from '../../platform'
 import {
+  createTestManagerDeps,
   createTestManagers,
   createTestStores
 } from '../../testUtils/testServices'
+
+const libraryManagerMap = {
+  steam: new SteamLibraryManager(createTestManagerDeps())
+}
 
 /** The slices `registerSteamFlows` takes; the steam manager is the real singleton. */
 const steamFlowDeps = () => ({

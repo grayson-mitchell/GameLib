@@ -11,7 +11,9 @@ import { resolveEpicOfflineMode } from 'backend/storeManagers/legendary/epicOffl
 import gogPresence from 'backend/storeManagers/gog/presence'
 import { isEnabled as isEosOverlayEnabled } from 'backend/storeManagers/legendary/eos_overlay/eos_overlay'
 import { sendFrontendMessage } from 'backend/ipc'
-import { legacyManagerDeps } from 'backend/services/legacyFacades'
+import { createLauncher } from 'backend/launcher'
+import type { Launcher } from 'backend/launcher'
+import type { ManagerDeps, StoreManagers } from 'backend/services/types'
 
 import { logInfo, RunnerToLogPrefixMap } from 'backend/logger'
 import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
@@ -27,14 +29,6 @@ import type LogWriter from 'backend/logger/log_writer'
 
 // launcher.ts reaches store-specific code only through this module (D-13).
 export type { LegendaryCommand } from 'backend/storeManagers/legendary/commands'
-
-export const libraryManagerMap = {
-  sideload: new SideloadLibraryManager(legacyManagerDeps()),
-  gog: new GOGLibraryManager(legacyManagerDeps()),
-  legendary: new LegendaryLibraryManager(legacyManagerDeps()),
-  nile: new NileLibraryManager(legacyManagerDeps()),
-  steam: new SteamLibraryManager(legacyManagerDeps())
-} satisfies Record<Runner, LibraryManager>
 
 interface OfflineModeInput {
   offlineMode: boolean
@@ -63,59 +57,63 @@ export interface StoreLaunchHooks {
   persistBottleWineVersion?: (wineVersion: WineInstallation) => Promise<void>
 }
 
-const launchHooks = {
-  sideload: {},
-  gog: {
-    prepareLaunch: async (appName) => {
-      await gogSetup(legacyManagerDeps(), appName)
-      sendFrontendMessage('gameStatusUpdate', {
-        appName,
-        runner: 'gog',
-        status: 'launching'
-      })
+/**
+ * The per-runner launch hooks, built from the boot's manager deps. Every body reads `deps` at
+ * call time only (the managers it reaches are filled in after construction).
+ */
+export function buildLaunchHooks(
+  deps: ManagerDeps
+): Record<Runner, StoreLaunchHooks> {
+  const hooks = {
+    sideload: {},
+    gog: {
+      prepareLaunch: async (appName) => {
+        await gogSetup(deps, appName)
+        sendFrontendMessage('gameStatusUpdate', {
+          appName,
+          runner: 'gog',
+          status: 'launching'
+        })
+      },
+      setPresence: async (appName) => {
+        gogPresence.setCurrentGame(appName)
+        await gogPresence.setPresence(deps)
+      },
+      clearPresence: async () => {
+        gogPresence.setCurrentGame('')
+        await gogPresence.setPresence(deps)
+      }
     },
-    setPresence: async (appName) => {
-      gogPresence.setCurrentGame(appName)
-      await gogPresence.setPresence(legacyManagerDeps())
-    },
-    clearPresence: async () => {
-      gogPresence.setCurrentGame('')
-      await gogPresence.setPresence(legacyManagerDeps())
-    }
-  },
-  legendary: {
-    prepareLaunch: async (appName, logWriter) => {
-      await legendarySetup(legacyManagerDeps(), appName, logWriter)
-    },
-    // R8 (Phase 49): the expired flag is read here, once per launch.
-    resolveOfflineMode: (input) =>
-      resolveEpicOfflineMode({
-        ...input,
-        storeExpired: Boolean(
-          legacyManagerDeps().stores.legendary.legendaryConfigStore.get_nodefault(
-            'expired'
+    legendary: {
+      prepareLaunch: async (appName, logWriter) => {
+        await legendarySetup(deps, appName, logWriter)
+      },
+      // R8 (Phase 49): the expired flag is read here, once per launch.
+      resolveOfflineMode: (input) =>
+        resolveEpicOfflineMode({
+          ...input,
+          storeExpired: Boolean(
+            deps.stores.legendary.legendaryConfigStore.get_nodefault('expired')
           )
-        )
-      }),
-    isOverlayEnabled: (appName) =>
-      isEosOverlayEnabled(legacyManagerDeps(), appName)
-  },
-  nile: {
-    prepareLaunch: async (appName) => {
-      await nileSetup(legacyManagerDeps(), appName)
+        }),
+      isOverlayEnabled: (appName) => isEosOverlayEnabled(deps, appName)
+    },
+    nile: {
+      prepareLaunch: async (appName) => {
+        await nileSetup(deps, appName)
+      }
+    },
+    steam: {
+      persistBottleWineVersion: async (wineVersion) => {
+        const { persistBottleWineVersion } =
+          await import('backend/storeManagers/steam/bottle')
+        persistBottleWineVersion(wineVersion)
+      }
     }
-  },
-  steam: {
-    persistBottleWineVersion: async (wineVersion) => {
-      const { persistBottleWineVersion } =
-        await import('backend/storeManagers/steam/bottle')
-      persistBottleWineVersion(wineVersion)
-    }
-  }
-} satisfies Record<Runner, StoreLaunchHooks>
-
-// Widened so a call site can write `storeLaunchHooks[runner].prepareLaunch?.()`.
-export const storeLaunchHooks: Record<Runner, StoreLaunchHooks> = launchHooks
+  } satisfies Record<Runner, StoreLaunchHooks>
+  // Widened so a call site can write `launchHooks[runner].prepareLaunch?.()`.
+  return hooks
+}
 
 function getDMElement(gameInfo: GameInfo, appName: string) {
   const {
@@ -138,37 +136,83 @@ function getDMElement(gameInfo: GameInfo, appName: string) {
   return dmQueueElement
 }
 
-/** `getDownloadQueue` is called only when an update is enqueued (the queue is built after the managers). */
-export interface AutoUpdateDeps {
-  getDownloadQueue: () => Pick<DownloadQueue, 'addToQueue'>
+export interface CreateStoreManagersDeps {
+  stores: ManagerDeps['stores']
+  commandRunner: ManagerDeps['commandRunner']
+  spawnAsync: ManagerDeps['spawnAsync']
+  /** The runner commandRunner is built on: stop paths kill through the registry spawns use. */
+  runner: ManagerDeps['runner']
+  /** Called only when an update is enqueued (the queue is built after the managers). */
+  getDownloadQueue: () => DownloadQueue
 }
 
-export function autoUpdate(
-  runner: Runner,
-  gamesToUpdate: string[],
-  deps: AutoUpdateDeps
-) {
-  const logPrefix = RunnerToLogPrefixMap[runner]
-  gamesToUpdate.forEach(async (appName) => {
-    const game = libraryManagerMap[runner].getGame(appName)
-    const { ignoreGameUpdates } = await game.getSettings()
-    const gameInfo = game.getGameInfo()
-    const gameIsAvailable = await game.isGameAvailable()
-    if (!ignoreGameUpdates && gameIsAvailable) {
-      logInfo(`Auto-Updating ${gameInfo.title}`, logPrefix)
-      const dmQueueElement: DMQueueElement = getDMElement(gameInfo, appName)
-      void deps.getDownloadQueue().addToQueue(dmQueueElement)
-      // remove from the array to avoid downloading the same game twice
-      gamesToUpdate = gamesToUpdate.filter((game) => game !== appName)
-    } else {
-      logInfo(`Skipping auto-update for ${gameInfo.title}`, logPrefix)
-    }
+/**
+ * Builds the five library managers and the launcher for one boot (D-02). The manager table is
+ * allocated first and handed to every constructor by reference (RESEARCH Pattern B); no
+ * constructor reads a sibling, so filling it afterwards is safe.
+ */
+export function createStoreManagers(
+  deps: CreateStoreManagersDeps
+): StoreManagers & { launcher: Launcher } {
+  const library = {} as StoreManagers['library']
+  const managerDeps: ManagerDeps = {
+    libraryManagers: library,
+    stores: deps.stores,
+    commandRunner: deps.commandRunner,
+    // The launcher is built below from the same map; managers reach it at call time.
+    get launcher() {
+      return launcher
+    },
+    spawnAsync: deps.spawnAsync,
+    runner: deps.runner,
+    getDownloadQueue: deps.getDownloadQueue
+  }
+  const launchHooks = buildLaunchHooks(managerDeps)
+  const launcher = createLauncher({
+    libraryManagers: library,
+    launchHooks,
+    commandRunner: deps.commandRunner,
+    spawnAsync: deps.spawnAsync,
+    stores: deps.stores
   })
-  return gamesToUpdate
-}
+  Object.assign(library, {
+    sideload: new SideloadLibraryManager(managerDeps),
+    gog: new GOGLibraryManager(managerDeps),
+    legendary: new LegendaryLibraryManager(managerDeps),
+    nile: new NileLibraryManager(managerDeps),
+    steam: new SteamLibraryManager(managerDeps)
+  } satisfies Record<Runner, LibraryManager>)
 
-export async function initStoreManagers() {
-  return Promise.all(
-    Object.values(libraryManagerMap).map((manager) => manager.init())
-  )
+  function autoUpdate(runner: Runner, gamesToUpdate: string[]) {
+    const logPrefix = RunnerToLogPrefixMap[runner]
+    gamesToUpdate.forEach(async (appName) => {
+      const game = library[runner].getGame(appName)
+      const { ignoreGameUpdates } = await game.getSettings()
+      const gameInfo = game.getGameInfo()
+      const gameIsAvailable = await game.isGameAvailable()
+      if (!ignoreGameUpdates && gameIsAvailable) {
+        logInfo(`Auto-Updating ${gameInfo.title}`, logPrefix)
+        const dmQueueElement: DMQueueElement = getDMElement(gameInfo, appName)
+        void deps.getDownloadQueue().addToQueue(dmQueueElement)
+        // remove from the array to avoid downloading the same game twice
+        gamesToUpdate = gamesToUpdate.filter((game) => game !== appName)
+      } else {
+        logInfo(`Skipping auto-update for ${gameInfo.title}`, logPrefix)
+      }
+    })
+    return gamesToUpdate
+  }
+
+  return {
+    library,
+    launchHooks,
+    autoUpdate,
+    initAll: () =>
+      Promise.all(
+        Object.values(library as Record<Runner, LibraryManager>).map(
+          (manager) => manager.init()
+        )
+      ),
+    launcher
+  }
 }

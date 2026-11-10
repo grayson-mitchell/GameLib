@@ -15,6 +15,8 @@ import type { Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type { StoreLaunchHooks } from 'backend/storeManagers'
 import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
+import type { Launcher } from 'backend/launcher'
+import type { ProcessRunner } from 'backend/process/types'
 import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
@@ -58,23 +60,8 @@ export interface StoreManagers {
   initAll(): Promise<unknown[]>
 }
 
-type LauncherModule = typeof import('backend/launcher')
-
-/** The non-command launcher exports. */
-export type Launcher = Pick<
-  LauncherModule,
-  | 'prepareLaunch'
-  | 'launchCleanup'
-  | 'prepareWineLaunch'
-  | 'setupEnvVars'
-  | 'setupWrapperEnvVars'
-  | 'setupWineEnvVars'
-  | 'setupWrappers'
-  | 'launchEventCallback'
-  | 'getKnownFixesEnvVariables'
-  | 'validWine'
-  | 'verifyWinePrefix'
->
+/** The launcher built by createLauncher (the non-command launcher members). */
+export type { Launcher }
 
 export type CommandRunner = CommandRunnerImpl
 
@@ -88,6 +75,11 @@ export interface ManagerDeps {
   launcher: Launcher
   spawnAsync: SpawnAsync
   /**
+   * The boot's process runner (the one commandRunner is built on), so a manager's stop path
+   * kills through the same registry its spawns are tracked in.
+   */
+  runner: Pick<ProcessRunner, 'killTracked' | 'spawnLongLived'>
+  /**
    * A call-time accessor, never a queue value: the download queue is built by the
    * 'download-queue' boot step, after the managers exist.
    */
@@ -99,6 +91,8 @@ export interface BootServices {
   managers: StoreManagers
   launcher: Launcher
   commandRunner: CommandRunner
+  /** ctx.runner: the process runner commandRunner is built on (one registry). */
+  runner: ManagerDeps['runner']
   spawnAsync: SpawnAsync
   quit: QuitHandler
   downloadQueue: DownloadQueue

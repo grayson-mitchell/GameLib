@@ -5,7 +5,6 @@
     "src/backend/downloadmanager/__tests__/utils.test.ts": 10
   },
   "moduleState": {
-    "src/backend/downloadmanager/downloadqueue.ts": 1,
     "src/backend/downloadmanager/stores.ts": 1
   }
 }

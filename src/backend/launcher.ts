@@ -1,4 +1,3 @@
-import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
 import { trackChild } from './trackedChildren'
 import {
   CallRunnerOptions,
@@ -31,22 +30,9 @@ import {
   sendGameStatusUpdate,
   checkWineBeforeLaunch,
   isMacSonomaOrHigher,
-  askForceUninstall,
-  getGame,
-  spawnAsync
+  askForceUninstall
 } from './utils'
-// Static top-level import (not a lazy `require()`) of the alias
-// 'backend/storeManagers'. Only dereferenced INSIDE function bodies below
-// (never at this module's top level), so the launcher.ts <->
-// storeManagers/index.ts cycle is safe the same way downloadqueue.ts's is —
-// see the comment there (debug/download-queue-require-crash). Fixes the
-// same class of bug: electron-vite's production build leaves a literal,
-// unresolvable `require("backend/storeManagers")` in the emitted chunk for
-// synchronous require() calls, even though it resolves the alias fine for
-// static `import`/`import()`.
-// `storeLaunchHooks` rides the same safe cycle: it is only dereferenced inside
-// function bodies, never at this module's top level.
-import { libraryManagerMap, storeLaunchHooks } from 'backend/storeManagers'
+import type { StoreLaunchHooks } from 'backend/storeManagers'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 import {
   createGameLogWriter,
@@ -58,8 +44,17 @@ import {
   logWarning
 } from './logger'
 import { GlobalConfig } from './config'
-import { createTools } from './tools'
-import type { CommandRunner } from './services/types'
+import {
+  engineServicesFrom,
+  toolsFrom,
+  type EngineServicesSource
+} from './services/engineServices'
+import type {
+  CommandRunner,
+  SpawnAsync,
+  StoreManagers,
+  Stores
+} from './services/types'
 import { spawn, spawnSync } from 'child_process'
 import shlex from 'shlex'
 import { buildGameScopeCommand } from './gamescopeCommand'
@@ -78,10 +73,6 @@ import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
 import { copyFile } from 'fs/promises'
 import { app, powerSaveBlocker } from 'backend/platform'
 import { addRecentGame } from './recent_games/recent_games'
-import * as kvsStores from './constants/key_value_stores'
-import * as wineManagerStores from './wine/manager/stores'
-import * as runsForMeStores from './runsForMe/stores'
-import { tsStore } from './constants/key_value_stores'
 import { readKnownFixes } from './knownFixes'
 import { applyKnownFixProfileRegistry } from './knownFixesRegistry'
 import { knownFixProfileOverlayEnv, logKnownFixEnv } from './knownFixOverlays'
@@ -111,7 +102,6 @@ import {
   endEngineLaunch,
   selectEngineForLaunch
 } from './engine/launchEngine'
-import type { EngineServices } from './engine/engineServices'
 import { getLaunchSettings } from './engine/launchSettings'
 import { engineKeyFor } from './engine/gameKey'
 
@@ -120,20 +110,41 @@ import type { PartialDeep } from 'type-fest'
 import type LogWriter from './logger/log_writer'
 import { Game } from 'common/types/game_manager'
 
-let powerDisplayId: number | null
+/** What the launcher is built from (66.1, D-02): constructed once per boot by createStoreManagers. */
+export interface LauncherDeps {
+  /** Late-bound: filled by createStoreManagers after the launcher is built, read at call time only. */
+  libraryManagers: StoreManagers['library']
+  launchHooks: Record<Runner, StoreLaunchHooks>
+  commandRunner: CommandRunner
+  spawnAsync: SpawnAsync
+  stores: Pick<Stores, 'kvs' | 'wineManager' | 'runsForMe'>
+}
 
-const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
-  appName,
-  launchArguments,
-  runner,
-  skipVersionCheck,
-  args
-}) => {
-  // Imported lazily to break a circular dependency (launcher.ts <->
-  // storeManagers/index.ts) — see the load-bearing comment in
-  // storeManagers/gog/user.ts.
-  const { libraryManagerMap } = await import('backend/storeManagers')
-  const game = libraryManagerMap[runner].getGame(appName)
+/** The display-sleep blocker id of one launcher instance (closure state, not module state). */
+interface PowerState {
+  displayId: number | null
+}
+
+type LaunchCtx = LauncherDeps & { power: PowerState }
+
+/** The tool wrappers bound to this launcher's own deps (tools module state is still module-level until 66.3). */
+function engineSource(deps: LauncherDeps): EngineServicesSource {
+  return {
+    libraryManagers: deps.libraryManagers,
+    commandRunner: deps.commandRunner,
+    spawnAsync: deps.spawnAsync,
+    stores: deps.stores,
+    // The pure env/validation helpers are module functions, so the tools need no handle on the
+    // launcher being built (checker warning 6).
+    launcher: { setupEnvVars, setupWineEnvVars, validWine }
+  }
+}
+
+async function runLaunchEventCallback(
+  deps: LaunchCtx,
+  { appName, launchArguments, runner, skipVersionCheck, args }: LaunchParams
+): StatusPromise {
+  const game = deps.libraryManagers[runner].getGame(appName)
   const gameInfo = game.getGameInfo()
 
   if (
@@ -164,6 +175,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
 
   const startPlayingDate = new Date()
 
+  const { tsStore } = deps.stores.kvs
   if (!tsStore.has(appName)) {
     tsStore.set(`${appName}.firstPlayed`, startPlayingDate.toISOString())
   }
@@ -201,9 +213,9 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
   }
 
   // Prevent display from sleep
-  if (!powerDisplayId) {
+  if (!deps.power.displayId) {
     logInfo('Preventing display from sleep', LogPrefix.Backend)
-    powerDisplayId = powerSaveBlocker.start('prevent-display-sleep')
+    deps.power.displayId = powerSaveBlocker.start('prevent-display-sleep')
   }
 
   const logWriter = await createGameLogWriter(appName, runner)
@@ -222,10 +234,14 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
 
   // Phase 61 (D-05, D-13): on macOS every non-Steam Windows launch runs the engine step before
   // any Wine check. It returns the engine this launch uses; nothing is persisted (D-08).
-  const engineStep = await selectEngineForLaunch(legacyEngineServices(), game, {
-    offline: !isOnline(),
-    logWriter
-  })
+  const engineStep = await selectEngineForLaunch(
+    engineServicesFrom(engineSource(deps)),
+    game,
+    {
+      offline: !isOnline(),
+      logWriter
+    }
+  )
   if (engineStep.kind === 'refused') {
     sendGameStatusUpdate({
       appName,
@@ -252,7 +268,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
   // persist a derived or fallback engine into wineVersion (D-08).
   if (!isNative && !engineControlled) {
     const isWineOkToLaunch = await checkWineBeforeLaunch(
-      legacyWineStores(),
+      { stores: deps.stores },
       gameInfo,
       gameSettings,
       logWriter
@@ -291,7 +307,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
     // validation call. Steam's isNative() is false ONLY for a bottle-eligible
     // game, so this block is unreachable for native Steam games (Linux/
     // Windows) and for every other runner.
-    await storeLaunchHooks[runner].persistBottleWineVersion?.(
+    await deps.launchHooks[runner].persistBottleWineVersion?.(
       gameSettings.wineVersion
     )
   }
@@ -299,7 +315,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
   let launchedAt: number
   let command: Promise<boolean>
   try {
-    await runBeforeLaunchScript(gameInfo, gameSettings, logWriter)
+    await runBeforeLaunchScript(deps, gameInfo, gameSettings, logWriter)
 
     sendGameStatusUpdate({
       appName,
@@ -312,7 +328,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
     launchedAt = Date.now()
     command = game.launch(logWriter, launchArguments, args, skipVersionCheck)
 
-    await storeLaunchHooks[runner].setPresence?.(appName)
+    await deps.launchHooks[runner].setPresence?.(appName)
   } catch (error) {
     // The engine selection must not outlive a launch that never got going.
     releaseEngine()
@@ -331,7 +347,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
     })
     .finally(async () => {
       try {
-        await runAfterLaunchScript(gameInfo, gameSettings, logWriter)
+        await runAfterLaunchScript(deps, gameInfo, gameSettings, logWriter)
         await logWriter.close()
       } finally {
         releaseEngine()
@@ -344,18 +360,18 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
   // not the game; bottleProcessMonitor records Steam sessions.
   if (!hasCapability(runner, 'playtimeTrackedExternally') && launchResult) {
     recordPlaySession(
-      legacyWineStores(),
+      { stores: deps.stores },
       appName,
       runner,
       Date.now() - launchedAt
     )
   }
 
-  await storeLaunchHooks[runner].clearPresence?.()
+  await deps.launchHooks[runner].clearPresence?.()
   // Stop display sleep blocker
-  if (powerDisplayId !== null) {
+  if (deps.power.displayId !== null) {
     logInfo('Stopping Display Power Saver Blocker', LogPrefix.Backend)
-    powerSaveBlocker.stop(powerDisplayId)
+    powerSaveBlocker.stop(deps.power.displayId)
   }
 
   // Update playtime and last played date
@@ -371,7 +387,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
   const { disablePlaytimeSync } = GlobalConfig.get().getSettings()
   if (isStore(runner, 'gog')) {
     if (!disablePlaytimeSync) {
-      await libraryManagerMap['gog']
+      await deps.libraryManagers.gog
         .getGame(appName)
         .updateGOGPlaytime(startPlayingDate, finishedPlayingDate)
     } else {
@@ -381,7 +397,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
       )
     }
   }
-  await addRecentGame({ stores: { kvs: kvsStores } }, gameInfo)
+  await addRecentGame({ stores: { kvs: deps.stores.kvs } }, gameInfo)
 
   if (autoSyncSaves && isOnline()) {
     sendGameStatusUpdate({
@@ -426,7 +442,10 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
 // before any launcher-level work runs. Deliberately a plain (non-async) arrow
 // so the in-flight check precedes runLaunchEventCallback's first await. No
 // notify on join: the span covers the whole play session for these runners.
-const launchEventCallback: (args: LaunchParams) => StatusPromise = (params) =>
+const launchEventCallback = (
+  deps: LaunchCtx,
+  params: LaunchParams
+): StatusPromise =>
   singleFlightLaunch(
     params.runner,
     params.appName,
@@ -436,7 +455,7 @@ const launchEventCallback: (args: LaunchParams) => StatusPromise = (params) =>
         LogPrefix.Backend
       )
     },
-    () => runLaunchEventCallback(params)
+    () => runLaunchEventCallback(deps, params)
   )
 
 function filterGameSettingsForLog(
@@ -591,6 +610,7 @@ function filterGameSettingsForLog(
 }
 
 async function prepareLaunch(
+  deps: LauncherDeps,
   gameSettings: GameSettings,
   logWriter: LogWriter,
   gameInfo: GameInfo
@@ -607,7 +627,7 @@ async function prepareLaunch(
   // offline. The flag is read ONCE, here; a probe that latches it after this
   // point only affects the next launch, never one already in flight.
   offlineMode =
-    storeLaunchHooks[gameInfo.runner].resolveOfflineMode?.({
+    deps.launchHooks[gameInfo.runner].resolveOfflineMode?.({
       offlineMode,
       runner: gameInfo.runner,
       canRunOffline: Boolean(gameInfo.canRunOffline)
@@ -630,9 +650,7 @@ async function prepareLaunch(
     'Launching',
     `"${gameInfo.title}" (${gameInfo.runner})`
   ])
-  // Lazy import — see the load-bearing comment in launchEventCallback above.
-  const { libraryManagerMap } = await import('backend/storeManagers')
-  const native = libraryManagerMap[gameInfo.runner]
+  const native = deps.libraryManagers[gameInfo.runner]
     .getGame(gameInfo.app_name)
     .isNative()
   await logWriter.logInfo(['Native?', native])
@@ -643,7 +661,10 @@ async function prepareLaunch(
     if (!isWindows) {
       let prefixOrBottleFolder: string | null = gameSettings.winePrefix
       if (isMac && gameSettings.wineVersion.type === 'crossover') {
-        prefixOrBottleFolder = await getCrossoverBottleFolder(gameSettings)
+        prefixOrBottleFolder = await getCrossoverBottleFolder(
+          deps,
+          gameSettings
+        )
       }
       if (prefixOrBottleFolder)
         await logWriter.logInfo(['Installed in:', prefixOrBottleFolder])
@@ -664,7 +685,7 @@ async function prepareLaunch(
 
   await logWriter.logInfo([
     'System Info:',
-    getSystemInfo({ libraryManagers: libraryManagerMap })
+    getSystemInfo({ libraryManagers: deps.libraryManagers })
       .then(formatSystemInfo)
       .then((s) => `\n${s}\n\n`)
   ])
@@ -777,8 +798,11 @@ async function prepareLaunch(
 }
 
 // Use Crossover's verbose output to extract the path of the game's configured bottle
-async function getCrossoverBottleFolder(gameSettings: GameSettings) {
-  const command = runWineCommand({
+async function getCrossoverBottleFolder(
+  deps: Pick<LauncherDeps, 'commandRunner'>,
+  gameSettings: GameSettings
+) {
+  const command = deps.commandRunner.runWineCommand({
     commandParts: [
       '--bottle',
       gameSettings.wineCrossoverBottle,
@@ -803,6 +827,7 @@ async function getCrossoverBottleFolder(gameSettings: GameSettings) {
 }
 
 async function prepareWineLaunch(
+  deps: LauncherDeps,
   game: Game,
   logWriter: LogWriter,
   // False for callers that do not merge tier-1 `envVariables` (the sideload
@@ -861,7 +886,7 @@ async function prepareWineLaunch(
   }
 
   logWriter.logInfo(
-    tools()
+    toolsFrom(engineSource(deps))
       .Winetricks.listInstalled(game)
       .then((installedPackages) => {
         const packagesString = installedPackages.join(', ')
@@ -873,7 +898,7 @@ async function prepareWineLaunch(
   // On windows, the overlay is installed globally
   // On mac, the overlay doesn't work
   const checkEOSOverlayStatusPromise = isLinux
-    ? storeLaunchHooks[gameInfo.runner].isOverlayEnabled?.(gameInfo.app_name)
+    ? deps.launchHooks[gameInfo.runner].isOverlayEnabled?.(gameInfo.app_name)
     : undefined
   if (checkEOSOverlayStatusPromise) {
     // The first time a game runs, the overlay is not enabled yet at this point
@@ -890,7 +915,7 @@ async function prepareWineLaunch(
     )
   }
 
-  await verifyWinePrefix(gameSettings)
+  await verifyWinePrefix(deps, gameSettings)
   const experimentalFeatures =
     GlobalConfig.get().getSettings().experimentalFeatures
 
@@ -898,7 +923,7 @@ async function prepareWineLaunch(
 
   let prefixOrBottleFolder: string | null = gameSettings.winePrefix
   if (isMac && gameSettings.wineVersion.type === 'crossover') {
-    prefixOrBottleFolder = await getCrossoverBottleFolder(gameSettings)
+    prefixOrBottleFolder = await getCrossoverBottleFolder(deps, gameSettings)
   }
 
   // we check this because if the Crossover's bottle is not configured
@@ -926,22 +951,17 @@ async function prepareWineLaunch(
       ['Created/Updated Wineprefix at', gameSettings.winePrefix],
       LogPrefix.Backend
     )
-    await storeLaunchHooks[gameInfo.runner].prepareLaunch?.(
+    await deps.launchHooks[gameInfo.runner].prepareLaunch?.(
       gameInfo.app_name,
       logWriter
     )
 
-    await installFixes(gameInfo.app_name, gameInfo.runner)
+    await installFixes(deps, gameInfo.app_name, gameInfo.runner)
   }
 
   // Tier-2 profile registry, every launch (Decision 1, quick 261026-j6x).
   await applyKnownFixProfileRegistry(
-    {
-      commandRunner: {
-        runWineCommand:
-          runWineCommand as unknown as CommandRunner['runWineCommand']
-      }
-    },
+    { commandRunner: deps.commandRunner },
     gameInfo.app_name,
     gameInfo.runner,
     gameSettings
@@ -983,7 +1003,7 @@ async function prepareWineLaunch(
     ) {
       const galaxyCommWinePath =
         'C:\\ProgramData\\GOG.com\\Galaxy\\redists\\GalaxyCommunication.exe'
-      const communicationDest = await getWinePath({
+      const communicationDest = await deps.commandRunner.getWinePath({
         path: galaxyCommWinePath,
         gameSettings,
         variant: 'unix'
@@ -992,7 +1012,7 @@ async function prepareWineLaunch(
       if (!existsSync(communicationDest)) {
         mkdirSync(dirname(communicationDest), { recursive: true })
         await copyFile(galaxyCommunicationExePath, communicationDest)
-        await runWineCommand({
+        await deps.commandRunner.runWineCommand({
           commandParts: [
             'sc',
             'create',
@@ -1013,14 +1033,15 @@ async function prepareWineLaunch(
 
   // If DXVK/VKD3D installation is enabled, install it
   if (gameSettings.wineVersion.type === 'wine') {
+    const tools = toolsFrom(engineSource(deps))
     if (gameSettings.autoInstallDxvk) {
-      await tools().DXVK.installRemove(gameSettings, 'dxvk', 'backup')
+      await tools.DXVK.installRemove(gameSettings, 'dxvk', 'backup')
     }
     if (isLinux && gameSettings.autoInstallDxvkNvapi) {
-      await tools().DXVK.installRemove(gameSettings, 'dxvk-nvapi', 'backup')
+      await tools.DXVK.installRemove(gameSettings, 'dxvk-nvapi', 'backup')
     }
     if (isLinux && gameSettings.autoInstallVkd3d) {
-      await tools().DXVK.installRemove(gameSettings, 'vkd3d', 'backup')
+      await tools.DXVK.installRemove(gameSettings, 'vkd3d', 'backup')
     }
   }
 
@@ -1045,7 +1066,7 @@ async function prepareWineLaunch(
   // Phase 61-16 (D-18): after installFixes and the known-fix overlay env, so prerequisite
   // installers never count against the deadline (RESEARCH Pitfall 3).
   armEngineLaunchDeadline(
-    legacyEngineServices(),
+    engineServicesFrom(engineSource(deps)),
     game,
     engineKeyFor(gameInfo.runner, gameInfo.app_name)
   )
@@ -1057,7 +1078,11 @@ async function prepareWineLaunch(
   }
 }
 
-async function installFixes(appName: string, runner: Runner) {
+async function installFixes(
+  deps: LauncherDeps,
+  appName: string,
+  runner: Runner
+) {
   const knownFixes = readKnownFixes(appName, runner)
 
   if (!knownFixes) return
@@ -1070,12 +1095,16 @@ async function installFixes(appName: string, runner: Runner) {
     })
 
     for (const winetricksPackage of knownFixes.winetricks) {
-      await tools().Winetricks.install(runner, appName, winetricksPackage)
+      await toolsFrom(engineSource(deps)).Winetricks.install(
+        runner,
+        appName,
+        winetricksPackage
+      )
     }
   }
 
   if (knownFixes.runInPrefix) {
-    const gameInfo = getGame(appName, runner).getGameInfo()
+    const gameInfo = deps.libraryManagers[runner].getGame(appName).getGameInfo()
 
     sendGameStatusUpdate({
       appName,
@@ -1086,11 +1115,15 @@ async function installFixes(appName: string, runner: Runner) {
 
     for (const filePath of knownFixes.runInPrefix) {
       const fullPath = join(gameInfo.install.install_path!, filePath)
-      await tools().runWineCommandOnGame(runner, appName, {
-        commandParts: [fullPath],
-        wait: true,
-        protonVerb: 'run'
-      })
+      await toolsFrom(engineSource(deps)).runWineCommandOnGame(
+        runner,
+        appName,
+        {
+          commandParts: [fullPath],
+          wait: true,
+          protonVerb: 'run'
+        }
+      )
     }
   }
 }
@@ -1106,7 +1139,7 @@ function getKnownFixesEnvVariables(appName: string, runner: Runner) {
  * @param gameSettings The GameSettings to get the environment variables for
  * @returns A big string of environment variables, structured key=value
  */
-function setupEnvVars(gameSettings: GameSettings, installPath?: string) {
+export function setupEnvVars(gameSettings: GameSettings, installPath?: string) {
   const ret: Record<string, string> = {}
   if (gameSettings.nvidiaPrime) {
     ret.DRI_PRIME = '1'
@@ -1171,7 +1204,7 @@ function setupWrapperEnvVars(wrapperEnv: WrapperEnv) {
  * @param gameId If Proton and the Steam Runtime are used, the SteamGameId variable will be set to `heroic-gameId` if it's unset
  * @returns A Record that can be passed to execAsync/spawn
  */
-function setupWineEnvVars(gameSettings: GameSettings, gameId = '0') {
+export function setupWineEnvVars(gameSettings: GameSettings, gameId = '0') {
   const { wineVersion, winePrefix, wineCrossoverBottle } = gameSettings
 
   const ret: Record<string, string> = {}
@@ -1419,51 +1452,6 @@ function setupWrappers(
  * @param wineVersion an object of type WineInstallation with binary path and name to check
  * @returns true if the wine version exists, false if it doesn't
  */
-/**
- * TEMPORARY (plan 12, deleted by plan 23 with the launcher conversion): the tool wrappers bound
- * to this module's own functions. Resolved at call time (R4): `libraryManagerMap` and the
- * functions below are live bindings of a module that is still loading when it is first reached.
- */
-/**
- * TEMPORARY (plan 19, deleted by plan 23 with the launcher conversion): the kvs and wine-manager
- * store slices `checkWineBeforeLaunch` reads, until the launcher is built with injected stores.
- */
-function legacyWineStores() {
-  return {
-    stores: {
-      kvs: kvsStores,
-      wineManager: wineManagerStores,
-      runsForMe: runsForMeStores
-    }
-  }
-}
-
-function tools() {
-  return createTools({
-    managers: { library: libraryManagerMap },
-    // The handle-typed runner signature is a subset of the ChildProcess one (see legacyFacades).
-    commandRunner: {
-      runWineCommand:
-        runWineCommand as unknown as CommandRunner['runWineCommand']
-    },
-    launcher: { setupEnvVars, setupWineEnvVars, validWine },
-    spawnAsync,
-    stores: { wineManager: wineManagerStores }
-  })
-}
-
-/**
- * TEMPORARY (plan 22d, deleted by plan 23 with tools() and legacyWineStores()): the engine's
- * bottle-creation capabilities for a launcher that holds no deps yet.
- */
-function legacyEngineServices(): EngineServices {
-  return {
-    spawnAsync,
-    installRemove: (...a) => tools().DXVK.installRemove(...a),
-    wineManagerReleases: wineManagerReleasesFrom(legacyWineStores())
-  }
-}
-
 export async function validWine(
   wineVersion: WineInstallation
 ): Promise<boolean> {
@@ -1503,6 +1491,7 @@ export async function validWine(
  * @returns stderr & stdout of 'wineboot --init'
  */
 export async function verifyWinePrefix(
+  deps: { commandRunner: Pick<CommandRunner, 'runWineCommand'> },
   settings: GameSettings
 ): Promise<{ res: ExecResult }> {
   const { winePrefix = sharedWinePrefix, wineVersion } = settings
@@ -1528,7 +1517,7 @@ export async function verifyWinePrefix(
       : join(winePrefix, 'system.reg')
   const haveToWait = !existsSync(systemRegPath)
 
-  const command = runWineCommand({
+  const command = deps.commandRunner.runWineCommand({
     commandParts: (await isUmuSupported(settings))
       ? ['createprefix']
       : ['wineboot', '--init'],
@@ -1548,7 +1537,7 @@ export async function verifyWinePrefix(
     })
 }
 
-function launchCleanup(rpcClient?: RpcClient) {
+function launchCleanup(_deps: LauncherDeps, rpcClient?: RpcClient) {
   if (rpcClient) {
     rpcClient.destroy()
     logInfo('Stopped Discord Rich Presence', LogPrefix.Backend)
@@ -1606,7 +1595,16 @@ async function runWineCommand({
         LogPrefix.Backend
       )
       mkdirSync(winePrefix, { recursive: true })
-      await verifyWinePrefix(settings)
+      // Legacy path, deleted by plan 24 with this function.
+      await verifyWinePrefix(
+        {
+          commandRunner: {
+            runWineCommand:
+              runWineCommand as unknown as CommandRunner['runWineCommand']
+          }
+        },
+        settings
+      )
     }
   }
 
@@ -1836,7 +1834,11 @@ async function callRunner(
     [...commandParts],
     options?.env,
     fullRunnerPath,
-    (command) => libraryManagerMap['legendary'].commandToArgsArray(command)
+    () => {
+      throw new Error(
+        'legacy launcher callRunner has no legendary argv converter; use deps.commandRunner (deleted by plan 24)'
+      )
+    }
   )
 
   const prefix = `${options.logMessagePrefix ?? 'Running command'}:`
@@ -1920,6 +1922,14 @@ async function callRunner(
     child.on('close', (code, signal) => {
       if (!options?.skipErrorHandler) {
         errorHandler(
+          {
+            // Production-dead (deleted by plan 24): the legacy callRunner has no manager table.
+            get libraryManagers(): never {
+              throw new Error(
+                'legacy launcher callRunner has no manager table; use deps.commandRunner (deleted by plan 24)'
+              )
+            }
+          },
           `${stdout.join().concat(stderr.join())}`,
           appName,
           runner.name
@@ -1995,7 +2005,19 @@ async function callRunner(
         error instanceof Error ? error.message : String(error)
 
       if (!options?.skipErrorHandler) {
-        errorHandler(errorMessage, appName, runner.name)
+        errorHandler(
+          {
+            // Production-dead (deleted by plan 24): the legacy callRunner has no manager table.
+            get libraryManagers(): never {
+              throw new Error(
+                'legacy launcher callRunner has no manager table; use deps.commandRunner (deleted by plan 24)'
+              )
+            }
+          },
+          errorMessage,
+          appName,
+          runner.name
+        )
       }
 
       logError(
@@ -2073,6 +2095,7 @@ async function getWinePath({
 }
 
 async function runBeforeLaunchScript(
+  deps: Pick<LauncherDeps, 'commandRunner'>,
   gameInfo: GameInfo,
   gameSettings: GameSettings,
   logWriter: LogWriter
@@ -2085,10 +2108,16 @@ async function runBeforeLaunchScript(
     `Running script before ${gameInfo.title} (${gameSettings.beforeLaunchScriptPath})\n`
   )
 
-  return runScriptForGame(gameInfo, gameSettings, 'before', logWriter)
+  return deps.commandRunner.runScriptForGame(
+    gameInfo,
+    gameSettings,
+    'before',
+    logWriter
+  )
 }
 
 async function runAfterLaunchScript(
+  deps: Pick<LauncherDeps, 'commandRunner'>,
   gameInfo: GameInfo,
   gameSettings: GameSettings,
   logWriter: LogWriter
@@ -2100,7 +2129,12 @@ async function runAfterLaunchScript(
   await logWriter.writeString(
     `Running script after ${gameInfo.title} (${gameSettings.afterLaunchScriptPath})\n`
   )
-  return runScriptForGame(gameInfo, gameSettings, 'after', logWriter)
+  return deps.commandRunner.runScriptForGame(
+    gameInfo,
+    gameSettings,
+    'after',
+    logWriter
+  )
 }
 
 /* Execute script before launch/after exit, wait until the script
@@ -2174,18 +2208,54 @@ async function runScriptForGame(
   })
 }
 
-export {
-  prepareLaunch,
-  launchCleanup,
-  prepareWineLaunch,
-  setupEnvVars,
-  setupWrapperEnvVars,
-  setupWineEnvVars,
-  setupWrappers,
-  runWineCommand,
-  callRunner,
-  runScriptForGame,
-  getWinePath,
-  launchEventCallback,
-  getKnownFixesEnvVariables
+/** Launcher members; pure helpers stay module-level because they need no deps. */
+export interface Launcher {
+  prepareLaunch(
+    ...a: DropFirst<Parameters<typeof prepareLaunch>>
+  ): ReturnType<typeof prepareLaunch>
+  launchCleanup(
+    ...a: DropFirst<Parameters<typeof launchCleanup>>
+  ): ReturnType<typeof launchCleanup>
+  prepareWineLaunch(
+    ...a: DropFirst<Parameters<typeof prepareWineLaunch>>
+  ): ReturnType<typeof prepareWineLaunch>
+  setupEnvVars: typeof setupEnvVars
+  setupWrapperEnvVars: typeof setupWrapperEnvVars
+  setupWineEnvVars: typeof setupWineEnvVars
+  setupWrappers: typeof setupWrappers
+  launchEventCallback(params: LaunchParams): StatusPromise
+  getKnownFixesEnvVariables: typeof getKnownFixesEnvVariables
+  validWine: typeof validWine
+  verifyWinePrefix(
+    ...a: DropFirst<Parameters<typeof verifyWinePrefix>>
+  ): ReturnType<typeof verifyWinePrefix>
 }
+
+type DropFirst<T extends unknown[]> = T extends [unknown, ...infer R]
+  ? R
+  : never
+
+/** The launcher, built once per boot with its own deps (D-02). */
+export function createLauncher(deps: LauncherDeps): Launcher {
+  // Inherits deps (not a copy), so a getter-backed deps object stays call-time.
+  const ctx = Object.assign(Object.create(deps) as LauncherDeps, {
+    power: { displayId: null } as PowerState
+  }) as LaunchCtx
+  return {
+    prepareLaunch: (...a) => prepareLaunch(deps, ...a),
+    launchCleanup: (...a) => launchCleanup(deps, ...a),
+    prepareWineLaunch: (...a) => prepareWineLaunch(deps, ...a),
+    setupEnvVars,
+    setupWrapperEnvVars,
+    setupWineEnvVars,
+    setupWrappers,
+    launchEventCallback: (params) => launchEventCallback(ctx, params),
+    getKnownFixesEnvVariables,
+    validWine,
+    verifyWinePrefix: (...a) => verifyWinePrefix(deps, ...a)
+  }
+}
+
+// Deleted by plan 24 with the legacy command functions.
+/** @public */
+export { runWineCommand, callRunner, runScriptForGame, getWinePath }

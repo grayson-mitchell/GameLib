@@ -105,7 +105,12 @@ function bootedWorld(opts?: {
   let runOnce!: jest.Mock
   let syncQueuedPlaytimeSpy!: jest.SpyInstance
   let playtimeSyncQueue!: typeof import('../../storeManagers/gog/stores').playtimeSyncQueue
+  // The boot builds the managers (66.1-23), so the suite builds its own, spies the drain on the
+  // gog one, and hands them in prebuilt: the boot's drain call then reaches the spy.
+  let gogManager!: import('../../storeManagers/gog/library').default
+  const prebuilt: Partial<import('../../services/types').BootServices> = {}
   bootFresh({
+    services: prebuilt,
     before: () => {
       // Load bootstrap first so the module graph resolves in its natural order (requiring the
       // online_monitor mock first hits a circular import and drops its re-exports).
@@ -115,11 +120,23 @@ function bootedWorld(opts?: {
       playtimeSyncQueue =
         require('../../storeManagers/gog/stores').playtimeSyncQueue
       opts?.seed?.(playtimeSyncQueue)
+      const { createStoreManagers } =
+        require('../../storeManagers') as typeof import('../../storeManagers')
+      const { createTestServices } =
+        require('../../testUtils/testServices') as typeof import('../../testUtils/testServices')
+      const fakes = createTestServices()
+      const built = createStoreManagers({
+        stores: fakes.stores,
+        commandRunner: fakes.commandRunner,
+        spawnAsync: fakes.spawnAsync,
+        runner: fakes.runner,
+        getDownloadQueue: () => fakes.downloadQueue
+      })
+      prebuilt.managers = built
+      prebuilt.launcher = built.launcher
+      gogManager = built.library.gog
       syncQueuedPlaytimeSpy = jest
-        .spyOn(
-          require('../../storeManagers').libraryManagerMap.gog,
-          'syncQueuedPlaytime'
-        )
+        .spyOn(gogManager, 'syncQueuedPlaytime')
         .mockImplementation(opts?.drainImpl ?? (() => Promise.resolve()))
     }
   })
@@ -142,11 +159,7 @@ function bootedWorld(opts?: {
           }) => void
         }
       ).syncQueuedPlaytimeWhenOnline({
-        managers: {
-          library: (
-            require('../../storeManagers') as typeof import('../../storeManagers')
-          ).libraryManagerMap
-        }
+        managers: { library: gogManager ? { gog: gogManager } : {} }
       })
   }
 }

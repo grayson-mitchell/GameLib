@@ -8,7 +8,6 @@ import {
 import { libraryStore } from './stores'
 import { GameConfig } from '../../game_config'
 import { sendGameStatusUpdate, shutdownWine } from '../../utils'
-import { killTracked } from '../../trackedChildren'
 import { logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { dirname } from 'path'
 import { existsSync, rmSync } from 'graceful-fs'
@@ -37,7 +36,12 @@ export default class SideloadGame implements Game {
     id: string,
     private readonly deps: Pick<
       ManagerDeps,
-      'libraryManagers' | 'stores' | 'launcher' | 'commandRunner' | 'spawnAsync'
+      | 'libraryManagers'
+      | 'stores'
+      | 'launcher'
+      | 'commandRunner'
+      | 'spawnAsync'
+      | 'runner'
     >
   ) {
     this.id = id
@@ -97,10 +101,10 @@ export default class SideloadGame implements Game {
 
     if (executable) {
       // Phase 72 D-13: keys match the trackKey passed at the launch spawn sites.
-      killTracked({ runner: 'sideload', key: this.id })
+      this.deps.runner.killTracked({ runner: 'sideload', key: this.id })
 
       if (!this.isNative()) {
-        killTracked({ runner: 'wine', key: this.id })
+        this.deps.runner.killTracked({ runner: 'wine', key: this.id })
         const gameSettings = getLaunchSettings(
           engineKeyFor(this.getGameInfo().runner, this.id),
           await this.getSettings()

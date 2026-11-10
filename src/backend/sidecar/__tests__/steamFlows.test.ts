@@ -85,7 +85,12 @@ jest.mock('../../storeManagers/steam/user')
 // version, etc. that this test has no business constructing.
 const launchEventCallbackMock = jest.fn()
 jest.mock('../../launcher', () => ({
-  launchEventCallback: (...args: unknown[]) => launchEventCallbackMock(...args)
+  // The boot builds the launcher through createLauncher (66.1-23); the mock hands back only the
+  // member this file asserts on.
+  createLauncher: () => ({
+    launchEventCallback: (...args: unknown[]) =>
+      launchEventCallbackMock(...args)
+  })
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────────────────

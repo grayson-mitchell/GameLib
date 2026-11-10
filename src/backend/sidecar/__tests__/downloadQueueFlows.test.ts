@@ -134,21 +134,12 @@ jest.mock('backend/constants/environment', () => ({
   isLinux: true
 }))
 
-// ── backend/storeManagers mock — the boundary cancelCurrentDownload/
-// stopCurrentDownload/processNotification/addToQueue touch; a plain
-// jest.fn()-backed stub proves the routing without any real
-// SteamGame/depot/PICS involvement. `getGameInfo` (Plan 32-02 addition) is
-// the enqueue-time call `addToQueue()` itself makes (distinct from
+// ── the steam manager: a plain jest.fn()-backed stub handed to the boot as a PREBUILT manager
+// table (66.1-23: the boot builds managers, nothing is constructed at import), the boundary
+// cancelCurrentDownload/stopCurrentDownload/processNotification/addToQueue touch; it proves the
+// routing without any real SteamGame/depot/PICS involvement. `getGameInfo` (Plan 32-02 addition)
+// is the enqueue-time call `addToQueue()` itself makes (distinct from
 // `.getGame(appName).getGameInfo()`, which is a different call site) ────────
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {
-    steam: {
-      getGame: jest.fn(),
-      getInstallInfo: jest.fn(),
-      getGameInfo: jest.fn()
-    }
-  }
-}))
 
 // ── storeManagers/steam/gameRequirements mock — override ONLY getSteamInstallSize (the
 // real Steam store appdetails network call), preserve the real default
@@ -178,6 +169,10 @@ jest.mock('../../downloadmanager/utils', () => ({
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { bootFresh, writeInvoke, writeSend } from './helpers/sidecarHarness'
+import {
+  createTestManagers,
+  createTestServices
+} from '../../testUtils/testServices'
 import type { DMQueueElement } from 'common/types'
 
 // D-08: every case boots the sidecar once, in a fresh module registry. Module
@@ -196,7 +191,6 @@ function freshRegistry(): void {
   jest.resetModules()
   /* eslint-disable @typescript-eslint/no-require-imports */
   require('../bootstrap')
-  const { libraryManagerMap } = require('backend/storeManagers')
   const {
     installQueueElement,
     updateQueueElement
@@ -204,13 +198,28 @@ function freshRegistry(): void {
   ;({ downloadManager } = require('../../downloadmanager/stores'))
   ;({ sendFrontendMessage } = require('../../ipc'))
   /* eslint-enable @typescript-eslint/no-require-imports */
-  mockedSteamGetGame = libraryManagerMap.steam.getGame as jest.Mock
-  mockedSteamGetGameInfo = libraryManagerMap.steam.getGameInfo as jest.Mock
+  mockedSteamGetGame = jest.fn()
+  mockedSteamGetGameInfo = jest.fn()
   mockedInstallQueueElement = installQueueElement as jest.Mock
   mockedUpdateQueueElement = updateQueueElement as jest.Mock
 }
 
-const boot = () => bootFresh({ reuseRegistry: true })
+const boot = () =>
+  bootFresh({
+    reuseRegistry: true,
+    services: {
+      managers: createTestManagers({
+        library: {
+          steam: {
+            getGame: mockedSteamGetGame,
+            getInstallInfo: jest.fn(),
+            getGameInfo: mockedSteamGetGameInfo
+          } as never
+        }
+      }),
+      launcher: createTestServices().launcher
+    }
+  })
 
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {

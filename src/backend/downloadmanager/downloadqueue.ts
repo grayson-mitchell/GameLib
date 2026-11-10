@@ -587,20 +587,3 @@ export function createDownloadQueue(deps: DownloadQueueDeps) {
 }
 
 export type DownloadQueue = ReturnType<typeof createDownloadQueue>
-
-// transitional: import-time managers reach the boot queue through this until plan 23 builds
-// managers at boot (the 'download-queue' step runs after 'store-managers').
-let legacyBootQueue: DownloadQueue | undefined
-
-export function bindLegacyBootQueue(queue: DownloadQueue) {
-  legacyBootQueue = queue
-}
-
-export function getLegacyBootQueue(): DownloadQueue {
-  if (!legacyBootQueue) {
-    throw new Error(
-      'download queue not bound: the download-queue boot step has not run'
-    )
-  }
-  return legacyBootQueue
-}

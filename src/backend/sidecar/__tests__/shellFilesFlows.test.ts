@@ -180,11 +180,20 @@ jest.mock('../../utils/aborthandler/aborthandler', () => ({
 // `clearCache`'s `startLegendaryCleanup` fires `legendary cleanup` through the injected legendary
 // manager. Without this stub that reaches the REAL legendary runner machinery (`launcher.ts`'s
 // `callRunner`, an actual `child_process.spawn()`) ────────────────────────────────────────────
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {
-    legendary: { runRunnerCommand: jest.fn() }
+jest.mock('backend/storeManagers', () => {
+  const libraryManagerMap = { legendary: { runRunnerCommand: jest.fn() } }
+  return {
+    libraryManagerMap,
+    // The boot builds its managers through this factory (66.1-23); it hands back the stub table.
+    createStoreManagers: () => ({
+      library: libraryManagerMap,
+      launchHooks: {},
+      autoUpdate: () => [],
+      initAll: async () => [],
+      launcher: {}
+    })
   }
-}))
+})
 
 // ── backend/dialog/dialog mock — narrow override, real module spread
 // (mirrors gameDetailsFlows.test.ts's own `notify` boundary choice).

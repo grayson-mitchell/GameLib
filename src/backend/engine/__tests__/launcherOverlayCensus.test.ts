@@ -33,10 +33,7 @@ describe('launcher.ts overlay census', () => {
   })
 
   it('runLaunchEventCallback reads game settings once, before the engine step, and overlays after it', () => {
-    const body = bodyOf(
-      launcher,
-      'const runLaunchEventCallback: (args: LaunchParams) => StatusPromise'
-    )
+    const body = bodyOf(launcher, 'async function runLaunchEventCallback(')
     const gameReads = body.match(/game\.getSettings\(\)/g) ?? []
     expect(gameReads).toHaveLength(1)
     const stepAt = body.indexOf('selectEngineForLaunch(')
@@ -49,10 +46,7 @@ describe('launcher.ts overlay census', () => {
   })
 
   it('the engine step follows the log writer and precedes the Wine check', () => {
-    const body = bodyOf(
-      launcher,
-      'const runLaunchEventCallback: (args: LaunchParams) => StatusPromise'
-    )
+    const body = bodyOf(launcher, 'async function runLaunchEventCallback(')
     const logAt = body.indexOf('createGameLogWriter(')
     const stepAt = body.indexOf('selectEngineForLaunch(')
     const checkAt = body.indexOf('checkWineBeforeLaunch(')
@@ -62,10 +56,7 @@ describe('launcher.ts overlay census', () => {
   })
 
   it('checkWineBeforeLaunch sits in a branch that excludes an engine-controlled launch', () => {
-    const body = bodyOf(
-      launcher,
-      'const runLaunchEventCallback: (args: LaunchParams) => StatusPromise'
-    )
+    const body = bodyOf(launcher, 'async function runLaunchEventCallback(')
     const checkAt = body.indexOf('checkWineBeforeLaunch(')
     const guardAt = body.lastIndexOf('if (', checkAt)
     const guard = body.slice(guardAt, body.indexOf('{', guardAt))
@@ -74,10 +65,7 @@ describe('launcher.ts overlay census', () => {
   })
 
   it('the selection is released in the launch finally and on a failed start', () => {
-    const body = bodyOf(
-      launcher,
-      'const runLaunchEventCallback: (args: LaunchParams) => StatusPromise'
-    )
+    const body = bodyOf(launcher, 'async function runLaunchEventCallback(')
     expect(body).toMatch(/\.finally\(async \(\) => \{[\s\S]*releaseEngine\(\)/)
     expect(body).toMatch(/catch \(error\) \{[\s\S]*releaseEngine\(\)/)
     expect(body).toContain('endEngineLaunch(engineKey)')

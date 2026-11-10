@@ -33,7 +33,6 @@ import {
   assertContainedPath,
   assertPlausibleAbsolutePath
 } from './sidecar/rendererPathGuard'
-import { libraryManagerMap } from './storeManagers'
 import { resolveTitleForGame } from './utils/gameTitle'
 import * as fileSize from 'filesize'
 import { Client as discordClient } from '@xhayper/discord-rpc'
@@ -75,20 +74,6 @@ import type { Game } from 'common/types/game_manager'
 import { isStore } from 'common/storeCapabilities'
 
 const execAsync = promisify(exec)
-
-function getGame(id: string, runner: Runner): Game {
-  // Uses the static top-level `import { libraryManagerMap } from './storeManagers'`
-  // above, NOT a synchronous `require('./storeManagers')`: electron-vite/Rollup
-  // leaves a bare require() of a module specifier unresolved in the production
-  // bundle (it only rewrites static import/import()), so require('./storeManagers')
-  // threw "Cannot find module './storeManagers'" at runtime from the packaged
-  // chunk. The binding is dereferenced only here at call time, so the
-  // utils.ts <-> storeManagers/index.ts circular dependency is unaffected (live
-  // binding; mirrors downloadqueue.ts / launcher.ts / uninstaller.ts). getGame()
-  // stays a synchronous export — its callers (shortcuts/tools/wiki_game_info
-  // ipc_handlers etc.) expect a Game, not a Promise<Game>.
-  return libraryManagerMap[runner].getGame(id)
-}
 
 /**
  * Compares 2 SemVer strings following "major.minor.patch".
@@ -255,7 +240,11 @@ export async function askForceUninstall(game: Game, appName: string) {
   return response
 }
 
+/** errorHandler reads the manager table only in its deleted-folder branch. */
+export type ErrorHandlerDeps = Pick<ManagerDeps, 'libraryManagers'>
+
 async function errorHandler(
+  deps: ErrorHandlerDeps,
   error: string,
   appName: string,
   runner: Runner
@@ -277,7 +266,10 @@ async function errorHandler(
   if (ignoreMessages.some((msg) => error.includes(msg))) return
 
   if (error.includes(deletedFolderMsg) && appName) {
-    await askForceUninstall(getGame(appName, runner), appName)
+    await askForceUninstall(
+      deps.libraryManagers[runner].getGame(appName),
+      appName
+    )
     return
   }
 
@@ -1842,8 +1834,7 @@ export {
   calculateEta,
   extractFiles,
   axiosClient,
-  parseSize,
-  getGame
+  parseSize
 }
 
 // Exported only for testing purpose

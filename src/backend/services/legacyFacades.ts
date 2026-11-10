@@ -5,9 +5,8 @@
  * swaps its facade for the real factory.
  *
  * Deletion schedule: command runner (plan 05), spawnAsync and quit (plan 06), tools and spawn
- * shims (plan 22f), managers and launcher (plan 23, with the legacyManagerDeps added by plan 08),
- * stores (plan 25). The file
- * is deleted by plan 25 with the last one.
+ * shims (plan 22f), managers and launcher (plan 23), stores (plan 25). The file is deleted by
+ * plan 25 with the last one.
  *
  * Everything is inside a function: no top-level `let`/`const` binding for the ratchet.
  */
@@ -27,17 +26,7 @@ import * as sideload from 'backend/storeManagers/sideload/stores'
 import * as steam from 'backend/storeManagers/steam/stores'
 import * as wikiGameInfo from 'backend/wiki_game_info/stores'
 import * as wineManager from 'backend/wine/manager/stores'
-import {
-  autoUpdate,
-  initStoreManagers,
-  libraryManagerMap,
-  storeLaunchHooks
-} from 'backend/storeManagers'
-import * as launcherModule from 'backend/launcher'
-import * as utilsModule from 'backend/utils'
-import { getLegacyBootQueue } from 'backend/downloadmanager/downloadqueue'
-import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
-import type { Launcher, ManagerDeps, StoreManagers, Stores } from './types'
+import type { Stores } from './types'
 
 export function buildStoresFacade(): Stores {
   return {
@@ -57,91 +46,5 @@ export function buildStoresFacade(): Stores {
     steam,
     wikiGameInfo,
     wineManager
-  }
-}
-
-/**
- * `getDownloadQueue` is resolved when an auto-update enqueues, never at construction: the
- * 'download-queue' step runs after 'store-managers'. The default reads the transitional boot
- * holder (plan 23 deletes it).
- */
-export function buildManagersFacade(
-  getDownloadQueue: () => DownloadQueue = () => getLegacyBootQueue()
-): StoreManagers {
-  return {
-    library: libraryManagerMap,
-    launchHooks: storeLaunchHooks,
-    autoUpdate: (runner, games) =>
-      autoUpdate(runner, games, { getDownloadQueue }),
-    initAll: initStoreManagers
-  }
-}
-
-export function buildLauncherFacade(): Launcher {
-  return {
-    prepareLaunch: launcherModule.prepareLaunch,
-    launchCleanup: launcherModule.launchCleanup,
-    prepareWineLaunch: launcherModule.prepareWineLaunch,
-    setupEnvVars: launcherModule.setupEnvVars,
-    setupWrapperEnvVars: launcherModule.setupWrapperEnvVars,
-    setupWineEnvVars: launcherModule.setupWineEnvVars,
-    setupWrappers: launcherModule.setupWrappers,
-    launchEventCallback: launcherModule.launchEventCallback,
-    getKnownFixesEnvVariables: launcherModule.getKnownFixesEnvVariables,
-    validWine: launcherModule.validWine,
-    verifyWinePrefix: launcherModule.verifyWinePrefix
-  }
-}
-
-/**
- * The legacy launcher functions take a `ChildProcess` where the service types hand out a
- * `ChildHandle`; the handle is a subset, so forwarding is safe. Wrappers resolve the function
- * at call time (R4).
- */
-function legacyCommandRunner(): ManagerDeps['commandRunner'] {
-  return {
-    callRunner: (...a: unknown[]) =>
-      (launcherModule.callRunner as (...x: unknown[]) => unknown)(...a),
-    runWineCommand: (...a: unknown[]) =>
-      (launcherModule.runWineCommand as (...x: unknown[]) => unknown)(...a),
-    getWinePath: (...a: unknown[]) =>
-      (launcherModule.getWinePath as (...x: unknown[]) => unknown)(...a),
-    runScriptForGame: (...a: unknown[]) =>
-      (launcherModule.runScriptForGame as (...x: unknown[]) => unknown)(...a)
-  } as unknown as ManagerDeps['commandRunner']
-}
-
-/**
- * TEMPORARY (plan 08, deleted by plan 23): deps for the library managers that the import-time
- * `libraryManagerMap` still constructs. Every member defers to the legacy value at CALL time
- * (R4): this module is evaluated inside the storeManagers/launcher import cycle, so nothing
- * here may capture a function reference or dereference the map while loading.
- */
-export function legacyManagerDeps(): ManagerDeps {
-  return {
-    get libraryManagers() {
-      return libraryManagerMap
-    },
-    // A getter: this module can be mid-load when the managers are constructed (R4).
-    get stores() {
-      return buildStoresFacade()
-    },
-    commandRunner: legacyCommandRunner(),
-    launcher: {
-      prepareLaunch: (...a) => launcherModule.prepareLaunch(...a),
-      launchCleanup: (...a) => launcherModule.launchCleanup(...a),
-      prepareWineLaunch: (...a) => launcherModule.prepareWineLaunch(...a),
-      setupEnvVars: (...a) => launcherModule.setupEnvVars(...a),
-      setupWrapperEnvVars: (...a) => launcherModule.setupWrapperEnvVars(...a),
-      setupWineEnvVars: (...a) => launcherModule.setupWineEnvVars(...a),
-      setupWrappers: (...a) => launcherModule.setupWrappers(...a),
-      launchEventCallback: (...a) => launcherModule.launchEventCallback(...a),
-      getKnownFixesEnvVariables: (...a) =>
-        launcherModule.getKnownFixesEnvVariables(...a),
-      validWine: (...a) => launcherModule.validWine(...a),
-      verifyWinePrefix: (...a) => launcherModule.verifyWinePrefix(...a)
-    },
-    spawnAsync: (...a) => utilsModule.spawnAsync(...a),
-    getDownloadQueue: () => getLegacyBootQueue()
   }
 }

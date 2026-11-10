@@ -253,7 +253,7 @@ jest.mock('backend/storeManagers', () => {
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { getDefaultSavePath } from '../save_sync'
-import { libraryManagerMap } from 'backend/storeManagers'
+import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
 import {
   legendaryConfigPath,
   legendaryMetadata
@@ -274,6 +274,10 @@ const APP_NAME = 'Iris'
 // The manager the real `backend/storeManagers` mock factory constructed above -- the SAME
 // object reference `save_sync.ts` sees through its own `import { libraryManagerMap } from
 // 'backend/storeManagers'`, since jest caches one module instance per test file.
+// The real module no longer exports a table (66.1-23); the mock factory above still does.
+const { libraryManagerMap } = jest.requireMock<{
+  libraryManagerMap: { legendary: LegendaryLibraryManager; gog: object }
+}>('backend/storeManagers')
 const manager = libraryManagerMap.legendary
 
 // save_sync.ts takes its collaborators by deps (66.1-11); the wine helpers are inert stubs here

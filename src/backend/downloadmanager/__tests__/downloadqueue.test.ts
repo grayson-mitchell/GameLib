@@ -939,17 +939,4 @@ describe('downloadqueue.ts — 66.1-11: boot service, no import-time effects', (
     expect(first.getQueueInformation().state).toBe('paused')
     expect(second.getQueueInformation().state).toBe('idle')
   })
-
-  it('getLegacyBootQueue throws the named error until bindLegacyBootQueue runs', async () => {
-    const { getLegacyBootQueue, bindLegacyBootQueue } =
-      await import('../downloadqueue')
-    expect(() => getLegacyBootQueue()).toThrow(
-      'download queue not bound: the download-queue boot step has not run'
-    )
-    const queue = await makeQueue()
-
-    bindLegacyBootQueue(queue)
-
-    expect(getLegacyBootQueue()).toBe(queue)
-  })
 })

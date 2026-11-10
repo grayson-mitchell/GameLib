@@ -153,7 +153,6 @@ let getAnonymousPicsClient: typeof import('../../storeManagers/steam/anonymousCl
 let getSteamLibraries: typeof import('backend/utils').getSteamLibraries
 let steamConfigStore: typeof import('../../storeManagers/steam/stores').configStore
 let configStore: typeof import('backend/constants/key_value_stores').configStore
-let libraryManagerMap: typeof import('../../storeManagers').libraryManagerMap
 
 function freshRegistry(): void {
   jest.resetModules()
@@ -172,7 +171,6 @@ function freshRegistry(): void {
     configStore: steamConfigStore
   } = require('../../storeManagers/steam/stores'))
   ;({ configStore } = require('backend/constants/key_value_stores'))
-  ;({ libraryManagerMap } = require('../../storeManagers'))
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
@@ -719,6 +717,9 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     })
 
     it("invoking refreshLibrary with ['gog'] calls the gog manager's refresh() and does NOT call the steam manager's refresh()", async () => {
+      // The managers are built by the boot (66.1-23): boot first, then spy on its table.
+      const { input, frames, services } = boot()
+      const libraryManagerMap = services.managers.library
       const gogSpy = jest
         .spyOn(libraryManagerMap.gog, 'refresh')
         .mockResolvedValue({ stdout: '', stderr: '' })
@@ -726,7 +727,6 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
         .spyOn(libraryManagerMap.steam, 'refresh')
         .mockResolvedValue({ stdout: '', stderr: '' })
 
-      const { input, frames } = boot()
       writeInvoke(input, 'gog-refresh-1', 'refreshLibrary', ['gog'])
       await flush()
 
@@ -738,13 +738,15 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     })
 
     it("invoking refreshLibrary with ['all'] calls every manager's refresh()", async () => {
+      // The managers are built by the boot (66.1-23): boot first, then spy on its table.
+      const { input, frames, services } = boot()
+      const libraryManagerMap = services.managers.library
       const spies = Object.entries(libraryManagerMap).map(([, manager]) =>
         jest
           .spyOn(manager, 'refresh')
           .mockResolvedValue({ stdout: '', stderr: '' })
       )
 
-      const { input, frames } = boot()
       writeInvoke(input, 'all-refresh-1', 'refreshLibrary', ['all'])
       await flush()
 
@@ -765,13 +767,15 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // 3546-green suite missed this. Dispatching with `[null]` here reproduces the
     // real transport shape byte for byte.
     it("invoking refreshLibrary with [null] (the JSON-transport shape of the frontend's mount-time undefined call) calls every manager's refresh(), the same as ['all']", async () => {
+      // The managers are built by the boot (66.1-23): boot first, then spy on its table.
+      const { input, frames, services } = boot()
+      const libraryManagerMap = services.managers.library
       const spies = Object.entries(libraryManagerMap).map(([, manager]) =>
         jest
           .spyOn(manager, 'refresh')
           .mockResolvedValue({ stdout: '', stderr: '' })
       )
 
-      const { input, frames } = boot()
       writeInvoke(input, 'null-refresh-1', 'refreshLibrary', [null])
       await flush()
 
@@ -782,13 +786,15 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     })
 
     it('an unknown runner is rejected value-free at the schema boundary, and calls no manager’s refresh()', async () => {
+      // The managers are built by the boot (66.1-23): boot first, then spy on its table.
+      const { input, frames, services } = boot()
+      const libraryManagerMap = services.managers.library
       const spies = Object.values(libraryManagerMap).map((manager) =>
         jest
           .spyOn(manager, 'refresh')
           .mockResolvedValue({ stdout: '', stderr: '' })
       )
 
-      const { input, frames } = boot()
       writeInvoke(input, 'unknown-refresh-1', 'refreshLibrary', [
         'not-a-real-runner'
       ])
@@ -807,6 +813,9 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     })
 
     it('in the all-branch, one manager rejecting does not reject the handler and the other managers still ran', async () => {
+      // The managers are built by the boot (66.1-23): boot first, then spy on its table.
+      const { input, frames, services } = boot()
+      const libraryManagerMap = services.managers.library
       const rejectingSpy = jest
         .spyOn(libraryManagerMap.gog, 'refresh')
         .mockRejectedValue(new Error('gog refresh boom'))
@@ -818,7 +827,6 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
             .mockResolvedValue({ stdout: '', stderr: '' })
         )
 
-      const { input, frames } = boot()
       writeInvoke(input, 'all-refresh-partial-fail-1', 'refreshLibrary', [
         'all'
       ])

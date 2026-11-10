@@ -6,12 +6,16 @@ import type { EngineServices } from 'backend/engine/engineServices'
 import { wineManagerReleasesFrom } from 'backend/engine/wineManagerReleases'
 import { createTools } from 'backend/tools'
 import type { Tools } from 'backend/tools'
-import type { ManagerDeps } from './types'
+import type { Launcher, ManagerDeps } from './types'
 
 export type EngineServicesSource = Pick<
   ManagerDeps,
-  'libraryManagers' | 'commandRunner' | 'launcher' | 'spawnAsync'
-> & { stores: Pick<ManagerDeps['stores'], 'wineManager'> }
+  'libraryManagers' | 'commandRunner' | 'spawnAsync'
+> & {
+  /** The members createTools reads; a launcher still being built can supply just these. */
+  launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>
+  stores: Pick<ManagerDeps['stores'], 'wineManager'>
+}
 
 export function toolsFrom(deps: EngineServicesSource): Tools {
   return createTools({

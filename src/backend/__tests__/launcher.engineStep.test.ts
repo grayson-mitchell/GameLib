@@ -8,12 +8,6 @@
  * Mock implementations are assigned in beforeEach (jest.config.js sets resetMocks: true).
  */
 const getGameMock = jest.fn()
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {
-    legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
-  },
-  storeLaunchHooks: { legendary: {} }
-}))
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -67,7 +61,7 @@ jest.mock('backend/engine/launchSettings', () => ({
 
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { launchEventCallback } from 'backend/launcher'
+import { createLauncher } from 'backend/launcher'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { createGameLogWriter } from 'backend/logger'
 import { resetLaunchSingleFlightForTests } from 'backend/launchSingleFlight'
@@ -126,6 +120,18 @@ beforeEach(() => {
     isNative: () => false,
     launch: launchMock
   }))
+})
+
+// The launcher is built from test deps (66.1-23): the manager table and hooks are plain fakes.
+const tsStore = { has: () => true, get: () => 0, set: jest.fn() }
+const { launchEventCallback } = createLauncher({
+  libraryManagers: {
+    legendary: { getGame: (...a: unknown[]) => getGameMock(...a) }
+  } as never,
+  launchHooks: { legendary: {} } as never,
+  commandRunner: {} as never,
+  spawnAsync: (() => Promise.reject(new Error('unscripted spawn'))) as never,
+  stores: { kvs: { tsStore }, wineManager: {}, runsForMe: {} } as never
 })
 
 const run = () => launchEventCallback({ appName: 'Quail', runner: 'legendary' })

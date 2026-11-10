@@ -28,10 +28,6 @@
  * a jest mock, so it is immune to that reset and survives across tests.
  */
 
-jest.mock('backend/utils', () => ({
-  getGame: jest.fn(),
-  handleExit: jest.fn()
-}))
 jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn()
 }))
@@ -62,7 +58,6 @@ import { existsSync } from 'graceful-fs'
 import { mkdirSync, rmSync, symlinkSync } from 'fs'
 import { dirname, join } from 'path'
 import { homedir } from 'os'
-import { getGame } from 'backend/utils'
 import {
   createTestManagers,
   createTestStores
@@ -77,7 +72,7 @@ import type { Game } from 'common/types/game_manager'
 const deps = { libraryManagers: { gog: {} } } as unknown as Parameters<
   typeof addShortcuts
 >[0]
-const mockedGetGame = getGame as jest.Mock
+const mockedGetGame = jest.fn()
 const mockedLogWarning = logWarning as jest.Mock
 const mockedExistsSync = existsSync as jest.Mock
 

@@ -62,7 +62,6 @@ import { Path } from 'backend/schemas'
 import { mkdirSync } from 'fs'
 import { epicRedistPath, legendaryInstalled } from './constants'
 import { isCLINoGui, isMac, isWindows } from 'backend/constants/environment'
-import { killTracked } from 'backend/trackedChildren'
 import { fakeEpicExePath } from 'backend/constants/paths'
 
 import type LogWriter from 'backend/logger/log_writer'
@@ -1163,7 +1162,7 @@ export default class LegendaryGame implements Game {
   // which is send via AbortController
   async stop(stopWine = true) {
     // Phase 72 D-13: kill the tracked legendary child for this app, not a name pattern.
-    killTracked({ runner: 'legendary', key: this.appName })
+    this.deps.runner.killTracked({ runner: 'legendary', key: this.appName })
 
     if (stopWine && !this.isNative()) {
       const gameSettings = getLaunchSettings(
