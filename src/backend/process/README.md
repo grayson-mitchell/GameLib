@@ -172,19 +172,25 @@ gone (zero `jest.mock`).
 `jest.doMock`/`setMock` would surface previously uncounted sites, and those can only enter the
 shrink-only baselines as a raise. 66.2 owns the `child_process` ban and the gate hardening.
 
-**Hand-off to 66.2:** the remaining `child_process` files (`config.ts`, `utils.ts` and the rest of
-the 28-file census), `execAsync`, the VC redist probe, `wineserver -k`, the engine caps, and
-the module-private `utils.spawnAsync` that `moveOnUnix`/`moveOnWindows`/`extractTarFile` still use
-(each has many callers in the store managers and the wine tools; move them onto the injected
-`spawnAsync` and delete it).
+**66.2 end state:** every backend spawn goes through the runner. Three independent detectors hold
+the line: the ESLint `no-restricted-imports` block for `src/backend` production code (static
+imports, `createRequire`, `process.getBuiltinModule`), the dependency-cruiser rule
+`no-child-process-outside-runner` (static, `require()`, `import()`, and the npm spawn packages),
+and the AST census in `meta/backendDiCeilings.cjs` (computed specifiers included). The sanctioned
+list is `src/backend/process/runner.ts` alone. The `childProcess` ceiling is deleted and shards
+may not carry the section; the counter stays, so any other site is a new violation.
 
 **Hand-off to 66.3:** `GlobalConfig`, `helperRegistry` and the other module state that sits next to
 the download queue, the secret-store placeholders, the manager modules' module-level Maps, and the
 static stores outside the 16 (`engineNoticeStore`, the two `pci_ids` stores).
+66.2 also deferred these to 66.3 (D-66.2-03): `GlobalConfig.globalInstance`, the `utils.ts`
+`default*Path` lets, and `installingComponent`/`catalogCache`/`scriptMetadataCache` in
+`tools/index.ts`. `knownFolders` and `pathShim` keep a win32 sync fallback (the async registry
+lookup needs a runner) that 66.3 should retire.
 
 ## Ratchets
 
 `pnpm backend-di-ceilings` counts module-level singletons, `jest.mock` sites
 and similar census items per shard in `meta/backendDiCeilings/`. Ceilings only
 shrink: when a conversion lowers a count, lower the shard entry in the same
-commit. Never raise a ceiling to admit growth. The one exception is a census _definition_ change that starts counting state that already existed (e.g. 66.1 review C-WR-2 began counting non-readonly `static` class fields: moduleState 234 -> 251); that re-baseline must name every newly counted site and its owning phase in the same commit. 66.2-01 (C-05/WR-06) began counting jest.doMock/setMock/unstable_mockModule/destructured mock: jestMock 2402 -> 2438, sites: src/backend/**tests**/launcher_wineLibFolders.test.ts:+1, src/backend/**tests**/protocol.test.ts:+1, src/backend/sidecar/**tests**/appShellFlows.test.ts:+1, src/backend/sidecar/**tests**/humbleFlows.test.ts:+4, src/backend/sidecar/**tests**/isPackagedSidecar.test.ts:+5 (new entry), src/backend/sidecar/**tests**/wineToolsFlows.test.ts:+14, src/preload/**tests**/tauriAttach.test.ts:+10 (owning phase 66.2).
+commit. Never raise a ceiling to admit growth. `childProcess` is now a ban, not a ceiling (66.2 D-16). The one exception is a census _definition_ change that starts counting state that already existed (e.g. 66.1 review C-WR-2 began counting non-readonly `static` class fields: moduleState 234 -> 251); that re-baseline must name every newly counted site and its owning phase in the same commit. 66.2-01 (C-05/WR-06) began counting jest.doMock/setMock/unstable_mockModule/destructured mock: jestMock 2402 -> 2438, sites: src/backend/**tests**/launcher_wineLibFolders.test.ts:+1, src/backend/**tests**/protocol.test.ts:+1, src/backend/sidecar/**tests**/appShellFlows.test.ts:+1, src/backend/sidecar/**tests**/humbleFlows.test.ts:+4, src/backend/sidecar/**tests**/isPackagedSidecar.test.ts:+5 (new entry), src/backend/sidecar/**tests**/wineToolsFlows.test.ts:+14, src/preload/**tests**/tauriAttach.test.ts:+10 (owning phase 66.2).
