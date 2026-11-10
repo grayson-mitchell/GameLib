@@ -272,7 +272,7 @@ function rowOf(input: SteamSectionGatingInput): RowLabel {
     return hasChoice ? '6' : '5'
   }
 
-  // Linux-family bucket (includes ContextProvider's 'unknown' fallback,
+  // Linux-family bucket (includes the app stores's 'unknown' fallback,
   // covered separately by the defensive-normalisation block -- not part of
   // this 96-combination sweep, which only varies hostPlatform across
   // 'darwin' | 'win32' | 'linux').

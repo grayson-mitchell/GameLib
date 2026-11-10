@@ -186,7 +186,7 @@ export default function Header({ list, totalGames }: Props) {
   //
   // debug/login-logout-wipes-library: a single-runner refresh (login/logout
   // of ONE platform) no longer flips the two GLOBAL flags above at all — it
-  // writes `refreshingByRunner` instead (see GlobalState.tsx's
+  // writes `refreshingByRunner` instead (see the old GlobalState class's
   // `refreshLibrary`/`refresh`). Without this OR clause, that scoped case
   // would silently lose this spinner entirely (a real, if pre-existing and
   // mislabeled, feedback regression) — checking whether ANY runner is mid

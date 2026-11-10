@@ -16,7 +16,7 @@
  *
  * Pure and reader-injected on purpose: no `window.api`, no store imports, so a
  * node jest test covers it. The readers mirror the authoritative initial-state
- * expressions in `GlobalState.tsx`.
+ * expressions in `the old GlobalState class`.
  */
 
 type Maybe<T> = T | null | undefined

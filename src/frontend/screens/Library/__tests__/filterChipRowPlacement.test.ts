@@ -16,7 +16,7 @@
  * WHY A SOURCE GATE AND NOT A RENDER TEST. `src/frontend/jest.config.js` sets
  * `testEnvironment: 'node'`: there is no jsdom and no react-test-renderer in
  * this project, and `Library/index.tsx`'s transitive import graph pulls in the
- * whole ContextProvider/game-list stack plus colocated CSS. A comment-stripped
+ * whole the app stores/game-list stack plus colocated CSS. A comment-stripped
  * source gate is the ESTABLISHED shape for this file (see
  * `libraryHeaderVisibility.test.ts`), not a fallback.
  *

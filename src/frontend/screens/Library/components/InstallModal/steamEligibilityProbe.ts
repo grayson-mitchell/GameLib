@@ -86,7 +86,7 @@ export function shouldProbeEligibility({
   // Written as an explicit win32/linux SKIP, never as
   // `platform !== 'darwin'` -- the same convention 34.13-08 uses for the
   // same reason. An absent or unrecognised `platform` (including
-  // ContextProvider's own 'unknown' fallback) must still ask the backend
+  // the app stores's own 'unknown' fallback) must still ask the backend
   // rather than silently answer "not eligible", which is the exact shape of
   // the cold-metadata-cache false negative
   // `.planning/debug/steam-bottle-guided-setup-never-fires.md` records.

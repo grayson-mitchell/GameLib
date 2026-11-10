@@ -118,7 +118,6 @@ import NavItem from '../components/NavItem'
 import FilterFacetGroup from '../components/FilterFacetGroup'
 import FilterCollectionList from '../components/FilterCollectionList'
 import useLibraryState from 'frontend/state/libraryState'
-import { resetAllStores } from 'frontend/state/storeKit'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }

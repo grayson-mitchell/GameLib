@@ -123,9 +123,9 @@ type Props = {
   /** D-43-12 (Phase 43 plan 06): the caller's answer to "is GameLib
    * connected to this key's login store?" — `true`/`false` when
    * `getGameLibLoginStore(humbleKey.platform)` names a store (steam/gog/
-   * epic family) and the caller has read that store's `ContextProvider`
+   * epic family) and the caller has read that store's the app stores
    * `username`, `undefined` when the platform has no login store at all.
-   * The row never reads `ContextProvider` itself (it never has — that is
+   * The row never reads the app stores itself (it never has — that is
    * the only reason its component tests can invoke it as a plain function
    * with no provider tree), so this is threaded in rather than looked up
    * here. Deliberately re-verified against `getGameLibLoginStore` inside

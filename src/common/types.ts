@@ -704,7 +704,7 @@ export type RecentGame = {
    *
    * DELIBERATELY inherited by `HiddenGame`/`FavouriteGame` below, and
    * deliberately never populated by either. Their only writers
-   * (`GlobalState.tsx`'s `hideGame`/`addGameToFavourites`) build a literal from
+   * (`the old GlobalState class`'s `hideGame`/`addGameToFavourites`) build a literal from
    * two scalar string arguments with no `GameInfo` in scope, so there is no
    * value they could put here even by accident. Verified by census before this
    * field was added, rather than assumed: the aliases were kept intact instead

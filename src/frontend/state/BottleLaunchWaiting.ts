@@ -20,7 +20,7 @@ interface BottleLaunchWaitingState {
 // user can have more than one bottled-Steam launch outstanding, each with
 // its own classification. Mirrors SteamBridgeSetup.ts's shape -- a standalone
 // zustand store plus a directly-testable signal handler, rather than state
-// owned by GlobalState.tsx's class component (no jsdom in this project's
+// owned by the old GlobalState class's class component (no jsdom in this project's
 // frontend jest config; see SteamBridgeSetup.test.ts's own docstring).
 export const useBottleLaunchWaiting = create<BottleLaunchWaitingState>()(
   (set) => ({
@@ -41,7 +41,7 @@ export const useBottleLaunchWaiting = create<BottleLaunchWaitingState>()(
 
 // Extracted as a standalone function (SteamBridgeSetup.ts precedent) so unit
 // tests can simulate the backend's `steamBottleLaunchWaiting` push without
-// mounting GlobalState.tsx.
+// mounting the old GlobalState class.
 export const handleSteamBottleLaunchWaitingSignal = (
   _e: IpcRendererEvent,
   {

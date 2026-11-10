@@ -72,7 +72,7 @@ export default function NavTabs() {
     epic,
     gog,
     amazon,
-    // ContextType's `steam.username` is `string | null | undefined`
+    // the steam store's `username` is `string | null | undefined`
     // (`frontend/types.ts:114`) while `NavStoreSessions.steam.username` is
     // `string | undefined` -- coerce the `null` case here rather than
     // widening plan 01's shared contract type for one caller.

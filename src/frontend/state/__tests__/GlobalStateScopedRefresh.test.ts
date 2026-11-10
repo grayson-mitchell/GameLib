@@ -1,6 +1,6 @@
 /**
  * Behavioural gates for the fix to debug/login-logout-wipes-library, rewritten
- * from GlobalState.tsx / authState.ts source-text gates when `refresh()` moved
+ * from the old GlobalState class / authState.ts source-text gates when `refresh()` moved
  * into libraryState.ts (69-17).
  *
  * What this proves, split into the items the fix's verification bar names:

@@ -1,24 +1,24 @@
 import { useMemo } from 'react'
 
-import type { ContextType } from 'frontend/types'
+import type { AccountSlices } from 'frontend/types'
 import useAuthState from './authState'
 import type { AuthState } from './authState'
 import useLibraryState from './libraryState'
 import type { LibraryState } from './libraryState'
 
 // Phase 69-19 (Pattern 4): the composite account/collection shapes the
-// ContextType always exposed, built by pure functions shared by the D-09
-// bridge (bridgeContextValue.ts) and the convenience hooks below. The hooks
+// AccountSlices always exposed, built by pure functions shared by the D-09
+// bridge (the retired bridge) and the convenience hooks below. The hooks
 // select raw fields (useShallow via `.keys`) and compose with useMemo, so a
 // selector never builds a new object.
 
-// Logout writes null; ContextType types these as `string | undefined`.
+// Logout writes null; AccountSlices types these as `string | undefined`.
 const name = (value: string | null | undefined) => value as string | undefined
 
 export const composeEpicAccount = (
   lib: Pick<LibraryState, 'epicLibrary'>,
   auth: Pick<AuthState, 'epicUsername' | 'epicLogin' | 'epicLogout'>
-): ContextType['epic'] => ({
+): AccountSlices['epic'] => ({
   library: lib.epicLibrary,
   username: name(auth.epicUsername),
   login: auth.epicLogin,
@@ -28,7 +28,7 @@ export const composeEpicAccount = (
 export const composeGogAccount = (
   lib: Pick<LibraryState, 'gogLibrary'>,
   auth: Pick<AuthState, 'gogUsername' | 'gogLogin' | 'gogLogout'>
-): ContextType['gog'] => ({
+): AccountSlices['gog'] => ({
   library: lib.gogLibrary,
   username: name(auth.gogUsername),
   login: auth.gogLogin,
@@ -45,7 +45,7 @@ export const composeAmazonAccount = (
     | 'amazonLogin'
     | 'amazonLogout'
   >
-): ContextType['amazon'] => ({
+): AccountSlices['amazon'] => ({
   library: lib.amazonLibrary,
   user_id: name(auth.amazonUserId),
   username: name(auth.amazonUsername),
@@ -57,7 +57,7 @@ export const composeAmazonAccount = (
 export const composeSteamAccount = (
   lib: Pick<LibraryState, 'steamLibrary'>,
   auth: Pick<AuthState, 'steamUsername' | 'steamLogin' | 'steamLogout'>
-): ContextType['steam'] => ({
+): AccountSlices['steam'] => ({
   library: lib.steamLibrary,
   username: auth.steamUsername,
   login: auth.steamLogin,
@@ -66,7 +66,7 @@ export const composeSteamAccount = (
 
 export const composeHumbleAccount = (
   auth: Pick<AuthState, 'humble' | 'humbleLogin' | 'humbleDisconnect'>
-): ContextType['humble'] => ({
+): AccountSlices['humble'] => ({
   isLoggedIn: auth.humble.isLoggedIn,
   username: auth.humble.username,
   expired: auth.humble.expired,
@@ -81,7 +81,7 @@ export const composeHumbleAccount = (
 
 export const composeHiddenGames = (
   lib: Pick<LibraryState, 'hiddenGames' | 'hideGame' | 'unhideGame'>
-): ContextType['hiddenGames'] => ({
+): AccountSlices['hiddenGames'] => ({
   list: lib.hiddenGames,
   add: lib.hideGame,
   remove: lib.unhideGame
@@ -92,7 +92,7 @@ export const composeFavouriteGames = (
     LibraryState,
     'favouriteGames' | 'addGameToFavourites' | 'removeGameFromFavourites'
   >
-): ContextType['favouriteGames'] => ({
+): AccountSlices['favouriteGames'] => ({
   list: lib.favouriteGames,
   add: lib.addGameToFavourites,
   remove: lib.removeGameFromFavourites
@@ -109,7 +109,7 @@ export const composeCustomCategories = (
     | 'removeCustomCategory'
     | 'renameCustomCategory'
   >
-): ContextType['customCategories'] => ({
+): AccountSlices['customCategories'] => ({
   list: lib.customCategories,
   listCategories: lib.getCustomCategories,
   addToGame: lib.addGameToCustomCategory,
@@ -119,19 +119,19 @@ export const composeCustomCategories = (
   renameCategory: lib.renameCustomCategory
 })
 
-export function useEpicAccount(): ContextType['epic'] {
+export function useEpicAccount(): AccountSlices['epic'] {
   const lib = useLibraryState.keys('epicLibrary')
   const auth = useAuthState.keys('epicUsername', 'epicLogin', 'epicLogout')
   return useMemo(() => composeEpicAccount(lib, auth), [lib, auth])
 }
 
-export function useGogAccount(): ContextType['gog'] {
+export function useGogAccount(): AccountSlices['gog'] {
   const lib = useLibraryState.keys('gogLibrary')
   const auth = useAuthState.keys('gogUsername', 'gogLogin', 'gogLogout')
   return useMemo(() => composeGogAccount(lib, auth), [lib, auth])
 }
 
-export function useAmazonAccount(): ContextType['amazon'] {
+export function useAmazonAccount(): AccountSlices['amazon'] {
   const lib = useLibraryState.keys('amazonLibrary')
   const auth = useAuthState.keys(
     'amazonUserId',
@@ -143,23 +143,23 @@ export function useAmazonAccount(): ContextType['amazon'] {
   return useMemo(() => composeAmazonAccount(lib, auth), [lib, auth])
 }
 
-export function useSteamAccount(): ContextType['steam'] {
+export function useSteamAccount(): AccountSlices['steam'] {
   const lib = useLibraryState.keys('steamLibrary')
   const auth = useAuthState.keys('steamUsername', 'steamLogin', 'steamLogout')
   return useMemo(() => composeSteamAccount(lib, auth), [lib, auth])
 }
 
-export function useHumbleAccount(): ContextType['humble'] {
+export function useHumbleAccount(): AccountSlices['humble'] {
   const auth = useAuthState.keys('humble', 'humbleLogin', 'humbleDisconnect')
   return useMemo(() => composeHumbleAccount(auth), [auth])
 }
 
-export function useHiddenGames(): ContextType['hiddenGames'] {
+export function useHiddenGames(): AccountSlices['hiddenGames'] {
   const lib = useLibraryState.keys('hiddenGames', 'hideGame', 'unhideGame')
   return useMemo(() => composeHiddenGames(lib), [lib])
 }
 
-export function useFavouriteGames(): ContextType['favouriteGames'] {
+export function useFavouriteGames(): AccountSlices['favouriteGames'] {
   const lib = useLibraryState.keys(
     'favouriteGames',
     'addGameToFavourites',
@@ -168,7 +168,7 @@ export function useFavouriteGames(): ContextType['favouriteGames'] {
   return useMemo(() => composeFavouriteGames(lib), [lib])
 }
 
-export function useCustomCategories(): ContextType['customCategories'] {
+export function useCustomCategories(): AccountSlices['customCategories'] {
   const lib = useLibraryState.keys(
     'customCategories',
     'getCustomCategories',

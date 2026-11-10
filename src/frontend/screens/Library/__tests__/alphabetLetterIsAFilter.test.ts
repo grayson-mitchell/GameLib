@@ -5,7 +5,7 @@
  * removes games from the rendered set inside `libraryToShow` -- it is a
  * filter, not an index/jump control. That reclassification has three
  * consequences, gated here at the source level because `Library/index.tsx`'s
- * transitive import graph (ContextProvider, the game-list stack, colocated
+ * transitive import graph (the app stores, the game-list stack, colocated
  * CSS) cannot be mounted in this jest project (`testEnvironment: 'node'`,
  * no jsdom, no react-test-renderer -- see `clearAllFiltersCoverage.test.ts`
  * and `libraryHeaderVisibility.test.ts` for the same idiom):

@@ -75,7 +75,7 @@ body {
      `.focus()` after dispatching UNTRUSTED synthetic KeyboardEvents, so
      Chromium/WebKit's :focus-visible heuristic (matched against the last
      TRUSTED interaction) frequently does not match. `body.controllerLayout`
-     is toggled by src/frontend/state/GlobalState.tsx on `controller-changed`
+     is toggled by the old GlobalState class on `controller-changed`
      and is the existing fallback (see UI/InfoIcon/index.css:15).
 
      Focus is deliberately LOUDER than hover on every surface except library

@@ -17,7 +17,7 @@
  *
  * `useContext`/`useEffect` are mocked via `react` (mirrors
  * `removeEosOverlayConfirmation.test.tsx`'s approach): `useContext` dispatches on the
- * mocked `ContextProvider` default export's `__name` sentinel to a fixed context
+ * mocked the app stores default export's `__name` sentinel to a fixed context
  * object; `useEffect` invokes its callback synchronously (a single mount needs no
  * dep-array re-run tracking) so the `onMessage` handler passed to
  * `window.api.handleShowDialog` is captured for direct invocation.

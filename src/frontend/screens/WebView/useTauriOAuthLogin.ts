@@ -18,7 +18,7 @@ import { isStore } from 'common/storeCapabilities'
  *
  * Once Phase 34.5 ported these channels for real, a resolved `{ status: 'done' }` response
  * stopped being merely "the hook's job is done" — it is the ONE place a Tauri OAuth login can
- * trigger the post-login completion work `GlobalState.tsx`'s `epicLogin`/`gogLogin`/
+ * trigger the post-login completion work `the old GlobalState class`'s `epicLogin`/`gogLogin`/
  * `amazonLogin` wrappers perform for Electron's `<webview>` path (`setState` of the
  * signed-in username plus `handleSuccessfulLogin(runner)` -> `refreshLibrary`). This hook still
  * calls the raw `window.api.*` channel itself (so it keeps owning the `UNPORTED_CHANNEL_MARKER`
@@ -26,7 +26,7 @@ import { isStore } from 'common/storeCapabilities'
  * on `status === 'done'`, invokes the injected `onLoginSuccess` completion callback with exactly
  * the payload `createOAuthLoginCompletion` below needs to reproduce that same post-login work —
  * routed through `GlobalState`'s own `handleSuccessfulLogin`, never a second, parallel refresh
- * path. `GlobalState.tsx` wires `completeOAuthLogin = createOAuthLoginCompletion({...})` and
+ * path. `the old GlobalState class` wires `completeOAuthLogin = createOAuthLoginCompletion({...})` and
  * exposes it on context; `index.tsx` passes it as this hook's second argument. Electron never
  * reaches any of this — Tauri is the only shell now, so the guard below (which used to
  * also check Tauri-context) reduces to the runner-recognition check alone, still first
@@ -88,7 +88,7 @@ function isOAuthRunner(value: unknown): value is OAuthRunner {
 
 // Phase 34.5 Plan 26 (F-34.5-G6-02 layer 2): the minimal shape a `status === 'done'` auth-channel
 // response is reduced to before it is handed to the completion callback. Deliberately loose
-// (username/user_id, never the raw per-runner response object) so `GlobalState.tsx` never has to
+// (username/user_id, never the raw per-runner response object) so `the old GlobalState class` never has to
 // import this hook's runner-specific response-shape knowledge -- it only needs to know what to
 // DO with a signed-in username, exactly like its own epicLogin/gogLogin/amazonLogin
 // wrappers already do.
@@ -99,7 +99,7 @@ export type OAuthLoginCompletionPayload = {
 }
 
 // Dependencies `createOAuthLoginCompletion` needs to reproduce the post-login half of
-// GlobalState.tsx's epicLogin/gogLogin/amazonLogin wrappers -- setting the runner's
+// the old GlobalState class's epicLogin/gogLogin/amazonLogin wrappers -- setting the runner's
 // username into state, then routing through the EXISTING `handleSuccessfulLogin` (which itself
 // calls `refreshLibrary`), never a second, parallel refresh path (per this plan's domain
 // context). `setState` is intentionally loosely typed: GlobalState's own `PureComponent<Props>`
@@ -115,7 +115,7 @@ type OAuthLoginCompletionDeps = {
 }
 
 /**
- * Builds the completion callback `GlobalState.tsx` exposes on context as `completeOAuthLogin`
+ * Builds the completion callback `the old GlobalState class` exposes on context as `completeOAuthLogin`
  * (Phase 34.5 Plan 26). Exported (rather than inlined into the class) so this exact wiring can be
  * driven directly in tests, with `setState`/`handleSuccessfulLogin` spied, without instantiating
  * the full `GlobalState` React component (see `useTauriOAuthLogin.test.tsx`'s "library refresh"
@@ -375,7 +375,7 @@ export function useTauriOAuthLogin(
 
         if (status === 'done') {
           // The auth channel accepted the captured code -- hand the login on to the SAME
-          // completion path GlobalState.tsx's own wrappers use (setState +
+          // completion path the old GlobalState class's own wrappers use (setState +
           // handleSuccessfulLogin -> refreshLibrary), never a second, parallel refresh path.
           // Always fires, whether or not teardown landed first (Plan 34.5-34 Task 2) -- an
           // already-persisted credential must never be discarded.

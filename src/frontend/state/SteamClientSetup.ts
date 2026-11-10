@@ -19,7 +19,7 @@ interface SteamClientSetupState {
 // SteamBottleSetup.ts (the macOS CrossOver BOTTLE flow). Opened by the
 // backend `steamClientSetupRequired` push (see
 // `handleSteamClientSetupRequiredSignal` below, wired up once in
-// GlobalState.tsx) OR by Console Mode's hand-off
+// the old GlobalState class) OR by Console Mode's hand-off
 // (`handOffSteamClientSetupToDesktop`, consoleSteamTarget.ts), which reopens
 // it with the appName and reason the backend's own recheck just reported.
 // The decision stays backend-owned and is never made by a frontend
@@ -38,7 +38,7 @@ export const useSteamClientSetup = create<SteamClientSetupState>()((set) => ({
 }))
 
 // Extracted as a standalone, directly-testable function (rather than an
-// inline arrow registered in GlobalState.tsx) so unit tests can simulate the
+// inline arrow registered in the old GlobalState class) so unit tests can simulate the
 // backend signal firing without mounting the GlobalState class component —
 // mirrors SteamBottleSetup.ts's handleSteamBottleSetupRequiredSignal.
 export const handleSteamClientSetupRequiredSignal = (

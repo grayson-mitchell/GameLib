@@ -1,6 +1,6 @@
 /**
  * Behavioural gate for quick task 260819-r4r ("cache Steam library on
- * startup"), rewritten from a GlobalState.tsx source-text gate when the
+ * startup"), rewritten from a the old GlobalState class source-text gate when the
  * library data moved into libraryState.ts (69-17).
  *
  * What regressed: the Steam library cache (`store_cache/steam_library.json`,

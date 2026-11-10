@@ -20,7 +20,7 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 type FocusRowStub = { kind: string; value: string } | null
 
-type ContextProviderStub = {
+type AppStateStub = {
   focusRow: FocusRowStub
   handleFocusRow: jest.Mock
   customCategories: { listCategories: jest.Mock }
@@ -34,7 +34,7 @@ type LibraryContextStub = {
 // Declared BEFORE the `jest.mock('react', ...)` call and read by its factory
 // -- this project's ts-jest setup does not hoist `jest.mock` above variable
 // declarations the way babel-jest does.
-let contextProviderValue: ContextProviderStub
+let appStateValue: AppStateStub
 let libraryContextValue: LibraryContextStub
 
 function setContexts(
@@ -45,7 +45,7 @@ function setContexts(
     focusRow?: FocusRowStub
   } = {}
 ) {
-  contextProviderValue = {
+  appStateValue = {
     focusRow: options.focusRow ?? null,
     handleFocusRow: jest.fn(),
     customCategories: {
@@ -55,11 +55,11 @@ function setContexts(
   // focusRow / handleFocusRow / the collection accessor now come from the
   // settings and library stores; the stub above keeps the spy handles.
   useSettingsState.setState({
-    focusRow: contextProviderValue.focusRow as never,
-    handleFocusRow: contextProviderValue.handleFocusRow
+    focusRow: appStateValue.focusRow as never,
+    handleFocusRow: appStateValue.handleFocusRow
   })
   useLibraryState.setState({
-    getCustomCategories: contextProviderValue.customCategories.listCategories
+    getCustomCategories: appStateValue.customCategories.listCategories
   })
   libraryContextValue = {
     connectedStores: options.stores ?? [],
@@ -311,7 +311,7 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
     it('sets the pick when the row is not active', () => {
       setContexts(populated)
       click(rowByLabel(render(), label))
-      expect(contextProviderValue.handleFocusRow).toHaveBeenCalledWith({
+      expect(appStateValue.handleFocusRow).toHaveBeenCalledWith({
         kind,
         value
       })
@@ -320,7 +320,7 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
     it('clears the pick to null when the active row is clicked again', () => {
       setContexts({ ...populated, focusRow: { kind, value } })
       click(rowByLabel(render(), label))
-      expect(contextProviderValue.handleFocusRow).toHaveBeenCalledWith(null)
+      expect(appStateValue.handleFocusRow).toHaveBeenCalledWith(null)
     })
 
     it('replaces the pick when a different row is clicked', () => {
@@ -329,7 +329,7 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
         focusRow: { kind: 'view', value: 'all' }
       })
       click(rowByLabel(render(), label))
-      expect(contextProviderValue.handleFocusRow).toHaveBeenCalledWith({
+      expect(appStateValue.handleFocusRow).toHaveBeenCalledWith({
         kind,
         value
       })
@@ -339,7 +339,7 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
   it('selects Uncategorized as a collection pick with the PRESET sentinel value', () => {
     setContexts({ categories: ['RPGs'] })
     click(rowByLabel(render(), 'Uncategorized'))
-    expect(contextProviderValue.handleFocusRow).toHaveBeenCalledWith({
+    expect(appStateValue.handleFocusRow).toHaveBeenCalledWith({
       kind: 'collection',
       value: 'preset_uncategorized'
     })

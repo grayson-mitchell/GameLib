@@ -422,7 +422,7 @@ describe('App shell layout (F-34.10-03 seam recipe, F-34.10-06 scroll relocation
     // __tests__ directories) and looks for a SCROLL-SPECIFIC
     // `document.body` pattern only -- the tree has many legitimate,
     // unrelated `document.body.classList`, `document.body.className` and
-    // `document.body.insertAdjacentElement` uses (index.tsx, GlobalState.tsx,
+    // `document.body.insertAdjacentElement` uses (index.tsx, the old GlobalState class,
     // ConsoleMode's dialogs, gamepad.ts) which must NOT trip this gate. If a
     // future author trips this and the match is one of those three
     // patterns, it is a false positive worth narrowing, not a real defect.

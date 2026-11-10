@@ -3,7 +3,7 @@ import type { DialogModalOptions } from 'frontend/types'
 /**
  * Quick 261024-ho4: shared CrossOver install-risk resolution for the Steam,
  * Download and ThirdParty install dialogs. Pure on purpose: no React, no
- * ContextProvider, no stylesheet, so it runs under the node jest env.
+ * the app stores, no stylesheet, so it runs under the node jest env.
  *
  * Thresholds (operator-locked): ratings 1-3 ask for confirmation (<= 2 with
  * "known not to work" copy, 3 with "may have problems" copy), 4-5 install

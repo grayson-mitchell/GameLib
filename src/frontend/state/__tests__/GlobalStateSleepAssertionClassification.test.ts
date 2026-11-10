@@ -3,7 +3,7 @@
  * libraryStatus-driven subscriber (Phase 35 gap-closure 35-27, REQ-35-20 / D-35-08-02 / gate
  * criterion 16, option-a; Phase 69-19 D-08).
  *
- * These used to live in `GlobalState.tsx`, which could not be imported under the jsdom-less
+ * These used to live in `the old GlobalState class`, which could not be imported under the jsdom-less
  * frontend jest project, so this file extracted their source text and transpiled it. They now
  * live in `sleepAssertion.ts` and are imported directly; the anti-vacuity self-tests below run
  * REGRESSED local variants through the same assertions to prove the cases would convict them.

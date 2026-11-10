@@ -4,7 +4,7 @@
  * `initStateSubscriptions` plus the mount functions GlobalState still calls.
  *
  * The 49-07 version of this file pinned the wiring by source text over
- * GlobalState.tsx. The code moved into importable modules, so the same rules
+ * the old GlobalState class. The code moved into importable modules, so the same rules
  * are proven by running them against a fake `window.api` that records every
  * call and captures every registered listener:
  *   - D-16 / R3: nothing in boot calls `humbleCheckHealth` (the health check

@@ -93,7 +93,7 @@ export const useSteamBridgeRouteNotice = create<SteamBridgeRouteNoticeState>()(
 )
 
 // Extracted as a standalone, directly-testable function (rather than an
-// inline arrow registered in GlobalState.tsx) so unit tests can simulate the
+// inline arrow registered in the old GlobalState class) so unit tests can simulate the
 // backend signal firing without mounting the GlobalState class component --
 // this project's frontend jest config has no jsdom (see jest.config.js
 // docstring), so class-component instantiation/mounting isn't feasible here.

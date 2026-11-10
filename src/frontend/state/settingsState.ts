@@ -16,7 +16,7 @@ import { bindStoreHooks, registerStoreForReset } from './storeKit'
 
 const RTL_LANGUAGES = ['fa', 'ar']
 
-// R5: read at import time exactly as GlobalState.tsx did (import-time timing
+// R5: read at import time exactly as the old GlobalState class did (import-time timing
 // preserved, see
 // .planning/todos/pending/2026-11-10-import-time-mirror-reads-before-hydration.md).
 export const globalSettingsAtImport = configStore.get_nodefault('settings')

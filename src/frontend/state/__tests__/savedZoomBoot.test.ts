@@ -1,8 +1,8 @@
 /**
  * Real behaviour tests over `savedZoomBoot.ts` (quick 261015-p3q). This is a
- * real import, not a source gate -- the source gate for the `GlobalState.tsx`
+ * real import, not a source gate -- the source gate for the `the old GlobalState class`
  * wiring is `GlobalStateSavedZoomWiring.test.ts`, and exists only because
- * `GlobalState.tsx` itself cannot be imported under this project's node jest.
+ * `the old GlobalState class` itself cannot be imported under this project's node jest.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'

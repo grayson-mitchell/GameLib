@@ -29,7 +29,7 @@ interface SteamBridgeSetupState {
 // Phase 24 (24-09), R7/D-05: single global store driving the EXPLICIT
 // bridge-failure dialog. Opened EXCLUSIVELY in response to the backend
 // `steamBridgeSetupRequired` push (see `handleSteamBridgeSetupRequiredSignal`
-// below, wired up once in GlobalState.tsx) — never by a frontend eligibility
+// below, wired up once in the old GlobalState class) — never by a frontend eligibility
 // check. Mirrors SteamBottleSetup.ts's shape exactly (D-07 precedent), a
 // third guided-setup surface rather than a new invocation shape.
 //
@@ -63,7 +63,7 @@ export const useSteamBridgeSetup = create<SteamBridgeSetupState>()((set) => ({
 }))
 
 // Extracted as a standalone, directly-testable function (rather than an
-// inline arrow registered in GlobalState.tsx) so unit tests can simulate the
+// inline arrow registered in the old GlobalState class) so unit tests can simulate the
 // backend signal firing without mounting the GlobalState class component —
 // this project's frontend jest config has no jsdom (see jest.config.js
 // docstring), so class-component instantiation/mounting isn't feasible here.

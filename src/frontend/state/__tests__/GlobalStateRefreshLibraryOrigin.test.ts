@@ -86,7 +86,7 @@ const realImpl: RefreshImpl = (o) =>
 /**
  * Counts how many times an exact `origin: '<value>'` literal appears.
  * Deliberately generic over ANY stripped source string, not only
- * GlobalState.tsx's — plan 34.5-47 reuses it unchanged against the nine
+ * the old GlobalState class's — plan 34.5-47 reuses it unchanged against the nine
  * external call-site files' stripped sources below.
  */
 function countOriginLiteral(strippedSource: string, value: string): number {
@@ -100,7 +100,7 @@ function countOriginLiteral(strippedSource: string, value: string): number {
 /**
  * The T-34.5-47-01 mitigation as an executable gate. Scans every `origin:`
  * KEY occurrence (object-literal property syntax — deliberately does NOT
- * match the `origin = 'unknown'` DESTRUCTURING DEFAULT in GlobalState.tsx's
+ * match the `origin = 'unknown'` DESTRUCTURING DEFAULT in the old GlobalState class's
  * own signature, which uses `=` not `:` and is intentionally left alone by
  * this plan) and requires the value immediately following the colon to be a
  * single-quoted string literal containing no backslash (which also rejects
@@ -426,7 +426,7 @@ describe('libraryState.refreshLibrary — scopes the global refreshing flags to 
 
 /**
  * Plan 34.5-47 (T-34.5-47-01, Task 2): the nine PRODUCTION `refreshLibrary`
- * call sites living OUTSIDE GlobalState.tsx, plus the literal-only origin
+ * call sites living OUTSIDE the old GlobalState class, plus the literal-only origin
  * rule applied to all fifteen call sites (six internal + nine external)
  * combined. Reads the REAL production source of each of the nine files with
  * `readFileSync` + `stripSourceComments` — never a reconstruction of the

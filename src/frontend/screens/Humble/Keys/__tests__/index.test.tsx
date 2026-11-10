@@ -49,7 +49,7 @@
  * project even via its now-exported `routes` array -- `import './App.css'`
  * at module scope throws the same `SyntaxError` before any mock in this
  * file could intercept it, and mocking out App.tsx's entire transitive
- * import graph (NavShell, ContextProvider, half a dozen dialog components)
+ * import graph (NavShell, the app stores, half a dozen dialog components)
  * is out of proportion for one routing assertion. This follows the
  * established convention in
  * `src/frontend/screens/Login/__tests__/loginInFlightUiReachability.test.tsx`

@@ -19,7 +19,7 @@
  *
  *   2. COMMENT-STRIPPED SOURCE GATES for `Header/index.tsx` and
  *      `Library/index.tsx`. Neither can be invoked here -- their transitive
- *      import graphs pull in ContextProvider, the whole game-list stack and
+ *      import graphs pull in the app stores, the whole game-list stack and
  *      colocated CSS. This is the `downloadsRingStyles.test.ts` idiom.
  *
  * What the source gates do NOT and CANNOT prove: that the header renders,

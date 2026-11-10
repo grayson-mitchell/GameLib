@@ -1,5 +1,5 @@
 #!/bin/bash
-pnpm codecheck && pnpm lint && pnpm prettier && pnpm i18n --fail-on-update && pnpm find-deadcode && pnpm boundaries && pnpm steam-line-ceiling && pnpm backend-di-ceilings && pnpm frontend-context-ceiling
+pnpm codecheck && pnpm lint && pnpm prettier && pnpm i18n --fail-on-update && pnpm find-deadcode && pnpm boundaries && pnpm steam-line-ceiling && pnpm backend-di-ceilings
 checks_status=$?
 
 # Best-effort refresh of the gitignored graphify-out/ knowledge graph after a

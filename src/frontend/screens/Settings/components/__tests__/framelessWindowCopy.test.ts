@@ -79,13 +79,13 @@ describe('frameless-window toggle copy accuracy (gap G2, UAT test 2)', () => {
     expect(RESTART_PATTERN.test(retiredDescription)).toBe(true)
   })
 
-  it('the component contains no showDialogModal or ContextProvider reference', () => {
+  it('the component contains no showDialogModal or React context reference', () => {
     const source = readStrippedComponent()
 
     // The confirmation dialog gated a live-applying, default-off,
     // reversible setting -- it must not be reintroduced.
     expect(source).not.toMatch(/showDialogModal/)
-    expect(source).not.toMatch(/ContextProvider/)
+    expect(source).not.toMatch(/useContext\(/)
   })
 
   it('the component references the gamelib namespace key and no upstream frameless-window key', () => {

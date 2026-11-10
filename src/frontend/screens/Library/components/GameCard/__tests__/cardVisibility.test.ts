@@ -212,7 +212,7 @@ describe('observeCardVisibility fallback -- no IntersectionObserver available', 
  * Source gates for the three files rewired by Task 2 to consume
  * `cardVisibility.ts` and delete the old `visible-cards` broadcast. None of
  * `GameCard/index.tsx`, `GamesList/index.tsx` can be `require()`d here --
- * both pull in colocated CSS and the full ContextProvider import graph, and
+ * both pull in colocated CSS and the full the app stores import graph, and
  * there is no jsdom in this project (see the file header above). These gates
  * prove the wiring is TEXTUALLY present and the broadcast machinery is
  * TEXTUALLY gone -- not that either runs. That proof is owed to a live run.

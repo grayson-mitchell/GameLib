@@ -27,7 +27,7 @@
  * `NavShell/__tests__/SettingsPanel.test.tsx`.
  *
  * 261002-hx0 gave `Header` real hook usage of its own (`useContext` against
- * BOTH `LibraryContext` and `ContextProvider`, plus `useState`/`useEffect`/
+ * BOTH `LibraryContext` and the app stores, plus `useState`/`useEffect`/
  * `useMemo`) that its two dissolved predecessors previously carried, and
  * 261003 tier2-right-edge-shifts-with-scrollbar added `useRef`/
  * `useLayoutEffect` (the scrollbar-gutter correction) -- both stubbed below
@@ -37,7 +37,7 @@
  * "Invalid hook call". `react` is therefore partially mocked below, the same
  * idiom `SettingsPanel.test.tsx` established for a single context; this file
  * extends it to distinguish TWO contexts by identity (the real,
- * unmocked `LibraryContext`/`ContextProvider` default exports, fetched via
+ * unmocked `LibraryContext`/the app stores default exports, fetched via
  * `jest.requireActual` so the comparison is against the exact object
  * `Header` itself receives), because a single canned `contextValue` would
  * make one of the two `useContext` call sites silently read the other

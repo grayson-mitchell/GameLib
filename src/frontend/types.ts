@@ -1,15 +1,11 @@
 import {
   AppSettings,
   GameInfo,
-  GameStatus,
   Runner,
-  ConnectivityStatus,
   DialogType,
   ButtonOptions,
-  FocusRowSelection,
   DMQueueElement,
   DownloadManagerState,
-  ExperimentalFeatures,
   GameSettings,
   WikiInfo,
   ExtraInfo,
@@ -18,19 +14,12 @@ import {
 } from 'common/types'
 import { NileLoginData, NileRegisterData } from 'common/types/nile'
 import { HumbleKey } from 'common/types/humble'
-import type { OAuthLoginCompletionPayload } from 'frontend/screens/WebView/useTauriOAuthLogin'
-import type { SteamSyncStatus } from 'common/types/ipc'
 import type { RunsForMeState } from 'common/runsForMe'
 import type {
   LibraryGroupBy,
   LibrarySortDirection,
   LibrarySortField
 } from 'frontend/screens/Library/librarySort'
-import type {
-  SignInProbeOutcomeMap,
-  SignInState,
-  SignInStore
-} from 'common/signInState'
 
 export type Category =
   | 'all'
@@ -40,46 +29,12 @@ export type Category =
   | 'nile'
   | 'steam'
 
-export interface ContextType {
-  error: boolean
-  gameUpdates: string[]
-  isRTL: boolean
-  isFullscreen: boolean
-  isFrameless: boolean
-  language: string
-  setLanguage: (newLanguage: string) => void
-  libraryStatus: GameStatus[]
-  focusRow: FocusRowSelection
-  handleFocusRow: (value: FocusRowSelection) => void
-  // 49-07 (D-08): this launch's sign-in probe outcomes; `{}` = every store pending.
-  signInProbeOutcomes: SignInProbeOutcomeMap
-  // 49-07 (D-10): the persisted per-store dismissed set and its two writers.
-  dismissedSignInNotices: SignInStore[]
-  handleDismissSignInNotice: (store: SignInStore) => void
-  handleRearmSignInDismissals: (
-    states: Record<SignInStore, SignInState>
-  ) => void
-  platform: NodeJS.Platform | 'unknown'
-  refresh: (library: Runner, checkUpdates?: boolean) => Promise<void>
-  refreshLibrary: (options: RefreshOptions) => Promise<void>
-  // Phase 34.5 Plan 26 (F-34.5-G6-02 layer 2, F-34.5-G6-03): completes a Tauri OAuth login whose
-  // captured code has already been handed to the runner's real auth channel by
-  // useTauriOAuthLogin.ts. Sets the signed-in username into state and routes through the
-  // EXISTING handleSuccessfulLogin -> refreshLibrary path, never a second, parallel one.
-  completeOAuthLogin: (payload: OAuthLoginCompletionPayload) => void
-  refreshing: boolean
-  refreshingInTheBackground: boolean
-  // debug/login-logout-wipes-library: per-runner scoped refresh tracking,
-  // separate from the two global flags above — see GlobalState.tsx's
-  // StateProps.refreshingByRunner doc comment for the full rationale.
-  refreshingByRunner: Partial<Record<Runner, boolean>>
-  // True while Steam per-game metadata/art is streaming in the background.
-  steamMetadataSyncing: boolean
-  // Phase 34.15 (34.15-02), D-06: the Steam library sync's own tri-state,
-  // fed by the steamSyncStatus channel. Replaces refreshingInTheBackground
-  // as the driver of the Steam sync indicator -- see GlobalState.tsx's
-  // StateProps.steamSyncStatus doc comment for the full rationale.
-  steamSyncStatus: SteamSyncStatus
+/**
+ * The per-account and per-collection shapes the account hooks in
+ * `state/accountHooks.ts` build. (Formerly the account slice of the deleted
+ * GlobalState context type.)
+ */
+export interface AccountSlices {
   hiddenGames: {
     list: HiddenGame[]
     add: (appNameToHide: string, appTitle: string) => void
@@ -99,12 +54,6 @@ export interface ContextType {
     removeCategory: (category: string) => void
     renameCategory: (oldName: string, newName: string) => void
   }
-  currentCustomCategories: string[]
-  setCurrentCustomCategories: (newCustomCategories: string[]) => void
-  theme: string
-  setTheme: (themeName: string) => void
-  zoomPercent: number
-  setZoomPercent: (newZoomPercent: number) => void
   epic: {
     library: GameInfo[]
     username?: string
@@ -143,39 +92,6 @@ export interface ContextType {
     login: (result: { status: string; username?: string }) => Promise<string>
     logout: () => Promise<void>
   }
-  installingEpicGame: boolean
-  allTilesInColor: boolean
-  setAllTilesInColor: (value: boolean) => void
-  titlesAlwaysVisible: boolean
-  setTitlesAlwaysVisible: (value: boolean) => void
-  hideTitles: boolean
-  setHideTitles: (value: boolean) => void
-  cleanTiles: boolean
-  setCleanTiles: (value: boolean) => void
-  setSideBarCollapsed: (value: boolean) => void
-  sidebarCollapsed: boolean
-  activeController: string
-  connectivity: { status: ConnectivityStatus; retryIn: number }
-  setSecondaryFontFamily: (newFontFamily: string, saveToFile?: boolean) => void
-  setPrimaryFontFamily: (newFontFamily: string, saveToFile?: boolean) => void
-  dialogModalOptions: DialogModalOptions
-  showDialogModal: (options: DialogModalOptions) => void
-  showResetDialog: () => void
-  externalLinkDialogOptions: ExternalLinkDialogOptions
-  handleExternalLinkDialog: (options: ExternalLinkDialogOptions) => void
-  showRedeemKeyDialog: boolean
-  handleRedeemKeyDialog: (show: boolean) => void
-  sideloadedLibrary: GameInfo[]
-  hideChangelogsOnStartup: boolean
-  setHideChangelogsOnStartup: (value: boolean) => void
-  lastChangelogShown: string | null
-  setLastChangelogShown: (value: string) => void
-  experimentalFeatures: ExperimentalFeatures
-  handleExperimentalFeatures: (newSetting: ExperimentalFeatures) => void
-  disableDialogBackdropClose: boolean
-  setDisableDialogBackdropClose: (value: boolean) => void
-  disableAnimations: boolean
-  setDisableAnimations: (value: boolean) => void
 }
 
 export type DialogModalOptions = {
@@ -209,20 +125,6 @@ export interface InstallProgress {
   eta: string
   folder?: string
   percent: number
-}
-
-type RefreshOptions = {
-  checkForUpdates?: boolean
-  fullRefresh?: boolean
-  library?: Runner | 'all'
-  runInBackground?: boolean
-  // Plan 34.5-47 (T-34.5-47-01): threads the fixed-literal `origin` from the
-  // nine external call sites through the ContextType-facing surface. Kept a
-  // plain optional string here to match GlobalState.tsx's own local
-  // `RefreshLibraryOptions = RefreshOptions(common) & { origin?: string }` —
-  // deliberately NOT narrowed to a union in this plan (see that file's L58-69
-  // comment and this plan's threat register T-34.5-47-01 residual note).
-  origin?: string
 }
 
 export type SyncType = 'Download' | 'Upload' | 'Force download' | 'Force upload'
@@ -529,7 +431,7 @@ export interface FilterEngineDeps {
   crossoverRatings: Record<string, number | null>
   // Quick 261029-mkz: keyed by gameKey() (`${app_name}_${runner}`).
   runsForMe: Record<string, RunsForMeState>
-  // ContextProvider's `platform`, i.e. 'darwin' | 'linux' | 'win32'.
+  // the app stores's `platform`, i.e. 'darwin' | 'linux' | 'win32'.
   hostPlatform: string
 }
 

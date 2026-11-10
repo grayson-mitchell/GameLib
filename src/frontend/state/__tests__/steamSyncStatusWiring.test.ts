@@ -4,7 +4,7 @@
  *
  * WHY A SOURCE GATE. None of the five touchpoints this file proves can be
  * imported directly under this project's frontend jest project (no jsdom, no
- * CSS transform -- `GlobalState.tsx` reads `window.localStorage` at MODULE
+ * CSS transform -- `the old GlobalState class` reads `window.localStorage` at MODULE
  * SCOPE and dies at import with "window is not defined"; `Library/index.tsx`
  * / `InstallModal/index.tsx` open with a stylesheet import). This mirrors
  * `GlobalStateScopedRefresh.test.ts` and `filterChipRowPlacement.test.ts`'s
@@ -25,7 +25,7 @@
  *   W3: BEHAVIOURAL (69-18). The boot listener `initStateSubscriptions`
  *       registers for `handleSteamSyncStatus` writes the pushed status into
  *       libraryState (not merely registered and dropped).
- *   W4: `frontend/types.ts` and `state/ContextProvider.tsx` both declare the
+ *   W4: `frontend/types.ts` and `the app stores` both declare the
  *       lockstep `steamSyncStatus` pair -- a type without a default (or vice
  *       versa) drifts silently.
  *   W5 (D-06 negative gate): BEHAVIOURAL (69-18). Pushing a status leaves
@@ -69,8 +69,7 @@ const PRELOAD_STEAM_PATH = join(
   'api',
   'steam.ts'
 )
-const CONTEXT_PROVIDER_PATH = join(__dirname, '..', 'ContextProvider.tsx')
-const FRONTEND_TYPES_PATH = join(__dirname, '..', '..', 'types.ts')
+const LIBRARY_STATE_PATH = join(__dirname, '..', 'libraryState.ts')
 
 function gateSource(source: string): string {
   return stripSourceComments(source)
@@ -113,20 +112,20 @@ function gateW2_preloadExportsListenerSlot(source: string): void {
   )
 }
 
-function gateW4_typesAndProviderDeclareLockstepPair(
-  typesSource: string,
-  contextProviderSource: string
+function gateW4_libraryStateDeclaresTypeAndDefault(
+  libraryStateSource: string,
+  defaultStatus: unknown
 ): void {
   expectPresent(
-    typesSource,
-    'steamSyncStatus',
-    'W4: frontend/types.ts must declare the steamSyncStatus field on ContextType'
+    libraryStateSource,
+    'steamSyncStatus: SteamSyncStatus',
+    'W4: libraryState.ts must declare the steamSyncStatus type'
   )
-  expectPresent(
-    contextProviderSource,
-    'steamSyncStatus',
-    'W4: ContextProvider.tsx must declare the steamSyncStatus default -- a type without a default (or vice versa) drifts'
-  )
+  if (defaultStatus !== 'idle') {
+    throw new Error(
+      `W4: libraryState's steamSyncStatus default must be 'idle', got ${String(defaultStatus)}`
+    )
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -136,8 +135,6 @@ function gateW4_typesAndProviderDeclareLockstepPair(
 describe('steamSyncStatus wiring -- the five-touchpoint chain (34.15-02, D-06/D-07)', () => {
   const ipcSource = readGated(IPC_PATH)
   const preloadSteamSource = readGated(PRELOAD_STEAM_PATH)
-  const frontendTypesSource = readGated(FRONTEND_TYPES_PATH)
-  const contextProviderSource = readGated(CONTEXT_PROVIDER_PATH)
 
   it('W1: common/types/ipc/steam.ts declares the steamSyncStatus FrontendMessages channel', () => {
     expect(() => gateW1_ipcDeclaresChannel(ipcSource)).not.toThrow()
@@ -146,16 +143,6 @@ describe('steamSyncStatus wiring -- the five-touchpoint chain (34.15-02, D-06/D-
   it('W2 (silent-failure risk): preload/api/steam.ts exports the handleSteamSyncStatus allowlist entry -- a missing entry fails SILENTLY on the Tauri sidecar with no compile or runtime error', () => {
     expect(() =>
       gateW2_preloadExportsListenerSlot(preloadSteamSource)
-    ).not.toThrow()
-  })
-
-  // W4 stays source-text until 69-24 rewrites it with ContextProvider's removal.
-  it('W4: frontend/types.ts and ContextProvider.tsx both declare the lockstep steamSyncStatus pair', () => {
-    expect(() =>
-      gateW4_typesAndProviderDeclareLockstepPair(
-        frontendTypesSource,
-        contextProviderSource
-      )
     ).not.toThrow()
   })
 })
@@ -198,22 +185,18 @@ describe('RED proofs -- each gate demonstrably trips against a source-derived kn
     ).toThrow()
   })
 
-  it('W4 trips when steamSyncStatus is removed from ContextProvider.tsx while frontend/types.ts still declares it (derived by string-removal, proving the lockstep pair is checked, not just one side)', () => {
-    const realTypesSource = readGated(FRONTEND_TYPES_PATH)
-    const realContextProviderSource = readGated(CONTEXT_PROVIDER_PATH)
-    const defaultLine = "steamSyncStatus: 'idle',"
-    expect(realContextProviderSource).toContain(defaultLine)
-
-    const missingDefaultSpecimen = realContextProviderSource.replace(
-      defaultLine,
-      ''
-    )
-
+  it('W4 trips when the type declaration is removed, or the default differs (derived by string-removal / a differing default)', () => {
+    const realSource = readGated(LIBRARY_STATE_PATH)
+    const token = 'steamSyncStatus: SteamSyncStatus'
+    expect(realSource).toContain(token)
     expect(() =>
-      gateW4_typesAndProviderDeclareLockstepPair(
-        realTypesSource,
-        missingDefaultSpecimen
+      gateW4_libraryStateDeclaresTypeAndDefault(
+        realSource.replace(token, ''),
+        'idle'
       )
+    ).toThrow()
+    expect(() =>
+      gateW4_libraryStateDeclaresTypeAndDefault(realSource, 'running')
     ).toThrow()
   })
 })
@@ -340,6 +323,15 @@ describe('steamSyncStatus boot listener -- behavioural W3/W5 (69-18)', () => {
   beforeAll(async () => {
     init = await import('../initStateSubscriptions')
     useLibraryState = (await import('../libraryState')).default
+  })
+
+  it("W4: libraryState.ts declares the steamSyncStatus type and its default is 'idle'", () => {
+    expect(() =>
+      gateW4_libraryStateDeclaresTypeAndDefault(
+        readGated(LIBRARY_STATE_PATH),
+        useLibraryState.getState().steamSyncStatus
+      )
+    ).not.toThrow()
   })
 
   beforeEach(() => {

@@ -186,7 +186,7 @@ export default React.memo(function Library(): JSX.Element {
   // platformsFilters shape.
   // Quick 261029-riq (D-riq-2): 'native' left this facet group for the Native
   // chip. A persisted facet containing it is split once, in this initialiser
-  // (`platform` comes from ContextProvider and is already in scope): 'native'
+  // (`platform` comes from the app stores and is already in scope): 'native'
   // is stripped and persisted, and `libraryNativeOnly` is set before the
   // nativeOnly state below reads it (initialisers run in declaration order).
   const [runnabilityFacet, setRunnabilityFacet_] = useState<RunnabilityTier[]>(
@@ -363,7 +363,7 @@ export default React.memo(function Library(): JSX.Element {
   // starts `null` (never seeded with `connectedStores`) so there is no
   // baseline until this effect has run once with a real value. Seeding it
   // non-null would reintroduce the exact mount-time wipe this guards against
-  // -- `gog`/`epic`/`amazon` accounts arrive from `ContextProvider`
+  // -- `gog`/`epic`/`amazon` accounts arrive from the app stores
   // asynchronously, so a bare intersection at mount could wipe a
   // legitimately persisted selection during that account-load window.
   //
@@ -822,7 +822,7 @@ export default React.memo(function Library(): JSX.Element {
   // (`__tests__/engineWiring.test.ts`) rather than being an untested inline
   // object literal -- the seam CR-02 lived on, and which no test in the
   // phase touched. `favouriteGames` is passed RAW, straight from
-  // ContextProvider, so the engine's favourite key set can never again be
+  // the app stores, so the engine's favourite key set can never again be
   // gated on a display setting.
   const engineDeps: FilterEngineDeps = useMemo(
     () =>

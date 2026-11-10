@@ -3,14 +3,14 @@
  * (quick 261015-p3q). `GlobalState`'s `zoomPercent` is read back from
  * `configStore` at boot and shown on the Accessibility slider, but until this
  * module nothing on the boot path ever called `window.api.setZoomFactor` --
- * the slider's `onChange` (`setZoomPercent`, `GlobalState.tsx:610-619`) was
+ * the slider's `onChange` (`setZoomPercent`, `the old GlobalState class`) was
  * the ONLY caller. A saved 150% rendered the UI at 100% on every relaunch
  * until the slider was touched again.
  *
  * Kept pure and React-free so it imports under this project's
  * `testEnvironment: 'node'` jest project (the Frontend project): no `window`,
  * no `document` and no `configStore` touched at module scope, and nothing
- * imported from `src/frontend/screens`. `GlobalState.tsx` itself cannot be
+ * imported from `src/frontend/screens`. `the old GlobalState class` itself cannot be
  * imported under that same jest project (it reads `window.localStorage` at
  * module scope), which is why the real behaviour lives here rather than in a
  * test that imports the class directly -- see

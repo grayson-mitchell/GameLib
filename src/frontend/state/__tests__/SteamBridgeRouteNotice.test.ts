@@ -3,7 +3,7 @@
  * (D-51-08/11, Plan 13). No jsdom is installed in this project (see
  * src/frontend/jest.config.js docstring) so the store/handler are exercised
  * directly (zustand's `create` needs no DOM) rather than via mounting
- * GlobalState.tsx. Mirrors SteamBridgeSetup.test.ts.
+ * the old GlobalState class. Mirrors SteamBridgeSetup.test.ts.
  */
 import {
   useSteamBridgeRouteNotice,

@@ -19,7 +19,7 @@ import type { SteamSyncStatus } from 'common/types/ipc'
  *   const steamLibrary = showSteam ? steam.library : []
  *
  * `steam.username` is seeded at boot from a PERSISTED config value
- * (`steamConfigStore` -> `userData.username`, read in `GlobalState.tsx`) and
+ * (`steamConfigStore` -> `userData.username`, read in `the old GlobalState class`) and
  * is never re-verified against a live connection. `SteamUser.ensureConnected()`
  * deliberately leaves `userData`/`isLoggedIn` untouched when a reconnect fails
  * or the stored token reads back empty (`steam/user.ts`) -- by design, so a

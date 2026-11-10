@@ -3,7 +3,7 @@
  * (Phase 21 Plan 10, D-10/D-11). No jsdom is installed in this project (see
  * src/frontend/jest.config.js docstring) so the store/handler are exercised
  * directly (zustand's `create` needs no DOM) rather than via mounting
- * GlobalState.tsx. Mirrors SteamBottleSetup.test.ts's own structure.
+ * the old GlobalState class. Mirrors SteamBottleSetup.test.ts's own structure.
  */
 import {
   useSteamClientSetup,

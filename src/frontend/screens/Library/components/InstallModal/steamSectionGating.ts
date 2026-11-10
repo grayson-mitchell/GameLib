@@ -83,11 +83,11 @@ export type SteamPlatformRowMode =
  */
 export interface SteamSectionGatingInput {
   /**
-   * ContextProvider's `platform` value, i.e. `'darwin' | 'win32' | 'linux'`
+   * the app stores's `platform` value, i.e. `'darwin' | 'win32' | 'linux'`
    * at runtime (mirrors `FilterEngineDeps.hostPlatform`,
    * `src/frontend/types.ts:479-480`). Typed as a plain `string`, not
    * `NodeJS.Platform`, for the same reason `FilterEngineDeps` is: any other
-   * runtime value (including ContextProvider's own `'unknown'` fallback)
+   * runtime value (including the app stores's own `'unknown'` fallback)
    * falls into the fail-closed Linux-family bucket -- see step 1 of
    * `resolveSteamSectionGating`.
    */
@@ -177,7 +177,7 @@ export function resolveSteamSectionGating(
   input: SteamSectionGatingInput
 ): SteamSectionGatingVerdict {
   // Step 1 (D-18): host bucket. Only 'darwin' and 'win32' get their own
-  // branch; EVERYTHING else -- including 'linux' and ContextProvider's own
+  // branch; EVERYTHING else -- including 'linux' and the app stores's own
   // 'unknown' fallback -- falls into the Linux-family bucket. This is a
   // deliberate, fail-closed discretion call the UI-SPEC does not itself
   // enumerate (it only names 'Linux (host)'): a host we cannot positively

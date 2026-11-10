@@ -3,7 +3,7 @@
  * REQ-34.4-02 / live-gate item 2). Proves items 2 and 3 of the gap-fix
  * task's required coverage directly, since `waitForSteamSignedOut` and
  * `performSteamLogout` are plain async functions with no `window`/DOM
- * dependency -- unlike GlobalState.tsx itself, which is not safely
+ * dependency -- unlike the old GlobalState class itself, which is not safely
  * importable under this project's `node`-environment frontend jest project
  * (see jest.config.js's docstring; GlobalStateSteamLogout.test.ts covers
  * item 1 via a source-text structural gate instead, for that reason).

@@ -12,7 +12,7 @@
  * gamepad press is not one -- so after any mouse use, gamepad-moved focus
  * will often not match `:focus-visible` at all.
  *
- * F2 -- the fallback, and its one nesting trap: `GlobalState.tsx` toggles
+ * F2 -- the fallback, and its one nesting trap: `the old GlobalState class` toggles
  * `document.body.classList.toggle('controllerLayout', ...)` on the
  * `controller-changed` event, so every targeted rule additionally matches
  * `X:focus:is(body.controllerLayout *)`. This SUFFIX form is required, not

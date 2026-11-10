@@ -783,7 +783,7 @@ export function splitNativeFromRunnabilityFacet(
  * TRANSITION-ONLY, never a mount-time intersection. `previousConnected` is
  * `null` on first render and stays `null` until the caller has observed one
  * real `connectedStores` value -- `gog`/`epic`/`amazon` accounts arrive from
- * `ContextProvider` asynchronously, so a bare `selection ∩ currentConnected`
+ * the app stores asynchronously, so a bare `selection ∩ currentConnected`
  * at mount would silently wipe a legitimately persisted selection during
  * that account-load window. A logout is a store that WAS in
  * `previousConnected` and is ABSENT from `currentConnected` -- nothing else

@@ -23,7 +23,7 @@ interface SteamGoOfflineNoticeState {
 // Phase 54 Plan 07: single global store driving the guided Go Offline dialog.
 // Opened exclusively by the backend `steamGoOfflineRequired` push (user.ts
 // acquireAuthenticated, Plan 03) when the go-offline wrap did not see Mac
-// Steam log off; the one subscriber is GlobalState.tsx. The frontend never
+// Steam log off; the one subscriber is the old GlobalState class. The frontend never
 // decides this itself, and nothing here logs on.
 export const useSteamGoOfflineNotice = create<SteamGoOfflineNoticeState>()(
   (set) => ({

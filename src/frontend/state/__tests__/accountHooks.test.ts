@@ -12,7 +12,7 @@ import {
 } from '../accountHooks'
 
 // Pure builders only: the hooks wrap them in useMemo over raw store fields, and
-// the bridge calls the very same builders (bridgeContextValue.test.ts).
+// the bridge calls the very same builders (the retired bridge tests).
 
 const fn = () => Promise.resolve('')
 const lib = [{ app_name: 'a' }] as GameInfo[]

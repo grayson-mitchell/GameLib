@@ -37,7 +37,7 @@ jest.mock('../../FieldLabel/index.css', () => ({}))
 jest.mock('../index.css', () => ({}))
 
 // PathSelectionBox now reaches the file picker through `useOpenDialog` (quick task
-// 260902-8wc), which calls useContext(ContextProvider) + useCallback. The `react` mock below
+// 260902-8wc), which calls useContext(the app stores) + useCallback. The `react` mock below
 // spreads the REAL react, so those two hooks would run outside any renderer and throw on a
 // null dispatcher. Stubbing the hook module keeps that out of this harness entirely: no case
 // in this file exercises handleIconClick's picker branch, and modelling a context provider

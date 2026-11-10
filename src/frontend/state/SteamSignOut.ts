@@ -2,7 +2,7 @@ import { SteamUserData } from 'common/types/steam'
 
 /**
  * Phase 34.4 gap fix (in-phase deviation, live-gate item 2 / REQ-34.4-02):
- * the real Steam sign-out flow GlobalState.tsx's `steamLogout` delegates to.
+ * the real Steam sign-out flow the old GlobalState class's `steamLogout` delegates to.
  *
  * `logoutSteam` (`preload/api/steam.ts`'s `makeListenerCaller`) is a `send`
  * channel with NO response protocol at all -- the call returns as soon as
@@ -18,7 +18,7 @@ import { SteamUserData } from 'common/types/steam'
  * on the premise that no sidecar listener existed at all for it (true at
  * the time -- no longer true since Phase 34.4 Plan 01 registered
  * `steamAuthFlowRegistration.ts`'s `ipcMain.on('logoutSteam', ...)`). That
- * guard is gone from GlobalState.tsx; `performSteamLogout` below is what
+ * guard is gone from the old GlobalState class; `performSteamLogout` below is what
  * replaces it, for BOTH builds (Electron's `ipcRenderer.send` is exactly as
  * fire-and-forget as the Tauri sidecar's stdio transport, so the same race
  * existed there too, just less visibly -- this is not a Tauri-only fix).
@@ -37,8 +37,8 @@ import { SteamUserData } from 'common/types/steam'
  *
  * Extracted as standalone, directly-testable functions (mirrors
  * SteamClientSetup.ts's `handleSteamClientSetupRequiredSignal`) rather than
- * inlined in GlobalState.tsx, for two reasons: the race-handling logic can
- * be proven with real behavioral tests, and GlobalState.tsx itself is NOT
+ * inlined in the old GlobalState class, for two reasons: the race-handling logic can
+ * be proven with real behavioral tests, and the old GlobalState class itself is NOT
  * safely importable under this project's `node`-environment frontend jest
  * project (it reads `window.localStorage` at module scope -- see
  * `src/frontend/jest.config.js`'s docstring on why there is no DOM harness

@@ -5,7 +5,7 @@
  * `ipc.ts` factories expect -- `invoke` (req/resp), `send` (fire-and-forget), `listen`
  * (backend->frontend push) -- plus a fourth primitive: a synchronous in-memory store
  * snapshot for `misc.ts`'s `storeGet`/`storeHas` (the Steam login-gate reads
- * `steamConfigStore` synchronously -- GlobalState.tsx:238).
+ * `steamConfigStore` synchronously -- the old GlobalState class).
  *
  * This module has NO import of the electron package (or any other Node-only package) --
  * it is safe to be part of the Tauri renderer's own JS bundle. `ipc.ts`/`misc.ts` used to
@@ -308,8 +308,8 @@ export function registerStore(storeName: string, options?: Record<string, unknow
 /**
  * Calls the `SIDECAR_STORE_SNAPSHOT` Tauri command once and fills the in-memory snapshot
  * map, marking every store name present in the result as hydrated (D-03). Must be
- * awaited before React mounts (index.tsx) -- the Steam login-gate (GlobalState.tsx:238)
- * and the CacheStore reads (GlobalState.tsx:178/203) read synchronously during
+ * awaited before React mounts (index.tsx) -- the Steam login-gate (the old GlobalState class)
+ * and the CacheStore reads (the old GlobalState class) read synchronously during
  * GlobalState's constructor. This is the EAGER tier -- `BOOT_SET_STORES`
  * (src/common/types/storePolicy.ts). Anything not in that set is a lazy store, hydrated
  * on demand by `hydrateStore()` below.
@@ -396,7 +396,7 @@ function getAtPath(obj: Record<string, unknown> | undefined, key: string): unkno
  * above. It was not — `snapshotSet` did a FLAT `snapshot[storeName][key] = value` while
  * every read resolved the key through `key.split('.')`. Shipped call sites that write
  * dot keys (`configStore.set('games.hidden'|'games.favourites'|'games.customCategories', …)`
- * in GlobalState.tsx, and every frontend `CacheStore.set()`, which writes a
+ * in the old GlobalState class, and every frontend `CacheStore.set()`, which writes a
  * `` `__timestamp.${key}` `` entry) therefore read back the PRE-write hydrated value for
  * the rest of the session: a hidden game un-hid itself, and a freshly written cache
  * entry could never be read back in-session. Only a restart repaired it, because the

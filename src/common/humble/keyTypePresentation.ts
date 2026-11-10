@@ -228,7 +228,7 @@ const GAMELIB_LOGIN_STORES: Record<string, HumbleGameLibLoginStore> = {
 }
 
 /**
- * Resolves a raw Humble `key_type` to the `ContextProvider` store slice
+ * Resolves a raw Humble `key_type` to the the app stores store slice
  * whose `username` field answers "is GameLib connected to this platform?"
  * (D-43-12). `null` means GameLib has no connectable account for this
  * platform at all — `origin`, `origin_keyless`, `uplay`, `battlenet`,
@@ -237,7 +237,7 @@ const GAMELIB_LOGIN_STORES: Record<string, HumbleGameLibLoginStore> = {
  *
  * **Read this return value honestly (D-43-12), because a future reader who
  * treats it as a session predicate will ship a lie in the UI:** a non-null
- * value names WHICH `ContextProvider` slice (`steam.username` /
+ * value names WHICH the app stores slice (`steam.username` /
  * `gog.username` / `epic.username`, the context slices in
  * `frontend/types.ts`) to check — it does not itself observe anything. A
  * truthy `username` on that slice

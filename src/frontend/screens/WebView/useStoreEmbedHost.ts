@@ -179,7 +179,7 @@ interface UseStoreEmbedHostOptions {
    * `window.platform` (Phase 50 Plan 01) — threaded into `isEmbeddableOrigin` below so the
    * CR-01/D-05 refused-target guard reflects the (store, platform) embeddability pair rather
    * than a single store-wide flag. Required, not defaulted: every caller already resolves this
-   * from the same `ContextProvider` value `index.tsx` itself reads before rendering this hook.
+   * from the same the app stores value `index.tsx` itself reads before rendering this hook.
    */
   platform: string
   /**

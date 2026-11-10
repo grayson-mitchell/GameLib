@@ -3,7 +3,7 @@
  * D-11). No jsdom is installed in this project (see
  * src/frontend/jest.config.js docstring) so the store/handler are exercised
  * directly (zustand's `create` needs no DOM) rather than via mounting
- * GlobalState.tsx (a class component with heavy module-level side effects).
+ * the old GlobalState class (a class component with heavy module-level side effects).
  */
 import {
   useSteamBottleSetup,

@@ -24,7 +24,7 @@ import type { SteamSyncStatus } from 'common/types/ipc'
  *     )}
  *
  * `refreshingInTheBackground` defaults `true` and is reset to `true` after
- * every unscoped refresh (`GlobalState.tsx`), so it never actually means "a
+ * every unscoped refresh (`the old GlobalState class`), so it never actually means "a
  * refresh is running" -- the guard above reduces to "Steam is logged in AND
  * the Steam library is empty", permanently, on failure AND on a genuinely
  * empty library. `resolveSteamSyncIndicator` below replaces that flag with
