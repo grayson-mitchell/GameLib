@@ -152,6 +152,36 @@ them by reference); `createTestServices`, `createTestManagers` and `createTestSt
   any of the 16 stores modules, utils `spawnAsync`/`getGame`/`handleExit`, or launcher
   `callRunner`/`runWineCommand`/`getWinePath`.
 
+## 66.1 outcome
+
+**Built at boot, injected everywhere:** the command runner (`commandRunner`, `spawnAsync` and the
+`runner` itself), the per-boot store registry and the 16 `createXStores` factories joined by
+`createStores`, `createStoreManagers` (the manager table), `createLauncher`, `createDownloadQueue`,
+the quit handler (`createQuitHandler`) and the long-lived helper services. Nothing in that list
+constructs at import time; the boot's named steps are the only construction path.
+
+**Now runs through the runner:** every tracked game/installer child (stop and cancel are marked by
+the registry as `killedByUs`, so they do not surface as errors), long-lived children (comet, the
+Steam bridge helper) via `spawnLongLived`, and quit teardown (`killAllTracked` then `teardownAll`).
+`trackedChildren.ts`, `longLivedChildren.ts`, the quit handler's `legacyChildren` arm,
+`libraryManagerMap`, `storeLaunchHooks`, `legacyManagerDeps`, `legacyBootQueue` and
+`services/legacyFacades.ts` are deleted; `src/backend/__tests__/diPhaseGates.test.ts` keeps them
+gone (zero `jest.mock`).
+
+**C-05 decision:** the WR-04/05/06 and IN-02 gate hardening is not done in 66.1. Counting
+`jest.doMock`/`setMock` would surface previously uncounted sites, and those can only enter the
+shrink-only baselines as a raise. 66.2 owns the `child_process` ban and the gate hardening.
+
+**Hand-off to 66.2:** the remaining `child_process` files (`config.ts`, `utils.ts` and the rest of
+the 28-file census), `execAsync`, the VC redist probe, `wineserver -k`, the engine caps, and
+the module-private `utils.spawnAsync` that `moveOnUnix`/`moveOnWindows`/`extractTarFile` still use
+(each has many callers in the store managers and the wine tools; move them onto the injected
+`spawnAsync` and delete it).
+
+**Hand-off to 66.3:** `GlobalConfig`, `helperRegistry` and the other module state that sits next to
+the download queue, the secret-store placeholders, the manager modules' module-level Maps, and the
+static stores outside the 16 (`engineNoticeStore`, the two `pci_ids` stores).
+
 ## Ratchets
 
 `pnpm backend-di-ceilings` counts module-level singletons, `jest.mock` sites
