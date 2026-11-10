@@ -1,6 +1,7 @@
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { FocusRowKind } from 'common/types'
+import { isStore } from 'common/storeCapabilities'
 import type {
   LibraryView,
   RunnabilityTier,
@@ -15,7 +16,6 @@ import FilterFacetGroup from '../FilterFacetGroup'
 import { runnabilityLabel } from '../FilterRunnabilityFacet'
 import NavItem from '../NavItem'
 import './index.scss'
-import { isStore } from 'common/storeCapabilities'
 
 /**
  * FOCUS ROW panel section (48-02 Task 2, widened by 48-03 Task 1) -- four
