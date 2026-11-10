@@ -4,6 +4,7 @@ import { subscribeWithSelector } from 'zustand/middleware'
 import type {
   FavouriteGame,
   GameInfo,
+  GameStatus,
   HiddenGame,
   RefreshOptions,
   Runner
@@ -25,6 +26,7 @@ import { attachGameOverrides } from 'frontend/helpers/gameOverrides'
 import { isStore } from 'common/storeCapabilities'
 import useAuthState from './authState'
 import { bindStoreHooks, registerStoreForReset } from './storeKit'
+import { useBottleLaunchWaiting } from './BottleLaunchWaiting'
 
 // Phase 69 D-09: library domain store. authState (D-10 puts auth before
 // library) reaches refreshLibrary, resetRunnerLibrary and setRefreshing through
@@ -37,6 +39,10 @@ export type RefreshLibraryOptions = RefreshOptions & { origin?: string }
 type GameOverride = NonNullable<GameInfo['overrides']>
 
 export interface LibraryState {
+  // Phase 69-19: the per-game operation status list (formerly the last field
+  // of the GlobalState class) and its push handler, the hot path.
+  libraryStatus: GameStatus[]
+  handleGameStatus: (status: GameStatus) => Promise<void>
   refreshLibrary: (options: RefreshLibraryOptions) => Promise<void>
   steamMetadataSyncing: boolean
   // Phase 34.15 (34.15-02), D-06: tri-state driver of the Steam sync
@@ -209,6 +215,125 @@ export function readInitialLibrary(): Pick<
 const useLibraryStateRaw = create<LibraryState>()(
   subscribeWithSelector(
     (set, get): LibraryState => ({
+      libraryStatus: [],
+
+      handleGameStatus: async ({
+        appName,
+        status,
+        folder,
+        context,
+        progress,
+        runner,
+        managedBySteam
+      }: GameStatus): Promise<void> => {
+        const { libraryStatus, gameUpdates } = get()
+
+        // Phase 51 Plan 08 (D-51-16, folded todo): the "waiting for Steam"
+        // state ends either way the launch resolves -- the game's own process
+        // appearing (playing) or the launch itself ending (done). Runs before
+        // every other branch below (including the !currentApp early return) so
+        // neither path can skip it.
+        if (status === 'playing' || status === 'done') {
+          useBottleLaunchWaiting.getState().clear(appName)
+        }
+
+        const currentApp = libraryStatus.find(
+          (game) => game.appName === appName
+        )
+
+        // add app to libraryStatus if it was not present
+        if (!currentApp) {
+          return set({
+            libraryStatus: [
+              ...libraryStatus,
+              {
+                appName,
+                status,
+                folder,
+                context,
+                progress,
+                runner,
+                ...(managedBySteam ? { managedBySteam } : {})
+              }
+            ]
+          })
+        }
+
+        // if the app's status didn't change, do nothing
+        if (
+          currentApp.status === status &&
+          currentApp.context === context &&
+          !!currentApp.managedBySteam === !!managedBySteam
+        ) {
+          return
+        }
+
+        // if the app's status did change, remove it from the current list and then handle the new status
+        const newLibraryStatus = libraryStatus.filter(
+          (game) => game.appName !== appName
+        )
+
+        // in these cases we just add the new status
+        if (
+          [
+            'installing',
+            'updating',
+            'playing',
+            'extracting',
+            'launching',
+            'winetricks',
+            'redist',
+            'drm-setup',
+            'engine-download',
+            'steam-starting',
+            'queued'
+          ].includes(status)
+        ) {
+          newLibraryStatus.push({
+            appName,
+            status,
+            folder,
+            context,
+            progress,
+            runner,
+            ...(managedBySteam ? { managedBySteam } : {})
+          })
+          set({ libraryStatus: newLibraryStatus })
+        }
+
+        // when error or done we remove it from the status info
+        if (['error', 'done'].includes(status)) {
+          // also remove from updates if it was updating
+          if (currentApp.status === 'updating') {
+            const updatedGamesUpdates = gameUpdates.filter(
+              (game) => game !== appName
+            )
+            // This avoids calling legendary again before the previous process is killed when canceling
+            void get().refreshLibrary({
+              checkForUpdates: true,
+              runInBackground: true,
+              library: runner,
+              origin: 'game-status'
+            })
+
+            window.localStorage.setItem(
+              'updates',
+              JSON.stringify(updatedGamesUpdates)
+            )
+            set({ gameUpdates: updatedGamesUpdates })
+            return set({ libraryStatus: newLibraryStatus })
+          }
+
+          void get().refreshLibrary({
+            runInBackground: true,
+            library: runner,
+            origin: 'game-status'
+          })
+
+          set({ libraryStatus: newLibraryStatus })
+        }
+      },
+
       refreshLibrary: async ({
         checkForUpdates,
         runInBackground = true,
@@ -615,6 +740,14 @@ const useLibraryStateRaw = create<LibraryState>()(
 )
 
 registerStoreForReset(useLibraryStateRaw)
+
+/** True only while a legendary (Epic) game is in the 'installing' status. */
+export const selectInstallingEpicGame = (
+  state: Pick<LibraryState, 'libraryStatus'>
+): boolean =>
+  state.libraryStatus.some(
+    (game) => game.status === 'installing' && isStore(game, 'legendary')
+  )
 
 /**
  * D-08: persists `gameUpdates` to localStorage 'updates' on every change. It

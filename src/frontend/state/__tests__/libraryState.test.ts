@@ -3,8 +3,11 @@ import { resetAllStores } from '../storeKit'
 import type { GameInfo } from 'common/types'
 import useLibraryState, {
   readInitialLibrary,
-  registerLibrarySideEffects
+  registerLibrarySideEffects,
+  selectInstallingEpicGame
 } from '../libraryState'
+import { useBottleLaunchWaiting } from '../BottleLaunchWaiting'
+import type { GameStatus } from 'common/types'
 import useAuthState from '../authState'
 
 let logged: string[] = []
@@ -461,5 +464,152 @@ describe('libraryState library data', () => {
     registerLibrarySideEffects()
     useLibraryState.setState({ gameUpdates: ['x'] })
     expect(written).toEqual(['[]', '["x"]'])
+  })
+})
+
+describe('libraryState handleGameStatus (hot path)', () => {
+  type Refresh = ReturnType<typeof useLibraryState.getState>['refreshLibrary']
+  let refreshCalls: Parameters<Refresh>[0][] = []
+  const lib = () => useLibraryState.getState()
+  const push = (status: Partial<GameStatus> & { appName: string }) =>
+    lib().handleGameStatus({
+      status: 'installing',
+      runner: 'legendary',
+      ...status
+    } as GameStatus)
+
+  beforeEach(() => {
+    ;(window as unknown as { api: unknown }).api = {
+      logError: () => undefined,
+      storeHas: () => false,
+      storeGet: (_s: string, _key: string, dflt?: unknown) => dflt,
+      storeSet: () => undefined
+    }
+    ;(window as unknown as { localStorage: unknown }).localStorage = {
+      getItem: (k: string) => local[k] ?? null,
+      setItem: (k: string, v: string) => {
+        local[k] = v
+        writes.push([`local:${k}`, v])
+      }
+    }
+    writes = []
+    refreshCalls = []
+    for (const k of Object.keys(local)) delete local[k]
+    useLibraryState.setState({
+      refreshLibrary: (options) => {
+        refreshCalls.push(options)
+        return Promise.resolve()
+      }
+    })
+  })
+
+  afterEach(() => {
+    resetAllStores()
+    useBottleLaunchWaiting.setState({ entries: {} })
+  })
+
+  it('appends a status for an unseen app', async () => {
+    await push({
+      appName: 'a',
+      folder: '/f',
+      progress: { percent: 1 } as never
+    })
+    expect(lib().libraryStatus).toEqual([
+      {
+        appName: 'a',
+        status: 'installing',
+        folder: '/f',
+        context: undefined,
+        progress: { percent: 1 },
+        runner: 'legendary'
+      }
+    ])
+  })
+
+  it('carries managedBySteam only when truthy', async () => {
+    await push({ appName: 'a', managedBySteam: true })
+    expect(lib().libraryStatus[0]).toHaveProperty('managedBySteam', true)
+    await push({ appName: 'b' })
+    expect(lib().libraryStatus[1]).not.toHaveProperty('managedBySteam')
+  })
+
+  it('does nothing when status, context and managedBySteam are unchanged', async () => {
+    await push({ appName: 'a' })
+    const before = lib().libraryStatus
+    await push({ appName: 'a', progress: { percent: 50 } as never })
+    expect(lib().libraryStatus).toBe(before)
+  })
+
+  it('replaces an entry (moved to the end) when the status changes to an active one', async () => {
+    await push({ appName: 'a' })
+    await push({ appName: 'b' })
+    await push({ appName: 'a', status: 'updating' })
+    expect(lib().libraryStatus.map((g) => [g.appName, g.status])).toEqual([
+      ['b', 'installing'],
+      ['a', 'updating']
+    ])
+    expect(refreshCalls).toEqual([])
+  })
+
+  it('treats a context change as a change', async () => {
+    await push({ appName: 'a', context: 'x' as never })
+    await push({ appName: 'a', context: 'y' as never })
+    expect(lib().libraryStatus).toHaveLength(1)
+    expect(lib().libraryStatus[0].context).toBe('y')
+  })
+
+  it('removes the entry on done and refreshes in the background with origin game-status', async () => {
+    await push({ appName: 'a' })
+    await push({ appName: 'a', status: 'done' })
+    expect(lib().libraryStatus).toEqual([])
+    expect(refreshCalls).toEqual([
+      { runInBackground: true, library: 'legendary', origin: 'game-status' }
+    ])
+  })
+
+  it('removes the entry on error', async () => {
+    await push({ appName: 'a' })
+    await push({ appName: 'a', status: 'error' })
+    expect(lib().libraryStatus).toEqual([])
+    expect(refreshCalls).toHaveLength(1)
+  })
+
+  it('an update finishing drops the app from gameUpdates, writes updates and checks for updates', async () => {
+    useLibraryState.setState({ gameUpdates: ['a', 'z'] })
+    await push({ appName: 'a', status: 'updating' })
+    await push({ appName: 'a', status: 'done' })
+    expect(lib().gameUpdates).toEqual(['z'])
+    expect(local.updates).toBe(JSON.stringify(['z']))
+    expect(lib().libraryStatus).toEqual([])
+    expect(refreshCalls).toEqual([
+      {
+        checkForUpdates: true,
+        runInBackground: true,
+        library: 'legendary',
+        origin: 'game-status'
+      }
+    ])
+  })
+
+  it('clears BottleLaunchWaiting on playing and done, even for an unseen app, but not on other statuses', async () => {
+    useBottleLaunchWaiting.setState({
+      entries: { a: { detectedCause: null }, b: { detectedCause: null } }
+    })
+    await push({ appName: 'a', status: 'launching' })
+    expect(useBottleLaunchWaiting.getState().entries.a).toBeDefined()
+    await push({ appName: 'a', status: 'playing' })
+    expect(useBottleLaunchWaiting.getState().entries.a).toBeUndefined()
+    await push({ appName: 'b', status: 'done' })
+    expect(useBottleLaunchWaiting.getState().entries.b).toBeUndefined()
+  })
+
+  it('selectInstallingEpicGame is true only for an installing legendary entry', async () => {
+    expect(selectInstallingEpicGame(lib())).toBe(false)
+    await push({ appName: 'g', runner: 'gog' })
+    expect(selectInstallingEpicGame(lib())).toBe(false)
+    await push({ appName: 'u', status: 'updating' })
+    expect(selectInstallingEpicGame(lib())).toBe(false)
+    await push({ appName: 'e' })
+    expect(selectInstallingEpicGame(lib())).toBe(true)
   })
 })
