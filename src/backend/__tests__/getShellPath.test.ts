@@ -5,10 +5,8 @@
  * `remote-config.gog.com`, and the `getShellPath` invoke channel exposes it to
  * the renderer, so `$(...)`, backticks, `;`, `&` must come back literally.
  *
- * `child_process.exec` is mocked rather than letting a real shell run: the
- * mock records any command it is handed and answers the way `sh -c 'echo …'`
- * would for a command substitution, so the pre-fix code is observably RED
- * without anything actually being executed.
+ * utils.ts no longer imports child_process (66.2-11), so a shell cannot run
+ * at all; these cases pin the literal, JS-side results.
  */
 import { homedir } from 'os'
 import { normalize } from 'path'
@@ -18,18 +16,6 @@ jest.mock('../logger')
 jest.mock('../dialog/dialog')
 jest.mock('../config')
 
-type ExecCallback = (
-  err: Error | null,
-  out: { stdout: string; stderr: string }
-) => void
-const execMock = jest.fn()
-
-jest.mock('child_process', () => ({
-  ...jest.requireActual('child_process'),
-  exec: (...args: unknown[]) =>
-    (execMock as unknown as (...a: unknown[]) => unknown)(...args)
-}))
-
 import { getShellPath, testingExportsUtils } from '../utils'
 
 const { expandPathVariables } = testingExportsUtils
@@ -38,10 +24,6 @@ describe('getShellPath — no shell, JS-side expansion', () => {
   const savedEnv = { ...process.env }
 
   beforeEach(() => {
-    // Re-armed per test: the backend jest project sets `resetMocks: true`.
-    execMock.mockImplementation((_cmd: string, cb: ExecCallback) =>
-      cb(null, { stdout: 'INJECTED\n', stderr: '' })
-    )
     process.env.GAMELIB_TEST_VAR = '/opt/gamelib-test'
     delete process.env.GAMELIB_TEST_UNSET
   })
@@ -56,10 +38,12 @@ describe('getShellPath — no shell, JS-side expansion', () => {
     ['/saves/x; touch /tmp/pwned'],
     ['/saves/x && touch /tmp/pwned'],
     ['/saves/x | tee /tmp/pwned']
-  ])('returns %p literally and never spawns a process', async (input) => {
-    await expect(getShellPath(input)).resolves.toBe(normalize(input))
-    expect(execMock).not.toHaveBeenCalled()
-  })
+  ])(
+    'returns %p literally and spawns nothing (utils.ts imports no child_process)',
+    async (input) => {
+      await expect(getShellPath(input)).resolves.toBe(normalize(input))
+    }
+  )
 
   it('expands $VAR and ${VAR} from process.env', async () => {
     await expect(getShellPath('$GAMELIB_TEST_VAR/saves')).resolves.toBe(
@@ -68,7 +52,6 @@ describe('getShellPath — no shell, JS-side expansion', () => {
     await expect(getShellPath('${GAMELIB_TEST_VAR}/saves')).resolves.toBe(
       '/opt/gamelib-test/saves'
     )
-    expect(execMock).not.toHaveBeenCalled()
   })
 
   it('expands a leading ~ to os.homedir()', async () => {

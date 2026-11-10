@@ -13,14 +13,6 @@ jest.mock('backend/logger', () => ({
   createGameLogWriter: jest.fn()
 }))
 
-jest.mock('child_process', () => ({
-  spawn: jest.fn(),
-  spawnSync: jest.fn(),
-  exec: jest.fn(),
-  execFile: jest.fn(),
-  execSync: jest.fn()
-}))
-
 const sendGameStatusUpdateMock = jest.fn()
 jest.mock('backend/utils', () => ({
   ...jest.requireActual('backend/utils'),

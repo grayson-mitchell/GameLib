@@ -19,14 +19,6 @@ jest.mock('backend/logger', () => ({
   createGameLogWriter: jest.fn()
 }))
 
-jest.mock('child_process', () => ({
-  spawn: jest.fn(),
-  spawnSync: jest.fn(),
-  exec: jest.fn(),
-  execFile: jest.fn(),
-  execSync: jest.fn()
-}))
-
 const calls: string[] = []
 const checkWineMock = jest.fn()
 jest.mock('backend/utils', () => ({

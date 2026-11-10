@@ -17,14 +17,6 @@ jest.mock('backend/logger', () => ({
   createGameLogWriter: jest.fn()
 }))
 
-jest.mock('child_process', () => ({
-  spawn: jest.fn(),
-  spawnSync: jest.fn(),
-  exec: jest.fn(),
-  execFile: jest.fn(),
-  execSync: jest.fn()
-}))
-
 const LIB_ERROR = "Couldn't find all library folders"
 
 function loadWith(platform: { isMac: boolean; isLinux: boolean }) {

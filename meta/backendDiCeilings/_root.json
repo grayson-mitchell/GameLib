@@ -1,7 +1,4 @@
 {
-  "childProcess": {
-    "src/backend/utils.ts": 1
-  },
   "jestMock": {
     "src/backend/jest.setupContainment.ts": 2
   },
