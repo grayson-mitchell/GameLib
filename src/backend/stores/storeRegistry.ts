@@ -8,8 +8,9 @@
  * the RPC handlers resolve through the same instance. Two boots (or two tests) therefore get
  * independent registries and never see each other's stores.
  *
- * A store constructed with NO registry is simply not RPC-visible, which is the documented shape
- * for the few stores that were never registered (for example the macOS arch verdict store).
+ * A store constructed with NO registry is simply not RPC-visible (a test's ad hoc store, or one
+ * deliberately kept off the name-keyed RPCs). Every store `createStores` builds is registered,
+ * including the macOS arch verdict store.
  *
  * Import budget: type-only imports and Node builtins. Nothing here may construct a store.
  */
