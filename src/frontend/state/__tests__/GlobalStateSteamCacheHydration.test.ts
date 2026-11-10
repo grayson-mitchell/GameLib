@@ -21,7 +21,7 @@
  *   Test 4 - anti-drift: `steam_library` is in the renderer's two mirrored
  *            registrations (`BOOT_SET_STORES`, `RECOGNIZED_CACHE_STORE_NAMES`).
  *            The sidecar's module-local `CACHE_BACKED_STORE_NAMES` copy is no
- *            longer text-checked here (that needed readFileSync); it is
+ *            longer text-checked here (that needed a source read); it is
  *            exercised by `sidecar/__tests__/storeLayer.test.ts`.
  *   Test 5 - no credentials cross the boundary: `steam_library` is NOT in
  *            `STORE_ALLOWLIST`, and hydrating the library never reads
