@@ -12,7 +12,9 @@
 import type { Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type { StoreLaunchHooks } from 'backend/storeManagers'
+import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
+import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
 
 /** One entry per store family; each is the module's value exports. */
 export interface Stores {
@@ -36,7 +38,10 @@ export interface Stores {
 
 export interface StoreManagers {
   /** `gog` keeps its concrete type: boot drains the queued playtime through it. */
-  library: Record<Runner, LibraryManager> & { gog: GOGLibraryManager }
+  library: Record<Runner, LibraryManager> & {
+    gog: GOGLibraryManager
+    legendary: LegendaryLibraryManager
+  }
   launchHooks: Record<Runner, StoreLaunchHooks>
   autoUpdate(runner: Runner, gamesToUpdate: string[]): string[]
   initAll(): Promise<unknown[]>
@@ -60,10 +65,7 @@ export type Launcher = Pick<
   | 'verifyWinePrefix'
 >
 
-export type CommandRunner = Pick<
-  LauncherModule,
-  'callRunner' | 'runWineCommand' | 'getWinePath' | 'runScriptForGame'
->
+export type CommandRunner = CommandRunnerImpl
 
 export type SpawnAsync = typeof import('backend/utils').spawnAsync
 

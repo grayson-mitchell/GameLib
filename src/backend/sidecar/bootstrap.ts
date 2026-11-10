@@ -42,7 +42,6 @@ import { i18nextLanguageOptions, localeFileSegments } from 'common/languages'
 
 import { registerHandlers } from './handlers'
 import {
-  buildCommandRunnerFacade,
   buildLauncherFacade,
   buildManagersFacade,
   buildQuitFacade,
@@ -154,6 +153,7 @@ import {
   logWarning,
   logError,
   logErrorSettled,
+  getRunnerLogWriter,
   LogPrefix
 } from '../logger'
 import { GlobalConfig } from '../config'
@@ -170,7 +170,20 @@ import { isMac } from '../constants/environment'
 // edge back into `sidecar/` (`grep -n "from './sidecar\|from '\.\./sidecar" src/backend/
 // utils.ts` returns nothing), so this import introduces no cycle. `isMac` above is already
 // imported for other blocks -- not duplicated here.
-import { checkRosettaInstall } from '../utils'
+import { checkRosettaInstall, errorHandler } from '../utils'
+import { createCommandRunner } from '../commandRunner'
+import {
+  setupEnvVars,
+  setupWineEnvVars,
+  validWine,
+  verifyWinePrefix
+} from '../launcher'
+import { getUmuPath, isUmuSupported } from '../utils/compatibility_layers'
+import { searchForExecutableOnPath } from '../utils/os/path'
+import {
+  createAbortController,
+  deleteAbortController
+} from '../utils/aborthandler/aborthandler'
 // Todo 2026-08-16 (quick task 260822-s8y): `applyMigrations()` had exactly ONE call site in
 // the whole repo -- `main.ts:412`, inside Electron's `app.whenReady()` -- so under Tauri the
 // entire migration system was dead code that PRESENTED as live (`storeRegistration.ts`
@@ -1001,9 +1014,42 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'command-runner',
-      run: (_ctx, _io, state) => {
+      run: (ctx, _io, state) => {
         state.services.commandRunner =
-          prebuilt.commandRunner ?? buildCommandRunnerFacade()
+          prebuilt.commandRunner ??
+          createCommandRunner({
+            runner: ctx.runner,
+            platform: ctx.platform,
+            logger: {
+              logInfo,
+              logWarning,
+              logError,
+              logDebug,
+              backendPrefix: LogPrefix.Backend
+            },
+            getRunnerLogWriter,
+            abort: {
+              create: createAbortController,
+              remove: deleteAbortController
+            },
+            errorHandler,
+            searchForExecutableOnPath,
+            // Read lazily: 'command-runner' runs before 'store-managers', and the closure only
+            // fires after boot has completed.
+            commandToArgsArray: (command) =>
+              requireServices(
+                state
+              ).managers.library.legendary.commandToArgsArray(command),
+            wine: {
+              getDefaultSettings: () => GlobalConfig.get().getSettings(),
+              verifyWinePrefix,
+              validWine,
+              setupEnvVars,
+              setupWineEnvVars,
+              isUmuSupported,
+              getUmuPath
+            }
+          })
         state.services.spawnAsync =
           prebuilt.spawnAsync ?? buildSpawnAsyncFacade()
         state.services.quit = prebuilt.quit ?? buildQuitFacade()

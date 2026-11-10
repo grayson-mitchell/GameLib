@@ -35,7 +35,6 @@ import {
 import * as launcherModule from 'backend/launcher'
 import { handleExit, spawnAsync } from 'backend/utils'
 import type {
-  CommandRunner,
   Launcher,
   QuitHandler,
   SpawnAsync,
@@ -86,15 +85,6 @@ export function buildLauncherFacade(): Launcher {
     getKnownFixesEnvVariables: launcherModule.getKnownFixesEnvVariables,
     validWine: launcherModule.validWine,
     verifyWinePrefix: launcherModule.verifyWinePrefix
-  }
-}
-
-export function buildCommandRunnerFacade(): CommandRunner {
-  return {
-    callRunner: launcherModule.callRunner,
-    runWineCommand: launcherModule.runWineCommand,
-    getWinePath: launcherModule.getWinePath,
-    runScriptForGame: launcherModule.runScriptForGame
   }
 }
 
