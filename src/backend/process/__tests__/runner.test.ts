@@ -333,6 +333,53 @@ describe('C-02 WR-01 drain grace and caller capabilities', () => {
   })
 })
 
+describe('C-02 WR-02 truncation pin', () => {
+  // The review's splice cannot occur: outBytes counts dropped chunks, so once a
+  // chunk is dropped no later (smaller) chunk is appended. Verified not
+  // reproducible; this pins that behaviour.
+  it('never appends a later chunk once one was dropped', async () => {
+    const script =
+      'const w=(s)=>new Promise(r=>process.stdout.write(s,r));' +
+      '(async()=>{await w("aaaa");await wait();await w("b".repeat(20));await wait();await w("c")})();' +
+      'function wait(){return new Promise(r=>setTimeout(r,50))}'
+    const r = await runner.run(NODE, ['-e', script], { maxBufferBytes: 10 })
+    expect(r.stdout).toBe('aaaa')
+    expect(r.truncated).toBe(true)
+  })
+})
+
+describe('C-02 WR-03', () => {
+  const posixOnlyIt = process.platform === 'win32' ? it.skip : it
+  // A6: CI is ubuntu-only, so the win32 taskkill success path is not CI-verified.
+  posixOnlyIt('win32 killPid returns false when taskkill fails', async () => {
+    const r = make({ platform: 'win32' })
+    let child: import('../types').ChildHandle | undefined
+    const pending = r.run(NODE, SLEEP10, {
+      timeoutMs: 20_000,
+      onSpawn: (h) => {
+        child = h
+      }
+    })
+    await wait(150)
+    expect(r.killTracked({ runner: 'runner' })).toBe(0)
+    expect(log.warn).toHaveBeenCalledWith(
+      expect.stringContaining('Unable to kill')
+    )
+    child?.kill('SIGKILL')
+    await pending
+  })
+
+  it('runSync captures a 2 MB stdout', () => {
+    const r = runner.runSync(
+      NODE,
+      ['-e', 'process.stdout.write("x".repeat(2e6))'],
+      { timeoutMs: 10_000, reason: 'test' }
+    )
+    expect(r.error).toBeUndefined()
+    expect(r.stdout.length).toBe(2_000_000)
+  })
+})
+
 describe('source shape', () => {
   it('has no shell option and exactly one detached spawn', () => {
     const src = stripSourceComments(
