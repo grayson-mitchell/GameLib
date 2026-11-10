@@ -48,6 +48,7 @@ import {
 } from '../../../testUtils/testContext'
 import type { ScriptStep } from '../../../testUtils/scriptedRunner'
 import type { AppPaths } from '../../../process/context'
+import type { BootServices } from '../../../services/types'
 
 /** A single newline-delimited JSON frame read off the sidecar's output. */
 export type Frame = Record<string, unknown>
@@ -90,6 +91,8 @@ export interface FreshSidecar {
   frames: Frame[]
   /** The fresh context this boot ran on (fake HOME, scripted runner, capture log). */
   testContext: TestContext
+  /** The services this boot ran with (prebuilt ones by reference). */
+  services: BootServices
 }
 
 /**
@@ -110,6 +113,8 @@ export function bootFresh(opts?: {
    * BEFORE the boot). Skip the reset; the boot still happens exactly once.
    */
   reuseRegistry?: boolean
+  /** Prebuilt services handed to the boot; every other service is built by its step. */
+  services?: Partial<BootServices>
   /** Overrides for this case's createTestContext(); `userData` stays under the fake HOME. */
   context?: {
     script?: readonly ScriptStep[]
@@ -124,8 +129,9 @@ export function bootFresh(opts?: {
     bootSidecar: (
       ctx: TestContext['ctx'],
       input: PassThrough,
-      output: PassThrough
-    ) => void
+      output: PassThrough,
+      prebuilt?: Partial<BootServices>
+    ) => BootServices
     resolveAppPaths: () => { appRoot: string; publicDir: string }
   }
   const real = resolveAppPaths()
@@ -141,8 +147,8 @@ export function bootFresh(opts?: {
   const input = new PassThrough()
   const output = opts?.output ?? new PassThrough()
   const frames = collectFrames(output)
-  bootSidecar(testContext.ctx, input, output)
-  return { input, output, frames, testContext }
+  const services = bootSidecar(testContext.ctx, input, output, opts?.services)
+  return { input, output, frames, testContext, services }
 }
 
 /** Writes an `invoke` request frame to the sidecar's input stream. */

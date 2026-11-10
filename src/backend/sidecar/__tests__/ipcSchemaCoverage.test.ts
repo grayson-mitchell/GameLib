@@ -12,7 +12,7 @@
  *     handlers populates). `initOnlineMonitor()` is deliberately never called here: it pings
  *     sites and arms retries.
  */
-import type { BootServices } from 'backend/services/types'
+import { createTestServices } from 'backend/testUtils/testServices'
 import { createCaptureLog } from 'backend/testUtils/captureLog'
 import { defined } from 'backend/testUtils/indexed'
 import { readdirSync, readFileSync, statSync } from 'fs'
@@ -88,10 +88,9 @@ async function registered(): Promise<{
   declared: Set<string>
 }> {
   const { registerHandlers } = await import('backend/sidecar/handlers')
-  // No registration consumes services yet (66.1-04); plans 07/21/22 convert them.
   registerHandlers({
     log: createCaptureLog(),
-    services: {} as BootServices
+    services: createTestServices()
   })
   registerSignInProbeOutcomesHandler()
   const scan = staticScan()

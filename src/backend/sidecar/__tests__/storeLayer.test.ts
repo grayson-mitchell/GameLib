@@ -91,13 +91,12 @@ import {
 // every store this suite exercises — the same real, unmodified code path
 // production runs (the 'register-handlers' boot step).
 import { registerHandlers } from '../handlers'
-import type { BootServices } from '../../services/types'
+import { createTestServices } from '../../testUtils/testServices'
 import { createCaptureLog } from '../../testUtils/captureLog'
 
-// No registration consumes services yet (66.1-04); plans 07/21/22 convert them.
 registerHandlers({
   log: createCaptureLog(),
-  services: {} as BootServices
+  services: createTestServices()
 })
 
 import { configStore as steamConfigStore } from '../../storeManagers/steam/stores'
