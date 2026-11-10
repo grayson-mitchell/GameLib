@@ -15,7 +15,8 @@
  *   - childProcess: non-test src/backend files. Each import/export-from,
  *     require() call and dynamic import() of child_process / node:child_process
  *     (type-only imports do not count).
- *   - jestMock: every .ts/.tsx under src/. Each `jest.mock(...)` call;
+ *   - jestMock: every .ts/.tsx under src/. Each jest.mock/doMock/setMock/unstable_mockModule call
+ *     (and calls of names destructured from jest);
  *     comments never count.
  *
  * 66.3 TARGETS (C-WR-2): when static fields joined the census the baseline ROSE by 17
@@ -60,20 +61,33 @@ const ts = require('typescript')
 
 const REPO_ROOT = path.join(__dirname, '..')
 const DEFAULT_BASELINE_DIR = path.join(__dirname, 'backendDiCeilings')
-const SKIP_DIRS = new Set([
-  '__tests__',
-  '__mocks__',
-  'testUtils',
-  'node_modules'
-])
-// Floors: about half of the files measured on 2026-11-10 (475 scanned
-// non-test backend files; 1,911 .ts/.tsx files under src/).
-const DEFAULT_MIN_BACKEND_FILES = 240
-const DEFAULT_MIN_SRC_FILES = 955
+// Tests are colocated, so __tests__/__mocks__/node_modules are skipped at any depth.
+// testUtils is skipped ONLY at src/backend/testUtils (IN-02): a production directory that
+// happens to be named testUtils elsewhere must still be scanned.
+const SKIP_DIRS = new Set(['__tests__', '__mocks__', 'node_modules'])
+const SKIP_PATHS = ['src/backend/testUtils']
+// Floors: about 90% of the files measured on 2026-11-10 (494 scanned non-test backend
+// files; 1,961 .ts/.tsx files under src/), so a half-scanned tree fails (T-66.2-05).
+const DEFAULT_MIN_BACKEND_FILES = 445
+const DEFAULT_MIN_SRC_FILES = 1765
 
 const SECTIONS = ['moduleState', 'childProcess', 'jestMock']
 const SHARD_KEYS = new Set([...SECTIONS, 'sanctioned'])
 const KINDS = new Set(['runner', 'logger-sink', 'boot-entry', 'rust-overlap'])
+// WR-04 (D-66.2-04): a sanctioned entry is valid only at the one path its kind allows. A hard-coded
+// table, not a git compare, so a PR that edits the shard JSON cannot sanction a new site.
+const SANCTIONED_PATHS = {
+  runner: ['src/backend/process/runner.ts'],
+  'logger-sink': ['src/backend/logger/index.ts'],
+  'boot-entry': ['src/backend/sidecar/bootstrap.ts'],
+  'rust-overlap': []
+}
+const JEST_MOCK_METHODS = new Set([
+  'mock',
+  'doMock',
+  'setMock',
+  'unstable_mockModule'
+])
 const DELETED_BY = /^Phase \d+(\.\d+)?$/
 const IMMUTABLE_NEW = new Set([
   'RegExp',
@@ -240,6 +254,8 @@ function countStaticFields(sf) {
   return n
 }
 
+const BYPASS_NAMES = new Set(['getBuiltinModule', 'createRequire'])
+
 function countChildProcessImports(sourceText, fileName = 'x.ts') {
   const sf = parse(sourceText, fileName)
   let n = 0
@@ -250,6 +266,10 @@ function countChildProcessImports(sourceText, fileName = 'x.ts') {
     elementsKey(bindings) &&
     elementsKey(bindings).length > 0 &&
     elementsKey(bindings).every((e) => e.isTypeOnly)
+  const isBypassCallee = (callee) =>
+    (ts.isIdentifier(callee) && BYPASS_NAMES.has(callee.text)) ||
+    (ts.isPropertyAccessExpression(callee) &&
+      BYPASS_NAMES.has(callee.name.text))
   const visit = (node) => {
     if (ts.isImportDeclaration(node) && isCp(node.moduleSpecifier)) {
       const c = node.importClause
@@ -279,7 +299,14 @@ function countChildProcessImports(sourceText, fileName = 'x.ts') {
       const callee = node.expression
       const isRequire = ts.isIdentifier(callee) && callee.text === 'require'
       const isDynamic = callee.kind === ts.SyntaxKind.ImportKeyword
-      if ((isRequire || isDynamic) && isCp(node.arguments[0])) n += 1
+      const arg = node.arguments[0]
+      if (isRequire || isDynamic) {
+        if (ts.isStringLiteralLike(arg)) {
+          if (isCp(arg)) n += 1
+        } else n += 1 // computed specifier (WR-05): cannot prove it is not child_process
+      } else if (isBypassCallee(callee)) n += 1
+    } else if (ts.isCallExpression(node) && isBypassCallee(node.expression)) {
+      n += 1
     }
     ts.forEachChild(node, visit)
   }
@@ -290,15 +317,40 @@ function countChildProcessImports(sourceText, fileName = 'x.ts') {
 function countJestMock(sourceText, fileName = 'x.ts') {
   const sf = parse(sourceText, fileName)
   let n = 0
-  const visit = (node) => {
+  const aliases = new Set()
+  const isJest = (e) => ts.isIdentifier(e) && e.text === 'jest'
+  const collect = (node) => {
     if (
-      ts.isCallExpression(node) &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      ts.isIdentifier(node.expression.expression) &&
-      node.expression.expression.text === 'jest' &&
-      node.expression.name.text === 'mock'
-    )
-      n += 1
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name) &&
+      node.initializer &&
+      isJest(unwrap(node.initializer))
+    ) {
+      for (const el of node.name.elements) {
+        const source = el.propertyName ?? el.name
+        const srcName = ts.isIdentifier(source) ? source.text : undefined
+        if (
+          srcName &&
+          JEST_MOCK_METHODS.has(srcName) &&
+          ts.isIdentifier(el.name)
+        )
+          aliases.add(el.name.text)
+      }
+    }
+    ts.forEachChild(node, collect)
+  }
+  collect(sf)
+  const visit = (node) => {
+    if (ts.isCallExpression(node)) {
+      const c = node.expression
+      if (
+        ts.isPropertyAccessExpression(c) &&
+        isJest(c.expression) &&
+        JEST_MOCK_METHODS.has(c.name.text)
+      )
+        n += 1
+      else if (ts.isIdentifier(c) && aliases.has(c.text)) n += 1
+    }
     ts.forEachChild(node, visit)
   }
   visit(sf)
@@ -307,12 +359,13 @@ function countJestMock(sourceText, fileName = 'x.ts') {
 
 const toPosix = (p) => p.split(path.sep).join('/')
 
-function walkTs(dir, skipDirs, out) {
+function walkTs(dir, skipDirs, out, skipFull = new Set()) {
   if (!fs.existsSync(dir)) return out
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name)
     if (entry.isDirectory()) {
-      if (!skipDirs.has(entry.name)) walkTs(full, skipDirs, out)
+      if (!skipDirs.has(entry.name) && !skipFull.has(full))
+        walkTs(full, skipDirs, out, skipFull)
       continue
     }
     if (!entry.isFile()) continue
@@ -333,7 +386,12 @@ function census(root = REPO_ROOT) {
   const rel = (f) => toPosix(path.relative(root, f))
   const backendDir = path.join(root, 'src', 'backend')
   const isTest = (f) => /\.(test\.tsx?|d\.ts)$/.test(f)
-  for (const f of walkTs(backendDir, SKIP_DIRS, []).sort()) {
+  for (const f of walkTs(
+    backendDir,
+    SKIP_DIRS,
+    [],
+    new Set(SKIP_PATHS.map((p) => path.join(root, ...p.split('/'))))
+  ).sort()) {
     if (isTest(f)) continue
     result.backendFiles += 1
     const text = fs.readFileSync(f, 'utf8')
@@ -439,6 +497,12 @@ function evaluate(merged, current) {
     let valid = true
     if (!KINDS.has(e.kind)) {
       failures.push(`sanctioned ${file}: unknown kind "${e.kind}"`)
+      valid = false
+    }
+    if (KINDS.has(e.kind) && !SANCTIONED_PATHS[e.kind].includes(file)) {
+      failures.push(
+        `sanctioned ${file}: kind ${e.kind} only allows [${SANCTIONED_PATHS[e.kind].join(', ')}]`
+      )
       valid = false
     }
     if (typeof e.reason !== 'string' || e.reason.length < 20) {
@@ -613,11 +677,18 @@ function main() {
     if (!fs.existsSync(shardFile)) {
       failures.push(`unknown shard: ${args.shard} (no ${shardFile})`)
     } else {
-      const data = JSON.parse(fs.readFileSync(shardFile, 'utf8'))
-      const paths = new Set()
-      for (const k of Object.keys(data))
-        for (const p of Object.keys(data[k] || {})) paths.add(p)
-      ;({ merged, current: cur } = restrictTo(paths, merged, current))
+      let data
+      try {
+        data = JSON.parse(fs.readFileSync(shardFile, 'utf8'))
+      } catch (e) {
+        failures.push(`cannot read shard ${args.shard}.json: ${e.message}`)
+      }
+      if (data !== undefined) {
+        const paths = new Set()
+        for (const k of Object.keys(data))
+          for (const p of Object.keys(data[k] || {})) paths.add(p)
+        ;({ merged, current: cur } = restrictTo(paths, merged, current))
+      }
     }
   }
   failures.push(...evaluate(merged, cur))
@@ -638,6 +709,7 @@ module.exports = {
   countJestMock,
   evaluate,
   loadShards,
+  SANCTIONED_PATHS,
   parseArgs,
   restrictTo
 }

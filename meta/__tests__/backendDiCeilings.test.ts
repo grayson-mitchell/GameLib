@@ -21,6 +21,7 @@ const {
   countJestMock,
   evaluate,
   loadShards,
+  SANCTIONED_PATHS,
   parseArgs
 } = require('../backendDiCeilings.cjs')
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -113,6 +114,33 @@ describe('countChildProcessImports', () => {
     ['export from', "export { spawn } from 'child_process'", 1],
     ['side-effect import', "import 'child_process'", 1],
     ['import equals require', "import cp = require('child_process')", 1],
+    [
+      'process.getBuiltinModule',
+      'const cp = process.getBuiltinModule("child_process")',
+      1
+    ],
+    [
+      'globalThis.process.getBuiltinModule',
+      'globalThis.process.getBuiltinModule(x)',
+      1
+    ],
+    ['bare getBuiltinModule', 'getBuiltinModule(x)', 1],
+    [
+      'createRequire',
+      'import { createRequire } from "node:module"; const r = createRequire(import.meta.url)',
+      1
+    ],
+    ['module.createRequire', 'module.createRequire(x)', 1],
+    ['computed require', 'const m = "child_" + "process"; require(m)', 1],
+    ['computed dynamic import', 'await import(name)', 1],
+    ['template with substitution', 'require(`child_${x}`)', 1],
+    [
+      'no-substitution template of child_process',
+      'require(`child_process`)',
+      1
+    ],
+    ['no-substitution template of fs', 'require(`fs`)', 0],
+    ['require of a literal fs', "require('fs')", 0],
     ['a comment', "// import x from 'child_process'", 0],
     ['an unrelated module', "import fs from 'fs'", 0],
     [
@@ -134,8 +162,32 @@ describe('countJestMock', () => {
   it('ignores comments', () => {
     expect(countJestMock("// jest.mock('y')", 'x.ts')).toBe(0)
   })
-  it('ignores doMock', () => {
-    expect(countJestMock("jest.doMock('z')", 'x.ts')).toBe(0)
+  it('counts doMock', () => {
+    expect(countJestMock("jest.doMock('z')", 'x.ts')).toBe(1)
+  })
+  it('counts setMock', () => {
+    expect(countJestMock("jest.setMock('z', {})", 'x.ts')).toBe(1)
+  })
+  it('counts unstable_mockModule', () => {
+    expect(
+      countJestMock("jest.unstable_mockModule('z', () => ({}))", 'x.ts')
+    ).toBe(1)
+  })
+  it('counts destructured mock calls, including renames', () => {
+    expect(
+      countJestMock(
+        "const { mock, doMock: dm } = jest\nmock('a')\ndm('b')",
+        'x.ts'
+      )
+    ).toBe(2)
+  })
+  it('does not count requireMock or createMockFromModule', () => {
+    expect(
+      countJestMock(
+        "jest.requireMock('a')\njest.createMockFromModule('b')",
+        'x.ts'
+      )
+    ).toBe(0)
   })
 })
 
@@ -145,6 +197,7 @@ const SANC = {
   childProcess: 1,
   reason: 'a reason that is long enough to pass'
 }
+const RUNNER = 'src/backend/process/runner.ts'
 const empty = () => ({ moduleState: {}, childProcess: {}, jestMock: {} })
 
 describe('evaluate', () => {
@@ -184,89 +237,116 @@ describe('evaluate', () => {
   it('passes a sanctioned exact match', () => {
     expect(
       evaluate(
-        { sanctioned: { a: SANC } },
-        { ...empty(), childProcess: { a: 1 } }
+        { sanctioned: { [RUNNER]: SANC } },
+        { ...empty(), childProcess: { [RUNNER]: 1 } }
       )
     ).toEqual([])
   })
   it('CR-01: a sanctioned entry of 2 for a file at 9 fails (no entry exempts at any size)', () => {
     expect(
       evaluate(
-        { sanctioned: { a: { ...SANC, moduleState: 2, childProcess: 0 } } },
-        { ...empty(), moduleState: { a: 9 } }
+        {
+          sanctioned: { [RUNNER]: { ...SANC, moduleState: 2, childProcess: 0 } }
+        },
+        { ...empty(), moduleState: { [RUNNER]: 9 } }
       )
-    ).toEqual([expect.stringContaining('grew: a 9 > baseline 2')])
+    ).toEqual([expect.stringContaining(`grew: ${RUNNER} 9 > baseline 2`)])
   })
   it('flags sanctioned growth in childProcess', () => {
     expect(
       evaluate(
-        { sanctioned: { a: SANC } },
-        { ...empty(), childProcess: { a: 2 } }
+        { sanctioned: { [RUNNER]: SANC } },
+        { ...empty(), childProcess: { [RUNNER]: 2 } }
       )
-    ).toEqual([expect.stringContaining('grew: a 2 > baseline 1')])
+    ).toEqual([expect.stringContaining(`grew: ${RUNNER} 2 > baseline 1`)])
   })
   it('flags sanctioned shrink', () => {
     expect(
       evaluate(
-        { sanctioned: { a: { ...SANC, moduleState: 3 } } },
-        { ...empty(), moduleState: { a: 1 }, childProcess: { a: 1 } }
+        { sanctioned: { [RUNNER]: { ...SANC, moduleState: 3 } } },
+        {
+          ...empty(),
+          moduleState: { [RUNNER]: 1 },
+          childProcess: { [RUNNER]: 1 }
+        }
       )
-    ).toEqual([expect.stringContaining('shrank: lower a to 1')])
+    ).toEqual([expect.stringContaining(`shrank: lower ${RUNNER} to 1`)])
   })
   it('flags a sanctioned stale entry', () => {
-    expect(evaluate({ sanctioned: { a: SANC } }, empty())).toEqual([
-      expect.stringContaining('stale sanctioned entry: a')
+    expect(evaluate({ sanctioned: { [RUNNER]: SANC } }, empty())).toEqual([
+      expect.stringContaining(`stale sanctioned entry: ${RUNNER}`)
     ])
   })
   it('flags both-zero sanctioned counts', () => {
     expect(
-      evaluate({ sanctioned: { a: { ...SANC, childProcess: 0 } } }, empty())
+      evaluate(
+        { sanctioned: { [RUNNER]: { ...SANC, childProcess: 0 } } },
+        empty()
+      )
     ).toEqual([expect.stringContaining('both counts are 0')])
   })
   it('flags an unknown sanctioned kind', () => {
     const f = evaluate(
-      { sanctioned: { a: { ...SANC, kind: 'whatever' } } },
-      { ...empty(), childProcess: { a: 1 } }
+      { sanctioned: { [RUNNER]: { ...SANC, kind: 'whatever' } } },
+      { ...empty(), childProcess: { [RUNNER]: 1 } }
     )
     expect(f.join('\n')).toContain('unknown kind')
   })
   it('flags a short reason', () => {
     const f = evaluate(
-      { sanctioned: { a: { ...SANC, reason: 'short' } } },
-      { ...empty(), childProcess: { a: 1 } }
+      { sanctioned: { [RUNNER]: { ...SANC, reason: 'short' } } },
+      { ...empty(), childProcess: { [RUNNER]: 1 } }
     )
     expect(f.join('\n')).toContain('reason must be')
   })
-  it('flags rust-overlap without deletedBy, accepts it with one', () => {
+  it('flags rust-overlap without deletedBy', () => {
     const base = { ...SANC, kind: 'rust-overlap' }
-    const cur = { ...empty(), childProcess: { a: 1 } }
-    expect(evaluate({ sanctioned: { a: base } }, cur).join('\n')).toContain(
-      'deletedBy'
-    )
+    const cur = { ...empty(), childProcess: { [RUNNER]: 1 } }
     expect(
-      evaluate({ sanctioned: { a: { ...base, deletedBy: 'Phase 75' } } }, cur)
-    ).toEqual([])
+      evaluate({ sanctioned: { [RUNNER]: base } }, cur).join('\n')
+    ).toContain('deletedBy')
     expect(
       evaluate(
-        { sanctioned: { a: { ...base, deletedBy: 'later' } } },
+        { sanctioned: { [RUNNER]: { ...base, deletedBy: 'later' } } },
         cur
       ).join('\n')
     ).toContain('deletedBy')
   })
   it('flags a sanctioned path that is also baselined', () => {
     const f = evaluate(
-      { sanctioned: { a: SANC }, childProcess: { a: 1 } },
-      { ...empty(), childProcess: { a: 1 } }
+      { sanctioned: { [RUNNER]: SANC }, childProcess: { [RUNNER]: 1 } },
+      { ...empty(), childProcess: { [RUNNER]: 1 } }
     )
     expect(f.join('\n')).toContain('also appears in childProcess')
   })
   it('does not exempt jestMock for a sanctioned path', () => {
     expect(
       evaluate(
-        { sanctioned: { a: SANC } },
-        { ...empty(), childProcess: { a: 1 }, jestMock: { a: 1 } }
+        { sanctioned: { [RUNNER]: SANC } },
+        { ...empty(), childProcess: { [RUNNER]: 1 }, jestMock: { [RUNNER]: 1 } }
       )
-    ).toEqual([expect.stringContaining('new violation: a')])
+    ).toEqual([expect.stringContaining(`new violation: ${RUNNER}`)])
+  })
+  it('rejects a sanctioned entry at a path its kind does not allow', () => {
+    const f = evaluate(
+      { sanctioned: { 'src/backend/other.ts': SANC } },
+      { ...empty(), childProcess: { 'src/backend/other.ts': 1 } }
+    )
+    expect(f.join('\n')).toContain(
+      'kind runner only allows [src/backend/process/runner.ts]'
+    )
+  })
+  it('rust-overlap allows no path (D-14 table is empty)', () => {
+    expect(SANCTIONED_PATHS['rust-overlap']).toEqual([])
+    const f = evaluate(
+      {
+        sanctioned: {
+          [RUNNER]: { ...SANC, kind: 'rust-overlap', deletedBy: 'Phase 75' }
+        }
+      },
+      { ...empty(), childProcess: { [RUNNER]: 1 } }
+    )
+    expect(f.join('\n')).toContain('kind rust-overlap only allows []')
   })
 })
 
@@ -444,6 +524,21 @@ describe('backendDiCeilings CLI', () => {
     const r = run(['--shard', 'nope'])
     expect(r.status).toBe(1)
     expect(r.stderr).toContain('unknown shard')
+  })
+  it('scans a testUtils directory that is not src/backend/testUtils', () => {
+    write('src/backend/testUtils/skip.ts', 'let skipped\n')
+    write('src/backend/foo/testUtils/scan.ts', 'let scanned\n')
+    expect(census(tmp).moduleState).toEqual({
+      'src/backend/a.ts': 1,
+      'src/backend/foo/testUtils/scan.ts': 1
+    })
+  })
+  it('a malformed --shard file is reported as a failure, not thrown', () => {
+    write('baselines/bad.json', '{ nope')
+    const r = run(['--shard', 'bad'])
+    expect(r.status).toBe(1)
+    expect(r.stderr).toContain('cannot read shard bad.json')
+    expect(r.stderr).not.toContain('SyntaxError: ')
   })
   it('--update is rejected (no update flag exists)', () => {
     const r = run(['--update'])
