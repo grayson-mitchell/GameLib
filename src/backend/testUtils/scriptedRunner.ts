@@ -25,9 +25,11 @@ export interface ScriptStep {
   chunks?: { stream: 'stdout' | 'stderr'; text: string }[]
   error?: { code: string }
   repeat?: boolean
+  /** run() stays pending until release(cmd) or opts.signal aborts. */
+  hold?: boolean
 }
 interface ScriptedCall {
-  method: 'run' | 'runSync' | 'spawnLongLived' | 'openDetached'
+  method: 'run' | 'runSync' | 'spawnLongLived' | 'openDetached' | 'killTracked'
   cmd: string
   argv: readonly string[]
   env?: NodeJS.ProcessEnv
@@ -37,6 +39,8 @@ interface ScriptedCall {
 export interface ScriptedRunner extends ProcessRunner {
   readonly calls: readonly ScriptedCall[]
   expectAllConsumed(): void
+  /** Settles the pending held run for cmd with its scripted result. */
+  release(cmd: string): void
 }
 
 const noChild: ChildHandle = {
@@ -47,8 +51,11 @@ const noChild: ChildHandle = {
 }
 
 export function createScriptedRunner(
-  script: readonly ScriptStep[]
+  script: readonly ScriptStep[],
+  options?: { killCounts?: readonly number[] }
 ): ScriptedRunner {
+  const killCounts = [...(options?.killCounts ?? [])]
+  const held = new Map<string, () => void>()
   const steps = script.map((step) => ({ step, used: false }))
   const calls: ScriptedCall[] = []
   const live = new Map<
@@ -93,8 +100,30 @@ export function createScriptedRunner(
         )
       }
     },
+    release(cmd: string): void {
+      const fn = held.get(cmd)
+      if (!fn) throw new Error(`release: no held run for ${cmd}`)
+      held.delete(cmd)
+      fn()
+    },
     async run(cmd, argv, opts?: RunOptions): Promise<RunResult> {
       positive(opts?.timeoutMs, 'timeoutMs')
+      if (opts?.timeout !== undefined) {
+        if (opts.timeoutMs !== undefined) {
+          throw new TypeError(
+            'run: timeoutMs and timeout are mutually exclusive (D-10)'
+          )
+        }
+        if (
+          opts.timeout.none !== true ||
+          typeof opts.timeout.reason !== 'string' ||
+          opts.timeout.reason.trim().length === 0
+        ) {
+          throw new TypeError(
+            'run: timeout opt-out requires { none: true, reason } with a non-empty reason (D-10)'
+          )
+        }
+      }
       calls.push({
         method: 'run',
         cmd,
@@ -109,12 +138,8 @@ export function createScriptedRunner(
           code: s.error.code
         })
       }
-      for (const c of s.chunks ?? []) {
-        if (c.stream === 'stdout') opts?.onStdout?.(c.text, noChild)
-        else opts?.onStderr?.(c.text, noChild)
-      }
-      await Promise.resolve()
-      return {
+      opts?.onSpawn?.(noChild)
+      const base: RunResult = {
         code: 0,
         signal: null,
         stdout: '',
@@ -125,6 +150,28 @@ export function createScriptedRunner(
         pid: undefined,
         ...s.result
       }
+      const abortedResult: RunResult = { ...base, code: null, aborted: true }
+      if (opts?.signal?.aborted) return abortedResult
+      for (const c of s.chunks ?? []) {
+        if (c.stream === 'stdout') opts?.onStdout?.(c.text, noChild)
+        else opts?.onStderr?.(c.text, noChild)
+      }
+      if (s.hold) {
+        return new Promise<RunResult>((resolve) => {
+          const signal = opts?.signal
+          const onAbort = () => {
+            held.delete(cmd)
+            resolve(abortedResult)
+          }
+          signal?.addEventListener('abort', onAbort, { once: true })
+          held.set(cmd, () => {
+            signal?.removeEventListener('abort', onAbort)
+            resolve(base)
+          })
+        })
+      }
+      await Promise.resolve()
+      return base
     },
     runSync(cmd, argv, opts: RunSyncOptions): SyncResult {
       positive(opts.timeoutMs, 'timeoutMs')
@@ -199,8 +246,9 @@ export function createScriptedRunner(
       )
       return handle
     },
-    killTracked(_filter: TrackFilter): number {
-      return 0
+    killTracked(filter: TrackFilter): number {
+      calls.push({ method: 'killTracked', cmd: '', argv: [], opts: filter })
+      return killCounts.shift() ?? 0
     },
     killAllTracked: () => live.size,
     teardownAll() {

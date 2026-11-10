@@ -67,6 +67,11 @@ its fakes (`runner`, `clock`, `log`, `profile`) and a `dispose()`:
 
 - Scripted runner (`createScriptedRunner`) is the default. It never spawns, and
   an unscripted call fails loudly naming the cmd and argv.
+  It calls `onSpawn` once with an inert handle, honours `opts.signal`
+  (`aborted: true`), validates the `timeout` opt-out like the real runner, and
+  supports `hold: true` steps that stay pending until `runner.release(cmd)` or an
+  abort. `createScriptedRunner(script, { killCounts })` makes `killTracked`
+  record its filter in `calls` and return the scripted counts (default 0).
 - Fake clock (`createFakeClock`) replaces `jest.useFakeTimers`: call
   `advance(ms)` or `runAll()`, and `assertNoKeepAlive()` to prove nothing holds
   the loop open.
