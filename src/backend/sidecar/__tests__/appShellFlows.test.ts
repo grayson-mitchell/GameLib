@@ -360,6 +360,16 @@ function freshRegistry(): void {
   mockedHandleProtocol = handleProtocol as jest.Mock
 }
 
+/** Deps for the tests that call registerAppShellFlows() directly (no boot). */
+function directDeps(stores: unknown = {}) {
+  return {
+    managers: { library: {} } as never,
+    downloadQueue: downloadQueueStub,
+    quit: { handleExit: jest.fn().mockResolvedValue(undefined) },
+    stores: stores as never
+  }
+}
+
 /** The one boot for a test case, in the registry freshRegistry() just built. */
 function boot() {
   return bootFresh({
@@ -1112,10 +1122,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
-        isolatedModule.registerAppShellFlows({
-          downloadQueue: downloadQueueStub,
-          stores: {} as never
-        })
+        isolatedModule.registerAppShellFlows(directDeps())
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
         const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1188,10 +1195,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { registerAppShellFlows } = require('../appShellFlowRegistration')
-        registerAppShellFlows({
-          downloadQueue: downloadQueueStub,
-          stores: {} as never
-        })
+        registerAppShellFlows(directDeps())
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
         const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1253,10 +1257,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
             })
           }
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          require('../appShellFlowRegistration').registerAppShellFlows({
-            downloadQueue: downloadQueueStub,
-            stores: {} as never
-          })
+          require('../appShellFlowRegistration').registerAppShellFlows(
+            directDeps()
+          )
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           const platform = require('../../platform')
           ;[frontendReadyListener] =
@@ -1367,10 +1370,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           const flowRegModule = require('../appShellFlowRegistration')
           const { registerAppShellFlows } = flowRegModule
-          registerAppShellFlows({
-            downloadQueue: downloadQueueStub,
-            stores: {} as never
-          })
+          registerAppShellFlows(
+            directDeps({ kvs: { configStore: isolatedConfigStore } })
+          )
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           const isolatedPlatform = require('../../platform')
           const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1495,10 +1497,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
-        isolatedModule.registerAppShellFlows({
-          downloadQueue: downloadQueueStub,
-          stores: {} as never
-        })
+        isolatedModule.registerAppShellFlows(directDeps())
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
         const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1546,10 +1545,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
-        isolatedModule.registerAppShellFlows({
-          downloadQueue: downloadQueueStub,
-          stores: {} as never
-        })
+        isolatedModule.registerAppShellFlows(directDeps())
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
         const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1602,10 +1598,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
-        isolatedModule.registerAppShellFlows({
-          downloadQueue: downloadQueueStub,
-          stores: {} as never
-        })
+        isolatedModule.registerAppShellFlows(directDeps())
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
         const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1823,10 +1816,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // Inside a fresh-registry scope: a static import would resolve against the shared registry.
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { registerAppShellFlows } = require('../appShellFlowRegistration')
-        registerAppShellFlows({
-          downloadQueue: downloadQueueStub,
-          stores: {} as never
-        })
+        registerAppShellFlows(directDeps())
         jest.runAllTimers()
 
         expect(isolatedRequestRustInvoke).toHaveBeenCalledTimes(1)

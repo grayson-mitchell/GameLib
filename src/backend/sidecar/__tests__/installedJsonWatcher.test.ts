@@ -36,13 +36,15 @@
 
 // ── storeManagers — the DEFAULT refresh target, asserted by its own case below ─────────────
 const refreshInstalledMock = jest.fn()
-jest.mock('../../storeManagers', () => ({
-  libraryManagerMap: {
-    legendary: {
-      refreshInstalled: (...args: unknown[]) => refreshInstalledMock(...args)
+const watcherDeps = {
+  managers: {
+    library: {
+      legendary: {
+        refreshInstalled: (...args: unknown[]) => refreshInstalledMock(...args)
+      }
     }
-  }
-}))
+  } as never
+}
 
 // ── logger — the ported `logInfo` line is asserted, not merely assumed present ─────────────
 const logInfoMock = jest.fn()
@@ -113,9 +115,9 @@ function touchInstalledJson(): void {
 describe('installed.json watcher — the debounce', () => {
   it('collapses two writes INSIDE the window into exactly ONE refresh', async () => {
     const refresh = jest.fn()
-    expect(startInstalledJsonWatcher({ path: installedJson, refresh })).toBe(
-      true
-    )
+    expect(
+      startInstalledJsonWatcher(watcherDeps, { path: installedJson, refresh })
+    ).toBe(true)
     await sleep(120)
 
     touchInstalledJson()
@@ -132,9 +134,9 @@ describe('installed.json watcher — the debounce', () => {
 
   it('does NOT collapse two writes SEPARATED by more than the window — two refreshes', async () => {
     const refresh = jest.fn()
-    expect(startInstalledJsonWatcher({ path: installedJson, refresh })).toBe(
-      true
-    )
+    expect(
+      startInstalledJsonWatcher(watcherDeps, { path: installedJson, refresh })
+    ).toBe(true)
     await sleep(120)
 
     touchInstalledJson()
@@ -155,7 +157,9 @@ describe('installed.json watcher — the existsSync guard', () => {
     const refresh = jest.fn()
     const missing = join(tempDir, 'no-such-installed.json')
 
-    expect(startInstalledJsonWatcher({ path: missing, refresh })).toBe(false)
+    expect(
+      startInstalledJsonWatcher(watcherDeps, { path: missing, refresh })
+    ).toBe(false)
     expect(isInstalledJsonWatcherActive()).toBe(false)
 
     // Creating the file afterwards must not retroactively arm anything — `main.ts` guards the
@@ -170,7 +174,7 @@ describe('installed.json watcher — the existsSync guard', () => {
 describe('installed.json watcher — teardown', () => {
   it('stops refreshing after stopInstalledJsonWatcher()', async () => {
     const refresh = jest.fn()
-    startInstalledJsonWatcher({ path: installedJson, refresh })
+    startInstalledJsonWatcher(watcherDeps, { path: installedJson, refresh })
     await sleep(120)
 
     stopInstalledJsonWatcher()
@@ -184,7 +188,7 @@ describe('installed.json watcher — teardown', () => {
 
   it('drops a refresh already pending inside the debounce window when stopped', async () => {
     const refresh = jest.fn()
-    startInstalledJsonWatcher({ path: installedJson, refresh })
+    startInstalledJsonWatcher(watcherDeps, { path: installedJson, refresh })
     await sleep(120)
 
     touchInstalledJson()
@@ -200,9 +204,9 @@ describe('installed.json watcher — teardown', () => {
 
   it('refuses a second start rather than opening a second watch handle (T-35-42)', async () => {
     const refresh = jest.fn()
-    expect(startInstalledJsonWatcher({ path: installedJson, refresh })).toBe(
-      true
-    )
+    expect(
+      startInstalledJsonWatcher(watcherDeps, { path: installedJson, refresh })
+    ).toBe(true)
     // THE DETECTING ASSERTION IS THIS RETURN VALUE, and the distinction matters — it was
     // established by deliberately deleting the idempotence guard and re-running.
     //
@@ -218,9 +222,9 @@ describe('installed.json watcher — teardown', () => {
     // real-world shape of "one write costs N refreshes" accumulating across library
     // re-initialisations — it hangs rather than failing cleanly, which is precisely why the
     // guard is asserted directly instead of through its downstream effect.
-    expect(startInstalledJsonWatcher({ path: installedJson, refresh })).toBe(
-      false
-    )
+    expect(
+      startInstalledJsonWatcher(watcherDeps, { path: installedJson, refresh })
+    ).toBe(false)
     await sleep(120)
 
     touchInstalledJson()
@@ -235,7 +239,9 @@ describe('installed.json watcher — the ported production wiring', () => {
     // No `refresh` override: this is the case that proves the port targets the SAME function
     // `main.ts:1046` calls. Every other case injects a spy and would pass against a watcher
     // wired to nothing at all.
-    expect(startInstalledJsonWatcher({ path: installedJson })).toBe(true)
+    expect(
+      startInstalledJsonWatcher(watcherDeps, { path: installedJson })
+    ).toBe(true)
     await sleep(120)
 
     touchInstalledJson()
@@ -248,7 +254,7 @@ describe('installed.json watcher — the ported production wiring', () => {
     // The original defect class is silence. A refresh that happens without the log line leaves
     // the live gate with no discharge signal — `35-AB-RETEST.md` item 2 names the presence of
     // this exact string as the observable that would have settled the item.
-    startInstalledJsonWatcher({ path: installedJson })
+    startInstalledJsonWatcher(watcherDeps, { path: installedJson })
     await sleep(120)
 
     touchInstalledJson()
@@ -282,7 +288,9 @@ describe('installed.json watcher — the ported production wiring', () => {
 // Restoring the line returned it to green. See the SUMMARY for the full captured output.
 describe('installed.json watcher — the renderer refresh signal (D-35-19-09)', () => {
   it('(a) sends refreshLibrary/legendary exactly once after refreshInstalled resolves', async () => {
-    expect(startInstalledJsonWatcher({ path: installedJson })).toBe(true)
+    expect(
+      startInstalledJsonWatcher(watcherDeps, { path: installedJson })
+    ).toBe(true)
     await sleep(120)
 
     touchInstalledJson()
@@ -308,7 +316,9 @@ describe('installed.json watcher — the renderer refresh signal (D-35-19-09)', 
       order.push('sendFrontendMessage')
     })
 
-    expect(startInstalledJsonWatcher({ path: installedJson })).toBe(true)
+    expect(
+      startInstalledJsonWatcher(watcherDeps, { path: installedJson })
+    ).toBe(true)
     await sleep(120)
 
     touchInstalledJson()
@@ -363,7 +373,9 @@ describe('installed.json watcher — the renderer refresh signal (D-35-19-09)', 
         new Error('malformed installed.json')
       )
 
-      expect(startInstalledJsonWatcher({ path: installedJson })).toBe(true)
+      expect(
+        startInstalledJsonWatcher(watcherDeps, { path: installedJson })
+      ).toBe(true)
       await sleep(120)
 
       touchInstalledJson()
@@ -377,7 +389,9 @@ describe('installed.json watcher — the renderer refresh signal (D-35-19-09)', 
   }, 15000)
 
   it('(d) collapses two writes INSIDE the window into exactly ONE send, same as the refresh', async () => {
-    expect(startInstalledJsonWatcher({ path: installedJson })).toBe(true)
+    expect(
+      startInstalledJsonWatcher(watcherDeps, { path: installedJson })
+    ).toBe(true)
     await sleep(120)
 
     touchInstalledJson()

@@ -178,19 +178,17 @@ import {
 } from '../appshell/appManagement'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
 import { acknowledgeDialogDisplay } from '../dialog/displayAck'
-import { handleExit, detectVCRedist } from '../utils'
+import { detectVCRedist } from '../utils'
 import { assertOpenableExternalUrl } from './openPolicy'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
 import { GlobalConfig } from '../config'
-import { libraryManagerMap } from '../storeManagers'
-import { configStore } from '../constants/key_value_stores'
 import { logInfo, LogPrefix } from '../logger'
 import { pushReadOnlyStoresNotice } from './readOnlyStoresNotice'
 // Phase 35 plan 11: boot-time download-queue auto-resume, ported from
 // `main.ts:613` before that file is deleted at plan 35-14. See the
 // `frontendReady` handler below for the full contingency analysis.
 import type { DownloadQueue } from '../downloadmanager/downloadqueue'
-import type { Stores } from '../services/types'
+import type { Stores, StoreManagers, QuitHandler } from '../services/types'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
 import {
@@ -264,18 +262,21 @@ function syncTrayIcon(): void {
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
  *
- * `options.skipInitialTraySync` (sidecar-init-rustinvoke-leak, default `false`): lets
+ * `deps.skipInitialTraySync` (sidecar-init-rustinvoke-leak, default `false`): lets
  * `handlers.ts`'s own top-level, import-time-triggered call suppress the one-shot boot-time
  * `tray_set_icon` correction under Jest, without changing this function's behavior for any
  * caller that invokes it directly (see the call site below for the full rationale).
  */
-export function registerAppShellFlows(
-  deps: {
-    downloadQueue: Pick<DownloadQueue, 'initQueue'>
-    stores: Pick<Stores, 'kvs' | 'legendary'>
-  },
-  options: { skipInitialTraySync?: boolean } = {}
-): void {
+export interface AppShellFlowDeps {
+  managers: Pick<StoreManagers, 'library'>
+  downloadQueue: Pick<DownloadQueue, 'initQueue'>
+  quit: Pick<QuitHandler, 'handleExit'>
+  stores: Pick<Stores, 'kvs' | 'legendary'>
+  /** Default `false`; handlers.ts sets it under Jest (see the docstring above). */
+  skipInitialTraySync?: boolean
+}
+
+export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   // ── invoke (7) ─────────────────────────────────────────────────────────
   // Was 8 under the original Phase 34.1 D-01 set; `getLoginBackground` is a
   // later addition (user-selectable Manage Accounts background artwork).
@@ -334,7 +335,7 @@ export function registerAppShellFlows(
     // Live-gate marker (todo 2026-10-05 cmd-q-and-red-x): proves the shell's routed quit frame
     // landed in the sidecar, before handleExit() can block on the pending-operations confirm.
     logSendHandlerReached('quit')
-    handleExit().catch((error) => logSendFailure('quit', error))
+    deps.quit.handleExit().catch((error) => logSendFailure('quit', error))
   })
 
   // Quick 261026-b9r (T-b9r-02): takes NO argument; only the constant is ever opened.
@@ -456,7 +457,10 @@ export function registerAppShellFlows(
       markFrontendReady()
 
       if (isSnap) {
-        const showSnapWarning = configStore.get('showSnapWarning', true)
+        const showSnapWarning = deps.stores.kvs.configStore.get(
+          'showSnapWarning',
+          true
+        )
         if (showSnapWarning) {
           // 260919-sch: moved off the native dialog's checkbox onto the
           // in-app path -- the native shim hard-codes `checkboxChecked:
@@ -648,12 +652,16 @@ export function registerAppShellFlows(
 
     for (const runner of searchOrder) {
       try {
-        // Own-property form, never a bare index: `libraryManagerMap` is a plain object
+        // Own-property form, never a bare index: the manager record is a plain object
         // literal, so a bare lookup resolves through `Object.prototype` (the same
         // T-34.5-46-01 reasoning `handleLaunch`'s own guard carries).
-        if (!Object.prototype.hasOwnProperty.call(libraryManagerMap, runner))
+        if (
+          !Object.prototype.hasOwnProperty.call(deps.managers.library, runner)
+        )
           continue
-        const info = libraryManagerMap[runner].getGame(appName).getGameInfo()
+        const info = deps.managers.library[runner]
+          .getGame(appName)
+          .getGameInfo()
         if (info?.app_name) return runner
       } catch (error) {
         // A manager that throws for an unknown appName must not abort the search -- the next
@@ -715,7 +723,7 @@ export function registerAppShellFlows(
   // right args -- is completely unaffected. Only `handlers.ts`'s own top-level,
   // import-time-triggered call (the actual leak source, decoupled from any specific `init()`
   // invocation) passes `true` under Jest.
-  if (!options.skipInitialTraySync) {
+  if (!deps.skipInitialTraySync) {
     setImmediate(syncTrayIcon)
   }
 }

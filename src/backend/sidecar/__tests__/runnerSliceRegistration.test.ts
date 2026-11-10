@@ -814,10 +814,13 @@ describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 0
     // alone needs. Isolated to this describe: see the module-scope comment above for why these
     // two calls do not belong in the shared canonical snapshot or in `MODULES`.
     restoreCanonicalRegistrations()
-    registerAppShellFlows(
-      { downloadQueue: { initQueue: jest.fn() }, stores: createTestStores() },
-      { skipInitialTraySync: true }
-    )
+    registerAppShellFlows({
+      managers: createTestServices().managers,
+      downloadQueue: { initQueue: jest.fn() },
+      quit: { handleExit: jest.fn() },
+      stores: createTestStores(),
+      skipInitialTraySync: true
+    })
     registerInstallFlows({
       downloadQueue: { addToQueue: jest.fn() },
       stores: createTestStores()

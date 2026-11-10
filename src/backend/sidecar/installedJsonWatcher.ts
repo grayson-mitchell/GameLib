@@ -31,17 +31,17 @@
  * call while active is a no-op returning `false`) and `stopInstalledJsonWatcher` both closes the
  * handle and clears any refresh still pending inside the debounce window.
  *
- * CURATED-IMPORT DISCIPLINE. This module imports `../storeManagers` and
+ * CURATED-IMPORT DISCIPLINE. This module imports
  * `../storeManagers/legendary/constants` directly, never `../main` — the same rule every other
  * `src/backend/sidecar/` module follows, and the rule whose violation would drag Electron's real
  * `ipcMain` into the sidecar's graph.
  */
 
 import { existsSync, watch } from 'graceful-fs'
-import { libraryManagerMap } from '../storeManagers'
 import { legendaryInstalled } from '../storeManagers/legendary/constants'
 import { logInfo, LogPrefix } from '../logger'
 import { sendFrontendMessage } from '../ipc'
+import type { StoreManagers } from '../services/types'
 
 /**
  * The debounce window, in milliseconds. Matches `main.ts:1047`'s `setTimeout(..., 500)` exactly.
@@ -78,6 +78,7 @@ export function isInstalledJsonWatcherActive(): boolean {
  * through the app-data path shim, and the existence check is only meaningful after startup.
  */
 export function startInstalledJsonWatcher(
+  deps: { managers: Pick<StoreManagers, 'library'> },
   options: InstalledJsonWatcherOptions = {}
 ): boolean {
   if (activeWatcher) {
@@ -112,7 +113,7 @@ export function startInstalledJsonWatcher(
       // catch. Dropping the `await` would let `sendFrontendMessage('refreshLibrary')` fire on a
       // failed rebuild and turn the rejection into an unhandled one.
       // eslint-disable-next-line @typescript-eslint/await-thenable
-      await libraryManagerMap['legendary'].refreshInstalled()
+      await deps.managers.library.legendary.refreshInstalled()
       sendFrontendMessage('refreshLibrary', 'legendary')
     })
 

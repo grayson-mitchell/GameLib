@@ -179,13 +179,13 @@ export function registerHandlers(deps: {
   // Jest" signal (always set in a Jest worker, never set for the real Tauri sidecar process)
   // -- under real Tauri this is unconditionally `false` and behavior is byte-identical to
   // before.
-  registerAppShellFlows(
-    {
-      downloadQueue: deps.services.downloadQueue,
-      stores: deps.services.stores
-    },
-    { skipInitialTraySync: process.env.JEST_WORKER_ID !== undefined }
-  )
+  registerAppShellFlows({
+    managers: deps.services.managers,
+    downloadQueue: deps.services.downloadQueue,
+    quit: deps.services.quit,
+    stores: deps.services.stores,
+    skipInitialTraySync: process.env.JEST_WORKER_ID !== undefined
+  })
   // Phase 34.2 Plans 04+05: the game-details/settings/override channels — no
   // ordering constraint relative to the other calls above (own
   // channel names, no cross-module runtime dependency at registration time),

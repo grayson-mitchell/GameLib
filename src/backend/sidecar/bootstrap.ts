@@ -1602,7 +1602,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'installed-json-watcher',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Block C — the `installed.json` watcher (Phase 35 plan 35-10, REQ-35-16). Ports
         // `main.ts:1036-1048`, an Electron-only module-scope side effect that the sidecar never
         // inherited: plan 35-01's D-17 census found ZERO import edges from the sidecar into
@@ -1627,7 +1627,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // under real Tauri this is unconditionally false and the watcher always arms.
         if (process.env.JEST_WORKER_ID === undefined) {
           try {
-            startInstalledJsonWatcher()
+            startInstalledJsonWatcher({
+              managers: requireServices(state).managers
+            })
           } catch (error) {
             logWarning(
               `[bootstrap] startInstalledJsonWatcher() failed: ${error}`,
