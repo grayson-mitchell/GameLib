@@ -105,21 +105,6 @@
  */
 
 import { ipcMain } from '../platform'
-// Load-bearing FIRST import (mirrors steamAuthFlowRegistration.ts's Phase 27
-// Plan 05 circular-dep fix, copied verbatim per-file): `humble/library.ts`
-// (imported below, transitively via `HumbleLibrary`) statically imports
-// `steamLibraryStore` from `backend/storeManagers/steam/stores` and
-// `SteamUser` from `backend/storeManagers/steam/user` at its own top
-// (library.ts:41-42) — the SAME storeManagers-under-steam reach that made
-// this fix load-bearing in `steamAuthFlowRegistration.ts`. Forcing
-// `storeManagers/index.ts` to be the INITIALIZATION ENTRY here, before
-// either humble module import below resolves, lets every module under
-// `storeManagers/steam` finish defining its class export before this
-// module's own steam-touching import chain re-enters it — avoiding the
-// esbuild-bundle-only `SteamLibraryManager is not a constructor` hazard.
-// This fix is per-file, not "once is enough" — each curated registration
-// module is its own independent entry point into the bundle's module graph.
-import '../storeManagers'
 import { HumbleUser } from '../humble/user'
 import { HumbleLibrary } from '../humble/library'
 import { runHumbleValidation } from '../humble/validation'

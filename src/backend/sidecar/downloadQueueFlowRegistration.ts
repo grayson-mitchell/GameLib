@@ -71,18 +71,6 @@
 import type { LogSink } from '../process/types'
 
 import { ipcMain } from '../platform'
-// Load-bearing FIRST import (mirrors installFlowRegistration.ts's /
-// settingsFlowRegistration.ts's Phase 27 Plan 05 circular-dep fix): force
-// `storeManagers/index.ts` to be the INITIALIZATION ENTRY before any other
-// module in this file's own import graph (transitively, `downloadqueue.ts`'s
-// own static import of the library-manager table from 'backend/storeManagers') resolves.
-// Entering through a direct steam/* or downloadmanager/* import instead risks
-// the same re-entrant `index.ts` mid-evaluation crash `steamFlowRegistration.ts`'s
-// docstring documents (`SteamLibraryManager is not a constructor`,
-// esbuild-bundle-only, ts-jest's init order differs) — this fix is per-file,
-// not "once is enough", because each curated registration module is its own
-// independent entry point into the bundle's module graph.
-import '../storeManagers'
 import type { DownloadQueue } from '../downloadmanager/downloadqueue'
 
 /**

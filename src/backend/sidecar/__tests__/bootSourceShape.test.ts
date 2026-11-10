@@ -147,14 +147,9 @@ describe('66.1 MH-3: registrations take slices', () => {
     'callRunner',
     'runWineCommand'
   ]
-  // `storeRegistration.ts` keeps its side-effect store imports until plan 25 deletes it.
-  // `runnerAuthFlowRegistration.ts` still builds its gog/legendary/nile user deps from the
-  // legacy singletons at call time (66.1-08 transitional); it leaves this set when that
-  // conversion lands.
-  const EXEMPT = new Set([
-    'storeRegistration.ts',
-    'runnerAuthFlowRegistration.ts'
-  ])
+  // `storeRegistration.ts` keeps its side-effect store imports until plan 25 deletes it; it is
+  // the only exemption.
+  const EXEMPT = new Set(['storeRegistration.ts'])
   const allFiles = readdirSync(SIDECAR_DIR).filter(
     (name) =>
       name.endsWith('Registration.ts') || name === 'installedJsonWatcher.ts'
@@ -187,6 +182,19 @@ describe('66.1 MH-3: registrations take slices', () => {
             offenders.push(`${name}: imports ${binding}`)
           }
         }
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('no registration enters the storeManagers index for its side effects', () => {
+    const offenders: string[] = []
+    for (const { name, source: raw } of sources) {
+      if (
+        /^import\s+['"]\.\.\/storeManagers['"]/m.test(raw) ||
+        /import\(\s*['"](?:\.\.\/|backend\/)storeManagers['"]\s*\)/.test(raw)
+      ) {
+        offenders.push(name)
       }
     }
     expect(offenders).toEqual([])
