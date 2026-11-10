@@ -190,8 +190,11 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // 66.2-02: re-pin -- registerSettingsFlows deps gain the boot `runner` slice (consumers
   // converted by 66.2-05). No channel, guard or `steamLibrary.has` gate moved. Prior digest:
   // 3f62bbb93755b547eff3f0f6666c1a2c0a842e05925d4f1d86b407540422a1a7
+  // 66.2-05: re-pin -- the getSystemInfo handler passes `deps.runner` to the systeminfo
+  // probes. No channel, guard or `steamLibrary.has` gate moved. Prior digest:
+  // 23affb0e9558e3e0b2448176c05de58ae477a9a498cd95f1267027e8953d8cbc
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    '23affb0e9558e3e0b2448176c05de58ae477a9a498cd95f1267027e8953d8cbc'
+    '0d549b1a8b521692f7aedae252417f87c7ec4c91d3c594d14383517131b3bda6'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')
