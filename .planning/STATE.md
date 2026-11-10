@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 69 context gathered
-last_updated: "2026-11-10T18:05:24.488Z"
+last_updated: "2026-11-10T18:16:23.136Z"
 last_activity: 2026-11-10
 progress:
   total_phases: 18
   completed_phases: 12
   total_plans: 252
-  completed_plans: 245
+  completed_plans: 246
   percent: 67
 ---
 
@@ -73,11 +73,11 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 ## Current Position
 
 Phase: 66.2 (every-backend-spawn-through-the-process-runner) — EXECUTING
-Plan: 6 of 12
+Plan: 7 of 12
 Status: Ready to execute
-Last activity: 2026-11-11 - Completed quick task 261111-9mj: Detect Steam-launched games as playing by install-folder PID
+Last activity: 2026-11-10
 
-Progress: [██████████] 97%
+Progress: [██████████] 98%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -254,6 +254,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 66.1 P26 | 1h | 2 tasks | 14 files |
 | Phase 66.1 P27 | 40min | 2 tasks | 13 files |
 | Phase 66.2 P02 | 20m | 2 tasks | 38 files |
+| Phase 66.2 P08 | 90m | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -403,6 +404,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 66]: 66-02: logger/index.ts sanctioned as logger-sink (moduleState 2); rust-overlap table empty
 - [Phase 66.1]: [66.1-23] Intended kills are marked by the tracked registry (RunResult.killedByUs) and read as abort by commandRunner; BootServices gains runner
 - [Phase ?]: 66.2-02: BootServices.clock added so managerDepsFromServices can supply ManagerDeps.clock
+- [Phase ?]: 66.2-08: winetricks installs run with timeout none + reason and resolveOn exit; tools module caches stay module-level (D-66.2-03, 66.3)
 
 ### Pending Todos
 
@@ -706,7 +708,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-10T18:05:24.480Z
+Last session: 2026-11-10T18:16:17.897Z
 Stopped at: Phase 69 context gathered
 Resume file: None
 
