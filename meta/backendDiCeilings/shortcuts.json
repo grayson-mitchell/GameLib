@@ -1,5 +1,4 @@
 {
-  "childProcess": {},
   "jestMock": {
     "src/backend/shortcuts/__tests__/addShortcutsOutcome.test.ts": 4,
     "src/backend/shortcuts/__tests__/getIcon.test.ts": 3,

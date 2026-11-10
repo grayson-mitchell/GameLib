@@ -388,6 +388,30 @@ describe('loadShards', () => {
       expect.stringContaining('duplicate: x')
     ])
   })
+  it('rejects a childProcess section in any shard (66.2 D-16)', () => {
+    writeFileSync(
+      join(dir, 'a.json'),
+      JSON.stringify({ childProcess: { 'src/backend/x.ts': 1 } })
+    )
+    writeFileSync(join(dir, 'b.json'), JSON.stringify({ childProcess: {} }))
+    const { failures } = loadShards(dir)
+    expect(failures).toHaveLength(2)
+    expect(failures[0]).toContain(
+      'childProcess ceiling deleted (66.2 D-16): remove the section; only sanctioned process/runner.ts may import child_process'
+    )
+  })
+  it('names the ban when a non-sanctioned file imports child_process', () => {
+    const f = evaluate(
+      {},
+      { ...empty(), childProcess: { 'src/backend/x.ts': 1 } }
+    )
+    expect(f).toEqual([
+      expect.stringContaining('new violation: src/backend/x.ts')
+    ])
+    expect(f[0]).toContain(
+      'only sanctioned process/runner.ts may import child_process'
+    )
+  })
   it('fails on unknown keys, zero values and bad JSON', () => {
     writeFileSync(join(dir, 'a.json'), JSON.stringify({ bogus: {} }))
     writeFileSync(
@@ -461,7 +485,7 @@ describe('backendDiCeilings CLI', () => {
     profile = createFakeHomeProfile()
     tmp = mkdtempSync(join(tmpdir(), 'bdc-cli-'))
     write('src/backend/a.ts', 'let x = 1\n')
-    write('src/backend/b.ts', "import { spawn } from 'child_process'\n")
+    write('src/backend/b.ts', 'export const b = 1\n')
     write(
       'src/backend/__tests__/a.test.ts',
       "jest.mock('x')\nlet skipped = 1\n"
@@ -470,7 +494,6 @@ describe('backendDiCeilings CLI', () => {
       'baselines/one.json',
       JSON.stringify({
         moduleState: { 'src/backend/a.ts': 1 },
-        childProcess: { 'src/backend/b.ts': 1 },
         jestMock: { 'src/backend/__tests__/a.test.ts': 1 }
       })
     )

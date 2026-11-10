@@ -232,3 +232,43 @@ describe('66.1 end state: no direct child_process', () => {
     expect(offenders).toEqual([])
   })
 })
+
+describe('66.2 end state: one process runner', () => {
+  const ceilings = require('../../../meta/backendDiCeilings.cjs') as {
+    census: () => { childProcess: Record<string, number> }
+    loadShards: () => {
+      merged: { sanctioned: Record<string, { childProcess: number }> }
+      failures: string[]
+    }
+  }
+
+  it('only src/backend/process/runner.ts imports child_process', () => {
+    expect(ceilings.census().childProcess).toEqual({
+      'src/backend/process/runner.ts': 1
+    })
+  })
+
+  it('the sanctioned list has exactly one child_process entry: the runner', () => {
+    const { merged, failures } = ceilings.loadShards()
+    expect(failures).toEqual([])
+    const withCp = Object.entries(merged.sanctioned)
+      .filter(([, e]) => e.childProcess > 0)
+      .map(([p]) => p)
+    expect(withCp).toEqual(['src/backend/process/runner.ts'])
+  })
+
+  it('the ESLint config rejects a child_process import in a backend production path', () => {
+    const config = readFileSync(
+      join(BACKEND, '..', '..', 'eslint.config.mjs'),
+      'utf8'
+    )
+    const start = config.indexOf("files: ['src/backend/**/*.ts']")
+    expect(start).toBeGreaterThan(-1)
+    const block = config.slice(start, start + 1500)
+    expect(block).toContain("name: 'child_process'")
+    expect(block).toContain("name: 'node:child_process'")
+    expect(block).toContain('...RESTRICTED_PATHS')
+    expect(block).toContain("'src/backend/process/runner.ts'")
+    expect(block).toMatch(/'no-restricted-imports': \[\s*'error'/)
+  })
+})

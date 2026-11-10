@@ -119,9 +119,12 @@ const EXEMPTIONS: readonly Exemption[] = [
   }
 ]
 
-/** Spawn-family call sites. A file with none of these cannot leak a profile to a child. */
+/**
+ * Spawn-family call sites. A file with none of these cannot leak a profile to a child.
+ * 66.2: backend spawns go through the runner; keep the hand-rolled-HOME detector looking at them.
+ */
 const SPAWN_CALL_RE =
-  /\b(?:spawn|spawnSync|fork|exec|execSync|execFile|execFileSync)\s*\(/
+  /\b(?:spawn|spawnSync|fork|exec|execSync|execFile|execFileSync)\s*\(|\.(?:run|runSync|spawnLongLived)\s*\(/
 
 /**
  * An object-literal property assignment of one of the eight keys, e.g.

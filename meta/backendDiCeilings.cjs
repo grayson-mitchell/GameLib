@@ -12,7 +12,9 @@
  *     `const m = new Map()` therefore does not lower the count (D-06). Each
  *     non-readonly `static` class field counts too (C-WR-2): a static holder
  *     is module-level state wearing a class.
- *   - childProcess: non-test src/backend files. Each import/export-from,
+ *   - childProcess (66.2 D-16: the ceiling is deleted and shards may not carry
+ *     the section; the counter is the gate, so any site outside the sanctioned
+ *     process/runner.ts is a new violation): non-test src/backend files. Each import/export-from,
  *     require() call and dynamic import() of child_process / node:child_process
  *     (type-only imports do not count).
  *   - jestMock: every .ts/.tsx under src/. Each jest.mock/doMock/setMock/unstable_mockModule call
@@ -37,7 +39,7 @@
  * so parallel plans each own a shard. A path may appear in only one shard per
  * section. Shard format (every section optional, keys are repo-root-relative
  * POSIX paths):
- *   { "moduleState": {p: n}, "childProcess": {p: n}, "jestMock": {p: n},
+ *   { "moduleState": {p: n}, "jestMock": {p: n},
  *     "sanctioned": { p: { kind, moduleState, childProcess, reason,
  *                          deletedBy? } } }
  * Sanctioned `kind` is runner | logger-sink | boot-entry | rust-overlap
@@ -449,6 +451,12 @@ function loadShards(dir = DEFAULT_BASELINE_DIR) {
       continue
     }
     for (const key of Object.keys(data)) {
+      if (key === 'childProcess') {
+        failures.push(
+          `shard ${name}: childProcess ceiling deleted (66.2 D-16): remove the section; only sanctioned process/runner.ts may import child_process`
+        )
+        continue
+      }
       if (!SHARD_KEYS.has(key)) {
         failures.push(`shard ${name}: unknown key "${key}"`)
         continue
@@ -569,7 +577,10 @@ function evaluate(merged, current) {
       const b = baseline[file]
       if (b === undefined)
         failures.push(
-          `new violation: ${file} has ${n} (${section}) and no baseline entry; remove it instead`
+          `new violation: ${file} has ${n} (${section}) and no baseline entry; remove it instead` +
+            (section === 'childProcess'
+              ? ' (66.2 D-16: only sanctioned process/runner.ts may import child_process; spawn through the ProcessRunner)'
+              : '')
         )
       else if (n > b)
         failures.push(`grew: ${file} ${n} > baseline ${b} (${section})`)
