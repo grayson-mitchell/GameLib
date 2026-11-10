@@ -1,3 +1,4 @@
+import useUiState from 'frontend/state/uiState'
 import './index.scss'
 
 import React, { useContext, useEffect, useState } from 'react'
@@ -40,7 +41,6 @@ import {
   SteamOverlayOverride
 } from '../../components'
 import { TabPanel } from 'frontend/components/UI'
-import ContextProvider from 'frontend/state/ContextProvider'
 import Tools from '../../components/Tools'
 import SettingsContext from '../../SettingsContext'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -77,7 +77,7 @@ function getStartingTab(platform: string, gameInfo?: GameInfo | null): string {
 
 export default function GamesSettings() {
   const { t } = useTranslation()
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const { isDefault, gameInfo, runner } = useContext(SettingsContext)
   const [wineVersion] = useSetting('wineVersion', defaultWineVersion)
   const [isNative, setIsNative] = useState(false)

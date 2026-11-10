@@ -1,7 +1,5 @@
 {
   "contextImports": {
-    "src/frontend/screens/ConsoleMode/InstallOverlay/index.tsx": 1,
-    "src/frontend/screens/ConsoleMode/components/LaunchOverlay/index.tsx": 1,
     "src/frontend/screens/ConsoleMode/index.tsx": 1
   }
 }

@@ -8,6 +8,7 @@
  * `react`, `react-i18next` and `@fortawesome/react-fontawesome` mocks and the
  * four stylesheet mocks.
  */
+import 'frontend/testUtils/tauriWindow'
 import type {
   Runner,
   WinetricksComponent,
@@ -186,10 +187,12 @@ export async function mountTab(
   platform = 'linux'
 ): Promise<ElementLike> {
   harness().__resetMount()
+  // lazy: uiState (zustand) must first load AFTER the test file's react mock
+  const { default: useUiState } = await import('frontend/state/uiState')
+  useUiState.setState({ platform: platform as 'linux' })
   harness().__setContext({
     appName: 'fake-app',
     runner: RUNNER,
-    platform,
     gameInfo: { title: 'Fake Game' }
   })
   rerender(tab)

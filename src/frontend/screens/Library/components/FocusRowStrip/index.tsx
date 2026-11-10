@@ -1,11 +1,5 @@
-import React, {
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState
-} from 'react'
+import useUiState from 'frontend/state/uiState'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -14,7 +8,6 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { FocusRowSelection, GameInfo, Runner } from 'common/types'
 import { FilterEngineDeps, FilterMode } from 'frontend/types'
-import ContextProvider from 'frontend/state/ContextProvider'
 import { runnabilityLabel } from 'frontend/components/UI/NavShell/components/FilterRunnabilityFacet'
 import GamesList from '../GamesList'
 import { PRESET_UNCATEGORIZED } from '../../filterEngine'
@@ -68,7 +61,7 @@ function FocusRowStrip({
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
   const trackRef = useRef<HTMLDivElement | null>(null)
-  const { activeController } = useContext(ContextProvider)
+  const activeController = useUiState((s) => s.activeController)
   const [measure, setMeasure] = useState<TrackMeasurement>({
     clientWidth: 0,
     scrollWidth: 0,

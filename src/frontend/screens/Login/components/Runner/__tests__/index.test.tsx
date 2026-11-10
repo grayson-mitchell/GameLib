@@ -15,6 +15,7 @@
  * every runner that OMITS the prop (the other 5 runners) is completely unaffected: the primary
  * tile navigates to `loginUrl` exactly as before.
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement, ReactNode } from 'react'
 
 jest.mock('../index.css', () => ({}))
@@ -36,8 +37,12 @@ jest.mock('react', () => {
   let slots: unknown[] = []
   let cursor = 0
 
-  return {
-    ...actualReact,
+  // withStoreHooks lets the REAL zustand uiState hook run under this mock (Phase 69);
+  // the mock stays declared before anything imports zustand.
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(actualReact, {
     useState: (initial: unknown) => {
       const idx = cursor++
       if (idx >= slots.length) {
@@ -52,18 +57,11 @@ jest.mock('react', () => {
       }
       return [slots[idx], setState]
     },
-    // Phase 35 gap closure, plan 35-22 (CR-04 renderer half): Runner now also calls
-    // `useContext(ContextProvider)` for `showDialogModal`. This file's scope is the
-    // login/logout navigation surface, not the failure-dialog path (that is
-    // `logoutFailureSurface.test.tsx`), so a no-op stub is sufficient here -- it exists
-    // only so calling the real dispatcher-less `useContext` outside a real render does
-    // not throw.
-    useContext: () => ({ showDialogModal: jest.fn() }),
     __resetMount: () => {
       slots = []
       cursor = 0
     }
-  }
+  } as unknown as Partial<typeof import('react')>)
 })
 
 // Imported after the mocks above (textual order, not hoisting -- this project's ts-jest setup
@@ -71,6 +69,8 @@ jest.mock('react', () => {
 // convention) so the component transitively requires the mocked
 // 'react'/'react-i18next'/'react-router-dom'.
 import Runner from '../index'
+import useUiState from 'frontend/state/uiState'
+import { resetAllStores } from 'frontend/state/storeKit'
 import { at } from '../../../../__tests__/fixtures/indexed'
 
 type HookHarness = { __resetMount: () => void }
@@ -132,6 +132,17 @@ function makeProps(overrides: Record<string, unknown> = {}) {
     ...overrides
   }
 }
+
+const seededShowDialogModal = jest.fn()
+
+beforeEach(() => {
+  useUiState.setState({ showDialogModal: seededShowDialogModal })
+})
+
+afterEach(() => {
+  resetAllStores()
+  seededShowDialogModal.mockClear()
+})
 
 function mount(props: ReturnType<typeof makeProps>): ReactElement {
   harness().__resetMount()
@@ -701,5 +712,29 @@ describe('Runner: tiles carry button semantics (quick task 261008-fjj)', () => {
 
     expect((stripped.match(/<button/g) ?? []).length).toBe(0)
     expect((stripped.match(/<a\s/g) ?? []).length).toBe(0)
+  })
+})
+
+describe('Runner: real uiState hook under withStoreHooks (Phase 69 proof)', () => {
+  it('the component receives the SEEDED showDialogModal: a rejected logout reaches the spy', async () => {
+    ;(globalThis as unknown as { window: { api?: unknown } }).window.api = {
+      logError: jest.fn()
+    }
+    const logoutAction = jest.fn().mockRejectedValue(new Error('boom'))
+    const tree = mount(makeProps({ isLoggedIn: true, logoutAction }))
+    const tile = collectElements(tree).find((el) => {
+      const className = el.props?.className
+      return (
+        typeof className === 'string' &&
+        className.split(' ').includes('runnerLogin') &&
+        typeof (el.props as Record<string, unknown>).onClick === 'function'
+      )
+    })!
+    ;(tile.props as unknown as { onClick: () => void }).onClick()
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(logoutAction).toHaveBeenCalled()
+    expect(seededShowDialogModal).toHaveBeenCalledTimes(1)
   })
 })

@@ -1,3 +1,4 @@
+import useUiState from 'frontend/state/uiState'
 import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import classNames from 'classnames'
@@ -10,7 +11,7 @@ import { engineDownloadLabel } from 'frontend/hooks/engineDownloadLabel'
 import BackHint from '../BackHint'
 
 import type { GameInfo, Runner } from 'common/types'
-import { useContext, useEffect } from 'react'
+import { useEffect } from 'react'
 import {
   useCancelOnHold,
   useGamepadButtonHold,
@@ -18,7 +19,6 @@ import {
 } from '../../hooks'
 import { getBackButtonIndex } from '../../controller'
 import { launch, sendKill } from 'frontend/helpers'
-import ContextProvider from 'frontend/state/ContextProvider'
 
 const CANCEL_HOLD_MS = 3000
 // Steam launch is fire-and-forget. `shell.openExternal('steam://…')` makes the OS
@@ -43,7 +43,7 @@ export default function LaunchOverlay({
   const { status, statusContext } = hasStatus(game)
   let label: string | null = null
 
-  const { showDialogModal } = useContext(ContextProvider)
+  const showDialogModal = useUiState((s) => s.showDialogModal)
 
   // Hold-to-cancel for in-flight launches. Triggered by Escape (keyboard) or
   // the back button (gamepad); fires `sendKill` after CANCEL_HOLD_MS.

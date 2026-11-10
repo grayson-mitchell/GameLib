@@ -167,6 +167,10 @@ export function createReactMock() {
     useCallback: (callback: unknown) => callback,
     useId: () => `id-${current.id}-${current.idCursor++}`,
     useContext: () => contextValue,
+    useDebugValue: () => undefined,
+    // real zustand store hooks (uiState) read their snapshot synchronously
+    useSyncExternalStore: (_subscribe: unknown, getSnapshot: () => unknown) =>
+      getSnapshot(),
     __beginRender: () => {
       resetCursors(rootInstance)
     },

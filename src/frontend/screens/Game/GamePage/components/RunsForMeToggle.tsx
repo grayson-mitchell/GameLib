@@ -1,6 +1,4 @@
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
-import ContextProvider from 'frontend/state/ContextProvider'
 import useUiState from 'frontend/state/uiState'
 import ToggleSwitch from 'frontend/components/UI/ToggleSwitch'
 import { runsForMeKey, isRunsForMeOn } from 'common/runsForMe'
@@ -18,7 +16,7 @@ interface Props {
  */
 const RunsForMeToggle = ({ gameInfo }: Props) => {
   const { t: tGamelib } = useTranslation('gamelib')
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const { runsForMe } = useUiState.keys('runsForMe')
 
   if (platform !== 'darwin' || gameInfo.is_mac_native === true) {

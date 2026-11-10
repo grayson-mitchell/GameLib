@@ -1,3 +1,4 @@
+import useUiState from 'frontend/state/uiState'
 import { useContext, useState } from 'react'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
@@ -10,7 +11,6 @@ import useSetting from 'frontend/hooks/useSetting'
 import { syncSaves } from 'frontend/helpers'
 import { Menu, MenuItem, Divider } from '@mui/material'
 import { ToggleSwitch } from 'frontend/components/UI'
-import ContextProvider from 'frontend/state/ContextProvider'
 
 interface Props {
   gameInfo: GameInfo
@@ -21,7 +21,7 @@ const CloudSavesSync = ({ gameInfo }: Props) => {
   const { t: tCommon } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
   const { gameSettings, is } = useContext(GameContext)
-  const { showDialogModal } = useContext(ContextProvider)
+  const showDialogModal = useUiState((s) => s.showDialogModal)
 
   const [autoSyncSaves, setAutoSyncSaves] = useSetting('autoSyncSaves', false)
   const [savesPath] = useSetting('savesPath', '')

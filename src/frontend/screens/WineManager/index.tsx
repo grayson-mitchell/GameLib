@@ -1,9 +1,8 @@
 import './index.css'
 
-import ContextProvider from 'frontend/state/ContextProvider'
 import { UpdateComponent } from 'frontend/components/UI'
 
-import React, { lazy, useContext, useEffect, useMemo, useState } from 'react'
+import React, { lazy, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Tab, Tabs } from '@mui/material'
 import { wineDownloaderInfoStore } from 'frontend/helpers/stores'
@@ -22,7 +21,7 @@ const WineItem = lazy(
 export default function WineManager(): JSX.Element | null {
   const { t } = useTranslation()
 
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const isLinux = platform === 'linux'
   const { refreshingWineVersions, refreshWineVersions } = useUiState.keys(
     'refreshingWineVersions',

@@ -1,8 +1,8 @@
-import { useContext, useState } from 'react'
+import useUiState from 'frontend/state/uiState'
+import { useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import ContextProvider from 'frontend/state/ContextProvider'
 import './index.css'
 
 interface RunnerProps {
@@ -82,7 +82,7 @@ export default function Runner(props: RunnerProps) {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
   const navigate = useNavigate()
-  const { showDialogModal } = useContext(ContextProvider)
+  const showDialogModal = useUiState((s) => s.showDialogModal)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   async function handleLogout() {

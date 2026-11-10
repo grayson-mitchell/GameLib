@@ -14,14 +14,13 @@ import {
 } from 'frontend/components/UI/Dialog'
 import { install, writeConfig } from 'frontend/helpers'
 import { hasAnticheatInfo } from 'frontend/hooks/hasAnticheatInfo'
-import ContextProvider from 'frontend/state/ContextProvider'
 import useUiState from 'frontend/state/uiState'
 import {
   crossoverRiskDialogOptions,
   resolveCrossoverInstallRisk
 } from '../crossoverInstallRisk'
 import { InstallProgress } from 'frontend/types'
-import React, { useCallback, useContext } from 'react'
+import React, { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import AllowedIcon from 'frontend/assets/rounded_checkmark_icon.svg?react'
 import { AvailablePlatforms } from '..'
@@ -62,7 +61,10 @@ export default function ThirdPartyDialog({
 }: Props) {
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
-  const { platform, showDialogModal } = useContext(ContextProvider)
+  const { platform, showDialogModal } = useUiState.keys(
+    'platform',
+    'showDialogModal'
+  )
   const { crossoverRatings, runsForMe } = useUiState.keys(
     'crossoverRatings',
     'runsForMe'

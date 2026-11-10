@@ -1,9 +1,9 @@
+import useUiState from 'frontend/state/uiState'
 import { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ContentCopyOutlined } from '@mui/icons-material'
 import classNames from 'classnames'
 import SettingsContext from '../../SettingsContext'
-import ContextProvider from 'frontend/state/ContextProvider'
 import {
   AllowInstallationBrokenAnticheat,
   ShowValveProton,
@@ -19,7 +19,7 @@ export default function AdvancedSetting() {
 
   const [isCopiedToClipboard, setCopiedToClipboard] = useState(false)
 
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const { t } = useTranslation()
   const isLinux = platform === 'linux'
 

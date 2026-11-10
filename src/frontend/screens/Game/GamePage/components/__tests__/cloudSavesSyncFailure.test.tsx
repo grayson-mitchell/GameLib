@@ -10,6 +10,7 @@
  * slots, the component invoked as a plain function, and the returned element
  * tree walked for the menu items' `onClick` handlers.
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement, ReactNode } from 'react'
 
 const mockShowDialogModal = jest.fn()
@@ -19,8 +20,10 @@ jest.mock('react', () => {
   const actualReact = jest.requireActual<typeof import('react')>('react')
   let stateSlots: unknown[] = []
   let stateCursor = 0
-  return {
-    ...actualReact,
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(actualReact, {
     useState: (initial: unknown) => {
       const idx = stateCursor++
       if (idx >= stateSlots.length) stateSlots[idx] = initial
@@ -29,12 +32,10 @@ jest.mock('react', () => {
       }
       return [stateSlots[idx], setState]
     },
-    // GameContext and ContextProvider are both read through useContext; one
-    // merged value serves both.
+    // GameContext is read through useContext; showDialogModal comes from uiState.
     useContext: () => ({
       gameSettings: {},
-      is: { linuxNative: false },
-      showDialogModal: mockShowDialogModal
+      is: { linuxNative: false }
     }),
     __beginRender: () => {
       stateCursor = 0
@@ -43,7 +44,7 @@ jest.mock('react', () => {
       stateSlots = []
       stateCursor = 0
     }
-  }
+  } as unknown as Partial<typeof import('react')>)
 })
 
 jest.mock('react-i18next', () => ({
@@ -53,10 +54,6 @@ jest.mock('react-i18next', () => ({
 }))
 
 jest.mock('../../../GameContext', () => ({ __esModule: true, default: {} }))
-jest.mock('frontend/state/ContextProvider', () => ({
-  __esModule: true,
-  default: {}
-}))
 jest.mock('@mui/icons-material', () => ({
   CloudOff: 'CloudOff',
   CloudQueue: 'CloudQueue'
@@ -90,6 +87,8 @@ jest.mock('frontend/hooks/useSetting', () => ({
 import * as React from 'react'
 import type { GameInfo } from 'common/types'
 import CloudSavesSync from '../CloudSavesSync'
+import useUiState from 'frontend/state/uiState'
+import { resetAllStores } from 'frontend/state/storeKit'
 
 const harness = React as unknown as {
   __beginRender: () => void
@@ -133,8 +132,13 @@ function downloadItem(tree: El): El {
   return item
 }
 
+afterEach(() => {
+  resetAllStores()
+})
+
 beforeEach(() => {
   harness.__resetMount()
+  useUiState.setState({ showDialogModal: mockShowDialogModal })
   ;(globalThis as unknown as { window: unknown }).window = {
     api: { getDefaultSavePath: jest.fn(), logError: jest.fn() }
   }

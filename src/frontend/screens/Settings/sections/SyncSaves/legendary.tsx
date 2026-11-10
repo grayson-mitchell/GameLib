@@ -1,3 +1,4 @@
+import useUiState from 'frontend/state/uiState'
 import { faExclamationTriangle } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useContext, useEffect, useState } from 'react'
@@ -9,7 +10,6 @@ import {
   ToggleSwitch
 } from 'frontend/components/UI'
 import { syncSaves } from 'frontend/helpers'
-import ContextProvider from 'frontend/state/ContextProvider'
 import { SyncType } from 'frontend/types'
 import { ProgressDialog } from 'frontend/components/UI/ProgressDialog'
 import SettingsContext from '../../SettingsContext'
@@ -46,7 +46,7 @@ export default function LegendarySyncSaves({
   const [manuallyOutputShow, setManuallyOutputShow] = useState<boolean>(false)
   const [retry, setRetry] = useState<boolean>(false)
   const { t } = useTranslation()
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const isWin = platform === 'win32'
   const { appName } = useContext(SettingsContext)
 

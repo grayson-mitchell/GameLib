@@ -1,3 +1,4 @@
+import useUiState from 'frontend/state/uiState'
 import './index.scss'
 
 import { useContext, useEffect, useRef, useState } from 'react'
@@ -6,7 +7,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBoxOpen } from '@fortawesome/free-solid-svg-icons'
 
 import SettingsContext from '../../SettingsContext'
-import ContextProvider from 'frontend/state/ContextProvider'
 import {
   Runner,
   WinetricksComponent,
@@ -121,7 +121,7 @@ type LivePercent = { verb: string; percent: number } | null
 
 export default function WinetricksSettings() {
   const { appName, runner, gameInfo } = useContext(SettingsContext)
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
 

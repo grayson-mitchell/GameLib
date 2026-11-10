@@ -14,6 +14,7 @@
  * inspected, following this file's sibling `index.test.tsx` and
  * `EmptyLibrary/__tests__/index.test.tsx`'s `useContext` mocking convention.
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement, ReactNode } from 'react'
 
 jest.mock('../index.css', () => ({}))
@@ -26,11 +27,9 @@ const mockShowDialogModal = jest.fn()
 // 'node'` jest config provides no `window` global otherwise.
 ;(
   globalThis as unknown as {
-    window: { api: { logError: typeof mockLogError } }
+    window: { api?: { logError: typeof mockLogError } }
   }
-).window = {
-  api: { logError: mockLogError }
-}
+).window.api = { logError: mockLogError }
 
 jest.mock('react-router-dom', () => ({
   useNavigate: () => jest.fn()
@@ -41,11 +40,6 @@ jest.mock('react-i18next', () => ({
     t: (_key: string, defaultValue: string): string => defaultValue,
     ns
   })
-}))
-
-jest.mock('frontend/state/ContextProvider', () => ({
-  __esModule: true,
-  default: { __name: 'ContextProvider' }
 }))
 
 // `isLoggingOutHistory` records every value `setIsLoggingOut` is called with, across the
@@ -60,8 +54,10 @@ jest.mock('react', () => {
   let slots: unknown[] = []
   let cursor = 0
 
-  return {
-    ...actualReact,
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(actualReact, {
     useState: (initial: unknown) => {
       const idx = cursor++
       if (idx >= slots.length) {
@@ -78,22 +74,20 @@ jest.mock('react', () => {
       }
       return [slots[idx], setState]
     },
-    useContext: (ctx: { __name?: string }) =>
-      ctx?.__name === 'ContextProvider'
-        ? { showDialogModal: mockShowDialogModal }
-        : undefined,
     __resetMount: () => {
       slots = []
       cursor = 0
       isLoggingOutHistory = []
     }
-  }
+  } as unknown as Partial<typeof import('react')>)
 })
 
 // Imported after the mocks above (textual order, not hoisting -- ts-jest does not hoist
 // jest.mock like babel-jest; see HumbleOriginInfo.test.tsx / index.test.tsx for the same
 // convention).
 import Runner from '../index'
+import useUiState from 'frontend/state/uiState'
+import { resetAllStores } from 'frontend/state/storeKit'
 
 type HookHarness = { __resetMount: () => void }
 
@@ -165,6 +159,15 @@ describe('Runner: logout failure surface (Phase 35 gap closure, plan 35-22, CR-0
   beforeEach(() => {
     mockLogError.mockClear()
     mockShowDialogModal.mockClear()
+    useUiState.setState({ showDialogModal: mockShowDialogModal })
+    // tauriAttach (pulled in by uiState) may replace window.api at import time
+    ;(globalThis as unknown as { window: { api: unknown } }).window.api = {
+      logError: mockLogError
+    }
+  })
+
+  afterEach(() => {
+    resetAllStores()
   })
 
   it('a rejecting logoutAction calls window.api.logError exactly once, with the runner identifier in the message', async () => {

@@ -2,7 +2,6 @@
   "contextImports": {
     "src/frontend/screens/Library/components/CategoriesManager/index.tsx": 1,
     "src/frontend/screens/Library/components/EmptyLibrary/index.tsx": 1,
-    "src/frontend/screens/Library/components/FocusRowStrip/index.tsx": 1,
     "src/frontend/screens/Library/components/GameCard/index.tsx": 1,
     "src/frontend/screens/Library/components/GamesList/index.tsx": 1,
     "src/frontend/screens/Library/components/LibrarySignInNotice/index.tsx": 1,

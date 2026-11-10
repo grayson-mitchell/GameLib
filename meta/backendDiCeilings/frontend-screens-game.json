@@ -16,6 +16,6 @@
     "src/frontend/screens/Game/GamePage/components/__tests__/MainButton.steamWaitingRestart.test.tsx": 5,
     "src/frontend/screens/Game/GamePage/components/__tests__/SettingsButton.test.tsx": 3,
     "src/frontend/screens/Game/GamePage/components/__tests__/SteamClientSetup.waitingDialog.test.tsx": 5,
-    "src/frontend/screens/Game/GamePage/components/__tests__/cloudSavesSyncFailure.test.tsx": 10
+    "src/frontend/screens/Game/GamePage/components/__tests__/cloudSavesSyncFailure.test.tsx": 9
   }
 }

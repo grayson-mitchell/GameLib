@@ -1,13 +1,13 @@
+import useUiState from 'frontend/state/uiState'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 import classNames from 'classnames'
-import { useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import './index.scss'
 
 import { install, writeConfig } from 'frontend/helpers'
 import { hasProgress } from 'frontend/hooks/hasProgress'
-import ContextProvider from 'frontend/state/ContextProvider'
 
 import { useSteamBottleEligibility } from 'frontend/screens/Library/components/InstallModal/steamEligibilityProbe'
 
@@ -55,7 +55,7 @@ export default function InstallOverlay({
 }) {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const [progress] = hasProgress(game.app_name, game.runner)
 
   const isWin = platform === 'win32'

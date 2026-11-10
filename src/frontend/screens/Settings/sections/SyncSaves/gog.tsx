@@ -1,5 +1,5 @@
+import useUiState from 'frontend/state/uiState'
 import { useContext, useEffect, useState } from 'react'
-import ContextProvider from 'frontend/state/ContextProvider'
 import { SyncType } from 'common/types'
 import { GOGCloudSavesLocation } from 'common/types/gog'
 import {
@@ -46,7 +46,7 @@ export default function GOGSyncSaves({
 
   const { t } = useTranslation()
 
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const isWin = platform === 'win32'
 
   const { appName } = useContext(SettingsContext)

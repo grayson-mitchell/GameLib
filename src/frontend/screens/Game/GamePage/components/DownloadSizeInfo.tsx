@@ -1,3 +1,4 @@
+import useUiState from 'frontend/state/uiState'
 import { useContext, useEffect, useState } from 'react'
 import { hasCapability } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
@@ -5,7 +6,6 @@ import GameContext from '../../GameContext'
 import { CloudDownload, Storage, Assignment } from '@mui/icons-material'
 import { size } from 'frontend/helpers'
 import { GameInfo } from 'common/types'
-import ContextProvider from 'frontend/state/ContextProvider'
 
 interface Props {
   gameInfo: GameInfo
@@ -47,7 +47,7 @@ const SteamInstallSize = ({ appId }: { appId: string }) => {
 const DownloadSizeInfo = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamepage')
   const { gameInstallInfo, runner } = useContext(GameContext)
-  const { connectivity } = useContext(ContextProvider)
+  const connectivity = useUiState((s) => s.connectivity)
 
   if (connectivity.status !== 'online') {
     return null

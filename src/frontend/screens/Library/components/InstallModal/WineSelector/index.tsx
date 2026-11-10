@@ -5,7 +5,7 @@ import {
   TextInputField,
   PathSelectionBox
 } from 'frontend/components/UI'
-import React, { useContext, useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Runner, WineInstallation } from 'common/types'
 import { Trans, useTranslation } from 'react-i18next'
 import { removeSpecialcharacters } from 'frontend/helpers'
@@ -15,7 +15,6 @@ import { WineVersionListItem } from 'frontend/screens/Settings/components/WineVe
 import { MenuItem } from '@mui/material'
 import { useAwaited } from 'frontend/hooks/useAwaited'
 import { isRunsForMeOn, runsForMeKey } from 'common/runsForMe'
-import ContextProvider from 'frontend/state/ContextProvider'
 import useUiState from 'frontend/state/uiState'
 import {
   resolveCrossoverOnly,
@@ -91,7 +90,7 @@ export default function WineSelector({
   const [detailsOpen, setDetailsOpen] = useState(!!initiallyOpen)
   const [useSharedPrefix, setUseSharedPrefix] = useState(false)
 
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const { crossoverRatings, runsForMe } = useUiState.keys(
     'crossoverRatings',
     'runsForMe'

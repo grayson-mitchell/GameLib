@@ -1,7 +1,7 @@
+import useUiState from 'frontend/state/uiState'
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import useSetting from 'frontend/hooks/useSetting'
-import ContextProvider from 'frontend/state/ContextProvider'
 import SettingsContext from '../../SettingsContext'
 import { defaultWineVersion } from '../..'
 import GOGSyncSaves from './gog'
@@ -12,7 +12,7 @@ import { isStore } from 'common/storeCapabilities'
 const SyncSaves = () => {
   const { t } = useTranslation()
   const { runner, gameInfo } = useContext(SettingsContext)
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const isWin = platform === 'win32'
 
   const [autoSyncSaves, setAutoSyncSaves] = useSetting('autoSyncSaves', false)

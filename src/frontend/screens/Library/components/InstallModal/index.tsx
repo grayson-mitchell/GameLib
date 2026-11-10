@@ -1,3 +1,4 @@
+import useUiState from 'frontend/state/uiState'
 import {
   hasCapability,
   isHandOffInstall,
@@ -6,9 +7,8 @@ import {
 import { faApple, faLinux, faWindows } from '@fortawesome/free-brands-svg-icons'
 import { IconDefinition, faGlobe } from '@fortawesome/free-solid-svg-icons'
 
-import { useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-import ContextProvider from 'frontend/state/ContextProvider'
 import {
   GameInfo,
   InstallPlatform,
@@ -120,7 +120,7 @@ export type AvailablePlatforms = {
 // can never reach the hook call below (T-34.13-11-06).
 
 function InstallModal({ appName, runner, gameInfo = null }: Props) {
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
   const { action = 'install' } = useInstallGameModal()
