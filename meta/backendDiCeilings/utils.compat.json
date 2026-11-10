@@ -1,7 +1,4 @@
 {
-  "childProcess": {
-    "src/backend/utils/compatibility_layers.ts": 1
-  },
   "jestMock": {
     "src/backend/utils/__tests__/compatibility_layers.test.ts": 1
   }

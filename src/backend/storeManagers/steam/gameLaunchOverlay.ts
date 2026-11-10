@@ -344,7 +344,10 @@ export async function prepareTcpOverlay(
           ...inputArg,
           ...overlayProbeArg(steamGame)
         },
-        { runTool: createRunTool({ runner: steamGame.deps.runner }) }
+        {
+          runTool: createRunTool({ runner: steamGame.deps.runner }),
+          runner: steamGame.deps.runner
+        }
       )
       if (result.status === 'error') {
         notifyOverlaySetupFailed(steamGame, result.step, result.cause)

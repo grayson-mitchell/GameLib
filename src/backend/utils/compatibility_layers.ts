@@ -1,16 +1,16 @@
 import { GlobalConfig } from 'backend/config'
 import { logError, LogPrefix, logInfo } from 'backend/logger'
-import { execAsync, getSteamLibraries } from 'backend/utils'
-import { execSync } from 'child_process'
+import { getSteamLibraries } from 'backend/utils'
+import type { ProcessRunner, RunResult } from 'backend/process/types'
 import { GameSettings, WineInstallation } from 'common/types'
 import { existsSync, mkdirSync, readFileSync, readdirSync } from 'graceful-fs'
 import { homedir } from 'os'
-import { dirname, join } from 'path'
+import { basename, dirname, join } from 'path'
 import { PlistObject, parse as plistParse } from 'plist'
 import LaunchCommand from '../storeManagers/legendary/commands/launch'
 import { NonEmptyString } from '../storeManagers/legendary/commands/base'
 import { Path } from 'backend/schemas'
-import { searchForExecutableOnPath } from './os/path'
+import { findExecutableOnPath, searchForExecutableOnPath } from './os/path'
 import {
   configPath,
   defaultUmuPath,
@@ -19,33 +19,56 @@ import {
 } from 'backend/constants/paths'
 import { isLinux, isMac } from 'backend/constants/environment'
 
+/** Runner slice the wine discovery functions need: they only ever call `run`. */
+export type WineDiscoveryDeps = { runner: Pick<ProcessRunner, 'run'> }
+
+// mdfind reads the Spotlight index; generous for a cold index (unmeasured, 66.2 research A1).
+const MDFIND_TIMEOUT_MS = 10_000
+// Precedent: WINE_VERSION_PROBE_TIMEOUT_MS.
+const WINE_VERSION_TIMEOUT_MS = 5_000
+
+/** A run that exited 0 on its own: the old exec() rejected on anything else. */
+const ok = (r: RunResult): boolean => !r.timedOut && !r.aborted && r.code === 0
+
 /**
- * Loads the default wine installation path and version.
- *
- * @returns Promise<WineInstallation>
+ * Runs `mdfind` (the Spotlight CLI) and returns stdout. Rejects on a spawn error, a
+ * timeout or a non-zero exit, as the old `exec('mdfind ...')` did; callers catch.
  */
-export function getDefaultWine(): WineInstallation {
-  const defaultWine: WineInstallation = {
-    bin: '',
-    name: 'Default Wine - Not Found',
-    type: 'wine'
+async function mdfind(
+  deps: WineDiscoveryDeps,
+  argv: readonly string[]
+): Promise<string> {
+  const result = await deps.runner.run('mdfind', argv, {
+    timeoutMs: MDFIND_TIMEOUT_MS,
+    stdin: ''
+  })
+  if (!ok(result)) {
+    throw new Error(
+      `mdfind failed (code ${result.code}, timedOut ${result.timedOut})`
+    )
   }
+  return result.stdout
+}
 
-  try {
-    let stdout = execSync(`which wine`).toString()
-    const [wineBin = ''] = stdout.split('\n')
-    defaultWine.bin = wineBin
-
-    stdout = execSync(`wine --version`).toString()
-    const [wineName = ''] = stdout.split('\n')
-    defaultWine.name = wineName
-
+/**
+ * Locates the default wine binary on PATH without spawning anything (D-66.2-01):
+ * the factory defaults are read before any runner exists. The version string is
+ * resolved asynchronously by getLinuxWineSet; until then the name is the binary name.
+ */
+export function getDefaultWineBinary(): WineInstallation {
+  const wineBin = findExecutableOnPath('wine')
+  if (!wineBin) {
     return {
-      ...defaultWine,
-      ...getWineExecs(wineBin)
+      bin: '',
+      name: 'Default Wine - Not Found',
+      type: 'wine'
     }
-  } catch {
-    return defaultWine
+  }
+  return {
+    bin: wineBin,
+    name: basename(wineBin),
+    type: 'wine',
+    ...getWineExecs(wineBin)
   }
 }
 
@@ -111,6 +134,7 @@ export function getWineLibs(wineBin: string): {
 }
 
 export async function getLinuxWineSet(
+  deps: WineDiscoveryDeps,
   scanCustom?: boolean
 ): Promise<Set<WineInstallation>> {
   if (!existsSync(`${toolsPath}/wine`)) {
@@ -190,8 +214,20 @@ export async function getLinuxWineSet(
   })
 
   const defaultWineSet = new Set<WineInstallation>()
-  const defaultWine = getDefaultWine()
+  const defaultWine = getDefaultWineBinary()
   if (!defaultWine.name.includes('Not Found')) {
+    try {
+      const result = await deps.runner.run(defaultWine.bin, ['--version'], {
+        timeoutMs: WINE_VERSION_TIMEOUT_MS,
+        stdin: ''
+      })
+      if (ok(result)) {
+        const [wineName = ''] = result.stdout.split('\n')
+        if (wineName) defaultWine.name = wineName
+      }
+    } catch {
+      // keep the binary-name fallback
+    }
     defaultWineSet.add(defaultWine)
   }
 
@@ -210,7 +246,9 @@ export async function getLinuxWineSet(
  *
  * @returns Promise<Set<WineInstallation>>
  */
-export async function getWineOnMac(): Promise<Set<WineInstallation>> {
+export async function getWineOnMac(
+  deps: WineDiscoveryDeps
+): Promise<Set<WineInstallation>> {
   const wineSet = new Set<WineInstallation>()
   if (!isMac) {
     return wineSet
@@ -227,13 +265,18 @@ export async function getWineOnMac(): Promise<Set<WineInstallation>> {
   }
 
   // search for wine installed around the system
-  await execAsync('mdfind kMDItemCFBundleIdentifier = "*.wine"').then(
-    async ({ stdout }) => {
-      stdout.split('\n').forEach((winePath) => {
-        winePaths.add(winePath)
-      })
-    }
-  )
+  try {
+    const stdout = await mdfind(deps, [
+      'kMDItemCFBundleIdentifier',
+      '=',
+      '*.wine'
+    ])
+    stdout.split('\n').forEach((winePath) => {
+      winePaths.add(winePath)
+    })
+  } catch {
+    logInfo('Spotlight found no system Wine', LogPrefix.GlobalConfig)
+  }
 
   winePaths.forEach((winePath) => {
     const infoFilePath = join(winePath, 'Contents/Info.plist')
@@ -265,7 +308,9 @@ export async function getWineOnMac(): Promise<Set<WineInstallation>> {
   return wineSet
 }
 
-export async function getWineskinWine(): Promise<Set<WineInstallation>> {
+export async function getWineskinWine(
+  deps: WineDiscoveryDeps
+): Promise<Set<WineInstallation>> {
   const wineSet = new Set<WineInstallation>()
   if (!isMac) {
     return wineSet
@@ -278,8 +323,20 @@ export async function getWineskinWine(): Promise<Set<WineInstallation>> {
         const wineBin = `${userHome}/Applications/Wineskin/${app}/Contents/SharedSupport/wine/bin/wine64`
         if (existsSync(wineBin)) {
           try {
-            const { stdout: out } = await execAsync(`'${wineBin}' --version`)
-            const version = out.split('\n')[0]
+            const versionResult = await deps.runner.run(
+              wineBin,
+              ['--version'],
+              {
+                timeoutMs: WINE_VERSION_TIMEOUT_MS,
+                stdin: ''
+              }
+            )
+            if (!ok(versionResult)) {
+              throw new Error(
+                `wine --version failed (code ${versionResult.code}, timedOut ${versionResult.timedOut})`
+              )
+            }
+            const version = versionResult.stdout.split('\n')[0]
             wineSet.add({
               ...getWineExecs(wineBin),
               lib: `${userHome}/Applications/Wineskin/${app}/Contents/SharedSupport/wine/lib`,
@@ -306,17 +363,21 @@ export async function getWineskinWine(): Promise<Set<WineInstallation>> {
  *
  * @returns Promise<Set<WineInstallation>>
  */
-export async function getCrossover(): Promise<Set<WineInstallation>> {
+export async function getCrossover(
+  deps: WineDiscoveryDeps
+): Promise<Set<WineInstallation>> {
   const crossover = new Set<WineInstallation>()
 
   if (!isMac) {
     return crossover
   }
 
-  await execAsync(
-    'mdfind kMDItemCFBundleIdentifier = "com.codeweavers.CrossOver"'
-  )
-    .then(async ({ stdout }) => {
+  await mdfind(deps, [
+    'kMDItemCFBundleIdentifier',
+    '=',
+    'com.codeweavers.CrossOver'
+  ])
+    .then((stdout) => {
       stdout.split('\n').forEach((crossoverMacPath) => {
         const infoFilePath = join(crossoverMacPath, 'Contents/Info.plist')
         if (crossoverMacPath && existsSync(infoFilePath)) {
@@ -397,16 +458,17 @@ export async function getGamePortingToolkitWine(): Promise<
  * Detects Gaming Porting Toolkit Wine installs on Mac
  * @returns Promise<Set<WineInstallation>>
  **/
-export async function getSystemGamePortingToolkitWine(): Promise<
-  Set<WineInstallation>
-> {
+export async function getSystemGamePortingToolkitWine(
+  deps: WineDiscoveryDeps
+): Promise<Set<WineInstallation>> {
   const systemGPTK = new Set<WineInstallation>()
   if (!isMac) {
     return systemGPTK
   }
 
   logInfo('Searching for Gaming Porting Toolkit Wine', LogPrefix.GlobalConfig)
-  const { stdout } = await execAsync('mdfind wine64')
+  // A failed Spotlight query finds nothing.
+  const stdout = await mdfind(deps, ['wine64']).catch(() => '')
   const wineBin = stdout.split('\n').filter((p) => {
     return p.match(/^(?!.*heroic\/tools).*game-porting-toolkit.*\/wine64$/)
   })[0]
@@ -417,8 +479,16 @@ export async function getSystemGamePortingToolkitWine(): Promise<
       LogPrefix.GlobalConfig
     )
     try {
-      const { stdout: out } = await execAsync(`'${wineBin}' --version`)
-      const [version = ''] = out.split('\n')
+      const versionResult = await deps.runner.run(wineBin, ['--version'], {
+        timeoutMs: WINE_VERSION_TIMEOUT_MS,
+        stdin: ''
+      })
+      if (!ok(versionResult)) {
+        throw new Error(
+          `wine --version failed (code ${versionResult.code}, timedOut ${versionResult.timedOut})`
+        )
+      }
+      const [version = ''] = versionResult.stdout.split('\n')
       const GPTKDIR = join(dirname(wineBin), '..')
       systemGPTK.add({
         ...getWineExecs(wineBin),

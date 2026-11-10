@@ -259,7 +259,7 @@ async function runLaunchEventCallback(
   // persist a derived or fallback engine into wineVersion (D-08).
   if (!isNative && !engineControlled) {
     const isWineOkToLaunch = await checkWineBeforeLaunch(
-      { stores: deps.stores },
+      { stores: deps.stores, runner: deps.runner },
       gameInfo,
       gameSettings,
       logWriter

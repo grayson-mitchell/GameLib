@@ -15,7 +15,7 @@ import {
 } from './storeVersioning/settingsFiles'
 import {
   getCrossover,
-  getDefaultWine,
+  getDefaultWineBinary,
   getGamePortingToolkitWine,
   getLinuxWineSet,
   getSystemGamePortingToolkitWine,
@@ -34,9 +34,20 @@ import {
   defaultWinePrefixDir
 } from './constants/paths'
 import { join } from 'path'
-import { spawnSync } from 'child_process'
+import type { ProcessRunner } from './process/types'
 import { updateWineVersionInfos } from './wine/manager/utils'
 import type { Stores } from './services/types'
+
+const FLATPAK_STEAM_APP = 'com.valvesoftware.Steam'
+
+/**
+ * Whether Steam is really installed as a flatpak: its app directory exists under a
+ * flatpak installation root (system or user). Pure fs check, no `flatpak info` child
+ * (D-66.2-01: the factory defaults run before any runner exists).
+ */
+export function isFlatpakSteamInstalled(roots: string[]): boolean {
+  return roots.some((root) => existsSync(join(root, 'app', FLATPAK_STEAM_APP)))
+}
 
 function getSteamCompatFolder() {
   // Paths are from https://savelocation.net/steam-game-folder
@@ -53,12 +64,12 @@ function getSteamCompatFolder() {
 
     if (existsSync(flatpakSteamPath)) {
       // check if steam is really installed via flatpak
-      const { status } = spawnSync('flatpak', [
-        'info',
-        'com.valvesoftware.Steam'
-      ])
-
-      if (status === 0) {
+      if (
+        isFlatpakSteamInstalled([
+          '/var/lib/flatpak',
+          join(userHome, '.local/share/flatpak')
+        ])
+      ) {
         return flatpakSteamPath
       }
     }
@@ -109,16 +120,19 @@ abstract class GlobalConfig {
    * @returns Promise<Set<WineInstallation>>
    * @memberof GlobalConfig
    **/
-  public async getMacOsWineSet(): Promise<Set<WineInstallation>> {
+  public async getMacOsWineSet(deps: {
+    runner: Pick<ProcessRunner, 'run'>
+  }): Promise<Set<WineInstallation>> {
     if (!isMac) {
       return new Set<WineInstallation>()
     }
 
+    const discovery = { runner: deps.runner }
     const getGPTKWine = await getGamePortingToolkitWine()
-    const getSystemGPTK = await getSystemGamePortingToolkitWine()
-    const crossover = await getCrossover()
-    const wineOnMac = await getWineOnMac()
-    const wineskinWine = await getWineskinWine()
+    const getSystemGPTK = await getSystemGamePortingToolkitWine(discovery)
+    const crossover = await getCrossover(discovery)
+    const wineOnMac = await getWineOnMac(discovery)
+    const wineskinWine = await getWineskinWine(discovery)
     const whiskyWine = await getWhisky()
 
     return new Set([
@@ -139,6 +153,7 @@ abstract class GlobalConfig {
   public async getAlternativeWine(
     deps: {
       wineDownloaderInfoStore: Stores['wineManager']['wineDownloaderInfoStore']
+      runner: Pick<ProcessRunner, 'run'>
     },
     scanCustom = true
   ): Promise<WineInstallation[]> {
@@ -147,11 +162,11 @@ abstract class GlobalConfig {
     }
 
     if (isMac) {
-      const macOsWineSet = await this.getMacOsWineSet()
+      const macOsWineSet = await this.getMacOsWineSet(deps)
       return [...macOsWineSet]
     }
 
-    const linuxWineSet = await getLinuxWineSet(scanCustom)
+    const linuxWineSet = await getLinuxWineSet(deps, scanCustom)
 
     return [...linuxWineSet]
   }
@@ -267,7 +282,9 @@ class GlobalConfigV0 extends GlobalConfig {
 
   public getFactoryDefaults(): AppSettings {
     // @ts-expect-error FIXME: Settings values don't work like this in other parts of the codebase
-    const defaultWine: WineInstallation = isWindows ? {} : getDefaultWine()
+    const defaultWine: WineInstallation = isWindows
+      ? {}
+      : getDefaultWineBinary()
 
     const settings: Partial<AppSettings> = {
       notifyHumbleExpirations: true,

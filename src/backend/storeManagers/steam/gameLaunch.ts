@@ -863,7 +863,10 @@ export async function prefetchBridgeDrmDownloads(
       drmWrapper,
       cegMarkers
     },
-    { runTool: createRunTool({ runner: steamGame.deps.runner }) }
+    {
+      runTool: createRunTool({ runner: steamGame.deps.runner }),
+      runner: steamGame.deps.runner
+    }
   )
 }
 

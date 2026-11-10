@@ -166,7 +166,10 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
 
   // ── Wine probe pair (main.ts:973, main.ts:1532) ─────────────────────────────────────────────
   ipcMain.handle('getAlternativeWine', async () => {
-    return GlobalConfig.get().getAlternativeWine(deps.stores.wineManager)
+    return GlobalConfig.get().getAlternativeWine({
+      wineDownloaderInfoStore: deps.stores.wineManager.wineDownloaderInfoStore,
+      runner: deps.runner
+    })
   })
 
   ipcMain.handle(

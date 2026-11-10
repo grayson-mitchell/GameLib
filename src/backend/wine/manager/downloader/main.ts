@@ -27,6 +27,7 @@ import {
 } from './utilities'
 import { axiosClient, calculateEta, downloadFile } from 'backend/utils'
 import type { WineManagerStatus } from 'common/types'
+import type { ProcessRunner } from 'backend/process/types'
 import { backendEvents } from 'backend/backend_events'
 
 interface getVersionsProps {
@@ -169,6 +170,7 @@ interface installProps {
   overwrite?: boolean
   onProgress?: (state: WineManagerStatus) => void
   abortSignal?: AbortSignal
+  runner: Pick<ProcessRunner, 'run'>
 }
 
 /**
@@ -191,7 +193,8 @@ async function installVersion({
   onProgress = () => {
     return
   },
-  abortSignal
+  abortSignal,
+  runner
 }: installProps): Promise<{ versionInfo: VersionInfo; installDir: string }> {
   /*
    * VARIABLE DECLARATION
@@ -248,7 +251,7 @@ async function installVersion({
     )
 
     // resolve with disksize
-    versionInfo.disksize = getFolderSize(installSubDir)
+    versionInfo.disksize = await getFolderSize({ runner }, installSubDir)
     return { versionInfo: versionInfo, installDir: installSubDir }
   }
 
@@ -354,7 +357,7 @@ async function installVersion({
   unlinkFile(tarFile)
 
   // resolve with disksize
-  versionInfo.disksize = getFolderSize(installSubDir)
+  versionInfo.disksize = await getFolderSize({ runner }, installSubDir)
 
   backendEvents.emit('wineVersionInstalled', versionInfo, installDir)
 

@@ -33,7 +33,7 @@ jest.mock('../constants/paths', () => ({
   }
 }))
 jest.mock('../utils/compatibility_layers', () => ({
-  getDefaultWine: () => ({ name: 'x', bin: '', type: 'wine' })
+  getDefaultWineBinary: () => ({ name: 'x', bin: '', type: 'wine' })
 }))
 jest.mock('../logger', () => ({
   logError: jest.fn(),

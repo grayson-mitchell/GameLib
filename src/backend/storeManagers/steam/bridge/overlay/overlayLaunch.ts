@@ -19,6 +19,7 @@ import {
   type OverlayRunnerReady
 } from './overlayRunnerClone'
 import type { RunTool } from 'backend/engine/runTool'
+import type { ProcessRunner } from 'backend/process/types'
 
 export type EnvVar = { key: string; value: string }
 
@@ -305,6 +306,7 @@ export async function prepareOverlayLaunch(
     detect?: typeof detectCrossoverForOverlay
     ensure?: typeof ensureOverlayRunnerClone
     runTool: RunTool
+    runner: Pick<ProcessRunner, 'run'>
   }
 ): Promise<
   OverlayStepResult<{ runner: OverlayRunnerReady; tokens: string[] }>
@@ -314,7 +316,7 @@ export async function prepareOverlayLaunch(
     if (inputs.status === 'error') return inputs
     const detected = await (deps.detect ?? detectCrossoverForOverlay)(
       { appFolder: a.appFolder },
-      { runTool: deps.runTool }
+      { runTool: deps.runTool, runner: deps.runner }
     )
     if (detected.status === 'error') return detected
     const ensured = await (deps.ensure ?? ensureOverlayRunnerClone)(

@@ -52,6 +52,7 @@ import {
   scrubCloneXattrs
 } from '../drm/runnerEntitlements'
 import type { RunTool } from 'backend/engine/runTool'
+import type { ProcessRunner } from 'backend/process/types'
 import {
   overlayStepError,
   type OverlayStepError,
@@ -128,6 +129,7 @@ export async function detectCrossoverForOverlay(
   deps: {
     resolveCrossoverBinDir?: () => Promise<string | undefined>
     runTool: RunTool
+    runner: Pick<ProcessRunner, 'run'>
     platform?: NodeJS.Platform
   }
 ): Promise<OverlayStepResult<{ crossover: OverlayCrossover }>> {
@@ -138,7 +140,9 @@ export async function detectCrossoverForOverlay(
     }
     const binDir =
       opts.crossoverBinDir ??
-      (await (deps.resolveCrossoverBinDir ?? defaultResolveBinDir)())
+      (await (
+        deps.resolveCrossoverBinDir ?? (() => defaultResolveBinDir(deps))
+      )())
     if (!binDir) return fail('CrossOver not found')
     if (!binDir.endsWith(`${CX_ROOT_SUFFIX}${sep}bin`)) {
       return fail('unexpected CrossOver location')

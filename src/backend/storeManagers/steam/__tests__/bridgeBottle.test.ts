@@ -54,6 +54,7 @@ import { __stopBottledRaiseLoops } from '../bottledSteam'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
 import type { Stores } from 'backend/services/types'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 const { steamBottleConfigStore } =
   jest.requireMock<Stores['steam']>('../stores')
@@ -152,7 +153,10 @@ bindBottleStores({
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 // Recording fake handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
-const spawnDeps = { spawnAsync: mockedSpawnAsync }
+const spawnDeps = {
+  spawnAsync: mockedSpawnAsync,
+  runner: createScriptedRunner([])
+}
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 // The legacy launcher runWineCommand is gone (66.1-24); the bottle code reaches the command runner.

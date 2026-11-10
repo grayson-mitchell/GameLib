@@ -177,9 +177,10 @@ export async function removePerGameBridgeBottle(
   // rmSync fallback if the dir survives.
   await killBottleWineServer(deps, name)
 
-  const removeBinDir = await resolveCrossoverBinDirAsync({
-    hintWineBins: persistedWineBins()
-  })
+  const removeBinDir = await resolveCrossoverBinDirAsync(
+    { runner: deps.runner },
+    { hintWineBins: persistedWineBins() }
+  )
   if (!removeBinDir) {
     logWarning(
       `removePerGameBridgeBottle: no CrossOver install found, skipping cxbottle --delete for "${name}" (rmSync fallback follows)`,
@@ -529,10 +530,13 @@ export async function provisionBridgeBottle(
 
   // (3b) quick 261024-cjq: CrossOver precondition, after the ready
   // short-circuit and before any spawn.
-  const binDir = await resolveCrossoverBinDirAsync({
-    wineVersion: opts.wineVersion,
-    hintWineBins: persistedWineBins()
-  })
+  const binDir = await resolveCrossoverBinDirAsync(
+    { runner: deps.runner },
+    {
+      wineVersion: opts.wineVersion,
+      hintWineBins: persistedWineBins()
+    }
+  )
   if (!binDir) {
     logWarning(
       `provisionBridgeBottle: CrossOver not found, cannot create bridge bottle "${bottleName}"`,

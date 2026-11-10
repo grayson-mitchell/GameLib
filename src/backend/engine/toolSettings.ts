@@ -89,23 +89,30 @@ function pinEngine(pin: (typeof ENGINE_PINS)['current']): NonCrossoverEngine {
 
 const defaultDeps: Omit<
   ToolSettingsDeps,
-  'ensureGameBottle' | 'readEffective' | 'nonCrossoverEngine'
+  | 'ensureGameBottle'
+  | 'readEffective'
+  | 'nonCrossoverEngine'
+  | 'crossoverBinDir'
 > = {
   isMac: () => isMac,
   hasLiveSelection: (key) => getEngineSelection(key) !== undefined,
   resolvePrefix: resolveGamePrefix,
   overlay: getLaunchSettings,
   isProvisioned: isBottleProvisioned,
-  markerKind: readBottleEngineMarkerKind,
-  crossoverBinDir: () => resolveCrossoverBinDirAsync({})
+  markerKind: readBottleEngineMarkerKind
 }
 
 /** The deps that read the Wine Manager release list through the injected services (66.1-22i). */
 function releaseBoundDeps(
   services: EngineServices
-): Pick<ToolSettingsDeps, 'readEffective' | 'nonCrossoverEngine'> {
+): Pick<
+  ToolSettingsDeps,
+  'readEffective' | 'nonCrossoverEngine' | 'crossoverBinDir'
+> {
   const releases = { wineManagerReleases: services.wineManagerReleases }
   return {
+    crossoverBinDir: () =>
+      resolveCrossoverBinDirAsync({ runner: services.runner }),
     readEffective: (id) => readEngineForGame(id, releases),
     nonCrossoverEngine(engineId) {
       if (engineId.startsWith('wine-manager:')) {

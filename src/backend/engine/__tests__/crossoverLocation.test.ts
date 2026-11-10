@@ -11,6 +11,7 @@ import {
   __resetCrossoverLocationForTests
 } from '../crossoverLocation'
 import { getCrossover } from 'backend/utils/compatibility_layers'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 jest.mock('graceful-fs', () => ({ existsSync: jest.fn() }))
 jest.mock('backend/constants/paths', () => ({ userHome: '/Users/test' }))
@@ -90,7 +91,9 @@ describe('crossoverLocation', () => {
     mockedGetCrossover.mockResolvedValue(
       new Set([{ bin: `${vol}/wine`, name: 'CX', type: 'crossover' }])
     )
-    expect(await resolveCrossoverBinDirAsync()).toBe(vol)
+    expect(
+      await resolveCrossoverBinDirAsync({ runner: createScriptedRunner([]) })
+    ).toBe(vol)
     expect(resolveCrossoverBinDir()).toBe(vol)
     present.clear()
     expect(resolveCrossoverBinDir()).toBeUndefined()
@@ -99,8 +102,12 @@ describe('crossoverLocation', () => {
   test('async never throws when getCrossover rejects or is empty', async () => {
     only()
     mockedGetCrossover.mockRejectedValue(new Error('mdfind boom'))
-    expect(await resolveCrossoverBinDirAsync()).toBeUndefined()
+    expect(
+      await resolveCrossoverBinDirAsync({ runner: createScriptedRunner([]) })
+    ).toBeUndefined()
     mockedGetCrossover.mockResolvedValue(new Set())
-    expect(await resolveCrossoverBinDirAsync()).toBeUndefined()
+    expect(
+      await resolveCrossoverBinDirAsync({ runner: createScriptedRunner([]) })
+    ).toBeUndefined()
   })
 })

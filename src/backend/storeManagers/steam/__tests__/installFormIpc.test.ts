@@ -96,6 +96,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { at } from './fixtures/indexed'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 // Plan 13 (D-51-10/11): handleSetSteamBridgeUserRoute's own describe block
 // wires `steamMetadataStore.get`/`.set` to a backing Map so the REAL (unmocked)
@@ -115,6 +116,7 @@ const steamTestDeps = createTestManagerDeps({
 })
 
 const wineDeps = {
+  runner: createScriptedRunner([]),
   stores: createTestStores({
     wineManager: { wineDownloaderInfoStore: {} } as never
   })

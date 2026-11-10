@@ -42,7 +42,7 @@ jest.mock('backend/utils/systeminfo', () => ({
 
 jest.mock('backend/utils/compatibility_layers', () => ({
   ...jest.requireActual('backend/utils/compatibility_layers'),
-  getDefaultWine: () => ({ bin: '', name: 'Wine - Test', type: 'wine' })
+  getDefaultWineBinary: () => ({ bin: '', name: 'Wine - Test', type: 'wine' })
 }))
 
 interface Launch {

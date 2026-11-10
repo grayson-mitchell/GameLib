@@ -1,9 +1,10 @@
 import { existsSync, statSync, unlinkSync } from 'graceful-fs'
-import { spawnSync } from 'child_process'
 
 import { VersionInfo, Type, type WineManagerStatus } from 'common/types'
 import { axiosClient, extractFiles } from 'backend/utils'
 import { isMac } from 'backend/constants/environment'
+import { logWarning, LogPrefix } from 'backend/logger'
+import type { ProcessRunner } from 'backend/process/types'
 
 interface fetchProps {
   url: string
@@ -169,13 +170,34 @@ function unlinkFile(filePath: string) {
  * @param folder absolute path to folder
  * @returns size of folder in bytes
  */
-function getFolderSize(folder: string): number {
+async function getFolderSize(
+  deps: { runner: Pick<ProcessRunner, 'run'> },
+  folder: string
+): Promise<number> {
   const param = isMac ? '-sk' : '-sb'
-  const { stdout } = spawnSync('du', [param, folder])
-  const value = parseInt(stdout.toString())
+  try {
+    // 60 s: unmeasured, generous for a large wine dir on a cold disk (66.2 research A1)
+    const result = await deps.runner.run('du', [param, folder], {
+      timeoutMs: 60_000,
+      stdin: ''
+    })
+    if (result.timedOut || result.code !== 0) {
+      throw new Error(
+        `du exited with code ${result.code} (timedOut ${result.timedOut})`
+      )
+    }
+    const value = parseInt(result.stdout)
+    if (Number.isNaN(value)) throw new Error('du printed no size')
 
-  // on mac we get the size in kilobytes so we need to convert it to bytes
-  return isMac ? value * 1024 : value
+    // on mac we get the size in kilobytes so we need to convert it to bytes
+    return isMac ? value * 1024 : value
+  } catch (error) {
+    logWarning(
+      [`Could not measure the size of ${folder}:`, error],
+      LogPrefix.WineDownloader
+    )
+    return 0
+  }
 }
 
 interface unzipProps {

@@ -30,6 +30,7 @@ import {
   __stopAllBottleProcessMonitors,
   __getActiveMonitorKindForTests
 } from '../bottleProcessMonitor'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 // Importing `getBottleDir` from '../bottle' evaluates the whole module, so
 // its own module-load-time dependencies need the same mocks bottle.test.ts
@@ -125,6 +126,7 @@ jest.mock('../bottleLaunchSignals', () => ({
 const mockedSpawnAsync = jest.fn()
 const spawnDeps = {
   spawnAsync: mockedSpawnAsync,
+  runner: createScriptedRunner([]),
   stores: { runsForMe: {} } as never
 }
 const mockedRecordPlaySession = recordPlaySession as jest.Mock

@@ -57,6 +57,7 @@ import { createRealRunner } from 'backend/testUtils/realRunner'
 import { buildDrmPaths } from '../drmPaths'
 import type { NtdllPatchRow } from '../ntdllPatchTable'
 import { at } from '../../../__tests__/fixtures/indexed'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 const sha = (b: Buffer | string) => createHash('sha256').update(b).digest('hex')
 const WINE_INF_MTIME = 1784047440
@@ -304,7 +305,12 @@ describe('detectAllowedCrossover', () => {
     const bin = over.binDir ? over.binDir(cx) : cx.binDir
     const res = await detectAllowedCrossover(
       { crossoverBinDir: bin, appFolder },
-      { runTool, platform: 'darwin', ...over.deps }
+      {
+        runTool,
+        runner: createScriptedRunner([]),
+        platform: 'darwin',
+        ...over.deps
+      }
     )
     return { res, calls, cx, appFolder }
   }
@@ -424,6 +430,7 @@ describe('detectAllowedCrossover', () => {
       { crossoverBinDir: cx.binDir, appFolder },
       {
         platform: 'darwin',
+        runner: createScriptedRunner([]),
         runTool: () => Promise.reject(new Error('must not run'))
       }
     )
@@ -1197,7 +1204,10 @@ const realOn =
     const installedBefore = sha(readFileSync(realInputs[0]))
     const real = createRealRunner()
     const runTool = createRunTool({ runner: real.runner })
-    const found = await detectAllowedCrossover({}, { runTool })
+    const found = await detectAllowedCrossover(
+      {},
+      { runTool, runner: real.runner }
+    )
     expect(found.status).toBe('ok')
     if (found.status !== 'ok') return
     const component: RunnerComponentInput = {

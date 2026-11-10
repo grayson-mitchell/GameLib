@@ -130,8 +130,13 @@ async function defaultEnsurePinEngine(
 /** The kill and DXVK restore members of a switch, built from the injected engine services (66.1-22f). */
 export function switchServicesFrom(
   services: EngineServices
-): Pick<EngineSwitchDeps, 'killWith' | 'installRemove'> {
+): Pick<
+  EngineSwitchDeps,
+  'killWith' | 'installRemove' | 'resolveCrossoverBinDir'
+> {
   return {
+    resolveCrossoverBinDir: () =>
+      resolveCrossoverBinDirAsync({ runner: services.runner }),
     killWith: (...a) =>
       killBottleWineServerWith({ spawnAsync: services.spawnAsync }, ...a),
     installRemove: services.installRemove
@@ -141,10 +146,9 @@ export function switchServicesFrom(
 /** Everything except what the caller supplies: `crossoverSettings` (store-specific) and the services-built `killWith`/`installRemove`. */
 const defaultDeps: Omit<
   EngineSwitchDeps,
-  'crossoverSettings' | 'killWith' | 'installRemove'
+  'crossoverSettings' | 'killWith' | 'installRemove' | 'resolveCrossoverBinDir'
 > = {
   getMonitorPhase: () => null,
-  resolveCrossoverBinDir: () => resolveCrossoverBinDirAsync({}),
   fallbackSettings: buildFallbackGameSettings,
   currentPinEngine: defaultCurrentPinEngine,
   ensurePinEngine: defaultEnsurePinEngine
@@ -479,7 +483,13 @@ type PrepareArgs = {
   /** Called once when a real engine change is about to start, before any kill or DXVK step. */
   onSwitching?: () => void
   deps: Partial<EngineSwitchDeps> &
-    Pick<EngineSwitchDeps, 'crossoverSettings' | 'killWith' | 'installRemove'>
+    Pick<
+      EngineSwitchDeps,
+      | 'crossoverSettings'
+      | 'killWith'
+      | 'installRemove'
+      | 'resolveCrossoverBinDir'
+    >
 }
 
 async function prepareBottleForEngineBody(

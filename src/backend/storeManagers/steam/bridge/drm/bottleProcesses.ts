@@ -133,7 +133,7 @@ async function listingOutput(file: string, argv: string[]): Promise<string> {
  * touched. Best effort; never throws.
  */
 export async function defaultEndStageSession(
-  deps: Pick<ManagerDeps, 'spawnAsync'>,
+  deps: Pick<ManagerDeps, 'spawnAsync' | 'runner'>,
   args: {
     appId: string
     bottleName: string

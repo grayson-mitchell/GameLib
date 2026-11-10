@@ -11,6 +11,7 @@ import { existsSync } from 'graceful-fs'
 import { userHome } from 'backend/constants/paths'
 import { logWarning, LogPrefix } from 'backend/logger'
 import type { WineInstallation } from 'common/types'
+import type { ProcessRunner } from 'backend/process/types'
 
 const CROSSOVER_BIN_SUBPATH = 'Contents/SharedSupport/CrossOver/bin'
 const WINE_BIN_SUFFIX = '/SharedSupport/CrossOver/bin/wine'
@@ -50,15 +51,18 @@ export function resolveCrossoverBinDir(opts?: {
   return candidates.find(hasCxbottle)
 }
 
-export async function resolveCrossoverBinDirAsync(opts?: {
-  wineVersion?: WineInstallation
-  hintWineBins?: string[]
-}): Promise<string | undefined> {
+export async function resolveCrossoverBinDirAsync(
+  deps: { runner: Pick<ProcessRunner, 'run'> },
+  opts?: {
+    wineVersion?: WineInstallation
+    hintWineBins?: string[]
+  }
+): Promise<string | undefined> {
   const sync = resolveCrossoverBinDir(opts)
   if (sync) return sync
   try {
     const { getCrossover } = await import('backend/utils/compatibility_layers')
-    const found = await getCrossover()
+    const found = await getCrossover({ runner: deps.runner })
     for (const entry of found ?? []) {
       const dir = crossoverBinDirFromWineBin(entry.bin)
       if (hasCxbottle(dir)) {

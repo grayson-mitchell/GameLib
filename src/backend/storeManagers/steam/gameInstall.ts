@@ -163,7 +163,8 @@ export async function install(
     // Phase 59 (D-04): a missing CrossOver blocks only the bottled-Steam
     // route. The bridge route installs on the built-in engine, so the gate
     // is applied once the final route is known (below).
-    const crossoverMissing = isMac && !(await bottle.isCrossoverInstalled())
+    const crossoverMissing =
+      isMac && !(await bottle.isCrossoverInstalled(steamGame.deps))
 
     // quick-260821-le0: remove a leftover unrunnable native i386 install
     // BEFORE anything else in this branch runs — HOARD proved a demoted

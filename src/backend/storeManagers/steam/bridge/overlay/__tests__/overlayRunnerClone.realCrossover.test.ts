@@ -73,7 +73,7 @@ maybe('overlay runner clone against the real CrossOver', () => {
         appFolder,
         crossoverBinDir: CX_BIN
       },
-      { runTool }
+      { runTool, runner: real.runner }
     )
     expect(detected.status).toBe('ok')
     if (detected.status !== 'ok') return

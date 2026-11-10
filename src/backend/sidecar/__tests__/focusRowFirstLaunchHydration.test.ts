@@ -29,7 +29,7 @@
  *     never takes.
  *   - `backend/utils/systeminfo`: `registerSettingsFlows` imports it, and it
  *     shells out to real subprocesses at call time; this suite never calls it.
- *   - `backend/utils/compatibility_layers` `getDefaultWine` only (the rest of
+ *   - `backend/utils/compatibility_layers` `getDefaultWineBinary` only (the rest of
  *     the module is real): `GlobalConfigV0.getFactoryDefaults()` calls it for
  *     host Wine discovery, which is irrelevant to `focusRow` and non-deterministic
  *     across machines.
@@ -77,7 +77,7 @@ jest.mock('backend/utils/systeminfo', () => ({
 
 jest.mock('backend/utils/compatibility_layers', () => ({
   ...jest.requireActual('backend/utils/compatibility_layers'),
-  getDefaultWine: () => ({ bin: '', name: 'Wine - Test', type: 'wine' })
+  getDefaultWineBinary: () => ({ bin: '', name: 'Wine - Test', type: 'wine' })
 }))
 
 type FocusRowSelection = import('common/types').FocusRowSelection

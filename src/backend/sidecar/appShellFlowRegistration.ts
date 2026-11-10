@@ -297,7 +297,9 @@ export function registerAppShellFlows(deps: AppShellFlowDeps): void {
   ipcMain.handle('getHeroicVersion', async () => app.getVersion())
 
   // Quick 261026-b9r: the probe only runs when invoked (never at boot).
-  ipcMain.handle('getAppManagementStatus', async () => getAppManagementStatus())
+  ipcMain.handle('getAppManagementStatus', async () =>
+    getAppManagementStatus({ runner: deps.runner })
+  )
 
   ipcMain.handle('getLatestReleases', async () => getLatestReleasesForStartup())
 

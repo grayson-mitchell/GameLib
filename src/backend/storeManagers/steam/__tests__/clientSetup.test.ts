@@ -33,6 +33,7 @@ import {
   ensureSteamClientReady,
   startGuidedClientInstall
 } from '../clientSetup'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 jest.mock('graceful-fs', () => ({
   existsSync: jest.fn(),
@@ -90,9 +91,10 @@ const mockedDownloadFile = downloadFile as jest.Mock
 const mockedOpenExternal = shell.openExternal as jest.Mock
 // Recording fake handed to the code under test through its deps slice (66.1 R5).
 const mockedSpawnAsync = jest.fn()
-const setupDeps = { spawnAsync: mockedSpawnAsync } as Parameters<
-  typeof startGuidedClientInstall
->[0]
+const setupDeps = {
+  spawnAsync: mockedSpawnAsync,
+  runner: createScriptedRunner([])
+} as Parameters<typeof startGuidedClientInstall>[0]
 const mockedIsSteamClientInstalled =
   SteamUser.isSteamClientInstalled as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock

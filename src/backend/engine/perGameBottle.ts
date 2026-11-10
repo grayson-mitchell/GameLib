@@ -233,9 +233,8 @@ export interface PerGameBottleDeps {
 
 const defaultDeps: Omit<
   PerGameBottleDeps,
-  'createCrossover' | 'createFallback' | 'decide'
+  'createCrossover' | 'createFallback' | 'decide' | 'resolveBinDir'
 > = {
-  resolveBinDir: () => resolveCrossoverBinDirForEngine(),
   ensurePin: ensurePinnedEngineReportingStatus,
   currentPin: () => ENGINE_PINS.current,
   isProvisioned: isBottleProvisioned
@@ -346,6 +345,8 @@ export function ensureGameBottle(
     createCrossover: (...a) => createCrossoverBottle(services, ...a),
     createFallback: (...a) => createFallbackBottle(services, ...a),
     decide: (a) => decideCreationEngine(a, { runner: services.runner }),
+    resolveBinDir: () =>
+      resolveCrossoverBinDirForEngine({ runner: services.runner }),
     ...defaultDeps,
     ...deps
   }

@@ -48,8 +48,8 @@ export function readSteamEngineOverride(appId: string): unknown {
   return readStoredTitleConfig(appId)?.steamEngineOverride
 }
 
-const hintedBinDir = () =>
-  resolveCrossoverBinDirAsync({ hintWineBins: persistedWineBins() })
+const hintedBinDir = (runner: EngineServices['runner']) =>
+  resolveCrossoverBinDirAsync({ runner }, { hintWineBins: persistedWineBins() })
 
 /** The spawn and release-reader slice the steam decision paths need, from a store's deps (66.1-22i). */
 export function steamDecisionServices(deps: {
@@ -76,7 +76,7 @@ export function steamDecisionDeps(
     runner: services.runner,
     killCrossoverWineserver: killCrossoverWineserverWith(services),
     wineManagerReleases: services.wineManagerReleases,
-    resolveCrossoverBinDir: hintedBinDir,
+    resolveCrossoverBinDir: () => hintedBinDir(services.runner),
     readOverride: readSteamEngineOverride,
     monitorPhase: getBottleProcessMonitorPhase
   }
@@ -85,13 +85,19 @@ export function steamDecisionDeps(
 export function steamSwitchDeps(
   services: EngineServices
 ): Partial<EngineSwitchDeps> &
-  Pick<EngineSwitchDeps, 'crossoverSettings' | 'killWith' | 'installRemove'> {
+  Pick<
+    EngineSwitchDeps,
+    | 'crossoverSettings'
+    | 'killWith'
+    | 'installRemove'
+    | 'resolveCrossoverBinDir'
+  > {
   return {
     ...switchServicesFrom(services),
     getMonitorPhase: getBottleProcessMonitorPhase,
     ownBottleName: bridgeBottleNameFor,
     crossoverSettings: getBridgeBottleSettings,
-    resolveCrossoverBinDir: hintedBinDir
+    resolveCrossoverBinDir: () => hintedBinDir(services.runner)
   }
 }
 

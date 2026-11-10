@@ -16,6 +16,7 @@
 import { dirname, join } from 'path'
 import { existsSync, readFileSync } from 'graceful-fs'
 import type { GameSettings, WineInstallation } from 'common/types'
+import type { ProcessRunner } from 'backend/process/types'
 import { GlobalConfig } from 'backend/config'
 import { logWarning, LogPrefix } from 'backend/logger'
 // NOTE: `runWineCommand` is imported LAZILY (dynamic import inside the two
@@ -104,11 +105,14 @@ export const CROSSOVER_REQUIRED_MESSAGE =
   'CrossOver is required. Install CrossOver from https://www.codeweavers.com/crossover, then try again.'
 
 /** True when a CrossOver install with a cxbottle can be located. */
-export async function isCrossoverInstalled(): Promise<boolean> {
+export async function isCrossoverInstalled(deps: {
+  runner: Pick<ProcessRunner, 'run'>
+}): Promise<boolean> {
   return (
-    (await resolveCrossoverBinDirAsync({
-      hintWineBins: persistedWineBins()
-    })) !== undefined
+    (await resolveCrossoverBinDirAsync(
+      { runner: deps.runner },
+      { hintWineBins: persistedWineBins() }
+    )) !== undefined
   )
 }
 

@@ -10,6 +10,7 @@ jest.mock('backend/engine/crossoverLocation', () => ({
 }))
 
 import { logWarning } from '../../logger'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 const BIN = '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
 const PROBE = '/Applications/CrossOver.app/Contents/.gamelib-appmgmt-probe'
@@ -31,6 +32,7 @@ describe('classifyProbeError', () => {
 
 describe('getAppManagementStatus', () => {
   const mk = (over = {}) => ({
+    runner: createScriptedRunner([]),
     platform: 'darwin' as NodeJS.Platform,
     resolveBinDir: jest.fn().mockResolvedValue(BIN),
     writeFile: jest.fn().mockResolvedValue(undefined),

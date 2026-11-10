@@ -143,16 +143,28 @@ export type RunnerDeps = { runner: Pick<ProcessRunner, 'run'> }
 
 type NonSpawnDefaults = Omit<
   EngineDecisionDeps,
-  'killCrossoverWineserver' | 'wineManagerReleases' | 'probe' | 'readBuild'
+  | 'killCrossoverWineserver'
+  | 'wineManagerReleases'
+  | 'probe'
+  | 'readBuild'
+  | 'resolveCrossoverBinDir'
 >
 
-function baseEngineDecisionDeps(): NonSpawnDefaults {
+/** The bin-dir default: Spotlight (mdfind) runs through the caller's runner. */
+function binDirDefault(
+  runner: Pick<ProcessRunner, 'run'>
+): Pick<EngineDecisionDeps, 'resolveCrossoverBinDir'> {
   return {
     async resolveCrossoverBinDir() {
       const { resolveCrossoverBinDirAsync } =
         await import('backend/engine/crossoverLocation')
-      return resolveCrossoverBinDirAsync({})
-    },
+      return resolveCrossoverBinDirAsync({ runner })
+    }
+  }
+}
+
+function baseEngineDecisionDeps(): NonSpawnDefaults {
+  return {
     isExecutable(path) {
       try {
         accessSync(path, fsConstants.X_OK)
@@ -183,6 +195,7 @@ function defaultEngineDecisionDeps(
 ): Omit<EngineDecisionDeps, 'killCrossoverWineserver' | 'wineManagerReleases'> {
   return {
     ...baseEngineDecisionDeps(),
+    ...binDirDefault(runner),
     probe: createProbeDemoStatus({ runner }),
     readBuild: (binDir) => readCrossoverBuild(binDir, createRunTool({ runner }))
   }
@@ -213,16 +226,27 @@ export function killCrossoverWineserverWith(
   }
 }
 
-/** For entry points that reach no spawn, neither the kill nor the release list. */
-function withDefaults(deps?: Partial<EngineDecisionDeps>): NonSpawnDefaults {
-  return { ...baseEngineDecisionDeps(), ...deps }
+/** For entry points that resolve the bin dir: only the caller's runner is required by type. */
+function withDefaults(
+  deps: Partial<EngineDecisionDeps> & RunnerDeps
+): NonSpawnDefaults & Pick<EngineDecisionDeps, 'resolveCrossoverBinDir'> {
+  return { ...baseEngineDecisionDeps(), ...binDirDefault(deps.runner), ...deps }
 }
 
-/** For entry points that read the release list: it is required by type. */
+/** For entry points that read the release list and reach no spawn: it is required by type. */
 function withReleases(
   deps: Partial<EngineDecisionDeps> & ReleasesDeps
 ): NonSpawnDefaults & ReleasesDeps {
   return { ...baseEngineDecisionDeps(), ...deps }
+}
+
+/** For entry points that read the release list and resolve the bin dir. */
+function withReleasesAndRunner(
+  deps: Partial<EngineDecisionDeps> & ReleasesDeps & RunnerDeps
+): NonSpawnDefaults &
+  ReleasesDeps &
+  Pick<EngineDecisionDeps, 'resolveCrossoverBinDir'> {
+  return { ...baseEngineDecisionDeps(), ...binDirDefault(deps.runner), ...deps }
 }
 
 /** For decideLaunchEngine: the runner, the kill and the release list are all required by type. */
@@ -241,7 +265,7 @@ function withKill(
 
 /** The CrossOver bin dir the engine layer resolves (a store may inject a wine-bin hint). */
 export async function resolveCrossoverBinDirForEngine(
-  deps?: Partial<EngineDecisionDeps>
+  deps: Partial<EngineDecisionDeps> & RunnerDeps
 ): Promise<string | undefined> {
   return withDefaults(deps).resolveCrossoverBinDir()
 }
@@ -253,7 +277,7 @@ export async function resolveCrossoverBinDirForEngine(
  * refusal, so it reports false.
  */
 export async function isCrossoverMissing(
-  deps?: Partial<EngineDecisionDeps>
+  deps: Partial<EngineDecisionDeps> & RunnerDeps
 ): Promise<boolean> {
   try {
     const d = withDefaults(deps)
@@ -725,9 +749,9 @@ export async function decideCreationEngine(
 }
 
 export async function listEngineOverrideOptions(
-  deps: Partial<EngineDecisionDeps> & ReleasesDeps
+  deps: Partial<EngineDecisionDeps> & ReleasesDeps & RunnerDeps
 ): Promise<EngineOption[]> {
-  const d = withReleases(deps)
+  const d = withReleasesAndRunner(deps)
   const out: EngineOption[] = [
     {
       id: 'automatic',

@@ -10,7 +10,7 @@
  *
  * Mocked, and why: `backend/storeManagers`, `steam/state`, `backend/game_config`
  * and `backend/utils/systeminfo` sit only on the per-game branch of the settings
- * channels, which this suite never takes; `getDefaultWine` is host discovery and
+ * channels, which this suite never takes; `getDefaultWineBinary` is host discovery and
  * non-deterministic across machines.
  *
  * The two-store hazard (`common/focusRowMigration.ts`, CR-01) is CHECKED here,
@@ -52,7 +52,7 @@ jest.mock('backend/utils/systeminfo', () => ({
 
 jest.mock('backend/utils/compatibility_layers', () => ({
   ...jest.requireActual('backend/utils/compatibility_layers'),
-  getDefaultWine: () => ({ bin: '', name: 'Wine - Test', type: 'wine' })
+  getDefaultWineBinary: () => ({ bin: '', name: 'Wine - Test', type: 'wine' })
 }))
 
 interface Launch {

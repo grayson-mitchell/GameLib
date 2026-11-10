@@ -1,44 +1,240 @@
 import {
-  getDefaultWine,
+  getCrossover,
+  getDefaultWineBinary,
+  getLinuxWineSet,
+  getSystemGamePortingToolkitWine,
   getWineExecs,
-  getWineLibs
+  getWineLibs,
+  getWineOnMac,
+  getWineskinWine
 } from '../compatibility_layers'
-import { mkdirSync } from 'graceful-fs'
+import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'graceful-fs'
 import { dirname, join } from 'path'
 import { tmpdir } from 'os'
-import child_process from 'child_process'
+import { isMac } from 'backend/constants/environment'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 jest.mock('../../logger')
 
-describe('getDefaultWine', () => {
-  test('return wine not found', () => {
-    const expected = {
+// The macOS discovery functions return early off-darwin, so their cases run on macOS hosts only.
+const macDescribe = isMac ? describe : describe.skip
+
+const MDFIND_WINE_ARGV = ['kMDItemCFBundleIdentifier', '=', '*.wine']
+const MDFIND_CX_ARGV = [
+  'kMDItemCFBundleIdentifier',
+  '=',
+  'com.codeweavers.CrossOver'
+]
+
+describe('getDefaultWineBinary', () => {
+  const realPath = process.env['PATH']
+  afterEach(() => {
+    process.env['PATH'] = realPath
+  })
+
+  test('is spawn-free and reports not found with an empty PATH', () => {
+    process.env['PATH'] = ''
+    expect(getDefaultWineBinary()).toEqual({
       bin: '',
       name: 'Default Wine - Not Found',
       type: 'wine'
-    }
-    jest.spyOn(child_process, 'execSync').mockImplementation(() => {
-      throw new Error()
     })
-    const result = getDefaultWine()
-    expect(result).toEqual(expected)
   })
 
-  test('return list with one default wine', () => {
-    // spy on the execSync calling which wine and returning /usr/bin/wine
-    jest.spyOn(child_process, 'execSync').mockImplementation((command) => {
-      if (command === 'which wine') {
-        return '/usr/bin/wine\n'
-      } else if (command === 'wine --version') {
-        return 'wine-6.0 (Staging)\n'
-      }
-      throw new Error('Unexpected command')
-    })
-
-    const result = getDefaultWine()
-    expect(result.bin).toBe('/usr/bin/wine')
-    expect(result.name).toBe('wine-6.0 (Staging)')
+  test('finds wine on PATH and names it by its binary name', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'wine-path-'))
+    const bin = join(dir, 'wine')
+    writeFileSync(bin, '#!/bin/sh\n')
+    chmodSync(bin, 0o755)
+    process.env['PATH'] = dir
+    const result = getDefaultWineBinary()
+    expect(result.bin).toBe(bin)
+    expect(result.name).toBe('wine')
     expect(result.type).toBe('wine')
+  })
+})
+
+describe('getLinuxWineSet default wine naming', () => {
+  const realPath = process.env['PATH']
+  afterEach(() => {
+    process.env['PATH'] = realPath
+  })
+
+  const withFakeWine = () => {
+    const dir = mkdtempSync(join(tmpdir(), 'wine-path-'))
+    const bin = join(dir, 'wine')
+    writeFileSync(bin, '#!/bin/sh\n')
+    chmodSync(bin, 0o755)
+    process.env['PATH'] = dir
+    return bin
+  }
+  const defaultNames = async (
+    runner: ReturnType<typeof createScriptedRunner>
+  ) =>
+    [...(await getLinuxWineSet({ runner }, false))]
+      .filter((w) => w.type === 'wine' && !w.bin.includes('/tools/'))
+      .map((w) => w.name)
+
+  test('uses the first stdout line of wine --version', async () => {
+    const bin = withFakeWine()
+    const runner = createScriptedRunner([
+      {
+        cmd: bin,
+        argv: ['--version'],
+        result: { stdout: 'wine-6.0 (Staging)\n' }
+      }
+    ])
+    expect(await defaultNames(runner)).toContain('wine-6.0 (Staging)')
+    expect(runner.calls[0]?.opts).toMatchObject({ timeoutMs: 5_000 })
+  })
+
+  test.each([
+    ['code 1', { code: 1 }],
+    ['timedOut', { timedOut: true, code: null }]
+  ])('falls back to the binary name on %s', async (_label, result) => {
+    const bin = withFakeWine()
+    const runner = createScriptedRunner([
+      { cmd: bin, argv: ['--version'], result }
+    ])
+    expect(await defaultNames(runner)).toContain('wine')
+  })
+
+  test('falls back to the binary name on ENOENT', async () => {
+    const bin = withFakeWine()
+    const runner = createScriptedRunner([
+      { cmd: bin, argv: ['--version'], error: { code: 'ENOENT' } }
+    ])
+    expect(await defaultNames(runner)).toContain('wine')
+  })
+})
+
+macDescribe('getWineOnMac', () => {
+  test('mdfind uses the three-word split argv', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'mdfind', argv: MDFIND_WINE_ARGV, result: { stdout: '\n' } }
+    ])
+    await getWineOnMac({ runner })
+    expect(runner.calls[0]).toMatchObject({
+      cmd: 'mdfind',
+      argv: MDFIND_WINE_ARGV,
+      opts: { timeoutMs: 10_000 }
+    })
+  })
+
+  test.each([
+    ['code 1', { code: 1 }],
+    ['timedOut', { timedOut: true, code: null }]
+  ])('mdfind %s does not throw', async (_label, result) => {
+    const runner = createScriptedRunner([
+      { cmd: 'mdfind', argv: MDFIND_WINE_ARGV, result }
+    ])
+    await expect(getWineOnMac({ runner })).resolves.toBeInstanceOf(Set)
+  })
+
+  test('mdfind ENOENT does not throw', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'mdfind', argv: MDFIND_WINE_ARGV, error: { code: 'ENOENT' } }
+    ])
+    await expect(getWineOnMac({ runner })).resolves.toBeInstanceOf(Set)
+  })
+})
+
+macDescribe('getCrossover', () => {
+  test('mdfind uses the three-word split argv', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'mdfind', argv: MDFIND_CX_ARGV, result: { stdout: '' } }
+    ])
+    expect((await getCrossover({ runner })).size).toBe(0)
+    expect(runner.calls[0]).toMatchObject({
+      argv: MDFIND_CX_ARGV,
+      opts: { timeoutMs: 10_000 }
+    })
+  })
+
+  test.each([
+    ['code 1', { code: 1 }],
+    ['timedOut', { timedOut: true, code: null }]
+  ])('mdfind %s yields an empty set', async (_label, result) => {
+    const runner = createScriptedRunner([
+      { cmd: 'mdfind', argv: MDFIND_CX_ARGV, result }
+    ])
+    expect((await getCrossover({ runner })).size).toBe(0)
+  })
+
+  test('mdfind ENOENT yields an empty set', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'mdfind', argv: MDFIND_CX_ARGV, error: { code: 'ENOENT' } }
+    ])
+    expect((await getCrossover({ runner })).size).toBe(0)
+  })
+})
+
+macDescribe('getSystemGamePortingToolkitWine', () => {
+  const gptkBin = (): string => {
+    const dir = mkdtempSync(join(tmpdir(), "it's gptk-"))
+    const bin = join(dir, 'game-porting-toolkit', 'bin', 'wine64')
+    mkdirSync(dirname(bin), { recursive: true })
+    writeFileSync(bin, '')
+    return bin
+  }
+
+  test('mdfind wine64 then wine64 --version with the path as the command (single quote safe)', async () => {
+    const bin = gptkBin()
+    expect(bin).toContain("'")
+    const runner = createScriptedRunner([
+      { cmd: 'mdfind', argv: ['wine64'], result: { stdout: `${bin}\n` } },
+      { cmd: bin, argv: ['--version'], result: { stdout: 'wine-7.7\n' } }
+    ])
+    const set = await getSystemGamePortingToolkitWine({ runner })
+    expect([...set][0]?.name).toBe('GPTK System (DX11/DX12 Only) - wine-7.7')
+    expect(runner.calls[1]?.opts).toMatchObject({ timeoutMs: 5_000 })
+    runner.expectAllConsumed()
+  })
+
+  test.each([
+    ['code 1', { code: 1 }],
+    ['timedOut', { timedOut: true, code: null }]
+  ])('--version %s skips the install', async (_label, result) => {
+    const bin = gptkBin()
+    const runner = createScriptedRunner([
+      { cmd: 'mdfind', argv: ['wine64'], result: { stdout: `${bin}\n` } },
+      { cmd: bin, argv: ['--version'], result }
+    ])
+    expect((await getSystemGamePortingToolkitWine({ runner })).size).toBe(0)
+  })
+
+  test('--version ENOENT skips the install', async () => {
+    const bin = gptkBin()
+    const runner = createScriptedRunner([
+      { cmd: 'mdfind', argv: ['wine64'], result: { stdout: `${bin}\n` } },
+      { cmd: bin, argv: ['--version'], error: { code: 'ENOENT' } }
+    ])
+    expect((await getSystemGamePortingToolkitWine({ runner })).size).toBe(0)
+  })
+
+  test.each([
+    ['code 1', { code: 1 }],
+    ['timedOut', { timedOut: true, code: null }]
+  ])('mdfind %s finds nothing', async (_label, result) => {
+    const runner = createScriptedRunner([
+      { cmd: 'mdfind', argv: ['wine64'], result }
+    ])
+    expect((await getSystemGamePortingToolkitWine({ runner })).size).toBe(0)
+  })
+
+  test('mdfind ENOENT finds nothing', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'mdfind', argv: ['wine64'], error: { code: 'ENOENT' } }
+    ])
+    expect((await getSystemGamePortingToolkitWine({ runner })).size).toBe(0)
+  })
+})
+
+macDescribe('getWineskinWine', () => {
+  test('returns an empty set when no Wineskin apps exist (no spawn)', async () => {
+    const runner = createScriptedRunner([])
+    await getWineskinWine({ runner })
+    expect(runner.calls).toHaveLength(0)
   })
 })
 

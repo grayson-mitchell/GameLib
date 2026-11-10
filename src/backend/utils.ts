@@ -71,6 +71,7 @@ import { parse } from '@node-steam/vdf'
 import type LogWriter from 'backend/logger/log_writer'
 import { isOnline } from './online_monitor'
 import type { Game } from 'common/types/game_manager'
+import type { ProcessRunner } from 'backend/process/types'
 import { isStore } from 'common/storeCapabilities'
 
 const execAsync = promisify(exec)
@@ -968,6 +969,7 @@ async function ContinueWithFoundWine(
 
 export async function downloadDefaultWine(deps: {
   stores: Pick<Stores, 'kvs' | 'wineManager'>
+  runner: Pick<ProcessRunner, 'run'>
 }) {
   if (isWindows) return null
   // refresh wine list
@@ -1005,9 +1007,11 @@ export async function downloadDefaultWine(deps: {
   if (result === 'success') {
     let downloadedWine = null
     try {
-      const wineList = await GlobalConfig.get().getAlternativeWine(
-        deps.stores.wineManager
-      )
+      const wineList = await GlobalConfig.get().getAlternativeWine({
+        wineDownloaderInfoStore:
+          deps.stores.wineManager.wineDownloaderInfoStore,
+        runner: deps.runner
+      })
       // update the game config to use that wine
       const firstWine = wineList[0]
       if (firstWine === undefined) {
@@ -1032,7 +1036,10 @@ export async function downloadDefaultWine(deps: {
 }
 
 export async function checkWineBeforeLaunch(
-  deps: { stores: Pick<Stores, 'kvs' | 'wineManager'> },
+  deps: {
+    stores: Pick<Stores, 'kvs' | 'wineManager'>
+    runner: Pick<ProcessRunner, 'run'>
+  },
   gameInfo: GameInfo,
   gameSettings: GameSettings,
   logWriter: LogWriter
@@ -1084,9 +1091,11 @@ export async function checkWineBeforeLaunch(
         return false
       }
     } else {
-      const wineList = await GlobalConfig.get().getAlternativeWine(
-        deps.stores.wineManager
-      )
+      const wineList = await GlobalConfig.get().getAlternativeWine({
+        wineDownloaderInfoStore:
+          deps.stores.wineManager.wineDownloaderInfoStore,
+        runner: deps.runner
+      })
       const firstFoundWine = wineList[0]
 
       const isValidWine =

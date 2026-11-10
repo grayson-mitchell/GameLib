@@ -27,6 +27,7 @@ import { writeFile, unlink } from 'fs/promises'
 
 import type { AppManagementStatus } from '../../common/types'
 import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
+import type { ProcessRunner } from 'backend/process/types'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 
 export const APP_MANAGEMENT_SETTINGS_URL =
@@ -54,6 +55,7 @@ function errorCode(error: unknown): string {
 }
 
 interface AppManagementDeps {
+  runner: Pick<ProcessRunner, 'run'>
   platform?: NodeJS.Platform
   resolveBinDir?: () => Promise<string | undefined>
   writeFile?: (path: string, data: string) => Promise<void>
@@ -61,13 +63,14 @@ interface AppManagementDeps {
 }
 
 export async function getAppManagementStatus(
-  deps: AppManagementDeps = {}
+  deps: AppManagementDeps
 ): Promise<AppManagementStatus> {
   const platform = deps.platform ?? process.platform
   if (platform !== 'darwin') return 'not-needed'
 
   const binDir = await (
-    deps.resolveBinDir ?? (() => resolveCrossoverBinDirAsync())
+    deps.resolveBinDir ??
+    (() => resolveCrossoverBinDirAsync({ runner: deps.runner }))
   )()
   if (!binDir) return 'not-needed'
 

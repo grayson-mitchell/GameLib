@@ -25,6 +25,7 @@
  *   deadline and abort id.
  */
 import type { RunTool } from 'backend/engine/runTool'
+import type { ProcessRunner } from 'backend/process/types'
 import { spawn } from 'child_process'
 import { dirname, isAbsolute, resolve } from 'path'
 import type { GameSettings, GameStatus } from 'common/types'
@@ -125,6 +126,8 @@ export type DrmLaunchSetupResult =
 export type DrmSetupOverrides = {
   /** The caller's tool runner (66.2-03); the clone and allowlist steps spawn through it. */
   runTool: RunTool
+  /** The runner behind `runTool`; the CrossOver bin-dir lookup (mdfind) runs through it (66.2-07). */
+  runner: Pick<ProcessRunner, 'run'>
   isMacSteamRunning?: () => Promise<boolean>
   detectCrossover?: typeof detectAllowedCrossover
   ensureComponent?: typeof ensureSteamclientLayerComponent
@@ -245,7 +248,7 @@ async function ensureDrmDownloads(
   // 2. CrossOver allowlist
   const detect = deps.detectCrossover ?? detectAllowedCrossover
   const crossover = await run('unsupported-crossover', () =>
-    detect({ appFolder }, { runTool: deps.runTool })
+    detect({ appFolder }, { runTool: deps.runTool, runner: deps.runner })
   )
   if (crossover.status === 'error')
     return { status: 'error', stage: 'crossover-allowlist', error: crossover }
@@ -460,7 +463,8 @@ async function runSetup(
     const staged = await run('bottle-stage', () =>
       stage(stageInput, {
         commandRunner: deps.commandRunner,
-        spawnAsync: deps.spawnAsync
+        spawnAsync: deps.spawnAsync,
+        runner: deps.runner
       })
     )
     if (staged.status === 'error') return fail('bottle-stage', staged)

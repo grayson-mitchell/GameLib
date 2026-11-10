@@ -147,7 +147,7 @@ function legacyEntry(effective: EffectiveEngine): EngineOption | null {
  * GPTK / toolkit / DXMT builds and custom paths are never offered (D-11).
  */
 export async function listGameEngineOptions(
-  services: Pick<EngineServices, 'wineManagerReleases'>,
+  services: Pick<EngineServices, 'wineManagerReleases' | 'runner'>,
   args: unknown,
   deps: {
     config?: Partial<EngineConfigDeps>
@@ -158,6 +158,7 @@ export async function listGameEngineOptions(
   const config = { ...releases, ...deps.config }
   const options = await listEngineOverrideOptions({
     ...releases,
+    runner: services.runner,
     ...deps.decision
   })
   let effective: EffectiveEngine | null = null

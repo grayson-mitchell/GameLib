@@ -17,6 +17,7 @@ import {
   prepareOverlayTokens
 } from '../overlayLaunch'
 import { at } from '../../../__tests__/fixtures/indexed'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 const SBIN =
   '/Users/x/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS'
@@ -181,6 +182,7 @@ describe('prepareOverlayLaunch', () => {
   test('success returns runner and tokens', async () => {
     const r = await prepareOverlayLaunch(a, {
       runTool: noRunTool,
+      runner: createScriptedRunner([]),
       checkInputs: okInputs,
       detect: () => Promise.resolve({ status: 'ok', crossover }),
       ensure: () => Promise.resolve({ status: 'ok', runner })
@@ -194,6 +196,7 @@ describe('prepareOverlayLaunch', () => {
   test('detect error is returned', async () => {
     const r = await prepareOverlayLaunch(a, {
       runTool: noRunTool,
+      runner: createScriptedRunner([]),
       checkInputs: okInputs,
       detect: () =>
         Promise.resolve({
@@ -207,6 +210,7 @@ describe('prepareOverlayLaunch', () => {
   test('ensure error is returned', async () => {
     const r = await prepareOverlayLaunch(a, {
       runTool: noRunTool,
+      runner: createScriptedRunner([]),
       checkInputs: okInputs,
       detect: () => Promise.resolve({ status: 'ok', crossover }),
       ensure: () =>
@@ -219,6 +223,7 @@ describe('prepareOverlayLaunch', () => {
     const ensure = jest.fn()
     const r = await prepareOverlayLaunch(a, {
       runTool: noRunTool,
+      runner: createScriptedRunner([]),
       checkInputs: () =>
         Promise.resolve({
           status: 'error',
@@ -235,6 +240,7 @@ describe('prepareOverlayLaunch', () => {
   test('a throwing dep gives a step error, not a rejection', async () => {
     const r = await prepareOverlayLaunch(a, {
       runTool: noRunTool,
+      runner: createScriptedRunner([]),
       checkInputs: okInputs,
       detect: async () => {
         throw new Error('boom')

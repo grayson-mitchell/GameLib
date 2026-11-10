@@ -12,6 +12,7 @@ import type { Stats } from 'fs'
 import { basename, dirname, isAbsolute, join, relative, sep } from 'path'
 
 import type { RunTool } from 'backend/engine/runTool'
+import type { ProcessRunner } from 'backend/process/types'
 import { buildDrmPaths } from './drmPaths'
 import {
   findNtdllPatchRow,
@@ -96,6 +97,8 @@ export type CrossoverAllowed = {
 export type DetectCrossoverDeps = {
   resolveCrossoverBinDir?: () => Promise<string | undefined>
   runTool: RunTool
+  /** Spotlight (mdfind) for the default bin-dir lookup runs through this runner. */
+  runner: Pick<ProcessRunner, 'run'>
   findRow?: (build: string, cleanSha256: string) => NtdllPatchRow | null
   supportedBuilds?: () => string[]
   platform?: NodeJS.Platform
@@ -103,10 +106,12 @@ export type DetectCrossoverDeps = {
 
 export const CX_ROOT_SUFFIX = `${sep}Contents${sep}SharedSupport${sep}CrossOver`
 
-export async function defaultResolveBinDir(): Promise<string | undefined> {
+export async function defaultResolveBinDir(deps: {
+  runner: Pick<ProcessRunner, 'run'>
+}): Promise<string | undefined> {
   try {
     const mod = await import('backend/engine/crossoverLocation')
-    return await mod.resolveCrossoverBinDirAsync()
+    return await mod.resolveCrossoverBinDirAsync({ runner: deps.runner })
   } catch {
     return undefined
   }
@@ -163,7 +168,9 @@ export async function detectAllowedCrossover(
     }
     const binDir =
       opts.crossoverBinDir ??
-      (await (deps.resolveCrossoverBinDir ?? defaultResolveBinDir)())
+      (await (
+        deps.resolveCrossoverBinDir ?? (() => defaultResolveBinDir(deps))
+      )())
     if (!binDir) return fail(`CrossOver not found; supported ${list}`)
     if (!binDir.endsWith(`${CX_ROOT_SUFFIX}${sep}bin`)) {
       return fail(`unexpected CrossOver location; supported ${list}`)

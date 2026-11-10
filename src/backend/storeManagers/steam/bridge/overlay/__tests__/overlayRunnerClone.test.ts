@@ -42,6 +42,7 @@ import {
 } from '../overlayRunnerClone'
 import { buildOverlayPaths } from '../overlayPaths'
 import { at, defined } from '../../../__tests__/fixtures/indexed'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 
 const sha = (b: Buffer | string) => createHash('sha256').update(b).digest('hex')
 const BUILD = '26.3.0.39832'
@@ -187,7 +188,11 @@ describe('detectCrossoverForOverlay', () => {
           appFolder: over.appFolder ? over.appFolder(s.root) : s.appFolder,
           crossoverBinDir: binDir
         },
-        { runTool: s.fake.run, platform: over.platform ?? 'darwin' }
+        {
+          runTool: s.fake.run,
+          runner: createScriptedRunner([]),
+          platform: over.platform ?? 'darwin'
+        }
       )
     }
   }
@@ -219,6 +224,7 @@ describe('detectCrossoverForOverlay', () => {
       { appFolder, crossoverBinDir: inner },
       {
         platform: 'darwin',
+        runner: createScriptedRunner([]),
         runTool: () => Promise.reject(new Error('must not run'))
       }
     )

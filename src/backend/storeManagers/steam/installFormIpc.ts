@@ -25,6 +25,7 @@ import SteamGame from './games'
 import { checkBottleEligibility } from './gameEligibility'
 import { getBridgeRouteVerdict } from './bridgeRouteVerdict'
 import type { ManagerDeps, Stores } from 'backend/services/types'
+import type { ProcessRunner } from 'backend/process/types'
 import type { SteamStoresDeps } from './library/installRoot'
 import { persistBottleWineVersion } from './bottle'
 import { depotSignalCaptured } from './metadataCapture'
@@ -222,7 +223,10 @@ export async function getSteamBottleEligibilityVerdict(
  * never the submitted value.
  */
 export async function persistInstallFormWineVersion(
-  deps: { stores: Pick<Stores, 'wineManager'> },
+  deps: {
+    stores: Pick<Stores, 'wineManager'>
+    runner: Pick<ProcessRunner, 'run'>
+  },
   input: unknown
 ): Promise<{
   status: 'done' | 'error'
@@ -290,9 +294,10 @@ export async function persistInstallFormWineVersion(
   // closed — see this function's own JSDoc for why that degrades safely.
   let detected: WineInstallation[]
   try {
-    detected = await GlobalConfig.get().getAlternativeWine(
-      deps.stores.wineManager
-    )
+    detected = await GlobalConfig.get().getAlternativeWine({
+      wineDownloaderInfoStore: deps.stores.wineManager.wineDownloaderInfoStore,
+      runner: deps.runner
+    })
   } catch (error) {
     logWarning(
       `persistInstallFormWineVersion: could not enumerate detected wine engines, refusing to persist (${String(

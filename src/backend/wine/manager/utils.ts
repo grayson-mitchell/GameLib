@@ -24,6 +24,7 @@ import { GlobalConfig } from '../../config'
 import { join } from 'path'
 import { backendEvents } from 'backend/backend_events'
 import type { Stores } from 'backend/services/types'
+import type { ProcessRunner } from 'backend/process/types'
 
 /** The store slice the wine manager reads (66.1, R1). */
 export interface WineManagerDeps {
@@ -282,7 +283,7 @@ function getInstallDir(release: WineVersionInfo): string {
 }
 
 async function installWineVersion(
-  deps: WineManagerDeps,
+  deps: WineManagerDeps & { runner: Pick<ProcessRunner, 'run'> },
   release: WineVersionInfo,
   onProgress: (status: WineManagerStatus) => void
 ) {
@@ -316,7 +317,8 @@ async function installWineVersion(
       installDir,
       overwrite: release.hasUpdate,
       onProgress: onProgress,
-      abortSignal: abortController.signal
+      abortSignal: abortController.signal,
+      runner: deps.runner
     })
     updatedInfo = {
       ...response.versionInfo,

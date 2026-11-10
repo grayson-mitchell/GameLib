@@ -16,6 +16,7 @@ import {
   LogPrefix
 } from 'backend/logger'
 import type { SpawnAsync } from 'backend/spawnAsync'
+import type { ProcessRunner } from 'backend/process/types'
 import { checkWineBeforeLaunch } from 'backend/utils'
 import { downloadSetupPayload } from './setupDownloads'
 import {
@@ -83,7 +84,11 @@ export type ProvisionBottleResult = {
  * provisioning (the rmSync fallback + recreate still run).
  */
 /** The slice every spawning bottle helper receives (66.1 R5). */
-export type SpawnDeps = { spawnAsync: SpawnAsync }
+export type SpawnDeps = {
+  spawnAsync: SpawnAsync
+  /** The CrossOver Spotlight lookup (mdfind) runs through it (66.2-07). */
+  runner: Pick<ProcessRunner, 'run'>
+}
 
 export async function killBottleWineServer(
   deps: SpawnDeps,
@@ -93,7 +98,10 @@ export async function killBottleWineServer(
 ): Promise<boolean> {
   const binDir =
     knownBinDir ??
-    (await resolveCrossoverBinDirAsync({ hintWineBins: persistedWineBins() }))
+    (await resolveCrossoverBinDirAsync(
+      { runner: deps.runner },
+      { hintWineBins: persistedWineBins() }
+    ))
   if (!binDir) {
     logWarning(
       `killBottleWineServer: no CrossOver install found, skipping wineserver -k for "${bottleName}"`,
@@ -150,6 +158,7 @@ export async function provisionBottle(
     stores: Pick<Stores, 'kvs' | 'wineManager'>
     spawnAsync: SpawnAsync
     commandRunner: Pick<CommandRunner, 'runWineCommand'>
+    runner: Pick<ProcessRunner, 'run'>
   },
   opts?: {
     bottleName?: string
@@ -215,10 +224,13 @@ export async function provisionBottle(
   // CrossOver since uninstalled still short-circuits 'done' (step 3), so the
   // missing-CrossOver error is returned only when a recreate or a create is
   // actually needed.
-  const binDir = await resolveCrossoverBinDirAsync({
-    wineVersion: opts?.wineVersion,
-    hintWineBins: persistedWineBins()
-  })
+  const binDir = await resolveCrossoverBinDirAsync(
+    { runner: deps.runner },
+    {
+      wineVersion: opts?.wineVersion,
+      hintWineBins: persistedWineBins()
+    }
+  )
   const needsCxbottle =
     !isBottleReady(bottleName) ||
     (isBottleProvisioned(bottleName) && bottleWineArch(bottleName) === 'win32')

@@ -112,7 +112,10 @@ export interface LaunchEngineDeps {
   currentPinInstalled(): boolean
   ensurePinned: typeof ensurePinnedEngineReportingStatus
   switchDeps(): Partial<EngineSwitchDeps> &
-    Pick<EngineSwitchDeps, 'killWith' | 'installRemove'>
+    Pick<
+      EngineSwitchDeps,
+      'killWith' | 'installRemove' | 'resolveCrossoverBinDir'
+    >
   prepare: typeof prepareBottleForEngine
   sendStatus(update: {
     appName: string
@@ -133,11 +136,14 @@ export interface LaunchEngineDeps {
 
 const defaultDeps: Omit<
   LaunchEngineDeps,
-  'ensureGameBottle' | 'decisionDeps' | 'switchDeps' | 'readEffective'
+  | 'ensureGameBottle'
+  | 'decisionDeps'
+  | 'switchDeps'
+  | 'readEffective'
+  | 'isCrossoverMissing'
 > = {
   isMac: () => isMac,
   isProvisioned: isBottleProvisioned,
-  isCrossoverMissing: () => isCrossoverMissing(),
   currentPinInstalled: () => isPinnedEngineInstalled(ENGINE_PINS.current),
   ensurePinned: ensurePinnedEngineReportingStatus,
   prepare: prepareBottleForEngine,
@@ -187,6 +193,7 @@ export async function selectEngineForLaunch(
     ...defaultDeps,
     ensureGameBottle: (a) => ensureGameBottle(services, a),
     switchDeps: () => switchServicesFrom(services),
+    isCrossoverMissing: () => isCrossoverMissing({ runner: services.runner }),
     readEffective: (id) =>
       readEngineForGame(id, {
         wineManagerReleases: services.wineManagerReleases
