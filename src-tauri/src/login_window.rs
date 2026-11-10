@@ -15,11 +15,6 @@ pub(crate) use humble_helpers::*;
 mod windows_cdp;
 #[cfg(any(target_os = "macos", windows))]
 pub(crate) use windows_cdp::*;
-// TEMP-DIAG(webview2-humble-deletecookie): debug-build live-gate diagnostics, see the file header for removal.
-#[cfg(windows)]
-mod windows_cookie_diag;
-#[cfg(windows)]
-pub(crate) use windows_cookie_diag::*;
 #[cfg(target_os = "macos")]
 mod pristine_epic;
 #[cfg(target_os = "macos")]

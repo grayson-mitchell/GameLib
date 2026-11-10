@@ -836,15 +836,35 @@ fn remove_window_cookies_windows(
     //     removed it (`issued=1 partitioned=1`, then `after=0`). Hence the CDP
     //     pass for survivors.
     //
-    // The Epic measurement does NOT generalise to "partitioned cookies are the only
-    // `DeleteCookie` survivors". Humble on Windows 11 (2026-11-11): `before=35
-    // after=25 settle_rereads=20`, then `CDP cleanup issued=25 partitioned=2` and
-    // `after=0` -- `DeleteCookie` removed 10 of 35, and 23 of the 25 survivors were
-    // NOT partitioned. The CDP pass is therefore doing most of the clearing on
-    // Humble, not mopping up stragglers. Mechanism still open (debug
-    // `webview2-humble-deletecookie`); in debug builds `windows_cookie_diag`
-    // measures it live (count-only, T-34.4.1-02). Correct this header, and decide
-    // whether CDP should be the primary path, once that run is in.
+    // This single `DeleteCookie` pass is only reliable while NOTHING IS WRITING TO
+    // THE JAR. Humble on Windows 11 (2026-11-11, debug `webview2-humble-deletecookie`)
+    // caught it failing -- `before=31 after=23`, with the CDP pass then doing most
+    // of the clearing (`issued=25 partitioned=2` on the first run) -- and the
+    // failure was not `DeleteCookie`'s:
+    //   - the 23 survivors shared no attribute (survival ~0.74 for every value of
+    //     every dimension: leading dot vs host-only, subdomain depth, Secure,
+    //     SameSite, lifetime) and were scattered across the enumeration order, so
+    //     neither a cookie shape nor a per-batch quota is involved (a later pass
+    //     issued 27 calls and landed all of them);
+    //   - the jar GREW (24 -> 27) over an idle 1.3s while nothing of ours ran, and
+    //     13 of the 23 survivors held a different value than at the pre-delete
+    //     read: something live was re-writing the cookies being deleted;
+    //   - once that went quiet, a second `DeleteCookie` pass on fresh `GetCookies`
+    //     objects removed 26 of 27, the one left being the partitioned cookie.
+    // The writer is inferred (cookie names and domains are never logged) to be the
+    // clear window's own page: the caller had opened it on the live
+    // `www.humblebundle.com`, a window built on an https URL IS a navigation
+    // (`rpc_humble_login_open` returns at `.build()`, mid-load), and Humble's
+    // loading page kept setting its cookies into the shared jar. Epic's clear has
+    // always used a non-resolving host (`COOKIE_HANDLE_ORIGIN`, legendary/user.ts),
+    // which is why its 2026-09-26 measurement above was clean (`before=9 after=1`,
+    // the 1 partitioned). Humble's non-macOS clear now does the same
+    // (`HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN`, humble/constants.ts). So: a caller must
+    // never point this arm's window at the real site and lean on the CDP pass to
+    // mop up -- that is exactly what the live measurement caught. Not separable
+    // from that run: whether `DeleteCookie` on the `GetCookies` handler's own
+    // objects is also racy against a live writer (the fresh-object pass only ran
+    // after the writer had gone quiet).
     //
     // Threading: this arm runs on a spawned worker thread (see the macOS arm's
     // note), so `with_webview` posts the closure to the main thread and returns
@@ -852,14 +872,6 @@ fn remove_window_cookies_windows(
     // services the `GetCookies` completion. The closure never blocks.
     use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2_2;
     use windows::core::{Interface, PCWSTR, PWSTR};
-
-    // TEMP-DIAG(webview2-humble-deletecookie): debug builds only. Read-only snapshot of the jar
-    // before the natural pass, so a later report can say which shapes survived. Count-only.
-    let diag = if cfg!(debug_assertions) {
-        Some(Baseline::capture(window, domain))
-    } else {
-        None
-    };
 
     let (tx, rx) = mpsc_channel::<()>();
     let target_domain = domain.to_string();
@@ -952,20 +964,11 @@ fn remove_window_cookies_windows(
         "[shell] humble_login_clear_cookies: before={before_matching} after={after_matching} settle_rereads={settle_rereads}"
     );
     if after_matching > 0 {
-        // TEMP-DIAG(webview2-humble-deletecookie): debug builds only. Reports what survived
-        // and what each alternative removal path can still remove, BEFORE the CDP pass below,
-        // so that pass then sees only what none of them could.
-        if let Some(diag) = &diag {
-            diag.report_and_experiment(
-                window,
-                domain,
-                count_matching,
-                (before_matching, after_matching, settle_rereads),
-            );
-        }
         // Survivors of `DeleteCookie`: partitioned (CHIPS) cookies, which that API
-        // cannot address (measured on Epic, see this arm's header -- on Humble most
-        // survivors are NOT partitioned, cause under investigation). CDP
+        // cannot address (measured twice: Epic 2026-09-26, and Humble 2026-11-11,
+        // where the one cookie left after repeated `DeleteCookie` passes on a quiet
+        // jar was the partitioned one -- see this arm's header for why a live page
+        // in the clear window can strand far more than that). CDP
         // `Network.deleteCookies` takes the partition key. A CDP failure is logged,
         // not returned -- the re-read below still measures whatever actually
         // happened, and the TS guard fails closed on a residual. Cost: a domain

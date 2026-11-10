@@ -2,7 +2,12 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 
 import { humbleStores } from './humbleStores'
-import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from './constants'
+import { isMac } from 'backend/constants/environment'
+import {
+  HUMBLE_BASE_URL,
+  HUMBLE_LOGIN_URL,
+  HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN
+} from './constants'
 import { getGamekeys } from './adapter'
 import {
   noteSignInSucceeded,
@@ -991,10 +996,24 @@ export class HumbleUser {
       [
         'clearHumbleCookies',
         async () => {
-          const label = await seam.open(HUMBLE_BASE_URL, {
-            visible: false,
-            userAgent: standardBrowserUserAgent()
-          })
+          // The window exists only to hang the app-wide cookie jar off, so on
+          // Windows/Linux it must NOT load Humble: a window built on an https
+          // URL is a navigation (`rpc_humble_login_open` returns at
+          // `.build()`, mid-load), and Humble's loading page keeps re-writing
+          // humblebundle.com cookies into the shared jar while the delete
+          // runs. Measured live on Windows 2026-11-11 (before=31, 23 survived
+          // the first DeleteCookie pass, jar GROWING during an idle watch,
+          // survivors sharing no attribute; a second pass on a quiet jar
+          // removed 26 of 27). See HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN.
+          // macOS keeps the live origin: its eviction path was live-gated
+          // against that window and is unmeasured against this one.
+          const label = await seam.open(
+            isMac ? HUMBLE_BASE_URL : HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN,
+            {
+              visible: false,
+              userAgent: standardBrowserUserAgent()
+            }
+          )
           try {
             // Phase 34.4.1 gap-cycle plan 17 (F-5, item 3(b)): a paired
             // before/after jar census, taken INSIDE this step against the

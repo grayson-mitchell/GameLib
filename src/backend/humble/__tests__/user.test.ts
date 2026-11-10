@@ -56,6 +56,22 @@ jest.mock('backend/platform', () => ({
   session: { fromPartition: mockFromPartition }
 }))
 
+// ── backend/constants/environment mock: `isMac` is switchable per test ──────
+// `disconnect()`'s cookie-clear window origin depends on the platform, and the
+// real `isMac` is the HOST's `process.platform` (CI is ubuntu, the operator's
+// primary box is a Mac), so an unmocked assertion would pass on one and fail on
+// the other. Same shape as legendary's `epicLogoutDomains.test.ts`, and a
+// `defineProperty` for the same reason: an object-literal getter is silently
+// inert under TypeScript's `__assign` spread helper and every branch would
+// measure the real `process.platform`. Defaults to non-macOS.
+let mockIsMac = false
+jest.mock('backend/constants/environment', () => {
+  const actual = jest.requireActual('backend/constants/environment')
+  return Object.defineProperty({ ...actual }, 'isMac', {
+    get: () => mockIsMac
+  })
+})
+
 // ── Logger mock (factory to prevent transitive module load failures) ────────
 const mockLogInfo = jest.fn()
 const mockLogError = jest.fn()
@@ -135,7 +151,11 @@ import {
   COOKIE_POLL_INTERVAL_MS
 } from '../user'
 import { setLoginWindowSeam, type LoginWindowSeam } from '../loginWindowSeam'
-import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from '../constants'
+import {
+  HUMBLE_BASE_URL,
+  HUMBLE_LOGIN_URL,
+  HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN
+} from '../constants'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
 
@@ -2035,7 +2055,12 @@ describe('HumbleUser', () => {
         expect(callOrder).toEqual(['configStore.clear', 'clearCookies'])
       })
 
-      test('opens a HIDDEN window on HUMBLE_BASE_URL and clears cookies scoped to exactly humblebundle.com', async () => {
+      afterEach(() => {
+        mockIsMac = false
+      })
+
+      test('macOS: opens a HIDDEN window on HUMBLE_BASE_URL and clears cookies scoped to exactly humblebundle.com', async () => {
+        mockIsMac = true
         mockSeamOpen.mockResolvedValue('disconnect-window-0')
         mockSeamClearCookies.mockResolvedValue(3)
 
@@ -2049,6 +2074,42 @@ describe('HumbleUser', () => {
           'disconnect-window-0',
           'humblebundle.com'
         )
+      })
+
+      // webview2-humble-deletecookie (live, Windows 2026-11-11): the clear
+      // window is only a handle to the app-wide jar. Built on the live Humble
+      // origin it IS a navigation, and the loading page re-wrote
+      // humblebundle.com cookies while DeleteCookie removed them (23 of 31
+      // survived the first pass). Off macOS it must point at the reserved,
+      // non-resolving host -- the Epic fix (b5b3464bd) for the same class.
+      test('non-macOS: the cookie-clear window is opened on the non-resolving handle origin, NEVER on the live Humble origin', async () => {
+        mockIsMac = false
+        mockSeamOpen.mockResolvedValue('disconnect-window-handle')
+        mockSeamClearCookies.mockResolvedValue(3)
+
+        await HumbleUser.disconnect()
+
+        expect(mockSeamOpen).toHaveBeenCalledWith(
+          HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN,
+          { visible: false, userAgent: standardBrowserUserAgent() }
+        )
+        for (const [url] of mockSeamOpen.mock.calls) {
+          expect(url).not.toContain('humblebundle.com')
+        }
+        // The clear itself stays domain-scoped to Humble and runs on THAT
+        // window's label: only the window's origin changed, not the target.
+        expect(mockSeamClearCookies).toHaveBeenCalledWith(
+          'disconnect-window-handle',
+          'humblebundle.com'
+        )
+      })
+
+      test('the handle origin is a reserved, non-resolving https host (login_window_url_arg rejects any other scheme)', () => {
+        const url = new URL(HUMBLE_COOKIE_CLEAR_HANDLE_ORIGIN)
+        expect(url.protocol).toBe('https:')
+        // RFC 2606 reserved TLD: can never resolve, so the window can never
+        // reach Humble (or anyone else) and seed the jar it is clearing.
+        expect(url.hostname.endsWith('.invalid')).toBe(true)
       })
 
       test('a rejecting clearCookies does not throw out of disconnect(), and the hidden window is still closed', async () => {
