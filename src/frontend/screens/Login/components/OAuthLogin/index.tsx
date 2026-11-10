@@ -1,8 +1,8 @@
-import { useCallback, useContext, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
 import { Dialog, DialogHeader } from 'frontend/components/UI/Dialog'
 import { useSuppressStoreEmbed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useAuthState from 'frontend/state/authState'
 import { getStoreDisplayName } from 'frontend/helpers/storeDisplayName'
 import TauriLoginPanel from '../../../WebView/components/TauriLoginPanel'
 import {
@@ -124,7 +124,7 @@ const DIALOG_PHASES: ReadonlySet<TauriOAuthLoginState['phase']> = new Set([
  * the clicked Accounts-screen tile instead (`Runner/index.tsx`).
  */
 export default function OAuthLogin({ runner, dismiss, onRetry }: Props) {
-  const { completeOAuthLogin } = useContext(ContextProvider)
+  const completeOAuthLogin = useAuthState((s) => s.completeOAuthLogin)
 
   // Acquired directly, mirroring HumbleLogin: the Dialog below (which would
   // otherwise acquire suppression by mounting) is absent for most of this

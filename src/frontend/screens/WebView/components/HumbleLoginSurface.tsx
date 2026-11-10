@@ -1,8 +1,8 @@
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import useAuthState from 'frontend/state/authState'
 import TauriLoginPanel from './TauriLoginPanel'
 import type { TauriOAuthLoginState } from '../useTauriOAuthLogin'
 
@@ -53,7 +53,8 @@ export default function HumbleLoginSurface({
   renderState
 }: Props) {
   const { t: tGamelib } = useTranslation('gamelib')
-  const { humble } = useContext(ContextProvider)
+  const humbleExpired = useAuthState((s) => s.humble.expired)
+  const humbleLogin = useAuthState((s) => s.humbleLogin)
 
   // F-34.4.2-19 fix: `result.status === 'error'`/`'waiting'` used to be silently swallowed
   // here — the promise settled, but nothing told `TauriLoginPanel` (still statically rendering
@@ -75,14 +76,14 @@ export default function HumbleLoginSurface({
     let mounted = true
 
     async function runHumbleLoginWatch() {
-      const result = humble.expired
+      const result = humbleExpired
         ? await window.api.humbleReconnect()
         : await window.api.humbleStartLogin()
       // A late resolution after this surface unmounted must not call back —
       // the user already left it (D-06 silent cancel).
       if (!mounted) return
       if (result.status === 'done') {
-        await humble.login(result)
+        await humbleLogin(result)
         onDone()
       } else if (result.status === 'cancelled') {
         // Quick task 260808-gl6: the user closed the sign-in window. That is how you back
@@ -123,7 +124,7 @@ export default function HumbleLoginSurface({
 
     // A REJECTION (not a resolved `{ status: 'error' }`) used to float away
     // here: `humbleStartLogin` rejects on a sidecar disconnect (this channel is
-    // exempt from the 60s invoke timeout), and `humble.login(result)` can
+    // exempt from the 60s invoke timeout), and `humbleLogin(result)` can
     // throw. State stayed 'idle', neither callback ran, and the Login screen's
     // overlay -- which renders nothing while idle -- left an inert surface
     // with no close button. Route it into the same 'error' phase, carrying the

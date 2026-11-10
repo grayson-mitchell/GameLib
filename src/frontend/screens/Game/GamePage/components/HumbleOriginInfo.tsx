@@ -1,8 +1,7 @@
-import { useContext } from 'react'
 import { isStore } from 'common/storeCapabilities'
 import { useTranslation } from 'react-i18next'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import useAuthState from 'frontend/state/authState'
 import { GameInfo } from 'common/types'
 
 interface Props {
@@ -20,13 +19,13 @@ interface Props {
  */
 const HumbleOriginInfo = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamepage')
-  const { humble } = useContext(ContextProvider)
+  const humbleKeys = useAuthState((s) => s.humble.keys)
 
   if (!isStore(gameInfo, 'steam')) {
     return null
   }
 
-  const matchedKey = humble.keys?.find(
+  const matchedKey = humbleKeys?.find(
     (key) => key.state === 'REDEEMED' && key.steamAppId === gameInfo.app_name
   )
 

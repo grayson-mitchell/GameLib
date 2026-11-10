@@ -59,7 +59,7 @@ describe('WebView humble login watch error/timeout handling (F-34.4.2-19)', () =
 
   it('still handles the done arm unchanged: logs in and calls onDone()', () => {
     expect(watchFn).toContain("result.status === 'done'")
-    expect(watchFn).toContain('await humble.login(result)')
+    expect(watchFn).toContain('await humbleLogin(result)')
     expect(watchFn).toContain('onDone()')
   })
 

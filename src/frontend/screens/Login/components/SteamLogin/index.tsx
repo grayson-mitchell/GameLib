@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Tab, Tabs } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -9,7 +9,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import QRCode from 'react-qr-code'
 import TabPanel from 'frontend/components/UI/TabPanel'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useAuthState from 'frontend/state/authState'
 import { Dialog, DialogHeader } from 'frontend/components/UI/Dialog'
 import './index.scss'
 
@@ -67,7 +67,7 @@ interface Props {
 }
 
 export default function SteamLogin({ dismiss }: Props) {
-  const { steam } = useContext(ContextProvider)
+  const steamLogin = useAuthState((s) => s.steamLogin)
   const closeWindow = () => dismiss()
 
   const [step, setStep] = useState<Step>('checking')
@@ -136,7 +136,7 @@ export default function SteamLogin({ dismiss }: Props) {
       if (poll.status === 'done' && poll.username) {
         clearCredPollInterval()
         setStep('qr-confirmed') // reuse the "completing sign-in" UI
-        await steam.login({ status: 'done', username: poll.username })
+        await steamLogin({ status: 'done', username: poll.username })
         closeWindow()
       } else if (poll.status === 'done') {
         // Authenticated but CM connect still in flight — keep polling for username.
@@ -184,7 +184,7 @@ export default function SteamLogin({ dismiss }: Props) {
         clearPollInterval()
         clearQrRefreshTimer()
         setStep('qr-confirmed')
-        await steam.login({ status: 'done', username: poll.username })
+        await steamLogin({ status: 'done', username: poll.username })
         closeWindow()
       } else if (poll.status === 'done') {
         // QR approved but username not yet populated — the background CM
@@ -273,7 +273,7 @@ export default function SteamLogin({ dismiss }: Props) {
 
     if (result.status === 'done') {
       const userInfo = await window.api.getSteamUserInfo()
-      await steam.login({ status: 'done', username: userInfo?.username })
+      await steamLogin({ status: 'done', username: userInfo?.username })
       closeWindow()
     } else if (result.status === 'guard_required') {
       // Start polling for out-of-band completion (DeviceConfirmation phone-approval path).
@@ -304,7 +304,7 @@ export default function SteamLogin({ dismiss }: Props) {
 
     if (result.status === 'done') {
       const userInfo = await window.api.getSteamUserInfo()
-      await steam.login({ status: 'done', username: userInfo?.username })
+      await steamLogin({ status: 'done', username: userInfo?.username })
       closeWindow()
     } else {
       showError(

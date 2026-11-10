@@ -3,22 +3,23 @@
  *
  * No jsdom / react-test-renderer is installed in this project (see
  * src/frontend/jest.config.js docstring — adding one is a new npm
- * dependency, excluded from executor auto-fix). 'react' (useContext) and
+ * dependency, excluded from executor auto-fix). 'react' (store hooks) and
  * 'react-i18next' (useTranslation) are mocked at the module level so the
  * component can be invoked directly as a plain function; the returned React
  * element's props are inspected without ever needing a DOM/render tree.
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement } from 'react'
 
 import { GameInfo } from 'common/types'
 import { HumbleKey } from 'common/types/humble'
 
-const mockKeys: HumbleKey[] = []
-
-jest.mock('react', () => ({
-  ...jest.requireActual<typeof import('react')>('react'),
-  useContext: () => ({ humble: { keys: mockKeys } })
-}))
+jest.mock('react', () => {
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(jest.requireActual<typeof import('react')>('react'))
+})
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -35,6 +36,12 @@ jest.mock('react-i18next', () => ({
 }))
 
 import HumbleOriginInfo from '../HumbleOriginInfo'
+import useAuthState from 'frontend/state/authState'
+import { resetAllStores } from 'frontend/state/storeKit'
+
+function seedKeys(keys: HumbleKey[]): void {
+  useAuthState.setState((s) => ({ humble: { ...s.humble, keys } }))
+}
 
 function makeGameInfo(overrides: Partial<GameInfo> = {}): GameInfo {
   return {
@@ -69,17 +76,17 @@ type Rendered = ReactElement<{ children: string }> | null
 
 describe('HumbleOriginInfo', () => {
   afterEach(() => {
-    mockKeys.length = 0
+    resetAllStores()
   })
 
   it('renders the annotation with the origin/bundle name for a REDEEMED, AppID-matching Steam key', () => {
-    mockKeys.push(
+    seedKeys([
       makeKey({
         steamAppId: '12345',
         state: 'REDEEMED',
         origin: 'Humble RPG Bundle'
       })
-    )
+    ])
     const element = HumbleOriginInfo({
       gameInfo: makeGameInfo({ app_name: '12345' })
     }) as Rendered
@@ -89,7 +96,7 @@ describe('HumbleOriginInfo', () => {
   })
 
   it('renders nothing when gameInfo.runner is not steam', () => {
-    mockKeys.push(makeKey({ steamAppId: '12345', state: 'REDEEMED' }))
+    seedKeys([makeKey({ steamAppId: '12345', state: 'REDEEMED' })])
     const element = HumbleOriginInfo({
       gameInfo: makeGameInfo({ runner: 'gog', app_name: '12345' })
     }) as Rendered
@@ -98,7 +105,7 @@ describe('HumbleOriginInfo', () => {
   })
 
   it('renders nothing when the only matching-AppID key is NOT REDEEMED (D-40)', () => {
-    mockKeys.push(makeKey({ steamAppId: '12345', state: 'REVEALED' }))
+    seedKeys([makeKey({ steamAppId: '12345', state: 'REVEALED' })])
     const element = HumbleOriginInfo({
       gameInfo: makeGameInfo({ app_name: '12345' })
     }) as Rendered
@@ -107,7 +114,7 @@ describe('HumbleOriginInfo', () => {
   })
 
   it('renders nothing when no key matches this AppID (D-37 no mismatch flag)', () => {
-    mockKeys.push(makeKey({ steamAppId: '99999', state: 'REDEEMED' }))
+    seedKeys([makeKey({ steamAppId: '99999', state: 'REDEEMED' })])
     const element = HumbleOriginInfo({
       gameInfo: makeGameInfo({ app_name: '12345' })
     }) as Rendered

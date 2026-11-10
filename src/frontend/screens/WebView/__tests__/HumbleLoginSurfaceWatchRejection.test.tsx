@@ -7,7 +7,7 @@
  * THE BUG: `void runHumbleLoginWatch()` had no catch. When
  * `window.api.humbleStartLogin()` rejected (a sidecar disconnect -- this
  * channel is exempt from the 60s invoke timeout, so nothing else bounds it)
- * or `humble.login(result)` threw, the state stayed `idle`, neither `onDone`
+ * or `humbleLogin(result)` threw, the state stayed `idle`, neither `onDone`
  * nor `onCancelled` ran, and the Login screen's `HumbleLogin` overlay --
  * which renders NOTHING while idle -- left an inert, close-button-less
  * surface whose only way out was leaving the Login screen.
@@ -16,21 +16,19 @@
  * same way `Humble/Keys/__tests__/index.test.tsx` does it: slot-based
  * `useState`, an effect runner, and the component called as a function.
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactNode } from 'react'
 
 import type { TauriOAuthLoginState } from '../useTauriOAuthLogin'
-
-const mockHumble: {
-  expired: boolean
-  login: jest.Mock
-} = { expired: false, login: jest.fn() }
 
 jest.mock('react', () => {
   const actualReact = jest.requireActual<typeof import('react')>('react')
   let slots: unknown[] = []
   let cursor = 0
-  return {
-    ...actualReact,
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(actualReact, {
     useState: (initial: unknown) => {
       const idx = cursor++
       if (idx >= slots.length) slots[idx] = initial
@@ -45,7 +43,6 @@ jest.mock('react', () => {
         slots[idx] = effect() ?? null
       }
     },
-    useContext: () => ({ humble: mockHumble }),
     __beginRender: () => {
       cursor = 0
     },
@@ -53,7 +50,7 @@ jest.mock('react', () => {
       slots = []
       cursor = 0
     }
-  }
+  } as unknown as Partial<typeof import('react')>)
 })
 
 jest.mock('react-i18next', () => ({
@@ -69,13 +66,16 @@ const mockApi = {
   logInfo: jest.fn(),
   logError: jest.fn()
 }
-;(globalThis as unknown as { window: { api: typeof mockApi } }).window = {
-  api: mockApi
-}
 
 // Imported after the mocks above (textual order -- this project's ts-jest
 // setup does not hoist jest.mock like babel-jest).
 import HumbleLoginSurface from '../components/HumbleLoginSurface'
+import useAuthState from 'frontend/state/authState'
+import { resetAllStores } from 'frontend/state/storeKit'
+
+function setHumbleExpired(expired: boolean): void {
+  useAuthState.setState((s) => ({ humble: { ...s.humble, expired } }))
+}
 
 type Harness = { __beginRender: () => void; __resetMount: () => void }
 const harness = () => jest.requireMock('react') as unknown as Harness
@@ -113,10 +113,13 @@ async function settle(): Promise<{
 
 describe('HumbleLoginSurface login watch -- rejection', () => {
   beforeEach(() => {
+    ;(window as unknown as { api: typeof mockApi }).api = mockApi
     jest.clearAllMocks()
-    mockHumble.expired = false
-    mockHumble.login = jest.fn()
+    setHumbleExpired(false)
+    useAuthState.setState({ humbleLogin: jest.fn() })
   })
+
+  afterEach(() => resetAllStores())
 
   it('a rejected humbleStartLogin settles into phase "error" (so the overlay shows its closable Dialog)', async () => {
     mockApi.humbleStartLogin.mockRejectedValue(new Error('sidecar went away'))
@@ -133,7 +136,9 @@ describe('HumbleLoginSurface login watch -- rejection', () => {
 
   it('a throwing humble.login after a "done" result settles into phase "error", not a silent idle', async () => {
     mockApi.humbleStartLogin.mockResolvedValue({ status: 'done' })
-    mockHumble.login = jest.fn().mockRejectedValue(new Error('login failed'))
+    useAuthState.setState({
+      humbleLogin: jest.fn().mockRejectedValue(new Error('login failed'))
+    })
 
     const { states, onDone } = await settle()
 
@@ -142,7 +147,7 @@ describe('HumbleLoginSurface login watch -- rejection', () => {
   })
 
   it('a rejected humbleReconnect (expired session) takes the same error path', async () => {
-    mockHumble.expired = true
+    setHumbleExpired(true)
     mockApi.humbleReconnect.mockRejectedValue('not an Error')
 
     const { states } = await settle()
@@ -152,7 +157,9 @@ describe('HumbleLoginSurface login watch -- rejection', () => {
 
   it('positive control: a resolved "done" still logs in and calls onDone with no error state', async () => {
     mockApi.humbleStartLogin.mockResolvedValue({ status: 'done' })
-    mockHumble.login = jest.fn().mockResolvedValue(undefined)
+    useAuthState.setState({
+      humbleLogin: jest.fn().mockResolvedValue(undefined)
+    })
 
     const { states, onDone } = await settle()
 

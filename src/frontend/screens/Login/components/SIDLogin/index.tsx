@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Info from '@mui/icons-material/Info'
 import LinkIcon from '@mui/icons-material/Link'
 import PublicIcon from '@mui/icons-material/Public'
@@ -8,7 +8,7 @@ import { loginPage, sidInfoPage } from 'frontend/helpers'
 import { parseEpicAuthCode } from 'frontend/helpers/epicAuthCode'
 import './index.css'
 import { Autorenew } from '@mui/icons-material'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useAuthState from 'frontend/state/authState'
 
 interface Props {
   backdropClick: () => void
@@ -17,7 +17,7 @@ interface Props {
 export default function SIDLogin({ backdropClick }: Props) {
   const epicLoginUrl = 'https://legendary.gl/epiclogin'
 
-  const { epic } = useContext(ContextProvider)
+  const epicLogin = useAuthState((s) => s.epicLogin)
   const { t } = useTranslation('login')
   const { t: tGamelib } = useTranslation('gamelib')
   const [input, setInput] = useState('')
@@ -67,7 +67,7 @@ export default function SIDLogin({ backdropClick }: Props) {
       loading: true,
       error: false
     })
-    await epic.login(sid).then(async (res) => {
+    await epicLogin(sid).then(async (res) => {
       console.log(res)
       if (res === 'done') {
         await window.api.getUserInfo()
