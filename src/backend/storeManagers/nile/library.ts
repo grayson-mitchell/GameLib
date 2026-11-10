@@ -1,5 +1,5 @@
 import type { ManagerDeps } from 'backend/services/types'
-import type { CommandCallRunnerOptions } from 'backend/commandRunner'
+import type { CallRunnerOptions } from 'common/types'
 import JSON5 from 'json5'
 import {
   LogPrefix,
@@ -535,7 +535,7 @@ export default class NileLibraryManager implements LibraryManager {
 
   async runRunnerCommand(
     commandParts: string[],
-    options?: CommandCallRunnerOptions
+    options?: CallRunnerOptions
   ): Promise<ExecResult> {
     if (process.env.CI === 'e2e') {
       return runNileCommandStub(commandParts)

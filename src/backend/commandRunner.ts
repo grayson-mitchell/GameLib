@@ -47,15 +47,6 @@ export interface RunnerProps {
   dir?: string
 }
 
-export type CommandCallRunnerOptions = Omit<CallRunnerOptions, 'onOutput'> & {
-  onOutput?: (output: string, child: ChildHandle) => void
-}
-
-export type CommandWineArgs = Omit<WineCommandArgs, 'options' | 'onSpawn'> & {
-  options?: CommandCallRunnerOptions
-  onSpawn?: (child: ChildHandle) => void
-}
-
 export interface WineCommandResult {
   stderr: string
   stdout: string
@@ -268,7 +259,7 @@ export function createCommandRunner(deps: CommandRunnerDeps) {
     ignoreLogging = false,
     onSpawn,
     resolveOnExit = false
-  }: CommandWineArgs): Promise<WineCommandResult> {
+  }: WineCommandArgs): Promise<WineCommandResult> {
     const settings = gameSettings ? gameSettings : wine.getDefaultSettings()
     const { wineVersion, winePrefix } = settings
 
@@ -421,7 +412,7 @@ export function createCommandRunner(deps: CommandRunnerDeps) {
   async function callRunner(
     commandParts: string[],
     runnerProps: RunnerProps,
-    options: CommandCallRunnerOptions
+    options: CallRunnerOptions
   ): Promise<ExecResult> {
     const appName = appNameFromCommandParts(commandParts, runnerProps.name)
 

@@ -1,5 +1,5 @@
 import type { ManagerDeps } from 'backend/services/types'
-import type { CommandCallRunnerOptions } from 'backend/commandRunner'
+import type { CallRunnerOptions } from 'common/types'
 import { existsSync, mkdirSync, readFileSync, readdirSync } from 'graceful-fs'
 
 import {
@@ -731,7 +731,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
 
   async runRunnerCommand(
     command: LegendaryCommand,
-    options?: CommandCallRunnerOptions
+    options?: CallRunnerOptions
   ): Promise<ExecResult> {
     if (process.env.CI === 'e2e') {
       return runLegendaryCommandStub(command)

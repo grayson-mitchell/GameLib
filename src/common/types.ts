@@ -12,7 +12,6 @@ import { NileInstallInfo, NileInstallPlatform } from './types/nile'
 import type { TrayIconVariant } from './trayIconVariant'
 import type { SignInStore } from './signInState'
 import type { TitleBarOverlay, Rectangle } from 'backend/platform'
-import { ChildProcess } from 'child_process'
 import type { HeroicHowLongToBeatEntry } from 'backend/wiki_game_info/howlongtobeat/utils'
 import type { Path } from 'backend/schemas'
 import type LogWriter from 'backend/logger/log_writer'
@@ -589,13 +588,21 @@ export interface RpcClient {
   destroy(): void
 }
 
+/** The handle shape a spawned child is reported through (structurally the runner's ChildHandle). */
+interface SpawnedChildHandle {
+  readonly pid: number | undefined
+  readonly exitCode: number | null
+  readonly signalCode: NodeJS.Signals | null
+  kill(signal?: NodeJS.Signals): boolean
+}
+
 export interface CallRunnerOptions {
   logMessagePrefix?: string
   logWriters?: LogWriter[]
   logSanitizer?: (line: string) => string
   env?: Record<string, string> | NodeJS.ProcessEnv
   wrappers?: string[]
-  onOutput?: (output: string, child: ChildProcess) => void
+  onOutput?: (output: string, child: SpawnedChildHandle) => void
   abortId?: string
   /**
    * Phase 72 D-13: key the spawned child is recorded under in `trackedChildren`
@@ -845,7 +852,7 @@ export type WineCommandArgs = {
    * child cannot hold the sidecar's event loop open past stdin EOF (quick 261025-rkj WR-01).
    * Omitted by every other caller, whose behaviour is unchanged.
    */
-  onSpawn?: (child: ChildProcess) => void
+  onSpawn?: (child: SpawnedChildHandle) => void
   /**
    * Opt-in: settle on the wine child's `exit` (plus a short drain grace) instead of `close`.
    * `close` waits for every holder of the stdout/stderr pipes to exit, and the wineserver that

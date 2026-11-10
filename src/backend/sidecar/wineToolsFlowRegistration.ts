@@ -81,7 +81,7 @@ import { notify } from '../dialog/dialog'
 import { logDebug, logError, LogPrefix } from '../logger'
 import { backendEvents } from '../backend_events'
 import { t } from 'i18next'
-import type { CommandWineArgs } from 'backend/commandRunner'
+import type { WineCommandArgs } from 'common/types'
 import type {
   CommandRunner,
   Launcher,
@@ -157,7 +157,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   ipcMain.handle(
     'runWineCommand',
     async (_event: unknown, ...args: unknown[]) => {
-      return deps.commandRunner.runWineCommand(args[0] as CommandWineArgs)
+      return deps.commandRunner.runWineCommand(args[0] as WineCommandArgs)
     }
   )
 

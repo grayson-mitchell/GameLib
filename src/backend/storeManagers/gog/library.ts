@@ -1,5 +1,5 @@
 import type { ManagerDeps } from 'backend/services/types'
-import type { CommandCallRunnerOptions } from 'backend/commandRunner'
+import type { CallRunnerOptions } from 'common/types'
 import { sendFrontendMessage } from '../../ipc'
 import axios, { AxiosError, AxiosResponse } from 'axios'
 import { GOGUser } from './user'
@@ -1614,7 +1614,7 @@ export default class GOGLibraryManager implements LibraryManager {
    */
   async runRunnerCommand(
     commandParts: string[],
-    options?: CommandCallRunnerOptions
+    options?: CallRunnerOptions
   ): Promise<ExecResult> {
     if (process.env.CI === 'e2e') {
       return runGogdlCommandStub(commandParts)

@@ -37,7 +37,8 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 const toolsIndexPath = join(__dirname, '..', 'index.ts')
-const launcherPath = join(__dirname, '..', '..', 'launcher.ts')
+// 66.1-24: the emitter moved from launcher.ts to the command runner.
+const launcherPath = join(__dirname, '..', '..', 'commandRunner.ts')
 
 /** Collapses every run of whitespace to a single space -- a whitespace window, not a line. */
 function collapse(source: string): string {

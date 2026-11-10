@@ -10,7 +10,7 @@ import {
   LogPrefix,
   logWarning
 } from 'backend/logger'
-import type { CommandWineArgs } from 'backend/commandRunner'
+import type { WineCommandArgs } from 'common/types'
 import type { GOGManagerDeps } from './library'
 import { engineServicesFrom } from 'backend/services/engineServices'
 import { readFile } from 'node:fs/promises'
@@ -39,7 +39,7 @@ export type SetupDeps = Pick<
  * Automatially executes command properly according to operating system
  *  on Windows pre-appends powershell command to spawn UAC prompt
  */
-async function runSetupCommand(deps: SetupDeps, wineArgs: CommandWineArgs) {
+async function runSetupCommand(deps: SetupDeps, wineArgs: WineCommandArgs) {
   if (isWindows) {
     // Run shell
     const [exe, ...args] = wineArgs.commandParts
