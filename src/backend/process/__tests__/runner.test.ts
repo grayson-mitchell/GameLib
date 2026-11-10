@@ -259,6 +259,80 @@ describe('openDetached', () => {
   })
 })
 
+describe('C-02 WR-01 drain grace and caller capabilities', () => {
+  const GRANDCHILD =
+    "require('child_process').spawn(process.execPath,['-e','setTimeout(()=>{},5000)'],{stdio:'inherit'})"
+
+  it('WR-01 settles after a timeout kill even if a grandchild holds the pipes', async () => {
+    const t0 = Date.now()
+    const r = await runner.run(
+      NODE,
+      ['-e', `${GRANDCHILD};setTimeout(()=>{},10000)`],
+      { timeoutMs: 200 }
+    )
+    expect(Date.now() - t0).toBeLessThan(2000)
+    expect(r.timedOut).toBe(true)
+    expect(r.drainTimedOut).toBe(true)
+  })
+
+  it('WR-01 resolveOn exit settles with the exit code when a grandchild holds the pipes', async () => {
+    const t0 = Date.now()
+    const r = await runner.run(NODE, ['-e', GRANDCHILD], {
+      resolveOn: 'exit',
+      timeoutMs: 10_000
+    })
+    expect(Date.now() - t0).toBeLessThan(2000)
+    expect(r.code).toBe(0)
+    expect(r.drainTimedOut).toBe(true)
+  })
+
+  it('WR-01 resolveOn exit without a grandchild is not flagged', async () => {
+    const r = await runner.run(NODE, ['-e', 'process.stdout.write("ok")'], {
+      resolveOn: 'exit'
+    })
+    expect(r.code).toBe(0)
+    expect(r.drainTimedOut).toBeFalsy()
+  })
+
+  it('WR-01 untracks the child when the drain is cut short', async () => {
+    await runner.run(NODE, ['-e', GRANDCHILD], { resolveOn: 'exit' })
+    expect(runner.killTracked({ runner: 'runner' })).toBe(0)
+  })
+
+  it('opt-out runs without a timeout when a reason is given', async () => {
+    const r = await runner.run(NODE, ['-e', 'setTimeout(()=>{},300)'], {
+      timeout: { none: true, reason: 'installer' }
+    })
+    expect(r).toMatchObject({ code: 0, timedOut: false })
+  })
+
+  it('opt-out rejects an empty reason and a combination with timeoutMs', () => {
+    expect(() =>
+      runner.run(NODE, ['-e', ''], { timeout: { none: true, reason: '  ' } })
+    ).toThrow(/D-10/)
+    expect(() =>
+      runner.run(NODE, ['-e', ''], {
+        timeoutMs: 5,
+        timeout: { none: true, reason: 'x' }
+      })
+    ).toThrow(TypeError)
+  })
+
+  it('handle reports exit state', async () => {
+    let seen: { exitCode: number | null; signalCode: unknown } | undefined
+    let handle: import('../types').ChildHandle | undefined
+    await runner.run(NODE, ['-e', 'process.exit(0)'], {
+      onSpawn: (h) => {
+        handle = h
+        seen = { exitCode: h.exitCode, signalCode: h.signalCode }
+      }
+    })
+    expect(seen).toEqual({ exitCode: null, signalCode: null })
+    expect(handle?.exitCode).toBe(0)
+    expect(handle?.signalCode).toBeNull()
+  })
+})
+
 describe('source shape', () => {
   it('has no shell option and exactly one detached spawn', () => {
     const src = stripSourceComments(
