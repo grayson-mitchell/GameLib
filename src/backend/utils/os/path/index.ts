@@ -1,6 +1,65 @@
-import { spawn } from 'child_process'
+import { accessSync, constants, statSync } from 'fs'
+import { delimiter, isAbsolute, join } from 'path'
 
-const findCommand = process.platform === 'win32' ? 'where' : 'which'
+/**
+ * Pure PATH scan, no child process.
+ *
+ * `which`/`where` is only a PATH lookup, so it is done in-process: that removes the child (and
+ * its missing error listener) and keeps the signature the callers already use. First match only;
+ * the old `where.exe` arm could return several lines joined together.
+ */
+
+function isExecutableFile(p: string, platform: NodeJS.Platform): boolean {
+  try {
+    if (!statSync(p).isFile()) return false
+    if (platform !== 'win32') accessSync(p, constants.X_OK)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function envValue(env: NodeJS.ProcessEnv, key: string): string | undefined {
+  if (env[key] !== undefined) return env[key]
+  const found = Object.keys(env).find((k) => k.toLowerCase() === key)
+  return found === undefined ? undefined : env[found]
+}
+
+/**
+ * Finds an executable on %PATH%/$PATH.
+ * @returns The full path to the first match, or null if none is executable.
+ */
+export function findExecutableOnPath(
+  executable: string,
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+  cwd: string = process.cwd()
+): string | null {
+  const isWin = platform === 'win32'
+  const sep = isWin ? ';' : delimiter
+
+  let names = [executable]
+  if (isWin && !/\.[^\\/.]+$/.test(executable)) {
+    const exts = (envValue(env, 'pathext') ?? '.COM;.EXE;.BAT;.CMD')
+      .split(';')
+      .filter((e) => e !== '')
+    names = exts.map((e) => executable + e)
+  }
+
+  if (isAbsolute(executable)) {
+    return names.find((n) => isExecutableFile(n, platform)) ?? null
+  }
+
+  const dirs = (envValue(env, 'path') ?? '').split(sep).filter((d) => d !== '')
+  if (isWin) dirs.unshift(cwd)
+  for (const dir of dirs) {
+    for (const name of names) {
+      const candidate = join(dir, name)
+      if (isExecutableFile(candidate, platform)) return candidate
+    }
+  }
+  return null
+}
 
 /**
  * Finds an executable on %PATH%/$PATH
@@ -10,22 +69,7 @@ const findCommand = process.platform === 'win32' ? 'where' : 'which'
 async function searchForExecutableOnPath(
   executable: string
 ): Promise<string | null> {
-  return new Promise<string | null>((resolve) => {
-    // no need to check stderr or error
-    // if stdout returns the first path we take this
-    // if nothing is send to stdout we didn't found it
-    // this avoids problems inside steam where "which" calls
-    // throws alot of errors and still find the exectuable.
-    // We also prevent endless waiting when stderr, stdout
-    // and error are never called
-    const child = spawn(findCommand, [executable])
-    child.stdout.on('data', (output: Buffer | string) => {
-      resolve(output.toString().trim())
-    })
-
-    // if we close and not got any data on stdout, we return null
-    child.on('close', () => resolve(null))
-  })
+  return Promise.resolve(findExecutableOnPath(executable))
 }
 
 /**

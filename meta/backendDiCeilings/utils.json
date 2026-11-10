@@ -2,7 +2,6 @@
   "childProcess": {
     "src/backend/utils/helperBinaries/index.ts": 1,
     "src/backend/utils/macArch.ts": 1,
-    "src/backend/utils/os/path/index.ts": 1,
     "src/backend/utils/os/processes/index.ts": 1
   },
   "jestMock": {
