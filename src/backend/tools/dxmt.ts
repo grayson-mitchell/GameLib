@@ -233,7 +233,13 @@ backendEvents.on('releasesInfoReady', async (releasesInfo) => {
   // wine-manager store slice bound at boot (bindDxmtStores). Unbound means no boot ran: nothing to
   // update.
   const wineStores = DxmtStores.bound?.stores.wineManager
-  if (!wineStores) return
+  if (!wineStores) {
+    logWarning(
+      'DXMT: wine-manager stores not bound (no boot ran); skipping the copy update',
+      LogPrefix.ToolInstaller
+    )
+    return
+  }
   const availableWines = wineStores.wineDownloaderInfoStore.get(
     'wine-releases',
     []
