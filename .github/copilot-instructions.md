@@ -41,7 +41,7 @@ Wine/Proton handling is a major subsystem in `src/backend/wine/` and `src/backen
 
 - **Components** live in `src/frontend/components/UI/`, each in its own folder with `index.tsx` + `index.css`/`index.scss`. Re-exported via barrel file.
 - **Screens** in `src/frontend/screens/` (Library, Game, Settings, Login, etc.)
-- **State**: Legacy `GlobalState.tsx` (React Context class component) coexists with newer **Zustand** slices in `uiState.ts`. Prefer Zustand for new state.
+- **State**: **Zustand** domain stores in `src/frontend/state/` (`uiState`, `settingsState`, `downloadsState`, `authState`, `libraryState`), each built with `storeKit.bindStoreHooks`. Boot listeners and post-mount boot live in `initStateSubscriptions.ts`, triggered from `index.tsx` and `BootSequence.tsx`. There is no React Context for app state: read it with the store hooks, and use the narrowest selector you can.
 - **Styling**: Plain CSS/SCSS imports (no CSS Modules). Use the spacing system (`--space-*`) and text scale variables from the design system (see `doc/frontend_design_system.md`).
 - **Path aliases**: Import as `'backend/...'`, `'frontend/...'`, `'common/...'` — never use deep relative paths across layers.
 
