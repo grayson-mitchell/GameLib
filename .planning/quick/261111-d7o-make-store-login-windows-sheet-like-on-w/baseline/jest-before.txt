@@ -1,0 +1,20 @@
+PASS Backend src/backend/__tests__/sidecarShutdownFlagSource.test.ts
+PASS Backend src/backend/scanners/__tests__/scanChannelParity.test.ts
+PASS Backend src/backend/__tests__/capabilitiesDefault.test.ts
+PASS Backend src/backend/__tests__/keyringDiagPersistence.test.ts
+PASS Backend src/backend/__tests__/quitTeardownWiring.test.ts
+PASS Backend src/backend/__tests__/dialogOptionForwarding.test.ts
+PASS Backend src/backend/signInProbe/__tests__/pass.test.ts
+PASS Backend src/backend/__tests__/loginChromeCssInjection.test.ts
+PASS Backend src/backend/__tests__/abandonedInvokeAttribution.test.ts
+PASS Backend src/backend/sidecar/__tests__/keyringTokenStore.test.ts
+PASS Backend src/backend/__tests__/depotChannelParity.test.ts
+PASS Backend src/backend/__tests__/shellDiagPersistence.test.ts
+PASS Backend src/backend/storeManagers/legendary/__tests__/epicLogoutDomains.test.ts
+PASS Backend src/backend/__tests__/longRunningChannels.test.ts
+FAIL Backend src/backend/sidecar/__tests__/appRootResolution.test.ts
+PASS Backend src/backend/storeManagers/steam/__tests__/steamStartupKeyringDeferral.test.ts
+FAIL Backend src/backend/sidecar/__tests__/shortcutsFlows.test.ts
+PASS Backend src/backend/sidecar/__tests__/steamFocusRefreshWire.test.ts (5.147 s)
+FAIL Backend src/backend/__tests__/tauriShellSource.test.ts (5.592 s)
+Tests:       3 failed, 4 skipped, 650 passed, 657 total

@@ -1,0 +1,2 @@
+[shell] send-trace: write_frame FAILED for 'brokentest relay_commands::relay_allow_list_tests::ipc_contract_relay_allows_renderer_channel ... ': okbroken pipe
+test result: ok. 427 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.14s
