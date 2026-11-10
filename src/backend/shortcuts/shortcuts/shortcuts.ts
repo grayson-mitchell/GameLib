@@ -33,7 +33,9 @@ import { readWindowsShellFolder } from '../../sidecar/knownFolders'
  * On macOS one .app is written in ~/Applications (start menu / menu add, or whenever
  * addDesktopShortcuts is on) and, when addDesktopShortcuts is on, ~/Desktop gets a symlink to that
  * bundle, so macOS Apps lists the game once.
- * Rejects if any requested shortcut could not be written (after trying all of them).
+ * Rejects if any requested shortcut could not be written (after trying all of them). On win32 a
+ * Desktop folder the registry could not resolve counts as a failed Desktop shortcut (the Start Menu
+ * .lnk is still written); it is never guessed.
  * @async
  * @public
  */
@@ -61,7 +63,9 @@ async function addShortcuts(
     gameInfo.title,
     await windowsDesktopDir(deps)
   )
-  if (!desktopFile || !menuFile) {
+  // Only win32 can lack a Desktop path (its registry lookup failed); linux and darwin always get
+  // both, so their early return keeps today's semantics.
+  if (!menuFile || (!desktopFile && process.platform !== 'win32')) {
     return
   }
 
@@ -102,7 +106,7 @@ Type=Application
 ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
 `
 
-      if (addDesktopShortcuts || fromMenu) {
+      if ((addDesktopShortcuts || fromMenu) && desktopFile) {
         //777 = -rwxrwxrwx
         await recordWrite(desktopFile, () =>
           writeFile(desktopFile, shortcut, { mode: 0o777 })
@@ -142,7 +146,17 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
         if (!result.ok) throw new Error(result.error)
       }
       if (addDesktopShortcuts || fromMenu) {
-        await recordWrite(desktopFile, () => writeLnk(desktopFile))
+        if (desktopFile) {
+          await recordWrite(desktopFile, () => writeLnk(desktopFile))
+        } else {
+          // No registry Desktop and no guess (quick 261111-aq4): record the Desktop .lnk as
+          // not written so the caller rejects instead of announcing it. The Start Menu .lnk
+          // below is still attempted.
+          const reason =
+            'the Windows Desktop folder could not be read from the registry (User Shell Folders "Desktop"), so no Desktop shortcut was written'
+          logError([`Could not write shortcut: ${reason}`], LogPrefix.Backend)
+          failures.push(`Desktop: ${reason}`)
+        }
       }
 
       if (addStartMenuShortcuts || fromMenu) {
@@ -161,7 +175,7 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
           generateMacOsApp(deps, gameInfo, menuFile)
         )
       }
-      if (addDesktopShortcuts) {
+      if (addDesktopShortcuts && desktopFile) {
         await recordWrite(desktopFile, async () => {
           if (!bundleWritten) {
             throw new Error(`not linked: ${menuFile} was not written`)
@@ -188,7 +202,8 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
  * (`storeManagers/gog/games.ts`, `legendary/games.ts`, `nile/games.ts`) and
  * `sideload/games.ts` calls it un-awaited, so a new rejection would fail an uninstall over a stale
  * shortcut, or surface as an unhandled rejection. The sidecar reads the outcome from the disk
- * instead.
+ * instead. On win32 with no registry Desktop folder only the Start Menu .lnk is removed, and a
+ * warning says the Desktop one was not looked for.
  * @async
  * @public
  */
@@ -246,6 +261,13 @@ async function removeShortcuts(
       () => unlink(desktopFile),
       'Desktop shortcut removed'
     )
+  } else if (process.platform === 'win32') {
+    // No registry Desktop and no guess (quick 261111-aq4): a Desktop shortcut for this title, if
+    // there is one, stays. Never rejects.
+    logWarning(
+      `The Windows Desktop folder could not be read from the registry (User Shell Folders "Desktop"), so a Desktop shortcut for ${gameInfo.title} (if any) was not removed`,
+      LogPrefix.Backend
+    )
   }
 
   if (menuFile) {
@@ -259,8 +281,8 @@ async function removeShortcuts(
 
 /**
  * The redirected Desktop folder on win32 (OneDrive, a user's own "Move"), read from the registry;
- * undefined elsewhere or when it cannot be read, so `shortcutFiles` falls back to
- * `app.getPath('desktop')`.
+ * undefined elsewhere or when it cannot be read. On win32 undefined means "no Desktop path":
+ * `shortcutFiles` never falls back to `app.getPath('desktop')` (quick 261111-aq4).
  */
 async function windowsDesktopDir(
   deps: Pick<ShortcutsDeps, 'runner'>
@@ -282,7 +304,11 @@ function shortcutFiles(gameTitle: string, windowsDesktop?: string) {
       break
     }
     case 'win32': {
-      desktopFile = `${windowsDesktop ?? app.getPath('desktop')}\\${gameTitle}.lnk`
+      // No windowsDesktop means the registry could not answer: there is no Desktop path (never a
+      // guessed `<home>\Desktop`, which does not exist on a OneDrive-redirected profile).
+      desktopFile = windowsDesktop
+        ? `${windowsDesktop}\\${gameTitle}.lnk`
+        : undefined
       menuFile = `${app.getPath(
         'appData'
       )}\\Microsoft\\Windows\\Start Menu\\Programs\\${gameTitle}.lnk`

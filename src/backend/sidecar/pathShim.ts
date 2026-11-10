@@ -89,16 +89,18 @@ export function getPath(name: string): string {
       // here: it uses join(userHome, 'Desktop') directly, so a test that overrides
       // process.platform gets a deterministic path. The darwin arm below equals it and exists
       // for correctness (Electron's real app.getPath('desktop') resolves it there too).
-      // Live call sites: shortcuts.ts shortcutFiles (linux and win32).
-      // linux honours the user's real folder (`user-dirs.dirs`) via `knownFolders.ts`; win32 returns
-      // ~/Desktop here and its callers resolve the registry folder themselves (async).
+      // Live call site: shortcuts.ts shortcutFiles' linux arm only.
+      // linux honours the user's real folder (`user-dirs.dirs`) via `knownFolders.ts`. win32 never
+      // reaches this name: its Desktop is a registry known folder, read async by shortcuts.ts.
       switch (platform) {
         case 'darwin':
           return join(homedir(), 'Desktop')
         case 'win32':
-          // Sync getPath cannot await the registry: win32 callers that need the redirected
-          // folder await readWindowsShellFolder(deps, 'Desktop') first (shortcuts.ts).
-          return join(homedir(), 'Desktop')
+          // No guessed `<home>\Desktop`: on a OneDrive-redirected profile that folder does not
+          // exist (quick 261111-aq4). Sync getPath cannot await the registry, so say so loudly.
+          throw new Error(
+            `[sidecar/pathShim] getPath('desktop') is not available synchronously on win32 — the Desktop is a registry known folder (User Shell Folders, often redirected to OneDrive); await readWindowsShellFolder(deps, 'Desktop') instead`
+          )
         default:
           return (
             env.XDG_DESKTOP_DIR ||

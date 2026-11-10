@@ -113,11 +113,17 @@ describe('sidecar/pathShim getPath()', () => {
 
   describe('desktop and documents — redirected-home resolution (D-09)', () => {
     it('desktop resolves to an absolute path ending in Desktop, under the redirected home', () => {
-      const desktop = getPath('desktop')
-      expect(desktop.endsWith('Desktop')).toBe(true)
-      expect(desktop.startsWith(homedir())).toBe(true)
-      expect(desktop).not.toBe(realHomeAtSetup)
-      expect(desktop.startsWith(realHomeAtSetup)).toBe(false)
+      // Pinned to linux, CI's own arm: on a win32 host the shim throws for this name (261111-aq4).
+      const originalPlatform = overrideProcessPlatform('linux')
+      try {
+        const desktop = getPath('desktop')
+        expect(desktop.endsWith('Desktop')).toBe(true)
+        expect(desktop.startsWith(homedir())).toBe(true)
+        expect(desktop).not.toBe(realHomeAtSetup)
+        expect(desktop.startsWith(realHomeAtSetup)).toBe(false)
+      } finally {
+        overrideProcessPlatform(originalPlatform)
+      }
     })
 
     it('documents resolves to an absolute path ending in Documents, under the redirected home', () => {
@@ -128,12 +134,20 @@ describe('sidecar/pathShim getPath()', () => {
       expect(documents.startsWith(realHomeAtSetup)).toBe(false)
     })
 
-    it('desktop resolves under Desktop on win32 too', () => {
+    it('desktop throws on win32: the Desktop is a registry known folder, never a guessed homedir()/Desktop (261111-aq4)', () => {
       const originalPlatform = overrideProcessPlatform('win32')
       try {
-        const desktop = getPath('desktop')
-        expect(desktop.endsWith('Desktop')).toBe(true)
-        expect(desktop.startsWith(homedir())).toBe(true)
+        expect(() => getPath('desktop')).toThrow(/desktop/)
+        expect(() => getPath('desktop')).toThrow(/readWindowsShellFolder/)
+      } finally {
+        overrideProcessPlatform(originalPlatform)
+      }
+    })
+
+    it('desktop still resolves to homedir()/Desktop on darwin (control: the platform override reaches the shim)', () => {
+      const originalPlatform = overrideProcessPlatform('darwin')
+      try {
+        expect(getPath('desktop')).toBe(join(homedir(), 'Desktop'))
       } finally {
         overrideProcessPlatform(originalPlatform)
       }
@@ -216,10 +230,10 @@ describe('sidecar/pathShim getPath()', () => {
       }
     })
 
-    it('win32: the sync shim returns the homedir fallbacks; the registry folder is resolved by the async callers', () => {
+    it('win32: the sync shim returns no homedir fallback; the registry folder is resolved by the async callers', () => {
       const originalPlatform = overrideProcessPlatform('win32')
       try {
-        expect(getPath('desktop')).toBe(join(homedir(), 'Desktop'))
+        expect(() => getPath('desktop')).toThrow(/readWindowsShellFolder/)
         expect(getPath('documents')).toBe(join(homedir(), 'Documents'))
       } finally {
         overrideProcessPlatform(originalPlatform)
