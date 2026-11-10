@@ -4,13 +4,13 @@ milestone: v0.9
 milestone_name: Steam Bridge & Engine
 status: executing
 stopped_at: Phase 69 context gathered
-last_updated: "2026-11-10T06:50:38.358Z"
+last_updated: "2026-11-10T07:11:34.565Z"
 last_activity: 2026-11-10
 progress:
   total_phases: 18
   completed_phases: 11
   total_plans: 240
-  completed_plans: 234
+  completed_plans: 235
   percent: 61
 ---
 
@@ -250,6 +250,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 73 P09 | 55min | 2 tasks | 4 files |
 | Phase 66 P02 | 40min | 2 tasks | 50 files |
 | Phase 69 P02 | 20m | 3 tasks | 45 files |
+| Phase 66.1 P23 | 2h | 2 tasks | 49 files |
 
 ## Accumulated Context
 
@@ -397,6 +398,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 73]: 73-09: failed/cancelled files drain in-flight chunk tasks (spawn_blocking is not abortable) so nothing writes after run_job returns; ChunkSource trait abstracts Fetcher for tests; non-install modes error until 73-10
 - [Phase 73]: 73-04: Mach-O probe ported from machO.ts (gamelib-scan not reused); containment lexical; case probe stat-based per TS
 - [Phase 66]: 66-02: logger/index.ts sanctioned as logger-sink (moduleState 2); rust-overlap table empty
+- [Phase 66.1]: [66.1-23] Intended kills are marked by the tracked registry (RunResult.killedByUs) and read as abort by commandRunner; BootServices gains runner
 
 ### Pending Todos
 
@@ -686,7 +688,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-11-10T06:50:38.350Z
+Last session: 2026-11-10T07:11:23.425Z
 Stopped at: Phase 69 context gathered
 Resume file: None
 
