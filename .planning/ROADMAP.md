@@ -613,14 +613,14 @@ Plans:
 **Goal:** D-15 step 2 of Phase 66 (decisions in `66-CONTEXT.md`). Nothing is constructed at import time. A stores factory replaces the 16 `*/stores.ts` modules and `key_value_stores.ts`. `createStoreManagers` builds the library and game manager classes (gog, legendary, nile, steam, sideload) with constructor deps at boot (D-02), and the 46 non-test consumers of `libraryManagerMap`/`gameManagerMap`/`storeLaunchHooks` receive them. The 25 `sidecar/*FlowRegistration.ts` files take narrow slices (D-01). In `launcher.ts`, `callRunner`, `runWineCommand`, the gamescope probe and script spawns become runner callers, pinned by characterization tests first. `utils.ts` `spawnAsync` becomes a thin runner caller and `handleExit` calls the runner's teardown. `trackedChildren.ts` and `longLivedChildren.ts` are deleted, with comet and the bridge `helperSpawn` moving to `spawnLongLived` (D-10, D-11). Ceilings drop in the same commits (D-16). About 16–18 plans.
 **Requirements**: TBD
 **Depends on:** Phase 66
-**Plans:** 1/28 plans executed
+**Plans:** 2/28 plans executed
 
 Plans:
 
 **Wave 1**
 
 - [x] 66.1-01-PLAN.md — runner C-02 fixes (WR-01 drain grace, WR-02 pin, WR-03 killPid/maxBuffer), timeout opt-out, ChildHandle exit state, scripted-runner capabilities
-- [ ] 66.1-02-PLAN.md — launcher Layer-1 characterization + pure buildGameScopeCommand
+- [x] 66.1-02-PLAN.md — launcher Layer-1 characterization + pure buildGameScopeCommand
 - [ ] 66.1-03-PLAN.md — 'register-handlers' boot step, C-03 (ctx.paths.userData), C-04 (late-log leak)
 
 **Wave 2** *(blocked on Wave 1 completion)*
