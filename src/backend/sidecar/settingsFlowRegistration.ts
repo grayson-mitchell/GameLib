@@ -96,6 +96,7 @@ import { hasExecutable } from '../utils/os/path'
 import { isFlatpak } from '../constants/environment'
 import { gamesConfigPath } from '../constants/paths'
 import type { AppSettings } from 'common/types'
+import type { Stores } from '../services/types'
 
 /**
  * WR-01 (Phase 31 Plan 04) path-containment guard for the per-game write
@@ -122,7 +123,9 @@ function isContainedGameConfig(appName: string): boolean {
  * imports above; the caller decides when registration onto the handler
  * registry happens.
  */
-export function registerSettingsFlows(): void {
+export function registerSettingsFlows(deps: {
+  stores: Pick<Stores, 'kvs'>
+}): void {
   ipcMain.handle('requestAppSettings', async () =>
     GlobalConfig.get().getSettings()
   )
@@ -183,7 +186,11 @@ export function registerSettingsFlows(): void {
       return
     }
     if (appName === 'default') {
-      GlobalConfig.get().setSetting(key as keyof AppSettings, value)
+      GlobalConfig.get().setSetting(
+        key as keyof AppSettings,
+        value,
+        deps.stores.kvs
+      )
     } else {
       // WR-01: drop a path-escaping appName before it reaches
       // `GameConfig.get(appName)` (which joins appName into a filesystem
@@ -237,7 +244,7 @@ export function registerSettingsFlows(): void {
       >
       safeConfig = rest as Partial<AppSettings>
     }
-    return writeConfig(appName as string, safeConfig)
+    return writeConfig(deps, appName as string, safeConfig)
   })
 
   // ── GENERIC READS (Phase 31 Plan 01, REQ-31-01) ────────────────────────────

@@ -19,6 +19,7 @@ import { tmpdir } from 'os'
 import { dirname, sep } from 'path'
 import { GlobalConfig } from 'backend/config'
 import { configPath } from 'backend/constants/paths'
+import { configStore } from 'backend/constants/key_value_stores'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
 import { __resetSignInEpochsForTests } from '../sessionEpoch'
@@ -110,7 +111,9 @@ describe('T-49-25: a dismiss persisted during a running pass survives it', () =>
     )
 
     // The user dismisses the GOG notice while the probe is still in flight.
-    GlobalConfig.get().setSetting('dismissedSignInNotices', ['gog'])
+    GlobalConfig.get().setSetting('dismissedSignInNotices', ['gog'], {
+      configStore
+    })
     gate.resolve('expired')
     await pass
 
@@ -129,13 +132,17 @@ describe('T-49-25: a dismiss persisted during a running pass survives it', () =>
           // AppSettings from its stale view when the probe settles.
           probe: async () => {
             await gate.promise
-            GlobalConfig.get().setSetting('dismissedSignInNotices', [])
+            GlobalConfig.get().setSetting('dismissedSignInNotices', [], {
+              configStore
+            })
             return 'expired'
           }
         }
       })
     )
-    GlobalConfig.get().setSetting('dismissedSignInNotices', ['gog'])
+    GlobalConfig.get().setSetting('dismissedSignInNotices', ['gog'], {
+      configStore
+    })
     gate.resolve('expired')
     await pass
 

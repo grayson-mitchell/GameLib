@@ -25,6 +25,10 @@ import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { probeNileSession } from 'backend/signInProbe/runnerProbes'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
 import { NileUser } from '../user'
+import type { ClearCacheDeps } from 'backend/utils'
+
+// `clearCache` is mocked in this file, so the cache stores are never read.
+const clearDeps = {} as unknown as ClearCacheDeps
 
 jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),
@@ -215,7 +219,7 @@ describe('Amazon: sign-in success and logout clear the flag', () => {
     const epochBefore = captureSignInEpoch('nile')
     armRunner([])
 
-    await NileUser.logout()
+    await NileUser.logout(clearDeps)
 
     expect(flag.data.has('expired')).toBe(false)
     expect(getSignInProbeOutcomes().nile).toBeUndefined()

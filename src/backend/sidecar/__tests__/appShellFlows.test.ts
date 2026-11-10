@@ -488,7 +488,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
     expect(mockedI18nextChangeLanguage).toHaveBeenCalledWith('fr')
     expect(mockedGameInfoStoreClear).toHaveBeenCalledTimes(1)
-    expect(setSetting).toHaveBeenCalledWith('language', 'fr')
+    expect(setSetting).toHaveBeenCalledWith('language', 'fr', expect.anything())
     expect(emitSpy).toHaveBeenCalledWith('languageChanged')
 
     emitSpy.mockRestore()
@@ -1113,7 +1113,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
         isolatedModule.registerAppShellFlows({
-          downloadQueue: downloadQueueStub
+          downloadQueue: downloadQueueStub,
+          stores: {} as never
         })
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
@@ -1187,7 +1188,10 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { registerAppShellFlows } = require('../appShellFlowRegistration')
-        registerAppShellFlows({ downloadQueue: downloadQueueStub })
+        registerAppShellFlows({
+          downloadQueue: downloadQueueStub,
+          stores: {} as never
+        })
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
         const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1250,7 +1254,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           }
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           require('../appShellFlowRegistration').registerAppShellFlows({
-            downloadQueue: downloadQueueStub
+            downloadQueue: downloadQueueStub,
+            stores: {} as never
           })
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           const platform = require('../../platform')
@@ -1362,7 +1367,10 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           const flowRegModule = require('../appShellFlowRegistration')
           const { registerAppShellFlows } = flowRegModule
-          registerAppShellFlows({ downloadQueue: downloadQueueStub })
+          registerAppShellFlows({
+            downloadQueue: downloadQueueStub,
+            stores: {} as never
+          })
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           const isolatedPlatform = require('../../platform')
           const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1458,7 +1466,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
   // 11 tests above: `frontendReadyBootWorkDone` is module-scoped and must not
   // already be flipped by an earlier test in this shared registration.
   describe('260922-v2e: detectVCRedist wiring', () => {
-    it('is called exactly once, with no arguments, on a single frontendReady delivery into an isolated registration', async () => {
+    it('is called exactly once, with only the deps slice, on a single frontendReady delivery into an isolated registration', async () => {
       let isolatedDetectVCRedist!: jest.Mock
       let frontendReadyListener!: () => void
 
@@ -1488,7 +1496,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
         isolatedModule.registerAppShellFlows({
-          downloadQueue: downloadQueueStub
+          downloadQueue: downloadQueueStub,
+          stores: {} as never
         })
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
@@ -1502,7 +1511,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         await flush()
 
         expect(isolatedDetectVCRedist).toHaveBeenCalledTimes(1)
-        expect(isolatedDetectVCRedist).toHaveBeenCalledWith()
+        expect(isolatedDetectVCRedist).toHaveBeenCalledWith(
+          expect.objectContaining({ stores: expect.anything() })
+        )
       } finally {
         jest.useRealTimers()
       }
@@ -1536,7 +1547,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
         isolatedModule.registerAppShellFlows({
-          downloadQueue: downloadQueueStub
+          downloadQueue: downloadQueueStub,
+          stores: {} as never
         })
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
@@ -1591,7 +1603,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
         isolatedModule.registerAppShellFlows({
-          downloadQueue: downloadQueueStub
+          downloadQueue: downloadQueueStub,
+          stores: {} as never
         })
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
@@ -1810,7 +1823,10 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // Inside a fresh-registry scope: a static import would resolve against the shared registry.
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { registerAppShellFlows } = require('../appShellFlowRegistration')
-        registerAppShellFlows({ downloadQueue: downloadQueueStub })
+        registerAppShellFlows({
+          downloadQueue: downloadQueueStub,
+          stores: {} as never
+        })
         jest.runAllTimers()
 
         expect(isolatedRequestRustInvoke).toHaveBeenCalledTimes(1)
@@ -1845,7 +1861,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     await flush()
 
     expect(mockedGameInfoStoreClear).toHaveBeenCalledTimes(1)
-    expect(setSetting).toHaveBeenCalledWith('language', 'de')
+    expect(setSetting).toHaveBeenCalledWith('language', 'de', expect.anything())
     expect(emitSpy).toHaveBeenCalledWith('languageChanged')
 
     writeInvoke(input, 'health-after-change-lang-fail', 'health', [])
@@ -1882,7 +1898,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     await flush()
 
     expect(mockedGameInfoStoreClear).toHaveBeenCalledTimes(1)
-    expect(setSetting).toHaveBeenCalledWith('language', 'pt')
+    expect(setSetting).toHaveBeenCalledWith('language', 'pt', expect.anything())
     expect(emitSpy).toHaveBeenCalledWith('languageChanged')
 
     writeInvoke(input, 'health-after-change-lang-throw', 'health', [])

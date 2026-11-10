@@ -86,7 +86,8 @@ import type {
   CommandRunner,
   Launcher,
   SpawnAsync,
-  StoreManagers
+  StoreManagers,
+  Stores
 } from 'backend/services/types'
 import type {
   Runner,
@@ -101,6 +102,7 @@ export interface WineToolsFlowDeps {
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
   launcher: Pick<Launcher, 'validWine' | 'setupEnvVars' | 'setupWineEnvVars'>
   spawnAsync: SpawnAsync
+  stores: Pick<Stores, 'wineManager'>
 }
 
 /**
@@ -161,7 +163,7 @@ export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
 
   // ── Wine probe pair (main.ts:973, main.ts:1532) ─────────────────────────────────────────────
   ipcMain.handle('getAlternativeWine', async () => {
-    return GlobalConfig.get().getAlternativeWine()
+    return GlobalConfig.get().getAlternativeWine(deps.stores.wineManager)
   })
 
   ipcMain.handle(

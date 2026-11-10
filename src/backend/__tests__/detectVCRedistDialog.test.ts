@@ -43,6 +43,11 @@ import { detectVCRedist, VC_REDIST_PROBE_TIMEOUT_MS } from '../utils'
 import { logWarning, logError, logInfo } from '../logger'
 import { configStore } from '../constants/key_value_stores'
 import type { ButtonOptions } from 'common/types'
+import { createTestStores } from 'backend/testUtils/testServices'
+
+const vcDeps = {
+  stores: createTestStores({ kvs: { configStore } as never })
+}
 
 const mockedSpawn = spawn as unknown as jest.Mock
 const mockedShowDialogBoxModalAuto = showDialogBoxModalAuto as jest.Mock
@@ -78,7 +83,7 @@ describe('backend/utils.ts: detectVCRedist (260919-sch)', () => {
     const child = makeStubChild()
     mockedSpawn.mockReturnValue(child)
 
-    detectVCRedist()
+    detectVCRedist(vcDeps)
 
     // Feed fewer than 4 "Microsoft Visual C++ 2022" lines so the function
     // treats the runtime as not (fully) installed.
@@ -106,7 +111,7 @@ describe('backend/utils.ts: detectVCRedist (260919-sch)', () => {
     const child = makeStubChild()
     mockedSpawn.mockReturnValue(child)
 
-    detectVCRedist()
+    detectVCRedist(vcDeps)
 
     for (let i = 0; i < 4; i++) {
       child.stdout.emit('data', 'Microsoft Visual C++ 2022 X86 Additional\n')
@@ -138,7 +143,7 @@ describe('backend/utils.ts: detectVCRedist bounded probe (260922-v2e)', () => {
     const child = makeStubChild()
     mockedSpawn.mockReturnValue(child)
 
-    detectVCRedist()
+    detectVCRedist(vcDeps)
 
     expect(mockedSpawn).toHaveBeenCalledTimes(1)
     const [command, argv, options] = mockedSpawn.mock.calls[0]
@@ -159,7 +164,7 @@ describe('backend/utils.ts: detectVCRedist bounded probe (260922-v2e)', () => {
     const child = makeStubChild()
     mockedSpawn.mockReturnValue(child)
 
-    detectVCRedist()
+    detectVCRedist(vcDeps)
 
     // Zero matching lines fed before the kill -- if the signal branch were
     // missing, `code === null` is falsy and the function would fall through
@@ -180,7 +185,7 @@ describe('backend/utils.ts: detectVCRedist bounded probe (260922-v2e)', () => {
     const child = makeStubChild()
     mockedSpawn.mockReturnValue(child)
 
-    detectVCRedist()
+    detectVCRedist(vcDeps)
 
     child.stderr.emit('data', 'access denied\n')
     child.emit('close', 1, null)
@@ -193,7 +198,7 @@ describe('backend/utils.ts: detectVCRedist bounded probe (260922-v2e)', () => {
     const child = makeStubChild()
     mockedSpawn.mockReturnValue(child)
 
-    detectVCRedist()
+    detectVCRedist(vcDeps)
 
     for (let i = 0; i < 4; i++) {
       child.stdout.emit('data', 'Microsoft Visual C++ 2022 X86 Additional\n')
@@ -212,7 +217,7 @@ describe('backend/utils.ts: detectVCRedist bounded probe (260922-v2e)', () => {
   it('skips the probe entirely when skipVcRuntime is set, and logs why', () => {
     ;(configStore.get as jest.Mock).mockReturnValue(true)
 
-    detectVCRedist()
+    detectVCRedist(vcDeps)
 
     expect(mockedSpawn).not.toHaveBeenCalled()
     expect(mockedLogInfo).toHaveBeenCalledTimes(1)

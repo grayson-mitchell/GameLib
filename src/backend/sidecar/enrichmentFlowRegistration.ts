@@ -177,11 +177,12 @@ import * as SteamGridDB from '../steamgrid/utils'
 import { getGogDiscounts } from '../discounts/fetchDiscounts'
 import { logError, logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
-import type { StoreManagers } from 'backend/services/types'
+import type { StoreManagers, Stores } from 'backend/services/types'
 
 /** Narrow slice (66.1 D-01): library managers for game lookup. */
 export interface EnrichmentFlowDeps {
   managers: Pick<StoreManagers, 'library'>
+  stores: Pick<Stores, 'kvs'>
 }
 import type { CatalogLocaleSettings } from 'common/types/discounts'
 
@@ -302,7 +303,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // Imports ONLY removeRecentGame from recent_games.ts — not
   // getRecentGames/addRecentGame (curated-import discipline, D-04).
   ipcMain.handle('removeRecent', async (_event: unknown, ...args: unknown[]) =>
-    removeRecentGame(args[0] as string)
+    removeRecentGame(deps, args[0] as string)
   )
 
   ipcMain.handle(

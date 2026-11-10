@@ -150,7 +150,10 @@ import { realHomeAtSetup } from 'backend/jest.setupContainment'
 import { registerShortcutsFlows } from '../shortcutsFlowRegistration'
 import { handlerRegistry, listenerRegistry } from '../../platform'
 import { getPath } from '../pathShim'
-import { createTestManagers } from 'backend/testUtils/testServices'
+import {
+  createTestManagers,
+  createTestStores
+} from 'backend/testUtils/testServices'
 import { sendFrontendMessage } from 'backend/ipc'
 import { logWarning, logError } from 'backend/logger'
 import { GlobalConfig } from 'backend/config'
@@ -266,7 +269,8 @@ registerShortcutsFlows({
       sideload: { getGame: (...a: [string]) => mockGetGame(...a) }
     }
   }),
-  quit: { handleExit: () => mockHandleExit() }
+  quit: { handleExit: () => mockHandleExit() },
+  stores: createTestStores()
 })
 
 const shellExeAtFileLoad = process.env.GAMELIB_SHELL_EXE

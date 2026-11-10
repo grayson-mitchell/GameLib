@@ -85,6 +85,8 @@ import { GOGUser } from '../storeManagers/gog/user'
 import * as gogStores from '../storeManagers/gog/stores'
 import * as legendaryStores from '../storeManagers/legendary/stores'
 import * as kvs from '../constants/key_value_stores'
+import * as nileStores from '../storeManagers/nile/stores'
+import * as wikiGameInfoStores from '../wiki_game_info/stores'
 import { NileUser } from '../storeManagers/nile/user'
 import { isEpicServiceOffline } from '../utils'
 import { logWarning, LogPrefix } from '../logger'
@@ -118,7 +120,12 @@ let registered = false
 // Transitional (66.1-08): resolved at call time until the registration takes injected slices.
 function gogUserDeps() {
   return {
-    stores: { gog: gogStores },
+    stores: {
+      gog: gogStores,
+      legendary: legendaryStores,
+      nile: nileStores,
+      wikiGameInfo: wikiGameInfoStores
+    },
     libraryManagers: { gog: libraryManagerMap.gog }
   }
 }
@@ -126,7 +133,13 @@ function gogUserDeps() {
 // Transitional (66.1-09): resolved at call time until the registration takes injected slices.
 function legendaryUserDeps() {
   return {
-    stores: { legendary: legendaryStores, kvs },
+    stores: {
+      legendary: legendaryStores,
+      kvs,
+      gog: gogStores,
+      nile: nileStores,
+      wikiGameInfo: wikiGameInfoStores
+    },
     libraryManagers: { legendary: libraryManagerMap.legendary }
   }
 }
@@ -255,7 +268,7 @@ export function registerRunnerAuthFlows(): void {
   // "do not add a cookie clear" instruction this comment used to carry no longer applies — the
   // clear lives inside `NileUser.logout()`, not in this delegation.
   ipcMain.handle('logoutAmazon', () => {
-    return NileUser.logout()
+    return NileUser.logout(gogUserDeps())
   })
 
   // Source: main.ts:880 -> `addListener('logoutGOG', () => GOGUser.logout())` — the phase's

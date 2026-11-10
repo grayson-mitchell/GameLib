@@ -2,6 +2,7 @@ import { readFileSync, copyFileSync, mkdirSync } from 'graceful-fs'
 import { join } from 'path'
 import { DirResult, dirSync } from 'tmp'
 import { addNonSteamGame, removeNonSteamGame } from '../nonesteamgame'
+import { tsStore } from 'backend/constants/key_value_stores'
 import { showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import { GlobalConfig } from 'backend/config'
 import { logInfo, logError, logWarning } from 'backend/logger'
@@ -27,9 +28,10 @@ function makeGameMock(title: string = 'MyGame', id: string = 'Game'): Game {
   } as Game
 }
 
-const deps = { libraryManagers: {} } as unknown as Parameters<
-  typeof addNonSteamGame
->[0]
+const deps = {
+  libraryManagers: {},
+  stores: { kvs: { tsStore } }
+} as unknown as Parameters<typeof addNonSteamGame>[0]
 
 function copyTestFile(file: string, alternativeUserPath = '') {
   const testFileDir = join(__dirname, 'test_data')

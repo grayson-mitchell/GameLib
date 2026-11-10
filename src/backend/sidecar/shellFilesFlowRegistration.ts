@@ -123,6 +123,7 @@ import { pushFrontendMessage } from './sidecarRpc'
 import { logInfo, LogPrefix } from '../logger'
 import i18next from 'i18next'
 import type { DiskSpaceData } from 'common/types'
+import type { ClearCacheDeps } from '../utils'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -138,7 +139,9 @@ function logSendFailure(channel: string, error: unknown): void {
  * import time beyond the imports above; the caller decides when
  * registration onto the handler registry happens.
  */
-export function registerShellFilesFlows(): void {
+export function registerShellFilesFlows(deps: {
+  stores: ClearCacheDeps['stores']
+}): void {
   // ── send (11): the URL openers (constant URLs go straight to shell.openExternal) ────
 
   ipcMain.on('openExternalUrl', (_event: unknown, ...args: unknown[]) => {
@@ -264,7 +267,7 @@ export function registerShellFilesFlows(): void {
     try {
       const showDialog = args[0]
       const fromVersionChange = args[1] === true
-      clearCache(undefined, fromVersionChange)
+      clearCache(deps, undefined, fromVersionChange)
       pushFrontendMessage('refreshLibrary')
 
       if (showDialog) {
@@ -288,7 +291,7 @@ export function registerShellFilesFlows(): void {
   ipcMain.on('clearAchievementCache', (_event: unknown, ...args: unknown[]) => {
     try {
       const appName = args[0] as string
-      clearAchievementCache(appName)
+      clearAchievementCache(deps, appName)
       logInfo(
         'Achievement cache was cleared for game: ' + appName,
         LogPrefix.Backend

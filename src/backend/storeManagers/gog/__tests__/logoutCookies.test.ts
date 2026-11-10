@@ -87,11 +87,12 @@ import { GOGUser, type GOGUserDeps } from '../user'
 const deps = {
   stores: { gog: fakeGogStores },
   libraryManagers: { gog: { runRunnerCommand: jest.fn() } }
-} as unknown as GOGUserDeps
+} as unknown as GOGUserDeps & ClearCacheDeps
 import {
   setLoginWindowSeam,
   type LoginWindowSeam
 } from '../../../humble/loginWindowSeam'
+import type { ClearCacheDeps } from 'backend/utils'
 
 function makeMockSeam(
   overrides: Partial<LoginWindowSeam> = {}

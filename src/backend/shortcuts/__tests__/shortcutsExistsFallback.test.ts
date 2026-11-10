@@ -63,7 +63,10 @@ import { mkdirSync, rmSync, symlinkSync } from 'fs'
 import { dirname, join } from 'path'
 import { homedir } from 'os'
 import { getGame } from 'backend/utils'
-import { createTestManagers } from 'backend/testUtils/testServices'
+import {
+  createTestManagers,
+  createTestStores
+} from 'backend/testUtils/testServices'
 import { shortcutFiles } from '../shortcuts/shortcuts'
 import { addShortcuts } from '../shortcuts/shortcuts'
 import { handlerRegistry } from 'backend/platform'
@@ -93,7 +96,8 @@ registerShortcutsFlows({
       sideload: { getGame: (...a: [string]) => mockedGetGame(...a) }
     }
   }),
-  quit: { handleExit: () => Promise.resolve() }
+  quit: { handleExit: () => Promise.resolve() },
+  stores: createTestStores()
 })
 
 type ShortcutsExistsHandler = (

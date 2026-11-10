@@ -1138,7 +1138,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     expect(steamGameMocks.importGame.mock.calls[0][1]).toBe('Windows')
 
     expect(mockedWriteConfig).toHaveBeenCalledTimes(1)
-    const [writeConfigAppName, writeConfigPayload] =
+    const [, writeConfigAppName, writeConfigPayload] =
       mockedWriteConfig.mock.calls[0]
     expect(writeConfigAppName).toBe('999001')
     expect(writeConfigPayload).toMatchObject({

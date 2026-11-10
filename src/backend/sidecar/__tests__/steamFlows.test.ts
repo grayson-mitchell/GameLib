@@ -105,6 +105,7 @@ let getRecentGames: typeof RecentGamesModule.getRecentGames
 let testingExportsRecentGames: typeof RecentGamesModule.testingExportsRecentGames
 let steamLibraryStore: typeof import('backend/storeManagers/steam/stores').steamLibraryStore
 let GlobalConfig: typeof import('backend/config').GlobalConfig
+let recentGamesDeps: RecentGamesModule.RecentGamesDeps
 
 function freshRegistry(): void {
   jest.resetModules()
@@ -117,6 +118,9 @@ function freshRegistry(): void {
   } = require('backend/recent_games/recent_games'))
   ;({ steamLibraryStore } = require('backend/storeManagers/steam/stores'))
   ;({ GlobalConfig } = require('backend/config'))
+  recentGamesDeps = {
+    stores: { kvs: require('backend/constants/key_value_stores') }
+  }
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
@@ -148,7 +152,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
     // D-35-19-06 / Test D below: `addRecentGame` is real and unmocked in this suite (it is
     // NOT store-manager-adjacent), and its store is the same disposable per-PID homedir the
     // `os` mock above redirects. Cleared here so Test D observes ONLY its own launch.
-    testingExportsRecentGames.setRecentGames([])
+    testingExportsRecentGames.setRecentGames(recentGamesDeps, [])
     // Same reasoning for the library cache Test D seeds: cleared here so no other test in this
     // file (run before or after it) can observe a leaked '999003' library entry.
     steamLibraryStore.set('games', [])
@@ -296,7 +300,7 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
       result: { status: 'done' }
     })
 
-    const recentGames = await getRecentGames()
+    const recentGames = await getRecentGames(recentGamesDeps)
     expect(recentGames).toHaveLength(1)
     expect(recentGames[0]).toMatchObject({
       appName: '999003',

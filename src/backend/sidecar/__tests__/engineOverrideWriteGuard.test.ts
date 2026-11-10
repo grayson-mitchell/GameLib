@@ -37,7 +37,10 @@ import { ENGINE_PINS } from '../../engine/enginePins'
 import { registerSettingsFlows } from '../settingsFlowRegistration'
 
 let stderr: jest.SpyInstance
-beforeAll(() => registerSettingsFlows())
+const settingsDeps = {
+  stores: { kvs: { configStore: { get_nodefault: jest.fn(), set: jest.fn() } } }
+} as unknown as Parameters<typeof registerSettingsFlows>[0]
+beforeAll(() => registerSettingsFlows(settingsDeps))
 beforeEach(() => {
   jest.clearAllMocks()
   stderr = jest.spyOn(process.stderr, 'write').mockImplementation(() => true)
@@ -75,7 +78,11 @@ describe('setSetting engineOverride guard', () => {
     set('default', 'legacy:x')
     expect(mockGlobalSet).not.toHaveBeenCalled()
     set('default', 'crossover')
-    expect(mockGlobalSet).toHaveBeenCalledWith('engineOverride', 'crossover')
+    expect(mockGlobalSet).toHaveBeenCalledWith(
+      'engineOverride',
+      'crossover',
+      settingsDeps.stores.kvs
+    )
   })
 })
 
@@ -88,7 +95,7 @@ describe('writeConfig engineOverride guard', () => {
         config: { engineOverride: 'legacy:x', wineCrossoverBottle: 'B' }
       }
     )
-    expect(mockWriteConfig).toHaveBeenCalledWith('Fortnite', {
+    expect(mockWriteConfig).toHaveBeenCalledWith(settingsDeps, 'Fortnite', {
       wineCrossoverBottle: 'B'
     })
   })
@@ -100,7 +107,7 @@ describe('writeConfig engineOverride guard', () => {
         config: { engineOverride: 'crossover' }
       }
     )
-    expect(mockWriteConfig).toHaveBeenCalledWith('Fortnite', {
+    expect(mockWriteConfig).toHaveBeenCalledWith(settingsDeps, 'Fortnite', {
       engineOverride: 'crossover'
     })
   })

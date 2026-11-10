@@ -24,7 +24,7 @@ import { GlobalConfig } from 'backend/config'
 import SteamGame from './games'
 import { checkBottleEligibility } from './gameEligibility'
 import { getBridgeRouteVerdict } from './bridgeRouteVerdict'
-import type { ManagerDeps } from 'backend/services/types'
+import type { ManagerDeps, Stores } from 'backend/services/types'
 import { persistBottleWineVersion } from './bottle'
 import { depotSignalCaptured } from './metadataCapture'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
@@ -220,7 +220,10 @@ export async function getSteamBottleEligibilityVerdict(
  * Never logs the submitted `bin` path — a rejection names the failing field,
  * never the submitted value.
  */
-export async function persistInstallFormWineVersion(input: unknown): Promise<{
+export async function persistInstallFormWineVersion(
+  deps: { stores: Pick<Stores, 'wineManager'> },
+  input: unknown
+): Promise<{
   status: 'done' | 'error'
   error?: string
 }> {
@@ -286,7 +289,9 @@ export async function persistInstallFormWineVersion(input: unknown): Promise<{
   // closed — see this function's own JSDoc for why that degrades safely.
   let detected: WineInstallation[]
   try {
-    detected = await GlobalConfig.get().getAlternativeWine()
+    detected = await GlobalConfig.get().getAlternativeWine(
+      deps.stores.wineManager
+    )
   } catch (error) {
     logWarning(
       `persistInstallFormWineVersion: could not enumerate detected wine engines, refusing to persist (${String(

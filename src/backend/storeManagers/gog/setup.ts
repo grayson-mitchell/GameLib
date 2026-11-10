@@ -31,7 +31,7 @@ import { getLaunchSettings } from 'backend/engine/launchSettings'
 /** What GOG setup reads: the manager map, the wine launcher helpers and the runners. */
 export type SetupDeps = Pick<
   GOGManagerDeps,
-  'libraryManagers' | 'launcher' | 'commandRunner' | 'spawnAsync'
+  'libraryManagers' | 'launcher' | 'commandRunner' | 'spawnAsync' | 'stores'
 >
 
 /*
@@ -134,6 +134,7 @@ async function setup(
 
   const logWriter = getRunnerLogWriter('gog')
   const isWineOkToLaunch = await checkWineBeforeLaunch(
+    deps,
     gameInfo,
     stored,
     logWriter

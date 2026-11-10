@@ -34,7 +34,9 @@ import { addRecentGame } from 'backend/recent_games/recent_games'
 import type LogWriter from 'backend/logger/log_writer'
 import type { ManagerDeps } from 'backend/services/types'
 
-type LaunchDispatchDeps = Pick<ManagerDeps, 'libraryManagers'>
+type LaunchDispatchDeps = Pick<ManagerDeps, 'libraryManagers'> & {
+  stores: Pick<ManagerDeps['stores'], 'kvs'>
+}
 
 /**
  * Launches a Steam title and, on success, records it as a recent game.
@@ -104,7 +106,7 @@ async function runDispatch(
   }
 
   try {
-    await addRecentGame(game.getGameInfo())
+    await addRecentGame(deps, game.getGameInfo())
   } catch (err) {
     logWarning(
       ['dispatchSteamLaunch: addRecentGame failed:', err],

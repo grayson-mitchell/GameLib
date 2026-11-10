@@ -122,6 +122,12 @@ const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule })
 })
 
+const wineDeps = {
+  stores: createTestStores({
+    wineManager: { wineDownloaderInfoStore: {} } as never
+  })
+}
+
 const mockedSteamGame = SteamGame as unknown as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedMetadataGet = steamMetadataStore.get as jest.Mock
@@ -477,7 +483,10 @@ describe('installFormIpc.ts', () => {
 
   describe('persistInstallFormWineVersion — D-14', () => {
     it('D-14: a valid CrossOver engine is persisted and returns done', async () => {
-      const result = await persistInstallFormWineVersion(persistedEngine)
+      const result = await persistInstallFormWineVersion(
+        wineDeps,
+        persistedEngine
+      )
 
       expect(result).toEqual({ status: 'done' })
       expect(mockedPersistBottleWineVersion).toHaveBeenCalledTimes(1)
@@ -491,7 +500,7 @@ describe('installFormIpc.ts', () => {
     it('D-14 containment: the renderer object is NOT persisted by reference and unknown keys are dropped', async () => {
       const polluted = { ...persistedEngine, polluted: 'yes' }
 
-      await persistInstallFormWineVersion(polluted)
+      await persistInstallFormWineVersion(wineDeps, polluted)
 
       const persistedArg = mockedPersistBottleWineVersion.mock.calls[0][0]
       expect(persistedArg).not.toBe(polluted)
@@ -511,7 +520,7 @@ describe('installFormIpc.ts', () => {
     ])(
       'T-34.13-07-02: structurally invalid payload %p is rejected before the store write',
       async (badPayload) => {
-        const result = await persistInstallFormWineVersion(badPayload)
+        const result = await persistInstallFormWineVersion(wineDeps, badPayload)
 
         expect(result.status).toBe('error')
         expect(mockedPersistBottleWineVersion).not.toHaveBeenCalled()
@@ -519,7 +528,10 @@ describe('installFormIpc.ts', () => {
     )
 
     it('Deferred-idea guard: a toolkit (GPTK) engine is ACCEPTED by the backend', async () => {
-      const result = await persistInstallFormWineVersion(sentinelGlobalEngine)
+      const result = await persistInstallFormWineVersion(
+        wineDeps,
+        sentinelGlobalEngine
+      )
 
       expect(result).toEqual({ status: 'done' })
       expect(mockedPersistBottleWineVersion).toHaveBeenCalledTimes(1)
@@ -546,7 +558,10 @@ describe('installFormIpc.ts', () => {
     it('A-15: a well-SHAPED payload whose bin is not among the detected engines is refused', async () => {
       mockGetAlternativeWine.mockResolvedValue([persistedEngine])
 
-      const result = await persistInstallFormWineVersion(ATTACKER_PAYLOAD)
+      const result = await persistInstallFormWineVersion(
+        wineDeps,
+        ATTACKER_PAYLOAD
+      )
 
       expect(result).toEqual({ status: 'error', error: 'unknown-bin' })
       expect(mockedPersistBottleWineVersion).not.toHaveBeenCalled()
@@ -563,7 +578,10 @@ describe('installFormIpc.ts', () => {
       expect(typeof ATTACKER_PAYLOAD.name).toBe('string')
       expect(ATTACKER_PAYLOAD.type).toBe('crossover')
 
-      const result = await persistInstallFormWineVersion(ATTACKER_PAYLOAD)
+      const result = await persistInstallFormWineVersion(
+        wineDeps,
+        ATTACKER_PAYLOAD
+      )
 
       expect(result.error).toBe('unknown-bin')
     })
@@ -574,7 +592,10 @@ describe('installFormIpc.ts', () => {
         ATTACKER_PAYLOAD
       ])
 
-      const result = await persistInstallFormWineVersion(persistedEngine)
+      const result = await persistInstallFormWineVersion(
+        wineDeps,
+        persistedEngine
+      )
 
       expect(result).toEqual({ status: 'done' })
       expect(mockedPersistBottleWineVersion).toHaveBeenCalledTimes(1)
@@ -583,7 +604,10 @@ describe('installFormIpc.ts', () => {
     it('A-15: fails CLOSED when the detector rejects — an unavailable detector cannot vouch for anything', async () => {
       mockGetAlternativeWine.mockRejectedValue(new Error('detector exploded'))
 
-      const result = await persistInstallFormWineVersion(persistedEngine)
+      const result = await persistInstallFormWineVersion(
+        wineDeps,
+        persistedEngine
+      )
 
       expect(result).toEqual({ status: 'error', error: 'unknown-bin' })
       expect(mockedPersistBottleWineVersion).not.toHaveBeenCalled()
@@ -592,7 +616,10 @@ describe('installFormIpc.ts', () => {
     it('A-15: fails CLOSED when the detector returns an empty list', async () => {
       mockGetAlternativeWine.mockResolvedValue([])
 
-      const result = await persistInstallFormWineVersion(persistedEngine)
+      const result = await persistInstallFormWineVersion(
+        wineDeps,
+        persistedEngine
+      )
 
       expect(result.status).toBe('error')
       expect(mockedPersistBottleWineVersion).not.toHaveBeenCalled()
@@ -603,7 +630,7 @@ describe('installFormIpc.ts', () => {
       const { logWarning } = jest.requireMock('backend/logger')
       ;(logWarning as jest.Mock).mockClear()
 
-      await persistInstallFormWineVersion(ATTACKER_PAYLOAD)
+      await persistInstallFormWineVersion(wineDeps, ATTACKER_PAYLOAD)
 
       const logged = (logWarning as jest.Mock).mock.calls
         .flat()

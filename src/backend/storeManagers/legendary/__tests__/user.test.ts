@@ -196,7 +196,7 @@ describe('LegendaryUser.logout(deps)', () => {
       'Legendary'
     )
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
-    expect(clearCache).toHaveBeenCalledWith('legendary')
+    expect(clearCache).toHaveBeenCalledWith(deps, 'legendary')
   })
 
   // ADDED (Phase 40 CR-03): the runner had no abort-case test at all before
@@ -216,7 +216,7 @@ describe('LegendaryUser.logout(deps)', () => {
     await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
-    expect(clearCache).toHaveBeenCalledWith('legendary')
+    expect(clearCache).toHaveBeenCalledWith(deps, 'legendary')
   })
 
   // ADDED (Phase 40 CR-03): pins the rethrow gate. The fatal cookie step
@@ -240,7 +240,7 @@ describe('LegendaryUser.logout(deps)', () => {
     await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
-    expect(clearCache).toHaveBeenCalledWith('legendary')
+    expect(clearCache).toHaveBeenCalledWith(deps, 'legendary')
     expect(logError).toHaveBeenCalled()
   })
 
@@ -344,7 +344,7 @@ describe('LegendaryUser.logout(deps)', () => {
     expect(seam.close).toHaveBeenCalledWith('window-label-1')
     // Credential-side cleanup still ran despite the rejected clear.
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
-    expect(clearCache).toHaveBeenCalledWith('legendary')
+    expect(clearCache).toHaveBeenCalledWith(deps, 'legendary')
   })
 
   it('REQ-34.5-04 (T-34.5-20): with a seam installed and a healthy clear, the domain passed is never a blanket/empty value', async () => {
@@ -405,7 +405,7 @@ describe('LegendaryUser.logout(deps)', () => {
     )
 
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
-    expect(clearCache).toHaveBeenCalledWith('legendary')
+    expect(clearCache).toHaveBeenCalledWith(deps, 'legendary')
     // The NON-fatal storage step keeps its warn-and-continue behaviour.
     expect(logWarning).toHaveBeenCalled()
     // The fatal step is logged at ERROR, not merely warned about.
@@ -431,7 +431,7 @@ describe('LegendaryUser.logout(deps)', () => {
     )
 
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
-    expect(clearCache).toHaveBeenCalledWith('legendary')
+    expect(clearCache).toHaveBeenCalledWith(deps, 'legendary')
   })
 
   it('F-6 twin: a rejecting clearStorage step still leaves logout() resolving, and the cookie step ran anyway', async () => {
@@ -522,7 +522,7 @@ describe('LegendaryUser.logout(deps)', () => {
 
     // The credential-side security boundary still ran (T-34.5-19).
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
-    expect(clearCache).toHaveBeenCalledWith('legendary')
+    expect(clearCache).toHaveBeenCalledWith(deps, 'legendary')
   })
 
   it('REQ-34.4.1-06 (Plan 23, F-6 Defect B) / T-35-39: a healthy non-zero total resolves and warns about nothing', async () => {

@@ -18,6 +18,7 @@ import { GameInfo } from 'common/types'
 import { getIcon } from '../utils'
 import type { ShortcutsDeps } from '../utils'
 import { addNonSteamGame } from '../nonesteamgame/nonesteamgame'
+import type { NonSteamGameDeps } from '../nonesteamgame/nonesteamgame'
 import sanitize from 'sanitize-filename'
 import { isMac } from 'backend/constants/environment'
 import { userHome } from 'backend/constants/paths'
@@ -36,7 +37,7 @@ import { writeWindowsShortcut } from './windowsShortcut'
  * @public
  */
 async function addShortcuts(
-  deps: ShortcutsDeps,
+  deps: NonSteamGameDeps,
   game: Game,
   fromMenu?: boolean
 ) {

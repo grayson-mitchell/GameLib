@@ -370,7 +370,8 @@ async function handleLaunch(
       app.hideMainWindow()
     }
     const launched = await dispatchSteamLaunch(
-      { libraryManagers: libraryManagerMap },
+      // Transitional (66.1-10/19): the full legacy deps until the registration takes slices.
+      (await import('../services/legacyFacades')).legacyManagerDeps(),
       appName
     )
     return { status: launched ? 'done' : 'error' }

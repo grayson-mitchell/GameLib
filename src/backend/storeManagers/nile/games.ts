@@ -1,3 +1,4 @@
+import type { ManagerDeps } from 'backend/services/types'
 import {
   ExecResult,
   ExtraInfo,
@@ -66,7 +67,9 @@ export default class NileGameManager implements Game {
 
   constructor(
     id: string,
-    private readonly deps: ShortcutsDeps
+    private readonly deps: ShortcutsDeps & {
+      stores: Pick<ManagerDeps['stores'], 'kvs' | 'wineManager'>
+    }
   ) {
     this.id = id
   }
@@ -284,7 +287,7 @@ export default class NileGameManager implements Game {
     const metadata = libraryManagerMap['nile'].getInstallMetadata(this.id)
 
     if (isWindows) {
-      await setup(this.id, metadata?.path)
+      await setup(this.deps, this.id, metadata?.path)
     }
 
     return { status: 'done' }

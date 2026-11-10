@@ -100,7 +100,9 @@ describe('global settings', () => {
 
     const config = GlobalConfig.get()
     expect(config.getSettings().checkUpdatesInterval).toBe(77)
-    config.setSetting('language', 'de')
+    config.setSetting('language', 'de', {
+      configStore: { get_nodefault: jest.fn(), set: jest.fn() } as never
+    })
     expect(config.getSettings().language).toBe('de')
     expect(readFileSync(configFile(), 'utf8')).toBe(text)
   })

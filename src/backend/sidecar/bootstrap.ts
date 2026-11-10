@@ -80,6 +80,7 @@ import {
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
 import { installSidecarHumbleSecretStore } from './humbleSecretStore'
 import { installSidecarSteamGridDbSecretStore } from './steamgridSecretStore'
+import { bindSteamGridDbSecretDeps } from '../steamgrid/secretStore'
 // 34.5 gap cycle 4 plan 36 (developer-scoped Routing addition): the dev-only plaintext vault
 // that this branch installs INSTEAD OF the two keyring stores below, when opted into. Import
 // only — no module-scope call. See installDevSecretVault()'s own header for the full guardrail
@@ -1437,7 +1438,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'secret-stores',
-      run: () => {
+      run: (_ctx, _io, state) => {
+        const { stores } = requireServices(state)
+        bindSteamGridDbSecretDeps({ stores })
         // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
         // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
         // only fire from the RPC loop below, never at module-import time) so no handler ever
@@ -1478,7 +1481,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           // Phase 34.6 plan 02 (A-03): same placement reasoning as installSidecarHumbleSecretStore()
           // just above -- its migration also calls requestRustInvoke, so it must run AFTER
           // startRpcServer() and inside this same keyring arm.
-          installSidecarSteamGridDbSecretStore()
+          installSidecarSteamGridDbSecretStore({ stores })
           logInfo('[bootstrap] secret stores: keyring', LogPrefix.Backend)
         }
       }

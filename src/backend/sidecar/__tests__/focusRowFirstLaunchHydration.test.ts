@@ -120,7 +120,7 @@ function launch(): Launch {
     } = require('common/focusRowMigration')
     /* eslint-enable @typescript-eslint/no-require-imports */
 
-    registerSettingsFlows()
+    registerSettingsFlows({ stores: { kvs: { configStore } } })
 
     const handler = handlerRegistry.get('requestAppSettings') as (
       event: unknown

@@ -2,7 +2,7 @@
  * D-15 cookie-jar leak fix for Amazon (Nile) logout (Phase 40 plan 04, T-40-04-07/-08).
  *
  * See the GOG sibling of this file (`gog/__tests__/logoutCookies.test.ts`) for the full
- * rationale -- this file proves the identical five properties against `NileUser.logout()`:
+ * rationale -- this file proves the identical five properties against `NileUser.logout(clearDeps)`:
  * credential cleanup runs first and unconditionally, `logout()` never rejects on a cookie-side
  * failure, the clear targets the sentinel no-window label one domain at a time, a zero
  * verified-delete count against a non-empty before-census warns, and off macOS no seam call is
@@ -61,6 +61,10 @@ jest.mock('backend/constants/environment', () => {
 
 import { logWarning, logInfo } from 'backend/logger'
 import { NileUser } from '../user'
+import type { ClearCacheDeps } from 'backend/utils'
+
+// `clearCache` is mocked in this file, so the cache stores are never read.
+const clearDeps = {} as unknown as ClearCacheDeps
 import {
   setLoginWindowSeam,
   type LoginWindowSeam
@@ -111,12 +115,12 @@ afterEach(() => {
   setLoginWindowSeam(null)
 })
 
-describe('NileUser.logout() credential cleanup runs first and unconditionally (D-15)', () => {
+describe('NileUser.logout(clearDeps) credential cleanup runs first and unconditionally (D-15)', () => {
   it('clears credentials even when no login-window seam is installed at all', async () => {
-    await expect(NileUser.logout()).resolves.toBeUndefined()
+    await expect(NileUser.logout(clearDeps)).resolves.toBeUndefined()
 
     expect(mockConfigStoreDelete).toHaveBeenCalledWith('userData')
-    expect(mockClearCache).toHaveBeenCalledWith('nile')
+    expect(mockClearCache).toHaveBeenCalledWith(clearDeps, 'nile')
   })
 
   it('clears credentials even when the cookie seam clearCookies() rejects', async () => {
@@ -127,10 +131,10 @@ describe('NileUser.logout() credential cleanup runs first and unconditionally (D
     })
     setLoginWindowSeam(seam)
 
-    await expect(NileUser.logout()).resolves.toBeUndefined()
+    await expect(NileUser.logout(clearDeps)).resolves.toBeUndefined()
 
     expect(mockConfigStoreDelete).toHaveBeenCalledWith('userData')
-    expect(mockClearCache).toHaveBeenCalledWith('nile')
+    expect(mockClearCache).toHaveBeenCalledWith(clearDeps, 'nile')
   })
 
   it('never rejects -- a cookie-side failure must never surface as a rejected logout() promise', async () => {
@@ -140,7 +144,7 @@ describe('NileUser.logout() credential cleanup runs first and unconditionally (D
     })
     setLoginWindowSeam(seam)
 
-    await expect(NileUser.logout()).resolves.toBeUndefined()
+    await expect(NileUser.logout(clearDeps)).resolves.toBeUndefined()
   })
 
   // INVERTED (Phase 40 CR-03): this test used to assert the opposite -- that
@@ -162,20 +166,20 @@ describe('NileUser.logout() credential cleanup runs first and unconditionally (D
     const seam = makeMockSeam()
     setLoginWindowSeam(seam)
 
-    await expect(NileUser.logout()).resolves.toBeUndefined()
+    await expect(NileUser.logout(clearDeps)).resolves.toBeUndefined()
 
     expect(mockConfigStoreDelete).toHaveBeenCalledWith('userData')
-    expect(mockClearCache).toHaveBeenCalledWith('nile')
+    expect(mockClearCache).toHaveBeenCalledWith(clearDeps, 'nile')
     expect(seam.clearCookies).toHaveBeenCalled()
   })
 })
 
-describe('NileUser.logout() cookie clear (macOS)', () => {
+describe('NileUser.logout(clearDeps) cookie clear (macOS)', () => {
   it('clears the Amazon apex domain against the sentinel no-window label, never a real window', async () => {
     const seam = makeMockSeam()
     setLoginWindowSeam(seam)
 
-    await NileUser.logout()
+    await NileUser.logout(clearDeps)
 
     expect(seam.clearCookies).toHaveBeenCalledTimes(1)
     expect(seam.clearCookies).toHaveBeenCalledWith(
@@ -191,7 +195,7 @@ describe('NileUser.logout() cookie clear (macOS)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await NileUser.logout()
+    await NileUser.logout(clearDeps)
 
     expect(allLoggedText()).toContain('amazon.com')
     expect(allLoggedText()).toContain('7')
@@ -204,7 +208,7 @@ describe('NileUser.logout() cookie clear (macOS)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await NileUser.logout()
+    await NileUser.logout(clearDeps)
 
     expect(logWarning).toHaveBeenCalledWith(
       expect.stringContaining('amazon.com'),
@@ -219,19 +223,19 @@ describe('NileUser.logout() cookie clear (macOS)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await NileUser.logout()
+    await NileUser.logout(clearDeps)
 
     expect(logWarning).not.toHaveBeenCalled()
   })
 })
 
-describe('NileUser.logout() cookie clear (off macOS)', () => {
+describe('NileUser.logout(clearDeps) cookie clear (off macOS)', () => {
   it('attempts no seam call at all -- no Tauri leg ships off macOS yet', async () => {
     mockIsMac = false
     const seam = makeMockSeam()
     setLoginWindowSeam(seam)
 
-    await NileUser.logout()
+    await NileUser.logout(clearDeps)
 
     expect(seam.clearCookies).not.toHaveBeenCalled()
     expect(seam.cookiesForDomain).not.toHaveBeenCalled()

@@ -14,6 +14,7 @@ import { libraryManagerMap } from '..'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { configStore } from './stores'
 import { clearCache } from 'backend/utils'
+import type { ClearCacheDeps } from 'backend/utils'
 import { nileUserData } from './constants'
 import { isMac } from 'backend/constants/environment'
 import { getLoginWindowSeamOrThrow } from '../../humble/loginWindowSeam'
@@ -254,7 +255,7 @@ export class NileUser {
     }
   }
 
-  static async logout() {
+  static async logout(deps: ClearCacheDeps) {
     const commandParts = ['auth', '--logout']
 
     const res = await libraryManagerMap['nile'].runRunnerCommand(commandParts, {
@@ -278,7 +279,7 @@ export class NileUser {
     // this, and can never make `logout()` itself reject. This reword widens
     // an already-accurate claim -- it does not correct a false one.
     configStore.delete('userData')
-    clearCache('nile')
+    clearCache(deps, 'nile')
     // Phase 49 (R2): sign-out clears the expiry flag and fences any probe that
     // began before it, so a late verdict cannot re-latch a signed-out store.
     configStore.delete('expired')

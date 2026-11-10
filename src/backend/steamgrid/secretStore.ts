@@ -33,6 +33,12 @@ import { GlobalConfig } from 'backend/config'
 import { logWarning, LogPrefix } from 'backend/logger'
 
 import { isEncryptedValue, encryptApiKey, decryptApiKey } from './secureKey'
+import type { Stores } from 'backend/services/types'
+
+/** What the key's persistence reads and writes: the kvs config store behind `GlobalConfig`. */
+export interface SteamGridDbSecretDeps {
+  stores: Pick<Stores, 'kvs'>
+}
 
 export interface SteamGridDbSecretStore {
   /** Whether this store's underlying encryption/secure-storage mechanism is currently usable.
@@ -55,6 +61,8 @@ export interface SteamGridDbSecretStore {
  * to `secureKey.ts`'s existing crypto primitives. A behavior diff here is a REQ-34.6-06 failure.
  */
 export class ElectronSteamGridDbSecretStore implements SteamGridDbSecretStore {
+  constructor(private readonly deps: SteamGridDbSecretDeps) {}
+
   isAvailable(): boolean {
     try {
       // secureKey.ts deliberately does not export its private `encryptionAvailable()` — probe
@@ -78,7 +86,11 @@ export class ElectronSteamGridDbSecretStore implements SteamGridDbSecretStore {
       if (!isEncryptedValue(stored)) {
         const reEncrypted = encryptApiKey(stored)
         if (isEncryptedValue(reEncrypted)) {
-          GlobalConfig.get().setSetting('steamGridDbApiKey', reEncrypted)
+          GlobalConfig.get().setSetting(
+            'steamGridDbApiKey',
+            reEncrypted,
+            this.deps.stores.kvs
+          )
         }
         return stored
       }
@@ -98,7 +110,11 @@ export class ElectronSteamGridDbSecretStore implements SteamGridDbSecretStore {
     try {
       const trimmed = value.trim()
       const stored = trimmed ? encryptApiKey(trimmed) : ''
-      GlobalConfig.get().setSetting('steamGridDbApiKey', stored)
+      GlobalConfig.get().setSetting(
+        'steamGridDbApiKey',
+        stored,
+        this.deps.stores.kvs
+      )
     } catch (error) {
       logWarning(
         ['Failed to persist SteamGridDB API key:', error],
@@ -109,7 +125,11 @@ export class ElectronSteamGridDbSecretStore implements SteamGridDbSecretStore {
 
   async clearApiKey(): Promise<void> {
     try {
-      GlobalConfig.get().setSetting('steamGridDbApiKey', '')
+      GlobalConfig.get().setSetting(
+        'steamGridDbApiKey',
+        '',
+        this.deps.stores.kvs
+      )
     } catch (error) {
       logWarning(
         ['Failed to clear SteamGridDB API key:', error],
@@ -121,8 +141,18 @@ export class ElectronSteamGridDbSecretStore implements SteamGridDbSecretStore {
 
 // ── Registry — swappable per build, no env-var escape hatch ─────────────────
 
-let activeSecretStore: SteamGridDbSecretStore =
-  new ElectronSteamGridDbSecretStore()
+let registry: {
+  store?: SteamGridDbSecretStore
+  deps?: SteamGridDbSecretDeps
+} = {}
+
+/**
+ * Hands the registry the stores its default (Electron) implementation persists through. Bound once
+ * at boot, before any channel can read the key; the default store is only constructed on first use.
+ */
+export function bindSteamGridDbSecretDeps(deps: SteamGridDbSecretDeps): void {
+  registry = { ...registry, deps }
+}
 
 /**
  * Installs a different SteamGridDbSecretStore implementation. Only ever called explicitly by a
@@ -131,9 +161,20 @@ let activeSecretStore: SteamGridDbSecretStore =
  * REQ-28-07/D-08's rule, applied here).
  */
 export function setSteamGridDbSecretStore(next: SteamGridDbSecretStore): void {
-  activeSecretStore = next
+  registry = { ...registry, store: next }
 }
 
 export function getSteamGridDbSecretStore(): SteamGridDbSecretStore {
-  return activeSecretStore
+  if (registry.store === undefined) {
+    if (registry.deps === undefined) {
+      throw new Error(
+        'SteamGridDB secret store read before bindSteamGridDbSecretDeps() or setSteamGridDbSecretStore()'
+      )
+    }
+    registry = {
+      ...registry,
+      store: new ElectronSteamGridDbSecretStore(registry.deps)
+    }
+  }
+  return registry.store as SteamGridDbSecretStore
 }

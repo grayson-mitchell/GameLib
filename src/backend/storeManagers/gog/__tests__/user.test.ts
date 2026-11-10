@@ -80,13 +80,14 @@ jest.mock('backend/utils', () => ({
 import axios from 'axios'
 import { logError, logWarning } from 'backend/logger'
 import { GOGUser, type GOGUserDeps } from '../user'
+import type { ClearCacheDeps } from 'backend/utils'
 
 const deps = {
   stores: { gog: fakeGogStores },
   libraryManagers: {
     gog: { runRunnerCommand: (...a: unknown[]) => mockRunRunnerCommand(...a) }
   }
-} as unknown as GOGUserDeps
+} as unknown as GOGUserDeps & ClearCacheDeps
 
 const mockedAxiosGet = axios.get as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock

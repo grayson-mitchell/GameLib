@@ -303,7 +303,8 @@ const mockGetSteamGridDbSecretStore = jest.fn(() => ({
 // this suite's handlers actually resolve.
 jest.mock('../../steamgrid/secretStore', () => ({
   getSteamGridDbSecretStore: () => mockGetSteamGridDbSecretStore(),
-  setSteamGridDbSecretStore: jest.fn()
+  setSteamGridDbSecretStore: jest.fn(),
+  bindSteamGridDbSecretDeps: jest.fn()
 }))
 
 // ── steamgrid/utils — the real SteamGridDB API client. Mocked at this

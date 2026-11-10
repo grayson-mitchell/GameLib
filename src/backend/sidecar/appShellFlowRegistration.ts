@@ -190,6 +190,7 @@ import { pushReadOnlyStoresNotice } from './readOnlyStoresNotice'
 // `main.ts:613` before that file is deleted at plan 35-14. See the
 // `frontendReady` handler below for the full contingency analysis.
 import type { DownloadQueue } from '../downloadmanager/downloadqueue'
+import type { Stores } from '../services/types'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
 import {
@@ -269,7 +270,10 @@ function syncTrayIcon(): void {
  * caller that invokes it directly (see the call site below for the full rationale).
  */
 export function registerAppShellFlows(
-  deps: { downloadQueue: Pick<DownloadQueue, 'initQueue'> },
+  deps: {
+    downloadQueue: Pick<DownloadQueue, 'initQueue'>
+    stores: Pick<Stores, 'kvs' | 'legendary'>
+  },
   options: { skipInitialTraySync?: boolean } = {}
 ): void {
   // ── invoke (7) ─────────────────────────────────────────────────────────
@@ -303,7 +307,7 @@ export function registerAppShellFlows(
   // ── send (14) ─────────────────────────────────────────────────────────
 
   ipcMain.on('changeLanguage', (_event: unknown, ...args: unknown[]) => {
-    changeLanguage(args[0] as string).catch((error) =>
+    changeLanguage(deps, args[0] as string).catch((error) =>
       logSendFailure('changeLanguage', error)
     )
   })
@@ -578,7 +582,7 @@ export function registerAppShellFlows(
         // reorders this block still cannot let a `detectVCRedist` throw skip the
         // `initQueue` scheduling above it.
         try {
-          detectVCRedist()
+          detectVCRedist(deps)
         } catch (error) {
           logSendFailure('frontendReady -> detectVCRedist', error)
         }

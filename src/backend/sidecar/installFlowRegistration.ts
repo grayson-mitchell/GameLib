@@ -145,6 +145,7 @@ import { library as steamLibraryMap } from '../storeManagers/steam/state'
 import { getSteamBottleEligibilityVerdict } from '../storeManagers/steam/installFormIpc'
 import { isSteamExperimentalInstallAppEnabled } from '../storeManagers/steam/experimentalInstallAppSetting'
 import type { DownloadQueue } from '../downloadmanager/downloadqueue'
+import type { Stores } from '../services/types'
 import { resolveGameTitle } from '../downloadmanager/utils'
 // Plan 34.6-06 (REQ-34.6-04): byte-equivalent port of moveInstall/importGame
 // (main.ts:1112-1245, D-02). getGame/isEpicServiceOffline/sendGameStatusUpdate/writeConfig are
@@ -201,6 +202,7 @@ function rejectedPathDialogTitle(): string {
  */
 export function registerInstallFlows(deps: {
   downloadQueue: Pick<DownloadQueue, 'addToQueue'>
+  stores: Pick<Stores, 'kvs'>
 }): void {
   ipcMain.handle(
     'install',
@@ -653,10 +655,10 @@ export function registerInstallFlows(deps: {
         : null
       if (engineSettings) {
         const gameSettings = await getGame(appName, runner).getSettings()
-        writeConfig(appName, { ...gameSettings, ...engineSettings })
+        writeConfig(deps, appName, { ...gameSettings, ...engineSettings })
       } else if (winePrefix && wineVersion) {
         const gameSettings = await getGame(appName, runner).getSettings()
-        writeConfig(appName, {
+        writeConfig(deps, appName, {
           ...gameSettings,
           winePrefix,
           wineVersion,

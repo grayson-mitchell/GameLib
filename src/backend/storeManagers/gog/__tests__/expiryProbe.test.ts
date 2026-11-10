@@ -28,6 +28,7 @@ import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { probeGogSession } from 'backend/signInProbe/runnerProbes'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
 import { GOGUser, type GOGUserDeps } from '../user'
+import type { ClearCacheDeps } from 'backend/utils'
 
 const deps = {
   stores: { gog: { configStore: gogConfigStore } },
@@ -36,7 +37,7 @@ const deps = {
       runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
     }
   }
-} as unknown as GOGUserDeps
+} as unknown as GOGUserDeps & ClearCacheDeps
 
 let mockOnline = true
 let mockAuthConfigExists = true

@@ -15,6 +15,7 @@ import {
 import { runWineCommand, verifyWinePrefix } from 'backend/launcher'
 import { isWindows } from 'backend/constants/environment'
 import type { GameSettings } from 'common/types'
+import type { ManagerDeps } from 'backend/services/types'
 import type { FuelSchema } from 'common/types/nile'
 import { isOnline } from '../../online_monitor'
 import {
@@ -27,6 +28,7 @@ import { getLaunchSettings } from 'backend/engine/launchSettings'
  * Handles installing dependencies for games that include PostInstall scripts
  */
 export default async function setup(
+  deps: { stores: Pick<ManagerDeps['stores'], 'kvs' | 'wineManager'> },
   appName: string,
   installedPath?: string
 ): Promise<void> {
@@ -115,6 +117,7 @@ export default async function setup(
 
   const logWriter = getRunnerLogWriter('nile')
   const isWineOkToLaunch = await checkWineBeforeLaunch(
+    deps,
     gameInfo,
     stored,
     logWriter

@@ -82,6 +82,7 @@ describe('dispatchSteamLaunch', () => {
     expect(getGameMock).toHaveBeenCalledWith(appId)
     expect(addRecentGameMock).toHaveBeenCalledTimes(1)
     expect(addRecentGameMock).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ runner: 'steam', app_name: appId })
     )
   })

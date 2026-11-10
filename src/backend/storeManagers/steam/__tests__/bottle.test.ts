@@ -37,6 +37,7 @@ import {
 } from 'backend/engine/bottlePrimitives'
 import { __stopBottledRaiseLoops } from '../bottledSteam'
 import { provisionBottle } from '../provisionBottle'
+import { createTestStores } from 'backend/testUtils/testServices'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
 
@@ -646,7 +647,7 @@ describe('quick 261024-cjq: CrossOver precondition', () => {
   test('provisionBottle returns crossover-missing before any store write or spawn', async () => {
     cxState.binDir = undefined
     mockedExistsSync.mockReturnValue(false)
-    const result = await provisionBottle()
+    const result = await provisionBottle({ stores: createTestStores() })
     expect(result.status).toBe('error')
     expect(result.errorCode).toBe('crossover-missing')
     expect(result.error).toMatch(/CrossOver is required/)

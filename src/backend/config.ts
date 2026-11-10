@@ -24,7 +24,6 @@ import {
   getWineskinWine
 } from './utils/compatibility_layers'
 import { backendEvents } from './backend_events'
-import { configStore } from './constants/key_value_stores'
 import { isFlatpak, isLinux, isMac, isWindows } from './constants/environment'
 import {
   configPath,
@@ -36,10 +35,8 @@ import {
 } from './constants/paths'
 import { join } from 'path'
 import { spawnSync } from 'child_process'
-import {
-  updateWineVersionInfos,
-  wineDownloaderInfoStore
-} from './wine/manager/utils'
+import { updateWineVersionInfos } from './wine/manager/utils'
+import type { Stores } from './services/types'
 
 function getSteamCompatFolder() {
   // Paths are from https://savelocation.net/steam-game-folder
@@ -140,9 +137,12 @@ abstract class GlobalConfig {
    * @returns An Array of Wine/Proton installations.
    */
   public async getAlternativeWine(
+    deps: {
+      wineDownloaderInfoStore: Stores['wineManager']['wineDownloaderInfoStore']
+    },
     scanCustom = true
   ): Promise<WineInstallation[]> {
-    if (wineDownloaderInfoStore.get('wine-releases', []).length === 0) {
+    if (deps.wineDownloaderInfoStore.get('wine-releases', []).length === 0) {
       await updateWineVersionInfos(true)
     }
 
@@ -190,7 +190,11 @@ abstract class GlobalConfig {
   public abstract flush(): void
 
   /** change a specific setting */
-  public abstract setSetting(key: keyof AppSettings, value: unknown): void
+  public abstract setSetting(
+    key: keyof AppSettings,
+    value: unknown,
+    deps: { configStore: Stores['kvs']['configStore'] }
+  ): void
 
   /**
    * Load the config file, upgrade if needed.
@@ -329,7 +333,12 @@ class GlobalConfigV0 extends GlobalConfig {
     return settings
   }
 
-  public setSetting(key: keyof AppSettings, value: unknown) {
+  public setSetting(
+    key: keyof AppSettings,
+    value: unknown,
+    deps: { configStore: Stores['kvs']['configStore'] }
+  ) {
+    const { configStore } = deps
     const config = this.getSettings()
     const configStoreSettings = configStore.get_nodefault('settings') || config
     configStore.set('settings', { ...configStoreSettings, [key]: value })

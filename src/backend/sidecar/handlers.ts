@@ -139,8 +139,11 @@ export function registerHandlers(deps: {
   registerSteamFlows()
   registerSteamAuthFlows()
   registerEngineFlows({ managers: deps.services.managers })
-  registerInstallFlows({ downloadQueue: deps.services.downloadQueue })
-  registerSettingsFlows()
+  registerInstallFlows({
+    downloadQueue: deps.services.downloadQueue,
+    stores: deps.services.stores
+  })
+  registerSettingsFlows({ stores: deps.services.stores })
   // D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the
   // `EPIC_COOKIE_HOSTS` sweep can be exercised against ONE sibling apex without
   // `LegendaryUser.logout()` destroying the operator's real Epic session. Self-gated —
@@ -174,7 +177,10 @@ export function registerHandlers(deps: {
   // -- under real Tauri this is unconditionally `false` and behavior is byte-identical to
   // before.
   registerAppShellFlows(
-    { downloadQueue: deps.services.downloadQueue },
+    {
+      downloadQueue: deps.services.downloadQueue,
+      stores: deps.services.stores
+    },
     { skipInitialTraySync: process.env.JEST_WORKER_ID !== undefined }
   )
   // Phase 34.2 Plans 04+05: the game-details/settings/override channels — no
@@ -191,13 +197,16 @@ export function registerHandlers(deps: {
   // them, before `ensureStoresRegistered()`. `wiki_game_info/stores`
   // is already registered by `storeRegistration.ts:104` (Phase 29), so this
   // module needs no new store plumbing.
-  registerEnrichmentFlows({ managers: deps.services.managers })
+  registerEnrichmentFlows({
+    managers: deps.services.managers,
+    stores: deps.services.stores
+  })
   // Phase 34.3 Plans 01+02 (REQ-34.3-01/-02/-13): the shell/link-opener and
   // filesystem/diagnostics channels — no ordering constraint
   // relative to the other calls above (own channel names, no cross-module
   // runtime dependency at registration time), placed alongside them, before
   // `ensureStoresRegistered()`.
-  registerShellFilesFlows()
+  registerShellFilesFlows({ stores: deps.services.stores })
   // Phase 34.3 Plan 06 (REQ-34.3-03/-04/-13): the clipboard channels — the ONLY
   // consumers of this slice's two new dispatch_rust_channel arms
   // (clipboard_write_text/clipboard_read_text, Plan 03). No ordering constraint
@@ -250,11 +259,13 @@ export function registerHandlers(deps: {
     managers: deps.services.managers,
     commandRunner: deps.services.commandRunner,
     launcher: deps.services.launcher,
-    spawnAsync: deps.services.spawnAsync
+    spawnAsync: deps.services.spawnAsync,
+    stores: deps.services.stores
   })
   registerShortcutsFlows({
     managers: deps.services.managers,
-    quit: deps.services.quit
+    quit: deps.services.quit,
+    stores: deps.services.stores
   })
   registerRunnerMiscFlows({
     managers: deps.services.managers,

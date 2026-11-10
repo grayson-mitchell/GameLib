@@ -35,7 +35,7 @@ export default class SideloadGame implements Game {
 
   constructor(
     id: string,
-    private readonly deps: Pick<ManagerDeps, 'libraryManagers'>
+    private readonly deps: Pick<ManagerDeps, 'libraryManagers' | 'stores'>
   ) {
     this.id = id
   }
@@ -138,7 +138,7 @@ export default class SideloadGame implements Game {
     notify({ title, body: i18next.t('notify.uninstalled') })
 
     removeShortcutsUtil(this)
-    removeRecentGame(this.id)
+    removeRecentGame(this.deps, this.id)
     removeNonSteamGame(this)
 
     sendGameStatusUpdate({

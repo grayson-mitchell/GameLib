@@ -6,7 +6,7 @@ import { tOrFallback } from './i18nFallback'
 import { GameInfo, LaunchOption, Runner } from 'common/types'
 import { getMainWindow } from './main_window'
 import { sendFrontendMessage } from './ipc'
-import type { Launcher, StoreManagers } from './services/types'
+import type { Launcher, StoreManagers, Stores } from './services/types'
 import { z } from 'zod'
 import { windowIcon } from './constants/paths'
 import { Path } from './schemas'
@@ -62,6 +62,7 @@ function isColdStartLink(): boolean {
 export interface ProtocolDeps {
   managers: Pick<StoreManagers, 'library'>
   launcher: Pick<Launcher, 'launchEventCallback'>
+  stores: Pick<Stores, 'kvs'>
 }
 
 export function handleProtocol(deps: ProtocolDeps, args: string[]) {
@@ -265,7 +266,7 @@ async function handleLaunch(deps: ProtocolDeps, url: URL) {
       const { dispatchSteamLaunch } =
         await import('backend/storeManagers/steam/launchDispatch')
       const launched = await dispatchSteamLaunch(
-        { libraryManagers: deps.managers.library },
+        { libraryManagers: deps.managers.library, stores: deps.stores },
         appName
       )
       return { status: launched ? 'done' : 'error' }

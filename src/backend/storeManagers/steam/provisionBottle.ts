@@ -6,6 +6,7 @@
 import { join } from 'path'
 import { existsSync, mkdirSync, rmSync } from 'graceful-fs'
 import type { GameInfo, WineInstallation } from 'common/types'
+import type { Stores } from 'backend/services/types'
 import { GlobalConfig } from 'backend/config'
 import {
   getRunnerLogWriter,
@@ -139,10 +140,13 @@ export async function killBottleWineServer(
  * user to finish clicking through the installer or for Steam to finish its
  * own first-run update.
  */
-export async function provisionBottle(opts?: {
-  bottleName?: string
-  wineVersion?: WineInstallation
-}): Promise<ProvisionBottleResult> {
+export async function provisionBottle(
+  deps: { stores: Pick<Stores, 'kvs' | 'wineManager'> },
+  opts?: {
+    bottleName?: string
+    wineVersion?: WineInstallation
+  }
+): Promise<ProvisionBottleResult> {
   const rawName = opts?.bottleName ?? DEFAULT_STEAM_BOTTLE_NAME
   const bottleName = sanitizeBottleName(rawName)
 
@@ -381,6 +385,7 @@ export async function provisionBottle(opts?: {
     }
     const logWriter = getRunnerLogWriter('steam')
     const wineOk = await checkWineBeforeLaunch(
+      deps,
       syntheticGameInfo,
       bottleSettings,
       logWriter

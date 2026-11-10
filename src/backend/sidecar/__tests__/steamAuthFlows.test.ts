@@ -601,7 +601,10 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         result: { status: 'done' }
       })
       expect(provisionBottle).toHaveBeenCalledTimes(1)
-      expect(provisionBottle).toHaveBeenCalledWith(transportArg)
+      expect(provisionBottle).toHaveBeenCalledWith(
+        expect.anything(),
+        transportArg
+      )
     })
 
     it("REQ-34.4-03 isSteamBottleProvisioned invoke round-trips isBottleProvisioned()'s boolean", async () => {
@@ -722,7 +725,10 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
         result: { status: 'done' }
       })
       expect(persistInstallFormWineVersion).toHaveBeenCalledTimes(1)
-      expect(persistInstallFormWineVersion).toHaveBeenCalledWith(engine)
+      expect(persistInstallFormWineVersion).toHaveBeenCalledWith(
+        expect.anything(),
+        engine
+      )
     })
 
     it('Invariant B guard: neither channel resolves the UNPORTED_CHANNEL_MARKER', async () => {

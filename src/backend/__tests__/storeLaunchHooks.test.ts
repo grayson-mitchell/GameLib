@@ -93,7 +93,7 @@ describe('storeLaunchHooks', () => {
 
   test('nile prepareLaunch runs nileSetup(appName)', async () => {
     await storeLaunchHooks.nile.prepareLaunch!('n1', logWriter)
-    expect(nileSetupMock).toHaveBeenCalledWith('n1')
+    expect(nileSetupMock).toHaveBeenCalledWith(expect.anything(), 'n1')
   })
 
   test('legendary prepareLaunch runs legendarySetup(appName, logWriter)', async () => {

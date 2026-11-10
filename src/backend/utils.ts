@@ -35,26 +35,11 @@ import {
   assertContainedPath,
   assertPlausibleAbsolutePath
 } from './sidecar/rendererPathGuard'
-import {
-  gameInfoStore,
-  installStore,
-  libraryStore
-} from 'backend/storeManagers/legendary/stores'
-import {
-  achievementStore as GOGAchievementStore,
-  apiInfoCache as GOGapiInfoCache,
-  installInfoStore as GOGinstallInfoStore,
-  libraryStore as GOGlibraryStore
-} from './storeManagers/gog/stores'
 import gogPresence from './storeManagers/gog/presence'
 import { libraryManagerMap } from './storeManagers'
 import { SteamUser } from './storeManagers/steam/user'
 import { hasLiveBridgeHelper } from './storeManagers/steam/bridge/helperRegistry'
 import { resolveTitleForGame } from './utils/gameTitle'
-import {
-  installStore as nileInstallStore,
-  libraryStore as nileLibraryStore
-} from './storeManagers/nile/stores'
 import * as fileSize from 'filesize'
 import { Client as discordClient } from '@xhayper/discord-rpc'
 import { showDialogBoxModalAuto } from './dialog/dialog'
@@ -65,12 +50,11 @@ import { GameConfig } from './game_config'
 import { validWine, runWineCommand } from './launcher'
 import {
   installWineVersion,
-  updateWineVersionInfos,
-  wineDownloaderInfoStore
+  updateWineVersionInfos
 } from './wine/manager/utils'
+import type { Stores } from './services/types'
 import { readdir, lstat, rm } from 'fs/promises'
 import { backendEvents } from './backend_events'
-import { wikiGameInfoStore } from './wiki_game_info/stores'
 import EasyDl from 'easydl'
 
 import {
@@ -80,7 +64,6 @@ import {
 import type { AppSettings, WineManagerStatus } from 'common/types'
 import { isUmuSupported } from './utils/compatibility_layers'
 import { getSystemInfo } from './utils/systeminfo'
-import { configStore } from './constants/key_value_stores'
 import { isLinux, isMac, isWindows } from './constants/environment'
 import { killAllTracked } from './trackedChildren'
 import {
@@ -414,21 +397,28 @@ function removeSpecialcharacters(text: string): string {
   return text.replaceAll(regexp, '')
 }
 
+/** The cache families `clearCache` empties. */
+export interface ClearCacheDeps {
+  stores: Pick<Stores, 'wikiGameInfo' | 'gog' | 'legendary' | 'nile'>
+}
+
 function clearCache(
+  deps: ClearCacheDeps,
   library?: 'gog' | 'legendary' | 'nile',
   fromVersionChange = false
 ) {
-  wikiGameInfoStore.clear()
+  const { wikiGameInfo, gog, legendary, nile } = deps.stores
+  wikiGameInfo.wikiGameInfoStore.clear()
   if (isStore(library, 'gog') || !library) {
-    GOGapiInfoCache.clear()
-    GOGlibraryStore.clear()
-    GOGinstallInfoStore.clear()
-    GOGAchievementStore.clear()
+    gog.apiInfoCache.clear()
+    gog.libraryStore.clear()
+    gog.installInfoStore.clear()
+    gog.achievementStore.clear()
   }
   if (isStore(library, 'legendary') || !library) {
-    installStore.clear()
-    libraryStore.clear()
-    gameInfoStore.clear()
+    legendary.installStore.clear()
+    legendary.libraryStore.clear()
+    legendary.gameInfoStore.clear()
     // Imported lazily to break a circular dependency (utils.ts <->
     // storeManagers/index.ts) — see the load-bearing comment in
     // storeManagers/gog/user.ts. Fire-and-forget, matching the previous
@@ -441,8 +431,8 @@ function clearCache(
     })
   }
   if (isStore(library, 'nile') || !library) {
-    nileInstallStore.clear()
-    nileLibraryStore.clear()
+    nile.installStore.clear()
+    nile.libraryStore.clear()
   }
 
   if (!fromVersionChange) {
@@ -451,8 +441,11 @@ function clearCache(
   }
 }
 
-function clearAchievementCache(appName: string) {
-  GOGAchievementStore.delete(appName)
+function clearAchievementCache(
+  deps: { stores: Pick<Stores, 'gog'> },
+  appName: string
+) {
+  deps.stores.gog.achievementStore.delete(appName)
 }
 
 function resetHeroic() {
@@ -786,12 +779,12 @@ const VC_REDIST_PROBE_TIMEOUT_MS = 15_000
  * (see `VC_REDIST_PROBE_TIMEOUT_MS` above) so a hung/slow child cannot keep
  * the sidecar process alive past the exit contract's in-flight-work bound.
  */
-function detectVCRedist() {
+function detectVCRedist(deps: { stores: Pick<Stores, 'kvs'> }) {
   if (!isWindows) {
     return
   }
 
-  const skip = configStore.get('skipVcRuntime', false)
+  const skip = deps.stores.kvs.configStore.get('skipVcRuntime', false)
 
   if (skip) {
     logInfo('VCRuntime check skipped (skipVcRuntime is set)', LogPrefix.Backend)
@@ -1050,12 +1043,17 @@ async function ContinueWithFoundWine(
   return { response }
 }
 
-export async function downloadDefaultWine() {
+export async function downloadDefaultWine(deps: {
+  stores: Pick<Stores, 'kvs' | 'wineManager'>
+}) {
   if (isWindows) return null
   // refresh wine list
   await updateWineVersionInfos(true)
   // get list of wines on wineDownloaderInfoStore
-  const availableWine = wineDownloaderInfoStore.get('wine-releases', [])
+  const availableWine = deps.stores.wineManager.wineDownloaderInfoStore.get(
+    'wine-releases',
+    []
+  )
   const isMacOSUpToDate = await isMacSonomaOrHigher()
   const release = availableWine.find((version) => {
     if (isLinux) {
@@ -1084,7 +1082,9 @@ export async function downloadDefaultWine() {
   if (result === 'success') {
     let downloadedWine = null
     try {
-      const wineList = await GlobalConfig.get().getAlternativeWine()
+      const wineList = await GlobalConfig.get().getAlternativeWine(
+        deps.stores.wineManager
+      )
       // update the game config to use that wine
       const firstWine = wineList[0]
       if (firstWine === undefined) {
@@ -1092,7 +1092,11 @@ export async function downloadDefaultWine() {
       }
       downloadedWine = firstWine
       logInfo(`Changing wine version to ${downloadedWine.name}`)
-      GlobalConfig.get().setSetting('wineVersion', downloadedWine)
+      GlobalConfig.get().setSetting(
+        'wineVersion',
+        downloadedWine,
+        deps.stores.kvs
+      )
     } catch (error) {
       logError(
         ['Error when changing wine version to default', error],
@@ -1105,6 +1109,7 @@ export async function downloadDefaultWine() {
 }
 
 export async function checkWineBeforeLaunch(
+  deps: { stores: Pick<Stores, 'kvs' | 'wineManager'> },
   gameInfo: GameInfo,
   gameSettings: GameSettings,
   logWriter: LogWriter
@@ -1156,14 +1161,16 @@ export async function checkWineBeforeLaunch(
         return false
       }
     } else {
-      const wineList = await GlobalConfig.get().getAlternativeWine()
+      const wineList = await GlobalConfig.get().getAlternativeWine(
+        deps.stores.wineManager
+      )
       const firstFoundWine = wineList[0]
 
       const isValidWine =
         firstFoundWine !== undefined && (await validWine(firstFoundWine))
 
       if (!wineList.length || !firstFoundWine || !isValidWine) {
-        const firstFoundWine = await downloadDefaultWine()
+        const firstFoundWine = await downloadDefaultWine(deps)
         if (firstFoundWine) {
           logInfo(`Changing wine version to ${firstFoundWine.name}`)
           gameSettings.wineVersion = firstFoundWine
@@ -1830,7 +1837,11 @@ const axiosClient = axios.create({
   headers: { 'User-Agent': GAMELIB_USER_AGENT }
 })
 
-export const writeConfig = (appName: string, config: Partial<AppSettings>) => {
+export const writeConfig = (
+  deps: { stores: Pick<Stores, 'kvs'> },
+  appName: string,
+  config: Partial<AppSettings>
+) => {
   logInfo(
     `Writing config for ${appName === 'default' ? 'GameLib' : appName}`,
     LogPrefix.Backend
@@ -1859,6 +1870,7 @@ export const writeConfig = (appName: string, config: Partial<AppSettings>) => {
   if (appName === 'default') {
     GlobalConfig.get().set(config as AppSettings)
     GlobalConfig.get().flush()
+    const { configStore } = deps.stores.kvs
     const currentConfigStore = configStore.get_nodefault('settings')
     if (currentConfigStore) {
       configStore.set('settings', { ...currentConfigStore, ...config })

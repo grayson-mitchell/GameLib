@@ -77,7 +77,7 @@ function launch(): Launch {
     const { GlobalConfig } = require('backend/config')
     /* eslint-enable @typescript-eslint/no-require-imports */
 
-    registerSettingsFlows()
+    registerSettingsFlows({ stores: { kvs: { configStore } } })
 
     const handler = handlerRegistry.get('requestAppSettings') as (
       event: unknown

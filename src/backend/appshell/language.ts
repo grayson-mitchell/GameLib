@@ -20,8 +20,8 @@ import i18next from 'i18next'
 import { toI18nextCode } from '../../common/languages'
 import { GlobalConfig } from '../config'
 import { backendEvents } from '../backend_events'
-import { gameInfoStore } from '../storeManagers/legendary/stores'
 import { logInfo, logWarning, LogPrefix } from '../logger'
+import type { Stores } from '../services/types'
 
 /**
  * CR-01 (Phase 34.1 code review): `i18next.changeLanguage()` MUST NOT be able to
@@ -47,7 +47,10 @@ import { logInfo, logWarning, LogPrefix } from '../logger'
  * Under Electron nothing changes: i18next IS initialized there, the call resolves, and
  * the catch is never entered.
  */
-export async function changeLanguage(language: string): Promise<void> {
+export async function changeLanguage(
+  deps: { stores: Pick<Stores, 'kvs' | 'legendary'> },
+  language: string
+): Promise<void> {
   logInfo(['Changing Language to:', language], LogPrefix.Backend)
   try {
     // `toI18nextCode` (quick-260925-bq4): `language` is the SHIPPED code, which
@@ -67,7 +70,7 @@ export async function changeLanguage(language: string): Promise<void> {
       LogPrefix.Backend
     )
   }
-  gameInfoStore.clear()
-  GlobalConfig.get().setSetting('language', language)
+  deps.stores.legendary.gameInfoStore.clear()
+  GlobalConfig.get().setSetting('language', language, deps.stores.kvs)
   backendEvents.emit('languageChanged')
 }

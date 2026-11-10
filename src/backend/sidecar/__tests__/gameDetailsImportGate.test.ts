@@ -177,8 +177,11 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // writeConfig (isWritableEngineOverride import + two drop branches); the
   // `steamLibrary.has(appName)` gate is untouched. Prior digest:
   // 7120ad92f0f8e0121039685b327b2adb882a4e8f87743c9d80e7957ca86e2aa0
+  // 66.1-19: re-pin -- registerSettingsFlows takes the kvs store slice by parameter and passes it
+  // to GlobalConfig.setSetting/writeConfig (R3). No channel, guard or `steamLibrary.has` gate
+  // moved. Prior digest: eeb736f040ead01b46da0e346748f6472ffd569c4773966a5e64c8c8a12dfa5b
   const SETTINGS_FLOW_REGISTRATION_SHA256 =
-    'eeb736f040ead01b46da0e346748f6472ffd569c4773966a5e64c8c8a12dfa5b'
+    '9366f91f823f454cc865ff2b60c57d7032fbf7be604be2524648bd81d5b140b6'
 
   it('REQ-34.2-10/D-09 Gate 7: settingsFlowRegistration.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, '../settingsFlowRegistration.ts')

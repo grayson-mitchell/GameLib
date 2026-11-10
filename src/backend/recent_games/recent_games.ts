@@ -1,21 +1,27 @@
 import { GameInfo, RecentGame } from 'common/types'
 import { backendEvents } from '../backend_events'
 import { sendFrontendMessage } from '../ipc'
-import { configStore } from 'backend/constants/key_value_stores'
+import type { Stores } from '../services/types'
 
-const getRecentGames = async () => configStore.get('games.recent', [])
+/** The recent-games list lives in the kvs config store. */
+export interface RecentGamesDeps {
+  stores: Pick<Stores, 'kvs'>
+}
 
-const setRecentGames = (recentGames: RecentGame[]) => {
+const getRecentGames = async (deps: RecentGamesDeps) =>
+  deps.stores.kvs.configStore.get('games.recent', [])
+
+const setRecentGames = (deps: RecentGamesDeps, recentGames: RecentGame[]) => {
   // store
-  configStore.set('games.recent', recentGames)
+  deps.stores.kvs.configStore.set('games.recent', recentGames)
 
   // emit
   sendFrontendMessage('recentGamesChanged', recentGames)
   backendEvents.emit('recentGamesChanged', recentGames)
 }
 
-const addRecentGame = async (game: GameInfo) => {
-  const games = await getRecentGames()
+const addRecentGame = async (deps: RecentGamesDeps, game: GameInfo) => {
+  const games = await getRecentGames(deps)
 
   // update list
   const updatedList = games.filter(
@@ -33,15 +39,15 @@ const addRecentGame = async (game: GameInfo) => {
     title: game.title,
     runner: game.runner
   })
-  setRecentGames(updatedList)
+  setRecentGames(deps, updatedList)
 }
 
-const removeRecentGame = async (appName: string) => {
-  const games = await getRecentGames()
+const removeRecentGame = async (deps: RecentGamesDeps, appName: string) => {
+  const games = await getRecentGames(deps)
 
   if (games.length) {
     const updatedList = games.filter((a) => a.appName && a.appName !== appName)
-    setRecentGames(updatedList)
+    setRecentGames(deps, updatedList)
   }
 }
 

@@ -43,15 +43,6 @@ jest.mock('i18next', () => ({
   }
 }))
 
-// ── legendary stores mock (language.ts) — gameInfoStore is a real
-// CacheStore backed by electron-store; mocked to avoid any real disk I/O
-// (this repo's own "tests clobbering real store" precedent) ────────────────
-jest.mock('../../storeManagers/legendary/stores', () => ({
-  gameInfoStore: {
-    clear: jest.fn()
-  }
-}))
-
 // ── backend/logger mock (language.ts) — heroicLogWriter is unset until
 // bootstrap.ts's init() runs (this repo's own documented gotcha); mocked so
 // logInfo() is a no-op rather than throwing on the unset writer ────────────
@@ -66,7 +57,7 @@ import {
   getCurrentChangelog as mockedGetCurrentChangelog
 } from '../../utils'
 import i18next from 'i18next'
-import { gameInfoStore } from '../../storeManagers/legendary/stores'
+import { createTestStores } from 'backend/testUtils/testServices'
 import { backendEvents } from '../../backend_events'
 
 import {
@@ -78,7 +69,15 @@ import { defined } from 'backend/testUtils/indexed'
 
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockedI18nextChangeLanguage = i18next.changeLanguage as jest.Mock
-const mockedGameInfoStoreClear = gameInfoStore.clear as jest.Mock
+// language.ts takes its stores by parameter; the gameInfoStore is a stub, so no disk I/O happens.
+const mockedGameInfoStoreClear = jest.fn()
+const languageKvs = { configStore: {} } as never
+const languageDeps = {
+  stores: createTestStores({
+    legendary: { gameInfoStore: { clear: mockedGameInfoStoreClear } } as never,
+    kvs: languageKvs
+  })
+}
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
 function mockAppSettings(partial: Record<string, unknown>) {
@@ -135,11 +134,11 @@ describe('backend/appshell/language.ts (REQ-34.1-04)', () => {
     const { setSetting } = mockAppSettings({})
     const emitSpy = jest.spyOn(backendEvents, 'emit')
 
-    await changeLanguage('fr')
+    await changeLanguage(languageDeps, 'fr')
 
     expect(mockedI18nextChangeLanguage).toHaveBeenCalledWith('fr')
     expect(mockedGameInfoStoreClear).toHaveBeenCalledTimes(1)
-    expect(setSetting).toHaveBeenCalledWith('language', 'fr')
+    expect(setSetting).toHaveBeenCalledWith('language', 'fr', languageKvs)
     expect(emitSpy).toHaveBeenCalledWith('languageChanged')
 
     emitSpy.mockRestore()
@@ -149,7 +148,7 @@ describe('backend/appshell/language.ts (REQ-34.1-04)', () => {
     const { setSetting } = mockAppSettings({})
     const emitSpy = jest.spyOn(backendEvents, 'emit')
 
-    await changeLanguage('de')
+    await changeLanguage(languageDeps, 'de')
 
     const setSettingOrder = setSetting.mock.invocationCallOrder[0]
     const emitOrder = defined(

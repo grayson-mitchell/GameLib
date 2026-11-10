@@ -6,6 +6,7 @@ import type { GOGManagerDeps } from './library'
 import { isOnline } from '../../online_monitor'
 import { GOGCredentials, UserData } from 'common/types/gog'
 import { clearCache } from 'backend/utils'
+import type { ClearCacheDeps } from 'backend/utils'
 import { app } from 'backend/platform'
 import { gogdlAuthConfig } from './constants'
 import { isMac } from 'backend/constants/environment'
@@ -431,8 +432,8 @@ export class GOGUser {
   // impossible by ORDER already, but the wrap also stops it becoming a
   // rejected `logout()` promise (an unhandled rejection at the `ipcMain.on`
   // call site, which cannot `.catch()` a fire-and-forget invocation).
-  public static async logout(deps: GOGUserDeps) {
-    clearCache('gog')
+  public static async logout(deps: GOGUserDeps & ClearCacheDeps) {
+    clearCache(deps, 'gog')
     deps.stores.gog.configStore.clear()
     if (existsSync(gogdlAuthConfig)) {
       unlinkSync(gogdlAuthConfig)

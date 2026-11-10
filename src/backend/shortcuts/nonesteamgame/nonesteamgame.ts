@@ -23,9 +23,9 @@ import i18next from 'i18next'
 import { notify, showDialogBoxModalAuto } from '../../dialog/dialog'
 import { GlobalConfig } from '../../config'
 import { getWikiGameInfo } from 'backend/wiki_game_info/wiki_game_info'
-import { tsStore } from 'backend/constants/key_value_stores'
 import { isAppImage, isFlatpak, isWindows } from 'backend/constants/environment'
 import type { Game } from 'common/types/game_manager'
+import type { Stores } from 'backend/services/types'
 
 const getSteamUserdataDir = async () => {
   const { defaultSteamPath } = GlobalConfig.get().getSettings()
@@ -199,6 +199,9 @@ function checkIfAlreadyAdded(object: Partial<ShortcutObject>, title: string) {
   return shortcuts.findIndex((entry) => getAppName(entry) === title)
 }
 
+/** The icon lookup's managers plus the kvs store the shortcut's last-played read uses. */
+export type NonSteamGameDeps = ShortcutsDeps & { stores: Pick<Stores, 'kvs'> }
+
 /**
  * Adds a non-steam game to steam via editing shortcuts.vdf
  * @param deps the managers the icon lookup reads
@@ -206,7 +209,7 @@ function checkIfAlreadyAdded(object: Partial<ShortcutObject>, title: string) {
  * @returns boolean
  */
 async function addNonSteamGame(
-  deps: ShortcutsDeps,
+  deps: NonSteamGameDeps,
   game: Game
 ): Promise<boolean> {
   const gameInfo = game.getGameInfo()
@@ -322,7 +325,9 @@ async function addNonSteamGame(
     newEntry.Devkit = false
     newEntry.DevkitOverrideAppID = false
 
-    const lastPlayed = tsStore.get_nodefault(`${gameInfo.app_name}.lastPlayed`)
+    const lastPlayed = deps.stores.kvs.tsStore.get_nodefault(
+      `${gameInfo.app_name}.lastPlayed`
+    )
     if (lastPlayed) {
       newEntry.LastPlayTime = new Date(lastPlayed)
     } else {

@@ -76,6 +76,8 @@ import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
 import { copyFile } from 'fs/promises'
 import { app, powerSaveBlocker } from 'backend/platform'
 import { addRecentGame } from './recent_games/recent_games'
+import * as kvsStores from './constants/key_value_stores'
+import * as wineManagerStores from './wine/manager/stores'
 import { tsStore } from './constants/key_value_stores'
 import { readKnownFixes } from './knownFixes'
 import { applyKnownFixProfileRegistry } from './knownFixesRegistry'
@@ -246,6 +248,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
   // persist a derived or fallback engine into wineVersion (D-08).
   if (!isNative && !engineControlled) {
     const isWineOkToLaunch = await checkWineBeforeLaunch(
+      legacyWineStores(),
       gameInfo,
       gameSettings,
       logWriter
@@ -369,7 +372,7 @@ const runLaunchEventCallback: (args: LaunchParams) => StatusPromise = async ({
       )
     }
   }
-  await addRecentGame(gameInfo)
+  await addRecentGame({ stores: { kvs: kvsStores } }, gameInfo)
 
   if (autoSyncSaves && isOnline()) {
     sendGameStatusUpdate({
@@ -1411,6 +1414,14 @@ function setupWrappers(
  * to this module's own functions. Resolved at call time (R4): `libraryManagerMap` and the
  * functions below are live bindings of a module that is still loading when it is first reached.
  */
+/**
+ * TEMPORARY (plan 19, deleted by plan 23 with the launcher conversion): the kvs and wine-manager
+ * store slices `checkWineBeforeLaunch` reads, until the launcher is built with injected stores.
+ */
+function legacyWineStores() {
+  return { stores: { kvs: kvsStores, wineManager: wineManagerStores } }
+}
+
 function tools() {
   return createTools({
     managers: { library: libraryManagerMap },

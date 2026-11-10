@@ -53,6 +53,7 @@ import {
 } from './keyringTokenStore'
 import {
   setSteamGridDbSecretStore,
+  type SteamGridDbSecretDeps,
   type SteamGridDbSecretStore
 } from '../steamgrid/secretStore'
 import { isEncryptedValue, decryptApiKey } from '../steamgrid/secureKey'
@@ -114,10 +115,12 @@ export class SidecarSteamGridDbSecretStore implements SteamGridDbSecretStore {
  * below, so an existing plaintext or legacy-ciphertext SteamGridDB API key moves into the keyring
  * the first time this install runs against it.
  */
-export function installSidecarSteamGridDbSecretStore(): void {
+export function installSidecarSteamGridDbSecretStore(
+  deps: SteamGridDbSecretDeps
+): void {
   setSteamGridDbSecretStore(new SidecarSteamGridDbSecretStore())
   logInfo('[bootstrap] steamgrid secret store: keyring', LogPrefix.Backend)
-  void migrateSteamGridDbApiKey().catch((error) => {
+  void migrateSteamGridDbApiKey(deps).catch((error) => {
     logWarning(
       `SteamGridDB API key migration failed unexpectedly: ${errorMessage(error)}`,
       LogPrefix.Backend
@@ -142,7 +145,9 @@ export function installSidecarSteamGridDbSecretStore(): void {
  * is exactly the `navigator.clipboard`-under-Tauri failure shape this project has already been
  * bitten by. A mismatched readback is NEVER rounded up to success.
  */
-export async function migrateSteamGridDbApiKey(): Promise<void> {
+export async function migrateSteamGridDbApiKey(
+  deps: SteamGridDbSecretDeps
+): Promise<void> {
   const stored = GlobalConfig.get().getSettings().steamGridDbApiKey
 
   if (!stored || typeof stored !== 'string') {
@@ -209,7 +214,7 @@ export async function migrateSteamGridDbApiKey(): Promise<void> {
     return
   }
 
-  GlobalConfig.get().setSetting('steamGridDbApiKey', '')
+  GlobalConfig.get().setSetting('steamGridDbApiKey', '', deps.stores.kvs)
 }
 
 /**

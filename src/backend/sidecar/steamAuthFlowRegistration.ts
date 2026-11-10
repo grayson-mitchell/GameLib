@@ -277,7 +277,10 @@ export function registerSteamAuthFlows(): void {
   ipcMain.handle(
     'steamBottleProvision',
     async (_event: unknown, ...args: unknown[]) => {
-      return provisionBottle(args[0] as Parameters<typeof provisionBottle>[0])
+      return provisionBottle(
+        (await import('../services/legacyFacades')).legacyManagerDeps(),
+        args[0] as Parameters<typeof provisionBottle>[1]
+      )
     }
   )
 
@@ -356,7 +359,10 @@ export function registerSteamAuthFlows(): void {
   ipcMain.handle(
     'persistBottleWineVersion',
     async (_event: unknown, ...args: unknown[]) => {
-      return persistInstallFormWineVersion(args[0])
+      return persistInstallFormWineVersion(
+        (await import('../services/legacyFacades')).legacyManagerDeps(),
+        args[0]
+      )
     }
   )
 

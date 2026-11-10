@@ -102,7 +102,7 @@ const gogDeps = {
 
 const runners: Array<[string, (a: string) => Promise<void>]> = [
   ['gog', (a) => gogSetup(gogDeps, a)],
-  ['nile', (a) => nileSetup(a)]
+  ['nile', (a) => nileSetup(gogDeps, a)]
 ]
 
 describe.each(runners)('%s setup on macOS', (_name, run) => {

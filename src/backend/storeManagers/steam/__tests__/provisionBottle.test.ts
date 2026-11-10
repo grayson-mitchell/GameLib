@@ -27,6 +27,7 @@ import { steamBottleConfigStore } from '../stores'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { __stopBottledRaiseLoops } from '../bottledSteam'
 import { provisionBottle } from '../provisionBottle'
+import { createTestStores } from 'backend/testUtils/testServices'
 import { STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
 import { at } from './fixtures/indexed'
@@ -130,6 +131,8 @@ const mockedSet = steamBottleConfigStore.set as jest.Mock
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockedSpawnAsync = spawnAsync as jest.Mock
 const mockedDownloadFile = downloadFile as jest.Mock
+// checkWineBeforeLaunch is mocked in this file, so the store slices are never read.
+const provisionDeps = { stores: createTestStores() }
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 const mockedRunWineCommand = runWineCommand as jest.Mock
 
@@ -200,7 +203,9 @@ describe('bottle.ts', () => {
     test('rejects an unsafe bottle name and does NOT call downloadFile', async () => {
       mockedGetNodefault.mockReturnValue(undefined)
 
-      const result = await provisionBottle({ bottleName: 'a/../b' })
+      const result = await provisionBottle(provisionDeps, {
+        bottleName: 'a/../b'
+      })
 
       expect(result.status).toBe('error')
       expect(mockedDownloadFile).not.toHaveBeenCalled()
@@ -226,7 +231,9 @@ describe('bottle.ts', () => {
         setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
         mockedReadFileSync.mockReturnValue('"WineArch" = "win32"')
 
-        const result = await provisionBottle({ bottleName: 'GameLib' })
+        const result = await provisionBottle(provisionDeps, {
+          bottleName: 'GameLib'
+        })
 
         expect(result.status).toBe('error')
         expect(result.error).toMatch(/shared/i)
@@ -249,7 +256,9 @@ describe('bottle.ts', () => {
         })
         setBottleFs({ conf: false, steamExe: false, steamSetupExe: false })
 
-        const result = await provisionBottle({ bottleName: '  GameLib  ' })
+        const result = await provisionBottle(provisionDeps, {
+          bottleName: '  GameLib  '
+        })
 
         expect(result.status).toBe('error')
         expect(mockedSet).not.toHaveBeenCalled()
@@ -268,7 +277,9 @@ describe('bottle.ts', () => {
         })
         setBottleFs({ conf: false, steamExe: false, steamSetupExe: false })
 
-        const result = await provisionBottle({ bottleName: 'GameLib' })
+        const result = await provisionBottle(provisionDeps, {
+          bottleName: 'GameLib'
+        })
 
         expect(result.status).toBe('error')
         expect(mockedSet).not.toHaveBeenCalled()
@@ -295,7 +306,9 @@ describe('bottle.ts', () => {
           return Promise.resolve({ code: 0, stdout: '', stderr: '' })
         })
 
-        const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+        const result = await provisionBottle(provisionDeps, {
+          bottleName: 'GameLibSteam'
+        })
 
         expect(result.status).toBe('done')
         // Normal create path still runs for the dedicated bottle.
@@ -319,7 +332,9 @@ describe('bottle.ts', () => {
           return Promise.resolve({ code: 0, stdout: '', stderr: '' })
         })
 
-        const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+        const result = await provisionBottle(provisionDeps, {
+          bottleName: 'GameLibSteam'
+        })
 
         expect(result.status).toBe('done')
         expect(mockedSet).toHaveBeenCalledWith('bottleName', 'GameLibSteam')
@@ -347,7 +362,7 @@ describe('bottle.ts', () => {
           type: 'toolkit'
         }
 
-        const result = await provisionBottle({
+        const result = await provisionBottle(provisionDeps, {
           bottleName: 'GameLibSteam',
           wineVersion: gptk
         })
@@ -387,7 +402,7 @@ describe('bottle.ts', () => {
           type: 'crossover'
         }
 
-        const result = await provisionBottle({
+        const result = await provisionBottle(provisionDeps, {
           bottleName: 'GameLibSteam',
           wineVersion: crossover
         })
@@ -401,7 +416,9 @@ describe('bottle.ts', () => {
       mockedGetNodefault.mockReturnValue(undefined)
       setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
 
-      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+      const result = await provisionBottle(provisionDeps, {
+        bottleName: 'GameLibSteam'
+      })
 
       expect(result).toEqual({ status: 'done' })
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -423,7 +440,9 @@ describe('bottle.ts', () => {
         return Promise.resolve({ code: 0, stdout: '', stderr: '' })
       })
 
-      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+      const result = await provisionBottle(provisionDeps, {
+        bottleName: 'GameLibSteam'
+      })
 
       expect(result.status).toBe('done')
       expect(mockedSpawnAsync).toHaveBeenCalledTimes(1)
@@ -446,7 +465,7 @@ describe('bottle.ts', () => {
         return Promise.resolve({ code: 0, stdout: '', stderr: '' })
       })
 
-      await provisionBottle({ bottleName: 'GameLibSteam' })
+      await provisionBottle(provisionDeps, { bottleName: 'GameLibSteam' })
 
       expect(mockedRunWineCommand).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -477,7 +496,7 @@ describe('bottle.ts', () => {
         return Promise.resolve({ code: 0, stdout: '', stderr: '' })
       })
 
-      await provisionBottle({ bottleName: 'GameLibSteam' })
+      await provisionBottle(provisionDeps, { bottleName: 'GameLibSteam' })
 
       expect(mockedMkdirSync).toHaveBeenCalledWith(
         expect.stringContaining('redist'),
@@ -493,7 +512,9 @@ describe('bottle.ts', () => {
       // conf present, steam.exe absent — half-provisioned.
       setBottleFs({ conf: true, steamExe: false, steamSetupExe: false })
 
-      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+      const result = await provisionBottle(provisionDeps, {
+        bottleName: 'GameLibSteam'
+      })
 
       expect(result.status).toBe('done')
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -507,7 +528,9 @@ describe('bottle.ts', () => {
       // Both present: full short-circuit, no spawn, no download.
       setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
 
-      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+      const result = await provisionBottle(provisionDeps, {
+        bottleName: 'GameLibSteam'
+      })
 
       expect(result).toEqual({ status: 'done' })
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -528,7 +551,7 @@ describe('bottle.ts', () => {
         return Promise.resolve({ code: 0, stdout: '', stderr: '' })
       })
 
-      await provisionBottle({ bottleName: 'GameLibSteam' })
+      await provisionBottle(provisionDeps, { bottleName: 'GameLibSteam' })
 
       const createCall = mockedSpawnAsync.mock.calls.find((call) =>
         (call[1] as string[]).includes('--create')
@@ -565,7 +588,9 @@ describe('bottle.ts', () => {
         }
       )
 
-      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+      const result = await provisionBottle(provisionDeps, {
+        bottleName: 'GameLibSteam'
+      })
 
       expect(result.status).toBe('done')
 
@@ -616,7 +641,9 @@ describe('bottle.ts', () => {
         return Promise.resolve({ code: 0, stdout: '', stderr: '' })
       })
 
-      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+      const result = await provisionBottle(provisionDeps, {
+        bottleName: 'GameLibSteam'
+      })
 
       expect(result.status).toBe('done')
       // The race that GAP-17-PROVISIONED-FLAG-STUCK describes: step 8 used to
@@ -630,7 +657,9 @@ describe('bottle.ts', () => {
       // observes readiness and the lazy reconcile persists provisioned:true.
       setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
 
-      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+      const result = await provisionBottle(provisionDeps, {
+        bottleName: 'GameLibSteam'
+      })
 
       expect(result).toEqual({ status: 'done' })
       expect(mockedSet).toHaveBeenCalledWith('provisioned', true)
@@ -642,7 +671,9 @@ describe('bottle.ts', () => {
       setBottleFs({ conf: true, steamExe: true, steamSetupExe: false })
       mockedReadFileSync.mockReturnValue('"WineArch" = "win64"')
 
-      const result = await provisionBottle({ bottleName: 'GameLibSteam' })
+      const result = await provisionBottle(provisionDeps, {
+        bottleName: 'GameLibSteam'
+      })
 
       expect(result).toEqual({ status: 'done' })
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -672,7 +703,7 @@ describe('bottle.ts', () => {
       mockedGetNodefault.mockReturnValue(undefined)
       arrangeWin32Recreate({ conf: true, steamExe: true, steamSetupExe: false })
 
-      await provisionBottle({ bottleName: 'GameLibSteam' })
+      await provisionBottle(provisionDeps, { bottleName: 'GameLibSteam' })
 
       const killIdx = mockedSpawnAsync.mock.calls.findIndex((c) =>
         String(c[0]).endsWith('/bin/wineserver')
@@ -692,7 +723,7 @@ describe('bottle.ts', () => {
       mockedGetNodefault.mockReturnValue(undefined)
       arrangeWin32Recreate({ conf: true, steamExe: true, steamSetupExe: false })
 
-      await provisionBottle({ bottleName: 'GameLibSteam' })
+      await provisionBottle(provisionDeps, { bottleName: 'GameLibSteam' })
 
       const killCall = mockedSpawnAsync.mock.calls.find((c) =>
         String(c[0]).endsWith('/bin/wineserver')
@@ -725,7 +756,7 @@ describe('bottle.ts', () => {
         return Promise.resolve({ code: 0, stdout: '', stderr: '' })
       })
 
-      await provisionBottle({ bottleName: 'GameLibSteam' })
+      await provisionBottle(provisionDeps, { bottleName: 'GameLibSteam' })
 
       const killCall = mockedSpawnAsync.mock.calls.find((c) =>
         String(c[0]).endsWith('/bin/wineserver')

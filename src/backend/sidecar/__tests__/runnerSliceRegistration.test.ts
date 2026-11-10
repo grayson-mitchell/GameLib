@@ -105,7 +105,10 @@ import {
   IpcListener
 } from '../../platform'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import { createTestServices } from 'backend/testUtils/testServices'
+import {
+  createTestServices,
+  createTestStores
+} from 'backend/testUtils/testServices'
 
 // ── Canonical real-registration snapshot (Rule 1 fix, discovered building Phase 34.5 Plan
 // 13's completeness/SEAM-Invariant-B describes below) ──────────────────────────────────────────
@@ -812,10 +815,13 @@ describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 0
     // two calls do not belong in the shared canonical snapshot or in `MODULES`.
     restoreCanonicalRegistrations()
     registerAppShellFlows(
-      { downloadQueue: { initQueue: jest.fn() } },
+      { downloadQueue: { initQueue: jest.fn() }, stores: createTestStores() },
       { skipInitialTraySync: true }
     )
-    registerInstallFlows({ downloadQueue: { addToQueue: jest.fn() } })
+    registerInstallFlows({
+      downloadQueue: { addToQueue: jest.fn() },
+      stores: createTestStores()
+    })
   })
 
   afterAll(() => {

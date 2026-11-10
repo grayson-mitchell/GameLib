@@ -118,8 +118,8 @@ export interface LegendaryUserInfoDeps {
 export interface LegendaryUserDeps extends LegendaryUserInfoDeps {
   libraryManagers: Pick<ManagerDeps['libraryManagers'], 'legendary'>
   stores: LegendaryUserInfoDeps['stores'] & {
-    legendary: Pick<Stores['legendary'], 'legendaryConfigStore'>
-  }
+    legendary: Stores['legendary']
+  } & Pick<Stores, 'wikiGameInfo' | 'gog' | 'nile'>
 }
 
 export class LegendaryUser {
@@ -699,7 +699,7 @@ export class LegendaryUser {
     }
 
     deps.stores.kvs.configStore.delete('userInfo')
-    clearCache('legendary')
+    clearCache(deps, 'legendary')
     // Phase 49 (R2): sign-out clears the expiry flag and fences any probe that
     // began before it, so a late verdict cannot re-latch a signed-out store.
     deps.stores.legendary.legendaryConfigStore.delete('expired')

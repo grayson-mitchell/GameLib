@@ -100,12 +100,13 @@ import { sendFrontendMessage } from '../ipc'
 import { getMainWindow } from '../main_window'
 import { logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
-import type { QuitHandler, StoreManagers } from 'backend/services/types'
+import type { QuitHandler, StoreManagers, Stores } from 'backend/services/types'
 
 /** Narrow slice (66.1 D-01): library managers for game lookup, the quit handler for ctrl+q. */
 export interface ShortcutsFlowDeps {
   managers: Pick<StoreManagers, 'library'>
   quit: Pick<QuitHandler, 'handleExit'>
+  stores: Pick<Stores, 'kvs'>
 }
 
 function logChannelFailure(channel: string, error: unknown): void {
@@ -352,7 +353,10 @@ export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
     const appName = args[0] as string
     const runner = args[1] as Runner
     const game = deps.managers.library[runner].getGame(appName)
-    return addNonSteamGame({ libraryManagers: deps.managers.library }, game)
+    return addNonSteamGame(
+      { libraryManagers: deps.managers.library, stores: deps.stores },
+      game
+    )
   })
 
   ipcMain.handle(

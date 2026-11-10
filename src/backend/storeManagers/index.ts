@@ -102,7 +102,7 @@ const launchHooks = {
   },
   nile: {
     prepareLaunch: async (appName) => {
-      await nileSetup(appName)
+      await nileSetup(legacyManagerDeps(), appName)
     }
   },
   steam: {

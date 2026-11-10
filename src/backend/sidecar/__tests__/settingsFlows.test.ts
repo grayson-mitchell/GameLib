@@ -377,7 +377,8 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
     }
     expect(globalConfigInstance.setSetting).toHaveBeenCalledWith(
       'maxWorkers',
-      2
+      2,
+      expect.anything()
     )
   })
 
@@ -452,7 +453,8 @@ describe('sidecar settings WRITE flows (Phase 31 Plan 01 — setSetting/writeCon
     }
     expect(globalConfigInstance.setSetting).toHaveBeenCalledWith(
       'steamGridDbApiKey',
-      'not-a-token'
+      'not-a-token',
+      expect.anything()
     )
     expect(globalConfigInstance.set).not.toHaveBeenCalled()
     expect(globalConfigInstance.flush).not.toHaveBeenCalled()

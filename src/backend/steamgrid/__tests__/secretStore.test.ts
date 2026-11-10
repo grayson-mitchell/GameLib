@@ -67,9 +67,16 @@ import {
   SteamGridDbSecretStore,
   ElectronSteamGridDbSecretStore,
   setSteamGridDbSecretStore,
-  getSteamGridDbSecretStore
+  getSteamGridDbSecretStore,
+  bindSteamGridDbSecretDeps
 } from '../secretStore'
+import { createTestStores } from 'backend/testUtils/testServices'
 import { defined } from 'backend/testUtils/indexed'
+
+// The mocked GlobalConfig never reads the kvs slice, but the store must hand it through.
+const secretDeps = {
+  stores: createTestStores({ kvs: { configStore: {} } as never })
+}
 
 describe('steamgrid/secretStore', () => {
   beforeEach(() => {
@@ -92,14 +99,15 @@ describe('steamgrid/secretStore', () => {
 
     // Reset the module-level registry to a fresh ElectronSteamGridDbSecretStore between tests so
     // registry-swap tests don't leak into unrelated tests.
-    setSteamGridDbSecretStore(new ElectronSteamGridDbSecretStore())
+    bindSteamGridDbSecretDeps(secretDeps)
+    setSteamGridDbSecretStore(new ElectronSteamGridDbSecretStore(secretDeps))
   })
 
   describe('mock wiring sanity', () => {
     it('a value seeded directly into backingSettings is read back through the mocked GlobalConfig', async () => {
       backingSettings.steamGridDbApiKey =
         'sgdb:v1:' + Buffer.from('seeded').toString('base64')
-      const store = new ElectronSteamGridDbSecretStore()
+      const store = new ElectronSteamGridDbSecretStore(secretDeps)
 
       const value = await store.getApiKey()
       expect(value).toBe('seeded')
@@ -109,12 +117,13 @@ describe('steamgrid/secretStore', () => {
 
   describe('ElectronSteamGridDbSecretStore', () => {
     it('setApiKey persists a sgdb:v1:-prefixed value, not raw plaintext, and getApiKey round-trips it', async () => {
-      const store = new ElectronSteamGridDbSecretStore()
+      const store = new ElectronSteamGridDbSecretStore(secretDeps)
       await store.setApiKey('  abc123  ')
 
       expect(mockSetSetting).toHaveBeenCalledWith(
         'steamGridDbApiKey',
-        expect.stringMatching(/^sgdb:v1:/)
+        expect.stringMatching(/^sgdb:v1:/),
+        secretDeps.stores.kvs
       )
       const [, persisted] = defined(
         mockSetSetting.mock.calls[0],
@@ -128,28 +137,33 @@ describe('steamgrid/secretStore', () => {
 
     it('getApiKey on a legacy bare-plaintext value returns it unchanged AND re-encrypts it in the same call', async () => {
       backingSettings.steamGridDbApiKey = 'legacykey'
-      const store = new ElectronSteamGridDbSecretStore()
+      const store = new ElectronSteamGridDbSecretStore(secretDeps)
 
       const value = await store.getApiKey()
       expect(value).toBe('legacykey')
       expect(backingSettings.steamGridDbApiKey).toMatch(/^sgdb:v1:/)
       expect(mockSetSetting).toHaveBeenCalledWith(
         'steamGridDbApiKey',
-        expect.stringMatching(/^sgdb:v1:/)
+        expect.stringMatching(/^sgdb:v1:/),
+        secretDeps.stores.kvs
       )
     })
 
     it('getApiKey returns undefined when nothing is stored', async () => {
-      const store = new ElectronSteamGridDbSecretStore()
+      const store = new ElectronSteamGridDbSecretStore(secretDeps)
       const value = await store.getApiKey()
       expect(value).toBeUndefined()
     })
 
     it('setApiKey("") persists the empty string and getApiKey then returns undefined', async () => {
-      const store = new ElectronSteamGridDbSecretStore()
+      const store = new ElectronSteamGridDbSecretStore(secretDeps)
       await store.setApiKey('')
 
-      expect(mockSetSetting).toHaveBeenCalledWith('steamGridDbApiKey', '')
+      expect(mockSetSetting).toHaveBeenCalledWith(
+        'steamGridDbApiKey',
+        '',
+        secretDeps.stores.kvs
+      )
       const value = await store.getApiKey()
       expect(value).toBeUndefined()
     })
@@ -158,16 +172,20 @@ describe('steamgrid/secretStore', () => {
       mockIsEncryptionAvailable.mockImplementation(() => {
         throw new Error('Keychain unavailable')
       })
-      const store = new ElectronSteamGridDbSecretStore()
+      const store = new ElectronSteamGridDbSecretStore(secretDeps)
 
       await expect(store.setApiKey('abc')).resolves.toBeUndefined()
-      expect(mockSetSetting).toHaveBeenCalledWith('steamGridDbApiKey', 'abc')
+      expect(mockSetSetting).toHaveBeenCalledWith(
+        'steamGridDbApiKey',
+        'abc',
+        secretDeps.stores.kvs
+      )
 
       await expect(store.getApiKey()).resolves.toBe('abc')
     })
 
     it('clearApiKey resolves and leaves getApiKey returning undefined', async () => {
-      const store = new ElectronSteamGridDbSecretStore()
+      const store = new ElectronSteamGridDbSecretStore(secretDeps)
       await store.setApiKey('abc')
       await expect(store.clearApiKey()).resolves.toBeUndefined()
 
@@ -175,7 +193,7 @@ describe('steamgrid/secretStore', () => {
     })
 
     it('isAvailable() reflects safeStorage availability via a throwaway probe, never touching GlobalConfig', () => {
-      const store = new ElectronSteamGridDbSecretStore()
+      const store = new ElectronSteamGridDbSecretStore(secretDeps)
       expect(store.isAvailable()).toBe(true)
 
       mockIsEncryptionAvailable.mockReturnValue(false)
@@ -188,7 +206,7 @@ describe('steamgrid/secretStore', () => {
       mockEncryptString.mockImplementation(() => {
         throw new Error('encrypt failed')
       })
-      const store = new ElectronSteamGridDbSecretStore()
+      const store = new ElectronSteamGridDbSecretStore(secretDeps)
 
       expect(() => store.isAvailable()).not.toThrow()
       expect(store.isAvailable()).toBe(false)
@@ -202,19 +220,19 @@ describe('steamgrid/secretStore', () => {
       })
 
       it('getApiKey resolves to undefined and logs at most one warning', async () => {
-        const store = new ElectronSteamGridDbSecretStore()
+        const store = new ElectronSteamGridDbSecretStore(secretDeps)
         await expect(store.getApiKey()).resolves.toBeUndefined()
         expect(mockLogWarning.mock.calls.length).toBeLessThanOrEqual(1)
       })
 
       it('setApiKey resolves and logs at most one warning', async () => {
-        const store = new ElectronSteamGridDbSecretStore()
+        const store = new ElectronSteamGridDbSecretStore(secretDeps)
         await expect(store.setApiKey('abc')).resolves.toBeUndefined()
         expect(mockLogWarning.mock.calls.length).toBeLessThanOrEqual(1)
       })
 
       it('clearApiKey resolves and logs at most one warning', async () => {
-        const store = new ElectronSteamGridDbSecretStore()
+        const store = new ElectronSteamGridDbSecretStore(secretDeps)
         await expect(store.clearApiKey()).resolves.toBeUndefined()
         expect(mockLogWarning.mock.calls.length).toBeLessThanOrEqual(1)
       })
