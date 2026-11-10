@@ -228,7 +228,7 @@
             "chipNonAvailableOnly": "მხოლოდ მიუწვდომელი",
             "chipNoStorePageOnly": "მხოლოდ მაღაზიის გვერდის გარეშე",
             "clearAll": "ყველას გასუფთავება",
-            "collections": "კოლექციები",
+            "collections": "კატეგორიები",
             "emptyAlphabetLetter": "იწყება \"{{letter}}\"-ით",
             "emptyAlphabetNumber": "იწყება ციფრით",
             "emptyBody": "არცერთი თამაში არ ემთხვევა {{filters}}.",

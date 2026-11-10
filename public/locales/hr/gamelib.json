@@ -234,7 +234,7 @@
             "chipNonAvailableOnly": "Samo nedostupne",
             "chipNoStorePageOnly": "Samo bez stranice trgovine",
             "clearAll": "Obriši sve",
-            "collections": "Zbirke",
+            "collections": "Kategorije",
             "emptyAlphabetLetter": "Počinje s \"{{letter}}\"",
             "emptyAlphabetNumber": "Počinje brojem",
             "emptyBody": "Nijedna igra ne odgovara filtrima {{filters}}.",

@@ -234,7 +234,7 @@
             "chipNonAvailableOnly": "Само недоступне",
             "chipNoStorePageOnly": "Само без странице продавнице",
             "clearAll": "Обриши све",
-            "collections": "Колекције",
+            "collections": "Категорије",
             "emptyAlphabetLetter": "Почиње на „{{letter}}”",
             "emptyAlphabetNumber": "Почиње бројем",
             "emptyBody": "Ниједна игра се не подудара са {{filters}}.",

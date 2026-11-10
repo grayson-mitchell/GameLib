@@ -228,7 +228,7 @@
             "chipNonAvailableOnly": "เฉพาะที่ไม่พร้อมใช้งาน",
             "chipNoStorePageOnly": "เฉพาะที่ไม่มีหน้าร้านค้า",
             "clearAll": "ล้างทั้งหมด",
-            "collections": "คอลเลกชัน",
+            "collections": "หมวดหมู่",
             "emptyAlphabetLetter": "ขึ้นต้นด้วย \"{{letter}}\"",
             "emptyAlphabetNumber": "ขึ้นต้นด้วยตัวเลข",
             "emptyBody": "ไม่มีเกมที่ตรงกับ {{filters}}",

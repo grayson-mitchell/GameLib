@@ -281,7 +281,7 @@
             "chipNoStorePageHidden": "Hiding games without a store page",
             "chipNoStorePageOnly": "No store page only",
             "clearAll": "Clear all",
-            "collections": "Collections",
+            "collections": "Categories",
             "emptyAlphabetLetter": "Starting with \"{{letter}}\"",
             "emptyAlphabetNumber": "Starting with a number",
             "emptyBody": "No games match {{filters}}.",
@@ -293,11 +293,11 @@
             "focusRowViewsGroup": "Views",
             "groupSelectedCount_one": "{{count}} selected",
             "groupSelectedCount_other": "{{count}} selected",
-            "manageCollections": "Manage collections",
+            "manageCollections": "Manage categories",
             "moreFilters": "More filters",
             "native": "Native",
             "nativeAll": "All",
-            "newCollection": "+ New collection",
+            "newCollection": "+ New category",
             "noStorePage": "No store page",
             "notYetChecked": "Not yet checked",
             "removeFilter": "Remove {{filterLabel}} filter",
@@ -841,7 +841,7 @@
     "tour": {
         "library": {
             "groupBy": "Group your games by install status or by store, or turn grouping off.",
-            "quickFiltersCollections": "Show only installed games or only native builds, or browse your custom Collections.",
+            "quickFiltersCollections": "Show only installed games or only native builds, or browse your custom Categories.",
             "sort": "Sort your games by name, last played or install size, and flip the direction.",
             "sortWithMetacritic": "Sort your games by name, last played, install size or Metacritic score, and flip the direction.",
             "welcome": {
