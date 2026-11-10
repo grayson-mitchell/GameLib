@@ -25,9 +25,8 @@
  * `onOutput` into a bounded capture. The capture is NEVER logged: a runner's
  * output can carry tokens (T-49-15), so this module imports no logger.
  *
- * `libraryManagerMap` is imported lazily (`await import('../storeManagers')`),
- * never statically, to stay out of the storeManagers import cycle (the same
- * pattern as `eos_overlay.ts`).
+ * The library managers arrive by injection (66.1), so nothing here imports
+ * `storeManagers`.
  *
  * GOG's probe lives below and delegates to `GOGUser.getCredentialsWithVerdict`:
  * that is the single `gogdl auth` spawn site, shared with Block E.
@@ -45,11 +44,20 @@
  * kill an unrelated runner command.
  */
 import type { SignInProbeOutcome } from 'common/signInState'
+import type { ManagerDeps } from 'backend/services/types'
+import type { GOGUserDeps } from '../storeManagers/gog/user'
 import {
   classifyLegendaryStatus,
   classifyNileOutput,
   createBoundedOutputCapture
 } from './classify'
+
+/** The library managers each probe drives (66.1, R3). */
+export interface RunnerProbeDeps<
+  R extends keyof ManagerDeps['libraryManagers']
+> {
+  libraryManagers: Pick<ManagerDeps['libraryManagers'], R>
+}
 
 export const SIGN_IN_PROBE_ABORT_IDS = {
   legendary: 'signin-probe-legendary',
@@ -58,11 +66,12 @@ export const SIGN_IN_PROBE_ABORT_IDS = {
 } as const
 
 /** `legendary status --json`: classify the captured output (RESEARCH 1a). */
-export async function probeLegendarySession(): Promise<SignInProbeOutcome> {
+export async function probeLegendarySession(
+  deps: RunnerProbeDeps<'legendary'>
+): Promise<SignInProbeOutcome> {
   try {
-    const { libraryManagerMap } = await import('../storeManagers')
     const capture = createBoundedOutputCapture()
-    const res = await libraryManagerMap.legendary.runRunnerCommand(
+    const res = await deps.libraryManagers.legendary.runRunnerCommand(
       { subcommand: 'status', '--json': true },
       {
         abortId: SIGN_IN_PROBE_ABORT_IDS.legendary,
@@ -83,11 +92,12 @@ export async function probeLegendarySession(): Promise<SignInProbeOutcome> {
 }
 
 /** `nile list-updates --json`: classify the captured output (RESEARCH 1c). */
-export async function probeNileSession(): Promise<SignInProbeOutcome> {
+export async function probeNileSession(
+  deps: RunnerProbeDeps<'nile'>
+): Promise<SignInProbeOutcome> {
   try {
-    const { libraryManagerMap } = await import('../storeManagers')
     const capture = createBoundedOutputCapture()
-    const res = await libraryManagerMap.nile.runRunnerCommand(
+    const res = await deps.libraryManagers.nile.runRunnerCommand(
       ['list-updates', '--json'],
       {
         abortId: SIGN_IN_PROBE_ABORT_IDS.nile,
@@ -109,21 +119,15 @@ export async function probeNileSession(): Promise<SignInProbeOutcome> {
 
 /**
  * GOG: the verdict is decided inside `GOGUser.getCredentialsWithVerdict`, the
- * single `gogdl auth` spawn site shared with Block E (D-17). Lazy import for the
- * same cycle reason as `libraryManagerMap` above.
+ * single `gogdl auth` spawn site shared with Block E (D-17). `GOGUser` is
+ * imported lazily to stay out of the storeManagers import cycle.
  */
-export async function probeGogSession(): Promise<SignInProbeOutcome> {
+export async function probeGogSession(
+  deps: GOGUserDeps
+): Promise<SignInProbeOutcome> {
   try {
     const { GOGUser } = await import('../storeManagers/gog/user')
-    // Transitional (66.1-08): the probe takes injected slices in a later plan.
-    const { libraryManagerMap } = await import('../storeManagers')
-    const gogStores = await import('../storeManagers/gog/stores')
-    return (
-      await GOGUser.getCredentialsWithVerdict({
-        stores: { gog: gogStores },
-        libraryManagers: { gog: libraryManagerMap.gog }
-      })
-    ).verdict
+    return (await GOGUser.getCredentialsWithVerdict(deps)).verdict
   } catch {
     return 'unknown'
   }

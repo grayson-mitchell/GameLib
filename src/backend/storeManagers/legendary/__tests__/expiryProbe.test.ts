@@ -46,15 +46,8 @@ jest.mock('backend/ipc', () => ({
 }))
 
 const mockRunRunnerCommand = jest.fn()
-jest.mock('../..', () => ({
-  libraryManagerMap: {
-    legendary: {
-      runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
-    }
-  }
-}))
 
-// Plain-object fake stores (immune to resetMocks), one per store verdict.ts reaches.
+// Plain-object fake store (immune to resetMocks) for this store's verdict flag.
 jest.mock('backend/storeManagers/legendary/stores', () => ({
   legendaryConfigStore: jest
     .requireActual<
@@ -62,36 +55,18 @@ jest.mock('backend/storeManagers/legendary/stores', () => ({
     >('backend/signInProbe/__tests__/fakeFlagStore')
     .makeFakeFlagStore()
 }))
-jest.mock('backend/storeManagers/gog/stores', () => ({
-  configStore: jest
-    .requireActual<
-      typeof import('backend/signInProbe/__tests__/fakeFlagStore')
-    >('backend/signInProbe/__tests__/fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/nile/stores', () => ({
-  configStore: jest
-    .requireActual<
-      typeof import('backend/signInProbe/__tests__/fakeFlagStore')
-    >('backend/signInProbe/__tests__/fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/steam/stores', () => ({
-  configStore: jest
-    .requireActual<
-      typeof import('backend/signInProbe/__tests__/fakeFlagStore')
-    >('backend/signInProbe/__tests__/fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/humble/stores', () => ({
-  configStore: jest
-    .requireActual<
-      typeof import('backend/signInProbe/__tests__/fakeFlagStore')
-    >('backend/signInProbe/__tests__/fakeFlagStore')
-    .makeFakeFlagStore()
-}))
 
 const flag = legendaryConfigStore as unknown as FakeFlagStore
+const verdictDeps = {
+  stores: { legendary: { legendaryConfigStore: flag } }
+} as unknown as Parameters<typeof applySignInVerdict<'legendary'>>[0]
+const probeDeps = {
+  libraryManagers: {
+    legendary: {
+      runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
+    }
+  }
+} as unknown as Parameters<typeof probeLegendarySession>[0]
 
 const kvsConfigStore = { delete: jest.fn(), set: jest.fn(), get: jest.fn() }
 
@@ -132,8 +107,11 @@ function armRunner(
 /** The pass's shape: capture the epoch, probe, apply. */
 async function probeAndApply() {
   const epoch = captureSignInEpoch('legendary')
-  const outcome = await probeLegendarySession()
-  return { outcome, result: applySignInVerdict('legendary', outcome, epoch) }
+  const outcome = await probeLegendarySession(probeDeps)
+  return {
+    outcome,
+    result: applySignInVerdict(verdictDeps, 'legendary', outcome, epoch)
+  }
 }
 
 beforeEach(() => {
@@ -250,7 +228,12 @@ describe('Epic: a probe that began before a sign-in cannot re-set expired', () =
     const epochAtStart = captureSignInEpoch('legendary')
     noteSignInSucceeded('legendary')
 
-    const result = applySignInVerdict('legendary', 'expired', epochAtStart)
+    const result = applySignInVerdict(
+      verdictDeps,
+      'legendary',
+      'expired',
+      epochAtStart
+    )
 
     expect(result).toBe('stale')
     expect(flag.sets).toEqual([])

@@ -2,7 +2,7 @@
   "jestMock": {
     "src/backend/storeManagers/legendary/__tests__/epicCookieCensus.test.ts": 7,
     "src/backend/storeManagers/legendary/__tests__/epicLogoutDomains.test.ts": 7,
-    "src/backend/storeManagers/legendary/__tests__/expiryProbe.test.ts": 11,
+    "src/backend/storeManagers/legendary/__tests__/expiryProbe.test.ts": 6,
     "src/backend/storeManagers/legendary/__tests__/getGameInfoForceReloadStaleness.test.ts": 7,
     "src/backend/storeManagers/legendary/__tests__/user.test.ts": 5
   },

@@ -35,13 +35,17 @@
 import { isStore } from 'common/storeCapabilities'
 import { sendFrontendMessage } from 'backend/ipc'
 import { logInfo, LogPrefix } from 'backend/logger'
-import { configStore as humbleConfigStore } from 'backend/humble/stores'
-import { configStore as gogConfigStore } from 'backend/storeManagers/gog/stores'
-import { legendaryConfigStore } from 'backend/storeManagers/legendary/stores'
-import { configStore as nileConfigStore } from 'backend/storeManagers/nile/stores'
-import { configStore as steamConfigStore } from 'backend/storeManagers/steam/stores'
+import type { Stores } from 'backend/services/types'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { isSignInEpochCurrent } from './sessionEpoch'
+
+/**
+ * The store family a verdict reads and writes (66.1, R3). `SignInStore` names are
+ * `Stores` keys, so a caller deciding for one store injects only that family.
+ */
+export interface SignInVerdictDeps<S extends SignInStore = SignInStore> {
+  stores: Pick<Stores, S>
+}
 
 export type SignInVerdictResult = 'latched' | 'cleared' | 'unchanged' | 'stale'
 
@@ -52,40 +56,50 @@ interface PersistedFlag {
 }
 
 /**
- * One accessor per store. `latch` is only ever called from the `expired`
- * branch of `applySignInVerdict`; `clear` only from the `healthy` branch.
+ * One accessor per store, resolved lazily so a caller that injected a single
+ * family never touches the others. `latch` is only ever called from the
+ * `expired` branch of `applySignInVerdict`; `clear` only from the `healthy`
+ * branch.
  */
-const FLAGS: Record<SignInStore, PersistedFlag> = {
-  legendary: {
-    isSet: () => legendaryConfigStore.get_nodefault('expired') === true,
-    latch: () => legendaryConfigStore.set('expired', true),
-    clear: () => legendaryConfigStore.delete('expired')
-  },
-  gog: {
-    isSet: () => gogConfigStore.get_nodefault('expired') === true,
-    latch: () => gogConfigStore.set('expired', true),
-    clear: () => gogConfigStore.delete('expired')
-  },
-  nile: {
-    isSet: () => nileConfigStore.get_nodefault('expired') === true,
-    latch: () => nileConfigStore.set('expired', true),
-    clear: () => nileConfigStore.delete('expired')
-  },
-  humble: {
-    isSet: () => humbleConfigStore.get_nodefault('expired') === true,
-    latch: () => humbleConfigStore.set('expired', true),
-    clear: () => humbleConfigStore.delete('expired')
-  },
-  steam: {
-    isSet: () => steamConfigStore.get_nodefault('credentialsMissing') === true,
-    latch: () => steamConfigStore.set('credentialsMissing', true),
-    clear: () => steamConfigStore.delete('credentialsMissing')
+function flagFor<S extends SignInStore>(
+  deps: SignInVerdictDeps<S>,
+  store: S
+): PersistedFlag {
+  // Only `store`'s family is injected for a single-store caller; the lookups
+  // below touch nothing else.
+  const stores = deps.stores as Pick<Stores, SignInStore>
+  const accessors: Record<SignInStore, () => PersistedFlag> = {
+    legendary: () => flagOver(stores.legendary.legendaryConfigStore, 'expired'),
+    gog: () => flagOver(stores.gog.configStore, 'expired'),
+    nile: () => flagOver(stores.nile.configStore, 'expired'),
+    humble: () => flagOver(stores.humble.configStore, 'expired'),
+    steam: () => flagOver(stores.steam.configStore, 'credentialsMissing')
+  }
+  return accessors[store]()
+}
+
+function flagOver(
+  store: unknown,
+  key: 'expired' | 'credentialsMissing'
+): PersistedFlag {
+  const flagStore = store as {
+    get_nodefault(k: string): unknown
+    set(k: string, v: boolean): void
+    delete(k: string): void
+  }
+  return {
+    isSet: () => flagStore.get_nodefault(key) === true,
+    latch: () => flagStore.set(key, true),
+    clear: () => flagStore.delete(key)
   }
 }
 
 /** Display-safe by construction: the same cookie-free shape as before D-18. */
-function pushHumbleAuthState(expired: boolean): void {
-  const userData = humbleConfigStore.get_nodefault('userData')
+function pushHumbleAuthState(
+  { stores }: SignInVerdictDeps<'humble'>,
+  expired: boolean
+): void {
+  const userData = stores.humble.configStore.get_nodefault('userData')
   sendFrontendMessage('humbleAuthState', {
     isLoggedIn: true,
     username: userData?.username,
@@ -93,8 +107,9 @@ function pushHumbleAuthState(expired: boolean): void {
   })
 }
 
-function decide(
-  store: SignInStore,
+function decide<S extends SignInStore>(
+  deps: SignInVerdictDeps<S>,
+  store: S,
   outcome: SignInProbeOutcome,
   epochAtStart: number
 ): SignInVerdictResult {
@@ -105,14 +120,14 @@ function decide(
     return 'unchanged'
   }
 
-  const flag = FLAGS[store]
+  const flag = flagFor(deps, store)
   if (outcome === 'expired') {
     if (flag.isSet()) {
       return 'unchanged'
     }
     flag.latch()
     if (isStore(store, 'humble')) {
-      pushHumbleAuthState(true)
+      pushHumbleAuthState(deps as unknown as SignInVerdictDeps<'humble'>, true)
     }
     return 'latched'
   }
@@ -123,17 +138,18 @@ function decide(
   }
   flag.clear()
   if (isStore(store, 'humble')) {
-    pushHumbleAuthState(false)
+    pushHumbleAuthState(deps as unknown as SignInVerdictDeps<'humble'>, false)
   }
   return 'cleared'
 }
 
-export function applySignInVerdict(
-  store: SignInStore,
+export function applySignInVerdict<S extends SignInStore>(
+  deps: SignInVerdictDeps<S>,
+  store: S,
   outcome: SignInProbeOutcome,
   epochAtStart: number
 ): SignInVerdictResult {
-  const result = decide(store, outcome, epochAtStart)
+  const result = decide(deps, store, outcome, epochAtStart)
   logInfo(`[signInProbe] ${store} verdict=${result}`, LogPrefix.Backend)
   return result
 }

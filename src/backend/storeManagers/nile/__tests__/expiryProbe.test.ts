@@ -40,6 +40,7 @@ jest.mock('backend/ipc', () => ({
 }))
 
 const mockRunRunnerCommand = jest.fn()
+// NileUser still imports the manager map itself (its own conversion is a later plan).
 jest.mock('../..', () => ({
   libraryManagerMap: {
     nile: {
@@ -48,36 +49,8 @@ jest.mock('../..', () => ({
   }
 }))
 
-// Plain-object fake stores (immune to resetMocks), one per store verdict.ts reaches.
+// Plain-object fake store (immune to resetMocks) for this store's verdict flag.
 jest.mock('backend/storeManagers/nile/stores', () => ({
-  configStore: jest
-    .requireActual<
-      typeof import('backend/signInProbe/__tests__/fakeFlagStore')
-    >('backend/signInProbe/__tests__/fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/legendary/stores', () => ({
-  legendaryConfigStore: jest
-    .requireActual<
-      typeof import('backend/signInProbe/__tests__/fakeFlagStore')
-    >('backend/signInProbe/__tests__/fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/gog/stores', () => ({
-  configStore: jest
-    .requireActual<
-      typeof import('backend/signInProbe/__tests__/fakeFlagStore')
-    >('backend/signInProbe/__tests__/fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/steam/stores', () => ({
-  configStore: jest
-    .requireActual<
-      typeof import('backend/signInProbe/__tests__/fakeFlagStore')
-    >('backend/signInProbe/__tests__/fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/humble/stores', () => ({
   configStore: jest
     .requireActual<
       typeof import('backend/signInProbe/__tests__/fakeFlagStore')
@@ -86,6 +59,16 @@ jest.mock('backend/humble/stores', () => ({
 }))
 
 const flag = nileConfigStore as unknown as FakeFlagStore
+const verdictDeps = {
+  stores: { nile: { configStore: flag } }
+} as unknown as Parameters<typeof applySignInVerdict<'nile'>>[0]
+const probeDeps = {
+  libraryManagers: {
+    nile: {
+      runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
+    }
+  }
+} as unknown as Parameters<typeof probeNileSession>[0]
 const sendMock = sendFrontendMessage as unknown as jest.Mock
 
 type RunOptions = { onOutput?: (chunk: string) => void }
@@ -110,8 +93,11 @@ function armRunner(
 /** The pass's shape: capture the epoch, probe, apply. */
 async function probeAndApply() {
   const epoch = captureSignInEpoch('nile')
-  const outcome = await probeNileSession()
-  return { outcome, result: applySignInVerdict('nile', outcome, epoch) }
+  const outcome = await probeNileSession(probeDeps)
+  return {
+    outcome,
+    result: applySignInVerdict(verdictDeps, 'nile', outcome, epoch)
+  }
 }
 
 const REGISTER_DATA = {
@@ -251,7 +237,12 @@ describe('Amazon: a probe that began before a sign-in cannot re-set expired', ()
     const epochAtStart = captureSignInEpoch('nile')
     noteSignInSucceeded('nile')
 
-    const result = applySignInVerdict('nile', 'expired', epochAtStart)
+    const result = applySignInVerdict(
+      verdictDeps,
+      'nile',
+      'expired',
+      epochAtStart
+    )
 
     expect(result).toBe('stale')
     expect(flag.sets).toEqual([])

@@ -315,6 +315,7 @@ describe('authenticated connect lifecycle', () => {
       'logon-rejected'
     )
     expect(mockApplySignInVerdict).toHaveBeenCalledWith(
+      expect.anything(),
       'steam',
       'expired',
       expect.anything()
@@ -327,6 +328,7 @@ describe('authenticated connect lifecycle', () => {
       'logon-rejected'
     )
     expect(mockApplySignInVerdict).not.toHaveBeenCalledWith(
+      expect.anything(),
       'steam',
       'expired',
       expect.anything()

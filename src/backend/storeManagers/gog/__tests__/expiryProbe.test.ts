@@ -69,15 +69,8 @@ jest.mock('graceful-fs', () => ({
 }))
 
 const mockRunRunnerCommand = jest.fn()
-jest.mock('backend/storeManagers/index', () => ({
-  libraryManagerMap: {
-    gog: {
-      runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
-    }
-  }
-}))
 
-// Plain-object fake stores (immune to resetMocks), one per store verdict.ts reaches.
+// Plain-object fake store (immune to resetMocks) for this store's verdict flag.
 jest.mock('backend/storeManagers/gog/stores', () => {
   const fake = jest
     .requireActual<
@@ -89,34 +82,6 @@ jest.mock('backend/storeManagers/gog/stores', () => {
     configStore: Object.assign(fake, { clear: () => fake.data.clear() })
   }
 })
-jest.mock('backend/storeManagers/legendary/stores', () => ({
-  legendaryConfigStore: jest
-    .requireActual<
-      typeof import('backend/signInProbe/__tests__/fakeFlagStore')
-    >('backend/signInProbe/__tests__/fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/nile/stores', () => ({
-  configStore: jest
-    .requireActual<
-      typeof import('backend/signInProbe/__tests__/fakeFlagStore')
-    >('backend/signInProbe/__tests__/fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/steam/stores', () => ({
-  configStore: jest
-    .requireActual<
-      typeof import('backend/signInProbe/__tests__/fakeFlagStore')
-    >('backend/signInProbe/__tests__/fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/humble/stores', () => ({
-  configStore: jest
-    .requireActual<
-      typeof import('backend/signInProbe/__tests__/fakeFlagStore')
-    >('backend/signInProbe/__tests__/fakeFlagStore')
-    .makeFakeFlagStore()
-}))
 
 const flag = gogConfigStore as unknown as FakeFlagStore
 
@@ -155,8 +120,8 @@ function armRunner(
 /** The pass's shape: capture the epoch, probe, apply. */
 async function probeAndApply() {
   const epoch = captureSignInEpoch('gog')
-  const outcome = await probeGogSession()
-  return { outcome, result: applySignInVerdict('gog', outcome, epoch) }
+  const outcome = await probeGogSession(deps)
+  return { outcome, result: applySignInVerdict(deps, 'gog', outcome, epoch) }
 }
 
 beforeEach(() => {
@@ -352,21 +317,21 @@ describe('GOG: getCredentials() is unchanged for existing callers', () => {
 
 describe('probeGogSession', () => {
   it('returns the verdict from getCredentialsWithVerdict', async () => {
-    await expect(probeGogSession()).resolves.toBe('expired')
+    await expect(probeGogSession(deps)).resolves.toBe('expired')
 
     armRunner(JSON.stringify(CREDENTIALS))
     GOGUser.__resetCredentialsCacheForTests()
-    await expect(probeGogSession()).resolves.toBe('healthy')
+    await expect(probeGogSession(deps)).resolves.toBe('healthy')
   })
 
   it('returns unknown when the spawn rejects', async () => {
     mockRunRunnerCommand.mockRejectedValue(new Error('spawn failed'))
-    await expect(probeGogSession()).resolves.toBe('unknown')
+    await expect(probeGogSession(deps)).resolves.toBe('unknown')
   })
 
   it('never passes captured text to a logger', async () => {
     armRunner('null', [`Failed to refresh credentials ${SECRET}`, 'null'])
-    await probeGogSession()
+    await probeGogSession(deps)
 
     const logged = [logInfo, logWarning, logError].some((logger) =>
       (logger as unknown as jest.Mock).mock.calls.some((args) =>
@@ -442,11 +407,11 @@ describe('GOG: the only latch is applySignInVerdict (source gate)', () => {
 describe('GOG: a probe that began before a sign-in cannot re-set expired', () => {
   it('returns stale with no write when the epoch moved after the probe started', async () => {
     const epochAtStart = captureSignInEpoch('gog')
-    const outcome = await probeGogSession()
+    const outcome = await probeGogSession(deps)
     expect(outcome).toBe('expired')
 
     noteSignInSucceeded('gog')
-    const result = applySignInVerdict('gog', outcome, epochAtStart)
+    const result = applySignInVerdict(deps, 'gog', outcome, epochAtStart)
 
     expect(result).toBe('stale')
     expect(flag.sets).toEqual([])

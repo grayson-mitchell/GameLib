@@ -2,6 +2,7 @@ import { existsSync } from 'graceful-fs'
 import { join } from 'path'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { configStore } from './stores'
+import * as steamStores from './stores'
 import { STEAM_INSTALL_PATHS } from './constants'
 import { getTokenStore, readTokenOutcome } from './tokenStore'
 import { currentTriggerLabel, noteSteamAuthTrigger } from './authTrigger'
@@ -214,7 +215,13 @@ export class SteamUser {
     outcome: 'healthy' | 'expired',
     epochAtStart: number
   ): void {
-    const result = applySignInVerdict('steam', outcome, epochAtStart)
+    const result = applySignInVerdict(
+      // Transitional (66.1-13): SteamUser is a static class; plan 18 injects the family.
+      { stores: { steam: steamStores } },
+      'steam',
+      outcome,
+      epochAtStart
+    )
     if (result !== 'latched' && result !== 'cleared') return
     recordSignInProbeOutcome('steam', outcome)
     publishSignInProbeOutcomes()

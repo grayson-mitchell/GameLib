@@ -581,7 +581,7 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
     function signInProbeOrderViolations(initBody: string): string[] {
       const handler = initBody.indexOf('registerSignInProbeOutcomesHandler()')
       const ready = initBody.indexOf('READY_SENTINEL}')
-      const start = initBody.indexOf('startSignInProbePass()')
+      const start = initBody.indexOf('startSignInProbePass(')
       const deliver = initBody.lastIndexOf('deliverStartupProtocolUrl()')
       const violations: string[] = []
       if (ready < 0) violations.push('no READY write')

@@ -24,11 +24,6 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { logInfo, logWarning } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
-import { legendaryConfigStore } from 'backend/storeManagers/legendary/stores'
-import { configStore as gogConfigStore } from 'backend/storeManagers/gog/stores'
-import { configStore as nileConfigStore } from 'backend/storeManagers/nile/stores'
-import { configStore as steamConfigStore } from 'backend/storeManagers/steam/stores'
-import { configStore as humbleConfigStore } from 'backend/humble/stores'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
 import { __resetSignInEpochsForTests, bumpSignInEpoch } from '../sessionEpoch'
@@ -40,13 +35,18 @@ import { SIGN_IN_PROBE_ABORT_IDS } from '../runnerProbes'
 import {
   __resetSignInProbePassForTests,
   boundedSignInProbe,
+  createSignInProbePassDeps,
   requestSignInProbePass,
   runSignInProbePass,
   SIGN_IN_PROBE_BOUND_MS,
   startSignInProbePass
 } from '../pass'
-import type { SignInProbePassDeps, SignInProbeRegistration } from '../pass'
-import type { FakeFlagStore } from './fakeFlagStore'
+import type {
+  SignInProbeDeps,
+  SignInProbePassDeps,
+  SignInProbeRegistration
+} from '../pass'
+import { makeFakeSignInStores } from './fakeFlagStore'
 import { defined } from 'backend/testUtils/indexed'
 
 jest.mock('backend/logger', () => ({
@@ -138,44 +138,16 @@ jest.mock('../runnerProbes', () => ({
   }
 }))
 
-jest.mock('backend/storeManagers/legendary/stores', () => ({
-  legendaryConfigStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/gog/stores', () => ({
-  configStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/nile/stores', () => ({
-  configStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/steam/stores', () => ({
-  configStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/humble/stores', () => ({
-  configStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-
 const sendMock = sendFrontendMessage as unknown as jest.Mock
 const abortMock = callAbortController as unknown as jest.Mock
 const logInfoMock = logInfo as unknown as jest.Mock
 const logWarningMock = logWarning as unknown as jest.Mock
 
-const fakeStores: Record<SignInStore, FakeFlagStore> = {
-  legendary: legendaryConfigStore as unknown as FakeFlagStore,
-  gog: gogConfigStore as unknown as FakeFlagStore,
-  nile: nileConfigStore as unknown as FakeFlagStore,
-  humble: humbleConfigStore as unknown as FakeFlagStore,
-  steam: steamConfigStore as unknown as FakeFlagStore
-}
+const { fakes: fakeStores, stores: fakeVerdictStores } = makeFakeSignInStores()
+const probeSlice = {
+  libraryManagers: {},
+  stores: fakeVerdictStores
+} as unknown as SignInProbeDeps
 
 const allWrites = () =>
   Object.values(fakeStores).flatMap((fake) => [...fake.sets, ...fake.deletes])
@@ -218,7 +190,7 @@ function makeDeps(overrides: Overrides = {}): SignInProbePassDeps {
       ...overrides[store]
     }
   }
-  return { registrations }
+  return { registrations, stores: fakeVerdictStores }
 }
 
 /** Only `store` is logged in; everything else is skipped. */
@@ -485,7 +457,7 @@ describe('exit contract: no referenced handle survives a pass (T-49-22)', () => 
   it('unrefs the first-run setImmediate and creates no interval', async () => {
     const handles = trackTimerHandles()
     mockConnectivity.online = true
-    startSignInProbePass({
+    startSignInProbePass(probeSlice, {
       allowInTestWorker: true,
       deps: onlyStore(
         'gog',
@@ -565,7 +537,10 @@ describe('edge gating (D-03, T-49-23)', () => {
 
   it('runs once on a repeated online, again after offline then online, and again after check-online then online', async () => {
     mockConnectivity.online = true
-    startSignInProbePass({ allowInTestWorker: true, deps: gogOnly() })
+    startSignInProbePass(probeSlice, {
+      allowInTestWorker: true,
+      deps: gogOnly()
+    })
     await jest.advanceTimersByTimeAsync(0)
     expect(probeCalls).toHaveLength(1)
 
@@ -588,7 +563,10 @@ describe('edge gating (D-03, T-49-23)', () => {
 
   it('starts nothing while offline until the first online event', async () => {
     mockConnectivity.online = false
-    startSignInProbePass({ allowInTestWorker: true, deps: gogOnly() })
+    startSignInProbePass(probeSlice, {
+      allowInTestWorker: true,
+      deps: gogOnly()
+    })
     await jest.advanceTimersByTimeAsync(0)
     expect(probeCalls).toHaveLength(0)
 
@@ -603,7 +581,10 @@ describe('edge gating (D-03, T-49-23)', () => {
 
   it('does not re-run on a timer', async () => {
     mockConnectivity.online = true
-    startSignInProbePass({ allowInTestWorker: true, deps: gogOnly() })
+    startSignInProbePass(probeSlice, {
+      allowInTestWorker: true,
+      deps: gogOnly()
+    })
     await jest.advanceTimersByTimeAsync(0)
     await jest.advanceTimersByTimeAsync(24 * 60 * 60 * 1000)
     expect(probeCalls).toHaveLength(1)
@@ -613,16 +594,22 @@ describe('edge gating (D-03, T-49-23)', () => {
 describe('test-worker guard', () => {
   it('registers no listener and starts nothing under jest without the opt-in', async () => {
     mockConnectivity.online = true
-    startSignInProbePass()
+    startSignInProbePass(probeSlice)
     expect(mockConnectivity.listeners).toHaveLength(0)
     await new Promise((resolve) => setImmediate(resolve))
     expect(mockUsers.calls).toEqual([])
   })
 
   it('registers its listener once with the opt-in, however many times it is called', () => {
-    startSignInProbePass({ allowInTestWorker: true, deps: makeDeps() })
+    startSignInProbePass(probeSlice, {
+      allowInTestWorker: true,
+      deps: makeDeps()
+    })
     expect(mockConnectivity.listeners).toHaveLength(1)
-    startSignInProbePass({ allowInTestWorker: true, deps: makeDeps() })
+    startSignInProbePass(probeSlice, {
+      allowInTestWorker: true,
+      deps: makeDeps()
+    })
     expect(mockConnectivity.listeners).toHaveLength(1)
   })
 })
@@ -717,7 +704,7 @@ describe('default registrations (D-14, D-15, D-21)', () => {
     for (const store of SIGN_IN_STORES) {
       mockUsers.loggedIn[store] = true
     }
-    await runSignInProbePass()
+    await runSignInProbePass(createSignInProbePassDeps(probeSlice))
 
     expect([...mockUsers.calls].sort()).toEqual(
       [
@@ -733,7 +720,7 @@ describe('default registrations (D-14, D-15, D-21)', () => {
 
   it('does not probe a store whose logged-in flag is false', async () => {
     mockUsers.loggedIn.gog = true
-    await runSignInProbePass()
+    await runSignInProbePass(createSignInProbePassDeps(probeSlice))
     expect(mockUsers.calls).toEqual(['gog:probe'])
   })
 })

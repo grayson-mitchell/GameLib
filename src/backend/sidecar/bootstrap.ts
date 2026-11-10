@@ -1694,13 +1694,17 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'sign-in-probe',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Phase 49 plan 08 (R3, SPEC "READY first"): the bounded boot sign-in probe pass starts HERE,
         // after the READY write, so READY never waits on a probe. The call is registration only -- one
         // connectivity listener and an unref()'d setImmediate -- so it cannot delay the protocol-URL
         // delivery below. It creates no handle of its own beyond those the pass enumerates in its
         // exit-contract header (every timer unref()'d, spawned children aborted at the bound).
-        startSignInProbePass()
+        const services = requireServices(state)
+        startSignInProbePass({
+          libraryManagers: services.managers.library,
+          stores: services.stores
+        })
       }
     },
     {

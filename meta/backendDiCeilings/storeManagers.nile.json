@@ -1,6 +1,6 @@
 {
   "jestMock": {
-    "src/backend/storeManagers/nile/__tests__/expiryProbe.test.ts": 9,
+    "src/backend/storeManagers/nile/__tests__/expiryProbe.test.ts": 5,
     "src/backend/storeManagers/nile/__tests__/getUserData.test.ts": 5,
     "src/backend/storeManagers/nile/__tests__/librarySyncLatchClear.test.ts": 10,
     "src/backend/storeManagers/nile/__tests__/logoutCookies.test.ts": 6,

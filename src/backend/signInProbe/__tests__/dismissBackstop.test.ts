@@ -19,14 +19,13 @@ import { tmpdir } from 'os'
 import { dirname, sep } from 'path'
 import { GlobalConfig } from 'backend/config'
 import { configPath } from 'backend/constants/paths'
-import { configStore as gogConfigStore } from 'backend/storeManagers/gog/stores'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
 import { __resetSignInEpochsForTests } from '../sessionEpoch'
 import { __resetSignInProbeOutcomesForTests } from '../outcomes'
 import { runSignInProbePass } from '../pass'
 import type { SignInProbePassDeps, SignInProbeRegistration } from '../pass'
-import type { FakeFlagStore } from './fakeFlagStore'
+import { makeFakeSignInStores } from './fakeFlagStore'
 
 jest.mock('backend/logger', () => ({
   ...jest.requireActual('backend/logger'),
@@ -38,33 +37,8 @@ jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn(),
   addHandler: jest.fn()
 }))
-jest.mock('backend/storeManagers/legendary/stores', () => ({
-  legendaryConfigStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/gog/stores', () => ({
-  configStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/nile/stores', () => ({
-  configStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/steam/stores', () => ({
-  configStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/humble/stores', () => ({
-  configStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-
-const gogFlags = gogConfigStore as unknown as FakeFlagStore
+const { fakes, stores: fakeVerdictStores } = makeFakeSignInStores()
+const gogFlags = fakes.gog
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -86,7 +60,7 @@ function makeDeps(
       ...overrides[store]
     }
   }
-  return { registrations }
+  return { registrations, stores: fakeVerdictStores }
 }
 
 function realpathOfNearestAncestor(target: string): string {

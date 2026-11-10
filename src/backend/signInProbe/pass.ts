@@ -61,7 +61,6 @@ import { isOnline, onConnectivityChange } from 'backend/online_monitor'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { LegendaryUser } from 'backend/storeManagers/legendary/user'
 import { GOGUser } from 'backend/storeManagers/gog/user'
-import * as gogStores from 'backend/storeManagers/gog/stores'
 import { NileUser } from 'backend/storeManagers/nile/user'
 import { HumbleUser } from 'backend/humble/user'
 import { SteamUser } from 'backend/storeManagers/steam/user'
@@ -79,7 +78,8 @@ import {
 } from './runnerProbes'
 import { captureSignInEpoch } from './sessionEpoch'
 import { applySignInVerdict } from './verdict'
-import type { SignInVerdictResult } from './verdict'
+import type { SignInVerdictDeps, SignInVerdictResult } from './verdict'
+import type { ManagerDeps, Stores } from 'backend/services/types'
 
 /**
  * The single bound for every store's probe. Exactly Rust's
@@ -99,25 +99,42 @@ export interface SignInProbeRegistration {
 
 export interface SignInProbePassDeps {
   registrations: Record<SignInStore, SignInProbeRegistration>
+  /** The five store families the verdict reads and writes. */
+  stores: SignInVerdictDeps['stores']
 }
 
-function defaultDeps(): SignInProbePassDeps {
+/** What the real registrations read: three managers and the five families (66.1, R3). */
+export interface SignInProbeDeps {
+  libraryManagers: Pick<
+    ManagerDeps['libraryManagers'],
+    'legendary' | 'gog' | 'nile'
+  >
+  stores: Pick<Stores, SignInStore>
+}
+
+export function createSignInProbePassDeps(
+  deps: SignInProbeDeps
+): SignInProbePassDeps {
+  const gogUserDeps = {
+    stores: { gog: deps.stores.gog },
+    libraryManagers: { gog: deps.libraryManagers.gog }
+  }
   return {
+    stores: deps.stores,
     registrations: {
       legendary: {
         isLoggedIn: () => Boolean(LegendaryUser.isLoggedIn()),
-        probe: probeLegendarySession,
+        probe: () => probeLegendarySession(deps),
         abortId: SIGN_IN_PROBE_ABORT_IDS.legendary
       },
       gog: {
-        isLoggedIn: () =>
-          Boolean(GOGUser.isLoggedIn({ stores: { gog: gogStores } })),
-        probe: probeGogSession,
+        isLoggedIn: () => Boolean(GOGUser.isLoggedIn(gogUserDeps)),
+        probe: () => probeGogSession(gogUserDeps),
         abortId: SIGN_IN_PROBE_ABORT_IDS.gog
       },
       nile: {
         isLoggedIn: () => Boolean(NileUser.isLoggedIn()),
-        probe: probeNileSession,
+        probe: () => probeNileSession(deps),
         abortId: SIGN_IN_PROBE_ABORT_IDS.nile
       },
       // D-15: the Humble read carries `trigger=boot-probe` through `readSecret`.
@@ -203,7 +220,7 @@ function loggedInStores(deps: SignInProbePassDeps): SignInStore[] {
  * store's verdict reaches the renderer without waiting on a slower sibling.
  */
 export async function runSignInProbePass(
-  deps: SignInProbePassDeps = defaultDeps()
+  deps: SignInProbePassDeps
 ): Promise<void> {
   const stores = loggedInStores(deps)
   logInfo(
@@ -232,7 +249,7 @@ export async function runSignInProbePass(
 
       let result: SignInVerdictResult
       try {
-        result = applySignInVerdict(store, outcome, epoch)
+        result = applySignInVerdict(deps, store, outcome, epoch)
       } catch {
         // A failed store write must not fail the pass; nothing is recorded.
         return `${store}:error`
@@ -269,6 +286,10 @@ let configuredDeps: SignInProbePassDeps | undefined
 export function requestSignInProbePass(
   deps: SignInProbePassDeps | undefined = configuredDeps
 ): void {
+  // Nothing is requested before `startSignInProbePass` has built the deps.
+  if (!deps) {
+    return
+  }
   if (passInFlight) {
     rerunPending = true
     return
@@ -297,6 +318,7 @@ export function requestSignInProbePass(
  * (the Block C precedent).
  */
 export function startSignInProbePass(
+  slice: SignInProbeDeps,
   options: { allowInTestWorker?: boolean; deps?: SignInProbePassDeps } = {}
 ): void {
   if (process.env.JEST_WORKER_ID !== undefined && !options.allowInTestWorker) {
@@ -306,7 +328,7 @@ export function startSignInProbePass(
     return
   }
   started = true
-  configuredDeps = options.deps
+  configuredDeps = options.deps ?? createSignInProbePassDeps(slice)
   lastStatus = isOnline() ? 'online' : 'offline'
 
   // D-03: only a non-online -> online EDGE starts a pass. A repeated `online`

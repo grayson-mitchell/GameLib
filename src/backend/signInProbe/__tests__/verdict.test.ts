@@ -8,11 +8,6 @@ import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { logInfo } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
-import { legendaryConfigStore } from 'backend/storeManagers/legendary/stores'
-import { configStore as gogConfigStore } from 'backend/storeManagers/gog/stores'
-import { configStore as nileConfigStore } from 'backend/storeManagers/nile/stores'
-import { configStore as steamConfigStore } from 'backend/storeManagers/steam/stores'
-import { configStore as humbleConfigStore } from 'backend/humble/stores'
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { SIGN_IN_STORES } from 'common/signInState'
 import {
@@ -21,7 +16,7 @@ import {
   captureSignInEpoch
 } from '../sessionEpoch'
 import { applySignInVerdict } from '../verdict'
-import type { FakeFlagStore } from './fakeFlagStore'
+import { makeFakeSignInStores } from './fakeFlagStore'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -31,50 +26,22 @@ jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn(),
   addHandler: jest.fn()
 }))
-jest.mock('backend/storeManagers/legendary/stores', () => ({
-  legendaryConfigStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/gog/stores', () => ({
-  configStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/nile/stores', () => ({
-  configStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/storeManagers/steam/stores', () => ({
-  configStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
-jest.mock('backend/humble/stores', () => ({
-  configStore: jest
-    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
-    .makeFakeFlagStore()
-}))
 
 const logInfoMock = logInfo as unknown as jest.Mock
 const sendMock = sendFrontendMessage as unknown as jest.Mock
 
-const stores: Record<SignInStore, { fake: FakeFlagStore; flag: string }> = {
-  legendary: {
-    fake: legendaryConfigStore as unknown as FakeFlagStore,
-    flag: 'expired'
-  },
-  gog: { fake: gogConfigStore as unknown as FakeFlagStore, flag: 'expired' },
-  nile: { fake: nileConfigStore as unknown as FakeFlagStore, flag: 'expired' },
-  humble: {
-    fake: humbleConfigStore as unknown as FakeFlagStore,
-    flag: 'expired'
-  },
-  steam: {
-    fake: steamConfigStore as unknown as FakeFlagStore,
-    flag: 'credentialsMissing'
-  }
+const { fakes, stores: verdictStores } = makeFakeSignInStores()
+const deps = { stores: verdictStores }
+
+const stores: Record<
+  SignInStore,
+  { fake: (typeof fakes)[SignInStore]; flag: string }
+> = {
+  legendary: { fake: fakes.legendary, flag: 'expired' },
+  gog: { fake: fakes.gog, flag: 'expired' },
+  nile: { fake: fakes.nile, flag: 'expired' },
+  humble: { fake: fakes.humble, flag: 'expired' },
+  steam: { fake: fakes.steam, flag: 'credentialsMissing' }
 }
 
 beforeEach(() => {
@@ -92,33 +59,39 @@ describe.each(SIGN_IN_STORES)('applySignInVerdict (%s)', (store) => {
   const epoch = () => captureSignInEpoch(store)
 
   it('expired with the flag unset latches with exactly one set', () => {
-    expect(applySignInVerdict(store, 'expired', epoch())).toBe('latched')
+    expect(applySignInVerdict(deps, store, 'expired', epoch())).toBe('latched')
     expect(fake.sets).toEqual([[flag, true]])
     expect(fake.deletes).toEqual([])
   })
 
   it('expired again is unchanged and performs no set (R2 idempotency)', () => {
     fake.data.set(flag, true)
-    expect(applySignInVerdict(store, 'expired', epoch())).toBe('unchanged')
+    expect(applySignInVerdict(deps, store, 'expired', epoch())).toBe(
+      'unchanged'
+    )
     expect(fake.sets).toEqual([])
     expect(fake.deletes).toEqual([])
   })
 
   it('two identical expired results set the flag once', () => {
-    applySignInVerdict(store, 'expired', epoch())
-    expect(applySignInVerdict(store, 'expired', epoch())).toBe('unchanged')
+    applySignInVerdict(deps, store, 'expired', epoch())
+    expect(applySignInVerdict(deps, store, 'expired', epoch())).toBe(
+      'unchanged'
+    )
     expect(fake.sets).toHaveLength(1)
   })
 
   it('healthy with the flag set clears it with one delete', () => {
     fake.data.set(flag, true)
-    expect(applySignInVerdict(store, 'healthy', epoch())).toBe('cleared')
+    expect(applySignInVerdict(deps, store, 'healthy', epoch())).toBe('cleared')
     expect(fake.deletes).toEqual([flag])
     expect(fake.sets).toEqual([])
   })
 
   it('healthy with the flag unset is unchanged and writes nothing', () => {
-    expect(applySignInVerdict(store, 'healthy', epoch())).toBe('unchanged')
+    expect(applySignInVerdict(deps, store, 'healthy', epoch())).toBe(
+      'unchanged'
+    )
     expect(allWrites()).toEqual([])
   })
 
@@ -128,7 +101,9 @@ describe.each(SIGN_IN_STORES)('applySignInVerdict (%s)', (store) => {
       if (flagSet) {
         fake.data.set(flag, true)
       }
-      expect(applySignInVerdict(store, 'unknown', epoch())).toBe('unchanged')
+      expect(applySignInVerdict(deps, store, 'unknown', epoch())).toBe(
+        'unchanged'
+      )
       expect(allWrites()).toEqual([])
       expect(fake.data.get(flag) === true).toBe(flagSet)
     }
@@ -143,13 +118,13 @@ describe.each(SIGN_IN_STORES)('applySignInVerdict (%s)', (store) => {
       if (outcome === 'healthy') {
         fake.data.set(flag, true)
       }
-      expect(applySignInVerdict(store, outcome, captured)).toBe('stale')
+      expect(applySignInVerdict(deps, store, outcome, captured)).toBe('stale')
       expect(allWrites()).toEqual([])
     }
   )
 
   it('touches no other store and only its own flag key', () => {
-    applySignInVerdict(store, 'expired', epoch())
+    applySignInVerdict(deps, store, 'expired', epoch())
     for (const other of SIGN_IN_STORES) {
       if (other === store) {
         continue
@@ -161,7 +136,7 @@ describe.each(SIGN_IN_STORES)('applySignInVerdict (%s)', (store) => {
   })
 
   it('logs one store-and-result-only line per call', () => {
-    applySignInVerdict(store, 'expired', epoch())
+    applySignInVerdict(deps, store, 'expired', epoch())
     expect(logInfoMock).toHaveBeenCalledTimes(1)
     expect(logInfoMock).toHaveBeenCalledWith(
       `[signInProbe] ${store} verdict=latched`,
@@ -184,7 +159,7 @@ describe('Humble push (D-18)', () => {
 
   it('latched pushes humbleAuthState once with the cookie-free payload', () => {
     humble.data.set('userData', { username: 'ada' })
-    applySignInVerdict('humble', 'expired', captureSignInEpoch('humble'))
+    applySignInVerdict(deps, 'humble', 'expired', captureSignInEpoch('humble'))
 
     expect(sendMock).toHaveBeenCalledTimes(1)
     const [channel, payload] = sendMock.mock.calls[0]
@@ -205,7 +180,7 @@ describe('Humble push (D-18)', () => {
   it('cleared pushes humbleAuthState with expired false', () => {
     humble.data.set('userData', { username: 'ada' })
     humble.data.set('expired', true)
-    applySignInVerdict('humble', 'healthy', captureSignInEpoch('humble'))
+    applySignInVerdict(deps, 'humble', 'healthy', captureSignInEpoch('humble'))
 
     expect(sendMock).toHaveBeenCalledTimes(1)
     expect(sendMock).toHaveBeenCalledWith('humbleAuthState', {
@@ -217,10 +192,10 @@ describe('Humble push (D-18)', () => {
 
   it('unchanged pushes nothing', () => {
     humble.data.set('expired', true)
-    applySignInVerdict('humble', 'expired', captureSignInEpoch('humble'))
-    applySignInVerdict('humble', 'unknown', captureSignInEpoch('humble'))
-    applySignInVerdict('humble', 'healthy', captureSignInEpoch('humble'))
-    applySignInVerdict('humble', 'healthy', captureSignInEpoch('humble'))
+    applySignInVerdict(deps, 'humble', 'expired', captureSignInEpoch('humble'))
+    applySignInVerdict(deps, 'humble', 'unknown', captureSignInEpoch('humble'))
+    applySignInVerdict(deps, 'humble', 'healthy', captureSignInEpoch('humble'))
+    applySignInVerdict(deps, 'humble', 'healthy', captureSignInEpoch('humble'))
     // expired->unchanged, unknown->unchanged, healthy->cleared (1 push), healthy->unchanged
     expect(sendMock).toHaveBeenCalledTimes(1)
   })
@@ -228,13 +203,13 @@ describe('Humble push (D-18)', () => {
   it('stale pushes nothing', () => {
     const captured = captureSignInEpoch('humble')
     bumpSignInEpoch('humble')
-    applySignInVerdict('humble', 'expired', captured)
+    applySignInVerdict(deps, 'humble', 'expired', captured)
     expect(sendMock).not.toHaveBeenCalled()
   })
 
   it('no other store pushes humbleAuthState', () => {
     for (const store of ['legendary', 'gog', 'nile', 'steam'] as const) {
-      applySignInVerdict(store, 'expired', captureSignInEpoch(store))
+      applySignInVerdict(deps, store, 'expired', captureSignInEpoch(store))
     }
     expect(sendMock).not.toHaveBeenCalled()
   })
@@ -272,9 +247,8 @@ describe('src/backend/signInProbe source gates', () => {
 
   it('writes a flag to true only inside a latch lambda', () => {
     const verdict = sources.find((s) => s.name === 'verdict.ts')?.code ?? ''
-    const writes = verdict.match(
-      /\.set\('(expired|credentialsMissing)', true\)/g
-    )
-    expect(writes ?? []).toHaveLength(5)
+    const writes = verdict.match(/\.set\([^)]*true\)/g)
+    expect(writes ?? []).toEqual(['.set(key, true)'])
+    expect(verdict).toMatch(/latch: \(\) => flagStore\.set\(key, true\)/)
   })
 })

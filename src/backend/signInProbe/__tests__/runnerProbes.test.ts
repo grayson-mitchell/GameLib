@@ -25,14 +25,18 @@ jest.mock('backend/logger', () => ({
 
 const mockLegendaryRun = jest.fn()
 const mockNileRun = jest.fn()
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {
+const legendaryDeps = {
+  libraryManagers: {
     legendary: {
       runRunnerCommand: (...args: unknown[]) => mockLegendaryRun(...args)
-    },
+    }
+  }
+} as unknown as Parameters<typeof probeLegendarySession>[0]
+const nileDeps = {
+  libraryManagers: {
     nile: { runRunnerCommand: (...args: unknown[]) => mockNileRun(...args) }
   }
-}))
+} as unknown as Parameters<typeof probeNileSession>[0]
 
 type RunOptions = {
   abortId?: string
@@ -82,7 +86,7 @@ describe('probeLegendarySession', () => {
   it('runs legendary status --json once, with its own abort id, no modal and an onOutput capture', async () => {
     armRunner(mockLegendaryRun, ['{"account": "someone"}'])
 
-    await probeLegendarySession()
+    await probeLegendarySession(legendaryDeps)
 
     expect(mockLegendaryRun).toHaveBeenCalledTimes(1)
     const [argv, options] = mockLegendaryRun.mock.calls[0]
@@ -102,41 +106,41 @@ describe('probeLegendarySession', () => {
       ['Stored credentials are no longer valid! Please login again.'],
       { error: 'Process exited with code 1' }
     )
-    await expect(probeLegendarySession()).resolves.toBe('expired')
+    await expect(probeLegendarySession(legendaryDeps)).resolves.toBe('expired')
   })
 
   it('returns healthy for a logged-in status document', async () => {
     armRunner(mockLegendaryRun, [
       '{"account": "someone", "games_available": 3}'
     ])
-    await expect(probeLegendarySession()).resolves.toBe('healthy')
+    await expect(probeLegendarySession(legendaryDeps)).resolves.toBe('healthy')
   })
 
   it('returns unknown for a network failure, an abort and a joined (unobserved) spawn', async () => {
     armRunner(mockLegendaryRun, ['HTTP request for login failed: timeout'], {
       error: 'Process exited with code 1'
     })
-    await expect(probeLegendarySession()).resolves.toBe('unknown')
+    await expect(probeLegendarySession(legendaryDeps)).resolves.toBe('unknown')
 
     armRunner(
       mockLegendaryRun,
       ['Stored credentials are no longer valid! Please login again.'],
       { abort: true }
     )
-    await expect(probeLegendarySession()).resolves.toBe('unknown')
+    await expect(probeLegendarySession(legendaryDeps)).resolves.toBe('unknown')
 
     armRunner(mockLegendaryRun, [])
-    await expect(probeLegendarySession()).resolves.toBe('unknown')
+    await expect(probeLegendarySession(legendaryDeps)).resolves.toBe('unknown')
   })
 
   it('returns unknown when the runner call rejects', async () => {
     mockLegendaryRun.mockRejectedValue(new Error('spawn failed'))
-    await expect(probeLegendarySession()).resolves.toBe('unknown')
+    await expect(probeLegendarySession(legendaryDeps)).resolves.toBe('unknown')
   })
 
   it('never passes captured text to a logger', async () => {
     armRunner(mockLegendaryRun, [`token=${SECRET}`], { error: 'exit 1' })
-    await probeLegendarySession()
+    await probeLegendarySession(legendaryDeps)
     expect(loggedAnything(SECRET)).toBe(false)
   })
 })
@@ -145,7 +149,7 @@ describe('probeNileSession', () => {
   it('runs nile list-updates --json once, with its own abort id and no modal', async () => {
     armRunner(mockNileRun, ['[]'])
 
-    await probeNileSession()
+    await probeNileSession(nileDeps)
 
     expect(mockNileRun).toHaveBeenCalledTimes(1)
     const [argv, options] = mockNileRun.mock.calls[0]
@@ -161,40 +165,40 @@ describe('probeNileSession', () => {
 
   it('returns expired for a 401 refresh failure', async () => {
     armRunner(mockNileRun, ['Failed to refresh the token <Response [401]>'])
-    await expect(probeNileSession()).resolves.toBe('expired')
+    await expect(probeNileSession(nileDeps)).resolves.toBe('expired')
   })
 
   it('returns healthy for clean output and unknown for a 503, a connection error and an abort', async () => {
     armRunner(mockNileRun, ['[]'])
-    await expect(probeNileSession()).resolves.toBe('healthy')
+    await expect(probeNileSession(nileDeps)).resolves.toBe('healthy')
 
     armRunner(mockNileRun, ['Failed to refresh the token <Response [503]>'])
-    await expect(probeNileSession()).resolves.toBe('unknown')
+    await expect(probeNileSession(nileDeps)).resolves.toBe('unknown')
 
     armRunner(mockNileRun, ['Failed to refresh the token'])
-    await expect(probeNileSession()).resolves.toBe('unknown')
+    await expect(probeNileSession(nileDeps)).resolves.toBe('unknown')
 
     armRunner(mockNileRun, ['Failed to refresh the token <Response [401]>'], {
       abort: true
     })
-    await expect(probeNileSession()).resolves.toBe('unknown')
+    await expect(probeNileSession(nileDeps)).resolves.toBe('unknown')
   })
 
   it('F-49-R1-4: returns unknown for the zero-installed shape ([] + No games installed, exit 0)', async () => {
     // The two chunks nile 1.2.0 emits with nothing installed, in the order a
     // real spawn delivered them (49-LIVE-GATE Run 1 item 6); no auth call ran.
     armRunner(mockNileRun, ['[]\n', 'ERROR [CLI]:\t No games installed\n'])
-    await expect(probeNileSession()).resolves.toBe('unknown')
+    await expect(probeNileSession(nileDeps)).resolves.toBe('unknown')
   })
 
   it('returns unknown when the runner call rejects', async () => {
     mockNileRun.mockRejectedValue(new Error('spawn failed'))
-    await expect(probeNileSession()).resolves.toBe('unknown')
+    await expect(probeNileSession(nileDeps)).resolves.toBe('unknown')
   })
 
   it('never passes captured text to a logger', async () => {
     armRunner(mockNileRun, [`token=${SECRET}`])
-    await probeNileSession()
+    await probeNileSession(nileDeps)
     expect(loggedAnything(SECRET)).toBe(false)
   })
 })
@@ -204,11 +208,12 @@ describe('runnerProbes.ts source gates', () => {
     readFileSync(join(__dirname, '..', 'runnerProbes.ts'), 'utf8')
   )
 
-  it('imports storeManagers lazily only (stays out of the storeManagers cycle)', () => {
+  it('reaches the managers through deps and imports no manager map (R8)', () => {
+    expect(source).not.toMatch(/libraryManagerMap/)
+    expect(source).not.toMatch(/import\('(backend|\.\.)\/storeManagers'\)/)
     expect(source).not.toMatch(
-      /^import [^\n]*['"](backend|\.\.)\/storeManagers/m
+      /^import (?!type)[^\n]*['"](backend|\.\.)\/storeManagers['"]/m
     )
-    expect(source).toMatch(/await import\('\.\.\/storeManagers'\)/)
   })
 
   it('passes skipErrorHandler on every runner spawn and never logs', () => {

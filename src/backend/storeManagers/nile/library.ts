@@ -251,7 +251,12 @@ export default class NileLibraryManager implements LibraryManager {
         errored: Boolean(res.error),
         aborted: Boolean(res.abort)
       })
-      const result = applySignInVerdict('nile', outcome, epoch)
+      const result = applySignInVerdict(
+        { stores: { nile: this.deps.stores.nile } },
+        'nile',
+        outcome,
+        epoch
+      )
       // Mirrors pass.ts: only a non-stale verdict is recorded and published
       // (T-49-10).
       if (result !== 'stale') {

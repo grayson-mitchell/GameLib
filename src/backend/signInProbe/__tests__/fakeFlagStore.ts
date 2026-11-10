@@ -1,3 +1,6 @@
+import type { SignInStore } from 'common/signInState'
+import type { SignInVerdictDeps } from '../verdict'
+
 /**
  * Plain (non-jest.fn) stand-in for a TypeCheckedStoreBackend, so `resetMocks`
  * cannot wipe its behaviour between tests. Records every write.
@@ -12,8 +15,6 @@ export interface FakeFlagStore {
   reset(): void
 }
 
-// WHY exported: verdict.test.ts reaches it through jest.requireActual() inside its
-// jest.mock factories, which the dead-code scanner cannot see.
 export function makeFakeFlagStore(): FakeFlagStore {
   const store: FakeFlagStore = {
     data: new Map(),
@@ -35,4 +36,29 @@ export function makeFakeFlagStore(): FakeFlagStore {
     }
   }
   return store
+}
+
+/**
+ * The five sign-in families as fakes, in the shape `SignInVerdictDeps.stores`
+ * expects (each family module exposes its config store under its own name).
+ */
+export function makeFakeSignInStores(): {
+  fakes: Record<SignInStore, FakeFlagStore>
+  stores: SignInVerdictDeps['stores']
+} {
+  const fakes: Record<SignInStore, FakeFlagStore> = {
+    legendary: makeFakeFlagStore(),
+    gog: makeFakeFlagStore(),
+    nile: makeFakeFlagStore(),
+    humble: makeFakeFlagStore(),
+    steam: makeFakeFlagStore()
+  }
+  const stores = {
+    legendary: { legendaryConfigStore: fakes.legendary },
+    gog: { configStore: fakes.gog },
+    nile: { configStore: fakes.nile },
+    humble: { configStore: fakes.humble },
+    steam: { configStore: fakes.steam }
+  } as unknown as SignInVerdictDeps['stores']
+  return { fakes, stores }
 }
