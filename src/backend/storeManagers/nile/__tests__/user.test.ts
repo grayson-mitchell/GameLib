@@ -1,7 +1,7 @@
 /**
  * Regression coverage for quick task 260806-teb Task 2.
  *
- * `NileUser.getLoginData()` spawns `nile auth --login --non-interactive` via
+ * `NileUser.getLoginData(userDeps)` spawns `nile auth --login --non-interactive` via
  * `runRunnerCommand` -- a ~12.8s cost per invocation (pyinstaller-onefile-spawn-tax). Under
  * Tauri, two concurrent callers (e.g. index.tsx's now-removed effect racing
  * useTauriOAuthLogin.ts's own fetch, or a remounted WebView route) used to race two
@@ -17,12 +17,6 @@
  */
 
 const mockRunRunnerCommand = jest.fn()
-
-jest.mock('backend/storeManagers/index', () => ({
-  libraryManagerMap: {
-    nile: { runRunnerCommand: mockRunRunnerCommand }
-  }
-}))
 
 jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),
@@ -44,6 +38,12 @@ jest.mock('backend/utils', () => ({
 }))
 
 import { NileUser } from '../user'
+import type { NileUserDeps } from '../user'
+
+const userDeps = {
+  stores: {},
+  libraryManagers: { nile: { runRunnerCommand: mockRunRunnerCommand } }
+} as unknown as NileUserDeps
 
 function stdoutFor(payload: Record<string, unknown>) {
   return { stdout: JSON.stringify(payload) }
@@ -77,7 +77,7 @@ const LOGIN_DATA_2 = {
   serial: 'serial-2'
 }
 
-describe('quick 260806-teb Task 2 -- NileUser.getLoginData() in-flight memoization', () => {
+describe('quick 260806-teb Task 2 -- NileUser.getLoginData(userDeps) in-flight memoization', () => {
   beforeEach(() => {
     NileUser.__resetInFlightLoginDataForTests()
   })
@@ -86,8 +86,8 @@ describe('quick 260806-teb Task 2 -- NileUser.getLoginData() in-flight memoizati
     const first = deferred<{ stdout: string }>()
     mockRunRunnerCommand.mockReturnValueOnce(first.promise)
 
-    const callA = NileUser.getLoginData()
-    const callB = NileUser.getLoginData()
+    const callA = NileUser.getLoginData(userDeps)
+    const callB = NileUser.getLoginData(userDeps)
 
     first.resolve(stdoutFor(LOGIN_DATA_1))
 
@@ -100,12 +100,12 @@ describe('quick 260806-teb Task 2 -- NileUser.getLoginData() in-flight memoizati
 
   it('a getLoginData() call issued AFTER the previous one resolved spawns a SECOND runRunnerCommand and mints FRESH code_verifier/serial -- proving no value cache exists', async () => {
     mockRunRunnerCommand.mockResolvedValueOnce(stdoutFor(LOGIN_DATA_1))
-    const first = await NileUser.getLoginData()
+    const first = await NileUser.getLoginData(userDeps)
     expect(first).toEqual(LOGIN_DATA_1)
     expect(mockRunRunnerCommand).toHaveBeenCalledTimes(1)
 
     mockRunRunnerCommand.mockResolvedValueOnce(stdoutFor(LOGIN_DATA_2))
-    const second = await NileUser.getLoginData()
+    const second = await NileUser.getLoginData(userDeps)
 
     // THE regression this test exists to catch: a TTL/value cache here would return
     // LOGIN_DATA_1 again (stale PKCE material) instead of spawning fresh.
@@ -119,14 +119,14 @@ describe('quick 260806-teb Task 2 -- NileUser.getLoginData() in-flight memoizati
     const failing = deferred<{ stdout: string }>()
     mockRunRunnerCommand.mockReturnValueOnce(failing.promise)
 
-    const firstCall = NileUser.getLoginData()
+    const firstCall = NileUser.getLoginData(userDeps)
     failing.reject(new Error('nile auth exited non-zero'))
 
     await expect(firstCall).rejects.toThrow('nile auth exited non-zero')
     expect(mockRunRunnerCommand).toHaveBeenCalledTimes(1)
 
     mockRunRunnerCommand.mockResolvedValueOnce(stdoutFor(LOGIN_DATA_1))
-    const secondCall = await NileUser.getLoginData()
+    const secondCall = await NileUser.getLoginData(userDeps)
 
     expect(mockRunRunnerCommand).toHaveBeenCalledTimes(2)
     expect(secondCall).toEqual(LOGIN_DATA_1)
@@ -136,8 +136,8 @@ describe('quick 260806-teb Task 2 -- NileUser.getLoginData() in-flight memoizati
     const failing = deferred<{ stdout: string }>()
     mockRunRunnerCommand.mockReturnValueOnce(failing.promise)
 
-    const callA = NileUser.getLoginData()
-    const callB = NileUser.getLoginData()
+    const callA = NileUser.getLoginData(userDeps)
+    const callB = NileUser.getLoginData(userDeps)
 
     failing.reject(new Error('spawn failed'))
 

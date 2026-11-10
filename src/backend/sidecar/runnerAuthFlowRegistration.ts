@@ -126,7 +126,10 @@ function gogUserDeps() {
       nile: nileStores,
       wikiGameInfo: wikiGameInfoStores
     },
-    libraryManagers: { gog: libraryManagerMap.gog }
+    libraryManagers: {
+      gog: libraryManagerMap.gog,
+      nile: libraryManagerMap.nile
+    }
   }
 }
 
@@ -210,7 +213,7 @@ export function registerRunnerAuthFlows(): void {
   // through. Both derive from `appFolder` and resolve through `pathShim`'s already-implemented
   // `userData`, so this delegation needs no new path work.
   ipcMain.handle('getAmazonLoginData', () => {
-    return NileUser.getLoginData()
+    return NileUser.getLoginData(gogUserDeps())
   })
 
   // ORDERING CONSTRAINT (T-34.5-34, closes T-34.4.1-44b): Source: main.ts:883 ->
@@ -249,7 +252,7 @@ export function registerRunnerAuthFlows(): void {
       )
       return { status: 'failed', user: undefined }
     }
-    return NileUser.login(data as NileRegisterData)
+    return NileUser.login(gogUserDeps(), data as NileRegisterData)
   })
 
   // Source: main.ts:872 -> `NileUser.getUserData()`.

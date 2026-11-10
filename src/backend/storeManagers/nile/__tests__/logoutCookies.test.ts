@@ -39,13 +39,6 @@ jest.mock('backend/storeManagers/nile/constants', () => ({
 }))
 
 const mockRunRunnerCommand = jest.fn<Promise<unknown>, unknown[]>()
-jest.mock('backend/storeManagers/index', () => ({
-  libraryManagerMap: {
-    nile: {
-      runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
-    }
-  }
-}))
 
 // See `epicLogoutDomains.test.ts`'s copy of this mock for why it must be a `defineProperty` and
 // not an object-literal getter.
@@ -61,10 +54,18 @@ jest.mock('backend/constants/environment', () => {
 
 import { logWarning, logInfo } from 'backend/logger'
 import { NileUser } from '../user'
+import type { NileUserDeps } from '../user'
 import type { ClearCacheDeps } from 'backend/utils'
 
 // `clearCache` is mocked in this file, so the cache stores are never read.
-const clearDeps = {} as unknown as ClearCacheDeps
+const clearDeps = {
+  stores: {},
+  libraryManagers: {
+    nile: {
+      runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
+    }
+  }
+} as unknown as ClearCacheDeps & NileUserDeps
 import {
   setLoginWindowSeam,
   type LoginWindowSeam

@@ -100,9 +100,20 @@ const gogDeps = {
   spawnAsync: jest.fn()
 } as unknown as SetupDeps
 
+const nileDeps = {
+  ...gogDeps,
+  libraryManagers: {
+    nile: {
+      getGameInfo: () => nileInfo,
+      getGame: () => ({}),
+      fetchFuelJSON: () => fuel
+    }
+  }
+} as unknown as Parameters<typeof nileSetup>[0]
+
 const runners: Array<[string, (a: string) => Promise<void>]> = [
   ['gog', (a) => gogSetup(gogDeps, a)],
-  ['nile', (a) => nileSetup(gogDeps, a)]
+  ['nile', (a) => nileSetup(nileDeps, a)]
 ]
 
 describe.each(runners)('%s setup on macOS', (_name, run) => {

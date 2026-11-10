@@ -25,10 +25,17 @@ import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { probeNileSession } from 'backend/signInProbe/runnerProbes'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
 import { NileUser } from '../user'
-import type { ClearCacheDeps } from 'backend/utils'
+import type { NileUserDeps } from '../user'
 
 // `clearCache` is mocked in this file, so the cache stores are never read.
-const clearDeps = {} as unknown as ClearCacheDeps
+const clearDeps = {
+  stores: {},
+  libraryManagers: {
+    nile: {
+      runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
+    }
+  }
+} as unknown as NileUserDeps
 
 jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),
@@ -44,14 +51,6 @@ jest.mock('backend/ipc', () => ({
 }))
 
 const mockRunRunnerCommand = jest.fn()
-// NileUser still imports the manager map itself (its own conversion is a later plan).
-jest.mock('../..', () => ({
-  libraryManagerMap: {
-    nile: {
-      runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
-    }
-  }
-}))
 
 // Plain-object fake store (immune to resetMocks) for this store's verdict flag.
 jest.mock('backend/storeManagers/nile/stores', () => ({
@@ -178,7 +177,7 @@ describe('Amazon: sign-in success and logout clear the flag', () => {
       .spyOn(NileUser, 'getUserData')
       .mockResolvedValue({ user_id: 'amzn-1' } as never)
 
-    const res = await NileUser.login(REGISTER_DATA)
+    const res = await NileUser.login(clearDeps, REGISTER_DATA)
 
     expect(res.status).toBe('done')
     expect(flag.deletes).toContain('expired')
@@ -193,7 +192,7 @@ describe('Amazon: sign-in success and logout clear the flag', () => {
     flag.data.set('expired', true)
     armRunner([], { stderr: 'something went wrong' })
 
-    const res = await NileUser.login(REGISTER_DATA)
+    const res = await NileUser.login(clearDeps, REGISTER_DATA)
 
     expect(res.status).toBe('failed')
     expect(flag.data.get('expired')).toBe(true)
@@ -207,7 +206,7 @@ describe('Amazon: sign-in success and logout clear the flag', () => {
     })
     jest.spyOn(NileUser, 'getUserData').mockResolvedValue(undefined)
 
-    const res = await NileUser.login(REGISTER_DATA)
+    const res = await NileUser.login(clearDeps, REGISTER_DATA)
 
     expect(res.status).toBe('failed')
     expect(flag.data.get('expired')).toBe(true)

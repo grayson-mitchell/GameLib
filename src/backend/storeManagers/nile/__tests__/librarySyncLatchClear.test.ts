@@ -25,7 +25,8 @@ import {
   NILE_REFRESH_FAILURE_MARKER
 } from 'backend/signInProbe/classify'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
-import type { CallRunnerOptions, ExecResult } from 'common/types'
+import type { ExecResult } from 'common/types'
+import type { CommandCallRunnerOptions } from 'backend/commandRunner'
 import NileLibraryManager from '../library'
 
 jest.mock('backend/logger', () => ({
@@ -41,7 +42,6 @@ jest.mock('backend/utils', () => ({
   getNileBin: jest.fn(() => ({ dir: '', bin: 'nile' })),
   removeSpecialcharacters: jest.fn((s: string) => s)
 }))
-jest.mock('backend/launcher', () => ({ callRunner: jest.fn() }))
 jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn(),
   addHandler: jest.fn(),
@@ -103,15 +103,17 @@ function armRunner(
 ) {
   jest
     .spyOn(mgr, 'runRunnerCommand')
-    .mockImplementation((_argv: string[], options?: CallRunnerOptions) => {
-      chunks.forEach((chunk) => options?.onOutput?.(chunk, {} as never))
-      return Promise.resolve({
-        stdout: '',
-        stderr: result.stderr ?? '',
-        error: result.error,
-        abort: result.abort ?? false
-      })
-    })
+    .mockImplementation(
+      (_argv: string[], options?: CommandCallRunnerOptions) => {
+        chunks.forEach((chunk) => options?.onOutput?.(chunk, {} as never))
+        return Promise.resolve({
+          stdout: '',
+          stderr: result.stderr ?? '',
+          error: result.error,
+          abort: result.abort ?? false
+        })
+      }
+    )
 }
 
 /** `refreshNile` is private; go at it directly per F5. */
@@ -172,18 +174,20 @@ describe('Amazon: a successful library sync clears a latched flag (quick 261016-
     const mgr = new NileLibraryManager(createTestManagerDeps())
     jest
       .spyOn(mgr, 'runRunnerCommand')
-      .mockImplementation((_argv: string[], options?: CallRunnerOptions) => {
-        options?.onOutput?.(SUCCESS_CHUNK, {} as never)
-        // Simulates a sign-in completing while this spawn is still in flight --
-        // the epoch was already captured before runRunnerCommand was called.
-        bumpSignInEpoch('nile')
-        return Promise.resolve({
-          stdout: '',
-          stderr: '',
-          error: undefined,
-          abort: false
-        })
-      })
+      .mockImplementation(
+        (_argv: string[], options?: CommandCallRunnerOptions) => {
+          options?.onOutput?.(SUCCESS_CHUNK, {} as never)
+          // Simulates a sign-in completing while this spawn is still in flight --
+          // the epoch was already captured before runRunnerCommand was called.
+          bumpSignInEpoch('nile')
+          return Promise.resolve({
+            stdout: '',
+            stderr: '',
+            error: undefined,
+            abort: false
+          })
+        }
+      )
 
     await callRefreshNile(mgr)
 

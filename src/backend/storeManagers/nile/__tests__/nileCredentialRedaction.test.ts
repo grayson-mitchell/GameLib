@@ -30,12 +30,6 @@ const mockLogInfo = jest.fn()
 const mockLogWarning = jest.fn()
 const mockLogError = jest.fn()
 
-jest.mock('backend/storeManagers/index', () => ({
-  libraryManagerMap: {
-    nile: { runRunnerCommand: mockRunRunnerCommand }
-  }
-}))
-
 jest.mock('backend/logger', () => ({
   logDebug: mockLogDebug,
   logInfo: mockLogInfo,
@@ -59,6 +53,12 @@ jest.mock('backend/utils', () => ({
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { NileUser } from '../user'
+import type { NileUserDeps } from '../user'
+
+const userDeps = {
+  stores: {},
+  libraryManagers: { nile: { runRunnerCommand: mockRunRunnerCommand } }
+} as unknown as NileUserDeps
 
 const SENTINEL_CODE = 'SENTINEL_CODE_ac91f3'
 const SENTINEL_VERIFIER = 'SENTINEL_VERIFIER_7d02be'
@@ -84,7 +84,7 @@ async function driveLoginWithSentinels() {
   mockRunRunnerCommand.mockResolvedValueOnce({
     stderr: 'not a successful register line'
   })
-  await NileUser.login({
+  await NileUser.login(userDeps, {
     code: SENTINEL_CODE,
     code_verifier: SENTINEL_VERIFIER,
     serial: SENTINEL_SERIAL,
@@ -101,7 +101,7 @@ async function driveGetLoginDataWithSentinels() {
       client_id: SENTINEL_CLIENT_ID
     })
   })
-  await NileUser.getLoginData()
+  await NileUser.getLoginData(userDeps)
 }
 
 describe('nile credential redaction -- Group A: behavioral', () => {

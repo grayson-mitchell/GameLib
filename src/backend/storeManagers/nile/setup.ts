@@ -7,12 +7,7 @@ import {
   getRunnerLogWriter
 } from 'backend/logger'
 import { GameConfig } from 'backend/game_config'
-import {
-  checkWineBeforeLaunch,
-  sendGameStatusUpdate,
-  spawnAsync
-} from 'backend/utils'
-import { runWineCommand, verifyWinePrefix } from 'backend/launcher'
+import { checkWineBeforeLaunch, sendGameStatusUpdate } from 'backend/utils'
 import { isWindows } from 'backend/constants/environment'
 import type { GameSettings } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
@@ -24,19 +19,20 @@ import {
 } from 'backend/engine/launchEngine'
 import { getLaunchSettings } from 'backend/engine/launchSettings'
 
+type NileSetupDeps = Pick<
+  ManagerDeps,
+  'libraryManagers' | 'launcher' | 'commandRunner' | 'spawnAsync'
+> & { stores: Pick<ManagerDeps['stores'], 'kvs' | 'wineManager'> }
+
 /**
  * Handles installing dependencies for games that include PostInstall scripts
  */
 export default async function setup(
-  deps: { stores: Pick<ManagerDeps['stores'], 'kvs' | 'wineManager'> },
+  deps: NileSetupDeps,
   appName: string,
   installedPath?: string
 ): Promise<void> {
-  // Imported lazily to break a circular dependency (nile/setup.ts <->
-  // storeManagers/index.ts) — see the load-bearing comment in
-  // storeManagers/gog/user.ts.
-  const { libraryManagerMap } = await import('..')
-  const gameInfo = libraryManagerMap['nile'].getGameInfo(appName)
+  const gameInfo = deps.libraryManagers.nile.getGameInfo(appName)
   if (!gameInfo) {
     logError([`Could not find game info for ${appName}. Skipping setup`])
     return
@@ -52,7 +48,7 @@ export default async function setup(
     return
   }
 
-  const fuel = libraryManagerMap['nile'].fetchFuelJSON(appName, basePath)
+  const fuel = deps.libraryManagers.nile.fetchFuelJSON(appName, basePath)
   if (!fuel) {
     logError(
       [
@@ -80,13 +76,13 @@ export default async function setup(
 
   const stored = GameConfig.get(appName).config
   if (isWindows) {
-    return runNileSetup(appName, basePath, fuel.PostInstall, stored)
+    return runNileSetup(deps, appName, basePath, fuel.PostInstall, stored)
   }
 
   // Phase 61 (D-01, D-03, D-08): on macOS the setup runs on the engine the step selects, in the
   // game's own bottle. An engine-controlled setup skips checkWineBeforeLaunch: its self-heal would
   // persist a derived or fallback engine into wineVersion.
-  const game = libraryManagerMap['nile'].getGame(appName)
+  const game = deps.libraryManagers.nile.getGame(appName)
   const step = await selectEngineForLaunch(game, {
     offline: !isOnline(),
     purpose: 'setup'
@@ -105,6 +101,7 @@ export default async function setup(
   if (step.kind === 'use') {
     try {
       return await runNileSetup(
+        deps,
         appName,
         basePath,
         fuel.PostInstall,
@@ -129,17 +126,18 @@ export default async function setup(
     )
     return
   }
-  return runNileSetup(appName, basePath, fuel.PostInstall, stored)
+  return runNileSetup(deps, appName, basePath, fuel.PostInstall, stored)
 }
 
 async function runNileSetup(
+  deps: NileSetupDeps,
   appName: string,
   basePath: string,
   postInstall: FuelSchema['PostInstall'],
   gameSettings: GameSettings
 ): Promise<void> {
   // Make sure prefix is initialized correctly
-  if (!isWindows) await verifyWinePrefix(gameSettings)
+  if (!isWindows) await deps.launcher.verifyWinePrefix(gameSettings)
 
   logDebug(['PostInstall:', postInstall], LogPrefix.Nile)
 
@@ -165,7 +163,7 @@ async function runNileSetup(
         command.push('-ArgumentList', ...exeArguments)
       }
       logInfo(['Setup: Executing', command.join(' ')], LogPrefix.Nile)
-      await spawnAsync('powershell', command, {
+      await deps.spawnAsync('powershell', command, {
         cwd: basePath
       })
       continue
@@ -176,7 +174,7 @@ async function runNileSetup(
       LogPrefix.Nile
     )
 
-    await runWineCommand({
+    await deps.commandRunner.runWineCommand({
       gameSettings,
       gameInstallPath: basePath,
       commandParts: [action.Command, ...exeArguments],

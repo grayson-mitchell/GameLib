@@ -10,7 +10,7 @@ import {
   NileRegisterData,
   NileUserData
 } from 'common/types/nile'
-import { libraryManagerMap } from '..'
+import type { ManagerDeps } from 'backend/services/types'
 import { existsSync, readFileSync } from 'graceful-fs'
 import { configStore } from './stores'
 import { clearCache } from 'backend/utils'
@@ -22,6 +22,11 @@ import {
   noteSignedOut,
   noteSignInSucceeded
 } from 'backend/signInProbe/outcomes'
+
+/** What the CLI-driven NileUser methods need: the nile manager and the stores clearCache wipes. */
+export type NileUserDeps = ClearCacheDeps & {
+  libraryManagers: Pick<ManagerDeps['libraryManagers'], 'nile'>
+}
 
 // Amazon-owned APEX domain. Suffix-matching happens Rust-side in
 // `cookie_domain_matches`, so this single apex covers `www.amazon.com` (the
@@ -152,7 +157,7 @@ function redactNileRegisterData(d: NileRegisterData) {
 }
 
 export class NileUser {
-  static async getLoginData(): Promise<NileLoginData> {
+  static async getLoginData(deps: NileUserDeps): Promise<NileLoginData> {
     if (inFlightLoginData) {
       logDebug(
         'Getting login data from Nile: reusing an already in-flight fetch',
@@ -163,7 +168,7 @@ export class NileUser {
 
     const fetchPromise = (async (): Promise<NileLoginData> => {
       logDebug('Getting login data from Nile', LogPrefix.Nile)
-      const { stdout } = await libraryManagerMap['nile'].runRunnerCommand(
+      const { stdout } = await deps.libraryManagers.nile.runRunnerCommand(
         ['auth', '--login', '--non-interactive'],
         {
           abortId: 'nile-auth',
@@ -202,6 +207,7 @@ export class NileUser {
   }
 
   static async login(
+    deps: NileUserDeps,
     data: NileRegisterData
   ): Promise<{ status: 'done' | 'failed'; user: NileUserData | undefined }> {
     logDebug(
@@ -210,7 +216,7 @@ export class NileUser {
     )
     const { code, code_verifier, serial, client_id } = data
     // Nile prints output to stderr
-    const { stderr: output } = await libraryManagerMap['nile'].runRunnerCommand(
+    const { stderr: output } = await deps.libraryManagers.nile.runRunnerCommand(
       [
         'register',
         '--code',
@@ -255,10 +261,10 @@ export class NileUser {
     }
   }
 
-  static async logout(deps: ClearCacheDeps) {
+  static async logout(deps: NileUserDeps) {
     const commandParts = ['auth', '--logout']
 
-    const res = await libraryManagerMap['nile'].runRunnerCommand(commandParts, {
+    const res = await deps.libraryManagers.nile.runRunnerCommand(commandParts, {
       abortId: 'nile-logout'
     })
 

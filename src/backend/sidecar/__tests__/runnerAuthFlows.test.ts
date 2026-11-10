@@ -311,7 +311,7 @@ describe('T-34.5-35/T-34.5-36 — authAmazon rejects a malformed NileRegisterDat
 
     await authAmazonHandler()(undefined, VALID_PAYLOAD)
 
-    expect(mockNileLogin).toHaveBeenCalledWith(VALID_PAYLOAD)
+    expect(mockNileLogin).toHaveBeenCalledWith(expect.anything(), VALID_PAYLOAD)
   })
 })
 
@@ -354,6 +354,7 @@ describe('T-34.5-34 — the nile host anchor and the authAmazon mint are only me
     })
 
     expect(mockNileLogin).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ code: 'NILE-REAL-CODE' })
     )
   })

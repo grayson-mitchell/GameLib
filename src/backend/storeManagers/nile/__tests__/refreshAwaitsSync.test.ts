@@ -24,13 +24,11 @@ jest.mock('backend/utils', () => ({
   getNileBin: jest.fn(() => ({ dir: '', bin: 'nile' })),
   removeSpecialcharacters: jest.fn((s: string) => s)
 }))
-jest.mock('backend/launcher', () => ({ callRunner: jest.fn() }))
 jest.mock('backend/ipc', () => ({
   sendFrontendMessage: jest.fn(),
   addHandler: jest.fn(),
   addTestOnlyListener: jest.fn()
 }))
-jest.mock('../..', () => ({ libraryManagerMap: {} }))
 jest.mock('backend/signInProbe/verdict', () => ({
   applySignInVerdict: () => 'stale'
 }))

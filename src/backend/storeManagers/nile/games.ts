@@ -9,7 +9,6 @@ import {
   LaunchOption
 } from 'common/types'
 import { Game, InstallResult } from 'common/types/game_manager'
-import { libraryManagerMap } from '..'
 import {
   LogPrefix,
   logDebug,
@@ -19,15 +18,6 @@ import {
   createGameLogWriter
 } from 'backend/logger'
 import { GameConfig } from 'backend/game_config'
-import {
-  getKnownFixesEnvVariables,
-  launchCleanup,
-  prepareLaunch,
-  prepareWineLaunch,
-  setupEnvVars,
-  setupWrapperEnvVars,
-  setupWrappers
-} from 'backend/launcher'
 import { existsSync } from 'graceful-fs'
 import { showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import { t } from 'i18next'
@@ -67,9 +57,13 @@ export default class NileGameManager implements Game {
 
   constructor(
     id: string,
-    private readonly deps: ShortcutsDeps & {
-      stores: Pick<ManagerDeps['stores'], 'kvs' | 'wineManager'>
-    }
+    private readonly deps: ShortcutsDeps &
+      Pick<
+        ManagerDeps,
+        'libraryManagers' | 'launcher' | 'commandRunner' | 'spawnAsync'
+      > & {
+        stores: Pick<ManagerDeps['stores'], 'kvs' | 'wineManager'>
+      }
   ) {
     this.id = id
   }
@@ -80,7 +74,7 @@ export default class NileGameManager implements Game {
   }
 
   getGameInfo(): GameInfo {
-    const info = libraryManagerMap['nile'].getGameInfo(this.id)
+    const info = this.deps.libraryManagers.nile.getGameInfo(this.id)
     if (!info) {
       logError(
         [
@@ -120,7 +114,7 @@ export default class NileGameManager implements Game {
 
   async importGame(folderPath: string): Promise<ExecResult> {
     const importLogWriter = await createGameLogWriter(this.id, 'nile', 'import')
-    const res = await libraryManagerMap['nile'].runRunnerCommand(
+    const res = await this.deps.libraryManagers.nile.runRunnerCommand(
       ['import', '--path', folderPath, this.id],
       {
         abortId: this.id,
@@ -157,7 +151,7 @@ export default class NileGameManager implements Game {
           LogPrefix.Nile
         )
       )
-      libraryManagerMap['nile'].installState(this.id, true)
+      this.deps.libraryManagers.nile.installState(this.id, true)
     } catch (error) {
       logError(['Failed to import', `${this.id}:`, error], LogPrefix.Nile)
     }
@@ -260,12 +254,15 @@ export default class NileGameManager implements Game {
       'nile',
       'install'
     )
-    const res = await libraryManagerMap['nile'].runRunnerCommand(commandParts, {
-      abortId: this.id,
-      logWriters: [installLogWriter],
-      onOutput,
-      logMessagePrefix: `Installing ${this.id}`
-    })
+    const res = await this.deps.libraryManagers.nile.runRunnerCommand(
+      commandParts,
+      {
+        abortId: this.id,
+        logWriters: [installLogWriter],
+        onOutput,
+        logMessagePrefix: `Installing ${this.id}`
+      }
+    )
 
     if (res.abort) {
       return { status: 'abort' }
@@ -283,8 +280,8 @@ export default class NileGameManager implements Game {
         LogPrefix.Nile
       )
     )
-    libraryManagerMap['nile'].installState(this.id, true)
-    const metadata = libraryManagerMap['nile'].getInstallMetadata(this.id)
+    this.deps.libraryManagers.nile.installState(this.id, true)
+    const metadata = this.deps.libraryManagers.nile.getInstallMetadata(this.id)
 
     if (isWindows) {
       await setup(this.deps, this.id, metadata?.path)
@@ -335,11 +332,15 @@ export default class NileGameManager implements Game {
       mangoHudCommand,
       gameModeBin,
       gameScopeCommand
-    } = await prepareLaunch(gameSettings, logWriter, gameInfo)
+    } = await this.deps.launcher.prepareLaunch(
+      gameSettings,
+      logWriter,
+      gameInfo
+    )
 
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
-      launchCleanup()
+      this.deps.launcher.launchCleanup()
       showDialogBoxModalAuto({
         title: t('box.error.launchAborted', 'Launch aborted'),
         message: launchPrepFailReason!,
@@ -375,14 +376,20 @@ export default class NileGameManager implements Game {
 
     let commandEnv = {
       ...process.env,
-      ...setupWrapperEnvVars({ appName: this.id, appRunner: 'nile' }),
+      ...this.deps.launcher.setupWrapperEnvVars({
+        appName: this.id,
+        appRunner: 'nile'
+      }),
       ...(isWindows
         ? {}
-        : setupEnvVars(gameSettings, gameInfo.install.install_path)),
-      ...getKnownFixesEnvVariables(this.id, 'nile')
+        : this.deps.launcher.setupEnvVars(
+            gameSettings,
+            gameInfo.install.install_path
+          )),
+      ...this.deps.launcher.getKnownFixesEnvVariables(this.id, 'nile')
     }
 
-    const wrappers = setupWrappers(
+    const wrappers = this.deps.launcher.setupWrappers(
       gameSettings,
       mangoHudCommand,
       gameModeBin,
@@ -399,7 +406,7 @@ export default class NileGameManager implements Game {
         success: wineLaunchPrepSuccess,
         failureReason: wineLaunchPrepFailReason,
         envVars: wineEnvVars
-      } = await prepareWineLaunch(this, logWriter)
+      } = await this.deps.launcher.prepareWineLaunch(this, logWriter)
       if (!wineLaunchPrepSuccess) {
         logWriter.logError(['Launch aborted:', wineLaunchPrepFailReason])
         if (wineLaunchPrepFailReason) {
@@ -453,7 +460,7 @@ export default class NileGameManager implements Game {
       status: 'playing'
     })
 
-    const { error } = await libraryManagerMap['nile'].runRunnerCommand(
+    const { error } = await this.deps.libraryManagers.nile.runRunnerCommand(
       commandParts,
       {
         abortId: this.id,
@@ -468,7 +475,7 @@ export default class NileGameManager implements Game {
       logError(['Error launching game:', error], LogPrefix.Nile)
     }
 
-    launchCleanup(rpcClient)
+    this.deps.launcher.launchCleanup(rpcClient)
 
     return !error
   }
@@ -489,7 +496,7 @@ export default class NileGameManager implements Game {
       return { status: 'error', error }
     }
 
-    await libraryManagerMap['nile'].changeGameInstallPath(
+    await this.deps.libraryManagers.nile.changeGameInstallPath(
       this.id,
       moveResult.installPath
     )
@@ -512,7 +519,7 @@ export default class NileGameManager implements Game {
 
     logDebug([this.id, 'is installed at', install_path], LogPrefix.Nile)
     const repairLogWriter = await createGameLogWriter(this.id, 'nile', 'repair')
-    const res = await libraryManagerMap['nile'].runRunnerCommand(
+    const res = await this.deps.libraryManagers.nile.runRunnerCommand(
       ['verify', '--path', install_path, this.id],
       {
         abortId: this.id,
@@ -537,10 +544,13 @@ export default class NileGameManager implements Game {
   async uninstall(): Promise<ExecResult> {
     const commandParts = ['uninstall', this.id]
 
-    const res = await libraryManagerMap['nile'].runRunnerCommand(commandParts, {
-      abortId: this.id,
-      logMessagePrefix: `Uninstalling ${this.id}`
-    })
+    const res = await this.deps.libraryManagers.nile.runRunnerCommand(
+      commandParts,
+      {
+        abortId: this.id,
+        logMessagePrefix: `Uninstalling ${this.id}`
+      }
+    )
 
     if (res.error) {
       logError(
@@ -550,7 +560,7 @@ export default class NileGameManager implements Game {
     } else if (!res.abort) {
       await removeShortcutsUtil(this)
       await removeNonSteamGame(this)
-      libraryManagerMap['nile'].installState(this.id, false)
+      this.deps.libraryManagers.nile.installState(this.id, false)
     }
     sendFrontendMessage('refreshLibrary', 'nile')
     return res
@@ -567,12 +577,15 @@ export default class NileGameManager implements Game {
     }
 
     const updateLogWriter = await createGameLogWriter(this.id, 'nile', 'update')
-    const res = await libraryManagerMap['nile'].runRunnerCommand(commandParts, {
-      abortId: this.id,
-      logWriters: [updateLogWriter],
-      onOutput,
-      logMessagePrefix: `Updating ${this.id}`
-    })
+    const res = await this.deps.libraryManagers.nile.runRunnerCommand(
+      commandParts,
+      {
+        abortId: this.id,
+        logWriters: [updateLogWriter],
+        onOutput,
+        logMessagePrefix: `Updating ${this.id}`
+      }
+    )
 
     if (res.abort) {
       return { status: 'abort' }
@@ -595,7 +608,7 @@ export default class NileGameManager implements Game {
   }
 
   async forceUninstall() {
-    libraryManagerMap['nile'].removeFromInstalledConfig(this.id)
+    this.deps.libraryManagers.nile.removeFromInstalledConfig(this.id)
   }
 
   async stop(stopWine = true) {

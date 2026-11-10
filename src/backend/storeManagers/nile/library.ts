@@ -1,4 +1,5 @@
 import type { ManagerDeps } from 'backend/services/types'
+import type { CommandCallRunnerOptions } from 'backend/commandRunner'
 import JSON5 from 'json5'
 import {
   LogPrefix,
@@ -7,7 +8,7 @@ import {
   logInfo,
   logWarning
 } from 'backend/logger'
-import { CallRunnerOptions, ExecResult, GameInfo } from 'common/types'
+import { ExecResult, GameInfo } from 'common/types'
 import {
   FuelSchema,
   NileGameDownloadInfo,
@@ -18,7 +19,6 @@ import {
 import { existsSync, readFileSync, writeFileSync } from 'graceful-fs'
 import { installStore, libraryStore } from './stores'
 import { getFileSize, getNileBin, removeSpecialcharacters } from 'backend/utils'
-import { callRunner } from 'backend/launcher'
 import { dirname, join } from 'path'
 import { app } from 'backend/platform'
 import { copySync } from 'fs-extra'
@@ -535,7 +535,7 @@ export default class NileLibraryManager implements LibraryManager {
 
   async runRunnerCommand(
     commandParts: string[],
-    options?: CallRunnerOptions
+    options?: CommandCallRunnerOptions
   ): Promise<ExecResult> {
     if (process.env.CI === 'e2e') {
       return runNileCommandStub(commandParts)
@@ -553,7 +553,7 @@ export default class NileLibraryManager implements LibraryManager {
     }
     options.env.NILE_CONFIG_PATH = dirname(nileConfigPath)
 
-    return callRunner(
+    return this.deps.commandRunner.callRunner(
       commandParts,
       { name: 'nile', logPrefix: LogPrefix.Nile, bin, dir },
       options

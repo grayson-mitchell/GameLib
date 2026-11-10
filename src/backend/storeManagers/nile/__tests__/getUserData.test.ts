@@ -21,10 +21,6 @@ jest.mock('graceful-fs', () => ({
   readFileSync: (...args: unknown[]) => mockReadFileSync(...args)
 }))
 
-jest.mock('backend/storeManagers/index', () => ({
-  libraryManagerMap: { nile: { runRunnerCommand: jest.fn() } }
-}))
-
 jest.mock('backend/logger', () => ({
   logDebug: jest.fn(),
   logInfo: jest.fn(),
