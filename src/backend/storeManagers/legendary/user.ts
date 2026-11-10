@@ -4,13 +4,11 @@ import { UserInfo } from 'common/types'
 import { clearCache } from '../../utils'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { userInfo as user } from 'os'
-import { libraryManagerMap } from '..'
+import type { ManagerDeps, Stores } from 'backend/services/types'
 import { LegendaryCommand } from './commands'
 import { NonEmptyString } from './commands/base'
-import { configStore } from 'backend/constants/key_value_stores'
 import { isMac } from 'backend/constants/environment'
 import { legendaryUserInfo } from './constants'
-import { legendaryConfigStore } from './stores'
 import {
   noteSignedOut,
   noteSignInSucceeded
@@ -111,8 +109,22 @@ const EPIC_COOKIE_HOSTS = [
 // steps deliberately stay warnings.
 const FATAL_WIPE_STEP = 'clearEpicCookies'
 
+/** What `getUserInfo` reads: the persisted `userInfo` slot in the kvs config store. */
+export interface LegendaryUserInfoDeps {
+  stores: { kvs: Pick<Stores['kvs'], 'configStore'> }
+}
+
+/** What `login` / `logout` need (R3): the legendary manager, its config store and kvs. */
+export interface LegendaryUserDeps extends LegendaryUserInfoDeps {
+  libraryManagers: Pick<ManagerDeps['libraryManagers'], 'legendary'>
+  stores: LegendaryUserInfoDeps['stores'] & {
+    legendary: Pick<Stores['legendary'], 'legendaryConfigStore'>
+  }
+}
+
 export class LegendaryUser {
   public static async login(
+    deps: LegendaryUserDeps,
     authorizationCode: string
   ): Promise<{ status: 'done' | 'failed'; data: UserInfo | undefined }> {
     const command: LegendaryCommand = {
@@ -129,7 +141,7 @@ export class LegendaryUser {
     }
 
     try {
-      const res = await libraryManagerMap['legendary'].runRunnerCommand(
+      const res = await deps.libraryManagers.legendary.runRunnerCommand(
         command,
         {
           abortId: 'legendary-login',
@@ -148,20 +160,20 @@ export class LegendaryUser {
       // Phase 49 (R2): a completed sign-in proves the session, so the expiry
       // flag clears and the fence moves. This is the one Epic sign-in success
       // site: legendary `auth` is only ever run with `--code` here.
-      legendaryConfigStore.delete('expired')
+      deps.stores.legendary.legendaryConfigStore.delete('expired')
       noteSignInSucceeded('legendary')
 
-      const userInfo = this.getUserInfo()
+      const userInfo = this.getUserInfo(deps)
       return { status: 'done', data: userInfo }
     } catch (error) {
       return errorMessage(`${error}`)
     }
   }
 
-  public static async logout() {
+  public static async logout(deps: LegendaryUserDeps) {
     const command: LegendaryCommand = { subcommand: 'auth', '--delete': true }
 
-    const res = await libraryManagerMap['legendary'].runRunnerCommand(command, {
+    const res = await deps.libraryManagers.legendary.runRunnerCommand(command, {
       abortId: 'legendary-logout',
       logMessagePrefix: 'Logging out'
     })
@@ -686,11 +698,11 @@ export class LegendaryUser {
       }
     }
 
-    configStore.delete('userInfo')
+    deps.stores.kvs.configStore.delete('userInfo')
     clearCache('legendary')
     // Phase 49 (R2): sign-out clears the expiry flag and fences any probe that
     // began before it, so a late verdict cannot re-latch a signed-out store.
-    legendaryConfigStore.delete('expired')
+    deps.stores.legendary.legendaryConfigStore.delete('expired')
     noteSignedOut('legendary')
 
     // Phase 40 CR-03: gated on `!res.abort`. On abort the app is exiting --
@@ -708,9 +720,9 @@ export class LegendaryUser {
     return existsSync(legendaryUserInfo)
   }
 
-  public static getUserInfo(): UserInfo | undefined {
+  public static getUserInfo(deps: LegendaryUserInfoDeps): UserInfo | undefined {
     if (!LegendaryUser.isLoggedIn()) {
-      configStore.delete('userInfo')
+      deps.stores.kvs.configStore.delete('userInfo')
       return
     }
     try {
@@ -721,7 +733,7 @@ export class LegendaryUser {
         displayName: userInfoObject.displayName,
         user: user().username
       }
-      configStore.set('userInfo', info)
+      deps.stores.kvs.configStore.set('userInfo', info)
       return info
     } catch (error) {
       logError(

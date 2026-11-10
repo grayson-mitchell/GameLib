@@ -180,7 +180,7 @@ describe('argument-forwarding proof — enable/disable forward appName unchanged
     await handler({} as never, 'my-app-name')
 
     expect(mockEnable).toHaveBeenCalledTimes(1)
-    expect(mockEnable).toHaveBeenCalledWith('my-app-name')
+    expect(mockEnable).toHaveBeenCalledWith(expect.anything(), 'my-app-name')
   })
 
   it("disableEosOverlay forwards its first argument to eos_overlay.ts's disable(appName) unchanged", async () => {
@@ -191,7 +191,7 @@ describe('argument-forwarding proof — enable/disable forward appName unchanged
     await handler({} as never, 'my-app-name')
 
     expect(mockDisable).toHaveBeenCalledTimes(1)
-    expect(mockDisable).toHaveBeenCalledWith('my-app-name')
+    expect(mockDisable).toHaveBeenCalledWith(expect.anything(), 'my-app-name')
   })
 
   it('isEosOverlayEnabled works when called with NO argument (the Electron signature has appName? optional) and does not throw', async () => {
@@ -201,7 +201,7 @@ describe('argument-forwarding proof — enable/disable forward appName unchanged
 
     await expect(handler({} as never)).resolves.toBe(false)
     expect(mockIsEnabled).toHaveBeenCalledTimes(1)
-    expect(mockIsEnabled).toHaveBeenCalledWith(undefined)
+    expect(mockIsEnabled).toHaveBeenCalledWith(expect.anything(), undefined)
   })
 })
 
@@ -239,6 +239,9 @@ describe("fail-closed gate — real remove()/enable() from eos_overlay.ts (bypas
     libraryManagerMap: { legendary: { runRunnerCommand: jest.Mock } }
   }>('../../storeManagers/index')
   const mockRunRunnerCommand = mockLibraryManagerMap.legendary.runRunnerCommand
+  const overlayDeps = {
+    libraryManagers: mockLibraryManagerMap
+  } as unknown as Parameters<typeof realRemove>[0]
 
   beforeEach(() => {
     mockRunRunnerCommand.mockClear()
@@ -256,7 +259,7 @@ describe("fail-closed gate — real remove()/enable() from eos_overlay.ts (bypas
     ])(
       'REQ-35-17/T-35-122 refuses and calls NO runner command when confirmed is %s',
       async (_label, value) => {
-        const result = await realRemove(value as never)
+        const result = await realRemove(overlayDeps, value as never)
 
         expect(mockRunRunnerCommand).not.toHaveBeenCalled()
         expect(result).toBe(false)
@@ -264,7 +267,7 @@ describe("fail-closed gate — real remove()/enable() from eos_overlay.ts (bypas
     )
 
     it('REQ-35-17/T-35-122 proceeds ONLY when confirmed is the literal true, and forwards the exact remove command', async () => {
-      const result = await realRemove(true)
+      const result = await realRemove(overlayDeps, true)
 
       expect(mockRunRunnerCommand).toHaveBeenCalledTimes(1)
       expect(mockRunRunnerCommand).toHaveBeenCalledWith(
@@ -287,7 +290,7 @@ describe("fail-closed gate — real remove()/enable() from eos_overlay.ts (bypas
         .mockReturnValue(false)
 
       try {
-        const result = await realEnable('some-app-name')
+        const result = await realEnable(overlayDeps, 'some-app-name')
         expect(result).toEqual({ wasEnabled: false, installNow: true })
         expect(mockRunRunnerCommand).not.toHaveBeenCalled()
       } finally {

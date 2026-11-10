@@ -222,7 +222,10 @@ describe('T-34.5-21/T-34.5-22 — login and authGOG reject a non-string/empty pa
 
     await loginHandler()(undefined, 'valid-sid')
 
-    expect(mockLegendaryLogin).toHaveBeenCalledWith('valid-sid')
+    expect(mockLegendaryLogin).toHaveBeenCalledWith(
+      expect.anything(),
+      'valid-sid'
+    )
   })
 
   it('REQ-34.5-04 authGOG rejects a non-string payload without invoking GOGUser.login, and never logs the payload value', async () => {

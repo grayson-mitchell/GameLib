@@ -98,7 +98,11 @@ describe('storeLaunchHooks', () => {
 
   test('legendary prepareLaunch runs legendarySetup(appName, logWriter)', async () => {
     await storeLaunchHooks.legendary.prepareLaunch!('l1', logWriter)
-    expect(legendarySetupMock).toHaveBeenCalledWith('l1', logWriter)
+    expect(legendarySetupMock).toHaveBeenCalledWith(
+      expect.anything(),
+      'l1',
+      logWriter
+    )
   })
 
   test('steam and sideload have no prepareLaunch', () => {
@@ -146,7 +150,7 @@ describe('storeLaunchHooks', () => {
     await expect(
       storeLaunchHooks.legendary.isOverlayEnabled!('l1')
     ).resolves.toBe(true)
-    expect(isEnabledMock).toHaveBeenCalledWith('l1')
+    expect(isEnabledMock).toHaveBeenCalledWith(expect.anything(), 'l1')
   })
 
   test('steam persistBottleWineVersion lazy-imports bottle and persists', async () => {

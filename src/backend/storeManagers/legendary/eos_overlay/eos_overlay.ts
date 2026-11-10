@@ -12,6 +12,10 @@ import { legendaryConfigPath } from '../constants'
 import { isLinux } from 'backend/constants/environment'
 
 import type { Runner } from 'common/types'
+import type { ManagerDeps } from 'backend/services/types'
+
+/** The only collaborator the overlay functions need (R3). */
+export type EosOverlayDeps = Pick<ManagerDeps, 'libraryManagers'>
 
 const currentVersionPath = () =>
   join(legendaryConfigPath, 'overlay_version.json')
@@ -43,13 +47,13 @@ function getStatus(): {
   return { isInstalled: true, version, install_path }
 }
 
-async function getLatestVersion(): Promise<string> {
+async function getLatestVersion(deps: EosOverlayDeps): Promise<string> {
   if (!existsSync(currentVersionPath())) {
     // HACK: `overlay_version.json` isn't created when the overlay isn't installed
     if (!isInstalled()) {
       return ''
     }
-    await updateInfo()
+    await updateInfo(deps)
     if (!existsSync(currentVersionPath())) {
       logError(
         'EOS Overlay information not found after manual update. User is probably not logged in anymore',
@@ -64,18 +68,14 @@ async function getLatestVersion(): Promise<string> {
   return buildVersion
 }
 
-async function updateInfo() {
+async function updateInfo(deps: EosOverlayDeps) {
   // Without the overlay being installed, this will do nothing at all.
   // So we can just skip running the command if that's the case
   if (!isInstalled()) {
     return
   }
 
-  // Imported lazily to break a circular dependency (eos_overlay.ts <->
-  // storeManagers/index.ts) — see the load-bearing comment in
-  // storeManagers/gog/user.ts.
-  const { libraryManagerMap } = await import('../..')
-  await libraryManagerMap['legendary'].runRunnerCommand(
+  await deps.libraryManagers['legendary'].runRunnerCommand(
     { subcommand: 'status' },
     {
       abortId: eosOverlayAppName,
@@ -88,19 +88,16 @@ async function updateInfo() {
  * Installs the EOS overlay
  * @returns The error encountered when installing, if any
  */
-async function install() {
+async function install(deps: EosOverlayDeps) {
   sendGameStatusUpdate({
     appName: eosOverlayAppName,
     runner: 'legendary',
     status: isInstalled() ? 'updating' : 'installing'
   })
 
-  // Lazy import — see the load-bearing comment on updateInfo() above.
-  const { libraryManagerMap } = await import('../..')
-
   let downloadSize = 0
   // Run download without -y to get the install size
-  await libraryManagerMap['legendary'].runRunnerCommand(
+  await deps.libraryManagers['legendary'].runRunnerCommand(
     {
       subcommand: 'eos-overlay',
       action: 'install',
@@ -122,12 +119,12 @@ async function install() {
     }
   )
 
-  const game = libraryManagerMap['legendary'].getGame(eosOverlayAppName)
+  const game = deps.libraryManagers['legendary'].getGame(eosOverlayAppName)
   // The EOS Overlay doesn't support Ctrl-C-pausing, so it's fine to just do this
   game.setCurrentDownloadSize(downloadSize)
 
   // And now actually install it
-  const { error } = await libraryManagerMap['legendary'].runRunnerCommand(
+  const { error } = await deps.libraryManagers['legendary'].runRunnerCommand(
     {
       '-y': true,
       subcommand: 'eos-overlay',
@@ -171,7 +168,10 @@ async function install() {
  * refuses the removal.
  * @returns True if the overlay was removed, False if it wasn't (refused or declined).
  */
-async function remove(confirmed: boolean): Promise<boolean> {
+async function remove(
+  deps: EosOverlayDeps,
+  confirmed: boolean
+): Promise<boolean> {
   if (confirmed !== true) {
     logWarning(
       'EOS Overlay removal refused: confirmation was not the literal `true`',
@@ -180,9 +180,7 @@ async function remove(confirmed: boolean): Promise<boolean> {
     return false
   }
 
-  // Lazy import — see the load-bearing comment on updateInfo() above.
-  const { libraryManagerMap } = await import('../..')
-  await libraryManagerMap['legendary'].runRunnerCommand(
+  await deps.libraryManagers['legendary'].runRunnerCommand(
     {
       '-y': true,
       subcommand: 'eos-overlay',
@@ -197,6 +195,7 @@ async function remove(confirmed: boolean): Promise<boolean> {
 }
 
 async function enable(
+  deps: EosOverlayDeps,
   appName: string
 ): Promise<{ wasEnabled: boolean; installNow?: boolean }> {
   if (!isInstalled()) {
@@ -209,7 +208,7 @@ async function enable(
     return { wasEnabled: false, installNow: true }
   }
 
-  const prefix = await getWinePrefixFolder(appName)
+  const prefix = await getWinePrefixFolder(deps, appName)
   // Can't install the overlay if we don't have a valid prefix
   // FIXME: Notify the user about this
   if (prefix === false) return { wasEnabled: false }
@@ -220,9 +219,7 @@ async function enable(
   }
   if (prefix) command['--prefix'] = prefix
 
-  // Lazy import — see the load-bearing comment on updateInfo() above.
-  const { libraryManagerMap } = await import('../..')
-  await libraryManagerMap['legendary'].runRunnerCommand(command, {
+  await deps.libraryManagers['legendary'].runRunnerCommand(command, {
     abortId: eosOverlayAppName,
     logMessagePrefix: 'Enabling EOS Overlay'
   })
@@ -230,8 +227,8 @@ async function enable(
   return { wasEnabled: true }
 }
 
-async function disable(appName: string) {
-  const prefix = await getWinePrefixFolder(appName)
+async function disable(deps: EosOverlayDeps, appName: string) {
+  const prefix = await getWinePrefixFolder(deps, appName)
   // If we don't have a valid prefix anymore, we have nothing to disable
   if (prefix === false) return
 
@@ -241,9 +238,7 @@ async function disable(appName: string) {
   }
   if (prefix) command['--prefix'] = prefix
 
-  // Lazy import — see the load-bearing comment on updateInfo() above.
-  const { libraryManagerMap } = await import('../..')
-  await libraryManagerMap['legendary'].runRunnerCommand(command, {
+  await deps.libraryManagers['legendary'].runRunnerCommand(command, {
     abortId: eosOverlayAppName,
     logMessagePrefix: 'Disabling EOS Overlay'
   })
@@ -258,10 +253,13 @@ function isInstalled() {
  * @param appName required on Linux, does nothing on Windows
  * @returns Enabled = True; Disabled = False
  */
-async function isEnabled(appName?: string): Promise<boolean> {
+async function isEnabled(
+  deps: EosOverlayDeps,
+  appName?: string
+): Promise<boolean> {
   let enabled = false
 
-  const prefix = await getWinePrefixFolder(appName)
+  const prefix = await getWinePrefixFolder(deps, appName)
   if (prefix === false) return false
 
   const command: LegendaryCommand = {
@@ -270,9 +268,7 @@ async function isEnabled(appName?: string): Promise<boolean> {
   }
   if (prefix) command['--prefix'] = prefix
 
-  // Lazy import — see the load-bearing comment on updateInfo() above.
-  const { libraryManagerMap } = await import('../..')
-  await libraryManagerMap['legendary'].runRunnerCommand(command, {
+  await deps.libraryManagers['legendary'].runRunnerCommand(command, {
     abortId: eosOverlayAppName,
     onOutput: (data: string) => {
       if (data.includes('Overlay enabled')) {
@@ -292,14 +288,13 @@ async function isEnabled(appName?: string): Promise<boolean> {
  * @returns ValidWinePrefix (a folder that is verified to contain a Wineprefix) otherwise
  */
 async function getWinePrefixFolder(
+  deps: EosOverlayDeps,
   appName?: string,
   runner: Runner = 'legendary'
 ): Promise<ValidWinePrefix | null | false> {
   if (!isLinux || !appName) return null
 
-  // Lazy import — see the load-bearing comment on updateInfo() above.
-  const { libraryManagerMap } = await import('../..')
-  const { winePrefix, wineVersion } = await libraryManagerMap[runner]
+  const { winePrefix, wineVersion } = await deps.libraryManagers[runner]
     .getGame(appName)
     .getSettings()
   const prefixPath =

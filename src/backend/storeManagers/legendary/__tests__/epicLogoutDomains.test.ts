@@ -97,18 +97,19 @@ const mockConfigStore = {
   delete: jest.fn(),
   clear: jest.fn()
 }
-jest.mock('backend/constants/key_value_stores', () => ({
-  configStore: mockConfigStore
-}))
 
 const mockRunRunnerCommand = jest.fn()
-jest.mock('../..', () => ({
-  libraryManagerMap: {
+const deps = {
+  libraryManagers: {
     legendary: {
       runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
     }
+  },
+  stores: {
+    kvs: { configStore: mockConfigStore },
+    legendary: { legendaryConfigStore: { delete: jest.fn() } }
   }
-}))
+} as unknown as import('../user').LegendaryUserDeps
 
 // See `epicCookieCensus.test.ts`'s copy of this mock for why it is a
 // `defineProperty` and not an object-literal getter — the literal form is
@@ -247,7 +248,7 @@ describe('Epic logout clears every Epic-owned domain (T-35-37)', () => {
     const seam = makeMockSeam()
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     // Order is asserted, not just membership: `epicgames.com` staying first
     // keeps the pre-existing single-domain assertions in `user.test.ts`
@@ -284,7 +285,7 @@ describe('Epic logout clears every Epic-owned domain (T-35-37)', () => {
     const seam = makeMockSeam()
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     expect(seam.open).not.toHaveBeenCalled()
     expect(seam.close).not.toHaveBeenCalled()
@@ -298,7 +299,7 @@ describe('Epic logout clears every Epic-owned domain (T-35-37)', () => {
     const seam = makeMockSeam()
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     expect(seam.open).toHaveBeenCalledTimes(1)
     // Deliberately `not.toContain` — this assertion is the inverse of the one
@@ -327,7 +328,7 @@ describe('Epic logout clears every Epic-owned domain (T-35-37)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       'rust-side clear failed'
     )
 
@@ -346,7 +347,7 @@ describe('Epic logout clears every Epic-owned domain (T-35-37)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       'rust-side clear failed'
     )
 
@@ -371,7 +372,7 @@ describe('the per-domain deltas are summed, and only a ZERO TOTAL fails (T-35-39
     })
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     const logged = allLoggedText()
     // The breakdown: every domain named with its own count, including the
@@ -399,7 +400,7 @@ describe('the per-domain deltas are summed, and only a ZERO TOTAL fails (T-35-39
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+    await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
     expect(logError).not.toHaveBeenCalled()
   })
 
@@ -416,7 +417,7 @@ describe('the per-domain deltas are summed, and only a ZERO TOTAL fails (T-35-39
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /removed nothing across all 5 Epic-owned domains/
     )
   })
@@ -437,7 +438,7 @@ describe('the per-domain deltas are summed, and only a ZERO TOTAL fails (T-35-39
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow()
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow()
 
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
   })
@@ -455,7 +456,7 @@ describe('the per-domain deltas are summed, and only a ZERO TOTAL fails (T-35-39
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow()
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow()
 
     expect(seam.clearStorage).toHaveBeenCalledTimes(1)
   })
@@ -468,7 +469,7 @@ describe('logs carry counts and domains only — never a cookie name or value (T
     })
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     const logged = allLoggedText()
     // Non-vacuity FIRST: the corpus must be non-empty and must actually carry
@@ -496,7 +497,7 @@ describe('logs carry counts and domains only — never a cookie name or value (T
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow()
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow()
 
     const logged = allLoggedText()
     expect(logged.length).toBeGreaterThan(0)

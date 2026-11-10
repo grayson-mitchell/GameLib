@@ -24,7 +24,7 @@ import {
 import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { probeLegendarySession } from 'backend/signInProbe/runnerProbes'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
-import { LegendaryUser } from '../user'
+import { LegendaryUser, type LegendaryUserDeps } from '../user'
 
 jest.mock('../constants', () => ({
   legendaryUserInfo: '/tmp/gamelib-legendary-expiry-test/user.json'
@@ -37,15 +37,6 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Legendary: 'Legendary', Backend: 'Backend' }
 }))
 jest.mock('../../../utils', () => ({ clearCache: jest.fn() }))
-jest.mock('backend/constants/key_value_stores', () => ({
-  configStore: {
-    get: jest.fn(),
-    get_nodefault: jest.fn(),
-    set: jest.fn(),
-    delete: jest.fn(),
-    clear: jest.fn()
-  }
-}))
 jest.mock('../../../humble/userAgent', () => ({
   standardBrowserUserAgent: () => 'Mozilla/5.0 (Test)'
 }))
@@ -101,6 +92,22 @@ jest.mock('backend/humble/stores', () => ({
 }))
 
 const flag = legendaryConfigStore as unknown as FakeFlagStore
+
+const kvsConfigStore = { delete: jest.fn(), set: jest.fn(), get: jest.fn() }
+
+function userDeps(): LegendaryUserDeps {
+  return {
+    libraryManagers: {
+      legendary: {
+        runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
+      }
+    },
+    stores: {
+      kvs: { configStore: kvsConfigStore },
+      legendary: { legendaryConfigStore }
+    }
+  } as unknown as LegendaryUserDeps
+}
 const sendMock = sendFrontendMessage as unknown as jest.Mock
 
 type RunOptions = { onOutput?: (chunk: string) => void }
@@ -190,7 +197,7 @@ describe('Epic: sign-in success and logout clear the flag', () => {
     flag.data.set('expired', true)
     armRunner([])
 
-    const res = await LegendaryUser.login('auth-code-123')
+    const res = await LegendaryUser.login(userDeps(), 'auth-code-123')
 
     expect(res.status).toBe('done')
     expect(flag.deletes).toContain('expired')
@@ -205,7 +212,7 @@ describe('Epic: sign-in success and logout clear the flag', () => {
     flag.data.set('expired', true)
     armRunner([], { error: 'login exploded' })
 
-    const res = await LegendaryUser.login('auth-code-123')
+    const res = await LegendaryUser.login(userDeps(), 'auth-code-123')
 
     expect(res.status).toBe('failed')
     expect(flag.data.get('expired')).toBe(true)
@@ -221,7 +228,7 @@ describe('Epic: sign-in success and logout clear the flag', () => {
     // The cookie wipe steps are not under test (no login-window seam is
     // installed, so the fatal step rejects); the credential-side cleanup runs
     // unconditionally before that rethrow (Phase 40 CR-03).
-    await LegendaryUser.logout().catch(() => undefined)
+    await LegendaryUser.logout(userDeps()).catch(() => undefined)
 
     expect(flag.data.has('expired')).toBe(false)
     expect(getSignInProbeOutcomes().legendary).toBeUndefined()

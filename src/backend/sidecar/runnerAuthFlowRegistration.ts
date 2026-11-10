@@ -83,6 +83,8 @@ import { libraryManagerMap } from '../storeManagers'
 import { LegendaryUser } from '../storeManagers/legendary/user'
 import { GOGUser } from '../storeManagers/gog/user'
 import * as gogStores from '../storeManagers/gog/stores'
+import * as legendaryStores from '../storeManagers/legendary/stores'
+import * as kvs from '../constants/key_value_stores'
 import { NileUser } from '../storeManagers/nile/user'
 import { isEpicServiceOffline } from '../utils'
 import { logWarning, LogPrefix } from '../logger'
@@ -121,6 +123,14 @@ function gogUserDeps() {
   }
 }
 
+// Transitional (66.1-09): resolved at call time until the registration takes injected slices.
+function legendaryUserDeps() {
+  return {
+    stores: { legendary: legendaryStores, kvs },
+    libraryManagers: { legendary: libraryManagerMap.legendary }
+  }
+}
+
 export function registerRunnerAuthFlows(): void {
   if (registered) {
     return
@@ -134,7 +144,7 @@ export function registerRunnerAuthFlows(): void {
 
   // Source: main.ts:868 -> `LegendaryUser.getUserInfo()`.
   ipcMain.handle('getUserInfo', async () => {
-    return LegendaryUser.getUserInfo()
+    return LegendaryUser.getUserInfo(legendaryUserDeps())
   })
 
   // Source: main.ts:875 -> `LegendaryUser.isLoggedIn()`.
@@ -156,12 +166,12 @@ export function registerRunnerAuthFlows(): void {
       )
       return { status: 'failed', data: undefined }
     }
-    return LegendaryUser.login(sid)
+    return LegendaryUser.login(legendaryUserDeps(), sid)
   })
 
   // Source: main.ts:879 -> `LegendaryUser.logout()`.
   ipcMain.handle('logoutLegendary', () => {
-    return LegendaryUser.logout()
+    return LegendaryUser.logout(legendaryUserDeps())
   })
 
   // Source: main.ts:878 -> `GOGUser.login(code)`. `code` is a GOG authorization code — same

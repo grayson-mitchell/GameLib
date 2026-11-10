@@ -306,7 +306,8 @@ export async function readConfig(
     await libraryManagerMap['legendary'].refresh()
     return libraryManagerMap['legendary'].getListOfGames()
   }
-  const userInfo = LegendaryUser.getUserInfo()
+  const { legacyManagerDeps } = await import('../services/legacyFacades')
+  const userInfo = LegendaryUser.getUserInfo(legacyManagerDeps())
   return userInfo?.displayName ?? ''
 }
 

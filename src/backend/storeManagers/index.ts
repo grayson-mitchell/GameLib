@@ -7,7 +7,6 @@ import SteamLibraryManager from 'backend/storeManagers/steam/library'
 import gogSetup from 'backend/storeManagers/gog/setup'
 import nileSetup from 'backend/storeManagers/nile/setup'
 import { legendarySetup } from 'backend/storeManagers/legendary/setup'
-import { legendaryConfigStore } from 'backend/storeManagers/legendary/stores'
 import { resolveEpicOfflineMode } from 'backend/storeManagers/legendary/epicOfflineMode'
 import gogPresence from 'backend/storeManagers/gog/presence'
 import { isEnabled as isEosOverlayEnabled } from 'backend/storeManagers/legendary/eos_overlay/eos_overlay'
@@ -86,15 +85,20 @@ const launchHooks = {
   },
   legendary: {
     prepareLaunch: async (appName, logWriter) => {
-      await legendarySetup(appName, logWriter)
+      await legendarySetup(legacyManagerDeps(), appName, logWriter)
     },
     // R8 (Phase 49): the expired flag is read here, once per launch.
     resolveOfflineMode: (input) =>
       resolveEpicOfflineMode({
         ...input,
-        storeExpired: Boolean(legendaryConfigStore.get_nodefault('expired'))
+        storeExpired: Boolean(
+          legacyManagerDeps().stores.legendary.legendaryConfigStore.get_nodefault(
+            'expired'
+          )
+        )
       }),
-    isOverlayEnabled: (appName) => isEosOverlayEnabled(appName)
+    isOverlayEnabled: (appName) =>
+      isEosOverlayEnabled(legacyManagerDeps(), appName)
   },
   nile: {
     prepareLaunch: async (appName) => {

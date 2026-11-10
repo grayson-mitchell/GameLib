@@ -1,5 +1,5 @@
 /**
- * Unit tests for LegendaryUser.logout() (Phase 34.5 Plan 06, T-34.5-19/T-34.5-20,
+ * Unit tests for LegendaryUser.logout(deps) (Phase 34.5 Plan 06, T-34.5-19/T-34.5-20,
  * REQ-34.5-04).
  *
  * No test file existed for this module before Phase 34.5 Plan 06. These tests originally
@@ -63,19 +63,20 @@ const mockConfigStore = {
   delete: jest.fn(),
   clear: jest.fn()
 }
-jest.mock('backend/constants/key_value_stores', () => ({
-  configStore: mockConfigStore
-}))
 
 // ── '..' mock (storeManagers/index -> libraryManagerMap) ─────────────────────────────────
 const mockRunRunnerCommand = jest.fn()
-jest.mock('../..', () => ({
-  libraryManagerMap: {
+const deps = {
+  libraryManagers: {
     legendary: {
       runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
     }
+  },
+  stores: {
+    kvs: { configStore: mockConfigStore },
+    legendary: { legendaryConfigStore: { delete: jest.fn() } }
   }
-}))
+} as unknown as import('../user').LegendaryUserDeps
 
 // ── backend/constants/environment mock (isMac) ───────────────────────────────────────────
 // See `epicCookieCensus.test.ts`'s copy of this mock for why it is a
@@ -146,7 +147,7 @@ function makeMockSeam(
   }
 }
 
-describe('LegendaryUser.logout()', () => {
+describe('LegendaryUser.logout(deps)', () => {
   beforeEach(() => {
     mockIsMac = true
     // Re-arm default mock behavior. Jest's project-wide `resetMocks: true` (jest.config.js)
@@ -188,7 +189,7 @@ describe('LegendaryUser.logout()', () => {
       abort: false
     })
 
-    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+    await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 
     expect(logError).toHaveBeenCalledWith(
       ['Failed to logout:', 'boom'],
@@ -212,7 +213,7 @@ describe('LegendaryUser.logout()', () => {
       abort: true
     })
 
-    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+    await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
     expect(clearCache).toHaveBeenCalledWith('legendary')
@@ -236,7 +237,7 @@ describe('LegendaryUser.logout()', () => {
       abort: true
     })
 
-    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+    await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
     expect(clearCache).toHaveBeenCalledWith('legendary')
@@ -275,7 +276,7 @@ describe('LegendaryUser.logout()', () => {
       callOrder.push(`configStore.delete:${key}`)
     })
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     const authIdx = callOrder.indexOf('auth-delete')
     const cookieIdx = callOrder.indexOf('clearCookies')
@@ -318,7 +319,7 @@ describe('LegendaryUser.logout()', () => {
     // failure. This test's original subject is unchanged and still asserted
     // below: the window is closed and the credential-side cleanup still runs
     // regardless.
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       'rust-side clear failed'
     )
 
@@ -350,7 +351,7 @@ describe('LegendaryUser.logout()', () => {
     const seam = makeMockSeam()
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     const [, domainArg] = seam.clearCookies.mock.calls[0]
     expect(domainArg).toBe('epicgames.com')
@@ -376,7 +377,7 @@ describe('LegendaryUser.logout()', () => {
     })
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     expect(seam.clearCookies).toHaveBeenCalled()
     expect(seam.clearStorage).toHaveBeenCalledWith(
@@ -399,7 +400,7 @@ describe('LegendaryUser.logout()', () => {
     // Phase 35 plan 09: logout REJECTS now (the cookie step is fatal), but the
     // credential-side cleanup — this test's actual subject, T-34.5-19's
     // security boundary — still runs unconditionally before the rethrow.
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       'rust cookie clear failed'
     )
 
@@ -425,7 +426,7 @@ describe('LegendaryUser.logout()', () => {
     // predicate TEXT. Statement ORDERING — whether the seam is acquired
     // before or after the credential-side cleanup — is invisible to both,
     // which is why this defect shipped through a green Phase 39.
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       'no login-window seam is installed'
     )
 
@@ -441,7 +442,7 @@ describe('LegendaryUser.logout()', () => {
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+    await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 
     expect(seam.clearCookies).toHaveBeenCalled()
     expect(logWarning).toHaveBeenCalled()
@@ -458,7 +459,7 @@ describe('LegendaryUser.logout()', () => {
     // Phase 35 plan 09: the fatal cookie step is captured and rethrown AFTER
     // the loop, so the remaining steps still run — that is this test's subject
     // and it survives the change intact.
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       'rust cookie clear failed'
     )
 
@@ -485,7 +486,7 @@ describe('LegendaryUser.logout()', () => {
     })
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     expect(logInfo).toHaveBeenCalledWith(
       expect.stringContaining('cleared 4 epicgames.com cookie(s)'),
@@ -515,7 +516,7 @@ describe('LegendaryUser.logout()', () => {
     // `logWarning('... removed nothing for epicgames.com')` and let the wipe
     // loop swallow it, which is the defect class that produced the original
     // lying self-report. It is now a rejection.
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /removed nothing across all 5 Epic-owned domains/
     )
 
@@ -530,7 +531,7 @@ describe('LegendaryUser.logout()', () => {
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+    await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 
     const removedNothingCall = (logWarning as jest.Mock).mock.calls.find((c) =>
       String(c[0]).includes('removed nothing')

@@ -3,18 +3,20 @@ import { sendGameStatusUpdate } from 'backend/utils'
 import { enable, getStatus, isEnabled } from './eos_overlay/eos_overlay'
 import { split } from 'shlex'
 import { logError, LogPrefix } from 'backend/logger'
-import { runWineCommand } from 'backend/launcher'
+import type { LegendaryManagerDeps } from './library'
 import { GameConfig } from 'backend/game_config'
 import { epicRedistPath } from './constants'
 import { isLinux } from 'backend/constants/environment'
 import LogWriter from 'backend/logger/log_writer'
 
-export const legendarySetup = async (appName: string, logWriter: LogWriter) => {
-  // Imported lazily to break a circular dependency (legendary/setup.ts <->
-  // storeManagers/index.ts) — see the load-bearing comment in
-  // storeManagers/gog/user.ts.
-  const { libraryManagerMap } = await import('..')
-  const gameInfo = libraryManagerMap['legendary'].getGame(appName).getGameInfo()
+export const legendarySetup = async (
+  deps: LegendaryManagerDeps,
+  appName: string,
+  logWriter: LogWriter
+) => {
+  const gameInfo = deps.libraryManagers['legendary']
+    .getGame(appName)
+    .getGameInfo()
   if (!gameInfo) {
     return
   }
@@ -29,7 +31,7 @@ export const legendarySetup = async (appName: string, logWriter: LogWriter) => {
   const gameSettings = GameConfig.get(appName).config
 
   // Fixes games like Fallout New Vegas and Dishonored: Death of the Outsider
-  await runWineCommand({
+  await deps.commandRunner.runWineCommand({
     gameSettings,
     commandParts: [
       'reg',
@@ -49,7 +51,7 @@ export const legendarySetup = async (appName: string, logWriter: LogWriter) => {
     !gameInfo.isUbisoftManaged
   ) {
     try {
-      const info = await libraryManagerMap['legendary'].getInstallInfo(
+      const info = await deps.libraryManagers['legendary'].getInstallInfo(
         appName,
         gameInfo.install.platform
       )
@@ -57,7 +59,7 @@ export const legendarySetup = async (appName: string, logWriter: LogWriter) => {
         info.manifest.prerequisites &&
         info.manifest.prerequisites.path.length > 0
       ) {
-        await runWineCommand({
+        await deps.commandRunner.runWineCommand({
           gameSettings,
           gameInstallPath: gameInfo.install.install_path,
           commandParts: [
@@ -79,7 +81,7 @@ export const legendarySetup = async (appName: string, logWriter: LogWriter) => {
   if (gameInfo.isEAManaged) {
     const installerPath = join(epicRedistPath, 'EAappInstaller.exe')
     try {
-      await runWineCommand({
+      await deps.commandRunner.runWineCommand({
         gameSettings,
         commandParts: [
           installerPath,
@@ -96,7 +98,7 @@ export const legendarySetup = async (appName: string, logWriter: LogWriter) => {
     const installerPath = join(epicRedistPath, 'UbisoftConnectInstaller.exe')
     console.log('Installing', installerPath)
     try {
-      await runWineCommand({
+      await deps.commandRunner.runWineCommand({
         gameSettings,
         commandParts: [installerPath, '/S'],
         wait: true,
@@ -111,12 +113,12 @@ export const legendarySetup = async (appName: string, logWriter: LogWriter) => {
   // On windows, the overlay is installed globally
   // On mac, the overlay doesn't work
   if (isLinux) {
-    const isOverlayEnabled = await isEnabled(appName)
+    const isOverlayEnabled = await isEnabled(deps, appName)
 
     if (!isOverlayEnabled) {
       if (getStatus().isInstalled) {
         void logWriter.logInfo('EOS Overlay: Enabling')
-        await enable(appName)
+        await enable(deps, appName)
       } else {
         void logWriter.logInfo('EOS Overlay: Not Installed')
       }

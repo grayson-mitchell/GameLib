@@ -60,6 +60,13 @@ import {
   isEnabled
 } from '../storeManagers/legendary/eos_overlay/eos_overlay'
 
+// Transitional (66.1-09): resolved at call time (lazy import breaks the storeManagers cycle)
+// until the registration takes injected slices.
+async function eosOverlayDeps() {
+  const { libraryManagerMap } = await import('../storeManagers')
+  return { libraryManagers: libraryManagerMap }
+}
+
 /**
  * Registers this cluster's 8 channels (8 invoke, 0 send). Called once from `handlers.ts` — this
  * module owns no side effects at import time; the caller decides when registration onto the
@@ -77,15 +84,15 @@ export function registerEosOverlayFlows(): void {
   })
 
   ipcMain.handle('getLatestEosOverlayVersion', async () => {
-    return getLatestVersion()
+    return getLatestVersion(await eosOverlayDeps())
   })
 
   ipcMain.handle('updateEosOverlayInfo', async () => {
-    return updateInfo()
+    return updateInfo(await eosOverlayDeps())
   })
 
   ipcMain.handle('installEosOverlay', async () => {
-    return install()
+    return install(await eosOverlayDeps())
   })
 
   // Phase 35 plan 26 (REQ-35-17): `remove()` now takes an explicit `confirmed` gate — the
@@ -95,7 +102,7 @@ export function registerEosOverlayFlows(): void {
     'removeEosOverlay',
     async (_event: unknown, ...args: unknown[]) => {
       const confirmed = args[0] as boolean
-      return remove(confirmed)
+      return remove(await eosOverlayDeps(), confirmed)
     }
   )
 
@@ -103,7 +110,7 @@ export function registerEosOverlayFlows(): void {
     'enableEosOverlay',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
-      return enable(appName)
+      return enable(await eosOverlayDeps(), appName)
     }
   )
 
@@ -111,7 +118,7 @@ export function registerEosOverlayFlows(): void {
     'disableEosOverlay',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
-      return disable(appName)
+      return disable(await eosOverlayDeps(), appName)
     }
   )
 
@@ -121,7 +128,7 @@ export function registerEosOverlayFlows(): void {
     'isEosOverlayEnabled',
     async (_event: unknown, ...args: unknown[]) => {
       const appName = (args[0] ?? undefined) as string | undefined
-      return isEnabled(appName)
+      return isEnabled(await eosOverlayDeps(), appName)
     }
   )
 }

@@ -108,18 +108,19 @@ const mockConfigStore = {
   delete: jest.fn(),
   clear: jest.fn()
 }
-jest.mock('backend/constants/key_value_stores', () => ({
-  configStore: mockConfigStore
-}))
 
 const mockRunRunnerCommand = jest.fn()
-jest.mock('../..', () => ({
-  libraryManagerMap: {
+const deps = {
+  libraryManagers: {
     legendary: {
       runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
     }
+  },
+  stores: {
+    kvs: { configStore: mockConfigStore },
+    legendary: { legendaryConfigStore: { delete: jest.fn() } }
   }
-}))
+} as unknown as import('../user').LegendaryUserDeps
 
 jest.mock('../../../humble/userAgent', () => ({
   standardBrowserUserAgent: () =>
@@ -279,7 +280,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     // THREE per host, not two (debug session
     // `epic-cookie-clear-read-divergence`). The before/after pair is taken
@@ -333,7 +334,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     const logged = allLoggedText()
     expect(logged).toContain('total=3, matched=0, verdict=SUPPORTED_NONEMPTY')
@@ -354,7 +355,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+    await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 
     // clearCookies still ran for EVERY host, including the one whose census
     // read rejected, and every host after it.
@@ -395,7 +396,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     const logged = allLoggedText()
     expect(logged.length).toBeGreaterThan(0)
@@ -444,7 +445,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /post-clear verification found 5 Epic-owned cookie\(s\) still present/
     )
   })
@@ -465,7 +466,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow()
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow()
 
     const logged = allLoggedText()
     expect(logged).toContain('post-clear verification')
@@ -518,7 +519,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /post-clear verification could not read the cookie jar/
     )
   })
@@ -539,7 +540,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow()
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow()
 
     const logged = allLoggedText()
     expect(logged).not.toContain('Epic-owned cookie(s) remain')
@@ -563,7 +564,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /post-clear verification could not read the cookie jar/
     )
     expect(allLoggedText()).not.toContain('Epic-owned cookie(s) remain')
@@ -625,7 +626,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     // 1. Fatal, naming the ONE unconfirmed host. The em-dash immediately after
     //    the single host name is what distinguishes this from the all-five case,
     //    whose list would continue with a comma.
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /could not read the cookie jar for unrealengine\.com —/
     )
 
@@ -674,7 +675,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     // No window at all — not merely "not Epic's login page". The window was
     // never consulted by the macOS Rust arms (they gate their default-data-store
@@ -695,7 +696,7 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     })
     setLoginWindowSeam(seam)
 
-    await LegendaryUser.logout()
+    await LegendaryUser.logout(deps)
 
     expect(seam.open).toHaveBeenCalledTimes(1)
     expect(seam.close).toHaveBeenCalledTimes(1)
@@ -726,7 +727,7 @@ describe('Task 2: jar-liveness fatality rule (CR-04 part 2, D-35-19-15)', () => 
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+    await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 
     expect(logError).not.toHaveBeenCalled()
     expect(logInfo).toHaveBeenCalledWith(
@@ -757,7 +758,7 @@ describe('Task 2: jar-liveness fatality rule (CR-04 part 2, D-35-19-15)', () => 
     const seam = makeMockSeam({ cookiesForDomain, clearCookies })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /removed nothing for fortnite\.com despite the jar proving cookies were present beforehand/
     )
 
@@ -786,7 +787,7 @@ describe('Task 2: jar-liveness fatality rule (CR-04 part 2, D-35-19-15)', () => 
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /removed nothing across all 5 Epic-owned domains/
     )
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
@@ -805,7 +806,7 @@ describe('Task 2: jar-liveness fatality rule (CR-04 part 2, D-35-19-15)', () => 
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /removed nothing across all 5 Epic-owned domains/
     )
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
@@ -866,7 +867,7 @@ describe('D-35-29-01 (quick q93) the census produces EVIDENCE, and both consumin
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /removed nothing for epicgames\.com despite the jar proving cookies were present beforehand/
     )
 
@@ -906,7 +907,7 @@ describe('D-35-29-01 (quick q93) the census produces EVIDENCE, and both consumin
 
     // NOT the broken-host message — the generic fail-closed one. The detector
     // never ran.
-    await expect(LegendaryUser.logout()).rejects.toThrow(
+    await expect(LegendaryUser.logout(deps)).rejects.toThrow(
       /removed nothing across all 5 Epic-owned domains/
     )
     const logged = allLoggedText()
@@ -928,7 +929,7 @@ describe('D-35-29-01 (quick q93) the census produces EVIDENCE, and both consumin
     })
     setLoginWindowSeam(seam)
 
-    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+    await expect(LegendaryUser.logout(deps)).resolves.toBeUndefined()
 
     const logged = allLoggedText()
     expect(logged).not.toContain('UNSUPPORTED_OR_ERROR')
