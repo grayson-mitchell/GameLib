@@ -677,7 +677,7 @@ Plans:
 - [x] 66.1-22d2-PLAN.md — cleanup: steam bottle suites on injected installRemove; removable legacyFacades mocks and storeManagers.steam ceiling lowered
 - [x] 66.1-22e-PLAN.md — cleanup: CrossOver wineserver kill + game-process watch on injected spawnAsync
 - [x] 66.1-22f-PLAN.md — cleanup: engine switch + bridge known fixes on injected services; legacySpawnAsync.ts and legacyTools deleted
-- [x] 66.1-22g-PLAN.md — cleanup: systeminfo version probes take managers; bindBottleStores bound at 'stores', fallback deleted; test:ci baseline
+- [ ] 66.1-22g-PLAN.md — cleanup: systeminfo version probes take managers; bindBottleStores bound at 'stores', fallback deleted; test:ci baseline
 - [ ] 66.1-22h-PLAN.md — cleanup: knownFixReport, macSteamAdoption and steamRestartHold take injected steam stores; their call-time stores requires deleted
 - [ ] 66.1-22i-PLAN.md — cleanup: engineDecision wineManagerReleases reads an injected wineManager store, threaded through EngineServices/ToolsDeps; last call-time stores require deleted
 - [ ] 66.1-23-PLAN.md — construction flip: createStoreManagers + createLauncher at boot; libraryManagerMap/storeLaunchHooks deleted
