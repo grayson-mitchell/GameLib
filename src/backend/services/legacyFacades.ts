@@ -33,7 +33,8 @@ import {
   storeLaunchHooks
 } from 'backend/storeManagers'
 import * as launcherModule from 'backend/launcher'
-import type { Launcher, StoreManagers, Stores } from './types'
+import * as utilsModule from 'backend/utils'
+import type { Launcher, ManagerDeps, StoreManagers, Stores } from './types'
 
 export function buildStoresFacade(): Stores {
   return {
@@ -78,5 +79,56 @@ export function buildLauncherFacade(): Launcher {
     getKnownFixesEnvVariables: launcherModule.getKnownFixesEnvVariables,
     validWine: launcherModule.validWine,
     verifyWinePrefix: launcherModule.verifyWinePrefix
+  }
+}
+
+/**
+ * The legacy launcher functions take a `ChildProcess` where the service types hand out a
+ * `ChildHandle`; the handle is a subset, so forwarding is safe. Wrappers resolve the function
+ * at call time (R4).
+ */
+function legacyCommandRunner(): ManagerDeps['commandRunner'] {
+  const forward =
+    (
+      name: 'callRunner' | 'runWineCommand' | 'getWinePath' | 'runScriptForGame'
+    ) =>
+    (...a: unknown[]): unknown =>
+      (launcherModule[name] as (...x: unknown[]) => unknown)(...a)
+  return {
+    callRunner: forward('callRunner'),
+    runWineCommand: forward('runWineCommand'),
+    getWinePath: forward('getWinePath'),
+    runScriptForGame: forward('runScriptForGame')
+  } as unknown as ManagerDeps['commandRunner']
+}
+
+/**
+ * TEMPORARY (plan 08, deleted by plan 23): deps for the library managers that the import-time
+ * `libraryManagerMap` still constructs. Every member defers to the legacy value at CALL time
+ * (R4): this module is evaluated inside the storeManagers/launcher import cycle, so nothing
+ * here may capture a function reference or dereference the map while loading.
+ */
+export function legacyManagerDeps(): ManagerDeps {
+  return {
+    get libraryManagers() {
+      return libraryManagerMap
+    },
+    stores: buildStoresFacade(),
+    commandRunner: legacyCommandRunner(),
+    launcher: {
+      prepareLaunch: (...a) => launcherModule.prepareLaunch(...a),
+      launchCleanup: (...a) => launcherModule.launchCleanup(...a),
+      prepareWineLaunch: (...a) => launcherModule.prepareWineLaunch(...a),
+      setupEnvVars: (...a) => launcherModule.setupEnvVars(...a),
+      setupWrapperEnvVars: (...a) => launcherModule.setupWrapperEnvVars(...a),
+      setupWineEnvVars: (...a) => launcherModule.setupWineEnvVars(...a),
+      setupWrappers: (...a) => launcherModule.setupWrappers(...a),
+      launchEventCallback: (...a) => launcherModule.launchEventCallback(...a),
+      getKnownFixesEnvVariables: (...a) =>
+        launcherModule.getKnownFixesEnvVariables(...a),
+      validWine: (...a) => launcherModule.validWine(...a),
+      verifyWinePrefix: (...a) => launcherModule.verifyWinePrefix(...a)
+    },
+    spawnAsync: (...a) => utilsModule.spawnAsync(...a)
   }
 }

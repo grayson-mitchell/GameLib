@@ -1,3 +1,4 @@
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 /**
  * Quick 261016-n7s Task 1 (end-to-end): a successful `nile library sync`
  * clears a latched Amazon `expired` flag through `refreshNile()`'s new
@@ -134,7 +135,7 @@ beforeEach(() => {
 describe('Amazon: a successful library sync clears a latched flag (quick 261016-n7s)', () => {
   it('a clean sync carrying the success phrase deletes expired, marks healthy and publishes once', async () => {
     flag.data.set('expired', true)
-    const mgr = new NileLibraryManager()
+    const mgr = new NileLibraryManager(createTestManagerDeps())
     armRunner(mgr, [SUCCESS_CHUNK])
 
     await callRefreshNile(mgr)
@@ -150,7 +151,7 @@ describe('Amazon: a successful library sync clears a latched flag (quick 261016-
 
   it('a failed refresh (400, non-zero exit) leaves a latched flag set and never clears it', async () => {
     flag.data.set('expired', true)
-    const mgr = new NileLibraryManager()
+    const mgr = new NileLibraryManager(createTestManagerDeps())
     armRunner(mgr, [`${NILE_REFRESH_FAILURE_MARKER} <Response [400]>`], {
       error: 'Process exited with code 1'
     })
@@ -168,7 +169,7 @@ describe('Amazon: a successful library sync clears a latched flag (quick 261016-
 
   it('an epoch bump mid-flight (a fresh sign-in landing during the spawn) makes the verdict stale: the flag is left untouched and nothing is published (T-49-10)', async () => {
     flag.data.set('expired', true)
-    const mgr = new NileLibraryManager()
+    const mgr = new NileLibraryManager(createTestManagerDeps())
     jest
       .spyOn(mgr, 'runRunnerCommand')
       .mockImplementation((_argv: string[], options?: CallRunnerOptions) => {
@@ -193,7 +194,7 @@ describe('Amazon: a successful library sync clears a latched flag (quick 261016-
   })
 
   it('a synchronous throw inside the observer resolves cleanly, with no unhandled rejection and nothing published (F6)', async () => {
-    const mgr = new NileLibraryManager()
+    const mgr = new NileLibraryManager(createTestManagerDeps())
     jest.spyOn(mgr, 'runRunnerCommand').mockImplementation(() => {
       throw new Error('forced for quick 261016-n7s F6 throw-safety')
     })

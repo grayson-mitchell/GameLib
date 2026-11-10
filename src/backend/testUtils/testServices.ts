@@ -13,6 +13,7 @@ import type {
   BootServices,
   CommandRunner,
   Launcher,
+  ManagerDeps,
   QuitHandler,
   SpawnAsync,
   StoreManagers,
@@ -148,5 +149,24 @@ export function createTestServices(
       unscriptedMembers<CommandRunner>('command runner', {}),
     spawnAsync: overrides.spawnAsync ?? spawnAsync,
     quit: overrides.quit ?? quit
+  }
+}
+
+/** Deps for a library manager under test; any member not given throws when called. */
+export function createTestManagerDeps(
+  overrides: Partial<ManagerDeps> = {}
+): ManagerDeps {
+  return {
+    libraryManagers: overrides.libraryManagers ?? createTestManagers().library,
+    stores: overrides.stores ?? createTestStores(),
+    commandRunner:
+      overrides.commandRunner ??
+      unscriptedMembers<CommandRunner>('command runner', {}),
+    launcher: overrides.launcher ?? unscriptedMembers<Launcher>('launcher', {}),
+    spawnAsync:
+      overrides.spawnAsync ??
+      (() => {
+        throw new Error('unscripted spawnAsync call')
+      })
   }
 }

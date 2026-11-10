@@ -12,6 +12,7 @@ import { resolveEpicOfflineMode } from 'backend/storeManagers/legendary/epicOffl
 import gogPresence from 'backend/storeManagers/gog/presence'
 import { isEnabled as isEosOverlayEnabled } from 'backend/storeManagers/legendary/eos_overlay/eos_overlay'
 import { sendFrontendMessage } from 'backend/ipc'
+import { legacyManagerDeps } from 'backend/services/legacyFacades'
 
 import { logInfo, RunnerToLogPrefixMap } from 'backend/logger'
 import { addToQueue } from 'backend/downloadmanager/downloadqueue'
@@ -29,11 +30,11 @@ import type LogWriter from 'backend/logger/log_writer'
 export type { LegendaryCommand } from 'backend/storeManagers/legendary/commands'
 
 export const libraryManagerMap = {
-  sideload: new SideloadLibraryManager(),
-  gog: new GOGLibraryManager(),
-  legendary: new LegendaryLibraryManager(),
-  nile: new NileLibraryManager(),
-  steam: new SteamLibraryManager()
+  sideload: new SideloadLibraryManager(legacyManagerDeps()),
+  gog: new GOGLibraryManager(legacyManagerDeps()),
+  legendary: new LegendaryLibraryManager(legacyManagerDeps()),
+  nile: new NileLibraryManager(legacyManagerDeps()),
+  steam: new SteamLibraryManager(legacyManagerDeps())
 } satisfies Record<Runner, LibraryManager>
 
 interface OfflineModeInput {

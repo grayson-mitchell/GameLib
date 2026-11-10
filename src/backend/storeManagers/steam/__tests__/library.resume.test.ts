@@ -1,3 +1,4 @@
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 /**
  * Unit tests for steam/library/resume.ts (rearmPersistedSteamRestartHolds and the persisted-hold round trip).
  * Moved out of library.test.ts by Phase 65 plan 04 (D-03); mock preamble
@@ -315,7 +316,7 @@ describe('D-UAT-13 hold persists across a GameLib restart (quick 261029-pkp)', (
     jest
       .mocked(steamRestartHoldStore.entries)
       .mockImplementation(() => [...store.entries()] as never)
-    manager = new SteamLibraryManager()
+    manager = new SteamLibraryManager(createTestManagerDeps())
     jest.mocked(steamLibraryStore.get).mockReturnValue([])
     ;(steamMetadataStore.entries as jest.Mock).mockReturnValue([])
     library.clear()

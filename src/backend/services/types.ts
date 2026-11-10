@@ -71,6 +71,15 @@ export type CommandRunner = CommandRunnerImpl
 
 export type { SpawnAsync, QuitHandler }
 
+/** What every library manager receives through its constructor (66.1, R2). */
+export interface ManagerDeps {
+  libraryManagers: Record<Runner, LibraryManager>
+  stores: Stores
+  commandRunner: CommandRunner
+  launcher: Launcher
+  spawnAsync: SpawnAsync
+}
+
 export interface BootServices {
   stores: Stores
   managers: StoreManagers

@@ -1,3 +1,4 @@
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 /**
  * Characterisation probe — quick task 260912-qop, serving the pending todo
  * `2026-09-05-getdefaultsavepath-live-redrive-never-taken-against-a-real-legendary-title.md`.
@@ -273,7 +274,7 @@ describe('getGameInfo(appName, forceReload=true) stale-map characterisation (qui
   let installedJsonPath: string
 
   beforeEach(() => {
-    manager = new LegendaryLibraryManager()
+    manager = new LegendaryLibraryManager(createTestManagerDeps())
 
     mkdirSync(legendaryMetadata, { recursive: true })
     writeFileSync(

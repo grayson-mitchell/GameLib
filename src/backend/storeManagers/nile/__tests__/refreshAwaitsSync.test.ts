@@ -1,3 +1,4 @@
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 /**
  * Quick 261102-s32 / F3: `refresh()` awaits `refreshNile()` so the published
  * list is the one read after `nile library sync` finishes, and a failing or
@@ -78,7 +79,7 @@ describe('NileLibraryManager.refresh awaits the sync (quick 261102-s32)', () => 
   })
 
   it('publishes the list read after the sync resolves', async () => {
-    const mgr = new NileLibraryManager()
+    const mgr = new NileLibraryManager(createTestManagerDeps())
     let release!: (v: { stdout: string; stderr: string }) => void
     const deferred = new Promise<{ stdout: string; stderr: string }>((r) => {
       release = r
@@ -101,7 +102,7 @@ describe('NileLibraryManager.refresh awaits the sync (quick 261102-s32)', () => 
   })
 
   it('a sync error still publishes the cached list and resolves', async () => {
-    const mgr = new NileLibraryManager()
+    const mgr = new NileLibraryManager(createTestManagerDeps())
     jest
       .spyOn(mgr, 'runRunnerCommand')
       .mockResolvedValue({ stdout: '', stderr: '', error: 'boom' })
@@ -118,7 +119,7 @@ describe('NileLibraryManager.refresh awaits the sync (quick 261102-s32)', () => 
     ],
     ['rejected promise', () => Promise.reject(new Error('async boom'))]
   ])('a %s still publishes the cached list', async (_name, impl) => {
-    const mgr = new NileLibraryManager()
+    const mgr = new NileLibraryManager(createTestManagerDeps())
     jest.spyOn(mgr, 'runRunnerCommand').mockImplementation(impl as never)
     await expect(mgr.refresh()).resolves.toBeDefined()
     expect(publishedCount()).toBe(1)
@@ -126,7 +127,7 @@ describe('NileLibraryManager.refresh awaits the sync (quick 261102-s32)', () => 
 
   it('signed out returns the default result without running the sync', async () => {
     loggedIn.mockReturnValue(false)
-    const mgr = new NileLibraryManager()
+    const mgr = new NileLibraryManager(createTestManagerDeps())
     const spy = jest.spyOn(mgr, 'runRunnerCommand')
     await expect(mgr.refresh()).resolves.toEqual({ stderr: '', stdout: '' })
     expect(spy).not.toHaveBeenCalled()

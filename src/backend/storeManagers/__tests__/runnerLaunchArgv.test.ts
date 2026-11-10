@@ -1,3 +1,4 @@
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 /**
  * Passthrough game args must never be parsed as runner options (todo
  * `2026-10-05-gamelib-deep-link-launch-args-reach-runner-cli-options.md`).
@@ -83,7 +84,7 @@ function legendaryArgv(
   launcherArgs?: string,
   knownFixLaunchArgs?: string[]
 ): string[] {
-  const manager = new LegendaryLibraryManager()
+  const manager = new LegendaryLibraryManager(createTestManagerDeps())
   return manager.commandToArgsArray({
     subcommand: 'launch',
     appName: LegendaryAppName.parse('Fortnite'),

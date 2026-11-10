@@ -1,3 +1,4 @@
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 /**
  * Structural proof for the Steam keyring deferral gate (quick task 260817-d61,
  * Task 3 — "Flip the gate: defer the startup refresh, activate on deliberate
@@ -367,7 +368,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
       key === 'isLoggedIn' ? true : undefined
     )
 
-    const manager = new SteamLibraryManager()
+    const manager = new SteamLibraryManager(createTestManagerDeps())
     await manager.init()
     await flushAsync()
 
@@ -384,7 +385,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
     const { steamLibraryStore } = jest.requireMock('../stores')
     ;(steamLibraryStore.get as jest.Mock).mockReturnValue(cachedGames)
 
-    const manager = new SteamLibraryManager()
+    const manager = new SteamLibraryManager(createTestManagerDeps())
     await manager.init()
     await flushAsync()
 
@@ -396,7 +397,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
 
   it('refresh() while LOCKED returns null, emits steamSyncStatus idle, and NEVER emits syncing or failed', async () => {
     installSpyTokenStore({ status: 'absent' })
-    const manager = new SteamLibraryManager()
+    const manager = new SteamLibraryManager(createTestManagerDeps())
 
     const result = await manager.refresh()
 
@@ -420,7 +421,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
 
   it('refresh() while LOCKED never reads the token store (the deferral is real, not a coincidence of an unrelated early return)', async () => {
     const spy = installSpyTokenStore({ status: 'absent' })
-    const manager = new SteamLibraryManager()
+    const manager = new SteamLibraryManager(createTestManagerDeps())
 
     await manager.refresh()
 
@@ -436,7 +437,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
     noteRefreshTrigger('steam', 'action-icons-refresh-button')
     expect(isSteamAuthUnlocked()).toBe(true)
 
-    const manager = new SteamLibraryManager()
+    const manager = new SteamLibraryManager(createTestManagerDeps())
     await manager.refresh()
 
     expect(spy.readToken).toHaveBeenCalledTimes(1)
@@ -447,7 +448,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
     noteSteamAuthTrigger('user-install')
     noteSteamAuthTrigger('boot-probe')
 
-    const manager = new SteamLibraryManager()
+    const manager = new SteamLibraryManager(createTestManagerDeps())
     await manager.refresh()
 
     expect(spy.readToken).toHaveBeenCalledTimes(0)
@@ -455,7 +456,7 @@ describe('SteamLibraryManager keyring deferral (quick-260817-d61)', () => {
 
   it('the deferral log line names the reason and the current trigger, without ever containing a token value', async () => {
     installSpyTokenStore({ status: 'absent' })
-    const manager = new SteamLibraryManager()
+    const manager = new SteamLibraryManager(createTestManagerDeps())
     noteSteamAuthTrigger('startup')
 
     await manager.refresh()
@@ -533,7 +534,7 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
   }
 
   it('ordering A: boot probe first, then the mount refresh', async () => {
-    const manager = new SteamLibraryManager()
+    const manager = new SteamLibraryManager(createTestManagerDeps())
 
     await SteamUser.probeCredentialPresence()
     noteRefreshTrigger(null, 'mount')
@@ -544,7 +545,7 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
   })
 
   it('ordering B: mount refresh first, then the boot probe, then a second mount refresh', async () => {
-    const manager = new SteamLibraryManager()
+    const manager = new SteamLibraryManager(createTestManagerDeps())
 
     noteRefreshTrigger(null, 'mount')
     await manager.refresh()
@@ -557,7 +558,7 @@ describe('Phase 54 SC1: no authenticated logon at launch, both orderings', () =>
   })
 
   it('non-vacuity control: an explicit Refresh DOES log on, exactly once, with the refresh token', async () => {
-    const manager = new SteamLibraryManager()
+    const manager = new SteamLibraryManager(createTestManagerDeps())
 
     await SteamUser.probeCredentialPresence()
     noteRefreshTrigger('steam', 'action-icons-refresh-button')

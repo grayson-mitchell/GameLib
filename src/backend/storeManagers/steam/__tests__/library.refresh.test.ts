@@ -1,3 +1,4 @@
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 /* eslint-disable @typescript-eslint/unbound-method -- jest mock handles (SteamUser.acquire*), never invoked unbound; same reason as the line-level disables elsewhere in steam/__tests__ */
 /**
  * SteamLibraryManager.refresh() / refreshInstallState() behaviour (free functions in
@@ -317,7 +318,7 @@ describe('SteamLibraryManager', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    manager = new SteamLibraryManager()
+    manager = new SteamLibraryManager(createTestManagerDeps())
     // Phase 54: refresh() logs on only for a granted (explicit) Refresh. This
     // suite tests refresh()'s BEHAVIOR, so arm the one-shot grant the way the
     // IPC handler does; the grant is consumed by the first refresh() call, so

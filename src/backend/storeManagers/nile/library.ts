@@ -1,3 +1,4 @@
+import type { ManagerDeps } from 'backend/services/types'
 import JSON5 from 'json5'
 import {
   LogPrefix,
@@ -27,7 +28,12 @@ import { nileConfigPath, nileInstalled, nileLibrary } from './constants'
 import NileGame from './games'
 import type { LibraryManager } from 'common/types/game_manager'
 
+/** The collaborators NileLibraryManager uses; narrowed by its own plan. */
+export type NileManagerDeps = ManagerDeps
+
 export default class NileLibraryManager implements LibraryManager {
+  constructor(private readonly deps: NileManagerDeps) {}
+
   private installedGames: Map<string, NileInstallMetadataInfo> = new Map()
   private library: Map<string, GameInfo> = new Map()
   private readonly gameCache: Map<string, NileGame> = new Map()

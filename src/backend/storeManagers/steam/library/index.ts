@@ -1,3 +1,4 @@
+import type { ManagerDeps } from 'backend/services/types'
 import {
   GameInfo,
   ExecResult,
@@ -31,7 +32,12 @@ import { rearmPersistedSteamRestartHolds } from './resume'
 import { startRunningPoll } from './runningPoll'
 import { refresh, refreshInstallState } from './refresh'
 
+/** The collaborators SteamLibraryManager uses; narrowed by its own plan. */
+export type SteamManagerDeps = ManagerDeps
+
 export default class SteamLibraryManager implements LibraryManager {
+  constructor(private readonly deps: SteamManagerDeps) {}
+
   /**
    * On startup: load the cached library immediately, SURFACE (never
    * auto-drive) any in-progress install detected on disk (D-07, softened by

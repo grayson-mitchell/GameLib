@@ -1,3 +1,4 @@
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 /**
  * Regression test — quick task 260912-rvv, acting on the measurement made by quick task
  * `260912-qop` (`getGameInfoForceReloadStaleness.test.ts`).
@@ -242,7 +243,7 @@ jest.mock('backend/storeManagers', () => {
 
   return {
     libraryManagerMap: {
-      legendary: new ActualLegendaryLibraryManager(),
+      legendary: new ActualLegendaryLibraryManager(createTestManagerDeps()),
       gog: {}
     }
   }

@@ -1,3 +1,4 @@
+import type { ManagerDeps } from 'backend/services/types'
 import { sendFrontendMessage } from '../../ipc'
 import axios, { AxiosError, AxiosResponse } from 'axios'
 import { GOGUser } from './user'
@@ -95,7 +96,12 @@ export function applyGogMacArch(appName: string, verdict: '32' | '64') {
   sendFrontendMessage('pushGameToLibrary', updated)
 }
 
+/** The collaborators GOGLibraryManager uses; narrowed by its own plan. */
+export type GOGManagerDeps = ManagerDeps
+
 export default class GOGLibraryManager implements LibraryManager {
+  constructor(private readonly deps: GOGManagerDeps) {}
+
   private readonly gameCache: Map<string, GOGGame> = new Map()
 
   async init() {

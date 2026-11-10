@@ -1,3 +1,4 @@
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 /**
  * Regression coverage for debug/gog-spawn-reduction.md fixes 2 and 4.
  *
@@ -177,7 +178,7 @@ describe('debug/gog-spawn-reduction fix 2 -- credentials threaded through getGal
   let manager: GOGLibraryManager
 
   beforeEach(() => {
-    manager = new GOGLibraryManager()
+    manager = new GOGLibraryManager(createTestManagerDeps())
     mockIsOnline.mockReturnValue(true)
     mockLibraryStoreGet.mockReturnValue([])
     mockInstalledGamesStoreGet.mockReturnValue([])
@@ -282,7 +283,7 @@ describe('debug/gog-spawn-reduction fix 4 -- getInstallInfo() login gate is isLo
   let manager: GOGLibraryManager
 
   beforeEach(() => {
-    manager = new GOGLibraryManager()
+    manager = new GOGLibraryManager(createTestManagerDeps())
     mockIsOnline.mockReturnValue(true)
     mockInstallInfoStoreHas.mockReturnValue(false)
     mockInstalledGamesStoreGet.mockReturnValue([])
@@ -353,7 +354,7 @@ describe('D-35-19-16 -- changeGameInstallPath does not double the macOS bundle n
 
   /** Seed both stores and load the in-memory library the way the app does. */
   async function seedInstalledGame(install_path: string, platform: string) {
-    manager = new GOGLibraryManager()
+    manager = new GOGLibraryManager(createTestManagerDeps())
     // Offline so loadLocalLibrary skips checkForOfflineInstallerChanges.
     mockIsOnline.mockReturnValue(false)
 
@@ -489,7 +490,7 @@ describe('importGame preserves un-owned InstalledInfo fields on re-import (26090
   }
 
   beforeEach(async () => {
-    manager = new GOGLibraryManager()
+    manager = new GOGLibraryManager(createTestManagerDeps())
 
     mockInstallInfoStoreHas.mockReturnValue(true)
     mockInstallInfoStoreGet.mockReturnValue({ manifest: { disk_size: 100 } })
@@ -591,7 +592,7 @@ describe('finding A1 LEG 1 -- syncQueuedPlaytime releases the lock when postPlay
   const galaxyUserId = 'gid-1'
 
   beforeEach(() => {
-    manager = new GOGLibraryManager()
+    manager = new GOGLibraryManager(createTestManagerDeps())
     // Back the four playtime mocks with a real Map so `has()` reflects true state instead of
     // a canned boolean -- `syncQueuedPlaytime()`'s own `has('lock')` guard and its `set('lock',
     // ...)`/`delete('lock')` calls must all observe the same underlying state for these tests to

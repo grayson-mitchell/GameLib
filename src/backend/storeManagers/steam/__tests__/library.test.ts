@@ -1,3 +1,4 @@
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 /**
  * Unit tests for SteamLibraryManager — LIB-01, LIB-02, LIB-03.
  *
@@ -280,7 +281,7 @@ describe('SteamLibraryManager', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    manager = new SteamLibraryManager()
+    manager = new SteamLibraryManager(createTestManagerDeps())
     // Phase 54: refresh() logs on only for a granted (explicit) Refresh. This
     // suite tests refresh()'s BEHAVIOR, so arm the one-shot grant the way the
     // IPC handler does; the grant is consumed by the first refresh() call, so

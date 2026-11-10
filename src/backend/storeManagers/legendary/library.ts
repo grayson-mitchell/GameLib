@@ -1,3 +1,4 @@
+import type { ManagerDeps } from 'backend/services/types'
 import { existsSync, mkdirSync, readFileSync, readdirSync } from 'graceful-fs'
 
 import {
@@ -78,7 +79,12 @@ export function applyLegendaryMacArch(appName: string, verdict: '32' | '64') {
   if (updated) sendFrontendMessage('pushGameToLibrary', updated)
 }
 
+/** The collaborators LegendaryLibraryManager uses; narrowed by its own plan. */
+export type LegendaryManagerDeps = ManagerDeps
+
 export default class LegendaryLibraryManager implements LibraryManager {
+  constructor(private readonly deps: LegendaryManagerDeps) {}
+
   private readonly gameCache: Map<LegendaryAppName, LegendaryGame> = new Map()
 
   async init() {

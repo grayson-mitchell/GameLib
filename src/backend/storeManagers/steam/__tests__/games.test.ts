@@ -1,3 +1,4 @@
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 /**
  * Unit tests for SteamGame — LIB-04 (lazy metadata), GAME-01 (launch), GAME-04 (no-Wine),
  * and supporting read methods (getSettings, getExtraInfo, isGameAvailable).
@@ -1721,7 +1722,7 @@ describe('SteamLibraryManager.getGameInfo integration — lazy fetch delegation'
     // Entry in shared Map with no artwork — should trigger fetchMetadataIfNeeded
     library.set(APP_ID, makeEntry())
 
-    const manager = new SteamLibraryManager()
+    const manager = new SteamLibraryManager(createTestManagerDeps())
     const result = manager.getGameInfo(APP_ID)
 
     // Synchronous return should be the in-Map entry
@@ -4896,7 +4897,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
       const scanResult = await acfState.scanDownloadingAppIds()
       expect(scanResult).toEqual([])
 
-      await new SteamLibraryManager().init()
+      await new SteamLibraryManager(createTestManagerDeps()).init()
 
       expect(library.get(APP_ID)?.install?.steamResumePending).toBe(true)
       expect(notify).toHaveBeenCalled()
@@ -4943,7 +4944,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
       .spyOn(gamesModule, 'isNativeInstallInFlight')
       .mockReturnValue(false)
 
-    await new SteamLibraryManager().init()
+    await new SteamLibraryManager(createTestManagerDeps()).init()
 
     expect(notify).not.toHaveBeenCalled()
     expect(library.get(APP_ID)?.install?.steamResumePending).toBeFalsy()
@@ -5022,7 +5023,7 @@ describe('260821-rb5 — case-C residue breadcrumb', () => {
     const scanResult = await acfState.scanDownloadingAppIds()
     expect(scanResult).toEqual([])
 
-    await new SteamLibraryManager().init()
+    await new SteamLibraryManager(createTestManagerDeps()).init()
 
     expect(notify).not.toHaveBeenCalled()
     expect(library.get(APP_ID)?.install?.steamResumePending).toBeFalsy()

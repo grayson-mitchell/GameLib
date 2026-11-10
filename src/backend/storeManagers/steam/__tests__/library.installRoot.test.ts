@@ -1,3 +1,4 @@
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 /**
  * Unit tests for steam/library/installRoot.ts (resolveInstallRoot, hostInstallPlatform).
  * Moved out of library.test.ts by Phase 65 plan 02 (D-03); mock preamble copied.
@@ -380,7 +381,7 @@ describe('hostInstallPlatform() via refreshInstallState() — install.platform r
   }
 
   beforeEach(() => {
-    manager = new SteamLibraryManager()
+    manager = new SteamLibraryManager(createTestManagerDeps())
     envMock = jest.requireMock('backend/constants/environment')
     // Default to Linux (matches the top-level module mock declaration at L99-104)
     envMock.isWindows = false

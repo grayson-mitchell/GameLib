@@ -1,3 +1,4 @@
+import type { ManagerDeps } from 'backend/services/types'
 import { ExecResult, GameInfo } from 'common/types'
 import { readdirSync } from 'graceful-fs'
 import { dirname, join } from 'path'
@@ -9,7 +10,12 @@ import { isMac } from 'backend/constants/environment'
 import { LibraryManager } from 'common/types/game_manager'
 import SideloadGame from './games'
 
+/** The collaborators SideloadLibraryManager uses; narrowed by its own plan. */
+export type SideloadManagerDeps = ManagerDeps
+
 export default class SideloadLibraryManager implements LibraryManager {
+  constructor(private readonly deps: SideloadManagerDeps) {}
+
   init = () => Promise.resolve()
 
   getGame(id: string): SideloadGame {

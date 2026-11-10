@@ -1,3 +1,4 @@
+import { createTestManagerDeps } from 'backend/testUtils/testServices'
 /**
  * Unit tests for steam/library/macArch.ts (Mach-O ground-truth check, i386
  * recovery). Moved out of library.test.ts by Phase 65 plan 03 (D-03); mock
@@ -985,7 +986,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     manifestPresent = true
     ;(vdf.parse as jest.Mock).mockReturnValue(installedAcf)
 
-    await new SteamLibraryManager().refreshInstallState()
+    await new SteamLibraryManager(createTestManagerDeps()).refreshInstallState()
     await flushMicrotasks()
 
     expect(library.get(APP_ID)?.is_installed).toBe(true)
@@ -1005,7 +1006,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
       delegatedToSteamClient: true
     })
 
-    await new SteamLibraryManager().refreshInstallState()
+    await new SteamLibraryManager(createTestManagerDeps()).refreshInstallState()
     await flushMicrotasks()
 
     expect(library.get(APP_ID)?.is_installed).toBe(true)
