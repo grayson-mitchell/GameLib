@@ -36,6 +36,7 @@
 
 import * as nodeFsPromises from 'node:fs/promises'
 import { join } from 'node:path'
+import { isValidBetaKey } from './betaBranch'
 
 /** Numeric-only guard for appId/depotId before any interpolation (T-21-05). */
 const NUMERIC_ID = /^\d+$/
@@ -76,6 +77,9 @@ export interface AppManifestParams {
    *  download-complete (BytesToDownload == BytesDownloaded) under the
    *  StateFlags=4 full-ownership path. */
   bytes?: string
+  /** quick 261110-up7: Steam beta branch, written as UserConfig.BetaKey. Omitted
+   *  when absent, 'public' or not a valid branch name (mirrors acf.rs). */
+  betaKey?: string
   installedDepots: InstalledDepotEntry[]
 }
 
@@ -158,6 +162,12 @@ function buildAppManifestText(params: AppManifestParams): string {
   const stateFlags = params.stateFlags ?? '1026'
   const bytes = params.bytes ?? '0'
   const installedDepotsBlock = buildInstalledDepotsBlock(params.installedDepots)
+  const betaLines =
+    params.betaKey !== undefined &&
+    params.betaKey !== 'public' &&
+    isValidBetaKey(params.betaKey)
+      ? [`\t\t"BetaKey"\t\t"${params.betaKey}"`]
+      : []
 
   return (
     [
@@ -181,6 +191,7 @@ function buildAppManifestText(params: AppManifestParams): string {
       '\t}',
       '\t"UserConfig"',
       '\t{',
+      ...betaLines,
       '\t}',
       '\t"MountedDepots"',
       '\t{',

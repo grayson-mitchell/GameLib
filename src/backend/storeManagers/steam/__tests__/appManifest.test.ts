@@ -253,4 +253,24 @@ describe('depot/appManifest', () => {
       expect(text).toMatch(/"buildid"\s+"0"/)
     })
   })
+  describe('betaKey (quick 261110-up7)', () => {
+    const emptyUserConfig = '\t"UserConfig"\n\t{\n\t}'
+    const text = async (betaKey?: string) =>
+      readFileSync(
+        await writeAppManifest(dir, { ...baseParams, betaKey }),
+        'utf8'
+      )
+
+    it('writes BetaKey inside UserConfig for a real beta', async () => {
+      expect(await text('release-101')).toContain(
+        '\t"UserConfig"\n\t{\n\t\t"BetaKey"\t\t"release-101"\n\t}'
+      )
+    })
+
+    it('absent, public and invalid keys leave UserConfig empty', async () => {
+      for (const k of [undefined, 'public', 'a"b', 'a b', '']) {
+        expect(await text(k)).toContain(emptyUserConfig)
+      }
+    })
+  })
 })

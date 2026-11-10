@@ -84,6 +84,8 @@ export interface FinalizeToSteamOpts {
   failures?: DepotDownloadFailure[]
   allFilesVerified?: boolean
   allModesApplied?: boolean
+  /** quick 261110-up7: the Steam beta branch the depots came from; omitted/'public' writes no BetaKey. */
+  betaKey?: string
 }
 
 /**
@@ -188,6 +190,7 @@ export async function finalizeToSteam(
     stateFlags: canWrite4 ? '4' : undefined,
     bytes: canWrite4 ? String(sizeOnDisk) : undefined,
     buildid: canWrite4 ? opts.buildid : undefined,
+    betaKey: opts.betaKey,
     installedDepots: opts.depots.map((d) => ({
       depotId: d.depotId,
       manifest: d.gid,

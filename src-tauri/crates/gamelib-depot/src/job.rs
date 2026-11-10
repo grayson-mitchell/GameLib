@@ -67,6 +67,10 @@ pub struct FinalizeSpec {
     pub buildid: Option<String>,
     pub last_owner: Option<String>,
     pub allow_full_ownership: bool,
+    /// quick 261110-up7: the Steam beta branch the depots were selected from. None or "public"
+    /// writes no BetaKey.
+    #[serde(default)]
+    pub beta_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -16,6 +16,7 @@ fn base() -> AppManifestParams {
         last_owner: None,
         state_flags: None,
         bytes: None,
+        beta_key: None,
         installed_depots: vec![InstalledDepot {
             depot_id: "264161".into(),
             manifest: "1234567890123456789".into(),
@@ -295,6 +296,7 @@ fn spec(dir: &std::path::Path, allow: bool, buildid: Option<&str>) -> FinalizeSp
         buildid: buildid.map(String::from),
         last_owner: Some("76561198000000000".into()),
         allow_full_ownership: allow,
+        beta_key: None,
     }
 }
 
@@ -500,4 +502,45 @@ fn preserve_installed_manifest_cases() {
     assert!(!preserve_installed_manifest(true, 0, 1, Some(4)));
     assert!(!preserve_installed_manifest(true, 0, 0, None));
     assert!(!preserve_installed_manifest(true, 0, 0, Some(1026)));
+}
+
+// quick 261110-up7: BetaKey inside UserConfig
+const EMPTY_USER_CONFIG: &str = "\t\"UserConfig\"\n\t{\n\t}";
+
+#[test]
+fn beta_key_none_public_empty_invalid_keep_public_shape() {
+    let plain = text(&base());
+    assert!(plain.contains(EMPTY_USER_CONFIG));
+    for k in [None, Some("public"), Some(""), Some("a\"b"), Some("a b")] {
+        let mut p = base();
+        p.beta_key = k.map(String::from);
+        assert_eq!(text(&p), plain, "beta_key {k:?}");
+    }
+}
+
+#[test]
+fn beta_key_valid_is_emitted_in_user_config() {
+    let mut p = base();
+    p.beta_key = Some("release-101".into());
+    assert!(text(&p).contains("\t\"UserConfig\"\n\t{\n\t\t\"BetaKey\"\t\t\"release-101\"\n\t}"));
+}
+
+#[test]
+fn finalize_spec_beta_key_is_optional_on_the_wire() {
+    let base_json = r#"{"steamappsDir":"/x","installdir":"G","name":"G","buildid":null,"lastOwner":null,"allowFullOwnership":true"#;
+    let without: FinalizeSpec = serde_json::from_str(&format!("{base_json}}}")).unwrap();
+    assert_eq!(without.beta_key, None);
+    let with: FinalizeSpec =
+        serde_json::from_str(&format!("{base_json},\"betaKey\":\"release-101\"}}")).unwrap();
+    assert_eq!(with.beta_key.as_deref(), Some("release-101"));
+}
+
+#[tokio::test]
+async fn finalize_writes_beta_key_to_disk() {
+    let dir = setup();
+    let mut s = spec(dir.path(), true, Some("777"));
+    s.beta_key = Some("release-101".into());
+    let w = finalize(&s, "480", &depots(), &good()).await.unwrap();
+    let t = fs::read_to_string(&w.path).unwrap();
+    assert!(t.contains("\t\t\"BetaKey\"\t\t\"release-101\""));
 }

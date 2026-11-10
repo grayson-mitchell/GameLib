@@ -62,7 +62,17 @@ pub struct AppManifestParams {
     pub state_flags: Option<String>,
     /// BytesToDownload / BytesDownloaded; defaults to "0".
     pub bytes: Option<String>,
+    /// quick 261110-up7: Steam beta branch, written into UserConfig as BetaKey. Omitted when
+    /// None, "public" or not a valid branch name.
+    pub beta_key: Option<String>,
     pub installed_depots: Vec<InstalledDepot>,
+}
+
+/// Same rule as TS isValidBetaKey: ASCII alphanumeric or `.`/`_`/`-`, 1..=64 bytes.
+fn is_valid_beta_key(s: &str) -> bool {
+    (1..=64).contains(&s.len())
+        && s.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-')
 }
 
 fn is_numeric(s: &str) -> bool {
@@ -123,6 +133,12 @@ pub fn build_app_manifest_text(p: &AppManifestParams, last_updated: u64) -> Resu
         ));
     }
     let block = depots.join("\n");
+    let beta_line = p
+        .beta_key
+        .as_deref()
+        .filter(|k| *k != "public" && is_valid_beta_key(k))
+        .map(|k| format!("\n\t\t\"BetaKey\"\t\t\"{k}\""))
+        .unwrap_or_default();
 
     let lines = [
         "\"AppState\"".to_string(),
@@ -144,7 +160,7 @@ pub fn build_app_manifest_text(p: &AppManifestParams, last_updated: u64) -> Resu
         block,
         "\t}".to_string(),
         "\t\"UserConfig\"".to_string(),
-        "\t{".to_string(),
+        format!("\t{{{beta_line}"),
         "\t}".to_string(),
         "\t\"MountedDepots\"".to_string(),
         "\t{".to_string(),
@@ -314,6 +330,7 @@ pub async fn finalize(
             last_owner,
             state_flags: if can4 { Some("4".into()) } else { None },
             bytes: if can4 { Some(size.to_string()) } else { None },
+            beta_key: spec.beta_key.clone(),
             installed_depots: depots,
         };
         let path = write_app_manifest(&steamapps, &params, unix_now()).map_err(io_failure)?;
