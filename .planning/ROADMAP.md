@@ -8,7 +8,7 @@ GameLib forks Heroic Games Launcher and adds Steam as a first-class platform alo
 ## Milestones
 
 - ✅ **v0.1 Steam Platform** — Phases 1–4 (shipped 2026-06-29) — archive: `milestones/v0.1-ROADMAP.md`
-- ✅ **v0.2 Polish & Enhancements** — Phases 5–8.1 (Phase 9 Quality Gate never started) — phase dirs archived 2026-10-16 to `milestones/v0.2-phases/`
+- ✅ **v0.2 Polish & Enhancements** — Phases 5–8.1 (Phase 9 Quality Gate never started; superseded 2026-11-11) — phase dirs archived 2026-10-16 to `milestones/v0.2-phases/`
 - ✅ **v0.3 Humble Bundle Integration** — Phases 10–15 (shipped 2026-07-10) — `milestones/v0.3-phases/`
 - ✅ **v0.4 Compatibility Data** — Phase 16 (shipped 2026-07-10) — `milestones/v0.4-phases/`
 - ✅ **v0.5 Steam macOS Compatibility Runtime** — Phases 17–19 (shipped 2026-07-14) — `milestones/v0.5-phases/`
@@ -41,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: Library & Game Status UX** - Library grid surfaces real playtime and install size; a "Playing" badge tracks active Steam sessions (completed 2026-07-03)
 - [x] **Phase 7: Game Details Enrichment** - Game details page shows supported platforms and, on macOS, an AppleGamingWiki compatibility rating (completed 2026-07-03, manual UAT pending)
 - [x] **Phase 8: New Steam Surfaces** - Steam storefront is browsable in the Stores sidebar tab; Steam games appear in Console mode (completed 2026-07-03)
-- [ ] **Phase 9: Quality Gate** - All v0.1 and v0.2 shipped phases pass a formal Nyquist validation pass (no directory — never started)
+- [ ] **Phase 9: Quality Gate** — 0/0 plans; ⛔ SUPERSEDED 2026-11-11 by the post-cutover verification record (never started; see `## Parked / Superseded Phases`)
 
 **v0.3 — Humble Bundle Integration**
 
@@ -198,6 +198,13 @@ for the next milestone are added below this line by `/gsd-phase`.
 - [ ] 22-08-PLAN.md — "Steam Families" Settings section: create/rename/set-wine/guarded delete
 
 **Not revivable — salvage means a NEW phase:** this phase is permanently superseded and will not be executed. The parts that could still have value are the ones *not* about bottle multiplicity — chiefly any per-game launch-configuration UI and the Steam game-families data model itself. If either is wanted, scope it as a new phase derived against the bridge architecture; do not resume these plans. Bridge scope limits that might reopen adjacent work are tracked in Phase 24's own artifacts (`24-UAT.md`, `24-SECURITY.md`) and the `spike-findings-gamelib` skill — notably that the bridge currently proxies only ISteamUser + ISteamFriends, so games needing more interfaces (Utils/Apps/UserStats/RemoteStorage/Matchmaking/Networking) are out of scope until those proxies are built.
+
+### Phase 9: Quality Gate
+
+**Status:** ⛔ SUPERSEDED 2026-11-11 (permanent — will not be executed). Never started: no phase directory, no plans. Requirement QA-01 is closed as superseded, not satisfied.
+**Why:** The phase was a formal Nyquist validation pass over the v0.1 (AUTH-01..05, LIB-01..04, GAME-01..04, BRAND-01) and v0.2 phases. Those phases shipped on Electron; the Rust/Tauri rearchitecture and the Electron cutover (Phases 34–35), and the decomposition and Rust-migration phases since, rewrote most of the code it would have validated, so a pass over the original phases would check code that no longer exists.
+**Superseded by:** Phase 35's blocking live gate (21/21 PASS, verified 17/17 against a genuine release artifact); Phase 38's Windows/Linux hardware and controller UAT gates; and the per-phase `*-VERIFICATION.md` / `*-UAT.md` record of every phase since. The v0.2 milestone audit's QA-01 gap (`v0.2-MILESTONE-AUDIT.md`) is closed by this decision.
+**Not revivable — salvage means a NEW phase:** if a regression sweep of the original requirement IDs against the current app is wanted, scope it as a new phase against the Tauri app.
 
 ## Backlog
 

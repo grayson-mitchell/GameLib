@@ -107,7 +107,7 @@ History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood 
 | 6 | Library & Game Status UX | LIB-05, LIB-06, GAME-05 | Complete (2026-07-03) |
 | 7 | Game Details Enrichment | DETAIL-01, DETAIL-02 | Executed (UAT pending) |
 | 8 | New Steam Surfaces | STORE-01, CONSOLE-01 | Not started |
-| 9 | Quality Gate | QA-01 | Not started |
+| 9 | Quality Gate | QA-01 | Superseded (2026-11-11; see ROADMAP Parked / Superseded) |
 
 ## v0.3 Phase Map
 
