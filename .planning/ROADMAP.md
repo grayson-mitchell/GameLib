@@ -730,7 +730,7 @@ Plans:
 The last plan merges `no-restricted-imports` for `child_process` into the existing ESLint `paths` array at `error` and deletes that ceiling (D-13, D-16). About 9–10 plans.
 **Requirements**: TBD
 **Depends on:** Phase 66.1
-**Plans:** 8/12 plans executed
+**Plans:** 9/12 plans executed
 
 Plans:
 
@@ -742,7 +742,7 @@ Plans:
 - [x] 66.2-06-PLAN.md — Steam probes + download monitor (spawnLongLived) + running poll, boot-built steamProcesses (wave 3)
 - [x] 66.2-07-PLAN.md — wine discovery: compatibility_layers argv, config.ts spawn-free defaults (D-66.2-01), du (wave 3)
 - [x] 66.2-08-PLAN.md — tools/index (winetricks, which, wine --version) + vulkan (wave 3)
-- [ ] 66.2-09-PLAN.md — Mac Steam client: createMacSteamOffline instance, adoption probes, both openDetached absorbed (wave 4)
+- [x] 66.2-09-PLAN.md — Mac Steam client: createMacSteamOffline instance, adoption probes, both openDetached absorbed (wave 4)
 - [ ] 66.2-10-PLAN.md — DRM spawners + boundedListing, single-flight instance (wave 5)
 - [ ] 66.2-11-PLAN.md — utils.ts: execAsync and legacy spawnAsync deleted, moveOn*/tar/wineserver/VC redist/Rosetta (wave 5)
 - [ ] 66.2-12-PLAN.md — the ban: ESLint paths at error + depcruise rule + census gate, childProcess ceiling deleted (wave 6)
