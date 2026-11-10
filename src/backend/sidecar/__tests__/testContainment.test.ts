@@ -978,6 +978,11 @@ const IN_SCOPE_SUITES = [
  *
  * `bootSourceShape.test.ts` (Phase 66 Plan 08, D-08) is structurally contained: it only reads
  * source text with `fs.readFileSync`/`readdirSync`, boots nothing and spawns nothing.
+ *
+ * `outboundHttpRegistry.test.ts` (quick-261110-9w2) is structurally contained: it drives the
+ * `diagnostics_channel`-based outbound-request registry against a loopback `http` server it
+ * starts itself, boots nothing, and reaches no path module, `homedir()`, filesystem or child
+ * process. Its landing commit did not classify it; the T-34.2-83 tripwire caught it.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -1029,6 +1034,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'oauthLoginCapture.test.ts',
   'onlineMonitorWiring.test.ts',
   'openPolicy.test.ts',
+  'outboundHttpRegistry.test.ts',
   'outputStreamBinding.test.ts',
   'pathShim.test.ts',
   'playtimeLockBootClear.test.ts',
