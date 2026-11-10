@@ -45,6 +45,10 @@ describe('bootstrap.ts source shape (D-08)', () => {
       'i18n',
       'register-handlers',
       'rpc-server',
+      // T-28-10 / T-66-27: the keyring/dev-vault arm and the orphaned-token cleanup run after
+      // the RPC server is bound, and the cleanup after the store it sweeps is installed.
+      'secret-stores',
+      'orphaned-token-cleanup',
       'online-monitor',
       'rosetta',
       'ready-sentinel',
