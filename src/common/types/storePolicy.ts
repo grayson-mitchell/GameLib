@@ -380,8 +380,8 @@ export function filterStoreSnapshot(
  * guard against this declaration silently going stale as `StoreStructure` grows is
  * `storePolicy.test.ts`'s totality/disjointness assertions, NOT a runtime computation.
  *
- * D-13: the boot set includes the 11 typed stores that `the old GlobalState class`'s constructor
- * / `uiState.ts`'s zustand initializer read SYNCHRONOUSLY, BEFORE React mounts
+ * D-13: the boot set includes the 11 typed stores that the `readInitial*` functions
+ * (run by `initStateSubscriptions`) and the store modules' import-time mirror reads read SYNCHRONOUSLY, BEFORE React mounts
  * (29-RESEARCH.md Finding 1), plus the four cache-store names that are also read
  * synchronously at that same boot point even though they are not `ValidStoreName`s.
  */

@@ -123,11 +123,11 @@ type Props = {
   /** D-43-12 (Phase 43 plan 06): the caller's answer to "is GameLib
    * connected to this key's login store?" — `true`/`false` when
    * `getGameLibLoginStore(humbleKey.platform)` names a store (steam/gog/
-   * epic family) and the caller has read that store's the app stores
+   * epic family) and the caller has read that store's `authState`
    * `username`, `undefined` when the platform has no login store at all.
-   * The row never reads the app stores itself (it never has — that is
+   * The row never reads a Zustand store itself (it never has — that is
    * the only reason its component tests can invoke it as a plain function
-   * with no provider tree), so this is threaded in rather than looked up
+   * with no store setup), so this is threaded in rather than looked up
    * here. Deliberately re-verified against `getGameLibLoginStore` inside
    * `resolveKeyScenario` below (D-43-13): a caller mistake on this prop can
    * never make scenario 1 reachable for a platform with no login concept. */

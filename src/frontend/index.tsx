@@ -174,7 +174,7 @@ try {
 //
 // For a `framelessWindow: true` user that shipped a visibly broken window on every
 // launch: the native titlebar was restored here, while `App.tsx` reads `isFrameless`
-// LATER (settingsState's readInitial, post-hydration) and correctly got `true` -- so GameLib
+// LATER (`uiState`, seeded by `seedAndFollowWindowChrome`, post-hydration) and correctly got `true` -- so GameLib
 // rendered its OWN overlay window controls on top and the user got BOTH chromes at
 // once. Nothing re-applied afterwards; the only other call site is the `setSetting`
 // toggle.

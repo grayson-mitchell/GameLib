@@ -18,7 +18,7 @@
  * `'syncing'` mirrors `UpdateComponent`'s icon choice (`faSyncAlt`) so the
  * two surfaces read as the same visual family. `'failed'` adds a
  * Steam-scoped retry that calls straight into the existing scoped
- * refresh path, runner-scoped to Steam (`the old GlobalState class`), which
+ * refresh path, runner-scoped to Steam (`libraryState.refreshLibrary`), which
  * already guards double-entry via `refreshingByRunner.steam` and already
  * clears that flag on failure -- no new backend wiring is needed.
  *

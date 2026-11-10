@@ -22,9 +22,9 @@ import './index.scss'
 // a full MUI Dialog with a backdrop + focus trap, which would freeze the
 // rest of the app). No toast/snackbar library exists in this codebase, so
 // this is a minimal from-scratch banner; it now lives as the LAST slot of
-// NoticeStack (nearest the corner). It reacts to the `expired` context
-// value directly rather than owning any state itself - GlobalState's
-// humbleAuthState listener is the single source of truth for `expired`.
+// NoticeStack (nearest the corner). It reacts to the `authState` `humble.expired`
+// value directly rather than owning any state itself - `authState`'s
+// humbleAuthState subscription is the single source of truth for `expired`.
 export default function HumbleExpiryToast() {
   const humbleExpired = useAuthState((s) => s.humble.expired)
   const navigate = useNavigate()
@@ -32,8 +32,9 @@ export default function HumbleExpiryToast() {
 
   // Tracks whether the toast has already been shown for the CURRENT expiry
   // period, so it fires exactly once per false -> true transition rather
-  // than re-appearing every time GlobalState re-renders while expired stays
-  // true. Dismissing (X) sets shownForCurrentExpiry without resetting
+  // than re-appearing on any repeated `expired: true` write (the component
+  // itself selects only `humble.expired`, so unrelated store changes do not
+  // re-render it). Dismissing (X) sets shownForCurrentExpiry without resetting
   // `expired` itself - it only re-arms once `expired` goes back to false
   // (successful reconnect) and later flips true again.
   const shownForCurrentExpiry = useRef(false)

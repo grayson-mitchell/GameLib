@@ -18,12 +18,12 @@
  * never drift into separate layouts. A never-connected store is not an error
  * and is never styled or worded as one (P4).
  *
- * Dismissal state is owned by the renderer's GlobalState and persisted; this
+ * Dismissal state is owned by the renderer's `authState` and persisted; this
  * component only reads it and reports clicks. The re-arm effect below hands
- * GlobalState the derived states so a store that goes connected -> expired
+ * `authState` the derived states so a store that goes connected -> expired
  * gets its dismissal cleared (D-10).
  *
- * Nothing here probes: it reads context and calls no `window.api` method, so
+ * Nothing here probes: it reads store state and calls no `window.api` method, so
  * mounting the Library starts no keyring read (P3).
  *
  * The state decision is NOT made here. It flows
@@ -97,7 +97,7 @@ export default function LibrarySignInNotice() {
   )
   const navigate = useNavigate()
 
-  // Row visibility is derived from context state on every render: no event
+  // Row visibility is derived from store state on every render: no event
   // subscription and no local copy, so a sign-in that completed while the
   // Library was unmounted leaves no row on return (R6). `signInProbeOutcomes`
   // is this launch's pushed-and-pulled map (`{}` = every store pending).

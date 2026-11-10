@@ -77,7 +77,7 @@ export default function WebView() {
   // rules-of-hooks) -- the hook's OWN internal guard is what makes it a no-op for
   // `runner === 'humble'`/`undefined`/any non-OAuth value, not a conditional call here. Its
   // result is only consumed by the login-pathname branch below.  `completeOAuthLogin` is
-  // the old GlobalState class's own post-login completion path (setState + handleSuccessfulLogin ->
+  // `authState`'s own post-login completion path (setState + handleSuccessfulLogin ->
   // refreshLibrary) -- passing it here is what makes a captured OAuth login actually refresh the
   // library instead of silently landing nowhere.
   // True-unmount flag. NOT the same thing as the hook's own `cancelled` — see
@@ -119,7 +119,7 @@ export default function WebView() {
    * would reintroduce the exact bug.
    *
    * Stable identity via `useCallback` over two stable inputs — `completeOAuthLogin` is a
-   * GlobalState class field and `navigate` is stable in react-router v6 — because
+   * stable `authState` action and `navigate` is stable in react-router v6 — because
    * `onLoginSuccess` is one of `useTauriOAuthLogin`'s effect dependencies. A wrapper that
    * changed identity per render would re-run the capture effect on every render.
    */
@@ -344,7 +344,7 @@ export default function WebView() {
   // Phase 50 Plan 05 (D-04, D-16): the resolved four-value Epic sign-in state, reached through
   // the shared rule table (`src/common/signInState.ts`) rather than an inlined flag comparison
   // -- its branch order is load-bearing (Phase 49 D-06/D-07). Matches the argument shape
-  // `the old GlobalState class` and `LibrarySignInNotice/index.tsx` already use for their own
+  // `LibrarySignInNotice/index.tsx` already uses for its own
   // `collectSignInInputs(...)` call sites. Never a cookie (Phase 40 D-16).
   const signInInputs = collectSignInInputs(
     {

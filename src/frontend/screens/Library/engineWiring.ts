@@ -92,7 +92,7 @@ export function buildGridPipeline(
 export interface EngineDepsInputs {
   hiddenGames: HiddenGame[]
   /**
-   * `favouriteGames.list` from the app stores -- the UNCONDITIONAL source
+   * `favouriteGames.list` from `libraryState` -- the UNCONDITIONAL source
    * of truth. Not the Library screen's `favourites` display memo, whose
    * population is gated on the top-section setting (see CR-02 below).
    */
@@ -107,7 +107,7 @@ export interface EngineDepsInputs {
    * aliases inherit. This input is still required and must not be removed on
    * the strength of that field: the only writer that populates it is
    * `addRecentGame`, and the favourites/hidden writers
-   * (`the old GlobalState class`'s `addGameToFavourites`/`hideGame`) construct their
+   * (`libraryState`'s `addGameToFavourites`/`hideGame`) construct their
    * literals from two scalar strings and never set it. A `FavouriteGame` here
    * therefore has `runner === undefined` in every case, not merely usually.
    */

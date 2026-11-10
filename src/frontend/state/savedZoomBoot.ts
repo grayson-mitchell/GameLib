@@ -1,19 +1,17 @@
 /**
  * Applies the saved Accessibility zoom to the webview once at startup
- * (quick 261015-p3q). `GlobalState`'s `zoomPercent` is read back from
- * `configStore` at boot and shown on the Accessibility slider, but until this
+ * (quick 261015-p3q). `settingsState`'s `zoomPercent` is read back from
+ * `configStore` at boot (`readInitialSettings`) and shown on the Accessibility slider, but until this
  * module nothing on the boot path ever called `window.api.setZoomFactor` --
- * the slider's `onChange` (`setZoomPercent`, `the old GlobalState class`) was
+ * the slider's `onChange` (`setZoomPercent` in `settingsState`) was
  * the ONLY caller. A saved 150% rendered the UI at 100% on every relaunch
  * until the slider was touched again.
  *
  * Kept pure and React-free so it imports under this project's
  * `testEnvironment: 'node'` jest project (the Frontend project): no `window`,
  * no `document` and no `configStore` touched at module scope, and nothing
- * imported from `src/frontend/screens`. `the old GlobalState class` itself cannot be
- * imported under that same jest project (it reads `window.localStorage` at
- * module scope), which is why the real behaviour lives here rather than in a
- * test that imports the class directly -- see
+ * imported from `src/frontend/screens`. The boot module (`initStateSubscriptions`) only calls it; the
+ * logic lives here so it can be tested without that module's wiring -- see
  * `GlobalStateSavedZoomWiring.test.ts` for the source-text gate that pins the
  * one call site this module is wired into.
  *
