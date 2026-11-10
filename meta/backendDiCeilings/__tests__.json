@@ -25,7 +25,7 @@
     "src/backend/__tests__/knownFixesMacArch.test.ts": 1,
     "src/backend/__tests__/knownFixesMacArchSeeds.test.ts": 1,
     "src/backend/__tests__/knownFixesOverlay.test.ts": 1,
-    "src/backend/__tests__/knownFixesRegistry.test.ts": 4,
+    "src/backend/__tests__/knownFixesRegistry.test.ts": 3,
     "src/backend/__tests__/knownFixesWithLayer.test.ts": 3,
     "src/backend/__tests__/launcher.engineStep.test.ts": 9,
     "src/backend/__tests__/launcher_callRunner.test.ts": 2,

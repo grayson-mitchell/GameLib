@@ -21,7 +21,8 @@
  * imports it, so a static import back would be a cycle.
  */
 
-import type { ChildProcess } from 'child_process'
+import type { ChildHandle } from './process/types'
+import type { CommandRunner } from './services/types'
 import { promises as fsPromises } from 'fs'
 import { basename, join } from 'path'
 import type {
@@ -429,7 +430,7 @@ function registryFileFor(
 
 type RegistryFixRun = (
   commandParts: string[],
-  onSpawn: (child: ChildProcess) => void
+  onSpawn: (child: ChildHandle) => void
 ) => Promise<{ code?: number | null } | undefined>
 
 /**
@@ -479,7 +480,7 @@ export async function applyRegistryFixes(
           }
         }
         let timer: NodeJS.Timeout | undefined
-        let child: ChildProcess | undefined
+        let child: ChildHandle | undefined
         try {
           const timeout = new Promise<'timeout'>((res) => {
             timer = setTimeout(() => res('timeout'), REGISTRY_FIX_TIMEOUT_MS)
@@ -569,6 +570,7 @@ export function knownFixPrefixDir(
  * Steam path because `wineserver --wait` can block.
  */
 export async function applyKnownFixProfileRegistry(
+  deps: { commandRunner: Pick<CommandRunner, 'runWineCommand'> },
   appName: string,
   runner: Runner,
   gameSettings: GameSettings
@@ -579,13 +581,11 @@ export async function applyKnownFixProfileRegistry(
     const ctx = { label, logPrefix: LogPrefix.Backend }
     const raw = profile ? knownFixProfileRegistryFixes(profile, ctx) : undefined
     if (raw === undefined) return
-    // Lazy, to avoid the launcher import cycle.
-    const { runWineCommand } = await import('backend/launcher')
     await applyRegistryFixes(
       raw,
       ctx,
       (commandParts, onSpawn) =>
-        runWineCommand({
+        deps.commandRunner.runWineCommand({
           commandParts,
           gameSettings,
           wait: false,

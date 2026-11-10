@@ -36,10 +36,12 @@ jest.mock('../constants/paths', () => {
 const mockRunWineCommand = jest.fn()
 const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()
+const commandDeps = {
+  commandRunner: {
+    runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)
+  }
+} as unknown as Parameters<typeof applyKnownFixProfileRegistry>[0]
 
-jest.mock('backend/launcher', () => ({
-  runWineCommand: (...args: unknown[]) => mockRunWineCommand(...args)
-}))
 jest.mock('backend/logger', () => ({
   logWarning: (...args: unknown[]) => mockLogWarning(...args),
   logInfo: (...args: unknown[]) => mockLogInfo(...args),
@@ -664,7 +666,7 @@ describe('applyKnownFixProfileRegistry', () => {
   it('applies a bundled -gog.profile.json to the game own prefix', async () => {
     writeIn(bundledFixesPath, 'gog', { title: 't', registry: [ENTRY] })
 
-    await applyKnownFixProfileRegistry('GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
 
     expect(mockRunWineCommand).toHaveBeenCalledTimes(2)
     const first = mockRunWineCommand.mock.calls[0][0]
@@ -684,7 +686,12 @@ describe('applyKnownFixProfileRegistry', () => {
   it('applies via the local layer for legendary (file suffix is epic)', async () => {
     writeIn(localFixesPath, 'epic', { title: 't', registry: [ENTRY] })
 
-    await applyKnownFixProfileRegistry('GOGAPP', 'legendary', SETTINGS)
+    await applyKnownFixProfileRegistry(
+      commandDeps,
+      'GOGAPP',
+      'legendary',
+      SETTINGS
+    )
 
     expect(mockRunWineCommand).toHaveBeenCalledTimes(2)
   })
@@ -692,15 +699,15 @@ describe('applyKnownFixProfileRegistry', () => {
   it('ignores a profile that exists only in the remote fixes dir', async () => {
     writeIn(fixesPath, 'gog', { title: 't', registry: [ENTRY] })
 
-    await applyKnownFixProfileRegistry('GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
 
     expect(mockRunWineCommand).not.toHaveBeenCalled()
   })
 
   it('does nothing, silently, with no profile or no registry', async () => {
-    await applyKnownFixProfileRegistry('GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
     writeIn(bundledFixesPath, 'gog', { title: 't' })
-    await applyKnownFixProfileRegistry('GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
 
     expect(mockRunWineCommand).not.toHaveBeenCalled()
     expect(mockLogWarning).not.toHaveBeenCalled()
@@ -711,7 +718,7 @@ describe('applyKnownFixProfileRegistry', () => {
     mockRunWineCommand.mockRejectedValue(new Error('nope'))
 
     await expect(
-      applyKnownFixProfileRegistry('GOGAPP', 'gog', SETTINGS)
+      applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
     ).resolves.toBeUndefined()
 
     expect(mockLogWarning).toHaveBeenCalledWith(
@@ -725,7 +732,7 @@ describe('applyKnownFixProfileRegistry', () => {
       dllOverrides: [{ exe: 'Game.exe', dlls: { nvapi64: 'disabled' } }]
     })
 
-    await applyKnownFixProfileRegistry('GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
 
     expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
     const arg = mockRunWineCommand.mock.calls[0][0]
@@ -751,7 +758,7 @@ describe('applyKnownFixProfileRegistry', () => {
       dllOverrides: [{ exe: 'Game.exe', dlls: { nvapi64: 'native' } }]
     })
 
-    await applyKnownFixProfileRegistry('GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
 
     expect(mockRunWineCommand).toHaveBeenCalledTimes(2)
     expect(mockRunWineCommand.mock.calls[0][0].commandParts[2]).toBe(KEY)
@@ -763,8 +770,8 @@ describe('applyKnownFixProfileRegistry', () => {
   it('writes on every call, not only the first', async () => {
     writeIn(bundledFixesPath, 'gog', { title: 't', registry: [ENTRY] })
 
-    await applyKnownFixProfileRegistry('GOGAPP', 'gog', SETTINGS)
-    await applyKnownFixProfileRegistry('GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
+    await applyKnownFixProfileRegistry(commandDeps, 'GOGAPP', 'gog', SETTINGS)
 
     expect(mockRunWineCommand).toHaveBeenCalledTimes(4)
   })

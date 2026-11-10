@@ -924,6 +924,12 @@ async function prepareWineLaunch(
 
   // Tier-2 profile registry, every launch (Decision 1, quick 261026-j6x).
   await applyKnownFixProfileRegistry(
+    {
+      commandRunner: {
+        runWineCommand:
+          runWineCommand as unknown as CommandRunner['runWineCommand']
+      }
+    },
     gameInfo.app_name,
     gameInfo.runner,
     gameSettings

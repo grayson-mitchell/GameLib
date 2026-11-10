@@ -223,7 +223,8 @@ export async function applySteamBridgeKnownFixes(
             wait: false,
             protonVerb: 'run',
             skipPrefixCheckIKnowWhatImDoing: true,
-            onSpawn
+            // Handle-typed callback on the legacy ChildProcess runner (plan 18 moves this onto the slice).
+            onSpawn: onSpawn as Parameters<typeof runWineCommand>[0]['onSpawn']
           }),
         bridgeBottleSettings.wineCrossoverBottle
           ? getBottleDir(bridgeBottleSettings.wineCrossoverBottle)
