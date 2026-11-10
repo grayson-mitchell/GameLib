@@ -291,3 +291,112 @@ describe('stopSteamLaunchedGame', () => {
     }
   )
 })
+
+describe('stopSteamLaunchedGame on win32', () => {
+  const killCalls = (t: ReturnType<typeof setup>) =>
+    t.runner.calls.filter((c) => c.cmd === windowsSystem32Path('taskkill.exe'))
+
+  it('forces a survivor: taskkill exit 1, still alive, still in the rescan', async () => {
+    const t = setupWin32(
+      [
+        winList([`42 ${WIN_GAME}`]),
+        winKill(42, 1),
+        winList([`42 ${WIN_GAME}`])
+      ],
+      { alive: [42] }
+    )
+    const out = await run(t.deps, t.clock)
+    expect(out).toEqual({
+      kind: 'stopped',
+      folder: WIN_FOLDER,
+      termed: [42],
+      killed: [42]
+    })
+    expect(t.signal).toHaveBeenCalledWith(42, 'SIGKILL')
+    expect(t.signal).not.toHaveBeenCalledWith(42, 'SIGTERM')
+    expect(t.clock.pendingCount()).toBe(0)
+    t.clock.assertNoKeepAlive()
+  })
+
+  it('a taskkill spawn error still counts as termed and reaches the force path', async () => {
+    const t = setupWin32(
+      [
+        winList([`42 ${WIN_GAME}`]),
+        winKill(42, { error: { code: 'ENOENT' } }),
+        winList([`42 ${WIN_GAME}`])
+      ],
+      { alive: [42] }
+    )
+    const out = await run(t.deps, t.clock)
+    expect(out).toEqual({
+      kind: 'stopped',
+      folder: WIN_FOLDER,
+      termed: [42],
+      killed: [42]
+    })
+    expect(t.clock.pendingCount()).toBe(0)
+    t.clock.assertNoKeepAlive()
+  })
+
+  it('taskkill exit 128 for the only pid -> no-process, no SIGKILL', async () => {
+    const t = setupWin32([winList([`42 ${WIN_GAME}`]), winKill(42, 128)])
+    await expect(run(t.deps, t.clock)).resolves.toEqual({
+      kind: 'no-process',
+      folder: WIN_FOLDER
+    })
+    expect(t.signal).not.toHaveBeenCalled()
+    expect(t.clock.pendingCount()).toBe(0)
+    t.clock.assertNoKeepAlive()
+  })
+
+  it('does not force a pid absent from the rescan (PID reuse)', async () => {
+    const t = setupWin32(
+      [
+        winList([`42 ${WIN_GAME}`]),
+        winKill(42, 0),
+        winList(['7 C:\\Windows\\other.exe'])
+      ],
+      { alive: [42] }
+    )
+    const out = await run(t.deps, t.clock)
+    expect(out).toMatchObject({ kind: 'stopped', killed: [] })
+    expect(t.signal).not.toHaveBeenCalledWith(42, 'SIGKILL')
+    t.clock.assertNoKeepAlive()
+  })
+
+  it('a PowerShell list failure -> failed, no taskkill, no signal', async () => {
+    const t = setupWin32([
+      {
+        cmd: windowsSystem32Path('WindowsPowerShell', 'v1.0', 'powershell.exe'),
+        result: { code: 1, stdout: '' }
+      }
+    ])
+    const out = await run(t.deps, t.clock)
+    expect(out.kind).toBe('failed')
+    expect(killCalls(t)).toHaveLength(0)
+    expect(t.signal).not.toHaveBeenCalled()
+    t.clock.assertNoKeepAlive()
+  })
+
+  it('never targets siblings, self or helpers; argv is exactly /PID <pid>', async () => {
+    const t = setupWin32(
+      [
+        winList([
+          `42 ${WIN_GAME}`,
+          `600 ${WIN_SIBLING}`,
+          '900 C:\\Steam\\steamapps\\common\\WazHack\\self.exe',
+          '601 C:\\Steam\\steamapps\\common\\WazHack\\steamwebhelper.exe'
+        ]),
+        winKill(42, 0)
+      ],
+      { alive: [] }
+    )
+    await run(t.deps, t.clock)
+    const kills = killCalls(t)
+    expect(kills).toHaveLength(1)
+    expect(kills[0]?.argv).toEqual(['/PID', '42'])
+    expect(t.signal.mock.calls.every((c) => c[1] !== 'SIGTERM')).toBe(true)
+    expect(t.signal.mock.calls.every((c) => c[0] === 42)).toBe(true)
+    t.clock.assertNoKeepAlive()
+  })
+})

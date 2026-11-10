@@ -518,8 +518,10 @@ export default class SteamGame implements Game {
    *   killed (separate decision, left as is);
    * - Steam-launched (native Mac/Linux titles, steam://rungameid; quick
    *   261111-9b7): SIGTERM the PIDs whose executable is inside the install
-   *   folder, bounded grace, SIGKILL survivors, then terminal `done`. win32
-   *   and "nothing found" stay a no-op.
+   *   folder, bounded grace, SIGKILL survivors, then terminal `done`. On
+   *   win32 (quick 261111-9p6) the PIDs come from a PowerShell CIM listing by
+   *   executable path, the close request is `taskkill /PID` without force, and
+   *   survivors are force-ended. Only "nothing found" stays a no-op.
    * Mirrors downloadqueue.ts's own stopCurrentDownload ->
    * callAbortController(appName) call site. Analog: gog/games.ts lines
    * 1291-1295.
