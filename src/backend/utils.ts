@@ -52,7 +52,7 @@ import {
   installWineVersion,
   updateWineVersionInfos
 } from './wine/manager/utils'
-import type { Stores } from './services/types'
+import type { ManagerDeps, Stores } from './services/types'
 import { readdir, lstat, rm } from 'fs/promises'
 import { backendEvents } from './backend_events'
 import EasyDl from 'easydl'
@@ -402,6 +402,20 @@ export interface ClearCacheDeps {
   stores: Pick<Stores, 'wikiGameInfo' | 'gog' | 'legendary' | 'nile'>
 }
 
+/**
+ * Fires `legendary cleanup` (fire-and-forget, as the old lazy-import call was). Callers that
+ * clear the legendary caches call this right after `clearCache`. The abort id keeps its
+ * historical spelling: abort ids are matched by string.
+ */
+export function startLegendaryCleanup(deps: {
+  libraryManagers: Pick<ManagerDeps['libraryManagers'], 'legendary'>
+}): void {
+  void deps.libraryManagers.legendary.runRunnerCommand(
+    { subcommand: 'cleanup' },
+    { abortId: 'legandary-cleanup' }
+  )
+}
+
 function clearCache(
   deps: ClearCacheDeps,
   library?: 'gog' | 'legendary' | 'nile',
@@ -419,16 +433,6 @@ function clearCache(
     legendary.installStore.clear()
     legendary.libraryStore.clear()
     legendary.gameInfoStore.clear()
-    // Imported lazily to break a circular dependency (utils.ts <->
-    // storeManagers/index.ts) — see the load-bearing comment in
-    // storeManagers/gog/user.ts. Fire-and-forget, matching the previous
-    // (also unawaited) synchronous call.
-    void import('./storeManagers').then(({ libraryManagerMap }) => {
-      libraryManagerMap['legendary'].runRunnerCommand(
-        { subcommand: 'cleanup' },
-        { abortId: 'legandary-cleanup' }
-      )
-    })
   }
   if (isStore(library, 'nile') || !library) {
     nile.installStore.clear()

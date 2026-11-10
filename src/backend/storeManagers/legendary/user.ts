@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'graceful-fs'
 
 import { UserInfo } from 'common/types'
-import { clearCache } from '../../utils'
+import { clearCache, startLegendaryCleanup } from '../../utils'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { userInfo as user } from 'os'
 import type { ManagerDeps, Stores } from 'backend/services/types'
@@ -700,6 +700,7 @@ export class LegendaryUser {
 
     deps.stores.kvs.configStore.delete('userInfo')
     clearCache(deps, 'legendary')
+    startLegendaryCleanup(deps)
     // Phase 49 (R2): sign-out clears the expiry flag and fences any probe that
     // began before it, so a late verdict cannot re-latch a signed-out store.
     deps.stores.legendary.legendaryConfigStore.delete('expired')

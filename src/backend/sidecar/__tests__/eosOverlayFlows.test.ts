@@ -38,21 +38,6 @@ jest.mock('../../storeManagers/legendary/eos_overlay/eos_overlay', () => ({
   isEnabled: jest.fn()
 }))
 
-// Describe 5 exercises the REAL `remove()`/`enable()` via `jest.requireActual`, bypassing the
-// module mock above for just that block. The real `remove()`/`enable()` reach
-// `libraryManagerMap['legendary'].runRunnerCommand` through a LAZY `await import('../..')`
-// (`eos_overlay.ts`'s own load-bearing circular-dependency-breaking pattern) — this is a
-// DIFFERENT module path from the one mocked above, so it coexists without conflict. Mocked at
-// top level (ts-jest does not hoist `jest.mock`, so this must precede Describe 5's usage
-// textually, same as the mock above).
-jest.mock('../../storeManagers/index', () => ({
-  libraryManagerMap: {
-    legendary: {
-      runRunnerCommand: jest.fn()
-    }
-  }
-}))
-
 // `backend/logger`'s real module requires an `initLogger()` call this suite never makes
 // (`heroicLogWriter` is otherwise undefined) — Describe 5's real `remove()` calls `logWarning`
 // on refusal, so this must be mocked for that path to run at all. Mirrors
@@ -89,7 +74,15 @@ const listenerCountsBefore = new Map(
     listeners.length
   ])
 )
-registerEosOverlayFlows()
+// The injected library managers: only `legendary` is reached by the EOS overlay functions.
+const mockRunRunnerCommand = jest.fn()
+const mockLibrary = {
+  legendary: { runRunnerCommand: mockRunRunnerCommand }
+}
+const flowDeps = {
+  managers: { library: mockLibrary }
+} as unknown as Parameters<typeof registerEosOverlayFlows>[0]
+registerEosOverlayFlows(flowDeps)
 const registeredSendChannels = [...listenerRegistry]
   .filter(
     ([channel, listeners]) =>
@@ -153,7 +146,7 @@ describe('curated-import guard — eosOverlayFlowRegistration.ts never imports e
       ' * Never side-effect-import eos_overlay/ipc_handler.ts — it registers',
       ' * these same channels a second time onto the real ipcMain.',
       ' */',
-      'export function registerEosOverlayFlows(): void {}'
+      'export function registerEosOverlayFlows(deps: EosOverlayFlowDeps): void {}'
     ].join('\n')
     const stripped = stripSourceComments(synthetic)
     expect(/ipc_handler/.test(stripped)).toBe(false)
@@ -181,6 +174,11 @@ describe('argument-forwarding proof — enable/disable forward appName unchanged
 
     expect(mockEnable).toHaveBeenCalledTimes(1)
     expect(mockEnable).toHaveBeenCalledWith(expect.anything(), 'my-app-name')
+    // The handler hands the injected library managers to the eos function.
+    expect(mockEnable).toHaveBeenCalledWith(
+      { libraryManagers: mockLibrary },
+      'my-app-name'
+    )
   })
 
   it("disableEosOverlay forwards its first argument to eos_overlay.ts's disable(appName) unchanged", async () => {
@@ -219,8 +217,8 @@ describe('idempotence — calling registerEosOverlayFlows() twice does not throw
   ]
 
   it('can be called twice without throwing, and every channel stays invoke-kind with no listener stacked', () => {
-    expect(() => registerEosOverlayFlows()).not.toThrow()
-    expect(() => registerEosOverlayFlows()).not.toThrow()
+    expect(() => registerEosOverlayFlows(flowDeps)).not.toThrow()
+    expect(() => registerEosOverlayFlows(flowDeps)).not.toThrow()
 
     for (const channel of HANDLE_CHANNELS) {
       expect(handlerRegistry.has(channel)).toBe(true)
@@ -235,12 +233,8 @@ describe("fail-closed gate — real remove()/enable() from eos_overlay.ts (bypas
     typeof import('../../storeManagers/legendary/eos_overlay/eos_overlay')
   >('../../storeManagers/legendary/eos_overlay/eos_overlay')
 
-  const { libraryManagerMap: mockLibraryManagerMap } = jest.requireMock<{
-    libraryManagerMap: { legendary: { runRunnerCommand: jest.Mock } }
-  }>('../../storeManagers/index')
-  const mockRunRunnerCommand = mockLibraryManagerMap.legendary.runRunnerCommand
   const overlayDeps = {
-    libraryManagers: mockLibraryManagerMap
+    libraryManagers: mockLibrary
   } as unknown as Parameters<typeof realRemove>[0]
 
   beforeEach(() => {

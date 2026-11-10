@@ -96,6 +96,7 @@ import {
   getShellPath,
   getFileSize,
   clearCache,
+  startLegendaryCleanup,
   clearAchievementCache,
   resetHeroic
 } from '../utils'
@@ -124,6 +125,7 @@ import { logInfo, LogPrefix } from '../logger'
 import i18next from 'i18next'
 import type { DiskSpaceData } from 'common/types'
 import type { ClearCacheDeps } from '../utils'
+import type { StoreManagers } from '../services/types'
 
 function logSendFailure(channel: string, error: unknown): void {
   console.warn(
@@ -140,6 +142,7 @@ function logSendFailure(channel: string, error: unknown): void {
  * registration onto the handler registry happens.
  */
 export function registerShellFilesFlows(deps: {
+  managers: Pick<StoreManagers, 'library'>
   stores: ClearCacheDeps['stores']
 }): void {
   // ── send (11): the URL openers (constant URLs go straight to shell.openExternal) ────
@@ -268,6 +271,7 @@ export function registerShellFilesFlows(deps: {
       const showDialog = args[0]
       const fromVersionChange = args[1] === true
       clearCache(deps, undefined, fromVersionChange)
+      startLegendaryCleanup({ libraryManagers: deps.managers.library })
       pushFrontendMessage('refreshLibrary')
 
       if (showDialog) {

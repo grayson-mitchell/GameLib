@@ -140,7 +140,11 @@ import { matchOAuthRedirect } from '../oauthLoginCapture'
 // listener onto logoutGOG (humbleLoginFlows.test.ts's own convention/warning, and the exact
 // hazard this plan's own idempotence guard in runnerAuthFlowRegistration.ts now also protects
 // against independently) ─────────────────────────────────────────────────────────────────────────
-registerRunnerAuthFlows()
+const flowDeps = {
+  managers: { library: { marker: 'library' } },
+  stores: { marker: 'stores' }
+} as unknown as Parameters<typeof registerRunnerAuthFlows>[0]
+registerRunnerAuthFlows(flowDeps)
 
 // ── Describe 1: Registration kind (bidirectional) ──────────────────────────────────────────────
 describe('registration kind — all 11 auth channels are registered with the correct kind, both directions', () => {
@@ -387,5 +391,24 @@ describe('T-34.5-18 — logoutGOG never lets a synchronous GOGUser.logout() thro
     ).not.toThrow()
     expect(mockGOGLogout).toHaveBeenCalled()
     expect(logWarning).not.toHaveBeenCalled()
+  })
+})
+
+describe('injected slices reach the user modules', () => {
+  it('logoutLegendary and authGOG pass the registered deps object contents through', async () => {
+    const expected = {
+      stores: flowDeps.stores,
+      libraryManagers: flowDeps.managers.library
+    }
+    await defined(
+      handlerRegistry.get('logoutLegendary'),
+      'logoutLegendary handler'
+    )({})
+    expect(mockLegendaryLogout).toHaveBeenCalledWith(expected)
+    await defined(handlerRegistry.get('authGOG'), 'authGOG handler')(
+      {},
+      'a-code'
+    )
+    expect(mockGOGLogin).toHaveBeenCalledWith(expected, 'a-code')
   })
 })

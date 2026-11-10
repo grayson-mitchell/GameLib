@@ -136,7 +136,7 @@ import {
 const services = createTestServices()
 handlerRegistry.clear()
 listenerRegistry.clear()
-registerRunnerAuthFlows()
+registerRunnerAuthFlows(services)
 registerWineToolsFlows(services)
 registerShortcutsFlows(services)
 registerRunnerMiscFlows(services)
@@ -144,7 +144,7 @@ registerRunnerMiscFlows(services)
 // snapshot below. Its absence here (before this plan) is exactly what made the EOS 8 register
 // as EMPTY in this file — the mandatory part of D-09's flip-to-presence is this call, not
 // merely editing an array.
-registerEosOverlayFlows()
+registerEosOverlayFlows(services)
 // Phase 34.6 Plan 09 (REQ-34.6-02/04/08/13): `enrichmentFlowRegistration.ts` joins the snapshot
 // too, so the 5 `steamgriddb.*` names it now registers can flip from Describe 7's absence
 // assertion to Describe 10's presence assertion below. `registerEnrichmentFlows()` carries no
@@ -297,7 +297,7 @@ const MODULES: ReadonlyArray<{
 }> = [
   {
     name: 'registerRunnerAuthFlows',
-    register: registerRunnerAuthFlows,
+    register: () => registerRunnerAuthFlows(services),
     file: 'runnerAuthFlowRegistration.ts',
     declaredChannels: RUNNER_AUTH_CHANNELS
   },
@@ -326,7 +326,7 @@ const MODULES: ReadonlyArray<{
     // is added underneath it is exactly the kind of stale claim this project's own process
     // lessons warn about.
     name: 'registerEosOverlayFlows',
-    register: registerEosOverlayFlows,
+    register: () => registerEosOverlayFlows(services),
     file: 'eosOverlayFlowRegistration.ts',
     declaredChannels: EOS_OVERLAY_CHANNELS
   },
@@ -467,7 +467,7 @@ describe('curated-import guard — none of the six modules imports ipc_handler o
   it('gate self-test: a synthetic source with a bare side-effect import of ../main is detected', () => {
     const synthetic = [
       "import '../main'",
-      'export function registerRunnerAuthFlows(): void {}'
+      'export function registerRunnerAuthFlows(deps: RunnerAuthFlowDeps): void {}'
     ].join('\n')
     expect(importsForbiddenModule(synthetic)).toBe(true)
   })

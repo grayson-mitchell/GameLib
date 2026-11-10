@@ -176,15 +176,10 @@ jest.mock('../../utils/aborthandler/aborthandler', () => ({
   callAllAbortControllers: jest.fn()
 }))
 
-// ── backend/storeManagers mock — utils.ts's real `clearCache()` body ends
-// with a fire-and-forget `import('./storeManagers').then(({ libraryManagerMap }) =>
-// libraryManagerMap['legendary'].runRunnerCommand({ subcommand: 'cleanup' }, ...))`
-// (Electron parity, unmodified). Without this mock that reaches the REAL
-// legendary runner machinery (`launcher.ts`'s `callRunner`, an actual
-// `child_process.spawn()`) — this narrow stub keeps clearCache's coverage
-// focused on ITS OWN behavior (store clears + refreshLibrary + dialog),
-// mirroring gameDetailsFlows.test.ts's/downloadQueueFlows.test.ts's own
-// `backend/storeManagers` mock precedent ────────────────────────────────────
+// ── backend/storeManagers mock — the boot's injected library managers come from this module, and
+// `clearCache`'s `startLegendaryCleanup` fires `legendary cleanup` through the injected legendary
+// manager. Without this stub that reaches the REAL legendary runner machinery (`launcher.ts`'s
+// `callRunner`, an actual `child_process.spawn()`) ────────────────────────────────────────────
 jest.mock('backend/storeManagers', () => ({
   libraryManagerMap: {
     legendary: { runRunnerCommand: jest.fn() }
@@ -644,6 +639,16 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
         (f) => f.kind === 'frontendMessage' && f.channel === 'showDialog'
       )
       expect(dialogFrame).toBeUndefined()
+
+      // The legendary cleanup is fired through the injected library manager.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { libraryManagerMap } = require('backend/storeManagers') as {
+        libraryManagerMap: { legendary: { runRunnerCommand: jest.Mock } }
+      }
+      expect(libraryManagerMap.legendary.runRunnerCommand).toHaveBeenCalledWith(
+        { subcommand: 'cleanup' },
+        { abortId: 'legandary-cleanup' }
+      )
     })
 
     it('REQ-34.3-06 clearCache(showDialog=true) pushes BOTH refreshLibrary and showDialog, with a RESOLVED title (not the raw i18next key)', async () => {

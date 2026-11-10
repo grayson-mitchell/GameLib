@@ -213,7 +213,10 @@ export function registerHandlers(deps: {
   // relative to the other calls above (own channel names, no cross-module
   // runtime dependency at registration time), placed alongside them, before
   // `ensureStoresRegistered()`.
-  registerShellFilesFlows({ stores: deps.services.stores })
+  registerShellFilesFlows({
+    managers: deps.services.managers,
+    stores: deps.services.stores
+  })
   // Phase 34.3 Plan 06 (REQ-34.3-03/-04/-13): the clipboard channels — the ONLY
   // consumers of this slice's two new dispatch_rust_channel arms
   // (clipboard_write_text/clipboard_read_text, Plan 03). No ordering constraint
@@ -261,7 +264,10 @@ export function registerHandlers(deps: {
   // are populated now. No ordering constraint relative to the other calls above (own channel
   // names, no cross-module runtime dependency at registration time), placed alongside them,
   // before `ensureStoresRegistered()`.
-  registerRunnerAuthFlows()
+  registerRunnerAuthFlows({
+    managers: deps.services.managers,
+    stores: deps.services.stores
+  })
   registerWineToolsFlows({
     managers: deps.services.managers,
     commandRunner: deps.services.commandRunner,
@@ -281,7 +287,7 @@ export function registerHandlers(deps: {
   })
   // Phase 34.6 Plan 08 (REQ-34.6-01): the EOS overlay channel cluster — no ordering constraint
   // relative to the other calls above.
-  registerEosOverlayFlows()
+  registerEosOverlayFlows({ managers: deps.services.managers })
   // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): the in-app store-embed channels, plus installing the
   // rustInvoke-backed store-embed seam (setStoreEmbedSeam) — no ordering constraint relative to
   // the other calls above (own channel names, no cross-module runtime dependency at registration

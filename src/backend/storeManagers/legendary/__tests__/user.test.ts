@@ -20,7 +20,7 @@
  *
  * Mock boundaries:
  *  - backend/logger                    -> logInfo/logError/logWarning
- *  - ../../../utils                    -> clearCache
+ *  - ../../../utils                    -> clearCache, startLegendaryCleanup
  *  - backend/constants/key_value_stores -> configStore
  *  - '..' (storeManagers/index)        -> libraryManagerMap['legendary'].runRunnerCommand
  *  - ../../../humble/userAgent         -> standardBrowserUserAgent (fixed string)
@@ -52,7 +52,8 @@ jest.mock('backend/logger', () => ({
 
 // ── ../../../utils mock (clearCache) ──────────────────────────────────────────────────────
 jest.mock('../../../utils', () => ({
-  clearCache: jest.fn()
+  clearCache: jest.fn(),
+  startLegendaryCleanup: jest.fn()
 }))
 
 // ── backend/constants/key_value_stores mock (configStore) ────────────────────────────────
@@ -98,7 +99,7 @@ jest.mock('../../../humble/userAgent', () => ({
 }))
 
 import { LegendaryUser } from '../user'
-import { clearCache } from '../../../utils'
+import { clearCache, startLegendaryCleanup } from '../../../utils'
 import { logError, logInfo, logWarning } from 'backend/logger'
 import {
   setLoginWindowSeam,
@@ -197,6 +198,7 @@ describe('LegendaryUser.logout(deps)', () => {
     )
     expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
     expect(clearCache).toHaveBeenCalledWith(deps, 'legendary')
+    expect(startLegendaryCleanup).toHaveBeenCalledWith(deps)
   })
 
   // ADDED (Phase 40 CR-03): the runner had no abort-case test at all before
