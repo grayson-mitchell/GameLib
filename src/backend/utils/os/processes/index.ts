@@ -1,10 +1,14 @@
-import { ChildProcess, spawn } from 'child_process'
+import type { ChildHandle, ProcessRunner } from 'backend/process/types'
+
+/** Runner slice the probes need: they only ever call `run`. */
+export type ProbeDeps = { runner: Pick<ProcessRunner, 'run'> }
 
 type SpawnWrapperOptions = Partial<{
-  onStdout: (data: string, child: ChildProcess) => unknown
-  onStderr: (data: string, child: ChildProcess) => unknown
+  onStdout: (data: string, child: ChildHandle) => unknown
+  onStderr: (data: string, child: ChildHandle) => unknown
+  /** Replaces the child's environment (the pre-runner `spawn({ env })` semantics). */
   env: Record<string, string | undefined>
-  /** Kill the child (SIGTERM) after this many ms. Default {@link DEFAULT_TIMEOUT_MS}. */
+  /** Kill the child after this many ms. Default {@link DEFAULT_TIMEOUT_MS}. */
   timeoutMs: number
 }>
 
@@ -18,47 +22,30 @@ interface SpawnWrapperReturn {
   signalName: string | null
 }
 
+/**
+ * Runs a probe command through the process runner. Rejects only on spawn error (ENOENT);
+ * a timeout kills the child (SIGKILL) and resolves with whatever was captured.
+ */
 async function genericSpawnWrapper(
+  deps: ProbeDeps,
   command: string,
   args: string[] = [],
   options: SpawnWrapperOptions = {}
 ): Promise<SpawnWrapperReturn> {
-  const child = spawn(command, args, {
-    env: options?.env,
-    timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS
+  const r = await deps.runner.run(command, args, {
+    env: options.env,
+    replaceEnv: options.env !== undefined ? true : undefined,
+    timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    onStdout: options.onStdout,
+    onStderr: options.onStderr,
+    stdin: ''
   })
-  // Sidecar exit contract: unref the child and its pipes so a hung probe never holds the event
-  // loop past stdin EOF. Optional calls: test doubles need not implement unref().
-  child.unref?.()
-  ;(child.stdout as { unref?: () => void } | null)?.unref?.()
-  ;(child.stderr as { unref?: () => void } | null)?.unref?.()
-  child.stdout.setEncoding('utf-8')
-  child.stderr.setEncoding('utf-8')
-
-  let stdout = ''
-  let stderr = ''
-  child.stdout.on('data', (data: string) => {
-    stdout += data
-    if (options.onStdout) options.onStdout(data, child)
-  })
-  child.stderr.on('data', (data: string) => {
-    stderr += data
-    if (options.onStderr) options.onStderr(data, child)
-  })
-
-  return new Promise<SpawnWrapperReturn>((resolve, reject) => {
-    // A missing binary (ENOENT) emits 'error' with no 'close'; unhandled, it is an uncaught
-    // exception that would take the sidecar down. Reject so the caller's catch handles it.
-    child.on('error', reject)
-    child.on('close', (code, signal) =>
-      resolve({
-        stdout,
-        stderr,
-        exitCode: code,
-        signalName: signal
-      })
-    )
-  })
+  return {
+    stdout: r.stdout,
+    stderr: r.stderr,
+    exitCode: r.code,
+    signalName: r.signal
+  }
 }
 
 export { genericSpawnWrapper }

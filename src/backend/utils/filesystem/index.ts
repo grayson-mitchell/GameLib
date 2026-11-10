@@ -1,5 +1,6 @@
 import { isFlatpak } from 'backend/constants/environment'
 import type { Path } from 'backend/schemas'
+import type { ProbeDeps } from '../os/processes'
 
 interface DiskInfo {
   freeSpace: number
@@ -10,16 +11,16 @@ interface DiskInfo {
  * Gathers information about the disk `path` is on.
  * `path` does not have to exist.
  */
-async function getDiskInfo(path: Path): Promise<DiskInfo> {
+async function getDiskInfo(deps: ProbeDeps, path: Path): Promise<DiskInfo> {
   switch (process.platform) {
     case 'linux':
     case 'darwin': {
       const { getDiskInfo_unix } = await import('./unix')
-      return getDiskInfo_unix(path)
+      return getDiskInfo_unix(deps, path)
     }
     case 'win32': {
       const { getDiskInfo_windows } = await import('./windows')
-      return getDiskInfo_windows(path)
+      return getDiskInfo_windows(deps, path)
     }
     default:
       return { freeSpace: 0, totalSpace: 0 }

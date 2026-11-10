@@ -18,6 +18,7 @@ import {
   getNileVersion
 } from '../helperBinaries'
 import type { VersionProbeDeps } from '../helperBinaries'
+import type { ProbeDeps } from '../os/processes'
 import { APP_DISPLAY_NAME } from 'backend/constants/others'
 
 type GPUInfo = {
@@ -69,7 +70,7 @@ interface SystemInformation {
 
 let cachedSystemInfo: SystemInformation | null = null
 /** R1 slice: the runner managers the version probes ask. */
-export type SystemInfoDeps = VersionProbeDeps
+export type SystemInfoDeps = VersionProbeDeps & ProbeDeps
 
 // In-flight-promise memoization -- debug/gog-spawn-reduction.md fix 3. The value-cache
 // above only helps SEQUENTIAL calls; concurrent callers at boot (backend boot log,
@@ -109,16 +110,16 @@ async function fetchSystemInfo(
   deps: SystemInfoDeps
 ): Promise<SystemInformation> {
   const cpus = os.cpus()
-  const memory = await getMemoryInfo()
-  const gpus = await getGpuInfo()
-  const detailedOsInfo = await getOsInfo()
+  const memory = await getMemoryInfo(deps)
+  const gpus = await getGpuInfo(deps)
+  const detailedOsInfo = await getOsInfo(deps)
   const deckInfo = getSteamDeckInfo(cpus, gpus)
   const versionDeps = deps
   const [legendaryVersion, gogdlVersion, cometVersion, nileVersion] =
     await Promise.all([
       getLegendaryVersion(versionDeps),
       getGogdlVersion(versionDeps),
-      getCometVersion(),
+      getCometVersion(versionDeps),
       getNileVersion(versionDeps)
     ])
 

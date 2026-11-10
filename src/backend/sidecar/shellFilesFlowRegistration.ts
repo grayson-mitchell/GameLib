@@ -333,7 +333,7 @@ export function registerShellFilesFlows(deps: {
       // never be wrapped in a try/catch that swallows the rejection.
       const parsedPath = Path.parse(args[0] as string)
 
-      const { freeSpace, totalSpace } = await getDiskInfo(parsedPath)
+      const { freeSpace, totalSpace } = await getDiskInfo(deps, parsedPath)
       const pathIsWritable = await isWritable(parsedPath)
       const pathIsFlatpakAccessible =
         isAccessibleWithinFlatpakSandbox(parsedPath)

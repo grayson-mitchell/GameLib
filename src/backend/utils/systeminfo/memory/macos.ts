@@ -1,21 +1,27 @@
 import os from 'os'
 
-import { genericSpawnWrapper } from '../../os/processes'
+import { genericSpawnWrapper, type ProbeDeps } from '../../os/processes'
 
 import type { PartialMemoryInfo } from './index'
 
 const DEFAULT_PAGE_SIZE = 4096
-async function getPageSize(): Promise<number> {
-  const { stdout } = await genericSpawnWrapper('sysctl', ['-n', 'vm.pagesize'])
+async function getPageSize(deps: ProbeDeps): Promise<number> {
+  const { stdout } = await genericSpawnWrapper(deps, 'sysctl', [
+    '-n',
+    'vm.pagesize'
+  ])
   const pageSize = Number(stdout.trim())
-  return Number.isNaN(pageSize) ? DEFAULT_PAGE_SIZE : pageSize
+  // A timed-out or failed probe leaves stdout empty, which Number() reads as 0.
+  return Number.isFinite(pageSize) && pageSize > 0
+    ? pageSize
+    : DEFAULT_PAGE_SIZE
 }
 
-async function getActiveAndWiredPages(): Promise<{
+async function getActiveAndWiredPages(deps: ProbeDeps): Promise<{
   activePages: number
   wiredPages: number
 }> {
-  const { stdout } = await genericSpawnWrapper('vm_stat')
+  const { stdout } = await genericSpawnWrapper(deps, 'vm_stat')
   const match = stdout.match(
     /^Pages active:\s*(\d*)[\s\S]*^Pages wired down:\s*(\d*)/m
   )
@@ -29,11 +35,13 @@ async function getActiveAndWiredPages(): Promise<{
   }
 }
 
-async function getMemoryInfo_macos(): Promise<PartialMemoryInfo> {
+async function getMemoryInfo_macos(
+  deps: ProbeDeps
+): Promise<PartialMemoryInfo> {
   const total = os.totalmem()
 
-  const pageSize = await getPageSize()
-  const { activePages, wiredPages } = await getActiveAndWiredPages()
+  const pageSize = await getPageSize(deps)
+  const { activePages, wiredPages } = await getActiveAndWiredPages(deps)
   const used = activePages * pageSize + wiredPages * pageSize
 
   return { total, used }

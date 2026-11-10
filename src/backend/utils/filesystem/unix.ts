@@ -1,14 +1,21 @@
-import { genericSpawnWrapper } from '../os/processes'
+import { genericSpawnWrapper, type ProbeDeps } from '../os/processes'
 import { access } from 'fs/promises'
 import { join } from 'path'
 
 import type { Path } from 'backend/schemas'
 import type { DiskInfo } from './index'
 
-async function getDiskInfo_unix(path: Path): Promise<DiskInfo> {
+async function getDiskInfo_unix(
+  deps: ProbeDeps,
+  path: Path
+): Promise<DiskInfo> {
   const rootPath = await findFirstExistingPath(path)
 
-  const { stdout } = await genericSpawnWrapper('df', ['-P', '-k', rootPath])
+  const { stdout } = await genericSpawnWrapper(deps, 'df', [
+    '-P',
+    '-k',
+    rootPath
+  ])
   const dataLine = stdout.split('\n')[1]
   if (dataLine === undefined) {
     throw new Error(`df output for ${rootPath} has no data line`)

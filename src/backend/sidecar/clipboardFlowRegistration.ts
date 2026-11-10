@@ -118,7 +118,8 @@ export function registerClipboardFlows(deps: ClipboardFlowDeps): void {
     void (async () => {
       try {
         const info = await getSystemInfo({
-          libraryManagers: deps.managers.library
+          libraryManagers: deps.managers.library,
+          runner: deps.runner
         })
         const formatted = await formatSystemInfo(info)
         clipboard.writeText(formatted)

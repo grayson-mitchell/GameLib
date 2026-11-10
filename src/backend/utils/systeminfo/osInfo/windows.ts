@@ -1,13 +1,15 @@
 import { z } from 'zod'
-import { genericSpawnWrapper } from '../../os/processes'
+import { genericSpawnWrapper, type ProbeDeps } from '../../os/processes'
 
 const Win32_OperatingSystem = z.object({
   Caption: z.string(),
   Version: z.string()
 })
 
-async function osInfo_windows(): Promise<{ name: string; version?: string }> {
-  const { stdout } = await genericSpawnWrapper('powershell', [
+async function osInfo_windows(
+  deps: ProbeDeps
+): Promise<{ name: string; version?: string }> {
+  const { stdout } = await genericSpawnWrapper(deps, 'powershell', [
     'Get-CimInstance',
     '-Class',
     'Win32_OperatingSystem',

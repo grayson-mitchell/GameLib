@@ -2,6 +2,7 @@ import { app } from 'backend/platform'
 import { z } from 'zod'
 
 import { hasExecutable } from '../../os/path'
+import { genericSpawnWrapper, type ProbeDeps } from '../../os/processes'
 
 import type { PartialGpuInfo } from './index'
 
@@ -24,7 +25,7 @@ const GPUInfoSchema = z.object({
  * vendor IDs of all GPUs in the system. If possible, use `lspci` to then get
  * the subvendor and subdevice IDs and the current kernel driver in use
  */
-async function getGpuInfo_linux(): Promise<PartialGpuInfo[]> {
+async function getGpuInfo_linux(deps: ProbeDeps): Promise<PartialGpuInfo[]> {
   const gpus: PartialGpuInfo[] = []
 
   const gpuInfo = await app.getGPUInfo('basic')
@@ -37,7 +38,7 @@ async function getGpuInfo_linux(): Promise<PartialGpuInfo[]> {
       // them as hexadecimal strings
       deviceId: gpu.deviceId.toString(16).padStart(4, '0'),
       vendorId: gpu.vendorId.toString(16).padStart(4, '0'),
-      ...(hasLspci ? await getLspciInfo(gpu.deviceId, gpu.vendorId) : {})
+      ...(hasLspci ? await getLspciInfo(deps, gpu.deviceId, gpu.vendorId) : {})
     })
   }
 
@@ -51,6 +52,7 @@ async function getGpuInfo_linux(): Promise<PartialGpuInfo[]> {
  * @param vendorId The vendor ID returned by {@link app.getGPUInfo}
  */
 async function getLspciInfo(
+  deps: ProbeDeps,
   deviceId: number,
   vendorId: number
 ): Promise<{
@@ -58,8 +60,7 @@ async function getLspciInfo(
   subdeviceId?: string
   driverVersion?: string
 }> {
-  const { genericSpawnWrapper } = await import('../../os/processes')
-  const { stdout } = await genericSpawnWrapper('lspci', [
+  const { stdout } = await genericSpawnWrapper(deps, 'lspci', [
     '-d', // work on the following device:
     `${vendorId.toString(16)}:${deviceId.toString(16)}`,
     '-mm', // machine-readable format

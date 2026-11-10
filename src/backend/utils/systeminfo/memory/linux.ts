@@ -1,8 +1,10 @@
 import type { PartialMemoryInfo } from './index'
-import { genericSpawnWrapper } from '../../os/processes'
+import { genericSpawnWrapper, type ProbeDeps } from '../../os/processes'
 
-async function getMemoryInfo_linux(): Promise<PartialMemoryInfo> {
-  const { stdout } = await genericSpawnWrapper('free', ['-b'], {
+async function getMemoryInfo_linux(
+  deps: ProbeDeps
+): Promise<PartialMemoryInfo> {
+  const { stdout } = await genericSpawnWrapper(deps, 'free', ['-b'], {
     env: { ...process.env, LANG: 'C' }
   })
   const match = stdout.match(/^\S*:\s*(\d*)\s*(\d*)/m)

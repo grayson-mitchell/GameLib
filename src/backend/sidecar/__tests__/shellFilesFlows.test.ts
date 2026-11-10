@@ -519,7 +519,21 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
   // ── REQ-34.3-02: checkDiskSpace ────────────────────────────────────────────
 
   it('REQ-34.3-02 checkDiskSpace (invoke) resolves real disk info for a valid path', async () => {
-    const { input, frames } = boot()
+    const { input, frames } = bootFresh({
+      reuseRegistry: true,
+      context: {
+        script: [
+          {
+            cmd: 'df',
+            argv: ['-P', '-k', tmpdir()],
+            result: {
+              stdout:
+                'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/disk1 100 90 10 90% /'
+            }
+          }
+        ]
+      }
+    })
     writeInvoke(input, 'disk-1', 'checkDiskSpace', [tmpdir()])
     await waitForResponse(frames, 'disk-1')
 

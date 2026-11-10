@@ -1,79 +1,76 @@
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
 import type { FileHandle } from 'fs/promises'
-import * as util_os_processes from '../../os/processes'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { getDiskInfo_windows, isWritable_windows } from '../windows'
 import type { Path } from 'backend/schemas'
 import { defined } from 'backend/testUtils/indexed'
 
-describe('getDiskInfo_windows', () => {
-  it('Works with root path', async () => {
-    const spawnWrapperSpy = jest
-      .spyOn(util_os_processes, 'genericSpawnWrapper')
-      .mockImplementation(async () => {
-        return Promise.resolve({
-          stdout: JSON.stringify([{ Caption: 'C:', FreeSpace: 10, Size: 100 }]),
-          stderr: '',
-          exitCode: null,
-          signalName: null
-        })
-      })
+const PS_ARGV = [
+  'Get-CimInstance',
+  '-Class',
+  'Win32_LogicalDisk',
+  '-Property',
+  'Caption,FreeSpace,Size',
+  '|',
+  'Select-Object',
+  'Caption,FreeSpace,Size',
+  '|',
+  'ConvertTo-Json',
+  '-Compress'
+]
+const DISKS = JSON.stringify([{ Caption: 'C:', FreeSpace: 10, Size: 100 }])
 
-    const ret = await getDiskInfo_windows('C:' as Path)
+describe('getDiskInfo_windows', () => {
+  it.each(['C:', 'C:/foo/bar/baz'])('Works with path %s', async (p) => {
+    const runner = createScriptedRunner([
+      { cmd: 'powershell', argv: PS_ARGV, result: { stdout: DISKS } }
+    ])
+    const ret = await getDiskInfo_windows({ runner }, p as Path)
     expect(ret.totalSpace).toBe(100)
     expect(ret.freeSpace).toBe(10)
-    expect(spawnWrapperSpy).toHaveBeenCalledWith('powershell', [
-      'Get-CimInstance',
-      '-Class',
-      'Win32_LogicalDisk',
-      '-Property',
-      'Caption,FreeSpace,Size',
-      '|',
-      'Select-Object',
-      'Caption,FreeSpace,Size',
-      '|',
-      'ConvertTo-Json',
-      '-Compress'
-    ])
-    expect(spawnWrapperSpy).toHaveBeenCalledTimes(1)
+    expect(runner.calls).toHaveLength(1)
+    expect(runner.calls[0]?.opts).toMatchObject({ timeoutMs: 30_000 })
+    runner.expectAllConsumed()
   })
 
-  it('Works with nested path', async () => {
-    const spawnWrapperSpy = jest
-      .spyOn(util_os_processes, 'genericSpawnWrapper')
-      .mockImplementation(async () => {
-        return Promise.resolve({
-          stdout: JSON.stringify([{ Caption: 'C:', FreeSpace: 10, Size: 100 }]),
-          stderr: '',
-          exitCode: null,
-          signalName: null
-        })
-      })
-
-    const ret = await getDiskInfo_windows('C:/foo/bar/baz' as Path)
-    expect(ret.totalSpace).toBe(100)
-    expect(ret.freeSpace).toBe(10)
-    expect(spawnWrapperSpy).toHaveBeenCalledWith('powershell', [
-      'Get-CimInstance',
-      '-Class',
-      'Win32_LogicalDisk',
-      '-Property',
-      'Caption,FreeSpace,Size',
-      '|',
-      'Select-Object',
-      'Caption,FreeSpace,Size',
-      '|',
-      'ConvertTo-Json',
-      '-Compress'
+  it('rejects when powershell cannot spawn', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'powershell', argv: PS_ARGV, error: { code: 'ENOENT' } }
     ])
-    expect(spawnWrapperSpy).toHaveBeenCalledTimes(1)
+    await expect(getDiskInfo_windows({ runner }, 'C:' as Path)).rejects.toThrow(
+      'ENOENT'
+    )
+  })
+
+  it('returns zeros on a timeout with no output', async () => {
+    const runner = createScriptedRunner([
+      {
+        cmd: 'powershell',
+        argv: PS_ARGV,
+        result: { timedOut: true, code: null, signal: 'SIGKILL' }
+      }
+    ])
+    expect(await getDiskInfo_windows({ runner }, 'C:' as Path)).toEqual({
+      freeSpace: 0,
+      totalSpace: 0
+    })
+  })
+
+  it('returns zeros on a non-zero exit with no output', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'powershell', argv: PS_ARGV, result: { code: 1 } }
+    ])
+    expect(await getDiskInfo_windows({ runner }, 'C:' as Path)).toEqual({
+      freeSpace: 0,
+      totalSpace: 0
+    })
   })
 })
 
 describe('isWritable_windows', () => {
   // MOCKED ARM -- runs on any host. These spy on `fs.promises` and
-  // `genericSpawnWrapper`; they prove the new CONTROL FLOW (including that a
+  // the ACL probe is gone; they prove the new CONTROL FLOW (including that a
   // group-only ACL no longer produces a false `false`, and that the
   // powershell spawn is gone) but say NOTHING about how Windows actually
   // adjudicates an ACL. Never cite this arm as evidence about real ACL
@@ -91,35 +88,6 @@ describe('isWritable_windows', () => {
     it('group-granted directory is writable (regression: the D:\\SteamLibrary shape)', async () => {
       // The exact ACL the todo measured for D:\SteamLibrary: four GROUP
       // identities, no per-user ACE at all.
-      const spawnSpy = jest
-        .spyOn(util_os_processes, 'genericSpawnWrapper')
-        .mockImplementation(async () =>
-          Promise.resolve({
-            stdout: JSON.stringify([
-              {
-                FileSystemRights: 2032127,
-                IdentityReference: { Value: 'BUILTIN\\Administrators' }
-              },
-              {
-                FileSystemRights: 2032127,
-                IdentityReference: { Value: 'NT AUTHORITY\\SYSTEM' }
-              },
-              {
-                FileSystemRights: 2032127,
-                IdentityReference: {
-                  Value: 'NT AUTHORITY\\Authenticated Users'
-                }
-              },
-              {
-                FileSystemRights: 2032127,
-                IdentityReference: { Value: 'BUILTIN\\Users' }
-              }
-            ]),
-            stderr: '',
-            exitCode: null,
-            signalName: null
-          })
-        )
       jest
         .spyOn(fs.promises, 'stat')
         .mockResolvedValue({ isDirectory: () => true } as fs.Stats)
@@ -129,7 +97,6 @@ describe('isWritable_windows', () => {
       const ret = await isWritable_windows('D:/SteamLibrary' as Path)
 
       expect(ret).toBe(true)
-      expect(spawnSpy).not.toHaveBeenCalled()
     })
 
     it('single-entry ACL does not produce a false negative', async () => {
@@ -137,21 +104,6 @@ describe('isWritable_windows', () => {
       // object, not an array. Pre-fix, `AccessControlEntry.array().parse()`
       // throws on this shape and the `catch` returns `false` -- a second,
       // independent false-`false` path.
-      jest
-        .spyOn(util_os_processes, 'genericSpawnWrapper')
-        .mockImplementation(async () =>
-          Promise.resolve({
-            stdout: JSON.stringify({
-              FileSystemRights: 2032127,
-              IdentityReference: {
-                Value: `some-domain\\${os.userInfo().username}`
-              }
-            }),
-            stderr: '',
-            exitCode: null,
-            signalName: null
-          })
-        )
       jest
         .spyOn(fs.promises, 'stat')
         .mockResolvedValue({ isDirectory: () => true } as fs.Stats)

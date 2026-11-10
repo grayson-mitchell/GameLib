@@ -1,7 +1,7 @@
-import { spawnSync } from 'node:child_process'
 import { getCometBin } from 'backend/utils'
 import { join } from 'path'
 import type { ManagerDeps } from 'backend/services/types'
+import type { ProbeDeps } from '../os/processes'
 
 /** R1 slice: the runner managers the version probes ask. */
 export type VersionProbeDeps = Pick<ManagerDeps, 'libraryManagers'>
@@ -46,16 +46,22 @@ async function getGogdlVersion(deps: VersionProbeDeps): Promise<string> {
   return stdout
 }
 
-async function getCometVersion(): Promise<string> {
+async function getCometVersion(deps: ProbeDeps): Promise<string> {
   const path = getCometBin()
-  // Bounded: spawnSync blocks the event loop, so a hung comet must not stall RPC frames.
-  const { stdout, error } = spawnSync(join(path.dir, path.bin), ['--version'], {
-    timeout: COMET_VERSION_TIMEOUT_MS
-  })
+  // Bounded: a hung comet must not stall the System Information dump.
+  let result
+  try {
+    result = await deps.runner.run(join(path.dir, path.bin), ['--version'], {
+      timeoutMs: COMET_VERSION_TIMEOUT_MS,
+      stdin: ''
+    })
+  } catch {
+    return 'invalid'
+  }
 
-  if (error) return 'invalid'
+  if (result.timedOut) return 'invalid'
 
-  return stdout.toString().trimEnd()
+  return result.stdout.trimEnd()
 }
 
 async function getNileVersion(deps: VersionProbeDeps): Promise<string> {

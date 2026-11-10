@@ -676,7 +676,10 @@ async function prepareLaunch(
 
   await logWriter.logInfo([
     'System Info:',
-    getSystemInfo({ libraryManagers: deps.libraryManagers })
+    getSystemInfo({
+      libraryManagers: deps.libraryManagers,
+      runner: deps.runner
+    })
       .then(formatSystemInfo)
       .then((s) => `\n${s}\n\n`)
   ])

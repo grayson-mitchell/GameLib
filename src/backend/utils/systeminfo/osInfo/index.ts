@@ -1,8 +1,12 @@
-async function getOsInfo(): Promise<{ name: string; version?: string }> {
+import type { ProbeDeps } from '../../os/processes'
+
+async function getOsInfo(
+  deps: ProbeDeps
+): Promise<{ name: string; version?: string }> {
   switch (process.platform) {
     case 'win32': {
       const { osInfo_windows } = await import('./windows')
-      return osInfo_windows()
+      return osInfo_windows(deps)
     }
     case 'linux': {
       const { osInfo_linux } = await import('./linux')

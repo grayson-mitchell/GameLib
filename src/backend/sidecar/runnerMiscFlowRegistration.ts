@@ -119,7 +119,9 @@ export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
   ipcMain.handle('getGogdlVersion', () => getGogdlVersion(versionDeps))
   // D-04: `comet` is GOG's Galaxy Communication replacement, gated on
   // `gameInfo.runner === 'gog'` at `launcher.ts:973`.
-  ipcMain.handle('getCometVersion', getCometVersion)
+  ipcMain.handle('getCometVersion', () =>
+    getCometVersion({ runner: deps.runner })
+  )
   ipcMain.handle('getNileVersion', () => getNileVersion(versionDeps))
 
   // ── Wine runtime channels (wine/runtimes/ipc_handler.ts:4,6) ──────────────

@@ -4,7 +4,7 @@ import { join } from 'path'
 import { randomUUID } from 'node:crypto'
 
 import type { Path } from 'backend/schemas'
-import { genericSpawnWrapper } from '../os/processes'
+import { genericSpawnWrapper, type ProbeDeps } from '../os/processes'
 import type { DiskInfo } from './index'
 
 const Win32_LogicalDisk = z.object({
@@ -14,8 +14,11 @@ const Win32_LogicalDisk = z.object({
 })
 type Win32_LogicalDisk = z.infer<typeof Win32_LogicalDisk>
 
-async function getDiskInfo_windows(path: Path): Promise<DiskInfo> {
-  const { stdout } = await genericSpawnWrapper('powershell', [
+async function getDiskInfo_windows(
+  deps: ProbeDeps,
+  path: Path
+): Promise<DiskInfo> {
+  const { stdout } = await genericSpawnWrapper(deps, 'powershell', [
     'Get-CimInstance',
     '-Class',
     'Win32_LogicalDisk',

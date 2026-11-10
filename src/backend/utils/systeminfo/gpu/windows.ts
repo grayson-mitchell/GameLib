@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { genericSpawnWrapper } from '../../os/processes'
+import { genericSpawnWrapper, type ProbeDeps } from '../../os/processes'
 
 import type { PartialGpuInfo } from './index'
 
@@ -11,11 +11,11 @@ const Win32_VideoController = z.object({
 })
 type VideoController = z.infer<typeof Win32_VideoController>
 
-async function getGpuInfo_windows(): Promise<PartialGpuInfo[]> {
+async function getGpuInfo_windows(deps: ProbeDeps): Promise<PartialGpuInfo[]> {
   // Unlike on Linux, Electron's `app.getGPUInfo` seems entirely useless on
   // Windows (returns wrong device & vendor IDs). We instead use WMI to find
   // those values
-  const { stdout } = await genericSpawnWrapper('powershell', [
+  const { stdout } = await genericSpawnWrapper(deps, 'powershell', [
     'Get-CimInstance',
     '-Class',
     'Win32_VideoController',
