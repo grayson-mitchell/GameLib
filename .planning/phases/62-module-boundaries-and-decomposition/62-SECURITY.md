@@ -35,12 +35,12 @@ created: 2026-11-10
 | T-62-07 | DoS | sidecar<->Rust channel drift | mitigate | Arm-set parity now in src/backend/__tests__/tauriShellSource.test.ts and sidecarTransport RUST_INVOKE_CHANNELS (later phases 67/71 moved to generated enum). Parity tests pass; the 1 failing test in that file is an unrelated WR-07 `.title(` literal check | closed |
 | T-62-08 | Tampering | Rust comment-only edit | accept | See Accepted Risks Log AR-62-01 | closed |
 | T-62-09 | Tampering | parseSteamStorageRequirement move | mitigate | storeManagers/steam tests PASS (134 suites incl. games tests) | closed |
-| T-62-10 | Info disclosure | DRM trace/log helpers moved | mitigate | meta/logSecretGate.ts + logSecretGate.test.ts exist; see WARNING W-1 (gate currently red on HEAD from post-62 code) | closed (with warning) |
+| T-62-10 | Info disclosure | DRM trace/log helpers moved | mitigate | meta/logSecretGate.ts + logSecretGate.test.ts exist and pass (W-1 fixed in quick 261110-uog) | closed |
 | T-62-11 | DoS | duplicated session state | mitigate | steam suites PASS; split modules enforced by depcruise `games-split-modules-are-leaves` (.dependency-cruiser.cjs) | closed |
 | T-62-12 | Tampering | containment/bottle moved | mitigate | steam __tests__ PASS (games.test.ts unchanged per 62 summaries) | closed |
 | T-62-13 | EoP | TS `private` removal | accept | AR-62-02; todo filed and later completed: .planning/todos/completed/2026-11-06-renarrow-steamgame-member-visibility-after-62-lift.md | closed |
 | T-62-14 | Tampering | launch env/argv moved | mitigate | steam launch tests PASS; live smoke 62-UAT.md item with DRM trace (line 24) = pass | closed |
-| T-62-15 | Info disclosure | launch logging moved | mitigate | logSecretGate meta test; see W-1 | closed (with warning) |
+| T-62-15 | Info disclosure | launch logging moved | mitigate | logSecretGate meta test passes (W-1 fixed in quick 261110-uog) | closed |
 | T-62-16 | Tampering | uninstall path handling | mitigate | games + removeCopies tests PASS (steam suite) | closed |
 | T-62-17 | Repudiation | cleanups mixed into moves | mitigate | cleanups tracked as todos (planning-gates enforced); re-narrow todo exists | closed |
 | T-62-18 | Tampering | resolveContainedPath/PathTraversalError | mitigate | depot tests (depot/*.test.ts) PASS incl. traversal cases | closed |
@@ -71,7 +71,7 @@ created: 2026-11-10
 
 ## Warnings (non-blocking)
 
-- W-1: `meta/__tests__/logSecretGate.test.ts` is red on HEAD (2 tests: "finds zero violations", non-vacuity). Cause: src/backend/utils/uninstaller.ts:139,150 log `result.stderr` (kind process-output), added by quick tasks 261107-td5 / 261108-anw and edited in 66.1-12, after phase 62. Not a phase 62 regression, but the T-62-10/15 gate mechanism is currently failing and should be fixed (redact or allowlist) outside this phase.
+- W-1 (FIXED 2026-11-10, quick 261110-uog: e51427cfe, 70989e3c3, 043f8962b; uninstaller.ts now logs `stderrLength=`, gate files unchanged, logSecretGate + uninstaller jest 69/69 pass): `meta/__tests__/logSecretGate.test.ts` was red on HEAD (2 tests: "finds zero violations", non-vacuity). Cause: src/backend/utils/uninstaller.ts:139,150 log `result.stderr` (kind process-output), added by quick tasks 261107-td5 / 261108-anw and edited in 66.1-12, after phase 62. Not a phase 62 regression, but the T-62-10/15 gate mechanism is currently failing and should be fixed (redact or allowlist) outside this phase.
 - W-2: Unrelated failing steam/tauriShell tests on HEAD (macArchKnownFixRouting, steamStartupKeyringDeferral, installFormIpc, tauriShellSource WR-07); none cover a phase 62 threat.
 - Unregistered flags: none (summaries 05-08 report "None").
 
@@ -87,6 +87,7 @@ created: 2026-11-10
 | Audit Date | Threats Total | Closed | Open | Run By |
 |------------|---------------|--------|------|--------|
 | 2026-11-10 | 41 | 41 | 0 | gsd-security-auditor |
+| 2026-11-10 | 41 | 41 | 0 | W-1 fix re-check (quick 261110-uog): T-62-10/15 warnings cleared |
 
 ## Sign-Off
 
