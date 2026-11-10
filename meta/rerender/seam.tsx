@@ -1,41 +1,33 @@
 /**
  * The ONLY era-specific file of the D-14 re-render harness.
  *
- * Current (pre-migration) era: the app is mounted as
- * <GlobalState><MemoryRouter><Library/></MemoryRouter></GlobalState> and the
- * UI-driven steps go through the GlobalState React context.
- *
- * Plan 69-25 rewrites mountApp / toggleAppearance / dialogOpenClose against
- * the zustand stores and calls initStateSubscriptions() first. The IPC-driven
- * steps (gameStatusPush, libraryRefreshPush) stay identical.
+ * Store era (Phase 69): the app is mounted through the real boot path --
+ * initStateSubscriptions() then
+ * <BootSequence><MemoryRouter><Library/></MemoryRouter></BootSequence> -- and
+ * the UI-driven steps write the zustand stores directly. The IPC-driven steps
+ * (gameStatusPush, libraryRefreshPush) are unchanged from the baseline era.
  *
  * window.api must already be the fake (see fakeApi.ts) BEFORE this module is
  * required, because helpers/stores.ts calls window.api.storeNew at import.
  */
-import React, { useContext } from 'react'
+import React from 'react'
 import { createRoot, Root } from 'react-dom/client'
 import { act } from 'react-dom/test-utils'
 import { MemoryRouter } from 'react-router-dom'
 import i18next from 'i18next'
 import { I18nextProvider, initReactI18next } from 'react-i18next'
 
-import GlobalState from '../../src/frontend/state/GlobalState'
-import ContextProvider from '../../src/frontend/state/ContextProvider'
+import BootSequence from '../../src/frontend/state/BootSequence'
 import Library from '../../src/frontend/screens/Library'
 import {
   __resetInitStateSubscriptionsGuardForTests,
   initStateSubscriptions
 } from '../../src/frontend/state/initStateSubscriptions'
 import useLibraryState from '../../src/frontend/state/libraryState'
+import useSettingsState from '../../src/frontend/state/settingsState'
+import useUiState from '../../src/frontend/state/uiState'
+import { resetAllStores } from '../../src/frontend/state/storeKit'
 import { emit } from './fakeApi'
-
-type Ctx = React.ContextType<typeof ContextProvider>
-let ctx: Ctx | null = null
-
-function SeamProbe(): null {
-  ctx = useContext(ContextProvider)
-  return null
-}
 
 let i18nReady: Promise<unknown> | null = null
 function ensureI18n() {
@@ -59,22 +51,20 @@ export async function mountApp(
   // 69-18: handleRefreshLibrary is now a boot listener (once-guarded), so the
   // seam registers it the way index.tsx does before render. Every run installs
   // a fresh fake api (listeners cleared), so the once-guard is reset first.
+  resetAllStores()
   __resetInitStateSubscriptionsGuardForTests()
   initStateSubscriptions()
-  // 69-19: libraryStatus is store state now (it was per-mount class state), so a
-  // fresh run starts empty or the repeated gameStatusPush becomes a no-op.
+  // libraryStatus is store state: a fresh run must start empty or the repeated
+  // gameStatusPush becomes a no-op.
   useLibraryState.setState({ libraryStatus: [] })
   const root = createRoot(container)
   await act(async () => {
     root.render(
-      <GlobalState>
+      <BootSequence>
         <I18nextProvider i18n={i18next}>
-          <MemoryRouter>
-            <SeamProbe />
-            {wrap('Library', <Library />)}
-          </MemoryRouter>
+          <MemoryRouter>{wrap('Library', <Library />)}</MemoryRouter>
         </I18nextProvider>
-      </GlobalState>
+      </BootSequence>
     )
   })
   return root
@@ -85,7 +75,8 @@ const flush = () => new Promise<void>((r) => setTimeout(r, 0))
 export const steps = {
   async toggleAppearance(): Promise<void> {
     await act(async () => {
-      ctx!.setAllTilesInColor(!ctx!.allTilesInColor)
+      const settings = useSettingsState.getState()
+      settings.setAllTilesInColor(!settings.allTilesInColor)
       await flush()
     })
   },
@@ -101,11 +92,11 @@ export const steps = {
   },
   async dialogOpenClose(): Promise<void> {
     await act(async () => {
-      ctx!.showDialogModal({ title: 'perf', message: 'perf' })
+      useUiState.getState().showDialogModal({ title: 'perf', message: 'perf' })
       await flush()
     })
     await act(async () => {
-      ctx!.showDialogModal({ showDialog: false })
+      useUiState.getState().showDialogModal({ showDialog: false })
       await flush()
     })
   },
