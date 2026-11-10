@@ -261,7 +261,9 @@ export async function runNativeDepotDownload(
     // so no D-UAT-13 restart hold arms (quick 261105-sqe).
     if (deferredPoll.handoff && leasedResult.status === 'done') {
       const handoff = deferredPoll.handoff
-      const pid = await adoption.probeMacSteamPid().catch(() => null)
+      const pid = await adoption
+        .probeMacSteamPid({ runner: steamGame.deps.runner })
+        .catch(() => null)
       let adoptedByInstallApp = false
       if (pid !== null && isSteamExperimentalInstallAppEnabled()) {
         const outcome = await requestSteamInstallApp(

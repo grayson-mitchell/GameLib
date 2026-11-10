@@ -561,6 +561,10 @@ jest.mock('../bridge/allowlist', () => ({
 const mockAdoptionStore = {}
 jest.mock('../macSteamAdoption', () => ({
   probeMacSteamPid: jest.fn(),
+  // Plain function (not jest.fn): the caller builds the restart deps, the driver is mocked.
+  createRestartDeps: (deps: { launchRunGameId: () => Promise<unknown> }) => ({
+    launchRunGameId: deps.launchRunGameId
+  }),
   readAcfSnapshot: jest.fn(),
   recordPendingAdoption: jest.fn(),
   readPendingAdoption: jest.fn(),

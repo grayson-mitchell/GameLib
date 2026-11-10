@@ -1,7 +1,7 @@
 /**
  * Quick 261029-ji2: pending-adoption record, Play decision and the graceful
  * quit-wait-relaunch driver. Driven through injected deps (fake clock advanced
- * by `sleep`); no fs, no spawn, no real timers.
+ * by `sleep`); no fs, no spawn, no real timers. The pgrep probe runs on a scripted runner.
  */
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -11,7 +11,6 @@ jest.mock('backend/logger', () => ({
 }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
 jest.mock('../macSteamOffline', () => ({
-  spawnOpenDetached: jest.fn(),
   MAC_STEAM_OFFLINE_OWED_FILE: 'mac-steam-offline-owed.json'
 }))
 
@@ -19,6 +18,8 @@ import {
   isSteamAdoptedAcf,
   decidePlayAdoption,
   restartMacSteamForAdoption,
+  probeMacSteamPid,
+  createRestartDeps,
   recordPendingAdoption,
   readPendingAdoption,
   clearPendingAdoption,
@@ -29,6 +30,11 @@ import {
   type RestartDeps
 } from '../macSteamAdoption'
 import { at } from './fixtures/indexed'
+import { createFakeClock } from 'backend/testUtils/fakeClock'
+import {
+  createScriptedRunner,
+  type ScriptStep
+} from 'backend/testUtils/scriptedRunner'
 
 function acf(fields: Record<string, string>, mtimeMs = 1000): AcfSnapshot {
   const body = Object.entries({ appid: '264160', ...fields })
@@ -267,5 +273,77 @@ describe('pending-adoption record store', () => {
     const store = fakeStore()
     store.map.set('264160', value)
     expect(readPendingAdoption('264160', store)).toBeUndefined()
+  })
+})
+
+describe('probeMacSteamPid', () => {
+  const pgrep = (result: ScriptStep['result']): ScriptStep => ({
+    cmd: '/usr/bin/pgrep',
+    argv: ['-x', 'steam_osx'],
+    result
+  })
+
+  test('runs pgrep under a fake-HOME env, empty stdin and a 2 s bound, and returns the lowest PID', async () => {
+    const runner = createScriptedRunner([
+      pgrep({ code: 0, stdout: '812\n77\n' })
+    ])
+    await expect(probeMacSteamPid({ runner })).resolves.toBe(77)
+    const call = runner.calls[0]
+    expect(call?.opts).toMatchObject({
+      replaceEnv: true,
+      stdin: '',
+      timeoutMs: 2000
+    })
+    expect(call?.env?.HOME).toBeDefined()
+  })
+
+  test('exit 1 means Steam is not running', async () => {
+    const runner = createScriptedRunner([pgrep({ code: 1 })])
+    await expect(probeMacSteamPid({ runner })).resolves.toBeNull()
+  })
+
+  test('a timeout, another exit code or a spawn error rejects', async () => {
+    await expect(
+      probeMacSteamPid({
+        runner: createScriptedRunner([pgrep({ code: null, timedOut: true })])
+      })
+    ).rejects.toThrow('timed out')
+    await expect(
+      probeMacSteamPid({ runner: createScriptedRunner([pgrep({ code: 2 })]) })
+    ).rejects.toThrow()
+    await expect(
+      probeMacSteamPid({
+        runner: createScriptedRunner([
+          { cmd: '/usr/bin/pgrep', error: { code: 'ENOENT' } }
+        ])
+      })
+    ).rejects.toThrow()
+  })
+})
+
+describe('createRestartDeps', () => {
+  test('timers and now come from the clock; the probe and open come from the instance', async () => {
+    const clock = createFakeClock(5000)
+    const isSteamRunning = jest.fn().mockResolvedValue(false)
+    const openUrlDetached = jest.fn()
+    const deps = createRestartDeps({
+      clock,
+      macSteamOffline: { isSteamRunning, openUrlDetached },
+      launchRunGameId: () => Promise.resolve()
+    })
+    expect(deps.now()).toBe(5000)
+    let slept = false
+    void deps.sleep(500).then(() => {
+      slept = true
+    })
+    clock.advance(499)
+    await Promise.resolve()
+    expect(slept).toBe(false)
+    clock.advance(1)
+    await Promise.resolve()
+    expect(slept).toBe(true)
+    deps.openUrlDetached('steam://exit')
+    expect(openUrlDetached).toHaveBeenCalledWith('steam://exit')
+    await expect(deps.isSteamRunning()).resolves.toBe(false)
   })
 })

@@ -17,7 +17,6 @@
  * depot completion branch is the single writer); Steam-performed installs never
  * restart Steam. Steam is never signalled or killed here.
  */
-import { spawn } from 'child_process'
 import { existsSync, statSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { parse } from '@node-steam/vdf'
@@ -25,9 +24,10 @@ import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendGameStatusUpdate } from 'backend/utils'
 import type { SteamStoresDeps } from './library/installRoot'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
+import type { Clock, ProcessRunner } from 'backend/process/types'
 import {
-  spawnOpenDetached,
-  MAC_STEAM_OFFLINE_OWED_FILE
+  MAC_STEAM_OFFLINE_OWED_FILE,
+  type MacSteamOffline
 } from './macSteamOffline'
 
 /** Graceful quit is bounded; Steam is never killed. */
@@ -189,45 +189,28 @@ export function decidePlayAdoption(input: {
  * Isolated half of the two-profile rule: env from createFakeHomeProfile().
  */
 export async function probeMacSteamPid(
+  deps: { runner: Pick<ProcessRunner, 'run'> },
   timeoutMs = 2000
 ): Promise<number | null> {
   const profile = createFakeHomeProfile({ prefix: 'gamelib-steam-pid-probe-' })
-  let timer: ReturnType<typeof setTimeout> | undefined
   try {
-    return await new Promise<number | null>((resolve, reject) => {
-      const child = spawn('/usr/bin/pgrep', ['-x', 'steam_osx'], {
-        env: profile.childEnv(),
-        stdio: ['ignore', 'pipe', 'ignore'],
-        windowsHide: true
-      })
-      child.unref()
-      let out = ''
-      child.stdout?.on('data', (chunk: Buffer) => {
-        out += chunk.toString()
-      })
-      timer = setTimeout(() => {
-        try {
-          child.kill('SIGKILL')
-        } catch {
-          // already gone
-        }
-        reject(new Error(`pgrep timed out after ${timeoutMs} ms`))
-      }, timeoutMs)
-      timer.unref()
-      child.on('error', reject)
-      child.on('close', (code) => {
-        if (code === 0) {
-          const pids = out
-            .split('\n')
-            .map((l) => parseInt(l.trim(), 10))
-            .filter((n) => Number.isInteger(n) && n > 0)
-          resolve(pids.length ? Math.min(...pids) : null)
-        } else if (code === 1) resolve(null)
-        else reject(new Error(`pgrep exited ${code}`))
-      })
+    const r = await deps.runner.run('/usr/bin/pgrep', ['-x', 'steam_osx'], {
+      env: profile.childEnv(),
+      replaceEnv: true,
+      stdin: '',
+      timeoutMs
     })
+    if (r.timedOut) throw new Error(`pgrep timed out after ${timeoutMs} ms`)
+    if (r.code === 0) {
+      const pids = r.stdout
+        .split('\n')
+        .map((l) => parseInt(l.trim(), 10))
+        .filter((n) => Number.isInteger(n) && n > 0)
+      return pids.length ? Math.min(...pids) : null
+    }
+    if (r.code === 1) return null
+    throw new Error(`pgrep exited ${String(r.code)}`)
   } finally {
-    if (timer) clearTimeout(timer)
     profile.dispose()
   }
 }
@@ -250,7 +233,17 @@ export interface RestartDeps {
   now: () => number
 }
 
-function defaultRestartDeps(): RestartDeps {
+/**
+ * The restart deps, built explicitly by the caller (no default): timers come
+ * from the clock (unref'd by default), the probe and the detached open from
+ * the boot-built Mac Steam instance.
+ */
+export function createRestartDeps(deps: {
+  clock: Clock
+  macSteamOffline: Pick<MacSteamOffline, 'isSteamRunning' | 'openUrlDetached'>
+  launchRunGameId: () => Promise<unknown>
+}): RestartDeps {
+  const { clock, macSteamOffline } = deps
   return {
     readRunningAppId: () => {
       /* eslint-disable @typescript-eslint/no-require-imports */
@@ -268,15 +261,9 @@ function defaultRestartDeps(): RestartDeps {
       /* eslint-enable @typescript-eslint/no-require-imports */
       return existsSync(join(appFolder, MAC_STEAM_OFFLINE_OWED_FILE))
     },
-    isSteamRunning: async () => {
-      /* eslint-disable @typescript-eslint/no-require-imports */
-      const { isMacSteamRunning } =
-        require('./bridge/drm/drmLaunchSetup') as typeof import('./bridge/drm/drmLaunchSetup')
-      /* eslint-enable @typescript-eslint/no-require-imports */
-      return isMacSteamRunning()
-    },
-    openUrlDetached: spawnOpenDetached,
-    launchRunGameId: () => Promise.resolve(),
+    isSteamRunning: () => macSteamOffline.isSteamRunning(),
+    openUrlDetached: (url) => macSteamOffline.openUrlDetached(url),
+    launchRunGameId: deps.launchRunGameId,
     emitStatus: (id) =>
       sendGameStatusUpdate({
         appName: id,
@@ -289,13 +276,13 @@ function defaultRestartDeps(): RestartDeps {
         runner: 'steam',
         status: 'done'
       }),
+    // Bounded by RESTART_QUIT_TIMEOUT_MS; clock timers are unref'd, so no handle
+    // holds the sidecar's event loop past stdin EOF.
     sleep: (ms) =>
       new Promise<void>((resolve) => {
-        // unref: bounded by RESTART_QUIT_TIMEOUT_MS, and no handle may hold
-        // the sidecar's event loop past stdin EOF.
-        setTimeout(resolve, ms).unref()
+        clock.setTimeout(resolve, ms)
       }),
-    now: Date.now
+    now: () => clock.now()
   }
 }
 
@@ -306,10 +293,8 @@ function defaultRestartDeps(): RestartDeps {
  */
 export async function restartMacSteamForAdoption(
   appId: string,
-  overrides: Partial<RestartDeps> = {}
+  deps: RestartDeps
 ): Promise<RestartResult> {
-  const deps: RestartDeps = { ...defaultRestartDeps(), ...overrides }
-
   const runningAppId = deps.readRunningAppId()
   if (runningAppId !== 0) {
     logWarning(

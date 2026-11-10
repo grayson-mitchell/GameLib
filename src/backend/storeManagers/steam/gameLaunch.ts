@@ -23,6 +23,7 @@ import { sendFrontendMessage } from '../../ipc'
 import type { SteamBridgeVerdict } from './stores'
 import {
   probeMacSteamPid,
+  createRestartDeps,
   readAcfSnapshot,
   readPendingAdoption,
   clearPendingAdoption,
@@ -221,7 +222,9 @@ export async function launch(
       pendingAdoptionStoreFrom(steamGame.deps)
     )
     if (record) {
-      const currentPid = await probeMacSteamPid().catch(() => null)
+      const currentPid = await probeMacSteamPid({
+        runner: steamGame.deps.runner
+      }).catch(() => null)
       const decision = decidePlayAdoption({
         record,
         currentPid,
@@ -233,9 +236,14 @@ export async function launch(
           pendingAdoptionStoreFrom(steamGame.deps)
         )
       } else if (decision === 'restart') {
-        const outcome = await restartMacSteamForAdoption(steamGame.appId, {
-          launchRunGameId: () => shell.openExternal(url, { activate: false })
-        })
+        const outcome = await restartMacSteamForAdoption(
+          steamGame.appId,
+          createRestartDeps({
+            clock: steamGame.deps.clock,
+            macSteamOffline: steamGame.deps.steamProcesses.macSteamOffline,
+            launchRunGameId: () => shell.openExternal(url, { activate: false })
+          })
+        )
         if (outcome.kind === 'relaunched') {
           clearPendingAdoption(
             steamGame.appId,

@@ -410,7 +410,9 @@ export async function uninstallUnadoptedMacNativeDirectly(
   )
   if (!record) return null
 
-  const currentPid = await probeMacSteamPid().catch(() => null)
+  const currentPid = await probeMacSteamPid({
+    runner: steamGame.deps.runner
+  }).catch(() => null)
   const decision = decidePlayAdoption({
     record,
     currentPid,
