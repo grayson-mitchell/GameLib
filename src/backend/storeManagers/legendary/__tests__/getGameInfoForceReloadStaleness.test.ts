@@ -144,11 +144,6 @@ jest.mock('../../../utils', () => ({
   axiosClient: { get: jest.fn() }
 }))
 
-// ── ../../../launcher mock ───────────────────────────────────────────────────────────────────
-jest.mock('../../../launcher', () => ({
-  callRunner: jest.fn()
-}))
-
 // ── backend/online_monitor mock ──────────────────────────────────────────────────────────────
 const mockIsOnline = jest.fn((..._args: unknown[]) => true)
 jest.mock('backend/online_monitor', () => ({

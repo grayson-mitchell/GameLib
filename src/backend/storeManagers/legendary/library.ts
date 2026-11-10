@@ -1,10 +1,10 @@
 import type { ManagerDeps } from 'backend/services/types'
+import type { CommandCallRunnerOptions } from 'backend/commandRunner'
 import { existsSync, mkdirSync, readFileSync, readdirSync } from 'graceful-fs'
 
 import {
   GameInfo,
   InstalledInfo,
-  CallRunnerOptions,
   ExecResult,
   InstallPlatform,
   LaunchOption
@@ -33,8 +33,6 @@ import {
   LogPrefix,
   logWarning
 } from 'backend/logger'
-import { gamesOverrideStore, installStore, libraryStore } from './stores'
-import { callRunner } from '../../launcher'
 import { dirname, join } from 'path'
 import { isOnline } from 'backend/online_monitor'
 import { LegendaryCommand } from './commands'
@@ -63,16 +61,20 @@ const library: Map<string, GameInfo> = new Map()
  * rebuilt from the Map: at boot the Map may be only partly loaded), then
  * pushes the updated entry live.
  */
-export function applyLegendaryMacArch(appName: string, verdict: '32' | '64') {
+export function applyLegendaryMacArch(
+  deps: Pick<LegendaryManagerDeps, 'stores'>,
+  appName: string,
+  verdict: '32' | '64'
+) {
   const cached = library.get(appName)
   if (cached) library.set(appName, { ...cached, mac_arch: verdict })
 
-  const stored = libraryStore.get('library', [])
+  const stored = deps.stores.legendary.libraryStore.get('library', [])
   const idx = stored.findIndex((g) => g.app_name === appName)
   const entry = stored[idx]
   if (entry) {
     stored[idx] = { ...entry, mac_arch: verdict }
-    libraryStore.set('library', stored)
+    deps.stores.legendary.libraryStore.set('library', stored)
   }
 
   const updated = library.get(appName) ?? entry
@@ -102,7 +104,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
             executable: i.executable,
             title: library.get(appName)?.title
           })),
-      applyLegendaryMacArch
+      (appName, verdict) => applyLegendaryMacArch(this.deps, appName, verdict)
     )
   }
 
@@ -112,7 +114,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
     const cached = this.gameCache.get(appName)
     if (cached) return cached
 
-    const game = new LegendaryGame(appName)
+    const game = new LegendaryGame(appName, this.deps)
     this.gameCache.set(appName, game)
     return game
   }
@@ -221,7 +223,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
       logError(error, LogPrefix.Legendary)
     }
     const arr = Array.from(library.values())
-    libraryStore.set('library', arr)
+    this.deps.stores.legendary.libraryStore.set('library', arr)
     logInfo(
       ['Game list updated, got', `${arr.length}`, 'games & DLCs'],
       LogPrefix.Legendary
@@ -230,7 +232,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
   }
 
   getListOfGames() {
-    return libraryStore.get('library', [])
+    return this.deps.stores.legendary.libraryStore.get('library', [])
   }
 
   /**
@@ -265,7 +267,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
   ): Promise<LegendaryInstallInfo> {
     const retries = options?.retries
 
-    const cache = installStore.get(appName)
+    const cache = this.deps.stores.legendary.installStore.get(appName)
     if (cache && cache.manifest) {
       logDebug('Using cached install info', LogPrefix.Legendary)
       return cache
@@ -289,7 +291,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
     try {
       const info: LegendaryInstallInfo = JSON.parse(res.stdout)
       if (info.manifest) {
-        installStore.set(appName, info)
+        this.deps.stores.legendary.installStore.set(appName, info)
         return info
       } else {
         const nextRetry = retries !== undefined ? retries - 1 : 3
@@ -728,7 +730,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
 
   async runRunnerCommand(
     command: LegendaryCommand,
-    options?: CallRunnerOptions
+    options?: CommandCallRunnerOptions
   ): Promise<ExecResult> {
     if (process.env.CI === 'e2e') {
       return runLegendaryCommandStub(command)
@@ -752,7 +754,7 @@ export default class LegendaryLibraryManager implements LibraryManager {
 
     const commandParts = this.commandToArgsArray(command)
 
-    return callRunner(
+    return this.deps.commandRunner.callRunner(
       commandParts,
       { name: 'legendary', logPrefix: LogPrefix.Legendary, bin, dir },
       options
@@ -760,7 +762,8 @@ export default class LegendaryLibraryManager implements LibraryManager {
   }
 
   async getGameOverride(): Promise<GameOverride> {
-    const cached = gamesOverrideStore.get('gamesOverride')
+    const cached =
+      this.deps.stores.legendary.gamesOverrideStore.get('gamesOverride')
     if (cached) {
       return cached
     }
@@ -771,7 +774,10 @@ export default class LegendaryLibraryManager implements LibraryManager {
       )
 
       if (response.data.game_overrides) {
-        gamesOverrideStore.set('gamesOverride', response.data.game_overrides)
+        this.deps.stores.legendary.gamesOverrideStore.set(
+          'gamesOverride',
+          response.data.game_overrides
+        )
       }
 
       return response.data.game_overrides

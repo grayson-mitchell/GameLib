@@ -12,7 +12,7 @@ import {
 } from 'common/types'
 import { GameConfig } from '../../game_config'
 import { GlobalConfig } from '../../config'
-import { libraryManagerMap } from '..'
+import type { LegendaryManagerDeps } from './library'
 import { checkInstalledMacArch } from 'backend/macArch/recovery'
 import {
   downloadFile,
@@ -20,8 +20,7 @@ import {
   moveOnWindows,
   sendGameStatusUpdate,
   sendProgressUpdate,
-  shutdownWine,
-  spawnAsync
+  shutdownWine
 } from '../../utils'
 import {
   logError,
@@ -31,21 +30,10 @@ import {
   createGameLogWriter
 } from 'backend/logger'
 import {
-  prepareLaunch,
-  prepareWineLaunch,
-  setupEnvVars,
-  setupWrapperEnvVars,
-  setupWrappers,
-  launchCleanup,
-  getKnownFixesEnvVariables,
-  getWinePath
-} from '../../launcher'
-import {
   addShortcuts as addShortcutsUtil,
   removeShortcuts as removeShortcutsUtil
 } from '../../shortcuts/shortcuts/shortcuts'
 import { join } from 'path'
-import { gameInfoStore } from './stores'
 import { removeNonSteamGame } from '../../shortcuts/nonesteamgame/nonesteamgame'
 import shlex from 'shlex'
 import { legendaryLaunchArgumentFields } from '../runnerLaunchArgv'
@@ -72,7 +60,6 @@ import { getUmuId } from 'backend/wiki_game_info/umu/utils'
 import thirdParty from './thirdParty'
 import { Path } from 'backend/schemas'
 import { mkdirSync } from 'fs'
-import { configStore } from 'backend/constants/key_value_stores'
 import { epicRedistPath, legendaryInstalled } from './constants'
 import { isCLINoGui, isMac, isWindows } from 'backend/constants/environment'
 import { killTracked } from 'backend/trackedChildren'
@@ -85,7 +72,10 @@ import { engineKeyFor } from 'backend/engine/gameKey'
 export default class LegendaryGame implements Game {
   private readonly appName: LegendaryAppName
 
-  constructor(appName: LegendaryAppName) {
+  constructor(
+    appName: LegendaryAppName,
+    private readonly deps: LegendaryManagerDeps
+  ) {
     this.appName = appName
   }
 
@@ -95,7 +85,7 @@ export default class LegendaryGame implements Game {
    * @returns GameInfo
    */
   getGameInfo(): GameInfo {
-    const info = libraryManagerMap['legendary'].getGameInfo(this.appName)
+    const info = this.deps.libraryManagers.legendary.getGameInfo(this.appName)
     if (!info) {
       logError(
         [
@@ -167,7 +157,7 @@ export default class LegendaryGame implements Game {
   }
 
   private async getExtraFromAPI(slug: string): Promise<ExtraInfo | null> {
-    let lang = configStore.get('language', '')
+    let lang = this.deps.stores.kvs.configStore.get('language', '')
     if (lang === 'pt') {
       lang = 'pt-BR'
     }
@@ -304,7 +294,8 @@ export default class LegendaryGame implements Game {
     const { namespace, title } = this.getGameInfo()
     if (namespace === undefined) return this.emptyExtraInfo
 
-    const cachedExtraInfo = gameInfoStore.get(namespace)
+    const cachedExtraInfo =
+      this.deps.stores.legendary.gameInfoStore.get(namespace)
     if (cachedExtraInfo) {
       return cachedExtraInfo
     }
@@ -324,7 +315,7 @@ export default class LegendaryGame implements Game {
 
     // if we have data, store it and return
     if (extraData) {
-      gameInfoStore.set(namespace, extraData)
+      this.deps.stores.legendary.gameInfoStore.set(namespace, extraData)
       return extraData
     } else {
       logError('Error Getting Info from Epic API', LogPrefix.Legendary)
@@ -375,7 +366,7 @@ export default class LegendaryGame implements Game {
       return { status: 'error', error }
     }
 
-    await libraryManagerMap['legendary'].changeGameInstallPath(
+    await this.deps.libraryManagers.legendary.changeGameInstallPath(
       this.appName,
       moveResult.installPath
     )
@@ -504,7 +495,7 @@ export default class LegendaryGame implements Game {
     })
     const { maxWorkers, downloadNoHttps } = GlobalConfig.get().getSettings()
     const installPlatform = this.getGameInfo().install.platform!
-    const info = await libraryManagerMap['legendary'].getInstallInfo(
+    const info = await this.deps.libraryManagers.legendary.getInstallInfo(
       this.appName,
       installPlatform
     )
@@ -531,12 +522,15 @@ export default class LegendaryGame implements Game {
       'legendary',
       'update'
     )
-    const res = await libraryManagerMap['legendary'].runRunnerCommand(command, {
-      abortId: this.appName,
-      logWriters: [updateLogWriter],
-      onOutput,
-      logMessagePrefix: `Updating ${this.appName}`
-    })
+    const res = await this.deps.libraryManagers.legendary.runRunnerCommand(
+      command,
+      {
+        abortId: this.appName,
+        logWriters: [updateLogWriter],
+        onOutput,
+        logMessagePrefix: `Updating ${this.appName}`
+      }
+    )
 
     sendGameStatusUpdate({
       appName: this.appName,
@@ -597,7 +591,7 @@ export default class LegendaryGame implements Game {
       return { status: 'error' }
     }
     const { maxWorkers, downloadNoHttps } = GlobalConfig.get().getSettings()
-    const info = await libraryManagerMap['legendary'].getInstallInfo(
+    const info = await this.deps.libraryManagers.legendary.getInstallInfo(
       this.appName,
       platformToInstall
     )
@@ -629,21 +623,27 @@ export default class LegendaryGame implements Game {
       'legendary',
       'install'
     )
-    let res = await libraryManagerMap['legendary'].runRunnerCommand(command, {
-      abortId: this.appName,
-      logWriters: [installLogWriter],
-      onOutput,
-      logMessagePrefix: `Installing ${this.appName}`
-    })
+    let res = await this.deps.libraryManagers.legendary.runRunnerCommand(
+      command,
+      {
+        abortId: this.appName,
+        logWriters: [installLogWriter],
+        onOutput,
+        logMessagePrefix: `Installing ${this.appName}`
+      }
+    )
 
     // try to run the install again with higher memory limit
     if (res.stderr.includes('MemoryError:')) {
       command['--max-shared-memory'] = PositiveInteger.parse(5000)
-      res = await libraryManagerMap['legendary'].runRunnerCommand(command, {
-        abortId: this.appName,
-        logWriters: [installLogWriter],
-        onOutput
-      })
+      res = await this.deps.libraryManagers.legendary.runRunnerCommand(
+        command,
+        {
+          abortId: this.appName,
+          logWriters: [installLogWriter],
+          onOutput
+        }
+      )
     }
 
     if (res.abort) {
@@ -667,8 +667,8 @@ export default class LegendaryGame implements Game {
     )
 
     if (isMac && LegendaryPlatform.parse(platformToInstall) === 'Mac') {
-      libraryManagerMap['legendary'].refreshInstalled()
-      const installed = libraryManagerMap['legendary'].getGameInfo(
+      this.deps.libraryManagers.legendary.refreshInstalled()
+      const installed = this.deps.libraryManagers.legendary.getGameInfo(
         this.appName,
         true
       )?.install
@@ -683,7 +683,8 @@ export default class LegendaryGame implements Game {
             installPath,
             executable: installed?.executable,
             title: gameInfo.title,
-            apply: applyLegendaryMacArch,
+            apply: (appName, verdict) =>
+              applyLegendaryMacArch(this.deps, appName, verdict),
             prompt: true
           })
         )
@@ -719,7 +720,7 @@ export default class LegendaryGame implements Game {
     }
 
     if (isWindows) {
-      const process = await spawnAsync(installerPath, [
+      const process = await this.deps.spawnAsync(installerPath, [
         'EAX_LAUNCH_CLIENT=0',
         'IGNORE_INSTALLED=1'
       ])
@@ -760,7 +761,7 @@ export default class LegendaryGame implements Game {
     }
 
     if (isWindows) {
-      const process = await spawnAsync(installerPath, ['/S'])
+      const process = await this.deps.spawnAsync(installerPath, ['/S'])
 
       if (process.code !== null && process.code === 3) {
         return { status: 'abort' }
@@ -785,10 +786,13 @@ export default class LegendaryGame implements Game {
       '-y': true
     }
 
-    const res = await libraryManagerMap['legendary'].runRunnerCommand(command, {
-      abortId: this.appName,
-      logMessagePrefix: `Uninstalling ${this.appName}`
-    })
+    const res = await this.deps.libraryManagers.legendary.runRunnerCommand(
+      command,
+      {
+        abortId: this.appName,
+        logMessagePrefix: `Uninstalling ${this.appName}`
+      }
+    )
 
     if (res.error) {
       logError(
@@ -796,7 +800,7 @@ export default class LegendaryGame implements Game {
         LogPrefix.Legendary
       )
     } else if (!res.abort) {
-      libraryManagerMap['legendary'].installState(this.appName, false)
+      this.deps.libraryManagers.legendary.installState(this.appName, false)
       await removeShortcutsUtil(this)
       await removeNonSteamGame(this)
     }
@@ -825,11 +829,14 @@ export default class LegendaryGame implements Game {
       'legendary',
       'repair'
     )
-    const res = await libraryManagerMap['legendary'].runRunnerCommand(command, {
-      abortId: this.appName,
-      logWriters: [repairLogWriter],
-      logMessagePrefix: `Repairing ${this.appName}`
-    })
+    const res = await this.deps.libraryManagers.legendary.runRunnerCommand(
+      command,
+      {
+        abortId: this.appName,
+        logWriters: [repairLogWriter],
+        logMessagePrefix: `Repairing ${this.appName}`
+      }
+    )
 
     if (res.error) {
       logError(
@@ -859,10 +866,13 @@ export default class LegendaryGame implements Game {
       'legendary',
       'import'
     )
-    const res = await libraryManagerMap['legendary'].runRunnerCommand(command, {
-      abortId: this.appName,
-      logWriters: [logWriter]
-    })
+    const res = await this.deps.libraryManagers.legendary.runRunnerCommand(
+      command,
+      {
+        abortId: this.appName,
+        logWriters: [logWriter]
+      }
+    )
     void this.addShortcuts().catch((error) =>
       logWarning(
         ['Could not add shortcuts for', this.appName, error],
@@ -902,11 +912,14 @@ export default class LegendaryGame implements Game {
     }
 
     let fullOutput = ''
-    const res = await libraryManagerMap['legendary'].runRunnerCommand(command, {
-      abortId: this.appName,
-      logMessagePrefix: `Syncing saves for ${this.getGameInfo().title}`,
-      onOutput: (output) => (fullOutput += output)
-    })
+    const res = await this.deps.libraryManagers.legendary.runRunnerCommand(
+      command,
+      {
+        abortId: this.appName,
+        logMessagePrefix: `Syncing saves for ${this.getGameInfo().title}`,
+        onOutput: (output) => (fullOutput += output)
+      }
+    )
 
     if (res.error) {
       logError(
@@ -937,10 +950,14 @@ export default class LegendaryGame implements Game {
       gameModeBin,
       gameScopeCommand,
       offlineMode
-    } = await prepareLaunch(gameSettings, logWriter, gameInfo)
+    } = await this.deps.launcher.prepareLaunch(
+      gameSettings,
+      logWriter,
+      gameInfo
+    )
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
-      launchCleanup()
+      this.deps.launcher.launchCleanup()
       showDialogBoxModalAuto({
         title: t('box.error.launchAborted', 'Launch aborted'),
         message: launchPrepFailReason!,
@@ -950,13 +967,20 @@ export default class LegendaryGame implements Game {
     }
 
     const languageCode =
-      gameSettings.language || configStore.get('language', '')
+      gameSettings.language ||
+      this.deps.stores.kvs.configStore.get('language', '')
 
     let commandEnv = {
       ...process.env,
-      ...setupWrapperEnvVars({ appName: this.appName, appRunner: 'legendary' }),
-      ...setupEnvVars(gameSettings, gameInfo.install.install_path),
-      ...getKnownFixesEnvVariables(this.appName, 'legendary')
+      ...this.deps.launcher.setupWrapperEnvVars({
+        appName: this.appName,
+        appRunner: 'legendary'
+      }),
+      ...this.deps.launcher.setupEnvVars(
+        gameSettings,
+        gameInfo.install.install_path
+      ),
+      ...this.deps.launcher.getKnownFixesEnvVariables(this.appName, 'legendary')
     }
 
     // Use the wrapper EXE to launch games.
@@ -969,11 +993,12 @@ export default class LegendaryGame implements Game {
       } else {
         // on linux and mac, we copy the fake exe
         const fakeExeWinPath = 'C:\\windows\\command\\EpicGamesLauncher.exe'
-        const fakeEpicExePathInPrefix = await getWinePath({
-          path: fakeExeWinPath,
-          gameSettings,
-          variant: 'unix'
-        })
+        const fakeEpicExePathInPrefix =
+          await this.deps.commandRunner.getWinePath({
+            path: fakeExeWinPath,
+            gameSettings,
+            variant: 'unix'
+          })
 
         // we copy the file inside the prefix to avoid permission issues
         if (!existsSync(fakeEpicExePathInPrefix))
@@ -982,7 +1007,7 @@ export default class LegendaryGame implements Game {
       }
     }
 
-    const wrappers = setupWrappers(
+    const wrappers = this.deps.launcher.setupWrappers(
       gameSettings,
       mangoHudCommand,
       gameModeBin,
@@ -999,7 +1024,7 @@ export default class LegendaryGame implements Game {
         success: wineLaunchPrepSuccess,
         failureReason: wineLaunchPrepFailReason,
         envVars: wineEnvVars
-      } = await prepareWineLaunch(this, logWriter)
+      } = await this.deps.launcher.prepareWineLaunch(this, logWriter)
       if (!wineLaunchPrepSuccess) {
         logWriter.logError(['Launch aborted:', wineLaunchPrepFailReason])
         if (wineLaunchPrepFailReason) {
@@ -1074,18 +1099,16 @@ export default class LegendaryGame implements Game {
       status: 'playing'
     })
 
-    const { error } = await libraryManagerMap['legendary'].runRunnerCommand(
-      command,
-      {
+    const { error } =
+      await this.deps.libraryManagers.legendary.runRunnerCommand(command, {
         abortId: this.appName,
         env: commandEnv,
         wrappers: wrappers,
         logMessagePrefix: `Launching ${gameInfo.title}`,
         logWriters: gameSettings.verboseLogs ? [logWriter] : []
-      }
-    )
+      })
 
-    launchCleanup(rpcClient)
+    this.deps.launcher.launchCleanup(rpcClient)
 
     return !error
   }
@@ -1107,7 +1130,7 @@ export default class LegendaryGame implements Game {
   async forceUninstall() {
     // Modify Legendary installed.json file:
     try {
-      await libraryManagerMap['legendary'].runRunnerCommand(
+      await this.deps.libraryManagers.legendary.runRunnerCommand(
         {
           subcommand: 'uninstall',
           appName: this.appName,
