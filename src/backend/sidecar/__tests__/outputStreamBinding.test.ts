@@ -12,8 +12,8 @@
  * stream, so subsequent writes are silently discarded rather than printed.
  *
  * Three real producers get in ahead of the bind, so this is not a
- * test-only concern: `bootstrap.ts:40`'s `import './handlers'` runs at module
- * scope; `init()` floats `applyMigrations()` above its own `startRpcServer()`
+ * test-only concern: the `register-handlers` boot step (handler registration) runs at
+ * boot, ahead of the bind; `init()` floats `applyMigrations()` above its own `startRpcServer()`
  * call and a migration writes `migrationsStore.appliedMigrations`; and test
  * setup may touch a store before starting its sidecar.
  *

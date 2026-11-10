@@ -488,6 +488,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
     const SEND_CHANNELS_34_4_1 = ['humbleStopLogin']
 
     it('REQ-34.4.1-02/-03/-04/-05 registerHumbleLoginFlows() has registered all 4 channels it owns, with the correct kind, both directions', () => {
+      boot() // registration is the 'register-handlers' boot step (D-08), not an import effect
       for (const channel of HANDLE_CHANNELS_34_4_1) {
         expect(isolationHandlerRegistry.has(channel)).toBe(true)
         expect((isolationListenerRegistry.get(channel) ?? []).length).toBe(0)
@@ -504,6 +505,7 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
     })
 
     it('REQ-34.4-07/08/09 registerHumbleFlows() has registered all 16 Humble channels this slice owns: 15 as ipcMain.handle (incl. humbleRunValidation, dev signal), 1 (humbleDisconnect) as ipcMain.on exactly once', () => {
+      boot() // registration is the 'register-handlers' boot step (D-08), not an import effect
       const HANDLE_CHANNELS = [
         'humbleGetUserInfo',
         'humbleCheckHealth',

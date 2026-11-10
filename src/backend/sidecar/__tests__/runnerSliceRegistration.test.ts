@@ -380,7 +380,7 @@ describe('handlers.ts wiring — imported but never called guard', () => {
     'T-34.5-11 %s is both imported and called in handlers.ts',
     (name) => {
       const importPattern = new RegExp(`import\\s*{\\s*${name}\\s*}\\s*from`)
-      const callPattern = new RegExp(`^${name}\\(\\)`, 'm')
+      const callPattern = new RegExp(`^\\s*${name}\\(\\)`, 'm')
       expect(importPattern.test(handlersSource)).toBe(true)
       expect(callPattern.test(handlersSource)).toBe(true)
     }

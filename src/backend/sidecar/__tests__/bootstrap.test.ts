@@ -76,7 +76,8 @@ jest.mock('../../storeManagers/steam/macSteamOffline', () => ({
 import { defined } from 'backend/testUtils/indexed'
 import { tmpdir } from 'os'
 import { isAbsolute, join, relative, resolve } from 'path'
-import { mkdtempSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync } from 'node:fs'
+import { createFakeHomeProfile } from '../../testUtils/fakeHomeProfile'
 import { PassThrough } from 'node:stream'
 import { bootFresh } from './helpers/sidecarHarness'
 import { getLogFilePath } from '../../logger/paths'
@@ -573,6 +574,49 @@ describe('sidecar bootstrap (headless boot)', () => {
       expect(store.get_nodefault('refreshToken')).toBeUndefined()
       expect(applyStoreWriteSpy).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe('register-handlers boot step (D-08, C-03)', () => {
+  it('importing ../handlers alone registers nothing; the boot step registers health', () => {
+    jest.resetModules()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('../handlers')
+    expect(
+      fresh<typeof import('../../platform')>(
+        '../../platform'
+      ).handlerRegistry.has('health')
+    ).toBe(false)
+
+    bootFresh()
+    expect(
+      fresh<typeof import('../../platform')>(
+        '../../platform'
+      ).handlerRegistry.has('health')
+    ).toBe(true)
+  })
+
+  it('legacy-zoom cleanup removes seeded data under ctx.paths.userData, not the platform getPath value', async () => {
+    const profile = createFakeHomeProfile({ prefix: 'gamelib-zoom-ctx-' })
+    try {
+      const ctxUserData = join(profile.root, 'ctx-userData')
+      const seeded = join(ctxUserData, 'zoom_store')
+      mkdirSync(seeded, { recursive: true })
+
+      bootFresh({ context: { paths: { userData: ctxUserData } } })
+      expect(
+        fresh<typeof import('../../platform')>('../../platform').app.getPath(
+          'userData'
+        )
+      ).not.toBe(ctxUserData)
+
+      for (let turn = 0; turn < 50 && existsSync(seeded); turn++) {
+        await new Promise((resolve) => setImmediate(resolve))
+      }
+      expect(existsSync(seeded)).toBe(false)
+    } finally {
+      profile.dispose()
+    }
   })
 })
 

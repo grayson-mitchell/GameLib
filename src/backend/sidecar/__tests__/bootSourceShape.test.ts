@@ -40,6 +40,7 @@ describe('bootstrap.ts source shape (D-08)', () => {
       'logger',
       'migrations',
       'i18n',
+      'register-handlers',
       'rpc-server',
       'online-monitor',
       'rosetta',
@@ -51,6 +52,29 @@ describe('bootstrap.ts source shape (D-08)', () => {
     expect(positions.every((position) => position >= 0)).toBe(true)
     expect([...positions].sort((a, b) => a - b)).toEqual(positions)
     expect(new Set(names).size).toBe(names.length)
+  })
+})
+
+describe('register-handlers and legacy-zoom-cleanup source shape (D-08, C-03)', () => {
+  it('handlers.ts has no top-level registration statement', () => {
+    const stripped = stripSourceComments(
+      readFileSync(join(__dirname, '..', 'handlers.ts'), 'utf-8')
+    )
+    const bad = stripped
+      .split('\n')
+      .filter((l) =>
+        /^(ipcMain\.handle|register[A-Z]\w*\(|ensureStoresRegistered\()/.test(l)
+      )
+    expect(bad).toEqual([])
+  })
+
+  it('the legacy-zoom-cleanup step reads ctx.paths.userData, not getPath', () => {
+    expect(readFileSync(BOOTSTRAP, 'utf-8')).toContain(
+      'removeLegacyZoomData(ctx.paths.userData)'
+    )
+    expect(strippedBootstrap).not.toMatch(
+      /removeLegacyZoomData\(platformApi\.app\.getPath/
+    )
   })
 })
 

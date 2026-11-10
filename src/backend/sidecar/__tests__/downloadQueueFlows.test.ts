@@ -537,6 +537,20 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
   // unreliable here (module docstring above explains why: resetMocks:true
   // wipes a boot-time-only call's history before the first test body runs) —
   // read the NEW registration module's own source instead, comments stripped.
+  it('C-04: the boot-resume notice reaches the context log synchronously during boot, unchanged text', () => {
+    const { testContext } = boot()
+
+    expect(
+      testContext.log.lines.filter(
+        (l) =>
+          l.level === 'info' &&
+          l.msg.startsWith(
+            'sidecar: boot-time download-queue auto-resume (the startup-flagged initQueue call) is ENABLED as of Phase 35 plan 11'
+          )
+      )
+    ).toHaveLength(1)
+  })
+
   it('D-05 source gate: downloadQueueFlowRegistration.ts never calls initQueue(true)/isStartup=true, and logs the deliberate boot-resume disablement', () => {
     const source = readFileSync(
       join(__dirname, '../downloadQueueFlowRegistration.ts'),
@@ -548,7 +562,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
     expect(stripped).not.toMatch(/isStartup\s*[:=]\s*true/)
     expect(stripped).not.toMatch(/setTimeout\(\s*initQueue/)
     // The disablement itself must be logged, never silent (D-04/D-05 house style).
-    expect(stripped).toMatch(/logInfo/)
+    expect(stripped).toMatch(/log\.info/)
     expect(source.toLowerCase()).toMatch(/auto-resume/)
   })
 

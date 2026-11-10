@@ -85,12 +85,15 @@ import {
   STORE_FETCH_CHANNEL
 } from 'common/types/sidecarTransport'
 
-// Importing '../handlers' registers every invoke handler (including the
+// `registerHandlers()` registers every invoke handler (including the
 // store-layer ones under test) onto platformApi's `handlerRegistry`, and
-// its own module-scope call to `registerSteamFlows()` /
-// `ensureStoresRegistered()` constructs every store this suite exercises —
-// the same real, unmodified code path production runs.
-import '../handlers'
+// its own `registerSteamFlows()` / `ensureStoresRegistered()` calls construct
+// every store this suite exercises — the same real, unmodified code path
+// production runs (the 'register-handlers' boot step).
+import { registerHandlers } from '../handlers'
+import { createCaptureLog } from '../../testUtils/captureLog'
+
+registerHandlers({ log: createCaptureLog() })
 
 import { configStore as steamConfigStore } from '../../storeManagers/steam/stores'
 import { configStore as humbleConfigStore } from '../../humble/stores'
