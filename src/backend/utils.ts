@@ -188,7 +188,8 @@ async function isEpicServiceOffline(
 
   return checkEpicServiceOffline(
     {
-      fetchComponents: async () => (await axiosClient.get(epicStatusApi)).data,
+      fetchComponents: async () =>
+        (await axiosClient.get<unknown>(epicStatusApi)).data,
       notify: () => notification.show(),
       onError: (error) =>
         logError(
