@@ -42,7 +42,7 @@ result: pass — verified at the 72-03 checkpoint on 2026-11-08 (`gh api repos/g
 ### 6. Windows: normal quit reaps the sidecar tree
 
 expected: (D-20) Launch GameLib, start a legendary or gogdl operation (or a game), quit the app, and Task Manager shows no legendary.exe, gogdl.exe, nile, powershell.exe or game child left running.
-result: pending (operator's Windows PC)
+result: pass. Operator's Windows PC, 2026-11-11, `pnpm tauri:dev` at 076fd3044: with GOG Balrum (1769415595) running under gogdl, a normal quit left no gamelib-sidecar, gogdl or Balrum process behind.
 
 ### 7. Windows: ending the shell reaps the sidecar tree
 

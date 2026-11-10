@@ -15,7 +15,7 @@ updated: 2026-11-11T17:00:00+13:00
 ### 1. Windows: normal quit reaps the sidecar tree
 
 expected: (D-20, 72-UAT item 6) Start a legendary/gogdl operation or a game, quit GameLib, and Task Manager shows no legendary.exe, gogdl.exe, nile, powershell.exe or game child left running.
-result: pending (operator's Windows PC)
+result: pass. See 72-UAT item 6 (2026-11-11): a normal quit with Balrum running under gogdl left no sidecar, gogdl or game process behind.
 
 ### 2. Windows: ending the shell process reaps the sidecar tree
 
@@ -35,9 +35,9 @@ result: pending (dev-mode run relaunched process and sidecar; blank window attri
 ## Summary
 
 total: 4
-passed: 2
+passed: 3
 issues: 0
-pending: 2
+pending: 1
 skipped: 0
 blocked: 0
 
