@@ -4,8 +4,9 @@
  * behaviour is unchanged; consumers convert once onto the slices and each owner plan later
  * swaps its facade for the real factory.
  *
- * Deletion schedule: command runner (plan 05), spawnAsync and quit (plan 06), managers and
- * launcher (plan 23, with the legacyManagerDeps added by plan 08), stores (plan 25). The file
+ * Deletion schedule: command runner (plan 05), spawnAsync and quit (plan 06), tools and spawn
+ * shims (plan 22f), managers and launcher (plan 23, with the legacyManagerDeps added by plan 08),
+ * stores (plan 25). The file
  * is deleted by plan 25 with the last one.
  *
  * Everything is inside a function: no top-level `let`/`const` binding for the ratchet.
@@ -36,8 +37,6 @@ import * as launcherModule from 'backend/launcher'
 import * as utilsModule from 'backend/utils'
 import { getLegacyBootQueue } from 'backend/downloadmanager/downloadqueue'
 import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
-import { createTools } from 'backend/tools'
-import type { Tools } from 'backend/tools'
 import type { Launcher, ManagerDeps, StoreManagers, Stores } from './types'
 
 export function buildStoresFacade(): Stores {
@@ -145,21 +144,4 @@ export function legacyManagerDeps(): ManagerDeps {
     spawnAsync: (...a) => utilsModule.spawnAsync(...a),
     getDownloadQueue: () => getLegacyBootQueue()
   }
-}
-
-/**
- * TEMPORARY (plan 12, deleted by plan 23): the tool wrappers for callers that do not hold deps
- * yet (engineSwitch default, bottle primitives, the Steam known-fix applier). Built per call
- * from the legacy deps; the tools' state is module-level, so a fresh wrapper shares it.
- */
-export function legacyTools(): Tools {
-  const deps = legacyManagerDeps()
-  return createTools({
-    get managers() {
-      return { library: deps.libraryManagers }
-    },
-    commandRunner: deps.commandRunner,
-    launcher: deps.launcher,
-    spawnAsync: deps.spawnAsync
-  })
 }
