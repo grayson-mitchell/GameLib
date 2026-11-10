@@ -48,6 +48,31 @@ fn owned_label_release(labels: &mut Vec<String>, label: &str) -> bool {
     labels.len() != before && labels.is_empty()
 }
 
+/// Top-left (physical px) that centers a child of `child_size` over a parent window, clamped to
+/// the parent's top-left on any axis where the child is larger (main's 900x600 minimum is shorter
+/// than the login window, so that case is live). All inputs are PHYSICAL pixels: both windows'
+/// identical invisible borders cancel out. Arithmetic is in i64 and never wraps.
+fn center_over_parent(
+    parent_pos: (i32, i32),
+    parent_size: (u32, u32),
+    child_size: (u32, u32),
+) -> (i32, i32) {
+    let axis = |parent: i32, parent_len: u32, child_len: u32| -> i32 {
+        let offset = if parent_len > child_len {
+            (i64::from(parent_len) - i64::from(child_len)) / 2
+        } else {
+            // Child does not fit: clamp to the parent's top-left so the title bar and close
+            // button are never above or left of main.
+            0
+        };
+        i32::try_from(i64::from(parent) + offset).unwrap_or(parent)
+    };
+    (
+        axis(parent_pos.0, parent_size.0, child_size.0),
+        axis(parent_pos.1, parent_size.1, child_size.1),
+    )
+}
+
 /// Try to make `main` the owner of the login window being built. On success returns the builder
 /// with the native owner set, `skip_taskbar(true)` and `visible(false)` (built hidden so it can be
 /// positioned before it ever paints, with no screen-center flash), plus main. Any miss returns the
@@ -99,8 +124,6 @@ pub(crate) fn present_owned_login_window(
     owner: &tauri::WebviewWindow,
     label: &str,
 ) {
-    #[cfg(not(windows))]
-    let _ = owner;
     // 1. Register.
     with_owned_labels(|labels| owned_label_register(labels, label));
     // 2. Second close listener. Aliased so it is not mistaken for the main window's quit-routing
@@ -121,7 +144,31 @@ pub(crate) fn present_owned_login_window(
             }
         });
     }
-    // (positioning goes here)
+    // Center over main. Wayland reports `outer_position` as unsupported; then skip, still show,
+    // and let `transient_for` have the compositor place it over main.
+    match (
+        owner.outer_position(),
+        owner.outer_size(),
+        window.outer_size(),
+    ) {
+        (Ok(owner_pos), Ok(owner_size), Ok(own_size)) => {
+            let (x, y) = center_over_parent(
+                (owner_pos.x, owner_pos.y),
+                (owner_size.width, owner_size.height),
+                (own_size.width, own_size.height),
+            );
+            if let Err(e) = window.set_position(tauri::PhysicalPosition::new(x, y)) {
+                shell_eprintln!(
+                    "[shell] WARN: humble_login_open: '{label}' owned window position failed: {e}"
+                );
+            }
+        }
+        _ => {
+            shell_eprintln!(
+                "[shell] humble_login_open: '{label}' owner geometry unavailable; not centering over main"
+            );
+        }
+    }
     // 3. Show. A window that is not on screen must never leave main disabled.
     if let Err(e) = window.show() {
         shell_eprintln!("[shell] WARN: humble_login_open: '{label}' owned window show failed: {e}");
@@ -134,7 +181,30 @@ pub(crate) fn present_owned_login_window(
             "[shell] WARN: humble_login_open: '{label}' owned window focus failed: {e}"
         );
     }
-    // (Linux GTK modal goes here)
+    // Linux GTK modal: best effort, fire-and-forget (never blocks this worker). GTK drops the
+    // modal grab when the window is destroyed, so there is no Linux release step beyond the
+    // re-focus in `release_owned_login_modal`. Mirrors the `store_embed::layout` GTK pattern.
+    #[cfg(target_os = "linux")]
+    {
+        use gtk::prelude::*;
+        let label_for_modal = label.to_string();
+        if let Err(e) = window.with_webview(move |pw| {
+            let widget: gtk::Widget = pw.inner().upcast();
+            match widget.toplevel().and_then(|t| t.downcast::<gtk::Window>().ok()) {
+                Some(top) => {
+                    top.set_modal(true);
+                    shell_eprintln!("[shell] humble_login_open: '{label_for_modal}' modal set");
+                }
+                None => shell_eprintln!(
+                    "[shell] WARN: humble_login_open: '{label_for_modal}' modal not set (no GTK toplevel)"
+                ),
+            }
+        }) {
+            shell_eprintln!(
+                "[shell] WARN: humble_login_open: '{label}' modal not set (with_webview failed: {e})"
+            );
+        }
+    }
     // 5. Windows: disable main on the main thread, only while the label is still registered. The
     // release listener also runs on the main thread, so a close that landed first has already
     // removed the label and the disable is skipped.
@@ -218,6 +288,57 @@ mod tests {
         owned_label_register(&mut labels, "b");
         assert!(!owned_label_release(&mut labels, "a"));
         assert!(owned_label_release(&mut labels, "b"));
+    }
+
+    #[test]
+    fn centers_a_smaller_child_over_the_parent() {
+        assert_eq!(
+            center_over_parent((100, 50), (1280, 800), (480, 630)),
+            (500, 135)
+        );
+    }
+
+    #[test]
+    fn an_odd_size_difference_floors() {
+        assert_eq!(center_over_parent((0, 0), (101, 101), (50, 50)), (25, 25));
+    }
+
+    #[test]
+    fn equal_sizes_return_the_parent_origin() {
+        assert_eq!(
+            center_over_parent((40, 70), (600, 500), (600, 500)),
+            (40, 70)
+        );
+    }
+
+    #[test]
+    fn a_child_taller_than_the_parent_keeps_its_title_bar_on_the_parent_top() {
+        let (x, y) = center_over_parent((100, 50), (900, 600), (480, 700));
+        assert_eq!(y, 50);
+        assert_eq!(x, 100 + (900 - 480) / 2);
+    }
+
+    #[test]
+    fn a_child_wider_than_the_parent_keeps_its_left_edge_on_the_parent_left() {
+        let (x, y) = center_over_parent((100, 50), (400, 800), (480, 630));
+        assert_eq!(x, 100);
+        assert_eq!(y, 50 + (800 - 630) / 2);
+    }
+
+    #[test]
+    fn a_negative_origin_parent_centers_correctly() {
+        assert_eq!(
+            center_over_parent((-1920, -200), (1920, 1080), (480, 630)),
+            (-1200, 25)
+        );
+    }
+
+    #[test]
+    fn extreme_values_neither_panic_nor_wrap() {
+        let (x, y) = center_over_parent((i32::MAX - 10, 0), (u32::MAX, 10), (1, 1));
+        assert!(i64::from(x) <= i64::from(i32::MAX));
+        assert!(i64::from(x) >= i64::from(i32::MIN));
+        assert_eq!(y, 4);
     }
 
     #[test]
