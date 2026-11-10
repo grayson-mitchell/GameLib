@@ -35,7 +35,11 @@ Two alternatives were built and rejected:
   and focused.
 - **Interaction:** no swipe to dismiss, no backdrop, no focus trap.
 
-## CSS Patterns (as shipped, `SteamEngineLaunchNotice/index.scss`)
+## CSS Patterns (as shipped)
+
+The region, slot and toast surface live in `NoticeStack/index.scss` and are shared by every
+notice. The icon, title, body and dismiss styles live in `SteamEngineLaunchNotice/index.scss`.
+Per-theme tokens were added in quick `261110-nwy`.
 
 ```scss
 // One fixed bottom-right stack for every notice.
@@ -49,9 +53,10 @@ Two alternatives were built and rejected:
 .toast {
   pointer-events: auto; position: relative; overflow: hidden;
   display: flex; align-items: flex-start; gap: var(--space-sm); padding: var(--space-md);
-  background: var(--background-darker, var(--body-background));
+  background: var(--background, var(--background-darker, var(--body-background)));
   border-radius: 10px;
-  border-inline-start: 3px solid var(--status-warning);
+  border: 1px solid var(--input-background, var(--border-color));  // must come first:
+  border-inline-start: 3px solid var(--status-warning);            // the shorthand would wipe the stripe
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
   animation: toastIn 240ms cubic-bezier(0.2, 1.1, 0.3, 1) both;   // slight overshoot
 }
@@ -69,16 +74,23 @@ Two alternatives were built and rejected:
 // Reduced motion: fade-only keyframes; slot transitions off.
 ```
 
-**Token mapping.** The sketch used sketch-theme names. In the app they are:
+**Token mapping.** The sketch used sketch-theme names. The app maps each toast part to the same
+per-theme tokens its other themed surfaces use, so every theme's highlights and fonts carry
+through:
 
-| Sketch | App |
-|---|---|
-| `--color-surface` | `--background-darker, var(--body-background)` |
-| `--color-warning` | `--status-warning` |
-| `--color-text-muted` | `--text-secondary` |
-| `--color-text` | `--text-default` |
+| Part | Sketch | App | Precedent |
+|---|---|---|---|
+| Surface | `--color-surface` | `--background`, falling back to `--background-darker`, then `--body-background` | Popover |
+| Frame (1px) | — | `--input-background`, falling back to `--border-color` | InfoBox |
+| Stripe, countdown bar | `--color-warning` | `--status-warning` | stays a warning on purpose |
+| Icon | `--color-warning` | `--accent` | InfoBox `strong` |
+| Title | `--color-text` | `--text-title`, falling back to `--text-default`; `--primary-font-family` | headings, game titles |
+| Body | `--color-text-muted` | `--text-secondary`; `--secondary-font-family` | — |
+| Dismiss × | `--color-text-muted` | `--action-icon` (fallback `--text-secondary`); hover `--action-icon-hover` (fallback `--text-default`) on a 16% `--accent` fill | high-contrast sets no `--action-icon`, so keep the fallbacks |
 
 The shadow `rgba` is the one allowed literal colour. Everything else is a theme variable.
+`SteamEngineLaunchNotice/__tests__/launchNoticeThemeTokens.test.ts` checks this mapping, so
+update it if you change a token.
 
 ## HTML Structure
 
@@ -86,10 +98,10 @@ The shadow `rgba` is the one allowed literal colour. Everything else is a theme 
 region (fixed, bottom-right)
  └ slot (collapses on leave)
     └ toast [--leaving | --paused | --waiting | --overlay]
-       ├ icon        per-cause glyph, warning colour, 16px
+       ├ icon        per-cause glyph, accent colour, 16px
        ├ text
-       │  ├ title    bold
-       │  └ body     secondary colour
+       │  ├ title    bold, heading font, title colour
+       │  └ body     secondary colour, secondary font
        ├ dismiss     24px round button, always visible, focus-visible outline in --accent
        └ bar         2px hairline
 ```
@@ -98,6 +110,8 @@ region (fixed, bottom-right)
 
 - **Do not hide the dismiss button behind hover.** Keyboard and controller users cannot find it.
 - **Do not tint the whole surface with the warning colour.** It reads as an error.
+- **Do not use `--navbar-background` or `--navbar-active` for the surface.** In nord-light the
+  navbar is dark while the default text is also dark, so the text disappears.
 - **Do not position each notice independently.** Every notice goes in the one region, or toasts
   overlap.
 - **Do not let the overlay countdown run while GameLib is in the background.** The user would
