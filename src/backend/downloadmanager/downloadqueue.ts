@@ -32,7 +32,7 @@ import { onConnectivityChange } from 'backend/online_monitor'
 // (e.g. utils/uninstaller.ts's `libraryManagerMap[runner].getGame(appName)`).
 import { libraryManagerMap } from 'backend/storeManagers'
 import { downloadManager } from './stores'
-import { isRunner } from 'common/utils'
+import { keepKnownRunnerElements, upsertFinished } from './finishedList'
 import {
   hasCapability,
   isStore,
@@ -88,15 +88,7 @@ function isRunning(): boolean {
 function addToFinished(element: DMQueueElement, status: DMStatus) {
   const elements = downloadManager.get('finished', [])
 
-  const elementIndex = elements.findIndex(
-    (el) => el.params.appName === element.params.appName
-  )
-
-  if (elementIndex >= 0) {
-    elements[elementIndex] = { ...element, status: status ?? 'abort' }
-  } else {
-    elements.push({ ...element, status })
-  }
+  upsertFinished(elements, element, status)
 
   downloadManager.set('finished', elements)
   logInfo(
@@ -118,7 +110,7 @@ function pruneUnknownRunnerElements() {
   const dropped: string[] = []
   for (const key of ['queue', 'finished'] as const) {
     const list = downloadManager.get(key, [])
-    const kept = list.filter((element) => isRunner(element?.params?.runner))
+    const kept = keepKnownRunnerElements(list)
     if (kept.length !== list.length) {
       for (const element of list) {
         if (!kept.includes(element)) {
