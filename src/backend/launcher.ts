@@ -2202,6 +2202,7 @@ export {
   setupWrappers,
   runWineCommand,
   callRunner,
+  runScriptForGame,
   getWinePath,
   launchEventCallback,
   getKnownFixesEnvVariables

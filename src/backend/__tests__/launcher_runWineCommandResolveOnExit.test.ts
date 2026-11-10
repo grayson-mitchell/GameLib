@@ -31,8 +31,10 @@ jest.mock('child_process', () => ({
 }))
 
 import { spawn } from 'child_process'
-import { runWineCommand } from 'backend/launcher'
-import type { GameSettings } from 'common/types'
+import { runWineCommand, runScriptForGame } from 'backend/launcher'
+import * as trackedChildren from 'backend/trackedChildren'
+import type { GameInfo, GameSettings } from 'common/types'
+import type { LogWriter } from 'backend/logger'
 
 class FakeStream extends EventEmitter {
   destroy = jest.fn()
@@ -169,5 +171,259 @@ describe('runWineCommand resolveOnExit', () => {
     expect(res.code).toBe(1)
     expect(res.stderr).toBe('')
     expect(child.stderr.destroy).toHaveBeenCalled()
+  })
+})
+
+describe('Layer-1 characterization (66.1 MH-4): runWineCommand', () => {
+  const SERVER_SETTINGS = {
+    ...SETTINGS,
+    wineVersion: {
+      type: 'crossover',
+      name: 'fake',
+      bin: '/bin/sh',
+      wineserver: '/bin/sh'
+    }
+  } as unknown as GameSettings
+
+  const call = (
+    extra: Partial<Parameters<typeof runWineCommand>[0]> = {},
+    settings: GameSettings = SETTINGS
+  ) =>
+    runWineCommand({
+      commandParts: ['reg', 'query', 'HKCU'],
+      gameSettings: settings,
+      skipPrefixCheckIKnowWhatImDoing: true,
+      ...extra
+    })
+
+  afterEach(() => jest.restoreAllMocks())
+
+  it('resolves { stdout, stderr, code } once the child closes', async () => {
+    const promise = call()
+    await flush()
+    child.stdout.emit('data', 'out-1 ')
+    child.stdout.emit('data', 'out-2')
+    child.stderr.emit('data', 'err-1')
+    child.emit('close', 3, null)
+    expect(await promise).toEqual({
+      stdout: 'out-1 out-2',
+      stderr: 'err-1',
+      code: 3
+    })
+  })
+
+  it('calls onSpawn exactly once with the spawned child', async () => {
+    const onSpawn = jest.fn()
+    const promise = call({ onSpawn })
+    await flush()
+    expect(onSpawn).toHaveBeenCalledTimes(1)
+    expect(onSpawn).toHaveBeenCalledWith(child)
+    child.emit('close', 0, null)
+    await promise
+    expect(onSpawn).toHaveBeenCalledTimes(1)
+  })
+
+  it('calls onOutput for both streams with the chunk and the child', async () => {
+    const onOutput = jest.fn()
+    const promise = call({ options: { onOutput } })
+    await flush()
+    child.stdout.emit('data', 'to-stdout')
+    child.stderr.emit('data', 'to-stderr')
+    child.emit('close', 0, null)
+    await promise
+    expect(onOutput).toHaveBeenCalledWith('to-stdout', child)
+    expect(onOutput).toHaveBeenCalledWith('to-stderr', child)
+    expect(onOutput).toHaveBeenCalledTimes(2)
+  })
+
+  it('writes a "Wine Command:" header to each log writer before any output', async () => {
+    const make = () => ({ writeString: jest.fn() })
+    const [w1, w2] = [make(), make()]
+    const promise = call({
+      options: { logWriters: [w1, w2] as unknown as LogWriter[] }
+    })
+    await flush()
+    child.stdout.emit('data', 'after-header')
+    child.emit('close', 0, null)
+    await promise
+    for (const w of [w1, w2]) {
+      expect(w.writeString.mock.calls[0]?.[0]).toMatch(/^Wine Command: /)
+      expect(w.writeString).toHaveBeenCalledWith('after-header')
+    }
+  })
+
+  it('wait: true runs `wineserver --wait` after close and resolves only after its close', async () => {
+    const waitChild = new FakeChildProcess()
+    ;(spawn as unknown as jest.Mock)
+      .mockReturnValueOnce(child)
+      .mockReturnValueOnce(waitChild)
+    let settled = false
+    const promise = call({ wait: true }, SERVER_SETTINGS).then((r) => {
+      settled = true
+      return r
+    })
+    await flush()
+    expect(spawn).toHaveBeenCalledTimes(1)
+
+    child.emit('close', 0, null)
+    await flush()
+    expect(spawn).toHaveBeenCalledTimes(2)
+    const [bin, args] = (spawn as unknown as jest.Mock).mock.calls[1] as [
+      string,
+      string[]
+    ]
+    expect(bin).toBe('/bin/sh')
+    expect(args).toEqual(['--wait'])
+    expect(settled).toBe(false)
+
+    waitChild.emit('close', 0, null)
+    expect((await promise).code).toBe(0)
+  })
+
+  it('returns { stdout: "", stderr: "Invalid wine" } and spawns nothing for an invalid wine', async () => {
+    const invalid = {
+      ...SETTINGS,
+      wineVersion: { type: 'crossover', name: 'gone', bin: '/nonexistent/wine' }
+    } as unknown as GameSettings
+    const res = await call({}, invalid)
+    expect(res).toEqual({ stdout: '', stderr: 'Invalid wine' })
+    expect(spawn).not.toHaveBeenCalled()
+  })
+
+  describe('track key precedence', () => {
+    const tracked = async (extra: Parameters<typeof call>[0]) => {
+      const track = jest.spyOn(trackedChildren, 'trackChild')
+      const promise = call(extra)
+      await flush()
+      child.emit('close', 0, null)
+      await promise
+      return track.mock.calls[0]
+    }
+
+    it('prefers options.trackKey', async () => {
+      expect(
+        await tracked({
+          options: { trackKey: 'tk' },
+          installFolderName: 'folder'
+        })
+      ).toEqual([child, { runner: 'wine', key: 'tk' }])
+    })
+
+    it('falls back to installFolderName', async () => {
+      expect(await tracked({ installFolderName: 'folder' })).toEqual([
+        child,
+        { runner: 'wine', key: 'folder' }
+      ])
+    })
+
+    it('falls back to the winePrefix', async () => {
+      expect(await tracked({})).toEqual([
+        child,
+        { runner: 'wine', key: '/nonexistent-prefix' }
+      ])
+    })
+  })
+})
+
+describe('Layer-1 characterization (66.1 MH-4): runScriptForGame', () => {
+  const gameInfo = {
+    app_name: 'l1-app',
+    title: 'L1 Title',
+    runner: 'gog',
+    install: { executable: 'game.exe', install_path: '/l1/install' }
+  } as unknown as GameInfo
+  const settings = (extra: Partial<GameSettings> = {}) =>
+    ({
+      winePrefix: '/l1/prefix',
+      beforeLaunchScriptPath: '/l1/before.sh',
+      afterLaunchScriptPath: '/l1/after.sh',
+      ...extra
+    }) as unknown as GameSettings
+  const writer = () => ({
+    writeString: jest.fn(),
+    logError: jest.fn()
+  })
+
+  it('resolves true on exit while a grandchild still holds the pipes (close never fires)', async () => {
+    const w = writer()
+    const promise = runScriptForGame(
+      gameInfo,
+      settings(),
+      'before',
+      w as unknown as LogWriter
+    )
+    child.emit('exit', 0, null)
+    expect(await promise).toBe(true)
+  })
+
+  it('rejects when the child emits error', async () => {
+    const promise = runScriptForGame(
+      gameInfo,
+      settings(),
+      'before',
+      writer() as unknown as LogWriter
+    )
+    child.emit('error', new Error('spawn ENOENT'))
+    await expect(promise).rejects.toThrow('spawn ENOENT')
+  })
+
+  it('writes output to the log writer only when verboseLogs is on', async () => {
+    const quiet = writer()
+    const p1 = runScriptForGame(
+      gameInfo,
+      settings(),
+      'before',
+      quiet as unknown as LogWriter
+    )
+    child.stdout.emit('data', 'hidden')
+    child.emit('exit', 0, null)
+    await p1
+    expect(quiet.writeString).not.toHaveBeenCalled()
+
+    child = new FakeChildProcess()
+    ;(spawn as unknown as jest.Mock).mockReturnValue(child)
+    const loud = writer()
+    const p2 = runScriptForGame(
+      gameInfo,
+      settings({ verboseLogs: true }),
+      'before',
+      loud as unknown as LogWriter
+    )
+    child.stdout.emit('data', 'shown-out')
+    child.stderr.emit('data', 'shown-err')
+    child.emit('exit', 0, null)
+    await p2
+    expect(loud.writeString).toHaveBeenCalledWith('shown-out')
+    expect(loud.writeString).toHaveBeenCalledWith('shown-err')
+  })
+
+  it('spawns the stage script with cwd = install_path and HEROIC_* env merged over process.env', async () => {
+    process.env.L1_SCRIPT_SENTINEL = 'inherited'
+    const promise = runScriptForGame(
+      gameInfo,
+      settings(),
+      'after',
+      writer() as unknown as LogWriter
+    )
+    child.emit('exit', 0, null)
+    await promise
+    const [script, spawnOpts] = (spawn as unknown as jest.Mock).mock
+      .calls[0] as [string, { cwd: string; env: NodeJS.ProcessEnv }]
+    expect(script).toBe('/l1/after.sh')
+    expect(spawnOpts.cwd).toBe('/l1/install')
+    expect(spawnOpts.env).toMatchObject({
+      HEROIC_GAME_APP_NAME: 'l1-app',
+      HEROIC_GAME_EXEC: 'game.exe',
+      HEROIC_GAME_PREFIX: '/l1/prefix',
+      HEROIC_GAME_RUNNER: 'gog',
+      HEROIC_GAME_SCRIPT_STAGE: 'after',
+      HEROIC_GAME_TITLE: 'L1 Title',
+      L1_SCRIPT_SENTINEL: 'inherited'
+    })
+    expect(JSON.parse(spawnOpts.env.HEROIC_GAME_INFO ?? '{}')).toMatchObject({
+      app_name: 'l1-app'
+    })
+    expect(spawnOpts.env.HEROIC_GAME_SETTINGS).toContain('/l1/prefix')
+    delete process.env.L1_SCRIPT_SENTINEL
   })
 })

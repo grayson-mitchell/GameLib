@@ -67,6 +67,7 @@ jest.mock('child_process', () => ({
 
 import { spawn, exec, execFile } from 'child_process'
 import { callRunner } from 'backend/launcher'
+import * as trackedChildren from 'backend/trackedChildren'
 import * as backendUtils from 'backend/utils'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import {
@@ -580,5 +581,139 @@ describe('callRunner skipErrorHandler (49-03, 49-SPEC P2)', () => {
     const res = await promise
     expect(res.abort).toBe(true)
     expect(errorHandlerSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('Layer-1 characterization (66.1 MH-4): callRunner', () => {
+  const flush = () => new Promise<void>((r) => setImmediate(r))
+  let writer: ReturnType<typeof makeFakeLogWriter>
+  let order: string[]
+
+  beforeEach(() => {
+    fakeChild = new FakeChildProcess()
+    ;(spawn as unknown as jest.Mock).mockReturnValue(fakeChild)
+    order = []
+    writer = {
+      writeString: jest.fn((s: string) => {
+        order.push(`write:${s}`)
+      }),
+      logInfo: jest.fn((s: string) => {
+        order.push(`info:${s}`)
+        return Promise.resolve(undefined)
+      }),
+      logError: jest.fn().mockResolvedValue(undefined)
+    }
+    ;(getRunnerLogWriter as jest.Mock).mockReturnValue(makeFakeLogWriter())
+    ;(createGameLogWriter as jest.Mock).mockResolvedValue(makeFakeLogWriter())
+  })
+
+  it('tracks the child under trackKey with the runner name, else under the abortId alone', async () => {
+    const track = jest.spyOn(trackedChildren, 'trackChild')
+    const keyed = callRunner(['list', 'l1-trackkey'], runner, {
+      trackKey: 'my-key',
+      abortId: 'ignored-abort'
+    })
+    await flush()
+    fakeChild.emit('close', 0, null)
+    await keyed
+    expect(track).toHaveBeenLastCalledWith(fakeChild, {
+      runner: 'gog',
+      key: 'my-key'
+    })
+
+    fakeChild = new FakeChildProcess()
+    ;(spawn as unknown as jest.Mock).mockReturnValue(fakeChild)
+    const plain = callRunner(['list', 'l1-abortkey'], runner, {
+      abortId: 'my-abort'
+    })
+    await flush()
+    fakeChild.emit('close', 0, null)
+    await plain
+    expect(track).toHaveBeenLastCalledWith(fakeChild, {
+      runner: 'gog',
+      key: 'my-abort'
+    })
+    track.mockRestore()
+  })
+
+  it('spawns with the option cwd and an env where option keys win over process.env', async () => {
+    process.env.L1_ENV_SENTINEL = 'from-process'
+    process.env.L1_ENV_SHARED = 'from-process'
+    const p = callRunner(['list', 'l1-env'], runner, {
+      cwd: '/l1/cwd',
+      env: { L1_ENV_SHARED: 'from-options', L1_ENV_OPT: 'opt' }
+    })
+    await flush()
+    fakeChild.emit('close', 0, null)
+    await p
+    const [bin, args, spawnOpts] = (spawn as unknown as jest.Mock).mock
+      .calls[0] as [string, string[], { cwd: string; env: NodeJS.ProcessEnv }]
+    expect(bin).toBe('gogdl')
+    expect(args).toEqual(['list', 'l1-env'])
+    expect(spawnOpts.cwd).toBe('/l1/cwd')
+    expect(spawnOpts.env.L1_ENV_SENTINEL).toBe('from-process')
+    expect(spawnOpts.env.L1_ENV_SHARED).toBe('from-options')
+    expect(spawnOpts.env.L1_ENV_OPT).toBe('opt')
+    delete process.env.L1_ENV_SENTINEL
+    delete process.env.L1_ENV_SHARED
+  })
+
+  it('writes the command header to every log writer before the first output chunk', async () => {
+    const p = callRunner(['list', 'l1-header'], runner, {
+      logWriters: [writer]
+    })
+    await flush()
+    fakeChild.stdout.emit('data', 'first-chunk')
+    fakeChild.emit('close', 0, null)
+    await p
+    const headerIdx = order.findIndex((e) => e.startsWith('info:'))
+    const chunkIdx = order.indexOf('write:first-chunk')
+    expect(headerIdx).toBe(0)
+    expect(order[headerIdx]).toContain('gogdl')
+    expect(chunkIdx).toBeGreaterThan(headerIdx)
+  })
+
+  it('applies logSanitizer to the writers but hands onOutput the raw chunk', async () => {
+    const seen: string[] = []
+    const p = callRunner(['list', 'l1-sanitizer'], runner, {
+      logWriters: [writer],
+      logSanitizer: (s: string) => s.replace('SECRET', '***'),
+      onOutput: (chunk) => seen.push(chunk)
+    })
+    await flush()
+    fakeChild.stdout.emit('data', 'token=SECRET')
+    fakeChild.stderr.emit('data', 'err=SECRET')
+    fakeChild.emit('close', 0, null)
+    await p
+    expect(order).toContain('write:token=***')
+    expect(order).toContain('write:err=***')
+    expect(order.join('\n')).not.toContain('write:token=SECRET')
+    expect(seen).toEqual(['token=SECRET', 'err=SECRET'])
+  })
+
+  it('joins trimmed stdout chunks with "" and trimmed stderr chunks with a newline', async () => {
+    const p = callRunner(['list', 'l1-join'], runner, {})
+    await flush()
+    fakeChild.stdout.emit('data', ' a \n')
+    fakeChild.stdout.emit('data', '\n b ')
+    fakeChild.stderr.emit('data', ' x \n')
+    fakeChild.stderr.emit('data', ' y ')
+    fakeChild.emit('close', 0, null)
+    const res = await p
+    expect(res.stdout).toBe('ab')
+    expect(res.stderr).toBe('x\ny')
+  })
+
+  it('classifies a run aborted through abortId as { abort: true } with empty output and no error', async () => {
+    const p = callRunner(['list', 'l1-abort'], runner, {
+      abortId: 'l1-abort-id'
+    })
+    await flush()
+    fakeChild.stdout.emit('data', 'partial')
+    callAbortController('l1-abort-id')
+    fakeChild.emit('close', null, 'SIGTERM')
+    const res = await p
+    expect(res).toMatchObject({ abort: true, stdout: '', stderr: '' })
+    expect(res.error).toBeUndefined()
   })
 })
