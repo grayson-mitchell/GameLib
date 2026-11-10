@@ -119,21 +119,18 @@ export const composeCustomCategories = (
   renameCategory: lib.renameCustomCategory
 })
 
-/** @public convenience hook for the library conversion wave (69-20..23); no consumer until then. */
 export function useEpicAccount(): ContextType['epic'] {
   const lib = useLibraryState.keys('epicLibrary')
   const auth = useAuthState.keys('epicUsername', 'epicLogin', 'epicLogout')
   return useMemo(() => composeEpicAccount(lib, auth), [lib, auth])
 }
 
-/** @public convenience hook for the library conversion wave (69-20..23); no consumer until then. */
 export function useGogAccount(): ContextType['gog'] {
   const lib = useLibraryState.keys('gogLibrary')
   const auth = useAuthState.keys('gogUsername', 'gogLogin', 'gogLogout')
   return useMemo(() => composeGogAccount(lib, auth), [lib, auth])
 }
 
-/** @public convenience hook for the library conversion wave (69-20..23); no consumer until then. */
 export function useAmazonAccount(): ContextType['amazon'] {
   const lib = useLibraryState.keys('amazonLibrary')
   const auth = useAuthState.keys(
@@ -146,7 +143,6 @@ export function useAmazonAccount(): ContextType['amazon'] {
   return useMemo(() => composeAmazonAccount(lib, auth), [lib, auth])
 }
 
-/** @public convenience hook for the library conversion wave (69-20..23); no consumer until then. */
 export function useSteamAccount(): ContextType['steam'] {
   const lib = useLibraryState.keys('steamLibrary')
   const auth = useAuthState.keys('steamUsername', 'steamLogin', 'steamLogout')
@@ -159,13 +155,11 @@ export function useHumbleAccount(): ContextType['humble'] {
   return useMemo(() => composeHumbleAccount(auth), [auth])
 }
 
-/** @public convenience hook for the library conversion wave (69-20..23); no consumer until then. */
 export function useHiddenGames(): ContextType['hiddenGames'] {
   const lib = useLibraryState.keys('hiddenGames', 'hideGame', 'unhideGame')
   return useMemo(() => composeHiddenGames(lib), [lib])
 }
 
-/** @public convenience hook for the library conversion wave (69-20..23); no consumer until then. */
 export function useFavouriteGames(): ContextType['favouriteGames'] {
   const lib = useLibraryState.keys(
     'favouriteGames',
@@ -175,7 +169,6 @@ export function useFavouriteGames(): ContextType['favouriteGames'] {
   return useMemo(() => composeFavouriteGames(lib), [lib])
 }
 
-/** @public convenience hook for the library conversion wave (69-20..23); no consumer until then. */
 export function useCustomCategories(): ContextType['customCategories'] {
   const lib = useLibraryState.keys(
     'customCategories',
