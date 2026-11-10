@@ -61,6 +61,8 @@ function setup(
   const registry: SteamLaunchWatchRegistry = new Map()
   const sent: string[] = []
   const state = { running: 0, alive: new Set<number>() }
+  const holds: string[] = []
+  const released: boolean[] = []
   const deps: SteamLaunchWatchDeps = {
     runner,
     clock,
@@ -76,9 +78,13 @@ function setup(
     sendStatus: (_id, status) => void sent.push(status),
     pollerReports: o.poller ?? (() => false),
     readRunningAppId: () => Promise.resolve(state.running),
-    pidAlive: (pid) => state.alive.has(pid)
+    pidAlive: (pid) => state.alive.has(pid),
+    pollerHold: (id) => {
+      holds.push(id)
+      return (terminalSent) => void released.push(terminalSent)
+    }
   }
-  return { deps, runner, clock, log, registry, sent, state }
+  return { deps, runner, clock, log, registry, sent, state, holds, released }
 }
 
 async function tick(clock: ReturnType<typeof createFakeClock>, n = 1) {
@@ -243,6 +249,62 @@ describe('steamLaunchWatch', () => {
     await tick500(clock, 8000)
     await settled
     expect(sent).toEqual(['playing', 'done'])
+  })
+
+  it('W6 (a9g) win32: pollerHold is taken synchronously at start, and released with true after the watch own done', async () => {
+    const { deps, clock, holds, released, state } = setupWin([
+      winList([42]),
+      winList([])
+    ])
+    state.running = 264160
+    state.alive.add(42)
+    const { settled } = startSteamLaunchWatch(deps, '264160')
+    expect(holds).toEqual(['264160'])
+    expect(released).toEqual([])
+    await tick500(clock, 2000)
+    state.alive.delete(42)
+    await tick500(clock, 1000)
+    await settled
+    expect(released).toEqual([true])
+  })
+
+  it('W7 (a9g) win32: cancel releases true; start-window end, bail and no folder release false; exactly once', async () => {
+    const cancel = setupWin([winList([42])])
+    cancel.state.running = 264160
+    cancel.state.alive.add(42)
+    const c = startSteamLaunchWatch(cancel.deps, '264160')
+    await tick500(cancel.clock, 2000)
+    cancelSteamLaunchWatch(cancel.registry, '264160')
+    await c.settled
+    await tick500(cancel.clock, 2000)
+    expect(cancel.released).toEqual([true])
+
+    const window = setupWin([])
+    const w = startSteamLaunchWatch(window.deps, '264160', {
+      startWindowMs: 6000
+    })
+    await tick500(window.clock, 8000)
+    await w.settled
+    expect(window.released).toEqual([false])
+
+    const bail = setupWin([{ ...winList([]), repeat: true }])
+    bail.state.running = 264160
+    const b = startSteamLaunchWatch(bail.deps, '264160')
+    await tick500(bail.clock, 12000)
+    await b.settled
+    expect(bail.released).toEqual([false])
+
+    const noFolder = setup([], { platform: 'win32', libs: undefined })
+    await startSteamLaunchWatch(noFolder.deps, '264160').settled
+    expect(noFolder.holds).toEqual(['264160'])
+    expect(noFolder.released).toEqual([false])
+  })
+
+  it('W8 (a9g) a darwin watch never calls pollerHold', async () => {
+    const t = setup([], { libs: undefined })
+    await startSteamLaunchWatch(t.deps, '264160').settled
+    expect(t.holds).toEqual([])
+    expect(t.released).toEqual([])
   })
 
   it('T7 relaunch dedupes and re-asserts playing', async () => {

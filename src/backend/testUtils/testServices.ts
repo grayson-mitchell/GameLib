@@ -265,7 +265,8 @@ export function createInertSteamProcesses(
       start: () => undefined,
       stop: () => undefined,
       pollOnce: () => Promise.resolve(),
-      lastAppId: () => 0
+      lastAppId: () => 0,
+      hold: () => () => undefined
     },
     downloadMonitor: overrides.downloadMonitor ?? {
       start: () => Promise.resolve(),

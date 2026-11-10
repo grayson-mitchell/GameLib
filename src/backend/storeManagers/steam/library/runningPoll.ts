@@ -128,6 +128,22 @@ export interface RunningPoll {
   pollOnce(): Promise<void>
   /** The appId the poller last saw running (0 when none, or never started). */
   lastAppId(): number
+  /**
+   * quick 261111-a9g: the launch watch claims an appId's status, so the poller stays silent for
+   * it. The returned release is bound to this claim (a later hold replaces it and the stale
+   * release becomes a no-op) and acts once.
+   * - release(true): the watch sent done, or was cancelled (Stop owns the terminal frame). The
+   *   claim drains: the poller stays silent until it reads a different RunningAppID, and sends
+   *   playing if it still reads this appId drainMs after the release (a premature done heals).
+   * - release(false): the watch handed back. The claim is deleted, and if the poller already
+   *   reads the appId it sends playing now.
+   */
+  hold(appId: number): (terminalSent: boolean) => void
+}
+
+interface Claim {
+  /** Set once released with a terminal frame sent: the drain deadline. */
+  until?: number
 }
 
 /**
@@ -140,6 +156,7 @@ export interface RunningPoll {
  * - X->0: sends `done` for X
  * - X->Y: sends `done` for X then `playing` for Y
  * - unchanged: no-op
+ * A claimed appId (see RunningPoll.hold) sends neither.
  *
  * AppID is scoped to a numeric-only string (T-06-07 -- no raw external string).
  */
@@ -147,30 +164,68 @@ export function createRunningPoll(deps: {
   clock: Clock
   readRunningAppId: () => Promise<number>
   notify: (appId: number, status: 'playing' | 'done') => void
+  /** How long a drained claim stays silent while RunningAppID persists (default 20000). */
+  drainMs?: number
 }): RunningPoll {
+  const drainMs = deps.drainMs ?? 20000
   let timer: TimerHandle | null = null
   let lastKnownRunningAppId = 0
   let inFlight = false
+  const claims = new Map<number, Claim>()
 
   async function pollOnce(): Promise<void> {
     if (inFlight) return
     inFlight = true
     try {
       const currentAppId = await deps.readRunningAppId()
-      if (currentAppId === lastKnownRunningAppId) return
-      if (lastKnownRunningAppId !== 0) {
-        deps.notify(lastKnownRunningAppId, 'done')
-        logInfo(
-          `Steam: running-game poller: game ${lastKnownRunningAppId} stopped`,
-          LogPrefix.Steam
-        )
+      const previous = lastKnownRunningAppId
+      const previousClaimed = previous !== 0 && claims.has(previous)
+      let republish = false
+      for (const [id, claim] of claims) {
+        if (claim.until === undefined) continue
+        if (id !== currentAppId) claims.delete(id)
+        else if (deps.clock.now() >= claim.until) {
+          claims.delete(id)
+          republish = true
+        }
+      }
+      if (currentAppId === previous) {
+        if (republish && currentAppId !== 0) {
+          deps.notify(currentAppId, 'playing')
+          logInfo(
+            `Steam: running-game poller: game ${currentAppId} still running ${drainMs} ms after its launch watch ended; reporting playing`,
+            LogPrefix.Steam
+          )
+        }
+        return
+      }
+      if (previous !== 0) {
+        if (previousClaimed) {
+          logInfo(
+            `Steam: running-game poller: game ${previous} stopped (status owned by launch watch)`,
+            LogPrefix.Steam
+          )
+        } else {
+          deps.notify(previous, 'done')
+          logInfo(
+            `Steam: running-game poller: game ${previous} stopped`,
+            LogPrefix.Steam
+          )
+        }
       }
       if (currentAppId !== 0) {
-        deps.notify(currentAppId, 'playing')
-        logInfo(
-          `Steam: running-game poller: game ${currentAppId} started`,
-          LogPrefix.Steam
-        )
+        if (claims.has(currentAppId)) {
+          logInfo(
+            `Steam: running-game poller: game ${currentAppId} started (status owned by launch watch)`,
+            LogPrefix.Steam
+          )
+        } else {
+          deps.notify(currentAppId, 'playing')
+          logInfo(
+            `Steam: running-game poller: game ${currentAppId} started`,
+            LogPrefix.Steam
+          )
+        }
       }
       lastKnownRunningAppId = currentAppId
     } catch {
@@ -192,9 +247,32 @@ export function createRunningPoll(deps: {
         timer = null
       }
       lastKnownRunningAppId = 0
+      claims.clear()
       logInfo('Steam: stopped running-game poller', LogPrefix.Steam)
     },
     pollOnce,
-    lastAppId: () => lastKnownRunningAppId
+    lastAppId: () => lastKnownRunningAppId,
+    hold(appId) {
+      const claim: Claim = {}
+      claims.set(appId, claim)
+      let released = false
+      return (terminalSent) => {
+        if (released) return
+        released = true
+        if (claims.get(appId) !== claim) return
+        if (terminalSent) {
+          claim.until = deps.clock.now() + drainMs
+          return
+        }
+        claims.delete(appId)
+        if (lastKnownRunningAppId === appId) {
+          deps.notify(appId, 'playing')
+          logInfo(
+            `Steam: running-game poller: game ${appId} running; launch watch handed its status back`,
+            LogPrefix.Steam
+          )
+        }
+      }
+    }
   }
 }

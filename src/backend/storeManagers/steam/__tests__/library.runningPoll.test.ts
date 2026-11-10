@@ -20,6 +20,7 @@ import {
 } from '../library/runningPoll'
 import { windowsSystem32Path } from '../runningFromFolder'
 import {
+  cancelSteamLaunchWatch,
   startSteamLaunchWatch,
   type SteamLaunchWatchDeps,
   type SteamLaunchWatchRegistry
@@ -262,6 +263,112 @@ describe('createRunningPoll()', () => {
   })
 })
 
+describe('createRunningPoll() hold / release (quick 261111-a9g)', () => {
+  const X = 264160
+  const build = (drainMs = 20000) => {
+    const clock = createFakeClock()
+    const notify = jest.fn()
+    let current = 0
+    const poll = createRunningPoll({
+      clock,
+      readRunningAppId: () => Promise.resolve(current),
+      notify,
+      drainMs
+    })
+    const read = async (n: number) => {
+      current = n
+      await poll.pollOnce()
+    }
+    return { clock, notify, poll, read }
+  }
+
+  it('H1 (a9g) hold: 0 -> X -> 0 sends nothing while held, and lastAppId still tracks X', async () => {
+    const { poll, notify, read } = build()
+    poll.hold(X)
+    await read(0)
+    await read(X)
+    expect(poll.lastAppId()).toBe(X)
+    await read(0)
+    expect(notify).not.toHaveBeenCalled()
+    expect(poll.lastAppId()).toBe(0)
+  })
+
+  it('H2 (a9g) release(true) after the poller saw X: X -> 0 is silent, a later 0 -> X sends playing', async () => {
+    const { poll, notify, read } = build()
+    const release = poll.hold(X)
+    await read(X)
+    release(true)
+    await read(0)
+    expect(notify).not.toHaveBeenCalled()
+    await read(X)
+    expect(notify.mock.calls).toEqual([[X, 'playing']])
+  })
+
+  it('H3 (a9g) release(true) before the poller saw X: the lagging X then 0 reads are both silent', async () => {
+    const { poll, notify, read } = build()
+    poll.hold(X)(true)
+    await read(X)
+    await read(0)
+    expect(notify).not.toHaveBeenCalled()
+  })
+
+  it('H4 (a9g) drain deadline: X persisting past drainMs sends one playing, then done at X -> 0', async () => {
+    const { poll, notify, clock, read } = build(3000)
+    poll.hold(X)(true)
+    await read(X)
+    clock.advance(2000)
+    await read(X)
+    expect(notify).not.toHaveBeenCalled()
+    clock.advance(1000)
+    await read(X)
+    expect(notify.mock.calls).toEqual([[X, 'playing']])
+    clock.advance(5000)
+    await read(X)
+    expect(notify).toHaveBeenCalledTimes(1)
+    await read(0)
+    expect(notify.mock.calls).toEqual([
+      [X, 'playing'],
+      [X, 'done']
+    ])
+  })
+
+  it('H5 (a9g) release(false): playing at once when the poller already reads X, else at a later 0 -> X', async () => {
+    const a = build()
+    const releaseA = a.poll.hold(X)
+    await a.read(X)
+    expect(a.notify).not.toHaveBeenCalled()
+    releaseA(false)
+    expect(a.notify.mock.calls).toEqual([[X, 'playing']])
+    await a.read(0)
+    expect(a.notify.mock.calls).toEqual([
+      [X, 'playing'],
+      [X, 'done']
+    ])
+
+    const b = build()
+    const releaseB = b.poll.hold(X)
+    releaseB(false)
+    expect(b.notify).not.toHaveBeenCalled()
+    await b.read(X)
+    expect(b.notify.mock.calls).toEqual([[X, 'playing']])
+  })
+
+  it('H6 (a9g) a second hold replaces the claim (a stale release is a no-op); stop() clears claims', async () => {
+    const { poll, notify, read } = build()
+    const first = poll.hold(X)
+    poll.hold(X)
+    first(false) // stale: must not delete the live claim
+    await read(X)
+    await read(0)
+    expect(notify).not.toHaveBeenCalled()
+
+    poll.hold(X)
+    poll.stop()
+    await read(X)
+    expect(notify.mock.calls).toEqual([[X, 'playing']])
+  })
+})
+
 describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
   // Host-agnostic fixture paths: built from this machine's path module so the suite passes on
   // the Windows dev box and on ubuntu CI alike (steamLaunchWatch.test.ts uses POSIX literals).
@@ -279,7 +386,10 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
   }
   const APP_ID = '264160'
 
-  type Frame = { src: 'watch' | 'poller'; status: 'playing' | 'done' }
+  type Frame = {
+    src: 'watch' | 'poller' | 'stop'
+    status: 'playing' | 'done'
+  }
 
   // Drain pending microtasks, move the shared fake clock, drain again. Moves in 1000 ms
   // increments so the watch's chained timers (each scheduled after an async scan) re-arm from
@@ -355,7 +465,8 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
       // Mirrors steamLaunchedDeps.ts: the watch hands status to the poller once it reports the id.
       pollerReports: (appId) => String(poll.lastAppId()) === appId,
       readRunningAppId: () => Promise.resolve(state.running),
-      pidAlive: (pid) => state.alive.has(pid)
+      pidAlive: (pid) => state.alive.has(pid),
+      pollerHold: (id) => poll.hold(Number(id))
     }
     return { clock, runner, registry, frames, state, poll, watchDeps }
   }
@@ -422,7 +533,7 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
     poll.stop()
   })
 
-  it('C3 win32 (a9g): the watch shows playing and sends done within 1 s of the pid dying', async () => {
+  it('C3 win32 (a9g): the watch shows playing and sends done within 1 s of the pid dying; the poller stays silent', async () => {
     const { clock, registry, frames, state, poll, watchDeps } = setup(
       [winList([42]), winList([])],
       'win32'
@@ -433,18 +544,98 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
     const { settled } = startSteamLaunchWatch(watchDeps, APP_ID)
 
     await step500(clock, 2000) // t = 2000: the gated scan finds pid 42
-    expect(frames.filter((f) => f.src === 'watch')).toEqual([
-      { src: 'watch', status: 'playing' }
-    ])
-    await step500(clock, 8000) // t = 10000: still alive
+    expect(frames).toEqual([{ src: 'watch', status: 'playing' }])
+    await step500(clock, 8000) // t = 10000: the poller ticked at 5000 and 10000, silently
     state.alive.delete(42)
     await step500(clock, 1000) // t = 11000: one confirm scan, then done
     await settled
-    expect(frames.filter((f) => f.src === 'watch')).toEqual([
+    expect(registry.size).toBe(0)
+    state.running = 0 // Steam clears RunningAppID 2100 ms after the exit
+    await step500(clock, 9000) // two more poller ticks add nothing
+    expect(frames).toEqual([
       { src: 'watch', status: 'playing' },
       { src: 'watch', status: 'done' }
     ])
+    expect(collapse(frames)).toEqual(['playing', 'done'])
+    poll.stop()
+  })
+
+  it('C4 win32 (a9g) Stop: [watch playing, stop done]; the poller stays silent through the cancel', async () => {
+    const { clock, registry, frames, state, poll, watchDeps } = setup(
+      [winList([42])],
+      'win32'
+    )
+    state.running = Number(APP_ID)
+    state.alive.add(42)
+    poll.start()
+    startSteamLaunchWatch(watchDeps, APP_ID)
+    await step500(clock, 6000)
+    // games.ts stop(): cancel the watch, then send the one done
+    expect(cancelSteamLaunchWatch(registry, APP_ID).shown).toBe(true)
+    frames.push({ src: 'stop', status: 'done' })
+    await step500(clock, 3000) // the poller still reads the appId
+    state.alive.delete(42)
+    state.running = 0
+    await step500(clock, 10000)
+    expect(frames).toEqual([
+      { src: 'watch', status: 'playing' },
+      { src: 'stop', status: 'done' }
+    ])
+    poll.stop()
+  })
+
+  it('C6 win32 (a9g) handover: the 5-empty-scan bail hands the status to the poller', async () => {
+    const { clock, registry, frames, state, poll, watchDeps } = setup(
+      [winList([], true)],
+      'win32'
+    )
+    state.running = Number(APP_ID)
+    poll.start()
+    const { settled } = startSteamLaunchWatch(watchDeps, APP_ID)
+    await step500(clock, 10500) // t = 10000: the fifth empty scan
+    await settled
     expect(registry.size).toBe(0)
+    expect(frames).toEqual([{ src: 'poller', status: 'playing' }])
+    state.running = 0
+    await step500(clock, 5000)
+    expect(frames).toEqual([
+      { src: 'poller', status: 'playing' },
+      { src: 'poller', status: 'done' }
+    ])
+    poll.stop()
+  })
+
+  it('C7 win32 (a9g) self-heal: a premature watch done is repaired 20 s later', async () => {
+    const { clock, frames, state, poll, watchDeps } = setup(
+      [winList([42]), winList([])],
+      'win32'
+    )
+    state.running = Number(APP_ID)
+    state.alive.add(42)
+    poll.start()
+    const { settled } = startSteamLaunchWatch(watchDeps, APP_ID)
+    await step500(clock, 10000)
+    state.alive.delete(42) // the watch sends done at about t = 10500
+    await step500(clock, 1000)
+    await settled
+    expect(frames).toEqual([
+      { src: 'watch', status: 'playing' },
+      { src: 'watch', status: 'done' }
+    ])
+    await step500(clock, 25000) // t = 36000: the poller tick at 35000 is past the drain
+    expect(frames).toEqual([
+      { src: 'watch', status: 'playing' },
+      { src: 'watch', status: 'done' },
+      { src: 'poller', status: 'playing' }
+    ])
+    state.running = 0
+    await step500(clock, 5000)
+    expect(frames).toEqual([
+      { src: 'watch', status: 'playing' },
+      { src: 'watch', status: 'done' },
+      { src: 'poller', status: 'playing' },
+      { src: 'poller', status: 'done' }
+    ])
     poll.stop()
   })
 })

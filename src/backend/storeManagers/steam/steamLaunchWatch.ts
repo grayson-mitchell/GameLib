@@ -69,6 +69,12 @@ export interface SteamLaunchWatchDeps extends Pick<
   readRunningAppId(): Promise<number>
   /** In-process liveness of a pid. Only the win32 loop calls it. */
   pidAlive(pid: number): boolean
+  /**
+   * win32 only: claim the appId's status from the RunningAppID poller. The release is called
+   * once when the watch ends, with true when it sent done or was cancelled (Stop owns the
+   * terminal frame), false when it handed the status back.
+   */
+  pollerHold(appId: string): (terminalSent: boolean) => void
 }
 
 export interface SteamLaunchWatchOptions {
@@ -134,6 +140,12 @@ export function startSteamLaunchWatch(
     }
   }
   deps.registry.set(appId, entry)
+  const releasePoller = win ? deps.pollerHold(appId) : undefined
+  let doneSent = false
+  const sendDone = () => {
+    doneSent = true
+    deps.sendStatus(appId, 'done')
+  }
 
   const sleep = (ms: number) =>
     new Promise<void>((resolve) => {
@@ -263,7 +275,7 @@ export function startSteamLaunchWatch(
           deps.log.warn(
             `appId ${appId}: ${fails} consecutive scan failures (${String(e)}); ending watch`
           )
-          deps.sendStatus(appId, 'done')
+          sendDone()
           return
         }
       }
@@ -278,7 +290,7 @@ export function startSteamLaunchWatch(
         continue
       }
       deps.log.info(`appId ${appId} no longer running`)
-      deps.sendStatus(appId, 'done')
+      sendDone()
       return
     }
   }
@@ -301,6 +313,7 @@ export function startSteamLaunchWatch(
     })
     .finally(() => {
       if (deps.registry.get(appId) === entry) deps.registry.delete(appId)
+      releasePoller?.(doneSent || cancelled)
       finish()
     })
 
