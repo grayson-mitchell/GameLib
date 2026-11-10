@@ -613,7 +613,7 @@ Plans:
 **Goal:** D-15 step 2 of Phase 66 (decisions in `66-CONTEXT.md`). Nothing is constructed at import time. A stores factory replaces the 16 `*/stores.ts` modules and `key_value_stores.ts`. `createStoreManagers` builds the library and game manager classes (gog, legendary, nile, steam, sideload) with constructor deps at boot (D-02), and the 46 non-test consumers of `libraryManagerMap`/`gameManagerMap`/`storeLaunchHooks` receive them. The 25 `sidecar/*FlowRegistration.ts` files take narrow slices (D-01). In `launcher.ts`, `callRunner`, `runWineCommand`, the gamescope probe and script spawns become runner callers, pinned by characterization tests first. `utils.ts` `spawnAsync` becomes a thin runner caller and `handleExit` calls the runner's teardown. `trackedChildren.ts` and `longLivedChildren.ts` are deleted, with comet and the bridge `helperSpawn` moving to `spawnLongLived` (D-10, D-11). Ceilings drop in the same commits (D-16). About 16–18 plans.
 **Requirements**: TBD
 **Depends on:** Phase 66
-**Plans:** 17/28 plans executed
+**Plans:** 18/28 plans executed
 
 Plans:
 
@@ -657,7 +657,7 @@ Plans:
 **Wave 8**
 
 - [x] 66.1-15-PLAN.md — nile, sideload, storeManagerCommon
-- [ ] 66.1-17-PLAN.md — Steam bottle family
+- [x] 66.1-17-PLAN.md — Steam bottle family
 - [ ] 66.1-20-PLAN.md — domain store consumers (humble, logger, migration, runsForMe, wine, overrides, crossover, wiki)
 
 **Wave 9**
