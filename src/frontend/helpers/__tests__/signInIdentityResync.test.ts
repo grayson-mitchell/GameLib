@@ -1,3 +1,4 @@
+import '../../testUtils/tauriWindow'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { resolveSignInState } from 'common/signInState'
@@ -107,16 +108,18 @@ describe('resyncSignInIdentity', () => {
   })
 })
 
-describe('GlobalState wiring source gate', () => {
+describe('GlobalState wiring gate', () => {
   const src = stripSourceComments(
     readFileSync(
       join(__dirname, '..', '..', 'state', 'GlobalState.tsx'),
       'utf8'
     )
   )
-  const CALL = 'this.resyncSignInIdentityFromStores()'
+  const CALL = 'useAuthState.getState().resyncSignInIdentityFromStores()'
 
-  // Body of `name = ...` up to the next two-space-indented class member.
+  // Body of `name = ...` up to the next two-space-indented class member. The
+  // login paths still live in the class (69-14 moves them), so the call sites
+  // are pinned by text; the resync itself is proven behaviourally below.
   const memberBody = (source: string, name: string): string => {
     const plain = source.indexOf(`\n  ${name} = `)
     const start =
@@ -137,14 +140,6 @@ describe('GlobalState wiring source gate', () => {
     expect(memberBody(src, name)).toContain(CALL)
   })
 
-  it('the private method applies resyncSignInIdentity then rearms', () => {
-    const body = memberBody(src, 'resyncSignInIdentityFromStores')
-    expect(body).toContain('resyncSignInIdentity(')
-    expect(body.indexOf('resyncSignInIdentity(')).toBeLessThan(
-      body.indexOf('this.rearmFromCurrentState()')
-    )
-  })
-
   it('RED specimen: deleting the call from the real source trips the gate', () => {
     for (const name of MEMBERS) {
       const mutated = src.replace(
@@ -153,5 +148,42 @@ describe('GlobalState wiring source gate', () => {
       )
       expect(memberBody(mutated, name)).not.toContain(CALL)
     }
+  })
+})
+
+describe('authState.resyncSignInIdentityFromStores applies the patch, then rearms', () => {
+  const stored: Record<string, unknown> = {}
+  const fakeApi = {
+    storeNew: () => undefined,
+    storeHas: () => false,
+    storeGet: (name: string, key: string, fallback?: unknown) =>
+      stored[`${name}|${key}`] ?? fallback,
+    setSetting: () => undefined,
+    logError: () => undefined
+  }
+
+  afterEach(async () => {
+    const { resetAllStores } = await import('../../state/storeKit')
+    resetAllStores()
+  })
+
+  it('a stale identity is healed before the dismissed set is pruned', async () => {
+    const { default: useAuthState } = await import('../../state/authState')
+    ;(window as unknown as { api: unknown }).api = fakeApi
+    stored['humbleConfigStore|isLoggedIn'] = true
+    stored['humbleConfigStore|expired'] = true
+    useAuthState.setState({
+      humble: { isLoggedIn: false, expired: false },
+      dismissedSignInNotices: ['humble']
+    })
+
+    useAuthState.getState().resyncSignInIdentityFromStores()
+
+    // Only an already-patched Humble identity reads as expired, so a pruned
+    // dismissal proves the patch landed before the rearm.
+    expect(useAuthState.getState().humble.expired).toBe(true)
+    expect(useAuthState.getState().dismissedSignInNotices).toEqual([])
+    delete stored['humbleConfigStore|isLoggedIn']
+    delete stored['humbleConfigStore|expired']
   })
 })

@@ -39,7 +39,7 @@ import { bindStoreHooks, registerStoreForReset } from './storeKit'
 
 type Maybe<T> = T | null | undefined
 
-export interface HumbleAuthSlice {
+interface HumbleAuthSlice {
   isLoggedIn?: boolean
   username?: string | null
   expired?: boolean
@@ -50,7 +50,7 @@ export interface HumbleAuthSlice {
   syncing?: boolean
 }
 
-interface AuthState {
+export interface AuthState {
   epicUsername: Maybe<string>
   gogUsername: Maybe<string>
   amazonUserId: Maybe<string>

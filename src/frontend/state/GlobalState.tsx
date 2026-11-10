@@ -25,34 +25,27 @@ import {
   nileLibraryStore,
   sideloadLibrary,
   steamConfigStore,
-  steamLibraryStore,
-  humbleConfigStore
+  steamLibraryStore
 } from '../helpers/stores'
 import type { IpcRendererEvent } from 'backend/platform'
 import { NileRegisterData } from 'common/types/nile'
-import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 import type { SteamSyncStatus } from 'common/types/ipc'
-import {
-  resolveSignInStates,
-  sanitizeSignInProbeOutcomeMap,
-  type SignInProbeOutcomeMap,
-  type SignInState,
-  type SignInStore
-} from 'common/signInState'
-import {
-  addSignInDismissal,
-  normalizeSignInDismissals,
-  rearmSignInDismissals
-} from 'common/signInDismissal'
-import { collectSignInInputs } from '../helpers/signInInputs'
-import { resyncSignInIdentity } from '../helpers/signInIdentityResync'
 import useUiState from './uiState'
+import useAuthState from './authState'
 import { applySavedFonts } from './settingsState'
-import { bridgedContextSlice, subscribeBridge } from './bridgeContextValue'
+import {
+  bridgedAccounts,
+  bridgedContextSlice,
+  subscribeBridge
+} from './bridgeContextValue'
 import {
   followConnectivity,
+  hydrateDismissedSignInNotices,
+  pullSignInProbeOutcomes,
+  refreshAmazonUserInfo,
   registerControllerListener,
-  seedAndFollowWindowChrome
+  seedAndFollowWindowChrome,
+  seedEpicUserInfo
 } from './initStateSubscriptions'
 import { useBottleLaunchWaiting } from './BottleLaunchWaiting'
 import { performSteamLogout } from './SteamSignOut'
@@ -61,14 +54,6 @@ import { isStore } from 'common/storeCapabilities'
 
 const storage: Storage = window.localStorage
 
-/** Element-wise equality of two canonical-order store lists (deep-equal for these arrays). */
-function sameSignInStores(
-  a: readonly SignInStore[],
-  b: readonly SignInStore[]
-): boolean {
-  return a.length === b.length && a.every((store, i) => store === b[i])
-}
-const globalSettings = configStore.get_nodefault('settings')
 // GAP CYCLE 4 (34.5-33, Routing item 2): `origin` identifies which call site
 // triggered a refresh, instrumenting the search for the runner-less
 // `refreshLibrary` emitters (candidates: `main.ts:789`'s
@@ -91,41 +76,20 @@ interface Props {
 }
 
 interface StateProps {
+  // Phase 69 (69-13): identities, the Humble session and the sign-in notice
+  // state moved to authState; the class keeps only the libraries.
   epic: {
     library: GameInfo[]
-    username?: string
   }
   gog: {
     library: GameInfo[]
-    username?: string
   }
   amazon: {
     library: GameInfo[]
-    user_id?: string
-    username?: string
   }
   steam: {
     library: GameInfo[]
-    username?: string | null
   }
-  humble: {
-    isLoggedIn?: boolean
-    username?: string | null
-    expired?: boolean
-    encryptionDegraded?: boolean
-    keys?: HumbleKey[]
-    syncedAt?: number | null
-    syncError?: HumbleSyncState['syncError']
-    syncing?: boolean
-  }
-  // 49-07 (D-08): this launch's sign-in probe outcomes, fed by the
-  // `signInProbeOutcomes` push AND a one-time `getSignInProbeOutcomes()` pull on
-  // mount (the push can precede the listener). Both pass through
-  // `sanitizeSignInProbeOutcomeMap`. `{}` means every store is still pending.
-  signInProbeOutcomes: SignInProbeOutcomeMap
-  // 49-07 (D-10): the persisted per-store dismissed set. Renderer-owned: only
-  // `handleDismissSignInNotice` / `handleRearmSignInDismissals` write it.
-  dismissedSignInNotices: SignInStore[]
   gameUpdates: string[]
   libraryStatus: GameStatus[]
   refreshing: boolean
@@ -404,50 +368,18 @@ class GlobalState extends PureComponent<Props> {
 
   state: StateProps = {
     epic: {
-      library: this.loadLegendaryLibrary(),
-      username: configStore.get_nodefault('userInfo.displayName')
+      library: this.loadLegendaryLibrary()
     },
     gog: {
-      library: this.loadGOGLibrary(),
-      username: gogConfigStore.get_nodefault('userData.username')
+      library: this.loadGOGLibrary()
     },
     amazon: {
-      library: this.loadAmazonLibrary(),
-      user_id: nileConfigStore.get_nodefault('userData.user_id'),
-      username: nileConfigStore.get_nodefault('userData.name')
+      library: this.loadAmazonLibrary()
     },
     steam: {
-      library: this.loadSteamLibrary(),
-      username: steamConfigStore.get_nodefault('userData')?.username
-    },
-    humble: {
-      // D-02/D-16: the backend's `isLoggedIn` flag is the connected-state
-      // signal (set once the gamekeys endpoint validates a session) — NOT
-      // `username`, which only reflects the best-effort identity fetch and
-      // is frequently absent (e.g. an identity 404). A connected-but-
-      // anonymous account must still show the tile as connected.
-      isLoggedIn: humbleConfigStore.get_nodefault('isLoggedIn'),
-      username: humbleConfigStore.get_nodefault('userData')?.username,
-      // WR-05/D-08: the backend persists `expired` on a 401 health check —
-      // read it back so a restart with a known-expired session shows the
-      // reconnect state immediately (and even when offline), instead of
-      // showing a stale 'Connected' until the network round-trip completes.
-      expired: humbleConfigStore.get_nodefault('expired') ?? false,
-      encryptionDegraded: humbleConfigStore.get_nodefault('encryptionDegraded'),
-      // Phase 11 (Plan 03): keys/sync-state live in humbleLibraryStore /
-      // humbleSyncStore (backend), NOT humbleConfigStore — they arrive via
-      // IPC (initial fetch on mount + push listeners), never read from a
-      // config store at init time.
-      keys: [],
-      syncedAt: null,
-      syncError: 'none',
-      syncing: false
+      library: this.loadSteamLibrary()
     },
     gameUpdates: [],
-    signInProbeOutcomes: {},
-    dismissedSignInNotices: normalizeSignInDismissals(
-      globalSettings?.dismissedSignInNotices
-    ),
     libraryStatus: [],
     refreshing: false,
     refreshingInTheBackground: true,
@@ -608,107 +540,9 @@ class GlobalState extends PureComponent<Props> {
     configStore.set('games.customCategories', newCustomCategories)
   }
 
-  // 49-07 (D-10): dismissing twice equals once -- persist only when the set
-  // actually changed. `addSignInDismissal` returns a canonical-order array, so
-  // an element-wise comparison is a deep-equality check.
-  handleDismissSignInNotice = (store: SignInStore) => {
-    const current = this.state.dismissedSignInNotices
-    const next = addSignInDismissal(current, store)
-    if (sameSignInStores(current, next)) {
-      return
-    }
-    this.setState({ dismissedSignInNotices: next })
-    window.api.setSetting({
-      appName: 'default',
-      key: 'dismissedSignInNotices',
-      value: next
-    })
-  }
-
-  // 49-07 (D-10): re-arm is a renderer-side prune at the proven-expired
-  // observation. The sidecar pass never writes AppSettings.
-  handleRearmSignInDismissals = (states: Record<SignInStore, SignInState>) => {
-    const current = this.state.dismissedSignInNotices
-    const next = rearmSignInDismissals(current, states)
-    if (sameSignInStores(current, next)) {
-      return
-    }
-    this.setState({ dismissedSignInNotices: next })
-    window.api.setSetting({
-      appName: 'default',
-      key: 'dismissedSignInNotices',
-      value: next
-    })
-  }
-
-  // Re-derives every store state from what the renderer holds right now and
-  // prunes the dismissed set. Idempotent, so every call site (outcome push,
-  // outcome pull, Humble auth push, end of mount) may call it freely.
-  private rearmFromCurrentState = () => {
-    const states = resolveSignInStates(
-      collectSignInInputs(
-        {
-          epicUsername: this.state.epic.username,
-          gogUsername: this.state.gog.username,
-          amazonUserId: this.state.amazon.user_id,
-          humbleLoggedIn: this.state.humble.isLoggedIn,
-          humbleExpired: this.state.humble.expired,
-          steamUsername: this.state.steam?.username
-        },
-        this.state.signInProbeOutcomes
-      )
-    )
-    this.handleRearmSignInDismissals(states)
-  }
-
-  // Quick 261029-quw item 2: a login path can leave a sign-in identity field
-  // stale in renderer state (a response without a username, an OAuth payload
-  // without `user_id`, a login that finished in the backend). Re-read the five
-  // fields from their config stores -- the same expressions the initial state
-  // uses -- and re-arm the notice. An empty patch skips setState, so calling
-  // this after every refresh cannot loop.
-  private resyncSignInIdentityFromStores = () => {
-    try {
-      const patch = resyncSignInIdentity(
-        {
-          epic: this.state.epic,
-          gog: this.state.gog,
-          amazon: this.state.amazon,
-          humble: this.state.humble,
-          steam: this.state.steam
-        },
-        {
-          legendaryDisplayName: () =>
-            configStore.get_nodefault('userInfo.displayName'),
-          gogUsername: () => gogConfigStore.get_nodefault('userData.username'),
-          nileUserId: () => nileConfigStore.get_nodefault('userData.user_id'),
-          nileName: () => nileConfigStore.get_nodefault('userData.name'),
-          humbleIsLoggedIn: () => humbleConfigStore.get_nodefault('isLoggedIn'),
-          humbleUsername: () =>
-            humbleConfigStore.get_nodefault('userData')?.username,
-          humbleExpired: () => humbleConfigStore.get_nodefault('expired'),
-          steamUsername: () =>
-            steamConfigStore.get_nodefault('userData')?.username
-        }
-      )
-      if (Object.keys(patch).length > 0) {
-        this.setState((prev: StateProps) => ({
-          ...(patch.epic && { epic: { ...prev.epic, ...patch.epic } }),
-          ...(patch.gog && { gog: { ...prev.gog, ...patch.gog } }),
-          ...(patch.amazon && { amazon: { ...prev.amazon, ...patch.amazon } }),
-          ...(patch.humble && { humble: { ...prev.humble, ...patch.humble } }),
-          ...(patch.steam && { steam: { ...prev.steam, ...patch.steam } })
-        }))
-      }
-    } catch (error) {
-      window.api.logError(`Sign-in identity resync failed: ${String(error)}`)
-    }
-    this.rearmFromCurrentState()
-  }
-
   handleSuccessfulLogin = (runner: Runner) => {
     storage.setItem('category', 'all')
-    this.resyncSignInIdentityFromStores()
+    useAuthState.getState().resyncSignInIdentityFromStores()
     this.refreshLibrary({
       runInBackground: false,
       library: runner,
@@ -725,21 +559,42 @@ class GlobalState extends PureComponent<Props> {
   // single method on context, built by the exported (and independently unit-tested)
   // `createOAuthLoginCompletion` factory. None of the four wrappers below change.
   completeOAuthLogin = createOAuthLoginCompletion({
-    setState: (update) => this.setState(update),
+    setState: (update) => this.applyOAuthLoginSlice(update),
     handleSuccessfulLogin: (runner) => this.handleSuccessfulLogin(runner)
   })
+
+  // The factory's `{ epic: { library: [], username } }` update splits here:
+  // the library half stays in the class, the identity half goes to authState.
+  private applyOAuthLoginSlice = (update: Record<string, unknown>) => {
+    const { epic, gog, amazon } = update as {
+      epic?: { username?: string }
+      gog?: { username?: string }
+      amazon?: { user_id?: string; username?: string }
+    }
+    if (epic) {
+      this.setState({ epic: { library: [] } })
+      useAuthState.setState({ epicUsername: epic.username })
+    }
+    if (gog) {
+      this.setState({ gog: { library: [] } })
+      useAuthState.setState({ gogUsername: gog.username })
+    }
+    if (amazon) {
+      this.setState({ amazon: { library: [] } })
+      useAuthState.setState({
+        amazonUserId: amazon.user_id,
+        amazonUsername: amazon.username
+      })
+    }
+  }
 
   epicLogin = async (sid: string) => {
     console.log('logging epic')
     const response = await window.api.login(sid)
 
     if (response.status === 'done') {
-      this.setState({
-        epic: {
-          library: [],
-          username: response.data?.displayName
-        }
-      })
+      this.setState({ epic: { library: [] } })
+      useAuthState.setState({ epicUsername: response.data?.displayName })
 
       this.handleSuccessfulLogin('legendary')
     }
@@ -759,12 +614,8 @@ class GlobalState extends PureComponent<Props> {
     // that Runner guard is what surfaces and logs it.
     try {
       await window.api.logoutLegendary().finally(() => {
-        this.setState({
-          epic: {
-            library: [],
-            username: null
-          }
-        })
+        this.setState({ epic: { library: [] } })
+        useAuthState.setState({ epicUsername: null })
       })
       console.log('Logging out from epic')
     } finally {
@@ -777,12 +628,8 @@ class GlobalState extends PureComponent<Props> {
     const response = await window.api.authGOG(token)
 
     if (response.status === 'done') {
-      this.setState({
-        gog: {
-          library: [],
-          username: response.data?.username
-        }
-      })
+      this.setState({ gog: { library: [] } })
+      useAuthState.setState({ gogUsername: response.data?.username })
 
       this.handleSuccessfulLogin('gog')
     }
@@ -792,12 +639,8 @@ class GlobalState extends PureComponent<Props> {
 
   gogLogout = async () => {
     window.api.logoutGOG()
-    this.setState({
-      gog: {
-        library: [],
-        username: null
-      }
-    })
+    this.setState({ gog: { library: [] } })
+    useAuthState.setState({ gogUsername: null })
     console.log('Logging out from gog')
   }
 
@@ -806,12 +649,10 @@ class GlobalState extends PureComponent<Props> {
     const response = await window.api.authAmazon(data)
 
     if (response.status === 'done') {
-      this.setState({
-        amazon: {
-          library: [],
-          user_id: response.user?.user_id,
-          username: response.user?.name
-        }
+      this.setState({ amazon: { library: [] } })
+      useAuthState.setState({
+        amazonUserId: response.user?.user_id,
+        amazonUsername: response.user?.name
       })
 
       this.handleSuccessfulLogin('nile')
@@ -822,13 +663,8 @@ class GlobalState extends PureComponent<Props> {
 
   amazonLogout = async () => {
     await window.api.logoutAmazon()
-    this.setState({
-      amazon: {
-        library: [],
-        user_id: null,
-        username: null
-      }
-    })
+    this.setState({ amazon: { library: [] } })
+    useAuthState.setState({ amazonUserId: null, amazonUsername: null })
     console.log('Logging out from amazon')
   }
 
@@ -836,13 +672,9 @@ class GlobalState extends PureComponent<Props> {
 
   steamLogin = async (result: { status: string; username?: string }) => {
     if (result.status === 'done') {
-      this.setState({
-        steam: {
-          library: [],
-          username: result.username
-        }
-      })
-      this.resyncSignInIdentityFromStores()
+      this.setState({ steam: { library: [] } })
+      useAuthState.setState({ steamUsername: result.username })
+      useAuthState.getState().resyncSignInIdentityFromStores()
       this.refreshLibrary({
         runInBackground: true,
         library: 'steam',
@@ -871,12 +703,8 @@ class GlobalState extends PureComponent<Props> {
       logoutSteam: window.api.logoutSteam,
       getSteamUserInfo: window.api.getSteamUserInfo,
       onSignedOut: () => {
-        this.setState({
-          steam: {
-            library: [],
-            username: null
-          }
-        })
+        this.setState({ steam: { library: [] } })
+        useAuthState.setState({ steamUsername: null })
         console.log('Logging out from steam')
       },
       onSignOutFailed: () => {
@@ -906,9 +734,9 @@ class GlobalState extends PureComponent<Props> {
   // shape from window.api.humbleStartLogin/humbleReconnect).
   humbleLogin = async (result: { status: string; username?: string }) => {
     if (result.status === 'done') {
-      this.setState({
+      useAuthState.setState({
         humble: {
-          ...this.state.humble,
+          ...useAuthState.getState().humble,
           // D-02/D-16: 'done' means the gamekeys endpoint already validated
           // the session — that is the connected flag. `username` stays
           // display-only and may legitimately be undefined (identity is
@@ -918,7 +746,7 @@ class GlobalState extends PureComponent<Props> {
           expired: false
         }
       })
-      this.resyncSignInIdentityFromStores()
+      useAuthState.getState().resyncSignInIdentityFromStores()
       // D-23: a successful login/reconnect triggers a sync.
       void window.api.humbleSync()
     }
@@ -940,7 +768,7 @@ class GlobalState extends PureComponent<Props> {
           text: t('box.yes'),
           onClick: () => {
             window.api.humbleDisconnect()
-            this.setState({
+            useAuthState.setState({
               // HumbleUser.disconnect() wipes humbleLibraryStore/humbleSyncStore
               // (Plan 02) — mirror that here so the renderer never shows a
               // stale key inventory for a disconnected account.
@@ -991,6 +819,7 @@ class GlobalState extends PureComponent<Props> {
     console.log('refreshing')
 
     const { epic, gog, amazon, gameUpdates } = this.state
+    const auth = useAuthState.getState()
 
     const overrides = overridesArg || currentOverrides()
 
@@ -1053,7 +882,7 @@ class GlobalState extends PureComponent<Props> {
     let epicLibrary = epic.library
     if (includesEpic) {
       epicLibrary = libraryStore.get('library', [])
-      if (epic.username && !epicLibrary.length) {
+      if (auth.epicUsername && !epicLibrary.length) {
         window.api.logInfo('No cache found, getting data from legendary...')
         const { library: legendaryLibrary } = await getLegendaryConfig()
         epicLibrary = legendaryLibrary
@@ -1063,7 +892,7 @@ class GlobalState extends PureComponent<Props> {
     let gogLibrary = gog.library
     if (includesGog) {
       gogLibrary = this.loadGOGLibrary(overrides)
-      if (gog.username && !gogLibrary.length) {
+      if (auth.gogUsername && !gogLibrary.length) {
         window.api.logInfo('No cache found, getting data from gog...')
         await window.api.refreshLibrary('gog')
         gogLibrary = this.loadGOGLibrary(overrides)
@@ -1073,7 +902,7 @@ class GlobalState extends PureComponent<Props> {
     let amazonLibrary = amazon.library
     if (includesAmazon) {
       amazonLibrary = nileLibraryStore.get('library', [])
-      if (amazon.user_id && !amazonLibrary.length) {
+      if (auth.amazonUserId && !amazonLibrary.length) {
         window.api.logInfo('No cache found, getting data from nile...')
         await window.api.refreshLibrary('nile')
         amazonLibrary = this.loadAmazonLibrary(overrides)
@@ -1097,21 +926,17 @@ class GlobalState extends PureComponent<Props> {
 
       if (includesEpic) {
         next.epic = {
-          library: applyGameOverrides(epicLibrary, overrides),
-          username: epic.username
+          library: applyGameOverrides(epicLibrary, overrides)
         }
       }
       if (includesGog) {
         next.gog = {
-          library: gogLibrary,
-          username: gog.username
+          library: gogLibrary
         }
       }
       if (includesAmazon) {
         next.amazon = {
-          library: amazonLibrary,
-          user_id: amazon.user_id,
-          username: amazon.username
+          library: amazonLibrary
         }
       }
 
@@ -1194,7 +1019,7 @@ class GlobalState extends PureComponent<Props> {
       await this.refresh(library, checkForUpdates)
       // Quick 261029-quw item 2: every login triggers a refresh, so a login
       // that finished in the backend heals here at the latest.
-      this.resyncSignInIdentityFromStores()
+      useAuthState.getState().resyncSignInIdentityFromStores()
       return
     } catch (error) {
       window.api.logError(`Library refresh failed: ${String(error)}`)
@@ -1410,102 +1235,6 @@ class GlobalState extends PureComponent<Props> {
         window.api.logError(`Runs-for-me pull failed: ${String(error)}`)
       )
 
-    // D-09: state-only listener — never opens a dialog/modal directly. The
-    // non-blocking expiry toast (HumbleExpiryToast) reacts to the resulting
-    // `expired` state transition on its own.
-    window.api.handleHumbleAuthState((e, humbleState) => {
-      this.setState(
-        (prevState: StateProps) => ({
-          humble: {
-            ...prevState.humble,
-            isLoggedIn: humbleState.isLoggedIn,
-            username: humbleState.username ?? prevState.humble.username,
-            expired: !!humbleState.expired
-          }
-        }),
-        this.rearmFromCurrentState
-      )
-    })
-
-    // 49-07 (D-08): this launch's sign-in probe outcomes. The sidecar writes
-    // the three persisted expiry flags BEFORE it publishes, so a re-render off
-    // this push reads the fresh flags. Sanitised at the boundary (T-49-20).
-    window.api.handleSignInProbeOutcomes((e, { outcomes }) => {
-      this.setState(
-        { signInProbeOutcomes: sanitizeSignInProbeOutcomeMap(outcomes) },
-        this.rearmFromCurrentState
-      )
-    })
-
-    // Phase 11 (Plan 03): pushed by HumbleLibrary.sync()/loadCached() with
-    // the display-safe key inventory — never the generic storeGet bridge
-    // (WR-09). Keys ONLY: this event fires after EVERY committed order
-    // (D-26 progressive fill), so it must NOT touch `syncing` — doing so
-    // made the Keys header thrash between "Syncing…" and the freshness line
-    // once per order (live-UAT round 2). End-of-sync is signalled solely by
-    // humbleSyncStateChanged below.
-    window.api.handleHumbleKeysUpdated((e, keys) => {
-      this.setState((prevState: StateProps) => ({
-        humble: { ...prevState.humble, keys }
-      }))
-    })
-
-    // Phase 11 (Plan 03): progressive-fill sync progress (D-26) — counts
-    // only, no cookie/key values.
-    window.api.handleHumbleSyncProgress((e, { done, total }) => {
-      this.setState((prevState: StateProps) => ({
-        humble: { ...prevState.humble, syncing: done < total }
-      }))
-    })
-
-    // Live-UAT round 2 (D-31/D-32): terminal sync-state push, emitted on
-    // EVERY sync() exit path. The single authoritative end-of-sync signal:
-    // updates the freshness timestamp + fail-soft banner in-session (they
-    // were previously stale from the one mount-time fetch) and force-clears
-    // `syncing` (covers aborted syncs whose last progress had done < total).
-    window.api.handleHumbleSyncStateChanged((e, syncState) => {
-      this.setState((prevState: StateProps) => ({
-        humble: {
-          ...prevState.humble,
-          syncedAt: syncState.syncedAt,
-          syncError: syncState.syncError,
-          syncing: false
-        }
-      }))
-    })
-
-    // 49-07 (D-16, R3): the expiry health check moved into the sidecar boot
-    // sign-in pass, so the renderer no longer runs it "in addition". Sync
-    // stays on mount, fire-and-forget -- the backend pushes
-    // humbleAuthState/humbleKeysUpdated/humbleSyncProgress as each stage
-    // resolves, so we don't block mount waiting on it. Humble sync does not
-    // latch expiry (the D-18 correction); the pass does. Gated on
-    // `isLoggedIn` (the connected flag), NOT `username` -- a connected-but-
-    // anonymous account (identity fetch failed) must still get the startup
-    // sync.
-    if (this.state.humble.isLoggedIn) {
-      void window.api.humbleSync()
-    }
-
-    // Phase 11 (Plan 03): cache-then-sync (D-23) — render whatever is
-    // already on disk immediately on mount, independent of whether a sync
-    // ever runs (e.g. an expired session still shows its last-known-good
-    // cache per HSYNC-04).
-    void window.api.humbleGetKeys().then((keys) => {
-      this.setState((prevState: StateProps) => ({
-        humble: { ...prevState.humble, keys }
-      }))
-    })
-    void window.api.humbleGetSyncState().then((syncState) => {
-      this.setState((prevState: StateProps) => ({
-        humble: {
-          ...prevState.humble,
-          syncedAt: syncState.syncedAt,
-          syncError: syncState.syncError
-        }
-      }))
-    })
-
     window.api.handleGamePush((e: IpcRendererEvent, args: GameInfo) => {
       if (!args.app_name) return
       if (isStore(args, 'gog')) {
@@ -1520,8 +1249,7 @@ class GlobalState extends PureComponent<Props> {
         }
         this.setState({
           gog: {
-            library: [...library],
-            username: this.state.gog.username
+            library: [...library]
           }
         })
       } else if (isStore(args, 'legendary')) {
@@ -1537,8 +1265,7 @@ class GlobalState extends PureComponent<Props> {
           }
           return {
             epic: {
-              library,
-              username: prevState.epic.username
+              library
             }
           }
         })
@@ -1555,8 +1282,7 @@ class GlobalState extends PureComponent<Props> {
           }
           return {
             steam: {
-              library,
-              username: prevState.steam.username
+              library
             }
           }
         })
@@ -1587,17 +1313,9 @@ class GlobalState extends PureComponent<Props> {
     // mount and seed the username from its answer when the mirror had none.
     // The cold-boot expired path does not depend on this: the latched flag
     // wins in `resolveSignInState` branch 1 (measured live 2026-10-09).
-    const epicUserInfo = await window.api.getUserInfo()
-    const legendaryUser = Boolean(epicUserInfo)
-    if (epicUserInfo?.displayName && !this.state.epic.username) {
-      this.setState((prev: StateProps) => ({
-        epic: { ...prev.epic, username: epicUserInfo.displayName }
-      }))
-    }
+    const legendaryUser = await seedEpicUserInfo()
 
-    if (amazonUser) {
-      await window.api.getAmazonUserInfo()
-    }
+    await refreshAmazonUserInfo(amazonUser)
 
     if (!gameUpdates.length) {
       const storedGameUpdates = JSON.parse(storage.getItem('updates') || '[]')
@@ -1623,50 +1341,13 @@ class GlobalState extends PureComponent<Props> {
     // 49-07 (D-08, Pitfall 11): pull once on mount, because the outcomes push
     // can precede the listener above. Read-only getter -- nothing here starts
     // a probe (P3).
-    window.api
-      .getSignInProbeOutcomes()
-      .then((outcomes) =>
-        this.setState(
-          { signInProbeOutcomes: sanitizeSignInProbeOutcomeMap(outcomes) },
-          this.rearmFromCurrentState
-        )
-      )
-      .catch((error) =>
-        window.api.logError(`Sign-in outcomes pull failed: ${String(error)}`)
-      )
+    pullSignInProbeOutcomes()
 
-    // F-49-R1-3 (Phase 49 live gate Run 1, item 10d FAIL): the dismissed set
-    // seeded at construction comes from `globalSettings`, a module-load read of
-    // the renderer mirror. On a cold boot that read lands before the mirror
-    // carries the persisted value, so the seed is `[]` and a dismissed
-    // not-connected row returned on every relaunch while both config files
-    // still held the store (measured 2026-10-09, launch 10). Hydrate once from
-    // the backend's authoritative settings, the same route the focusRow seed
-    // takes (CR-01). This is a READ: it never calls setSetting, so the two
-    // persisted writers (dismiss, re-arm) stay the only writers. Union with
-    // the in-session set so a dismiss that raced the fetch is not undone.
-    void window.api
-      .requestAppSettings()
-      .then((settings) => {
-        const persisted = normalizeSignInDismissals(
-          settings?.dismissedSignInNotices
-        )
-        if (persisted.length === 0) {
-          return
-        }
-        const current = this.state.dismissedSignInNotices
-        const merged = normalizeSignInDismissals([...current, ...persisted])
-        if (!sameSignInStores(current, merged)) {
-          this.setState({ dismissedSignInNotices: merged })
-        }
-      })
-      .catch((error) =>
-        window.api.logError(
-          `dismissedSignInNotices hydration failed: ${String(error)}`
-        )
-      )
+    // F-49-R1-3: hydrate the dismissed set from the backend's settings, as a
+    // read (see hydrateDismissedSignInNotices).
+    void hydrateDismissedSignInNotices()
 
-    this.rearmFromCurrentState()
+    useAuthState.getState().rearmFromCurrentState()
 
     applySavedFonts()
 
@@ -1715,7 +1396,6 @@ class GlobalState extends PureComponent<Props> {
       gog,
       amazon,
       steam,
-      humble,
       favouriteGames,
       customCategories,
       hiddenGames,
@@ -1732,44 +1412,23 @@ class GlobalState extends PureComponent<Props> {
           ...this.state,
           ...bridgedContextSlice(),
           completeOAuthLogin: this.completeOAuthLogin,
-          epic: {
-            library: epic.library,
-            username: epic.username,
-            login: this.epicLogin,
-            logout: this.epicLogout
-          },
-          gog: {
-            library: gog.library,
-            username: gog.username,
-            login: this.gogLogin,
-            logout: this.gogLogout
-          },
-          amazon: {
-            library: amazon.library,
-            user_id: amazon.user_id,
-            username: amazon.username,
-            getLoginData: this.getAmazonLoginData,
-            login: this.amazonLogin,
-            logout: this.amazonLogout
-          },
-          steam: {
-            library: steam.library,
-            username: steam.username,
-            login: this.steamLogin,
-            logout: this.steamLogout
-          },
-          humble: {
-            isLoggedIn: humble.isLoggedIn,
-            username: humble.username,
-            expired: humble.expired,
-            encryptionDegraded: humble.encryptionDegraded,
-            keys: humble.keys,
-            syncedAt: humble.syncedAt,
-            syncError: humble.syncError,
-            syncing: humble.syncing,
-            login: this.humbleLogin,
-            logout: this.humbleDisconnect
-          },
+          ...bridgedAccounts({
+            epicLibrary: epic.library,
+            gogLibrary: gog.library,
+            amazonLibrary: amazon.library,
+            steamLibrary: steam.library,
+            epicLogin: this.epicLogin,
+            epicLogout: this.epicLogout,
+            gogLogin: this.gogLogin,
+            gogLogout: this.gogLogout,
+            amazonLogin: this.amazonLogin,
+            amazonLogout: this.amazonLogout,
+            getAmazonLoginData: this.getAmazonLoginData,
+            steamLogin: this.steamLogin,
+            steamLogout: this.steamLogout,
+            humbleLogin: this.humbleLogin,
+            humbleDisconnect: this.humbleDisconnect
+          }),
           installingEpicGame,
           refresh: this.refresh,
           refreshLibrary: this.refreshLibrary,
@@ -1792,8 +1451,6 @@ class GlobalState extends PureComponent<Props> {
             removeCategory: this.removeCustomCategory,
             renameCategory: this.renameCustomCategory
           },
-          handleDismissSignInNotice: this.handleDismissSignInNotice,
-          handleRearmSignInDismissals: this.handleRearmSignInDismissals,
           setCurrentCustomCategories: this.setCurrentCustomCategories
         }}
       >

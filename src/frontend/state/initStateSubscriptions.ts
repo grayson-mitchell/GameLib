@@ -29,6 +29,8 @@ import useSettingsState, {
   registerSettingsSideEffects,
   wasFocusRowPickedThisSession
 } from './settingsState'
+import useAuthState, { readInitialAuth } from './authState'
+import { normalizeSignInDismissals } from 'common/signInDismissal'
 import { registerDownloadsListeners } from './downloadsState'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
@@ -55,6 +57,7 @@ export function initStateSubscriptions(): void {
   // (1) re-read persisted initial state into each store (readInitial)
   useUiState.setState(readInitialUi())
   useSettingsState.setState(readInitialSettings())
+  useAuthState.setState(readInitialAuth())
 
   // componentDidMount head (R10: pre-first-await statements): re-apply the
   // saved Accessibility zoom FIRST, before any listener registration, so the
@@ -134,8 +137,129 @@ export function initStateSubscriptions(): void {
   // Phase 69 D-15: completed-downloads list, boot pull + queue-change refresh.
   registerDownloadsListeners()
 
+  registerAuthListeners()
+
   // (3) store.subscribe side effects (D-08)
   registerSettingsSideEffects()
+}
+
+/**
+ * Humble auth/keys/sync and sign-in probe listeners, plus the pre-await Humble
+ * pulls (R10). The 49-07 D-16/R3 rule holds: the expiry health check lives in
+ * the sidecar boot pass, so nothing here calls humbleCheckHealth, and nothing
+ * here starts a probe (P3).
+ */
+function registerAuthListeners(): void {
+  const auth = useAuthState.getState()
+
+  // D-09: state-only listener -- never opens a dialog/modal directly.
+  window.api.handleHumbleAuthState((_e, humbleState) =>
+    auth.applyHumbleAuthState(humbleState)
+  )
+
+  // 49-07 (D-08): the sidecar writes the persisted expiry flags BEFORE it
+  // publishes, so a re-arm off this push reads fresh flags. Sanitised inside
+  // applySignInProbeOutcomes (T-49-20).
+  window.api.handleSignInProbeOutcomes((_e, { outcomes }) =>
+    auth.applySignInProbeOutcomes(outcomes)
+  )
+
+  // Keys ONLY (D-26 progressive fill): must not touch `syncing`.
+  window.api.handleHumbleKeysUpdated((_e, keys) => auth.applyHumbleKeys(keys))
+
+  window.api.handleHumbleSyncProgress((_e, { done, total }) =>
+    auth.applyHumbleSyncProgress(done, total)
+  )
+
+  // Live-UAT round 2 (D-31/D-32): the single authoritative end-of-sync signal.
+  window.api.handleHumbleSyncStateChanged((_e, syncState) =>
+    auth.applyHumbleSyncState(syncState)
+  )
+
+  // Sync stays on mount, fire-and-forget, gated on `isLoggedIn` (the connected
+  // flag), NOT `username`.
+  if (useAuthState.getState().humble.isLoggedIn) {
+    void window.api.humbleSync()
+  }
+
+  // Cache-then-sync (D-23): render what is on disk immediately.
+  void window.api
+    .humbleGetKeys()
+    .then((keys) => useAuthState.getState().applyHumbleKeys(keys))
+  void window.api
+    .humbleGetSyncState()
+    .then((syncState) =>
+      useAuthState.getState().applyHumbleSyncState(syncState, false)
+    )
+}
+
+/**
+ * F-49-R1-1: the backend's getUserInfo() is self-healing in both directions, so
+ * it is asked on every mount and the Epic username is seeded from its answer
+ * only when the mirror had none. Returns whether user info exists.
+ */
+export async function seedEpicUserInfo(): Promise<boolean> {
+  const epicUserInfo = await window.api.getUserInfo()
+  if (epicUserInfo?.displayName && !useAuthState.getState().epicUsername) {
+    useAuthState.setState({ epicUsername: epicUserInfo.displayName })
+  }
+  return Boolean(epicUserInfo)
+}
+
+export async function refreshAmazonUserInfo(
+  amazonUser: boolean
+): Promise<void> {
+  if (amazonUser) {
+    await window.api.getAmazonUserInfo()
+  }
+}
+
+/**
+ * 49-07 (D-08, Pitfall 11): pull once on mount, because the outcomes push can
+ * precede the listener. Read-only getter -- nothing here starts a probe (P3).
+ */
+export function pullSignInProbeOutcomes(): void {
+  window.api
+    .getSignInProbeOutcomes()
+    .then((outcomes) =>
+      useAuthState.getState().applySignInProbeOutcomes(outcomes)
+    )
+    .catch((error) =>
+      window.api.logError(`Sign-in outcomes pull failed: ${String(error)}`)
+    )
+}
+
+/**
+ * F-49-R1-3: the dismissed set is seeded at import time, which on a cold boot
+ * can land before the mirror carries the persisted value. Hydrate once from the
+ * backend's authoritative settings. This is a READ: it never calls setSetting,
+ * so dismiss and re-arm stay the only writers. Union with the in-session set so
+ * a dismiss that raced the fetch is not undone.
+ */
+export function hydrateDismissedSignInNotices(): Promise<void> {
+  return window.api
+    .requestAppSettings()
+    .then((settings) => {
+      const persisted = normalizeSignInDismissals(
+        settings?.dismissedSignInNotices
+      )
+      if (persisted.length === 0) {
+        return
+      }
+      const current = useAuthState.getState().dismissedSignInNotices
+      const merged = normalizeSignInDismissals([...current, ...persisted])
+      if (
+        merged.length !== current.length ||
+        merged.some((store, i) => store !== current[i])
+      ) {
+        useAuthState.setState({ dismissedSignInNotices: merged })
+      }
+    })
+    .catch((error) =>
+      window.api.logError(
+        `dismissedSignInNotices hydration failed: ${String(error)}`
+      )
+    )
 }
 
 /**

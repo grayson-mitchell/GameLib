@@ -79,9 +79,9 @@ describe('GlobalState.refresh() cache guards', () => {
   })
 
   it.each([
-    ['epic', 'epic.username && !epicLibrary.length'],
-    ['gog', 'gog.username && !gogLibrary.length'],
-    ['amazon', 'amazon.user_id && !amazonLibrary.length']
+    ['epic', 'auth.epicUsername && !epicLibrary.length'],
+    ['gog', 'auth.gogUsername && !gogLibrary.length'],
+    ['amazon', 'auth.amazonUserId && !amazonLibrary.length']
   ])(
     'the %s guard tests exactly the cache-backed variable',
     (_runner, expected) => {

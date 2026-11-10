@@ -1,6 +1,7 @@
 import type { ContextType } from 'frontend/types'
 import useUiState from './uiState'
 import useSettingsState, { selectIsRTL } from './settingsState'
+import useAuthState from './authState'
 
 // Phase 69 D-09 bridge: GlobalState re-renders when a store that owns a
 // context field changes, and spreads the stores' current values into the
@@ -53,17 +54,23 @@ type BridgedKeys =
   | 'setDisableDialogBackdropClose'
   | 'setDisableAnimations'
   | 'handleFocusRow'
+  | 'signInProbeOutcomes'
+  | 'dismissedSignInNotices'
+  | 'handleDismissSignInNotice'
+  | 'handleRearmSignInDismissals'
 
 /** Subscribes `onChange` to every bridged store. Lasts for the app's life (D-07). */
 export function subscribeBridge(onChange: () => void): void {
   useUiState.subscribe(onChange)
   useSettingsState.subscribe(onChange)
+  useAuthState.subscribe(onChange)
 }
 
 /** The store-owned context fields, read at call time. */
 export function bridgedContextSlice(): Pick<ContextType, BridgedKeys> {
   const ui = useUiState.getState()
   const settings = useSettingsState.getState()
+  const auth = useAuthState.getState()
   return {
     platform: ui.platform,
     error: ui.error,
@@ -108,6 +115,82 @@ export function bridgedContextSlice(): Pick<ContextType, BridgedKeys> {
     handleExperimentalFeatures: settings.handleExperimentalFeatures,
     setDisableDialogBackdropClose: settings.setDisableDialogBackdropClose,
     setDisableAnimations: settings.setDisableAnimations,
-    handleFocusRow: settings.handleFocusRow
+    handleFocusRow: settings.handleFocusRow,
+    signInProbeOutcomes: auth.signInProbeOutcomes,
+    dismissedSignInNotices: auth.dismissedSignInNotices,
+    handleDismissSignInNotice: auth.handleDismissSignInNotice,
+    handleRearmSignInDismissals: auth.handleRearmSignInDismissals
+  }
+}
+
+/** What the class still owns of the account composites: libraries and actions. */
+interface AccountsClassPart {
+  epicLibrary: ContextType['epic']['library']
+  gogLibrary: ContextType['gog']['library']
+  amazonLibrary: ContextType['amazon']['library']
+  steamLibrary: ContextType['steam']['library']
+  epicLogin: ContextType['epic']['login']
+  epicLogout: ContextType['epic']['logout']
+  gogLogin: ContextType['gog']['login']
+  gogLogout: ContextType['gog']['logout']
+  amazonLogin: ContextType['amazon']['login']
+  amazonLogout: ContextType['amazon']['logout']
+  getAmazonLoginData: ContextType['amazon']['getLoginData']
+  steamLogin: ContextType['steam']['login']
+  steamLogout: ContextType['steam']['logout']
+  humbleLogin: ContextType['humble']['login']
+  humbleDisconnect: ContextType['humble']['logout']
+}
+
+/**
+ * The epic/gog/amazon/steam/humble composites, built from authState identities
+ * plus the class's libraries and login/logout methods, with the same keys
+ * unconverted consumers always saw.
+ */
+export function bridgedAccounts(
+  classPart: AccountsClassPart
+): Pick<ContextType, 'epic' | 'gog' | 'amazon' | 'steam' | 'humble'> {
+  const auth = useAuthState.getState()
+  // Logout writes null; ContextType types these as `string | undefined`.
+  const name = (value: string | null | undefined) => value as string | undefined
+  return {
+    epic: {
+      library: classPart.epicLibrary,
+      username: name(auth.epicUsername),
+      login: classPart.epicLogin,
+      logout: classPart.epicLogout
+    },
+    gog: {
+      library: classPart.gogLibrary,
+      username: name(auth.gogUsername),
+      login: classPart.gogLogin,
+      logout: classPart.gogLogout
+    },
+    amazon: {
+      library: classPart.amazonLibrary,
+      user_id: name(auth.amazonUserId),
+      username: name(auth.amazonUsername),
+      getLoginData: classPart.getAmazonLoginData,
+      login: classPart.amazonLogin,
+      logout: classPart.amazonLogout
+    },
+    steam: {
+      library: classPart.steamLibrary,
+      username: auth.steamUsername,
+      login: classPart.steamLogin,
+      logout: classPart.steamLogout
+    },
+    humble: {
+      isLoggedIn: auth.humble.isLoggedIn,
+      username: auth.humble.username,
+      expired: auth.humble.expired,
+      encryptionDegraded: auth.humble.encryptionDegraded,
+      keys: auth.humble.keys,
+      syncedAt: auth.humble.syncedAt,
+      syncError: auth.humble.syncError,
+      syncing: auth.humble.syncing,
+      login: classPart.humbleLogin,
+      logout: classPart.humbleDisconnect
+    }
   }
 }

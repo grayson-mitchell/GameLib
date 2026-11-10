@@ -1,6 +1,7 @@
 import { resetAllStores, type StoreHooks } from '../storeKit'
 import type { UiState } from '../uiState'
 import type { SettingsState } from '../settingsState'
+import type { AuthState } from '../authState'
 import type * as InitModule from '../initStateSubscriptions'
 
 type Handler = (...args: unknown[]) => unknown
@@ -26,6 +27,21 @@ const fakeApi = new Proxy(
       if (name === 'getDMQueueInformation') {
         return () =>
           Promise.resolve({ elements: [], finished: [], state: 'idle' })
+      }
+      if (name === 'humbleGetKeys') {
+        return () => Promise.resolve(values.humbleKeys ?? [])
+      }
+      if (name === 'humbleGetSyncState') {
+        return () =>
+          Promise.resolve(
+            values.humbleSyncState ?? { syncedAt: null, syncError: 'none' }
+          )
+      }
+      if (name === 'humbleSync') {
+        return () => {
+          calls.push('humbleSync')
+          return Promise.resolve()
+        }
       }
       if (name === 'getConnectivityStatus') {
         return () => new Promise(() => undefined)
@@ -88,7 +104,12 @@ const MOVED_LISTENERS = [
   'handleSteamRequestNotice',
   'handleReadOnlyStoresNotice',
   'handleSteamBottleLaunchWaiting',
-  'handleDMQueueInformation'
+  'handleDMQueueInformation',
+  'handleHumbleAuthState',
+  'handleSignInProbeOutcomes',
+  'handleHumbleKeysUpdated',
+  'handleHumbleSyncProgress',
+  'handleHumbleSyncStateChanged'
 ]
 
 // Node-env: settingsState reads/writes these when the boot module runs.
@@ -104,12 +125,14 @@ describe('initStateSubscriptions', () => {
   let init: typeof InitModule
   let useUiState: StoreHooks<UiState>
   let useSettingsState: StoreHooks<SettingsState>
+  let useAuthState: StoreHooks<AuthState>
 
   beforeAll(async () => {
     // window.api is replaced after helpers attach their own at import time.
     init = await import('../initStateSubscriptions')
     useUiState = (await import('../uiState')).default
     useSettingsState = (await import('../settingsState')).default
+    useAuthState = (await import('../authState')).default
   })
 
   beforeEach(() => {
@@ -241,5 +264,60 @@ describe('initStateSubscriptions', () => {
     expect(store.get('sidebar_collapsed')).toBe('false')
     useSettingsState.getState().setSideBarCollapsed(true)
     expect(store.get('sidebar_collapsed')).toBe('true')
+  })
+
+  it('section (1) applies readInitialAuth and the connected-flag gate starts the Humble sync', () => {
+    config['userInfo.displayName'] = 'epicUser'
+    config.isLoggedIn = true
+    init.initStateSubscriptions()
+    expect(useAuthState.getState().epicUsername).toBe('epicUser')
+    expect(calls).toContain('humbleSync')
+  })
+
+  it('does not start a Humble sync when the stored session is not connected', () => {
+    init.initStateSubscriptions()
+    expect(calls).not.toContain('humbleSync')
+  })
+
+  it('the cache-then-sync pulls land in the store', async () => {
+    values.humbleKeys = [{ id: 'k' }]
+    values.humbleSyncState = { syncedAt: 9, syncError: 'denied' }
+    init.initStateSubscriptions()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(useAuthState.getState().humble).toMatchObject({
+      keys: [{ id: 'k' }],
+      syncedAt: 9,
+      syncError: 'denied',
+      syncing: false
+    })
+  })
+
+  it('the Humble push listeners update the store', () => {
+    init.initStateSubscriptions()
+    handlers.get('handleHumbleAuthState')?.[0]?.({}, { isLoggedIn: true })
+    expect(useAuthState.getState().humble.isLoggedIn).toBe(true)
+    handlers.get('handleHumbleSyncProgress')?.[0]?.({}, { done: 1, total: 4 })
+    expect(useAuthState.getState().humble.syncing).toBe(true)
+    handlers.get('handleHumbleSyncStateChanged')?.[0]?.(
+      {},
+      { syncedAt: 3, syncError: 'none' }
+    )
+    expect(useAuthState.getState().humble).toMatchObject({
+      syncedAt: 3,
+      syncing: false
+    })
+    handlers.get('handleHumbleKeysUpdated')?.[0]?.({}, [{ id: 'a' }])
+    expect(useAuthState.getState().humble.keys).toEqual([{ id: 'a' }])
+  })
+
+  it('the outcome push is sanitised', () => {
+    init.initStateSubscriptions()
+    handlers.get('handleSignInProbeOutcomes')?.[0]?.(
+      {},
+      { outcomes: { gog: 'healthy', bogus: 'healthy' } }
+    )
+    expect(useAuthState.getState().signInProbeOutcomes).toEqual({
+      gog: 'healthy'
+    })
   })
 })

@@ -38,6 +38,12 @@ const fakeApi = new Proxy(
       if (name === 'storeGet') {
         return (_s: string, _k: string, dflt?: unknown) => dflt
       }
+      if (name === 'humbleGetKeys') {
+        return () => Promise.resolve([])
+      }
+      if (name === 'humbleGetSyncState') {
+        return () => Promise.resolve({ syncedAt: null, syncError: 'none' })
+      }
       if (name === 'getConnectivityStatus') {
         return () => new Promise(() => undefined)
       }

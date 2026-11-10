@@ -1,6 +1,7 @@
 import { resetAllStores, type StoreHooks } from '../storeKit'
 import type { UiState } from '../uiState'
 import type { SettingsState } from '../settingsState'
+import type { AuthState } from '../authState'
 import type * as BridgeModule from '../bridgeContextValue'
 
 // Node-env frontend project (no jsdom): give uiState's transitive imports a
@@ -20,11 +21,13 @@ import type * as BridgeModule from '../bridgeContextValue'
 describe('bridgeContextValue', () => {
   let useUiState: StoreHooks<UiState>
   let useSettingsState: StoreHooks<SettingsState>
+  let useAuthState: StoreHooks<AuthState>
   let bridge: typeof BridgeModule
 
   beforeAll(async () => {
     useUiState = (await import('../uiState')).default
     useSettingsState = (await import('../settingsState')).default
+    useAuthState = (await import('../authState')).default
     bridge = await import('../bridgeContextValue')
   })
 
@@ -81,6 +84,84 @@ describe('bridgeContextValue', () => {
     const spy = jest.fn()
     bridge.subscribeBridge(spy)
     useSettingsState.setState({ hideTitles: true })
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  const classPart = () => {
+    const fn = () => Promise.resolve('done')
+    const out = () => Promise.resolve()
+    return {
+      epicLibrary: [],
+      gogLibrary: [],
+      amazonLibrary: [],
+      steamLibrary: [],
+      epicLogin: fn,
+      epicLogout: out,
+      gogLogin: fn,
+      gogLogout: out,
+      amazonLogin: fn,
+      amazonLogout: out,
+      getAmazonLoginData: () => Promise.resolve({}) as never,
+      steamLogin: fn,
+      steamLogout: out,
+      humbleLogin: fn,
+      humbleDisconnect: out
+    }
+  }
+
+  it('bridgedAccounts composites keep their keys and follow authState identities', () => {
+    useAuthState.setState({
+      epicUsername: 'e',
+      gogUsername: 'g',
+      amazonUserId: 'a-id',
+      amazonUsername: 'a',
+      steamUsername: 's',
+      humble: { isLoggedIn: true, username: 'h', keys: [] }
+    })
+    const parts = classPart()
+    const accounts = bridge.bridgedAccounts(parts)
+    expect(Object.keys(accounts)).toEqual([
+      'epic',
+      'gog',
+      'amazon',
+      'steam',
+      'humble'
+    ])
+    expect(accounts.epic.username).toBe('e')
+    expect(accounts.gog.username).toBe('g')
+    expect(accounts.amazon.user_id).toBe('a-id')
+    expect(accounts.amazon.username).toBe('a')
+    expect(accounts.steam.username).toBe('s')
+    expect(accounts.humble).toMatchObject({ isLoggedIn: true, username: 'h' })
+    expect(accounts.epic.login).toBe(parts.epicLogin)
+    expect(accounts.humble.logout).toBe(parts.humbleDisconnect)
+    expect(Object.keys(accounts.humble)).toEqual([
+      'isLoggedIn',
+      'username',
+      'expired',
+      'encryptionDegraded',
+      'keys',
+      'syncedAt',
+      'syncError',
+      'syncing',
+      'login',
+      'logout'
+    ])
+
+    useAuthState.setState({ epicUsername: null })
+    expect(bridge.bridgedAccounts(parts).epic.username).toBeNull()
+  })
+
+  it('the slice carries the sign-in notice state and actions, and authState changes notify', () => {
+    useAuthState.setState({ dismissedSignInNotices: ['gog'] })
+    const slice = bridge.bridgedContextSlice()
+    expect(slice.dismissedSignInNotices).toEqual(['gog'])
+    expect(slice.handleDismissSignInNotice).toBe(
+      useAuthState.getState().handleDismissSignInNotice
+    )
+    const spy = jest.fn()
+    bridge.subscribeBridge(spy)
+    useAuthState.setState({ steamUsername: 'x' })
     expect(spy).toHaveBeenCalledTimes(1)
   })
 })
