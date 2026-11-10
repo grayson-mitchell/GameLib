@@ -34,7 +34,7 @@ import type {
 export const DEFAULT_RUN_TIMEOUT_MS = 30_000
 const DEFAULT_MAX_BUFFER_BYTES = 8 * 1024 * 1024
 /** Grace after 'exit' before a pipe-holding grandchild stops blocking run(). */
-export const DRAIN_GRACE_MS = 250
+const DRAIN_GRACE_MS = 250
 
 type Unrefable = { unref?: () => void }
 
