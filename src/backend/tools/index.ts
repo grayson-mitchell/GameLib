@@ -25,16 +25,13 @@ import {
   rmSync
 } from 'graceful-fs'
 
-import { execFile, spawn } from 'child_process'
 import type { ProcessRunner } from 'backend/process/types'
 import {
   axiosClient,
   downloadFile,
-  execAsync,
   extractFiles,
   getWineFromProton
 } from '../utils'
-import { execOptions } from 'backend/constants/others'
 import {
   logDebug,
   logError,
@@ -59,11 +56,7 @@ import {
 import type { ToolSettingsResult } from '../engine/toolSettings'
 import { GameConfig } from '../game_config'
 import { chmod, readFile, stat } from 'fs/promises'
-import {
-  any_gpu_supports_version,
-  get_nvngx_path,
-  get_vulkan_instance_version
-} from '../utils/graphics/vulkan'
+import { createVulkan } from '../utils/graphics/vulkan'
 import { lt as semverLt } from 'semver'
 import { createAbortController } from '../utils/aborthandler/aborthandler'
 import { sendFrontendMessage } from '../ipc'
@@ -216,7 +209,6 @@ export interface ToolsDeps {
   commandRunner: Pick<CommandRunner, 'runWineCommand'>
   launcher: Pick<Launcher, 'setupEnvVars' | 'setupWineEnvVars' | 'validWine'>
   spawnAsync: SpawnAsync
-  /** Converted onto the runner by 66.2-08. */
   runner: Pick<ProcessRunner, 'run'>
   stores: Pick<Stores, 'wineManager'>
 }
@@ -232,6 +224,7 @@ function engineServicesFor(deps: ToolsDeps): EngineServices {
 }
 
 function createDxvk(deps: ToolsDeps) {
+  const vulkan = createVulkan({ runner: deps.runner })
   const DXVK = {
     getLatest: async () => {
       if (isWindows) {
@@ -248,12 +241,12 @@ function createDxvk(deps: ToolsDeps) {
       const tools: Tool[] = [
         {
           name: 'vkd3d',
-          url: getVkd3dUrl(),
+          url: await getVkd3dUrl(vulkan),
           os: 'linux'
         },
         {
           name: 'dxvk',
-          url: getDxvkUrl(),
+          url: await getDxvkUrl(vulkan),
           os: 'linux'
         },
         {
@@ -568,7 +561,7 @@ function createDxvk(deps: ToolsDeps) {
       //locate and copy nvngx.dll to support DLSS on Nvidia GPUs
       if (tool === 'dxvk-nvapi' && action === 'backup') {
         try {
-          let nvngx_path = get_nvngx_path()
+          let nvngx_path = await vulkan.getNvngxPath()
           if (nvngx_path.length !== 0) {
             nvngx_path += '/nvidia/wine'
             const copyDlls = ['nvngx.dll', '_nvngx.dll']
@@ -815,50 +808,37 @@ async function restoreDxvkStrict(
 // generous, not tight, ceilings.
 const WINE_VERSION_PROBE_TIMEOUT_MS = 5_000
 const WINE_VERSION_PROBE_MAX_BUFFER = 16 * 1024
+const WHICH_TIMEOUT_MS = 5_000
 
-// Wraps execFile's callback form in a Promise. Resolves `{ stdout }` on
-// success and `{ error }` on any failure (async callback error OR a
-// synchronous throw) -- never rejects, so the fire-and-forget call site below
-// needs only a `.catch` for its OWN logic, not for this.
-//
-// Does not use util.promisify: execFile's native promisify hook is what
-// resolves `{ stdout, stderr }` in production; a jest stand-in has no such
-// hook and would resolve a bare string, so tests and production would see
-// different shapes. Does not use execAsync/exec either -- those run through a
-// shell, and a wine path containing a quote would break the same
-// `'${wineBin}'` quoting the compatibility_layers.ts exec sites rely on.
-function readWineVersionOutput(
+// Resolves `{ stdout }` on success and `{ error }` on any failure (spawn error, timeout,
+// non-zero exit) -- never rejects, so the fire-and-forget call site below needs only a
+// `.catch` for its OWN logic, not for this. argv, no shell: a wine path containing a quote
+// is just a path.
+async function readWineVersionOutput(
+  runner: Pick<ProcessRunner, 'run'>,
   wineBin: string,
   envs: Record<string, string>
 ): Promise<{ stdout: string } | { error: unknown }> {
-  return new Promise((resolve) => {
-    try {
-      // The returned ChildProcess is intentionally never touched, and never
-      // unref'd: it is bounded (5 s, SIGKILL), it runs beside the list-all
-      // child (itself referenced, with no timeout), and the Rust shell's
-      // process-group kill reaps it at app exit.
-      execFile(
-        wineBin,
-        ['--version'],
-        {
-          env: { ...envs, WINEDEBUG: '-all' },
-          encoding: 'utf8',
-          timeout: WINE_VERSION_PROBE_TIMEOUT_MS,
-          killSignal: 'SIGKILL',
-          maxBuffer: WINE_VERSION_PROBE_MAX_BUFFER
-        },
-        (error, stdout) => {
-          if (error) {
-            resolve({ error })
-          } else {
-            resolve({ stdout: String(stdout) })
-          }
-        }
-      )
-    } catch (error) {
-      resolve({ error })
+  try {
+    const r = await runner.run(wineBin, ['--version'], {
+      env: { ...envs, WINEDEBUG: '-all' },
+      replaceEnv: true,
+      timeoutMs: WINE_VERSION_PROBE_TIMEOUT_MS,
+      maxBufferBytes: WINE_VERSION_PROBE_MAX_BUFFER
+    })
+    if (r.timedOut) return { error: new Error('wine --version timed out') }
+    if (r.code !== 0) {
+      return {
+        error: new Error(`wine --version exited with code ${r.code}`)
+      }
     }
-  })
+    if (r.truncated) {
+      return { error: new Error('wine --version output exceeded the buffer') }
+    }
+    return { stdout: r.stdout }
+  } catch (error) {
+    return { error }
+  }
 }
 
 function catalogCacheKey(runner: Runner, appName: string): string {
@@ -1127,16 +1107,13 @@ function createWinetricks(deps: ToolsDeps) {
 
         logInfo(`Running ${winetricks} ${args.join(' ')}`, LogPrefix.WineTricks)
 
-        const child = spawn(winetricks, args, { env: envs })
-
         const output: string[] = []
         // One partial-line remainder per stream: a chunk boundary can fall in
         // the middle of a line (curl redraws with a bare \r).
         let stdoutRemainder = ''
         let stderrRemainder = ''
 
-        child.stdout.setEncoding('utf8')
-        child.stdout.on('data', (data: string) => {
+        const onStdout = (data: string) => {
           if (returnOutput) {
             // The list-all parser reads this verbatim; it is never classified.
             output.push(data)
@@ -1145,16 +1122,15 @@ function createWinetricks(deps: ToolsDeps) {
             stdoutRemainder = split.remainder
             split.lines.forEach(handleLine)
           }
-        })
+        }
 
-        child.stderr.setEncoding('utf8')
-        child.stderr.on('data', (data: string) => {
+        const onStderr = (data: string) => {
           const split = splitOutputChunk(stderrRemainder, data)
           stderrRemainder = split.remainder
           split.lines.forEach(handleLine)
-        })
+        }
 
-        child.on('error', (error) => {
+        const onSpawnError = (error: unknown) => {
           logError(['Winetricks threw Error:', error], LogPrefix.WineTricks)
           showDialogBoxModalAuto({
             title: i18next.t('box.error.winetricks.title', 'Winetricks error'),
@@ -1169,17 +1145,16 @@ function createWinetricks(deps: ToolsDeps) {
           clearInterval(sendProgress)
           onDone?.(true)
           resolve(returnOutput ? output : null)
-        })
+        }
 
-        // Done is sent once, on 'close': that is when stdout/stderr have drained, so the
-        // lines buffered since the last 1s tick -- usually winetricks' own abort message --
-        // are flushed into the log BEFORE Done. 'exit' can fire while output is still in
-        // flight. `failed` carries the exit code itself (a signal exit reports
-        // `code === null`, also a failure), so attribution no longer rests on the " err"
-        // substring test alone. A lingering wineserver can hold the pipes open past exit,
-        // so 'exit' arms a short unref'd fallback that sends Done if 'close' never comes.
+        // Done is sent once, when the run settles: resolveOn 'exit' lets the runner drain
+        // stdout/stderr for its short grace, so the lines buffered since the last 1s tick --
+        // usually winetricks' own abort message -- are flushed into the log BEFORE Done.
+        // `failed` carries the exit code itself (a signal exit reports `code === null`, also
+        // a failure), so attribution no longer rests on the " err" substring test alone. A
+        // lingering wineserver can hold the pipes open past exit; the runner's drain grace
+        // bounds that instead of the old 2 s 'exit' fallback.
         let doneSent = false
-        let exitCode: number | null = null
         const sendDone = (code: number | null) => {
           if (doneSent) return
           doneSent = true
@@ -1214,14 +1189,22 @@ function createWinetricks(deps: ToolsDeps) {
           resolve(returnOutput ? output : null)
         }
 
-        child.on('exit', (code) => {
-          exitCode = code
-          setTimeout(() => sendDone(code), 2000).unref?.()
-        })
-
-        child.on('close', (code) => {
-          sendDone(exitCode ?? code)
-        })
+        // D-10: no timeout. winetricks installs run for minutes to hours; the user cancels
+        // through the queue, and the runner tracks the PID for quit teardown.
+        deps.runner
+          .run(winetricks, args, {
+            env: envs,
+            replaceEnv: true,
+            timeout: {
+              none: true,
+              reason:
+                'winetricks installs run for minutes to hours; the user cancels through the winetricks queue'
+            },
+            resolveOn: 'exit',
+            onStdout,
+            onStderr
+          })
+          .then((result) => sendDone(result.code), onSpawnError)
       })
     },
     listAvailable: async (runner: Runner, appName: string) => {
@@ -1417,7 +1400,13 @@ function createWinetricks(deps: ToolsDeps) {
       const missingDeps: string[] = []
       for (const dependency of dependencies) {
         try {
-          await execAsync(`which ${dependency}`, { ...execOptions, env: envs })
+          const r = await deps.runner.run('which', [dependency], {
+            env: envs,
+            replaceEnv: true,
+            timeoutMs: WHICH_TIMEOUT_MS
+          })
+          // Not found is a non-zero exit, a timeout is as good as missing.
+          if (r.timedOut || r.code !== 0) throw new Error('missing')
         } catch {
           // A probe that rejects OR throws synchronously counts as missing and
           // never escapes this function.
@@ -1451,7 +1440,7 @@ function createWinetricks(deps: ToolsDeps) {
       wineBin: string,
       envs: Record<string, string>
     ) => {
-      const result = await readWineVersionOutput(wineBin, envs)
+      const result = await readWineVersionOutput(deps.runner, wineBin, envs)
       if ('error' in result) {
         logWarning(
           [
@@ -1509,13 +1498,15 @@ export function getInstallingComponent(): string {
  * Figures out the right DXVK version to use, taking the user's hardware
  * (specifically their Vulkan support) into account
  */
-function getDxvkUrl(): string {
+async function getDxvkUrl(
+  vulkan: ReturnType<typeof createVulkan>
+): Promise<string> {
   if (!isLinux) {
     return ''
   }
 
-  if (any_gpu_supports_version([1, 3, 0])) {
-    const instance_version = get_vulkan_instance_version()
+  if (await vulkan.anyGpuSupportsVersion([1, 3, 0])) {
+    const instance_version = await vulkan.getInstanceVersion()
     if (instance_version && semverLt(instance_version.join('.'), '1.3.0')) {
       // FIXME: How does the instance version matter? Even with 1.2, newer DXVK seems to work fine
       logWarning(
@@ -1525,7 +1516,7 @@ function getDxvkUrl(): string {
     }
     return 'https://api.github.com/repos/doitsujin/dxvk/releases/latest'
   }
-  if (any_gpu_supports_version([1, 1, 0])) {
+  if (await vulkan.anyGpuSupportsVersion([1, 1, 0])) {
     logInfo(
       'The GPU(s) in this system only support Vulkan 1.1/1.2, falling back to DXVK 1.10.3 for Wine, or use DXVK-Sarek with proton-cachyos',
       LogPrefix.ToolInstaller
@@ -1545,13 +1536,15 @@ function getDxvkUrl(): string {
  * Figures out the right VKD3D version to use, taking the user's hardware
  * (specifically their Vulkan support) into account
  */
-function getVkd3dUrl(): string {
+async function getVkd3dUrl(
+  vulkan: ReturnType<typeof createVulkan>
+): Promise<string> {
   if (!isLinux) {
     return ''
   }
 
-  if (any_gpu_supports_version([1, 3, 0])) {
-    const instance_version = get_vulkan_instance_version()
+  if (await vulkan.anyGpuSupportsVersion([1, 3, 0])) {
+    const instance_version = await vulkan.getInstanceVersion()
     if (instance_version && semverLt(instance_version.join('.'), '1.3.0')) {
       // FIXME: How does the instance version matter? Even with 1.2, newer VKD3D seems to work fine
       logWarning(
@@ -1561,7 +1554,7 @@ function getVkd3dUrl(): string {
     }
     return 'https://api.github.com/repos/Heroic-Games-Launcher/vkd3d-proton/releases/latest'
   }
-  if (any_gpu_supports_version([1, 1, 0])) {
+  if (await vulkan.anyGpuSupportsVersion([1, 1, 0])) {
     logInfo(
       'The GPU(s) in this system only support Vulkan 1.1/1.2, falling back to VKD3D 2.6 for Wine, or use DXVK-Sarek with proton-cachyos',
       LogPrefix.ToolInstaller

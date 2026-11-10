@@ -1,8 +1,1 @@
-{
-  "childProcess": {
-    "src/backend/utils/graphics/vulkan/index.ts": 1
-  },
-  "moduleState": {
-    "src/backend/utils/graphics/vulkan/index.ts": 2
-  }
-}
+{}
