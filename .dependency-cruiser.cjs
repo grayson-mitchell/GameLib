@@ -104,6 +104,29 @@ module.exports = {
       to: { path: '^src/', pathNot: '^src/backend/process/' }
     },
     {
+      // 66 D-13 / 66.2 C-05: only the runner may import child_process. Static
+      // imports, require() and import() with literal specifiers are seen here;
+      // computed specifiers and process.getBuiltinModule are covered by the AST
+      // census in meta/backendDiCeilings.cjs.
+      name: 'no-child-process-outside-runner',
+      severity: 'error',
+      comment:
+        'Only src/backend/process/runner.ts may import child_process (66 D-13, 66.2 C-05).',
+      from: {
+        path: '^src/backend/',
+        pathNot: [
+          '/__tests__/',
+          '/__mocks__/',
+          '^src/backend/testUtils/',
+          '^src/backend/jest\\.',
+          '^src/backend/process/runner\\.ts$'
+        ]
+      },
+      to: {
+        path: '^(node:)?child_process$|^(execa|cross-spawn|shelljs|node-pty)($|/)'
+      }
+    },
+    {
       // Phase 66 D-11 / RESEARCH Pitfall 1: no npm package either; Node builtins only.
       name: 'runner-no-npm',
       severity: 'error',
