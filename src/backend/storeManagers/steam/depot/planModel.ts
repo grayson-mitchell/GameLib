@@ -69,6 +69,9 @@ export interface DownloadSteamDepotsOpts {
   /** Required — never defaulted to the host OS here (select.ts's own discipline). */
   os: string
   language?: string
+  /** Explicit beta branch override (tests, the updater). Absent means resolve the user's choice
+   *  (ACF BetaKey, then Steam's localconfig.vdf). */
+  branch?: string
   signal?: AbortSignal
   /** Phase 54, internal: the reason logged with the lease buildDepotPlan
    *  acquires. Defaults to 'user-install'; prescreenBridgeDepots passes

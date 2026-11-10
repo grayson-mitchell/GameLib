@@ -92,7 +92,8 @@ type CodeClient = {
 export function requestCodeRefresher(
   client: CodeClient,
   ownerByDepot: Map<string, string>,
-  fallbackAppId: string
+  fallbackAppId: string,
+  branch = 'public'
 ) {
   return async (
     depotId: string,
@@ -104,7 +105,7 @@ export function requestCodeRefresher(
         Number(owner),
         Number(depotId),
         manifestId,
-        'public'
+        branch
       )
       // A uint64 arrives as a number, string or Long; String() renders all three.
       const code = String((requestCode ?? '') as string | number | bigint)
@@ -158,6 +159,7 @@ export async function downloadSteamDepotsRust(
         name: refs.name,
         depots: [],
         buildid: refs.buildid,
+        betaKey: refs.branch === 'public' ? undefined : refs.branch,
         outcome: opts.signal?.aborted === true ? 'cancelled' : undefined
       })
       return opts.signal?.aborted === true
@@ -183,7 +185,8 @@ export async function downloadSteamDepotsRust(
       name: refs.name,
       buildid: refs.buildid === '' ? null : refs.buildid,
       lastOwner: SteamUser.getPersistedSteamId64() ?? null,
-      allowFullOwnership: opts.signal?.aborted !== true
+      allowFullOwnership: opts.signal?.aborted !== true,
+      betaKey: refs.branch === 'public' ? undefined : refs.branch
     }
     const job = buildDepotJob({
       appId,
@@ -200,7 +203,8 @@ export async function downloadSteamDepotsRust(
       refreshRequestCode: requestCodeRefresher(
         client,
         new Map(refs.depots.map((d) => [d.depotId, d.ownerAppId])),
-        appId
+        appId,
+        refs.branch
       ),
       onEvent: (ev) => bridge.onEvent(ev)
     })

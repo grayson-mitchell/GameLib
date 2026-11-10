@@ -31,6 +31,8 @@ export interface RustFinalizeSpec {
   buildid: string | null
   lastOwner: string | null
   allowFullOwnership: boolean
+  /** Steam beta branch the depots came from (mirrors job.rs FinalizeSpec.beta_key); null/absent = public. */
+  betaKey?: string | null
 }
 
 interface RustJobLimits {

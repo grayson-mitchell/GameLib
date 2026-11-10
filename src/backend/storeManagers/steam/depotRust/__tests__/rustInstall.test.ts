@@ -367,4 +367,27 @@ describe('requestCodeRefresher', () => {
     )
     expect(await ok('111', '7')).toBeNull()
   })
+
+  it('requests codes for the given branch, defaulting to public', async () => {
+    client.getManifestRequestCode.mockClear()
+    await requestCodeRefresher(
+      client,
+      owners,
+      APP_ID,
+      'release-101'
+    )('111', '7')
+    expect(client.getManifestRequestCode).toHaveBeenLastCalledWith(
+      Number(APP_ID),
+      111,
+      '7',
+      'release-101'
+    )
+    await requestCodeRefresher(client, owners, APP_ID)('111', '7')
+    expect(client.getManifestRequestCode).toHaveBeenLastCalledWith(
+      Number(APP_ID),
+      111,
+      '7',
+      'public'
+    )
+  })
 })

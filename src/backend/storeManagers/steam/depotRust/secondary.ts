@@ -80,7 +80,8 @@ export async function prescreenBridgeDepotsRust(
       refreshRequestCode: requestCodeRefresher(
         client,
         new Map(refs.depots.map((d) => [d.depotId, d.ownerAppId])),
-        appId
+        appId,
+        refs.branch
       ),
       onEvent: () => {}
     })
@@ -173,7 +174,8 @@ export async function downloadSelectedDepotFilesRust(
       refreshRequestCode: requestCodeRefresher(
         client,
         new Map(refs.depots.map((d) => [d.depotId, d.ownerAppId])),
-        appId
+        appId,
+        refs.branch
       ),
       onEvent: () => {}
     })
@@ -249,7 +251,8 @@ export async function resumeVerifyRust(
       name: input.name,
       buildid: refs.buildid === '' ? null : refs.buildid,
       lastOwner: SteamUser.getPersistedSteamId64() ?? null,
-      allowFullOwnership: true
+      allowFullOwnership: true,
+      betaKey: refs.branch === 'public' ? undefined : refs.branch
     }
     const job = buildDepotJob({
       appId,
@@ -268,7 +271,8 @@ export async function resumeVerifyRust(
       refreshRequestCode: requestCodeRefresher(
         client,
         new Map(refs.depots.map((d) => [d.depotId, d.ownerAppId])),
-        appId
+        appId,
+        refs.branch
       ),
       onEvent: () => {}
     })

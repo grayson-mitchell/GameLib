@@ -13,7 +13,7 @@
  * Everything a manifest decides (filenames, sizes, totals, path collisions, per-file failures)
  * is Rust's and is tested in src-tauri/crates/gamelib-depot.
  */
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs'
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { logError, logWarning } from 'backend/logger'
@@ -161,6 +161,80 @@ describe('buildDepotRefs', () => {
       wire([depot('111', APP_ID, '9007199254740993')])
       const refs = await buildDepotRefs(APP_ID, BASE_OPTS)
       expect(at(refs.depots, 0).gid).toBe('9007199254740993')
+    })
+  })
+
+  describe('quick 261110-up7: per-app beta branch', () => {
+    const withBranches = (branches: unknown) => {
+      client.getProductInfo.mockResolvedValue({
+        apps: { 12345: { appinfo: { depots: { branches }, extended: {} } } },
+        packages: {},
+        unknownApps: [],
+        unknownPackages: []
+      })
+    }
+    const BRANCHES = { public: { buildid: 1 }, 'release-101': { buildid: 2 } }
+
+    it('an explicit branch drives selection and buildid', async () => {
+      wire([])
+      withBranches(BRANCHES)
+      const refs = await buildDepotRefs(APP_ID, {
+        ...BASE_OPTS,
+        branch: 'release-101'
+      })
+      expect(jest.mocked(selectAllDepots)).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        expect.objectContaining({ branch: 'release-101' }),
+        APP_ID
+      )
+      expect(refs.branch).toBe('release-101')
+      expect(refs.buildid).toBe('2')
+    })
+
+    it('an unknown branch falls back to public', async () => {
+      wire([])
+      withBranches({ public: { buildid: 1 } })
+      const refs = await buildDepotRefs(APP_ID, {
+        ...BASE_OPTS,
+        branch: 'release-101'
+      })
+      expect(refs.branch).toBe('public')
+      expect(refs.buildid).toBe('1')
+    })
+
+    it('a password-protected branch falls back to public', async () => {
+      wire([])
+      withBranches({
+        public: { buildid: 1 },
+        'release-101': { buildid: 2, pwdrequired: '1' }
+      })
+      const refs = await buildDepotRefs(APP_ID, {
+        ...BASE_OPTS,
+        branch: 'release-101'
+      })
+      expect(refs.branch).toBe('public')
+    })
+
+    it('with no explicit branch, the ACF BetaKey is resolved', async () => {
+      wire([])
+      withBranches(BRANCHES)
+      const dir = mkdtempSync(join(tmpdir(), 'cmplan-beta-'))
+      try {
+        writeFileSync(
+          join(dir, `appmanifest_${APP_ID}.acf`),
+          `"AppState"\n{\n\t"UserConfig"\n\t{\n\t\t"BetaKey"\t\t"release-101"\n\t}\n}\n`
+        )
+        const refs = await buildDepotRefs(APP_ID, {
+          ...BASE_OPTS,
+          targetSteamappsDir: dir
+        })
+        expect(refs.branch).toBe('release-101')
+        expect(refs.buildid).toBe('2')
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
     })
   })
 

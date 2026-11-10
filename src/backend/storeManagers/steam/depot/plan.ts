@@ -4,6 +4,7 @@
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { prescreenBridgeDepotsRust } from '../depotRust/secondary'
 import { SteamUser } from '../user'
+import { chooseInstallBranch, resolveUserBetaKey } from './betaBranch'
 import {
   selectAllDepots,
   dlcAppIds,
@@ -365,6 +366,8 @@ export interface DepotRefsResult {
   appId: string
   name: string
   buildid: string
+  /** quick 261110-up7: the Steam beta branch selection, buildid and request codes use. */
+  branch: string
   depots: DepotRefEntry[]
   /** Depot ids Steam refused with EResult 40 (Blocked), dropped from the install. */
   skippedDepots: string[]
@@ -375,6 +378,23 @@ export interface DepotRefsResult {
  * one decryption key per selected depot. It never fetches or parses a manifest; Rust does (D-01).
  * Precondition: the caller holds an authenticated lease (every depotRust entry point does).
  */
+/** SteamID64 and Steam root for the localconfig.vdf leg; steamRoot only when there is an id. */
+function resolveSteamIdentity(): { steamId64?: string; steamRoot?: string } {
+  const steamId64 = SteamUser.getPersistedSteamId64()
+  if (!steamId64) return {}
+  try {
+    // Lazy: backend/config pulls in the whole backend graph (same as macSteamOffline.ts).
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const { GlobalConfig } =
+      require('backend/config') as typeof import('backend/config')
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    const { defaultSteamPath } = GlobalConfig.get().getSettings()
+    return { steamId64, steamRoot: defaultSteamPath.replaceAll("'", '') }
+  } catch {
+    return { steamId64 }
+  }
+}
+
 export async function buildDepotRefs(
   appId: string,
   opts: DownloadSteamDepotsOpts
@@ -392,15 +412,28 @@ export async function buildDepotRefs(
   throwIfAborted(opts.signal)
   const displayName =
     (appinfo as unknown as AppCommonName).common?.name ?? opts.installdir
-  // SPIKE 003 (throwaway): current public-branch buildid, for the StateFlags=4
+  // quick 261110-up7: the branch the user picked in Steam (explicit override, else ACF
+  // BetaKey, else localconfig.vdf), checked against the app's real branch list; anything
+  // unusable falls back to 'public'.
+  const requested =
+    opts.branch ??
+    resolveUserBetaKey({
+      appId,
+      steamappsDir: opts.targetSteamappsDir,
+      ...resolveSteamIdentity()
+    })
+  const branch = chooseInstallBranch(appinfo, requested, appId)
+  // SPIKE 003 (throwaway): the chosen branch's current buildid, for the StateFlags=4
   // full-ownership manifest. `depots.branches` is a special (non-depot) key not
   // modelled by SteamAppInfo, so read it via a narrow cast.
   const buildid = String(
     (
       appinfo as unknown as {
-        depots?: { branches?: { public?: { buildid?: string | number } } }
+        depots?: {
+          branches?: Record<string, { buildid?: string | number } | undefined>
+        }
       }
-    ).depots?.branches?.public?.buildid ?? ''
+    ).depots?.branches?.[branch]?.buildid ?? ''
   )
   const owned = await withPlanBuildRetry(
     opts.signal,
@@ -417,7 +450,8 @@ export async function buildDepotRefs(
 
   const selectOpts: DepotSelectOpts = {
     os: opts.os,
-    language: opts.language
+    language: opts.language,
+    branch
   }
   const descriptors = selectAllDepots(
     appinfo,
@@ -463,7 +497,7 @@ export async function buildDepotRefs(
   }
 
   throwIfAllDepotsSkipped(appId, depots.length, skippedDepots)
-  return { appId, name: displayName, buildid, depots, skippedDepots }
+  return { appId, name: displayName, buildid, branch, depots, skippedDepots }
 }
 
 /** True (and logs) when `err` is Steam's EResult 40 (Blocked) for a depot: skip it, keep going. */

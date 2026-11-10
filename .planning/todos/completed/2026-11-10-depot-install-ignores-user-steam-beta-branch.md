@@ -32,3 +32,15 @@ refresher, and write it into the ACF `UserConfig`. Password-protected branches n
 Evidence: `/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/0f6e4bdc-f756-4997-848e-d58a531e00f4/scratchpad/smoke73/adom-buildid-finding.md`
 (session scratchpad, may be gone), Steam `content_log.txt` 2026-11-08 22:00:54 ("beta changed:
 release-101") and 2026-11-10 07:32:00–07:32:06.
+
+## Resolution
+
+Closed by quick 261110-up7.
+
+- Resolver order: ACF `UserConfig.BetaKey`, then the localconfig.vdf `UserAppConfig/<appId>` binary-KV blob (decoded; verified against the real ADOM 333300 blob), then `public`.
+- The branch is checked against the app's `depots.branches`; unknown and password-protected branches fall back to `public` with a log line and never fail the install. Invalid key shapes are rejected the same way.
+- The branch flows to `selectAllDepots`, the buildid read, manifest request codes and resume verify (prescreen and selected-files too).
+- BetaKey is written into the ACF `UserConfig` by both the Rust and TS writers (neither emits MountedConfig). Public installs write the byte-identical ACF as before.
+- A depot with no manifest on the beta branch falls back to its public manifest, with a log line.
+- Still out of scope: CheckAppBetaPassword.
+- Live confirmation: re-install ADOM (333300) with release-101 selected in Steam and check Steam's content_log shows no "beta changed" delta after adoption.
