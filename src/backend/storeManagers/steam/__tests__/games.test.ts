@@ -1,3 +1,4 @@
+import type { SteamDrm } from '../bridge/drm/drmLaunchSetup'
 import {
   createTestManagerDeps,
   createInertSteamProcesses,
@@ -277,19 +278,21 @@ const runWineCommand = jest.fn()
 
 // quick 261111-9mj: the steam manager carries the per-boot launch-watch registry.
 const launchWatches: SteamLaunchWatchRegistry = new Map()
+const drmStandIn: Partial<SteamDrm> = {
+  drmLaunchSetup: (...args: Parameters<SteamDrm['drmLaunchSetup']>) =>
+    jest
+      .requireMock<{
+        drmLaunchSetup: SteamDrm['drmLaunchSetup']
+      }>('../bridge/drm/drmLaunchSetup')
+      .drmLaunchSetup(...args),
+  prefetchDrmDownloads: () => Promise.resolve({ status: 'not-applicable' })
+}
+
 const steamTestDeps = createTestManagerDeps({
   steamProcesses: createInertSteamProcesses({
     // The DRM instance: its launch setup is the jest.fn()-backed stand-in the
     // '../bridge/drm/drmLaunchSetup' mock below exports (not-applicable by default).
-    drm: {
-      drmLaunchSetup: (...args: unknown[]) =>
-        (
-          jest.requireMock('../bridge/drm/drmLaunchSetup') as {
-            drmLaunchSetup: (...a: unknown[]) => Promise<unknown>
-          }
-        ).drmLaunchSetup(...args),
-      prefetchDrmDownloads: () => Promise.resolve({ status: 'not-applicable' })
-    } as never
+    drm: drmStandIn as SteamDrm
   }),
   stores: createTestStores({ steam: steamStoresModule }),
   commandRunner: { runWineCommand } as never,

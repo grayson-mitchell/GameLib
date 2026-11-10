@@ -338,7 +338,6 @@ types	meta/logSecretGate.ts	Exemption
 types	meta/logSecretGate.ts	Violation
 types	meta/logSecretGate.ts	ViolationKind
 types	src/backend/humble/adapter.ts	OrderDetailTpk
-types	src/backend/storeManagers/steam/bridge/drm/steamclientLayerInstall.ts	CodesignRunner
 types	src/backend/storeManagers/steam/bridge/drm/steamclientLayerInstall.ts	SteamclientLayerArchiveFetch
 types	src/backend/storeManagers/steam/bridge/protocol.ts	InterfaceOrdinalName
 types	src/common/types/steam.ts	SteamCredentials
