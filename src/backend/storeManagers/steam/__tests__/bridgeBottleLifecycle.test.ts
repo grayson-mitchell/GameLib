@@ -102,11 +102,6 @@ jest.mock('backend/utils', () => ({
   downloadFile: jest.fn()
 }))
 
-// Phase 59: bottle creation with the fallback engine installs DXVK and writes the conf.
-jest.mock('backend/services/legacyFacades', () => {
-  const tools = { DXVK: { installRemove: jest.fn() } }
-  return { legacyTools: () => tools }
-})
 jest.mock('backend/engine/adoptBottle', () => ({
   writeCxbottleConf: jest.fn()
 }))
