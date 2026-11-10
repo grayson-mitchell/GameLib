@@ -13,7 +13,7 @@
  *   Electron homes):
  *     - `getWikiGameInfo` -> `wiki_game_info/wiki_game_info.ts`'s
  *       `getWikiGameInfo(game, forceRefresh)`, `game` resolved via
- *       `backend/utils`'s `getGame(appName, runner)`
+ *       `backend/utils`'s `deps.managers.library[runner].getGame(appName)`
  *       (`wiki_game_info/ipc_handler.ts:5`)
  *     - `getAnticheatInfo` -> `anticheat/utils.ts`'s
  *       `gameAnticheatInfo(appNamespace)` (`anticheat/ipc_handler.ts:8`)
@@ -161,7 +161,6 @@
  */
 
 import { ipcMain } from '../platform'
-import { getGame } from '../utils'
 import { getWikiGameInfo } from '../wiki_game_info/wiki_game_info'
 import { gameAnticheatInfo } from '../anticheat/utils'
 import { readGamelibFixStatus, readKnownFixes } from '../knownFixes'
@@ -178,6 +177,12 @@ import * as SteamGridDB from '../steamgrid/utils'
 import { getGogDiscounts } from '../discounts/fetchDiscounts'
 import { logError, logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
+import type { StoreManagers } from 'backend/services/types'
+
+/** Narrow slice (66.1 D-01): library managers for game lookup. */
+export interface EnrichmentFlowDeps {
+  managers: Pick<StoreManagers, 'library'>
+}
 import type { CatalogLocaleSettings } from 'common/types/discounts'
 
 const RUNS_FOR_ME_RUNNERS: ReadonlySet<string> = new Set([
@@ -194,7 +199,7 @@ const RUNS_FOR_ME_RUNNERS: ReadonlySet<string> = new Set([
  * above; the caller decides when registration onto the handler registry
  * happens.
  */
-export function registerEnrichmentFlows(): void {
+export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
   // The `title` argument is accepted and intentionally IGNORED — see the
   // module docstring above. `getWikiGameInfo` re-derives the title off the
   // resolved `Game` itself.
@@ -204,7 +209,7 @@ export function registerEnrichmentFlows(): void {
       const appName = args[1] as string
       const runner = args[2] as Runner
       const forceRefresh = (args[3] as boolean | null | undefined) ?? undefined
-      const game = getGame(appName, runner)
+      const game = deps.managers.library[runner].getGame(appName)
       return getWikiGameInfo(game, forceRefresh)
     }
   )

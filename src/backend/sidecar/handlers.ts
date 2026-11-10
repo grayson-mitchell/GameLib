@@ -135,7 +135,7 @@ export function registerHandlers(deps: {
 
   registerSteamFlows()
   registerSteamAuthFlows()
-  registerEngineFlows()
+  registerEngineFlows({ managers: deps.services.managers })
   registerInstallFlows()
   registerSettingsFlows()
   // D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the
@@ -181,7 +181,7 @@ export function registerHandlers(deps: {
   // them, before `ensureStoresRegistered()`. `wiki_game_info/stores`
   // is already registered by `storeRegistration.ts:104` (Phase 29), so this
   // module needs no new store plumbing.
-  registerEnrichmentFlows()
+  registerEnrichmentFlows({ managers: deps.services.managers })
   // Phase 34.3 Plans 01+02 (REQ-34.3-01/-02/-13): the shell/link-opener and
   // filesystem/diagnostics channels — no ordering constraint
   // relative to the other calls above (own channel names, no cross-module
@@ -236,8 +236,16 @@ export function registerHandlers(deps: {
   // names, no cross-module runtime dependency at registration time), placed alongside them,
   // before `ensureStoresRegistered()`.
   registerRunnerAuthFlows()
-  registerWineToolsFlows()
-  registerShortcutsFlows()
+  registerWineToolsFlows({
+    managers: deps.services.managers,
+    commandRunner: deps.services.commandRunner,
+    launcher: deps.services.launcher,
+    spawnAsync: deps.services.spawnAsync
+  })
+  registerShortcutsFlows({
+    managers: deps.services.managers,
+    quit: deps.services.quit
+  })
   registerRunnerMiscFlows()
   // Phase 34.6 Plan 08 (REQ-34.6-01): the EOS overlay channel cluster — no ordering constraint
   // relative to the other calls above.

@@ -83,7 +83,6 @@
 
 import i18next, { t } from 'i18next'
 import { ipcMain } from '../platform'
-import { getGame, handleExit } from '../utils'
 import {
   macDesktopShortcutPresent,
   macDesktopShortcutWanted,
@@ -101,6 +100,13 @@ import { sendFrontendMessage } from '../ipc'
 import { getMainWindow } from '../main_window'
 import { logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
+import type { QuitHandler, StoreManagers } from 'backend/services/types'
+
+/** Narrow slice (66.1 D-01): library managers for game lookup, the quit handler for ctrl+q. */
+export interface ShortcutsFlowDeps {
+  managers: Pick<StoreManagers, 'library'>
+  quit: Pick<QuitHandler, 'handleExit'>
+}
 
 function logChannelFailure(channel: string, error: unknown): void {
   logWarning(
@@ -117,8 +123,12 @@ function logChannelFailure(channel: string, error: unknown): void {
  * `addShortcut`/`removeShortcut` handlers, which evaluate it AFTER their work has settled so the
  * renderer sets its state from the disk and never from an assumption (quick task 261012-ca6).
  */
-function shortcutsExistOnDisk(appName: string, runner: Runner): boolean {
-  const { title } = getGame(appName, runner).getGameInfo()
+function shortcutsExistOnDisk(
+  deps: ShortcutsFlowDeps,
+  appName: string,
+  runner: Runner
+): boolean {
+  const { title } = deps.managers.library[runner].getGame(appName).getGameInfo()
 
   // Quick task 260905-mv5 (site 4, D-03): getGameInfo() can return
   // `{} as GameInfo` on a double cache miss (D-01), leaving `title`
@@ -167,7 +177,7 @@ function shortcutsExistOnDisk(appName: string, runner: Runner): boolean {
  * `storeRegistration.ts`'s original.
  */
 let registered = false
-export function registerShortcutsFlows(): void {
+export function registerShortcutsFlows(deps: ShortcutsFlowDeps): void {
   if (registered) {
     return
   }
@@ -180,7 +190,7 @@ export function registerShortcutsFlows(): void {
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
       const runner = args[1] as Runner
-      return shortcutsExistOnDisk(appName, runner)
+      return shortcutsExistOnDisk(deps, appName, runner)
     }
   )
 
@@ -208,7 +218,9 @@ export function registerShortcutsFlows(): void {
     const fromMenu = (args[2] ?? undefined) as boolean | undefined
 
     try {
-      await getGame(appName, runner).addShortcuts(fromMenu)
+      await deps.managers.library[runner]
+        .getGame(appName)
+        .addShortcuts(fromMenu)
     } catch (error) {
       logChannelFailure('addShortcut', error)
       notify({
@@ -218,10 +230,10 @@ export function registerShortcutsFlows(): void {
         ),
         title: t('box.shortcuts.title', 'Shortcuts')
       })
-      return shortcutsExistOnDisk(appName, runner)
+      return shortcutsExistOnDisk(deps, appName, runner)
     }
 
-    const exists = shortcutsExistOnDisk(appName, runner)
+    const exists = shortcutsExistOnDisk(deps, appName, runner)
     if (exists) {
       const body = i18next.t(
         'box.shortcuts.message',
@@ -268,11 +280,11 @@ export function registerShortcutsFlows(): void {
 
       // 261027-c4g: snapshot BEFORE removal; the toast follows what was on disk, not the setting.
       const hadDesktopItem = macDesktopShortcutPresent(
-        getGame(appName, runner).getGameInfo().title
+        deps.managers.library[runner].getGame(appName).getGameInfo().title
       )
 
       try {
-        await getGame(appName, runner).removeShortcuts()
+        await deps.managers.library[runner].getGame(appName).removeShortcuts()
       } catch (error) {
         logChannelFailure('removeShortcut', error)
         notify({
@@ -282,10 +294,10 @@ export function registerShortcutsFlows(): void {
           ),
           title: t('box.shortcuts.title', 'Shortcuts')
         })
-        return shortcutsExistOnDisk(appName, runner)
+        return shortcutsExistOnDisk(deps, appName, runner)
       }
 
-      const exists = shortcutsExistOnDisk(appName, runner)
+      const exists = shortcutsExistOnDisk(deps, appName, runner)
       if (!exists) {
         const body = i18next.t(
           'box.shortcuts.message-remove',
@@ -339,7 +351,7 @@ export function registerShortcutsFlows(): void {
   ipcMain.handle('addToSteam', async (_event: unknown, ...args: unknown[]) => {
     const appName = args[0] as string
     const runner = args[1] as Runner
-    const game = getGame(appName, runner)
+    const game = deps.managers.library[runner].getGame(appName)
     return addNonSteamGame(game)
   })
 
@@ -348,7 +360,7 @@ export function registerShortcutsFlows(): void {
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
       const runner = args[1] as Runner
-      const game = getGame(appName, runner)
+      const game = deps.managers.library[runner].getGame(appName)
       await removeNonSteamGame(game)
     }
   )
@@ -358,7 +370,7 @@ export function registerShortcutsFlows(): void {
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
       const runner = args[1] as Runner
-      const game = getGame(appName, runner)
+      const game = deps.managers.library[runner].getGame(appName)
       return isAddedToSteam(game)
     }
   )
@@ -384,7 +396,7 @@ export function registerShortcutsFlows(): void {
             break
           // hotkey to quit the app
           case 'ctrl+q':
-            await handleExit()
+            await deps.quit.handleExit()
             break
           // hotkey to open the settings on frontend
           case 'ctrl+k':

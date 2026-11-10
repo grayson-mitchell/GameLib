@@ -54,11 +54,6 @@
 // discord RPC, etc.) with no bearing on this test's proof of registration kind / pass-through
 // forwarding -- factory-mocked so this suite never drives its real filesystem/child_process
 // side effects.
-jest.mock('../../launcher', () => ({
-  runWineCommand: jest.fn(),
-  validWine: jest.fn()
-}))
-
 // `../../game_config`'s `GameConfig.get(appName).getSettings()` would otherwise exercise real
 // config-file I/O for a fake `appName` -- factory-mocked so the tool-literal proof test (Describe
 // 5) controls exactly what `getSettings()` resolves to, without touching disk.
@@ -106,7 +101,7 @@ import { join } from 'path'
 
 import { registerWineToolsFlows } from '../wineToolsFlowRegistration'
 import { handlerRegistry, listenerRegistry } from '../../platform'
-import { runWineCommand } from '../../launcher'
+import { createTestManagers } from 'backend/testUtils/testServices'
 import { GameConfig } from '../../game_config'
 import {
   DXVK,
@@ -129,7 +124,16 @@ const listenerCountsBefore = new Map(
     listeners.length
   ])
 )
-registerWineToolsFlows()
+const runWineCommand = jest.fn()
+registerWineToolsFlows({
+  managers: createTestManagers(),
+  commandRunner: {
+    runWineCommand: (...a: Parameters<typeof runWineCommand>) =>
+      runWineCommand(...a)
+  },
+  launcher: { validWine: jest.fn() },
+  spawnAsync: jest.fn()
+})
 const registeredSendChannels = [...listenerRegistry]
   .filter(
     ([channel, listeners]) =>
@@ -605,10 +609,6 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
     const runWineCommandOnGameMock = jest.fn()
 
     jest.isolateModules(() => {
-      jest.doMock('../../launcher', () => ({
-        runWineCommand: jest.fn(),
-        validWine: jest.fn()
-      }))
       jest.doMock('../../config', () => ({
         GlobalConfig: {
           get: jest.fn(() => ({
@@ -634,10 +634,6 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
           install: jest.fn()
         },
         runWineCommandOnGame: runWineCommandOnGameMock
-      }))
-      jest.doMock('../../utils', () => ({
-        getGame: jest.fn(),
-        spawnAsync: spawnAsyncMock
       }))
       jest.doMock('../../constants/environment', () => ({
         isWindows: true,
@@ -672,7 +668,12 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
       const {
         handlerRegistry: isolatedHandlerRegistry
       } = require('../../platform')
-      isolatedRegister()
+      isolatedRegister({
+        managers: {},
+        commandRunner: { runWineCommand: jest.fn() },
+        launcher: { validWine: jest.fn() },
+        spawnAsync: spawnAsyncMock
+      })
       isolatedHandler = isolatedHandlerRegistry.get('runWineCommandForGame')
       /* eslint-enable @typescript-eslint/no-require-imports */
     })

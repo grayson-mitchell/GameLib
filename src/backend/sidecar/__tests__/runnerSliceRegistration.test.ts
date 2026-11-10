@@ -105,6 +105,7 @@ import {
   IpcListener
 } from '../../platform'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { createTestServices } from 'backend/testUtils/testServices'
 
 // ── Canonical real-registration snapshot (Rule 1 fix, discovered building Phase 34.5 Plan
 // 13's completeness/SEAM-Invariant-B describes below) ──────────────────────────────────────────
@@ -129,11 +130,12 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 // then immediately capture `before`, so it does not matter whether that call is literally the
 // first-ever or a later no-op — the property under test (two more calls change nothing) holds
 // either way.
+const services = createTestServices()
 handlerRegistry.clear()
 listenerRegistry.clear()
 registerRunnerAuthFlows()
-registerWineToolsFlows()
-registerShortcutsFlows()
+registerWineToolsFlows(services)
+registerShortcutsFlows(services)
 registerRunnerMiscFlows()
 // Phase 34.6 Plan 08 (REQ-34.6-01/13, D-09): the EOS overlay cluster joins the module-scope
 // snapshot below. Its absence here (before this plan) is exactly what made the EOS 8 register
@@ -146,7 +148,7 @@ registerEosOverlayFlows()
 // idempotence guard, but registers zero send-kind (listener) channels, so a second call here (or
 // from Describe 3's idempotence `it.each`) only overwrites existing `Map` entries in place —
 // harmless, and does not affect `listenerRegistry`'s counts.
-registerEnrichmentFlows()
+registerEnrichmentFlows(services)
 
 const CANONICAL_HANDLER_ENTRIES: ReadonlyArray<[string, IpcHandler]> = [
   ...handlerRegistry.entries()
@@ -298,13 +300,13 @@ const MODULES: ReadonlyArray<{
   },
   {
     name: 'registerWineToolsFlows',
-    register: registerWineToolsFlows,
+    register: () => registerWineToolsFlows(services),
     file: 'wineToolsFlowRegistration.ts',
     declaredChannels: WINE_TOOLS_CHANNELS
   },
   {
     name: 'registerShortcutsFlows',
-    register: registerShortcutsFlows,
+    register: () => registerShortcutsFlows(services),
     file: 'shortcutsFlowRegistration.ts',
     declaredChannels: SHORTCUTS_CHANNELS
   },
@@ -334,7 +336,7 @@ const MODULES: ReadonlyArray<{
     // module docstring, which would fail that describe's "exactly twice" assertion for reasons
     // unrelated to wiring correctness.
     name: 'registerEnrichmentFlows',
-    register: registerEnrichmentFlows,
+    register: () => registerEnrichmentFlows(services),
     file: 'enrichmentFlowRegistration.ts',
     declaredChannels: ENRICHMENT_CHANNELS
   }
@@ -380,7 +382,7 @@ describe('handlers.ts wiring — imported but never called guard', () => {
     'T-34.5-11 %s is both imported and called in handlers.ts',
     (name) => {
       const importPattern = new RegExp(`import\\s*{\\s*${name}\\s*}\\s*from`)
-      const callPattern = new RegExp(`^\\s*${name}\\(\\)`, 'm')
+      const callPattern = new RegExp(`^\\s*${name}\\(`, 'm')
       expect(importPattern.test(handlersSource)).toBe(true)
       expect(callPattern.test(handlersSource)).toBe(true)
     }

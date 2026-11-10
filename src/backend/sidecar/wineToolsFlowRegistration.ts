@@ -64,7 +64,6 @@
  */
 
 import { ipcMain } from '../platform'
-import { runWineCommand, validWine } from '../launcher'
 import { GlobalConfig } from '../config'
 import { GameConfig } from '../game_config'
 import {
@@ -80,7 +79,6 @@ import {
   runWineCommandForPendingInstall
 } from '../tools'
 import { WinetricksQueue } from '../tools/winetricksQueue'
-import { getGame, spawnAsync } from '../utils'
 import { isWindows } from '../constants/environment'
 import { assertCommandParts } from './rendererPathGuard'
 import { sendFrontendMessage } from '../ipc'
@@ -88,13 +86,27 @@ import { notify } from '../dialog/dialog'
 import { logDebug, logError, LogPrefix } from '../logger'
 import { backendEvents } from '../backend_events'
 import { t } from 'i18next'
+import type { CommandWineArgs } from 'backend/commandRunner'
+import type {
+  CommandRunner,
+  Launcher,
+  SpawnAsync,
+  StoreManagers
+} from 'backend/services/types'
 import type {
   Runner,
-  WineCommandArgs,
   WineInstallation,
   WineManagerStatus,
   WineVersionInfo
 } from 'common/types'
+
+/** Narrow slice (66.1 D-01): exactly the services the Wine-tools handlers call. */
+export interface WineToolsFlowDeps {
+  managers: Pick<StoreManagers, 'library'>
+  commandRunner: Pick<CommandRunner, 'runWineCommand'>
+  launcher: Pick<Launcher, 'validWine'>
+  spawnAsync: SpawnAsync
+}
 
 /**
  * Registers this cluster's 15 channels (15 invoke, 0 send — `winetricksInstall` retired, Phase 45
@@ -112,7 +124,7 @@ import type {
  * plan's job to do.
  */
 let registered = false
-export function registerWineToolsFlows(): void {
+export function registerWineToolsFlows(deps: WineToolsFlowDeps): void {
   if (registered) {
     return
   }
@@ -141,7 +153,7 @@ export function registerWineToolsFlows(): void {
   ipcMain.handle(
     'runWineCommand',
     async (_event: unknown, ...args: unknown[]) => {
-      return runWineCommand(args[0] as WineCommandArgs)
+      return deps.commandRunner.runWineCommand(args[0] as CommandWineArgs)
     }
   )
 
@@ -153,7 +165,7 @@ export function registerWineToolsFlows(): void {
   ipcMain.handle(
     'wine.isValidVersion',
     async (_event: unknown, ...args: unknown[]) => {
-      return validWine(args[0] as WineInstallation)
+      return deps.launcher.validWine(args[0] as WineInstallation)
     }
   )
 
@@ -322,7 +334,7 @@ export function registerWineToolsFlows(): void {
     async (_event: unknown, ...args: unknown[]) => {
       const runner = args[0] as Runner
       const appName = args[1] as string
-      const game = getGame(appName, runner)
+      const game = deps.managers.library[runner].getGame(appName)
       return Winetricks.listInstalled(game)
     }
   )
@@ -390,7 +402,7 @@ export function registerWineToolsFlows(): void {
       assertCommandParts(commandParts)
       if (isWindows) {
         const [command, ...commandArgs] = commandParts
-        return spawnAsync(command, commandArgs)
+        return deps.spawnAsync(command, commandArgs)
       }
       if (pendingInstall === true) {
         return runWineCommandForPendingInstall({

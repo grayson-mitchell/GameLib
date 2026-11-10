@@ -75,7 +75,7 @@ import { ipcMain } from '../platform'
 // settingsFlowRegistration.ts's Phase 27 Plan 05 circular-dep fix): force
 // `storeManagers/index.ts` to be the INITIALIZATION ENTRY before any other
 // module in this file's own import graph (transitively, `downloadqueue.ts`'s
-// own `import { libraryManagerMap } from 'backend/storeManagers'`) resolves.
+// own static import of the library-manager table from 'backend/storeManagers') resolves.
 // Entering through a direct steam/* or downloadmanager/* import instead risks
 // the same re-entrant `index.ts` mid-evaluation crash `steamFlowRegistration.ts`'s
 // docstring documents (`SteamLibraryManager is not a constructor`,

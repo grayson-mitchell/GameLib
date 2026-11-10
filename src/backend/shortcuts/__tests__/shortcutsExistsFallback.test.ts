@@ -66,6 +66,7 @@ import { mkdirSync, rmSync, symlinkSync } from 'fs'
 import { dirname, join } from 'path'
 import { homedir } from 'os'
 import { getGame } from 'backend/utils'
+import { createTestManagers } from 'backend/testUtils/testServices'
 import { shortcutFiles } from '../shortcuts/shortcuts'
 import { addShortcuts } from '../shortcuts/shortcuts'
 import { handlerRegistry } from 'backend/platform'
@@ -82,7 +83,18 @@ const mockedExistsSync = existsSync as jest.Mock
 // against the real `backend/ipc` -> `backend/platform` chain.
 import { registerShortcutsFlows } from '../../sidecar/shortcutsFlowRegistration'
 
-registerShortcutsFlows()
+registerShortcutsFlows({
+  managers: createTestManagers({
+    library: {
+      legendary: { getGame: (...a: [string]) => mockedGetGame(...a) },
+      gog: { getGame: (...a: [string]) => mockedGetGame(...a) },
+      steam: { getGame: (...a: [string]) => mockedGetGame(...a) },
+      nile: { getGame: (...a: [string]) => mockedGetGame(...a) },
+      sideload: { getGame: (...a: [string]) => mockedGetGame(...a) }
+    }
+  }),
+  quit: { handleExit: () => Promise.resolve() }
+})
 
 type ShortcutsExistsHandler = (
   event: unknown,

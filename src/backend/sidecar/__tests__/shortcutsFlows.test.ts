@@ -64,10 +64,6 @@ jest.mock('backend/config', () => ({
 // ── backend/utils — getGame/handleExit are the two real exports shortcutsFlowRegistration.ts
 // and this test both need directly controllable; every other real export of this module is
 // untouched by the channels under test.
-jest.mock('backend/utils', () => ({
-  getGame: jest.fn(),
-  handleExit: jest.fn()
-}))
 
 // ── backend/ipc — sendFrontendMessage is processShortcut's ctrl+k/j/l push target
 jest.mock('backend/ipc', () => ({
@@ -154,7 +150,7 @@ import { realHomeAtSetup } from 'backend/jest.setupContainment'
 import { registerShortcutsFlows } from '../shortcutsFlowRegistration'
 import { handlerRegistry, listenerRegistry } from '../../platform'
 import { getPath } from '../pathShim'
-import { getGame, handleExit } from 'backend/utils'
+import { createTestManagers } from 'backend/testUtils/testServices'
 import { sendFrontendMessage } from 'backend/ipc'
 import { logWarning, logError } from 'backend/logger'
 import { GlobalConfig } from 'backend/config'
@@ -207,8 +203,8 @@ function makeFakeGame(gameInfo: GameInfo) {
   }
 }
 
-const mockGetGame = getGame as jest.Mock
-const mockHandleExit = handleExit as jest.Mock
+const mockGetGame = jest.fn()
+const mockHandleExit = jest.fn()
 const mockSendFrontendMessage = sendFrontendMessage as jest.Mock
 const mockLogWarning = logWarning as jest.Mock
 const mockLogError = logError as jest.Mock
@@ -253,7 +249,18 @@ if (HOST_IS_DARWIN) {
 // module-scope maps; calling registerShortcutsFlows() more than once would stack a duplicate
 // listener onto the same channel array (clipboardFlowRegistration's own test docstring names this
 // hazard).
-registerShortcutsFlows()
+registerShortcutsFlows({
+  managers: createTestManagers({
+    library: {
+      legendary: { getGame: (...a: [string]) => mockGetGame(...a) },
+      gog: { getGame: (...a: [string]) => mockGetGame(...a) },
+      steam: { getGame: (...a: [string]) => mockGetGame(...a) },
+      nile: { getGame: (...a: [string]) => mockGetGame(...a) },
+      sideload: { getGame: (...a: [string]) => mockGetGame(...a) }
+    }
+  }),
+  quit: { handleExit: () => mockHandleExit() }
+})
 
 const shellExeAtFileLoad = process.env.GAMELIB_SHELL_EXE
 

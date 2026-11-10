@@ -20,13 +20,6 @@ jest.mock('../../constants/environment', () => ({
   }
 }))
 const getGame = jest.fn()
-jest.mock('../../storeManagers', () => ({
-  libraryManagerMap: {
-    legendary: { getGame: (...a: unknown[]) => getGame(...a) },
-    gog: { getGame: (...a: unknown[]) => getGame(...a) },
-    steam: { getGame: (...a: unknown[]) => getGame(...a) }
-  }
-}))
 
 const dismiss = jest.fn()
 const setPublisher = jest.fn()
@@ -54,6 +47,15 @@ jest.mock('../../ipc', () => ({
 }))
 
 import { registerEngineFlows } from '../engineFlowRegistration'
+import { createTestManagers } from 'backend/testUtils/testServices'
+
+const managers = createTestManagers({
+  library: {
+    legendary: { getGame: (...a: [string]) => getGame(...a) },
+    gog: { getGame: (...a: [string]) => getGame(...a) },
+    steam: { getGame: (...a: [string]) => getGame(...a) }
+  }
+})
 
 function fakeGame(over: { native?: boolean; platform?: string } = {}) {
   return {
@@ -63,7 +65,7 @@ function fakeGame(over: { native?: boolean; platform?: string } = {}) {
 }
 
 describe('engine flows', () => {
-  beforeAll(() => registerEngineFlows())
+  beforeAll(() => registerEngineFlows({ managers }))
   beforeEach(() => {
     jest.clearAllMocks()
     envState.isMac = true
@@ -170,7 +172,7 @@ describe('engine flows', () => {
   })
 
   it('wires the publisher to engineStateChanged', () => {
-    registerEngineFlows()
+    registerEngineFlows({ managers })
     const publisher = setPublisher.mock.calls[0][0] as (s: unknown) => void
     const state = { appId: '1' }
     publisher(state)

@@ -71,11 +71,11 @@ import { ipcMain } from '../platform'
 // before a direct `storeManagers/<runner>/user` import resolves, avoiding the re-entrant "X is
 // not a constructor" mid-evaluation crash `steamAuthFlowRegistration.ts`'s own docstring
 // documents (`storeManagers/index.ts` imports `steam/library` at its own top, which in turn
-// imports `steam/user`, and only THEN constructs its eager `libraryManagerMap` — entering through
+// imports `steam/user`, and only THEN constructs its eager library-manager table — entering through
 // a direct runner `user.ts` import instead risks hitting that same class mid-definition). This
 // fix is per-file, not "once is enough": each curated registration module is its own independent
 // entry point into the bundle's module graph. Verified for THIS cluster too: `legendary/user.ts`
-// imports `libraryManagerMap` from `..` (`storeManagers/index.ts`) and `gog/user.ts` reaches the
+// imports the library-manager table from `..` (`storeManagers/index.ts`) and `gog/user.ts` reaches the
 // same map via a lazy `await import('../index')` inside `login()`/`getCredentials()` specifically
 // to break this same cycle (its own doc comment cites "Phase 27 Plan 02") — both runners are
 // reachable through the identical circular-dependency shape this import ordering exists to avoid.

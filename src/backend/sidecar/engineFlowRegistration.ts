@@ -17,7 +17,7 @@
  */
 import { hasCapability } from 'common/storeCapabilities'
 import { ipcMain } from '../platform'
-import { libraryManagerMap } from '../storeManagers'
+import type { StoreManagers } from 'backend/services/types'
 import { isMac } from '../constants/environment'
 import { sendFrontendMessage } from '../ipc'
 import {
@@ -32,7 +32,16 @@ import {
 } from 'backend/engine/gameEngineState'
 import { engineKeyFor } from 'backend/engine/gameKey'
 
-async function getEngineStateFor(arg: unknown): Promise<unknown> {
+/** Narrow slice (66.1 D-01): only the library managers are read. */
+export interface EngineFlowDeps {
+  managers: Pick<StoreManagers, 'library'>
+}
+
+async function getEngineStateFor(
+  deps: EngineFlowDeps,
+  arg: unknown
+): Promise<unknown> {
+  const libraryManagerMap = deps.managers.library
   if (typeof arg !== 'object' || arg === null) return null
   const { runner, appName } = arg as Record<string, unknown>
   if (typeof runner !== 'string') return null
@@ -63,10 +72,11 @@ async function getEngineStateFor(arg: unknown): Promise<unknown> {
  * `getDefaultEngine`, `getPerGameBottleName`, `dismissEngineNotice`) and installs the
  * `engineStateChanged` publisher. Invoke channels use `ipcMain.handle`; the push is not a channel.
  */
-export function registerEngineFlows(): void {
+export function registerEngineFlows(deps: EngineFlowDeps): void {
   ipcMain.handle(
     'getEngineState',
-    async (_event: unknown, ...args: unknown[]) => getEngineStateFor(args[0])
+    async (_event: unknown, ...args: unknown[]) =>
+      getEngineStateFor(deps, args[0])
   )
 
   ipcMain.handle(
