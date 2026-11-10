@@ -61,7 +61,8 @@ import {
 import {
   prepareBottleForEngine,
   readBottleEngineMarkerKind,
-  restoreNeedsAbsentPin
+  restoreNeedsAbsentPin,
+  switchServicesFrom
 } from './engineSwitch'
 import type { EngineSwitchDeps } from './engineSwitch'
 import { engineLogLabel, isNonCrossover } from './engineTypes'
@@ -105,7 +106,8 @@ export interface LaunchEngineDeps {
   isCrossoverMissing(): Promise<boolean>
   currentPinInstalled(): boolean
   ensurePinned: typeof ensurePinnedEngineReportingStatus
-  switchDeps(): Partial<EngineSwitchDeps>
+  switchDeps(): Partial<EngineSwitchDeps> &
+    Pick<EngineSwitchDeps, 'killWith' | 'installRemove'>
   prepare: typeof prepareBottleForEngine
   sendStatus(update: {
     appName: string
@@ -124,31 +126,32 @@ export interface LaunchEngineDeps {
   notifyFallback: typeof notifyEngineFallback
 }
 
-const defaultDeps: Omit<LaunchEngineDeps, 'ensureGameBottle' | 'decisionDeps'> =
-  {
-    isMac: () => isMac,
-    readEffective: (id) => readEngineForGame(id),
-    isProvisioned: isBottleProvisioned,
-    isCrossoverMissing: () => isCrossoverMissing(),
-    currentPinInstalled: () => isPinnedEngineInstalled(ENGINE_PINS.current),
-    ensurePinned: ensurePinnedEngineReportingStatus,
-    switchDeps: () => ({}),
-    prepare: prepareBottleForEngine,
-    sendStatus: (update) => sendGameStatusUpdate(update),
-    recordDecision(id, decision, bottleName, prefix, effective) {
-      recordLaunchDecision(id, decision, bottleName, {
-        bottleFor: () => (bottleName === '' ? null : bottleName),
-        stateWithoutBottle: true,
-        overrideEligible: () => true,
-        overlayEligible: false,
-        effective: () => effective,
-        prefixKind: prefix.kind === 'bottle' ? 'bottle' : 'plain',
-        perGameBottleName: perGameBottleName(id.runner, id.appName)
-      })
-    },
-    showDialog: showEngineDialog,
-    notifyFallback: notifyEngineFallback
-  }
+const defaultDeps: Omit<
+  LaunchEngineDeps,
+  'ensureGameBottle' | 'decisionDeps' | 'switchDeps'
+> = {
+  isMac: () => isMac,
+  readEffective: (id) => readEngineForGame(id),
+  isProvisioned: isBottleProvisioned,
+  isCrossoverMissing: () => isCrossoverMissing(),
+  currentPinInstalled: () => isPinnedEngineInstalled(ENGINE_PINS.current),
+  ensurePinned: ensurePinnedEngineReportingStatus,
+  prepare: prepareBottleForEngine,
+  sendStatus: (update) => sendGameStatusUpdate(update),
+  recordDecision(id, decision, bottleName, prefix, effective) {
+    recordLaunchDecision(id, decision, bottleName, {
+      bottleFor: () => (bottleName === '' ? null : bottleName),
+      stateWithoutBottle: true,
+      overrideEligible: () => true,
+      overlayEligible: false,
+      effective: () => effective,
+      prefixKind: prefix.kind === 'bottle' ? 'bottle' : 'plain',
+      perGameBottleName: perGameBottleName(id.runner, id.appName)
+    })
+  },
+  showDialog: showEngineDialog,
+  notifyFallback: notifyEngineFallback
+}
 
 /** The bottle each key was marked running in, so endEngineLaunch can release it. */
 const ledgerBottles = new Map<EngineKey, string>()
@@ -179,6 +182,7 @@ export async function selectEngineForLaunch(
   const d: LaunchEngineDeps = {
     ...defaultDeps,
     ensureGameBottle: (a) => ensureGameBottle(services, a),
+    switchDeps: () => switchServicesFrom(services),
     decisionDeps: () => ({
       killCrossoverWineserver: killCrossoverWineserverWith(services)
     }),

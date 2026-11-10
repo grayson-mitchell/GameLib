@@ -42,6 +42,10 @@ jest.mock('../engineDialogs', () => ({
 jest.mock('../engineState', () => ({ recordLaunchDecision: jest.fn() }))
 jest.mock('../engineSwitch', () => ({
   prepareBottleForEngine: jest.fn(),
+  switchServicesFrom: jest.fn(() => ({
+    killWith: jest.fn(),
+    installRemove: jest.fn()
+  })),
   readBottleEngineMarkerKind: jest.fn(() => null),
   restoreNeedsAbsentPin: jest.fn(() => false)
 }))

@@ -10,6 +10,7 @@ import { resolveCrossoverBinDirAsync } from 'backend/engine/crossoverLocation'
 import { killCrossoverWineserverWith } from 'backend/engine/engineDecision'
 import type { EngineDecisionDeps } from 'backend/engine/engineDecision'
 import type { EngineServices } from 'backend/engine/engineServices'
+import { switchServicesFrom } from 'backend/engine/engineSwitch'
 import type { EngineSwitchDeps } from 'backend/engine/engineSwitch'
 import { readStoredGameConfig } from 'backend/engine/engineConfig'
 import type { EffectiveEngine } from 'backend/engine/engineConfig'
@@ -56,9 +57,12 @@ export function steamDecisionDeps(
   }
 }
 
-export function steamSwitchDeps(): Partial<EngineSwitchDeps> &
-  Pick<EngineSwitchDeps, 'crossoverSettings'> {
+export function steamSwitchDeps(
+  services: EngineServices
+): Partial<EngineSwitchDeps> &
+  Pick<EngineSwitchDeps, 'crossoverSettings' | 'killWith' | 'installRemove'> {
   return {
+    ...switchServicesFrom(services),
     getMonitorPhase: getBottleProcessMonitorPhase,
     ownBottleName: bridgeBottleNameFor,
     crossoverSettings: getBridgeBottleSettings,

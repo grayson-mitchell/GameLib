@@ -39,7 +39,7 @@
     "src/backend/__tests__/progress_bar.test.ts": 2,
     "src/backend/__tests__/protocol.test.ts": 11,
     "src/backend/__tests__/settingsVersioning.test.ts": 3,
-    "src/backend/__tests__/steamBridgeKnownFixes.test.ts": 9,
+    "src/backend/__tests__/steamBridgeKnownFixes.test.ts": 8,
     "src/backend/__tests__/storeChangeNotifier.test.ts": 1,
     "src/backend/__tests__/storeLaunchHooks.test.ts": 12,
     "src/backend/__tests__/trackedChildren.test.ts": 2,

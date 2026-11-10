@@ -9,6 +9,8 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
+import * as engineServices from 'backend/services/engineServices'
+import type { Tools } from 'backend/tools'
 
 jest.mock('os', () => {
   const actual = jest.requireActual('os')
@@ -43,13 +45,6 @@ const mockLogWarning = jest.fn()
 const mockLogInfo = jest.fn()
 let mockBottleRoot = '/mock/Bottles'
 
-jest.mock('backend/services/legacyFacades', () => ({
-  legacyTools: () => ({
-    Winetricks: {
-      install: (...args: unknown[]) => mockWinetricksInstall(...args)
-    }
-  })
-}))
 jest.mock('backend/utils', () => ({
   sendGameStatusUpdate: (...args: unknown[]) =>
     mockSendGameStatusUpdate(...args)
@@ -134,6 +129,13 @@ beforeEach(() => {
   rmSync(join(fixesPath, `${APP_ID}-steam.profile.json`), { force: true })
   rmSync(localFixesPath, { recursive: true, force: true })
   rmSync(bundledFixesPath, { recursive: true, force: true })
+  // The tools instance the known-fix applier builds from its deps (66.1-22f): the Winetricks
+  // seam is observed by spying the builder, not by mocking a module.
+  jest.spyOn(engineServices, 'toolsFrom').mockReturnValue({
+    Winetricks: {
+      install: (...args: unknown[]) => mockWinetricksInstall(...args)
+    }
+  } as unknown as Tools)
   mockWinetricksInstall.mockResolvedValue('installed')
   mockRunWineCommand.mockResolvedValue({ stdout: '', stderr: '', code: 0 })
   mockResolveOverlayEnv.mockResolvedValue({})

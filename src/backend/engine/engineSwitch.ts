@@ -13,7 +13,7 @@ import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'path'
 import { toolsPath } from 'backend/constants/paths'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { legacySpawnAsync } from 'backend/services/legacySpawnAsync'
+import type { EngineServices } from './engineServices'
 import type { GameSettings } from 'common/types'
 import type { Tools } from 'backend/tools'
 import {
@@ -127,17 +127,24 @@ async function defaultEnsurePinEngine(
   }
 }
 
-/** Everything except `crossoverSettings`, which the caller supplies (store-specific). */
-const defaultDeps: Omit<EngineSwitchDeps, 'crossoverSettings'> = {
+/** The kill and DXVK restore members of a switch, built from the injected engine services (66.1-22f). */
+export function switchServicesFrom(
+  services: EngineServices
+): Pick<EngineSwitchDeps, 'killWith' | 'installRemove'> {
+  return {
+    killWith: (...a) =>
+      killBottleWineServerWith({ spawnAsync: services.spawnAsync }, ...a),
+    installRemove: services.installRemove
+  }
+}
+
+/** Everything except what the caller supplies: `crossoverSettings` (store-specific) and the services-built `killWith`/`installRemove`. */
+const defaultDeps: Omit<
+  EngineSwitchDeps,
+  'crossoverSettings' | 'killWith' | 'installRemove'
+> = {
   getMonitorPhase: () => null,
-  killWith: (...a) =>
-    killBottleWineServerWith({ spawnAsync: legacySpawnAsync }, ...a),
   resolveCrossoverBinDir: () => resolveCrossoverBinDirAsync({}),
-  // Lazy: legacyFacades pulls in launcher and the store managers (import cycle).
-  installRemove: async (...args) =>
-    (await import('backend/services/legacyFacades'))
-      .legacyTools()
-      .DXVK.installRemove(...args),
   fallbackSettings: buildFallbackGameSettings,
   currentPinEngine: defaultCurrentPinEngine,
   ensurePinEngine: defaultEnsurePinEngine
@@ -471,7 +478,8 @@ type PrepareArgs = {
   crossoverHealthy?: boolean
   /** Called once when a real engine change is about to start, before any kill or DXVK step. */
   onSwitching?: () => void
-  deps: Partial<EngineSwitchDeps> & Pick<EngineSwitchDeps, 'crossoverSettings'>
+  deps: Partial<EngineSwitchDeps> &
+    Pick<EngineSwitchDeps, 'crossoverSettings' | 'killWith' | 'installRemove'>
 }
 
 async function prepareBottleForEngineBody(

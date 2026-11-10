@@ -515,6 +515,7 @@ export async function selectLaunchEngine(
   const { isCrossoverMissing } = await import('backend/engine/engineDecision')
   const { steamDecisionDeps, steamSwitchDeps, readSteamEngineOverride } =
     await import('./engine/steamEngineDeps')
+  const { engineServicesFrom } = await import('backend/services/engineServices')
   const { parseEngineOverride } = await import('backend/engine/engineIds')
   const earlyOverride = parseEngineOverride(
     readSteamEngineOverride(steamGame.appId)
@@ -628,7 +629,7 @@ export async function selectLaunchEngine(
     crossoverHealthy: decision.preflight?.kind === 'healthy',
     // WR-05: a restore's pin download reports the same progress as a launch download.
     deps: {
-      ...steamSwitchDeps(),
+      ...steamSwitchDeps(engineServicesFrom(steamGame.deps)),
       ensurePinEngine: steamGame.restorePinEngine
     },
     // IN-05 (59-22): a real engine switch is "setting up", not a stale

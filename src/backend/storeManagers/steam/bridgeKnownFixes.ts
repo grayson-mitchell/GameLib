@@ -49,7 +49,7 @@
 
 import { isAbsolute, relative, resolve } from 'node:path'
 import type { EnviromentVariable, GameSettings } from 'common/types'
-import type { CommandRunner } from 'backend/commandRunner'
+import type { EngineServicesSource } from 'backend/services/engineServices'
 import { readKnownFixes, readKnownFixProfile } from 'backend/knownFixes'
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import { sendGameStatusUpdate } from 'backend/utils'
@@ -172,9 +172,7 @@ async function gameMakerGraphicsDefault(
 }
 
 /** What the bridge known-fix applier reaches through a slice (66.1 R3). */
-export interface BridgeKnownFixDeps {
-  commandRunner: Pick<CommandRunner, 'runWineCommand'>
-}
+export type BridgeKnownFixDeps = EngineServicesSource
 
 export async function applySteamBridgeKnownFixes(
   deps: BridgeKnownFixDeps,
@@ -206,8 +204,8 @@ export async function applySteamBridgeKnownFixes(
   try {
     // Lazy, mirroring games.ts's lazy launcher import: avoids the cycle.
     const { Winetricks } = (
-      await import('backend/services/legacyFacades')
-    ).legacyTools()
+      await import('backend/services/engineServices')
+    ).toolsFrom(deps)
     const { runWineCommand } = deps.commandRunner
 
     const registryCtx = { label: `Steam ${appId}`, logPrefix: LogPrefix.Steam }
