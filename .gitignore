@@ -98,3 +98,8 @@ __pycache__/
 # workflow run. Machine-local, never source -- and untracked-but-unignored it fails
 # the pre-push `prettier --check .`.
 .gsd/
+
+# Written by meta/esbuildWorkerBundleShared.ts (writeLzmaNativeResolvedPaths) on build/install.
+# It holds this machine's absolute node_modules path, so it is machine-local and must not be committed;
+# untracked-but-unignored it fails the pre-push `prettier --check .`.
+/src/backend/storeManagers/steam/depot/lzmaNativeResolvedPaths.generated.cjs
