@@ -21,3 +21,7 @@ Found while moving the UI slice out of GlobalState in Phase 69-06. All three are
 ## Solution
 
 Read the current game status at event time from the library/downloads store once those slices exist (Phase 69 later waves), then either wire `showInstallModal` to a consumer or delete it together with the push handler, and delete `wineVersions` and `error` if still unread.
+
+## Resolution
+
+Resolved in quick task 261110-u9k: the push is wired to `openInstallGameModal`, the in-flight guard reads `libraryStatus` at event time (skips `installing` and `queued`), and the dead `UiState` fields `showInstallModal`, `wineVersions` and `error` are deleted.

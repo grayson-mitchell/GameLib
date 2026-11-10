@@ -2,19 +2,13 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 
 import type { GetLogFileArgs } from 'backend/logger/paths'
-import type {
-  ConnectivityStatus,
-  GameInfo,
-  Runner,
-  WineVersionInfo
-} from 'common/types'
+import type { ConnectivityStatus, GameInfo } from 'common/types'
 import type {
   DialogModalOptions,
   ExternalLinkDialogOptions
 } from 'frontend/types'
 import type { GameSettingsModalType } from '../screens/Settings/components/SettingsModal'
 import { notify } from 'frontend/helpers'
-import { wineDownloaderInfoStore } from 'frontend/helpers/stores'
 import { t } from 'i18next'
 import { reduceDialogRequest } from './dialogQueue'
 import { bindStoreHooks, registerStoreForReset } from './storeKit'
@@ -25,7 +19,6 @@ import { bindStoreHooks, registerStoreForReset } from './storeKit'
 export interface UiState {
   // Phase 69-06 (D-10 first domain): moved out of GlobalState's StateProps.
   platform: NodeJS.Platform | 'unknown'
-  error: boolean
   isFullscreen: boolean
   isFrameless: boolean
   activeController: string
@@ -34,13 +27,6 @@ export interface UiState {
   dialogQueue: DialogModalOptions[]
   externalLinkDialogOptions: ExternalLinkDialogOptions
   showRedeemKeyDialog: boolean
-  showInstallModal: {
-    show: boolean
-    gameInfo: GameInfo | null
-    appName: string
-    runner: Runner
-  }
-  wineVersions: WineVersionInfo[]
   showDialogModal: (request: DialogModalOptions) => void
   showResetDialog: () => void
   handleExternalLinkDialog: (value: ExternalLinkDialogOptions) => void
@@ -75,7 +61,6 @@ export interface UiState {
 const useUiStateRaw = create<UiState>()(
   subscribeWithSelector((set, get) => ({
     platform: 'unknown',
-    error: false,
     isFullscreen: false,
     isFrameless: false,
     activeController: '',
@@ -84,13 +69,6 @@ const useUiStateRaw = create<UiState>()(
     dialogQueue: [],
     externalLinkDialogOptions: { showDialog: false },
     showRedeemKeyDialog: false,
-    showInstallModal: {
-      show: false,
-      appName: '',
-      runner: 'legendary',
-      gameInfo: null
-    },
-    wineVersions: [],
 
     showDialogModal: (request) => {
       // Functional update: a button click closes then opens a follow-up in the
@@ -188,10 +166,9 @@ const useUiStateRaw = create<UiState>()(
  * The values the GlobalState constructor read after hydration. Applied by
  * initStateSubscriptions section (1); read at CALL time, never at module scope.
  */
-export function readInitialUi(): Pick<UiState, 'platform' | 'wineVersions'> {
+export function readInitialUi(): Pick<UiState, 'platform'> {
   return {
-    platform: window.platform,
-    wineVersions: wineDownloaderInfoStore.get('wine-releases', [])
+    platform: window.platform
   }
 }
 

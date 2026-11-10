@@ -22,7 +22,6 @@ const useUiState = require('../uiState').default as StoreHooks<UiState>
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const readInitialUi = require('../uiState').readInitialUi as () => {
   platform: unknown
-  wineVersions: unknown
 }
 
 const game = { app_name: 'a', title: 'A', runner: 'steam' } as GameInfo
@@ -88,7 +87,6 @@ describe('uiState store', () => {
   it('has the moved UI slice defaults', () => {
     const s = useUiState.getState()
     expect(s.platform).toBe('unknown')
-    expect(s.error).toBe(false)
     expect(s.isFullscreen).toBe(false)
     expect(s.isFrameless).toBe(false)
     expect(s.activeController).toBe('')
@@ -97,8 +95,6 @@ describe('uiState store', () => {
     expect(s.dialogQueue).toEqual([])
     expect(s.externalLinkDialogOptions).toEqual({ showDialog: false })
     expect(s.showRedeemKeyDialog).toBe(false)
-    expect(s.showInstallModal.show).toBe(false)
-    expect(s.wineVersions).toEqual([])
   })
 
   it('showDialogModal: two calls in one tick each see the previous result', () => {
@@ -144,6 +140,6 @@ describe('uiState store', () => {
     expect(readInitialUi().platform).toBe('linux')
     ;(window as unknown as { platform: string }).platform = 'darwin'
     expect(readInitialUi().platform).toBe('darwin')
-    expect(Array.isArray(readInitialUi().wineVersions)).toBe(true)
+    expect(Object.keys(readInitialUi())).toEqual(['platform'])
   })
 })
