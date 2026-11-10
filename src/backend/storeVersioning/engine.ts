@@ -248,6 +248,11 @@ export function __kindMismatchesForTest(): readonly {
   return kindMismatches
 }
 
+/** The kind the engine recorded for a store file (first declaration wins), for parity tests. */
+export function __kindOfForTest(filePath: string): StoreKind | undefined {
+  return STATE.get(resolve(filePath))?.kind
+}
+
 export function __resetStoreState(): void {
   STATE.clear()
   kindMismatches.length = 0

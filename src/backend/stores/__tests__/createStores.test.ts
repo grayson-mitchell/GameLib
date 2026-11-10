@@ -4,6 +4,7 @@ import { getPath } from '../../sidecar/pathShim'
 import { TypeCheckedStoreBackend } from '../../typed_store'
 import { createStores } from '../createStores'
 import { createStoreRegistry } from '../storeRegistry'
+import { __kindOfForTest } from '../../storeVersioning/engine'
 import fixture from './fixtures/registeredStores.json'
 
 /**
@@ -79,11 +80,6 @@ describe('createStoreRegistry', () => {
  */
 describe('createStores', () => {
   const registered = fixture.filter((entry) => entry.registeredAs !== null)
-  const cacheNames = new Set(
-    fixture
-      .filter((entry) => entry.registeredAs === null)
-      .map((entry) => entry.options.name)
-  )
 
   it('registers exactly the stores the singletons registered, with identical options and declarations', () => {
     const registry = createStoreRegistry()
@@ -110,23 +106,61 @@ describe('createStores', () => {
     }
   })
 
-  it('keeps every cache store on its original file under store_cache', () => {
+  type CacheInternals = {
+    store: { path: string }
+    lifespan: number | null
+    invalidateCheck: (data: unknown) => boolean
+  }
+
+  /** Every CacheStore `createStores` builds, keyed by its file name under store_cache. */
+  function builtCacheStores(): Map<string, CacheInternals> {
     const stores = createStores({ registry: createStoreRegistry() })
-    const files: string[] = []
+    const built = new Map<string, CacheInternals>()
     for (const family of Object.values(stores)) {
       for (const store of Object.values(family)) {
-        if (store instanceof CacheStore) {
-          const path = (store as unknown as { store: { path: string } }).store
-            .path
-          expect(dirname(path)).toBe(join(getPath('userData'), 'store_cache'))
-          files.push(basename(path, '.json'))
-        }
+        if (!(store instanceof CacheStore)) continue
+        const internals = store as unknown as CacheInternals
+        const path = internals.store.path
+        expect(dirname(path)).toBe(join(getPath('userData'), 'store_cache'))
+        const name = basename(path, '.json')
+        expect(built.has(name)).toBe(false)
+        built.set(name, internals)
       }
     }
-    expect(files.length).toBeGreaterThanOrEqual(25)
-    for (const file of files) {
-      expect(cacheNames).toContain(file)
+    return built
+  }
+
+  // The pci_ids_* caches are built outside createStores (the systeminfo module), so they are in
+  // the fixture but not in this factory's output.
+  const fixtureCaches = fixture.filter(
+    (entry) =>
+      entry.registeredAs === null && !entry.options.name.startsWith('pci_ids_')
+  )
+
+  it('builds exactly the fixture cache stores, each declared with the fixture kind', () => {
+    const built = builtCacheStores()
+    expect([...built.keys()].sort()).toEqual(
+      [...new Set(fixtureCaches.map((entry) => entry.options.name))].sort()
+    )
+    for (const entry of fixtureCaches) {
+      const path = built.get(entry.options.name)?.store.path
+      expect(path).toBeDefined()
+      expect(__kindOfForTest(path as string)).toBe(entry.declaration.kind)
     }
+  })
+
+  it('pins the TTL and invalidateCheck of the umu, wikigameinfo and crossover_index caches', () => {
+    const built = builtCacheStores()
+    const umu = built.get('umu')
+    expect(umu?.lifespan).toBe(60 * 6)
+    expect(umu?.invalidateCheck(null)).toBe(true) // a cached "no umu id" is re-resolved
+    expect(umu?.invalidateCheck('umu-123')).toBe(false)
+    const wiki = built.get('wikigameinfo')
+    expect(wiki?.lifespan).toBe(60 * 24 * 30)
+    expect(wiki?.invalidateCheck({})).toBe(true) // the CacheStore default
+    const crossover = built.get('crossover_index')
+    expect(crossover?.lifespan).toBe(60 * 24)
+    expect(crossover?.invalidateCheck({})).toBe(false) // keep-last-good (D-09)
   })
 
   it('two boots get independent registries and instances, and no duplicate line', () => {
