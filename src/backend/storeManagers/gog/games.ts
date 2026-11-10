@@ -66,12 +66,11 @@ import { isOnline, runOnceWhenOnline } from 'backend/online_monitor'
 import { readdir, readFile } from 'fs/promises'
 import ini from 'ini'
 import { getRequiredRedistList, updateRedist } from './redist'
-import { spawn } from 'child_process'
 import { getUmuId } from 'backend/wiki_game_info/umu/utils'
 import { gogdlConfigPath, gogSupportPath } from './constants'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import { checkInstalledMacArch } from 'backend/macArch/recovery'
-import { registerLongLivedChild } from 'backend/longLivedChildren'
+import type { LongLivedHandle } from 'backend/process/types'
 
 import { readKnownFixLaunchOverrides } from 'backend/knownFixLaunch'
 import type LogWriter from 'backend/logger/log_writer'
@@ -832,7 +831,7 @@ export default class GOGGame implements Game {
 
     sendGameStatusUpdate({ appName: this.id, runner: 'gog', status: 'playing' })
 
-    let child = undefined
+    let comet: LongLivedHandle | undefined
 
     const cometLogWriter = getRunnerLogWriter('comet')
 
@@ -843,32 +842,19 @@ export default class GOGGame implements Game {
         false
     ) {
       const path = getCometBin()
-      child = spawn(join(path.dir, path.bin), [
-        '--from-heroic',
-        '--username',
-        userData.username,
-        '--quit'
-      ])
-      child.stdout.setEncoding('utf-8')
-      child.stderr.setEncoding('utf-8')
-      child.stdout.on('data', (data: string) => {
-        cometLogWriter.writeString(data)
-      })
-      child.stderr.on('data', (data: string) => {
-        cometLogWriter.writeString(data)
-      })
+      // Runner-tracked long-lived child: teardownAll() at quit and PID-kills
+      // reach comet even while runRunnerCommand() below is still in flight.
+      comet = this.deps.runner.spawnLongLived(
+        join(path.dir, path.bin),
+        ['--from-heroic', '--username', userData.username, '--quit'],
+        {
+          id: 'gog-comet',
+          onStdout: (data: string) => cometLogWriter.writeString(data),
+          onStderr: (data: string) => cometLogWriter.writeString(data)
+        }
+      )
       logInfo(`Launching Comet!`, LogPrefix.Gog)
     }
-
-    // Quick task 260907-juv (Layer A): register comet on the shared long-lived-child
-    // registry so `handleExit()` can gracefully terminate it on in-app quit even while
-    // this game's `runRunnerCommand()` call below is still in flight -- previously comet
-    // was ONLY killed after that call resolved (game-exit-scoped, never quit-scoped), so
-    // quitting mid-session left comet running as an orphan (see the CONTEXT.md findings
-    // for this quick task).
-    const unregisterComet = child
-      ? registerLongLivedChild('gog-comet', () => child?.kill())
-      : null
 
     const { error, abort } =
       await this.deps.libraryManagers.gog.runRunnerCommand(commandParts, {
@@ -879,10 +865,10 @@ export default class GOGGame implements Game {
         logWriters: [logWriter]
       })
 
-    if (child) {
+    if (comet) {
       logInfo(`Killing Comet!`, LogPrefix.Gog)
-      unregisterComet?.()
-      child.kill()
+      comet.unregister()
+      comet.kill()
     }
     this.deps.launcher.launchCleanup(rpcClient)
 

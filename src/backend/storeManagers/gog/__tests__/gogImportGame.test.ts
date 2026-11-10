@@ -21,6 +21,7 @@
  */
 
 const mockRunRunnerCommand = jest.fn()
+const mockCometLog = { logInfo: jest.fn(), writeString: jest.fn() }
 const mockLibraryManagerImportGame = jest.fn()
 const mockLibraryManagerGetGameInfo = jest.fn()
 
@@ -36,7 +37,7 @@ jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
   logDebug: jest.fn(),
   createGameLogWriter: jest.fn(() => ({ logInfo: jest.fn() })),
-  getRunnerLogWriter: jest.fn(() => ({ logInfo: jest.fn() })),
+  getRunnerLogWriter: jest.fn(() => mockCometLog),
   LogPrefix: { Gog: 'Gog', Backend: 'Backend' }
 }))
 
@@ -135,10 +136,6 @@ jest.mock('../redist', () => ({
   updateRedist: jest.fn()
 }))
 
-jest.mock('child_process', () => ({
-  spawn: jest.fn()
-}))
-
 jest.mock('backend/wiki_game_info/umu/utils', () => ({
   getUmuId: jest.fn()
 }))
@@ -154,14 +151,16 @@ jest.mock('backend/constants/environment', () => ({
   isWindows: false
 }))
 
-jest.mock('backend/longLivedChildren', () => ({
-  registerLongLivedChild: jest.fn()
-}))
-
 import GOGGame from '../games'
 import type { GOGManagerDeps } from '../library'
 import { createTestManagerDeps } from 'backend/testUtils/testServices'
 import type { GOGImportData } from 'common/types'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import { existsSync } from 'graceful-fs'
+import { getRunnerLogWriter } from 'backend/logger'
+import shlex from 'shlex'
+import { getCometBin } from '../../../utils'
+import { GlobalConfig } from '../../../config'
 
 function makeDeps(): GOGManagerDeps {
   const base = createTestManagerDeps()
@@ -305,5 +304,91 @@ describe('GOGGame.importGame -- identity guard (260907-ppy)', () => {
     const shortcutFailureResult = await game.importGame(FOLDER_PATH)
 
     expect(shortcutFailureResult.error).toBeUndefined()
+  })
+})
+
+describe('GOGGame.launch: comet on the process runner', () => {
+  function launchHarness() {
+    const runner = createScriptedRunner([
+      {
+        cmd: '/fake/comet/comet',
+        argv: ['--from-heroic', '--username', 'player1', '--quit']
+      }
+    ])
+    const base = makeDeps()
+    const deps = {
+      ...base,
+      runner,
+      launcher: {
+        prepareLaunch: jest.fn(async () => ({ success: true })),
+        launchCleanup: jest.fn(),
+        setupWrapperEnvVars: jest.fn(() => ({})),
+        setupEnvVars: jest.fn(() => ({})),
+        getKnownFixesEnvVariables: jest.fn(() => ({})),
+        setupWrappers: jest.fn(() => [])
+      } as unknown as GOGManagerDeps['launcher']
+    } as GOGManagerDeps
+    ;(deps.stores.gog.configStore.get_nodefault as jest.Mock).mockReturnValue({
+      username: 'player1'
+    })
+    mockRunRunnerCommand.mockResolvedValue({ error: undefined, abort: false })
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(getCometBin as jest.Mock).mockReturnValue({
+      dir: '/fake/comet',
+      bin: 'comet'
+    })
+    ;(GlobalConfig.get as jest.Mock).mockReturnValue({
+      config: {},
+      getSettings: () => ({})
+    })
+    ;(getRunnerLogWriter as jest.Mock).mockReturnValue(mockCometLog)
+    ;(shlex.split as jest.Mock).mockReturnValue([])
+    ;(shlex.join as jest.Mock).mockReturnValue('')
+    const game = new GOGGame(GAME_ID, deps)
+    jest.spyOn(game, 'getGameInfo').mockReturnValue({
+      app_name: GAME_ID,
+      runner: 'gog',
+      install: {
+        install_path: '/fake/game',
+        platform: 'windows'
+      }
+    } as unknown as ReturnType<GOGGame['getGameInfo']>)
+    jest.spyOn(game, 'getSettings').mockResolvedValue({} as never)
+    jest.spyOn(game, 'isNative').mockReturnValue(true)
+    return { game, runner }
+  }
+
+  it('spawns comet as the tracked long-lived child gog-comet with the exact argv, then unregisters and kills it', async () => {
+    const { game, runner } = launchHarness()
+    await game.launch({
+      logInfo: jest.fn(),
+      logError: jest.fn(),
+      writeString: jest.fn()
+    } as never)
+
+    const spawns = runner.calls.filter((c) => c.method === 'spawnLongLived')
+    expect(spawns).toHaveLength(1)
+    expect(spawns[0]).toMatchObject({
+      cmd: '/fake/comet/comet',
+      argv: ['--from-heroic', '--username', 'player1', '--quit'],
+      opts: { id: 'gog-comet' }
+    })
+    // unregister() dropped the teardown, so quit no longer reaches a dead comet.
+    expect(() => runner.teardownAll()).not.toThrow()
+  })
+
+  it('routes comet stdout and stderr to the comet log writer', async () => {
+    const { game, runner } = launchHarness()
+    await game.launch({
+      logInfo: jest.fn(),
+      logError: jest.fn(),
+      writeString: jest.fn()
+    } as never)
+    const opts = runner.calls.find((c) => c.method === 'spawnLongLived')
+      ?.opts as { onStdout: (s: string) => void; onStderr: (s: string) => void }
+    opts.onStdout('out-chunk')
+    opts.onStderr('err-chunk')
+    expect(mockCometLog.writeString).toHaveBeenCalledWith('out-chunk')
+    expect(mockCometLog.writeString).toHaveBeenCalledWith('err-chunk')
   })
 })
