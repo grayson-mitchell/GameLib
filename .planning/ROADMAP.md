@@ -218,6 +218,14 @@ Quest (593280, 32-bit Mono Unity, Steamworks.NET) — strict verified bar: shim 
 clean game Steam-init line in its `error.log` / `output_log.txt`. Diagnosis:
 `.planning/debug/resolved/cat-quest-shim-withheld.md`.
 
+**Second acceptance title:** Undertale (391540, GameMaker 1.4 x86 runner, runtime-loaded
+`steam_api.dll`). The runner resolves `SteamAPI_InitSafe`, `SteamAPI_GetHSteamPipe` and
+`SteamAPI_GetHSteamUser` by name; the x86 shim exports none of them, so init never reaches the
+shim and HELLO is never sent. The shim is now withheld for this shape (original restored from
+`.gamelib-orig`, direct launch, no helper), not bridged, so it is **not verified**. Same strict
+bar as Cat Quest: shim HELLO plus a game-originated bridge call. Diagnosis:
+`.planning/debug/resolved/undertale-shim-placed-no-hello.md`.
+
 **Adjacent, deliberately NOT folded in:** confirming that `APPLE_CERTIFICATE`,
 `APPLE_CERTIFICATE_PASSWORD` and `APPLE_SIGNING_IDENTITY` are enrolled as repo secrets — without
 them `.github/workflows/release-tauri.yml` ships unsigned, giving each release a fresh code
