@@ -29,6 +29,7 @@ import useSettingsState, {
   registerSettingsSideEffects,
   wasFocusRowPickedThisSession
 } from './settingsState'
+import { registerDownloadsListeners } from './downloadsState'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
@@ -129,6 +130,9 @@ export function initStateSubscriptions(): void {
   window.api.handleSteamBottleLaunchWaiting(
     handleSteamBottleLaunchWaitingSignal
   )
+
+  // Phase 69 D-15: completed-downloads list, boot pull + queue-change refresh.
+  registerDownloadsListeners()
 
   // (3) store.subscribe side effects (D-08)
   registerSettingsSideEffects()

@@ -6,13 +6,13 @@ import { DMQueueElement, DownloadManagerState } from 'common/types'
 import type { IpcRendererEvent } from 'backend/platform'
 import { UpdateComponent } from 'frontend/components/UI'
 import DownloadHero from './components/DownloadHero'
-import { downloadManagerStore } from 'frontend/helpers/stores'
 import { DMQueue } from 'frontend/types'
 import DownloadManagerItem from './components/DownloadManagerItem'
 import SetupDownloadItem from './components/SetupDownloadItem'
 import SteamManagedItem from './components/SteamManagedItem'
 import { steamManagedRows } from './components/SteamManagedItem/steamManagedModel'
 import ContextProvider from 'frontend/state/ContextProvider'
+import useDownloadsState from 'frontend/state/downloadsState'
 import { useSteamSetupDownloads } from 'frontend/state/SteamSetupDownloads'
 
 export default React.memo(function DownloadManager(): JSX.Element | null {
@@ -25,7 +25,11 @@ export default React.memo(function DownloadManager(): JSX.Element | null {
   const [state, setState] = useState<DownloadManagerState>('idle')
   const [plannendElements, setPlannendElements] = useState<DMQueueElement[]>([])
   const [currentElement, setCurrentElement] = useState<DMQueueElement>()
-  const [finishedElem, setFinishedElem] = useState<DMQueueElement[]>()
+  const finished = useDownloadsState((s) => s.finished)
+  const { clearFinished, clearFinishedItem } = useDownloadsState.keys(
+    'clearFinished',
+    'clearFinishedItem'
+  )
 
   useEffect(() => {
     setRefreshing(true)
@@ -55,35 +59,13 @@ export default React.memo(function DownloadManager(): JSX.Element | null {
     }
   }, [])
 
-  useEffect(() => {
-    window.api.getDMQueueInformation().then(({ finished }: DMQueue) => {
-      setFinishedElem(finished)
-    })
-  }, [plannendElements.length, currentElement?.params.appName])
-
   if (refreshing) {
     return <UpdateComponent />
   }
 
-  const handleClearList = () => {
-    setFinishedElem([])
-    downloadManagerStore.set('finished', [])
-  }
-
-  const handleClearItem = (appName: string) => {
-    const filteredFinishedElem = finishedElem?.filter(
-      (e) => e.params.appName !== appName
-    )
-    setFinishedElem(filteredFinishedElem)
-    downloadManagerStore.set(
-      'finished',
-      filteredFinishedElem ? filteredFinishedElem : []
-    )
-  }
-
   const doneElements =
-    (finishedElem?.length &&
-      finishedElem.sort((a, b) => {
+    (finished?.length &&
+      [...finished].sort((a, b) => {
         // Sort by endTime
         return b.endTime - a.endTime
       })) ||
@@ -166,10 +148,7 @@ export default React.memo(function DownloadManager(): JSX.Element | null {
                 {`(${doneElements.length})`}
               </span>
             </h5>
-            <button
-              className="button is-text"
-              onClick={() => handleClearList()}
-            >
+            <button className="button is-text" onClick={() => clearFinished()}>
               {t('queue.label.clear', 'Clear List')}
             </button>
           </header>
@@ -179,7 +158,7 @@ export default React.memo(function DownloadManager(): JSX.Element | null {
                 key={key}
                 element={el}
                 current={false}
-                handleClearItem={handleClearItem}
+                handleClearItem={clearFinishedItem}
               />
             ))}
           </div>

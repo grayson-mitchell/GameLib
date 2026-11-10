@@ -23,6 +23,10 @@ const fakeApi = new Proxy(
           return Promise.resolve(values[name] ?? false)
         }
       }
+      if (name === 'getDMQueueInformation') {
+        return () =>
+          Promise.resolve({ elements: [], finished: [], state: 'idle' })
+      }
       if (name === 'getConnectivityStatus') {
         return () => new Promise(() => undefined)
       }
@@ -83,7 +87,8 @@ const MOVED_LISTENERS = [
   'handleEngineStateChanged',
   'handleSteamRequestNotice',
   'handleReadOnlyStoresNotice',
-  'handleSteamBottleLaunchWaiting'
+  'handleSteamBottleLaunchWaiting',
+  'handleDMQueueInformation'
 ]
 
 // Node-env: settingsState reads/writes these when the boot module runs.
