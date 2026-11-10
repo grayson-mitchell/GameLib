@@ -62,6 +62,7 @@ jest.mock('../../online_monitor', () => ({
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
+import type { GOGUserDeps } from '../../storeManagers/gog/user'
 import { bootFresh } from './helpers/sidecarHarness'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -102,11 +103,18 @@ function bootedWorld() {
     GlobalConfig: (require('../../config') as typeof import('../../config'))
       .GlobalConfig,
     setGogPresenceWhenOnline: (
-      require('../bootstrap') as { setGogPresenceWhenOnline: () => void }
+      require('../bootstrap') as {
+        setGogPresenceWhenOnline: (deps: GOGUserDeps) => void
+      }
     ).setGogPresenceWhenOnline
   }
 }
 /* eslint-enable @typescript-eslint/no-require-imports */
+
+const presenceDeps = {
+  stores: {},
+  libraryManagers: {}
+} as unknown as GOGUserDeps
 
 describe('todo 2026-09-06 -- sidecar boot sets GOG presence once online (Block H)', () => {
   // Case 1: FUSED WIRING PROOF.
@@ -121,9 +129,10 @@ describe('todo 2026-09-06 -- sidecar boot sets GOG presence once online (Block H
     it('case 2 -- direct, enabled: setGogPresenceWhenOnline() calls setPresence() exactly once', () => {
       const { setPresenceSpy, setGogPresenceWhenOnline } = bootedWorld()
 
-      setGogPresenceWhenOnline()
+      setGogPresenceWhenOnline(presenceDeps)
 
       expect(setPresenceSpy).toHaveBeenCalledTimes(1)
+      expect(setPresenceSpy).toHaveBeenCalledWith(presenceDeps)
     })
 
     it('case 3 -- D-K5X-02 receipt: disableGOGPresence still calls setPresence(), no skip-log -- the gate is inside setPresence()', () => {
@@ -141,7 +150,7 @@ describe('todo 2026-09-06 -- sidecar boot sets GOG presence once online (Block H
       } as unknown as import('../../config').GlobalConfig)
       const logDebugSpy = jest.spyOn(loggerModule, 'logDebug')
 
-      setGogPresenceWhenOnline()
+      setGogPresenceWhenOnline(presenceDeps)
 
       // Block H itself reads NO settings -- it must call setPresence() regardless of
       // disableGOGPresence. If someone later "helpfully" hoists a settings read to helper
@@ -159,7 +168,7 @@ describe('todo 2026-09-06 -- sidecar boot sets GOG presence once online (Block H
       )
       const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
 
-      expect(() => setGogPresenceWhenOnline()).not.toThrow()
+      expect(() => setGogPresenceWhenOnline(presenceDeps)).not.toThrow()
       // This is what proves the explicit `.catch` exists: without it, this rejection would
       // surface as an unhandled rejection instead of a caught, logged warning.
       await new Promise(setImmediate)
@@ -193,7 +202,7 @@ describe('todo 2026-09-06 -- sidecar boot sets GOG presence once online (Block H
       })
       const logWarningSpy = jest.spyOn(loggerModule, 'logWarning')
 
-      expect(() => setGogPresenceWhenOnline()).not.toThrow()
+      expect(() => setGogPresenceWhenOnline(presenceDeps)).not.toThrow()
       expect(setPresenceSpy).not.toHaveBeenCalled()
       expect(capturedCallback).toBeDefined()
 

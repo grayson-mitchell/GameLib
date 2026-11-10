@@ -1317,7 +1317,7 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       ])
     })
 
-    it('REQ-34.6-08 getGogDiscounts delegates to fetchDiscounts.ts’s getGogDiscounts(locale, hideOwned, wishlistOnly)', async () => {
+    it('REQ-34.6-08 getGogDiscounts delegates to fetchDiscounts.ts’s getGogDiscounts(deps, locale, hideOwned, wishlistOnly)', async () => {
       const locale = {
         countryCode: 'US',
         locale: 'en-US',
@@ -1335,7 +1335,15 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
       ])
       await flush()
 
-      expect(mockGetGogDiscounts).toHaveBeenCalledWith(locale, true, false)
+      expect(mockGetGogDiscounts).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stores: expect.anything(),
+          libraryManagers: expect.anything()
+        }),
+        locale,
+        true,
+        false
+      )
       expect(findResponse(frames, 'discounts-1')?.result).toEqual([
         { id: 'prod-1', title: 'Discounted Game' }
       ])

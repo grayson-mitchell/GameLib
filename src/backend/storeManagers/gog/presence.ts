@@ -4,7 +4,6 @@ import { axiosClient } from 'backend/utils'
 import { GOGUser, type GOGUserDeps } from './user'
 import { isOnline } from 'backend/online_monitor'
 import { GlobalConfig } from 'backend/config'
-import { backendEvents } from 'backend/backend_events'
 
 interface PresencePayload {
   application_type: string
@@ -17,34 +16,12 @@ interface PresencePayload {
 let CURRENT_GAME = ''
 let interval: NodeJS.Timeout | undefined
 
-/**
- * Transitional (66.1-08): the gog stores and manager are resolved by getter at call time, so
- * loading this module (it is imported from utils.ts) pulls in neither. A later plan injects them.
- */
-function presenceUserDeps(): GOGUserDeps {
-  return {
-    stores: {
-      get gog() {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        return require('./stores') as typeof import('./stores')
-      }
-    },
-    libraryManagers: {
-      get gog() {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        return (require('..') as typeof import('..')).libraryManagerMap.gog
-      }
-    }
-  }
-}
-
 function setCurrentGame(game: string) {
   CURRENT_GAME = game
 }
 
-async function setPresence() {
+async function setPresence(deps: GOGUserDeps) {
   try {
-    const deps = presenceUserDeps()
     const { disablePlaytimeSync, disableGOGPresence } =
       GlobalConfig.get().getSettings()
     if (
@@ -58,7 +35,7 @@ async function setPresence() {
     if (!credentials) return
 
     if (!interval) {
-      interval = setInterval(setPresence, 5 * 60 * 1000)
+      interval = setInterval(() => void setPresence(deps), 5 * 60 * 1000)
       // quick-260913-901: this keep-alive must NEVER be the reason the process cannot exit.
       //
       // The sidecar's lifetime is owned by stdin (the RPC frame stream) and it must exit when
@@ -160,13 +137,12 @@ async function setPresence() {
  * presence off. If presence is needed again afterward, `setPresence()`'s own `if (!interval)`
  * arm re-creates the timer on its next call, exactly as it does after a fresh process start.
  */
-async function deletePresence(force = false) {
+async function deletePresence(deps: GOGUserDeps, force = false) {
   // D-DRS-01 Option A: local timer teardown is unconditional, ahead of every guard below --
   // see this function's own docblock for the full audit and rationale.
   clearInterval(interval)
   interval = undefined
   try {
-    const deps = presenceUserDeps()
     const { disablePlaytimeSync, disableGOGPresence } =
       GlobalConfig.get().getSettings()
     if (
@@ -191,17 +167,6 @@ async function deletePresence(force = false) {
     logError(['Failed to delete gog presence', e], LogPrefix.Gog)
   }
 }
-
-// React immediately when the user toggles GOG presence on/off in settings
-backendEvents.on('settingChanged', ({ key, newValue }) => {
-  if (key === 'disableGOGPresence') {
-    if (newValue) {
-      void deletePresence(true)
-    } else {
-      void setPresence()
-    }
-  }
-})
 
 export default {
   setCurrentGame,

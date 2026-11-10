@@ -76,7 +76,7 @@ jest.mock('backend/storeManagers/gog/user', () => ({
 
 import { axiosClient } from 'backend/utils'
 import { GlobalConfig } from 'backend/config'
-import { GOGUser } from 'backend/storeManagers/gog/user'
+import { GOGUser, type GOGUserDeps } from 'backend/storeManagers/gog/user'
 import gogPresence from '../presence'
 
 type MockAxiosClient = {
@@ -91,6 +91,9 @@ const mockAxiosClient = axiosClient as unknown as MockAxiosClient
 // See depot.test.ts's own precedent comment for the same constraint against a different class.
 const mockIsLoggedIn = jest.mocked(GOGUser).isLoggedIn
 const mockGetCredentials = jest.mocked(GOGUser).getCredentials
+
+// One deps object for every call: GOGUser is mocked, so the slice is never read.
+const deps = { stores: {}, libraryManagers: {} } as unknown as GOGUserDeps
 
 const FIVE_MINUTES_MS = 5 * 60 * 1000
 
@@ -133,9 +136,7 @@ interface IsolatedPresenceHarness {
  * a virgin `interval` unaffected by whatever an earlier case left armed or torn down, so each
  * gets its own fresh module copy via `jest.isolateModules` (mirrors
  * bootstrapWirings.test.ts's own single precedent use of this pattern) rather than relying on
- * file-scope import order. Exactly two call sites use this helper (Case 2, Case 3) -- each
- * re-require also re-registers presence.ts's module-scope `settingChanged` listener on the real
- * `backendEvents` emitter, and Node warns past ten listeners.
+ * file-scope import order. Exactly two call sites use this helper (Case 2, Case 3).
  */
 function loadIsolatedPresence(): IsolatedPresenceHarness {
   let harness!: IsolatedPresenceHarness
@@ -183,11 +184,11 @@ describe('todo 2026-09-09 -- GOG presence keep-alive re-arm after deletePresence
   // sticky state starts virgin for the lifecycle it drives.
   it('case 1 -- setPresence() re-arms the keep-alive after a deletePresence() teardown, in the SAME process', async () => {
     // Arm: first setPresence() call.
-    await gogPresence.setPresence()
+    await gogPresence.setPresence(deps)
     expect(mockAxiosClient.post).toHaveBeenCalledTimes(1)
 
     // Tear down.
-    await gogPresence.deletePresence(true)
+    await gogPresence.deletePresence(deps, true)
     expect(mockAxiosClient.delete).toHaveBeenCalledTimes(1)
 
     // A timer that survived teardown would fire here and produce an extra POST before the
@@ -197,7 +198,7 @@ describe('todo 2026-09-09 -- GOG presence keep-alive re-arm after deletePresence
     expect(mockAxiosClient.post).toHaveBeenCalledTimes(1)
 
     // Re-arm: THIRD call, in the same process, after teardown.
-    await gogPresence.setPresence()
+    await gogPresence.setPresence(deps)
     expect(mockAxiosClient.post).toHaveBeenCalledTimes(2)
 
     // Behavioural proof the keep-alive is LIVE again: advancing 5 minutes produces an
@@ -214,8 +215,8 @@ describe('todo 2026-09-09 -- GOG presence keep-alive re-arm after deletePresence
     const { presence, axiosClient: isolatedAxiosClient } =
       loadIsolatedPresence()
 
-    await presence.setPresence()
-    await presence.setPresence()
+    await presence.setPresence(deps)
+    await presence.setPresence(deps)
     expect(isolatedAxiosClient.post).toHaveBeenCalledTimes(2)
 
     jest.advanceTimersByTime(FIVE_MINUTES_MS)
@@ -236,7 +237,7 @@ describe('todo 2026-09-09 -- GOG presence keep-alive re-arm after deletePresence
     } = loadIsolatedPresence()
 
     // Arm the keep-alive under normal settings.
-    await isolatedPresence.setPresence()
+    await isolatedPresence.setPresence(deps)
     expect(isolatedAxiosClient.post).toHaveBeenCalledTimes(1)
 
     // Now flip disablePlaytimeSync on -- deletePresence()'s early-return guard blocks the
@@ -248,7 +249,7 @@ describe('todo 2026-09-09 -- GOG presence keep-alive re-arm after deletePresence
       })
     })
 
-    await isolatedPresence.deletePresence(true)
+    await isolatedPresence.deletePresence(deps, true)
 
     // The guard blocked the network call.
     expect(isolatedAxiosClient.delete).not.toHaveBeenCalled()

@@ -1,32 +1,19 @@
 import axios from 'axios'
 import { app } from 'backend/platform'
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
-import { GOGUser } from 'backend/storeManagers/gog/user'
+import { GOGUser, type GOGUserDeps } from 'backend/storeManagers/gog/user'
 import type {
   CatalogLocaleSettings,
   CatalogProduct
 } from 'common/types/discounts'
 
 /**
- * `getGogDiscounts`'s underlying fetch logic, extracted out of
- * `discounts/index.ts`'s `addHandler(...)` call body (Phase 34.6 Plan 09,
- * REQ-34.6-08, A-03/D-07).
+ * `getGogDiscounts`'s underlying fetch logic, imported by
+ * `sidecar/enrichmentFlowRegistration.ts`. The GOG credential slice is injected by the caller.
  *
- * `discounts/index.ts` self-registers via `addHandler` at module scope, so
- * — exactly like every other feature's `ipc_handler.ts` — it can never be
- * imported by the sidecar's curated registration modules without dragging
- * `backend/ipc`'s real `electron` import along with it (D-04's
- * underlying-module-not-`ipc_handler` rule, applied here since this feature
- * had no separate underlying module before this plan). This file is that
- * underlying module: `discounts/index.ts` and
- * `sidecar/enrichmentFlowRegistration.ts` both import `getGogDiscounts` from
- * here, so the two builds cannot drift apart.
- *
- * NOTE this module DOES import `app` from `electron` (for the catalog
- * request's `User-Agent` header) — a real, direct electron reach. That is
- * unchanged behavior carried over verbatim from `discounts/index.ts`; it is
- * accounted for in `electronReachLedger.test.ts`'s
- * `BASELINE_ELECTRON_REACHING_MODULES`, not avoided by this extraction.
+ * NOTE this module DOES import `app` from the platform shim (for the catalog
+ * request's `User-Agent` header); it is accounted for in
+ * `electronReachLedger.test.ts`'s `BASELINE_ELECTRON_REACHING_MODULES`.
  */
 
 interface CatalogResponse {
@@ -139,13 +126,9 @@ const fetchAllDiscounts = async (
   })
 }
 
-/**
- * `getGogDiscounts`'s full handler body, byte-identical to
- * `discounts/index.ts`'s pre-extraction `addHandler` callback. Both the
- * Electron `addHandler` wrapper and the sidecar's `ipcMain.handle`
- * registration call this same function.
- */
+/** `getGogDiscounts`'s full handler body; the sidecar's `ipcMain.handle` registration calls it. */
 export async function getGogDiscounts(
+  deps: GOGUserDeps,
   locale: CatalogLocaleSettings,
   hideOwned = false,
   wishlistOnly = false
@@ -154,10 +137,7 @@ export async function getGogDiscounts(
     let token: string | undefined = undefined
 
     if (hideOwned || wishlistOnly) {
-      // Transitional (66.1-08): the deps arrive from the composition root in a later plan.
-      const { legacyManagerDeps } =
-        await import('backend/services/legacyFacades')
-      const credentials = await GOGUser.getCredentials(legacyManagerDeps())
+      const credentials = await GOGUser.getCredentials(deps)
       if (credentials) {
         token = credentials.access_token
       } else {

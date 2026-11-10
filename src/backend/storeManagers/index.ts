@@ -76,11 +76,11 @@ const launchHooks = {
     },
     setPresence: async (appName) => {
       gogPresence.setCurrentGame(appName)
-      await gogPresence.setPresence()
+      await gogPresence.setPresence(legacyManagerDeps())
     },
     clearPresence: async () => {
       gogPresence.setCurrentGame('')
-      await gogPresence.setPresence()
+      await gogPresence.setPresence(legacyManagerDeps())
     }
   },
   legendary: {

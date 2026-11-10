@@ -1,5 +1,3 @@
-import { callAllAbortControllers } from './utils/aborthandler/aborthandler'
-import { shutdownLongLivedChildren } from './longLivedChildren'
 import {
   Runner,
   WineInstallation,
@@ -35,15 +33,11 @@ import {
   assertContainedPath,
   assertPlausibleAbsolutePath
 } from './sidecar/rendererPathGuard'
-import gogPresence from './storeManagers/gog/presence'
 import { libraryManagerMap } from './storeManagers'
-import { SteamUser } from './storeManagers/steam/user'
-import { hasLiveBridgeHelper } from './storeManagers/steam/bridge/helperRegistry'
 import { resolveTitleForGame } from './utils/gameTitle'
 import * as fileSize from 'filesize'
 import { Client as discordClient } from '@xhayper/discord-rpc'
 import { showDialogBoxModalAuto } from './dialog/dialog'
-import { getMainWindow } from './main_window'
 import { sendFrontendMessage } from './ipc'
 import { GlobalConfig } from './config'
 import { GameConfig } from './game_config'
@@ -65,7 +59,6 @@ import type { AppSettings, WineManagerStatus } from 'common/types'
 import { isUmuSupported } from './utils/compatibility_layers'
 import { getSystemInfo } from './utils/systeminfo'
 import { isLinux, isMac, isWindows } from './constants/environment'
-import { killAllTracked } from './trackedChildren'
 import {
   configPath,
   fixAsarPath,
@@ -78,8 +71,6 @@ import {
 import { parse } from '@node-steam/vdf'
 
 import type LogWriter from 'backend/logger/log_writer'
-// transitional: `handleExit` is built from boot state by plan 21/23; until then it reads the bound queue
-import { getLegacyBootQueue } from './downloadmanager/downloadqueue'
 import { isOnline } from './online_monitor'
 import type { Game } from 'common/types/game_manager'
 import { isStore } from 'common/storeCapabilities'
@@ -237,74 +228,6 @@ async function isEpicServiceOffline(
     )
     return false
   }
-}
-
-async function handleExit() {
-  const isLocked = existsSync(join(gamesConfigPath, 'lock'))
-  const mainWindow = getMainWindow()
-
-  const isBridgeHosting = hasLiveBridgeHelper()
-
-  if (
-    (isLocked || getLegacyBootQueue().isRunning() || isBridgeHosting) &&
-    mainWindow
-  ) {
-    const { response } = await dialog.showMessageBox(mainWindow, {
-      buttons: [tOrFallback('box.no', 'No'), tOrFallback('box.yes', 'Yes')],
-      // CR-04: `cancelId` is LOAD-BEARING, not cosmetic. This dialog's sense is
-      // INVERTED relative to every other `showMessageBox` caller in the codebase:
-      // index 0 is the SAFE "No" and index 1 is the DESTRUCTIVE "Yes"
-      // (killAllTracked() + callAllAbortControllers() +
-      // app.exit(), i.e. killing an in-flight install/download). The sidecar's
-      // `platformApi.showMessageBox` fail-safe default is
-      // `options?.cancelId ?? (buttons.length ?? 1) - 1`, which without an explicit
-      // cancelId evaluates to 1 here -- so ANY transport error or timeout on the
-      // newly-sidecar-reachable `quit` path returned the DESTRUCTIVE answer. Declaring
-      // cancelId: 0 restores the stub's documented fail-safe-to-decline property for
-      // this caller. cancelId is ALSO the response for a dismissal (Esc / window close,
-      // no button pressed) -- Electron's semantics, which the Tauri path only matches
-      // since `dialog_message` began returning null for a dismissal (todo 2026-10-05
-      // dialog-dismiss). Before that, a dismissal on Windows/Linux came back as
-      // buttons[1], so Esc here meant "Yes, kill everything and quit".
-      cancelId: 0,
-      message:
-        isBridgeHosting && !isLocked && !getLegacyBootQueue().isRunning()
-          ? tOrFallback(
-              'box.quit.bridgeHosting',
-              'A game is running through the Steam bridge. Quitting GameLib ends any multiplayer session it is hosting. Quit anyway?'
-            )
-          : tOrFallback(
-              'box.quit.message',
-              'There are pending operations, are you sure?'
-            ),
-      title: tOrFallback('box.quit.title', 'Exit')
-    })
-
-    if (response === 0) {
-      return
-    }
-
-    // Phase 72 D-13: kill only the children this sidecar spawned (tracked PIDs),
-    // never by name pattern. Includes tracked Wine children (games).
-    killAllTracked()
-
-    // Kill all child processes
-    callAllAbortControllers()
-  }
-
-  mainWindow?.hide()
-  // Routed-quit layer: log the CM client off and pay any owed Mac Steam goonline. It must finish
-  // before app.exit(), which leads to shutdown_child()'s group SIGTERM within milliseconds.
-  await SteamUser.releaseForShutdown()
-  await gogPresence.deletePresence()
-
-  // Quick task 260907-juv, Layer A: tear down every registered long-lived child
-  // (comet, the Steam bridge helper) gracefully before exiting. This is the ONLY quit
-  // path this call can reach -- see `longLivedChildren.ts`'s module docblock for why a
-  // second, unconditional layer in the Rust shell is also required.
-  shutdownLongLivedChildren()
-
-  app.exit()
 }
 
 export async function askForceUninstall(game: Game, appName: string) {
@@ -1889,7 +1812,6 @@ export {
   errorHandler,
   execAsync,
   getCurrentChangelog,
-  handleExit,
   isEpicServiceOffline,
   showItemInFolder,
   removeSpecialcharacters,

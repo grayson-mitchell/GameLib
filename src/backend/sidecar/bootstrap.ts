@@ -51,9 +51,8 @@ import type { BootServices, StoreManagers, Stores } from '../services/types'
 // `sidecar/storeRegistration.ts:61` already imports `playtimeSyncQueue` from this exact
 // module, so this is a second binding onto an already-resident singleton, not a new edge.
 // Block G (todo 2026-09-06, quick-260908-wk0). Adds NO new module to the sidecar bundle:
-// `grep -rn "libraryManagerMap" src/backend/sidecar/*.ts` (re-run at execution time) confirms
 // `bootstrap.ts` already imports `./installedJsonWatcher` at its own line 39, and
-// `installedJsonWatcher.ts:41` already imports `libraryManagerMap` from `'../storeManagers'` --
+// `installedJsonWatcher.ts` already reaches the manager table through its injected deps --
 // so this is a second binding onto an already-resident singleton, strictly stronger than the
 // `./handlers`-transitive route (`runnerMiscFlowRegistration.ts:92`,
 // `installFlowRegistration.ts:125`, `appShellFlowRegistration.ts:164` all also import it), not a
@@ -307,6 +306,25 @@ interface BootState {
   i18nReady: Promise<void>
   /** The per-boot services, filled by the 'stores', 'command-runner' and 'store-managers' steps. */
   services: Partial<BootServices>
+}
+
+/**
+ * The GOG user slice for presence, resolved by getter at call time (R4): the 'gog-presence' step
+ * and the quit handler read the boot's stores and managers only when they fire.
+ */
+function gogPresenceDeps(state: BootState): GOGUserDeps {
+  return {
+    stores: {
+      get gog() {
+        return requireServices(state).stores.gog
+      }
+    },
+    libraryManagers: {
+      get gog() {
+        return requireServices(state).managers.library.gog
+      }
+    }
+  }
 }
 
 function requireServices(state: BootState): BootServices {
@@ -602,7 +620,7 @@ export function reconcileStoreUsersWhenOnline(deps: {
  *     // Make sure lock is not present when starting up
  *     playtimeSyncQueue.delete('lock')
  *     if (!settings.disablePlaytimeSync) {
- *       runOnceWhenOnline(() => libraryManagerMap['gog'].syncQueuedPlaytime())
+ *       runOnceWhenOnline(() => <manager table>['gog'].syncQueuedPlaytime())
  *     } else {
  *       logDebug('Skipping playtime sync queue upload - playtime sync disabled', {
  *         prefix: LogPrefix.Backend
@@ -673,7 +691,7 @@ export function reconcileStoreUsersWhenOnline(deps: {
 export function syncQueuedPlaytimeWhenOnline(deps: {
   managers: Pick<StoreManagers, 'library'>
 }): void {
-  const libraryManagerMap = deps.managers.library
+  const library = deps.managers.library
   try {
     const settings = GlobalConfig.get().getSettings()
     if (settings.disablePlaytimeSync) {
@@ -685,14 +703,12 @@ export function syncQueuedPlaytimeWhenOnline(deps: {
     }
     runOnceWhenOnline(() => {
       try {
-        libraryManagerMap['gog']
-          .syncQueuedPlaytime()
-          .catch((error: unknown) => {
-            logWarning(
-              `[bootstrap] syncQueuedPlaytimeWhenOnline: syncQueuedPlaytime() failed: ${String(error)}`,
-              LogPrefix.Backend
-            )
-          })
+        library['gog'].syncQueuedPlaytime().catch((error: unknown) => {
+          logWarning(
+            `[bootstrap] syncQueuedPlaytimeWhenOnline: syncQueuedPlaytime() failed: ${String(error)}`,
+            LogPrefix.Backend
+          )
+        })
       } catch (error) {
         logWarning(
           `[bootstrap] syncQueuedPlaytimeWhenOnline: callback failed: ${String(error)}`,
@@ -836,7 +852,7 @@ export function checkRosettaWhenMac(i18nReady: Promise<void>): void {
  * local `[bootstrap] ` prefix and name `setGogPresenceWhenOnline`, in the shape of
  * `reconcileStoreUsersWhenOnline`'s and `syncQueuedPlaytimeWhenOnline`'s own catch arms.
  *
- * LOAD-BEARING CALL SHAPE: `gogPresence.setPresence()` is called as a property access on the
+ * LOAD-BEARING CALL SHAPE: `gogPresence.setPresence(deps)` is called as a property access on the
  * default-export object, resolved at CALL time -- not destructured
  * (`const { setPresence } = gogPresence`), and not passed as the bare reference
  * `runOnceWhenOnline(gogPresence.setPresence)` the deleted source used. Two reasons: (i) the
@@ -856,13 +872,13 @@ export function checkRosettaWhenMac(i18nReady: Promise<void>): void {
  * @public Consumed by sidecar tests through require() in a fresh module registry (D-08),
  * which knip cannot see.
  */
-export function setGogPresenceWhenOnline(): void {
+export function setGogPresenceWhenOnline(deps: GOGUserDeps): void {
   try {
     runOnceWhenOnline(() => {
       try {
-        gogPresence.setPresence().catch((error: unknown) => {
+        gogPresence.setPresence(deps).catch((error: unknown) => {
           logWarning(
-            `[bootstrap] setGogPresenceWhenOnline: gogPresence.setPresence() failed: ${String(error)}`,
+            `[bootstrap] setGogPresenceWhenOnline: gogPresence.setPresence(deps) failed: ${String(error)}`,
             LogPrefix.Backend
           )
         })
@@ -1119,7 +1135,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             releaseSteam: async () => {
               await SteamUser.releaseForShutdown()
             },
-            deletePresence: () => gogPresence.deletePresence(),
+            deletePresence: () =>
+              gogPresence.deletePresence(gogPresenceDeps(state)),
             exit: () => platformApi.app.exit(),
             // Transitional: the legacy registries still hold children until plans 23/24/26;
             // plan 27 removes this dep with the registries.
@@ -1741,7 +1758,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'gog-presence',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Block H — boot-time GOG presence call (todo 2026-09-06, quick-260909-k5x). Unlike Block G,
         // this block has NO load-bearing ordering constraint of its own -- do not go hunting for one.
         // Only the generic three apply (see `setGogPresenceWhenOnline()`'s own header for the full
@@ -1749,7 +1766,18 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // `initOnlineMonitor()`, and before READY_SENTINEL below. Appending here, after Block G,
         // satisfies all three. `setGogPresenceWhenOnline()` itself never fails boot per its own
         // header, so no additional try/catch is needed at this call site, matching Blocks D/E/F/G.
-        setGogPresenceWhenOnline()
+        setGogPresenceWhenOnline(gogPresenceDeps(state))
+        // React immediately when the user toggles GOG presence on/off in settings. Registered here
+        // (not at presence.ts import) because the listener needs the boot's deps.
+        backendEvents.on('settingChanged', ({ key, newValue }) => {
+          if (key !== 'disableGOGPresence') return
+          const deps = gogPresenceDeps(state)
+          if (newValue) {
+            void gogPresence.deletePresence(deps, true)
+          } else {
+            void gogPresence.setPresence(deps)
+          }
+        })
       }
     },
     {
@@ -1788,7 +1816,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): the LAST statement of init(), deliberately
         // AFTER the READY_SENTINEL write above — so the shell knows the sidecar is up before any
         // launch begins, and so every store manager imported by ./handlers (Step 2, above) is fully
-        // constructed before handleProtocol can possibly touch libraryManagerMap. The sign-in probe
+        // constructed before handleProtocol can possibly touch the manager table. The sign-in probe
         // pass start above is registration only, so protocol-URL delivery is still the last statement
         // that does any work.
         deliverStartupProtocolUrl(requireServices(state))

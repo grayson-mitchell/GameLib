@@ -182,7 +182,10 @@ import type { StoreManagers, Stores } from 'backend/services/types'
 /** Narrow slice (66.1 D-01): library managers for game lookup. */
 export interface EnrichmentFlowDeps {
   managers: Pick<StoreManagers, 'library'>
-  stores: Pick<Stores, 'kvs' | 'runsForMe' | 'wikiGameInfo' | 'crossoverIndex'>
+  stores: Pick<
+    Stores,
+    'kvs' | 'runsForMe' | 'wikiGameInfo' | 'crossoverIndex' | 'gog'
+  >
 }
 import type { CatalogLocaleSettings } from 'common/types/discounts'
 
@@ -314,6 +317,7 @@ export function registerEnrichmentFlows(deps: EnrichmentFlowDeps): void {
     'getGogDiscounts',
     async (_event: unknown, ...args: unknown[]) =>
       getGogDiscounts(
+        { stores: deps.stores, libraryManagers: deps.managers.library },
         args[0] as CatalogLocaleSettings,
         (args[1] as boolean | null | undefined) ?? undefined,
         (args[2] as boolean | null | undefined) ?? undefined
