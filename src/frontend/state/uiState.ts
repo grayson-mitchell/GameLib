@@ -12,21 +12,15 @@ import type {
   DialogModalOptions,
   ExternalLinkDialogOptions
 } from 'frontend/types'
-import type { RunsForMeState } from 'common/runsForMe'
 import type { GameSettingsModalType } from '../screens/Settings/components/SettingsModal'
 import { notify } from 'frontend/helpers'
-import {
-  gameOverridesStore,
-  wineDownloaderInfoStore
-} from 'frontend/helpers/stores'
+import { wineDownloaderInfoStore } from 'frontend/helpers/stores'
 import { t } from 'i18next'
 import { reduceDialogRequest } from './dialogQueue'
 import { bindStoreHooks, registerStoreForReset } from './storeKit'
 
-// Phase 69 D-01: UI/dialog domain store (formerly UiState). gameOverrides,
-// crossoverRatings and runsForMe move to libraryState in 69-16.
-
-type GameOverride = NonNullable<GameInfo['overrides']>
+// Phase 69 D-01: UI/dialog domain store (formerly UiState). The per-game
+// display data lives in libraryState.
 
 export interface UiState {
   // Phase 69-06 (D-10 first domain): moved out of GlobalState's StateProps.
@@ -76,21 +70,6 @@ export interface UiState {
 
   refreshingWineVersions: boolean
   refreshWineVersions: (fetch: boolean) => void
-
-  gameOverrides: Record<string, GameOverride>
-  setGameOverrides: (overrides: Record<string, GameOverride>) => void
-
-  // Phase 19 (Plan 06), D-11/D-16: display-only three-state CrossOver
-  // rating map (`number` = matched rating, `null` = looked-up-but-absent,
-  // key-absent = never looked up). The grid reads this synchronously — no
-  // component writes back to it, and reading it never triggers a fetch.
-  crossoverRatings: Record<string, number | null>
-  setCrossoverRatings: (ratings: Record<string, number | null>) => void
-
-  // Quick 261029-mkz: per-game "Runs for me" override map, keyed
-  // `${app_name}_${runner}`. Backend-persisted; this slice mirrors it.
-  runsForMe: Record<string, RunsForMeState>
-  setRunsForMe: (map: Record<string, RunsForMeState>) => void
 }
 
 const useUiStateRaw = create<UiState>()(
@@ -182,17 +161,6 @@ const useUiStateRaw = create<UiState>()(
     },
 
     showUploadedLogFileList: false,
-
-    // Create-time read preserved (import-time timing, see
-    // .planning/todos/pending/2026-11-10-import-time-mirror-reads-before-hydration.md)
-    gameOverrides: gameOverridesStore.get('overrides', {}),
-    setGameOverrides: (gameOverrides) => set({ gameOverrides }),
-
-    crossoverRatings: {},
-    setCrossoverRatings: (crossoverRatings) => set({ crossoverRatings }),
-
-    runsForMe: {},
-    setRunsForMe: (runsForMe) => set({ runsForMe }),
 
     refreshingWineVersions: false,
     refreshWineVersions: (fetch) => {

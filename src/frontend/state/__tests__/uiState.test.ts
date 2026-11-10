@@ -39,9 +39,6 @@ describe('uiState store', () => {
     expect(s.settingsModalProps).toEqual({ isOpen: false })
     expect(s.showUploadedLogFileList).toBe(false)
     expect(s.refreshingWineVersions).toBe(false)
-    expect(s.crossoverRatings).toEqual({})
-    expect(s.runsForMe).toEqual({})
-    expect(typeof s.gameOverrides).toBe('object')
   })
 
   it('opens and closes the game modals', () => {
