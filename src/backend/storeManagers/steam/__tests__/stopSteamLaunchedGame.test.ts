@@ -1,8 +1,11 @@
+import { join } from 'path'
+
 import { createCaptureLog } from 'backend/testUtils/captureLog'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { ScriptStep } from 'backend/testUtils/scriptedRunner'
 
+import { windowsSystem32Path } from '../runningFromFolder'
 import {
   stopSteamLaunchedGame,
   type StopSteamLaunchedGameDeps
@@ -62,6 +65,39 @@ function setup(
   return { deps, runner, clock, log, signal }
 }
 
+const WIN_LIB = 'C:\\Steam'
+// production resolveSteamLaunchedInstallFolder uses the native join
+const WIN_FOLDER = join(WIN_LIB, 'steamapps', 'common', 'WazHack')
+const WIN_GAME = 'C:\\Steam\\steamapps\\common\\WazHack\\WazHack.exe'
+const WIN_SIBLING = 'C:\\Steam\\steamapps\\common\\WazHack2\\run.exe'
+
+function winList(lines: string[]): ScriptStep {
+  return {
+    cmd: windowsSystem32Path('WindowsPowerShell', 'v1.0', 'powershell.exe'),
+    result: { code: 0, stdout: lines.join('\r\n') + '\r\n' }
+  }
+}
+
+function winKill(
+  pid: number,
+  code: number | { error: { code: string } }
+): ScriptStep {
+  const cmd = windowsSystem32Path('taskkill.exe')
+  const argv = ['/PID', String(pid)]
+  return typeof code === 'number'
+    ? { cmd, argv, result: { code, stdout: '' } }
+    : { cmd, argv, error: code.error }
+}
+
+function setupWin32(
+  script: ScriptStep[],
+  o: Parameters<typeof setup>[1] = {}
+): ReturnType<typeof setup> {
+  const t = setup(script, { ...o, platform: 'win32' })
+  t.deps.getSteamLibraries = () => Promise.resolve([WIN_LIB])
+  return t
+}
+
 async function run(
   deps: StopSteamLaunchedGameDeps,
   clock: ReturnType<typeof createFakeClock>
@@ -79,14 +115,23 @@ async function run(
 }
 
 describe('stopSteamLaunchedGame', () => {
-  it('win32 is a no-op', async () => {
-    const t = setup([])
-    t.deps.platform = 'win32'
-    await expect(stopSteamLaunchedGame(t.deps, '264160')).resolves.toEqual({
-      kind: 'unsupported-platform'
+  it('win32 asks the matched pid to close via taskkill, then stops', async () => {
+    const t = setupWin32([
+      winList([`42 ${WIN_GAME}`, `600 ${WIN_SIBLING}`]),
+      winKill(42, 0)
+    ])
+    const out = await run(t.deps, t.clock)
+    expect(out).toEqual({
+      kind: 'stopped',
+      folder: WIN_FOLDER,
+      termed: [42],
+      killed: []
     })
-    expect(t.runner.calls).toHaveLength(0)
-    expect(t.signal).not.toHaveBeenCalled()
+    expect(t.runner.calls).toHaveLength(2)
+    expect(t.signal).not.toHaveBeenCalledWith(42, 'SIGTERM')
+    expect(t.signal).not.toHaveBeenCalledWith(42, 'SIGKILL')
+    expect(t.clock.pendingCount()).toBe(0)
+    t.clock.assertNoKeepAlive()
   })
 
   it('non-numeric appId and missing/throwing libraries -> no-folder', async () => {
