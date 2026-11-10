@@ -82,7 +82,7 @@ describe('findPidsRunningFromFolder (scripted runner)', () => {
     await expect(
       findPidsRunningFromFolder({ runner, platform: 'darwin' }, folder)
     ).resolves.toEqual([42])
-    expect(runner.calls[0].opts).toMatchObject({ timeoutMs: 2000 })
+    expect(runner.calls[0]?.opts).toMatchObject({ timeoutMs: 2000 })
   })
   it('win32 and bad folder make no calls', async () => {
     const runner = createScriptedRunner([])

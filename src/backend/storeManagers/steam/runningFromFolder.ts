@@ -63,7 +63,7 @@ export function psOutputPidsInFolder(
     const m = /^\s*(\d+)\s+(.+)$/.exec(line)
     if (!m) continue
     const pid = Number(m[1])
-    const args = m[2]
+    const args = m[2] ?? ''
     if (!Number.isSafeInteger(pid) || pid <= 1) continue
     if (excludePids.includes(pid)) continue
     if (!args.startsWith(prefix)) continue
