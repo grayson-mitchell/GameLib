@@ -51,6 +51,7 @@ result: pass — operator confirmed.
 ### 9. Download queue
 expected: A GameLib-driven Steam depot download and a GOG/Epic download each show advancing progress with working pause/resume/cancel; Steam failures show error + Remove (not "canceled"); steam:// hand-offs appear under "Managed by Steam".
 result: skipped — operator had no time for a Steam install. Exercises the moved depot code, so deferred to smoke #2 (62-21).
+reason: covered by #18a (smoke 2), where a GameLib-driven Steam depot download passed progress, pause, resume and cancel; the "Managed by Steam" hand-off passed in 62-HUMAN-UAT #3.
 
 ## Smoke 2 — after capabilities (D-16 step 3)
 
