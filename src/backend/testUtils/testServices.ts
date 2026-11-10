@@ -11,6 +11,22 @@ import {
   createStoreRegistry,
   type StoreRegistry
 } from '../stores/storeRegistry'
+import { createKvsStores } from '../constants/key_value_stores'
+import { createCrossoverIndexStores } from '../crossover_index/stores'
+import { createDownloadManagerStores } from '../downloadmanager/stores'
+import { createGameOverridesStores } from '../game_overrides/stores'
+import { createHumbleStores } from '../humble/stores'
+import { createLoggerStores } from '../logger/stores'
+import { createMacArchStores } from '../macArch/stores'
+import { createMigrationStores } from '../migration/stores'
+import { createRunsForMeStores } from '../runsForMe/stores'
+import { createGogStores } from '../storeManagers/gog/stores'
+import { createLegendaryStores } from '../storeManagers/legendary/stores'
+import { createNileStores } from '../storeManagers/nile/stores'
+import { createSideloadStores } from '../storeManagers/sideload/stores'
+import { createSteamStores } from '../storeManagers/steam/stores'
+import { createWikiGameInfoStores } from '../wiki_game_info/stores'
+import { createWineManagerStores } from '../wine/manager/stores'
 import type { EngineServices } from '../engine/engineServices'
 import type { Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
@@ -112,80 +128,35 @@ const STORE_KEYS = [
   'wineManager'
 ] as const satisfies readonly (keyof Stores)[]
 
-/** Builds one family against the shared registry; each `require` is lazy (see createTestStores). */
+/** Builds one family against the shared registry; each call is lazy (see createTestStores). */
 type FamilyBuilders = {
   [K in keyof Stores]: (registry: StoreRegistry) => Stores[K]
 }
 
 /**
- * Loads a stores module on first use. The path is a parameter on purpose: a family a suite never
- * reads must not load its module, and a literal `require` of a stores module is exactly what the
- * "no call-time stores require" gate looks for.
+ * The factories are imported eagerly (importing a stores module has no side effect: the
+ * 16 modules only declare factories, and diPhaseGates pins that none constructs at import).
+ * What stays lazy is the factory CALL, in the getters of createTestStores, so a family a suite
+ * never reads never touches the real store backend.
  */
-type StoresFactory = (arg?: { registry: StoreRegistry }) => never
-
-function load(path: string, factory: string): StoresFactory {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const mod = require(path) as Record<string, StoresFactory | undefined>
-  const fn = mod[factory]
-  if (!fn) throw new Error(`${path} does not export ${factory}`)
-  return fn
-}
-
 function familyBuilders(): FamilyBuilders {
   return {
-    kvs: (registry) =>
-      load('../constants/key_value_stores', 'createKvsStores')({ registry }),
-    crossoverIndex: () =>
-      load('../crossover_index/stores', 'createCrossoverIndexStores')(),
-    downloadManager: (registry) =>
-      load(
-        '../downloadmanager/stores',
-        'createDownloadManagerStores'
-      )({
-        registry
-      }),
-    gameOverrides: (registry) =>
-      load(
-        '../game_overrides/stores',
-        'createGameOverridesStores'
-      )({
-        registry
-      }),
-    humble: (registry) =>
-      load('../humble/stores', 'createHumbleStores')({ registry }),
-    logger: (registry) =>
-      load('../logger/stores', 'createLoggerStores')({ registry }),
-    macArch: (registry) =>
-      load('../macArch/stores', 'createMacArchStores')({ registry }),
-    migration: (registry) =>
-      load('../migration/stores', 'createMigrationStores')({ registry }),
-    runsForMe: (registry) =>
-      load('../runsForMe/stores', 'createRunsForMeStores')({ registry }),
-    gog: (registry) =>
-      load('../storeManagers/gog/stores', 'createGogStores')({ registry }),
-    legendary: (registry) =>
-      load(
-        '../storeManagers/legendary/stores',
-        'createLegendaryStores'
-      )({
-        registry
-      }),
-    nile: (registry) =>
-      load('../storeManagers/nile/stores', 'createNileStores')({ registry }),
-    sideload: (registry) =>
-      load(
-        '../storeManagers/sideload/stores',
-        'createSideloadStores'
-      )({
-        registry
-      }),
-    steam: (registry) =>
-      load('../storeManagers/steam/stores', 'createSteamStores')({ registry }),
-    wikiGameInfo: () =>
-      load('../wiki_game_info/stores', 'createWikiGameInfoStores')(),
-    wineManager: (registry) =>
-      load('../wine/manager/stores', 'createWineManagerStores')({ registry })
+    kvs: (registry) => createKvsStores({ registry }),
+    crossoverIndex: () => createCrossoverIndexStores(),
+    downloadManager: (registry) => createDownloadManagerStores({ registry }),
+    gameOverrides: (registry) => createGameOverridesStores({ registry }),
+    humble: (registry) => createHumbleStores({ registry }),
+    logger: (registry) => createLoggerStores({ registry }),
+    macArch: (registry) => createMacArchStores({ registry }),
+    migration: (registry) => createMigrationStores({ registry }),
+    runsForMe: (registry) => createRunsForMeStores({ registry }),
+    gog: (registry) => createGogStores({ registry }),
+    legendary: (registry) => createLegendaryStores({ registry }),
+    nile: (registry) => createNileStores({ registry }),
+    sideload: (registry) => createSideloadStores({ registry }),
+    steam: (registry) => createSteamStores({ registry }),
+    wikiGameInfo: () => createWikiGameInfoStores(),
+    wineManager: (registry) => createWineManagerStores({ registry })
   }
 }
 
@@ -203,7 +174,7 @@ export function createTestStores(overrides: Partial<Stores> = {}): Stores {
         // Lazy and per family on purpose: building a family touches the real store backend,
         // which a suite that overrides only the slices it reads must never reach, and a
         // suite that mocks one family's module must not break the others.
-        built ??= builders[key](registry) as never
+        built ??= builders[key](registry)
         return built
       }
     })

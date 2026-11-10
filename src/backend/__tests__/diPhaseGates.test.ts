@@ -24,6 +24,11 @@ function walk(dir: string, out: string[] = []): string[] {
   return out
 }
 
+/**
+ * Test infrastructure is excluded from the production scans by name, not by accident. The one
+ * place in it that may value-import stores modules is testUtils/testServices.ts (the test-side
+ * stores factory); a dedicated test below pins that no other testUtils file does.
+ */
 const isTestInfra = (file: string): boolean =>
   /(^|\/)(__tests__|__mocks__|testUtils)\//.test(relative(BACKEND, file)) ||
   /\.(test|spec)\.tsx?$/.test(file) ||
@@ -120,6 +125,30 @@ describe('66.1 end state: stores modules', () => {
       }
     }
     expect(offenders).toEqual([])
+  })
+
+  it('testUtils: only testServices.ts value-imports a stores module', () => {
+    const files = walk(join(BACKEND, 'testUtils')).filter((f) =>
+      /\.ts$/.test(f)
+    )
+    expect(files.length).toBeGreaterThan(3)
+    const importRe =
+      /^(import|export)\s+(type\s+)?[\s\S]*?\sfrom\s+['"]([^'"]+)['"]|(?<!typeof\s)(?:require|import)\(\s*['"]([^'"]+)['"]\s*\)/gm
+    const offenders: string[] = []
+    for (const file of files) {
+      if (rel(file) === 'testUtils/testServices.ts') continue
+      for (const m of source(file).matchAll(importRe)) {
+        if (m[2]) continue
+        const spec = m[3] ?? m[4] ?? ''
+        if (/(^|\/)stores$/.test(spec) || /key_value_stores$/.test(spec)) {
+          offenders.push(`${rel(file)} -> ${spec}`)
+        }
+      }
+    }
+    expect(offenders).toEqual([])
+    expect(source(join(BACKEND, 'testUtils/testServices.ts'))).not.toMatch(
+      /\brequire\(/
+    )
   })
 
   it('storeManagers/index.ts and every stores module have no top-level new', () => {

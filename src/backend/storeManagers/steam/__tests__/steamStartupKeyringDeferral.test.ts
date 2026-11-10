@@ -73,7 +73,10 @@ const mockConfigStore = {
   delete: jest.fn()
 }
 jest.mock('../stores', () => ({
-  configStore: mockConfigStore,
+  // getter: the module is evaluated at import time, before `mockConfigStore` is initialised
+  get configStore() {
+    return mockConfigStore
+  },
   steamLibraryStore: {
     get: jest.fn(),
     set: jest.fn()
