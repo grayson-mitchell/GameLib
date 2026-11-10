@@ -12,7 +12,6 @@
  *    defaults true; flipped per-test via jest.requireMock for case (h))
  */
 import { join } from 'node:path'
-import { spawnAsync } from 'backend/utils'
 import { logInfo, logWarning } from 'backend/logger'
 import { sendFrontendMessage } from '../../../ipc'
 import { recordPlaySession } from 'backend/runsForMe'
@@ -63,12 +62,6 @@ jest.mock('backend/config', () => ({
   GlobalConfig: {
     get: jest.fn()
   }
-}))
-
-jest.mock('backend/utils', () => ({
-  spawnAsync: jest.fn(),
-  checkWineBeforeLaunch: jest.fn(),
-  downloadFile: jest.fn()
 }))
 
 jest.mock('backend/logger', () => ({
@@ -128,7 +121,9 @@ jest.mock('../bottleLaunchSignals', () => ({
   WAITING_RECHECK_MS: 15000
 }))
 
-const mockedSpawnAsync = spawnAsync as jest.Mock
+// Recording fake handed to the code under test through its deps slice (66.1 R5).
+const mockedSpawnAsync = jest.fn()
+const spawnDeps = { spawnAsync: mockedSpawnAsync }
 const mockedRecordPlaySession = recordPlaySession as jest.Mock
 const mockedRaise = raiseWineGameWindow as jest.Mock
 const mockedLogInfo = logInfo as jest.Mock
@@ -206,7 +201,11 @@ describe('bottleProcessMonitor.ts', () => {
     })
 
     jest.useFakeTimers()
-    startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+    startBottleProcessMonitor(spawnDeps, {
+      appId: '38410',
+      installPath,
+      bottleDir
+    })
 
     await jest.advanceTimersByTimeAsync(1500)
     await flushMicrotasks()
@@ -233,7 +232,11 @@ describe('bottleProcessMonitor.ts', () => {
       .mockResolvedValue({ code: 0, stdout: '', stderr: '' })
 
     jest.useFakeTimers()
-    startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+    startBottleProcessMonitor(spawnDeps, {
+      appId: '38410',
+      installPath,
+      bottleDir
+    })
 
     await jest.advanceTimersByTimeAsync(1500)
     await flushMicrotasks()
@@ -289,7 +292,7 @@ describe('bottleProcessMonitor.ts', () => {
       })
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath: rootInstallPath,
         bottleDir
@@ -323,7 +326,11 @@ describe('bottleProcessMonitor.ts', () => {
     })
 
     jest.useFakeTimers()
-    startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+    startBottleProcessMonitor(spawnDeps, {
+      appId: '38410',
+      installPath,
+      bottleDir
+    })
     await jest.advanceTimersByTimeAsync(1500)
     await flushMicrotasks()
 
@@ -358,7 +365,7 @@ describe('bottleProcessMonitor.ts', () => {
     })
 
     jest.useFakeTimers()
-    startBottleProcessMonitor({
+    startBottleProcessMonitor(spawnDeps, {
       appId: '12345',
       installPath: avernum4InstallPath,
       bottleDir
@@ -382,7 +389,11 @@ describe('bottleProcessMonitor.ts', () => {
       .mockResolvedValue({ code: 0, stdout: matchedPsLine, stderr: '' })
 
     jest.useFakeTimers()
-    startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+    startBottleProcessMonitor(spawnDeps, {
+      appId: '38410',
+      installPath,
+      bottleDir
+    })
 
     for (let i = 0; i < 4; i++) {
       await jest.advanceTimersByTimeAsync(1500)
@@ -412,7 +423,11 @@ describe('bottleProcessMonitor.ts', () => {
     })
 
     jest.useFakeTimers()
-    startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+    startBottleProcessMonitor(spawnDeps, {
+      appId: '38410',
+      installPath,
+      bottleDir
+    })
     await jest.advanceTimersByTimeAsync(1500)
     await flushMicrotasks()
     expect(statusesFor('38410')).toEqual(['launching', 'playing'])
@@ -421,7 +436,11 @@ describe('bottleProcessMonitor.ts', () => {
     mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
     // A fresh monitor for the SAME appId — stops the first (whose next sleep
     // is still pending) before it can poll again.
-    startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+    startBottleProcessMonitor(spawnDeps, {
+      appId: '38410',
+      installPath,
+      bottleDir
+    })
 
     await jest.advanceTimersByTimeAsync(1500 * 3)
     await flushMicrotasks()
@@ -449,7 +468,11 @@ describe('bottleProcessMonitor.ts', () => {
     mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
 
     jest.useFakeTimers()
-    startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+    startBottleProcessMonitor(spawnDeps, {
+      appId: '38410',
+      installPath,
+      bottleDir
+    })
     await flushMicrotasks()
     expect(jest.getTimerCount()).toBeGreaterThan(0)
 
@@ -463,8 +486,12 @@ describe('bottleProcessMonitor.ts', () => {
     mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
 
     jest.useFakeTimers()
-    startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
-    startBottleProcessMonitor({
+    startBottleProcessMonitor(spawnDeps, {
+      appId: '38410',
+      installPath,
+      bottleDir
+    })
+    startBottleProcessMonitor(spawnDeps, {
       appId: '440',
       installPath: join(bottleDir, 'drive_c', 'Program Files (x86)', 'Steam'),
       bottleDir
@@ -482,7 +509,11 @@ describe('bottleProcessMonitor.ts', () => {
   test('on a non-mac host, starting the monitor performs no spawn and sends no message', async () => {
     envMock.isMac = false
 
-    startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+    startBottleProcessMonitor(spawnDeps, {
+      appId: '38410',
+      installPath,
+      bottleDir
+    })
     await flushMicrotasks()
 
     expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -498,7 +529,7 @@ describe('bottleProcessMonitor.ts', () => {
         .mockResolvedValue({ code: 0, stdout: '', stderr: '' })
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -531,7 +562,7 @@ describe('bottleProcessMonitor.ts', () => {
       })
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -564,7 +595,7 @@ describe('bottleProcessMonitor.ts', () => {
         .mockResolvedValue({ code: 0, stdout: '', stderr: '' })
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -587,7 +618,11 @@ describe('bottleProcessMonitor.ts', () => {
       mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      startBottleProcessMonitor(spawnDeps, {
+        appId: '38410',
+        installPath,
+        bottleDir
+      })
       await flushMicrotasks()
 
       expect(__getActiveMonitorKindForTests('38410')).toBe('bottled-steam')
@@ -600,7 +635,7 @@ describe('bottleProcessMonitor.ts', () => {
       mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -624,7 +659,7 @@ describe('bottleProcessMonitor.ts', () => {
         stderr: ''
       })
       jest.useFakeTimers()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -649,7 +684,7 @@ describe('bottleProcessMonitor.ts', () => {
         stderr: ''
       })
       jest.useFakeTimers()
-      const handle = startBottleProcessMonitor({
+      const handle = startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -670,7 +705,7 @@ describe('bottleProcessMonitor.ts', () => {
       const none = jest.fn()
       mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
       jest.useFakeTimers()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -687,7 +722,7 @@ describe('bottleProcessMonitor.ts', () => {
         stdout: matchedPsLine,
         stderr: ''
       })
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -709,7 +744,7 @@ describe('bottleProcessMonitor.ts', () => {
         .mockResolvedValueOnce({ code: 0, stdout: matchedPsLine, stderr: '' })
         .mockResolvedValue({ code: 0, stdout: '', stderr: '' })
       jest.useFakeTimers()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -736,7 +771,7 @@ describe('bottleProcessMonitor.ts', () => {
   // non-supersede terminal path (51-UAT item 2, review WR-05).
   describe('launcherExited handle (51-23)', () => {
     const startBridge = (onStopped?: () => void) =>
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -755,7 +790,7 @@ describe('bottleProcessMonitor.ts', () => {
       envMock.isMac = true
 
       expect(
-        startBottleProcessMonitor({
+        startBottleProcessMonitor(spawnDeps, {
           appId: '1',
           installPath: '/elsewhere/game',
           bottleDir,
@@ -872,7 +907,7 @@ describe('bottleProcessMonitor.ts', () => {
       const order: string[] = []
       mockedSpawnAsync.mockRejectedValue(new Error('spawn EPERM'))
       jest.useFakeTimers()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -897,7 +932,7 @@ describe('bottleProcessMonitor.ts', () => {
         return { code: 0, stdout: `${matchedPsLine}\n`, stderr: '' }
       })
       jest.useFakeTimers()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -924,7 +959,7 @@ describe('bottleProcessMonitor.ts', () => {
         stderr: ''
       })
       jest.useFakeTimers()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -984,7 +1019,11 @@ describe('bottleProcessMonitor.ts', () => {
     test('cause=none past the grace window never gives up: no done, phase starting, one waiting message', async () => {
       mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
       jest.useFakeTimers()
-      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      startBottleProcessMonitor(spawnDeps, {
+        appId: '38410',
+        installPath,
+        bottleDir
+      })
 
       // 20s grace + 15s + 15s re-checks, all with an empty ps.
       await jest.advanceTimersByTimeAsync(55000)
@@ -1012,7 +1051,11 @@ describe('bottleProcessMonitor.ts', () => {
         .mockResolvedValueOnce({ code: 0, stdout: matchedPsLine, stderr: '' })
         .mockResolvedValue({ code: 0, stdout: '', stderr: '' })
       jest.useFakeTimers()
-      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      startBottleProcessMonitor(spawnDeps, {
+        appId: '38410',
+        installPath,
+        bottleDir
+      })
       expect(getBottleProcessMonitorPhase('38410')).toBe('starting')
 
       await jest.advanceTimersByTimeAsync(1500)
@@ -1036,14 +1079,18 @@ describe('bottleProcessMonitor.ts', () => {
     test('launching is sent synchronously for both kinds', () => {
       mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
       jest.useFakeTimers()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '1',
         installPath,
         bottleDir,
         kind: 'bridge'
       })
       expect(statusesFor('1')).toEqual(['launching'])
-      startBottleProcessMonitor({ appId: '2', installPath, bottleDir })
+      startBottleProcessMonitor(spawnDeps, {
+        appId: '2',
+        installPath,
+        bottleDir
+      })
       expect(statusesFor('2')).toEqual(['launching'])
       __stopAllBottleProcessMonitors()
       jest.useRealTimers()
@@ -1058,7 +1105,11 @@ describe('bottleProcessMonitor.ts', () => {
           stderr: ''
         })
         jest.useFakeTimers()
-        startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+        startBottleProcessMonitor(spawnDeps, {
+          appId: '38410',
+          installPath,
+          bottleDir
+        })
         if (phase === 'running') {
           await jest.advanceTimersByTimeAsync(1500)
           await flushMicrotasks()
@@ -1080,7 +1131,11 @@ describe('bottleProcessMonitor.ts', () => {
     test('__stopAllBottleProcessMonitors is silent and leaves no timers', () => {
       mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
       jest.useFakeTimers()
-      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      startBottleProcessMonitor(spawnDeps, {
+        appId: '38410',
+        installPath,
+        bottleDir
+      })
       __stopAllBottleProcessMonitors()
       expect(statusesFor('38410')).toEqual(['launching'])
       expect(jest.getTimerCount()).toBe(0)
@@ -1091,13 +1146,17 @@ describe('bottleProcessMonitor.ts', () => {
       mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
       jest.useFakeTimers()
       const firstStopped = jest.fn()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
         onStopped: firstStopped
       })
-      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      startBottleProcessMonitor(spawnDeps, {
+        appId: '38410',
+        installPath,
+        bottleDir
+      })
       await jest.advanceTimersByTimeAsync(3000)
       expect(firstStopped).not.toHaveBeenCalled()
       expect(statusesFor('38410')).toEqual(['launching', 'launching'])
@@ -1118,7 +1177,11 @@ describe('bottleProcessMonitor.ts', () => {
       mockedClassifyBottledSteamBlock.mockReturnValue('self-update')
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      startBottleProcessMonitor(spawnDeps, {
+        appId: '38410',
+        installPath,
+        bottleDir
+      })
 
       await advanceByGraceWindow()
 
@@ -1147,7 +1210,11 @@ describe('bottleProcessMonitor.ts', () => {
       mockedClassifyBottledSteamBlock.mockReturnValue(null)
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      startBottleProcessMonitor(spawnDeps, {
+        appId: '38410',
+        installPath,
+        bottleDir
+      })
 
       await advanceByGraceWindow()
 
@@ -1176,7 +1243,11 @@ describe('bottleProcessMonitor.ts', () => {
       mockedClassifyBottledSteamBlock.mockReturnValue('self-update')
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      startBottleProcessMonitor(spawnDeps, {
+        appId: '38410',
+        installPath,
+        bottleDir
+      })
 
       await advanceByGraceWindow()
       let waitingCalls = mockedSendFrontendMessage.mock.calls.filter(
@@ -1214,7 +1285,11 @@ describe('bottleProcessMonitor.ts', () => {
       mockedClassifyBottledSteamBlock.mockReturnValue('login')
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      startBottleProcessMonitor(spawnDeps, {
+        appId: '38410',
+        installPath,
+        bottleDir
+      })
 
       await advanceByGraceWindow()
       expect(
@@ -1259,7 +1334,7 @@ describe('bottleProcessMonitor.ts', () => {
       mockedClassifyBottledSteamBlock.mockReturnValue('self-update')
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,
@@ -1292,7 +1367,11 @@ describe('bottleProcessMonitor.ts', () => {
       )
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      startBottleProcessMonitor(spawnDeps, {
+        appId: '38410',
+        installPath,
+        bottleDir
+      })
 
       // Advance to the tick that crosses the grace window -- the pending
       // readBoundedTail call is now in flight, unresolved.
@@ -1333,7 +1412,11 @@ describe('bottleProcessMonitor.ts', () => {
       )
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      startBottleProcessMonitor(spawnDeps, {
+        appId: '38410',
+        installPath,
+        bottleDir
+      })
 
       await advanceByGraceWindow()
 
@@ -1369,7 +1452,11 @@ describe('bottleProcessMonitor.ts', () => {
       )
 
       jest.useFakeTimers()
-      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      startBottleProcessMonitor(spawnDeps, {
+        appId: '38410',
+        installPath,
+        bottleDir
+      })
 
       await jest.advanceTimersByTimeAsync(1500 * 14)
       await flushMicrotasks()
@@ -1387,7 +1474,7 @@ describe('bottleProcessMonitor.ts', () => {
 
   describe('first-match window raise (261024-g3m)', () => {
     const start = (kind?: 'bridge' | 'bottled-steam') =>
-      startBottleProcessMonitor({
+      startBottleProcessMonitor(spawnDeps, {
         appId: '38410',
         installPath,
         bottleDir,

@@ -226,14 +226,14 @@ export async function provisionBridgeBottleForInstall(
     engineUsed = engine
     if (signal?.aborted) return abortResult()
     sendCreatingBottle()
-    provisionResult = await bbLifecycle.provisionBridgeBottle({
+    provisionResult = await bbLifecycle.provisionBridgeBottle(steamGame.deps, {
       bottleName: bridgeBottleName,
       fallbackEngine: engine,
       signal
     })
   } else {
     sendCreatingBottle()
-    provisionResult = await bbLifecycle.provisionBridgeBottle({
+    provisionResult = await bbLifecycle.provisionBridgeBottle(steamGame.deps, {
       bottleName: bridgeBottleName,
       createTimeoutMs: creation.createTimeoutMs,
       signal
@@ -265,11 +265,14 @@ export async function provisionBridgeBottleForInstall(
       engineUsed = engine
       if (signal?.aborted) return abortResult()
       sendCreatingBottle()
-      provisionResult = await bbLifecycle.provisionBridgeBottle({
-        bottleName: bridgeBottleName,
-        fallbackEngine: engine,
-        signal
-      })
+      provisionResult = await bbLifecycle.provisionBridgeBottle(
+        steamGame.deps,
+        {
+          bottleName: bridgeBottleName,
+          fallbackEngine: engine,
+          signal
+        }
+      )
     }
   }
   if (provisionResult.errorCode === bottle.PROVISION_ABORTED)
@@ -487,6 +490,7 @@ export async function installBridgeGameLeased(
       setBridgeSteamApiPrescreen(steamGame.appId, 'x64')
       stopInstallPolling(steamGame.appId)
       const removeResult = await bbLifecycle.removePerGameBridgeBottle(
+        steamGame.deps,
         steamGame.appId
       )
       if (removeResult.status === 'error') {
@@ -546,6 +550,7 @@ export async function installBridgeGameLeased(
     )
     stopInstallPolling(steamGame.appId)
     const removeResult = await bbLifecycle.removePerGameBridgeBottle(
+      steamGame.deps,
       steamGame.appId
     )
     if (removeResult.status === 'error') {

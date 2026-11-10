@@ -628,7 +628,11 @@ describe('enumerateSteamInstallCopies', () => {
 // ── Task 1: removeSteamInstallCopy ───────────────────────────────────────────
 describe('removeSteamInstallCopy', () => {
   it('non-numeric appId -> refused, nothing deleted', async () => {
-    const result = await acfState.removeSteamInstallCopy('../evil', 'native')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      '../evil',
+      'native'
+    )
 
     expect(result).toEqual({
       status: 'refused',
@@ -639,7 +643,11 @@ describe('removeSteamInstallCopy', () => {
   })
 
   it("state 'absent' -> absent, nothing deleted", async () => {
-    const result = await acfState.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      '63000',
+      'native'
+    )
 
     expect(result).toEqual({ status: 'absent', source: 'native' })
     expect(rmSync).not.toHaveBeenCalled()
@@ -652,7 +660,11 @@ describe('removeSteamInstallCopy', () => {
       installdir: 'HOARD'
     })
 
-    const result = await acfState.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      '63000',
+      'native'
+    )
 
     expect(result).toEqual({
       status: 'refused',
@@ -669,7 +681,11 @@ describe('removeSteamInstallCopy', () => {
       installdir: '../../etc/evil'
     })
 
-    const result = await acfState.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      '63000',
+      'native'
+    )
 
     expect(result).toEqual({
       status: 'refused',
@@ -686,7 +702,11 @@ describe('removeSteamInstallCopy', () => {
       installdir: ''
     })
 
-    const result = await acfState.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      '63000',
+      'native'
+    )
 
     expect(result).toEqual({
       status: 'refused',
@@ -704,7 +724,11 @@ describe('removeSteamInstallCopy', () => {
       SizeOnDisk: '999'
     })
 
-    const result = await acfState.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      '63000',
+      'native'
+    )
 
     expect(result).toEqual({
       status: 'removed',
@@ -733,7 +757,11 @@ describe('removeSteamInstallCopy', () => {
       installdir: 'SharedGame'
     })
 
-    const result = await acfState.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      '63000',
+      'native'
+    )
 
     expect(result).toEqual({
       status: 'removed',
@@ -765,7 +793,11 @@ describe('removeSteamInstallCopy — delete-in-GameLib containment (quick 261106
       lib2Steamapps
     )
 
-    const result = await acfState.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      '63000',
+      'native'
+    )
 
     expect(result).toEqual({
       status: 'removed',
@@ -796,7 +828,11 @@ describe('removeSteamInstallCopy — delete-in-GameLib containment (quick 261106
       installdir: '../../..'
     })
 
-    const result = await acfState.removeSteamInstallCopy('63000', 'native')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      '63000',
+      'native'
+    )
 
     expect(result).toMatchObject({ status: 'refused' })
     expect(rmSync).not.toHaveBeenCalled()
@@ -809,7 +845,7 @@ describe('removeSteamInstallCopy — delete-in-GameLib containment (quick 261106
       installdir: '/etc'
     })
 
-    await acfState.removeSteamInstallCopy('63000', 'native')
+    await acfState.removeSteamInstallCopy(steamTestDeps, '63000', 'native')
 
     expect(rmSync).not.toHaveBeenCalledWith('/etc', expect.anything())
     for (const [target] of (rmSync as jest.Mock).mock.calls) {
@@ -837,7 +873,7 @@ describe('removeSteamInstallCopy — delete-in-GameLib containment (quick 261106
       )
       ;(rmSync as jest.Mock).mockImplementation(real.rmSync)
 
-      await acfState.removeSteamInstallCopy('63000', 'native')
+      await acfState.removeSteamInstallCopy(steamTestDeps, '63000', 'native')
 
       expect(real.existsSync(join(outside, 'precious.txt'))).toBe(true)
       expect(real.existsSync(link)).toBe(false)
@@ -899,7 +935,11 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       BRIDGE_STEAMAPPS
     )
 
-    const result = await acfState.removeSteamInstallCopy(APP_ID, 'bridge')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      APP_ID,
+      'bridge'
+    )
 
     expect(result).toEqual({
       status: 'removed',
@@ -908,7 +948,10 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       bottleRemoved: true
     })
     expect(mock.removePerGameBridgeBottle).toHaveBeenCalledTimes(1)
-    expect(mock.removePerGameBridgeBottle).toHaveBeenCalledWith(APP_ID)
+    expect(mock.removePerGameBridgeBottle).toHaveBeenCalledWith(
+      steamTestDeps,
+      APP_ID
+    )
   })
 
   it('resolved bottle is the legacy GameLibSteamBridge -> removePerGameBridgeBottle NOT called, bottleRemoved absent', async () => {
@@ -920,7 +963,11 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       BRIDGE_STEAMAPPS
     )
 
-    const result = await acfState.removeSteamInstallCopy(APP_ID, 'bridge')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      APP_ID,
+      'bridge'
+    )
 
     expect(result).toEqual({
       status: 'removed',
@@ -953,7 +1000,11 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       BRIDGE_STEAMAPPS
     )
 
-    const result = await acfState.removeSteamInstallCopy(APP_ID, 'bridge')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      APP_ID,
+      'bridge'
+    )
 
     expect(result).toEqual({
       status: 'removed',
@@ -979,7 +1030,11 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       'backend/logger'
     )
 
-    const result = await acfState.removeSteamInstallCopy(APP_ID, 'bridge')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      APP_ID,
+      'bridge'
+    )
 
     expect(result).toEqual({
       status: 'removed',
@@ -1002,7 +1057,11 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       installdir: 'HOARD'
     })
 
-    const result = await acfState.removeSteamInstallCopy(APP_ID, 'native')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      APP_ID,
+      'native'
+    )
 
     expect(result).toEqual({
       status: 'removed',
@@ -1022,7 +1081,11 @@ describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
       BOTTLE_STEAMAPPS
     )
 
-    const result = await acfState.removeSteamInstallCopy(APP_ID, 'bottle')
+    const result = await acfState.removeSteamInstallCopy(
+      steamTestDeps,
+      APP_ID,
+      'bottle'
+    )
 
     expect(result).toEqual({
       status: 'removed',
@@ -1093,7 +1156,7 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     const result = await new SteamGame(APP_ID, steamTestDeps).install({} as any)
 
     expect(removeSpy).toHaveBeenCalledTimes(1)
-    expect(removeSpy).toHaveBeenCalledWith(APP_ID, 'native')
+    expect(removeSpy).toHaveBeenCalledWith(steamTestDeps, APP_ID, 'native')
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
     // rmSync is the real deletion primitive removeSteamInstallCopy calls
     // internally — the spy above only proves the CALL, this proves the
@@ -1259,7 +1322,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       ])
     const removeSpy = jest
       .spyOn(acfState, 'removeSteamInstallCopy')
-      .mockImplementation((appId, source) =>
+      .mockImplementation((_deps, appId, source) =>
         Promise.resolve({
           status: 'removed',
           source,
@@ -1273,9 +1336,24 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
     const result = await removeAllSteamInstallCopies(steamTestDeps, APP_ID)
 
     expect(removeSpy).toHaveBeenCalledTimes(3)
-    expect(removeSpy).toHaveBeenNthCalledWith(1, APP_ID, 'native')
-    expect(removeSpy).toHaveBeenNthCalledWith(2, APP_ID, 'bottle')
-    expect(removeSpy).toHaveBeenNthCalledWith(3, APP_ID, 'bridge')
+    expect(removeSpy).toHaveBeenNthCalledWith(
+      1,
+      steamTestDeps,
+      APP_ID,
+      'native'
+    )
+    expect(removeSpy).toHaveBeenNthCalledWith(
+      2,
+      steamTestDeps,
+      APP_ID,
+      'bottle'
+    )
+    expect(removeSpy).toHaveBeenNthCalledWith(
+      3,
+      steamTestDeps,
+      APP_ID,
+      'bridge'
+    )
     expect(result).toEqual({ removed: 3, refused: 0 })
 
     enumerateSpy.mockRestore()
@@ -1293,7 +1371,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       ])
     const removeSpy = jest
       .spyOn(acfState, 'removeSteamInstallCopy')
-      .mockImplementation((appId, source) => {
+      .mockImplementation((_deps, appId, source) => {
         if (source === 'bottle') {
           return Promise.resolve({
             status: 'refused',
@@ -1327,7 +1405,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       .mockResolvedValue([mockCopy('native'), mockCopy('bridge')])
     const removeSpy = jest
       .spyOn(acfState, 'removeSteamInstallCopy')
-      .mockImplementation((appId, source) => {
+      .mockImplementation((_deps, appId, source) => {
         if (source === 'native') return Promise.reject(new Error('disk error'))
         return Promise.resolve({
           status: 'removed',
@@ -1377,7 +1455,7 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       .mockResolvedValue([mockCopy('native'), mockCopy('bottle')])
     const removeSpy = jest
       .spyOn(acfState, 'removeSteamInstallCopy')
-      .mockImplementation((appId, source) =>
+      .mockImplementation((_deps, appId, source) =>
         Promise.resolve({
           status: 'removed',
           source,

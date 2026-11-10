@@ -197,7 +197,10 @@ async function uninstallBridgeGame(steamGame: SteamGame): Promise<ExecResult> {
     steamGame.appId
   ).wineCrossoverBottle
   if (bottleName === bridgeBottleNameFor(steamGame.appId)) {
-    const result = await removePerGameBridgeBottle(steamGame.appId)
+    const result = await removePerGameBridgeBottle(
+      steamGame.deps,
+      steamGame.appId
+    )
     if (result.status === 'error') {
       logWarning(
         `SteamGame: uninstallBridgeGame failed to remove per-game bottle "${bottleName}" for appId ${steamGame.appId}: ${result.error}`,
@@ -422,7 +425,11 @@ export async function removeNativeInstallDirectly(
 ): Promise<ExecResult> {
   let failure: string
   try {
-    const result = await removeSteamInstallCopy(steamGame.appId, 'native')
+    const result = await removeSteamInstallCopy(
+      steamGame.deps,
+      steamGame.appId,
+      'native'
+    )
     if (result.status !== 'refused') {
       clearPendingAdoption(steamGame.appId)
       await pollUninstallOnce(steamGame.deps, steamGame.appId, 'native')

@@ -515,7 +515,11 @@ export async function removeDemotedNativeOrphan(
       return
     }
 
-    const result = await removeSteamInstallCopy(steamGame.appId, 'native')
+    const result = await removeSteamInstallCopy(
+      steamGame.deps,
+      steamGame.appId,
+      'native'
+    )
     logInfo(
       `SteamGame: removeDemotedNativeOrphan removed appId ${steamGame.appId}'s native install (result: ${result.status})`,
       LogPrefix.Steam

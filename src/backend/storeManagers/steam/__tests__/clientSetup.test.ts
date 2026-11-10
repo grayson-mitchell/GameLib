@@ -19,7 +19,7 @@
 import { existsSync, mkdirSync } from 'graceful-fs'
 import { join } from 'path'
 import { GlobalConfig } from 'backend/config'
-import { downloadFile, spawnAsync } from 'backend/utils'
+import { downloadFile } from 'backend/utils'
 import { shell } from 'backend/platform'
 import { logError, logInfo } from 'backend/logger'
 import { sendFrontendMessage } from '../../../ipc'
@@ -51,8 +51,7 @@ jest.mock('backend/platform', () => ({
 }))
 
 jest.mock('backend/utils', () => ({
-  downloadFile: jest.fn(),
-  spawnAsync: jest.fn()
+  downloadFile: jest.fn()
 }))
 
 jest.mock('backend/logger', () => ({
@@ -89,7 +88,11 @@ const mockedMkdirSync = mkdirSync as jest.Mock
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedOpenExternal = shell.openExternal as jest.Mock
-const mockedSpawnAsync = spawnAsync as jest.Mock
+// Recording fake handed to the code under test through its deps slice (66.1 R5).
+const mockedSpawnAsync = jest.fn()
+const setupDeps = { spawnAsync: mockedSpawnAsync } as Parameters<
+  typeof startGuidedClientInstall
+>[0]
 const mockedIsSteamClientInstalled =
   SteamUser.isSteamClientInstalled as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
@@ -254,7 +257,7 @@ describe('clientSetup.ts', () => {
     it('D-10/D-UAT-17: Windows downloads the official SteamSetup.exe over HTTPS and launches it elevated through PowerShell RunAs', async () => {
       mockedExistsSync.mockReturnValue(false)
 
-      const result = await startGuidedClientInstall()
+      const result = await startGuidedClientInstall(setupDeps)
 
       expect(result).toEqual({ status: 'started' })
       expect(mockedDownloadFile).toHaveBeenCalledWith(
@@ -292,7 +295,7 @@ describe('clientSetup.ts', () => {
     it('D-UAT-17/T-0yc-01: the installer path reaches PowerShell as one single-quoted literal with apostrophes doubled', async () => {
       mockedExistsSync.mockReturnValue(true)
 
-      await startGuidedClientInstall()
+      await startGuidedClientInstall(setupDeps)
 
       const [, spawnedArgs] = mockedSpawnAsync.mock.calls[0]
       const filePath: string = spawnedArgs[spawnedArgs.indexOf('-FilePath') + 1]
@@ -307,7 +310,7 @@ describe('clientSetup.ts', () => {
     it('D-10/T-21-20: the Windows launch passes no wait, argument-list or silent/quiet flag', async () => {
       mockedExistsSync.mockReturnValue(true)
 
-      await startGuidedClientInstall()
+      await startGuidedClientInstall(setupDeps)
 
       const [, spawnedArgs] = mockedSpawnAsync.mock.calls[0]
       for (const forbidden of [
@@ -333,7 +336,7 @@ describe('clientSetup.ts', () => {
           'Start-Process : This command cannot be run due to the error: The operation was canceled by the user.'
       })
 
-      const result = await startGuidedClientInstall()
+      const result = await startGuidedClientInstall(setupDeps)
 
       expect(result).toEqual({
         status: 'error',
@@ -350,7 +353,7 @@ describe('clientSetup.ts', () => {
       mockedExistsSync.mockReturnValue(true)
       mockedSpawnAsync.mockRejectedValue(new Error('spawn powershell ENOENT'))
 
-      const result = await startGuidedClientInstall()
+      const result = await startGuidedClientInstall(setupDeps)
 
       expect(result).toEqual({
         status: 'error',
@@ -367,7 +370,7 @@ describe('clientSetup.ts', () => {
       mockedExistsSync.mockReturnValue(true)
       mockedSpawnAsync.mockResolvedValue({ code: null, stdout: '', stderr: '' })
 
-      const result = await startGuidedClientInstall()
+      const result = await startGuidedClientInstall(setupDeps)
 
       expect(result).toEqual({
         status: 'error',
@@ -381,7 +384,7 @@ describe('clientSetup.ts', () => {
       envMock.isLinux = false
       mockedExistsSync.mockReturnValue(false)
 
-      const result = await startGuidedClientInstall()
+      const result = await startGuidedClientInstall(setupDeps)
 
       expect(result).toEqual({ status: 'started' })
       const [downloadArgs] = mockedDownloadFile.mock.calls[0]
@@ -400,7 +403,7 @@ describe('clientSetup.ts', () => {
       mockedExistsSync.mockReturnValue(true)
       mockedSpawnAsync.mockResolvedValue({ code: 1, stdout: '', stderr: '' })
 
-      const result = await startGuidedClientInstall()
+      const result = await startGuidedClientInstall(setupDeps)
 
       expect(result).toEqual({ status: 'error', error: MAC_LAUNCH_FAILED })
       expect(mockedLogError).toHaveBeenCalled()
@@ -415,7 +418,7 @@ describe('clientSetup.ts', () => {
       envMock.isMac = false
       envMock.isLinux = true
 
-      const result = await startGuidedClientInstall()
+      const result = await startGuidedClientInstall(setupDeps)
 
       expect(result).toEqual({ status: 'link-opened' })
       expect(mockedOpenExternal).toHaveBeenCalledWith(STEAM_DOWNLOAD_URL)
@@ -426,7 +429,7 @@ describe('clientSetup.ts', () => {
     it('reuses an already-downloaded installer instead of re-fetching it', async () => {
       mockedExistsSync.mockReturnValue(true)
 
-      await startGuidedClientInstall()
+      await startGuidedClientInstall(setupDeps)
 
       expect(mockedDownloadFile).not.toHaveBeenCalled()
       expect(mockedSpawnAsync).toHaveBeenCalled()
@@ -436,7 +439,7 @@ describe('clientSetup.ts', () => {
       mockedExistsSync.mockReturnValue(false)
       mockedDownloadFile.mockRejectedValue(new Error('network down'))
 
-      const result = await startGuidedClientInstall()
+      const result = await startGuidedClientInstall(setupDeps)
 
       expect(result.status).toBe('error')
       expect(mockedSpawnAsync).not.toHaveBeenCalled()

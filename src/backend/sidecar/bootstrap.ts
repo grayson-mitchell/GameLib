@@ -77,6 +77,7 @@ import {
   setTokenStore as installTokenStore,
   clearOrphanedElectronToken
 } from '../storeManagers/steam/tokenStore'
+import { bindBottleStores } from '../storeManagers/steam/bottle'
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
 import { installSidecarHumbleSecretStore } from './humbleSecretStore'
 import { installSidecarSteamGridDbSecretStore } from './steamgridSecretStore'
@@ -1441,6 +1442,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
       run: (_ctx, _io, state) => {
         const { stores } = requireServices(state)
         bindSteamGridDbSecretDeps({ stores })
+        bindBottleStores({ stores })
         // Placement is load-bearing (Phase 28, T-28-10): must run AFTER startRpcServer() so
         // requestRustInvoke can write frames, and BEFORE any invoke handler body can run (those
         // only fire from the RPC loop below, never at module-import time) so no handler ever

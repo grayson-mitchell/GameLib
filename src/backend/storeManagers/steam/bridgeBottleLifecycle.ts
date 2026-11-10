@@ -9,10 +9,10 @@ import { existsSync, rmSync } from 'graceful-fs'
 import type { WineInstallation } from 'common/types'
 import { GlobalConfig } from 'backend/config'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { spawnAsync } from 'backend/utils'
 import {
   killBottleWineServer,
-  type ProvisionBottleResult
+  type ProvisionBottleResult,
+  type SpawnDeps
 } from './provisionBottle'
 import {
   bridgeBottleNameFor,
@@ -27,11 +27,11 @@ import {
   CROSSOVER_REQUIRED_MESSAGE,
   DEFAULT_BRIDGE_BOTTLE_NAME,
   PROVISION_ABORTED,
+  bottleConfigStore,
   cxbottleIn,
   persistedWineBins
 } from './bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
-import { steamBottleConfigStore } from './stores'
 import { getEngineSelection } from 'backend/engine/engineRegistry'
 import { isNonCrossover } from 'backend/engine/engineTypes'
 import type { NonCrossoverEngine } from 'backend/engine/engineTypes'
@@ -77,7 +77,7 @@ function guardPerGameBridgeBottleName(
 
   // (3) Refuse every non-per-game bottle this function could ever be asked
   // to touch, mirroring provisionBottle's CR-01 guard (D-01).
-  const storedPhase17Name = steamBottleConfigStore.get_nodefault('bottleName')
+  const storedPhase17Name = bottleConfigStore().get_nodefault('bottleName')
   const sharedBottle = GlobalConfig.get().getSettings().wineCrossoverBottle
   const forbidden = new Set<string>([
     DEFAULT_BRIDGE_BOTTLE_NAME,
@@ -152,6 +152,7 @@ function guardPerGameBridgeBottleName(
  * STEAM_SETUP_EXE_URL) — a per-game bridge bottle never has one to clean up.
  */
 export async function removePerGameBridgeBottle(
+  deps: SpawnDeps,
   appId: string
 ): Promise<
   | { status: 'removed' }
@@ -173,7 +174,7 @@ export async function removePerGameBridgeBottle(
   // (6) Stop the bottle's own wineserver first (best-effort), then delete
   // via the same locked cxbottle mechanism provisionBottle uses, with an
   // rmSync fallback if the dir survives.
-  await killBottleWineServer(name)
+  await killBottleWineServer(deps, name)
 
   const removeBinDir = await resolveCrossoverBinDirAsync({
     hintWineBins: persistedWineBins()
@@ -185,7 +186,7 @@ export async function removePerGameBridgeBottle(
     )
   } else {
     try {
-      await spawnAsync(cxbottleIn(removeBinDir), [
+      await deps.spawnAsync(cxbottleIn(removeBinDir), [
         '--bottle',
         name,
         '--delete',
@@ -243,18 +244,19 @@ export async function removePerGameBridgeBottle(
  * stock CrossOver (D-10).
  */
 async function killForRegisteredEngine(
+  deps: SpawnDeps,
   appId: string,
   name: string,
   timeoutMs?: number,
   engineHint?: { wineserverBin: string }
 ): Promise<boolean> {
   if (getDrmBridgeRunner(appId)) {
-    return killBottleWineServer(name, drmRunnerBinDir(appId), timeoutMs)
+    return killBottleWineServer(deps, name, drmRunnerBinDir(appId), timeoutMs)
   }
   const engine = getEngineSelection(appId)
   if (engine && isNonCrossover(engine)) {
     return killBottleWineServerWith(
-      { spawnAsync },
+      deps,
       name,
       engine.wineserverBin,
       { USER: 'crossover' },
@@ -267,7 +269,7 @@ async function killForRegisteredEngine(
       existsSync(engineHint.wineserverBin)
     ) {
       return killBottleWineServerWith(
-        { spawnAsync },
+        deps,
         name,
         engineHint.wineserverBin,
         { USER: 'crossover' },
@@ -279,7 +281,7 @@ async function killForRegisteredEngine(
       LogPrefix.Steam
     )
   }
-  return killBottleWineServer(name, undefined, timeoutMs)
+  return killBottleWineServer(deps, name, undefined, timeoutMs)
 }
 
 /**
@@ -290,6 +292,7 @@ async function killForRegisteredEngine(
  * never joins a stock wineserver or the reverse. Same guards; never throws.
  */
 export async function endPerGameBridgeBottleSessionWith(
+  deps: SpawnDeps,
   appId: string,
   bottleName: string | undefined,
   runnerBinDir: string | undefined,
@@ -308,7 +311,7 @@ export async function endPerGameBridgeBottleSessionWith(
       `endPerGameBridgeBottleSessionWith: wineserver -k for bottle "${name}" (appId ${appId})`,
       LogPrefix.Steam
     )
-    return await killBottleWineServer(name, runnerBinDir, timeoutMs)
+    return await killBottleWineServer(deps, name, runnerBinDir, timeoutMs)
   } catch (error) {
     logWarning(
       [`endPerGameBridgeBottleSessionWith: failed for appId "${appId}"`, error],
@@ -324,6 +327,7 @@ export async function endPerGameBridgeBottleSessionWith(
  * guard refuses. Never throws.
  */
 export async function killBridgeBottleWineServer(
+  deps: SpawnDeps,
   appId: string,
   timeoutMs: number
 ): Promise<boolean> {
@@ -333,7 +337,7 @@ export async function killBridgeBottleWineServer(
       'killBridgeBottleWineServer'
     )
     if (!guard.ok) return false
-    return await killForRegisteredEngine(appId, guard.name, timeoutMs)
+    return await killForRegisteredEngine(deps, appId, guard.name, timeoutMs)
   } catch (error) {
     logWarning(
       [`killBridgeBottleWineServer: failed for appId "${appId}"`, error],
@@ -344,6 +348,7 @@ export async function killBridgeBottleWineServer(
 }
 
 export async function stopPerGameBridgeBottle(
+  deps: SpawnDeps,
   appId: string
 ): Promise<
   | { status: 'stopped' }
@@ -369,7 +374,7 @@ export async function stopPerGameBridgeBottle(
     LogPrefix.Steam
   )
   // D-11: a registered DRM runner's own wineserver, one runner per bottle.
-  await killForRegisteredEngine(appId, name)
+  await killForRegisteredEngine(deps, appId, name)
   return { status: 'stopped' }
 }
 
@@ -381,6 +386,7 @@ export async function stopPerGameBridgeBottle(
  * resolves true only when a `wineserver -k` ran to completion.
  */
 export async function endPerGameBridgeBottleSession(
+  deps: SpawnDeps,
   appId: string,
   bottleName: string | undefined,
   timeoutMs: number,
@@ -400,7 +406,13 @@ export async function endPerGameBridgeBottleSession(
       LogPrefix.Steam
     )
     // D-11: a registered DRM runner's own wineserver, one runner per bottle.
-    return await killForRegisteredEngine(appId, name, timeoutMs, engineHint)
+    return await killForRegisteredEngine(
+      deps,
+      appId,
+      name,
+      timeoutMs,
+      engineHint
+    )
   } catch (error) {
     logWarning(
       [`endPerGameBridgeBottleSession: failed for appId "${appId}"`, error],
@@ -448,16 +460,19 @@ export function discardNewBridgeBottle(bottleName: string): void {
   removeCreatedBottleDir(bottleName)
 }
 
-export async function provisionBridgeBottle(opts: {
-  bottleName: string
-  wineVersion?: WineInstallation
-  /** Phase 59: create with this engine instead of CrossOver (D-01). */
-  fallbackEngine?: NonCrossoverEngine
-  /** D-12: hard cap for `cxbottle --create`, in ms. */
-  createTimeoutMs?: number
-  /** 59-REVIEW CR-01: aborts bottle creation and removes what this call created. */
-  signal?: AbortSignal
-}): Promise<ProvisionBottleResult> {
+export async function provisionBridgeBottle(
+  deps: SpawnDeps,
+  opts: {
+    bottleName: string
+    wineVersion?: WineInstallation
+    /** Phase 59: create with this engine instead of CrossOver (D-01). */
+    fallbackEngine?: NonCrossoverEngine
+    /** D-12: hard cap for `cxbottle --create`, in ms. */
+    createTimeoutMs?: number
+    /** 59-REVIEW CR-01: aborts bottle creation and removes what this call created. */
+    signal?: AbortSignal
+  }
+): Promise<ProvisionBottleResult> {
   const rawName = opts.bottleName
   const bottleName = sanitizeBottleName(rawName)
 
@@ -501,7 +516,7 @@ export async function provisionBridgeBottle(opts: {
   // Phase 59: an explicit fallback engine creates the bottle itself.
   if (opts.fallbackEngine) {
     return createFallbackBottle(
-      { spawnAsync },
+      deps,
       bottleName,
       opts.fallbackEngine,
       opts.signal
@@ -534,7 +549,7 @@ export async function provisionBridgeBottle(opts: {
       `provisionBridgeBottle: bottle creation cancelled for "${bottleName}"`,
       LogPrefix.Steam
     )
-    await killBottleWineServer(bottleName, binDir, 15_000)
+    await killBottleWineServer(deps, bottleName, binDir, 15_000)
     if (createdHere) removeCreatedBottleDir(bottleName)
     return {
       status: 'error',
@@ -552,11 +567,11 @@ export async function provisionBridgeBottle(opts: {
     ]
     const { code, stderr } =
       opts.createTimeoutMs !== undefined
-        ? await spawnAsync(cxbottleIn(binDir), createArgv, {
+        ? await deps.spawnAsync(cxbottleIn(binDir), createArgv, {
             timeout: opts.createTimeoutMs,
             signal: opts.signal
           })
-        : await spawnAsync(cxbottleIn(binDir), createArgv, {
+        : await deps.spawnAsync(cxbottleIn(binDir), createArgv, {
             signal: opts.signal
           })
     if (opts.signal?.aborted) return await abortedCrossOver()
@@ -565,7 +580,7 @@ export async function provisionBridgeBottle(opts: {
         `provisionBridgeBottle: cxbottle create for "${bottleName}" hit its ${opts.createTimeoutMs} ms cap (D-12)`,
         LogPrefix.Steam
       )
-      await killBottleWineServer(bottleName, binDir, 15_000)
+      await killBottleWineServer(deps, bottleName, binDir, 15_000)
       if (createdHere) removeCreatedBottleDir(bottleName)
       return {
         status: 'error',
@@ -584,7 +599,7 @@ export async function provisionBridgeBottle(opts: {
         ],
         LogPrefix.Steam
       )
-      await killBottleWineServer(bottleName, binDir, 15_000)
+      await killBottleWineServer(deps, bottleName, binDir, 15_000)
       if (createdHere) removeCreatedBottleDir(bottleName)
       return {
         status: 'error',
@@ -598,7 +613,7 @@ export async function provisionBridgeBottle(opts: {
       LogPrefix.Steam
     )
     if (opts.signal?.aborted) return await abortedCrossOver()
-    await killBottleWineServer(bottleName, binDir, 15_000)
+    await killBottleWineServer(deps, bottleName, binDir, 15_000)
     if (createdHere) removeCreatedBottleDir(bottleName)
     return {
       status: 'error',
@@ -610,7 +625,7 @@ export async function provisionBridgeBottle(opts: {
   // (5) Tooling hygiene (SPEC constraint — avoid cxstart, kill wineserver
   // between runs): best-effort cleanup after creation so a fresh bottle
   // never leaves a wedged wineserver behind. Never fails provisioning.
-  await killBottleWineServer(bottleName, binDir)
+  await killBottleWineServer(deps, bottleName, binDir)
 
   logInfo(
     `provisionBridgeBottle: bridge bottle "${bottleName}" created (no Windows Steam client installed — R6)`,

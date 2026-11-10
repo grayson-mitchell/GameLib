@@ -258,6 +258,7 @@ describe('installSteamBridgeSharedRedists', () => {
     ])
     expect(mockedEnd).toHaveBeenCalledTimes(2)
     expect(mockedEnd).toHaveBeenCalledWith(
+      expect.anything(),
       APP,
       SETTINGS.wineCrossoverBottle,
       20_000,
@@ -293,7 +294,7 @@ describe('installSteamBridgeSharedRedists', () => {
     await installSteamBridgeSharedRedists(APP, fallback)
     expect(mockedEnd).toHaveBeenCalledTimes(2)
     for (const call of mockedEnd.mock.calls) {
-      expect(call[3]).toEqual({ wineserverBin: '/pins/bin/wineserver' })
+      expect(call[4]).toEqual({ wineserverBin: '/pins/bin/wineserver' })
     }
   })
 
@@ -310,7 +311,7 @@ describe('installSteamBridgeSharedRedists', () => {
     } as unknown as GameSettings
     await installSteamBridgeSharedRedists(APP, cx)
     expect(mockedEnd).toHaveBeenCalledTimes(2)
-    for (const call of mockedEnd.mock.calls) expect(call[3]).toBeUndefined()
+    for (const call of mockedEnd.mock.calls) expect(call[4]).toBeUndefined()
   })
 
   describe('H1: Wine Mono repair before DirectX', () => {

@@ -8,6 +8,7 @@ import { library } from '../state'
 import { NUMERIC_APP_ID } from '../gameConstants'
 import { DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
 import { removePerGameBridgeBottle } from '../bridgeBottleLifecycle'
+import type { SpawnDeps } from '../provisionBottle'
 import { resolveBridgeBottleName } from '../bridgeBottle'
 import {
   type AcfSource,
@@ -265,6 +266,7 @@ export type RemoveCopyResult =
  * Exported for unit testing.
  */
 export async function removeSteamInstallCopy(
+  deps: SpawnDeps,
   appId: string,
   source: AcfSource
 ): Promise<RemoveCopyResult> {
@@ -367,7 +369,7 @@ export async function removeSteamInstallCopy(
     resolvedBridgeBottleName &&
     resolvedBridgeBottleName !== DEFAULT_BRIDGE_BOTTLE_NAME
   ) {
-    const bottleResult = await removePerGameBridgeBottle(appId)
+    const bottleResult = await removePerGameBridgeBottle(deps, appId)
     const bottleRemoved = bottleResult.status === 'removed'
     if (!bottleRemoved) {
       logWarning(

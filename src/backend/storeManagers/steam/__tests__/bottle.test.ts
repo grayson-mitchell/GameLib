@@ -18,8 +18,7 @@ import {
 } from 'graceful-fs'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
-import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
-import { runWineCommand } from 'backend/launcher'
+import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { steamBottleConfigStore } from '../stores'
 import {
   getBottleSteamappsDir,
@@ -76,12 +75,7 @@ jest.mock('backend/config', () => ({
 
 jest.mock('backend/utils', () => ({
   checkWineBeforeLaunch: jest.fn(),
-  downloadFile: jest.fn(),
-  spawnAsync: jest.fn()
-}))
-
-jest.mock('backend/launcher', () => ({
-  runWineCommand: jest.fn()
+  downloadFile: jest.fn()
 }))
 
 // Phase 59: bottle creation with the fallback engine installs DXVK and writes the conf.
@@ -138,10 +132,11 @@ const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-const mockedSpawnAsync = spawnAsync as jest.Mock
+// Recording fakes handed to the code under test through its deps slice (66.1 R5).
+const mockedSpawnAsync = jest.fn()
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
-const mockedRunWineCommand = runWineCommand as jest.Mock
+const mockedRunWineCommand = jest.fn()
 
 const defaultWine: WineInstallation = {
   bin: '/usr/bin/wine',
@@ -647,7 +642,11 @@ describe('quick 261024-cjq: CrossOver precondition', () => {
   test('provisionBottle returns crossover-missing before any store write or spawn', async () => {
     cxState.binDir = undefined
     mockedExistsSync.mockReturnValue(false)
-    const result = await provisionBottle({ stores: createTestStores() })
+    const result = await provisionBottle({
+      stores: createTestStores(),
+      spawnAsync: mockedSpawnAsync,
+      commandRunner: { runWineCommand: mockedRunWineCommand }
+    } as unknown as Parameters<typeof provisionBottle>[0])
     expect(result.status).toBe('error')
     expect(result.errorCode).toBe('crossover-missing')
     expect(result.error).toMatch(/CrossOver is required/)

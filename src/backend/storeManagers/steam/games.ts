@@ -551,7 +551,7 @@ export default class SteamGame implements Game {
           `SteamGame.stop: stopping bridge-launched appId ${this.appId} — wineserver -k in its per-game bottle ${bridgeRecord.bottle}`,
           LogPrefix.Steam
         )
-        const result = await stopPerGameBridgeBottle(this.appId)
+        const result = await stopPerGameBridgeBottle(this.deps, this.appId)
         if (result.status !== 'stopped') {
           logWarning(
             `SteamGame.stop: per-game bridge bottle stop for appId ${this.appId} returned ${result.status}${'error' in result ? ` (${result.error})` : ''}`,

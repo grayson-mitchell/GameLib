@@ -448,7 +448,7 @@ export function registerSteamAuthFlows(): void {
 
   // ── Guided Steam-client install pair (REQ-34.4-04, main.ts:958-961) ───────
   ipcMain.handle('steamClientSetupStart', async () => {
-    return startGuidedClientInstall()
+    return startGuidedClientInstall(await legacySteamStores())
   })
 
   ipcMain.handle(

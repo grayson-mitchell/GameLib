@@ -21,8 +21,7 @@ import {
 // below. Distinct local name so it never collides with the mocked
 // `graceful-fs` `readFileSync` import above (manifest.test.ts precedent).
 import { GlobalConfig } from 'backend/config'
-import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
-import { runWineCommand } from 'backend/launcher'
+import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { steamBottleConfigStore } from '../stores'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { __stopBottledRaiseLoops } from '../bottledSteam'
@@ -67,12 +66,7 @@ jest.mock('backend/config', () => ({
 
 jest.mock('backend/utils', () => ({
   checkWineBeforeLaunch: jest.fn(),
-  downloadFile: jest.fn(),
-  spawnAsync: jest.fn()
-}))
-
-jest.mock('backend/launcher', () => ({
-  runWineCommand: jest.fn()
+  downloadFile: jest.fn()
 }))
 
 // Phase 59: bottle creation with the fallback engine installs DXVK and writes the conf.
@@ -129,12 +123,17 @@ const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-const mockedSpawnAsync = spawnAsync as jest.Mock
+// Recording fakes handed to the code under test through its deps slice (66.1 R5).
+const mockedSpawnAsync = jest.fn()
+const mockedRunWineCommand = jest.fn()
 const mockedDownloadFile = downloadFile as jest.Mock
 // checkWineBeforeLaunch is mocked in this file, so the store slices are never read.
-const provisionDeps = { stores: createTestStores() }
+const provisionDeps = {
+  stores: createTestStores(),
+  spawnAsync: mockedSpawnAsync,
+  commandRunner: { runWineCommand: mockedRunWineCommand }
+} as unknown as Parameters<typeof provisionBottle>[0]
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
-const mockedRunWineCommand = runWineCommand as jest.Mock
 
 const defaultWine: WineInstallation = {
   bin: '/usr/bin/wine',

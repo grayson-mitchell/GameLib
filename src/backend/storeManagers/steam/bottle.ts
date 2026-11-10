@@ -25,7 +25,7 @@ import { logWarning, LogPrefix } from 'backend/logger'
 // its pure helpers (e.g. steam/library.ts consumers like games.test.ts). Only
 // the provisioning/command functions actually need it, so defer the load.
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
-import { steamBottleConfigStore } from './stores'
+import type { SteamStoresDeps } from './library/installRoot'
 import {
   getBottleDir,
   isBottleProvisioned
@@ -43,6 +43,31 @@ import {
 // client in the bottle" acceptance bar. Distinct name so
 // getBridgeBottleSettings()/isBridgeBottleReady() can never accidentally
 // resolve the Phase 17 bottle.
+/**
+ * Binds the stores slice the bottle readers use (66.1 R3). Bound once at boot; the bottle
+ * helpers are sync and have ~40 callers across the steam tree, so they read the bound slice
+ * instead of taking a parameter. TRANSITIONAL: until bound, the call-time `require('./stores')`
+ * fallback serves (unit tests, early import order) -- plan 23 deletes the fallback.
+ */
+export function bindBottleStores(deps: SteamStoresDeps): void {
+  BottleStores.bound = deps
+}
+
+/** Static holder, the same shape as `SteamUser.bindStores` (66.1-16); plan 23 revisits both. */
+class BottleStores {
+  static bound: SteamStoresDeps | null = null
+}
+
+/** The dedicated Steam bottle config store, for the sibling bottle modules. */
+export function bottleConfigStore(): SteamStoresDeps['stores']['steam']['steamBottleConfigStore'] {
+  if (BottleStores.bound)
+    return BottleStores.bound.stores.steam.steamBottleConfigStore
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  return (require('./stores') as typeof import('./stores'))
+    .steamBottleConfigStore
+  /* eslint-enable @typescript-eslint/no-require-imports */
+}
+
 export const DEFAULT_BRIDGE_BOTTLE_NAME = 'GameLibSteamBridge'
 
 // CrossOver's cxbottle CLI lives in the CrossOver install's bin dir. Where
@@ -58,7 +83,7 @@ export const wineserverIn = (binDir: string): string =>
 export const cxRootFrom = (binDir: string): string => dirname(binDir)
 
 export function persistedWineBins(): string[] {
-  const bin = steamBottleConfigStore.get_nodefault('wineVersion')?.bin
+  const bin = bottleConfigStore().get_nodefault('wineVersion')?.bin
   return bin ? [bin] : []
 }
 
@@ -174,8 +199,7 @@ export function getBottleSteamExePath(bottleName: string): string {
  */
 export function isSteamBottleProvisioned(): boolean {
   return isBottleProvisioned(
-    steamBottleConfigStore.get_nodefault('bottleName') ??
-      DEFAULT_STEAM_BOTTLE_NAME
+    bottleConfigStore().get_nodefault('bottleName') ?? DEFAULT_STEAM_BOTTLE_NAME
   )
 }
 
@@ -223,7 +247,7 @@ export function bottleWineArch(bottleName: string): 'win32' | 'win64' | null {
 export function isBottleReady(bottleName?: string): boolean {
   const name =
     bottleName ??
-    steamBottleConfigStore.get_nodefault('bottleName') ??
+    bottleConfigStore().get_nodefault('bottleName') ??
     DEFAULT_STEAM_BOTTLE_NAME
   const ready =
     isBottleProvisioned(name) && existsSync(getBottleSteamExePath(name))
@@ -240,8 +264,8 @@ export function isBottleReady(bottleName?: string): boolean {
   // no main.ts change. Guarded by get_nodefault so a already-true flag is not
   // needlessly re-written. NEVER writes `false` here — un-readiness is not a
   // signal to un-provision (the win32-recreate branch owns the legitimate reset).
-  if (ready && steamBottleConfigStore.get_nodefault('provisioned') !== true) {
-    steamBottleConfigStore.set('provisioned', true)
+  if (ready && bottleConfigStore().get_nodefault('provisioned') !== true) {
+    bottleConfigStore().set('provisioned', true)
   }
 
   return ready
@@ -274,8 +298,8 @@ export function isBottleReady(bottleName?: string): boolean {
  */
 export function getSteamBottleSettings(): GameSettings {
   const globalSettings = GlobalConfig.get().getSettings()
-  const storedWineVersion = steamBottleConfigStore.get_nodefault('wineVersion')
-  const storedBottleName = steamBottleConfigStore.get_nodefault(
+  const storedWineVersion = bottleConfigStore().get_nodefault('wineVersion')
+  const storedBottleName = bottleConfigStore().get_nodefault(
     'wineCrossoverBottle'
   )
 
@@ -315,7 +339,7 @@ export function getSteamBottleSettings(): GameSettings {
     wineVersion.type === 'crossover' &&
     storedWineVersion?.type !== 'crossover'
   ) {
-    steamBottleConfigStore.set('wineVersion', wineVersion)
+    bottleConfigStore().set('wineVersion', wineVersion)
   }
 
   return {
@@ -357,7 +381,7 @@ export function persistBottleWineVersion(wineVersion: WineInstallation): void {
       LogPrefix.Steam
     )
   }
-  steamBottleConfigStore.set('wineVersion', wineVersion)
+  bottleConfigStore().set('wineVersion', wineVersion)
 }
 
 /**

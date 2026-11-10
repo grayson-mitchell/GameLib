@@ -24,7 +24,7 @@ import { readFileSync as readRealFile } from 'node:fs'
 import { dirname as dirnameOf, join as joinPath } from 'node:path'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
-import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
+import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { runWineCommand } from 'backend/launcher'
 import { steamBottleConfigStore } from '../stores'
 import { DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
@@ -90,8 +90,7 @@ jest.mock('backend/config', () => ({
 
 jest.mock('backend/utils', () => ({
   checkWineBeforeLaunch: jest.fn(),
-  downloadFile: jest.fn(),
-  spawnAsync: jest.fn()
+  downloadFile: jest.fn()
 }))
 
 jest.mock('backend/launcher', () => ({
@@ -152,7 +151,9 @@ const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-const mockedSpawnAsync = spawnAsync as jest.Mock
+// Recording fake handed to the code under test through its deps slice (66.1 R5).
+const mockedSpawnAsync = jest.fn()
+const spawnDeps = { spawnAsync: mockedSpawnAsync }
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 const mockedRunWineCommand = runWineCommand as jest.Mock
@@ -754,6 +755,7 @@ describe('bottle.ts', () => {
         )
         setDrmBridgeRunner('219990', R)
         await endPerGameBridgeBottleSession(
+          spawnDeps,
           '219990',
           'GameLibSteamBridge-219990',
           5000,
@@ -767,7 +769,7 @@ describe('bottle.ts', () => {
         const dir = getBottleDir('GameLibSteamBridge-219990')
         mockedExistsSync.mockImplementation((path: string) => path === dir)
         setDrmBridgeRunner('219990', R)
-        await stopPerGameBridgeBottle('219990')
+        await stopPerGameBridgeBottle(spawnDeps, '219990')
         let call = mockedSpawnAsync.mock.calls.at(-1)!
         expect(call[0]).toBe(CX_ROOT + '/bin/wineserver')
         expect(call[1]).toEqual(['-k'])
@@ -775,6 +777,7 @@ describe('bottle.ts', () => {
         expect(call[2]?.env?.CX_ROOT).toBe(CX_ROOT)
         mockedSpawnAsync.mockClear()
         await endPerGameBridgeBottleSession(
+          spawnDeps,
           '219990',
           'GameLibSteamBridge-219990',
           5000
@@ -822,7 +825,7 @@ describe('bottle.ts', () => {
           const dir = getBottleDir('GameLibSteamBridge-620')
           mockedExistsSync.mockImplementation((path: string) => path === dir)
           setOverlayBridgeRunner('620', OV)
-          await stopPerGameBridgeBottle('620')
+          await stopPerGameBridgeBottle(spawnDeps, '620')
           const call = mockedSpawnAsync.mock.calls.at(-1)!
           expect(call[0]).toBe(OV_ROOT + '/bin/wineserver')
         })
@@ -831,6 +834,7 @@ describe('bottle.ts', () => {
           const dir = getBottleDir('GameLibSteamBridge-620')
           mockedExistsSync.mockImplementation((path: string) => path === dir)
           await endPerGameBridgeBottleSessionWith(
+            spawnDeps,
             '620',
             'GameLibSteamBridge-620',
             OV_ROOT + '/bin',
@@ -846,6 +850,7 @@ describe('bottle.ts', () => {
           mockedSpawnAsync.mockClear()
           expect(
             await endPerGameBridgeBottleSessionWith(
+              spawnDeps,
               '620',
               'GameLibSteamBridge-621',
               undefined,
@@ -854,6 +859,7 @@ describe('bottle.ts', () => {
           ).toBe(false)
           expect(
             await endPerGameBridgeBottleSessionWith(
+              spawnDeps,
               '620',
               'GameLibSteamBridge',
               undefined,

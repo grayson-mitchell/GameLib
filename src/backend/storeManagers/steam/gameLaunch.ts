@@ -174,7 +174,10 @@ export async function launch(
       sendLaunchDone(steamGame)
       return false
     }
-    const result = await tellBottledSteamToLaunch(steamGame.appId)
+    const result = await tellBottledSteamToLaunch(
+      steamGame.deps,
+      steamGame.appId
+    )
     return result.status === 'done'
   }
 
@@ -783,7 +786,7 @@ export async function onBridgeLaunchDeadline(
     LogPrefix.Steam
   )
   stopBottleProcessMonitor(steamGame.appId)
-  await killBridgeBottleWineServer(steamGame.appId, 15_000)
+  await killBridgeBottleWineServer(steamGame.deps, steamGame.appId, 15_000)
   stopBridgeHelper(steamGame.appId)
   clearLaunchRecord()
   clearEngineSelection(steamGame.appId)

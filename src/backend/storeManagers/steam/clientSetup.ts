@@ -30,7 +30,7 @@ import { join } from 'path'
 import { existsSync, mkdirSync } from 'graceful-fs'
 import { GlobalConfig } from 'backend/config'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { spawnAsync } from 'backend/utils'
+import type { SpawnDeps } from './provisionBottle'
 import { shell } from 'backend/platform'
 import { isMac, isLinux } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
@@ -199,7 +199,9 @@ interface StartGuidedInstallResult {
  * returns status 'error' so the UI does not claim an install is running when
  * nothing opened (D-UAT-17).
  */
-export async function startGuidedClientInstall(): Promise<StartGuidedInstallResult> {
+export async function startGuidedClientInstall(
+  deps: SpawnDeps
+): Promise<StartGuidedInstallResult> {
   if (isLinux) {
     try {
       await shell.openExternal(STEAM_DOWNLOAD_URL)
@@ -257,8 +259,8 @@ export async function startGuidedClientInstall(): Promise<StartGuidedInstallResu
   const launchFailedMessage = isMac ? MAC_LAUNCH_FAILED : WINDOWS_LAUNCH_FAILED
   try {
     const { code, stderr } = isMac
-      ? await spawnAsync('open', [destPath])
-      : await spawnAsync(
+      ? await deps.spawnAsync('open', [destPath])
+      : await deps.spawnAsync(
           'powershell',
           [
             '-NoProfile',

@@ -6,7 +6,7 @@
 import { join } from 'path'
 import { existsSync, mkdirSync, rmSync } from 'graceful-fs'
 import type { GameInfo, WineInstallation } from 'common/types'
-import type { Stores } from 'backend/services/types'
+import type { CommandRunner, Stores } from 'backend/services/types'
 import { GlobalConfig } from 'backend/config'
 import {
   getRunnerLogWriter,
@@ -15,7 +15,8 @@ import {
   logWarning,
   LogPrefix
 } from 'backend/logger'
-import { checkWineBeforeLaunch, spawnAsync } from 'backend/utils'
+import type { SpawnAsync } from 'backend/spawnAsync'
+import { checkWineBeforeLaunch } from 'backend/utils'
 import { downloadSetupPayload } from './setupDownloads'
 import {
   DEFAULT_STEAM_BOTTLE_NAME,
@@ -23,7 +24,6 @@ import {
   STEAM_SETUP_EXE_URL,
   steamSupportPath
 } from './constants'
-import { steamBottleConfigStore } from './stores'
 import {
   getBottleDir,
   isBottleProvisioned,
@@ -36,6 +36,7 @@ import {
   CROSSOVER_MISSING,
   CROSSOVER_REQUIRED_MESSAGE,
   PROVISION_ABORTED,
+  bottleConfigStore,
   bottleWineArch,
   cxRootFrom,
   cxbottleIn,
@@ -81,7 +82,11 @@ export type ProvisionBottleResult = {
  * own libraries. Best-effort: a kill failure logs a warning and MUST NOT abort
  * provisioning (the rmSync fallback + recreate still run).
  */
+/** The slice every spawning bottle helper receives (66.1 R5). */
+export type SpawnDeps = { spawnAsync: SpawnAsync }
+
 export async function killBottleWineServer(
+  deps: SpawnDeps,
   bottleName: string,
   knownBinDir?: string,
   timeoutMs?: number
@@ -97,7 +102,7 @@ export async function killBottleWineServer(
     return false
   }
   try {
-    const result = await spawnAsync(wineserverIn(binDir), ['-k'], {
+    const result = await deps.spawnAsync(wineserverIn(binDir), ['-k'], {
       env: {
         ...process.env,
         WINEPREFIX: getBottleDir(bottleName),
@@ -141,7 +146,11 @@ export async function killBottleWineServer(
  * own first-run update.
  */
 export async function provisionBottle(
-  deps: { stores: Pick<Stores, 'kvs' | 'wineManager'> },
+  deps: {
+    stores: Pick<Stores, 'kvs' | 'wineManager'>
+    spawnAsync: SpawnAsync
+    commandRunner: Pick<CommandRunner, 'runWineCommand'>
+  },
   opts?: {
     bottleName?: string
     wineVersion?: WineInstallation
@@ -226,10 +235,10 @@ export async function provisionBottle(
   }
 
   // (2) Persist the chosen wine/bottle identity before composing settings.
-  steamBottleConfigStore.set('bottleName', bottleName)
-  steamBottleConfigStore.set('wineCrossoverBottle', bottleName)
+  bottleConfigStore().set('bottleName', bottleName)
+  bottleConfigStore().set('wineCrossoverBottle', bottleName)
   if (opts?.wineVersion) {
-    steamBottleConfigStore.set('wineVersion', opts.wineVersion)
+    bottleConfigStore().set('wineVersion', opts.wineVersion)
   }
 
   // (2b) GAP-17-CEF-RENDER: a win32 bottle cannot be converted in place — it
@@ -250,9 +259,9 @@ export async function provisionBottle(
     // GAP-17-CEF-RECREATE-RUNNING: stop the bottle's OWN Wine processes first —
     // WINEPREFIX-scoped (T-17-DoS) — so `cxbottle --delete` does not abort while
     // the bottled Steam client/steamwebhelper is still running.
-    await killBottleWineServer(bottleName, binDir)
+    await killBottleWineServer(deps, bottleName, binDir)
     try {
-      await spawnAsync(cxbottleIn(binDir as string), [
+      await deps.spawnAsync(cxbottleIn(binDir as string), [
         '--bottle',
         bottleName,
         '--delete',
@@ -283,7 +292,7 @@ export async function provisionBottle(
       }
     }
     // Reset ONLY bottle state — never touch refreshToken/isLoggedIn/userData.
-    steamBottleConfigStore.set('provisioned', false)
+    bottleConfigStore().set('provisioned', false)
   }
 
   // (3) Idempotent short-circuit — bottle is FULLY ready (conf + steam.exe).
@@ -303,13 +312,10 @@ export async function provisionBottle(
   // download/install step.
   if (!isBottleProvisioned(bottleName)) {
     try {
-      const { code, stderr } = await spawnAsync(cxbottleIn(binDir as string), [
-        '--create',
-        '--bottle',
-        bottleName,
-        '--template',
-        'win10_64'
-      ])
+      const { code, stderr } = await deps.spawnAsync(
+        cxbottleIn(binDir as string),
+        ['--create', '--bottle', bottleName, '--template', 'win10_64']
+      )
       if (!isBottleProvisioned(bottleName)) {
         // log-secret-gate-exempt: stderr of cxbottle create (bottle provisioning), not an auth command
         logError(
@@ -391,7 +397,7 @@ export async function provisionBottle(
       logWriter
     )
     if (wineOk && bottleSettings.wineVersion) {
-      steamBottleConfigStore.set('wineVersion', bottleSettings.wineVersion)
+      bottleConfigStore().set('wineVersion', bottleSettings.wineVersion)
     }
   } catch (error) {
     logWarning(
@@ -406,9 +412,8 @@ export async function provisionBottle(
     // GAP 5: raise the installer to the front once it appears (fire-and-forget).
     // Kicked off BEFORE awaiting runWineCommand — that await does not resolve
     // until the installer closes, so it must not gate the raise.
-    void raiseInstallerWindow('provision-SteamSetup')
-    const { runWineCommand } = await import('backend/launcher')
-    await runWineCommand({
+    void raiseInstallerWindow(deps, 'provision-SteamSetup')
+    await deps.commandRunner.runWineCommand({
       commandParts: [steamSetupExePath],
       gameSettings: getSteamBottleSettings(),
       wait: false,
@@ -440,7 +445,7 @@ export async function provisionBottle(
   const steamExeReady =
     isBottleProvisioned(bottleName) && existsSync(steamExePath)
   if (steamExeReady) {
-    steamBottleConfigStore.set('provisioned', true)
+    bottleConfigStore().set('provisioned', true)
   }
 
   logInfo(

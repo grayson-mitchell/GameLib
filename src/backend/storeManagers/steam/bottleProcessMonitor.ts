@@ -49,7 +49,7 @@ import {
   raiseWineGameWindow,
   windowsExeNameFromCommand
 } from 'backend/utils/wineWindowRaise'
-import { spawnAsync } from 'backend/utils'
+import type { SpawnDeps } from './provisionBottle'
 import { sendFrontendMessage } from '../../ipc'
 import { recordPlaySession } from 'backend/runsForMe'
 import type { SteamBottleLaunchWaitingCause } from 'common/types/steam'
@@ -190,9 +190,10 @@ function deriveWindowsPrefix(
  * Steam's own client binaries.
  */
 async function matchedProcesses(
+  deps: SpawnDeps,
   lowerPrefixes: string[]
 ): Promise<Array<{ pid: string; command: string }>> {
-  const stdout = await processListing({ spawnAsync })
+  const stdout = await processListing(deps)
   const matches: Array<{ pid: string; command: string }> = []
   for (const line of stdout.split('\n')) {
     const parsed = parsePsLine(line)
@@ -265,6 +266,7 @@ function fireStoppedOnce(appId: string, entry: MonitorEntry): void {
 
 /** First-match bookkeeping shared by the poll loop and launcherExited(). */
 function recordFirstMatch(
+  deps: SpawnDeps,
   appId: string,
   entry: MonitorEntry,
   matches: Array<{ pid: string; command: string }>
@@ -302,15 +304,11 @@ function recordFirstMatch(
           .filter((n): n is string => n !== null)
       )
     ]
-    // TEMPORARY (plan 12, replaced when this module takes injected deps).
-    void raiseWineGameWindow(
-      { spawnAsync },
-      {
-        context: `${entry.kind}:${appId}`,
-        pids: matches.map((m) => m.pid),
-        processNames
-      }
-    )
+    void raiseWineGameWindow(deps, {
+      context: `${entry.kind}:${appId}`,
+      pids: matches.map((m) => m.pid),
+      processNames
+    })
   } catch (error) {
     logWarning(
       [`bottleProcessMonitor [${appId}]: window raise failed to start`, error],
@@ -320,6 +318,7 @@ function recordFirstMatch(
 }
 
 async function runPollLoop(
+  deps: SpawnDeps,
   appId: string,
   entry: MonitorEntry,
   lowerPrefixes: string[],
@@ -356,7 +355,7 @@ async function runPollLoop(
 
     let matches: Array<{ pid: string; command: string }>
     try {
-      matches = await matchedProcesses(lowerPrefixes)
+      matches = await matchedProcesses(deps, lowerPrefixes)
       consecutiveFailures = 0
     } catch (error) {
       consecutiveFailures++
@@ -395,7 +394,7 @@ async function runPollLoop(
     }
 
     if (matches.length > 0 && !entry.everMatched) {
-      recordFirstMatch(appId, entry, matches)
+      recordFirstMatch(deps, appId, entry, matches)
     } else if (matches.length === 0 && entry.everMatched) {
       const elapsedMs = Date.now() - entry.matchedAt
       const elapsedSeconds = Math.round(elapsedMs / 1000)
@@ -490,6 +489,7 @@ export interface BottleProcessMonitorHandle {
  * when `installPath` does not resolve under `<bottleDir>/drive_c/`.
  */
 export function startBottleProcessMonitor(
+  deps: SpawnDeps,
   args: StartBottleProcessMonitorArgs
 ): BottleProcessMonitorHandle | null {
   const {
@@ -554,7 +554,14 @@ export function startBottleProcessMonitor(
 
   void (async () => {
     try {
-      await runPollLoop(appId, entry, lowerPrefixes, pollIntervalMs, bottleDir)
+      await runPollLoop(
+        deps,
+        appId,
+        entry,
+        lowerPrefixes,
+        pollIntervalMs,
+        bottleDir
+      )
     } catch (error) {
       logWarning(
         [`bottleProcessMonitor [${appId}]: poll loop failed`, error],
@@ -573,13 +580,13 @@ export function startBottleProcessMonitor(
         try {
           let matches: Array<{ pid: string; command: string }> = []
           try {
-            matches = await matchedProcesses(lowerPrefixes)
+            matches = await matchedProcesses(deps, lowerPrefixes)
           } catch {
             // A ps failure counts as "no match".
           }
           if (!isLive() || entry.everMatched) return
           if (matches.length > 0) {
-            recordFirstMatch(appId, entry, matches)
+            recordFirstMatch(deps, appId, entry, matches)
             return
           }
           logInfo(

@@ -24,8 +24,7 @@ import { readFileSync as readRealFile } from 'node:fs'
 import { dirname as dirnameOf, join as joinPath } from 'node:path'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
-import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
-import { runWineCommand } from 'backend/launcher'
+import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
 import { legacyTools } from 'backend/services/legacyFacades'
 import { writeCxbottleConf } from 'backend/engine/adoptBottle'
 import { steamBottleConfigStore } from '../stores'
@@ -99,12 +98,7 @@ jest.mock('backend/config', () => ({
 
 jest.mock('backend/utils', () => ({
   checkWineBeforeLaunch: jest.fn(),
-  downloadFile: jest.fn(),
-  spawnAsync: jest.fn()
-}))
-
-jest.mock('backend/launcher', () => ({
-  runWineCommand: jest.fn()
+  downloadFile: jest.fn()
 }))
 
 // Phase 59: bottle creation with the fallback engine installs DXVK and writes the conf.
@@ -161,10 +155,12 @@ const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
 const mockedSet = steamBottleConfigStore.set as jest.Mock
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
-const mockedSpawnAsync = spawnAsync as jest.Mock
+// Recording fakes handed to the code under test through its deps slice (66.1 R5).
+const mockedSpawnAsync = jest.fn()
+const spawnDeps = { spawnAsync: mockedSpawnAsync }
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
-const mockedRunWineCommand = runWineCommand as jest.Mock
+const mockedRunWineCommand = jest.fn()
 
 const defaultWine: WineInstallation = {
   bin: '/usr/bin/wine',
@@ -235,7 +231,9 @@ describe('bottle.ts', () => {
       test('rejects an unsafe bottle name and does NOT call cxbottle', async () => {
         mockedGetNodefault.mockReturnValue(undefined)
 
-        const result = await provisionBridgeBottle({ bottleName: 'a/../b' })
+        const result = await provisionBridgeBottle(spawnDeps, {
+          bottleName: 'a/../b'
+        })
 
         expect(result.status).toBe('error')
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -248,7 +246,7 @@ describe('bottle.ts', () => {
           type: 'toolkit'
         }
 
-        const result = await provisionBridgeBottle({
+        const result = await provisionBridgeBottle(spawnDeps, {
           bottleName: DEFAULT_BRIDGE_BOTTLE_NAME,
           wineVersion: gptk
         })
@@ -274,7 +272,7 @@ describe('bottle.ts', () => {
           return { code: 0, stdout: '', stderr: '' }
         })
 
-        const result = await provisionBridgeBottle({
+        const result = await provisionBridgeBottle(spawnDeps, {
           bottleName: DEFAULT_BRIDGE_BOTTLE_NAME,
           wineVersion: crossover
         })
@@ -287,7 +285,7 @@ describe('bottle.ts', () => {
           path.includes('cxbottle.conf')
         )
 
-        const result = await provisionBridgeBottle({
+        const result = await provisionBridgeBottle(spawnDeps, {
           bottleName: DEFAULT_BRIDGE_BOTTLE_NAME
         })
 
@@ -306,7 +304,7 @@ describe('bottle.ts', () => {
           return { code: 0, stdout: '', stderr: '' }
         })
 
-        const result = await provisionBridgeBottle({
+        const result = await provisionBridgeBottle(spawnDeps, {
           bottleName: DEFAULT_BRIDGE_BOTTLE_NAME
         })
 
@@ -335,7 +333,7 @@ describe('bottle.ts', () => {
           return { code: 0, stdout: '', stderr: '' }
         })
 
-        const result = await provisionBridgeBottle({
+        const result = await provisionBridgeBottle(spawnDeps, {
           bottleName: 'CustomBridge'
         })
 
@@ -360,7 +358,7 @@ describe('bottle.ts', () => {
           return { code: 0, stdout: '', stderr: '' }
         })
 
-        const result = await provisionBridgeBottle({
+        const result = await provisionBridgeBottle(spawnDeps, {
           bottleName: 'GameLibSteamBridge-206040'
         })
 
@@ -383,7 +381,9 @@ describe('bottle.ts', () => {
           return { code: 0, stdout: '', stderr: '' }
         })
 
-        await provisionBridgeBottle({ bottleName: DEFAULT_BRIDGE_BOTTLE_NAME })
+        await provisionBridgeBottle(spawnDeps, {
+          bottleName: DEFAULT_BRIDGE_BOTTLE_NAME
+        })
 
         expect(mockedDownloadFile).not.toHaveBeenCalled()
         expect(mockedRunWineCommand).not.toHaveBeenCalled()
@@ -397,7 +397,7 @@ describe('bottle.ts', () => {
           stderr: 'boom'
         })
 
-        const result = await provisionBridgeBottle({
+        const result = await provisionBridgeBottle(spawnDeps, {
           bottleName: DEFAULT_BRIDGE_BOTTLE_NAME
         })
 
@@ -408,7 +408,7 @@ describe('bottle.ts', () => {
         mockedExistsSync.mockReturnValue(false)
         mockedSpawnAsync.mockRejectedValue(new Error('spawn failed'))
 
-        const result = await provisionBridgeBottle({
+        const result = await provisionBridgeBottle(spawnDeps, {
           bottleName: DEFAULT_BRIDGE_BOTTLE_NAME
         })
 
@@ -427,7 +427,9 @@ describe('bottle.ts', () => {
           return { code: 0, stdout: '', stderr: '' }
         })
 
-        await provisionBridgeBottle({ bottleName: DEFAULT_BRIDGE_BOTTLE_NAME })
+        await provisionBridgeBottle(spawnDeps, {
+          bottleName: DEFAULT_BRIDGE_BOTTLE_NAME
+        })
 
         const wineserverCall = mockedSpawnAsync.mock.calls.find(([bin]) =>
           String(bin).includes('wineserver')
@@ -465,7 +467,7 @@ describe('bottle.ts', () => {
           return Promise.resolve({ code: 0, stdout: '', stderr: '' })
         })
 
-        const result = await removePerGameBridgeBottle('206040')
+        const result = await removePerGameBridgeBottle(spawnDeps, '206040')
 
         expect(result).toEqual({ status: 'removed' })
         const wineserverCall = mockedSpawnAsync.mock.calls.find(([bin]) =>
@@ -502,7 +504,7 @@ describe('bottle.ts', () => {
           return Promise.resolve({ code: 0, stdout: '', stderr: '' })
         })
 
-        const result = await removePerGameBridgeBottle('206040')
+        const result = await removePerGameBridgeBottle(spawnDeps, '206040')
 
         expect(result).toEqual({ status: 'removed' })
         expect(mockedRmSync).toHaveBeenCalledWith(perGameDir, {
@@ -520,7 +522,7 @@ describe('bottle.ts', () => {
           throw new Error('EPERM')
         })
 
-        const result = await removePerGameBridgeBottle('206040')
+        const result = await removePerGameBridgeBottle(spawnDeps, '206040')
 
         expect(result.status).toBe('error')
       })
@@ -528,7 +530,7 @@ describe('bottle.ts', () => {
       test('absent dir: returns absent with no spawnAsync and no rmSync', async () => {
         mockedExistsSync.mockReturnValue(false)
 
-        const result = await removePerGameBridgeBottle('206040')
+        const result = await removePerGameBridgeBottle(spawnDeps, '206040')
 
         expect(result).toEqual({ status: 'absent' })
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -538,7 +540,7 @@ describe('bottle.ts', () => {
       test.each(['', 'abc', '../1', '206040/..', ' '])(
         'rejects an invalid appId %j with no spawnAsync and no rmSync',
         async (appId) => {
-          const result = await removePerGameBridgeBottle(appId)
+          const result = await removePerGameBridgeBottle(spawnDeps, appId)
 
           expect(result.status).toBe('error')
           expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -552,7 +554,7 @@ describe('bottle.ts', () => {
         )
         mockedExistsSync.mockReturnValue(true)
 
-        const result = await removePerGameBridgeBottle('206040')
+        const result = await removePerGameBridgeBottle(spawnDeps, '206040')
 
         expect(result.status).toBe('error')
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -569,7 +571,7 @@ describe('bottle.ts', () => {
         })
         mockedExistsSync.mockReturnValue(true)
 
-        const result = await removePerGameBridgeBottle('206040')
+        const result = await removePerGameBridgeBottle(spawnDeps, '206040')
 
         expect(result.status).toBe('error')
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -584,7 +586,7 @@ describe('bottle.ts', () => {
         )
         mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
 
-        await removePerGameBridgeBottle('206040')
+        await removePerGameBridgeBottle(spawnDeps, '206040')
 
         for (const call of mockedSpawnAsync.mock.calls) {
           const [bin, args, opts] = call
@@ -639,7 +641,7 @@ describe('bottle.ts', () => {
           (path: string) => path === perGameDir
         )
 
-        const result = await stopPerGameBridgeBottle('206040')
+        const result = await stopPerGameBridgeBottle(spawnDeps, '206040')
 
         expect(result).toEqual({ status: 'stopped' })
         const wineserverCalls = mockedSpawnAsync.mock.calls.filter(([bin]) =>
@@ -660,7 +662,7 @@ describe('bottle.ts', () => {
       test('non-numeric appId is refused with no spawn', async () => {
         mockedExistsSync.mockReturnValue(true)
 
-        const result = await stopPerGameBridgeBottle('abc')
+        const result = await stopPerGameBridgeBottle(spawnDeps, 'abc')
 
         expect(result.status).toBe('refused')
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -672,7 +674,7 @@ describe('bottle.ts', () => {
         )
         mockedExistsSync.mockReturnValue(true)
 
-        const result = await stopPerGameBridgeBottle('206040')
+        const result = await stopPerGameBridgeBottle(spawnDeps, '206040')
 
         expect(result.status).toBe('refused')
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -688,7 +690,7 @@ describe('bottle.ts', () => {
         })
         mockedExistsSync.mockReturnValue(true)
 
-        const result = await stopPerGameBridgeBottle('206040')
+        const result = await stopPerGameBridgeBottle(spawnDeps, '206040')
 
         expect(result.status).toBe('refused')
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -697,7 +699,7 @@ describe('bottle.ts', () => {
       test('absent dir: returns absent with no spawn', async () => {
         mockedExistsSync.mockReturnValue(false)
 
-        const result = await stopPerGameBridgeBottle('206040')
+        const result = await stopPerGameBridgeBottle(spawnDeps, '206040')
 
         expect(result).toEqual({ status: 'absent' })
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -722,6 +724,7 @@ describe('bottle.ts', () => {
 
       test('present dir: one bounded wineserver -k scoped to the per-game WINEPREFIX', async () => {
         const ok = await endPerGameBridgeBottleSession(
+          spawnDeps,
           '206040',
           perGameName,
           20_000
@@ -740,17 +743,17 @@ describe('bottle.ts', () => {
       test.each(['GameLib', 'GameLibSteamBridge', 'GameLibSteamBridge-999'])(
         'bottle %s is not this appId per-game bottle: false, no spawn',
         async (name) => {
-          expect(await endPerGameBridgeBottleSession('206040', name, 1)).toBe(
-            false
-          )
+          expect(
+            await endPerGameBridgeBottleSession(spawnDeps, '206040', name, 1)
+          ).toBe(false)
           expect(mockedSpawnAsync).not.toHaveBeenCalled()
         }
       )
 
       test('non-numeric appId: false, no spawn', async () => {
-        expect(await endPerGameBridgeBottleSession('abc', perGameName, 1)).toBe(
-          false
-        )
+        expect(
+          await endPerGameBridgeBottleSession(spawnDeps, 'abc', perGameName, 1)
+        ).toBe(false)
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
       })
 
@@ -763,7 +766,12 @@ describe('bottle.ts', () => {
             }) as GameSettings
         })
         expect(
-          await endPerGameBridgeBottleSession('206040', perGameName, 1)
+          await endPerGameBridgeBottleSession(
+            spawnDeps,
+            '206040',
+            perGameName,
+            1
+          )
         ).toBe(false)
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
       })
@@ -771,7 +779,12 @@ describe('bottle.ts', () => {
       test('absent dir: false, no spawn', async () => {
         mockedExistsSync.mockReturnValue(false)
         expect(
-          await endPerGameBridgeBottleSession('206040', perGameName, 1)
+          await endPerGameBridgeBottleSession(
+            spawnDeps,
+            '206040',
+            perGameName,
+            1
+          )
         ).toBe(false)
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
       })
@@ -779,7 +792,12 @@ describe('bottle.ts', () => {
       test('spawn rejects: false', async () => {
         mockedSpawnAsync.mockRejectedValue(new Error('boom'))
         expect(
-          await endPerGameBridgeBottleSession('206040', perGameName, 1)
+          await endPerGameBridgeBottleSession(
+            spawnDeps,
+            '206040',
+            perGameName,
+            1
+          )
         ).toBe(false)
       })
 
@@ -793,6 +811,7 @@ describe('bottle.ts', () => {
             (path: string) => path === perGameDir || path === HINT
           )
           const ok = await endPerGameBridgeBottleSession(
+            spawnDeps,
             '206040',
             perGameName,
             20_000,
@@ -826,9 +845,15 @@ describe('bottle.ts', () => {
             })
           ).toBe(true)
           try {
-            await endPerGameBridgeBottleSession('206040', perGameName, 20_000, {
-              wineserverBin: HINT
-            })
+            await endPerGameBridgeBottleSession(
+              spawnDeps,
+              '206040',
+              perGameName,
+              20_000,
+              {
+                wineserverBin: HINT
+              }
+            )
           } finally {
             clearEngineSelection('206040')
           }
@@ -839,9 +864,15 @@ describe('bottle.ts', () => {
         test.each(['relative/wineserver', '/abs/missing/wineserver'])(
           'H2: unusable hint %s is ignored and the CrossOver arm runs',
           async (bin) => {
-            await endPerGameBridgeBottleSession('206040', perGameName, 20_000, {
-              wineserverBin: bin
-            })
+            await endPerGameBridgeBottleSession(
+              spawnDeps,
+              '206040',
+              perGameName,
+              20_000,
+              {
+                wineserverBin: bin
+              }
+            )
             expect(spawnedBins()).not.toContain(bin)
             expect(
               spawnedBins().filter((b) => b.includes('wineserver'))
@@ -857,7 +888,12 @@ describe('bottle.ts', () => {
           stderr: ''
         })
         expect(
-          await endPerGameBridgeBottleSession('206040', perGameName, 1)
+          await endPerGameBridgeBottleSession(
+            spawnDeps,
+            '206040',
+            perGameName,
+            1
+          )
         ).toBe(false)
       })
     })
@@ -878,7 +914,7 @@ describe('quick 261024-cjq: CrossOver precondition', () => {
   test('provisionBridgeBottle returns crossover-missing without spawning when no cxbottle resolves', async () => {
     cxState.binDir = undefined
     mockedExistsSync.mockReturnValue(false)
-    const result = await provisionBridgeBottle({
+    const result = await provisionBridgeBottle(spawnDeps, {
       bottleName: 'GameLibSteamBridge'
     })
     expect(result.status).toBe('error')
@@ -892,7 +928,7 @@ describe('quick 261024-cjq: CrossOver precondition', () => {
     cxState.binDir = `${userHome}/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin`
     mockedExistsSync.mockReturnValue(false)
     mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
-    await provisionBridgeBottle({ bottleName: 'GameLibSteamBridge' })
+    await provisionBridgeBottle(spawnDeps, { bottleName: 'GameLibSteamBridge' })
     expect(mockedSpawnAsync.mock.calls[0][0]).toBe(
       `${userHome}/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle`
     )
@@ -1046,7 +1082,7 @@ describe('Phase 59 engine registry', () => {
   describe('wineserver kill', () => {
     test('killBottleWineServerWith spawns the given wineserver', async () => {
       const ok = await killBottleWineServerWith(
-        { spawnAsync },
+        spawnDeps,
         bottle,
         '/pins/wineserver',
         { USER: 'crossover', WINEPREFIX: '/evil' },
@@ -1064,7 +1100,7 @@ describe('Phase 59 engine registry', () => {
     test('killBottleWineServerWith returns false on timeout', async () => {
       mockedSpawnAsync.mockResolvedValue({ code: null })
       expect(
-        await killBottleWineServerWith({ spawnAsync }, bottle, '/w', {}, 1)
+        await killBottleWineServerWith(spawnDeps, bottle, '/w', {}, 1)
       ).toBe(false)
     })
 
@@ -1072,7 +1108,7 @@ describe('Phase 59 engine registry', () => {
       'killBottleWineServerWith refuses unsafe bottle %j',
       async (name) => {
         expect(
-          await killBottleWineServerWith({ spawnAsync }, name, '/w', {}, 1)
+          await killBottleWineServerWith(spawnDeps, name, '/w', {}, 1)
         ).toBe(false)
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
       }
@@ -1080,7 +1116,7 @@ describe('Phase 59 engine registry', () => {
 
     test('killBridgeBottleWineServer uses the registered engine wineserver', async () => {
       setEngineSelection('620', pinned)
-      await killBridgeBottleWineServer('620', 5000)
+      await killBridgeBottleWineServer(spawnDeps, '620', 5000)
       const [bin, , opts] = mockedSpawnAsync.mock.calls[0]
       expect(bin).toBe(pinned.wineserverBin)
       expect(opts.env.USER).toBe('crossover')
@@ -1088,20 +1124,22 @@ describe('Phase 59 engine registry', () => {
     })
 
     test('killBridgeBottleWineServer uses CrossOver when nothing is registered', async () => {
-      await killBridgeBottleWineServer('620', 5000)
+      await killBridgeBottleWineServer(spawnDeps, '620', 5000)
       expect(mockedSpawnAsync.mock.calls[0][0]).toBe(`${CX_BIN_DIR}/wineserver`)
     })
 
     test('killBridgeBottleWineServer refuses a non-numeric appId', async () => {
-      expect(await killBridgeBottleWineServer('abc', 5000)).toBe(false)
+      expect(await killBridgeBottleWineServer(spawnDeps, 'abc', 5000)).toBe(
+        false
+      )
       expect(mockedSpawnAsync).not.toHaveBeenCalled()
     })
 
     test('stop/end per-game use the registered engine wineserver', async () => {
       setEngineSelection('620', pinned)
       mockedExistsSync.mockReturnValue(true)
-      await stopPerGameBridgeBottle('620')
-      await endPerGameBridgeBottleSession('620', bottle, 5000)
+      await stopPerGameBridgeBottle(spawnDeps, '620')
+      await endPerGameBridgeBottleSession(spawnDeps, '620', bottle, 5000)
       expect(mockedSpawnAsync.mock.calls.map((c) => c[0])).toEqual([
         pinned.wineserverBin,
         pinned.wineserverBin
@@ -1148,7 +1186,7 @@ describe('Phase 59 engine registry', () => {
 
     test('creates the bottle itself in the right order, never spawning cxbottle', async () => {
       cxState.binDir = undefined
-      const result = await provisionBridgeBottle({
+      const result = await provisionBridgeBottle(spawnDeps, {
         bottleName: name,
         fallbackEngine: engine
       })
@@ -1192,7 +1230,7 @@ describe('Phase 59 engine registry', () => {
             ? { code, stdout: '', stderr: 'boom' }
             : { code: 0, stdout: '', stderr: '' }
         )
-        const result = await provisionBridgeBottle({
+        const result = await provisionBridgeBottle(spawnDeps, {
           bottleName: name,
           fallbackEngine: engine
         })
@@ -1210,7 +1248,7 @@ describe('Phase 59 engine registry', () => {
         (p: string) => String(p) === getBottleDir(name)
       )
       mockedSpawnAsync.mockResolvedValue({ code: 1, stdout: '', stderr: '' })
-      const result = await provisionBridgeBottle({
+      const result = await provisionBridgeBottle(spawnDeps, {
         bottleName: name,
         fallbackEngine: engine
       })
@@ -1222,7 +1260,7 @@ describe('Phase 59 engine registry', () => {
       mockedExistsSync.mockImplementation((p: string) =>
         String(p).endsWith('cxbottle.conf')
       )
-      const result = await provisionBridgeBottle({
+      const result = await provisionBridgeBottle(spawnDeps, {
         bottleName: name,
         fallbackEngine: engine
       })
@@ -1231,7 +1269,7 @@ describe('Phase 59 engine registry', () => {
     })
 
     test('a toolkit wineVersion without a fallback engine is still rejected', async () => {
-      const result = await provisionBridgeBottle({
+      const result = await provisionBridgeBottle(spawnDeps, {
         bottleName: name,
         wineVersion: { bin: '/x/gptk', name: 'GPTK', type: 'toolkit' }
       })
@@ -1241,7 +1279,9 @@ describe('Phase 59 engine registry', () => {
 
     test('CrossOver absent and no fallback engine is still CROSSOVER_MISSING', async () => {
       cxState.binDir = undefined
-      const result = await provisionBridgeBottle({ bottleName: name })
+      const result = await provisionBridgeBottle(spawnDeps, {
+        bottleName: name
+      })
       cxState.binDir = CX_BIN_DIR
       expect(result.errorCode).toBe(CROSSOVER_MISSING)
     })
@@ -1255,7 +1295,7 @@ describe('Phase 59 engine registry', () => {
             : { code: 0, stdout: '', stderr: '' }
         }
       )
-      const result = await provisionBridgeBottle({
+      const result = await provisionBridgeBottle(spawnDeps, {
         bottleName: name,
         createTimeoutMs: 1000
       })
@@ -1271,7 +1311,9 @@ describe('Phase 59 engine registry', () => {
 
     test('cxbottle --create exiting without a conf returns CROSSOVER_CREATE_FAILED and removes the new dir', async () => {
       mockedSpawnAsync.mockResolvedValue({ code: 1, stdout: '', stderr: 'x' })
-      const result = await provisionBridgeBottle({ bottleName: name })
+      const result = await provisionBridgeBottle(spawnDeps, {
+        bottleName: name
+      })
       expect(result.status).toBe('error')
       expect(result.errorCode).toBe(CROSSOVER_CREATE_FAILED)
       expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(name), {
@@ -1285,14 +1327,18 @@ describe('Phase 59 engine registry', () => {
         (p: string) => String(p) === getBottleDir(name)
       )
       mockedSpawnAsync.mockResolvedValue({ code: 1, stdout: '', stderr: 'x' })
-      const result = await provisionBridgeBottle({ bottleName: name })
+      const result = await provisionBridgeBottle(spawnDeps, {
+        bottleName: name
+      })
       expect(result.errorCode).toBe(CROSSOVER_CREATE_FAILED)
       expect(mockedRmSync).not.toHaveBeenCalled()
     })
 
     test('cxbottle --create throwing returns CROSSOVER_CREATE_FAILED and removes the new dir', async () => {
       mockedSpawnAsync.mockRejectedValue(new Error('spawn failed'))
-      const result = await provisionBridgeBottle({ bottleName: name })
+      const result = await provisionBridgeBottle(spawnDeps, {
+        bottleName: name
+      })
       expect(result.errorCode).toBe(CROSSOVER_CREATE_FAILED)
       expect(mockedRmSync).toHaveBeenCalledWith(getBottleDir(name), {
         recursive: true,
@@ -1313,7 +1359,7 @@ describe('Phase 59 engine registry', () => {
       mockedRmSync.mockImplementation(() => {
         order.push('rm')
       })
-      await provisionBridgeBottle({ bottleName: name })
+      await provisionBridgeBottle(spawnDeps, { bottleName: name })
       expect(order.indexOf('rm')).toBeGreaterThan(
         order.findIndex((o) => o.startsWith('wineserver -k'))
       )
@@ -1326,7 +1372,7 @@ describe('Phase 59 engine registry', () => {
           return { code: 0, stdout: '', stderr: '' }
         }
       )
-      await provisionBridgeBottle({ bottleName: name })
+      await provisionBridgeBottle(spawnDeps, { bottleName: name })
       expect(order.indexOf('rm')).toBeGreaterThan(
         order.findIndex((o) => o.startsWith('wineserver -k'))
       )
@@ -1337,7 +1383,7 @@ describe('Phase 59 engine registry', () => {
       const ac = new AbortController()
       ac.abort()
       for (const fallbackEngine of [undefined, engine]) {
-        const result = await provisionBridgeBottle({
+        const result = await provisionBridgeBottle(spawnDeps, {
           bottleName: name,
           fallbackEngine,
           signal: ac.signal
@@ -1361,7 +1407,7 @@ describe('Phase 59 engine registry', () => {
           return { code: 0, stdout: '', stderr: '' }
         }
       )
-      const result = await provisionBridgeBottle({
+      const result = await provisionBridgeBottle(spawnDeps, {
         bottleName: name,
         fallbackEngine: engine,
         signal: ac.signal
@@ -1389,7 +1435,7 @@ describe('Phase 59 engine registry', () => {
           if (step === 'dxvk') ac.abort()
           return true
         })
-        const result = await provisionBridgeBottle({
+        const result = await provisionBridgeBottle(spawnDeps, {
           bottleName: name,
           fallbackEngine: engine,
           signal: ac.signal
@@ -1413,7 +1459,7 @@ describe('Phase 59 engine registry', () => {
           return { code: 0, stdout: '', stderr: '' }
         }
       )
-      const result = await provisionBridgeBottle({
+      const result = await provisionBridgeBottle(spawnDeps, {
         bottleName: name,
         signal: ac.signal
       })
@@ -1433,7 +1479,7 @@ describe('Phase 59 engine registry', () => {
         ac.abort()
         throw new Error('aborted')
       })
-      const result = await provisionBridgeBottle({
+      const result = await provisionBridgeBottle(spawnDeps, {
         bottleName: name,
         fallbackEngine: engine,
         signal: ac.signal
@@ -1459,7 +1505,9 @@ describe('Phase 59 engine registry', () => {
         }
         return { code: 0, stdout: '', stderr: '' }
       })
-      const result = await provisionBridgeBottle({ bottleName: name })
+      const result = await provisionBridgeBottle(spawnDeps, {
+        bottleName: name
+      })
       expect(result).toMatchObject({ status: 'done', createdHere: true })
     })
 
@@ -1475,7 +1523,9 @@ describe('Phase 59 engine registry', () => {
           return { code: 0, stdout: '', stderr: '' }
         }
       )
-      const result = await provisionBridgeBottle({ bottleName: name })
+      const result = await provisionBridgeBottle(spawnDeps, {
+        bottleName: name
+      })
       expect(result).toMatchObject({ status: 'done', createdHere: false })
     })
 

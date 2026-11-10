@@ -6,6 +6,7 @@
  */
 import { logInfo, LogPrefix } from 'backend/logger'
 import { endPerGameBridgeBottleSession } from '../../bridgeBottleLifecycle'
+import { legacySpawnAsync } from 'backend/services/legacySpawnAsync'
 import { runBoundedListing } from './boundedListing'
 
 /**
@@ -137,7 +138,12 @@ export async function defaultEndStageSession(args: {
   bottleDir: string
 }): Promise<void> {
   try {
-    await endPerGameBridgeBottleSession(args.appId, args.bottleName, 5000)
+    await endPerGameBridgeBottleSession(
+      { spawnAsync: legacySpawnAsync },
+      args.appId,
+      args.bottleName,
+      5000
+    )
   } catch {
     // best effort
   }

@@ -48,6 +48,7 @@ import {
 } from './steamclientLayerInstall'
 import { ensureValveClient, type ValveClientReady } from './valveClient'
 import { stageDrmBottle } from './stageDrmBottle'
+import { legacySpawnAsync } from 'backend/services/legacySpawnAsync'
 import type { StageDrmBottleOk, StageDrmBottleInput } from './stageDrmTypes'
 import { DRM_LAUNCH_FORM, type DrmLaunchForm } from '../../bridgeBottle'
 import { buildDrmPaths } from './drmPaths'
@@ -289,7 +290,14 @@ async function runSetup(
   const buildBottleSettings =
     deps.buildBottleSettings ?? bridgeBottle.getDrmBridgeBottleSettings
   const endBottleSession =
-    deps.endBottleSession ?? bottleLifecycle.endPerGameBridgeBottleSession
+    deps.endBottleSession ??
+    ((appId: string, bottleName: string, timeoutMs: number) =>
+      bottleLifecycle.endPerGameBridgeBottleSession(
+        { spawnAsync: legacySpawnAsync },
+        appId,
+        bottleName,
+        timeoutMs
+      ))
   const sendStatus =
     deps.sendStatus ??
     ((await import('backend/utils')).sendGameStatusUpdate as (

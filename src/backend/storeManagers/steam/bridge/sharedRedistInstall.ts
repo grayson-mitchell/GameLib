@@ -75,6 +75,7 @@ import { readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { endPerGameBridgeBottleSession } from '../bridgeBottleLifecycle'
+import { legacySpawnAsync } from 'backend/services/legacySpawnAsync'
 import { bridgeBottleNameFor } from '../bridgeBottle'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { steamSupportPath } from '../constants'
@@ -560,6 +561,7 @@ async function run(
     let sessionEnded = false
     try {
       sessionEnded = await endPerGameBridgeBottleSession(
+        { spawnAsync: legacySpawnAsync },
         appId,
         bottleSettings.wineCrossoverBottle,
         SESSION_END_TIMEOUT_MS,
@@ -695,6 +697,7 @@ async function run(
         !add.timedOut &&
         add.code === 0 &&
         (await endPerGameBridgeBottleSession(
+          { spawnAsync: legacySpawnAsync },
           appId,
           bottleSettings.wineCrossoverBottle,
           SESSION_END_TIMEOUT_MS,

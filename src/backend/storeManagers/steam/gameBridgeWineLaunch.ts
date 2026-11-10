@@ -452,7 +452,7 @@ export async function fireBridgeWineLaunch(
       markGameRunning(ledgerBottle, steamGame.appId)
       handle = bindDeadlineToMonitor(
         deadline,
-        startBottleProcessMonitor({
+        startBottleProcessMonitor(steamGame.deps, {
           appId: steamGame.appId,
           installPath: installRoot,
           bottleDir: getBottleDir(bridgeBottleSettings.wineCrossoverBottle),

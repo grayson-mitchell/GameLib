@@ -18,6 +18,7 @@ import {
 } from './library/acfState'
 import { NUMERIC_APP_ID } from './gameConstants'
 import type { SteamStoresDeps } from './library/installRoot'
+import type { SpawnDeps } from './provisionBottle'
 
 // NUMERIC_APP_ID is the shared appId guard from gameConstants.ts (34.13
 // review A-12).
@@ -49,7 +50,7 @@ interface RemoveAllCopiesResult {
  * constraint the route-time auto-cleanup (Task 2) also follows.
  */
 export async function removeAllSteamInstallCopies(
-  deps: SteamStoresDeps,
+  deps: SteamStoresDeps & SpawnDeps,
   appName: unknown
 ): Promise<RemoveAllCopiesResult> {
   if (typeof appName !== 'string' || !NUMERIC_APP_ID.test(appName)) {
@@ -68,7 +69,7 @@ export async function removeAllSteamInstallCopies(
 
     for (const copy of copies) {
       try {
-        const result = await removeSteamInstallCopy(appName, copy.source)
+        const result = await removeSteamInstallCopy(deps, appName, copy.source)
         if (result.status === 'removed') {
           removed += 1
         } else if (result.status === 'refused') {

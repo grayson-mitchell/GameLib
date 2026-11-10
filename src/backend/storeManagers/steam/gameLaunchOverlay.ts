@@ -351,6 +351,7 @@ export async function prepareTcpOverlay(
     const nextRunnerDir = ok?.runner.runnerDir
     if (nextRunnerDir !== previousRunner?.runner.runnerDir) {
       await endPerGameBridgeBottleSessionWith(
+        steamGame.deps,
         steamGame.appId,
         settings.wineCrossoverBottle,
         previousRunner ? join(previousRunner.runner.cxRoot, 'bin') : undefined,

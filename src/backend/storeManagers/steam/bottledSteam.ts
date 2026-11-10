@@ -5,13 +5,14 @@
  */
 import { app } from 'backend/platform'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { spawnAsync } from 'backend/utils'
+import type { CommandRunner } from 'backend/services/types'
+import type { SpawnDeps } from './provisionBottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
-import { steamBottleConfigStore } from './stores'
 import { library } from './state'
 import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { NUMERIC_APP_ID } from './gameConstants'
 import {
+  bottleConfigStore,
   getBottleSteamExePath,
   getSteamBottleSettings,
   isBottleReady
@@ -92,6 +93,7 @@ export function __stopBottledRaiseLoops(): void {
  * failure never affects the install/launch flow. No-op on Linux/Windows.
  */
 async function raiseFrontmostBottledProcess(
+  deps: SpawnDeps,
   context: string,
   raiseScript: string
 ): Promise<void> {
@@ -119,7 +121,10 @@ async function raiseFrontmostBottledProcess(
       })
     const tryRaise = async (): Promise<string | null> => {
       try {
-        const { stdout } = await spawnAsync('osascript', ['-e', raiseScript])
+        const { stdout } = await deps.spawnAsync('osascript', [
+          '-e',
+          raiseScript
+        ])
         const out = stdout.trim()
         return out && out !== 'none' ? out : null
       } catch (error) {
@@ -191,7 +196,10 @@ async function raiseFrontmostBottledProcess(
   }
 }
 
-export async function raiseInstallerWindow(context: string): Promise<void> {
+export async function raiseInstallerWindow(
+  deps: SpawnDeps,
+  context: string
+): Promise<void> {
   const nameClause = INSTALLER_PROCESS_NAMES.map((n) => `name is "${n}"`).join(
     ' or '
   )
@@ -208,7 +216,7 @@ export async function raiseInstallerWindow(context: string): Promise<void> {
     'return (name of p) & " pid=" & (unix id of p)',
     'end tell'
   ].join('\n')
-  await raiseFrontmostBottledProcess(context, raiseScript)
+  await raiseFrontmostBottledProcess(deps, context, raiseScript)
 }
 
 /**
@@ -219,7 +227,10 @@ export async function raiseInstallerWindow(context: string): Promise<void> {
  * do not), so we raise the frontmost visible `.exe` process that is NOT one of
  * Steam's own client/helper processes — i.e. the launched game itself.
  */
-async function raiseBottledGameWindow(context: string): Promise<void> {
+async function raiseBottledGameWindow(
+  deps: SpawnDeps,
+  context: string
+): Promise<void> {
   const excludeList = STEAM_CLIENT_PROCESS_NAMES.map((n) => `"${n}"`).join(', ')
   const raiseScript = [
     'tell application "System Events"',
@@ -234,10 +245,15 @@ async function raiseBottledGameWindow(context: string): Promise<void> {
     'return "none"',
     'end tell'
   ].join('\n')
-  await raiseFrontmostBottledProcess(context, raiseScript)
+  await raiseFrontmostBottledProcess(deps, context, raiseScript)
 }
 
 // ── 17-04: bottled-Steam verb dispatch ──────────────────────────────────────
+
+/** The slices the bottled-Steam dispatch reaches (66.1 R3, R5). */
+export type BottledSteamDeps = SpawnDeps & {
+  commandRunner: Pick<CommandRunner, 'runWineCommand'>
+}
 
 type BottledSteamVerb = 'install' | 'launch' | 'uninstall'
 type BottledSteamResult = { status: 'done' | 'error'; error?: string }
@@ -251,6 +267,7 @@ type BottledSteamResult = { status: 'done' | 'error'; error?: string }
  * state (D-02); the bottle-scoped ACF poller (17-05) owns real status.
  */
 async function dispatchToBottledSteam(
+  deps: BottledSteamDeps,
   verb: BottledSteamVerb,
   appId: string
 ): Promise<BottledSteamResult> {
@@ -270,8 +287,7 @@ async function dispatchToBottledSteam(
   }
 
   const bottleName =
-    steamBottleConfigStore.get_nodefault('bottleName') ??
-    DEFAULT_STEAM_BOTTLE_NAME
+    bottleConfigStore().get_nodefault('bottleName') ?? DEFAULT_STEAM_BOTTLE_NAME
   const steamExePath = getBottleSteamExePath(bottleName)
 
   // -silent: if this call is what starts the bottled client, it comes up in
@@ -292,7 +308,6 @@ async function dispatchToBottledSteam(
   }
 
   try {
-    const { runWineCommand } = await import('backend/launcher')
     // Raise the relevant bottled window once it appears (fire-and-forget, before
     // the await so it runs concurrently — see provisionBottle note).
     //  - 'install': raise the guided installer UI (steam.exe/SteamSetup.exe).
@@ -307,9 +322,9 @@ async function dispatchToBottledSteam(
     //    the ACF poller's own grace-window fallback silently reverted the
     //    badge to installed ~60s later.
     if (verb === 'install' || verb === 'uninstall') {
-      void raiseInstallerWindow(verb)
+      void raiseInstallerWindow(deps, verb)
     } else if (verb === 'launch') {
-      void raiseBottledGameWindow('launch')
+      void raiseBottledGameWindow(deps, 'launch')
       // quick/261016-t3e: give a bottled launch real started/stopped
       // feedback by polling for any process under the game's own bottle
       // install directory (Playnite's SteamPlayController pattern). Lazy
@@ -328,7 +343,7 @@ async function dispatchToBottledSteam(
         try {
           const { startBottleProcessMonitor } =
             await import('./bottleProcessMonitor')
-          startBottleProcessMonitor({
+          startBottleProcessMonitor(deps, {
             appId,
             installPath,
             bottleDir: getBottleDir(bottleName)
@@ -344,7 +359,7 @@ async function dispatchToBottledSteam(
         }
       }
     }
-    await runWineCommand({
+    await deps.commandRunner.runWineCommand({
       commandParts,
       gameSettings: getSteamBottleSettings(),
       wait: false,
@@ -375,9 +390,10 @@ async function dispatchToBottledSteam(
 }
 
 export function tellBottledSteamToLaunch(
+  deps: BottledSteamDeps,
   appId: string
 ): Promise<BottledSteamResult> {
-  return dispatchToBottledSteam('launch', appId)
+  return dispatchToBottledSteam(deps, 'launch', appId)
 }
 
 /**
@@ -403,7 +419,8 @@ export function tellBottledSteamToLaunch(
  * and this function still has zero callers, it is safe to delete then.
  */
 export function tellBottledSteamToUninstall(
+  deps: BottledSteamDeps,
   appId: string
 ): Promise<BottledSteamResult> {
-  return dispatchToBottledSteam('uninstall', appId)
+  return dispatchToBottledSteam(deps, 'uninstall', appId)
 }
