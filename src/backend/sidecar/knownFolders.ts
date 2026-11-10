@@ -10,8 +10,12 @@
  *     through the process runner (argv, no shell, no new native dependency), awaited by the two
  *     win32 consumers (shortcuts.ts, save_sync.ts); `pathShim` itself is sync and never reads it.
  *
- * Every lookup returns `undefined` when it cannot answer, and the caller falls back to
- * `homedir()/<Name>`, which is what the shim always returned before.
+ * Every lookup returns `undefined` when it cannot answer. The Linux lookup then falls back to
+ * `homedir()/<Name>` inside pathShim. The Windows lookup has NO fallback: on `undefined`,
+ * shortcuts.ts writes no Desktop shortcut and reports it, and save_sync.ts leaves out the
+ * locations that need Documents. pathShim's win32 `desktop`/`documents` arms throw (quick
+ * 261111-aq4). Live evidence: on a OneDrive-redirected profile `<profile>\Desktop` did not exist
+ * and `<profile>\Documents` was a different folder from the real one.
  */
 import { readFileSync } from 'fs'
 import { homedir } from 'os'

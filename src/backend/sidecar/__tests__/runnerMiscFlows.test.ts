@@ -207,6 +207,15 @@ import { handlerRegistry, listenerRegistry } from '../../platform'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { getPath } from '../pathShim'
 
+/** Pins `process.platform` for one case. These cases assert the host-platform (linux) arm CI runs;
+ * on a win32 host `shortcutFiles`/`getPath` no longer guess a Desktop/Documents folder (quick
+ * 261111-aq4). Restore the returned value in `finally`. */
+function overrideProcessPlatform(os: string): string {
+  const original = process.platform
+  Object.defineProperty(process, 'platform', { value: os, configurable: true })
+  return original
+}
+
 // ── Registered ONCE for this whole file (not per-test) -- `listenerRegistry`/`handlerRegistry`
 // are module-scope maps; calling `registerRunnerMiscFlows()` more than once would stack a
 // duplicate registration, mirroring every prior cluster suite's own file-scope-once convention. ──
@@ -326,10 +335,16 @@ describe('curated-import guard — no ipc_handler import', () => {
 // ── Describe 3: `documents`-path pin (research Pitfall 1 / D-09) ──────────────────────────────
 describe('documents-path pin — pathShim resolves the name this cluster depends on', () => {
   it("getPath('documents') resolves to a non-empty string under this suite's redirected home, without throwing (narrower proof; full getPath('documents') switch-case coverage lives in pathShim.test.ts)", () => {
-    const documents = getPath('documents')
-    expect(documents).toEqual(expect.any(String))
-    expect(documents.length).toBeGreaterThan(0)
-    expect(documents.startsWith(homedir())).toBe(true)
+    // Pinned to linux, CI's own arm: on a win32 host getPath('documents') throws (261111-aq4).
+    const originalPlatform = overrideProcessPlatform('linux')
+    try {
+      const documents = getPath('documents')
+      expect(documents).toEqual(expect.any(String))
+      expect(documents.length).toBeGreaterThan(0)
+      expect(documents.startsWith(homedir())).toBe(true)
+    } finally {
+      overrideProcessPlatform(originalPlatform)
+    }
   })
 })
 

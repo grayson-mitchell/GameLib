@@ -185,8 +185,9 @@ the download queue, the secret-store placeholders, the manager modules' module-l
 static stores outside the 16 (`engineNoticeStore`, the two `pci_ids` stores).
 66.2 also deferred these to 66.3 (D-66.2-03): `GlobalConfig.globalInstance`, the `utils.ts`
 `default*Path` lets, and `installingComponent`/`catalogCache`/`scriptMetadataCache` in
-`tools/index.ts`. `knownFolders` and `pathShim` keep a win32 sync fallback (the async registry
-lookup needs a runner) that 66.3 should retire.
+`tools/index.ts`. The win32 sync fallback in `knownFolders` and `pathShim` was retired in quick
+261111-aq4: pathShim's win32 `desktop`/`documents` arms throw, and the two callers use the registry
+folder or go without it.
 
 ## Ratchets
 

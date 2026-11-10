@@ -82,6 +82,15 @@ const mockedExistsSync = existsSync as jest.Mock
 // against the real `backend/ipc` -> `backend/platform` chain.
 import { registerShortcutsFlows } from '../../sidecar/shortcutsFlowRegistration'
 
+/** Pins `process.platform` for one case. These cases assert the host-platform (linux) arm CI runs;
+ * on a win32 host `shortcutFiles`/`getPath` no longer guess a Desktop/Documents folder (quick
+ * 261111-aq4). Restore the returned value in `finally`. */
+function overrideProcessPlatform(os: string): string {
+  const original = process.platform
+  Object.defineProperty(process, 'platform', { value: os, configurable: true })
+  return original
+}
+
 registerShortcutsFlows({
   managers: createTestManagers({
     library: {
@@ -164,14 +173,22 @@ describe('sidecar/shortcutsFlowRegistration.ts: shortcutsExists (260905-mv5, sit
     mockedGetGame.mockReturnValue(
       makeStubGame({ title: 'Real Game' } as GameInfo)
     )
-    const [desktopFile] = shortcutFiles('Real Game')
-    mockedExistsSync.mockImplementation((path: string) => path === desktopFile)
+    // Pinned to linux, CI's own arm (261111-aq4).
+    const originalPlatform = overrideProcessPlatform('linux')
+    try {
+      const [desktopFile] = shortcutFiles('Real Game')
+      mockedExistsSync.mockImplementation(
+        (path: string) => path === desktopFile
+      )
 
-    const handler = getRegisteredHandler('shortcutsExists')
-    await expect(
-      Promise.resolve().then(() => handler(undefined, 'AppName', 'legendary'))
-    ).resolves.toBe(true)
-    expect(mockedLogWarning).not.toHaveBeenCalled()
+      const handler = getRegisteredHandler('shortcutsExists')
+      await expect(
+        Promise.resolve().then(() => handler(undefined, 'AppName', 'legendary'))
+      ).resolves.toBe(true)
+      expect(mockedLogWarning).not.toHaveBeenCalled()
+    } finally {
+      overrideProcessPlatform(originalPlatform)
+    }
   })
 })
 
@@ -191,7 +208,15 @@ describe('260905-mv5 Task 1: premise re-verification (plan evidence item 5)', ()
   })
 
   it("shortcutFiles('') RETURNS a real non-empty path pair, it does not throw (matches plan measurement)", () => {
-    const [desktopFile, menuFile] = shortcutFiles('')
+    // Pinned to linux, CI's own arm: on a win32 host the Desktop path needs a registry folder
+    // (261111-aq4).
+    const originalPlatform = overrideProcessPlatform('linux')
+    let desktopFile, menuFile
+    try {
+      ;[desktopFile, menuFile] = shortcutFiles('')
+    } finally {
+      overrideProcessPlatform(originalPlatform)
+    }
     expect(desktopFile).toBeTruthy()
     expect(menuFile).toBeTruthy()
     // shortcutFiles switches on process.platform (not the isMac mock above, which is irrelevant
