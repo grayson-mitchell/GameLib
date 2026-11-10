@@ -326,6 +326,8 @@ export async function uninstallNativeInGameLib(
       seq: nextSteamRequestNoticeSeq()
     })
   const refuse = (stderr: string): ExecResult => {
+    // quick 261110-uog: uninstaller.ts logs only stderrLength, so this refusal logs its own reason.
+    logWarning(`SteamGame: ${stderr}`, LogPrefix.Steam)
     sendFrontendMessage('gameStatusUpdate', {
       appName: steamGame.appId,
       runner: 'steam',
