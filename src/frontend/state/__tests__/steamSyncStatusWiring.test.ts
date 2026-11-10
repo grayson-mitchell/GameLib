@@ -22,14 +22,14 @@
  *       the backend emits fine, Rust forwards fine, and the renderer simply
  *       has nobody listening -- no compile error, no runtime error, nothing
  *       arrives. Ledgered: `sidecar-send-channels-fail-silently`.
- *   W3: `GlobalState.tsx` both registers the `handleSteamSyncStatus`
- *       listener AND its body actually writes `steamSyncStatus` into state
- *       (not merely registered and dropped).
+ *   W3: BEHAVIOURAL (69-18). The boot listener `initStateSubscriptions`
+ *       registers for `handleSteamSyncStatus` writes the pushed status into
+ *       libraryState (not merely registered and dropped).
  *   W4: `frontend/types.ts` and `state/ContextProvider.tsx` both declare the
  *       lockstep `steamSyncStatus` pair -- a type without a default (or vice
  *       versa) drifts silently.
- *   W5 (D-06 negative gate): the `handleSteamSyncStatus` handler body does
- *       NOT reference `refreshingInTheBackground` -- the new tri-state must
+ *   W5 (D-06 negative gate): BEHAVIOURAL (69-18). Pushing a status leaves
+ *       `refreshingInTheBackground` unchanged -- the new tri-state must
  *       not be derived from, or reset alongside, the flag it replaces (that
  *       flag defaults `true` and resets to `true` after every unscoped
  *       refresh, so it never actually meant "a refresh is running").
@@ -42,6 +42,9 @@
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { resetAllStores, type StoreHooks } from '../storeKit'
+import type { LibraryState } from '../libraryState'
+import type * as InitModule from '../initStateSubscriptions'
 import {
   stripSourceComments,
   stripTrailingLineComment
@@ -66,7 +69,6 @@ const PRELOAD_STEAM_PATH = join(
   'api',
   'steam.ts'
 )
-const GLOBAL_STATE_PATH = join(__dirname, '..', 'GlobalState.tsx')
 const CONTEXT_PROVIDER_PATH = join(__dirname, '..', 'ContextProvider.tsx')
 const FRONTEND_TYPES_PATH = join(__dirname, '..', '..', 'types.ts')
 
@@ -95,69 +97,6 @@ function expectPresent(source: string, token: string, decisionNote: string) {
   }
 }
 
-/**
- * Asserts `nearToken` appears within `windowChars` characters after the
- * FIRST occurrence of `anchorToken` -- proving a handler registration is
- * actually wired to the state write it claims to make, not merely present
- * somewhere unrelated in the file.
- */
-function expectPresentWithin(
-  source: string,
-  anchorToken: string,
-  nearToken: string,
-  windowChars: number,
-  decisionNote: string
-) {
-  const anchorIdx = source.indexOf(anchorToken)
-  if (anchorIdx === -1) {
-    throw new Error(
-      `expectPresentWithin: anchor token "${anchorToken}" not found in stripped source (${decisionNote})`
-    )
-  }
-  const window = source.slice(
-    anchorIdx,
-    anchorIdx + anchorToken.length + windowChars
-  )
-  if (!window.includes(nearToken)) {
-    throw new Error(
-      `expectPresentWithin: "${nearToken}" not found within ${windowChars} chars after "${anchorToken}" (${decisionNote})`
-    )
-  }
-}
-
-/**
- * The D-06 negative-gate counterpart to `expectPresentWithin` -- asserts
- * `forbiddenToken` does NOT appear within `windowChars` characters after the
- * FIRST occurrence of `anchorToken`.
- */
-function expectAbsentWithin(
-  source: string,
-  anchorToken: string,
-  forbiddenToken: string,
-  windowChars: number,
-  decisionNote: string
-) {
-  const anchorIdx = source.indexOf(anchorToken)
-  if (anchorIdx === -1) {
-    throw new Error(
-      `expectAbsentWithin: anchor token "${anchorToken}" not found in stripped source (${decisionNote})`
-    )
-  }
-  const window = source.slice(
-    anchorIdx,
-    anchorIdx + anchorToken.length + windowChars
-  )
-  if (window.includes(forbiddenToken)) {
-    throw new Error(
-      `expectAbsentWithin: forbidden token "${forbiddenToken}" found within ${windowChars} chars after "${anchorToken}" (${decisionNote})`
-    )
-  }
-}
-
-// ---------------------------------------------------------------------------
-// The five gates, each named after the obligation it protects.
-// ---------------------------------------------------------------------------
-
 function gateW1_ipcDeclaresChannel(source: string): void {
   expectPresent(
     source,
@@ -171,21 +110,6 @@ function gateW2_preloadExportsListenerSlot(source: string): void {
     source,
     "frontendListenerSlot('steamSyncStatus')",
     'W2: the preload allowlist entry -- omitting it fails SILENTLY on the Tauri sidecar (sidecar-send-channels-fail-silently); this is the highest-risk omission in the phase'
-  )
-}
-
-function gateW3_globalStateSubscribesAndWritesState(source: string): void {
-  expectPresent(
-    source,
-    'handleSteamSyncStatus',
-    'W3: GlobalState must register a handleSteamSyncStatus listener'
-  )
-  expectPresentWithin(
-    source,
-    'handleSteamSyncStatus',
-    'steamSyncStatus:',
-    200,
-    'W3: the registered handler must actually write steamSyncStatus into state, not merely be registered and dropped'
   )
 }
 
@@ -205,16 +129,6 @@ function gateW4_typesAndProviderDeclareLockstepPair(
   )
 }
 
-function gateW5_handlerDoesNotReadReplacedFlag(source: string): void {
-  expectAbsentWithin(
-    source,
-    'handleSteamSyncStatus',
-    'refreshingInTheBackground',
-    200,
-    'D-06: the new tri-state must not be derived from, or reset alongside, the flag it replaces'
-  )
-}
-
 // ---------------------------------------------------------------------------
 // Real-source assertions.
 // ---------------------------------------------------------------------------
@@ -222,7 +136,6 @@ function gateW5_handlerDoesNotReadReplacedFlag(source: string): void {
 describe('steamSyncStatus wiring -- the five-touchpoint chain (34.15-02, D-06/D-07)', () => {
   const ipcSource = readGated(IPC_PATH)
   const preloadSteamSource = readGated(PRELOAD_STEAM_PATH)
-  const globalStateSource = readGated(GLOBAL_STATE_PATH)
   const frontendTypesSource = readGated(FRONTEND_TYPES_PATH)
   const contextProviderSource = readGated(CONTEXT_PROVIDER_PATH)
 
@@ -236,24 +149,13 @@ describe('steamSyncStatus wiring -- the five-touchpoint chain (34.15-02, D-06/D-
     ).not.toThrow()
   })
 
-  it('W3: GlobalState.tsx registers handleSteamSyncStatus and its body writes steamSyncStatus into state', () => {
-    expect(() =>
-      gateW3_globalStateSubscribesAndWritesState(globalStateSource)
-    ).not.toThrow()
-  })
-
+  // W4 stays source-text until 69-24 rewrites it with ContextProvider's removal.
   it('W4: frontend/types.ts and ContextProvider.tsx both declare the lockstep steamSyncStatus pair', () => {
     expect(() =>
       gateW4_typesAndProviderDeclareLockstepPair(
         frontendTypesSource,
         contextProviderSource
       )
-    ).not.toThrow()
-  })
-
-  it('W5 (D-06 negative gate): the handleSteamSyncStatus handler body does not read or reset refreshingInTheBackground, the flag it replaces', () => {
-    expect(() =>
-      gateW5_handlerDoesNotReadReplacedFlag(globalStateSource)
     ).not.toThrow()
   })
 })
@@ -278,37 +180,6 @@ describe('RED proofs -- each gate demonstrably trips against a source-derived kn
 
     expect(() =>
       gateW2_preloadExportsListenerSlot(missingSlotSpecimen)
-    ).toThrow()
-  })
-
-  it('W3 trips when steamSyncStatus: is removed from inside the handler body in GlobalState.tsx (derived by string-removal from the real source)', () => {
-    const realSource = readGated(GLOBAL_STATE_PATH)
-    const realHandlerBody = 'this.setState({ steamSyncStatus: status })'
-    expect(realSource).toContain(realHandlerBody)
-
-    const droppedWriteSpecimen = realSource.replace(
-      realHandlerBody,
-      'this.setState({})'
-    )
-
-    expect(() =>
-      gateW3_globalStateSubscribesAndWritesState(droppedWriteSpecimen)
-    ).toThrow()
-  })
-
-  it('W5 trips when refreshingInTheBackground is inserted into the handler body in GlobalState.tsx (derived by string-insertion from the real source, proving W5 actually discriminates)', () => {
-    const realSource = readGated(GLOBAL_STATE_PATH)
-    const realHandlerOpen =
-      'window.api.handleSteamSyncStatus((e, { status }) => {'
-    expect(realSource).toContain(realHandlerOpen)
-
-    const reintroducedFlagSpecimen = realSource.replace(
-      realHandlerOpen,
-      `${realHandlerOpen}\n      this.setState({ refreshingInTheBackground: true })`
-    )
-
-    expect(() =>
-      gateW5_handlerDoesNotReadReplacedFlag(reintroducedFlagSpecimen)
     ).toThrow()
   })
 
@@ -344,5 +215,197 @@ describe('RED proofs -- each gate demonstrably trips against a source-derived kn
         missingDefaultSpecimen
       )
     ).toThrow()
+  })
+})
+
+type Handler = (...args: unknown[]) => unknown
+
+/**
+ * A fake `window.api`: every `handle*`/`on*` property records its handler in
+ * call order; the awaited getters resolve from `values`.
+ */
+const calls: string[] = []
+const errors: string[] = []
+const handlers = new Map<string, Handler[]>()
+const values: Record<string, unknown> = {}
+const config: Record<string, unknown> = {}
+const fakeApi = new Proxy(
+  {},
+  {
+    get: (_t, name: string) => {
+      if (name === 'isFullscreen' || name === 'isFrameless') {
+        return () => {
+          calls.push(`seed:${name}`)
+          return Promise.resolve(values[name] ?? false)
+        }
+      }
+      if (name === 'getDMQueueInformation') {
+        return () =>
+          Promise.resolve({ elements: [], finished: [], state: 'idle' })
+      }
+      if (name === 'getCrossoverIndex' || name === 'getRunsForMeMap') {
+        const key =
+          name === 'getCrossoverIndex' ? 'crossoverIndex' : 'runsForMe'
+        return () => {
+          if (values[`${key}Reject`]) return Promise.reject(new Error('boom'))
+          return key in values
+            ? Promise.resolve(values[key])
+            : new Promise(() => undefined)
+        }
+      }
+      if (name === 'logError') {
+        return (message: string) => {
+          errors.push(message)
+        }
+      }
+      if (name === 'humbleGetKeys') {
+        return () => Promise.resolve(values.humbleKeys ?? [])
+      }
+      if (name === 'humbleGetSyncState') {
+        return () =>
+          Promise.resolve(
+            values.humbleSyncState ?? { syncedAt: null, syncError: 'none' }
+          )
+      }
+      if (name === 'humbleSync') {
+        return () => {
+          calls.push('humbleSync')
+          return Promise.resolve()
+        }
+      }
+      if (name === 'getConnectivityStatus') {
+        return () => new Promise(() => undefined)
+      }
+      if (name === 'setZoomFactor') {
+        return (factor: string) => {
+          calls.push(`zoom:${factor}`)
+        }
+      }
+      if (name === 'storeGet') {
+        return (_store: string, key: string, dflt?: unknown) =>
+          key in config ? config[key] : dflt
+      }
+      if (name === 'requestAppSettings') {
+        return () => {
+          calls.push('requestAppSettings')
+          return Promise.resolve(values.appSettings ?? {})
+        }
+      }
+      if (name === 'setSetting') {
+        return (payload: unknown) => {
+          calls.push(`setSetting:${JSON.stringify(payload)}`)
+        }
+      }
+      if (/^(handle|on)[A-Z]/.test(name)) {
+        return (fn: Handler) => {
+          calls.push(`register:${name}`)
+          handlers.set(name, [...(handlers.get(name) ?? []), fn])
+        }
+      }
+      return () => undefined
+    }
+  }
+)
+
+// Node-env frontend project (no jsdom): give the modules a window first.
+;(globalThis as unknown as { window: object }).window = {
+  platform: 'linux',
+  api: fakeApi,
+  localStorage: { getItem: () => null, setItem: () => undefined },
+  __TAURI_INTERNALS__: {
+    invoke: () => Promise.resolve(undefined),
+    transformCallback: () => 0,
+    unregisterCallback: () => undefined,
+    metadata: {
+      currentWindow: { label: 'main' },
+      currentWebview: { label: 'main' }
+    }
+  }
+}
+
+// Node-env: settingsState reads/writes these when the boot module runs.
+;(globalThis as unknown as Record<string, unknown>).document = {
+  documentElement: {},
+  body: { classList: { toggle: () => undefined } }
+}
+;(globalThis as unknown as Record<string, unknown>).getComputedStyle = () => ({
+  getPropertyValue: () => ''
+})
+
+describe('steamSyncStatus boot listener -- behavioural W3/W5 (69-18)', () => {
+  let init: typeof InitModule
+  let useLibraryState: StoreHooks<LibraryState>
+  type StatusHandler = (e: unknown, payload: { status: string }) => void
+
+  beforeAll(async () => {
+    init = await import('../initStateSubscriptions')
+    useLibraryState = (await import('../libraryState')).default
+  })
+
+  beforeEach(() => {
+    ;(window as unknown as { api: unknown }).api = fakeApi
+    calls.length = 0
+    errors.length = 0
+    handlers.clear()
+    for (const k of Object.keys(values)) delete values[k]
+    for (const k of Object.keys(config)) delete config[k]
+    init.__resetInitStateSubscriptionsGuardForTests()
+  })
+
+  afterEach(() => {
+    resetAllStores()
+  })
+
+  /** Pushes `syncing` through a listener and reads back the two fields. */
+  function push(listener: StatusHandler) {
+    useLibraryState.setState({
+      refreshingInTheBackground: false,
+      steamSyncStatus: 'idle'
+    })
+    listener({}, { status: 'syncing' })
+    const s = useLibraryState.getState()
+    return {
+      status: s.steamSyncStatus,
+      background: s.refreshingInTheBackground
+    }
+  }
+
+  const w3WritesPushedStatus = (listener: StatusHandler) =>
+    push(listener).status === 'syncing'
+  const w5LeavesBackgroundFlagAlone = (listener: StatusHandler) =>
+    push(listener).background === false
+
+  const bootListener = (): StatusHandler => {
+    init.initStateSubscriptions()
+    const registered = handlers.get('handleSteamSyncStatus')
+    expect(registered).toHaveLength(1)
+    return registered?.[0] as StatusHandler
+  }
+
+  /** Registered but drops the write. */
+  const droppedWrite: StatusHandler = () => undefined
+  /** Writes the status AND resets the flag it replaces. */
+  const resetsFlag: StatusHandler = (_e, { status }) => {
+    useLibraryState.setState({
+      steamSyncStatus: status as never,
+      refreshingInTheBackground: true
+    })
+  }
+
+  it('W3: the boot listener writes the pushed status into libraryState', () => {
+    expect(w3WritesPushedStatus(bootListener())).toBe(true)
+  })
+
+  it('W5 (D-06 negative gate): pushing a status leaves refreshingInTheBackground unchanged', () => {
+    expect(w5LeavesBackgroundFlagAlone(bootListener())).toBe(true)
+  })
+
+  it('W3 trips against a listener that is registered but drops the write', () => {
+    expect(w3WritesPushedStatus(droppedWrite)).toBe(false)
+  })
+
+  it('W5 trips against a listener that also resets refreshingInTheBackground (proves W5 discriminates)', () => {
+    expect(w3WritesPushedStatus(resetsFlag)).toBe(true)
+    expect(w5LeavesBackgroundFlagAlone(resetsFlag)).toBe(false)
   })
 })

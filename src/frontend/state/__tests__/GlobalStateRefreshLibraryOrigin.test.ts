@@ -1,120 +1,87 @@
 /**
- * Source-text structural gate for GlobalState.tsx's `refreshLibrary` method
- * and its call sites (Gap cycle 4, plan 34.5-33, Routing item 2).
+ * Gate over libraryState.refreshLibrary, the mount-time refresh gate and the
+ * refreshLibrary call sites (Gap cycle 4, plan 34.5-33, Routing item 2).
  *
- * GlobalState.tsx cannot be imported directly under this project's
- * `node`-environment frontend jest project (see jest.config.js's docstring —
- * no jsdom/react-test-renderer installed): the module reads
- * `window.localStorage` at MODULE SCOPE (`const storage: Storage =
- * window.localStorage`), so a bare `import` throws `window is not defined`
- * before a single test could even run. This mirrors
- * `GlobalStateSteamLogout.test.ts`'s own documented DOM-less constraint and
- * follows the identical pattern: read the real source, strip comments (so
- * the fix's own prose can't fool a naive match), and assert the exact
- * method-body/call-site shape.
+ * Phase 69-18 moved refreshLibrary out of the GlobalState class into
+ * libraryState, so the first three describe blocks are BEHAVIOURAL: they run
+ * the real store action (and `runMountLibraryRefresh`) against a fake
+ * `window.api` and assert on what was logged, flagged and called. Each keeps
+ * a positive control and a near-miss self-test: a regressed implementation
+ * (the old `Refreshing ${library} Library` line, a global-flag write for a
+ * scoped call, a mount gate without Steam, a missing failure reset) is run
+ * through the SAME probe and assertion and must fail it.
  *
- * What this proves: the `refreshLibrary` log line can never print the
- * literal word `undefined` (it coalesces an omitted `library` to `'all'`
- * BEFORE interpolation, matching the semantics `window.api.refreshLibrary
- * (undefined)` already carries at `main.ts:1051` and, after plan 34.5-33
- * Task 1, in the sidecar handler too), that it names an `origin` alongside
- * the runner, and that every internal call site threads a distinct `origin`
- * value naming its own trigger. It does NOT prove the runtime string a real
- * invocation would log — that requires either a jsdom-enabled test project
- * (not installed) or a real `pnpm tauri:dev` session with `gamelib.log`
- * grepped for the `origin=` field, which is the live observable plan
- * 34.5-33's own objective names as authoritative.
- *
- * Self-tested against synthetic merged/regressed sources per this project's
- * own anti-vacuity requirement — a source-text gate without a self-test is
- * a vacuous gate (the exact lesson Phase 34.2's gap cycles paid for).
- *
- * EXTENDED (plan 34.5-47, T-34.5-47-01): a third top-level describe below
- * pins the nine PRODUCTION `refreshLibrary` call sites living OUTSIDE this
- * file (Login, NavTabs, Header, ErrorComponent, RedeemSteamKeyDialog,
- * ClearCache, EgsSettings, ConsoleMode, SideloadDialog) plus a literal-only
- * security rule (`everyOriginIsAFixedStringLiteral`) applied to all nine of
- * those sources concatenated with GlobalState.tsx's own. None of the nine
- * host components can be imported under this project's `node`-environment
- * frontend jest project either — several read `window.api`/`window.location`
- * at module or render scope — so this is a source-text gate for the same
- * documented reason as the two blocks above, not a stylistic choice. It does
- * NOT prove the runtime `origin=` string a real session logs (that stays
- * `U-34.5-08`'s live-only remainder); it proves the nine call sites' SOURCE
- * TEXT cannot regress to an unattributed or forgeable form. RED-proven by
- * physically reverting the `ConsoleMode/index.tsx` edit and confirming the
- * `console-mode-mount` row fails naming that value, then restoring it and
- * confirming green again (verbatim output in `34.5-47-SUMMARY.md`).
+ * The last block stays source-text: it pins the nine external call sites'
+ * fixed-literal origins (T-34.5-47-01), which gate code that did not move.
+ * None of those host components can be imported under this project's
+ * `node`-environment frontend jest project.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import '../../testUtils/tauriWindow'
+import { resetAllStores } from '../storeKit'
+import useLibraryState from '../libraryState'
+import type { RefreshLibraryOptions } from '../libraryState'
+import { runMountLibraryRefresh } from '../initStateSubscriptions'
 
-const globalStatePath = join(__dirname, '..', 'GlobalState.tsx')
+const stateDir = join(__dirname, '..')
 
-/** Extracts the balanced-brace block body starting at the first `{` after `marker`. */
-function extractBlock(source: string, marker: string): string {
-  const markerIdx = source.indexOf(marker)
-  if (markerIdx === -1) {
-    throw new Error(`marker not found: ${marker}`)
-  }
-  const braceStart = source.indexOf('{', markerIdx + marker.length - 1)
-  let depth = 0
-  let i = braceStart
-  for (; i < source.length; i++) {
-    if (source[i] === '{') depth++
-    else if (source[i] === '}') {
-      depth--
-      if (depth === 0) break
+type RefreshImpl = (options: RefreshLibraryOptions) => Promise<void>
+
+interface Probe {
+  infos: string[]
+  errors: string[]
+  fetched: unknown[]
+  /** global flags and the per-runner map as seen while the backend call ran */
+  duringFetch: {
+    refreshing: boolean
+    refreshingInTheBackground: boolean
+    byRunner: Partial<Record<string, boolean>>
+  } | null
+}
+
+function installFakeApi(probe: Probe, backendFails = false): void {
+  ;(window as unknown as { api: unknown }).api = {
+    logInfo: (m: string) => probe.infos.push(m),
+    logError: (m: string) => probe.errors.push(m),
+    refreshLibrary: async (runner: unknown) => {
+      probe.fetched.push(runner)
+      const s = useLibraryState.getState()
+      probe.duringFetch = {
+        refreshing: s.refreshing,
+        refreshingInTheBackground: s.refreshingInTheBackground,
+        byRunner: { ...s.refreshingByRunner }
+      }
+      if (backendFails) throw new Error('boom')
     }
   }
-  return source.slice(braceStart, i + 1)
 }
 
-/**
- * The gate under test: the `refreshLibrary` method body must (a) never
- * contain the old broken template `Refreshing ${library} Library` (which
- * printed the literal word `undefined` whenever `library` was omitted), (b)
- * coalesce an omitted `library` to `'all'` before interpolation, and (c)
- * emit a `[refreshLibrary] runner=... origin=...` shaped log line naming
- * both fields.
- */
-function refreshLibraryLogLineNeverPrintsUndefined(
-  strippedSource: string
-): boolean {
-  let block: string
-  try {
-    block = extractBlock(
-      strippedSource,
-      '}: RefreshLibraryOptions): Promise<void> => '
-    )
-  } catch {
-    return false
-  }
-
-  const hasOldBrokenTemplate =
-    /Refreshing\s*\$\{\s*library\s*\}\s*Library/.test(block)
-  const coalescesRunnerScope = /library\s*\?\?\s*['"]all['"]/.test(block)
-  const emitsRunnerOriginLine =
-    /\[refreshLibrary\]\s*runner=\$\{[^}]+\}\s*origin=\$\{[^}]+\}/.test(block)
-
-  return !hasOldBrokenTemplate && coalescesRunnerScope && emitsRunnerOriginLine
+function newProbe(): Probe {
+  return { infos: [], errors: [], fetched: [], duringFetch: null }
 }
 
-/**
- * The `refreshing` guard and its failure-path reset must be byte-identical
- * to their pre-task form — out of scope for this plan (their own defect
- * history, `debug/steam-relogin-no-autorefresh`, is unrelated).
- */
-function refreshingGuardAndResetUnchanged(strippedSource: string): boolean {
-  const hasGuard = strippedSource.includes(
-    'if (libraryAtStart.refreshing) return'
-  )
-  const hasReset = strippedSource.includes(
-    'useLibraryState.setState({ refreshing: false })'
-  )
-  return hasGuard && hasReset
+/** Runs `impl` the way the app calls it, against a fresh probe. */
+async function run(
+  impl: RefreshImpl,
+  options: RefreshLibraryOptions,
+  backendFails = false
+): Promise<Probe> {
+  const probe = newProbe()
+  installFakeApi(probe, backendFails)
+  useLibraryState.setState({
+    refresh: async () => undefined,
+    refreshing: false,
+    refreshingInTheBackground: true,
+    refreshingByRunner: {}
+  })
+  await impl(options)
+  return probe
 }
+
+const realImpl: RefreshImpl = (o) =>
+  useLibraryState.getState().refreshLibrary(o)
 
 /**
  * Counts how many times an exact `origin: '<value>'` literal appears.
@@ -159,240 +126,302 @@ function everyOriginIsAFixedStringLiteral(source: string): boolean {
   return true
 }
 
-/**
- * debug/steam-refresh-hung-on-startup: the mount-time "refresh everything"
- * call (the sole `origin: 'mount'` call site) MUST include a Steam-login
- * check in its gating condition. A Steam-only session (no Epic/GOG/Amazon
- * account) was previously excluded from this gate entirely, so
- * SteamLibraryManager.refresh() never ran on startup and the "Syncing your
- * Steam library…" spinner (true by default) never cleared. Asserts both
- * that a `steamUser` variable is derived from `steamConfigStore.has(...)`
- * (mirroring the existing gogUser/amazonUser pattern) and that it
- * appears in the `if (...)` condition immediately gating the `origin:
- * 'mount'` refreshLibrary call.
- */
-function mountGateIncludesSteamUser(strippedSource: string): boolean {
-  const definesSteamUser =
-    /const\s+steamUser\s*=\s*steamConfigStore\.has\(\s*['"]userData['"]\s*\)/.test(
-      strippedSource
-    )
+// Files holding the internal `origin:` literals. The class file is listed
+// until 69-19 moves handleGameStatus (its two game-status call sites) out.
+const INTERNAL_FILES = [
+  'libraryState.ts',
+  'initStateSubscriptions.ts',
+  'authState.ts',
+  'GlobalState.tsx'
+]
 
-  const mountIdx = strippedSource.indexOf("origin: 'mount'")
-  if (mountIdx === -1) return false
+describe('refreshLibrary internal call sites thread their fixed origin literal', () => {
+  const stripped = INTERNAL_FILES.map((f) =>
+    stripSourceComments(readFileSync(join(stateDir, f), 'utf-8'))
+  ).join('\n')
 
-  const windowStart = Math.max(0, mountIdx - 800)
-  const before = strippedSource.slice(windowStart, mountIdx)
-  const ifIdx = before.lastIndexOf('if (')
-  if (ifIdx === -1) return false
-  const condition = before.slice(ifIdx)
-
-  return definesSteamUser && /steamUser/.test(condition)
-}
-
-describe('GlobalState.tsx refreshLibrary — origin-tagged, never prints undefined (gap cycle 4, item 2)', () => {
-  const rawSource = readFileSync(globalStatePath, 'utf-8')
-  const stripped = stripSourceComments(rawSource)
-  // login-success and steam-login moved into authState (69-14).
-  const authStripped = stripSourceComments(
-    readFileSync(join(__dirname, '..', 'authState.ts'), 'utf-8')
-  )
-
-  it('the real source coalesces an omitted runner to "all" and emits a runner=/origin= log line, never the literal word undefined', () => {
-    expect(refreshLibraryLogLineNeverPrintsUndefined(stripped)).toBe(true)
-  })
-
-  it('the real source contains no trace of the old broken `Refreshing ${library} Library` template', () => {
-    expect(/Refreshing\s*\$\{\s*library\s*\}\s*Library/.test(stripped)).toBe(
-      false
-    )
-  })
-
-  it('the refreshing guard and its catch-block reset are unchanged', () => {
-    expect(refreshingGuardAndResetUnchanged(stripped)).toBe(true)
-  })
-
-  // Candidate emitters for the three undefined-runner lines observed at
-  // 19:23:09, 19:24:30 and 19:25:30 (per this plan's own <interfaces>
-  // block) are backend/sidecar-side pushes with no runner argument
-  // (main.ts:789, shellFilesFlowRegistration.ts:274) — NOT any of these six
-  // frontend call sites, which is exactly why each one below can be
-  // statically proven to carry an explicit origin already.
   it.each([
     ['handleSuccessfulLogin', 'login-success', 1],
     ['handleRefreshLibrary receiver (push)', 'push', 1],
-    ['libraryStatus (checkForUpdates + done/error branches)', 'game-status', 2],
-    ['componentDidMount', 'mount', 1],
+    [
+      'handleGameStatus (checkForUpdates + done/error branches)',
+      'game-status',
+      2
+    ],
+    ['mount-time refresh', 'mount', 1],
     ['steamLogin', 'steam-login', 1]
   ])(
     '%s call site threads origin=%s exactly %i time(s)',
     (_label: string, originValue: string, expectedCount: number) => {
-      expect(
-        countOriginLiteral(stripped + '\n' + authStripped, originValue)
-      ).toBe(expectedCount)
+      expect(countOriginLiteral(stripped, originValue)).toBe(expectedCount)
     }
   )
 
-  it('self-test: the gate ACCEPTS the exact shape the fix produces (positive control)', () => {
-    const correctShape = [
-      'class GlobalState {',
-      '  refreshLibrary = async ({',
-      '    checkForUpdates,',
-      '    runInBackground = true,',
-      '    library = undefined,',
-      "    origin = 'unknown'",
-      '  }: RefreshLibraryOptions): Promise<void> => {',
-      '    if (libraryAtStart.refreshing) return',
-      '',
-      "    const runnerScope = library ?? 'all'",
-      '    window.api.logInfo(`[refreshLibrary] runner=${runnerScope} origin=${origin}`)',
-      '    try {',
-      '      await window.api.refreshLibrary(library)',
-      '      return await this.refresh(library, checkForUpdates)',
-      '    } catch (error) {',
-      '      window.api.logError(`Library refresh failed: ${String(error)}`)',
-      '      useLibraryState.setState({ refreshing: false })',
-      '    }',
-      '  }',
-      '}'
-    ].join('\n')
-
-    expect(refreshLibraryLogLineNeverPrintsUndefined(correctShape)).toBe(true)
-    expect(refreshingGuardAndResetUnchanged(correctShape)).toBe(true)
-  })
-
-  it('self-test: the gate REJECTS the exact stale broken-template shape being reinstated (the hand RED-proof mutation)', () => {
-    const staleShape = [
-      'class GlobalState {',
-      '  refreshLibrary = async ({',
-      '    checkForUpdates,',
-      '    runInBackground = true,',
-      '    library = undefined,',
-      "    origin = 'unknown'",
-      '  }: RefreshLibraryOptions): Promise<void> => {',
-      '    if (libraryAtStart.refreshing) return',
-      '',
-      '    window.api.logInfo(`Refreshing ${library} Library`)',
-      '    try {',
-      '      await window.api.refreshLibrary(library)',
-      '      return await this.refresh(library, checkForUpdates)',
-      '    } catch (error) {',
-      '      window.api.logError(`Library refresh failed: ${String(error)}`)',
-      '      useLibraryState.setState({ refreshing: false })',
-      '    }',
-      '  }',
-      '}'
-    ].join('\n')
-
-    expect(refreshLibraryLogLineNeverPrintsUndefined(staleShape)).toBe(false)
-  })
-
-  it('self-test: the gate REJECTS a shape that coalesces to "all" but drops the origin field entirely (a regression back to the un-attributed line)', () => {
-    const noOriginShape = [
-      'class GlobalState {',
-      '  refreshLibrary = async ({',
-      '    checkForUpdates,',
-      '    runInBackground = true,',
-      '    library = undefined',
-      '  }: RefreshLibraryOptions): Promise<void> => {',
-      '    if (libraryAtStart.refreshing) return',
-      '',
-      "    const runnerScope = library ?? 'all'",
-      '    window.api.logInfo(`[refreshLibrary] runner=${runnerScope}`)',
-      '    try {',
-      '      await window.api.refreshLibrary(library)',
-      '      return await this.refresh(library, checkForUpdates)',
-      '    } catch (error) {',
-      '      window.api.logError(`Library refresh failed: ${String(error)}`)',
-      '      useLibraryState.setState({ refreshing: false })',
-      '    }',
-      '  }',
-      '}'
-    ].join('\n')
-
-    expect(refreshLibraryLogLineNeverPrintsUndefined(noOriginShape)).toBe(false)
-  })
-
-  it('self-test: refreshingGuardAndResetUnchanged REJECTS a shape missing the catch-block reset', () => {
-    const missingResetShape = [
-      'refreshLibrary = async () => {',
-      '  if (libraryAtStart.refreshing) return',
-      '  try {',
-      '    await window.api.refreshLibrary(library)',
-      '  } catch (error) {',
-      '    window.api.logError(String(error))',
-      '  }',
-      '}'
-    ].join('\n')
-
-    expect(refreshingGuardAndResetUnchanged(missingResetShape)).toBe(false)
+  it('self-test: a source without the literal counts zero', () => {
+    expect(countOriginLiteral('void refreshLibrary({})', 'push')).toBe(0)
   })
 })
 
-describe('GlobalState.tsx componentDidMount — mount-time refresh gate includes Steam (debug/steam-refresh-hung-on-startup)', () => {
-  const rawSource = readFileSync(globalStatePath, 'utf-8')
-  const stripped = stripSourceComments(rawSource)
+function logLineIsAttributedAndNeverUndefined(probe: Probe): boolean {
+  return (
+    probe.infos.length === 1 &&
+    /^\[refreshLibrary\] runner=[a-z]+ origin=[a-z-]+$/.test(
+      probe.infos[0] ?? ''
+    ) &&
+    !(probe.infos[0] ?? '').includes('undefined')
+  )
+}
 
-  it('the real source derives steamUser from steamConfigStore and includes it in the origin:"mount" gate', () => {
-    expect(mountGateIncludesSteamUser(stripped)).toBe(true)
+/** The pre-34.5-33 shape: prints the literal word undefined for no runner. */
+const staleImpl: RefreshImpl = async ({ library }) => {
+  window.api.logInfo(`Refreshing ${library} Library`)
+}
+
+/** Coalesces to "all" but drops the origin field. */
+const noOriginImpl: RefreshImpl = async ({ library }) => {
+  window.api.logInfo(`[refreshLibrary] runner=${library ?? 'all'}`)
+}
+
+function failureResetsFlags(
+  probe: Probe,
+  flagsAfter: {
+    refreshing: boolean
+    byRunner: Partial<Record<string, boolean>>
+  }
+): boolean {
+  return (
+    probe.errors.length === 1 &&
+    probe.errors[0] === 'Library refresh failed: Error: boom' &&
+    flagsAfter.refreshing === false &&
+    flagsAfter.byRunner.gog === false
+  )
+}
+
+/** Same as the real action but never resets after a failed backend call. */
+const noResetImpl: RefreshImpl = async ({ library }) => {
+  useLibraryState.setState({
+    refreshing: true,
+    refreshingByRunner: { [library as string]: true }
+  })
+  try {
+    await window.api.refreshLibrary(library)
+  } catch (error) {
+    window.api.logError(`Library refresh failed: ${String(error)}`)
+  }
+}
+
+describe('libraryState.refreshLibrary — origin-tagged, never prints undefined (gap cycle 4, item 2)', () => {
+  afterEach(() => {
+    resetAllStores()
   })
 
-  it('self-test: the gate ACCEPTS the exact shape the fix produces (positive control)', () => {
-    const correctShape = [
-      'async componentDidMount() {',
-      "    const legendaryUser = configStore.has('userInfo')",
-      "    const gogUser = gogConfigStore.has('userData')",
-      "    const amazonUser = nileConfigStore.has('userData')",
-      "    const steamUser = steamConfigStore.has('userData')",
-      '    if (legendaryUser || gogUser || amazonUser || steamUser) {',
-      '      this.refreshLibrary({',
-      '        checkForUpdates: true,',
-      '        runInBackground: false,',
-      "        origin: 'mount'",
-      '      })',
-      '    }',
-      '}'
-    ].join('\n')
-
-    expect(mountGateIncludesSteamUser(correctShape)).toBe(true)
+  it('coalesces an omitted runner to "all" and emits one runner=/origin= line, never the word undefined', async () => {
+    const probe = await run(realImpl, {
+      checkForUpdates: false,
+      origin: 'mount'
+    })
+    expect(probe.infos).toEqual(['[refreshLibrary] runner=all origin=mount'])
+    expect(logLineIsAttributedAndNeverUndefined(probe)).toBe(true)
   })
 
-  it('self-test: the gate REJECTS the pre-fix shape that omits steamUser entirely (the exact regression this test guards against)', () => {
-    const preFixShape = [
-      'async componentDidMount() {',
-      "    const legendaryUser = configStore.has('userInfo')",
-      "    const gogUser = gogConfigStore.has('userData')",
-      "    const amazonUser = nileConfigStore.has('userData')",
-      '    if (legendaryUser || gogUser || amazonUser) {',
-      '      this.refreshLibrary({',
-      '        checkForUpdates: true,',
-      '        runInBackground: false,',
-      "        origin: 'mount'",
-      '      })',
-      '    }',
-      '}'
-    ].join('\n')
-
-    expect(mountGateIncludesSteamUser(preFixShape)).toBe(false)
+  it('names the runner and defaults the origin to unknown', async () => {
+    const probe = await run(realImpl, {
+      checkForUpdates: false,
+      library: 'gog'
+    })
+    expect(probe.infos).toEqual(['[refreshLibrary] runner=gog origin=unknown'])
   })
 
-  it('self-test: the gate REJECTS a shape that defines steamUser but forgets to add it to the if-condition', () => {
-    const definedButUnusedShape = [
-      'async componentDidMount() {',
-      "    const legendaryUser = configStore.has('userInfo')",
-      "    const gogUser = gogConfigStore.has('userData')",
-      "    const amazonUser = nileConfigStore.has('userData')",
-      "    const steamUser = steamConfigStore.has('userData')",
-      '    if (legendaryUser || gogUser || amazonUser) {',
-      '      this.refreshLibrary({',
-      '        checkForUpdates: true,',
-      '        runInBackground: false,',
-      "        origin: 'mount'",
-      '      })',
-      '    }',
-      '}'
-    ].join('\n')
+  it('returns early when a global refresh is already running', async () => {
+    const probe = newProbe()
+    installFakeApi(probe)
+    useLibraryState.setState({ refreshing: true })
+    await realImpl({ checkForUpdates: false })
+    expect(probe.infos).toEqual([])
+    expect(probe.fetched).toEqual([])
+  })
 
-    expect(mountGateIncludesSteamUser(definedButUnusedShape)).toBe(false)
+  it('returns early for a runner already refreshing, not for a different runner', async () => {
+    const probe = newProbe()
+    installFakeApi(probe)
+    useLibraryState.setState({
+      refreshingByRunner: { gog: true },
+      refresh: async () => undefined
+    })
+    await realImpl({ checkForUpdates: false, library: 'gog' })
+    expect(probe.fetched).toEqual([])
+    await realImpl({ checkForUpdates: false, library: 'nile' })
+    expect(probe.fetched).toEqual(['nile'])
+  })
+
+  it('on a backend failure logs once and resets the global and the per-runner flag', async () => {
+    const probe = await run(
+      realImpl,
+      { checkForUpdates: false, library: 'gog' },
+      true
+    )
+    const s = useLibraryState.getState()
+    expect(
+      failureResetsFlags(probe, {
+        refreshing: s.refreshing,
+        byRunner: s.refreshingByRunner
+      })
+    ).toBe(true)
+  })
+
+  it('self-test: the probe ACCEPTS the real action (positive control)', async () => {
+    const probe = await run(realImpl, {
+      checkForUpdates: false,
+      library: 'gog'
+    })
+    expect(logLineIsAttributedAndNeverUndefined(probe)).toBe(true)
+  })
+
+  it('self-test: the probe REJECTS the stale `Refreshing ${library} Library` shape', async () => {
+    const probe = await run(staleImpl, { checkForUpdates: false })
+    expect(probe.infos).toEqual(['Refreshing undefined Library'])
+    expect(logLineIsAttributedAndNeverUndefined(probe)).toBe(false)
+  })
+
+  it('self-test: the probe REJECTS a shape that coalesces to "all" but drops origin', async () => {
+    const probe = await run(noOriginImpl, { checkForUpdates: false })
+    expect(logLineIsAttributedAndNeverUndefined(probe)).toBe(false)
+  })
+
+  it('self-test: the failure check REJECTS an implementation that never resets after a failed call', async () => {
+    const probe = await run(
+      noResetImpl,
+      { checkForUpdates: false, library: 'gog' },
+      true
+    )
+    const s = useLibraryState.getState()
+    expect(
+      failureResetsFlags(probe, {
+        refreshing: s.refreshing,
+        byRunner: s.refreshingByRunner
+      })
+    ).toBe(false)
+  })
+})
+
+describe('runMountLibraryRefresh — the mount-time refresh gate includes Steam (debug/steam-refresh-hung-on-startup)', () => {
+  type Users = Parameters<typeof runMountLibraryRefresh>[0]
+  const noUsers: Users = {
+    legendaryUser: false,
+    gogUser: false,
+    amazonUser: false,
+    steamUser: false
+  }
+
+  /** Runs a gate against the store and returns the refreshLibrary calls. */
+  function mountCalls(gate: (users: Users) => void, users: Users) {
+    const seen: RefreshLibraryOptions[] = []
+    useLibraryState.setState({
+      refreshLibrary: async (o) => {
+        seen.push(o)
+      }
+    })
+    gate(users)
+    return seen
+  }
+
+  /** The pre-fix gate: no steamUser in the condition. */
+  const preFixGate = (users: Users) => {
+    if (users.legendaryUser || users.gogUser || users.amazonUser) {
+      void useLibraryState.getState().refreshLibrary({
+        checkForUpdates: true,
+        runInBackground: false,
+        origin: 'mount'
+      })
+    }
+  }
+
+  const gateRefreshesForSteamOnly = (gate: (users: Users) => void): boolean => {
+    const seen = mountCalls(gate, { ...noUsers, steamUser: true })
+    return seen.length === 1 && seen[0]?.origin === 'mount'
+  }
+
+  afterEach(() => {
+    resetAllStores()
+  })
+
+  it('a Steam-only user triggers the mount refresh with origin mount and checkForUpdates true', () => {
+    const seen = mountCalls(runMountLibraryRefresh, {
+      ...noUsers,
+      steamUser: true
+    })
+    expect(seen).toHaveLength(1)
+    expect(seen[0]).toMatchObject({ checkForUpdates: true, origin: 'mount' })
+  })
+
+  it.each(['legendaryUser', 'gogUser', 'amazonUser'] as const)(
+    'a %s alone triggers it',
+    (key) => {
+      expect(
+        mountCalls(runMountLibraryRefresh, { ...noUsers, [key]: true })
+      ).toHaveLength(1)
+    }
+  )
+
+  it('no user triggers nothing', () => {
+    expect(mountCalls(runMountLibraryRefresh, noUsers)).toEqual([])
+  })
+
+  it('self-test: the check ACCEPTS the real gate (positive control)', () => {
+    expect(gateRefreshesForSteamOnly(runMountLibraryRefresh)).toBe(true)
+  })
+
+  it('self-test: the check REJECTS the pre-fix gate that omits steamUser', () => {
+    expect(gateRefreshesForSteamOnly(preFixGate)).toBe(false)
+  })
+})
+
+describe('libraryState.refreshLibrary — scopes the global refreshing flags to unscoped calls only (debug/login-logout-wipes-library item b)', () => {
+  const scopesGlobalFlagsToUnscopedCallsOnly = async (
+    impl: RefreshImpl
+  ): Promise<boolean> => {
+    const scoped = await run(impl, {
+      checkForUpdates: false,
+      runInBackground: false,
+      library: 'gog'
+    })
+    const unscoped = await run(impl, {
+      checkForUpdates: false,
+      runInBackground: false
+    })
+    return (
+      scoped.duringFetch?.refreshing === false &&
+      scoped.duringFetch.byRunner.gog === true &&
+      unscoped.duringFetch?.refreshing === true &&
+      unscoped.duringFetch.refreshingInTheBackground === false &&
+      unscoped.duringFetch.byRunner.gog === undefined
+    )
+  }
+
+  /** The pre-fix shape: sets the global flags for every call, scoped or not. */
+  const unconditionalImpl: RefreshImpl = async ({
+    library,
+    runInBackground = true
+  }) => {
+    useLibraryState.setState({
+      refreshing: true,
+      refreshingInTheBackground: runInBackground
+    })
+    await window.api.refreshLibrary(library)
+  }
+
+  afterEach(() => {
+    resetAllStores()
+  })
+
+  it('the real action sets global flags only for an unscoped call and refreshingByRunner only for a scoped one', async () => {
+    expect(await scopesGlobalFlagsToUnscopedCallsOnly(realImpl)).toBe(true)
+  })
+
+  it('self-test: the probe REJECTS the pre-fix unconditional global-flag shape', async () => {
+    expect(await scopesGlobalFlagsToUnscopedCallsOnly(unconditionalImpl)).toBe(
+      false
+    )
   })
 })
 
@@ -405,7 +434,7 @@ describe('GlobalState.tsx componentDidMount — mount-time refresh gate includes
  * call site — per this project's own `test-must-exercise-production-call-
  * shape` standing rule.
  */
-describe('GlobalState.tsx refreshLibrary — nine EXTERNAL call sites thread a unique fixed-literal origin (plan 34.5-47)', () => {
+describe('refreshLibrary — nine EXTERNAL call sites thread a unique fixed-literal origin (plan 34.5-47)', () => {
   const EXTERNAL_CALL_SITES: Array<[string, string]> = [
     ['../../screens/Login/index.tsx', 'login-screen'],
     [
@@ -432,12 +461,9 @@ describe('GlobalState.tsx refreshLibrary — nine EXTERNAL call sites thread a u
     )
   }))
 
-  const globalStateSourceStripped =
-    stripSourceComments(readFileSync(globalStatePath, 'utf-8')) +
-    '\n' +
-    stripSourceComments(
-      readFileSync(join(__dirname, '..', 'authState.ts'), 'utf-8')
-    )
+  const internalSourceStripped = INTERNAL_FILES.map((f) =>
+    stripSourceComments(readFileSync(join(stateDir, f), 'utf-8'))
+  ).join('\n')
 
   it.each(EXTERNAL_CALL_SITES)(
     '%s threads origin: %s exactly once (exact-count, not >= 1)',
@@ -448,11 +474,11 @@ describe('GlobalState.tsx refreshLibrary — nine EXTERNAL call sites thread a u
     }
   )
 
-  it('every origin: key across all nine external call sites AND GlobalState.tsx is a fixed single-quoted string literal — never a template literal, double-quoted string, or bare identifier', () => {
+  it('every origin: key across all nine external call sites AND the internal call sites is a fixed single-quoted string literal — never a template literal, double-quoted string, or bare identifier', () => {
     const concatenated =
       externalSources.map((s) => s.stripped).join('\n') +
       '\n' +
-      globalStateSourceStripped
+      internalSourceStripped
     expect(everyOriginIsAFixedStringLiteral(concatenated)).toBe(true)
   })
 
@@ -501,119 +527,5 @@ describe('GlobalState.tsx refreshLibrary — nine EXTERNAL call sites thread a u
         "refreshLibrary = async ({ origin = 'unknown' }: RefreshLibraryOptions) => {}"
       expect(everyOriginIsAFixedStringLiteral(defaultOnly)).toBe(true)
     })
-  })
-})
-
-// ---------------------------------------------------------------------------
-// (b) refreshLibrary() (moved here from GlobalStateScopedRefresh.test.ts in
-//     69-17: it is class-owned until 69-18, and that file is now behavioural)
-//     refreshLibrary() only sets the GLOBAL refreshing flags for an
-//     unscoped ('all') call; a scoped call writes refreshingByRunner instead.
-// ---------------------------------------------------------------------------
-
-function refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(
-  block: string
-): boolean {
-  const derivesScopedRunner =
-    /const\s+scopedRunner\s*=\s*library\s*&&\s*library\s*!==\s*'all'\s*\?\s*library\s*:\s*undefined/.test(
-      block
-    )
-
-  const globalFlagIdx = block.indexOf('refreshing: true,')
-  if (globalFlagIdx === -1) return false
-  const windowBefore = block.slice(
-    Math.max(0, globalFlagIdx - 300),
-    globalFlagIdx
-  )
-  const globalFlagGuardedByElse =
-    /if\s*\(scopedRunner\)\s*{/.test(windowBefore) &&
-    /}\s*else\s*{/.test(windowBefore)
-
-  const writesByRunnerTrueWhenScoped =
-    /if\s*\(scopedRunner\)\s*{\s*useLibraryState\.setState\(\s*\(prevState\)\s*=>\s*\(\{\s*refreshingByRunner:\s*{\s*\.\.\.prevState\.refreshingByRunner,\s*\[scopedRunner\]:\s*true\s*}\s*\}\)\s*\)/.test(
-      block
-    )
-
-  return (
-    derivesScopedRunner &&
-    globalFlagGuardedByElse &&
-    writesByRunnerTrueWhenScoped
-  )
-}
-
-describe('GlobalState.tsx refreshLibrary — scopes the global refreshing flags to unscoped calls only (debug/login-logout-wipes-library item b)', () => {
-  const rawSource = readFileSync(globalStatePath, 'utf-8')
-  const stripped = stripSourceComments(rawSource)
-
-  it('the real source only sets refreshing/refreshingInTheBackground globally when there is no scoped runner', () => {
-    const block = extractBlock(
-      stripped,
-      '}: RefreshLibraryOptions): Promise<void> => '
-    )
-    expect(refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(block)).toBe(true)
-  })
-
-  it('self-test: the gate ACCEPTS the exact shape the fix produces (positive control)', () => {
-    const correctShape = [
-      '{',
-      '  if (libraryAtStart.refreshing) return',
-      "  const runnerScope = library ?? 'all'",
-      "  const scopedRunner = library && library !== 'all' ? library : undefined",
-      '  if (scopedRunner && libraryAtStart.refreshingByRunner[scopedRunner]) return',
-      '',
-      '  if (scopedRunner) {',
-      '    useLibraryState.setState((prevState) => ({',
-      '      refreshingByRunner: {',
-      '        ...prevState.refreshingByRunner,',
-      '        [scopedRunner]: true',
-      '      }',
-      '    }))',
-      '  } else {',
-      '    useLibraryState.setState({',
-      '      refreshing: true,',
-      '      refreshingInTheBackground: runInBackground',
-      '    })',
-      '  }',
-      '}'
-    ].join('\n')
-
-    expect(
-      refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(correctShape)
-    ).toBe(true)
-  })
-
-  it('self-test: the gate REJECTS the pre-fix shape that set the global flags unconditionally for every call, scoped or not', () => {
-    const preFixShape = [
-      '{',
-      '  if (libraryAtStart.refreshing) return',
-      '',
-      '  useLibraryState.setState({',
-      '    refreshing: true,',
-      '    refreshingInTheBackground: runInBackground',
-      '  })',
-      "  const runnerScope = library ?? 'all'",
-      '}'
-    ].join('\n')
-
-    expect(refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(preFixShape)).toBe(
-      false
-    )
-  })
-
-  it('self-test: the gate REJECTS a shape that derives scopedRunner but never actually branches on it before setting the global flags', () => {
-    const unguardedShape = [
-      '{',
-      '  if (libraryAtStart.refreshing) return',
-      "  const scopedRunner = library && library !== 'all' ? library : undefined",
-      '  useLibraryState.setState({',
-      '    refreshing: true,',
-      '    refreshingInTheBackground: runInBackground',
-      '  })',
-      '}'
-    ].join('\n')
-
-    expect(
-      refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(unguardedShape)
-    ).toBe(false)
   })
 })

@@ -114,13 +114,13 @@ describe('resync wiring gate', () => {
       readFileSync(join(__dirname, '..', '..', ...parts), 'utf8')
     )
   const authSrc = read('state', 'authState.ts')
-  const classSrc = read('state', 'GlobalState.tsx')
+  const librarySrc = read('state', 'libraryState.ts')
   const AUTH_CALL = 'get().resyncSignInIdentityFromStores()'
-  const CLASS_CALL = 'useAuthState.getState().resyncSignInIdentityFromStores()'
+  const LIBRARY_CALL =
+    'useAuthState.getState().resyncSignInIdentityFromStores()'
 
   // Body of the member `name` up to the next member at the same indent: the
-  // login paths are store actions (`name: ...` at 6 spaces), refreshLibrary is
-  // still a class field (`name = ...` at 2 spaces, until the library wave).
+  // login paths and refreshLibrary are store actions (`name: ...` at 6 spaces).
   const memberBody = (
     source: string,
     name: string,
@@ -140,9 +140,9 @@ describe('resync wiring gate', () => {
     ['handleSuccessfulLogin', 'auth', 'store', AUTH_CALL],
     ['steamLogin', 'auth', 'store', AUTH_CALL],
     ['humbleLogin', 'auth', 'store', AUTH_CALL],
-    ['refreshLibrary', 'class', 'class', CLASS_CALL]
+    ['refreshLibrary', 'library', 'store', LIBRARY_CALL]
   ]
-  const sourceOf = (which: string) => (which === 'auth' ? authSrc : classSrc)
+  const sourceOf = (which: string) => (which === 'auth' ? authSrc : librarySrc)
 
   it.each(MEMBERS)(
     '%s reaches the single resync method',
