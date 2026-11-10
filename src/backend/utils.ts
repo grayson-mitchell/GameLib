@@ -905,7 +905,9 @@ const getShellPath = (path: string): Promise<string> =>
     )
   )
 
-export const spawnAsync = async (
+// Module-private: only moveOnWindows/moveOnUnix/extractTarFile still use it; 66.2 moves those
+// callers onto the command runner and deletes it with the last child_process import.
+const spawnAsync = async (
   command: string,
   args: string[],
   options: SpawnOptions = {},
@@ -1829,7 +1831,6 @@ export {
   getLatestReleases,
   getWineFromProton,
   getFileSize,
-  memoryLog,
   removeFolder,
   getPathDiskSize,
   sendGameStatusUpdate,

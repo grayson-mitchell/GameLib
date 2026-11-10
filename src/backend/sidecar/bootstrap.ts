@@ -190,8 +190,6 @@ import { hasLiveBridgeHelper } from '../storeManagers/steam/bridge/helperRegistr
 import { SteamUser } from '../storeManagers/steam/user'
 // Transitional (removed by plan 27): the legacy registries still hold children until plans
 // 23/24/26 move them onto the runner.
-import { killAllTracked } from '../trackedChildren'
-import { shutdownLongLivedChildren } from '../longLivedChildren'
 import {
   setupEnvVars,
   setupWineEnvVars,
@@ -1164,10 +1162,7 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             },
             deletePresence: () =>
               gogPresence.deletePresence(gogPresenceDeps(state)),
-            exit: () => platformApi.app.exit(),
-            // Transitional: the legacy registries still hold children until plans 23/24/26;
-            // plan 27 removes this dep with the registries.
-            legacyChildren: { killAllTracked, shutdownLongLivedChildren }
+            exit: () => platformApi.app.exit()
           })
       }
     },

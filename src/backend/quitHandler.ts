@@ -1,7 +1,7 @@
 /**
  * Quit handler (Phase 66.1, MH-5): the body of the legacy `utils.handleExit`, with every
  * collaborator passed in. Tracked and long-lived children are torn down through the process
- * runner; the `legacyChildren` dep covers the legacy registries until plan 27.
+ * runner's tracked and long-lived registries.
  *
  * Value imports: none; every collaborator arrives as a dep.
  */
@@ -20,14 +20,6 @@ interface QuitMessageBoxOptions {
 
 export interface QuitHandlerDeps {
   runner: Pick<ProcessRunner, 'killAllTracked' | 'teardownAll'>
-  /**
-   * transitional: the legacy registries still hold children until plans 23/24/26 move them to
-   * the runner; removed in plan 27
-   */
-  legacyChildren: {
-    killAllTracked(): void
-    shutdownLongLivedChildren(): void
-  }
   isLocked(): boolean
   isRunning(): boolean
   isBridgeHosting(): boolean
@@ -90,7 +82,6 @@ export function createQuitHandler(deps: QuitHandlerDeps): QuitHandler {
       // Phase 72 D-13: kill only the children this sidecar spawned (tracked PIDs),
       // never by name pattern. Includes tracked Wine children (games).
       deps.runner.killAllTracked()
-      deps.legacyChildren.killAllTracked()
 
       // Kill all child processes
       deps.abortAll()
@@ -102,12 +93,11 @@ export function createQuitHandler(deps: QuitHandlerDeps): QuitHandler {
     await deps.releaseSteam()
     await deps.deletePresence()
 
-    // Quick task 260907-juv, Layer A: tear down every registered long-lived child
+    // Quick task 260907-juv, Layer A: tear down every runner-registered long-lived child
     // (comet, the Steam bridge helper) gracefully before exiting. This is the ONLY quit
-    // path this call can reach -- see `longLivedChildren.ts`'s module docblock for why a
+    // path this call can reach -- see the runner's long-lived registry docblock for why a
     // second, unconditional layer in the Rust shell is also required.
     deps.runner.teardownAll()
-    deps.legacyChildren.shutdownLongLivedChildren()
 
     deps.exit()
   }

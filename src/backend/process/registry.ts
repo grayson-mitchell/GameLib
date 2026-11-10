@@ -1,6 +1,6 @@
 /**
  * Per-instance tracked-child and teardown registries (Phase 66 D-11),
- * absorbing backend/trackedChildren.ts and backend/longLivedChildren.ts.
+ * absorbing the former tracked-children and long-lived-children modules.
  *
  * Tracked children are NOT detached: the Rust shell's process-group reap relies
  * on it (Phase 72 D-13). State lives in Maps created inside each factory.

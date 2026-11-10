@@ -605,7 +605,7 @@ export interface CallRunnerOptions {
   onOutput?: (output: string, child: SpawnedChildHandle) => void
   abortId?: string
   /**
-   * Phase 72 D-13: key the spawned child is recorded under in `trackedChildren`
+   * Phase 72 D-13: key the spawned child is recorded under in the runner's tracked registry
    * (what `killTracked({ runner, key })` matches). Defaults to the abort id for
    * `callRunner`; callers whose command carries no app name (sideload) pass it.
    */

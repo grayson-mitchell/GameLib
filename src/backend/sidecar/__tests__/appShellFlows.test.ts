@@ -212,19 +212,6 @@ jest.mock('../../utils/aborthandler/aborthandler', () => ({
   callAllAbortControllers: jest.fn()
 }))
 
-// ── longLivedChildren mock — quick task 260907-juv (Gate A). A narrow jest.fn()
-// boundary so `handleExit()`'s reachability into the Layer A registry can be asserted
-// directly, mirroring this file's own aborthandler mock above. Deliberately NOT
-// `{ virtual: true }`: at HEAD the module does not exist yet, and the honest RED here is
-// a module-resolution failure -- a virtual mock would let this suite survive a world in
-// which the registry was never created, which is exactly the failure mode (a call site
-// silently losing its target) this gate exists to catch.
-jest.mock('../../longLivedChildren', () => ({
-  registerLongLivedChild: jest.fn(() => jest.fn()),
-  shutdownLongLivedChildren: jest.fn(),
-  __resetLongLivedChildrenForTests: jest.fn()
-}))
-
 // ── download queue stub (66.1-11): the queue is a boot service now, so the boot gets this stub
 // as its prebuilt `downloadQueue` and the isolated registrations receive it by deps. Only
 // `initQueue` is asserted on; `isRunning` stays falsy so the quit tests see an idle queue
@@ -281,7 +268,6 @@ import type { Stores } from 'backend/services/types'
 import type { backendEvents as backendEventsType } from '../../backend_events'
 import type * as aborthandlerModule from '../../utils/aborthandler/aborthandler'
 import type { requestRustInvoke as requestRustInvokeType } from '../sidecarRpc'
-import type { shutdownLongLivedChildren as shutdownLongLivedChildrenType } from '../../longLivedChildren'
 import type * as platformModule from '../../platform'
 import type * as loggerModuleType from '../../logger'
 import type * as protocolModule from '../../protocol'
@@ -309,7 +295,6 @@ let backendEvents: typeof backendEventsType
 let callAbortController: typeof aborthandlerModule.callAbortController
 let callAllAbortControllers: typeof aborthandlerModule.callAllAbortControllers
 let requestRustInvoke: typeof requestRustInvokeType
-let shutdownLongLivedChildren: typeof shutdownLongLivedChildrenType
 let listenerRegistry: typeof platformModule.listenerRegistry
 let handlerRegistry: typeof platformModule.handlerRegistry
 let loggerModule: typeof loggerModuleType
@@ -323,7 +308,6 @@ let mockedGameInfoStoreClear: jest.Mock
 let mockedCallAbortController: jest.Mock
 let mockedCallAllAbortControllers: jest.Mock
 let mockRequestRustInvoke: jest.Mock
-let mockedShutdownLongLivedChildren: jest.Mock
 let mockedHandleProtocol: jest.Mock
 
 function freshRegistry(): void {
@@ -341,8 +325,6 @@ function freshRegistry(): void {
   callAbortController = aborthandler.callAbortController
   callAllAbortControllers = aborthandler.callAllAbortControllers
   requestRustInvoke = require('../sidecarRpc').requestRustInvoke
-  shutdownLongLivedChildren =
-    require('../../longLivedChildren').shutdownLongLivedChildren
   const platform = require('../../platform')
   listenerRegistry = platform.listenerRegistry
   handlerRegistry = platform.handlerRegistry
@@ -359,7 +341,6 @@ function freshRegistry(): void {
   mockedCallAbortController = callAbortController as jest.Mock
   mockedCallAllAbortControllers = callAllAbortControllers as jest.Mock
   mockRequestRustInvoke = requestRustInvoke as jest.Mock
-  mockedShutdownLongLivedChildren = shutdownLongLivedChildren as jest.Mock
   mockedHandleProtocol = handleProtocol as jest.Mock
 }
 
@@ -423,7 +404,6 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     mockedGameInfoStoreClear.mockClear()
     mockedCallAbortController.mockClear()
     mockedCallAllAbortControllers.mockClear()
-    mockedShutdownLongLivedChildren.mockClear()
     mockRequestRustInvoke.mockReset().mockResolvedValue(undefined)
     mockRestoreMacSteamOnlineIfOwed
       .mockReset()
@@ -566,37 +546,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     }
   })
 
-  // ── Quick task 260907-juv (Gate A): handleExit() -> shutdownLongLivedChildren() ──
-  //
-  // Layer A of the two-layer helper-process-orphan fix. `longLivedChildren` is mocked
-  // as a narrow jest.fn() boundary (see the module mock above) so these assertions fail
-  // on CALL-SITE DELETION -- if `handleExit()` stops calling `shutdownLongLivedChildren()`,
-  // these tests go RED with `Number of calls: 0`, not merely on misbehaviour.
-  it('REQ-260907-juv A1: quit (send) calls shutdownLongLivedChildren exactly once', async () => {
-    const { input } = boot()
-    writeSend(input, 'quit-1', 'quit', [])
-    await flush()
-
-    expect(mockedShutdownLongLivedChildren).toHaveBeenCalledTimes(1)
-  })
-
-  it('REQ-260907-juv A2: shutdownLongLivedChildren runs BEFORE the RUST_APP_EXIT rustInvoke (ordering)', async () => {
-    const { input } = boot()
-    writeSend(input, 'quit-2', 'quit', [])
-    await flush()
-
-    const registryOrder =
-      mockedShutdownLongLivedChildren.mock.invocationCallOrder[0]
-    const exitCallIndex = mockRequestRustInvoke.mock.calls.findIndex(
-      ([channel]) => channel === RUST_APP_EXIT
-    )
-    expect(exitCallIndex).toBeGreaterThanOrEqual(0)
-    const exitOrder = defined(
-      mockRequestRustInvoke.mock.invocationCallOrder[exitCallIndex],
-      'exit invocation order'
-    )
-    expect(registryOrder).toBeLessThan(exitOrder)
-  })
+  // Quick task 260907-juv Layer A (quit tears down long-lived children before exit) is pinned
+  // by quitHandler.test.ts's runner-only order arrays; the real runner is not observable here.
 
   // ── CR-04 (Phase 34.1 code review): the pending-operations quit confirm ───
   //
@@ -685,7 +636,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     // -- per `platformApi.showMessageBox`'s own logic, `result === false` is false for an
     // `undefined` resolution, so the safe/"No"/cancelled `response: 0` path is taken and
     // `handleExit()` returns before reaching either the abort fan-out or the registry.
-    it('REQ-260907-juv A3: a cancelled quit (response === 0) does NOT tear down long-lived children', async () => {
+    it('REQ-260907-juv A3: a cancelled quit (response === 0) does not pay the Mac Steam goonline', async () => {
       const { input } = boot()
       writeSend(input, 'quit-pending-3', 'quit', [])
       await flush()
@@ -696,7 +647,6 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           ([channel]) => channel === RUST_DIALOG_MESSAGE
         )
       ).toBe(true)
-      expect(mockedShutdownLongLivedChildren).not.toHaveBeenCalled()
       expect(mockRestoreMacSteamOnlineIfOwed).not.toHaveBeenCalledWith(
         'shutdown'
       )

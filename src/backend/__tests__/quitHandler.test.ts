@@ -1,9 +1,4 @@
 import { createQuitHandler, type QuitHandlerDeps } from '../quitHandler'
-import {
-  __resetLongLivedChildrenForTests,
-  registerLongLivedChild,
-  shutdownLongLivedChildren
-} from '../longLivedChildren'
 
 function setup(
   over: Partial<QuitHandlerDeps> = {},
@@ -19,10 +14,6 @@ function setup(
     runner: {
       killAllTracked: () => (calls.push('runner.kill'), 0),
       teardownAll: () => void calls.push('runner.teardown')
-    },
-    legacyChildren: {
-      killAllTracked: () => void calls.push('legacy.kill'),
-      shutdownLongLivedChildren: () => void calls.push('legacy.shutdown')
     },
     isLocked: () => false,
     isRunning: () => false,
@@ -52,7 +43,6 @@ describe('createQuitHandler', () => {
       'releaseSteam',
       'presence',
       'runner.teardown',
-      'legacy.shutdown',
       'exit'
     ])
   })
@@ -70,13 +60,11 @@ describe('createQuitHandler', () => {
     expect(calls).toEqual([
       'dialog',
       'runner.kill',
-      'legacy.kill',
       'abort',
       'hide',
       'releaseSteam',
       'presence',
       'runner.teardown',
-      'legacy.shutdown',
       'exit'
     ])
   })
@@ -104,31 +92,5 @@ describe('createQuitHandler', () => {
     await createQuitHandler(deps).handleExit()
     expect(calls).not.toContain('dialog')
     expect(calls).toContain('exit')
-  })
-
-  describe('both registries while both exist (deleted by plan 27)', () => {
-    afterEach(() => __resetLongLivedChildrenForTests())
-
-    test('a quit tears down the runner and the real legacy long-lived registry', async () => {
-      const { calls, deps } = setup({
-        legacyChildren: {
-          killAllTracked: () => void calls.push('legacy.kill'),
-          // The real export. Its trailing logInfo needs an initialised log writer, which would
-          // write to the operator's real log path; every teardown has already run by then, so
-          // the logger TypeError is swallowed rather than initialising the writer.
-          shutdownLongLivedChildren: () => {
-            try {
-              shutdownLongLivedChildren()
-            } catch (error) {
-              if (!(error instanceof TypeError)) throw error
-            }
-          }
-        }
-      })
-      registerLongLivedChild('comet', () => void calls.push('comet.teardown'))
-      await createQuitHandler(deps).handleExit()
-      expect(calls).toContain('runner.teardown')
-      expect(calls).toContain('comet.teardown')
-    })
   })
 })

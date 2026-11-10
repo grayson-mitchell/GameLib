@@ -517,7 +517,7 @@ export function createCommandRunner(deps: CommandRunnerDeps) {
           replaceEnv: true,
           signal: abortController.signal,
           // Phase 72 D-13: on Windows with PowerShell this PID is powershell's
-          // (hence the /T tree kill in trackedChildren).
+          // (hence the /T tree kill in the runner's tracked registry).
           track: {
             runner: runnerProps.name,
             key: options?.trackKey ?? abortId

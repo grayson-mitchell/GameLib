@@ -40,7 +40,6 @@
     "src/backend/__tests__/steamBridgeKnownFixes.test.ts": 8,
     "src/backend/__tests__/storeChangeNotifier.test.ts": 1,
     "src/backend/__tests__/storeLaunchHooks.test.ts": 8,
-    "src/backend/__tests__/trackedChildren.test.ts": 2,
     "src/backend/__tests__/utils.test.ts": 6
   }
 }

@@ -137,9 +137,9 @@ export function getBridgeHelperConnection(
 }
 
 /**
- * D-51-01: tears down ONLY the helper for `appId`, via `backend/
- * longLivedChildren`'s registry (never called directly from a quit path --
- * see that module's own doc). Safe to call unconditionally, including for
+ * D-51-01: tears down ONLY the helper for `appId`, via the runner's
+ * long-lived registry (never called directly from a quit path --
+ * see the quit handler). Safe to call unconditionally, including for
  * an appId whose helper was never spawned this session (a no-op).
  *
  * This is the per-appId replacement for Phase 24's old single-shared-helper
@@ -177,8 +177,8 @@ export function hasLiveBridgeHelper(): boolean {
 /**
  * Tears down every currently-running bridge helper, regardless of appId --
  * the full-app-quit fan-out. Each individual appId is ALSO independently
- * registered on `backend/longLivedChildren`'s own registry (via
- * `ensureHelperSpawned`), so `shutdownLongLivedChildren()` reaches every
+ * registered on the runner's own long-lived registry (via
+ * `ensureHelperSpawned`), so the runner's `teardownAll()` reaches every
  * helper even if this function is never called directly.
  */
 export function shutdownAllBridgeHelpers(): void {

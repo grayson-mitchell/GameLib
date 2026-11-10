@@ -499,7 +499,7 @@ export const app = {
 //
 // UPDATED (2026-09-07, quick task 260907-juv). A second staleness beyond the CR-04
 // correction above: `handleExit()` (`backend/utils.ts`) now ALSO calls
-// `shutdownLongLivedChildren()` (`backend/longLivedChildren.ts`) immediately before
+// the runner's `teardownAll()` immediately before
 // `app.exit()`, unconditionally -- not gated behind this dialog's destructive branch. This
 // tears down GOG's `comet` and the Steam bridge helper gracefully on THIS quit path only;
 // the red-X/Cmd+Q/`osascript` quit path bypasses `handleExit()` entirely and is covered
