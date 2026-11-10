@@ -1,12 +1,15 @@
-import process from 'process'
+import { freemem, totalmem } from 'os'
 
 import type { PartialMemoryInfo } from './index'
 
+// Node's os module, not Electron's process.getSystemMemoryInfo(): the sidecar
+// is plain Node, where that Electron-only method does not exist and threw on
+// every Windows launch. os.totalmem()/os.freemem() already return bytes.
 function getMemoryInfo_windows(): PartialMemoryInfo {
-  const { total, free } = process.getSystemMemoryInfo()
+  const total = totalmem()
   return {
-    total: total * 1024,
-    used: (total - free) * 1024
+    total,
+    used: total - freemem()
   }
 }
 

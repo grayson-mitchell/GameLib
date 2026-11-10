@@ -526,28 +526,20 @@ export namespace CrossProcessExports {
 // the commit immediately before this task: `tsc --noEmit` was clean there),
 // not a pre-existing gap.
 //
-// Consumed by:
-//   src/backend/utils/systeminfo/index.ts:131 -- `process.getSystemVersion()`
-//   src/backend/utils/systeminfo/memory/windows.ts:6 -- `const { total, free }
-//   = process.getSystemMemoryInfo()`
-// Both call sites are real, live code (`getSystemInfo` is reached from the
-// frontend boot IPC call, per that module's own header comment) -- not dead
-// Electron-main-process-only code retired by this migration. Note
-// `src/backend/platform/index.ts`'s own `getSystemVersion` RUNTIME polyfill
-// (Phase 31 plan 01) works around the same gap locally with an intersection
-// cast at its one call site; it does not declare the method globally, so it
-// does not help these two sites. Only the two members actually read are
-// declared -- `SystemMemoryInfo` has several more fields
-// (`fileBacked`/`purgeable`/`swapped`, `darwin`-only) that nothing in this
-// tree reads.
+// Consumed by `process.getSystemVersion()` in src/backend/utils/systeminfo/
+// index.ts and src/backend/utils.ts. It is safe to declare only because
+// `src/backend/platform/index.ts` installs a RUNTIME polyfill (Phase 31
+// plan 01) when the sidecar boots.
+//
+// `getSystemMemoryInfo` is deliberately NOT declared: it had no runtime
+// polyfill, so the type let systeminfo/memory/windows.ts call it and throw
+// `process.getSystemMemoryInfo is not a function` on every Windows game
+// launch (2026-11-11). That module now uses `os.totalmem()`/`os.freemem()`.
+// Leaving it undeclared makes tsc reject any new caller.
 declare global {
   namespace NodeJS {
     interface Process {
       getSystemVersion(): string
-      getSystemMemoryInfo(): {
-        total: number
-        free: number
-      }
     }
   }
 }
