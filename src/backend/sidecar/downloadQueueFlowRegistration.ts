@@ -68,7 +68,7 @@
  * import the real `electron` module (REQ-32-08).
  */
 
-import { logInfo, LogPrefix } from 'backend/logger'
+import type { LogSink } from '../process/types'
 
 import { ipcMain } from '../platform'
 // Load-bearing FIRST import (mirrors installFlowRegistration.ts's /
@@ -97,7 +97,7 @@ import {
  * imports above and the D-05 log line below; the caller decides when
  * registration onto the handler registry happens.
  */
-export function registerDownloadQueueFlows(): void {
+export function registerDownloadQueueFlows(deps: { log: LogSink }): void {
   // D-05: logged, never silent. Phase 35 plan 11 CHANGED WHAT THIS RECORDS.
   // The boot-time auto-resume is no longer suppressed under the sidecar — it
   // now runs from `appShellFlowRegistration.ts`'s `frontendReady` handler.
@@ -106,44 +106,9 @@ export function registerDownloadQueueFlows(): void {
   // from the queue code that implements it. Pre-initQueue cancelability (the
   // module-scope `currentElement` seed, `downloadqueue.ts:49`) is preserved
   // regardless, exactly as before.
-  //
-  // Deferred via `setImmediate` (blocking fix, Rule 3): `handlers.ts` (and
-  // therefore this function) runs synchronously at `bootstrap.ts`'s own
-  // `import './handlers'` (Step 2), which happens BEFORE `bootstrap.ts`'s
-  // exported `init()` ever runs `initLogger()` (Step 3) — logInfo's
-  // `heroicLogWriter` is only assigned inside `initLogger()`, so calling
-  // logInfo synchronously here throws `Cannot read properties of undefined
-  // (reading 'logInfo')` before the sidecar ever reaches READY. The real
-  // entry point (`src/sidecar/index.ts`'s `import { init } from
-  // 'backend/sidecar/bootstrap'; init()`) and this plan's own
-  // `downloadQueueFlows.test.ts` (`startSidecar()`) both call `init()`
-  // synchronously, in the same script turn, immediately after this module
-  // finishes evaluating — a `setImmediate`-deferred call is therefore
-  // guaranteed to run after `initLogger()` has already assigned
-  // `heroicLogWriter` in those two paths.
-  //
-  // The try/catch below additionally covers a THIRD path this codebase
-  // already has (discovered by the full sidecar test-suite run, not just
-  // this plan's own suite): a test file that imports `./handlers` directly
-  // (e.g. `storeLayer.test.ts`) to exercise a different module's channels
-  // WITHOUT ever calling `bootstrap.ts`'s `init()` — `heroicLogWriter` never
-  // gets assigned there at all, so the deferred call would otherwise throw
-  // asynchronously, outside any test's own try/catch, crashing the whole
-  // Jest worker process. Falling back to `console.info` keeps the D-05
-  // disablement observably logged (D-04's "never silent" house style)
-  // without that crash, in every import path this module can be reached from.
-  setImmediate(() => {
-    try {
-      logInfo(
-        'sidecar: boot-time download-queue auto-resume (the startup-flagged initQueue call) is ENABLED as of Phase 35 plan 11 and runs from appShellFlowRegistration.ts frontendReady, not from this module — a persisted Steam queue head is still never auto-started, since the startup flag is itself the Steam suppression (downloadqueue.ts initQueue doc comment)',
-        LogPrefix.DownloadManager
-      )
-    } catch {
-      console.info(
-        '[downloadQueueFlowRegistration] boot-time download-queue auto-resume is ENABLED (Phase 35 plan 11) and runs from appShellFlowRegistration.ts, not from this module — logger not yet initialized in this process, falling back to console'
-      )
-    }
-  })
+  deps.log.info(
+    'sidecar: boot-time download-queue auto-resume (the startup-flagged initQueue call) is ENABLED as of Phase 35 plan 11 and runs from appShellFlowRegistration.ts frontendReady, not from this module — a persisted Steam queue head is still never auto-started, since the startup flag is itself the Steam suppression (downloadqueue.ts initQueue doc comment)'
+  )
 
   // Transport-kind split copied character-for-character from
   // `downloadmanager/ipc_handler.ts:64-70` — four `ipcMain.on` (send/listener),

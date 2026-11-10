@@ -38,8 +38,9 @@ import { READY_SENTINEL } from 'common/types/sidecarTransport'
 import { i18nextLanguageOptions, localeFileSegments } from 'common/languages'
 
 // ---- Step 2: import the backend registration path — AFTER the platform import -------
+// Importing `./handlers` registers nothing (D-08); the 'register-handlers' boot step calls it.
 
-import './handlers'
+import { registerHandlers } from './handlers'
 // Block D (finding A1, quick-260907-odi). Adds NO new module to the sidecar bundle:
 // `sidecar/storeRegistration.ts:61` already imports `playtimeSyncQueue` from this exact
 // module, so this is a second binding onto an already-resident singleton, not a new edge.
@@ -196,7 +197,9 @@ import {
  * the logger (the migration system logs and `heroicLogWriter` is unset until `initLogger()`);
  * the logger step binds the processGuards sinks once (WR-04); secret stores and the online
  * monitor come after the RPC server and transport and before READY; rosetta comes after i18n
- * (it awaits that boot's own `state.i18nReady`); READY precedes the sign-in probe and the
+ * (it awaits that boot's own `state.i18nReady`); register-handlers comes after the logger (the
+ * download-queue notice logs synchronously, C-04) and before rpc-server (no frame may arrive
+ * before its channel exists); READY precedes the sign-in probe and the
  * startup protocol URL.
  *
  * Exit contract: no step may create an unref()-less handle or leave unbounded in-flight work.
@@ -211,6 +214,7 @@ export const BOOT_STEP_NAMES = [
   'shell-exe-receipt',
   'asset-root-check',
   'i18n',
+  'register-handlers',
   'rpc-server',
   'protocol-url-handler',
   'transport',
@@ -1172,6 +1176,11 @@ function buildBootSteps(): BootStep[] {
       }
     },
     {
+      name: 'register-handlers',
+      // Closures only: installs channel handlers, creates no timer, watcher, socket or child.
+      run: (ctx) => registerHandlers({ log: ctx.log })
+    },
+    {
       name: 'rpc-server',
       run: (_ctx, { input, output }) => {
         startRpcServer(input, output)
@@ -1407,11 +1416,11 @@ function buildBootSteps(): BootStep[] {
     },
     {
       name: 'legacy-zoom-cleanup',
-      run: () => {
+      run: (ctx) => {
         // Legacy Zoom Platform data removal (quick-261029-toq). After `initLogger()` (it logs).
         // Fire-and-forget: never awaited before READY, never rejects, creates no handle (see the
         // module header for the sidecar exit-contract reasoning).
-        void removeLegacyZoomData(platformApi.app.getPath('userData'))
+        void removeLegacyZoomData(ctx.paths.userData)
       }
     },
     {

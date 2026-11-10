@@ -43,8 +43,9 @@
  * (single-store on-demand hydrate for everything else in `STORE_UNIVERSE`,
  * filtered identically).
  *
- * `ensureStoresRegistered()` runs at module scope, right after
- * `registerSteamFlows()`, so every store instance either handler below can
+ * Registration runs inside `registerHandlers()` (the 'register-handlers' boot step, D-08),
+ * not at import time. `ensureStoresRegistered()` runs there, after the flow
+ * registrations, so every store instance either handler below can
  * be asked about already exists (REQ-29-01, 29-RESEARCH Pitfall 6) before
  * any RPC frame can reach a handler body.
  *
@@ -74,6 +75,7 @@
  */
 
 import Store from '../store_backend'
+import type { LogSink } from '../process/types'
 
 import { ipcMain } from '../platform'
 import { registerSteamFlows } from './steamFlowRegistration'
@@ -119,134 +121,189 @@ import {
   STORE_FETCH_CHANNEL
 } from 'common/types/sidecarTransport'
 
-ipcMain.handle('health', async () => 'ok')
+/**
+ * Registers every handler and flow channel. Called once by the `register-handlers`
+ * boot step (D-08), after the logger and before the RPC server binds; importing
+ * this module registers nothing.
+ */
+export function registerHandlers(deps: { log: LogSink }): void {
+  ipcMain.handle('health', async () => 'ok')
 
-registerSteamFlows()
-registerSteamAuthFlows()
-registerEngineFlows()
-registerInstallFlows()
-registerSettingsFlows()
-// D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the
-// `EPIC_COOKIE_HOSTS` sweep can be exercised against ONE sibling apex without
-// `LegendaryUser.logout()` destroying the operator's real Epic session. Self-gated —
-// `registerDevEpicCookieSweepFlow()` no-ops in a packaged sidecar, so the channel does not
-// exist in a shipped build. Not on the preload surface by design; see that module's docstring.
-registerDevEpicCookieSweepFlow()
-// WR-02: without this, plan 30-03's native picker chain was unreachable — `openDialog`
-// is the only backend channel that reaches `dialog.showOpenDialog`, and its sole other
-// caller (`main.ts`) is not in the sidecar's import graph.
-registerDialogFlows()
-// Phase 32 Plan 01: the queue-management channels — no ordering constraint
-// relative to the other four calls above (each module owns its own channel
-// names, no cross-module runtime
-// dependency at registration time); placed alongside them, before
-// `ensureStoresRegistered()` (32-PATTERNS.md).
-registerDownloadQueueFlows()
-// Phase 34.1 Plan 04: the app-shell channels — no ordering constraint
-// relative to the other calls above (own channel names, no cross-module
-// runtime dependency at registration time), placed alongside them, before
-// `ensureStoresRegistered()`.
-//
-// Guarded (sidecar-init-rustinvoke-leak): only this top-level, import-time-triggered call
-// suppresses the one-shot boot-time tray_set_icon correction under Jest -- a DIRECT call to
-// registerAppShellFlows() (e.g. appShellFlows.test.ts's own REQ-34.1-07 coverage) is
-// unaffected. See appShellFlowRegistration.ts's own docstring/inline comment for the full
-// mechanism this fixes. `JEST_WORKER_ID` is Jest's own zero-config "am I running under
-// Jest" signal (always set in a Jest worker, never set for the real Tauri sidecar process)
-// -- under real Tauri this is unconditionally `false` and behavior is byte-identical to
-// before.
-registerAppShellFlows({
-  skipInitialTraySync: process.env.JEST_WORKER_ID !== undefined
-})
-// Phase 34.2 Plans 04+05: the game-details/settings/override channels — no
-// ordering constraint relative to the other calls above (own
-// channel names, no cross-module runtime dependency at registration time),
-// placed alongside them, before `ensureStoresRegistered()`.
-registerGameDetailsFlows()
-// Phase 34.2 Plan 06: the enrichment channels — no ordering
-// constraint relative to the other calls above (own channel names, no
-// cross-module runtime dependency at registration time), placed alongside
-// them, before `ensureStoresRegistered()`. `wiki_game_info/stores`
-// is already registered by `storeRegistration.ts:104` (Phase 29), so this
-// module needs no new store plumbing.
-registerEnrichmentFlows()
-// Phase 34.3 Plans 01+02 (REQ-34.3-01/-02/-13): the shell/link-opener and
-// filesystem/diagnostics channels — no ordering constraint
-// relative to the other calls above (own channel names, no cross-module
-// runtime dependency at registration time), placed alongside them, before
-// `ensureStoresRegistered()`.
-registerShellFilesFlows()
-// Phase 34.3 Plan 06 (REQ-34.3-03/-04/-13): the clipboard channels — the ONLY
-// consumers of this slice's two new dispatch_rust_channel arms
-// (clipboard_write_text/clipboard_read_text, Plan 03). No ordering constraint
-// relative to the other calls above (own channel names, no cross-module runtime
-// dependency at registration time), placed alongside them, before
-// `ensureStoresRegistered()`.
-registerClipboardFlows()
-// Phase 34.2 gap cycle 2, plan 34.2-16 (REQ-34.2-12), extended by Phase 34.3
-// plan 04: the logger channels. `logError` was ported early from its Phase
-// 34.3/slice-6 slot because gap cycle 1's renderer repair-failure handler
-// routes through it — an unregistered `send` channel is a total silent no-op
-// under Tauri. Declared
-// in both `.planning/IPC-PORT-INVENTORY.md` and this slice's own
-// `34.2-PORTED-CHANNELS.md` (§7 gap-cycle-2 subsection, plan 34.2-16 Task 3)
-// so Phase 34.3 does not register `logError` a second time — a duplicate
-// listener would duplicate every frontend log line (`dispatchSend` iterates
-// ALL listeners for a channel). No ordering constraint relative to the other
-// calls above (own channel name, no cross-module runtime dependency at
-// registration time), placed alongside them, before `ensureStoresRegistered()`.
-registerLoggerFlows()
-// Phase 34.4 Plans 04+05 (REQ-34.4-07): the library/sync + key-state Humble
-// channels — no ordering constraint relative to the other calls above (own channel
-// names, no cross-module runtime dependency at registration time), placed
-// alongside them, before `ensureStoresRegistered()`. Every store this module
-// needs (all 9 Humble stores) is already registered by storeRegistration.ts
-// — zero new store plumbing.
-registerHumbleFlows()
-// Phase 34.4.1 Plan 02 (REQ-34.4.1-02/-03/-04/-05/-13): the browser-auth channels,
-// plus installing the rustInvoke-backed login-window seam (setLoginWindowSeam)
-// — no ordering constraint relative to the
-// other calls above (own channel names, no cross-module runtime dependency at
-// registration time), placed alongside them, before `ensureStoresRegistered()`.
-registerHumbleLoginFlows()
-// Phase 34.4.1 Plan 09 (REQ-34.4.1-08): the `oauthCaptureLogin` handle channel, which
-// drives the four OAuth runners' (legendary/gog/nile) redirect capture through the SAME
-// login-window seam Humble already installed above -- a completely separate concern from
-// Humble's own browser-auth channels (this captures a redirect code, it does not
-// authenticate). No ordering constraint relative to the other calls above (own channel name,
-// no cross-module runtime dependency at registration time), placed alongside them, before
-// `ensureStoresRegistered()`.
-registerOAuthLoginFlows()
-// Phase 34.5 Plan 04 (REQ-34.5-13): the four slice-34.5 clusters — runner auth/sign-out,
-// Wine tools, shortcuts, runner misc. Declared here as EMPTY seams by plan 34.5-04 and
-// filled in one module at a time by the cluster plans (34.5-05 through 34.5-12); all four
-// are populated now. No ordering constraint relative to the other calls above (own channel
-// names, no cross-module runtime dependency at registration time), placed alongside them,
-// before `ensureStoresRegistered()`.
-registerRunnerAuthFlows()
-registerWineToolsFlows()
-registerShortcutsFlows()
-registerRunnerMiscFlows()
-// Phase 34.6 Plan 08 (REQ-34.6-01): the EOS overlay channel cluster — no ordering constraint
-// relative to the other calls above.
-registerEosOverlayFlows()
-// Phase 40 Plan 05 (REQ-40-02/REQ-40-05): the in-app store-embed channels, plus installing the
-// rustInvoke-backed store-embed seam (setStoreEmbedSeam) — no ordering constraint relative to
-// the other calls above (own channel names, no cross-module runtime dependency at registration
-// time), placed alongside them, before `ensureStoresRegistered()`.
-registerStoreEmbedFlows()
-// Phase 73 Plan 11 (D-03, D-06): the shell-originated channels the Rust depot job uses for CDN
-// tokens, manifest request codes and progress events — no ordering constraint relative to the
-// other calls above (own channel names, backed by a Map in jobRegistry.ts), placed before
-// `ensureStoresRegistered()`.
-registerDepotHostFlows()
-ensureStoresRegistered()
-// D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
-// every store instance exists, or a legitimate write would be rejected as an unknown
-// store — hence AFTER ensureStoresRegistered(). These are `send`-kind (fire-and-forget)
-// registrations, so unlike an `invoke` channel there is no response frame and no promise
-// to reject, which is exactly why the missing registration was invisible before this phase.
-registerStoreWriteHandlers()
+  registerSteamFlows()
+  registerSteamAuthFlows()
+  registerEngineFlows()
+  registerInstallFlows()
+  registerSettingsFlows()
+  // D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the
+  // `EPIC_COOKIE_HOSTS` sweep can be exercised against ONE sibling apex without
+  // `LegendaryUser.logout()` destroying the operator's real Epic session. Self-gated —
+  // `registerDevEpicCookieSweepFlow()` no-ops in a packaged sidecar, so the channel does not
+  // exist in a shipped build. Not on the preload surface by design; see that module's docstring.
+  registerDevEpicCookieSweepFlow()
+  // WR-02: without this, plan 30-03's native picker chain was unreachable — `openDialog`
+  // is the only backend channel that reaches `dialog.showOpenDialog`, and its sole other
+  // caller (`main.ts`) is not in the sidecar's import graph.
+  registerDialogFlows()
+  // Phase 32 Plan 01: the queue-management channels — no ordering constraint
+  // relative to the other four calls above (each module owns its own channel
+  // names, no cross-module runtime
+  // dependency at registration time); placed alongside them, before
+  // `ensureStoresRegistered()` (32-PATTERNS.md).
+  registerDownloadQueueFlows({ log: deps.log })
+  // Phase 34.1 Plan 04: the app-shell channels — no ordering constraint
+  // relative to the other calls above (own channel names, no cross-module
+  // runtime dependency at registration time), placed alongside them, before
+  // `ensureStoresRegistered()`.
+  //
+  // Guarded (sidecar-init-rustinvoke-leak): only this top-level, import-time-triggered call
+  // suppresses the one-shot boot-time tray_set_icon correction under Jest -- a DIRECT call to
+  // registerAppShellFlows() (e.g. appShellFlows.test.ts's own REQ-34.1-07 coverage) is
+  // unaffected. See appShellFlowRegistration.ts's own docstring/inline comment for the full
+  // mechanism this fixes. `JEST_WORKER_ID` is Jest's own zero-config "am I running under
+  // Jest" signal (always set in a Jest worker, never set for the real Tauri sidecar process)
+  // -- under real Tauri this is unconditionally `false` and behavior is byte-identical to
+  // before.
+  registerAppShellFlows({
+    skipInitialTraySync: process.env.JEST_WORKER_ID !== undefined
+  })
+  // Phase 34.2 Plans 04+05: the game-details/settings/override channels — no
+  // ordering constraint relative to the other calls above (own
+  // channel names, no cross-module runtime dependency at registration time),
+  // placed alongside them, before `ensureStoresRegistered()`.
+  registerGameDetailsFlows()
+  // Phase 34.2 Plan 06: the enrichment channels — no ordering
+  // constraint relative to the other calls above (own channel names, no
+  // cross-module runtime dependency at registration time), placed alongside
+  // them, before `ensureStoresRegistered()`. `wiki_game_info/stores`
+  // is already registered by `storeRegistration.ts:104` (Phase 29), so this
+  // module needs no new store plumbing.
+  registerEnrichmentFlows()
+  // Phase 34.3 Plans 01+02 (REQ-34.3-01/-02/-13): the shell/link-opener and
+  // filesystem/diagnostics channels — no ordering constraint
+  // relative to the other calls above (own channel names, no cross-module
+  // runtime dependency at registration time), placed alongside them, before
+  // `ensureStoresRegistered()`.
+  registerShellFilesFlows()
+  // Phase 34.3 Plan 06 (REQ-34.3-03/-04/-13): the clipboard channels — the ONLY
+  // consumers of this slice's two new dispatch_rust_channel arms
+  // (clipboard_write_text/clipboard_read_text, Plan 03). No ordering constraint
+  // relative to the other calls above (own channel names, no cross-module runtime
+  // dependency at registration time), placed alongside them, before
+  // `ensureStoresRegistered()`.
+  registerClipboardFlows()
+  // Phase 34.2 gap cycle 2, plan 34.2-16 (REQ-34.2-12), extended by Phase 34.3
+  // plan 04: the logger channels. `logError` was ported early from its Phase
+  // 34.3/slice-6 slot because gap cycle 1's renderer repair-failure handler
+  // routes through it — an unregistered `send` channel is a total silent no-op
+  // under Tauri. Declared
+  // in both `.planning/IPC-PORT-INVENTORY.md` and this slice's own
+  // `34.2-PORTED-CHANNELS.md` (§7 gap-cycle-2 subsection, plan 34.2-16 Task 3)
+  // so Phase 34.3 does not register `logError` a second time — a duplicate
+  // listener would duplicate every frontend log line (`dispatchSend` iterates
+  // ALL listeners for a channel). No ordering constraint relative to the other
+  // calls above (own channel name, no cross-module runtime dependency at
+  // registration time), placed alongside them, before `ensureStoresRegistered()`.
+  registerLoggerFlows()
+  // Phase 34.4 Plans 04+05 (REQ-34.4-07): the library/sync + key-state Humble
+  // channels — no ordering constraint relative to the other calls above (own channel
+  // names, no cross-module runtime dependency at registration time), placed
+  // alongside them, before `ensureStoresRegistered()`. Every store this module
+  // needs (all 9 Humble stores) is already registered by storeRegistration.ts
+  // — zero new store plumbing.
+  registerHumbleFlows()
+  // Phase 34.4.1 Plan 02 (REQ-34.4.1-02/-03/-04/-05/-13): the browser-auth channels,
+  // plus installing the rustInvoke-backed login-window seam (setLoginWindowSeam)
+  // — no ordering constraint relative to the
+  // other calls above (own channel names, no cross-module runtime dependency at
+  // registration time), placed alongside them, before `ensureStoresRegistered()`.
+  registerHumbleLoginFlows()
+  // Phase 34.4.1 Plan 09 (REQ-34.4.1-08): the `oauthCaptureLogin` handle channel, which
+  // drives the four OAuth runners' (legendary/gog/nile) redirect capture through the SAME
+  // login-window seam Humble already installed above -- a completely separate concern from
+  // Humble's own browser-auth channels (this captures a redirect code, it does not
+  // authenticate). No ordering constraint relative to the other calls above (own channel name,
+  // no cross-module runtime dependency at registration time), placed alongside them, before
+  // `ensureStoresRegistered()`.
+  registerOAuthLoginFlows()
+  // Phase 34.5 Plan 04 (REQ-34.5-13): the four slice-34.5 clusters — runner auth/sign-out,
+  // Wine tools, shortcuts, runner misc. Declared here as EMPTY seams by plan 34.5-04 and
+  // filled in one module at a time by the cluster plans (34.5-05 through 34.5-12); all four
+  // are populated now. No ordering constraint relative to the other calls above (own channel
+  // names, no cross-module runtime dependency at registration time), placed alongside them,
+  // before `ensureStoresRegistered()`.
+  registerRunnerAuthFlows()
+  registerWineToolsFlows()
+  registerShortcutsFlows()
+  registerRunnerMiscFlows()
+  // Phase 34.6 Plan 08 (REQ-34.6-01): the EOS overlay channel cluster — no ordering constraint
+  // relative to the other calls above.
+  registerEosOverlayFlows()
+  // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): the in-app store-embed channels, plus installing the
+  // rustInvoke-backed store-embed seam (setStoreEmbedSeam) — no ordering constraint relative to
+  // the other calls above (own channel names, no cross-module runtime dependency at registration
+  // time), placed alongside them, before `ensureStoresRegistered()`.
+  registerStoreEmbedFlows()
+  // Phase 73 Plan 11 (D-03, D-06): the shell-originated channels the Rust depot job uses for CDN
+  // tokens, manifest request codes and progress events — no ordering constraint relative to the
+  // other calls above (own channel names, backed by a Map in jobRegistry.ts), placed before
+  // `ensureStoresRegistered()`.
+  registerDepotHostFlows()
+  ensureStoresRegistered()
+  // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
+  // every store instance exists, or a legitimate write would be rejected as an unknown
+  // store — hence AFTER ensureStoresRegistered(). These are `send`-kind (fire-and-forget)
+  // registrations, so unlike an `invoke` channel there is no response frame and no promise
+  // to reject, which is exactly why the missing registration was invisible before this phase.
+  registerStoreWriteHandlers()
+
+  // D-03: the eager payload is EXACTLY the declared boot set — not the
+  // unbounded lazy tier (T-29-16, index.tsx's hydration timeout). D-08: this
+  // generalizes the old per-store hand-strip that used to live here (T-27-09)
+  // — that defense-in-depth property is PRESERVED, and now enforced by
+  // `filterStoreSnapshot` for every store in the walk, not one field of one
+  // store (single-sourcing).
+  ipcMain.handle(STORE_SNAPSHOT_CHANNEL, async () => {
+    const snapshot: Record<string, unknown> = {}
+    for (const name of BOOT_SET_STORES) {
+      snapshot[name] = filterStoreSnapshot(name, resolveRawStore(name))
+    }
+    return snapshot
+  })
+
+  // D-03: lazy per-store hydrate for the tier that isn't part of the eager
+  // snapshot. Applies the IDENTICAL filter as the eager path above (T-29-14 —
+  // "enforced eagerly but forgotten in the lazy fetch" is exactly the gap
+  // this closes). Rides the existing `sidecar_invoke` Tauri command; this is
+  // an ordinary internal RPC channel, not a new Tauri command.
+  ipcMain.handle(
+    STORE_FETCH_CHANNEL,
+    async (_event: unknown, storeName: unknown) => {
+      if (typeof storeName !== 'string') {
+        process.stderr.write(
+          '[sidecar/handlers] sidecar:store-fetch rejected a non-string store name\n'
+        )
+        return {}
+      }
+
+      const isUniverseMember = STORE_UNIVERSE.includes(storeName)
+      const isSyntacticallyValidName = CACHE_STORE_NAME_PATTERN.test(storeName)
+
+      if (!isUniverseMember && !isSyntacticallyValidName) {
+        // T-29-13: rejected BEFORE any resolution attempt — this never
+        // reaches `getRegisteredStore()` or the cache-store construction
+        // branch, so `fileStore.ts`'s own path-tampering guard is never even
+        // exercised by a malicious name arriving here. The diagnostic below
+        // names the rejected string only — never a store value (T-29-18).
+        process.stderr.write(
+          `[sidecar/handlers] sidecar:store-fetch rejected an invalid store name: '${storeName}'\n`
+        )
+        return {}
+      }
+
+      return filterStoreSnapshot(storeName, resolveRawStore(storeName))
+    }
+  )
+}
 
 // ---- Store layer read path (Plan 04, D-02 / D-03 / D-08) -------------------
 
@@ -330,51 +387,3 @@ function resolveRawStore(name: string): Record<string, unknown> {
   )
   return {}
 }
-
-// D-03: the eager payload is EXACTLY the declared boot set — not the
-// unbounded lazy tier (T-29-16, index.tsx's hydration timeout). D-08: this
-// generalizes the old per-store hand-strip that used to live here (T-27-09)
-// — that defense-in-depth property is PRESERVED, and now enforced by
-// `filterStoreSnapshot` for every store in the walk, not one field of one
-// store (single-sourcing).
-ipcMain.handle(STORE_SNAPSHOT_CHANNEL, async () => {
-  const snapshot: Record<string, unknown> = {}
-  for (const name of BOOT_SET_STORES) {
-    snapshot[name] = filterStoreSnapshot(name, resolveRawStore(name))
-  }
-  return snapshot
-})
-
-// D-03: lazy per-store hydrate for the tier that isn't part of the eager
-// snapshot. Applies the IDENTICAL filter as the eager path above (T-29-14 —
-// "enforced eagerly but forgotten in the lazy fetch" is exactly the gap
-// this closes). Rides the existing `sidecar_invoke` Tauri command; this is
-// an ordinary internal RPC channel, not a new Tauri command.
-ipcMain.handle(
-  STORE_FETCH_CHANNEL,
-  async (_event: unknown, storeName: unknown) => {
-    if (typeof storeName !== 'string') {
-      process.stderr.write(
-        '[sidecar/handlers] sidecar:store-fetch rejected a non-string store name\n'
-      )
-      return {}
-    }
-
-    const isUniverseMember = STORE_UNIVERSE.includes(storeName)
-    const isSyntacticallyValidName = CACHE_STORE_NAME_PATTERN.test(storeName)
-
-    if (!isUniverseMember && !isSyntacticallyValidName) {
-      // T-29-13: rejected BEFORE any resolution attempt — this never
-      // reaches `getRegisteredStore()` or the cache-store construction
-      // branch, so `fileStore.ts`'s own path-tampering guard is never even
-      // exercised by a malicious name arriving here. The diagnostic below
-      // names the rejected string only — never a store value (T-29-18).
-      process.stderr.write(
-        `[sidecar/handlers] sidecar:store-fetch rejected an invalid store name: '${storeName}'\n`
-      )
-      return {}
-    }
-
-    return filterStoreSnapshot(storeName, resolveRawStore(storeName))
-  }
-)
