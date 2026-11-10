@@ -23,9 +23,10 @@ workaround is to quit from inside the game.
 A Windows PID lookup by executable path under the install folder, through the injected runner.
 Never kill by name (Phase 72 D-13). Leave the design open.
 
-## Status
+## Resolution (code fix, quick 261111-9p6, 2026-11-11)
 
-Code landed in quick 261111-9p6; awaiting the Windows live gate (frontmatter stays `ready: live-gate`).
+Code landed in quick 261111-9p6. Windows live gate PASSED 2026-11-11 (operator): launch, Playing, Stop
+closed the game, the card returned to Play, Steam kept running.
 
 Design as built:
 
