@@ -1,396 +1,279 @@
 /**
- * Source-text structural gates for the fix to debug/login-logout-wipes-library.
+ * Behavioural gates for the fix to debug/login-logout-wipes-library, rewritten
+ * from GlobalState.tsx / authState.ts source-text gates when `refresh()` moved
+ * into libraryState.ts (69-17).
  *
- * GlobalState.tsx cannot be imported directly under this project's
- * `node`-environment frontend jest project (see jest.config.js's docstring —
- * no jsdom/react-test-renderer installed, and the module reads
- * `window.localStorage` at MODULE SCOPE), so a bare `import` throws `window
- * is not defined` before a single test could run. This mirrors
- * `GlobalStateSteamLogout.test.ts` and `GlobalStateRefreshLibraryOrigin.test.ts`'s
- * own documented DOM-less constraint and follows the identical pattern: read
- * the real source, strip comments, and assert the exact method-body shape.
+ * What this proves, split into the items the fix's verification bar names:
  *
- * What this proves, split into the three items the fix's verification bar
- * names:
+ *   (a) None of the four logout actions (epicLogout/gogLogout/amazonLogout/
+ *       steamLogout) reload the window - the mechanism that unmounted the
+ *       ENTIRE React tree (wiping every OTHER platform's loaded games) when a
+ *       SINGLE platform logged out - and each clears only its own runner's
+ *       library.
  *
- *   (a) None of the four logout wrappers (epicLogout/gogLogout/amazonLogout/
- *       steamLogout) call `window.location.reload()` any more —
- *       the mechanism that unmounted the ENTIRE React tree (wiping every
- *       OTHER platform's already-loaded games) whenever a SINGLE platform
- *       logged out. Each wrapper's own scoped `setState` clearing only its
- *       own runner's `{ library: [], username: null }` is asserted to still
- *       be present (the correct behavior was never the bug — the reload
- *       bolted on top of it was).
+ *   (b) `refreshLibrary()`'s scoping of the two GLOBAL flags is class-owned
+ *       until 69-18 and is still gated as source text in
+ *       `GlobalStateRefreshLibraryOrigin.test.ts`.
  *
- *   (b) `refreshLibrary()` no longer sets the two GLOBAL `refreshing`/
- *       `refreshingInTheBackground` flags for a single-runner (scoped) call
- *       — only for a genuine all-runners call (no `library` argument, or
- *       `library: 'all'`). A scoped call writes its OWN `refreshingByRunner`
- *       entry instead, so Library/index.tsx's merged-grid gate (which reads
- *       only the two global flags) is never triggered by one platform's
- *       login finishing.
+ *   (c) `libraryState.refresh()` honours its `library` parameter all the way
+ *       through to its final write: a scoped call only ever writes that one
+ *       runner's array (and its own `refreshingByRunner` entry), never the
+ *       other runners' arrays or the two global flags.
  *
- *   (c) `.refresh()` honors its `library` parameter all the way through to
- *       its FINAL `setState` — a scoped call only ever writes that one
- *       runner's slice (and its own `refreshingByRunner` entry), never the
- *       other three runners' arrays or the two global flags.
- *
- * Self-tested against synthetic correct/regressed sources per this project's
- * own anti-vacuity requirement — a source-text gate without a self-test is a
- * vacuous gate (the exact lesson Phase 34.2's gap cycles paid for).
+ * Each contract is a violations function; the self-tests run it against
+ * regressed variants (a reload-ing logout, a scoped refresh that wipes
+ * everything) which the same assertions must convict (anti-vacuity).
  */
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import '../../testUtils/tauriWindow'
+import type { GameInfo, Runner } from 'common/types'
+import { resetAllStores } from '../storeKit'
+import useLibraryState from '../libraryState'
+import useAuthState from '../authState'
 
-// The logout actions moved from the class into authState (69-14).
-const globalStatePath = join(__dirname, '..', 'authState.ts')
-const classStatePath = join(__dirname, '..', 'GlobalState.tsx')
+const mirror: Record<string, unknown> = {}
+let reloads = 0
 
-/** Extracts the balanced-brace block body starting at the first `{` after `marker`. */
-function extractBlock(source: string, marker: string): string {
-  const markerIdx = source.indexOf(marker)
-  if (markerIdx === -1) {
-    throw new Error(`marker not found: ${marker}`)
+const game = (name: string, runner: GameInfo['runner']) =>
+  ({ app_name: name, runner, title: name }) as GameInfo
+
+beforeEach(() => {
+  for (const k of Object.keys(mirror)) delete mirror[k]
+  reloads = 0
+  ;(window as unknown as { api: unknown }).api = {
+    storeNew: () => undefined,
+    storeHas: (store: string, key: string) => `${store}:${key}` in mirror,
+    storeGet: (store: string, key: string, dflt?: unknown) => {
+      if (key.startsWith('__timestamp.')) return '2026-01-01T00:00:00Z'
+      return `${store}:${key}` in mirror ? mirror[`${store}:${key}`] : dflt
+    },
+    storeSet: () => undefined,
+    setSetting: () => undefined,
+    logInfo: () => undefined,
+    logError: () => undefined,
+    refreshLibrary: async () => undefined,
+    checkGameUpdates: async () => [],
+    logoutLegendary: async () => undefined,
+    logoutGOG: () => undefined,
+    logoutAmazon: async () => undefined,
+    logoutSteam: () => undefined,
+    // signed out on the first poll, so steamLogout confirms immediately
+    getSteamUserInfo: async () => undefined
   }
-  const braceStart = source.indexOf('{', markerIdx + marker.length - 1)
-  let depth = 0
-  let i = braceStart
-  for (; i < source.length; i++) {
-    if (source[i] === '{') depth++
-    else if (source[i] === '}') {
-      depth--
-      if (depth === 0) break
+  ;(window as unknown as { location: unknown }).location = {
+    reload: () => {
+      reloads += 1
     }
   }
-  return source.slice(braceStart, i + 1)
-}
-
-// ---------------------------------------------------------------------------
-// (a) Logout wrappers never reload the window; each still scopes its own
-//     runner's state clear.
-// ---------------------------------------------------------------------------
-
-function logoutBlockNeverReloadsWindow(block: string): boolean {
-  return !/window\.location\.reload\s*\(/.test(block)
-}
-
-function logoutClearsOwnRunnerState(block: string, runnerKey: string): boolean {
-  const slotRunner: Record<string, string> = {
-    epic: 'legendary',
-    gog: 'gog',
-    amazon: 'nile',
-    steam: 'steam'
+  ;(window as unknown as { localStorage: unknown }).localStorage = {
+    getItem: () => null,
+    setItem: () => undefined
   }
-  const pattern = new RegExp(
-    `${runnerKey}:\\s*{\\s*library:\\s*\\[\\]|resetRunnerLibrary\\('${slotRunner[runnerKey] ?? runnerKey}'\\)`,
-    'm'
-  )
-  return pattern.test(block)
+  useLibraryState.setState({ gameOverrides: {} })
+})
+
+afterEach(() => {
+  resetAllStores()
+})
+
+// ---------------------------------------------------------------------------
+// (a) Logouts never reload the window; each clears only its own runner.
+// ---------------------------------------------------------------------------
+
+type LogoutKey = 'epic' | 'gog' | 'amazon' | 'steam'
+type LogoutRunner = Record<LogoutKey, [Runner, keyof LibraryArrays]>
+type LibraryArrays = {
+  epicLibrary: GameInfo[]
+  gogLibrary: GameInfo[]
+  amazonLibrary: GameInfo[]
+  steamLibrary: GameInfo[]
 }
 
-describe('GlobalState.tsx logout wrappers — never reload the window (debug/login-logout-wipes-library item a)', () => {
-  const rawSource = readFileSync(globalStatePath, 'utf-8')
-  const stripped = stripSourceComments(rawSource)
+const OWN: LogoutRunner = {
+  epic: ['legendary', 'epicLibrary'],
+  gog: ['gog', 'gogLibrary'],
+  amazon: ['nile', 'amazonLibrary'],
+  steam: ['steam', 'steamLibrary']
+}
 
+const seedAll = () =>
+  useLibraryState.setState({
+    epicLibrary: [game('e', 'legendary')],
+    gogLibrary: [game('g', 'gog')],
+    amazonLibrary: [game('a', 'nile')],
+    steamLibrary: [game('s', 'steam')]
+  })
+
+async function logoutViolations(
+  key: LogoutKey,
+  logout: () => Promise<void>
+): Promise<string[]> {
+  const violations: string[] = []
+  seedAll()
+  await logout()
+  if (reloads > 0) violations.push('reloaded the window')
+  const own = OWN[key][1]
+  const state = useLibraryState.getState()
+  if (state[own].length !== 0) violations.push('did not clear own library')
+  for (const [other, [, arrayKey]] of Object.entries(OWN)) {
+    if (other !== key && state[arrayKey].length !== 1) {
+      violations.push(`wiped the ${other} library`)
+    }
+  }
+  return violations
+}
+
+describe('logout actions - never reload the window (debug/login-logout-wipes-library item a)', () => {
   it.each([
-    ['epicLogout: async () => ', 'epic'],
-    ['gogLogout: async () => ', 'gog'],
-    ['amazonLogout: async () => ', 'amazon'],
-    ['steamLogout: async () => ', 'steam']
-  ])(
-    '%s never calls window.location.reload() and still clears its own (%s) state',
-    (marker: string, runnerKey: string) => {
-      const block = extractBlock(stripped, marker)
-      expect(logoutBlockNeverReloadsWindow(block)).toBe(true)
-      expect(logoutClearsOwnRunnerState(block, runnerKey)).toBe(true)
+    ['epic', () => useAuthState.getState().epicLogout()],
+    ['gog', () => useAuthState.getState().gogLogout()],
+    ['amazon', () => useAuthState.getState().amazonLogout()],
+    ['steam', () => useAuthState.getState().steamLogout()]
+  ] as [LogoutKey, () => Promise<void>][])(
+    '%sLogout never reloads and clears only its own runner library',
+    async (key, logout) => {
+      await expect(logoutViolations(key, logout)).resolves.toEqual([])
     }
   )
 
-  it('self-test: the gate REJECTS a shape that reintroduces window.location.reload() (the hand RED-proof mutation)', () => {
-    const regressedShape = [
-      'epicLogout = async () => {',
-      '  this.setState({ refreshing: true })',
-      '  await window.api.logoutLegendary().finally(() => {',
-      '    this.setState({',
-      '      epic: {',
-      '        library: [],',
-      '        username: null',
-      '      }',
-      '    })',
-      '  })',
-      '  this.setState({ refreshing: false })',
-      '  window.location.reload()',
-      '}'
-    ].join('\n')
-
-    expect(logoutBlockNeverReloadsWindow(regressedShape)).toBe(false)
+  it('self-test: the gate CONVICTS a logout that reintroduces window.location.reload() (the hand RED-proof mutation)', async () => {
+    const reloading = async () => {
+      useLibraryState.getState().resetRunnerLibrary('gog')
+      window.location.reload()
+    }
+    await expect(logoutViolations('gog', reloading)).resolves.toEqual([
+      'reloaded the window'
+    ])
   })
 
-  it('self-test: the gate ACCEPTS the exact shape the fix produces (positive control)', () => {
-    const correctShape = [
-      'gogLogout = async () => {',
-      '  window.api.logoutGOG()',
-      '  this.setState({',
-      '    gog: {',
-      '      library: [],',
-      '      username: null',
-      '    }',
-      '  })',
-      '}'
-    ].join('\n')
-
-    expect(logoutBlockNeverReloadsWindow(correctShape)).toBe(true)
-    expect(logoutClearsOwnRunnerState(correctShape, 'gog')).toBe(true)
+  it('self-test: the gate CONVICTS a logout that wipes every runner (not just its own)', async () => {
+    const wipesAll = async () => {
+      for (const [runner] of Object.values(OWN)) {
+        useLibraryState.getState().resetRunnerLibrary(runner)
+      }
+    }
+    const violations = await logoutViolations('gog', wipesAll)
+    expect(violations).toEqual([
+      'wiped the epic library',
+      'wiped the amazon library',
+      'wiped the steam library'
+    ])
   })
 
-  it('self-test: logoutClearsOwnRunnerState REJECTS a shape whose scoped clear was also (incorrectly) dropped', () => {
-    const noClearShape = [
-      'gogLogout = async () => {',
-      '  window.api.logoutGOG()',
-      '  console.log("Logging out from gog")',
-      '}'
-    ].join('\n')
-
-    expect(logoutClearsOwnRunnerState(noClearShape, 'gog')).toBe(false)
+  it('self-test: the gate CONVICTS a logout whose scoped clear was dropped', async () => {
+    const noClear = async () => undefined
+    await expect(logoutViolations('gog', noClear)).resolves.toEqual([
+      'did not clear own library'
+    ])
   })
 })
 
 // ---------------------------------------------------------------------------
-// (b) refreshLibrary() only sets the GLOBAL refreshing flags for an
-//     unscoped ('all') call; a scoped call writes refreshingByRunner instead.
+// (c) refresh() honours its `library` parameter through to the final write.
 // ---------------------------------------------------------------------------
 
-function refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(
-  block: string
-): boolean {
-  const derivesScopedRunner =
-    /const\s+scopedRunner\s*=\s*library\s*&&\s*library\s*!==\s*'all'\s*\?\s*library\s*:\s*undefined/.test(
-      block
-    )
+type ScopedRefresh = (runner: Runner) => Promise<void>
 
-  const globalFlagIdx = block.indexOf('refreshing: true,')
-  if (globalFlagIdx === -1) return false
-  const windowBefore = block.slice(
-    Math.max(0, globalFlagIdx - 300),
-    globalFlagIdx
-  )
-  const globalFlagGuardedByElse =
-    /if\s*\(scopedRunner\)\s*{/.test(windowBefore) &&
-    /}\s*else\s*{/.test(windowBefore)
+/** The contract; returns the list of violated rules (empty = conforming). */
+async function scopedRefreshViolations(
+  refresh: ScopedRefresh
+): Promise<string[]> {
+  const violations: string[] = []
+  mirror['gog_library:games'] = [game('g', 'gog')]
+  mirror['legendary_library:library'] = [game('e', 'legendary')]
+  mirror['nile_library:library'] = [game('a', 'nile')]
+  const keepEpic = [game('keep-e', 'legendary')]
+  const keepAmazon = [game('keep-a', 'nile')]
+  useLibraryState.setState({
+    epicLibrary: keepEpic,
+    amazonLibrary: keepAmazon,
+    gogLibrary: [],
+    refreshing: true,
+    refreshingInTheBackground: false,
+    refreshingByRunner: { gog: true, nile: true }
+  })
 
-  const writesByRunnerTrueWhenScoped =
-    /if\s*\(scopedRunner\)\s*{\s*this\.setState\(\s*\(prevState:\s*StateProps\)\s*=>\s*\(\{\s*refreshingByRunner:\s*{\s*\.\.\.prevState\.refreshingByRunner,\s*\[scopedRunner\]:\s*true\s*}\s*\}\)\s*\)/.test(
-      block
-    )
+  await refresh('gog')
 
-  return (
-    derivesScopedRunner &&
-    globalFlagGuardedByElse &&
-    writesByRunnerTrueWhenScoped
-  )
+  const s = useLibraryState.getState()
+  if (s.gogLibrary.map((g) => g.app_name).join() !== 'g') {
+    violations.push('did not write the scoped runner array')
+  }
+  if (s.epicLibrary !== keepEpic) violations.push('touched the epic array')
+  if (s.amazonLibrary !== keepAmazon)
+    violations.push('touched the amazon array')
+  if (s.refreshing !== true || s.refreshingInTheBackground !== false) {
+    violations.push('touched the global refreshing flags')
+  }
+  if (s.refreshingByRunner.gog !== false) {
+    violations.push('did not clear its own refreshingByRunner entry')
+  }
+  if (s.refreshingByRunner.nile !== true) {
+    violations.push("clobbered another runner's refreshingByRunner entry")
+  }
+  return violations
 }
 
-describe('GlobalState.tsx refreshLibrary — scopes the global refreshing flags to unscoped calls only (debug/login-logout-wipes-library item b)', () => {
-  const rawSource = readFileSync(classStatePath, 'utf-8')
-  const stripped = stripSourceComments(rawSource)
-
-  it('the real source only sets refreshing/refreshingInTheBackground globally when there is no scoped runner', () => {
-    const block = extractBlock(
-      stripped,
-      '}: RefreshLibraryOptions): Promise<void> => '
-    )
-    expect(refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(block)).toBe(true)
+describe('libraryState.refresh() - a scoped library arg only overwrites that runner (debug/login-logout-wipes-library item c)', () => {
+  it('a scoped refresh writes only its own runner array and refreshingByRunner entry', async () => {
+    await expect(
+      scopedRefreshViolations((runner) =>
+        useLibraryState.getState().refresh(runner)
+      )
+    ).resolves.toEqual([])
   })
 
-  it('self-test: the gate ACCEPTS the exact shape the fix produces (positive control)', () => {
-    const correctShape = [
-      '{',
-      '  if (this.state.refreshing) return',
-      "  const runnerScope = library ?? 'all'",
-      "  const scopedRunner = library && library !== 'all' ? library : undefined",
-      '  if (scopedRunner && this.state.refreshingByRunner[scopedRunner]) return',
-      '',
-      '  if (scopedRunner) {',
-      '    this.setState((prevState: StateProps) => ({',
-      '      refreshingByRunner: {',
-      '        ...prevState.refreshingByRunner,',
-      '        [scopedRunner]: true',
-      '      }',
-      '    }))',
-      '  } else {',
-      '    this.setState({',
-      '      refreshing: true,',
-      '      refreshingInTheBackground: runInBackground',
-      '    })',
-      '  }',
-      '}'
-    ].join('\n')
-
-    expect(
-      refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(correctShape)
-    ).toBe(true)
+  it('an unscoped refresh does write every array and the two global flags (positive control)', async () => {
+    mirror['gog_library:games'] = [game('g', 'gog')]
+    mirror['legendary_library:library'] = [game('e', 'legendary')]
+    mirror['nile_library:library'] = [game('a', 'nile')]
+    useLibraryState.setState({
+      refreshing: true,
+      refreshingInTheBackground: false
+    })
+    await useLibraryState.getState().refresh('all')
+    const s = useLibraryState.getState()
+    expect(s.epicLibrary).toHaveLength(1)
+    expect(s.gogLibrary).toHaveLength(1)
+    expect(s.amazonLibrary).toHaveLength(1)
+    expect(s.refreshing).toBe(false)
+    expect(s.refreshingInTheBackground).toBe(true)
   })
 
-  it('self-test: the gate REJECTS the pre-fix shape that set the global flags unconditionally for every call, scoped or not', () => {
-    const preFixShape = [
-      '{',
-      '  if (this.state.refreshing) return',
-      '',
-      '  this.setState({',
-      '    refreshing: true,',
-      '    refreshingInTheBackground: runInBackground',
-      '  })',
-      "  const runnerScope = library ?? 'all'",
-      '}'
-    ].join('\n')
-
-    expect(refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(preFixShape)).toBe(
-      false
+  it('self-test: the gate CONVICTS the pre-fix shape that always overwrote every array and the global flags', async () => {
+    const preFix: ScopedRefresh = async () => {
+      useLibraryState.setState({
+        epicLibrary: [],
+        gogLibrary: [game('g', 'gog')],
+        amazonLibrary: [],
+        refreshing: false,
+        refreshingInTheBackground: true
+      })
+    }
+    const violations = await scopedRefreshViolations(preFix)
+    expect(violations).toEqual(
+      expect.arrayContaining([
+        'touched the epic array',
+        'touched the amazon array',
+        'touched the global refreshing flags',
+        'did not clear its own refreshingByRunner entry'
+      ])
     )
   })
 
-  it('self-test: the gate REJECTS a shape that derives scopedRunner but never actually branches on it before setting the global flags', () => {
-    const unguardedShape = [
-      '{',
-      '  if (this.state.refreshing) return',
-      "  const scopedRunner = library && library !== 'all' ? library : undefined",
-      '  this.setState({',
-      '    refreshing: true,',
-      '    refreshingInTheBackground: runInBackground',
-      '  })',
-      '}'
-    ].join('\n')
-
-    expect(
-      refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(unguardedShape)
-    ).toBe(false)
-  })
-})
-
-// ---------------------------------------------------------------------------
-// (c) .refresh() honors its `library` parameter through to the FINAL
-//     setState — a scoped call only overwrites that one runner's slice.
-// ---------------------------------------------------------------------------
-
-function refreshScopesFetchAndFinalSetStatePerRunner(block: string): boolean {
-  const derivesIncludes =
-    /const\s+includesEpic\s*=\s*!scopedRunner\s*\|\|\s*isStore\(scopedRunner,\s*'legendary'\)/.test(
-      block
-    ) &&
-    /const\s+includesGog\s*=\s*!scopedRunner\s*\|\|\s*isStore\(scopedRunner,\s*'gog'\)/.test(
-      block
-    ) &&
-    /const\s+includesAmazon\s*=\s*!scopedRunner\s*\|\|\s*isStore\(scopedRunner,\s*'nile'\)/.test(
-      block
-    )
-
-  const finalWritesGuarded =
-    /if\s*\(includesEpic\)\s*{\s*next\.epic\s*=/.test(block) &&
-    /if\s*\(includesGog\)\s*{\s*next\.gog\s*=/.test(block) &&
-    /if\s*\(includesAmazon\)\s*{\s*next\.amazon\s*=/.test(block)
-
-  const finalFlagIdx = block.indexOf('next.refreshing = false')
-  if (finalFlagIdx === -1) return false
-  const before = block.slice(Math.max(0, finalFlagIdx - 150), finalFlagIdx)
-  const finalFlagGuardedByNoScope = /if\s*\(!scopedRunner\)\s*{/.test(before)
-
-  const scopedFinalWrite =
-    /next\.refreshingByRunner\s*=\s*{\s*\.\.\.prevState\.refreshingByRunner,\s*\[scopedRunner\]:\s*false\s*}/.test(
-      block
-    )
-
-  return (
-    derivesIncludes &&
-    finalWritesGuarded &&
-    finalFlagGuardedByNoScope &&
-    scopedFinalWrite
-  )
-}
-
-describe('GlobalState.tsx refresh() — a scoped library arg only overwrites that runner slice (debug/login-logout-wipes-library item c)', () => {
-  const rawSource = readFileSync(classStatePath, 'utf-8')
-  const stripped = stripSourceComments(rawSource)
-
-  it('the real source gates every fetch AND the final setState per includesX, including the global-flag write', () => {
-    const block = extractBlock(stripped, 'refresh = async (')
-    expect(refreshScopesFetchAndFinalSetStatePerRunner(block)).toBe(true)
-  })
-
-  it('self-test: the gate ACCEPTS the exact shape the fix produces (positive control)', () => {
-    const correctShape = [
-      '{',
-      "  const scopedRunner = library && library !== 'all' ? library : undefined",
-      "  const includesEpic = !scopedRunner || isStore(scopedRunner, 'legendary')",
-      "  const includesGog = !scopedRunner || isStore(scopedRunner, 'gog')",
-      "  const includesAmazon = !scopedRunner || isStore(scopedRunner, 'nile')",
-      '',
-      '  this.setState((prevState: StateProps) => {',
-      '    const next: Partial<StateProps> = {}',
-      '    if (includesEpic) {',
-      '      next.epic = { library: epicLibrary, username: epic.username }',
-      '    }',
-      '    if (includesGog) {',
-      '      next.gog = { library: gogLibrary, username: gog.username }',
-      '    }',
-      '    if (includesAmazon) {',
-      '      next.amazon = { library: amazonLibrary, user_id: amazon.user_id, username: amazon.username }',
-      '    }',
-      '    if (!scopedRunner) {',
-      '      next.refreshing = false',
-      '      next.refreshingInTheBackground = true',
-      '    } else {',
-      '      next.refreshingByRunner = {',
-      '        ...prevState.refreshingByRunner,',
-      '        [scopedRunner]: false',
-      '      }',
-      '    }',
-      '    return next',
-      '  })',
-      '}'
-    ].join('\n')
-
-    expect(refreshScopesFetchAndFinalSetStatePerRunner(correctShape)).toBe(true)
-  })
-
-  it('self-test: the gate REJECTS the pre-fix shape that always overwrote all three slices and the global flags unconditionally', () => {
-    const preFixShape = [
-      '{',
-      '  this.setState({',
-      '    epic: { library: epicLibrary, username: epic.username },',
-      '    gog: { library: gogLibrary, username: gog.username },',
-      '    amazon: { library: amazonLibrary, user_id: amazon.user_id, username: amazon.username },',
-      '    refreshing: false,',
-      '    refreshingInTheBackground: true',
-      '  })',
-      '}'
-    ].join('\n')
-
-    expect(refreshScopesFetchAndFinalSetStatePerRunner(preFixShape)).toBe(false)
-  })
-
-  it('self-test: the gate REJECTS a shape that scopes the fetch branches but leaves the final setState unconditional (specialist-flagged no-op regression)', () => {
-    const fetchOnlyScopedShape = [
-      '{',
-      "  const scopedRunner = library && library !== 'all' ? library : undefined",
-      "  const includesEpic = !scopedRunner || isStore(scopedRunner, 'legendary')",
-      "  const includesGog = !scopedRunner || isStore(scopedRunner, 'gog')",
-      "  const includesAmazon = !scopedRunner || isStore(scopedRunner, 'nile')",
-      "  if (includesEpic) { epicLibrary = libraryStore.get('library', []) }",
-      '  if (includesGog) { gogLibrary = this.loadGOGLibrary(overrides) }',
-      "  if (includesAmazon) { amazonLibrary = nileLibraryStore.get('library', []) }",
-      '  this.setState({',
-      '    epic: { library: epicLibrary, username: epic.username },',
-      '    gog: { library: gogLibrary, username: gog.username },',
-      '    amazon: { library: amazonLibrary, user_id: amazon.user_id, username: amazon.username },',
-      '    refreshing: false,',
-      '    refreshingInTheBackground: true',
-      '  })',
-      '}'
-    ].join('\n')
-
-    expect(
-      refreshScopesFetchAndFinalSetStatePerRunner(fetchOnlyScopedShape)
-    ).toBe(false)
+  it('self-test: the gate CONVICTS a shape that scopes the fetch but leaves the final write unconditional (specialist-flagged no-op regression)', async () => {
+    const fetchOnlyScoped: ScopedRefresh = async () => {
+      useLibraryState.setState({
+        gogLibrary: [game('g', 'gog')],
+        epicLibrary: [game('other', 'legendary')],
+        refreshing: false,
+        refreshingInTheBackground: true,
+        refreshingByRunner: { gog: false, nile: true }
+      })
+    }
+    const violations = await scopedRefreshViolations(fetchOnlyScoped)
+    expect(violations).toEqual([
+      'touched the epic array',
+      'touched the global refreshing flags'
+    ])
   })
 })

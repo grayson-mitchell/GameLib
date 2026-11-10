@@ -503,3 +503,117 @@ describe('GlobalState.tsx refreshLibrary — nine EXTERNAL call sites thread a u
     })
   })
 })
+
+// ---------------------------------------------------------------------------
+// (b) refreshLibrary() (moved here from GlobalStateScopedRefresh.test.ts in
+//     69-17: it is class-owned until 69-18, and that file is now behavioural)
+//     refreshLibrary() only sets the GLOBAL refreshing flags for an
+//     unscoped ('all') call; a scoped call writes refreshingByRunner instead.
+// ---------------------------------------------------------------------------
+
+function refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(
+  block: string
+): boolean {
+  const derivesScopedRunner =
+    /const\s+scopedRunner\s*=\s*library\s*&&\s*library\s*!==\s*'all'\s*\?\s*library\s*:\s*undefined/.test(
+      block
+    )
+
+  const globalFlagIdx = block.indexOf('refreshing: true,')
+  if (globalFlagIdx === -1) return false
+  const windowBefore = block.slice(
+    Math.max(0, globalFlagIdx - 300),
+    globalFlagIdx
+  )
+  const globalFlagGuardedByElse =
+    /if\s*\(scopedRunner\)\s*{/.test(windowBefore) &&
+    /}\s*else\s*{/.test(windowBefore)
+
+  const writesByRunnerTrueWhenScoped =
+    /if\s*\(scopedRunner\)\s*{\s*useLibraryState\.setState\(\s*\(prevState\)\s*=>\s*\(\{\s*refreshingByRunner:\s*{\s*\.\.\.prevState\.refreshingByRunner,\s*\[scopedRunner\]:\s*true\s*}\s*\}\)\s*\)/.test(
+      block
+    )
+
+  return (
+    derivesScopedRunner &&
+    globalFlagGuardedByElse &&
+    writesByRunnerTrueWhenScoped
+  )
+}
+
+describe('GlobalState.tsx refreshLibrary — scopes the global refreshing flags to unscoped calls only (debug/login-logout-wipes-library item b)', () => {
+  const rawSource = readFileSync(globalStatePath, 'utf-8')
+  const stripped = stripSourceComments(rawSource)
+
+  it('the real source only sets refreshing/refreshingInTheBackground globally when there is no scoped runner', () => {
+    const block = extractBlock(
+      stripped,
+      '}: RefreshLibraryOptions): Promise<void> => '
+    )
+    expect(refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(block)).toBe(true)
+  })
+
+  it('self-test: the gate ACCEPTS the exact shape the fix produces (positive control)', () => {
+    const correctShape = [
+      '{',
+      '  if (libraryAtStart.refreshing) return',
+      "  const runnerScope = library ?? 'all'",
+      "  const scopedRunner = library && library !== 'all' ? library : undefined",
+      '  if (scopedRunner && libraryAtStart.refreshingByRunner[scopedRunner]) return',
+      '',
+      '  if (scopedRunner) {',
+      '    useLibraryState.setState((prevState) => ({',
+      '      refreshingByRunner: {',
+      '        ...prevState.refreshingByRunner,',
+      '        [scopedRunner]: true',
+      '      }',
+      '    }))',
+      '  } else {',
+      '    useLibraryState.setState({',
+      '      refreshing: true,',
+      '      refreshingInTheBackground: runInBackground',
+      '    })',
+      '  }',
+      '}'
+    ].join('\n')
+
+    expect(
+      refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(correctShape)
+    ).toBe(true)
+  })
+
+  it('self-test: the gate REJECTS the pre-fix shape that set the global flags unconditionally for every call, scoped or not', () => {
+    const preFixShape = [
+      '{',
+      '  if (libraryAtStart.refreshing) return',
+      '',
+      '  useLibraryState.setState({',
+      '    refreshing: true,',
+      '    refreshingInTheBackground: runInBackground',
+      '  })',
+      "  const runnerScope = library ?? 'all'",
+      '}'
+    ].join('\n')
+
+    expect(refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(preFixShape)).toBe(
+      false
+    )
+  })
+
+  it('self-test: the gate REJECTS a shape that derives scopedRunner but never actually branches on it before setting the global flags', () => {
+    const unguardedShape = [
+      '{',
+      '  if (libraryAtStart.refreshing) return',
+      "  const scopedRunner = library && library !== 'all' ? library : undefined",
+      '  useLibraryState.setState({',
+      '    refreshing: true,',
+      '    refreshingInTheBackground: runInBackground',
+      '  })',
+      '}'
+    ].join('\n')
+
+    expect(
+      refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(unguardedShape)
+    ).toBe(false)
+  })
+})

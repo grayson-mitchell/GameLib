@@ -1,145 +1,130 @@
 /**
- * Source-text structural gate for `GlobalState.refresh()`'s four cache guards.
+ * Behavioural gate for `refresh()`'s cache guards (moved from the GlobalState
+ * class into libraryState.ts in 69-17; formerly a source-text gate).
  *
  * WHAT IT PINS
  *
- * Each of the four runner blocks in `refresh()` asks "is the CACHE empty, and must I
- * therefore fetch the library?". All four used to ALSO test `!<runner>.library.length` —
- * the length of REACT STATE — and refetch when that was empty even though the cache was
- * full.
+ * Each runner block in `refresh()` asks "is the CACHE empty, and must I
+ * therefore fetch the library?". All of them used to ALSO test the length of
+ * the in-memory array and refetch when that was empty even though the cache
+ * was full. A fresh login empties the array before triggering the refresh, so
+ * the guard then went to the network for data the cache already held.
+ * Measured on the live GOG login: a full second library fetch, ~10 seconds
+ * (debug/resolved/gog-login-ui-never-updates.md).
  *
- * React state is only written by the `setState` at the END of `refresh()`, so on any path
- * that deliberately empties it (a fresh login sets `{library: [], username}` before
- * triggering the refresh) it is guaranteed empty at the guard while the cache is already
- * correct. The guard then went to the network for data the next line already held.
- * Measured cost on the live GOG login: a full second library fetch, 01:40:14 -> 01:40:24,
- * ~10 seconds (debug/resolved/gog-login-ui-never-updates.md).
+ * Behaviour asserted: refresh never calls `window.api.refreshLibrary(runner)`
+ * for a runner whose cache is non-empty - even when the in-memory array is
+ * empty - and does call it for a runner whose cache is empty.
  *
- * All three call sites were fixed together. Only GOG had a reported symptom; epic and
- * amazon are the same defect and fixing one would have left two latent — this project's
- * own "count the instances before scoping the fix" lesson from Phase 34.2's gap cycles.
- *
- * WHY A SOURCE-TEXT GATE
- *
- * `GlobalState.tsx` cannot be imported under this project's `node`-environment frontend
- * jest project (no jsdom): it reads `window.localStorage` at MODULE SCOPE, so a bare
- * `import` throws `window is not defined` before any test could run. Same documented
- * constraint and same approach as `GlobalStateRefreshLibraryOrigin.test.ts` and
- * `GlobalStateSteamLogout.test.ts`: read the real source, strip comments (so this fix's own
- * explanatory prose cannot satisfy a naive match), assert the shape.
- *
- * What it does NOT prove: the runtime behaviour of a real refresh. That needs a live
- * session — the observable is the absence of a second `Getting GOG library` round trip
- * between a login's `refreshLibrary complete` and the library rendering.
- *
- * Self-tested against synthetic regressed sources per this project's anti-vacuity
- * requirement — a source-text gate without a self-test is a vacuous gate.
+ * Self-tested: a variant of the guard that re-adds the in-memory-length clause
+ * is CONVICTED by the same assertions (anti-vacuity).
  */
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import '../../testUtils/tauriWindow'
+import type { GameInfo } from 'common/types'
+import { resetAllStores } from '../storeKit'
+import useLibraryState from '../libraryState'
+import useAuthState from '../authState'
 
-const globalStatePath = join(__dirname, '..', 'GlobalState.tsx')
+const mirror: Record<string, unknown> = {}
+let fetched: string[] = []
 
-/** Extracts the balanced-brace body of the `refresh = async (...)` method. */
-function extractRefreshBody(source: string): string {
-  const marker = 'refresh = async ('
-  const markerIdx = source.indexOf(marker)
-  if (markerIdx === -1) throw new Error('refresh method not found')
+const game = (name: string, runner: GameInfo['runner']) =>
+  ({ app_name: name, runner, title: name }) as GameInfo
 
-  // Skip past the parameter list to the body's opening brace.
-  const arrowIdx = source.indexOf('=> {', markerIdx)
-  if (arrowIdx === -1) throw new Error('refresh body not found')
-
-  let depth = 0
-  for (let i = source.indexOf('{', arrowIdx); i < source.length; i++) {
-    if (source[i] === '{') depth++
-    else if (source[i] === '}') {
-      depth--
-      if (depth === 0) return source.slice(arrowIdx, i + 1)
-    }
+beforeEach(() => {
+  for (const k of Object.keys(mirror)) delete mirror[k]
+  fetched = []
+  ;(window as unknown as { api: unknown }).api = {
+    storeNew: () => undefined,
+    storeHas: (store: string, key: string) => `${store}:${key}` in mirror,
+    storeGet: (store: string, key: string, dflt?: unknown) => {
+      if (key.startsWith('__timestamp.')) return '2026-01-01T00:00:00Z'
+      return `${store}:${key}` in mirror ? mirror[`${store}:${key}`] : dflt
+    },
+    storeSet: () => undefined,
+    logInfo: () => undefined,
+    logError: () => undefined,
+    refreshLibrary: async (runner: string) => {
+      fetched.push(runner)
+    },
+    checkGameUpdates: async () => []
   }
-  throw new Error('unbalanced braces in refresh body')
+  useLibraryState.setState({ gameOverrides: {} })
+  useAuthState.setState({
+    epicUsername: null,
+    gogUsername: 'g',
+    amazonUserId: 'a'
+  })
+})
+
+afterEach(() => {
+  resetAllStores()
+})
+
+type Refresh = () => Promise<void>
+
+/** The contract; returns the list of violated rules (empty = conforming). */
+async function cacheGuardViolations(refresh: Refresh): Promise<string[]> {
+  const violations: string[] = []
+
+  // Non-empty caches with EMPTY in-memory arrays (the post-login shape).
+  mirror['gog_library:games'] = [game('g', 'gog')]
+  mirror['nile_library:library'] = [game('a', 'nile')]
+  useLibraryState.setState({ gogLibrary: [], amazonLibrary: [] })
+  await refresh()
+  if (fetched.length) {
+    violations.push(`fetched ${fetched.join(',')} despite a full cache`)
+  }
+
+  // Empty caches are still fetched: the guard is not simply deleted.
+  fetched = []
+  delete mirror['gog_library:games']
+  delete mirror['nile_library:library']
+  await refresh()
+  if (fetched.join() !== 'gog,nile') {
+    violations.push(`did not fetch empty caches (fetched: ${fetched.join()})`)
+  }
+  return violations
 }
 
-/**
- * The regression this gate exists to catch: a cache guard that also consults React state's
- * library length. Matches `|| !epic.library.length`, `||!gog.library.length`, and the
- * reversed `!amazon.library.length ||` form.
- */
-const STATE_LENGTH_IN_GUARD =
-  /(\|\|\s*!\s*\w+\.library\.length)|(!\s*\w+\.library\.length\s*\|\|)/
-
-describe('GlobalState.refresh() cache guards', () => {
-  const source = stripSourceComments(readFileSync(globalStatePath, 'utf-8'))
-  const refreshBody = extractRefreshBody(source)
-
-  it('guards on the CACHE only — no guard consults React state length', () => {
-    expect(refreshBody).not.toMatch(STATE_LENGTH_IN_GUARD)
-  })
-
-  it.each([
-    ['epic', 'auth.epicUsername && !epicLibrary.length'],
-    ['gog', 'auth.gogUsername && !gogLibrary.length'],
-    ['amazon', 'auth.amazonUserId && !amazonLibrary.length']
-  ])(
-    'the %s guard tests exactly the cache-backed variable',
-    (_runner, expected) => {
-      expect(refreshBody).toContain(expected)
-    }
-  )
-
-  it('still refetches when the cache IS empty — the guard is not simply deleted', () => {
-    // The three fetch calls must survive. A "fix" that removed the guards entirely would
-    // pass the assertions above while breaking first-login population outright.
-    expect(refreshBody).toContain('getLegendaryConfig()')
-    expect(refreshBody).toContain("window.api.refreshLibrary('gog')")
-    expect(refreshBody).toContain("window.api.refreshLibrary('nile')")
+describe('libraryState.refresh() cache guards', () => {
+  it('guards on the CACHE only and still refetches when the cache IS empty', async () => {
+    await expect(
+      cacheGuardViolations(() => useLibraryState.getState().refresh())
+    ).resolves.toEqual([])
   })
 
   describe('self-test (anti-vacuity)', () => {
-    it('detects a regressed guard that re-adds the React-state clause', () => {
-      const regressed =
-        'if (gog.username && (!gogLibrary.length || !gog.library.length)) {'
-      expect(regressed).toMatch(STATE_LENGTH_IN_GUARD)
+    it('convicts a guard that re-adds the in-memory-length clause', async () => {
+      // Regressed shape: refetch whenever the in-memory array is empty.
+      const regressed: Refresh = async () => {
+        const s = useLibraryState.getState()
+        if (!s.gogLibrary.length) await window.api.refreshLibrary('gog')
+        if (!s.amazonLibrary.length) await window.api.refreshLibrary('nile')
+        await s.refresh()
+      }
+      const violations = await cacheGuardViolations(regressed)
+      expect(violations[0]).toContain('despite a full cache')
     })
 
-    it('detects the reversed operand order too', () => {
-      const regressed =
-        'if (gog.username && (!gog.library.length || !gogLibrary.length)) {'
-      expect(regressed).toMatch(STATE_LENGTH_IN_GUARD)
-    })
-
-    it('does not fire on the fixed form', () => {
-      expect('if (gog.username && !gogLibrary.length) {').not.toMatch(
-        STATE_LENGTH_IN_GUARD
-      )
-    })
-
-    it('does not fire on unrelated library.length reads outside a guard', () => {
-      // `handleGamePush` and the connectivity check both read `<runner>.library.length`
-      // legitimately; this gate is scoped to refresh()'s body and to the `||` shape, so
-      // those must not trip it.
-      expect('beforeLen=${prevState.steam.library.length}').not.toMatch(
-        STATE_LENGTH_IN_GUARD
-      )
-      expect('epic.library.length !== 0').not.toMatch(STATE_LENGTH_IN_GUARD)
+    it('convicts a guard that was simply deleted (never fetches)', async () => {
+      const neverFetches: Refresh = async () => undefined
+      const violations = await cacheGuardViolations(neverFetches)
+      expect(violations).toHaveLength(1)
+      expect(violations[0]).toContain('did not fetch empty caches')
     })
   })
 
-  describe('handleGamePush legendary branch (quick 261029-t39)', () => {
-    const LEGENDARY_PUSH_BRANCH =
-      /isStore\(args,\s*'legendary'\)\s*\)\s*\{\s*this\.setState\(\(prevState: StateProps\) => \{[\s\S]*?epic:\s*\{\s*library/
-
-    it('pushes Epic library entries live via the functional setState form', () => {
-      const source = stripSourceComments(readFileSync(globalStatePath, 'utf-8'))
-      expect(source).toMatch(LEGENDARY_PUSH_BRANCH)
+  describe('applyGamePush legendary branch (quick 261029-t39)', () => {
+    it('pushes Epic library entries live', () => {
+      useLibraryState.getState().applyGamePush(game('e', 'legendary'))
+      useLibraryState.getState().applyGamePush(game('e', 'legendary'))
+      expect(useLibraryState.getState().epicLibrary).toHaveLength(1)
     })
 
-    it('negative control: rejects a source lacking the branch', () => {
-      const lacking =
-        "if (isStore(args, 'gog')) { this.setState({}) } else if (isStore(args, 'steam')) { this.setState((prevState: StateProps) => { return { steam: { library } } }) }"
-      expect(lacking).not.toMatch(LEGENDARY_PUSH_BRANCH)
+    it('negative control: a push for another runner does not land in the Epic array', () => {
+      useLibraryState.getState().applyGamePush(game('a', 'nile'))
+      expect(useLibraryState.getState().epicLibrary).toEqual([])
     })
   })
 })
