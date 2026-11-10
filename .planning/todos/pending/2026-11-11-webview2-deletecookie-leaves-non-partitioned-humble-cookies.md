@@ -48,7 +48,12 @@ TBD. Investigate on the Windows machine:
 - Whether `DeleteCookie` is still async-pending after 2s (try a longer settle), or genuinely refuses.
 - Whether `DeleteCookiesWithDomainAndPath`, or CDP alone, is the more honest primary path, then
   correct the header comment to match what is measured.
-</content>
-</invoke>
-<invoke name="Bash">
-<parameter name="command">cd /c/Users/grays/Projects/GameLib; python .planning/todos/todo-frontmatter-gate.py 2>&1 | tail -3
+
+## Progress (2026-11-11, debug session `webview2-humble-deletecookie`)
+
+A debug-build-only, count-only diagnostics arm (`src-tauri/src/login_window/windows_cookie_diag.rs`)
+is in and waits on one live Humble sign-in + disconnect on Windows. It never logs a cookie name,
+value or domain. Where the lines land: the shell's `[shell]` stderr goes to the terminal running
+`pnpm tauri:dev`, NOT `gamelib.log` (zero `[shell]` lines there); the `DIAG` lines are also appended
+to `%LOCALAPPDATA%\GameLib\logs\humble-cookie-diag.log`. Remove the arm once the mechanism is
+settled; its file header lists every removal site.

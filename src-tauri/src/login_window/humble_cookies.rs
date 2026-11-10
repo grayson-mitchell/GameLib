@@ -836,12 +836,30 @@ fn remove_window_cookies_windows(
     //     removed it (`issued=1 partitioned=1`, then `after=0`). Hence the CDP
     //     pass for survivors.
     //
+    // The Epic measurement does NOT generalise to "partitioned cookies are the only
+    // `DeleteCookie` survivors". Humble on Windows 11 (2026-11-11): `before=35
+    // after=25 settle_rereads=20`, then `CDP cleanup issued=25 partitioned=2` and
+    // `after=0` -- `DeleteCookie` removed 10 of 35, and 23 of the 25 survivors were
+    // NOT partitioned. The CDP pass is therefore doing most of the clearing on
+    // Humble, not mopping up stragglers. Mechanism still open (debug
+    // `webview2-humble-deletecookie`); in debug builds `windows_cookie_diag`
+    // measures it live (count-only, T-34.4.1-02). Correct this header, and decide
+    // whether CDP should be the primary path, once that run is in.
+    //
     // Threading: this arm runs on a spawned worker thread (see the macOS arm's
     // note), so `with_webview` posts the closure to the main thread and returns
     // at once. The worker blocks on `rx`; the main thread's own message loop
     // services the `GetCookies` completion. The closure never blocks.
     use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2_2;
     use windows::core::{Interface, PCWSTR, PWSTR};
+
+    // TEMP-DIAG(webview2-humble-deletecookie): debug builds only. Read-only snapshot of the jar
+    // before the natural pass, so a later report can say which shapes survived. Count-only.
+    let diag = if cfg!(debug_assertions) {
+        Some(Baseline::capture(window, domain))
+    } else {
+        None
+    };
 
     let (tx, rx) = mpsc_channel::<()>();
     let target_domain = domain.to_string();
@@ -934,8 +952,20 @@ fn remove_window_cookies_windows(
         "[shell] humble_login_clear_cookies: before={before_matching} after={after_matching} settle_rereads={settle_rereads}"
     );
     if after_matching > 0 {
+        // TEMP-DIAG(webview2-humble-deletecookie): debug builds only. Reports what survived
+        // and what each alternative removal path can still remove, BEFORE the CDP pass below,
+        // so that pass then sees only what none of them could.
+        if let Some(diag) = &diag {
+            diag.report_and_experiment(
+                window,
+                domain,
+                count_matching,
+                (before_matching, after_matching, settle_rereads),
+            );
+        }
         // Survivors of `DeleteCookie`: partitioned (CHIPS) cookies, which that API
-        // cannot address (measured, see this arm's header). CDP
+        // cannot address (measured on Epic, see this arm's header -- on Humble most
+        // survivors are NOT partitioned, cause under investigation). CDP
         // `Network.deleteCookies` takes the partition key. A CDP failure is logged,
         // not returned -- the re-read below still measures whatever actually
         // happened, and the TS guard fails closed on a residual. Cost: a domain

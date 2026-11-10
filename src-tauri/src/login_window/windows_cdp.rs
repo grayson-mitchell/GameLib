@@ -27,7 +27,7 @@ pub(crate) const CLEAR_COOKIES_SETTLE: Duration = Duration::from_secs(2);
 /// JSON result. Blocks the calling (worker) thread on a channel while the main thread's message
 /// loop services the completion, the same shape as `humble_login_clear_cookies`' Windows arm.
 #[cfg(windows)]
-fn webview2_cdp_call(
+pub(crate) fn webview2_cdp_call(
     window: &tauri::WebviewWindow,
     method: &'static str,
     params: Value,
