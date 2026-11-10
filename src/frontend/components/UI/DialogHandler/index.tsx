@@ -1,9 +1,9 @@
 import { ButtonOptions, DialogType } from 'common/types'
 import type { IpcRendererEvent } from 'backend/platform'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import { ackWhenVisible } from './ackWhenVisible'
 import { configStore } from 'frontend/helpers/stores'
-import { useEffect, useContext, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -65,7 +65,10 @@ function resolveButtonAction(
 }
 
 export default function DialogHandler() {
-  const { dialogModalOptions, showDialogModal } = useContext(ContextProvider)
+  const { dialogModalOptions, showDialogModal } = useUiState.keys(
+    'dialogModalOptions',
+    'showDialogModal'
+  )
   const navigate = useNavigate()
   const { t } = useTranslation()
   // Read from inside the long-lived listener without resubscribing it.

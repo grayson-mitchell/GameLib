@@ -90,13 +90,17 @@ jest.mock('../components/NavTabs/index.scss', () => ({}))
 jest.mock('../index.scss', () => ({}))
 jest.mock('frontend/assets/gamelib-icon.png', () => 'mock-icon.png')
 
-jest.mock('react', () => ({
-  ...jest.requireActual<typeof import('react')>('react'),
-  useContext: () => contextValue,
-  useEffect: (effect: () => void | (() => void)) => {
-    effect()
-  }
-}))
+jest.mock('react', () => {
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(jest.requireActual<typeof import('react')>('react'), {
+    useContext: () => contextValue,
+    useEffect: (effect: () => void | (() => void)) => {
+      effect()
+    }
+  } as unknown as Partial<typeof import('react')>)
+})
 
 const navigateMock = jest.fn()
 jest.mock('react-router-dom', () => ({
@@ -189,6 +193,9 @@ const handleGoToScreenMock = jest.fn()
 // at import time -- importing the same mocked/real bindings here lets tests
 // assert type identity rather than invoking the element's type (mirrors
 // StoresPanel.test.tsx / NavShell.test.tsx).
+import 'frontend/testUtils/tauriWindow'
+import useUiState from 'frontend/state/uiState'
+import { resetAllStores } from 'frontend/state/storeKit'
 import { Tab } from '@mui/material'
 import NavItem from '../components/NavItem'
 import HeroicVersion from '../components/HeroicVersion'
@@ -197,6 +204,16 @@ import StoresPanel from '../components/StoresPanel'
 import SettingsPanel from '../components/SettingsPanel'
 import NavShell from '../index'
 import { at } from '../../../__tests__/fixtures/indexed'
+
+afterEach(() => resetAllStores())
+
+function setContext(value: MockContextValue): void {
+  contextValue = value
+  useUiState.setState({
+    platform: value.platform,
+    handleExternalLinkDialog: value.handleExternalLinkDialog
+  } as unknown as Partial<ReturnType<typeof useUiState.getState>>)
+}
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -242,7 +259,13 @@ function navItemLabels(tree: ReactNode): string[] {
 }
 
 beforeEach(() => {
-  contextValue = makeContextValue()
+  // uiState import can overwrite window.api (tauriAttach); re-install the stub.
+  ;(
+    globalThis as unknown as {
+      window: { api: { handleGoToScreen: typeof handleGoToScreenMock } }
+    }
+  ).window.api = { handleGoToScreen: handleGoToScreenMock }
+  setContext(makeContextValue())
   pathname = '/'
   navigateMock.mockClear()
   handleGoToScreenMock.mockClear()
@@ -251,7 +274,7 @@ beforeEach(() => {
 
 describe('Destination coverage -- the settled tree', () => {
   it('the union of tab, Stores and Settings destinations equals the settled set exactly -- no sidebar destination missing, none invented', () => {
-    contextValue = permissiveContextValue()
+    setContext(permissiveContextValue())
 
     const union = [
       ...tabLabels(),
@@ -296,16 +319,18 @@ describe('Destination coverage -- the settled tree', () => {
 
 describe('Accounts entry point (re-homed from the deleted suite)', () => {
   it('targets /login in both logged-out and logged-in context states, and no collected label anywhere equals "Login"', () => {
-    contextValue = makeContextValue()
+    setContext(makeContextValue())
     const loggedOutAccountsTab = tabElements().find(
       (el) => el.props?.value === 'accounts'
     )
     expect(loggedOutAccountsTab?.props.to).toBe('/login')
     expect(tabLabels()).not.toContain('Login')
 
-    contextValue = makeContextValue({
-      gog: { username: 'TestUser', library: [] }
-    })
+    setContext(
+      makeContextValue({
+        gog: { username: 'TestUser', library: [] }
+      })
+    )
     const loggedInAccountsTab = tabElements().find(
       (el) => el.props?.value === 'accounts'
     )
@@ -316,7 +341,7 @@ describe('Accounts entry point (re-homed from the deleted suite)', () => {
 
 describe('Community links (re-homed from the deleted suite)', () => {
   it('labels contain neither "Discord" nor "GitHub Sponsors" nor a bare "Ko-fi", and do contain the donate row', () => {
-    contextValue = permissiveContextValue()
+    setContext(permissiveContextValue())
     const settingsLabels = navItemLabels(
       SettingsPanel() as unknown as ReactElement
     )
@@ -355,7 +380,7 @@ describe('Version mount (re-homed from the deleted suite)', () => {
                 : tab === 'settings'
                   ? '/settings/general'
                   : '/nowhere'
-      contextValue = permissiveContextValue()
+      setContext(permissiveContextValue())
 
       const tree = NavShell() as unknown as AnyElement
       const kids = tree.props.children as AnyElement[]

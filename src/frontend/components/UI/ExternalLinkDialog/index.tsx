@@ -1,6 +1,6 @@
-import { useContext, useState } from 'react'
+import { useState } from 'react'
 import { Dialog, DialogContent, DialogFooter } from '../Dialog'
-import ContextProvider from '../../../state/ContextProvider'
+import useUiState from '../../../state/uiState'
 import ToggleSwitch from '../ToggleSwitch'
 import { useTranslation } from 'react-i18next'
 
@@ -10,7 +10,7 @@ export default function ExternalLinkDialog() {
   const { t } = useTranslation()
   const [showDialog, setShowDialog] = useState(false)
   const { externalLinkDialogOptions, handleExternalLinkDialog } =
-    useContext(ContextProvider)
+    useUiState.keys('externalLinkDialogOptions', 'handleExternalLinkDialog')
 
   function onClose() {
     setShowDialog(false)

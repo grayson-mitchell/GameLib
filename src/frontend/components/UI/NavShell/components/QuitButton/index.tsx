@@ -1,9 +1,8 @@
 import { faPowerOff } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import { handleQuit } from 'frontend/helpers'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 
 /**
  * Relocated Quit action (34.10-05 Task 2), ported from the retired left
@@ -14,7 +13,7 @@ import ContextProvider from 'frontend/state/ContextProvider'
  */
 export default function QuitButton() {
   const { t } = useTranslation()
-  const { showDialogModal } = useContext(ContextProvider)
+  const showDialogModal = useUiState((s) => s.showDialogModal)
 
   const handleQuitButton = () => {
     showDialogModal({

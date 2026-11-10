@@ -1,6 +1,6 @@
-import { useCallback, useContext } from 'react'
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 
 /**
  * Derived from the API signature rather than imported, so this wrapper's parameter type can
@@ -31,7 +31,7 @@ type OpenDialogOptions = Parameters<typeof window.api.openDialog>[0]
  * both a logged error and a visible dialog. Callers stay a single `if (path)` check.
  */
 export default function useOpenDialog() {
-  const { showDialogModal } = useContext(ContextProvider)
+  const showDialogModal = useUiState((s) => s.showDialogModal)
   const { t } = useTranslation('gamelib')
 
   return useCallback(

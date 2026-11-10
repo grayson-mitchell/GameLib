@@ -1,16 +1,11 @@
 {
   "contextImports": {
-    "src/frontend/components/UI/Anticheat/index.tsx": 1,
-    "src/frontend/components/UI/ControllerHints/index.tsx": 1,
     "src/frontend/components/UI/DLCList/DLC/index.tsx": 1,
     "src/frontend/components/UI/Dialog/components/Dialog.tsx": 1,
-    "src/frontend/components/UI/DialogHandler/index.tsx": 1,
     "src/frontend/components/UI/ErrorComponent/index.tsx": 1,
-    "src/frontend/components/UI/ExternalLinkDialog/index.tsx": 1,
     "src/frontend/components/UI/Header/index.tsx": 1,
     "src/frontend/components/UI/HumbleExpiryToast/index.tsx": 1,
     "src/frontend/components/UI/LanguageSelector/index.tsx": 1,
-    "src/frontend/components/UI/OfflineMessage/index.tsx": 1,
     "src/frontend/components/UI/RedeemSteamKeyDialog/index.tsx": 1,
     "src/frontend/components/UI/SelectField/index.tsx": 1,
     "src/frontend/components/UI/SliderField/index.tsx": 1,

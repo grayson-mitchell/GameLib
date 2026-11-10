@@ -1,4 +1,4 @@
-import { MouseEvent, useContext } from 'react'
+import { MouseEvent } from 'react'
 import { AntiCheatInfo } from 'common/types'
 import { createNewWindow } from 'frontend/helpers'
 
@@ -8,7 +8,7 @@ import AllowedIcon from 'frontend/assets/rounded_checkmark_icon.svg?react'
 
 import './index.scss'
 import { useTranslation } from 'react-i18next'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 
 type Props = {
   anticheatInfo: AntiCheatInfo | null
@@ -18,7 +18,7 @@ const awacyUrl = 'https://areweanticheatyet.com/'
 
 export default function Anticheat({ anticheatInfo }: Props) {
   const { t } = useTranslation()
-  const { platform } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
 
   if (!anticheatInfo) {
     return null

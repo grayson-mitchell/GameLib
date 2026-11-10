@@ -1,8 +1,7 @@
 import { AppSettings, GameInfo, Runner } from 'common/types'
 import { SettingsContextType } from 'frontend/types'
 import { useTranslation } from 'react-i18next'
-import { useState, useEffect, useContext, useRef } from 'react'
-import ContextProvider from 'frontend/state/ContextProvider'
+import { useState, useEffect, useRef } from 'react'
 
 import useUiState from 'frontend/state/uiState'
 
@@ -92,8 +91,10 @@ const useSettingsContext = ({ appName, gameInfo, runner }: Props) => {
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false)
   const [reloadToken, setReloadToken] = useState(0)
   const { i18n } = useTranslation()
-  const { platform } = useContext(ContextProvider)
-  const { settingsModalProps } = useUiState.keys('settingsModalProps')
+  const { platform, settingsModalProps } = useUiState.keys(
+    'platform',
+    'settingsModalProps'
+  )
 
   const isDefault = appName === 'default'
   const isLinux = platform === 'linux'

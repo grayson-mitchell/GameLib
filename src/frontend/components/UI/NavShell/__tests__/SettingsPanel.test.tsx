@@ -54,24 +54,28 @@ function resetHookState(): void {
   stateCursor = 0
 }
 
-jest.mock('react', () => ({
-  ...jest.requireActual<typeof import('react')>('react'),
-  useContext: () => contextValue,
-  useState: (initial: unknown) => {
-    const idx = stateCursor++
-    if (idx >= stateSlots.length) {
-      stateSlots[idx] =
-        typeof initial === 'function' ? (initial as () => unknown)() : initial
+jest.mock('react', () => {
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(jest.requireActual<typeof import('react')>('react'), {
+    useContext: () => contextValue,
+    useState: (initial: unknown) => {
+      const idx = stateCursor++
+      if (idx >= stateSlots.length) {
+        stateSlots[idx] =
+          typeof initial === 'function' ? (initial as () => unknown)() : initial
+      }
+      const setState = (updater: unknown) => {
+        stateSlots[idx] =
+          typeof updater === 'function'
+            ? (updater as (prev: unknown) => unknown)(stateSlots[idx])
+            : updater
+      }
+      return [stateSlots[idx], setState]
     }
-    const setState = (updater: unknown) => {
-      stateSlots[idx] =
-        typeof updater === 'function'
-          ? (updater as (prev: unknown) => unknown)(stateSlots[idx])
-          : updater
-    }
-    return [stateSlots[idx], setState]
-  }
-}))
+  } as unknown as Partial<typeof import('react')>)
+})
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -128,12 +132,12 @@ jest.mock('../components/QuitButton', () => ({
   key: jest.fn(),
   length: 0
 }
-;(
-  globalThis as unknown as {
-    window: { api: { openKofiPage: jest.Mock; showAboutWindow: jest.Mock } }
-  }
-).window = {
-  api: { openKofiPage: jest.fn(), showAboutWindow: jest.fn() }
+const testWindowApi = { openKofiPage: jest.fn(), showAboutWindow: jest.fn() }
+// The tauriWindow stub import below replaces `window`, and uiState's import
+// chain can overwrite `window.api`, so the stub api is installed in beforeEach.
+function installWindowApi(): void {
+  ;(globalThis as unknown as { window: { api: unknown } }).window.api =
+    testWindowApi
 }
 
 // Imported after the mocks above (textual order -- this project's ts-jest
@@ -143,6 +147,9 @@ jest.mock('../components/QuitButton', () => ({
 // -- not the mock factory's return value. Importing the same mocked
 // bindings here lets tests assert type identity (see NavItem.test.tsx /
 // 34.10-02 SUMMARY Deviation 1).
+import 'frontend/testUtils/tauriWindow'
+import useUiState from 'frontend/state/uiState'
+import { resetAllStores } from 'frontend/state/storeKit'
 import NavItem from '../components/NavItem'
 import QuitButton from '../components/QuitButton'
 import SettingsPanel from '../components/SettingsPanel'
@@ -163,6 +170,16 @@ import {
   faUniversalAccess,
   faWineGlass
 } from '@fortawesome/free-solid-svg-icons'
+
+afterEach(() => resetAllStores())
+
+function setContext(value: MockContextValue): void {
+  contextValue = value
+  useUiState.setState({
+    platform: value.platform,
+    handleExternalLinkDialog: value.handleExternalLinkDialog
+  } as unknown as Partial<ReturnType<typeof useUiState.getState>>)
+}
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -224,6 +241,9 @@ describe('SettingsPanel', () => {
     // implementation before each test, including the module-level
     // `localStorage.getItem` factory below -- reassign it here so each
     // test's `storedPreference` value actually takes effect.
+    installWindowApi()
+    testWindowApi.openKofiPage.mockClear()
+    testWindowApi.showAboutWindow.mockClear()
     storedPreference = null
     resetHookState()
     ;(localStorage.getItem as jest.Mock).mockImplementation(
@@ -232,7 +252,7 @@ describe('SettingsPanel', () => {
   })
 
   it('renders all thirteen entries in the settled order for a non-Windows context, and does not render Console Mode', () => {
-    contextValue = makeContextValue({ platform: 'linux' })
+    setContext(makeContextValue({ platform: 'linux' }))
 
     const tree = SettingsPanel() as unknown as ReactElement
     const labels = labelsOf(tree)
@@ -277,18 +297,18 @@ describe('SettingsPanel', () => {
   }
 
   it('places a separator between System Information and Report a problem', () => {
-    contextValue = makeContextValue({ platform: 'linux' })
+    setContext(makeContextValue({ platform: 'linux' }))
     separatorChecks(
       topLevelChildren(SettingsPanel() as unknown as ReactElement)
     )
-    contextValue = makeContextValue({ platform: 'win32' })
+    setContext(makeContextValue({ platform: 'win32' }))
     separatorChecks(
       topLevelChildren(SettingsPanel() as unknown as ReactElement)
     )
   })
 
   it('every NavItem row carries its sketch-007 icon', () => {
-    contextValue = makeContextValue({ platform: 'linux' })
+    setContext(makeContextValue({ platform: 'linux' }))
     const tree = SettingsPanel() as unknown as ReactElement
     const expected: Array<[string, unknown]> = [
       ['Appearance', faPalette],
@@ -314,7 +334,7 @@ describe('SettingsPanel', () => {
   })
 
   it('omits Game Defaults, Wine Manager and Console Mode on win32 while keeping Advanced', () => {
-    contextValue = makeContextValue({ platform: 'win32' })
+    setContext(makeContextValue({ platform: 'win32' }))
 
     const tree = SettingsPanel() as unknown as ReactElement
     const labels = labelsOf(tree)
@@ -326,7 +346,7 @@ describe('SettingsPanel', () => {
   })
 
   it('places System Information immediately after Log', () => {
-    contextValue = makeContextValue()
+    setContext(makeContextValue())
 
     const tree = SettingsPanel() as unknown as ReactElement
     const labels = labelsOf(tree)
@@ -358,7 +378,7 @@ describe('SettingsPanel', () => {
   it('Donate is a button whose onClick calls handleExternalLinkDialog when the stored preference is absent', () => {
     storedPreference = null
     const handleExternalLinkDialog = jest.fn()
-    contextValue = makeContextValue({ handleExternalLinkDialog })
+    setContext(makeContextValue({ handleExternalLinkDialog }))
 
     const tree = SettingsPanel() as unknown as ReactElement
     const kofiItem = findNavItem(tree, 'Donate')
@@ -375,7 +395,7 @@ describe('SettingsPanel', () => {
   it('Donate calls handleExternalLinkDialog when the stored preference is true', () => {
     storedPreference = 'true'
     const handleExternalLinkDialog = jest.fn()
-    contextValue = makeContextValue({ handleExternalLinkDialog })
+    setContext(makeContextValue({ handleExternalLinkDialog }))
 
     const tree = SettingsPanel() as unknown as ReactElement
     const kofiItem = findNavItem(tree, 'Donate')
@@ -390,7 +410,7 @@ describe('SettingsPanel', () => {
   it('Donate calls window.api.openKofiPage directly when the stored preference is false', () => {
     storedPreference = 'false'
     const handleExternalLinkDialog = jest.fn()
-    contextValue = makeContextValue({ handleExternalLinkDialog })
+    setContext(makeContextValue({ handleExternalLinkDialog }))
 
     const tree = SettingsPanel() as unknown as ReactElement
     const kofiItem = findNavItem(tree, 'Donate')
@@ -401,7 +421,7 @@ describe('SettingsPanel', () => {
   })
 
   it('the QuitButton element is the last child of the panel', () => {
-    contextValue = makeContextValue()
+    setContext(makeContextValue())
 
     const tree = SettingsPanel() as unknown as ReactElement
     const children = topLevelChildren(tree)
@@ -411,7 +431,7 @@ describe('SettingsPanel', () => {
 
   describe('D-05 tour anchors', () => {
     it('the Wine Manager row carries data-tour="nav-wine" on a non-Windows platform', () => {
-      contextValue = makeContextValue({ platform: 'linux' })
+      setContext(makeContextValue({ platform: 'linux' }))
 
       const tree = SettingsPanel() as unknown as ReactElement
       const row = findNavItem(tree, 'Wine Manager')
@@ -420,7 +440,7 @@ describe('SettingsPanel', () => {
     })
 
     it('the Appearance row carries data-tour="nav-accessibility"', () => {
-      contextValue = makeContextValue()
+      setContext(makeContextValue())
 
       const tree = SettingsPanel() as unknown as ReactElement
       const row = findNavItem(tree, 'Appearance')
@@ -429,7 +449,7 @@ describe('SettingsPanel', () => {
     })
 
     it('the Documentation row carries data-tour="nav-docs"', () => {
-      contextValue = makeContextValue()
+      setContext(makeContextValue())
 
       const tree = SettingsPanel() as unknown as ReactElement
       const row = findNavItem(tree, 'Documentation')
@@ -438,7 +458,7 @@ describe('SettingsPanel', () => {
     })
 
     it('the Donate row carries data-tour="nav-community"', () => {
-      contextValue = makeContextValue()
+      setContext(makeContextValue())
 
       const tree = SettingsPanel() as unknown as ReactElement
       const row = findNavItem(tree, 'Donate')
@@ -447,7 +467,7 @@ describe('SettingsPanel', () => {
     })
 
     it('on win32, no element carries data-tour="nav-wine" -- the row guard and the tour step guard agree', () => {
-      contextValue = makeContextValue({ platform: 'win32' })
+      setContext(makeContextValue({ platform: 'win32' }))
 
       const tree = SettingsPanel() as unknown as ReactElement
       const elements = collectElements(tree)
@@ -460,7 +480,7 @@ describe('SettingsPanel', () => {
 
   describe('D-01 launcher row', () => {
     it('starts the tour without resetting when it has not been completed', () => {
-      contextValue = makeContextValue()
+      setContext(makeContextValue())
       hasTourCompletedMock.mockReturnValue(false)
 
       const tree = SettingsPanel() as unknown as ReactElement
@@ -474,7 +494,7 @@ describe('SettingsPanel', () => {
     })
 
     it('resets then starts the tour, in that order, when it was already completed', () => {
-      contextValue = makeContextValue()
+      setContext(makeContextValue())
       hasTourCompletedMock.mockReturnValue(true)
 
       const tree = SettingsPanel() as unknown as ReactElement

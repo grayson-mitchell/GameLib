@@ -1,12 +1,11 @@
-import ContextProvider from 'frontend/state/ContextProvider'
-import { useContext } from 'react'
+import useUiState from 'frontend/state/uiState'
 import { useTranslation } from 'react-i18next'
 
 import './index.scss'
 
 const OfflineMessage = () => {
   const { t } = useTranslation()
-  const { connectivity } = useContext(ContextProvider)
+  const connectivity = useUiState((s) => s.connectivity)
 
   // render nothing if online
   if (connectivity.status === 'online') {

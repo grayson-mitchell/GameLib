@@ -2,10 +2,6 @@ jest.mock('frontend/state/uiState', () => ({
   __esModule: true,
   default: { keys: () => ({ settingsModalProps: { isOpen: false } }) }
 }))
-jest.mock('frontend/state/ContextProvider', () => ({
-  __esModule: true,
-  default: {}
-}))
 
 import {
   createSettingSetter,

@@ -25,10 +25,14 @@ function makeContextValue(
 
 let contextValue: MockContextValue = makeContextValue()
 
-jest.mock('react', () => ({
-  ...jest.requireActual<typeof import('react')>('react'),
-  useContext: () => contextValue
-}))
+jest.mock('react', () => {
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(jest.requireActual<typeof import('react')>('react'), {
+    useContext: () => contextValue
+  } as unknown as Partial<typeof import('react')>)
+})
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -49,13 +53,25 @@ jest.mock('frontend/helpers', () => ({
 
 // Imported after the mocks above (textual order -- this project's ts-jest
 // setup does not hoist jest.mock like babel-jest).
+import 'frontend/testUtils/tauriWindow'
+import useUiState from 'frontend/state/uiState'
+import { resetAllStores } from 'frontend/state/storeKit'
 import QuitButton from '../components/QuitButton'
+
+afterEach(() => resetAllStores())
+
+function setContext(value: MockContextValue): void {
+  contextValue = value
+  useUiState.setState({
+    showDialogModal: value.showDialogModal
+  } as unknown as Partial<ReturnType<typeof useUiState.getState>>)
+}
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
 
 beforeEach(() => {
-  contextValue = makeContextValue()
+  setContext(makeContextValue())
 })
 
 describe('QuitButton', () => {
@@ -76,7 +92,7 @@ describe('QuitButton', () => {
 
   it('invoking onClick calls showDialogModal once with the resolved Quit title', () => {
     const showDialogModal = jest.fn()
-    contextValue = makeContextValue({ showDialogModal })
+    setContext(makeContextValue({ showDialogModal }))
 
     const element = QuitButton() as AnyElement
     ;(element.props.onClick as () => void)()

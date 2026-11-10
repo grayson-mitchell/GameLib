@@ -52,33 +52,28 @@ type OnMessage = (
 
 let capturedOnMessage: OnMessage | undefined
 
-  // `window.api` stubbed at `globalThis` -- this project's `testEnvironment: 'node'`
-  // jest config provides no `window` global otherwise (mirrors
-  // `removeEosOverlayConfirmation.test.tsx`'s convention). Only the two channels this
-  // file's assertions actually reach are stubbed.
-;(
-  globalThis as unknown as {
-    window: {
-      api: {
-        handleShowDialog: (cb: OnMessage) => () => void
-        openExternalUrl: typeof mockOpenExternalUrl
-        logInfo: (message: unknown) => void
-      }
+// `window.api` stubbed at `globalThis` -- this project's `testEnvironment: 'node'`
+// jest config provides no `window` global otherwise (mirrors
+// `removeEosOverlayConfirmation.test.tsx`'s convention). Only the two channels this
+// file's assertions actually reach are stubbed.
+const testApi = {
+  handleShowDialog: (cb: OnMessage) => {
+    capturedOnMessage = cb
+    return () => {
+      capturedOnMessage = undefined
     }
-    document: { visibilityState: string; hasFocus: () => boolean }
-  }
-).window = {
-  api: {
-    handleShowDialog: (cb: OnMessage) => {
-      capturedOnMessage = cb
-      return () => {
-        capturedOnMessage = undefined
-      }
-    },
-    openExternalUrl: mockOpenExternalUrl,
-    logInfo: jest.fn()
+  },
+  openExternalUrl: mockOpenExternalUrl,
+  logInfo: jest.fn()
+}
+// Importing DialogHandler pulls uiState -> tauriAttach, which can overwrite
+// `window.api` at import time, so the stub is (re)installed in beforeEach.
+function installWindowApi(): void {
+  ;(globalThis as unknown as { window: { api: typeof testApi } }).window = {
+    api: testApi
   }
 }
+installWindowApi()
 ;(
   globalThis as unknown as {
     document: { visibilityState: string; hasFocus: () => boolean }
@@ -101,37 +96,29 @@ jest.mock('react-i18next', () => ({
 }))
 
 jest.mock('frontend/helpers/stores', () => ({
-  configStore: { set: mockConfigStoreSet }
-}))
-
-jest.mock('frontend/state/ContextProvider', () => ({
-  __esModule: true,
-  default: { __name: 'ContextProvider' }
+  configStore: { set: mockConfigStoreSet },
+  gameOverridesStore: { get: (_key: string, fallback: unknown) => fallback },
+  wineDownloaderInfoStore: {
+    get: (_key: string, fallback: unknown) => fallback
+  }
 }))
 
 jest.mock('react', () => {
-  const actualReact = jest.requireActual<typeof import('react')>('react')
-  return {
-    ...actualReact,
-    useContext: (ctx: { __name?: string }) => {
-      if (ctx?.__name === 'ContextProvider') {
-        return {
-          dialogModalOptions: { showDialog: false },
-          showDialogModal: mockShowDialogModal
-        }
-      }
-      return undefined
-    },
-    useRef: (initial: unknown) => ({ current: initial }),
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  return withStoreHooks(jest.requireActual<typeof import('react')>('react'), {
     useEffect: (fn: () => void) => {
       fn()
     }
-  }
+  })
 })
 
 // Imported after the mocks above (textual order, not hoisting -- ts-jest does not
 // hoist jest.mock; see removeEosOverlayConfirmation.test.tsx for the same convention).
 import DialogHandler from '../index'
+import useUiState from 'frontend/state/uiState'
+import { resetAllStores } from 'frontend/state/storeKit'
 import { at, defined } from '../../../__tests__/fixtures/indexed'
 
 function mount(): void {
@@ -148,11 +135,19 @@ function emit(buttons: ButtonOptions[]): void {
 
 describe('DialogHandler: resolveButtonAction (260919-sch)', () => {
   beforeEach(() => {
+    installWindowApi()
+    useUiState.setState({
+      dialogModalOptions: { showDialog: false },
+      showDialogModal: (options) =>
+        mockShowDialogModal(options as CapturedDialogOptions)
+    })
     mockShowDialogModal.mockClear()
     mockConfigStoreSet.mockClear()
     mockOpenExternalUrl.mockClear()
     mockNavigate.mockClear()
   })
+
+  afterEach(() => resetAllStores())
 
   it('vcRuntimeSkip calls configStore.set("skipVcRuntime", true) exactly once', () => {
     mount()

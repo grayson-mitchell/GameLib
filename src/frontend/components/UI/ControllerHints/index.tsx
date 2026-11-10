@@ -1,12 +1,12 @@
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 
 import './index.css'
 
 export default function ControllerHints() {
-  const { activeController } = useContext(ContextProvider)
+  const activeController = useUiState((s) => s.activeController)
   const [layout, setLayout] = useState('steam-deck') // default to steam deck icons
   const [mainActionHint, setMainActionHint] = useState('') // A / Cross
   const [altActionHint, setAltActionHint] = useState('') // X / Square

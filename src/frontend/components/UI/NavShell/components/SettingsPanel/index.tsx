@@ -1,4 +1,3 @@
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   faBookOpen,
@@ -16,7 +15,7 @@ import {
   faWineGlass
 } from '@fortawesome/free-solid-svg-icons'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
 import { SHOW_EXTERNAL_LINK_DIALOG_STORAGE_KEY } from 'frontend/components/UI/ExternalLinkDialog'
 import { useTour } from 'frontend/state/TourContext'
 import NavItem from '../NavItem'
@@ -107,7 +106,10 @@ import { NAV_TOUR_ID } from '../NavShellTour'
 export default function SettingsPanel() {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
-  const { platform, handleExternalLinkDialog } = useContext(ContextProvider)
+  const { platform, handleExternalLinkDialog } = useUiState.keys(
+    'platform',
+    'handleExternalLinkDialog'
+  )
   const { startTour, resetTour, hasTourCompleted } = useTour()
   const isWin = platform === 'win32'
 
