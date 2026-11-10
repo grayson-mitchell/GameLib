@@ -556,6 +556,12 @@ export function createCommandRunner(deps: CommandRunnerDeps) {
         return classifyFailure(new Error('aborted'))
       }
 
+      // killTracked/killAllTracked ended this child on purpose (stop game, cancel, quit): a
+      // cancellation, never an error, even when no abort controller was signalled for it.
+      if (result.killedByUs) {
+        return classifyFailure(new Error('killed by us'), true)
+      }
+
       if (result.signal) {
         return classifyFailure(
           new Error(`Process terminated with signal ${result.signal}`)
@@ -582,8 +588,8 @@ export function createCommandRunner(deps: CommandRunnerDeps) {
       }
     }
 
-    const classifyFailure = (error: unknown): ExecResult => {
-      if (abortController.signal.aborted) {
+    const classifyFailure = (error: unknown, intended = false): ExecResult => {
+      if (intended || abortController.signal.aborted) {
         logger.logInfo(
           ['Abort command', `"${safeCommand}"`],
           runnerProps.logPrefix

@@ -165,6 +165,32 @@ describe('run', () => {
     await p2
   })
 
+  it('marks a child killed through killTracked as killedByUs, and only that child (66.1-23)', async () => {
+    const killed = runner.run(NODE, SLEEP10, {
+      track: { runner: 'wine', key: 'k1' }
+    })
+    const spared = runner.run(NODE, ['-e', 'setTimeout(()=>{},100)'], {
+      track: { runner: 'wine', key: 'k2' }
+    })
+    await wait(100)
+    expect(runner.killTracked({ key: 'k1' })).toBe(1)
+    const r = await killed
+    expect(r.killedByUs).toBe(true)
+    expect(r.signal).not.toBeNull()
+    const other = await spared
+    expect(other.killedByUs).toBeUndefined()
+    expect(other.code).toBe(0)
+  })
+
+  it('a child that dies without killTracked is not killedByUs (66.1-23)', async () => {
+    const r = await runner.run(NODE, [
+      '-e',
+      'process.kill(process.pid,"SIGKILL")'
+    ])
+    expect(r.signal).toBe('SIGKILL')
+    expect(r.killedByUs).toBeUndefined()
+  })
+
   it('supports stdin', async () => {
     const r = await runner.run(
       NODE,

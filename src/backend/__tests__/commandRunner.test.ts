@@ -214,6 +214,48 @@ describe('Layer-2: callRunner close-handler exit-code classification (D-2 root c
   })
 })
 
+describe('Layer-2: an intended kill reads as a cancellation, not an error (66.1-23)', () => {
+  it('a signal exit the runner marks killedByUs is .abort even with no abort controller signalled', async () => {
+    const t = setup([
+      {
+        cmd: 'gogdl',
+        result: { code: null, signal: 'SIGTERM', killedByUs: true }
+      }
+    ])
+    const res = await t.cr.callRunner(['launch', 'x', 'stopped'], gogRunner, {
+      abortId: 'stopped'
+    })
+    expect(res.abort).toBe(true)
+    expect(res.error).toBeUndefined()
+    expect(res.stderr).toBe('')
+    // No error log and no errorHandler call carrying a "terminated" message.
+    expect(t.errorCalls).toHaveLength(0)
+    expect(
+      t.errorHandlerCalls.filter((c) => String(c[0]).includes('terminated'))
+    ).toHaveLength(0)
+  })
+
+  it('a signal exit NOT marked killedByUs still surfaces as an error (the marker is the only cancel signal)', async () => {
+    const t = setup([
+      { cmd: 'gogdl', result: { code: null, signal: 'SIGTERM' } }
+    ])
+    const res = await t.cr.callRunner(['launch', 'x', 'crash'], gogRunner, {
+      abortId: 'crash'
+    })
+    expect(res.error).toBe('Process terminated with signal SIGTERM')
+    expect(res.abort).toBeUndefined()
+  })
+
+  it('a non-zero exit marked killedByUs (graceful shutdown after SIGTERM) is .abort too', async () => {
+    const t = setup([{ cmd: 'gogdl', result: { code: 1, killedByUs: true } }])
+    const res = await t.cr.callRunner(['launch', 'x', 'graceful'], gogRunner, {
+      abortId: 'graceful'
+    })
+    expect(res.abort).toBe(true)
+    expect(res.error).toBeUndefined()
+  })
+})
+
 describe('Layer-2: in-flight dedup never swallows a caller that observes output (49-REVIEW WR-01)', () => {
   it('Layer-2: a second caller with identical argv and an onOutput observer gets its OWN run and sees the stream', async () => {
     const t = setup([

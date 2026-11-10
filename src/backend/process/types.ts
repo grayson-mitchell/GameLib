@@ -80,6 +80,11 @@ export interface RunResult {
    * grace (a grandchild holds them); late output was dropped.
    */
   drainTimedOut?: boolean
+  /**
+   * True when this child was killed through killTracked/killAllTracked: an intended stop,
+   * cancel or quit, so a caller reads the signal exit as a cancellation, not a failure.
+   */
+  killedByUs?: boolean
 }
 
 export interface LongLivedOptions extends Omit<

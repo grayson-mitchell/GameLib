@@ -28,10 +28,12 @@ export function createTrackedRegistry(deps: {
   log: LogSink
 }) {
   const registry = new Map<ChildProcessLike, TrackedEntry>()
+  // Children this registry killed on purpose; weak so an exited child is not retained.
+  const killedByUs = new WeakSet<ChildProcessLike>()
 
   function killTracked(filter: TrackFilter): number {
     let killed = 0
-    for (const entry of [...registry.values()]) {
+    for (const [child, entry] of [...registry.entries()]) {
       if (filter.runner !== undefined && entry.runner !== filter.runner)
         continue
       if (filter.key !== undefined && entry.key !== filter.key) continue
@@ -44,8 +46,10 @@ export function createTrackedRegistry(deps: {
         )
         continue
       }
-      if (ok) killed++
-      else
+      if (ok) {
+        killed++
+        killedByUs.add(child)
+      } else
         deps.log.warn(
           `Unable to kill ${entry.runner} (${entry.key}), ignoring.`
         )
@@ -66,6 +70,8 @@ export function createTrackedRegistry(deps: {
       return untrack
     },
     killTracked,
+    /** Whether killTracked/killAll signalled this child (read after it exits). */
+    wasKilled: (child: ChildProcessLike) => killedByUs.has(child),
     killAll: () => killTracked({}),
     size: () => registry.size
   }

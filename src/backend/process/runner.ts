@@ -232,7 +232,8 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
           aborted,
           truncated,
           pid: child.pid,
-          ...(drainTimedOut ? { drainTimedOut: true } : {})
+          ...(drainTimedOut ? { drainTimedOut: true } : {}),
+          ...(tracked.wasKilled(child) ? { killedByUs: true } : {})
         })
       }
 
