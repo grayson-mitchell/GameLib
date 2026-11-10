@@ -1,4 +1,4 @@
-import React, { useContext, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import './App.css'
@@ -16,7 +16,8 @@ import Loading from './screens/Loading'
 import NavShell from './components/UI/NavShell'
 import { Tier2PortalProvider } from './components/UI/NavShell/Tier2PortalContext'
 import { StoreEmbedSuppressionProvider } from './components/UI/NavShell/StoreEmbedSuppressionContext'
-import ContextProvider from './state/ContextProvider'
+import useUiState from './state/uiState'
+import useSettingsState, { selectIsRTL } from './state/settingsState'
 import { ControllerHints, OfflineMessage } from './components/UI'
 import DialogHandler from './components/UI/DialogHandler'
 import ExternalLinkDialog from './components/UI/ExternalLinkDialog'
@@ -39,8 +40,13 @@ import SteamGoOfflineNotice from './screens/Game/GamePage/components/SteamGoOffl
 import { buildMuiTheme } from './muiTheme'
 
 function Root() {
-  const { isRTL, isFullscreen, isFrameless, disableAnimations, platform } =
-    useContext(ContextProvider)
+  const { isFullscreen, isFrameless, platform } = useUiState.keys(
+    'isFullscreen',
+    'isFrameless',
+    'platform'
+  )
+  const { disableAnimations } = useSettingsState.keys('disableAnimations')
+  const isRTL = useSettingsState(selectIsRTL)
 
   const hasNativeOverlayControls = navigator['windowControlsOverlay']?.visible
 

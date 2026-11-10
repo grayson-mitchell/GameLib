@@ -1,6 +1,6 @@
-import React, { ReactNode, useContext, useEffect, useRef } from 'react'
+import React, { ReactNode, useEffect, useRef } from 'react'
 import classnames from 'classnames'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useSettingsState, { selectIsRTL } from 'frontend/state/settingsState'
 import FieldLabel from '../FieldLabel'
 import './index.css'
 
@@ -32,7 +32,7 @@ const TextInputField = ({
   onChange,
   ...inputProps
 }: TextInputFieldProps) => {
-  const { isRTL } = useContext(ContextProvider)
+  const isRTL = useSettingsState(selectIsRTL)
   const input = useRef<HTMLInputElement>(null)
 
   // we have to use an event listener instead of the react

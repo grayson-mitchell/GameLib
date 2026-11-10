@@ -1,6 +1,6 @@
 import classNames from 'classnames'
-import { ChangeEventHandler, useContext } from 'react'
-import ContextProvider from 'frontend/state/ContextProvider'
+import { ChangeEventHandler } from 'react'
+import useSettingsState, { selectIsRTL } from 'frontend/state/settingsState'
 import './index.css'
 
 interface Props {
@@ -25,7 +25,7 @@ export default function ToggleSwitch(props: Props) {
     description = '',
     fading
   } = props
-  const { isRTL } = useContext(ContextProvider)
+  const isRTL = useSettingsState(selectIsRTL)
 
   return (
     <>

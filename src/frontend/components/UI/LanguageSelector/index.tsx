@@ -1,7 +1,7 @@
-import { useContext, type KeyboardEvent } from 'react'
+import { type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { configStore } from 'frontend/helpers/stores'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useSettingsState from 'frontend/state/settingsState'
 import { SelectField } from '..'
 import { MenuItem } from '@mui/material'
 import { toI18nextCode, type SupportedLanguage } from 'common/languages'
@@ -122,7 +122,10 @@ export default function LanguageSelector({
   hideLabel = false
 }: Props) {
   const { t, i18n } = useTranslation()
-  const { language, setLanguage } = useContext(ContextProvider)
+  const { language, setLanguage } = useSettingsState.keys(
+    'language',
+    'setLanguage'
+  )
   const currentLanguage = language || i18n.language || 'en'
 
   const handleChangeLanguage = (newLanguage: string) => {

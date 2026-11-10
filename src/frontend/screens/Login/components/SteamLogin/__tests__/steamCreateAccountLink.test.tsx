@@ -42,6 +42,7 @@
  * -- scoped to this test file's own module registry, so no shared jest
  * config changes and no other suite's behaviour is affected.
  */
+import '../../../../../testUtils/tauriWindow'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { ReactElement } from 'react'
@@ -55,9 +56,10 @@ jest.mock('frontend/components/UI/Dialog/index.css', () => ({}))
 const mockApi = {
   openExternalUrl: jest.fn()
 }
-;(globalThis as unknown as { window: { api: typeof mockApi } }).window = {
-  api: mockApi
-}
+beforeEach(() => {
+  ;(globalThis as unknown as { window: { api: typeof mockApi } }).window.api =
+    mockApi
+})
 
 import {
   showsCreateAccountLink,

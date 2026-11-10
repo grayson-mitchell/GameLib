@@ -14,30 +14,23 @@
  * `Library/__tests__/libraryTourAnchors.test.tsx` and
  * `NavShell/__tests__/NavTabsComponent.test.tsx`.
  */
+import 'frontend/testUtils/tauriWindow'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { ReactElement } from 'react'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
-type MockContextValue = { platform: string; isRTL: boolean }
-
-let contextValue: MockContextValue = { platform: 'linux', isRTL: false }
 const startTourMock = jest.fn()
 let isTourActiveReturn = false
 
-jest.mock('react', () => ({
-  ...jest.requireActual<typeof import('react')>('react'),
-  useContext: () => contextValue,
-  // NavShellTour now memoizes its `steps` array (introjs-tooltip-not-rendering
-  // fix -- intro.js-react's componentDidUpdate compares `steps` by reference,
-  // so an unmemoized array re-triggered intro.js's show-step path on every
-  // render). No dispatcher is installed here (component is invoked as a
-  // plain function, not rendered), so the real `useMemo` would throw; this
-  // test only cares about the STRUCTURAL content of the memoized value, not
-  // memoization behaviour itself, so a passthrough that always recomputes is
-  // sufficient and keeps the "invoke as a plain function" pattern working.
-  useMemo: <T,>(factory: () => T) => factory()
-}))
+jest.mock('react', () => {
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+  // NavShellTour memoizes `steps`; with no dispatcher installed (plain-function
+  // invocation) withStoreHooks supplies a recomputing passthrough useMemo.
+  return withStoreHooks(jest.requireActual<typeof import('react')>('react'))
+})
 
 jest.mock('react-i18next', () => {
   // Resolves against the shipped en catalogues, not the inline default: the
@@ -56,11 +49,6 @@ jest.mock('frontend/state/TourContext', () => ({
   })
 }))
 
-jest.mock('frontend/state/ContextProvider', () => ({
-  __esModule: true,
-  default: {}
-}))
-
 jest.mock('frontend/components/Tour/Tour', () => ({
   __esModule: true,
   default: (props: Record<string, unknown>) => ({
@@ -76,6 +64,14 @@ jest.mock('frontend/components/Tour/Tour', () => ({
 // mocks above must be keyed on the same alias to intercept the same module.
 import Tour from 'frontend/components/Tour/Tour'
 import NavShellTour from '../components/NavShellTour'
+import useUiState from 'frontend/state/uiState'
+import useSettingsState from 'frontend/state/settingsState'
+import { resetAllStores } from 'frontend/state/storeKit'
+
+const seedStores = (platform: string, isRTL: boolean) => {
+  useUiState.setState({ platform: platform as never })
+  useSettingsState.setState({ language: isRTL ? 'ar' : 'en' })
+}
 
 type TourStepLike = { element?: string; intro?: string; title?: string }
 type TourElement = ReactElement<{
@@ -120,8 +116,10 @@ const NAVSHELLTOUR_SOURCE_PATH = join(
   'index.tsx'
 )
 
+afterEach(() => resetAllStores())
+
 beforeEach(() => {
-  contextValue = { platform: 'linux', isRTL: false }
+  seedStores('linux', false)
   startTourMock.mockClear()
   isTourActiveReturn = false
 })
@@ -139,7 +137,7 @@ describe('NavShellTour (34.12-04 Task 3)', () => {
   })
 
   it('has twelve steps in the settled order on a non-Windows platform', () => {
-    contextValue = { platform: 'linux', isRTL: false }
+    seedStores('linux', false)
     const element = renderTour()
     expect(element.props.steps.map((step) => step.element)).toEqual(
       EXPECTED_NON_WINDOWS_ELEMENTS
@@ -147,7 +145,7 @@ describe('NavShellTour (34.12-04 Task 3)', () => {
   })
 
   it('excludes nav-wine on win32, keeping the other eleven steps in the same relative order', () => {
-    contextValue = { platform: 'win32', isRTL: false }
+    seedStores('win32', false)
     const element = renderTour()
     const elements = element.props.steps.map((step) => step.element)
 
@@ -191,7 +189,7 @@ describe('NavShellTour copy', () => {
   it.each(['linux', 'win32'])(
     'no rendered step names the retired sidebar or lists stores without Steam (%s)',
     (platform) => {
-      contextValue = { platform, isRTL: false }
+      seedStores(platform, false)
       expect(staleCopyIn(renderTour().props.steps)).toEqual([])
     }
   )

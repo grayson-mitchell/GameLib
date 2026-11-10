@@ -1,4 +1,4 @@
-import { ReactNode, useContext, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import SvgButton from '../SvgButton'
 import TextInputField from '../TextInputField'
 import AddBoxIcon from '@mui/icons-material/AddBox'
@@ -6,7 +6,7 @@ import RemoveCircleIcon from '@mui/icons-material/RemoveCircle'
 import { faArrowUp } from '@fortawesome/free-solid-svg-icons'
 import EditIcon from '@mui/icons-material/Edit'
 import classnames from 'classnames'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useSettingsState, { selectIsRTL } from 'frontend/state/settingsState'
 import FieldLabel from '../FieldLabel'
 import './index.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -53,7 +53,7 @@ export function TableInput({
   validation,
   connector = ''
 }: Props) {
-  const { isRTL } = useContext(ContextProvider)
+  const isRTL = useSettingsState(selectIsRTL)
   const { t } = useTranslation()
   const [rowData, setRowData] = useState<ColumnProps[]>(rows)
   const [newVarName, setNewVarName] = useState('')

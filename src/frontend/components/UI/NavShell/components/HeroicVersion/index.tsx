@@ -1,6 +1,7 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useSettingsState from 'frontend/state/settingsState'
+import useUiState from 'frontend/state/uiState'
 import { ChangelogModal } from '../../../ChangelogModal'
 import { WelcomeModal } from '../../../WelcomeModal'
 import {
@@ -56,12 +57,13 @@ export default React.memo(function HeroicVersion() {
   const [showChangelogModalOnClick, setShowChangelogModalOnClick] =
     useState(false)
 
-  const {
-    hideChangelogsOnStartup,
-    lastChangelogShown,
-    setLastChangelogShown,
-    platform
-  } = useContext(ContextProvider)
+  const { hideChangelogsOnStartup, lastChangelogShown, setLastChangelogShown } =
+    useSettingsState.keys(
+      'hideChangelogsOnStartup',
+      'lastChangelogShown',
+      'setLastChangelogShown'
+    )
+  const platform = useUiState((s) => s.platform)
 
   useEffect(() => {
     void window.api.getHeroicVersion().then((version) => {

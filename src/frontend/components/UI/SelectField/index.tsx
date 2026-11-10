@@ -1,6 +1,6 @@
-import { ReactNode, useContext } from 'react'
+import { ReactNode } from 'react'
 import classnames from 'classnames'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useSettingsState, { selectIsRTL } from 'frontend/state/settingsState'
 import { Select, MenuItem, SelectChangeEvent } from '@mui/material'
 import FieldLabel from '../FieldLabel'
 import './index.css'
@@ -30,7 +30,7 @@ export default function SelectField({
   afterSelect,
   children
 }: SelectFieldProps) {
-  const { isRTL } = useContext(ContextProvider)
+  const isRTL = useSettingsState(selectIsRTL)
 
   return (
     <div

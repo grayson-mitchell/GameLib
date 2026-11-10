@@ -2,8 +2,6 @@
   "contextImports": {
     "src/frontend/components/UI/NavShell/components/FilterCollectionList/index.tsx": 1,
     "src/frontend/components/UI/NavShell/components/FilterFocusRow/index.tsx": 1,
-    "src/frontend/components/UI/NavShell/components/HeroicVersion/index.tsx": 1,
-    "src/frontend/components/UI/NavShell/components/NavShellTour/index.tsx": 1,
     "src/frontend/components/UI/NavShell/components/NavTabs/index.tsx": 1,
     "src/frontend/components/UI/NavShell/components/StoresPanel/index.tsx": 1
   }

@@ -18,6 +18,7 @@
  * never on the mere presence of a prop. This project's own named failure
  * mode is a gate that checks the call site rather than the behaviour.
  */
+import '../../../../testUtils/tauriWindow'
 import type {
   ReactElement,
   KeyboardEvent as ReactKeyboardEvent,

@@ -1,14 +1,13 @@
 import React, {
   ChangeEvent,
   CSSProperties,
-  useContext,
   useEffect,
   useMemo,
   useRef,
   useState
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useSettingsState, { selectIsRTL } from 'frontend/state/settingsState'
 import classNames from 'classnames'
 import { SelectField } from 'frontend/components/UI'
 import { ThemeSelector } from 'frontend/components/UI/ThemeSelector'
@@ -23,7 +22,6 @@ import { queryLocalFontsSafe } from './queryLocalFontsSafe'
 const Accessibility = React.memo(function Accessibility() {
   const { t } = useTranslation()
   const {
-    isRTL,
     zoomPercent,
     setZoomPercent,
     allTilesInColor,
@@ -40,7 +38,25 @@ const Accessibility = React.memo(function Accessibility() {
     setDisableDialogBackdropClose,
     disableAnimations,
     setDisableAnimations
-  } = useContext(ContextProvider)
+  } = useSettingsState.keys(
+    'zoomPercent',
+    'setZoomPercent',
+    'allTilesInColor',
+    'setAllTilesInColor',
+    'titlesAlwaysVisible',
+    'setTitlesAlwaysVisible',
+    'hideTitles',
+    'setHideTitles',
+    'cleanTiles',
+    'setCleanTiles',
+    'setPrimaryFontFamily',
+    'setSecondaryFontFamily',
+    'disableDialogBackdropClose',
+    'setDisableDialogBackdropClose',
+    'disableAnimations',
+    'setDisableAnimations'
+  )
+  const isRTL = useSettingsState(selectIsRTL)
 
   const [fonts, setFonts] = useState<string[]>([])
   const [contentFont, setContentFont] = useState('')

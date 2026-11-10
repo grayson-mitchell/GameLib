@@ -152,11 +152,9 @@ function readAppGate(strippedApp: string): AppGate {
   }
   const root = strippedApp.slice(rootIdx)
 
-  const destructure = root.match(
-    /const\s*\{([^}]*)\}\s*=\s*useContext\(ContextProvider\)/
-  )
+  const destructure = root.match(/const\s*\{([^}]*)\}\s*=\s*useUiState\.keys\(/)
   if (!destructure) {
-    throw new Error('Root does not destructure useContext(ContextProvider)')
+    throw new Error('Root does not destructure useUiState.keys(...)')
   }
   const contextNames = defined(destructure[1], 'destructured names')
     .split(',')
@@ -233,7 +231,7 @@ describe('seedAndFollowWindowChrome -- isFrameless follows the frameless push (2
 describe('App.tsx -- the WindowControls gate across the frameless flip (261102-dma)', () => {
   const gate = readAppGate(stripSourceComments(readFileSync(appPath, 'utf-8')))
 
-  it('B1: Root reads isFrameless from the context GlobalState provides', () => {
+  it('B1: Root reads isFrameless from useUiState', () => {
     expect(gate.contextNames).toContain('isFrameless')
   })
 

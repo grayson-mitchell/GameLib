@@ -1,6 +1,6 @@
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import classnames from 'classnames'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useSettingsState, { selectIsRTL } from 'frontend/state/settingsState'
 import { Slider } from '@mui/material'
 import './index.css'
 import { Mark } from '@mui/material/Slider/useSlider.types'
@@ -30,7 +30,7 @@ export default function SliderField({
   marks,
   showMinMaxMarks
 }: SliderFieldProps) {
-  const { isRTL } = useContext(ContextProvider)
+  const isRTL = useSettingsState(selectIsRTL)
 
   const [sliderMarks, setSliderMarks] = useState<Mark[]>([])
 

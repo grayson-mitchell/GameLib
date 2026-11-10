@@ -1,6 +1,5 @@
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useSettingsState from 'frontend/state/settingsState'
 import { SelectField } from '..'
 import { MenuItem } from '@mui/material'
 import { defaultThemes, resolveThemeLabel } from './themeLabels'
@@ -13,7 +12,7 @@ export { defaultThemes }
 // import above stays for this file's own internal use below.
 
 export const ThemeSelector = () => {
-  const { theme, setTheme } = useContext(ContextProvider)
+  const { theme, setTheme } = useSettingsState.keys('theme', 'setTheme')
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
 

@@ -1,9 +1,8 @@
-import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import useSetting from 'frontend/hooks/useSetting'
 import { ToggleSwitch } from 'frontend/components/UI'
 import InfoIcon from 'frontend/components/UI/InfoIcon'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useSettingsState from 'frontend/state/settingsState'
 
 // GOG-only. Still stored as experimentalFeatures.cometSupport (the backend reads that key in
 // launcher.ts and gog/games.ts); it moved out of the old Experimental Features section.
@@ -15,7 +14,9 @@ const CometSupport = () => {
       cometSupport: true
     }
   )
-  const { handleExperimentalFeatures } = useContext(ContextProvider)
+  const handleExperimentalFeatures = useSettingsState(
+    (s) => s.handleExperimentalFeatures
+  )
 
   const toggle = () => {
     const newFeatures = {

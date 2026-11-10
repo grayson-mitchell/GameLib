@@ -2,7 +2,6 @@ import React, {
   ReactNode,
   forwardRef,
   useCallback,
-  useContext,
   useEffect,
   useState
 } from 'react'
@@ -16,7 +15,7 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import useSettingsState from 'frontend/state/settingsState'
 import { useSuppressStoreEmbed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 
 interface DialogProps {
@@ -68,7 +67,9 @@ export const Dialog: React.FC<DialogProps> = ({
   onClose
 }) => {
   const [open, setOpen] = useState(true)
-  const { disableDialogBackdropClose } = useContext(ContextProvider)
+  const disableDialogBackdropClose = useSettingsState(
+    (s) => s.disableDialogBackdropClose
+  )
 
   // Phase 40 Plan 06 (D-18/D-20/T-40-06-01): called unconditionally, not
   // gated on `open` -- `Dialog` only exists in the tree while it is open

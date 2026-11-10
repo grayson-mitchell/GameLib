@@ -29,6 +29,7 @@
  * real component passes.
  */
 
+import 'frontend/testUtils/tauriWindow'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { ReactElement, ReactNode } from 'react'

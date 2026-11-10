@@ -22,11 +22,12 @@
  * `Sidebar/components/` tree as a git-detected rename in the prior
  * commit; this commit is the rewrite.
  */
-import React, { useContext, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import Tour, { TourStep } from 'frontend/components/Tour/Tour'
 import { useTour } from 'frontend/state/TourContext'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useUiState from 'frontend/state/uiState'
+import useSettingsState, { selectIsRTL } from 'frontend/state/settingsState'
 
 export const NAV_TOUR_ID = 'nav-tour'
 
@@ -44,7 +45,8 @@ const NavShellTour: React.FC = () => {
   // key rather than edit a default an existing catalogue value overrides).
   const { t: tGamelib } = useTranslation('gamelib')
   const { isTourActive } = useTour()
-  const { platform, isRTL } = useContext(ContextProvider)
+  const platform = useUiState((s) => s.platform)
+  const isRTL = useSettingsState(selectIsRTL)
 
   const isWin = platform === 'win32'
 

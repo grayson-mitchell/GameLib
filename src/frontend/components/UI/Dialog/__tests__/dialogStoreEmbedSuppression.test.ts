@@ -11,7 +11,7 @@
  * established convention in this same directory: this jest project
  * (`src/frontend/jest.config.js`) is `testEnvironment: 'node'`, and
  * `Dialog.tsx` cannot actually be mounted (it renders MUI's `Dialog`,
- * `Paper`, `Slide` and reads `ContextProvider` via `useContext` -- none of
+ * `Paper`, `Slide` and reads `settingsState` via `useSettingsState` -- none of
  * which this project's hooks-mocking convention can drive through a real
  * render). Every assertion below reads `Dialog.tsx` with `readFileSync`,
  * strips comments with `stripSourceComments`, and matches text -- proving
@@ -51,9 +51,9 @@ describe('Phase 40 Plan 06: Dialog acquires store-embed suppression unconditiona
 
     // Breaks if: the call is removed, or moved inside an `if`/callback
     // (which would indent it past this exact two-space top-level depth,
-    // the same depth `useState`/`useContext` sit at immediately above it).
+    // the same depth `useState`/`useSettingsState` sit at immediately above it).
     expect(source).toMatch(
-      /const \{ disableDialogBackdropClose \} = useContext\(ContextProvider\)\n\n {2}useSuppressStoreEmbed\(\)\n/
+      /const disableDialogBackdropClose = useSettingsState\(\n {4}\(s\) => s\.disableDialogBackdropClose\n {2}\)\n\n {2}useSuppressStoreEmbed\(\)\n/
     )
   })
 

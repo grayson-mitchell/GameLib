@@ -11,7 +11,7 @@
     "src/frontend/components/UI/NavShell/__tests__/HeroicVersion.test.tsx": 5,
     "src/frontend/components/UI/NavShell/__tests__/NavItem.test.tsx": 3,
     "src/frontend/components/UI/NavShell/__tests__/NavShell.test.tsx": 10,
-    "src/frontend/components/UI/NavShell/__tests__/NavShellTour.test.tsx": 5,
+    "src/frontend/components/UI/NavShell/__tests__/NavShellTour.test.tsx": 4,
     "src/frontend/components/UI/NavShell/__tests__/NavTabsComponent.test.tsx": 6,
     "src/frontend/components/UI/NavShell/__tests__/QuitButton.test.tsx": 4,
     "src/frontend/components/UI/NavShell/__tests__/SettingsPanel.test.tsx": 7,

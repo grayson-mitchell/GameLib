@@ -1,18 +1,10 @@
 {
   "contextImports": {
     "src/frontend/components/UI/DLCList/DLC/index.tsx": 1,
-    "src/frontend/components/UI/Dialog/components/Dialog.tsx": 1,
     "src/frontend/components/UI/ErrorComponent/index.tsx": 1,
     "src/frontend/components/UI/Header/index.tsx": 1,
     "src/frontend/components/UI/HumbleExpiryToast/index.tsx": 1,
-    "src/frontend/components/UI/LanguageSelector/index.tsx": 1,
     "src/frontend/components/UI/RedeemSteamKeyDialog/index.tsx": 1,
-    "src/frontend/components/UI/SelectField/index.tsx": 1,
-    "src/frontend/components/UI/SliderField/index.tsx": 1,
-    "src/frontend/components/UI/TextInputField/index.tsx": 1,
-    "src/frontend/components/UI/ThemeSelector/index.tsx": 1,
-    "src/frontend/components/UI/ToggleSwitch/index.tsx": 1,
-    "src/frontend/components/UI/TwoColTableInput/index.tsx": 1,
     "src/frontend/components/UI/UninstallModal/index.tsx": 1
   }
 }

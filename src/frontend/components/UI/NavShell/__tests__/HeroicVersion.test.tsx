@@ -5,10 +5,10 @@
  *
  * No jsdom / react-test-renderer is installed in this project (see
  * `src/frontend/jest.config.js` docstring) -- `HeroicVersion` uses
- * `useState` (x4), `useEffect` (x2) and `useContext`, so it needs the
+ * `useState` (x4), `useEffect` (x2) and the settings/ui store hooks, so it needs the
  * hand-rolled hooks harness (originally copied from the since-deleted `DownloadsRing.test.tsx`;
  * `DownloadsTabIcon.test.tsx` carries the same harness)
- * plus `useContext` mocked in the SAME `jest.mock('react', ...)` factory.
+ * plus the store hooks' `useSyncExternalStore` mocked in the SAME `jest.mock('react', ...)` factory.
  *
  * The default export is `React.memo(function HeroicVersion() {...})`
  * (`HeroicVersion/index.tsx:35`). A memo result is a plain object
@@ -16,6 +16,7 @@
  * directly throws "is not a function". The real render function lives at
  * `.type`; this file calls THAT.
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement, ReactNode } from 'react'
 
 jest.mock('../components/HeroicVersion/index.scss', () => ({}))
@@ -74,7 +75,12 @@ jest.mock('react', () => {
 
   return {
     ...actualReact,
-    useContext: () => contextValue,
+    useSyncExternalStore: (_subscribe: unknown, getSnapshot: () => unknown) =>
+      getSnapshot(),
+    useDebugValue: () => undefined,
+    useRef: (value: unknown) => ({ current: value }),
+    useMemo: (fn: () => unknown) => fn(),
+    useCallback: (fn: unknown) => fn,
     useState: (initial: unknown) => {
       const idx = stateCursor++
       if (idx >= stateSlots.length) {
@@ -144,14 +150,14 @@ const mockLocalStorage: Storage = {
 // (and decides first-run there) -- `window` must exist with a `localStorage`
 // before the component is required, and each scenario re-requires the module
 // inside `jest.isolateModules` with `storageData` set first.
-;(
-  globalThis as unknown as {
-    window: { localStorage: Storage; api: typeof mockApi }
-  }
-).window = {
-  localStorage: mockLocalStorage,
-  api: mockApi
-}
+type TestWindow = { localStorage: Storage; api: typeof mockApi }
+const testWindow = (): TestWindow =>
+  (globalThis as unknown as { window: TestWindow }).window
+// Extends the tauriWindow stub rather than replacing it: the stores need its
+// __TAURI_INTERNALS__. Importing them pulls tauriAttach, which can overwrite
+// window.api, so it is re-set after the imports in load().
+testWindow().localStorage = mockLocalStorage
+testWindow().api = mockApi
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -198,6 +204,21 @@ function load(seed: Record<string, string>): Loaded {
   storageData = { ...seed }
   let loaded: Loaded | undefined
   jest.isolateModules(() => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // Seed the stores the component reads, inside the same module registry
+    // the component binds to.
+    const { platform, ...settings } = contextValue
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const settingsStore = require('frontend/state/settingsState') as {
+      default: { setState: (s: Record<string, unknown>) => void }
+    }
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const uiStore = require('frontend/state/uiState') as {
+      default: { setState: (s: Record<string, unknown>) => void }
+    }
+    testWindow().api = mockApi
+    settingsStore.default.setState(settings)
+    uiStore.default.setState({ platform })
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require('../components/HeroicVersion') as {
       default: { type: () => AnyElement }
