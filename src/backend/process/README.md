@@ -187,4 +187,4 @@ static stores outside the 16 (`engineNoticeStore`, the two `pci_ids` stores).
 `pnpm backend-di-ceilings` counts module-level singletons, `jest.mock` sites
 and similar census items per shard in `meta/backendDiCeilings/`. Ceilings only
 shrink: when a conversion lowers a count, lower the shard entry in the same
-commit. Never raise a ceiling to admit growth.
+commit. Never raise a ceiling to admit growth. The one exception is a census _definition_ change that starts counting state that already existed (e.g. 66.1 review C-WR-2 began counting non-readonly `static` class fields: moduleState 234 -> 251); that re-baseline must name every newly counted site and its owning phase in the same commit.
