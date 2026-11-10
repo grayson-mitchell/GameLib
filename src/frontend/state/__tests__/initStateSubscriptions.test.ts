@@ -1,3 +1,4 @@
+import i18next from 'i18next'
 import { resetAllStores, type StoreHooks } from '../storeKit'
 import type { UiState } from '../uiState'
 import type { SettingsState } from '../settingsState'
@@ -572,6 +573,38 @@ describe('initStateSubscriptions', () => {
       init.bootSequenceEffect()
       await new Promise((r) => setTimeout(r, 20))
       expect(ready).toBe(1)
+    })
+  })
+  describe('i18next resolves its language a tick after init (http backend)', () => {
+    // Runs first in this block: it performs the one real `i18next.init` of the
+    // file, without inline `resources`, so `language` is set after a tick like
+    // the production http-backend boot.
+    it('settingsState.language follows i18next once it initialises', async () => {
+      const ready: string[] = []
+      const initDone = i18next.init({
+        lng: 'pt-BR',
+        fallbackLng: 'en',
+        supportedLngs: ['en', 'pt_BR', 'pt-BR'],
+        interpolation: { escapeValue: false }
+      })
+      // the CR-01 precondition: nothing resolved yet when the boot runs
+      expect(i18next.language).toBeUndefined()
+      expect(i18next.isInitialized).toBeFalsy()
+
+      init.initStateSubscriptions()
+      init.runWhenI18nextInitialized(() => ready.push('ran'))
+      expect(useSettingsState.getState().language).toBe('en')
+      expect(ready).toEqual([])
+
+      await initDone
+      expect(ready).toEqual(['ran'])
+      expect(useSettingsState.getState().language).toBe('pt_BR')
+    })
+
+    it('runWhenI18nextInitialized runs immediately once initialised', () => {
+      let ran = 0
+      init.runWhenI18nextInitialized(() => ran++)
+      expect(ran).toBe(1)
     })
   })
 })

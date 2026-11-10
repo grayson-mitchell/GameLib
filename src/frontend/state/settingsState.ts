@@ -178,7 +178,6 @@ const useSettingsStateRaw = create<SettingsState>()(
 
 type InitialSettings = Pick<
   SettingsState,
-  | 'language'
   | 'theme'
   | 'zoomPercent'
   | 'primaryFontFamily'
@@ -191,7 +190,14 @@ type InitialSettings = Pick<
   | 'lastChangelogShown'
   | 'disableDialogBackdropClose'
   | 'disableAnimations'
->
+> & {
+  /**
+   * Absent while i18next has not resolved a language yet (its `init` defers the
+   * load by a tick with the http backend); the store's default stays in place
+   * and `followBootLanguage` fills it in once i18next is ready.
+   */
+  language?: string
+}
 
 /**
  * The values the GlobalState constructor read after hydration. Applied by
@@ -202,7 +208,9 @@ export function readInitialSettings(): InitialSettings {
   return {
     // Converted back OUT of i18next (quick-260925-bq4): `i18n.language` is the
     // BCP-47 tag, but LanguageSelector indexes labels by the shipped code.
-    language: toShippedLanguage(i18next.language),
+    ...(i18next.language
+      ? { language: toShippedLanguage(i18next.language) }
+      : {}),
     theme: configStore.get('theme', 'midnightMirage'),
     zoomPercent: configStore.get('zoomPercent', 100),
     secondaryFontFamily:

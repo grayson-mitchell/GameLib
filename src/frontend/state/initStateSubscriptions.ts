@@ -4,8 +4,11 @@
  * Listeners registered here last for the life of the app: there is no
  * disposer (D-07). Tests reset stores instead of tearing listeners down.
  *
- * Must be called after `hydrateStoreSnapshot()` and `i18next.init`, before
- * `root.render` (index.tsx), so readInitial() sees the hydrated snapshot.
+ * Must be called after `hydrateStoreSnapshot()` and the `i18next.init` CALL,
+ * before `root.render` (index.tsx), so readInitial() sees the hydrated
+ * snapshot. `init` has been called but may not have finished: with the http
+ * backend `i18next.language` is still undefined here, so the language is
+ * filled in by `followBootLanguage` once i18next reports `initialized`.
  *
  * The former componentDidMount tail (awaited seeding, mount-time
  * refreshLibrary, frontendReady) is `runPostMountBoot()`, triggered by
@@ -15,6 +18,8 @@
  * Never read `window.localStorage` at module scope: node-env tests must be
  * able to import this file.
  */
+import i18next from 'i18next'
+import { toShippedLanguage } from 'common/languages'
 import { hydrateFocusRowSelection } from 'common/focusRowMigration'
 import { applySavedZoomAtBoot } from './savedZoomBoot'
 import { getGameInfo } from '../helpers'
@@ -58,6 +63,41 @@ import { handleSteamBottleLaunchWaitingSignal } from './BottleLaunchWaiting'
 // .planning/todos/pending/2026-11-10-install-game-push-stale-status-and-unread-modal-state.md
 const LIBRARY_STATUS_AT_REGISTRATION: GameStatus[] = []
 
+/**
+ * Runs `fn` once i18next has finished initialising (immediately if it has).
+ * i18next emits `initialized` even when a resource load failed, so this does
+ * not hang on a backend error.
+ */
+export function runWhenI18nextInitialized(fn: () => void): void {
+  if (i18next.isInitialized) {
+    fn()
+    return
+  }
+  const onInitialized = () => {
+    i18next.off('initialized', onInitialized)
+    fn()
+  }
+  i18next.on('initialized', onInitialized)
+}
+
+/**
+ * The old GlobalState constructor only ran after i18next had loaded (Suspense
+ * through withTranslation), so it always read a resolved language. Reproduce
+ * that for the boot value only: if `readInitialSettings` found no language
+ * yet, take it from i18next once it has initialised. Later changes still go
+ * through `setLanguage`, as before.
+ */
+export function followBootLanguage(): void {
+  if (i18next.language) return
+  runWhenI18nextInitialized(() => {
+    if (i18next.language) {
+      useSettingsState.setState({
+        language: toShippedLanguage(i18next.language)
+      })
+    }
+  })
+}
+
 let initialised = false
 
 export function initStateSubscriptions(): void {
@@ -67,6 +107,7 @@ export function initStateSubscriptions(): void {
   // (1) re-read persisted initial state into each store (readInitial)
   useUiState.setState(readInitialUi())
   useSettingsState.setState(readInitialSettings())
+  followBootLanguage()
   useAuthState.setState(readInitialAuth())
   useLibraryState.setState(readInitialLibrary())
 
