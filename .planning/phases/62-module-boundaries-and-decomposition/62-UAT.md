@@ -1,10 +1,15 @@
 ---
-status: partial
+status: complete
 phase: 62-module-boundaries-and-decomposition
 source: [62-12-PLAN.md, 62-21-PLAN.md]
+updated: 2026-11-10T00:00:00Z
 ---
 
 # Phase 62 UAT
+
+## Current Test
+
+[testing complete]
 
 ## Smoke 1 — after split (D-16 step 2)
 
@@ -87,3 +92,23 @@ result: pass — operator confirmed.
 ### 18. Download queue
 expected: A GameLib-driven Steam depot download and a GOG/Epic download each show advancing progress with working pause/resume/cancel; Steam failures show error + Remove (not "canceled"); steam:// hand-offs appear under "Managed by Steam".
 result: issue — NOT caused by phase 62. 18a pass: GameLib-driven Steam depot download showed advancing progress, pause/resume/cancel worked. 18b: GOG download resume (Endless Sky 1829678475) restarts from 0%: paused at 12.07%, resume re-ran a byte-identical gogdl command and progress restarted at 0%. Phase-62 diffs in downloadqueue.ts/utils.ts are 1:1 literal-to-capability swaps not touching pause/resume or the gogdl command; not confirmed against a pre-62 build. 18c (Managed by Steam hand-off) and the Steam-failure case skipped. Filed as a todo.
+
+## Summary
+
+total: 18
+passed: 16
+issues: 1
+pending: 0
+skipped: 1
+
+#9 was skipped (no time for a Steam install) and its scope was re-run as #18. #18a passed.
+
+## Gaps
+
+- truth: "A GOG download resumes from where it was paused"
+  status: out-of-scope
+  reason: "User reported (#18b): GOG resume of Endless Sky restarts from 0%. Pre-existing, not a phase 62 regression: 62-HUMAN-UAT #5 got the same behaviour on a pre-62 build. Tracked and closed in .planning/todos/completed/2026-11-07-gog-download-resume-restarts-from-zero.md."
+  severity: major
+  test: 18
+  artifacts: []
+  missing: []
