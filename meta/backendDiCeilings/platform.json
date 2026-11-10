@@ -1,10 +1,6 @@
 {
-  "childProcess": {
-    "src/backend/platform/openDetached.ts": 1
-  },
   "jestMock": {
-    "src/backend/platform/__tests__/mainWindowVisibility.test.ts": 3,
-    "src/backend/platform/__tests__/openDetached.test.ts": 1
+    "src/backend/platform/__tests__/mainWindowVisibility.test.ts": 3
   },
   "moduleState": {
     "src/backend/platform/index.ts": 8

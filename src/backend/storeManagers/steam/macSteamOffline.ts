@@ -21,7 +21,6 @@
  *
  * The owed record is versioned by the Phase 68 store engine (quick 261109-vw2).
  */
-import { execFile } from 'child_process'
 import {
   closeSync,
   existsSync,
@@ -42,7 +41,8 @@ import {
   macSteamOfflineOwedVersion
 } from 'backend/storeVersioning/macSteamOfflineOwedFile'
 import { shell } from 'backend/platform'
-import { spawnOpenDetached as spawnDetachedOpen } from 'backend/platform/openDetached'
+import type { Clock, ProcessRunner, TimerHandle } from 'backend/process/types'
+import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import type { SteamGoOfflineRetryResult } from 'common/types/steam'
 
 const MAC_STEAM_LOGOFF_WAIT_MS = 5000
@@ -126,21 +126,23 @@ export function isOwnUserPidAlive(pid: number): boolean {
   }
 }
 
-/**
- * Fires a steam:// URL through a direct, detached `/usr/bin/open`. The
- * sidecar's `shell.openExternal` is a frame to the Rust shell over stdout,
- * which is gone at stdin EOF, so a shutdown restore cannot use it.
- */
-export function spawnOpenDetached(url: string): void {
-  spawnDetachedOpen(url, (code) => {
-    logWarning(
-      `[Steam] go-offline restore: could not spawn open (${code})`,
-      LogPrefix.Steam
-    )
-  })
+/** What the instance needs from the process: spawning goes through the runner, timers through the clock. */
+export type MacSteamOfflineBuildDeps = Omit<
+  MacSteamOfflineDeps,
+  'isSteamRunning' | 'sleep' | 'now' | 'openUrlDetached'
+> & {
+  runner: Pick<ProcessRunner, 'run' | 'openDetached'>
+  clock: Clock
 }
 
-function defaultMacSteamOfflineDeps(): MacSteamOfflineDeps {
+/**
+ * The non-spawn members of the deps, as production wires them. The paths are
+ * read lazily so importing this module stays cheap.
+ */
+export function createMacSteamOfflineEnvDeps(): Omit<
+  MacSteamOfflineBuildDeps,
+  'runner' | 'clock'
+> {
   return {
     platform: process.platform,
     connectionLogPath: () => {
@@ -158,28 +160,8 @@ function defaultMacSteamOfflineDeps(): MacSteamOfflineDeps {
         'connection_log.txt'
       )
     },
-    isSteamRunning: () =>
-      new Promise<boolean>((resolve, reject) => {
-        execFile(
-          '/usr/bin/pgrep',
-          ['-x', 'steam_osx'],
-          { timeout: 2000 },
-          (err) => {
-            if (!err) return resolve(true)
-            const code: unknown = (err as { code?: unknown }).code
-            if (code === 1) return resolve(false)
-            reject(err instanceof Error ? err : new Error(String(err)))
-          }
-        )
-      }),
     // Refresh's go-offline must not raise Mac Steam (quick 261029-thl); Steam may still self-raise on gooffline.
     openUrl: (url) => void shell.openExternal(url, { activate: false }),
-    sleep: (ms) =>
-      new Promise<void>((resolve) => {
-        const t = setTimeout(resolve, ms)
-        t.unref?.()
-      }),
-    now: () => Date.now(),
     onlineDebtPath: () => {
       /* eslint-disable @typescript-eslint/no-require-imports */
       const { appFolder } =
@@ -187,102 +169,34 @@ function defaultMacSteamOfflineDeps(): MacSteamOfflineDeps {
       /* eslint-enable @typescript-eslint/no-require-imports */
       return join(appFolder, MAC_STEAM_OFFLINE_OWED_FILE)
     },
-    openUrlDetached: spawnOpenDetached,
     isPidAlive: isOwnUserPidAlive,
     selfPid: process.pid,
     systemBootMs: () => Date.now() - uptime() * 1000
   }
 }
 
-// One-shot, 10-minute flag armed by checkGuidedOfflineReady(): the user went
-// offline because GameLib asked, so the next wrapped logon that finds Steam
-// 'Logged Off' restores it afterwards. Without it a user-chosen offline state
-// is never undone.
-let guidedArmedAt: number | null = null
-// 54-REVIEW WR-05: pays an abandoned guided step when its arm lapses unused.
-let guidedExpiryTimer: ReturnType<typeof setTimeout> | null = null
-
-function disarmGuided(): void {
-  guidedArmedAt = null
-  if (guidedExpiryTimer) clearTimeout(guidedExpiryTimer)
-  guidedExpiryTimer = null
-}
-
-// 54-REVIEW WR-01: bumped on every marker write, so a late goonline
-// confirmation clears only the marker it was fired for, never a newer one.
-let debtGeneration = 0
-// The in-session goonline confirmation still watching connection_log, if any.
-let onlineConfirmInFlight: Promise<void> | null = null
-
-// 54-REVIEW WR-04: wraps whose gooffline has been fired but whose LogOff has
-// not been seen yet. A shutdown restore in that window cannot know whether
-// the gooffline lands before or after its goonline, so it keeps the marker.
-let goofflinePending = 0
-// Resolved once the shutdown restore begins: the wrap then stops waiting on
-// unref'd timers (the LogOff watch, the settle) and fires its goonline at
-// once, before the event loop can drain.
-let shutdownBegun = false
-let signalShutdown: () => void = () => undefined
-let shutdownSignal: Promise<void> = newShutdownSignal()
-
-function newShutdownSignal(): Promise<void> {
-  return new Promise<void>((resolve) => {
-    signalShutdown = resolve
-  })
-}
-
-function beginMacSteamShutdown(): void {
-  shutdownBegun = true
-  signalShutdown()
-}
-
-// One restore flight per trigger: a shutdown never waits on a boot's confirm window.
-const restoreInFlight: {
-  boot: Promise<MacSteamRestoreOutcome> | null
-  shutdown: Promise<MacSteamRestoreOutcome> | null
-} = { boot: null, shutdown: null }
-
-export function __resetMacSteamOfflineForTests(): void {
-  disarmGuided()
-  restoreInFlight.boot = null
-  restoreInFlight.shutdown = null
-  debtGeneration = 0
-  onlineConfirmInFlight = null
-  goofflinePending = 0
-  shutdownBegun = false
-  shutdownSignal = newShutdownSignal()
-}
-
-export function __macSteamOnlineConfirmForTests(): Promise<void> {
-  return onlineConfirmInFlight ?? Promise.resolve()
-}
-
-type OnlineDebtBy = 'toggled' | 'guided' | 'toggled-unconfirmed'
-
-function recordOnlineDebt(
-  by: OnlineDebtBy,
-  deps: MacSteamOfflineDeps,
-  sinceMs: number = deps.now()
-): void {
-  debtGeneration++
+/**
+ * Isolated half of the two-profile rule: pgrep reads no user profile, so it
+ * gets a fake-HOME env and an empty stdin. Exit 1 is "not running"; any other
+ * outcome (spawn error, timeout, other code) rejects and callers fail safe.
+ */
+async function probeSteamRunning(
+  runner: Pick<ProcessRunner, 'run'>
+): Promise<boolean> {
+  const profile = createFakeHomeProfile({ prefix: 'gamelib-mac-steam-pgrep-' })
   try {
-    const p = deps.onlineDebtPath()
-    mkdirSync(dirname(p), { recursive: true })
-    writeFileSync(
-      p,
-      JSON.stringify({
-        version: macSteamOfflineOwedVersion(),
-        since: new Date(sinceMs).toISOString(),
-        by,
-        pid: deps.selfPid
-      }),
-      { mode: 0o600 }
-    )
-  } catch (err) {
-    logWarning(
-      `[Steam] go-offline wrap: could not record the owed goonline (${(err as NodeJS.ErrnoException).code ?? 'error'})`,
-      LogPrefix.Steam
-    )
+    const r = await runner.run('/usr/bin/pgrep', ['-x', 'steam_osx'], {
+      env: profile.childEnv(),
+      replaceEnv: true,
+      stdin: '',
+      timeoutMs: 2000
+    })
+    if (r.timedOut) throw new Error('pgrep timed out')
+    if (r.code === 0) return true
+    if (r.code === 1) return false
+    throw new Error(`pgrep exited ${String(r.code)}`)
+  } finally {
+    profile.dispose()
   }
 }
 
@@ -536,381 +450,487 @@ export function watchConnectionLog(
 }
 
 /**
- * Runs `connect` with Mac Steam taken offline for the duration, when that is
- * needed to protect its Friends session. See the module doc.
+ * One instance per process, built at boot (66.2 D-05/D-15). The go-offline
+ * debt, the guided arm and the shutdown signal are closure state of the
+ * instance, so a test builds its own and nothing leaks between tests. Building
+ * starts nothing; every timer is a clock timer (unref'd by default) and every
+ * child goes through the runner.
  */
-export async function withMacSteamOffline<T>(
-  connect: (wrap: MacSteamWrapKind) => Promise<T>,
-  deps: MacSteamOfflineDeps = defaultMacSteamOfflineDeps()
-): Promise<{ value: T; wrap: MacSteamWrapKind }> {
-  if (deps.platform !== 'darwin') {
-    return { value: await connect('not-darwin'), wrap: 'not-darwin' }
-  }
-
-  // A boot restore in flight is landing a goonline; do not read state mid-flight.
-  if (restoreInFlight.boot) await restoreInFlight.boot
-
-  let running: boolean
-  try {
-    running = await deps.isSteamRunning()
-  } catch {
-    logWarning(
-      '[Steam] go-offline wrap: Steam-running probe failed, deferring to the guided Go Offline step (no logon)',
-      LogPrefix.Steam
-    )
-    throw new GuidedOfflineRequiredError('running-probe-failed')
-  }
-  if (!running) {
-    logInfo('[Steam] go-offline wrap: Mac Steam not running', LogPrefix.Steam)
-    return { value: await connect('not-running'), wrap: 'not-running' }
-  }
-
-  const logPath = deps.connectionLogPath()
-  const state = readMacSteamCmState(logPath)
-
-  if (state === 'Logged Off') {
-    const guidedArmed =
-      guidedArmedAt !== null &&
-      deps.now() - guidedArmedAt < GUIDED_RESTORE_TTL_MS
-    disarmGuided()
-    let debtPresent = false
-    if (isOnlineDebtOwed(deps)) {
-      const debt = readOnlineDebt(deps)
-      if (!debtOwnedByOtherLiveProcess(debt, deps)) {
-        if (isUnconfirmedDebtStale(debt, () => logPath)) {
-          // The wrap's gooffline never landed: this Logged Off is the user's
-          // own choice, and the marker no longer means anything.
-          clearOnlineDebt(deps)
-          logInfo(
-            '[Steam] go-offline wrap: unconfirmed marker with no late LogOff, marker cleared',
-            LogPrefix.Steam
-          )
-        } else {
-          debtPresent = true
-        }
-      }
-    }
-    const armed = guidedArmed || debtPresent
-    if (!armed) {
-      logInfo(
-        '[Steam] go-offline wrap: Mac Steam state=Logged Off, no toggle needed',
-        LogPrefix.Steam
-      )
-      return {
-        value: await connect('already-offline'),
-        wrap: 'already-offline'
-      }
-    }
-    logInfo(
-      guidedArmed
-        ? '[Steam] go-offline wrap: Mac Steam state=Logged Off (guided), will restore online afterwards'
-        : '[Steam] go-offline wrap: Mac Steam state=Logged Off (owed from an interrupted wrap), will restore online afterwards',
-      LogPrefix.Steam
-    )
-    return {
-      value: await runThenGoOnline(connect, 'guided-restore', deps),
-      wrap: 'guided-restore'
-    }
-  }
-
-  logInfo(
-    `[Steam] go-offline wrap: Mac Steam state=${state ?? 'unknown'}, firing gooffline`,
-    LogPrefix.Steam
-  )
-  const firedAt = deps.now()
-  recordOnlineDebt('toggled', deps, firedAt)
-  // Watch BEFORE the verb so the start offset precedes any LogOff line.
-  const seen = watchConnectionLog(
-    logPath,
-    LOGOFF_EVIDENCE_RE,
-    MAC_STEAM_LOGOFF_WAIT_MS,
-    deps
-  )
-  goofflinePending++
-  let sawLogoff: boolean
-  try {
-    deps.openUrl(STEAM_GO_OFFLINE_URL)
-    // 54-REVIEW WR-04: a shutdown cuts the watch short; the gooffline may
-    // still land, so the wrap goes straight on to its goonline below.
-    sawLogoff = await Promise.race([seen, shutdownSignal.then(() => true)])
-  } finally {
-    goofflinePending--
-  }
-  if (shutdownBegun) {
-    logInfo(
-      '[Steam] go-offline wrap: shutdown began during the LogOff watch, going back online',
-      LogPrefix.Steam
-    )
-  }
-  if (!sawLogoff) {
-    logWarning(
-      `[Steam] go-offline wrap: no user-initiated LogOff within ${MAC_STEAM_LOGOFF_WAIT_MS}ms, deferring to the guided Go Offline step (no logon)`,
-      LogPrefix.Steam
-    )
-    // 54-REVIEW WR-02: Steam has not gone offline, so nothing is owed yet.
-    // The marker is kept only as `toggled-unconfirmed`, owed if the gooffline
-    // lands late (isUnconfirmedDebtStale), so a later Go Offline the user
-    // chooses is never undone by it.
-    recordOnlineDebt('toggled-unconfirmed', deps, firedAt)
-    throw new GuidedOfflineRequiredError('logoff-not-seen')
-  }
-  return {
-    value: await runThenGoOnline(connect, 'toggled', deps),
-    wrap: 'toggled'
-  }
-}
-
-async function runThenGoOnline<T>(
-  connect: (wrap: MacSteamWrapKind) => Promise<T>,
-  kind: MacSteamWrapKind,
-  deps: MacSteamOfflineDeps
-): Promise<T> {
-  let ok = false
-  recordOnlineDebt(kind === 'guided-restore' ? 'guided' : 'toggled', deps)
-  try {
-    const value = await connect(kind)
-    ok = true
-    return value
-  } finally {
-    // 54-REVIEW WR-04: the settle sleep is unref'd, so at shutdown it is cut
-    // short; otherwise the loop could drain before the goonline fires.
-    if (ok && !shutdownBegun) {
-      await Promise.race([
-        deps.sleep(MAC_STEAM_ONLINE_SETTLE_MS),
-        shutdownSignal
-      ])
-    }
-    logInfo('[Steam] go-offline wrap: firing goonline', LogPrefix.Steam)
-    fireGoOnlineAndConfirm(deps)
-  }
-}
-
-/**
- * 54-REVIEW WR-01: the in-session goonline. Fired through the detached
- * `/usr/bin/open` (not the shell's stdout frame, which has no acknowledgement
- * and is dropped when the shell is exiting), then confirmed from
- * connection_log the way the boot restore confirms it. The marker is cleared
- * only on confirmation; unconfirmed, it stays owed for the next wrap, the
- * shutdown restore or the boot restore. Never awaited by the wrap, so the
- * lease holder's result is not held for the confirm window; the watch polls
- * on `deps.sleep` (unref'd) and is bounded at MAC_STEAM_RESTORE_CONFIRM_MS.
- */
-function fireGoOnlineAndConfirm(deps: MacSteamOfflineDeps): void {
-  const gen = debtGeneration
-  let logPath: string | null = null
-  try {
-    logPath = deps.connectionLogPath()
-  } catch {
-    logPath = null
-  }
-  const since = deps.now()
-  // Watch BEFORE the fire so the start offset precedes any confirming line.
-  const seen =
-    logPath === null
-      ? Promise.resolve(false)
-      : watchConnectionLog(
-          logPath,
-          /processing complete/,
-          MAC_STEAM_RESTORE_CONFIRM_MS,
-          deps
-        )
-  deps.openUrlDetached(STEAM_GO_ONLINE_URL)
-  const p: Promise<void> = seen
-    .then((saw) => {
-      const confirmed =
-        saw ||
-        (logPath !== null &&
-          readMacSteamCmStateSince(logPath, since) === 'Logged On')
-      if (!confirmed) {
+export function createMacSteamOffline(build: MacSteamOfflineBuildDeps) {
+  const { runner, clock, ...envDeps } = build
+  const deps: MacSteamOfflineDeps = {
+    ...envDeps,
+    isSteamRunning: () => probeSteamRunning(runner),
+    sleep: (ms) =>
+      new Promise<void>((resolve) => {
+        clock.setTimeout(resolve, ms)
+      }),
+    now: () => clock.now(),
+    // The sidecar's `shell.openExternal` is a frame to the Rust shell over
+    // stdout, which is gone at stdin EOF, so a shutdown restore goes through
+    // a direct detached open instead.
+    openUrlDetached: (url) =>
+      runner.openDetached(url, (code) => {
         logWarning(
-          `[Steam] go-offline wrap: online not confirmed within ${MAC_STEAM_RESTORE_CONFIRM_MS}ms, marker kept`,
+          `[Steam] go-offline restore: could not spawn open (${code})`,
           LogPrefix.Steam
         )
-        return
-      }
-      // A wrap that started after this goonline owns the marker now.
-      if (debtGeneration !== gen) return
-      clearOnlineDebt(deps)
-      logInfo(
-        '[Steam] go-offline wrap: Mac Steam back online, marker cleared',
-        LogPrefix.Steam
-      )
-    })
-    .catch(() => undefined)
-    .finally(() => {
-      if (onlineConfirmInFlight === p) onlineConfirmInFlight = null
-    })
-  onlineConfirmInFlight = p
-}
+      })
+  }
 
-async function runRestore(
-  trigger: MacSteamRestoreTrigger,
-  deps: MacSteamOfflineDeps
-): Promise<MacSteamRestoreOutcome> {
-  if (deps.platform !== 'darwin') return 'not-darwin'
-  try {
-    if (!isOnlineDebtOwed(deps)) return 'not-owed'
-    const debt = readOnlineDebt(deps)
-    if (debtOwnedByOtherLiveProcess(debt, deps)) {
-      logInfo(
-        `[Steam] go-offline restore trigger=${trigger}: marker owned by a live GameLib process, marker kept`,
+  // One-shot, 10-minute flag armed by checkGuidedOfflineReady(): the user went
+  // offline because GameLib asked, so the next wrapped logon that finds Steam
+  // 'Logged Off' restores it afterwards. Without it a user-chosen offline state
+  // is never undone.
+  let guidedArmedAt: number | null = null
+  // 54-REVIEW WR-05: pays an abandoned guided step when its arm lapses unused.
+  let guidedExpiryTimer: TimerHandle | null = null
+
+  function disarmGuided(): void {
+    guidedArmedAt = null
+    if (guidedExpiryTimer) clock.clear(guidedExpiryTimer)
+    guidedExpiryTimer = null
+  }
+
+  // 54-REVIEW WR-01: bumped on every marker write, so a late goonline
+  // confirmation clears only the marker it was fired for, never a newer one.
+  let debtGeneration = 0
+  // The in-session goonline confirmation still watching connection_log, if any.
+  let onlineConfirmInFlight: Promise<void> | null = null
+
+  // 54-REVIEW WR-04: wraps whose gooffline has been fired but whose LogOff has
+  // not been seen yet. A shutdown restore in that window cannot know whether
+  // the gooffline lands before or after its goonline, so it keeps the marker.
+  let goofflinePending = 0
+  // Resolved once the shutdown restore begins: the wrap then stops waiting on
+  // unref'd timers (the LogOff watch, the settle) and fires its goonline at
+  // once, before the event loop can drain.
+  let shutdownBegun = false
+  let signalShutdown: () => void = () => undefined
+  const shutdownSignal: Promise<void> = new Promise<void>((resolve) => {
+    signalShutdown = resolve
+  })
+
+  function beginMacSteamShutdown(): void {
+    shutdownBegun = true
+    signalShutdown()
+  }
+
+  // One restore flight per trigger: a shutdown never waits on a boot's confirm window.
+  const restoreInFlight: {
+    boot: Promise<MacSteamRestoreOutcome> | null
+    shutdown: Promise<MacSteamRestoreOutcome> | null
+  } = { boot: null, shutdown: null }
+
+  type OnlineDebtBy = 'toggled' | 'guided' | 'toggled-unconfirmed'
+
+  function recordOnlineDebt(
+    by: OnlineDebtBy,
+    sinceMs: number = deps.now()
+  ): void {
+    debtGeneration++
+    try {
+      const p = deps.onlineDebtPath()
+      mkdirSync(dirname(p), { recursive: true })
+      writeFileSync(
+        p,
+        JSON.stringify({
+          version: macSteamOfflineOwedVersion(),
+          since: new Date(sinceMs).toISOString(),
+          by,
+          pid: deps.selfPid
+        }),
+        { mode: 0o600 }
+      )
+    } catch (err) {
+      logWarning(
+        `[Steam] go-offline wrap: could not record the owed goonline (${(err as NodeJS.ErrnoException).code ?? 'error'})`,
         LogPrefix.Steam
       )
-      return 'kept-owner-alive'
     }
-    if (isUnconfirmedDebtStale(debt, deps.connectionLogPath)) {
-      clearOnlineDebt(deps)
-      logInfo(
-        '[Steam] go-offline restore: unconfirmed marker with no late LogOff, nothing owed, marker cleared',
-        LogPrefix.Steam
-      )
-      return 'not-owed'
+  }
+
+  /**
+   * Runs `connect` with Mac Steam taken offline for the duration, when that is
+   * needed to protect its Friends session. See the module doc.
+   */
+  async function withMacSteamOffline<T>(
+    connect: (wrap: MacSteamWrapKind) => Promise<T>
+  ): Promise<{ value: T; wrap: MacSteamWrapKind }> {
+    if (deps.platform !== 'darwin') {
+      return { value: await connect('not-darwin'), wrap: 'not-darwin' }
     }
+
+    // A boot restore in flight is landing a goonline; do not read state mid-flight.
+    if (restoreInFlight.boot) await restoreInFlight.boot
+
     let running: boolean
     try {
       running = await deps.isSteamRunning()
     } catch {
-      logInfo(
-        `[Steam] go-offline restore trigger=${trigger}: running probe failed, marker kept`,
+      logWarning(
+        '[Steam] go-offline wrap: Steam-running probe failed, deferring to the guided Go Offline step (no logon)',
         LogPrefix.Steam
       )
-      return 'kept-probe-failed'
+      throw new GuidedOfflineRequiredError('running-probe-failed')
     }
     if (!running) {
+      logInfo('[Steam] go-offline wrap: Mac Steam not running', LogPrefix.Steam)
+      return { value: await connect('not-running'), wrap: 'not-running' }
+    }
+
+    const logPath = deps.connectionLogPath()
+    const state = readMacSteamCmState(logPath)
+
+    if (state === 'Logged Off') {
+      const guidedArmed =
+        guidedArmedAt !== null &&
+        deps.now() - guidedArmedAt < GUIDED_RESTORE_TTL_MS
+      disarmGuided()
+      let debtPresent = false
+      if (isOnlineDebtOwed(deps)) {
+        const debt = readOnlineDebt(deps)
+        if (!debtOwnedByOtherLiveProcess(debt, deps)) {
+          if (isUnconfirmedDebtStale(debt, () => logPath)) {
+            // The wrap's gooffline never landed: this Logged Off is the user's
+            // own choice, and the marker no longer means anything.
+            clearOnlineDebt(deps)
+            logInfo(
+              '[Steam] go-offline wrap: unconfirmed marker with no late LogOff, marker cleared',
+              LogPrefix.Steam
+            )
+          } else {
+            debtPresent = true
+          }
+        }
+      }
+      const armed = guidedArmed || debtPresent
+      if (!armed) {
+        logInfo(
+          '[Steam] go-offline wrap: Mac Steam state=Logged Off, no toggle needed',
+          LogPrefix.Steam
+        )
+        return {
+          value: await connect('already-offline'),
+          wrap: 'already-offline'
+        }
+      }
       logInfo(
-        `[Steam] go-offline restore trigger=${trigger}: owed but Mac Steam not running, marker kept`,
+        guidedArmed
+          ? '[Steam] go-offline wrap: Mac Steam state=Logged Off (guided), will restore online afterwards'
+          : '[Steam] go-offline wrap: Mac Steam state=Logged Off (owed from an interrupted wrap), will restore online afterwards',
         LogPrefix.Steam
       )
-      return 'kept-not-running'
+      return {
+        value: await runThenGoOnline(connect, 'guided-restore'),
+        wrap: 'guided-restore'
+      }
     }
-    const logPath = deps.connectionLogPath()
+
+    logInfo(
+      `[Steam] go-offline wrap: Mac Steam state=${state ?? 'unknown'}, firing gooffline`,
+      LogPrefix.Steam
+    )
+    const firedAt = deps.now()
+    recordOnlineDebt('toggled', firedAt)
+    // Watch BEFORE the verb so the start offset precedes any LogOff line.
+    const seen = watchConnectionLog(
+      logPath,
+      LOGOFF_EVIDENCE_RE,
+      MAC_STEAM_LOGOFF_WAIT_MS,
+      deps
+    )
+    goofflinePending++
+    let sawLogoff: boolean
+    try {
+      deps.openUrl(STEAM_GO_OFFLINE_URL)
+      // 54-REVIEW WR-04: a shutdown cuts the watch short; the gooffline may
+      // still land, so the wrap goes straight on to its goonline below.
+      sawLogoff = await Promise.race([seen, shutdownSignal.then(() => true)])
+    } finally {
+      goofflinePending--
+    }
+    if (shutdownBegun) {
+      logInfo(
+        '[Steam] go-offline wrap: shutdown began during the LogOff watch, going back online',
+        LogPrefix.Steam
+      )
+    }
+    if (!sawLogoff) {
+      logWarning(
+        `[Steam] go-offline wrap: no user-initiated LogOff within ${MAC_STEAM_LOGOFF_WAIT_MS}ms, deferring to the guided Go Offline step (no logon)`,
+        LogPrefix.Steam
+      )
+      // 54-REVIEW WR-02: Steam has not gone offline, so nothing is owed yet.
+      // The marker is kept only as `toggled-unconfirmed`, owed if the gooffline
+      // lands late (isUnconfirmedDebtStale), so a later Go Offline the user
+      // chooses is never undone by it.
+      recordOnlineDebt('toggled-unconfirmed', firedAt)
+      throw new GuidedOfflineRequiredError('logoff-not-seen')
+    }
+    return {
+      value: await runThenGoOnline(connect, 'toggled'),
+      wrap: 'toggled'
+    }
+  }
+
+  async function runThenGoOnline<T>(
+    connect: (wrap: MacSteamWrapKind) => Promise<T>,
+    kind: MacSteamWrapKind
+  ): Promise<T> {
+    let ok = false
+    recordOnlineDebt(kind === 'guided-restore' ? 'guided' : 'toggled')
+    try {
+      const value = await connect(kind)
+      ok = true
+      return value
+    } finally {
+      // 54-REVIEW WR-04: the settle sleep is unref'd, so at shutdown it is cut
+      // short; otherwise the loop could drain before the goonline fires.
+      if (ok && !shutdownBegun) {
+        await Promise.race([
+          deps.sleep(MAC_STEAM_ONLINE_SETTLE_MS),
+          shutdownSignal
+        ])
+      }
+      logInfo('[Steam] go-offline wrap: firing goonline', LogPrefix.Steam)
+      fireGoOnlineAndConfirm()
+    }
+  }
+
+  /**
+   * 54-REVIEW WR-01: the in-session goonline. Fired through the detached
+   * `/usr/bin/open` (not the shell's stdout frame, which has no acknowledgement
+   * and is dropped when the shell is exiting), then confirmed from
+   * connection_log the way the boot restore confirms it. The marker is cleared
+   * only on confirmation; unconfirmed, it stays owed for the next wrap, the
+   * shutdown restore or the boot restore. Never awaited by the wrap, so the
+   * lease holder's result is not held for the confirm window; the watch polls
+   * on `deps.sleep` (unref'd) and is bounded at MAC_STEAM_RESTORE_CONFIRM_MS.
+   */
+  function fireGoOnlineAndConfirm(): void {
+    const gen = debtGeneration
+    let logPath: string | null = null
+    try {
+      logPath = deps.connectionLogPath()
+    } catch {
+      logPath = null
+    }
+    const since = deps.now()
     // Watch BEFORE the fire so the start offset precedes any confirming line.
     const seen =
-      trigger === 'boot'
-        ? watchConnectionLog(
+      logPath === null
+        ? Promise.resolve(false)
+        : watchConnectionLog(
             logPath,
             /processing complete/,
             MAC_STEAM_RESTORE_CONFIRM_MS,
             deps
           )
-        : null
-    logInfo(
-      `[Steam] go-offline restore trigger=${trigger}: firing goonline`,
-      LogPrefix.Steam
-    )
     deps.openUrlDetached(STEAM_GO_ONLINE_URL)
-    if (seen === null) {
-      if (goofflinePending > 0) {
-        // 54-REVIEW WR-04: a wrap's gooffline may still land after this
-        // goonline; the wrap fires its own goonline next, and the boot
-        // restore pays the marker if neither is confirmed.
+    const p: Promise<void> = seen
+      .then((saw) => {
+        const confirmed =
+          saw ||
+          (logPath !== null &&
+            readMacSteamCmStateSince(logPath, since) === 'Logged On')
+        if (!confirmed) {
+          logWarning(
+            `[Steam] go-offline wrap: online not confirmed within ${MAC_STEAM_RESTORE_CONFIRM_MS}ms, marker kept`,
+            LogPrefix.Steam
+          )
+          return
+        }
+        // A wrap that started after this goonline owns the marker now.
+        if (debtGeneration !== gen) return
+        clearOnlineDebt(deps)
         logInfo(
-          `[Steam] go-offline restore trigger=${trigger}: a gooffline is still in flight, marker kept`,
+          '[Steam] go-offline wrap: Mac Steam back online, marker cleared',
           LogPrefix.Steam
         )
-        return 'restore-unconfirmed'
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (onlineConfirmInFlight === p) onlineConfirmInFlight = null
+      })
+    onlineConfirmInFlight = p
+  }
+
+  async function runRestore(
+    trigger: MacSteamRestoreTrigger
+  ): Promise<MacSteamRestoreOutcome> {
+    if (deps.platform !== 'darwin') return 'not-darwin'
+    try {
+      if (!isOnlineDebtOwed(deps)) return 'not-owed'
+      const debt = readOnlineDebt(deps)
+      if (debtOwnedByOtherLiveProcess(debt, deps)) {
+        logInfo(
+          `[Steam] go-offline restore trigger=${trigger}: marker owned by a live GameLib process, marker kept`,
+          LogPrefix.Steam
+        )
+        return 'kept-owner-alive'
       }
-      clearOnlineDebt(deps)
-      return 'restored'
-    }
-    const confirmed =
-      (await seen) ||
-      (debt.sinceMs !== undefined &&
-        readMacSteamCmStateSince(logPath, debt.sinceMs) === 'Logged On')
-    if (confirmed) {
-      clearOnlineDebt(deps)
+      if (isUnconfirmedDebtStale(debt, deps.connectionLogPath)) {
+        clearOnlineDebt(deps)
+        logInfo(
+          '[Steam] go-offline restore: unconfirmed marker with no late LogOff, nothing owed, marker cleared',
+          LogPrefix.Steam
+        )
+        return 'not-owed'
+      }
+      let running: boolean
+      try {
+        running = await deps.isSteamRunning()
+      } catch {
+        logInfo(
+          `[Steam] go-offline restore trigger=${trigger}: running probe failed, marker kept`,
+          LogPrefix.Steam
+        )
+        return 'kept-probe-failed'
+      }
+      if (!running) {
+        logInfo(
+          `[Steam] go-offline restore trigger=${trigger}: owed but Mac Steam not running, marker kept`,
+          LogPrefix.Steam
+        )
+        return 'kept-not-running'
+      }
+      const logPath = deps.connectionLogPath()
+      // Watch BEFORE the fire so the start offset precedes any confirming line.
+      const seen =
+        trigger === 'boot'
+          ? watchConnectionLog(
+              logPath,
+              /processing complete/,
+              MAC_STEAM_RESTORE_CONFIRM_MS,
+              deps
+            )
+          : null
       logInfo(
-        '[Steam] go-offline restore trigger=boot: Mac Steam back online, marker cleared',
+        `[Steam] go-offline restore trigger=${trigger}: firing goonline`,
         LogPrefix.Steam
       )
-      return 'restored'
+      deps.openUrlDetached(STEAM_GO_ONLINE_URL)
+      if (seen === null) {
+        if (goofflinePending > 0) {
+          // 54-REVIEW WR-04: a wrap's gooffline may still land after this
+          // goonline; the wrap fires its own goonline next, and the boot
+          // restore pays the marker if neither is confirmed.
+          logInfo(
+            `[Steam] go-offline restore trigger=${trigger}: a gooffline is still in flight, marker kept`,
+            LogPrefix.Steam
+          )
+          return 'restore-unconfirmed'
+        }
+        clearOnlineDebt(deps)
+        return 'restored'
+      }
+      const confirmed =
+        (await seen) ||
+        (debt.sinceMs !== undefined &&
+          readMacSteamCmStateSince(logPath, debt.sinceMs) === 'Logged On')
+      if (confirmed) {
+        clearOnlineDebt(deps)
+        logInfo(
+          '[Steam] go-offline restore trigger=boot: Mac Steam back online, marker cleared',
+          LogPrefix.Steam
+        )
+        return 'restored'
+      }
+      logInfo(
+        `[Steam] go-offline restore trigger=boot: online not confirmed within ${MAC_STEAM_RESTORE_CONFIRM_MS}ms, marker kept`,
+        LogPrefix.Steam
+      )
+      return 'restore-unconfirmed'
+    } catch {
+      return 'kept-probe-failed'
     }
+  }
+
+  /**
+   * Pays the goonline a wrap owed when its process died first. Never rejects;
+   * single-flight per trigger. With no marker it does no work at all.
+   */
+  function restoreMacSteamOnlineIfOwed(
+    trigger: MacSteamRestoreTrigger
+  ): Promise<MacSteamRestoreOutcome> {
+    if (trigger === 'shutdown') beginMacSteamShutdown()
+    const existing = restoreInFlight[trigger]
+    if (existing) return existing
+    const p: Promise<MacSteamRestoreOutcome> = runRestore(trigger)
+      .catch((): MacSteamRestoreOutcome => 'kept-probe-failed')
+      .finally(() => {
+        if (restoreInFlight[trigger] === p) restoreInFlight[trigger] = null
+      })
+    restoreInFlight[trigger] = p
+    return p
+  }
+
+  /**
+   * The renderer's Continue button on the guided Go Offline step. Reports
+   * whether Mac Steam is now offline (or not running) and, when it is, arms the
+   * one-shot guided restore.
+   */
+  async function checkGuidedOfflineReady(): Promise<SteamGoOfflineRetryResult> {
+    if (deps.platform !== 'darwin') return { status: 'not-macos' }
+    let running: boolean
+    try {
+      running = await deps.isSteamRunning()
+    } catch {
+      return { status: 'still-online' }
+    }
+    if (running) {
+      const state = readMacSteamCmState(deps.connectionLogPath())
+      if (state !== 'Logged Off') return { status: 'still-online' }
+    }
+    disarmGuided()
+    if (running) {
+      recordOnlineDebt('guided')
+      // 54-REVIEW WR-05: if no wrapped logon consumes this arm in time (the
+      // retry failed before its logon, or a redeem is never retried), pay the
+      // goonline anyway. A clock timer, unref'd: it never holds the sidecar open.
+      guidedExpiryTimer = clock.setTimeout(
+        () => payAbandonedGuidedOffline('expired'),
+        GUIDED_RESTORE_TTL_MS
+      )
+    }
+    guidedArmedAt = deps.now()
+    return { status: 'ready' }
+  }
+
+  /**
+   * 54-REVIEW WR-05: the user left the guided Go Offline step (Cancel, close)
+   * or its arm lapsed, while Mac Steam is offline only because GameLib asked.
+   * Fires the goonline and clears the marker once Steam is confirmed online.
+   * A no-op unless the step is still armed and the marker is this process's own
+   * `guided` record, so it never undoes a wrap in flight or the user's choice.
+   */
+  function payAbandonedGuidedOffline(cause: 'cancel' | 'expired'): boolean {
+    const armed = guidedArmedAt !== null
+    disarmGuided()
+    if (deps.platform !== 'darwin' || !armed) return false
+    if (!isOnlineDebtOwed(deps)) return false
+    const debt = readOnlineDebt(deps)
+    if (debt.by !== 'guided' || debt.pid !== deps.selfPid) return false
     logInfo(
-      `[Steam] go-offline restore trigger=boot: online not confirmed within ${MAC_STEAM_RESTORE_CONFIRM_MS}ms, marker kept`,
+      `[Steam] go-offline guided step ${cause === 'cancel' ? 'cancelled' : 'expired'}: firing goonline`,
       LogPrefix.Steam
     )
-    return 'restore-unconfirmed'
-  } catch {
-    return 'kept-probe-failed'
+    fireGoOnlineAndConfirm()
+    return true
+  }
+
+  return {
+    withMacSteamOffline,
+    restoreMacSteamOnlineIfOwed,
+    checkGuidedOfflineReady,
+    payAbandonedGuidedOffline,
+    isSteamRunning: deps.isSteamRunning,
+    openUrlDetached: deps.openUrlDetached,
+    /** Settles when the in-session goonline confirmation has finished watching. */
+    onlineConfirmSettled: (): Promise<void> =>
+      onlineConfirmInFlight ?? Promise.resolve()
   }
 }
 
-/**
- * Pays the goonline a wrap owed when its process died first. Never rejects;
- * single-flight per trigger. With no marker it does no work at all.
- */
-export function restoreMacSteamOnlineIfOwed(
-  trigger: MacSteamRestoreTrigger,
-  deps: MacSteamOfflineDeps = defaultMacSteamOfflineDeps()
-): Promise<MacSteamRestoreOutcome> {
-  if (trigger === 'shutdown') beginMacSteamShutdown()
-  const existing = restoreInFlight[trigger]
-  if (existing) return existing
-  const p: Promise<MacSteamRestoreOutcome> = runRestore(trigger, deps)
-    .catch((): MacSteamRestoreOutcome => 'kept-probe-failed')
-    .finally(() => {
-      if (restoreInFlight[trigger] === p) restoreInFlight[trigger] = null
-    })
-  restoreInFlight[trigger] = p
-  return p
-}
-
-/**
- * The renderer's Continue button on the guided Go Offline step. Reports
- * whether Mac Steam is now offline (or not running) and, when it is, arms the
- * one-shot guided restore.
- */
-export async function checkGuidedOfflineReady(
-  deps: MacSteamOfflineDeps = defaultMacSteamOfflineDeps()
-): Promise<SteamGoOfflineRetryResult> {
-  if (deps.platform !== 'darwin') return { status: 'not-macos' }
-  let running: boolean
-  try {
-    running = await deps.isSteamRunning()
-  } catch {
-    return { status: 'still-online' }
-  }
-  if (running) {
-    const state = readMacSteamCmState(deps.connectionLogPath())
-    if (state !== 'Logged Off') return { status: 'still-online' }
-  }
-  disarmGuided()
-  if (running) {
-    recordOnlineDebt('guided', deps)
-    // 54-REVIEW WR-05: if no wrapped logon consumes this arm in time (the
-    // retry failed before its logon, or a redeem is never retried), pay the
-    // goonline anyway. unref'd: it never holds the sidecar open.
-    guidedExpiryTimer = setTimeout(
-      () => payAbandonedGuidedOffline('expired', deps),
-      GUIDED_RESTORE_TTL_MS
-    )
-    guidedExpiryTimer.unref?.()
-  }
-  guidedArmedAt = deps.now()
-  return { status: 'ready' }
-}
-
-/**
- * 54-REVIEW WR-05: the user left the guided Go Offline step (Cancel, close)
- * or its arm lapsed, while Mac Steam is offline only because GameLib asked.
- * Fires the goonline and clears the marker once Steam is confirmed online.
- * A no-op unless the step is still armed and the marker is this process's own
- * `guided` record, so it never undoes a wrap in flight or the user's choice.
- */
-export function payAbandonedGuidedOffline(
-  cause: 'cancel' | 'expired',
-  deps: MacSteamOfflineDeps = defaultMacSteamOfflineDeps()
-): boolean {
-  const armed = guidedArmedAt !== null
-  disarmGuided()
-  if (deps.platform !== 'darwin' || !armed) return false
-  if (!isOnlineDebtOwed(deps)) return false
-  const debt = readOnlineDebt(deps)
-  if (debt.by !== 'guided' || debt.pid !== deps.selfPid) return false
-  logInfo(
-    `[Steam] go-offline guided step ${cause === 'cancel' ? 'cancelled' : 'expired'}: firing goonline`,
-    LogPrefix.Steam
-  )
-  fireGoOnlineAndConfirm(deps)
-  return true
-}
+export type MacSteamOffline = ReturnType<typeof createMacSteamOffline>

@@ -37,17 +37,28 @@ jest.mock('backend/config', () => ({
 import {
   GuidedOfflineRequiredError,
   GUIDED_RESTORE_TTL_MS,
-  restoreMacSteamOnlineIfOwed,
   STEAM_GO_OFFLINE_URL,
   STEAM_GO_ONLINE_URL,
-  __macSteamOnlineConfirmForTests,
-  __resetMacSteamOfflineForTests,
-  checkGuidedOfflineReady,
   readMacSteamCmState,
   watchConnectionLog,
-  withMacSteamOffline,
-  type MacSteamOfflineDeps
+  type MacSteamOfflineDeps,
+  type MacSteamRestoreTrigger,
+  type MacSteamWrapKind
 } from '../macSteamOffline'
+import { createMacSteamOfflineHarness } from 'backend/testUtils/macSteamOfflineHarness'
+
+let harness = createMacSteamOfflineHarness()
+const withMacSteamOffline = <T>(
+  connect: (wrap: MacSteamWrapKind) => Promise<T>,
+  deps: MacSteamOfflineDeps
+) => harness.instanceFor(deps).withMacSteamOffline(connect)
+const restoreMacSteamOnlineIfOwed = (
+  trigger: MacSteamRestoreTrigger,
+  deps: MacSteamOfflineDeps
+) => harness.instanceFor(deps).restoreMacSteamOnlineIfOwed(trigger)
+const checkGuidedOfflineReady = (deps: MacSteamOfflineDeps) =>
+  harness.instanceFor(deps).checkGuidedOfflineReady()
+const __macSteamOnlineConfirmForTests = () => harness.settleAll()
 
 const ONLINE_LINE =
   '[2026-10-27 13:07:22] [Logged On, 4, 19] [U:1:1] RecvMsgClientLogOnResponse() : processing complete\r\n'
@@ -103,11 +114,12 @@ beforeEach(() => {
   clock = 0
   urls = []
   running = true
-  __resetMacSteamOfflineForTests()
+  harness = createMacSteamOfflineHarness()
   __resetStoreState()
 })
 
-afterEach(() => {
+afterEach(async () => {
+  await harness.settleAll()
   fs.rmSync(dir, { recursive: true, force: true })
 })
 

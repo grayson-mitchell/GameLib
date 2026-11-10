@@ -220,6 +220,9 @@ function createTestSteamProcesses(
   overrides: Partial<ManagerDeps['steamProcesses']> = {}
 ): ManagerDeps['steamProcesses'] {
   return {
+    // Inert, not unscripted: every boot pays the owed goonline through this instance.
+    macSteamOffline:
+      overrides.macSteamOffline ?? createInertSteamProcesses().macSteamOffline,
     runningPoll: unscriptedMembers<
       ManagerDeps['steamProcesses']['runningPoll']
     >('steam running poll', overrides.runningPoll ?? {}),
@@ -238,6 +241,18 @@ export function createInertSteamProcesses(
   overrides: Partial<ManagerDeps['steamProcesses']> = {}
 ): ManagerDeps['steamProcesses'] {
   return {
+    macSteamOffline: overrides.macSteamOffline ?? {
+      withMacSteamOffline: async (connect) => ({
+        value: await connect('not-darwin'),
+        wrap: 'not-darwin'
+      }),
+      restoreMacSteamOnlineIfOwed: () => Promise.resolve('not-darwin'),
+      checkGuidedOfflineReady: () => Promise.resolve({ status: 'not-macos' }),
+      payAbandonedGuidedOffline: () => false,
+      isSteamRunning: () => Promise.resolve(false),
+      openUrlDetached: () => undefined,
+      onlineConfirmSettled: () => Promise.resolve()
+    },
     runningPoll: overrides.runningPoll ?? {
       start: () => undefined,
       stop: () => undefined,

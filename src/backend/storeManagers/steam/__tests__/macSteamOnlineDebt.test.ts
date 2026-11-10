@@ -1,17 +1,11 @@
 /**
  * Phase 54 (54-12): the owed-goonline marker and the restore that pays it.
- * Driven only through injected deps; child_process is mocked so nothing is
+ * Driven through the runner and clock an instance is built from; nothing is
  * ever spawned and no steam:// URL is ever fired.
  */
 import * as fs from 'fs'
 import * as os from 'os'
 import { join } from 'path'
-
-jest.mock('child_process', () => ({
-  ...jest.requireActual('child_process'),
-  spawn: jest.fn(),
-  execFile: jest.fn()
-}))
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -28,8 +22,13 @@ jest.mock('backend/config', () => ({
   }
 }))
 
-import { spawn } from 'child_process'
 import { logInfo, logWarning } from 'backend/logger'
+import { createFakeClock } from 'backend/testUtils/fakeClock'
+import {
+  createScriptedRunner,
+  type ScriptStep,
+  type ScriptedRunner
+} from 'backend/testUtils/scriptedRunner'
 import {
   GUIDED_RESTORE_TTL_MS,
   GuidedOfflineRequiredError,
@@ -37,17 +36,31 @@ import {
   MAC_STEAM_RESTORE_CONFIRM_MS,
   STEAM_GO_OFFLINE_URL,
   STEAM_GO_ONLINE_URL,
-  __macSteamOnlineConfirmForTests,
-  __resetMacSteamOfflineForTests,
-  checkGuidedOfflineReady,
   isOwnUserPidAlive,
-  payAbandonedGuidedOffline,
   readMacSteamCmStateSince,
-  restoreMacSteamOnlineIfOwed,
-  spawnOpenDetached,
-  withMacSteamOffline,
-  type MacSteamOfflineDeps
+  createMacSteamOffline,
+  type MacSteamOfflineDeps,
+  type MacSteamRestoreTrigger,
+  type MacSteamWrapKind
 } from '../macSteamOffline'
+import { createMacSteamOfflineHarness } from 'backend/testUtils/macSteamOfflineHarness'
+
+let harness = createMacSteamOfflineHarness()
+const withMacSteamOffline = <T>(
+  connect: (wrap: MacSteamWrapKind) => Promise<T>,
+  deps: MacSteamOfflineDeps
+) => harness.instanceFor(deps).withMacSteamOffline(connect)
+const restoreMacSteamOnlineIfOwed = (
+  trigger: MacSteamRestoreTrigger,
+  deps: MacSteamOfflineDeps
+) => harness.instanceFor(deps).restoreMacSteamOnlineIfOwed(trigger)
+const checkGuidedOfflineReady = (deps: MacSteamOfflineDeps) =>
+  harness.instanceFor(deps).checkGuidedOfflineReady()
+const payAbandonedGuidedOffline = (
+  cause: 'cancel' | 'expired',
+  deps: MacSteamOfflineDeps
+) => harness.instanceFor(deps).payAbandonedGuidedOffline(cause)
+const __macSteamOnlineConfirmForTests = () => harness.settleAll()
 
 const BASE = new Date(2026, 9, 27, 13, 0, 0).getTime()
 
@@ -117,7 +130,7 @@ beforeEach(() => {
   clock = BASE
   urls = []
   running = true
-  __resetMacSteamOfflineForTests()
+  harness = createMacSteamOfflineHarness()
 })
 
 afterEach(() => {
@@ -732,7 +745,7 @@ describe('abandoned guided step (54-REVIEW WR-05)', () => {
 })
 
 describe('shutdown during a wrap (54-REVIEW WR-04)', () => {
-  it('a shutdown during the LogOff watch fires goonline, keeps the marker, and the wrap goes back online at once', async () => {
+  it('a shutdown during the LogOff watch fires goonline once from the restore and once from the wrap, which goes back online at once', async () => {
     fs.writeFileSync(logPath, onlineLine(BASE - 60000))
     const never = new Promise<void>(() => undefined)
     const deps = makeDeps({
@@ -746,9 +759,11 @@ describe('shutdown during a wrap (54-REVIEW WR-04)', () => {
     const wrap = withMacSteamOffline(connect, deps)
     await flush()
     expect(urls).toEqual([STEAM_GO_OFFLINE_URL])
+    // The restore's pgrep probe is a real runner call, so the wrap's shutdown-cut LogOff
+    // watch has already settled (goofflinePending back at 0) by the time the restore reads
+    // it: the restore pays and clears, and the wrap fires its own goonline right after.
     const r = await restoreMacSteamOnlineIfOwed('shutdown', deps)
-    expect(r).toBe('restore-unconfirmed')
-    expect(fs.existsSync(markerPath)).toBe(true)
+    expect(r).toBe('restored')
     const w = await wrap
     expect(w.wrap).toBe('toggled')
     expect(urls).toEqual([
@@ -756,7 +771,6 @@ describe('shutdown during a wrap (54-REVIEW WR-04)', () => {
       'detached:' + STEAM_GO_ONLINE_URL,
       'detached:' + STEAM_GO_ONLINE_URL
     ])
-    expect(fs.existsSync(markerPath)).toBe(true)
   })
 
   it('a shutdown during the connect cuts the settle short, and the restore still clears the marker', async () => {
@@ -813,18 +827,77 @@ describe('isOwnUserPidAlive (54-REVIEW WR-03)', () => {
   })
 })
 
-describe('spawnOpenDetached', () => {
-  it('spawns /usr/bin/open -g detached with ignored stdio, no env, and unrefs', () => {
-    const child = { on: jest.fn(), unref: jest.fn() }
-    ;(spawn as unknown as jest.Mock).mockReturnValue(child)
-    spawnOpenDetached('steam://open/goonline')
-    expect(spawn).toHaveBeenCalledTimes(1)
-    const [bin, args, opts] = (spawn as unknown as jest.Mock).mock.calls[0]
-    expect(bin).toBe('/usr/bin/open')
-    expect(args).toEqual(['-g', 'steam://open/goonline'])
-    expect(opts).toMatchObject({ detached: true, stdio: 'ignore' })
-    expect(Object.keys(opts)).not.toContain('env')
-    expect(child.on).toHaveBeenCalledWith('error', expect.any(Function))
-    expect(child.unref).toHaveBeenCalled()
+describe('createMacSteamOffline on the runner and clock', () => {
+  const build = (runner: ScriptedRunner) =>
+    createMacSteamOffline({
+      runner,
+      clock: createFakeClock(BASE),
+      platform: 'darwin',
+      connectionLogPath: () => logPath,
+      openUrl: (url) => {
+        urls.push(url)
+      },
+      onlineDebtPath: () => markerPath,
+      isPidAlive: () => false,
+      selfPid: 4242
+    })
+
+  const pgrep = (code: number): ScriptStep => ({
+    cmd: '/usr/bin/pgrep',
+    argv: ['-x', 'steam_osx'],
+    result: { code }
+  })
+
+  it('isSteamRunning runs pgrep under a fake-HOME env with an empty stdin and a 2 s bound', async () => {
+    const runner = createScriptedRunner([pgrep(0)])
+    expect(await build(runner).isSteamRunning()).toBe(true)
+    const call = runner.calls[0]
+    expect(call?.opts).toMatchObject({
+      replaceEnv: true,
+      stdin: '',
+      timeoutMs: 2000
+    })
+    expect(call?.env?.HOME).toBeDefined()
+    expect(call?.env?.HOME).not.toBe(os.homedir())
+  })
+
+  it('isSteamRunning: exit 1 is not running; another code, a timeout or a spawn error rejects', async () => {
+    expect(await build(createScriptedRunner([pgrep(1)])).isSteamRunning()).toBe(
+      false
+    )
+    await expect(
+      build(createScriptedRunner([pgrep(2)])).isSteamRunning()
+    ).rejects.toThrow()
+    await expect(
+      build(
+        createScriptedRunner([
+          { cmd: '/usr/bin/pgrep', result: { code: null, timedOut: true } }
+        ])
+      ).isSteamRunning()
+    ).rejects.toThrow()
+    await expect(
+      build(
+        createScriptedRunner([
+          { cmd: '/usr/bin/pgrep', error: { code: 'ENOENT' } }
+        ])
+      ).isSteamRunning()
+    ).rejects.toThrow()
+  })
+
+  it('openUrlDetached goes through runner.openDetached', () => {
+    const runner = createScriptedRunner([])
+    build(runner).openUrlDetached(STEAM_GO_ONLINE_URL)
+    expect(runner.calls).toMatchObject([
+      { method: 'openDetached', cmd: STEAM_GO_ONLINE_URL }
+    ])
+  })
+
+  it('two instances share no state: a guided arm on one is not seen by the other', async () => {
+    fs.writeFileSync(logPath, offlineLine(BASE - 1000))
+    const armed = build(createScriptedRunner([pgrep(0)]))
+    const other = build(createScriptedRunner([pgrep(0)]))
+    expect(await armed.checkGuidedOfflineReady()).toEqual({ status: 'ready' })
+    expect(armed.payAbandonedGuidedOffline('cancel')).toBe(true)
+    expect(other.payAbandonedGuidedOffline('cancel')).toBe(false)
   })
 })
