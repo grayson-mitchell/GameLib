@@ -66,7 +66,7 @@ describe('createQuitHandler', () => {
   test('pending and Yes: dialog with cancelId 0, then the full ordered teardown', async () => {
     const { calls, dialogs, deps } = setup({ isRunning: () => true }, 1)
     await createQuitHandler(deps).handleExit()
-    expect(dialogs[0].cancelId).toBe(0)
+    expect(dialogs[0]!.cancelId).toBe(0)
     expect(calls).toEqual([
       'dialog',
       'runner.kill',
@@ -84,7 +84,7 @@ describe('createQuitHandler', () => {
   test('bridge hosting only: bridge-hosting message', async () => {
     const { dialogs, deps } = setup({ isBridgeHosting: () => true }, 0)
     await createQuitHandler(deps).handleExit()
-    expect(String(dialogs[0].message)).toMatch(/Steam bridge/)
+    expect(String(dialogs[0]!.message)).toMatch(/Steam bridge/)
   })
 
   test('pending operations: generic message', async () => {
@@ -93,7 +93,7 @@ describe('createQuitHandler', () => {
       0
     )
     await createQuitHandler(deps).handleExit()
-    expect(String(dialogs[0].message)).toMatch(/pending operations/)
+    expect(String(dialogs[0]!.message)).toMatch(/pending operations/)
   })
 
   test('no main window: no dialog, still tears down', async () => {

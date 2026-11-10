@@ -33,14 +33,7 @@ import {
   storeLaunchHooks
 } from 'backend/storeManagers'
 import * as launcherModule from 'backend/launcher'
-import { handleExit, spawnAsync } from 'backend/utils'
-import type {
-  Launcher,
-  QuitHandler,
-  SpawnAsync,
-  StoreManagers,
-  Stores
-} from './types'
+import type { Launcher, StoreManagers, Stores } from './types'
 
 export function buildStoresFacade(): Stores {
   return {
@@ -86,13 +79,4 @@ export function buildLauncherFacade(): Launcher {
     validWine: launcherModule.validWine,
     verifyWinePrefix: launcherModule.verifyWinePrefix
   }
-}
-
-export function buildSpawnAsyncFacade(): SpawnAsync {
-  // Late-bound: resolves `spawnAsync` at call time, never at boot (R4).
-  return (...args) => spawnAsync(...args)
-}
-
-export function buildQuitFacade(): QuitHandler {
-  return { handleExit: () => handleExit() }
 }

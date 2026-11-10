@@ -20,8 +20,8 @@ describe('createSpawnAsync', () => {
     })
     expect(out).toEqual({ code: 0, stdout: 'o1o2', stderr: 'e1' })
     expect(runner.calls).toHaveLength(1)
-    const opts = runner.calls[0].opts as Record<string, any>
-    expect(runner.calls[0].cwd).toBe('/x')
+    const opts = runner.calls[0]!.opts as Record<string, any>
+    expect(runner.calls[0]!.cwd).toBe('/x')
     expect(opts.timeout.none).toBe(true)
     expect(opts.timeout.reason.length).toBeGreaterThan(0)
     expect(opts.windowsHide).toBe(false)
@@ -31,9 +31,9 @@ describe('createSpawnAsync', () => {
   test('options.env replaces the environment', async () => {
     const runner = createScriptedRunner([{ cmd: 'x' }])
     await createSpawnAsync({ runner })('x', [], { env: { A: '1' } })
-    const opts = runner.calls[0].opts as Record<string, any>
+    const opts = runner.calls[0]!.opts as Record<string, any>
     expect(opts.replaceEnv).toBe(true)
-    expect(runner.calls[0].env).toEqual({ A: '1' })
+    expect(runner.calls[0]!.env).toEqual({ A: '1' })
   })
 
   test('a positive timeout becomes timeoutMs; signal and windowsHide pass through', async () => {
@@ -44,7 +44,7 @@ describe('createSpawnAsync', () => {
       signal: ac.signal,
       windowsHide: true
     })
-    const opts = runner.calls[0].opts as Record<string, any>
+    const opts = runner.calls[0]!.opts as Record<string, any>
     expect(opts.timeoutMs).toBe(500)
     expect(opts.timeout).toBeUndefined()
     expect(opts.signal).toBe(ac.signal)
@@ -103,7 +103,8 @@ describe('createSpawnAsync', () => {
   )
 
   test('real child: exit code and stdout', async () => {
-    const { runner, dispose } = createRealRunner()
+    const real = createRealRunner()
+    const runner = real.runner
     try {
       const out = await createSpawnAsync({ runner })(process.execPath, [
         '-e',
@@ -111,7 +112,7 @@ describe('createSpawnAsync', () => {
       ])
       expect(out).toMatchObject({ code: 3, stdout: 'ok' })
     } finally {
-      dispose()
+      real.dispose()
     }
   })
 })

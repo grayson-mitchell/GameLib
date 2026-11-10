@@ -11,7 +11,7 @@ export interface QuitHandler {
   handleExit(): Promise<void>
 }
 
-export interface QuitMessageBoxOptions {
+interface QuitMessageBoxOptions {
   buttons: string[]
   cancelId: number
   message: string

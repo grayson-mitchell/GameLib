@@ -44,8 +44,6 @@ import { registerHandlers } from './handlers'
 import {
   buildLauncherFacade,
   buildManagersFacade,
-  buildQuitFacade,
-  buildSpawnAsyncFacade,
   buildStoresFacade
 } from '../services/legacyFacades'
 import type { BootServices, StoreManagers, Stores } from '../services/types'
@@ -161,7 +159,7 @@ import { createAppContext } from '../process/context'
 import type { AppContext, AppPaths } from '../process/context'
 import type { LogSink } from '../process/types'
 import { setIpcRejectionLogSink } from './ipcValidation'
-import { publicDir } from '../constants/paths'
+import { gamesConfigPath, publicDir } from '../constants/paths'
 import { backendEvents } from '../backend_events'
 import { fetchLastestReleases } from '../utils/releases'
 import { downloadAntiCheatData } from '../anticheat/utils'
@@ -172,6 +170,17 @@ import { isMac } from '../constants/environment'
 // imported for other blocks -- not duplicated here.
 import { checkRosettaInstall, errorHandler } from '../utils'
 import { createCommandRunner } from '../commandRunner'
+import { createSpawnAsync } from '../spawnAsync'
+import { createQuitHandler } from '../quitHandler'
+import { tOrFallback } from '../i18nFallback'
+import { getMainWindow } from '../main_window'
+import { isRunning } from '../downloadmanager/downloadqueue'
+import { hasLiveBridgeHelper } from '../storeManagers/steam/bridge/helperRegistry'
+import { SteamUser } from '../storeManagers/steam/user'
+// Transitional (removed by plan 27): the legacy registries still hold children until plans
+// 23/24/26 move them onto the runner.
+import { killAllTracked } from '../trackedChildren'
+import { shutdownLongLivedChildren } from '../longLivedChildren'
 import {
   setupEnvVars,
   setupWineEnvVars,
@@ -181,6 +190,7 @@ import {
 import { getUmuPath, isUmuSupported } from '../utils/compatibility_layers'
 import { searchForExecutableOnPath } from '../utils/os/path'
 import {
+  callAllAbortControllers,
   createAbortController,
   deleteAbortController
 } from '../utils/aborthandler/aborthandler'
@@ -1051,8 +1061,31 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
             }
           })
         state.services.spawnAsync =
-          prebuilt.spawnAsync ?? buildSpawnAsyncFacade()
-        state.services.quit = prebuilt.quit ?? buildQuitFacade()
+          prebuilt.spawnAsync ?? createSpawnAsync({ runner: ctx.runner })
+        state.services.quit =
+          prebuilt.quit ??
+          createQuitHandler({
+            runner: ctx.runner,
+            isLocked: () => existsSync(join(gamesConfigPath, 'lock')),
+            isRunning,
+            isBridgeHosting: hasLiveBridgeHelper,
+            getMainWindow,
+            showMessageBox: (win, opts) =>
+              platformApi.dialog.showMessageBox(
+                win as Parameters<typeof platformApi.dialog.showMessageBox>[0],
+                opts
+              ),
+            t: tOrFallback,
+            abortAll: callAllAbortControllers,
+            releaseSteam: async () => {
+              await SteamUser.releaseForShutdown()
+            },
+            deletePresence: () => gogPresence.deletePresence(),
+            exit: () => platformApi.app.exit(),
+            // Transitional: the legacy registries still hold children until plans 23/24/26;
+            // plan 27 removes this dep with the registries.
+            legacyChildren: { killAllTracked, shutdownLongLivedChildren }
+          })
       }
     },
     {

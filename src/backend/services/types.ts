@@ -9,6 +9,8 @@
  * `{ managers: Pick<StoreManagers, 'library'> }` style interface. Only composition roots
  * see the whole `BootServices`.
  */
+import type { SpawnAsync } from 'backend/spawnAsync'
+import type { QuitHandler } from 'backend/quitHandler'
 import type { Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type { StoreLaunchHooks } from 'backend/storeManagers'
@@ -67,11 +69,7 @@ export type Launcher = Pick<
 
 export type CommandRunner = CommandRunnerImpl
 
-export type SpawnAsync = typeof import('backend/utils').spawnAsync
-
-export interface QuitHandler {
-  handleExit(): Promise<void>
-}
+export type { SpawnAsync, QuitHandler }
 
 export interface BootServices {
   stores: Stores

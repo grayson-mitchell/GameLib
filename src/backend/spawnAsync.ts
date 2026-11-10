@@ -12,7 +12,7 @@
 import type { ProcessRunner } from './process/types'
 
 /** The only SpawnOptions keys any production caller passes (enumerated in the 66.1-06 SUMMARY). */
-export interface SpawnAsyncOptions {
+interface SpawnAsyncOptions {
   cwd?: string
   env?: NodeJS.ProcessEnv
   /** child_process semantics: milliseconds; 0/undefined means no cap. */
@@ -28,13 +28,13 @@ export type SpawnAsync = (
   onOutput?: (data: string) => void
 ) => Promise<{ code: number | null; stdout: string; stderr: string }>
 
-const ALLOWED_KEYS: ReadonlySet<string> = new Set([
+const ALLOWED_KEYS: readonly string[] = [
   'cwd',
   'env',
   'timeout',
   'signal',
   'windowsHide'
-])
+]
 
 // Local copy of utils.memoryLog (last `limit` chunks); kept here so this module stays narrow.
 const lastChunks = (limit = 50) => {
@@ -51,9 +51,9 @@ const lastChunks = (limit = 50) => {
 export function createSpawnAsync(deps: { runner: ProcessRunner }): SpawnAsync {
   return async (command, args, options = {}, onOutput) => {
     for (const key of Object.keys(options)) {
-      if (!ALLOWED_KEYS.has(key)) {
+      if (!ALLOWED_KEYS.includes(key)) {
         throw new TypeError(
-          `spawnAsync: unsupported option "${key}" (allowed: ${[...ALLOWED_KEYS].join(', ')})`
+          `spawnAsync: unsupported option "${key}" (allowed: ${ALLOWED_KEYS.join(', ')})`
         )
       }
     }
