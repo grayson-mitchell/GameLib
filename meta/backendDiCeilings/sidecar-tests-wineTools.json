@@ -1,0 +1,6 @@
+{
+  "jestMock": {
+    "src/backend/sidecar/__tests__/runnerMiscFlows.test.ts": 8,
+    "src/backend/sidecar/__tests__/wineToolsFlows.test.ts": 17
+  }
+}

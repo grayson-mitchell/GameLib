@@ -1,14 +1,11 @@
 {
   "childProcess": {
-    "src/backend/utils/compatibility_layers.ts": 1,
-    "src/backend/utils/graphics/vulkan/index.ts": 1,
     "src/backend/utils/helperBinaries/index.ts": 1,
     "src/backend/utils/macArch.ts": 1,
     "src/backend/utils/os/path/index.ts": 1,
     "src/backend/utils/os/processes/index.ts": 1
   },
   "jestMock": {
-    "src/backend/utils/__tests__/compatibility_layers.test.ts": 1,
     "src/backend/utils/__tests__/macArch.test.ts": 5,
     "src/backend/utils/__tests__/uninstaller.test.ts": 8,
     "src/backend/utils/__tests__/wineWindowRaise.test.ts": 2,
@@ -17,7 +14,6 @@
   },
   "moduleState": {
     "src/backend/utils/aborthandler/aborthandler.ts": 1,
-    "src/backend/utils/graphics/vulkan/index.ts": 2,
     "src/backend/utils/systeminfo/gpu/pci_ids.ts": 2,
     "src/backend/utils/systeminfo/index.ts": 2,
     "src/backend/utils/wineWindowRaise.ts": 2

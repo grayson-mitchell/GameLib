@@ -2,7 +2,6 @@
   "jestMock": {
     "src/backend/logger/__tests__/logWriter.test.ts": 2
   },
-  "moduleState": {},
   "sanctioned": {
     "src/backend/logger/index.ts": {
       "kind": "logger-sink",

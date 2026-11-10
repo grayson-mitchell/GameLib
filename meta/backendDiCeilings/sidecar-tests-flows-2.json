@@ -3,7 +3,7 @@
     "src/backend/sidecar/__tests__/downloadQueueFlows.test.ts": 6,
     "src/backend/sidecar/__tests__/enrichmentFlows.test.ts": 16,
     "src/backend/sidecar/__tests__/gameDetailsFlows.test.ts": 13,
-    "src/backend/sidecar/__tests__/humbleFlows.test.ts": 6,
+    "src/backend/sidecar/__tests__/humbleFlows.test.ts": 10,
     "src/backend/sidecar/__tests__/loggerFlows.test.ts": 9,
     "src/backend/sidecar/__tests__/shellFilesFlows.test.ts": 11,
     "src/backend/sidecar/__tests__/skeletonFlows.test.ts": 7

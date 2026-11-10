@@ -9,6 +9,5 @@
     "src/backend/wine/manager/downloader/__tests__/utilities/rest.test.ts": 1,
     "src/backend/wine/manager/downloader/__tests__/utilities/unzip.test.ts": 1,
     "src/backend/wine/runtimes/__tests__/runtimes/utils.test.ts": 1
-  },
-  "moduleState": {}
+  }
 }

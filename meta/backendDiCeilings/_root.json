@@ -1,6 +1,5 @@
 {
   "childProcess": {
-    "src/backend/config.ts": 1,
     "src/backend/utils.ts": 1
   },
   "jestMock": {
@@ -8,7 +7,6 @@
   },
   "moduleState": {
     "src/backend/backend_events.ts": 1,
-    "src/backend/config.ts": 1,
     "src/backend/game_config.ts": 1,
     "src/backend/images_cache.ts": 1,
     "src/backend/knownFixOverlayInstall.ts": 1,
