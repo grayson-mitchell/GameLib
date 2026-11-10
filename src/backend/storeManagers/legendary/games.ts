@@ -1169,7 +1169,7 @@ export default class LegendaryGame implements Game {
         engineKeyFor(this.getGameInfo().runner, this.appName),
         await this.getSettings()
       )
-      await shutdownWine(gameSettings)
+      await shutdownWine(this.deps, gameSettings)
     }
   }
 

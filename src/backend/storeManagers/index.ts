@@ -172,6 +172,7 @@ export function createStoreManagers(
     libraryManagers: library,
     launchHooks,
     commandRunner: deps.commandRunner,
+    runner: deps.runner,
     spawnAsync: deps.spawnAsync,
     stores: deps.stores
   })

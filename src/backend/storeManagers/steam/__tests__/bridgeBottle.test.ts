@@ -25,7 +25,6 @@ import { dirname as dirnameOf, join as joinPath } from 'node:path'
 import { userHome } from 'backend/constants/paths'
 import { GlobalConfig } from 'backend/config'
 import { checkWineBeforeLaunch, downloadFile } from 'backend/utils'
-import { runWineCommand } from 'backend/launcher'
 import { steamBottleConfigStore } from '../stores'
 import { createTestStores } from 'backend/testUtils/testServices'
 import { bindBottleStores, DEFAULT_BRIDGE_BOTTLE_NAME } from '../bottle'
@@ -94,10 +93,6 @@ jest.mock('backend/utils', () => ({
   downloadFile: jest.fn()
 }))
 
-jest.mock('backend/launcher', () => ({
-  runWineCommand: jest.fn()
-}))
-
 jest.mock('backend/engine/adoptBottle', () => ({
   writeCxbottleConf: jest.fn()
 }))
@@ -157,7 +152,8 @@ const mockedSpawnAsync = jest.fn()
 const spawnDeps = { spawnAsync: mockedSpawnAsync }
 const mockedDownloadFile = downloadFile as jest.Mock
 const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
-const mockedRunWineCommand = runWineCommand as jest.Mock
+// The legacy launcher runWineCommand is gone (66.1-24); the bottle code reaches the command runner.
+const mockedRunWineCommand = jest.fn()
 
 const defaultWine: WineInstallation = {
   bin: '/usr/bin/wine',

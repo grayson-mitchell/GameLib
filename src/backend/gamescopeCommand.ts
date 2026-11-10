@@ -1,6 +1,7 @@
 import shlex from 'shlex'
 
 import type { GameSettings } from 'common/types'
+import type { ProcessRunner } from './process/types'
 
 export interface GameScopeCommandInput {
   bin: string
@@ -69,4 +70,20 @@ export function buildGameScopeCommand({
   // Note: needs to be the last option
   cmd.push('--')
   return cmd
+}
+
+/**
+ * The `gamescope --help` text that decides the CLI generation. A timeout (5 s) or a spawn error
+ * degrades to '' (the old-CLI flag set) rather than failing the launch.
+ */
+export async function probeGamescopeHelp(
+  runner: Pick<ProcessRunner, 'run'>,
+  bin: string
+): Promise<string> {
+  try {
+    const result = await runner.run(bin, ['--help'], { timeoutMs: 5_000 })
+    return result.timedOut ? '' : result.stderr
+  } catch {
+    return ''
+  }
 }

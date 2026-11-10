@@ -1459,7 +1459,7 @@ export default class GOGGame implements Game {
         engineKeyFor(this.getGameInfo().runner, this.id),
         await this.getSettings()
       )
-      await shutdownWine(gameSettings)
+      await shutdownWine(this.deps, gameSettings)
     }
   }
 

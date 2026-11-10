@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-import { buildGameScopeCommand } from '../gamescopeCommand'
+import { buildGameScopeCommand, probeGamescopeHelp } from '../gamescopeCommand'
 import { stripSourceComments } from '../testUtils/stripSourceComments'
 
 import type { GameSettings } from 'common/types'
@@ -141,5 +141,68 @@ describe('launcher.ts gamescope wiring', () => {
   test('calls buildGameScopeCommand and holds no flag mapping itself', () => {
     expect(launcher).toContain('buildGameScopeCommand(')
     expect(launcher).not.toContain("'-F, --filter'")
+  })
+  test('probes through the runner with a 5 s timeout and spawns nothing itself', () => {
+    expect(launcher).toContain('probeGamescopeHelp(')
+    expect(launcher).not.toContain('spawnSync')
+    expect(launcher).not.toContain('child_process')
+  })
+})
+
+describe('probeGamescopeHelp (scripted runner)', () => {
+  const result = (over: object) => ({
+    code: 0,
+    signal: null,
+    stdout: '',
+    stderr: '',
+    timedOut: false,
+    aborted: false,
+    truncated: false,
+    pid: 1,
+    ...over
+  })
+
+  test('runs `--help` with a 5 s timeout and returns its stderr', async () => {
+    const run = jest.fn().mockResolvedValue(result({ stderr: NEW_HELP }))
+    await expect(
+      probeGamescopeHelp({ run }, '/usr/bin/gamescope')
+    ).resolves.toBe(NEW_HELP)
+    expect(run).toHaveBeenCalledWith('/usr/bin/gamescope', ['--help'], {
+      timeoutMs: 5_000
+    })
+  })
+
+  test('the new-CLI help text builds the new-CLI command', async () => {
+    const run = jest.fn().mockResolvedValue(result({ stderr: NEW_HELP }))
+    const helpStderr = await probeGamescopeHelp({ run }, '/usr/bin/gamescope')
+    expect(
+      buildGameScopeCommand({
+        bin: '/usr/bin/gamescope',
+        settings: { ...base, enableUpscaling: true, upscaleMethod: 'fsr' },
+        helpStderr
+      })
+    ).toEqual(
+      buildGameScopeCommand({
+        bin: '/usr/bin/gamescope',
+        settings: { ...base, enableUpscaling: true, upscaleMethod: 'fsr' },
+        helpStderr: NEW_HELP
+      })
+    )
+  })
+
+  test('a timeout degrades to the old-CLI help (empty stderr)', async () => {
+    const run = jest
+      .fn()
+      .mockResolvedValue(result({ timedOut: true, stderr: NEW_HELP }))
+    await expect(
+      probeGamescopeHelp({ run }, '/usr/bin/gamescope')
+    ).resolves.toBe('')
+  })
+
+  test('a spawn error degrades to the old-CLI help instead of throwing', async () => {
+    const run = jest.fn().mockRejectedValue(new Error('spawn ENOENT'))
+    await expect(
+      probeGamescopeHelp({ run }, '/usr/bin/gamescope')
+    ).resolves.toBe('')
   })
 })

@@ -1,6 +1,4 @@
-import { trackChild } from './trackedChildren'
 import {
-  CallRunnerOptions,
   GameInfo,
   Runner,
   EnviromentVariable,
@@ -10,7 +8,6 @@ import {
   LaunchPreperationResult,
   RpcClient,
   WineInstallation,
-  WineCommandArgs,
   GameSettings,
   LaunchParams,
   StatusPromise
@@ -19,14 +16,12 @@ import {
 
 import i18next from 'i18next'
 import { existsSync, mkdirSync } from 'graceful-fs'
-import { join, dirname, isAbsolute } from 'path'
+import { join, dirname } from 'path'
 
 import {
   constructAndUpdateRPC,
   isEpicServiceOffline,
-  errorHandler,
   removeQuoteIfNecessary,
-  memoryLog,
   sendGameStatusUpdate,
   checkWineBeforeLaunch,
   isMacSonomaOrHigher,
@@ -36,8 +31,6 @@ import type { StoreLaunchHooks } from 'backend/storeManagers'
 import { hasCapability, isStore } from 'common/storeCapabilities'
 import {
   createGameLogWriter,
-  getRunnerLogWriter,
-  logDebug,
   logError,
   logInfo,
   LogPrefix,
@@ -55,18 +48,13 @@ import type {
   StoreManagers,
   Stores
 } from './services/types'
-import { spawn, spawnSync } from 'child_process'
 import shlex from 'shlex'
-import { buildGameScopeCommand } from './gamescopeCommand'
-import { getRunnerCallWithoutCredentials } from './commandRunner'
+import type { ProcessRunner } from './process/types'
+import { buildGameScopeCommand, probeGamescopeHelp } from './gamescopeCommand'
 import { isOnline } from './online_monitor'
 import { showDialogBoxModalAuto } from './dialog/dialog'
 import { readFileSync, writeFileSync } from 'fs'
 import { searchForExecutableOnPath } from './utils/os/path'
-import {
-  createAbortController,
-  deleteAbortController
-} from './utils/aborthandler/aborthandler'
 import { download, isInstalled } from './wine/runtimes/runtimes'
 import { recordPlaySession } from './runsForMe'
 import { getUmuPath, isUmuSupported } from './utils/compatibility_layers'
@@ -116,6 +104,8 @@ export interface LauncherDeps {
   libraryManagers: StoreManagers['library']
   launchHooks: Record<Runner, StoreLaunchHooks>
   commandRunner: CommandRunner
+  /** The boot process runner: the gamescope --help probe runs through it. */
+  runner: Pick<ProcessRunner, 'run'>
   spawnAsync: SpawnAsync
   stores: Pick<Stores, 'kvs' | 'wineManager' | 'runsForMe'>
 }
@@ -763,15 +753,13 @@ async function prepareLaunch(
       logWarning(warningMessage)
     } else {
       // Gamescope does not provide a version option; the --help text decides
-      const { stderr } = spawnSync(gameScopeBin, ['--help'], {
-        encoding: 'utf-8'
-      })
+      const stderr = await probeGamescopeHelp(deps.runner, gameScopeBin)
 
       gameScopeCommand.push(
         ...buildGameScopeCommand({
           bin: gameScopeBin,
           settings: gameSettings.gamescope,
-          helpStderr: stderr ?? '',
+          helpStderr: stderr,
           showMangohud: gameSettings.showMangohud
         })
       )
@@ -1544,556 +1532,6 @@ function launchCleanup(_deps: LauncherDeps, rpcClient?: RpcClient) {
   }
 }
 
-async function runWineCommand({
-  gameSettings,
-  commandParts,
-  wait,
-  protonVerb = 'run',
-  installFolderName,
-  gameInstallPath,
-  options,
-  startFolder,
-  skipPrefixCheckIKnowWhatImDoing = false,
-  ignoreLogging = false,
-  onSpawn,
-  resolveOnExit = false
-}: WineCommandArgs): Promise<{
-  stderr: string
-  stdout: string
-  code?: number
-}> {
-  const settings = gameSettings
-    ? gameSettings
-    : GlobalConfig.get().getSettings()
-  const { wineVersion, winePrefix } = settings
-
-  if (!skipPrefixCheckIKnowWhatImDoing && wineVersion.type !== 'crossover') {
-    let requiredPrefixFiles = [
-      'dosdevices',
-      'drive_c',
-      'system.reg',
-      'user.reg',
-      'userdef.reg'
-    ]
-    if (wineVersion.type === 'proton') {
-      requiredPrefixFiles = [
-        'pfx.lock',
-        'tracked_files',
-        'version',
-        'config_info',
-        ...requiredPrefixFiles.map((path) => join('pfx', path))
-      ]
-    }
-    requiredPrefixFiles = requiredPrefixFiles.map((path) =>
-      join(winePrefix, path)
-    )
-    requiredPrefixFiles.push(winePrefix)
-
-    if (!requiredPrefixFiles.every((path) => existsSync(path))) {
-      logWarning(
-        'Required prefix files are missing, running `verifyWinePrefix` to create prefix',
-        LogPrefix.Backend
-      )
-      mkdirSync(winePrefix, { recursive: true })
-      // Legacy path, deleted by plan 24 with this function.
-      await verifyWinePrefix(
-        {
-          commandRunner: {
-            runWineCommand:
-              runWineCommand as unknown as CommandRunner['runWineCommand']
-          }
-        },
-        settings
-      )
-    }
-  }
-
-  if (!(await validWine(wineVersion))) {
-    return { stdout: '', stderr: 'Invalid wine' }
-  }
-
-  const env_vars: Record<string, string> = {
-    ...process.env,
-    ...options?.env,
-    ...setupEnvVars(settings, gameInstallPath),
-    ...setupWineEnvVars(settings, installFolderName),
-    PROTON_VERB: protonVerb
-  }
-
-  if (ignoreLogging) {
-    delete env_vars['PROTON_LOG']
-  }
-
-  const wineBin = wineVersion.bin.replaceAll("'", '')
-  const umuSupported = await isUmuSupported(settings)
-  const runnerBin = umuSupported ? await getUmuPath() : wineBin
-
-  if (wineVersion.type === 'proton' && !umuSupported) {
-    commandParts.unshift(protonVerb)
-  }
-
-  logDebug(['Running Wine command:', commandParts.join(' ')], LogPrefix.Backend)
-
-  return new Promise<{ stderr: string; stdout: string }>((res) => {
-    const wrappers = options?.wrappers || []
-    let bin = runnerBin
-
-    if (wrappers.length) {
-      bin = wrappers.shift()!
-      commandParts.unshift(...wrappers, runnerBin)
-    }
-
-    const child = spawn(bin, commandParts, {
-      env: env_vars,
-      cwd: startFolder
-    })
-    trackChild(child, {
-      runner: 'wine',
-      key: options?.trackKey ?? installFolderName ?? winePrefix
-    })
-    onSpawn?.(child)
-    child.stdout.setEncoding('utf-8')
-    child.stderr.setEncoding('utf-8')
-
-    if (options?.logWriters) {
-      options.logWriters.forEach((writer) =>
-        writer.writeString(
-          `Wine Command: ${bin} ${commandParts.join(' ')}\n\nGame Log:\n`
-        )
-      )
-    }
-
-    const stdout = memoryLog()
-    const stderr = memoryLog()
-
-    child.stdout.on('data', (data: string) => {
-      options?.logWriters?.forEach((writer) => writer.writeString(data))
-
-      if (options?.onOutput) {
-        options.onOutput(data, child)
-      }
-
-      stdout.push(data)
-    })
-
-    child.stderr.on('data', (data: string) => {
-      options?.logWriters?.forEach((writer) => writer.writeString(data))
-
-      if (options?.onOutput) {
-        options.onOutput(data, child)
-      }
-
-      stderr.push(data)
-    })
-
-    let settled = false
-    const settle = async (code: number | null) => {
-      if (settled) return
-      settled = true
-      const response = {
-        stderr: stderr.join(''),
-        stdout: stdout.join(''),
-        code
-      }
-
-      if (wait && wineVersion.wineserver) {
-        await new Promise<void>((res_wait) => {
-          const wait_child = spawn(wineVersion.wineserver!, ['--wait'], {
-            env: env_vars,
-            cwd: startFolder
-          })
-
-          wait_child.on('close', () => {
-            res_wait()
-          })
-        })
-      }
-
-      res(response)
-    }
-
-    child.on('close', (code) => {
-      void settle(code)
-    })
-
-    if (resolveOnExit) {
-      // See WineCommandArgs.resolveOnExit: the wineserver this call started holds the pipes open
-      // after the command is done. Give already-written output a moment to drain, then settle.
-      child.on('exit', (code) => {
-        const grace = setTimeout(() => {
-          child.stdout.destroy()
-          child.stderr.destroy()
-          void settle(code)
-        }, 250)
-        grace.unref?.()
-        child.on('close', () => clearTimeout(grace))
-      })
-    }
-
-    child.on('error', (error) => {
-      console.log(error)
-    })
-  })
-}
-
-interface RunnerProps {
-  name: Runner
-  logPrefix: LogPrefix
-  bin: string
-  dir?: string
-}
-
-const commandsRunning: Record<string, Promise<ExecResult>> = {}
-
-let shouldUsePowerShell: boolean | null = null
-
-// Index of the appName within a runner's command parts, per store (-1: none).
-const appNameIndexFinders: Record<Runner, (commandParts: string[]) => number> =
-  {
-    gog: (commandParts) => {
-      const idx = commandParts.findIndex((value) => value === 'launch')
-      if (idx > -1) {
-        // for GOGdl, between `launch` and the app name there's another element
-        return idx + 2
-      }
-      // for the `download`, `repair` and `update` command it's right after
-      const other = commandParts.findIndex((value) =>
-        ['download', 'repair', 'update'].includes(value)
-      )
-      return other > -1 ? other + 1 : -1
-    },
-    legendary: (commandParts) => {
-      // for legendary, the appName comes right after the commands
-      const idx = commandParts.findIndex((value) =>
-        ['launch', 'install', 'repair', 'update'].includes(value)
-      )
-      return idx > -1 ? idx + 1 : -1
-    },
-    nile: (commandParts) => {
-      // for nile, we pass the appName as the last command part
-      const idx = commandParts.findIndex((value) =>
-        ['launch', 'install', 'update', 'verify'].includes(value)
-      )
-      return idx > -1 ? commandParts.length - 1 : -1
-    },
-    sideload: () => -1,
-    steam: () => -1
-  }
-
-function appNameFromCommandParts(commandParts: string[], runner: Runner) {
-  const appNameIndex = appNameIndexFinders[runner](commandParts)
-  return appNameIndex > -1 ? (commandParts[appNameIndex] ?? '') : ''
-}
-
-async function callRunner(
-  commandParts: string[],
-  runner: RunnerProps,
-  options: CallRunnerOptions
-): Promise<ExecResult> {
-  const appName = appNameFromCommandParts(commandParts, runner.name)
-
-  // Automatically add the relevant LogWriter for the runner
-  options.logWriters ??= []
-  options.logWriters.push(getRunnerLogWriter(runner.name))
-
-  // Necessary to get rid of possible undefined or null entries, else
-  // TypeError is triggered
-  commandParts = commandParts.filter(Boolean)
-
-  let bin = runner.bin
-  let fullRunnerPath = runner.dir ? join(runner.dir, bin) : bin
-
-  // macOS/Linux: `spawn`ing an executable in the current working directory
-  // requires a "./"
-  if (!isWindows && !isAbsolute(bin) && runner.dir) bin = './' + bin
-
-  // On Windows: Use PowerShell's `Start-Process` to wait for the process and
-  // its children to exit, provided PowerShell is available
-  if (shouldUsePowerShell === null)
-    shouldUsePowerShell =
-      isWindows && !!(await searchForExecutableOnPath('powershell'))
-
-  if (shouldUsePowerShell) {
-    const argsAsString = commandParts
-      .map((part) => part.replaceAll('\\', '\\\\'))
-      .map((part) => `"\`"${part}\`""`)
-      .join(',')
-    commandParts = [
-      '-NoProfile',
-      'Start-Process',
-      `"\`"${fullRunnerPath}\`""`,
-      '-Wait',
-      '-NoNewWindow'
-    ]
-    if (argsAsString) commandParts.push('-ArgumentList', argsAsString)
-
-    bin = fullRunnerPath = 'powershell'
-  }
-
-  const safeCommand = getRunnerCallWithoutCredentials(
-    [...commandParts],
-    options?.env,
-    fullRunnerPath,
-    () => {
-      throw new Error(
-        'legacy launcher callRunner has no legendary argv converter; use deps.commandRunner (deleted by plan 24)'
-      )
-    }
-  )
-
-  const prefix = `${options.logMessagePrefix ?? 'Running command'}:`
-  logInfo([prefix, safeCommand], runner.logPrefix)
-
-  if (options?.logWriters) {
-    for (const writer of options.logWriters) {
-      await writer.logInfo(
-        [prefix, safeCommand, '\n\n'].filter(Boolean).join(' ')
-      )
-      if (appName) await writer.logInfo('Game Output:')
-    }
-  }
-
-  // check if the same command is currently running
-  // if so, return the same promise instead of running it again
-  const key = [runner.name, commandParts].join(' ')
-  // 49-REVIEW WR-01 (F-49-R1-5): a caller that observes the stream can never be
-  // served by joining someone else's in-flight spawn, because `onOutput` is
-  // only ever invoked from the child this call creates (below). The sign-in
-  // probe's `nile list-updates --json` raced `listUpdateableGames()`'s identical
-  // argv at boot, joined it, saw no output and classified `unknown`. Such a
-  // caller neither joins nor registers as joinable; callers without an
-  // observer keep the original dedup.
-  const joinable = !options?.onOutput
-  const currentPromise = commandsRunning[key]
-
-  if (joinable && key in commandsRunning && currentPromise !== undefined) {
-    return currentPromise
-  }
-
-  const abortId = options?.abortId || appName || Math.random().toString()
-  const abortController = createAbortController(abortId)
-
-  let promise = new Promise<ExecResult>((res, rej) => {
-    const child = spawn(bin, commandParts, {
-      cwd: options?.cwd || runner.dir,
-      env: { ...process.env, ...options?.env },
-      signal: abortController.signal
-    })
-    // Phase 72 D-13: on Windows with PowerShell this PID is powershell's (hence
-    // the /T tree kill in trackedChildren).
-    trackChild(child, {
-      runner: runner.name,
-      key: options?.trackKey ?? abortId
-    })
-
-    const stdout = memoryLog()
-    const stderr = memoryLog()
-
-    child.stdout.setEncoding('utf-8')
-    child.stdout.on('data', (data: string) => {
-      const stringToLog = options?.logSanitizer
-        ? options.logSanitizer(data)
-        : data
-
-      options?.logWriters?.forEach((writer) => writer.writeString(stringToLog))
-
-      if (options?.onOutput) {
-        options.onOutput(data, child)
-      }
-
-      stdout.push(data.trim())
-    })
-
-    child.stderr.setEncoding('utf-8')
-    child.stderr.on('data', (data: string) => {
-      const stringToLog = options?.logSanitizer
-        ? options.logSanitizer(data)
-        : data
-
-      options?.logWriters?.forEach((writer) => writer.writeString(stringToLog))
-
-      if (options?.onOutput) {
-        options.onOutput(data, child)
-      }
-
-      stderr.push(data.trim())
-    })
-
-    child.on('close', (code, signal) => {
-      if (!options?.skipErrorHandler) {
-        errorHandler(
-          {
-            // Production-dead (deleted by plan 24): the legacy callRunner has no manager table.
-            get libraryManagers(): never {
-              throw new Error(
-                'legacy launcher callRunner has no manager table; use deps.commandRunner (deleted by plan 24)'
-              )
-            }
-          },
-          `${stdout.join().concat(stderr.join())}`,
-          appName,
-          runner.name
-        )
-      }
-
-      if (signal && !child.killed) {
-        rej(new Error(`Process terminated with signal ${signal}`))
-        return
-      }
-
-      // debug/steam-install-slow-start (D-2): a process that exits with a
-      // non-zero code but WITHOUT an OS-level signal (e.g. gogdl/legendary/
-      // nile catching SIGTERM from utils.ts's killAllTracked() and shutting down
-      // gracefully with a failure exit code, or any ordinary runner-internal
-      // failure) previously fell through the `signal && !child.killed` check
-      // above and was unconditionally treated as a SUCCESSFUL completion —
-      // `res({stdout, stderr})` carried no `.error`/`.abort` flag at all. For
-      // GOG specifically, this let `install()`'s `if (res.abort)`/
-      // `if (res.error)` gate (games.ts) see two false values and fall
-      // through into the "Installation succeeded" branch, writing a full
-      // installedGamesStore entry for a download that never actually
-      // completed. Rejecting here routes the outcome through the exact same
-      // `.catch` classification below (abort vs error, based on
-      // `abortController.signal.aborted`), so a deliberate cancel/quit is
-      // still correctly reported as `abort` — this only removes the
-      // previously-silent "neither abort nor error" gap.
-      if (code !== 0 && code !== null) {
-        rej(new Error(`Process exited with code ${code}`))
-        return
-      }
-
-      res({
-        stdout: stdout.join(),
-        stderr: stderr.join('\n')
-      })
-    })
-
-    child.on('error', (error) => {
-      rej(error)
-    })
-  })
-
-  promise = promise
-    .then(({ stdout, stderr }) => {
-      return { stdout, stderr, fullCommand: safeCommand }
-    })
-    .catch((error) => {
-      if (abortController.signal.aborted) {
-        logInfo(['Abort command', `"${safeCommand}"`], runner.logPrefix)
-
-        return {
-          stdout: '',
-          stderr: '',
-          fullCommand: safeCommand,
-          abort: true
-        }
-      }
-
-      // debug/steam-install-slow-start (D-2, adjacent fix): `error` here is
-      // whatever value rejected the executor promise above — an `Error`
-      // object for both the pre-existing signal-kill rejection and this
-      // cycle's new non-zero-exit-code rejection, never a plain string.
-      // `errorHandler` expects a `string` (it calls `.includes()` on its
-      // first argument) — passing the raw Error object through crashed with
-      // "error.includes is not a function" the moment this catch branch was
-      // ever actually exercised by a real rejection (previously untested;
-      // surfaced by this cycle's new callRunner test coverage). Stringifying
-      // here, and on the returned ExecResult's `.error` field (typed
-      // `string` in common/types.ts, but previously assigned the raw
-      // rejection value), fixes both without changing which branch is taken.
-      const errorMessage =
-        error instanceof Error ? error.message : String(error)
-
-      if (!options?.skipErrorHandler) {
-        errorHandler(
-          {
-            // Production-dead (deleted by plan 24): the legacy callRunner has no manager table.
-            get libraryManagers(): never {
-              throw new Error(
-                'legacy launcher callRunner has no manager table; use deps.commandRunner (deleted by plan 24)'
-              )
-            }
-          },
-          errorMessage,
-          appName,
-          runner.name
-        )
-      }
-
-      logError(
-        ['Error running', 'command', `"${safeCommand}":`, error],
-        runner.logPrefix
-      )
-
-      return {
-        stdout: '',
-        stderr: errorMessage,
-        fullCommand: safeCommand,
-        error: errorMessage
-      }
-    })
-    .finally(() => {
-      // remove from list when done (only the registered, joinable spawn)
-      if (joinable && commandsRunning[key] === promise) {
-        delete commandsRunning[key]
-      }
-      deleteAbortController(abortId)
-    })
-
-  // keep track of which commands are running
-  if (joinable) {
-    commandsRunning[key] = promise
-  }
-
-  return promise
-}
-
-/**
- * Converts Unix paths to Windows ones or vice versa
- * @param path The Windows/Unix path you have
- * @param game Required for runWineCommand
- * @param variant The path variant (Windows/Unix) that you'd like to get (passed to `winepath` as -u/-w)
- * @returns The path returned by `winepath`
- */
-async function getWinePath({
-  path,
-  gameSettings,
-  variant = 'unix'
-}: {
-  path: string
-  gameSettings: GameSettings
-  variant?: 'win' | 'unix'
-}): Promise<string> {
-  logDebug(`Getting wine path for ${path}.`, LogPrefix.Backend)
-  // TODO: Proton has a special verb for getting Unix paths, and another one for Windows ones. Use those instead
-  //       Note that this would involve running `proton runinprefix cmd /c echo path` first to expand env vars
-  //       https://github.com/ValveSoftware/Proton/blob/4221d9ef07cc38209ff93dbbbca9473581a38255/proton#L1526-L1533
-  const { stdout, stderr } = await runWineCommand({
-    gameSettings,
-    commandParts: [
-      'cmd',
-      '/c',
-      'winepath',
-      variant === 'unix' ? '-u' : '-w',
-      path
-    ],
-    wait: false,
-    protonVerb: 'runinprefix',
-    ignoreLogging: true
-  })
-
-  const result = stdout.trim()
-  if (!result) {
-    // log-secret-gate-exempt: stderr of `cmd /c winepath` (path translation), not an auth command
-    logError(
-      `Couldn't get wine path for ${path}.\n${stderr}`,
-      LogPrefix.Backend
-    )
-  }
-
-  return result
-}
-
 async function runBeforeLaunchScript(
   deps: Pick<LauncherDeps, 'commandRunner'>,
   gameInfo: GameInfo,
@@ -2135,77 +1573,6 @@ async function runAfterLaunchScript(
     'after',
     logWriter
   )
-}
-
-/* Execute script before launch/after exit, wait until the script
- * exits to continue
- *
- * The script can start sub-processes with `bash another-command &`
- * if `another-command` should run asynchronously
- *
- * For example:
- *
- * ```
- * #!/bin/bash
- *
- * echo "this runs before/after the game"
- * bash ./another.bash & # this is launched before/after the game but is not waited
- * echo "this also runs before/after the game too" > someoutput.txt
- * ```
- *
- * Notes:
- * - Output and logs are printed in the game's log
- * - Make sure the script is executable
- * - Make sure any async process is not stuck running in the background forever,
- *   use the after script to kill any running process if that's the case
- */
-async function runScriptForGame(
-  gameInfo: GameInfo,
-  gameSettings: GameSettings,
-  scriptStage: 'before' | 'after',
-  logWriter: LogWriter
-): Promise<boolean | string> {
-  return new Promise((resolve, reject) => {
-    const scriptPath = gameSettings[`${scriptStage}LaunchScriptPath`]
-    const scriptEnv = {
-      HEROIC_GAME_APP_NAME: gameInfo.app_name,
-      HEROIC_GAME_EXEC: gameInfo.install.executable,
-      HEROIC_GAME_PREFIX: gameSettings.winePrefix,
-      HEROIC_GAME_RUNNER: gameInfo.runner,
-      HEROIC_GAME_SCRIPT_STAGE: scriptStage,
-      HEROIC_GAME_TITLE: gameInfo.title,
-      HEROIC_GAME_SETTINGS: JSON.stringify(gameSettings),
-      HEROIC_GAME_INFO: JSON.stringify(gameInfo),
-      ...process.env
-    }
-    const child = spawn(scriptPath, {
-      cwd: gameInfo.install.install_path,
-      env: scriptEnv
-    })
-    child.stdout.setEncoding('utf-8')
-    child.stderr.setEncoding('utf-8')
-
-    if (gameSettings.verboseLogs) {
-      child.stdout.on('data', (data: string) => {
-        logWriter.writeString(data)
-      })
-
-      child.stderr.on('data', (data: string) => {
-        logWriter.writeString(data)
-      })
-    }
-
-    child.on('error', (err) => {
-      if (gameSettings.verboseLogs) {
-        logWriter.logError(err)
-      }
-      reject(err)
-    })
-
-    child.on('exit', () => {
-      resolve(true)
-    })
-  })
 }
 
 /** Launcher members; pure helpers stay module-level because they need no deps. */
@@ -2255,7 +1622,3 @@ export function createLauncher(deps: LauncherDeps): Launcher {
     verifyWinePrefix: (...a) => verifyWinePrefix(deps, ...a)
   }
 }
-
-// Deleted by plan 24 with the legacy command functions.
-/** @public */
-export { runWineCommand, callRunner, runScriptForGame, getWinePath }

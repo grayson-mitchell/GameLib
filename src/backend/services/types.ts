@@ -78,7 +78,7 @@ export interface ManagerDeps {
    * The boot's process runner (the one commandRunner is built on), so a manager's stop path
    * kills through the same registry its spawns are tracked in.
    */
-  runner: Pick<ProcessRunner, 'killTracked' | 'spawnLongLived'>
+  runner: Pick<ProcessRunner, 'killTracked' | 'spawnLongLived' | 'run'>
   /**
    * A call-time accessor, never a queue value: the download queue is built by the
    * 'download-queue' boot step, after the managers exist.

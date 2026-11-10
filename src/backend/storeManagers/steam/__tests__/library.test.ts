@@ -36,7 +36,6 @@ import { getBottleSteamappsDir } from '../bottle'
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { finalizeToSteam, downloadSteamDepots } from '../depot'
 import { resumeVerifyRust } from '../depotRust/secondary'
-import { runWineCommand } from 'backend/launcher'
 import { join } from 'path'
 import { library } from '../state'
 import * as gamesModule from '../gameSessionState'
@@ -210,10 +209,8 @@ jest.mock('../depotRust/secondary', () => ({
   resumeVerifyRust: jest.fn()
 }))
 
-// ── backend/launcher mock — runWineCommand (D-05 no-auto-drive regression) ────
-jest.mock('backend/launcher', () => ({
-  runWineCommand: jest.fn()
-}))
+// 66.1-24: the legacy launcher runWineCommand is gone; the D-05 guard watches this stand-in.
+const runWineCommand = jest.fn()
 
 // ── bridge/allowlist mock — bridgeAllowlist.has (D-UAT-24-02, 24-17) ────────
 // Defaulted to false in the shared beforeEach below so EVERY pre-existing

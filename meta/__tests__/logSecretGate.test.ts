@@ -436,8 +436,8 @@ describe('logSecretGate', () => {
       const files = [...new Set(report.exemptions.map((e) => e.file))].sort()
 
       expect(files).toEqual([
+        'src/backend/commandRunner.ts',
         'src/backend/engine/perGameBottle.ts',
-        'src/backend/launcher.ts',
         'src/backend/storeManagers/gog/games.ts',
         'src/backend/storeManagers/legendary/library.ts',
         'src/backend/storeManagers/steam/bridge/bottleDllOverrides.ts',

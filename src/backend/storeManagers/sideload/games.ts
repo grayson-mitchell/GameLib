@@ -109,7 +109,7 @@ export default class SideloadGame implements Game {
           engineKeyFor(this.getGameInfo().runner, this.id),
           await this.getSettings()
         )
-        shutdownWine(gameSettings)
+        shutdownWine(this.deps, gameSettings)
       }
     }
   }

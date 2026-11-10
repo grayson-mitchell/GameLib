@@ -40,12 +40,12 @@ import { showDialogBoxModalAuto } from './dialog/dialog'
 import { sendFrontendMessage } from './ipc'
 import { GlobalConfig } from './config'
 import { GameConfig } from './game_config'
-import { validWine, runWineCommand } from './launcher'
+import { validWine } from './launcher'
 import {
   installWineVersion,
   updateWineVersionInfos
 } from './wine/manager/utils'
-import type { ManagerDeps, Stores } from './services/types'
+import type { CommandRunner, ManagerDeps, Stores } from './services/types'
 import { readdir, lstat, rm } from 'fs/promises'
 import { backendEvents } from './backend_events'
 import EasyDl from 'easydl'
@@ -845,13 +845,16 @@ const getCurrentChangelog = async (): Promise<Release | null> => {
   }
 }
 
-async function shutdownWine(gameSettings: GameSettings) {
+async function shutdownWine(
+  deps: { commandRunner: Pick<CommandRunner, 'runWineCommand'> },
+  gameSettings: GameSettings
+) {
   if (gameSettings.wineVersion.wineserver) {
     spawnSync(gameSettings.wineVersion.wineserver, ['-k'], {
       env: { WINEPREFIX: gameSettings.winePrefix }
     })
   } else {
-    await runWineCommand({
+    await deps.commandRunner.runWineCommand({
       gameSettings,
       commandParts: ['wineboot', '-k'],
       wait: true,

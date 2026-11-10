@@ -130,6 +130,7 @@ const { launchEventCallback } = createLauncher({
   } as never,
   launchHooks: { legendary: {} } as never,
   commandRunner: {} as never,
+  runner: { run: () => Promise.reject(new Error('unscripted run')) } as never,
   spawnAsync: (() => Promise.reject(new Error('unscripted spawn'))) as never,
   stores: { kvs: { tsStore }, wineManager: {}, runsForMe: {} } as never
 })
