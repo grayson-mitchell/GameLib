@@ -10,7 +10,7 @@ source: [72-03-PLAN.md, 72-07-PLAN.md, 72-10-PLAN.md, 72-12-PLAN.md]
 
 - Launch with `pnpm tauri:dev`, never `tauri:dev:run` (it skips the dev-vault flag and Keychain prompts every launch).
 - `tauri dev` builds the sidecar only at startup: restart dev after backend changes.
-- Items 6 and 7 need the operator's Windows PC and a build that includes 72-12 (Job Object). The Windows compile of that code is unproven until the rust-test windows-latest leg runs after a push.
+- Items 6 and 7 need the operator's Windows PC and a build that includes 72-12 (Job Object). That code compiles on Windows: Rust test run 42952556201 on 847c0849f (2026-11-11) passed its windows-latest leg (72-HUMAN-UAT item 3).
 
 ## Tests
 
