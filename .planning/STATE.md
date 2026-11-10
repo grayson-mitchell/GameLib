@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-11-06)
 Phase: 66.1 (backend-di-stores-store-managers-flow-registrations-and-launcher) — EXECUTING
 Plan: 28 of 28
 Status: Ready to execute
-Last activity: 2026-11-10 - Completed quick task 261110-ugu: Import-time mirror reads run before store-snapshot hydration
+Last activity: 2026-11-10 - Completed quick task 261110-uog: logSecretGate green (uninstaller logs stderr length, not text)
 
 Progress: [██████████] 100%
 
@@ -689,6 +689,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 | 261110-nwy | Launch notice toast takes each theme's tokens: shared NoticeStack surface → `--background` + 1px `--input-background` frame (all toasts); icon `--accent`, title `--primary-font-family` + `--text-title`, body `--secondary-font-family`, × `--action-icon`/hover; stripe + bar stay `--status-warning`. SCSS only + source gate test. Todo stays pending on live-gate. | 2026-11-10 | 3e5546299, f94b22971 | Needs Review: UI jest 316/316 suites pass; scoped prettier + eslint clean; live 10-theme check owed | [261110-nwy-deeper-theming-of-the-steam-launch-notic](./quick/261110-nwy-deeper-theming-of-the-steam-launch-notic/) |
 | 261110-u9k | installGame push (protocol-link install) now opens the install dialog via `openInstallGameModal`, guarded by event-time `libraryStatus` (skips installing/queued) instead of a stale `[]` snapshot; deleted unread UiState `showInstallModal`/`wineVersions`/`error`. Todo closed. | 2026-11-10 | fb0a6dbed | uiState+initStateSubscriptions jest 45 pass; codecheck + planning-gates green | [261110-u9k-installgame-push-stale-status-and-unread](./quick/261110-u9k-installgame-push-stale-status-and-unread/) |
 | 261110-ugu | Import-time mirror reads (settings hideChangelogsOnStartup/experimentalFeatures/focusRow, auth dismissedSignInNotices, library gameOverrides) moved into post-hydration `readInitialSettings/Auth/Library()`; `readFocusRowMirrorSeed()` replaces the import-time seed, CR-01 now fires only when the hydrated mirror lacks `focusRow`; boot libraries get hydrated overrides. Todo closed. | 2026-11-10 | cac3c5ba3 | jest src/frontend/state 500/500; codecheck + planning-gates green | [261110-ugu-import-time-mirror-reads-run-before-stor](./quick/261110-ugu-import-time-mirror-reads-run-before-stor/) |
+| 261110-uog | logSecretGate green again: uninstaller.ts refused/failed `logInfo` lines log `stderrLength=` instead of raw `result.stderr`; Steam `refuse()` now logs its own reason via logWarning. Gate files unchanged. Closes phase-62 SECURITY W-1. | 2026-11-10 | e51427cfe, 70989e3c3, 043f8962b | logSecretGate + uninstaller jest 69/69; scoped prettier clean | [261110-uog-fix-logsecretgate-failure-uninstaller-ts](./quick/261110-uog-fix-logsecretgate-failure-uninstaller-ts/) |
 
 ## Session Continuity
 
