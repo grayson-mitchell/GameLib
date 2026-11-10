@@ -157,7 +157,7 @@ import {
   logWarning,
   logError,
   logErrorSettled,
-  logSystemInformation,
+  logBootFacts,
   getRunnerLogWriter,
   LogPrefix
 } from '../logger'
@@ -1214,14 +1214,9 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           queue.start()
         }
         state.services.downloadQueue = queue
-        // The managers do not exist at the 'logger' step, so the System Information line is
-        // logged here, the first point where they do. Fire-and-forget; managers resolved
-        // through a getter inside the fetch, never at step time.
-        logSystemInformation({
-          get libraryManagers() {
-            return requireServices(state).managers.library
-          }
-        })
+        // No System Information dump at boot (A-CR-1): the full probe set is lazy (getSystemInfo
+        // RPC). Only cheap static facts are logged.
+        logBootFacts()
       }
     },
     {

@@ -6,6 +6,8 @@ import type { ManagerDeps } from 'backend/services/types'
 /** R1 slice: the runner managers the version probes ask. */
 export type VersionProbeDeps = Pick<ManagerDeps, 'libraryManagers'>
 
+const COMET_VERSION_TIMEOUT_MS = 5000
+
 async function getLegendaryVersion(deps: VersionProbeDeps): Promise<string> {
   const { stdout, error, abort } = await deps.libraryManagers[
     'legendary'
@@ -46,7 +48,10 @@ async function getGogdlVersion(deps: VersionProbeDeps): Promise<string> {
 
 async function getCometVersion(): Promise<string> {
   const path = getCometBin()
-  const { stdout, error } = spawnSync(join(path.dir, path.bin), ['--version'])
+  // Bounded: spawnSync blocks the event loop, so a hung comet must not stall RPC frames.
+  const { stdout, error } = spawnSync(join(path.dir, path.bin), ['--version'], {
+    timeout: COMET_VERSION_TIMEOUT_MS
+  })
 
   if (error) return 'invalid'
 

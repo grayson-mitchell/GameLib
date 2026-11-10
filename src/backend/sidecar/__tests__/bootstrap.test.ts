@@ -83,6 +83,8 @@ import {
   createTestServices
 } from '../../testUtils/testServices'
 import { PassThrough } from 'node:stream'
+import * as util_os_processes from '../../utils/os/processes'
+import * as helperBinaries from '../../utils/helperBinaries'
 import { createStoreRegistry } from '../../stores/storeRegistry'
 import { bootFresh } from './helpers/sidecarHarness'
 import { getLogFilePath } from '../../logger/paths'
@@ -227,21 +229,27 @@ describe('sidecar bootstrap (headless boot)', () => {
       expect(() => bootFresh({ services: prebuilt })).not.toThrow()
     })
 
-    it('the moved System Information log neither fails the boot nor leaks an unhandled rejection when the managers are unavailable (66.1-22g)', async () => {
+    it('a boot starts no system-info child and never touches comet (A-CR-1)', async () => {
+      const spawnWrapper = jest.spyOn(util_os_processes, 'genericSpawnWrapper')
+      const comet = jest.spyOn(helperBinaries, 'getCometVersion')
       const rejections: unknown[] = []
       const onRejection = (reason: unknown) => rejections.push(reason)
       process.on('unhandledRejection', onRejection)
       try {
-        // createTestServices' default managers throw on use, so the probe fetch rejects later;
-        // logSystemInformation's default catch turns that into 'unavailable'.
+        // createTestServices' default managers throw on use: a boot-time probe fetch would
+        // reject (unhandled) AND call the spies below.
         expect(() =>
           bootFresh({ services: createTestServices() })
         ).not.toThrow()
         await new Promise((resolve) => setImmediate(resolve))
         await new Promise((resolve) => setImmediate(resolve))
+        expect(spawnWrapper).not.toHaveBeenCalled()
+        expect(comet).not.toHaveBeenCalled()
         expect(rejections).toEqual([])
       } finally {
         process.off('unhandledRejection', onRejection)
+        spawnWrapper.mockRestore()
+        comet.mockRestore()
       }
     })
   })

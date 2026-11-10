@@ -1,10 +1,6 @@
 import { GameConfig } from 'backend/game_config'
 import { GlobalConfig } from 'backend/config'
-import {
-  formatSystemInfo,
-  getSystemInfo,
-  type SystemInfoDeps
-} from 'backend/utils/systeminfo'
+import os from 'os'
 import { backendEvents } from 'backend/backend_events'
 
 import { LogPrefix, RunnerToLogPrefixMap } from './constants'
@@ -122,9 +118,7 @@ async function createGameLogWriter(
  * an already-initialized `userData` config directory/file — a real
  * Electron app guarantees this before app code runs, a headless sidecar
  * process does not), the one-time system-info dump (shells out to
- * hardware/binary-version probes via a fire-and-forget async chain that can
- * outlive a short-lived caller — e.g. a test process tearing down before it
- * resolves), and the `settingChanged` event listener (meaningless without
+ * hardware/binary-version probes; the sidecar fetches it lazily instead), and the `settingChanged` event listener (meaningless without
  * GlobalConfig). Used ONLY by the headless sidecar
  * (`backend/sidecar/bootstrap.ts`) so the REAL `logInfo`/`logWarning`/
  * `logError` calls throughout the backend's existing code (reused unchanged
@@ -138,25 +132,22 @@ function initHeadless(): void {
 }
 
 /**
- * Logs the System Information line. Called at the end of the boot's 'download-queue' step (the
- * first point where the runner managers exist; the 'logger' step runs before them).
+ * Logs one boot line of cheap, static facts (platform, arch, OS release, CPU model/count, total
+ * memory). Everything here is an in-process `os` read: no child process, no I/O, nothing to bound.
  *
- * - No added work: getSystemInfo memoizes one fetch per process (in-flight + value cache), so
- *   this starts the same single fetch the old init() call started, later.
- * - The three runner `--version` probes are not time-bounded (commandRunner runs them with no
- *   timeout) but the process runner unrefs every child and its stdio and the probes are tracked
- *   for the quit handler's kill, so a hung probe cannot hold the event loop open.
- * - Fire-and-forget: a failed fetch resolves to 'unavailable', never an unhandled rejection.
+ * The full System Information dump (GPU via lspci/powershell, OS name, runner `--version` probes,
+ * comet `spawnSync`) is deliberately NOT run at boot. It is spawn-heavy, referenced and (before
+ * the probes were bounded) unbounded, so running it at boot violated the sidecar's exit contract
+ * (A-CR-1, 66.1 review). It is fetched lazily by the `getSystemInfo` RPC and by launch-time logging.
  */
-export function logSystemInformation(deps: SystemInfoDeps): void {
+export function logBootFacts(): void {
+  const cpus = os.cpus()
   heroicLogWriter.logInfo(
     [
-      'System Information:',
-      // Promise.resolve().then: a synchronous throw from the fetch also lands in the catch.
-      Promise.resolve()
-        .then(() => getSystemInfo(deps))
-        .then(formatSystemInfo)
-        .catch(() => 'unavailable')
+      'System facts:',
+      `${process.platform} ${process.arch} ${os.release()},`,
+      `CPU: ${cpus[0]?.model ?? 'unknown'} x${cpus.length},`,
+      `memory: ${Math.round(os.totalmem() / 1024 ** 3)} GiB`
     ],
     LogPrefix.Backend
   )
