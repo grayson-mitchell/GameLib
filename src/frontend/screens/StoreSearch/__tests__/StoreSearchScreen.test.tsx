@@ -13,6 +13,7 @@
  * timer cleanup — see useDebouncedStoreSearch.test.ts for why an unaware
  * mock would misreport call counts).
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement, ReactNode } from 'react'
 
 import type { HumbleKey } from 'common/types/humble'
@@ -148,7 +149,11 @@ jest.mock('react', () => {
       }
       return memoSlots[idx]
     },
-    useContext: () => contextValue,
+    useDebugValue: () => undefined,
+    useLayoutEffect: () => undefined,
+    useInsertionEffect: () => undefined,
+    useSyncExternalStore: (_subscribe: unknown, getSnapshot: () => unknown) =>
+      getSnapshot(),
     __beginRender: () => {
       stateCursor = 0
       refCursor = 0
@@ -176,14 +181,31 @@ const mockApi = {
   getStoreSearchDeals: jest.fn(),
   openExternalUrl: jest.fn()
 }
-;(globalThis as unknown as { window: { api: typeof mockApi } }).window = {
-  api: mockApi
-}
-
 // Imported after the mocks above (textual order — this project's ts-jest
 // setup does not hoist jest.mock like babel-jest).
 import StoreSearch from '../index'
 import StoreSearchRow from '../components/StoreSearchRow'
+import useAuthState from 'frontend/state/authState'
+import useLibraryState from 'frontend/state/libraryState'
+import { resetAllStores } from 'frontend/state/storeKit'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+
+// The screen reads the account libraries and humble keys from the stores;
+// contextValue stays the fixture holder and is pushed into them here.
+function seedStores() {
+  useLibraryState.setState({
+    epicLibrary: contextValue.epic.library,
+    gogLibrary: contextValue.gog.library,
+    amazonLibrary: contextValue.amazon.library,
+    steamLibrary: contextValue.steam.library
+  })
+  useAuthState.setState({
+    humble: {
+      ...useAuthState.getState().humble,
+      keys: contextValue.humble.keys
+    }
+  })
+}
 
 type HookHarness = { __beginRender: () => void; __resetMount: () => void }
 
@@ -313,12 +335,16 @@ describe('StoreSearch screen container', () => {
       steam: { library: [] },
       humble: { keys: [] }
     }
+    ;(globalThis as unknown as { window: { api: unknown } }).window.api =
+      mockApi
+    seedStores()
     mockApi.searchStores.mockReset()
     mockApi.logError.mockReset()
   })
 
   afterEach(() => {
     jest.useRealTimers()
+    resetAllStores()
   })
 
   it('renders the explanatory prompt block (with icon) before any search', () => {
@@ -403,6 +429,7 @@ describe('StoreSearch screen container', () => {
       },
       humble: { keys: [] }
     }
+    seedStores()
     mockApi.searchStores.mockResolvedValue([
       makeResult({ gameId: 'game-1', title: 'Portal', steamAppId: '400' })
     ])
@@ -417,19 +444,15 @@ describe('StoreSearch screen container', () => {
       keyAvailable: false
     })
 
-    // D-05: assert the actual useContext destructure statement — not the
-    // whole file (which legitimately documents the exclusion in prose) —
-    // never binds sideloadedLibrary.
+    // D-05: the screen source (comments stripped, so the prose that
+    // documents the exclusion does not count) never references
+    // sideloadedLibrary. Anti-vacuity: it does read the steam account.
     const fs: typeof import('fs') = jest.requireActual('fs')
     const path: typeof import('path') = jest.requireActual('path')
-    const source = fs.readFileSync(
-      path.join(__dirname, '..', 'index.tsx'),
-      'utf8'
+    const source = stripSourceComments(
+      fs.readFileSync(path.join(__dirname, '..', 'index.tsx'), 'utf8')
     )
-    const destructureLine = source
-      .split('\n')
-      .find((line) => line.includes('useContext(ContextProvider)'))
-    expect(destructureLine).toBeDefined()
-    expect(destructureLine).not.toMatch(/sideloadedLibrary/)
+    expect(source).toContain('useSteamAccount()')
+    expect(source).not.toMatch(/sideloadedLibrary/)
   })
 })

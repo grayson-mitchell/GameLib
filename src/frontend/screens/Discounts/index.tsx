@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MenuItem, Select } from '@mui/material'
 
@@ -37,7 +37,13 @@ import {
   type PegiAge
 } from './helpers'
 import './index.css'
-import ContextProvider from 'frontend/state/ContextProvider'
+import {
+  useAmazonAccount,
+  useEpicAccount,
+  useGogAccount,
+  useHumbleAccount,
+  useSteamAccount
+} from 'frontend/state/accountHooks'
 
 export default function Discounts() {
   const { t, i18n } = useTranslation()
@@ -54,7 +60,11 @@ export default function Discounts() {
     () => getLocaleSettings(toShippedLanguage(i18n.language), regionOverride),
     [i18n.language, regionOverride]
   )
-  const { epic, gog, amazon, steam, humble } = useContext(ContextProvider)
+  const epic = useEpicAccount()
+  const gog = useGogAccount()
+  const amazon = useAmazonAccount()
+  const steam = useSteamAccount()
+  const humble = useHumbleAccount()
   const isGogLoggedIn: boolean = !!gog?.username
 
   // Build a normalized-title set of games owned in ANY store (Epic, GOG,

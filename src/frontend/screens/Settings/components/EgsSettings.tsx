@@ -1,8 +1,9 @@
-import { ChangeEvent, useContext, useState } from 'react'
+import { ChangeEvent, useState } from 'react'
 
 import { useTranslation } from 'react-i18next'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
+import useUiState from 'frontend/state/uiState'
 import useSetting from 'frontend/hooks/useSetting'
 import { InfoBox, ToggleSwitch, PathSelectionBox } from 'frontend/components/UI'
 
@@ -10,8 +11,11 @@ const EgsSettings = () => {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
   const [isSyncing, setIsSyncing] = useState(false)
-  const { platform, refreshLibrary, showDialogModal } =
-    useContext(ContextProvider)
+  const refreshLibrary = useLibraryState((s) => s.refreshLibrary)
+  const { platform, showDialogModal } = useUiState.keys(
+    'platform',
+    'showDialogModal'
+  )
   const [egsPath, setEgsPath] = useSetting('egsLinkedPath', '')
 
   function handleSync(

@@ -1,10 +1,16 @@
-import { useContext, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMagnifyingGlassDollar } from '@fortawesome/free-solid-svg-icons'
 
 import SearchBar from 'frontend/components/UI/SearchBar'
-import ContextProvider from 'frontend/state/ContextProvider'
+import {
+  useAmazonAccount,
+  useEpicAccount,
+  useGogAccount,
+  useHumbleAccount,
+  useSteamAccount
+} from 'frontend/state/accountHooks'
 import { selectKeysWaiting } from 'common/humble/viewFilters'
 import {
   resolveStoreSearchBadges,
@@ -23,12 +29,16 @@ import './index.css'
  *
  * D-05: reads exactly steam.library, gog.library, epic.library,
  * amazon.library + humble keys — `sideloadedLibrary` is
- * DELIBERATELY never destructured from ContextProvider here (highest
+ * DELIBERATELY never destructured from the context value here (highest
  * fuzzy-false-positive risk source).
  */
 export default function StoreSearch() {
   const { t } = useTranslation()
-  const { epic, gog, amazon, steam, humble } = useContext(ContextProvider)
+  const epic = useEpicAccount()
+  const gog = useGogAccount()
+  const amazon = useAmazonAccount()
+  const steam = useSteamAccount()
+  const humble = useHumbleAccount()
   const { query, setQuery, results, status, loading, retry } =
     useDebouncedStoreSearch()
 

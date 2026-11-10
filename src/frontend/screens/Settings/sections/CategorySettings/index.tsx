@@ -1,5 +1,6 @@
 import './index.scss'
-import ContextProvider from 'frontend/state/ContextProvider'
+import { useCustomCategories } from 'frontend/state/accountHooks'
+import useLibraryState from 'frontend/state/libraryState'
 import { useContext, useEffect, useMemo, useState } from 'react'
 import SettingsContext from '../../SettingsContext'
 import { Box, Button, Divider, IconButton } from '@mui/material'
@@ -13,11 +14,12 @@ import {
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
 
 const CategorySettings = () => {
-  const {
-    customCategories,
-    currentCustomCategories,
-    setCurrentCustomCategories
-  } = useContext(ContextProvider)
+  const customCategories = useCustomCategories()
+  const { currentCustomCategories, setCurrentCustomCategories } =
+    useLibraryState.keys(
+      'currentCustomCategories',
+      'setCurrentCustomCategories'
+    )
   const { appName, runner } = useContext(SettingsContext)
 
   const [newCategory, setNewCategory] = useState('')

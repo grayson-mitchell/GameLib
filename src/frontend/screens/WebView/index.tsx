@@ -1,15 +1,17 @@
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState
-} from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import {
+  useAmazonAccount,
+  useEpicAccount,
+  useGogAccount,
+  useHumbleAccount,
+  useSteamAccount
+} from 'frontend/state/accountHooks'
+import useLibraryState from 'frontend/state/libraryState'
+import useAuthState from 'frontend/state/authState'
+import useUiState from 'frontend/state/uiState'
 import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 import { rememberLastStore } from 'frontend/components/UI/NavShell/navTabs'
 import StoreEmbedControls from 'frontend/components/UI/StoreEmbedControls'
@@ -45,19 +47,18 @@ const lastUrlStorageKey = (storeKey: string) => `last-url-${storeKey}`
 export default function WebView() {
   const { i18n } = useTranslation()
   const { pathname, search } = useLocation()
-  const {
-    epic,
-    gog,
-    amazon,
-    humble,
-    steam,
-    completeOAuthLogin,
-    platform,
-    signInProbeOutcomes,
-    refreshLibrary,
-    refreshing,
-    refreshingByRunner
-  } = useContext(ContextProvider)
+  const epic = useEpicAccount()
+  const gog = useGogAccount()
+  const amazon = useAmazonAccount()
+  const steam = useSteamAccount()
+  const humble = useHumbleAccount()
+  const { completeOAuthLogin, signInProbeOutcomes } = useAuthState.keys(
+    'completeOAuthLogin',
+    'signInProbeOutcomes'
+  )
+  const platform = useUiState((s) => s.platform)
+  const { refreshLibrary, refreshing, refreshingByRunner } =
+    useLibraryState.keys('refreshLibrary', 'refreshing', 'refreshingByRunner')
   const navigate = useNavigate()
 
   // `store` is set to epic/gog/amazon depending on which storefront we're
@@ -592,13 +593,13 @@ export default function WebView() {
   // D-01/D-02: the live embed runs on macOS, Linux and Windows (Linux per the positioning todo's
   // 2026-09-28 decision (a): a real GTK-box-native embed rather than none; Windows per quick
   // 261012-f25: WebView2 `add_child` through the macOS positioning path, spike 027). Reuses
-  // `platform` from `ContextProvider` (the same source `App.tsx`'s own `isMac` check reads)
+  // `platform` from uiState (the same source `App.tsx`'s own `isMac` check reads)
   // rather than `process.platform` or `navigator.platform` -- both are wrong here: `process` is
   // Node/main-process-only, and `navigator.platform` under WKWebView doesn't reflect the actual
   // host OS this app runs on (`tauri-chromium-only-web-apis` project gotcha).
   // `src/preload/tauriAttach.ts` only ever assigns 'darwin' | 'win32' | 'linux' to
   // `window.platform`, so under the shipped preload this branch is a defensive fallback, reached
-  // only by ContextProvider's 'unknown' default or a future platform value. It is kept so a
+  // only by uiState's 'unknown' default or a future platform value. It is kept so a
   // platform the shell cannot embed on gets the `WebviewUnavailablePanel` (reworded by plan
   // 40-10 (D-02) to name the platform reason) rather than a dead slot.
   if (platform !== 'darwin' && platform !== 'linux' && platform !== 'win32') {

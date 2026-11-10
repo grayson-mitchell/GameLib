@@ -1,6 +1,6 @@
 import './index.css'
 
-import { useContext, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -8,7 +8,13 @@ import { faSyncAlt } from '@fortawesome/free-solid-svg-icons'
 import { MenuItem, SelectChangeEvent } from '@mui/material'
 import classNames from 'classnames'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import {
+  useEpicAccount,
+  useGogAccount,
+  useHumbleAccount,
+  useSteamAccount
+} from 'frontend/state/accountHooks'
+import useUiState from 'frontend/state/uiState'
 import WarningMessage from 'frontend/components/UI/WarningMessage'
 import SearchBar from 'frontend/components/UI/SearchBar'
 import SelectField from 'frontend/components/UI/SelectField'
@@ -113,8 +119,11 @@ function loginPathForStore(store: HumbleGameLibLoginStore): string {
 export default function HumbleKeys() {
   const { t } = useTranslation()
   const { t: tGamelib, i18n } = useTranslation('gamelib')
-  const { humble, steam, gog, epic, showDialogModal } =
-    useContext(ContextProvider)
+  const humble = useHumbleAccount()
+  const steam = useSteamAccount()
+  const gog = useGogAccount()
+  const epic = useEpicAccount()
+  const showDialogModal = useUiState((s) => s.showDialogModal)
   const navigate = useNavigate()
 
   const [cooldownUntil, setCooldownUntil] = useState<number | undefined>(

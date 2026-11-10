@@ -1,5 +1,5 @@
 import './index.css'
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { faCopy, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons'
@@ -12,7 +12,7 @@ import {
   getRedeemTarget
 } from 'common/humble/keyTypePresentation'
 import { redeemOutcomeCopy } from 'frontend/components/UI/RedeemSteamKeyDialog/copy'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
 
 // D-68/T-14-09, revised by D-42-03 (Phase 42): the static, generic
 // redemption-help destination for every platform with NO evidenced
@@ -90,7 +90,7 @@ export default function HumbleClaimWizard({
   // rather than incidental.
   const { t: tGamelib } = useTranslation('gamelib')
   const navigate = useNavigate()
-  const { refreshLibrary } = useContext(ContextProvider)
+  const refreshLibrary = useLibraryState((s) => s.refreshLibrary)
 
   const isSteam = humbleKey.platform === 'steam'
 

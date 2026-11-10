@@ -1,8 +1,0 @@
-{
-  "contextImports": {
-    "src/frontend/screens/Discounts/index.tsx": 1,
-    "src/frontend/screens/Humble/Keys/components/HumbleClaimWizard/index.tsx": 1,
-    "src/frontend/screens/Humble/Keys/index.tsx": 1,
-    "src/frontend/screens/StoreSearch/index.tsx": 1
-  }
-}

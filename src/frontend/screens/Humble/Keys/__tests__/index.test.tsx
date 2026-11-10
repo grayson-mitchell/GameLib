@@ -56,6 +56,7 @@
  * (its own "SOURCE GATES, NOT RENDER TESTS" docblock explains the same
  * constraint): read the file, strip comments, match text.
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement, ReactNode } from 'react'
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -184,8 +185,11 @@ jest.mock('react', () => {
   let slots: unknown[] = []
   let cursor = 0
 
-  return {
-    ...actualReact,
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+
+  return withStoreHooks(actualReact, {
     useState: (initial: unknown) => {
       const idx = cursor++
       if (idx >= slots.length) {
@@ -244,7 +248,6 @@ jest.mock('react', () => {
       }
       return prev.value
     },
-    useContext: () => contextValue,
     __beginRender: () => {
       cursor = 0
     },
@@ -252,7 +255,7 @@ jest.mock('react', () => {
       slots = []
       cursor = 0
     }
-  }
+  })
 })
 
 const mockApi = {
@@ -266,10 +269,6 @@ const mockApi = {
   humbleRecordGiftLinkOpened: jest.fn(),
   openExternalUrl: jest.fn(),
   clipboardWriteText: jest.fn()
-}
-
-;(globalThis as unknown as { window: { api: typeof mockApi } }).window = {
-  api: mockApi
 }
 
 // Imported after the mocks above (textual order -- this project's ts-jest
@@ -286,6 +285,24 @@ import SearchBarStub from 'frontend/components/UI/SearchBar'
 import SelectFieldStub from 'frontend/components/UI/SelectField'
 import ToggleSwitchStub from 'frontend/components/UI/ToggleSwitch'
 import { at } from '../../../__tests__/fixtures/indexed'
+import useAuthState from 'frontend/state/authState'
+import useUiState from 'frontend/state/uiState'
+import { resetAllStores } from 'frontend/state/storeKit'
+
+// The screen reads its accounts from the stores; contextValue stays the
+// per-test fixture holder and is pushed into them before every render.
+function seedStores() {
+  useAuthState.setState({
+    humble: {
+      ...useAuthState.getState().humble,
+      ...contextValue.humble
+    } as ReturnType<typeof useAuthState.getState>['humble'],
+    steamUsername: contextValue.steam.username,
+    gogUsername: contextValue.gog.username,
+    epicUsername: contextValue.epic.username
+  })
+  useUiState.setState({ showDialogModal: contextValue.showDialogModal })
+}
 
 type HookHarness = { __beginRender: () => void; __resetMount: () => void }
 
@@ -294,12 +311,15 @@ function harness(): HookHarness {
 }
 
 function mount(): ReactElement {
+  ;(globalThis as unknown as { window: { api: unknown } }).window.api = mockApi
+  seedStores()
   harness().__resetMount()
   harness().__beginRender()
   return HumbleKeys() as unknown as ReactElement
 }
 
 function rerender(): ReactElement {
+  seedStores()
   harness().__beginRender()
   return HumbleKeys() as unknown as ReactElement
 }
@@ -448,6 +468,8 @@ function defaultContext(keys: HumbleKey[] = []): MockContextValue {
 }
 
 describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
+  afterEach(() => resetAllStores())
+
   beforeEach(() => {
     mockUiLanguage = 'en'
     contextValue = defaultContext()

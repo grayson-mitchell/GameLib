@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import classNames from 'classnames'
 import './index.scss'
 import Runner from './components/Runner'
@@ -21,7 +21,15 @@ import SIDLogin from './components/SIDLogin'
 import SteamLogin from './components/SteamLogin'
 import HumbleLogin from './components/HumbleLogin'
 import OAuthLogin, { type OAuthOverlayRunner } from './components/OAuthLogin'
-import ContextProvider from '../../state/ContextProvider'
+import {
+  useAmazonAccount,
+  useEpicAccount,
+  useGogAccount,
+  useHumbleAccount,
+  useSteamAccount
+} from 'frontend/state/accountHooks'
+import useLibraryState from 'frontend/state/libraryState'
+import useAuthState from 'frontend/state/authState'
 import { useAwaited } from '../../hooks/useAwaited'
 import { collectSignInInputs } from 'frontend/helpers/signInInputs'
 import { resolveSignInStates } from 'common/signInState'
@@ -63,15 +71,13 @@ function isOAuthOverlayRunner(
 }
 
 export default React.memo(function NewLogin() {
-  const {
-    epic,
-    gog,
-    amazon,
-    steam,
-    humble,
-    refreshLibrary,
-    signInProbeOutcomes
-  } = useContext(ContextProvider)
+  const epic = useEpicAccount()
+  const gog = useGogAccount()
+  const amazon = useAmazonAccount()
+  const steam = useSteamAccount()
+  const humble = useHumbleAccount()
+  const refreshLibrary = useLibraryState((s) => s.refreshLibrary)
+  const signInProbeOutcomes = useAuthState((s) => s.signInProbeOutcomes)
   const { t } = useTranslation()
   // Fork-owned strings live in gamelib.json — translation.json is upstream's
   // and meta/i18nCatalogChurnGuard.ts fails the build on any fork edit to it.

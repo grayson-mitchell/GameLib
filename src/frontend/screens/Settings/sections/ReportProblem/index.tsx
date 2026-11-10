@@ -1,7 +1,14 @@
-import { useContext, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import ContextProvider from 'frontend/state/ContextProvider'
+import {
+  useAmazonAccount,
+  useEpicAccount,
+  useGogAccount,
+  useHumbleAccount,
+  useSteamAccount
+} from 'frontend/state/accountHooks'
+import useLibraryState from 'frontend/state/libraryState'
 import {
   collectDiagnostics,
   getReportEnv,
@@ -19,8 +26,12 @@ const gameKey = (g: Pick<GameInfo, 'runner' | 'app_name'>) =>
 
 export default function ReportProblem() {
   const { t } = useTranslation('gamelib')
-  const { epic, gog, amazon, steam, humble, sideloadedLibrary } =
-    useContext(ContextProvider)
+  const epic = useEpicAccount()
+  const gog = useGogAccount()
+  const amazon = useAmazonAccount()
+  const steam = useSteamAccount()
+  const humble = useHumbleAccount()
+  const sideloadedLibrary = useLibraryState((s) => s.sideloadedLibrary)
 
   const configured = isReportingConfigured()
 

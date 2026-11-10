@@ -5,6 +5,7 @@
  * returned element tree (host elements only) is inspected and handlers are
  * invoked directly.
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement } from 'react'
 
 type Slot = { value: unknown; deps?: unknown[] }
@@ -15,40 +16,44 @@ const h = {
   dirty: false
 }
 
-jest.mock('react', () => ({
-  ...jest.requireActual<typeof import('react')>('react'),
-  useState: (init: unknown) => {
-    const i = h.index++
-    if (!h.slots[i]) {
-      h.slots[i] = { value: typeof init === 'function' ? init() : init }
-    }
-    const set = (v: unknown) => {
-      const slot = h.slots[i]
-      if (!slot) throw new Error(`useState slot ${i} is missing`)
-      const next =
-        typeof v === 'function' ? (v as (p: unknown) => unknown)(slot.value) : v
-      if (next !== slot.value) {
-        slot.value = next
-        h.dirty = true
+jest.mock('react', () =>
+  jest
+    .requireActual<
+      typeof import('frontend/testUtils/storeHookReact')
+    >('frontend/testUtils/storeHookReact')
+    .withStoreHooks(jest.requireActual<typeof import('react')>('react'), {
+      useState: (init: unknown) => {
+        const i = h.index++
+        if (!h.slots[i]) {
+          h.slots[i] = { value: typeof init === 'function' ? init() : init }
+        }
+        const set = (v: unknown) => {
+          const slot = h.slots[i]
+          if (!slot) throw new Error(`useState slot ${i} is missing`)
+          const next =
+            typeof v === 'function'
+              ? (v as (p: unknown) => unknown)(slot.value)
+              : v
+          if (next !== slot.value) {
+            slot.value = next
+            h.dirty = true
+          }
+        }
+        return [h.slots[i].value, set]
+      },
+      useEffect: (fn: () => void, deps?: unknown[]) => {
+        const i = h.index++
+        const prev = h.slots[i]
+        const changed =
+          !prev ||
+          !deps ||
+          !prev.deps ||
+          deps.some((d, k) => !Object.is(d, prev.deps?.[k]))
+        h.slots[i] = { value: undefined, deps }
+        if (changed) h.effects.push(fn)
       }
-    }
-    return [h.slots[i].value, set]
-  },
-  useEffect: (fn: () => void, deps?: unknown[]) => {
-    const i = h.index++
-    const prev = h.slots[i]
-    const changed =
-      !prev ||
-      !deps ||
-      !prev.deps ||
-      deps.some((d, k) => !Object.is(d, prev.deps?.[k]))
-    h.slots[i] = { value: undefined, deps }
-    if (changed) h.effects.push(fn)
-  },
-  useMemo: (fn: () => unknown) => fn(),
-  useCallback: (fn: unknown) => fn,
-  useContext: () => mockContext
-}))
+    })
+)
 
 jest.mock('../index.css', () => ({}))
 
@@ -56,11 +61,6 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_k: string, d: string) => d
   })
-}))
-
-jest.mock('frontend/state/ContextProvider', () => ({
-  __esModule: true,
-  default: {}
 }))
 
 const mockCollect = jest.fn()
@@ -94,6 +94,27 @@ const mockContext = {
 }
 
 import ReportProblem from '../index'
+import useAuthState from 'frontend/state/authState'
+import useLibraryState from 'frontend/state/libraryState'
+import { resetAllStores } from 'frontend/state/storeKit'
+
+function seedStores() {
+  useLibraryState.setState({
+    epicLibrary: mockContext.epic.library,
+    gogLibrary: mockContext.gog.library,
+    amazonLibrary: mockContext.amazon.library,
+    steamLibrary: mockContext.steam.library as never,
+    sideloadedLibrary: mockContext.sideloadedLibrary
+  })
+  useAuthState.setState({
+    epicUsername: mockContext.epic.username,
+    gogUsername: mockContext.gog.username,
+    amazonUserId: mockContext.amazon.user_id,
+    amazonUsername: mockContext.amazon.username,
+    steamUsername: mockContext.steam.username,
+    humble: { ...useAuthState.getState().humble, ...mockContext.humble }
+  })
+}
 
 type El = ReactElement<Record<string, unknown>>
 
@@ -146,7 +167,10 @@ const typeMessage = (tree: El, v: string) =>
     target: { value: v }
   })
 
+afterEach(() => resetAllStores())
+
 beforeEach(() => {
+  seedStores()
   h.slots = []
   mockCollect.mockReset().mockResolvedValue('DIAG')
   mockSubmit.mockReset().mockResolvedValue({ ok: true })

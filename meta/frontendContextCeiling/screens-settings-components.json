@@ -1,6 +1,0 @@
-{
-  "contextImports": {
-    "src/frontend/screens/Settings/components/ClearCache.tsx": 1,
-    "src/frontend/screens/Settings/components/EgsSettings.tsx": 1
-  }
-}

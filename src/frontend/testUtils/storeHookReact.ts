@@ -20,7 +20,9 @@ type React = typeof import('react')
 
 export function withStoreHooks(
   actualReact: React,
-  overrides: Partial<React> = {}
+  // Loose on purpose: test harnesses hand in slot-based fakes whose
+  // signatures are narrower than React's overloaded hook types.
+  overrides: Record<string, unknown> = {}
 ): React {
   const noop = () => undefined
   return {

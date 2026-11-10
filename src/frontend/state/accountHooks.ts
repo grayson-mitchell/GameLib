@@ -149,7 +149,6 @@ export function useSteamAccount(): ContextType['steam'] {
   return useMemo(() => composeSteamAccount(lib, auth), [lib, auth])
 }
 
-/** @public convenience hook for the library conversion wave (69-20..23); no consumer until then. */
 export function useHumbleAccount(): ContextType['humble'] {
   const auth = useAuthState.keys('humble', 'humbleLogin', 'humbleDisconnect')
   return useMemo(() => composeHumbleAccount(auth), [auth])

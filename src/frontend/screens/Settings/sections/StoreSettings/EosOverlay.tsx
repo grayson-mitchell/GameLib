@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   DeleteOutline,
@@ -9,7 +9,8 @@ import {
   SelectAllOutlined,
   DeselectOutlined
 } from '@mui/icons-material'
-import ContextProvider from 'frontend/state/ContextProvider'
+import useLibraryState from 'frontend/state/libraryState'
+import useUiState from 'frontend/state/uiState'
 import { GameStatus } from 'common/types'
 import { callOrDeclare } from 'frontend/helpers/declaredUnavailable'
 
@@ -37,8 +38,11 @@ export default function EosOverlay() {
   const [eosOverlayUnavailable, setEosOverlayUnavailable] = useState(false)
   const eosOverlayAppName = '98bc04bc842e4906993fd6d6644ffb8d'
 
-  const { libraryStatus, platform, showDialogModal } =
-    useContext(ContextProvider)
+  const libraryStatus = useLibraryState((s) => s.libraryStatus)
+  const { platform, showDialogModal } = useUiState.keys(
+    'platform',
+    'showDialogModal'
+  )
   const { t } = useTranslation()
   // Phase 35 plan 26 remediation: the Install/Update confirmation strings below are fork-
   // owned and go in `gamelib.json`, never `translation.json` -- explicit `gamelib:` prefix

@@ -30,6 +30,7 @@
  * renders when the overlay is reported installed and this component's own probing `useEffect`s
  * are mocked to no-ops (nothing real reaches `window.api.getEosOverlayStatus()` here).
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement, ReactNode } from 'react'
 import { at, defined } from '../../../../__tests__/fixtures/indexed'
 
@@ -41,28 +42,11 @@ const mockLogError = jest.fn()
 // provides no `window` global otherwise (mirrors `logoutFailureSurface.test.tsx`'s convention).
 // Only channels this file's assertions actually reach need a real mock; every `useEffect` below
 // is a no-op, so the two "unconditional EOS probe" fetches never run.
-;(
-  globalThis as unknown as {
-    window: {
-      api: {
-        removeEosOverlay: typeof mockRemoveEosOverlay
-        logError: typeof mockLogError
-      }
-    }
-  }
-).window = {
-  api: { removeEosOverlay: mockRemoveEosOverlay, logError: mockLogError }
-}
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, defaultValue?: string): string => defaultValue ?? _key
   })
-}))
-
-jest.mock('frontend/state/ContextProvider', () => ({
-  __esModule: true,
-  default: { __name: 'ContextProvider' }
 }))
 
 jest.mock('react', () => {
@@ -75,8 +59,11 @@ jest.mock('react', () => {
     while (slots.length <= n) slots.push(UNSET)
   }
 
-  return {
-    ...actualReact,
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+
+  return withStoreHooks(actualReact, {
     useState: (initial: unknown) => {
       const idx = cursor++
       ensureLength(idx)
@@ -91,16 +78,6 @@ jest.mock('react', () => {
             : updater
       }
       return [slots[idx], setState]
-    },
-    useContext: (ctx: { __name?: string }) => {
-      if (ctx?.__name === 'ContextProvider') {
-        return {
-          libraryStatus: [],
-          platform: 'linux',
-          showDialogModal: mockShowDialogModal
-        }
-      }
-      return undefined
     },
     // All 4 of this component's useEffects are no-ops here -- none of them are under test in
     // this file (they only populate state this file seeds directly via __seedSlots).
@@ -117,12 +94,15 @@ jest.mock('react', () => {
       }
     },
     __getSlots: () => slots
-  }
+  })
 })
 
 // Imported after the mocks above (textual order, not hoisting -- ts-jest does not hoist
 // jest.mock; see logoutFailureSurface.test.tsx / index.test.tsx for the same convention).
 import EosOverlay from '../EosOverlay'
+import useLibraryState from 'frontend/state/libraryState'
+import useUiState from 'frontend/state/uiState'
+import { resetAllStores } from 'frontend/state/storeKit'
 
 type HookHarness = {
   __resetMount: () => void
@@ -205,7 +185,16 @@ interface CapturedDialogOptions {
 }
 
 describe('StoreSettings/EosOverlay: EOS overlay Remove confirmation (Phase 35 plan 26, REQ-35-17)', () => {
+  afterEach(() => resetAllStores())
+
   beforeEach(() => {
+    ;(globalThis as unknown as { window: Record<string, unknown> }).window.api =
+      { removeEosOverlay: mockRemoveEosOverlay, logError: mockLogError }
+    useLibraryState.setState({ libraryStatus: [] })
+    useUiState.setState({
+      platform: 'linux',
+      showDialogModal: mockShowDialogModal
+    })
     mockShowDialogModal.mockClear()
     mockRemoveEosOverlay.mockClear()
     mockLogError.mockClear()

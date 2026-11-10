@@ -1,8 +1,0 @@
-{
-  "contextImports": {
-    "src/frontend/screens/Settings/sections/CategorySettings/index.tsx": 1,
-    "src/frontend/screens/Settings/sections/LogSettings/index.tsx": 1,
-    "src/frontend/screens/Settings/sections/ReportProblem/index.tsx": 1,
-    "src/frontend/screens/Settings/sections/StoreSettings/EosOverlay.tsx": 1
-  }
-}

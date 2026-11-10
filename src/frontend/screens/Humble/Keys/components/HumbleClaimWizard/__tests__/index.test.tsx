@@ -21,6 +21,7 @@
  * harness; `flushPromises()` lets a click handler's internal `await` settle
  * before the next `rerender()` inspects the resulting state.
  */
+import 'frontend/testUtils/tauriWindow'
 import type { ReactElement, ReactNode } from 'react'
 
 import { HumbleKey, RedeemOutcome, RevealOutcome } from 'common/types/humble'
@@ -67,15 +68,17 @@ jest.mock('react-i18next', () => ({
 }))
 
 const mockRefreshLibrary = jest.fn().mockResolvedValue(undefined)
-const mockContext = { refreshLibrary: mockRefreshLibrary }
 
 jest.mock('react', () => {
   const actualReact = jest.requireActual<typeof import('react')>('react')
   let slots: unknown[] = []
   let cursor = 0
 
-  return {
-    ...actualReact,
+  const { withStoreHooks } = jest.requireActual<
+    typeof import('frontend/testUtils/storeHookReact')
+  >('frontend/testUtils/storeHookReact')
+
+  return withStoreHooks(actualReact, {
     useState: (initial: unknown) => {
       const idx = cursor++
       if (idx >= slots.length) {
@@ -105,10 +108,6 @@ jest.mock('react', () => {
       }
       return slots[idx]
     },
-    // 260823-op3: the wizard reads `refreshLibrary` off ContextProvider. The
-    // real `useContext` needs a renderer dispatcher, which this DOM-less
-    // harness does not have.
-    useContext: () => mockContext,
     __beginRender: () => {
       cursor = 0
     },
@@ -116,7 +115,7 @@ jest.mock('react', () => {
       slots = []
       cursor = 0
     }
-  }
+  })
 })
 
 const mockApi = {
@@ -133,16 +132,14 @@ const mockApi = {
   redeemSteamKey: jest.fn()
 }
 
-;(globalThis as unknown as { window: { api: typeof mockApi } }).window = {
-  api: mockApi
-}
-
 // Imported after the mocks above (textual order, not hoisting — this
 // project's ts-jest setup does not hoist jest.mock like babel-jest; see
 // HumbleOriginInfo.test.tsx for the same convention) so the component
 // transitively requires the mocked 'react'/'react-i18next'/'react-router-dom'.
 import HumbleClaimWizard from '../index'
 import { at } from '../../../../../__tests__/fixtures/indexed'
+import useLibraryState from 'frontend/state/libraryState'
+import { resetAllStores } from 'frontend/state/storeKit'
 
 type HookHarness = { __beginRender: () => void; __resetMount: () => void }
 
@@ -158,6 +155,9 @@ type Props = {
 }
 
 function mount(props: Props): ReactElement {
+  ;(globalThis as unknown as { window: { api: unknown } }).window.api = mockApi
+  // 260823-op3: the wizard reads `refreshLibrary` from the library store.
+  useLibraryState.setState({ refreshLibrary: mockRefreshLibrary })
   harness().__resetMount()
   harness().__beginRender()
   return HumbleClaimWizard(props) as unknown as ReactElement
@@ -249,6 +249,8 @@ function makeHumbleKey(overrides: Partial<HumbleKey> = {}): HumbleKey {
 }
 
 describe('HumbleClaimWizard', () => {
+  afterEach(() => resetAllStores())
+
   // T-14-08, RESTORED by 260823-ptz: 260823-op3 briefly gave Steam keys a
   // mount-effect reveal; the confirm gate put the click back in front of it,
   // so NO platform reveals on mount again. Asserted for both here.
