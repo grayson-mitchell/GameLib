@@ -70,6 +70,7 @@ import {
 } from 'backend/constants/paths'
 import { bridgeFailedThisSession } from './gameSessionState'
 import { buildSteamProtocolUrl } from './gameProtocolUrl'
+import { watchSteamLaunch } from './steamLaunchedDeps'
 import {
   MAC_STEAM_CLIENT_SUBPATH,
   drmBottleWinPath,
@@ -240,6 +241,7 @@ export async function launch(
             steamGame.appId,
             pendingAdoptionStoreFrom(steamGame.deps)
           )
+          if (!isWindows) watchSteamLaunch(steamGame.deps, steamGame.appId)
           return true
         }
         // Refuse rather than fall back to a plain launch: an unadopted
@@ -274,6 +276,7 @@ export async function launch(
     }
   }
   await shell.openExternal(url, { activate: false })
+  if (!isWindows) watchSteamLaunch(steamGame.deps, steamGame.appId)
   return true
 }
 

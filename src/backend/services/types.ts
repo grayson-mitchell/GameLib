@@ -23,6 +23,7 @@ import type GOGLibraryManager from 'backend/storeManagers/gog/library'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
 import type NileLibraryManager from 'backend/storeManagers/nile/library'
 import type SideloadLibraryManager from 'backend/storeManagers/sideload/library'
+import type SteamLibraryManager from 'backend/storeManagers/steam/library'
 
 /** One entry per store family; each is what the family's `createXStores` factory returns. */
 export interface Stores {
@@ -76,13 +77,15 @@ export interface StoreManagers {
   /** `gog` keeps its concrete type: boot drains the queued playtime through it. */
   library: Omit<
     Record<Runner, LibraryManager>,
-    'gog' | 'legendary' | 'nile' | 'sideload'
+    'gog' | 'legendary' | 'nile' | 'sideload' | 'steam'
   > & {
     gog: GOGLibraryManager
     legendary: LegendaryLibraryManager
     nile: NileLibraryManager
     /** `sideload` keeps its concrete type: game-details adds a sideloaded app through it. */
     sideload: SideloadLibraryManager
+    /** `steam` keeps its concrete type: the manager holds the per-boot launch-watch registry. */
+    steam: SteamLibraryManager
   }
   launchHooks: Record<Runner, StoreLaunchHooks>
   autoUpdate(runner: Runner, gamesToUpdate: string[]): string[]

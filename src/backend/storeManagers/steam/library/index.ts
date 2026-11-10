@@ -30,12 +30,19 @@ import {
 import { rearmPersistedSteamRestartHolds } from './resume'
 import { startRunningPoll } from './runningPoll'
 import { refresh, refreshInstallState } from './refresh'
+import type { SteamLaunchWatchRegistry } from '../steamLaunchWatch'
 
 /** The collaborators SteamLibraryManager uses; narrowed by its own plan. */
 export type SteamManagerDeps = ManagerDeps
 
 export default class SteamLibraryManager implements LibraryManager {
   constructor(private readonly deps: SteamManagerDeps) {}
+
+  /**
+   * Per-boot holder of the Steam launch watches (261111-9mj). An instance
+   * field by design, not module state (backend-di-ceilings).
+   */
+  readonly launchWatches: SteamLaunchWatchRegistry = new Map()
 
   /**
    * On startup: load the cached library immediately, SURFACE (never

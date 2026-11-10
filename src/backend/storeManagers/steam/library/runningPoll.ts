@@ -190,3 +190,8 @@ export function stopRunningPoll(): void {
   lastKnownRunningAppId = 0
   logInfo('Steam: stopped running-game poller', LogPrefix.Steam)
 }
+
+/** The appId the poller last saw running (0 when none, or never started). */
+export function getPollerRunningAppId(): number {
+  return lastKnownRunningAppId
+}

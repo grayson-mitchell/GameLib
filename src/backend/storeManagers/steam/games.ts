@@ -1,5 +1,4 @@
 import { existsSync } from 'graceful-fs'
-import { readlinkSync, realpathSync } from 'fs'
 import {
   ExtraInfo,
   GameInfo,
@@ -45,46 +44,11 @@ import {
 import { isNative, isBottleEligible } from './gameEligibility'
 import { install, ensureBuiltInEngineForInstall } from './gameInstall'
 import { launch, sendLaunchDone } from './gameLaunch'
-import { getSteamLibraries } from 'backend/utils'
-import { readAcfInstalldir } from './acfInstalldir'
-import { sanitizeInstalldir } from './installLocation'
-import {
-  stopSteamLaunchedGame,
-  type StopSteamLaunchedGameDeps
-} from './stopSteamLaunchedGame'
+import { stopSteamLaunchedGame } from './stopSteamLaunchedGame'
+import { cancelSteamLaunchWatch } from './steamLaunchWatch'
+import { steamLaunchedStopDeps } from './steamLaunchedDeps'
 import { moveInstall, repair, syncSaves } from './gameMaintenance'
 import { uninstall } from './gameUninstall'
-
-function steamLaunchedStopDeps(deps: ManagerDeps): StopSteamLaunchedGameDeps {
-  return {
-    runner: deps.runner,
-    clock: deps.clock,
-    platform: process.platform,
-    log: {
-      info: (msg) => logInfo(`SteamGame.stop: ${msg}`, LogPrefix.Steam),
-      warn: (msg) => logWarning(`SteamGame.stop: ${msg}`, LogPrefix.Steam)
-    },
-    getSteamLibraries,
-    readAcfInstalldir,
-    sanitizeInstalldir,
-    signal: (pid, sig) => void process.kill(pid, sig),
-    readExe: (pid) => {
-      try {
-        return readlinkSync(`/proc/${pid}/exe`)
-      } catch {
-        return undefined
-      }
-    },
-    realpath: (p) => {
-      try {
-        return realpathSync(p)
-      } catch {
-        return p
-      }
-    },
-    selfPids: [process.pid, process.ppid]
-  }
-}
 
 export default class SteamGame implements Game {
   readonly appId: string
@@ -629,6 +593,12 @@ export default class SteamGame implements Game {
       return
     }
 
+    // quick 261111-9mj: cancel the launch watch first so exactly one `done`
+    // reaches the frontend whatever the stop outcome.
+    const watch = cancelSteamLaunchWatch(
+      this.deps.libraryManagers.steam.launchWatches,
+      this.appId
+    )
     const outcome = await stopSteamLaunchedGame(
       steamLaunchedStopDeps(this.deps),
       this.appId
@@ -636,6 +606,13 @@ export default class SteamGame implements Game {
     if (outcome.kind === 'stopped') {
       sendLaunchDone(this)
       return
+    }
+    if (watch.shown) {
+      logInfo(
+        `SteamGame.stop: ending Playing state for appId ${this.appId} (${outcome.kind})`,
+        LogPrefix.Steam
+      )
+      sendLaunchDone(this)
     }
 
     logWarning(

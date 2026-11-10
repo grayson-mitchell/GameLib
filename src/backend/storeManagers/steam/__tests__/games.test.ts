@@ -1,5 +1,6 @@
 import {
   createTestManagerDeps,
+  createTestManagers,
   createTestStores
 } from 'backend/testUtils/testServices'
 /**
@@ -42,6 +43,8 @@ import * as gameMetadata from '../gameMetadata'
 import * as gameInstallDepot from '../gameInstallDepot'
 import * as gameLaunchModule from '../gameLaunch'
 import * as stopSteamLaunchedModule from '../stopSteamLaunchedGame'
+import * as steamLaunchWatchModule from '../steamLaunchWatch'
+import type { SteamLaunchWatchRegistry } from '../steamLaunchWatch'
 import * as gameBridgeLaunchModule from '../gameBridgeLaunch'
 import * as gameBridgeLaunchGateModule from '../gameBridgeLaunchGate'
 import { launchBridgeGame } from '../gameBridgeLaunchGate'
@@ -272,9 +275,14 @@ const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 // The bridge launch reaches runWineCommand through the commandRunner slice.
 const runWineCommand = jest.fn()
 
+// quick 261111-9mj: the steam manager carries the per-boot launch-watch registry.
+const launchWatches: SteamLaunchWatchRegistry = new Map()
 const steamTestDeps = createTestManagerDeps({
   stores: createTestStores({ steam: steamStoresModule }),
-  commandRunner: { runWineCommand } as never
+  commandRunner: { runWineCommand } as never,
+  libraryManagers: createTestManagers({
+    library: { steam: { launchWatches } as never }
+  }).library
 })
 
 jest.mock('backend/knownFixReport', () => ({
@@ -17336,5 +17344,102 @@ describe('SteamGame.launch() — phase 59 engine selection and launch deadline (
         expect(fired).not.toContain('engine=crossover')
       })
     })
+  })
+})
+
+describe('Steam launch watch wiring (261111-9mj)', () => {
+  const doneCount = () =>
+    (sendGameStatusUpdate as jest.Mock).mock.calls.filter(
+      (c) => c[0]?.status === 'done'
+    ).length
+  let startSpy: jest.SpyInstance
+  let stopSpy: jest.SpyInstance
+  let delegatedSpy: jest.SpyInstance
+  beforeEach(() => {
+    const env = jest.requireMock('backend/constants/environment')
+    env.isWindows = false
+    env.isMac = false
+    env.isLinux = true
+    launchWatches.clear()
+    // an earlier describe may leave a bridge record that stop() would take first
+    __resetBridgeLaunchBottlesForTests()
+    ;(sendGameStatusUpdate as jest.Mock).mockClear()
+    library.clear()
+    pendingFetches.clear()
+    library.set(APP_ID, makeEntry({ title: 'Dota 2' }))
+    const { shell } = jest.requireMock('backend/platform')
+    ;(shell.openExternal as jest.Mock).mockResolvedValue(undefined)
+    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
+    startSpy = jest
+      .spyOn(steamLaunchWatchModule, 'startSteamLaunchWatch')
+      .mockReturnValue({ status: 'started', settled: Promise.resolve() })
+    stopSpy = jest.spyOn(stopSteamLaunchedModule, 'stopSteamLaunchedGame')
+    // an earlier describe may leave a delegated-install poll that stop() takes first
+    delegatedSpy = jest
+      .spyOn(installPollingModule, 'cancelDelegatedInstall')
+      .mockReturnValue(false)
+  })
+  afterEach(() => {
+    delegatedSpy.mockRestore()
+    startSpy.mockRestore()
+    stopSpy.mockRestore()
+    const env = jest.requireMock('backend/constants/environment')
+    env.isWindows = false
+  })
+
+  const registerWatch = (shown: boolean) => {
+    launchWatches.set(APP_ID, {
+      shown,
+      settled: Promise.resolve(),
+      cancel: () => void launchWatches.delete(APP_ID),
+      noteRelaunch: () => undefined
+    })
+  }
+
+  it('G1 launch starts the watch after openExternal', async () => {
+    const { shell } = jest.requireMock('backend/platform')
+    await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
+    expect(shell.openExternal).toHaveBeenCalledTimes(1)
+    expect(startSpy).toHaveBeenCalledTimes(1)
+    expect(startSpy.mock.calls[0]?.[1]).toBe(APP_ID)
+  })
+
+  it('G2 win32 launch starts no watch', async () => {
+    jest.requireMock('backend/constants/environment').isWindows = true
+    await new SteamGame(APP_ID, steamTestDeps).launch({} as any)
+    expect(startSpy).not.toHaveBeenCalled()
+  })
+
+  it('G3 stop with a shown watch and no-process sends exactly one done', async () => {
+    registerWatch(true)
+    stopSpy.mockResolvedValue({ kind: 'no-process', folder: '/f' })
+    await new SteamGame(APP_ID, steamTestDeps).stop()
+    expect(doneCount()).toBe(1)
+    expect(launchWatches.size).toBe(0)
+  })
+
+  it('G4 stop that stops the game cancels the watch and sends one done', async () => {
+    registerWatch(true)
+    stopSpy.mockResolvedValue({
+      kind: 'stopped',
+      folder: '/f',
+      termed: [1],
+      killed: []
+    })
+    await new SteamGame(APP_ID, steamTestDeps).stop()
+    expect(doneCount()).toBe(1)
+    expect(launchWatches.size).toBe(0)
+  })
+
+  it('G5 stop with no watch and no-process keeps the no-op warning and sends no done', async () => {
+    stopSpy.mockResolvedValue({ kind: 'no-process', folder: '/f' })
+    await new SteamGame(APP_ID, steamTestDeps).stop()
+    expect(doneCount()).toBe(0)
+    const { logWarning } = jest.requireMock('backend/logger')
+    expect(
+      (logWarning as jest.Mock).mock.calls.some((c) =>
+        String(c[0]).includes('Steam owns process lifecycle')
+      )
+    ).toBe(true)
   })
 })
