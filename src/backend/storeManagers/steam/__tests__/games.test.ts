@@ -41,6 +41,7 @@ import SteamGame from '../games'
 import * as gameMetadata from '../gameMetadata'
 import * as gameInstallDepot from '../gameInstallDepot'
 import * as gameLaunchModule from '../gameLaunch'
+import * as stopSteamLaunchedModule from '../stopSteamLaunchedGame'
 import * as gameBridgeLaunchModule from '../gameBridgeLaunch'
 import * as gameBridgeLaunchGateModule from '../gameBridgeLaunchGate'
 import { launchBridgeGame } from '../gameBridgeLaunchGate'
@@ -4062,6 +4063,62 @@ describe('SteamGame.stop() — pending launch monitor (261024-gvu)', () => {
     expect(stopBottleProcessMonitor).not.toHaveBeenCalled()
     expect(stopPerGameBridgeBottle).not.toHaveBeenCalled()
     expect(warnedNoOp()).toBe(true)
+  })
+})
+
+describe('SteamGame.stop() — Steam-launched PID stop (261111-9b7)', () => {
+  const warnedNoOp = () => {
+    const { logWarning } = jest.requireMock('backend/logger')
+    return (logWarning as jest.Mock).mock.calls.some((c) =>
+      String(c[0]).includes('Steam owns process lifecycle')
+    )
+  }
+  let stopSpy: jest.SpyInstance
+  let doneSpy: jest.SpyInstance
+  beforeEach(() => {
+    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
+    stopSpy = jest.spyOn(stopSteamLaunchedModule, 'stopSteamLaunchedGame')
+    doneSpy = jest
+      .spyOn(gameLaunchModule, 'sendLaunchDone')
+      .mockImplementation(() => undefined)
+  })
+  afterEach(() => {
+    stopSpy.mockRestore()
+    doneSpy.mockRestore()
+  })
+
+  it('stopped -> sends done, no no-op warning', async () => {
+    stopSpy.mockResolvedValue({
+      kind: 'stopped',
+      folder: '/f',
+      termed: [1],
+      killed: []
+    })
+    const game = new SteamGame(APP_ID, steamTestDeps)
+    await expect(game.stop()).resolves.toBeUndefined()
+    expect(stopSpy).toHaveBeenCalledTimes(1)
+    expect(stopSpy.mock.calls[0]?.[1]).toBe(APP_ID)
+    expect(doneSpy).toHaveBeenCalledWith(game)
+    expect(warnedNoOp()).toBe(false)
+  })
+
+  it.each([
+    { kind: 'no-process', folder: '/f' },
+    { kind: 'no-folder' },
+    { kind: 'unsupported-platform' },
+    { kind: 'failed', error: 'boom' }
+  ])('%p keeps the no-op warning and sends no done', async (outcome) => {
+    stopSpy.mockResolvedValue(outcome)
+    const game = new SteamGame(APP_ID, steamTestDeps)
+    await expect(game.stop()).resolves.toBeUndefined()
+    expect(doneSpy).not.toHaveBeenCalled()
+    expect(warnedNoOp()).toBe(true)
+  })
+
+  it('live monitor branch never calls it', async () => {
+    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue('starting')
+    await new SteamGame(APP_ID, steamTestDeps).stop()
+    expect(stopSpy).not.toHaveBeenCalled()
   })
 })
 

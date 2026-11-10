@@ -1,4 +1,5 @@
 import { existsSync } from 'graceful-fs'
+import { readlinkSync, realpathSync } from 'fs'
 import {
   ExtraInfo,
   GameInfo,
@@ -43,9 +44,47 @@ import {
 } from './gameSessionState'
 import { isNative, isBottleEligible } from './gameEligibility'
 import { install, ensureBuiltInEngineForInstall } from './gameInstall'
-import { launch } from './gameLaunch'
+import { launch, sendLaunchDone } from './gameLaunch'
+import { getSteamLibraries } from 'backend/utils'
+import { readAcfInstalldir } from './acfInstalldir'
+import { sanitizeInstalldir } from './installLocation'
+import {
+  stopSteamLaunchedGame,
+  type StopSteamLaunchedGameDeps
+} from './stopSteamLaunchedGame'
 import { moveInstall, repair, syncSaves } from './gameMaintenance'
 import { uninstall } from './gameUninstall'
+
+function steamLaunchedStopDeps(deps: ManagerDeps): StopSteamLaunchedGameDeps {
+  return {
+    runner: deps.runner,
+    clock: deps.clock,
+    platform: process.platform,
+    log: {
+      info: (msg) => logInfo(`SteamGame.stop: ${msg}`, LogPrefix.Steam),
+      warn: (msg) => logWarning(`SteamGame.stop: ${msg}`, LogPrefix.Steam)
+    },
+    getSteamLibraries,
+    readAcfInstalldir,
+    sanitizeInstalldir,
+    signal: (pid, sig) => void process.kill(pid, sig),
+    readExe: (pid) => {
+      try {
+        return readlinkSync(`/proc/${pid}/exe`)
+      } catch {
+        return undefined
+      }
+    },
+    realpath: (p) => {
+      try {
+        return realpathSync(p)
+      } catch {
+        return p
+      }
+    },
+    selfPids: [process.pid, process.ppid]
+  }
+}
 
 export default class SteamGame implements Game {
   readonly appId: string
@@ -513,7 +552,10 @@ export default class SteamGame implements Game {
    *   no kill, since a bottle-wide kill would take out other games;
    * - bottled-Steam launch (261024-gvu): end the monitor only, nothing is
    *   killed (separate decision, left as is);
-   * - otherwise a no-op.
+   * - Steam-launched (native Mac/Linux titles, steam://rungameid; quick
+   *   261111-9b7): SIGTERM the PIDs whose executable is inside the install
+   *   folder, bounded grace, SIGKILL survivors, then terminal `done`. win32
+   *   and "nothing found" stay a no-op.
    * Mirrors downloadqueue.ts's own stopCurrentDownload ->
    * callAbortController(appName) call site. Analog: gog/games.ts lines
    * 1291-1295.
@@ -587,8 +629,17 @@ export default class SteamGame implements Game {
       return
     }
 
+    const outcome = await stopSteamLaunchedGame(
+      steamLaunchedStopDeps(this.deps),
+      this.appId
+    )
+    if (outcome.kind === 'stopped') {
+      sendLaunchDone(this)
+      return
+    }
+
     logWarning(
-      `SteamGame.stop: Steam owns process lifecycle for appId ${this.appId}; no-op`,
+      `SteamGame.stop: Steam owns process lifecycle for appId ${this.appId}; no-op (${outcome.kind}${outcome.kind === 'failed' ? `: ${outcome.error}` : ''})`,
       LogPrefix.Steam
     )
   }
