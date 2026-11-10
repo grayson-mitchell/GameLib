@@ -19,6 +19,7 @@ import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
 import type NileLibraryManager from 'backend/storeManagers/nile/library'
+import type SideloadLibraryManager from 'backend/storeManagers/sideload/library'
 
 /** One entry per store family; each is the module's value exports. */
 export interface Stores {
@@ -44,11 +45,13 @@ export interface StoreManagers {
   /** `gog` keeps its concrete type: boot drains the queued playtime through it. */
   library: Omit<
     Record<Runner, LibraryManager>,
-    'gog' | 'legendary' | 'nile'
+    'gog' | 'legendary' | 'nile' | 'sideload'
   > & {
     gog: GOGLibraryManager
     legendary: LegendaryLibraryManager
     nile: NileLibraryManager
+    /** `sideload` keeps its concrete type: game-details adds a sideloaded app through it. */
+    sideload: SideloadLibraryManager
   }
   launchHooks: Record<Runner, StoreLaunchHooks>
   autoUpdate(runner: Runner, gamesToUpdate: string[]): string[]

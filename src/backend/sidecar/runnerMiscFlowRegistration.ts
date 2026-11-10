@@ -96,6 +96,7 @@ import { isOnline } from '../online_monitor'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 import { sendFrontendMessage } from '../ipc'
 import { getDefaultSavePath } from '../save_sync'
+import type { SaveSyncDeps } from '../save_sync'
 import { GlobalConfig } from '../config'
 
 /**
@@ -108,7 +109,7 @@ import { GlobalConfig } from '../config'
  * (plan 34.5-12), plus the three late-discovered channels `getAchievements`,
  * `getDefaultSavePath` and `getPlaytimeFromRunner` (Phase 34.6 Plan 10, D-14).
  */
-export function registerRunnerMiscFlows(deps: ToolsDeps): void {
+export function registerRunnerMiscFlows(deps: ToolsDeps & SaveSyncDeps): void {
   const { runWineCommandOnGame } = createTools(deps)
   // ── Runner CLI version probes (main.ts / utils/ipc_handler.ts:18-21) ──────
   // Pure pass-through reads, exactly as the Electron source registers them — no caching, no
@@ -288,7 +289,7 @@ export function registerRunnerMiscFlows(deps: ToolsDeps): void {
       const appName = args[0] as string
       const runner = args[1] as Runner
       const alreadyDefinedGogSaves = args[2] as GOGCloudSavesLocation[]
-      return getDefaultSavePath(appName, runner, alreadyDefinedGogSaves)
+      return getDefaultSavePath(deps, appName, runner, alreadyDefinedGogSaves)
     }
   )
 

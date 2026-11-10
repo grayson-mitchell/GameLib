@@ -15,7 +15,10 @@
  * 06, gap closure for Gap 2 / UAT Test 8), the curated app-shell channels
  * (`registerAppShellFlows()`, `appShellFlowRegistration.ts` — Phase 34.1 Plan
  * 04, D-03/D-08/D-09/D-13), the curated game-details/settings/override
- * channels (`registerGameDetailsFlows()`, `gameDetailsFlowRegistration.ts` —
+ * channels (`registerGameDetailsFlows({
+    managers: deps.services.managers,
+    stores: deps.services.stores
+  })`, `gameDetailsFlowRegistration.ts` —
  * Phase 34.2 Plan 04, D-01/D-03/D-04), the curated enrichment channels
  * (`registerEnrichmentFlows()`, `enrichmentFlowRegistration.ts` — Phase 34.2
  * Plan 06, D-04/D-07/D-10), the curated shell/files/diagnostics channels
@@ -178,7 +181,10 @@ export function registerHandlers(deps: {
   // ordering constraint relative to the other calls above (own
   // channel names, no cross-module runtime dependency at registration time),
   // placed alongside them, before `ensureStoresRegistered()`.
-  registerGameDetailsFlows()
+  registerGameDetailsFlows({
+    managers: deps.services.managers,
+    stores: deps.services.stores
+  })
   // Phase 34.2 Plan 06: the enrichment channels — no ordering
   // constraint relative to the other calls above (own channel names, no
   // cross-module runtime dependency at registration time), placed alongside

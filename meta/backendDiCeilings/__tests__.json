@@ -37,7 +37,7 @@
     "src/backend/__tests__/notificationFailureLogging.test.ts": 5,
     "src/backend/__tests__/onlineMonitor.test.ts": 4,
     "src/backend/__tests__/progress_bar.test.ts": 2,
-    "src/backend/__tests__/protocol.test.ts": 13,
+    "src/backend/__tests__/protocol.test.ts": 11,
     "src/backend/__tests__/settingsVersioning.test.ts": 3,
     "src/backend/__tests__/steamBridgeKnownFixes.test.ts": 10,
     "src/backend/__tests__/storeChangeNotifier.test.ts": 1,

@@ -35,6 +35,7 @@ import { join } from 'path'
 import { tmpdir } from 'os'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
+import { createTestServices } from 'backend/testUtils/testServices'
 
 // DIAGNOSIS QUALITY ONLY -- this buys no correctness and is not what fixed the drop this
 // suite was reported for (that was `LogWriter`'s rotate gate; see
@@ -215,7 +216,7 @@ async function waitFor(
 }
 
 type WiringHandles = {
-  deliverStartupProtocolUrl: (argv?: string[]) => boolean
+  deliverStartupProtocolUrl: (deps: unknown, argv?: string[]) => boolean
 
   backendEvents: any
   axiosGet: jest.Mock
@@ -498,7 +499,7 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
     // implementations report a falsy `app_name` for this appName, so `handleLaunch` logs
     // "Could not receive game data" and returns immediately after the `Received` line below.
     const testUrl = 'gamelib://launch?appName=__gamelib_test_missing__'
-    deliverStartupProtocolUrl(['--no-gui', testUrl])
+    deliverStartupProtocolUrl(createTestServices(), ['--no-gui', testUrl])
 
     // Real, unmocked LogWriter queues its write fire-and-forget (no caller in this codebase
     // `await`s a `logXXX()` call) -- poll for the CONTENT, not merely the file's existence,
@@ -529,7 +530,7 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
   // green forever, which is exactly the trap `test-must-exercise-production-call-shape`
   // names. This is a by-construction source gate instead, reading `bootstrap.ts`'s own
   // source text.
-  describe('Test B (by-construction, source gate): init() calls both registerProtocolUrlHandler() and deliverStartupProtocolUrl()', () => {
+  describe('Test B (by-construction, source gate): init() calls both registerProtocolUrlHandler( and deliverStartupProtocolUrl(', () => {
     function extractInitBody(source: string): string {
       const stripped = stripComments(source)
       const startMarker = 'export function init('
@@ -546,8 +547,8 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
         'utf-8'
       )
       const initBody = extractInitBody(source)
-      expect(initBody).toContain('registerProtocolUrlHandler()')
-      expect(initBody).toContain('deliverStartupProtocolUrl()')
+      expect(initBody).toContain('registerProtocolUrlHandler(')
+      expect(initBody).toContain('deliverStartupProtocolUrl(')
     })
 
     it('self-test (RED proof): a synthetic init() missing both calls does NOT satisfy the gate', () => {
@@ -558,31 +559,31 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
         '}'
       ].join('\n')
       const initBody = extractInitBody(synthetic)
-      expect(initBody).not.toContain('registerProtocolUrlHandler()')
-      expect(initBody).not.toContain('deliverStartupProtocolUrl()')
+      expect(initBody).not.toContain('registerProtocolUrlHandler(')
+      expect(initBody).not.toContain('deliverStartupProtocolUrl(')
     })
 
-    it('self-test (RED proof): a synthetic init() missing ONLY registerProtocolUrlHandler() still fails the gate', () => {
+    it('self-test (RED proof): a synthetic init() missing ONLY registerProtocolUrlHandler( still fails the gate', () => {
       const synthetic = [
         'export function init(input, output) {',
         '  startRpcServer(input, output)',
         '  output.write(`${READY_SENTINEL}\\n`)',
-        '  deliverStartupProtocolUrl()',
+        '  deliverStartupProtocolUrl(',
         '}'
       ].join('\n')
       const initBody = extractInitBody(synthetic)
-      expect(initBody).not.toContain('registerProtocolUrlHandler()')
+      expect(initBody).not.toContain('registerProtocolUrlHandler(')
     })
 
     // Phase 49-08 (R3): the sign-in probe pass is registered AFTER the READY write and
-    // BEFORE deliverStartupProtocolUrl(); its outcomes pull handler is registered BEFORE
+    // BEFORE deliverStartupProtocolUrl(; its outcomes pull handler is registered BEFORE
     // READY. Returns the violated rules, so the real source must return [] and every
     // RED specimen must return a non-empty list.
     function signInProbeOrderViolations(initBody: string): string[] {
       const handler = initBody.indexOf('registerSignInProbeOutcomesHandler()')
       const ready = initBody.indexOf('READY_SENTINEL}')
       const start = initBody.indexOf('startSignInProbePass(')
-      const deliver = initBody.lastIndexOf('deliverStartupProtocolUrl()')
+      const deliver = initBody.lastIndexOf('deliverStartupProtocolUrl(')
       const violations: string[] = []
       if (ready < 0) violations.push('no READY write')
       if (handler < 0 || handler > ready) {
@@ -592,14 +593,12 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
         violations.push('pass is not started after READY')
       }
       if (deliver < 0 || start > deliver) {
-        violations.push(
-          'pass is not started before deliverStartupProtocolUrl()'
-        )
+        violations.push('pass is not started before deliverStartupProtocolUrl(')
       }
       return violations
     }
 
-    it('the real bootstrap.ts registers the outcomes handler before READY and starts the pass after READY, before deliverStartupProtocolUrl()', () => {
+    it('the real bootstrap.ts registers the outcomes handler before READY and starts the pass after READY, before deliverStartupProtocolUrl(', () => {
       const source = readFileSync(
         join(__dirname, '..', 'bootstrap.ts'),
         'utf-8'
@@ -623,22 +622,22 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
         'registerSignInProbeOutcomesHandler()',
         'startSignInProbePass()',
         READY_LINE,
-        'deliverStartupProtocolUrl()'
+        'deliverStartupProtocolUrl('
       ])
       expect(signInProbeOrderViolations(initBody)).toContain(
         'pass is not started after READY'
       )
     })
 
-    it('self-test (RED proof): starting the pass AFTER deliverStartupProtocolUrl() fails the gate', () => {
+    it('self-test (RED proof): starting the pass AFTER deliverStartupProtocolUrl( fails the gate', () => {
       const initBody = specimen([
         'registerSignInProbeOutcomesHandler()',
         READY_LINE,
-        'deliverStartupProtocolUrl()',
+        'deliverStartupProtocolUrl(',
         'startSignInProbePass()'
       ])
       expect(signInProbeOrderViolations(initBody)).toContain(
-        'pass is not started before deliverStartupProtocolUrl()'
+        'pass is not started before deliverStartupProtocolUrl('
       )
     })
 
@@ -647,7 +646,7 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
         READY_LINE,
         'registerSignInProbeOutcomesHandler()',
         'startSignInProbePass()',
-        'deliverStartupProtocolUrl()'
+        'deliverStartupProtocolUrl('
       ])
       expect(signInProbeOrderViolations(initBody)).toContain(
         'outcomes handler is not registered before READY'
@@ -659,7 +658,7 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
         'registerSignInProbeOutcomesHandler()',
         READY_LINE,
         'startSignInProbePass()',
-        'deliverStartupProtocolUrl()'
+        'deliverStartupProtocolUrl('
       ])
       expect(signInProbeOrderViolations(initBody)).toEqual([])
     })

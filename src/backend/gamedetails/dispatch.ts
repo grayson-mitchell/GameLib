@@ -52,7 +52,7 @@ import type {
 import type { GameOverride, SelectiveDownload } from 'common/types/legendary'
 import { isStore, storeCapabilities } from 'common/storeCapabilities'
 
-import { libraryManagerMap } from '../storeManagers'
+import type { Stores, StoreManagers } from '../services/types'
 import { attachOverrides } from '../game_overrides'
 import { isDelegatedInstallPolling } from '../storeManagers/steam/library/installPolling'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
@@ -62,26 +62,38 @@ import { notify } from '../dialog/dialog'
 import { LegendaryUser } from '../storeManagers/legendary/user'
 import { logError, logInfo, logWarning, LogPrefix } from '../logger'
 
-export async function isGameAvailable(args: {
-  appName: string
-  runner: Runner
-}): Promise<boolean> {
+/** What the game-details dispatchers read: the manager map and the kvs config store (66.1, R3). */
+export interface GameDetailsDeps {
+  managers: Pick<StoreManagers, 'library'>
+  stores: { kvs: Pick<Stores['kvs'], 'configStore'> }
+}
+
+export async function isGameAvailable(
+  deps: GameDetailsDeps,
+  args: {
+    appName: string
+    runner: Runner
+  }
+): Promise<boolean> {
   const { appName, runner } = args
-  return libraryManagerMap[runner].getGame(appName).isGameAvailable()
+  return deps.managers.library[runner].getGame(appName).isGameAvailable()
 }
 
 export async function getGameInfo(
+  deps: GameDetailsDeps,
   appName: string,
   runner: Runner
 ): Promise<GameInfo | null> {
   // Fastpath since we sometimes have to request info for a GOG game as Legendary because we don't know it's a GOG game yet
   if (
     isStore(runner, 'legendary') &&
-    !libraryManagerMap['legendary'].hasGame(appName)
+    !deps.managers.library['legendary'].hasGame(appName)
   ) {
     return null
   }
-  const tempGameInfo = libraryManagerMap[runner].getGame(appName).getGameInfo()
+  const tempGameInfo = deps.managers.library[runner]
+    .getGame(appName)
+    .getGameInfo()
   // The game managers return an empty object if they couldn't fetch the game
   // info, since most of the backend assumes getting it can never fail (and
   // an empty object is a little easier to work with than `null`)
@@ -92,25 +104,27 @@ export async function getGameInfo(
 }
 
 export async function getExtraInfo(
+  deps: GameDetailsDeps,
   appName: string,
   runner: Runner
 ): Promise<ExtraInfo | null> {
   // Fastpath since we sometimes have to request info for a GOG game as Legendary because we don't know it's a GOG game yet
   if (
     isStore(runner, 'legendary') &&
-    !libraryManagerMap['legendary'].hasGame(appName)
+    !deps.managers.library['legendary'].hasGame(appName)
   ) {
     return null
   }
-  return libraryManagerMap[runner].getGame(appName).getExtraInfo()
+  return deps.managers.library[runner].getGame(appName).getExtraInfo()
 }
 
 export async function getGameSettings(
+  deps: GameDetailsDeps,
   appName: string,
   runner: Runner
 ): Promise<GameSettings | null> {
   try {
-    return await libraryManagerMap[runner].getGame(appName).getSettings()
+    return await deps.managers.library[runner].getGame(appName).getSettings()
   } catch (error) {
     logError(error, LogPrefix.Backend)
     return null
@@ -123,6 +137,7 @@ export async function getGameSettings(
 // (frontend/helpers/index.ts:88, main.ts:844) already agree on; ipc.ts's
 // declared parameter NAMES disagreed and are corrected in this same plan.
 export async function getInstallInfo(
+  deps: GameDetailsDeps,
   appName: string,
   runner: Runner,
   installPlatform: InstallPlatform,
@@ -130,7 +145,7 @@ export async function getInstallInfo(
   branch?: string
 ): Promise<InstallInfo | null> {
   try {
-    const info = await libraryManagerMap[runner].getInstallInfo(
+    const info = await deps.managers.library[runner].getInstallInfo(
       appName,
       installPlatform,
       {
@@ -149,7 +164,11 @@ export async function getInstallInfo(
   }
 }
 
-export async function kill(appName: string, runner: Runner): Promise<void> {
+export async function kill(
+  deps: GameDetailsDeps,
+  appName: string,
+  runner: Runner
+): Promise<void> {
   // A Steam-owned (delegated) install has no abort controller by design;
   // SteamGame.stop() -> cancelDelegatedInstall ends it, and a lookup here
   // would log a false "Aborting not possible" ERROR (quick 261106-pvk).
@@ -161,7 +180,7 @@ export async function kill(appName: string, runner: Runner): Promise<void> {
   ) {
     callAbortController(appName)
   }
-  return libraryManagerMap[runner].getGame(appName).stop()
+  return deps.managers.library[runner].getGame(appName).stop()
 }
 
 // SteamGame.repair() (storeManagers/steam/games.ts) restores a bridge title's
@@ -170,7 +189,11 @@ export async function kill(appName: string, runner: Runner): Promise<void> {
 //
 // The two `i18next.t(...)` calls below are the sites plan 34.2-01's D-02
 // bootstrap init exists to make return real strings under the sidecar.
-export async function repair(appName: string, runner: Runner): Promise<void> {
+export async function repair(
+  deps: GameDetailsDeps,
+  appName: string,
+  runner: Runner
+): Promise<void> {
   if (!isOnline()) {
     logWarning(
       `App offline, skipping repair for game '${appName}'.`,
@@ -185,7 +208,7 @@ export async function repair(appName: string, runner: Runner): Promise<void> {
     status: 'repairing'
   })
 
-  const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
+  const { title } = deps.managers.library[runner].getGame(appName).getGameInfo()
 
   // IN-02 (34.2-REVIEW.md round 1): the success notification and
   // "Finished repairing" log used to sit AFTER the try/catch, unguarded, so a
@@ -212,7 +235,7 @@ export async function repair(appName: string, runner: Runner): Promise<void> {
   let repairFailed = false
 
   try {
-    await libraryManagerMap[runner].getGame(appName).repair()
+    await deps.managers.library[runner].getGame(appName).repair()
   } catch (error) {
     repairFailed = true
     notify({
@@ -237,9 +260,12 @@ export async function repair(appName: string, runner: Runner): Promise<void> {
 // D-01 declaration rider: SteamLibrary.changeGameInstallPath is an
 // underscore-arg no-op (library.ts:790) -- an upstream Electron-side stub,
 // not a regression introduced here.
-export async function changeInstallPath(args: MoveGameArgs): Promise<void> {
+export async function changeInstallPath(
+  deps: GameDetailsDeps,
+  args: MoveGameArgs
+): Promise<void> {
   const { appName, path, runner } = args
-  await libraryManagerMap[runner].changeGameInstallPath(appName, path)
+  await deps.managers.library[runner].changeGameInstallPath(appName, path)
   logInfo(
     `Finished changing install path of ${appName} to ${path}.`,
     LogPrefix.Backend
@@ -250,11 +276,12 @@ export async function changeInstallPath(args: MoveGameArgs): Promise<void> {
 // no-op (library.ts:907) -- an upstream Electron-side stub, not a
 // regression introduced here.
 export async function getLaunchOptions(
+  deps: GameDetailsDeps,
   appName: string,
   runner: Runner
 ): Promise<LaunchOption[]> {
   const availableLaunchOptions =
-    await libraryManagerMap[runner].getLaunchOptions(appName)
+    await deps.managers.library[runner].getLaunchOptions(appName)
 
   // add a default option if there are other options but no default
   if (
@@ -282,46 +309,55 @@ export async function getLaunchOptions(
 // underscore-arg no-op (library.ts:797) -- an upstream Electron-side stub,
 // not a regression introduced here.
 export function changeGameVersionPinnedStatus(
+  deps: GameDetailsDeps,
   appName: string,
   runner: Runner,
   status: boolean
 ): void {
-  libraryManagerMap[runner].changeVersionPinnedStatus(appName, status)
+  deps.managers.library[runner].changeVersionPinnedStatus(appName, status)
 }
 
-export async function getGameOverride(): Promise<GameOverride> {
-  return libraryManagerMap['legendary'].getGameOverride()
+export async function getGameOverride(
+  deps: GameDetailsDeps
+): Promise<GameOverride> {
+  return deps.managers.library['legendary'].getGameOverride()
 }
 
 export async function getGameSdl(
+  deps: GameDetailsDeps,
   appName: string
 ): Promise<SelectiveDownload[]> {
-  return libraryManagerMap['legendary'].getGameSdl(appName)
+  return deps.managers.library['legendary'].getGameSdl(appName)
 }
 
 export async function readConfig(
+  deps: GameDetailsDeps,
   configClass: 'library' | 'user'
 ): Promise<GameInfo[] | string> {
   if (configClass === 'library') {
-    await libraryManagerMap['legendary'].refresh()
-    return libraryManagerMap['legendary'].getListOfGames()
+    await deps.managers.library['legendary'].refresh()
+    return deps.managers.library['legendary'].getListOfGames()
   }
-  const { legacyManagerDeps } = await import('../services/legacyFacades')
-  const userInfo = LegendaryUser.getUserInfo(legacyManagerDeps())
+  const userInfo = LegendaryUser.getUserInfo(deps)
   return userInfo?.displayName ?? ''
 }
 
-export function addNewApp(args: GameInfo): void {
-  libraryManagerMap['sideload'].addNewApp(args)
+export function addNewApp(deps: GameDetailsDeps, args: GameInfo): void {
+  deps.managers.library['sideload'].addNewApp(args)
 }
 
-export async function getAvailableCyberpunkMods(): Promise<string[]> {
-  return libraryManagerMap['gog'].getCyberpunkMods()
+export async function getAvailableCyberpunkMods(
+  deps: GameDetailsDeps
+): Promise<string[]> {
+  return deps.managers.library['gog'].getCyberpunkMods()
 }
 
-export async function setCyberpunkModConfig(props: {
-  enabled: boolean
-  modsToLoad: string[]
-}): Promise<void> {
-  return libraryManagerMap['gog'].setCyberpunkModConfig(props)
+export async function setCyberpunkModConfig(
+  deps: GameDetailsDeps,
+  props: {
+    enabled: boolean
+    modsToLoad: string[]
+  }
+): Promise<void> {
+  return deps.managers.library['gog'].setCyberpunkModConfig(props)
 }

@@ -70,9 +70,11 @@ const managerMocks = {
   sideload: makeManagerDouble()
 }
 
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: managerMocks
-}))
+// The manager map reaches the dispatchers by deps (66.1-11), not by module mock.
+const dispatchDeps = {
+  managers: { library: managerMocks },
+  stores: { kvs: { configStore: {} } }
+} as never
 
 // ── backend/game_overrides mock -- observes attachOverrides/setGameOverrides/
 // getAllGameOverrides calls without touching the real electron-store-backed
@@ -233,7 +235,10 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     })
     managerMocks.steam.getGame.mockReturnValue(gameDouble)
 
-    const result = await isGameAvailable({ appName: '440', runner: 'steam' })
+    const result = await isGameAvailable(dispatchDeps, {
+      appName: '440',
+      runner: 'steam'
+    })
 
     expect(result).toBe(true)
     expect(managerMocks.steam.getGame).toHaveBeenCalledWith('440')
@@ -243,7 +248,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   it('REQ-34.2-01 getGameInfo returns null for a legendary appName when hasGame is false, WITHOUT calling getGame', async () => {
     managerMocks.legendary.hasGame.mockReturnValue(false)
 
-    const result = await getGameInfo('some-app', 'legendary')
+    const result = await getGameInfo(dispatchDeps, 'some-app', 'legendary')
 
     expect(result).toBeNull()
     expect(managerMocks.legendary.getGame).not.toHaveBeenCalled()
@@ -255,7 +260,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     })
     managerMocks.steam.getGame.mockReturnValue(gameDouble)
 
-    const result = await getGameInfo('440', 'steam')
+    const result = await getGameInfo(dispatchDeps, '440', 'steam')
 
     expect(result).toBeNull()
     expect(attachOverridesMock).not.toHaveBeenCalled()
@@ -270,7 +275,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     managerMocks.steam.getGame.mockReturnValue(gameDouble)
     attachOverridesMock.mockReturnValue(overriddenInfo)
 
-    const result = await getGameInfo('440', 'steam')
+    const result = await getGameInfo(dispatchDeps, '440', 'steam')
 
     expect(attachOverridesMock).toHaveBeenCalledWith(rawInfo)
     expect(result).toBe(overriddenInfo)
@@ -280,7 +285,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   it('REQ-34.2-01 getExtraInfo applies the same legendary fastpath', async () => {
     managerMocks.legendary.hasGame.mockReturnValue(false)
 
-    const result = await getExtraInfo('some-app', 'legendary')
+    const result = await getExtraInfo(dispatchDeps, 'some-app', 'legendary')
 
     expect(result).toBeNull()
     expect(managerMocks.legendary.getGame).not.toHaveBeenCalled()
@@ -294,7 +299,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     })
     managerMocks.steam.getGame.mockReturnValue(gameDouble)
 
-    const result = await getGameSettings('440', 'steam')
+    const result = await getGameSettings(dispatchDeps, '440', 'steam')
 
     expect(result).toBeNull()
     expect(logErrorMock).toHaveBeenCalledWith(error, 'Backend')
@@ -315,7 +320,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     })
     managerMocks.steam.getGame.mockReturnValue(gameDouble)
 
-    const result = await kill('440', 'steam')
+    const result = await kill(dispatchDeps, '440', 'steam')
 
     expect(order).toEqual(['abort', 'stop'])
     expect(result).toBe(stopResult)
@@ -329,7 +334,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     })
     managerMocks.steam.getGame.mockReturnValue(gameDouble)
 
-    const result = await kill('203160', 'steam')
+    const result = await kill(dispatchDeps, '203160', 'steam')
 
     expect(callAbortControllerMock).not.toHaveBeenCalled()
     expect(managerMocks.steam.getGame).toHaveBeenCalledWith('203160')
@@ -341,7 +346,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     isDelegatedInstallPollingMock.mockReturnValue(true)
     managerMocks.legendary.getGame.mockReturnValue(makeGameDouble({}))
 
-    await kill('x', 'legendary')
+    await kill(dispatchDeps, 'x', 'legendary')
 
     expect(callAbortControllerMock).toHaveBeenCalledWith('x')
     expect(isDelegatedInstallPollingMock).not.toHaveBeenCalled()
@@ -351,7 +356,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   it('REQ-34.2-01 repair returns early with a logWarning and fires NO sendGameStatusUpdate when isOnline() is false', async () => {
     isOnlineMock.mockReturnValue(false)
 
-    await repair('440', 'steam')
+    await repair(dispatchDeps, '440', 'steam')
 
     expect(logWarningMock).toHaveBeenCalled()
     expect(sendGameStatusUpdateMock).not.toHaveBeenCalled()
@@ -366,7 +371,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     })
     managerMocks.steam.getGame.mockReturnValue(gameDouble)
 
-    await repair('440', 'steam')
+    await repair(dispatchDeps, '440', 'steam')
 
     expect(sendGameStatusUpdateMock).toHaveBeenNthCalledWith(1, {
       appName: '440',
@@ -408,7 +413,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     })
     managerMocks.steam.getGame.mockReturnValue(gameDouble)
 
-    await repair('440', 'steam')
+    await repair(dispatchDeps, '440', 'steam')
 
     expect(notifyMock).toHaveBeenCalledTimes(1)
     expect(notifyMock).toHaveBeenCalledWith(
@@ -433,7 +438,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   it('REQ-34.2-01 changeInstallPath forwards {appName, path} to changeGameInstallPath and logs', async () => {
     managerMocks.steam.changeGameInstallPath.mockResolvedValue(undefined)
 
-    await changeInstallPath({
+    await changeInstallPath(dispatchDeps, {
       appName: '440',
       path: '/new/path',
       runner: 'steam'
@@ -486,7 +491,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
       })
     ).toBe(realTranslatedDefault)
 
-    const result = await getLaunchOptions('440', 'steam')
+    const result = await getLaunchOptions(dispatchDeps, '440', 'steam')
 
     expect(result).toHaveLength(2)
     expect(result[0]).toMatchObject({ parameters: '', type: 'basic' })
@@ -510,7 +515,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     const existingDefault = { name: 'Default', parameters: '', type: 'basic' }
     managerMocks.steam.getLaunchOptions.mockResolvedValue([existingDefault])
 
-    const result = await getLaunchOptions('440', 'steam')
+    const result = await getLaunchOptions(dispatchDeps, '440', 'steam')
 
     expect(result).toEqual([existingDefault])
   })
@@ -518,14 +523,14 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   it('REQ-34.2-01 getLaunchOptions returns [] untouched when the manager returns []', async () => {
     managerMocks.steam.getLaunchOptions.mockResolvedValue([])
 
-    const result = await getLaunchOptions('440', 'steam')
+    const result = await getLaunchOptions(dispatchDeps, '440', 'steam')
 
     expect(result).toEqual([])
   })
 
   // ── changeGameVersionPinnedStatus ───────────────────────────────────
   it('REQ-34.2-01 changeGameVersionPinnedStatus forwards to the runner-pinned changeVersionPinnedStatus', () => {
-    changeGameVersionPinnedStatus('440', 'steam', true)
+    changeGameVersionPinnedStatus(dispatchDeps, '440', 'steam', true)
 
     expect(managerMocks.steam.changeVersionPinnedStatus).toHaveBeenCalledWith(
       '440',
@@ -539,7 +544,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     managerMocks.legendary.refresh.mockResolvedValue(undefined)
     managerMocks.legendary.getListOfGames.mockReturnValue(games)
 
-    const result = await readConfig('library')
+    const result = await readConfig(dispatchDeps, 'library')
 
     expect(managerMocks.legendary.refresh).toHaveBeenCalledTimes(1)
     expect(result).toBe(games)
@@ -548,7 +553,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   it("REQ-34.2-09 readConfig('user') returns LegendaryUser.getUserInfo()'s displayName", async () => {
     getUserInfoMock.mockReturnValue({ displayName: 'Alice' })
 
-    const result = await readConfig('user')
+    const result = await readConfig(dispatchDeps, 'user')
 
     expect(result).toBe('Alice')
   })
@@ -556,7 +561,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   it("REQ-34.2-09 readConfig('user') returns '' when getUserInfo() is undefined", async () => {
     getUserInfoMock.mockReturnValue(undefined)
 
-    const result = await readConfig('user')
+    const result = await readConfig(dispatchDeps, 'user')
 
     expect(result).toBe('')
   })
@@ -567,7 +572,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   it('REQ-34.2-09 getGameOverride dispatches to legendary and to no other runner', async () => {
     managerMocks.legendary.getGameOverride.mockResolvedValue({})
 
-    await getGameOverride()
+    await getGameOverride(dispatchDeps)
 
     expect(managerMocks.legendary.getGameOverride).toHaveBeenCalledTimes(1)
     for (const runner of OTHER_RUNNERS_FOR_LEGENDARY) {
@@ -578,7 +583,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   it('REQ-34.2-09 getGameSdl dispatches to legendary and to no other runner', async () => {
     managerMocks.legendary.getGameSdl.mockResolvedValue([])
 
-    await getGameSdl('440')
+    await getGameSdl(dispatchDeps, '440')
 
     expect(managerMocks.legendary.getGameSdl).toHaveBeenCalledWith('440')
     for (const runner of OTHER_RUNNERS_FOR_LEGENDARY) {
@@ -589,7 +594,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   it('REQ-34.2-09 getAvailableCyberpunkMods dispatches to gog and to no other runner', async () => {
     managerMocks.gog.getCyberpunkMods.mockResolvedValue([])
 
-    await getAvailableCyberpunkMods()
+    await getAvailableCyberpunkMods(dispatchDeps)
 
     expect(managerMocks.gog.getCyberpunkMods).toHaveBeenCalledTimes(1)
     for (const runner of OTHER_RUNNERS_FOR_GOG) {
@@ -601,7 +606,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
     managerMocks.gog.setCyberpunkModConfig.mockResolvedValue(undefined)
     const props = { enabled: true, modsToLoad: ['mod-a'] }
 
-    await setCyberpunkModConfig(props)
+    await setCyberpunkModConfig(dispatchDeps, props)
 
     expect(managerMocks.gog.setCyberpunkModConfig).toHaveBeenCalledWith(props)
     for (const runner of OTHER_RUNNERS_FOR_GOG) {
@@ -612,7 +617,7 @@ describe('backend/gamedetails/dispatch.ts (REQ-34.2-01/REQ-34.2-09)', () => {
   it('REQ-34.2-09 addNewApp dispatches to sideload and to no other runner', () => {
     const args = { app_name: 'my-sideload-app' }
 
-    addNewApp(args as never)
+    addNewApp(dispatchDeps, args as never)
 
     expect(managerMocks.sideload.addNewApp).toHaveBeenCalledWith(args)
     for (const runner of OTHER_RUNNERS_FOR_SIDELOAD) {

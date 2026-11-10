@@ -981,7 +981,7 @@ describe('sidecar game-details/settings flows (Phase 34.2 Plan 04)', () => {
     // And the extracted `getInstallInfo(...)` call must pass build before
     // branch as its final two positional arguments.
     const callMatch = registrationSource.match(
-      /getInstallInfo\(\s*args\[0\] as string,\s*args\[1\] as Runner,\s*args\[2\] as InstallPlatform,\s*build,\s*branch\s*\)/
+      /getInstallInfo\(\s*deps,\s*args\[0\] as string,\s*args\[1\] as Runner,\s*args\[2\] as InstallPlatform,\s*build,\s*branch\s*\)/
     )
     expect(callMatch).not.toBeNull()
   })

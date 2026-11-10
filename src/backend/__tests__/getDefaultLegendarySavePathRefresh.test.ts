@@ -18,7 +18,7 @@ import { createTestManagerDeps } from 'backend/testUtils/testServices'
  * returns a stale (or absent) value even though the fresh one is already on disk, leaving the
  * Cloud Saves Sync save-path field EMPTY on the first call (live-reproduced, quick 260912-qop).
  *
- * TWO ARMS, both driving the real, exported `getDefaultSavePath(APP_NAME, 'legendary', [])`:
+ * TWO ARMS, both driving the real, exported `getDefaultSavePath(saveSyncDeps, APP_NAME, 'legendary', [])`:
  *  - EMPTY arm -- `installed.json` and the seeded in-memory map both hold `save_path: null`
  *    (the real first-call state; mirrors the live evidence where the UI persisted
  *    `savesPath: ''`). WITHOUT THE FIX this resolves to `''` via the `if (!new_save_path)`
@@ -169,7 +169,7 @@ jest.mock('../utils', () => ({
   getShellPath: jest.fn((path: string) => Promise.resolve(path))
 }))
 
-// ── ../launcher mock (also covers save_sync.ts's own './launcher' import) ───────────────────
+// ── ../launcher mock ─────────────────────────────────────────────────────────────────────────
 jest.mock('../launcher', () => ({
   callRunner: jest.fn(),
   getWinePath: jest.fn(),
@@ -275,6 +275,14 @@ const APP_NAME = 'Iris'
 // object reference `save_sync.ts` sees through its own `import { libraryManagerMap } from
 // 'backend/storeManagers'`, since jest caches one module instance per test file.
 const manager = libraryManagerMap.legendary
+
+// save_sync.ts takes its collaborators by deps (66.1-11); the wine helpers are inert stubs here
+// (the legendary arm never reaches them on a non-wine game).
+const saveSyncDeps = {
+  managers: { library: libraryManagerMap },
+  commandRunner: { getWinePath: jest.fn() },
+  launcher: { setupWineEnvVars: jest.fn(), verifyWinePrefix: jest.fn() }
+} as never
 
 /**
  * `metadata/Iris.json` fixture -- reused verbatim (path-adjusted import) from
@@ -427,7 +435,12 @@ describe(
         expect(preCallInfo!.title).toBe('Phoenix Point')
         expect(preCallInfo!.is_installed).toBe(true)
 
-        const result = await getDefaultSavePath(APP_NAME, 'legendary', [])
+        const result = await getDefaultSavePath(
+          saveSyncDeps,
+          APP_NAME,
+          'legendary',
+          []
+        )
 
         // (c) stub-was-called assertion, AFTER the call.
         expect(runRunnerCommandSpy).toHaveBeenCalledTimes(1)
@@ -468,7 +481,12 @@ describe(
         expect(preCallInfo!.title).toBe('Phoenix Point')
         expect(preCallInfo!.is_installed).toBe(true)
 
-        const result = await getDefaultSavePath(APP_NAME, 'legendary', [])
+        const result = await getDefaultSavePath(
+          saveSyncDeps,
+          APP_NAME,
+          'legendary',
+          []
+        )
 
         // (c) stub-was-called assertion, AFTER the call.
         expect(runRunnerCommandSpy).toHaveBeenCalledTimes(1)

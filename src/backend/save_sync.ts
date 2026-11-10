@@ -1,7 +1,6 @@
 import { InstalledInfo, Runner } from 'common/types'
 
 import { GOGCloudSavesLocation, SaveFolderVariable } from 'common/types/gog'
-import { getWinePath, setupWineEnvVars, verifyWinePrefix } from './launcher'
 import { logDebug, LogPrefix, logInfo, logError, logWarning } from './logger'
 import { getShellPath } from './utils'
 import {
@@ -11,11 +10,19 @@ import {
   writeFileSync
 } from 'graceful-fs'
 import { app } from 'backend/platform'
-import { libraryManagerMap } from 'backend/storeManagers'
+import type { CommandRunner, Launcher, StoreManagers } from './services/types'
 import { LegendaryAppName } from './storeManagers/legendary/commands/base'
 import { legendaryInstalled } from './storeManagers/legendary/constants'
 
+/** What the save-path resolvers read: the managers, `getWinePath` and the wine prefix helpers (66.1, R3). */
+export interface SaveSyncDeps {
+  managers: Pick<StoreManagers, 'library'>
+  commandRunner: Pick<CommandRunner, 'getWinePath'>
+  launcher: Pick<Launcher, 'setupWineEnvVars' | 'verifyWinePrefix'>
+}
+
 async function getDefaultSavePath(
+  deps: SaveSyncDeps,
   appName: string,
   runner: Runner,
   alreadyDefinedGogSaves: GOGCloudSavesLocation[]
@@ -24,8 +31,8 @@ async function getDefaultSavePath(
     Runner,
     () => Promise<string | GOGCloudSavesLocation[]>
   > = {
-    legendary: () => getDefaultLegendarySavePath(appName),
-    gog: () => getDefaultGogSavePaths(appName, alreadyDefinedGogSaves),
+    legendary: () => getDefaultLegendarySavePath(deps, appName),
+    gog: () => getDefaultGogSavePaths(deps, appName, alreadyDefinedGogSaves),
     nile: () => Promise.resolve(''),
     sideload: () => Promise.resolve(''),
     steam: () => Promise.resolve('')
@@ -33,8 +40,11 @@ async function getDefaultSavePath(
   return defaultSavePath[runner]()
 }
 
-async function getDefaultLegendarySavePath(appName: string): Promise<string> {
-  const game = libraryManagerMap['legendary'].getGame(appName)
+async function getDefaultLegendarySavePath(
+  deps: SaveSyncDeps,
+  appName: string
+): Promise<string> {
+  const game = deps.managers.library['legendary'].getGame(appName)
   const { save_folder, save_path } = game.getGameInfo()
   logInfo(
     ['Computing save path for save folder', save_folder],
@@ -63,11 +73,11 @@ async function getDefaultLegendarySavePath(appName: string): Promise<string> {
   }
 
   if (!game.isNative()) {
-    await verifyWinePrefix(await game.getSettings())
+    await deps.launcher.verifyWinePrefix(await game.getSettings())
   }
 
   logInfo(['Computing default save path for', appName], LogPrefix.Legendary)
-  await libraryManagerMap['legendary'].runRunnerCommand(
+  await deps.managers.library['legendary'].runRunnerCommand(
     {
       subcommand: 'sync-saves',
       appName: LegendaryAppName.parse(appName),
@@ -78,7 +88,9 @@ async function getDefaultLegendarySavePath(appName: string): Promise<string> {
     {
       abortId: appName + '-savePath',
       logMessagePrefix: 'Getting default save path',
-      env: game.isNative() ? {} : setupWineEnvVars(await game.getSettings())
+      env: game.isNative()
+        ? {}
+        : deps.launcher.setupWineEnvVars(await game.getSettings())
     }
   )
 
@@ -91,8 +103,8 @@ async function getDefaultLegendarySavePath(appName: string): Promise<string> {
   // push landing AFTER the "Unable to compute default save path" error, so it loses the race
   // for this, the very first read. Do not remove or weaken the watcher -- it still correctly
   // heals the map for subsequent reads; it simply cannot win this particular one.
-  libraryManagerMap['legendary'].refreshInstalled()
-  const { save_path: new_save_path } = libraryManagerMap[
+  deps.managers.library['legendary'].refreshInstalled()
+  const { save_path: new_save_path } = deps.managers.library[
     'legendary'
   ].getGameInfo(appName, true)!
   if (!new_save_path) {
@@ -107,16 +119,16 @@ async function getDefaultLegendarySavePath(appName: string): Promise<string> {
 }
 
 async function getDefaultGogSavePaths(
+  deps: SaveSyncDeps,
   appName: string,
   alreadyDefinedGogSaves: GOGCloudSavesLocation[]
 ): Promise<GOGCloudSavesLocation[]> {
-  const game = libraryManagerMap['gog'].getGame(appName)
+  const game = deps.managers.library['gog'].getGame(appName)
   const gameSettings = await game.getSettings()
   const installInfo = game.getGameInfo().install as InstalledInfo
-  const gog_save_location = await libraryManagerMap['gog'].getSaveSyncLocation(
-    appName,
-    installInfo
-  )
+  const gog_save_location = await deps.managers.library[
+    'gog'
+  ].getSaveSyncLocation(appName, installInfo)
 
   const { platform: installed_platform, install_path } = installInfo
   if (!gog_save_location || !install_path) {
@@ -131,7 +143,8 @@ async function getDefaultGogSavePaths(
 
   // If no save locations are defined, assume the default
   if (!gog_save_location.length) {
-    const clientId = libraryManagerMap['gog'].readInfoFile(appName)?.clientId
+    const clientId =
+      deps.managers.library['gog'].readInfoFile(appName)?.clientId
     gog_save_location.push({
       name: '__default',
       location:
@@ -193,7 +206,7 @@ async function getDefaultGogSavePaths(
     // still contain Windows (%NAME%) or Unix ($NAME) ones
     let absolutePath: string
     if (!game.isNative()) {
-      absolutePath = await getWinePath({
+      absolutePath = await deps.commandRunner.getWinePath({
         path: locationWithVariablesRemoved,
         gameSettings
       })

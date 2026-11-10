@@ -67,6 +67,7 @@ import type { BootServices, StoreManagers, Stores } from '../services/types'
 // `ENTRY_POINTS` list (confirmed at planning time): that ledger tracks registration modules,
 // and `bootstrap.ts` itself has never been a member.
 import { handleProtocol } from '../protocol'
+import type { ProtocolDeps } from '../protocol'
 import {
   startRpcServer,
   pushFrontendMessage,
@@ -384,6 +385,7 @@ interface BootStep {
 // this reference is invisible to ts-prune despite both files being in
 // tsconfig `include`.
 export function deliverStartupProtocolUrl(
+  deps: ProtocolDeps,
   argv: string[] = process.argv
 ): boolean {
   const hasProtocolUrl = argv.some((arg) => arg.startsWith('gamelib://'))
@@ -391,7 +393,7 @@ export function deliverStartupProtocolUrl(
 
   try {
     logInfo('[bootstrap] startup protocol URL present', LogPrefix.Backend)
-    void Promise.resolve(handleProtocol(argv)).catch((error) => {
+    void Promise.resolve(handleProtocol(deps, argv)).catch((error) => {
       logError(
         `[bootstrap] deliverStartupProtocolUrl: handleProtocol rejected: ${error}`,
         LogPrefix.Backend
@@ -431,14 +433,14 @@ export function deliverStartupProtocolUrl(
 // checks (`initBody.toContain('registerProtocolUrlHandler()')`), a call-site
 // string match indifferent to the `export` keyword. Called internally by
 // `init()` below.
-function registerProtocolUrlHandler(): void {
+function registerProtocolUrlHandler(getDeps: () => ProtocolDeps): void {
   platformApi.ipcMain.handle(
     'handleProtocolUrl',
     (_event: unknown, url?: unknown) => {
       if (typeof url !== 'string' || !url.startsWith('gamelib://')) {
         throw new Error('handleProtocolUrl: rejected a non-gamelib argument')
       }
-      void Promise.resolve(handleProtocol([url])).catch((error) => {
+      void Promise.resolve(handleProtocol(getDeps(), [url])).catch((error) => {
         logError(
           `[bootstrap] registerProtocolUrlHandler: handleProtocol rejected: ${error}`,
           LogPrefix.Backend
@@ -1409,11 +1411,11 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'protocol-url-handler',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): registered immediately after
         // startRpcServer() and BEFORE the READY_SENTINEL write below, so the shell can never send a
         // handleProtocolUrl frame for an unregistered channel.
-        registerProtocolUrlHandler()
+        registerProtocolUrlHandler(() => requireServices(state))
       }
     },
     {
@@ -1763,14 +1765,14 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'startup-protocol-url',
-      run: () => {
+      run: (_ctx, _io, state) => {
         // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): the LAST statement of init(), deliberately
         // AFTER the READY_SENTINEL write above — so the shell knows the sidecar is up before any
         // launch begins, and so every store manager imported by ./handlers (Step 2, above) is fully
         // constructed before handleProtocol can possibly touch libraryManagerMap. The sign-in probe
         // pass start above is registration only, so protocol-URL delivery is still the last statement
         // that does any work.
-        deliverStartupProtocolUrl()
+        deliverStartupProtocolUrl(requireServices(state))
       }
     }
   ]

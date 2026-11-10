@@ -126,6 +126,7 @@ import {
   changeGameVersionPinnedStatus,
   addNewApp
 } from '../gamedetails/dispatch'
+import type { GameDetailsDeps } from '../gamedetails/dispatch'
 import {
   setGameMetadataOverride,
   setMetadataChangedNotifier
@@ -151,7 +152,7 @@ function logSendFailure(channel: string, error: unknown): void {
  * at import time beyond the imports above; the caller decides when
  * registration onto the handler registry happens.
  */
-export function registerGameDetailsFlows(): void {
+export function registerGameDetailsFlows(deps: GameDetailsDeps): void {
   // Installed FIRST, before any of the 3 send registrations below, so no
   // send can ever fire against gamedetails/overrides.ts's default no-op
   // notifier. Rides the existing generic frontend-message relay
@@ -167,17 +168,17 @@ export function registerGameDetailsFlows(): void {
   // ── invoke (15) ───────────────────────────────────────────────────────
 
   ipcMain.handle('getGameInfo', async (_event: unknown, ...args: unknown[]) =>
-    getGameInfo(args[0] as string, args[1] as Runner)
+    getGameInfo(deps, args[0] as string, args[1] as Runner)
   )
 
   ipcMain.handle('getExtraInfo', async (_event: unknown, ...args: unknown[]) =>
-    getExtraInfo(args[0] as string, args[1] as Runner)
+    getExtraInfo(deps, args[0] as string, args[1] as Runner)
   )
 
   ipcMain.handle(
     'getGameSettings',
     async (_event: unknown, ...args: unknown[]) =>
-      getGameSettings(args[0] as string, args[1] as Runner)
+      getGameSettings(deps, args[0] as string, args[1] as Runner)
   )
 
   // F-34.5-G6-10 (34.5-43): late-discovered channel, absent from every
@@ -193,6 +194,7 @@ export function registerGameDetailsFlows(): void {
       const build = args[3] as string | undefined
       const branch = args[4] as string | undefined
       return getInstallInfo(
+        deps,
         args[0] as string,
         args[1] as Runner,
         args[2] as InstallPlatform,
@@ -206,43 +208,43 @@ export function registerGameDetailsFlows(): void {
   ipcMain.handle(
     'isGameAvailable',
     async (_event: unknown, ...args: unknown[]) =>
-      isGameAvailable(args[0] as { appName: string; runner: Runner })
+      isGameAvailable(deps, args[0] as { appName: string; runner: Runner })
   )
 
   ipcMain.handle(
     'getLaunchOptions',
     async (_event: unknown, ...args: unknown[]) =>
-      getLaunchOptions(args[0] as string, args[1] as Runner)
+      getLaunchOptions(deps, args[0] as string, args[1] as Runner)
   )
 
   ipcMain.handle('kill', async (_event: unknown, ...args: unknown[]) =>
-    kill(args[0] as string, args[1] as Runner)
+    kill(deps, args[0] as string, args[1] as Runner)
   )
 
   // INVOKE despite feeling fire-and-forget — main.ts:1110 is addHandler.
   ipcMain.handle('repair', async (_event: unknown, ...args: unknown[]) =>
-    repair(args[0] as string, args[1] as Runner)
+    repair(deps, args[0] as string, args[1] as Runner)
   )
 
   // Single {appName, path, runner} OBJECT argument, not positional args.
   ipcMain.handle(
     'changeInstallPath',
     async (_event: unknown, ...args: unknown[]) =>
-      changeInstallPath(args[0] as MoveGameArgs)
+      changeInstallPath(deps, args[0] as MoveGameArgs)
   )
 
   ipcMain.handle('readConfig', async (_event: unknown, ...args: unknown[]) =>
-    readConfig(args[0] as 'library' | 'user')
+    readConfig(deps, args[0] as 'library' | 'user')
   )
 
-  ipcMain.handle('getGameOverride', async () => getGameOverride())
+  ipcMain.handle('getGameOverride', async () => getGameOverride(deps))
 
   ipcMain.handle('getGameSdl', async (_event: unknown, ...args: unknown[]) =>
-    getGameSdl(args[0] as string)
+    getGameSdl(deps, args[0] as string)
   )
 
   ipcMain.handle('getAvailableCyberpunkMods', async () =>
-    getAvailableCyberpunkMods()
+    getAvailableCyberpunkMods(deps)
   )
 
   // INVOKE despite feeling fire-and-forget — main.ts:1520 is addHandler.
@@ -250,6 +252,7 @@ export function registerGameDetailsFlows(): void {
     'setCyberpunkModConfig',
     async (_event: unknown, ...args: unknown[]) =>
       setCyberpunkModConfig(
+        deps,
         args[0] as { enabled: boolean; modsToLoad: string[] }
       )
   )
@@ -293,6 +296,7 @@ export function registerGameDetailsFlows(): void {
     (_event: unknown, ...args: unknown[]) => {
       try {
         changeGameVersionPinnedStatus(
+          deps,
           args[0] as string,
           args[1] as Runner,
           args[2] as boolean
@@ -305,7 +309,7 @@ export function registerGameDetailsFlows(): void {
 
   ipcMain.on('addNewApp', (_event: unknown, ...args: unknown[]) => {
     try {
-      addNewApp(args[0] as GameInfo)
+      addNewApp(deps, args[0] as GameInfo)
     } catch (error) {
       logSendFailure('addNewApp', error)
     }

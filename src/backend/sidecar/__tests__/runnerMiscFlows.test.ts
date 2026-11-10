@@ -549,6 +549,7 @@ describe('late-discovered channel dispatch — getAchievements, getDefaultSavePa
       )
 
       expect(mockGetDefaultSavePath).toHaveBeenCalledWith(
+        expect.anything(),
         'fake-app',
         'gog',
         alreadyDefinedGogSaves

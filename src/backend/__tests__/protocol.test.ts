@@ -29,11 +29,9 @@ jest.mock('../config', () => ({
 import { handleProtocol, markFrontendReady, RUNNERS } from '../protocol'
 import i18next from 'i18next'
 import { app, dialog } from 'backend/platform'
-import { libraryManagerMap } from '../storeManagers'
 import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'
 import { logInfo, logError } from '../logger'
-import { launchEventCallback } from '../launcher'
 import { dispatchSteamLaunch } from '../storeManagers/steam/launchDispatch'
 
 // Mock electron modules
@@ -58,28 +56,32 @@ jest.mock('../ipc', () => ({
   sendFrontendMessage: jest.fn()
 }))
 
-jest.mock('../storeManagers', () => ({
-  libraryManagerMap: {
-    legendary: {
-      getGame: jest.fn(),
-      refreshInstalled: jest.fn(),
-      loadGamesInAccount: jest.fn()
-    },
-    gog: {
-      getGame: jest.fn(),
-      refreshInstalled: jest.fn()
-    },
-    nile: {
-      getGame: jest.fn()
-    },
-    sideload: {
-      getGame: jest.fn()
-    },
-    steam: {
-      getGame: jest.fn()
-    }
+// The managers and the launcher reach the protocol handler by deps (66.1-11), not by module mock.
+const libraryManagerMap = {
+  legendary: {
+    getGame: jest.fn(),
+    refreshInstalled: jest.fn(),
+    loadGamesInAccount: jest.fn()
+  },
+  gog: {
+    getGame: jest.fn(),
+    refreshInstalled: jest.fn()
+  },
+  nile: {
+    getGame: jest.fn()
+  },
+  sideload: {
+    getGame: jest.fn()
+  },
+  steam: {
+    getGame: jest.fn()
   }
-}))
+}
+const launchEventCallback = jest.fn()
+const deps = {
+  managers: { library: libraryManagerMap },
+  launcher: { launchEventCallback }
+} as never
 
 // Phase 35 plan 20 (D-35-19-05/06): the Steam launch dispatch is now a separate module both
 // `protocol.ts` (lazily) and `steamFlowRegistration.ts` import — mocked here so these tests
@@ -100,11 +102,6 @@ jest.mock('../logger', () => ({
 // Mock i18next
 jest.mock('i18next', () => ({
   t: jest.fn((key: string, fallback?: string) => fallback || key)
-}))
-
-// Mock launcher
-jest.mock('../launcher', () => ({
-  launchEventCallback: jest.fn()
 }))
 
 // Mock additional dependencies to avoid import issues
@@ -150,23 +147,13 @@ describe('protocol.ts --no-gui behavior', () => {
     }
 
     ;(getMainWindow as jest.Mock).mockReturnValue(mockMainWindow)
-    ;(libraryManagerMap.legendary.getGame as jest.Mock).mockReturnValue(
-      gameMock
-    )
+    libraryManagerMap.legendary.getGame.mockReturnValue(gameMock)
 
     // Mock other game managers to return empty objects
-    ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue(
-      emptyGameInfoMock
-    )
-    ;(libraryManagerMap.nile.getGame as jest.Mock).mockReturnValue(
-      emptyGameInfoMock
-    )
-    ;(libraryManagerMap.sideload.getGame as jest.Mock).mockReturnValue(
-      emptyGameInfoMock
-    )
-    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue(
-      emptyGameInfoMock
-    )
+    libraryManagerMap.gog.getGame.mockReturnValue(emptyGameInfoMock)
+    libraryManagerMap.nile.getGame.mockReturnValue(emptyGameInfoMock)
+    libraryManagerMap.sideload.getGame.mockReturnValue(emptyGameInfoMock)
+    libraryManagerMap.steam.getGame.mockReturnValue(emptyGameInfoMock)
     ;(dispatchSteamLaunch as jest.Mock).mockResolvedValue(true)
   })
 
@@ -183,7 +170,7 @@ describe('protocol.ts --no-gui behavior', () => {
       test('should exit app when user clicks No', async () => {
         ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
 
-        await handleProtocol(['gamelib://launch/test-game'])
+        await handleProtocol(deps, ['gamelib://launch/test-game'])
 
         expect(app.quit).toHaveBeenCalled()
       })
@@ -191,7 +178,7 @@ describe('protocol.ts --no-gui behavior', () => {
       test('should show GUI and install when user clicks Yes', async () => {
         ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 0 })
 
-        await handleProtocol(['gamelib://launch/test-game'])
+        await handleProtocol(deps, ['gamelib://launch/test-game'])
 
         expect(app.raiseMainWindow).toHaveBeenCalled()
         expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -211,7 +198,7 @@ describe('protocol.ts --no-gui behavior', () => {
       test('should not exit app when user clicks No', async () => {
         ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
 
-        await handleProtocol(['gamelib://launch/test-game'])
+        await handleProtocol(deps, ['gamelib://launch/test-game'])
 
         expect(app.quit).not.toHaveBeenCalled()
         expect(mockMainWindow.show).not.toHaveBeenCalled()
@@ -220,7 +207,7 @@ describe('protocol.ts --no-gui behavior', () => {
       test('should install when user clicks Yes (normal behavior)', async () => {
         ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 0 })
 
-        await handleProtocol(['gamelib://launch/test-game'])
+        await handleProtocol(deps, ['gamelib://launch/test-game'])
 
         expect(sendFrontendMessage).toHaveBeenCalledWith(
           'installGame',
@@ -246,8 +233,8 @@ describe('protocol.ts --no-gui behavior', () => {
       jest.doMock('../launcher', () => ({
         launchEventCallback: mockLaunchEventCallback
       }))
-      ;(launchEventCallback as jest.Mock).mockResolvedValue({ status: 'done' })
-      await handleProtocol(['gamelib://launch/test-game'])
+      launchEventCallback.mockResolvedValue({ status: 'done' })
+      await handleProtocol(deps, ['gamelib://launch/test-game'])
 
       // Should not show dialog for installed games
       expect(dialog.showMessageBox).not.toHaveBeenCalled()
@@ -264,36 +251,36 @@ describe('protocol.ts --no-gui behavior', () => {
     })
 
     test('aborted launch with the window still hidden quits', async () => {
-      ;(launchEventCallback as jest.Mock).mockResolvedValue({ status: 'abort' })
-      await handleProtocol(['gamelib://launch/test-game'])
+      launchEventCallback.mockResolvedValue({ status: 'abort' })
+      await handleProtocol(deps, ['gamelib://launch/test-game'])
       expect(app.quit).toHaveBeenCalledTimes(1)
     })
 
     test('a thrown launch error with the window still hidden quits', async () => {
-      ;(launchEventCallback as jest.Mock).mockRejectedValue(new Error('boom'))
-      await handleProtocol(['gamelib://launch/test-game'])
+      launchEventCallback.mockRejectedValue(new Error('boom'))
+      await handleProtocol(deps, ['gamelib://launch/test-game'])
       expect(app.quit).toHaveBeenCalledTimes(1)
     })
 
     test('an in-app dialog that raised the window keeps GameLib open', async () => {
-      ;(launchEventCallback as jest.Mock).mockImplementation(async () => {
+      launchEventCallback.mockImplementation(async () => {
         inAppDialogRaiseCount.mockReturnValue(1)
         return { status: 'error' }
       })
-      await handleProtocol(['gamelib://launch/test-game'])
+      await handleProtocol(deps, ['gamelib://launch/test-game'])
       expect(app.quit).not.toHaveBeenCalled()
     })
 
     test('normal completion is left to the launcher (no second exit)', async () => {
-      ;(launchEventCallback as jest.Mock).mockResolvedValue({ status: 'done' })
-      await handleProtocol(['gamelib://launch/test-game'])
+      launchEventCallback.mockResolvedValue({ status: 'done' })
+      await handleProtocol(deps, ['gamelib://launch/test-game'])
       expect(app.quit).not.toHaveBeenCalled()
     })
 
     test('without --no-gui an abort does not quit', async () => {
       mockIsCLINoGui.mockReturnValue(false)
-      ;(launchEventCallback as jest.Mock).mockResolvedValue({ status: 'abort' })
-      await handleProtocol(['gamelib://launch/test-game'])
+      launchEventCallback.mockResolvedValue({ status: 'abort' })
+      await handleProtocol(deps, ['gamelib://launch/test-game'])
       expect(app.quit).not.toHaveBeenCalled()
     })
   })
@@ -309,20 +296,20 @@ describe('protocol.ts --no-gui behavior', () => {
     beforeEach(() => {
       mockIsCLINoGui.mockReturnValue(true)
       gogGame.is_installed = false
-      ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+      libraryManagerMap.gog.getGame.mockReturnValue({
         getGameInfo: () => gogGame,
         getSettings: () => ({ ignoreGameUpdates: false })
       })
       // The manager only reports the game as installed once refreshInstalled() has run.
-      ;(libraryManagerMap.gog.refreshInstalled as jest.Mock).mockImplementation(
-        () => {
-          gogGame.is_installed = true
-        }
-      )
+      libraryManagerMap.gog.refreshInstalled.mockImplementation(() => {
+        gogGame.is_installed = true
+      })
     })
 
     test('loads installed state before resolving the game, so an installed game launches', async () => {
-      await handleProtocol(['gamelib://launch?appName=1542190742&runner=gog'])
+      await handleProtocol(deps, [
+        'gamelib://launch?appName=1542190742&runner=gog'
+      ])
 
       expect(libraryManagerMap.gog.refreshInstalled).toHaveBeenCalled()
       expect(dialog.showMessageBox).not.toHaveBeenCalled()
@@ -332,7 +319,7 @@ describe('protocol.ts --no-gui behavior', () => {
     })
 
     test('legendary also loads its account games and installed state', async () => {
-      await handleProtocol([
+      await handleProtocol(deps, [
         'gamelib://launch?appName=test-game&runner=legendary'
       ])
 
@@ -349,7 +336,7 @@ describe('protocol.ts --no-gui behavior', () => {
       ;(i18next.t as unknown as jest.Mock).mockImplementation(() => undefined)
       ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
 
-      await handleProtocol(['gamelib://launch/test-game'])
+      await handleProtocol(deps, ['gamelib://launch/test-game'])
 
       expect(dialog.showMessageBox).toHaveBeenCalledWith(
         mockMainWindow,
@@ -363,7 +350,7 @@ describe('protocol.ts --no-gui behavior', () => {
 
   describe('edge cases', () => {
     test('should handle invalid URLs gracefully', async () => {
-      await handleProtocol(['not-a-heroic-url'])
+      await handleProtocol(deps, ['not-a-heroic-url'])
 
       // Should not crash or call any dialog/app methods
       expect(dialog.showMessageBox).not.toHaveBeenCalled()
@@ -372,11 +359,9 @@ describe('protocol.ts --no-gui behavior', () => {
 
     test('should handle missing game info', async () => {
       // Mock gameManagerMap to return empty object for missing games
-      ;(libraryManagerMap.legendary.getGame as jest.Mock).mockReturnValue(
-        emptyGameInfoMock
-      )
+      libraryManagerMap.legendary.getGame.mockReturnValue(emptyGameInfoMock)
 
-      await handleProtocol(['gamelib://launch/nonexistent-game'])
+      await handleProtocol(deps, ['gamelib://launch/nonexistent-game'])
 
       // Should not show dialog if game info cannot be found
       expect(dialog.showMessageBox).not.toHaveBeenCalled()
@@ -387,7 +372,7 @@ describe('protocol.ts --no-gui behavior', () => {
       ;(getMainWindow as jest.Mock).mockReturnValue(null)
       mockIsCLINoGui.mockReturnValue(true)
 
-      await handleProtocol(['gamelib://launch/test-game'])
+      await handleProtocol(deps, ['gamelib://launch/test-game'])
 
       // Should return early if no main window available; under --no-gui nothing is left to
       // wait for, so the process exits (Steam's shortcut button must not stay on Stop)
@@ -416,7 +401,7 @@ describe('protocol.ts --no-gui behavior', () => {
       })
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
 
-      await isolatedHandle(['gamelib://launch/test-game'])
+      await isolatedHandle(deps, ['gamelib://launch/test-game'])
 
       expect(isolatedApp.hideMainWindow).toHaveBeenCalledTimes(1)
     })
@@ -424,7 +409,7 @@ describe('protocol.ts --no-gui behavior', () => {
     test('cold start hides on the Steam branch too, before dispatch', async () => {
       uptimeSpy.mockReturnValue(1)
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
-      ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+      libraryManagerMap.steam.getGame.mockReturnValue({
         getGameInfo: () => ({
           app_name: 'steam-appid-123',
           title: 'Steam Game',
@@ -433,9 +418,7 @@ describe('protocol.ts --no-gui behavior', () => {
         }),
         getSettings: () => mockGameSettings
       })
-      ;(libraryManagerMap.legendary.getGame as jest.Mock).mockReturnValue(
-        emptyGameInfoMock
-      )
+      libraryManagerMap.legendary.getGame.mockReturnValue(emptyGameInfoMock)
       const order: string[] = []
       ;(app.hideMainWindow as jest.Mock).mockImplementation(() =>
         order.push('hide')
@@ -445,14 +428,14 @@ describe('protocol.ts --no-gui behavior', () => {
         return true
       })
 
-      await handleProtocol(['gamelib://launch/steam-appid-123'])
+      await handleProtocol(deps, ['gamelib://launch/steam-appid-123'])
 
       expect(order).toEqual(['hide', 'dispatch'])
     })
 
     test('cold start + gui=false + setting off hides', async () => {
       uptimeSpy.mockReturnValue(1)
-      await handleProtocol([
+      await handleProtocol(deps, [
         'gamelib://launch?appName=test-game&runner=legendary&gui=false'
       ])
       expect(app.hideMainWindow).toHaveBeenCalledTimes(1)
@@ -462,20 +445,20 @@ describe('protocol.ts --no-gui behavior', () => {
       markFrontendReady()
       uptimeSpy.mockReturnValue(5)
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
-      await handleProtocol(['gamelib://launch/test-game'])
+      await handleProtocol(deps, ['gamelib://launch/test-game'])
       expect(app.hideMainWindow).toHaveBeenCalledTimes(1)
     })
 
     test('warm link + setting on + no gui param does NOT hide', async () => {
       markFrontendReady()
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
-      await handleProtocol(['gamelib://launch/test-game'])
+      await handleProtocol(deps, ['gamelib://launch/test-game'])
       expect(app.hideMainWindow).not.toHaveBeenCalled()
     })
 
     test('warm link + gui=false still hides', async () => {
       markFrontendReady()
-      await handleProtocol([
+      await handleProtocol(deps, [
         'gamelib://launch?appName=test-game&runner=legendary&gui=false'
       ])
       expect(app.hideMainWindow).toHaveBeenCalledTimes(1)
@@ -483,7 +466,7 @@ describe('protocol.ts --no-gui behavior', () => {
 
     test('does not hide when neither setting nor URL param is set', async () => {
       uptimeSpy.mockReturnValue(1)
-      await handleProtocol(['gamelib://launch/test-game'])
+      await handleProtocol(deps, ['gamelib://launch/test-game'])
       expect(app.hideMainWindow).not.toHaveBeenCalled()
     })
 
@@ -492,7 +475,7 @@ describe('protocol.ts --no-gui behavior', () => {
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
       // response 0 = Decline in the URL-arg confirmation dialog.
       ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 0 })
-      await handleProtocol([
+      await handleProtocol(deps, [
         'gamelib://launch?appName=test-game&runner=legendary&arg=--foo'
       ])
       expect(app.hideMainWindow).not.toHaveBeenCalled()
@@ -505,7 +488,7 @@ describe('protocol.ts --no-gui behavior', () => {
       mockHideWindowOnProtocolLaunch.mockReturnValue(true)
       ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 0 })
 
-      await handleProtocol(['gamelib://launch/test-game'])
+      await handleProtocol(deps, ['gamelib://launch/test-game'])
 
       expect(app.raiseMainWindow).toHaveBeenCalled()
       expect(sendFrontendMessage).toHaveBeenCalledWith(
@@ -536,7 +519,7 @@ describe('protocol.ts --no-gui behavior', () => {
       // describes elsewhere in this file, so this block sets its own installed state rather
       // than inheriting whatever the previous test left behind.
       mockGameInfo.is_installed = true
-      ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+      libraryManagerMap.gog.getGame.mockReturnValue({
         getGameInfo: () => installedGogGame,
         getSettings: () => installedGameSettings
       })
@@ -545,7 +528,7 @@ describe('protocol.ts --no-gui behavior', () => {
     // RED direction: a shell that passed only the bare URL with no surrounding argv, or that
     // stripped the query string before handing it to handleProtocol, would fail this.
     test('dev sidecar argv shape: node + entry path + --no-gui + URL launches the named GOG game', async () => {
-      await handleProtocol([
+      await handleProtocol(deps, [
         '/usr/local/bin/node',
         '/repo/build/main/sidecar.js',
         '--no-gui',
@@ -563,7 +546,7 @@ describe('protocol.ts --no-gui behavior', () => {
     // produce DIFFERENT argv shapes and only the dev one is exercised by a `tauri:dev` session
     // — this case exists so the packaged shape is not assumed identical without proof.
     test('packaged SEA argv shape: gamelib-sidecar entry + --no-gui + URL launches the named GOG game', async () => {
-      await handleProtocol([
+      await handleProtocol(deps, [
         '/Applications/GameLib.app/Contents/MacOS/gamelib-sidecar',
         '--no-gui',
         'gamelib://launch?appName=1207659037&runner=gog'
@@ -582,7 +565,10 @@ describe('protocol.ts --no-gui behavior', () => {
     // param would return early with "Could not receive game data" and never call getGame at
     // all.
     test('runner-less truncated shape (D-44-C / U-34.5-19): findGame all-runner search runs, legendary first', async () => {
-      await handleProtocol(['--no-gui', 'gamelib://launch?appName=1207659037'])
+      await handleProtocol(deps, [
+        '--no-gui',
+        'gamelib://launch?appName=1207659037'
+      ])
 
       // findGame (protocol.ts:181) iterates RUNNERS.options with no runner param -- legendary
       // is the first entry (RUNNERS = z.enum(['legendary','gog','nile','sideload'])).
@@ -594,7 +580,7 @@ describe('protocol.ts --no-gui behavior', () => {
     // Pins that the Electron-shaped flags this shell now drops (--no-sandbox) — and any argv
     // with no gamelib:// URL at all — are inert: no game lookup, no Received log line.
     test('inert flags: --no-gui and --no-sandbox alone perform no getGame call and emit no Received log line', async () => {
-      await handleProtocol(['--no-gui', '--no-sandbox'])
+      await handleProtocol(deps, ['--no-gui', '--no-sandbox'])
 
       expect(libraryManagerMap.legendary.getGame).not.toHaveBeenCalled()
       expect(libraryManagerMap.gog.getGame).not.toHaveBeenCalled()
@@ -626,17 +612,15 @@ describe('protocol.ts --no-gui behavior', () => {
     }
 
     test('resolves through libraryManagerMap.steam when every other manager is empty', async () => {
-      ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+      libraryManagerMap.steam.getGame.mockReturnValue({
         getGameInfo: () => steamGameInfo,
         getSettings: () => mockGameSettings
       })
       // legendary is populated by the outer beforeEach (mockGameInfo) -- override it to empty
       // so this case genuinely exercises "every other manager returns nothing".
-      ;(libraryManagerMap.legendary.getGame as jest.Mock).mockReturnValue(
-        emptyGameInfoMock
-      )
+      libraryManagerMap.legendary.getGame.mockReturnValue(emptyGameInfoMock)
 
-      await handleProtocol(['gamelib://launch/steam-appid-123'])
+      await handleProtocol(deps, ['gamelib://launch/steam-appid-123'])
 
       expect(libraryManagerMap.steam.getGame).toHaveBeenCalledWith(
         'steam-appid-123'
@@ -665,11 +649,11 @@ describe('protocol.ts --no-gui behavior', () => {
     }
 
     beforeEach(() => {
-      ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+      libraryManagerMap.steam.getGame.mockReturnValue({
         getGameInfo: () => installedSteamGame,
         getSettings: () => mockGameSettings
       })
-      ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+      libraryManagerMap.gog.getGame.mockReturnValue({
         getGameInfo: () => installedGogGame,
         getSettings: () => mockGameSettings
       })
@@ -680,7 +664,7 @@ describe('protocol.ts --no-gui behavior', () => {
     // `launchEventCallback`, whose `existsSync`/`askForceUninstall` precheck is exactly the
     // abort `steamFlowRegistration.ts` avoids for this same runner.
     test('a Steam protocol launch calls dispatchSteamLaunch and never launchEventCallback', async () => {
-      await handleProtocol([
+      await handleProtocol(deps, [
         'gamelib://launch?appName=steam-appid-999&runner=steam'
       ])
 
@@ -692,7 +676,9 @@ describe('protocol.ts --no-gui behavior', () => {
     })
 
     test('a GOG protocol launch calls launchEventCallback and never dispatchSteamLaunch (inverse case)', async () => {
-      await handleProtocol(['gamelib://launch?appName=gog-appid-1&runner=gog'])
+      await handleProtocol(deps, [
+        'gamelib://launch?appName=gog-appid-1&runner=gog'
+      ])
 
       expect(launchEventCallback).toHaveBeenCalled()
       expect(dispatchSteamLaunch).not.toHaveBeenCalled()
@@ -713,7 +699,7 @@ describe('protocol.ts --no-gui behavior', () => {
     test('an explicit-runner link whose manager returns the {} sentinel resolves and logs', async () => {
       // `libraryManagerMap.steam.getGame` returns `emptyGameInfoMock` from the outer beforeEach.
       await expect(
-        handleProtocol(['gamelib://launch?appName=steam-1&runner=steam'])
+        handleProtocol(deps, ['gamelib://launch?appName=steam-1&runner=steam'])
       ).resolves.toBeUndefined()
 
       expect(logError).toHaveBeenCalledWith(
@@ -728,7 +714,7 @@ describe('protocol.ts --no-gui behavior', () => {
     // Inverse case -- the guard only ever narrows. A populated GameInfo on the same
     // explicit-runner path must still reach its launch dispatch.
     test('an explicit-runner link with a populated GameInfo still dispatches', async () => {
-      ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+      libraryManagerMap.steam.getGame.mockReturnValue({
         getGameInfo: () => ({
           app_name: 'steam-2',
           title: 'Populated Steam Game',
@@ -738,7 +724,9 @@ describe('protocol.ts --no-gui behavior', () => {
         getSettings: () => mockGameSettings
       })
 
-      await handleProtocol(['gamelib://launch?appName=steam-2&runner=steam'])
+      await handleProtocol(deps, [
+        'gamelib://launch?appName=steam-2&runner=steam'
+      ])
 
       expect(dispatchSteamLaunch).toHaveBeenCalledWith(
         expect.anything(),
@@ -778,11 +766,11 @@ describe('protocol.ts --no-gui behavior', () => {
 
     beforeEach(() => {
       mockIsCLINoGui.mockReturnValue(false)
-      ;(libraryManagerMap.legendary.getGame as jest.Mock).mockReturnValue({
+      libraryManagerMap.legendary.getGame.mockReturnValue({
         getGameInfo: () => installedLegendaryGame,
         getSettings: () => mockGameSettings
       })
-      ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+      libraryManagerMap.gog.getGame.mockReturnValue({
         getGameInfo: () => installedGogGame,
         getSettings: () => mockGameSettings
       })
@@ -798,7 +786,7 @@ describe('protocol.ts --no-gui behavior', () => {
         response: DECLINE
       })
 
-      await handleProtocol([attackUrl])
+      await handleProtocol(deps, [attackUrl])
 
       expect(dialog.showMessageBox).toHaveBeenCalledTimes(1)
       expect(launchEventCallback).not.toHaveBeenCalled()
@@ -809,7 +797,7 @@ describe('protocol.ts --no-gui behavior', () => {
         response: DECLINE
       })
 
-      await handleProtocol([attackUrl])
+      await handleProtocol(deps, [attackUrl])
 
       const options = lastDialogOptions()
       expect(options.cancelId).toBe(DECLINE)
@@ -822,7 +810,7 @@ describe('protocol.ts --no-gui behavior', () => {
         response: DECLINE
       })
 
-      await handleProtocol([
+      await handleProtocol(deps, [
         attackUrl + '&altExe=' + encodeURIComponent('/games/Fortnite/bin/x.exe')
       ])
 
@@ -838,7 +826,7 @@ describe('protocol.ts --no-gui behavior', () => {
         response: LAUNCH
       })
 
-      await handleProtocol([
+      await handleProtocol(deps, [
         attackUrl + '&altExe=' + encodeURIComponent('/games/Fortnite/bin/x.exe')
       ])
 
@@ -866,7 +854,7 @@ describe('protocol.ts --no-gui behavior', () => {
           response: LAUNCH
         })
 
-        await handleProtocol([
+        await handleProtocol(deps, [
           'gamelib://launch?appName=Fortnite&runner=legendary&altExe=' +
             encodeURIComponent(altExe)
         ])
@@ -881,7 +869,7 @@ describe('protocol.ts --no-gui behavior', () => {
         response: LAUNCH
       })
 
-      await handleProtocol([
+      await handleProtocol(deps, [
         'gamelib://launch?appName=1207659037&runner=gog&arg=--wrapper&arg=calc&arg=--wra=x&arg=-skipintro'
       ])
 
@@ -896,7 +884,7 @@ describe('protocol.ts --no-gui behavior', () => {
         response: DECLINE
       })
 
-      await handleProtocol([
+      await handleProtocol(deps, [
         'gamelib://launch?appName=Fortnite&runner=legendary&arg=x%0AExecutable%3A%20safe&arg=%E2%80%AEexe'
       ])
 
@@ -907,7 +895,7 @@ describe('protocol.ts --no-gui behavior', () => {
     })
 
     test('a URL with no arg/altExe launches unchanged, without a dialog', async () => {
-      await handleProtocol([
+      await handleProtocol(deps, [
         'gamelib://launch?appName=Fortnite&runner=legendary'
       ])
 

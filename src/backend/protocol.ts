@@ -6,8 +6,7 @@ import { tOrFallback } from './i18nFallback'
 import { GameInfo, LaunchOption, Runner } from 'common/types'
 import { getMainWindow } from './main_window'
 import { sendFrontendMessage } from './ipc'
-import { libraryManagerMap } from './storeManagers'
-import { launchEventCallback } from './launcher'
+import type { Launcher, StoreManagers } from './services/types'
 import { z } from 'zod'
 import { windowIcon } from './constants/paths'
 import { Path } from './schemas'
@@ -21,8 +20,8 @@ import { assertContainedPath } from './sidecar/rendererPathGuard'
 //
 // The confused-deputy guard (T-34.5-46-03) does NOT live in this enum — it lives in
 // `steamFlowRegistration.ts`'s `handleLaunch`, in its own-property check on
-// `libraryManagerMap`. Restated here so a future reader does not re-derive it: `steam` IS an
-// own property of `libraryManagerMap` (`storeManagers/index.ts`), so widening this enum does
+// the library manager map. Restated here so a future reader does not re-derive it: `steam` IS an
+// own property of the library manager map (`storeManagers/index.ts`), so widening this enum does
 // not reach a manager that does not exist.
 export const RUNNERS = z.enum(['legendary', 'gog', 'nile', 'sideload', 'steam'])
 
@@ -59,7 +58,13 @@ function isColdStartLink(): boolean {
   return !frontendReadySeen || process.uptime() < COLD_START_WINDOW_SECONDS
 }
 
-export function handleProtocol(args: string[]) {
+/** What a protocol launch reads: the library managers and the launcher's launch callback (66.1, R3). */
+export interface ProtocolDeps {
+  managers: Pick<StoreManagers, 'library'>
+  launcher: Pick<Launcher, 'launchEventCallback'>
+}
+
+export function handleProtocol(deps: ProtocolDeps, args: string[]) {
   const url = parseHeroicUrl(args)
   if (!url) return
 
@@ -69,7 +74,7 @@ export function handleProtocol(args: string[]) {
     case 'ping':
       return handlePing(url)
     case 'launch':
-      return handleLaunchEndingNoGui(url)
+      return handleLaunchEndingNoGui(deps, url)
     default:
       return
   }
@@ -87,12 +92,12 @@ function handlePing(url: URL) {
 // that one is still on screen for the user to read, and closing GameLib then ends Steam's session.
 // Native awaited prompts (askForceUninstall, the not-installed and link-args confirmations) are
 // answered by now and do not count. A user who chose to install is staying on purpose.
-async function handleLaunchEndingNoGui(url: URL) {
-  if (!isCLINoGui) return handleLaunch(url)
+async function handleLaunchEndingNoGui(deps: ProtocolDeps, url: URL) {
+  if (!isCLINoGui) return handleLaunch(deps, url)
   const dialogsBefore = app.inAppDialogRaiseCount()
   let result: Awaited<ReturnType<typeof handleLaunch>>
   try {
-    result = await handleLaunch(url)
+    result = await handleLaunch(deps, url)
   } catch (error) {
     logError(['Protocol launch failed:', error], LogPrefix.ProtocolHandler)
     result = { status: 'error' }
@@ -116,7 +121,7 @@ async function handleLaunchEndingNoGui(url: URL) {
   return result
 }
 
-async function handleLaunch(url: URL) {
+async function handleLaunch(deps: ProtocolDeps, url: URL) {
   let appName
   let runnerStr
   let args: string[] = []
@@ -157,8 +162,8 @@ async function handleLaunch(url: URL) {
   // A cold-start link is handled before any library refresh has populated the managers'
   // installed maps (the renderer drives `refreshLibrary`, and `initStoreManagers` is dead under
   // Tauri), so `is_installed` would read false for an installed game. Load it from disk first.
-  if (isColdStartLink()) await loadInstalledStateFromDisk(runner)
-  const gameInfo = findGame(appName, runner)
+  if (isColdStartLink()) await loadInstalledStateFromDisk(deps, runner)
+  const gameInfo = findGame(deps, appName, runner)
   if (!gameInfo) {
     return logError(
       `Could not receive game data for ${appName}!`,
@@ -167,7 +172,7 @@ async function handleLaunch(url: URL) {
   }
 
   const { is_installed, title } = gameInfo
-  const settings = await libraryManagerMap[gameInfo.runner]
+  const settings = await deps.managers.library[gameInfo.runner]
     .getGame(appName)
     .getSettings()
   const coldStart = isColdStartLink()
@@ -254,20 +259,19 @@ async function handleLaunch(url: URL) {
     // `steamFlowRegistration.ts`'s `handleLaunch` avoids on purpose for a Steam title, whose
     // "install path" is the Steam client's own concern, not a local binary this process can
     // stat. Imported lazily (`await import(...)`) mirroring `launchEventCallback`'s own lazy
-    // `await import('backend/storeManagers')` at `launcher.ts`, so no new static edge is added
+    // manager import at `launcher.ts`, so no new static edge is added
     // to this module's import graph.
     if (storeCapabilities[gameInfo.runner].launchHandedToClient) {
       const { dispatchSteamLaunch } =
         await import('backend/storeManagers/steam/launchDispatch')
-      const { libraryManagerMap } = await import('backend/storeManagers')
       const launched = await dispatchSteamLaunch(
-        { libraryManagers: libraryManagerMap },
+        { libraryManagers: deps.managers.library },
         appName
       )
       return { status: launched ? 'done' : 'error' }
     }
 
-    return launchEventCallback({
+    return deps.launcher.launchEventCallback({
       appName: appName,
       runner: gameInfo.runner,
       skipVersionCheck: settings.ignoreGameUpdates,
@@ -377,16 +381,17 @@ async function confirmUrlLaunchParameters(
  * library-manager lookup. So only gog and legendary need this.
  */
 export async function loadInstalledStateFromDisk(
+  deps: Pick<ProtocolDeps, 'managers'>,
   runner?: Runner
 ): Promise<void> {
   const targets = runner ? [runner] : RUNNERS.options
   for (const target of targets) {
     try {
       if (target === 'gog') {
-        libraryManagerMap.gog.refreshInstalled()
+        deps.managers.library.gog.refreshInstalled()
       } else if (target === 'legendary') {
-        libraryManagerMap.legendary.loadGamesInAccount()
-        libraryManagerMap.legendary.refreshInstalled()
+        deps.managers.library.legendary.loadGamesInAccount()
+        deps.managers.library.legendary.refreshInstalled()
       }
     } catch (error) {
       logError(
@@ -398,6 +403,7 @@ export async function loadInstalledStateFromDisk(
 }
 
 function findGame(
+  deps: Pick<ProtocolDeps, 'managers'>,
   appName?: string | null,
   runner?: Runner
 ): GameInfo | undefined {
@@ -407,17 +413,19 @@ function findGame(
   // 260907-f2g: guard the D-01 sentinel. `SteamGame.getGameInfo()` deliberately returns
   // `{} as GameInfo` on a double cache miss, and `{}` is TRUTHY -- returning it here defeats
   // the caller's own `if (!gameInfo)` guard at L116, so the deep link silently does nothing
-  // and then throws at `libraryManagerMap[gameInfo.runner]` where `runner` is undefined.
+  // and then throws at `deps.managers.library[gameInfo.runner]` where `runner` is undefined.
   // The `app_name` check makes this branch AGREE with the loop branch below, whose identical
   // check is one of D-01's four legitimate sentinel consumers and must not be altered.
   if (runner) {
-    const gameInfo = libraryManagerMap[runner].getGame(appName).getGameInfo()
+    const gameInfo = deps.managers.library[runner]
+      .getGame(appName)
+      .getGameInfo()
     return gameInfo.app_name ? gameInfo : undefined
   }
 
   // If no runner is specified, search for the game in all runners and return the first one found
   for (const runner of RUNNERS.options) {
-    const maybeGameInfo = libraryManagerMap[runner]
+    const maybeGameInfo = deps.managers.library[runner]
       .getGame(appName)
       .getGameInfo()
     if (maybeGameInfo.app_name) return maybeGameInfo
