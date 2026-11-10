@@ -81,6 +81,28 @@ its fakes (`runner`, `clock`, `log`, `profile`) and a `dispose()`:
 `createTestContext` creates directories only for its fake-HOME defaults. A
 `paths` override is used as given and never created.
 
+## Runner semantics (66.1)
+
+- **Drain grace.** When a run timed out, was aborted, or uses
+  `resolveOn: 'exit'`, `run()` waits at most `DRAIN_GRACE_MS` (250 ms, on the
+  injected clock) after the child's `exit` for its pipes to close. A grandchild
+  holding the pipes no longer hangs the call: the pipes are destroyed, the child
+  is untracked (so `killTracked` cannot signal a recycled PID), and the result
+  carries the exit code/signal with `drainTimedOut: true`. Output after the
+  grace is dropped.
+- **Timeout opt-out.** Omitting both fields still means `DEFAULT_RUN_TIMEOUT_MS`.
+  `timeout: { none: true, reason }` is the only way to run unbounded; the reason
+  must be non-empty and the option cannot be combined with `timeoutMs`. Justified
+  for installers, game launches and scripts the caller cancels via `signal`.
+- **Handle exit state.** `ChildHandle` exposes `exitCode` and `signalCode`
+  (null until the child exits), so callers do not need `ChildProcess`.
+- **Truncation (WR-02).** Once a chunk is dropped on a stream, no later chunk is
+  appended to it. The review's splice was not reproducible; a test pins it.
+- **win32 kill.** `killPid` returns the `taskkill` outcome (false on failure or
+  when it is missing) so the registry's warning fires. CI is ubuntu-only, so
+  only the failure path is CI-verified (A6). `runSync` passes
+  `maxBuffer: DEFAULT_MAX_BUFFER_BYTES`, so large stdout is captured, not ENOBUFS.
+
 ## Ratchets
 
 `pnpm backend-di-ceilings` counts module-level singletons, `jest.mock` sites

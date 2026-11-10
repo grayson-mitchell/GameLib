@@ -71,7 +71,8 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
       timeout: opts.timeoutMs,
       killSignal: 'SIGKILL',
       windowsHide: true,
-      encoding: 'utf-8'
+      encoding: 'utf-8',
+      maxBuffer: DEFAULT_MAX_BUFFER_BYTES
     })
     const errCode = (r.error as NodeJS.ErrnoException | undefined)?.code
     return {
@@ -86,10 +87,11 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
 
   function killPid(pid: number): boolean {
     if (deps.platform === 'win32') {
-      runSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
+      const r = runSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
         timeoutMs: 5_000,
         reason: 'quit path must finish before app exit (Phase 72 D-13)'
       })
+      return r.code === 0 && !r.error
     } else {
       process.kill(pid, 'SIGTERM')
     }
@@ -170,6 +172,8 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
       let outBytes = 0
       let errBytes = 0
       let truncated = false
+      // Once a chunk is dropped on a stream, nothing later is appended to it.
+      const stopped = { out: false, err: false }
       let timedOut = false
       let aborted = false
       let settled = false
@@ -186,15 +190,16 @@ export function createProcessRunner(deps: ProcessRunnerDeps): ProcessRunner {
 
       const capture = (text: string, stream: 'out' | 'err'): void => {
         const bytes = Buffer.byteLength(text)
-        if (stream === 'out') {
-          if (outBytes + bytes <= maxBytes) stdout += text
-          else truncated = true
-          outBytes += bytes
-        } else {
-          if (errBytes + bytes <= maxBytes) stderr += text
-          else truncated = true
-          errBytes += bytes
+        const total = (stream === 'out' ? outBytes : errBytes) + bytes
+        if (stream === 'out') outBytes = total
+        else errBytes = total
+        if (stopped[stream] || total > maxBytes) {
+          stopped[stream] = true
+          truncated = true
+          return
         }
+        if (stream === 'out') stdout += text
+        else stderr += text
       }
 
       child.stdout?.setEncoding('utf-8')
