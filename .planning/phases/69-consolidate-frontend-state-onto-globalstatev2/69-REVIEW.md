@@ -375,3 +375,18 @@ const humbleLoggedIn = useAuthState((s) => s.humble.isLoggedIn)
 _Reviewed: 2026-11-10T04:03:30Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+
+## Fix Log
+
+Fixed by gsd-code-fixer on 2026-11-10. Each fix is one commit.
+
+| Finding | Outcome | Commit |
+| --- | --- | --- |
+| A/CR-01 | fixed: `readInitialSettings` omits `language` until i18next has one, and `followBootLanguage` (once, on `initialized`) sets `toShippedLanguage(i18next.language)`. Later changes still go through `setLanguage`, as before the phase. | 931d41c77 |
+| A/IN-04 | fixed with CR-01: `language` is now optional on the initial-settings type, so the store's `string` is never overwritten with `undefined`. | 931d41c77 |
+| A/WR-02, B/WR-01 | fixed: `refreshFinished` catches and logs, a sequence token drops stale responses (Clear and per-item removal also invalidate in-flight pulls), and DownloadManager calls `ensureFinishedLoaded()` on mount, which pulls only while `finished === undefined`. | bfde7122a |
+| A/WR-01 | fixed: `BootSequence` now calls `bootSequenceEffectWhenI18nReady`, which waits for i18next's `initialized` (immediate when already initialised). That event fires even when a resource load fails, so a backend error cannot hang the boot. | 5ea99ae2c |
+| A/WR-03 | fixed | 1671c5a3a |
+| A/IN-01, B/IN-01, B/IN-02, C/IN-01, C/IN-02, C/IN-03 | fixed (comments only) | eed7c97ca |
+| A/IN-02, A/IN-03, C/IN-04, C/IN-05 | skipped by request | - |
