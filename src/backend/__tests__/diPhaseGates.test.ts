@@ -234,6 +234,8 @@ describe('66.1 end state: no direct child_process', () => {
 })
 
 describe('66.2 end state: one process runner', () => {
+  // The ceilings module is CommonJS (a node script); there is no ESM form to import.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const ceilings = require('../../../meta/backendDiCeilings.cjs') as {
     census: () => { childProcess: Record<string, number> }
     loadShards: () => {
