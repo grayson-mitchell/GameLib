@@ -43,7 +43,9 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
-const globalStatePath = join(__dirname, '..', 'GlobalState.tsx')
+// The logout actions moved from the class into authState (69-14).
+const globalStatePath = join(__dirname, '..', 'authState.ts')
+const classStatePath = join(__dirname, '..', 'GlobalState.tsx')
 
 /** Extracts the balanced-brace block body starting at the first `{` after `marker`. */
 function extractBlock(source: string, marker: string): string {
@@ -74,7 +76,16 @@ function logoutBlockNeverReloadsWindow(block: string): boolean {
 }
 
 function logoutClearsOwnRunnerState(block: string, runnerKey: string): boolean {
-  const pattern = new RegExp(`${runnerKey}:\\s*{\\s*library:\\s*\\[\\]`, 'm')
+  const slotRunner: Record<string, string> = {
+    epic: 'legendary',
+    gog: 'gog',
+    amazon: 'nile',
+    steam: 'steam'
+  }
+  const pattern = new RegExp(
+    `${runnerKey}:\\s*{\\s*library:\\s*\\[\\]|resetRunnerLibrary\\('${slotRunner[runnerKey] ?? runnerKey}'\\)`,
+    'm'
+  )
   return pattern.test(block)
 }
 
@@ -83,10 +94,10 @@ describe('GlobalState.tsx logout wrappers — never reload the window (debug/log
   const stripped = stripSourceComments(rawSource)
 
   it.each([
-    ['epicLogout = async () => ', 'epic'],
-    ['gogLogout = async () => ', 'gog'],
-    ['amazonLogout = async () => ', 'amazon'],
-    ['steamLogout = async () => ', 'steam']
+    ['epicLogout: async () => ', 'epic'],
+    ['gogLogout: async () => ', 'gog'],
+    ['amazonLogout: async () => ', 'amazon'],
+    ['steamLogout: async () => ', 'steam']
   ])(
     '%s never calls window.location.reload() and still clears its own (%s) state',
     (marker: string, runnerKey: string) => {
@@ -181,7 +192,7 @@ function refreshLibraryScopesGlobalFlagToUnscopedCallsOnly(
 }
 
 describe('GlobalState.tsx refreshLibrary — scopes the global refreshing flags to unscoped calls only (debug/login-logout-wipes-library item b)', () => {
-  const rawSource = readFileSync(globalStatePath, 'utf-8')
+  const rawSource = readFileSync(classStatePath, 'utf-8')
   const stripped = stripSourceComments(rawSource)
 
   it('the real source only sets refreshing/refreshingInTheBackground globally when there is no scoped runner', () => {
@@ -298,7 +309,7 @@ function refreshScopesFetchAndFinalSetStatePerRunner(block: string): boolean {
 }
 
 describe('GlobalState.tsx refresh() — a scoped library arg only overwrites that runner slice (debug/login-logout-wipes-library item c)', () => {
-  const rawSource = readFileSync(globalStatePath, 'utf-8')
+  const rawSource = readFileSync(classStatePath, 'utf-8')
   const stripped = stripSourceComments(rawSource)
 
   it('the real source gates every fetch AND the final setState per includesX, including the global-flag write', () => {

@@ -58,6 +58,7 @@ type BridgedKeys =
   | 'dismissedSignInNotices'
   | 'handleDismissSignInNotice'
   | 'handleRearmSignInDismissals'
+  | 'completeOAuthLogin'
 
 /** Subscribes `onChange` to every bridged store. Lasts for the app's life (D-07). */
 export function subscribeBridge(onChange: () => void): void {
@@ -119,32 +120,22 @@ export function bridgedContextSlice(): Pick<ContextType, BridgedKeys> {
     signInProbeOutcomes: auth.signInProbeOutcomes,
     dismissedSignInNotices: auth.dismissedSignInNotices,
     handleDismissSignInNotice: auth.handleDismissSignInNotice,
-    handleRearmSignInDismissals: auth.handleRearmSignInDismissals
+    handleRearmSignInDismissals: auth.handleRearmSignInDismissals,
+    completeOAuthLogin: auth.completeOAuthLogin
   }
 }
 
-/** What the class still owns of the account composites: libraries and actions. */
+/** What the class still owns of the account composites: the libraries. */
 interface AccountsClassPart {
   epicLibrary: ContextType['epic']['library']
   gogLibrary: ContextType['gog']['library']
   amazonLibrary: ContextType['amazon']['library']
   steamLibrary: ContextType['steam']['library']
-  epicLogin: ContextType['epic']['login']
-  epicLogout: ContextType['epic']['logout']
-  gogLogin: ContextType['gog']['login']
-  gogLogout: ContextType['gog']['logout']
-  amazonLogin: ContextType['amazon']['login']
-  amazonLogout: ContextType['amazon']['logout']
-  getAmazonLoginData: ContextType['amazon']['getLoginData']
-  steamLogin: ContextType['steam']['login']
-  steamLogout: ContextType['steam']['logout']
-  humbleLogin: ContextType['humble']['login']
-  humbleDisconnect: ContextType['humble']['logout']
 }
 
 /**
  * The epic/gog/amazon/steam/humble composites, built from authState identities
- * plus the class's libraries and login/logout methods, with the same keys
+ * plus the class's libraries, with the same keys
  * unconverted consumers always saw.
  */
 export function bridgedAccounts(
@@ -157,28 +148,28 @@ export function bridgedAccounts(
     epic: {
       library: classPart.epicLibrary,
       username: name(auth.epicUsername),
-      login: classPart.epicLogin,
-      logout: classPart.epicLogout
+      login: auth.epicLogin,
+      logout: auth.epicLogout
     },
     gog: {
       library: classPart.gogLibrary,
       username: name(auth.gogUsername),
-      login: classPart.gogLogin,
-      logout: classPart.gogLogout
+      login: auth.gogLogin,
+      logout: auth.gogLogout
     },
     amazon: {
       library: classPart.amazonLibrary,
       user_id: name(auth.amazonUserId),
       username: name(auth.amazonUsername),
-      getLoginData: classPart.getAmazonLoginData,
-      login: classPart.amazonLogin,
-      logout: classPart.amazonLogout
+      getLoginData: auth.getAmazonLoginData,
+      login: auth.amazonLogin,
+      logout: auth.amazonLogout
     },
     steam: {
       library: classPart.steamLibrary,
       username: auth.steamUsername,
-      login: classPart.steamLogin,
-      logout: classPart.steamLogout
+      login: auth.steamLogin,
+      logout: auth.steamLogout
     },
     humble: {
       isLoggedIn: auth.humble.isLoggedIn,
@@ -189,8 +180,8 @@ export function bridgedAccounts(
       syncedAt: auth.humble.syncedAt,
       syncError: auth.humble.syncError,
       syncing: auth.humble.syncing,
-      login: classPart.humbleLogin,
-      logout: classPart.humbleDisconnect
+      login: auth.humbleLogin,
+      logout: auth.humbleDisconnect
     }
   }
 }

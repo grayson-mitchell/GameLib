@@ -1,174 +1,136 @@
 /**
- * Source-text structural gate for GlobalState.tsx's `steamLogout` method
- * (Phase 34.4 gap fix, REQ-34.4-02 / live-gate item 2, task item 1).
+ * Behavioural gate for the store's `steamLogout` (Phase 34.4 gap fix,
+ * REQ-34.4-02 / live-gate item 2; Phase 69-14 moved the action into authState).
  *
- * GlobalState.tsx cannot be imported directly under this project's
- * `node`-environment frontend jest project (see jest.config.js's docstring
- * — no jsdom/react-test-renderer installed): the module reads
- * `window.localStorage` at MODULE SCOPE (`const storage: Storage =
- * window.localStorage`), so a bare `import` throws `window is not defined`
- * before a single test could even run, well before any hook-call concern.
- * This mirrors WebviewUnavailablePanel.test.tsx's Group 2 "structural
- * fallback" rationale (its own docstring explains the same DOM-less
- * constraint for a different reason — hooks, not module-scope `window`).
+ * The stale G-30-01 guard short-circuited BEFORE `window.api.logoutSteam()`
+ * was ever reached, so under Tauri sign-out silently did nothing. This gate
+ * drives the real `useAuthState.getState().steamLogout()` against a recording
+ * fake `window.api` and asserts the observable contract:
+ *  - `logoutSteam` is reached unconditionally (the real channel, no guard);
+ *  - sign-out confirmed -> identity and library cleared, no dialog;
+ *  - never confirmed -> state untouched and the failure dialog shown.
  *
- * What this proves, and why it's the right proof for item 1 ("Under Tauri,
- * steamLogout now actually calls window.api.logoutSteam()"): the stale
- * G-30-01 guard was a Tauri-context conditional (`if (<check>()) { ...;
- * return }`) that short-circuited BEFORE `window.api.logoutSteam()` (nee
- * `performSteamLogout`) was ever reached. This gate reads the real source,
- * strips comments (so the guard's own prose can't fool a naive match), and
- * asserts the `steamLogout` method body has no `if (...)` guard preceding
- * the `performSteamLogout(...)` call, and unconditionally reaches that call
- * with the real `window.api.logoutSteam` handed through as the
- * `logoutSteam` dependency — never nested inside a guard that could return
- * before it. `SteamSignOut.test.ts` then proves, behaviorally, that
- * `performSteamLogout` given that real dependency actually calls it.
- *
- * Phase 35 plan 17 note: the detector below was generalized from matching
- * the specific (now-deleted) Tauri-context-check function name to matching
- * ANY `if (` guard preceding the call — a strictly stronger check (it also
- * catches a differently-named reintroduced guard), and one that does not
- * require this file to reference the deleted function's name at all.
- *
- * Self-tested against synthetic merged/regressed sources per this project's
- * own anti-vacuity requirement (the exact lesson Phase 34.2's four gap
- * cycles paid for — a source-text gate without a self-test is a vacuous
- * gate).
+ * Anti-vacuity: `steamLogoutViolations` is run against the real action AND
+ * against a near-miss variant that short-circuits before the channel (the
+ * stale guard) and a variant that clears state on failure; both must be
+ * convicted.
  */
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import '../../testUtils/tauriWindow'
+import { resetAllStores } from '../storeKit'
+import useAuthState from '../authState'
+import { installLibraryBridgeSlots } from '../libraryState'
+import useUiState from '../uiState'
 
-const globalStatePath = join(__dirname, '..', 'GlobalState.tsx')
-
-/** Extracts the balanced-brace block body starting at the first `{` after `marker`. */
-function extractBlock(source: string, marker: string): string {
-  const markerIdx = source.indexOf(marker)
-  if (markerIdx === -1) {
-    throw new Error(`marker not found: ${marker}`)
-  }
-  const braceStart = source.indexOf('{', markerIdx)
-  let depth = 0
-  let i = braceStart
-  for (; i < source.length; i++) {
-    if (source[i] === '{') depth++
-    else if (source[i] === '}') {
-      depth--
-      if (depth === 0) break
-    }
-  }
-  return source.slice(braceStart, i + 1)
+interface Recording {
+  calls: string[]
+  resets: string[]
+  dialogs: number
 }
 
-/**
- * The gate under test: `steamLogout`'s body must (a) have no `if (...)`
- * guard preceding the `performSteamLogout(...)` call — the exact shape of
- * the stale guard, regardless of what its condition is named — and (b)
- * unconditionally call `performSteamLogout(...)`, passing the REAL
- * `window.api.logoutSteam` through as its `logoutSteam` dependency (not a
- * stub, not a conditionally-assigned no-op).
- */
-function steamLogoutReachesRealLogoutUnconditionally(
-  strippedSource: string
-): boolean {
-  let block: string
+let rec: Recording
+let signedOutOnPoll: boolean
+
+function install(): void {
+  rec = { calls: [], resets: [], dialogs: 0 }
+  ;(window as unknown as { api: unknown }).api = {
+    storeNew: () => undefined,
+    storeHas: () => false,
+    storeGet: (_n: string, _k: string, fallback?: unknown) => fallback,
+    setSetting: () => undefined,
+    logError: () => undefined,
+    logoutSteam: () => {
+      rec.calls.push('logoutSteam')
+    },
+    getSteamUserInfo: async () =>
+      signedOutOnPoll ? undefined : { username: 'sName' }
+  }
+  installLibraryBridgeSlots({
+    refreshLibrary: async () => undefined,
+    resetRunnerLibrary: (runner) => {
+      rec.resets.push(runner)
+    },
+    setRefreshing: () => undefined
+  })
+  useUiState.setState({
+    showDialogModal: (() => {
+      rec.dialogs++
+    }) as never
+  })
+}
+
+type SteamLogout = () => Promise<void>
+
+/** The contract; returns the list of violated rules (empty = conforming). */
+async function steamLogoutViolations(steamLogout: SteamLogout) {
+  const violations: string[] = []
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined)
+  jest.useFakeTimers()
   try {
-    block = extractBlock(strippedSource, 'steamLogout = async () => ')
-  } catch {
-    return false
+    // confirmed path
+    signedOutOnPoll = true
+    install()
+    useAuthState.setState({ steamUsername: 'sName' })
+    await steamLogout()
+    if (!rec.calls.includes('logoutSteam')) {
+      violations.push('never reached window.api.logoutSteam')
+    }
+    if (useAuthState.getState().steamUsername !== null) {
+      violations.push('identity not cleared after confirmed sign-out')
+    }
+    if (!rec.resets.includes('steam') || rec.dialogs !== 0) {
+      violations.push('confirmed path library/dialog wrong')
+    }
+
+    // unconfirmed path
+    signedOutOnPoll = false
+    install()
+    useAuthState.setState({ steamUsername: 'sName' })
+    const pending = steamLogout()
+    await jest.advanceTimersByTimeAsync(20 * 150)
+    await pending
+    if (useAuthState.getState().steamUsername !== 'sName') {
+      violations.push('state cleared although sign-out never confirmed')
+    }
+    if (rec.resets.length !== 0) {
+      violations.push('library cleared although sign-out never confirmed')
+    }
+    if (rec.dialogs !== 1) {
+      violations.push('failure dialog not shown exactly once')
+    }
+  } finally {
+    jest.useRealTimers()
+    warn.mockRestore()
   }
-
-  const callIndex = block.indexOf('performSteamLogout(')
-  const preCallSegment = callIndex === -1 ? block : block.slice(0, callIndex)
-  const hasStaleGuard = /if\s*\(/.test(preCallSegment)
-  const callsPerformSteamLogout = /performSteamLogout\(/.test(block)
-  const wiresRealLogoutSteam = /logoutSteam:\s*window\.api\.logoutSteam/.test(
-    block
-  )
-
-  return !hasStaleGuard && callsPerformSteamLogout && wiresRealLogoutSteam
+  return violations
 }
 
-describe('GlobalState.tsx steamLogout — reaches the real logoutSteam channel unconditionally (item 1)', () => {
-  it('the real source has no Tauri-context guard and unconditionally wires window.api.logoutSteam through performSteamLogout', () => {
-    const rawSource = readFileSync(globalStatePath, 'utf-8')
-    const stripped = stripSourceComments(rawSource)
-
-    expect(steamLogoutReachesRealLogoutUnconditionally(stripped)).toBe(true)
+describe('authState.steamLogout reaches the real logoutSteam channel unconditionally (item 1)', () => {
+  afterEach(() => {
+    resetAllStores()
   })
 
-  it('self-test: the gate ACCEPTS the exact shape the fix produces (positive control)', () => {
-    const correctShape = [
-      'class GlobalState {',
-      '  steamLogout = async () => {',
-      '    await performSteamLogout({',
-      '      logoutSteam: window.api.logoutSteam,',
-      '      getSteamUserInfo: window.api.getSteamUserInfo,',
-      '      onSignedOut: () => {},',
-      '      onSignOutFailed: () => {}',
-      '    })',
-      '  }',
-      '}'
-    ].join('\n')
-
-    expect(steamLogoutReachesRealLogoutUnconditionally(correctShape)).toBe(true)
-  })
-
-  it('self-test: the gate REJECTS the exact stale G-30-01 guard shape being reinstated (the hand RED-proof mutation)', () => {
-    const staleGuardShape = [
-      'class GlobalState {',
-      '  steamLogout = async () => {',
-      '    if (tauriContextGuard()) {',
-      '      this.handleShowDialogModal({ title: "Sign out unavailable" })',
-      '      return',
-      '    }',
-      '',
-      '    await performSteamLogout({',
-      '      logoutSteam: window.api.logoutSteam,',
-      '      getSteamUserInfo: window.api.getSteamUserInfo,',
-      '      onSignedOut: () => {},',
-      '      onSignOutFailed: () => {}',
-      '    })',
-      '  }',
-      '}'
-    ].join('\n')
-
-    expect(steamLogoutReachesRealLogoutUnconditionally(staleGuardShape)).toBe(
-      false
-    )
-  })
-
-  it('self-test: the gate REJECTS a shape where performSteamLogout is never called at all (regression to a dead-end no-op)', () => {
-    const deadEndShape = [
-      'class GlobalState {',
-      '  steamLogout = async () => {',
-      '    console.log("nothing happens")',
-      '  }',
-      '}'
-    ].join('\n')
-
-    expect(steamLogoutReachesRealLogoutUnconditionally(deadEndShape)).toBe(
-      false
-    )
-  })
-
-  it('self-test: the gate REJECTS a shape where a fake/no-op logoutSteam is wired instead of the real window.api.logoutSteam', () => {
-    const fakeDependencyShape = [
-      'class GlobalState {',
-      '  steamLogout = async () => {',
-      '    await performSteamLogout({',
-      '      logoutSteam: () => {},',
-      '      getSteamUserInfo: window.api.getSteamUserInfo,',
-      '      onSignedOut: () => {},',
-      '      onSignOutFailed: () => {}',
-      '    })',
-      '  }',
-      '}'
-    ].join('\n')
-
+  it('the real action conforms to the contract', async () => {
     expect(
-      steamLogoutReachesRealLogoutUnconditionally(fakeDependencyShape)
-    ).toBe(false)
+      await steamLogoutViolations(() => useAuthState.getState().steamLogout())
+    ).toEqual([])
+  })
+
+  it('self-test: a stale guard that returns before the channel is convicted', async () => {
+    const stale: SteamLogout = async () => {
+      useUiState.getState().showDialogModal({} as never)
+    }
+    const violations = await steamLogoutViolations(stale)
+    expect(violations).toContain('never reached window.api.logoutSteam')
+  })
+
+  it('self-test: a variant that clears state on failure is convicted', async () => {
+    const clearsOnFailure: SteamLogout = async () => {
+      window.api.logoutSteam()
+      useAuthState.setState({ steamUsername: null })
+    }
+    const violations = await steamLogoutViolations(clearsOnFailure)
+    expect(violations).toContain(
+      'state cleared although sign-out never confirmed'
+    )
   })
 })

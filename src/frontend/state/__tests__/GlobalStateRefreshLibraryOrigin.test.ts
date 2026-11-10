@@ -190,6 +190,10 @@ function mountGateIncludesSteamUser(strippedSource: string): boolean {
 describe('GlobalState.tsx refreshLibrary — origin-tagged, never prints undefined (gap cycle 4, item 2)', () => {
   const rawSource = readFileSync(globalStatePath, 'utf-8')
   const stripped = stripSourceComments(rawSource)
+  // login-success and steam-login moved into authState (69-14).
+  const authStripped = stripSourceComments(
+    readFileSync(join(__dirname, '..', 'authState.ts'), 'utf-8')
+  )
 
   it('the real source coalesces an omitted runner to "all" and emits a runner=/origin= log line, never the literal word undefined', () => {
     expect(refreshLibraryLogLineNeverPrintsUndefined(stripped)).toBe(true)
@@ -220,7 +224,9 @@ describe('GlobalState.tsx refreshLibrary — origin-tagged, never prints undefin
   ])(
     '%s call site threads origin=%s exactly %i time(s)',
     (_label: string, originValue: string, expectedCount: number) => {
-      expect(countOriginLiteral(stripped, originValue)).toBe(expectedCount)
+      expect(
+        countOriginLiteral(stripped + '\n' + authStripped, originValue)
+      ).toBe(expectedCount)
     }
   )
 
@@ -424,9 +430,12 @@ describe('GlobalState.tsx refreshLibrary — nine EXTERNAL call sites thread a u
     )
   }))
 
-  const globalStateSourceStripped = stripSourceComments(
-    readFileSync(globalStatePath, 'utf-8')
-  )
+  const globalStateSourceStripped =
+    stripSourceComments(readFileSync(globalStatePath, 'utf-8')) +
+    '\n' +
+    stripSourceComments(
+      readFileSync(join(__dirname, '..', 'authState.ts'), 'utf-8')
+    )
 
   it.each(EXTERNAL_CALL_SITES)(
     '%s threads origin: %s exactly once (exact-count, not >= 1)',

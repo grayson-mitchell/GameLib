@@ -88,24 +88,11 @@ describe('bridgeContextValue', () => {
   })
 
   const classPart = () => {
-    const fn = () => Promise.resolve('done')
-    const out = () => Promise.resolve()
     return {
       epicLibrary: [],
       gogLibrary: [],
       amazonLibrary: [],
-      steamLibrary: [],
-      epicLogin: fn,
-      epicLogout: out,
-      gogLogin: fn,
-      gogLogout: out,
-      amazonLogin: fn,
-      amazonLogout: out,
-      getAmazonLoginData: () => Promise.resolve({}) as never,
-      steamLogin: fn,
-      steamLogout: out,
-      humbleLogin: fn,
-      humbleDisconnect: out
+      steamLibrary: []
     }
   }
 
@@ -133,8 +120,14 @@ describe('bridgeContextValue', () => {
     expect(accounts.amazon.username).toBe('a')
     expect(accounts.steam.username).toBe('s')
     expect(accounts.humble).toMatchObject({ isLoggedIn: true, username: 'h' })
-    expect(accounts.epic.login).toBe(parts.epicLogin)
-    expect(accounts.humble.logout).toBe(parts.humbleDisconnect)
+    const auth = useAuthState.getState()
+    expect(accounts.epic.login).toBe(auth.epicLogin)
+    expect(accounts.amazon.getLoginData).toBe(auth.getAmazonLoginData)
+    expect(accounts.steam.logout).toBe(auth.steamLogout)
+    expect(accounts.humble.logout).toBe(auth.humbleDisconnect)
+    expect(bridge.bridgedContextSlice().completeOAuthLogin).toBe(
+      auth.completeOAuthLogin
+    )
     expect(Object.keys(accounts.humble)).toEqual([
       'isLoggedIn',
       'username',

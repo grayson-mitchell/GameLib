@@ -108,45 +108,55 @@ describe('resyncSignInIdentity', () => {
   })
 })
 
-describe('GlobalState wiring gate', () => {
-  const src = stripSourceComments(
-    readFileSync(
-      join(__dirname, '..', '..', 'state', 'GlobalState.tsx'),
-      'utf8'
+describe('resync wiring gate', () => {
+  const read = (...parts: string[]) =>
+    stripSourceComments(
+      readFileSync(join(__dirname, '..', '..', ...parts), 'utf8')
     )
-  )
-  const CALL = 'useAuthState.getState().resyncSignInIdentityFromStores()'
+  const authSrc = read('state', 'authState.ts')
+  const classSrc = read('state', 'GlobalState.tsx')
+  const AUTH_CALL = 'get().resyncSignInIdentityFromStores()'
+  const CLASS_CALL = 'useAuthState.getState().resyncSignInIdentityFromStores()'
 
-  // Body of `name = ...` up to the next two-space-indented class member. The
-  // login paths still live in the class (69-14 moves them), so the call sites
-  // are pinned by text; the resync itself is proven behaviourally below.
-  const memberBody = (source: string, name: string): string => {
-    const plain = source.indexOf(`\n  ${name} = `)
-    const start =
-      plain === -1 ? source.indexOf(`\n  private ${name} = `) : plain
+  // Body of the member `name` up to the next member at the same indent: the
+  // login paths are store actions (`name: ...` at 6 spaces), refreshLibrary is
+  // still a class field (`name = ...` at 2 spaces, until the library wave).
+  const memberBody = (
+    source: string,
+    name: string,
+    kind: 'store' | 'class'
+  ) => {
+    const [lead, sep, next] =
+      kind === 'store'
+        ? ['\n      ', ': ', /\n {6}\w+: /]
+        : ['\n  ', ' = ', /\n {2}(?:private )?\w+ = /]
+    const start = source.indexOf(`${lead}${name}${sep}`)
     if (start === -1) throw new Error(`member ${name} not found`)
     const rest = source.slice(start + 1)
-    const end = rest.slice(2).search(/\n {2}(?:private )?\w+ = /)
+    const end = rest.slice(2).search(next)
     return end === -1 ? rest : rest.slice(0, end + 2)
   }
-  const MEMBERS = [
-    'handleSuccessfulLogin',
-    'steamLogin',
-    'humbleLogin',
-    'refreshLibrary'
+  const MEMBERS: Array<[string, string, 'store' | 'class', string]> = [
+    ['handleSuccessfulLogin', 'auth', 'store', AUTH_CALL],
+    ['steamLogin', 'auth', 'store', AUTH_CALL],
+    ['humbleLogin', 'auth', 'store', AUTH_CALL],
+    ['refreshLibrary', 'class', 'class', CLASS_CALL]
   ]
+  const sourceOf = (which: string) => (which === 'auth' ? authSrc : classSrc)
 
-  it.each(MEMBERS)('%s reaches the single resync method', (name) => {
-    expect(memberBody(src, name)).toContain(CALL)
-  })
+  it.each(MEMBERS)(
+    '%s reaches the single resync method',
+    (name, which, kind, call) => {
+      expect(memberBody(sourceOf(which), name, kind)).toContain(call)
+    }
+  )
 
   it('RED specimen: deleting the call from the real source trips the gate', () => {
-    for (const name of MEMBERS) {
-      const mutated = src.replace(
-        memberBody(src, name),
-        memberBody(src, name).split(CALL).join('')
-      )
-      expect(memberBody(mutated, name)).not.toContain(CALL)
+    for (const [name, which, kind, call] of MEMBERS) {
+      const src = sourceOf(which)
+      const body = memberBody(src, name, kind)
+      const mutated = src.replace(body, body.split(call).join(''))
+      expect(memberBody(mutated, name, kind)).not.toContain(call)
     }
   })
 })

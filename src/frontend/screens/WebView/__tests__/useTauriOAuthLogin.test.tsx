@@ -90,7 +90,12 @@ const mockApi = {
   authGOG: jest.fn(),
   authAmazon: jest.fn(),
   getAmazonLoginData: jest.fn(),
-  logInfo: jest.fn()
+  logInfo: jest.fn(),
+  logError: jest.fn(),
+  storeNew: jest.fn(),
+  storeHas: jest.fn(),
+  storeGet: jest.fn(),
+  setSetting: jest.fn()
 }
 ;(globalThis as unknown as { window: { api: typeof mockApi } }).window = {
   api: mockApi
@@ -482,7 +487,7 @@ describe('useTauriOAuthLogin — captured -> auth channel -> completion (Phase 3
 
 describe('useTauriOAuthLogin — completion callback drives the real GlobalState-shaped wiring (Task 2)', () => {
   // Constructs the completion callback EXACTLY as index.tsx wires it: `createOAuthLoginCompletion`
-  // is the same factory GlobalState.tsx uses to build `completeOAuthLogin`, with `setState` and
+  // is the same factory authState.ts uses to build `completeOAuthLogin`, with `setState` and
   // `handleSuccessfulLogin` spied so the OBSERVABLE downstream effect (a library refresh, not the
   // mutating call's own report) can be asserted -- per this phase's standing lesson that a green
   // suite is not evidence of parity unless something asserts parity.
@@ -496,41 +501,63 @@ describe('useTauriOAuthLogin — completion callback drives the real GlobalState
     return { setState, handleSuccessfulLogin, onLoginSuccess }
   }
 
-  it("the wired handleSuccessfulLogin -> refreshLibrary chain receives { library: runner } (mirrors GlobalState.tsx's own handleSuccessfulLogin body)", async () => {
-    const setState = jest.fn()
-    const refreshLibrary = jest.fn()
-    // Mirrors GlobalState.tsx's own handleSuccessfulLogin body EXACTLY --
-    //   storage.setItem('category', 'all')
-    //   this.refreshLibrary({ runInBackground: false, library: runner })
-    // -- so asserting on refreshLibrary here is asserting the REAL production observable effect
-    // a captured OAuth login triggers, not a re-interpretation of it.
-    function handleSuccessfulLogin(runner: OAuthRunner): void {
-      refreshLibrary({ runInBackground: false, library: runner })
+  it('the real authState.completeOAuthLogin -> refreshLibrary slot receives { library: runner } and the identity lands in authState', async () => {
+    const priorWindow = (globalThis as unknown as { window: object }).window
+    // The stores need a Tauri-shaped window at import time; restored below so
+    // the hook harness keeps its own `window.api`.
+    await import('../../../testUtils/tauriWindow')
+    const { default: useAuthState } = await import('../../../state/authState')
+    const { default: useLibraryState, installLibraryBridgeSlots } =
+      await import('../../../state/libraryState')
+    ;(globalThis as unknown as { window: object }).window = priorWindow
+    const setItem = jest.fn()
+    Object.assign(priorWindow, { localStorage: { setItem } })
+
+    const refreshLibrary = jest.fn(() => Promise.resolve())
+    const resetRunnerLibrary = jest.fn()
+    installLibraryBridgeSlots({
+      refreshLibrary,
+      resetRunnerLibrary,
+      setRefreshing: jest.fn()
+    })
+
+    try {
+      // handleSuccessfulLogin re-reads the identity from the config store.
+      mockApi.storeGet.mockImplementation((name: string, key: string) =>
+        name === 'gogConfigStore' && key === 'userData.username'
+          ? 'grayson'
+          : undefined
+      )
+      mockApi.oauthCaptureLogin.mockResolvedValue({
+        status: 'captured',
+        runner: 'gog',
+        code: 'GOG-CODE',
+        redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
+      })
+      mockApi.authGOG.mockResolvedValue({
+        status: 'done',
+        data: { username: 'grayson' }
+      })
+
+      const completion = useAuthState.getState().completeOAuthLogin
+      mount('gog', completion)
+      await settle('gog', completion)
+
+      expect(refreshLibrary).toHaveBeenCalledTimes(1)
+      expect(refreshLibrary).toHaveBeenCalledWith({
+        runInBackground: false,
+        library: 'gog',
+        origin: 'login-success'
+      })
+      expect(resetRunnerLibrary).toHaveBeenCalledWith('gog')
+      expect(useAuthState.getState().gogUsername).toBe('grayson')
+      expect(setItem).toHaveBeenCalledWith('category', 'all')
+    } finally {
+      mockApi.storeGet.mockReset()
+      useAuthState.setState({ gogUsername: undefined })
+      useLibraryState.setState({ refreshLibrary: async () => undefined })
+      delete (priorWindow as { localStorage?: unknown }).localStorage
     }
-    const onLoginSuccess = createOAuthLoginCompletion({
-      setState,
-      handleSuccessfulLogin
-    })
-
-    mockApi.oauthCaptureLogin.mockResolvedValue({
-      status: 'captured',
-      runner: 'gog',
-      code: 'GOG-CODE',
-      redirectUrl: 'https://embed.gog.com/on_login_success?code=GOG-CODE'
-    })
-    mockApi.authGOG.mockResolvedValue({
-      status: 'done',
-      data: { username: 'grayson' }
-    })
-
-    mount('gog', onLoginSuccess)
-    await settle('gog', onLoginSuccess)
-
-    expect(refreshLibrary).toHaveBeenCalledTimes(1)
-    expect(refreshLibrary).toHaveBeenCalledWith({
-      runInBackground: false,
-      library: 'gog'
-    })
   })
 
   it('a successful GOG capture calls setState with the gog slice and handleSuccessfulLogin with "gog"', async () => {
