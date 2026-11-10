@@ -30,7 +30,6 @@ import {
 } from '../helpers/stores'
 import { collectSignInInputs } from '../helpers/signInInputs'
 import { resyncSignInIdentity } from '../helpers/signInIdentityResync'
-import { globalSettingsAtImport } from './settingsState'
 import {
   createOAuthLoginCompletion,
   type OAuthLoginCompletionPayload
@@ -131,6 +130,7 @@ export function readInitialAuth(): Pick<
   | 'amazonUsername'
   | 'steamUsername'
   | 'humble'
+  | 'dismissedSignInNotices'
 > {
   return {
     epicUsername: configStore.get_nodefault('userInfo.displayName'),
@@ -138,6 +138,9 @@ export function readInitialAuth(): Pick<
     amazonUserId: nileConfigStore.get_nodefault('userData.user_id'),
     amazonUsername: nileConfigStore.get_nodefault('userData.name'),
     steamUsername: steamConfigStore.get_nodefault('userData')?.username,
+    dismissedSignInNotices: normalizeSignInDismissals(
+      configStore.get_nodefault('settings')?.dismissedSignInNotices
+    ),
     humble: {
       // D-02/D-16: `isLoggedIn` is the connected-state signal, NOT `username`,
       // which is best-effort and often absent.
@@ -173,9 +176,7 @@ const useAuthStateRaw = create<AuthState>()(
       steamUsername: undefined,
       humble: { expired: false, ...humbleDefaults },
       signInProbeOutcomes: {},
-      dismissedSignInNotices: normalizeSignInDismissals(
-        globalSettingsAtImport?.dismissedSignInNotices
-      ),
+      dismissedSignInNotices: [],
 
       // 49-07 (D-10): dismissing twice equals once -- persist only when the
       // set actually changed.

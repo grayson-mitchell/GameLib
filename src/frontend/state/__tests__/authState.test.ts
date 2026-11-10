@@ -37,6 +37,11 @@ describe('authState', () => {
     resetAllStores()
   })
 
+  it('readInitialAuth normalizes dismissedSignInNotices from the settings mirror', () => {
+    stored = { 'configStore|settings': { dismissedSignInNotices: ['gog'] } }
+    expect(readInitialAuth().dismissedSignInNotices).toEqual(['gog'])
+  })
+
   it('readInitialAuth reads every identity from the config stores at call time', () => {
     stored = {
       'configStore|userInfo.displayName': 'epicUser',
@@ -54,6 +59,7 @@ describe('authState', () => {
       amazonUserId: 'amzId',
       amazonUsername: 'amzName',
       steamUsername: 'steamUser',
+      dismissedSignInNotices: [],
       humble: {
         isLoggedIn: true,
         username: 'humbleUser',

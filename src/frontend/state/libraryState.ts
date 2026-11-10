@@ -186,7 +186,12 @@ const upsertByAppName = (library: GameInfo[], info: GameInfo): GameInfo[] => {
   return next
 }
 
-/** Re-reads the persisted library state at boot (R5). */
+/**
+ * Re-reads the persisted library state at boot (R5). `gameOverrides` is read
+ * here, post-hydration (formerly at `create()`, before the snapshot landed; see
+ * the 2026-11-10 import-time-mirror-reads todo), and passed explicitly to every
+ * loader because the store still holds the stale `{}` when they run.
+ */
 export function readInitialLibrary(): Pick<
   LibraryState,
   | 'hiddenGames'
@@ -198,17 +203,20 @@ export function readInitialLibrary(): Pick<
   | 'amazonLibrary'
   | 'steamLibrary'
   | 'sideloadedLibrary'
+  | 'gameOverrides'
 > {
+  const gameOverrides = gameOverridesStore.get('overrides', {})
   return {
+    gameOverrides,
     hiddenGames: configStore.get('games.hidden', []),
     favouriteGames: configStore.get('games.favourites', []),
     customCategories: configStore.get('games.customCategories', {}),
     currentCustomCategories: loadCurrentCategories(),
-    epicLibrary: loadLegendaryLibrary(),
-    gogLibrary: loadGOGLibrary(),
-    amazonLibrary: loadAmazonLibrary(),
-    steamLibrary: loadSteamLibrary(),
-    sideloadedLibrary: loadSideloadedLibrary()
+    epicLibrary: loadLegendaryLibrary(gameOverrides),
+    gogLibrary: loadGOGLibrary(gameOverrides),
+    amazonLibrary: loadAmazonLibrary(gameOverrides),
+    steamLibrary: loadSteamLibrary(gameOverrides),
+    sideloadedLibrary: loadSideloadedLibrary(gameOverrides)
   }
 }
 
@@ -727,7 +735,7 @@ const useLibraryStateRaw = create<LibraryState>()(
 
       // Create-time read preserved (import-time timing, see
       // .planning/todos/pending/2026-11-10-import-time-mirror-reads-before-hydration.md)
-      gameOverrides: gameOverridesStore.get('overrides', {}),
+      gameOverrides: {},
       setGameOverrides: (gameOverrides) => set({ gameOverrides }),
 
       crossoverRatings: {},

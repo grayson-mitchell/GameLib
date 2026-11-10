@@ -3,7 +3,7 @@ import i18next from 'i18next'
 import { resetAllStores } from '../storeKit'
 import useSettingsState, {
   applySavedFonts,
-  focusRowMirrorSeed,
+  readFocusRowMirrorSeed,
   readInitialSettings,
   registerSettingsSideEffects,
   selectIsRTL,
@@ -91,13 +91,14 @@ describe('settingsState store', () => {
     resetAllStores()
   })
 
-  it('has safe defaults and the import-time focusRow seed', () => {
+  it('has safe defaults and a null focusRow at create time', () => {
     const s = useSettingsState.getState()
     expect(s.language).toBe('en')
     expect(s.theme).toBe('midnightMirage')
     expect(s.zoomPercent).toBe(100)
     expect(s.experimentalFeatures.cometSupport).toBe(true)
-    expect(s.focusRow).toEqual(focusRowMirrorSeed.focusRow)
+    expect(s.focusRow).toBeNull()
+    expect(s.hideChangelogsOnStartup).toBe(false)
   })
 
   it.each([
@@ -196,6 +197,29 @@ describe('settingsState store', () => {
     expect(after.lastChangelogShown).toBe('1.2.3')
     expect(after.experimentalFeatures).toEqual({ cometSupport: false })
     expect(calls).toEqual([])
+  })
+
+  it('readInitialSettings reads hideChangelogs/experimental/focusRow at call time', () => {
+    config.set('settings', {})
+    const first = readInitialSettings()
+    expect(first.hideChangelogsOnStartup).toBe(false)
+    expect(first.experimentalFeatures).toEqual({ cometSupport: true })
+    expect(first.focusRow).toBeNull()
+    config.set('settings', {
+      hideChangelogsOnStartup: true,
+      experimentalFeatures: { cometSupport: false },
+      focusRow: { kind: 'view', value: 'installed' }
+    })
+    const second = readInitialSettings()
+    expect(second.hideChangelogsOnStartup).toBe(true)
+    expect(second.experimentalFeatures).toEqual({ cometSupport: false })
+    expect(second.focusRow).toEqual({ kind: 'view', value: 'installed' })
+  })
+
+  it('readFocusRowMirrorSeed reports whether the mirror has a focusRow key', () => {
+    expect(readFocusRowMirrorSeed().needsMigratedValue).toBe(true)
+    config.set('settings', { focusRow: { kind: 'view', value: 'installed' } })
+    expect(readFocusRowMirrorSeed().needsMigratedValue).toBe(false)
   })
 
   it('readInitialSettings reads at call time', () => {

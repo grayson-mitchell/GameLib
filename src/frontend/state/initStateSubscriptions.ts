@@ -34,7 +34,7 @@ import useUiState, { readInitialUi } from './uiState'
 import { openInstallGameModal } from './InstallGameModal'
 import useSettingsState, {
   applySavedFonts,
-  focusRowMirrorSeed,
+  readFocusRowMirrorSeed,
   readInitialSettings,
   registerSettingsSideEffects,
   wasFocusRowPickedThisSession
@@ -101,6 +101,7 @@ export function initStateSubscriptions(): void {
   // (1) re-read persisted initial state into each store (readInitial)
   useUiState.setState(readInitialUi())
   useSettingsState.setState(readInitialSettings())
+  const focusRowSeed = readFocusRowMirrorSeed()
   followBootLanguage()
   useAuthState.setState(readInitialAuth())
   useLibraryState.setState(readInitialLibrary())
@@ -115,9 +116,12 @@ export function initStateSubscriptions(): void {
       window.api.logError(`applySavedZoomAtBoot failed: ${String(error)}`)
   })
 
-  // CR-01: first launch of a profile whose mirror has no `focusRow` key yet.
+  // CR-01: fires only when the HYDRATED mirror lacks a `focusRow` key (the
+  // backend's `settings/global` migration writes it to config.json and the
+  // mirror never receives it) or hydration failed/timed out. Kept deliberately,
+  // not redundant with the post-hydration readInitialSettings().
   // `void` is safe ONLY because hydrateFocusRowSelection never rejects.
-  if (focusRowMirrorSeed.needsMigratedValue) {
+  if (focusRowSeed.needsMigratedValue) {
     void hydrateFocusRowSelection({
       requestAppSettings: () => window.api.requestAppSettings(),
       setSetting: (payload) => window.api.setSetting(payload),
@@ -419,9 +423,11 @@ export function pullSignInProbeOutcomes(): void {
 }
 
 /**
- * F-49-R1-3: the dismissed set is seeded at import time, which on a cold boot
- * can land before the mirror carries the persisted value. Hydrate once from the
- * backend's authoritative settings. This is a READ: it never calls setSetting,
+ * F-49-R1-3: the dismissed set is seeded post-hydration by readInitialAuth.
+ * This backend read is kept because the mirror can diverge from the backend's
+ * config.json (same class as CR-01) and because a failed or timed-out hydration
+ * leaves the mirror empty. Hydrate once from the backend's authoritative
+ * settings. This is a READ: it never calls setSetting,
  * so dismiss and re-arm stay the only writers. Union with the in-session set so
  * a dismiss that raced the fetch is not undone.
  */

@@ -16,14 +16,15 @@ import { bindStoreHooks, registerStoreForReset } from './storeKit'
 
 const RTL_LANGUAGES = ['fa', 'ar']
 
-// R5: read at import time exactly as the old GlobalState class did (import-time timing
-// preserved, see
-// .planning/todos/pending/2026-11-10-import-time-mirror-reads-before-hydration.md).
-export const globalSettingsAtImport = configStore.get_nodefault('settings')
 // CR-01: the mirror alone cannot see the `focusRow` the backend now persists into
 // `config.json` via the `settings/global` migration (the mirror never receives
-// it), so first-launch hydration (boot module) fills the gap once.
-export const focusRowMirrorSeed = seedFocusRowFromMirror(globalSettingsAtImport)
+// it), so first-launch hydration (boot module) fills the gap once. Read at CALL
+// time, after hydrateStoreSnapshot(), never at module scope.
+export function readFocusRowMirrorSeed(): ReturnType<
+  typeof seedFocusRowFromMirror
+> {
+  return seedFocusRowFromMirror(configStore.get_nodefault('settings'))
+}
 
 // 48-02: handleFocusRow owns BOTH halves -- state and persistence. The flag
 // stops first-launch hydration (CR-01, 48-07) from overwriting a pick the user
@@ -83,16 +84,12 @@ const useSettingsStateRaw = create<SettingsState>()(
     hideTitles: false,
     cleanTiles: false,
     sidebarCollapsed: false,
-    hideChangelogsOnStartup:
-      globalSettingsAtImport?.hideChangelogsOnStartup || false,
+    hideChangelogsOnStartup: false,
     lastChangelogShown: null,
-    experimentalFeatures: {
-      cometSupport: true,
-      ...(globalSettingsAtImport?.experimentalFeatures || {})
-    },
+    experimentalFeatures: { cometSupport: true },
     disableDialogBackdropClose: false,
     disableAnimations: false,
-    focusRow: focusRowMirrorSeed.focusRow,
+    focusRow: null,
 
     setLanguage: (newLanguage) => {
       set({ language: newLanguage })
@@ -190,6 +187,9 @@ type InitialSettings = Pick<
   | 'lastChangelogShown'
   | 'disableDialogBackdropClose'
   | 'disableAnimations'
+  | 'hideChangelogsOnStartup'
+  | 'experimentalFeatures'
+  | 'focusRow'
 > & {
   /**
    * Absent while i18next has not resolved a language yet (its `init` defers the
@@ -205,6 +205,7 @@ type InitialSettings = Pick<
  */
 export function readInitialSettings(): InitialSettings {
   const root = () => getComputedStyle(document.documentElement)
+  const globalSettings = configStore.get_nodefault('settings')
   return {
     // Converted back OUT of i18next (quick-260925-bq4): `i18n.language` is the
     // BCP-47 tag, but LanguageSelector indexes labels by the shipped code.
@@ -233,7 +234,13 @@ export function readInitialSettings(): InitialSettings {
       'disableDialogBackdropClose',
       false
     ),
-    disableAnimations: configStore.get('disableAnimations', false)
+    disableAnimations: configStore.get('disableAnimations', false),
+    hideChangelogsOnStartup: globalSettings?.hideChangelogsOnStartup || false,
+    experimentalFeatures: {
+      cometSupport: true,
+      ...(globalSettings?.experimentalFeatures || {})
+    },
+    focusRow: seedFocusRowFromMirror(globalSettings).focusRow
   }
 }
 

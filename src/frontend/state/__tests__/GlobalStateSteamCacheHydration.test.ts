@@ -85,9 +85,7 @@ afterEach(() => {
 describe('libraryState steam library - seeded synchronously from the persisted cache (quick-260819-r4r)', () => {
   it('Test 1: readInitialLibrary hydrates steamLibrary from the steam_library mirror with overrides applied', () => {
     mirror['steam_library:games'] = [steamGame('a'), steamGame('b')]
-    useLibraryState.setState({
-      gameOverrides: { a: { wineVersion: 'w' } as never }
-    })
+    mirror['gameOverridesStore:overrides'] = { a: { wineVersion: 'w' } }
     const { steamLibrary } = readInitialLibrary()
     expect(steamLibrary.map((g) => g.app_name)).toEqual(['a', 'b'])
     expect(steamLibrary[0]?.overrides).toEqual({ wineVersion: 'w' })

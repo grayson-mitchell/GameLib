@@ -86,6 +86,10 @@ const fakeApi = new Proxy(
         return (_store: string, key: string, dflt?: unknown) =>
           key in config ? config[key] : dflt
       }
+      if (name === 'storeHas') {
+        // CacheStore.get gates on storeHas + a `__timestamp.<key>` companion
+        return (_store: string, key: string) => key in config
+      }
       if (name === 'requestAppSettings') {
         return () => {
           calls.push('requestAppSettings')
@@ -491,17 +495,59 @@ describe('initStateSubscriptions', () => {
     )
   })
 
-  it('focus-row hydration runs only when the mirror seed needs it', async () => {
-    const settings = await import('../settingsState')
+  it('focus-row hydration is armed by an empty post-hydration mirror', () => {
     init.initStateSubscriptions()
-    const needed = settings.focusRowMirrorSeed.needsMigratedValue
-    expect(calls.includes('requestAppSettings')).toBe(needed)
+    expect(calls.filter((c) => c === 'requestAppSettings')).toHaveLength(1)
+  })
+
+  it('focus-row hydration is NOT armed when the hydrated mirror has a focusRow key', () => {
+    config.settings = { focusRow: { kind: 'view', value: 'installed' } }
+    init.initStateSubscriptions()
+    expect(calls.includes('requestAppSettings')).toBe(false)
+  })
+
+  it('section (1) picks up settings hydrated after module import', () => {
+    config.settings = {
+      hideChangelogsOnStartup: true,
+      experimentalFeatures: { cometSupport: false },
+      focusRow: { kind: 'view', value: 'installed' },
+      dismissedSignInNotices: ['gog']
+    }
+    init.initStateSubscriptions()
+    const s = useSettingsState.getState()
+    expect(s.hideChangelogsOnStartup).toBe(true)
+    expect(s.experimentalFeatures.cometSupport).toBe(false)
+    expect(s.focusRow).toEqual({ kind: 'view', value: 'installed' })
+    expect(useAuthState.getState().dismissedSignInNotices).toEqual(['gog'])
+  })
+
+  it('section (1) attaches hydrated gameOverrides to the state and boot libraries', () => {
+    config.overrides = { g: { wineVersion: 'w' } }
+    config.games = [{ app_name: 'g', runner: 'gog', title: 'G' }]
+    config['__timestamp.games'] = '2026-01-01T00:00:00Z'
+    init.initStateSubscriptions()
+    const lib = useLibraryState.getState()
+    expect(lib.gameOverrides).toEqual({ g: { wineVersion: 'w' } })
+    expect(lib.gogLibrary.find((g) => g.app_name === 'g')?.overrides).toEqual({
+      wineVersion: 'w'
+    })
+  })
+
+  it('SELF-TEST (anti-vacuity): with no hydrated overrides the boot entry carries none', () => {
+    config.games = [{ app_name: 'g', runner: 'gog', title: 'G' }]
+    config['__timestamp.games'] = '2026-01-01T00:00:00Z'
+    init.initStateSubscriptions()
+    const lib = useLibraryState.getState()
+    expect(lib.gameOverrides).toEqual({})
+    expect(
+      lib.gogLibrary.find((g) => g.app_name === 'g')?.overrides
+    ).toBeUndefined()
   })
 
   it('a user focus-row pick during hydration is not overwritten', async () => {
     const settings = await import('../settingsState')
-    // the empty import-time mirror lacks focusRow, so hydration is armed
-    expect(settings.focusRowMirrorSeed.needsMigratedValue).toBe(true)
+    // the empty post-hydration mirror lacks focusRow, so hydration is armed
+    expect(settings.readFocusRowMirrorSeed().needsMigratedValue).toBe(true)
     values.appSettings = { focusRow: 'recent' }
     init.initStateSubscriptions()
     useSettingsState.getState().handleFocusRow('picked' as never)

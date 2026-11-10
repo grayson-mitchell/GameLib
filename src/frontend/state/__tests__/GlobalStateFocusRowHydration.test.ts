@@ -15,7 +15,7 @@
  */
 import '../../testUtils/tauriWindow'
 import { resetAllStores } from '../storeKit'
-import useSettingsState, { focusRowMirrorSeed } from '../settingsState'
+import useSettingsState, { readFocusRowMirrorSeed } from '../settingsState'
 import { hydrateFocusRowSelection } from 'common/focusRowMigration'
 import * as init from '../initStateSubscriptions'
 
@@ -78,8 +78,8 @@ describe('focusRow first-launch hydration (CR-01, 48-07), behavioural', () => {
     resetAllStores()
   })
 
-  it('the import-time mirror (no focusRow key) arms hydration', () => {
-    expect(focusRowMirrorSeed.needsMigratedValue).toBe(true)
+  it('an empty post-hydration mirror (no focusRow key) arms hydration', () => {
+    expect(readFocusRowMirrorSeed().needsMigratedValue).toBe(true)
   })
 
   it('hydrates the migrated value once and writes it back once', async () => {

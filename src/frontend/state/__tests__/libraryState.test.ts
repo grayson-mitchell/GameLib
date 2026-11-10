@@ -285,10 +285,10 @@ describe('libraryState library data', () => {
     mirror['nile_library:library'] = [game('a', 'nile')]
     mirror['steam_library:games'] = [game('s', 'steam')]
     mirror['sideloadedStore:games'] = [game('sl', 'sideload')]
-    useLibraryState.setState({
-      gameOverrides: { s: { wineVersion: 'x' } as never }
-    })
+    // readInitialLibrary reads the overrides post-hydration from the mirror
+    mirror['gameOverridesStore:overrides'] = { s: { wineVersion: 'x' } }
     const init = readInitialLibrary()
+    expect(init.gameOverrides).toEqual({ s: { wineVersion: 'x' } })
     expect(init.epicLibrary.map((g) => g.app_name)).toEqual(['e'])
     expect(init.gogLibrary[0]?.is_installed).toBe(true)
     expect(init.gogLibrary[0]?.install).toEqual({ appName: 'g1' })

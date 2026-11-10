@@ -238,7 +238,9 @@ describe('sign-in renderer state wiring (49-07: D-08, D-10, D-16; 69-13)', () =>
     // relaunch. The mount hydrates from the backend's settings and MERGES with
     // the in-session set, never setSetting.
     values.appSettings = { dismissedSignInNotices: ['gog'] }
-    useAuthState.setState({ dismissedSignInNotices: ['steam'] })
+    // the post-hydration mirror seed (readInitialAuth) carries 'steam'; the
+    // backend read then unions 'gog' into it
+    config.settings = { dismissedSignInNotices: ['steam'] }
     await runBoot()
     expect(called).toContain('requestAppSettings')
     expect(useAuthState.getState().dismissedSignInNotices).toEqual([
