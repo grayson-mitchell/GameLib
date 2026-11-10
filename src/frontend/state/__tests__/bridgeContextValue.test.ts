@@ -1,5 +1,6 @@
 import { resetAllStores, type StoreHooks } from '../storeKit'
 import type { UiState } from '../uiState'
+import type { SettingsState } from '../settingsState'
 import type * as BridgeModule from '../bridgeContextValue'
 
 // Node-env frontend project (no jsdom): give uiState's transitive imports a
@@ -18,10 +19,12 @@ import type * as BridgeModule from '../bridgeContextValue'
 
 describe('bridgeContextValue', () => {
   let useUiState: StoreHooks<UiState>
+  let useSettingsState: StoreHooks<SettingsState>
   let bridge: typeof BridgeModule
 
   beforeAll(async () => {
     useUiState = (await import('../uiState')).default
+    useSettingsState = (await import('../settingsState')).default
     bridge = await import('../bridgeContextValue')
   })
 
@@ -53,5 +56,31 @@ describe('bridgeContextValue', () => {
     expect(spy).toHaveBeenCalledTimes(1)
     useUiState.setState({ activeController: 'x' })
     expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  it('bridgedContextSlice follows the settings store and derives isRTL', () => {
+    expect(bridge.bridgedContextSlice().theme).toBe('midnightMirage')
+    useSettingsState.setState({ theme: 'dracula', language: 'ar' })
+    const slice = bridge.bridgedContextSlice()
+    expect(slice.theme).toBe('dracula')
+    expect(slice.isRTL).toBe(true)
+    useSettingsState.setState({ language: 'en' })
+    expect(bridge.bridgedContextSlice().isRTL).toBe(false)
+  })
+
+  it('exposes the settings setters as the store functions', () => {
+    const slice = bridge.bridgedContextSlice()
+    const settings = useSettingsState.getState()
+    expect(slice.setTheme).toBe(settings.setTheme)
+    expect(slice.setZoomPercent).toBe(settings.setZoomPercent)
+    expect(slice.handleFocusRow).toBe(settings.handleFocusRow)
+    expect(slice.setSideBarCollapsed).toBe(settings.setSideBarCollapsed)
+  })
+
+  it('subscribeBridge fires for a settings change too', () => {
+    const spy = jest.fn()
+    bridge.subscribeBridge(spy)
+    useSettingsState.setState({ hideTitles: true })
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 })

@@ -7,8 +7,6 @@ import {
   HiddenGame,
   RefreshOptions,
   Runner,
-  FocusRowSelection,
-  ExperimentalFeatures,
   Status
 } from 'common/types'
 import { withTranslation } from 'react-i18next'
@@ -34,12 +32,6 @@ import type { IpcRendererEvent } from 'backend/platform'
 import { NileRegisterData } from 'common/types/nile'
 import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 import type { SteamSyncStatus } from 'common/types/ipc'
-import { toShippedLanguage } from 'common/languages'
-import {
-  hydrateFocusRowSelection,
-  seedFocusRowFromMirror
-} from 'common/focusRowMigration'
-import { applySavedZoomAtBoot } from './savedZoomBoot'
 import {
   resolveSignInStates,
   sanitizeSignInProbeOutcomeMap,
@@ -55,6 +47,7 @@ import {
 import { collectSignInInputs } from '../helpers/signInInputs'
 import { resyncSignInIdentity } from '../helpers/signInIdentityResync'
 import useUiState from './uiState'
+import { applySavedFonts } from './settingsState'
 import { bridgedContextSlice, subscribeBridge } from './bridgeContextValue'
 import {
   followConnectivity,
@@ -76,12 +69,6 @@ function sameSignInStores(
   return a.length === b.length && a.every((store, i) => store === b[i])
 }
 const globalSettings = configStore.get_nodefault('settings')
-// CR-01: the mirror alone cannot see the `focusRow` the backend now persists into
-// `config.json` via the `settings/global` migration (the mirror never receives it), so first-launch hydration (componentDidMount) fills the gap once.
-const focusRowMirrorSeed = seedFocusRowFromMirror(globalSettings)
-
-const RTL_LANGUAGES = ['fa', 'ar']
-
 // GAP CYCLE 4 (34.5-33, Routing item 2): `origin` identifies which call site
 // triggered a refresh, instrumenting the search for the runner-less
 // `refreshLibrary` emitters (candidates: `main.ts:789`'s
@@ -131,7 +118,6 @@ interface StateProps {
     syncError?: HumbleSyncState['syncError']
     syncing?: boolean
   }
-  focusRow: FocusRowSelection
   // 49-07 (D-08): this launch's sign-in probe outcomes, fed by the
   // `signInProbeOutcomes` push AND a one-time `getSignInProbeOutcomes()` pull on
   // mount (the push can precede the listener). Both pass through
@@ -141,7 +127,6 @@ interface StateProps {
   // `handleDismissSignInNotice` / `handleRearmSignInDismissals` write it.
   dismissedSignInNotices: SignInStore[]
   gameUpdates: string[]
-  language: string
   libraryStatus: GameStatus[]
   refreshing: boolean
   refreshingInTheBackground: boolean
@@ -171,21 +156,7 @@ interface StateProps {
   favouriteGames: FavouriteGame[]
   customCategories: Record<string, string[]>
   currentCustomCategories: string[]
-  theme: string
-  zoomPercent: number
-  primaryFontFamily: string
-  secondaryFontFamily: string
-  allTilesInColor: boolean
-  titlesAlwaysVisible: boolean
-  hideTitles: boolean
-  cleanTiles: boolean
-  sidebarCollapsed: boolean
   sideloadedLibrary: GameInfo[]
-  hideChangelogsOnStartup: boolean
-  lastChangelogShown: string | null
-  experimentalFeatures: ExperimentalFeatures
-  disableDialogBackdropClose: boolean
-  disableAnimations: boolean
 }
 
 // function to load the new key or fallback to the old one
@@ -473,18 +444,10 @@ class GlobalState extends PureComponent<Props> {
       syncing: false
     },
     gameUpdates: [],
-    // Converted back OUT of i18next (quick-260925-bq4): `i18n.language` is now
-    // the BCP-47 tag, but this value reaches `LanguageSelector`'s
-    // `currentLanguage`, which indexes `languageLabels`/`languageFlags` (keyed
-    // by the shipped code) and is the <select>'s value. Unconverted, the four
-    // underscore-named locales would show a raw `nb-NO` label with no option
-    // selected.
-    focusRow: focusRowMirrorSeed.focusRow,
     signInProbeOutcomes: {},
     dismissedSignInNotices: normalizeSignInDismissals(
       globalSettings?.dismissedSignInNotices
     ),
-    language: toShippedLanguage(this.props.i18n.language),
     libraryStatus: [],
     refreshing: false,
     refreshingInTheBackground: true,
@@ -493,39 +456,9 @@ class GlobalState extends PureComponent<Props> {
     steamSyncStatus: 'idle',
     hiddenGames: configStore.get('games.hidden', []),
     currentCustomCategories: loadCurrentCategories(),
-    sidebarCollapsed: JSON.parse(
-      storage.getItem('sidebar_collapsed') || 'false'
-    ),
     favouriteGames: configStore.get('games.favourites', []),
     customCategories: configStore.get('games.customCategories', {}),
-    theme: configStore.get('theme', 'midnightMirage'),
-    zoomPercent: configStore.get('zoomPercent', 100),
-    secondaryFontFamily:
-      configStore.get_nodefault('contentFontFamily') ||
-      getComputedStyle(document.documentElement).getPropertyValue(
-        '--default-secondary-font-family'
-      ),
-    primaryFontFamily:
-      configStore.get_nodefault('actionsFontFamily') ||
-      getComputedStyle(document.documentElement).getPropertyValue(
-        '--default-primary-font-family'
-      ),
-    allTilesInColor: configStore.get('allTilesInColor', false),
-    titlesAlwaysVisible: configStore.get('titlesAlwaysVisible', false),
-    hideTitles: configStore.get('hideTitles', false),
-    cleanTiles: configStore.get('cleanTiles', false),
-    sideloadedLibrary: applyGameOverrides(sideloadLibrary.get('games', [])),
-    hideChangelogsOnStartup: globalSettings?.hideChangelogsOnStartup || false,
-    lastChangelogShown: JSON.parse(storage.getItem('last_changelog') || 'null'),
-    experimentalFeatures: {
-      cometSupport: true,
-      ...(globalSettings?.experimentalFeatures || {})
-    },
-    disableDialogBackdropClose: configStore.get(
-      'disableDialogBackdropClose',
-      false
-    ),
-    disableAnimations: configStore.get('disableAnimations', false)
+    sideloadedLibrary: applyGameOverrides(sideloadLibrary.get('games', []))
   }
 
   setCurrentCustomCategories = (newCustomCategories: string[]) => {
@@ -534,87 +467,6 @@ class GlobalState extends PureComponent<Props> {
       JSON.stringify(newCustomCategories)
     )
     this.setState({ currentCustomCategories: newCustomCategories })
-  }
-
-  setLanguage = (newLanguage: string) => {
-    this.setState({ language: newLanguage })
-    document.querySelector('html')?.setAttribute('lang', newLanguage)
-  }
-
-  setTheme = (newThemeName: string) => {
-    configStore.set('theme', newThemeName)
-    this.setState({ theme: newThemeName })
-    window.setTheme(newThemeName)
-  }
-
-  zoomTimer: NodeJS.Timeout | undefined = undefined
-  setZoomPercent = (newZoomPercent: number) => {
-    if (this.zoomTimer) clearTimeout(this.zoomTimer)
-
-    configStore.set('zoomPercent', newZoomPercent)
-    this.setState({ zoomPercent: newZoomPercent })
-
-    this.zoomTimer = setTimeout(() => {
-      window.api.setZoomFactor((newZoomPercent / 100).toString())
-    }, 500)
-  }
-
-  setPrimaryFontFamily = (newFontFamily: string, saveToFile = true) => {
-    if (saveToFile) configStore.set('actionsFontFamily', newFontFamily)
-    document.documentElement.style.setProperty(
-      '--primary-font-family',
-      newFontFamily
-    )
-  }
-
-  setSecondaryFontFamily = (newFontFamily: string, saveToFile = true) => {
-    if (saveToFile) configStore.set('contentFontFamily', newFontFamily)
-    document.documentElement.style.setProperty(
-      '--secondary-font-family',
-      newFontFamily
-    )
-  }
-
-  setAllTilesInColor = (value: boolean) => {
-    configStore.set('allTilesInColor', value)
-    this.setState({ allTilesInColor: value })
-  }
-
-  setTitlesAlwaysVisible = (value: boolean) => {
-    configStore.set('titlesAlwaysVisible', value)
-    this.setState({ titlesAlwaysVisible: value })
-  }
-
-  setHideTitles = (value: boolean) => {
-    configStore.set('hideTitles', value)
-    this.setState({ hideTitles: value })
-  }
-
-  setCleanTiles = (value: boolean) => {
-    configStore.set('cleanTiles', value)
-    this.setState({ cleanTiles: value })
-  }
-
-  setDisableDialogBackdropClose = (value: boolean) => {
-    configStore.set('disableDialogBackdropClose', value)
-    this.setState({ disableDialogBackdropClose: value })
-  }
-
-  setDisableAnimations = (value: boolean) => {
-    configStore.set('disableAnimations', value)
-    this.setState({ disableAnimations: value })
-  }
-
-  setSideBarCollapsed = (value: boolean) => {
-    this.setState({ sidebarCollapsed: value })
-  }
-
-  setHideChangelogsOnStartup = (value: boolean) => {
-    this.setState({ hideChangelogsOnStartup: value })
-  }
-
-  setLastChangelogShown = (value: string) => {
-    this.setState({ lastChangelogShown: value })
   }
 
   hideGame = (appNameToHide: string, appTitle: string) => {
@@ -756,22 +608,6 @@ class GlobalState extends PureComponent<Props> {
     configStore.set('games.customCategories', newCustomCategories)
   }
 
-  // 48-02: this setter owns BOTH halves -- state and persistence. The
-  // Settings screen's `useSetting` hook needs `SettingsContext`, which does
-  // not exist outside the Settings screen, so a focus-row pick made from the
-  // Library screen has no other writer available. One writer, no
-  // split-brain. Clearing writes `focusRow: null`, which makes the key
-  // present and permanently disarms the one-time legacy seed (48-05). The
-  // flag below stops first-launch hydration (CR-01, 48-07) from overwriting a
-  // pick the user makes while the backend answer is still in flight.
-  private focusRowPickedThisSession = false
-
-  handleFocusRow = (value: FocusRowSelection) => {
-    this.focusRowPickedThisSession = true
-    this.setState({ focusRow: value })
-    window.api.setSetting({ appName: 'default', key: 'focusRow', value })
-  }
-
   // 49-07 (D-10): dismissing twice equals once -- persist only when the set
   // actually changed. `addSignInDismissal` returns a canonical-order array, so
   // an element-wise comparison is a deep-equality check.
@@ -868,10 +704,6 @@ class GlobalState extends PureComponent<Props> {
       window.api.logError(`Sign-in identity resync failed: ${String(error)}`)
     }
     this.rearmFromCurrentState()
-  }
-
-  handleExperimentalFeatures = (value: ExperimentalFeatures) => {
-    this.setState({ experimentalFeatures: value })
   }
 
   handleSuccessfulLogin = (runner: Runner) => {
@@ -1513,36 +1345,6 @@ class GlobalState extends PureComponent<Props> {
 
     const { epic, gog, amazon, gameUpdates = [] } = this.state
 
-    // 261015-p3q: re-apply the saved Accessibility zoom once at boot, through
-    // the same window.api.setZoomFactor chain setZoomPercent uses, so a saved
-    // zoomPercent is actually in effect after a relaunch rather than only
-    // being displayed back on the slider. Earliest statement in this method:
-    // every statement before it widens the window in which the user sees
-    // factor 1. Reads this.state.zoomPercent directly (NOT destructured
-    // above) because the accessibility setting lives in
-    // state.zoomPercent, not in a per-store slice.
-    applySavedZoomAtBoot({
-      savedZoomPercent: this.state.zoomPercent,
-      setZoomFactor: (zoomFactor) => window.api.setZoomFactor(zoomFactor),
-      onError: (error) =>
-        window.api.logError(`applySavedZoomAtBoot failed: ${String(error)}`)
-    })
-
-    // CR-01: first launch of a profile whose mirror has no `focusRow` key yet.
-    // `void` is safe ONLY because hydrateFocusRowSelection never rejects.
-    if (focusRowMirrorSeed.needsMigratedValue) {
-      void hydrateFocusRowSelection({
-        requestAppSettings: () => window.api.requestAppSettings(),
-        setSetting: (payload) => window.api.setSetting(payload),
-        applyFocusRow: (value) => this.setState({ focusRow: value }),
-        hasUserPicked: () => this.focusRowPickedThisSession,
-        onError: (error) =>
-          window.api.logError(
-            `focusRow first-launch hydration failed: ${String(error)}`
-          )
-      })
-    }
-
     window.api.handleGameStatus((e, args) => {
       this.handleGameStatus({ ...args })
     })
@@ -1866,29 +1668,15 @@ class GlobalState extends PureComponent<Props> {
 
     this.rearmFromCurrentState()
 
-    this.setPrimaryFontFamily(this.state.primaryFontFamily, false)
-    this.setSecondaryFontFamily(this.state.secondaryFontFamily, false)
+    applySavedFonts()
 
     window.api.frontendReady()
   }
 
   componentDidUpdate() {
-    const {
-      gameUpdates,
-      libraryStatus,
-      sidebarCollapsed,
-      hideChangelogsOnStartup,
-      lastChangelogShown,
-      language
-    } = this.state
-
-    const isRTL = RTL_LANGUAGES.includes(language)
-    document.body.classList.toggle('isRTL', isRTL)
+    const { gameUpdates, libraryStatus } = this.state
 
     storage.setItem('updates', JSON.stringify(gameUpdates))
-    storage.setItem('sidebar_collapsed', JSON.stringify(sidebarCollapsed))
-    storage.setItem('hide_changelogs', JSON.stringify(hideChangelogsOnStartup))
-    storage.setItem('last_changelog', JSON.stringify(lastChangelogShown))
 
     // REQ-35-20 / D-35-08-02 / gate criterion 16 (Phase 35 gap-closure 35-27, option-a): the two
     // questions "is an operation pending?" and "which sleep kind should it block?" used to be
@@ -1923,7 +1711,6 @@ class GlobalState extends PureComponent<Props> {
 
   render() {
     const {
-      language,
       epic,
       gog,
       amazon,
@@ -1932,11 +1719,8 @@ class GlobalState extends PureComponent<Props> {
       favouriteGames,
       customCategories,
       hiddenGames,
-      hideChangelogsOnStartup,
-      lastChangelogShown,
       libraryStatus
     } = this.state
-    const isRTL = RTL_LANGUAGES.includes(language)
 
     const installingEpicGame = libraryStatus.some(
       (game) => game.status === 'installing' && isStore(game, 'legendary')
@@ -1987,8 +1771,6 @@ class GlobalState extends PureComponent<Props> {
             logout: this.humbleDisconnect
           },
           installingEpicGame,
-          setLanguage: this.setLanguage,
-          isRTL,
           refresh: this.refresh,
           refreshLibrary: this.refreshLibrary,
           hiddenGames: {
@@ -2010,27 +1792,9 @@ class GlobalState extends PureComponent<Props> {
             removeCategory: this.removeCustomCategory,
             renameCategory: this.renameCustomCategory
           },
-          handleFocusRow: this.handleFocusRow,
           handleDismissSignInNotice: this.handleDismissSignInNotice,
           handleRearmSignInDismissals: this.handleRearmSignInDismissals,
-          handleExperimentalFeatures: this.handleExperimentalFeatures,
-          setTheme: this.setTheme,
-          setZoomPercent: this.setZoomPercent,
-          setAllTilesInColor: this.setAllTilesInColor,
-          setTitlesAlwaysVisible: this.setTitlesAlwaysVisible,
-          setHideTitles: this.setHideTitles,
-          setCleanTiles: this.setCleanTiles,
-          setSideBarCollapsed: this.setSideBarCollapsed,
-          setPrimaryFontFamily: this.setPrimaryFontFamily,
-          setSecondaryFontFamily: this.setSecondaryFontFamily,
-          hideChangelogsOnStartup: hideChangelogsOnStartup,
-          setHideChangelogsOnStartup: this.setHideChangelogsOnStartup,
-          lastChangelogShown: lastChangelogShown,
-          setLastChangelogShown: this.setLastChangelogShown,
-          setCurrentCustomCategories: this.setCurrentCustomCategories,
-          setDisableDialogBackdropClose: this.setDisableDialogBackdropClose,
-          disableAnimations: this.state.disableAnimations,
-          setDisableAnimations: this.setDisableAnimations
+          setCurrentCustomCategories: this.setCurrentCustomCategories
         }}
       >
         {this.props.children}

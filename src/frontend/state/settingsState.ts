@@ -72,7 +72,7 @@ export interface SettingsState {
 }
 
 const useSettingsStateRaw = create<SettingsState>()(
-  subscribeWithSelector((set, get) => ({
+  subscribeWithSelector((set) => ({
     language: 'en',
     theme: 'midnightMirage',
     zoomPercent: 100,
@@ -217,10 +217,10 @@ export function readInitialSettings(): InitialSettings {
     cleanTiles: configStore.get('cleanTiles', false),
     sidebarCollapsed: JSON.parse(
       window.localStorage.getItem('sidebar_collapsed') || 'false'
-    ),
+    ) as boolean,
     lastChangelogShown: JSON.parse(
       window.localStorage.getItem('last_changelog') || 'null'
-    ),
+    ) as string | null,
     disableDialogBackdropClose: configStore.get(
       'disableDialogBackdropClose',
       false

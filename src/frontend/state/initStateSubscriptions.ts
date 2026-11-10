@@ -16,11 +16,19 @@
  * Never read `window.localStorage` at module scope: node-env tests must be
  * able to import this file.
  */
+import { hydrateFocusRowSelection } from 'common/focusRowMigration'
+import { applySavedZoomAtBoot } from './savedZoomBoot'
 import { getGameInfo } from '../helpers'
 import { createConnectivitySync } from '../helpers/connectivitySync'
 import { isStore } from 'common/storeCapabilities'
 import type { GameStatus } from 'common/types'
 import useUiState, { readInitialUi } from './uiState'
+import useSettingsState, {
+  focusRowMirrorSeed,
+  readInitialSettings,
+  registerSettingsSideEffects,
+  wasFocusRowPickedThisSession
+} from './settingsState'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
@@ -45,6 +53,32 @@ export function initStateSubscriptions(): void {
 
   // (1) re-read persisted initial state into each store (readInitial)
   useUiState.setState(readInitialUi())
+  useSettingsState.setState(readInitialSettings())
+
+  // componentDidMount head (R10: pre-first-await statements): re-apply the
+  // saved Accessibility zoom FIRST, before any listener registration, so the
+  // 100% window stays short (261015-p3q). Undebounced, unlike setZoomPercent.
+  applySavedZoomAtBoot({
+    savedZoomPercent: useSettingsState.getState().zoomPercent,
+    setZoomFactor: (zoomFactor) => window.api.setZoomFactor(zoomFactor),
+    onError: (error) =>
+      window.api.logError(`applySavedZoomAtBoot failed: ${String(error)}`)
+  })
+
+  // CR-01: first launch of a profile whose mirror has no `focusRow` key yet.
+  // `void` is safe ONLY because hydrateFocusRowSelection never rejects.
+  if (focusRowMirrorSeed.needsMigratedValue) {
+    void hydrateFocusRowSelection({
+      requestAppSettings: () => window.api.requestAppSettings(),
+      setSetting: (payload) => window.api.setSetting(payload),
+      applyFocusRow: (value) => useSettingsState.setState({ focusRow: value }),
+      hasUserPicked: () => wasFocusRowPickedThisSession(),
+      onError: (error) =>
+        window.api.logError(
+          `focusRow first-launch hydration failed: ${String(error)}`
+        )
+    })
+  }
 
   // (2) window.api.handle* listeners
 
@@ -97,6 +131,7 @@ export function initStateSubscriptions(): void {
   )
 
   // (3) store.subscribe side effects (D-08)
+  registerSettingsSideEffects()
 }
 
 /**

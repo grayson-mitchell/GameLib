@@ -1,5 +1,6 @@
 import type { ContextType } from 'frontend/types'
 import useUiState from './uiState'
+import useSettingsState, { selectIsRTL } from './settingsState'
 
 // Phase 69 D-09 bridge: GlobalState re-renders when a store that owns a
 // context field changes, and spreads the stores' current values into the
@@ -21,15 +22,48 @@ type BridgedKeys =
   | 'showResetDialog'
   | 'handleExternalLinkDialog'
   | 'handleRedeemKeyDialog'
+  | 'language'
+  | 'isRTL'
+  | 'theme'
+  | 'zoomPercent'
+  | 'allTilesInColor'
+  | 'titlesAlwaysVisible'
+  | 'hideTitles'
+  | 'cleanTiles'
+  | 'sidebarCollapsed'
+  | 'hideChangelogsOnStartup'
+  | 'lastChangelogShown'
+  | 'experimentalFeatures'
+  | 'disableDialogBackdropClose'
+  | 'disableAnimations'
+  | 'focusRow'
+  | 'setLanguage'
+  | 'setTheme'
+  | 'setZoomPercent'
+  | 'setPrimaryFontFamily'
+  | 'setSecondaryFontFamily'
+  | 'setAllTilesInColor'
+  | 'setTitlesAlwaysVisible'
+  | 'setHideTitles'
+  | 'setCleanTiles'
+  | 'setSideBarCollapsed'
+  | 'setHideChangelogsOnStartup'
+  | 'setLastChangelogShown'
+  | 'handleExperimentalFeatures'
+  | 'setDisableDialogBackdropClose'
+  | 'setDisableAnimations'
+  | 'handleFocusRow'
 
 /** Subscribes `onChange` to every bridged store. Lasts for the app's life (D-07). */
 export function subscribeBridge(onChange: () => void): void {
   useUiState.subscribe(onChange)
+  useSettingsState.subscribe(onChange)
 }
 
 /** The store-owned context fields, read at call time. */
 export function bridgedContextSlice(): Pick<ContextType, BridgedKeys> {
   const ui = useUiState.getState()
+  const settings = useSettingsState.getState()
   return {
     platform: ui.platform,
     error: ui.error,
@@ -43,6 +77,37 @@ export function bridgedContextSlice(): Pick<ContextType, BridgedKeys> {
     showDialogModal: ui.showDialogModal,
     showResetDialog: ui.showResetDialog,
     handleExternalLinkDialog: ui.handleExternalLinkDialog,
-    handleRedeemKeyDialog: ui.handleRedeemKeyDialog
+    handleRedeemKeyDialog: ui.handleRedeemKeyDialog,
+    language: settings.language,
+    isRTL: selectIsRTL(settings),
+    theme: settings.theme,
+    zoomPercent: settings.zoomPercent,
+    allTilesInColor: settings.allTilesInColor,
+    titlesAlwaysVisible: settings.titlesAlwaysVisible,
+    hideTitles: settings.hideTitles,
+    cleanTiles: settings.cleanTiles,
+    sidebarCollapsed: settings.sidebarCollapsed,
+    hideChangelogsOnStartup: settings.hideChangelogsOnStartup,
+    lastChangelogShown: settings.lastChangelogShown,
+    experimentalFeatures: settings.experimentalFeatures,
+    disableDialogBackdropClose: settings.disableDialogBackdropClose,
+    disableAnimations: settings.disableAnimations,
+    focusRow: settings.focusRow,
+    setLanguage: settings.setLanguage,
+    setTheme: settings.setTheme,
+    setZoomPercent: settings.setZoomPercent,
+    setPrimaryFontFamily: settings.setPrimaryFontFamily,
+    setSecondaryFontFamily: settings.setSecondaryFontFamily,
+    setAllTilesInColor: settings.setAllTilesInColor,
+    setTitlesAlwaysVisible: settings.setTitlesAlwaysVisible,
+    setHideTitles: settings.setHideTitles,
+    setCleanTiles: settings.setCleanTiles,
+    setSideBarCollapsed: settings.setSideBarCollapsed,
+    setHideChangelogsOnStartup: settings.setHideChangelogsOnStartup,
+    setLastChangelogShown: settings.setLastChangelogShown,
+    handleExperimentalFeatures: settings.handleExperimentalFeatures,
+    setDisableDialogBackdropClose: settings.setDisableDialogBackdropClose,
+    setDisableAnimations: settings.setDisableAnimations,
+    handleFocusRow: settings.handleFocusRow
   }
 }
