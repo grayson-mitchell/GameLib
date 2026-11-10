@@ -223,6 +223,10 @@ function createTestSteamProcesses(
     // Inert, not unscripted: every boot pays the owed goonline through this instance.
     macSteamOffline:
       overrides.macSteamOffline ?? createInertSteamProcesses().macSteamOffline,
+    drm: unscriptedMembers<ManagerDeps['steamProcesses']['drm']>(
+      'steam drm',
+      overrides.drm ?? {}
+    ),
     runningPoll: unscriptedMembers<
       ManagerDeps['steamProcesses']['runningPoll']
     >('steam running poll', overrides.runningPoll ?? {}),
@@ -253,6 +257,9 @@ export function createInertSteamProcesses(
       openUrlDetached: () => undefined,
       onlineConfirmSettled: () => Promise.resolve()
     },
+    drm:
+      overrides.drm ??
+      unscriptedMembers<ManagerDeps['steamProcesses']['drm']>('steam drm', {}),
     runningPoll: overrides.runningPoll ?? {
       start: () => undefined,
       stop: () => undefined,

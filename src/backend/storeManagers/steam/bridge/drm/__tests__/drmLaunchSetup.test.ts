@@ -3,22 +3,25 @@
  *
  * Every step is an injected fake, apart from the darwin-only real `pgrep` arm.
  */
-import { EventEmitter } from 'events'
-import * as childProcess from 'child_process'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { GameSettings } from 'common/types'
 import { buildDrmPaths } from '../drmPaths'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { drmStepError } from '../steamclientLayerMode'
 import {
-  drmLaunchSetup,
-  isMacSteamRunning,
-  prefetchDrmDownloads,
+  createIsMacSteamRunning,
+  createSteamDrm,
   DRM_END_SESSION_TIMEOUT_MS,
   DRM_PROGRESS_CONTEXT,
   type DrmLaunchSetupDeps,
   type DrmLaunchSetupInput
 } from '../drmLaunchSetup'
+
+// Every step is an injected fake, so the instance's runner is never reached.
+const { drmLaunchSetup, prefetchDrmDownloads } = createSteamDrm({
+  runner: createScriptedRunner([])
+})
 
 jest.mock('../../../bridgeBottleLifecycle', () => ({
   endPerGameBridgeBottleSession: jest.fn(() => Promise.resolve(true))
@@ -30,10 +33,6 @@ jest.mock('../../../bridgeBottle', () => ({
   setDrmBridgeRunner: jest.fn(() => true),
   getDrmBridgeBottleSettings: jest.fn(() => ({}))
 }))
-jest.mock('child_process', () => {
-  const actual = jest.requireActual('child_process')
-  return { ...actual, spawn: jest.fn() }
-})
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -123,14 +122,7 @@ function makeDeps(callOrder: string[], over: Partial<DrmLaunchSetupDeps> = {}) {
   return deps as Any
 }
 
-const spawnMock = childProcess.spawn as unknown as jest.Mock
-const realSpawn = jest.requireActual('child_process').spawn
-
 describe('drmLaunchSetup', () => {
-  beforeEach(() => {
-    spawnMock.mockImplementation(realSpawn)
-  })
-
   test('not-applicable for none, undefined and CEG-marked steamstub: no step runs', async () => {
     for (const [drmWrapper, cegMarkers] of [
       ['none', undefined],
@@ -511,59 +503,50 @@ describe('drmLaunchSetup', () => {
     expect(deps.stageBottle).toHaveBeenCalledTimes(1)
   })
 
-  describe('isMacSteamRunning', () => {
-    const darwinTest = process.platform === 'darwin' ? test : test.skip
-    darwinTest('real arm resolves a boolean under a fake HOME', async () => {
-      const spy = spawnMock
-      const running = await isMacSteamRunning()
-      expect(typeof running).toBe('boolean')
-      const call = spy.mock.calls[0]
-      expect(call[0]).toBe('/usr/bin/pgrep')
-      expect(call[1]).toEqual(['-x', 'steam_osx'])
-      expect(call[2].env.HOME).not.toBe(process.env.HOME)
-    })
+  describe('createIsMacSteamRunning', () => {
+    const probe = (result: Record<string, unknown>) => {
+      const runner = createScriptedRunner([{ cmd: '/usr/bin/pgrep', result }])
+      return { runner, isRunning: createIsMacSteamRunning({ runner }) }
+    }
 
-    test('a probe that never exits times out and is SIGKILLed', async () => {
-      const child = Object.assign(new EventEmitter(), {
-        kill: jest.fn(),
-        unref: jest.fn()
+    test('runs pgrep with the 5 s bound, empty stdin and a fake HOME', async () => {
+      const { runner, isRunning } = probe({ code: 0 })
+      await expect(isRunning()).resolves.toBe(true)
+      const call = runner.calls[0]
+      expect(call?.argv).toEqual(['-x', 'steam_osx'])
+      expect(call?.opts).toMatchObject({
+        timeoutMs: 5000,
+        stdin: '',
+        replaceEnv: true
       })
-      spawnMock.mockReturnValue(child as Any)
-      await expect(isMacSteamRunning(20)).rejects.toThrow('timed out')
-      expect(child.kill).toHaveBeenCalledWith('SIGKILL')
+      expect(call?.env?.HOME).not.toBe(process.env.HOME)
     })
 
     test('exit codes map to boolean or error', async () => {
-      for (const [code, expected] of [
-        [0, true],
-        [1, false]
-      ] as const) {
-        const child = Object.assign(new EventEmitter(), {
-          kill: jest.fn(),
-          unref: jest.fn()
-        })
-        spawnMock.mockReturnValue(child as Any)
-        const p = isMacSteamRunning(1000)
-        child.emit('close', code)
-        await expect(p).resolves.toBe(expected)
-      }
-      const child = Object.assign(new EventEmitter(), {
-        kill: jest.fn(),
-        unref: jest.fn()
-      })
-      spawnMock.mockReturnValue(child as Any)
-      const p = isMacSteamRunning(1000)
-      child.emit('close', 2)
-      await expect(p).rejects.toThrow('pgrep exited 2')
+      await expect(probe({ code: 1 }).isRunning(1000)).resolves.toBe(false)
+      await expect(probe({ code: 2 }).isRunning(1000)).rejects.toThrow(
+        'pgrep exited 2'
+      )
+    })
+
+    test('a timed-out probe rejects', async () => {
+      await expect(
+        probe({ code: null, timedOut: true }).isRunning(20)
+      ).rejects.toThrow('timed out')
+    })
+
+    test('a spawn failure rejects', async () => {
+      const runner = createScriptedRunner([
+        { cmd: '/usr/bin/pgrep', error: { code: 'ENOENT' } }
+      ])
+      await expect(createIsMacSteamRunning({ runner })()).rejects.toThrow()
     })
   })
 
   test('importing the module spawns nothing', async () => {
-    spawnMock.mockClear()
     await jest.isolateModulesAsync(async () => {
       await import('../drmLaunchSetup')
     })
-    expect(spawnMock).not.toHaveBeenCalled()
   })
 
   test('source gate: no forbidden tokens outside comments', () => {

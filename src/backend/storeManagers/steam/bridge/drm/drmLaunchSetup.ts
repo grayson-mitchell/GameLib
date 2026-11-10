@@ -21,12 +21,11 @@
  *   `createFakeHomeProfile()`. There is no real-profile arm here; the wine
  *   spawns happen in 56-09 and 56-12 under the DRM bottle settings.
  * - Sidecar exit contract: nothing runs at import; the probe child and its
- *   deadline are unref'd; each long step is bounded by its own module's
+ *   deadline are the process runner's (unref'd there); each long step is bounded by its own module's
  *   deadline and abort id.
  */
 import type { RunTool } from 'backend/engine/runTool'
 import type { ProcessRunner } from 'backend/process/types'
-import { spawn } from 'child_process'
 import { dirname, isAbsolute, resolve } from 'path'
 import type { GameSettings, GameStatus } from 'common/types'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -45,10 +44,10 @@ import {
 import { ensureRunnerClone } from './runnerClone'
 import type { RunnerReady } from './runnerVerify'
 import {
-  ensureSteamclientLayerComponent,
+  createSteamclientLayerInstall,
   type SteamclientLayerReady
 } from './steamclientLayerInstall'
-import { ensureValveClient, type ValveClientReady } from './valveClient'
+import { createValveClient, type ValveClientReady } from './valveClient'
 import { stageDrmBottle } from './stageDrmBottle'
 import type {
   StageDrmBottleOk,
@@ -122,7 +121,21 @@ export type DrmLaunchSetupResult =
   | DrmStepResult<DrmLaunchReady>
   | { status: 'not-applicable'; mode: 'tcp' }
 
-/** Overridable steps; every member defaults to the real implementation. */
+type SteamclientLayerEnsure = ReturnType<
+  typeof createSteamclientLayerInstall
+>['ensureSteamclientLayerComponent']
+type ValveClientEnsure = ReturnType<
+  typeof createValveClient
+>['ensureValveClient']
+
+/** The instance's own steps, used where a caller supplies no override. */
+type DrmInstanceSteps = {
+  isMacSteamRunning: (timeoutMs?: number) => Promise<boolean>
+  ensureComponent: SteamclientLayerEnsure
+  ensureValveClient: ValveClientEnsure
+}
+
+/** Overridable steps; every member defaults to the instance's implementation. */
 export type DrmSetupOverrides = {
   /** The caller's tool runner (66.2-03); the clone and allowlist steps spawn through it. */
   runTool: RunTool
@@ -130,9 +143,9 @@ export type DrmSetupOverrides = {
   runner: Pick<ProcessRunner, 'run'>
   isMacSteamRunning?: () => Promise<boolean>
   detectCrossover?: typeof detectAllowedCrossover
-  ensureComponent?: typeof ensureSteamclientLayerComponent
+  ensureComponent?: SteamclientLayerEnsure
   ensureRunner?: typeof ensureRunnerClone
-  ensureValveClient?: typeof ensureValveClient
+  ensureValveClient?: ValveClientEnsure
   stageBottle?: typeof stageDrmBottle
   buildBottleSettings?: (
     appId: string,
@@ -160,52 +173,44 @@ export type DrmLaunchSetupDeps = DrmSetupOverrides & StageDrmBottleSlices
 
 const NUMERIC_APP_ID = /^[0-9]{1,10}$/
 
-const inFlight = new Map<string, Promise<DrmLaunchSetupResult>>()
-
-function unrefHandle(handle: unknown): void {
-  ;(handle as { unref?: () => void } | null | undefined)?.unref?.()
-}
-
 const messageOf = (err: unknown): string =>
   err instanceof Error ? err.message : String(err)
 
 /**
- * `pgrep -x steam_osx`: exit 0 running, exit 1 not running, anything else is
- * an error. Isolated half of the two-profile rule: the env is
- * `createFakeHomeProfile().childEnv()`, never a hand-rolled literal.
+ * `pgrep -x steam_osx` on the process runner: exit 0 running, exit 1 not
+ * running, anything else (including a timeout or a spawn failure) is an error.
+ * Isolated half of the two-profile rule: the env is
+ * `createFakeHomeProfile().childEnv()`, never a hand-rolled literal. stdin is ''
+ * so the probe never waits on an open pipe.
  */
-export async function isMacSteamRunning(
-  timeoutMs: number = MAC_STEAM_PROBE_TIMEOUT_MS
-): Promise<boolean> {
-  const profile = createFakeHomeProfile({ prefix: 'gamelib-drm-steam-probe-' })
-  let timer: ReturnType<typeof setTimeout> | undefined
-  try {
-    return await new Promise<boolean>((resolve, reject) => {
-      const child = spawn('/usr/bin/pgrep', ['-x', 'steam_osx'], {
-        env: profile.childEnv(),
-        stdio: ['ignore', 'ignore', 'ignore'],
-        windowsHide: true
-      })
-      unrefHandle(child)
-      timer = setTimeout(() => {
-        try {
-          child.kill('SIGKILL')
-        } catch {
-          // already gone
-        }
-        reject(new Error(`pgrep timed out after ${timeoutMs} ms`))
-      }, timeoutMs)
-      unrefHandle(timer)
-      child.on('error', reject)
-      child.on('close', (code) => {
-        if (code === 0) resolve(true)
-        else if (code === 1) resolve(false)
-        else reject(new Error(`pgrep exited ${code}`))
-      })
+export function createIsMacSteamRunning(deps: {
+  runner: Pick<ProcessRunner, 'run'>
+}) {
+  return async function isMacSteamRunning(
+    timeoutMs: number = MAC_STEAM_PROBE_TIMEOUT_MS
+  ): Promise<boolean> {
+    const profile = createFakeHomeProfile({
+      prefix: 'gamelib-drm-steam-probe-'
     })
-  } finally {
-    if (timer) clearTimeout(timer)
-    profile.dispose()
+    try {
+      const result = await deps.runner.run(
+        '/usr/bin/pgrep',
+        ['-x', 'steam_osx'],
+        {
+          env: profile.childEnv(),
+          replaceEnv: true,
+          stdin: '',
+          timeoutMs
+        }
+      )
+      if (result.timedOut)
+        throw new Error(`pgrep timed out after ${timeoutMs} ms`)
+      if (result.code === 0) return true
+      if (result.code === 1) return false
+      throw new Error(`pgrep exited ${result.code}`)
+    } finally {
+      profile.dispose()
+    }
   }
 }
 
@@ -232,7 +237,8 @@ type DrmDownloadsError = {
 async function ensureDrmDownloads(
   appFolder: string,
   deps: DrmSetupOverrides,
-  progress: (context: string) => void
+  progress: (context: string) => void,
+  steps: DrmInstanceSteps
 ): Promise<DrmDownloads | DrmDownloadsError> {
   const run = async <T extends { status: string }>(
     step: DrmStep,
@@ -254,8 +260,7 @@ async function ensureDrmDownloads(
     return { status: 'error', stage: 'crossover-allowlist', error: crossover }
 
   // 3. Component
-  const ensureComponent =
-    deps.ensureComponent ?? ensureSteamclientLayerComponent
+  const ensureComponent = deps.ensureComponent ?? steps.ensureComponent
   const component = await run('component-missing', () =>
     ensureComponent(
       { appFolder, crossoverBuild: crossover.crossoverBuild },
@@ -280,7 +285,7 @@ async function ensureDrmDownloads(
     return { status: 'error', stage: 'runner', error: runner }
 
   // 5. Valve client
-  const ensureValve = deps.ensureValveClient ?? ensureValveClient
+  const ensureValve = deps.ensureValveClient ?? steps.ensureValveClient
   const valveClient = await run('valve-fetch', () =>
     ensureValve(
       { appFolder },
@@ -295,7 +300,8 @@ async function ensureDrmDownloads(
 
 async function runSetup(
   input: DrmLaunchSetupInput,
-  deps: DrmLaunchSetupDeps
+  deps: DrmLaunchSetupDeps,
+  steps: DrmInstanceSteps
 ): Promise<DrmLaunchSetupResult> {
   const { appId, appFolder } = input
   const bottleLifecycle = await import('../../bridgeBottleLifecycle')
@@ -392,7 +398,7 @@ async function runSetup(
     try {
       running = await (deps.isMacSteamRunning
         ? deps.isMacSteamRunning()
-        : isMacSteamRunning(deps.macSteamProbeTimeoutMs))
+        : steps.isMacSteamRunning(deps.macSteamProbeTimeoutMs))
     } catch (err) {
       running = drmStepError(
         'steam-not-running',
@@ -409,7 +415,7 @@ async function runSetup(
     }
 
     // 2-5. CrossOver allowlist, component, runner, Valve client
-    const downloads = await ensureDrmDownloads(appFolder, deps, progress)
+    const downloads = await ensureDrmDownloads(appFolder, deps, progress, steps)
     if (downloads.status === 'error') {
       return fail(downloads.stage, downloads.error)
     }
@@ -500,9 +506,11 @@ async function runSetup(
 }
 
 /** Never rejects. */
-export async function drmLaunchSetup(
+async function drmLaunchSetupOn(
   input: DrmLaunchSetupInput,
-  deps: DrmLaunchSetupDeps
+  deps: DrmLaunchSetupDeps,
+  steps: DrmInstanceSteps,
+  inFlight: Map<string, Promise<DrmLaunchSetupResult>>
 ): Promise<DrmLaunchSetupResult> {
   try {
     // D-12 mode gate
@@ -535,7 +543,7 @@ export async function drmLaunchSetup(
 
     const existing = inFlight.get(input.appId)
     if (existing) return await existing
-    const promise = runSetup(input, deps)
+    const promise = runSetup(input, deps, steps)
       .catch((err) => drmStepError('bottle-stage', err))
       .finally(() => {
         inFlight.delete(input.appId)
@@ -566,9 +574,10 @@ export type DrmPrefetchResult =
  * still runs every step, and the cached ones are no-ops. Progress goes out as
  * the same 'drm-setup' status. Never rejects.
  */
-export async function prefetchDrmDownloads(
+async function prefetchDrmDownloadsOn(
   input: DrmPrefetchInput,
-  deps: DrmSetupOverrides
+  deps: DrmSetupOverrides,
+  steps: DrmInstanceSteps
 ): Promise<DrmPrefetchResult> {
   try {
     if (
@@ -604,7 +613,7 @@ export async function prefetchDrmDownloads(
         )
       }
     }
-    const downloads = await ensureDrmDownloads(appFolder, deps, progress)
+    const downloads = await ensureDrmDownloads(appFolder, deps, progress, steps)
     if (downloads.status === 'error') {
       const { stage, error } = downloads
       logWarning(
@@ -622,3 +631,33 @@ export async function prefetchDrmDownloads(
     return drmStepError('component-missing', err)
   }
 }
+
+/**
+ * The Steam DRM instance (66.2 D-05/D-15): one per process, built inside
+ * createSteamProcesses. The three single-flight Maps (setup, component, Valve
+ * client) are closure state of it, so a second instance shares no pending work.
+ */
+export function createSteamDrm(deps: { runner: Pick<ProcessRunner, 'run'> }) {
+  const inFlight = new Map<string, Promise<DrmLaunchSetupResult>>()
+  const steps: DrmInstanceSteps = {
+    isMacSteamRunning: createIsMacSteamRunning(deps),
+    ensureComponent:
+      createSteamclientLayerInstall(deps).ensureSteamclientLayerComponent,
+    ensureValveClient: createValveClient(deps).ensureValveClient
+  }
+  return {
+    isMacSteamRunning: steps.isMacSteamRunning,
+    ensureSteamclientLayerComponent: steps.ensureComponent,
+    ensureValveClient: steps.ensureValveClient,
+    drmLaunchSetup: (
+      input: DrmLaunchSetupInput,
+      setupDeps: DrmLaunchSetupDeps
+    ) => drmLaunchSetupOn(input, setupDeps, steps, inFlight),
+    prefetchDrmDownloads: (
+      input: DrmPrefetchInput,
+      prefetchDeps: DrmSetupOverrides
+    ) => prefetchDrmDownloadsOn(input, prefetchDeps, steps)
+  }
+}
+
+export type SteamDrm = ReturnType<typeof createSteamDrm>

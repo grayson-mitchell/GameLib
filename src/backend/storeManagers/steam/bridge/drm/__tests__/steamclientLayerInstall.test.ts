@@ -42,7 +42,17 @@ import {
   steamclientLayerReleasePageUrl
 } from 'common/steamclientLayerCatalogue'
 import { buildDrmPaths, steamclientLayerComponentId } from '../drmPaths'
-import { ensureSteamclientLayerComponent } from '../steamclientLayerInstall'
+import { createRealRunner } from 'backend/testUtils/realRunner'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+import {
+  createRunCodesign,
+  createSteamclientLayerInstall
+} from '../steamclientLayerInstall'
+
+// Every test supplies runCodesign, so the instance's runner is never reached.
+const { ensureSteamclientLayerComponent } = createSteamclientLayerInstall({
+  runner: createScriptedRunner([])
+})
 import { at, defined } from '../../../__tests__/fixtures/indexed'
 
 const BUILD = '26.3.0.39832'
@@ -364,7 +374,17 @@ describe('ensureSteamclientLayerComponent', () => {
   const realCodesign = existsSync('/usr/bin/codesign') ? it : it.skip
   realCodesign('runs the real codesign on a non-Mach-O file', async () => {
     const { entry, archive, data } = synthetic()
-    const r = await run(entry, { fetchArchive: async () => archive })
+    // The one arm that must really sign: the real runner under a fake HOME (D-12(b)).
+    const real = createRealRunner()
+    let r: Awaited<ReturnType<typeof run>>
+    try {
+      r = await run(entry, {
+        fetchArchive: async () => archive,
+        runCodesign: createRunCodesign({ runner: real.runner })
+      })
+    } finally {
+      real.dispose()
+    }
     expect(r.status).toBe('ok')
     expect(
       readFileSync(join(dir(), 'lsteamclient.so')).equals(
@@ -462,6 +482,38 @@ describe('ensureSteamclientLayerComponent', () => {
   })
 })
 
+describe('createRunCodesign', () => {
+  it('runs codesign through the runner with empty stdin, the given bound and a fake HOME', async () => {
+    const runner = createScriptedRunner([
+      { cmd: '/usr/bin/codesign', result: { code: 0, stdout: 'ok' } }
+    ])
+    const r = await createRunCodesign({ runner })(['--remove-signature', 'f'], {
+      timeoutMs: 30000
+    })
+    expect(r).toEqual({ code: 0, stdout: 'ok', stderr: '', timedOut: false })
+    expect(runner.calls[0]?.opts).toMatchObject({
+      stdin: '',
+      timeoutMs: 30000,
+      replaceEnv: true
+    })
+    expect(runner.calls[0]?.env?.HOME).not.toBe(process.env.HOME)
+  })
+  it('maps a timeout and a rejected spawn', async () => {
+    const t = createScriptedRunner([
+      { cmd: '/usr/bin/codesign', result: { code: null, timedOut: true } }
+    ])
+    await expect(
+      createRunCodesign({ runner: t })([], { timeoutMs: 1 })
+    ).resolves.toMatchObject({ code: null, timedOut: true })
+    const e = createScriptedRunner([
+      { cmd: '/usr/bin/codesign', error: { code: 'ENOENT' } }
+    ])
+    await expect(
+      createRunCodesign({ runner: e })([], { timeoutMs: 1 })
+    ).resolves.toMatchObject({ code: null, timedOut: false })
+  })
+})
+
 describe('module hygiene', () => {
   const src = readFileSync(
     join(__dirname, '..', 'steamclientLayerInstall.ts'),
@@ -476,6 +528,9 @@ describe('module hygiene', () => {
     }
     expect(src).toContain('createFakeHomeProfile(')
     expect(src).toContain("'/usr/bin/codesign'")
+  })
+  it('has no child_process import', () => {
+    expect(src).not.toContain('child_process')
   })
   it('leaves no abort controller registered after import', () => {
     expect(hasAbortController(`drm-steamclient-layer:${BUILD}`)).toBe(false)

@@ -44,13 +44,22 @@ import {
   ValveFetchText,
   ValveFetchToFile,
   ValveUnzipRunner,
-  ensureValveClient,
+  createRunUnzip,
+  createValveClient,
   isAllowedValveUrl,
   parseValveClientManifest,
   valveManifestUrl,
   valvePackageUrl
 } from '../valveClient'
 import { at } from '../../../__tests__/fixtures/indexed'
+import { createRealRunner } from 'backend/testUtils/realRunner'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
+
+// The unzip integration tests must really extract the fixture zips, so they run the real
+// runner under a fake HOME (D-12(b)); every other path never reaches unzip.
+const realRunner = createRealRunner()
+const { ensureValveClient } = createValveClient({ runner: realRunner.runner })
+afterAll(() => realRunner.dispose())
 
 const FIXTURES = join(__dirname, 'fixtures')
 const MANIFEST = readFileSync(join(FIXTURES, 'steam_client_win64.vdf'), 'utf8')
@@ -514,5 +523,51 @@ describe('ensureValveClient', () => {
     })
     expect(hasAbortController('drm-valve-client:manifest')).toBe(false)
     expect(hasAbortController('drm-valve-client:package')).toBe(false)
+  })
+
+  it('runs unzip through the runner with empty stdin and the 120 s bound', async () => {
+    const runner = createScriptedRunner([
+      { cmd: '/usr/bin/unzip', result: { code: 1 } }
+    ])
+    const { ensureValveClient: scripted } = createValveClient({ runner })
+    const r = await scripted({ appFolder }, fakes('bins_win64.fixture.zip'))
+    expect(r).toMatchObject({ status: 'error', step: 'valve-verify' })
+    const opts = runner.calls[0]?.opts as {
+      stdin: string
+      timeoutMs: number
+      replaceEnv: boolean
+    }
+    expect(opts.stdin).toBe('')
+    expect(opts.timeoutMs).toBe(120000)
+    expect(opts.replaceEnv).toBe(true)
+  })
+
+  it("a second instance does not share the first one's pending fetch", async () => {
+    const hang = () => ({
+      fetchText: jest.fn(() => new Promise<string>(() => undefined)),
+      fetchToFile: jest.fn()
+    })
+    const a = createValveClient({ runner: createScriptedRunner([]) })
+    const b = createValveClient({ runner: createScriptedRunner([]) })
+    const fa = hang()
+    const fb = hang()
+    const fa2 = hang()
+    void a.ensureValveClient({ appFolder }, fa)
+    void a.ensureValveClient({ appFolder }, fa2)
+    void b.ensureValveClient({ appFolder }, fb)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(fa.fetchText).toHaveBeenCalledTimes(1)
+    expect(fa2.fetchText).not.toHaveBeenCalled()
+    expect(fb.fetchText).toHaveBeenCalledTimes(1)
+    callAllAbortControllers()
+  })
+
+  it('createRunUnzip maps a rejected spawn to a null exit', async () => {
+    const runner = createScriptedRunner([
+      { cmd: '/usr/bin/unzip', error: { code: 'ENOENT' } }
+    ])
+    await expect(
+      createRunUnzip({ runner })(['-l', 'x'], { timeoutMs: 1000 })
+    ).resolves.toMatchObject({ code: null, timedOut: false })
   })
 })

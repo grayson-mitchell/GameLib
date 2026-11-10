@@ -27,7 +27,6 @@
  * the app path constants either: the caller passes `appFolder` (56-04).
  */
 
-import { spawn } from 'child_process'
 import { createHash } from 'crypto'
 import { createReadStream, promises as fsp } from 'fs'
 import { join } from 'path'
@@ -41,6 +40,7 @@ import {
 } from 'common/steamclientLayerCatalogue'
 import { readOverlayTarGz } from 'backend/knownFixOverlayArchive'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import type { ProcessRunner } from 'backend/process/types'
 import { createFakeHomeProfile } from 'backend/testUtils/fakeHomeProfile'
 import {
   createAbortController,
@@ -107,10 +107,6 @@ type Verify = { ok: true } | { ok: false; reason: string }
 const errText = (err: unknown) =>
   err instanceof Error ? err.message : String(err)
 
-function unrefHandle(handle: unknown): void {
-  ;(handle as { unref?: () => void } | null | undefined)?.unref?.()
-}
-
 async function isRealDir(path: string): Promise<boolean> {
   const st = await fsp.lstat(path)
   return st.isDirectory() && !st.isSymbolicLink()
@@ -149,49 +145,35 @@ const defaultFetchArchive: SteamclientLayerArchiveFetch = async (
   return Buffer.from(response.data)
 }
 
-const defaultRunCodesign: CodesignRunner = async (args, { timeoutMs }) => {
-  // codesign needs no user profile, so it gets the isolated half of the
-  // two-profile rule. The env comes from createFakeHomeProfile().childEnv()
-  // and is never a hand-rolled literal.
-  const profile = createFakeHomeProfile({ prefix: 'gamelib-codesign-' })
-  let timer: NodeJS.Timeout | undefined
-  try {
-    return await new Promise((resolve) => {
-      let stdout = ''
-      let stderr = ''
-      let settled = false
-      let timedOut = false
-      const done = (code: number | null) => {
-        if (settled) return
-        settled = true
-        resolve({ code, stdout, stderr, timedOut })
-      }
-      const child = spawn('/usr/bin/codesign', [...args], {
+/**
+ * codesign on the process runner. codesign needs no user profile, so it gets the
+ * isolated half of the two-profile rule (createFakeHomeProfile env, replaceEnv).
+ * stdin is '' so no prompt can hold the 30 s bound.
+ */
+export function createRunCodesign(deps: {
+  runner: Pick<ProcessRunner, 'run'>
+}): CodesignRunner {
+  return async (args, { timeoutMs }) => {
+    const profile = createFakeHomeProfile({ prefix: 'gamelib-codesign-' })
+    try {
+      const result = await deps.runner.run('/usr/bin/codesign', [...args], {
         env: profile.childEnv(),
-        stdio: ['ignore', 'pipe', 'pipe'],
-        windowsHide: true
+        replaceEnv: true,
+        stdin: '',
+        timeoutMs,
+        maxBufferBytes: CODESIGN_OUTPUT_CAP
       })
-      unrefHandle(child)
-      unrefHandle(child.stdout)
-      unrefHandle(child.stderr)
-      child.stdout?.on('data', (d: Buffer) => {
-        if (stdout.length < CODESIGN_OUTPUT_CAP) stdout += d.toString('utf8')
-      })
-      child.stderr?.on('data', (d: Buffer) => {
-        if (stderr.length < CODESIGN_OUTPUT_CAP) stderr += d.toString('utf8')
-      })
-      timer = setTimeout(() => {
-        timedOut = true
-        child.kill('SIGKILL')
-        done(null)
-      }, timeoutMs)
-      timer.unref?.()
-      child.on('error', () => done(null))
-      child.on('close', (code) => done(code))
-    })
-  } finally {
-    if (timer) clearTimeout(timer)
-    profile.dispose()
+      return {
+        code: result.code,
+        stdout: result.stdout,
+        stderr: result.stderr,
+        timedOut: result.timedOut
+      }
+    } catch {
+      return { code: null, stdout: '', stderr: '', timedOut: false }
+    } finally {
+      profile.dispose()
+    }
   }
 }
 
@@ -322,13 +304,12 @@ function ready(
   }
 }
 
-const inFlight = new Map<string, Promise<Ready>>()
-
 async function installOnce(
   entry: SteamclientLayerCatalogueEntry,
   componentRoot: string,
   target: string,
-  deps: SteamclientLayerInstallDeps
+  deps: SteamclientLayerInstallDeps,
+  defaultRunCodesign: CodesignRunner
 ): Promise<Ready> {
   const { id } = entry
   let tempDir: string | undefined
@@ -457,60 +438,77 @@ async function installOnce(
   }
 }
 
-/** Installs or verifies the pinned component. Never rejects. */
-export async function ensureSteamclientLayerComponent(
-  opts: { appFolder: string; crossoverBuild: string },
-  deps: SteamclientLayerInstallDeps = {}
-): Promise<Ready> {
-  const result = await resolveComponent(opts, deps)
-  if (result.status === 'error') {
-    logWarning(
-      `steamclient-layer: ${result.step} ${result.cause}`,
-      LogPrefix.Steam
-    )
-  }
-  return result
-}
+/**
+ * The component step on one runner. The single-flight Map is closure state of
+ * the instance (66.2 D-15).
+ */
+export function createSteamclientLayerInstall(deps: {
+  runner: Pick<ProcessRunner, 'run'>
+}) {
+  const inFlight = new Map<string, Promise<Ready>>()
+  const defaultRunCodesign = createRunCodesign(deps)
 
-async function resolveComponent(
-  opts: { appFolder: string; crossoverBuild: string },
-  deps: SteamclientLayerInstallDeps
-): Promise<Ready> {
-  try {
-    const paths = buildDrmPaths(opts.appFolder)
-    if (!paths) return drmStepError('component-missing', 'invalid app folder')
-    const componentId = steamclientLayerComponentId(opts.crossoverBuild)
-    if (!componentId) {
-      return drmStepError('component-missing', 'invalid CrossOver build')
-    }
-    const entry = (deps.lookupEntry ?? lookupSteamclientLayer)(
-      opts.crossoverBuild
-    )
-    if (!entry) {
-      return drmStepError(
-        'component-missing',
-        `no steamclient-layer component for CrossOver ${opts.crossoverBuild}`
+  /** Installs or verifies the pinned component. Never rejects. */
+  async function ensureSteamclientLayerComponent(
+    opts: { appFolder: string; crossoverBuild: string },
+    stepDeps: SteamclientLayerInstallDeps = {}
+  ): Promise<Ready> {
+    const result = await resolveComponent(opts, stepDeps)
+    if (result.status === 'error') {
+      logWarning(
+        `steamclient-layer: ${result.step} ${result.cause}`,
+        LogPrefix.Steam
       )
     }
-    const bad = checkEntry(entry, opts.crossoverBuild, componentId)
-    if (bad) {
-      return drmStepError(
-        'component-verify',
-        'catalogue entry inconsistent: ' + bad
-      )
-    }
-    const target = paths.componentDir(componentId)
-    if (!target)
-      return drmStepError('component-missing', 'invalid component id')
-
-    const pending = inFlight.get(target)
-    if (pending) return await pending
-    const run = installOnce(entry, paths.componentRoot, target, deps).finally(
-      () => inFlight.delete(target)
-    )
-    inFlight.set(target, run)
-    return await run
-  } catch (err) {
-    return drmStepError('component-verify', err)
+    return result
   }
+
+  async function resolveComponent(
+    opts: { appFolder: string; crossoverBuild: string },
+    stepDeps: SteamclientLayerInstallDeps
+  ): Promise<Ready> {
+    try {
+      const paths = buildDrmPaths(opts.appFolder)
+      if (!paths) return drmStepError('component-missing', 'invalid app folder')
+      const componentId = steamclientLayerComponentId(opts.crossoverBuild)
+      if (!componentId) {
+        return drmStepError('component-missing', 'invalid CrossOver build')
+      }
+      const entry = (stepDeps.lookupEntry ?? lookupSteamclientLayer)(
+        opts.crossoverBuild
+      )
+      if (!entry) {
+        return drmStepError(
+          'component-missing',
+          `no steamclient-layer component for CrossOver ${opts.crossoverBuild}`
+        )
+      }
+      const bad = checkEntry(entry, opts.crossoverBuild, componentId)
+      if (bad) {
+        return drmStepError(
+          'component-verify',
+          'catalogue entry inconsistent: ' + bad
+        )
+      }
+      const target = paths.componentDir(componentId)
+      if (!target)
+        return drmStepError('component-missing', 'invalid component id')
+
+      const pending = inFlight.get(target)
+      if (pending) return await pending
+      const run = installOnce(
+        entry,
+        paths.componentRoot,
+        target,
+        stepDeps,
+        defaultRunCodesign
+      ).finally(() => inFlight.delete(target))
+      inFlight.set(target, run)
+      return await run
+    } catch (err) {
+      return drmStepError('component-verify', err)
+    }
+  }
+
+  return { ensureSteamclientLayerComponent }
 }

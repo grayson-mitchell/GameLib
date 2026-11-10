@@ -11,6 +11,7 @@
  */
 import { sendFrontendMessage } from '../../ipc'
 import type { Clock, ProcessRunner } from '../../process/types'
+import { createSteamDrm } from './bridge/drm/drmLaunchSetup'
 import { createRunningPoll, readRunningAppId } from './library/runningPoll'
 import {
   createMacSteamOffline,
@@ -37,6 +38,8 @@ export function createSteamProcesses(deps: {
       runner,
       clock
     }),
+    // The Steam DRM spawners (pgrep, codesign, unzip) and their three single-flight Maps.
+    drm: createSteamDrm({ runner }),
     runningPoll: createRunningPoll({
       clock,
       readRunningAppId: () => readRunningAppId({ runner }, platform),

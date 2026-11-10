@@ -24,7 +24,6 @@ import { getBottleDir } from 'backend/engine/bottlePrimitives'
 import { type OverlayLaunchPayload } from './bridge/overlay/overlayLaunch'
 import { placeShimForGame } from './bridge/shimGenerate'
 import { detectLaunchDrmWrapper } from './bridge/drm/drmScanExe'
-import { drmLaunchSetup } from './bridge/drm/drmLaunchSetup'
 import {
   resolveBridgeMode,
   drmStepError
@@ -194,7 +193,7 @@ export async function launchBridgeGameBody(
     bridgeBottleSettings = engine.settings
   }
   // No signal is passed: the bridge launch has no abort controller.
-  const drm = await drmLaunchSetup(
+  const drm = await steamGame.deps.steamProcesses.drm.drmLaunchSetup(
     {
       appId: steamGame.appId,
       appFolder,

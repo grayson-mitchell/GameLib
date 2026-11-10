@@ -47,10 +47,7 @@ import type { EngineSelection } from 'backend/engine/engineTypes'
 import { noteSteamAuthTrigger } from './authTrigger'
 import { detectLaunchDrmWrapper } from './bridge/drm/drmScanExe'
 import { detectSteamDrmInPe } from './bridge/peScan'
-import {
-  prefetchDrmDownloads,
-  type DrmLaunchReady
-} from './bridge/drm/drmLaunchSetup'
+import { type DrmLaunchReady } from './bridge/drm/drmLaunchSetup'
 import {
   resolveBridgeMode,
   formatDrmNoticeLine,
@@ -864,7 +861,7 @@ export async function prefetchBridgeDrmDownloads(
       : 'tcp'
   )
   if (drmWrapper !== 'steamstub') return
-  await prefetchDrmDownloads(
+  await steamGame.deps.steamProcesses.drm.prefetchDrmDownloads(
     {
       appId: steamGame.appId,
       appFolder,

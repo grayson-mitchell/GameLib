@@ -278,7 +278,19 @@ const runWineCommand = jest.fn()
 // quick 261111-9mj: the steam manager carries the per-boot launch-watch registry.
 const launchWatches: SteamLaunchWatchRegistry = new Map()
 const steamTestDeps = createTestManagerDeps({
-  steamProcesses: createInertSteamProcesses(),
+  steamProcesses: createInertSteamProcesses({
+    // The DRM instance: its launch setup is the jest.fn()-backed stand-in the
+    // '../bridge/drm/drmLaunchSetup' mock below exports (not-applicable by default).
+    drm: {
+      drmLaunchSetup: (...args: unknown[]) =>
+        (
+          jest.requireMock('../bridge/drm/drmLaunchSetup') as {
+            drmLaunchSetup: (...a: unknown[]) => Promise<unknown>
+          }
+        ).drmLaunchSetup(...args),
+      prefetchDrmDownloads: () => Promise.resolve({ status: 'not-applicable' })
+    } as never
+  }),
   stores: createTestStores({ steam: steamStoresModule }),
   commandRunner: { runWineCommand } as never,
   libraryManagers: createTestManagers({
