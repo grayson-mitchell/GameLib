@@ -1,8 +1,11 @@
+import { join } from 'path'
+
 import { createCaptureLog } from 'backend/testUtils/captureLog'
 import { createFakeClock } from 'backend/testUtils/fakeClock'
 import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import type { ScriptStep } from 'backend/testUtils/scriptedRunner'
 
+import { windowsSystem32Path } from '../runningFromFolder'
 import {
   cancelSteamLaunchWatch,
   startSteamLaunchWatch,
@@ -23,6 +26,26 @@ const TIMEOUT: ScriptStep = {
   result: { code: null, timedOut: true, stdout: '' }
 }
 
+const WIN_LIB = 'C:\\Steam'
+const WIN_GAME = join(WIN_LIB, 'steamapps', 'common', 'WazHack', 'WazHack.exe')
+const WIN_PS = windowsSystem32Path(
+  'WindowsPowerShell',
+  'v1.0',
+  'powershell.exe'
+)
+// 9p6 fixture style: CRLF-joined `<pid> <exe>` lines, host-agnostic
+const winList = (pids: number[]): ScriptStep => ({
+  cmd: WIN_PS,
+  result: {
+    code: 0,
+    stdout: pids.map((p) => `${p} ${WIN_GAME}`).join('\r\n') + '\r\n'
+  }
+})
+const WIN_FAIL: ScriptStep = {
+  cmd: WIN_PS,
+  result: { code: 1, stdout: '' }
+}
+
 function setup(
   script: ScriptStep[],
   o: {
@@ -37,6 +60,7 @@ function setup(
   const log = createCaptureLog()
   const registry: SteamLaunchWatchRegistry = new Map()
   const sent: string[] = []
+  const state = { running: 0, alive: new Set<number>() }
   const deps: SteamLaunchWatchDeps = {
     runner,
     clock,
@@ -50,9 +74,11 @@ function setup(
     selfPids: [900],
     registry,
     sendStatus: (_id, status) => void sent.push(status),
-    pollerReports: o.poller ?? (() => false)
+    pollerReports: o.poller ?? (() => false),
+    readRunningAppId: () => Promise.resolve(state.running),
+    pidAlive: (pid) => state.alive.has(pid)
   }
-  return { deps, runner, clock, log, registry, sent }
+  return { deps, runner, clock, log, registry, sent, state }
 }
 
 async function tick(clock: ReturnType<typeof createFakeClock>, n = 1) {
@@ -61,6 +87,21 @@ async function tick(clock: ReturnType<typeof createFakeClock>, n = 1) {
     clock.advance(2000)
     for (let j = 0; j < 10; j++) await Promise.resolve()
   }
+}
+
+// 500 ms steps: the win32 tracking phase re-arms its timer every 500 ms
+async function tick500(clock: ReturnType<typeof createFakeClock>, ms: number) {
+  for (let moved = 0; moved < ms; moved += 500) {
+    for (let j = 0; j < 20; j++) await Promise.resolve()
+    clock.advance(500)
+    for (let j = 0; j < 20; j++) await Promise.resolve()
+  }
+}
+
+function setupWin(script: ScriptStep[]) {
+  const t = setup(script, { platform: 'win32', libs: [WIN_LIB] })
+  const psCalls = () => t.runner.calls.filter((c) => c.cmd === WIN_PS).length
+  return { ...t, psCalls }
 }
 
 describe('steamLaunchWatch', () => {
@@ -116,12 +157,92 @@ describe('steamLaunchWatch', () => {
     expect(b.registry.size).toBe(0)
   })
 
-  it('T6 win32 is unsupported', () => {
-    const { deps, runner, registry } = setup([], { platform: 'win32' })
-    const r = startSteamLaunchWatch(deps, '264160')
-    expect(r.status).toBe('unsupported-platform')
-    expect(runner.calls).toHaveLength(0)
+  it('W1 (a9g) win32: gated scan finds the game, pid liveness is free, one confirm scan sends done', async () => {
+    const { deps, clock, registry, sent, state, psCalls } = setupWin([
+      winList([42]),
+      winList([])
+    ])
+    const { status, settled } = startSteamLaunchWatch(deps, '264160')
+    expect(status).toBe('started')
+    await tick500(clock, 2000) // RunningAppID reads 0: nothing is spawned
+    expect(psCalls()).toBe(0)
+    expect(sent).toEqual([])
+    state.running = 264160
+    state.alive.add(42)
+    await tick500(clock, 2000)
+    expect(sent).toEqual(['playing'])
+    expect(psCalls()).toBe(1)
+    await tick500(clock, 10000) // alive: no further PowerShell
+    expect(psCalls()).toBe(1)
+    clock.assertNoKeepAlive()
+    state.alive.delete(42)
+    await tick500(clock, 1000)
+    await settled
+    expect(sent).toEqual(['playing', 'done'])
+    expect(psCalls()).toBe(2)
     expect(registry.size).toBe(0)
+    expect(clock.pendingCount()).toBe(0)
+  })
+
+  it('W2 (a9g) win32: a successor pid found by the confirm scan defers done', async () => {
+    const { deps, clock, sent, state, psCalls } = setupWin([
+      winList([42]),
+      winList([77]),
+      winList([])
+    ])
+    const { settled } = startSteamLaunchWatch(deps, '264160')
+    state.running = 264160
+    state.alive.add(42).add(77)
+    await tick500(clock, 2000)
+    expect(sent).toEqual(['playing'])
+    state.alive.delete(42)
+    await tick500(clock, 3000)
+    expect(psCalls()).toBe(2)
+    expect(sent).toEqual(['playing'])
+    state.alive.delete(77)
+    await tick500(clock, 1000)
+    await settled
+    expect(sent).toEqual(['playing', 'done'])
+    expect(psCalls()).toBe(3)
+  })
+
+  it('W3 (a9g) win32: RunningAppID never matching spawns no PowerShell across the start window', async () => {
+    const { deps, clock, registry, sent, psCalls } = setupWin([])
+    const { settled } = startSteamLaunchWatch(deps, '264160')
+    await tick500(clock, 92000)
+    await settled
+    expect(psCalls()).toBe(0)
+    expect(sent).toEqual([])
+    expect(registry.size).toBe(0)
+  })
+
+  it('W4 (a9g) win32: Steam reports the appId but 5 scans are empty: hand back with no status', async () => {
+    const { deps, clock, registry, sent, state, psCalls } = setupWin([
+      { ...winList([]), repeat: true }
+    ])
+    state.running = 264160
+    const { settled } = startSteamLaunchWatch(deps, '264160')
+    await tick500(clock, 12000)
+    await settled
+    expect(psCalls()).toBe(5)
+    expect(sent).toEqual([])
+    expect(registry.size).toBe(0)
+  })
+
+  it('W5 (a9g) win32: 10 failed confirm scans after playing send exactly one done', async () => {
+    const { deps, clock, sent, state } = setupWin([
+      winList([42]),
+      { ...WIN_FAIL, repeat: true }
+    ])
+    state.running = 264160
+    state.alive.add(42)
+    const { settled } = startSteamLaunchWatch(deps, '264160')
+    await tick500(clock, 2000)
+    expect(sent).toEqual(['playing'])
+    state.alive.delete(42)
+    await tick500(clock, 8000)
+    await settled
+    expect(sent).toEqual(['playing', 'done'])
   })
 
   it('T7 relaunch dedupes and re-asserts playing', async () => {

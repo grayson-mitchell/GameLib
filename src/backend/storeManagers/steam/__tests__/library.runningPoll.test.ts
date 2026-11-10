@@ -18,6 +18,7 @@ import {
   readMacRunningAppId,
   readRunningAppId
 } from '../library/runningPoll'
+import { windowsSystem32Path } from '../runningFromFolder'
 import {
   startSteamLaunchWatch,
   type SteamLaunchWatchDeps,
@@ -291,13 +292,47 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
     }
   }
 
+  // The win32 watch advances in 500 ms alive ticks, so its chained timers need 500 ms steps too.
+  async function step500(
+    clock: ReturnType<typeof createFakeClock>,
+    ms: number
+  ) {
+    for (let moved = 0; moved < ms; moved += 500) {
+      for (let i = 0; i < 20; i++) await Promise.resolve()
+      clock.advance(500)
+      for (let i = 0; i < 20; i++) await Promise.resolve()
+    }
+  }
+
+  const WIN_LIB = 'C:\\Steam'
+  const WIN_GAME = join(
+    WIN_LIB,
+    'steamapps',
+    'common',
+    'WazHack',
+    'WazHack.exe'
+  )
+  const WIN_PS = windowsSystem32Path(
+    'WindowsPowerShell',
+    'v1.0',
+    'powershell.exe'
+  )
+  const winList = (pids: number[], repeat?: true): ScriptStep => ({
+    cmd: WIN_PS,
+    result: {
+      code: 0,
+      stdout: pids.map((p) => `${p} ${WIN_GAME}`).join('\r\n') + '\r\n'
+    },
+    ...(repeat ? { repeat } : {})
+  })
+
   function setup(script: ScriptStep[], platform: NodeJS.Platform = 'darwin') {
     const clock = createFakeClock()
     const runner = createScriptedRunner(script)
     const log = createCaptureLog()
     const registry: SteamLaunchWatchRegistry = new Map()
     const frames: Frame[] = []
-    const state = { running: 0 }
+    const state = { running: 0, alive: new Set<number>() }
     const poll = createRunningPoll({
       clock,
       readRunningAppId: () => Promise.resolve(state.running),
@@ -308,7 +343,8 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
       clock,
       platform,
       log,
-      getSteamLibraries: () => Promise.resolve([LIB]),
+      getSteamLibraries: () =>
+        Promise.resolve([platform === 'win32' ? WIN_LIB : LIB]),
       readAcfInstalldir: () => 'WazHack',
       sanitizeInstalldir: (c) => c,
       readExe: jest.fn(),
@@ -317,7 +353,9 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
       registry,
       sendStatus: (_id, status) => void frames.push({ src: 'watch', status }),
       // Mirrors steamLaunchedDeps.ts: the watch hands status to the poller once it reports the id.
-      pollerReports: (appId) => String(poll.lastAppId()) === appId
+      pollerReports: (appId) => String(poll.lastAppId()) === appId,
+      readRunningAppId: () => Promise.resolve(state.running),
+      pidAlive: (pid) => state.alive.has(pid)
     }
     return { clock, runner, registry, frames, state, poll, watchDeps }
   }
@@ -384,38 +422,29 @@ describe('poller + launch watch coexistence (quick 261111-7wo)', () => {
     poll.stop()
   })
 
-  it('C3 win32: the watch is unsupported and the poller alone sends [playing, done]', async () => {
-    const reg = (stdout: string, repeat?: true): ScriptStep => ({
-      cmd: 'reg',
-      argv: REG_ARGV,
-      result: { code: 0, stdout },
-      ...(repeat ? { repeat } : {})
-    })
-    const { clock, runner, registry, frames, watchDeps } = setup(
-      [
-        reg('RunningAppID    REG_DWORD    0x407e0'),
-        reg('RunningAppID    REG_DWORD    0x0', true)
-      ],
+  it('C3 win32 (a9g): the watch shows playing and sends done within 1 s of the pid dying', async () => {
+    const { clock, registry, frames, state, poll, watchDeps } = setup(
+      [winList([42]), winList([])],
       'win32'
     )
-    const poll = createRunningPoll({
-      clock,
-      readRunningAppId: () => readRunningAppId({ runner }, 'win32'),
-      notify: (_id, status) => void frames.push({ src: 'poller', status })
-    })
+    state.running = Number(APP_ID)
+    state.alive.add(42)
+    poll.start() // default 5000 ms
+    const { settled } = startSteamLaunchWatch(watchDeps, APP_ID)
 
-    expect(startSteamLaunchWatch(watchDeps, APP_ID).status).toBe(
-      'unsupported-platform'
-    )
-    expect(registry.size).toBe(0)
-
-    poll.start()
-    await step(clock, 5000)
-    await step(clock, 5000)
-    expect(frames).toEqual([
-      { src: 'poller', status: 'playing' },
-      { src: 'poller', status: 'done' }
+    await step500(clock, 2000) // t = 2000: the gated scan finds pid 42
+    expect(frames.filter((f) => f.src === 'watch')).toEqual([
+      { src: 'watch', status: 'playing' }
     ])
+    await step500(clock, 8000) // t = 10000: still alive
+    state.alive.delete(42)
+    await step500(clock, 1000) // t = 11000: one confirm scan, then done
+    await settled
+    expect(frames.filter((f) => f.src === 'watch')).toEqual([
+      { src: 'watch', status: 'playing' },
+      { src: 'watch', status: 'done' }
+    ])
+    expect(registry.size).toBe(0)
     poll.stop()
   })
 })
