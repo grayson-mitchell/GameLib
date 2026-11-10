@@ -252,7 +252,7 @@ export function ensureHelperSpawned(
 
   // 261027-aue: same appid rule and own-stream rule as LISTEN/READY (T-aue-01).
   // The err text is not logged again -- the per-line relay already logs it.
-  let ownEntry: BridgeHelperEntry | undefined
+  const own: { entry?: BridgeHelperEntry } = {}
   const handleInitFailedLine = (line: string) => {
     const match = INIT_FAILED_LINE.exec(line)
     if (!match) return
@@ -261,8 +261,8 @@ export function ensureHelperSpawned(
     if (errText === undefined) return
     // Written onto THIS child's own entry object, not looked up through the map: the trailing
     // line is flushed when stdio closes, which can be after `exited` already dropped the map
-    // entry (B-WR-1). `ownEntry` is only ever this spawn's entry, so the own-stream rule holds.
-    if (ownEntry) ownEntry.initError = errText
+    // entry (B-WR-1). `own.entry` is only ever this spawn's entry, so the own-stream rule holds.
+    if (own.entry) own.entry.initError = errText
   }
 
   // T-k6o-01: same appid rule as the LISTEN line (T-51-05), and only from this
@@ -386,7 +386,7 @@ export function ensureHelperSpawned(
     secret,
     lastInviteRequestMs: 0
   }
-  ownEntry = entry
+  own.entry = entry
   helpers.set(appId, entry)
   return entry
 }
