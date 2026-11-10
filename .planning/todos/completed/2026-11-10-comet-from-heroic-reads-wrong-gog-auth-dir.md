@@ -37,3 +37,7 @@ Check comet's CLI for an explicit auth/config path option, or an env var such as
 or `XDG_CONFIG_HOME`, and pass GameLib's gog_store location. Otherwise use comet's token-based mode
 (`--access-token/--refresh-token/--user-id`) from the gog configStore. Add a test that pins the argv/env.
 Verify live: `pgrep -fl comet` shows comet running while a GOG game plays.
+
+## Resolution
+
+Fixed in quick 261110-vdk. comet v0.2.0 has no config-path option or env override (`--from-heroic` hard-codes `heroic/gog_store/auth.json`), so GameLib now spawns comet in token mode from `GOGUser.getCredentials` (access token, refresh token, Galaxy `user_id`, and username). comet is skipped with a warning when credentials are unavailable (offline or signed out), and the game still launches. comet's stdout and stderr are token-redacted before they reach the comet runner log. Tests pinning the argv and the skip paths live in `gogImportGame.test.ts` and C7 in `quitTeardownWiring.test.ts`. Accepted trade-off: the tokens are visible in comet's argv to `ps` for the life of the game session. The operator live check (`pgrep -fl comet` while a GOG game plays, and no panic in the comet runner log) is pending and not blocking.
