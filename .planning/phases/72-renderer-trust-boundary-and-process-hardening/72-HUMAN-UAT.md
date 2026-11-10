@@ -3,7 +3,7 @@ status: partial
 phase: 72-renderer-trust-boundary-and-process-hardening
 source: [72-VERIFICATION.md]
 started: 2026-11-08T17:30:00+13:00
-updated: 2026-11-08T17:30:00+13:00
+updated: 2026-11-11T17:00:00+13:00
 ---
 
 ## Current Test
@@ -25,7 +25,7 @@ result: pending (operator's Windows PC)
 ### 3. Windows compile of 72-12 on CI
 
 expected: After the next push, the rust-test windows-latest leg is green with the Job Object code compiled.
-result: pending (not yet pushed)
+result: pass. Rust test run 42952556201 on 847c0849f (2026-11-11): the cargo-test (windows-latest) job passed with the 72-12 Job Object code (dadef07e7) compiled in.
 
 ### 4. Dead-sidecar Restart in a packaged build
 
@@ -35,9 +35,9 @@ result: pending (dev-mode run relaunched process and sidecar; blank window attri
 ## Summary
 
 total: 4
-passed: 0
+passed: 1
 issues: 0
-pending: 4
+pending: 3
 skipped: 0
 blocked: 0
 
