@@ -1133,9 +1133,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
         }
         state.services.runner = prebuilt.runner ?? ctx.runner
         state.services.clock = ctx.clock
-        // Built once per boot; starts nothing (the poller's interval starts in the
-        // 'steam-running-poll' step, the monitors spawn per polled install), so the exit contract
-        // holds.
+        // Built once per boot; starts nothing (the 'steam-running-poll' step arms the poller's
+        // interval, the monitors spawn per polled install), so the exit contract holds.
         state.services.steamProcesses =
           prebuilt.steamProcesses ??
           createSteamProcesses({

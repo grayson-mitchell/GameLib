@@ -2,12 +2,14 @@
  * quick 261111-9mj: per-launch process watcher for Steam-launched games
  * (steam://rungameid on macOS/Linux).
  *
- * Why: macOS registry.vdf has no RunningAppID, and the global RunningAppID
- * poller is never started under Tauri (initStoreManagers is not called), so
- * nothing ever told the frontend such a game was playing and the Stop button
- * (261111-9b7) was unreachable. This watch polls the game's install folder
- * for its PIDs and sends `playing` when they appear and one `done` when they
- * are all gone.
+ * Why: the global RunningAppID poller now runs from boot (quick 261111-7wo),
+ * but macOS registry.vdf carries no RunningAppID (measured 2026-11-11, WazHack
+ * 264160), so this watch remains the Playing signal for rungameid launches and
+ * keeps the Stop button (261111-9b7) reachable. win32 launches are covered by
+ * the poller, and this watch returns unsupported-platform there. When the
+ * poller does report the appId, pollerReports hands status to it. This watch
+ * polls the game's install folder for its PIDs and sends `playing` when they
+ * appear and one `done` when they are all gone.
  *
  * Bounds: a start window (nothing is sent if no PID ever appears), a ps
  * timeout per scan, a consecutive-failure cap, and only unref'd timers from
