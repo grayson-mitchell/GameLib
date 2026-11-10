@@ -47,4 +47,4 @@ result: pending (operator's Windows PC)
 ### 7. Windows: ending the shell reaps the sidecar tree
 
 expected: (D-20) With the same children running, end the GameLib shell process from Task Manager and the same children die with it (the kill-on-close Job Object fires on shell crash).
-result: pending (operator's Windows PC)
+result: pass. Operator's Windows PC, 2026-11-11, `pnpm tauri:dev` at 076fd3044: with GOG Balrum (1769415595) running under gogdl, `Stop-Process -Name gamelib-shell -Force` closed the game window at once. Killing a parent does not kill its children on Windows, so the game ending means the Job Object reaped it. A `Get-Process` run immediately afterwards still listed two gogdl.exe PIDs (PyInstaller launcher and child). Both were gone within about a minute and no timed re-check was run, so how fast gogdl is torn down was not measured.

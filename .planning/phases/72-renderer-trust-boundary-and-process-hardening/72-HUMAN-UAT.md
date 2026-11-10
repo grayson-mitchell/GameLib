@@ -20,7 +20,7 @@ result: pending (operator's Windows PC)
 ### 2. Windows: ending the shell process reaps the sidecar tree
 
 expected: (D-20, 72-UAT item 7) With the same children running, end the GameLib shell in Task Manager and the children die with it (kill-on-close Job Object).
-result: pending (operator's Windows PC)
+result: pass. See 72-UAT item 7 (2026-11-11): Balrum closed the moment the shell was killed. gogdl.exe was still listed by an immediate `Get-Process` and gone within about a minute; its teardown time was not measured.
 
 ### 3. Windows compile of 72-12 on CI
 
@@ -35,9 +35,9 @@ result: pending (dev-mode run relaunched process and sidecar; blank window attri
 ## Summary
 
 total: 4
-passed: 1
+passed: 2
 issues: 0
-pending: 3
+pending: 2
 skipped: 0
 blocked: 0
 
