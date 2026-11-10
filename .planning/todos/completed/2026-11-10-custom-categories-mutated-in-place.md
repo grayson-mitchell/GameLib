@@ -24,3 +24,12 @@ so tests must seed `customCategories` themselves.
 
 Build a new object in each action (`{ ...customCategories, [name]: [] }`, and a
 filtered copy for delete/rename) before `set` and `configStore.set`.
+
+## Resolution
+
+Closed by quick 261110-v11.
+
+- setCustomCategory, removeCustomCategory, renameCustomCategory (and addGameToCustomCategory's array push) now build a fresh object/array and pass that same object to `set` and `configStore.set`.
+- Regression tests freeze the prior object and assert a new reference with no mutation, plus a reset test proving the store's initial `{}` stays empty.
+- The beforeEach `customCategories: {}` seed was kept as explicit isolation, with an updated comment.
+- Behaviour note: renaming a category to its own name now keeps it (the old assign-then-delete removed it).
