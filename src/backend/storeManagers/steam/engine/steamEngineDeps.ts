@@ -27,6 +27,7 @@ import {
   getBridgeBottleSettings,
   isBridgeBottleReady
 } from '../bridgeBottle'
+import { steamWineToolsBottle } from '../bridgeWineTools'
 import { readBridgeVerdict } from '../bridge/bridgeVerdict'
 import type { SteamStoresDeps } from '../library/installRoot'
 import { getBottleProcessMonitorPhase } from '../bottleProcessMonitor'
@@ -124,6 +125,15 @@ export function steamEngineStateDeps(
     overrideEligible: (_id, bottle) =>
       bottle === own && !isDrmModeFromVerdict(readBridgeVerdict(deps, appId)),
     overlayEligible: true,
+    // isMac true: getEngineState already returns null off macOS (quick 261110-vi4).
+    wineToolsEligible: (_id, bottle) =>
+      bottle !== null &&
+      bottle ===
+        steamWineToolsBottle(appId, {
+          isMac: true,
+          ownBottleName: bridgeBottleNameFor,
+          findInstallBottle: findBridgeInstallBottle
+        }),
     effective: (): EffectiveEngine => {
       const raw = readSteamEngineOverride(appId)
       return {

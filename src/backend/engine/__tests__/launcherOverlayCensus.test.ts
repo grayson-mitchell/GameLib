@@ -86,7 +86,7 @@ describe('tools/index.ts overlay census (T-61-63)', () => {
   ]
 
   it.each(bodies)(
-    '%s routes every game.getSettings() read through resolveToolSettings(',
+    '%s routes every game.getSettings() read through resolveToolSettings( (or resolveGameToolSettings, quick 261110-vi4)',
     (_n, marker) => {
       const start = tools.indexOf(marker)
       expect(start).toBeGreaterThan(-1)
@@ -103,7 +103,7 @@ describe('tools/index.ts overlay census (T-61-63)', () => {
       expect(reads.length).toBeGreaterThan(0)
       const guarded =
         body.match(
-          /resolveToolSettings\(\s*engineServicesFor\(deps\),\s*\w+,\s*await \w+\.getSettings\(\)/g
+          /(?:resolveToolSettings\(\s*engineServicesFor\(deps\)|resolveGameToolSettings\(\s*deps,\s*\{[^}]*\}),\s*\w+,\s*await \w+\.getSettings\(\)/g
         ) ?? []
       expect(guarded).toHaveLength(reads.length)
     }

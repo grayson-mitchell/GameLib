@@ -108,6 +108,11 @@ export interface EngineStateDeps
   overrideEligible: (identity: EngineIdentity, bottle: string | null) => boolean
   /** Whether the overlay toggle applies to this game. */
   overlayEligible: boolean
+  /** Quick 261110-vi4: whether the Wine tools may act on this game's own bottle. */
+  wineToolsEligible?: (
+    identity: EngineIdentity,
+    bottle: string | null
+  ) => boolean
   /** The effective engine; defaults to `readEngineForGame`. */
   effective?: (identity: EngineIdentity) => EffectiveEngine
   prefixKind?: EngineState['prefixKind']
@@ -174,7 +179,8 @@ function compute(
   store: EngineNoticeStore,
   overrideEligible: boolean,
   overlayEligible: boolean,
-  launchNotice: EngineState['launchNotice']
+  launchNotice: EngineState['launchNotice'],
+  wineToolsEligible = false
 ): EngineState {
   let engine: EngineState['engine'] = null
   let reason: EngineState['reason'] = null
@@ -229,6 +235,7 @@ function compute(
     untestedCrossoverBuild:
       build !== null && shouldShowUntestedNotice(build, store) ? build : null,
     overrideEligible,
+    wineToolsEligible,
     overlayEligible,
     overrideWarning,
     launchNotice,
@@ -337,7 +344,8 @@ export async function getEngineState(
     store,
     overrideEligible,
     deps.overlayEligible,
-    null
+    null,
+    deps.wineToolsEligible?.(id, bottle) ?? false
   )
 }
 
@@ -415,7 +423,8 @@ export function recordLaunchDecision(
       deps.store ?? lazyNoticeStore(),
       deps.overrideEligible(identity, bottleName),
       deps.overlayEligible,
-      launchNotice
+      launchNotice,
+      deps.wineToolsEligible?.(identity, bottleName) ?? false
     )
     lastPublished.set(key, state)
     publisher(state)

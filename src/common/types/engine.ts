@@ -18,6 +18,12 @@ export type OverlayNoticeStep =
 
 /** Per-title engine display state for the game page. */
 export interface EngineState {
+  /**
+   * Quick 261110-vi4: true only for a macOS Steam bridge title installed in its own ready
+   * per-game bottle. The renderer shows Winecfg, Run EXE and Winetricks only then. Always set by
+   * the backend; optional so older fixtures compile. Carries no path.
+   */
+  wineToolsEligible?: boolean
   runner: string
   appName: string
   engine: EngineKind | null

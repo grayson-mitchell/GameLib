@@ -188,6 +188,7 @@ describe('getSteamEngineState', () => {
       showNoCrossoverNote: false,
       untestedCrossoverBuild: null,
       overrideEligible: true,
+      wineToolsEligible: false,
       overlayEligible: true,
       overrideWarning: null,
       launchNotice: null,
@@ -281,6 +282,16 @@ describe('getSteamEngineState', () => {
       (await getSteamEngineState('1', legacy.deps))?.overrideEligible
     ).toBe(false)
     expect(legacy.probe).toHaveBeenCalledWith('GameLibSteamBridge')
+  })
+  it('wineToolsEligible follows the injected dep and is false when absent (quick 261110-vi4)', async () => {
+    const on = mk(healthy(null), { wineToolsEligible: () => true })
+    expect((await getSteamEngineState('1', on.deps))?.wineToolsEligible).toBe(
+      true
+    )
+    const absent = mk(healthy(null))
+    expect(
+      (await getSteamEngineState('1', absent.deps))?.wineToolsEligible
+    ).toBe(false)
   })
   it('a DRM-mode title (injected) is not override-eligible', async () => {
     const { deps } = mk(healthy(null), { isDrmModeTitle: () => true })

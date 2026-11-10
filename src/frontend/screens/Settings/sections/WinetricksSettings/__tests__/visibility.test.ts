@@ -57,22 +57,22 @@ describe('wineToolsHidden (quick 261110-v08)', () => {
       wineToolsHidden({
         isCrossover: true,
         isMacEngineGame: true,
-        isMacSteamTitle: false
+        isMacSteamTitle: false,
+        steamToolsEligible: false
       })
     ).toBe(false)
   })
 
   it('never hides tools when the game is not on CrossOver', () => {
     for (const isMacEngineGame of [true, false]) {
-      for (const isMacSteamTitle of [true, false]) {
-        expect(
-          wineToolsHidden({
-            isCrossover: false,
-            isMacEngineGame,
-            isMacSteamTitle
-          })
-        ).toBe(false)
-      }
+      expect(
+        wineToolsHidden({
+          isCrossover: false,
+          isMacEngineGame,
+          isMacSteamTitle: false,
+          steamToolsEligible: false
+        })
+      ).toBe(false)
     }
   })
 
@@ -81,7 +81,8 @@ describe('wineToolsHidden (quick 261110-v08)', () => {
       wineToolsHidden({
         isCrossover: true,
         isMacEngineGame: true,
-        isMacSteamTitle: true
+        isMacSteamTitle: true,
+        steamToolsEligible: false
       })
     ).toBe(true)
   })
@@ -91,7 +92,34 @@ describe('wineToolsHidden (quick 261110-v08)', () => {
       wineToolsHidden({
         isCrossover: true,
         isMacEngineGame: false,
-        isMacSteamTitle: false
+        isMacSteamTitle: false,
+        steamToolsEligible: false
+      })
+    ).toBe(true)
+  })
+})
+
+describe('Mac Steam per-game bridge bottle (quick 261110-vi4)', () => {
+  const steam = {
+    isCrossover: true,
+    isMacEngineGame: true,
+    isMacSteamTitle: true
+  }
+
+  it('shows the tools for an eligible per-game bridge title', () => {
+    expect(wineToolsHidden({ ...steam, steamToolsEligible: true })).toBe(false)
+  })
+
+  it('hides them for legacy shared, bottled Steam or a state not loaded yet', () => {
+    expect(wineToolsHidden({ ...steam, steamToolsEligible: false })).toBe(true)
+  })
+
+  it('hides a Mac Steam title on eligibility alone, whatever its wineVersion', () => {
+    expect(
+      wineToolsHidden({
+        ...steam,
+        isCrossover: false,
+        steamToolsEligible: false
       })
     ).toBe(true)
   })

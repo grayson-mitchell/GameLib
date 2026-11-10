@@ -115,11 +115,12 @@ export default function GamesSettings() {
         effectiveEngineId === 'automatic' ||
         effectiveEngineId === 'crossover'
       : wineVersion?.type === 'crossover'
-  // quick 261110-v08: see wineToolsHidden in visibility.ts.
+  // quick 261110-v08 / 261110-vi4: see wineToolsHidden in visibility.ts.
   const hideWineTools = wineToolsHidden({
     isCrossover,
     isMacEngineGame,
-    isMacSteamTitle
+    isMacSteamTitle,
+    steamToolsEligible: engineState?.wineToolsEligible === true
   })
   const isBottleBacked = engineState?.prefixKind === 'bottle'
   // Native Linux games and native macOS Steam games (steam://rungameid cannot take env vars) are excluded; nile is listed but inert because isNative is Windows-only for it. Browser games are not launched via setupEnvVars.
