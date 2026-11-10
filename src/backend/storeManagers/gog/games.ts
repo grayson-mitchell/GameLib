@@ -77,6 +77,16 @@ import type LogWriter from 'backend/logger/log_writer'
 import { getLaunchSettings } from 'backend/engine/launchSettings'
 import { engineKeyFor } from 'backend/engine/gameKey'
 
+// comet's output is untrusted and may echo tokens; split/join because tokens
+// can contain regex metacharacters.
+function redactSecrets(text: string, secrets: readonly string[]): string {
+  let out = text
+  for (const secret of secrets) {
+    if (secret) out = out.split(secret).join('<redacted>')
+  }
+  return out
+}
+
 export default class GOGGame implements Game {
   private readonly id: string
 
@@ -841,19 +851,50 @@ export default class GOGGame implements Game {
       GlobalConfig.get().getSettings().experimentalFeatures?.cometSupport !==
         false
     ) {
-      const path = getCometBin()
-      // Runner-tracked long-lived child: teardownAll() at quit and PID-kills
-      // reach comet even while runRunnerCommand() below is still in flight.
-      comet = this.deps.runner.spawnLongLived(
-        join(path.dir, path.bin),
-        ['--from-heroic', '--username', userData.username, '--quit'],
-        {
-          id: 'gog-comet',
-          onStdout: (data: string) => cometLogWriter.writeString(data),
-          onStderr: (data: string) => cometLogWriter.writeString(data)
-        }
-      )
-      logInfo(`Launching Comet!`, LogPrefix.Gog)
+      // quick 261110-vdk: `--from-heroic` hard-codes Heroic's config dir, so
+      // comet runs in token mode from the credentials GameLib already holds.
+      const cometCredentials = await GOGUser.getCredentials(this.deps)
+      if (
+        !cometCredentials ||
+        !cometCredentials.access_token ||
+        !cometCredentials.refresh_token ||
+        !cometCredentials.user_id
+      ) {
+        logWarning(
+          'Comet not started: GOG credentials unavailable (offline or signed out); Galaxy features disabled for this session',
+          LogPrefix.Gog
+        )
+      } else {
+        const path = getCometBin()
+        const secrets = [
+          cometCredentials.access_token,
+          cometCredentials.refresh_token
+        ]
+        // Runner-tracked long-lived child: teardownAll() at quit and PID-kills
+        // reach comet even while runRunnerCommand() below is still in flight.
+        comet = this.deps.runner.spawnLongLived(
+          join(path.dir, path.bin),
+          [
+            '--access-token',
+            cometCredentials.access_token,
+            '--refresh-token',
+            cometCredentials.refresh_token,
+            '--user-id',
+            cometCredentials.user_id,
+            '--username',
+            userData.username,
+            '--quit'
+          ],
+          {
+            id: 'gog-comet',
+            onStdout: (data: string) =>
+              cometLogWriter.writeString(redactSecrets(data, secrets)),
+            onStderr: (data: string) =>
+              cometLogWriter.writeString(redactSecrets(data, secrets))
+          }
+        )
+        logInfo(`Launching Comet!`, LogPrefix.Gog)
+      }
     }
 
     const { error, abort } =

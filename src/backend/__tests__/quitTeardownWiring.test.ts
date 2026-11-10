@@ -174,12 +174,15 @@ describe('Layer A -- comet registration on the process runner teardown registry 
     // 66.1-26: comet moved from registerLongLivedChild onto the process runner's
     // spawnLongLived, whose teardown registry is what quit drains.
     const code = loadGamesTsCode()
-    const idx = code.indexOf("'--from-heroic'")
+    // quick 261110-vdk: comet moved to token mode because `--from-heroic`
+    // hard-codes Heroic's config dir.
+    const idx = code.indexOf("'--access-token'")
     expect(idx).toBeGreaterThan(-1)
     const window = code.slice(idx - 400, idx + 400)
     expect(window).toContain('spawnLongLived(')
     expect(window).toContain("id: 'gog-comet'")
     expect(code).not.toContain('registerLongLivedChild(')
+    expect(code).not.toContain("'--from-heroic'")
   })
 })
 

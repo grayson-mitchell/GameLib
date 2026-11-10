@@ -152,6 +152,8 @@ jest.mock('backend/constants/environment', () => ({
 }))
 
 import GOGGame from '../games'
+import { GOGUser } from '../user'
+import { logInfo, logWarning, logError, logDebug } from 'backend/logger'
 import type { GOGManagerDeps } from '../library'
 import { createTestManagerDeps } from 'backend/testUtils/testServices'
 import type { GOGImportData } from 'common/types'
@@ -308,12 +310,39 @@ describe('GOGGame.importGame -- identity guard (260907-ppy)', () => {
 })
 
 describe('GOGGame.launch: comet on the process runner', () => {
-  function launchHarness() {
+  const CREDS = {
+    access_token: 'AT-secret',
+    refresh_token: 'RT-secret',
+    user_id: 'galaxy-42'
+  }
+  const TOKEN_ARGV = [
+    '--access-token',
+    'AT-secret',
+    '--refresh-token',
+    'RT-secret',
+    '--user-id',
+    'galaxy-42',
+    '--username',
+    'player1',
+    '--quit'
+  ]
+  const logWriter = () =>
+    ({
+      logInfo: jest.fn(),
+      logError: jest.fn(),
+      writeString: jest.fn()
+    }) as never
+
+  function launchHarness(
+    opts: {
+      credentials?: typeof CREDS | undefined
+      settings?: Record<string, unknown>
+      userData?: Record<string, unknown>
+    } = {}
+  ) {
+    const credentials = 'credentials' in opts ? opts.credentials : CREDS
     const runner = createScriptedRunner([
-      {
-        cmd: '/fake/comet/comet',
-        argv: ['--from-heroic', '--username', 'player1', '--quit']
-      }
+      { cmd: '/fake/comet/comet', argv: TOKEN_ARGV }
     ])
     const base = makeDeps()
     const deps = {
@@ -328,9 +357,10 @@ describe('GOGGame.launch: comet on the process runner', () => {
         setupWrappers: jest.fn(() => [])
       } as unknown as GOGManagerDeps['launcher']
     } as GOGManagerDeps
-    ;(deps.stores.gog.configStore.get_nodefault as jest.Mock).mockReturnValue({
-      username: 'player1'
-    })
+    ;(deps.stores.gog.configStore.get_nodefault as jest.Mock).mockReturnValue(
+      opts.userData ?? { username: 'player1' }
+    )
+    ;(GOGUser.getCredentials as jest.Mock).mockResolvedValue(credentials)
     mockRunRunnerCommand.mockResolvedValue({ error: undefined, abort: false })
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(getCometBin as jest.Mock).mockReturnValue({
@@ -339,7 +369,7 @@ describe('GOGGame.launch: comet on the process runner', () => {
     })
     ;(GlobalConfig.get as jest.Mock).mockReturnValue({
       config: {},
-      getSettings: () => ({})
+      getSettings: () => opts.settings ?? {}
     })
     ;(getRunnerLogWriter as jest.Mock).mockReturnValue(mockCometLog)
     ;(shlex.split as jest.Mock).mockReturnValue([])
@@ -355,40 +385,93 @@ describe('GOGGame.launch: comet on the process runner', () => {
     } as unknown as ReturnType<GOGGame['getGameInfo']>)
     jest.spyOn(game, 'getSettings').mockResolvedValue({} as never)
     jest.spyOn(game, 'isNative').mockReturnValue(true)
-    return { game, runner }
+    return { game, runner, deps }
   }
 
-  it('spawns comet as the tracked long-lived child gog-comet with the exact argv, then unregisters and kills it', async () => {
-    const { game, runner } = launchHarness()
-    await game.launch({
-      logInfo: jest.fn(),
-      logError: jest.fn(),
-      writeString: jest.fn()
-    } as never)
+  const spawnsOf = (runner: ReturnType<typeof launchHarness>['runner']) =>
+    runner.calls.filter((c) => c.method === 'spawnLongLived')
 
-    const spawns = runner.calls.filter((c) => c.method === 'spawnLongLived')
+  it('spawns comet in token mode as the tracked long-lived child gog-comet, never --from-heroic', async () => {
+    const { game, runner, deps } = launchHarness()
+    await game.launch(logWriter())
+
+    const spawns = spawnsOf(runner)
     expect(spawns).toHaveLength(1)
     expect(spawns[0]).toMatchObject({
       cmd: '/fake/comet/comet',
-      argv: ['--from-heroic', '--username', 'player1', '--quit'],
+      argv: TOKEN_ARGV,
       opts: { id: 'gog-comet' }
     })
+    expect(spawns[0]?.argv).not.toContain('--from-heroic')
+    expect(GOGUser.getCredentials).toHaveBeenCalledTimes(1)
+    expect(GOGUser.getCredentials).toHaveBeenCalledWith(deps)
     // unregister() dropped the teardown, so quit no longer reaches a dead comet.
     expect(() => runner.teardownAll()).not.toThrow()
   })
 
-  it('routes comet stdout and stderr to the comet log writer', async () => {
+  it('skips comet with a warning when credentials are unavailable, and the game still launches', async () => {
+    const { game, runner } = launchHarness({ credentials: undefined })
+    const ok = await game.launch(logWriter())
+
+    expect(spawnsOf(runner)).toHaveLength(0)
+    const cometWarnings = (logWarning as jest.Mock).mock.calls.filter((c) =>
+      /comet/i.test(String(c[0]))
+    )
+    expect(cometWarnings).toHaveLength(1)
+    expect(mockRunRunnerCommand).toHaveBeenCalled()
+    expect(ok).toBe(true)
+  })
+
+  it('does not spawn comet or fetch credentials when cometSupport is false', async () => {
+    const { game, runner } = launchHarness({
+      settings: { experimentalFeatures: { cometSupport: false } }
+    })
+    await game.launch(logWriter())
+
+    expect(spawnsOf(runner)).toHaveLength(0)
+    expect(GOGUser.getCredentials).not.toHaveBeenCalled()
+  })
+
+  it('does not spawn comet or fetch credentials when userData has no username', async () => {
+    const { game, runner } = launchHarness({ userData: {} })
+    await game.launch(logWriter())
+
+    expect(spawnsOf(runner)).toHaveLength(0)
+    expect(GOGUser.getCredentials).not.toHaveBeenCalled()
+  })
+
+  it('routes comet stdout and stderr to the comet log writer, redacting tokens', async () => {
     const { game, runner } = launchHarness()
-    await game.launch({
-      logInfo: jest.fn(),
-      logError: jest.fn(),
-      writeString: jest.fn()
-    } as never)
-    const opts = runner.calls.find((c) => c.method === 'spawnLongLived')
-      ?.opts as { onStdout: (s: string) => void; onStderr: (s: string) => void }
+    await game.launch(logWriter())
+    const opts = spawnsOf(runner)[0]?.opts as {
+      onStdout: (s: string) => void
+      onStderr: (s: string) => void
+    }
     opts.onStdout('out-chunk')
     opts.onStderr('err-chunk')
     expect(mockCometLog.writeString).toHaveBeenCalledWith('out-chunk')
     expect(mockCometLog.writeString).toHaveBeenCalledWith('err-chunk')
+
+    opts.onStdout('token=AT-secret refresh=RT-secret')
+    const written = mockCometLog.writeString.mock.calls
+      .map((c) => String(c[0]))
+      .join('\n')
+    expect(written).not.toContain('AT-secret')
+    expect(written).not.toContain('RT-secret')
+    expect(written).toContain('<redacted>')
+  })
+
+  it('never passes a token to any backend logger call', async () => {
+    const { game, runner } = launchHarness()
+    await game.launch(logWriter())
+    const opts = spawnsOf(runner)[0]?.opts as {
+      onStdout: (s: string) => void
+    }
+    opts.onStdout('token=AT-secret refresh=RT-secret')
+    for (const fn of [logInfo, logWarning, logError, logDebug]) {
+      const dump = JSON.stringify((fn as jest.Mock).mock.calls)
+      expect(dump).not.toContain('AT-secret')
+      expect(dump).not.toContain('RT-secret')
+    }
   })
 })
