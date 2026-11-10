@@ -1,12 +1,11 @@
-// No real subprocess runs here: child_process, graceful-fs, the logger, the
-// platform dialog and i18next are all mocked, so no fake-HOME profile is needed
+// No real subprocess runs here: the lipo/file probes run on a scripted runner and graceful-fs,
+// the logger, the platform dialog and i18next are mocked, so no fake-HOME profile is needed
 // and no `env` literal appears.
 
-import { execFile, execFileSync } from 'child_process'
+import { createScriptedRunner } from 'backend/testUtils/scriptedRunner'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { dialog } from 'backend/platform'
 import {
-  machOArchsOf,
   machOArchsOfAsync,
   verdictFromArchs,
   locateMachOBinary,
@@ -14,10 +13,6 @@ import {
   promptMac32WindowsReinstall
 } from '../macArch'
 
-jest.mock('child_process', () => ({
-  execFile: jest.fn(),
-  execFileSync: jest.fn()
-}))
 jest.mock('graceful-fs', () => ({
   existsSync: jest.fn(),
   readdirSync: jest.fn(),
@@ -36,8 +31,6 @@ jest.mock('i18next', () => ({
   default: { t: jest.fn((_k: string, d: string) => d) }
 }))
 
-const mExecSync = execFileSync as unknown as jest.Mock
-const mExec = execFile as unknown as jest.Mock
 const mExists = existsSync as unknown as jest.Mock
 const mReaddir = readdirSync as unknown as jest.Mock
 const mReadFile = readFileSync as unknown as jest.Mock
@@ -48,17 +41,6 @@ function plistNaming(exe: string) {
   return `<plist version="1.0">\n<dict>\n\t<key>CFBundleExecutable</key>\n\t<string>${exe}</string>\n</dict>\n</plist>`
 }
 
-type ExecCb = (err: Error | null, stdout?: string) => void
-function asyncExec(handler: (cmd: string) => string | Error) {
-  mExec.mockImplementation(
-    (cmd: string, _a: string[], _o: unknown, cb: ExecCb) => {
-      const r = handler(cmd)
-      if (r instanceof Error) cb(r)
-      else cb(null, r)
-    }
-  )
-}
-
 beforeEach(() => {
   jest.resetAllMocks()
   jest
@@ -66,47 +48,67 @@ beforeEach(() => {
     .default.t.mockImplementation((_k: string, d: string) => d)
 })
 
-describe('machOArchsOf', () => {
-  test('splits lipo output', () => {
-    mExecSync.mockReturnValue('x86_64 arm64\n')
-    expect(machOArchsOf('/b')).toEqual(['x86_64', 'arm64'])
-  })
-  test('falls back to file', () => {
-    mExecSync.mockImplementationOnce(() => {
-      throw new Error('no lipo')
-    })
-    mExecSync.mockReturnValueOnce('Mach-O executable i386')
-    expect(machOArchsOf('/b')).toEqual(['i386'])
-  })
-  test('both throw gives []', () => {
-    mExecSync.mockImplementation(() => {
-      throw new Error('x')
-    })
-    expect(machOArchsOf('/b')).toEqual([])
-  })
-})
-
 describe('machOArchsOfAsync', () => {
-  test('resolves lipo archs', async () => {
-    asyncExec(() => 'i386\n')
-    await expect(machOArchsOfAsync('/b')).resolves.toEqual(['i386'])
-    expect(mExec.mock.calls[0][2]).toEqual({ encoding: 'utf8', timeout: 5000 })
+  test('resolves lipo archs, one probe bounded at 5 s', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'lipo', argv: ['-archs', '/b'], result: { stdout: 'i386\n' } }
+    ])
+    await expect(machOArchsOfAsync({ runner }, '/b')).resolves.toEqual(['i386'])
+    expect(runner.calls).toHaveLength(1)
+    expect(runner.calls[0]?.opts).toMatchObject({ timeoutMs: 5000 })
   })
-  test('lipo error falls back to file', async () => {
-    asyncExec((cmd) =>
-      cmd === 'lipo' ? new Error('no') : 'Mach-O x86_64 executable'
-    )
-    await expect(machOArchsOfAsync('/b')).resolves.toEqual(['x86_64'])
+  test('splits multi-arch lipo output', async () => {
+    const runner = createScriptedRunner([
+      {
+        cmd: 'lipo',
+        argv: ['-archs', '/b'],
+        result: { stdout: 'x86_64 arm64\n' }
+      }
+    ])
+    await expect(machOArchsOfAsync({ runner }, '/b')).resolves.toEqual([
+      'x86_64',
+      'arm64'
+    ])
   })
-  test('both erroring resolves [] and never rejects', async () => {
-    asyncExec(() => new Error('no'))
-    await expect(machOArchsOfAsync('/b')).resolves.toEqual([])
+  test('non-zero lipo falls back to file', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'lipo', argv: ['-archs', '/b'], result: { code: 1 } },
+      {
+        cmd: 'file',
+        argv: ['/b'],
+        result: { stdout: 'Mach-O x86_64 executable' }
+      }
+    ])
+    await expect(machOArchsOfAsync({ runner }, '/b')).resolves.toEqual([
+      'x86_64'
+    ])
   })
-  test('synchronous throw still resolves []', async () => {
-    mExec.mockImplementation(() => {
-      throw new Error('boom')
-    })
-    await expect(machOArchsOfAsync('/b')).resolves.toEqual([])
+  test('lipo ENOENT falls back to file', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'lipo', argv: ['-archs', '/b'], error: { code: 'ENOENT' } },
+      { cmd: 'file', argv: ['/b'], result: { stdout: 'Mach-O i386' } }
+    ])
+    await expect(machOArchsOfAsync({ runner }, '/b')).resolves.toEqual(['i386'])
+  })
+  test('lipo timeout falls back to file', async () => {
+    const runner = createScriptedRunner([
+      {
+        cmd: 'lipo',
+        argv: ['-archs', '/b'],
+        result: { timedOut: true, code: null, signal: 'SIGKILL' }
+      },
+      { cmd: 'file', argv: ['/b'], result: { stdout: 'Mach-O arm64' } }
+    ])
+    await expect(machOArchsOfAsync({ runner }, '/b')).resolves.toEqual([
+      'arm64'
+    ])
+  })
+  test('both failing resolves [] and never rejects', async () => {
+    const runner = createScriptedRunner([
+      { cmd: 'lipo', argv: ['-archs', '/b'], error: { code: 'ENOENT' } },
+      { cmd: 'file', argv: ['/b'], result: { timedOut: true, code: null } }
+    ])
+    await expect(machOArchsOfAsync({ runner }, '/b')).resolves.toEqual([])
   })
 })
 

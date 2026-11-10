@@ -1,6 +1,6 @@
 import { GameInfo, InstallArgs } from 'common/types'
 import {
-  machOArchsOf,
+  machOArchsOfAsync,
   verdictFromArchs,
   locateMachOBinary as locateMachOBinaryShared,
   promptMac32WindowsReinstall
@@ -92,7 +92,7 @@ export async function verifyMacArchGroundTruth(
     return
   }
 
-  const verdict = verdictFromArchs(machOArchsOf(binaryPath))
+  const verdict = verdictFromArchs(await machOArchsOfAsync(deps, binaryPath))
   if (verdict === null) {
     logInfo(
       `Steam: verifyMacArchGroundTruth inconclusive for appId ${appId} — leaving mac_arch unchanged`,

@@ -37,6 +37,7 @@ export interface MacArchRecoveryDeps {
   libraryManagers: ManagerDeps['libraryManagers']
   getDownloadQueue: ManagerDeps['getDownloadQueue']
   stores: MacArchStoresDeps['stores']
+  runner: Pick<ManagerDeps['runner'], 'run'>
 }
 
 /** The verdict store slice (66.1, R1). */
@@ -114,7 +115,8 @@ export async function checkInstalledMacArch(
     const candidates = locateMachOCandidates(installPath, executable, lp)
     if (!candidates.length) return
     const archs: string[] = []
-    for (const c of candidates) archs.push(...(await machOArchsOfAsync(c)))
+    for (const c of candidates)
+      archs.push(...(await machOArchsOfAsync(deps, c)))
     const verdict = verdictFromArchs(archs)
     if (!verdict) return
     // Always overwrite: a fresh native install may be a newer build.

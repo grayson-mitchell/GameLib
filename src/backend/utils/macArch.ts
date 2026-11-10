@@ -7,13 +7,13 @@
 // backend/logger, backend/platform, i18next) reach it only because the import
 // specifiers here match the ones those tests mock.
 
-import { execFile, execFileSync } from 'child_process'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import { basename, join, resolve, relative, isAbsolute } from 'path'
 import i18next from 'i18next'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { dialog } from 'backend/platform'
 import type { Runner } from 'common/types'
+import type { ProcessRunner } from 'backend/process/types'
 import { storeCapabilities } from 'common/storeCapabilities'
 
 /** Maximum bundle files probed per game (false-flag-safe union). */
@@ -27,68 +27,49 @@ function archsFromFileOutput(output: string): string[] {
   return archs
 }
 
-/**
- * Runs `lipo -archs` on the given binary — argv-form execFileSync (command +
- * array, never a shell-interpolated string; T-18-03-01). Falls back to `file`
- * when lipo throws (not installed / binary lipo doesn't recognize).
- * Returns [] when BOTH tools fail — inconclusive, NEVER a 32-bit verdict on
- * its own (verdictFromArchs below is the sole place that turns an arch list
- * into a '32'/'64' answer). Exported for unit testing.
- */
-export function machOArchsOf(binaryPath: string): string[] {
+/** Per-probe bound; a hung lipo/file must not stall an install check. */
+const PROBE_TIMEOUT_MS = 5_000
+
+/** Runner slice the probes need: only `run`. */
+export type MachOProbeDeps = { runner: Pick<ProcessRunner, 'run'> }
+
+/** One probe: stdout on a clean exit, null on spawn error, timeout or non-zero. */
+async function probeText(
+  deps: MachOProbeDeps,
+  cmd: string,
+  argv: string[]
+): Promise<string | null> {
   try {
-    const output = execFileSync('lipo', ['-archs', binaryPath], {
-      encoding: 'utf8',
-      timeout: 5000
+    const r = await deps.runner.run(cmd, argv, {
+      timeoutMs: PROBE_TIMEOUT_MS,
+      stdin: ''
     })
-    return output.trim().split(/\s+/).filter(Boolean)
+    if (r.timedOut || r.code !== 0) return null
+    return r.stdout
   } catch {
-    try {
-      const output = execFileSync('file', [binaryPath], {
-        encoding: 'utf8',
-        timeout: 5000
-      })
-      return archsFromFileOutput(output)
-    } catch {
-      return [] // neither tool available/succeeded — inconclusive, NOT 32-bit
-    }
+    return null
   }
-}
-
-function execFileText(cmd: string, args: string[]): Promise<string> {
-  return new Promise((resolvePromise, reject) => {
-    try {
-      execFile(
-        cmd,
-        args,
-        { encoding: 'utf8', timeout: 5000 },
-        (err, stdout) => {
-          if (err) reject(err instanceof Error ? err : new Error(String(err)))
-          else resolvePromise(String(stdout))
-        }
-      )
-    } catch (e) {
-      reject(e instanceof Error ? e : new Error(String(e)))
-    }
-  })
 }
 
 /**
- * Async twin of machOArchsOf (argv-form execFile, no shell, no env override;
- * T-t39-01). Total: resolves [] and never rejects.
+ * Runs `lipo -archs` on the given binary through the runner (argv form, never a shell-
+ * interpolated string; T-18-03-01), falling back to `file` when lipo yields nothing (not
+ * installed / binary lipo does not recognize / timed out). Total: resolves [] and never
+ * rejects when BOTH tools fail -- inconclusive, NEVER a 32-bit verdict on its own
+ * (verdictFromArchs below is the sole place that turns an arch list into a '32'/'64'
+ * answer). Exported for unit testing.
  */
-export async function machOArchsOfAsync(binaryPath: string): Promise<string[]> {
-  try {
-    const output = await execFileText('lipo', ['-archs', binaryPath])
-    return output.trim().split(/\s+/).filter(Boolean)
-  } catch {
-    try {
-      const output = await execFileText('file', [binaryPath])
-      return archsFromFileOutput(output)
-    } catch {
-      return []
-    }
+export async function machOArchsOfAsync(
+  deps: MachOProbeDeps,
+  binaryPath: string
+): Promise<string[]> {
+  const lipo = await probeText(deps, 'lipo', ['-archs', binaryPath])
+  if (lipo !== null) {
+    const archs = lipo.trim().split(/\s+/).filter(Boolean)
+    if (archs.length > 0) return archs
   }
+  const file = await probeText(deps, 'file', [binaryPath])
+  return file === null ? [] : archsFromFileOutput(file)
 }
 
 /**

@@ -73,12 +73,6 @@ jest.mock('backend/online_monitor', () => ({
   isOnline: jest.fn().mockReturnValue(false)
 }))
 
-// ── child_process mock ────────────────────────────────────────────────────────
-jest.mock('child_process', () => ({
-  spawnSync: jest.fn(),
-  execFileSync: jest.fn()
-}))
-
 // ── electron mock ──────────────────────────────────────────────────────────────
 jest.mock('backend/platform', () => ({
   dialog: { showMessageBox: jest.fn() },

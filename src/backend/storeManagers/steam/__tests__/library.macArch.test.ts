@@ -13,10 +13,9 @@ import SteamLibraryManager from '../library'
 import { startInstallPolling } from '../library/installPolling'
 import { stopInstallPolling } from '../library/installStop'
 import { locateMachOBinary, verifyMacArchGroundTruth } from '../library/macArch'
-import { machOArchsOf, verdictFromArchs } from 'backend/utils/macArch'
+import { machOArchsOfAsync, verdictFromArchs } from 'backend/utils/macArch'
 import { existsSync, readdirSync, readFileSync } from 'graceful-fs'
 import * as vdf from '@node-steam/vdf'
-import { execFileSync } from 'child_process'
 import { dialog } from 'backend/platform'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { reportDetectedFix } from 'backend/knownFixReport'
@@ -31,14 +30,46 @@ import {
 import { listReadyBridgeBottleNames } from '../bridgeBottle'
 import { join } from 'path'
 import { library } from '../state'
-import type { Stores } from 'backend/services/types'
+import type { ManagerDeps, Stores } from 'backend/services/types'
 
 const { steamLibraryStore, steamMetadataStore } =
   jest.requireMock<Stores['steam']>('../stores')
 const steamStoresModule = jest.requireMock<Stores['steam']>('../stores')
 
+// The lipo/file probes run on the runner. `probe(cmd, argv)` scripts them in the shape the
+// pre-runner tests used: a return value is a clean exit's stdout, a throw is a failed tool.
+const probe = jest.fn<string, [string, readonly string[]]>()
+const archRunner = {
+  run: (cmd: string, argv: readonly string[]) => {
+    try {
+      return Promise.resolve({
+        code: 0,
+        signal: null,
+        stdout: String(probe(cmd, argv) ?? ''),
+        stderr: '',
+        timedOut: false,
+        aborted: false,
+        truncated: false,
+        pid: undefined
+      })
+    } catch {
+      return Promise.resolve({
+        code: 1,
+        signal: null,
+        stdout: '',
+        stderr: '',
+        timedOut: false,
+        aborted: false,
+        truncated: false,
+        pid: undefined
+      })
+    }
+  }
+} as unknown as ManagerDeps['runner']
+
 const steamTestDeps = createTestManagerDeps({
-  stores: createTestStores({ steam: steamStoresModule })
+  stores: createTestStores({ steam: steamStoresModule }),
+  runner: archRunner
 })
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
@@ -111,13 +142,6 @@ jest.mock('../user')
 jest.mock('backend/online_monitor', () => ({
   runOnceWhenOnline: jest.fn(),
   isOnline: jest.fn().mockReturnValue(false)
-}))
-
-// ── child_process mock — spawnSync (Windows reg.exe) + execFileSync (Linux ps,
-// MAC32-03 lipo/file) ─────────────────────────────────────────────────────────
-jest.mock('child_process', () => ({
-  spawnSync: jest.fn(),
-  execFileSync: jest.fn()
 }))
 
 // ── electron mock — dialog.showMessageBox (MAC32-03 i386 recovery confirm) +
@@ -273,22 +297,24 @@ beforeEach(() => {
 /** Flush pending microtask/macrotask queues (real timers only). */
 const flushAsync = () => new Promise<void>((resolve) => setImmediate(resolve))
 
-describe('machOArchsOf()', () => {
-  it('runs lipo -archs argv-form and returns the space-split arch list', () => {
-    ;(execFileSync as jest.Mock).mockReturnValue('x86_64 arm64\n')
+describe('machOArchsOfAsync()', () => {
+  it('runs lipo -archs argv-form and returns the space-split arch list', async () => {
+    probe.mockReturnValue('x86_64 arm64\n')
 
-    const result = machOArchsOf('/Games/Foo.app/Contents/MacOS/Foo')
-
-    expect(execFileSync).toHaveBeenCalledWith(
-      'lipo',
-      ['-archs', '/Games/Foo.app/Contents/MacOS/Foo'],
-      expect.objectContaining({ encoding: 'utf8' })
+    const result = await machOArchsOfAsync(
+      { runner: archRunner },
+      '/Games/Foo.app/Contents/MacOS/Foo'
     )
+
+    expect(probe).toHaveBeenCalledWith('lipo', [
+      '-archs',
+      '/Games/Foo.app/Contents/MacOS/Foo'
+    ])
     expect(result).toEqual(['x86_64', 'arm64'])
   })
 
-  it('falls back to `file` when lipo throws, and still classifies correctly', () => {
-    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+  it('falls back to `file` when lipo fails, and still classifies correctly', async () => {
+    probe.mockImplementation((cmd: string) => {
       if (cmd === 'lipo') throw new Error('lipo not found')
       if (cmd === 'file') {
         return '/Games/Foo.app/Contents/MacOS/Foo: Mach-O executable i386\n'
@@ -296,22 +322,26 @@ describe('machOArchsOf()', () => {
       throw new Error(`unexpected command ${cmd}`)
     })
 
-    const result = machOArchsOf('/Games/Foo.app/Contents/MacOS/Foo')
-
-    expect(execFileSync).toHaveBeenCalledWith(
-      'file',
-      ['/Games/Foo.app/Contents/MacOS/Foo'],
-      expect.objectContaining({ encoding: 'utf8' })
+    const result = await machOArchsOfAsync(
+      { runner: archRunner },
+      '/Games/Foo.app/Contents/MacOS/Foo'
     )
+
+    expect(probe).toHaveBeenCalledWith('file', [
+      '/Games/Foo.app/Contents/MacOS/Foo'
+    ])
     expect(result).toEqual(['i386'])
   })
 
-  it('returns [] (inconclusive) when BOTH lipo and file fail — never a 32-bit verdict', () => {
-    ;(execFileSync as jest.Mock).mockImplementation(() => {
+  it('returns [] (inconclusive) when BOTH lipo and file fail — never a 32-bit verdict', async () => {
+    probe.mockImplementation(() => {
       throw new Error('neither tool available')
     })
 
-    const result = machOArchsOf('/Games/Foo.app/Contents/MacOS/Foo')
+    const result = await machOArchsOfAsync(
+      { runner: archRunner },
+      '/Games/Foo.app/Contents/MacOS/Foo'
+    )
 
     expect(result).toEqual([])
   })
@@ -436,7 +466,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     envMock.isLinux = false
     ;(existsSync as jest.Mock).mockReset()
     ;(readdirSync as jest.Mock).mockReset()
-    ;(execFileSync as jest.Mock).mockReset()
+    probe.mockReset()
     ;(steamMetadataStore.get as jest.Mock).mockReset()
     ;(steamMetadataStore.set as jest.Mock).mockReset()
     // Default to a cancel response — tests that exercise the confirm path
@@ -463,7 +493,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       'bottle'
     )
 
-    expect(execFileSync).not.toHaveBeenCalled()
+    expect(probe).not.toHaveBeenCalled()
     expect(readdirSync).not.toHaveBeenCalled()
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
   })
@@ -478,7 +508,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       'native'
     )
 
-    expect(execFileSync).not.toHaveBeenCalled()
+    expect(probe).not.toHaveBeenCalled()
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
   })
 
@@ -492,7 +522,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       'native'
     )
 
-    expect(execFileSync).not.toHaveBeenCalled()
+    expect(probe).not.toHaveBeenCalled()
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
   })
 
@@ -509,7 +539,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       'native'
     )
 
-    expect(execFileSync).not.toHaveBeenCalled()
+    expect(probe).not.toHaveBeenCalled()
     expect(steamMetadataStore.set).not.toHaveBeenCalled()
   })
 
@@ -534,7 +564,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       return []
     })
     ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(execFileSync as jest.Mock).mockImplementation(() => {
+    probe.mockImplementation(() => {
       throw new Error('neither tool available')
     })
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
@@ -559,7 +589,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       return []
     })
     ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+    probe.mockImplementation((cmd: string) => {
       if (cmd === 'lipo') return 'i386\n'
       throw new Error(`unexpected command ${cmd}`)
     })
@@ -599,7 +629,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       return []
     })
     ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+    probe.mockImplementation((cmd: string) => {
       if (cmd === 'lipo') return 'x86_64\n'
       throw new Error(`unexpected command ${cmd}`)
     })
@@ -634,7 +664,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
         return []
       })
       ;(existsSync as jest.Mock).mockReturnValue(true)
-      ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+      probe.mockImplementation((cmd: string) => {
         if (cmd === 'lipo') return lipoOut
         throw new Error(`unexpected command ${cmd}`)
       })
@@ -746,7 +776,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
         return []
       })
       ;(existsSync as jest.Mock).mockReturnValue(true)
-      ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+      probe.mockImplementation((cmd: string) => {
         if (cmd === 'lipo') return lipoOut
         throw new Error(`unexpected command ${cmd}`)
       })
@@ -825,7 +855,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
         INSTALL_PATH,
         'native'
       )
-      expect(execFileSync).not.toHaveBeenCalled()
+      expect(probe).not.toHaveBeenCalled()
       // eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock handle, never invoked unbound
       expect(steamMetadataStore.set).not.toHaveBeenCalled()
     })
@@ -838,7 +868,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       return []
     })
     ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+    probe.mockImplementation((cmd: string) => {
       if (cmd === 'lipo') return 'i386\n'
       throw new Error(`unexpected command ${cmd}`)
     })
@@ -892,7 +922,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       return []
     })
     ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+    probe.mockImplementation((cmd: string) => {
       if (cmd === 'lipo') return 'i386\n'
       throw new Error(`unexpected command ${cmd}`)
     })
@@ -933,7 +963,7 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
       return []
     })
     ;(existsSync as jest.Mock).mockReturnValue(true)
-    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) =>
+    probe.mockImplementation((cmd: string) =>
       cmd === 'lipo'
         ? 'i386\n'
         : (() => {
@@ -1015,8 +1045,8 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
       return []
     })
     ;(readFileSync as jest.Mock).mockReturnValue('content')
-    ;(execFileSync as jest.Mock).mockReset()
-    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+    probe.mockReset()
+    probe.mockImplementation((cmd: string) => {
       if (cmd === 'lipo') return 'i386\n'
       throw new Error(`unexpected command ${cmd}`)
     })
@@ -1090,7 +1120,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
   it('E2: no Mach-O check or dialog on a non-mac host, nor for a delegated bottle poll', async () => {
     envMock.isMac = false
     await runDelegatedPoll('native')
-    expect(execFileSync).not.toHaveBeenCalled()
+    expect(probe).not.toHaveBeenCalled()
     expect(dialog.showMessageBox).not.toHaveBeenCalled()
 
     stopInstallPolling(APP_ID)
@@ -1098,7 +1128,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     manifestPresent = false
     seedGame()
     await runDelegatedPoll('bottle')
-    expect(execFileSync).not.toHaveBeenCalled()
+    expect(probe).not.toHaveBeenCalled()
     expect(dialog.showMessageBox).not.toHaveBeenCalled()
   })
 
@@ -1130,7 +1160,7 @@ describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () 
     await flushMicrotasks()
 
     expect(library.get(APP_ID)?.is_installed).toBe(true)
-    expect(execFileSync).not.toHaveBeenCalled()
+    expect(probe).not.toHaveBeenCalled()
     expect(dialog.showMessageBox).not.toHaveBeenCalled()
   })
 })
