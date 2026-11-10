@@ -82,7 +82,11 @@ a9g's PLAN and SUMMARY describe a "launcher `launching`, launcher hand-off `done
 
 No auth gates. No stubs. No threat flags (no new network, auth, file or schema surface).
 
-## Open live gate (operator, not claimed verified)
+## Live gate: PASSED 2026-11-11 (operator)
+
+The operator restarted `pnpm tauri:dev`, pressed Play on WazHack 264160, and reported **pass**: Launching held from the click until Stop appeared. The operator's report did not separately cover the 90 s expiry or Play-while-running steps, so those are covered by unit tests only (A1-A8, C8/C9).
+
+### Gate as written
 
 Restart `pnpm tauri:dev` so the sidecar bundle postdates these commits, then follow the plan's six-step Human live gate on WazHack 264160: Launching held from click to Playing with no flash of Play (GamePage and Library card); quit in game returns to Play within about 1-2 s; with Steam quit, Launching holds while Steam starts, and past 90 s returns to Play with the log `not detected running; ending Launching`; Play while already running shows no Launching flash.
 
