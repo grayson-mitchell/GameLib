@@ -8,18 +8,15 @@
  * read/action flow channels (`registerSteamFlows()`, `steamFlowRegistration.ts`),
  * the curated Steam QR-login channels (`registerSteamAuthFlows()`,
  * `steamAuthFlowRegistration.ts` — Phase 30 Plan 01, D-01/D-02/D-08), the
- * curated install-slice channels (`registerInstallFlows({ downloadQueue: deps.services.downloadQueue })`,
+ * curated install-slice channels (`registerInstallFlows(services)`,
  * `installFlowRegistration.ts` — Phase 30 Plan 02,
  * D-05a/D-05b/D-07/D-08/D-12), the curated settings-read channels
  * (`registerSettingsFlows()`, `settingsFlowRegistration.ts` — Phase 30 Plan
  * 06, gap closure for Gap 2 / UAT Test 8), the curated app-shell channels
  * (`registerAppShellFlows()`, `appShellFlowRegistration.ts` — Phase 34.1 Plan
  * 04, D-03/D-08/D-09/D-13), the curated game-details/settings/override
- * channels (`registerGameDetailsFlows({
-    managers: deps.services.managers,
-    stores: deps.services.stores
-  })`, `gameDetailsFlowRegistration.ts` —
- * Phase 34.2 Plan 04, D-01/D-03/D-04), the curated enrichment channels
+ * channels (`registerGameDetailsFlows({ managers, stores })`,
+ * `gameDetailsFlowRegistration.ts` — Phase 34.2 Plan 04, D-01/D-03/D-04), the curated enrichment channels
  * (`registerEnrichmentFlows()`, `enrichmentFlowRegistration.ts` — Phase 34.2
  * Plan 06, D-04/D-07/D-10), the curated shell/files/diagnostics channels
  * (`registerShellFilesFlows()`, `shellFilesFlowRegistration.ts` — Phase 34.3
