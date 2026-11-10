@@ -5,7 +5,7 @@ import { isAxiosError } from 'axios'
  * notification and logging injected, so it is unit-testable without mocks.
  */
 
-export const EPIC_NETWORK_ERROR_CODES: readonly string[] = [
+const EPIC_NETWORK_ERROR_CODES: readonly string[] = [
   'ENOTFOUND',
   'EAI_AGAIN',
   'ECONNREFUSED',
