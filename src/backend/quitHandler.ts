@@ -79,6 +79,11 @@ export function createQuitHandler(deps: QuitHandlerDeps): QuitHandler {
         return
       }
 
+      // Long-lived children (comet, the Steam bridge helper) go first, through their own
+      // teardowns (stopBridgeHelper etc.): a raw SIGTERM from killAllTracked would bypass
+      // them (A-WR-5, 66.1 review). Both quit paths now run the teardowns.
+      deps.runner.teardownAll()
+
       // Phase 72 D-13: kill only the children this sidecar spawned (tracked PIDs),
       // never by name pattern. Includes tracked Wine children (games).
       deps.runner.killAllTracked()

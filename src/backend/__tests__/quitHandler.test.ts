@@ -59,6 +59,9 @@ describe('createQuitHandler', () => {
     expect(dialogs[0]!.cancelId).toBe(0)
     expect(calls).toEqual([
       'dialog',
+      // A-WR-5: long-lived teardowns run BEFORE the raw tracked kill. The registry empties on
+      // teardownAll, so the final call is a no-op in the real runner.
+      'runner.teardown',
       'runner.kill',
       'abort',
       'hide',
