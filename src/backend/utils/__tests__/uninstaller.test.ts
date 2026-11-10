@@ -32,6 +32,7 @@ jest.mock('i18next', () => ({ t: jest.fn((_k: string, d: string) => d) }))
 
 import { removeFixFile, uninstallGameCallback } from '../uninstaller'
 import { notify } from 'backend/dialog/dialog'
+import { logInfo } from 'backend/logger'
 // The managers arrive by deps now: a plain map the tests fill in per case.
 const libraryManagerMap = {} as Record<string, unknown>
 const deps = {
@@ -43,6 +44,12 @@ import {
   gamesConfigPath,
   localFixesPath
 } from 'backend/constants/paths'
+
+const infoText = () =>
+  (logInfo as jest.Mock).mock.calls
+    .flat()
+    .map((a) => String(a))
+    .join('\n')
 
 beforeEach(() => {
   rmSync(join(fixesPath, '..'), { recursive: true, force: true })
@@ -109,7 +116,11 @@ describe('uninstallGameCallback refusal (quick 261107-td5)', () => {
 
   it('a refused uninstall keeps settings, prefix and fix file, sends done, no notify', async () => {
     const { settings, fix } = setup()
-    uninstall.mockResolvedValue({ stdout: '', stderr: 'x', refused: true })
+    uninstall.mockResolvedValue({
+      stdout: '',
+      stderr: 'Refused: sentinel-reason',
+      refused: true
+    })
 
     await uninstallGameCallback(deps, {} as any, APP, 'steam', true, true)
 
@@ -118,6 +129,9 @@ describe('uninstallGameCallback refusal (quick 261107-td5)', () => {
     expect(getSettings).not.toHaveBeenCalled()
     expect(notify).not.toHaveBeenCalled()
     expect(statuses()).toEqual(['uninstalling', 'done'])
+    // quick 261110-uog: the stderr text never reaches logInfo
+    expect(infoText()).not.toContain('sentinel-reason')
+    expect(infoText()).toContain('Uninstall refused; keeping settings')
   })
 
   it('an unflagged success still cleans up and sends no done for steam', async () => {
@@ -184,6 +198,9 @@ describe('uninstallGameCallback failure (quick 261108-anw)', () => {
       expect(getSettings).not.toHaveBeenCalled()
       expect(notify).not.toHaveBeenCalled()
       expect(statuses()).toEqual(['uninstalling', 'done'])
+      // quick 261110-uog: the stderr text never reaches logInfo
+      expect(infoText()).not.toContain('Failed to remove x')
+      expect(infoText()).toContain('Uninstall failed; keeping settings')
     }
   )
 })

@@ -135,8 +135,9 @@ export const uninstallGameCallback = async (
       // quick 261107-td5: the uninstall declined and changed nothing. The
       // refusing route owns the user-facing message; keep settings/logs/
       // prefix/fix file and clear the "uninstalling" status.
+      // quick 261110-uog: stderr is logged by the refusing/failing route itself; only its length here (logSecretGate).
       logInfo(
-        `Uninstall refused; keeping settings (${result.stderr})`,
+        `Uninstall refused; keeping settings for ${runner} ${appName} (stderrLength=${result.stderr.length})`,
         LogPrefix.Backend
       )
       sendGameStatusUpdate({ appName, runner, status: 'done' })
@@ -146,8 +147,9 @@ export const uninstallGameCallback = async (
       // quick 261108-anw: the delete errored, possibly partially. Keep
       // GameLib state so a retry is possible; the failing route sends no
       // done, so this is the single done. The route owns the in-app notice.
+      // quick 261110-uog: stderr is logged by the refusing/failing route itself; only its length here (logSecretGate).
       logInfo(
-        `Uninstall failed; keeping settings (${result.stderr})`,
+        `Uninstall failed; keeping settings for ${runner} ${appName} (stderrLength=${result.stderr.length})`,
         LogPrefix.Backend
       )
       sendGameStatusUpdate({ appName, runner, status: 'done' })
