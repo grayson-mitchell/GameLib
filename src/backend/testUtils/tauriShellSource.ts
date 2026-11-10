@@ -273,6 +273,143 @@ export function readHandlerBody(
 }
 
 /**
+ * The step fns `rpc_humble_login_open` calls, in call order (quick 261111-buh). Each is a column-0 fn
+ * in `login_window/humble_open.rs` whose statements were moved out of the handler verbatim.
+ * {@link readHandlerBodyWithSteps} splices each one's statements in at its call so a source pin sees
+ * the arm as one body, and {@link listStepLinkageProblems} fails when a step is renamed, left uncalled,
+ * called twice, called from elsewhere or called out of order. Re-derive this list from the handler; do
+ * not widen it to make a pin pass.
+ */
+export const HUMBLE_LOGIN_OPEN_STEPS: readonly string[] = [
+  'install_login_window_close_hook'
+]
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/** A call of `step(` that is neither a longer identifier's tail nor the fn's own `fn step(` line. */
+function stepCallPattern(step: string, flags = ''): RegExp {
+  return new RegExp(`(?<![\\w])(?<!fn )${escapeRegExp(step)}\\(`, flags)
+}
+
+/**
+ * The body statements of the column-0 fn `fnName`, signature excluded: like
+ * {@link readTopLevelFnBody}, plus, when the `fn` line does not itself end with `{` (rustfmt's
+ * one-param-per-line form), the leading parameter lines through the `) ... {` line that closes the
+ * signature. Throws on every case `readTopLevelFnBody` throws on.
+ */
+export function readTopLevelFnStatements(
+  source: string,
+  fnName: string,
+  minLines = 3
+): string {
+  const body = readTopLevelFnBody(source, fnName, minLines)
+  const re = new RegExp(`^(pub\\(crate\\) )?fn ${escapeRegExp(fnName)}\\(`)
+  const header = source.split('\n').find((l) => re.test(l)) ?? ''
+  if (header.trimEnd().endsWith('{')) return body
+  const lines = body.split('\n')
+  const close = lines.findIndex(
+    (l) => l.trim().startsWith(')') && l.trimEnd().endsWith('{')
+  )
+  if (close < 0) {
+    throw new Error(
+      `readTopLevelFnStatements: ${fnName} has a multi-line signature with no closing ") ... {" line`
+    )
+  }
+  return lines.slice(close + 1).join('\n')
+}
+
+/** Index of the line that ends the statement starting at `from` (the first at or after it ending `;`). */
+function statementEndLine(lines: readonly string[], from: number): number {
+  for (let i = from; i < lines.length; i++) {
+    if ((lines[i] ?? '').trimEnd().endsWith(';')) return i
+  }
+  return from
+}
+
+/**
+ * {@link readHandlerBody} with each listed step's statements ({@link readTopLevelFnStatements})
+ * spliced in right after the statement that calls it, so an ordering pin reads across the call
+ * sequence exactly as it did before the handler was split. A step the handler does not call is not
+ * spliced (a lone synthetic handler keeps working); a step the handler calls but the source does not
+ * define throws. {@link listStepLinkageProblems} is what fails on an uncalled or misplaced step.
+ */
+export function readHandlerBodyWithSteps(
+  source: string,
+  wireName: string,
+  steps: readonly string[],
+  minLines = 3
+): string {
+  const lines = readHandlerBody(source, wireName, minLines).split('\n')
+  const insertAfter = new Map<number, string[]>()
+  for (const step of steps) {
+    const re = stepCallPattern(step)
+    lines.forEach((line, i) => {
+      if (!re.test(line)) return
+      const at = statementEndLine(lines, i)
+      const list = insertAfter.get(at) ?? []
+      list.push(readTopLevelFnStatements(source, step))
+      insertAfter.set(at, list)
+    })
+  }
+  const out: string[] = []
+  lines.forEach((line, i) => {
+    out.push(line)
+    out.push(...(insertAfter.get(i) ?? []))
+  })
+  return out.join('\n')
+}
+
+/**
+ * One problem string per way the `steps` of `rpc_<wireName>` are mis-linked; `[]` when clean. A step
+ * must be defined exactly once, called exactly once in the handler body, called nowhere else in
+ * `source`, and called in list order.
+ */
+export function listStepLinkageProblems(
+  source: string,
+  wireName: string,
+  steps: readonly string[]
+): string[] {
+  const problems: string[] = []
+  const handler = readHandlerBody(source, wireName, 1)
+  const positions: { step: string; at: number }[] = []
+  for (const step of steps) {
+    try {
+      readTopLevelFnBody(source, step, 1)
+    } catch (e) {
+      problems.push(
+        `${step}: definition missing or duplicated (${(e as Error).message})`
+      )
+    }
+    const inHandler = (handler.match(stepCallPattern(step, 'g')) ?? []).length
+    if (inHandler !== 1) {
+      problems.push(
+        `${step}: called ${inHandler} times in rpc_${wireName}, expected exactly 1`
+      )
+    }
+    const inSource = (source.match(stepCallPattern(step, 'g')) ?? []).length
+    if (inSource !== 1) {
+      problems.push(
+        `${step}: called ${inSource} times across the source, expected exactly 1 (a second caller?)`
+      )
+    }
+    const at = handler.search(stepCallPattern(step))
+    if (inHandler === 1 && at >= 0) positions.push({ step, at })
+  }
+  for (let i = 1; i < positions.length; i++) {
+    const prev = positions[i - 1]
+    const cur = positions[i]
+    if (prev && cur && cur.at < prev.at) {
+      problems.push(
+        `${cur.step}: called before ${prev.step}, but the step list orders ${prev.step} first`
+      )
+    }
+  }
+  return problems
+}
+
+/**
  * Full text (tests included) of `macos_epic_embed.rs` followed by every `macos_epic_embed/**\/*.rs`
  * in sorted order. Today that is exactly the single file; the Epic embed suites read through this so
  * the Wave 4 split needs no reader edit (Phase 71 D-11).

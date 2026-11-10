@@ -15,7 +15,8 @@
  * (each file's own test modules cut).
  */
 import {
-  readHandlerBody,
+  HUMBLE_LOGIN_OPEN_STEPS,
+  readHandlerBodyWithSteps,
   readTauriShellProductionSource,
   readTauriShellSource
 } from 'backend/testUtils/tauriShellSource'
@@ -75,10 +76,16 @@ function extractBracedBlock(code: string, openMarker: string): string {
  * call, the body lives in `login_window/humble_open.rs`). `readHandlerBody` throws when the fn is
  * missing, duplicated or near-empty, so this extractor cannot pass vacuously. The arm above's
  * single-flight guard deliberately uses `if visible == true {` -- do not "fix" that condition; this
- * extractor does not depend on it.
+ * extractor does not depend on it. The arm is the handler with each named step's statements
+ * (`HUMBLE_LOGIN_OPEN_STEPS`) spliced in at its call (quick 261111-buh), so the ordering and
+ * brace-depth checks below read across the call sequence as they did before the split.
  */
 function extractHumbleLoginOpenArmBody(code: string): string {
-  return readHandlerBody(code, 'humble_login_open')
+  return readHandlerBodyWithSteps(
+    code,
+    'humble_login_open',
+    HUMBLE_LOGIN_OPEN_STEPS
+  )
 }
 
 describe('fn login_chrome_css_script( exists exactly once in production code', () => {

@@ -649,6 +649,48 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
             "[shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false light_theme_requested=true sheet_presented={sheet_presented}"
         );
     }
+    // Close detection: see `install_login_window_close_hook`.
+    install_login_window_close_hook(app, &window, label.clone());
+    // Seed the title from the validated open URL's origin (Phase 34.5 Plan 27) so
+    // it is visible from the moment the window appears, rather than only after the
+    // first `on_page_load`/`on_document_title_changed` event.
+    if visible {
+        let _ = window.set_title(&login_window_title(&origin, None));
+    }
+    // Dev-only diagnostic (epic-login-non-interactive investigation, 2026-08-01,
+    // F-34.5-G6-01): `open_devtools()` is already forced for the "main" webview
+    // above (the main-window devtools block in `main()`'s `.setup()`, guarded by the
+    // same #[cfg(debug_assertions)]), but
+    // THIS arm builds the login window (`loginwin-N-*`) that all five runners share
+    // -- and it has never had devtools wired up. That gap left the login page's own
+    // JS console unread across four debug cycles despite it being the one webview
+    // that renders third-party OAuth pages (Epic, GOG, Amazon, Humble). Gated on
+    // `visible` to match every other presentation-only call in this arm (the hidden
+    // reveal/clear windows built elsewhere in this file are unaffected) and on
+    // `#[cfg(debug_assertions)]` so it can never reach a packaged build. Skipped on
+    // Linux through `should_auto_open_devtools`: gated on mechanism (the docked-inspector
+    // attach races page boot there), not measured on this window, and applied because
+    // the race is not specific to our page.
+    #[cfg(debug_assertions)]
+    if visible && should_auto_open_devtools(std::env::consts::OS) {
+        window.open_devtools();
+        shell_eprintln!(
+            "[shell] humble_login_open: devtools opened for '{label}' (debug build)"
+        );
+    } else if visible {
+        shell_eprintln!(
+            "[shell] humble_login_open: devtools NOT auto-opened for '{label}' on linux (debug build) -- the inspector attach races page boot; right-click > Inspect Element opens it"
+        );
+    }
+    Ok(Value::String(label))
+}
+
+// A step of `rpc_humble_login_open`: relays the built window's destruction as a `closed` event.
+fn install_login_window_close_hook(
+    #[cfg_attr(not(target_os = "macos"), allow(unused_variables))] app: &AppHandle,
+    window: &tauri::WebviewWindow,
+    label: String,
+) {
     // Quick task 260803-eee Task 5: close-detection, added AFTER `.build()` because
     // `on_window_event` is a method on the built `WebviewWindow` handle
     // (`tauri-2.11.5/src/webview/webview_window.rs:1524`), not on the builder --
@@ -713,38 +755,6 @@ pub(crate) fn rpc_humble_login_open(args: &[Value], app: &AppHandle) -> Result<V
             clear_pending_visible_login_window(&close_event_label);
         }
     });
-    // Seed the title from the validated open URL's origin (Phase 34.5 Plan 27) so
-    // it is visible from the moment the window appears, rather than only after the
-    // first `on_page_load`/`on_document_title_changed` event.
-    if visible {
-        let _ = window.set_title(&login_window_title(&origin, None));
-    }
-    // Dev-only diagnostic (epic-login-non-interactive investigation, 2026-08-01,
-    // F-34.5-G6-01): `open_devtools()` is already forced for the "main" webview
-    // above (the main-window devtools block in `main()`'s `.setup()`, guarded by the
-    // same #[cfg(debug_assertions)]), but
-    // THIS arm builds the login window (`loginwin-N-*`) that all five runners share
-    // -- and it has never had devtools wired up. That gap left the login page's own
-    // JS console unread across four debug cycles despite it being the one webview
-    // that renders third-party OAuth pages (Epic, GOG, Amazon, Humble). Gated on
-    // `visible` to match every other presentation-only call in this arm (the hidden
-    // reveal/clear windows built elsewhere in this file are unaffected) and on
-    // `#[cfg(debug_assertions)]` so it can never reach a packaged build. Skipped on
-    // Linux through `should_auto_open_devtools`: gated on mechanism (the docked-inspector
-    // attach races page boot there), not measured on this window, and applied because
-    // the race is not specific to our page.
-    #[cfg(debug_assertions)]
-    if visible && should_auto_open_devtools(std::env::consts::OS) {
-        window.open_devtools();
-        shell_eprintln!(
-            "[shell] humble_login_open: devtools opened for '{label}' (debug build)"
-        );
-    } else if visible {
-        shell_eprintln!(
-            "[shell] humble_login_open: devtools NOT auto-opened for '{label}' on linux (debug build) -- the inspector attach races page boot; right-click > Inspect Element opens it"
-        );
-    }
-    Ok(Value::String(label))
 }
 
 // Drain (not merely read) `label`'s queued navigation events (Phase 34.4.1 Plan
