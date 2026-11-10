@@ -189,7 +189,7 @@ import { pushReadOnlyStoresNotice } from './readOnlyStoresNotice'
 // Phase 35 plan 11: boot-time download-queue auto-resume, ported from
 // `main.ts:613` before that file is deleted at plan 35-14. See the
 // `frontendReady` handler below for the full contingency analysis.
-import { initQueue } from '../downloadmanager/downloadqueue'
+import type { DownloadQueue } from '../downloadmanager/downloadqueue'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
 import {
@@ -269,6 +269,7 @@ function syncTrayIcon(): void {
  * caller that invokes it directly (see the call site below for the full rationale).
  */
 export function registerAppShellFlows(
+  deps: { downloadQueue: Pick<DownloadQueue, 'initQueue'> },
   options: { skipInitialTraySync?: boolean } = {}
 ): void {
   // ── invoke (7) ─────────────────────────────────────────────────────────
@@ -550,7 +551,7 @@ export function registerAppShellFlows(
         // `.unref()` only removes its claim on the loop, never its scheduling.
         setTimeout(() => {
           logInfo('Starting the Download Queue', LogPrefix.Backend)
-          void initQueue(true)
+          void deps.downloadQueue.initQueue(true)
         }, 5000).unref()
 
         // Quick task 260922-v2e: ports old `main.ts:296` `detectVCRedist(mainWindow)`

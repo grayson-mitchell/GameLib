@@ -37,24 +37,24 @@ const installMock = jest.fn()
 const getGameInfoMock = jest.fn().mockReturnValue({ title: 'Test Game' })
 const stopMock = jest.fn()
 
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {
-    steam: {
-      getGame: jest.fn().mockReturnValue({
-        install: installMock,
-        getGameInfo: getGameInfoMock,
-        stop: stopMock
-      })
-    },
-    gog: {
-      getGame: jest.fn().mockReturnValue({
-        install: installMock,
-        getGameInfo: getGameInfoMock,
-        stop: stopMock
-      })
-    }
+// The library map is passed to the queue element runners as a dep (66.1-11), not mocked as a module.
+const libraryManagerMap = {
+  steam: {
+    getGame: jest.fn().mockReturnValue({
+      install: installMock,
+      getGameInfo: getGameInfoMock,
+      stop: stopMock
+    })
+  },
+  gog: {
+    getGame: jest.fn().mockReturnValue({
+      install: installMock,
+      getGameInfo: getGameInfoMock,
+      stop: stopMock
+    })
   }
-}))
+}
+const queueDeps = { managers: { library: libraryManagerMap } } as never
 
 const sendGameStatusUpdateMock = jest.fn()
 
@@ -114,7 +114,6 @@ jest.mock('backend/knownFixesFetcher', () => ({
 }))
 
 import { installQueueElement, resolveGameTitle } from '../utils'
-import { libraryManagerMap } from 'backend/storeManagers'
 import { isOnline } from '../../online_monitor'
 import { existsSync } from 'graceful-fs'
 import { fetchRemoteKnownFixes } from 'backend/knownFixesFetcher'
@@ -236,12 +235,12 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
     // just once. Re-apply every implementation this suite depends on here.
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
     stopMock.mockResolvedValue(undefined)
-    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+    libraryManagerMap.steam.getGame.mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
       stop: stopMock
     })
-    ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+    libraryManagerMap.gog.getGame.mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
       stop: stopMock
@@ -253,7 +252,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
   it('a CANCELLED native Steam install (status: "abort") force-clears the "installing" badge, even though no ACF poller ever started', async () => {
     installMock.mockResolvedValue({ status: 'abort' })
 
-    const result = await installQueueElement(makeParams())
+    const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('abort')
     expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
@@ -268,7 +267,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
   it('regression guard: a SUCCESSFUL native Steam install (status: "done") does NOT force-clear the badge here — still defers to the ACF poller, exactly as before this fix', async () => {
     installMock.mockResolvedValue({ status: 'done' })
 
-    const result = await installQueueElement(makeParams())
+    const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('done')
     // The 'installing' sendGameStatusUpdate call at the START of
@@ -283,7 +282,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
   it('WR-01/D-10: a genuine ERROR (status: "error", never a user cancel) NOW force-clears the "installing" badge — the pre-33-01 gap that let the live install-hang persist despite the wasAborted fix', async () => {
     installMock.mockResolvedValue({ status: 'error', error: 'boom' })
 
-    const result = await installQueueElement(makeParams())
+    const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('error')
     expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
@@ -301,7 +300,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
       error: 'Steam connection stale, try again'
     })
 
-    await installQueueElement(makeParams())
+    await installQueueElement(queueDeps, makeParams())
 
     expect(showDialogBoxModalAuto).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -318,7 +317,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
       errorAction: 'signIn'
     })
 
-    await installQueueElement(makeParams())
+    await installQueueElement(queueDeps, makeParams())
 
     const dialogCall = (showDialogBoxModalAuto as jest.Mock).mock.calls[0][0]
     expect(dialogCall.buttons).toHaveLength(1)
@@ -333,7 +332,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
       error: 'boom'
     })
 
-    await installQueueElement(makeParams())
+    await installQueueElement(queueDeps, makeParams())
 
     const dialogCall = (showDialogBoxModalAuto as jest.Mock).mock.calls[0][0]
     expect(dialogCall.buttons).toBeUndefined()
@@ -343,6 +342,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
     installMock.mockResolvedValue({ status: 'done' })
 
     await installQueueElement(
+      queueDeps,
       makeParams({
         runner: 'gog',
         gameInfo: { app_name: '1091500', runner: 'gog' } as never,
@@ -360,6 +360,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
     installMock.mockResolvedValue({ status: 'abort' })
 
     const result = await installQueueElement(
+      queueDeps,
       makeParams({
         runner: 'gog',
         gameInfo: { app_name: '1091500', runner: 'gog' } as never
@@ -379,7 +380,7 @@ describe('installQueueElement — debug/steam-cancel-abort-thread-a: badge clear
   it("a bottle guided-setup deferral (deferredToSetup: true, Phase 17) still force-clears the badge — unaffected by this cycle's new wasAborted exception", async () => {
     installMock.mockResolvedValue({ status: 'done', deferredToSetup: true })
 
-    const result = await installQueueElement(makeParams())
+    const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('done')
     expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
@@ -396,7 +397,7 @@ describe('installQueueElement — 260817-dib: no-progress (stall) install watchd
   beforeEach(() => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
     stopMock.mockResolvedValue(undefined)
-    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+    libraryManagerMap.steam.getGame.mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
       stop: stopMock
@@ -413,7 +414,7 @@ describe('installQueueElement — 260817-dib: no-progress (stall) install watchd
     jest.useFakeTimers()
     installMock.mockReturnValue(new Promise(() => {}))
 
-    const resultPromise = installQueueElement(makeParams())
+    const resultPromise = installQueueElement(queueDeps, makeParams())
     const assertion = resultPromise.then((result) => {
       expect(result.status).toBe('error')
       expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
@@ -443,7 +444,7 @@ describe('installQueueElement — 260817-dib: no-progress (stall) install watchd
         })
     )
 
-    const resultPromise = installQueueElement(makeParams())
+    const resultPromise = installQueueElement(queueDeps, makeParams())
     const assertion = resultPromise.then((result) => {
       expect(result.status).toBe('done')
     })
@@ -456,7 +457,7 @@ describe('installQueueElement — 260817-dib: no-progress (stall) install watchd
     jest.useFakeTimers()
     installMock.mockReturnValue(new Promise(() => {}))
 
-    const resultPromise = installQueueElement(makeParams())
+    const resultPromise = installQueueElement(queueDeps, makeParams())
     let settled = false
     resultPromise.then(() => (settled = true))
 
@@ -483,7 +484,7 @@ describe('installQueueElement — 260817-dib: no-progress (stall) install watchd
     jest.useFakeTimers()
     installMock.mockReturnValue(new Promise(() => {}))
 
-    const resultPromise = installQueueElement(makeParams())
+    const resultPromise = installQueueElement(queueDeps, makeParams())
     const assertion = resultPromise.then((result) => {
       expect(result.status).toBe('error')
       expect(callAbortController).toHaveBeenCalledWith('1091500')
@@ -503,7 +504,7 @@ describe('installQueueElement — 260817-dib: no-progress (stall) install watchd
     jest.useFakeTimers()
     installMock.mockReturnValue(new Promise(() => {}))
 
-    const resultPromise = installQueueElement(makeParams())
+    const resultPromise = installQueueElement(queueDeps, makeParams())
     const assertion = resultPromise.then(() => {
       expect(mockT).toHaveBeenCalledWith(
         'gamelib:box.error.install.stalled',
@@ -527,7 +528,7 @@ describe('installQueueElement — 260817-dib: no-progress (stall) install watchd
       Object.assign(new Error('CM socket stale'), { isTimeout: true as const })
     )
 
-    await installQueueElement(makeParams())
+    await installQueueElement(queueDeps, makeParams())
 
     expect(showDialogBoxModalAuto).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -557,12 +558,12 @@ describe('installQueueElement — 34.13 A-01: the reshape must not drop InstallA
   beforeEach(() => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
     stopMock.mockResolvedValue(undefined)
-    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+    libraryManagerMap.steam.getGame.mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
       stop: stopMock
     })
-    ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+    libraryManagerMap.gog.getGame.mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
       stop: stopMock
@@ -574,7 +575,10 @@ describe('installQueueElement — 34.13 A-01: the reshape must not drop InstallA
   it('A-01: steamForceWindowsViaBottle: true survives the queue hop and reaches .install()', async () => {
     installMock.mockResolvedValue({ status: 'done' })
 
-    await installQueueElement(makeParams({ steamForceWindowsViaBottle: true }))
+    await installQueueElement(
+      queueDeps,
+      makeParams({ steamForceWindowsViaBottle: true })
+    )
 
     expect(installMock).toHaveBeenCalledTimes(1)
     expect(installMock.mock.calls[0][0].steamForceWindowsViaBottle).toBe(true)
@@ -583,7 +587,10 @@ describe('installQueueElement — 34.13 A-01: the reshape must not drop InstallA
   it('A-01: an explicit false is forwarded as false (distinguishable from "never asked")', async () => {
     installMock.mockResolvedValue({ status: 'done' })
 
-    await installQueueElement(makeParams({ steamForceWindowsViaBottle: false }))
+    await installQueueElement(
+      queueDeps,
+      makeParams({ steamForceWindowsViaBottle: false })
+    )
 
     expect(installMock.mock.calls[0][0].steamForceWindowsViaBottle).toBe(false)
   })
@@ -591,7 +598,7 @@ describe('installQueueElement — 34.13 A-01: the reshape must not drop InstallA
   it('A-01: the legacy no-override shape stays undefined — the field is not fabricated', async () => {
     installMock.mockResolvedValue({ status: 'done' })
 
-    await installQueueElement(makeParams())
+    await installQueueElement(queueDeps, makeParams())
 
     expect(
       installMock.mock.calls[0][0].steamForceWindowsViaBottle
@@ -602,6 +609,7 @@ describe('installQueueElement — 34.13 A-01: the reshape must not drop InstallA
     installMock.mockResolvedValue({ status: 'done' })
 
     await installQueueElement(
+      queueDeps,
       makeParams({
         runner: 'gog',
         gameInfo: { app_name: '1091500', runner: 'gog' } as never,
@@ -617,7 +625,7 @@ describe('installQueueElement — WR-03/D-12: error-path regression coverage', (
   beforeEach(() => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
     stopMock.mockResolvedValue(undefined)
-    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+    libraryManagerMap.steam.getGame.mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
       stop: stopMock
@@ -629,7 +637,7 @@ describe('installQueueElement — WR-03/D-12: error-path regression coverage', (
   it('an install() call that THROWS/REJECTS (not just resolves {status:"error"}) is unaffected by the coverage gap that let WR-01 ship — badge clears AND a failure dialog is raised via the same catch-block path', async () => {
     installMock.mockRejectedValue(new Error('ECONNRESET'))
 
-    const result = await installQueueElement(makeParams())
+    const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('error')
     expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
@@ -647,7 +655,7 @@ describe('installQueueElement — WR-03/D-12: error-path regression coverage', (
   it('a "abort" resolution (user cancel) is unaffected by the D-10/D-01b additions — no dialog raised for a user-initiated cancel, only badge-clear', async () => {
     installMock.mockResolvedValue({ status: 'abort' })
 
-    const result = await installQueueElement(makeParams())
+    const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('abort')
     expect(sendGameStatusUpdateMock).toHaveBeenCalledWith(
@@ -671,7 +679,7 @@ describe('installQueueElement — WR-03/D-12: error-path regression coverage', (
     getGameInfoMock.mockReturnValue({})
     installMock.mockResolvedValue({ status: 'error' })
 
-    await installQueueElement(makeParams({ appName: '1091500' }))
+    await installQueueElement(queueDeps, makeParams({ appName: '1091500' }))
 
     expect(showDialogBoxModalAuto).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -689,7 +697,7 @@ describe('installQueueElement — WR-03/D-12: error-path regression coverage', (
 describe('resolveGameTitle — 260905-luf (D-01): the shared title fallback chain', () => {
   beforeEach(() => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
-    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+    libraryManagerMap.steam.getGame.mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
       stop: stopMock
@@ -699,9 +707,14 @@ describe('resolveGameTitle — 260905-luf (D-01): the shared title fallback chai
   it('a live (non-empty) title from getGameInfo() wins over both the fallback and the raw appName', () => {
     getGameInfoMock.mockReturnValue({ title: 'Live Title' })
 
-    const result = resolveGameTitle(libraryManagerMap, 'steam', '1091500', {
-      title: 'Fallback Title'
-    } as GameInfo)
+    const result = resolveGameTitle(
+      libraryManagerMap as never,
+      'steam',
+      '1091500',
+      {
+        title: 'Fallback Title'
+      } as GameInfo
+    )
 
     expect(result).toBe('Live Title')
   })
@@ -709,9 +722,14 @@ describe('resolveGameTitle — 260905-luf (D-01): the shared title fallback chai
   it('a double cache miss ({} from getGameInfo()) falls back to fallback.title when provided', () => {
     getGameInfoMock.mockReturnValue({})
 
-    const result = resolveGameTitle(libraryManagerMap, 'steam', '1091500', {
-      title: 'Cyberpunk 2077'
-    } as GameInfo)
+    const result = resolveGameTitle(
+      libraryManagerMap as never,
+      'steam',
+      '1091500',
+      {
+        title: 'Cyberpunk 2077'
+      } as GameInfo
+    )
 
     expect(result).toBe('Cyberpunk 2077')
   })
@@ -719,7 +737,11 @@ describe('resolveGameTitle — 260905-luf (D-01): the shared title fallback chai
   it('a double cache miss with NO fallback provided falls back to the raw appName — never an empty subject', () => {
     getGameInfoMock.mockReturnValue({})
 
-    const result = resolveGameTitle(libraryManagerMap, 'steam', '1091500')
+    const result = resolveGameTitle(
+      libraryManagerMap as never,
+      'steam',
+      '1091500'
+    )
 
     expect(result).toBe('1091500')
   })
@@ -727,9 +749,14 @@ describe('resolveGameTitle — 260905-luf (D-01): the shared title fallback chai
   it('an empty-string live title is treated as absent (falsy), same as undefined — falls through to fallback.title', () => {
     getGameInfoMock.mockReturnValue({ title: '' })
 
-    const result = resolveGameTitle(libraryManagerMap, 'steam', '1091500', {
-      title: 'Cyberpunk 2077'
-    } as GameInfo)
+    const result = resolveGameTitle(
+      libraryManagerMap as never,
+      'steam',
+      '1091500',
+      {
+        title: 'Cyberpunk 2077'
+      } as GameInfo
+    )
 
     expect(result).toBe('Cyberpunk 2077')
   })
@@ -767,12 +794,12 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
   beforeEach(() => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
     stopMock.mockResolvedValue(undefined)
-    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+    libraryManagerMap.steam.getGame.mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
       stop: stopMock
     })
-    ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+    libraryManagerMap.gog.getGame.mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
       stop: stopMock
@@ -795,7 +822,7 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
     jest.useFakeTimers()
     installMock.mockReturnValue(new Promise(() => {}))
 
-    const resultPromise = installQueueElement(makeParams())
+    const resultPromise = installQueueElement(queueDeps, makeParams())
     const assertion = resultPromise.then((result) => {
       expect(result.status).toBe('error')
       expect(callAbortController).toHaveBeenCalledWith('1091500')
@@ -809,7 +836,7 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
   it('spec 2 (install resolves {status: "error"}, REVISED by 37-05): the depot download has already settled, so games.ts has already deleted its own controller by construction — nothing left for callAbortController to abort, but .stop(false) still fires unconditionally', async () => {
     installMock.mockResolvedValue({ status: 'error', error: 'boom' })
 
-    const result = await installQueueElement(makeParams())
+    const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('error')
     expect(callAbortController).not.toHaveBeenCalled()
@@ -823,7 +850,7 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
   it('spec 3 (install() throws/rejects, REVISED by 37-05): a finally block runs on rejection exactly as it does on resolution, so this shape ALSO has no registered controller left by the time installQueueElement sees it — .stop(false) still fires unconditionally', async () => {
     installMock.mockRejectedValue(new Error('ECONNRESET'))
 
-    const result = await installQueueElement(makeParams())
+    const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('error')
     expect(callAbortController).not.toHaveBeenCalled()
@@ -833,7 +860,7 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
   it('spec 4 (regression — {status: "done"}): a successful install does NOT trigger an abort', async () => {
     installMock.mockResolvedValue({ status: 'done' })
 
-    const result = await installQueueElement(makeParams())
+    const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('done')
     expect(callAbortController).not.toHaveBeenCalled()
@@ -843,7 +870,7 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
   it('spec 5 (regression — {status: "abort"}): a user cancel that already aborted does NOT get a second, redundant abort issued', async () => {
     installMock.mockResolvedValue({ status: 'abort' })
 
-    const result = await installQueueElement(makeParams())
+    const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('abort')
     expect(callAbortController).not.toHaveBeenCalled()
@@ -854,6 +881,7 @@ describe('installQueueElement — orphaned-depot abort: a terminal install failu
     installMock.mockResolvedValue({ status: 'error', error: 'boom' })
 
     const result = await installQueueElement(
+      queueDeps,
       makeParams({
         runner: 'gog',
         gameInfo: { app_name: '1091500', runner: 'gog' } as never
@@ -872,7 +900,7 @@ describe('installQueueElement — REQ-37-03: the install-failure dialog always n
     // implementation this suite depends on, same convention as the other
     // describe blocks in this file.
     stopMock.mockResolvedValue(undefined)
-    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+    libraryManagerMap.steam.getGame.mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
       stop: stopMock
@@ -885,7 +913,7 @@ describe('installQueueElement — REQ-37-03: the install-failure dialog always n
     getGameInfoMock.mockReturnValue({})
     installMock.mockResolvedValue({ status: 'error', error: 'boom' })
 
-    await installQueueElement(makeParams())
+    await installQueueElement(queueDeps, makeParams())
 
     const [dialogArg] = (showDialogBoxModalAuto as jest.Mock).mock.calls[0]
     // Assert on the RENDERED message, not the i18next.t options object --
@@ -900,7 +928,7 @@ describe('installQueueElement — REQ-37-03: the install-failure dialog always n
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
     installMock.mockResolvedValue({ status: 'error', error: 'boom' })
 
-    await installQueueElement(makeParams())
+    await installQueueElement(queueDeps, makeParams())
 
     const [dialogArg] = (showDialogBoxModalAuto as jest.Mock).mock.calls[0]
     expect(dialogArg.message).toContain('Test Game')
@@ -911,7 +939,7 @@ describe('installQueueElement — REQ-37-03: the install-failure dialog always n
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
     installMock.mockResolvedValue({ status: 'error' })
 
-    await installQueueElement(makeParams())
+    await installQueueElement(queueDeps, makeParams())
 
     const [dialogArg] = (showDialogBoxModalAuto as jest.Mock).mock.calls[0]
     expect(dialogArg.message).toContain('Unknown error')
@@ -939,7 +967,7 @@ describe('installQueueElement — REQ-37-04: no spurious abort-controller-miss E
   beforeEach(() => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
     stopMock.mockResolvedValue(undefined)
-    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+    libraryManagerMap.steam.getGame.mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
       stop: stopMock
@@ -951,7 +979,7 @@ describe('installQueueElement — REQ-37-04: no spurious abort-controller-miss E
   it('case 1 (RED against unmodified utils.ts): a terminal Steam install failure with NO abort controller registered for the appName does not log the misleading "could not find a matching abort controller" ERROR, and logs an honest WARNING naming the appName instead — not silence, not ERROR', async () => {
     installMock.mockResolvedValue({ status: 'error', error: 'boom' })
 
-    const result = await installQueueElement(makeParams())
+    const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('error')
     expect(loggedAbortControllerMiss()).toBe(false)
@@ -968,7 +996,7 @@ describe('installQueueElement — REQ-37-04: no spurious abort-controller-miss E
     registerFakeAbortController('1091500')
     installMock.mockResolvedValue({ status: 'error', error: 'boom' })
 
-    const result = await installQueueElement(makeParams())
+    const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('error')
     expect(callAbortController).toHaveBeenCalledWith('1091500')
@@ -1006,12 +1034,12 @@ describe('installQueueElement — quick 261026-avw: every store fetches known fi
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
     stopMock.mockResolvedValue(undefined)
     installMock.mockResolvedValue({ status: 'done' })
-    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+    libraryManagerMap.steam.getGame.mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
       stop: stopMock
     })
-    ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+    libraryManagerMap.gog.getGame.mockReturnValue({
       install: installMock,
       getGameInfo: getGameInfoMock,
       stop: stopMock
@@ -1021,7 +1049,7 @@ describe('installQueueElement — quick 261026-avw: every store fetches known fi
   })
 
   it('a Steam install calls the fetcher and never downloadFile for known fixes', async () => {
-    await installQueueElement(makeParams())
+    await installQueueElement(queueDeps, makeParams())
 
     expect(fetchRemoteKnownFixes).toHaveBeenCalledWith(
       expect.any(String),
@@ -1036,6 +1064,7 @@ describe('installQueueElement — quick 261026-avw: every store fetches known fi
 
   it('a GOG install calls the fetcher with the gog runner', async () => {
     await installQueueElement(
+      queueDeps,
       makeParams({
         appName: '1207658930',
         runner: 'gog',
@@ -1054,7 +1083,7 @@ describe('installQueueElement — quick 261026-avw: every store fetches known fi
   it('a rejecting fetcher never fails the install', async () => {
     ;(fetchRemoteKnownFixes as jest.Mock).mockRejectedValue(new Error('boom'))
 
-    const result = await installQueueElement(makeParams())
+    const result = await installQueueElement(queueDeps, makeParams())
 
     expect(result.status).toBe('done')
   })

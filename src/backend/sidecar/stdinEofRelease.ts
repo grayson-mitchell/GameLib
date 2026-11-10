@@ -1,9 +1,6 @@
 import type { Readable } from 'node:stream'
 import { callAllAbortControllers } from '../utils/aborthandler/aborthandler'
-import {
-  isRunning,
-  pauseCurrentDownload
-} from '../downloadmanager/downloadqueue'
+import type { DownloadQueue } from '../downloadmanager/downloadqueue'
 import { SteamUser } from '../storeManagers/steam/user'
 import { stopAllSteamDownloadMonitors } from '../storeManagers/steam/steamDownloadMonitor'
 import { LogPrefix, logInfo, logWarning } from '../logger'
@@ -41,7 +38,12 @@ export const RESIDUAL_HOLDER_DIAG_MS = 15_000
  * down (no process.exit) -- it only drops references to handles that cannot be unref'd, and the
  * process still leaves by drain. It lives here, not in `startRpcServer()`.
  */
-export function releaseOnStdinEof(input: Readable): void {
+export function releaseOnStdinEof(
+  input: Readable,
+  deps: {
+    downloadQueue: Pick<DownloadQueue, 'isRunning' | 'pauseCurrentDownload'>
+  }
+): void {
   let released = false
   const release = (): void => {
     if (released) return
@@ -51,7 +53,9 @@ export function releaseOnStdinEof(input: Readable): void {
       LogPrefix.Backend
     )
     try {
-      if (isRunning()) pauseCurrentDownload()
+      if (deps.downloadQueue.isRunning()) {
+        deps.downloadQueue.pauseCurrentDownload()
+      }
     } catch {
       // best-effort: still abort and release below
     }

@@ -144,7 +144,7 @@ import { resolveInstallRoot } from '../storeManagers/steam/library/installRoot'
 import { library as steamLibraryMap } from '../storeManagers/steam/state'
 import { getSteamBottleEligibilityVerdict } from '../storeManagers/steam/installFormIpc'
 import { isSteamExperimentalInstallAppEnabled } from '../storeManagers/steam/experimentalInstallAppSetting'
-import { addToQueue } from '../downloadmanager/downloadqueue'
+import type { DownloadQueue } from '../downloadmanager/downloadqueue'
 import { resolveGameTitle } from '../downloadmanager/utils'
 // Plan 34.6-06 (REQ-34.6-04): byte-equivalent port of moveInstall/importGame
 // (main.ts:1112-1245, D-02). getGame/isEpicServiceOffline/sendGameStatusUpdate/writeConfig are
@@ -199,7 +199,9 @@ function rejectedPathDialogTitle(): string {
  * imports above; the caller decides when registration onto the handler
  * registry happens.
  */
-export function registerInstallFlows(): void {
+export function registerInstallFlows(deps: {
+  downloadQueue: Pick<DownloadQueue, 'addToQueue'>
+}): void {
   ipcMain.handle(
     'install',
     async (_event: unknown, ...args: unknown[]): Promise<void> => {
@@ -221,7 +223,7 @@ export function registerInstallFlows(): void {
         startTime: 0
       }
 
-      await addToQueue(dmQueueElement)
+      await deps.downloadQueue.addToQueue(dmQueueElement)
     }
   )
 
@@ -279,7 +281,7 @@ export function registerInstallFlows(): void {
         startTime: 0
       }
 
-      await addToQueue(dmQueueElement)
+      await deps.downloadQueue.addToQueue(dmQueueElement)
     }
   )
 

@@ -14,6 +14,7 @@ import type { QuitHandler } from 'backend/quitHandler'
 import type { Runner } from 'common/types'
 import type { LibraryManager } from 'common/types/game_manager'
 import type { StoreLaunchHooks } from 'backend/storeManagers'
+import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
 import type { CommandRunner as CommandRunnerImpl } from 'backend/commandRunner'
 import type GOGLibraryManager from 'backend/storeManagers/gog/library'
 import type LegendaryLibraryManager from 'backend/storeManagers/legendary/library'
@@ -83,6 +84,11 @@ export interface ManagerDeps {
   commandRunner: CommandRunner
   launcher: Launcher
   spawnAsync: SpawnAsync
+  /**
+   * A call-time accessor, never a queue value: the download queue is built by the
+   * 'download-queue' boot step, after the managers exist.
+   */
+  getDownloadQueue: () => DownloadQueue
 }
 
 export interface BootServices {
@@ -92,4 +98,5 @@ export interface BootServices {
   commandRunner: CommandRunner
   spawnAsync: SpawnAsync
   quit: QuitHandler
+  downloadQueue: DownloadQueue
 }

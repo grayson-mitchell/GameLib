@@ -226,18 +226,17 @@ jest.mock('../../longLivedChildren', () => ({
   __resetLongLivedChildrenForTests: jest.fn()
 }))
 
-// ── downloadmanager/downloadqueue mock — Plan 05 (REQ-34.6-04/07/13): spreads the REAL
-// module (already transitively loaded today via `utils.ts`'s own `import { isRunning } from
-// './downloadmanager/downloadqueue'`, exercised by the CR-04 quit tests above — this mock
-// introduces no new import-graph risk) and overrides ONLY `initQueue` with a `jest.fn()`.
-// Until Phase 35 plan 11 the frontendReady test asserted it was NEVER called; plan 11 ported
-// the boot-time auto-resume, so the test now asserts it IS called exactly once with `true`
-// after 5s. `isRunning` (and every other real export `handleExit` depends on) stays real
-// and unchanged.
-jest.mock('../../downloadmanager/downloadqueue', () => ({
-  ...jest.requireActual('../../downloadmanager/downloadqueue'),
-  initQueue: jest.fn()
-}))
+// ── download queue stub (66.1-11): the queue is a boot service now, so the boot gets this stub
+// as its prebuilt `downloadQueue` and the isolated registrations receive it by deps. Only
+// `initQueue` is asserted on; `isRunning` stays falsy so the quit tests see an idle queue
+// (undefined after `resetMocks`). Until Phase 35 plan 11 the frontendReady test asserted
+// initQueue was NEVER called; plan 11 ported the boot-time auto-resume, so the test now asserts
+// it IS called exactly once with `true` after 5s.
+const downloadQueueStub = {
+  initQueue: jest.fn(),
+  isRunning: jest.fn(),
+  pauseCurrentDownload: jest.fn()
+}
 
 // ── protocol mock — Plan 05 (REQ-34.6-04/07/13): spreads the REAL module (already
 // transitively loaded today via `bootstrap.ts`'s own `import { handleProtocol } from
@@ -363,7 +362,10 @@ function freshRegistry(): void {
 
 /** The one boot for a test case, in the registry freshRegistry() just built. */
 function boot() {
-  return bootFresh({ reuseRegistry: true })
+  return bootFresh({
+    reuseRegistry: true,
+    services: { downloadQueue: downloadQueueStub as never }
+  })
 }
 
 /**
@@ -1092,8 +1094,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           .requestRustInvoke as jest.Mock
         isolatedRequestRustInvoke.mockResolvedValue(undefined)
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        isolatedInitQueue = require('../../downloadmanager/downloadqueue')
-          .initQueue as jest.Mock
+        isolatedInitQueue = downloadQueueStub.initQueue
 
         // `frontendReady`'s handler calls `logInfo()` unconditionally near the top of its
         // body (before the guard under test is ever reached). `logInfo` reads a
@@ -1111,7 +1112,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
-        isolatedModule.registerAppShellFlows()
+        isolatedModule.registerAppShellFlows({
+          downloadQueue: downloadQueueStub
+        })
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
         const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1175,8 +1178,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           .requestRustInvoke as jest.Mock
         isolatedRequestRustInvoke.mockResolvedValue(undefined)
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        isolatedInitQueue = require('../../downloadmanager/downloadqueue')
-          .initQueue as jest.Mock
+        isolatedInitQueue = downloadQueueStub.initQueue
 
         // See the "Phase 35 plan 11" test above for why this is required: `frontendReady`
         // calls `logInfo()` unconditionally, which needs `heroicLogWriter` assigned.
@@ -1185,7 +1187,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { registerAppShellFlows } = require('../appShellFlowRegistration')
-        registerAppShellFlows()
+        registerAppShellFlows({ downloadQueue: downloadQueueStub })
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
         const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1247,7 +1249,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
             })
           }
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          require('../appShellFlowRegistration').registerAppShellFlows()
+          require('../appShellFlowRegistration').registerAppShellFlows({
+            downloadQueue: downloadQueueStub
+          })
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           const platform = require('../../platform')
           ;[frontendReadyListener] =
@@ -1358,7 +1362,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           const flowRegModule = require('../appShellFlowRegistration')
           const { registerAppShellFlows } = flowRegModule
-          registerAppShellFlows()
+          registerAppShellFlows({ downloadQueue: downloadQueueStub })
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           const isolatedPlatform = require('../../platform')
           const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1483,7 +1487,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
-        isolatedModule.registerAppShellFlows()
+        isolatedModule.registerAppShellFlows({
+          downloadQueue: downloadQueueStub
+        })
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
         const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1529,7 +1535,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
-        isolatedModule.registerAppShellFlows()
+        isolatedModule.registerAppShellFlows({
+          downloadQueue: downloadQueueStub
+        })
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
         const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1569,8 +1577,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           .requestRustInvoke as jest.Mock
         isolatedRequestRustInvoke.mockResolvedValue(undefined)
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        isolatedInitQueue = require('../../downloadmanager/downloadqueue')
-          .initQueue as jest.Mock
+        isolatedInitQueue = downloadQueueStub.initQueue
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         isolatedDetectVCRedist = require('../../utils')
           .detectVCRedist as jest.Mock
@@ -1583,7 +1590,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedModule = require('../appShellFlowRegistration')
-        isolatedModule.registerAppShellFlows()
+        isolatedModule.registerAppShellFlows({
+          downloadQueue: downloadQueueStub
+        })
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const isolatedPlatform = require('../../platform')
         const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
@@ -1801,7 +1810,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // Inside a fresh-registry scope: a static import would resolve against the shared registry.
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { registerAppShellFlows } = require('../appShellFlowRegistration')
-        registerAppShellFlows()
+        registerAppShellFlows({ downloadQueue: downloadQueueStub })
         jest.runAllTimers()
 
         expect(isolatedRequestRustInvoke).toHaveBeenCalledTimes(1)

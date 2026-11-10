@@ -92,7 +92,11 @@ import { installDevSecretVault } from './devSecretVault'
 // "App offline, skipping install" even when fully online. Paired with the sidecar
 // `net.isOnline()` stub (platform/index.ts) so the very first status check falls through to the
 // real `pingSites()` ping instead of pinning `'offline'` permanently.
-import { initOnlineMonitor, runOnceWhenOnline } from '../online_monitor'
+import {
+  initOnlineMonitor,
+  onConnectivityChange,
+  runOnceWhenOnline
+} from '../online_monitor'
 // Block E (todo 2026-09-06, quick-260908-fre). `grep -rn
 // "storeManagers/legendary/user\|storeManagers/gog/user" src/backend/sidecar/` confirms
 // `./handlers` (Step 2, above) already pulls both classes in transitively:
@@ -174,7 +178,10 @@ import { createSpawnAsync } from '../spawnAsync'
 import { createQuitHandler } from '../quitHandler'
 import { tOrFallback } from '../i18nFallback'
 import { getMainWindow } from '../main_window'
-import { isRunning } from '../downloadmanager/downloadqueue'
+import {
+  bindLegacyBootQueue,
+  createDownloadQueue
+} from '../downloadmanager/downloadqueue'
 import { hasLiveBridgeHelper } from '../storeManagers/steam/bridge/helperRegistry'
 import { SteamUser } from '../storeManagers/steam/user'
 // Transitional (removed by plan 27): the legacy registries still hold children until plans
@@ -247,6 +254,7 @@ export const BOOT_STEP_NAMES = [
   'migrations',
   'command-runner',
   'store-managers',
+  'download-queue',
   'shell-exe-receipt',
   'asset-root-check',
   'i18n',
@@ -297,15 +305,23 @@ interface BootState {
 }
 
 function requireServices(state: BootState): BootServices {
-  const { stores, managers, launcher, commandRunner, spawnAsync, quit } =
-    state.services
+  const {
+    stores,
+    managers,
+    launcher,
+    commandRunner,
+    spawnAsync,
+    quit,
+    downloadQueue
+  } = state.services
   if (
     !stores ||
     !managers ||
     !launcher ||
     !commandRunner ||
     !spawnAsync ||
-    !quit
+    !quit ||
+    !downloadQueue
   ) {
     const missing = (
       [
@@ -314,12 +330,21 @@ function requireServices(state: BootState): BootServices {
         'launcher',
         'commandRunner',
         'spawnAsync',
-        'quit'
+        'quit',
+        'downloadQueue'
       ] as const
     ).filter((name) => !state.services[name])
     throw new Error(`boot services missing: ${missing.join(', ')}`)
   }
-  return { stores, managers, launcher, commandRunner, spawnAsync, quit }
+  return {
+    stores,
+    managers,
+    launcher,
+    commandRunner,
+    spawnAsync,
+    quit,
+    downloadQueue
+  }
 }
 
 interface BootStep {
@@ -1068,7 +1093,8 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
           createQuitHandler({
             runner: ctx.runner,
             isLocked: () => existsSync(join(gamesConfigPath, 'lock')),
-            isRunning,
+            // Read lazily: this handler is built before 'download-queue' and only fires after boot.
+            isRunning: () => requireServices(state).downloadQueue.isRunning(),
             isBridgeHosting: hasLiveBridgeHelper,
             getMainWindow,
             showMessageBox: (win, opts) =>
@@ -1092,8 +1118,34 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     {
       name: 'store-managers',
       run: (_ctx, _io, state) => {
-        state.services.managers = prebuilt.managers ?? buildManagersFacade()
+        // The 'download-queue' step runs after this one, so auto-update reaches the queue through
+        // an accessor resolved when it enqueues.
+        state.services.managers =
+          prebuilt.managers ??
+          buildManagersFacade(() => requireServices(state).downloadQueue)
         state.services.launcher = prebuilt.launcher ?? buildLauncherFacade()
+      }
+    },
+    {
+      name: 'download-queue',
+      // Builds the queue and registers one connectivity listener: no timer, watcher, socket or
+      // child, so nothing here can hold the loop (exit contract).
+      run: (_ctx, _io, state) => {
+        const { stores, managers } = state.services
+        if (!stores || !managers) {
+          throw new Error('download-queue step ran before store-managers')
+        }
+        let queue = prebuilt.downloadQueue
+        if (!queue) {
+          queue = createDownloadQueue({
+            stores,
+            managers,
+            onConnectivityChange
+          })
+          queue.start()
+        }
+        state.services.downloadQueue = queue
+        bindLegacyBootQueue(queue)
       }
     },
     {
@@ -1346,11 +1398,13 @@ function buildBootSteps(prebuilt: Partial<BootServices>): BootStep[] {
     },
     {
       name: 'rpc-server',
-      run: (_ctx, { input, output }) => {
+      run: (_ctx, { input, output }, state) => {
         startRpcServer(input, output)
         // Phase 67 D-09: boundary rejections reach gamelib.log (ipcValidation avoids importing the logger).
         setIpcRejectionLogSink((line) => logWarning(line, LogPrefix.Backend))
-        releaseOnStdinEof(input)
+        releaseOnStdinEof(input, {
+          downloadQueue: requireServices(state).downloadQueue
+        })
       }
     },
     {

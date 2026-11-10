@@ -95,7 +95,8 @@ import {
 import { parse } from '@node-steam/vdf'
 
 import type LogWriter from 'backend/logger/log_writer'
-import { isRunning } from './downloadmanager/downloadqueue'
+// transitional: `handleExit` is built from boot state by plan 21/23; until then it reads the bound queue
+import { getLegacyBootQueue } from './downloadmanager/downloadqueue'
 import { isOnline } from './online_monitor'
 import type { Game } from 'common/types/game_manager'
 import { isStore } from 'common/storeCapabilities'
@@ -261,7 +262,10 @@ async function handleExit() {
 
   const isBridgeHosting = hasLiveBridgeHelper()
 
-  if ((isLocked || isRunning() || isBridgeHosting) && mainWindow) {
+  if (
+    (isLocked || getLegacyBootQueue().isRunning() || isBridgeHosting) &&
+    mainWindow
+  ) {
     const { response } = await dialog.showMessageBox(mainWindow, {
       buttons: [tOrFallback('box.no', 'No'), tOrFallback('box.yes', 'Yes')],
       // CR-04: `cancelId` is LOAD-BEARING, not cosmetic. This dialog's sense is
@@ -281,7 +285,7 @@ async function handleExit() {
       // buttons[1], so Esc here meant "Yes, kill everything and quit".
       cancelId: 0,
       message:
-        isBridgeHosting && !isLocked && !isRunning()
+        isBridgeHosting && !isLocked && !getLegacyBootQueue().isRunning()
           ? tOrFallback(
               'box.quit.bridgeHosting',
               'A game is running through the Steam bridge. Quitting GameLib ends any multiplayer session it is hosting. Quit anyway?'

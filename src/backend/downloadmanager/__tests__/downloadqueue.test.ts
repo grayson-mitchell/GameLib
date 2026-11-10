@@ -12,37 +12,30 @@
  * COMPLETE no-op — not even removing the item from the persisted queue.
  * initQueue()'s own 5s auto-resume then re-wedged on every restart.
  *
- * The fix seeds `currentElement` from the persisted queue head at module
- * load instead of leaving it null, so cancel/pause/stop work immediately —
- * before initQueue() has ever run.
+ * The fix seeds `currentElement` from the persisted queue head when the queue starts (the
+ * 'download-queue' boot step calls `start()`), instead of leaving it null, so cancel/pause/stop
+ * work immediately, before initQueue() has ever run.
  *
- * Mock strategy:
- *  - ../typed_store's TypeCheckedStoreBackend is replaced with a simple
- *    in-memory object (exposed via `__store`) so a test can seed the
- *    persisted `queue` BEFORE importing downloadqueue.ts (module load order
- *    matters here — that's the exact bug).
- *  - backend/storeManagers's libraryManagerMap is a plain jest.fn() surface
- *    matching ratingMap.test.ts's established mocking convention.
- *  - downloadqueue.ts must be require()'d fresh (jest.resetModules) in each
- *    test AFTER the store is seeded, since the currentElement seed only
- *    happens once, at first import.
+ * 66.1-11: the queue is built by `createDownloadQueue(deps)`; every test builds its own through
+ * `makeQueue()` with an in-memory store and a fresh library map as deps, so no module state or
+ * module-registry reset is needed for the queue itself (resetModules stays only for the mocked
+ * collaborators' fresh jest.fn()s).
  */
 
 const __store: Record<string, unknown> = {}
 
-jest.mock('../../typed_store', () => ({
-  TypeCheckedStoreBackend: jest.fn().mockImplementation(() => ({
-    has: (key: string) => key in __store,
-    get: (key: string, def: unknown) => (key in __store ? __store[key] : def),
-    get_nodefault: (key: string) => __store[key],
-    set: (key: string, value: unknown) => {
-      __store[key] = value
-    },
-    delete: (key: string) => {
-      delete __store[key]
-    }
-  }))
-}))
+// An in-memory stand-in for the persisted download-manager store, passed to the queue as a dep.
+const memoryStore = {
+  has: (key: string) => key in __store,
+  get: (key: string, def: unknown) => (key in __store ? __store[key] : def),
+  get_nodefault: (key: string) => __store[key],
+  set: (key: string, value: unknown) => {
+    __store[key] = value
+  },
+  delete: (key: string) => {
+    delete __store[key]
+  }
+}
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -55,6 +48,35 @@ const gameStopMock = jest.fn().mockResolvedValue(undefined)
 const gameGetGameInfoMock = jest
   .fn()
   .mockReturnValue({ folder_name: undefined })
+
+// A fresh library map per queue: `resetMocks: true` wipes a shared jest.fn()'s return value
+// before every test, so the map is built inside each makeQueue() call.
+function makeLibrary() {
+  const manager = () => ({
+    getGame: jest.fn().mockReturnValue({
+      stop: gameStopMock,
+      getGameInfo: gameGetGameInfoMock
+    })
+  })
+  return { steam: manager(), gog: manager() }
+}
+
+async function makeQueue() {
+  const { createDownloadQueue } = await import('../downloadqueue')
+  const library = makeLibrary()
+  const onConnectivityChange = jest.fn()
+  const queue = createDownloadQueue({
+    stores: {
+      downloadManager: { downloadManager: memoryStore },
+      steam: {}
+    } as never,
+    managers: { library } as never,
+    onConnectivityChange
+  })
+  // Seeds the queue head from the store seeded by the test, as the boot step does.
+  queue.start()
+  return { ...queue, library, onConnectivityChange }
+}
 
 // 260905-luf: behavior mirror of downloadmanager/utils.ts's real
 // resolveGameTitle (live.title || fallback?.title || appName) — see the
@@ -82,23 +104,6 @@ const resolveGameTitleMock = jest.fn(
     return title || fallback?.title || appName
   }
 )
-
-jest.mock('backend/storeManagers', () => ({
-  libraryManagerMap: {
-    steam: {
-      getGame: jest.fn().mockReturnValue({
-        stop: gameStopMock,
-        getGameInfo: gameGetGameInfoMock
-      })
-    },
-    gog: {
-      getGame: jest.fn().mockReturnValue({
-        stop: gameStopMock,
-        getGameInfo: gameGetGameInfoMock
-      })
-    }
-  }
-}))
 
 jest.mock('../../utils', () => ({
   getFileSize: jest.fn(),
@@ -167,10 +172,6 @@ jest.mock('backend/storeManagers/gog/constants', () => ({
   gogRedistPath: '/mock/gog-redist'
 }))
 
-jest.mock('backend/online_monitor', () => ({
-  onConnectivityChange: jest.fn()
-}))
-
 import type { DMQueueElement } from 'common/types'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { defined } from 'backend/testUtils/indexed'
@@ -208,8 +209,7 @@ describe('downloadqueue.ts — D-UAT-05 restart-wedge regression', () => {
     // Fresh import — this is the exact module-load moment the fix's
     // currentElement seed matters for. initQueue() is NEVER called here,
     // mirroring the pre-5s-timer window on a real app restart.
-    const { cancelCurrentDownload, getQueueInformation } =
-      await import('../downloadqueue')
+    const { cancelCurrentDownload, getQueueInformation } = await makeQueue()
 
     expect(getQueueInformation().elements).toHaveLength(1)
 
@@ -225,8 +225,7 @@ describe('downloadqueue.ts — D-UAT-05 restart-wedge regression', () => {
     __store.queue = [makeQueueElement('1091500')]
     __store.finished = []
 
-    const { pauseCurrentDownload, getQueueInformation } =
-      await import('../downloadqueue')
+    const { pauseCurrentDownload, getQueueInformation } = await makeQueue()
 
     pauseCurrentDownload()
 
@@ -242,7 +241,7 @@ describe('downloadqueue.ts — D-UAT-05 restart-wedge regression', () => {
     __store.finished = []
 
     const { cancelCurrentDownload, pauseCurrentDownload, getQueueInformation } =
-      await import('../downloadqueue')
+      await makeQueue()
 
     expect(() =>
       cancelCurrentDownload({ removeDownloaded: false })
@@ -255,8 +254,7 @@ describe('downloadqueue.ts — D-UAT-05 restart-wedge regression', () => {
     __store.queue = [makeQueueElement('1295660'), makeQueueElement('1091500')]
     __store.finished = []
 
-    const { removeFromQueue, getQueueInformation } =
-      await import('../downloadqueue')
+    const { removeFromQueue, getQueueInformation } = await makeQueue()
 
     removeFromQueue('1091500')
 
@@ -320,7 +318,7 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
     __store.finished = []
 
     const { installQueueElement } = await import('../utils')
-    const { initQueue, getQueueInformation } = await import('../downloadqueue')
+    const { initQueue, getQueueInformation } = await makeQueue()
 
     await initQueue(true)
 
@@ -336,7 +334,7 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
     __store.queue = [makeQueueElement('1091500')]
     __store.finished = []
 
-    const { initQueue, getQueueInformation } = await import('../downloadqueue')
+    const { initQueue, getQueueInformation } = await makeQueue()
 
     await initQueue(true)
 
@@ -348,7 +346,7 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
     __store.finished = []
 
     const { initQueue, cancelCurrentDownload, getQueueInformation } =
-      await import('../downloadqueue')
+      await makeQueue()
 
     await initQueue(true)
     cancelCurrentDownload({ removeDownloaded: false })
@@ -369,15 +367,13 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
     const { installQueueElement } = await import('../utils')
     ;(installQueueElement as jest.Mock).mockResolvedValue({ status: 'done' })
     const { logWarning } = await import('backend/logger')
-    const { libraryManagerMap } = await import('backend/storeManagers')
-    const { initQueue } = await import('../downloadqueue')
+    const { initQueue, library } = await makeQueue()
 
     await initQueue(true)
 
-    expect(
-      (libraryManagerMap as unknown as Record<string, unknown>).zoom
-    ).toBeUndefined()
+    expect((library as unknown as Record<string, unknown>).zoom).toBeUndefined()
     expect(installQueueElement).not.toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ appName: 'zoom-game' })
     )
     expect(__store.finished).not.toContainEqual(zoomFinished)
@@ -393,11 +389,12 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
     const { installQueueElement } = await import('../utils')
     ;(installQueueElement as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const { initQueue } = await import('../downloadqueue')
+    const { initQueue } = await makeQueue()
 
     await initQueue(true)
 
     expect(installQueueElement).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ appName: 'gog-game', runner: 'gog' })
     )
   })
@@ -409,8 +406,7 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
     const { installQueueElement } = await import('../utils')
     ;(installQueueElement as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const { initQueue, resumeCurrentDownload } =
-      await import('../downloadqueue')
+    const { initQueue, resumeCurrentDownload } = await makeQueue()
 
     await initQueue(true)
     expect(installQueueElement).not.toHaveBeenCalled()
@@ -421,6 +417,7 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
     await new Promise((resolve) => setImmediate(resolve))
 
     expect(installQueueElement).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ appName: '1091500' })
     )
   })
@@ -432,7 +429,7 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
     const { installQueueElement } = await import('../utils')
     ;(installQueueElement as jest.Mock).mockResolvedValue({ status: 'done' })
 
-    const { initQueue, addToQueue } = await import('../downloadqueue')
+    const { initQueue, addToQueue } = await makeQueue()
     await initQueue(true)
     expect(installQueueElement).not.toHaveBeenCalled()
 
@@ -448,6 +445,7 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
     // isStartup=false, so it processes the queue head (still the deferred
     // Steam item, FIFO) normally rather than re-deferring it.
     expect(installQueueElement).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ appName: '1091500' })
     )
   })
@@ -515,7 +513,7 @@ describe('downloadqueue.ts — 260905-luf: processNotification title fallback on
     const { installQueueElement } = await import('../utils')
     ;(installQueueElement as jest.Mock).mockResolvedValue({ status: 'error' })
 
-    const { initQueue } = await import('../downloadqueue')
+    const { initQueue } = await makeQueue()
     const { notify } = await import('../../dialog/dialog')
 
     await initQueue(false)
@@ -555,7 +553,7 @@ describe('downloadqueue.ts — 260905-luf: processNotification title fallback on
     const { installQueueElement } = await import('../utils')
     ;(installQueueElement as jest.Mock).mockResolvedValue({ status: 'error' })
 
-    const { initQueue } = await import('../downloadqueue')
+    const { initQueue } = await makeQueue()
     const { notify } = await import('../../dialog/dialog')
 
     await initQueue(false)
@@ -603,7 +601,7 @@ describe('downloadqueue.ts — debug/steam-cancel-abort-thread-a: cancelled Stea
     // stale mock instance from before the reset and never observe this
     // test's calls.
     const { sendGameStatusUpdate } = await import('../../utils')
-    const { cancelCurrentDownload } = await import('../downloadqueue')
+    const { cancelCurrentDownload } = await makeQueue()
 
     cancelCurrentDownload({ removeDownloaded: false })
 
@@ -627,7 +625,7 @@ describe('downloadqueue.ts — debug/steam-cancel-abort-thread-a: cancelled Stea
     __store.finished = []
 
     const { sendGameStatusUpdate } = await import('../../utils')
-    const { cancelCurrentDownload } = await import('../downloadqueue')
+    const { cancelCurrentDownload } = await makeQueue()
 
     cancelCurrentDownload({ removeDownloaded: false })
 
@@ -644,7 +642,7 @@ describe('downloadqueue.ts — debug/steam-cancel-abort-thread-a: cancelled Stea
     __store.finished = []
 
     const { sendGameStatusUpdate } = await import('../../utils')
-    const { removeFromQueue } = await import('../downloadqueue')
+    const { removeFromQueue } = await makeQueue()
 
     // Calling with the default (no second argument) mirrors initQueue's own
     // call site (element.params.appName) — must NOT force-clear the badge.
@@ -658,7 +656,7 @@ describe('downloadqueue.ts — debug/steam-cancel-abort-thread-a: cancelled Stea
     __store.finished = []
 
     const { sendGameStatusUpdate } = await import('../../utils')
-    const { removeFromQueue } = await import('../downloadqueue')
+    const { removeFromQueue } = await makeQueue()
 
     removeFromQueue('1091500', true)
 
@@ -674,7 +672,7 @@ describe('downloadqueue.ts — debug/steam-cancel-abort-thread-a: cancelled Stea
     __store.finished = []
 
     const { sendGameStatusUpdate } = await import('../../utils')
-    const { removeFromQueue } = await import('../downloadqueue')
+    const { removeFromQueue } = await makeQueue()
 
     removeFromQueue('gog-game') // forceStatusUpdate omitted -- non-steam already always clears
 
@@ -705,7 +703,7 @@ describe('downloadqueue.ts — quick 261024-cjq: deferred-to-setup installs are 
     __store.finished = []
     const { installQueueElement } = await import('../utils')
     ;(installQueueElement as jest.Mock).mockResolvedValue(installResult)
-    const { initQueue } = await import('../downloadqueue')
+    const { initQueue } = await makeQueue()
     const { logInfo } = await import('backend/logger')
     await initQueue(false)
     const lines = (logInfo as jest.Mock).mock.calls.map((c) =>
@@ -742,7 +740,7 @@ describe('downloadqueue.ts — quick-261027-cux: Steam Delete Files routing', ()
     const { deleteCancelledSteamInstall } =
       await import('backend/storeManagers/steam/cancelDelete')
     const { removeFolder } = await import('../../utils')
-    const { cancelCurrentDownload } = await import('../downloadqueue')
+    const { cancelCurrentDownload } = await makeQueue()
 
     cancelCurrentDownload({ removeDownloaded: true })
 
@@ -759,7 +757,7 @@ describe('downloadqueue.ts — quick-261027-cux: Steam Delete Files routing', ()
     __store.finished = []
     const { deleteCancelledSteamInstall } =
       await import('backend/storeManagers/steam/cancelDelete')
-    const { cancelCurrentDownload } = await import('../downloadqueue')
+    const { cancelCurrentDownload } = await makeQueue()
 
     cancelCurrentDownload({ removeDownloaded: false })
 
@@ -776,7 +774,7 @@ describe('downloadqueue.ts — quick-261027-cux: Steam Delete Files routing', ()
       await import('backend/storeManagers/steam/cancelDelete')
     const { removeFolder } = await import('../../utils')
     jest.mocked(removeFolder).mockResolvedValue(undefined)
-    const { cancelCurrentDownload } = await import('../downloadqueue')
+    const { cancelCurrentDownload } = await makeQueue()
 
     cancelCurrentDownload({ removeDownloaded: true })
 
@@ -816,7 +814,7 @@ describe('downloadqueue.ts — todo 2026-11-09: stale already-installed Steam he
     jest
       .mocked(updateQueueElement)
       .mockResolvedValue({ status: 'done' } as never)
-    const queue = await import('../downloadqueue')
+    const queue = await makeQueue()
     return {
       installQueueElement,
       updateQueueElement,
@@ -834,6 +832,7 @@ describe('downloadqueue.ts — todo 2026-11-09: stale already-installed Steam he
 
     expect(installQueueElement).toHaveBeenCalledTimes(1)
     expect(installQueueElement).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ appName: 'DREDGE' })
     )
     const finished = (__store.finished as DMQueueElement[]).map(
@@ -879,5 +878,78 @@ describe('downloadqueue.ts — todo 2026-11-09: stale already-installed Steam he
     await initQueue()
 
     expect(steamQueueHeadAlreadyInstalled).not.toHaveBeenCalled()
+  })
+})
+
+describe('downloadqueue.ts — 66.1-11: boot service, no import-time effects', () => {
+  beforeEach(() => {
+    jest.resetModules()
+    jest.clearAllMocks()
+    for (const key of Object.keys(__store)) delete __store[key]
+  })
+
+  function depsWith(
+    overrides: { get?: jest.Mock; subscribe?: jest.Mock } = {}
+  ) {
+    const get = overrides.get ?? jest.fn((_k: string, def: unknown) => def)
+    const subscribe = overrides.subscribe ?? jest.fn()
+    return {
+      get,
+      subscribe,
+      deps: {
+        stores: {
+          downloadManager: { downloadManager: { ...memoryStore, get } },
+          steam: {}
+        } as never,
+        managers: { library: makeLibrary() } as never,
+        onConnectivityChange: subscribe
+      }
+    }
+  }
+
+  it('importing the module and constructing a queue reads no store and subscribes to nothing', async () => {
+    const { createDownloadQueue } = await import('../downloadqueue')
+    const { get, subscribe, deps } = depsWith()
+
+    createDownloadQueue(deps)
+
+    expect(get).not.toHaveBeenCalled()
+    expect(subscribe).not.toHaveBeenCalled()
+  })
+
+  it('start() reads the first element once and subscribes once', async () => {
+    const { createDownloadQueue } = await import('../downloadqueue')
+    const { get, subscribe, deps } = depsWith()
+
+    createDownloadQueue(deps).start()
+
+    expect(get).toHaveBeenCalledTimes(1)
+    expect(get).toHaveBeenCalledWith('queue', [])
+    expect(subscribe).toHaveBeenCalledTimes(1)
+  })
+
+  it('two queues created in one test keep independent state', async () => {
+    __store.queue = [makeQueueElement('1295660')]
+    __store.finished = []
+    const first = await makeQueue()
+    const second = await makeQueue()
+
+    first.pauseCurrentDownload()
+
+    expect(first.getQueueInformation().state).toBe('paused')
+    expect(second.getQueueInformation().state).toBe('idle')
+  })
+
+  it('getLegacyBootQueue throws the named error until bindLegacyBootQueue runs', async () => {
+    const { getLegacyBootQueue, bindLegacyBootQueue } =
+      await import('../downloadqueue')
+    expect(() => getLegacyBootQueue()).toThrow(
+      'download queue not bound: the download-queue boot step has not run'
+    )
+    const queue = await makeQueue()
+
+    bindLegacyBootQueue(queue)
+
+    expect(getLegacyBootQueue()).toBe(queue)
   })
 })

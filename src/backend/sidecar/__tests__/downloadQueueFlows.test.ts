@@ -352,6 +352,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
     expect(mockedInstallQueueElement).toHaveBeenCalledTimes(1)
     expect(mockedInstallQueueElement).toHaveBeenNthCalledWith(
       1,
+      expect.anything(),
       expect.objectContaining({ appName: '999003' })
     )
 
@@ -375,6 +376,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
     expect(mockedInstallQueueElement).toHaveBeenCalledTimes(2)
     expect(mockedInstallQueueElement).toHaveBeenNthCalledWith(
       2,
+      expect.anything(),
       expect.objectContaining({ appName: '999003' })
     )
 
@@ -480,6 +482,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
     // SteamGame.install() bypass.
     expect(mockedInstallQueueElement).toHaveBeenCalledTimes(1)
     expect(mockedInstallQueueElement).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ appName: '999010', runner: 'steam' })
     )
 
@@ -524,6 +527,7 @@ describe('sidecar download-queue flows (Phase 32 Plan 01 — REQ-32-02/03/04/05/
 
     expect(mockedUpdateQueueElement).toHaveBeenCalledTimes(1)
     expect(mockedUpdateQueueElement).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         appName: '999011',
         runner: 'steam',

@@ -33,9 +33,10 @@ import { macArchStore } from './stores'
 import type { Runner } from 'common/types'
 import type { ManagerDeps } from 'backend/services/types'
 
-/** The library managers the Windows-reinstall flow drives (66.1, R3). */
+/** The library managers and download queue the Windows-reinstall flow drives (66.1, R3). */
 export interface MacArchRecoveryDeps {
   libraryManagers: ManagerDeps['libraryManagers']
+  getDownloadQueue: ManagerDeps['getDownloadQueue']
 }
 
 export const MAX_SWEEP_PROBES = 20
@@ -182,8 +183,7 @@ export async function offerWindowsReinstall(
       return
     }
 
-    const { addToQueue } = await import('backend/downloadmanager/downloadqueue')
-    await addToQueue({
+    await deps.getDownloadQueue().addToQueue({
       type: 'install',
       addToQueueTime: Date.now(),
       startTime: 0,

@@ -28,7 +28,7 @@
     "src/backend/sidecar/__tests__/sendChannelObservable.test.ts": 1,
     "src/backend/sidecar/__tests__/shortcutsFlows.test.ts": 9,
     "src/backend/sidecar/__tests__/sidecarRpcFraming.test.ts": 1,
-    "src/backend/sidecar/__tests__/stdinEofRelease.test.ts": 6,
+    "src/backend/sidecar/__tests__/stdinEofRelease.test.ts": 5,
     "src/backend/sidecar/__tests__/steamNativeInstallDefault.test.ts": 5,
     "src/backend/sidecar/__tests__/steamgridSecretStore.test.ts": 4,
     "src/backend/sidecar/__tests__/storeLayer.test.ts": 5,

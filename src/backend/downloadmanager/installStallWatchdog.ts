@@ -9,7 +9,7 @@ import type { GameStatus } from 'common/types'
 /**
  * 260817-dib: converts the DownloadManager's install bound from a TOTAL
  * DURATION ceiling to a NO-PROGRESS window. This module is runner-agnostic
- * and governs all five runners in `libraryManagerMap` (sideload, gog,
+ * and governs all five library managers (sideload, gog,
  * legendary, nile, steam) equally — it must never import anything from
  * `storeManagers/steam`.
  *

@@ -8,7 +8,7 @@
  * read/action flow channels (`registerSteamFlows()`, `steamFlowRegistration.ts`),
  * the curated Steam QR-login channels (`registerSteamAuthFlows()`,
  * `steamAuthFlowRegistration.ts` — Phase 30 Plan 01, D-01/D-02/D-08), the
- * curated install-slice channels (`registerInstallFlows()`,
+ * curated install-slice channels (`registerInstallFlows({ downloadQueue: deps.services.downloadQueue })`,
  * `installFlowRegistration.ts` — Phase 30 Plan 02,
  * D-05a/D-05b/D-07/D-08/D-12), the curated settings-read channels
  * (`registerSettingsFlows()`, `settingsFlowRegistration.ts` — Phase 30 Plan
@@ -136,7 +136,7 @@ export function registerHandlers(deps: {
   registerSteamFlows()
   registerSteamAuthFlows()
   registerEngineFlows({ managers: deps.services.managers })
-  registerInstallFlows()
+  registerInstallFlows({ downloadQueue: deps.services.downloadQueue })
   registerSettingsFlows()
   // D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the
   // `EPIC_COOKIE_HOSTS` sweep can be exercised against ONE sibling apex without
@@ -153,7 +153,10 @@ export function registerHandlers(deps: {
   // names, no cross-module runtime
   // dependency at registration time); placed alongside them, before
   // `ensureStoresRegistered()` (32-PATTERNS.md).
-  registerDownloadQueueFlows({ log: deps.log })
+  registerDownloadQueueFlows({
+    log: deps.log,
+    downloadQueue: deps.services.downloadQueue
+  })
   // Phase 34.1 Plan 04: the app-shell channels — no ordering constraint
   // relative to the other calls above (own channel names, no cross-module
   // runtime dependency at registration time), placed alongside them, before
@@ -167,9 +170,10 @@ export function registerHandlers(deps: {
   // Jest" signal (always set in a Jest worker, never set for the real Tauri sidecar process)
   // -- under real Tauri this is unconditionally `false` and behavior is byte-identical to
   // before.
-  registerAppShellFlows({
-    skipInitialTraySync: process.env.JEST_WORKER_ID !== undefined
-  })
+  registerAppShellFlows(
+    { downloadQueue: deps.services.downloadQueue },
+    { skipInitialTraySync: process.env.JEST_WORKER_ID !== undefined }
+  )
   // Phase 34.2 Plans 04+05: the game-details/settings/override channels — no
   // ordering constraint relative to the other calls above (own
   // channel names, no cross-module runtime dependency at registration time),

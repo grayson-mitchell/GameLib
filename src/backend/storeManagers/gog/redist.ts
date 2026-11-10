@@ -11,10 +11,6 @@ import {
   GOGv2Manifest
 } from 'common/types/gog'
 import { GlobalConfig } from 'backend/config'
-import {
-  addToQueue,
-  getQueueInformation
-} from 'backend/downloadmanager/downloadqueue'
 import { DMQueueElement } from 'common/types'
 import { GOGUser } from './user'
 import type { GOGManagerDeps } from './library'
@@ -25,7 +21,10 @@ import { gamesConfigPath } from 'backend/constants/paths'
 import LogWriter from '../../logger/log_writer'
 
 /** What the redist helpers read: the gog stores and the manager map. */
-export type RedistDeps = Pick<GOGManagerDeps, 'stores' | 'libraryManagers'>
+export type RedistDeps = Pick<
+  GOGManagerDeps,
+  'stores' | 'libraryManagers' | 'getDownloadQueue'
+>
 
 export async function checkForRedistUpdates(deps: RedistDeps) {
   if (!GOGUser.isLoggedIn(deps) || !isOnline()) {
@@ -100,7 +99,7 @@ export async function checkForRedistUpdates(deps: RedistDeps) {
 }
 
 async function pushRedistUpdateToQueue(deps: RedistDeps) {
-  const currentQueue = getQueueInformation()
+  const currentQueue = deps.getDownloadQueue().getQueueInformation()
 
   const currentRedistElement = currentQueue.elements.find(
     (element) => element.params.appName === 'gog-redist'
@@ -111,7 +110,7 @@ async function pushRedistUpdateToQueue(deps: RedistDeps) {
   }
   const newElement = createRedistDMQueueElement(deps)
 
-  await addToQueue(newElement)
+  await deps.getDownloadQueue().addToQueue(newElement)
 }
 
 export function createRedistDMQueueElement(

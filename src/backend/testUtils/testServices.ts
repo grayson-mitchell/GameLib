@@ -148,7 +148,10 @@ export function createTestServices(
       overrides.commandRunner ??
       unscriptedMembers<CommandRunner>('command runner', {}),
     spawnAsync: overrides.spawnAsync ?? spawnAsync,
-    quit: overrides.quit ?? quit
+    quit: overrides.quit ?? quit,
+    downloadQueue:
+      overrides.downloadQueue ??
+      unscriptedMembers<BootServices['downloadQueue']>('download queue', {})
   }
 }
 
@@ -167,6 +170,11 @@ export function createTestManagerDeps(
       overrides.spawnAsync ??
       (() => {
         throw new Error('unscripted spawnAsync call')
+      }),
+    getDownloadQueue:
+      overrides.getDownloadQueue ??
+      (() => {
+        throw new Error('unscripted call: getDownloadQueue')
       })
   }
 }

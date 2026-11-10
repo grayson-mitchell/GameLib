@@ -21,6 +21,7 @@ import {
   INSTALL_NO_PROGRESS_TIMEOUT_MS
 } from 'backend/downloadmanager/installStallWatchdog'
 import { resolveGameTitle } from 'backend/utils/gameTitle'
+import type { StoreManagers } from 'backend/services/types'
 
 // Quick task 260905-mv5 (D-02): re-exported, unchanged name and signature,
 // so this module's 3 existing jest.mock() callers (downloadqueue.test.ts,
@@ -33,12 +34,9 @@ import { resolveGameTitle } from 'backend/utils/gameTitle'
 // resolveGameTitle back from here without closing a cycle).
 export { resolveGameTitle }
 
-// Type-only reference to the lazily-imported module below -- erased at
-// compile time, so it does NOT reintroduce the downloadmanager/utils.ts <->
-// storeManagers/index.ts circular dependency the runtime `await import(...)`
-// calls in installQueueElement/updateQueueElement exist to break.
-type LibraryManagerMap =
-  typeof import('backend/storeManagers').libraryManagerMap
+/** What the queue element runners read: the library manager map (66.1, R3). */
+type QueueElementDeps = { managers: Pick<StoreManagers, 'library'> }
+type LibraryManagerMap = StoreManagers['library']
 
 /**
  * 2026-08-22 (D-09, REQ-37-03): `SteamGame`'s game-info getter
@@ -111,7 +109,10 @@ function resolveQueueElementTitle(
  * ceiling.
  */
 
-async function installQueueElement(params: InstallParams): Promise<{
+async function installQueueElement(
+  deps: QueueElementDeps,
+  params: InstallParams
+): Promise<{
   status: DMStatus
   error?: string | undefined
   deferredToSetup?: boolean
@@ -136,10 +137,7 @@ async function installQueueElement(params: InstallParams): Promise<{
     // runner, exactly like `build`/`branch`) — non-Steam managers ignore it.
     steamForceWindowsViaBottle
   } = params
-  // Imported lazily to break a circular dependency (downloadmanager/utils.ts
-  // <-> storeManagers/index.ts) — see the load-bearing comment in
-  // storeManagers/gog/user.ts.
-  const { libraryManagerMap } = await import('backend/storeManagers')
+  const libraryManagerMap = deps.managers.library
   const title = resolveQueueElementTitle(libraryManagerMap, runner, appName)
 
   if (!isOnline()) {
@@ -430,13 +428,15 @@ async function installQueueElement(params: InstallParams): Promise<{
   }
 }
 
-async function updateQueueElement(params: InstallParams): Promise<{
+async function updateQueueElement(
+  deps: QueueElementDeps,
+  params: InstallParams
+): Promise<{
   status: DMStatus
   error?: string | undefined
 }> {
   const { appName, runner } = params
-  // Lazy import — see the load-bearing comment in installQueueElement above.
-  const { libraryManagerMap } = await import('backend/storeManagers')
+  const libraryManagerMap = deps.managers.library
   const title = resolveQueueElementTitle(libraryManagerMap, runner, appName)
 
   if (!isOnline()) {

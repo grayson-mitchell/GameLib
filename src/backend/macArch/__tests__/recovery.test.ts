@@ -39,6 +39,9 @@ jest.mock('backend/utils/macArch', () => ({
 const getInstallInfo = jest.fn()
 const getGameInfo = jest.fn()
 const deps = {
+  getDownloadQueue: () => ({
+    addToQueue: (...a: unknown[]) => addToQueue(...a)
+  }),
   libraryManagers: {
     gog: {
       getInstallInfo: (...a: unknown[]) => getInstallInfo(...a),
@@ -51,9 +54,6 @@ jest.mock('backend/utils/uninstaller', () => ({
   uninstallGameCallback: (...a: unknown[]) => uninstallGameCallback(...a)
 }))
 const addToQueue = jest.fn()
-jest.mock('backend/downloadmanager/downloadqueue', () => ({
-  addToQueue: (...a: unknown[]) => addToQueue(...a)
-}))
 
 const m = macArch as jest.Mocked<typeof macArch>
 

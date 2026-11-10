@@ -1,6 +1,6 @@
 {
   "jestMock": {
-    "src/backend/sidecar/__tests__/appShellFlows.test.ts": 15,
+    "src/backend/sidecar/__tests__/appShellFlows.test.ts": 14,
     "src/backend/sidecar/__tests__/clipboardFlows.test.ts": 4,
     "src/backend/sidecar/__tests__/devSecretVault.test.ts": 4,
     "src/backend/sidecar/__tests__/loggerCallSiteGuard.test.ts": 2,

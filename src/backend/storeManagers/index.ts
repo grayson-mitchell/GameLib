@@ -14,7 +14,7 @@ import { sendFrontendMessage } from 'backend/ipc'
 import { legacyManagerDeps } from 'backend/services/legacyFacades'
 
 import { logInfo, RunnerToLogPrefixMap } from 'backend/logger'
-import { addToQueue } from 'backend/downloadmanager/downloadqueue'
+import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
 
 import type {
   DMQueueElement,
@@ -138,7 +138,16 @@ function getDMElement(gameInfo: GameInfo, appName: string) {
   return dmQueueElement
 }
 
-export function autoUpdate(runner: Runner, gamesToUpdate: string[]) {
+/** `getDownloadQueue` is called only when an update is enqueued (the queue is built after the managers). */
+export interface AutoUpdateDeps {
+  getDownloadQueue: () => Pick<DownloadQueue, 'addToQueue'>
+}
+
+export function autoUpdate(
+  runner: Runner,
+  gamesToUpdate: string[],
+  deps: AutoUpdateDeps
+) {
   const logPrefix = RunnerToLogPrefixMap[runner]
   gamesToUpdate.forEach(async (appName) => {
     const game = libraryManagerMap[runner].getGame(appName)
@@ -148,7 +157,7 @@ export function autoUpdate(runner: Runner, gamesToUpdate: string[]) {
     if (!ignoreGameUpdates && gameIsAvailable) {
       logInfo(`Auto-Updating ${gameInfo.title}`, logPrefix)
       const dmQueueElement: DMQueueElement = getDMElement(gameInfo, appName)
-      addToQueue(dmQueueElement)
+      void deps.getDownloadQueue().addToQueue(dmQueueElement)
       // remove from the array to avoid downloading the same game twice
       gamesToUpdate = gamesToUpdate.filter((game) => game !== appName)
     } else {

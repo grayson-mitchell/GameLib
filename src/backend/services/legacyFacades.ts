@@ -34,6 +34,8 @@ import {
 } from 'backend/storeManagers'
 import * as launcherModule from 'backend/launcher'
 import * as utilsModule from 'backend/utils'
+import { getLegacyBootQueue } from 'backend/downloadmanager/downloadqueue'
+import type { DownloadQueue } from 'backend/downloadmanager/downloadqueue'
 import { createTools } from 'backend/tools'
 import type { Tools } from 'backend/tools'
 import type { Launcher, ManagerDeps, StoreManagers, Stores } from './types'
@@ -59,11 +61,19 @@ export function buildStoresFacade(): Stores {
   }
 }
 
-export function buildManagersFacade(): StoreManagers {
+/**
+ * `getDownloadQueue` is resolved when an auto-update enqueues, never at construction: the
+ * 'download-queue' step runs after 'store-managers'. The default reads the transitional boot
+ * holder (plan 23 deletes it).
+ */
+export function buildManagersFacade(
+  getDownloadQueue: () => DownloadQueue = () => getLegacyBootQueue()
+): StoreManagers {
   return {
     library: libraryManagerMap,
     launchHooks: storeLaunchHooks,
-    autoUpdate,
+    autoUpdate: (runner, games) =>
+      autoUpdate(runner, games, { getDownloadQueue }),
     initAll: initStoreManagers
   }
 }
@@ -132,7 +142,8 @@ export function legacyManagerDeps(): ManagerDeps {
       validWine: (...a) => launcherModule.validWine(...a),
       verifyWinePrefix: (...a) => launcherModule.verifyWinePrefix(...a)
     },
-    spawnAsync: (...a) => utilsModule.spawnAsync(...a)
+    spawnAsync: (...a) => utilsModule.spawnAsync(...a),
+    getDownloadQueue: () => getLegacyBootQueue()
   }
 }
 

@@ -83,13 +83,7 @@ import { ipcMain } from '../platform'
 // not "once is enough", because each curated registration module is its own
 // independent entry point into the bundle's module graph.
 import '../storeManagers'
-import {
-  removeFromQueue,
-  pauseCurrentDownload,
-  resumeCurrentDownload,
-  cancelCurrentDownload,
-  getQueueInformation
-} from '../downloadmanager/downloadqueue'
+import type { DownloadQueue } from '../downloadmanager/downloadqueue'
 
 /**
  * Registers the five queue-management channels. Called once from
@@ -97,7 +91,17 @@ import {
  * imports above and the D-05 log line below; the caller decides when
  * registration onto the handler registry happens.
  */
-export function registerDownloadQueueFlows(deps: { log: LogSink }): void {
+export function registerDownloadQueueFlows(deps: {
+  log: LogSink
+  downloadQueue: Pick<
+    DownloadQueue,
+    | 'removeFromQueue'
+    | 'pauseCurrentDownload'
+    | 'resumeCurrentDownload'
+    | 'cancelCurrentDownload'
+    | 'getQueueInformation'
+  >
+}): void {
   // D-05: logged, never silent. Phase 35 plan 11 CHANGED WHAT THIS RECORDS.
   // The boot-time auto-resume is no longer suppressed under the sidecar — it
   // now runs from `appShellFlowRegistration.ts`'s `frontendReady` handler.
@@ -115,20 +119,24 @@ export function registerDownloadQueueFlows(deps: { log: LogSink }): void {
   // one `ipcMain.handle` (invoke). Getting this wrong is completely silent at
   // runtime (Phase 31 Pitfall 2).
   ipcMain.on('removeFromDMQueue', (_event: unknown, ...args: unknown[]) => {
-    removeFromQueue(args[0] as string)
+    deps.downloadQueue.removeFromQueue(args[0] as string)
   })
 
   ipcMain.on('pauseCurrentDownload', () => {
-    pauseCurrentDownload()
+    deps.downloadQueue.pauseCurrentDownload()
   })
 
   ipcMain.on('resumeCurrentDownload', () => {
-    resumeCurrentDownload()
+    deps.downloadQueue.resumeCurrentDownload()
   })
 
   ipcMain.on('cancelDownload', (_event: unknown, ...args: unknown[]) => {
-    cancelCurrentDownload({ removeDownloaded: args[0] as boolean })
+    deps.downloadQueue.cancelCurrentDownload({
+      removeDownloaded: args[0] as boolean
+    })
   })
 
-  ipcMain.handle('getDMQueueInformation', async () => getQueueInformation())
+  ipcMain.handle('getDMQueueInformation', async () =>
+    deps.downloadQueue.getQueueInformation()
+  )
 }
