@@ -35,7 +35,10 @@ export default class SideloadGame implements Game {
 
   constructor(
     id: string,
-    private readonly deps: Pick<ManagerDeps, 'libraryManagers' | 'stores'>
+    private readonly deps: Pick<
+      ManagerDeps,
+      'libraryManagers' | 'stores' | 'launcher' | 'commandRunner' | 'spawnAsync'
+    >
   ) {
     this.id = id
   }
@@ -84,7 +87,7 @@ export default class SideloadGame implements Game {
     launchArguments?: LaunchOption,
     args: string[] = []
   ): Promise<boolean> {
-    return launchGame(this, logWriter, args)
+    return launchGame(this.deps, this, logWriter, args)
   }
 
   async stop(): Promise<void> {

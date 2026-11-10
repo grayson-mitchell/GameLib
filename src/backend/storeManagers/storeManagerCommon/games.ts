@@ -4,17 +4,7 @@ import { logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { basename, dirname } from 'path'
 import { constants as FS_CONSTANTS } from 'graceful-fs'
 import i18next from 'i18next'
-import {
-  callRunner,
-  getKnownFixesEnvVariables,
-  launchCleanup,
-  prepareLaunch,
-  prepareWineLaunch,
-  runWineCommand,
-  setupEnvVars,
-  setupWrapperEnvVars,
-  setupWrappers
-} from '../../launcher'
+import type { ManagerDeps } from 'backend/services/types'
 import { access, chmod } from 'fs/promises'
 import shlex from 'shlex'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
@@ -28,7 +18,6 @@ import { isLinux, isMac } from 'backend/constants/environment'
 import { windowIcon } from 'backend/constants/paths'
 import { withKnownFixEnv } from 'backend/knownFixOverlays'
 import { raiseWineGameWindow } from 'backend/utils/wineWindowRaise'
-import { spawnAsync } from 'backend/utils'
 
 import type LogWriter from 'backend/logger/log_writer'
 import { Game } from '../../../common/types/game_manager'
@@ -150,7 +139,14 @@ const openNewBrowserGameWindow = async ({
   })
 }
 
+/** The collaborators the shared launch helper uses (66.1, R3). */
+export type CommonGameDeps = Pick<
+  ManagerDeps,
+  'launcher' | 'commandRunner' | 'spawnAsync'
+>
+
 export async function launchGame(
+  deps: CommonGameDeps,
   game: Game,
   logWriter: LogWriter,
   args: string[] = []
@@ -199,15 +195,17 @@ export async function launchGame(
       mangoHudCommand,
       gameScopeCommand,
       gameModeBin
-    } = await prepareLaunch(gameSettings, logWriter, gameInfo)
+    } = await deps.launcher.prepareLaunch(gameSettings, logWriter, gameInfo)
 
     // The sideload path does not merge tier-1 envVariables (unchanged), so it
     // opts out of tier-1 in the overlay base and log.
     const wineLaunch = !isNative
-      ? await prepareWineLaunch(game, logWriter, { mergesTier1Env: false })
+      ? await deps.launcher.prepareWineLaunch(game, logWriter, {
+          mergesTier1Env: false
+        })
       : undefined
 
-    const wrappers = setupWrappers(
+    const wrappers = deps.launcher.setupWrappers(
       gameSettings,
       mangoHudCommand,
       gameModeBin,
@@ -216,7 +214,7 @@ export async function launchGame(
 
     if (!launchPrepSuccess) {
       logWriter.logError(['Launch aborted:', launchPrepFailReason])
-      launchCleanup()
+      deps.launcher.launchCleanup()
       showDialogBoxModalAuto({
         title: i18next.t('box.error.launchAborted', 'Launch aborted'),
         message: launchPrepFailReason!,
@@ -252,9 +250,12 @@ export async function launchGame(
       }
 
       const env = {
-        ...setupWrapperEnvVars({ appName, appRunner: runner }),
-        ...setupEnvVars(gameSettings, gameInfo.install.install_path),
-        ...getKnownFixesEnvVariables(appName, runner)
+        ...deps.launcher.setupWrapperEnvVars({ appName, appRunner: runner }),
+        ...deps.launcher.setupEnvVars(
+          gameSettings,
+          gameInfo.install.install_path
+        ),
+        ...deps.launcher.getKnownFixesEnvVariables(appName, runner)
       }
 
       if (wrappers.length > 0) {
@@ -262,7 +263,7 @@ export async function launchGame(
         executable = extraArgs.shift()!
       }
 
-      await callRunner(
+      await deps.commandRunner.callRunner(
         extraArgs,
         {
           name: runner,
@@ -279,7 +280,7 @@ export async function launchGame(
         }
       )
 
-      launchCleanup(rpcClient)
+      deps.launcher.launchCleanup(rpcClient)
       // TODO: check and revert to previous permissions
       if (isLinux || (isMac && !executable.endsWith('.app'))) {
         await chmod(executable, 0o775)
@@ -294,9 +295,8 @@ export async function launchGame(
 
     // quick/261024-g3m: fire before the await — wait:true resolves only at game exit.
     if (isMac) {
-      // TEMPORARY (plan 12, replaced when this module takes injected deps).
       void raiseWineGameWindow(
-        { spawnAsync },
+        { spawnAsync: deps.spawnAsync },
         {
           context: `sideload:${appName}`,
           processNames: [basename(executable)]
@@ -304,7 +304,7 @@ export async function launchGame(
       )
     }
 
-    await runWineCommand({
+    await deps.commandRunner.runWineCommand({
       commandParts: [executable, ...extraArgs],
       gameSettings: withKnownFixEnv(
         gameSettings,
@@ -321,7 +321,7 @@ export async function launchGame(
       }
     })
 
-    launchCleanup(rpcClient)
+    deps.launcher.launchCleanup(rpcClient)
 
     return true
   }
